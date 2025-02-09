@@ -1,0 +1,275 @@
+---
+title: masks.yml
+description: The canonical reference for the masks.yml config file
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+All of the settings outlined below can be overridden in your `masks.yml`. Some
+settings do not apply to Rails apps including the Masks engine.
+
+## Minimal settings
+
+At minimum, provide the name and public URL of your installation.
+
+| name     | ENV var        | default                |
+| -------- | -------------- | ---------------------- |
+| url      | `MASKS_URL`    | https://localhost:5000 |
+| name     | `MASKS_NAME`   | masks                  |
+| timezone | `MASKS_TZ`     | America/New_York       |
+| region   | `MASKS_REGION` | US                     |
+
+<Aside type="caution">
+  Changing the `url` will expire any existing cookies and sessions.
+</Aside>
+
+
+## Advanced settings
+
+### `actors`
+
+You can automatically delete actors that are inactive after some period of time
+and supply some defaults:
+
+| name              | default                 |
+|-------------------| ---------------------------------------------|
+| actors.inactive        |                                    |
+| actors.defaults.scopes | `['openid']`                         |
+
+
+### `clients`
+
+Like actors, you can supply defaults for clients. You can also create "types"—a
+set of defaults with a name:
+
+```yaml
+# masks.yml
+clients:
+  defaults:
+    allow_second_factor: false
+  types:
+    my-type:
+      bg_dark: ...
+      bg_light: ...
+      ...
+```
+
+```yaml
+# clients.yml
+my-client:
+  type: my-type
+```
+
+### `devices`
+
+Masks also fingerprints and tracks devices using a cookie.
+
+| name              | ENV var                  | default       |
+|-------------------| -------------------------|---------------|
+| devices.timeout   | `MASKS_DEVICES_TIMEOUT`  | 400 days      |
+| devices.cookie    | `MASKS_DEVICES_COOKIE`   | `_device`       |
+| devices.class     | `MASKS_DEVICES_CLASS`    | `Masks::Device` |
+
+By default, devices are tracked with the database, allowing you to block and rotate them.
+
+<Aside type="tip">
+  A blank value for the timeout will expire the cookie when the browser exits.
+  Most browsers have <a href="https://httpwg.org/http-extensions/draft-ietf-httpbis-rfc6265bis.html#section-5.5">a maximum cookie lifetime of 400 days</a>.
+</Aside>
+
+### `emails`
+
+While masks can be used without sending email, it's recommended to
+configure support for it. Email verification, login links, and some
+notifications depend on it.
+
+| name                            | ENV var                     | default |
+| ------------------------------- | --------------------------- | ------- |
+| emails.from                     | `MASKS_EMAILS_FROM`         |
+| emails.reply_to                 | `MASKS_EMAILS_REPLY_TO`     |
+| emails.adapter                  | `MASKS_EMAILS_ADAPTER`      | `smtp` or `sendmail` |
+| emails.smtp.domain              | `MASKS_SMTP_DOMAIN`         |
+| emails.smtp.address             | `MASKS_SMTP_ADDRESS`        |
+| emails.smtp.port                | `MASKS_SMTP_PORT`           |
+| emails.smtp.user_name           | `MASKS_SMTP_USER_NAME`      |
+| emails.smtp.password            | `MASKS_SMTP_PASSWORD`       |
+| emails.smtp.authentication      | `MASKS_SMTP_AUTHENTICATION` |
+
+You can custom how many can be used per-actor:
+
+| name                            | default |
+| ------------------------------- | ------- |
+| emails.max_for_login            | 5                            |
+
+### `nicknames`
+
+| name                   | default                      |
+| ---------------------- | ---------------------------- |
+| nicknames.format       | `\A[a-zA-Z][a-zA-Z0-9\-]+\z` |
+| nicknames.min_chars    | 4                            |
+| nicknames.max_chars    | 20                           |
+
+
+### `passwords`
+
+Passwords are hashed with b
+
+| name                   | default                      |
+| ---------------------- | ---------------------------- |
+| passwords.min_chars    | 8                            |
+| passwords.max_chars    | 100                          |
+
+### `phones`
+
+SMS verification can be configured in support of two-factor auth.
+
+| name                            | ENV var                     | default |
+| ------------------------------- | --------------------------- | ------- |
+| phones.adapter                  | `MASKS_PHONES_ADAPTER`      | `twilio`  |
+| phones.twilio.account_sid       | `MASKS_TWILIO_ACCOUNT_SID`  |
+| phones.twilio.auth_token        | `MASKS_TWILIO_AUTH_TOKEN`   |
+| phones.twilio.service_sid       | `MASKS_TWILIO_SERVICE_SID`  |
+
+### `providers`
+
+Unlike clients, provider types are specified in code. The following are available:
+
+ - `oidc`
+ - `oauth`
+ - `github`
+ - `google`
+ - `facebook`
+ - `twitter`
+ - `apple`
+
+You can add your own as well:
+
+```yaml
+# masks.yml
+providers:
+  types:
+    my-provider: "My::Provider"
+```
+
+### `webauthn`
+
+| name                 | default
+| -------------------- | ------------
+| webauthn.rp_name       | `name` or `MASKS_NAME`       |
+
+### `backup_codes`
+
+| name                   | default                      |
+| ---------------------- | ---------------------------- |
+| backup_codes.min_chars | 8                            |
+| backup_codes.max_chars | 100                          |
+| backup_codes.total     | 10                           |
+
+
+### `secrets`
+
+Self-hosted and Rails apps calling `Masks::Engine.use_secrets` will generate
+secrets for encryption and hashing from a `private.key`, located in:
+
+ - `/masks/data/private.key` for containers
+ - `config/private.key` for Rails apps
+
+You pass ENV vars or override your `masks.yml` to skip this process:
+
+| name              | ENV var                   | default                    |
+| ----------------- | ------------------------- | -------------------------- |
+| private_key       | `MASKS_PRIVATE_KEY`       | ./data/private.key         |
+| secret_key        | `MASKS_SECRET_KEY`        | _derived from private key contents_ |
+| encryption_key    | `MASKS_ENCRYPTION_KEY`    | _derived from private key contents_ |
+| deterministic_key | `MASKS_DETERMINISTIC_KEY` | _derived from private key contents_ |
+| salt              | `MASKS_SALT`              | _derived from private key contents_ |
+
+### `sessions`
+
+Masks uses cookies to keep track of sessions. The self-hosted version prefers to
+store them in a separate database.
+
+| name              | ENV var                  | default       |
+|-------------------| -------------------------|---------------|
+| sessions.timeout  | `MASKS_SESSIONS_TIMEOUT`  | 90 days      |
+| sessions.lifetime | `MASKS_SESSIONS_LIFETIME` | _nil_ (on browser close) |
+
+<Aside>
+Rails apps must call `Masks::Engine.use_sessions` for these settings to apply.
+</Aside>
+
+### `theme`
+
+Masks can be customized with your organization's name, branding, and more.
+
+| name                 | ENV var
+| -------------------- | ------------
+| theme.url            |
+| theme.name           | `MASKS_NAME`
+| theme.light_logo_url |
+| theme.dark_logo_url  |
+| theme.favicon_url    |
+
+Take a look at client configuration to customize the look and feel of client interactions.
+
+## Container settings
+
+### `db`
+
+The following database adapters are supported (SQLite is default):
+
+- `db.adapter=postgresql`
+- `db.adapter=sqlite3`
+
+While a primary database is always required, you can use separate
+databases for specific types of data: `queue`, `cache`, `websockets`,
+and `sessions`.
+
+| name                  | ENV var                       | default                                  |
+| --------------------- | ----------------------------- | ---------------------------------------- |
+| db.url                | `MASKS_DB_URL`                |                                          |
+| db.adapter            | `MASKS_DB_ADAPTER`            | `sqlite3` unless specified via the `url` |
+| db.name               | `MASKS_DB_NAME`               | `masks` or `data/masks.sqlite3`          |
+| db.queue.url          | `MASKS_QUEUE_DB_URL`          |                                          |
+| db.queue.adapter      | `MASKS_QUEUE_DB_ADAPTER`      |                                          |
+| db.queue.name         | `MASKS_QUEUE_DB_NAME`         |                                          |
+| db.cache.url          | `MASKS_CACHE_DB_URL`          |                                          |
+| db.cache.adapter      | `MASKS_CACHE_DB_ADAPTER`      |                                          |
+| db.cache.name         | `MASKS_CACHE_DB_NAME`         |                                          |
+| db.websockets.url     | `MASKS_WEBSOCKETS_DB_URL`     |                                          |
+| db.websockets.adapter | `MASKS_WEBSOCKETS_DB_ADAPTER` |                                          |
+| db.websockets.name    | `MASKS_WEBSOCKETS_DB_NAME`    |                                          |
+| db.sessions.url       | `MASKS_SESSIONS_DB_URL`       |                                          |
+| db.sessions.adapter   | `MASKS_SESSIONS_DB_ADAPTER`   |                                          |
+| db.sessions.name      | `MASKS_SESSIONS_DB_NAME`      |                                          |
+
+
+### `storage`
+
+Logos, avatars, and other uploads are stored on the local filesystem by default. You can
+change the location or configure masks to store assets with a cloud
+provider.
+
+| name                                           | ENV var                            | default |
+| ---------------------------------------------- | ---------------------------------- | ------- |
+| storage.adapter                                | `MASKS_STORAGE_INTEGRATION`        | disk    |
+| storage.s3.access_key_id                   | `MASKS_S3_ACCESS_KEY_ID`           |
+| storage.s3.secret_access_key               | `MASKS_S3_SECRET_ACCESS_KEY`       |
+| storage.s3.region                          | `MASKS_S3_REGION`                  |
+| storage.s3.bucket                          | `MASKS_S3_BUCKET`                  |
+| storage.gcs.project                        | `MASKS_GCS_PROJECT`                |
+| storage.gcs.credentials                    | `MASKS_GCS_CREDENTIALS`            |
+| storage.gcs.bucket                         | `MASKS_GCS_BUCKET`                 |
+| storage.azure_storage.storage_account_name | `MASKS_AZURE_STORAGE_ACCOUNT_NAME` |
+| storage.azure_storage.storage_access_key   | `MASKS_AZURE_STORAGE_ACCESS_KEY`   |
+| storage.azure_storage.container            | `MASKS_AZURE_STORAGE_CONTAINER`    |
+
+### `monitoring`
+
+You can monitor a running masks instance with [Sentry](https://sentry.io) and New Relic.
+
+| name                            | ENV var                      | default |
+| --------------------------------| -----------------------------| ------- |
+| monitoring.sentry.dsn           | `MASKS_SENTRY_DSN`           |
+| monitoring.newrelic.app         | `MASKS_NEWRELIC_LICENSE_KEY` |
+| monitoring.newrelic.license_key | `MASKS_NEWRELIC_APP`         |

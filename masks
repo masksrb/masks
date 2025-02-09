@@ -1,0 +1,67 @@
+#!/usr/bin/env ruby
+ENGINE_ROOT = File.expand_path(".", __dir__)
+ENGINE_PATH = File.expand_path("./lib/masks/engine", __dir__)
+APP_PATH = File.expand_path("./install/config/application", __dir__)
+
+# Set up gems listed in the Gemfile.
+ENV["BUNDLE_GEMFILE"] ||= File.expand_path("./Gemfile", __dir__)
+require "bundler/setup" if File.exist?(ENV["BUNDLE_GEMFILE"])
+
+require "gli"
+require "shellwords"
+require "rails/all"
+
+def generator(cli, name)
+  cli.desc "manage #{name.pluralize}"
+  cli.command name do |c|
+    c.action do |_, opts, args|
+      system "bin/rails g masks:#{name} #{args.map(&:shellescape).join(" ")}"
+    end
+  end
+end
+
+module Masks
+  class RuntimeCLI
+    extend GLI::App
+
+    program_desc "Runtime CLI"
+
+    generator(self, "client")
+    generator(self, "actor")
+    generator(self, "provider")
+
+    desc "Run migrations and seed data"
+    command :migrate do |c|
+      c.action { system "bin/rails db:migrate db:seed" }
+    end
+
+    desc "Start masks, including web and job servers"
+    command :worker do |c|
+      c.action do |_, opts, args|
+        unless ENV["MASKS_SKIP_MIGRATIONS"]
+          system "bin/rails db:migrate db:seed"
+        end
+
+        system "bin/jobs"
+      end
+    end
+
+    desc "Start masks, including web and job servers"
+    command :server do |c|
+      c.action do |_, opts, args|
+        unless ENV["MASKS_SKIP_MIGRATIONS"]
+          system "bin/rails db:migrate db:seed"
+        end
+
+        system "bin/rails server"
+      end
+    end
+
+    desc "Open a console"
+    command :console do |c|
+      c.action { |_, opts, args| system "bin/rails console" }
+    end
+  end
+end
+
+Masks::RuntimeCLI.run(ARGV)

@@ -1,0 +1,57 @@
+# Specify your single sign-on providers here.
+#
+# You will likely want `common: true` which enables the provider for all clients.
+# Otherwise, you can assign to specific clients in your `clients.yml`.
+#
+# Similar to clients, pass `local: true` to create synthetic, in-memory providers.
+#
+#  - https://masksrb.github.io/guides/rails
+#  - https://masksrb.github.io/reference/providers-yml
+#
+# Note: ERB-templating is supported. Use ENV vars for sensitive data.
+#
+# default: &default
+#   github:
+#     common: true
+#     client_id: <%= ENV['MASKS_GITHUB_CLIENT_ID'] %>
+#     client_secret: <%= ENV['MASKS_GITHUB_CLIENT_SECRET'] %>
+#   google:
+#     common: true
+#     client_id: <%= ENV['MASKS_GOOGLE_CLIENT_ID'] %>
+#     client_secret: <%= ENV['MASKS_GOOGLE_CLIENT_SECRET'] %>
+#   apple:
+#     common: true
+#     client_id: <%= ENV['MASKS_APPLE_SERVICE_BUNDLE_ID'] %>
+#     scopes: <%= ENV['MASKS_APPLE_SCOPES'] %>
+#     team_id: <%= ENV['MASKS_APPLE_APP_ID_PREFIX'] %>
+#     key_id: <%= ENV['MASKS_APPLE_KEY_ID'] %>
+#     pem: <%= ENV['MASKS_APPLE_P8_FILE_CONTENTS'] %>
+#   facebook:
+#     common: true
+#     client_id: <%= ENV['MASKS_FACEBOOK_APP_ID'] %>
+#     client_secret: <%= ENV['MASKS_FACEBOOK_APP_SECRET'] %>
+#   twitter:
+#     clients: ['my-app']
+#     client_id: <%= ENV['MASKS_TWITTER_CLIENT_ID'] %>
+#     client_secret: <%= ENV['MASKS_TWITTER_CLIENT_SECRET'] %>
+#
+# development:
+#   <<: *default
+#
+# test:
+#   <<: *default
+#
+# production:
+#   <<: *default
+test:
+  type: github
+  client_id: test
+  client_secret: test
+  common: true
+  local: true
+
+test2:
+  type: github
+  client_id: test
+  client_secret: test
+  common: true

@@ -1,0 +1,73 @@
+@import "../tailwind.css";
+
+input.no-inc[type="number"]::-webkit-outer-spin-button,
+input.no-inc[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input.no-inc[type="number"] {
+  -moz-appearance: textfield;
+}
+
+.background {
+  background-image: radial-gradient(
+    circle,
+    #00cdb7,
+    #00c6d2,
+    #00bcea,
+    #00b0fb,
+    #009fff,
+    #2e8eef,
+    #407dde,
+    #4c6ccc,
+    #365ca5,
+    #294b7f,
+    #233a5a,
+    #1f2937
+  );
+}
+
+@media (prefers-color-scheme: dark) {
+  .background {
+    background: radial-gradient(
+      circle,
+      rgba(62, 65, 55, 1) 0%,
+      rgba(54, 47, 40, 1) 25%,
+      rgba(31, 41, 55, 1) 50%,
+      rgba(10, 8, 14, 1) 100%
+    );
+  }
+}
+
+.rainbow {
+  background-color: #ff0000;
+  animation: bgColor 30s infinite linear;
+}
+
+@keyframes bgColor {
+  12.5% {
+    background-color: #ff0000;
+  }
+  25% {
+    background-color: #ffa500;
+  }
+  37.5% {
+    background-color: #ffff00;
+  }
+  50% {
+    background-color: #7fff00;
+  }
+  62.5% {
+    background-color: #00ffff;
+  }
+  75% {
+    background-color: #0000ff;
+  }
+  87.5% {
+    background-color: #9932cc;
+  }
+  100% {
+    background-color: #ff1493;
+  }
+}

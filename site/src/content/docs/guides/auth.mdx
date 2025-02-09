@@ -1,0 +1,74 @@
+---
+title: Login & signup
+description: A guide in my new Starlight docs site.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+Masks authenticates _actors_—people (and computers) who want access to [a
+client's](/guides/client) resources.
+
+You can seed a masks installation with actors in a number of ways:
+
+- Enable open signups
+- Alternatively, build a custom signup/invitation flow
+- Configure default actors in `actors.yml`
+- Manually add actors as a manager
+- Import actors with the CLI or API
+- For Rails apps, with [custom seeds](#)
+
+Otherwise, a masks installation will seed a default _manager_—an actor
+with full access able to manage all aspects of the masks server.
+
+## Actors
+
+Actors authenticate with _credentials_, one-by-one. Any actor that is _missing_
+required credentials will be prompted to add them (where applicable).
+
+Ultimately, clients dictate the set of credentials that are required along with
+how long they're valid for.
+
+The following credentials are supported at various stages of authentication:
+
+| Credential   | Identification | First factor | Second factor | Authorization |
+| ------------ | -------------- | ------------ | ------------- | ------------- |
+| Device       | ✅             |              |               |               |
+| Nickname     | ✅             |              |               |               |
+| Email        | ✅             |              |               |               |
+| Password     |                | ✅           |               |
+| Passkey      | ✅             | ✅           |               |               |
+| Login link   | ✅             | ✅           |               |
+| SMS code     |                |              | ✅            |
+| TOTP         |                |              | ✅            |
+| Webauthn     |                |              | ✅            |
+| Backup codes |                |              | ✅            |
+| Scopes       |                |              |               | ✅            |
+
+## Scopes
+
+Actors are granted access with _scopes_. For example, only actors with the
+`masks:manage` scope can manage the masks installation. Other scopes are
+required to add and invite actors, or create clients, and so on.
+
+The following scopes are used internally for actors with the ability to manage
+all or part of masks:
+
+| masks:clients | r/w access to clients |
+| masks:actors | r/w access to actors |
+| masks:install | r/w access to settings |
+| masks:manage | super-user access, includes all `masks:` scopes. |
+
+Since there are no other scopes built-in to the system, you are free to create
+and use any number to fit your needs. Scopes must be url-encodable and without
+whitespace.
+
+## Invitation & signup
+
+You can add actors to your installation in a number of ways:
+
+- managers can use `/manage` or the Management API
+- confidential clients using the Actor API
+- web-based signup and invitation flows, when enabled
+- with seed data
+
+## Password hashing

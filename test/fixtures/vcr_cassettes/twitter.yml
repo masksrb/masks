@@ -1,0 +1,82 @@
+---
+http_interactions:
+  - request:
+      method: post
+      uri: https://api.twitter.com/oauth/request_token
+      body:
+        encoding: US-ASCII
+        string: ""
+      headers:
+        Accept-Encoding:
+          - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+        Accept:
+          - "*/*"
+        User-Agent:
+          - OAuth gem v1.1.0
+        Content-Length:
+          - "0"
+        Content-Type:
+          - application/x-www-form-urlencoded
+        Authorization:
+          - "<AUTHORIZATION>"
+    response:
+      status:
+        code: 401
+        message: Unauthorized
+      headers:
+        Date:
+          - Wed, 05 Feb 2025 20:00:12 GMT
+        Perf:
+          - "7402827104"
+        Pragma:
+          - no-cache
+        Server:
+          - tsa_b
+        Status:
+          - 401 Unauthorized
+        Expires:
+          - Tue, 31 Mar 1981 05:00:00 GMT
+        Set-Cookie:
+          - guest_id=v1%3A173878561206446711; Max-Age=63072000; Expires=Fri, 05 Feb 2027
+            20:00:12 GMT; Path=/; Domain=.twitter.com; Secure; SameSite=None
+          - guest_id_ads=v1%3A173878561206446711; Max-Age=63072000; Expires=Fri, 05 Feb
+            2027 20:00:12 GMT; Path=/; Domain=.twitter.com; Secure; SameSite=None
+          - guest_id_marketing=v1%3A173878561206446711; Max-Age=63072000; Expires=Fri,
+            05 Feb 2027 20:00:12 GMT; Path=/; Domain=.twitter.com; Secure; SameSite=None
+          - personalization_id="v1_86o/nVw6iVmwA0aauQtCpg=="; Max-Age=63072000; Expires=Fri,
+            05 Feb 2027 20:00:12 GMT; Path=/; Domain=.twitter.com; Secure; SameSite=None
+        Content-Type:
+          - application/json; charset=utf-8
+        Cache-Control:
+          - no-cache, no-store, must-revalidate, pre-check=0, post-check=0
+        Last-Modified:
+          - Wed, 05 Feb 2025 20:00:12 GMT
+        X-Transaction:
+          - 2a4986e6970c7484
+        Content-Length:
+          - "64"
+        X-Frame-Options:
+          - SAMEORIGIN
+        Www-Authenticate:
+          - OAuth realm="https://api.twitter.com", api_error_code=32
+        X-Transaction-Id:
+          - 2a4986e6970c7484
+        X-Xss-Protection:
+          - "0"
+        Content-Disposition:
+          - attachment; filename=json.json
+        X-Content-Type-Options:
+          - nosniff
+        X-Twitter-Response-Tags:
+          - BouncerCompliant
+        Strict-Transport-Security:
+          - max-age=631138519
+        X-Response-Time:
+          - "6"
+        X-Connection-Hash:
+          - 615f3041201150b239528f029c29bfbd391f3f5901c4854b903e7047086ff94f
+      body:
+        encoding: ASCII-8BIT
+        string: '{"errors":[{"code":32,"message":"Could not authenticate you."}]}'
+    recorded_at: Wed, 05 Feb 2025 20:00:12 GMT
+recorded_with: VCR 6.3.1

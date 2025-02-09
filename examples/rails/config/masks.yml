@@ -1,0 +1,19 @@
+# Customize your masks installation here.
+#
+# - https://masksrb.github.io/guides/rails
+# - https://masksrb.github.io/reference/masks-yml
+defaults: &defaults
+  client:
+    default: demo
+    defaults:
+      allow_second_factor: false
+      allow_profiles: false
+
+development:
+  <<: *defaults
+
+test:
+  <<: *defaults
+
+production:
+  <<: *defaults

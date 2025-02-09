@@ -1,0 +1,5 @@
+👋 Enter the following <%= @link.chars %>-character code to verify "<%= @email.address %>":
+
+> <%= @link.code %>
+
+Your verification code expires in <%= time_ago_in_words(@link.expires_at) %> (<%= @link.expires_at.in_time_zone(@actor.tz).strftime("%b %d at%l:%M%P %Z") %>).

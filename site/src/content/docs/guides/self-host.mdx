@@ -1,0 +1,165 @@
+---
+title: Self-hosting
+description: How to host your own masks server
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+You can run masks using any container orchestration tool, including Docker,
+Portainer, and Kubernetes.
+
+### Examples
+
+The masks repository includes examples for various container orchestration tools.
+
+- [minimal docker-compose.yml](#)
+- or all examples...
+
+## Official images
+
+- Docker: [masksrb/masks](#)
+- Github: [masksrb/masks](#)
+
+Official images run migrations, a web server, async workers, and more supporting
+processes. You can override the command that is run for more fine-grained control
+over this process.
+
+### Customization
+
+You can customize the installation via the following YAML files:
+
+| Name                        | Purpose                                           | Path
+| --------------------------- | ------------------------------------------------- | ---
+| [masks.yml](/reference/masks-yml)          | General settings and features      | `/masks/conf/masks.yml`
+| [actors.yml](/reference/actors-yml)        | Default actors                     | `/masks/conf/actors.yml`
+| [clients.yml](/reference/clients-yml)      | Default clients                    | `/masks/conf/clients.yml`
+| [providers.yml](/reference/providers-yml)  | Default providers                  | `/masks/conf/providers.yml`
+
+Refer to each of the files above for more information. In many cases there are
+ENV vars you can provide instead of a custom file.
+
+### Volumes
+
+The root `/masks` directory is used to store the code required to run masks.
+Additional data and configuration is stored in the following locations, which
+can be overridden with ENV vars:
+
+<Aside>
+  You'll want to ensure these directories are persisted somewhere, especially
+  the storage and data directories.
+</Aside>
+
+##### `MASKS_DIR=/masks/conf`
+
+Directory for customization and configuration files
+
+##### `MASKS_DATA_DIR=/masks/data`
+
+Stores app data, including private keys and SQLite databases (if used)
+
+##### `MASKS_STORAGE_DIR=/masks/storage`
+
+Stores logos, avatars, and other public assets
+
+
+
+### Dependencies
+
+<Aside type="caution">
+  Access over SSL is <i><b>required</b></i>. You must configure masks with SSL
+  certificates or use a proxy like Caddy, traefik, or nginx with LetsEncrypt.
+</Aside>
+
+While you can run masks in a "local" mode, the full set of features depends on a
+database—either SQLite or PostgreSQL.
+
+All other dependencies are optional, including:
+
+| Name                        | Purpose                                           |
+| --------------------------- | ------------------------------------------------- |
+| SMTP                        | Email verification                                |
+| Twilio                      | SMS-based verification                            |
+| Public internet             | Communication with integrations and SSO providers |
+| Filesystem or cloud storage | Storing public assets, avatars, and logos         |
+| Sentry, Prometheus, etc     | Monitoring and status management                  |
+
+#### Migrations
+
+Migrations are run automatically. You can disable this behaviour with
+`MASKS_SKIP_MIGRATIONS=true` and manually migrate. For example, in
+`docker compose`:
+
+```yaml
+services:
+  masks-migrate:
+    image: masksrb/masks:latest
+    command: ["migrate"]
+    restart: "no"
+    # etc...
+
+  masks:
+    image: masksrb/masks:latest
+    command: ["server"]
+    environment:
+      MASKS_SKIP_MIGRATIONS: true
+    depends_on:
+      migrate:
+        condition: service_completed_succesfully
+    # etc...
+```
+
+### Entrypoints
+
+Containers expose the masks Runtime CLI at `/masks/masks` and use it as the default
+entrypoint. By default the `server` sub-command is run, but you can use the container
+to run other commands.
+
+#### Ports
+
+- `5000`: the web server
+- `9394`: prometheus metrics
+
+## Performance
+
+<Aside type="caution">
+  Masks can be write-heavy, meaning database performance will heavily impact the
+  overall application performance.
+</Aside>
+
+The official image boots a multi-threaded web server and workers for handling
+background jobs. By default, one masks container runs 2 processes (web and job),
+each with multiple independent threads (defaulting to just 1, if not specified).
+
+This works fine for low-traffic setups, but others may benefit from
+the following changes:
+
+- Increase the number of processes with `MASKS_WORKERS=n`
+  - Typically this is set to the number of available cores
+- Increase the number of threads per-process with `MASKS_THREADS=n`
+- Run the server and workers separately
+- Scale horizontally (as with most apps)
+
+For example, in a `docker-compose.yml`:
+
+```yaml
+services:
+  masks-job:
+    image: masksrb/masks:latest
+    command: ["worker"]
+    environment:
+      MASKS_WORKERS: 8
+      MASKS_THREADS: 2
+    deploy:
+      mode: replicated
+      replicas: 3
+
+  masks-web:
+    image: masksrb/masks:latest
+    command: ["server"]
+    environment:
+      MASKS_WORKERS: 8
+      MASKS_THREADS: 2
+    deploy:
+      mode: replicated
+      replicas: 2
+```

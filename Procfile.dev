@@ -1,0 +1,4 @@
+app: bin/rails server
+vite: bin/vite dev
+email: npm run watch:email
+site: bin/site

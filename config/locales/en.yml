@@ -1,0 +1,207 @@
+# Files in the config/locales directory are used for internationalization and
+# are automatically loaded by Rails. If you want to use locales other than
+# English, add the necessary files in this directory.
+#
+# To use the locales, use `I18n.t`:
+#
+#     I18n.t "hello"
+#
+# In views, this is aliased to just `t`:
+#
+#     <%= t("hello") %>
+#
+# To use a different locale, set it with `I18n.locale`:
+#
+#     I18n.locale = :es
+#
+# This would use the information in config/locales/es.yml.
+#
+# To learn more about the API, please read the Rails Internationalization guide
+# at https://guides.rubyonrails.org/i18n.html.
+#
+# Be aware that YAML interprets the following case-insensitive strings as
+# booleans: `true`, `false`, `on`, `off`, `yes`, `no`. Therefore, these strings
+# must be quoted to be interpreted as strings. For example:
+#
+#     en:
+#       "yes": yup
+#       enabled: "ON"
+
+en:
+  settings:
+    masks/actor:
+      desc:
+        name: A name for the actor
+        uuid: A public UUID for the actor
+        key: The actor's unique key, derived from their identifier
+        nickname: The actors' semi-public, unique nickname
+        password: The actor's secret password
+        scopes: A list of scopes granted to the actor
+        tz: The actor's preferred timezone
+        created_at: The time the actor was created
+        updated_at: The last time the actor was saved
+    masks/providers/generic_oauth:
+      desc:
+        client_id: "The shared client identifier"
+        client_secret: "The shared client secret"
+        scopes: "Requested scopes, space-separated"
+    masks/providers/generic_oidc:
+      desc:
+        client_id: "The shared client identifier"
+        client_secret: "The shared client secret"
+        scopes: "Requested scopes, space-separated"
+    masks/providers/google:
+      desc:
+        client_id: "The shared client identifier"
+        client_secret: "The shared client secret"
+        scopes: "Requested scopes, space-separated"
+    masks/providers/github:
+      desc:
+        client_id: "The shared client identifier"
+        client_secret: "The shared client secret"
+        scopes: "Requested scopes, space-separated"
+    masks/providers/apple:
+      desc:
+        pem: "Contents of .p8 file from apple (including trailing newline)"
+        client_id: "Service Identifier, from your Services Id config"
+        key_id: "Key ID from Key details page"
+        team_id: "aka App ID prefix"
+        scopes: "Requested scopes, space-separated"
+    masks/providers/twitter:
+      desc:
+        client_id: "The shared client identifier"
+        client_secret: "The shared client secret"
+        scopes: "Requested scopes, space-separated"
+    masks/providers/facebook:
+      desc:
+        client_id: "The shared client identifier"
+        client_secret: "The shared client secret"
+        scopes: "Requested scopes, space-separated"
+    masks/provider:
+      desc:
+        key: The providers's unique key
+        name: A name shown when during login to the provider
+        common: Toggle availability for all clients
+        enabled: Enable or disable the provider without deleting it
+        created_at: The time the provider was created
+        updated_at: The last time the provider was saved
+        disabled_at: The time the provider was disabled
+
+    masks/client:
+      desc:
+        authorization_expires_in: Expire login attempts after
+        id_token_expires_in:
+        access_token_expires_in:
+        authorization_code_expires_in:
+        refresh_token_expires_in:
+        client_token_expires_in:
+        login_link_expires_in:
+        login_link_code_expires_in:
+        email_verification_expires_in:
+        sso_request_expires_in:
+        phone_verification_expires_in:
+        identifier_expires_in:
+        first_factor_login_link_expires_in:
+        first_factor_sso_expires_in:
+        first_factor_password_expires_in:
+        second_factor_backup_code_expires_in:
+        second_factor_phone_expires_in: Timeout for proof of 2FA with TOTP/ROTP
+        second_factor_otp_expires_in: Timeout for proof of 2FA with TOTP/ROTP
+        second_factor_webauthn_expires_in: Timeout for proof of 2FA with webauthn
+        internal_token_expires_in: Timeout for internal sessions
+        onboarding_expires_in: Require onboarding after this expires
+        allow_nicknames: Toggle login with nickname
+        allow_emails: Toggle login with an email address
+        allow_passkeys: Toggle login with a passkey
+        allow_passwords: Toggle password-based login
+        allow_login_links: Toggle login links
+        allow_sso: Allow single sign-on
+        allow_profiles: Allow built-in profile management
+        allow_webauthn: Toggle two-factor auth with Webauthn (excluding passkeys)
+        allow_otp: Toggle two-factor auth with one-time passwords (TOTP/ROTP)
+        allow_backup_codes: Toggle two-factor auth with backup codes
+        allow_phones: Toggle two-factor auth with SMS codes
+        allow_second_factor: Toggle any form of two-factor auth
+        require_approval: Show a consent screen before granting access
+        subject_type: Customize the actor (subject) exposed to the client
+        sector_identifier: An "ID" for use with pairwise subject types
+        pairwise_salt: A "salt" for use with pairwise subject types
+        bg_light: Any valid value for the css "background:" property
+        bg_dark: Any valid value for the css "background:" property
+        autofill_redirect_uri: Auto-fill empty redirect_uris with the first successful
+        fuzzy_redirect_uri: Allow wildcards in redirect_uris
+  sso:
+    generic_oidc:
+      name: OpenID Connect
+    generic_oauth:
+      name: OAuth2
+  auth:
+    invalid_identifier: "invalid identifier"
+    invalid_credentials: "invalid credentials"
+    invalid_request: the request is malformed
+    scopes_required: "unauthorized"
+  scopes:
+    "masks:manage": Manage masks
+  activerecord:
+    attributes:
+      masks/device:
+        user_agent: User agent
+        ip_address: IP address
+        version: This device
+      masks/email:
+        address: Email address
+      masks/phone:
+        number: Phone number
+      masks/actor:
+        backup_codes: Backup codes
+        identifier_type: Identifier
+        emails: Email
+      masks/client:
+        id_token_expires_in: Id token lifetime
+        access_token_expires_in: Access token lifetime
+        authorization_code_expires_in: Authorization code lifetime
+        refresh_token_expires_in: Refresh token lifetime
+        login_link_expires_in: Login link lifetime
+        auth_attempt_expires_in: Auth attempt lifetime
+        email_verification_expires_in: Verified email lifetime
+        login_link_factor_expires_in: Login link lifetime
+        sso_factor_expires_in: Single sign-on lifetime
+        password_factor_expires_in: Auth via password lifetime
+        second_factor_backup_code_expires_in: 2FA with backup code
+        second_factor_phone_expires_in: 2FA with SMS code
+        second_factor_otp_expires_in: 2FA with OTP
+        second_factor_webauthn_expires_in: 2FA with Webauthn
+        internal_token_expires_in: Internal token lifetime
+    errors:
+      models:
+        masks/email:
+          attributes:
+            base:
+              max_for_login: "Cannot add another login email (%{count} maximum)"
+              email_identifier: "Cannot remove primary email"
+        masks/token:
+          attributes:
+            actor_id:
+              blank: must exist
+        masks/actor:
+          attributes:
+            password:
+              unchangeable: cannot be changed. Try again in %{time}...
+            identifier_type:
+              blank: is invalid
+            backup_codes:
+              length: must be replaced by a list of exactly %{total} codes
+              too_short: must be longer than %{count} characters
+              too_long: must be shorter than %{count} characters
+        masks/device:
+          attributes:
+            user_agent:
+              mismatch: changed. You must log in again.
+            ip_address:
+              mismatch: changed. You must log in again.
+            version:
+              mismatch: has expired.
+            backup_codes:
+              length: must be replaced by a list of exactly %{total} codes
+              too_short: must be longer than %{count} characters
+              too_long: must be shorter than %{count} characters

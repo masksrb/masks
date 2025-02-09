@@ -1,0 +1,240 @@
+integration: &integration
+
+default: &default
+  url: "<%= ENV['MASKS_URL'] || 'http://localhost:5000' %>"
+  type: <%= ENV['MASKS_INSTALLATION'] %>
+  name: "<%= ENV['MASKS_NAME'] || Rails.application.name || 'masks' %>"
+  timezone: "<%= ENV['MASKS_TZ'] || 'America/New_York' %>"
+  region: "<%= ENV['MASKS_REGION'] || 'US' %>"
+  private_key: "<%= ENV['MASKS_PRIVATE_KEY'] %>"
+  workers: <%= ENV['MASKS_WORKERS'] || 1 %>
+  threads: <%= ENV['MASKS_THREADS'] || 1 %>
+  debug: <%= 'true' if Rails.env.development?  %>
+  management: true
+  db:
+    url: <%= ENV['MASKS_DB_URL'] %>
+    adapter: <%= ENV['MASKS_DB_ADAPTER'] %>
+    name: <%= ENV['MASKS_DB_NAME'] %>
+    queue:
+      url: <%= ENV['MASKS_QUEUE_DB_URL'] %>
+      adapter: <%= ENV['MASKS_QUEUE_DB_ADAPTER'] %>
+      name: <%= ENV['MASKS_QUEUE_DB_NAME'] %>
+    cache:
+      url: <%= ENV['MASKS_CACHE_DB_URL'] %>
+      adapter: <%= ENV['MASKS_CACHE_DB_ADAPTER'] %>
+      name: <%= ENV['MASKS_CACHE_DB_NAME'] %>
+    websockets:
+      url: <%= ENV['MASKS_WEBSOCKETS_DB_URL'] %>
+      adapter: <%= ENV['MASKS_WEBSOCKETS_DB_ADAPTER'] %>
+      name: <%= ENV['MASKS_WEBSOCKETS_DB_NAME'] %>
+    sessions:
+      url: <%= ENV['MASKS_SESSIONS_DB_URL'] %>
+      adapter: <%= ENV['MASKS_SESSIONS_DB_ADAPTER'] %>
+      name: <%= ENV['MASKS_SESSIONS_DB_NAME'] %>
+  theme:
+    name: "<%= ENV['MASKS_NAME'] || Rails.application.name || 'masks' %>"
+  prompts:
+    - Masks::Prompts::Device
+    - Masks::Prompts::SingleSignOn
+    - Masks::Prompts::Identifier
+    - Masks::Prompts::LoginLink
+    - Masks::Prompts::Password
+    - Masks::Prompts::FirstFactor
+    - Masks::Prompts::Phone
+    - Masks::Prompts::Webauthn
+    - Masks::Prompts::OneTimePassword
+    - Masks::Prompts::BackupCode
+    - Masks::Prompts::SecondFactor
+    - Masks::Prompts::Email
+    - Masks::Prompts::ResetPassword
+    - Masks::Prompts::OAuth
+    - Masks::Prompts::Profile
+    - Masks::Prompts::LastLogin
+    - Masks::Prompts::Internal
+  secret_key: "<%= ENV['MASKS_SECRET_KEY']  %>"
+  encryption_key: "<%= ENV['MASKS_ENCRYPTION_KEY'] %>"
+  deterministic_key: "<%= ENV['MASKS_DETERMINISTIC_KEY'] %>"
+  salt: "<%= ENV['MASKS_SALT'] %>"
+  actors:
+    defaults:
+      scopes:
+        - openid
+  sessions:
+    timeout: <%= ENV['MASKS_SESSIONS_TIMEOUT'] %>
+    inactive: <%= ENV['MASKS_SESSIONS_TIMEOUT'] || '120 days' %>
+  devices:
+    class: <%= ENV.fetch('MASKS_DEVICES_CLASS', 'Masks::Device') %>
+    cookie: <%= ENV.fetch('MASKS_DEVICES_COOKIE', '_device') %>
+    timeout: <%= ENV.fetch('MASKS_DEVICES_TIMEOUT', '') %>
+  providers:
+    types:
+      oidc: "Masks::Providers::GenericOIDC"
+      oauth: "Masks::Providers::GenericOAuth"
+      github: "Masks::Providers::Github"
+      google: "Masks::Providers::Google"
+      facebook: "Masks::Providers::Facebook"
+      twitter: "Masks::Providers::Twitter"
+      apple: "Masks::Providers::Apple"
+  client:
+    types:
+      internal:
+        internal: true
+        redirect_uris: ["/", "/*"]
+        fuzzy_redirect_uri: true
+      management:
+        name: "manage masks"
+        internal: true
+        scopes:
+          required: masks:manage
+        redirect_uris: ["/", "/*"]
+        fuzzy_redirect_uri: true
+      public:
+        pkce: true
+        grant_types:
+          - authorization_code
+          - refresh_token
+      confidential:
+        grant_types:
+          - client_credentials
+          - authorization_code
+          - refresh_token
+      client-credentials:
+        grant_types:
+          - client_credentials
+          - refresh_token
+    defaults:
+      subject_type: pairwise-uuid
+      id_token_expires_in: "6 hours"
+      access_token_expires_in: "6 hours"
+      authorization_code_expires_in: "10 minutes"
+      refresh_token_expires_in: "1 day"
+      client_token_expires_in: "12 hours"
+      authorization_expires_in: "1 hour"
+      login_link_expires_in: "10 minutes"
+      login_link_code_expires_in: "10 minutes"
+      phone_verification_expires_in: "10 minutes"
+      identifier_expires_in: "1 week"
+      first_factor_login_link_expires_in: "12 hours"
+      first_factor_password_expires_in: "1 day"
+      first_factor_sso_expires_in: "3 hours"
+      sso_request_expires_in: "1 hour"
+      second_factor_backup_code_expires_in: "3 hours"
+      second_factor_phone_expires_in: "2 hours"
+      second_factor_otp_expires_in: "2 hours"
+      second_factor_webauthn_expires_in: "2 hours"
+      internal_token_expires_in: "1 day"
+      email_verification_expires_in: "1 year"
+      onboarding_expires_in: "1 year"
+      allow_nicknames: true
+      allow_emails: true
+      allow_passwords: true
+      allow_login_links: true
+      allow_second_factor: true
+      allow_otp: true
+      allow_phones: true
+      allow_webauthn: true
+      allow_backup_codes: true
+      allow_sso: true
+      allow_profiles: true
+      autofill_redirect_uri: false
+      bg_dark: |
+        background: radial-gradient(
+          circle,
+          rgba(62, 65, 55, 1) 0%,
+          rgba(54, 47, 40, 1) 25%,
+          rgba(31, 41, 55, 1) 50%,
+          rgba(10, 8, 14, 1) 100%
+        );
+      bg_light: |
+        background: radial-gradient(
+          circle,
+          #00cdb7,
+          #00c6d2,
+          #00bcea,
+          #00b0fb,
+          #009fff,
+          #2e8eef,
+          #407dde,
+          #4c6ccc,
+          #365ca5,
+          #294b7f,
+          #233a5a,
+          #1f2937
+        );
+  emails:
+    adapter: "<%= ENV['MASKS_EMAILS_ADAPTER'] || 'smtp' %>"
+    from: <%= ENV['MASKS_EMAIL_FROM'] %>
+    reply_to: <%= ENV['MASKS_EMAIL_REPLY_TO'] %>
+    max_for_login: 5
+    smtp:
+      address: <%= ENV['MASKS_SMTP_ADDRESS'] %>
+      port: <%= ENV['MASKS_SMTP_PORT'] %>
+      domain: <%= ENV['MASKS_SMTP_DOMAIN'] %>
+      user_name: <%= ENV['MASKS_SMTP_USER_NAME'] %>
+      password: <%= ENV['MASKS_SMTP_PASSWORD'] %>
+      authentication: <%= ENV['MASKS_SMTP_AUTHENTICATION'] %>
+    sendmail: {}
+  phones:
+    adapter: "<%= ENV['MASKS_PHONES_ADAPTER'] || 'twilio' %>"
+    twilio:
+      account_sid: <%= ENV['MASKS_TWILIO_ACCOUNT_SID'] %>
+      auth_token: <%= ENV['MASKS_TWILIO_AUTH_TOKEN'] %>
+      service_sid: <%= ENV['MASKS_TWILIO_SERVICE_SID'] %>
+  webauthn:
+    rp_name: <%= ENV['MASKS_WEBAUTHN_NAME'] %>
+  storage:
+    adapter: "<%= ENV['MASKS_STORAGE_ADAPTER'] || 'disk' %>"
+    disk:
+      root: "<%= ENV['MASKS_STORAGE_DIR'] %>"
+    s3:
+      access_key_id: <%= ENV['MASKS_S3_ACCESS_KEY_ID'] %>
+      secret_access_key: <%= ENV['MASKS_S3_SECRET_ACCESS_KEY'] %>
+      region: <%= ENV['MASKS_S3_REGION'] %>
+      bucket: <%= ENV['MASKS_S3_BUCKET'] %>
+    gcs:
+      project: <%= ENV['MASKS_GCS_PROJECT'] %>
+      credentials: <%= ENV['MASKS_GCS_CREDENTIALS'] %>
+      bucket: <%= ENV['MASKS_GCS_BUCKET'] %>
+    azure_storage:
+      storage_account_name: <%= ENV['MASKS_AZURE_STORAGE_ACCOUNT_NAME'] %>
+      storage_access_key: <%= ENV['MASKS_AZURE_STORAGE_ACCESS_KEY'] %>
+      container: <%= ENV['MASKS_AZURE_STORAGE_CONTAINER'] %>
+  monitoring:
+    sentry:
+      dsn: <%= ENV['MASKS_SENTRY_DSN'] %>
+    newrelic:
+      license_key: <%= ENV['MASKS_NEWRELIC_LICENSE_KEY'] %>
+      app: <%= ENV['MASKS_NEWRELIC_APP'] || ENV['MASKS_NAME'] || Rails.application.name || 'masks' %>
+
+development:
+  <<: *default
+  url: "http://localhost:5000"
+  private_key: "<%= Rails.root.join('config', 'private.development.key') %>"
+  storage:
+    adapter: "disk"
+    disk:
+      root: <%= ENV.fetch('MASKS_STORAGE_DIR', Rails.root.join('tmp', 'storage')) %>
+  emails:
+    from: <%= ENV.fetch('MASKS_EMAIL_FROM', 'from@example.com') %>
+    reply_to: <%= ENV.fetch('MASKS_EMAIL_REPLY_TO', 'reply-to@example.com') %>
+    adapter: <%= ENV.fetch('MASKS_EMAILS_ADAPTER', 'dev') %>
+    max_for_login: 5
+
+test:
+  <<: *default
+  url: "http://www.example.com"
+  private_key: "<%= Rails.root.join('config', 'private.test.key') %>"
+  storage:
+    adapter: disk
+    disk:
+      root: <%= ENV.fetch('MASKS_STORAGE_DIR', Rails.root.join('tmp', 'storage')) %>
+  phones:
+    adapter: test
+  emails:
+    adapter: "test"
+    from: masks@example.com
+    reply_to: no-reply@example.com
+    max_for_login: 5
+
+production:
+  <<: *default

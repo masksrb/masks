@@ -1,0 +1,36 @@
+---
+title: masks
+description: Self-hosted auth for the open web...
+template: splash
+hero:
+  tagline: self-hosted auth for the open web...
+  image:
+    file: ../../../../app/assets/images/masks.png
+  actions:
+    - text: Try the demo
+      link: /guides/demo/
+      icon: right-arrow
+    - text: Read the docs
+      link: /guides/intro/
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid } from "@astrojs/starlight/components";
+
+## Next steps
+
+<CardGrid stagger>
+  <Card title="Update content" icon="pencil">
+    Edit `src/content/docs/index.mdx` to see this page change.
+  </Card>
+  <Card title="Add new content" icon="add-document">
+    Add Markdown or MDX files to `src/content/docs` to create new pages.
+  </Card>
+  <Card title="Configure your site" icon="setting">
+    Edit your `sidebar` and other config in `astro.config.mjs`.
+  </Card>
+  <Card title="Read the docs" icon="open-book">
+    Learn more in [the Starlight Docs](https://starlight.astro.build/).
+  </Card>
+</CardGrid>

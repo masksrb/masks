@@ -1,0 +1,47 @@
+services:
+  masks:
+    image: masksrb/masks:latest
+    ports:
+      - "5000:5000"
+    environment:
+      MASKS_NAME: Docker example
+      MASKS_URL: https://masks.localhost
+      MASKS_DB_URL: postgres://masks:masks@db:5432/masks
+      MASKS_MANAGER_NICKNAME: manager
+      MASKS_MANAGER_PASSWORD: password
+    volumes:
+      - ./masks-data:/masks/data
+      - ./masks-storage:/masks/storage
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: masks
+      POSTGRES_PASSWORD: masks
+      POSTGRES_DB: masks
+      PGUSER: masks
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready", "-d", "masks"]
+      interval: 30s
+      timeout: 60s
+      retries: 5
+      start_period: 80s
+
+  caddy:
+    image: caddy:2
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - ./caddy-data:/data
+      - ./caddy-config:/config
+    depends_on:
+      - masks

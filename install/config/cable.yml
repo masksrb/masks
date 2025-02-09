@@ -1,0 +1,22 @@
+development:
+  adapter: solid_cable
+  polling_interval: 0.1.seconds
+  message_retention: 1.day
+  <% if Masks.env.db_enabled?(:websockets) %>
+  connects_to:
+    database:
+      writing: websockets
+  <% end %>
+
+test:
+  adapter: test
+
+production:
+  adapter: solid_cable
+  polling_interval: 0.1.seconds
+  message_retention: 1.day
+  <% if Masks.env.db_enabled?(:websockets) %>
+  connects_to:
+    database:
+      writing: websockets
+  <% end %>

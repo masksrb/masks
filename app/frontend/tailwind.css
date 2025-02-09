@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .dim {
+    @apply opacity-75;
+  }
+
+  .row {
+    @apply flex items-center;
+  }
+
+  .cols-1\.5 {
+    @apply flex items-center gap-1.5;
+  }
+
+  .cols-3 {
+    @apply flex items-center gap-3;
+  }
+
+  .rows {
+    @apply flex flex-col items-start;
+  }
+
+  .rows-1\.5 {
+    @apply flex flex-col gap-1.5;
+  }
+
+  .rows-3 {
+    @apply flex flex-col gap-3;
+  }
+
+  .label-xs {
+    opacity: 0.75;
+    @apply text-xs;
+  }
+
+  .label-sm {
+    opacity: 0.75;
+    @apply text-sm;
+  }
+
+  .label-uc {
+    @apply text-xs uppercase font-bold;
+  }
+
+  .label-bold {
+    @apply text-sm font-bold;
+  }
+
+  .box {
+    @apply p-3 rounded-lg;
+  }
+
+  .box-snug {
+    @apply px-3 py-1.5 rounded-lg;
+  }
+}
