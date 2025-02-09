@@ -1,0 +1,41 @@
+---
+title: 👋 Welcome!
+description: A guide in my new Starlight docs site.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+Masks is a self-hostable auth server. It is highly customizable, feature-rich,
+and aims to provide a complete, open-source, end-to-end solution for securing
+apps written in any language.
+
+<Aside type="danger">
+  Masks is <b>unstable</b>. Do not use it except for research purposes.
+</Aside>
+
+## Get started
+
+- [Explore masks](/try) with screenshots, demos, and examples
+- Protect your homelab with [a self-hosted masks server...](/guides/self-host)
+- Add auth to [a Rails app](/guides/ruby-on-rails) or [a web/mobile app...](/guides/integration)
+
+## Features
+
+- OTP, Twilio, and Webauthn support
+- Social sign-in with common & generic providers
+- Built-in support for captchas and rate-limiting
+- Standards-compliant OpenID Connect & OAuth 2 server
+- Client libraries for Ruby and/or JS applications [^2]
+- Web and CLI management for admins
+- And more...
+
+## Further reading
+
+- For technical-folk, [more on how it works...](/guides/how-it-works)
+- Learn to [deploy](/guides/self-host) and [configure](/guides/configuration) masks
+- Check out the [developer reference](/developers)
+- [Contribute](/contribute) issues, code, and more
+
+---
+
+[^2]: You can integrate any application with masks using libraries for OpenID or OAuth2, since it supports these standards by default.

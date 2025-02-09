@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html class="h-full" data-theme="<%= content_for(:theme) || '' %>">
+  <head>
+    <title><%= content_for(:title) || "masks" %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+
+    <%= yield :head %>
+
+    <link rel="icon" href="<%= Masks.conf.favicon_url %>">
+    <link rel="apple-touch-icon" href="<%= Masks.conf.favicon_url %>">
+
+    <%= vite_client_tag %>
+
+    <% if Masks.conf.styles_url %>
+      <%= stylesheet_link_tag Masks.conf.styles_url, skip_pipeline: true %>
+    <% end %>
+
+    <% if current_client&.styles_url %>
+      <%= stylesheet_link_tag current_client.styles_url, skip_pipeline: true %>
+    <% end %>
+
+    <%= yield :styles %>
+  </head>
+
+  <body class="h-full <%= content_for(:body_class) || 'bg-base-300' %>">
+    <%= yield %>
+  </body>
+</html>

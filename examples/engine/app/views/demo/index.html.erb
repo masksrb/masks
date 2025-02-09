@@ -1,0 +1,18 @@
+<% if current_actor %>
+  <h1>
+    You are logged in as
+    "<%= current_actor.identifier %>"
+  </h1>
+
+  <p>
+    This message is visible to anyone with the "demo" scope.
+  </p>
+
+  <a href="<%= masks_login_path('demo', login_hint: current_actor.identifier, prompt: 'profile') %>">Edit your profile</a>
+<% else %>
+<h1>
+    You are not logged in
+  </h1>
+
+  <a href="<%= masks_login_path('demo') %>">Log in</a>
+<% end %>

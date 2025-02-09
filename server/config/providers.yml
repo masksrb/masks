@@ -1,0 +1,33 @@
+default: &default
+  github:
+    common: true
+    client_id: <%= ENV['MASKS_GITHUB_CLIENT_ID'] %>
+    client_secret: <%= ENV['MASKS_GITHUB_CLIENT_SECRET'] %>
+  google:
+    common: true
+    client_id: <%= ENV['MASKS_GOOGLE_CLIENT_ID'] %>
+    client_secret: <%= ENV['MASKS_GOOGLE_CLIENT_SECRET'] %>
+  apple:
+    common: true
+    client_id: <%= ENV['MASKS_APPLE_CLIENT_ID'] %>
+    scopes: <%= ENV['MASKS_APPLE_SCOPES'] %>
+    team_id: <%= ENV['MASKS_APPLE_APP_ID_PREFIX'] %>
+    key_id: <%= ENV['MASKS_APPLE_KEY_ID'] %>
+    pem: <%= ENV['MASKS_APPLE_P8_FILE_CONTENTS'] %>
+  facebook:
+    common: true
+    client_id: <%= ENV['MASKS_FACEBOOK_APP_ID'] %>
+    client_secret: <%= ENV['MASKS_FACEBOOK_APP_SECRET'] %>
+  twitter:
+    common: true
+    client_id: <%= ENV['MASKS_TWITTER_CLIENT_ID'] %>
+    client_secret: <%= ENV['MASKS_TWITTER_CLIENT_SECRET'] %>
+
+development:
+  <<: *default
+
+test:
+  <<: *default
+
+production:
+  <<: *default

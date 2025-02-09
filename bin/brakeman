@@ -1,0 +1,8 @@
+#!/usr/bin/env ruby
+require "rubygems"
+require "bundler/setup"
+
+ARGV.unshift("--ensure-latest")
+ARGV.unshift("--skip-files=examples/")
+
+load Gem.bin_path("brakeman", "brakeman")

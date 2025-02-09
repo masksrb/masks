@@ -1,0 +1,32 @@
+common: &default_settings
+  license_key: <%= Masks.conf.newrelic_license_key %>
+  app_name: <%= Masks.conf.newrelic_app %>
+  log_level: info
+
+  distributed_tracing:
+    enabled: true
+
+  application_logging:
+    enabled: true
+    forwarding:
+      enabled: true
+      max_samples_stored: 10000
+    metrics:
+      enabled: true
+    local_decorating:
+      enabled: false
+
+development:
+  <<: *default_settings
+  app_name: "masks (Development)"
+
+test:
+  <<: *default_settings
+  monitor_mode: false
+
+staging:
+  <<: *default_settings
+  app_name: "masks (Staging)"
+
+production:
+  <<: *default_settings

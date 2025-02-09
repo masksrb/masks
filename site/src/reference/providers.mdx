@@ -1,0 +1,98 @@
+---
+title: Providers (SSO)
+description: How to enable SSO with masks providers
+json: providers.json
+types:
+  headings: true
+---
+
+import { Settings, Types } from "./components.js";
+import { Aside } from "@astrojs/starlight/components";
+
+Providers are a server-only feature that enable single sign-on. You add
+_providers_ to your masks server, enable them on clients (or globally),
+and actors can rely on them to log in.
+
+## Adding providers
+
+You can add clients manually as a manager, via the API, CLI,
+with seeds, a `clients.yml` file, or a number of other ways.
+
+### Command line
+
+You can add and edit providers using the `masks provider` command`.
+
+```sh
+masks provider github client_id=...
+masks provider github common=true # enable for all clients
+```
+
+### Ruby API
+
+You can also seed providers in Ruby with the `Masks` global:
+
+```ruby
+provider = Masks.providers.new(key: "my-provider", type: "oidc", **opts)
+provider.save
+```
+
+### `providers.yml`
+
+Any providers specified in `providers.yml` will be available to masks (in server
+mode only):
+
+```yaml
+#providers.yml
+github:
+  common: true
+  client_id: <%= ENV['MASKS_GITHUB_CLIENT_ID'] %>
+  client_secret: <%= ENV['MASKS_GITHUB_CLIENT_SECRET'] %>
+
+my-provider:
+  type: oidc
+  ...
+```
+
+## Settings
+
+The following settings exist for all providers, regardless of type:
+
+<Settings settings={frontmatter.json.settings} />
+
+You must specify a `type` when adding a provider. For example:
+
+```yaml
+# providers.yml
+my-github-app:
+  type: github
+  ...
+```
+
+<h3>Custom types</h3>
+
+You can add custom types for cases where masks built-ins don't work.
+
+```yaml
+# providers.yml
+my-provider:
+  type: custom-provider
+  ...
+```
+
+```yaml
+# masks.yml
+provider_types:
+  custom-provider: MyApp::CustomProvider
+```
+
+```ruby
+class MyApp::CustomProvider < Masks::Providers::Abstract
+  # See the Ruby API reference for more information
+end
+```
+
+<h3>Built-in types</h3>
+
+There are many built-in types with additional settings:
+
+<Types types={frontmatter.json.types} />

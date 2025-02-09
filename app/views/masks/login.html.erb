@@ -1,0 +1,11 @@
+<%= content_tag :div, "", id: "login", class: 'h-full' %>
+
+<%= javascript_tag("window.LOGIN = #{login_json}") %>
+
+<% content_for :head do %>
+  <%= vite_javascript_tag 'login' %>
+<% end %>
+
+<% content_for :styles do %>
+  <%= vite_stylesheet_tag "login.css" %>
+<% end %>

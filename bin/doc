@@ -1,0 +1,53 @@
+#!/usr/bin/env ruby
+
+ENV["BUNDLE_GEMFILE"] = File.expand_path("../Gemfile", __dir__)
+require "bundler/setup" if File.exist?(ENV["BUNDLE_GEMFILE"])
+
+require_relative "../lib/masks/command"
+
+def output_result(header, cmd, file)
+  print_header header, file, margin: false
+
+  system "#{cmd} > #{file}"
+end
+
+Masks.cmd! do
+  name "doc"
+  desc "documents masks itself"
+
+  run do
+    print_header "deps", "installing..."
+
+    system "bundle config set with 'development,doc'"
+    system "bundle install"
+    system "npm install"
+
+    puts
+
+    system "mkdir -p doc"
+    system "mkdir -p doc/settings"
+
+    print_header "settings", "Generating settings schemas...", margin: false
+    output_result " ", "./cli conf --spec -h", "doc/settings/masks.json"
+    output_result " ", "./cli actor --spec -h", "doc/settings/actors.json"
+    output_result " ", "./cli client --spec -h", "doc/settings/clients.json"
+    output_result " ", "./cli provider --spec -h", "doc/settings/providers.json"
+
+    print_header "graphql", "Generating Graphql schemas..."
+    system "bin/rails masks:doc:graphql"
+
+    system "mkdir -p doc/cli"
+    puts
+
+    output_result "cli", "./cli -h", "doc/cli/USAGE"
+
+    print_header "ruby", "Generating Ruby docs..."
+    system "bundle exec rdoc --format markdown -o doc/ruby"
+
+    print_header "ruby", "Generating site..."
+    system "bin/site build"
+
+    print_header "ruby", "Generating Ruby HTML..."
+    system "bundle exec rdoc --template rorvswild -o site/dist/ruby"
+  end
+end

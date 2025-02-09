@@ -1,0 +1,15 @@
+# Customize your masks installation in this file.
+#
+# - https://masks.pages.dev/guides/rails
+# - https://masks.pages.dev/reference/masks.yml
+defaults: &defaults
+  url: http://localhost:5000
+
+development:
+  <<: *defaults
+
+test:
+  <<: *defaults
+
+production:
+  <<: *defaults

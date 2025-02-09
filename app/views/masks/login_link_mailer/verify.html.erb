@@ -1,0 +1,12 @@
+<%= render "masks/email/header", heading: "Your e-mail verification code...", subheading: "", modifier: 'for', identifier: @actor.nickname || @actor.identifier %>
+
+<div class="flex text-left gap-3 mb-6 text-xl">
+  <span>👋</span>
+  <span>Enter the following code to verify your email—<span class="italic"><%= @email.address %></span>:</span>
+</div>
+
+<div class="rounded-lg p-12 mb-6 text-4xl bg-base-100 text-white font-mono font-bold shadow tracking-widest">
+  <div class="mx-auto text-center">
+    <%= @link.code %>
+  </div>
+</div>

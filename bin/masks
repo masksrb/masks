@@ -1,0 +1,19 @@
+#!/usr/bin/env ruby
+
+require "pathname"
+
+app_path = Pathname.new(ENV["MASKS_APP"] || Dir.pwd)
+
+ENV["BUNDLE_GEMFILE"] ||= app_path.join("Gemfile").to_s
+require "bundler/setup" if File.exist?(ENV["BUNDLE_GEMFILE"])
+
+begin
+  if File.exist?(app_path.join("config/environment.rb"))
+    APP_PATH = app_path.join("config/application").to_s
+    require app_path.join("config/environment").to_s
+  end
+rescue => e
+  puts e
+end
+
+require_relative "../lib/masks/cli"
