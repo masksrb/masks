@@ -1,0 +1,69 @@
+---
+title: Actors
+json: actors.json
+---
+
+import { Settings } from "./components.js";
+
+Actors are records of the people and computers that access your system. Actors
+have a profile, credentials, and anything else necessary to secure their account.
+
+## Adding actors
+
+There are a number of options for adding actors, depending on your use-case.
+
+### Signup & invitations
+
+Open signups and invitations are **disabled** by default.
+
+When signups are enabled, actors will be able to create new accounts with their
+nickname, email, passkey, or single sign-on provider. They can also invite
+others to signup as well, if enabled.
+
+### `actors.yml`
+
+Like other data, you can seed actors with an `actors.yml`:
+
+```yaml
+# actors.yml
+manager:
+  manager: true
+  nickname: tester
+  password: <%= ENV['MASKS_MANAGER_PASSWORD'] %>
+
+tester:
+  nickname: tester
+  password: password
+```
+
+### Command line
+
+Use the `actor` command to add and edit actors:
+
+```sh
+masks actor tester password=password
+masks actor tester assign_scopes="one two three"
+```
+
+### Ruby API
+
+You can also seed actors in Ruby with the `Masks` global:
+
+```ruby
+Masks.seed_actor("tester", password: "password").save
+```
+
+## Defaults
+
+You can supply a set of defaults for all newly created actors in your `masks.yml`:
+
+```yaml
+# masks.yml
+
+actor_scopes:
+  - one two three
+```
+
+## Settings
+
+<Settings settings={frontmatter.json.settings} />

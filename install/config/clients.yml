@@ -1,0 +1,23 @@
+default: &default
+  masks:
+    type: management
+
+  dashboard:
+    name: Dashboard
+    type: internal
+    scopes:
+      required: dashboard
+
+  local:
+    name: Local
+    type: internal
+    local: true
+
+development:
+  <<: *default
+
+test:
+  <<: *default
+
+production:
+  <<: *default

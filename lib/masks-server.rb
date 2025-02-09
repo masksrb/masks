@@ -1,0 +1,8 @@
+require "omniauth"
+require "omniauth-github"
+require "omniauth-facebook"
+require "omniauth-google-oauth2"
+require "omniauth-apple"
+require "omniauth-oauth2-generic"
+require "omniauth_openid_connect"
+# require "omniauth-twitter2"

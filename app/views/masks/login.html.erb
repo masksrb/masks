@@ -1,0 +1,19 @@
+<style>
+  <%= masks_styles %>
+</style>
+
+<%= content_tag :div, "", id: "login", class: 'h-full' %>
+
+<%= javascript_tag("window.LOGIN = #{masks_login_json}") %>
+
+<% content_for :head do %>
+  <%= vite_javascript_tag 'login' %>
+<% end %>
+
+<% content_for :styles do %>
+  <%= vite_stylesheet_tag "login.css" %>
+
+  <% if masks_client %>
+  <%= stylesheet_link_tag main_app.masks_client_css_path(masks_client), skip_pipeline: true %>
+  <% end %>
+<% end %>

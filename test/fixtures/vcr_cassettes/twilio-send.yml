@@ -1,0 +1,72 @@
+---
+http_interactions:
+  - request:
+      method: post
+      uri: https://verify.twilio.com/v2/Services/53rv1c3/Verifications
+      body:
+        encoding: UTF-8
+        string: Channel=sms&To=%2B12345678901
+      headers:
+        Content-Type:
+          - application/x-www-form-urlencoded
+        User-Agent:
+          - twilio-ruby/7.3.6 (darwin23 arm64) Ruby/3.3.5
+        Accept-Charset:
+          - utf-8
+        Accept:
+          - application/json
+        Authorization:
+          - <AUTHORIZATION>
+        Accept-Encoding:
+          - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+    response:
+      status:
+        code: 201
+        message: Created
+      headers:
+        Date:
+          - Tue, 03 Dec 2024 18:51:10 GMT
+        Content-Type:
+          - application/json; charset=utf-8
+        Content-Length:
+          - "752"
+        Connection:
+          - keep-alive
+        Access-Control-Allow-Origin:
+          - "*"
+        Access-Control-Allow-Headers:
+          - Accept, Authorization, Content-Type, If-Match, If-Modified-Since, If-None-Match,
+            If-Unmodified-Since, Idempotency-Key
+        Access-Control-Allow-Credentials:
+          - "true"
+        Access-Control-Allow-Methods:
+          - GET, POST, DELETE, OPTIONS
+        Access-Control-Expose-Headers:
+          - ETag
+        Twilio-Request-Id:
+          - RQ3bf0b8335138325d95bcff773d8e2d5a
+        Twilio-Request-Duration:
+          - "0.219"
+        Twilio-Concurrent-Requests:
+          - "1"
+        X-Shenanigans:
+          - none
+        X-Powered-By:
+          - AT-5000
+        X-Home-Region:
+          - us1
+        X-Api-Domain:
+          - verify.twilio.com
+      body:
+        encoding: UTF-8
+        string:
+          '{"status": "pending", "payee": null, "date_updated": "2024-12-03T18:51:10Z",
+          "send_code_attempts": [{"attempt_sid": "VL07be49cc9c2142473242d83b31295bdc",
+          "channel": "sms", "time": "2024-12-03T18:51:10.017Z"}], "account_sid": "<ACCOUNT_SID>",
+          "to": "+12345678901", "amount": null, "valid": false, "lookup": {"carrier":
+          {"mobile_country_code": "123", "type": "mobile", "error_code": null, "mobile_network_code":
+          "610", "name": "Phone Services"}}, "url": "https://verify.twilio.com/v2/Services/VA32b40823b4368d759b7967b5b6cc933c/Verifications/VE2c004e4f012df55b9871f671fc49356a",
+          "sid": "VE2c004e4f012df55b9871f671fc49356a", "date_created": "2024-12-03T18:51:10Z",
+          "service_sid": "53rv1c3", "channel": "sms"}'
+    recorded_at: Tue, 03 Dec 2024 18:51:10 GMT
+recorded_with: VCR 6.3.1

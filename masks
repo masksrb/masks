@@ -1,0 +1,116 @@
+#!/usr/bin/env ruby
+ENGINE_ROOT = File.expand_path(".", __dir__)
+ENGINE_PATH = File.expand_path("./lib/masks/engine", __dir__)
+APP_PATH = File.expand_path("./install/config/application", __dir__)
+
+# Set up gems listed in the Gemfile.
+ENV["BUNDLE_GEMFILE"] ||= File.expand_path("./Gemfile", __dir__)
+require "bundler/setup" if File.exist?(ENV["BUNDLE_GEMFILE"])
+
+require "#{File.dirname(APP_PATH)}/environment"
+require "shellwords"
+require "optparse"
+require "colorize"
+require "thor"
+
+def generator(n, d)
+  args =
+    ARGV
+      .map do |arg|
+        if %w[--help -h].include?(arg)
+          "--usage"
+        elsif arg.start_with?("-")
+          arg if args.include?(arg)
+        else
+          arg.shellescape
+        end
+      end
+      .uniq
+
+  Masks.cmd do
+    name n
+    desc d
+
+    def help
+      system "bin/rails g masks:#{name} --usage"
+    end
+
+    run { exit system "bin/rails g masks:#{args.join(" ")}" }
+  end
+end
+
+Masks
+  .cli do
+    name "masks"
+    desc "Commands to interact with a local masks server."
+
+    cmd Masks::ConfCommand.new
+    cmd Masks::ActorCommand.new
+    cmd Masks::ClientCommand.new
+    cmd Masks::ProviderCommand.new
+
+    cmd do
+      name "migrate"
+      desc "Run migrations and seed data"
+
+      run { system "bin/rails db:migrate db:seed" }
+    end
+
+    cmd do
+      name "console"
+      desc "Open a console with access to masks"
+
+      run { system "bin/rails console" }
+    end
+
+    cmd do
+      name "worker"
+      desc "Start masks job workers"
+
+      run do
+        unless ENV["MASKS_SKIP_MIGRATIONS"]
+          system "bin/rails db:migrate db:seed"
+        end
+
+        system "bin/jobs"
+      end
+    end
+
+    cmd do
+      name "server"
+      desc "Start the masks web server (and job workers)"
+
+      run do
+        unless ENV["MASKS_SKIP_MIGRATIONS"]
+          system "bin/rails db:migrate db:seed"
+        end
+
+        system "bin/rails server"
+      end
+    end
+
+    def help
+      puts "     #{set_color(" masks ", :black, :on_white)}  Runtime CLI"
+      puts
+      thor.say_status("Usage", "masks [command] [options]")
+      thor.say opts
+      puts
+      thor.say_status(
+        "Note",
+        "Use the Remote CLI to manage a remote masks server.",
+        :blue,
+      )
+      puts
+      thor.say_status("Commands", "")
+      puts
+
+      cmds = cmd.sort.map { |k, cmd| ["#{k}", cmd.desc] }
+
+      print_table cmds, indent: 4
+
+      puts
+    end
+
+    run { help }
+  end
+  .run!

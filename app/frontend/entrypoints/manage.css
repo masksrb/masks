@@ -1,0 +1,43 @@
+@import "../tailwind.css";
+
+input.no-inc[type="number"]::-webkit-outer-spin-button,
+input.no-inc[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input.no-inc[type="number"] {
+  -moz-appearance: textfield;
+}
+
+.rainbow {
+  background-color: #ff0000;
+  animation: bgColor 1s infinite linear;
+}
+
+@keyframes bgColor {
+  12.5% {
+    background-color: #ff0000;
+  }
+  25% {
+    background-color: #ffa500;
+  }
+  37.5% {
+    background-color: #ffff00;
+  }
+  50% {
+    background-color: #7fff00;
+  }
+  62.5% {
+    background-color: #00ffff;
+  }
+  75% {
+    background-color: #0000ff;
+  }
+  87.5% {
+    background-color: #9932cc;
+  }
+  100% {
+    background-color: #ff1493;
+  }
+}

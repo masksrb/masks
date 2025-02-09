@@ -1,0 +1,551 @@
+---
+title: Ruby on Rails
+description: How to run masks in a Rails app
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+The `masks` gem allows you to integrate a Rails app with any masks server.
+
+<Aside type="tip">
+  Advanced users can use the gem to mount a masks server inside their Rails app,
+  rather than using a separate, containerized deployment.
+</Aside>
+
+### Getting started
+
+To get started, add `masks` to your Gemfile:
+
+```bash
+bundle add masks
+```
+
+Run the installation script, including the canonical URL for your masks server:
+
+```bash
+masks:install --url https://login.example.com
+```
+
+If you also want to host a masks server in your app, use _engine mode_:
+
+```bash
+masks:install --server --url ...
+```
+
+Running with the `--server` flag will install typical features plus what's
+required to run the masks server, including migrations, additional YML config,
+and routes.
+
+## Quickstart
+
+To add auth to your routes and controllers, either:
+
+- provide a discovery key to automatically register your app, or
+- share the credentials for an existing client
+
+For example:
+
+```yaml
+#config/masks.yml
+url: https://login.example.com
+discovery:
+  key: <%= ENV['MASKS_DISCOVERY_KEY'] %>
+```
+
+Or share credentials manually:
+
+```yaml
+#config/clients.yml
+app:
+  key: <%= ENV['MASKS_APP_KEY'] %>
+  secret: <%= ENV['MASKS_APP_SECRET'] %>
+  type: confidential
+```
+
+<Aside>
+  You can add any number of clients for the different portions of your app using
+  `clients.yml`, the Ruby API, or the options available with engine mode.
+</Aside>
+
+Finally, add auth to routes with the `mask` method:
+
+```ruby
+# config/routes.rb
+Rails.application.routes.draw { mask "/protected" }
+```
+
+Or in controllers, where fine-grained control is available:
+
+```ruby
+# app/controllers/welcome_controller.rb
+class WelcomeController < ApplicationController
+  include Masks::Controller
+
+  mask only: :index, optional: true
+end
+```
+
+Once complete, visit `/login` or one of your masked routes to log in.
+
+### Routing
+
+#### `mask(path, **opts, &block)`
+
+Requires an authenticated actor for the passed path. A client _must_ be
+specified. For example:
+
+```ruby
+# config/routes.rb
+Rails.application.routes.draw do
+  use_masks
+
+  mask "/protected" # The default client is used, if configured
+  mask "/public-path", optional: true
+  mask "/staff", with: "my-client", scopes: ["staff"]
+  mask "/api", bearer: true do
+    bearer_token.client if bearer_token.scope?("public-api")
+  end
+end
+```
+
+<Aside>
+  A `mask` in your routes applies to any matching path _or subpath_. Wildcards,
+  parameters, and regular expressions are **not supported**. Use the `mask`
+  method in your controllers for fine-grained control.
+</Aside>
+
+#### `use_masks(**opts)`
+
+Generates a `/login` route for each client, plus more if running a rails engine.
+
+```
+GET /login              # Log in using the default client
+GET /login/:client_id   # Log in using a specific client
+```
+
+You can customize the path prefix with `use_masks(login: '/my-login')`.
+
+Running `masks:install` will automatically add this to your `config/routes.rb`.
+
+### Controllers
+
+#### `Masks::Controller.mask`
+
+You can also `mask` controller actions by including `Masks::Controller`.
+
+```ruby
+class WelcomeController < ApplicationController
+  include Masks::Controller
+
+  mask only: :index # default client is used
+  mask only: :staff, with: :staff_client, scopes: ["staff"]
+
+  rescue_from Masks::LoggedOut do |e|
+    # redirect_to e.redirect_uri
+  end
+
+  def index
+    # current_actor and current_client are available...
+  end
+
+  def staff
+    @writable = current_actor.scope?("staff:manage")
+  end
+
+  private
+
+  def staff_client
+    # e.g. Masks.client(...)
+  end
+end
+```
+
+Just like calling `mask` in your routes, `mask` in a controller will require
+login before granting access (unless you pass `optional: true`). While a client
+is always required, in some cases you also need to pass
+
+The `Masks::Controller` concern will login according to client settings. If
+masks is unable to infer the appropriate strategy to use, you may need to specify
+it manually with the `type:` key:
+
+```ruby
+class WelcomeController < ApplicationController
+  include Masks::Controller
+
+  mask only: :index # default client is used
+  mask only: :staff, with: :staff_client, scopes: ["staff"]
+
+  rescue_from Masks::LoggedOut do |e|
+    # redirect_to e.redirect_uri
+  end
+
+  def index
+    # current_actor, current_manager, current_client, and current_device
+    # are all available in actions and views.
+  end
+
+  def staff
+    @writable = current_actor.scope?("staff:manage")
+  end
+
+  private
+
+  def staff_client
+    # TODO
+  end
+end
+```
+
+Refer to the [`clients.yml` reference](/reference/clients#clientsyml)
+
+In some cases, masks is able to infer
+
+- `Masks::InternalController`for internal clients
+- `Masks::ClientController` for confidential clients
+- `Masks::PKCEController` for pkce-enabled clients
+
+In additional to [the other controller concerns](/clients/ruby#controllers)
+available to all Rails clients, you can create controllers that require an
+_internal_ client. Controllers including `Masks::InternalController` assume they
+are running _inside_ the masks server and thus have access to cookies and
+internal data.
+
+#### `Masks::InternalController`
+
+When included, adds the `mask` method plus additional helper methods:
+
+```ruby
+class WelcomeController < ApplicationController
+  include Masks::InternalController
+
+  mask only: :index
+  mask only: :staff, scopes: ["staff"]
+
+  rescue_from Masks::LoggedOut do |e|
+    # redirect_to e.redirect_uri
+  end
+
+  def index
+    # current_actor, current_manager, current_client, and current_device
+    # are all available in actions and views.
+  end
+
+  def staff
+    @writable = current_actor.scope?("staff:manage")
+  end
+end
+```
+
+The `mask` method works similar to the method at the routing layer, except it
+relies on controller hooks instead of middleware.
+
+## `Masks::Engine`
+
+### Quickstart
+
+Customize your `masks.yml` and `clients.yml`. For example:
+
+```yaml
+# config/masks.yml
+name: My app
+url: http://localhost:3000
+clients:
+  default: my-app
+```
+
+Your users will always log in to a particular _client_.
+
+```yaml
+# config/clients.yml
+my-app:
+  type: internal
+masks:
+  type: management
+```
+
+Protect your controllers:
+
+```ruby
+# app/controllers/my_controller.rb
+
+class MyController < ApplicationController
+  include Masks::InternalController
+
+  mask only: :index, optional: true
+  mask only :admin, managers_only: true
+end
+```
+
+<Aside type="tip">
+  Or protect in your `config/routes.rb` with [`masks_engine`](#masks_engineopts)
+  and [`mask`](#maskpath-opts-block).
+</Aside>
+
+Then seed your actors with `actors.yml`, `Masks.seed`, or a generator:
+
+```bash
+bin/rails g masks:actor manager password=password manager=true
+bin/rails g masks:actor test password=password
+bin/rails db:seed
+```
+
+Once the database is seeded, start the Rails server and visit any of the
+following paths to log in:
+
+- `/` or `/login` to login to your app
+- `/masks` to manage masks (managers only)
+
+### Configuration
+
+You can override configuration via YAML or ENV vars as outlined in the detailed
+configuration guide. Just like the containerized deployment, masks will search
+for the following files in `Rails.root` for configuration.
+
+| Name                                               | Purpose                       | Path                   |
+| -------------------------------------------------- | ----------------------------- | ---------------------- |
+| [masks.yml](/reference/masks.yml)                  | General settings and features | `config/masks.yml`     |
+| [actors.yml](/reference/actors#actorsyml)          | Default actors                | `config/actors.yml`    |
+| [clients.yml](/reference/clients#clientsyml)       | Default clients               | `config/clients.yml`   |
+| [providers.yml](/reference/providers#providersyml) | Default providers             | `config/providers.yml` |
+
+You can also customize `Masks` at runtime with an initializer.
+
+#### Dependencies
+
+When used as an engine, you must ensure your app has configured the following
+Rails services:
+
+|                |                                                            |
+| -------------- | ---------------------------------------------------------- |
+| Active Record  | Used to store settings, clients, actors, tokens, etc.      |
+| Action Mailer  | Used to send verification emails                           |
+| Active Storage | Used to store logos, avatars, and other assets             |
+| Active Job     | Used to clean up data                                      |
+| `Rails.cache`  | Stores timeouts, FIDO metadata, and other short-lived data |
+
+#### Sessions
+
+You must ensure `config.session_store` is set. _Avoid_ cookie-based sessions.
+
+<Aside type="tip">
+  There are a number of downsides to using cookies as the session storage
+  mechanism. It is **highly recommended** to use another storage backend, like
+  the database, cache, or some other persistent store.
+</Aside>
+
+#### Secrets
+
+You must ensure that your app has properly configured and secured the following values:
+
+- `config.secret_key_base`
+- `config.active_record.encryption.primary_key`
+- `config.active_record.encryption.deterministic_key`
+- `config.active_record.encryption.key_derivation_salt`
+
+These are used to secure sessions, hash passwords, and encrypt sensitive data at
+rest.
+
+#### Assets & frontend
+
+A hybrid frontend is shipped with masks, allowing a number of deployment
+options. The default configurations expects your asset pipeline is properly
+set up and precompiled in production.
+
+You can customize the frontend in a variety of ways:
+
+- With basic, per-client theming options
+- By including and extending the default UI
+- Using the Login API and a SPA framework
+- With custom controllers and views
+
+### Routing
+
+#### `use_masks`
+
+When running the rails engine, you can also set the following:
+
+```ruby
+# config/routes.rb
+Rails.application.routes.draw do
+  use_masks(
+    sso: "/sso",
+    oidc: false,
+    token: "/token",
+    graphql: "/login.graphql",
+    manage: "/masks",
+  )
+end
+```
+
+Which adds these routes:
+
+```
+GET /login?client_id=...&response_typ...       Authorization code flow (for oidc)
+GET /login.graphql                             Login API
+GET /sso/:provider                             Single sign-on request & callbacks
+GET /token                                     Token endpoint (for oidc)
+GET /.well-known/:client_id/...                Discovery endpoints (for oidc)
+GET /masks                                     When management is enabled
+```
+
+#### `mask(path, **opts, &block)`
+
+_requires authentication_ for the passed path. A client _must_ be specified:
+
+```ruby
+mask "/" # The default client is used, if configured
+mask "/staff", with: "my-client", scopes: ["staff"]
+mask "/foo", optional: true
+mask "/masks", managers_only: true
+mask "/api", bearer: true do
+  bearer_token.client if bearer_token.scope?("public-api")
+end
+```
+
+<Aside>
+  This works for _any path_, as it checked at the middleware level. Wildcard
+  paths are _not_ supported. You can use a similar method in your controllers
+  for more fine-grained control.
+</Aside>
+
+### Controllers
+
+In additional to [the other controller concerns](/clients/ruby#controllers)
+available to all Rails clients, you can create controllers that require an
+_internal_ client. Controllers including `Masks::InternalController` assume they
+are running _inside_ the masks server and thus have access to cookies and
+internal data.
+
+#### `Masks::InternalController`
+
+When included, adds the `mask` method plus additional helper methods:
+
+```ruby
+class WelcomeController < ApplicationController
+  include Masks::InternalController
+
+  mask only: :index
+  mask only: :staff, scopes: ["staff"]
+
+  rescue_from Masks::LoggedOut do |e|
+    # redirect_to e.redirect_uri
+  end
+
+  def index
+    # current_actor, current_manager, current_client, and current_device
+    # are all available in actions and views.
+  end
+
+  def staff
+    @writable = current_actor.scope?("staff:manage")
+  end
+end
+```
+
+The `mask` method works similar to the method at the routing layer, except it
+relies on controller hooks instead of middleware.
+
+### Models
+
+Masks includes the models necessary to function, but your app must specify how
+they work. While the YML configuration files and seeds work for simple cases,
+you can also interact with the models in code and create dynamic setups.
+
+#### `Masks.installation`
+
+This global mediates access to clients, actors, settings, tokens, and more.
+
+You can change your installation `type` in your `masks.yml`. You can choose
+between some built-in types:
+
+- `type: dynamic` loads settings from the database
+- `type: readonly` loads settings from `masks.yml`
+
+You can also provide your own _custom_ implementation:
+
+```yaml
+# config/masks.yml
+type: MyApp::MasksInstallation
+```
+
+```ruby
+module MyApp
+  class MasksInstallation < Masks::Installation::Database
+    def client(key)
+      MyApp::CustomClient.find_by(key:)
+    end
+  end
+end
+```
+
+As long as your installation adheres to the `Masks::Installer` interface most
+functionality will work. Take a look at the Ruby API for more information,
+including details for `Masks::Actor`, `Masks::Client`, and so on.
+
+#### `Masks::Client`
+
+There are several built-in client types:
+
+- `internal` - Creates internal tokens and redirects
+- `confidential` - For backend clients. Returns auth codes, access tokens, and ID tokens
+- `public` - For clients unable to keep secrets. PKCE required
+- `management` - Only allow masks managers
+- `client-credentials` - Create client tokens using the token endpoint
+
+You can also [create your own client types](/reference/masks.yml#clients). For example:
+
+Refer to the [`clients.yml`](/reference/clients#clientsyml) and `Masks::Client` reference for a full list of
+attributes you can customize—there are quite a lot!
+
+#### `Masks::Actor`
+
+Actors have:
+
+- identifiers—a nickname, email, passkey, or social login
+- credentials—a password, phone number, hardware keys, and more
+- scopes indicating access to various resources
+- an optional profile, including address, name, etc.
+
+You can seed actors with `Masks.seed`, `actors.yml`, generators, or masks
+built-in signup & invitation flows. You can create actors and custom flows in a
+number of ways:
+
+- Custom signup & social sign-in
+- Invitation, device
+- Profiles and account management
+- Associations with bespoke records
+
+### Generators
+
+Run the following generators to create/update records from the command-line.
+Records that already exist will be updated rather than created.
+
+```
+$ bin/rails g masks:actor admin password=password
+$ bin/rails g masks:client my-app type=internal
+$ bin/rails g masks:provider github client_id=...
+```
+
+## Examples
+
+Take a look at [the containerized version][container] or [an example rails app][example].
+
+[container]: https://github.com/masksrb/masks/tree/main/install
+[example]: https://github.com/masksrb/masks/tree/main/examples/engine
+
+### Clients
+
+If your client has _dynamic registration_ enabled it can be used to create other
+clients using the Client API. Add them to your [`clients.yml`](/reference/clients#clientsyml)
+or use the `Masks` Ruby API to create them.
+
+```yaml
+#config/clients.yml
+
+my-client:
+  type: confidential
+  name: Test app
+  scopes: ["foobar"]
+  redirect_uris: https://app.example.com/login
+  fuzzy_redirect_uris: true
+```

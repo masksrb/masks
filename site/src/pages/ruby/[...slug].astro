@@ -1,0 +1,30 @@
+---
+import StarlightPage from "@astrojs/starlight/components/StarlightPage.astro";
+import { getCollection, getEntry, render } from "astro:content";
+
+export async function getStaticPaths() {
+  const entries = await getCollection("ruby");
+
+  return entries.map((entry) => ({
+    params: { slug: entry.id },
+    props: { entry },
+  }));
+}
+
+const entry = await getEntry("ruby", Astro.params.slug);
+const headings = entry?.rendered?.metadata?.headings
+  ?.map((h, i) => {
+    if (i === 0) {
+      return;
+    }
+
+    return { ...h, depth: h.depth + 1 };
+  })
+  .filter(Boolean);
+
+const { Content } = await render(entry);
+---
+
+<StarlightPage frontmatter={{ title: "Ruby API" }} {headings}>
+  <Content />
+</StarlightPage>

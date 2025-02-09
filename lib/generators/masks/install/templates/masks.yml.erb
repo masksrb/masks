@@ -1,0 +1,15 @@
+# Customize your masks installation in this file.
+#
+# - https://masksrb.github.io/guides/rails
+# - https://masksrb.github.io/reference/masks.yml
+defaults: &defaults
+  url: <%= @url || "<%%= ENV['MASKS_URL'] %%>" %>
+  <% if @server%><%= "mode: server\n" %><% end %>
+development:
+  <<: *defaults
+
+test:
+  <<: *defaults
+
+production:
+  <<: *defaults

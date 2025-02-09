@@ -1,0 +1,5 @@
+#!/usr/bin/env ruby
+
+Dir.chdir "./site" do
+  exec "npm run dev"
+end

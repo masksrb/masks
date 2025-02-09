@@ -1,0 +1,64 @@
+---
+title: HTTP APIs
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+There are several HTTP-based APIs exposed by the masks server:
+
+| Name               | Purpose                                                       |
+| ------------------ | ------------------------------------------------------------- |
+| Login endpoint     | A mixed-used endpoint for handling login, signup, and more... |
+| Token endpoint     | A JSON API for creating tokens                                |
+| Discovery endpoint | A JSON API for discovering clients, JWKS, and more            |
+| GraphQL API        | A structured API covering most masks functionality            |
+
+## Login endpoint
+
+This endpoint can be used by any masks client to log in actors.
+
+<Aside>
+  A user-agent with support for cookies is _**required**_ to used this endpoint.
+</Aside>
+
+### Path
+
+Typical masks servers expose the login endpoint at `/login`:
+
+```
+GET /login                # Uses the configured internal_client
+GET /login/:client_id     # Specify an internal client
+GET /login?client_id&...  # For others (e.g. type=confidential clients)
+```
+
+When accessed, it returns an identifier for a _login request_ along with
+more useful context.
+
+### Authorization
+
+When accessed by a typical, modern browser, HTML content will be returned.
+
+### Methods
+
+- `GET` — starts (or resumes) a login request
+- `POST` - updates a login request
+
+### Content types
+
+-
+
+When you make a `GET` request, the login endpoint returns an `X-Login-Id` header.
+
+```
+GET  /login
+```
+
+### Parameters
+
+#### client_id
+
+## Token endpoint
+
+## GraphQL
+
+## OpenID connect

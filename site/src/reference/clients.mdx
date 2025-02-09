@@ -1,0 +1,97 @@
+---
+title: Clients
+description: How to create, customize, and manage clients in masks
+json: clients.json
+---
+
+import { Settings, ClientTypes } from "./components.js";
+import { Aside } from "@astrojs/starlight/components";
+
+_Clients_ are consumers of the masks server. Typically they are web or mobile
+apps that manage data only meant for authenticated actors.
+
+## Adding clients
+
+You can add clients manually as a manager, via the API, CLI,
+with seeds, a `clients.yml` file, or a number of other ways.
+
+### `clients.yml`
+
+Any clients specified in `clients.yml` will be available to masks:
+
+```yaml
+mobile:
+  name: My mobile app
+  type: public
+
+admin:
+  name: Admins only
+  type: internal
+  scopes:
+    required: admin
+```
+
+Refer to [the settings](#settings) for a complete set of options.
+
+### Command line
+
+When in _server mode_ you can make new clients using the command line.
+
+The following adds an internal client with a key of `my-app` named `"My app"`:
+
+```sh
+masks client my-app name="My app" type=internal
+```
+
+You can also edit clients, given a key:
+
+```sh
+masks client my-app allow_sso=false
+```
+
+### Ruby API
+
+You can also seed clients in Ruby with the `Masks` global:
+
+```ruby
+key = "my-client"
+
+client = Masks.seed_client(key, **opts)
+client.save
+
+client = Masks.client(key)
+```
+
+## Types
+
+You'll notice most examples specify a `type`. Types are optional, since they are
+just named defaults. There are several built-in types:
+
+<div class="mt-3">
+  <ClientTypes types={frontmatter.json.types} client:only />
+</div>
+
+You can add custom types if necessary using the `client_types` key in
+your `masks.yml`:
+
+```yaml
+#config/masks.yml
+client_types:
+  my-type:
+    internal: true
+    allow_factor2: false
+    # etc...
+```
+
+<Aside type="tip">
+  _**Internal** clients_ expose tokens via cookies and the session, where other
+  types would expose authorization codes, access tokens, or ID tokens (as JWTs)
+  in the redirect URL.
+</Aside>
+
+## Settings
+
+In general, you can pass any of the following settings to the various APIs for
+adding & editing clients.
+
+<Settings settings={frontmatter.json.settings} />

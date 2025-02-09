@@ -1,0 +1,57 @@
+{
+  "name": "Actor",
+  "type": "actor",
+  "notes": "You can adjust scopes with the following:\n\nassign_scopes=foo,bar  # Assigns the foo & bar scopes\nremove_scopes=foo      # Removes the foo scope\n",
+  "settings": {
+    "id": {
+      "desc": null,
+      "env": null,
+      "default": "null"
+    },
+    "key": {
+      "desc": "The actor's unique key, derived from their identifier",
+      "env": null,
+      "default": "null"
+    },
+    "uuid": {
+      "desc": "A public UUID for the actor",
+      "env": null,
+      "default": "null"
+    },
+    "name": {
+      "desc": "A name for the actor",
+      "env": null,
+      "default": "null"
+    },
+    "nickname": {
+      "desc": "The actors' semi-public, unique nickname",
+      "env": null,
+      "default": "null"
+    },
+    "password": {
+      "desc": "The actor's secret password",
+      "env": null,
+      "default": "null"
+    },
+    "scopes": {
+      "desc": "A list of scopes granted to the actor",
+      "env": null,
+      "default": "null"
+    },
+    "tz": {
+      "desc": "The actor's preferred timezone",
+      "env": null,
+      "default": "null"
+    },
+    "created_at": {
+      "desc": "The time the actor was created",
+      "env": null,
+      "default": "null"
+    },
+    "updated_at": {
+      "desc": "The last time the actor was saved",
+      "env": null,
+      "default": "null"
+    }
+  }
+}

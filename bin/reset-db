@@ -1,0 +1,63 @@
+#!/bin/zsh
+
+# Exit immediately if a command exits with a non-zero status and print all commands
+set -euo pipefail
+set -x
+
+# Functions
+reset_sqlite() {
+  echo "Setting up SQLite environment..."
+
+  export MASKS_DB_ADAPTER=sqlite3
+  export MASKS_QUEUE_DB_ADAPTER=sqlite3
+  export MASKS_CACHE_DB_ADAPTER=sqlite3
+  export MASKS_WEBSOCKETS_DB_ADAPTER=sqlite3
+  export MASKS_SESSIONS_DB_ADAPTER=sqlite3
+
+  echo "Cleaning up SQLite schema files..."
+  rm -f install/db/*.sqlite3.rb || echo "SQLite: No schema files to clean up"
+
+  echo "Resetting SQLite databases..."
+  rm -f install/data/*.sqlite3 || echo "SQLite: No database files to clean up"
+  bin/rails db:create
+  bin/rails db:migrate
+  bin/rails db:seed
+}
+
+reset_postgresql() {
+  echo "Setting up PostgreSQL environment..."
+
+  export MASKS_DB_ADAPTER=postgresql
+  export MASKS_QUEUE_DB_ADAPTER=postgresql
+  export MASKS_CACHE_DB_ADAPTER=postgresql
+  export MASKS_WEBSOCKETS_DB_ADAPTER=postgresql
+  export MASKS_SESSIONS_DB_ADAPTER=postgresql
+
+  echo "Cleaning up PostgreSQL schema files..."
+  rm -f install/db/*.postgresql.rb || echo "PostgreSQL: No schema files to clean up"
+
+  echo "Dropping all PostgreSQL databases (except 'postgres' and templates)..."
+  databases=$(psql -U postgres -t -c "SELECT datname FROM pg_database WHERE datistemplate = false AND datname <> 'postgres';")
+
+  for dbname in ${(f)databases}; do
+    if [[ -n "$dbname" ]]; then
+      echo "Dropping database: $dbname"
+      psql -U postgres -c "DROP DATABASE IF EXISTS \"$dbname\";"
+    fi
+  done
+
+  echo "Resetting PostgreSQL databases via Rails..."
+  bin/rails db:drop || echo "PostgreSQL: Nothing to drop"
+  bin/rails db:create
+  bin/rails db:migrate
+  bin/rails db:seed
+}
+
+rm -f install/db/primary/*_add_masks.rb || echo "Generating migrations..."
+
+bin/rails g masks:install --database primary --migrations
+
+reset_sqlite
+reset_postgresql
+
+npm run format

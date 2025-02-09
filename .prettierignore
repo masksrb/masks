@@ -1,0 +1,14 @@
+vendor
+.release-please-manifest.json
+CHANGELOG.md
+**/database.yml
+**/cache.yml
+**/cable.yml
+install/public
+public
+aaguids
+package-lock.json
+examples/engine/tmp
+install/data/storage
+site/.astro
+site/.vscode

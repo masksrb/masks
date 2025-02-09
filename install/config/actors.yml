@@ -1,0 +1,20 @@
+default: &default
+  manager:
+    manager: true
+    nickname: "<%= ENV['MASKS_MANAGER_NICKNAME'] %>"
+    password: "<%= ENV['MASKS_MANAGER_PASSWORD'] %>"
+    email: "<%= ENV['MASKS_MANAGER_EMAIL'] %>"
+
+  tester:
+    manager: true
+    nickname: tester
+    password: pooboy!
+
+development:
+  <<: *default
+
+test:
+  <<: *default
+
+production:
+  <<: *default
