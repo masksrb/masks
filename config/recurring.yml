@@ -1,0 +1,25 @@
+production:
+  cleanup_sessions:
+    class: "Masks::CleanupJob"
+    args: ["Masks::SessionRecord"]
+    queue: every day at 9pm
+  cleanup_devices:
+    class: "Masks::CleanupJob"
+    args: ["Masks::Device"]
+    queue: every day at 10pm
+  cleanup_actors:
+    class: "Masks::CleanupJob"
+    args: ["Masks::Actor"]
+    queue: every day at 11pm
+  cleanup_id_tokens:
+    class: "Masks::CleanupJob"
+    args: ["Masks::IdToken"]
+    queue: every day at 12pm
+  cleanup_access_tokens:
+    class: "Masks::CleanupJob"
+    args: ["Masks::AccessToken"]
+    queue: every day at 1am
+  cleanup_authorization_codes:
+    class: "Masks::CleanupJob"
+    args: ["Masks::AuthorizationCode"]
+    queue: every day at 2am

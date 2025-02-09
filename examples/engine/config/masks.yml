@@ -1,0 +1,16 @@
+# Customize your masks installation in this file.
+#
+# - https://masks.pages.dev/guides/rails
+# - https://masks.pages.dev/reference/masks.yml
+defaults: &defaults
+  url: <%= ENV['MASKS_URL'] %>
+  mode: server
+
+development:
+  <<: *defaults
+
+test:
+  <<: *defaults
+
+production:
+  <<: *defaults

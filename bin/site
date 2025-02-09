@@ -1,0 +1,6 @@
+#!/usr/bin/env ruby
+
+Dir.chdir("site") do
+  system "npm install"
+  system "npm run #{ARGV.any? ? ARGV.join(" ") : "dev"}"
+end

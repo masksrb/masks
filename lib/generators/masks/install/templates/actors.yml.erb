@@ -1,0 +1,24 @@
+# Specify your actors here.
+#
+# Like other models, pass `local: true` to create synthetic, in-memory actors.
+#
+#  - https://masks.pages.dev/guides/rails
+#  - https://masks.pages.dev/reference/providers#providersyml
+#
+# Note: ERB-templating is supported. Use ENV vars for sensitive data.
+#
+# default: &default
+#   manager:
+#     manager: true
+#     nickname: <%%= ENV['MASKS_MANAGER_NICKNAME'] %>
+#     password: <%%= ENV['MASKS_MANAGER_PASSWORD'] %>
+#     email: <%%= ENV['MASKS_MANAGER_EMAIL'] %>
+#
+# development:
+#   <<: *default
+#
+# test:
+#   <<: *default
+#
+# production:
+#   <<: *default

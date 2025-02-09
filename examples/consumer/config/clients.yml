@@ -1,0 +1,34 @@
+# In short, you can use this file to seed masks with clients. Set `local: true`
+# to create synthetic, in-memory clients that require no database access.
+#
+# All interactions with masks require a client, so you'll need at least one
+# for your app. You can create additional clients for other contexts (web vs mobile),
+# or access levels, like a staff/admin-only area.
+#
+#  - https://masks.pages.dev/guides/rails
+#  - https://masks.pages.dev/reference/clients#clientsyml
+#
+# You can add additional types and customize defaults for all clients in your `masks.yml`.
+
+# Note: ERB-templating is supported. Use ENV vars for sensitive data.
+#
+# defaults: &defaults
+#   my-app:
+#     type: app
+#   second-factor:
+#     type: app
+#     allow_second_factor: true
+#   staff-only:
+#     type: app
+#     allow_second_factor: true
+#     scopes:
+#       required: ['staff']
+#
+# production:
+#   <<: *defaults
+#
+# development:
+#   <<: *defaults
+#
+# test:
+#   <<: *defaults

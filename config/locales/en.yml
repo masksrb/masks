@@ -1,0 +1,330 @@
+# Files in the config/locales directory are used for internationalization and
+# are automatically loaded by Rails. If you want to use locales other than
+# English, add the necessary files in this directory.
+#
+# To use the locales, use `I18n.t`:
+#
+#     I18n.t "hello"
+#
+# In views, this is aliased to just `t`:
+#
+#     <%= t("hello") %>
+#
+# To use a different locale, set it with `I18n.locale`:
+#
+#     I18n.locale = :es
+#
+# This would use the information in config/locales/es.yml.
+#
+# To learn more about the API, please read the Rails Internationalization guide
+# at https://guides.rubyonrails.org/i18n.html.
+#
+# Be aware that YAML interprets the following case-insensitive strings as
+# booleans: `true`, `false`, `on`, `off`, `yes`, `no`. Therefore, these strings
+# must be quoted to be interpreted as strings. For example:
+#
+#     en:
+#       "yes": yup
+#       enabled: "ON"
+
+en:
+  masks:
+    command:
+      provider:
+        desc: Manage providers
+        help: |
+          TODO
+      client:
+        desc: View, search, add, and edit clients
+        help: |
+          TODO
+      actor:
+        desc: View, search, add, and edit actors
+        help: |
+          TODO
+      conf:
+        desc: View and edit masks settings
+        help: |
+          TODO
+      login:
+        desc: Log in to a masks server
+        help: |
+          TODO
+  settings:
+    masks/actor:
+      desc:
+        name: A name for the actor
+        uuid: A public UUID for the actor
+        key: The actor's unique key
+        nickname: The actors' semi-public, unique nickname
+        password: The actor's secret password
+        scopes: A list of scopes granted to the actor
+        tz: The actor's preferred timezone
+        created_at: The time the actor was created
+        updated_at: The last time the actor was saved
+      default:
+        key: auto-generated
+        uuid: random UUIDv4
+        tz: server timezone
+    masks/providers/generic_oauth:
+      desc:
+        client_id: "The shared client identifier"
+        client_secret: "The shared client secret"
+        scopes: "Requested scopes, space-separated"
+    masks/providers/generic_oidc:
+      desc:
+        client_id: "The shared client identifier"
+        client_secret: "The shared client secret"
+        scopes: "Requested scopes, space-separated"
+    masks/providers/google:
+      desc:
+        client_id: "The shared client identifier"
+        client_secret: "The shared client secret"
+        scopes: "Requested scopes, space-separated"
+    masks/providers/github:
+      desc:
+        client_id: "The shared client identifier"
+        client_secret: "The shared client secret"
+        scopes: "Requested scopes, space-separated"
+    masks/providers/apple:
+      desc:
+        pem: "Contents of .p8 file from apple (including trailing newline)"
+        client_id: "Service Identifier, from your Services Id config"
+        key_id: "Key ID from Key details page"
+        team_id: "aka App ID prefix"
+        scopes: "Requested scopes, space-separated"
+    masks/providers/twitter:
+      desc:
+        client_id: "The shared client identifier"
+        client_secret: "The shared client secret"
+        scopes: "Requested scopes, space-separated"
+    masks/providers/facebook:
+      desc:
+        client_id: "The shared client identifier"
+        client_secret: "The shared client secret"
+        scopes: "Requested scopes, space-separated"
+    masks/provider:
+      desc:
+        key: The providers's unique key
+        type: The provider type, which dictates overall functionality
+        name: A name shown when during login to the provider
+        common: Toggle availability for all clients
+        enabled: Enable or disable the provider without deleting it
+        created_at: The time the provider was created
+        updated_at: The last time the provider was saved
+        disabled_at: The time the provider was disabled
+    masks/consumer/mode:
+      desc: &masks_mode
+        mode: The mode to run in, either client or server
+        name: A name for masks
+        url: The public URL of the masks server
+        private_key: The path to the server's private key
+        secret_key: "A key used for generating secret data"
+        encryption_key: "A key used for encrypting data"
+        deterministic_key: "A key used for deterministic encryption"
+        salt: "A salt used for encryption and hashing"
+        client_id: A client key for communication with the masks server
+        client_secret: A client secret for communication with the masks server
+        tz: The timezone to use for displaying times
+        debug: Toggle debug mode
+        data_dir: A directory for masks data
+        conf_dir: A directory for masks configuration
+        session_cookie_name: A name for the session cookie
+        session_cookie_lifetime: If empty the cookie clears on browser close
+        session_inactive: A time to consider sessions outdated (if not used)
+        device_class: The class to use for devices
+        device_cookie_name: A name for the device cookie
+        device_cookie_lifetime: Most browsers support <= 400 days
+        device_inactive: A time to consider devices outdated (if not used)
+    masks/server/mode:
+      desc:
+        <<: *masks_mode
+        port: "The server port"
+        workers: "The number of workers (processes) to run"
+        threads: "The number of threads to run in each worker"
+        run_workers: "Whether or not to run workers"
+        skip_migrations: "Whether or not to skip automatic migrations"
+        local: "If true, only configured from YML and ENV vars"
+        internal_client: The key of a default internal client to use
+        management_client: The key of the management client
+        client_defaults: "A hash of defaults applied to all new clients"
+        client_types: "A hash of client types"
+        provider_types: "A hash of provider types"
+        phone_adapter: "The adapter to use for phone/SMS verification"
+        phone_country: "The default country for new phone numbers"
+        storage_adapter: "The adapter to use for storing assets"
+        email_adapter: "The adapter to use for email communication"
+        email_limit: A maximum number of login emails to allow per-account
+        email_from: The "From" to use for outgoing emails
+        email_reply_to: The "Reply To" to use for outgoing emails
+        actor_scopes: "A list of default scopes"
+        actor_inactive: "Mark actors inactive if they haven't logged in after this duration"
+        backup_code_min_chars: "Max characters for a backup code"
+        backup_code_max_chars: "Min characters for a backup code"
+        backup_code_limit: "Amount of backup codes required when replacing"
+        nickname_format: "A regular expression to match nicknames against"
+        nickname_min_chars: "Max characters for a nickname"
+        nickname_max_chars: "Min characters for a nickname"
+        password_min_chars: "Max characters for a password"
+        password_max_chars: "Min characters for a password"
+        password_change_cooldown: "Cooldown period before passwords can be changed again"
+        otp_issuer: "A name to show when issuing OTP secrets"
+        webauthn_name: "A name for the app during Webauthn"
+        webauthn_origins: "A list of allowed Webauthn origins (URLs)"
+        theme_name: "A name shown during log in"
+        theme_homepage: "A url to the app's public homepage"
+        light_logo_url: "A URL to the light (light mode)"
+        dark_logo_url: "A URL to the light (dark mode)"
+        favicon_url: "A favicon URL shown on all pages"
+        db_url: "A URL to the database"
+        db_name: "A name for the database"
+        db_adapter: "The database adapater"
+        queue_db_url: "A URL to a separate database for queues"
+        queue_db_name: "A name for the queue database"
+        queue_db_adapter: "The queue database adapter"
+        cache_db_url: "A URL to a separate database for caches"
+        cache_db_name: "A name for the cache database"
+        cache_db_adapter: "A name for the cache database"
+        websockets_db_url: "A URL to a separate database for websockets"
+        websockets_db_name: "A name for the websocket database"
+        websockets_db_adapter: "A name for the websocket database"
+        sessions_db_url: "A URL to a separate database for sessions"
+        sessions_db_name: "A name for the session database"
+        sessions_db_adapter: "The session database adapter"
+        sentry_dsn: "A valid sentry DSN, used for error reporting"
+        newrelic_app: "A new relic app name used for reporting"
+        newrelic_license_key: "A valid new relic license key"
+    masks/client/mode:
+      desc:
+        <<: *masks_mode
+    masks/client:
+      types:
+        management: An internal app for accessing masks via the web or API
+        internal: Internal apps hosted on the same domain
+        public: Public, PKCE-ready apps (e.g. Mobile, JS, command-line apps)
+        confidential: Backend servers, bots, and other secure apps
+        client-credentials: Authenticate as a client rather than an actor
+      default:
+        key: generated from name
+        secret: random 64-character base58 string
+        issuer: the masks server url
+        sector_identifier: the masks server url
+        require_approval: true for public clients
+        pairwise_salt: random 10-character hex string
+        rsa_private_key: RSA-2048 key
+      desc:
+        key: A public key for identification
+        name: A human-readable name for the client
+        secret: A private secret for authentication
+        internal: Internal clients operate on the same domain
+        issuer: The "iss" claim value for ID tokens
+        rsa_private_key: The client's private key
+        allowed_scopes: A list of scopes allowed by the client
+        required_scopes: A list of required, always-applied scopes
+        grant_types: A list of allowed grant types (from the OIDC spec)
+        response_types: A list of allowed response types (from the OIDC spec)
+        redirect_uris: A newline-separated list of allowed redirect URIs
+        autofill_redirect_uri: If true, auto-fill empty redirect_uris with the first successful used
+        fuzzy_redirect_uri: Allow wildcards with '*' in redirect URIs
+        default_redirect_uri: A redirect URI to use if/when none is supplied
+        public_url: A public URL for linking back to the client
+        require_approval: Show a consent screen before granting access
+        subject_type: Customize the actor (subject) exposed to the client
+        sector_identifier: A stable identifier for use with pairwise subject types
+        pairwise_salt: A "salt" for use with pairwise subject types
+        login_attempt_duration: Lifetime for login attempts
+        actor_duration: How long to remember actors after login
+        id_token_duration: Lifetime for ID tokens
+        internal_token_duration: Lifetime for internal tokens
+        access_token_duration: Lifetime for access tokens
+        authorization_code_duration: Lifetime for authorization codes
+        refresh_token_duration: Lifetime for refresh tokens
+        client_token_duration: Lifetime for client tokens
+        email_verification_duration: Lifetime for emails allowing verification or login
+        verified_email_duration: Verified email lifetime—requiring re-verification on expiration
+        email_login_duration: Session lifetime for login via email
+        phone_verification_duration: Lifetime for phone/SMS verification
+        sso_request_duration: Lifetime for a single sign-on request
+        sso_login_duration: Session lifetime for login via SSO
+        password_login_duration: Session lifetime for traditional password login
+        backup_code_2fa_duration: Session lifetime for 2FA with backup codes
+        phone_2fa_duration: Session lifetime for 2FA with phone/SMS
+        otp_2fa_duration: Session lifetime for 2FA with TOTP/ROTP
+        webauthn_2fa_duration: Session lifetime for 2FA with webauthn
+        profile_duration: Require profile view once elapsed
+        allow_nicknames: Toggle login with nickname
+        allow_emails: Toggle login with an email address
+        allow_passkeys: Toggle login with a passkey
+        allow_passwords: Toggle password-based login
+        allow_login_links: Toggle login links
+        allow_sso: Toggle support for single sign-on
+        allow_profiles: Allow built-in profile management
+        allow_webauthn: Toggle two-factor auth with Webauthn (excluding passkeys)
+        allow_otp: Toggle two-factor auth with one-time passwords (TOTP/ROTP)
+        allow_backup_codes: Toggle two-factor auth with backup codes
+        allow_phones: Toggle two-factor auth with SMS codes
+        allow_factor2: Toggle any form of two-factor auth
+        created_at: Time of creation
+        updated_at: Last time of changed
+  sso:
+    generic_openid:
+      name: OpenID Connect
+    generic_oauth:
+      name: OAuth2
+  auth:
+    invalid_identifier: "invalid identifier"
+    invalid_credentials: "invalid credentials"
+    invalid_request: the request is malformed
+    scopes_required: "unauthorized"
+  scopes:
+    "masks:manage": Manage masks
+  activerecord:
+    attributes:
+      masks/device:
+        user_agent: User agent
+        ip_address: IP address
+        version: This device
+      masks/email:
+        address: Email address
+      masks/phone:
+        number: Phone number
+      masks/actor:
+        backup_codes: Backup codes
+        identifier_type: Identifier
+        emails: Email
+      masks/actor/emails:
+        address: Email address
+    errors:
+      models:
+        masks/email:
+          attributes:
+            base:
+              max_for_login: "Cannot add another login email (%{count} maximum)"
+              email_identifier: "Cannot remove primary email"
+        masks/token:
+          attributes:
+            actor_id:
+              blank: must exist
+
+        masks/actor:
+          attributes:
+            password:
+              unchangeable: cannot be changed. Try again in %{time}...
+            identifier_type:
+              blank: is invalid
+            backup_codes:
+              length: must be replaced by a list of exactly %{total} codes
+              too_short: must be longer than %{count} characters
+              too_long: must be shorter than %{count} characters
+        masks/device:
+          attributes:
+            user_agent:
+              mismatch: changed. You must log in again.
+            ip_address:
+              mismatch: changed. You must log in again.
+            version:
+              mismatch: has expired.
+            backup_codes:
+              length: must be replaced by a list of exactly %{total} codes
+              too_short: must be longer than %{count} characters
+              too_long: must be shorter than %{count} characters

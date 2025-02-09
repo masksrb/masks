@@ -1,0 +1,56 @@
+---
+import "./src/styles/global.css";
+import StarlightPage from "@astrojs/starlight/components/StarlightPage.astro";
+import Settings from "./_Settings.svelte";
+import Types from "./_Types.svelte";
+import { getCollection, getEntry } from "astro:content";
+
+export async function getStaticPaths() {
+  const entries = await getCollection("settings");
+
+  return entries.map((entry) => ({
+    params: { type: entry.id },
+    props: { entry },
+  }));
+}
+
+const makeSettingsHeadings = (settings) => {
+  return Object.keys(settings || {}).map((name) => {
+    return makeHeading(name);
+  });
+};
+
+const makeHeadings = (entry) => {
+  const headings = [];
+
+  if (entry.data.settings) {
+    headings.push(makeHeading("Settings", "settings", 2));
+    headings.push(...makeSettingsHeadings(entry.data.settings));
+  }
+
+  if (entry.data.types) {
+    Object.entries(entry.data.types || {}).map(([type, conf]) => {
+      headings.push(makeHeading(`${conf.name || type}`, `${type}-settings`, 2));
+      headings.push(...makeSettingsHeadings(conf.settings));
+    });
+  }
+
+  return headings;
+};
+
+const makeHeading = (name, slug = null, depth = null) => {
+  return {
+    depth: depth || 3,
+    text: name,
+    slug: slug || name,
+  };
+};
+
+const entry = await getEntry("settings", Astro.params.type);
+const headings = makeHeadings(entry);
+---
+
+<StarlightPage frontmatter={{ title: `${entry.data.name}` }} {headings}>
+  <Settings settings={entry.data.settings} />
+  <Types types={entry.data.types} />
+</StarlightPage>

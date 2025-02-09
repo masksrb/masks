@@ -1,0 +1,43 @@
+default: &default
+  client_types:
+    internal:
+      internal: true
+      redirect_uris: ["/", "/*"]
+      fuzzy_redirect_uri: true
+    management:
+      name: "manage masks"
+      internal: true
+      required_scopes: masks:manage
+      redirect_uris: ["/", "/*"]
+      fuzzy_redirect_uri: true
+    public:
+      pkce: true
+      grant_types:
+        - authorization_code
+        - refresh_token
+    confidential:
+      grant_types:
+        - client_credentials
+        - authorization_code
+        - refresh_token
+    client-credentials:
+      grant_types:
+        - client_credentials
+        - refresh_token
+
+  adapters:
+    disk: {}
+    s3: {}
+    twilio: {}
+    smtp: {}
+    sendmail: {}
+
+development:
+  url: http://localhost:5000
+  <<: *default
+
+test:
+  <<: *default
+
+production:
+  <<: *default

@@ -1,0 +1,21 @@
+---
+import "../../../styles/global.css";
+import StarlightPage from "@astrojs/starlight/components/StarlightPage.astro";
+import { getCollection, getEntry, render } from "astro:content";
+
+export async function getStaticPaths() {
+  const entries = await getCollection("ruby");
+
+  return entries.map((entry) => ({
+    params: { type: entry.id },
+    props: { entry },
+  }));
+}
+
+const entry = await getEntry("ruby", Astro.params.type);
+const { Content, headings, remarkPluginFrontmatter } = await render(entry);
+---
+
+<StarlightPage frontmatter={{title: "Ruby API"}} {headings}>
+  <Content />
+</StarlightPage>

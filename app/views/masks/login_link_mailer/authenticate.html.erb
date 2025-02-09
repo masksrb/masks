@@ -1,0 +1,22 @@
+<%= render "masks/email/header", heading: "Your login code..." %>
+
+<div class="flex text-left gap-3 my-6 text-xl">
+  <span>👋</span>
+  <span>Enter the <%= @link.chars %>-character code below to log in without using a password:</span>
+</div>
+
+<div class="rounded-lg p-12 mb-6 text-5xl bg-base-100 text-white font-mono font-bold shadow tracking-widest">
+  <div class="mx-auto text-center">
+    <%= @link.code %>
+  </div>
+</div>
+
+<div class="text-xl">
+  You can also <a class="underline" href="<%= @link.accept_url %>">click here</a> to log in automatically, provided you're opening this e-mail on the same device you're authorizing.
+</div>
+
+<div class="divider" />
+
+<p>
+  Your login code expires in <%= time_ago_in_words(@link.expires_at) %> (<%= @link.expires_at.in_time_zone(@actor.tz).strftime("%b %d at %l:%M%P %Z") %>).
+</p>

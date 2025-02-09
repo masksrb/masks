@@ -1,0 +1,6 @@
+<%= content_tag :div, "", id: "session", data: { error: 404 } %>
+<%= vite_javascript_tag 'session' %>
+
+<% content_for :styles do %>
+  <%= vite_stylesheet_tag 'session.css' %>
+<% end %>

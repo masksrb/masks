@@ -1,0 +1,35 @@
+name: Site
+
+on: [push]
+
+jobs:
+  site:
+    runs-on: ubuntu-latest
+
+    name: Deploy to cloudflare
+
+    permissions:
+      contents: read
+      deployments: write
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: .ruby-version
+          bundler-cache: true
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+      - name: Set up masks
+        run: bin/rails app:db:prepare
+      - name: Generate documentation
+        run: bin/doc
+      - name: Deploy
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy site/dist --project-name=masks

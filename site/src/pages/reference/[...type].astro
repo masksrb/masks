@@ -1,0 +1,66 @@
+---
+import "../../styles/global.css";
+import StarlightPage from "@astrojs/starlight/components/StarlightPage.astro";
+import { getCollection, getEntry, render } from "astro:content";
+
+export async function getStaticPaths() {
+  const entries = await getCollection("reference");
+
+  return entries.map((entry) => ({
+    params: { type: entry.id },
+    props: { entry },
+  }));
+}
+
+const makeSettingsHeadings = (settings) => {
+  return Object.keys(settings || {}).map((name) => {
+    return makeHeading(name);
+  });
+};
+
+const makeHeadings = (entry) => {
+  const headings = [];
+
+  if (entry.data.settings) {
+    headings.push(...makeSettingsHeadings(entry.data.settings));
+  }
+
+  if (entry.data.types && entry.frontmatter.types?.headings) {
+    if (!entry.frontmatter.types?.full) {
+      headings.push(makeHeading(`Types`, "types", 2));
+    }
+
+    Object.entries(entry.data.types || {}).map(([type, conf]) => {
+      if (entry.frontmatter.types?.full) {
+        headings.push(makeHeading(conf.name, type, 2));
+        headings.push(...makeSettingsHeadings(conf.settings));
+      } else {
+        headings.push(
+          makeHeading(`${conf.name || type}`, `${type}-settings`, 3),
+        );
+      }
+    });
+  }
+
+  return headings;
+};
+
+const makeHeading = (name, slug = null, depth = null) => {
+  return {
+    depth: depth || 3,
+    text: name,
+    slug: slug || name,
+  };
+};
+
+const entry = await getEntry("reference", Astro.params.type);
+const { Content, headings, remarkPluginFrontmatter } = await render(entry);
+const { json } = remarkPluginFrontmatter;
+const settings = json
+  ? makeHeadings({ frontmatter: remarkPluginFrontmatter, data: json })
+  : [];
+---
+
+<StarlightPage frontmatter={entry.data} headings={[...headings, ...settings]}>
+  <Content />
+</StarlightPage>
