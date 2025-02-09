@@ -1,0 +1,11 @@
+<%= content_tag :div, "", id: "app", class: 'h-full' %>
+
+<%= javascript_tag("window.APP = #{frontend_json}") %>
+
+<% content_for :head do %>
+  <%= vite_javascript_tag 'manage' %>
+<% end %>
+
+<% content_for :styles do %>
+  <%= vite_stylesheet_tag 'manage.css' %>
+<% end %>

@@ -1,0 +1,4 @@
+[submodule "aaguids"]
+	path = aaguids
+	url = https://github.com/passkeydeveloper/passkey-authenticator-aaguids.git
+	update = rebase

@@ -1,0 +1,11 @@
+defaults: &defaults
+  mode: server
+
+development:
+  <<: *defaults
+
+test:
+  <<: *defaults
+
+production:
+  <<: *defaults

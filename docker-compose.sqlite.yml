@@ -1,0 +1,25 @@
+services:
+  masks:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      MASKS_URL: https://masks.localhost
+      MASKS_MANAGER_NICKNAME: manager
+      MASKS_MANAGER_PASSWORD: password
+    volumes:
+      - ./.masks/data:/masks/data
+      - ./.masks/conf:/masks/conf
+      - ./.masks/storage:/masks/storage
+
+  caddy:
+    image: caddy:2
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - ./.masks/caddy/data:/data
+      - ./.masks/caddy/config:/config
+    depends_on:
+      - masks

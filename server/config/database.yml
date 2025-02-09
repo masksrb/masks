@@ -1,0 +1,84 @@
+# PostgreSQL. Versions 9.3 and up are supported.
+#
+# Install the pg driver:
+#   gem install pg
+# On macOS with Homebrew:
+#   gem install pg -- --with-pg-config=/usr/local/bin/pg_config
+# On Windows:
+#   gem install pg
+#       Choose the win32 build.
+#       Install PostgreSQL and put its /bin directory on your path.
+#
+# Configure Using Gemfile
+# gem "pg"
+#
+default: &default
+<% if Masks.conf.db.multiple? %>
+  primary:
+    url: <%= Masks.conf.db.url %>
+    adapter: <%= Masks.conf.db.adapter %>
+    database: <%= Masks.conf.db.name %>
+    schema_dump: "primary.<%= Masks.conf.db.adapter %>.rb"
+    encoding: unicode
+    pool: <%= Masks.conf.db.pool %>
+    migrations_paths: <%= Rails.root.join('db/primary') %>
+<% else %>
+  url: <%= Masks.conf.db.url %>
+  adapter: <%= Masks.conf.db.adapter %>
+  database: <%= Masks.conf.db.name %>
+  schema_dump: "primary.<%= Masks.conf.db.adapter %>.rb"
+  encoding: unicode
+  pool: <%= Masks.conf.db.pool %>
+  migrations_paths: <%= Rails.root.join('db/primary') %>
+<% end %>
+
+<% if Masks.conf.db.enabled?(:queue) %>
+  queue:
+    url: <%= Masks.conf.db.url(:queue) %>
+    adapter: <%= Masks.conf.db.adapter(:queue) %>
+    database: <%= Masks.conf.db.name(:queue) %>
+    schema_dump: "queue.<%= Masks.conf.db.adapter(:queue) %>.rb"
+    encoding: unicode
+    pool: <%= Masks.conf.db.pool %>
+    migrations_paths: <%= Rails.root.join('db/queue') %>
+    timeout: 30
+<% end %>
+<% if Masks.conf.db.enabled?(:cache) %>
+  cache:
+    url: <%= Masks.conf.db.url(:cache) %>
+    adapter: <%= Masks.conf.db.adapter(:cache) %>
+    database: <%= Masks.conf.db.name(:cache) %>
+    schema_dump: "cache.<%= Masks.conf.db.adapter(:cache) %>.rb"
+    encoding: unicode
+    pool: <%= Masks.conf.db.pool %>
+    migrations_paths: <%= Rails.root.join('db/cache') %>
+<% end %>
+<% if Masks.conf.db.enabled?(:websockets) %>
+  websockets:
+    url: <%= Masks.conf.db.url(:websockets) %>
+    adapter: <%= Masks.conf.db.adapter(:websockets) %>
+    database: <%= Masks.conf.db.name(:websockets) %>
+    schema_dump: "websockets.<%= Masks.conf.db.adapter(:websockets) %>.rb"
+    encoding: unicode
+    pool: <%= Masks.conf.db.pool %>
+    migrations_paths: <%= Rails.root.join('db/websockets') %>
+<% end %>
+<% if Masks.conf.db.enabled?(:sessions) %>
+  sessions:
+    url: <%= Masks.conf.db.url(:sessions) %>
+    adapter: <%= Masks.conf.db.adapter(:sessions) %>
+    database: <%= Masks.conf.db.name(:sessions) %>
+    schema_dump: "sessions.<%= Masks.conf.db.adapter(:sessions) %>.rb"
+    encoding: unicode
+    pool: <%= Masks.conf.db_pool %>
+    migrations_paths: <%= Rails.root.join('db/sessions') %>
+<% end %>
+
+development:
+  <<: *default
+
+test:
+  <<: *default
+
+production:
+  <<: *default

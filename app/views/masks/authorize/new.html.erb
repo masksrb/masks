@@ -1,0 +1,6 @@
+<%= content_tag :div, "", id: "app" %>
+<%= vite_javascript_tag 'app' %>
+
+<% content_for :styles do %>
+  <%= vite_stylesheet_tag 'app.css' %>
+<% end %>

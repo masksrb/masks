@@ -1,0 +1,37 @@
+---
+title: masks.yml
+json: masks.json
+types:
+  full: true
+  headings: true
+---
+
+import { Settings, ClientTypes } from "./components.js";
+import { Aside } from "@astrojs/starlight/components";
+
+Although masks can be configured in a number of ways, YML is a convenient option.
+
+<Aside>
+  Masks will search for a `masks.yml` in a `MASKS_DIR` (if supplied) and your
+  `Rails.root` (if applicable).
+</Aside>
+
+## Settings
+
+All of the settings outlined below can be overridden in your `masks.yml`. ENV
+vars can be used where noted.
+
+<Aside type="tip">
+  Remember that you can embed ERB in all `.yml` config files.
+</Aside>
+
+<Settings settings={frontmatter.json.settings} />
+
+<h2 id="server">Server</h2>
+
+<Aside>
+  Unlike most other settings, some of the server settings can only be configured
+  with ENV vars.
+</Aside>
+
+<Settings settings={frontmatter.json.types.server.settings} />

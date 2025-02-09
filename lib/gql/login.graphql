@@ -1,0 +1,135 @@
+fragment LoginFragment on Login {
+  id
+  requestId
+  error
+  prompt
+  warnings
+  extras
+  trusted
+  settled
+  redirectUri
+  scopes {
+    name
+    detail
+    hidden
+  }
+  loginLink {
+    expiresAt
+  }
+  actor {
+    id
+    name
+    nickname
+    identifier
+    identifierType
+    identiconId
+    loginEmail
+    loginEmails {
+      address
+      verifiedAt
+      verifyLink
+      deletable
+      createdAt
+    }
+    singleSignOns {
+      id
+      createdAt
+      identifier
+      deletable
+      provider {
+        id
+        type
+        name
+      }
+    }
+    passwordChangedAt
+    passwordChangeable
+    password
+    secondFactor
+    savedBackupCodesAt
+    remainingBackupCodes
+    hardwareKeys {
+      ...HardwareKeyFragment
+    }
+    phones {
+      ...PhoneFragment
+    }
+    otpSecrets {
+      ...OtpSecretFragment
+    }
+    secondFactors {
+      ... on HardwareKey {
+        ...HardwareKeyFragment
+      }
+      ... on Phone {
+        ...PhoneFragment
+      }
+      ... on OtpSecret {
+        ...OtpSecretFragment
+      }
+    }
+    createdAt
+    updatedAt
+    lastLoginAt
+  }
+  client {
+    id
+    name
+    logo
+    allowEmails
+    allowNicknames
+    allowPasswords
+    allowSso
+    allowLoginLinks
+    allowFactor2
+    allowBackupCodes
+    allowPhones
+    allowWebauthn
+    allowProfiles
+    allowOtp
+    providers {
+      id
+      type
+      name
+    }
+  }
+  settings {
+    name
+    url
+    tz
+    region
+    theme
+    needsRestart
+    faviconUrl
+    lightLogoUrl
+    darkLogoUrl
+    nicknames
+    passwords
+    backupCodes
+    needsRestart
+  }
+}
+
+fragment HardwareKeyFragment on HardwareKey {
+  __typename
+  id
+  name
+  createdAt
+  icons {
+    light
+    dark
+  }
+}
+
+fragment PhoneFragment on Phone {
+  __typename
+  number
+  createdAt
+}
+
+fragment OtpSecretFragment on OtpSecret {
+  __typename
+  id
+  name
+  createdAt
+}
