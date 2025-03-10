@@ -37,7 +37,7 @@ group :development, :test do
   gem "simplecov-cobertura", "~> 2.1"
   gem "dotenv"
   gem "vcr", "~> 6.3"
-  gem "webmock", "~> 3.24"
+  gem "webmock", "~> 3.25"
 end
 
 group :development do

@@ -779,7 +779,7 @@ GEM
       activesupport
       faraday (~> 2.0)
       faraday-follow_redirects
-    webmock (3.25.0)
+    webmock (3.25.1)
       addressable (>= 2.8.0)
       crack (>= 0.3.2)
       hashdiff (>= 0.4.0, < 2.0.0)
@@ -876,7 +876,7 @@ DEPENDENCIES
   tzinfo-data
   vcr (~> 6.3)
   web-console
-  webmock (~> 3.24)
+  webmock (~> 3.25)
   yabeda (~> 0.13.1)
   yabeda-activejob (~> 0.6.0)
   yabeda-activerecord (~> 0.1.1)
