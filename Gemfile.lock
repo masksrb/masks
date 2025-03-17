@@ -450,7 +450,7 @@ GEM
     pathutil (0.16.2)
       forwardable-extended (~> 2.6)
     pg (1.5.9)
-    phonelib (0.10.5)
+    phonelib (0.10.6)
     pp (0.6.2)
       prettyprint
     premailer (1.27.0)
