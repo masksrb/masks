@@ -249,7 +249,7 @@ GEM
       rake (>= 13)
     graphiql-rails (1.10.2)
       railties
-    graphql (2.4.10)
+    graphql (2.4.15)
       base64
       fiber-storage
       logger
