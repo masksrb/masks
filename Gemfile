@@ -44,7 +44,7 @@ end
 group :development do
   gem "letter_opener", "~> 1.10"
   gem "web-console"
-  gem "byebug", "~> 11.1"
+  gem "byebug", "~> 12.0"
   gem "graphiql-rails"
 end
 
