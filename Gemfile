@@ -45,7 +45,7 @@ group :development do
   gem "web-console"
   gem "byebug", "~> 11.1"
   gem "graphiql-rails"
-  gem "rdoc", "6.12.0"
+  gem "rdoc", "6.13.1"
   gem "rdoc-markdown"
   gem "rorvswild_theme_rdoc"
 end
