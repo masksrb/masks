@@ -535,7 +535,7 @@ GEM
     reverse_markdown (3.0.0)
       nokogiri
     rexml (3.4.1)
-    rorvswild_theme_rdoc (0.2)
+    rorvswild_theme_rdoc (0.3.0)
     rotp (6.3.0)
     rqrcode (2.2.0)
       chunky_png (~> 1.0)
