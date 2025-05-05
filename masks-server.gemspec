@@ -24,7 +24,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency "vite_rails", "~> 3.0.1"
   spec.add_dependency "addressable", "~> 2.8"
   spec.add_dependency "rotp", "~> 6.3"
-  spec.add_dependency "rqrcode", "~> 2.2"
+  spec.add_dependency "rqrcode", ">= 2.2", "< 4.0"
   spec.add_dependency "phonelib", "~> 0.10.3"
   spec.add_dependency "webauthn", "~> 3.1"
   spec.add_dependency "twilio-ruby", "~> 7.4"
