@@ -1,0 +1,29 @@
+<div class="cols-1.5">
+  <% if @mode&.has_logo? %>
+    <div class="max-w-[300px]">
+      <% if @mode.light_logo_url %>
+        <img
+          alt="<%= @mode.name %> logo"
+          url="<%= @mode.light_logo_url %>"
+          class="object-scale-down h-10 rounded dark:hidden"
+        />
+      <% end %>
+
+      <% if @mode.dark_logo_url %>
+        <img
+          alt="<%= @mode.name %> logo"
+          url="<%= @mode.dark_logo_url %>"
+          class="object-scale-down h-10 rounded hidden dark:block"
+        />
+      <% end %>
+    </div>
+  <% else %>
+    <p
+      class="font-bold grow opacity-50 text-left text-lg md:text-xl group-hover:underline group-focus:underline"
+    >
+      <%= @mode&.name %>
+    </p>
+  <% end %>
+
+  <div class="grow"></div>
+</div>

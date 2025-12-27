@@ -1,0 +1,21 @@
+<script src="https://js.hcaptcha.com/1/api.js?onload=onHcaptchaLoadCallback&render=explicit" async defer></script>
+
+<%= render 'masks/page_header',
+  icon: raw('<span class="loading loading-spinner loading-xs opacity-50"></span>'),
+  title: 'Verifying your device',
+  subtitle: 'Please wait a moment while we check for compatibility...' do %>
+  <div class="flex items-center overflow-hidden pt-6">
+    <div class="mx-auto" id="masks-hcaptcha"></div>
+  </div>
+<% end %>
+
+<script>
+  function onHcaptchaLoadCallback() {
+    masks.hcaptcha({
+      id: "masks-hcaptcha",
+      path: "<%= masks_captcha_verification_path(captcha: @captcha) %>",
+      sitekey: '<%= @captcha.sitekey %>',
+      variant: '<%= @captcha.variant %>',
+    })
+  }
+</script>

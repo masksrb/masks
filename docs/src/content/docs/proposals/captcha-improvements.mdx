@@ -1,0 +1,355 @@
+---
+title: Captcha Improvements
+description: Future enhancements for the Masks captcha system
+---
+
+Future enhancements for the Masks captcha system. Currently supports Turnstile, reCAPTCHA, and hCaptcha with throttle-based triggering.
+
+---
+
+## 1. Verification Expiration / Trust TTL
+
+Once a captcha passes, it's trusted until reset. In production, **trust should decay**.
+
+### Proposed config
+
+```ruby
+device captcha: :turnstile, ttl: 15.minutes
+device captcha: :recaptcha, after: 5, ttl: 10.minutes
+device captcha: :hcaptcha, ttl: { get: 30.minutes, post: 5.minutes }
+```
+
+### Implementation notes
+
+Store timestamp in device captcha JSON:
+
+```json
+{
+  "recaptcha": {
+    "success": true,
+    "verified_at": "2026-01-10T18:42:00Z",
+    "score": 0.82,
+    "variant": "v3"
+  }
+}
+```
+
+Consider expiring on:
+- IP change
+- User agent change
+- Session reset
+- Auth state change (logged in → logged out)
+
+### Advanced: Confidence-based TTL
+
+```ruby
+device captcha: :recaptcha, ttl: ->(score) {
+  score >= 0.9 ? 1.hour : 10.minutes
+}
+```
+
+---
+
+## 2. Per-Path / Per-Action Overrides
+
+Some endpoints are inherently riskier.
+
+### Proposed DSL
+
+```ruby
+Masks.configure do
+  policy do
+    device captcha: :turnstile  # default
+
+    # Override for specific paths
+    device captcha: :recaptcha, variant: :v3, score_threshold: 0.7,
+      on: '/users/sign_in', method: :post
+
+    device captcha: :hcaptcha, after: 0,
+      on: '/passwords/reset'
+  end
+end
+```
+
+### Override dimensions
+
+- HTTP method
+- Path pattern
+- Controller#action (if integrated with Rails routing)
+- Request format (HTML vs JSON)
+- Auth state (anonymous vs authenticated)
+
+---
+
+## 3. Fallback & Escalation Providers
+
+Captcha providers **do fail** (network issues, blocked scripts, regional bans).
+
+### Simple fallback
+
+```ruby
+device captcha: :recaptcha, fallback: :hcaptcha
+```
+
+### Escalation chain
+
+```ruby
+device captcha: [
+  { provider: :recaptcha, variant: :v3, score_threshold: 0.6 },
+  { provider: :turnstile },
+  { provider: :hcaptcha, variant: :checkbox }
+]
+```
+
+### Trigger escalation when:
+
+- Score below threshold
+- Verification timeout
+- Provider API error
+- Client-side script blocked
+
+---
+
+## 4. Score Thresholds & Risk-Based Challenges
+
+Generalize score_threshold into **risk policies**.
+
+### Risk policy config
+
+```ruby
+device captcha: :recaptcha, risk: {
+  low:    { score: 0.9.., action: :skip },
+  medium: { score: 0.6..0.9, action: :invisible },
+  high:   { score: ..0.6, action: :checkbox }
+}
+```
+
+### Risk inputs beyond captcha score
+
+- Request velocity
+- IP reputation (datacenter, VPN, Tor)
+- Failed auth attempts on device
+- Device fingerprint entropy
+- Geo anomalies
+
+---
+
+## 5. Rate Limiting Beyond Request Counts
+
+Simple request count is easy to evade.
+
+### Additional limiters
+
+```ruby
+device captcha: :turnstile, rate_limit: {
+  per_ip: { limit: 10, window: 1.minute },
+  per_device: { limit: 5, window: 1.minute },
+  burst: 3
+}
+```
+
+### Patterns to consider
+
+- Token bucket
+- Leaky bucket
+- Exponential backoff after failures
+- Penalty windows after captcha failure
+
+---
+
+## 6. Bot Detection Signals (Pre-Captcha)
+
+Use signals to decide *whether* to challenge at all.
+
+### Common signals
+
+- Missing/malformed headers (User-Agent, Accept-Language)
+- Known datacenter IP ranges
+- Headless browser markers
+- TLS fingerprint anomalies
+- Time-to-first-interaction
+- Mouse/touch entropy (privacy-sensitive)
+
+### Config
+
+```ruby
+device bot_detection: {
+  require_headers: %w[User-Agent Accept],
+  reject_datacenter_ips: true,
+  min_interaction_time: 200.ms
+}
+```
+
+These feed into risk scoring, not hard blocks.
+
+---
+
+## 7. Bypass & Trust Mechanisms
+
+Critical for internal tools, mobile apps, support workflows.
+
+### Bypass config
+
+```ruby
+device captcha: :turnstile, bypass: {
+  ip_whitelist: ["10.0.0.0/8", "192.168.0.0/16"],
+  api_keys: true,
+  header: "X-Internal-Auth"
+}
+```
+
+### Trusted device tokens
+
+- Persist signed, rotating captcha-trust token
+- Tie to device + IP range
+- Expire aggressively
+
+---
+
+## 8. Logging & Monitoring Hooks
+
+Often overlooked, painful later.
+
+### Events to emit
+
+```ruby
+captcha.challenge_shown
+captcha.verification_attempt
+captcha.verification_success
+captcha.verification_failure
+captcha.provider_error
+captcha.escalation
+captcha.bypass
+```
+
+### Payload
+
+```json
+{
+  "event": "captcha.verification_success",
+  "provider": "recaptcha",
+  "variant": "v3",
+  "score": 0.82,
+  "path": "/users/sign_in",
+  "method": "POST",
+  "ip": "203.0.113.5",
+  "device_id": "abc123",
+  "latency_ms": 342
+}
+```
+
+### Integration points
+
+- ActiveSupport::Notifications
+- Structured logging (JSON)
+- Prometheus/StatsD metrics
+- Sentry for errors
+
+---
+
+## 9. Operational Controls
+
+Production systems need runtime flexibility.
+
+### Feature flags
+
+```ruby
+Masks.configure do
+  captcha_enabled true
+  captcha_provider_enabled :recaptcha, true
+  force_interactive_captcha false  # debug mode
+end
+```
+
+### Kill switches
+
+- Disable provider instantly on outage
+- Force fallback globally
+- Bypass all captcha during incident
+
+---
+
+## 10. Privacy & Compliance
+
+Especially relevant for reCAPTCHA Enterprise and GDPR.
+
+### Options
+
+```ruby
+device captcha: :recaptcha, privacy: {
+  anonymize_ip: true,
+  minimal_data: true,
+  consent_required: true  # show consent before loading script
+}
+```
+
+---
+
+## Additional Providers to Consider
+
+### Currently Implemented
+
+| Provider | Type | Pros | Cons |
+|----------|------|------|------|
+| **Turnstile** | Invisible | Truly frictionless, privacy-focused, free | Cloudflare ecosystem |
+| **reCAPTCHA** | Multiple | Ubiquitous, good detection | Privacy concerns, Google dependency |
+| **hCaptcha** | Checkbox/Invisible | Privacy-focused, pays publishers | Not truly invisible, can show challenges |
+
+### Worth Adding
+
+| Provider | Type | Use Case |
+|----------|------|----------|
+| **Friendly Captcha** | Proof-of-work | GDPR-focused, no cookies, accessible. Growing in EU. |
+| **mCaptcha** | Proof-of-work | Self-hostable, open source, no third-party dependency |
+| **Arkose Labs** | Interactive puzzle | High-security (banks, gaming), hard to automate |
+| **GeeTest** | Sliding puzzle | Popular in Asia, good UX |
+| **AWS WAF Captcha** | Invisible/Interactive | Native if already on AWS, integrates with WAF rules |
+| **PerimeterX/HUMAN** | Behavioral | Enterprise bot detection, not just captcha |
+| **Kasada** | Proof-of-work | Anti-automation focus, fingerprinting |
+
+### Provider selection criteria
+
+1. **Invisibility** - Does it require user interaction?
+2. **Privacy** - Third-party scripts? Cookie requirements? GDPR compliance?
+3. **Self-hosting** - Can you run it yourself?
+4. **Cost** - Free tier limits? Per-verification pricing?
+5. **Regional availability** - Blocked in certain countries?
+6. **Accessibility** - Screen reader support? Alternative challenges?
+
+### Recommended additions (priority order)
+
+1. **Friendly Captcha** - Best GDPR story, proof-of-work means no user interaction
+2. **mCaptcha** - Self-hostable option for privacy-conscious deployments
+3. **AWS WAF Captcha** - If targeting AWS-heavy customers
+
+---
+
+## Implementation Priority
+
+High impact, reasonable effort:
+
+1. **TTL / Expiring trust** - Prevent indefinite trust
+2. **Structured logging hooks** - Observability is critical
+3. **Fallback providers** - Resilience when primary fails
+4. **Per-path overrides** - Different risk profiles per endpoint
+5. **Bypass mechanisms** - Operational necessity
+
+Medium priority:
+
+6. **Risk-based escalation** - Start invisible, escalate if suspicious
+7. **Additional rate limiting** - Beyond simple request counts
+8. **Friendly Captcha provider** - GDPR compliance story
+
+Lower priority (complexity vs value):
+
+9. **Bot detection signals** - Lots of edge cases
+10. **Proof-of-work providers** - Niche use cases
+
+---
+
+## Notes
+
+- Current implementation stores captcha results on Device model (JSON column keyed by provider)
+- Throttle state stored in Rails session
+- Session conflict between MiddlewareController and downstream controllers resolved - shared session object works correctly
+- All providers need `sitekey` and `secret` in `masks.yml`

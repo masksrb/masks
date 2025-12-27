@@ -1,0 +1,14 @@
+# Customize your masks installation in this file.
+#
+# - https://masks.pages.dev/guides/rails
+defaults: &defaults
+  mode: <%= @mode %>
+
+development:
+  <<: *defaults
+
+test:
+  <<: *defaults
+
+production:
+  <<: *defaults

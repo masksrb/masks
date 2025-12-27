@@ -1,0 +1,22 @@
+source "https://rubygems.org"
+
+# Specify your gem's dependencies in masks.gemspec.
+gemspec
+
+gem "puma"
+gem "sqlite3"
+gem "propshaft"
+gem "activerecord-session_store"
+gem "openssl", "~> 3.3.1"
+
+group :development do
+  gem 'byebug'
+end
+
+group :test do
+  gem "minitest", "< 6"
+  gem "mocha"
+end
+
+# Omakase Ruby styling [https://github.com/rails/rubocop-rails-omakase/]
+gem "rubocop-rails-omakase", require: false

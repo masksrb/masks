@@ -1,0 +1,189 @@
+---
+title: Policy-First Architecture
+description: Policies as the core abstraction, unifying routing, enforcement, and controller behavior
+---
+
+Policies become the foundational abstraction in Masks. They define where things live, what checks run, and what happens. The policy IS the endpoint.
+
+---
+
+## Core Architecture
+
+All policies extend `AbstractPolicy`. When a policy runs via `on :request`, it executes in a controller context where `Masks::Controller` is already included.
+
+```
+AbstractPolicy
+├── RequestPolicy    (orchestrates at middleware level)
+├── DevicePolicy     (tracks devices, captcha)
+├── ClientPolicy     (validates clients)
+├── LoginPolicy      (handles /login)
+├── SsoPolicy        (handles /sso)
+├── OidcPolicy       (handles /oidc)
+└── ...
+```
+
+No intermediate classes. Policies extend AbstractPolicy and run in controller context.
+
+---
+
+## Policy Structure
+
+```ruby
+class Masks::LoginPolicy < Masks::AbstractPolicy
+  def default_policies
+    device
+    client
+    throttle after: 5
+    captcha after: 3
+  end
+
+  on :request do |policy|
+    case request.method
+    when 'GET'
+      render :new
+    when 'POST'
+      if authenticate(params)
+        redirect_to after_login_path
+      else
+        render :new, status: :unprocessable_entity
+      end
+    end
+  end
+end
+```
+
+- `default_policies` - instance method defining composed policies, override to customize
+- `on :request` - runs in controller context, has access to `device`, `masks_session`, `stop`, `render`, `params`, `session`, `cookies`, `flash`
+
+No Rails-style action methods. The `on :request` block handles the request, branching on method as needed.
+
+---
+
+## Configuration
+
+YML or Ruby, both work:
+
+```yaml
+# masks.yml
+policies:
+  masks:
+    device:
+      captcha: turnstile
+    login:
+      on: /login
+    sso:
+      on: /sso
+```
+
+```ruby
+# config/masks.rb
+Masks.configure do
+  policy :masks do
+    device captcha: :turnstile
+
+    login on: '/login'
+    sso on: '/sso'
+    oidc on: '/oidc'
+    admin on: '/masks'
+    gql on: '/masks.graphql'
+  end
+end
+```
+
+### `login on: '/login'`
+
+Mounts `LoginPolicy` at `/login`. The policy handles the request entirely at middleware level.
+
+### `inherits:`
+
+Copies policies at definition time. No runtime chain.
+
+```ruby
+policy :masks do
+  device captcha: :turnstile
+  login on: '/login'
+end
+
+policy inherits: :masks do
+  # Copied: device, login
+  logged_in on: '/dashboard'
+end
+```
+
+---
+
+## Customization
+
+### YML class override
+
+```yaml
+policies:
+  login:
+    class_name: MyApp::CustomLoginPolicy
+  device:
+    class_name: MyApp::CustomDevicePolicy
+```
+
+### Ruby class override
+
+```ruby
+Masks.configure do
+  policy :login, class_name: 'MyApp::CustomLoginPolicy'
+end
+```
+
+### Full replacement
+
+```ruby
+class MyApp::CustomLoginPolicy < Masks::AbstractPolicy
+  def default_policies
+    # your composition
+  end
+end
+```
+
+Any piece swappable at any layer.
+
+---
+
+## Masks::Controller Concern
+
+For adding policy enforcement to existing Rails controllers:
+
+```ruby
+class DashboardController < ApplicationController
+  include Masks::Controller
+
+  policy :dashboard
+
+  def index
+    # ...
+  end
+end
+```
+
+Policies themselves don't include this concern - they run in a context that already has it.
+
+---
+
+## Routing
+
+Policy routes are not integrated with Rails routing. Masks handles its own routes at middleware level. No `login_path` helpers, no `rails routes` output.
+
+Client libraries generate URLs their own way.
+
+---
+
+## Views
+
+Standard Rails view lookup. `Masks::LoginPolicy` renders from `app/views/masks/login_policy/`.
+
+---
+
+## Benefits
+
+1. **Single source of truth** - policy config defines routes and behavior
+2. **Composable** - `default_policies` method, `inherits:` for layering
+3. **Flexible** - YML or Ruby config, class overrides at any level
+4. **No inheritance surprises** - `inherits:` is explicit copy
+5. **Clean separation** - policies don't care where they run

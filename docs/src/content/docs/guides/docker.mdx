@@ -1,0 +1,83 @@
+---
+title: Masks::Engine
+subtitle: test
+description: How to host your own masks server
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+You can safely run the masks server inside any Rails app that satisfies the
+[requirements](#requirements).
+
+## Quickstart
+
+Add `masks` to your Gemfile:
+
+```ruby title="Gemfile"
+gem "masks"
+```
+
+Then run the `masks:install` generator to update routes, add migrations and seeds.
+
+```sh
+bundle exec rails g masks:install --mode=engine
+```
+
+## Requirements
+
+Rails 8+ is required. Production deployments _must_ be hosted behind SSL.
+
+### Sessions
+
+Masks relies on Rails built-in session manager. Ensure you set
+`config.session_store`, ideally using a DB, Redis, or other persistent backend
+for storage.
+
+<Aside type="caution">
+  Avoid using `:cookie_store` for your `config.session_store`. It is less secure.
+</Aside>
+
+You are encouraged to pick a strong encryption key for storing encrypted and
+signed cookies—also required to run Masks.
+
+### Database
+
+A database is _required_ to run the masks server. SQLite & PostgreSQL are
+actively maintained.  The installer assumes you want to place migrations in
+`db/migrate` but you can customize the location:
+
+```sh
+bundle exec rails g masks:install --mode=engine --migrations=db/masks
+```
+
+#### `connects_to`
+
+By default, all masks models are configured to connect to your app's primary
+database. You can override this at runtime in an initializer if you'd like to
+use a separate database:
+
+```ruby title="config/initializers/masks.rb"
+Masks::ApplicationRecord.connects_to database: { writing: :masks, reading: :masks }
+```
+
+### Assets
+
+TODO
+
+### Jobs
+
+You are encouraged to run `Masks::CleanupJob` regularly.
+
+## Configuration
+
+You can add a `config/masks.yml` file to override behaviour in YML. You can also
+create an initializer if you'd prefer to use Ruby. All `masks.yml` settings can
+be customized at runtime:
+
+```ruby title="config/initializers/masks.rb"
+Masks.configure do |c|
+  c.url = "https://my.app.dev"
+  c.name = "My App"
+  # etc...
+end
+```

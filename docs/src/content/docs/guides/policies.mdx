@@ -1,0 +1,171 @@
+---
+title: ✅ Policies
+description: TODO
+---
+
+import { Aside, Tabs, TabItem } from '@astrojs/starlight/components';
+
+_Policies_ are used to dictate how authentication works in various parts of your
+app. When installed, masks will _automatically_ apply the following policies in
+Rails apps:
+
+ - `request` — to all incoming HTTP requests
+ - `controller` - to any controllers including `Masks::Controller`
+ - `socket` — to Websocket connections including `Masks::Socket`
+ - `job` - to any jobs including `Masks::Job`
+ - `cli` - when manually applied in console scripts
+
+By default, these policies _do nothing_. You must add additional checks to them
+using `config/masks.rb`, `config/masks.yml`, custom policy classes, or a few
+other options (depending on the type). Read on to learn more.
+
+### `request`
+
+The request policy will match requests based on the path, method, and criteria
+defined in a block. For example:
+
+<Tabs>
+  <TabItem label="config/masks.rb">
+```ruby
+Masks.configure do
+  policy :request do
+    # Inherits the default policies specified in Masks::MasksPolicy
+    # including login/signup, SSO, profiles, and admin features.
+    uses :masks
+
+    # Requires various forms of authentication
+    logged_in at: '/dashboard'
+    logged_in at: '/admin', scope: 'admin'
+    api_token at: '/api', scope: 'api-client'
+  end
+end
+```
+  </TabItem>
+  <TabItem label="config/masks.yml">
+  ```yml
+  policies:
+    request:
+      policies:
+        - uses: masks
+        - type: logged_in
+          at: /dashboard
+        # ...
+```
+  </TabItem>
+</Tabs>
+
+Request policies are distinctly different from controller policies, in that they
+apply to _all_ requests served by your Rails/rack app.
+
+#### Excluding paths
+
+By default, request policies skip common static asset paths like `/favicon.ico`,
+`/robots.txt`, `/assets/*`, and `/.well-known/*`. You can exclude additional paths:
+
+```ruby
+Masks.configure do
+  policy :request do
+    exclude '/health', '/metrics'
+  end
+end
+```
+
+### `controller`
+
+Any controller including `Masks::Controller` will have a corresponding policy.
+You can customize the policy in your controller or using `config/masks.rb|yml`:
+
+
+<Tabs>
+  <TabItem label="Inline">
+```ruby
+class MyController < ApplicationController
+  # Equivalent to a before_action
+  mask :logged_in, scope: 'my-scope' #, on: [:create]
+end
+```
+  </TabItem>
+  <TabItem label="config/masks.rb">
+```ruby
+Masks.configure do
+  policy :controller do
+    logged_in
+  end
+
+  policy :my_controller do
+    # Applies to MyController
+    uses :controller
+  end
+end
+```
+  </TabItem>
+  <TabItem label="config/masks.yml">
+  ```yml
+  policies:
+    controller:
+      - type: logged_in
+    my_controller:
+      - uses: controller
+      # ...
+```
+  </TabItem>
+</Tabs>
+
+
+### `socket`
+
+You can add `Masks::Socket` to your connections and channels to protect them
+from unauthorized access.
+
+### `job`
+
+Similarly, you can add `Masks::Job` to your jobs to ensure they are not run
+unless checks pass.
+
+Although most jobs don't require policy checks, there are
+some cases where you want to re-verify capabilities before performing an
+asynchronous action.
+
+### `cli`
+
+<Aside>
+If you want to add authentication to a command-line tool or rake task
+refer to the guides to CLI authentication. The `cli` policy is relied on in this
+case, but it is not applied automatically.
+</Aside>
+
+
+## Built-in policies
+
+| name | description |
+|------|-------------|
+| `client` | Finds and optionally requires a `client` in the context |
+| `device` | Ensures a valid `device` is present |
+| `throttle` | Throttles a request using captchas, time, and more |
+| `logged_in` | Redirects to login unless there is a valid authenticated session |
+| `scope` | Requires a specific scope on the authentication session |
+| `masks_manager` | Requires actors are logged in and have the `masks:manager` scope |
+| `api_token` | Requires an API token or returns a `401` |
+| `login` | Authenticates actors via a login (and optional signup) flow |
+| `sso` | Allows actors to authenticate via single sign-on |
+| `openid` | Allows external clients to authenticate actors via OAuth/OIDC |
+| `identifier` | Identifies an actor via a username, email or other unique identifier |
+| `first_factor` | Requires a valid set of credentials (e.g. password, passkey) |
+| `second_factor` | Requires a valid set of 2FA credentials |
+| `profile` | Allows profile customization on signup or if requested |
+| `onboarding` | Requires an onboarding step after signup  |
+
+## Custom policies
+
+Types correspond to classes. You can override the default implementations
+as-needed:
+
+```yml title=config/masks.yml
+classes:
+  request_policy: AppRequestPolicy
+  controller_policy: AppControllerPolicy
+  my_controller_policy: MyControllerPolicy
+```
+
+
+

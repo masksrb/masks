@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html class="h-full">
+  <head>
+    <title><%= content_for(:title) || "masks" %></title>
+
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+
+    <link rel="icon" href="<%= Masks.mode.favicon_url %>">
+    <link rel="apple-touch-icon" href="<%= Masks.mode.favicon_url %>">
+
+    <%= vite_client_tag %>
+
+    <% if @client&.styles_url %>
+      <%= stylesheet_link_tag @client.styles_url, skip_pipeline: true %>
+    <% end %>
+
+    <%= yield :styles %>
+
+    <%= vite_javascript_tag 'client' %>
+    <%= vite_stylesheet_tag 'client' %>
+  </head>
+
+  <body class="h-full bg-base-300 animate-fade-in flex flex-col">
+    <%= render "masks/debug_panel" %>
+
+    <div
+      class="bg-base-300 background animate-fade-in flex flex-col min-h-full md:p-3 px-[5px] items-center justify-center flex-grow"
+    >
+      <div
+        class="w-full max-w-[500px] md:w-[500px] mx-auto rounded-b-2xl shadow-2xl"
+      >
+        <div
+          class="bg-white dark:bg-black !bg-opacity-10 h-[25px] md:h-[32px] rounded-t-2xl w-full relative border-t dark:border-gray-700 border-gray-200"
+        ></div>
+        <div
+          class="md:w-[500px] bg-white dark:bg-black !bg-opacity-90 w-full md:px-8 pb-5 px-5"
+        >
+          <% if @mode&.homepage %>
+            <a
+              href="<%= @mode.homepage %>"
+              class="flex items-center gap-4 group !outline-none"
+            >
+              <%= render "layouts/masks/header" %>
+            </a>
+          <% else %>
+            <%= render "layouts/masks/header" %>
+          <% end %>
+
+          <div class="grow"></div>
+        </div>
+        <div class="w-full md:w-[500px] mx-auto relative rounded-b-2xl shadow-xl">
+          <div
+            class="bg-white dark:bg-black !bg-opacity-90 w-full min-h-[200px] md:w-[500px] mx-auto flex flex-col"
+          >
+            <div class="px-5 md:px-8 flex flex-col grow">
+              <%= yield %>
+            </div>
+          </div>
+          <div
+            class="bg-white dark:bg-black !bg-opacity-90 h-[30px] overflow-hidden rounded-b-2xl"
+          ></div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

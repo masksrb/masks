@@ -1,0 +1,21 @@
+<div
+  data-theme="dark"
+  class="fixed bottom-0 right-0 left-0 min-h-[50px] max-h-screen bg-black overflow-auto shadow-xl"
+>
+  <details class="collapse bg-black px-3">
+    <summary class="collapse-title cursor-pointer flex gap-1.5 p-3">
+    <% if @debug.present? %>
+      <span class="font-mono dim text-sm grow">masks@<%= @debug.version %></span>
+    <% end %>
+
+    <% if @debug && @debug[:message] %>
+      <span class="text-warning dim text-sm truncate"><%= @debug[:message] %></span>
+    <% end %>
+    </summary>
+
+    <div class="collapse-content text-sm p-3 pb-6 rows-3">
+      <p class="font-bold">Debug JSON</p>
+      <pre class="overflow-auto text-emerald-300"><%= JSON.pretty_generate(@debug.to_h) %></pre>
+    </div>
+  </details>
+</div>

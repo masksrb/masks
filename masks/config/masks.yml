@@ -1,0 +1,22 @@
+defaults: &defaults
+  mode: client
+
+  adapters:
+    turnstile:
+      sitekey: '0x4AAAAAACL3SmwMygRCBdgn'
+      secret: '0x4AAAAAACL3ShKvIlCZGnrCVo8Krd3svxA'
+    recaptcha:
+      sitekey: '6LcCtEAsAAAAAFqODDK4TNxsPny9iSzCXQE7vvgP'
+      secret: '6LcCtEAsAAAAAGTubZlfNSu5EsXKZPGDNvdg56Wj'
+    hcaptcha:
+      sitekey: '10000000-ffff-ffff-ffff-000000000001'
+      secret: '0x0000000000000000000000000000000000000000'
+
+development:
+  <<: *defaults
+
+test:
+  <<: *defaults
+
+production:
+  <<: *defaults
