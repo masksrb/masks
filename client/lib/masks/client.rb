@@ -19,6 +19,7 @@ require_relative "client/verifier"
 require_relative "client/resource"
 require_relative "client/rack"
 require_relative "client/registration"
+require_relative "client/pairing"
 
 module Masks
   module Client

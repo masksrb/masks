@@ -3,9 +3,12 @@ module Masks
     class Registration
       attr_reader :issuer, :metadata, :access_token
 
-      def self.create(issuer, **attributes)
+      def self.create(issuer, token: nil, **attributes)
         issuer = Issuer.resolve(issuer)
-        body = HTTP.post_json(issuer.endpoint("registration_endpoint"), stringify(attributes))
+        headers = token ? { "Authorization" => "Bearer #{token}" } : {}
+        body = HTTP.post_json(
+          issuer.endpoint("registration_endpoint"), stringify(attributes), headers
+        )
 
         new(issuer, body)
       end
