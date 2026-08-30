@@ -125,7 +125,8 @@ class TokensController < ApplicationController
       if code.scope_list.include?(Scopes::OPENID)
         body["id_token"] = issuer.id_token(
           actor: code.actor, client: client,
-          scopes: code.scopes, nonce: code.nonce
+          scopes: code.scopes, nonce: code.nonce,
+          access_token: access.jwt
         )
       end
 
