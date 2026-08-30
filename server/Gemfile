@@ -7,6 +7,8 @@ gem "puma", ">= 5.0"
 
 gem "bcrypt", "~> 3.1.7"
 gem "jwt", "~> 3.1"
+gem "rack-oauth2", "~> 2.2"
+gem "openid_connect", "~> 2.3"
 gem "rqrcode", "~> 3.1"
 gem "rotp", "~> 6.3"
 
@@ -16,6 +18,7 @@ gem "solid_cache"
 gem "solid_queue"
 
 gem "thruster", require: false
+gem "vite_rails"
 
 group :development, :test do
   gem "dotenv-rails"
