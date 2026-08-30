@@ -89,6 +89,9 @@ class LoginsController < ApplicationController
     end
 
     def after_login_path
-      session[:authorization].present? ? resume_authorization_path : root_path
+      return resume_authorization_path if session[:authorization].present?
+      return setup_connect_path if session[SetupController::STORE].present?
+
+      root_path
     end
 end

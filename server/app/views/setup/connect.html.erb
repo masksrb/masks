@@ -1,0 +1,56 @@
+<% content_for :title, "Connect #{@pairing.name}" %>
+
+<div class="flex flex-col gap-4">
+  <div class="flex flex-col gap-1">
+    <h1 class="text-2xl font-bold">
+      <%= @existing ? "Reconnect" : "Connect" %> <%= @pairing.name %>?
+    </h1>
+    <p class="text-sm opacity-75">
+      Signed in as <strong class="font-semibold"><%= current_actor.nickname %></strong>.
+    </p>
+  </div>
+
+  <div class="rounded-lg border border-base-content/15 bg-base-200 px-3 py-2">
+    <p class="font-mono text-xs break-all"><%= @pairing.origin %></p>
+  </div>
+
+  <h2 class="text-xs font-bold uppercase opacity-75">It will be able to ask you for</h2>
+  <ul class="flex flex-col gap-2">
+    <% @scopes.each do |scope, description| %>
+      <li class="flex items-baseline justify-between gap-3 rounded-lg border border-base-content/15 bg-base-200 px-3 py-2">
+        <span class="text-sm"><%= description || "The #{scope} scope" %></span>
+        <span class="font-mono text-xs opacity-75"><%= scope %></span>
+      </li>
+    <% end %>
+  </ul>
+
+  <p class="text-sm opacity-75">
+    Approving grants your account these permissions and lets
+    <%= @pairing.name %> sign you in at
+    <span class="font-mono text-xs break-all"><%= @pairing.resource %></span>.
+  </p>
+
+  <% if @existing %>
+    <div class="alert alert-warning text-sm" role="alert">
+      This tenant is already connected to something at that address. Approving
+      replaces the credentials it holds now, and it will stop working until it
+      picks up the new ones.
+    </div>
+  <% end %>
+
+  <h2 class="text-xs font-bold uppercase opacity-75">It will be sent back to</h2>
+  <% @pairing.redirect_uris.each do |uri| %>
+    <p class="font-mono text-xs break-all opacity-75"><%= uri %></p>
+  <% end %>
+
+  <%= form_with url: setup_connect_path, method: :post do |form| %>
+    <div class="flex gap-2">
+      <%= form.submit "Connect", name: "approve", value: "yes", class: "btn btn-primary grow" %>
+      <%= form.submit "Cancel", name: "deny", value: "yes", class: "btn btn-ghost" %>
+    </div>
+  <% end %>
+
+  <p class="text-sm opacity-75">
+    Not you? <%= link_to "Sign out", logout_path, class: "link" %>.
+  </p>
+</div>

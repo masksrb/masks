@@ -10,6 +10,9 @@ Rails.application.routes.draw do
   delete "/login", to: "logins#destroy"
   match "/logout", to: "sessions#destroy", via: %i[get post delete], as: :logout
 
+  get "/setup/connect", to: "setup#connect", as: :setup_connect
+  post "/setup/connect", to: "setup#approve"
+
   get "/consent", to: "consents#show", as: :consent
   post "/consent", to: "consents#create"
 
