@@ -33,6 +33,23 @@ HTTP. Nothing in `engine/` issues a token; it only spends them.
 | Discovery and JWKS | per tenant, not per installation |
 | Sign-in | password, with an optional TOTP second factor |
 | Consent | remembered per actor and client |
+| Token exchange | RFC 8693, narrowing scope, audience and lifetime at once |
+| Revocation | RFC 7009, cascading to everything exchanged from a token |
+
+## Checked against the spec, not against itself
+
+masks runs the OpenID Foundation's own conformance suite — the plans written against the
+specification rather than against what we built. Both certification plans pass:
+
+```
+oidcc-config-certification-test-plan    2 modules ·   35 conditions · 0 failures
+oidcc-basic-certification-test-plan    39 modules · 2178 conditions · 0 failures
+```
+
+It is worth saying what that caught, because none of it was visible to the server's own tests: a
+`request` object being ignored rather than refused, `POST /authorize` not being routed at all, a
+replayed code leaving its access token alive, and the id token carrying claims that belong at
+userinfo. A suite you write yourself only asks the questions you already thought of.
 
 ## Multi-tenant from the first migration
 

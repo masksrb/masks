@@ -27,11 +27,18 @@ variable RLS reads and restores the previous value afterwards.
 ## Actor
 
 A person. `uuid` (the `sub` claim), `nickname`, `name`, `email`, `password_digest`, `otp_secret`
-(encrypted), `scopes`.
+(encrypted), `scopes`, plus the rest of the OIDC standard profile: `given_name`, `family_name`,
+`middle_name`, `profile_url`, `picture_url`, `website_url`, `gender`, `birthdate`, `zoneinfo`,
+`locale`. All nullable, and nothing edits them yet.
 
-`Actor.authenticate(identifier, password)` accepts a nickname or an email. `#claims(scopes)` returns
-only what the granted scopes permit — `profile` releases the name, `email` releases the address, and
-neither is included without them.
+`Actor.authenticate(identifier, password)` accepts a nickname or an email.
+`#claims(scopes, requested:)` returns only what the granted scopes permit — `profile` releases the
+thirteen standard profile claims, `email` releases the address and `email_verified`, and neither is
+included without them. `requested:` is the `claims` request parameter, which releases a claim named
+directly rather than through its scope.
+
+Unset fields are omitted rather than returned as `null`, so an actor releases what it has and stays
+quiet about the rest.
 
 ## Client
 
@@ -47,12 +54,18 @@ Single table, `type` column, four subclasses.
 
 | | Stored as | |
 | --- | --- | --- |
-| `AuthorizationCode` | SHA-256 of the secret | holds the PKCE challenge, `redirect_uri`, `nonce` |
-| `AccessToken` | the `jti` of the JWT | the JWT itself is never stored |
+| `AuthorizationCode` | SHA-256 of the secret | holds the PKCE challenge, `redirect_uri`, `nonce`, `authenticated_at`, `requested_claims` |
+| `AccessToken` | the `jti` of the JWT | the JWT itself is never stored; `parent_id` is the code it came from |
 | `RefreshToken` | SHA-256 of the secret | `parent_id` chains rotations |
 
 `Token.mint!` generates a secret and returns the record with `#secret` readable exactly once.
-`Token.redeem(secret)` finds a live one by digest. `#consume!` burns it.
+`Token.redeem(secret)` finds a live one by digest. `Token.spent(secret)` finds one redeem has
+already refused, which is how a replay is noticed at all. `#consume!` burns it; `#revoke!` burns it
+and everything below it.
+
+`parent_id` is one chain doing three jobs: it rotates refresh tokens, it records provenance through
+[an exchange](/guides/exchange), and — because an access token points back at the code that minted
+it — it is what lets a replayed code revoke what it already issued.
 
 ## Session
 

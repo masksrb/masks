@@ -16,6 +16,40 @@ Opaque tokens are stored as a SHA-256 digest — a database read cannot recover 
 JWTs so a resource server can verify them offline against the JWKS, but a row is still kept per
 token, keyed by `jti`, so they can be revoked and inspected.
 
+## What the id token carries, and what it does not
+
+The id token is **identity, and nothing a scope asked for**:
+
+```json
+{
+  "iss": "https://jons.auth.example",
+  "sub": "9f1c…",
+  "aud": "2bb32482-…",
+  "exp": 1756400000,
+  "iat": 1756399100,
+  "auth_time": 1756398000,
+  "acr": "urn:masks:acr:pwd",
+  "nonce": "n-once",
+  "at_hash": "aG91c2U…",
+  "tenant": { "uuid": "…", "subdomain": "jons" }
+}
+```
+
+No `name`, no `email`, no `preferred_username`. OIDC Core 5.4 puts the claims a scope asks for at
+[userinfo](/reference/endpoints) for any flow that issues an access token, and carrying them here as
+well hands a name and an address to everything that reads the token rather than to what presents one.
+Ask `/userinfo` for those.
+
+| | |
+| --- | --- |
+| `auth_time` | when the person actually signed in — not when the token was built |
+| `acr` | `urn:masks:acr:pwd` or `urn:masks:acr:mfa`, by whether a second factor was used |
+| `at_hash` | left half of the SHA-256 of the access token, so a client can confirm the two were issued together rather than paired by whoever delivered them |
+| `tenant` | who answered, so a consumer reads a claim instead of calling back |
+
+`max_age` is enforced against `auth_time`, not against `iat`. Sign in at nine, reuse consent at
+eleven, and a token whose `auth_time` was its own issue time would swear you had just authenticated.
+
 ## Audiences, and why `resource` exists
 
 By default a token's `aud` is the client it was issued to. That is fine for an id token, which the
@@ -59,7 +93,21 @@ challenge = BASE64URL(SHA256(verifier))
 ```
 
 The verifier is checked at the token endpoint with a constant-time comparison, and the code is
-consumed whether or not it matches.
+consumed whether or not it matches. Burning it only on success would let a wrong verifier be retried
+with the right one — which is the interception the check exists to catch, granted a second attempt.
+
+## A replayed code takes its tokens with it
+
+Presenting a code twice is evidence the first presentation may not have been the client's. So the
+second attempt is refused *and* the access token the first one minted is revoked:
+
+```
+POST /token  code=abc…   → 200, access token issued
+POST /token  code=abc…   → 400 invalid_grant, and that access token is now dead
+```
+
+Revoking the code alone would leave whoever intercepted it holding the thing the code was only ever
+a means to.
 
 ## Refresh rotation
 
