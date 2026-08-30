@@ -48,6 +48,21 @@ end
 Because keys are per tenant, a token from the wrong one does not merely fail an `iss` comparison —
 its `kid` is absent from the JWKS you fetched, so it cannot be verified at all.
 
+## Names live at userinfo
+
+A verified access token gives you a subject, a tenant, scopes and an audience. It does not give you a
+name or an email address, and neither does the id token — those are released by `/userinfo` to
+whoever presents the token, which is the point of them not being in it.
+
+```ruby
+profile = session.userinfo(access_token)
+profile["name"]   # => "Jon"
+profile["email"]  # => "jon@example.com"
+```
+
+`Masks::Client::Session#identity` does this for you at a callback, merging userinfo *underneath* the
+verified id-token claims so the signed values always win.
+
 ## Caching
 
 `Issuer` caches discovery and JWKS for five minutes. On an unknown `kid` the verifier invalidates and

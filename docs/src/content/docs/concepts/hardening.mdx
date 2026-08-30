@@ -58,6 +58,14 @@ runs the real store in **development and test as well**, so a rate limit that st
 somewhere you will notice.
 :::
 
+## A replayed code is treated as an interception
+
+The second presentation of an authorization code is refused, and the access token the first one
+minted is revoked with it. A code is only ever a means to a token, so burning the code and leaving
+the token alive refuses the attacker the doorway while letting them keep what was behind it.
+
+This is why an access token records the code it came from — see [models](/reference/models).
+
 ## Nothing accumulates forever
 
 `CleanupJob` runs nightly and deletes, per tenant, anything expired or consumed longer than seven

@@ -34,6 +34,10 @@ curl -X POST https://jons.auth.example/register \
 `token_endpoint_auth_method: "none"` makes it a **public client** — no secret is issued, and PKCE
 becomes mandatory rather than optional.
 
+Leaving `scope` off entirely is fine: a registration that names no scopes gets all four masks
+defines, `offline_access` included. A connector that cannot refresh has to send the person back
+through sign-in to keep working, which is worse than the token it was denied.
+
 ## Manage it afterwards (RFC 7592)
 
 The `registration_access_token` is the only credential that works against `registration_client_uri`:

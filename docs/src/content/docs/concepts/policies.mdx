@@ -49,9 +49,12 @@ rescue Policy::Denied => denial
   if denial.redirectable && authorization.client&.redirect_uri?(authorization.redirect_uri)
     redirect_to authorization.redirect_with(issuer:, error: denial.error, …)
   else
-    render json: denial.to_h, status: denial.status
+    render :error, status: denial.status
   end
 ```
+
+The non-redirectable branch renders a page rather than a JSON body, because a refusal with nowhere
+safe to send it is one a **person** is looking at. A client that asks for JSON still gets it.
 
 ## Writing one
 
