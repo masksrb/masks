@@ -1,0 +1,73 @@
+---
+title: Configuration
+description: Environment for the server, and the engine's initializer.
+---
+
+## Server
+
+Nothing in the repository names a host, a domain, or a secret — those are facts about a deployment.
+Everything arrives through the environment.
+
+| | |
+| --- | --- |
+| `POSTGRES_HOST` `POSTGRES_PORT` | where the database is |
+| `POSTGRES_USER` `POSTGRES_PASSWORD` | must not be a superuser — RLS is bypassed by one |
+| `POSTGRES_DATABASE` | production only |
+| `ENCRYPTION_PRIMARY_KEY` | ActiveRecord encryption |
+| `ENCRYPTION_DETERMINISTIC_KEY` | |
+| `ENCRYPTION_KEY_DERIVATION_SALT` | |
+| `MASKS_HOST_SUFFIX` | the suffix tenant subdomains hang off, development only |
+| `MASKS_PUBLIC_ORIGIN_TEMPLATE` | overrides the derived issuer origin; takes `%{subdomain}` |
+| `PORT` | |
+
+Generate real encryption keys with `bin/rails db:encryption:init`. The defaults in `.env.example`
+are development values and are labelled as such.
+
+`MASKS_PUBLIC_ORIGIN_TEMPLATE` exists for the case where something in front of the app rewrites the
+host — a tunnel, or a proxy that does not set forwarding headers. It must be stable, because OAuth
+redirect URIs and token audiences are registered against it. Leave it blank otherwise.
+
+## Engine
+
+```ruby
+Masks::Rails.configure do |config|
+  config.issuer = "https://jons.auth.example"
+  config.client_id = ENV.fetch("MASKS_CLIENT_ID")
+  config.client_secret = ENV.fetch("MASKS_CLIENT_SECRET")
+  config.redirect_uri = nil
+  config.resource = nil
+  config.scope = %w[openid profile email]
+  config.after_sign_in = "/"
+  config.after_sign_out = "/"
+  config.session_key = "masks"
+end
+```
+
+| | |
+| --- | --- |
+| `issuer` | required |
+| `client_id` `client_secret` | omit the secret for a public client |
+| `redirect_uri` | defaults to this host's `/auth/masks/callback` |
+| `resource` | the API the access token is for — sets its `aud` |
+| `scope` | what to request |
+| `after_sign_in` | where to land, unless a return path was remembered |
+| `session_key` | the session key tokens are stored under |
+
+**Every one of these accepts a callable** taking the request, which is how one application serves
+many tenants:
+
+```ruby
+config.issuer = ->(request) { "https://#{request.host.split(".").first}.auth.example" }
+config.resource = ->(request) { "https://#{request.host}/mcp" }
+```
+
+## Client
+
+No global configuration. Construct what you need:
+
+```ruby
+Masks::Client.issuer(url)                        # discovery and JWKS, cached
+Masks::Client.verifier(url, audience:)           # for a resource server
+Masks::Client::Session.new(issuer:, client_id:, redirect_uri:, client_secret:, scope:)
+Masks::Client::Registration.create(issuer, **metadata)
+```

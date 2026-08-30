@@ -1,0 +1,67 @@
+---
+title: Tokens and audiences
+description: What masks issues, what it stores, and how a resource server insists a token was minted for it.
+---
+
+## What gets issued
+
+| | Format | Lifetime | Single use |
+| --- | --- | --- | --- |
+| authorization code | opaque, 64 bytes | 10 minutes | yes |
+| access token | signed JWT (RS256) | 1 hour | no |
+| id token | signed JWT (RS256) | 15 minutes | no |
+| refresh token | opaque, 64 bytes | 30 days | yes, rotated |
+
+Opaque tokens are stored as a SHA-256 digest — a database read cannot recover one. Access tokens are
+JWTs so a resource server can verify them offline against the JWKS, but a row is still kept per
+token, keyed by `jti`, so they can be revoked and inspected.
+
+## Audiences, and why `resource` exists
+
+By default a token's `aud` is the client it was issued to. That is fine for an id token, which the
+client consumes itself, and useless for an access token the client sends *somewhere else*.
+
+RFC 8707 fixes this. The client names the API it intends to call:
+
+```
+GET /authorize
+  ?response_type=code
+  &client_id=…
+  &resource=https%3A%2F%2Fjons.things.example%2Fmcp
+```
+
+and that value becomes the token's `aud`:
+
+```json
+{ "aud": "https://jons.things.example/mcp", "scope": "openid profile email" }
+```
+
+The resource server then verifies `aud` against **its own URL** and refuses anything else. Without
+this, a token minted for one API is a valid token at every other API that trusts the same issuer —
+so any one of them can replay a token it receives against all the others.
+
+`resource` may repeat to name several. It can be sent at `/authorize`, at `/token`, or both; at the
+token endpoint it may only *narrow* what the code already authorized.
+
+:::caution[Repeated parameters]
+Rails keeps only the last value of a repeated query parameter, so masks parses `resource` off the raw
+query string and raw body rather than out of `params`. If you are writing a client, either form
+works; if you are reading this code, that is why it looks unusual.
+:::
+
+## PKCE
+
+`code_challenge` with `S256` is required for public clients and accepted from every client. `plain`
+is not supported.
+
+```
+challenge = BASE64URL(SHA256(verifier))
+```
+
+The verifier is checked at the token endpoint with a constant-time comparison, and the code is
+consumed whether or not it matches.
+
+## Refresh rotation
+
+Refreshing consumes the presented token and mints a child that records its parent. A replayed
+refresh token fails, because the first use already consumed it.

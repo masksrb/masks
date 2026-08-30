@@ -1,0 +1,58 @@
+---
+title: Running it
+description: Two tenants, each with their own signing key, in about a minute.
+---
+
+```sh
+bin/setup
+bin/dev
+```
+
+`bin/setup` starts Postgres, prepares the database, and seeds **two** tenants — `jons` and `acme` —
+each with an `owner` actor and its own signing key.
+
+Tenants are addressed by subdomain, so add them to your hosts file:
+
+```
+127.0.0.1 auth.test jons.auth.test acme.auth.test
+```
+
+Then [jons.auth.test:5555](http://jons.auth.test:5555), signing in as `owner` / `password`.
+
+## Two tenants, always
+
+Single-tenant assumptions do not announce themselves. They leak through a scope someone forgot,
+months later, and the seed is the cheapest place to make sure there is always a second tenant to
+notice with.
+
+The pair is also the fastest end-to-end check of the thing most worth checking:
+
+```sh
+curl -H "Host: jons.auth.test" localhost:5555/.well-known/jwks.json
+curl -H "Host: acme.auth.test" localhost:5555/.well-known/jwks.json
+```
+
+Different `kid` values, and neither JWKS can verify the other's tokens.
+
+## What runs where
+
+Postgres runs in Docker; Rails runs on the host. Containerising the application would buy nothing
+here and cost you the debugger.
+
+The app connects as a **non-superuser** role created by `db/docker-entrypoint-initdb.d`, because a
+superuser bypasses row-level security unconditionally and `POSTGRES_USER` is created as one.
+
+## Configuration
+
+Everything that names a host, a port, or a credential arrives through the environment;
+`server/.env.example` documents the full set and `bin/setup` copies it to `.env` for you.
+
+| | |
+| --- | --- |
+| `POSTGRES_*` | where the database is |
+| `ENCRYPTION_*` | ActiveRecord encryption keys — replace before storing anything real |
+| `MASKS_HOST_SUFFIX` | the suffix tenant subdomains hang off in development |
+| `MASKS_PUBLIC_ORIGIN_TEMPLATE` | overrides the issuer origin when behind a tunnel or proxy |
+
+`MASKS_PUBLIC_ORIGIN_TEMPLATE` takes `%{subdomain}`. Leave it blank and the issuer is derived from
+the request, which is what you want unless something in front of the app is rewriting the host.

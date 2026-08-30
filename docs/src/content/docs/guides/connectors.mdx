@@ -1,0 +1,107 @@
+---
+title: Register a connector
+description: Dynamic client registration and resource indicators, driven end to end.
+---
+
+An AI client adding a custom connector registers with **no prior arrangement** — nobody creates it in
+an admin UI first. Without dynamic client registration that flow cannot be set up at all, which is
+why DCR is v1 here rather than v2.
+
+## Register
+
+```sh
+curl -X POST https://jons.auth.example/register \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "client_name": "Claude",
+    "redirect_uris": ["https://claude.ai/api/mcp/auth_callback"],
+    "grant_types": ["authorization_code", "refresh_token"],
+    "scope": "openid profile email offline_access",
+    "token_endpoint_auth_method": "none"
+  }'
+```
+
+```json
+{
+  "client_id": "2bb32482-4552-440c-a097-8d6ce5d72e48",
+  "client_name": "Claude",
+  "token_endpoint_auth_method": "none",
+  "registration_access_token": "…",
+  "registration_client_uri": "https://jons.auth.example/register/2bb32482-…"
+}
+```
+
+`token_endpoint_auth_method: "none"` makes it a **public client** — no secret is issued, and PKCE
+becomes mandatory rather than optional.
+
+## Manage it afterwards (RFC 7592)
+
+The `registration_access_token` is the only credential that works against `registration_client_uri`:
+
+```sh
+curl -H "Authorization: Bearer $REGISTRATION_TOKEN" \
+  https://jons.auth.example/register/$CLIENT_ID
+```
+
+`PUT` updates the metadata, `DELETE` archives the client. A wrong token, or the right token against
+another tenant, is `401`.
+
+## Redirect URIs
+
+Validated at registration, not at authorize time. They must be absolute, carry no fragment, and use
+`https` unless the host is loopback — so `http://localhost:3000/callback` is accepted and
+`http://example.com/callback` is not.
+
+At `/authorize` the comparison is exact string equality against a registered URI. There is no prefix
+or wildcard matching.
+
+## Then the normal flow
+
+```
+GET /authorize
+  ?response_type=code
+  &client_id=2bb32482-…
+  &redirect_uri=https%3A%2F%2Fclaude.ai%2Fapi%2Fmcp%2Fauth_callback
+  &scope=openid+profile+email+offline_access
+  &state=…
+  &code_challenge=…&code_challenge_method=S256
+  &resource=https%3A%2F%2Fjons.things.example%2Fmcp
+```
+
+The `resource` is what makes the resulting access token usable at your API and useless anywhere else
+— see [tokens and audiences](/concepts/tokens).
+
+Sign-in and consent happen in the browser; the redirect back carries `code`, `state`, and `iss`.
+Then exchange it:
+
+```sh
+curl -X POST https://jons.auth.example/token \
+  -d grant_type=authorization_code \
+  -d code=… \
+  -d client_id=… \
+  -d redirect_uri=https://claude.ai/api/mcp/auth_callback \
+  -d code_verifier=… \
+  -d resource=https://jons.things.example/mcp
+```
+
+## From Ruby
+
+`masks-client` does the whole thing:
+
+```ruby
+issuer = Masks::Client.issuer("https://jons.auth.example")
+
+registration = Masks::Client::Registration.create(
+  issuer,
+  name: "things",
+  redirect_uris: ["https://jons.things.example/auth/masks/callback"],
+  scope: %w[openid profile email offline_access]
+)
+
+session = registration.session(redirect_uri: "https://jons.things.example/auth/masks/callback")
+started = session.start(resource: "https://jons.things.example/mcp")
+
+# redirect the browser to started[:url], keep started[:verifier] and started[:state]
+
+tokens = session.complete(code: params[:code], verifier: started[:verifier])
+```
