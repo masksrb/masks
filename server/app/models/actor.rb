@@ -22,8 +22,21 @@ class Actor < ApplicationRecord
       actor = find_by(nickname: identifier.to_s.strip) ||
               find_by(email: identifier.to_s.strip.downcase)
 
-      actor&.authenticate(password.to_s) || nil
+      return burn(password) if actor.nil? || actor.password_digest.blank?
+
+      actor.authenticate(password.to_s) || nil
     end
+
+    def decoy_digest
+      @decoy_digest ||= BCrypt::Password.create(SecureRandom.hex(16))
+    end
+
+    private
+
+      def burn(password)
+        BCrypt::Password.new(decoy_digest) == password.to_s
+        nil
+      end
   end
 
   def scope_list

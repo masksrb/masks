@@ -1,4 +1,16 @@
 class SessionsController < ApplicationController
+  rate_limit to: 10, within: 3.minutes, only: :create,
+             by: -> { [ current_tenant.id, request.remote_ip ].join(":") },
+             with: -> { too_many("Too many sign-in attempts. Wait a few minutes and try again.") }
+
+  rate_limit to: 5, within: 3.minutes, only: :create, name: "identifier",
+             by: -> { [ current_tenant.id, params[:identifier].to_s.downcase ].join(":") },
+             with: -> { too_many("Too many sign-in attempts for that account.") }
+
+  rate_limit to: 10, within: 3.minutes, only: :verify_second_factor,
+             by: -> { [ current_tenant.id, request.remote_ip ].join(":") },
+             with: -> { too_many("Too many codes. Wait a few minutes and try again.") }
+
   def new
     @authorization = pending_authorization
     redirect_to resume_authorization_path if current_actor && @authorization.nil?
@@ -46,6 +58,12 @@ class SessionsController < ApplicationController
   end
 
   private
+
+    def too_many(message)
+      @authorization = pending_authorization
+      flash.now[:alert] = message
+      render :new, status: :too_many_requests
+    end
 
     def pending_actor
       id = session[:pending_actor_id]

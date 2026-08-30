@@ -1,0 +1,87 @@
+---
+title: Hardening
+description: The attacks a sign-in page invites, and what masks does about each.
+---
+
+An auth server is the one component whose failures are worth attacking. These are the defences that
+are not visible in the protocol.
+
+## Sign-in tells you nothing about who exists
+
+A naïve login returns immediately when no such account exists and spends ~200ms hashing when one
+does. That difference is a user-enumeration oracle: an attacker learns which nicknames and email
+addresses are real without ever guessing a password.
+
+`Actor.authenticate` verifies against a decoy digest when the account is missing, so every outcome
+costs the same:
+
+```
+existing user:   219.3 ms
+unknown user:    219.5 ms
+empty input:     219.0 ms
+ratio:             1.00x
+```
+
+The failure message is identical too — "that identifier and password do not match" names neither
+half.
+
+## The session is rotated on sign-in
+
+A session fixation attack plants a known session cookie in a victim's browser, waits for them to
+authenticate, and then uses the cookie it already knows. masks calls `reset_session` at sign-in, so
+the identifier an attacker planted is discarded at the moment it would become valuable.
+
+The pending authorization request is carried across the reset deliberately — that state is *the
+reason* the person is signing in, and losing it would dump them somewhere confusing after a
+successful login.
+
+## Rate limits
+
+| | | |
+| --- | --- | --- |
+| sign-in | 10 / 3 min | per tenant and address |
+| sign-in | 5 / 3 min | per tenant and **identifier** |
+| second factor | 10 / 3 min | per tenant and address |
+| token endpoint | 60 / min | per tenant and address |
+| registration | 10 / 10 min | per tenant and address |
+
+Two limits on sign-in rather than one, because they stop different attacks. The per-address limit
+stops one machine working through a list. The per-identifier limit stops a distributed attempt on a
+single account, which no per-address limit can see.
+
+Every key is prefixed with the tenant, so one tenant's traffic can never exhaust another's budget.
+
+:::caution[A limit that does not limit]
+Rate limiting runs on `Rails.cache`. A cache store configured only in production — or a `:null_store`
+in test — makes every one of these a silent no-op exactly where you would try to verify it. masks
+runs the real store in **development and test as well**, so a rate limit that stops working fails
+somewhere you will notice.
+:::
+
+## Nothing accumulates forever
+
+`CleanupJob` runs nightly and deletes, per tenant, anything expired or consumed longer than seven
+days ago: tokens, sessions, and signing keys past their retirement.
+
+The grace period is deliberate. Deleting a token the instant it expires destroys the record you want
+when someone asks why a request failed an hour ago.
+
+## What is stored, and how
+
+| | |
+| --- | --- |
+| passwords | bcrypt, via `has_secure_password` |
+| client secrets | bcrypt |
+| authorization codes, refresh tokens, sessions | SHA-256 digest — the plaintext is returned once and never stored |
+| TOTP secrets, signing keys | encrypted at rest |
+
+A database read recovers no credential. Access tokens are the exception by design: they are JWTs, so
+what is stored is the `jti` and never the token.
+
+## Still open
+
+- **WebAuthn and a device model.** Both exist in an earlier masks and are worth porting; a device
+  record is also what throttling and captcha policies would hang off.
+- **Client secret rotation.** Secrets are issued once and have no expiry.
+- **Offline revocation visibility.** A revoked token stays verifiable to a resource server doing
+  JWT-only validation until it expires — see [narrowing a token](/guides/exchange).

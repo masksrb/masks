@@ -1,6 +1,10 @@
 class TokensController < ApplicationController
   skip_forgery_protection
 
+  rate_limit to: 60, within: 1.minute,
+             by: -> { [ current_tenant.id, request.remote_ip ].join(":") },
+             with: -> { slow_down }
+
   def create
     case params[:grant_type]
     when "authorization_code" then exchange_code
@@ -15,6 +19,11 @@ class TokensController < ApplicationController
   end
 
   private
+
+    def slow_down
+      deny("slow_down", "too many token requests from this address",
+           status: :too_many_requests)
+    end
 
     def exchange_code
       client = authenticate_client!

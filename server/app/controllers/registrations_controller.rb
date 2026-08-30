@@ -1,6 +1,15 @@
 class RegistrationsController < ApplicationController
   skip_forgery_protection
 
+  rate_limit to: 10, within: 10.minutes, only: :create,
+             by: -> { [ current_tenant.id, request.remote_ip ].join(":") },
+             with: -> {
+               render json: {
+                 "error" => "too_many_requests",
+                 "error_description" => "too many registrations from this address"
+               }, status: :too_many_requests
+             }
+
   before_action :require_registration_token, except: :create
 
   METADATA = %i[
