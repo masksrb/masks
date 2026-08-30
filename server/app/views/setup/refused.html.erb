@@ -1,0 +1,18 @@
+<% content_for :title, "This connection cannot be set up" %>
+
+<div class="flex flex-col gap-4">
+  <h1 class="text-2xl font-bold">This connection cannot be set up</h1>
+
+  <p class="text-sm opacity-75">
+    The application that sent you here described itself in a way this server
+    will not accept, so nothing has been connected and nothing has been shared.
+  </p>
+
+  <div class="rounded-lg border border-base-content/15 bg-base-200 px-3 py-2">
+    <p class="font-mono text-xs break-all"><%= @description %></p>
+  </div>
+
+  <p class="text-sm opacity-75">
+    Nothing is wrong with your account. The application has to fix this.
+  </p>
+</div>

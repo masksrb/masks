@@ -21,11 +21,42 @@ class Client < ApplicationRecord
   validate :redirect_uris_are_usable
   validate :grant_types_are_known
 
+  belongs_to :approved_by, class_name: "Actor", optional: true
+
   scope :active, -> { where(archived_at: nil) }
+  scope :approved, -> { where.not(approved_at: nil) }
 
   attr_reader :secret, :registration_token
 
   class << self
+    def approve!(pairing, actor:)
+      client = approved_for(pairing.resource) || new(client_id: SecureRandom.uuid)
+
+      client.assign_attributes(
+        name: pairing.name,
+        redirect_uris: pairing.redirect_uris,
+        resources: [ pairing.resource ],
+        scopes: Scopes.join(pairing.scopes),
+        grant_types: Pairing::GRANT_TYPES,
+        response_types: [ "code" ],
+        token_endpoint_auth_method: "client_secret_basic",
+        client_uri: pairing.origin,
+        dynamic: false,
+        approved_at: Time.current,
+        approved_by: actor,
+        archived_at: nil
+      )
+
+      client.save!
+      client
+    end
+
+    def approved_for(resource)
+      return nil if resource.blank?
+
+      active.approved.where("resources @> ?", [ resource.to_s ].to_json).first
+    end
+
     def register!(attributes)
       client = new(
         client_id: SecureRandom.uuid,
@@ -44,10 +75,7 @@ class Client < ApplicationRecord
         dynamic: true
       )
 
-      client.issue_secret! unless client.public?
-      client.issue_registration_token!
-      client.save!
-      client
+      client.issue_credentials!
     end
 
     def authenticating(client_id)
@@ -63,6 +91,17 @@ class Client < ApplicationRecord
 
   def public?
     token_endpoint_auth_method == "none"
+  end
+
+  def approved?
+    approved_at.present?
+  end
+
+  def issue_credentials!
+    issue_secret! unless public?
+    issue_registration_token!
+    save!
+    self
   end
 
   def issue_secret!

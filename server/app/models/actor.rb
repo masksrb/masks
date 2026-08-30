@@ -49,6 +49,10 @@ class Actor < ApplicationRecord
     Scopes.granted(requested, scope_list)
   end
 
+  def grant!(requested)
+    update!(scopes: Scopes.join(scope_list | Scopes.list(requested)))
+  end
+
   def otp?
     otp_enabled_at.present? && otp_secret.present?
   end

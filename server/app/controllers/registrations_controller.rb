@@ -19,6 +19,8 @@ class RegistrationsController < ApplicationController
   ].freeze
 
   def create
+    return redeem if bearer.present?
+
     client = Client.register!(attributes)
 
     render json: issued(client), status: :created
@@ -50,6 +52,18 @@ class RegistrationsController < ApplicationController
   end
 
   private
+
+    def redeem
+      token = InitialAccessToken.redeem(bearer)
+
+      return unauthorized("that initial access token is not valid or has expired") if token&.client.nil?
+
+      render json: issued(token.redeem!), status: :created
+    end
+
+    def bearer
+      request.authorization.to_s[/\ABearer (\S+)\z/, 1]
+    end
 
     def body
       @body ||= begin
@@ -91,15 +105,19 @@ class RegistrationsController < ApplicationController
     end
 
     def require_registration_token
-      token = request.authorization.to_s[/\ABearer (\S+)\z/, 1]
-      @client = Client.by_registration_token(token)
+      @client = Client.by_registration_token(bearer)
 
       return if @client && @client.client_id == params[:client_id]
 
+      unauthorized("a registration access token is required")
+    end
+
+    def unauthorized(description)
       response.headers["WWW-Authenticate"] = %(Bearer error="invalid_token")
+
       render json: {
         "error" => "invalid_token",
-        "error_description" => "a registration access token is required"
+        "error_description" => description
       }, status: :unauthorized
     end
 end

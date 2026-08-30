@@ -109,7 +109,9 @@ CREATE TABLE public.clients (
     secret_expires_at timestamp(6) without time zone,
     archived_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    approved_at timestamp(6) without time zone,
+    approved_by_id bigint
 );
 
 ALTER TABLE ONLY public.clients FORCE ROW LEVEL SECURITY;
@@ -492,6 +494,13 @@ CREATE UNIQUE INDEX index_actors_on_uuid ON public.actors USING btree (uuid);
 
 
 --
+-- Name: index_clients_on_approved_by_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_clients_on_approved_by_id ON public.clients USING btree (approved_by_id);
+
+
+--
 -- Name: index_clients_on_registration_token_digest; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -663,6 +672,14 @@ ALTER TABLE ONLY public.tokens
 
 
 --
+-- Name: clients fk_rails_1a30f4383b; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.clients
+    ADD CONSTRAINT fk_rails_1a30f4383b FOREIGN KEY (approved_by_id) REFERENCES public.actors(id);
+
+
+--
 -- Name: tokens fk_rails_3bbe3ff1e4; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -819,6 +836,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260830150000'),
 ('20260830120000'),
 ('20260829100008'),
 ('20260829100007'),

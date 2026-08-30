@@ -66,6 +66,7 @@ class AuthorizeController < ApplicationController
     def needs_consent?(authorization)
       return false if needs_login?(authorization)
       return true if authorization.consent?
+      return false if authorization.client&.approved?
 
       !Consent.covers?(
         actor: current_actor,
