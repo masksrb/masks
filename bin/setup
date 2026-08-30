@@ -26,6 +26,7 @@ fi
 docker compose up -d --wait
 
 bundle install
+npm install
 bin/rails db:prepare
 bin/rails db:seed
 
