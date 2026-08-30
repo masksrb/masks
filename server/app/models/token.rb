@@ -40,6 +40,21 @@ class Token < ApplicationRecord
     update!(consumed_at: Time.current)
   end
 
+  def revoke!
+    revoked = 0
+    frontier = [ self ]
+
+    while (token = frontier.shift)
+      next if token.consumed?
+
+      token.update!(consumed_at: Time.current)
+      revoked += 1
+      frontier.concat(token.children.to_a)
+    end
+
+    revoked
+  end
+
   def consumed?
     consumed_at.present?
   end

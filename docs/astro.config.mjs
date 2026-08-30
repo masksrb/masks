@@ -42,6 +42,7 @@ export default defineConfig({
             { label: "Sign a Rails app in", slug: "guides/rails" },
             { label: "Verify a token", slug: "guides/verifying" },
             { label: "Register a connector", slug: "guides/connectors" },
+            { label: "Narrow a token", slug: "guides/exchange" },
           ],
         },
         {

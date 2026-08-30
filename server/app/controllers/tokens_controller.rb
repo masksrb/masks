@@ -5,8 +5,10 @@ class TokensController < ApplicationController
     case params[:grant_type]
     when "authorization_code" then exchange_code
     when "refresh_token" then refresh
+    when Exchange::GRANT_TYPE then exchange_token
     else
-      deny("unsupported_grant_type", "grant_type must be authorization_code or refresh_token")
+      deny("unsupported_grant_type",
+           "grant_type must be one of #{Client::GRANT_TYPES.join(', ')}")
     end
   rescue Policy::Denied => denial
     render json: denial.to_h, status: denial.status
@@ -72,6 +74,29 @@ class TokensController < ApplicationController
       }
     end
 
+    def exchange_token
+      exchange = Exchange.new(
+        client: authenticate_client!,
+        issuer: issuer,
+        subject_token: params[:subject_token],
+        subject_token_type: params[:subject_token_type],
+        requested_token_type: params[:requested_token_type],
+        scope: params[:scope],
+        resource: repeated("resource"),
+        lifetime: params[:requested_lifetime]
+      ).validate!
+
+      access = exchange.issue!
+
+      render json: {
+        "access_token" => access.jwt,
+        "issued_token_type" => Exchange::ACCESS_TOKEN,
+        "token_type" => "Bearer",
+        "expires_in" => access.expires_in,
+        "scope" => Scopes.join(access.scopes)
+      }
+    end
+
     def payload(access, code:, client:)
       body = {
         "access_token" => access.jwt,
@@ -98,9 +123,12 @@ class TokensController < ApplicationController
       body
     end
 
+    def repeated(name)
+      Array(Rack::Utils.parse_query(request.raw_post)[name]).map(&:to_s).reject(&:empty?)
+    end
+
     def narrow(granted, client)
-      requested = Rack::Utils.parse_query(request.raw_post)["resource"]
-      requested = Array(requested).map(&:to_s).reject(&:empty?)
+      requested = repeated("resource")
 
       return granted.presence || [ client.client_id ] if requested.empty?
 

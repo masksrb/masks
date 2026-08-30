@@ -15,6 +15,7 @@ Rails.application.routes.draw do
   post "/consent", to: "consents#create"
 
   post "/token", to: "tokens#create"
+  post "/revoke", to: "revocations#create"
   match "/userinfo", to: "userinfo#show", via: %i[get post]
 
   post "/register", to: "registrations#create"

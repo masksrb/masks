@@ -1,0 +1,109 @@
+---
+title: Narrow a token
+description: Token exchange, so a process can act with less authority than the person who started it.
+---
+
+An application often needs to hand a credential to something it does not fully trust — a background
+run, an enrolled machine, a nested agent. Handing over the user's own token gives that thing
+everything the user can do, for as long as the user's session lasts.
+
+Token exchange (RFC 8693) mints a **strictly narrower** token from one you already hold.
+
+```sh
+curl -X POST https://jons.auth.example/token \
+  -u "$CLIENT_ID:$CLIENT_SECRET" \
+  -d grant_type=urn:ietf:params:oauth:grant-type:token-exchange \
+  -d subject_token="$ACCESS_TOKEN" \
+  -d subject_token_type=urn:ietf:params:oauth:token-type:access_token \
+  -d scope="openid profile" \
+  -d resource=https://jons.things.example/mcp \
+  -d requested_lifetime=300
+```
+
+```json
+{
+  "access_token": "eyJraWQiOi…",
+  "issued_token_type": "urn:ietf:params:oauth:token-type:access_token",
+  "token_type": "Bearer",
+  "expires_in": 299,
+  "scope": "openid profile"
+}
+```
+
+## Narrower, in three directions at once
+
+| | |
+| --- | --- |
+| **scope** | must be a subset of the subject token's |
+| **audience** | must be a subset of the subject token's `resource` values |
+| **lifetime** | never outlives the subject token, whatever you ask for |
+
+Ask for more than you hold and it is refused, not silently trimmed:
+
+```json
+{"error":"invalid_scope",
+ "error_description":"an exchange cannot widen scope: email, offline_access is not carried by the subject token"}
+```
+
+Omit `scope` or `resource` and the new token inherits the subject's. The lifetime ceiling is not
+optional — a 300-second request against a subject with 120 seconds left yields 120.
+
+## The `act` claim records who did it
+
+The exchanged token names the client that performed the exchange, and chains on each further
+exchange:
+
+```json
+"act": { "sub": "a46deb60-…", "act": { "sub": "9c1e2f77-…" } }
+```
+
+So a token carries its own provenance. Anything reading it can see it was not minted directly for the
+subject, and by whom.
+
+## Revocation cascades
+
+Exchanged tokens record their parent, which makes cancellation a tree operation rather than a hunt:
+
+```sh
+curl -X POST https://jons.auth.example/revoke \
+  -u "$CLIENT_ID:$CLIENT_SECRET" \
+  -d token="$ROOT_ACCESS_TOKEN" \
+  -d token_type_hint=access_token
+```
+
+Revoking a token revokes everything exchanged from it, and everything exchanged from those. A child
+cannot outlive its parent, and a revoked token cannot be exchanged.
+
+:::tip[Why this pairs with short lifetimes]
+Revocation is immediate here because masks checks a row per access token. If you are relying on
+offline JWT verification alone, cascade revocation is not visible to the verifier until the token
+expires — which is the argument for asking for a short `requested_lifetime` and exchanging again,
+rather than minting something long-lived and hoping to recall it.
+:::
+
+## From Ruby
+
+```ruby
+narrowed = session.exchange(
+  tokens.access_token,
+  scope: %w[openid profile],
+  resource: "https://jons.things.example/mcp",
+  lifetime: 300
+)
+
+session.revoke(tokens.access_token, hint: "access_token")
+```
+
+## Enabling it
+
+A client may only exchange if it was registered for the grant:
+
+```json
+"grant_types": [
+  "authorization_code",
+  "refresh_token",
+  "urn:ietf:params:oauth:grant-type:token-exchange"
+]
+```
+
+Otherwise the exchange is refused with `unauthorized_client`.
