@@ -91,17 +91,76 @@ distinction that keeps an open redirector from being one line away.
 ## Running it
 
 ```sh
+brew bundle  # postgresql@17, and it must be first on PATH — see below
 bin/setup    # postgres, database, two tenants each with their own key
-bin/dev      # http://jons.auth.test:5555
+bin/dev      # http://jons.auth.localhost:5555, plus vite on 3036
+bin/ci       # rubocop, brakeman, gem audit, tests
 ```
 
+The schema is dumped as **SQL**, not `schema.rb`. This is not a preference: `schema.rb` cannot
+represent `CREATE POLICY` or `FORCE ROW LEVEL SECURITY`, so a database built from it has no tenant
+isolation whatsoever — and `db:prepare` builds from the schema, not from migrations. That is why
+`db/structure.sql` is checked in, why `bin/setup` refuses to run without a matching `pg_dump`, and
+why three tests assert the policies are actually present in whatever database they find.
+
 Two tenants from the first seed, always — single-tenant assumptions do not announce themselves.
+
+### The login machine
+
+The server owns the flow. `Login` runs an ordered list of states three times — `reload!`, then
+`event!`, then `factor!` — and the first state to raise `PromptRequired` names the prompt the client
+must show. The order of `Login::STATES` *is* the flow; nothing else encodes it.
+
+```ruby
+handles "password" do
+  verify
+end
+
+prompts "second-factor" do
+  touched?(:first_factor) && !touched?(:second_factor)
+end
+```
+
+The client posts `{ event, ...updates }` to `/login` and gets the whole state back as JSON. Each
+prompt is one Svelte component under `app/frontend/prompts`, resolved by name, so **adding a factor
+is adding two files** — a state and a component — and touching the one list that orders them.
+
+Sign-in requires JavaScript as a result; consent, account and the error pages do not.
+
+One rule the machine has to keep: **the identifier step must never look the actor up.**
+`Actor.authenticate` takes identifier and password together and burns a decoy digest when there is no
+such account, and that is the only reason sign-in is not a user-enumeration oracle. A state that
+branches on whether an identifier exists — a signup offer, an SSO hint — hands that oracle back.
+
+### The container
+
+`server/Dockerfile` builds the production image. `bin/image` builds it, runs it against the same
+compose postgres on its own database, and asserts what a deploy has to get right — that the image
+boots, migrates, seeds both tenants, and publishes a *different* `kid` for each.
+
+```sh
+bin/image         # build, run, and check on http://jons.auth.localhost:5556
+bin/image logs
+bin/image down
+```
+
+It uses `auth.localhost` rather than the `auth.test` of `bin/dev`, because `*.localhost` resolves
+without touching `/etc/hosts` — so the URL it prints is one a browser can actually open.
+
+It runs on the production environment, so it exercises the production cache and queue rather than
+the development ones — which is where the last hardening bug was hiding. TLS is the only thing
+relaxed: `RAILS_FORCE_SSL` and `RAILS_ASSUME_SSL` are `false` there so plain http answers locally,
+and both default to `true` everywhere else.
+
+CI builds the same image on every pull request and publishes it on `main`. Everything else arrives
+through the environment; `server/.env.example` documents what, and `server/compose.yml` shows a
+complete set with development-only values.
 
 ## Still ahead
 
 Token exchange (RFC 8693) is v1.5, and three consumers need it: workflow runs, enrolled nodes, and
-connectors. WebAuthn, social providers, an admin UI and a published container are v2; the previous
-attempt has working implementations of the first two to draw from.
+connectors. WebAuthn, social providers and an admin UI are v2; the previous attempt has working
+implementations of the first two to draw from.
 
 ## Standing constraints
 
