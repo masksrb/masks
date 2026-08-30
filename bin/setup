@@ -32,9 +32,11 @@ bin/rails db:seed
 
 cat <<'TEXT'
 
-Tenants are addressed by subdomain. Add these to /etc/hosts:
+Tenants are addressed by subdomain. Either add these to /etc/hosts:
 
   127.0.0.1 auth.test jons.auth.test acme.auth.test
 
-Then bin/dev, and http://jons.auth.test:5555
+...or use *.auth.localhost, which resolves without any setup.
+
+Then bin/dev, and http://jons.auth.localhost:5555
 TEXT
