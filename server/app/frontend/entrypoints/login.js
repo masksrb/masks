@@ -4,8 +4,9 @@ import Login from "../Login.svelte";
 const target = document.getElementById("login");
 
 if (target) {
-  mount(Login, {
-    target,
-    props: { auth: JSON.parse(target.dataset.auth) },
-  });
+  const auth = JSON.parse(target.dataset.auth);
+
+  target.replaceChildren();
+
+  mount(Login, { target, props: { auth } });
 }

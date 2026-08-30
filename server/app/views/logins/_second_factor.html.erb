@@ -1,0 +1,19 @@
+<%= render "logins/header", heading: "Enter your code", login: login %>
+
+<%= render "logins/identified", login: login %>
+
+<%= render "logins/warnings", login: login %>
+
+<%= form_with url: login_path, method: :post, id: "second-factor", class: "flex flex-col gap-4" do |form| %>
+  <%= form.hidden_field :event, value: "otp" %>
+
+  <label class="flex flex-col gap-1.5">
+    <span class="text-sm font-medium">Six-digit code</span>
+    <%= form.text_field :code, inputmode: "numeric", pattern: "[0-9]*",
+          autocomplete: "one-time-code", maxlength: 6, spellcheck: "false",
+          class: "input input-bordered w-full text-lg tabular-nums tracking-[0.4em]" %>
+    <span class="text-xs opacity-75">From your authenticator app.</span>
+  </label>
+
+  <button type="submit" class="btn btn-primary w-full">Verify</button>
+<% end %>

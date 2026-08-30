@@ -1,7 +1,7 @@
 class RegistrationsController < ApplicationController
   skip_forgery_protection
 
-  rate_limit to: 10, within: 10.minutes, only: :create,
+  rate_limit to: Rails.configuration.masks.registration_limit, within: 10.minutes, only: :create,
              by: -> { [ current_tenant.id, request.remote_ip ].join(":") },
              with: -> {
                render json: {
