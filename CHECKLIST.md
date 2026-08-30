@@ -234,9 +234,11 @@ registration token, cross-tenant client, cross-tenant token, widened scope, wide
       reachable host, the window between boot and first visit is a land grab.** The token is
       compared with `secure_compare`, a missing one is refused rather than treated as blank, and
       `setup` is rate-limited as a verifying event, so guessing it is bounded like a password.
-- [ ] **Nothing has driven the setup prompt in a browser** — the ERB partial is exercised by the
-      form-encoded test and the Svelte component builds, but no browser has run it. The same
-      caveat §2 carries for the no-JS path, in the other direction.
+- [ ] ◐ **The setup prompt has been driven with JavaScript off, and never with it on** — this said
+      nothing had driven it at all. `home/bin/probe-pairing` now runs it against a live server with
+      no actors in it: curl loads no bundle, so what answered was the ERB partial, which makes this
+      the first thing to deliberately execute the no-JS path §2 flags as read-but-never-run. The
+      Svelte component still builds and still has no browser behind it.
 - [x] **The identifier step never looks the actor up** — so §5's anti-enumeration property survives
       the split into two steps. Measured through the machine: 282.4 / 283.6 / 283.1 ms for
       real-wrong-password, no-such-account, and correct, with identical prompt and warning.
