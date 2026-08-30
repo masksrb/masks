@@ -126,6 +126,7 @@ class TokensController < ApplicationController
         body["id_token"] = issuer.id_token(
           actor: code.actor, client: client,
           scopes: code.scopes, nonce: code.nonce,
+          authenticated_at: code.authenticated_at,
           access_token: access.jwt
         )
       end

@@ -1,7 +1,7 @@
 class Authorization
   attr_reader :client_id, :redirect_uri, :response_type, :state, :nonce,
               :code_challenge, :code_challenge_method, :prompt, :audience,
-              :requested_scopes
+              :requested_scopes, :max_age
 
   def self.from_request(request)
     repeated = Rack::Utils.parse_query(request.query_string)
@@ -17,13 +17,14 @@ class Authorization
       code_challenge: params["code_challenge"],
       code_challenge_method: params["code_challenge_method"],
       prompt: params["prompt"],
+      max_age: params["max_age"],
       resource: repeated["resource"]
     )
   end
 
   def initialize(client_id:, redirect_uri:, response_type:, scope: nil, state: nil,
                  nonce: nil, code_challenge: nil, code_challenge_method: nil,
-                 prompt: nil, resource: nil)
+                 prompt: nil, max_age: nil, resource: nil)
     @client_id = client_id.to_s
     @redirect_uri = redirect_uri.to_s
     @response_type = response_type.to_s
@@ -33,6 +34,7 @@ class Authorization
     @code_challenge = code_challenge.presence
     @code_challenge_method = (code_challenge_method.presence || ("S256" if @code_challenge))
     @prompt = Scopes.list(prompt)
+    @max_age = max_age.presence&.to_i
     @audience = Array(resource).map(&:to_s).reject(&:empty?).uniq
   end
 
@@ -75,9 +77,10 @@ class Authorization
     self
   end
 
-  def issue_code!(actor:)
+  def issue_code!(actor:, authenticated_at: nil)
     AuthorizationCode.mint!(
       actor: actor,
+      authenticated_at: authenticated_at,
       client: client,
       scopes: Scopes.join(scopes_for(actor)),
       audience: audience,
@@ -108,6 +111,7 @@ class Authorization
       "nonce" => nonce,
       "code_challenge" => code_challenge,
       "code_challenge_method" => code_challenge_method,
+      "max_age" => max_age,
       "resource" => audience
     }.compact
   end
@@ -128,6 +132,7 @@ class Authorization
       nonce: data["nonce"],
       code_challenge: data["code_challenge"],
       code_challenge_method: data["code_challenge_method"],
+      max_age: data["max_age"],
       resource: data["resource"]
     )
   end
