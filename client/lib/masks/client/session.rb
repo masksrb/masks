@@ -93,10 +93,24 @@ module Masks
         HTTP.get(issuer.endpoint("userinfo_endpoint"), "Authorization" => "Bearer #{access_token}")
       end
 
+      # The id token is who you are; userinfo is what you are called. OIDC
+      # Core 5.4 puts the scope-derived claims at userinfo for any flow that
+      # issues an access token, so an identity is built from both and the id
+      # token stays the thing that is verified.
       def identity(tokens)
         return nil if tokens.id_token.nil?
 
-        Verifier.new(issuer, audience: client_id).verify(tokens.id_token)
+        claims = Verifier.new(issuer, audience: client_id).verify(tokens.id_token)
+
+        profile(tokens).merge(claims)
+      end
+
+      def profile(tokens)
+        return {} if tokens.access_token.nil?
+
+        userinfo(tokens.access_token)
+      rescue Masks::Client::Error
+        {}
       end
 
       private
