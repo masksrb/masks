@@ -1,0 +1,14 @@
+[
+    {
+        "test-name": "oidcc-discovery-endpoint-verification",
+        "variant": {
+            "server_metadata": "discovery",
+            "client_registration": "static_client"
+        },
+        "configuration-filename": "/conformance/masks.json",
+        "current-block": "",
+        "condition": "CheckForUnexpectedParametersInServerMetadata",
+        "expected-result": "warning",
+        "comment": "masks publishes two properties RFC 8414 does not register: 'tenant', which carries tenant identity so a consumer reads a claim instead of calling back, and 'resource_indicators_supported'. Both are additive and ignorable by a spec-conformant RP."
+    }
+]

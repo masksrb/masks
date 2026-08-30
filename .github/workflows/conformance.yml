@@ -1,0 +1,54 @@
+name: Conformance
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+    inputs:
+      suite_ref:
+        description: Conformance suite release tag
+        required: false
+        default: release-v5.2.4
+
+env:
+  SUITE_REF: ${{ inputs.suite_ref || 'release-v5.2.4' }}
+
+jobs:
+  oidcc:
+    if: >-
+      github.event_name != 'pull_request' ||
+      contains(github.event.pull_request.labels.*.name, 'conformance')
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v6
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Cache the suite checkout
+        uses: actions/cache@v4
+        with:
+          path: conformance/.suite
+          key: suite-${{ env.SUITE_REF }}
+
+      - name: Run the OpenID Foundation OP test plans
+        run: bin/conformance run
+
+      - name: Collect the suite's logs
+        if: always()
+        working-directory: conformance
+        run: |
+          docker compose logs --no-color server > results/suite.log 2>&1 || true
+          docker compose logs --no-color masks > results/masks.log 2>&1 || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: conformance-results
+          path: conformance/results
+          if-no-files-found: warn
+
+      - name: Tear down
+        if: always()
+        run: bin/conformance down

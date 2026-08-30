@@ -1,0 +1,48 @@
+{
+  "alias": "masks",
+  "description": "masks — a tenant of a masks deployment, registered dynamically",
+  "server": {
+    "discoveryUrl": "https://jons.masks.test/.well-known/openid-configuration"
+  },
+  "client": {
+    "client_name": "conformance-first"
+  },
+  "client2": {
+    "client_name": "conformance-second"
+  },
+  "browser": [
+    {
+      "match": "https://jons.masks.test/authorize*",
+      "tasks": [
+        {
+          "task": "Sign in",
+          "optional": true,
+          "match": "https://jons.masks.test/login*",
+          "commands": [
+            ["wait", "name", "identifier", 10],
+            ["text", "name", "identifier", "owner"],
+            ["click", "css", "form#identify button[type=submit]"],
+            ["wait", "name", "password", 10],
+            ["text", "name", "password", "password"],
+            ["click", "css", "form#first-factor button[type=submit]"]
+          ]
+        },
+        {
+          "task": "Consent",
+          "optional": true,
+          "match": "https://jons.masks.test/consent*",
+          "commands": [
+            ["click", "name", "approve"]
+          ]
+        },
+        {
+          "task": "Verify Complete",
+          "match": "*/test/*/callback*",
+          "commands": [
+            ["wait", "id", "submission_complete", 10]
+          ]
+        }
+      ]
+    }
+  ]
+}
