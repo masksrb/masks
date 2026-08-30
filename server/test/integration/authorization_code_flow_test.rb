@@ -21,7 +21,16 @@ class AuthorizationCodeFlowTest < ActionDispatch::IntegrationTest
 
     id_token = claims_in(body["id_token"])
     assert_equal @registration["client_id"], id_token["aud"]
-    assert_equal @actor.nickname, id_token["preferred_username"]
+    assert_equal @actor.uuid, id_token["sub"]
+    assert_equal Issuer::ACR_PASSWORD, id_token["acr"]
+
+    # The claims a scope asks for belong to userinfo, not here, or every holder
+    # of the token reads them without presenting it anywhere.
+    assert_nil id_token["preferred_username"]
+    assert_nil id_token["email"]
+
+    get "/userinfo", headers: { "Authorization" => "Bearer #{body['access_token']}" }
+    assert_equal @actor.nickname, JSON.parse(response.body)["preferred_username"]
 
     assert body["refresh_token"].present?
   end
@@ -141,7 +150,7 @@ class AuthorizationCodeFlowTest < ActionDispatch::IntegrationTest
     authorize(client_id: @registration["client_id"], redirect_uri: "https://attacker.example.com/cb")
 
     assert_response :bad_request
-    assert_equal "invalid_request", JSON.parse(response.body)["error"]
+    assert_select "#authorize-error[data-error=?]", "invalid_request"
   end
 
   test "a scope the client does not hold is refused" do
@@ -160,6 +169,78 @@ class AuthorizationCodeFlowTest < ActionDispatch::IntegrationTest
 
   test "an unsupported grant_type is refused" do
     assert_equal "unsupported_grant_type", token(grant_type: "password")["error"]
+  end
+
+  test "replaying a code revokes the access token it already issued" do
+    code = authorized_code(actor: @actor, registration: @registration)
+    granted = token(
+      grant_type: "authorization_code", code: code,
+      redirect_uri: OidcFlow::REDIRECT_URI, code_verifier: verifier,
+      client_id: @registration["client_id"],
+      client_secret: @registration["client_secret"]
+    )
+
+    get "/userinfo", headers: { "Authorization" => "Bearer #{granted['access_token']}" }
+    assert_response :success
+
+    replayed = token(
+      grant_type: "authorization_code", code: code,
+      redirect_uri: OidcFlow::REDIRECT_URI, code_verifier: verifier,
+      client_id: @registration["client_id"],
+      client_secret: @registration["client_secret"]
+    )
+    assert_equal "invalid_grant", replayed["error"]
+
+    get "/userinfo", headers: { "Authorization" => "Bearer #{granted['access_token']}" }
+    assert_response :unauthorized
+  end
+
+  test "the authorization request may arrive by POST" do
+    sign_in_as(@actor)
+
+    post "/authorize", params: {
+      response_type: "code", client_id: @registration["client_id"],
+      redirect_uri: OidcFlow::REDIRECT_URI, scope: "openid",
+      code_challenge: challenge, code_challenge_method: "S256", state: "posted"
+    }
+
+    consent! if awaiting_consent?
+
+    assert code_from.present?
+    assert_equal "posted", redirected["state"]
+  end
+
+  test "a repeated resource survives a POST body" do
+    sign_in_as(@actor)
+
+    post "/authorize", params: URI.encode_www_form([
+      [ "response_type", "code" ], [ "client_id", @registration["client_id"] ],
+      [ "redirect_uri", OidcFlow::REDIRECT_URI ], [ "scope", "openid" ],
+      [ "code_challenge", challenge ], [ "code_challenge_method", "S256" ],
+      [ "resource", "https://one.example" ], [ "resource", "https://two.example" ]
+    ]), headers: { "CONTENT_TYPE" => "application/x-www-form-urlencoded" }
+
+    consent! if awaiting_consent?
+
+    code = Tenant.switch(@tenant) { AuthorizationCode.order(:id).last }
+
+    assert_equal %w[https://one.example https://two.example], code.audience.sort
+  end
+
+  # A request object carries signed parameters. Ignoring it and reading the
+  # query would let an unsigned state and nonce beat the signed ones.
+  test "a request object is refused rather than ignored" do
+    sign_in_as(@actor)
+    authorize(client_id: @registration["client_id"], request: "eyJhbGciOiJub25lIn0.e30.")
+
+    assert_equal "request_not_supported", redirected["error"]
+  end
+
+  test "a request_uri is refused rather than ignored" do
+    sign_in_as(@actor)
+    authorize(client_id: @registration["client_id"], request_uri: "https://client.example/req.jwt")
+
+    assert_equal "request_uri_not_supported", redirected["error"]
   end
 
   test "a wrong client secret fails client authentication" do

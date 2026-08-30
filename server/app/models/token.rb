@@ -34,6 +34,14 @@ class Token < ApplicationRecord
 
       live.find_by(digest: Digest::SHA256.hexdigest(secret.to_s))
     end
+
+    # Deliberately outside `live`: a replay is only visible on a record redeem
+    # has already refused.
+    def spent(secret)
+      return nil if secret.blank?
+
+      find_by(digest: Digest::SHA256.hexdigest(secret.to_s))
+    end
   end
 
   def consume!

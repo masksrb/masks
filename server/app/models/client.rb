@@ -10,7 +10,11 @@ class Client < ApplicationRecord
   RESPONSE_TYPES = %w[code].freeze
   CHALLENGE_METHODS = %w[S256].freeze
   LOOPBACK = %w[localhost 127.0.0.1 ::1].freeze
-  DEFAULT_SCOPES = [ Scopes::OPENID, Scopes::PROFILE, Scopes::EMAIL ].freeze
+  # A registration that names no scopes gets everything masks defines, offline
+  # access included: a client that cannot refresh has to send the person back
+  # through sign-in to stay working, which is worse than the token it was
+  # denied. What a client may ask for beyond these is §3's ceiling, not this.
+  DEFAULT_SCOPES = Scopes::STANDARD
 
   has_many :tokens, dependent: :destroy
   has_many :consents, dependent: :destroy

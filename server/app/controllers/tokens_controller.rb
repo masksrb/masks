@@ -10,6 +10,8 @@ class TokensController < ApplicationController
              with: -> { slow_down }
 
   def create
+    return unsupported_grant_type unless Client::GRANT_TYPES.include?(params[:grant_type].to_s)
+
     render_rack(endpoint.call(request.env))
   end
 
@@ -28,6 +30,18 @@ class TokensController < ApplicationController
       end
     end
 
+    # rack-oauth2 knows grant types masks does not implement, and validates
+    # their required parameters before the block below ever runs — so asking for
+    # `password` was answered `invalid_request` for the missing username rather
+    # than `unsupported_grant_type` for the grant. RFC 6749 §5.2 wants the
+    # latter, and it has to be decided before the gem sees the request.
+    def unsupported_grant_type
+      render json: {
+        "error" => "unsupported_grant_type",
+        "error_description" => "this server does not support that grant_type"
+      }, status: :bad_request
+    end
+
     def slow_down
       render json: {
         "error" => "slow_down",
@@ -38,7 +52,10 @@ class TokensController < ApplicationController
     def exchange_code(req, res, client)
       code = AuthorizationCode.redeem(req.code)
 
-      req.invalid_grant!("that code is not valid or has expired") if code.nil?
+      if code.nil?
+        AuthorizationCode.spent(req.code)&.revoke_issued!
+        req.invalid_grant!("that code is not valid or has expired")
+      end
       req.invalid_grant!("that code was issued to another client") if code.client_id != client.id
 
       unless code.redirect_uri == req.redirect_uri.to_s
@@ -54,7 +71,8 @@ class TokensController < ApplicationController
       audience = narrow(req, code.audience, client)
       access = AccessToken.issue!(
         issuer: issuer, actor: code.actor, client: client,
-        scopes: code.scopes, audience: audience
+        scopes: code.scopes, audience: audience, parent: code,
+        requested_claims: code.requested_claims
       )
 
       res.access_token = Payload.new(payload(access, code: code, client: client))
@@ -124,8 +142,7 @@ class TokensController < ApplicationController
 
       if code.scope_list.include?(Scopes::OPENID)
         body["id_token"] = issuer.id_token(
-          actor: code.actor, client: client,
-          scopes: code.scopes, nonce: code.nonce,
+          actor: code.actor, client: client, nonce: code.nonce,
           authenticated_at: code.authenticated_at,
           access_token: access.jwt
         )

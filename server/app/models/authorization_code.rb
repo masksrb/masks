@@ -3,6 +3,14 @@ class AuthorizationCode < Token
     10.minutes
   end
 
+  # A code presented twice is evidence the first presentation may not have been
+  # the client's. OIDC Core 3.1.3.2 says the tokens issued from it SHOULD go
+  # with it — revoking the code alone leaves the interceptor holding the thing
+  # the code was only ever a means to.
+  def revoke_issued!
+    children.sum(&:revoke!)
+  end
+
   def pkce?
     code_challenge.present?
   end

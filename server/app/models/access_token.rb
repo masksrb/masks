@@ -3,7 +3,7 @@ class AccessToken < Token
     1.hour
   end
 
-  def self.issue!(issuer:, actor:, client:, scopes:, audience:, parent: nil, expires_at: nil, act: nil)
+  def self.issue!(issuer:, actor:, client:, scopes:, audience:, parent: nil, expires_at: nil, act: nil, requested_claims: nil)
     ceiling = [ expires_at, lifetime.from_now ].compact.min
 
     token = create!(
@@ -12,6 +12,7 @@ class AccessToken < Token
       parent: parent,
       scopes: Scopes.join(scopes),
       audience: Array(audience),
+      requested_claims: requested_claims,
       digest: SecureRandom.uuid,
       expires_at: ceiling
     )

@@ -133,6 +133,6 @@ class RegistrationTest < ActionDispatch::IntegrationTest
     authorize(client_id: registered["client_id"])
 
     assert_response :bad_request
-    assert_equal "invalid_client", JSON.parse(response.body)["error"]
+    assert_select "#authorize-error[data-error=?]", "invalid_client"
   end
 end

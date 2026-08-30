@@ -1,4 +1,11 @@
 class Issuer
+  # masks can assert exactly two authentication contexts, because it has
+  # exactly two ways of authenticating. Naming them is what lets a client ask
+  # for one with acr_values and check what it got.
+  ACR_PASSWORD = "urn:masks:acr:pwd".freeze
+  ACR_MULTI_FACTOR = "urn:masks:acr:mfa".freeze
+  ACR_VALUES = [ ACR_PASSWORD, ACR_MULTI_FACTOR ].freeze
+
   attr_reader :tenant, :origin
 
   def initialize(tenant, origin)
@@ -32,7 +39,10 @@ class Issuer
     Base64.urlsafe_encode64(digest[0, digest.bytesize / 2], padding: false)
   end
 
-  def id_token(actor:, client:, scopes:, nonce: nil, issued_at: Time.current,
+  # No scope-derived claims. OIDC Core 5.4: for a flow that issues an access
+  # token, the claims a scope asks for are returned from userinfo, and putting
+  # them here as well hands them to anyone who reads the token.
+  def id_token(actor:, client:, nonce: nil, issued_at: Time.current,
                authenticated_at: nil, access_token: nil, code: nil)
     sign({
       "iss" => url,
@@ -41,11 +51,19 @@ class Issuer
       "exp" => 15.minutes.from_now.to_i,
       "iat" => issued_at.to_i,
       "auth_time" => (authenticated_at || issued_at).to_i,
+      "acr" => acr_for(actor),
       "nonce" => nonce,
       "at_hash" => half_hash(access_token),
       "c_hash" => half_hash(code),
       "tenant" => tenant.to_identity
-    }.compact.merge(actor.claims(scopes)))
+    }.compact)
+  end
+
+  # A second factor is not optional once an actor has one — the login machine
+  # will not settle with it pending — so whether the actor holds one is the
+  # same fact as whether it was used.
+  def acr_for(actor)
+    actor.otp? ? ACR_MULTI_FACTOR : ACR_PASSWORD
   end
 
   def discovery
@@ -65,6 +83,7 @@ class Issuer
       "grant_types_supported" => Client::GRANT_TYPES,
       "revocation_endpoint_auth_methods_supported" => Client::AUTH_METHODS,
       "subject_types_supported" => [ "public" ],
+      "acr_values_supported" => ACR_VALUES,
       "id_token_signing_alg_values_supported" => [ SigningKey::ALGORITHM ],
       "token_endpoint_auth_methods_supported" => Client::AUTH_METHODS,
       "code_challenge_methods_supported" => Client::CHALLENGE_METHODS,
@@ -74,7 +93,13 @@ class Issuer
       ],
       "authorization_response_iss_parameter_supported" => true,
       "resource_indicators_supported" => true,
-      "require_pushed_authorization_requests" => false
+      "require_pushed_authorization_requests" => false,
+      # Declared rather than left to default, because the authorize endpoint
+      # refuses these outright and a client should learn that from metadata
+      # instead of from an error.
+      "request_parameter_supported" => false,
+      "request_uri_parameter_supported" => false,
+      "claims_parameter_supported" => true
     }
   end
 end

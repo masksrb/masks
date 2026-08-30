@@ -1,6 +1,10 @@
 class AuthorizeController < ApplicationController
   include RackOAuth2Endpoint
 
+  # A POST authorization request is a cross-site form post from the client, and
+  # it carries no session of ours to forge against.
+  skip_forgery_protection only: :show, if: -> { request.post? }
+
   def show
     authorization = Authorization.from_request(request)
     attempt = validate(authorization)
@@ -23,12 +27,20 @@ class AuthorizeController < ApplicationController
         req.unsupported_response_type! unless req.response_type == :code
 
         client = Client.authenticating(req.client_id)
-        req.invalid_request!("no client is registered with that client_id") if client.nil?
+        req.bad_request!(:invalid_client, "no client is registered with that client_id") if client.nil?
         req.invalid_request!("redirect_uri is required") if req.redirect_uri.blank?
 
         req.verify_redirect_uri!(client.redirect_uris)
         req.verified_redirect_uri = with_issuer(req.verified_redirect_uri)
         res.redirect_uri = req.verified_redirect_uri
+
+        # A request object carries signed copies of state and nonce. Reading the
+        # query and ignoring the object would let unsigned parameters beat
+        # signed ones, so refuse the way OIDC Core 6 says an issuer that does
+        # not support them must. After the redirect_uri is verified, so the
+        # refusal reaches the client rather than the browser.
+        req.bad_request!(:request_not_supported, "request objects are not supported") if authorization.request_object?
+        req.bad_request!(:request_uri_not_supported, "request_uri is not supported") if authorization.request_uri?
 
         permit(req) { authorization.validate! }
 
@@ -106,12 +118,23 @@ class AuthorizeController < ApplicationController
       target = params[:redirect_uri].to_s
 
       if client && target.present? && client.redirect_uri?(target)
-        redirect_to refusal_uri(target, error), allow_other_host: true
-      else
-        render json: {
-          "error" => error.error.to_s,
-          "error_description" => error.description
-        }, status: error.status
+        return redirect_to refusal_uri(target, error), allow_other_host: true
+      end
+
+      # There is nowhere safe to send this, so the person in the browser is the
+      # one who has to read it. A JSON body is not a refusal a human can act on,
+      # and it is what a browser was being handed here.
+      @error_code = error.error.to_s
+      @error_description = error.description
+
+      respond_to do |format|
+        format.html { render :error, status: error.status }
+        format.any do
+          render json: {
+            "error" => @error_code,
+            "error_description" => @error_description
+          }, status: error.status
+        end
       end
     end
 

@@ -29,6 +29,11 @@
 
 en:
   hello: "Hello world"
+  authorize:
+    error:
+      heading: "This request cannot be completed"
+      explanation: "The application that sent you here asked for something this server will not do, so you have not been signed in to it and nothing has been shared."
+      contact: "Nothing is wrong with your account. The application has to fix this."
   logins:
     warnings:
       invalid-credentials: "That identifier and password do not match."
