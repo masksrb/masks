@@ -2,16 +2,84 @@ class AuthorizeController < ApplicationController
   include RackOAuth2Endpoint
 
   def show
-    outcome = catch(:interaction) { { rack: endpoint.call(request.env) } }
+    authorization = Authorization.from_request(request)
+    attempt = validate(authorization)
 
-    return redirect_to(outcome) unless outcome.is_a?(Hash)
+    return refuse(attempt.error) if attempt.refused?
+    return redirect_to(attempt.location, allow_other_host: true) if attempt.answered?
 
-    render_rack(outcome[:rack])
-  rescue Rack::OAuth2::Server::Abstract::Error => error
-    refuse(error)
+    return start_login(authorization) if needs_login?(authorization)
+    return start_consent(authorization) if needs_consent?(authorization)
+
+    complete(authorization, attempt)
   end
 
   private
+
+    # rack-oauth2 validates a params hash, not this request, so the same checks
+    # run identically on a live authorize and on one resumed out of the session.
+    def validate(authorization)
+      AuthorizeRequest.new(authorization.to_params).run do |req, res|
+        req.unsupported_response_type! unless req.response_type == :code
+
+        client = Client.authenticating(req.client_id)
+        req.invalid_request!("no client is registered with that client_id") if client.nil?
+        req.invalid_request!("redirect_uri is required") if req.redirect_uri.blank?
+
+        req.verify_redirect_uri!(client.redirect_uris)
+        req.verified_redirect_uri = with_issuer(req.verified_redirect_uri)
+        res.redirect_uri = req.verified_redirect_uri
+
+        permit(req) { authorization.validate! }
+
+        if authorization.silent? && (needs_login?(authorization) || needs_consent?(authorization))
+          req.interaction_required!
+        end
+      end
+    end
+
+    def permit(req)
+      yield
+    rescue Policy::Denied => denial
+      raise unless denial.redirectable
+
+      req.bad_request!(denial.error.to_sym, denial.description)
+    end
+
+    def needs_login?(authorization)
+      authorization.reauthenticate? || current_actor.nil?
+    end
+
+    def needs_consent?(authorization)
+      return false if needs_login?(authorization)
+      return true if authorization.consent?
+
+      !Consent.covers?(
+        actor: current_actor,
+        client: authorization.client,
+        scopes: authorization.scopes_for(current_actor),
+        audience: authorization.audience
+      )
+    end
+
+    def start_login(authorization)
+      session[:authorization] = authorization.to_session
+
+      redirect_to login_path
+    end
+
+    def start_consent(authorization)
+      session[:authorization] = authorization.to_session
+
+      redirect_to consent_path
+    end
+
+    def complete(authorization, attempt)
+      code = authorization.issue_code!(actor: current_actor)
+      session.delete(:authorization)
+
+      render_rack(attempt.approve!(code.secret))
+    end
 
     # rack-oauth2 raises rather than answers when it has not yet verified the
     # redirect_uri — refusing to hand an attacker an open redirect. Once the URI
@@ -40,71 +108,6 @@ class AuthorizeController < ApplicationController
 
       uri.query = Rack::Utils.build_query(query)
       uri.to_s
-    end
-
-    def endpoint
-      Rack::OAuth2::Server::Authorize.new do |req, res|
-        req.unsupported_response_type! unless req.response_type == :code
-
-        client = Client.authenticating(req.client_id)
-        req.invalid_request!("no client is registered with that client_id") if client.nil?
-
-        req.invalid_request!("redirect_uri is required") if req.redirect_uri.blank?
-
-        req.verify_redirect_uri!(client.redirect_uris)
-        req.verified_redirect_uri = with_issuer(req.verified_redirect_uri)
-        res.redirect_uri = req.verified_redirect_uri
-
-        authorization = Authorization.from_request(request)
-
-        permit(req) { authorization.validate! }
-
-        if authorization.reauthenticate? || current_actor.nil?
-          interact(req, authorization, login_path)
-        end
-
-        unless consented?(authorization)
-          interact(req, authorization, consent_path)
-        end
-
-        code = permit(req) { authorization.issue_code!(actor: current_actor) }
-        session.delete(:authorization)
-
-        res.code = code.secret
-        res.approve!
-      end
-    end
-
-    def permit(req)
-      yield
-    rescue Policy::Denied => denial
-      raise unless denial.redirectable
-
-      req.bad_request!(denial.error.to_sym, denial.description)
-    end
-
-    def interact(req, authorization, path)
-      if authorization.silent?
-        req.bad_request!(
-          :interaction_required,
-          "the request set prompt=none but sign-in or consent is needed"
-        )
-      end
-
-      session[:authorization] = authorization.to_session
-
-      throw :interaction, path
-    end
-
-    def consented?(authorization)
-      return false if authorization.consent?
-
-      Consent.covers?(
-        actor: current_actor,
-        client: authorization.client,
-        scopes: authorization.scopes_for(current_actor),
-        audience: authorization.audience
-      )
     end
 
     def with_issuer(uri)

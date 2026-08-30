@@ -112,6 +112,10 @@ class Authorization
     }.compact
   end
 
+  def to_params
+    to_session.merge("prompt" => prompt.join(" ")).reject { |_, value| value.blank? }
+  end
+
   def self.from_session(data)
     return nil if data.blank?
 
