@@ -28,6 +28,11 @@ module Server
     # Common ones are `templates`, `generators`, or `middleware`, for example.
     config.autoload_lib(ignore: %w[assets tasks])
 
+    config.masks = ActiveSupport::OrderedOptions.new
+    config.masks.attempt_limit = ENV.fetch("MASKS_ATTEMPT_LIMIT", 10).to_i
+    config.masks.account_attempt_limit = ENV.fetch("MASKS_ACCOUNT_ATTEMPT_LIMIT", 5).to_i
+    config.masks.registration_limit = ENV.fetch("MASKS_REGISTRATION_LIMIT", 10).to_i
+
     # Configuration for the application, engines, and railties goes here.
     #
     # These settings can be overridden in specific environments using the files

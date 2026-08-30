@@ -5,10 +5,9 @@ Rails.application.routes.draw do
 
   get "/authorize", to: "authorize#show", as: :authorize
 
-  get "/login", to: "sessions#new", as: :login
-  post "/login", to: "sessions#create"
-  get "/login/otp", to: "sessions#second_factor", as: :second_factor
-  post "/login/otp", to: "sessions#verify_second_factor"
+  get "/login", to: "logins#show", as: :login
+  post "/login", to: "logins#update"
+  delete "/login", to: "logins#destroy"
   match "/logout", to: "sessions#destroy", via: %i[get post delete], as: :logout
 
   get "/consent", to: "consents#show", as: :consent

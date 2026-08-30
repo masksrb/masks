@@ -5,11 +5,6 @@
   <%= vite_javascript_tag "login" %>
 <% end %>
 
-<div id="login" data-auth="<%= @login.as_json.to_json %>">
-  <noscript>
-    <div class="flex flex-col gap-2">
-      <h1 class="text-2xl font-bold">JavaScript is required</h1>
-      <p class="text-sm opacity-75">Signing in needs JavaScript enabled.</p>
-    </div>
-  </noscript>
+<div id="login" class="flex flex-col gap-4" data-auth="<%= @login.as_json.to_json %>">
+  <%= render "logins/#{@login.prompt.tr("-", "_")}", login: @login %>
 </div>

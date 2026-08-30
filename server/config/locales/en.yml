@@ -29,3 +29,11 @@
 
 en:
   hello: "Hello world"
+  logins:
+    warnings:
+      invalid-credentials: "That identifier and password do not match."
+      invalid-code: "That code is not valid."
+      missing-identifier: "Enter your username or email address."
+      missing-first-factor: "That step expired. Start over and try again."
+      too-many-attempts: "Too many sign-in attempts. Wait a few minutes and try again."
+      too-many-attempts-for-account: "Too many sign-in attempts for that account."
