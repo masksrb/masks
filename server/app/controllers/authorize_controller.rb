@@ -7,9 +7,40 @@ class AuthorizeController < ApplicationController
     return redirect_to(outcome) unless outcome.is_a?(Hash)
 
     render_rack(outcome[:rack])
+  rescue Rack::OAuth2::Server::Abstract::Error => error
+    refuse(error)
   end
 
   private
+
+    # rack-oauth2 raises rather than answers when it has not yet verified the
+    # redirect_uri — refusing to hand an attacker an open redirect. Once the URI
+    # is verified it redirects on its own and never reaches here.
+    def refuse(error)
+      client = Client.authenticating(params[:client_id])
+      target = params[:redirect_uri].to_s
+
+      if client && target.present? && client.redirect_uri?(target)
+        redirect_to refusal_uri(target, error), allow_other_host: true
+      else
+        render json: {
+          "error" => error.error.to_s,
+          "error_description" => error.description
+        }, status: error.status
+      end
+    end
+
+    def refusal_uri(target, error)
+      uri = URI.parse(with_issuer(target))
+      query = Rack::Utils.parse_query(uri.query)
+
+      query["error"] = error.error.to_s
+      query["error_description"] = error.description
+      query["state"] = params[:state] if params[:state].present?
+
+      uri.query = Rack::Utils.build_query(query)
+      uri.to_s
+    end
 
     def endpoint
       Rack::OAuth2::Server::Authorize.new do |req, res|
@@ -17,6 +48,8 @@ class AuthorizeController < ApplicationController
 
         client = Client.authenticating(req.client_id)
         req.invalid_request!("no client is registered with that client_id") if client.nil?
+
+        req.invalid_request!("redirect_uri is required") if req.redirect_uri.blank?
 
         req.verify_redirect_uri!(client.redirect_uris)
         req.verified_redirect_uri = with_issuer(req.verified_redirect_uri)
