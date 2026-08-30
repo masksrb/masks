@@ -22,7 +22,18 @@ class Issuer
     { "keys" => Tenant.switch(tenant) { SigningKey.published.map(&:public_jwk) } }
   end
 
-  def id_token(actor:, client:, scopes:, nonce: nil, issued_at: Time.current)
+  # OIDC Core 3.1.3.6: the left half of the hash of the value, under the
+  # algorithm the token is signed with, base64url encoded.
+  def half_hash(value)
+    return nil if value.blank?
+
+    digest = OpenSSL::Digest::SHA256.digest(value.to_s)
+
+    Base64.urlsafe_encode64(digest[0, digest.bytesize / 2], padding: false)
+  end
+
+  def id_token(actor:, client:, scopes:, nonce: nil, issued_at: Time.current,
+               access_token: nil, code: nil)
     sign({
       "iss" => url,
       "sub" => actor.uuid,
@@ -31,6 +42,8 @@ class Issuer
       "iat" => issued_at.to_i,
       "auth_time" => issued_at.to_i,
       "nonce" => nonce,
+      "at_hash" => half_hash(access_token),
+      "c_hash" => half_hash(code),
       "tenant" => tenant.to_identity
     }.compact.merge(actor.claims(scopes)))
   end
