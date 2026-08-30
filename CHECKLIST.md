@@ -79,7 +79,7 @@ registration token, cross-tenant client, cross-tenant token, widened scope, wide
       `/.well-known/oauth-authorization-server`.
 - [x] **userinfo** — scope-gated: `profile` releases the name, `email` the address, neither without.
 - [x] **`iss` on the authorization response** — so a client with several issuers knows which answered.
-- [x] **Custom scopes, and a ceiling at each end** — a consumer's own scopes (`things:read`,
+- [x] **Custom scopes, and a ceiling at each end** — a consumer's own scopes (`catalog:read`,
       `admin`) travel in the `scope` claim on the access token and need no registration here;
       `scopes_supported` in discovery advertises only the four masks defines, because a resource
       server advertises its own in RFC 9728 metadata. Nothing is checked against a global allowlist.
@@ -130,6 +130,42 @@ registration token, cross-tenant client, cross-tenant token, widened scope, wide
       allowed on any host in development and test, because `.test` genuinely is not loopback and the
       documented local setup uses it.
 - [x] **Exact-match redirect URIs at authorize** — no prefix or wildcard matching.
+- [ ] **There is no such thing as a configured client, and the schema pretends otherwise.**
+      `Client` is tenant-scoped and carries `redirect_uris`, `scopes`, `grant_types`, `resources`,
+      an auth method, `dynamic` and `archived_at` — the shape of "a tenant has many clients with
+      different configs". But **`Client.register!` is the only constructor**, it hardcodes
+      `dynamic: true`, and nothing anywhere reads `dynamic`. Nothing seeds a client. So every client
+      that can exist is an anonymous self-registration, and the column that would distinguish a
+      first-party app from a stranger's connector is decoration.
+- [ ] **Which makes §2's client bound decorative.** §2 says the client's registration is a static
+      contract, so requesting outside it is refused whole rather than narrowed. That is only true of
+      a client somebody configured. `scope` is in `RegistrationsController::METADATA` and `create`
+      is unauthenticated — **a dynamic client writes its own contract.** Two of the three ceilings
+      are therefore one: the actor bound is all that stands between a stranger's registration and a
+      consumer's `admin`. Configured clients are what make the client bound mean anything.
+- [ ] **Configured clients, seeded when a tenant is created** — a stable, human-readable
+      `client_id` rather than a UUID, `dynamic: false`, and an optional secret supplied rather than
+      generated, so whoever deploys both halves can hold one value. The declaration lives in masks'
+      own configuration with redirect URIs templated over the tenant's subdomain, because a host
+      cannot be named in this repo and masks must not know who the consumer is.
+      **A consumer needs no per-tenant configuration to use this**: the same `client_id` *string* in
+      every tenant resolves to a different row, since `client_id` is unique per `tenant_id`.
+- [ ] **`required_scopes` and `allowed_scopes`, replacing `scopes`** — required are granted whether
+      or not asked for; allowed are grantable on request; the ceiling is their union. Ported from
+      the previous masks, which had `require_scopes=` / `allow_scopes=` / `remove_scopes=` over
+      exactly this pair.
+- [ ] **A ceiling on what a dynamic client may request**, declared per tenant. Registration stays
+      open, and trims to that set rather than refusing — RFC 7591 lets the server replace what was
+      asked for and return what was granted, and a connector that asked for too much should still
+      work with less. Note the asymmetry, which is deliberate: **registration trims, authorize
+      refuses, the actor narrows.** Each behaves the way its own failure should read.
+- [ ] **The default on that ceiling is the trap.** Discovered by building it and watching the suite
+      go red: default it to the four scopes masks defines and **every connector flow breaks**, since
+      masks does not know what a consumer's scopes are and never should. It has to default
+      permissive, or be declared per tenant before a consumer's scopes exist.
+- [ ] **Consent skipped for a trusted configured client** — a tenant approving a scope grant to
+      their own first-party app is theatre, and the screen trains people to click through. Only a
+      configured client may be trusted; a dynamic one is always asked.
 - [ ] **Client secret rotation** — secrets are issued once and never expire. `secret_expires_at`
       exists on the column and nothing sets it.
 - [ ] **Client ID Metadata Documents** — the alternative to DCR that some clients prefer. DCR covers
@@ -327,6 +363,21 @@ All of these exist and work in `masks-mono` or `masks-engine`. Porting is the ta
 - [ ] ↧ **Captcha policies** — `ThrottlePolicy` carries `captcha:`; rate limits cover the throttling
       half already, so what is left to inherit is the captcha challenge itself.
 - [ ] ↧ **Devices** — `Device`, and the policy that pairs with throttling.
+- [ ] ↧ **The client as the place login policy lives** — the largest thing not carried across, and
+      the reason §3 reads thin. `masks-mono`'s `Client` held `seed(key:)` for configured clients,
+      `internal` / `oauth` scopes, `required_scopes` **and** `allowed_scopes`, per-client SSO through
+      `ClientProvider`, per-client theming (logo, styles, `terms_url`), `*_duration` settings, and a
+      per-client login matrix: `allow_passwords`, `allow_sso`, `allow_webauthn`, `allow_otp`,
+      `allow_factor2`, `allow_backup_codes`, `allow_login_links`, `allow_signup`, `allow_emails`,
+      `allow_nicknames`, `allow_phones`, `allow_profiles`. A client there decided *how you sign in*,
+      not merely how a token is issued.
+      **Port the scope pair and configured clients now** (§3); hold the rest. The `allow_*` matrix
+      is a matrix of one row until WebAuthn, SSO and login links land above, and porting the toggles
+      first checks boxes that toggle nothing.
+      One thing not to port as-is: `internal?` there meant *masks' own UI* — `supports_oauth?` was
+      `!internal?` and `profile_url` returned a masks login URL. It did not mean "first-party app",
+      which is what §3 needs, and reusing the word for the other meaning would be worse than a new
+      one.
 
 Worth restating, because the roadmap read upside down: **the previous masks filed WebAuthn, TOTP and
 social providers as v2 and had all three written, while none of v1's tenancy, JWKS, registration or
