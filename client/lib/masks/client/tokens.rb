@@ -6,6 +6,19 @@ module Masks
 
       attr_reader :access_token, :id_token, :refresh_token, :token_type, :scope, :expires_in, :obtained_at
 
+      def self.granted(body)
+        token = new(body)
+
+        if token.access_token.to_s.empty?
+          raise Rejected.new(
+            body["error"] || "invalid_token_response",
+            body["error_description"] || "the token endpoint answered without an access_token"
+          )
+        end
+
+        token
+      end
+
       def initialize(body)
         @access_token = body["access_token"]
         @id_token = body["id_token"]

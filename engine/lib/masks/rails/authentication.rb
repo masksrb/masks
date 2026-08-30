@@ -23,9 +23,25 @@ module Masks
         @masks_tokens = Masks::Client::Tokens.from_h(session[masks_config.session_key])
       end
 
-      def masks_store(tokens)
-        session[masks_config.session_key] = tokens.to_h
+      def masks_store(tokens, identity: nil)
+        held = tokens.to_h.except("id_token")
+        held["identity"] = identity&.slice(*IDENTITY) || masks_held["identity"]
+
+        session[masks_config.session_key] = held.compact
         @masks_tokens = tokens
+        @masks_identity = held["identity"]
+      end
+
+      def masks_held
+        session[masks_config.session_key] || {}
+      end
+
+      IDENTITY = %w[sub name preferred_username email email_verified tenant].freeze
+
+      def masks_identity_from(tokens)
+        return nil if tokens.id_token.nil?
+
+        masks_session.identity(tokens)
       end
 
       def masks_forget
@@ -41,9 +57,7 @@ module Masks
       def masks_identity
         return @masks_identity if defined?(@masks_identity)
 
-        @masks_identity = masks_tokens && masks_session.identity(masks_tokens)
-      rescue Masks::Client::InvalidToken
-        @masks_identity = nil
+        @masks_identity = masks_held["identity"]
       end
 
       def masks_tenant

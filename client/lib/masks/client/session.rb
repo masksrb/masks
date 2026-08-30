@@ -50,7 +50,7 @@ module Masks
 
         Array(resource).each { |value| form << [ "resource", value ] }
 
-        Tokens.new(HTTP.post_form(issuer.endpoint("token_endpoint"), form, authorization))
+        Tokens.granted(HTTP.post_form(issuer.endpoint("token_endpoint"), form, authorization))
       end
 
       def refresh(refresh_token, resource: nil, scope: nil)
@@ -63,7 +63,7 @@ module Masks
         form << [ "scope", Array(scope).join(" ") ] if scope
         Array(resource).each { |value| form << [ "resource", value ] }
 
-        Tokens.new(HTTP.post_form(issuer.endpoint("token_endpoint"), form, authorization))
+        Tokens.granted(HTTP.post_form(issuer.endpoint("token_endpoint"), form, authorization))
       end
 
       def exchange(subject_token, scope: nil, resource: nil, lifetime: nil)
@@ -78,7 +78,7 @@ module Masks
         form << [ "requested_lifetime", lifetime.to_i ] if lifetime
         Array(resource).each { |value| form << [ "resource", value ] }
 
-        Tokens.new(HTTP.post_form(issuer.endpoint("token_endpoint"), form, authorization))
+        Tokens.granted(HTTP.post_form(issuer.endpoint("token_endpoint"), form, authorization))
       end
 
       def revoke(token, hint: nil)

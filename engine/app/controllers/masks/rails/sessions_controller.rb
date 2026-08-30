@@ -35,9 +35,15 @@ module Masks
           resource: masks_config.resource_for(request)
         )
 
-        return refuse("invalid_nonce", "the id token was issued for another request") unless nonce_matches?(tokens)
+        identity = begin
+          masks_identity_from(tokens)
+        rescue Masks::Client::InvalidToken
+          :unverified
+        end
 
-        masks_store(tokens)
+        return refuse("invalid_nonce", "the id token was issued for another request") unless nonce_matches?(identity)
+
+        masks_store(tokens, identity: identity)
         session.delete(:masks_state)
         session.delete(:masks_nonce)
 
@@ -67,14 +73,13 @@ module Masks
           expected.present? && ActiveSupport::SecurityUtils.secure_compare(expected, params[:state].to_s)
         end
 
-        def nonce_matches?(tokens)
-          expected = session[:masks_nonce]
-          return true if tokens.id_token.nil?
+        def nonce_matches?(identity)
+          return false if identity == :unverified
+          return true if identity.nil?
 
-          identity = masks_session.identity(tokens)
-          identity.nil? || identity["nonce"].nil? || identity["nonce"] == expected
-        rescue Masks::Client::InvalidToken
-          false
+          held = identity["nonce"]
+
+          held.nil? || held == session[:masks_nonce]
         end
 
         def refuse(code, description)
