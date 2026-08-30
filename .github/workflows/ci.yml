@@ -74,6 +74,47 @@ jobs:
           POSTGRES_PORT: 5435
         run: bin/rails db:prepare test
 
+  boot:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports: [ "5436:5432" ]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+          working-directory: server
+      - name: Create the non-superuser application role
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h 127.0.0.1 -p 5436 -U postgres -c \
+            "CREATE ROLE masks WITH LOGIN PASSWORD 'masks' CREATEDB;"
+      - name: Eager load the way production does
+        working-directory: server
+        env:
+          RAILS_ENV: production
+          POSTGRES_HOST: 127.0.0.1
+          POSTGRES_PORT: 5436
+          POSTGRES_USER: masks
+          POSTGRES_PASSWORD: masks
+          POSTGRES_DATABASE: masks_boot
+          SECRET_KEY_BASE: boot_check_secret_key_base_not_for_real_deployments
+          ENCRYPTION_PRIMARY_KEY: boot_check_primary_key_not_for_credentials
+          ENCRYPTION_DETERMINISTIC_KEY: boot_check_deterministic_key_not_real
+          ENCRYPTION_KEY_DERIVATION_SALT: boot_check_key_derivation_salt_fake
+        run: bin/rails db:prepare zeitwerk:check
+
   frontend:
     runs-on: ubuntu-latest
     steps:
