@@ -1,10 +1,13 @@
 class Authorization
   attr_reader :client_id, :redirect_uri, :response_type, :state, :nonce,
               :code_challenge, :code_challenge_method, :prompt, :audience,
-              :requested_scopes, :max_age
+              :requested_scopes, :max_age, :requested_claims
 
+  # OIDC Core 3.1.2.1 allows the authorization request to arrive by POST, so a
+  # repeated parameter can be in the body as well as the query.
   def self.from_request(request)
     repeated = Rack::Utils.parse_query(request.query_string)
+    repeated = repeated.merge(Rack::Utils.parse_query(request.raw_post)) { |_, a, b| Array(a) + Array(b) } if request.post?
     params = request.params
 
     new(
@@ -18,13 +21,20 @@ class Authorization
       code_challenge_method: params["code_challenge_method"],
       prompt: params["prompt"],
       max_age: params["max_age"],
-      resource: repeated["resource"]
+      resource: repeated["resource"],
+      request: params["request"],
+      request_uri: params["request_uri"],
+      claims: params["claims"]
     )
   end
 
   def initialize(client_id:, redirect_uri:, response_type:, scope: nil, state: nil,
                  nonce: nil, code_challenge: nil, code_challenge_method: nil,
-                 prompt: nil, max_age: nil, resource: nil)
+                 prompt: nil, max_age: nil, resource: nil, request: nil,
+                 request_uri: nil, claims: nil)
+    @requested_claims = self.class.parse_claims(claims)
+    @request_object = request.presence
+    @request_uri = request_uri.presence
     @client_id = client_id.to_s
     @redirect_uri = redirect_uri.to_s
     @response_type = response_type.to_s
@@ -60,6 +70,27 @@ class Authorization
     granted_scopes.include?(Scopes::OFFLINE)
   end
 
+  # The claims parameter is JSON in a query string. Anything that is not
+  # parseable JSON is not a claims request, and is dropped rather than raised
+  # on: the alternative is a 500 on a malformed query.
+  def self.parse_claims(value)
+    return value if value.is_a?(Hash)
+    return nil if value.blank?
+
+    parsed = JSON.parse(value.to_s)
+    parsed.is_a?(Hash) ? parsed : nil
+  rescue JSON::ParserError
+    nil
+  end
+
+  def request_object?
+    @request_object.present?
+  end
+
+  def request_uri?
+    @request_uri.present?
+  end
+
   def reauthenticate?
     prompt.include?("login")
   end
@@ -85,6 +116,7 @@ class Authorization
       scopes: Scopes.join(scopes_for(actor)),
       audience: audience,
       redirect_uri: redirect_uri,
+      requested_claims: requested_claims,
       nonce: nonce,
       code_challenge: code_challenge,
       code_challenge_method: code_challenge_method
@@ -112,7 +144,10 @@ class Authorization
       "code_challenge" => code_challenge,
       "code_challenge_method" => code_challenge_method,
       "max_age" => max_age,
-      "resource" => audience
+      "resource" => audience,
+      # JSON rather than a Hash, because the session is round-tripped back
+      # through a query string on resume and a Hash does not survive that.
+      "claims" => requested_claims&.to_json
     }.compact
   end
 
@@ -133,7 +168,8 @@ class Authorization
       code_challenge: data["code_challenge"],
       code_challenge_method: data["code_challenge_method"],
       max_age: data["max_age"],
-      resource: data["resource"]
+      resource: data["resource"],
+      claims: data["claims"]
     )
   end
 end

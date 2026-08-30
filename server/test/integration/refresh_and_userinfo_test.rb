@@ -15,6 +15,47 @@ class RefreshAndUserinfoTest < ActionDispatch::IntegrationTest
     )
   end
 
+  test "profile releases the whole standard claim set it has values for" do
+    Tenant.switch(@tenant) do
+      @actor.update!(
+        given_name: "Given", family_name: "Family", middle_name: "Middle",
+        profile_url: "https://example.com/p", picture_url: "https://example.com/p.png",
+        website_url: "https://example.com", gender: "unspecified",
+        birthdate: "1970-01-01", zoneinfo: "Etc/UTC", locale: "en"
+      )
+    end
+
+    claims = userinfo(access_token_for(actor: @actor, registration: @registration)["access_token"])
+
+    %w[name given_name family_name middle_name nickname preferred_username
+       profile picture website gender birthdate zoneinfo locale updated_at].each do |claim|
+      assert claims.key?(claim), "userinfo is missing #{claim}"
+    end
+  end
+
+  # A claim asked for by name, without the scope that would also have released
+  # it. OIDC Core 5.5.
+  test "the claims parameter releases a claim the scope did not" do
+    sign_in_as(@actor)
+    authorize(
+      client_id: @registration["client_id"], scope: "openid",
+      claims: { userinfo: { name: { essential: true } } }.to_json
+    )
+    consent! if awaiting_consent?
+
+    granted = token(
+      grant_type: "authorization_code", code: code_from,
+      redirect_uri: OidcFlow::REDIRECT_URI, code_verifier: verifier,
+      client_id: @registration["client_id"],
+      client_secret: @registration["client_secret"]
+    )
+
+    claims = userinfo(granted["access_token"])
+
+    assert_equal @actor.name, claims["name"]
+    assert_nil claims["email"]
+  end
+
   def userinfo(access)
     get "/userinfo", headers: { "HTTP_AUTHORIZATION" => "Bearer #{access}" }
     JSON.parse(response.body)

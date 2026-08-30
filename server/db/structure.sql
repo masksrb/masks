@@ -46,7 +46,17 @@ CREATE TABLE public.actors (
     email_verified_at timestamp(6) without time zone,
     last_login_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    given_name character varying,
+    family_name character varying,
+    middle_name character varying,
+    profile_url character varying,
+    picture_url character varying,
+    website_url character varying,
+    gender character varying,
+    birthdate character varying,
+    zoneinfo character varying,
+    locale character varying
 );
 
 ALTER TABLE ONLY public.actors FORCE ROW LEVEL SECURITY;
@@ -319,7 +329,8 @@ CREATE TABLE public.tokens (
     consumed_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    authenticated_at timestamp(6) without time zone
+    authenticated_at timestamp(6) without time zone,
+    requested_claims jsonb
 );
 
 ALTER TABLE ONLY public.tokens FORCE ROW LEVEL SECURITY;
@@ -836,6 +847,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260830210000'),
 ('20260830150000'),
 ('20260830120000'),
 ('20260829100008'),

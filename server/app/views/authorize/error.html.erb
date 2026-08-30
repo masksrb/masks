@@ -1,0 +1,14 @@
+<% content_for :title, "This request cannot be completed" %>
+
+<div id="authorize-error" class="flex flex-col gap-4" data-error="<%= @error_code %>">
+  <h1 class="text-xl font-semibold"><%= t(".heading") %></h1>
+
+  <p class="text-sm"><%= t(".explanation") %></p>
+
+  <div class="alert alert-error flex flex-col items-start gap-1 text-sm">
+    <span class="font-mono font-medium"><%= @error_code %></span>
+    <span><%= @error_description %></span>
+  </div>
+
+  <p class="text-sm opacity-70"><%= t(".contact") %></p>
+</div>

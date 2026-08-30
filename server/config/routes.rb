@@ -3,7 +3,7 @@ Rails.application.routes.draw do
   get "/.well-known/oauth-authorization-server", to: "discovery#openid"
   get "/.well-known/jwks.json", to: "discovery#jwks"
 
-  get "/authorize", to: "authorize#show", as: :authorize
+  match "/authorize", to: "authorize#show", via: %i[get post], as: :authorize
 
   get "/login", to: "logins#show", as: :login
   post "/login", to: "logins#update"
