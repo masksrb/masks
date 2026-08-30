@@ -1,4 +1,8 @@
 class TokensController < ApplicationController
+  include RackOAuth2Endpoint
+
+  EXCHANGE = Rack::OAuth2::Server::Token::Extension::TokenExchange::GRANT_TYPE_URN
+
   skip_forgery_protection
 
   rate_limit to: 60, within: 1.minute,
@@ -6,62 +10,66 @@ class TokensController < ApplicationController
              with: -> { slow_down }
 
   def create
-    case params[:grant_type]
-    when "authorization_code" then exchange_code
-    when "refresh_token" then refresh
-    when Exchange::GRANT_TYPE then exchange_token
-    else
-      deny("unsupported_grant_type",
-           "grant_type must be one of #{Client::GRANT_TYPES.join(', ')}")
-    end
-  rescue Policy::Denied => denial
-    render json: denial.to_h, status: denial.status
+    render_rack(endpoint.call(request.env))
   end
 
   private
 
-    def slow_down
-      deny("slow_down", "too many token requests from this address",
-           status: :too_many_requests)
+    def endpoint
+      Rack::OAuth2::Server::Token.new do |req, res|
+        client = authenticate_client!(req)
+
+        case req.grant_type.to_s
+        when "authorization_code" then exchange_code(req, res, client)
+        when "refresh_token" then refresh(req, res, client)
+        when EXCHANGE then exchange_token(req, res, client)
+        else req.unsupported_grant_type!
+        end
+      end
     end
 
-    def exchange_code
-      client = authenticate_client!
-      code = AuthorizationCode.redeem(params[:code])
+    def slow_down
+      render json: {
+        "error" => "slow_down",
+        "error_description" => "too many token requests from this address"
+      }, status: :too_many_requests
+    end
 
-      return deny("invalid_grant", "that code is not valid or has expired") if code.nil?
-      return deny("invalid_grant", "that code was issued to another client") if code.client_id != client.id
+    def exchange_code(req, res, client)
+      code = AuthorizationCode.redeem(req.code)
 
-      unless code.redirect_uri == params[:redirect_uri].to_s
-        return deny("invalid_grant", "redirect_uri does not match the one the code was issued for")
-      end
+      req.invalid_grant!("that code is not valid or has expired") if code.nil?
+      req.invalid_grant!("that code was issued to another client") if code.client_id != client.id
 
-      unless code.verifies?(params[:code_verifier])
-        return deny("invalid_grant", "code_verifier does not match the challenge")
+      unless code.redirect_uri == req.redirect_uri.to_s
+        req.invalid_grant!("redirect_uri does not match the one the code was issued for")
       end
 
       code.consume!
 
-      audience = narrow(code.audience, client)
+      unless code.verifies?(req.code_verifier)
+        req.invalid_grant!("code_verifier does not match the challenge")
+      end
+
+      audience = narrow(req, code.audience, client)
       access = AccessToken.issue!(
         issuer: issuer, actor: code.actor, client: client,
         scopes: code.scopes, audience: audience
       )
 
-      render json: payload(access, code: code, client: client)
+      res.access_token = Payload.new(payload(access, code: code, client: client))
     end
 
-    def refresh
-      client = authenticate_client!
-      token = RefreshToken.redeem(params[:refresh_token])
+    def refresh(req, res, client)
+      token = RefreshToken.redeem(req.refresh_token)
 
-      return deny("invalid_grant", "that refresh token is not valid or has expired") if token.nil?
-      return deny("invalid_grant", "that refresh token was issued to another client") if token.client_id != client.id
+      req.invalid_grant!("that refresh token is not valid or has expired") if token.nil?
+      req.invalid_grant!("that refresh token was issued to another client") if token.client_id != client.id
 
       token.consume!
 
-      scopes = params[:scope].present? ? Scopes.granted(params[:scope], token.scopes) : token.scope_list
-      audience = narrow(token.audience, client)
+      scopes = req.scope.present? ? Scopes.granted(req.scope, token.scopes) : token.scope_list
+      audience = narrow(req, token.audience, client)
 
       access = AccessToken.issue!(
         issuer: issuer, actor: token.actor, client: client,
@@ -74,36 +82,36 @@ class TokensController < ApplicationController
         expires_at: RefreshToken.lifetime.from_now
       )
 
-      render json: {
+      res.access_token = Payload.new(
         "access_token" => access.jwt,
         "token_type" => "Bearer",
         "expires_in" => access.expires_in,
         "scope" => Scopes.join(scopes),
         "refresh_token" => rotated.secret
-      }
+      )
     end
 
-    def exchange_token
+    def exchange_token(req, res, client)
       exchange = Exchange.new(
-        client: authenticate_client!,
+        client: client,
         issuer: issuer,
-        subject_token: params[:subject_token],
-        subject_token_type: params[:subject_token_type],
-        requested_token_type: params[:requested_token_type],
-        scope: params[:scope],
+        subject_token: req.subject_token,
+        subject_token_type: req.subject_token_type,
+        requested_token_type: req.requested_token_type,
+        scope: req.scope,
         resource: repeated("resource"),
-        lifetime: params[:requested_lifetime]
+        lifetime: req.requested_lifetime
       ).validate!
 
       access = exchange.issue!
 
-      render json: {
+      res.access_token = Payload.new(
         "access_token" => access.jwt,
         "issued_token_type" => Exchange::ACCESS_TOKEN,
         "token_type" => "Bearer",
         "expires_in" => access.expires_in,
         "scope" => Scopes.join(access.scopes)
-      }
+      )
     end
 
     def payload(access, code:, client:)
@@ -132,51 +140,31 @@ class TokensController < ApplicationController
       body
     end
 
-    def repeated(name)
-      Array(Rack::Utils.parse_query(request.raw_post)[name]).map(&:to_s).reject(&:empty?)
-    end
-
-    def narrow(granted, client)
+    def narrow(req, granted, client)
       requested = repeated("resource")
 
       return granted.presence || [ client.client_id ] if requested.empty?
 
       refused = requested - granted
-      deny!("invalid_target", "resource was not authorized: #{refused.join(', ')}") if granted.any? && refused.any?
+
+      if granted.any? && refused.any?
+        req.bad_request!(:invalid_target, "resource was not authorized: #{refused.join(', ')}")
+      end
 
       requested
     end
 
-    def authenticate_client!
-      id, secret = credentials
-      deny!("invalid_client", "client_id is required", status: :unauthorized) if id.blank?
+    def authenticate_client!(req)
+      req.invalid_client!("client_id is required") if req.client_id.blank?
 
-      client = Client.authenticating(id)
-      deny!("invalid_client", "no client is registered with that client_id", status: :unauthorized) if client.nil?
+      client = Client.authenticating(req.client_id)
 
-      unless client.authenticate_secret(secret)
-        deny!("invalid_client", "client authentication failed", status: :unauthorized)
+      req.invalid_client!("no client is registered with that client_id") if client.nil?
+
+      unless client.authenticate_secret(req.client_secret)
+        req.invalid_client!("client authentication failed")
       end
 
       client
-    end
-
-    def credentials
-      header = request.authorization.to_s
-
-      if header.start_with?("Basic ")
-        decoded = Base64.decode64(header.split(" ", 2).last.to_s)
-        decoded.split(":", 2).map { |part| CGI.unescape(part.to_s) }
-      else
-        [ params[:client_id], params[:client_secret] ]
-      end
-    end
-
-    def deny(error, description, status: :bad_request)
-      render json: { "error" => error, "error_description" => description }, status: status
-    end
-
-    def deny!(error, description, status: :bad_request)
-      raise Policy::Denied.new(error, description, status: status)
     end
 end
