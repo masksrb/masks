@@ -71,4 +71,5 @@ Rails.application.configure do
   config.action_controller.raise_on_missing_callback_actions = true
 
   config.hosts << ".#{ENV.fetch('MASKS_HOST_SUFFIX', 'auth.test')}"
+  config.hosts << ".auth.localhost"
 end
