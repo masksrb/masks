@@ -11,7 +11,8 @@ module Masks
                      algorithms: Verifier::ALGORITHMS, required: REQUIRED, verifier: nil)
         @issuer = Issuer.resolve(issuer)
         @url = url.to_s
-        @scopes = Array(scopes).map(&:to_s).freeze
+        @descriptions = describe(scopes)
+        @scopes = (@descriptions.any? ? @descriptions.keys : Array(scopes).map(&:to_s)).freeze
         @metadata_url = metadata_url
         @required = Array(required)
         @verifier = verifier || Verifier.new(@issuer, audience: @url, algorithms: algorithms)
@@ -40,8 +41,9 @@ module Masks
           "resource" => url,
           "authorization_servers" => [ issuer.url ],
           "scopes_supported" => scopes,
+          "scope_descriptions" => @descriptions,
           "bearer_methods_supported" => [ "header" ]
-        }
+        }.reject { |_, value| value.respond_to?(:empty?) && value.empty? }
       end
 
       def challenge(error = nil)
@@ -60,6 +62,14 @@ module Masks
       end
 
       private
+
+        def describe(scopes)
+          return {} unless scopes.is_a?(Hash)
+
+          scopes.each_with_object({}) do |(scope, description), held|
+            held[scope.to_s] = description.to_s
+          end.freeze
+        end
 
         def token!(authorization)
           token(authorization) || raise(Unauthenticated.new)
