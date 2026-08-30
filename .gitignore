@@ -9,5 +9,14 @@
 **/storage/*
 !**/.keep
 **/node_modules
+**/.bundle
+server/public/vite*
 docs/dist
 docs/.astro
+conformance/.suite
+conformance/results
+
+web/node_modules/
+web/dist/
+client/*.gem
+engine/*.gem

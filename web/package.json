@@ -1,0 +1,31 @@
+{
+  "name": "@masks/client",
+  "version": "0.1.0",
+  "description": "An OIDC client for masks: a session against a backend-for-frontend, or the code flow in the browser.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "biome check",
+    "lint:fix": "biome check --write",
+    "test": "node --test test/*.test.js"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.4.15",
+    "typescript": "^6.0.3"
+  }
+}

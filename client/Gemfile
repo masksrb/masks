@@ -1,0 +1,6 @@
+source "https://rubygems.org"
+
+gemspec name: "masks-client"
+
+gem "minitest", "~> 5.25"
+gem "rake", "~> 13.2"

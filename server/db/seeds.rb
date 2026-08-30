@@ -1,12 +1,12 @@
 TENANTS = [
-  { subdomain: "jons", name: "Jon's" },
-  { subdomain: "acme", name: "Acme" }
+  { subdomain: "jons", name: "Jon's Dev Env" },
+  { subdomain: "acme", name: "Acme Dev Env" }
 ].freeze
 
 TENANTS.each do |attributes|
-  tenant = Tenant.find_or_create_by!(subdomain: attributes[:subdomain]) do |record|
-    record.name = attributes[:name]
-  end
+  tenant = Tenant.find_or_initialize_by(subdomain: attributes[:subdomain])
+  tenant.name = attributes[:name]
+  tenant.save!
 
   Tenant.switch(tenant) do
     actor = Actor.find_or_initialize_by(nickname: "owner")

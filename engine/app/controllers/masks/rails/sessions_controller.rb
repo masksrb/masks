@@ -3,12 +3,24 @@ module Masks
     class SessionsController < ActionController::Base
       include Masks::Rails::Authentication
 
+      def show
+        if masks_signed_in? || (masks_tokens && masks_refresh!)
+          response.headers["Cache-Control"] = "no-store"
+
+          render json: masks_account
+        else
+          masks_forget
+          masks_refuse_json
+        end
+      end
+
       def start
         started = masks_session.start(resource: masks_config.resource_for(request))
 
         session[:masks_state] = started[:state]
         session[:masks_nonce] = started[:nonce]
         session[:masks_verifier] = started[:verifier]
+        session[:masks_return_to] = requested_return_to || session[:masks_return_to]
 
         redirect_to started[:url], allow_other_host: true
       end
@@ -37,10 +49,18 @@ module Masks
       def destroy
         masks_forget
 
-        redirect_to masks_config.after_sign_out
+        if masks_wants_json?
+          render json: { "signed_in" => false }
+        else
+          redirect_to masks_config.after_sign_out
+        end
       end
 
       private
+
+        def requested_return_to
+          masks_local_path(params[:return_to])
+        end
 
         def state_matches?
           expected = session[:masks_state]
@@ -58,7 +78,14 @@ module Masks
         end
 
         def refuse(code, description)
-          render plain: "sign-in failed — #{code}: #{description}", status: :bad_request
+          masks_forget
+
+          if masks_wants_json?
+            render json: { "error" => code, "error_description" => description },
+                   status: :bad_request
+          else
+            render plain: "sign-in failed — #{code}: #{description}", status: :bad_request
+          end
         end
     end
   end
