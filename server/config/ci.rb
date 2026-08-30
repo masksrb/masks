@@ -1,9 +1,10 @@
 # Run using bin/ci
 
 CI.run do
-  step "Setup", "bin/setup --skip-server"
-
+  step "Style: Ruby", "bin/rubocop"
+  step "Security: Rails defects", "bin/brakeman --no-pager"
   step "Security: Gem audit", "bin/bundler-audit"
+  step "Tests", "bin/rails test"
 
 
   # Optional: set a green GitHub commit status to unblock PR merge.
