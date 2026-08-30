@@ -1,0 +1,19 @@
+<% content_for :title, "Second factor" %>
+
+<div class="card">
+  <h1>One more step</h1>
+  <p>Enter the six-digit code from your authenticator app.</p>
+
+  <%= form_with url: second_factor_path, method: :post do |form| %>
+    <label>
+      Code
+      <%= form.text_field :code, autocomplete: "one-time-code", inputmode: "numeric", autofocus: true %>
+    </label>
+
+    <div class="actions">
+      <%= form.submit "Verify" %>
+    </div>
+  <% end %>
+
+  <p class="muted"><%= link_to "Start over", login_path %></p>
+</div>

@@ -1,0 +1,27 @@
+<% content_for :title, "masks" %>
+
+<div class="card">
+  <% if @actor %>
+    <h1>Signed in as <%= @actor.nickname %></h1>
+
+    <% if @consents.any? %>
+      <h2>Applications you have authorized</h2>
+      <ul class="scopes">
+        <% @consents.each do |consent| %>
+          <li>
+            <span><%= consent.client.name %></span>
+            <span class="name"><%= consent.scopes %></span>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p>You have not authorized any applications yet.</p>
+    <% end %>
+
+    <p class="muted"><%= link_to "Sign out", logout_path %></p>
+  <% else %>
+    <h1>masks</h1>
+    <p>An auth server for <%= Current.tenant.name %>.</p>
+    <p class="muted"><%= link_to "Sign in", login_path %></p>
+  <% end %>
+</div>

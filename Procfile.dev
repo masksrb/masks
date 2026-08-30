@@ -1,0 +1,1 @@
+web: cd server && bin/rails server -p ${PORT:-5555} -b 127.0.0.1

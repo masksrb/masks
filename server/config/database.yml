@@ -1,0 +1,29 @@
+default: &default
+  adapter: postgresql
+  encoding: unicode
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+  host: <%= ENV.fetch("POSTGRES_HOST", "127.0.0.1") %>
+  port: <%= ENV.fetch("POSTGRES_PORT", 5435) %>
+  username: <%= ENV.fetch("POSTGRES_USER", "masks") %>
+  password: <%= ENV.fetch("POSTGRES_PASSWORD", "masks") %>
+
+development:
+  <<: *default
+  database: masks_development
+
+test:
+  <<: *default
+  database: masks_test<%= ENV["TEST_ENV_NUMBER"] %>
+
+production:
+  primary:
+    <<: *default
+    database: <%= ENV.fetch("POSTGRES_DATABASE", "masks_production") %>
+  cache:
+    <<: *default
+    database: <%= ENV.fetch("POSTGRES_DATABASE", "masks_production") %>_cache
+    migrations_paths: db/cache_migrate
+  queue:
+    <<: *default
+    database: <%= ENV.fetch("POSTGRES_DATABASE", "masks_production") %>_queue
+    migrations_paths: db/queue_migrate

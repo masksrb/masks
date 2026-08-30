@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+set -uo pipefail
+cd "$(dirname "$0")/.."
+
+status=0
+
+if [ -x bin/rubocop ]; then
+  bin/rubocop -a || status=$?
+elif [ -f .rubocop.yml ]; then
+  rubocop -a || status=$?
+fi
+
+if [ -f package.json ]; then
+  npx biome check --write || status=$?
+fi
+
+npx --yes prettier --write --no-error-on-unmatched-pattern \
+  "*.{yml,yaml,md}" ".github/**/*.{yml,yaml}" "config/**/*.{yml,yaml}" || status=$?
+
+if command -v shfmt >/dev/null; then
+  scripts=$(shfmt -f bin 2>/dev/null)
+  [ -n "$scripts" ] && { shfmt -w -i 2 -ci $scripts || status=$?; }
+fi
+
+exit $status
