@@ -47,7 +47,20 @@ class AuthorizeController < ApplicationController
     end
 
     def needs_login?(authorization)
-      authorization.reauthenticate? || current_actor.nil?
+      return true if authorization.reauthenticate? || current_actor.nil?
+
+      stale?(authorization.max_age)
+    end
+
+    # max_age is a ceiling on how long ago the session authenticated, not on
+    # how long ago a token was issued, which is why auth_time has to be the
+    # session's and travel with the code.
+    def stale?(max_age)
+      return false if max_age.nil?
+
+      authenticated_at = current_session&.authenticated_at
+
+      authenticated_at.nil? || authenticated_at < max_age.seconds.ago
     end
 
     def needs_consent?(authorization)
@@ -75,7 +88,10 @@ class AuthorizeController < ApplicationController
     end
 
     def complete(authorization, attempt)
-      code = authorization.issue_code!(actor: current_actor)
+      code = authorization.issue_code!(
+        actor: current_actor,
+        authenticated_at: current_session&.authenticated_at
+      )
       session.delete(:authorization)
 
       render_rack(attempt.approve!(code.secret))

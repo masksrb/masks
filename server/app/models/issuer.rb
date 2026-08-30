@@ -33,14 +33,14 @@ class Issuer
   end
 
   def id_token(actor:, client:, scopes:, nonce: nil, issued_at: Time.current,
-               access_token: nil, code: nil)
+               authenticated_at: nil, access_token: nil, code: nil)
     sign({
       "iss" => url,
       "sub" => actor.uuid,
       "aud" => client.client_id,
       "exp" => 15.minutes.from_now.to_i,
       "iat" => issued_at.to_i,
-      "auth_time" => issued_at.to_i,
+      "auth_time" => (authenticated_at || issued_at).to_i,
       "nonce" => nonce,
       "at_hash" => half_hash(access_token),
       "c_hash" => half_hash(code),
