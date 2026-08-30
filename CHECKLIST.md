@@ -2,13 +2,15 @@
 
 What is built, what is inherited but not yet ported, and what is still ahead.
 
-**Read at `cb541fd`, plus the container, conformance and login work still in the working tree.**
-Everything marked done has been **run**, not merely written. Where a claim has
+**Read at `f8b8e25`, against a clean working tree.** The container, conformance, login, schema and
+suite work that the last read found loose is committed, in nine chunks. Everything marked done has
+been **run**, not merely written. Where a claim has
 only been read rather than executed, it says so — an unexecuted checked box is the shape most bugs
 here would take. §6 now carries one that was checked and false for exactly that reason.
 
-**The suite is red as this is written** — two failures, both error codes the move onto rack-oauth2
-changed. They are named in §11, and they are the reason to read §11 before §2.
+**The suite is red as this is written** — re-run at `f8b8e25`: 133 runs, 318 assertions, 2 failures,
+both error codes the move onto rack-oauth2 changed. They are named in §11, and they are the reason
+to read §11 before §2.
 
 **masks ships four deliverables, not three.** The server, the Ruby client gem, the Rails engine, and
 `@masks/client` for the browser. §6 §7 §8 are the three a consumer touches, and between them they
@@ -47,6 +49,9 @@ registration token, cross-tenant client, cross-tenant token, widened scope, wide
       caught them in Ruby; the database layer meant to catch a *bypassed* scope was not there at
       all. Now `schema_format = :sql`, `db/structure.sql` carries all twelve statements, and a
       dropped-and-recreated container database comes back with all six tables policed and forced.
+      The cost is a `pg_dump` matching the server, which refuses outright when it is older: `bin/setup`
+      checks for one before doing anything and says what to do about it, `PG_BIN_PATH` in
+      `server/.env` prepends a specific toolchain, and the `Brewfile` pins what to install.
 - [x] **Three tests now assert the policies exist** — that every model including `TenantScoped` has
       a `tenant_isolation` policy, that every such table is `FORCE`d, and that the application role
       is neither superuser nor `BYPASSRLS`. Derived from the models, so a new scoped model without a
@@ -367,10 +372,24 @@ because it redirects. Two modes in one package, serving different consumers rath
 - [x] **The boundary rule holds** — nothing here names a host, a domain, or a secret.
 - [x] **CI runs the test suite** — against a postgres 17 service with the non-superuser `masks` role
       created explicitly, so CI exercises the same role the application uses rather than a
-      superuser that would see through every policy. There is no local equivalent: `bin/` holds
-      `check-boundary`, `conformance`, `dev`, `fmt`, `image` and `setup`, and a `bin/ci` running the
-      same steps is worth adding — this line claimed one existed.
+      superuser that would see through every policy.
+- [x] **The local equivalent exists now** — `server/bin/ci` over `config/ci.rb`: rubocop, brakeman,
+      the gem audit, then the tests. It previously ran `bin/setup` and a gem audit and called that
+      CI, which is why this line used to claim a `bin/ci` that ran the same steps as CI when none
+      did.
 - [x] **CI lints and builds the frontend** — biome over the plain JS, then a real `vite build`.
+      **This was checked and could not have passed.** `config/vite.json` and `biome.json` were never
+      committed, so on a fresh checkout `npm run lint` and `vite build` had nothing to read — and
+      neither did a developer: `bin/vite` was missing too and `bin/setup` never ran `npm install`,
+      leaving `logins/show`'s `vite_javascript_tag` pointing at a manifest nobody could build. Both
+      configs, the binstub, the `.node-version` CI already read, and a `vite` process in
+      `Procfile.dev` are in the tree now.
+- [x] **CI boots the way production does** — `zeitwerk:check` under `RAILS_ENV=production` against
+      the same non-superuser role. rack-oauth2 arrived with two files the autoloader cannot name:
+      `lib/rack/oauth2`, required explicitly by an initializer and not to be autoloaded at all, and
+      the `RackOAuth2Endpoint` concern, which zeitwerk reads as `RackOauth2Endpoint`. Neither shows
+      in development, where nothing is eager loaded — they show at boot, in the deploy. The
+      inflection and the ignore land with the job that would have caught them.
 - [x] **A container image** — `server/Dockerfile`, built and run. Multi-stage, non-root, thruster in
       front of puma, solid_queue in the same process. `bin/image` runs it against compose postgres
       and asserts the boot: three databases prepared, both tenants seeded, a distinct `kid` each,
@@ -428,6 +447,10 @@ exchange existed anywhere.** The v2 list is mostly a porting exercise.
       created inside `Tenant.switch`. Covers the login machine's transitions and expiries, the
       enumeration properties, tenant isolation and RLS itself, and the login endpoint including
       cross-tenant sign-in. It found the RLS bug in §1 on its first run.
+      **None of it was committed until `f8b8e25`** — no `test_helper`, and
+      `rails/test_unit/railtie` commented out in `config/application.rb` — so the one test that was
+      tracked could not have run on a fresh checkout, and CI's test job could not have passed
+      against the tree it was given. The suite was real on this laptop and nowhere else.
 - [ ] **Two of those runs fail, and both are error codes the rack-oauth2 move changed** — an
       unsupported `grant_type` answers `invalid_request` where RFC 6749 §5.2 says
       `unsupported_grant_type`, and a client belonging to another tenant answers `invalid_request`
