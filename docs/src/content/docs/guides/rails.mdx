@@ -1,0 +1,92 @@
+---
+title: Sign a Rails app in
+description: Mount masks-rails, configure an issuer, and require sign-in.
+---
+
+## Install
+
+```ruby
+# Gemfile
+gem "masks-rails"
+```
+
+```ruby
+# config/routes.rb
+mount Masks::Rails::Engine, at: "/auth/masks"
+```
+
+## Configure
+
+```ruby
+# config/initializers/masks.rb
+Masks::Rails.configure do |config|
+  config.issuer = ENV.fetch("MASKS_ISSUER")
+  config.client_id = ENV.fetch("MASKS_CLIENT_ID")
+  config.client_secret = ENV.fetch("MASKS_CLIENT_SECRET")
+  config.scope = %w[openid profile email offline_access]
+  config.after_sign_in = "/"
+end
+```
+
+Every value also accepts a callable taking the request, which is how a subdomain-per-tenant
+application points each host at its own issuer:
+
+```ruby
+config.issuer = ->(request) { "https://#{request.host.split(".").first}.auth.example" }
+```
+
+`redirect_uri` defaults to your `/auth/masks/callback` on the requesting host, so it usually needs no
+configuration at all — but it must match a URI you registered with the client.
+
+## Require sign-in
+
+```ruby
+class ApplicationController < ActionController::Base
+  before_action :authenticate_masks!
+end
+```
+
+`authenticate_masks!` returns true if there is a live session, silently refreshes if the access token
+has expired and a refresh token is available, and otherwise remembers where you were headed and
+redirects into the flow.
+
+## Read who signed in
+
+| | |
+| --- | --- |
+| `masks_signed_in?` | is there an unexpired token |
+| `masks_identity` | verified id token claims — `sub`, `preferred_username`, `email` |
+| `masks_tenant` | the `tenant` claim: `uuid`, `subdomain`, `name` |
+| `masks_tokens` | the raw `Tokens`, including `access_token` for calling APIs |
+
+The first three are available in views.
+
+```erb
+<% if masks_signed_in? %>
+  Signed in as <%= masks_identity["preferred_username"] %>
+  at <%= masks_tenant["name"] %>
+<% end %>
+```
+
+## Map a tenant
+
+masks owns tenants; your application holds a projection keyed by the uuid.
+
+```ruby
+def current_tenant
+  claim = masks_tenant or return nil
+
+  Tenant.find_or_create_by!(uuid: claim["uuid"]) do |tenant|
+    tenant.subdomain = claim["subdomain"]
+    tenant.name = claim["name"]
+  end
+end
+```
+
+Key on `uuid`, not `subdomain` — a subdomain is routing and can be renamed.
+
+## What the callback checks
+
+`state` is compared in constant time against the value stashed when the flow began, and the id
+token's `nonce` is compared against its own stashed value. Both fail closed. The PKCE verifier is
+deleted from the session as it is used, so a replayed callback has nothing to exchange with.

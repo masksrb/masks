@@ -1,0 +1,55 @@
+---
+title: What masks is
+description: A standalone OIDC provider with per-tenant signing keys, plus the two pieces an application needs to sign in against it.
+---
+
+An auth server — a standalone, self-hostable OpenID Connect provider — and the two pieces an
+application needs to sign in against it.
+
+```
+server/    the standalone OIDC provider     Rails, Postgres, per-tenant keys
+client/    masks-client                     discovery, PKCE, exchange, verification
+engine/    masks-rails                      the consumer half, mounted in a host app
+```
+
+## The server is not an engine, and the engine is not the server
+
+An earlier version of masks shipped an engine *plus* a host app *plus* a gem, and the engine-ness
+produced its worst bug: middleware and host-app controllers fighting over `Set-Cookie`. So the server
+here is standalone. It has no downstream app, which designs that entire class of problem out.
+
+The engine in this repo runs the other direction. It is the **consumer** half — routes, callback
+handling, and session wiring that mount into *your* application, which then talks to the server over
+HTTP. Nothing in `engine/` issues a token; it only spends them.
+
+## What it implements
+
+| | |
+| --- | --- |
+| Authorization code + PKCE | S256 only, and mandatory for public clients |
+| Refresh | with rotation — the old token is consumed, a child minted |
+| Dynamic client registration | RFC 7591 to create, 7592 to manage |
+| Audience-restricted tokens | RFC 8707 `resource` becomes the token's `aud` |
+| Discovery and JWKS | per tenant, not per installation |
+| Sign-in | password, with an optional TOTP second factor |
+| Consent | remembered per actor and client |
+
+## Multi-tenant from the first migration
+
+masks is the source of truth for tenants, and every tenant has **its own signing keys**. A token
+minted for one tenant does not verify against another's JWKS — not as *forbidden*, but as
+unintelligible, because the key that signed it was never published where the other tenant could look.
+
+```
+$ curl -H "Host: acme.auth.test" -H "Authorization: Bearer $A_JONS_TOKEN" .../userinfo
+{"error":"invalid_token","error_description":"Could not find public key for kid e9914114-…"}
+```
+
+That is not something you can retrofit onto a singleton key, which is why it is in migration #2
+rather than on a roadmap.
+
+## Where to go next
+
+- [Running it](/start/running) — two tenants in about a minute
+- [Tenancy](/concepts/tenancy) — the uuid, the claim, and why apps hold a projection
+- [Register a connector](/guides/connectors) — DCR and resource indicators, end to end

@@ -1,0 +1,65 @@
+---
+title: Models
+description: What the server stores.
+---
+
+Every table below carries `tenant_id`, has row-level security forced on it, and is scoped by
+`TenantScoped` in the application as well.
+
+## Tenant
+
+`uuid`, `subdomain`, `name`, `settings`, `archived_at`. The only model *not* tenant-scoped, because
+it is the tenant. Generates a signing key on create.
+
+`Tenant.resolve(host)` finds one by subdomain; `Tenant.switch(tenant) { }` sets the Postgres session
+variable RLS reads and restores the previous value afterwards.
+
+## SigningKey
+
+`kid`, `algorithm`, `private_pem` (encrypted), `public_jwk`, `activated_at`, `retired_at`.
+
+| | |
+| --- | --- |
+| `SigningKey.active` | what signing uses |
+| `SigningKey.published` | what JWKS lists — includes a key retiring in the future |
+| `SigningKey.rotate!` | mint a replacement, retire the incumbent after an overlap |
+
+## Actor
+
+A person. `uuid` (the `sub` claim), `nickname`, `name`, `email`, `password_digest`, `otp_secret`
+(encrypted), `scopes`.
+
+`Actor.authenticate(identifier, password)` accepts a nickname or an email. `#claims(scopes)` returns
+only what the granted scopes permit — `profile` releases the name, `email` releases the address, and
+neither is included without them.
+
+## Client
+
+An application. `client_id`, `secret_digest` (bcrypt), `redirect_uris`, `grant_types`,
+`response_types`, `scopes`, `token_endpoint_auth_method`, `dynamic`, `registration_token_digest`.
+
+`#public?` is `token_endpoint_auth_method == "none"`, which is what makes PKCE mandatory.
+`Client.register!` is the DCR path and is the only place `dynamic` is set.
+
+## Token
+
+Single table, `type` column, four subclasses.
+
+| | Stored as | |
+| --- | --- | --- |
+| `AuthorizationCode` | SHA-256 of the secret | holds the PKCE challenge, `redirect_uri`, `nonce` |
+| `AccessToken` | the `jti` of the JWT | the JWT itself is never stored |
+| `RefreshToken` | SHA-256 of the secret | `parent_id` chains rotations |
+
+`Token.mint!` generates a secret and returns the record with `#secret` readable exactly once.
+`Token.redeem(secret)` finds a live one by digest. `#consume!` burns it.
+
+## Session
+
+A browser session. `digest`, `user_agent`, `ip_address`, `authenticated_at`, `expires_at`,
+`revoked_at`. The cookie holds the secret; the database holds its digest.
+
+## Consent
+
+What an actor has allowed a client to do: `scopes` and `audience`, unioned across grants.
+`Consent.covers?` is what decides whether the consent screen is shown again.

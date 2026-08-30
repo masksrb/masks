@@ -1,0 +1,52 @@
+---
+title: The three pieces
+description: Which of server, client, and engine you actually need.
+---
+
+```
+server/    the standalone OIDC provider     you run one
+client/    masks-client                     any ruby app that talks to it
+engine/    masks-rails                      a Rails app that wants sign-in wired up
+```
+
+## Which do I need?
+
+| I want to… | Use |
+| --- | --- |
+| run an auth server | `server/` |
+| sign a Rails app in | `masks-rails` — it pulls in `masks-client` |
+| verify tokens in an API | `masks-client` alone |
+| drive the flow by hand, or in a non-Rails app | `masks-client` alone |
+
+A resource server — something that only *receives* bearer tokens and never signs anyone in — needs
+`masks-client` and nothing else. See [verifying a token](/guides/verifying).
+
+## Why the server is standalone
+
+An earlier version shipped an engine, a host app, and a gem together. The engine-ness produced its
+worst bug: middleware and host-app controllers fighting over `Set-Cookie`, in ways that depended on
+the host app's own filters.
+
+A standalone server has no host app, so that class of problem does not exist. It owns its routes, its
+session, and its cookie, and nothing runs around it.
+
+## Why there is still an engine
+
+Because the *consumer* side genuinely is a Rails concern, and it is a different problem. `masks-rails`
+mounts three routes into your application — start, callback, logout — and gives you
+`authenticate_masks!`. It issues nothing. It holds no signing key. It talks to the server over HTTP
+like any other client would.
+
+The two are never loaded into the same process.
+
+## Multi-tenant hosts
+
+Every configuration value in the engine accepts a callable, so an application serving many tenants on
+subdomains resolves its issuer per request:
+
+```ruby
+Masks::Rails.configure do |config|
+  config.issuer = ->(request) { "https://#{request.host.split(".").first}.auth.example" }
+  config.resource = ->(request) { "https://#{request.host}/mcp" }
+end
+```

@@ -1,0 +1,77 @@
+---
+title: Tenancy
+description: masks is the source of truth for tenants, and every token says which one it belongs to.
+---
+
+A **tenant** is the unit masks isolates everything by. Actors, clients, tokens, sessions, consents
+and signing keys all belong to exactly one, and nothing crosses.
+
+Tenants are addressed by subdomain and identified by a uuid:
+
+| | | |
+| --- | --- | --- |
+| `uuid` | stable forever | what downstream applications key on |
+| `subdomain` | how requests reach it | can be renamed |
+| `name` | shown on the sign-in page | cosmetic |
+
+The split matters. A subdomain is a routing fact and someone will eventually want to change theirs;
+a uuid is identity. Anything that stores "which tenant is this" should store the uuid.
+
+## masks is the source of truth
+
+Downstream applications do not define tenants. They hold a **projection** — a local row keyed by the
+uuid masks issued — and let masks own the record.
+
+They learn which tenant a caller belongs to without asking, because every token says so:
+
+```json
+{
+  "iss": "https://jons.auth.example",
+  "sub": "3f3ef7a0-9a3e-49c6-955e-f73032bcf5f8",
+  "aud": "https://jons.things.example/mcp",
+  "scope": "openid profile email",
+  "tenant": {
+    "uuid": "45638a95-b76b-439a-a2cc-f2cb71d56fbd",
+    "subdomain": "jons",
+    "name": "Jon's"
+  }
+}
+```
+
+The same identity is published in the discovery document, so an application can resolve a tenant
+before anyone has signed in.
+
+:::tip[Why a claim rather than an endpoint]
+A lookup endpoint would mean the application either forwards the caller's token upstream — which
+hands masks a credential it has no business holding, and widens the blast radius of a compromise at
+either end — or holds a second credential purely to ask a question the token already answers.
+:::
+
+## Three layers of isolation
+
+Each fails in a different way, which is the point of having three.
+
+| Layer | Enforced by | Fails how |
+| --- | --- | --- |
+| application | `TenantScoped` default scope | quietly, if someone forgets a scope |
+| database | Postgres RLS, `FORCE` + policy | silently, if the app role is a superuser |
+| signature | per-tenant RSA key, per-tenant JWKS | loudly, and undeniably |
+
+Two traps are worth knowing about. A table's **owner bypasses RLS** unless the table is marked
+`FORCE ROW LEVEL SECURITY`, and a **superuser bypasses it regardless** — which is why `compose.yml`
+creates a separate non-superuser role for the application rather than letting Rails connect as
+`POSTGRES_USER`.
+
+## Switching tenants
+
+Every request resolves its tenant from the hostname and runs inside `Tenant.switch`, which sets the
+Postgres session variable the RLS policy reads and restores the previous value on the way out.
+
+```ruby
+Tenant.switch(tenant) do
+  Actor.count
+end
+```
+
+Nesting restores the *outer* tenant rather than clearing the setting, so code that switches inside a
+switch does not go blind to its own rows afterwards.

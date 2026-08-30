@@ -1,0 +1,71 @@
+---
+title: Endpoints
+description: Every route the server serves, and what it answers with.
+---
+
+All of these are per tenant. The tenant is resolved from the hostname, so
+`jons.auth.example/token` and `acme.auth.example/token` are different endpoints with different keys.
+
+## Discovery
+
+| Route | |
+| --- | --- |
+| `GET /.well-known/openid-configuration` | the discovery document, including the `tenant` identity |
+| `GET /.well-known/oauth-authorization-server` | the same document, for clients that look there |
+| `GET /.well-known/jwks.json` | this tenant's published keys, cached five minutes |
+
+## Flow
+
+| Route | |
+| --- | --- |
+| `GET /authorize` | starts the code flow; redirects to sign-in or consent as needed |
+| `POST /token` | `authorization_code` and `refresh_token` grants |
+| `GET POST /userinfo` | claims for the bearer, requires the `openid` scope |
+
+### `/authorize` parameters
+
+| | |
+| --- | --- |
+| `response_type` | `code` |
+| `client_id` `redirect_uri` | must match a registered URI exactly |
+| `scope` | narrowed to what the client is registered for |
+| `state` | echoed back; you must check it |
+| `nonce` | bound into the id token |
+| `code_challenge` `code_challenge_method` | `S256`; required for public clients |
+| `resource` | RFC 8707; may repeat |
+| `prompt` | `login` forces re-authentication, `consent` re-asks, `none` refuses to interact |
+
+The redirect back always carries `iss`, so a client with several issuers can tell which answered.
+
+## Sign-in
+
+| Route | |
+| --- | --- |
+| `GET POST /login` | identifier and password |
+| `GET POST /login/otp` | TOTP second factor, when the actor has one |
+| `GET POST DELETE /logout` | revokes the session |
+| `GET POST /consent` | scopes and audiences being asked for |
+| `GET /` | who you are signed in as, and what you have authorized |
+
+## Registration
+
+| Route | Auth | |
+| --- | --- | --- |
+| `POST /register` | none | RFC 7591 — create |
+| `GET /register/:client_id` | registration token | read |
+| `PUT /register/:client_id` | registration token | update |
+| `DELETE /register/:client_id` | registration token | archive |
+
+## Errors
+
+OAuth error codes, as JSON:
+
+```json
+{ "error": "invalid_grant", "error_description": "that code is not valid or has expired" }
+```
+
+Errors raised after the client and its `redirect_uri` are established come back **at the redirect
+URI** rather than as a response body. Errors about the client or the redirect URI itself never do —
+see [policies](/concepts/policies).
+
+`401` responses carry a `WWW-Authenticate` header.
