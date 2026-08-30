@@ -6,6 +6,23 @@ cd server
 
 [ -f .env ] || cp .env.example .env
 
+if ! pg_dump --version 2>/dev/null | grep -qE '\b17\.' && ! grep -q '^PG_BIN_PATH=.' .env; then
+  cat <<'TEXT' >&2
+pg_dump 17 is not first on your PATH, and PG_BIN_PATH is not set in server/.env.
+
+The schema is dumped as SQL, because schema.rb cannot represent the row-level
+security policies that isolate tenants. That dump needs a pg_dump matching the
+server, and an older one refuses outright.
+
+  brew bundle
+  echo "PG_BIN_PATH=$(brew --prefix postgresql@17)/bin" >> server/.env
+
+Or skip the host toolchain entirely and work in containers: bin/test.
+
+TEXT
+  exit 1
+fi
+
 docker compose up -d --wait
 
 bundle install

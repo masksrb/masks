@@ -38,5 +38,11 @@ module Server
 
     # Don't generate system test files.
     config.generators.system_tests = nil
+
+    config.active_record.schema_format = :sql
+
+    if ENV["PG_BIN_PATH"].present?
+      ENV["PATH"] = "#{ENV['PG_BIN_PATH']}:#{ENV['PATH']}"
+    end
   end
 end
