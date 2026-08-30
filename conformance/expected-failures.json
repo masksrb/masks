@@ -10,5 +10,70 @@
         "condition": "CheckForUnexpectedParametersInServerMetadata",
         "expected-result": "warning",
         "comment": "masks publishes two properties RFC 8414 does not register: 'tenant', which carries tenant identity so a consumer reads a claim instead of calling back, and 'resource_indicators_supported'. Both are additive and ignorable by a spec-conformant RP."
+    },
+    {
+        "test-name": "oidcc-server",
+        "variant": {
+            "client_auth_type": "client_secret_basic",
+            "response_mode": "default",
+            "response_type": "code"
+        },
+        "configuration-filename": "/conformance/masks.json",
+        "current-block": "",
+        "condition": "EnsureIdTokenDoesNotContainNonRequestedClaims",
+        "expected-result": "warning",
+        "comment": "The 'tenant' claim is deliberate and is the reason a consumer never has to call back to learn which tenant answered. It is additive, it is documented in discovery, and a client that does not know it ignores it."
+    },
+    {
+        "test-name": "oidcc-prompt-login",
+        "variant": {
+            "client_auth_type": "client_secret_basic",
+            "response_mode": "default",
+            "response_type": "code"
+        },
+        "configuration-filename": "/conformance/masks.json",
+        "current-block": "",
+        "condition": "ExpectSecondLoginPage",
+        "expected-result": "review",
+        "comment": "A manual step: the suite asks a human to upload a screenshot of the second login page. Every automated condition in this module passes, auth_time included, so what is unproven here is only the screenshot. It cannot be satisfied headlessly and is not a masks defect."
+    },
+    {
+        "test-name": "oidcc-max-age-1",
+        "variant": {
+            "client_auth_type": "client_secret_basic",
+            "response_mode": "default",
+            "response_type": "code"
+        },
+        "configuration-filename": "/conformance/masks.json",
+        "current-block": "",
+        "condition": "ExpectSecondLoginPage",
+        "expected-result": "review",
+        "comment": "Same manual screenshot step as oidcc-prompt-login. CheckIdTokenAuthTimeClaimPresentDueToMaxAge, CheckSecondIdTokenAuthTimeIsLaterIfPresent and CheckIdTokenAuthTimeIsRecentIfPresent all pass, which is the whole of what max_age is meant to do."
+    },
+    {
+        "test-name": "oidcc-ensure-registered-redirect-uri",
+        "variant": {
+            "client_auth_type": "client_secret_basic",
+            "response_mode": "default",
+            "response_type": "code"
+        },
+        "configuration-filename": "/conformance/masks.json",
+        "current-block": "",
+        "condition": "ExpectRedirectUriErrorPage",
+        "expected-result": "review",
+        "comment": "A manual screenshot step. The page itself is now real HTML carrying #authorize-error, which the browser config waits for, rather than the JSON body a person could not act on."
+    },
+    {
+        "test-name": "oidcc-ensure-request-object-with-redirect-uri",
+        "variant": {
+            "client_auth_type": "client_secret_basic",
+            "response_mode": "default",
+            "response_type": "code"
+        },
+        "configuration-filename": "/conformance/masks.json",
+        "current-block": "",
+        "condition": "ExpectRedirectUriErrorPage",
+        "expected-result": "review",
+        "comment": "Same manual screenshot step as oidcc-ensure-registered-redirect-uri."
     }
 ]
