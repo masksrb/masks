@@ -4,6 +4,8 @@
 .env*
 !.env.example
 
-/log/*
-/tmp/*
+**/log/*
+**/tmp/*
+**/storage/*
+!**/.keep
 /node_modules

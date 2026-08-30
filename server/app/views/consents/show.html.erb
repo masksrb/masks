@@ -1,0 +1,34 @@
+<% content_for :title, "Authorize #{@client.name}" %>
+
+<div class="card">
+  <h1><%= @client.name %> wants access</h1>
+  <p>Signed in as <strong><%= current_actor.nickname %></strong>.</p>
+
+  <h2>It is asking to</h2>
+  <ul class="scopes">
+    <% @scopes.each do |scope, description| %>
+      <li>
+        <span><%= description || "Use the #{scope} scope" %></span>
+        <span class="name"><%= scope %></span>
+      </li>
+    <% end %>
+  </ul>
+
+  <% if @audience.any? %>
+    <h2>On your behalf at</h2>
+    <% @audience.each do |resource| %>
+      <p class="audience"><%= resource %></p>
+    <% end %>
+  <% end %>
+
+  <%= form_with url: consent_path, method: :post do |form| %>
+    <div class="actions">
+      <%= form.submit "Allow", name: "approve", value: "yes" %>
+      <%= form.submit "Deny", name: "deny", value: "yes", class: "secondary" %>
+    </div>
+  <% end %>
+
+  <p class="muted">
+    Not you? <%= link_to "Sign out", logout_path %>.
+  </p>
+</div>

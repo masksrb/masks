@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+cd server
+
+[ -f .env ] || cp .env.example .env
+
+docker compose up -d --wait
+
+bundle install
+bin/rails db:prepare
+bin/rails db:seed
+
+cat <<'TEXT'
+
+Tenants are addressed by subdomain. Add these to /etc/hosts:
+
+  127.0.0.1 auth.test jons.auth.test acme.auth.test
+
+Then bin/dev, and http://jons.auth.test:5555
+TEXT

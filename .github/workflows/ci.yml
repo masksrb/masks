@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  boundary:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: No host, domain, or secret may be named here
+        run: bin/check-boundary
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+          working-directory: server
+      - name: Lint the server
+        working-directory: server
+        run: bin/rubocop -f github
+
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+          working-directory: server
+      - name: Scan for Rails security defects
+        working-directory: server
+        run: bin/brakeman --no-pager
+      - name: Scan gems for known vulnerabilities
+        working-directory: server
+        run: bin/bundler-audit
+
+  gems:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        gem: [client, engine]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+      - name: Build ${{ matrix.gem }}
+        working-directory: ${{ matrix.gem }}
+        run: gem build *.gemspec
