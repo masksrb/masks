@@ -239,11 +239,21 @@ The first resource server to adopt this gem wrote its own scope check and its ow
       lift one and there is no refresh loop in the page.
 - [x] **A resource-server concern** — `Masks::Rails::ProtectedResource`, wrapping §6's half for a
       controller. The engine currently offers a consuming app nothing for the tokens it *accepts*.
-- [ ] ◐ **The callback has never been driven against a real server** — `state` and `nonce` checks are
-      written and read but not executed. This is the largest unexercised surface in the repo, and it
-      is the half a consuming app depends on most. The first consumer wired up its own client rather
-      than using the engine, so nothing exercises it today. **A consumer adopting the engine is what
-      runs it**, and is the reason an adoption is worth more than the duplicate code it deletes.
+- [x] **The callback is driven end to end** — start, redirect, code exchange against a signing
+      issuer over a socket, `state`, `nonce`, session, and a query on the cookie alone. Twelve tests
+      in the first consumer to adopt the engine, which is what it took: the checks were written and
+      read for months and never executed. Running them found two defects the reading had not.
+- [x] **The id token is read once and not kept** — it was stored in the session with the access and
+      refresh tokens, and **three JWTs overflow a 4KB cookie session**: the first real sign-in raised
+      `CookieOverflow` at 4247 bytes. Every consumer using the default cookie store would have hit
+      it on their first sign-in. The id token is now verified at the callback, six claims are kept,
+      and the token is dropped — which also removes a signature verification per request, since
+      `masks_identity` was re-verifying it every time it was asked. A consumer whose claims are
+      larger still wants a server-side store; the cookie has a hard ceiling and no warning before it.
+- [x] **A token response with no `access_token` is refused** — `HTTP.parse` only raises on a non-2xx
+      status, so an issuer answering `200` with an error body, or with a body missing the token,
+      produced a `Tokens` holding `nil` and a session that looked established. `Tokens.granted`
+      refuses both. Found by a fake issuer that answered the wrong status.
 - [ ] **Published to RubyGems.**
 
 ## 8. The browser package — @masks/client
