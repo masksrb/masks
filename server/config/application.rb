@@ -32,6 +32,8 @@ module Server
     config.masks.attempt_limit = ENV.fetch("MASKS_ATTEMPT_LIMIT", 10).to_i
     config.masks.account_attempt_limit = ENV.fetch("MASKS_ACCOUNT_ATTEMPT_LIMIT", 5).to_i
     config.masks.registration_limit = ENV.fetch("MASKS_REGISTRATION_LIMIT", 10).to_i
+    config.masks.setup_token = ENV["MASKS_SETUP_TOKEN"].presence
+    config.masks.tenants = ENV["MASKS_TENANTS"].to_s.split(/[\s,]+/).reject(&:empty?)
 
     # Configuration for the application, engines, and railties goes here.
     #

@@ -1,5 +1,6 @@
 class Login
   STATES = [
+    LoginStates::Setup,
     LoginStates::Identifier,
     LoginStates::Password,
     LoginStates::FirstFactor,
@@ -102,7 +103,7 @@ class Login
   end
 
   def as_json(*)
-    {
+    base = {
       "prompt" => prompt,
       "settled" => settled?,
       "warnings" => warnings,
@@ -111,6 +112,8 @@ class Login
       "client" => client && { "name" => client.name, "id" => client.client_id },
       "tenant" => tenant && { "name" => tenant.name }
     }
+
+    states.reduce(base) { |json, state| state.enabled? ? json.merge(state.as_json) : json }
   end
 
   private

@@ -6,8 +6,10 @@ import FirstFactor from "./prompts/first-factor.svelte";
 import Identify from "./prompts/identify.svelte";
 import SecondFactor from "./prompts/second-factor.svelte";
 import Settled from "./prompts/settled.svelte";
+import Setup from "./prompts/setup.svelte";
 
 const prompts = {
+  setup: Setup,
   identify: Identify,
   "first-factor": FirstFactor,
   "second-factor": SecondFactor,
