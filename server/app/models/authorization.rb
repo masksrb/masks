@@ -44,6 +44,12 @@ class Authorization
     @granted_scopes ||= client ? client.permitted_scopes(requested_scopes) : []
   end
 
+  def scopes_for(actor)
+    return granted_scopes if actor.nil?
+
+    actor.permitted_scopes(granted_scopes)
+  end
+
   def openid?
     granted_scopes.include?(Scopes::OPENID)
   end
@@ -73,7 +79,7 @@ class Authorization
     AuthorizationCode.mint!(
       actor: actor,
       client: client,
-      scopes: Scopes.join(granted_scopes),
+      scopes: Scopes.join(scopes_for(actor)),
       audience: audience,
       redirect_uri: redirect_uri,
       nonce: nonce,

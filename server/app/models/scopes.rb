@@ -11,6 +11,8 @@ module Scopes
     OFFLINE => "Stay signed in when you are away"
   }.freeze
 
+  STANDARD = DESCRIBED.keys.freeze
+
   class << self
     def list(value)
       case value

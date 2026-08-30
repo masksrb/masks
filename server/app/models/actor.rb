@@ -40,7 +40,13 @@ class Actor < ApplicationRecord
   end
 
   def scope_list
-    Scopes.list(scopes)
+    list = Scopes.list(scopes)
+
+    list.empty? ? Scopes::STANDARD.dup : list
+  end
+
+  def permitted_scopes(requested)
+    Scopes.granted(requested, scope_list)
   end
 
   def otp?
