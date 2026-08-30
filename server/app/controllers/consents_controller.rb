@@ -4,7 +4,7 @@ class ConsentsController < ApplicationController
 
   def show
     @client = @authorization.client
-    @scopes = Scopes.describe(@authorization.granted_scopes)
+    @scopes = Scopes.describe(@authorization.scopes_for(current_actor))
     @audience = @authorization.audience
   end
 
@@ -20,7 +20,7 @@ class ConsentsController < ApplicationController
     Consent.record!(
       actor: current_actor,
       client: @authorization.client,
-      scopes: @authorization.granted_scopes,
+      scopes: @authorization.scopes_for(current_actor),
       audience: @authorization.audience
     )
 
