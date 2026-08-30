@@ -1,14 +1,18 @@
 class UserinfoController < ApplicationController
-  include BearerAuthentication
+  include RackOAuth2Endpoint
+  include BearerResource
 
   skip_forgery_protection
 
   def show
-    require_scope!(Scopes::OPENID)
-    actor = access_token.actor
+    with_access_token(scope: Scopes::OPENID) do |token|
+      actor = token.actor
 
-    raise Policy::Denied.new("invalid_token", "that token has no subject", status: :unauthorized) if actor.nil?
+      next refuse_token("that token has no subject") if actor.nil?
 
-    render json: actor.claims(access_token.scopes)
+      render json: OpenIDConnect::ResponseObject::UserInfo.new(
+        actor.claims(token.scopes).symbolize_keys
+      ).as_json
+    end
   end
 end
