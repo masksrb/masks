@@ -1,0 +1,45 @@
+<%= render "logins/header",
+      heading: login.tenant&.name ? "Set up #{login.tenant.name}" : "Set up",
+      login: login %>
+
+<p class="text-sm opacity-75">
+  Nobody has an account here yet. The first one you make owns this tenant.
+</p>
+
+<%= render "logins/warnings", login: login %>
+
+<%= form_with url: login_path, method: :post, id: "setup", class: "flex flex-col gap-4" do |form| %>
+  <%= form.hidden_field :event, value: "setup" %>
+
+  <% if LoginStates::Setup.token_required? %>
+    <label class="flex flex-col gap-1.5">
+      <span class="text-sm font-medium">Setup token</span>
+      <%= form.password_field :token, autocomplete: "off", class: "input input-bordered w-full" %>
+      <span class="text-xs opacity-75">Whoever deployed this server set one.</span>
+    </label>
+  <% end %>
+
+  <label class="flex flex-col gap-1.5">
+    <span class="text-sm font-medium">Username</span>
+    <%= form.text_field :nickname, value: login.updates["nickname"],
+          autocomplete: "username", autocapitalize: "none", autocorrect: "off",
+          spellcheck: "false", class: "input input-bordered w-full" %>
+  </label>
+
+  <label class="flex flex-col gap-1.5">
+    <span class="text-sm font-medium">Email <span class="opacity-75">(optional)</span></span>
+    <%= form.email_field :email, value: login.updates["email"],
+          autocomplete: "email", class: "input input-bordered w-full" %>
+  </label>
+
+  <label class="flex flex-col gap-1.5">
+    <span class="text-sm font-medium">Password</span>
+    <%= form.password_field :password, autocomplete: "new-password",
+          class: "input input-bordered w-full" %>
+    <span class="text-xs opacity-75">
+      At least <%= LoginStates::Setup::MINIMUM_PASSWORD %> characters.
+    </span>
+  </label>
+
+  <button type="submit" class="btn btn-primary w-full">Create the owner</button>
+<% end %>

@@ -19,6 +19,27 @@ class Tenant < ApplicationRecord
       active.find_by(subdomain: host.to_s.split(".").first)
     end
 
+    def declared
+      Rails.configuration.masks.tenants
+    end
+
+    def declare!
+      declared.map do |subdomain|
+        active.find_by(subdomain: subdomain) || create!(subdomain: subdomain, name: subdomain.titleize)
+      end
+    end
+
+    def claim(host)
+      return nil if declared.any?
+      return nil if exists?
+
+      subdomain = host.to_s.split(".").first
+
+      create!(subdomain: subdomain, name: subdomain.titleize)
+    rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique
+      nil
+    end
+
     def switch(tenant)
       raise ArgumentError, "no tenant" if tenant.nil?
 

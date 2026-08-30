@@ -37,3 +37,7 @@ en:
       missing-first-factor: "That step expired. Start over and try again."
       too-many-attempts: "Too many sign-in attempts. Wait a few minutes and try again."
       too-many-attempts-for-account: "Too many sign-in attempts for that account."
+      invalid-setup-token: "That setup token is not the one this server was started with."
+      missing-nickname: "Choose a username for the owner account."
+      short-password: "That password is too short."
+      invalid-account: "That username cannot be used here."

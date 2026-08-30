@@ -1,0 +1,192 @@
+require "test_helper"
+
+class FirstRunTest < ActionDispatch::IntegrationTest
+  PASSWORD = "a-long-enough-password".freeze
+
+  def setup_params(**overrides)
+    { event: "setup", nickname: "owner", email: "owner@example.invalid",
+      password: PASSWORD }.merge(overrides)
+  end
+
+  def with_declared(list)
+    was = Rails.configuration.masks.tenants
+    Rails.configuration.masks.tenants = list
+    yield
+  ensure
+    Rails.configuration.masks.tenants = was
+  end
+
+  def with_nothing_deployed
+    [ @tenant, @other ].each { |tenant| Tenant.switch(tenant) { tenant.destroy! } }
+
+    yield
+  end
+
+  test "a tenant with no actors asks to be set up, and says so in both renderings" do
+    host! host_for(@tenant)
+
+    get "/login"
+
+    assert_response :success
+    assert_match "Set up", response.body
+    assert_match "owns this tenant", response.body
+
+    post "/login", params: { event: "start-over" }, as: :json
+
+    assert_equal "setup", JSON.parse(response.body)["prompt"]
+  end
+
+  test "setup settles the login and signs the owner in, over JSON" do
+    host! host_for(@tenant)
+
+    post "/login", params: setup_params, as: :json
+    body = JSON.parse(response.body)
+
+    assert_response :success
+    assert body["settled"]
+    assert_equal "owner", body["actor"]["nickname"]
+
+    get "/login"
+
+    assert_redirected_to root_path
+  end
+
+  test "setup works with the bundle switched off, which is the whole point of the partials" do
+    host! host_for(@tenant)
+
+    post "/login", params: setup_params
+
+    assert_redirected_to root_path
+    assert_equal "owner", within(@tenant) { Actor.sole.nickname }
+  end
+
+  test "a refused setup re-renders the prompt rather than advancing" do
+    host! host_for(@tenant)
+
+    post "/login", params: setup_params(password: "short"), as: :json
+    body = JSON.parse(response.body)
+
+    assert_equal "setup", body["prompt"]
+    assert_includes body["warnings"], "short-password"
+    assert_equal 0, within(@tenant) { Actor.count }
+  end
+
+  test "the owner the wizard created can complete the whole OIDC flow" do
+    host! host_for(@tenant)
+
+    post "/login", params: setup_params, as: :json
+    assert JSON.parse(response.body)["settled"]
+
+    registration = register(@tenant)
+
+    authorize(client_id: registration["client_id"])
+    consent! if awaiting_consent?
+
+    granted = token(
+      grant_type: "authorization_code",
+      code: code_from,
+      redirect_uri: OidcFlow::REDIRECT_URI,
+      code_verifier: verifier,
+      client_id: registration["client_id"],
+      client_secret: registration["client_secret"]
+    )
+
+    claims = claims_in(granted["access_token"])
+
+    assert_equal @tenant.uuid, claims.dig("tenant", "uuid")
+    assert_equal %w[email openid profile], Scopes.list(claims["scope"])
+  end
+
+  test "setup is refused once the tenant has an owner, whatever is posted" do
+    create_actor(@tenant, nickname: "first", password: PASSWORD)
+    host! host_for(@tenant)
+
+    post "/login", params: setup_params(nickname: "second"), as: :json
+
+    assert_equal "identify", JSON.parse(response.body)["prompt"]
+    assert_equal 1, within(@tenant) { Actor.count }
+  end
+
+  test "one tenant's setup does not set up another" do
+    host! host_for(@tenant)
+    post "/login", params: setup_params, as: :json
+
+    reset!
+    host! host_for(@other)
+    get "/login"
+
+    assert_match "Set up", response.body
+    assert_equal 0, within(@other) { Actor.count }
+  end
+
+  test "an unknown host is still a 404 once any tenant exists" do
+    host! "nobody.auth.test"
+
+    get "/login"
+
+    assert_response :not_found
+  end
+
+  test "the first visit to an empty deployment claims the tenant and asks to set it up" do
+    with_nothing_deployed do
+      host! "fresh.auth.test"
+
+      get "/login"
+
+      assert_response :success
+      assert_match "Set up", response.body
+      assert_equal "fresh", Tenant.sole.subdomain
+      assert Tenant.sole.signing_key.kid.present?
+    end
+  end
+
+  test "claiming is off once tenants are declared at deploy" do
+    with_nothing_deployed do
+      with_declared([ "declared" ]) do
+        host! "fresh.auth.test"
+
+        get "/login"
+
+        assert_response :not_found
+        refute Tenant.exists?
+      end
+    end
+  end
+
+  test "a host that is not a usable subdomain claims nothing" do
+    with_nothing_deployed do
+      host! "-nope-.auth.test"
+
+      get "/login"
+
+      assert_response :not_found
+      refute Tenant.exists?
+    end
+  end
+
+  test "only the first host claims — the second is a 404, not a second tenant" do
+    with_nothing_deployed do
+      host! "fresh.auth.test"
+      get "/login"
+      assert_response :success
+
+      reset!
+      host! "second.auth.test"
+      get "/login"
+
+      assert_response :not_found
+      assert_equal 1, Tenant.count
+    end
+  end
+
+  test "a declared tenant is created by the task the entrypoint runs" do
+    with_nothing_deployed do
+      with_declared([ "declared" ]) do
+        created = Tenant.declare!
+
+        assert_equal [ "declared" ], created.map(&:subdomain)
+        assert_equal created.map(&:id), Tenant.declare!.map(&:id)
+      end
+    end
+  end
+end

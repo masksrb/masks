@@ -65,6 +65,10 @@ class LoginState
     true
   end
 
+  def as_json
+    {}
+  end
+
   def reload!
   end
 

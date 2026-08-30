@@ -11,7 +11,8 @@ class ApplicationController < ActionController::Base
   private
 
     def current_tenant
-      @current_tenant ||= Tenant.resolve(request.host) || raise(TenantMissing)
+      @current_tenant ||=
+        Tenant.resolve(request.host) || Tenant.claim(request.host) || raise(TenantMissing)
     end
 
     def within_tenant

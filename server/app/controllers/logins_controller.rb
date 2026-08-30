@@ -1,6 +1,6 @@
 class LoginsController < ApplicationController
   STORE = "login".freeze
-  VERIFYING = %w[password otp].freeze
+  VERIFYING = %w[password otp setup].freeze
 
   rate_limit to: Rails.configuration.masks.attempt_limit,
              within: 3.minutes, only: :update, if: -> { verifying? },
@@ -54,7 +54,7 @@ class LoginsController < ApplicationController
     end
 
     def update_params
-      params.permit(:identifier, :password, :code).to_h
+      params.permit(:identifier, :password, :code, :nickname, :email, :token).to_h
     end
 
     def settle(login)
