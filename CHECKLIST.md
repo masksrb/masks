@@ -2,10 +2,13 @@
 
 What is built, what is inherited but not yet ported, and what is still ahead.
 
-**Read at `9186e93`, plus the container work in the working tree.** Everything marked done has been
-**run**, not merely written. Where a claim has
+**Read at `cb541fd`, plus the container, conformance and login work still in the working tree.**
+Everything marked done has been **run**, not merely written. Where a claim has
 only been read rather than executed, it says so — an unexecuted checked box is the shape most bugs
 here would take. §6 now carries one that was checked and false for exactly that reason.
+
+**The suite is red as this is written** — two failures, both error codes the move onto rack-oauth2
+changed. They are named in §11, and they are the reason to read §11 before §2.
 
 **masks ships four deliverables, not three.** The server, the Ruby client gem, the Rails engine, and
 `@masks/client` for the browser. §6 §7 §8 are the three a consumer touches, and between them they
@@ -79,6 +82,32 @@ registration token, cross-tenant client, cross-tenant token, widened scope, wide
       `/.well-known/oauth-authorization-server`.
 - [x] **userinfo** — scope-gated: `profile` releases the name, `email` the address, neither without.
 - [x] **`iss` on the authorization response** — so a client with several issuers knows which answered.
+- [x] **The authorize and token endpoints run on rack-oauth2** — and the request is validated from a
+      params hash rather than the live env, because this request is not happening now: it stops for
+      sign-in, stops again for consent, and resumes out of the session later. The same hash
+      `to_session` round-trips, so a resumed authorization is checked by exactly the same code as a
+      fresh one, and the throw/catch that used to break out of the handler is gone. Token exchange
+      is a gem extension rather than a branch. `prompt=none` refuses with `interaction_required`,
+      which `openid_connect` defines, rather than a hand-written `bad_request`.
+- [x] **`auth_time` is when the person signed in, and `max_age` is enforced against it** — it was
+      set to the moment the id token was built, which made it a copy of `iat` and said nothing:
+      sign in at nine, reuse consent at eleven, and the old claim swore you had just authenticated.
+      That is also why `max_age` could not be honoured. The session's `authenticated_at` now travels
+      with the authorization code, so the claim survives the round trip through login and consent.
+      `max_age` is checked before consent alongside `prompt=login`, and refuses with
+      `interaction_required` when the client also said `prompt=none` — asking not to be interrupted
+      and demanding a fresh authentication at once cannot both be satisfied.
+- [x] **`at_hash` binds the id token to the access token it was issued with** — the left half of the
+      SHA-256, so a client can confirm the two were issued together rather than paired by whoever
+      delivered them. Optional for the code flow, required the moment an id token travels the front
+      channel, so it may as well be there now. `c_hash` is wired for when it does.
+- [x] **userinfo accepts a bearer token the way RFC 6750 says it may arrive** — header *or* form
+      parameter, and `invalid_request` when a caller sends both, which is the case the spec is
+      careful about and the one a hand-written extraction never thinks of. `Resource::Bearer`
+      carries the `WWW-Authenticate` shapes with it, `insufficient_scope` as a 403 naming the scope
+      it wanted rather than a bare denial. It is middleware by design and is called from inside the
+      action anyway, because mounted as middleware it would run before `Tenant.resolve` and verify
+      tokens against whichever issuer answered first.
 - [x] **Custom scopes, and a ceiling at each end** — a consumer's own scopes (`catalog:read`,
       `admin`) travel in the `scope` claim on the access token and need no registration here;
       `scopes_supported` in discovery advertises only the four masks defines, because a resource
@@ -100,12 +129,17 @@ registration token, cross-tenant client, cross-tenant token, widened scope, wide
       existing actor refreshing, and `everything` would have restored the hole above.
 - [x] **Remembered consent** — per actor and client, unioning scopes and audiences.
 - [x] **`prompt`** — `login` forces re-authentication, `consent` re-asks, `none` refuses to interact.
-- [x] ◐ **Sign-in is a Svelte prompt machine; consent is still server-rendered** — the server owns an
-      ordered list of `LoginState`s and answers with the next `prompt`; the client renders one
-      component per prompt and posts events back as JSON. Driven end to end in dev *and* in the
-      container: identify → first-factor → second-factor → settled, with a wrong password and a
-      wrong code each warning without advancing. **Sign-in now requires JavaScript**, which reverses
-      the previous no-JS property — consent, account and the error pages do not.
+- [x] **Sign-in is a progressively enhanced prompt machine** — the server owns an ordered list of
+      `LoginState`s and answers with the next `prompt`. Every prompt exists twice: as an ERB partial
+      whose `form_with` posts an `event` to `login_path` and gets a redirect back, and as a Svelte
+      component posting the same events as JSON. `logins/show` renders the partial; `login.js`
+      replaces it only if the bundle runs. `LoginsController#update` answers both formats from one
+      code path. Driven end to end in dev *and* in the container: identify → first-factor →
+      second-factor → settled, with a wrong password and a wrong code each warning without
+      advancing. **The earlier "sign-in now requires JavaScript" was reversed by building the
+      partials** — which is the property §11's conformance harness wanted back. Read, not yet
+      driven with JS off: nothing has executed the no-JS path deliberately, and HtmlUnit completing
+      the flow does not prove it, since HtmlUnit runs the bundle.
 - [x] **Adding a factor is adding two files** — a `LoginState` and a prompt component. The order of
       `Login::STATES` is the flow; nothing else encodes it.
 - [x] **The identifier step never looks the actor up** — so §5's anti-enumeration property survives
@@ -333,7 +367,9 @@ because it redirects. Two modes in one package, serving different consumers rath
 - [x] **The boundary rule holds** — nothing here names a host, a domain, or a secret.
 - [x] **CI runs the test suite** — against a postgres 17 service with the non-superuser `masks` role
       created explicitly, so CI exercises the same role the application uses rather than a
-      superuser that would see through every policy. `bin/ci` runs the same steps locally.
+      superuser that would see through every policy. There is no local equivalent: `bin/` holds
+      `check-boundary`, `conformance`, `dev`, `fmt`, `image` and `setup`, and a `bin/ci` running the
+      same steps is worth adding — this line claimed one existed.
 - [x] **CI lints and builds the frontend** — biome over the plain JS, then a real `vite build`.
 - [x] **A container image** — `server/Dockerfile`, built and run. Multi-stage, non-root, thruster in
       front of puma, solid_queue in the same process. `bin/image` runs it against compose postgres
@@ -387,12 +423,19 @@ exchange existed anywhere.** The v2 list is mostly a porting exercise.
 
 - [x] **A scripted end-to-end run** — the flow at the top of this file, driven with curl against two
       seeded tenants. Repeatable, and it has caught real bugs.
-- [x] **A test suite — 124 runs, 297 assertions, from a database built from scratch.** Minitest,
+- [x] **A test suite — 133 runs, 318 assertions, from a database built from scratch.** Minitest,
       no fixtures: RLS `WITH CHECK` refuses rows inserted outside a tenant, so every record is
       created inside `Tenant.switch`. Covers the login machine's transitions and expiries, the
       enumeration properties, tenant isolation and RLS itself, and the login endpoint including
       cross-tenant sign-in. It found the RLS bug in §1 on its first run.
-- [x] **The OIDC surface is now driven in CI, not only by curl** — seven integration tests under
+- [ ] **Two of those runs fail, and both are error codes the rack-oauth2 move changed** — an
+      unsupported `grant_type` answers `invalid_request` where RFC 6749 §5.2 says
+      `unsupported_grant_type`, and a client belonging to another tenant answers `invalid_request`
+      where it says `invalid_client`. The refusals still refuse, so §1's isolation is intact and no
+      token crosses a tenant; what is wrong is the code a client reads to tell one refusal from
+      another. Which is the thing the security profile plans at the bottom of this section look at,
+      so it is worth fixing before running them.
+- [x] **The OIDC surface is now driven in CI, not only by curl** — nine integration tests under
       `test/integration`, built on one `OidcFlow` helper that registers a client, signs in, walks
       authorize → consent → code → token, and verifies the JWT against the tenant's published JWKS.
       Authorize and the code grant, PKCE, refresh rotation, exchange, revocation, registration and
@@ -410,14 +453,20 @@ exchange existed anywhere.** The v2 list is mostly a porting exercise.
       answer to "is this actually a correct OIDC provider" that no test we write for ourselves can
       give, because the plans were written against the spec rather than against what we built.
       A nightly workflow, not a PR gate: it wants Java, Mongo and a container build.
-- [ ] ◐ **The harness has never completed a run** — the compose file, the plan config and the
-      runner are written and validate, and nothing has been executed end to end. Two things are
-      unproven. **The suite drives the login page with HtmlUnit, and masks' sign-in is a Svelte 5
-      app** — §2 traded the no-JS property away, and HtmlUnit is the weakest JS engine this will
-      ever meet. If it cannot run the bundle, no authorization-code plan can complete, and the
-      mitigation is a server-rendered fallback form, which would win that property back. Second,
-      `MASKS_PUBLIC_ORIGIN_TEMPLATE` and TLS at a proxy are set here for the first time — §8's
-      untested seam is on this path, which is a reason to run it and not only a risk.
+- [ ] ◐ **The harness runs and drives the browser; it has not completed a plan** — this item used
+      to say nothing had been executed at all. `conformance/results/` now holds three plan exports
+      and a run log. `oidcc-config-certification-test-plan` completed, twice.
+      **The risk this item was written about is retired: HtmlUnit drove sign-in and consent through
+      to a returned code** — identify, password, approve, then
+      `?iss=…&code=…&state=…` on the callback. So the weakest JS engine this will ever meet does run
+      the Svelte bundle, and §2's no-JS partials are the belt to that braces rather than the thing
+      standing between here and a certifiable run. The other unproven half proved out too:
+      `MASKS_PUBLIC_ORIGIN_TEMPLATE` and TLS at a proxy were set for the first time and worked.
+      What is left is the plan itself. `oidcc-basic-certification-test-plan` did not finish — four
+      modules broke and the log stops mid-module: `oidcc-prompt-login` and `oidcc-max-age-1` timed
+      out, `oidcc-ensure-registered-redirect-uri` and `oidcc-ensure-post-request-succeeds` went
+      INTERRUPTED. `max_age` was built *after* that run, so §2's item is untested against the suite
+      that asked for it, and re-running is the cheapest next thing here.
 - [ ] **An OAuth 2.1 / security BCP pass** — the same suite carries security profile plans, which is
       where things like redirect-URI handling and PKCE enforcement get adversarial attention.
 
