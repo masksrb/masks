@@ -8,11 +8,16 @@ marked done has been **run**, not merely written. Where a claim has
 only been read rather than executed, it says so — an unexecuted checked box is the shape most bugs
 here would take. §6 now carries one that was checked and false for exactly that reason.
 
-**Both suites are green as this is written.** masks' own: 184 runs, 485 assertions, 0 failures.
+**Both suites are green as this is written.** masks' own: 190 runs, 492 assertions, 0 failures.
 The OpenID Foundation's: **both certification plans complete with 0 failures and no unexpected
 warnings** — 2178 conditions across 39 modules on the basic plan, 35 on config. That is what §11
-now records, read from a finished run rather than one in flight. Two loose things are in the tree:
-the conformance work (§2 §4 §11) and first run (§1 §2, `plans/020`).
+now records, read from a finished run rather than one in flight.
+
+**First run is built and committed, both halves of it** — the login state that claims a tenant and
+creates an owner, and the approval screen that connects an app to it (§2, §3, `plans/020`). It is
+the first thing here with a consumer on the other side of it, so it is also the first thing neither
+suite can test alone: `home/bin/probe-pairing` drives the handshake across both, and §11 records
+what that run says.
 
 **masks ships four deliverables, not three.** The server, the Ruby client gem, the Rails engine, and
 `@masks/client` for the browser. §6 §7 §8 are the three a consumer touches, and between them they
@@ -248,6 +253,45 @@ registration token, cross-tenant client, cross-tenant token, widened scope, wide
 - [x] **Registration management — RFC 7592** — read, update and delete against a registration access
       token. A wrong token, or the right token against another tenant, is 401.
 - [x] **Public clients** — `token_endpoint_auth_method: none`, PKCE then mandatory.
+- [x] **An app is connected by a person approving it — `/setup/connect`** — `plans/020`. The wizard
+      starts at the consumer and the only part of masks anyone sees is one screen: what is being
+      connected, the origin it serves, the URIs it will be sent back to, and the scopes it asks for.
+      Signing in comes first when nobody has an account yet, so a fresh deployment is claimed, given
+      an owner, and connected in one browser trip — the pairing waits in the session while the login
+      machine runs first run, and `after_login_path` brings the browser back.
+- [x] **The credential is minted after approval and never crosses the browser** — what travels the
+      redirect is a one-time initial access token, RFC 7591 §3.1, redeemed at `/register` server to
+      server. `plans/020` rejected the obvious shape — self-register through open DCR, approve the
+      row afterwards — because the secret would exist before anyone agreed to anything. `Token`
+      already had single-use, expiry and a digest, so `InitialAccessToken` is a subclass and nothing
+      new was needed to burn it.
+- [x] **Approval creates the client, so the registration cannot disagree with the screen** — this is
+      `plans/020`'s open question about pinning redirect URIs, answered by removing the
+      disagreement: the client exists before the token does, the token is bound to it, and a
+      registration body naming other redirect_uris or wider scopes changes nothing it gets back. A
+      pairing is refused outright unless the resource, the redirect URIs and the `return_to` share
+      one origin, so a crafted URL cannot get one origin approved and the token delivered to
+      another.
+- [x] **A second run rotates the client rather than adding one** — `plans/020`'s other open
+      question. Keyed on the resource identifier, which is also the shape §3's *multiple clients per
+      tenant, one per resource server* wants. The failure mode it was worried about was a tenant
+      with two clients and no way to tell which one the browser holds.
+- [x] **`dynamic: false` finally means something** — a human-approved client records `approved_at`
+      and the actor who approved it, and skips consent: a tenant approving a scope grant to the app
+      they just installed is theatre. `prompt=consent` still asks, because the spec says it must.
+      This is the first thing that ever read that column.
+- [x] **Approval is where an actor gets its scopes** — the approving actor is granted what the
+      client declares, which closes *granting an actor a scope has no interface* for the one case
+      that has to work at install time. Without it the first real sign-in succeeds and then every
+      request refuses with "this token does not carry things:read".
+- [x] **A scope masks does not define is described by the server that does** — the approval screen
+      read `things:read` as "the things:read scope", which is the string already in the column
+      beside it. `ResourceMetadata` reads the consumer's own RFC 9728 document — the
+      path-suffixed URL first, then the bare one — and takes descriptions from a `scope_descriptions`
+      extension, because RFC 9728 has nowhere to put a sentence. masks still knows nothing about a
+      consumer's scopes. Display only and treated that way: two-second connect, three-second read,
+      no redirects, 64KB, truncated, every failure swallowed into the scope's own name, and it runs
+      after the actor is required so it is not an unauthenticated fetch primitive.
 - [x] **A registration naming no scopes gets everything masks defines, `offline_access` included** —
       it used to get three, and a client that cannot refresh has to push the person back through
       sign-in to keep working, which is a worse outcome than the token it was denied. What a client
@@ -554,6 +598,14 @@ exchange existed anywhere.** The v2 list is mostly a porting exercise.
 
 - [x] **A scripted end-to-end run** — the flow at the top of this file, driven with curl against two
       seeded tenants. Repeatable, and it has caught real bugs.
+- [x] **First run driven across both halves — `home/bin/probe-pairing`** — the one thing no suite
+      here can reach, because masks' suite has no consumer and the consumer's suite fakes an issuer.
+      Twenty-one checks against two live servers: an unpaired app offering setup and naming no
+      issuer while it does, the browser sent here, sign-in first, the approval screen, the one-time
+      token, the redemption server to server, and the sign-in that follows. Three of them are the
+      ones worth having — masks reads the consumer's RFC 9728 document and renders its scope as a
+      sentence, an approved client is not asked for consent, and the access token carries the scope
+      the person granted by approving. All twenty-one pass.
 - [x] **A test suite — 166 runs, 410 assertions, from a database built from scratch.** Minitest,
       no fixtures: RLS `WITH CHECK` refuses rows inserted outside a tenant, so every record is
       created inside `Tenant.switch`. Covers first run — claiming, the setup token, and the owner it
