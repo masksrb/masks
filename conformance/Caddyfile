@@ -1,0 +1,8 @@
+{
+	admin off
+}
+
+https://{$MASKS_CONFORMANCE_HOST} {
+	tls internal
+	reverse_proxy masks:80
+}

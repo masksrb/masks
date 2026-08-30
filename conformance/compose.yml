@@ -1,0 +1,112 @@
+name: masks-conformance
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    volumes:
+      - ../server/db/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  masks:
+    build:
+      context: ../server
+    image: masks:conformance
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: masks
+      POSTGRES_PASSWORD: masks
+      POSTGRES_DATABASE: masks_conformance
+      SECRET_KEY_BASE: conformance_only_secret_key_base_not_for_real_deployments
+      ENCRYPTION_PRIMARY_KEY: conformance_only_primary_key_not_for_credentials
+      ENCRYPTION_DETERMINISTIC_KEY: conformance_only_deterministic_key_not_real
+      ENCRYPTION_KEY_DERIVATION_SALT: conformance_only_key_derivation_salt_fake
+      MASKS_PUBLIC_ORIGIN_TEMPLATE: "https://%{subdomain}.masks.test"
+      MASKS_ATTEMPT_LIMIT: "100000"
+      MASKS_ACCOUNT_ATTEMPT_LIMIT: "100000"
+      MASKS_REGISTRATION_LIMIT: "100000"
+      RAILS_ASSUME_SSL: "true"
+      RAILS_FORCE_SSL: "false"
+      SOLID_QUEUE_IN_PUMA: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost/up > /dev/null"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  proxy:
+    image: caddy:2-alpine
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    environment:
+      MASKS_CONFORMANCE_HOST: jons.masks.test
+    networks:
+      default:
+        aliases:
+          - jons.masks.test
+    depends_on:
+      masks:
+        condition: service_healthy
+
+  mongodb:
+    image: ${MONGODB_IMAGE:-mongo:6.0.13}
+    volumes:
+      - mongo:/data/db
+
+  server:
+    image: registry.gitlab.com/openid/conformance-suite:${SUITE_REF:?set SUITE_REF}
+    environment:
+      BASE_URL: https://localhost.emobix.co.uk:8443
+      BASE_MTLS_URL: https://localhost.emobix.co.uk:8444
+      MONGODB_HOST: mongodb
+      SPRING_PROFILES_ACTIVE: dev
+      OIDC_GOOGLE_CLIENTID: unused
+      OIDC_GOOGLE_SECRET: unused
+      OIDC_GITLAB_CLIENTID: unused
+      OIDC_GITLAB_SECRET: unused
+    depends_on:
+      - mongodb
+      - proxy
+
+  nginx:
+    image: registry.gitlab.com/openid/conformance-suite/nginx:${SUITE_REF:?set SUITE_REF}
+    ports:
+      - "${SUITE_PORT:-8443}:8443"
+    networks:
+      default:
+        aliases:
+          - localhost.emobix.co.uk
+    depends_on:
+      - server
+
+  runner:
+    profiles: ["runner"]
+    image: python:3.13-alpine
+    environment:
+      CONFORMANCE_SERVER: https://nginx:8443/
+      CONFORMANCE_SERVER_MTLS: https://nginx:8444/
+      CONFORMANCE_DEV_MODE: "1"
+      DISABLE_SSL_VERIFY: "1"
+    volumes:
+      - ./.suite:/suite:ro
+      - ./:/conformance:ro
+      - ./results:/results
+    working_dir: /conformance
+    depends_on:
+      - nginx
+    entrypoint: ["/bin/sh", "-c"]
+
+volumes:
+  mongo:
