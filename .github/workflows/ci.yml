@@ -40,6 +40,19 @@ jobs:
         working-directory: server
         run: bin/bundler-audit
 
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: docs/package-lock.json
+      - name: Build the docs
+        working-directory: docs
+        run: npm ci && npm run build
+
   gems:
     runs-on: ubuntu-latest
     strategy:
