@@ -6,7 +6,7 @@ module Masks
       attr_reader :issuer, :audience
 
       def initialize(issuer, audience:, algorithms: ALGORITHMS)
-        @issuer = issuer.is_a?(Issuer) ? issuer : Issuer.new(issuer)
+        @issuer = Issuer.resolve(issuer)
         @audience = Array(audience)
         @algorithms = algorithms
       end

@@ -6,7 +6,7 @@ module Masks
       attr_reader :issuer, :client_id, :client_secret, :redirect_uri, :scope
 
       def initialize(issuer:, client_id:, redirect_uri:, client_secret: nil, scope: DEFAULT_SCOPE)
-        @issuer = issuer.is_a?(Issuer) ? issuer : Issuer.new(issuer)
+        @issuer = Issuer.resolve(issuer)
         @client_id = client_id
         @client_secret = client_secret
         @redirect_uri = redirect_uri

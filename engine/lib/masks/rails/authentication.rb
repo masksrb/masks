@@ -4,7 +4,9 @@ module Masks
       extend ActiveSupport::Concern
 
       included do
-        helper_method :masks_signed_in?, :masks_identity, :masks_tenant if respond_to?(:helper_method)
+        if respond_to?(:helper_method)
+          helper_method :masks_signed_in?, :masks_identity, :masks_tenant, :masks_scopes
+        end
       end
 
       def masks_config
@@ -48,6 +50,18 @@ module Masks
         masks_identity&.dig("tenant")
       end
 
+      def masks_scopes
+        masks_tokens&.scopes || []
+      end
+
+      def masks_permits?(scope)
+        masks_scopes.include?(scope.to_s)
+      end
+
+      def masks_access_token
+        masks_tokens&.access_token
+      end
+
       def masks_refresh!
         return false if masks_tokens&.refresh_token.nil?
 
@@ -63,14 +77,79 @@ module Masks
         false
       end
 
+      def masks_login_url(return_to: nil)
+        path = Masks::Rails::Engine.routes.url_helpers.start_path
+        target = masks_local_path(return_to)
+
+        target ? "#{path}?return_to=#{CGI.escape(target)}" : path
+      end
+
+      def masks_account
+        identity = masks_identity || {}
+
+        {
+          "signed_in" => masks_signed_in?,
+          "subject" => identity["sub"],
+          "name" => identity["name"],
+          "nickname" => identity["preferred_username"],
+          "email" => identity["email"],
+          "email_verified" => identity["email_verified"],
+          "tenant" => masks_tenant,
+          "scopes" => masks_scopes,
+          "expires_at" => masks_tokens&.expires_at
+        }.compact
+      end
+
       def authenticate_masks!
         return true if masks_signed_in?
         return true if masks_tokens && masks_refresh!
 
-        session[:masks_return_to] = request.fullpath if request.get?
-        redirect_to Masks::Rails::Engine.routes.url_helpers.start_path
+        masks_refuse
         false
       end
+
+      private
+
+        def masks_refuse
+          return masks_refuse_json if masks_wants_json?
+
+          session[:masks_return_to] = request.fullpath if request.get?
+          redirect_to Masks::Rails::Engine.routes.url_helpers.start_path
+        end
+
+        def masks_refuse_json
+          response.headers["Cache-Control"] = "no-store"
+
+          render json: {
+            "signed_in" => false,
+            "error" => "login_required",
+            "login_url" => masks_login_url(return_to: masks_referring_path)
+          }, status: :unauthorized
+        end
+
+        def masks_wants_json?
+          request.xhr? ||
+            request.format.json? ||
+            request.content_mime_type&.symbol == :json ||
+            !request.format.html?
+        end
+
+        def masks_referring_path
+          return nil if request.referer.blank?
+
+          masks_local_path(URI.parse(request.referer).request_uri)
+        rescue URI::InvalidURIError
+          nil
+        end
+
+        def masks_local_path(value)
+          path = value.to_s
+
+          return nil unless path.start_with?("/")
+          return nil if path.start_with?("//", "/\\")
+
+          path
+        end
     end
   end
 end

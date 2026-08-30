@@ -1,12 +1,13 @@
 module Masks
   module Rails
     class Configuration
-      attr_accessor :client_id, :client_secret, :scope, :resource,
+      attr_accessor :client_id, :client_secret, :scope, :resource, :resource_scopes,
                     :after_sign_in, :after_sign_out, :session_key
       attr_writer :issuer, :redirect_uri
 
       def initialize
         @scope = Masks::Client::Session::DEFAULT_SCOPE
+        @resource_scopes = []
         @after_sign_in = "/"
         @after_sign_out = "/"
         @session_key = "masks"
@@ -41,6 +42,18 @@ module Masks
           client_secret: client_secret_for(request),
           redirect_uri: redirect_uri_for(request),
           scope: scope
+        )
+      end
+
+      def resource_server_for(request)
+        url = Array(resource_for(request)).first
+
+        raise Masks::Client::Error, "Masks::Rails.config.resource is not set" if url.nil?
+
+        Masks::Client::Resource.new(
+          issuer: issuer_for(request),
+          url: url,
+          scopes: resource_scopes
         )
       end
 

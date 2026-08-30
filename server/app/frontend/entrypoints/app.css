@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+@source "../";
+@source "../../views";
+
+@plugin "daisyui" {
+  themes: light --default, dark --prefersdark;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.4s ease-out both;
+}
+
+.background {
+  background: radial-gradient(
+    circle,
+    #00cdb7,
+    #00c6d2,
+    #00bcea,
+    #00b0fb,
+    #009fff,
+    #2e8eef,
+    #407dde,
+    #4c6ccc,
+    #365ca5,
+    #294b7f,
+    #233a5a,
+    #1f2937
+  );
+}
+
+@media (prefers-color-scheme: dark) {
+  .background {
+    background: radial-gradient(
+      circle,
+      rgba(62, 65, 55, 1) 0%,
+      rgba(54, 47, 40, 1) 25%,
+      rgba(31, 41, 55, 1) 50%,
+      rgba(10, 8, 14, 1) 100%
+    );
+  }
+}
