@@ -66,6 +66,29 @@ module Masks
         Tokens.new(HTTP.post_form(issuer.endpoint("token_endpoint"), form, authorization))
       end
 
+      def exchange(subject_token, scope: nil, resource: nil, lifetime: nil)
+        form = [
+          [ "grant_type", Tokens::EXCHANGE ],
+          [ "client_id", client_id ],
+          [ "subject_token", subject_token ],
+          [ "subject_token_type", Tokens::ACCESS_TOKEN ]
+        ]
+
+        form << [ "scope", Array(scope).join(" ") ] if scope
+        form << [ "requested_lifetime", lifetime.to_i ] if lifetime
+        Array(resource).each { |value| form << [ "resource", value ] }
+
+        Tokens.new(HTTP.post_form(issuer.endpoint("token_endpoint"), form, authorization))
+      end
+
+      def revoke(token, hint: nil)
+        form = [ [ "token", token ], [ "client_id", client_id ] ]
+        form << [ "token_type_hint", hint ] if hint
+
+        HTTP.post_form(issuer.endpoint("revocation_endpoint"), form, authorization)
+        true
+      end
+
       def userinfo(access_token)
         HTTP.get(issuer.endpoint("userinfo_endpoint"), "Authorization" => "Bearer #{access_token}")
       end

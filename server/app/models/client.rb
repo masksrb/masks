@@ -2,9 +2,14 @@ class Client < ApplicationRecord
   include TenantScoped
 
   AUTH_METHODS = %w[client_secret_basic client_secret_post none].freeze
-  GRANT_TYPES = %w[authorization_code refresh_token].freeze
+  GRANT_TYPES = [
+    "authorization_code",
+    "refresh_token",
+    Exchange::GRANT_TYPE
+  ].freeze
   RESPONSE_TYPES = %w[code].freeze
   CHALLENGE_METHODS = %w[S256].freeze
+  LOOPBACK = %w[localhost 127.0.0.1 ::1].freeze
   DEFAULT_SCOPES = [ Scopes::OPENID, Scopes::PROFILE, Scopes::EMAIL ].freeze
 
   has_many :tokens, dependent: :destroy
@@ -130,7 +135,7 @@ class Client < ApplicationRecord
           errors.add(:redirect_uris, "must not contain a fragment: #{value}")
         elsif uri.scheme.blank?
           errors.add(:redirect_uris, "must be absolute: #{value}")
-        elsif uri.scheme == "http" && !loopback?(uri)
+        elsif uri.scheme == "http" && !loopback?(uri) && !Rails.env.local?
           errors.add(:redirect_uris, "must use https unless it is loopback: #{value}")
         end
       rescue URI::InvalidURIError
@@ -139,7 +144,9 @@ class Client < ApplicationRecord
     end
 
     def loopback?(uri)
-      %w[localhost 127.0.0.1 ::1].include?(uri.host)
+      host = uri.host.to_s
+
+      LOOPBACK.include?(host) || host.end_with?(".localhost")
     end
 
     def grant_types_are_known

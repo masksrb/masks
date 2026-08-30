@@ -1,6 +1,9 @@
 module Masks
   module Client
     class Tokens
+      EXCHANGE = "urn:ietf:params:oauth:grant-type:token-exchange".freeze
+      ACCESS_TOKEN = "urn:ietf:params:oauth:token-type:access_token".freeze
+
       attr_reader :access_token, :id_token, :refresh_token, :token_type, :scope, :expires_in, :obtained_at
 
       def initialize(body)

@@ -3,17 +3,20 @@ class AccessToken < Token
     1.hour
   end
 
-  def self.issue!(issuer:, actor:, client:, scopes:, audience:)
+  def self.issue!(issuer:, actor:, client:, scopes:, audience:, parent: nil, expires_at: nil, act: nil)
+    ceiling = [ expires_at, lifetime.from_now ].compact.min
+
     token = create!(
       actor: actor,
       client: client,
+      parent: parent,
       scopes: Scopes.join(scopes),
       audience: Array(audience),
       digest: SecureRandom.uuid,
-      expires_at: lifetime.from_now
+      expires_at: ceiling
     )
 
-    token.instance_variable_set(:@jwt, issuer.sign(token.claims(issuer)))
+    token.instance_variable_set(:@jwt, issuer.sign(token.claims(issuer, act: act)))
     token
   end
 
@@ -25,7 +28,7 @@ class AccessToken < Token
     @jwt
   end
 
-  def claims(issuer)
+  def claims(issuer, act: nil)
     {
       "iss" => issuer.url,
       "sub" => actor&.uuid,
@@ -35,6 +38,7 @@ class AccessToken < Token
       "jti" => jti,
       "client_id" => client&.client_id,
       "scope" => Scopes.join(scopes),
+      "act" => act,
       "tenant" => tenant.to_identity
     }.compact
   end

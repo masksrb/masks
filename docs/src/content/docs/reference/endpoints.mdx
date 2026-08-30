@@ -19,7 +19,8 @@ All of these are per tenant. The tenant is resolved from the hostname, so
 | Route | |
 | --- | --- |
 | `GET /authorize` | starts the code flow; redirects to sign-in or consent as needed |
-| `POST /token` | `authorization_code` and `refresh_token` grants |
+| `POST /token` | `authorization_code`, `refresh_token`, and token-exchange grants |
+| `POST /revoke` | RFC 7009 — revokes a token and everything exchanged from it |
 | `GET POST /userinfo` | claims for the bearer, requires the `openid` scope |
 
 ### `/authorize` parameters
