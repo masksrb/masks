@@ -19,6 +19,7 @@
           "optional": true,
           "match": "https://jons.masks.test/login*",
           "commands": [
+            ["wait", "css", "#login", 10, ".", "update-image-placeholder-optional"],
             ["wait", "name", "identifier", 10],
             ["text", "name", "identifier", "owner"],
             ["click", "css", "form#identify button[type=submit]"],
@@ -36,8 +37,17 @@
           ]
         },
         {
+          "task": "Read the error page",
+          "optional": true,
+          "match": "https://jons.masks.test/authorize*",
+          "commands": [
+            ["wait", "css", "#authorize-error", 10, ".", "update-image-placeholder-optional"]
+          ]
+        },
+        {
           "task": "Verify Complete",
-          "match": "*/test/*/callback*",
+          "optional": true,
+          "match": "https://localhost.emobix.co.uk:8443/test/*/callback*",
           "commands": [
             ["wait", "id", "submission_complete", 10]
           ]
