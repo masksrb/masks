@@ -42,22 +42,26 @@ class ApplicationController < ActionController::Base
     end
 
     def sign_in(actor)
-      session = Session.start!(
+      carried = session.to_hash.slice("authorization", "masks_return_to")
+      reset_session
+      carried.each { |key, value| session[key] = value }
+
+      record = Session.start!(
         actor: actor,
         user_agent: request.user_agent,
         ip_address: request.remote_ip
       )
 
       cookies.encrypted[:masks_session] = {
-        value: session.secret,
-        expires: session.expires_at,
+        value: record.secret,
+        expires: record.expires_at,
         httponly: true,
         same_site: :lax,
         secure: request.ssl?
       }
 
       actor.update!(last_login_at: Time.current)
-      @current_session = session
+      @current_session = record
     end
 
     def sign_out

@@ -34,6 +34,7 @@ export default defineConfig({
             { label: "Signing keys", slug: "concepts/keys" },
             { label: "Policies", slug: "concepts/policies" },
             { label: "Tokens and audiences", slug: "concepts/tokens" },
+            { label: "Hardening", slug: "concepts/hardening" },
           ],
         },
         {
