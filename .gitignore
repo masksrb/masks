@@ -1,0 +1,9 @@
+.DS_Store
+
+# Every host, domain, and credential arrives through the environment.
+.env*
+!.env.example
+
+/log/*
+/tmp/*
+/node_modules
