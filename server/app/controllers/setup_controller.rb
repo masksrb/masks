@@ -6,7 +6,7 @@ class SetupController < ApplicationController
 
   def connect
     @existing = Client.approved_for(@pairing.resource)
-    @scopes = Scopes.describe(@pairing.scopes)
+    @scopes = ResourceMetadata.describe(@pairing.resource, @pairing.scopes)
   end
 
   def approve

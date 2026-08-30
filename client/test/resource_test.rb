@@ -119,6 +119,25 @@ class ResourceTest < ClientTest
     )
   end
 
+  def test_described_scopes_are_published_beside_the_names_they_describe
+    described = Masks::Client::Resource.new(
+      issuer: issuer.url,
+      url: "https://app.test/mcp",
+      scopes: { "things:read" => "Search and read your catalog" }
+    )
+
+    assert_equal %w[things:read], described.scopes
+    assert_equal({ "things:read" => "Search and read your catalog" },
+                 described.metadata["scope_descriptions"])
+  end
+
+  def test_a_resource_with_no_scopes_publishes_no_empty_lists
+    bare = Masks::Client::Resource.new(issuer: issuer.url, url: "https://app.test/mcp")
+
+    assert_nil bare.metadata["scopes_supported"]
+    assert_nil bare.metadata["scope_descriptions"]
+  end
+
   def test_the_metadata_url_is_derived_from_the_origin_not_the_path
     assert_equal(
       "https://app.test/.well-known/oauth-protected-resource",
