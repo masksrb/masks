@@ -5,10 +5,17 @@ class Login
     LoginStates::Password,
     LoginStates::FirstFactor,
     LoginStates::OneTimePassword,
+    LoginStates::BackupCode,
     LoginStates::SecondFactor
   ].freeze
 
   SETTLED = "settled".freeze
+
+  # Derived rather than listed, so a new LoginState declaring `accepts` is
+  # genuinely two files and not three.
+  def self.permitted_updates
+    STATES.flat_map { |state| state.declared_updates }.uniq
+  end
 
   attr_reader :store, :updates, :event, :prompt, :warnings
 

@@ -61,6 +61,9 @@ export function createLogin(initial, options = {}) {
     get prompt() {
       return auth.prompt;
     },
+    get backupCodes() {
+      return auth.backupCodes;
+    },
     warns(key) {
       return (auth.warnings ?? []).includes(key);
     },

@@ -1,6 +1,6 @@
 class LoginsController < ApplicationController
   STORE = "login".freeze
-  VERIFYING = %w[password otp setup].freeze
+  VERIFYING = %w[password otp backup setup].freeze
 
   skip_forgery_protection
 
@@ -58,7 +58,7 @@ class LoginsController < ApplicationController
     end
 
     def update_params
-      params.permit(:identifier, :password, :code, :nickname, :email, :token).to_h
+      params.permit(*Login.permitted_updates).to_h
     end
 
     def settle(login)
