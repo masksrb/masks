@@ -56,7 +56,9 @@ CREATE TABLE public.actors (
     gender character varying,
     birthdate character varying,
     zoneinfo character varying,
-    locale character varying
+    locale character varying,
+    backup_code_digests jsonb DEFAULT '[]'::jsonb NOT NULL,
+    backup_codes_generated_at timestamp(6) without time zone
 );
 
 ALTER TABLE ONLY public.actors FORCE ROW LEVEL SECURITY;
@@ -850,6 +852,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260831150000'),
 ('20260831140000'),
 ('20260831120000'),
 ('20260830210000'),

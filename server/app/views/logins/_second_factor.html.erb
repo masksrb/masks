@@ -17,3 +17,10 @@
 
   <button type="submit" class="btn btn-primary w-full">Verify</button>
 <% end %>
+
+<% if login.actor&.backup_codes? %>
+  <%= form_with url: login_path, method: :post, id: "use-backup-code" do |form| %>
+    <%= form.hidden_field :event, value: "use-backup-code" %>
+    <button type="submit" class="btn btn-ghost btn-sm w-full">Use a backup code</button>
+  <% end %>
+<% end %>

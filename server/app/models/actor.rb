@@ -63,6 +63,49 @@ class Actor < ApplicationRecord
     ROTP::TOTP.new(otp_secret).verify(code.to_s.strip, drift_behind: 30).present?
   end
 
+  BACKUP_CODES = 10
+  BACKUP_CODE_BYTES = 8
+
+  def backup_codes?
+    backup_code_digests.any?
+  end
+
+  def backup_codes_remaining
+    backup_code_digests.length
+  end
+
+  # Returned once and never recoverable, like every other credential here.
+  # High entropy, so a digest rather than bcrypt: there is nothing to brute
+  # force in 64 bits of SecureRandom, and a login has to check ten of them.
+  def generate_backup_codes!
+    codes = Array.new(BACKUP_CODES) { SecureRandom.hex(BACKUP_CODE_BYTES) }
+
+    update!(
+      backup_code_digests: codes.map { |code| self.class.digest_backup_code(code) },
+      backup_codes_generated_at: Time.current
+    )
+
+    codes
+  end
+
+  def verify_backup_code(code)
+    return false unless backup_codes?
+
+    digest = self.class.digest_backup_code(code)
+    remaining = backup_code_digests.reject do |held|
+      ActiveSupport::SecurityUtils.secure_compare(held.to_s, digest)
+    end
+
+    return false if remaining.length == backup_code_digests.length
+
+    update!(backup_code_digests: remaining)
+    true
+  end
+
+  def self.digest_backup_code(code)
+    Digest::SHA256.hexdigest(code.to_s.strip.downcase.delete("^a-f0-9"))
+  end
+
   PROFILE_CLAIMS = {
     "name" => :name,
     "given_name" => :given_name,

@@ -6,48 +6,42 @@ let { login } = $props();
 
 let code = $state("");
 
-const valid = $derived(code.replace(/\s/g, "").length === 6);
+const valid = $derived(code.trim().length >= 8);
 
-function submit() {
+function onsubmit(event) {
+  event.preventDefault();
+
   if (!valid || login.loading) return;
 
   const entered = code;
   code = "";
 
-  login.submit("otp", { code: entered });
+  login.submit("backup", { backup_code: entered });
 }
-
-function onsubmit(event) {
-  event.preventDefault();
-  submit();
-}
-
-$effect(() => {
-  if (valid) submit();
-});
 </script>
 
-<PromptHeader heading="Enter your code" {login} />
+<PromptHeader heading="Use a backup code" {login} />
 
 <Identified {login} />
 
 <form {onsubmit} class="flex flex-col gap-4">
   <label class="flex flex-col gap-1.5">
-    <span class="text-sm font-medium">Six-digit code</span>
+    <span class="text-sm font-medium">Backup code</span>
     <!-- svelte-ignore a11y_autofocus -->
     <input
       type="text"
-      name="code"
-      class="input input-bordered w-full text-lg tabular-nums tracking-[0.4em]"
-      inputmode="numeric"
-      pattern="[0-9]*"
+      name="backup_code"
+      class="input input-bordered w-full font-mono tracking-widest"
       autocomplete="one-time-code"
-      maxlength="6"
       spellcheck="false"
+      autocapitalize="off"
       autofocus
       bind:value={code}
     />
-    <span class="text-xs opacity-75">From your authenticator app.</span>
+    <span class="text-xs opacity-75">
+      One of the codes you saved when you set up your authenticator. Each one
+      works once.
+    </span>
   </label>
 
   <button
@@ -60,12 +54,10 @@ $effect(() => {
   </button>
 </form>
 
-{#if login.backupCodes}
-  <button
-    type="button"
-    class="btn btn-ghost btn-sm w-full"
-    onclick={() => login.submit("use-backup-code", {})}
-  >
-    Use a backup code
-  </button>
-{/if}
+<button
+  type="button"
+  class="btn btn-ghost btn-sm w-full"
+  onclick={() => login.submit("use-authenticator", {})}
+>
+  Use my authenticator instead
+</button>
