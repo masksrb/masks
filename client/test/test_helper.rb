@@ -7,13 +7,14 @@ require "masks/client"
 class FakeIssuer
   ALGORITHM = "RS256".freeze
 
-  attr_reader :key, :kid, :port, :requests
+  attr_reader :key, :kid, :port, :requests, :received
 
   def initialize(tenant: { "uuid" => "t-1", "subdomain" => "jons", "name" => "Jons" })
     @key = OpenSSL::PKey::RSA.generate(2048)
     @kid = SecureRandom.uuid
     @tenant = tenant
     @requests = Hash.new(0)
+    @received = []
     @lock = Mutex.new
     @server = TCPServer.new("127.0.0.1", 0)
     @port = @server.addr[1]
@@ -34,6 +35,10 @@ class FakeIssuer
 
   def count(path)
     @lock.synchronize { @requests[path] }
+  end
+
+  def last(path)
+    @lock.synchronize { @received.reverse.find { |held| held[:path] == path } }
   end
 
   def override(path, body)
@@ -57,6 +62,7 @@ class FakeIssuer
       "userinfo_endpoint" => "#{url}/userinfo",
       "jwks_uri" => "#{url}/.well-known/jwks.json",
       "registration_endpoint" => "#{url}/register",
+      "handshake_endpoint" => "#{url}/handshake",
       "revocation_endpoint" => "#{url}/revoke"
     }
   end
@@ -92,11 +98,21 @@ class FakeIssuer
 
     def respond(socket)
       line = socket.gets.to_s
+      headers = {}
+
       while (header = socket.gets) && header.strip != ""
+        name, value = header.split(":", 2)
+        headers[name.to_s.strip.downcase] = value.to_s.strip
       end
 
-      path = line.split(" ")[1].to_s
-      @lock.synchronize { @requests[path] += 1 }
+      method, path = line.split(" ")
+      length = headers["content-length"].to_i
+      raw = length.positive? ? socket.read(length).to_s : ""
+
+      @lock.synchronize do
+        @requests[path] += 1
+        @received << { method: method, path: path, headers: headers, body: parse(raw) }
+      end
 
       found = body_for(path)
       body = JSON.generate(found || { "error" => "not_found" })
@@ -110,6 +126,12 @@ class FakeIssuer
       ].join("\r\n")
     ensure
       socket.close rescue nil
+    end
+
+    def parse(raw)
+      JSON.parse(raw)
+    rescue JSON::ParserError
+      {}
     end
 
     def body_for(path)

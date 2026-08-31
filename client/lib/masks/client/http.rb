@@ -20,8 +20,20 @@ module Masks
       end
 
       def post_json(url, body, headers = {})
+        json(Net::HTTP::Post, url, body, headers)
+      end
+
+      def put_json(url, body, headers = {})
+        json(Net::HTTP::Put, url, body, headers)
+      end
+
+      def delete(url, headers = {})
+        request(Net::HTTP::Delete.new(URI.parse(url.to_s), default_headers.merge(headers)))
+      end
+
+      def json(verb, url, body, headers)
         uri = URI.parse(url.to_s)
-        request = Net::HTTP::Post.new(uri, default_headers.merge(headers))
+        request = verb.new(uri, default_headers.merge(headers))
         request.body = JSON.generate(body)
         request["Content-Type"] = "application/json"
 
