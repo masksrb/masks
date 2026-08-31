@@ -63,7 +63,8 @@ class FakeIssuer
       "jwks_uri" => "#{url}/.well-known/jwks.json",
       "registration_endpoint" => "#{url}/register",
       "handshake_endpoint" => "#{url}/handshake",
-      "revocation_endpoint" => "#{url}/revoke"
+      "revocation_endpoint" => "#{url}/revoke",
+      "introspection_endpoint" => "#{url}/introspect"
     }
   end
 
@@ -131,6 +132,8 @@ class FakeIssuer
     def parse(raw)
       JSON.parse(raw)
     rescue JSON::ParserError
+      URI.decode_www_form(raw).each_with_object({}) { |(name, value), held| held[name] = value }
+    rescue StandardError
       {}
     end
 
