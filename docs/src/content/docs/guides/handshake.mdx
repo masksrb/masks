@@ -1,0 +1,96 @@
+---
+title: Connect an app
+description: The handshake — how an application gets a client a person approved, without anyone copying a secret.
+---
+
+An application cannot sign anyone in until it holds a `client_id` and a secret. Getting them is the
+**handshake**: the app asks, a person approves at masks, and the credentials are minted afterwards
+and fetched server to server. Nobody types a secret into a configuration file, and no secret
+travels through the browser.
+
+## What happens
+
+1. The app sends the browser to `GET /handshake` at its issuer, naming itself, the resource it
+   serves, the redirect URIs it will use, and the scopes it wants.
+2. masks signs the person in first if nobody has an account yet — first run is a step at the head of
+   the login machine, not a wizard beside it — and then shows what is being connected.
+3. Approving creates the client, grants the approving actor those scopes, and mints a **one-time
+   initial access token** (RFC 7591 §3.1), which travels back on the redirect.
+4. The app redeems that token at `POST /register` with no browser involved. The secret comes back on
+   that response.
+
+The client that comes back is the one that was approved. The registration body cannot widen it: a
+request naming other redirect URIs or broader scopes changes nothing, because approval created the
+row rather than authorizing a later description of one.
+
+Everything must share one origin — the resource, the redirect URIs, and where the browser is sent
+back to. The screen names one place, and the approval is worth exactly that place, so a crafted URL
+cannot get an app at one origin approved and the token delivered to another.
+
+A second handshake for the same resource **rotates** the client it finds rather than registering a
+second one. The app picks up new credentials; the old secret stops working.
+
+## In a Rails app
+
+The engine ships the whole consumer half. Tell it how to read and write credentials, and mount it:
+
+```ruby
+Masks::Rails.configure do |config|
+  config.name = "things"
+  config.issuer = ->(request) { "https://#{request.host.split('.').first}.auth.example" }
+  config.resource = ->(request) { "https://#{request.host}/mcp" }
+  config.credentials = ->(request) { Tenant.resolve(request.host)&.masks_credentials }
+  config.store = ->(request, registration) { Tenant.resolve!(request.host).connect!(registration) }
+end
+```
+
+`credentials` answers a hash of `client_id` and `client_secret`, or `nil` when there are none yet.
+`store` is handed the [`Registration`](/reference/configuration#client) the handshake redeemed — its
+`client_id`, `client_secret`, `access_token` (RFC 7592) and `uri`.
+
+That is the whole integration. `/auth/handshake` renders a page with one button, `/auth/handshake/callback`
+redeems the token and calls `store`, and until credentials exist every refusal says
+`handshake_required` rather than sending a browser to a login that cannot work:
+
+```json
+{ "signed_in": false, "error": "handshake_required", "handshake_url": "/auth/handshake" }
+```
+
+An app that has already been connected will not offer the handshake again to a browser that is not
+signed in.
+
+## Without the engine
+
+The gem does the same work in four lines. `Handshake` reads `handshake_endpoint` out of discovery,
+so no application writes another server's routes down:
+
+```ruby
+handshake = Masks::Client::Handshake.new(
+  issuer,
+  name: "things",
+  resource: "https://jons.things.example/mcp",
+  redirect_uris: [ "https://jons.things.example/auth/callback" ],
+  return_to: "https://jons.things.example/connected",
+  scope: %w[openid profile email offline_access things:read]
+)
+
+started = handshake.start          # => { url:, state: } — send the browser, hold the state
+registration = handshake.complete(params, state: held)
+```
+
+`complete` refuses before it redeems anything: a refusal from the approval screen is raised as it
+was given, a `state` that does not match this browser is `invalid_state`, and an answer from another
+issuer is `invalid_issuer`. What it returns is a `Registration`, which builds a `Session` directly.
+
+## In the browser
+
+`@masks/client` reports the same state to a single-page app, so it can say what is wrong rather than
+offering a sign-in button that goes nowhere:
+
+```ts
+const status = await session.status()
+
+if (status.state === 'handshake_required') {
+  // status.handshakeUrl
+}
+```

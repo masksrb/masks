@@ -24,7 +24,7 @@ export default defineConfig({
           items: [
             { label: "What masks is", slug: "index" },
             { label: "Running it", slug: "start/running" },
-            { label: "The three pieces", slug: "start/pieces" },
+            { label: "The four pieces", slug: "start/pieces" },
           ],
         },
         {
@@ -40,7 +40,9 @@ export default defineConfig({
         {
           label: "Guides",
           items: [
+            { label: "Connect an app", slug: "guides/handshake" },
             { label: "Sign a Rails app in", slug: "guides/rails" },
+            { label: "Sign an SPA in", slug: "guides/spa" },
             { label: "Verify a token", slug: "guides/verifying" },
             { label: "Register a connector", slug: "guides/connectors" },
             { label: "Narrow a token", slug: "guides/exchange" },
@@ -52,6 +54,7 @@ export default defineConfig({
             { label: "Endpoints", slug: "reference/endpoints" },
             { label: "Configuration", slug: "reference/configuration" },
             { label: "Models", slug: "reference/models" },
+            { label: "Conformance", slug: "reference/conformance" },
           ],
         },
       ],

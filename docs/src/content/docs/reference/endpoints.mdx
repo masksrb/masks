@@ -14,11 +14,28 @@ All of these are per tenant. The tenant is resolved from the hostname, so
 | `GET /.well-known/oauth-authorization-server` | the same document, for clients that look there |
 | `GET /.well-known/jwks.json` | this tenant's published keys, cached five minutes |
 
+The document names `handshake_endpoint` alongside the standard ones, so an application discovers
+where to ask to be connected rather than writing the path down.
+
+Four fields are worth reading before you write a client against it:
+
+| | |
+| --- | --- |
+| `acr_values_supported` | `urn:masks:acr:pwd` and `urn:masks:acr:mfa` — ask for one with `acr_values` |
+| `claims_parameter_supported` | `true`, for userinfo claims |
+| `request_parameter_supported` | `false` |
+| `request_uri_parameter_supported` | `false` |
+
+The last two are declared rather than left to default, because `/authorize` **refuses** a `request`
+or `request_uri` with `request_not_supported` / `request_uri_not_supported` rather than ignoring it.
+Reading the query and skipping the object would let the unsigned parameters beat the ones the client
+signed, which is the wrong direction to fail in.
+
 ## Flow
 
 | Route | |
 | --- | --- |
-| `GET /authorize` | starts the code flow; redirects to sign-in or consent as needed |
+| `GET POST /authorize` | starts the code flow; redirects to sign-in or consent as needed |
 | `POST /token` | `authorization_code`, `refresh_token`, and token-exchange grants |
 | `POST /revoke` | RFC 7009 — revokes a token and everything exchanged from it |
 | `GET POST /userinfo` | claims for the bearer, requires the `openid` scope |
@@ -35,8 +52,23 @@ All of these are per tenant. The tenant is resolved from the hostname, so
 | `code_challenge` `code_challenge_method` | `S256`; required for public clients |
 | `resource` | RFC 8707; may repeat |
 | `prompt` | `login` forces re-authentication, `consent` re-asks, `none` refuses to interact |
+| `max_age` | a ceiling on how long ago the person signed in, checked against `auth_time` |
+| `acr_values` | space-separated; the id token's `acr` names which was used |
+| `claims` | JSON, OIDC Core 5.5; `userinfo` claims are released by name |
+
+Both methods take the same parameters. `POST` is form-encoded, and a repeated `resource` may arrive
+in the body as well as the query.
 
 The redirect back always carries `iss`, so a client with several issuers can tell which answered.
+
+`claims` asks for a claim by name rather than by the scope that contains it:
+
+```
+&claims={"userinfo":{"name":{"essential":true}}}
+```
+
+Essential and voluntary are treated alike — masks releases what it holds either way, because
+refusing a voluntary request only teaches a client to ask for the broader scope instead.
 
 ## Sign-in
 
@@ -52,7 +84,8 @@ The redirect back always carries `iss`, so a client with several issuers can tel
 
 | Route | Auth | |
 | --- | --- | --- |
-| `POST /register` | none | RFC 7591 — create |
+| `GET POST /handshake` | a signed-in actor | approve an app, and mint the token that registers it |
+| `POST /register` | none, or an initial access token | RFC 7591 — create |
 | `GET /register/:client_id` | registration token | read |
 | `PUT /register/:client_id` | registration token | update |
 | `DELETE /register/:client_id` | registration token | archive |
@@ -69,4 +102,10 @@ Errors raised after the client and its `redirect_uri` are established come back 
 URI** rather than as a response body. Errors about the client or the redirect URI itself never do —
 see [policies](/concepts/policies).
 
-`401` responses carry a `WWW-Authenticate` header.
+When there is nowhere safe to send the error, the reader is a person rather than a program, so
+`/authorize` renders an **HTML page** naming the code and what it means. The JSON body above is kept
+for callers that do not ask for HTML.
+
+`401` responses carry a `WWW-Authenticate` header. `/userinfo` accepts its bearer token in the
+`Authorization` header or as an `access_token` form parameter, per RFC 6750, and refuses with
+`invalid_request` when both arrive at once.
