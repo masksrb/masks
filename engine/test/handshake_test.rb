@@ -1,0 +1,152 @@
+require "test_helper"
+
+class HandshakeTest < EngineIntegrationTest
+  test "an app nobody has connected offers the handshake" do
+    get "/auth/handshake", headers: host
+
+    assert_response :success
+    assert_includes response.body, "has not been connected"
+    assert_includes response.body, "Connect it"
+  end
+
+  test "the page does not name the issuer it is about to send you to" do
+    get "/auth/handshake", headers: host
+
+    refute_includes response.body, issuer.origin
+    refute_includes response.body, "127.0.0.1"
+  end
+
+  test "an unconnected app sends a browser to the handshake rather than a login it cannot run" do
+    get "/dashboard", headers: host
+
+    assert_redirected_to "/auth/handshake"
+  end
+
+  test "starting the handshake sends the browser to the endpoint discovery advertises" do
+    post "/auth/handshake", headers: host
+
+    assert_response :redirect
+    assert response.location.start_with?("#{issuer.url_for(SUBDOMAIN)}/handshake")
+  end
+
+  test "the connect url names one origin throughout, and the scopes it wants" do
+    post "/auth/handshake", headers: host
+
+    query = URI.decode_www_form(URI.parse(response.location).query)
+    held = query.each_with_object(Hash.new { |h, k| h[k] = [] }) { |(k, v), out| out[k] << v }
+
+    assert_equal [ "#{origin}/mcp" ], held["resource"]
+    assert_equal [ "#{origin}/auth/callback" ], held["redirect_uris"]
+    assert_equal [ "#{origin}/auth/handshake/callback" ], held["return_to"]
+    assert_includes held["scope"].first.split(" "), "catalog:read"
+    assert_equal [ "Catalog" ], held["client_name"]
+    refute_empty held["state"]
+  end
+
+  test "approving redeems the token server to server and hands the registration to the store" do
+    shake_hands!
+
+    assert_redirected_to "/auth/"
+
+    held = CREDENTIALS[HOST]
+
+    refute_nil held
+    refute_nil held[:client_id]
+    refute_nil held[:client_secret]
+    refute_nil held[:registration_access_token]
+    refute_nil held[:registration_client_uri]
+  end
+
+  test "what is registered is what the connect url asked for" do
+    shake_hands!
+
+    sent = issuer.last_registration
+
+    assert_equal [ "#{origin}/auth/callback" ], sent["redirect_uris"]
+    assert_equal "client_secret_basic", sent["token_endpoint_auth_method"]
+    assert_includes sent["grant_types"], "refresh_token"
+    assert_equal "Catalog", sent["client_name"]
+  end
+
+  test "the secret never travels the browser" do
+    started = shake_hands!
+
+    refute_includes started.keys, "client_secret"
+    refute_includes response.body, CREDENTIALS[HOST][:client_secret]
+  end
+
+  test "a callback with no handshake in flight is refused" do
+    get "/auth/handshake/callback?initial_access_token=whatever&state=whatever", headers: host
+
+    assert_response :bad_request
+    assert_includes response.body, "could not be connected"
+    assert_nil CREDENTIALS[HOST]
+  end
+
+  test "a callback whose state does not match this browser is refused" do
+    post "/auth/handshake", headers: host
+
+    token = issuer.approve!(SUBDOMAIN)
+
+    get "/auth/handshake/callback?initial_access_token=#{token}&state=forged", headers: host
+
+    assert_response :bad_request
+    assert_nil CREDENTIALS[HOST]
+  end
+
+  test "a callback naming another issuer is refused before anything is redeemed" do
+    post "/auth/handshake", headers: host
+
+    started = URI.decode_www_form(URI.parse(response.location).query).to_h
+    token = issuer.approve!(SUBDOMAIN)
+
+    get "/auth/handshake/callback?initial_access_token=#{token}&state=#{started['state']}" \
+        "&iss=#{CGI.escape('http://elsewhere.test')}", headers: host
+
+    assert_response :bad_request
+    assert_nil CREDENTIALS[HOST]
+  end
+
+  test "a refusal from the issuer is rendered rather than stored" do
+    post "/auth/handshake", headers: host
+
+    started = URI.decode_www_form(URI.parse(response.location).query).to_h
+
+    get "/auth/handshake/callback?error=access_denied&error_description=declined" \
+        "&state=#{started['state']}", headers: host
+
+    assert_response :bad_request
+    assert_includes response.body, "access_denied"
+    assert_nil CREDENTIALS[HOST]
+  end
+
+  test "a token the issuer never approved is refused" do
+    post "/auth/handshake", headers: host
+
+    started = URI.decode_www_form(URI.parse(response.location).query).to_h
+
+    get "/auth/handshake/callback?initial_access_token=never-approved&state=#{started['state']}", headers: host
+
+    assert_response :bad_request
+    assert_nil CREDENTIALS[HOST]
+  end
+
+  test "a connected app does not offer the handshake to a browser that is not signed in" do
+    connect!
+
+    get "/auth/handshake", headers: host
+    assert_redirected_to "/"
+
+    post "/auth/handshake", headers: host
+    assert_redirected_to "/"
+  end
+
+  test "a connected app offers the handshake to somebody signed in" do
+    sign_in!
+
+    get "/auth/handshake", headers: host
+
+    assert_response :success
+    assert_includes response.body, "Connect it"
+  end
+end
