@@ -1,0 +1,13 @@
+<% content_for :title, "Connect this app" %>
+
+<h1>This app has not been connected yet</h1>
+
+<p class="muted">
+  Nobody can sign in here until it holds credentials from the server that signs
+  people in. Getting them takes one approval, from whoever owns this tenant —
+  nothing is typed in, and no secret travels through your browser.
+</p>
+
+<%= form_with url: handshake_path, method: :post do %>
+  <button type="submit">Connect it</button>
+<% end %>

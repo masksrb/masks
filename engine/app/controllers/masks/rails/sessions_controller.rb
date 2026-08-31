@@ -4,7 +4,7 @@ module Masks
       include Masks::Rails::Authentication
 
       def show
-        if masks_signed_in? || (masks_tokens && masks_refresh!)
+        if masks_configured? && (masks_signed_in? || (masks_tokens && masks_refresh!))
           response.headers["Cache-Control"] = "no-store"
 
           render json: masks_account
@@ -15,6 +15,8 @@ module Masks
       end
 
       def start
+        return redirect_to(masks_handshake_path) unless masks_configured?
+
         started = masks_session.start(resource: masks_config.resource_for(request))
 
         session[:masks_state] = started[:state]

@@ -5,7 +5,7 @@ module Masks
 
       class_methods do
         def masks_protect!(**options)
-          before_action(->{ masks_authenticate!(**options) }, **options.slice(:only, :except))
+          before_action(-> { masks_authenticate!(**options) }, **options.slice(:only, :except))
         end
       end
 
