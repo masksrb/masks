@@ -2,15 +2,12 @@ module Masks
   module Rails
     module Authentication
       extend ActiveSupport::Concern
+      include Masks::Rails::Configurable
 
       included do
         if respond_to?(:helper_method)
           helper_method :masks_signed_in?, :masks_identity, :masks_tenant, :masks_scopes
         end
-      end
-
-      def masks_config
-        Masks::Rails.config
       end
 
       def masks_session
