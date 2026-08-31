@@ -107,7 +107,7 @@ CREATE TABLE public.clients (
     grant_types jsonb DEFAULT '["authorization_code"]'::jsonb NOT NULL,
     response_types jsonb DEFAULT '["code"]'::jsonb NOT NULL,
     resources jsonb DEFAULT '[]'::jsonb NOT NULL,
-    scopes text DEFAULT ''::text NOT NULL,
+    allowed_scopes text DEFAULT ''::text NOT NULL,
     token_endpoint_auth_method character varying DEFAULT 'client_secret_basic'::character varying NOT NULL,
     application_type character varying DEFAULT 'web'::character varying NOT NULL,
     client_uri character varying,
@@ -121,7 +121,8 @@ CREATE TABLE public.clients (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     approved_at timestamp(6) without time zone,
-    approved_by_id bigint
+    approved_by_id bigint,
+    required_scopes text DEFAULT ''::text NOT NULL
 );
 
 ALTER TABLE ONLY public.clients FORCE ROW LEVEL SECURITY;
@@ -284,7 +285,8 @@ CREATE TABLE public.tenants (
     settings jsonb DEFAULT '{}'::jsonb NOT NULL,
     archived_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    dynamic_client_scopes text
 );
 
 
@@ -847,6 +849,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260831120000'),
 ('20260830210000'),
 ('20260830150000'),
 ('20260830120000'),
