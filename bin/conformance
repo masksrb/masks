@@ -32,6 +32,7 @@ up() {
   fetch_suite
   mkdir -p results
   docker compose up -d --wait masks proxy mongodb server nginx
+  docker compose exec -T masks ./bin/rails runner - < owner.rb
 }
 
 run() {

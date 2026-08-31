@@ -8,8 +8,8 @@ bin/setup
 bin/dev
 ```
 
-`bin/setup` starts Postgres, prepares the database, and seeds **two** tenants — `jons` and `acme` —
-each with an `owner` actor and its own signing key.
+`bin/setup` starts Postgres, prepares the database, and declares **two** tenants — `jons` and
+`acme`, from `MASKS_TENANTS` in `.env` — each with its own signing key.
 
 Tenants are addressed by subdomain, so add them to your hosts file:
 
@@ -17,13 +17,16 @@ Tenants are addressed by subdomain, so add them to your hosts file:
 127.0.0.1 auth.test jons.auth.test acme.auth.test
 ```
 
-Then [jons.auth.test:5555](http://jons.auth.test:5555), signing in as `owner` / `password`.
+Then [jons.auth.test:5555](http://jons.auth.test:5555), which asks you to **set it up**: a tenant
+with no actors puts first run at the head of the login machine, and the nickname and password you
+type there create the owner. There is no seeded account and no password written down anywhere,
+which is also how a real deployment starts.
 
 ## Two tenants, always
 
 Single-tenant assumptions do not announce themselves. They leak through a scope someone forgot,
-months later, and the seed is the cheapest place to make sure there is always a second tenant to
-notice with.
+months later, and two declared tenants are the cheapest way to make sure there is always a second
+one to notice with.
 
 The pair is also the fastest end-to-end check of the thing most worth checking:
 

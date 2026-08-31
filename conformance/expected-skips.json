@@ -1,1 +1,38 @@
-[]
+[
+    {
+        "test-name": "oidcc-idtoken-unsigned",
+        "variant": "*",
+        "configuration-filename": "/conformance/masks.json",
+        "comment": "masks signs every id token with RS256 and advertises only that in id_token_signing_alg_values_supported. A client cannot register alg 'none', so the module has nothing to drive."
+    },
+    {
+        "test-name": "oidcc-scope-address",
+        "variant": "*",
+        "configuration-filename": "/conformance/masks.json",
+        "comment": "masks defines four scopes and 'address' is not one. scopes_supported says so, and an actor has no address to release."
+    },
+    {
+        "test-name": "oidcc-scope-phone",
+        "variant": "*",
+        "configuration-filename": "/conformance/masks.json",
+        "comment": "As above for 'phone'. The thirteen profile claims cover what masks holds about an actor; a phone number is not among them."
+    },
+    {
+        "test-name": "oidcc-scope-all",
+        "variant": "*",
+        "configuration-filename": "/conformance/masks.json",
+        "comment": "Asks for every standard scope at once, address and phone included, so it skips for the same reason those two do."
+    },
+    {
+        "test-name": "oidcc-request-uri-unsigned-supported-correctly-or-rejected-as-unsupported",
+        "variant": "*",
+        "configuration-filename": "/conformance/masks.json",
+        "comment": "request_uri_parameter_supported is declared false. masks refuses a request_uri with request_uri_not_supported rather than reading past it, which is the outcome this module's name allows for."
+    },
+    {
+        "test-name": "oidcc-unsigned-request-object-supported-correctly-or-rejected-as-unsupported",
+        "variant": "*",
+        "configuration-filename": "/conformance/masks.json",
+        "comment": "request_parameter_supported is declared false, for the same reason: silently preferring unsigned query parameters over a signed request object is the wrong direction to fail in."
+    }
+]
