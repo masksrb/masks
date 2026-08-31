@@ -77,11 +77,13 @@ module Masks
 
         def nonce_matches?(identity)
           return false if identity == :unverified
-          return true if identity.nil?
 
-          held = identity["nonce"]
+          sent = session[:masks_nonce]
+          return true if sent.blank?
+          return false unless identity.is_a?(Hash)
 
-          held.nil? || held == session[:masks_nonce]
+          held = identity["nonce"].to_s
+          held.present? && ActiveSupport::SecurityUtils.secure_compare(held, sent)
         end
 
         def refuse(code, description)

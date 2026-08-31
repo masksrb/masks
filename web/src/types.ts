@@ -28,6 +28,10 @@ export type Status =
   | { state: "signed_out"; loginUrl: string }
   | { state: "handshake_required"; handshakeUrl: string };
 
+export interface Claims {
+  [claim: string]: unknown;
+}
+
 export interface Tokens {
   access_token: string;
   id_token?: string;

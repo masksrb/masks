@@ -15,12 +15,14 @@ class TestIssuer
   end
 
   attr_reader :port, :registrations
+  attr_accessor :id_tokens
 
   def initialize
     @keys = {}
     @codes = {}
     @approvals = {}
     @registrations = []
+    @id_tokens = :normal
     @lock = Mutex.new
     @server = TCPServer.new("127.0.0.1", 0)
     @port = @server.addr[1]
@@ -177,15 +179,27 @@ class TestIssuer
 
       {
         "access_token" => mint(subdomain: subdomain, scopes: pending[:scopes], audience: audience),
-        "id_token" => mint(subdomain: subdomain, audience: pending[:client_id], scopes: [],
-                           nonce: pending[:nonce], name: "Test Owner",
-                           preferred_username: "owner", email: "owner@example.invalid",
-                           email_verified: true),
+        "id_token" => id_token_for(subdomain, pending),
         "refresh_token" => SecureRandom.urlsafe_base64(24),
         "token_type" => "Bearer",
         "scope" => Array(pending[:scopes]).join(" "),
         "expires_in" => 3600
-      }
+      }.compact
+    end
+
+    def id_token_for(subdomain, pending)
+      return nil if id_tokens == :absent
+
+      nonce = case id_tokens
+      when :without_nonce then nil
+      when :foreign_nonce then SecureRandom.urlsafe_base64(24)
+      else pending[:nonce]
+      end
+
+      mint(subdomain: subdomain, audience: pending[:client_id], scopes: [],
+           nonce: nonce, name: "Test Owner",
+           preferred_username: "owner", email: "owner@example.invalid",
+           email_verified: true)
     end
 
     def refreshed(subdomain, form)

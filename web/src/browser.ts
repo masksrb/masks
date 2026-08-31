@@ -1,5 +1,11 @@
+import { type Jwk, verifyIdToken } from "./jwt.js";
 import { challenge, method, random } from "./pkce.js";
-import { type Discovery, MasksError, type Tokens } from "./types.js";
+import {
+  type Claims,
+  type Discovery,
+  MasksError,
+  type Tokens,
+} from "./types.js";
 
 const PENDING = "masks:pending";
 
@@ -28,7 +34,10 @@ export interface BrowserClient {
     prompt?: string;
   }): Promise<string>;
   pending(): boolean;
-  callback(url?: string): Promise<{ tokens: Tokens; returnTo: string }>;
+  callback(
+    url?: string,
+  ): Promise<{ tokens: Tokens; identity: Claims | null; returnTo: string }>;
+  identity(): Claims | null;
   refresh(): Promise<Tokens>;
   accessToken(): string | null;
   tokens(): Tokens | null;
@@ -52,6 +61,8 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
 
   let document: Discovery | null = null;
   let held: Tokens | null = null;
+  let claims: Claims | null = null;
+  let keys: Record<string, Jwk> | null = null;
 
   const discover = async (): Promise<Discovery> => {
     if (document) return document;
@@ -80,6 +91,48 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
     document = found;
 
     return found;
+  };
+
+  const fetchKeys = async (): Promise<Record<string, Jwk>> => {
+    const { jwks_uri } = await discover();
+
+    if (!jwks_uri) {
+      throw new MasksError(
+        "invalid_issuer",
+        `${issuer} publishes no jwks_uri, so an id token cannot be verified`,
+      );
+    }
+
+    const response = await call(jwks_uri, {
+      headers: { Accept: "application/json" },
+    });
+
+    if (!response.ok) {
+      throw new MasksError(
+        "invalid_issuer",
+        `${jwks_uri} answered ${response.status}`,
+        response.status,
+      );
+    }
+
+    const found = (await response.json()) as { keys?: Jwk[] };
+
+    return Object.fromEntries(
+      (found.keys ?? [])
+        .filter((jwk) => jwk.kid && (!jwk.use || jwk.use === "sig"))
+        .map((jwk) => [jwk.kid as string, jwk]),
+    );
+  };
+
+  const keyFor = async (kid: string, refresh = false): Promise<Jwk> => {
+    if (refresh || !keys) keys = await fetchKeys();
+
+    const found = keys[kid];
+
+    if (found) return found;
+    if (!refresh) return keyFor(kid, true);
+
+    throw new MasksError("invalid_token", `${issuer} publishes no key ${kid}`);
   };
 
   const post = async (body: string[][]): Promise<Tokens> => {
@@ -132,7 +185,7 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
 
     const waiting: Pending = {
       state: random(24),
-      nonce: random(24),
+      nonce: scope.includes("openid") ? random(24) : "",
       verifier,
       returnTo: returnTo ?? `${location.pathname}${location.search}`,
     };
@@ -145,10 +198,11 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
       ["redirect_uri", options.redirectUri],
       ["scope", scope.join(" ")],
       ["state", waiting.state],
-      ["nonce", waiting.nonce],
       ["code_challenge", await challenge(verifier)],
       ["code_challenge_method", method],
     ]);
+
+    if (waiting.nonce) query.append("nonce", waiting.nonce);
 
     for (const value of resources) query.append("resource", value);
     if (prompt) query.append("prompt", prompt);
@@ -212,7 +266,38 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
 
       for (const value of resources) body.push(["resource", value]);
 
-      return { tokens: await post(body), returnTo: waiting.returnTo };
+      const tokens = await post(body);
+
+      if (waiting.nonce) {
+        if (!tokens.id_token) {
+          held = null;
+
+          throw new MasksError(
+            "invalid_token",
+            "an id token was asked for and the issuer returned none",
+          );
+        }
+
+        try {
+          claims = await verifyIdToken(tokens.id_token, {
+            issuer,
+            audience: options.clientId,
+            nonce: waiting.nonce,
+            keyFor,
+          });
+        } catch (failure) {
+          held = null;
+          claims = null;
+
+          throw failure;
+        }
+      }
+
+      return { tokens, identity: claims, returnTo: waiting.returnTo };
+    },
+
+    identity() {
+      return claims;
     },
 
     async refresh() {
@@ -251,6 +336,7 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
 
     logout() {
       held = null;
+      claims = null;
       store.removeItem(PENDING);
     },
   };
