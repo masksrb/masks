@@ -7,7 +7,7 @@ hero:
   image:
     file: ../../assets/dark-logo.png
   actions:
-    - text: Read the docs
+    - text: Run it
       link: /start/running/
       icon: document
     - text: Register a connector
@@ -19,64 +19,27 @@ hero:
 import { Card, CardGrid, LinkCard } from "@astrojs/starlight/components";
 
 <CardGrid stagger>
-  <Card title="Multi-tenant from migration #1" icon="seti:db">
-    Every tenant has **its own signing keys**. A token minted for one does not verify against
-    another's JWKS — not as *forbidden*, but as unintelligible.
+  <Card title="A signing key per tenant" icon="seti:db">
+    One tenant's token is **unintelligible** to another. Not forbidden — unreadable.
   </Card>
   <Card title="Standalone, not an engine" icon="seti:config">
-    The server owns its routes, its session and its cookie. Nothing runs around it, which designs out
-    the worst bug the previous version had.
+    It owns its **routes, its session, its cookie**. Nothing runs around it.
   </Card>
-  <Card title="Built for connectors" icon="puzzle">
-    Dynamic client registration is v1, not v2 — an AI client adding a connector registers with no
-    prior arrangement, because otherwise that flow cannot be set up at all.
+  <Card title="Connectors are v1" icon="puzzle">
+    **Dynamic client registration** from the first release. Without it that flow cannot be set up at
+    all.
   </Card>
   <Card title="Audience-restricted tokens" icon="approve-check">
-    RFC 8707 `resource` becomes the token's `aud`, so a token minted for one API is not a valid token
-    at every other API sharing the issuer.
+    RFC 8707 `resource` becomes the token's **`aud`**. A token for one API is not a token for every
+    API.
   </Card>
 </CardGrid>
 
-## Checked against the spec, not against itself
-
-masks runs the OpenID Foundation's own conformance suite — the plans written against the
-specification rather than against what we built. Both certification plans pass:
-
-```
-oidcc-config-certification-test-plan     2 modules ·   35 conditions · 0 failures
-oidcc-basic-certification-test-plan     39 modules · 2178 conditions · 0 failures
-```
-
-It is worth saying what that caught, because none of it was visible to the server's own tests: a
-`request` object being ignored rather than refused, `POST /authorize` not being routed at all, a
-replayed code leaving its access token alive, and the id token carrying claims that belong at
-userinfo. A suite you write yourself only asks the questions you already thought of.
-
-## The isolation layer that fails loudly
-
-```
-$ curl -H "Host: acme.auth.test" -H "Authorization: Bearer $A_JONS_TOKEN" .../userinfo
-{"error":"invalid_token","error_description":"Could not find public key for kid e9914114-…"}
-```
-
-Application scopes fail by omission and row-level security fails silently if the connecting role is a
-superuser. A per-tenant signing key cannot fail quietly: there is no code path where the wrong tenant
-*considers* the token and decides against it.
-
-## Four pieces
-
-```
-server/    the standalone OIDC provider     Rails, Postgres, per-tenant keys
-client/    masks-client                     discovery, PKCE, exchange, verification
-engine/    masks-rails                      the consumer half, mounted in a host app
-web/       @masks/client                    BFF and browser PKCE, for an SPA
-```
-
 <CardGrid>
-  <LinkCard title="Running it" href="/start/running/" description="Two tenants, each with their own signing key, in about a minute." />
-  <LinkCard title="The four pieces" href="/start/pieces/" description="Which of the server, the gems and the browser package you actually need." />
-  <LinkCard title="Tenancy" href="/concepts/tenancy/" description="The uuid, the claim, and why applications hold a projection." />
-  <LinkCard title="Tokens and audiences" href="/concepts/tokens/" description="What gets issued, what the id token carries, and why resource exists." />
-  <LinkCard title="Sign an SPA in" href="/guides/spa/" description="The BFF and the browser code flow, and which one to pick." />
-  <LinkCard title="Conformance" href="/reference/conformance/" description="The full result, how to run it, and how to read one." />
+  <LinkCard title="Run it" href="/start/running/" description="Two tenants, two keys, a minute." />
+  <LinkCard title="The four pieces" href="/start/pieces/" description="Server, two gems, one browser package." />
+  <LinkCard title="Tenancy" href="/concepts/tenancy/" description="The uuid, and the claim that carries it." />
+  <LinkCard title="Tokens" href="/concepts/tokens/" description="What is issued, and why `resource` exists." />
+  <LinkCard title="Sign an SPA in" href="/guides/spa/" description="BFF or browser PKCE." />
+  <LinkCard title="Conformance" href="/reference/conformance/" description="Both OpenID Foundation plans, run and passing." />
 </CardGrid>
