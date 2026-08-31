@@ -33,18 +33,18 @@ class Client < ApplicationRecord
   attr_reader :secret, :registration_token
 
   class << self
-    def approve!(pairing, actor:)
-      client = approved_for(pairing.resource) || new(client_id: SecureRandom.uuid)
+    def approve!(handshake, actor:)
+      client = approved_for(handshake.resource) || new(client_id: SecureRandom.uuid)
 
       client.assign_attributes(
-        name: pairing.name,
-        redirect_uris: pairing.redirect_uris,
-        resources: [ pairing.resource ],
-        scopes: Scopes.join(pairing.scopes),
-        grant_types: Pairing::GRANT_TYPES,
+        name: handshake.name,
+        redirect_uris: handshake.redirect_uris,
+        resources: [ handshake.resource ],
+        scopes: Scopes.join(handshake.scopes),
+        grant_types: Handshake::GRANT_TYPES,
         response_types: [ "code" ],
         token_endpoint_auth_method: "client_secret_basic",
-        client_uri: pairing.origin,
+        client_uri: handshake.origin,
         dynamic: false,
         approved_at: Time.current,
         approved_by: actor,

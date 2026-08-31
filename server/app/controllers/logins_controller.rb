@@ -90,7 +90,7 @@ class LoginsController < ApplicationController
 
     def after_login_path
       return resume_authorization_path if session[:authorization].present?
-      return setup_connect_path if session[SetupController::STORE].present?
+      return handshake_path if session[HandshakesController::STORE].present?
 
       root_path
     end

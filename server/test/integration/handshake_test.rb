@@ -1,9 +1,9 @@
 require "test_helper"
 
-class PairingTest < ActionDispatch::IntegrationTest
+class HandshakeTest < ActionDispatch::IntegrationTest
   APP = "https://jons.things.test".freeze
   RESOURCE = "#{APP}/mcp".freeze
-  RETURN_TO = "#{APP}/setup/callback".freeze
+  RETURN_TO = "#{APP}/auth/handshake/callback".freeze
   REDIRECT_URI = "#{APP}/auth/masks/callback".freeze
   SCOPE = "openid profile email offline_access things:read".freeze
 
@@ -24,11 +24,11 @@ class PairingTest < ActionDispatch::IntegrationTest
     query = params.to_a
     Array(redirect_uris).each { |uri| query << [ "redirect_uris", uri ] }
 
-    get "/setup/connect?#{URI.encode_www_form(query)}"
+    get "/handshake?#{URI.encode_www_form(query)}"
   end
 
   def approve!
-    post "/setup/connect", params: { approve: "yes" }
+    post "/handshake", params: { approve: "yes" }
     redirected["initial_access_token"]
   end
 
@@ -44,7 +44,7 @@ class PairingTest < ActionDispatch::IntegrationTest
     JSON.parse(response.body)
   end
 
-  def paired
+  def approved
     within(@tenant) { Client.approved.sole }
   end
 
@@ -64,7 +64,7 @@ class PairingTest < ActionDispatch::IntegrationTest
     connect
     secret = approve!
 
-    assert_equal "#{APP}/setup/callback", redirected_uri.to_s.split("?").first
+    assert_equal RETURN_TO, redirected_uri.to_s.split("?").first
     assert_equal "app-state", redirected["state"]
     assert_equal issuer_for(@tenant).url, redirected["iss"]
     assert secret.present?
@@ -78,7 +78,7 @@ class PairingTest < ActionDispatch::IntegrationTest
     registration = redeem(secret)
 
     assert_response :created
-    assert_equal paired.client_id, registration["client_id"]
+    assert_equal approved.client_id, registration["client_id"]
     assert registration["client_secret"].present?
     assert registration["registration_access_token"].present?
 
@@ -95,7 +95,7 @@ class PairingTest < ActionDispatch::IntegrationTest
     assert_equal [ REDIRECT_URI ], registration["redirect_uris"]
     assert_equal "things", registration["client_name"]
     assert_equal Scopes.list(SCOPE), Scopes.list(registration["scope"])
-    assert_equal [ RESOURCE ], paired.resources
+    assert_equal [ RESOURCE ], approved.resources
   end
 
   test "an approved client is not a dynamic one, and records who approved it" do
@@ -103,9 +103,9 @@ class PairingTest < ActionDispatch::IntegrationTest
     connect
     approve!
 
-    assert_not paired.dynamic
-    assert paired.approved?
-    assert_equal @owner.id, paired.approved_by_id
+    assert_not approved.dynamic
+    assert approved.approved?
+    assert_equal @owner.id, approved.approved_by_id
   end
 
   test "approving grants the actor the scopes the app asked for" do
@@ -120,7 +120,7 @@ class PairingTest < ActionDispatch::IntegrationTest
     sign_in_as(@owner)
     connect
 
-    post "/setup/connect", params: { deny: "yes" }
+    post "/handshake", params: { deny: "yes" }
 
     assert_equal "access_denied", redirected["error"]
     assert_equal "app-state", redirected["state"]
@@ -145,7 +145,7 @@ class PairingTest < ActionDispatch::IntegrationTest
   test "arriving with nothing to approve is refused rather than blank" do
     sign_in_as(@owner)
 
-    get "/setup/connect"
+    get "/handshake"
 
     assert_response :bad_request
     assert_match "no connection request is in progress", response.body
@@ -188,9 +188,9 @@ class PairingTest < ActionDispatch::IntegrationTest
          params: { event: "setup", nickname: "owner", password: "a-long-enough-password" },
          as: :json
 
-    assert_equal "/setup/connect", JSON.parse(response.body)["redirectTo"]
+    assert_equal "/handshake", JSON.parse(response.body)["redirectTo"]
 
-    get "/setup/connect"
+    get "/handshake"
 
     assert_response :success
     assert_match "Connect things?", response.body
@@ -248,6 +248,19 @@ class PairingTest < ActionDispatch::IntegrationTest
 
     assert_equal [ RESOURCE ], Array(claims["aud"])
     assert_includes Scopes.list(claims["scope"]), "things:read"
+  end
+
+  test "the endpoint an app sends a person to is the one discovery advertises" do
+    get "/.well-known/openid-configuration"
+
+    advertised = JSON.parse(response.body)["handshake_endpoint"]
+
+    assert_equal "#{issuer_for(@tenant).url}/handshake", advertised
+
+    sign_in_as(@owner)
+    connect
+
+    assert_response :success
   end
 
   private
