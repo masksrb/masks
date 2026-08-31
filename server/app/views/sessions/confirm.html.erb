@@ -1,0 +1,32 @@
+<% content_for :title, "Sign out?" %>
+
+<div id="logout-confirm" class="flex flex-col gap-4">
+  <div class="flex flex-col gap-1">
+    <h1 class="text-2xl font-bold">Sign out?</h1>
+    <p class="text-sm opacity-75">
+      Signed in as <strong class="font-semibold"><%= current_actor.nickname %></strong>.
+    </p>
+  </div>
+
+  <% if @client %>
+    <p class="text-sm">
+      <%= @client.name %> asked to sign you out of every app this account signs
+      in to, not only itself.
+    </p>
+  <% else %>
+    <p class="text-sm">
+      This signs you out of every app this account signs in to.
+    </p>
+  <% end %>
+
+  <%= form_with url: logout_path, method: :delete do |form| %>
+    <%= form.hidden_field :post_logout_redirect_uri, value: @logout.redirect_uri %>
+    <%= form.hidden_field :client_id, value: @client&.client_id %>
+    <%= form.hidden_field :state, value: @logout.state %>
+
+    <div class="flex gap-2">
+      <%= form.submit "Sign out", class: "btn btn-primary grow" %>
+      <%= link_to "Stay signed in", root_path, class: "btn btn-ghost" %>
+    </div>
+  <% end %>
+</div>

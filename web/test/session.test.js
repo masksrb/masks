@@ -176,3 +176,47 @@ test("a signed-in status carries the account itself", async () => {
   assert.equal(status.state, "signed_in");
   assert.equal(status.account.subject, "actor-1");
 });
+
+test("signing out everywhere asks the bff for it and follows where it says", async () => {
+  const assigned = [];
+  const held = globalThis.window;
+  globalThis.window = { location: { assign: (url) => assigned.push(url) } };
+
+  const { subject, upstream } = client([
+    {
+      status: 200,
+      body: {
+        signed_in: false,
+        logout_url: "https://jons.auth.test/logout?client_id=app",
+      },
+    },
+  ]);
+
+  const pending = subject.logout({ everywhere: true });
+  await Promise.race([pending, new Promise((done) => setTimeout(done, 10))]);
+
+  assert.ok(upstream.calls[0].url.endsWith("/logout?everywhere=1"));
+  assert.deepEqual(assigned, ["https://jons.auth.test/logout?client_id=app"]);
+
+  globalThis.window = held;
+});
+
+test("an ordinary sign out does not leave the app", async () => {
+  const assigned = [];
+  const held = globalThis.window;
+  globalThis.window = { location: { assign: (url) => assigned.push(url) } };
+
+  const { subject, upstream } = client([
+    {
+      status: 200,
+      body: { signed_in: false, logout_url: "https://elsewhere" },
+    },
+  ]);
+
+  await subject.logout();
+
+  assert.ok(upstream.calls[0].url.endsWith("/logout"));
+  assert.deepEqual(assigned, []);
+
+  globalThis.window = held;
+});

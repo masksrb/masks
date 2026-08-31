@@ -14,7 +14,7 @@ class RegistrationsController < ApplicationController
 
   METADATA = %i[
     client_name redirect_uris grant_types response_types scope
-    token_endpoint_auth_method application_type
+    post_logout_redirect_uris token_endpoint_auth_method application_type
     client_uri logo_uri tos_uri policy_uri resources
   ].freeze
 
@@ -76,6 +76,7 @@ class RegistrationsController < ApplicationController
       {
         name: body[:client_name],
         redirect_uris: body[:redirect_uris],
+        post_logout_redirect_uris: body[:post_logout_redirect_uris],
         grant_types: body[:grant_types],
         response_types: body[:response_types],
         resources: body[:resources],

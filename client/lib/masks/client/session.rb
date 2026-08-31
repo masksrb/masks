@@ -92,6 +92,15 @@ module Masks
         true
       end
 
+      def end_session_url(post_logout_redirect_uri: nil, state: nil, id_token_hint: nil)
+        pairs = [ [ "client_id", client_id ] ]
+        pairs << [ "id_token_hint", id_token_hint ] if id_token_hint
+        pairs << [ "post_logout_redirect_uri", post_logout_redirect_uri ] if post_logout_redirect_uri
+        pairs << [ "state", state ] if state
+
+        "#{issuer.endpoint('end_session_endpoint')}?#{URI.encode_www_form(pairs)}"
+      end
+
       def introspect(token, hint: nil)
         form = [ [ "token", token ], [ "client_id", client_id ] ]
         form << [ "token_type_hint", hint ] if hint

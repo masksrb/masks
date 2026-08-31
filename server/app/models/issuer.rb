@@ -68,6 +68,8 @@ class Issuer
       "revocation_endpoint" => "#{url}/revoke",
       "introspection_endpoint" => "#{url}/introspect",
       "end_session_endpoint" => "#{url}/logout",
+      "frontchannel_logout_supported" => false,
+      "backchannel_logout_supported" => false,
       "scopes_supported" => Scopes::DESCRIBED.keys,
       "response_types_supported" => Client::RESPONSE_TYPES,
       "response_modes_supported" => [ "query" ],

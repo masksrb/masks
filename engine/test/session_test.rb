@@ -242,6 +242,54 @@ class SessionTest < EngineIntegrationTest
     assert_response :unauthorized
   end
 
+  test "signing out drops the local session and leaves the issuer's" do
+    sign_in!
+
+    delete "/auth/logout", headers: host.merge("HTTP_ACCEPT" => "application/json")
+
+    assert_response :success
+    assert_equal false, json["signed_in"]
+    assert_nil json["logout_url"], "nothing asked to sign out of masks"
+    assert_empty session_payload
+  end
+
+  test "signing out everywhere hands back where to end the issuer's session" do
+    sign_in!
+
+    delete "/auth/logout?everywhere=1", headers: host.merge("HTTP_ACCEPT" => "application/json")
+
+    assert_response :success
+    assert_equal false, json["signed_in"]
+
+    query = URI.decode_www_form(URI.parse(json["logout_url"]).query).to_h
+
+    assert json["logout_url"].start_with?("#{issuer.url_for(SUBDOMAIN)}/logout")
+    assert_equal "test-client", query["client_id"]
+    assert_equal "#{origin}/", query["post_logout_redirect_uri"]
+    refute_empty query["state"]
+  end
+
+  test "a consumer can make signing out mean signing out of masks" do
+    Masks::Rails.config.sign_out_of_issuer = true
+
+    sign_in!
+
+    delete "/auth/logout", headers: host
+
+    assert_response :redirect
+    assert response.location.start_with?("#{issuer.url_for(SUBDOMAIN)}/logout")
+    assert_empty session_payload
+  ensure
+    Masks::Rails.config.sign_out_of_issuer = false
+  end
+
+  test "an unconnected app offers no logout url, rather than a broken one" do
+    delete "/auth/logout?everywhere=1", headers: host.merge("HTTP_ACCEPT" => "application/json")
+
+    assert_response :success
+    assert_nil json["logout_url"]
+  end
+
   private
 
     def session_payload

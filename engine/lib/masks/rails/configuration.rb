@@ -4,7 +4,7 @@ module Masks
       class Unconfigured < Masks::Client::Error; end
 
       attr_accessor :scope, :resource, :resource_scopes, :after_sign_in, :after_sign_out,
-                    :session_key
+                    :session_key, :sign_out_of_issuer
       attr_writer :issuer, :redirect_uri, :name, :credentials, :store
 
       def initialize
@@ -13,6 +13,7 @@ module Masks
         @after_sign_in = "/"
         @after_sign_out = "/"
         @session_key = "masks"
+        @sign_out_of_issuer = false
       end
 
       def name_for(request)

@@ -37,6 +37,7 @@ class Client < ApplicationRecord
       client.assign_attributes(
         name: handshake.name,
         redirect_uris: handshake.redirect_uris,
+        post_logout_redirect_uris: [ handshake.return_to ].compact,
         resources: [ handshake.resource ],
         allowed_scopes: Scopes.join(handshake.scopes),
         grant_types: Handshake::GRANT_TYPES,
@@ -64,6 +65,7 @@ class Client < ApplicationRecord
         client_id: SecureRandom.uuid,
         name: attributes[:name].presence || "Unnamed client",
         redirect_uris: Array(attributes[:redirect_uris]).map(&:to_s),
+        post_logout_redirect_uris: Array(attributes[:post_logout_redirect_uris]).map(&:to_s),
         grant_types: Scopes.list(attributes[:grant_types]).presence || [ "authorization_code" ],
         response_types: Scopes.list(attributes[:response_types]).presence || [ "code" ],
         resources: Array(attributes[:resources]).map(&:to_s),
@@ -162,6 +164,7 @@ class Client < ApplicationRecord
       "client_id" => client_id,
       "client_name" => name,
       "redirect_uris" => redirect_uris,
+      "post_logout_redirect_uris" => post_logout_redirect_uris.presence,
       "grant_types" => grant_types,
       "response_types" => response_types,
       "scope" => Scopes.join(scope_list),

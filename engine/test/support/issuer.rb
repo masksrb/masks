@@ -261,6 +261,8 @@ class TestIssuer
         "registration_endpoint" => "#{url}/register",
         "handshake_endpoint" => "#{url}/handshake",
         "revocation_endpoint" => "#{url}/revoke",
+        "end_session_endpoint" => "#{url}/logout",
+        "introspection_endpoint" => "#{url}/introspect",
         "tenant" => { "uuid" => "uuid-#{subdomain}", "subdomain" => subdomain }
       }
     end

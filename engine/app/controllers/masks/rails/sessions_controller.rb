@@ -55,12 +55,15 @@ module Masks
       end
 
       def destroy
+        everywhere = masks_config.sign_out_of_issuer || params[:everywhere].present?
+        upstream = everywhere ? masks_logout_url : nil
+
         masks_forget
 
         if masks_wants_json?
-          render json: { "signed_in" => false }
+          render json: { "signed_in" => false, "logout_url" => upstream }.compact
         else
-          redirect_to masks_config.after_sign_out
+          redirect_to upstream || masks_config.after_sign_out, allow_other_host: upstream.present?
         end
       end
 
