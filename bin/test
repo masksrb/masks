@@ -2,22 +2,21 @@
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
-ALL=(server client engine web)
+ALL=(server client web)
 
 usage() {
   cat <<'TEXT' >&2
 usage: bin/test [suite...] | down
 
   server   the Rails app, against a postgres of its own
-  client   masks-client, the Ruby gem
-  engine   masks-rails, the engine a consuming app mounts
+  client   masks, the Ruby gem — both halves, in two rake tasks
   web      @masks/client, the browser package
 
 Every suite runs in a container, so this needs docker and nothing else. With no
-arguments it runs all four, keeps going after a failure, and reports at the end.
+arguments it runs all three, keeps going after a failure, and reports at the end.
 
-  bin/test              all four
-  bin/test engine web   only those
+  bin/test              all three
+  bin/test client web   only those
   bin/test down         stop everything and drop the cache volumes
 TEXT
   exit 64

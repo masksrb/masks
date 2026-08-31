@@ -30,7 +30,7 @@ export default defineConfig({
           items: [
             { label: "Overview", slug: "index" },
             { label: "Running it", slug: "start/running" },
-            { label: "The four pieces", slug: "start/pieces" },
+            { label: "The three pieces", slug: "start/pieces" },
           ],
         },
         {

@@ -98,8 +98,8 @@ module Masks
         return true if spoken >= MINIMUM_ISSUER
 
         raise Unconfigured,
-              "#{issuer_for(request)} speaks masks protocol #{spoken}, and masks-rails " \
-              "#{Masks::Rails::VERSION} needs at least #{MINIMUM_ISSUER}"
+              "#{issuer_for(request)} speaks masks protocol #{spoken}, and masks " \
+              "#{Masks::VERSION} needs at least #{MINIMUM_ISSUER}"
       end
 
       def session_for(request)

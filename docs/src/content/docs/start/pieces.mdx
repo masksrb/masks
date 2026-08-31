@@ -1,12 +1,11 @@
 ---
-title: The four pieces
-description: Which of server, client, engine, and the browser package you actually need.
+title: The three pieces
+description: Which of the server, the gem, and the browser package you actually need.
 ---
 
 ```
 server/    the standalone OIDC provider     you run one
-client/    masks-client                     any ruby app that talks to it
-engine/    masks-rails                      a Rails app that wants sign-in wired up
+client/    masks                            any ruby app that talks to it, Rails or not
 web/       @masks/client                    a single-page app, in either of two modes
 ```
 
@@ -15,14 +14,14 @@ web/       @masks/client                    a single-page app, in either of two 
 | I want to… | Use |
 | --- | --- |
 | run an auth server | `server/` |
-| sign a Rails app in | `masks-rails` — it pulls in `masks-client` |
-| verify tokens in an API | `masks-client` alone |
-| drive the flow by hand, or in a non-Rails app | `masks-client` alone |
-| sign in an SPA in front of a Rails app | `masks-rails` + [`@masks/client`](/guides/spa) in BFF mode |
+| sign a Rails app in | `masks` — the engine mounts itself |
+| verify tokens in an API | `masks` |
+| drive the flow by hand, or in a non-Rails app | `masks` |
+| sign in an SPA in front of a Rails app | `masks` + [`@masks/client`](/guides/spa) in BFF mode |
 | sign in an SPA with no backend of its own | [`@masks/client`](/guides/spa) in browser PKCE mode |
 
 A resource server — something that only *receives* bearer tokens and never signs anyone in — needs
-`masks-client` and nothing else. See [verifying a token](/guides/verifying).
+`masks` and nothing else, and never loads the Rails half. See [verifying a token](/guides/verifying).
 
 ## Three consumer paths, not one
 
@@ -49,12 +48,16 @@ session, and its cookie, and nothing runs around it.
 
 ## Why there is still an engine
 
-Because the *consumer* side genuinely is a Rails concern, and it is a different problem. `masks-rails`
+Because the *consumer* side genuinely is a Rails concern, and it is a different problem. The engine
 mounts three routes into your application — start, callback, logout — and gives you
 `authenticate_masks!`. It issues nothing. It holds no signing key. It talks to the server over HTTP
 like any other client would.
 
 The two are never loaded into the same process.
+
+It ships inside the `masks` gem rather than beside it because both halves are the consumer — the
+split was never client versus server. `require "masks"` loads the engine only when Rails is already
+loaded, so a Rack or Sinatra app pays nothing for it.
 
 ## Multi-tenant hosts
 

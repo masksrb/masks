@@ -41,7 +41,7 @@ module Masks
       end
 
       def default_headers
-        { "Accept" => "application/json", "User-Agent" => "masks-client/#{VERSION}" }
+        { "Accept" => "application/json", "User-Agent" => "masks/#{Masks::VERSION}" }
       end
 
       def request(request)

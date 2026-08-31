@@ -1,4 +1,4 @@
-require "test_helper"
+require_relative "test_helper"
 
 class SessionTest < EngineIntegrationTest
   test "an unconnected app refuses differently from a signed-out one" do

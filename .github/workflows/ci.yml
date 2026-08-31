@@ -154,19 +154,16 @@ jobs:
         working-directory: docs
         run: npm ci && npm run build
 
-  gems:
+  gem:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        gem: [client, engine]
     steps:
       - uses: actions/checkout@v6
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: "3.4"
-      - name: Build ${{ matrix.gem }}
-        working-directory: ${{ matrix.gem }}
-        run: gem build *.gemspec
+      - name: Build the gem
+        working-directory: client
+        run: gem build masks.gemspec
 
   client:
     runs-on: ubuntu-latest
@@ -177,22 +174,12 @@ jobs:
           ruby-version: "3.4"
           bundler-cache: true
           working-directory: client
-      - name: Test the client gem
+      - name: Test the client half
         working-directory: client
-        run: bundle exec rake test
-
-  engine:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: "3.4"
-          bundler-cache: true
-          working-directory: engine
-      - name: Test the Rails engine
-        working-directory: engine
-        run: bundle exec rake test
+        run: bundle exec rake test:client
+      - name: Test the Rails half
+        working-directory: client
+        run: bundle exec rake test:rails
 
   web:
     runs-on: ubuntu-latest

@@ -1,4 +1,4 @@
-require "test_helper"
+require_relative "test_helper"
 
 class ConfigurationTest < EngineTest
   test "every value resolves against the request, so one host serves many tenants" do

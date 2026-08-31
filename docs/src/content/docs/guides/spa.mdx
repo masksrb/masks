@@ -26,7 +26,7 @@ XSS, and there is no refresh loop in the page.
 
 ## BFF session mode
 
-Your Rails app mounts [`masks-rails`](/guides/rails) at `/auth`; the page asks it who is signed in.
+Your Rails app mounts the [masks engine](/guides/rails) at `/auth`; the page asks it who is signed in.
 
 ```ts
 import { createSession } from "@masks/client";

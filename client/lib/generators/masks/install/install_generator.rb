@@ -5,7 +5,7 @@ module Masks
     class InstallGenerator < ::Rails::Generators::Base
       source_root File.expand_path("templates", __dir__)
 
-      desc "Mount masks-rails, write an initializer, and say what to set."
+      desc "Mount the masks engine, write an initializer, and say what to set."
 
       class_option :mount, type: :string, default: "/auth",
                    desc: "Where to mount the engine"
@@ -29,7 +29,7 @@ module Masks
 
       def say_what_is_left
         say ""
-        say "masks-rails is mounted at #{options[:mount]}.", :green
+        say "masks is mounted at #{options[:mount]}.", :green
         say ""
         say "  1. Set MASKS_ISSUER in the environment, or edit the initializer."
         say "  2. Start the app and open #{options[:mount]}/handshake."

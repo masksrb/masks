@@ -1,6 +1,10 @@
 source "https://rubygems.org"
 
-gemspec name: "masks-client"
+gemspec name: "masks"
 
+gem "railties", "~> 8.1"
+gem "actionpack", "~> 8.1"
+gem "actionview", "~> 8.1"
+gem "rails-dom-testing", "~> 2.2"
 gem "minitest", "~> 5.25"
 gem "rake", "~> 13.2"
