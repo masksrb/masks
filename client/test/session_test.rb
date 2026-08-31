@@ -64,4 +64,44 @@ class SessionTest < ClientTest
     assert_equal "Bearer at", tokens.authorization
     refute tokens.expired?
   end
+
+  def test_introspection_answers_a_claims_object_rather_than_a_hash
+    issuer.override("/introspect", {
+                      "active" => true, "scope" => "things:read", "sub" => "actor-1",
+                      "client_id" => "app", "username" => "owner", "token_type" => "Bearer",
+                      "exp" => Time.now.to_i + 60, "aud" => [ "https://app.test/mcp" ]
+                    })
+
+    found = session.introspect("some-token", hint: "access_token")
+
+    assert found.active?
+    assert_equal "actor-1", found.subject
+    assert_equal "owner", found.username
+    assert_equal "Bearer", found.token_type
+    assert_equal [ "things:read" ], found.scopes
+    assert found.permits?("things:read")
+    assert_equal "access_token", issuer.last("/introspect")[:body]["token_type_hint"]
+  end
+
+  def test_an_inactive_token_permits_nothing_however_wide_its_scope_reads
+    issuer.override("/introspect", { "active" => false, "scope" => "things:read" })
+
+    found = session.introspect("revoked")
+
+    refute found.active?
+    refute found.permits?("things:read")
+
+    error = assert_raises(Masks::Client::Unauthorized) { found.permit!("things:read") }
+
+    assert_match(/not active/, error.message)
+  end
+
+  def test_an_issuer_publishing_no_introspection_endpoint_is_refused_rather_than_guessed
+    issuer.override("/.well-known/openid-configuration",
+                    issuer.discovery.except("introspection_endpoint"))
+
+    error = assert_raises(Masks::Client::Rejected) { session.introspect("whatever") }
+
+    assert_match(/introspection_endpoint/, error.message)
+  end
 end

@@ -92,6 +92,15 @@ module Masks
         true
       end
 
+      def introspect(token, hint: nil)
+        form = [ [ "token", token ], [ "client_id", client_id ] ]
+        form << [ "token_type_hint", hint ] if hint
+
+        Introspection.new(
+          HTTP.post_form(issuer.endpoint("introspection_endpoint"), form, authorization)
+        )
+      end
+
       def userinfo(access_token)
         HTTP.get(issuer.endpoint("userinfo_endpoint"), "Authorization" => "Bearer #{access_token}")
       end
