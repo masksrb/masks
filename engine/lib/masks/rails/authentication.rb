@@ -97,6 +97,21 @@ module Masks
         false
       end
 
+      def masks_logout_url(return_to: nil)
+        return nil unless masks_configured?
+
+        masks_session.end_session_url(
+          post_logout_redirect_uri: masks_post_logout_redirect_uri,
+          state: SecureRandom.urlsafe_base64(16)
+        )
+      rescue Masks::Client::Error
+        nil
+      end
+
+      def masks_post_logout_redirect_uri
+        "#{request.base_url}#{masks_local_path(masks_config.after_sign_out) || '/'}"
+      end
+
       def masks_login_url(return_to: nil)
         path = Masks::Rails::Engine.routes.url_helpers.start_path
         target = masks_local_path(return_to)

@@ -19,7 +19,7 @@ export interface SessionClient {
   loginUrl(options?: { returnTo?: string }): string;
   handshake(): void;
   handshakeUrl(): string;
-  logout(): Promise<void>;
+  logout(options?: { everywhere?: boolean }): Promise<void>;
 }
 
 function metaToken(): string | null {
@@ -124,17 +124,31 @@ export function createSession(options: SessionOptions = {}): SessionClient {
       return await new Promise<Account>(() => {});
     },
 
-    async logout() {
+    async logout({ everywhere = false } = {}) {
       const token = csrf();
 
-      await call(url("/logout"), {
-        method: "DELETE",
-        credentials: "same-origin",
-        headers: {
-          Accept: "application/json",
-          ...(token ? { "X-CSRF-Token": token } : {}),
+      const response = await call(
+        url(everywhere ? "/logout?everywhere=1" : "/logout"),
+        {
+          method: "DELETE",
+          credentials: "same-origin",
+          headers: {
+            Accept: "application/json",
+            ...(token ? { "X-CSRF-Token": token } : {}),
+          },
         },
-      });
+      );
+
+      if (!everywhere) return;
+
+      const body = (await response.json().catch(() => ({}))) as {
+        logout_url?: string;
+      };
+
+      if (body.logout_url && typeof window !== "undefined") {
+        window.location.assign(body.logout_url);
+        await new Promise<void>(() => {});
+      }
     },
   };
 }
