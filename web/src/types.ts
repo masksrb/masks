@@ -18,9 +18,15 @@ export interface Account {
 
 export interface Refusal {
   signed_in: false;
-  error: string;
-  login_url: string;
+  error: "login_required" | "handshake_required" | string;
+  login_url?: string;
+  handshake_url?: string;
 }
+
+export type Status =
+  | { state: "signed_in"; account: Account }
+  | { state: "signed_out"; loginUrl: string }
+  | { state: "handshake_required"; handshakeUrl: string };
 
 export interface Tokens {
   access_token: string;

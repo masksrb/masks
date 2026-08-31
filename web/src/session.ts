@@ -1,4 +1,9 @@
-import { type Account, MasksError, type Refusal } from "./types.js";
+import {
+  type Account,
+  MasksError,
+  type Refusal,
+  type Status,
+} from "./types.js";
 
 export interface SessionOptions {
   basePath?: string;
@@ -8,9 +13,12 @@ export interface SessionOptions {
 
 export interface SessionClient {
   session(): Promise<Account | null>;
+  status(): Promise<Status>;
   require(options?: { returnTo?: string }): Promise<Account>;
   login(options?: { returnTo?: string }): void;
   loginUrl(options?: { returnTo?: string }): string;
+  handshake(): void;
+  handshakeUrl(): string;
   logout(): Promise<void>;
 }
 
@@ -43,41 +51,75 @@ export function createSession(options: SessionOptions = {}): SessionClient {
     return `${url("")}?return_to=${encodeURIComponent(target)}`;
   };
 
-  const session = async (): Promise<Account | null> => {
+  const handshakeUrl = () => url("/handshake");
+
+  const status = async (): Promise<Status> => {
     const response = await call(url("/session"), {
       method: "GET",
       credentials: "same-origin",
       headers: { Accept: "application/json" },
     });
 
-    if (response.status === 401) return null;
-
-    if (!response.ok) {
-      throw new MasksError(
-        "session_failed",
-        `the session endpoint answered ${response.status}`,
-        response.status,
-      );
+    if (response.ok) {
+      return {
+        state: "signed_in",
+        account: (await response.json()) as Account,
+      };
     }
 
-    return (await response.json()) as Account;
+    if (response.status === 401) {
+      const refusal = (await response.json().catch(() => ({}))) as Refusal;
+
+      if (refusal.error === "handshake_required") {
+        return {
+          state: "handshake_required",
+          handshakeUrl: refusal.handshake_url ?? handshakeUrl(),
+        };
+      }
+
+      return {
+        state: "signed_out",
+        loginUrl: refusal.login_url ?? loginUrl(),
+      };
+    }
+
+    throw new MasksError(
+      "session_failed",
+      `the session endpoint answered ${response.status}`,
+      response.status,
+    );
+  };
+
+  const session = async (): Promise<Account | null> => {
+    const held = await status();
+
+    return held.state === "signed_in" ? held.account : null;
   };
 
   return {
     session,
-
+    status,
     loginUrl,
+    handshakeUrl,
 
     login(opts = {}) {
       window.location.assign(loginUrl(opts));
     },
 
+    handshake() {
+      window.location.assign(handshakeUrl());
+    },
+
     async require(opts = {}) {
-      const account = await session();
+      const held = await status();
 
-      if (account) return account;
+      if (held.state === "signed_in") return held.account;
 
-      window.location.assign(loginUrl(opts));
+      window.location.assign(
+        held.state === "handshake_required"
+          ? held.handshakeUrl
+          : loginUrl(opts),
+      );
 
       return await new Promise<Account>(() => {});
     },
@@ -97,4 +139,4 @@ export function createSession(options: SessionOptions = {}): SessionClient {
   };
 }
 
-export type { Account, Refusal };
+export type { Account, Refusal, Status };
