@@ -1,5 +1,6 @@
 masks_image: ghcr.io/masksrb/masks
 masks_image_tag: latest
+masks_image_digest: ""
 masks_deploy_path: /srv/masks
 masks_network: edge
 masks_postgres_host: postgres
