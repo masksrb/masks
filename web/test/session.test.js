@@ -127,3 +127,52 @@ test("no token is ever held by the session client", async () => {
   assert.equal(account.access_token, undefined);
   assert.ok(!Object.keys(subject).includes("accessToken"));
 });
+
+test("an app that has not shaken hands says so, rather than offering a login", async () => {
+  const { subject } = client([
+    {
+      status: 401,
+      body: {
+        signed_in: false,
+        error: "handshake_required",
+        handshake_url: "/auth/handshake",
+      },
+    },
+  ]);
+
+  const status = await subject.status();
+
+  assert.equal(status.state, "handshake_required");
+  assert.equal(status.handshakeUrl, "/auth/handshake");
+  assert.equal(await subject.session(), null);
+});
+
+test("a signed-out session names where to sign in", async () => {
+  const { subject } = client([
+    {
+      status: 401,
+      body: { signed_in: false, error: "login_required", login_url: "/auth" },
+    },
+  ]);
+
+  const status = await subject.status();
+
+  assert.equal(status.state, "signed_out");
+  assert.equal(status.loginUrl, "/auth");
+});
+
+test("a refusal with no url falls back to the paths this client knows", async () => {
+  const { subject } = client([
+    { status: 401, body: { signed_in: false, error: "handshake_required" } },
+  ]);
+
+  assert.equal((await subject.status()).handshakeUrl, "/auth/handshake");
+});
+
+test("a signed-in status carries the account itself", async () => {
+  const { subject } = client([{ status: 200, body: ACCOUNT }]);
+  const status = await subject.status();
+
+  assert.equal(status.state, "signed_in");
+  assert.equal(status.account.subject, "actor-1");
+});
