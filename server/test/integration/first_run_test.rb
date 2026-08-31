@@ -71,6 +71,35 @@ class FirstRunTest < ActionDispatch::IntegrationTest
     assert_equal 0, within(@tenant) { Actor.count }
   end
 
+  test "an owner without an email is refused, because it is an owner nothing can consume" do
+    host! host_for(@tenant)
+
+    post "/login", params: setup_params(email: ""), as: :json
+    body = JSON.parse(response.body)
+
+    assert_equal "setup", body["prompt"]
+    assert_includes body["warnings"], "missing-email"
+    assert_equal 0, within(@tenant) { Actor.count }
+  end
+
+  test "the owner is created with a verified address, so userinfo releases one" do
+    host! host_for(@tenant)
+
+    post "/login", params: setup_params, as: :json
+    assert JSON.parse(response.body)["settled"]
+
+    actor = within(@tenant) { Actor.sole }
+
+    assert_equal "owner@example.invalid", actor.email
+    assert actor.email_verified_at.present?
+
+    claims = within(@tenant) { actor.claims(Scopes::STANDARD) }
+
+    assert_equal "owner@example.invalid", claims["email"]
+    assert_equal true, claims["email_verified"]
+    assert_equal "owner", claims["preferred_username"]
+  end
+
   test "the owner the wizard created can complete the whole OIDC flow" do
     host! host_for(@tenant)
 

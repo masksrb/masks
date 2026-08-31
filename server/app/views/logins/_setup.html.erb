@@ -27,9 +27,12 @@
   </label>
 
   <label class="flex flex-col gap-1.5">
-    <span class="text-sm font-medium">Email <span class="opacity-75">(optional)</span></span>
+    <span class="text-sm font-medium">Email</span>
     <%= form.email_field :email, value: login.updates["email"],
           autocomplete: "email", class: "input input-bordered w-full" %>
+    <span class="text-xs opacity-75">
+      Applications you sign in to are given this address, and most refuse an account without one.
+    </span>
   </label>
 
   <label class="flex flex-col gap-1.5">
