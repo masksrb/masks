@@ -19,27 +19,29 @@ hero:
 import { Card, CardGrid, LinkCard } from "@astrojs/starlight/components";
 
 <CardGrid stagger>
-  <Card title="A signing key per tenant" icon="seti:db">
-    One tenant's token is **unintelligible** to another. Not forbidden — unreadable.
+  <Card title="Every tenant has its own keys" icon="seti:db">
+    Each tenant signs its tokens with **its own key**. A token from one tenant will not work on
+    another, because the other has no key to check it with.
   </Card>
-  <Card title="Standalone, not an engine" icon="seti:config">
-    It owns its **routes, its session, its cookie**. Nothing runs around it.
+  <Card title="A server, not a library" icon="seti:config">
+    You run masks **next to your app**, not inside it. It handles its own sign-in pages, sessions and
+    upgrades, and your app talks to it over standard OpenID Connect.
   </Card>
-  <Card title="Connectors are v1" icon="puzzle">
-    **Dynamic client registration** from the first release. Without it that flow cannot be set up at
-    all.
+  <Card title="Apps can sign themselves up" icon="puzzle">
+    An app can **register itself** and get credentials without you setting anything up first. That is
+    how an AI connector adds itself, and it has worked since the first release.
   </Card>
-  <Card title="Audience-restricted tokens" icon="approve-check">
-    RFC 8707 `resource` becomes the token's **`aud`**. A token for one API is not a token for every
-    API.
+  <Card title="Tokens only work where they belong" icon="approve-check">
+    Every token **names the API it was issued for**. Present it to a different API and it is
+    rejected, so one leaked token does not open everything.
   </Card>
 </CardGrid>
 
 <CardGrid>
-  <LinkCard title="Run it" href="/start/running/" description="Two tenants, two keys, a minute." />
-  <LinkCard title="The four pieces" href="/start/pieces/" description="Server, two gems, one browser package." />
-  <LinkCard title="Tenancy" href="/concepts/tenancy/" description="The uuid, and the claim that carries it." />
-  <LinkCard title="Tokens" href="/concepts/tokens/" description="What is issued, and why `resource` exists." />
-  <LinkCard title="Sign an SPA in" href="/guides/spa/" description="BFF or browser PKCE." />
-  <LinkCard title="Conformance" href="/reference/conformance/" description="Both OpenID Foundation plans, run and passing." />
+  <LinkCard title="Run it" href="/start/running/" description="Up and running locally in about a minute." />
+  <LinkCard title="The four pieces" href="/start/pieces/" description="What each part does, and which ones you need." />
+  <LinkCard title="Tenancy" href="/concepts/tenancy/" description="How masks identifies tenants, and what your app stores." />
+  <LinkCard title="Tokens" href="/concepts/tokens/" description="What is inside a token, and how audiences work." />
+  <LinkCard title="Sign an SPA in" href="/guides/spa/" description="Two ways to do it, and how to choose." />
+  <LinkCard title="Conformance" href="/reference/conformance/" description="Tested against the OpenID Foundation's own suite." />
 </CardGrid>
