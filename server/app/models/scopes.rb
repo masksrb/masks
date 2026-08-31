@@ -30,6 +30,10 @@ module Scopes
       list(requested) & list(available)
     end
 
+    def union(*values)
+      list(values.flat_map { |value| list(value) })
+    end
+
     def covers?(available, requested)
       (list(requested) - list(available)).empty?
     end

@@ -12,6 +12,8 @@ class Client < ApplicationRecord
   LOOPBACK = %w[localhost 127.0.0.1 ::1].freeze
   DEFAULT_SCOPES = Scopes::STANDARD
 
+  class ScopesUnavailable < StandardError; end
+
   has_many :tokens, dependent: :destroy
   has_many :consents, dependent: :destroy
 
@@ -36,7 +38,7 @@ class Client < ApplicationRecord
         name: handshake.name,
         redirect_uris: handshake.redirect_uris,
         resources: [ handshake.resource ],
-        scopes: Scopes.join(handshake.scopes),
+        allowed_scopes: Scopes.join(handshake.scopes),
         grant_types: Handshake::GRANT_TYPES,
         response_types: [ "code" ],
         token_endpoint_auth_method: "client_secret_basic",
@@ -65,7 +67,7 @@ class Client < ApplicationRecord
         grant_types: Scopes.list(attributes[:grant_types]).presence || [ "authorization_code" ],
         response_types: Scopes.list(attributes[:response_types]).presence || [ "code" ],
         resources: Array(attributes[:resources]).map(&:to_s),
-        scopes: Scopes.join(attributes[:scopes].presence || DEFAULT_SCOPES),
+        allowed_scopes: Scopes.join(bounded(attributes[:scopes].presence || DEFAULT_SCOPES)),
         token_endpoint_auth_method: attributes[:token_endpoint_auth_method].presence || "client_secret_basic",
         application_type: attributes[:application_type].presence || "web",
         client_uri: attributes[:client_uri],
@@ -76,6 +78,18 @@ class Client < ApplicationRecord
       )
 
       client.issue_credentials!
+    end
+
+    def bounded(requested)
+      ceiling = Current.tenant&.dynamic_client_ceiling
+      bounded = ceiling ? Scopes.granted(requested, ceiling) : Scopes.list(requested)
+
+      if bounded.empty?
+        raise ScopesUnavailable,
+              "a dynamically registered client may not request #{Scopes.join(requested)}"
+      end
+
+      bounded
     end
 
     def authenticating(client_id)
@@ -134,11 +148,13 @@ class Client < ApplicationRecord
   end
 
   def scope_list
-    Scopes.list(scopes)
+    Scopes.union(required_scopes, allowed_scopes)
   end
 
   def permitted_scopes(requested)
-    requested.blank? ? scope_list : Scopes.granted(requested, scope_list)
+    return scope_list if Scopes.list(requested).empty?
+
+    Scopes.union(required_scopes, Scopes.granted(requested, allowed_scopes))
   end
 
   def metadata
@@ -148,7 +164,7 @@ class Client < ApplicationRecord
       "redirect_uris" => redirect_uris,
       "grant_types" => grant_types,
       "response_types" => response_types,
-      "scope" => Scopes.join(scopes),
+      "scope" => Scopes.join(scope_list),
       "token_endpoint_auth_method" => token_endpoint_auth_method,
       "application_type" => application_type,
       "client_uri" => client_uri,

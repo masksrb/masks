@@ -14,6 +14,13 @@ class Tenant < ApplicationRecord
 
   after_create_commit :ensure_signing_key!
 
+  def dynamic_client_ceiling
+    declared = dynamic_client_scopes.presence ||
+      Rails.configuration.masks.dynamic_client_scopes
+
+    declared && Scopes.list(declared)
+  end
+
   class << self
     def resolve(host)
       active.find_by(subdomain: host.to_s.split(".").first)

@@ -34,6 +34,7 @@ module Server
     config.masks.registration_limit = ENV.fetch("MASKS_REGISTRATION_LIMIT", 10).to_i
     config.masks.setup_token = ENV["MASKS_SETUP_TOKEN"].presence
     config.masks.tenants = ENV["MASKS_TENANTS"].to_s.split(/[\s,]+/).reject(&:empty?)
+    config.masks.dynamic_client_scopes = ENV["MASKS_DYNAMIC_CLIENT_SCOPES"].presence
 
     # Configuration for the application, engines, and railties goes here.
     #

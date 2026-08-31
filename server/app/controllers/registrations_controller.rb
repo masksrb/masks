@@ -25,10 +25,9 @@ class RegistrationsController < ApplicationController
 
     render json: issued(client), status: :created
   rescue ActiveRecord::RecordInvalid => e
-    render json: {
-      "error" => "invalid_client_metadata",
-      "error_description" => e.record.errors.full_messages.join("; ")
-    }, status: :bad_request
+    invalid_metadata(e.record.errors.full_messages.join("; "))
+  rescue Client::ScopesUnavailable => e
+    invalid_metadata(e.message)
   end
 
   def show
@@ -36,14 +35,13 @@ class RegistrationsController < ApplicationController
   end
 
   def update
-    @client.update!(attributes.except(:dynamic))
+    @client.update!(attributes.except(:scopes, :dynamic).merge(scope_updates))
 
     render json: @client.metadata.merge("registration_client_uri" => registration_uri(@client))
   rescue ActiveRecord::RecordInvalid => e
-    render json: {
-      "error" => "invalid_client_metadata",
-      "error_description" => e.record.errors.full_messages.join("; ")
-    }, status: :bad_request
+    invalid_metadata(e.record.errors.full_messages.join("; "))
+  rescue Client::ScopesUnavailable => e
+    invalid_metadata(e.message)
   end
 
   def destroy
@@ -89,6 +87,19 @@ class RegistrationsController < ApplicationController
         tos_uri: body[:tos_uri],
         policy_uri: body[:policy_uri]
       }.compact
+    end
+
+    def scope_updates
+      return {} if body[:scope].blank? || @client.approved?
+
+      { allowed_scopes: Scopes.join(Client.bounded(body[:scope])) }
+    end
+
+    def invalid_metadata(description)
+      render json: {
+        "error" => "invalid_client_metadata",
+        "error_description" => description
+      }, status: :bad_request
     end
 
     def issued(client)
