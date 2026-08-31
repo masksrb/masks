@@ -1,0 +1,130 @@
+---
+title: The login machine
+description: An ordered list of states, where the order is the flow and adding a factor is adding two files.
+---
+
+Sign-in is not a controller with branches. It is an **ordered list of states**, and the first one
+that cannot let you past names the prompt you see.
+
+```ruby
+class Login
+  STATES = [
+    LoginStates::Setup,
+    LoginStates::Identifier,
+    LoginStates::Password,
+    LoginStates::FirstFactor,
+    LoginStates::OneTimePassword,
+    LoginStates::SecondFactor
+  ].freeze
+end
+```
+
+**The order of `STATES` is the flow.** Nothing else encodes it — there is no state diagram, no
+`next_step` column, and no controller deciding what comes after what.
+
+## One pass is three passes
+
+```ruby
+def update
+  states.each(&:reload!)
+  states.each { |state| state.event!(event) } if event
+  states.each(&:factor!)
+
+  @prompt = SETTLED
+rescue LoginState::PromptRequired => denial
+  @prompt = denial.prompt
+end
+```
+
+Every state gets to reload, then to handle the event, then to insist. A state insists by raising
+`PromptRequired`, so the **first** unsatisfied state in declaration order wins and the rest never
+run. If nobody raises, the login is `settled` and you are signed in.
+
+The client gets the prompt name and renders one component for it:
+
+```json
+{ "prompt": "first-factor", "settled": false, "warnings": ["invalid-credentials"],
+  "identifier": "owner", "actor": { "nickname": "owner", "name": "Jon" } }
+```
+
+## A state declares three things
+
+```ruby
+module LoginStates
+  class Password < LoginState
+    EXPIRY = 12.hours
+
+    accepts :password
+
+    handles "password" do
+      verify
+    end
+
+    def verify
+      return warn!("missing-identifier") if login.identifier.blank?
+
+      if (authenticated = Actor.authenticate(login.identifier, update(:password)))
+        login.actor = authenticated
+        factored! :first_factor, expiry: EXPIRY
+      else
+        warn! "invalid-credentials"
+      end
+    end
+  end
+end
+```
+
+| | |
+| --- | --- |
+| `accepts` | the parameters this state will read, and the only ones it can |
+| `handles` | an event name from the client, and what to do with it |
+| `prompts` | a prompt name, and the condition under which it must be shown |
+
+All three inherit, so a subclass gets its parent's and can add.
+
+## Verifying and insisting are different states
+
+Notice that `Password` has no `prompts` block, and `FirstFactor` has nothing else:
+
+```ruby
+class FirstFactor < LoginState
+  prompts "first-factor" do
+    !touched?(:first_factor)
+  end
+end
+```
+
+One state knows how to *check* a password; a different one knows the flow cannot continue until some
+first factor has been satisfied. `OneTimePassword` and `SecondFactor` are the same pair a step later.
+
+That split is what lets a second way of proving a first factor — WebAuthn, a login link — be added
+without touching the thing that insists on one. It sets `factored! :first_factor` and
+`FirstFactor` stops raising.
+
+## Factors expire on their own
+
+`factored!` records a factor with a lifetime, and `touched?` is false again once it lapses:
+
+```ruby
+factored! :first_factor, expiry: 12.hours
+```
+
+So a second factor pending for half a day does not leave a half-authenticated session lying around,
+and `start_over!` on any state expires what it owns rather than clearing the whole store blindly.
+
+## Adding a factor is adding two files
+
+A `LoginState` and a prompt component. The state goes in `app/logins/login_states/`, its position in
+`Login::STATES` decides when it runs, and the component renders the prompt it names.
+
+Prompts exist twice — an ERB partial and a Svelte component — because
+[sign-in works without JavaScript](/concepts/hardening). The server renders the partial and the
+bundle replaces it if it runs; both post the same events to the same endpoint, and
+`LoginsController#update` answers HTML or JSON from one code path.
+
+:::note[The identifier step never looks you up]
+`Identifier` stores what you typed and validates nothing about whether it exists. That is deliberate:
+looking the actor up here would make the *first* step of sign-in a user-enumeration oracle, which is
+the property [hardening](/concepts/hardening) measures. Splitting sign-in across two screens is
+exactly where that usually gets lost.
+:::
