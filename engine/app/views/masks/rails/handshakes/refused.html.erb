@@ -1,0 +1,12 @@
+<% content_for :title, "This app could not be connected" %>
+
+<h1>This app could not be connected</h1>
+
+<p class="muted">
+  Nothing was connected and nothing was shared. The server that signs people in
+  refused, or answered something this app will not accept.
+</p>
+
+<p class="box"><%= @code %>: <%= @description %></p>
+
+<p class="muted"><a href="<%= handshake_path %>">Try again</a></p>

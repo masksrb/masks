@@ -54,6 +54,14 @@ module Masks
         masks_tokens.present? && !masks_tokens.expired?
       end
 
+      def masks_configured?
+        masks_config.configured?(request)
+      end
+
+      def masks_handshake_path
+        Masks::Rails::Engine.routes.url_helpers.handshake_path
+      end
+
       def masks_identity
         return @masks_identity if defined?(@masks_identity)
 
@@ -77,6 +85,7 @@ module Masks
       end
 
       def masks_refresh!
+        return false unless masks_configured?
         return false if masks_tokens&.refresh_token.nil?
 
         masks_store(
@@ -115,8 +124,7 @@ module Masks
       end
 
       def authenticate_masks!
-        return true if masks_signed_in?
-        return true if masks_tokens && masks_refresh!
+        return true if masks_configured? && (masks_signed_in? || (masks_tokens && masks_refresh!))
 
         masks_refuse
         false
@@ -126,6 +134,7 @@ module Masks
 
         def masks_refuse
           return masks_refuse_json if masks_wants_json?
+          return redirect_to(masks_handshake_path) unless masks_configured?
 
           session[:masks_return_to] = request.fullpath if request.get?
           redirect_to Masks::Rails::Engine.routes.url_helpers.start_path
@@ -134,11 +143,23 @@ module Masks
         def masks_refuse_json
           response.headers["Cache-Control"] = "no-store"
 
-          render json: {
+          render json: masks_refusal, status: :unauthorized
+        end
+
+        def masks_refusal
+          unless masks_configured?
+            return {
+              "signed_in" => false,
+              "error" => "handshake_required",
+              "handshake_url" => masks_handshake_path
+            }
+          end
+
+          {
             "signed_in" => false,
             "error" => "login_required",
             "login_url" => masks_login_url(return_to: masks_referring_path)
-          }, status: :unauthorized
+          }
         end
 
         def masks_wants_json?

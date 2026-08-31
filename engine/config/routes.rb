@@ -3,4 +3,8 @@ Masks::Rails::Engine.routes.draw do
   get "/session", to: "sessions#show", as: :session
   get "/callback", to: "sessions#callback", as: :callback
   match "/logout", to: "sessions#destroy", via: %i[get post delete], as: :logout
+
+  get "/handshake", to: "handshakes#show", as: :handshake
+  post "/handshake", to: "handshakes#create"
+  get "/handshake/callback", to: "handshakes#callback", as: :handshake_callback
 end

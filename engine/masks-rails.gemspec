@@ -12,7 +12,7 @@ Gem::Specification.new do |spec|
   spec.license = "MIT"
   spec.required_ruby_version = ">= 3.2"
 
-  spec.files = Dir["lib/**/*.rb", "app/**/*.rb", "config/**/*.rb", "README.md"]
+  spec.files = Dir["lib/**/*.rb", "app/**/*.rb", "app/**/*.erb", "config/**/*.rb", "README.md"]
   spec.require_paths = [ "lib" ]
 
   spec.add_dependency "masks-client", ">= 0.1.0"
