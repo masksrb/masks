@@ -60,6 +60,16 @@ jobs:
         with:
           bundler-cache: true
           working-directory: server
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: server/.node-version
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+      - name: Build the assets the tests render
+        working-directory: server
+        env:
+          RAILS_ENV: test
+        run: npm ci && bin/vite build --mode=test
       - name: Create the non-superuser application role
         env:
           PGPASSWORD: postgres
