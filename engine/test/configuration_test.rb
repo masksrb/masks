@@ -1,0 +1,136 @@
+require "test_helper"
+
+class ConfigurationTest < EngineTest
+  test "every value resolves against the request, so one host serves many tenants" do
+    Masks::Rails.config.issuer = ->(request) { "https://#{request.host.split('.').first}.auth.test" }
+
+    assert_equal "https://jons.auth.test", config.issuer_for(request_for("jons.app.test"))
+    assert_equal "https://acme.auth.test", config.issuer_for(request_for("acme.app.test"))
+  end
+
+  test "a plain value is accepted where a callable would be" do
+    Masks::Rails.config.issuer = "https://one.auth.test"
+
+    assert_equal "https://one.auth.test", config.issuer_for(request_for(HOST))
+  end
+
+  test "an unset issuer refuses rather than building a url out of nothing" do
+    Masks::Rails.config.issuer = nil
+
+    assert_raises(Masks::Rails::Configuration::Unconfigured) do
+      config.issuer_for(request_for(HOST))
+    end
+  end
+
+  test "redirect_uri defaults to the callback on the host that was asked" do
+    assert_equal "http://jons.app.test/auth/callback",
+                 config.redirect_uri_for(request_for("jons.app.test"))
+  end
+
+  test "return_to is derived from the redirect_uri, so the two cannot disagree" do
+    configure!(redirect_uri: ->(_request) { "https://public.example/auth/callback" })
+
+    assert_equal "https://public.example/auth/handshake/callback",
+                 config.return_to_for(request_for(HOST))
+  end
+
+  test "the origin of the redirect_uri is the origin of the return address, port included" do
+    configure!(redirect_uri: ->(_request) { "http://public.example:4242/auth/callback" })
+
+    redirect = URI.parse(config.redirect_uri_for(request_for(HOST)))
+    returned = URI.parse(config.return_to_for(request_for(HOST)))
+
+    assert_equal [ redirect.scheme, redirect.host, redirect.port ],
+                 [ returned.scheme, returned.host, returned.port ]
+  end
+
+  test "a default port is left off the return address" do
+    configure!(redirect_uri: ->(_request) { "https://public.example/auth/callback" })
+
+    refute_includes config.return_to_for(request_for(HOST)), ":443"
+  end
+
+  test "configured? is what tells never connected from wrongly configured" do
+    refute config.configured?(request_for(HOST))
+
+    connect!
+
+    assert config.configured?(request_for(HOST))
+  end
+
+  test "credentials with a blank client_id are not credentials" do
+    configure!(credentials: ->(_request) { { client_id: "", client_secret: "s" } })
+
+    refute config.configured?(request_for(HOST))
+  end
+
+  test "credentials may arrive with symbol or string keys" do
+    configure!(credentials: ->(_request) { { "client_id" => "a", "client_secret" => "b" } })
+
+    assert_equal "a", config.client_id_for(request_for(HOST))
+    assert_equal "b", config.client_secret_for(request_for(HOST))
+  end
+
+  test "a session cannot be built for an app that has never shaken hands" do
+    error = assert_raises(Masks::Rails::Configuration::Unconfigured) do
+      config.session_for(request_for(HOST))
+    end
+
+    assert_includes error.message, "has not shaken hands"
+  end
+
+  test "storing without a store raises rather than dropping the credential on the floor" do
+    configure!(store: nil)
+
+    assert_raises(Masks::Rails::Configuration::Unconfigured) do
+      config.store!(request_for(HOST), Object.new)
+    end
+  end
+
+  test "the name falls back to the application rather than being required" do
+    configure!(name: nil)
+
+    assert_equal "Dummy", config.name_for(request_for(HOST))
+  end
+
+  test "the handshake asks for exactly what the engine resolved" do
+    handshake = config.handshake_for(request_for(HOST))
+
+    assert_equal "#{origin}/mcp", handshake.resource
+    assert_equal [ "#{origin}/auth/callback" ], handshake.redirect_uris
+    assert_equal "#{origin}/auth/handshake/callback", handshake.return_to
+    assert_includes handshake.scope, "catalog:read"
+  end
+
+  test "a handshake with no resource refuses, because that is the one the consumer owns" do
+    configure!(resource: nil)
+
+    assert_raises(Masks::Rails::Configuration::Unconfigured) do
+      config.handshake_for(request_for(HOST))
+    end
+  end
+
+  test "a resource server needs a resource too" do
+    configure!(resource: nil)
+
+    assert_raises(Masks::Rails::Configuration::Unconfigured) do
+      config.resource_server_for(request_for(HOST))
+    end
+  end
+
+  private
+
+    def config
+      Masks::Rails.config
+    end
+
+    def origin
+      "http://#{HOST}"
+    end
+
+    def request_for(host)
+      ActionDispatch::Request.new(
+        Rack::MockRequest.env_for("http://#{host}/", "HTTP_HOST" => host)
+      )
+    end
+end
