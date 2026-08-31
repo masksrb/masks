@@ -15,7 +15,7 @@ export default defineConfig({
         alt: "masks",
       },
       description:
-        "A standalone OIDC provider with per-tenant signing keys, a client gem, and a Rails engine.",
+        "A standalone OIDC provider with per-tenant signing keys, and the client gem that signs apps in against it.",
       customCss: ["./src/styles/global.css"],
       social: [
         {
