@@ -2,6 +2,8 @@ class LoginsController < ApplicationController
   STORE = "login".freeze
   VERIFYING = %w[password otp setup].freeze
 
+  skip_forgery_protection
+
   rate_limit to: Rails.configuration.masks.attempt_limit,
              within: 3.minutes, only: :update, if: -> { verifying? },
              by: -> { [ current_tenant.id, request.remote_ip ].join(":") },
@@ -11,6 +13,8 @@ class LoginsController < ApplicationController
              within: 3.minutes, only: :update, name: "identifier", if: -> { verifying? },
              by: -> { [ current_tenant.id, session.dig(STORE, "identifier").to_s.downcase ].join(":") },
              with: -> { too_many("too-many-attempts-for-account") }
+
+  before_action :verify_authenticity_token
 
   def show
     return redirect_to after_login_path if current_actor && pending_authorization.nil?
