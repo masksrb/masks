@@ -42,10 +42,10 @@ module LoginStates
 
         actor = Actor.new(
           nickname: nickname,
-          email: update(:email).presence,
+          email: email,
           password: password,
           scopes: Scopes.join(Scopes::STANDARD),
-          email_verified_at: (Time.current if update(:email).present?)
+          email_verified_at: Time.current
         )
 
         return warn!("invalid-account") unless actor.save
@@ -73,6 +73,7 @@ module LoginStates
         before = login.warnings.size
 
         warn! "missing-nickname" if nickname.blank?
+        warn! "missing-email" if email.blank?
         warn! "short-password" if password.length < MINIMUM_PASSWORD
 
         login.warnings.size == before
@@ -80,6 +81,10 @@ module LoginStates
 
       def nickname
         update(:nickname).to_s.strip
+      end
+
+      def email
+        update(:email).to_s.strip.presence
       end
 
       def password

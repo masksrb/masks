@@ -18,6 +18,7 @@ const needsToken = $derived(login.auth.setup?.token === true);
 
 const valid = $derived(
   nickname.trim().length > 0 &&
+    email.trim().length > 0 &&
     password.length >= minimum &&
     (!needsToken || token.length > 0),
 );
@@ -69,7 +70,7 @@ function onsubmit(event) {
   </label>
 
   <label class="flex flex-col gap-1.5">
-    <span class="text-sm font-medium">Email <span class="opacity-75">(optional)</span></span>
+    <span class="text-sm font-medium">Email</span>
     <input
       type="email"
       name="email"
@@ -77,6 +78,9 @@ function onsubmit(event) {
       autocomplete="email"
       bind:value={email}
     />
+    <span class="text-xs opacity-75">
+      Applications you sign in to are given this address, and most refuse an account without one.
+    </span>
   </label>
 
   <label class="flex flex-col gap-1.5">

@@ -185,7 +185,8 @@ class HandshakeTest < ActionDispatch::IntegrationTest
     assert_redirected_to login_path
 
     post "/login",
-         params: { event: "setup", nickname: "owner", password: "a-long-enough-password" },
+         params: { event: "setup", nickname: "owner", email: "owner@example.invalid",
+                   password: "a-long-enough-password" },
          as: :json
 
     assert_equal "/handshake", JSON.parse(response.body)["redirectTo"]

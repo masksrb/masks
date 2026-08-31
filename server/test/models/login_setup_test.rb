@@ -34,30 +34,31 @@ class LoginSetupTest < ActiveSupport::TestCase
   end
 
   test "the owner holds the scopes masks defines and nothing else" do
-    login = step(event: "setup", nickname: "owner", password: "a-long-enough-password")
+    login = step(event: "setup", nickname: "owner", email: "owner@example.invalid", password: "a-long-enough-password")
 
     assert_equal Scopes::STANDARD.sort, login.actor.scope_list.sort
   end
 
   test "the owner can sign in afterwards with the password they chose" do
-    step(event: "setup", nickname: "owner", password: "a-long-enough-password")
+    step(event: "setup", nickname: "owner", email: "owner@example.invalid", password: "a-long-enough-password")
 
     assert_equal "owner", within { Actor.authenticate("owner", "a-long-enough-password") }&.nickname
   end
 
-  test "an email given at setup is recorded as verified, and none is left blank" do
+  test "the owner's email is required, and recorded as verified" do
     login = step(event: "setup", nickname: "owner", email: "owner@example.invalid",
                  password: "a-long-enough-password")
 
     assert_equal "owner@example.invalid", login.actor.email
     assert login.actor.email_verified_at.present?
+  end
 
-    other = Login.new(store: {}, event: "setup",
-                      updates: { nickname: "solo", password: "a-long-enough-password" })
-    created = within(@other) { other.update }
+  test "setup without an email warns rather than creating an owner nothing can consume" do
+    login = step(event: "setup", nickname: "solo", password: "a-long-enough-password")
 
-    assert_nil created.actor.email
-    assert_nil created.actor.email_verified_at
+    assert_nil login.actor
+    assert_includes login.warnings, "missing-email"
+    assert_equal 0, within { Actor.count }
   end
 
   test "the prompt is gone the moment an actor exists" do
@@ -76,7 +77,7 @@ class LoginSetupTest < ActiveSupport::TestCase
   end
 
   test "a blank username does not create anything" do
-    login = step(event: "setup", nickname: " ", password: "a-long-enough-password")
+    login = step(event: "setup", nickname: " ", email: "owner@example.invalid", password: "a-long-enough-password")
 
     assert_equal "setup", login.prompt
     assert_includes login.warnings, "missing-nickname"
@@ -84,7 +85,7 @@ class LoginSetupTest < ActiveSupport::TestCase
   end
 
   test "a short password does not create anything" do
-    login = step(event: "setup", nickname: "owner", password: "short")
+    login = step(event: "setup", nickname: "owner", email: "owner@example.invalid", password: "short")
 
     assert_equal "setup", login.prompt
     assert_includes login.warnings, "short-password"
@@ -92,7 +93,7 @@ class LoginSetupTest < ActiveSupport::TestCase
   end
 
   test "a username the model refuses warns rather than raising" do
-    login = step(event: "setup", nickname: "-nope-", password: "a-long-enough-password")
+    login = step(event: "setup", nickname: "-nope-", email: "owner@example.invalid", password: "a-long-enough-password")
 
     assert_equal "setup", login.prompt
     assert_includes login.warnings, "invalid-account"
@@ -108,7 +109,7 @@ class LoginSetupTest < ActiveSupport::TestCase
     with_token("the-real-token") do
       assert step.as_json.dig("setup", "token")
 
-      login = step(event: "setup", nickname: "owner", password: "a-long-enough-password",
+      login = step(event: "setup", nickname: "owner", email: "owner@example.invalid", password: "a-long-enough-password",
                    token: "not-the-token")
 
       assert_equal "setup", login.prompt
@@ -119,7 +120,7 @@ class LoginSetupTest < ActiveSupport::TestCase
 
   test "a missing setup token is refused rather than treated as blank" do
     with_token("the-real-token") do
-      login = step(event: "setup", nickname: "owner", password: "a-long-enough-password")
+      login = step(event: "setup", nickname: "owner", email: "owner@example.invalid", password: "a-long-enough-password")
 
       assert_includes login.warnings, "invalid-setup-token"
       assert_equal 0, within { Actor.count }
@@ -128,7 +129,7 @@ class LoginSetupTest < ActiveSupport::TestCase
 
   test "the right setup token creates the owner" do
     with_token("the-real-token") do
-      login = step(event: "setup", nickname: "owner", password: "a-long-enough-password",
+      login = step(event: "setup", nickname: "owner", email: "owner@example.invalid", password: "a-long-enough-password",
                    token: "the-real-token")
 
       assert login.settled?
@@ -138,7 +139,7 @@ class LoginSetupTest < ActiveSupport::TestCase
 
   test "the setup key stops being published once the tenant has an owner" do
     with_token("the-real-token") do
-      step(event: "setup", nickname: "owner", password: "a-long-enough-password",
+      step(event: "setup", nickname: "owner", email: "owner@example.invalid", password: "a-long-enough-password",
            token: "the-real-token")
 
       assert_nil step.as_json["setup"]
