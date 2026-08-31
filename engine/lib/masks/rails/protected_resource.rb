@@ -2,6 +2,7 @@ module Masks
   module Rails
     module ProtectedResource
       extend ActiveSupport::Concern
+      include Masks::Rails::Configurable
 
       class_methods do
         def masks_protect!(**options)

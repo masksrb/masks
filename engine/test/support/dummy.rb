@@ -72,12 +72,33 @@ class CatalogController < ActionController::Base
   end
 end
 
+class ApiController < ActionController::Base
+  include Masks::Rails::ProtectedResource
+
+  masks_protect! scope: "catalog:read"
+
+  def show
+    render json: { "subject" => masks_claims.subject }
+  end
+end
+
+class BareController < ActionController::Base
+  def show
+    render json: {
+      "authentication" => respond_to?(:masks_signed_in?, true),
+      "config" => respond_to?(:masks_config, true)
+    }
+  end
+end
+
 Dummy::Application.initialize!
 
 Rails.application.routes.draw do
   mount Masks::Rails::Engine, at: "/auth", as: :masks
 
   get "/catalog", to: "catalog#show"
+  get "/api", to: "api#show"
+  get "/bare", to: "bare#show"
   get "/dashboard", to: "pages#dashboard"
   root to: "pages#home"
 end

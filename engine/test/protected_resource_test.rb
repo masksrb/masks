@@ -1,6 +1,27 @@
 require "test_helper"
 
 class ProtectedResourceTest < EngineIntegrationTest
+  test "mounting the engine puts its methods on every controller, asked for or not" do
+    get "/bare", headers: host
+
+    assert_equal true, json["authentication"]
+    assert_equal true, json["config"]
+  end
+
+  test "a resource server needs nothing but this concern" do
+    get "/api", headers: host.merge("HTTP_AUTHORIZATION" => "Bearer #{token}")
+
+    assert_response :success
+    assert_equal "actor-1", json["subject"]
+  end
+
+  test "a resource server that carries no browser session still refuses correctly" do
+    get "/api", headers: host
+
+    assert_response :unauthorized
+    assert_includes response.headers["WWW-Authenticate"].to_s, "resource_metadata="
+  end
+
   test "a call with no token is refused with somewhere to go and find one" do
     get "/catalog", headers: host
 
