@@ -4,10 +4,13 @@ class ResourceMetadata
   OPEN_TIMEOUT = 2
   READ_TIMEOUT = 3
   LONGEST = 200
+  TTL = 5.minutes
 
   class << self
-    def describe(resource, scopes)
-      published = new(resource).descriptions
+    def describe(resources, scopes)
+      published = Array(resources).reject(&:blank?).reduce({}) do |held, resource|
+        new(resource).descriptions.merge(held)
+      end
 
       Scopes.list(scopes).map do |scope|
         [ scope, published[scope].presence || Scopes::DESCRIBED[scope] ]
@@ -31,7 +34,9 @@ class ResourceMetadata
   private
 
     def document
-      @document ||= candidates.lazy.filter_map { |url| fetch(url) }.first || {}
+      @document ||= Rails.cache.fetch([ "resource_metadata", @resource ], expires_in: TTL) do
+        candidates.lazy.filter_map { |url| fetch(url) }.first || {}
+      end
     end
 
     def candidates
