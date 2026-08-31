@@ -2,7 +2,7 @@ name: masks
 
 services:
   masks:
-    image: "{{ masks_image }}:{{ masks_image_tag }}"
+    image: "{{ masks_image }}{{ '@' + masks_image_digest if masks_image_digest else ':' + masks_image_tag }}"
     restart: unless-stopped
     environment:
       POSTGRES_HOST: "{{ masks_postgres_host }}"
