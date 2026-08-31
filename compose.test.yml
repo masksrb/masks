@@ -48,19 +48,6 @@ services:
       - ./client:/masks/client
       - client-bundle:/bundle
 
-  # The engine's Gemfile takes masks-client by relative path, so both trees are
-  # mounted at the depth that keeps ../client resolving.
-  engine:
-    image: ruby:3.4
-    working_dir: /masks/engine
-    command: ["sh", "-c", "bundle install --quiet && exec bundle exec rake test"]
-    environment:
-      BUNDLE_PATH: /bundle
-    volumes:
-      - ./client:/masks/client
-      - ./engine:/masks/engine
-      - engine-bundle:/bundle
-
   # The suite imports from dist/, not src/, so the build is part of the test.
   web:
     image: node:22-alpine
@@ -72,5 +59,4 @@ services:
 
 volumes:
   client-bundle:
-  engine-bundle:
   web-modules:

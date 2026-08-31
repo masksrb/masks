@@ -1,7 +1,7 @@
-require "masks/client"
 require "rails"
 
-require_relative "rails/version"
+require_relative "version"
+require_relative "client"
 require_relative "rails/credentials"
 require_relative "rails/configuration"
 require_relative "rails/configurable"

@@ -7,7 +7,7 @@ module Dummy
     config.root = File.expand_path("..", __dir__)
     config.eager_load = false
     config.consider_all_requests_local = true
-    config.secret_key_base = "masks-rails-test-secret-key-base-which-is-long-enough"
+    config.secret_key_base = "masks-engine-test-secret-key-base-which-is-long-enough"
     config.logger = Logger.new(IO::NULL)
     config.active_support.deprecation = :silence
     config.hosts.clear

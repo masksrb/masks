@@ -1,4 +1,4 @@
-require "test_helper"
+require_relative "test_helper"
 
 class ProtectedResourceTest < EngineIntegrationTest
   test "mounting the engine leaves a controller that asked for nothing alone" do

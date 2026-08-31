@@ -1,4 +1,4 @@
-require "test_helper"
+require_relative "test_helper"
 
 class HandshakeTest < EngineIntegrationTest
   test "an app nobody has connected offers the handshake" do
