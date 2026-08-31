@@ -51,6 +51,7 @@ class EngineIntegrationTest < ActionDispatch::IntegrationTest
   setup do
     Masks::Client.registry.clear!
     CREDENTIALS.clear!
+    issuer.id_tokens = :normal
     configure!
   end
 

@@ -19,6 +19,20 @@ class SessionTest < ClientTest
     refute_includes started[:url], started[:verifier]
   end
 
+  def test_a_nonce_travels_only_when_an_id_token_was_asked_for
+    started = session.start
+    query = URI.decode_www_form(URI.parse(started[:url]).query)
+
+    assert_equal started[:nonce], query.assoc("nonce").last
+    refute_nil started[:nonce]
+
+    started = session.start(scope: %w[things:read])
+    query = URI.decode_www_form(URI.parse(started[:url]).query)
+
+    assert_nil started[:nonce]
+    assert_nil query.assoc("nonce")
+  end
+
   def test_a_token_response_without_an_access_token_is_refused
     issuer.override("/token", { "token_type" => "Bearer", "expires_in" => 3600 })
 

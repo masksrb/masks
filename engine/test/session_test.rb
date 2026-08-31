@@ -110,6 +110,33 @@ class SessionTest < EngineIntegrationTest
     assert_empty session_payload
   end
 
+  test "an id token carrying no nonce is refused rather than accepted vacuously" do
+    issuer.id_tokens = :without_nonce
+
+    sign_in!
+
+    assert_response :bad_request
+    assert_empty session_payload
+  end
+
+  test "an id token carrying another request's nonce is refused" do
+    issuer.id_tokens = :foreign_nonce
+
+    sign_in!
+
+    assert_response :bad_request
+    assert_empty session_payload
+  end
+
+  test "a token response with no id token at all is refused when one was asked for" do
+    issuer.id_tokens = :absent
+
+    sign_in!
+
+    assert_response :bad_request
+    assert_empty session_payload
+  end
+
   test "a callback with nothing in flight is refused" do
     connect!
 

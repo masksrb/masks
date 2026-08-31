@@ -16,17 +16,20 @@ module Masks
       def start(resource: nil, prompt: nil, scope: nil, state: SecureRandom.urlsafe_base64(24),
                 nonce: SecureRandom.urlsafe_base64(24))
         pkce = Pkce.generate
+        scopes = Array(scope || self.scope)
+        nonce = nil unless scopes.include?("openid")
 
         pairs = [
           [ "response_type", "code" ],
           [ "client_id", client_id ],
           [ "redirect_uri", redirect_uri ],
-          [ "scope", Array(scope || self.scope).join(" ") ],
+          [ "scope", scopes.join(" ") ],
           [ "state", state ],
-          [ "nonce", nonce ],
           [ "code_challenge", pkce.challenge ],
           [ "code_challenge_method", pkce.method ]
         ]
+
+        pairs << [ "nonce", nonce ] if nonce
 
         Array(resource).each { |value| pairs << [ "resource", value ] }
         pairs << [ "prompt", prompt ] if prompt
