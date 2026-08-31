@@ -99,15 +99,17 @@ with the right one — which is the interception the check exists to catch, gran
 ## A replayed code takes its tokens with it
 
 Presenting a code twice is evidence the first presentation may not have been the client's. So the
-second attempt is refused *and* the access token the first one minted is revoked:
+second attempt is refused *and* everything the first one minted is revoked — the access token and
+the refresh token both, since both record the code as their parent:
 
 ```
-POST /token  code=abc…   → 200, access token issued
-POST /token  code=abc…   → 400 invalid_grant, and that access token is now dead
+POST /token  code=abc…   → 200, access + refresh issued
+POST /token  code=abc…   → 400 invalid_grant, and both of those are now dead
 ```
 
-Revoking the code alone would leave whoever intercepted it holding the thing the code was only ever
-a means to.
+Revoking the code alone would leave whoever intercepted it holding the things the code was only ever
+a means to — and the refresh token is the worse half to leave behind, because it outlives the access
+token by a month.
 
 ## Refresh rotation
 

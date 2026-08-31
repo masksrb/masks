@@ -171,7 +171,7 @@ class AuthorizationCodeFlowTest < ActionDispatch::IntegrationTest
     assert_equal "unsupported_grant_type", token(grant_type: "password")["error"]
   end
 
-  test "replaying a code revokes the access token it already issued" do
+  test "replaying a code revokes both tokens it already issued" do
     code = authorized_code(actor: @actor, registration: @registration)
     granted = token(
       grant_type: "authorization_code", code: code,
@@ -193,6 +193,13 @@ class AuthorizationCodeFlowTest < ActionDispatch::IntegrationTest
 
     get "/userinfo", headers: { "Authorization" => "Bearer #{granted['access_token']}" }
     assert_response :unauthorized
+
+    refreshed = token(
+      grant_type: "refresh_token", refresh_token: granted["refresh_token"],
+      client_id: @registration["client_id"],
+      client_secret: @registration["client_secret"]
+    )
+    assert_equal "invalid_grant", refreshed["error"]
   end
 
   test "the authorization request may arrive by POST" do
