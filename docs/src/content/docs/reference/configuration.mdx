@@ -13,6 +13,7 @@ Everything arrives through the environment.
 | `POSTGRES_HOST` `POSTGRES_PORT` | where the database is |
 | `POSTGRES_USER` `POSTGRES_PASSWORD` | must not be a superuser — RLS is bypassed by one |
 | `POSTGRES_DATABASE` | production only |
+| `SECRET_KEY_BASE` | required in production |
 | `ENCRYPTION_PRIMARY_KEY` | ActiveRecord encryption |
 | `ENCRYPTION_DETERMINISTIC_KEY` | |
 | `ENCRYPTION_KEY_DERIVATION_SALT` | |
@@ -22,6 +23,38 @@ Everything arrives through the environment.
 
 Generate real encryption keys with `bin/rails db:encryption:init`. The defaults in `.env.example`
 are development values and are labelled as such.
+
+### Tenants and first run
+
+| | | |
+| --- | --- | --- |
+| `MASKS_TENANTS` | | comma or space separated; ensured on boot |
+| `MASKS_SETUP_TOKEN` | | required to answer the setup prompt, when set |
+
+Declaring `MASKS_TENANTS` turns claiming off. Leave it unset and the first request to a hostname
+nothing serves claims that subdomain — once, and only while no tenant exists at all, so it cannot be
+used to mint tenants against a wildcard. See [connecting an app](/guides/handshake).
+
+### Rate limits
+
+Each is a count per tenant; the windows are fixed. [Hardening](/concepts/hardening) explains why
+sign-in carries two of them.
+
+| | |
+| --- | --- |
+| `MASKS_ATTEMPT_LIMIT` | sign-in and second factor, per address — default `10` |
+| `MASKS_ACCOUNT_ATTEMPT_LIMIT` | sign-in, per identifier — default `5` |
+| `MASKS_REGISTRATION_LIMIT` | dynamic client registration — default `10` |
+
+### Development only
+
+| | |
+| --- | --- |
+| `PG_BIN_PATH` | prepended to `PATH`, when the linked `pg_dump` is older than the server |
+
+The schema is dumped as SQL rather than Ruby, because `schema.rb` cannot represent a row-level
+security policy — so `pg_dump` has to match the server it dumps, and refuses outright when it does
+not. `bin/setup` checks for one before it does anything else.
 
 `MASKS_PUBLIC_ORIGIN_TEMPLATE` exists for the case where something in front of the app rewrites the
 host — a tunnel, or a proxy that does not set forwarding headers. It must be stable, because OAuth
