@@ -51,6 +51,9 @@ It is worth saying what that caught, because none of it was visible to the serve
 replayed code leaving its access token alive, and the id token carrying claims that belong at
 userinfo. A suite you write yourself only asks the questions you already thought of.
 
+[Conformance](/reference/conformance) has the full result, how to run it, and what a `SKIPPED`
+module means.
+
 ## Multi-tenant from the first migration
 
 masks is the source of truth for tenants, and every tenant has **its own signing keys**. A token
@@ -68,5 +71,7 @@ rather than on a roadmap.
 ## Where to go next
 
 - [Running it](/start/running) — two tenants in about a minute
+- [The four pieces](/start/pieces) — which of the server, the gems and the browser package you need
 - [Tenancy](/concepts/tenancy) — the uuid, the claim, and why apps hold a projection
 - [Register a connector](/guides/connectors) — DCR and resource indicators, end to end
+- [Sign an SPA in](/guides/spa) — the BFF and the browser code flow, and which to pick

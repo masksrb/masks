@@ -1,0 +1,90 @@
+---
+title: Conformance
+description: masks is checked against the OpenID Foundation's own suite, not only against tests we wrote.
+---
+
+A test suite you write yourself only asks the questions you already thought of. The OpenID
+Foundation publishes certification plans written against the **specification**, and masks runs them.
+
+```
+oidcc-config-certification-test-plan     2 modules ·   35 conditions · 0 failures
+oidcc-basic-certification-test-plan     39 modules · 2178 conditions · 0 failures
+```
+
+Registration is dynamic, so the suite registers its own clients and there is no static setup to keep
+in step.
+
+## Running it
+
+```sh
+bin/conformance          # up, then run both plans
+bin/conformance up       # just stand the stack up
+bin/conformance logs     # follow the suite server
+bin/conformance down     # tear down, including volumes
+bin/conformance plans    # print which plans run
+```
+
+It wants Docker and about twelve minutes. The stack is masks behind a TLS proxy on a Docker network,
+alongside the Foundation's suite and a Mongo it needs; the suite image is pulled at a pinned release
+rather than built from source.
+
+| | |
+| --- | --- |
+| `SUITE_REF` | suite release tag, default `release-v5.2.4` |
+| `SUITE_PORT` | host port for the suite UI, default `8443` |
+
+Exports and a full log land in `conformance/results/`. A nightly workflow runs the same thing; on a
+pull request it runs only when the PR carries the `conformance` label, because it wants Java, Mongo
+and a container build.
+
+:::note[This is where `MASKS_PUBLIC_ORIGIN_TEMPLATE` gets exercised]
+The suite reaches masks through a proxy under a different origin than the app binds, which is exactly
+the seam that template exists for — and the only place it is currently tested.
+:::
+
+## Reading a result
+
+Four outcomes, and only one of them is a problem.
+
+| | |
+| --- | --- |
+| `PASSED` | every condition held |
+| `SKIPPED` | masks declares it does not support the feature, so the plan skips it |
+| `REVIEW` | every automated condition held; a human signs off a screenshot at certification |
+| `FAILED` | a real defect |
+
+`SKIPPED` is a correct outcome, not a gap. The two request-object modules skip **because** masks
+declares `request_parameter_supported: false` and refuses them — a server that ignored the parameter
+instead would fail rather than skip.
+
+`REVIEW` covers the four modules whose remaining step is a person looking at a screenshot: the two
+that force re-authentication, and the two that show an error page for an unregistered
+`redirect_uri`. The browser config captures those screenshots automatically, so the modules complete
+rather than hanging.
+
+### Expected divergence
+
+`conformance/expected-failures.json` names each deliberate deviation with the module, the condition,
+and *why*. It carries two:
+
+- **the `tenant` claim** in the id token and the discovery document, which is the reason a consumer
+  never calls back to learn which tenant answered
+- **`resource_indicators_supported`** in metadata, which RFC 8414 does not register
+
+Both are additive and a spec-conformant client ignores them. Keeping them in that file rather than
+in someone's memory is what lets a warning that is a *decision* read differently from a warning that
+is a bug.
+
+## What it caught
+
+Worth naming, because none of it was visible to the server's own suite:
+
+- a `request` object **ignored** rather than refused, so the `state` and `nonce` a client had signed
+  lost to the unsigned ones beside them
+- `POST /authorize` not routed at all
+- a replayed authorization code leaving the access token it had already issued alive
+- the id token carrying claims that belong at [userinfo](/concepts/tokens)
+- a client registered through DCR unable to ask for `offline_access`
+- `unsupported_grant_type` and `invalid_client` both answering `invalid_request`
+
+Every one of those passed a green test suite of our own the whole time.

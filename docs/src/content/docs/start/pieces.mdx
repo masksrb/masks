@@ -1,12 +1,13 @@
 ---
-title: The three pieces
-description: Which of server, client, and engine you actually need.
+title: The four pieces
+description: Which of server, client, engine, and the browser package you actually need.
 ---
 
 ```
 server/    the standalone OIDC provider     you run one
 client/    masks-client                     any ruby app that talks to it
 engine/    masks-rails                      a Rails app that wants sign-in wired up
+web/       @masks/client                    a single-page app, in either of two modes
 ```
 
 ## Which do I need?
@@ -17,9 +18,25 @@ engine/    masks-rails                      a Rails app that wants sign-in wired
 | sign a Rails app in | `masks-rails` — it pulls in `masks-client` |
 | verify tokens in an API | `masks-client` alone |
 | drive the flow by hand, or in a non-Rails app | `masks-client` alone |
+| sign in an SPA in front of a Rails app | `masks-rails` + [`@masks/client`](/guides/spa) in BFF mode |
+| sign in an SPA with no backend of its own | [`@masks/client`](/guides/spa) in browser PKCE mode |
 
 A resource server — something that only *receives* bearer tokens and never signs anyone in — needs
 `masks-client` and nothing else. See [verifying a token](/guides/verifying).
+
+## Three consumer paths, not one
+
+The question "should the engine be the only supported way in?" resolved as **no**, and it had the
+wrong shape. The first consumer skipped the engine because the engine had nothing for a resource
+server and nothing for an SPA — not because it preferred its own.
+
+So there are three ways to consume masks, and they serve different consumers:
+
+| | |
+| --- | --- |
+| the engine | a Rails app doing browser sign-in |
+| `@masks/client` in BFF mode | a same-origin SPA in front of that Rails app |
+| `@masks/client` in PKCE mode | a client that is neither |
 
 ## Why the server is standalone
 

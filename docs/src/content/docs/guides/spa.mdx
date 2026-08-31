@@ -1,0 +1,113 @@
+---
+title: Sign an SPA in
+description: Two modes in one browser package — a session against a backend, or the code flow in the page.
+---
+
+`@masks/client` is the fourth deliverable, and the one that exists because the
+[engine](/guides/rails) cannot serve a single-page app: the engine answers every refusal with a
+redirect, and a redirect answered to `fetch()` is either an opaque CORS failure or a login page
+parsed as JSON.
+
+The package ships **two modes**, and they serve different consumers rather than competing.
+
+```sh
+npm install @masks/client
+```
+
+## Which mode
+
+| Your app | Mode | Where the token lives |
+| --- | --- | --- |
+| an SPA in front of your own Rails app | **BFF session** | the server's encrypted session |
+| a static site, or anything crossing an origin | **browser PKCE** | a closure in the page |
+
+Prefer the first whenever it is available. Tokens that never reach JavaScript cannot be lifted by
+XSS, and there is no refresh loop in the page.
+
+## BFF session mode
+
+Your Rails app mounts [`masks-rails`](/guides/rails) at `/auth`; the page asks it who is signed in.
+
+```ts
+import { createSession } from "@masks/client";
+
+const auth = createSession(); // defaults to basePath "/auth"
+
+const account = await auth.session(); // Account, or null
+if (!account) auth.login({ returnTo: "/dashboard" });
+```
+
+| | |
+| --- | --- |
+| `session()` | the current account, or `null` |
+| `status()` | the same question without throwing |
+| `require({ returnTo })` | an account, or a redirect to sign in |
+| `login()` / `loginUrl()` | send the browser to masks |
+| `handshake()` / `handshakeUrl()` | start [connecting this app](/guides/handshake) |
+| `logout()` | drop the local session |
+
+Requests carry cookies and a CSRF token, read from `<meta name="csrf-token">` unless you pass
+`csrfToken`. Nothing here handles a JWT, because nothing here ever sees one.
+
+## Browser PKCE mode
+
+For an app with no backend of its own. The page runs the code flow itself.
+
+```ts
+import { createBrowserClient } from "@masks/client";
+
+const client = createBrowserClient({
+  issuer: "https://jons.auth.example",
+  clientId: "2bb32482-…",
+  redirectUri: `${location.origin}/callback`,
+  scope: "openid profile email offline_access",
+  resource: "https://jons.things.example/mcp",
+});
+
+// on a "sign in" click
+await client.authorize({ returnTo: "/dashboard" });
+
+// on /callback
+if (client.pending()) {
+  const { returnTo } = await client.callback();
+  location.replace(returnTo);
+}
+
+// on every API call
+fetch("/api/things", { headers: { Authorization: client.authorization() } });
+```
+
+`discover()` reads the issuer's metadata, so no endpoint is written down. `expired(leeway)` and
+`refresh()` are there for the caller that wants to check before spending.
+
+### Where the secrets sit
+
+**Tokens live in a closure and nowhere else.** `localStorage` survives a tab close and is readable by
+every script on the origin, and buys nothing a silent prompt cannot re-derive.
+
+The PKCE verifier and `state` *must* cross a redirect, so they persist in `sessionStorage` — tab
+scoped, cleared on callback, and useless without the single-use code they pair with. `state` is
+checked when the callback returns, and the pending record is cleared even when it fails, so a forged
+state cannot be retried against a live verifier.
+
+S256 is computed with `crypto.subtle` — no dependency, no polyfill.
+
+:::caution[`nonce` is sent and not verified]
+The browser client puts a `nonce` on the authorization request and does not check it coming back,
+because checking it means fetching JWKS and verifying a signature in the page. Read this mode as
+"the token is bound to this browser by PKCE and `state`", which is true — not "the id token is bound
+to this request", which is not. The [engine](/guides/rails) does check it.
+:::
+
+### Telling it what to ask for
+
+A PKCE client has to be *told* its `resource`; unlike the BFF it has no server config to read it
+from. Get it wrong and you receive a token no resource server will accept — which is the
+[audience restriction](/concepts/tokens) working, presenting as a client that mysteriously cannot
+call anything.
+
+## What is not built yet
+
+**Silent refresh.** A hidden prompt against the issuer, so the PKCE mode does not have to choose
+between a long-lived token and an interruption. Until it lands, `refresh()` needs a refresh token,
+which means `offline_access`.
