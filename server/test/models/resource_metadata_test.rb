@@ -122,6 +122,40 @@ class ResourceMetadataTest < ActiveSupport::TestCase
     end
   end
 
+  test "a document is fetched once and held, because consent renders on every sign-in" do
+    published = {
+      "/.well-known/oauth-protected-resource/mcp" => {
+        "scope_descriptions" => { "things:read" => "Search and read your catalog" }
+      }
+    }
+
+    with_resource(published) do |server|
+      2.times { ResourceMetadata.describe(server.url, "things:read") }
+
+      assert_equal 1, server.paths.count
+    end
+  end
+
+  test "several resources are asked, and the first to describe a scope wins" do
+    first = { "/.well-known/oauth-protected-resource/mcp" => {
+      "scope_descriptions" => { "things:read" => "Read your catalog" }
+    } }
+    second = { "/.well-known/oauth-protected-resource/mcp" => {
+      "scope_descriptions" => { "things:read" => "Something else", "jobs:run" => "Run a job" }
+    } }
+
+    with_resource(first) do |one|
+      with_resource(second) do |two|
+        described = ResourceMetadata.describe([ one.url, two.url ], "things:read jobs:run")
+
+        assert_equal [
+          [ "jobs:run", "Run a job" ],
+          [ "things:read", "Read your catalog" ]
+        ], described
+      end
+    end
+  end
+
   test "a document that is not a document is simply not one" do
     with_resource({ "/.well-known/oauth-protected-resource/mcp" => "<html>nope</html>" }) do |server|
       assert_equal [ [ "things:read", nil ] ], ResourceMetadata.describe(server.url, "things:read")

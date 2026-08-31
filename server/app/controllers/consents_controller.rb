@@ -4,8 +4,8 @@ class ConsentsController < ApplicationController
 
   def show
     @client = @authorization.client
-    @scopes = Scopes.describe(@authorization.scopes_for(current_actor))
     @audience = @authorization.audience
+    @scopes = ResourceMetadata.describe(@audience, @authorization.scopes_for(current_actor))
   end
 
   def create
