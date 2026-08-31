@@ -29,6 +29,7 @@ services:
       POSTGRES_USER: masks
       POSTGRES_PASSWORD: masks
       POSTGRES_DATABASE: masks_image
+      MASKS_TENANTS: jons,acme
       SECRET_KEY_BASE: dev_only_secret_key_base_not_for_real_deployments
       ENCRYPTION_PRIMARY_KEY: dev_only_primary_key_not_for_real_credentials
       ENCRYPTION_DETERMINISTIC_KEY: dev_only_deterministic_key_not_for_real_use
