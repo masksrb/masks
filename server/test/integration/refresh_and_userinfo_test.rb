@@ -33,8 +33,6 @@ class RefreshAndUserinfoTest < ActionDispatch::IntegrationTest
     end
   end
 
-  # A claim asked for by name, without the scope that would also have released
-  # it. OIDC Core 5.5.
   test "the claims parameter releases a claim the scope did not" do
     sign_in_as(@actor)
     authorize(

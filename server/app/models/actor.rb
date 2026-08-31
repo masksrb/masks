@@ -63,9 +63,6 @@ class Actor < ApplicationRecord
     ROTP::TOTP.new(otp_secret).verify(code.to_s.strip, drift_behind: 30).present?
   end
 
-  # OIDC Core 5.4 fixes which claims each scope asks for. An actor who has not
-  # filled a field simply does not release it — `compact` is what makes an
-  # absent claim absent rather than null.
   PROFILE_CLAIMS = {
     "name" => :name,
     "given_name" => :given_name,
@@ -105,11 +102,6 @@ class Actor < ApplicationRecord
 
   private
 
-    # OIDC Core 5.5: the claims parameter names claims per endpoint. A client
-    # asking for one it could have had through a scope is asking for the same
-    # thing, so essential and voluntary are treated alike — masks releases what
-    # it holds either way, and refusing a voluntary request would only make the
-    # client ask for the whole scope instead.
     def asked(requested)
       return [] if requested.blank?
 

@@ -1,8 +1,6 @@
 class AuthorizeController < ApplicationController
   include RackOAuth2Endpoint
 
-  # A POST authorization request is a cross-site form post from the client, and
-  # it carries no session of ours to forge against.
   skip_forgery_protection only: :show, if: -> { request.post? }
 
   def show
@@ -20,8 +18,6 @@ class AuthorizeController < ApplicationController
 
   private
 
-    # rack-oauth2 validates a params hash, not this request, so the same checks
-    # run identically on a live authorize and on one resumed out of the session.
     def validate(authorization)
       AuthorizeRequest.new(authorization.to_params).run do |req, res|
         req.unsupported_response_type! unless req.response_type == :code
@@ -34,11 +30,6 @@ class AuthorizeController < ApplicationController
         req.verified_redirect_uri = with_issuer(req.verified_redirect_uri)
         res.redirect_uri = req.verified_redirect_uri
 
-        # A request object carries signed copies of state and nonce. Reading the
-        # query and ignoring the object would let unsigned parameters beat
-        # signed ones, so refuse the way OIDC Core 6 says an issuer that does
-        # not support them must. After the redirect_uri is verified, so the
-        # refusal reaches the client rather than the browser.
         req.bad_request!(:request_not_supported, "request objects are not supported") if authorization.request_object?
         req.bad_request!(:request_uri_not_supported, "request_uri is not supported") if authorization.request_uri?
 
@@ -64,9 +55,6 @@ class AuthorizeController < ApplicationController
       stale?(authorization.max_age)
     end
 
-    # max_age is a ceiling on how long ago the session authenticated, not on
-    # how long ago a token was issued, which is why auth_time has to be the
-    # session's and travel with the code.
     def stale?(max_age)
       return false if max_age.nil?
 
@@ -110,9 +98,6 @@ class AuthorizeController < ApplicationController
       render_rack(attempt.approve!(code.secret))
     end
 
-    # rack-oauth2 raises rather than answers when it has not yet verified the
-    # redirect_uri — refusing to hand an attacker an open redirect. Once the URI
-    # is verified it redirects on its own and never reaches here.
     def refuse(error)
       client = Client.authenticating(params[:client_id])
       target = params[:redirect_uri].to_s
@@ -121,9 +106,6 @@ class AuthorizeController < ApplicationController
         return redirect_to refusal_uri(target, error), allow_other_host: true
       end
 
-      # There is nowhere safe to send this, so the person in the browser is the
-      # one who has to read it. A JSON body is not a refusal a human can act on,
-      # and it is what a browser was being handed here.
       @error_code = error.error.to_s
       @error_description = error.description
 

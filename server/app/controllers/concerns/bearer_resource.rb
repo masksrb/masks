@@ -3,11 +3,6 @@ module BearerResource
 
   private
 
-    # Resource::Bearer is written as Rack middleware, which would run before the
-    # tenant is resolved and verify tokens against the wrong issuer. Called from
-    # inside the action it inherits the tenant, and lends us RFC 6750 token
-    # extraction — header or payload, and the refusal when a caller sends both —
-    # along with the WWW-Authenticate shapes for every way this can fail.
     def with_access_token(scope: nil)
       token = nil
 

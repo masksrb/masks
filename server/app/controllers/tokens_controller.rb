@@ -30,11 +30,6 @@ class TokensController < ApplicationController
       end
     end
 
-    # rack-oauth2 knows grant types masks does not implement, and validates
-    # their required parameters before the block below ever runs — so asking for
-    # `password` was answered `invalid_request` for the missing username rather
-    # than `unsupported_grant_type` for the grant. RFC 6749 §5.2 wants the
-    # latter, and it has to be decided before the gem sees the request.
     def unsupported_grant_type
       render json: {
         "error" => "unsupported_grant_type",
