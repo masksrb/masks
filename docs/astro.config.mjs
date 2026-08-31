@@ -3,11 +3,17 @@ import { defineConfig, passthroughImageService } from "astro/config";
 import starlight from "@astrojs/starlight";
 
 export default defineConfig({
-  site: process.env.DOCS_SITE,
+  // Where it is published. DOCS_SITE overrides it for a preview deploy; without
+  // either, @astrojs/sitemap silently emits nothing and canonical URLs are absent.
+  site: process.env.DOCS_SITE || "https://masks.pages.dev",
   image: { service: passthroughImageService() },
   integrations: [
     starlight({
       title: "masks",
+      logo: {
+        src: "./src/assets/dark-logo.png",
+        alt: "masks",
+      },
       description:
         "A standalone OIDC provider with per-tenant signing keys, a client gem, and a Rails engine.",
       customCss: ["./src/styles/global.css"],
@@ -22,7 +28,7 @@ export default defineConfig({
         {
           label: "Start here",
           items: [
-            { label: "What masks is", slug: "index" },
+            { label: "Overview", slug: "index" },
             { label: "Running it", slug: "start/running" },
             { label: "The four pieces", slug: "start/pieces" },
           ],
@@ -32,6 +38,7 @@ export default defineConfig({
           items: [
             { label: "Tenancy", slug: "concepts/tenancy" },
             { label: "Signing keys", slug: "concepts/keys" },
+            { label: "The login machine", slug: "concepts/login" },
             { label: "Policies", slug: "concepts/policies" },
             { label: "Tokens and audiences", slug: "concepts/tokens" },
             { label: "Hardening", slug: "concepts/hardening" },
