@@ -3,8 +3,6 @@ class Authorization
               :code_challenge, :code_challenge_method, :prompt, :audience,
               :requested_scopes, :max_age, :requested_claims
 
-  # OIDC Core 3.1.2.1 allows the authorization request to arrive by POST, so a
-  # repeated parameter can be in the body as well as the query.
   def self.from_request(request)
     repeated = Rack::Utils.parse_query(request.query_string)
     repeated = repeated.merge(Rack::Utils.parse_query(request.raw_post)) { |_, a, b| Array(a) + Array(b) } if request.post?
@@ -70,9 +68,6 @@ class Authorization
     granted_scopes.include?(Scopes::OFFLINE)
   end
 
-  # The claims parameter is JSON in a query string. Anything that is not
-  # parseable JSON is not a claims request, and is dropped rather than raised
-  # on: the alternative is a 500 on a malformed query.
   def self.parse_claims(value)
     return value if value.is_a?(Hash)
     return nil if value.blank?
@@ -145,8 +140,6 @@ class Authorization
       "code_challenge_method" => code_challenge_method,
       "max_age" => max_age,
       "resource" => audience,
-      # JSON rather than a Hash, because the session is round-tripped back
-      # through a query string on resume and a Hash does not survive that.
       "claims" => requested_claims&.to_json
     }.compact
   end

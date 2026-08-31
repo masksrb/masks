@@ -24,8 +24,6 @@ class AuthorizationCodeFlowTest < ActionDispatch::IntegrationTest
     assert_equal @actor.uuid, id_token["sub"]
     assert_equal Issuer::ACR_PASSWORD, id_token["acr"]
 
-    # The claims a scope asks for belong to userinfo, not here, or every holder
-    # of the token reads them without presenting it anywhere.
     assert_nil id_token["preferred_username"]
     assert_nil id_token["email"]
 
@@ -234,8 +232,6 @@ class AuthorizationCodeFlowTest < ActionDispatch::IntegrationTest
     assert_equal %w[https://one.example https://two.example], code.audience.sort
   end
 
-  # A request object carries signed parameters. Ignoring it and reading the
-  # query would let an unsigned state and nonce beat the signed ones.
   test "a request object is refused rather than ignored" do
     sign_in_as(@actor)
     authorize(client_id: @registration["client_id"], request: "eyJhbGciOiJub25lIn0.e30.")

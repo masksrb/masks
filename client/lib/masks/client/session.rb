@@ -93,10 +93,6 @@ module Masks
         HTTP.get(issuer.endpoint("userinfo_endpoint"), "Authorization" => "Bearer #{access_token}")
       end
 
-      # The id token is who you are; userinfo is what you are called. OIDC
-      # Core 5.4 puts the scope-derived claims at userinfo for any flow that
-      # issues an access token, so an identity is built from both and the id
-      # token stays the thing that is verified.
       def identity(tokens)
         return nil if tokens.id_token.nil?
 
