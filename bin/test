@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+set -uo pipefail
+cd "$(dirname "$0")/.."
+
+ALL=(server client engine web)
+
+usage() {
+  cat <<'TEXT' >&2
+usage: bin/test [suite...] | down
+
+  server   the Rails app, against a postgres of its own
+  client   masks-client, the Ruby gem
+  engine   masks-rails, the engine a consuming app mounts
+  web      @masks/client, the browser package
+
+Every suite runs in a container, so this needs docker and nothing else. With no
+arguments it runs all four, keeps going after a failure, and reports at the end.
+
+  bin/test              all four
+  bin/test engine web   only those
+  bin/test down         stop everything and drop the cache volumes
+TEXT
+  exit 64
+}
+
+compose() { docker compose -f compose.test.yml "$@"; }
+
+case "${1:-}" in
+  -h | --help) usage ;;
+  down)
+    compose down -v --remove-orphans
+    exit 0
+    ;;
+esac
+
+suites=("$@")
+[ ${#suites[@]} -eq 0 ] && suites=("${ALL[@]}")
+
+for suite in "${suites[@]}"; do
+  case " ${ALL[*]} " in
+    *" $suite "*) ;;
+    *)
+      echo "no such suite: $suite" >&2
+      usage
+      ;;
+  esac
+done
+
+failed=()
+
+for suite in "${suites[@]}"; do
+  printf '\n\033[1m== %s ==\033[0m\n\n' "$suite"
+
+  if [ "$suite" = server ]; then
+    compose run --rm --build server
+  else
+    compose run --rm "$suite"
+  fi
+
+  [ $? -eq 0 ] || failed+=("$suite")
+done
+
+compose down --remove-orphans > /dev/null 2>&1
+
+echo
+
+if [ ${#failed[@]} -eq 0 ]; then
+  printf '\033[32mpassed\033[0m: %s\n' "${suites[*]}"
+  exit 0
+fi
+
+printf '\033[31mfailed\033[0m: %s\n' "${failed[*]}"
+exit 1

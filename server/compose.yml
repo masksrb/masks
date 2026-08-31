@@ -49,26 +49,5 @@ services:
       retries: 20
       start_period: 30s
 
-  test:
-    profiles: [ "test" ]
-    build:
-      context: .
-      target: test
-    image: masks-test:dev
-    command: ["bin/rails", "db:prepare", "test"]
-    environment:
-      RAILS_ENV: test
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
-      POSTGRES_USER: masks
-      POSTGRES_PASSWORD: masks
-      SECRET_KEY_BASE: dev_only_secret_key_base_not_for_real_deployments
-      ENCRYPTION_PRIMARY_KEY: dev_only_primary_key_not_for_real_credentials
-      ENCRYPTION_DETERMINISTIC_KEY: dev_only_deterministic_key_not_for_real_use
-      ENCRYPTION_KEY_DERIVATION_SALT: dev_only_key_derivation_salt_not_for_real
-    depends_on:
-      postgres:
-        condition: service_healthy
-
 volumes:
   postgres:
