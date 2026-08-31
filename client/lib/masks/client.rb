@@ -19,7 +19,7 @@ require_relative "client/verifier"
 require_relative "client/resource"
 require_relative "client/rack"
 require_relative "client/registration"
-require_relative "client/pairing"
+require_relative "client/handshake"
 
 module Masks
   module Client
@@ -38,6 +38,10 @@ module Masks
 
       def resource(url, issuer:, **options)
         Resource.new(issuer: issuer, url: url, **options)
+      end
+
+      def handshake(url, **options)
+        Handshake.new(url, **options)
       end
     end
   end

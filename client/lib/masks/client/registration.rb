@@ -51,7 +51,21 @@ module Masks
       end
 
       def read
-        HTTP.get(uri, "Authorization" => "Bearer #{access_token}")
+        HTTP.get(uri, authorization)
+      end
+
+      def update(**attributes)
+        @metadata = metadata.merge(HTTP.put_json(uri, self.class.stringify(attributes), authorization))
+        self
+      end
+
+      def delete
+        HTTP.delete(uri, authorization)
+        true
+      end
+
+      def authorization
+        { "Authorization" => "Bearer #{access_token}" }
       end
 
       def session(redirect_uri:, scope: Session::DEFAULT_SCOPE)
