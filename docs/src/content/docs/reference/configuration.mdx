@@ -32,10 +32,12 @@ redirect URIs and token audiences are registered against it. Leave it blank othe
 ```ruby
 Masks::Rails.configure do |config|
   config.issuer = "https://jons.auth.example"
-  config.client_id = ENV.fetch("MASKS_CLIENT_ID")
-  config.client_secret = ENV.fetch("MASKS_CLIENT_SECRET")
+  config.credentials = -> { { client_id: ENV["MASKS_CLIENT_ID"], client_secret: ENV["MASKS_CLIENT_SECRET"] } }
+  config.store = ->(request, registration) { Credentials.store!(registration) }
+  config.name = "things"
   config.redirect_uri = nil
   config.resource = nil
+  config.resource_scopes = {}
   config.scope = %w[openid profile email]
   config.after_sign_in = "/"
   config.after_sign_out = "/"
@@ -46,12 +48,18 @@ end
 | | |
 | --- | --- |
 | `issuer` | required |
-| `client_id` `client_secret` | omit the secret for a public client |
+| `credentials` | `client_id` and `client_secret`, or `nil` when the app has not been connected |
+| `store` | given `(request, registration)` after a [handshake](/guides/handshake) — write them down |
+| `name` | what the approval screen calls this app; defaults to the application's module name |
 | `redirect_uri` | defaults to this host's `/auth/masks/callback` |
-| `resource` | the API the access token is for — sets its `aud` |
-| `scope` | what to request |
+| `resource` | the API the access token is for — sets its `aud`, and what the handshake asks about |
+| `resource_scopes` | scope to description, published as RFC 9728 metadata |
+| `scope` | what to request, and what the handshake asks to be approved for |
 | `after_sign_in` | where to land, unless a return path was remembered |
 | `session_key` | the session key tokens are stored under |
+
+Omit the secret for a public client. An app with no credentials yet is not misconfigured — it is
+unconnected, and every refusal says so.
 
 **Every one of these accepts a callable** taking the request, which is how one application serves
 many tenants:
@@ -69,5 +77,10 @@ No global configuration. Construct what you need:
 Masks::Client.issuer(url)                        # discovery and JWKS, cached
 Masks::Client.verifier(url, audience:)           # for a resource server
 Masks::Client::Session.new(issuer:, client_id:, redirect_uri:, client_secret:, scope:)
-Masks::Client::Registration.create(issuer, **metadata)
+Masks::Client::Registration.create(issuer, token: nil, **metadata)
+Masks::Client::Handshake.new(issuer, name:, resource:, redirect_uris:, return_to:, scope:)
 ```
+
+A `Registration` carries `client_id`, `client_secret`, `access_token` and `uri`, reads itself back
+with `read`, changes itself with `update`, archives itself with `delete`, and builds a `Session`
+with `session(redirect_uri:)`.

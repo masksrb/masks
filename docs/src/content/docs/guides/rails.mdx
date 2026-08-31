@@ -21,12 +21,16 @@ mount Masks::Rails::Engine, at: "/auth/masks"
 # config/initializers/masks.rb
 Masks::Rails.configure do |config|
   config.issuer = ENV.fetch("MASKS_ISSUER")
-  config.client_id = ENV.fetch("MASKS_CLIENT_ID")
-  config.client_secret = ENV.fetch("MASKS_CLIENT_SECRET")
+  config.credentials = -> { { client_id: ENV["MASKS_CLIENT_ID"], client_secret: ENV["MASKS_CLIENT_SECRET"] } }
   config.scope = %w[openid profile email offline_access]
   config.after_sign_in = "/"
 end
 ```
+
+If you have no credentials to name — which is the usual case, since nobody should be copying a
+secret into an environment file — leave `credentials` reading wherever you store them and give the
+engine a `store`. It will [run the handshake](/guides/handshake) at `/auth/masks/handshake` and put
+them there.
 
 Every value also accepts a callable taking the request, which is how a subdomain-per-tenant
 application points each host at its own issuer:
@@ -36,7 +40,7 @@ config.issuer = ->(request) { "https://#{request.host.split(".").first}.auth.exa
 ```
 
 `redirect_uri` defaults to your `/auth/masks/callback` on the requesting host, so it usually needs no
-configuration at all — but it must match a URI you registered with the client.
+configuration at all — but it must match a URI the client was approved for.
 
 ## Require sign-in
 
@@ -48,7 +52,8 @@ end
 
 `authenticate_masks!` returns true if there is a live session, silently refreshes if the access token
 has expired and a refresh token is available, and otherwise remembers where you were headed and
-redirects into the flow.
+redirects into the flow. An app holding no credentials yet is sent to the handshake instead, and a
+JSON caller is answered `handshake_required` — never a login it cannot complete.
 
 ## Read who signed in
 
