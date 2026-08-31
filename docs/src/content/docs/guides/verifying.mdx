@@ -3,8 +3,9 @@ title: Verify a token
 description: What a resource server does with a bearer token, and the two claims it must not skip.
 ---
 
-A resource server receives bearer tokens and signs nobody in. It needs `masks` and nothing
-else.
+A resource server receives bearer tokens and signs nobody in. It needs `masks` and nothing else —
+the gem's Rails engine loads only when Rails is already loaded, so an API-only or Rack service takes
+on `jwt` and no framework.
 
 ```ruby
 verifier = Masks::Client.verifier(

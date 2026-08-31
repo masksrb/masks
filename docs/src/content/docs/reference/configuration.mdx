@@ -1,6 +1,6 @@
 ---
 title: Configuration
-description: Environment for the server, and the engine's initializer.
+description: Environment for the server, and the gem's initializer.
 ---
 
 ## Server
@@ -60,7 +60,15 @@ not. `bin/setup` checks for one before it does anything else.
 host — a tunnel, or a proxy that does not set forwarding headers. It must be stable, because OAuth
 redirect URIs and token audiences are registered against it. Leave it blank otherwise.
 
-## Engine
+## The gem
+
+One gem, `masks`, holds both halves of the consumer side. `require "masks"` loads the client always
+and the Rails engine only when Rails is already loaded, so there is nothing to configure to keep the
+framework out of a service that does not want it.
+
+### Rails
+
+The generator writes this file. Everything in it has a default except `issuer`.
 
 ```ruby
 Masks::Rails.configure do |config|
@@ -68,28 +76,42 @@ Masks::Rails.configure do |config|
   config.credentials = -> { { client_id: ENV["MASKS_CLIENT_ID"], client_secret: ENV["MASKS_CLIENT_SECRET"] } }
   config.store = ->(request, registration) { Credentials.store!(registration) }
   config.name = "things"
-  config.redirect_uri = nil
   config.resource = nil
-  config.resource_scopes = {}
+  config.resource_scopes = []
   config.scope = %w[openid profile email]
-  config.after_sign_in = "/"
-  config.after_sign_out = "/"
-  config.session_key = "masks"
 end
 ```
 
-| | |
-| --- | --- |
-| `issuer` | required |
-| `credentials` | `client_id` and `client_secret`, or `nil` when the app has not been connected |
-| `store` | given `(request, registration)` after a [handshake](/guides/handshake) — write them down |
-| `name` | what the approval screen calls this app; defaults to the application's module name |
-| `redirect_uri` | defaults to this host's `/auth/masks/callback` |
-| `resource` | the API the access token is for — sets its `aud`, and what the handshake asks about |
-| `resource_scopes` | scope to description, published as RFC 9728 metadata |
-| `scope` | what to request, and what the handshake asks to be approved for |
-| `after_sign_in` | where to land, unless a return path was remembered |
-| `session_key` | the session key tokens are stored under |
+**Connecting**
+
+| | | |
+| --- | --- | --- |
+| `issuer` | | required — the masks issuer this app signs in against |
+| `name` | | what the approval screen calls this app; defaults to the application's module name |
+| `credentials` | | `client_id` and `client_secret`, or `nil` when the app has not been connected |
+| `store` | | given `(request, registration)` after a [handshake](/guides/handshake) — write them down |
+| `forget` | | given `(request)` to drop them again; an app that sets `store` and not this is never offered a disconnect |
+| `credentials_path` | `config/masks.json` | where the default store writes, when you set neither |
+
+**Asking**
+
+| | | |
+| --- | --- | --- |
+| `scope` | `openid profile email` | what to request, and what the handshake asks to be approved for |
+| `resource` | `nil` | the API the access token is for — sets its `aud`, and what the handshake asks about |
+| `resource_scopes` | `[]` | scope to description, published as RFC 9728 metadata |
+| `redirect_uri` | this host's `/auth/callback` | must match a URI the client was approved for |
+
+**Behaviour**
+
+| | | |
+| --- | --- | --- |
+| `after_sign_in` | `/` | where to land, unless a return path was remembered |
+| `after_sign_out` | `/` | where to land after signing out |
+| `sign_out_of_issuer` | `false` | make every sign-out an RP-initiated logout at the issuer |
+| `session_key` | `masks` | the session key tokens are stored under |
+| `parent_controller` | `ActionController::Base` | what the engine's own pages inherit, for your layout |
+| `authenticate_everything` | `false` | include `Authentication` on every controller rather than where you say |
 
 Omit the secret for a public client. An app with no credentials yet is not misconfigured — it is
 unconnected, and every refusal says so.
@@ -102,7 +124,7 @@ config.issuer = ->(request) { "https://#{request.host.split(".").first}.auth.exa
 config.resource = ->(request) { "https://#{request.host}/mcp" }
 ```
 
-## Client
+### Any Ruby app
 
 No global configuration. Construct what you need:
 

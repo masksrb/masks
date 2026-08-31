@@ -98,11 +98,11 @@ issuer = Masks::Client.issuer("https://jons.auth.example")
 registration = Masks::Client::Registration.create(
   issuer,
   name: "things",
-  redirect_uris: ["https://jons.things.example/auth/masks/callback"],
+  redirect_uris: ["https://jons.things.example/auth/callback"],
   scope: %w[openid profile email offline_access]
 )
 
-session = registration.session(redirect_uri: "https://jons.things.example/auth/masks/callback")
+session = registration.session(redirect_uri: "https://jons.things.example/auth/callback")
 started = session.start(resource: "https://jons.things.example/mcp")
 
 # redirect the browser to started[:url], keep started[:verifier] and started[:state]

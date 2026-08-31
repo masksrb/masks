@@ -59,10 +59,10 @@ redeems the token and calls `store`, and until credentials exist every refusal s
 An app that has already been connected will not offer the handshake again to a browser that is not
 signed in.
 
-## Without the engine
+## Without Rails
 
-The gem does the same work in four lines. `Handshake` reads `handshake_endpoint` out of discovery,
-so no application writes another server's routes down:
+The same gem does the same work in four lines, with no engine involved. `Handshake` reads
+`handshake_endpoint` out of discovery, so no application writes another server's routes down:
 
 ```ruby
 handshake = Masks::Client::Handshake.new(
