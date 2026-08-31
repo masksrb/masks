@@ -1,0 +1,38 @@
+Masks::Rails.configure do |config|
+  # The issuer this app signs in against. A callable taking the request works
+  # too, which is what a subdomain-per-tenant host needs.
+  config.issuer = ENV.fetch("MASKS_ISSUER", "https://auth.example.com")
+<% if @resource -%>
+
+  # This app is also a resource server: the identifier tokens are minted for,
+  # and the scopes it accepts. It is what `resource=` sends at authorize and
+  # what `aud` is checked against.
+  config.resource = "<%= @resource %>"
+  config.resource_scopes = []
+<% else -%>
+
+  # Uncomment when this app also accepts tokens of its own. `resource` is the
+  # identifier tokens are minted for; `resource_scopes` are what it accepts.
+  # config.resource = "https://app.example.com/api"
+  # config.resource_scopes = []
+<% end -%>
+
+  # Where to land after each. Both must be paths on this host.
+  config.after_sign_in = "/"
+  config.after_sign_out = "/"
+
+  # Credentials arrive from the handshake and are kept in config/masks.json.
+  # Replace both with your own storage when one file is not the right shape —
+  # a multi-tenant app wants a row per tenant rather than a file per install.
+  #
+  # config.credentials = ->(request) { Tenant.for(request).masks_credentials }
+  # config.store = ->(request, registration) { Tenant.for(request).connect!(registration) }
+
+  # Signing out of this app does not sign you out of the issuer unless you say
+  # so. Leave it false and offer "sign out everywhere" as its own action.
+  # config.sign_out_of_issuer = false
+
+  # The engine's pages inherit this, so a consumer's layout, helpers and
+  # before_actions apply to them.
+  # config.parent_controller = "ApplicationController"
+end

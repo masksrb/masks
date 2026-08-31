@@ -1,8 +1,6 @@
 module Masks
   module Rails
-    class SessionsController < ActionController::Base
-      include Masks::Rails::Authentication
-
+    class SessionsController < BaseController
       def show
         if masks_configured? && (masks_signed_in? || (masks_tokens && masks_refresh!))
           response.headers["Cache-Control"] = "no-store"

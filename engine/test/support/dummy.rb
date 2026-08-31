@@ -40,6 +40,10 @@ class CredentialStore
     }
   end
 
+  def forget!(host)
+    @held.delete(host)
+  end
+
   def clear!
     @held = {}
   end
@@ -91,6 +95,17 @@ class BareController < ActionController::Base
   end
 end
 
+class AskedController < ActionController::Base
+  include Masks::Rails::Authentication
+
+  def show
+    render json: {
+      "authentication" => respond_to?(:masks_signed_in?, true),
+      "config" => respond_to?(:masks_config, true)
+    }
+  end
+end
+
 Dummy::Application.initialize!
 
 Rails.application.routes.draw do
@@ -99,6 +114,7 @@ Rails.application.routes.draw do
   get "/catalog", to: "catalog#show"
   get "/api", to: "api#show"
   get "/bare", to: "bare#show"
+  get "/asked", to: "asked#show"
   get "/dashboard", to: "pages#dashboard"
   root to: "pages#home"
 end

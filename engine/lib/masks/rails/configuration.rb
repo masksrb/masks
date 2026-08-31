@@ -4,8 +4,9 @@ module Masks
       class Unconfigured < Masks::Client::Error; end
 
       attr_accessor :scope, :resource, :resource_scopes, :after_sign_in, :after_sign_out,
-                    :session_key, :sign_out_of_issuer
-      attr_writer :issuer, :redirect_uri, :name, :credentials, :store
+                    :session_key, :sign_out_of_issuer, :parent_controller,
+                    :credentials_path, :authenticate_everything
+      attr_writer :issuer, :redirect_uri, :name, :credentials, :store, :forget
 
       def initialize
         @scope = Masks::Client::Session::DEFAULT_SCOPE
@@ -14,6 +15,18 @@ module Masks
         @after_sign_out = "/"
         @session_key = "masks"
         @sign_out_of_issuer = false
+        @parent_controller = "ActionController::Base"
+        @authenticate_everything = false
+      end
+
+      # An app that has not said where to keep its credentials gets one file
+      # under the Rails root, so the handshake works before anybody writes a
+      # `store` lambda. `things` overrides both because it is multi-tenant,
+      # which is the interesting case rather than the common one.
+      def default_credentials
+        @default_credentials ||= Credentials.new(
+          credentials_path || ::Rails.root.join("config", "masks.json")
+        )
       end
 
       def name_for(request)
@@ -35,7 +48,8 @@ module Masks
       end
 
       def credentials_for(request)
-        held = resolve(@credentials, request) || {}
+        held = @credentials ? resolve(@credentials, request) : default_credentials.read
+        held ||= {}
 
         held.respond_to?(:to_h) ? held.to_h.transform_keys(&:to_s) : {}
       end
@@ -52,10 +66,40 @@ module Masks
         client_id_for(request).present?
       end
 
+      # An app that keeps its own credentials has to say how to drop them, and
+      # until it does the engine does not offer a button it cannot honour.
+      def can_forget?
+        @forget.respond_to?(:call) || !@store.respond_to?(:call)
+      end
+
+      def forget!(request)
+        return @forget.call(request) if @forget.respond_to?(:call)
+        raise Unconfigured, "Masks::Rails.config.forget is not set" if @store.respond_to?(:call)
+
+        default_credentials.clear!
+      end
+
       def store!(request, registration)
-        raise Unconfigured, "Masks::Rails.config.store is not set" unless @store.respond_to?(:call)
+        return default_credentials.write(registration) unless @store.respond_to?(:call)
 
         @store.call(request, registration)
+      end
+
+      # The engine depends on `handshake_endpoint` being in the discovery
+      # document, and on the approval flow behind it. An issuer that predates
+      # both should say so here rather than at the one screen that exists to
+      # be the first thing anybody touches.
+      MINIMUM_ISSUER = 1
+
+      def issuer_speaks!(request)
+        spoken = Masks::Client::Issuer.resolve(issuer_for(request))
+                                     .discovery["masks_protocol_version"].to_i
+
+        return true if spoken >= MINIMUM_ISSUER
+
+        raise Unconfigured,
+              "#{issuer_for(request)} speaks masks protocol #{spoken}, and masks-rails " \
+              "#{Masks::Rails::VERSION} needs at least #{MINIMUM_ISSUER}"
       end
 
       def session_for(request)

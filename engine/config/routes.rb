@@ -7,4 +7,5 @@ Masks::Rails::Engine.routes.draw do
   get "/handshake", to: "handshakes#show", as: :handshake
   post "/handshake", to: "handshakes#create"
   get "/handshake/callback", to: "handshakes#callback", as: :handshake_callback
+  delete "/handshake", to: "handshakes#destroy"
 end
