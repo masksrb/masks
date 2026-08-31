@@ -75,6 +75,7 @@ class Issuer
       "userinfo_endpoint" => "#{url}/userinfo",
       "jwks_uri" => "#{url}/.well-known/jwks.json",
       "registration_endpoint" => "#{url}/register",
+      "handshake_endpoint" => "#{url}/handshake",
       "revocation_endpoint" => "#{url}/revoke",
       "end_session_endpoint" => "#{url}/logout",
       "scopes_supported" => Scopes::DESCRIBED.keys,

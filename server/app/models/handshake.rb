@@ -1,4 +1,4 @@
-class Pairing
+class Handshake
   GRANT_TYPES = %w[authorization_code refresh_token].freeze
 
   attr_reader :name, :redirect_uris, :resource, :scopes, :return_to, :state

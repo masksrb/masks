@@ -43,7 +43,7 @@ class ApplicationController < ActionController::Base
     end
 
     def sign_in(actor)
-      carried = session.to_hash.slice("authorization", "pairing", "masks_return_to")
+      carried = session.to_hash.slice("authorization", "handshake", "masks_return_to")
       reset_session
       carried.each { |key, value| session[key] = value }
 
