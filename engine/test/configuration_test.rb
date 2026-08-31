@@ -79,12 +79,34 @@ class ConfigurationTest < EngineTest
     assert_includes error.message, "has not shaken hands"
   end
 
-  test "storing without a store raises rather than dropping the credential on the floor" do
-    configure!(store: nil)
+  test "an app that wrote no store still gets a working handshake" do
+    held = Pathname.new(Dir.mktmpdir).join("masks.json")
 
-    assert_raises(Masks::Rails::Configuration::Unconfigured) do
-      config.store!(request_for(HOST), Object.new)
-    end
+    configure!(store: nil, credentials: nil)
+    config.credentials_path = held
+
+    registration = Struct.new(:client_id, :client_secret, :access_token, :uri)
+                         .new("cid", "csec", "rat", "https://auth.test/register/cid")
+
+    config.store!(request_for(HOST), registration)
+
+    assert_equal "cid", config.client_id_for(request_for(HOST))
+    assert_equal "csec", config.client_secret_for(request_for(HOST))
+    assert_equal "600", format("%o", held.stat.mode & 0o777)
+    assert_equal "cid", JSON.parse(held.read)["client_id"]
+  ensure
+    config.credentials_path = nil
+    config.instance_variable_set(:@default_credentials, nil)
+  end
+
+  test "an app with no credentials file is simply unconnected" do
+    configure!(store: nil, credentials: nil)
+    config.credentials_path = Pathname.new(Dir.mktmpdir).join("absent.json")
+
+    assert_equal false, config.configured?(request_for(HOST))
+  ensure
+    config.credentials_path = nil
+    config.instance_variable_set(:@default_credentials, nil)
   end
 
   test "the name falls back to the application rather than being required" do

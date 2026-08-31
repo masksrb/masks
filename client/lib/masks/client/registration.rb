@@ -32,6 +32,15 @@ module Masks
         list.empty? ? default : list
       end
 
+      # Rebuild a registration from what a consumer stored, so RFC 7592's read,
+      # update and delete are reachable without having just created it.
+      def self.held(issuer, credentials)
+        held = credentials.to_h.transform_keys(&:to_s)
+        return nil if held["registration_client_uri"].blank? || held["registration_access_token"].blank?
+
+        new(Issuer.resolve(issuer), held)
+      end
+
       def initialize(issuer, body)
         @issuer = issuer
         @metadata = body

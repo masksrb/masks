@@ -141,12 +141,67 @@ class HandshakeTest < EngineIntegrationTest
     assert_redirected_to "/"
   end
 
-  test "a connected app offers the handshake to somebody signed in" do
+  test "a connected app offers a rotation to somebody signed in, not a first connect" do
     sign_in!
 
     get "/auth/handshake", headers: host
 
     assert_response :success
-    assert_includes response.body, "Connect it"
+    assert_includes response.body, "Reconnect it"
+    assert_includes response.body, "Disconnect it"
+    assert_not_includes response.body, "has not been connected yet"
+  end
+
+  test "reconnecting runs the same handshake and replaces what is held" do
+    sign_in!
+
+    before = CREDENTIALS[HOST][:client_id]
+    registrations = issuer.registrations.length
+
+    shake_hands!
+
+    assert_response :redirect
+    assert_equal registrations + 1, issuer.registrations.length
+    assert_not_equal before, CREDENTIALS[HOST][:client_id],
+                     "a second run must replace the credentials, not leave the old pair"
+    assert CREDENTIALS[HOST][:registration_access_token].present?
+  end
+
+  test "disconnecting deletes the registration upstream and drops what is held" do
+    sign_in!
+    shake_hands!
+
+    held = CREDENTIALS[HOST]
+    assert held[:registration_access_token].present?
+
+    delete "/auth/handshake", headers: host
+
+    assert_redirected_to "/auth/handshake"
+    assert_nil CREDENTIALS[HOST]
+
+    deleted = issuer.deletions.last
+
+    assert_equal held[:client_id], deleted[:client_id]
+    assert_equal held[:registration_access_token], deleted[:token],
+                 "RFC 7592 delete is authenticated by the registration access token"
+  end
+
+  test "disconnecting is refused to a browser that is not signed in" do
+    connect!
+
+    delete "/auth/handshake", headers: host
+
+    assert_redirected_to "/"
+    assert CREDENTIALS[HOST].present?
+  end
+
+  test "an app whose store cannot forget is not offered a button that would fail" do
+    configure!(forget: nil)
+    sign_in!
+
+    get "/auth/handshake", headers: host
+
+    assert_includes response.body, "Reconnect it"
+    assert_not_includes response.body, "Disconnect it"
   end
 end

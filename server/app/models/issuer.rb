@@ -65,6 +65,7 @@ class Issuer
       "jwks_uri" => "#{url}/.well-known/jwks.json",
       "registration_endpoint" => "#{url}/register",
       "handshake_endpoint" => "#{url}/handshake",
+      "masks_protocol_version" => Masks::PROTOCOL_VERSION,
       "revocation_endpoint" => "#{url}/revoke",
       "introspection_endpoint" => "#{url}/introspect",
       "end_session_endpoint" => "#{url}/logout",

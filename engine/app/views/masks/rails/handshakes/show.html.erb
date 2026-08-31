@@ -1,13 +1,40 @@
-<% content_for :title, "Connect this app" %>
+<% if @connected %>
+  <% content_for :title, "Reconnect this app" %>
 
-<h1>This app has not been connected yet</h1>
+  <h1>This app is connected</h1>
 
-<p class="muted">
-  Nobody can sign in here until it holds credentials from the server that signs
-  people in. Getting them takes one approval, from whoever owns this tenant —
-  nothing is typed in, and no secret travels through your browser.
-</p>
+  <p class="muted">
+    Reconnecting replaces the credentials it holds now with a fresh pair. It is
+    how you rotate them, and it is the only way to move this app to a different
+    account. Nothing is typed in and no secret travels through your browser.
+  </p>
 
-<%= form_with url: handshake_path, method: :post do %>
-  <button type="submit">Connect it</button>
+  <p class="muted">
+    It will stop working between the approval and the moment it picks the new
+    credentials up.
+  </p>
+
+  <%= form_with url: handshake_path, method: :post do %>
+    <button type="submit">Reconnect it</button>
+  <% end %>
+
+  <% if @can_disconnect %>
+    <%= form_with url: handshake_path, method: :delete do %>
+      <button type="submit">Disconnect it</button>
+    <% end %>
+  <% end %>
+<% else %>
+  <% content_for :title, "Connect this app" %>
+
+  <h1>This app has not been connected yet</h1>
+
+  <p class="muted">
+    Nobody can sign in here until it holds credentials from the server that signs
+    people in. Getting them takes one approval, from whoever owns this tenant —
+    nothing is typed in, and no secret travels through your browser.
+  </p>
+
+  <%= form_with url: handshake_path, method: :post do %>
+    <button type="submit">Connect it</button>
+  <% end %>
 <% end %>

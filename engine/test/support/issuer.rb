@@ -14,7 +14,7 @@ class TestIssuer
     end
   end
 
-  attr_reader :port, :registrations
+  attr_reader :port, :registrations, :deletions
   attr_accessor :id_tokens
 
   def initialize
@@ -22,6 +22,7 @@ class TestIssuer
     @codes = {}
     @approvals = {}
     @registrations = []
+    @deletions = []
     @id_tokens = :normal
     @lock = Mutex.new
     @server = TCPServer.new("127.0.0.1", 0)
@@ -116,6 +117,7 @@ class TestIssuer
 
       found = case method
       when "POST" then post_for(path.to_s, payload, bearer)
+      when "DELETE" then deleted(path.to_s, bearer)
       else get_for(path.to_s, bearer)
       end
 
@@ -139,6 +141,14 @@ class TestIssuer
       nil
     ensure
       socket.close rescue nil
+    end
+
+    def deleted(path, bearer)
+      return nil unless path =~ %r{\A/([^/]+)/register/([^/]+)\z}
+
+      @lock.synchronize { @deletions << { subdomain: $1, client_id: $2, token: bearer } }
+
+      {}
     end
 
     def get_for(path, bearer)

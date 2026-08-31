@@ -31,6 +31,7 @@ class EngineTest < ActiveSupport::TestCase
       config.redirect_uri = overrides[:redirect_uri]
       config.credentials = overrides.fetch(:credentials, ->(request) { CREDENTIALS[request.host] })
       config.store = overrides.fetch(:store, ->(request, registration) { CREDENTIALS.write(request.host, registration) })
+      config.forget = overrides.fetch(:forget, ->(request) { CREDENTIALS.forget!(request.host) })
       config.resource_scopes = overrides.fetch(:resource_scopes, %w[catalog:read])
       config.scope = overrides.fetch(:scope, %w[openid profile email offline_access catalog:read])
       config.after_sign_in = overrides.fetch(:after_sign_in, "/")
@@ -83,6 +84,7 @@ class EngineIntegrationTest < ActionDispatch::IntegrationTest
       config.redirect_uri = overrides[:redirect_uri]
       config.credentials = overrides.fetch(:credentials, ->(request) { CREDENTIALS[request.host] })
       config.store = overrides.fetch(:store, ->(request, registration) { CREDENTIALS.write(request.host, registration) })
+      config.forget = overrides.fetch(:forget, ->(request) { CREDENTIALS.forget!(request.host) })
       config.resource_scopes = overrides.fetch(:resource_scopes, %w[catalog:read])
       config.scope = overrides.fetch(:scope, %w[openid profile email offline_access catalog:read])
       config.after_sign_in = overrides.fetch(:after_sign_in, "/")

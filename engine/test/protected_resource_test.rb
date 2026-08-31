@@ -1,8 +1,16 @@
 require "test_helper"
 
 class ProtectedResourceTest < EngineIntegrationTest
-  test "mounting the engine puts its methods on every controller, asked for or not" do
+  test "mounting the engine leaves a controller that asked for nothing alone" do
     get "/bare", headers: host
+
+    assert_equal false, json["authentication"],
+                 "a library must not colonise the host's controllers"
+    assert_equal false, json["config"]
+  end
+
+  test "a controller that includes it gets it, which is the whole opt-in" do
+    get "/asked", headers: host
 
     assert_equal true, json["authentication"]
     assert_equal true, json["config"]
