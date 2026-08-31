@@ -14,8 +14,8 @@ docs/      the site above                   Astro + Starlight
 ```
 
 ```sh
-bin/setup   # dependencies, databases, two seeded tenants
-bin/dev     # http://jons.masks.test:3000
+bin/setup   # dependencies, databases, two declared tenants
+bin/dev     # http://jons.auth.test:5555
 ```
 
 Both OpenID Foundation certification plans pass — `oidcc-config` and `oidcc-basic`, 2213 conditions,
