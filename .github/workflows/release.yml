@@ -1,0 +1,127 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "gem-v*"
+      - "client-v*"
+  workflow_dispatch:
+    inputs:
+      package:
+        description: Which package to publish
+        required: true
+        type: choice
+        options: [gem, client]
+
+jobs:
+  gem:
+    if: >-
+      startsWith(github.ref, 'refs/tags/gem-v') ||
+      inputs.package == 'gem'
+    runs-on: ubuntu-latest
+    environment: rubygems
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+          bundler-cache: true
+          working-directory: client
+
+      - name: The tag and the gemspec must agree
+        if: startsWith(github.ref, 'refs/tags/gem-v')
+        working-directory: client
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          tagged="${TAG#gem-v}"
+          declared=$(ruby -Ilib -rmasks/version -e 'print Masks::VERSION')
+          if [ "$tagged" != "$declared" ]; then
+            echo "::error::tag $TAG wants $tagged, lib/masks/version.rb declares $declared"
+            exit 1
+          fi
+
+      - name: Test the client half
+        working-directory: client
+        run: bundle exec rake test:client
+
+      - name: Test the Rails half
+        working-directory: client
+        run: bundle exec rake test:rails
+
+      - uses: rubygems/configure-rubygems-credentials@v1
+
+      - name: Build
+        working-directory: client
+        run: gem build masks.gemspec
+
+      - name: Push
+        working-directory: client
+        run: gem push masks-*.gem
+
+      - uses: rubygems/await-rubygems-release@v1
+
+  client:
+    if: >-
+      startsWith(github.ref, 'refs/tags/client-v') ||
+      inputs.package == 'client'
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: server/.node-version
+          registry-url: https://registry.npmjs.org
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Trusted publishing needs a newer npm than the runner ships
+        run: npm install -g npm@latest
+
+      - name: The tag and the manifest must agree
+        if: startsWith(github.ref, 'refs/tags/client-v')
+        working-directory: web
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          tagged="${TAG#client-v}"
+          declared=$(node -p "require('./package.json').version")
+          if [ "$tagged" != "$declared" ]; then
+            echo "::error::tag $TAG wants $tagged, web/package.json declares $declared"
+            exit 1
+          fi
+
+      - name: Install
+        working-directory: web
+        run: npm ci
+
+      - name: Lint
+        working-directory: web
+        run: npm run lint
+
+      - name: Typecheck
+        working-directory: web
+        run: npm run typecheck
+
+      - name: Test
+        working-directory: web
+        run: npm test
+
+      - name: Build
+        working-directory: web
+        run: npm run build
+
+      - name: Publish
+        working-directory: web
+        run: npm publish --access public
