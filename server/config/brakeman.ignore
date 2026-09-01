@@ -1,0 +1,17 @@
+{
+  "ignored_warnings": [
+    {
+      "fingerprint": "6c44c27e1448d12806f914832c27d09590051f58e7aaa168b0f9f68c14c1d1ac",
+      "warning_type": "Redirect",
+      "file": "app/controllers/authorize_controller.rb",
+      "note": "Guarded. refuse redirects only when client.redirect_uri?(target) says the URI is registered to the authenticating client, which is the check an authorization endpoint exists to make. Brakeman cannot follow the guard to the redirect_to on the next line."
+    },
+    {
+      "fingerprint": "5c54edcc0ce44de5e8c97aa84342b54e7e19ab64a0ecda8b9ffea9d2bb3d40c9",
+      "warning_type": "Redirect",
+      "file": "app/controllers/handshakes_controller.rb",
+      "note": "The target is not a request parameter. approved builds it from the claimed PendingHandshake's stored return_to, which was validated when the handshake was created; params[:hid] only looks that record up. Redirecting to another host is the point of the code flow."
+    }
+  ],
+  "brakeman_version": "8.0.6"
+}

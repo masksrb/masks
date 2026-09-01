@@ -32,7 +32,11 @@ export function createLogin(initial, options = {}) {
     failed = false;
 
     try {
-      auth = await send(url, method, auth.rid ? { rid: auth.rid, ...body } : body);
+      auth = await send(
+        url,
+        method,
+        auth.rid ? { rid: auth.rid, ...body } : body,
+      );
 
       if (auth.redirectTo) {
         window.location.assign(auth.redirectTo);

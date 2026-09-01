@@ -28,7 +28,7 @@ class SessionsController < ApplicationController
     # nobody asked for is only a nuisance, but it is still not something a
     # stranger's <img> tag gets to do.
     def asking?(logout)
-      return false unless request.get?
+      return false unless request.get? || request.head?
       return false if logout.verified?
 
       current_session.present?
