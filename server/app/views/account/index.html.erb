@@ -20,7 +20,13 @@
 
     <p><%= link_to "Sign out", logout_path, class: "link text-sm" %></p>
   <% else %>
-    <h1 class="text-2xl font-bold"><%= Current.tenant.name %></h1>
-    <p><%= link_to "Log in", login_path, class: "link text-sm" %></p>
+    <div class="flex flex-col gap-1">
+      <h1 class="text-2xl font-bold"><%= Current.tenant.name %></h1>
+      <p class="text-sm opacity-75">
+        Sign in to manage your account and authorized applications.
+      </p>
+    </div>
+
+    <%= link_to "Log in", login_path, class: "btn btn-primary w-full" %>
   <% end %>
 </div>
