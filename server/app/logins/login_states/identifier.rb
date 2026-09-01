@@ -2,6 +2,10 @@ module LoginStates
   class Identifier < LoginState
     accepts :identifier
 
+    def reload!
+      login.identifier ||= session&.actor&.nickname
+    end
+
     handles "identify" do
       login.identifier = update(:identifier)
 
@@ -13,7 +17,7 @@ module LoginStates
     end
 
     prompts "identify" do
-      login.identifier.blank?
+      login.identifier.blank? && !login.first_factored?
     end
 
     def start_over!

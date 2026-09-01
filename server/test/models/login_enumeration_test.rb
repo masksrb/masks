@@ -10,9 +10,9 @@ class LoginEnumerationTest < ActiveSupport::TestCase
     store = {}
 
     within do
-      Login.new(store: store, client: @client, event: "identify",
+      Login.new(store: store, event: "identify",
                 updates: { identifier: identifier }).update
-      Login.new(store: store, client: @client, event: "password",
+      Login.new(store: store, event: "password",
                 updates: { password: password }).update
     end
   end
@@ -35,12 +35,12 @@ class LoginEnumerationTest < ActiveSupport::TestCase
 
   test "the identifier step reveals nothing about whether an account exists" do
     known = within do
-      Login.new(store: {}, client: @client, event: "identify",
+      Login.new(store: {}, event: "identify",
                 updates: { identifier: "owner" }).update
     end
 
     unknown = within do
-      Login.new(store: {}, client: @client, event: "identify",
+      Login.new(store: {}, event: "identify",
                 updates: { identifier: "no-such-account" }).update
     end
 

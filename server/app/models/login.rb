@@ -6,29 +6,30 @@ class Login
     LoginStates::FirstFactor,
     LoginStates::OneTimePassword,
     LoginStates::BackupCode,
-    LoginStates::SecondFactor
+    LoginStates::SecondFactor,
+    LoginStates::Consent
   ].freeze
 
   SETTLED = "settled".freeze
 
-  # Derived rather than listed, so a new LoginState declaring `accepts` is
-  # genuinely two files and not three.
   def self.permitted_updates
     STATES.flat_map { |state| state.declared_updates }.uniq
   end
 
-  attr_reader :store, :updates, :event, :prompt, :warnings
+  attr_reader :store, :updates, :event, :prompt, :warnings, :request, :session, :refusal, :rid
 
-  def initialize(store:, client: nil, event: nil, updates: {})
+  def initialize(store:, request: nil, session: nil, rid: nil, event: nil, updates: {})
     @store = store
-    @client = client
+    @request = request
+    @session = session
+    @rid = rid
     @event = event.presence&.to_s
     @updates = (updates || {}).stringify_keys
     @warnings = []
   end
 
   def client
-    @client
+    request&.client
   end
 
   def tenant
@@ -47,7 +48,7 @@ class Login
     return @actor if defined?(@actor)
 
     id = store["actor_id"]
-    @actor = id ? Actor.find_by(id: id) : nil
+    @actor = id ? Actor.find_by(id: id) : session&.actor
   end
 
   def actor=(record)
@@ -60,20 +61,61 @@ class Login
   end
 
   def touched?(key)
-    at = factors[key.to_s]
-    return false if at.blank?
+    until_at = stamp(key, "until")
 
-    Time.iso8601(at) > Time.current
-  rescue ArgumentError
-    false
+    until_at.present? && until_at > Time.current
   end
 
+  def factored_at(key)
+    stamp(key, "at")
+  end
+
+  PRECISION = 6
+
   def factored!(key, expiry:)
-    factors[key.to_s] = expiry.from_now.iso8601
+    now = Time.current
+
+    factors[key.to_s] = {
+      "at" => now.iso8601(PRECISION),
+      "until" => (now + expiry).iso8601(PRECISION)
+    }
   end
 
   def expire!(key)
-    factors.delete(key.to_s)
+    store["factors"]&.delete(key.to_s)
+  end
+
+  def authenticated_at
+    factored_at(:first_factor) || session&.authenticated_at
+  end
+
+  def signed_in?
+    session.present?
+  end
+
+  def reauthenticating?
+    return false unless request&.reauthenticate?
+
+    authenticated_at.nil? || authenticated_at < request.created_at
+  end
+
+  def stale?
+    age = request&.max_age
+    return false if age.nil?
+
+    authenticated_at.nil? || authenticated_at < age.to_i.seconds.ago
+  end
+
+  def first_factored?
+    return false if reauthenticating? || stale?
+
+    touched?(:first_factor) || signed_in?
+  end
+
+  def second_factored?
+    return false if reauthenticating? || stale?
+
+    touched?(:second_factor) || signed_in?
   end
 
   def warn!(*keys)
@@ -85,6 +127,14 @@ class Login
     prompt == SETTLED
   end
 
+  def prompted?
+    prompt.present? && !settled?
+  end
+
+  def refused?
+    refusal.present?
+  end
+
   def update
     states.each(&:reload!)
     states.each { |state| state.event!(event) } if event
@@ -94,6 +144,9 @@ class Login
     self
   rescue LoginState::PromptRequired => denial
     @prompt = denial.prompt
+    self
+  rescue LoginState::Refused => denial
+    @refusal = denial
     self
   ensure
     states.each(&:cleanup!)
@@ -115,6 +168,7 @@ class Login
       "settled" => settled?,
       "warnings" => warnings,
       "identifier" => identifier,
+      "rid" => rid,
       "actor" => actor && { "nickname" => actor.nickname, "name" => actor.name },
       "client" => client && { "name" => client.name, "id" => client.client_id },
       "tenant" => tenant && { "name" => tenant.name }
@@ -124,6 +178,15 @@ class Login
   end
 
   private
+
+    def stamp(key, field)
+      value = store["factors"]&.dig(key.to_s, field)
+      return nil if value.blank?
+
+      Time.iso8601(value)
+    rescue ArgumentError
+      nil
+    end
 
     def states
       states_by_key.values

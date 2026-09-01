@@ -103,10 +103,35 @@ module OidcFlow
     response
   end
 
-  def consent!
-    post "/consent", params: { approve: "yes" }
-    follow_redirect! while response.redirect? && URI.parse(response.location).host.end_with?(".auth.test")
+  def auth_data
+    raw = response.body[/data-auth="([^"]*)"/, 1]
+    raw && JSON.parse(CGI.unescapeHTML(raw))
+  end
+
+  def current_rid
+    auth_data&.dig("rid")
+  end
+
+  def login_forms
+    response.body.scan(%r{<form[^>]*action="/login"[^>]*>.*?</form>}m)
+  end
+
+  def form_rids
+    login_forms.map { |form| form[/name="rid"[^>]*value="([^"]*)"/, 1] }
+  end
+
+  def advance!(event, **updates)
+    post "/login", params: { event: event, rid: current_rid, **updates }
+    follow_redirect! while response.redirect? && URI.parse(response.location).host.to_s.end_with?(".auth.test")
     response
+  end
+
+  def consent!
+    advance!("consent", approve: "yes")
+  end
+
+  def decline!
+    advance!("decline")
   end
 
   def redirected
@@ -136,7 +161,11 @@ module OidcFlow
   end
 
   def awaiting_consent?
-    response.redirect? && URI.parse(response.location).path == "/consent"
+    !response.redirect? && auth_data&.dig("prompt") == "consent"
+  end
+
+  def awaiting_login?
+    !response.redirect? && %w[setup identify first-factor second-factor backup-code].include?(auth_data&.dig("prompt"))
   end
 
   def authorized_code(actor:, registration:, resource: nil, scope: "openid profile email offline_access")

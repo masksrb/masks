@@ -10,8 +10,23 @@ module Masks
         end
       end
 
+      REQUESTS = "masks_requests".freeze
+      HANDSHAKES = "masks_handshakes".freeze
+
       def masks_session
         @masks_session ||= masks_config.session_for(request)
+      end
+
+      def masks_requests
+        @masks_requests ||= masks_tracker(REQUESTS)
+      end
+
+      def masks_handshakes
+        @masks_handshakes ||= masks_tracker(HANDSHAKES)
+      end
+
+      def masks_tracker(key)
+        Masks::Client::Tracker.new(Masks::Client::Stores::Session.new(session, key))
       end
 
       def masks_tokens

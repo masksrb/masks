@@ -10,10 +10,16 @@ class AuthorizeController < ApplicationController
     return refuse(attempt.error) if attempt.refused?
     return redirect_to(attempt.location, allow_other_host: true) if attempt.answered?
 
-    return start_login(authorization) if needs_login?(authorization)
-    return start_consent(authorization) if needs_consent?(authorization)
+    pending = track_request!(authorization)
+    return spent(pending) if pending.consumed?
 
-    complete(authorization, attempt)
+    login = advance(pending)
+
+    return answer(deny(pending, login.refusal.error, login.refusal.description)) if login.refused?
+    return interaction_required(pending) if login.prompted? && pending.silent?
+    return prompt(login) unless login.settled?
+
+    complete(pending, attempt, login)
   end
 
   private
@@ -34,10 +40,6 @@ class AuthorizeController < ApplicationController
         req.bad_request!(:request_uri_not_supported, "request_uri is not supported") if authorization.request_uri?
 
         permit(req) { authorization.validate! }
-
-        if authorization.silent? && (needs_login?(authorization) || needs_consent?(authorization))
-          req.interaction_required!
-        end
       end
     end
 
@@ -49,53 +51,46 @@ class AuthorizeController < ApplicationController
       req.bad_request!(denial.error.to_sym, denial.description)
     end
 
-    def needs_login?(authorization)
-      return true if authorization.reauthenticate? || current_actor.nil?
-
-      stale?(authorization.max_age)
+    def advance(pending)
+      Login.new(
+        store: session[LoginsController::STORE] ||= {},
+        request: pending,
+        session: current_session,
+        rid: rid_for(pending)
+      ).update
     end
 
-    def stale?(max_age)
-      return false if max_age.nil?
+    def prompt(login)
+      @login = login
 
-      authenticated_at = current_session&.authenticated_at
-
-      authenticated_at.nil? || authenticated_at < max_age.seconds.ago
+      render template: "logins/show"
     end
 
-    def needs_consent?(authorization)
-      return false if needs_login?(authorization)
-      return true if authorization.consent?
-      return false if authorization.client&.approved?
+    def complete(pending, attempt, login)
+      claimed = PendingRequest.claim(rid_for(pending))
+      return spent(pending) if claimed.nil?
 
-      !Consent.covers?(
+      sign_in(login.actor) if current_session.nil?
+      session.delete(LoginsController::STORE)
+
+      code = claimed.issue_code!(
         actor: current_actor,
-        client: authorization.client,
-        scopes: authorization.scopes_for(current_actor),
-        audience: authorization.audience
+        authenticated_at: login.authenticated_at || current_session&.authenticated_at
       )
-    end
-
-    def start_login(authorization)
-      session[:authorization] = authorization.to_session
-
-      redirect_to login_path
-    end
-
-    def start_consent(authorization)
-      session[:authorization] = authorization.to_session
-
-      redirect_to consent_path
-    end
-
-    def complete(authorization, attempt)
-      code = authorization.issue_code!(
-        actor: current_actor,
-        authenticated_at: current_session&.authenticated_at
-      )
-      session.delete(:authorization)
 
       render_rack(attempt.approve!(code.secret))
+    end
+
+    def spent(pending)
+      answer(deny(pending, "invalid_request", "that sign-in request has already been answered"))
+    end
+
+    def interaction_required(pending)
+      answer(deny(pending, "interaction_required", "this request cannot be answered without asking the person"))
+    end
+
+    def answer(location)
+      redirect_to location, allow_other_host: true
     end
 
     def refuse(error)

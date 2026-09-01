@@ -1,8 +1,6 @@
 module Masks
   module Rails
     class HandshakesController < BaseController
-      STATE = :masks_handshake_state
-
       before_action :require_unconfigured_or_signed_in
 
       def show
@@ -11,9 +9,8 @@ module Masks
       end
 
       def create
-        started = masks_config.handshake_for(request).start
-
-        session[STATE] = started[:state]
+        pending = masks_handshakes.open
+        started = masks_config.handshake_for(request).start(state: pending.id)
 
         redirect_to started[:url], allow_other_host: true
       rescue Masks::Client::Error => e
@@ -21,9 +18,12 @@ module Masks
       end
 
       def callback
-        registration = masks_config.handshake_for(request).complete(returned, state: session[STATE])
+        pending = masks_handshakes.claim(params[:state])
 
-        session.delete(STATE)
+        return stale if pending.nil?
+
+        registration = masks_config.handshake_for(request).complete(returned, state: pending.id)
+
         masks_config.store!(request, registration)
 
         redirect_to Masks::Rails::Engine.routes.url_helpers.start_path
@@ -69,9 +69,14 @@ module Masks
           redirect_to masks_config.after_sign_out
         end
 
-        def refuse(error)
-          session.delete(STATE)
+        def stale
+          @code = "invalid_state"
+          @description = "that connection request is not one this browser started, or it expired"
 
+          render :refused, status: :bad_request
+        end
+
+        def refuse(error)
           @code = error.try(:code).presence || error.class.name.demodulize.underscore
           @description = error.try(:description).presence || error.message
 

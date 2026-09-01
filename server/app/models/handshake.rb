@@ -18,11 +18,48 @@ class Handshake
       )
     end
 
-    def from_session(data)
-      return nil if data.blank?
+    def from_row(row)
+      return nil if row.nil?
 
-      new(**data.symbolize_keys)
+      held = row.payload || {}
+
+      new(
+        name: held["name"],
+        redirect_uris: held["redirect_uris"],
+        resource: row.audience.first,
+        scopes: row.scopes,
+        return_to: row.redirect_uri,
+        state: held["state"]
+      )
     end
+  end
+
+  def canonical
+    {
+      "name" => name,
+      "resource" => resource,
+      "scopes" => scopes.sort.join(" "),
+      "return_to" => return_to,
+      "state" => state,
+      "redirect_uris" => redirect_uris.sort
+    }.compact
+  end
+
+  def fingerprint
+    Digest::SHA256.hexdigest(canonical.to_json)
+  end
+
+  def query_pairs
+    pairs = [
+      [ "client_name", name ],
+      [ "resource", resource ],
+      [ "scope", scopes.join(" ") ],
+      [ "return_to", return_to ]
+    ]
+
+    pairs << [ "state", state ] if state
+    redirect_uris.each { |uri| pairs << [ "redirect_uris", uri ] }
+    pairs
   end
 
   def initialize(name: nil, redirect_uris: nil, resource: nil, scopes: nil,
@@ -33,17 +70,6 @@ class Handshake
     @scopes = Scopes.list(scopes)
     @return_to = return_to.to_s
     @state = state.presence
-  end
-
-  def to_session
-    {
-      "name" => name,
-      "redirect_uris" => redirect_uris,
-      "resource" => resource,
-      "scopes" => scopes,
-      "return_to" => return_to,
-      "state" => state
-    }
   end
 
   def origin

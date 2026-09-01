@@ -44,6 +44,7 @@
   <% end %>
 
   <%= form_with url: handshake_path, method: :post do |form| %>
+    <%= hidden_field_tag :hid, hid_for(@pending) %>
     <div class="flex gap-2">
       <%= form.submit "Connect", name: "approve", value: "yes", class: "btn btn-primary grow" %>
       <%= form.submit "Cancel", name: "deny", value: "yes", class: "btn btn-ghost" %>

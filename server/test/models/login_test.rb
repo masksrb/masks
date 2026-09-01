@@ -9,7 +9,7 @@ class LoginTest < ActiveSupport::TestCase
 
   def step(event: nil, **updates)
     within do
-      Login.new(store: @store, client: @client, event: event, updates: updates).update
+      Login.new(store: @store, event: event, updates: updates).update
     end
   end
 

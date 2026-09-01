@@ -1,6 +1,4 @@
 class HandshakesController < ApplicationController
-  STORE = "handshake".freeze
-
   before_action :require_handshake
   before_action :require_actor
 
@@ -10,6 +8,9 @@ class HandshakesController < ApplicationController
   end
 
   def create
+    claimed = PendingHandshake.claim(hid_for(@pending))
+
+    return refuse("that connection request has already been answered") if claimed.nil?
     return redirect_to(@handshake.declined, allow_other_host: true) if params[:approve].blank?
 
     client = Client.approve!(@handshake, actor: current_actor)
@@ -18,12 +19,11 @@ class HandshakesController < ApplicationController
     token = InitialAccessToken.mint!(
       actor: current_actor,
       client: client,
+      parent: claimed,
       scopes: Scopes.join(@handshake.scopes),
       audience: [ @handshake.resource ],
       redirect_uri: @handshake.return_to
     )
-
-    session.delete(STORE)
 
     redirect_to @handshake.approved(token.secret, issuer: issuer.url), allow_other_host: true
   end
@@ -31,18 +31,22 @@ class HandshakesController < ApplicationController
   private
 
     def require_handshake
-      @handshake = requested || Handshake.from_session(session[STORE])
+      @pending = opening || pending_handshake(params[:hid])
 
-      return refuse("no connection request is in progress") if @handshake.nil?
-      return refuse(@handshake.refusal) unless @handshake.usable?
+      return if performed?
+      return refuse("no connection request is in progress") if @pending.nil?
+      return refuse("that connection request has already been answered") if @pending.consumed?
 
-      session[STORE] = @handshake.to_session
+      @handshake = @pending.handshake
     end
 
-    def requested
+    def opening
       return nil unless request.get? && params[:resource].present?
 
-      Handshake.from_request(request)
+      handshake = Handshake.from_request(request)
+      return refuse(handshake.refusal) unless handshake.usable?
+
+      track_handshake!(handshake)
     end
 
     def require_actor
@@ -53,5 +57,6 @@ class HandshakesController < ApplicationController
       @description = description
 
       render :refused, status: :bad_request
+      nil
     end
 end

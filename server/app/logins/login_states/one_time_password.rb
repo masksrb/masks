@@ -13,7 +13,7 @@ module LoginStates
     end
 
     def verify
-      return warn!("missing-first-factor") unless touched?(:first_factor)
+      return warn!("missing-first-factor") unless login.first_factored?
 
       if actor.verify_otp(update(:code))
         factored! :second_factor, expiry: EXPIRY

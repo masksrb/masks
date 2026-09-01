@@ -1,0 +1,46 @@
+<% state = login.state("consent") %>
+
+<div class="flex flex-col gap-1">
+  <h1 class="text-2xl font-bold"><%= login.client&.name %> wants access</h1>
+  <p class="text-sm opacity-75">
+    Signed in as <strong class="font-semibold"><%= login.actor&.nickname %></strong>.
+  </p>
+</div>
+
+<%= render "logins/warnings", login: login %>
+
+<h2 class="text-xs font-bold uppercase opacity-75">It is asking to</h2>
+<ul class="flex flex-col gap-2">
+  <% ResourceMetadata.describe(state.audience, state.scopes).each do |scope, description| %>
+    <li class="flex items-baseline justify-between gap-3 rounded-lg border border-base-content/15 bg-base-200 px-3 py-2">
+      <span class="text-sm"><%= description || "Use the #{scope} scope" %></span>
+      <span class="font-mono text-xs opacity-75"><%= scope %></span>
+    </li>
+  <% end %>
+</ul>
+
+<% if state.audience.any? %>
+  <h2 class="text-xs font-bold uppercase opacity-75">On your behalf at</h2>
+  <% state.audience.each do |resource| %>
+    <p class="font-mono text-xs break-all opacity-75"><%= resource %></p>
+  <% end %>
+<% end %>
+
+<div class="flex gap-2">
+  <%= form_with url: login_path, method: :post, id: "consent", class: "grow" do |form| %>
+    <%= hidden_field_tag :rid, login.rid %>
+    <%= form.hidden_field :event, value: "consent" %>
+    <%= form.hidden_field :approve, value: "yes" %>
+    <button type="submit" class="btn btn-primary w-full">Allow</button>
+  <% end %>
+
+  <%= form_with url: login_path, method: :post, id: "decline" do |form| %>
+    <%= hidden_field_tag :rid, login.rid %>
+    <%= form.hidden_field :event, value: "decline" %>
+    <button type="submit" class="btn btn-ghost">Deny</button>
+  <% end %>
+</div>
+
+<p class="text-sm opacity-75">
+  Not you? <%= link_to "Sign out", logout_path, class: "link" %>.
+</p>

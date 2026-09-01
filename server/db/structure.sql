@@ -335,7 +335,8 @@ CREATE TABLE public.tokens (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     authenticated_at timestamp(6) without time zone,
-    requested_claims jsonb
+    requested_claims jsonb,
+    payload jsonb
 );
 
 ALTER TABLE ONLY public.tokens FORCE ROW LEVEL SECURITY;
@@ -852,6 +853,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260901090000'),
 ('20260831150000'),
 ('20260831140000'),
 ('20260831120000'),

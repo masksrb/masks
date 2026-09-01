@@ -56,10 +56,13 @@ class AuthorizationCodeFlowTest < ActionDispatch::IntegrationTest
     assert_equal "opaque", redirected["state"]
   end
 
-  test "an unauthenticated authorize sends the caller to sign in" do
+  test "an unauthenticated authorize asks the caller to sign in without leaving the endpoint" do
     authorize(client_id: @registration["client_id"])
 
-    assert_redirected_to login_path
+    assert_response :success
+    assert awaiting_login?
+    assert_equal "identify", auth_data["prompt"]
+    assert current_rid.present?
   end
 
   test "a code is single use" do
@@ -167,6 +170,56 @@ class AuthorizationCodeFlowTest < ActionDispatch::IntegrationTest
 
   test "an unsupported grant_type is refused" do
     assert_equal "unsupported_grant_type", token(grant_type: "password")["error"]
+  end
+
+  test "a code presented by the wrong client is spent, not retryable" do
+    intruder = register(client_name: "Intruder")
+    code = authorized_code(actor: @actor, registration: @registration)
+
+    stolen = token(
+      grant_type: "authorization_code", code: code,
+      redirect_uri: OidcFlow::REDIRECT_URI, code_verifier: verifier,
+      client_id: intruder["client_id"], client_secret: intruder["client_secret"]
+    )
+    assert_equal "invalid_grant", stolen["error"]
+
+    retried = token(
+      grant_type: "authorization_code", code: code,
+      redirect_uri: OidcFlow::REDIRECT_URI, code_verifier: verifier,
+      client_id: @registration["client_id"],
+      client_secret: @registration["client_secret"]
+    )
+    assert_equal "invalid_grant", retried["error"]
+  end
+
+  test "one authorize request mints one code, however many times it is replayed" do
+    sign_in_as(@actor)
+    authorize(client_id: @registration["client_id"])
+    consent! if awaiting_consent?
+    first = code_from
+
+    assert first.present?
+
+    3.times do
+      authorize(client_id: @registration["client_id"])
+
+      assert_nil redirected["code"]
+      assert_equal "invalid_request", redirected["error"]
+    end
+
+    assert_equal 1, within { AuthorizationCode.count }
+  end
+
+  test "a declined consent answers the client and mints nothing" do
+    sign_in_as(@actor)
+    authorize(client_id: @registration["client_id"])
+
+    assert awaiting_consent?
+
+    decline!
+
+    assert_equal "access_denied", redirected["error"]
+    assert_equal 0, within { AuthorizationCode.count }
   end
 
   test "replaying a code revokes both tokens it already issued" do

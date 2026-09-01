@@ -5,6 +5,7 @@
 <%= render "logins/warnings", login: login %>
 
 <%= form_with url: login_path, method: :post, id: "identify", class: "flex flex-col gap-4" do |form| %>
+  <%= hidden_field_tag :rid, login.rid %>
   <%= form.hidden_field :event, value: "identify" %>
 
   <label class="flex flex-col gap-1.5">

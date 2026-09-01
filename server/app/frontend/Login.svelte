@@ -3,6 +3,7 @@ import { untrack } from "svelte";
 import { createLogin } from "./lib/login.svelte.js";
 import Warnings from "./shared/Warnings.svelte";
 import BackupCode from "./prompts/backup-code.svelte";
+import Consent from "./prompts/consent.svelte";
 import FirstFactor from "./prompts/first-factor.svelte";
 import Identify from "./prompts/identify.svelte";
 import SecondFactor from "./prompts/second-factor.svelte";
@@ -15,6 +16,7 @@ const prompts = {
   "first-factor": FirstFactor,
   "second-factor": SecondFactor,
   "backup-code": BackupCode,
+  consent: Consent,
   settled: Settled,
 };
 

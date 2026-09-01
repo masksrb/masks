@@ -45,7 +45,7 @@ class TokensController < ApplicationController
     end
 
     def exchange_code(req, res, client)
-      code = AuthorizationCode.redeem(req.code)
+      code = AuthorizationCode.claim(req.code)
 
       if code.nil?
         AuthorizationCode.spent(req.code)&.revoke_issued!
@@ -56,8 +56,6 @@ class TokensController < ApplicationController
       unless code.redirect_uri == req.redirect_uri.to_s
         req.invalid_grant!("redirect_uri does not match the one the code was issued for")
       end
-
-      code.consume!
 
       unless code.verifies?(req.code_verifier)
         req.invalid_grant!("code_verifier does not match the challenge")
@@ -74,12 +72,10 @@ class TokensController < ApplicationController
     end
 
     def refresh(req, res, client)
-      token = RefreshToken.redeem(req.refresh_token)
+      token = RefreshToken.claim(req.refresh_token)
 
       req.invalid_grant!("that refresh token is not valid or has expired") if token.nil?
       req.invalid_grant!("that refresh token was issued to another client") if token.client_id != client.id
-
-      token.consume!
 
       scopes = req.scope.present? ? Scopes.granted(req.scope, token.scopes) : token.scope_list
       audience = narrow(req, token.audience, client)
