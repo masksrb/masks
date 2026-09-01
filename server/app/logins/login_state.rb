@@ -9,6 +9,17 @@ class LoginState
     end
   end
 
+  class Refused < StandardError
+    attr_reader :error, :description
+
+    def initialize(error, description)
+      super("#{error}: #{description}")
+
+      @error = error.to_s
+      @description = description.to_s
+    end
+  end
+
   class << self
     def key
       name.demodulize.underscore.dasherize
@@ -51,7 +62,7 @@ class LoginState
   attr_reader :login
 
   delegate :actor, :client, :identifier, :warn!, :touched?, :factored!, :expire!,
-           :updates, :tenant, to: :login
+           :updates, :tenant, :request, :session, to: :login
 
   def initialize(login)
     @login = login
@@ -100,5 +111,9 @@ class LoginState
 
   def prompt!(name)
     raise PromptRequired, name
+  end
+
+  def refuse!(error, description)
+    raise Refused.new(error, description)
   end
 end

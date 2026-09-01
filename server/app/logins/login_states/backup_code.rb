@@ -7,7 +7,7 @@ module LoginStates
     end
 
     prompts "backup-code" do
-      touched?(:first_factor) && !touched?(:second_factor) && requested?
+      login.first_factored? && !login.second_factored? && requested?
     end
 
     handles "backup" do
@@ -25,7 +25,7 @@ module LoginStates
     end
 
     def verify
-      return warn!("missing-first-factor") unless touched?(:first_factor)
+      return warn!("missing-first-factor") unless login.first_factored?
 
       if actor.verify_backup_code(update(:backup_code))
         forget!

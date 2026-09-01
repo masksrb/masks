@@ -32,7 +32,7 @@ export function createLogin(initial, options = {}) {
     failed = false;
 
     try {
-      auth = await send(url, method, body);
+      auth = await send(url, method, auth.rid ? { rid: auth.rid, ...body } : body);
 
       if (auth.redirectTo) {
         window.location.assign(auth.redirectTo);
@@ -63,6 +63,15 @@ export function createLogin(initial, options = {}) {
     },
     get backupCodes() {
       return auth.backupCodes;
+    },
+    get consent() {
+      return auth.consent;
+    },
+    get client() {
+      return auth.client;
+    },
+    get actor() {
+      return auth.actor;
     },
     warns(key) {
       return (auth.warnings ?? []).includes(key);

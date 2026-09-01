@@ -10,7 +10,7 @@ class ConsentTest < ActionDispatch::IntegrationTest
   test "consent is asked once and remembered after that" do
     authorized_code(actor: @actor, registration: @registration)
 
-    authorize(client_id: @registration["client_id"])
+    authorize(client_id: @registration["client_id"], state: "again")
 
     assert response.redirect?
     assert code_from.present?
@@ -21,7 +21,16 @@ class ConsentTest < ActionDispatch::IntegrationTest
 
     authorize(client_id: @registration["client_id"], prompt: "consent")
 
-    assert_redirected_to consent_path
+    assert awaiting_consent?
+  end
+
+  test "prompt=consent is satisfied by approving it once, and does not loop" do
+    authorized_code(actor: @actor, registration: @registration)
+
+    authorize(client_id: @registration["client_id"], prompt: "consent", state: "again")
+    consent!
+
+    assert code_from.present?
   end
 
   test "consent granted for a narrow scope does not cover a wider one" do
@@ -29,14 +38,14 @@ class ConsentTest < ActionDispatch::IntegrationTest
 
     authorize(client_id: @registration["client_id"], scope: "openid profile email")
 
-    assert_redirected_to consent_path
+    assert awaiting_consent?
   end
 
   test "declining sends access_denied back to the client" do
     sign_in_as(@actor)
     authorize(client_id: @registration["client_id"], state: "opaque")
 
-    post "/consent", params: { deny: "yes" }
+    decline!
 
     assert_equal "access_denied", redirected["error"]
     assert_equal "opaque", redirected["state"]
@@ -47,7 +56,33 @@ class ConsentTest < ActionDispatch::IntegrationTest
 
     authorize(client_id: @registration["client_id"], prompt: "login")
 
-    assert_redirected_to login_path
+    assert awaiting_login?
+    assert_equal "first-factor", auth_data["prompt"]
+  end
+
+  test "prompt=login is satisfied by authenticating again, and does not loop" do
+    authorized_code(actor: @actor, registration: @registration)
+
+    authorize(client_id: @registration["client_id"], prompt: "login", state: "again")
+    advance!("password", password: "password")
+
+    assert code_from.present?
+  end
+
+  test "reauthenticating moves auth_time forward even when the session is reused" do
+    authorized_code(actor: @actor, registration: @registration)
+
+    signed_in_at = within { Session.live.first.authenticated_at }
+
+    travel 5.seconds
+
+    authorize(client_id: @registration["client_id"], prompt: "login", state: "again")
+    advance!("password", password: "password")
+
+    minted = within { AuthorizationCode.order(:created_at).last.authenticated_at }
+
+    assert_operator minted, :>, signed_in_at,
+                    "the code carried the old session's auth_time after a fresh first factor"
   end
 
   test "prompt=none refuses to interact when nobody is signed in" do
@@ -67,7 +102,7 @@ class ConsentTest < ActionDispatch::IntegrationTest
   test "prompt=none succeeds once sign-in and consent are settled" do
     authorized_code(actor: @actor, registration: @registration)
 
-    authorize(client_id: @registration["client_id"], prompt: "none")
+    authorize(client_id: @registration["client_id"], prompt: "none", state: "again")
 
     assert code_from.present?
     assert_nil redirected["error"]
@@ -76,7 +111,6 @@ class ConsentTest < ActionDispatch::IntegrationTest
   test "the consent screen names the client and the scopes it asks for" do
     sign_in_as(@actor)
     authorize(client_id: @registration["client_id"])
-    follow_redirect!
 
     assert_response :success
     assert_match @registration["client_name"], response.body
@@ -93,14 +127,17 @@ class ConsentTest < ActionDispatch::IntegrationTest
 
     authorize(client_id: @registration["client_id"])
 
-    assert_redirected_to consent_path
+    assert awaiting_consent?
   end
 
-  test "the consent screen is not reachable without a pending authorization" do
-    sign_in_as(@actor)
+  test "max_age forces a fresh first factor when the session is older" do
+    authorized_code(actor: @actor, registration: @registration)
 
-    get "/consent"
+    within { Session.live.each { |record| record.update!(authenticated_at: 10.minutes.ago) } }
 
-    assert_redirected_to root_path
+    authorize(client_id: @registration["client_id"], max_age: 60)
+
+    assert awaiting_login?
+    assert_equal "first-factor", auth_data["prompt"]
   end
 end

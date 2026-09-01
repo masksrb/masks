@@ -13,9 +13,6 @@ Rails.application.routes.draw do
   get "/handshake", to: "handshakes#show", as: :handshake
   post "/handshake", to: "handshakes#create"
 
-  get "/consent", to: "consents#show", as: :consent
-  post "/consent", to: "consents#create"
-
   post "/token", to: "tokens#create"
   post "/revoke", to: "revocations#create"
   post "/introspect", to: "introspections#create"

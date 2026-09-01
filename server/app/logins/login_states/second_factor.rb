@@ -5,7 +5,7 @@ module LoginStates
     end
 
     prompts "second-factor" do
-      touched?(:first_factor) && !touched?(:second_factor)
+      login.first_factored? && !login.second_factored?
     end
 
     def start_over!

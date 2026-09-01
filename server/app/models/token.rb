@@ -40,6 +40,16 @@ class Token < ApplicationRecord
 
       find_by(digest: Digest::SHA256.hexdigest(secret.to_s))
     end
+
+    def claim(secret)
+      return nil if secret.blank?
+
+      digest = Digest::SHA256.hexdigest(secret.to_s)
+      now = Time.current
+      taken = live.where(digest: digest).update_all(consumed_at: now, updated_at: now)
+
+      taken.zero? ? nil : find_by(digest: digest)
+    end
   end
 
   def consume!

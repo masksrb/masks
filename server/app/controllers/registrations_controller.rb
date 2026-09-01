@@ -52,11 +52,11 @@ class RegistrationsController < ApplicationController
   private
 
     def redeem
-      token = InitialAccessToken.redeem(bearer)
+      token = InitialAccessToken.claim(bearer)
 
       return unauthorized("that initial access token is not valid or has expired") if token&.client.nil?
 
-      render json: issued(token.redeem!), status: :created
+      render json: issued(token.issue!), status: :created
     end
 
     def bearer

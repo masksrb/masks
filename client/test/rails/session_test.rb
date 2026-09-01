@@ -98,6 +98,49 @@ class SessionTest < EngineIntegrationTest
     assert value.bytesize < 4096, "the session cookie is #{value.bytesize} bytes of 4096"
   end
 
+  test "two sign-ins started in two tabs both complete, in either order" do
+    connect!
+
+    get "/auth?return_to=/first", headers: host
+    first = issuer.authorize!(response.location)
+
+    get "/auth?return_to=/second", headers: host
+    second = issuer.authorize!(response.location)
+
+    refute_equal first[:state], second[:state]
+
+    get "/auth/callback?code=#{second[:code]}&state=#{second[:state]}", headers: host
+    assert_redirected_to "/second"
+
+    get "/auth/callback?code=#{first[:code]}&state=#{first[:state]}", headers: host
+    assert_redirected_to "/first"
+  end
+
+  test "a second tab starting does not sign the browser out of the first" do
+    sign_in!
+
+    get "/auth", headers: host
+    issuer.authorize!(response.location)
+
+    get "/auth/callback?code=x&state=stale-from-somewhere-else", headers: host
+
+    assert_response :bad_request
+    refute_empty session_payload
+  end
+
+  test "a state cannot be replayed once it has been claimed" do
+    connect!
+
+    get "/auth", headers: host
+    landed = issuer.authorize!(response.location)
+
+    get "/auth/callback?code=#{landed[:code]}&state=#{landed[:state]}", headers: host
+    assert_response :redirect
+
+    get "/auth/callback?code=#{landed[:code]}&state=#{landed[:state]}", headers: host
+    assert_response :bad_request
+  end
+
   test "a forged state is refused and nothing is established" do
     connect!
 

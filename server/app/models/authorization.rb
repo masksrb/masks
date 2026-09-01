@@ -103,21 +103,6 @@ class Authorization
     self
   end
 
-  def issue_code!(actor:, authenticated_at: nil)
-    AuthorizationCode.mint!(
-      actor: actor,
-      authenticated_at: authenticated_at,
-      client: client,
-      scopes: Scopes.join(scopes_for(actor)),
-      audience: audience,
-      redirect_uri: redirect_uri,
-      requested_claims: requested_claims,
-      nonce: nonce,
-      code_challenge: code_challenge,
-      code_challenge_method: code_challenge_method
-    )
-  end
-
   def redirect_with(issuer:, **params)
     uri = URI.parse(redirect_uri)
     query = Rack::Utils.parse_query(uri.query)
@@ -128,7 +113,7 @@ class Authorization
     uri.to_s
   end
 
-  def to_session
+  def canonical
     {
       "client_id" => client_id,
       "redirect_uri" => redirect_uri,
@@ -138,31 +123,25 @@ class Authorization
       "nonce" => nonce,
       "code_challenge" => code_challenge,
       "code_challenge_method" => code_challenge_method,
+      "prompt" => prompt.sort.join(" ").presence,
       "max_age" => max_age,
-      "resource" => audience,
+      "resource" => audience.sort,
       "claims" => requested_claims&.to_json
     }.compact
   end
 
-  def to_params
-    to_session.merge("prompt" => prompt.join(" ")).reject { |_, value| value.blank? }
+  def fingerprint
+    Digest::SHA256.hexdigest(canonical.to_json)
   end
 
-  def self.from_session(data)
-    return nil if data.blank?
+  def to_params
+    canonical.reject { |_, value| value.blank? }
+  end
 
-    new(
-      client_id: data["client_id"],
-      redirect_uri: data["redirect_uri"],
-      response_type: data["response_type"],
-      scope: data["scope"],
-      state: data["state"],
-      nonce: data["nonce"],
-      code_challenge: data["code_challenge"],
-      code_challenge_method: data["code_challenge_method"],
-      max_age: data["max_age"],
-      resource: data["resource"],
-      claims: data["claims"]
-    )
+  def query_pairs
+    pairs = canonical.except("resource").reject { |_, value| value.blank? }.to_a
+
+    audience.each { |value| pairs << [ "resource", value ] }
+    pairs
   end
 end

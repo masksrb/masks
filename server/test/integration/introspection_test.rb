@@ -51,10 +51,7 @@ class IntrospectionTest < ActionDispatch::IntegrationTest
   end
 
   def follow_consent
-    return unless response.location.to_s.include?("/consent")
-
-    post "/consent", params: { approve: "yes" }
-    get response.location if response.location.to_s.include?("/authorize")
+    consent! if awaiting_consent?
   end
 
   test "discovery advertises the endpoint" do

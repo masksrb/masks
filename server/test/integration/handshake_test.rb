@@ -27,9 +27,17 @@ class HandshakeTest < ActionDispatch::IntegrationTest
     get "/handshake?#{URI.encode_www_form(query)}"
   end
 
-  def approve!
-    post "/handshake", params: { approve: "yes" }
+  def current_hid
+    response.body[/name="hid"[^>]*value="([^"]*)"/, 1]
+  end
+
+  def approve!(hid: current_hid)
+    post "/handshake", params: { approve: "yes", hid: hid }
     redirected["initial_access_token"]
+  end
+
+  def decline!(hid: current_hid)
+    post "/handshake", params: { deny: "yes", hid: hid }
   end
 
   def redeem(secret, **metadata)
@@ -120,7 +128,7 @@ class HandshakeTest < ActionDispatch::IntegrationTest
     sign_in_as(@owner)
     connect
 
-    post "/handshake", params: { deny: "yes" }
+    decline!
 
     assert_equal "access_denied", redirected["error"]
     assert_equal "app-state", redirected["state"]
@@ -149,6 +157,58 @@ class HandshakeTest < ActionDispatch::IntegrationTest
 
     assert_response :bad_request
     assert_match "no connection request is in progress", response.body
+  end
+
+  test "approving the screen that was rendered connects that app, not the newer one" do
+    other = "https://other.things.test"
+
+    sign_in_as(@owner)
+
+    connect
+    theirs = current_hid
+
+    connect(
+      client_name: "other", resource: "#{other}/mcp",
+      return_to: "#{other}/auth/handshake/callback",
+      redirect_uris: [ "#{other}/auth/masks/callback" ]
+    )
+    refute_equal theirs, current_hid
+
+    post "/handshake", params: { approve: "yes", hid: theirs }
+
+    assert response.location.start_with?(RETURN_TO), "connected the wrong app"
+
+    assert_equal [ "things" ], within(@tenant) { Client.all.map(&:name) }
+  end
+
+  test "a hid from another browser connects nothing" do
+    sign_in_as(@owner)
+    connect
+
+    stolen = current_hid
+
+    reset!
+    host! host_for(@tenant)
+    sign_in_as(@owner)
+
+    post "/handshake", params: { approve: "yes", hid: stolen }
+
+    assert_response :bad_request
+    assert_equal 0, within(@tenant) { Client.count }
+  end
+
+  test "a connection request cannot be approved twice" do
+    sign_in_as(@owner)
+    connect
+
+    hid = current_hid
+
+    assert approve!(hid: hid).present?
+
+    post "/handshake", params: { approve: "yes", hid: hid }
+
+    assert_response :bad_request
+    assert_equal 1, within(@tenant) { Client.count }
   end
 
   test "a second run for the same resource rotates the client rather than adding one" do
@@ -189,9 +249,11 @@ class HandshakeTest < ActionDispatch::IntegrationTest
                    password: "a-long-enough-password" },
          as: :json
 
-    assert_equal "/handshake", JSON.parse(response.body)["redirectTo"]
+    resumed = JSON.parse(response.body)["redirectTo"]
 
-    get "/handshake"
+    assert resumed.start_with?("/handshake?"), "setup did not come back to the connection request"
+
+    get resumed
 
     assert_response :success
     assert_match "Connect things?", response.body

@@ -1,7 +1,7 @@
 module LoginStates
   class FirstFactor < LoginState
     prompts "first-factor" do
-      !touched?(:first_factor)
+      !login.first_factored?
     end
 
     def start_over!

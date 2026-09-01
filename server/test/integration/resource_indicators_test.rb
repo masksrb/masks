@@ -75,9 +75,9 @@ class ResourceIndicatorsTest < ActionDispatch::IntegrationTest
   test "the consent screen names the resources it is being asked to cover" do
     sign_in_as(@actor)
     authorize(client_id: @registration["client_id"], resource: MCP)
-    follow_redirect!
 
     assert_response :success
+    assert awaiting_consent?
     assert_match MCP, response.body
   end
 
@@ -86,6 +86,6 @@ class ResourceIndicatorsTest < ActionDispatch::IntegrationTest
 
     authorize(client_id: @registration["client_id"], resource: FILES)
 
-    assert_redirected_to consent_path
+    assert awaiting_consent?
   end
 end

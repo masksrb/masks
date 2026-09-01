@@ -17,7 +17,7 @@ class LoginsController < ApplicationController
   before_action :verify_authenticity_token
 
   def show
-    return redirect_to after_login_path if current_actor && pending_authorization.nil?
+    return redirect_to after_login_path if current_actor && pending.nil?
 
     @login = run
     @login.warn!(*flash[:warnings]) if flash[:warnings].present?
@@ -28,7 +28,7 @@ class LoginsController < ApplicationController
   def update
     login = run(event: params[:event], updates: update_params)
 
-    settle(login) if login.settled?
+    settle(login) if login.settled? && pending.nil?
 
     respond_to do |format|
       format.html { resume(login) }
@@ -37,21 +37,30 @@ class LoginsController < ApplicationController
   end
 
   def destroy
-    run.start_over!
+    login = run
+    login.start_over!
     sign_out
 
     respond_to do |format|
-      format.html { redirect_to login_path }
+      format.html { resume(login) }
       format.json { render json: serialize(run) }
     end
   end
 
   private
 
+    def pending
+      return @pending if defined?(@pending)
+
+      @pending = pending_request(params[:rid])
+    end
+
     def run(event: nil, updates: {})
       Login.new(
         store: session[STORE] ||= {},
-        client: pending_authorization&.client,
+        request: pending,
+        session: current_session,
+        rid: params[:rid].presence,
         event: event,
         updates: updates
       ).update
@@ -69,7 +78,7 @@ class LoginsController < ApplicationController
     end
 
     def serialize(login)
-      login.as_json.merge("redirectTo" => (after_login_path if login.settled?))
+      login.as_json.merge("redirectTo" => next_location(login))
     end
 
     def verifying?
@@ -79,7 +88,15 @@ class LoginsController < ApplicationController
     def resume(login)
       flash[:warnings] = login.warnings if login.warnings.any?
 
-      redirect_to(login.settled? ? after_login_path : login_path)
+      redirect_to next_location(login) || login_path, allow_other_host: true
+    end
+
+    def next_location(login)
+      return deny(pending, login.refusal.error, login.refusal.description) if login.refused? && pending
+      return authorize_url_for(pending) if pending
+      return after_login_path if login.settled?
+
+      nil
     end
 
     def too_many(warning)
@@ -93,8 +110,8 @@ class LoginsController < ApplicationController
     end
 
     def after_login_path
-      return resume_authorization_path if session[:authorization].present?
-      return handshake_path if session[HandshakesController::STORE].present?
+      pending = latest_handshake
+      return handshake_url_for(pending) if pending
 
       root_path
     end

@@ -3,8 +3,7 @@ class InitialAccessToken < Token
     redirect_uri
   end
 
-  def redeem!
-    consume!
+  def issue!
     client.issue_credentials!
     client
   end
