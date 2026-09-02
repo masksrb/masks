@@ -1,6 +1,16 @@
 require "test_helper"
 
 class ManageApiTest < ActionDispatch::IntegrationTest
+  include ActiveJob::TestHelper
+
+  def with_mailer(from: "masks@example.com")
+    held = Rails.configuration.masks.mail_from
+    Rails.configuration.masks.mail_from = from
+    yield
+  ensure
+    Rails.configuration.masks.mail_from = held
+  end
+
   setup do
     host! host_for(@tenant)
 
@@ -197,6 +207,81 @@ class ManageApiTest < ActionDispatch::IntegrationTest
     assert_includes body.dig("data", "setActorScopes", "actor", "scopes"), "masks:manage"
   end
 
+  def admin
+    @admin ||= bearer
+  end
+
+  def invite(nickname: "sam", email: "sam@example.com", scopes: nil)
+    ask(<<~GQL, admin)
+      mutation {
+        inviteActor(
+          nickname: "#{nickname}", email: "#{email}"
+          #{scopes ? ", scopes: #{scopes.inspect}" : ''}
+        ) {
+          delivered url actor { uuid nickname activated emailVerified invitedAt }
+        }
+      }
+    GQL
+  end
+
+  test "an admin invites somebody, and gets a link back when there is no mailer" do
+    body = invite
+
+    invited = body.dig("data", "inviteActor")
+
+    assert_nil body["errors"]
+    assert_equal false, invited["delivered"]
+    assert_match %r{/invite/}, invited["url"]
+    assert_equal false, invited.dig("actor", "activated")
+    assert_not_nil invited.dig("actor", "invitedAt")
+  end
+
+  test "with a mailer configured the link is mailed and never handed to the admin" do
+    with_mailer do
+      body = invite
+
+      invited = body.dig("data", "inviteActor")
+
+      assert_equal true, invited["delivered"]
+      assert_nil invited["url"]
+      assert_equal 1, enqueued_jobs.count { |job| job[:args].first == "ActorMailer" }
+    end
+  end
+
+  test "an invitation carries the scopes it names, the way setActorScopes does" do
+    body = ask(<<~GQL, bearer)
+      mutation {
+        inviteActor(nickname: "sam", email: "sam@example.com", scopes: ["openid", "masks:manage"]) {
+          actor { scopes }
+        }
+      }
+    GQL
+
+    assert_includes body.dig("data", "inviteActor", "actor", "scopes"), "masks:manage"
+  end
+
+  test "an invited nickname already in use is refused rather than duplicated" do
+    invite
+
+    assert_match(/nickname/i, invite["errors"].first["message"])
+  end
+
+  test "an invitation can be resent, and the admin cannot resend to somebody activated" do
+    invited = invite.dig("data", "inviteActor", "actor", "uuid")
+
+    resent = ask(<<~GQL, admin)
+      mutation { resendInvitation(uuid: "#{invited}") { delivered url } }
+    GQL
+
+    assert_match %r{/invite/}, resent.dig("data", "resendInvitation", "url")
+
+    refused = ask(<<~GQL, admin)
+      mutation { resendInvitation(uuid: "#{@actor.uuid}") { delivered } }
+    GQL
+
+    assert_match(/already accepted/, refused["errors"].first["message"])
+  end
+
   test "backup codes are refused for an actor with no second factor" do
     body = ask(%(mutation { generateBackupCodes(uuid: "#{@actor.uuid}") { codes } }), bearer)
 
@@ -268,7 +353,8 @@ class ManageApiTest < ActionDispatch::IntegrationTest
     body = ask(huge, bearer)
 
     assert body["errors"].any?, "a #{huge.length}-character query was accepted"
-    assert_match(/token/i, body["errors"].first["message"])
+    assert_nil body["data"], "the ceiling refused the query but something still executed"
+    assert_match(/too large|token/i, body["errors"].first["message"])
   end
 
   test "the ceiling is not so low that an ordinary admin query trips it" do
