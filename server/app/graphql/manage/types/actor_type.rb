@@ -5,6 +5,8 @@ module Manage
       field :nickname, String, null: false
       field :email, String
       field :email_verified, Boolean, null: false
+      field :activated, Boolean, null: false
+      field :invited_at, GraphQL::Types::ISO8601DateTime
       field :scopes, [ String ], null: false
       field :otp_enabled, Boolean, null: false
       field :backup_codes_remaining, Integer, null: false
@@ -27,6 +29,16 @@ module Manage
 
       def email_verified
         object.email_verified_at.present?
+      end
+
+      def activated
+        object.activated?
+      end
+
+      def invited_at
+        return nil if object.activated?
+
+        Invitation.where(actor_id: object.id).live.maximum(:created_at)
       end
 
       def scopes

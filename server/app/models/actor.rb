@@ -14,6 +14,8 @@ class Actor < ApplicationRecord
                        format: { with: /\A[a-z0-9][a-z0-9._-]*\z/i }
   validates :email, format: { with: URI::MailTo::EMAIL_REGEXP }, allow_blank: true
 
+  before_save :activate_once_a_password_exists
+
   normalizes :nickname, with: ->(value) { value.to_s.strip }
   normalizes :email, with: ->(value) { value.to_s.strip.downcase.presence }
 
@@ -26,9 +28,17 @@ class Actor < ApplicationRecord
       actor = find_by(nickname: identifier.to_s.strip) ||
               find_by(email: identifier.to_s.strip.downcase)
 
-      return burn(password) if actor.nil? || actor.password_digest.blank?
+      return burn(password) if actor.nil? || actor.password_digest.blank? || !actor.activated?
 
       actor.authenticate(password.to_s) || nil
+    end
+
+    def invite!(nickname:, email:, scopes: nil)
+      create!(
+        nickname: nickname,
+        email: email,
+        scopes: Scopes.join(Scopes.list(scopes).presence || Scopes::STANDARD)
+      )
     end
 
     def decoy_digest
@@ -66,6 +76,20 @@ class Actor < ApplicationRecord
 
   def grant!(requested)
     update!(scopes: Scopes.join(scope_list | Scopes.list(requested)))
+  end
+
+  def activated?
+    activated_at.present?
+  end
+
+  def invited?
+    !activated?
+  end
+
+  def activate!(password, verifying_email: false)
+    self.password = password
+    self.email_verified_at = Time.current if verifying_email && email.present?
+    save!
   end
 
   def otp?
@@ -159,6 +183,10 @@ class Actor < ApplicationRecord
   end
 
   private
+
+    def activate_once_a_password_exists
+      self.activated_at ||= Time.current if password_digest.present?
+    end
 
     def asked(requested)
       return [] if requested.blank?

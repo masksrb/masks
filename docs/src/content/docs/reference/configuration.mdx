@@ -35,6 +35,26 @@ Declaring `MASKS_TENANTS` turns claiming off. Leave it unset and the first reque
 nothing serves claims that subdomain — once, and only while no tenant exists at all, so it cannot be
 used to mint tenants against a wildcard. See [connecting an app](/guides/handshake).
 
+### Accounts and mail
+
+| | |
+| --- | --- |
+| `MASKS_MAIL_FROM` | the address invitations are sent from; unset means no mail is sent |
+| `MASKS_INVITATION_LIFETIME` | seconds an invitation stays open — default `604800`, seven days |
+
+Only the first run creates an account without an invitation. Every account after it is invited by
+somebody holding `masks:manage`, and the invitation is what carries the password nobody has set yet.
+
+`MASKS_MAIL_FROM` decides which of two things happens, and the difference is not cosmetic. With it
+set, the link is mailed to the address and is **never** returned to the administrator — so accepting
+the invitation proves control of the mailbox, and the account's email is marked verified. With it
+unset, there is no mail, so the administrator gets the link to deliver by hand and the address stays
+unverified, because nothing has demonstrated that it works. Configure a mailer if you want
+`email_verified` to mean anything.
+
+Delivery itself is ordinary Action Mailer — set `config.action_mailer.smtp_settings` in
+`config/environments/production.rb` the way you would in any Rails application.
+
 ### Rate limits
 
 Each is a count per tenant; the windows are fixed. [Hardening](/concepts/hardening) explains why
