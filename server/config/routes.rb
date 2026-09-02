@@ -11,6 +11,8 @@ Rails.application.routes.draw do
   delete "/login", to: "logins#destroy"
   match "/logout", to: "sessions#destroy", via: %i[get post delete], as: :logout
 
+  get "/invite/:token", to: "invitations#show", as: :invitation
+
   get "/handshake", to: "handshakes#show", as: :handshake
   post "/handshake", to: "handshakes#create"
 

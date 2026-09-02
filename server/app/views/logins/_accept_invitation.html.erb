@@ -1,0 +1,44 @@
+<% invitation = login.state("invitation").invitation %>
+
+<%= render "logins/header",
+      heading: login.tenant&.name ? "Join #{login.tenant.name}" : "Join",
+      login: login %>
+
+<p class="text-sm opacity-75">
+  <% if invitation.invited_by %>
+    <%= invitation.invited_by.nickname %> invited you.
+  <% end %>
+  Choose a password and the account is yours.
+</p>
+
+<%= render "logins/warnings", login: login %>
+
+<%= form_with url: login_path, method: :post, id: "accept-invitation", class: "flex flex-col gap-4" do |form| %>
+  <%= hidden_field_tag :rid, login.rid %>
+  <%= form.hidden_field :event, value: "accept-invitation" %>
+
+  <label class="flex flex-col gap-1.5">
+    <span class="text-sm font-medium">Username</span>
+    <input type="text" value="<%= invitation.actor.nickname %>" readonly
+           autocomplete="username" class="input input-bordered w-full" />
+  </label>
+
+  <% if invitation.actor.email.present? %>
+    <label class="flex flex-col gap-1.5">
+      <span class="text-sm font-medium">Email</span>
+      <input type="email" value="<%= invitation.actor.email %>" readonly
+             class="input input-bordered w-full" />
+    </label>
+  <% end %>
+
+  <label class="flex flex-col gap-1.5">
+    <span class="text-sm font-medium">Password</span>
+    <%= form.password_field :password, autocomplete: "new-password",
+          class: "input input-bordered w-full" %>
+    <span class="text-xs opacity-75">
+      At least <%= LoginStates::Invitation::MINIMUM_PASSWORD %> characters.
+    </span>
+  </label>
+
+  <button type="submit" class="btn btn-primary w-full">Accept the invitation</button>
+<% end %>

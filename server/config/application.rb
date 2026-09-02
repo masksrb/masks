@@ -35,6 +35,8 @@ module Server
     config.masks.setup_token = ENV["MASKS_SETUP_TOKEN"].presence
     config.masks.tenants = ENV["MASKS_TENANTS"].to_s.split(/[\s,]+/).reject(&:empty?)
     config.masks.dynamic_client_scopes = ENV["MASKS_DYNAMIC_CLIENT_SCOPES"].presence
+    config.masks.mail_from = ENV["MASKS_MAIL_FROM"].presence
+    config.masks.invitation_lifetime = ENV.fetch("MASKS_INVITATION_LIFETIME", 7 * 24 * 60 * 60).to_i.seconds
 
     # Configuration for the application, engines, and railties goes here.
     #

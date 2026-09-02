@@ -10,6 +10,7 @@ that cannot let you past names the prompt you see.
 class Login
   STATES = [
     LoginStates::Setup,
+    LoginStates::Invitation,
     LoginStates::Identifier,
     LoginStates::Password,
     LoginStates::FirstFactor,
@@ -18,6 +19,11 @@ class Login
   ].freeze
 end
 ```
+
+The first two states are how an account comes to exist at all, and they sit ahead of `Identifier`
+for the same reason: someone arriving with a claim on an account should not be asked who they are.
+`Setup` runs once per tenant and makes the owner. `Invitation` runs whenever the browser is carrying
+an invitation an administrator opened, and turns an account that has no password into one that does.
 
 **The order of `STATES` is the flow.** Nothing else encodes it — there is no state diagram, no
 `next_step` column, and no controller deciding what comes after what.
