@@ -70,7 +70,7 @@ class ConnectionsController < ApplicationController
     def require_actor
       return if current_actor
 
-      session[:masks_return_to] = request.original_url if request.get?
+      session[:masks_return_to] = request.original_url if request.get? || request.head?
 
       redirect_to login_path
     end
