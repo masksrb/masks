@@ -5,8 +5,8 @@
       login: login %>
 
 <p class="text-sm opacity-75">
-  <% if invitation.invited_by %>
-    <%= invitation.invited_by.nickname %> invited you.
+  <% if invitation.opened_by %>
+    <%= invitation.opened_by.nickname %> invited you.
   <% end %>
   Choose a password and the account is yours.
 </p>

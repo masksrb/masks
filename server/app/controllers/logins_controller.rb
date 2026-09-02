@@ -14,6 +14,12 @@ class LoginsController < ApplicationController
              by: -> { [ current_tenant.id, session.dig(STORE, "identifier").to_s.downcase ].join(":") },
              with: -> { too_many("too-many-attempts-for-account") }
 
+  rate_limit to: Rails.configuration.masks.recovery_limit,
+             within: 15.minutes, only: :update, name: "recovery",
+             if: -> { params[:event].to_s == "forgot-password" },
+             by: -> { [ current_tenant.id, request.remote_ip ].join(":") },
+             with: -> { too_many("too-many-attempts") }
+
   before_action :verify_authenticity_token
 
   def show

@@ -24,9 +24,13 @@ class Actor < ApplicationRecord
              with: ->(value) { value.to_s.strip.presence }
 
   class << self
+    def locate(identifier)
+      find_by(nickname: identifier.to_s.strip) ||
+        find_by(email: identifier.to_s.strip.downcase)
+    end
+
     def authenticate(identifier, password)
-      actor = find_by(nickname: identifier.to_s.strip) ||
-              find_by(email: identifier.to_s.strip.downcase)
+      actor = locate(identifier)
 
       return burn(password) if actor.nil? || actor.password_digest.blank? || !actor.activated?
 
@@ -90,6 +94,28 @@ class Actor < ApplicationRecord
     self.password = password
     self.email_verified_at = Time.current if verifying_email && email.present?
     save!
+  end
+
+  def reset_password!(password, verifying_email: false, keeping: nil)
+    transaction do
+      activate!(password, verifying_email: verifying_email)
+      sign_out_everywhere!(keeping: keeping)
+    end
+  end
+
+  def change_password!(current, password, keeping: nil)
+    return false unless activated? && authenticate(current.to_s)
+
+    reset_password!(password, keeping: keeping)
+    true
+  end
+
+  def sign_out_everywhere!(keeping: nil)
+    held = sessions.live
+    held = held.where.not(id: keeping.id) if keeping
+
+    held.find_each(&:revoke!)
+    RefreshToken.where(actor_id: id).live.find_each(&:revoke!)
   end
 
   def otp?

@@ -282,6 +282,22 @@ class ManageApiTest < ActionDispatch::IntegrationTest
     assert_match(/already accepted/, refused["errors"].first["message"])
   end
 
+  test "an admin starts a password reset, and cannot start one for somebody invited" do
+    started = ask(<<~GQL, admin)
+      mutation { resetPassword(uuid: "#{@actor.uuid}") { delivered url } }
+    GQL
+
+    assert_match %r{/reset/}, started.dig("data", "resetPassword", "url")
+
+    waiting = invite.dig("data", "inviteActor", "actor", "uuid")
+
+    refused = ask(<<~GQL, admin)
+      mutation { resetPassword(uuid: "#{waiting}") { delivered } }
+    GQL
+
+    assert_match(/has not accepted/, refused["errors"].first["message"])
+  end
+
   test "backup codes are refused for an actor with no second factor" do
     body = ask(%(mutation { generateBackupCodes(uuid: "#{@actor.uuid}") { codes } }), bearer)
 

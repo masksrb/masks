@@ -1,14 +1,13 @@
 module Invitations
-  def self.open(actor:, invited_by: nil)
-    invitation = Invitation.open!(actor: actor, invited_by: invited_by)
-    url = invitation.url(Current.origin)
+  def self.open(actor:, by: nil)
+    invitation = Invitation.open!(actor: actor, by: by)
 
-    return { delivered: false, url: url } unless deliverable?(actor)
+    return { delivered: false, url: invitation.url(Current.origin) } unless mailable?(actor)
 
     ActorMailer.invitation(
-      actor, url,
+      actor, invitation.url(Current.origin),
       tenant_name: Current.tenant&.name,
-      invited_by: invited_by
+      invited_by: by
     ).deliver_later
 
     invitation.delivered!
@@ -16,7 +15,7 @@ module Invitations
     { delivered: true, url: nil }
   end
 
-  def self.deliverable?(actor)
+  def self.mailable?(actor)
     ActorMailer.deliverable? && actor.email.present?
   end
 end

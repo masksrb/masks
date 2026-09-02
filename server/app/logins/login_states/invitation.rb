@@ -31,7 +31,7 @@ module LoginStates
         "invitation" => {
           "nickname" => held.actor.nickname,
           "email" => held.actor.email,
-          "invitedBy" => held.invited_by&.nickname,
+          "invitedBy" => held.opened_by&.nickname,
           "minimum" => MINIMUM_PASSWORD
         }
       }

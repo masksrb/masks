@@ -8,17 +8,33 @@ const MESSAGES = {
     "Too many sign-in attempts. Wait a few minutes and try again.",
   "too-many-attempts-for-account":
     "Too many sign-in attempts for that account.",
+  "invitation-expired": "That invitation is no longer valid. Ask for another.",
+  "reset-expired": "That reset link is no longer valid. Ask for another.",
+  "no-mailer":
+    "This server cannot send email, so it cannot reset a password. Ask an administrator.",
+  "short-password": "That password is too short.",
+};
+
+const NOTICES = {
+  "reset-sent":
+    "If that account exists and can receive email, a reset link is on its way.",
 };
 
 let { login } = $props();
 
-const messages = $derived(
-  (login.auth.warnings ?? []).map((key) => MESSAGES[key]).filter(Boolean),
+const shown = $derived(
+  (login.auth.warnings ?? [])
+    .map((key) =>
+      NOTICES[key]
+        ? { key, tone: "alert-info", text: NOTICES[key] }
+        : MESSAGES[key] && { key, tone: "alert-error", text: MESSAGES[key] },
+    )
+    .filter(Boolean),
 );
 </script>
 
-{#each messages as message (message)}
-  <div class="alert alert-error text-sm" role="alert">{message}</div>
+{#each shown as message (message.key)}
+  <div class="alert {message.tone} text-sm" role="alert">{message.text}</div>
 {/each}
 
 {#if login.failed}

@@ -18,6 +18,29 @@
       <p class="text-sm opacity-75">You have not authorized any applications yet.</p>
     <% end %>
 
+    <h2 class="text-xs font-bold uppercase opacity-75">Password</h2>
+
+    <%= form_with url: account_password_path, method: :patch, id: "change-password",
+          class: "flex flex-col gap-3" do |form| %>
+      <label class="flex flex-col gap-1.5">
+        <span class="text-sm font-medium">Current password</span>
+        <%= form.password_field :current_password, autocomplete: "current-password",
+              class: "input input-bordered w-full" %>
+      </label>
+
+      <label class="flex flex-col gap-1.5">
+        <span class="text-sm font-medium">New password</span>
+        <%= form.password_field :password, autocomplete: "new-password",
+              class: "input input-bordered w-full" %>
+        <span class="text-xs opacity-75">
+          At least <%= PasswordsController::MINIMUM %> characters. Changing it signs out
+          every other session and stops every application from refreshing.
+        </span>
+      </label>
+
+      <button type="submit" class="btn btn-primary self-start">Change password</button>
+    <% end %>
+
     <p><%= link_to "Sign out", logout_path, class: "link text-sm" %></p>
   <% else %>
     <div class="flex flex-col gap-1">

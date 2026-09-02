@@ -22,7 +22,7 @@
     query Actor($uuid: ID!) {
       actor(uuid: $uuid) {
         uuid nickname email emailVerified scopes otpEnabled backupCodesRemaining
-        backupCodesGeneratedAt lastLoginAt createdAt
+        backupCodesGeneratedAt lastLoginAt createdAt activated invitedAt
         name givenName familyName middleName profileUrl pictureUrl websiteUrl
         gender birthdate zoneinfo locale
       }
@@ -37,6 +37,7 @@
   let notice = $state(null);
   let failure = $state(null);
   let codes = $state(null);
+  let link = $state(null);
 
   async function load() {
     loading = true;
@@ -114,6 +115,42 @@
     }
   }
 
+  async function recover(document, confirmation) {
+    if (!confirm(confirmation)) return;
+
+    notice = null;
+    failure = null;
+    link = null;
+
+    try {
+      const data = await api.query(document, { uuid });
+      const result = Object.values(data)[0];
+
+      if (result.delivered) {
+        notice = "Emailed. The link is not shown here, so that using it proves the address.";
+      } else {
+        notice = "No mailer is configured, so pass this link along yourself. It works once.";
+        link = result.url;
+      }
+
+      await load();
+    } catch (thrown) {
+      failure = thrown.message;
+    }
+  }
+
+  const reset = () =>
+    recover(
+      `mutation Reset($uuid: ID!) { resetPassword(uuid: $uuid) { delivered url } }`,
+      "Start a password reset? Every session and refresh token ends when it is used.",
+    );
+
+  const resend = () =>
+    recover(
+      `mutation Resend($uuid: ID!) { resendInvitation(uuid: $uuid) { delivered url } }`,
+      "Send a fresh invitation? The previous one stops working.",
+    );
+
   function disable() {
     if (!confirm("Remove this actor's authenticator and every backup code?")) return;
 
@@ -176,6 +213,30 @@
           </p>
 
           <ScopesEditor value={actor.scopes} available={supported} onchange={saveScopes} />
+        </div>
+      </section>
+
+      <section class="card bg-base-100">
+        <div class="card-body gap-3">
+          <h2 class="card-title text-base">Access</h2>
+
+          {#if actor.activated}
+            <p class="text-sm opacity-70">
+              This account has a password. A reset sends a one-time link and signs it out
+              everywhere.
+            </p>
+            <button class="btn btn-sm self-start" onclick={reset}>Reset password</button>
+          {:else}
+            <p class="text-sm opacity-70">
+              Invited{actor.invitedAt ? ` on ${actor.invitedAt.slice(0, 10)}` : ""}, and has not
+              accepted yet. There is no password to reset until they do.
+            </p>
+            <button class="btn btn-sm self-start" onclick={resend}>Resend invitation</button>
+          {/if}
+
+          {#if link}
+            <p class="font-mono text-xs break-all bg-base-200 rounded px-2 py-1">{link}</p>
+          {/if}
         </div>
       </section>
 
