@@ -151,6 +151,51 @@ ALTER SEQUENCE public.clients_id_seq OWNED BY public.clients.id;
 
 
 --
+-- Name: connections; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.connections (
+    id bigint NOT NULL,
+    tenant_id bigint NOT NULL,
+    provider_id bigint NOT NULL,
+    actor_id bigint NOT NULL,
+    uuid uuid DEFAULT gen_random_uuid() NOT NULL,
+    subject character varying NOT NULL,
+    label character varying,
+    scopes text DEFAULT ''::text NOT NULL,
+    refresh_token text,
+    access_token text,
+    access_token_expires_at timestamp(6) without time zone,
+    connected_at timestamp(6) without time zone,
+    revoked_at timestamp(6) without time zone,
+    revoked_reason character varying,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+ALTER TABLE ONLY public.connections FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: connections_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.connections_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: connections_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.connections_id_seq OWNED BY public.connections.id;
+
+
+--
 -- Name: consents; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -186,6 +231,52 @@ CREATE SEQUENCE public.consents_id_seq
 --
 
 ALTER SEQUENCE public.consents_id_seq OWNED BY public.consents.id;
+
+
+--
+-- Name: providers; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.providers (
+    id bigint NOT NULL,
+    tenant_id bigint NOT NULL,
+    key character varying NOT NULL,
+    name character varying NOT NULL,
+    authorization_url character varying NOT NULL,
+    token_url character varying NOT NULL,
+    revocation_url character varying,
+    userinfo_url character varying,
+    client_id character varying NOT NULL,
+    client_secret text,
+    scopes text DEFAULT ''::text NOT NULL,
+    authorize_params jsonb DEFAULT '{}'::jsonb NOT NULL,
+    subject_claim character varying DEFAULT 'sub'::character varying NOT NULL,
+    label_claim character varying DEFAULT 'email'::character varying NOT NULL,
+    archived_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+ALTER TABLE ONLY public.providers FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: providers_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.providers_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: providers_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.providers_id_seq OWNED BY public.providers.id;
 
 
 --
@@ -376,10 +467,24 @@ ALTER TABLE ONLY public.clients ALTER COLUMN id SET DEFAULT nextval('public.clie
 
 
 --
+-- Name: connections id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.connections ALTER COLUMN id SET DEFAULT nextval('public.connections_id_seq'::regclass);
+
+
+--
 -- Name: consents id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.consents ALTER COLUMN id SET DEFAULT nextval('public.consents_id_seq'::regclass);
+
+
+--
+-- Name: providers id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.providers ALTER COLUMN id SET DEFAULT nextval('public.providers_id_seq'::regclass);
 
 
 --
@@ -435,11 +540,27 @@ ALTER TABLE ONLY public.clients
 
 
 --
+-- Name: connections connections_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.connections
+    ADD CONSTRAINT connections_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: consents consents_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.consents
     ADD CONSTRAINT consents_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: providers providers_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.providers
+    ADD CONSTRAINT providers_pkey PRIMARY KEY (id);
 
 
 --
@@ -539,6 +660,41 @@ CREATE UNIQUE INDEX index_clients_on_tenant_id_and_client_id ON public.clients U
 
 
 --
+-- Name: index_connections_on_actor_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_connections_on_actor_id ON public.connections USING btree (actor_id);
+
+
+--
+-- Name: index_connections_on_provider_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_connections_on_provider_id ON public.connections USING btree (provider_id);
+
+
+--
+-- Name: index_connections_on_tenant_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_connections_on_tenant_id ON public.connections USING btree (tenant_id);
+
+
+--
+-- Name: index_connections_on_tenant_id_and_provider_id_and_subject; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_connections_on_tenant_id_and_provider_id_and_subject ON public.connections USING btree (tenant_id, provider_id, subject);
+
+
+--
+-- Name: index_connections_on_uuid; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_connections_on_uuid ON public.connections USING btree (uuid);
+
+
+--
 -- Name: index_consents_on_actor_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -564,6 +720,20 @@ CREATE INDEX index_consents_on_client_id ON public.consents USING btree (client_
 --
 
 CREATE INDEX index_consents_on_tenant_id ON public.consents USING btree (tenant_id);
+
+
+--
+-- Name: index_providers_on_tenant_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_providers_on_tenant_id ON public.providers USING btree (tenant_id);
+
+
+--
+-- Name: index_providers_on_tenant_id_and_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_providers_on_tenant_id_and_key ON public.providers USING btree (tenant_id, key);
 
 
 --
@@ -705,6 +875,14 @@ ALTER TABLE ONLY public.tokens
 
 
 --
+-- Name: connections fk_rails_4234ab53d1; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.connections
+    ADD CONSTRAINT fk_rails_4234ab53d1 FOREIGN KEY (actor_id) REFERENCES public.actors(id);
+
+
+--
 -- Name: clients fk_rails_4904dbddb8; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -718,6 +896,14 @@ ALTER TABLE ONLY public.clients
 
 ALTER TABLE ONLY public.sessions
     ADD CONSTRAINT fk_rails_4cc5d929b0 FOREIGN KEY (tenant_id) REFERENCES public.tenants(id);
+
+
+--
+-- Name: connections fk_rails_6314b09676; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.connections
+    ADD CONSTRAINT fk_rails_6314b09676 FOREIGN KEY (tenant_id) REFERENCES public.tenants(id);
 
 
 --
@@ -753,6 +939,22 @@ ALTER TABLE ONLY public.tokens
 
 
 --
+-- Name: connections fk_rails_a26555371d; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.connections
+    ADD CONSTRAINT fk_rails_a26555371d FOREIGN KEY (provider_id) REFERENCES public.providers(id);
+
+
+--
+-- Name: providers fk_rails_ba1a501ef5; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.providers
+    ADD CONSTRAINT fk_rails_ba1a501ef5 FOREIGN KEY (tenant_id) REFERENCES public.tenants(id);
+
+
+--
 -- Name: signing_keys fk_rails_bb7b6b543d; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -781,10 +983,22 @@ ALTER TABLE public.actors ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.clients ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: connections; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.connections ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: consents; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
 ALTER TABLE public.consents ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: providers; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.providers ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: sessions; Type: ROW SECURITY; Schema: public; Owner: -
@@ -813,10 +1027,24 @@ CREATE POLICY tenant_isolation ON public.clients USING ((tenant_id = (NULLIF(cur
 
 
 --
+-- Name: connections tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.connections USING ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint)) WITH CHECK ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint));
+
+
+--
 -- Name: consents tenant_isolation; Type: POLICY; Schema: public; Owner: -
 --
 
 CREATE POLICY tenant_isolation ON public.consents USING ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint)) WITH CHECK ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint));
+
+
+--
+-- Name: providers tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.providers USING ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint)) WITH CHECK ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint));
 
 
 --
@@ -853,6 +1081,9 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260901120002'),
+('20260901120001'),
+('20260901120000'),
 ('20260901090000'),
 ('20260831150000'),
 ('20260831140000'),

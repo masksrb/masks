@@ -22,6 +22,8 @@ services:
     profiles: ["image"]
     build:
       context: .
+      additional_contexts:
+        web: ../web
     image: masks:dev
     environment:
       POSTGRES_HOST: postgres

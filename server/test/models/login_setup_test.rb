@@ -33,10 +33,18 @@ class LoginSetupTest < ActiveSupport::TestCase
     assert_equal "owner", login.identifier
   end
 
-  test "the owner holds the scopes masks defines and nothing else" do
+  test "the owner holds the scopes masks defines, and masks:manage, and nothing else" do
     login = step(event: "setup", nickname: "owner", email: "owner@example.invalid", password: "a-long-enough-password")
 
-    assert_equal Scopes::STANDARD.sort, login.actor.scope_list.sort
+    assert_equal (Scopes::STANDARD + [ Scopes::MANAGE ]).sort, login.actor.scope_list.sort
+  end
+
+  test "an actor created any other way does not hold masks:manage" do
+    login = step(event: "setup", nickname: "owner", email: "owner@example.invalid", password: "a-long-enough-password")
+    second = within { Actor.create!(nickname: "second", password: "a-long-enough-password") }
+
+    assert_includes login.actor.scope_list, Scopes::MANAGE
+    refute_includes second.scope_list, Scopes::MANAGE
   end
 
   test "the owner can sign in afterwards with the password they chose" do

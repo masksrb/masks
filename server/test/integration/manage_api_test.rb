@@ -1,0 +1,306 @@
+require "test_helper"
+
+class ManageApiTest < ActionDispatch::IntegrationTest
+  setup do
+    host! host_for(@tenant)
+
+    @actor = create_actor(@tenant, scopes: "openid profile email masks:manage")
+    @client = create_client(
+      @tenant,
+      allowed_scopes: "openid profile email masks:manage",
+      approved_at: Time.current,
+      grant_types: [ "authorization_code", "refresh_token" ]
+    )
+  end
+
+  def resource
+    @resource ||= issuer_for(@tenant).manage_resource
+  end
+
+  def bearer(scope: "openid masks:manage", for_resource: nil, actor: @actor)
+    sign_in_as(actor)
+    authorize(client_id: @client.client_id, scope: scope, resource: for_resource || resource)
+    consent! if awaiting_consent?
+
+    token(
+      grant_type: "authorization_code",
+      code: code_from,
+      redirect_uri: OidcFlow::REDIRECT_URI,
+      code_verifier: verifier,
+      client_id: @client.client_id
+    )["access_token"]
+  end
+
+  def ask(query, token, **variables)
+    post "/manage/graphql",
+         params: { query: query, variables: variables }.to_json,
+         headers: {
+           "CONTENT_TYPE" => "application/json",
+           "HTTP_AUTHORIZATION" => "Bearer #{token}"
+         }
+
+    JSON.parse(response.body)
+  end
+
+  test "the protected resource document names the scope and describes it" do
+    get "/.well-known/oauth-protected-resource"
+
+    body = JSON.parse(response.body)
+
+    assert_response :success
+    assert_equal resource, body["resource"]
+    assert_equal [ origin_for(@tenant) ], body["authorization_servers"]
+    assert_equal [ "masks:manage" ], body["scopes_supported"]
+    assert_equal "Modify the masks backend", body.dig("scope_descriptions", "masks:manage")
+  end
+
+  test "the document is also served under the resource path, as RFC 9728 asks" do
+    get "/.well-known/oauth-protected-resource/manage"
+
+    assert_response :success
+    assert_equal resource, JSON.parse(response.body)["resource"]
+  end
+
+  test "a bearer carrying masks:manage reaches the schema" do
+    body = ask("{ viewer { nickname scopes } }", bearer)
+
+    assert_response :success
+    assert_equal @actor.nickname, body.dig("data", "viewer", "nickname")
+    assert_includes body.dig("data", "viewer", "scopes"), "masks:manage"
+  end
+
+  test "no bearer at all is refused" do
+    post "/manage/graphql", params: { query: "{ viewer { nickname } }" }.to_json,
+                            headers: { "CONTENT_TYPE" => "application/json" }
+
+    assert_response :unauthorized
+  end
+
+  test "a token without masks:manage is refused with insufficient_scope, naming the scope" do
+    held = bearer(scope: "openid profile")
+
+    body = ask("{ viewer { nickname } }", held)
+
+    assert_response :forbidden
+    assert_equal "insufficient_scope", body["error"]
+    assert_equal "masks:manage", body["scope"]
+  end
+
+  test "a token issued for another resource is refused" do
+    held = bearer(for_resource: "https://things.example.com/api")
+
+    ask("{ viewer { nickname } }", held)
+
+    assert_response :unauthorized
+  end
+
+  test "an actor stripped of masks:manage cannot use a token that still carries it" do
+    held = bearer
+
+    within(@tenant) { @actor.update!(scopes: "openid profile email") }
+
+    ask("{ viewer { nickname } }", held)
+
+    assert_response :unauthorized
+  end
+
+  test "actors and clients are listed, and the tenant is readable" do
+    body = ask("{ actors { nickname } clients { clientId } tenant { subdomain } }", bearer)
+
+    assert_equal [ @actor.nickname ], body.dig("data", "actors").map { |a| a["nickname"] }
+    assert_equal [ @client.client_id ], body.dig("data", "clients").map { |c| c["clientId"] }
+    assert_equal @tenant.subdomain, body.dig("data", "tenant", "subdomain")
+  end
+
+  test "another tenant's actors are not visible" do
+    create_actor(@other, nickname: "elsewhere")
+
+    body = ask("{ actors { nickname } }", bearer)
+
+    refute_includes body.dig("data", "actors").map { |a| a["nickname"] }, "elsewhere"
+  end
+
+  test "the ten profile claims that had no editor are writable" do
+    body = ask(<<~GQL, bearer)
+      mutation {
+        updateActor(uuid: "#{@actor.uuid}", givenName: "Jon", locale: "en-CA", zoneinfo: "America/Vancouver") {
+          actor { givenName locale zoneinfo }
+        }
+      }
+    GQL
+
+    assert_nil body["errors"]
+    assert_equal "Jon", body.dig("data", "updateActor", "actor", "givenName")
+    assert_equal "America/Vancouver", body.dig("data", "updateActor", "actor", "zoneinfo")
+  end
+
+  test "a profile field cleared to empty leaves the claim absent, not present and blank" do
+    ask(%(mutation { updateActor(uuid: "#{@actor.uuid}", gender: "") { actor { gender } } }), bearer)
+
+    actor = within(@tenant) { @actor.reload }
+
+    assert_nil actor.gender
+    refute_includes actor.claims("openid profile").keys, "gender"
+  end
+
+  test "changing an email takes its verification with it" do
+    within(@tenant) { @actor.update!(email: "owner@example.invalid", email_verified_at: Time.current) }
+
+    body = ask(<<~GQL, bearer)
+      mutation {
+        updateActor(uuid: "#{@actor.uuid}", email: "moved@example.invalid") {
+          actor { email emailVerified }
+        }
+      }
+    GQL
+
+    assert_equal "moved@example.invalid", body.dig("data", "updateActor", "actor", "email")
+    refute body.dig("data", "updateActor", "actor", "emailVerified")
+  end
+
+  test "required_scopes is writable, which nothing but the console could do" do
+    body = ask(<<~GQL, bearer)
+      mutation {
+        updateClient(clientId: "#{@client.client_id}", requiredScopes: ["openid"]) {
+          client { requiredScopes }
+        }
+      }
+    GQL
+
+    assert_equal [ "openid" ], body.dig("data", "updateClient", "client", "requiredScopes")
+  end
+
+  test "an admin cannot take masks:manage away from themselves" do
+    body = ask(<<~GQL, bearer)
+      mutation {
+        setActorScopes(uuid: "#{@actor.uuid}", scopes: ["openid", "profile"]) {
+          actor { scopes }
+        }
+      }
+    GQL
+
+    assert_match "cannot take masks:manage away from yourself", body["errors"].first["message"]
+    assert_includes within(@tenant) { @actor.reload.scope_list }, "masks:manage"
+  end
+
+  test "an admin may grant masks:manage to somebody else" do
+    second = create_actor(@tenant, nickname: "second")
+
+    body = ask(<<~GQL, bearer)
+      mutation {
+        setActorScopes(uuid: "#{second.uuid}", scopes: ["openid", "masks:manage"]) {
+          actor { scopes }
+        }
+      }
+    GQL
+
+    assert_includes body.dig("data", "setActorScopes", "actor", "scopes"), "masks:manage"
+  end
+
+  test "backup codes are refused for an actor with no second factor" do
+    body = ask(%(mutation { generateBackupCodes(uuid: "#{@actor.uuid}") { codes } }), bearer)
+
+    assert_match "way past a second factor", body["errors"].first["message"]
+  end
+
+  test "backup codes are generated once an authenticator exists, retiring the rake task" do
+    held = bearer
+    enable_otp(@actor, @tenant)
+
+    body = ask(%(mutation { generateBackupCodes(uuid: "#{@actor.uuid}") { codes actor { backupCodesRemaining } } }), held)
+
+    assert_equal Actor::BACKUP_CODES, body.dig("data", "generateBackupCodes", "codes").length
+    assert_equal Actor::BACKUP_CODES, body.dig("data", "generateBackupCodes", "actor", "backupCodesRemaining")
+  end
+
+  test "the admin API cannot hand a masks: scope to a client nobody approved" do
+    dynamic = create_client(@tenant, name: "Dynamic", dynamic: true)
+
+    body = ask(<<~GQL, bearer)
+      mutation {
+        updateClient(clientId: "#{dynamic.client_id}", allowedScopes: ["openid", "masks:manage"]) {
+          client { allowedScopes }
+        }
+      }
+    GQL
+
+    assert_match "may only be granted to an approved client", body["errors"].first["message"]
+    assert_empty within(@tenant) { Scopes.reserved(dynamic.reload.scope_list) }
+  end
+
+  test "the ceiling offered to dynamic registration cannot include a masks: scope" do
+    body = ask(<<~GQL, bearer)
+      mutation {
+        updateTenant(dynamicClientScopes: ["openid", "masks:manage"]) { tenant { dynamicClientScopes } }
+      }
+    GQL
+
+    assert_match "may not be offered to dynamic registration", body["errors"].first["message"]
+  end
+
+  test "archiving the client you are signed in with is refused" do
+    body = ask(%(mutation { archiveClient(clientId: "#{@client.client_id}") { client { archivedAt } } }), bearer)
+
+    assert_match "would lock you out", body["errors"].first["message"]
+    assert_nil within(@tenant) { @client.reload.archived_at }
+  end
+
+  test "a public client has no secret to rotate" do
+    body = ask(%(mutation { rotateClientSecret(clientId: "#{@client.client_id}") { secret } }), bearer)
+
+    assert_match "public client has no secret", body["errors"].first["message"]
+  end
+
+  test "a session can be listed and revoked" do
+    held = bearer
+
+    listed = ask("{ sessions { id actor { nickname } } }", held)
+    id = listed.dig("data", "sessions").first["id"]
+
+    revoked = ask(%(mutation { revokeSession(id: "#{id}") { session { revokedAt } } }), held)
+
+    assert_not_nil revoked.dig("data", "revokeSession", "session", "revokedAt")
+  end
+
+  test "the schema refuses a query past its token ceiling" do
+    huge = "{ #{Array.new(2000) { |i| "a#{i}: viewer { nickname }" }.join(' ')} }"
+
+    body = ask(huge, bearer)
+
+    assert body["errors"].any?, "a #{huge.length}-character query was accepted"
+    assert_match(/token/i, body["errors"].first["message"])
+  end
+
+  test "the ceiling is not so low that an ordinary admin query trips it" do
+    body = ask(
+      "{ viewer { nickname } tenant { subdomain signingKeys { kid } } " \
+      "actors { uuid nickname email scopes } clients { clientId allowedScopes } " \
+      "sessions { id actor { nickname } } scopesSupported }",
+      bearer
+    )
+
+    assert_nil body["errors"], body["errors"].to_s
+  end
+
+  test "the admin page is served for any path under /manage, so the SPA can route" do
+    get "/manage"
+    assert_response :success
+    assert_match "id=\"manage\"", response.body
+
+    get "/manage/clients/whatever"
+    assert_response :success
+
+    boot = JSON.parse(CGI.unescapeHTML(response.body[/data-boot="([^"]*)"/, 1]))
+
+    assert_equal issuer_for(@tenant).manage_resource, boot["resource"]
+    assert_equal origin_for(@tenant), boot["issuer"]
+    assert_equal "/manage/graphql", boot["graphql"]
+  end
+
+  test "the admin page itself is public, and carries no token" do
+    get "/manage"
+
+    refute_match "masks_session", response.body
+    refute_match "access_token", response.body
+  end
+end

@@ -25,6 +25,8 @@ services:
     build:
       context: ./server
       target: test
+      additional_contexts:
+        web: ./web
     image: masks-test-server
     command: ["bin/rails", "db:prepare", "test"]
     environment:

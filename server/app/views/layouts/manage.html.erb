@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title><%= content_for(:title) || "Manage #{Current.tenant&.name}" %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    <%= vite_client_tag %>
+    <%= vite_stylesheet_tag "app" %>
+    <%= vite_javascript_tag "manage" %>
+  </head>
+
+  <body class="min-h-screen bg-base-200">
+    <%= yield %>
+  </body>
+</html>
