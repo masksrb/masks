@@ -28,4 +28,18 @@ class ActorMailer < ApplicationMailer
       subject: "Reset your #{tenant_name} password"
     )
   end
+
+  def email_verification(actor, url, tenant_name:)
+    return message unless deliverable?
+
+    @actor = actor
+    @url = url
+    @tenant_name = tenant_name
+
+    mail(
+      from: self.class.from,
+      to: actor.email,
+      subject: "Confirm your email address for #{tenant_name}"
+    )
+  end
 end

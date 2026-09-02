@@ -282,6 +282,27 @@ class ManageApiTest < ActionDispatch::IntegrationTest
     assert_match(/already accepted/, refused["errors"].first["message"])
   end
 
+  test "changing an address opens a confirmation for the new one" do
+    with_mailer do
+      body = ask(<<~GQL, admin)
+        mutation {
+          updateActor(uuid: "#{@actor.uuid}", email: "moved@example.invalid") {
+            actor { email emailVerified }
+          }
+        }
+      GQL
+
+      assert_equal false, body.dig("data", "updateActor", "actor", "emailVerified")
+
+      within(@tenant) do
+        held = EmailVerification.where(actor_id: @actor.id).live.sole
+
+        assert_equal "moved@example.invalid", held.address
+        assert held.delivered?
+      end
+    end
+  end
+
   test "an admin starts a password reset, and cannot start one for somebody invited" do
     started = ask(<<~GQL, admin)
       mutation { resetPassword(uuid: "#{@actor.uuid}") { delivered url } }

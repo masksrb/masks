@@ -53,12 +53,12 @@ class LoginSetupTest < ActiveSupport::TestCase
     assert_equal "owner", within { Actor.authenticate("owner", "a-long-enough-password") }&.nickname
   end
 
-  test "the owner's email is required, and recorded as verified" do
+  test "the owner's email is required, and starts unconfirmed" do
     login = step(event: "setup", nickname: "owner", email: "owner@example.invalid",
                  password: "a-long-enough-password")
 
     assert_equal "owner@example.invalid", login.actor.email
-    assert login.actor.email_verified_at.present?
+    assert_nil login.actor.email_verified_at
   end
 
   test "setup without an email warns rather than creating an owner nothing can consume" do

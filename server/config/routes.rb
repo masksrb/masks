@@ -13,8 +13,10 @@ Rails.application.routes.draw do
 
   get "/invite/:token", to: "links#invitation", as: :invitation
   get "/reset/:token", to: "links#reset", as: :password_reset
+  get "/verify/:token", to: "links#verify", as: :email_verification
 
   patch "/account/password", to: "passwords#update", as: :account_password
+  post "/account/verify", to: "verifications#create", as: :account_verification
 
   get "/handshake", to: "handshakes#show", as: :handshake
   post "/handshake", to: "handshakes#create"

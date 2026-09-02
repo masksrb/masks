@@ -82,7 +82,7 @@ class FirstRunTest < ActionDispatch::IntegrationTest
     assert_equal 0, within(@tenant) { Actor.count }
   end
 
-  test "the owner is created with a verified address, so userinfo releases one" do
+  test "the owner's address is recorded but not yet confirmed, because nothing confirmed it" do
     host! host_for(@tenant)
 
     post "/login", params: setup_params, as: :json
@@ -91,12 +91,12 @@ class FirstRunTest < ActionDispatch::IntegrationTest
     actor = within(@tenant) { Actor.sole }
 
     assert_equal "owner@example.invalid", actor.email
-    assert actor.email_verified_at.present?
+    assert_nil actor.email_verified_at
 
     claims = within(@tenant) { actor.claims(Scopes::STANDARD) }
 
     assert_equal "owner@example.invalid", claims["email"]
-    assert_equal true, claims["email_verified"]
+    assert_equal false, claims["email_verified"]
     assert_equal "owner", claims["preferred_username"]
   end
 

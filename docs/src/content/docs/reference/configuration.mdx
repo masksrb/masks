@@ -42,6 +42,7 @@ used to mint tenants against a wildcard. See [connecting an app](/guides/handsha
 | `MASKS_MAIL_FROM` | the address invitations are sent from; unset means no mail is sent |
 | `MASKS_INVITATION_LIFETIME` | seconds an invitation stays open — default `604800`, seven days |
 | `MASKS_PASSWORD_RESET_LIFETIME` | seconds a reset link stays open — default `1800`, thirty minutes |
+| `MASKS_EMAIL_VERIFICATION_LIFETIME` | seconds a confirmation link stays open — default `172800`, two days |
 
 Only the first run creates an account without an invitation. Every account after it is invited by
 somebody holding `masks:manage`, and the invitation is what carries the password nobody has set yet.
@@ -52,6 +53,13 @@ the invitation proves control of the mailbox, and the account's email is marked 
 unset, there is no mail, so the administrator gets the link to deliver by hand and the address stays
 unverified, because nothing has demonstrated that it works. Configure a mailer if you want
 `email_verified` to mean anything.
+
+**`email_verified` reports verification and nothing else.** An address is confirmed when somebody
+opens a link sent to it, and by no other route — not by an administrator setting it, and not by
+being the owner. First run therefore creates an owner whose address is *unconfirmed*, and mails a
+confirmation if it can. On a deployment with no mailer every address stays unconfirmed, which is the
+honest answer: nothing has demonstrated that any of them work. Relying parties that require a
+verified address will refuse those accounts, and that is the claim doing its job.
 
 Delivery itself is ordinary Action Mailer — set `config.action_mailer.smtp_settings` in
 `config/environments/production.rb` the way you would in any Rails application.

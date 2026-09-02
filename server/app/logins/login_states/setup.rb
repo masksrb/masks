@@ -44,11 +44,12 @@ module LoginStates
           nickname: nickname,
           email: email,
           password: password,
-          scopes: Scopes.join(Scopes::STANDARD + [ Scopes::MANAGE ]),
-          email_verified_at: Time.current
+          scopes: Scopes.join(Scopes::STANDARD + [ Scopes::MANAGE ])
         )
 
         return warn!("invalid-account") unless actor.save
+
+        Verifications.open(actor: actor)
 
         login.identifier = actor.nickname
         login.actor = actor
