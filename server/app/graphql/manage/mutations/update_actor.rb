@@ -24,7 +24,11 @@ module Manage
         actor.assign_attributes(attributes)
         actor.email_verified_at = nil if changing_email
 
-        { actor: save!(actor) }
+        save!(actor)
+
+        Verifications.open(actor: actor, by: viewer) if changing_email
+
+        { actor: actor }
       end
     end
   end

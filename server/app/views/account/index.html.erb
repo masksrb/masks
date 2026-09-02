@@ -18,6 +18,26 @@
       <p class="text-sm opacity-75">You have not authorized any applications yet.</p>
     <% end %>
 
+    <h2 class="text-xs font-bold uppercase opacity-75">Email</h2>
+
+    <% if @actor.email.blank? %>
+      <p class="text-sm opacity-75">
+        This account has no email address. Applications that require one will refuse it.
+      </p>
+    <% elsif @actor.email_verified_at.present? %>
+      <p class="text-sm opacity-75">
+        <%= @actor.email %> — confirmed.
+      </p>
+    <% else %>
+      <p class="text-sm opacity-75">
+        <%= @actor.email %> is not confirmed, so applications are told so and some will
+        refuse it.
+      </p>
+
+      <%= button_to "Send a confirmation link", account_verification_path,
+            class: "btn btn-sm self-start" %>
+    <% end %>
+
     <h2 class="text-xs font-bold uppercase opacity-75">Password</h2>
 
     <%= form_with url: account_password_path, method: :patch, id: "change-password",

@@ -39,6 +39,7 @@ module Server
     config.masks.mail_from = ENV["MASKS_MAIL_FROM"].presence
     config.masks.invitation_lifetime = ENV.fetch("MASKS_INVITATION_LIFETIME", 7 * 24 * 60 * 60).to_i.seconds
     config.masks.password_reset_lifetime = ENV.fetch("MASKS_PASSWORD_RESET_LIFETIME", 30 * 60).to_i.seconds
+    config.masks.email_verification_lifetime = ENV.fetch("MASKS_EMAIL_VERIFICATION_LIFETIME", 2 * 24 * 60 * 60).to_i.seconds
 
     # Configuration for the application, engines, and railties goes here.
     #

@@ -8,10 +8,10 @@ module MailedLink
       @path
     end
 
-    def open!(actor:, by: nil)
+    def open!(actor:, by: nil, **held)
       where(actor_id: actor.id).live.find_each(&:consume!)
 
-      mint!(actor: actor, payload: { "by" => by&.uuid }.compact)
+      mint!(actor: actor, payload: held.stringify_keys.merge({ "by" => by&.uuid }.compact))
     end
   end
 

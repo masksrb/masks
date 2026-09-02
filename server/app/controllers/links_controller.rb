@@ -7,6 +7,17 @@ class LinksController < ApplicationController
     hand_over(PasswordReset, LoginStates::PasswordReset::HELD, "reset link")
   end
 
+  def verify
+    @actor = EmailVerification.settle!(params[:token])
+
+    if @actor.nil?
+      @noun = "confirmation link"
+      return render :expired, status: :gone
+    end
+
+    render :verified
+  end
+
   private
 
     def hand_over(kind, slot, noun)
