@@ -2,6 +2,7 @@ class Client < ApplicationRecord
   include TenantScoped
 
   AUTH_METHODS = %w[client_secret_basic client_secret_post none].freeze
+  DEFAULT_AUTH_METHOD = "client_secret_basic".freeze
   GRANT_TYPES = [
     "authorization_code",
     "refresh_token",
@@ -42,7 +43,7 @@ class Client < ApplicationRecord
         allowed_scopes: Scopes.join(handshake.scopes),
         grant_types: Handshake::GRANT_TYPES,
         response_types: [ "code" ],
-        token_endpoint_auth_method: "client_secret_basic",
+        token_endpoint_auth_method: handshake.auth_method,
         client_uri: handshake.origin,
         dynamic: false,
         approved_at: Time.current,
@@ -70,7 +71,7 @@ class Client < ApplicationRecord
         response_types: Scopes.list(attributes[:response_types]).presence || [ "code" ],
         resources: Array(attributes[:resources]).map(&:to_s),
         allowed_scopes: Scopes.join(bounded(attributes[:scopes].presence || DEFAULT_SCOPES)),
-        token_endpoint_auth_method: attributes[:token_endpoint_auth_method].presence || "client_secret_basic",
+        token_endpoint_auth_method: attributes[:token_endpoint_auth_method].presence || DEFAULT_AUTH_METHOD,
         application_type: attributes[:application_type].presence || "web",
         client_uri: attributes[:client_uri],
         logo_uri: attributes[:logo_uri],
@@ -83,6 +84,13 @@ class Client < ApplicationRecord
     end
 
     def bounded(requested)
+      reserved = Scopes.reserved(requested)
+
+      if reserved.any?
+        raise ScopesUnavailable,
+              "#{Scopes.join(reserved)} may only be granted to an approved client"
+      end
+
       ceiling = Current.tenant&.dynamic_client_ceiling
       bounded = ceiling ? Scopes.granted(requested, ceiling) : Scopes.list(requested)
 

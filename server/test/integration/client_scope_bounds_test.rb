@@ -28,6 +28,31 @@ class ClientScopeBoundsTest < ActionDispatch::IntegrationTest
     assert_equal "admin openid profile things:read", body["scope"]
   end
 
+  test "open registration cannot ask for a masks: scope, with no ceiling declared" do
+    body = register(scope: "openid profile masks:manage")
+
+    assert_response :bad_request
+    assert_equal "invalid_client_metadata", body["error"]
+    assert_match "masks:manage", body["error_description"]
+  end
+
+  test "the refusal covers the whole masks: namespace, not one scope" do
+    body = register(scope: "openid masks:clients:register")
+
+    assert_response :bad_request
+    assert_match "masks:clients:register", body["error_description"]
+  end
+
+  test "a registration update cannot add a masks: scope either" do
+    registered = register
+    widened = put_metadata(registered, scope: "openid masks:manage")
+
+    assert_response :bad_request
+    assert_equal [ "email", "offline_access", "openid", "profile" ], within(@tenant) {
+      Client.authenticating(registered["client_id"]).scope_list.sort
+    }
+  end
+
   test "a ceiling trims a registration rather than refusing it" do
     ceiling "openid profile email offline_access things:read"
 

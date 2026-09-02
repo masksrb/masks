@@ -18,6 +18,29 @@ class Issuer
     @key ||= tenant.signing_key
   end
 
+  def manage_resource
+    "#{url}/manage"
+  end
+
+  def connections_resource
+    "#{url}/connections"
+  end
+
+  def connection_scopes
+    Tenant.switch(tenant) { Provider.active.map(&:release_scope) }
+  end
+
+  def protected_resource
+    {
+      "resource" => manage_resource,
+      "authorization_servers" => [ url ],
+      "scopes_supported" => [ Scopes::MANAGE ],
+      "scope_descriptions" => { Scopes::MANAGE => Scopes::DESCRIBED[Scopes::MANAGE] },
+      "bearer_methods_supported" => [ "header" ],
+      "tenant" => tenant.to_identity
+    }
+  end
+
   def sign(claims)
     key.sign(claims)
   end
@@ -71,7 +94,7 @@ class Issuer
       "end_session_endpoint" => "#{url}/logout",
       "frontchannel_logout_supported" => false,
       "backchannel_logout_supported" => false,
-      "scopes_supported" => Scopes::DESCRIBED.keys,
+      "scopes_supported" => Scopes::DESCRIBED.keys + connection_scopes,
       "response_types_supported" => Client::RESPONSE_TYPES,
       "response_modes_supported" => [ "query" ],
       "grant_types_supported" => Client::GRANT_TYPES,

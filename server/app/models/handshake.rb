@@ -1,7 +1,7 @@
 class Handshake
   GRANT_TYPES = %w[authorization_code refresh_token].freeze
 
-  attr_reader :name, :redirect_uris, :resource, :scopes, :return_to, :state
+  attr_reader :name, :redirect_uris, :resource, :scopes, :return_to, :state, :auth_method
 
   class << self
     def from_request(request)
@@ -14,7 +14,8 @@ class Handshake
         resource: params["resource"],
         scopes: params["scope"],
         return_to: params["return_to"],
-        state: params["state"]
+        state: params["state"],
+        auth_method: params["token_endpoint_auth_method"]
       )
     end
 
@@ -29,7 +30,8 @@ class Handshake
         resource: row.audience.first,
         scopes: row.scopes,
         return_to: row.redirect_uri,
-        state: held["state"]
+        state: held["state"],
+        auth_method: held["auth_method"]
       )
     end
   end
@@ -41,7 +43,8 @@ class Handshake
       "scopes" => scopes.sort.join(" "),
       "return_to" => return_to,
       "state" => state,
-      "redirect_uris" => redirect_uris.sort
+      "redirect_uris" => redirect_uris.sort,
+      "auth_method" => auth_method
     }.compact
   end
 
@@ -54,7 +57,8 @@ class Handshake
       [ "client_name", name ],
       [ "resource", resource ],
       [ "scope", scopes.join(" ") ],
-      [ "return_to", return_to ]
+      [ "return_to", return_to ],
+      [ "token_endpoint_auth_method", auth_method ]
     ]
 
     pairs << [ "state", state ] if state
@@ -63,13 +67,14 @@ class Handshake
   end
 
   def initialize(name: nil, redirect_uris: nil, resource: nil, scopes: nil,
-                 return_to: nil, state: nil)
+                 return_to: nil, state: nil, auth_method: nil)
     @name = name.to_s.strip.presence || "An application"
     @redirect_uris = Array(redirect_uris).map(&:to_s).reject(&:empty?).uniq
     @resource = resource.to_s
     @scopes = Scopes.list(scopes)
     @return_to = return_to.to_s
     @state = state.presence
+    @auth_method = auth_method.to_s.presence || Client::DEFAULT_AUTH_METHOD
   end
 
   def origin
@@ -105,6 +110,10 @@ class Handshake
       return "at least one redirect_uris is required" if redirect_uris.empty?
       return "a return_to is required" if return_to.blank?
       return "a scope is required" if scopes.empty?
+
+      unless Client::AUTH_METHODS.include?(auth_method)
+        return "token_endpoint_auth_method must be one of #{Client::AUTH_METHODS.join(', ')}"
+      end
 
       elsewhere = ([ return_to ] + redirect_uris).reject { |uri| origin_of(uri) == origin }
       return "everything must share the origin #{origin}: #{elsewhere.join(', ')}" if elsewhere.any?

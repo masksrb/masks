@@ -44,7 +44,7 @@ module LoginStates
           nickname: nickname,
           email: email,
           password: password,
-          scopes: Scopes.join(Scopes::STANDARD),
+          scopes: Scopes.join(Scopes::STANDARD + [ Scopes::MANAGE ]),
           email_verified_at: Time.current
         )
 

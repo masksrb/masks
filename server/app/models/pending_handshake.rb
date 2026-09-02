@@ -15,7 +15,8 @@ class PendingHandshake < Token
       payload: {
         "name" => handshake.name,
         "redirect_uris" => handshake.redirect_uris,
-        "state" => handshake.state
+        "state" => handshake.state,
+        "auth_method" => handshake.auth_method
       }.compact
     )
   end

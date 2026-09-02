@@ -35,6 +35,9 @@ COPY Gemfile Gemfile.lock ./
 RUN bundle install && \
     rm -rf ~/.bundle/ "${BUNDLE_PATH}"/ruby/*/cache "${BUNDLE_PATH}"/ruby/*/bundler/gems/*/.git
 
+COPY --from=web . /web
+RUN cd /web && npm ci && npm run build
+
 COPY package.json package-lock.json ./
 RUN npm ci
 

@@ -17,6 +17,10 @@ class Actor < ApplicationRecord
   normalizes :nickname, with: ->(value) { value.to_s.strip }
   normalizes :email, with: ->(value) { value.to_s.strip.downcase.presence }
 
+  normalizes :name, :given_name, :family_name, :middle_name, :profile_url, :picture_url,
+             :website_url, :gender, :birthdate, :zoneinfo, :locale,
+             with: ->(value) { value.to_s.strip.presence }
+
   class << self
     def authenticate(identifier, password)
       actor = find_by(nickname: identifier.to_s.strip) ||
@@ -46,7 +50,18 @@ class Actor < ApplicationRecord
   end
 
   def permitted_scopes(requested)
-    Scopes.granted(requested, scope_list)
+    wanted = Scopes.list(requested)
+    available = scope_list
+    available |= connection_scopes if wanted.any? { |scope| Scopes.connection?(scope) }
+
+    Scopes.granted(wanted, available)
+  end
+
+  def connection_scopes
+    return [] unless persisted?
+
+    Connection.live.where(actor_id: id).includes(:provider)
+              .filter_map { |held| held.provider&.release_scope }.uniq
   end
 
   def grant!(requested)
