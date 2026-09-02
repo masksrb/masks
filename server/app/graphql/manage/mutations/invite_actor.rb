@@ -20,7 +20,7 @@ module Manage
 
         save!(actor)
 
-        Invitations.open(actor: actor, invited_by: viewer).merge(actor: actor)
+        Invitations.open(actor: actor, by: viewer).merge(actor: actor)
       end
     end
   end

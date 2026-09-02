@@ -10,7 +10,7 @@ class InvitationTest < ActionDispatch::IntegrationTest
   def invite(nickname: "sam", email: "sam@example.com")
     within(@tenant) do
       actor = Actor.invite!(nickname: nickname, email: email)
-      [ actor, Invitation.open!(actor: actor, invited_by: @owner) ]
+      [ actor, Invitation.open!(actor: actor, by: @owner) ]
     end
   end
 
@@ -90,7 +90,7 @@ class InvitationTest < ActionDispatch::IntegrationTest
   test "opening a second invitation retires the first" do
     actor, first = invite
 
-    second = within(@tenant) { Invitation.open!(actor: actor, invited_by: @owner) }
+    second = within(@tenant) { Invitation.open!(actor: actor, by: @owner) }
 
     within(@tenant) do
       assert_not first.reload.live?

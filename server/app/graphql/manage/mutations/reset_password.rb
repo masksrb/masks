@@ -1,6 +1,6 @@
 module Manage
   module Mutations
-    class ResendInvitation < BaseMutation
+    class ResetPassword < BaseMutation
       argument :uuid, ID
 
       field :actor, Types::ActorType, null: false
@@ -10,9 +10,9 @@ module Manage
       def resolve(uuid:)
         actor = actor!(uuid)
 
-        refuse!("#{actor.nickname} has already accepted an invitation") if actor.activated?
+        refuse!("#{actor.nickname} has not accepted an invitation yet") unless actor.activated?
 
-        Invitations.open(actor: actor, by: viewer).merge(actor: actor)
+        Recoveries.open(actor: actor, by: viewer).merge(actor: actor)
       end
     end
   end

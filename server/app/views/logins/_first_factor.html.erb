@@ -16,3 +16,10 @@
 
   <button type="submit" class="btn btn-primary w-full">Sign in</button>
 <% end %>
+
+<%= form_with url: login_path, method: :post, id: "forgot-password" do |form| %>
+  <%= hidden_field_tag :rid, login.rid %>
+  <%= form.hidden_field :event, value: "forgot-password" %>
+
+  <button type="submit" class="link text-sm opacity-75">Forgot your password?</button>
+<% end %>

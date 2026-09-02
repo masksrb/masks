@@ -7,6 +7,7 @@ import BackupCode from "./prompts/backup-code.svelte";
 import Consent from "./prompts/consent.svelte";
 import FirstFactor from "./prompts/first-factor.svelte";
 import Identify from "./prompts/identify.svelte";
+import ResetPassword from "./prompts/reset-password.svelte";
 import SecondFactor from "./prompts/second-factor.svelte";
 import Settled from "./prompts/settled.svelte";
 import Setup from "./prompts/setup.svelte";
@@ -15,6 +16,7 @@ const prompts = {
   setup: Setup,
   "accept-invitation": AcceptInvitation,
   identify: Identify,
+  "reset-password": ResetPassword,
   "first-factor": FirstFactor,
   "second-factor": SecondFactor,
   "backup-code": BackupCode,

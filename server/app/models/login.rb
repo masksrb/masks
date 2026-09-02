@@ -2,6 +2,7 @@ class Login
   STATES = [
     LoginStates::Setup,
     LoginStates::Invitation,
+    LoginStates::PasswordReset,
     LoginStates::Identifier,
     LoginStates::Password,
     LoginStates::FirstFactor,

@@ -1,6 +1,7 @@
 <% login.warnings.each do |warning| %>
-  <% message = t("logins.warnings.#{warning}", default: nil) %>
+  <% notice = t("logins.notices.#{warning}", default: nil) %>
+  <% message = notice || t("logins.warnings.#{warning}", default: nil) %>
   <% if message %>
-    <div class="alert alert-error text-sm" role="alert"><%= message %></div>
+    <div class="alert <%= notice ? 'alert-info' : 'alert-error' %> text-sm" role="alert"><%= message %></div>
   <% end %>
 <% end %>

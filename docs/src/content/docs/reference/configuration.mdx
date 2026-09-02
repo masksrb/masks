@@ -41,6 +41,7 @@ used to mint tenants against a wildcard. See [connecting an app](/guides/handsha
 | --- | --- |
 | `MASKS_MAIL_FROM` | the address invitations are sent from; unset means no mail is sent |
 | `MASKS_INVITATION_LIFETIME` | seconds an invitation stays open — default `604800`, seven days |
+| `MASKS_PASSWORD_RESET_LIFETIME` | seconds a reset link stays open — default `1800`, thirty minutes |
 
 Only the first run creates an account without an invitation. Every account after it is invited by
 somebody holding `masks:manage`, and the invitation is what carries the password nobody has set yet.
@@ -65,6 +66,7 @@ sign-in carries two of them.
 | `MASKS_ATTEMPT_LIMIT` | sign-in and second factor, per address — default `10` |
 | `MASKS_ACCOUNT_ATTEMPT_LIMIT` | sign-in, per identifier — default `5` |
 | `MASKS_REGISTRATION_LIMIT` | dynamic client registration — default `10` |
+| `MASKS_RECOVERY_LIMIT` | forgotten-password requests, per address, in fifteen minutes — default `5` |
 
 ### Development only
 

@@ -46,3 +46,9 @@ en:
       missing-nickname: "Choose a username for the owner account."
       short-password: "That password is too short."
       invalid-account: "That username cannot be used here."
+      missing-email: "Enter an email address for the owner account."
+      invitation-expired: "That invitation is no longer valid. Ask for another."
+      reset-expired: "That reset link is no longer valid. Ask for another."
+      no-mailer: "This server cannot send email, so it cannot reset a password. Ask an administrator."
+    notices:
+      reset-sent: "If that account exists and can receive email, a reset link is on its way."

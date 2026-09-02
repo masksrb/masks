@@ -3,6 +3,7 @@ module Manage
     class MutationType < BaseObject
       field :invite_actor, mutation: Mutations::InviteActor
       field :resend_invitation, mutation: Mutations::ResendInvitation
+      field :reset_password, mutation: Mutations::ResetPassword
       field :update_actor, mutation: Mutations::UpdateActor
       field :set_actor_scopes, mutation: Mutations::SetActorScopes
       field :generate_backup_codes, mutation: Mutations::GenerateBackupCodes

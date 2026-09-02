@@ -46,3 +46,12 @@ function onsubmit(event) {
     {login.loading ? "Signing in..." : "Sign in"}
   </button>
 </form>
+
+<button
+  type="button"
+  class="link text-sm opacity-75 self-start"
+  disabled={login.loading}
+  onclick={() => login.submit("forgot-password", {})}
+>
+  Forgot your password?
+</button>

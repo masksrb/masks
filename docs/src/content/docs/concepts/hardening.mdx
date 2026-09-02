@@ -25,6 +25,16 @@ ratio:             1.00x
 The failure message is identical too — "that identifier and password do not match" names neither
 half.
 
+**Forgetting a password says nothing either.** A reset request answers with the same notice whichever
+way it goes: *if that account exists and can receive email, a reset link is on its way.* It answers
+that for an identifier nobody holds, for an account with no email address, and for an account invited
+but never accepted — all of which quietly send nothing. What it will not do is confirm a guess. The
+one thing the server does report about itself is having no mailer at all, which is a fact about the
+deployment rather than about anybody's account.
+
+Recovery is rate limited separately from sign-in, because it is the one unauthenticated action that
+causes mail to be sent.
+
 ## The session is rotated on sign-in
 
 A session fixation attack plants a known session cookie in a victim's browser, waits for them to
@@ -94,3 +104,6 @@ what is stored is the `jti` and never the token.
 - **Client secret rotation.** Secrets are issued once and have no expiry.
 - **Offline revocation visibility.** A revoked token stays verifiable to a resource server doing
   JWT-only validation until it expires — see [narrowing a token](/guides/exchange).
+- **A sole administrator with no mail.** Recovery needs a mailbox. A tenant whose only account holds
+  `masks:manage`, on a deployment with no mailer, has no path back in but the console. Backup codes
+  do not help: they are a way past a second factor, not past a first.
