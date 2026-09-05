@@ -91,6 +91,15 @@ class Actor < ApplicationRecord
     scope_list.include?(scope.to_s)
   end
 
+  def grant!(requested)
+    wanted = Scopes.list(requested) - scope_list
+    return scope_list if wanted.empty?
+
+    update!(scopes: Scopes.join(scope_list + wanted))
+
+    scope_list
+  end
+
   def withheld(requested)
     Scopes.list(requested) - permitted_scopes(requested)
   end

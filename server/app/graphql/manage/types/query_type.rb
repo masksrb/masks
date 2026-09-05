@@ -39,6 +39,8 @@ module Manage
         argument :id, ID
       end
 
+      field :namespaces, [ NamespaceType ], null: false
+
       field :scopes_supported, [ String ], null: false
 
       field :tally, TallyType, null: false
@@ -109,6 +111,10 @@ module Manage
 
       def device(id:)
         ::Device.find_by(id: id)
+      end
+
+      def namespaces
+        Namespace.includes(:client).order(:name)
       end
 
       def scopes_supported

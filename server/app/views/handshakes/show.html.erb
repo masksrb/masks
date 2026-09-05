@@ -45,6 +45,30 @@
     </ul>
   </div>
 
+  <% if @beneath.present? %>
+    <div class="ledger-row">
+      <span class="ledger-label">Which today is</span>
+      <ul class="grant-scopes">
+        <% @beneath.each do |scope, description| %>
+          <li class="grant-scope">
+            <span><%= description %></span>
+            <span class="chip-key"><%= scope %></span>
+          </li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <% if @granting.present? %>
+    <div class="ledger-row">
+      <span class="ledger-label">Claims</span>
+      <span class="ledger-value">
+        <%= @granting.to_sentence %> becomes <%= @handshake.name %>'s here, and is granted to you so
+        you can use what you are connecting.
+      </span>
+    </div>
+  <% end %>
+
   <div class="ledger-row">
     <span class="ledger-label">From</span>
     <span class="ledger-value aside-mono"><%= @handshake.origin %></span>
