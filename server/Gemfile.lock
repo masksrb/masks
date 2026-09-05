@@ -113,6 +113,7 @@ GEM
     debug (1.11.1)
       irb (~> 1.10)
       reline (>= 0.3.8)
+    device_detector (1.1.3)
     dotenv (3.2.0)
     dotenv-rails (3.2.0)
       dotenv (= 3.2.0)
@@ -435,6 +436,7 @@ DEPENDENCIES
   bundler-audit
   capybara
   debug
+  device_detector (~> 1.1)
   dotenv-rails
   fido_metadata (~> 0.5)
   graphql (~> 2.6)
@@ -491,6 +493,7 @@ CHECKSUMS
   crass (1.0.7) sha256=94868719948664c89ddcaf0a37c65048413dfcb1c869470a5f7a7ceb5390b295
   date (3.5.1) sha256=750d06384d7b9c15d562c76291407d89e368dda4d4fff957eb94962d325a0dc0
   debug (1.11.1) sha256=2e0b0ac6119f2207a6f8ac7d4a73ca8eb4e440f64da0a3136c30343146e952b6
+  device_detector (1.1.3) sha256=c5fe3fe42cab2e8aa01f193b2074b8bb1510373ce47127206f28c7dea75a9c79
   dotenv (3.2.0) sha256=e375b83121ea7ca4ce20f214740076129ab8514cd81378161f11c03853fe619d
   dotenv-rails (3.2.0) sha256=657e25554ba622ffc95d8c4f1670286510f47f2edda9f68293c3f661b303beab
   drb (2.2.3) sha256=0b00d6fdb50995fe4a45dea13663493c841112e4068656854646f418fda13373

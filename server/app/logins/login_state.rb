@@ -62,7 +62,7 @@ class LoginState
   attr_reader :login
 
   delegate :actor, :client, :identifier, :warn!, :touched?, :factored!, :expire!,
-           :updates, :tenant, :request, :session, to: :login
+           :updates, :tenant, :request, :session, :device, :remembered?, :remember!, to: :login
 
   def initialize(login)
     @login = login

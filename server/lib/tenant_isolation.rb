@@ -12,6 +12,14 @@ module TenantIsolation
     SQL
   end
 
+  def across_tenants(table)
+    execute "ALTER TABLE #{table} NO FORCE ROW LEVEL SECURITY"
+
+    yield
+  ensure
+    execute "ALTER TABLE #{table} FORCE ROW LEVEL SECURITY"
+  end
+
   def disable_row_level_security(table)
     execute <<~SQL
       DROP POLICY IF EXISTS tenant_isolation ON #{table};

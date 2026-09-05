@@ -115,6 +115,27 @@ A browser session. `digest`, `user_agent`, `ip_address`, `authenticated_at`, `ex
 `amr` is stored so a session that is reused for a second authorization still reports what actually
 proved it.
 
+`device_id` and `device_version` bind the session to the browser that started it; `Session.resume`
+refuses one whose device has since rotated or been blocked.
+
+## Device
+
+The browser behind a session, outliving every session on it. `public_id`, `version`, `name`,
+`user_agent`, `ip_address`, `last_seen_at`, `blocked_at`. `Device::LIFETIME` is 400 days — the
+cookie's sliding expiry — and `Device::IDLE` is the 5 minutes `last_seen_at` is allowed to go stale
+before it is written again.
+
+`Device.identify` finds or mints one; `#rotate!` invalidates every session on it in a single write;
+`#sign_out!` rotates, revokes the sessions and tokens it holds, and forgets what it was trusted for;
+`#block!` does that and refuses the browser outright. `#label` is the given name, or
+`DeviceDetector`'s reading of the user agent, or `Unknown device`.
+
+## DeviceFactor
+
+A factor one device has already satisfied for one actor: `device_id`, `actor_id`, `factor`,
+`satisfied_at`, `expires_at`. `DeviceFactor::LIFETIME` is 30 days. Only `second_factor` is ever
+written, and `Actor#sign_out_everywhere!` drops every one an actor holds.
+
 ## Consent
 
 What an actor has allowed a client to do: `scopes`, `audience`, `revoked_at`, unioned across grants.

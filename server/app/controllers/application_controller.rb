@@ -7,8 +7,9 @@ class ApplicationController < ActionController::Base
 
   around_action :within_tenant
   before_action :withhold_referrer
+  before_action :refuse_blocked_device
 
-  helper_method :current_actor, :current_tenant, :hid_for
+  helper_method :current_actor, :current_tenant, :current_device, :hid_for
 
   rescue_from TenantMissing, with: :no_such_tenant
   rescue_from Policy::Denied, with: :policy_denied
@@ -21,7 +22,7 @@ class ApplicationController < ActionController::Base
     end
 
     def withhold_referrer
-      response.headers["Referrer-Policy"] = "no-referrer"
+      response.headers["Referrer-Policy"] = "same-origin"
     end
 
     def within_tenant
@@ -51,13 +52,52 @@ class ApplicationController < ActionController::Base
       current_session&.actor
     end
 
+    def current_device
+      return @current_device if defined?(@current_device)
+
+      held = cookies.signed[Device::COOKIE].presence
+
+      @current_device = held && recognise(held)
+    end
+
+    def establish_device
+      @current_device = recognise(cookies.signed[Device::COOKIE].presence)
+    end
+
+    def refuse_blocked_device
+      return unless current_device&.blocked?
+
+      render plain: "this device has been blocked", status: :forbidden
+    end
+
+    def recognise(public_id)
+      device = Device.identify(
+        public_id,
+        user_agent: request.user_agent,
+        ip_address: request.remote_ip
+      )
+
+      cookies.signed[Device::COOKIE] = {
+        value: device.public_id,
+        expires: Device::LIFETIME.from_now,
+        httponly: true,
+        same_site: :lax,
+        secure: request.ssl?
+      }
+
+      device
+    end
+
     def sign_in(actor, amr: [])
       carried = session.to_hash.slice(REQUESTS, HANDSHAKES, "login", "masks_return_to")
       reset_session
       carried.each { |key, value| session[key] = value }
 
+      device = establish_device
+
       record = Session.start!(
         actor: actor,
+        device: device,
         user_agent: request.user_agent,
         ip_address: request.remote_ip,
         amr: amr

@@ -2,7 +2,7 @@ module LoginStates
   class OneTimePassword < LoginState
     EXPIRY = 12.hours
 
-    accepts :code
+    accepts :code, :remember
 
     def enabled?
       actor&.otp?
@@ -17,6 +17,7 @@ module LoginStates
 
       if actor.verify_otp(update(:code))
         factored! :second_factor, expiry: EXPIRY
+        remember! DeviceFactor::SECOND_FACTOR if remembering?
         login.noted! "otp", "mfa"
         true
       else
@@ -24,5 +25,11 @@ module LoginStates
         false
       end
     end
+
+    private
+
+      def remembering?
+        device.present? && ActiveModel::Type::Boolean.new.cast(update(:remember))
+      end
   end
 end

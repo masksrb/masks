@@ -56,6 +56,7 @@ class AuthorizeController < ApplicationController
         store: session[LoginsController::STORE] ||= {},
         request: pending,
         session: current_session,
+        device: current_device,
         rid: rid_for(pending)
       ).update
     end
@@ -75,6 +76,7 @@ class AuthorizeController < ApplicationController
 
       code = claimed.issue_code!(
         actor: current_actor,
+        device: current_device,
         authenticated_at: login.authenticated_at || current_session&.authenticated_at,
         amr: login.amr.presence || current_session&.amr
       )

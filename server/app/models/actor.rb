@@ -8,6 +8,7 @@ class Actor < ApplicationRecord
   has_many :tokens, dependent: :destroy
   has_many :sessions, dependent: :destroy
   has_many :consents, dependent: :destroy
+  has_many :device_factors, dependent: :destroy
 
   validates :nickname, presence: true,
                        uniqueness: { scope: :tenant_id, case_sensitive: false },
@@ -55,6 +56,10 @@ class Actor < ApplicationRecord
         BCrypt::Password.new(decoy_digest) == password.to_s
         nil
       end
+  end
+
+  def devices
+    Device.for_actor(self)
   end
 
   def scope_list
@@ -116,6 +121,7 @@ class Actor < ApplicationRecord
 
     held.find_each(&:revoke!)
     RefreshToken.where(actor_id: id).live.find_each(&:revoke!)
+    DeviceFactor.forget!(actor: self)
   end
 
   def otp?

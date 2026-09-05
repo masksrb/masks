@@ -22,6 +22,9 @@ Rails.application.routes.draw do
   post "/account/passkeys", to: "passkeys#create", as: :passkeys
   delete "/account/passkeys/:id", to: "passkeys#destroy", as: :passkey
 
+  patch "/account/devices/:id", to: "devices#update", as: :device
+  delete "/account/devices/:id", to: "devices#destroy"
+
   get "/handshake", to: "handshakes#show", as: :handshake
   post "/handshake", to: "handshakes#create"
 

@@ -15,7 +15,10 @@ module Manage
           backup_codes_generated_at: nil
         )
 
-        { actor: save!(actor) }
+        save!(actor)
+        DeviceFactor.forget!(actor: actor)
+
+        { actor: actor }
       end
     end
   end
