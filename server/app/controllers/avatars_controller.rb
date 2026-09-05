@@ -76,6 +76,7 @@ class AvatarsController < ApplicationController
       response.headers["X-Content-Type-Options"] = "nosniff"
       response.headers["Content-Security-Policy"] = SEALED
       response.headers["Cache-Control"] = caching(style, stamp)
+      response.headers["Vary"] = "Cookie, Authorization" unless named_style?
       response.headers["ETag"] = %("#{stamp}")
 
       return head :not_modified if request.headers["If-None-Match"].to_s.include?(stamp)
@@ -83,8 +84,15 @@ class AvatarsController < ApplicationController
       send_data bytes, type: content_type, disposition: "inline"
     end
 
+    def named_style?
+      params[:style].present?
+    end
+
+    # Without a style in the path the answer depends on who asked — an owner
+    # sees their photo where a stranger sees an identicon — so it is never a
+    # shared cache's to keep, whatever the style it resolved to.
     def caching(style, stamp)
-      shared = Avatars.generated?(style) ? "public" : "private"
+      shared = named_style? && Avatars.generated?(style) ? "public" : "private"
       age = params[:digest] == stamp ? FOREVER : BRIEFLY
       immutable = params[:digest] == stamp ? ", immutable" : ""
 

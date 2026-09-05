@@ -23,6 +23,10 @@ module Manage
           ::Device.find_by(id: id) || refuse!("no device with that id")
         end
 
+        def signing_key!(kid)
+          ::SigningKey.find_by(kid: kid) || refuse!("no signing key with that kid")
+        end
+
         def save!(record)
           refuse!(record.errors.full_messages.join("; ")) unless record.save
 

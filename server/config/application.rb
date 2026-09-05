@@ -45,7 +45,11 @@ module Server
     config.masks.password_reset_lifetime = ENV.fetch("MASKS_PASSWORD_RESET_LIFETIME", 30 * 60).to_i.seconds
     config.masks.email_verification_lifetime = ENV.fetch("MASKS_EMAIL_VERIFICATION_LIFETIME", 2 * 24 * 60 * 60).to_i.seconds
 
-    if config.masks.public_origin_template.nil? && !Rails.env.local?
+    # SECRET_KEY_BASE_DUMMY is Rails' own signal that this boot exists to
+    # compile assets rather than to serve anything, which is the one time
+    # production boots without a deployment's environment around it.
+    if config.masks.public_origin_template.nil? && !Rails.env.local? &&
+       ENV["SECRET_KEY_BASE_DUMMY"].blank?
       raise "MASKS_PUBLIC_ORIGIN_TEMPLATE is required outside development. Without it the " \
             "issuer, the registration endpoint and every emailed link follow the Host header, " \
             "so anyone who can reach this server can have a password reset delivered to theirs."

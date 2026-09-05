@@ -471,6 +471,110 @@ class ManageApiTest < ActionDispatch::IntegrationTest
     assert_match "may not be offered to dynamic registration", body["errors"].first["message"]
   end
 
+  def stage(token)
+    ask(%(mutation { stageSigningKey { signingKey { kid state } } }), token)
+      .dig("data", "stageSigningKey", "signingKey")
+  end
+
+  test "a staged key is published before it signs anything" do
+    signing = within(@tenant) { SigningKey.active.first.kid }
+    staged = stage(bearer)
+
+    assert_equal "staged", staged["state"]
+    assert_not_equal signing, staged["kid"]
+    assert_equal signing, within(@tenant) { SigningKey.active.first.kid }
+
+    get "/.well-known/jwks.json"
+
+    assert_includes JSON.parse(response.body)["keys"].map { |key| key["kid"] }, staged["kid"]
+  end
+
+  test "only one key may be staged at a time" do
+    held = bearer
+    stage(held)
+
+    body = ask(%(mutation { stageSigningKey { signingKey { kid } } }), held)
+
+    assert_match "already staged", body["errors"].first["message"]
+    assert_equal 1, within(@tenant) { SigningKey.staged.count }
+  end
+
+  test "activating a staged key retires the outgoing one after an overlap" do
+    held = bearer
+    outgoing = within(@tenant) { SigningKey.active.first }
+    staged = stage(held)
+
+    body = ask(
+      %(mutation { activateSigningKey(kid: "#{staged['kid']}") { signingKey { state } } }), held
+    )
+
+    assert_equal "active", body.dig("data", "activateSigningKey", "signingKey", "state")
+    assert_equal staged["kid"], within(@tenant) { SigningKey.active.first.kid }
+
+    retired = within(@tenant) { outgoing.reload.retired_at }
+
+    assert_operator retired, :>, Time.current
+    assert_in_delta SigningKey::OVERLAP.from_now.to_f, retired.to_f, 5
+
+    assert_nil ask("{ viewer { nickname } }", held)["errors"]
+  end
+
+  test "a key already signing cannot be activated again" do
+    held = bearer
+    signing = within(@tenant) { SigningKey.active.first.kid }
+
+    body = ask(%(mutation { activateSigningKey(kid: "#{signing}") { signingKey { state } } }), held)
+
+    assert_match "already signing", body["errors"].first["message"]
+  end
+
+  test "a staged key can be discarded, and a signing key cannot" do
+    held = bearer
+    staged = stage(held)
+
+    refused = ask(
+      %(mutation { discardSigningKey(kid: "#{within(@tenant) { SigningKey.active.first.kid }}") { kid } }),
+      held
+    )
+
+    assert_match "only a staged key", refused["errors"].first["message"]
+
+    body = ask(%(mutation { discardSigningKey(kid: "#{staged['kid']}") { kid } }), held)
+
+    assert_equal staged["kid"], body.dig("data", "discardSigningKey", "kid")
+    assert_empty within(@tenant) { SigningKey.staged.to_a }
+  end
+
+  test "rotating stages and activates in one step" do
+    held = bearer
+    outgoing = within(@tenant) { SigningKey.active.first }
+
+    body = ask(%(mutation { rotateSigningKey { signingKey { kid state } } }), held)
+    minted = body.dig("data", "rotateSigningKey", "signingKey")
+
+    assert_equal "active", minted["state"]
+    assert_not_equal outgoing.kid, minted["kid"]
+    assert_equal minted["kid"], within(@tenant) { SigningKey.active.first.kid }
+    assert_empty within(@tenant) { SigningKey.staged.to_a }
+
+    get "/.well-known/jwks.json"
+    published = JSON.parse(response.body)["keys"].map { |key| key["kid"] }
+
+    assert_includes published, minted["kid"]
+    assert_includes published, outgoing.kid
+  end
+
+  test "signing keys carry the state the console badges them with" do
+    held = bearer
+    stage(held)
+    within(@tenant) { SigningKey.rotate!(tenant: @tenant) }
+
+    states = ask("{ tenant { signingKeys { state } } }", held)
+      .dig("data", "tenant", "signingKeys").map { |key| key["state"] }
+
+    assert_equal %w[active retiring staged].sort, states.sort
+  end
+
   test "archiving the client you are signed in with is refused" do
     body = ask(%(mutation { archiveClient(clientId: "#{@client.client_id}") { client { archivedAt } } }), bearer)
 

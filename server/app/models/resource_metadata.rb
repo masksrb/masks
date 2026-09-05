@@ -13,7 +13,7 @@ class ResourceMetadata
       end
 
       Scopes.list(scopes).map do |scope|
-        [ scope, published[scope].presence || Scopes::DESCRIBED[scope] ]
+        [ scope, published[scope].presence || Scopes.description_for(scope) ]
       end
     end
   end
