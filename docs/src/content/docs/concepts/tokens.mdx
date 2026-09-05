@@ -3,22 +3,36 @@ title: Tokens and audiences
 description: What masks issues, what it stores, and how a resource server insists a token was minted for it.
 ---
 
+`server/app/models/token.rb` and its three subclasses.
+
 ## What gets issued
 
 | | Format | Lifetime | Single use |
 | --- | --- | --- | --- |
-| authorization code | opaque, 64 bytes | 10 minutes | yes |
+| authorization code | opaque, 48 random bytes base64url | 10 minutes | yes |
 | access token | signed JWT (RS256) | 1 hour | no |
 | id token | signed JWT (RS256) | 15 minutes | no |
-| refresh token | opaque, 64 bytes | 30 days | yes, rotated |
+| refresh token | opaque, 48 random bytes base64url | 30 days | yes, rotated |
 
-Opaque tokens are stored as a SHA-256 digest — a database read cannot recover one. Access tokens are
-JWTs so a resource server can verify them offline against the JWKS, but a row is still kept per
-token, keyed by `jti`, so they can be revoked and inspected.
+Lifetimes are `Token.lifetime` per subclass; the id token's is inline in `Issuer#id_token`.
 
-## What the id token carries, and what it does not
+Opaque tokens are stored as `Digest::SHA256.hexdigest(secret)`. `Token.mint!` returns the record
+with `#secret` readable exactly once and never stored.
 
-The id token is **identity, and nothing a scope asked for**:
+An access token's `digest` column holds its `jti` — a UUID — because the JWT itself is never stored.
+A row still exists per access token, so it can be revoked and inspected.
+
+| | |
+| --- | --- |
+| `Token.redeem(secret)` | find a live one by digest |
+| `Token.claim(secret)` | redeem and consume atomically, in one `UPDATE` |
+| `Token.spent(secret)` | find one `redeem` has already refused — how a replay is noticed |
+| `#consume!` | burn it |
+| `#revoke!` | burn it and everything below it, breadth-first through `children` |
+
+## The id token
+
+Identity, and nothing a scope asked for:
 
 ```json
 {
@@ -32,38 +46,42 @@ The id token is **identity, and nothing a scope asked for**:
   "amr": ["pwd"],
   "nonce": "n-once",
   "at_hash": "aG91c2U…",
+  "c_hash": "…",
   "tenant": { "uuid": "…", "subdomain": "jons" }
 }
 ```
 
-No `name`, no `email`, no `preferred_username`. OIDC Core 5.4 puts the claims a scope asks for at
-[userinfo](/reference/endpoints) for any flow that issues an access token, and carrying them here as
-well hands a name and an address to everything that reads the token rather than to what presents one.
-Ask `/userinfo` for those.
+No `name`, no `email`, no `preferred_username`. OIDC Core 5.4 puts scope-requested claims at
+[userinfo](/reference/endpoints) for any flow that issues an access token.
 
 | | |
 | --- | --- |
-| `auth_time` | when the person actually signed in — not when the token was built |
-| `acr` | `urn:masks:acr:pwd` or `urn:masks:acr:mfa`, by what **this** sign-in actually did |
-| `amr` | the methods that were used — `pwd`, `otp`, `swk`, `user`, `mfa` (RFC 8176) |
-| `at_hash` | left half of the SHA-256 of the access token, so a client can confirm the two were issued together rather than paired by whoever delivered them |
-| `tenant` | who answered, so a consumer reads a claim instead of calling back |
+| `auth_time` | when the person signed in, not when the token was built |
+| `acr` | `urn:masks:acr:mfa` if `amr` includes `mfa`, else `urn:masks:acr:pwd` |
+| `amr` | `pwd`, `otp`, `swk`, `user`, `mfa` (RFC 8176) |
+| `at_hash` / `c_hash` | left half of the SHA-256, base64url unpadded |
+| `tenant` | who answered — see [Tenancy](/concepts/tenancy) |
 
-Both describe the sign-in, never the account. An actor who has an authenticator enrolled but signed
-in with a password alone gets `pwd`, because that is what happened; an actor who signed in with a
-single user-verified passkey gets `mfa`, because that one step proved possession of the authenticator
-*and* verified the person holding it. Reading `acr` off the account instead would let the first case
-claim a second factor nobody presented.
+`acr` and `amr` describe the sign-in, never the account. `Login#noted!` accumulates `amr` as states
+satisfy factors; `Issuer#acr_for` reads it. An actor with an authenticator enrolled who signed in
+with a password alone gets `pwd`.
 
-`max_age` is enforced against `auth_time`, not against `iat`. Sign in at nine, reuse consent at
-eleven, and a token whose `auth_time` was its own issue time would swear you had just authenticated.
+`max_age` is enforced against `auth_time` through `Login#stale?`, not against `iat`.
 
-## Audiences, and why `resource` exists
+## The access token
 
-By default a token's `aud` is the client it was issued to. That is fine for an id token, which the
-client consumes itself, and useless for an access token the client sends *somewhere else*.
+```ruby
+{ "iss", "sub", "aud", "exp", "iat", "jti", "client_id", "scope", "act", "tenant" }
+```
 
-RFC 8707 fixes this. The client names the API it intends to call:
+`aud` is a bare string when there is one audience and an array otherwise. Nils are compacted out.
+
+## Audiences and `resource`
+
+By default a token's `aud` is the client it was issued to — fine for an id token, useless for an
+access token the client sends somewhere else.
+
+RFC 8707: the client names the API it intends to call.
 
 ```
 GET /authorize
@@ -72,29 +90,27 @@ GET /authorize
   &resource=https%3A%2F%2Fjons.things.example%2Fmcp
 ```
 
-and that value becomes the token's `aud`:
+That value becomes the token's `aud`. The resource server verifies it against its own URL and
+refuses anything else. Without it, a token minted for one API is valid at every other API trusting
+the same issuer.
 
-```json
-{ "aud": "https://jons.things.example/mcp", "scope": "openid profile email" }
-```
-
-The resource server then verifies `aud` against **its own URL** and refuses anything else. Without
-this, a token minted for one API is a valid token at every other API that trusts the same issuer —
-so any one of them can replay a token it receives against all the others.
-
-`resource` may repeat to name several. It can be sent at `/authorize`, at `/token`, or both; at the
-token endpoint it may only *narrow* what the code already authorized.
+`resource` may repeat. It can be sent at `/authorize`, at `/token`, or both; at the token endpoint it
+may only narrow what the code already authorized. `AuthorizationPolicy#resources_are_absolute`
+rejects a relative one.
 
 :::caution[Repeated parameters]
 Rails keeps only the last value of a repeated query parameter, so masks parses `resource` off the raw
-query string and raw body rather than out of `params`. If you are writing a client, either form
-works; if you are reading this code, that is why it looks unusual.
+query string and raw body rather than out of `params`.
 :::
+
+`resource_indicators_supported` is published in discovery. RFC 8414 does not register it, which is
+the second deliberate divergence recorded in `conformance/expected-failures.json`.
 
 ## PKCE
 
-`code_challenge` with `S256` is required for public clients and accepted from every client. `plain`
-is not supported.
+`code_challenge` with `S256` is required for public clients (`token_endpoint_auth_method: "none"`)
+and accepted from every client. `Client::CHALLENGE_METHODS` is `["S256"]` — `plain` is not
+supported.
 
 ```
 challenge = BASE64URL(SHA256(verifier))
@@ -102,24 +118,27 @@ challenge = BASE64URL(SHA256(verifier))
 
 The verifier is checked at the token endpoint with a constant-time comparison, and the code is
 consumed whether or not it matches. Burning it only on success would let a wrong verifier be retried
-with the right one — which is the interception the check exists to catch, granted a second attempt.
+with the right one.
 
 ## A replayed code takes its tokens with it
 
-Presenting a code twice is evidence the first presentation may not have been the client's. So the
-second attempt is refused *and* everything the first one minted is revoked — the access token and
-the refresh token both, since both record the code as their parent:
+Presenting a code twice is evidence the first presentation may not have been the client's. The
+second attempt is refused *and* everything the first minted is revoked — both the access token and
+the refresh token record the code as their `parent`.
 
 ```
 POST /token  code=abc…   → 200, access + refresh issued
 POST /token  code=abc…   → 400 invalid_grant, and both of those are now dead
 ```
 
-Revoking the code alone would leave whoever intercepted it holding the things the code was only ever
-a means to — and the refresh token is the worse half to leave behind, because it outlives the access
-token by a month.
+`Token#revoke!` walks `children` breadth-first, so the cascade reaches exchanges of exchanges.
+
+`server/test/integration/revocation_test.rb`.
 
 ## Refresh rotation
 
 Refreshing consumes the presented token and mints a child that records its parent. A replayed
 refresh token fails, because the first use already consumed it.
+
+`parent_id` is one chain doing three jobs: rotating refresh tokens, recording provenance through
+[an exchange](/guides/exchange), and letting a replayed code revoke what it already issued.

@@ -1,10 +1,12 @@
 ---
 title: Policies
-description: Declarative, composable checks — named after what they assert.
+description: Declarative checks named after what they assert, and the redirectable flag that decides where a denial goes.
 ---
 
-A policy is a list of named checks run against a subject. The names are the documentation: reading a
-policy tells you what the request has to satisfy, without reading a method body.
+A policy is a list of named checks run against a subject. Reading the list tells you what a request
+has to satisfy without reading a method body.
+
+`server/app/policies/`
 
 ```ruby
 class AuthorizationPolicy < Policy
@@ -18,13 +20,27 @@ class AuthorizationPolicy < Policy
 end
 ```
 
-- **`uses`** runs another policy first, in full. `AuthorizationPolicy` cannot check scopes against a
-  client it has not yet established exists, so `ClientPolicy` runs ahead of it.
-- **`checks`** names methods on this policy. They run in declaration order.
+| | |
+| --- | --- |
+| `uses` | run another policy first, in full |
+| `checks` | methods on this policy, in declaration order |
+| `delegate … to: :subject` | what the checks read |
 
-Both inherit, so a subclass gets its parent's checks and can add to them.
+Both `uses` and `checks` inherit, and both are de-duplicated before running.
+`ClientPolicy` runs ahead of `AuthorizationPolicy` because scopes cannot be checked against a client
+that has not been established to exist.
 
-## Denials carry two things
+The three that ship:
+
+| | Checks |
+| --- | --- |
+| `ClientPolicy` | `client_is_known`, `redirect_uri_is_registered` |
+| `AuthorizationPolicy` | the six above, plus `ClientPolicy`'s |
+| `ExchangePolicy` | `client_may_exchange`, `token_types_are_supported`, `subject_token_is_live`, `scopes_only_narrow`, `audience_only_narrows`, `lifetime_only_shortens` |
+
+Run one with `ClientPolicy.new(authorization).call`.
+
+## Denials carry four things
 
 ```ruby
 def pkce_is_present_when_required
@@ -36,12 +52,12 @@ def pkce_is_present_when_required
 end
 ```
 
-An OAuth **error code**, and whether the failure is safe to hand back to the client's
-`redirect_uri`.
+`Policy::Denied` holds an OAuth `error` code, a `description`, an HTTP `status` (default
+`:bad_request`), and `redirectable`.
 
-That second flag is the load-bearing one. `invalid_client` and an unregistered `redirect_uri` are
-*not* redirectable — if they were, an attacker could point `redirect_uri` anywhere and use the error
-response itself as an open redirector. Everything after the client and its redirect URI have been
+`redirectable` is the load-bearing one. `invalid_client` and an unregistered `redirect_uri` are not
+redirectable — if they were, an attacker could point `redirect_uri` anywhere and use the error
+response as an open redirector. Everything checked *after* the client and its redirect URI are
 established is redirectable, because by then the destination is one the client registered.
 
 ```ruby
@@ -54,11 +70,14 @@ rescue Policy::Denied => denial
 ```
 
 The non-redirectable branch renders a page rather than a JSON body, because a refusal with nowhere
-safe to send it is one a **person** is looking at. A client that asks for JSON still gets it.
+safe to send it is one a person is looking at. A client that asks for JSON still gets `to_h`.
+
+See [Endpoints](/reference/endpoints).
 
 ## Writing one
 
-Subclass `Policy`, delegate what you need from the subject, and keep each check to one assertion.
+Subclass `Policy`, delegate what you need from the subject, keep each check to one assertion, and
+name the method after what it asserts.
 
 ```ruby
 class ClientPolicy < Policy
@@ -81,12 +100,3 @@ class ClientPolicy < Policy
     end
 end
 ```
-
-Then run it: `ClientPolicy.new(authorization).call`.
-
-:::note[What changed from the previous masks]
-The idea is the same — declarative, composable checks. The implementation is not. The old DSL ran as
-Rack middleware over a host application and used `method_missing` to build sub-policies at
-configuration time. This runs against a standalone request pipeline, which is most of why the server
-is no longer an engine.
-:::

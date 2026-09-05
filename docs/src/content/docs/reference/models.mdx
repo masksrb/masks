@@ -3,92 +3,139 @@ title: Models
 description: What the server stores.
 ---
 
-Every table below carries `tenant_id`, has row-level security forced on it, and is scoped by
-`TenantScoped` in the application as well.
+`server/app/models/`
+
+Every table below carries `tenant_id`, has `FORCE ROW LEVEL SECURITY` and a `tenant_isolation`
+policy, and is scoped by `TenantScoped` in the application as well. See
+[Tenancy](/concepts/tenancy).
 
 ## Tenant
 
-`uuid`, `subdomain`, `name`, `settings`, `archived_at`. The only model *not* tenant-scoped, because
-it is the tenant. Generates a signing key on create.
+`uuid`, `subdomain`, `name`, `settings`, `dynamic_client_scopes`, `archived_at`. The only model
+*not* tenant-scoped, because it is the tenant. Generates a signing key on create.
 
-`Tenant.resolve(host)` finds one by subdomain; `Tenant.switch(tenant) { }` sets the Postgres session
-variable RLS reads and restores the previous value afterwards.
+| | |
+| --- | --- |
+| `Tenant.resolve(host)` | find one by subdomain |
+| `Tenant.switch(tenant) { }` | set the Postgres session variable RLS reads, and restore it after |
+| `#to_identity` | `{ uuid, subdomain, name }` — the `tenant` claim |
 
 ## SigningKey
 
-`kid`, `algorithm`, `private_pem` (encrypted), `public_jwk`, `activated_at`, `retired_at`.
+`kid`, `algorithm` (`RS256`), `private_pem` (encrypted), `public_jwk`, `activated_at`, `retired_at`.
 
 | | |
 | --- | --- |
 | `SigningKey.active` | what signing uses |
 | `SigningKey.published` | what JWKS lists — includes a key retiring in the future |
-| `SigningKey.rotate!` | mint a replacement, retire the incumbent after an overlap |
+| `SigningKey.rotate!` | mint a replacement, retire the incumbent after `OVERLAP` (24h) |
+
+See [Signing keys](/concepts/keys).
 
 ## Actor
 
 A person. `uuid` (the `sub` claim), `nickname`, `name`, `email`, `password_digest`, `otp_secret`
-(encrypted), `scopes`, plus the rest of the OIDC standard profile: `given_name`, `family_name`,
-`middle_name`, `profile_url`, `picture_url`, `website_url`, `gender`, `birthdate`, `zoneinfo`,
-`locale`. All nullable, and nothing edits them yet.
+(encrypted), `otp_enabled_at`, `email_verified_at`, `scopes`, `backup_code_digests`,
+`backup_codes_generated_at`, `activated_at`, `webauthn_id`, `last_login_at`, plus the OIDC standard
+profile: `given_name`, `family_name`, `middle_name`, `profile_url`, `picture_url`, `website_url`,
+`gender`, `birthdate`, `zoneinfo`, `locale`.
 
-`Actor.authenticate(identifier, password)` accepts a nickname or an email.
-`#claims(scopes, requested:)` returns only what the granted scopes permit — `profile` releases the
-thirteen standard profile claims, `email` releases the address and `email_verified`, and neither is
-included without them. `requested:` is the `claims` request parameter, which releases a claim named
-directly rather than through its scope.
+`Actor.locate` accepts a nickname or an email; `Actor.authenticate` verifies against a decoy digest
+when there is nothing to verify against — see [Hardening](/concepts/hardening).
 
-Unset fields are omitted rather than returned as `null`, so an actor releases what it has and stays
-quiet about the rest.
+`#claims(scopes, requested:)` returns only what the granted scopes permit. `profile` releases the
+standard profile claims; `email` releases the address and `email_verified`. Unset fields are omitted
+rather than returned as `null`. `requested:` is the `claims` request parameter, which releases a
+claim named directly rather than through its scope.
 
-`activated_at` separates an account that exists from one somebody has taken up. An invited actor has
-no password and cannot authenticate until it accepts; the flag is set whenever a password is stored,
-so it stays correct for an account that only ever holds passkeys.
+`#permitted_scopes` unions in `connection_scopes` — the `masks:connections:<provider>` scopes for
+providers this actor has live connections to.
+
+`activated_at` separates an account that exists from one somebody has taken up. It is set by
+`activate_once_a_password_exists` whenever a password is stored, so an invited actor cannot
+authenticate until it accepts.
+
+`email_verified_at` is set only by opening a link sent to the address. Nothing else sets it.
 
 ## Passkey
 
-A WebAuthn credential belonging to an actor. `external_id` (the credential id), `public_key`,
-`sign_count`, `aaguid`, `name`, `user_verified`, `last_used_at`.
+A WebAuthn credential. `external_id`, `public_key`, `sign_count`, `aaguid`, `name`, `discoverable`,
+`user_verified`, `last_used_at`.
 
-There is nothing secret in the row. The private half never leaves the authenticator, so a database
-read yields a public key and a counter — which is the whole reason to prefer one over a password.
+There is nothing secret in the row — the private half never leaves the authenticator.
 
-`sign_count` is the clone detector: an authenticator that reports a counter no higher than the one
-already stored is refused. `aaguid` says which model of authenticator it is, and is recorded so a
-credential can be named after the thing that made it rather than after the browser that enrolled it.
+`#cloned?(reported)` is the clone detector: a counter no higher than the one already stored is
+refused. `Passkey::MAX_PER_ACTOR` is 20.
 
 ## Client
 
-An application. `client_id`, `secret_digest` (bcrypt), `redirect_uris`, `grant_types`,
-`response_types`, `scopes`, `token_endpoint_auth_method`, `dynamic`, `registration_token_digest`.
+An application. `client_id`, `secret_digest` (bcrypt), `name`, `redirect_uris`,
+`post_logout_redirect_uris`, `grant_types`, `response_types`, `resources`, `allowed_scopes`,
+`required_scopes`, `token_endpoint_auth_method`, `application_type`, `client_uri`, `logo_uri`,
+`tos_uri`, `policy_uri`, `dynamic`, `registration_token_digest`, `secret_expires_at`, `approved_at`,
+`approved_by_id`, `archived_at`.
 
 `#public?` is `token_endpoint_auth_method == "none"`, which is what makes PKCE mandatory.
-`Client.register!` is the DCR path and is the only place `dynamic` is set.
+`Client.register!` is the DCR path and the only place `dynamic` is set true; `Client.bounded`
+refuses reserved scopes there. `approved_by` is the actor who ran the
+[handshake](/guides/handshake).
 
 ## Token
 
-Single table, `type` column, four subclasses.
+Single table, `type` column, three subclasses.
 
-| | Stored as | |
+Columns: `digest`, `scopes`, `audience`, `parent_id`, `actor_id`, `client_id`, `redirect_uri`,
+`nonce`, `code_challenge`, `code_challenge_method`, `authenticated_at`, `requested_claims`,
+`payload`, `expires_at`, `consumed_at`.
+
+| | Digest holds | |
 | --- | --- | --- |
-| `AuthorizationCode` | SHA-256 of the secret | holds the PKCE challenge, `redirect_uri`, `nonce`, `authenticated_at`, `requested_claims` |
-| `AccessToken` | the `jti` of the JWT | the JWT itself is never stored; `parent_id` is the code it came from |
+| `AuthorizationCode` | SHA-256 of the secret | the PKCE challenge, `redirect_uri`, `nonce`, `authenticated_at`, `requested_claims` |
+| `AccessToken` | the JWT's `jti` | the JWT is never stored; `parent_id` is the code it came from |
 | `RefreshToken` | SHA-256 of the secret | `parent_id` chains rotations |
 
-`Token.mint!` generates a secret and returns the record with `#secret` readable exactly once.
-`Token.redeem(secret)` finds a live one by digest. `Token.spent(secret)` finds one redeem has
-already refused, which is how a replay is noticed at all. `#consume!` burns it; `#revoke!` burns it
+`InitialAccessToken`, `PendingHandshake` and `PendingRequest` reuse the same table through
+`payload`. The last two live one hour; an authorization request in flight is a row rather than a
+session slot, which is what lets it survive the `reset_session` at sign-in.
+
+`Token.mint!` returns the record with `#secret` readable exactly once. `Token.redeem(secret)` finds
+a live one; `Token.claim(secret)` redeems and consumes atomically; `Token.spent(secret)` finds one
+`redeem` already refused, which is how a replay is noticed. `#consume!` burns it; `#revoke!` burns it
 and everything below it.
 
-`parent_id` is one chain doing three jobs: it rotates refresh tokens, it records provenance through
-[an exchange](/guides/exchange), and — because an access token points back at the code that minted
-it — it is what lets a replayed code revoke what it already issued.
+`parent_id` is one chain doing three jobs: rotating refresh tokens, recording provenance through
+[an exchange](/guides/exchange), and letting a replayed code revoke what it already issued.
 
 ## Session
 
 A browser session. `digest`, `user_agent`, `ip_address`, `authenticated_at`, `expires_at`,
-`revoked_at`. The cookie holds the secret; the database holds its digest.
+`revoked_at`, `amr`. The cookie holds the secret; the database holds its digest.
+`Session::LIFETIME` is 14 days.
+
+`amr` is stored so a session that is reused for a second authorization still reports what actually
+proved it.
 
 ## Consent
 
-What an actor has allowed a client to do: `scopes` and `audience`, unioned across grants.
-`Consent.covers?` is what decides whether the consent screen is shown again.
+What an actor has allowed a client to do: `scopes`, `audience`, `revoked_at`, unioned across grants.
+`Consent.covers?` decides whether the consent screen is shown again.
+
+## Provider and Connection
+
+An upstream identity provider a tenant configures, and one actor's account at it.
+
+`Provider`: `key`, `name`, `authorization_url`, `token_url`, `revocation_url`, `userinfo_url`,
+`client_id`, `client_secret` (encrypted), `scopes`, `authorize_params`, `subject_claim` (default
+`sub`), `label_claim` (default `email`), `archived_at`.
+
+`Connection`: `provider_id`, `actor_id`, `subject`, `label`, `scopes`, `refresh_token` and
+`access_token` (both encrypted), `access_token_expires_at`, `connected_at`, `revoked_at`,
+`revoked_reason`. `Connection::DEFAULT_LIFETIME` is 55 minutes and `SKEW` is 60 seconds.
+
+`Provider#release_scope` is `masks:connections:<key>`. A bearer holding it can exchange a connection
+id for a live upstream access token at `POST /connections/token`, so a downstream service never
+holds the upstream refresh token.
+
+:::note[TODO]
+There is no UI or `manage` mutation for creating a `Provider`. They are created from the console.
+:::

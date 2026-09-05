@@ -4,8 +4,10 @@ description: What a resource server does with a bearer token, and the two claims
 ---
 
 A resource server receives bearer tokens and signs nobody in. It needs `masks` and nothing else —
-the gem's Rails engine loads only when Rails is already loaded, so an API-only or Rack service takes
-on `jwt` and no framework.
+`Masks::Rails` loads only when Rails is already defined, so an API-only or Rack service takes on
+`jwt` and no framework.
+
+`client/lib/masks/client/verifier.rb`
 
 ```ruby
 verifier = Masks::Client.verifier(
@@ -16,20 +18,23 @@ verifier = Masks::Client.verifier(
 claims = verifier.verify(token)
 ```
 
-That checks the signature against the issuer's JWKS, and `iss`, `aud` and `exp`. A failure raises
-`Masks::Client::InvalidToken`.
+`verify` checks the signature against the issuer's JWKS, and `iss`, `aud` and `exp`. `required:`
+defaults to `%w[iss sub exp]` — claims that must be present, not merely valid if there. A failure
+raises `Masks::Client::InvalidToken`.
+
+`verifier.tenant(token)` returns the `tenant` claim.
 
 ## The two that are easy to skip
 
 **`aud`.** Verify it against *your own* URL. A token minted for another API is a perfectly valid
-token signed by an issuer you trust — if you do not check who it was minted for, any API sharing your
-issuer can replay tokens it receives against you.
+token signed by an issuer you trust; without this check, any API sharing your issuer can replay
+tokens it receives against you.
 
-**`iss`.** Pin it to the tenant you expect. The verifier does this for you, but only because you told
-it which issuer to construct with — so resolve that from the tenant, not from the token.
+**`iss`.** Pin it to the tenant you expect. The verifier does this, but only because you told it
+which issuer to construct with — so resolve that from the tenant, not from the token.
 
 :::caution
-Never resolve the issuer *from the token you are verifying*. That is the token telling you who to
+Never resolve the issuer from the token you are verifying. That is the token telling you who to
 trust to vouch for it.
 :::
 
@@ -47,13 +52,14 @@ end
 ```
 
 Because keys are per tenant, a token from the wrong one does not merely fail an `iss` comparison —
-its `kid` is absent from the JWKS you fetched, so it cannot be verified at all.
+its `kid` is absent from the JWKS you fetched, so it cannot be verified at all. See
+[Signing keys](/concepts/keys).
 
 ## Names live at userinfo
 
 A verified access token gives you a subject, a tenant, scopes and an audience. It does not give you a
 name or an email address, and neither does the id token — those are released by `/userinfo` to
-whoever presents the token, which is the point of them not being in it.
+whoever presents the token.
 
 ```ruby
 profile = session.userinfo(access_token)
@@ -61,13 +67,17 @@ profile["name"]   # => "Jon"
 profile["email"]  # => "jon@example.com"
 ```
 
-`Masks::Client::Session#identity` does this for you at a callback, merging userinfo *underneath* the
-verified id-token claims so the signed values always win.
+`Masks::Client::Session#identity` does this at a callback, merging userinfo *underneath* the
+verified id-token claims so the signed values win.
 
 ## Caching
 
-`Issuer` caches discovery and JWKS for five minutes. On an unknown `kid` the verifier invalidates and
-refetches once, so a key rotation is picked up without a restart and without a fetch per request.
+`Masks::Client::Issuer` caches discovery and JWKS for `TTL`, 300 seconds. On an unknown `kid` the
+verifier invalidates and refetches once, so a key rotation is picked up without a restart and
+without a fetch per request.
+
+`Issuer.resolve(url)` returns a shared instance from `Masks::Client.registry`; `refresh!` clears it
+by hand.
 
 ## Challenging
 
@@ -77,3 +87,17 @@ Answer a bad token with a `WWW-Authenticate` header so the client knows where to
 response.headers["WWW-Authenticate"] =
   %(Bearer error="invalid_token", resource_metadata="#{origin}/.well-known/oauth-protected-resource")
 ```
+
+`Masks::Rails::ProtectedResource` does this for you, and publishes the RFC 9728 metadata document
+from `config.resource` and `config.resource_scopes`.
+
+## Introspection
+
+For an opaque token, or to see whether one has been revoked since it was issued:
+
+```ruby
+session.introspect(token, hint: "access_token")
+```
+
+`POST /introspect` (RFC 7662) is rate limited to 120 per minute per tenant and address, and answers
+`{"active": false}` for anything it will not talk about.
