@@ -3,6 +3,7 @@ class Login
     LoginStates::Setup,
     LoginStates::Invitation,
     LoginStates::PasswordReset,
+    LoginStates::Passkey,
     LoginStates::Identifier,
     LoginStates::Password,
     LoginStates::FirstFactor,
@@ -60,6 +61,16 @@ class Login
 
   def factors
     store["factors"] ||= {}
+  end
+
+  def amr
+    store["amr"] ||= []
+  end
+
+  def noted!(*methods)
+    amr.concat(methods.map(&:to_s))
+    amr.uniq!
+    amr
   end
 
   def touched?(key)

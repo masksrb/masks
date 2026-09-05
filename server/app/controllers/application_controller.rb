@@ -51,7 +51,7 @@ class ApplicationController < ActionController::Base
       current_session&.actor
     end
 
-    def sign_in(actor)
+    def sign_in(actor, amr: [])
       carried = session.to_hash.slice(REQUESTS, HANDSHAKES, "login", "masks_return_to")
       reset_session
       carried.each { |key, value| session[key] = value }
@@ -59,7 +59,8 @@ class ApplicationController < ActionController::Base
       record = Session.start!(
         actor: actor,
         user_agent: request.user_agent,
-        ip_address: request.remote_ip
+        ip_address: request.remote_ip,
+        amr: amr
       )
 
       cookies.encrypted[:masks_session] = {

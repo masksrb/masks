@@ -1,6 +1,7 @@
 class Issuer
   ACR_PASSWORD = "urn:masks:acr:pwd".freeze
   ACR_MULTI_FACTOR = "urn:masks:acr:mfa".freeze
+  MULTI_FACTOR = "mfa".freeze
   ACR_VALUES = [ ACR_PASSWORD, ACR_MULTI_FACTOR ].freeze
 
   attr_reader :tenant, :origin
@@ -58,7 +59,7 @@ class Issuer
   end
 
   def id_token(actor:, client:, nonce: nil, issued_at: Time.current,
-               authenticated_at: nil, access_token: nil, code: nil)
+               authenticated_at: nil, access_token: nil, code: nil, amr: nil)
     sign({
       "iss" => url,
       "sub" => actor.uuid,
@@ -66,7 +67,8 @@ class Issuer
       "exp" => 15.minutes.from_now.to_i,
       "iat" => issued_at.to_i,
       "auth_time" => (authenticated_at || issued_at).to_i,
-      "acr" => acr_for(actor),
+      "acr" => acr_for(amr),
+      "amr" => Array(amr).presence,
       "nonce" => nonce,
       "at_hash" => half_hash(access_token),
       "c_hash" => half_hash(code),
@@ -74,8 +76,8 @@ class Issuer
     }.compact)
   end
 
-  def acr_for(actor)
-    actor.otp? ? ACR_MULTI_FACTOR : ACR_PASSWORD
+  def acr_for(amr)
+    Array(amr).include?(MULTI_FACTOR) ? ACR_MULTI_FACTOR : ACR_PASSWORD
   end
 
   def discovery

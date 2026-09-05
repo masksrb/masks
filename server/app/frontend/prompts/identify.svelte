@@ -1,4 +1,5 @@
 <script>
+import PasskeyButton from "../shared/PasskeyButton.svelte";
 import PromptHeader from "../shared/PromptHeader.svelte";
 
 let { login } = $props();
@@ -48,3 +49,5 @@ function onsubmit(event) {
     {login.loading ? "Checking..." : "Continue"}
   </button>
 </form>
+
+<PasskeyButton {login} />

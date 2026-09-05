@@ -40,6 +40,22 @@ directly rather than through its scope.
 Unset fields are omitted rather than returned as `null`, so an actor releases what it has and stays
 quiet about the rest.
 
+`activated_at` separates an account that exists from one somebody has taken up. An invited actor has
+no password and cannot authenticate until it accepts; the flag is set whenever a password is stored,
+so it stays correct for an account that only ever holds passkeys.
+
+## Passkey
+
+A WebAuthn credential belonging to an actor. `external_id` (the credential id), `public_key`,
+`sign_count`, `aaguid`, `name`, `user_verified`, `last_used_at`.
+
+There is nothing secret in the row. The private half never leaves the authenticator, so a database
+read yields a public key and a counter — which is the whole reason to prefer one over a password.
+
+`sign_count` is the clone detector: an authenticator that reports a counter no higher than the one
+already stored is refused. `aaguid` says which model of authenticator it is, and is recorded so a
+credential can be named after the thing that made it rather than after the browser that enrolled it.
+
 ## Client
 
 An application. `client_id`, `secret_digest` (bcrypt), `redirect_uris`, `grant_types`,

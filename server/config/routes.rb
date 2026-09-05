@@ -18,6 +18,10 @@ Rails.application.routes.draw do
   patch "/account/password", to: "passwords#update", as: :account_password
   post "/account/verify", to: "verifications#create", as: :account_verification
 
+  post "/account/passkeys/challenge", to: "passkeys#challenge", as: :passkey_challenge
+  post "/account/passkeys", to: "passkeys#create", as: :passkeys
+  delete "/account/passkeys/:id", to: "passkeys#destroy", as: :passkey
+
   get "/handshake", to: "handshakes#show", as: :handshake
   post "/handshake", to: "handshakes#create"
 

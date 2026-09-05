@@ -59,7 +59,8 @@ CREATE TABLE public.actors (
     locale character varying,
     backup_code_digests jsonb DEFAULT '[]'::jsonb NOT NULL,
     backup_codes_generated_at timestamp(6) without time zone,
-    activated_at timestamp(6) without time zone
+    activated_at timestamp(6) without time zone,
+    webauthn_id character varying
 );
 
 ALTER TABLE ONLY public.actors FORCE ROW LEVEL SECURITY;
@@ -235,6 +236,48 @@ ALTER SEQUENCE public.consents_id_seq OWNED BY public.consents.id;
 
 
 --
+-- Name: passkeys; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.passkeys (
+    id bigint NOT NULL,
+    tenant_id bigint NOT NULL,
+    actor_id bigint NOT NULL,
+    name character varying NOT NULL,
+    external_id character varying NOT NULL,
+    public_key text NOT NULL,
+    sign_count bigint DEFAULT 0 NOT NULL,
+    aaguid character varying,
+    discoverable boolean DEFAULT false NOT NULL,
+    user_verified boolean DEFAULT false NOT NULL,
+    last_used_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+ALTER TABLE ONLY public.passkeys FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: passkeys_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.passkeys_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: passkeys_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.passkeys_id_seq OWNED BY public.passkeys.id;
+
+
+--
 -- Name: providers; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -304,7 +347,8 @@ CREATE TABLE public.sessions (
     expires_at timestamp(6) without time zone NOT NULL,
     revoked_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    amr jsonb DEFAULT '[]'::jsonb NOT NULL
 );
 
 ALTER TABLE ONLY public.sessions FORCE ROW LEVEL SECURITY;
@@ -482,6 +526,13 @@ ALTER TABLE ONLY public.consents ALTER COLUMN id SET DEFAULT nextval('public.con
 
 
 --
+-- Name: passkeys id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.passkeys ALTER COLUMN id SET DEFAULT nextval('public.passkeys_id_seq'::regclass);
+
+
+--
 -- Name: providers id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -554,6 +605,14 @@ ALTER TABLE ONLY public.connections
 
 ALTER TABLE ONLY public.consents
     ADD CONSTRAINT consents_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: passkeys passkeys_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.passkeys
+    ADD CONSTRAINT passkeys_pkey PRIMARY KEY (id);
 
 
 --
@@ -721,6 +780,27 @@ CREATE INDEX index_consents_on_client_id ON public.consents USING btree (client_
 --
 
 CREATE INDEX index_consents_on_tenant_id ON public.consents USING btree (tenant_id);
+
+
+--
+-- Name: index_passkeys_on_actor_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_passkeys_on_actor_id ON public.passkeys USING btree (actor_id);
+
+
+--
+-- Name: index_passkeys_on_tenant_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_passkeys_on_tenant_id ON public.passkeys USING btree (tenant_id);
+
+
+--
+-- Name: index_passkeys_on_tenant_id_and_external_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_passkeys_on_tenant_id_and_external_id ON public.passkeys USING btree (tenant_id, external_id);
 
 
 --
@@ -932,6 +1012,14 @@ ALTER TABLE ONLY public.tokens
 
 
 --
+-- Name: passkeys fk_rails_79adc8e12d; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.passkeys
+    ADD CONSTRAINT fk_rails_79adc8e12d FOREIGN KEY (actor_id) REFERENCES public.actors(id);
+
+
+--
 -- Name: tokens fk_rails_86c4a10c3c; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -961,6 +1049,14 @@ ALTER TABLE ONLY public.providers
 
 ALTER TABLE ONLY public.signing_keys
     ADD CONSTRAINT fk_rails_bb7b6b543d FOREIGN KEY (tenant_id) REFERENCES public.tenants(id);
+
+
+--
+-- Name: passkeys fk_rails_bd872fde15; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.passkeys
+    ADD CONSTRAINT fk_rails_bd872fde15 FOREIGN KEY (tenant_id) REFERENCES public.tenants(id);
 
 
 --
@@ -994,6 +1090,12 @@ ALTER TABLE public.connections ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.consents ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: passkeys; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.passkeys ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: providers; Type: ROW SECURITY; Schema: public; Owner: -
@@ -1042,6 +1144,13 @@ CREATE POLICY tenant_isolation ON public.consents USING ((tenant_id = (NULLIF(cu
 
 
 --
+-- Name: passkeys tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.passkeys USING ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint)) WITH CHECK ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint));
+
+
+--
 -- Name: providers tenant_isolation; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -1082,6 +1191,8 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260904000002'),
+('20260904000001'),
 ('20260902000001'),
 ('20260901120002'),
 ('20260901120001'),

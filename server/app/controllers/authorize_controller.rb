@@ -70,12 +70,13 @@ class AuthorizeController < ApplicationController
       claimed = PendingRequest.claim(rid_for(pending))
       return spent(pending) if claimed.nil?
 
-      sign_in(login.actor) if current_session.nil?
+      sign_in(login.actor, amr: login.amr) if current_session.nil?
       session.delete(LoginsController::STORE)
 
       code = claimed.issue_code!(
         actor: current_actor,
-        authenticated_at: login.authenticated_at || current_session&.authenticated_at
+        authenticated_at: login.authenticated_at || current_session&.authenticated_at,
+        amr: login.amr.presence || current_session&.amr
       )
 
       render_rack(attempt.approve!(code.secret))

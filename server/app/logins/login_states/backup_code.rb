@@ -30,6 +30,7 @@ module LoginStates
       if actor.verify_backup_code(update(:backup_code))
         forget!
         factored! :second_factor, expiry: OneTimePassword::EXPIRY
+        login.noted! "otp", "mfa"
         true
       else
         warn! "invalid-backup-code"

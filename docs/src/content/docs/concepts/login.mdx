@@ -12,6 +12,7 @@ class Login
     LoginStates::Setup,
     LoginStates::Invitation,
     LoginStates::PasswordReset,
+    LoginStates::Passkey,
     LoginStates::Identifier,
     LoginStates::Password,
     LoginStates::FirstFactor,
@@ -29,6 +30,16 @@ an invitation an administrator opened, and turns an account that has no password
 event from the password prompt, and it prompts for a new password when the browser is carrying a
 reset link. Both end at `factored! :first_factor` and nothing further — **a reset is a first factor,
 never a way past a second one.**
+
+`Passkey` sits ahead of `Identifier` because a discoverable credential already knows who it belongs
+to — asking for a username first would be asking a question the authenticator is about to answer.
+
+**One passkey can be both factors.** It ends at `factored! :first_factor`, and *additionally* at
+`factored! :second_factor` when the assertion reports that the authenticator verified the person —
+a fingerprint, a face, a PIN. That is genuinely two factors in one step: something you have, proven
+by the signature, and something you are or know, proven by the verification flag. A passkey that
+reports no user verification stops at the first factor, and an enrolled authenticator still gates
+the rest.
 
 **The order of `STATES` is the flow.** Nothing else encodes it — there is no state diagram, no
 `next_step` column, and no controller deciding what comes after what.
