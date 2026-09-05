@@ -89,7 +89,13 @@ refuses reserved scopes there. `approved_by` is the actor who ran the
 
 ## Token
 
-Single table, `type` column, three subclasses.
+Single table, `type` column, nine subclasses:
+
+```
+AuthorizationCode  AccessToken  RefreshToken  InitialAccessToken
+Invitation  PasswordReset  EmailVerification
+PendingRequest  PendingHandshake
+```
 
 Columns: `digest`, `scopes`, `audience`, `parent_id`, `actor_id`, `client_id`, `redirect_uri`,
 `nonce`, `code_challenge`, `code_challenge_method`, `authenticated_at`, `requested_claims`,
@@ -101,8 +107,9 @@ Columns: `digest`, `scopes`, `audience`, `parent_id`, `actor_id`, `client_id`, `
 | `AccessToken` | the JWT's `jti` | the JWT is never stored; `parent_id` is the code it came from |
 | `RefreshToken` | SHA-256 of the secret | `parent_id` chains rotations |
 
-`InitialAccessToken`, `PendingHandshake` and `PendingRequest` reuse the same table through
-`payload`. The last two live one hour; an authorization request in flight is a row rather than a
+`Invitation`, `PasswordReset` and `EmailVerification` are the link tokens, with their own lifetimes
+from `MASKS_INVITATION_LIFETIME` and its siblings. `PendingHandshake` and `PendingRequest` live one
+hour and carry state through `payload`. An authorization request in flight is a row rather than a
 session slot, which is what lets it survive the `reset_session` at sign-in.
 
 `Token.mint!` returns the record with `#secret` readable exactly once. `Token.redeem(secret)` finds

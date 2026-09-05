@@ -3,8 +3,8 @@ title: The login machine
 description: Eleven ordered states — the order is the flow, and adding a factor is adding two files.
 ---
 
-Sign-in is an ordered list of states. Each gets to reload, handle the event, then insist; the first
-one that insists names the prompt you see.
+Sign-in is an ordered list of states. Each one reloads, handles the event, then insists. The first
+to insist names the prompt you see.
 
 `server/app/models/login.rb`, `server/app/logins/`
 
@@ -26,7 +26,7 @@ class Login
 end
 ```
 
-The order of `STATES` is the flow. There is no state diagram, no `next_step` column, and no
+The order of `STATES` is the flow. There is no state diagram, no `next_step` column and no
 controller deciding what comes after what.
 
 | State | Ahead of `Identifier` because |
@@ -38,9 +38,9 @@ controller deciding what comes after what.
 
 `Setup` runs once per tenant and creates the owner. `Invitation` turns an account with no password
 into one that has one. `PasswordReset` handles both the `forgot-password` event and the reset link,
-and ends at `factored! :first_factor` only — a reset is a first factor, never a way past a second.
+and ends at `factored! :first_factor` only, so a reset is never a way past a second factor.
 
-## One pass is three passes
+## How a pass runs
 
 ```ruby
 def update
@@ -59,7 +59,7 @@ end
 ```
 
 A state insists by raising `PromptRequired`, so the first unsatisfied state in declaration order
-wins and the rest never run. `Refused` ends the flow with an OAuth error instead — `Consent` raises
+wins and the rest never run. `Refused` ends the flow with an OAuth error instead; `Consent` raises
 it on `decline`.
 
 The client gets the prompt name and renders one component for it:
@@ -69,8 +69,8 @@ The client gets the prompt name and renders one component for it:
   "identifier": "owner", "actor": { "nickname": "owner", "name": "Ada" } }
 ```
 
-`Login#as_json` merges each enabled state's own `as_json`, so a prompt arrives with what it needs —
-`Passkey` adds its WebAuthn options, `Consent` adds the scopes and audience being asked for.
+`Login#as_json` merges each enabled state's own `as_json`, so a prompt arrives with what it needs.
+`Passkey` adds its WebAuthn options; `Consent` adds the scopes and audience being asked for.
 
 ## A state declares three things
 
@@ -110,10 +110,18 @@ All three inherit through `inherited_from`, so a subclass gets its parent's and 
 `Login.permitted_updates` is the union of every state's `accepts` — the strong parameters of the
 login endpoint.
 
-`enabled?` gates a state entirely: `Passkey` returns `::Passkey.exists?`, `Consent` returns
-`request.present?`.
+`enabled?` gates a state entirely:
 
-## Verifying and insisting are different states
+| | |
+| --- | --- |
+| `Setup` | a tenant with no actors |
+| `Invitation` | an invitation is present |
+| `Passkey` | `::Passkey.exists?` |
+| `OneTimePassword` / `SecondFactor` | `actor&.otp?` |
+| `BackupCode` | `actor&.backup_codes?` |
+| `Consent` | `request.present?` |
+
+## Verifying and insisting
 
 `Password` has no `prompts` block, and `FirstFactor` has nothing else:
 
@@ -127,27 +135,26 @@ end
 
 One state knows how to check a password; a different one knows the flow cannot continue until some
 first factor has been satisfied. `OneTimePassword` / `BackupCode` and `SecondFactor` are the same
-pair a step later.
-
-That split is what lets a second way of proving a first factor be added without touching the thing
-that insists on one.
+pair a step later. A second way of proving a first factor can be added without touching what
+insists on one.
 
 ## What proves what
 
-| State | Sets | `amr` |
-| --- | --- | --- |
-| `Password` | `first_factor`, 12h | `pwd` |
-| `Passkey` | `first_factor`, 12h | `swk` |
-| `Passkey`, user-verified | *and* `second_factor`, 12h | `user`, `mfa` |
-| `OneTimePassword` | `second_factor`, 12h | `otp`, `mfa` |
-| `BackupCode` | `second_factor`, 12h | `otp`, `mfa` |
-| `Setup` / `Invitation` / `PasswordReset` | `first_factor`, 12h | — |
+| State | Sets | Expiry | `amr` |
+| --- | --- | --- | --- |
+| `Password` | `first_factor` | 12h | `pwd` |
+| `Passkey` | `first_factor` | 12h | `swk` |
+| `Passkey`, user-verified | *and* `second_factor` | 12h | `user`, `mfa` |
+| `OneTimePassword` | `second_factor` | 12h | `otp`, `mfa` |
+| `BackupCode` | `second_factor` | 12h | `otp`, `mfa` |
+| `Setup` / `Invitation` / `PasswordReset` | `first_factor` | 12h | — |
+| `Consent` | `consent` | 1h | — |
 
-One passkey can be both factors: it ends at `first_factor`, and *additionally* at `second_factor`
-when the assertion reports the authenticator verified the person. A passkey reporting no user
+One passkey can be both factors. It ends at `first_factor`, and additionally at `second_factor` when
+the assertion reports the authenticator verified the person. A passkey reporting no user
 verification stops at the first factor.
 
-`amr` is what happened, not what the account holds — see [Tokens](/concepts/tokens).
+`amr` describes the sign-in rather than the account. See [Tokens](/concepts/tokens).
 
 :::note[TODO]
 A login link and an upstream identity provider as first factors are not built. The machine is the
@@ -156,7 +163,7 @@ part that is finished; a new factor is a `LoginState` and a prompt component.
 
 ## Factors expire
 
-`factored!(key, expiry:)` records `at` and `until`; `touched?` is false once `until` passes.
+`factored!(key, expiry:)` records `at` and `until`. `touched?` is false once `until` passes.
 
 ```ruby
 factored! :first_factor, expiry: 12.hours
@@ -168,12 +175,12 @@ around. `start_over!` on a state expires only what it owns.
 `Login#reauthenticating?` and `#stale?` make `first_factored?` and `second_factored?` false again
 when the request asked for `prompt=login` or set a `max_age` the sign-in no longer satisfies.
 
-## Adding a factor is adding two files
+## Adding a factor
 
 A `LoginState` in `server/app/logins/login_states/`, and a prompt component. Its position in
 `Login::STATES` decides when it runs.
 
-Prompts exist twice — an ERB partial and a Svelte component — because sign-in works without
+Prompts exist twice, as an ERB partial and a Svelte component, because sign-in works without
 JavaScript (`server/test/integration/no_javascript_test.rb`). Both post the same events to the same
 endpoint, and `LoginsController#update` answers HTML or JSON from one code path.
 

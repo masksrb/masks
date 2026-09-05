@@ -4,8 +4,8 @@ description: How an application gets a client a person approved, without anyone 
 ---
 
 An application cannot sign anyone in until it holds a `client_id` and a secret. The handshake is how
-it gets them: the app asks, a person approves at masks, and the credentials are minted afterwards and
-fetched server to server. No secret travels through the browser.
+it gets them: the app asks, a person approves at masks, and the credentials are minted afterwards
+and fetched server to server. No secret travels through the browser.
 
 `server/app/models/handshake.rb`, `server/app/controllers/handshakes_controller.rb`,
 `client/lib/masks/client/handshake.rb`
@@ -16,10 +16,9 @@ fetched server to server. No secret travels through the browser.
    `resource` it serves, the `redirect_uris` it will use, the `scope` it wants, a `return_to` and a
    `state`.
 2. masks signs the person in first if nobody has an account yet — first run is
-   [a state at the head of the login machine](/concepts/login), not a wizard beside it — then shows
-   what is being connected.
-3. Approving creates the client and mints a one-time **initial access token** (RFC 7591 §3.1),
-   which travels back on the redirect.
+   [a state at the head of the login machine](/concepts/login) — then shows what is being connected.
+3. Approving creates the client and mints a one-time **initial access token** (RFC 7591 §3.1), which
+   travels back on the redirect.
 4. The app redeems that token at `POST /register` with no browser involved. The secret comes back on
    that response.
 
@@ -29,11 +28,9 @@ collapsed to its last value.
 ## Who may approve one
 
 Approving is not the same as signing in. It creates a client that is `dynamic: false`, and an
-approved client is exempt from the ceiling `Client.bounded` applies to open registration — including
+approved client is exempt from the ceiling `Client.bounded` applies to open registration, including
 the refusal of the reserved `masks:` namespace. It is also tenant-wide: `Client.approved_for` is not
-scoped to whoever approved it.
-
-So it takes a scope of its own.
+scoped to whoever approved it. So it takes a scope of its own.
 
 | | |
 | --- | --- |
@@ -44,26 +41,26 @@ An actor with neither is refused at the screen, before anything is created. `mas
 delegable half: it lets somebody connect the applications they themselves can use, without handing
 them the admin API.
 
-`masks:manage` is unbounded because bounding it would be theatre — an administrator can grant
+`masks:manage` is unbounded. Bounding it would achieve nothing, since an administrator can grant
 themselves a scope and come back. The first-run owner holds it, which is what lets the very first
 application be paired before anybody has been granted anything.
 
-Approving no longer widens the approver. It used to grant them whatever the application asked for,
-which meant any signed-in actor could name `masks:manage` in a URL, approve it, and hold it.
+Approving does not widen the approver, except where a [namespace](/reference/protocol#namespaces) is
+claimed.
 
-The client that comes back is the one that was approved. The registration body cannot widen it — a
-request naming other redirect URIs or broader scopes changes nothing, because approval created the
-row rather than authorizing a later description of one.
+The client that comes back is the one that was approved. A registration body naming other redirect
+URIs or broader scopes changes nothing, because approval created the row rather than authorizing a
+later description of one.
 
 Everything must share one origin: the resource, the redirect URIs, and where the browser is sent
 back to. The approval screen names one place, so a crafted URL cannot get an app at one origin
 approved and the token delivered to another.
 
-A second handshake for the same resource **rotates** the client it finds rather than registering a
-second one. The app picks up new credentials; the old secret stops working.
+A second handshake for the same resource rotates the client it finds rather than registering a
+second one. The app picks up new credentials, and the old secret stops working.
 
-A handshake registers for `authorization_code` and `refresh_token` with
-`client_secret_basic` (`Handshake::GRANT_TYPES`, `Handshake::AUTH_METHOD`).
+A handshake registers for `authorization_code` and `refresh_token` with `client_secret_basic`
+(`Handshake::GRANT_TYPES`, `Handshake::AUTH_METHOD`).
 
 ## In a Rails app
 
@@ -82,15 +79,14 @@ end
 | | |
 | --- | --- |
 | `credentials` | a hash of `client_id` and `client_secret`, or `nil` when there are none yet |
-| `store` | given `(request, registration)` — the [`Registration`](/reference/configuration) the handshake redeemed, carrying `client_id`, `client_secret`, `access_token` and `uri` |
+| `store` | given `(request, registration)` — the [`Registration`](/libraries/ruby#registration) the handshake redeemed, carrying `client_id`, `client_secret`, `access_token` and `uri` |
 | `forget` | given `(request)`, to drop them again |
 
-An app that sets `store` and not `forget` is never offered a disconnect (`Configuration#can_forget?`).
-Set neither and the default is a JSON file at `config/masks.json`.
+An app that sets `store` and not `forget` is never offered a disconnect
+(`Configuration#can_forget?`). Set neither and the default is a JSON file at `config/masks.json`.
 
 `/auth/handshake` renders a page with one button, `/auth/handshake/callback` redeems the token and
-calls `store`, and until credentials exist every refusal says `handshake_required` rather than
-sending a browser to a login that cannot work:
+calls `store`, and until credentials exist every refusal says `handshake_required`:
 
 ```json
 { "signed_in": false, "error": "handshake_required", "handshake_url": "/auth/handshake" }
@@ -102,26 +98,24 @@ signed in.
 ## When the issuer has forgotten the client
 
 An app can hold credentials masks no longer knows: the database behind an issuer was reset, or the
-client was archived from `/manage`. Nothing about that is the browser's fault, and there is nothing
-the person at it can do except connect the app again — so the engine treats `invalid_client` as the
-answer to a question rather than an error to render.
+client was archived from `/manage`. The person at the browser can do nothing about it except connect
+the app again, so the engine treats `invalid_client` as an answer rather than an error to render.
 
 | where it shows up | what happens |
 | --- | --- |
-| `GET /auth` | the registration is read (RFC 7592) before the browser is sent anywhere; a refused read drops the credentials and renders the handshake instead of an authorize masks would refuse |
+| `GET /auth` | the registration is read (RFC 7592) before the browser is sent anywhere; a refused read drops the credentials and renders the handshake |
 | a refresh at `/auth/session` | `invalid_client` drops the credentials, and the refusal becomes `handshake_required` |
-| the callback | the same, and the browser lands on the handshake rather than a sign-in failure |
+| the callback | the same, and the browser lands on the handshake |
 | `DELETE /auth/handshake` | a registration the issuer does not know is already gone, so what is held locally is dropped anyway |
 
 Only a definite refusal counts. An issuer that cannot be reached, or that answers `404` to a
-registration read because it does not implement RFC 7592, costs an app nothing —
+registration read because it does not implement RFC 7592, costs an app nothing:
 `Masks::Client::Unregistered` is raised for `401` and `403`, and for `404` only when deleting. An
-app that has no `forget` keeps the behaviour it has always had, since the engine will not drop what
-it cannot be told how to drop.
+app with no `forget` keeps what it has, since the engine will not drop what it cannot be told how to
+drop.
 
 `Configuration#issuer_speaks!` checks `masks_protocol_version` in discovery against
-`MINIMUM_ISSUER`, so an issuer predating the handshake says so rather than failing at the one screen
-that exists to be the first thing anybody touches.
+`MINIMUM_ISSUER`, so an issuer predating the handshake says so at the point of configuration.
 
 ## Without Rails
 
@@ -151,7 +145,8 @@ registration = handshake.complete(params, state: held)
 | an `iss` from another issuer | `invalid_issuer` |
 | no `initial_access_token` | `invalid_request` |
 
-What it returns is a `Registration`, which builds a `Session` with `session(redirect_uri:)`.
+What it returns is a `Registration`, which builds a `Session` with `session(redirect_uri:)`. See
+[Masks::Client](/libraries/ruby#handshake).
 
 ## In the browser
 
@@ -165,4 +160,4 @@ if (status.state === 'handshake_required') {
 }
 ```
 
-See [Sign an SPA in](/guides/spa).
+See [Sign an SPA in](/guides/spa) and [@masks/client](/libraries/browser).

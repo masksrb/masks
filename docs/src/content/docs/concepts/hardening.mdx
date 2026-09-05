@@ -28,29 +28,28 @@ def burn(password)
 end
 ```
 
-The failure message is identical too — "that identifier and password do not match" names neither
+The failure message is identical too: "that identifier and password do not match" names neither
 half.
 
-`server/test/models/login_enumeration_test.rb` asserts three things: that a missing account and a
-wrong password produce the same prompt and the same warnings, that the identifier step resolves no
-actor at all, and that a missing account does not return far faster than a wrong password.
+`server/test/models/login_enumeration_test.rb` asserts that a missing account and a wrong password
+produce the same prompt and the same warnings, that the identifier step resolves no actor at all,
+and that a missing account does not return far faster than a wrong password.
 
-**Forgetting a password says nothing either.** A reset request answers with the same notice whichever
+Forgetting a password says nothing either. A reset request answers with the same notice whichever
 way it goes: *if that account exists and can receive email, a reset link is on its way.* It answers
 that for an identifier nobody holds, for an account with no email address, and for an account
-invited but never accepted — all of which send nothing. The one thing the server does report about
+invited but never accepted, none of which send anything. The one thing the server reports about
 itself is having no mailer at all, which is a fact about the deployment.
 
 ## The session is rotated on sign-in
 
-`ApplicationController#sign_in` calls `reset_session`, so a session identifier an attacker planted is
-discarded at the moment it would become valuable.
+`ApplicationController#sign_in` calls `reset_session`, so a session identifier an attacker planted
+is discarded at the moment it would become valuable.
 
-Four keys are carried across the reset and put back afterwards — the pending requests, the pending
-handshakes, the login store, and `masks_return_to`. Losing them would drop the person somewhere
-confusing after a successful login. Everything else in the session goes.
+Four keys are carried across the reset and put back: the pending requests, the pending handshakes,
+the login store, and `masks_return_to`. Everything else in the session goes.
 
-The session cookie is `httponly` with `same_site: :lax`, and holds `Session#secret`; the database
+The session cookie is `httponly` with `same_site: :lax` and holds `Session#secret`. The database
 holds its digest.
 
 ## Rate limits
@@ -70,7 +69,7 @@ Every key is prefixed with the tenant id, so one tenant's traffic cannot exhaust
 | `POST /connections/token` | 120 | 1 min | tenant + remote IP |
 
 Two limits on sign-in rather than one, because they stop different attacks. The per-address limit
-stops one machine working through a list; the per-identifier limit stops a distributed attempt on a
+stops one machine working through a list. The per-identifier limit stops a distributed attempt on a
 single account, which no per-address limit can see.
 
 Recovery is limited separately because it is the one unauthenticated action that causes mail to be
@@ -79,18 +78,18 @@ sent.
 `server/test/integration/rate_limit_test.rb`.
 
 :::caution[A limit that does not limit]
-Rate limiting runs on `Rails.cache`. A cache store configured only in production — or a `:null_store`
-in test — makes every one of these a silent no-op exactly where you would try to verify it. masks
-runs the real store in development and test as well.
+Rate limiting runs on `Rails.cache`. A cache store configured only in production, or a
+`:null_store` in test, makes every one of these a silent no-op exactly where you would try to
+verify it. masks runs the real store in development and test as well.
 :::
 
 ## A replayed code is treated as an interception
 
-The second presentation of an authorization code is refused, and the tokens the first one minted are
-revoked with it — access and refresh both. Burning the code and leaving the tokens alive would
+The second presentation of an authorization code is refused, and the tokens the first one minted
+are revoked with it, access and refresh both. Burning the code and leaving the tokens alive would
 refuse the attacker the doorway while letting them keep what was behind it.
 
-This is why an access token records the code it came from in `parent_id` — see
+This is why an access token records the code it came from in `parent_id`. See
 [models](/reference/models) and [tokens](/concepts/tokens).
 
 ## Nothing accumulates forever
@@ -99,27 +98,27 @@ This is why an access token records the code it came from in `parent_id` — see
 longer than `CleanupJob::GRACE` — seven days — ago: tokens, sessions, and signing keys past their
 retirement.
 
-The grace period is deliberate. Deleting a token the instant it expires destroys the record you want
-when someone asks why a request failed an hour ago.
+The grace period is deliberate. Deleting a token the instant it expires destroys the record you
+want when someone asks why a request failed an hour ago.
 
 :::note[TODO]
-`CleanupJob` has no schedule in the repository. It is a job that runs when something runs it.
+`CleanupJob` has no schedule in the repository. It runs when something runs it.
 :::
 
 ## A passkey is bound to one tenant
 
-`RelyingParty#id` is `URI.parse(origin).host` — the tenant's own host, `demo.auth.example`, not the
-registrable suffix `auth.example`. A credential enrolled at one tenant is not offered at another, and
-an assertion produced for one cannot be replayed at the next.
+`RelyingParty#id` is `URI.parse(origin).host` — the tenant's own host, `demo.auth.example`, rather
+than the registrable suffix `auth.example`. A credential enrolled at one tenant is not offered at
+another, and an assertion produced for one cannot be replayed at the next.
 
-Someone who belongs to two tenants enrols a passkey at each — the same authenticator, two
+Someone who belongs to two tenants enrols a passkey at each: the same authenticator, two
 credentials.
 
 The challenge is stored against the sign-in in `Login#store` and deleted in an `ensure`, whether the
 assertion verified or not, so an assertion is single use the way an authorization code is.
 
-A cloned authenticator is caught by `Passkey#cloned?` — a reported `sign_count` no higher than the
-one already stored is refused rather than logged. `Passkey::MAX_PER_ACTOR` is 20.
+A cloned authenticator is caught by `Passkey#cloned?`: a reported `sign_count` no higher than the
+one already stored is refused. `Passkey::MAX_PER_ACTOR` is 20.
 
 `server/test/integration/passkey_test.rb`.
 
@@ -131,19 +130,17 @@ one already stored is refused rather than logged. `Passkey::MAX_PER_ACTOR` is 20
 | client secrets | bcrypt (`secret_digest`) |
 | authorization codes, refresh tokens, sessions, registration tokens | SHA-256 digest — the plaintext is returned once and never stored |
 | TOTP secrets, signing keys, provider and connection tokens | encrypted at rest |
-| passkeys | a public key and a counter — nothing secret |
+| passkeys | a public key and a counter |
 
-A database read recovers no credential. Access tokens are the exception by design: they are JWTs, so
-what is stored is the `jti`.
+A database read recovers no credential. Access tokens are the exception by design: they are JWTs,
+so what is stored is the `jti`.
 
 ## Still open
 
-- **A device model.** An earlier masks had one, and it is what throttling and captcha policies would
-  hang off.
-- **Client secret rotation on a schedule.** `rotateClientSecret` exists as a `manage` mutation; there
-  is no expiry.
+- **Client secret rotation on a schedule.** `rotateClientSecret` exists as a `manage` mutation.
+  There is no expiry.
 - **Offline revocation visibility.** A revoked token stays verifiable to a resource server doing
-  JWT-only validation until it expires — see [narrowing a token](/guides/exchange).
-- **A sole administrator with no mail.** Recovery needs a mailbox. A tenant whose only account holds
-  `masks:manage`, on a deployment with no mailer, has no path back in but the console. Backup codes
-  are a way past a second factor, not a first.
+  JWT-only validation until it expires. See [narrowing a token](/guides/exchange).
+- **A sole administrator with no mail.** Recovery needs a mailbox. A tenant whose only account
+  holds `masks:manage`, on a deployment with no mailer, has no path back in but the console. Backup
+  codes are a way past a second factor, not a first.
