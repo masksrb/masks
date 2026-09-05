@@ -20,7 +20,7 @@ jobs:
       - uses: ruby/setup-ruby@v1
         with:
           bundler-cache: true
-          ruby-version-file: server/.ruby-version
+          ruby-version: "3.4"
       - name: Lint every Ruby file, the gem and the harness included
         run: bundle exec rubocop -f github
 
