@@ -75,11 +75,3 @@ Isolation is asserted directly in `test/models/tenant_isolation_test.rb` and
 Rate limiting runs on `Rails.cache`, and the real store is configured in development and test as
 well as production — a `:null_store` would make every limit a silent no-op exactly where you would
 try to verify it.
-
-## Before committing
-
-```sh
-bin/check-boundary
-```
-
-Nothing in the repository may name a host, a domain or a secret. It runs in CI too.
