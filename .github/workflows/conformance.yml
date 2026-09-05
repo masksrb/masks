@@ -27,7 +27,7 @@ jobs:
       - uses: docker/setup-buildx-action@v3
 
       - name: Cache the suite checkout
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: conformance/.suite
           key: suite-${{ env.SUITE_REF }}
