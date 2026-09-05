@@ -1,0 +1,308 @@
+---
+title: Masks::Rails
+description: The engine API — the generator, configuration, the controller concerns, and the routes it mounts.
+---
+
+The consumer half of the `masks` gem, loaded only when `::Rails::Engine` is already defined. It
+issues nothing and holds no signing key; it talks to the server over HTTP like any other client.
+
+## Install
+
+```sh
+bin/rails generate masks:install
+```
+
+| Option | Default | |
+| --- | --- | --- |
+| `--mount` | `/auth` | where the engine mounts |
+| `--resource` | — | this app's resource identifier, when it also accepts tokens |
+
+The generator writes `config/initializers/masks.rb`, adds `mount Masks::Rails::Engine, at: "/auth"`
+to the routes, and appends `/config/masks.json` to `.gitignore`.
+
+Set `MASKS_ISSUER`, start the app, and open `/auth/handshake`.
+
+## Routes
+
+Mounted under the path given to `mount`. Helpers are on `Masks::Rails::Engine.routes.url_helpers`.
+
+| Verb | Path | Helper | |
+| --- | --- | --- | --- |
+| `GET` | `/` | `start_path` | begin sign-in; accepts `return_to` |
+| `GET` | `/session` | `session_path` | the account as JSON, or `401` |
+| `GET` | `/avatar` | `avatar_path` | proxy the actor's photo; accepts `size` |
+| `GET` | `/callback` | `callback_path` | the authorization code callback |
+| `GET` `POST` `DELETE` | `/logout` | `logout_path` | end this app's session; accepts `everywhere` |
+| `GET` | `/handshake` | `handshake_path` | the connect screen |
+| `POST` | `/handshake` | | begin the approval |
+| `GET` | `/handshake/callback` | `handshake_callback_path` | redeem the initial access token |
+| `DELETE` | `/handshake` | | forget the credentials |
+
+The engine's pages inherit `config.parent_controller` and render in the
+`masks/rails/plain` layout.
+
+## Configuration
+
+```ruby
+Masks::Rails.configure do |config|
+  config.issuer = ENV.fetch("MASKS_ISSUER")
+end
+```
+
+`Masks::Rails.config` returns the `Configuration`. Every value marked callable accepts a proc
+taking the request, which is how one installation serves many tenants:
+
+```ruby
+config.issuer = ->(request) { "https://#{request.subdomain}.auth.example" }
+config.resource = ->(request) { "https://#{request.host}/mcp" }
+```
+
+A callable of arity zero is called with no arguments.
+
+| | Default | Callable | |
+| --- | --- | --- | --- |
+| `issuer` | — | ✓ | the masks issuer; raises `Unconfigured` when unset |
+| `resource` | `nil` | ✓ | this app's identifier, when it also accepts tokens |
+| `resource_scopes` | `[]` | | published in RFC 9728 metadata |
+| `scope` | `%w[openid profile email]` | | what to ask the issuer for |
+| `namespace` | `nil` | | see [approved_scope](#approved_scope) |
+| `name` | the application's module name | ✓ | the client name sent at handshake |
+| `redirect_uri` | `request.base_url` + `callback_path` | ✓ | |
+| `credentials` | the file store | ✓ | where the handshake's result is read from |
+| `store` | the file store | | `->(request, registration)`, where it is written |
+| `forget` | the file store | | `->(request)`, how it is cleared |
+| `credentials_path` | `config/masks.json` | | the default store's path |
+| `after_sign_in` | `/` | | a path on this host |
+| `after_sign_out` | `/` | | a path on this host |
+| `session_key` | `masks` | | the session key tokens live under |
+| `sign_out_of_issuer` | `false` | | make every sign-out an RP-initiated logout |
+| `parent_controller` | `ActionController::Base` | | what the engine's pages inherit |
+| `authenticate_everything` | `false` | | include `Authentication` on every controller |
+
+Setting `store` without `forget` makes `can_forget?` false, and `forget!` raises rather than
+deleting a file it does not own.
+
+### Resolution
+
+| Method | |
+| --- | --- |
+| `#issuer_for(request)` `#name_for` `#redirect_uri_for` `#resource_for` | resolve a callable against the request |
+| `#credentials_for(request)` | the stored credentials, keys stringified |
+| `#client_id_for(request)` `#client_secret_for(request)` | from those credentials |
+| `#configured?(request)` | a `client_id` is present |
+| `#session_for(request)` | a `Masks::Client::Session`; raises `Unconfigured` unless connected |
+| `#resource_server_for(request)` | a `Masks::Client::Resource` |
+| `#handshake_for(request)` | a `Masks::Client::Handshake` |
+| `#store!(request, registration)` `#forget!(request)` `#can_forget?` | the credential store |
+| `#issuer_speaks!(request)` | see below |
+| `#return_to_for(request)` | the handshake callback, absolute |
+
+`Configuration::Unconfigured < Masks::Client::Error` is what every missing value raises.
+
+### approved_scope
+
+`namespace` names a scope prefix this app owns. When it is set, `approved_scope` drops every scope
+beginning with the prefix and appends the prefix itself, so approval covers the namespace rather
+than each scope under it. Scopes outside the namespace are sent unchanged.
+
+### issuer_speaks!
+
+`MINIMUM_ISSUER` is `1`. The gem reads `masks_protocol_version` from discovery and raises
+`Unconfigured` when the issuer publishes less than that — version 1 is the one serving
+`handshake_endpoint`.
+
+## Authentication
+
+```ruby
+class ThingsController < ApplicationController
+  include Masks::Rails::Authentication
+
+  before_action :authenticate_masks!
+end
+```
+
+`config.authenticate_everything = true` includes it on every controller instead. Tokens live in
+the encrypted Rails session and never reach JavaScript.
+
+`masks_signed_in?`, `masks_identity`, `masks_tenant`, `masks_scopes` and `masks_claims` are
+declared as helper methods.
+
+### The guard
+
+`authenticate_masks!` returns `true` when the app is connected and the session is either live or
+refreshable. Otherwise it refuses and returns `false`:
+
+| Request | Refusal |
+| --- | --- |
+| wants JSON | `401` with `Cache-Control: no-store` and a refusal body |
+| HTML, not connected | redirect to `handshake_path` |
+| HTML, connected | store `masks_return_to` on a `GET`, redirect to `start_path` |
+
+A request wants JSON when it is XHR, its format is JSON, its content type is JSON, or its format is
+not HTML. The refusal body is `{ signed_in: false, error: "login_required", login_url: … }`, or
+`error: "handshake_required"` with `handshake_url` when the app has never connected.
+
+### Identity
+
+| Method | |
+| --- | --- |
+| `#masks_signed_in?` | tokens are held and unexpired |
+| `#masks_identity` | the stored identity hash, or `nil` |
+| `#masks_claims` | a `Masks::Client::Claims` over it |
+| `#masks_tenant` | the `tenant` claim |
+| `#masks_scopes` | the token's scopes |
+| `#masks_permits?(scope)` | |
+| `#masks_access_token` | |
+| `#masks_account` | the JSON `/session` answers |
+
+Only a fixed slice of the id token is stored: `sub`, `name`, `preferred_username`, `email`,
+`email_verified`, `tenant`, `picture` and `masks:avatars` (`Authentication::IDENTITY`). The id
+token itself is dropped after verification.
+
+`masks_account` answers:
+
+```json
+{
+  "signed_in": true,
+  "subject": "0f8f…",
+  "name": "Ada",
+  "nickname": "ada",
+  "email": "ada@example.com",
+  "email_verified": true,
+  "picture": "https://demo.auth.example/avatars/0f8f…/photo/9c1d…",
+  "avatars": { "photo": "…", "identicon": "…", "initials": "…" },
+  "tenant": { "uuid": "…", "subdomain": "demo", "name": "Demo" },
+  "scopes": ["openid", "profile", "email"],
+  "expires_at": 1756400000
+}
+```
+
+Nil values are dropped.
+
+### Sessions and tokens
+
+| Method | |
+| --- | --- |
+| `#masks_session` | the `Masks::Client::Session` for this request |
+| `#masks_tokens` | a `Masks::Client::Tokens`, or `nil` |
+| `#masks_store(tokens, identity: nil)` | write both to the session |
+| `#masks_forget` | drop them |
+| `#masks_refresh!` | refresh in place; `true` on success |
+| `#masks_login_url(return_to: nil)` `#masks_logout_url(return_to: nil)` | |
+| `#masks_post_logout_redirect_uri` | `after_sign_out`, absolute |
+
+`masks_refresh!` disconnects the app on `Unregistered` and forgets the session on any other
+`Rejected`. `return_to` values are checked against `masks_local_path`, which refuses anything not
+beginning with a single `/`.
+
+### Connection
+
+| Method | |
+| --- | --- |
+| `#masks_configured?` | credentials are held |
+| `#masks_registration` | a `Registration` rebuilt from them, or `nil` |
+| `#masks_registered?` | the issuer still knows this client |
+| `#masks_disconnect!` | forget the credentials and the session |
+| `#masks_reconnect!` | disconnect when the issuer no longer knows this client |
+| `#masks_handshake_path` | |
+
+`masks_registered?` answers `true` when the issuer cannot be reached, so an outage does not
+disconnect a working app.
+
+### Trackers
+
+`masks_requests` and `masks_handshakes` are `Masks::Client::Tracker`s over the Rails session, under
+`masks_requests` and `masks_handshakes`. The authorization `state` is the tracker entry's id, and
+claiming it on the callback is what makes a request single-use.
+
+## ProtectedResource
+
+For an app that also accepts bearer tokens.
+
+```ruby
+class ApiController < ApplicationController
+  include Masks::Rails::ProtectedResource
+
+  masks_protect! scope: "things:read"
+end
+```
+
+`masks_protect!(**options)` installs a `before_action`, passing `:only` and `:except` through.
+
+| Method | |
+| --- | --- |
+| `#masks_resource` | the `Masks::Client::Resource` for this request |
+| `#masks_authenticate!(scope: nil)` | verify, or render the challenge and return `false` |
+| `#masks_authenticate(scope: nil)` | verify, or `nil` when no token was sent |
+| `#masks_claims` | the verified `Claims`, once authenticated |
+| `#masks_challenge(error)` | render the refusal |
+| `#masks_resource_metadata` | the RFC 9728 document |
+
+`masks_challenge` sets `WWW-Authenticate` and `Cache-Control: no-store`, and renders
+`{ error, error_description }` at the challenge's status.
+
+Serve the metadata yourself:
+
+```ruby
+def metadata
+  render json: masks_resource_metadata
+end
+```
+
+`config.resource_scopes` accepts a hash of scope to description, which is published as
+`scope_descriptions` and rendered on the issuer's consent screen.
+
+## Avatars
+
+`GET /auth/avatar` proxies the actor's photo using the token this app already holds, so an `<img>`
+that cannot send an `Authorization` header still draws one.
+
+```erb
+<img src="/auth/avatar" width="64" height="64" alt="">
+```
+
+`size` is accepted and rounded up to the next of 32, 64, 128, 256 or 512.
+`AvatarsController::SIZES`. The controller refuses a photo URL that does not begin with the
+configured issuer, answers `404` when the actor has no photo or is signed out, `502` when the
+issuer cannot be reached, and passes a redirect back to the browser rather than following it.
+
+The generated styles need no token:
+
+```erb
+<img src="<%= masks_claims.avatars.identicon %>?size=64" width="64" height="64" alt="">
+```
+
+`masks_claims.picture` resolves the standard OIDC claim: the actor's `picture_url` if set, then the
+photo, then the identicon. See [Avatars](/concepts/avatars).
+
+## Credentials
+
+`Masks::Rails::Credentials` is the default store, writing JSON at `credentials_path` with mode
+`0600` and creating the directory if needed.
+
+`KEYS` is `client_id`, `client_secret`, `registration_access_token`, `registration_client_uri`. A
+`connected_at` timestamp is written alongside them.
+
+`#read` · `#write(registration)` · `#clear!` · `#connected?` · `#path`
+
+Replace it for anything that is not one file per install:
+
+```ruby
+config.credentials = ->(request) { Tenant.for(request).masks_credentials }
+config.store = ->(request, registration) { Tenant.for(request).connect!(registration) }
+config.forget = ->(request) { Tenant.for(request).disconnect! }
+```
+
+## Signing out
+
+`DELETE /auth/logout` clears this app's session. With `?everywhere=1`, or
+`config.sign_out_of_issuer = true`, the JSON response carries `logout_url` — the issuer's
+end-session endpoint — and an HTML request is redirected there.
+
+```js
+const auth = createSession();
+
+await auth.logout({ everywhere: true });
+```
+
+See [@masks/client](/libraries/browser).

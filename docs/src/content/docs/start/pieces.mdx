@@ -31,10 +31,10 @@ routes, its session and its cookie; there is no host application. See
 
 ## The gem
 
-One gem, currently `0.5.0` (`client/lib/masks/version.rb`), holding both halves of the consumer side.
+One gem, version `0.6.0` (`client/lib/masks/version.rb`), holding both halves of the consumer side.
 
-`require "masks"` loads `Masks::Client` always and `Masks::Rails` only when Rails is already defined,
-so a Rack or Sinatra service takes on `jwt` and no framework.
+`require "masks"` loads `Masks::Client` always, and `Masks::Rails` only when `::Rails::Engine` is
+already defined, so a Rack or Sinatra service takes on `jwt` and no framework.
 
 | | |
 | --- | --- |
@@ -45,15 +45,19 @@ so a Rack or Sinatra service takes on `jwt` and no framework.
 | `Masks::Client::Session` | the code flow, end to end |
 | `Masks::Client::Registration` | RFC 7591 / 7592 |
 
-The engine mounts three routes into your application and gives you `authenticate_masks!`. It issues
-nothing and holds no signing key — it talks to the server over HTTP like any other client.
+Full API: [Masks::Client](/libraries/ruby).
+
+The engine mounts nine routes into your application and gives you `authenticate_masks!`. It issues
+nothing and holds no signing key, and talks to the server over HTTP like any other client. Full API:
+[Masks::Rails](/libraries/rails).
 
 The two halves are never loaded into the same process.
 
 ## The browser package
 
-`@masks/client`, in `web/`. Two modes: a session against a backend that mounts the engine, or the
-authorization code flow run in the page. See [Sign an SPA in](/guides/spa).
+`@masks/client`, in `web/`, version `2.1.0`. Two modes: a session against a backend that mounts the
+engine, or the authorization code flow run in the page. See [Sign an SPA in](/guides/spa) for the
+walkthrough and [@masks/client](/libraries/browser) for the API.
 
 ## Multi-tenant hosts
 

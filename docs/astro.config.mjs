@@ -58,6 +58,14 @@ export default defineConfig({
           ],
         },
         {
+          label: "Libraries",
+          items: [
+            { label: "Masks::Client", slug: "libraries/ruby" },
+            { label: "Masks::Rails", slug: "libraries/rails" },
+            { label: "@masks/client", slug: "libraries/browser" },
+          ],
+        },
+        {
           label: "Reference",
           items: [
             { label: "Protocol", slug: "reference/protocol" },
