@@ -10,7 +10,7 @@ class Session < ApplicationRecord
   attr_reader :secret
 
   class << self
-    def start!(actor:, user_agent: nil, ip_address: nil)
+    def start!(actor:, user_agent: nil, ip_address: nil, amr: [])
       secret = SecureRandom.urlsafe_base64(48)
 
       session = create!(
@@ -19,6 +19,7 @@ class Session < ApplicationRecord
         user_agent: user_agent,
         ip_address: ip_address,
         authenticated_at: Time.current,
+        amr: Array(amr),
         expires_at: LIFETIME.from_now
       )
 

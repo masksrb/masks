@@ -1,5 +1,9 @@
 <% content_for :title, Current.tenant&.name %>
 
+<% content_for :scripts do %>
+  <%= vite_javascript_tag "account" %>
+<% end %>
+
 <div class="flex flex-col gap-4">
   <% if @actor %>
     <h1 class="text-2xl font-bold">Signed in as <%= @actor.nickname %></h1>
@@ -17,6 +21,47 @@
     <% else %>
       <p class="text-sm opacity-75">You have not authorized any applications yet.</p>
     <% end %>
+
+    <h2 class="text-xs font-bold uppercase opacity-75">Passkeys</h2>
+
+    <div data-passkeys class="flex flex-col gap-3">
+      <% if @passkeys.any? %>
+        <ul class="flex flex-col gap-2">
+          <% @passkeys.each do |passkey| %>
+            <li class="flex items-baseline justify-between gap-3 rounded-lg border border-base-content/15 bg-base-200 px-3 py-2">
+              <span class="text-sm"><%= passkey.name %></span>
+              <span class="flex items-baseline gap-3">
+                <span class="text-xs opacity-75">
+                  <%= passkey.last_used_at ? "used #{time_ago_in_words(passkey.last_used_at)} ago" : "never used" %>
+                </span>
+                <%= button_to "Remove", passkey_path(passkey), method: :delete,
+                      class: "link text-xs", form: { data: { turbo_confirm: "Remove this passkey?" } } %>
+              </span>
+            </li>
+          <% end %>
+        </ul>
+      <% else %>
+        <p class="text-sm opacity-75">
+          No passkeys yet. A passkey signs you in with the fingerprint, face or PIN
+          your device already uses — and counts as both factors on its own.
+        </p>
+      <% end %>
+
+      <%= form_with url: passkeys_path, method: :post, id: "add-passkey",
+            hidden: true, class: "flex flex-wrap items-end gap-3" do |form| %>
+        <%= form.hidden_field :credential, id: "passkey-credential" %>
+
+        <label class="flex flex-col gap-1.5">
+          <span class="text-sm font-medium">Name</span>
+          <%= form.text_field :name, id: "passkey-name", placeholder: "This laptop",
+                class: "input input-bordered" %>
+        </label>
+
+        <button type="button" id="add-passkey-button" class="btn btn-primary">Add a passkey</button>
+      <% end %>
+
+      <p id="passkey-unusable" hidden class="text-xs text-error"></p>
+    </div>
 
     <h2 class="text-xs font-bold uppercase opacity-75">Email</h2>
 

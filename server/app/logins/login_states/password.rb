@@ -16,6 +16,7 @@ module LoginStates
       if authenticated
         login.actor = authenticated
         factored! :first_factor, expiry: EXPIRY
+        login.noted! "pwd"
       else
         warn! "invalid-credentials"
       end

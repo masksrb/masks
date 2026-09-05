@@ -79,7 +79,7 @@ class LoginsController < ApplicationController
     def settle(login)
       return unless login.actor
 
-      sign_in(login.actor)
+      sign_in(login.actor, amr: login.amr)
       session.delete(STORE)
     end
 

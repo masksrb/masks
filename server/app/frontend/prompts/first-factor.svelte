@@ -1,5 +1,6 @@
 <script>
 import Identified from "../shared/Identified.svelte";
+import PasskeyButton from "../shared/PasskeyButton.svelte";
 import PromptHeader from "../shared/PromptHeader.svelte";
 
 let { login } = $props();
@@ -46,6 +47,8 @@ function onsubmit(event) {
     {login.loading ? "Signing in..." : "Sign in"}
   </button>
 </form>
+
+<PasskeyButton {login} label="Use a passkey instead" />
 
 <button
   type="button"

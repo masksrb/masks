@@ -85,6 +85,20 @@ days ago: tokens, sessions, and signing keys past their retirement.
 The grace period is deliberate. Deleting a token the instant it expires destroys the record you want
 when someone asks why a request failed an hour ago.
 
+## A passkey is bound to one tenant
+
+The WebAuthn relying party id is the **tenant's own host** — `jons.auth.example`, not the registrable
+suffix `auth.example`. A credential enrolled at one tenant is therefore not offered at another, and
+an assertion produced for one cannot be replayed at the next; the browser will not even surface it.
+
+The looser choice would let one passkey sign a person in to every tenant on the deployment, which is
+convenient and is exactly the boundary tenancy exists to hold. Someone who belongs to two tenants
+enrols a passkey at each — the same authenticator, two credentials.
+
+Assertions are single use in the same way an authorization code is: the challenge is stored against
+the sign-in, and spent whether the assertion verified or not. A cloned authenticator is caught by the
+signature counter going backwards, which is refused rather than merely logged.
+
 ## What is stored, and how
 
 | | |
@@ -93,14 +107,15 @@ when someone asks why a request failed an hour ago.
 | client secrets | bcrypt |
 | authorization codes, refresh tokens, sessions | SHA-256 digest — the plaintext is returned once and never stored |
 | TOTP secrets, signing keys | encrypted at rest |
+| passkeys | a public key and a counter — there is no secret here to steal |
 
 A database read recovers no credential. Access tokens are the exception by design: they are JWTs, so
 what is stored is the `jti` and never the token.
 
 ## Still open
 
-- **WebAuthn and a device model.** Both exist in an earlier masks and are worth porting; a device
-  record is also what throttling and captcha policies would hang off.
+- **A device model.** An earlier masks had one, and it is what throttling and captcha policies would
+  hang off.
 - **Client secret rotation.** Secrets are issued once and have no expiry.
 - **Offline revocation visibility.** A revoked token stays verifiable to a resource server doing
   JWT-only validation until it expires — see [narrowing a token](/guides/exchange).

@@ -17,6 +17,7 @@ module LoginStates
 
       if actor.verify_otp(update(:code))
         factored! :second_factor, expiry: EXPIRY
+        login.noted! "otp", "mfa"
         true
       else
         warn! "invalid-code"
