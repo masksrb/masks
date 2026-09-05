@@ -1,6 +1,4 @@
 .console {
-  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
-    Arial, sans-serif;
   --edge: color-mix(in oklab, var(--color-base-content) 10%, transparent);
   --dim: color-mix(in oklab, var(--color-base-content) 55%, transparent);
   --dimmer: color-mix(in oklab, var(--color-base-content) 40%, transparent);
@@ -12,7 +10,6 @@
 
 .headline {
   margin: 0;
-  font-family: var(--font-mono);
   font-size: clamp(1.5rem, 1.05rem + 1.7vw, 2.125rem);
   font-weight: 600;
   letter-spacing: -0.02em;
@@ -45,7 +42,6 @@
 
 .subhead {
   margin: 0;
-  font-family: var(--font-mono);
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -54,7 +50,6 @@
 }
 
 .legend {
-  font-family: var(--font-mono);
   font-size: 0.6875rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -74,7 +69,6 @@
   display: flex;
   align-items: center;
   gap: 0.625rem;
-  font-family: var(--font-mono);
   font-size: 0.875rem;
   font-weight: 700;
   text-transform: uppercase;
@@ -103,7 +97,6 @@
 .nav-item {
   position: relative;
   padding: 1.0625rem 0;
-  font-family: var(--font-mono);
   font-size: 0.75rem;
   font-weight: 500;
   text-transform: uppercase;
@@ -205,7 +198,6 @@
 }
 
 .tally-label {
-  font-family: var(--font-mono);
   font-size: 0.6875rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -290,7 +282,6 @@
 }
 
 .console .table thead th {
-  font-family: var(--font-mono);
   font-size: 0.6875rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -303,10 +294,15 @@
 }
 
 .console .badge {
-  font-family: var(--font-mono);
   font-size: 0.6875rem;
   font-weight: 600;
   letter-spacing: 0.02em;
+  height: auto;
+  min-height: var(--size);
+  padding-block: 0.1875rem;
+  line-height: 1.35;
+  white-space: normal;
+  text-align: left;
 }
 
 .console {
@@ -330,7 +326,6 @@
 }
 
 .chart-label {
-  font-family: var(--font-mono);
   font-size: 0.6875rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -472,7 +467,6 @@
 }
 
 .console .prompt-title {
-  font-family: var(--font-mono);
   font-weight: 600;
   letter-spacing: -0.02em;
 }

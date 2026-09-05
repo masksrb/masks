@@ -1,6 +1,6 @@
 <script>
   import { createFeedback } from "./lib/feedback.svelte.js";
-  import { day, moment, since } from "./lib/format.js";
+  import { day, joined, moment, since } from "./lib/format.js";
   import Presence from "./Presence.svelte";
   import ScopesEditor from "./ScopesEditor.svelte";
   import Card from "./ui/Card.svelte";
@@ -283,12 +283,11 @@
             </td>
 
             <td class="text-xs">
-              <div class="flex max-w-64 flex-wrap gap-x-2 font-mono">
-                {#each actor.scopes as scope (scope)}
-                  <span class="scope" class:scope-privileged={scope.startsWith("masks:")}
-                    >{scope}</span
-                  >
-                {/each}
+              <div class="max-w-64 truncate font-mono" title={joined(actor.scopes)}>
+                {#each actor.scopes as scope (scope)}<span
+                    class="scope"
+                    class:scope-privileged={scope.startsWith("masks:")}>{scope}</span
+                  >{" "}{/each}
               </div>
             </td>
 
@@ -299,7 +298,7 @@
                   {actor.backupCodesRemaining} backup codes
                 </div>
               {:else}
-                <span class="badge badge-ghost badge-sm">password only</span>
+                <span class="badge badge-ghost badge-sm">password</span>
               {/if}
             </td>
 

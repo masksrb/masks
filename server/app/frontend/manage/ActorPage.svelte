@@ -346,7 +346,7 @@
                     <span class="text-sm font-medium">{passkey.label}</span>
                     <span class="flex items-baseline gap-2">
                       {#if passkey.userVerified}
-                        <span class="badge badge-success badge-xs">verifies the person</span>
+                        <span class="badge badge-success badge-xs">verifying</span>
                       {/if}
                       {#if passkey.certification}
                         <span class="badge badge-ghost badge-xs">{passkey.certification}</span>
