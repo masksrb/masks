@@ -86,7 +86,15 @@ module Scopes
     end
 
     def describe(value)
-      list(value).map { |scope| [ scope, DESCRIBED[scope] || described_connection(scope) ] }
+      list(value).map { |scope| [ scope, description_for(scope) ] }
+    end
+
+    # A prefix is the broadest thing on an approval screen, so it is the last
+    # one that should read as a bare scope name with no sentence beside it.
+    def description_for(scope)
+      return DESCRIBED[scope] || described_connection(scope) unless prefix?(scope)
+
+      "Everything #{scope.chomp(':')} asks for, including capabilities it adds later"
     end
 
     def described_connection(scope)

@@ -21,6 +21,10 @@ module Manage
       field :unblock_device, mutation: Mutations::UnblockDevice
       field :sign_out_device, mutation: Mutations::SignOutDevice
       field :update_tenant, mutation: Mutations::UpdateTenant
+      field :stage_signing_key, mutation: Mutations::StageSigningKey
+      field :activate_signing_key, mutation: Mutations::ActivateSigningKey
+      field :discard_signing_key, mutation: Mutations::DiscardSigningKey
+      field :rotate_signing_key, mutation: Mutations::RotateSigningKey
     end
   end
 end

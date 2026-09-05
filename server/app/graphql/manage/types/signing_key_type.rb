@@ -5,11 +5,14 @@ module Manage
       field :algorithm, String, null: false
       field :activated_at, GraphQL::Types::ISO8601DateTime
       field :retired_at, GraphQL::Types::ISO8601DateTime
-      field :retired, Boolean, null: false
+      field :state, String, null: false
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
 
-      def retired
-        object.retired?
+      def state
+        return "staged" if object.staged?
+        return "active" if object.active?
+
+        object.retired? ? "retired" : "retiring"
       end
     end
   end

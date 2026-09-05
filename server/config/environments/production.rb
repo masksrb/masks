@@ -77,8 +77,24 @@ Rails.application.configure do
   config.active_record.attributes_for_inspect = [ :id ]
 
   template = config.masks.public_origin_template
-  served = URI.parse(format(template, subdomain: "tenant")).host
 
-  config.hosts << (template.include?("%{subdomain}") ? ".#{served.split('.', 2).last}" : served)
+  # Nil only while assets compile, where application.rb has already let the
+  # boot through and there is no host to authorize.
+  if template.present?
+    served =
+      begin
+        URI.parse(format(template, subdomain: "tenant")).host
+      rescue ArgumentError, KeyError, URI::InvalidURIError
+        nil
+      end
+
+    if served.blank?
+      raise "MASKS_PUBLIC_ORIGIN_TEMPLATE must be an absolute origin with a scheme, " \
+            "such as https://%{subdomain}.auth.example.com — got #{template.inspect}"
+    end
+
+    config.hosts << (template.include?("%{subdomain}") ? ".#{served.split('.', 2).last}" : served)
+  end
+
   config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
 end

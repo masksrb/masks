@@ -18,7 +18,7 @@
     query Tenant {
       tenant {
         uuid subdomain name dynamicClientScopes createdAt
-        signingKeys { kid algorithm activatedAt retiredAt retired }
+        signingKeys { kid algorithm activatedAt retiredAt state }
       }
       viewer { nickname scopes }
       tally { actors clients sessions devices }
@@ -33,6 +33,13 @@
   `;
 
   const SPANS = [7, 30, 90];
+
+  const BADGE = {
+    staged: "badge-warning",
+    active: "badge-success",
+    retiring: "badge-info",
+    retired: "badge-ghost",
+  };
 
   const MARK = new Intl.DateTimeFormat(undefined, { day: "numeric", month: "short" });
 
@@ -89,6 +96,51 @@
     );
 
     if (done) await load();
+  }
+
+  async function keys(query, variables, notice) {
+    const done = await feedback.attempt(() => api.query(query, variables), notice);
+
+    if (done) await load();
+  }
+
+  const stage = () =>
+    keys(
+      `mutation Stage { stageSigningKey { signingKey { kid } } }`,
+      {},
+      "Staged. Clients see it at the JWKS endpoint before it signs anything.",
+    );
+
+  function activate(kid) {
+    if (!confirm("Sign every new token with this key? The current one keeps verifying for 24 hours."))
+      return;
+
+    return keys(
+      `mutation Activate($kid: ID!) { activateSigningKey(kid: $kid) { signingKey { kid } } }`,
+      { kid },
+      "Activated.",
+    );
+  }
+
+  function discard(kid) {
+    if (!confirm("Discard this staged key? Nothing has been signed with it.")) return;
+
+    return keys(
+      `mutation Discard($kid: ID!) { discardSigningKey(kid: $kid) { kid } }`,
+      { kid },
+      "Discarded.",
+    );
+  }
+
+  function rotate() {
+    if (!confirm("Mint a key and sign with it immediately? The outgoing key keeps verifying for 24 hours."))
+      return;
+
+    return keys(
+      `mutation Rotate { rotateSigningKey { signingKey { kid } } }`,
+      {},
+      "Rotated.",
+    );
   }
 </script>
 
@@ -176,28 +228,45 @@
 
         <Card
           title="Signing keys"
-          lede="Tokens are signed with the active key. A staged key is published so clients pick it up before it takes over."
+          lede="Tokens are signed with the active key. Stage one to publish it ahead of time and activate it when clients have seen it; rotate to do both at once."
         >
+          {#snippet actions()}
+            <button type="button" class="btn btn-sm" onclick={stage}>Stage</button>
+            <button type="button" class="btn btn-sm btn-outline" onclick={rotate}>Rotate now</button>
+          {/snippet}
+
           <div class="overflow-x-auto">
             <table class="table table-sm">
               <thead>
-                <tr><th>Key</th><th>Algorithm</th><th>State</th><th>Activated</th></tr>
+                <tr><th>Key</th><th>Algorithm</th><th>State</th><th>Activated</th><th></th></tr>
               </thead>
               <tbody>
                 {#each data.tenant.signingKeys as key (key.kid)}
                   <tr>
                     <td class="font-mono text-xs">{key.kid.slice(0, 8)}</td>
                     <td class="text-xs">{key.algorithm}</td>
-                    <td>
-                      {#if key.retired}
-                        <span class="badge badge-ghost badge-sm">retired</span>
-                      {:else if key.activatedAt}
-                        <span class="badge badge-success badge-sm">active</span>
+                    <td><span class="badge badge-sm {BADGE[key.state]}">{key.state}</span></td>
+                    <td class="text-xs opacity-70">
+                      {#if key.state === "retiring"}
+                        until {day(key.retiredAt)}
                       {:else}
-                        <span class="badge badge-warning badge-sm">staged</span>
+                        {day(key.activatedAt, "not yet")}
                       {/if}
                     </td>
-                    <td class="text-xs opacity-70">{day(key.activatedAt, "not yet")}</td>
+                    <td class="text-right whitespace-nowrap">
+                      {#if key.state === "staged"}
+                        <button type="button" class="btn btn-xs" onclick={() => activate(key.kid)}>
+                          Activate
+                        </button>
+                        <button
+                          type="button"
+                          class="btn btn-xs btn-ghost"
+                          onclick={() => discard(key.kid)}
+                        >
+                          Discard
+                        </button>
+                      {/if}
+                    </td>
                   </tr>
                 {/each}
               </tbody>

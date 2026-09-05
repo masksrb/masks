@@ -28,8 +28,11 @@ policy, and is scoped by `TenantScoped` in the application as well. See
 | | |
 | --- | --- |
 | `SigningKey.active` | what signing uses |
-| `SigningKey.published` | what JWKS lists — includes a key retiring in the future |
-| `SigningKey.rotate!` | mint a replacement, retire the incumbent after `OVERLAP` (24h) |
+| `SigningKey.staged` | minted and published, signing nothing yet |
+| `SigningKey.published` | what JWKS lists — includes a staged key and one retiring in the future |
+| `SigningKey.stage!` | mint a key without activating it |
+| `#activate!` | sign with this key, retire the incumbent after `OVERLAP` (24h) |
+| `SigningKey.rotate!` | both at once |
 
 See [Signing keys](/concepts/keys).
 
