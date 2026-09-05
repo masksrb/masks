@@ -42,7 +42,10 @@ issuer_of() {
     grep -o '"issuer":"[^"]*"' | head -1 | cut -d'"' -f4
 }
 
-fail() { echo "FAIL: $1" >&2; exit 1; }
+fail() {
+  echo "FAIL: $1" >&2
+  exit 1
+}
 
 demo_issuer=$(issuer_of demo) || fail "demo discovery did not answer"
 acme_issuer=$(issuer_of acme) || fail "acme discovery did not answer"

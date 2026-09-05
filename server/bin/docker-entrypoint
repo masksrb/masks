@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-if [ "${@: -2:1}" == "./bin/rails" ] && [ "${@: -1:1}" == "server" ]; then
+if [ "${*: -2:1}" == "./bin/rails" ] && [ "${*: -1:1}" == "server" ]; then
   ./bin/rails db:prepare
   ./bin/rails masks:tenants
 fi
