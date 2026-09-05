@@ -1,4 +1,10 @@
 class Tenant < ApplicationRecord
+  class TenancyConflict < StandardError
+    def initialize(message = "MASKS_TENANT and MASKS_TENANTS are both set; declare one or the other")
+      super
+    end
+  end
+
   has_many :signing_keys, dependent: :destroy
   has_many :actors, dependent: :destroy
   has_many :clients, dependent: :destroy
@@ -22,12 +28,21 @@ class Tenant < ApplicationRecord
   end
 
   class << self
+    def pinned
+      Rails.configuration.masks.tenant
+    end
+
     def resolve(host)
+      return active.find_by(subdomain: pinned) if pinned
+
       active.find_by(subdomain: host.to_s.split(".").first)
     end
 
     def declared
-      Rails.configuration.masks.tenants
+      return Rails.configuration.masks.tenants unless pinned
+      raise TenancyConflict if Rails.configuration.masks.tenants.any?
+
+      [ pinned ]
     end
 
     def declare!
@@ -49,6 +64,7 @@ class Tenant < ApplicationRecord
 
     def switch(tenant)
       raise ArgumentError, "no tenant" if tenant.nil?
+      return yield tenant if Current.tenant&.id == tenant.id
 
       previous_tenant = Current.tenant
 

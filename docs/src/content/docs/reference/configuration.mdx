@@ -29,12 +29,17 @@ development values and are named as such.
 
 | | Default | |
 | --- | --- | --- |
+| `MASKS_TENANT` | *unset* | one tenant, reached at every hostname |
 | `MASKS_TENANTS` | `jons,acme` | comma or space separated; ensured on boot |
 | `MASKS_SETUP_TOKEN` | *unset* | required to answer the setup prompt, when set |
 | `MASKS_DYNAMIC_CLIENT_SCOPES` | *unset* | caps what dynamic registration may ask for |
 
 Declaring `MASKS_TENANTS` turns claiming off. Leave it unset and the first request to a hostname
 nothing serves claims that subdomain — once, and only while no tenant exists at all.
+
+`MASKS_TENANT` is the single-tenant form and names the record rather than a route — see
+[Tenancy](/concepts/tenancy). Setting both is refused rather than resolved by precedence, and the
+refusal surfaces at boot, from the `masks:tenants` the entrypoint runs.
 
 `MASKS_DYNAMIC_CLIENT_SCOPES` is the installation-wide ceiling; a tenant's own
 `dynamic_client_scopes` column overrides it. See [Register a connector](/guides/connectors).
@@ -87,6 +92,10 @@ checks for one before it does anything else.
 `MASKS_PUBLIC_ORIGIN_TEMPLATE` exists for the case where something in front of the app rewrites the
 host — a tunnel, or a proxy that does not set forwarding headers. It must be stable, because OAuth
 redirect URIs and token audiences are registered against it.
+
+`%{subdomain}` is optional. A template with no interpolation in it is a literal origin, which is what
+a single-tenant deployment wants: with `MASKS_TENANT` set every hostname resolves, so without a
+literal here the issuer is whichever hostname the request happened to arrive on.
 
 ## The gem
 

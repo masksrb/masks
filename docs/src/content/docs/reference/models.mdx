@@ -16,7 +16,8 @@ policy, and is scoped by `TenantScoped` in the application as well. See
 
 | | |
 | --- | --- |
-| `Tenant.resolve(host)` | find one by subdomain |
+| `Tenant.resolve(host)` | find one by subdomain, or the pinned one whatever the host |
+| `Tenant.pinned` | `MASKS_TENANT` — the single-tenant subdomain, or nil |
 | `Tenant.switch(tenant) { }` | set the Postgres session variable RLS reads, and restore it after |
 | `#to_identity` | `{ uuid, subdomain, name }` — the `tenant` claim |
 
