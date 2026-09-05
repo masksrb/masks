@@ -3,6 +3,7 @@ module Manage
     class SessionType < BaseObject
       field :id, ID, null: false
       field :actor, ActorType, null: false
+      field :device, "Manage::Types::DeviceType"
       field :user_agent, String
       field :ip_address, String
       field :authenticated_at, GraphQL::Types::ISO8601DateTime

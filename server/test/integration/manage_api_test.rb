@@ -384,6 +384,41 @@ class ManageApiTest < ActionDispatch::IntegrationTest
     assert_not_nil revoked.dig("data", "revokeSession", "session", "revokedAt")
   end
 
+  test "a device is listed with who signed in from it, and blocking it shuts that browser out" do
+    held = bearer
+
+    listed = ask("{ devices { id label category known actors { nickname } } }", held)
+    device = listed.dig("data", "devices").first
+
+    assert_not_nil device
+    assert_equal [ @actor.nickname ], device["actors"].map { |one| one["nickname"] }
+
+    blocked = ask(%(mutation { blockDevice(id: "#{device['id']}") { device { blockedAt } } }), held)
+
+    assert_not_nil blocked.dig("data", "blockDevice", "device", "blockedAt")
+    assert_empty within(@tenant) { Session.live.where(actor: @actor).to_a }
+
+    post "/manage/graphql",
+         params: { query: "{ viewer { nickname } }" }.to_json,
+         headers: {
+           "CONTENT_TYPE" => "application/json",
+           "HTTP_AUTHORIZATION" => "Bearer #{held}"
+         }
+
+    assert_response :forbidden
+  end
+
+  test "signing a device out from the admin API revokes the sessions and tokens it holds" do
+    held = bearer
+
+    id = ask("{ devices { id sessions { id } } }", held).dig("data", "devices").first["id"]
+
+    ask(%(mutation { signOutDevice(id: "#{id}") { device { id } } }), held)
+
+    assert_empty within(@tenant) { Session.live.where(actor: @actor).to_a }
+    assert_empty within(@tenant) { AccessToken.live.where(actor: @actor).to_a }
+  end
+
   test "the schema refuses a query past its token ceiling" do
     huge = "{ #{Array.new(2000) { |i| "a#{i}: viewer { nickname }" }.join(' ')} }"
 
@@ -425,5 +460,46 @@ class ManageApiTest < ActionDispatch::IntegrationTest
 
     refute_match "masks_session", response.body
     refute_match "access_token", response.body
+  end
+
+  test "the tally counts everything, not just the page of records a list query returns" do
+    crowd = Manage::Types::QueryType::LIMIT + 3
+
+    within(@tenant) { crowd.times { |at| create_actor(@tenant, nickname: "extra#{at}") } }
+
+    token = bearer
+    answer = ask("query { actors { uuid } tally { actors clients sessions devices } }", token)
+
+    listed = answer["data"]["actors"].length
+    counted = answer["data"]["tally"]["actors"]
+
+    assert_equal Manage::Types::QueryType::LIMIT, listed
+    assert_operator counted, :>, listed
+    assert_equal within(@tenant) { Actor.count }, counted
+  end
+
+  test "activity buckets sign-ins by day and leaves quiet days in the series at zero" do
+    token = bearer
+
+    within(@tenant) do
+      Session.where.not(id: nil).update_all(authenticated_at: 2.days.ago)
+    end
+
+    days = ask("query { activity(days: 7) { date signIns } }", token)["data"]["activity"]
+
+    assert_equal 7, days.length
+    assert_equal days.map { |one| one["date"] }.sort, days.map { |one| one["date"] }
+    assert_equal Date.current.to_s, days.last["date"]
+    assert_operator days.sum { |one| one["signIns"] }, :>, 0
+    assert days.any? { |one| one["signIns"].zero? }
+  end
+
+  test "activity refuses to reach further back than its ceiling" do
+    token = bearer
+    longest = Manage::Types::QueryType::LONGEST
+
+    days = ask("query { activity(days: 5000) { date } }", token)["data"]["activity"]
+
+    assert_equal longest, days.length
   end
 end

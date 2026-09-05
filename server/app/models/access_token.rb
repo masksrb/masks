@@ -9,6 +9,7 @@ class AccessToken < Token
     token = create!(
       actor: actor,
       client: client,
+      device: parent&.device,
       parent: parent,
       scopes: Scopes.join(scopes),
       audience: Array(audience),

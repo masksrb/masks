@@ -39,6 +39,7 @@ export default defineConfig({
             { label: "Tenancy", slug: "concepts/tenancy" },
             { label: "Signing keys", slug: "concepts/keys" },
             { label: "The login machine", slug: "concepts/login" },
+            { label: "Devices", slug: "concepts/devices" },
             { label: "Policies", slug: "concepts/policies" },
             { label: "Tokens and audiences", slug: "concepts/tokens" },
             { label: "Hardening", slug: "concepts/hardening" },

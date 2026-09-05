@@ -19,12 +19,13 @@ class Login
     STATES.flat_map { |state| state.declared_updates }.uniq
   end
 
-  attr_reader :store, :updates, :event, :prompt, :warnings, :request, :session, :refusal, :rid
+  attr_reader :store, :updates, :event, :prompt, :warnings, :request, :session, :device, :refusal, :rid
 
-  def initialize(store:, request: nil, session: nil, rid: nil, event: nil, updates: {})
+  def initialize(store:, request: nil, session: nil, device: nil, rid: nil, event: nil, updates: {})
     @store = store
     @request = request
     @session = session
+    @device = device
     @rid = rid
     @event = event.presence&.to_s
     @updates = (updates || {}).stringify_keys
@@ -128,7 +129,17 @@ class Login
   def second_factored?
     return false if reauthenticating? || stale?
 
-    touched?(:second_factor) || signed_in?
+    touched?(:second_factor) || signed_in? || remembered?(:second_factor)
+  end
+
+  def remembered?(factor)
+    return false if device.nil? || actor.nil?
+
+    device.remembers?(actor, factor)
+  end
+
+  def remember!(factor, expiry: DeviceFactor::LIFETIME)
+    DeviceFactor.remember!(device: device, actor: actor, factor: factor, expiry: expiry)
   end
 
   def warn!(*keys)

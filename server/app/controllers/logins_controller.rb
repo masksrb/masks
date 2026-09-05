@@ -21,6 +21,7 @@ class LoginsController < ApplicationController
              with: -> { too_many("too-many-attempts") }
 
   before_action :verify_authenticity_token
+  before_action :establish_device, only: :update
 
   def show
     return redirect_to after_login_path if current_actor && pending.nil?
@@ -66,6 +67,7 @@ class LoginsController < ApplicationController
         store: session[STORE] ||= {},
         request: pending,
         session: current_session,
+        device: current_device,
         rid: params[:rid].presence,
         event: event,
         updates: updates

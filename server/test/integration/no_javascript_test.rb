@@ -56,6 +56,13 @@ class NoJavascriptTest < ActionDispatch::IntegrationTest
     assert redirected["code"].present?
   end
 
+  test "the referrer policy still lets a browser send an origin when it posts a form" do
+    authorize(client_id: @registration["client_id"])
+
+    assert_equal "same-origin", response.headers["Referrer-Policy"],
+                 "no-referrer makes browsers send Origin: null, which fails forgery protection"
+  end
+
   private
 
     def submit(event:, **updates)

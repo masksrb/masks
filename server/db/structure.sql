@@ -273,6 +273,84 @@ ALTER SEQUENCE public.consents_id_seq OWNED BY public.consents.id;
 
 
 --
+-- Name: device_factors; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.device_factors (
+    id bigint NOT NULL,
+    tenant_id bigint NOT NULL,
+    device_id bigint NOT NULL,
+    actor_id bigint NOT NULL,
+    factor character varying NOT NULL,
+    satisfied_at timestamp(6) without time zone NOT NULL,
+    expires_at timestamp(6) without time zone NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+ALTER TABLE ONLY public.device_factors FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: device_factors_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.device_factors_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: device_factors_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.device_factors_id_seq OWNED BY public.device_factors.id;
+
+
+--
+-- Name: devices; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.devices (
+    id bigint NOT NULL,
+    tenant_id bigint NOT NULL,
+    public_id character varying NOT NULL,
+    version character varying NOT NULL,
+    name character varying,
+    user_agent character varying,
+    ip_address character varying,
+    last_seen_at timestamp(6) without time zone NOT NULL,
+    blocked_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+ALTER TABLE ONLY public.devices FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: devices_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.devices_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: devices_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.devices_id_seq OWNED BY public.devices.id;
+
+
+--
 -- Name: passkeys; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -385,7 +463,9 @@ CREATE TABLE public.sessions (
     revoked_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    amr jsonb DEFAULT '[]'::jsonb NOT NULL
+    amr jsonb DEFAULT '[]'::jsonb NOT NULL,
+    device_id bigint,
+    device_version character varying
 );
 
 ALTER TABLE ONLY public.sessions FORCE ROW LEVEL SECURITY;
@@ -509,7 +589,8 @@ CREATE TABLE public.tokens (
     updated_at timestamp(6) without time zone NOT NULL,
     authenticated_at timestamp(6) without time zone,
     requested_claims jsonb,
-    payload jsonb
+    payload jsonb,
+    device_id bigint
 );
 
 ALTER TABLE ONLY public.tokens FORCE ROW LEVEL SECURITY;
@@ -567,6 +648,20 @@ ALTER TABLE ONLY public.connections ALTER COLUMN id SET DEFAULT nextval('public.
 --
 
 ALTER TABLE ONLY public.consents ALTER COLUMN id SET DEFAULT nextval('public.consents_id_seq'::regclass);
+
+
+--
+-- Name: device_factors id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.device_factors ALTER COLUMN id SET DEFAULT nextval('public.device_factors_id_seq'::regclass);
+
+
+--
+-- Name: devices id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.devices ALTER COLUMN id SET DEFAULT nextval('public.devices_id_seq'::regclass);
 
 
 --
@@ -657,6 +752,22 @@ ALTER TABLE ONLY public.connections
 
 ALTER TABLE ONLY public.consents
     ADD CONSTRAINT consents_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: device_factors device_factors_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.device_factors
+    ADD CONSTRAINT device_factors_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: devices devices_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.devices
+    ADD CONSTRAINT devices_pkey PRIMARY KEY (id);
 
 
 --
@@ -842,6 +953,55 @@ CREATE INDEX index_consents_on_tenant_id ON public.consents USING btree (tenant_
 
 
 --
+-- Name: index_device_factors_on_actor_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_device_factors_on_actor_id ON public.device_factors USING btree (actor_id);
+
+
+--
+-- Name: index_device_factors_on_device_and_actor_and_factor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_device_factors_on_device_and_actor_and_factor ON public.device_factors USING btree (device_id, actor_id, factor);
+
+
+--
+-- Name: index_device_factors_on_device_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_device_factors_on_device_id ON public.device_factors USING btree (device_id);
+
+
+--
+-- Name: index_device_factors_on_tenant_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_device_factors_on_tenant_id ON public.device_factors USING btree (tenant_id);
+
+
+--
+-- Name: index_devices_on_tenant_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_devices_on_tenant_id ON public.devices USING btree (tenant_id);
+
+
+--
+-- Name: index_devices_on_tenant_id_and_last_seen_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_devices_on_tenant_id_and_last_seen_at ON public.devices USING btree (tenant_id, last_seen_at);
+
+
+--
+-- Name: index_devices_on_tenant_id_and_public_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_devices_on_tenant_id_and_public_id ON public.devices USING btree (tenant_id, public_id);
+
+
+--
 -- Name: index_passkeys_on_actor_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -881,6 +1041,13 @@ CREATE UNIQUE INDEX index_providers_on_tenant_id_and_key ON public.providers USI
 --
 
 CREATE INDEX index_sessions_on_actor_id ON public.sessions USING btree (actor_id);
+
+
+--
+-- Name: index_sessions_on_device_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_sessions_on_device_id ON public.sessions USING btree (device_id);
 
 
 --
@@ -944,6 +1111,13 @@ CREATE INDEX index_tokens_on_actor_id ON public.tokens USING btree (actor_id);
 --
 
 CREATE INDEX index_tokens_on_client_id ON public.tokens USING btree (client_id);
+
+
+--
+-- Name: index_tokens_on_device_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_tokens_on_device_id ON public.tokens USING btree (device_id);
 
 
 --
@@ -1015,6 +1189,14 @@ ALTER TABLE ONLY public.tokens
 
 
 --
+-- Name: device_factors fk_rails_3f98713d06; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.device_factors
+    ADD CONSTRAINT fk_rails_3f98713d06 FOREIGN KEY (tenant_id) REFERENCES public.tenants(id);
+
+
+--
 -- Name: connections fk_rails_4234ab53d1; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1036,6 +1218,14 @@ ALTER TABLE ONLY public.clients
 
 ALTER TABLE ONLY public.sessions
     ADD CONSTRAINT fk_rails_4cc5d929b0 FOREIGN KEY (tenant_id) REFERENCES public.tenants(id);
+
+
+--
+-- Name: device_factors fk_rails_4ed392263f; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.device_factors
+    ADD CONSTRAINT fk_rails_4ed392263f FOREIGN KEY (device_id) REFERENCES public.devices(id);
 
 
 --
@@ -1071,6 +1261,14 @@ ALTER TABLE ONLY public.tokens
 
 
 --
+-- Name: device_factors fk_rails_75a75fd1e0; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.device_factors
+    ADD CONSTRAINT fk_rails_75a75fd1e0 FOREIGN KEY (actor_id) REFERENCES public.actors(id);
+
+
+--
 -- Name: passkeys fk_rails_79adc8e12d; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1092,6 +1290,14 @@ ALTER TABLE ONLY public.tokens
 
 ALTER TABLE ONLY public.connections
     ADD CONSTRAINT fk_rails_a26555371d FOREIGN KEY (provider_id) REFERENCES public.providers(id);
+
+
+--
+-- Name: sessions fk_rails_aec6d92ac2; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sessions
+    ADD CONSTRAINT fk_rails_aec6d92ac2 FOREIGN KEY (device_id) REFERENCES public.devices(id);
 
 
 --
@@ -1119,11 +1325,27 @@ ALTER TABLE ONLY public.passkeys
 
 
 --
+-- Name: devices fk_rails_d5b7012cbc; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.devices
+    ADD CONSTRAINT fk_rails_d5b7012cbc FOREIGN KEY (tenant_id) REFERENCES public.tenants(id);
+
+
+--
 -- Name: consents fk_rails_eb0bd2c006; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.consents
     ADD CONSTRAINT fk_rails_eb0bd2c006 FOREIGN KEY (client_id) REFERENCES public.clients(id);
+
+
+--
+-- Name: tokens fk_rails_f809e5293f; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tokens
+    ADD CONSTRAINT fk_rails_f809e5293f FOREIGN KEY (device_id) REFERENCES public.devices(id);
 
 
 --
@@ -1149,6 +1371,18 @@ ALTER TABLE public.connections ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.consents ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: device_factors; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.device_factors ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: devices; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.devices ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: passkeys; Type: ROW SECURITY; Schema: public; Owner: -
@@ -1203,6 +1437,20 @@ CREATE POLICY tenant_isolation ON public.consents USING ((tenant_id = (NULLIF(cu
 
 
 --
+-- Name: device_factors tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.device_factors USING ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint)) WITH CHECK ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint));
+
+
+--
+-- Name: devices tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.devices USING ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint)) WITH CHECK ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint));
+
+
+--
 -- Name: passkeys tenant_isolation; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -1250,6 +1498,8 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260905000002'),
+('20260905000001'),
 ('20260904000003'),
 ('20260904000002'),
 ('20260904000001'),

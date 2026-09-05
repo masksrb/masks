@@ -68,6 +68,9 @@ export function createLogin(initial, options = {}) {
     get backupCodes() {
       return auth.backupCodes;
     },
+    get rememberable() {
+      return auth.rememberable;
+    },
     get consent() {
       return auth.consent;
     },

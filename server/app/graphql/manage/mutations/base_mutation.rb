@@ -19,6 +19,10 @@ module Manage
           Client.find_by(client_id: client_id) || refuse!("no client with that client_id")
         end
 
+        def device!(id)
+          ::Device.find_by(id: id) || refuse!("no device with that id")
+        end
+
         def save!(record)
           refuse!(record.errors.full_messages.join("; ")) unless record.save
 

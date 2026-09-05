@@ -28,10 +28,28 @@ module Manage
         argument :limit, Integer, required: false
       end
 
+      field :devices, [ DeviceType ], null: false do
+        argument :actor, ID, required: false
+        argument :blocked, Boolean, required: false
+        argument :limit, Integer, required: false
+      end
+
+      field :device, DeviceType do
+        argument :id, ID
+      end
+
       field :scopes_supported, [ String ], null: false
+
+      field :tally, TallyType, null: false
+
+      field :activity, [ ActivityDayType ], null: false do
+        argument :days, Integer, required: false
+      end
 
       LIMIT = 50
       CEILING = 200
+      SPAN = 30
+      LONGEST = 90
 
       def viewer
         context[:actor]
@@ -79,8 +97,43 @@ module Manage
         scope.limit(bounded(limit))
       end
 
+      def devices(actor: nil, blocked: nil, limit: nil)
+        scope = ::Device.newest_first
+        scope = scope.for_actor(::Actor.find_by(uuid: actor)) if actor.present?
+        scope = blocked ? scope.where.not(blocked_at: nil) : scope.allowed unless blocked.nil?
+
+        scope.limit(bounded(limit))
+      end
+
+      def device(id:)
+        ::Device.find_by(id: id)
+      end
+
       def scopes_supported
         Scopes::DESCRIBED.keys
+      end
+
+      def tally
+        {
+          actors: Actor.count,
+          clients: Client.active.count,
+          sessions: Session.live.count,
+          devices: ::Device.allowed.count
+        }
+      end
+
+      def activity(days: nil)
+        span = [ days&.clamp(1, LONGEST) || SPAN, LONGEST ].min
+        from = Date.current - (span - 1)
+
+        counted = Session
+          .where(authenticated_at: from.beginning_of_day..)
+          .group(Arel.sql("DATE(authenticated_at)"))
+          .count
+
+        (from..Date.current).map do |on|
+          { date: on, sign_ins: counted[on] || 0 }
+        end
       end
 
       private
