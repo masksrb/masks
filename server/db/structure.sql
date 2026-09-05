@@ -98,6 +98,43 @@ CREATE TABLE public.ar_internal_metadata (
 
 
 --
+-- Name: authenticators; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.authenticators (
+    id bigint NOT NULL,
+    aaguid character varying NOT NULL,
+    name character varying NOT NULL,
+    source character varying NOT NULL,
+    icon text,
+    certification character varying,
+    statuses jsonb DEFAULT '[]'::jsonb NOT NULL,
+    compromised_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+
+--
+-- Name: authenticators_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.authenticators_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: authenticators_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.authenticators_id_seq OWNED BY public.authenticators.id;
+
+
+--
 -- Name: clients; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -243,7 +280,7 @@ CREATE TABLE public.passkeys (
     id bigint NOT NULL,
     tenant_id bigint NOT NULL,
     actor_id bigint NOT NULL,
-    name character varying NOT NULL,
+    name character varying,
     external_id character varying NOT NULL,
     public_key text NOT NULL,
     sign_count bigint DEFAULT 0 NOT NULL,
@@ -505,6 +542,13 @@ ALTER TABLE ONLY public.actors ALTER COLUMN id SET DEFAULT nextval('public.actor
 
 
 --
+-- Name: authenticators id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.authenticators ALTER COLUMN id SET DEFAULT nextval('public.authenticators_id_seq'::regclass);
+
+
+--
 -- Name: clients id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -581,6 +625,14 @@ ALTER TABLE ONLY public.actors
 
 ALTER TABLE ONLY public.ar_internal_metadata
     ADD CONSTRAINT ar_internal_metadata_pkey PRIMARY KEY (key);
+
+
+--
+-- Name: authenticators authenticators_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.authenticators
+    ADD CONSTRAINT authenticators_pkey PRIMARY KEY (id);
 
 
 --
@@ -689,6 +741,13 @@ CREATE UNIQUE INDEX index_actors_on_tenant_id_and_nickname ON public.actors USIN
 --
 
 CREATE UNIQUE INDEX index_actors_on_uuid ON public.actors USING btree (uuid);
+
+
+--
+-- Name: index_authenticators_on_aaguid; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_authenticators_on_aaguid ON public.authenticators USING btree (aaguid);
 
 
 --
@@ -1191,6 +1250,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260904000003'),
 ('20260904000002'),
 ('20260904000001'),
 ('20260902000001'),
