@@ -1,7 +1,12 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.4.15/schema.json",
   "files": {
-    "includes": ["app/frontend/**/*.js", "*.js", "*.json"],
+    "includes": [
+      "app/frontend/**/*.js",
+      "app/frontend/**/*.svelte",
+      "*.js",
+      "*.json"
+    ],
     "ignoreUnknown": true
   },
   "formatter": {
@@ -22,5 +27,21 @@
         "organizeImports": "on"
       }
     }
-  }
+  },
+  "overrides": [
+    {
+      "includes": ["**/*.svelte"],
+      "formatter": { "enabled": false },
+      "assist": { "enabled": false },
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noUnusedVariables": "off",
+            "noUnusedImports": "off",
+            "noUnusedFunctionParameters": "off"
+          }
+        }
+      }
+    }
+  ]
 }
