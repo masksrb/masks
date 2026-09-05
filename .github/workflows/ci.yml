@@ -20,10 +20,38 @@ jobs:
       - uses: ruby/setup-ruby@v1
         with:
           bundler-cache: true
-          working-directory: server
-      - name: Lint the server
-        working-directory: server
-        run: bin/rubocop -f github
+      - name: Lint every Ruby file, the gem and the harness included
+        run: bundle exec rubocop -f github
+
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: server/.node-version
+      - name: Install shfmt
+        run: |
+          curl -fsSL -o /usr/local/bin/shfmt \
+            https://github.com/mvdan/sh/releases/download/v3.14.0/shfmt_v3.14.0_linux_amd64
+          chmod +x /usr/local/bin/shfmt
+      - name: YAML and Markdown
+        run: |
+          npx --yes prettier --check --no-error-on-unmatched-pattern \
+            "*.{yml,yaml,md}" ".github/**/*.{yml,yaml}" \
+            "server/config/**/*.{yml,yaml}" "conformance/**/*.{yml,yaml}"
+      - name: Shell
+        run: |
+          mapfile -t scripts < <(shfmt -f bin server/bin)
+          shfmt -d -i 2 -ci "${scripts[@]}"
+          shellcheck "${scripts[@]}"
+
+  actions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Lint the workflows
+        uses: raven-actions/actionlint@v2
 
   scan:
     runs-on: ubuntu-latest
@@ -149,6 +177,9 @@ jobs:
       - name: Build @masks/client, which the manage bundle imports by path
         working-directory: web
         run: npm ci && npm run build
+      - name: Check the components against their templates
+        working-directory: server
+        run: npm run check:svelte
       - name: Build the login bundle
         working-directory: server
         run: npx vite build
