@@ -15,8 +15,8 @@ class ResourceTest < ClientTest
     tenant = resource.authenticate("Bearer #{issuer.access_token}").tenant
 
     assert_equal "t-1", tenant.uuid
-    assert_equal "jons", tenant.subdomain
-    assert_equal "Jons", tenant.name
+    assert_equal "demo", tenant.subdomain
+    assert_equal "Demo", tenant.name
     assert tenant.present?
   end
 

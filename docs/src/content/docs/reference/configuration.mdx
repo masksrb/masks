@@ -30,7 +30,7 @@ development values and are named as such.
 | | Default | |
 | --- | --- | --- |
 | `MASKS_TENANT` | *unset* | one tenant, reached at every hostname |
-| `MASKS_TENANTS` | `jons,acme` | comma or space separated; ensured on boot |
+| `MASKS_TENANTS` | `demo,acme` | comma or space separated; ensured on boot |
 | `MASKS_SETUP_TOKEN` | *unset* | required to answer the setup prompt, when set |
 | `MASKS_DYNAMIC_CLIENT_SCOPES` | *unset* | caps what dynamic registration may ask for |
 
@@ -113,7 +113,7 @@ The generator writes this file. Everything has a default except `issuer`.
 
 ```ruby
 Masks::Rails.configure do |config|
-  config.issuer = "https://jons.auth.example"
+  config.issuer = "https://demo.auth.example"
   config.credentials = -> { { client_id: ENV["MASKS_CLIENT_ID"], client_secret: ENV["MASKS_CLIENT_SECRET"] } }
   config.store = ->(request, registration) { Credentials.store!(registration) }
   config.name = "things"

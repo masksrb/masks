@@ -3,7 +3,7 @@ require "vips"
 
 class AvatarsTest < ActionDispatch::IntegrationTest
   setup do
-    @actor = create_actor(email: "owner@probe.example.com", name: "Jon Geiger")
+    @actor = create_actor(email: "owner@probe.example.com", name: "Ada Lovelace")
     @registration = register
     host! host_for(@tenant)
   end
@@ -47,7 +47,7 @@ class AvatarsTest < ActionDispatch::IntegrationTest
   test "the initials are drawn from the name, two letters of it" do
     get "/avatars/#{@actor.uuid}/initials"
 
-    assert_includes response.body, ">JG<"
+    assert_includes response.body, ">AL<"
   end
 
   test "the initials fall back to the nickname when there is no name" do

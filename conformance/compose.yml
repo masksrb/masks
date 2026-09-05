@@ -25,7 +25,7 @@ services:
       POSTGRES_USER: masks
       POSTGRES_PASSWORD: masks
       POSTGRES_DATABASE: masks_conformance
-      MASKS_TENANTS: jons
+      MASKS_TENANTS: demo
       SECRET_KEY_BASE: conformance_only_secret_key_base_not_for_real_deployments
       ENCRYPTION_PRIMARY_KEY: conformance_only_primary_key_not_for_credentials
       ENCRYPTION_DETERMINISTIC_KEY: conformance_only_deterministic_key_not_real
@@ -52,11 +52,11 @@ services:
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
     environment:
-      MASKS_CONFORMANCE_HOST: jons.masks.test
+      MASKS_CONFORMANCE_HOST: demo.masks.test
     networks:
       default:
         aliases:
-          - jons.masks.test
+          - demo.masks.test
     depends_on:
       masks:
         condition: service_healthy

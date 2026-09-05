@@ -34,9 +34,9 @@ cat <<'TEXT'
 
 Tenants are addressed by subdomain. Either add these to /etc/hosts:
 
-  127.0.0.1 auth.test jons.auth.test acme.auth.test
+  127.0.0.1 auth.test demo.auth.test acme.auth.test
 
 ...or use *.auth.localhost, which resolves without any setup.
 
-Then bin/dev, and http://jons.auth.localhost:5555
+Then bin/dev, and http://demo.auth.localhost:5555
 TEXT

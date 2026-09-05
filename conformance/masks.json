@@ -2,7 +2,7 @@
   "alias": "masks",
   "description": "masks — a tenant of a masks deployment, registered dynamically",
   "server": {
-    "discoveryUrl": "https://jons.masks.test/.well-known/openid-configuration"
+    "discoveryUrl": "https://demo.masks.test/.well-known/openid-configuration"
   },
   "client": {
     "client_name": "conformance-first"
@@ -12,12 +12,12 @@
   },
   "browser": [
     {
-      "match": "https://jons.masks.test/authorize*",
+      "match": "https://demo.masks.test/authorize*",
       "tasks": [
         {
           "task": "Sign in",
           "optional": true,
-          "match": "https://jons.masks.test/login*",
+          "match": "https://demo.masks.test/login*",
           "commands": [
             ["wait", "css", "#login", 10, ".", "update-image-placeholder-optional"],
             ["wait", "name", "identifier", 10],
@@ -31,7 +31,7 @@
         {
           "task": "Consent",
           "optional": true,
-          "match": "https://jons.masks.test/consent*",
+          "match": "https://demo.masks.test/consent*",
           "commands": [
             ["click", "name", "approve"]
           ]
@@ -39,7 +39,7 @@
         {
           "task": "Read the error page",
           "optional": true,
-          "match": "https://jons.masks.test/authorize*",
+          "match": "https://demo.masks.test/authorize*",
           "commands": [
             ["wait", "css", "#authorize-error", 10, ".", "update-image-placeholder-optional"]
           ]

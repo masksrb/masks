@@ -5,9 +5,9 @@ import { createSession } from "../dist/session.js";
 const ACCOUNT = {
   signed_in: true,
   subject: "actor-1",
-  name: "Jon",
-  email: "jon@example.invalid",
-  tenant: { uuid: "t-1", subdomain: "jons", name: "Jons" },
+  name: "Ada",
+  email: "user@example.invalid",
+  tenant: { uuid: "t-1", subdomain: "demo", name: "Demo" },
   scopes: ["openid", "things:read", "admin"],
 };
 
@@ -50,7 +50,7 @@ test("a signed-in session comes back as an account", async () => {
   const account = await subject.session();
 
   assert.equal(account.subject, "actor-1");
-  assert.equal(account.tenant.subdomain, "jons");
+  assert.equal(account.tenant.subdomain, "demo");
   assert.deepEqual(account.scopes, ["openid", "things:read", "admin"]);
   assert.equal(upstream.calls[0].url, "/auth/session");
   assert.equal(upstream.calls[0].init.credentials, "same-origin");
@@ -187,7 +187,7 @@ test("signing out everywhere asks the bff for it and follows where it says", asy
       status: 200,
       body: {
         signed_in: false,
-        logout_url: "https://jons.auth.test/logout?client_id=app",
+        logout_url: "https://demo.auth.test/logout?client_id=app",
       },
     },
   ]);
@@ -196,7 +196,7 @@ test("signing out everywhere asks the bff for it and follows where it says", asy
   await Promise.race([pending, new Promise((done) => setTimeout(done, 10))]);
 
   assert.ok(upstream.calls[0].url.endsWith("/logout?everywhere=1"));
-  assert.deepEqual(assigned, ["https://jons.auth.test/logout?client_id=app"]);
+  assert.deepEqual(assigned, ["https://demo.auth.test/logout?client_id=app"]);
 
   globalThis.window = held;
 });

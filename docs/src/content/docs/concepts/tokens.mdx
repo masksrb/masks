@@ -36,7 +36,7 @@ Identity, and nothing a scope asked for:
 
 ```json
 {
-  "iss": "https://jons.auth.example",
+  "iss": "https://demo.auth.example",
   "sub": "9f1c…",
   "aud": "2bb32482-…",
   "exp": 1756400000,
@@ -47,7 +47,7 @@ Identity, and nothing a scope asked for:
   "nonce": "n-once",
   "at_hash": "aG91c2U…",
   "c_hash": "…",
-  "tenant": { "uuid": "…", "subdomain": "jons" }
+  "tenant": { "uuid": "…", "subdomain": "demo" }
 }
 ```
 
@@ -87,7 +87,7 @@ RFC 8707: the client names the API it intends to call.
 GET /authorize
   ?response_type=code
   &client_id=…
-  &resource=https%3A%2F%2Fjons.things.example%2Fmcp
+  &resource=https%3A%2F%2Fdemo.things.example%2Fmcp
 ```
 
 That value becomes the token's `aud`. The resource server verifies it against its own URL and

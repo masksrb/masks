@@ -44,21 +44,21 @@ issuer_of() {
 
 fail() { echo "FAIL: $1" >&2; exit 1; }
 
-jons_issuer=$(issuer_of jons) || fail "jons discovery did not answer"
+demo_issuer=$(issuer_of demo) || fail "demo discovery did not answer"
 acme_issuer=$(issuer_of acme) || fail "acme discovery did not answer"
 
-[ "$jons_issuer" = "http://jons.$SUFFIX:$PORT" ] ||
-  fail "jons issuer is $jons_issuer"
+[ "$demo_issuer" = "http://demo.$SUFFIX:$PORT" ] ||
+  fail "demo issuer is $demo_issuer"
 [ "$acme_issuer" = "http://acme.$SUFFIX:$PORT" ] ||
   fail "acme issuer is $acme_issuer"
 
-jons_kid=$(kid_of jons) || fail "jons published no JWKS"
+demo_kid=$(kid_of demo) || fail "demo published no JWKS"
 acme_kid=$(kid_of acme) || fail "acme published no JWKS"
 
-[ -n "$jons_kid" ] || fail "jons published an empty JWKS"
+[ -n "$demo_kid" ] || fail "demo published an empty JWKS"
 [ -n "$acme_kid" ] || fail "acme published an empty JWKS"
-[ "$jons_kid" != "$acme_kid" ] ||
-  fail "both tenants published kid $jons_kid — keys are not per-tenant"
+[ "$demo_kid" != "$acme_kid" ] ||
+  fail "both tenants published kid $demo_kid — keys are not per-tenant"
 
 status=$(curl -fsS -o /dev/null -w '%{http_code}' "http://127.0.0.1:$PORT/up")
 [ "$status" = "200" ] || fail "/up answered $status"
@@ -68,7 +68,7 @@ cat <<TEXT
 image ok — masks:dev is serving on port $PORT
 
   health    /up                                     $status
-  jons      $jons_issuer   kid $jons_kid
+  demo      $demo_issuer   kid $demo_kid
   acme      $acme_issuer   kid $acme_kid
 
   bin/image logs      follow the container

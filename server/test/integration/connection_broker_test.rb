@@ -177,15 +177,15 @@ class ConnectionBrokerTest < ActionDispatch::IntegrationTest
   test "a connection is recorded and its upstream token released to a scoped bearer" do
     with_upstream(
       "/o/token" => token_response,
-      "/o/userinfo" => identity(sub: "google-1", email: "jon@gmail.com")
+      "/o/userinfo" => identity(sub: "google-1", email: "user@gmail.com")
     ) do |upstream|
       provider = create_provider(upstream)
-      connect!(provider, sub: "google-1", email: "jon@gmail.com")
+      connect!(provider, sub: "google-1", email: "user@gmail.com")
 
       connection = within(@tenant) { Connection.live.sole }
 
       assert_equal "google-1", connection.subject
-      assert_equal "jon@gmail.com", connection.label
+      assert_equal "user@gmail.com", connection.label
       assert_equal @actor.id, connection.actor_id
 
       body = release(connection.uuid, bearer_for)
@@ -233,10 +233,10 @@ class ConnectionBrokerTest < ActionDispatch::IntegrationTest
   test "a bearer without the provider's scope cannot release the connection" do
     with_upstream(
       "/o/token" => token_response,
-      "/o/userinfo" => identity(sub: "google-1", email: "jon@gmail.com")
+      "/o/userinfo" => identity(sub: "google-1", email: "user@gmail.com")
     ) do |upstream|
       provider = create_provider(upstream)
-      connect!(provider, sub: "google-1", email: "jon@gmail.com")
+      connect!(provider, sub: "google-1", email: "user@gmail.com")
 
       connection = within(@tenant) { Connection.live.sole }
       body = release(connection.uuid, bearer_for(scope: "openid"))
@@ -250,10 +250,10 @@ class ConnectionBrokerTest < ActionDispatch::IntegrationTest
   test "a scope for one provider does not release another provider's connection" do
     with_upstream(
       "/o/token" => token_response,
-      "/o/userinfo" => identity(sub: "gh-1", email: "jon@example.com")
+      "/o/userinfo" => identity(sub: "gh-1", email: "user@example.com")
     ) do |upstream|
       github = create_provider(upstream, key: "github", name: "GitHub")
-      connect!(github, sub: "gh-1", email: "jon@example.com")
+      connect!(github, sub: "gh-1", email: "user@example.com")
 
       connection = within(@tenant) { Connection.live.sole }
       body = release(connection.uuid, bearer_for)
@@ -266,10 +266,10 @@ class ConnectionBrokerTest < ActionDispatch::IntegrationTest
   test "another actor's connection is not found rather than refused" do
     with_upstream(
       "/o/token" => token_response,
-      "/o/userinfo" => identity(sub: "google-1", email: "jon@gmail.com")
+      "/o/userinfo" => identity(sub: "google-1", email: "user@gmail.com")
     ) do |upstream|
       provider = create_provider(upstream)
-      connect!(provider, sub: "google-1", email: "jon@gmail.com")
+      connect!(provider, sub: "google-1", email: "user@gmail.com")
 
       connection = within(@tenant) { Connection.live.sole }
 
@@ -288,10 +288,10 @@ class ConnectionBrokerTest < ActionDispatch::IntegrationTest
         token_response(access_token: "first-access"),
         token_response(access_token: "second-access", refresh_token: nil)
       ),
-      "/o/userinfo" => identity(sub: "google-1", email: "jon@gmail.com")
+      "/o/userinfo" => identity(sub: "google-1", email: "user@gmail.com")
     ) do |upstream|
       provider = create_provider(upstream)
-      connect!(provider, sub: "google-1", email: "jon@gmail.com")
+      connect!(provider, sub: "google-1", email: "user@gmail.com")
 
       within(@tenant) do
         Connection.live.sole.update!(access_token_expires_at: 1.minute.ago)
@@ -312,11 +312,11 @@ class ConnectionBrokerTest < ActionDispatch::IntegrationTest
 
   test "an upstream that refuses the refresh marks the connection revoked" do
     with_upstream(
-      "/o/userinfo" => identity(sub: "google-1", email: "jon@gmail.com"),
+      "/o/userinfo" => identity(sub: "google-1", email: "user@gmail.com"),
       "/o/token" => sequence(token_response, nil)
     ) do |upstream|
       provider = create_provider(upstream)
-      connect!(provider, sub: "google-1", email: "jon@gmail.com")
+      connect!(provider, sub: "google-1", email: "user@gmail.com")
 
       within(@tenant) do
         Connection.live.sole.update!(access_token_expires_at: 1.minute.ago)
@@ -334,10 +334,10 @@ class ConnectionBrokerTest < ActionDispatch::IntegrationTest
   test "the refresh token never appears in any response" do
     with_upstream(
       "/o/token" => token_response,
-      "/o/userinfo" => identity(sub: "google-1", email: "jon@gmail.com")
+      "/o/userinfo" => identity(sub: "google-1", email: "user@gmail.com")
     ) do |upstream|
       provider = create_provider(upstream)
-      connect!(provider, sub: "google-1", email: "jon@gmail.com")
+      connect!(provider, sub: "google-1", email: "user@gmail.com")
 
       connection = within(@tenant) { Connection.live.sole }
 
@@ -362,7 +362,7 @@ class ConnectionBrokerTest < ActionDispatch::IntegrationTest
   test "a state this browser did not begin is refused" do
     with_upstream(
       "/o/token" => token_response,
-      "/o/userinfo" => identity(sub: "google-1", email: "jon@gmail.com")
+      "/o/userinfo" => identity(sub: "google-1", email: "user@gmail.com")
     ) do |upstream|
       provider = create_provider(upstream)
 
@@ -379,10 +379,10 @@ class ConnectionBrokerTest < ActionDispatch::IntegrationTest
   test "a return_to no client claims is not redirected to" do
     with_upstream(
       "/o/token" => token_response,
-      "/o/userinfo" => identity(sub: "google-1", email: "jon@gmail.com")
+      "/o/userinfo" => identity(sub: "google-1", email: "user@gmail.com")
     ) do |upstream|
       provider = create_provider(upstream)
-      connect!(provider, sub: "google-1", email: "jon@gmail.com", return_to: "https://evil.example.com/take")
+      connect!(provider, sub: "google-1", email: "user@gmail.com", return_to: "https://evil.example.com/take")
 
       assert_not response.redirect?,
                  "an unclaimed origin must not become a redirect target"
@@ -393,11 +393,11 @@ class ConnectionBrokerTest < ActionDispatch::IntegrationTest
   test "revoking a connection stops it releasing" do
     with_upstream(
       "/o/token" => token_response,
-      "/o/userinfo" => identity(sub: "google-1", email: "jon@gmail.com"),
+      "/o/userinfo" => identity(sub: "google-1", email: "user@gmail.com"),
       "/o/revoke" => { "ok" => true }
     ) do |upstream|
       provider = create_provider(upstream)
-      connect!(provider, sub: "google-1", email: "jon@gmail.com")
+      connect!(provider, sub: "google-1", email: "user@gmail.com")
 
       connection = within(@tenant) { Connection.live.sole }
 
@@ -415,10 +415,10 @@ class ConnectionBrokerTest < ActionDispatch::IntegrationTest
   test "one tenant cannot release another tenant's connection" do
     with_upstream(
       "/o/token" => token_response,
-      "/o/userinfo" => identity(sub: "google-1", email: "jon@gmail.com")
+      "/o/userinfo" => identity(sub: "google-1", email: "user@gmail.com")
     ) do |upstream|
       provider = create_provider(upstream)
-      connect!(provider, sub: "google-1", email: "jon@gmail.com")
+      connect!(provider, sub: "google-1", email: "user@gmail.com")
 
       connection = within(@tenant) { Connection.live.sole }
 

@@ -4,7 +4,7 @@ import { test } from "node:test";
 import { createBrowserClient } from "../dist/browser.js";
 import { challenge, encode, random } from "../dist/pkce.js";
 
-const ISSUER = "https://jons.auth.test";
+const ISSUER = "https://demo.auth.test";
 const KID = "test-key";
 const KEY = generateKeyPairSync("rsa", { modulusLength: 2048 });
 
@@ -64,7 +64,7 @@ function discovery(overrides = {}) {
     authorization_endpoint: `${ISSUER}/authorize`,
     token_endpoint: `${ISSUER}/token`,
     jwks_uri: `${ISSUER}/.well-known/jwks.json`,
-    tenant: { uuid: "t-1", subdomain: "jons", name: "Jons" },
+    tenant: { uuid: "t-1", subdomain: "demo", name: "Demo" },
     ...overrides,
   };
 }

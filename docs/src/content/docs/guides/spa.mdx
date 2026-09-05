@@ -69,11 +69,11 @@ For an app with no backend of its own. The page runs the code flow itself.
 import { createBrowserClient } from "@masks/client";
 
 const client = createBrowserClient({
-  issuer: "https://jons.auth.example",
+  issuer: "https://demo.auth.example",
   clientId: "2bb32482-…",
   redirectUri: `${location.origin}/callback`,
   scope: "openid profile email offline_access",
-  resource: "https://jons.things.example/mcp",
+  resource: "https://demo.things.example/mcp",
 });
 
 await client.authorize({ returnTo: "/dashboard" });   // on a "sign in" click

@@ -10,13 +10,13 @@ that thing everything the user can do.
 `server/app/models/exchange.rb`, `server/app/policies/exchange_policy.rb`
 
 ```sh
-curl -X POST https://jons.auth.example/token \
+curl -X POST https://demo.auth.example/token \
   -u "$CLIENT_ID:$CLIENT_SECRET" \
   -d grant_type=urn:ietf:params:oauth:grant-type:token-exchange \
   -d subject_token="$ACCESS_TOKEN" \
   -d subject_token_type=urn:ietf:params:oauth:token-type:access_token \
   -d scope="openid profile" \
-  -d resource=https://jons.things.example/mcp \
+  -d resource=https://demo.things.example/mcp \
   -d requested_lifetime=300
 ```
 
@@ -72,7 +72,7 @@ An exchanged token is issued with `parent: subject_access_token`, which makes ca
 operation:
 
 ```sh
-curl -X POST https://jons.auth.example/revoke \
+curl -X POST https://demo.auth.example/revoke \
   -u "$CLIENT_ID:$CLIENT_SECRET" \
   -d token="$ROOT_ACCESS_TOKEN" \
   -d token_type_hint=access_token
@@ -95,7 +95,7 @@ long-lived. `/introspect` is the other answer; see [Verify a token](/guides/veri
 narrowed = session.exchange(
   tokens.access_token,
   scope: %w[openid profile],
-  resource: "https://jons.things.example/mcp",
+  resource: "https://demo.things.example/mcp",
   lifetime: 300
 )
 

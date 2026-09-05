@@ -4,7 +4,7 @@ import { test } from "node:test";
 import { createBrowserClient } from "../dist/browser.js";
 import { createSession } from "../dist/session.js";
 
-const ISSUER = "https://jons.auth.test";
+const ISSUER = "https://demo.auth.test";
 const KID = "test-key";
 const KEY = generateKeyPairSync("rsa", { modulusLength: 2048 });
 
@@ -17,7 +17,7 @@ const AVATARS = {
 const ACCOUNT = {
   signed_in: true,
   subject: "actor-1",
-  name: "Jon Geiger",
+  name: "Ada Lovelace",
   picture: AVATARS.photo,
   avatars: AVATARS,
   scopes: ["openid", "profile"],

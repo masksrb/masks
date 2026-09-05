@@ -18,7 +18,7 @@ Rails half loads only when Rails does.
 
 ```sh
 bin/setup   # dependencies, databases, two declared tenants
-bin/dev     # http://jons.auth.test:5555
+bin/dev     # http://demo.auth.test:5555
 bin/test    # all three suites, in containers
 ```
 

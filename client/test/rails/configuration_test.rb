@@ -4,7 +4,7 @@ class ConfigurationTest < EngineTest
   test "every value resolves against the request, so one host serves many tenants" do
     Masks::Rails.config.issuer = ->(request) { "https://#{request.host.split('.').first}.auth.test" }
 
-    assert_equal "https://jons.auth.test", config.issuer_for(request_for("jons.app.test"))
+    assert_equal "https://demo.auth.test", config.issuer_for(request_for("demo.app.test"))
     assert_equal "https://acme.auth.test", config.issuer_for(request_for("acme.app.test"))
   end
 
@@ -23,8 +23,8 @@ class ConfigurationTest < EngineTest
   end
 
   test "redirect_uri defaults to the callback on the host that was asked" do
-    assert_equal "http://jons.app.test/auth/callback",
-                 config.redirect_uri_for(request_for("jons.app.test"))
+    assert_equal "http://demo.app.test/auth/callback",
+                 config.redirect_uri_for(request_for("demo.app.test"))
   end
 
   test "return_to is derived from the redirect_uri, so the two cannot disagree" do

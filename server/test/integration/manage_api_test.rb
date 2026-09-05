@@ -133,14 +133,14 @@ class ManageApiTest < ActionDispatch::IntegrationTest
   test "the ten profile claims that had no editor are writable" do
     body = ask(<<~GQL, bearer)
       mutation {
-        updateActor(uuid: "#{@actor.uuid}", givenName: "Jon", locale: "en-CA", zoneinfo: "America/Vancouver") {
+        updateActor(uuid: "#{@actor.uuid}", givenName: "Ada", locale: "en-CA", zoneinfo: "America/Vancouver") {
           actor { givenName locale zoneinfo }
         }
       }
     GQL
 
     assert_nil body["errors"]
-    assert_equal "Jon", body.dig("data", "updateActor", "actor", "givenName")
+    assert_equal "Ada", body.dig("data", "updateActor", "actor", "givenName")
     assert_equal "America/Vancouver", body.dig("data", "updateActor", "actor", "zoneinfo")
   end
 
@@ -725,7 +725,7 @@ class ManageApiTest < ActionDispatch::IntegrationTest
     held = ask("{ namespaces { name resource client { name } } }", token)["data"]["namespaces"]
 
     assert_equal [ "things:" ], held.map { |one| one["name"] }
-    assert_equal "https://jons.things.test/mcp", held.first["resource"]
+    assert_equal "https://demo.things.test/mcp", held.first["resource"]
     assert_equal "things", held.first.dig("client", "name")
   end
 
@@ -753,7 +753,7 @@ class ManageApiTest < ActionDispatch::IntegrationTest
 
   private
 
-    def claim!(resource: "https://jons.things.test/mcp", name: "things:")
+    def claim!(resource: "https://demo.things.test/mcp", name: "things:")
       within(@tenant) do
         holder = create_client(@tenant, name: "things", allowed_scopes: "openid #{name}",
                                approved_at: Time.current)

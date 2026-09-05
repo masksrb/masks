@@ -1,5 +1,5 @@
 namespace :masks do
-  desc "Generate backup codes for an actor: TENANT=jons ACTOR=owner"
+  desc "Generate backup codes for an actor: TENANT=demo ACTOR=owner"
   task backup_codes: :environment do
     tenant = Tenant.active.find_by!(subdomain: ENV.fetch("TENANT"))
 

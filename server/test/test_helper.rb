@@ -8,7 +8,7 @@ module TenantSetup
 
   included do
     setup do
-      @tenant = Tenant.create!(subdomain: "jons-#{SecureRandom.hex(4)}", name: "Jon's")
+      @tenant = Tenant.create!(subdomain: "demo-#{SecureRandom.hex(4)}", name: "Demo")
       @other = Tenant.create!(subdomain: "acme-#{SecureRandom.hex(4)}", name: "Acme")
     end
   end
