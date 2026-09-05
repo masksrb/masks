@@ -3,11 +3,11 @@ title: Narrow a token
 description: Token exchange, so a process can act with less authority than the person who started it.
 ---
 
-An application often needs to hand a credential to something it does not fully trust — a background
-run, an enrolled machine, a nested agent. Handing over the user's own token gives that thing
-everything the user can do, for as long as the user's session lasts.
+Token exchange (RFC 8693) mints a strictly narrower token from one you already hold — for a
+background run, an enrolled machine, a nested agent. Handing over the user's own token instead gives
+that thing everything the user can do.
 
-Token exchange (RFC 8693) mints a **strictly narrower** token from one you already hold.
+`server/app/models/exchange.rb`, `server/app/policies/exchange_policy.rb`
 
 ```sh
 curl -X POST https://jons.auth.example/token \
@@ -30,13 +30,18 @@ curl -X POST https://jons.auth.example/token \
 }
 ```
 
-## Narrower, in three directions at once
+`Exchange::TOKEN_TYPES` is `[access_token]` — that is the only subject and issued type supported.
+
+## Narrower, in three directions
+
+`ExchangePolicy` runs `client_may_exchange`, `token_types_are_supported`, `subject_token_is_live`,
+`scopes_only_narrow`, `audience_only_narrows` and `lifetime_only_shortens`.
 
 | | |
 | --- | --- |
 | **scope** | must be a subset of the subject token's |
 | **audience** | must be a subset of the subject token's `resource` values |
-| **lifetime** | never outlives the subject token, whatever you ask for |
+| **lifetime** | `min(requested_lifetime.from_now, subject.expires_at)` |
 
 Ask for more than you hold and it is refused, not silently trimmed:
 
@@ -45,24 +50,26 @@ Ask for more than you hold and it is refused, not silently trimmed:
  "error_description":"an exchange cannot widen scope: email, offline_access is not carried by the subject token"}
 ```
 
-Omit `scope` or `resource` and the new token inherits the subject's. The lifetime ceiling is not
-optional — a 300-second request against a subject with 120 seconds left yields 120.
+Omit `scope` or `resource` and the new token inherits the subject's (`Exchange#granted_scopes`,
+`#granted_audience`). The lifetime ceiling is not optional — a 300-second request against a subject
+with 120 seconds left yields 120.
 
-## The `act` claim records who did it
+## The `act` claim
 
-The exchanged token names the client that performed the exchange, and chains on each further
-exchange:
+`Exchange#actor_claim` names the client that performed the exchange, and nests the subject's
+existing `act` beneath it:
 
 ```json
 "act": { "sub": "a46deb60-…", "act": { "sub": "9c1e2f77-…" } }
 ```
 
-So a token carries its own provenance. Anything reading it can see it was not minted directly for the
-subject, and by whom.
+So a token carries its own provenance. Anything reading it can see it was not minted directly for
+the subject, and by whom.
 
 ## Revocation cascades
 
-Exchanged tokens record their parent, which makes cancellation a tree operation rather than a hunt:
+An exchanged token is issued with `parent: subject_access_token`, which makes cancellation a tree
+operation:
 
 ```sh
 curl -X POST https://jons.auth.example/revoke \
@@ -71,14 +78,15 @@ curl -X POST https://jons.auth.example/revoke \
   -d token_type_hint=access_token
 ```
 
-Revoking a token revokes everything exchanged from it, and everything exchanged from those. A child
-cannot outlive its parent, and a revoked token cannot be exchanged.
+`Token#revoke!` walks `children` breadth-first, so revoking a token revokes everything exchanged
+from it and everything exchanged from those. A child cannot outlive its parent, and a revoked token
+cannot be exchanged (`subject_token_is_live`).
 
 :::tip[Why this pairs with short lifetimes]
-Revocation is immediate here because masks checks a row per access token. If you are relying on
-offline JWT verification alone, cascade revocation is not visible to the verifier until the token
-expires — which is the argument for asking for a short `requested_lifetime` and exchanging again,
-rather than minting something long-lived and hoping to recall it.
+Revocation is immediate here because masks checks a row per access token. A resource server doing
+offline JWT verification alone does not see the cascade until the token expires — which is the
+argument for a short `requested_lifetime` and exchanging again, rather than minting something
+long-lived. `/introspect` is the other answer; see [Verify a token](/guides/verifying).
 :::
 
 ## From Ruby
@@ -106,4 +114,8 @@ A client may only exchange if it was registered for the grant:
 ]
 ```
 
-Otherwise the exchange is refused with `unauthorized_client`.
+Otherwise it is refused with `unauthorized_client`. The handshake registers only
+`authorization_code` and `refresh_token`, so a client that needs exchange asks for it at
+registration or has it added.
+
+`server/test/integration/token_exchange_test.rb`.

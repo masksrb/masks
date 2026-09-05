@@ -1,12 +1,12 @@
 ---
 title: Tenancy
-description: masks is the source of truth for tenants, and every token says which one it belongs to.
+description: masks owns the tenant record, three layers isolate it, and every token carries which one answered.
 ---
 
-A **tenant** is the unit masks isolates everything by. Actors, clients, tokens, sessions, consents
-and signing keys all belong to exactly one, and nothing crosses.
+A tenant is the unit masks isolates everything by. Actors, clients, tokens, sessions, consents,
+passkeys, providers, connections and signing keys all belong to exactly one.
 
-Tenants are addressed by subdomain and identified by a uuid:
+`server/app/models/tenant.rb`
 
 | | | |
 | --- | --- | --- |
@@ -14,15 +14,15 @@ Tenants are addressed by subdomain and identified by a uuid:
 | `subdomain` | how requests reach it | can be renamed |
 | `name` | shown on the sign-in page | cosmetic |
 
-The split matters. A subdomain is a routing fact and someone will eventually want to change theirs;
-a uuid is identity. Anything that stores "which tenant is this" should store the uuid.
+`Tenant#to_identity` returns those three as `{ uuid, subdomain, name }`. That hash is the `tenant`
+claim and the `tenant` field in discovery.
+
+Store the uuid. A subdomain is a routing fact and someone will eventually want to change theirs.
 
 ## masks is the source of truth
 
-Downstream applications do not define tenants. They hold a **projection** — a local row keyed by the
-uuid masks issued — and let masks own the record.
-
-They learn which tenant a caller belongs to without asking, because every token says so:
+Downstream applications hold a projection keyed by the uuid, and learn which tenant a caller belongs
+to from the token rather than by asking:
 
 ```json
 {
@@ -38,18 +38,18 @@ They learn which tenant a caller belongs to without asking, because every token 
 }
 ```
 
-The same identity is published in the discovery document, so an application can resolve a tenant
-before anyone has signed in.
+The same identity is in the discovery document, so an application can resolve a tenant before anyone
+has signed in.
 
 :::tip[Why a claim rather than an endpoint]
-A lookup endpoint would mean the application either forwards the caller's token upstream — which
-hands masks a credential it has no business holding, and widens the blast radius of a compromise at
-either end — or holds a second credential purely to ask a question the token already answers.
+A lookup endpoint means the application either forwards the caller's token upstream, or holds a
+second credential to ask a question the token already answers.
 :::
 
-## Three layers of isolation
+`tenant` is one of two deliberate divergences from the specs, recorded in
+`conformance/expected-failures.json` — see [Conformance](/reference/conformance).
 
-Each fails in a different way, which is the point of having three.
+## Three layers of isolation
 
 | Layer | Enforced by | Fails how |
 | --- | --- | --- |
@@ -57,15 +57,21 @@ Each fails in a different way, which is the point of having three.
 | database | Postgres RLS, `FORCE` + policy | silently, if the app role is a superuser |
 | signature | per-tenant RSA key, per-tenant JWKS | loudly, and undeniably |
 
-Two traps are worth knowing about. A table's **owner bypasses RLS** unless the table is marked
-`FORCE ROW LEVEL SECURITY`, and a **superuser bypasses it regardless** — which is why `compose.yml`
-creates a separate non-superuser role for the application rather than letting Rails connect as
-`POSTGRES_USER`.
+Two traps: a table's owner bypasses RLS unless the table is marked `FORCE ROW LEVEL SECURITY`, and a
+superuser bypasses it regardless. `db/docker-entrypoint-initdb.d` therefore creates a separate
+non-superuser role rather than letting Rails connect as `POSTGRES_USER`.
 
-## Switching tenants
+The schema is dumped as SQL (`config.active_record.schema_format = :sql`) because `schema.rb` cannot
+represent a policy.
 
-Every request resolves its tenant from the hostname and runs inside `Tenant.switch`, which sets the
-Postgres session variable the RLS policy reads and restores the previous value on the way out.
+Asserted by `server/test/models/tenant_isolation_test.rb` and
+`server/test/models/row_level_security_test.rb`.
+
+## Switching
+
+Every request resolves its tenant from the hostname (`Tenant.resolve`) and runs inside
+`Tenant.switch`, which sets the Postgres session variable the RLS policy reads and restores the
+previous value on the way out.
 
 ```ruby
 Tenant.switch(tenant) do
@@ -73,5 +79,13 @@ Tenant.switch(tenant) do
 end
 ```
 
-Nesting restores the *outer* tenant rather than clearing the setting, so code that switches inside a
-switch does not go blind to its own rows afterwards.
+Nesting restores the *outer* tenant rather than clearing the setting.
+
+## Declaring tenants
+
+`MASKS_TENANTS` is ensured on boot and by `bin/rails masks:tenants`. Declaring it turns claiming off.
+
+Leave it unset and the first request to a hostname nothing serves claims that subdomain — once, and
+only while no tenant exists at all, so it cannot mint tenants against a wildcard.
+
+`Tenant.active` excludes archived tenants; `archived_at` is the soft delete.

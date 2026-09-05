@@ -1,6 +1,6 @@
 ---
 title: The three pieces
-description: Which of the server, the gem, and the browser package you actually need.
+description: The server, the masks gem, and @masks/client — which you need for what.
 ---
 
 ```
@@ -21,48 +21,44 @@ web/       @masks/client                    a single-page app, in either of two 
 | sign in an SPA with no backend of its own | [`@masks/client`](/guides/spa) in browser PKCE mode |
 
 A resource server — something that only *receives* bearer tokens and never signs anyone in — needs
-`masks` and nothing else, and never loads the Rails half. See [verifying a token](/guides/verifying).
+`masks` and nothing else. See [verifying a token](/guides/verifying).
 
-## Three consumer paths, not one
+## The server
 
-The question "should the engine be the only supported way in?" resolved as **no**, and it had the
-wrong shape. The first consumer skipped the engine because the engine had nothing for a resource
-server and nothing for an SPA — not because it preferred its own.
+Rails 8, `config.load_defaults 8.1`, no Active Storage, no Action Cable, no Action Text. It owns its
+routes, its session and its cookie; there is no host application. See
+[Endpoints](/reference/endpoints).
 
-So there are three ways to consume masks, and they serve different consumers:
+## The gem
+
+One gem, currently `0.5.0` (`client/lib/masks/version.rb`), holding both halves of the consumer side.
+
+`require "masks"` loads `Masks::Client` always and `Masks::Rails` only when Rails is already defined,
+so a Rack or Sinatra service takes on `jwt` and no framework.
 
 | | |
 | --- | --- |
-| the engine | a Rails app doing browser sign-in |
-| `@masks/client` in BFF mode | a same-origin SPA in front of that Rails app |
-| `@masks/client` in PKCE mode | a client that is neither |
+| `Masks::Client.issuer(url)` | discovery and JWKS, cached |
+| `Masks::Client.verifier(url, audience:)` | for a resource server |
+| `Masks::Client.resource(url, issuer:)` | protected-resource metadata |
+| `Masks::Client.handshake(url, **)` | the approval flow |
+| `Masks::Client::Session` | the code flow, end to end |
+| `Masks::Client::Registration` | RFC 7591 / 7592 |
 
-## Why the server is standalone
+The engine mounts three routes into your application and gives you `authenticate_masks!`. It issues
+nothing and holds no signing key — it talks to the server over HTTP like any other client.
 
-An earlier version shipped an engine, a host app, and a gem together. The engine-ness produced its
-worst bug: middleware and host-app controllers fighting over `Set-Cookie`, in ways that depended on
-the host app's own filters.
+The two halves are never loaded into the same process.
 
-A standalone server has no host app, so that class of problem does not exist. It owns its routes, its
-session, and its cookie, and nothing runs around it.
+## The browser package
 
-## Why there is still an engine
-
-Because the *consumer* side genuinely is a Rails concern, and it is a different problem. The engine
-mounts three routes into your application — start, callback, logout — and gives you
-`authenticate_masks!`. It issues nothing. It holds no signing key. It talks to the server over HTTP
-like any other client would.
-
-The two are never loaded into the same process.
-
-It ships inside the `masks` gem rather than beside it because both halves are the consumer — the
-split was never client versus server. `require "masks"` loads the engine only when Rails is already
-loaded, so a Rack or Sinatra app pays nothing for it.
+`@masks/client`, in `web/`. Two modes: a session against a backend that mounts the engine, or the
+authorization code flow run in the page. See [Sign an SPA in](/guides/spa).
 
 ## Multi-tenant hosts
 
-Every configuration value in the engine accepts a callable, so an application serving many tenants on
-subdomains resolves its issuer per request:
+Every configuration value in the engine accepts a callable taking the request, which is how an
+application serving many tenants on subdomains resolves its issuer per request:
 
 ```ruby
 Masks::Rails.configure do |config|

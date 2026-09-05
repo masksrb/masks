@@ -18,30 +18,33 @@ hero:
 
 import { Card, CardGrid, LinkCard } from "@astrojs/starlight/components";
 
+A standalone OpenID Connect provider, a Ruby gem that signs apps in against it, and a browser
+package for single-page apps. Certified against the OpenID Foundation's own test suite.
+
 <CardGrid stagger>
-  <Card title="Every tenant has its own keys" icon="seti:db">
-    Each tenant signs its tokens with **its own key**. A token from one tenant will not work on
-    another, because the other has no key to check it with.
+  <Card title="A key per tenant" icon="seti:db">
+    Every tenant gets its own RS256 keypair on create, published only at its own JWKS endpoint. A
+    token from one tenant has no `kid` the next can look up.
   </Card>
-  <Card title="A server, not a library" icon="seti:config">
-    You run masks **next to your app**, not inside it. It handles its own sign-in pages, sessions and
-    upgrades, and your app talks to it over standard OpenID Connect.
+  <Card title="A server, not an engine" icon="seti:config">
+    `server/` runs beside your app and owns its own routes, session and cookie. The Rails engine in
+    the gem is the *consumer* half, and never loads in the same process.
   </Card>
-  <Card title="Apps can sign themselves up" icon="puzzle">
-    An app can **register itself** and get credentials without you setting anything up first. That is
-    how an AI connector adds itself, and it has worked since the first release.
+  <Card title="Apps register themselves" icon="puzzle">
+    RFC 7591 dynamic client registration, plus a `/handshake` flow where a person approves an app
+    and the credentials are fetched server to server.
   </Card>
-  <Card title="Tokens only work where they belong" icon="approve-check">
-    Every token **names the API it was issued for**. Present it to a different API and it is
-    rejected, so one leaked token does not open everything.
+  <Card title="Tokens name their API" icon="approve-check">
+    RFC 8707 resource indicators put the API's URL in `aud`. A resource server checks it against its
+    own URL and refuses anything else.
   </Card>
 </CardGrid>
 
 <CardGrid>
-  <LinkCard title="Run it" href="/start/running/" description="Up and running locally in about a minute." />
-  <LinkCard title="The three pieces" href="/start/pieces/" description="What each part does, and which ones you need." />
-  <LinkCard title="Tenancy" href="/concepts/tenancy/" description="How masks identifies tenants, and what your app stores." />
-  <LinkCard title="Tokens" href="/concepts/tokens/" description="What is inside a token, and how audiences work." />
-  <LinkCard title="Sign an SPA in" href="/guides/spa/" description="Two ways to do it, and how to choose." />
-  <LinkCard title="Conformance" href="/reference/conformance/" description="Tested against the OpenID Foundation's own suite." />
+  <LinkCard title="Run it" href="/start/running/" description="bin/setup, bin/dev, two tenants." />
+  <LinkCard title="The three pieces" href="/start/pieces/" description="server/, client/, web/ — and which you need." />
+  <LinkCard title="Tenancy" href="/concepts/tenancy/" description="Three isolation layers, and the tenant claim." />
+  <LinkCard title="Tokens" href="/concepts/tokens/" description="Lifetimes, claims, audiences and PKCE." />
+  <LinkCard title="The login machine" href="/concepts/login/" description="Eleven ordered states; the order is the flow." />
+  <LinkCard title="Conformance" href="/reference/conformance/" description="bin/conformance, and what it caught." />
 </CardGrid>

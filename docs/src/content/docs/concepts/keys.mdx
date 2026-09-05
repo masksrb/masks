@@ -1,50 +1,69 @@
 ---
 title: Signing keys
-description: Every tenant signs with its own key, which is the isolation layer that fails loudly.
+description: One RSA keypair per tenant, published only at that tenant's JWKS endpoint.
 ---
 
-Every tenant gets an RSA keypair when it is created. The private half is encrypted at rest; the
-public half is published as a JWK through **that tenant's JWKS endpoint and no other**.
+`server/app/models/signing_key.rb`
+
+Every tenant generates a keypair when it is created (`Tenant` `after_create`). `private_pem` is
+encrypted at rest; `public_jwk` is published as a JWK at that tenant's JWKS endpoint and no other.
+
+| | |
+| --- | --- |
+| `SigningKey::SIZE` | 2048 |
+| `SigningKey::ALGORITHM` | `RS256` |
+| `SigningKey::OVERLAP` | 24 hours |
 
 ```
 GET https://jons.auth.example/.well-known/jwks.json
 {"keys":[{"kty":"RSA","use":"sig","alg":"RS256","kid":"e9914114-…","n":"…","e":"AQAB"}]}
 ```
 
-## Why this is the layer worth having
+`kid` is a UUID generated with the key.
 
-Application scopes fail by omission — someone forgets one and rows leak. Row-level security fails
-silently if the connecting role happens to be a superuser. Both are real defences and both fail
-*quietly*.
+## Why the signature layer
 
-A per-tenant signing key cannot fail quietly. Present one tenant with another's token and the
-rejection is not a policy decision at all:
+The three isolation layers fail differently — see [Tenancy](/concepts/tenancy). Application scopes
+fail by omission; row-level security fails silently if the connecting role is a superuser. A
+per-tenant key cannot fail quietly:
 
 ```
 {"error":"invalid_token",
  "error_description":"Could not find public key for kid e9914114-08c3-438b-a4f4-d71b70489bde"}
 ```
 
-There is no code path where the wrong tenant *considers* the token and decides against it. The key
-that signed it was never published where they could look, so the token is unreadable rather than
-unauthorized.
+There is no code path where the wrong tenant considers the token and decides against it. The key
+that signed it was never published where they could look.
 
 :::caution[Not retrofittable]
 A single installation-wide key cannot be split into per-tenant keys later without invalidating every
-token in flight and rewriting every stored `kid`. This belongs in your first migrations or it does
-not happen.
+token in flight and rewriting every stored `kid`.
 :::
 
-## Rotation
+## Scopes
 
-`SigningKey.rotate!` mints a replacement, activates it immediately, and marks the outgoing key
-retired *in the future* rather than now:
+| | |
+| --- | --- |
+| `SigningKey.active` | `retired_at IS NULL` and activated — what signing uses |
+| `SigningKey.published` | `retired_at IS NULL OR retired_at > now()` — what JWKS lists |
+
+`published` includes a key retiring in the future, which is what makes rotation overlap.
+
+## Rotation
 
 ```ruby
 SigningKey.rotate!(tenant: tenant)
 ```
 
-The outgoing key keeps being published for an overlap window (24 hours by default), so tokens signed
-just before the rotation still verify while nothing new is signed with it. `SigningKey.published`
-is the JWKS scope and includes both; `SigningKey.active` is what signing uses and includes only the
-new one.
+Mints a replacement, activates it immediately, and sets `retired_at` on the outgoing key to
+`OVERLAP.from_now` rather than now. The outgoing key keeps being published for 24 hours, so tokens
+signed just before the rotation still verify while nothing new is signed with it.
+
+`CleanupJob` deletes keys past their retirement — see [Hardening](/concepts/hardening).
+
+The Ruby client refetches JWKS once on an unknown `kid`, so a rotation is picked up without a
+restart. See [Verify a token](/guides/verifying).
+
+:::note[TODO]
+Rotation is a console call. There is no schedule and no `manage` mutation for it.
+:::

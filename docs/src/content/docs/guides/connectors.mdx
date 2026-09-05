@@ -3,9 +3,10 @@ title: Register a connector
 description: Dynamic client registration and resource indicators, driven end to end.
 ---
 
-An AI client adding a custom connector registers with **no prior arrangement** — nobody creates it in
-an admin UI first. Without dynamic client registration that flow cannot be set up at all, which is
-why DCR is v1 here rather than v2.
+An AI client adding a custom connector registers with no prior arrangement — nobody creates it in an
+admin UI first. RFC 7591 dynamic client registration is what makes that possible.
+
+`server/app/controllers/registrations_controller.rb`, `Client.register!`
 
 ## Register
 
@@ -31,16 +32,30 @@ curl -X POST https://jons.auth.example/register \
 }
 ```
 
-`token_endpoint_auth_method: "none"` makes it a **public client** — no secret is issued, and PKCE
-becomes mandatory rather than optional.
+`token_endpoint_auth_method: "none"` makes it a public client — no secret is issued, and PKCE
+becomes mandatory rather than optional. The default is `client_secret_basic`.
 
-Leaving `scope` off entirely is fine: a registration that names no scopes gets all four masks
-defines, `offline_access` included. A connector that cannot refresh has to send the person back
-through sign-in to keep working, which is worse than the token it was denied.
+Rate limited to `MASKS_REGISTRATION_LIMIT` (10) per 10 minutes, per tenant and address.
+
+### Scopes
+
+Leaving `scope` off gets `Client::DEFAULT_SCOPES`, which is `Scopes::STANDARD` — `openid`,
+`profile`, `email` and `offline_access`. A connector that cannot refresh has to send the person back
+through sign-in to keep working.
+
+`Client.bounded` refuses any scope in the `masks:` namespace with `ScopesUnavailable`: a reserved
+scope may only be granted to a client a person approved through the
+[handshake](/guides/handshake).
+
+`MASKS_DYNAMIC_CLIENT_SCOPES`, or a tenant's own `dynamic_client_scopes`, caps what dynamic
+registration may ask for at all.
+
+`server/test/integration/client_scope_bounds_test.rb`.
 
 ## Manage it afterwards (RFC 7592)
 
-The `registration_access_token` is the only credential that works against `registration_client_uri`:
+The `registration_access_token` is the only credential that works against
+`registration_client_uri`:
 
 ```sh
 curl -H "Authorization: Bearer $REGISTRATION_TOKEN" \
@@ -52,8 +67,9 @@ another tenant, is `401`.
 
 ## Redirect URIs
 
-Validated at registration, not at authorize time. They must be absolute, carry no fragment, and use
-`https` unless the host is loopback — so `http://localhost:3000/callback` is accepted and
+Validated at registration by `redirect_uris_are_usable`, not at authorize time. They must be
+absolute, carry no fragment, and use `https` unless the host is loopback (`Client::LOOPBACK`:
+`localhost`, `127.0.0.1`, `::1`). So `http://localhost:3000/callback` is accepted and
 `http://example.com/callback` is not.
 
 At `/authorize` the comparison is exact string equality against a registered URI. There is no prefix
@@ -72,11 +88,11 @@ GET /authorize
   &resource=https%3A%2F%2Fjons.things.example%2Fmcp
 ```
 
-The `resource` is what makes the resulting access token usable at your API and useless anywhere else
-— see [tokens and audiences](/concepts/tokens).
+`resource` is what makes the resulting access token usable at your API and useless anywhere else —
+see [tokens and audiences](/concepts/tokens).
 
-Sign-in and consent happen in the browser; the redirect back carries `code`, `state`, and `iss`.
-Then exchange it:
+Sign-in and consent happen in the browser; the redirect back carries `code`, `state` and `iss`. Then
+exchange it:
 
 ```sh
 curl -X POST https://jons.auth.example/token \
@@ -89,8 +105,6 @@ curl -X POST https://jons.auth.example/token \
 ```
 
 ## From Ruby
-
-`masks` does the whole thing:
 
 ```ruby
 issuer = Masks::Client.issuer("https://jons.auth.example")
@@ -109,3 +123,6 @@ started = session.start(resource: "https://jons.things.example/mcp")
 
 tokens = session.complete(code: params[:code], verifier: started[:verifier])
 ```
+
+`server/test/integration/registration_test.rb`,
+`server/test/integration/resource_indicators_test.rb`.
