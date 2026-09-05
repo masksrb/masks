@@ -42,7 +42,8 @@ jobs:
             "server/config/**/*.{yml,yaml}" "conformance/**/*.{yml,yaml}"
       - name: Shell
         run: |
-          mapfile -t scripts < <(shfmt -f bin server/bin)
+          scripts=()
+          while IFS= read -r s; do scripts+=("$s"); done < <(shfmt -f bin server/bin)
           shfmt -d -i 2 -ci "${scripts[@]}"
           shellcheck "${scripts[@]}"
 
