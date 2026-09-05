@@ -43,6 +43,8 @@ module Manage
 
       field :scopes_supported, [ String ], null: false
 
+      field :minimum_password, Integer, null: false
+
       field :tally, TallyType, null: false
 
       field :activity, [ ActivityDayType ], null: false do
@@ -119,6 +121,10 @@ module Manage
 
       def scopes_supported
         Scopes::DESCRIBED.keys
+      end
+
+      def minimum_password
+        Actor::MINIMUM_PASSWORD
       end
 
       def tally

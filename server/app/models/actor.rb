@@ -1,6 +1,8 @@
 class Actor < ApplicationRecord
   include TenantScoped
 
+  MINIMUM_PASSWORD = 8
+
   has_secure_password validations: false
 
   encrypts :otp_secret

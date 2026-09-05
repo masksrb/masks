@@ -57,7 +57,10 @@ providers this actor has live connections to.
 
 `activated_at` separates an account that exists from one somebody has taken up. It is set by
 `activate_once_a_password_exists` whenever a password is stored, so an invited actor cannot
-authenticate until it accepts.
+authenticate until it accepts. An administrator who supplies a password to `createActor` sets it at
+creation instead — the one case where activation does not mean acceptance.
+
+`MINIMUM_PASSWORD` is 8, and is the single source the setup, invitation and reset flows all read.
 
 `email_verified_at` is set only by opening a link sent to the address. Nothing else sets it.
 

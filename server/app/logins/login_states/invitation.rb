@@ -1,7 +1,7 @@
 module LoginStates
   class Invitation < LoginState
     EXPIRY = 12.hours
-    MINIMUM_PASSWORD = 8
+    MINIMUM_PASSWORD = Actor::MINIMUM_PASSWORD
     HELD = "invitation".freeze
 
     accepts :password

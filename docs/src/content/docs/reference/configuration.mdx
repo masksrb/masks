@@ -53,8 +53,16 @@ refusal surfaces at boot, from the `masks:tenants` the entrypoint runs.
 | `MASKS_PASSWORD_RESET_LIFETIME` | `1800` — thirty minutes | seconds a reset link stays open |
 | `MASKS_EMAIL_VERIFICATION_LIFETIME` | `172800` — two days | seconds a confirmation link stays open |
 
-Only the first run creates an account without an invitation. Every account after it is invited by
-somebody holding `masks:manage`, and the invitation carries the password nobody has set yet.
+Every account after the first is created by somebody holding `masks:manage`, through `createActor`.
+Leaving the password out is the path to prefer: the account is created inert and the invitation
+carries the password nobody has set yet, so the person who ends up using it is the only one who ever
+knows it. An address is optional — with none on file the link is simply handed back to the
+administrator to pass along.
+
+Supplying a password creates the account already activated. It is there for the case where there is
+no way to get a link to somebody, and it costs you the property above: the administrator knows a
+credential they do not own, and `activated_at` no longer means the account was taken up by the
+person behind it.
 
 `MASKS_MAIL_FROM` decides which of two things happens. With it set, the link is mailed to the
 address and is never returned to the administrator — so accepting proves control of the mailbox, and

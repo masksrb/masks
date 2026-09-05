@@ -2,9 +2,9 @@
   let { value = $bindable(""), placeholder, label, onsearch } = $props();
 </script>
 
-<div class="join">
+<div class="join w-full sm:w-auto">
   <input
-    class="input input-sm join-item w-48 md:w-56"
+    class="input input-sm join-item w-full sm:w-48 md:w-56"
     type="search"
     aria-label={label}
     {placeholder}

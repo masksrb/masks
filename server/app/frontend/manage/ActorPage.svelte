@@ -238,10 +238,7 @@
 
     <div class="grid items-start gap-4 md:grid-cols-2">
       <div class="flex flex-col gap-4">
-        <Card
-          title="Profile"
-          lede="Released to clients under the profile and email scopes, and nowhere else."
-        >
+        <Card title="Profile" lede="Released under the profile and email scopes.">
           <div class="grid gap-3 sm:grid-cols-2">
             {#each FIELDS as [key, label] (key)}
               <Field {label} bind:value={draft[key]} />
@@ -255,19 +252,14 @@
 
         <Card
           title="Where they are"
-          lede={yourself
-            ? "Your own sessions and devices. Signing out everywhere takes this console with it."
-            : "Live sign-ins and the browsers carrying them. Revoking one signs that browser out without touching the account."}
+          lede={yourself ? "Signing out everywhere takes this console with it." : null}
         >
           <Presence {api} {feedback} {actor} onchange={load} />
         </Card>
       </div>
 
       <div class="flex flex-col gap-4">
-        <Card
-          title="Avatar"
-          lede="All three are released together. Only the photo is stored; the other two are drawn from the account."
-        >
+        <Card title="Avatar" lede="Only the photo is stored; the rest are drawn.">
           <div class="flex flex-wrap gap-5">
             {#each ["photo", "identicon", "initials"] as style (style)}
               <div class="flex flex-col items-start gap-2">
@@ -295,26 +287,18 @@
           {/if}
         </Card>
 
-        <Card
-          title="Scopes"
-          lede="The ceiling on what any client may be granted on this actor's behalf."
-        >
+        <Card title="Scopes" lede="The ceiling for any client acting on their behalf.">
           <ScopesEditor value={actor.scopes} available={supported} onchange={saveScopes} />
         </Card>
 
         <Card title="Access">
           {#if actor.activated}
-            <p class="max-w-prose text-sm opacity-70">
-              This account has a password. A reset sends a one-time link and signs it out
-              everywhere.
-            </p>
             <button type="button" class="btn btn-sm self-start" onclick={reset}>
               Reset password
             </button>
           {:else}
-            <p class="max-w-prose text-sm opacity-70">
-              Invited{actor.invitedAt ? ` on ${day(actor.invitedAt)}` : ""}, and has not accepted
-              yet. There is no password to reset until they do.
+            <p class="text-sm opacity-70">
+              Invited{actor.invitedAt ? ` ${day(actor.invitedAt)}` : ""}, not accepted.
             </p>
             <button type="button" class="btn btn-sm self-start" onclick={resend}>
               Resend invitation
@@ -322,20 +306,14 @@
           {/if}
 
           {#if actor.email && !actor.emailVerified}
-            <p class="max-w-prose text-sm opacity-70">
-              {actor.email} is unconfirmed, so nothing that depends on reaching them can be trusted
-              yet.
-            </p>
+            <p class="text-sm opacity-70">{actor.email} is unconfirmed.</p>
             <button type="button" class="btn btn-sm self-start" onclick={confirmEmail}>
               Send a confirmation link
             </button>
           {/if}
         </Card>
 
-        <Card
-          title="Passkeys"
-          lede="A passkey counts as both factors on its own, so each one here is a way in."
-        >
+        <Card title="Passkeys" lede="Each one counts as both factors on its own.">
           {#if actor.passkeys.length === 0}
             <p class="text-sm opacity-70">None enrolled.</p>
           {:else}
@@ -395,24 +373,14 @@
               </button>
             </div>
           {:else}
-            <p class="max-w-prose text-sm opacity-70">
-              Password only. A backup code is a way past a second factor, so there is nothing to
-              generate until this actor enrols an authenticator.
-            </p>
+            <p class="text-sm opacity-70">Password only — nothing enrolled.</p>
           {/if}
         </Card>
 
         <Card title="Delete">
           {#if yourself}
-            <p class="max-w-prose text-sm opacity-70">
-              This is you. Deleting yourself would lock you out, so another administrator has to do
-              it.
-            </p>
+            <p class="text-sm opacity-70">This is you — another administrator has to do it.</p>
           {:else}
-            <p class="max-w-prose text-sm opacity-70">
-              Removes the account and everything hanging off it. What they signed in to elsewhere
-              stays where it is; only the way back in is gone.
-            </p>
             <button
               type="button"
               class="btn btn-sm btn-error btn-outline self-start"

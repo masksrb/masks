@@ -153,7 +153,6 @@
     title={data.tenant.name}
     id={boot.issuer}
     hero
-    lede="Everything this server holds for {data.tenant.name}, and who is using it right now."
   >
     <div class="tally">
       {#each counts as count (count.label)}
@@ -164,10 +163,7 @@
       {/each}
     </div>
 
-    <Card
-      title="Sign-ins"
-      lede="Every session started on this tenant, counted on the day it was authenticated."
-    >
+    <Card title="Sign-ins">
       {#snippet actions()}
         <div class="range" role="group" aria-label="Time range">
           {#each SPANS as span (span)}
@@ -188,16 +184,16 @@
     </Card>
 
     <Card title="You are signed in as {data.viewer.nickname}">
-      <p class="deck-sm">
-        This page holds a bearer token issued for
-        <span class="font-mono text-xs">{boot.resource}</span>, carrying
-        <span class="font-mono text-xs">{data.viewer.scopes.join(" ")}</span>. Revoking it ends
-        administration without ending the sign-in.
-      </p>
+      <Facts
+        rows={[
+          { term: "Token for", value: boot.resource, mono: true },
+          { term: "Carrying", value: data.viewer.scopes.join(" "), mono: true },
+        ]}
+      />
     </Card>
   </Page>
 {:else}
-  <Page title="Settings" lede="How this tenant identifies itself, and what it hands out.">
+  <Page title="Settings">
     <Notices feedback={feedback.state} />
 
     <div class="grid items-start gap-4 md:grid-cols-2">
@@ -217,7 +213,7 @@
       <div class="flex flex-col gap-4">
         <Card
           title="Ceiling on open registration"
-          lede="The most a client registering itself may ask for. Leave it empty and anything outside the masks: namespace is grantable."
+          lede="The most a self-registering client may ask for. Empty means anything outside masks:."
         >
           <ScopesEditor
             value={data.tenant.dynamicClientScopes ?? []}
@@ -228,7 +224,7 @@
 
         <Card
           title="Signing keys"
-          lede="Tokens are signed with the active key. Stage one to publish it ahead of time and activate it when clients have seen it; rotate to do both at once."
+          lede="Stage to publish ahead of time; rotate to do both at once."
         >
           {#snippet actions()}
             <button type="button" class="btn btn-sm" onclick={stage}>Stage</button>
@@ -238,15 +234,21 @@
           <div class="overflow-x-auto">
             <table class="table table-sm">
               <thead>
-                <tr><th>Key</th><th>Algorithm</th><th>State</th><th>Activated</th><th></th></tr>
+                <tr>
+                  <th>Key</th>
+                  <th class="hidden sm:table-cell">Algorithm</th>
+                  <th>State</th>
+                  <th class="hidden sm:table-cell">Activated</th>
+                  <th></th>
+                </tr>
               </thead>
               <tbody>
                 {#each data.tenant.signingKeys as key (key.kid)}
                   <tr>
                     <td class="font-mono text-xs">{key.kid.slice(0, 8)}</td>
-                    <td class="text-xs">{key.algorithm}</td>
+                    <td class="hidden text-xs sm:table-cell">{key.algorithm}</td>
                     <td><span class="badge badge-sm {BADGE[key.state]}">{key.state}</span></td>
-                    <td class="text-xs opacity-70">
+                    <td class="hidden text-xs opacity-70 sm:table-cell">
                       {#if key.state === "retiring"}
                         until {day(key.retiredAt)}
                       {:else}

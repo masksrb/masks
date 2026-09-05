@@ -1,7 +1,7 @@
 module Manage
   module Types
     class MutationType < BaseObject
-      field :invite_actor, mutation: Mutations::InviteActor
+      field :create_actor, mutation: Mutations::CreateActor
       field :resend_invitation, mutation: Mutations::ResendInvitation
       field :reset_password, mutation: Mutations::ResetPassword
       field :verify_email, mutation: Mutations::VerifyEmail

@@ -1,13 +1,13 @@
 <script>
   import { createFeedback } from "./lib/feedback.svelte.js";
   import { day, joined, moment, since } from "./lib/format.js";
-  import Presence from "./Presence.svelte";
   import ScopesEditor from "./ScopesEditor.svelte";
   import Card from "./ui/Card.svelte";
   import Field from "./ui/Field.svelte";
   import Link from "./ui/Link.svelte";
   import Notices from "./ui/Notices.svelte";
   import Page from "./ui/Page.svelte";
+  import Row from "./ui/Row.svelte";
   import Search from "./ui/Search.svelte";
   import Spinner from "./ui/Spinner.svelte";
   import Table from "./ui/Table.svelte";
@@ -33,10 +33,10 @@
     }
   `;
 
-  const INVITE = `
-    mutation Invite($nickname: String!, $email: String!, $scopes: [String!]) {
-      inviteActor(nickname: $nickname, email: $email, scopes: $scopes) {
-        delivered url actor { uuid }
+  const CREATE = `
+    mutation Create($nickname: String!, $email: String, $password: String, $scopes: [String!]) {
+      createActor(nickname: $nickname, email: $email, password: $password, scopes: $scopes) {
+        delivered url actor { uuid nickname activated }
       }
     }
   `;
@@ -44,11 +44,10 @@
   const STANDARD = ["openid", "profile", "email", "offline_access"];
 
   const COLUMNS = [
-    { label: "" },
     "Person",
-    "Scopes",
-    "Second factor",
-    "Signed in on",
+    { label: "Scopes", hide: true },
+    { label: "Second factor", hide: true },
+    { label: "Signed in on", hide: true },
     "Last seen",
   ];
 
@@ -58,15 +57,16 @@
   let people = $state([]);
   let loose = $state([]);
   let loading = $state(true);
-  let opened = $state(new Set());
 
-  let inviting = $state(false);
+  let adding = $state(false);
   let nickname = $state("");
   let email = $state("");
+  let password = $state("");
   let scopes = $state([...STANDARD]);
   let supported = $state([]);
+  let minimum = $state(8);
   let busy = $state(false);
-  let invited = $state(null);
+  let created = $state(null);
 
   async function load() {
     loading = true;
@@ -85,44 +85,50 @@
 
   load();
 
-  function toggle(actor) {
-    const held = new Set(opened);
-
-    held.has(actor.uuid) ? held.delete(actor.uuid) : held.add(actor.uuid);
-    opened = held;
-  }
-
   async function open() {
     nickname = "";
     email = "";
+    password = "";
     scopes = [...STANDARD];
-    invited = null;
-    inviting = true;
+    created = null;
+    adding = true;
     feedback.clear();
 
     if (supported.length) return;
 
-    const data = await feedback.attempt(() => api.query("query Scopes { scopesSupported }"));
+    const data = await feedback.attempt(() =>
+      api.query("query Scopes { scopesSupported minimumPassword }"),
+    );
 
-    if (data) supported = data.scopesSupported;
+    if (data) {
+      supported = data.scopesSupported;
+      minimum = data.minimumPassword;
+    }
   }
 
   function close() {
-    inviting = false;
+    adding = false;
     feedback.clear();
   }
 
   async function send() {
     busy = true;
 
-    const data = await feedback.attempt(() => api.query(INVITE, { nickname, email, scopes }));
+    const data = await feedback.attempt(() =>
+      api.query(CREATE, {
+        nickname,
+        email: email.trim() || null,
+        password: password || null,
+        scopes,
+      }),
+    );
 
     busy = false;
 
     if (!data) return;
 
-    invited = data.inviteActor;
-    inviting = false;
+    created = data.createActor;
+    adding = false;
 
     await load();
   }
@@ -151,6 +157,8 @@
 
   const unblock = (device) => onDevice("unblockDevice", device, `${device.label} is unblocked.`);
 
+  const blocked = (actor) => actor.devices.some((device) => device.blockedAt);
+
   const presence = (actor) => {
     const parts = [
       `${actor.sessions.length} session${actor.sessions.length === 1 ? "" : "s"}`,
@@ -161,10 +169,7 @@
   };
 </script>
 
-<Page
-  title="People"
-  lede="Everyone who can sign in through this server: what each of them may be granted, and where they are signed in right now."
->
+<Page title="People">
   {#snippet actions()}
     <Search
       bind:value={search}
@@ -172,16 +177,13 @@
       placeholder="nickname, email or name"
       onsearch={load}
     />
-    <button type="button" class="btn btn-primary btn-sm" onclick={open}>Invite somebody</button>
+    <button type="button" class="btn btn-primary btn-sm" onclick={open}>Add somebody</button>
   {/snippet}
 
   <Notices feedback={feedback.state} />
 
-  {#if inviting}
-    <Card
-      title="Invite somebody"
-      lede="They choose their own password from a one-time link. Nothing is granted until they accept."
-    >
+  {#if adding}
+    <Card title="Add somebody">
       <div class="grid gap-3 sm:grid-cols-2">
         <Field
           label="Username"
@@ -193,6 +195,18 @@
         />
         <Field label="Email" type="email" bind:value={email} placeholder="ada@example.com" />
       </div>
+
+      <Field
+        label="Password"
+        type="password"
+        bind:value={password}
+        autocomplete="new-password"
+        placeholder="blank sends a one-time link"
+      />
+
+      {#if password}
+        <p class="text-xs opacity-60">At least {minimum} characters, and you will know it.</p>
+      {/if}
 
       <div class="flex flex-col gap-2">
         <span class="legend">Scopes</span>
@@ -207,27 +221,32 @@
         <button
           type="button"
           class="btn btn-primary btn-sm"
-          disabled={busy || !nickname.trim() || !email.trim()}
+          disabled={busy || !nickname.trim()}
           onclick={send}
         >
-          {busy ? "Sending..." : "Send the invitation"}
+          {busy ? "Adding..." : password ? "Create the account" : "Send the invitation"}
         </button>
         <button type="button" class="btn btn-ghost btn-sm" onclick={close}>Cancel</button>
       </div>
     </Card>
   {/if}
 
-  {#if invited}
-    <Card title="Invitation sent">
-      {#if invited.delivered}
-        <p class="max-w-prose text-sm opacity-70">
-          The link was emailed. It is not shown here, so that accepting it proves the address.
-        </p>
-      {:else}
-        <p class="max-w-prose text-sm opacity-70">
-          No mailer is configured, so pass this link along yourself. It works once.
-        </p>
-        <p class="rounded bg-base-200 px-2 py-1 font-mono text-xs break-all">{invited.url}</p>
+  {#if created}
+    <Card title={created.actor.activated ? "Account created" : "Invitation sent"}>
+      <p class="text-sm opacity-70">
+        {#if created.actor.activated}
+          {created.actor.nickname} can sign in now.{created.url
+            ? " This link confirms their address:"
+            : ""}
+        {:else if created.delivered}
+          Emailed — accepting it proves the address.
+        {:else}
+          Pass this link along yourself. It works once.
+        {/if}
+      </p>
+
+      {#if created.url}
+        <p class="rounded bg-base-200 px-2 py-1 font-mono text-xs break-all">{created.url}</p>
       {/if}
     </Card>
   {/if}
@@ -240,24 +259,11 @@
       count={people.length}
       empty={search.trim()
         ? `No person matches “${search.trim()}”.`
-        : "Nobody can sign in yet. Invite the first person."}
+        : "Nobody can sign in yet. Add the first person."}
     >
       {#snippet rows()}
         {#each people as actor (actor.uuid)}
-          {@const showing = opened.has(actor.uuid)}
-          <tr class="hover">
-            <td class="w-8 align-top">
-              <button
-                type="button"
-                class="caret"
-                aria-expanded={showing}
-                aria-label={showing ? `Hide ${actor.nickname}` : `Show ${actor.nickname}`}
-                onclick={() => toggle(actor)}
-              >
-                {showing ? "−" : "+"}
-              </button>
-            </td>
-
+          <Row to={`/people/${actor.uuid}`}>
             <td>
               <div class="flex items-center gap-3">
                 <img
@@ -272,17 +278,30 @@
                   <Link to={`/people/${actor.uuid}`} class="link link-hover font-medium">
                     {actor.nickname}
                   </Link>
-                  <div class="text-xs opacity-50">
-                    {actor.name ? `${actor.name} · ` : ""}{actor.email ?? "no email"}
+                  <div class="flex items-center gap-1.5 text-xs opacity-50">
+                    <span class="truncate">
+                      {actor.name ? `${actor.name} · ` : ""}{actor.email ?? "no email"}
+                    </span>
                     {#if actor.email && !actor.emailVerified}
-                      <span class="badge badge-warning badge-xs ml-1">unconfirmed</span>
+                      <span class="badge badge-warning badge-xs shrink-0">unconfirmed</span>
                     {/if}
                   </div>
+
+                  {#if actor.otpEnabled || blocked(actor)}
+                    <div class="mt-1 flex flex-wrap gap-1 md:hidden">
+                      {#if actor.otpEnabled}
+                        <span class="badge badge-success badge-xs">authenticator</span>
+                      {/if}
+                      {#if blocked(actor)}
+                        <span class="badge badge-error badge-xs">blocked</span>
+                      {/if}
+                    </div>
+                  {/if}
                 </div>
               </div>
             </td>
 
-            <td class="text-xs">
+            <td class="hidden text-xs md:table-cell">
               <div class="max-w-64 truncate font-mono" title={joined(actor.scopes)}>
                 {#each actor.scopes as scope (scope)}<span
                     class="scope"
@@ -291,7 +310,7 @@
               </div>
             </td>
 
-            <td>
+            <td class="hidden md:table-cell">
               {#if actor.otpEnabled}
                 <span class="badge badge-success badge-sm">authenticator</span>
                 <div class="mt-1 text-xs whitespace-nowrap opacity-60">
@@ -302,9 +321,9 @@
               {/if}
             </td>
 
-            <td class="text-xs whitespace-nowrap opacity-70">
+            <td class="hidden text-xs whitespace-nowrap opacity-70 md:table-cell">
               {presence(actor)}
-              {#if actor.devices.some((device) => device.blockedAt)}
+              {#if blocked(actor)}
                 <span class="badge badge-error badge-xs ml-1">blocked</span>
               {/if}
             </td>
@@ -316,30 +335,13 @@
                 {day(actor.lastLoginAt, "never")}
               {/if}
             </td>
-          </tr>
-
-          {#if showing}
-            <tr class="bare">
-              <td colspan={COLUMNS.length} class="p-0">
-                <div class="drawer-panel">
-                  <Presence {api} {feedback} {actor} onchange={load} columns />
-
-                  <Link to={`/people/${actor.uuid}`} class="link text-xs">
-                    Everything about {actor.nickname} &rarr;
-                  </Link>
-                </div>
-              </td>
-            </tr>
-          {/if}
+          </Row>
         {/each}
       {/snippet}
     </Table>
 
     {#if loose.length}
-      <Card
-        title="Devices nobody has signed in on"
-        lede="Browsers this server has recognised that never carried a session. Blocking one refuses it before any password is checked."
-      >
+      <Card title="Devices nobody has signed in on">
         <ul class="flex flex-col gap-1.5">
           {#each loose as device (device.id)}
             <li class="slat">
