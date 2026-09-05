@@ -18,13 +18,38 @@ fetched server to server. No secret travels through the browser.
 2. masks signs the person in first if nobody has an account yet — first run is
    [a state at the head of the login machine](/concepts/login), not a wizard beside it — then shows
    what is being connected.
-3. Approving creates the client, grants the approving actor those scopes, and mints a one-time
-   **initial access token** (RFC 7591 §3.1), which travels back on the redirect.
+3. Approving creates the client and mints a one-time **initial access token** (RFC 7591 §3.1),
+   which travels back on the redirect.
 4. The app redeems that token at `POST /register` with no browser involved. The secret comes back on
    that response.
 
 `redirect_uris` is read off the raw query string as well as `params`, so a repeated parameter is not
 collapsed to its last value.
+
+## Who may approve one
+
+Approving is not the same as signing in. It creates a client that is `dynamic: false`, and an
+approved client is exempt from the ceiling `Client.bounded` applies to open registration — including
+the refusal of the reserved `masks:` namespace. It is also tenant-wide: `Client.approved_for` is not
+scoped to whoever approved it.
+
+So it takes a scope of its own.
+
+| | |
+| --- | --- |
+| `masks:handshake` | may approve an application for scopes **the approver already holds**, and may reconnect only one they connected themselves |
+| `masks:manage` | may approve an application for any scope, and may reconnect any of them |
+
+An actor with neither is refused at the screen, before anything is created. `masks:handshake` is the
+delegable half: it lets somebody connect the applications they themselves can use, without handing
+them the admin API.
+
+`masks:manage` is unbounded because bounding it would be theatre — an administrator can grant
+themselves a scope and come back. The first-run owner holds it, which is what lets the very first
+application be paired before anybody has been granted anything.
+
+Approving no longer widens the approver. It used to grant them whatever the application asked for,
+which meant any signed-in actor could name `masks:manage` in a URL, approve it, and hold it.
 
 The client that comes back is the one that was approved. The registration body cannot widen it — a
 request naming other redirect URIs or broader scopes changes nothing, because approval created the

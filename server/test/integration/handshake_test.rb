@@ -8,7 +8,8 @@ class HandshakeTest < ActionDispatch::IntegrationTest
   SCOPE = "openid profile email offline_access things:read".freeze
 
   setup do
-    @owner = create_actor(@tenant, nickname: "owner", password: "password")
+    @owner = create_actor(@tenant, nickname: "owner", password: "password",
+                          scopes: Scopes.join(Scopes::STANDARD + [ Scopes::HANDSHAKE, "things:read" ]))
     host! host_for(@tenant)
   end
 
@@ -116,12 +117,100 @@ class HandshakeTest < ActionDispatch::IntegrationTest
     assert_equal @owner.id, approved.approved_by_id
   end
 
-  test "approving grants the actor the scopes the app asked for" do
+  test "an actor holding neither pairing scope is refused before anything is shown" do
+    nobody = create_actor(@tenant, nickname: "nobody", password: "password")
+
+    sign_in_as(nobody)
+    connect
+
+    assert_response :bad_request
+    assert_equal 0, within(@tenant) { Client.count }
+  end
+
+  test "an approver cannot connect a client to more than they hold themselves" do
+    sign_in_as(@owner)
+    connect(scope: "openid masks:manage")
+
+    assert_response :bad_request
+    assert_equal 0, within(@tenant) { Client.count }
+  end
+
+  test "the scope an approver does not hold is named, so the refusal is actionable" do
+    sign_in_as(@owner)
+    connect(scope: "openid catalog:write")
+
+    assert_match "catalog:write", response.body
+  end
+
+  test "masks:handshake cannot reconnect an application somebody else connected" do
+    admin = create_actor(@tenant, nickname: "admin", password: "password",
+                         scopes: Scopes.join(Scopes::STANDARD + [ Scopes::MANAGE ]))
+
+    sign_in_as(admin)
+    connect
+    approve!
+
+    held = approved.token_endpoint_auth_method
+
+    reset!
+    host! host_for(@tenant)
+    sign_in_as(@owner)
+    connect(token_endpoint_auth_method: "none", redirect_uris: [ "#{APP}/elsewhere" ])
+
+    assert_response :bad_request
+    assert_equal held, within(@tenant) { approved.token_endpoint_auth_method }
+    assert_equal [ REDIRECT_URI ], within(@tenant) { approved.redirect_uris }
+  end
+
+  test "masks:handshake may reconnect the application it connected itself" do
     sign_in_as(@owner)
     connect
     approve!
 
-    assert_includes within(@tenant) { @owner.reload.scope_list }, "things:read"
+    reset!
+    host! host_for(@tenant)
+    sign_in_as(@owner)
+    connect
+
+    assert_response :success
+  end
+
+  test "an administrator holding masks:manage may pair the admin ui with it" do
+    admin = create_actor(@tenant, nickname: "admin", password: "password",
+                         scopes: Scopes.join(Scopes::STANDARD + [ Scopes::MANAGE ]))
+
+    sign_in_as(admin)
+    connect(scope: "openid masks:manage")
+
+    assert_response :success
+
+    approve!
+
+    assert_includes within(@tenant) { Client.approved.sole.scope_list }, Scopes::MANAGE
+  end
+
+  test "an administrator approves a scope they do not hold, because they may grant it to themselves" do
+    admin = create_actor(@tenant, nickname: "admin", password: "password",
+                         scopes: Scopes.join(Scopes::STANDARD + [ Scopes::MANAGE ]))
+
+    sign_in_as(admin)
+    connect(scope: "openid catalog:write")
+
+    assert_response :success
+
+    approve!
+
+    assert_includes within(@tenant) { Client.approved.sole.scope_list }, "catalog:write"
+  end
+
+  test "approving widens nobody — the approver already held what the app asked for" do
+    held = within(@tenant) { @owner.scope_list }
+
+    sign_in_as(@owner)
+    connect
+    approve!
+
+    assert_equal held, within(@tenant) { @owner.reload.scope_list }
   end
 
   test "declining connects nothing and says so to the app" do
