@@ -1,0 +1,107 @@
+---
+title: Releasing
+description: Two packages, versioned apart, published from a conventional commit without a stored credential.
+---
+
+masks publishes two packages. The provider is not one of them — it holds a database and the signing
+keys, so it is deployed rather than installed.
+
+| Package | Tree | Registry |
+| --- | --- | --- |
+| `masks` | `client/` | rubygems.org |
+| `@masks/client` | `web/` | npmjs.com |
+
+They carry separate version numbers and get separate release pull requests. A change to the gem does
+not move the client package, and neither one is pinned to the provider.
+
+## The loop
+
+Releasing is two merges: yours, then the release pull request's.
+
+1. Land a commit on `main` with a conventional prefix.
+2. [release-please](https://github.com/googleapis/release-please) opens a release pull request for
+   whichever package the commit touched. It bumps the version file and writes the changelog entry,
+   and nothing else. It keeps rewriting itself as more commits land.
+3. Merge it when you want to ship. That is the release decision, and the only manual step.
+4. The merge is a push to `main`, so the workflow runs again — release-please sees its own pull
+   request merged, cuts the tag and the GitHub release, and the publish job for that package pushes
+   to the registry in the same run.
+
+It is one file, `.github/workflows/release.yml`, triggered by pushes to `main`.
+
+:::note[Why the publish is chained rather than triggered by the tag]
+A tag pushed with `GITHUB_TOKEN` starts no workflow — GitHub suppresses it so a workflow cannot
+trigger itself. A separate workflow listening for `gem-v*` would never fire. The publish jobs read
+release-please's own outputs instead, which needs no app token and no personal access token.
+:::
+
+## What counts as releasable
+
+Only these five types are visible to release-please, from `release-please-config.json`:
+
+```
+feat  fix  perf  docs  refactor
+```
+
+Anything else — `chore`, `ci`, `test`, or a subject with no prefix at all — is invisible. It will not
+appear in a changelog and will not cause a release. A commit that cannot be parsed as conventional is
+skipped with a note in the log, so a run that reports `No user facing commits found` is doing its
+job, not failing.
+
+`feat` opens a minor bump, `fix` a patch. A `!` after the type, or a `BREAKING CHANGE:` trailer,
+opens a major one.
+
+## Tags
+
+The tag carries the component, because two packages share one repository:
+
+```
+gem-v0.5.0        the masks gem, from client/
+client-v2.0.0     @masks/client, from web/
+```
+
+The prefixes come from the `component` fields in `release-please-config.json`, and release-please
+reads them back to work out what has already shipped. Nothing triggers on them.
+
+## Credentials
+
+There are none, in the repository or in CI. Both registries publish through OIDC trusted publishing:
+the job presents a short-lived GitHub identity token, and the registry decides whether it trusts it.
+
+Each registry is told the same four things:
+
+| | rubygems.org | npmjs.com |
+| --- | --- | --- |
+| Repository | `masksrb/masks` | `masksrb/masks` |
+| Workflow | `release.yml` | `release.yml` |
+| Environment | `rubygems` | `npm` |
+| Package | `masks` | `@masks/client` |
+
+All four are matched exactly and are case-sensitive. Renaming the workflow file, or changing a job's
+`environment:`, breaks publishing until the registry is updated to match.
+
+The npm CLI that ships on the runner is older than trusted publishing requires, so the job installs a
+current one before publishing.
+
+## Publishing by hand
+
+`workflow_dispatch` publishes a package without cutting a release — for a first publish, or to
+recover a version that failed after its tag was already cut:
+
+```sh
+gh workflow run release.yml -f package=gem
+gh workflow run release.yml -f package=client
+```
+
+It runs the same tests and the same build as the automatic path. It checks out `main` rather than a
+tag, so what it publishes is whatever version the tree currently declares.
+
+## What the repository needs
+
+Two settings, neither of them in this tree:
+
+- **Actions may create pull requests.** Under organization settings, not the repository's — a
+  repository cannot be more permissive than its organization, so the repository checkbox silently
+  refuses to save while the organization has it off. Without it release-please cannot open the
+  release pull request.
+- **A trusted publisher on each registry**, as above.
