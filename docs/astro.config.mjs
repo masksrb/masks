@@ -62,6 +62,7 @@ export default defineConfig({
             { label: "Configuration", slug: "reference/configuration" },
             { label: "Models", slug: "reference/models" },
             { label: "Conformance", slug: "reference/conformance" },
+            { label: "Releasing", slug: "reference/releasing" },
           ],
         },
       ],
