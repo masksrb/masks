@@ -5,5 +5,6 @@ class AccountController < ApplicationController
     @passkeys = @actor ? Passkey.where(actor: @actor).includes(:authenticator).newest_first : []
     @devices = @actor ? @actor.devices.newest_first : []
     @trusted = @actor ? DeviceFactor.live.where(actor: @actor).pluck(:device_id).to_set : Set.new
+    @live = @actor ? Session.live.where(device_id: @devices.map(&:id)).pluck(:device_id).to_set : Set.new
   end
 end

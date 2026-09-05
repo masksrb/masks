@@ -132,12 +132,16 @@
                     <% if device.blocked? %>
                       <span class="tag tag-bad">blocked</span>
                     <% end %>
+                    <% unless @live.include?(device.id) %>
+                      <span class="tag">signed out</span>
+                    <% end %>
                   </span>
                   <span class="chip-meta">
                     <span>seen <%= time_ago_in_words(device.last_seen_at) %> ago</span>
-                    <%= button_to "Sign out", device_path(device), method: :delete,
-                          class: "textlink", form_class: "chip-action",
-                          form: { data: { turbo_confirm: "Sign this device out?" } } %>
+                    <% if @live.include?(device.id) %>
+                      <%= button_to "Sign out", device_path(device), method: :delete,
+                            class: "textlink", form_class: "chip-action" %>
+                    <% end %>
                   </span>
                 </span>
 
