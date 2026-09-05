@@ -1,7 +1,7 @@
 module LoginStates
   class Setup < LoginState
     EXPIRY = 12.hours
-    MINIMUM_PASSWORD = 8
+    MINIMUM_PASSWORD = Actor::MINIMUM_PASSWORD
 
     accepts :nickname, :email, :password, :token
 

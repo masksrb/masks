@@ -322,11 +322,13 @@ class ManageApiTest < ActionDispatch::IntegrationTest
     @admin ||= bearer
   end
 
-  def invite(nickname: "sam", email: "sam@example.com", scopes: nil)
+  def invite(nickname: "sam", email: "sam@example.com", password: nil, scopes: nil)
     ask(<<~GQL, admin)
       mutation {
-        inviteActor(
-          nickname: "#{nickname}", email: "#{email}"
+        createActor(
+          nickname: "#{nickname}"
+          #{email ? ", email: \"#{email}\"" : ''}
+          #{password ? ", password: \"#{password}\"" : ''}
           #{scopes ? ", scopes: #{scopes.inspect}" : ''}
         ) {
           delivered url actor { uuid nickname activated emailVerified invitedAt }
@@ -338,7 +340,7 @@ class ManageApiTest < ActionDispatch::IntegrationTest
   test "an admin invites somebody, and gets a link back when there is no mailer" do
     body = invite
 
-    invited = body.dig("data", "inviteActor")
+    invited = body.dig("data", "createActor")
 
     assert_nil body["errors"]
     assert_equal false, invited["delivered"]
@@ -351,7 +353,7 @@ class ManageApiTest < ActionDispatch::IntegrationTest
     with_mailer do
       body = invite
 
-      invited = body.dig("data", "inviteActor")
+      invited = body.dig("data", "createActor")
 
       assert_equal true, invited["delivered"]
       assert_nil invited["url"]
@@ -359,16 +361,55 @@ class ManageApiTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "an admin adds somebody with no address at all, and hands the link over" do
+    body = invite(email: nil)
+
+    invited = body.dig("data", "createActor")
+
+    assert_nil body["errors"]
+    assert_equal false, invited["delivered"]
+    assert_match %r{/invite/}, invited["url"]
+    assert_equal false, invited.dig("actor", "activated")
+  end
+
+  test "an admin sets the password, and that actor is activated without a link" do
+    body = invite(email: nil, password: "correct-horse")
+
+    created = body.dig("data", "createActor")
+
+    assert_nil body["errors"]
+    assert_equal true, created.dig("actor", "activated")
+    assert_nil created["url"]
+
+    within(@tenant) do
+      assert_not_nil Actor.authenticate("sam", "correct-horse")
+    end
+  end
+
+  test "an admin-set password still has to clear the minimum" do
+    body = invite(password: "short")
+
+    assert_match(/at least #{Actor::MINIMUM_PASSWORD}/, body["errors"].first["message"])
+    assert_nil within(@tenant) { Actor.find_by(nickname: "sam") }
+  end
+
+  test "an admin-set password leaves the address unconfirmed, and opens a link for it" do
+    created = invite(password: "correct-horse").dig("data", "createActor")
+
+    assert_equal false, created.dig("actor", "emailVerified")
+    assert_match %r{/verify/}, created["url"]
+  end
+
   test "an invitation carries the scopes it names, the way setActorScopes does" do
     body = ask(<<~GQL, bearer)
       mutation {
-        inviteActor(nickname: "sam", email: "sam@example.com", scopes: ["openid", "masks:manage"]) {
+        createActor(nickname: "sam", email: "sam@example.com", scopes: ["openid", "masks:manage"]) {
           actor { scopes }
         }
       }
     GQL
 
-    assert_includes body.dig("data", "inviteActor", "actor", "scopes"), "masks:manage"
+    assert_includes body.dig("data", "createActor", "actor", "scopes"), "masks:manage"
   end
 
   test "an invited nickname already in use is refused rather than duplicated" do
@@ -378,7 +419,7 @@ class ManageApiTest < ActionDispatch::IntegrationTest
   end
 
   test "an invitation can be resent, and the admin cannot resend to somebody activated" do
-    invited = invite.dig("data", "inviteActor", "actor", "uuid")
+    invited = invite.dig("data", "createActor", "actor", "uuid")
 
     resent = ask(<<~GQL, admin)
       mutation { resendInvitation(uuid: "#{invited}") { delivered url } }
@@ -421,7 +462,7 @@ class ManageApiTest < ActionDispatch::IntegrationTest
 
     assert_match %r{/reset/}, started.dig("data", "resetPassword", "url")
 
-    waiting = invite.dig("data", "inviteActor", "actor", "uuid")
+    waiting = invite.dig("data", "createActor", "actor", "uuid")
 
     refused = ask(<<~GQL, admin)
       mutation { resetPassword(uuid: "#{waiting}") { delivered } }

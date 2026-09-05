@@ -25,7 +25,7 @@
     </div>
 
     {#if actions}
-      <div class="flex flex-wrap items-center gap-2">{@render actions()}</div>
+      <div class="flex w-full flex-wrap items-center gap-2 sm:w-auto">{@render actions()}</div>
     {/if}
   </header>
 

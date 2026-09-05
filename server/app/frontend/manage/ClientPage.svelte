@@ -151,10 +151,7 @@
       </Card>
 
       <div class="flex flex-col gap-4">
-        <Card
-          title="Always granted"
-          lede="Held whether or not the client asks for them, and never shown on a consent screen."
-        >
+        <Card title="Always granted" lede="Never shown on a consent screen.">
           <ScopesEditor
             value={client.requiredScopes}
             available={supported}
@@ -162,10 +159,7 @@
           />
         </Card>
 
-        <Card
-          title="Granted on request"
-          lede="Everything else this client may ask for. Together with the set above, this is the ceiling it is refused outside."
-        >
+        <Card title="Granted on request" lede="Everything else it may ask for.">
           <ScopesEditor
             value={client.allowedScopes}
             available={supported}
@@ -174,8 +168,7 @@
 
           {#if client.dynamic}
             <p class="text-sm opacity-70">
-              Nobody approved this client, so it may not hold a
-              <span class="font-mono text-xs">masks:</span> scope.
+              Self-registered, so no <span class="font-mono text-xs">masks:</span> scope.
             </p>
           {/if}
         </Card>

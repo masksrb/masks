@@ -16,7 +16,9 @@
       <thead>
         <tr>
           {#each heads as head, index (index)}
-            <th class={head.right ? "text-right" : ""}>{head.label ?? ""}</th>
+            <th
+              class="{head.right ? 'text-right' : ''} {head.hide ? 'hidden md:table-cell' : ''}"
+            >{head.label ?? ""}</th>
           {/each}
         </tr>
       </thead>

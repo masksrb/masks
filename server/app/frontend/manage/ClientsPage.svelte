@@ -20,7 +20,13 @@
     }
   `;
 
-  const COLUMNS = ["Name", "Resources", "How it got here", "Scopes", "Approved by"];
+  const COLUMNS = [
+    "Name",
+    { label: "Resources", hide: true },
+    "How it got here",
+    { label: "Scopes", hide: true },
+    { label: "Approved by", hide: true },
+  ];
 
   let search = $state("");
   let query = $state("");
@@ -37,10 +43,7 @@
   );
 </script>
 
-<Page
-  title="Clients"
-  lede="Applications registered against this server. A client may never be granted more than its scopes allow."
->
+<Page title="Clients">
   {#snippet actions()}
     <Switch bind:checked={archived} label="Archived" />
     <Search
@@ -58,13 +61,22 @@
           {#snippet rows()}
             {#each data.clients as client (client.clientId)}
               <Row to={`/clients/${client.clientId}`}>
-                <td>
+                <td class="max-w-[15rem]">
                   <Link to={`/clients/${client.clientId}`} class="link link-hover font-medium">
                     {client.name}
                   </Link>
-                  <div class="font-mono text-xs opacity-50">{client.clientId}</div>
+                  <div class="truncate font-mono text-xs opacity-50" title={client.clientId}>
+                    {client.clientId}
+                  </div>
                 </td>
-                <td class="font-mono text-xs opacity-70">{joined(client.resources)}</td>
+                <td class="hidden max-w-[16rem] md:table-cell">
+                  <div
+                    class="truncate font-mono text-xs opacity-70"
+                    title={joined(client.resources)}
+                  >
+                    {joined(client.resources)}
+                  </div>
+                </td>
                 <td>
                   <div class="flex flex-col items-start gap-1">
                     {#if client.dynamic}
@@ -77,7 +89,7 @@
                     {/if}
                   </div>
                 </td>
-                <td class="max-w-64 font-mono text-xs">
+                <td class="hidden max-w-64 font-mono text-xs md:table-cell">
                   {#if client.requiredScopes.length}
                     <div class="truncate" title={joined(client.requiredScopes)}>
                       <span class="opacity-50">always</span>
@@ -91,7 +103,9 @@
                     </div>
                   {/if}
                 </td>
-                <td class="text-xs opacity-70">{client.approvedBy?.nickname ?? "—"}</td>
+                <td class="hidden text-xs opacity-70 md:table-cell">
+                  {client.approvedBy?.nickname ?? "—"}
+                </td>
               </Row>
             {/each}
           {/snippet}
