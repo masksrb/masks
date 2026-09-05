@@ -1,0 +1,137 @@
+---
+title: Design
+description: One palette for the console, the sign-in pages and this site, drawn from the mark.
+---
+
+`server/app/frontend/entrypoints/app.css` · `docs/src/styles/global.css`
+
+The palette is sampled from the rose window in the logo. Three material families do three jobs, and
+the rule for which is which is the whole system.
+
+| | |
+| --- | --- |
+| **Lead** | the ground and the neutrals |
+| **Came** | the brass and silver joining the panes — every rule, border, focus ring and eyebrow |
+| **Glass** | the rainbow — links, badges, status, asides, chart marks |
+
+Sign-in follows the reader's system setting; `/manage` is pinned dark. Both draw from the same
+tokens, so a token changed in one place changes both.
+
+## What the window contains
+
+`docs/src/assets/dark-logo.png` is 188×188 and indexed, 28 significant colours. Pure black is 49.3%
+of it. Every value lands on `0x2a / 0x55 / 0x7f / 0xaa / 0xff`, so these are dithered index entries
+rather than chosen colours — too saturated to use directly, but they fix the hues everything else is
+derived from.
+
+## Lead
+
+Black is half the window, so black is the ground — `#000000`, not a charcoal. The ramp above it
+carries a faint warm cast (OKLCH hue 60, chroma 0.008–0.011) so it sits under brass without going
+cold.
+
+<div class="plate">
+  <div style="background:#000000;color:#e9e5e2"><b>000</b><span>#000000</span><span>ground</span></div>
+  <div style="background:#0f0b09;color:#e9e5e2"><b>050</b><span>#0f0b09</span><span>surface</span></div>
+  <div style="background:#1a1614;color:#e9e5e2"><b>100</b><span>#1a1614</span><span>raised</span></div>
+  <div style="background:#292421;color:#e9e5e2"><b>200</b><span>#292421</span><span>line</span></div>
+  <div style="background:#3d3834;color:#e9e5e2"><b>300</b><span>#3d3834</span><span>firm</span></div>
+  <div style="background:#605955;color:#ffffff"><b>400</b><span>#605955</span><span>disabled</span></div>
+  <div style="background:#88827d;color:#000000"><b>500</b><span>#88827d</span><span>mute</span></div>
+  <div style="background:#aca6a2;color:#000000"><b>600</b><span>#aca6a2</span><span>dim</span></div>
+  <div style="background:#cfc9c5;color:#000000"><b>700</b><span>#cfc9c5</span><span>—</span></div>
+  <div style="background:#e9e5e2;color:#000000"><b>800</b><span>#e9e5e2</span><span>body</span></div>
+</div>
+
+Body text is `lead-800` at 16.8:1 on the ground. The dimmed text every table and caption uses is
+`lead-600` at 8.7:1.
+
+## Came
+
+In the window, brass and silver are the only things touching every pane. In the interface they do
+the same job. Came is **structure, never state** — a brass border says "this is a seam", never "this
+needs attention".
+
+<div class="plate">
+  <div style="background:#b58a41;color:#000000"><b>brass</b><span>#b58a41</span><span>rules, eyebrows</span></div>
+  <div style="background:#deaf56;color:#000000"><b>brass-lit</b><span>#deaf56</span><span>focus ring</span></div>
+  <div style="background:#77531b;color:#ffffff"><b>brass-deep</b><span>#77531b</span><span>on paper</span></div>
+  <div style="background:#a9b3b4;color:#000000"><b>silver</b><span>#a9b3b4</span><span>hairline, mono</span></div>
+  <div style="background:#6e7677;color:#ffffff"><b>silver-deep</b><span>#6e7677</span><span>on paper</span></div>
+</div>
+
+## Glass
+
+Ten hues, weighted warm. The red shift is in the distribution rather than in one loud control: four
+hues sit between red and yellow, and the ground and chrome are warm-cast, so the whole system reads
+hot before any accent is spent.
+
+Every hue is given at two lightnesses — one for the black ground, one for paper. Contrast is
+measured against the ground each is used on.
+
+| Hue | Angle | On black | Ratio | On paper | Ratio | Role |
+| --- | --- | --- | --- | --- | --- | --- |
+| ruby | 27° | `#ff867a` | 8.94 | `#b53530` | 5.97 | danger |
+| ember | 47° | `#ff8f53` | 9.31 | `#b04000` | 5.87 | signal |
+| amber | 68° | `#f19c29` | 9.53 | `#a44f00` | 5.68 | categorical |
+| gold | 92° | `#d4ad03` | 9.78 | `#8b6200` | 5.46 | warning |
+| verdant | 140° | `#78c966` | 10.35 | `#267e05` | 5.16 | categorical |
+| emerald | 165° | `#1dcf98` | 10.43 | `#008450` | 4.76 | success |
+| cyan | 195° | `#00cecf` | 10.73 | `#008386` | 4.57 | categorical |
+| sky | 228° | `#00c2fe` | 10.15 | `#0077b2` | 4.90 | info |
+| cobalt | 258° | `#70b1ff` | 9.42 | `#2065c5` | 5.63 | note |
+| violet | 292° | `#b49dff` | 9.21 | `#6e50be` | 5.91 | categorical |
+
+## Three rules
+
+**Ruby is the only solid fill.** Signal and danger are 20° apart, which is not enough hue separation
+on its own, so they separate by treatment instead. Every other control is an outline or a ghost, and
+a solid `#d3403a` fill means one thing: this destroys something. Nothing decorative may use ruby.
+
+**Came is structure, glass is state.** If it is a border, a rule, an eyebrow or a focus ring, it is
+brass or silver. If it carries meaning — a badge, a status, a link, an aside — it is glass. A panel
+never borrows a glass hue for its edge to look lively.
+
+**The spare hues are categorical, not decorative.** Amber, verdant, cyan and violet are assigned by
+hashing a name, so a namespace or a scope keeps the same colour everywhere it appears — console
+table, docs example, chart series. Colour becomes identity rather than garnish.
+
+## Where it lives
+
+One daisyUI theme pair replaces the three that came before — `light`, `dark` and `console`. The
+console is no longer a separate palette; it is the dense expression of the shared one, keeping 3px
+fields and tight rows while drawing every colour from the same place.
+
+```css
+/* server/app/frontend/entrypoints/app.css */
+@plugin "daisyui/theme" {
+  name: "rose";
+  prefersdark: true;
+  color-scheme: dark;
+
+  --color-base-100: #0f0b09;   /* lead-050, surface */
+  --color-base-200: #000000;   /* lead-000, ground  */
+  --color-base-300: #292421;   /* lead-200, line    */
+  --color-base-content: #e9e5e2;
+
+  --color-primary: #ff8f53;    /* ember, signal */
+  --color-secondary: #b58a41;  /* brass, came   */
+  --color-error: #ff867a;      /* ruby    */
+  --color-warning: #d4ad03;    /* gold    */
+  --color-success: #1dcf98;    /* emerald */
+  --color-info: #00c2fe;       /* sky     */
+
+  --radius-field: 3px;
+  --radius-box: 5px;
+}
+```
+
+`/manage` pins it with `data-theme="rose"`; sign-in leaves it unstamped and follows the system. This
+site maps the same values onto Starlight's `--sl-color-*` variables, so it inherits the palette
+rather than approximating it.
+
+## Type
+
+Unchanged, and deliberately plain: Helvetica Neue with an Arial fallback, and a mono stack for
+client ids, URLs, scopes and figures. No display face and no webfont — spacing, grid, colour and
+hierarchy do the work.

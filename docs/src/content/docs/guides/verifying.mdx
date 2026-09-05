@@ -12,7 +12,7 @@ A resource server receives bearer tokens and signs nobody in. It needs `masks` a
 ```ruby
 verifier = Masks::Client.verifier(
   "https://demo.auth.example",
-  audience: "https://demo.things.example/mcp"
+  audience: "https://demo.uris.example/mcp"
 )
 
 claims = verifier.verify(token)

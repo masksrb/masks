@@ -7,9 +7,9 @@ class NamespaceScopeTest < ActionDispatch::IntegrationTest
     @client = Tenant.switch(@tenant) do
       Client.create!(
         client_id: SecureRandom.uuid,
-        name: "Thingies",
+        name: "uris",
         redirect_uris: [ OidcFlow::REDIRECT_URI ],
-        allowed_scopes: "openid profile email offline_access things:",
+        allowed_scopes: "openid profile email offline_access uris:",
         grant_types: [ "authorization_code" ],
         response_types: [ "code" ],
         token_endpoint_auth_method: "none",
@@ -26,32 +26,32 @@ class NamespaceScopeTest < ActionDispatch::IntegrationTest
   end
 
   test "a namespace grant covers a scope nobody registered by name" do
-    authorize(client_id: @client.client_id, scope: "openid things:catalog:read things:settings:admin")
+    authorize(client_id: @client.client_id, scope: "openid uris:catalog:read uris:settings:admin")
 
     assert_nil refusal&.dig("error"),
-               "a client granted things: may ask for anything beneath it"
+               "a client granted uris: may ask for anything beneath it"
   end
 
   test "a namespace grant does not reach past its own prefix" do
-    authorize(client_id: @client.client_id, scope: "openid things:catalog:read masks:manage")
+    authorize(client_id: @client.client_id, scope: "openid uris:catalog:read masks:manage")
 
     assert_equal "invalid_scope", refusal["error"]
     assert_equal "this client may not request masks:manage", refusal["error_description"]
   end
 
   test "the bare namespace is not a scope anyone can ask for" do
-    authorize(client_id: @client.client_id, scope: "openid things:")
+    authorize(client_id: @client.client_id, scope: "openid uris:")
 
     assert_equal "invalid_scope", refusal["error"]
-    assert_equal "this client may not request things:", refusal["error_description"]
+    assert_equal "this client may not request uris:", refusal["error_description"]
   end
 
   test "what is granted is the scope asked for, never the prefix itself" do
     Tenant.switch(@tenant) do
-      granted = @client.permitted_scopes(%w[things:catalog:read things:settings:admin])
+      granted = @client.permitted_scopes(%w[uris:catalog:read uris:settings:admin])
 
-      assert_equal %w[things:catalog:read things:settings:admin], granted - Scopes::STANDARD
-      assert_not_includes granted, "things:"
+      assert_equal %w[uris:catalog:read uris:settings:admin], granted - Scopes::STANDARD
+      assert_not_includes granted, "uris:"
     end
   end
 end

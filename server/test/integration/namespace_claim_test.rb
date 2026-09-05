@@ -1,13 +1,13 @@
 require "test_helper"
 
 class NamespaceClaimTest < ActionDispatch::IntegrationTest
-  APP = "https://demo.things.test".freeze
+  APP = "https://demo.uris.test".freeze
   RESOURCE = "#{APP}/mcp".freeze
   RETURN_TO = "#{APP}/auth/handshake/callback".freeze
   REDIRECT_URI = "#{APP}/auth/masks/callback".freeze
-  SCOPE = "openid profile email offline_access things:".freeze
+  SCOPE = "openid profile email offline_access uris:".freeze
 
-  OTHER = "https://other.things.test".freeze
+  OTHER = "https://other.uris.test".freeze
   OTHER_RESOURCE = "#{OTHER}/mcp".freeze
 
   setup do
@@ -16,7 +16,7 @@ class NamespaceClaimTest < ActionDispatch::IntegrationTest
     host! host_for(@tenant)
   end
 
-  def connect(resource: RESOURCE, origin: APP, scope: SCOPE, name: "things")
+  def connect(resource: RESOURCE, origin: APP, scope: SCOPE, name: "uris")
     query = {
       client_name: name,
       resource: resource,
@@ -36,7 +36,7 @@ class NamespaceClaimTest < ActionDispatch::IntegrationTest
     post "/handshake", params: { approve: "yes", hid: hid }
   end
 
-  def claimed(name = "things:")
+  def claimed(name = "uris:")
     within(@tenant) { Namespace.find_by(name: name) }
   end
 
@@ -46,10 +46,10 @@ class NamespaceClaimTest < ActionDispatch::IntegrationTest
     approve!
 
     within(@tenant) do
-      held = Namespace.find_by(name: "things:")
+      held = Namespace.find_by(name: "uris:")
 
       assert_equal RESOURCE, held.resource
-      assert_equal "things", held.client.name
+      assert_equal "uris", held.client.name
       assert held.claimed_at.present?
     end
   end
@@ -57,12 +57,12 @@ class NamespaceClaimTest < ActionDispatch::IntegrationTest
   test "claiming grants the namespace to whoever approved it" do
     sign_in_as(@owner)
 
-    assert_not within(@tenant) { Actor.find(@owner.id).holds?("things:") }
+    assert_not within(@tenant) { Actor.find(@owner.id).holds?("uris:") }
 
     connect
     approve!
 
-    assert within(@tenant) { Actor.find(@owner.id).holds?("things:") },
+    assert within(@tenant) { Actor.find(@owner.id).holds?("uris:") },
            "the approver must be able to use what they connected"
   end
 
@@ -71,7 +71,7 @@ class NamespaceClaimTest < ActionDispatch::IntegrationTest
     connect
 
     assert_response :success
-    assert_match "things:", response.body
+    assert_match "uris:", response.body
     assert_match "granted to you", response.body
   end
 
@@ -83,8 +83,38 @@ class NamespaceClaimTest < ActionDispatch::IntegrationTest
     connect(resource: OTHER_RESOURCE, origin: OTHER, name: "impostor")
 
     assert_response :bad_request
-    assert_match "things: is claimed by #{RESOURCE}", response.body
+    assert_match "uris: is claimed by #{RESOURCE}", response.body
     assert_equal RESOURCE, claimed.resource
+  end
+
+  test "an admin refused over a claimed namespace is sent to the console that can release it" do
+    sign_in_as(@owner)
+    connect
+    approve!
+
+    connect(resource: OTHER_RESOURCE, origin: OTHER, name: "impostor")
+
+    assert_response :bad_request
+    assert_select "a[href=?]", manage_path, "Open the console"
+  end
+
+  test "a namespace conflict is only ever an admin's to see, because a prefix is more than anybody else holds" do
+    connector = create_actor(@tenant, nickname: "connector", password: "password",
+                             scopes: Scopes.join(Scopes::STANDARD + [ Scopes::HANDSHAKE, "uris:" ]))
+
+    sign_in_as(@owner)
+    connect
+    approve!
+
+    reset!
+    host! host_for(@tenant)
+
+    sign_in_as(connector)
+    connect(resource: OTHER_RESOURCE, origin: OTHER, name: "impostor")
+
+    assert_response :bad_request
+    assert_match "uris: is more than this account holds", response.body
+    assert_select "a[href=?]", manage_path, false
   end
 
   test "the same resource shaking hands again keeps its claim" do
@@ -110,7 +140,7 @@ class NamespaceClaimTest < ActionDispatch::IntegrationTest
     within(@tenant) do
       claimed.client.update!(archived_at: Time.current)
 
-      assert_equal RESOURCE, Namespace.find_by(name: "things:").resource
+      assert_equal RESOURCE, Namespace.find_by(name: "uris:").resource
     end
   end
 
@@ -125,7 +155,7 @@ class NamespaceClaimTest < ActionDispatch::IntegrationTest
 
   test "a namespace must end in a colon" do
     within(@tenant) do
-      held = Namespace.new(name: "things:catalog:read", resource: RESOURCE, claimed_at: Time.current)
+      held = Namespace.new(name: "uris:catalog:read", resource: RESOURCE, claimed_at: Time.current)
 
       assert_not held.valid?
       assert_match "must end in a colon", held.errors.full_messages.join
@@ -138,10 +168,10 @@ class NamespaceClaimTest < ActionDispatch::IntegrationTest
     approve!
 
     granted = within(@tenant) do
-      Actor.find(@owner.id).permitted_scopes(%w[openid things:catalog:read things:settings:admin])
+      Actor.find(@owner.id).permitted_scopes(%w[openid uris:catalog:read uris:settings:admin])
     end
 
-    assert_includes granted, "things:catalog:read"
-    assert_includes granted, "things:settings:admin"
+    assert_includes granted, "uris:catalog:read"
+    assert_includes granted, "uris:settings:admin"
   end
 end

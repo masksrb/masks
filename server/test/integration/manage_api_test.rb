@@ -98,7 +98,7 @@ class ManageApiTest < ActionDispatch::IntegrationTest
   end
 
   test "a token issued for another resource is refused" do
-    held = bearer(for_resource: "https://things.example.com/api")
+    held = bearer(for_resource: "https://uris.example.com/api")
 
     ask("{ viewer { nickname } }", held)
 
@@ -857,38 +857,98 @@ class ManageApiTest < ActionDispatch::IntegrationTest
 
     held = ask("{ namespaces { name resource client { name } } }", token)["data"]["namespaces"]
 
-    assert_equal [ "things:" ], held.map { |one| one["name"] }
-    assert_equal "https://demo.things.test/mcp", held.first["resource"]
-    assert_equal "things", held.first.dig("client", "name")
+    assert_equal [ "uris:" ], held.map { |one| one["name"] }
+    assert_equal "https://demo.uris.test/mcp", held.first["resource"]
+    assert_equal "uris", held.first.dig("client", "name")
+  end
+
+  test "a namespace says whether it can be released, so the console can offer the button" do
+    token = bearer
+    claim!
+
+    listing = "{ namespaces { name resource claimedAt releasable client { clientId name archivedAt } } }"
+
+    held = ask(listing, token)["data"]["namespaces"].first
+
+    assert_equal false, held["releasable"]
+    assert_nil held.dig("client", "archivedAt")
+    assert held["claimedAt"].present?
+
+    within(@tenant) { Namespace.find_by(name: "uris:").client.update!(archived_at: Time.current) }
+
+    freed = ask(listing, token)["data"]["namespaces"].first
+
+    assert_equal true, freed["releasable"]
+    assert freed.dig("client", "archivedAt").present?
+  end
+
+  test "a namespace whose client is gone is releasable" do
+    token = bearer
+    claim!
+
+    within(@tenant) { Namespace.find_by(name: "uris:").update!(client: nil) }
+
+    held = ask("{ namespaces { name releasable client { name } } }", token)["data"]["namespaces"]
+
+    assert_nil held.first["client"]
+    assert_equal true, held.first["releasable"]
+  end
+
+  test "a client carries the namespaces it holds, so its page draws them without a second query" do
+    token = bearer
+    claim!
+
+    client = ask(
+      "query Held($clientId: ID!) {
+        client(clientId: $clientId) { name namespaces { name resource claimedAt releasable } }
+      }",
+      token,
+      clientId: within(@tenant) { Client.find_by(name: "uris").client_id }
+    )["data"]["client"]
+
+    assert_equal [ "uris:" ], client["namespaces"].map { |one| one["name"] }
+    assert_equal "https://demo.uris.test/mcp", client["namespaces"].first["resource"]
+    assert_equal false, client["namespaces"].first["releasable"]
+  end
+
+  test "the clients list carries each holding, so the page counts them without asking again" do
+    token = bearer
+    claim!
+
+    listed = ask("{ clients { name namespaces { name } } }", token)["data"]["clients"]
+    counted = listed.to_h { |one| [ one["name"], one["namespaces"].length ] }
+
+    assert_equal 1, counted["uris"]
+    assert_equal 0, counted[@client.name]
   end
 
   test "a namespace its client still holds cannot be released" do
     token = bearer
     claim!
 
-    body = ask('mutation { releaseNamespace(name: "things:") { released } }', token)
+    body = ask('mutation { releaseNamespace(name: "uris:") { released } }', token)
 
-    assert_match "is in use by things", body.dig("errors", 0, "message")
-    assert within(@tenant) { Namespace.exists?(name: "things:") }
+    assert_match "is in use by uris", body.dig("errors", 0, "message")
+    assert within(@tenant) { Namespace.exists?(name: "uris:") }
   end
 
   test "releasing an archived namespace frees the name" do
     token = bearer
     claim!
 
-    within(@tenant) { Namespace.find_by(name: "things:").client.update!(archived_at: Time.current) }
+    within(@tenant) { Namespace.find_by(name: "uris:").client.update!(archived_at: Time.current) }
 
-    body = ask('mutation { releaseNamespace(name: "things:") { released } }', token)
+    body = ask('mutation { releaseNamespace(name: "uris:") { released } }', token)
 
-    assert_equal "things:", body.dig("data", "releaseNamespace", "released")
-    assert_not within(@tenant) { Namespace.exists?(name: "things:") }
+    assert_equal "uris:", body.dig("data", "releaseNamespace", "released")
+    assert_not within(@tenant) { Namespace.exists?(name: "uris:") }
   end
 
   private
 
-    def claim!(resource: "https://demo.things.test/mcp", name: "things:")
+    def claim!(resource: "https://demo.uris.test/mcp", name: "uris:")
       within(@tenant) do
-        holder = create_client(@tenant, name: "things", allowed_scopes: "openid #{name}",
+        holder = create_client(@tenant, name: "uris", allowed_scopes: "openid #{name}",
                                approved_at: Time.current)
 
         Namespace.create!(name: name, resource: resource, client: holder, claimed_at: Time.current)

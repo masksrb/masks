@@ -16,7 +16,7 @@ curl -X POST https://demo.auth.example/token \
   -d subject_token="$ACCESS_TOKEN" \
   -d subject_token_type=urn:ietf:params:oauth:token-type:access_token \
   -d scope="openid profile" \
-  -d resource=https://demo.things.example/mcp \
+  -d resource=https://demo.uris.example/mcp \
   -d requested_lifetime=300
 ```
 
@@ -95,7 +95,7 @@ long-lived. `/introspect` is the other answer; see [Verify a token](/guides/veri
 narrowed = session.exchange(
   tokens.access_token,
   scope: %w[openid profile],
-  resource: "https://demo.things.example/mcp",
+  resource: "https://demo.uris.example/mcp",
   lifetime: 300
 )
 

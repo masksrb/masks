@@ -6,7 +6,7 @@ class ResourceTest < ClientTest
 
     assert_equal "actor-1", claims.subject
     assert_equal issuer.url, claims.issuer
-    assert_equal %w[things:read things:write], claims.scopes
+    assert_equal %w[uris:read uris:write], claims.scopes
     assert_equal [ "https://app.test/mcp" ], claims.audience
     refute claims.expired?
   end
@@ -68,7 +68,7 @@ class ResourceTest < ClientTest
   end
 
   def test_a_required_scope_is_enforced
-    token = issuer.access_token(scope: "things:read")
+    token = issuer.access_token(scope: "uris:read")
 
     error = assert_raises(Masks::Client::Forbidden) do
       resource.authenticate("Bearer #{token}", scope: "resources:command")
@@ -80,9 +80,9 @@ class ResourceTest < ClientTest
   end
 
   def test_a_granted_scope_passes
-    claims = resource.authenticate("Bearer #{issuer.access_token}", scope: "things:read")
+    claims = resource.authenticate("Bearer #{issuer.access_token}", scope: "uris:read")
 
-    assert claims.permits?("things:write")
+    assert claims.permits?("uris:write")
     refute claims.permits?("resources:command")
   end
 
@@ -91,7 +91,7 @@ class ResourceTest < ClientTest
 
     assert_includes challenge, 'error="invalid_token"'
     assert_includes challenge, 'error_description="nope"'
-    assert_includes challenge, 'scope="things:read things:write resources:command"'
+    assert_includes challenge, 'scope="uris:read uris:write resources:command"'
     assert_includes challenge,
                     'resource_metadata="https://app.test/.well-known/oauth-protected-resource"'
   end
@@ -112,7 +112,7 @@ class ResourceTest < ClientTest
       {
         "resource" => "https://app.test/mcp",
         "authorization_servers" => [ issuer.url ],
-        "scopes_supported" => %w[things:read things:write resources:command],
+        "scopes_supported" => %w[uris:read uris:write resources:command],
         "bearer_methods_supported" => [ "header" ]
       },
       resource.metadata
@@ -123,11 +123,11 @@ class ResourceTest < ClientTest
     described = Masks::Client::Resource.new(
       issuer: issuer.url,
       url: "https://app.test/mcp",
-      scopes: { "things:read" => "Search and read your catalog" }
+      scopes: { "uris:read" => "Search and read your catalog" }
     )
 
-    assert_equal %w[things:read], described.scopes
-    assert_equal({ "things:read" => "Search and read your catalog" },
+    assert_equal %w[uris:read], described.scopes
+    assert_equal({ "uris:read" => "Search and read your catalog" },
                  described.metadata["scope_descriptions"])
   end
 

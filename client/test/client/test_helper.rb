@@ -72,7 +72,7 @@ class FakeIssuer
     JWT.encode(claims, key, ALGORITHM, { kid: kid })
   end
 
-  def access_token(subject: "actor-1", scope: "things:read things:write",
+  def access_token(subject: "actor-1", scope: "uris:read uris:write",
                    audience: "https://app.test/mcp", expires_in: 3600, **extra)
     sign({
       "iss" => url,
@@ -160,7 +160,7 @@ class ClientTest < Minitest::Test
 
   attr_reader :issuer
 
-  def resource(url: "https://app.test/mcp", scopes: %w[things:read things:write resources:command])
+  def resource(url: "https://app.test/mcp", scopes: %w[uris:read uris:write resources:command])
     Masks::Client::Resource.new(issuer: issuer.url, url: url, scopes: scopes)
   end
 end

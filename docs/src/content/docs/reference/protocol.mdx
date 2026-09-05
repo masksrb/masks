@@ -117,21 +117,21 @@ The differences between an approved client and one that registered openly:
 | a namespace is claimed | a scope ending in a colon is bound to that `resource`, and granted to the approver |
 
 Approving widens the approver in exactly one way, and only where a namespace is claimed. A scope
-that is already a name, such as `things:catalog:read`, grants the approver nothing.
+that is already a name, such as `uris:catalog:read`, grants the approver nothing.
 
 ### Namespaces
 
-A scope ending in a colon is a namespace: a claim on every name beneath it. `things:` covers
-`things:catalog:read` and every capability that resource adds later, which keeps a new capability a
+A scope ending in a colon is a namespace: a claim on every name beneath it. `uris:` covers
+`uris:catalog:read` and every capability that resource adds later, which keeps a new capability a
 deployment rather than an approval round. A bare namespace is never itself requestable at
-`/authorize`, and asking for `things:` is refused like any other name a client does not hold.
+`/authorize`, and asking for `uris:` is refused like any other name a client does not hold.
 
 Open registration may not ask for one at all. A namespace is only ever claimed through an approved
 handshake, and claiming is first come:
 
 | | |
 | --- | --- |
-| one holder | a namespace belongs to one `resource` per tenant. `things:` in one tenant has nothing to do with `things:` in another |
+| one holder | a namespace belongs to one `resource` per tenant. `uris:` in one tenant has nothing to do with `uris:` in another |
 | claimed on approval | the namespaces a handshake asks for are bound to its `resource` when a human approves it |
 | taken means refused | a handshake naming a namespace another `resource` holds is refused at the screen, before anything is created |
 | the holder may return | a second handshake from the same `resource` keeps the claim, alongside the client rotation above |
