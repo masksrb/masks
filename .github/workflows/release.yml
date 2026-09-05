@@ -2,22 +2,45 @@ name: Release
 
 on:
   push:
-    tags:
-      - "gem-v*"
-      - "client-v*"
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       package:
-        description: Which package to publish
+        description: Publish a package without cutting a release
         required: true
         type: choice
         options: [gem, client]
 
+permissions: {}
+
 jobs:
+  release-please:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      gem: ${{ steps.release.outputs['client--release_created'] }}
+      gem_tag: ${{ steps.release.outputs['client--tag_name'] }}
+      client: ${{ steps.release.outputs['web--release_created'] }}
+      client_tag: ${{ steps.release.outputs['web--tag_name'] }}
+
+    steps:
+      - name: Maintain the release pull requests
+        id: release
+        uses: googleapis/release-please-action@v4
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
   gem:
+    needs: release-please
     if: >-
-      startsWith(github.ref, 'refs/tags/gem-v') ||
-      inputs.package == 'gem'
+      !cancelled() &&
+      needs.release-please.result != 'failure' &&
+      (needs.release-please.outputs.gem == 'true' || inputs.package == 'gem')
     runs-on: ubuntu-latest
     environment: rubygems
     permissions:
@@ -26,25 +49,14 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.release-please.outputs.gem_tag }}
 
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: "3.4"
           bundler-cache: true
           working-directory: client
-
-      - name: The tag and the gemspec must agree
-        if: startsWith(github.ref, 'refs/tags/gem-v')
-        working-directory: client
-        env:
-          TAG: ${{ github.ref_name }}
-        run: |
-          tagged="${TAG#gem-v}"
-          declared=$(ruby -Ilib -rmasks/version -e 'print Masks::VERSION')
-          if [ "$tagged" != "$declared" ]; then
-            echo "::error::tag $TAG wants $tagged, lib/masks/version.rb declares $declared"
-            exit 1
-          fi
 
       - name: Test the client half
         working-directory: client
@@ -67,9 +79,11 @@ jobs:
       - uses: rubygems/await-rubygems-release@v1
 
   client:
+    needs: release-please
     if: >-
-      startsWith(github.ref, 'refs/tags/client-v') ||
-      inputs.package == 'client'
+      !cancelled() &&
+      needs.release-please.result != 'failure' &&
+      (needs.release-please.outputs.client == 'true' || inputs.package == 'client')
     runs-on: ubuntu-latest
     environment: npm
     permissions:
@@ -78,6 +92,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.release-please.outputs.client_tag }}
 
       - uses: actions/setup-node@v4
         with:
@@ -88,19 +104,6 @@ jobs:
 
       - name: Trusted publishing needs a newer npm than the runner ships
         run: npm install -g npm@latest
-
-      - name: The tag and the manifest must agree
-        if: startsWith(github.ref, 'refs/tags/client-v')
-        working-directory: web
-        env:
-          TAG: ${{ github.ref_name }}
-        run: |
-          tagged="${TAG#client-v}"
-          declared=$(node -p "require('./package.json').version")
-          if [ "$tagged" != "$declared" ]; then
-            echo "::error::tag $TAG wants $tagged, web/package.json declares $declared"
-            exit 1
-          fi
 
       - name: Install
         working-directory: web
