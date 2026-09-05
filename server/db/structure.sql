@@ -389,6 +389,43 @@ ALTER SEQUENCE public.devices_id_seq OWNED BY public.devices.id;
 
 
 --
+-- Name: namespaces; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.namespaces (
+    id bigint NOT NULL,
+    tenant_id bigint NOT NULL,
+    client_id bigint,
+    name character varying NOT NULL,
+    resource character varying NOT NULL,
+    claimed_at timestamp(6) without time zone NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+ALTER TABLE ONLY public.namespaces FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: namespaces_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.namespaces_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: namespaces_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.namespaces_id_seq OWNED BY public.namespaces.id;
+
+
+--
 -- Name: passkeys; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -710,6 +747,13 @@ ALTER TABLE ONLY public.devices ALTER COLUMN id SET DEFAULT nextval('public.devi
 
 
 --
+-- Name: namespaces id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.namespaces ALTER COLUMN id SET DEFAULT nextval('public.namespaces_id_seq'::regclass);
+
+
+--
 -- Name: passkeys id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -821,6 +865,14 @@ ALTER TABLE ONLY public.device_factors
 
 ALTER TABLE ONLY public.devices
     ADD CONSTRAINT devices_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: namespaces namespaces_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.namespaces
+    ADD CONSTRAINT namespaces_pkey PRIMARY KEY (id);
 
 
 --
@@ -1076,6 +1128,34 @@ CREATE UNIQUE INDEX index_devices_on_tenant_id_and_public_id ON public.devices U
 
 
 --
+-- Name: index_namespaces_on_client_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_namespaces_on_client_id ON public.namespaces USING btree (client_id);
+
+
+--
+-- Name: index_namespaces_on_tenant_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_namespaces_on_tenant_id ON public.namespaces USING btree (tenant_id);
+
+
+--
+-- Name: index_namespaces_on_tenant_id_and_name; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_namespaces_on_tenant_id_and_name ON public.namespaces USING btree (tenant_id, name);
+
+
+--
+-- Name: index_namespaces_on_tenant_id_and_resource; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_namespaces_on_tenant_id_and_resource ON public.namespaces USING btree (tenant_id, resource);
+
+
+--
 -- Name: index_passkeys_on_actor_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1311,6 +1391,14 @@ ALTER TABLE ONLY public.device_factors
 
 
 --
+-- Name: namespaces fk_rails_55d81b81ab; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.namespaces
+    ADD CONSTRAINT fk_rails_55d81b81ab FOREIGN KEY (client_id) REFERENCES public.clients(id) ON DELETE SET NULL;
+
+
+--
 -- Name: connections fk_rails_6314b09676; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1348,6 +1436,14 @@ ALTER TABLE ONLY public.tokens
 
 ALTER TABLE ONLY public.device_factors
     ADD CONSTRAINT fk_rails_75a75fd1e0 FOREIGN KEY (actor_id) REFERENCES public.actors(id);
+
+
+--
+-- Name: namespaces fk_rails_78573ee4be; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.namespaces
+    ADD CONSTRAINT fk_rails_78573ee4be FOREIGN KEY (tenant_id) REFERENCES public.tenants(id);
 
 
 --
@@ -1481,6 +1577,12 @@ ALTER TABLE public.device_factors ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.devices ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: namespaces; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.namespaces ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: passkeys; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -1554,6 +1656,13 @@ CREATE POLICY tenant_isolation ON public.devices USING ((tenant_id = (NULLIF(cur
 
 
 --
+-- Name: namespaces tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.namespaces USING ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint)) WITH CHECK ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint));
+
+
+--
 -- Name: passkeys tenant_isolation; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -1601,6 +1710,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260905000004'),
 ('20260905000003'),
 ('20260905000002'),
 ('20260905000001'),

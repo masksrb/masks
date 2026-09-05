@@ -97,6 +97,11 @@ use. Reconnecting somebody else's application takes `masks:manage`.
 grant themselves a scope and come back. The first-run owner holds it, which is what allows the very
 first application to be paired before anybody has been granted anything.
 
+A namespace is never a scope the approver "already holds" — a bare prefix is not something anybody
+holds, it is a claim on everything beneath it — so approving a handshake that asks for one takes
+`masks:manage`. Delegating `masks:handshake` lets somebody connect applications; it does not let
+them mint a vocabulary.
+
 The scopes an approver holds include those they hold through a live
 [connection](/guides/connectors), so `masks:connections:<provider>` is approvable by the person who
 connected that provider.
@@ -112,8 +117,39 @@ Everything here is the difference between an approved client and one that regist
 | consent is recorded | the approved client does not ask the approver again |
 | one origin | the client is bound to the origin that was approved |
 | one per resource | a second handshake for the same `resource` rotates that client rather than adding another |
+| a namespace is claimed | a scope ending in a colon is bound to that `resource`, and granted to the approver |
 
-Approving does not widen the approver. It grants them nothing.
+Approving widens the approver in exactly one way, and only where a namespace is claimed. A scope
+that is already a name — `things:catalog:read` — grants the approver nothing.
+
+### Namespaces
+
+A scope ending in a colon is a namespace: a claim on every name beneath it. `things:` covers
+`things:catalog:read` and every capability that resource adds later, which is what keeps a new
+capability a deployment rather than an approval round. A bare namespace is never itself requestable
+at `/authorize` — asking for `things:` is asking for nothing in particular, and is refused like any
+other name a client does not hold.
+
+Open registration may not ask for one at all. A namespace is only ever claimed through an approved
+handshake, and claiming is first come:
+
+| | |
+| --- | --- |
+| one holder | a namespace belongs to one `resource` per tenant. `things:` in one tenant has nothing to do with `things:` in another |
+| claimed on approval | the namespaces a handshake asks for are bound to its `resource` when a human approves it |
+| taken means refused | a handshake naming a namespace another `resource` holds is refused at the screen, before anything is created |
+| the holder may return | a second handshake from the same `resource` keeps the claim, alongside the client rotation above |
+| archiving parks it | a claim outlives the client that holds it; re-pairing that `resource` picks it back up, and only an administrator releases the name |
+
+Claiming grants the namespace to the actor who approved it, because an application somebody paired
+and then cannot use is not an approval, it is a dead end — the token would come back carrying
+nothing the app asked for. It confers nothing a `masks:manage` holder could not grant themselves in
+the same session, and it is the reason first run reaches a working application without a detour
+through the administration API.
+
+The registry is also what makes a grant screen possible: masks knows which resource owns a
+namespace, so it can offer that resource's own advertised scope descriptions instead of a text box
+that goes stale the moment the resource renames a capability.
 
 ## Registration
 

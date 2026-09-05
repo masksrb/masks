@@ -16,6 +16,7 @@ module Manage
       field :update_client, mutation: Mutations::UpdateClient
       field :rotate_client_secret, mutation: Mutations::RotateClientSecret
       field :archive_client, mutation: Mutations::ArchiveClient
+      field :release_namespace, mutation: Mutations::ReleaseNamespace
       field :revoke_session, mutation: Mutations::RevokeSession
       field :block_device, mutation: Mutations::BlockDevice
       field :unblock_device, mutation: Mutations::UnblockDevice

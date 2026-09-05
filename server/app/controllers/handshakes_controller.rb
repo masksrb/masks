@@ -2,9 +2,12 @@ class HandshakesController < ApplicationController
   before_action :require_handshake
   before_action :require_actor
   before_action :require_pairing
+  before_action :require_unclaimed_namespaces
 
   def show
     @scopes = ResourceMetadata.describe(@handshake.resource, @handshake.scopes)
+    @granting = Namespace.prefixes(@handshake.scopes) - current_actor.scope_list
+    @beneath = published_beneath(Namespace.prefixes(@handshake.scopes))
   end
 
   def create
@@ -14,6 +17,12 @@ class HandshakesController < ApplicationController
     return redirect_to(@handshake.declined, allow_other_host: true) if params[:approve].blank?
 
     client = Client.approve!(@handshake, actor: current_actor)
+
+    begin
+      Namespace.claim!(@handshake, client: client, actor: current_actor)
+    rescue Namespace::Taken => taken
+      return refuse(taken.message)
+    end
 
     token = InitialAccessToken.mint!(
       actor: current_actor,
@@ -68,6 +77,20 @@ class HandshakesController < ApplicationController
       return if withheld.empty?
 
       refuse("#{Scopes.join(withheld)} is more than this account holds")
+    end
+
+    def published_beneath(prefixes)
+      return {} if prefixes.empty?
+
+      ResourceMetadata.new(@handshake.resource).descriptions.select do |scope, _|
+        prefixes.any? { |prefix| scope.start_with?(prefix) && scope.length > prefix.length }
+      end
+    end
+
+    def require_unclaimed_namespaces
+      refusal = Namespace.refusal(@handshake)
+
+      refuse(refusal) if refusal
     end
 
     def refuse(description)

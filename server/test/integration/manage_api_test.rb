@@ -717,4 +717,48 @@ class ManageApiTest < ActionDispatch::IntegrationTest
 
     assert_equal longest, days.length
   end
+
+  test "claimed namespaces are listed with the resource that holds them" do
+    token = bearer
+    claim!
+
+    held = ask("{ namespaces { name resource client { name } } }", token)["data"]["namespaces"]
+
+    assert_equal [ "things:" ], held.map { |one| one["name"] }
+    assert_equal "https://jons.things.test/mcp", held.first["resource"]
+    assert_equal "things", held.first.dig("client", "name")
+  end
+
+  test "a namespace its client still holds cannot be released" do
+    token = bearer
+    claim!
+
+    body = ask('mutation { releaseNamespace(name: "things:") { released } }', token)
+
+    assert_match "is in use by things", body.dig("errors", 0, "message")
+    assert within(@tenant) { Namespace.exists?(name: "things:") }
+  end
+
+  test "releasing an archived namespace frees the name" do
+    token = bearer
+    claim!
+
+    within(@tenant) { Namespace.find_by(name: "things:").client.update!(archived_at: Time.current) }
+
+    body = ask('mutation { releaseNamespace(name: "things:") { released } }', token)
+
+    assert_equal "things:", body.dig("data", "releaseNamespace", "released")
+    assert_not within(@tenant) { Namespace.exists?(name: "things:") }
+  end
+
+  private
+
+    def claim!(resource: "https://jons.things.test/mcp", name: "things:")
+      within(@tenant) do
+        holder = create_client(@tenant, name: "things", allowed_scopes: "openid #{name}",
+                               approved_at: Time.current)
+
+        Namespace.create!(name: name, resource: resource, client: holder, claimed_at: Time.current)
+      end
+    end
 end
