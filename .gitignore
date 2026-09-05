@@ -21,5 +21,3 @@ web/dist/
 client/*.gem
 client/Gemfile.lock
 engine/*.gem
-
-.boundary-patterns

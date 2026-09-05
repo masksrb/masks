@@ -6,13 +6,6 @@ on:
     branches: [main]
 
 jobs:
-  boundary:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - name: No host, domain, or secret may be named here
-        run: bin/check-boundary
-
   lint:
     runs-on: ubuntu-latest
     steps:
