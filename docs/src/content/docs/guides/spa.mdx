@@ -83,7 +83,7 @@ if (client.pending()) {                                // on /callback
   location.replace(returnTo);
 }
 
-fetch("/api/things", { headers: { Authorization: client.authorization() } });
+fetch("/api/items", { headers: { Authorization: client.authorization() } });
 ```
 
 `BrowserClient`:
