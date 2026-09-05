@@ -1,6 +1,8 @@
 <script>
   import { createFeedback } from "./lib/feedback.svelte.js";
   import { day, since } from "./lib/format.js";
+  import { useRouter } from "./lib/router.svelte.js";
+  import Presence from "./Presence.svelte";
   import ScopesEditor from "./ScopesEditor.svelte";
   import Card from "./ui/Card.svelte";
   import Field from "./ui/Field.svelte";
@@ -10,7 +12,10 @@
 
   let { api, uuid } = $props();
 
+  const router = useRouter();
+
   const FIELDS = [
+    ["nickname", "Username"],
     ["name", "Name"],
     ["givenName", "Given name"],
     ["familyName", "Family name"],
@@ -33,7 +38,11 @@
         passkeys { id label aaguid certification compromise userVerified lastUsedAt }
         name givenName familyName middleName profileUrl pictureUrl websiteUrl
         gender birthdate zoneinfo locale
+        photoUploaded avatars { photo identicon initials }
+        sessions { id ipAddress userAgent authenticatedAt expiresAt }
+        devices { id label category known ipAddress userAgent lastSeenAt blockedAt }
       }
+      viewer { uuid }
       scopesSupported
     }
   `;
@@ -41,11 +50,14 @@
   const feedback = createFeedback();
 
   let actor = $state(null);
+  let viewer = $state(null);
   let supported = $state([]);
   let draft = $state({});
   let loading = $state(true);
   let codes = $state(null);
   let link = $state(null);
+
+  const yourself = $derived(Boolean(actor && viewer && actor.uuid === viewer.uuid));
 
   async function load() {
     loading = true;
@@ -54,6 +66,7 @@
       const data = await api.query(QUERY, { uuid });
 
       actor = data.actor;
+      viewer = data.viewer;
       supported = data.scopesSupported;
       draft = Object.fromEntries(FIELDS.map(([key]) => [key, data.actor?.[key] ?? ""]));
     } catch (thrown) {
@@ -139,6 +152,12 @@
       "Send a fresh invitation? The previous one stops working.",
     );
 
+  const confirmEmail = () =>
+    recover(
+      `mutation Verify($uuid: ID!) { verifyEmail(uuid: $uuid) { delivered url } }`,
+      "Send a confirmation link for this address? Any earlier one stops working.",
+    );
+
   function revokePasskey(passkey) {
     if (!confirm(`Remove the passkey “${passkey.label}”?`)) return;
 
@@ -146,6 +165,16 @@
       `mutation Revoke($uuid: ID!, $id: ID!) { revokePasskey(uuid: $uuid, id: $id) { actor { uuid } } }`,
       { uuid, id: passkey.id },
       "Passkey removed.",
+    );
+  }
+
+  function removePhoto() {
+    if (!confirm("Remove this actor's uploaded photo?")) return;
+
+    act(
+      `mutation Remove($uuid: ID!) { removeAvatar(uuid: $uuid) { actor { uuid } } }`,
+      { uuid },
+      "Photo removed.",
     );
   }
 
@@ -157,6 +186,20 @@
       { uuid },
       "Authenticator removed.",
     );
+  }
+
+  async function remove() {
+    const question =
+      `Delete ${actor.nickname}? Their sessions, tokens, passkeys, consents and avatar go with them. ` +
+      "There is no undo, and nothing is kept.";
+
+    if (!confirm(question)) return;
+
+    const data = await feedback.attempt(() =>
+      api.query(`mutation Delete($uuid: ID!) { deleteActor(uuid: $uuid) { nickname } }`, { uuid }),
+    );
+
+    if (data) router.go("/people");
   }
 </script>
 
@@ -170,7 +213,7 @@
   <Page
     title={actor.nickname}
     id={actor.uuid}
-    back={{ to: "/actors", label: "Actors" }}
+    back={{ to: "/people", label: "People" }}
     lede={actor.activated
       ? `Signed in ${since(actor.lastLoginAt, "never")}.`
       : "Invited, and has not accepted yet."}
@@ -194,22 +237,64 @@
     {/if}
 
     <div class="grid items-start gap-4 md:grid-cols-2">
-      <Card
-        title="Profile"
-        lede="Released to clients under the profile and email scopes, and nowhere else."
-      >
-        <div class="grid gap-3 sm:grid-cols-2">
-          {#each FIELDS as [key, label] (key)}
-            <Field {label} bind:value={draft[key]} />
-          {/each}
-        </div>
+      <div class="flex flex-col gap-4">
+        <Card
+          title="Profile"
+          lede="Released to clients under the profile and email scopes, and nowhere else."
+        >
+          <div class="grid gap-3 sm:grid-cols-2">
+            {#each FIELDS as [key, label] (key)}
+              <Field {label} bind:value={draft[key]} />
+            {/each}
+          </div>
 
-        <button type="button" class="btn btn-primary btn-sm self-start" onclick={saveProfile}>
-          Save profile
-        </button>
-      </Card>
+          <button type="button" class="btn btn-primary btn-sm self-start" onclick={saveProfile}>
+            Save profile
+          </button>
+        </Card>
+
+        <Card
+          title="Where they are"
+          lede={yourself
+            ? "Your own sessions and devices. Signing out everywhere takes this console with it."
+            : "Live sign-ins and the browsers carrying them. Revoking one signs that browser out without touching the account."}
+        >
+          <Presence {api} {feedback} {actor} onchange={load} />
+        </Card>
+      </div>
 
       <div class="flex flex-col gap-4">
+        <Card
+          title="Avatar"
+          lede="All three are released together. Only the photo is stored; the other two are drawn from the account."
+        >
+          <div class="flex flex-wrap gap-5">
+            {#each ["photo", "identicon", "initials"] as style (style)}
+              <div class="flex flex-col items-start gap-2">
+                {#if actor.avatars[style]}
+                  <img
+                    src={`${actor.avatars[style]}?size=64`}
+                    width="64"
+                    height="64"
+                    alt=""
+                    class="size-16 rounded object-cover"
+                    class:drawn={style !== "photo"}
+                  />
+                {:else}
+                  <div class="size-16 rounded border border-dashed border-base-300"></div>
+                {/if}
+                <span class="text-xs opacity-60">{style}</span>
+              </div>
+            {/each}
+          </div>
+
+          {#if actor.photoUploaded}
+            <button type="button" class="btn btn-ghost btn-sm self-start" onclick={removePhoto}>
+              Remove photo
+            </button>
+          {/if}
+        </Card>
+
         <Card
           title="Scopes"
           lede="The ceiling on what any client may be granted on this actor's behalf."
@@ -233,6 +318,16 @@
             </p>
             <button type="button" class="btn btn-sm self-start" onclick={resend}>
               Resend invitation
+            </button>
+          {/if}
+
+          {#if actor.email && !actor.emailVerified}
+            <p class="max-w-prose text-sm opacity-70">
+              {actor.email} is unconfirmed, so nothing that depends on reaching them can be trusted
+              yet.
+            </p>
+            <button type="button" class="btn btn-sm self-start" onclick={confirmEmail}>
+              Send a confirmation link
             </button>
           {/if}
         </Card>
@@ -304,6 +399,27 @@
               Password only. A backup code is a way past a second factor, so there is nothing to
               generate until this actor enrols an authenticator.
             </p>
+          {/if}
+        </Card>
+
+        <Card title="Delete">
+          {#if yourself}
+            <p class="max-w-prose text-sm opacity-70">
+              This is you. Deleting yourself would lock you out, so another administrator has to do
+              it.
+            </p>
+          {:else}
+            <p class="max-w-prose text-sm opacity-70">
+              Removes the account and everything hanging off it. What they signed in to elsewhere
+              stays where it is; only the way back in is gone.
+            </p>
+            <button
+              type="button"
+              class="btn btn-sm btn-error btn-outline self-start"
+              onclick={remove}
+            >
+              Delete {actor.nickname}
+            </button>
           {/if}
         </Card>
       </div>

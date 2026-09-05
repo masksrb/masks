@@ -60,9 +60,28 @@ export function createApi(boot) {
       return answer;
     },
 
-    signOut() {
-      build()?.logout();
+    async signOut() {
+      const held = build();
+
       state.identity = null;
+
+      if (!held) return null;
+
+      const idToken = held.tokens()?.id_token;
+      const document = await held.discover().catch(() => null);
+
+      held.logout();
+
+      if (!document?.end_session_endpoint) return null;
+
+      const query = new URLSearchParams({
+        client_id: clientId(boot),
+        post_logout_redirect_uri: `${location.origin}${boot.root}`,
+      });
+
+      if (idToken) query.set("id_token_hint", idToken);
+
+      return `${document.end_session_endpoint}?${query}`;
     },
 
     unpair() {

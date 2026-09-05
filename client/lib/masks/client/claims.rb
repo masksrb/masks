@@ -29,6 +29,39 @@ module Masks
         end
       end
 
+      class Avatars
+        STYLES = %w[photo identicon initials].freeze
+        FALLBACK = "identicon".freeze
+
+        attr_reader :to_h
+
+        def initialize(hash)
+          @to_h = hash.is_a?(Hash) ? hash : {}
+        end
+
+        STYLES.each do |style|
+          define_method(style) { to_h[style] }
+        end
+
+        def [](style)
+          to_h[style.to_s]
+        end
+
+        def photo?
+          !photo.nil?
+        end
+
+        def present?
+          to_h.any?
+        end
+
+        def ==(other)
+          other.is_a?(Avatars) ? to_h == other.to_h : false
+        end
+      end
+
+      AVATARS = "masks:avatars".freeze
+
       attr_reader :to_h
 
       def initialize(claims)
@@ -65,6 +98,14 @@ module Masks
 
       def tenant
         @tenant ||= Tenant.new(self["tenant"])
+      end
+
+      def avatars
+        @avatars ||= Avatars.new(self[AVATARS])
+      end
+
+      def picture
+        self["picture"] || avatars.photo || avatars.identicon
       end
 
       def scopes

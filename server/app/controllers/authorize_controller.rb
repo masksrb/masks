@@ -100,7 +100,7 @@ class AuthorizeController < ApplicationController
       client = Client.authenticating(params[:client_id])
       target = params[:redirect_uri].to_s
 
-      if client && target.present? && client.redirect_uri?(target)
+      if target.present? && (client&.redirect_uri?(target) || ours?(target))
         return redirect_to refusal_uri(target, error), allow_other_host: true
       end
 
@@ -116,6 +116,15 @@ class AuthorizeController < ApplicationController
           }, status: error.status
         end
       end
+    end
+
+    def ours?(target)
+      here = URI.parse(issuer.url)
+      there = URI.parse(target.to_s)
+
+      there.scheme == here.scheme && there.host == here.host && there.port == here.port
+    rescue URI::InvalidURIError
+      false
     end
 
     def refusal_uri(target, error)

@@ -9,6 +9,10 @@ class Actor < ApplicationRecord
   has_many :sessions, dependent: :destroy
   has_many :consents, dependent: :destroy
   has_many :device_factors, dependent: :destroy
+  has_many :passkeys, dependent: :destroy
+  has_many :connections, dependent: :destroy
+  has_many :approvals, class_name: "Client", foreign_key: :approved_by_id, dependent: :nullify
+  has_one :avatar, dependent: :destroy
 
   validates :nickname, presence: true,
                        uniqueness: { scope: :tenant_id, case_sensitive: false },
@@ -197,12 +201,14 @@ class Actor < ApplicationRecord
     "locale" => :locale
   }.freeze
 
-  def claims(scopes, requested: nil)
+  AVATARS_CLAIM = "masks:avatars".freeze
+
+  def claims(scopes, requested: nil, origin: Current.origin)
     granted = Scopes.list(scopes)
-    claims = { "sub" => uuid }
+    claims = { "sub" => uuid, AVATARS_CLAIM => Avatars.urls(self, origin: origin) }
 
     if granted.include?(Scopes::PROFILE)
-      PROFILE_CLAIMS.each { |claim, attribute| claims[claim] = public_send(attribute) }
+      PROFILE_CLAIMS.each_key { |claim| claims[claim] = claim_value(claim, origin) }
       claims["updated_at"] = updated_at.to_i
     end
 
@@ -212,13 +218,19 @@ class Actor < ApplicationRecord
     end
 
     asked(requested).each do |claim|
-      claims[claim] = public_send(PROFILE_CLAIMS[claim]) if PROFILE_CLAIMS.key?(claim)
+      claims[claim] = claim_value(claim, origin) if PROFILE_CLAIMS.key?(claim)
     end
 
     claims.compact
   end
 
   private
+
+    def claim_value(claim, origin)
+      return Avatars.picture(self, origin: origin) if claim == "picture"
+
+      public_send(PROFILE_CLAIMS[claim])
+    end
 
     def activate_once_a_password_exists
       self.activated_at ||= Time.current if password_digest.present?

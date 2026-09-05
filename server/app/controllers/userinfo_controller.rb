@@ -10,9 +10,10 @@ class UserinfoController < ApplicationController
 
       next refuse_token("that token has no subject") if actor.nil?
 
-      render json: OpenIDConnect::ResponseObject::UserInfo.new(
-        actor.claims(token.scopes, requested: token.requested_claims).symbolize_keys
-      ).as_json
+      claims = actor.claims(token.scopes, requested: token.requested_claims, origin: issuer.url)
+      standard = OpenIDConnect::ResponseObject::UserInfo.new(claims.symbolize_keys).as_json
+
+      render json: standard.merge(claims.slice(Actor::AVATARS_CLAIM))
     end
   end
 end

@@ -4,6 +4,14 @@ export interface Tenant {
   name?: string;
 }
 
+export type AvatarStyle = "photo" | "identicon" | "initials";
+
+export interface Avatars {
+  photo: string | null;
+  identicon: string;
+  initials: string;
+}
+
 export interface Account {
   signed_in: boolean;
   subject?: string;
@@ -11,6 +19,8 @@ export interface Account {
   nickname?: string;
   email?: string;
   email_verified?: boolean;
+  picture?: string;
+  avatars?: Avatars;
   tenant?: Tenant;
   scopes: string[];
   expires_at?: number;
@@ -47,6 +57,9 @@ export interface Discovery {
   authorization_endpoint: string;
   token_endpoint: string;
   userinfo_endpoint?: string;
+  avatar_endpoint?: string;
+  avatar_styles_supported?: AvatarStyle[];
+  avatar_sizes_supported?: number[];
   jwks_uri?: string;
   revocation_endpoint?: string;
   end_session_endpoint?: string;

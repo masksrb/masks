@@ -53,6 +53,31 @@ Discovery, the PKCE challenge, state and nonce, the callback exchange and refres
 `accessToken()` and `authorization()` give you something to attach to a request; `expired(leeway)`
 tells you when to refresh first.
 
+## Avatars
+
+Every actor has three faces at once — an uploaded `photo`, an `identicon`, and two-letter
+`initials` — and the token carries all three. A photo needs a token, so the two modes differ.
+
+```js
+const account = await auth.session();
+
+img.src = auth.avatarUrl(account, { size: 64 });
+```
+
+In session mode `avatarUrl` returns your backend's proxy path for the photo and the issuer's URL for
+a generated style, so no token reaches the page. In browser mode the page holds the token, so the
+photo comes back as a blob:
+
+```js
+const blob = await auth.photo();
+
+img.src = blob
+  ? URL.createObjectURL(blob)
+  : await auth.avatarUrl(subject, { style: "identicon" });
+```
+
+`avatars()` reads the three URLs straight off the id token. Sizes are 32, 64, 128, 256 or 512.
+
 ## Audiences
 
 Pass `resource` to name the API the token is for. Every token names the API it was issued for and is

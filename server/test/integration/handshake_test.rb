@@ -107,6 +107,18 @@ class HandshakeTest < ActionDispatch::IntegrationTest
     assert_equal [ RESOURCE ], approved.resources
   end
 
+  test "where a handshake returns to is where a logout may send that client back" do
+    sign_in_as(@owner)
+    connect
+    redeem(approve!)
+
+    assert_equal [ RETURN_TO ], approved.post_logout_redirect_uris
+
+    delete "/logout", params: { client_id: approved.client_id, post_logout_redirect_uri: RETURN_TO }
+
+    assert_redirected_to RETURN_TO
+  end
+
   test "an approved client is not a dynamic one, and records who approved it" do
     sign_in_as(@owner)
     connect
