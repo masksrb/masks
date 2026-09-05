@@ -19,4 +19,5 @@ conformance/results
 web/node_modules/
 web/dist/
 client/*.gem
+client/Gemfile.lock
 engine/*.gem

@@ -1,8 +1,15 @@
 {
   "name": "@masks/client",
-  "version": "0.1.0",
+  "version": "2.0.0",
   "description": "An OIDC client for masks: a session against a backend-for-frontend, or the code flow in the browser.",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/masksrb/masks.git",
+    "directory": "web"
+  },
+  "homepage": "https://github.com/masksrb/masks/tree/main/web#readme",
+  "bugs": "https://github.com/masksrb/masks/issues",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -14,7 +21,9 @@
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
   ],
   "sideEffects": false,
   "scripts": {

@@ -1,0 +1,32 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "separate-pull-requests": true,
+  "include-component-in-tag": true,
+  "packages": {
+    "client": {
+      "release-type": "ruby",
+      "component": "gem",
+      "version-file": "lib/masks/version.rb",
+      "changelog-path": "CHANGELOG.md",
+      "changelog-sections": [
+        { "type": "feat", "section": "Features" },
+        { "type": "fix", "section": "Fixes" },
+        { "type": "perf", "section": "Performance" },
+        { "type": "docs", "section": "Documentation" },
+        { "type": "refactor", "section": "Refactoring" }
+      ]
+    },
+    "web": {
+      "release-type": "node",
+      "component": "client",
+      "changelog-path": "CHANGELOG.md",
+      "changelog-sections": [
+        { "type": "feat", "section": "Features" },
+        { "type": "fix", "section": "Fixes" },
+        { "type": "perf", "section": "Performance" },
+        { "type": "docs", "section": "Documentation" },
+        { "type": "refactor", "section": "Refactoring" }
+      ]
+    }
+  }
+}
