@@ -28,15 +28,32 @@
       <% if @passkeys.any? %>
         <ul class="flex flex-col gap-2">
           <% @passkeys.each do |passkey| %>
-            <li class="flex items-baseline justify-between gap-3 rounded-lg border border-base-content/15 bg-base-200 px-3 py-2">
-              <span class="text-sm"><%= passkey.name %></span>
-              <span class="flex items-baseline gap-3">
-                <span class="text-xs opacity-75">
-                  <%= passkey.last_used_at ? "used #{time_ago_in_words(passkey.last_used_at)} ago" : "never used" %>
+            <li class="flex flex-col gap-1 rounded-lg border border-base-content/15 bg-base-200 px-3 py-2">
+              <span class="flex items-baseline justify-between gap-3">
+                <span class="flex items-center gap-2">
+                  <% if passkey.icon %>
+                    <img src="<%= passkey.icon %>" alt="" width="16" height="16" />
+                  <% end %>
+                  <span class="text-sm"><%= passkey.label %></span>
+                  <% if passkey.authenticator&.certified? %>
+                    <span class="badge badge-ghost badge-xs">certified</span>
+                  <% end %>
                 </span>
-                <%= button_to "Remove", passkey_path(passkey), method: :delete,
-                      class: "link text-xs", form: { data: { turbo_confirm: "Remove this passkey?" } } %>
+                <span class="flex items-baseline gap-3">
+                  <span class="text-xs opacity-75">
+                    <%= passkey.last_used_at ? "used #{time_ago_in_words(passkey.last_used_at)} ago" : "never used" %>
+                  </span>
+                  <%= button_to "Remove", passkey_path(passkey), method: :delete,
+                        class: "link text-xs", form: { data: { turbo_confirm: "Remove this passkey?" } } %>
+                </span>
               </span>
+
+              <% if passkey.compromised? %>
+                <span class="text-xs text-error">
+                  The FIDO Alliance reports a compromise for this model of authenticator
+                  (<%= passkey.compromise.downcase.tr("_", " ") %>). Replace it and remove this passkey.
+                </span>
+              <% end %>
             </li>
           <% end %>
         </ul>

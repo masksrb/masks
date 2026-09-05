@@ -23,6 +23,20 @@ class PasskeyTest < ActionDispatch::IntegrationTest
     within(@tenant) { Passkey.where(actor_id: @actor.id).newest_first.first }
   end
 
+  def refuse_downloads
+    FidoMetadata::Client.class_eval do
+      alias_method :download_toc_before_stub, :download_toc
+      define_method(:download_toc) { |*| raise "a request tried to download metadata" }
+    end
+
+    yield
+  ensure
+    FidoMetadata::Client.class_eval do
+      alias_method :download_toc, :download_toc_before_stub
+      remove_method :download_toc_before_stub
+    end
+  end
+
   def sign_in_with_passkey(user_verified: true)
     post "/login", params: { event: "passkey:challenge" }, as: :json
     offer = JSON.parse(response.body)
@@ -136,6 +150,51 @@ class PasskeyTest < ActionDispatch::IntegrationTest
     body = JSON.parse(response.body)
 
     assert_includes body["warnings"], "passkey-expired"
+  end
+
+  test "a passkey is labelled by its authenticator, and named by its owner when they say" do
+    passkey = enrol(name: nil)
+
+    assert_equal "Passkey", passkey.label
+
+    within(@tenant) do
+      Authenticator.create!(aaguid: passkey.aaguid, name: "YubiKey 5 Series",
+                            source: Authenticator::MDS, certification: "FIDO_CERTIFIED_L2")
+
+      assert_equal "YubiKey 5 Series", passkey.reload.label
+
+      passkey.update!(name: "The one on my keys")
+      assert_equal "The one on my keys", passkey.reload.label
+    end
+  end
+
+  test "a compromised authenticator is reported against the passkeys made with it" do
+    passkey = enrol
+
+    within(@tenant) do
+      Authenticator.create!(
+        aaguid: passkey.aaguid, name: "Leaky Key", source: Authenticator::MDS,
+        statuses: [ "USER_VERIFICATION_BYPASS" ], compromised_at: Time.current
+      )
+
+      assert passkey.reload.compromised?
+      assert_equal "USER_VERIFICATION_BYPASS", passkey.compromise
+    end
+
+    get root_path
+    assert_match(/reports a compromise/, response.body)
+  end
+
+  test "signing in with a passkey never reaches the metadata service" do
+    enrol
+    reset!
+    host! host_for(@tenant)
+
+    refuse_downloads do
+      body = sign_in_with_passkey
+
+      assert_equal "settled", body["prompt"]
+    end
   end
 
   test "a passkey can be removed, and stops working" do

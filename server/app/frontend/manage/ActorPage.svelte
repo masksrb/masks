@@ -23,6 +23,7 @@
       actor(uuid: $uuid) {
         uuid nickname email emailVerified scopes otpEnabled backupCodesRemaining
         backupCodesGeneratedAt lastLoginAt createdAt activated invitedAt
+        passkeys { id label aaguid certification compromise userVerified lastUsedAt }
         name givenName familyName middleName profileUrl pictureUrl websiteUrl
         gender birthdate zoneinfo locale
       }
@@ -151,6 +152,16 @@
       "Send a fresh invitation? The previous one stops working.",
     );
 
+  function revokePasskey(id, label) {
+    if (!confirm(`Remove the passkey "${label}"?`)) return;
+
+    act(
+      `mutation Revoke($uuid: ID!, $id: ID!) { revokePasskey(uuid: $uuid, id: $id) { actor { uuid } } }`,
+      { uuid, id },
+      "Passkey removed.",
+    );
+  }
+
   function disable() {
     if (!confirm("Remove this actor's authenticator and every backup code?")) return;
 
@@ -236,6 +247,48 @@
 
           {#if link}
             <p class="font-mono text-xs break-all bg-base-200 rounded px-2 py-1">{link}</p>
+          {/if}
+        </div>
+      </section>
+
+      <section class="card bg-base-100">
+        <div class="card-body gap-3">
+          <h2 class="card-title text-base">Passkeys</h2>
+
+          {#if actor.passkeys.length === 0}
+            <p class="text-sm opacity-70">None enrolled.</p>
+          {:else}
+            <ul class="flex flex-col gap-2">
+              {#each actor.passkeys as passkey (passkey.id)}
+                <li class="flex flex-col gap-1 rounded-lg bg-base-200 px-3 py-2">
+                  <div class="flex items-baseline justify-between gap-3">
+                    <span class="text-sm font-medium">{passkey.label}</span>
+                    <span class="flex items-baseline gap-2">
+                      {#if passkey.userVerified}
+                        <span class="badge badge-success badge-xs">verifies the person</span>
+                      {/if}
+                      {#if passkey.certification}
+                        <span class="badge badge-ghost badge-xs">{passkey.certification}</span>
+                      {/if}
+                      <button
+                        class="link text-xs text-error"
+                        onclick={() => revokePasskey(passkey.id, passkey.label)}
+                      >Remove</button>
+                    </span>
+                  </div>
+
+                  {#if passkey.compromise}
+                    <span class="text-xs text-error">
+                      Compromise reported for this model: {passkey.compromise
+                        .toLowerCase()
+                        .replaceAll("_", " ")}.
+                    </span>
+                  {/if}
+
+                  <span class="text-xs opacity-60 font-mono">{passkey.aaguid ?? "no aaguid"}</span>
+                </li>
+              {/each}
+            </ul>
           {/if}
         </div>
       </section>

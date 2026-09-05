@@ -5,8 +5,9 @@ class Passkey < ApplicationRecord
   SIGN_COUNT_CEILING = (2**32) - 1
 
   belongs_to :actor
+  belongs_to :authenticator, primary_key: :aaguid, foreign_key: :aaguid, optional: true
 
-  validates :name, :external_id, :public_key, presence: true
+  validates :external_id, :public_key, presence: true
   validates :external_id, uniqueness: { scope: :tenant_id }
   validates :sign_count, numericality: {
     only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: SIGN_COUNT_CEILING
@@ -18,7 +19,7 @@ class Passkey < ApplicationRecord
   def self.enrol!(actor:, credential:, name:)
     create!(
       actor: actor,
-      name: name.presence || "Passkey",
+      name: name.presence,
       external_id: credential.id,
       public_key: credential.public_key,
       sign_count: credential.sign_count,
@@ -40,6 +41,22 @@ class Passkey < ApplicationRecord
       user_verified: user_verified,
       last_used_at: Time.current
     )
+  end
+
+  def label
+    name.presence || authenticator&.name.presence || "Passkey"
+  end
+
+  def icon
+    authenticator&.icon
+  end
+
+  def compromised?
+    authenticator&.compromised? || false
+  end
+
+  def compromise
+    authenticator&.compromise
   end
 
   def cloned?(reported)

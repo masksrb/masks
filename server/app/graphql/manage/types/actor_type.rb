@@ -10,6 +10,7 @@ module Manage
       field :scopes, [ String ], null: false
       field :otp_enabled, Boolean, null: false
       field :backup_codes_remaining, Integer, null: false
+      field :passkeys, [ PasskeyType ], null: false
       field :backup_codes_generated_at, GraphQL::Types::ISO8601DateTime
       field :last_login_at, GraphQL::Types::ISO8601DateTime
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
@@ -47,6 +48,10 @@ module Manage
 
       def otp_enabled
         object.otp?
+      end
+
+      def passkeys
+        ::Passkey.where(actor_id: object.id).includes(:authenticator).newest_first
       end
     end
   end
