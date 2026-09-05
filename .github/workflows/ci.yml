@@ -122,6 +122,7 @@ jobs:
           POSTGRES_USER: masks
           POSTGRES_PASSWORD: masks
           POSTGRES_DATABASE: masks_boot
+          MASKS_PUBLIC_ORIGIN_TEMPLATE: https://%{subdomain}.auth.invalid
           SECRET_KEY_BASE: boot_check_secret_key_base_not_for_real_deployments
           ENCRYPTION_PRIMARY_KEY: boot_check_primary_key_not_for_credentials
           ENCRYPTION_DETERMINISTIC_KEY: boot_check_deterministic_key_not_real

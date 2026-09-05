@@ -36,6 +36,7 @@ module Server
     config.masks.registration_limit = ENV.fetch("MASKS_REGISTRATION_LIMIT", 10).to_i
     config.masks.recovery_limit = ENV.fetch("MASKS_RECOVERY_LIMIT", 5).to_i
     config.masks.setup_token = ENV["MASKS_SETUP_TOKEN"].presence
+    config.masks.public_origin_template = ENV["MASKS_PUBLIC_ORIGIN_TEMPLATE"].presence
     config.masks.tenant = ENV["MASKS_TENANT"].presence
     config.masks.tenants = ENV["MASKS_TENANTS"].to_s.split(/[\s,]+/).reject(&:empty?)
     config.masks.dynamic_client_scopes = ENV["MASKS_DYNAMIC_CLIENT_SCOPES"].presence
@@ -43,6 +44,12 @@ module Server
     config.masks.invitation_lifetime = ENV.fetch("MASKS_INVITATION_LIFETIME", 7 * 24 * 60 * 60).to_i.seconds
     config.masks.password_reset_lifetime = ENV.fetch("MASKS_PASSWORD_RESET_LIFETIME", 30 * 60).to_i.seconds
     config.masks.email_verification_lifetime = ENV.fetch("MASKS_EMAIL_VERIFICATION_LIFETIME", 2 * 24 * 60 * 60).to_i.seconds
+
+    if config.masks.public_origin_template.nil? && !Rails.env.local?
+      raise "MASKS_PUBLIC_ORIGIN_TEMPLATE is required outside development. Without it the " \
+            "issuer, the registration endpoint and every emailed link follow the Host header, " \
+            "so anyone who can reach this server can have a password reset delivered to theirs."
+    end
 
     # Configuration for the application, engines, and railties goes here.
     #

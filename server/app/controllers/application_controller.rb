@@ -32,7 +32,7 @@ class ApplicationController < ActionController::Base
     end
 
     def origin
-      template = ENV["MASKS_PUBLIC_ORIGIN_TEMPLATE"].presence
+      template = Rails.configuration.masks.public_origin_template
       return request.base_url if template.nil?
 
       format(template, subdomain: request.host.split(".").first)

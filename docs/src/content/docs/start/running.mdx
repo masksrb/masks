@@ -69,8 +69,9 @@ variable.
 | `MASKS_TENANTS` | comma or space separated, ensured on boot |
 | `MASKS_TENANT` | one tenant, reached at every hostname — see [Tenancy](/concepts/tenancy) |
 | `MASKS_HOST_SUFFIX` | the suffix tenant subdomains hang off in development |
-| `MASKS_PUBLIC_ORIGIN_TEMPLATE` | overrides the derived issuer origin; takes `%{subdomain}` |
+| `MASKS_PUBLIC_ORIGIN_TEMPLATE` | the origin this installation is reached at; takes `%{subdomain}` |
 
-Leave `MASKS_PUBLIC_ORIGIN_TEMPLATE` blank unless something in front of the app is rewriting the
-host, or `MASKS_TENANT` is set — a single-tenant deployment wants a literal origin there, because
-every hostname resolves and the issuer would otherwise follow whichever one was used.
+`MASKS_PUBLIC_ORIGIN_TEMPLATE` may be left blank in development, where the origin falls back to the
+host the request arrived on. Everywhere else the application refuses to boot without it, because
+that fallback means the issuer and every emailed link follow the `Host` header. A single-tenant
+deployment wants a literal origin with no `%{subdomain}` in it.

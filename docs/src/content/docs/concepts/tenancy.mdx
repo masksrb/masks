@@ -144,11 +144,11 @@ Two consequences follow from the host no longer being consulted.
 claim. It is also the reason to set it rather than let an apex host claim: `example.com` claims a
 tenant named `example`, and `auth.example.com` one named `auth`.
 
-**Pin the origin too.** Since every hostname resolves, every hostname mints tokens, and `iss`
-defaults to the one the request arrived on. Reach the same installation over two names and you have
-issued two issuers against one key, half of which will fail verification. Set
-`MASKS_PUBLIC_ORIGIN_TEMPLATE` to a literal URL — the `%{subdomain}` is optional — and the issuer is
-that, whatever the host header says.
+**Pin the origin too.** Since every hostname resolves, every hostname would otherwise mint tokens
+under whichever `iss` the request arrived at — two issuers against one key, half of them failing
+verification, and emailed links pointing wherever the caller said. `MASKS_PUBLIC_ORIGIN_TEMPLATE` is
+required outside development for that reason; a single-tenant deployment sets it to a literal URL,
+because the `%{subdomain}` is optional.
 
 Declaring `MASKS_TENANT` turns claiming off the same way `MASKS_TENANTS` does, so the tenant and its
 key exist before the first request rather than being claimed by it, and the first run is the setup

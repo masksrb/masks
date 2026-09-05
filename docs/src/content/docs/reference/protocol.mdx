@@ -129,6 +129,13 @@ The response carries the client metadata plus `client_secret`, `client_secret_ex
 reachable at that URI with that token, and a client that has lost the token has to be re-approved by
 a human.
 
+An **approved** client may describe itself through that endpoint — its name, logo, and the other
+display metadata — but may not move: `redirect_uris`, `post_logout_redirect_uris`,
+`token_endpoint_auth_method` and `resources` are what the human approved, and an update naming them
+is ignored rather than refused. Otherwise the registration token alone would relocate an approved
+client to another origin, or drop its authentication, which is the whole of what approval decided.
+A dynamically registered client has no such restriction; it describes all of its own metadata.
+
 ### Client metadata
 
 The vocabulary is RFC 7591's, plus `resources`. These fields mean the same thing on both sides and
