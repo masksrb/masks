@@ -24,9 +24,6 @@ class Logout
     @client ||= verified_client
   end
 
-  # The RP proved who it is by presenting an id token this issuer signed, so
-  # the request is known to come from it rather than from a page that merely
-  # named it. Without one, a person has to say so.
   def verified?
     claims.present?
   end

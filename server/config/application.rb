@@ -1,31 +1,20 @@
 require_relative "boot"
 
 require "rails"
-# Pick the frameworks you want:
 require "active_model/railtie"
 require "active_job/railtie"
 require "active_record/railtie"
-# require "active_storage/engine"
 require "action_controller/railtie"
 require "action_mailer/railtie"
-# require "action_mailbox/engine"
-# require "action_text/engine"
 require "action_view/railtie"
-# require "action_cable/engine"
 require "rails/test_unit/railtie"
 
-# Require the gems listed in Gemfile, including any gems
-# you've limited to :test, :development, or :production.
 Bundler.require(*Rails.groups)
 
 module Server
   class Application < Rails::Application
-    # Initialize configuration defaults for originally generated Rails version.
     config.load_defaults 8.1
 
-    # Please, add to the `ignore` list any other `lib` subdirectories that do
-    # not contain `.rb` files, or that should not be reloaded or eager loaded.
-    # Common ones are `templates`, `generators`, or `middleware`, for example.
     config.autoload_lib(ignore: %w[assets tasks rack])
 
     config.action_mailer.delivery_job = "MailDeliveryJob"
@@ -45,9 +34,6 @@ module Server
     config.masks.password_reset_lifetime = ENV.fetch("MASKS_PASSWORD_RESET_LIFETIME", 30 * 60).to_i.seconds
     config.masks.email_verification_lifetime = ENV.fetch("MASKS_EMAIL_VERIFICATION_LIFETIME", 2 * 24 * 60 * 60).to_i.seconds
 
-    # SECRET_KEY_BASE_DUMMY is Rails' own signal that this boot exists to
-    # compile assets rather than to serve anything, which is the one time
-    # production boots without a deployment's environment around it.
     if config.masks.public_origin_template.nil? && !Rails.env.local? &&
        ENV["SECRET_KEY_BASE_DUMMY"].blank?
       raise "MASKS_PUBLIC_ORIGIN_TEMPLATE is required outside development. Without it the " \
@@ -55,15 +41,6 @@ module Server
             "so anyone who can reach this server can have a password reset delivered to theirs."
     end
 
-    # Configuration for the application, engines, and railties goes here.
-    #
-    # These settings can be overridden in specific environments using the files
-    # in config/environments, which are processed later.
-    #
-    # config.time_zone = "Central Time (US & Canada)"
-    # config.eager_load_paths << Rails.root.join("extras")
-
-    # Don't generate system test files.
     config.generators.system_tests = nil
 
     config.active_record.schema_format = :sql

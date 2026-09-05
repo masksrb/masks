@@ -32,16 +32,10 @@ module Scopes
       list(value).join(" ")
     end
 
-    # A trailing colon is a claim on everything beneath it. A resource server
-    # owns its own vocabulary, so granting "things:" once means the app can add
-    # a capability without an approval round for a name nobody has seen yet.
     def prefix?(scope)
       scope.to_s.end_with?(":")
     end
 
-    # A prefix is a grant, not a permission: asking for the bare "things:" is
-    # asking for nothing in particular, and is refused like any other name the
-    # client does not hold.
     def covered?(available, scope)
       return false if prefix?(scope)
       return true if list(available).include?(scope)
@@ -89,8 +83,6 @@ module Scopes
       list(value).map { |scope| [ scope, description_for(scope) ] }
     end
 
-    # A prefix is the broadest thing on an approval screen, so it is the last
-    # one that should read as a bare scope name with no sentence beside it.
     def description_for(scope)
       return DESCRIBED[scope] || described_connection(scope) unless prefix?(scope)
 

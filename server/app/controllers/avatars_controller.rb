@@ -88,9 +88,6 @@ class AvatarsController < ApplicationController
       params[:style].present?
     end
 
-    # Without a style in the path the answer depends on who asked — an owner
-    # sees their photo where a stranger sees an identicon — so it is never a
-    # shared cache's to keep, whatever the style it resolved to.
     def caching(style, stamp)
       shared = named_style? && Avatars.generated?(style) ? "public" : "private"
       age = params[:digest] == stamp ? FOREVER : BRIEFLY

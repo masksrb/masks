@@ -19,10 +19,6 @@ module Masks
         @authenticate_everything = false
       end
 
-      # An app that has not said where to keep its credentials gets one file
-      # under the Rails root, so the handshake works before anybody writes a
-      # `store` lambda. `things` overrides both because it is multi-tenant,
-      # which is the interesting case rather than the common one.
       def default_credentials
         @default_credentials ||= Credentials.new(
           credentials_path || ::Rails.root.join("config", "masks.json")
@@ -66,8 +62,6 @@ module Masks
         client_id_for(request).present?
       end
 
-      # An app that keeps its own credentials has to say how to drop them, and
-      # until it does the engine does not offer a button it cannot honour.
       def can_forget?
         @forget.respond_to?(:call) || !@store.respond_to?(:call)
       end
@@ -85,10 +79,6 @@ module Masks
         @store.call(request, registration)
       end
 
-      # The engine depends on `handshake_endpoint` being in the discovery
-      # document, and on the approval flow behind it. An issuer that predates
-      # both should say so here rather than at the one screen that exists to
-      # be the first thing anybody touches.
       MINIMUM_ISSUER = 1
 
       def issuer_speaks!(request)
@@ -138,10 +128,6 @@ module Masks
         )
       end
 
-      # What the handshake asks to be approved for, which is not what a sign-in
-      # requests. An app that owns a namespace asks for the namespace once, so
-      # that adding a capability later is a deployment rather than an approval
-      # round; the authorize request still names the scopes it actually wants.
       def approved_scope
         return scope if namespace.blank?
 

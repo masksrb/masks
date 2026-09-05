@@ -51,7 +51,6 @@ services:
       - ./client:/masks/client
       - client-bundle:/bundle
 
-  # The suite imports from dist/, not src/, so the build is part of the test.
   web:
     image: node:22-alpine
     working_dir: /masks/web
