@@ -18,9 +18,6 @@ class IntrospectionsController < ApplicationController
 
   private
 
-    # RFC 7662 §4: a client that is neither the token's own nor a resource
-    # server it names must not learn whether it is live, so both answer the
-    # same `active: false` a revoked token gets.
     def entitled?(client, token)
       return true if token.client_id == client.id
 

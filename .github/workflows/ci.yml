@@ -65,8 +65,6 @@ jobs:
           node-version-file: server/.node-version
           cache: npm
           cache-dependency-path: server/package-lock.json
-      # The runtime library only. Debian renamed it for the 64-bit time_t
-      # transition, so the runner's release decides which name exists.
       - name: libvips, which ruby-vips loads to square an avatar
         run: |
           sudo apt-get update -qq

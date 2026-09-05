@@ -1,9 +1,5 @@
 module Masks
   module Rails
-    # The default place a single-tenant app keeps what the handshake gives it,
-    # so `config.store` has something to be before a consumer writes one. An
-    # app with more than one issuer wants its own — `things` keeps these on
-    # `tenants`, because a handshake is per tenant there.
     class Credentials
       KEYS = %w[client_id client_secret registration_access_token registration_client_uri].freeze
 

@@ -57,8 +57,6 @@ class Avatar < ApplicationRecord
     MAGIC.find { |magic, _| head.start_with?(magic) }&.last
   end
 
-  # Asked of the upload before it is read, so a body far past the limit is
-  # refused rather than held in memory on its way to being refused.
   def self.refuse_size!(size)
     return if size.nil? || size <= LIMIT
 

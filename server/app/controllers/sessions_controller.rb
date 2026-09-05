@@ -23,10 +23,6 @@ class SessionsController < ApplicationController
       )
     end
 
-    # OIDC RP-Initiated Logout 1.0 §2: without an id_token_hint the OP cannot
-    # tell the RP from any page that named it, so a person confirms. A logout
-    # nobody asked for is only a nuisance, but it is still not something a
-    # stranger's <img> tag gets to do.
     def asking?(logout)
       return false unless request.get? || request.head?
       return false if logout.verified?

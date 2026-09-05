@@ -31,10 +31,6 @@ module Masks
         refuse(e)
       end
 
-      # Rotating is what masks does with a second run — the client is keyed on
-      # the resource identifier, so approving again replaces the credentials
-      # rather than leaving a tenant with two and no way to tell which one the
-      # browser holds. Disconnecting is the other half, and it is RFC 7592.
       def destroy
         return redirect_to(masks_config.after_sign_out) unless masks_signed_in?
         return redirect_to(masks_handshake_path) unless masks_config.can_forget?

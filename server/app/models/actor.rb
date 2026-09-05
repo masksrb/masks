@@ -164,9 +164,6 @@ class Actor < ApplicationRecord
     backup_code_digests.length
   end
 
-  # Returned once and never recoverable, like every other credential here.
-  # High entropy, so a digest rather than bcrypt: there is nothing to brute
-  # force in 64 bits of SecureRandom, and a login has to check ten of them.
   def generate_backup_codes!
     codes = Array.new(BACKUP_CODES) { SecureRandom.hex(BACKUP_CODE_BYTES) }
 
