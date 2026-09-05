@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.0](https://github.com/masksrb/masks/compare/client-v2.0.0...client-v2.1.0) (2026-09-05)
+
+
+### Features
+
+* **server:** people, avatars, and one page instead of three ([d50c444](https://github.com/masksrb/masks/commit/d50c4440812fc1c3a92e926ff6d533b9a69dae2a))
+
 ## 2.0.0 — unreleased
 
 First real release. Session mode against a backend-for-frontend, and the PKCE code flow in the
