@@ -223,7 +223,7 @@ For an app that also accepts bearer tokens.
 class ApiController < ApplicationController
   include Masks::Rails::ProtectedResource
 
-  masks_protect! scope: "uris:read"
+  masks_protect! scope: "uris:catalog:read"
 end
 ```
 

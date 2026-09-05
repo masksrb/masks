@@ -22,10 +22,10 @@ class ClientScopeBoundsTest < ActionDispatch::IntegrationTest
   end
 
   test "with no ceiling declared a registration keeps every scope it asked for" do
-    body = register(scope: "openid profile admin uris:read")
+    body = register(scope: "openid profile admin uris:catalog:read")
 
     assert_response :created
-    assert_equal "admin openid profile uris:read", body["scope"]
+    assert_equal "admin openid profile uris:catalog:read", body["scope"]
   end
 
   test "open registration cannot ask for a masks: scope, with no ceiling declared" do
@@ -54,22 +54,22 @@ class ClientScopeBoundsTest < ActionDispatch::IntegrationTest
   end
 
   test "a ceiling trims a registration rather than refusing it" do
-    ceiling "openid profile email offline_access uris:read"
+    ceiling "openid profile email offline_access uris:catalog:read"
 
-    body = register(scope: "openid profile admin uris:read")
+    body = register(scope: "openid profile admin uris:catalog:read")
 
     assert_response :created
-    assert_equal "openid profile uris:read", body["scope"]
+    assert_equal "openid profile uris:catalog:read", body["scope"]
   end
 
   test "a registration asking for nothing inside the ceiling is refused" do
     ceiling "openid profile"
 
-    body = register(scope: "admin uris:write")
+    body = register(scope: "admin uris:catalog:write")
 
     assert_response :bad_request
     assert_equal "invalid_client_metadata", body["error"]
-    assert_match "admin uris:write", body["error_description"]
+    assert_match "admin uris:catalog:write", body["error_description"]
   end
 
   test "a registration update cannot widen past the ceiling" do
@@ -99,18 +99,18 @@ class ClientScopeBoundsTest < ActionDispatch::IntegrationTest
       Client.create!(
         client_id: SecureRandom.uuid, name: "Approved",
         redirect_uris: [ OidcFlow::REDIRECT_URI ],
-        allowed_scopes: "openid uris:read",
+        allowed_scopes: "openid uris:catalog:read",
         approved_at: Time.current, dynamic: false
       ).tap(&:issue_credentials!)
     end
 
     updated = put_metadata(
       { "client_id" => client.client_id, "registration_access_token" => client.registration_token },
-      scope: "openid uris:read admin"
+      scope: "openid uris:catalog:read admin"
     )
 
     assert_response :success
-    assert_equal "openid uris:read", updated["scope"]
+    assert_equal "openid uris:catalog:read", updated["scope"]
   end
 
   test "a required scope is granted whether or not the client asked for it" do

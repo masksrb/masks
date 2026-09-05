@@ -8,7 +8,7 @@ const ACCOUNT = {
   name: "Ada",
   email: "user@example.invalid",
   tenant: { uuid: "t-1", subdomain: "demo", name: "Demo" },
-  scopes: ["openid", "uris:read", "admin"],
+  scopes: ["openid", "uris:catalog:read", "admin"],
 };
 
 function server(responses) {
@@ -51,7 +51,7 @@ test("a signed-in session comes back as an account", async () => {
 
   assert.equal(account.subject, "actor-1");
   assert.equal(account.tenant.subdomain, "demo");
-  assert.deepEqual(account.scopes, ["openid", "uris:read", "admin"]);
+  assert.deepEqual(account.scopes, ["openid", "uris:catalog:read", "admin"]);
   assert.equal(upstream.calls[0].url, "/auth/session");
   assert.equal(upstream.calls[0].init.credentials, "same-origin");
 });
