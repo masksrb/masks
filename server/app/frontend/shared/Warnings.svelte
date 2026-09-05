@@ -26,19 +26,19 @@ const shown = $derived(
   (login.auth.warnings ?? [])
     .map((key) =>
       NOTICES[key]
-        ? { key, tone: "alert-info", text: NOTICES[key] }
-        : MESSAGES[key] && { key, tone: "alert-error", text: MESSAGES[key] },
+        ? { key, tone: "note", text: NOTICES[key] }
+        : MESSAGES[key] && { key, tone: "note note-bad", text: MESSAGES[key] },
     )
     .filter(Boolean),
 );
 </script>
 
 {#each shown as message (message.key)}
-  <div class="alert {message.tone} text-sm" role="alert">{message.text}</div>
+  <div class={message.tone} role="alert">{message.text}</div>
 {/each}
 
 {#if login.failed}
-  <div class="alert alert-warning text-sm" role="alert">
+  <div class="note note-warn" role="alert">
     Could not reach the server. Check your connection and try again.
   </div>
 {/if}

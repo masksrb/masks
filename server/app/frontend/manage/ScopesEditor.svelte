@@ -18,28 +18,36 @@
   }
 </script>
 
-<div class="flex flex-col gap-2">
-  <div class="flex flex-wrap gap-2">
-    {#each known as scope (scope)}
-      <button
-        class="badge badge-lg gap-1"
-        class:badge-primary={value.includes(scope)}
-        class:badge-ghost={!value.includes(scope)}
-        {disabled}
-        onclick={() => toggle(scope)}
-      >{scope}</button>
-    {/each}
-  </div>
+<div class="flex flex-col gap-3">
+  {#if known.length}
+    <div class="flex flex-wrap gap-2">
+      {#each known as scope (scope)}
+        {@const held = value.includes(scope)}
+        <button
+          type="button"
+          class="badge badge-lg font-mono text-xs {held
+            ? 'badge-primary'
+            : 'badge-ghost opacity-60'} disabled:opacity-40"
+          aria-pressed={held}
+          {disabled}
+          onclick={() => toggle(scope)}
+        >{scope}</button>
+      {/each}
+    </div>
+  {/if}
 
   {#if !disabled}
     <div class="join">
       <input
-        class="input input-sm input-bordered join-item font-mono"
+        class="input input-sm join-item font-mono"
         placeholder="add a scope"
+        autocapitalize="none"
+        autocorrect="off"
+        spellcheck="false"
         bind:value={adding}
-        onkeydown={(e) => e.key === "Enter" && add()}
+        onkeydown={(event) => event.key === "Enter" && add()}
       />
-      <button class="btn btn-sm join-item" onclick={add}>Add</button>
+      <button type="button" class="btn btn-sm join-item" onclick={add}>Add</button>
     </div>
   {/if}
 </div>

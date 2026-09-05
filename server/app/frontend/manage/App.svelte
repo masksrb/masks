@@ -1,14 +1,17 @@
 <script>
   import { untrack } from "svelte";
   import { createApi } from "./lib/api.svelte.js";
-  import { createRouter } from "./lib/router.svelte.js";
+  import { createRouter, provideRouter } from "./lib/router.svelte.js";
   import { redeem } from "./lib/pairing.js";
+  import Link from "./ui/Link.svelte";
+  import Spinner from "./ui/Spinner.svelte";
   import Pair from "./Pair.svelte";
   import ActorsPage from "./ActorsPage.svelte";
   import ActorPage from "./ActorPage.svelte";
   import ClientsPage from "./ClientsPage.svelte";
   import ClientPage from "./ClientPage.svelte";
   import SessionsPage from "./SessionsPage.svelte";
+  import DevicesPage from "./DevicesPage.svelte";
   import SettingsPage from "./SettingsPage.svelte";
 
   let { boot } = $props();
@@ -16,14 +19,18 @@
   const api = untrack(() => createApi(boot));
   const router = untrack(() => createRouter(boot.root));
 
+  provideRouter(router);
+
   let phase = $state("starting");
   let failure = $state(null);
+  let viewer = $state(null);
 
   const NAV = [
     ["", "Overview"],
     ["/actors", "Actors"],
     ["/clients", "Clients"],
     ["/sessions", "Sessions"],
+    ["/devices", "Devices"],
     ["/settings", "Settings"],
   ];
 
@@ -52,7 +59,7 @@
       if (router.segments[0] === "callback") {
         const { returnTo } = await api.callback();
         router.replace(returnTo || "");
-        phase = "ready";
+        ready();
         return;
       }
 
@@ -61,19 +68,38 @@
         return;
       }
 
-      phase = "ready";
+      ready();
     } catch (thrown) {
       failure = thrown.message;
       phase = api.paired() ? "failed" : "pairing";
     }
   }
 
+  function ready() {
+    phase = "ready";
+
+    api
+      .query("query Viewer { viewer { nickname } }")
+      .then((data) => {
+        viewer = data.viewer;
+      })
+      .catch(() => {});
+  }
+
   start();
 
   const current = $derived(router.segments[0] ?? "");
+  const signedInAs = $derived(
+    viewer?.nickname ?? api.state.identity?.preferred_username ?? "Account",
+  );
 
   function repair() {
     api.unpair();
+    location.assign(boot.root);
+  }
+
+  function signOut() {
+    api.signOut();
     location.assign(boot.root);
   }
 </script>
@@ -81,68 +107,87 @@
 {#if phase === "pairing"}
   <Pair {boot} {failure} />
 {:else if phase === "starting"}
-  <div class="min-h-screen grid place-items-center">
-    <span class="loading loading-spinner loading-lg"></span>
+  <div class="grid min-h-screen place-items-center">
+    <Spinner label="Starting" />
   </div>
 {:else if phase === "failed"}
-  <div class="min-h-screen grid place-items-center p-4">
-    <div class="card bg-base-100 shadow-xl max-w-lg w-full">
-      <div class="card-body gap-4">
-        <h1 class="card-title">This admin app could not start</h1>
-        <div class="alert alert-error text-sm" role="alert">{failure}</div>
-        <button class="btn" onclick={repair}>Forget this registration and pair again</button>
+  <div class="auth-page">
+    <main class="auth-card">
+      <div class="auth-rail">{boot.tenant.name}</div>
+
+      <div class="auth-body flow">
+        <div class="prompt-head">
+          <h1 class="prompt-title">This console could not start</h1>
+          <p class="prompt-lede">
+            Its registration may have been archived. Pairing again registers this browser from
+            scratch.
+          </p>
+        </div>
+
+        <div class="note note-bad" role="alert">{failure}</div>
+
+        <button type="button" class="action" onclick={repair}>Pair again</button>
       </div>
-    </div>
+    </main>
   </div>
 {:else}
-  <div class="min-h-screen flex flex-col">
-    <header class="navbar bg-base-100 border-b border-base-content/10 px-4 gap-4">
-      <a class="font-bold" href={boot.root} onclick={(e) => { e.preventDefault(); router.go(""); }}>
-        {boot.tenant.name}
-      </a>
+  <div class="flex min-h-screen flex-col">
+    <header class="sticky top-0 z-20 border-b border-base-300 bg-base-100/95 backdrop-blur">
+      <div class="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-2">
+        <Link to="" class="brand">{boot.tenant.name}</Link>
 
-      <nav class="tabs tabs-border flex-1">
-        {#each NAV as [to, label] (to)}
-          <button
-            class="tab"
-            class:tab-active={current === to.slice(1) || (to === "" && current === "")}
-            onclick={() => router.go(to)}
-          >{label}</button>
-        {/each}
-      </nav>
+        <nav class="nav order-3 w-full md:order-none md:w-auto md:flex-1">
+          {#each NAV as [to, label] (to)}
+            <Link
+              {to}
+              class="nav-item {current === to.replace('/', '') ? 'nav-item-on' : ''}"
+            >{label}</Link>
+          {/each}
+        </nav>
 
-      <div class="dropdown dropdown-end">
-        <div tabindex="0" role="button" class="btn btn-ghost btn-sm">
-          {api.state.identity?.preferred_username ?? "signed in"}
+        <div class="dropdown dropdown-end ms-auto md:ms-0">
+          <div tabindex="0" role="button" class="btn btn-ghost btn-sm gap-2">
+            {signedInAs}
+            <span class="opacity-50">&#9662;</span>
+          </div>
+          <ul class="dropdown-content menu z-30 w-60 gap-1 rounded-box border border-base-300 bg-base-100 p-2 shadow-lg">
+            <li><button type="button" onclick={signOut}>Sign out</button></li>
+            <li>
+              <button type="button" onclick={repair}>
+                Unpair this browser
+                <span class="text-xs opacity-60">Forgets the registration</span>
+              </button>
+            </li>
+          </ul>
         </div>
-        <ul class="dropdown-content menu bg-base-100 rounded-box shadow z-10 w-56 p-2">
-          <li><button onclick={() => { api.signOut(); location.assign(boot.root); }}>Sign out</button></li>
-          <li><button onclick={repair}>Forget this registration</button></li>
-        </ul>
       </div>
     </header>
 
-    <main class="flex-1 p-4 md:p-6 max-w-6xl w-full mx-auto">
+    <main class="mx-auto w-full max-w-6xl flex-1 p-4 md:p-6">
       {#if current === ""}
         <SettingsPage {api} {boot} overview />
       {:else if current === "actors"}
         {#if router.segments[1]}
-          <ActorPage {api} uuid={router.segments[1]} {router} />
+          <ActorPage {api} uuid={router.segments[1]} />
         {:else}
-          <ActorsPage {api} {router} />
+          <ActorsPage {api} />
         {/if}
       {:else if current === "clients"}
         {#if router.segments[1]}
-          <ClientPage {api} clientId={router.segments[1]} {router} />
+          <ClientPage {api} clientId={router.segments[1]} />
         {:else}
-          <ClientsPage {api} {router} />
+          <ClientsPage {api} />
         {/if}
       {:else if current === "sessions"}
         <SessionsPage {api} />
+      {:else if current === "devices"}
+        <DevicesPage {api} />
       {:else if current === "settings"}
         <SettingsPage {api} {boot} />
       {:else}
-        <p class="opacity-70">Nothing here.</p>
+        <div class="rounded-box border border-base-300 bg-base-100 px-6 py-14 text-center">
+          <p class="text-sm opacity-70">There is no page at this address.</p>
+        </div>
       {/if}
     </main>
   </div>

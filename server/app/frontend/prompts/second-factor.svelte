@@ -5,6 +5,7 @@ import PromptHeader from "../shared/PromptHeader.svelte";
 let { login } = $props();
 
 let code = $state("");
+let remember = $state(false);
 
 const valid = $derived(code.replace(/\s/g, "").length === 6);
 
@@ -14,7 +15,7 @@ function submit() {
   const entered = code;
   code = "";
 
-  login.submit("otp", { code: entered });
+  login.submit("otp", { code: entered, remember });
 }
 
 function onsubmit(event) {
@@ -31,14 +32,14 @@ $effect(() => {
 
 <Identified {login} />
 
-<form {onsubmit} class="flex flex-col gap-4">
-  <label class="flex flex-col gap-1.5">
-    <span class="text-sm font-medium">Six-digit code</span>
+<form {onsubmit} class="flow">
+  <label class="field">
+    <span class="field-label">Six-digit code</span>
     <!-- svelte-ignore a11y_autofocus -->
     <input
       type="text"
       name="code"
-      class="input input-bordered w-full text-lg tabular-nums tracking-[0.4em]"
+      class="control control-code"
       inputmode="numeric"
       pattern="[0-9]*"
       autocomplete="one-time-code"
@@ -47,23 +48,26 @@ $effect(() => {
       autofocus
       bind:value={code}
     />
-    <span class="text-xs opacity-75">From your authenticator app.</span>
+    <span class="field-hint">From your authenticator app.</span>
   </label>
 
-  <button
-    type="submit"
-    class="btn btn-primary w-full"
-    disabled={!valid || login.loading}
-  >
-    {#if login.loading}<span class="loading loading-spinner loading-sm"></span>{/if}
-    {login.loading ? "Verifying..." : "Verify"}
+  {#if login.rememberable}
+    <label class="check">
+      <input type="checkbox" bind:checked={remember} />
+      <span>Do not ask for a code on this device for 30 days</span>
+    </label>
+  {/if}
+
+  <button type="submit" class="action" disabled={!valid || login.loading}>
+    {#if login.loading}<span class="spinner"></span>{/if}
+    {login.loading ? "Verifying" : "Verify"}
   </button>
 </form>
 
 {#if login.backupCodes}
   <button
     type="button"
-    class="btn btn-ghost btn-sm w-full"
+    class="action action-plain"
     onclick={() => login.submit("use-backup-code", {})}
   >
     Use a backup code

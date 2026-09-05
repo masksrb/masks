@@ -1,5 +1,16 @@
 <script>
+  import { createFeedback } from "./lib/feedback.svelte.js";
+  import { day } from "./lib/format.js";
   import ScopesEditor from "./ScopesEditor.svelte";
+  import BarChart from "./ui/BarChart.svelte";
+  import Card from "./ui/Card.svelte";
+  import Facts from "./ui/Facts.svelte";
+  import Field from "./ui/Field.svelte";
+  import Link from "./ui/Link.svelte";
+  import Loader from "./ui/Loader.svelte";
+  import Notices from "./ui/Notices.svelte";
+  import Page from "./ui/Page.svelte";
+  import Spinner from "./ui/Spinner.svelte";
 
   let { api, boot, overview = false } = $props();
 
@@ -10,18 +21,45 @@
         signingKeys { kid algorithm activatedAt retiredAt retired }
       }
       viewer { nickname scopes }
-      actors { uuid }
-      clients { clientId dynamic }
-      sessions { id }
+      tally { actors clients sessions devices }
       scopesSupported
     }
   `;
 
+  const ACTIVITY = `
+    query Activity($days: Int) {
+      activity(days: $days) { date signIns }
+    }
+  `;
+
+  const SPANS = [7, 30, 90];
+
+  const MARK = new Intl.DateTimeFormat(undefined, { day: "numeric", month: "short" });
+
+  const feedback = createFeedback();
+
   let data = $state(null);
   let name = $state("");
   let loading = $state(true);
-  let notice = $state(null);
-  let failure = $state(null);
+  let days = $state(30);
+
+  const counts = $derived(
+    data
+      ? [
+          { to: "/actors", label: "Actors", value: data.tally.actors },
+          { to: "/clients", label: "Clients", value: data.tally.clients },
+          { to: "/sessions", label: "Live sessions", value: data.tally.sessions },
+          { to: "/devices", label: "Devices", value: data.tally.devices },
+        ]
+      : [],
+  );
+
+  const plotted = (rows) =>
+    rows.map((row) => ({
+      key: row.date,
+      value: row.signIns,
+      label: MARK.format(new Date(`${row.date}T00:00:00`)),
+    }));
 
   async function load() {
     loading = true;
@@ -30,7 +68,7 @@
       data = await api.query(QUERY);
       name = data.tenant.name;
     } catch (thrown) {
-      failure = thrown.message;
+      feedback.blame(thrown);
     } finally {
       loading = false;
     }
@@ -38,140 +76,135 @@
 
   load();
 
-  async function update(changes, message) {
-    notice = null;
-    failure = null;
+  async function update(changes, notice) {
+    const done = await feedback.attempt(
+      () =>
+        api.query(
+          `mutation Update($name: String, $dynamicClientScopes: [String!]) {
+            updateTenant(name: $name, dynamicClientScopes: $dynamicClientScopes) { tenant { name } }
+          }`,
+          changes,
+        ),
+      notice,
+    );
 
-    try {
-      await api.query(
-        `mutation Update($name: String, $dynamicClientScopes: [String!]) {
-          updateTenant(name: $name, dynamicClientScopes: $dynamicClientScopes) { tenant { name } }
-        }`,
-        changes,
-      );
-
-      notice = message;
-      await load();
-    } catch (thrown) {
-      failure = thrown.message;
-    }
+    if (done) await load();
   }
 </script>
 
 {#if loading && !data}
-  <div class="py-16 grid place-items-center"><span class="loading loading-spinner"></span></div>
+  <Spinner />
 {:else if !data}
-  <div class="alert alert-error text-sm" role="alert">{failure}</div>
+  <div class="alert alert-error alert-soft text-sm" role="alert">{feedback.state.failure}</div>
 {:else if overview}
-  <h1 class="text-xl font-bold mb-1">{data.tenant.name}</h1>
-  <p class="text-xs opacity-60 font-mono mb-6">{boot.issuer}</p>
+  <Page
+    title={data.tenant.name}
+    id={boot.issuer}
+    hero
+    lede="Everything this server holds for {data.tenant.name}, and who is using it right now."
+  >
+    <div class="tally">
+      {#each counts as count (count.label)}
+        <Link to={count.to} class="tally-cell">
+          <span class="tally-figure">{count.value}</span>
+          <span class="tally-label">{count.label}</span>
+        </Link>
+      {/each}
+    </div>
 
-  <div class="stats bg-base-100 w-full mb-6">
-    <div class="stat">
-      <div class="stat-title">Actors</div>
-      <div class="stat-value text-3xl">{data.actors.length}</div>
-    </div>
-    <div class="stat">
-      <div class="stat-title">Clients</div>
-      <div class="stat-value text-3xl">{data.clients.length}</div>
-      <div class="stat-desc">{data.clients.filter((c) => c.dynamic).length} registered themselves</div>
-    </div>
-    <div class="stat">
-      <div class="stat-title">Live sessions</div>
-      <div class="stat-value text-3xl">{data.sessions.length}</div>
-    </div>
-    <div class="stat">
-      <div class="stat-title">Signing keys</div>
-      <div class="stat-value text-3xl">{data.signingKeys?.length ?? data.tenant.signingKeys.length}</div>
-    </div>
-  </div>
+    <Card
+      title="Sign-ins"
+      lede="Every session started on this tenant, counted on the day it was authenticated."
+    >
+      {#snippet actions()}
+        <div class="range" role="group" aria-label="Time range">
+          {#each SPANS as span (span)}
+            <button type="button" aria-pressed={days === span} onclick={() => (days = span)}>
+              {span}d
+            </button>
+          {/each}
+        </div>
+      {/snippet}
 
-  <div class="card bg-base-100">
-    <div class="card-body gap-2">
-      <h2 class="card-title text-base">You are signed in as {data.viewer.nickname}</h2>
-      <p class="text-sm opacity-70">
+      {#key days}
+        <Loader load={() => api.query(ACTIVITY, { days })}>
+          {#snippet children(activity)}
+            <BarChart points={plotted(activity.activity)} label="Sign-ins per day" />
+          {/snippet}
+        </Loader>
+      {/key}
+    </Card>
+
+    <Card title="You are signed in as {data.viewer.nickname}">
+      <p class="deck-sm">
         This page holds a bearer token issued for
         <span class="font-mono text-xs">{boot.resource}</span>, carrying
         <span class="font-mono text-xs">{data.viewer.scopes.join(" ")}</span>. Revoking it ends
         administration without ending the sign-in.
       </p>
-    </div>
-  </div>
+    </Card>
+  </Page>
 {:else}
-  <h1 class="text-xl font-bold mb-4">Settings</h1>
+  <Page title="Settings" lede="How this tenant identifies itself, and what it hands out.">
+    <Notices feedback={feedback.state} />
 
-  {#if notice}<div class="alert alert-success text-sm mb-4">{notice}</div>{/if}
-  {#if failure}<div class="alert alert-error text-sm mb-4" role="alert">{failure}</div>{/if}
+    <div class="grid items-start gap-4 md:grid-cols-2">
+      <Card title="Tenant">
+        <Field label="Name" bind:value={name} onsave={() => update({ name }, "Renamed.")} />
 
-  <div class="grid md:grid-cols-2 gap-4 items-start">
-    <section class="card bg-base-100">
-      <div class="card-body gap-3">
-        <h2 class="card-title text-base">Tenant</h2>
+        <Facts
+          rows={[
+            { term: "Subdomain", value: data.tenant.subdomain, mono: true },
+            { term: "Issuer", value: boot.issuer, mono: true },
+            { term: "Resource", value: boot.resource, mono: true },
+            { term: "Serving since", value: day(data.tenant.createdAt) },
+          ]}
+        />
+      </Card>
 
-        <label class="form-control">
-          <span class="label-text text-xs opacity-70">Name</span>
-          <div class="join">
-            <input class="input input-sm input-bordered join-item w-full" bind:value={name} />
-            <button class="btn btn-sm join-item" onclick={() => update({ name }, "Renamed.")}>Save</button>
-          </div>
-        </label>
-
-        <dl class="text-sm grid grid-cols-3 gap-y-2">
-          <dt class="opacity-60">Subdomain</dt>
-          <dd class="col-span-2 font-mono text-xs">{data.tenant.subdomain}</dd>
-
-          <dt class="opacity-60">Issuer</dt>
-          <dd class="col-span-2 font-mono text-xs break-all">{boot.issuer}</dd>
-
-          <dt class="opacity-60">Resource</dt>
-          <dd class="col-span-2 font-mono text-xs break-all">{boot.resource}</dd>
-        </dl>
-      </div>
-    </section>
-
-    <div class="flex flex-col gap-4">
-      <section class="card bg-base-100">
-        <div class="card-body gap-3">
-          <h2 class="card-title text-base">Open registration ceiling</h2>
-          <p class="text-xs opacity-70">
-            The most a client registering itself may ask for. Leave it empty and anything outside the
-            <span class="font-mono">masks:</span> namespace is grantable.
-          </p>
-
+      <div class="flex flex-col gap-4">
+        <Card
+          title="Ceiling on open registration"
+          lede="The most a client registering itself may ask for. Leave it empty and anything outside the masks: namespace is grantable."
+        >
           <ScopesEditor
             value={data.tenant.dynamicClientScopes ?? []}
             available={data.scopesSupported}
             onchange={(dynamicClientScopes) => update({ dynamicClientScopes }, "Ceiling updated.")}
           />
-        </div>
-      </section>
+        </Card>
 
-      <section class="card bg-base-100">
-        <div class="card-body gap-3">
-          <h2 class="card-title text-base">Signing keys</h2>
-
-          <table class="table table-sm">
-            <thead><tr><th>kid</th><th>Algorithm</th><th>State</th></tr></thead>
-            <tbody>
-              {#each data.tenant.signingKeys as key (key.kid)}
-                <tr>
-                  <td class="font-mono text-xs">{key.kid.slice(0, 8)}</td>
-                  <td class="text-xs">{key.algorithm}</td>
-                  <td>
-                    {#if key.retired}
-                      <span class="badge badge-ghost badge-sm">retired</span>
-                    {:else if key.activatedAt}
-                      <span class="badge badge-success badge-sm">active</span>
-                    {:else}
-                      <span class="badge badge-warning badge-sm">staged</span>
-                    {/if}
-                  </td>
-                </tr>
-              {/each}
-            </tbody>
-          </table>
-        </div>
-      </section>
+        <Card
+          title="Signing keys"
+          lede="Tokens are signed with the active key. A staged key is published so clients pick it up before it takes over."
+        >
+          <div class="overflow-x-auto">
+            <table class="table table-sm">
+              <thead>
+                <tr><th>Key</th><th>Algorithm</th><th>State</th><th>Activated</th></tr>
+              </thead>
+              <tbody>
+                {#each data.tenant.signingKeys as key (key.kid)}
+                  <tr>
+                    <td class="font-mono text-xs">{key.kid.slice(0, 8)}</td>
+                    <td class="text-xs">{key.algorithm}</td>
+                    <td>
+                      {#if key.retired}
+                        <span class="badge badge-ghost badge-sm">retired</span>
+                      {:else if key.activatedAt}
+                        <span class="badge badge-success badge-sm">active</span>
+                      {:else}
+                        <span class="badge badge-warning badge-sm">staged</span>
+                      {/if}
+                    </td>
+                    <td class="text-xs opacity-70">{day(key.activatedAt, "not yet")}</td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      </div>
     </div>
-  </div>
+  </Page>
 {/if}

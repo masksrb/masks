@@ -24,39 +24,35 @@ function onsubmit(event) {
 
 <Identified {login} />
 
-<form {onsubmit} class="flex flex-col gap-4">
-  <label class="flex flex-col gap-1.5">
-    <span class="text-sm font-medium">Backup code</span>
+<form {onsubmit} class="flow">
+  <label class="field">
+    <span class="field-label">Backup code</span>
     <!-- svelte-ignore a11y_autofocus -->
     <input
       type="text"
       name="backup_code"
-      class="input input-bordered w-full font-mono tracking-widest"
+      class="control control-mono"
       autocomplete="one-time-code"
       spellcheck="false"
       autocapitalize="off"
       autofocus
       bind:value={code}
     />
-    <span class="text-xs opacity-75">
+    <span class="field-hint">
       One of the codes you saved when you set up your authenticator. Each one
       works once.
     </span>
   </label>
 
-  <button
-    type="submit"
-    class="btn btn-primary w-full"
-    disabled={!valid || login.loading}
-  >
-    {#if login.loading}<span class="loading loading-spinner loading-sm"></span>{/if}
-    {login.loading ? "Verifying..." : "Verify"}
+  <button type="submit" class="action" disabled={!valid || login.loading}>
+    {#if login.loading}<span class="spinner"></span>{/if}
+    {login.loading ? "Verifying" : "Verify"}
   </button>
 </form>
 
 <button
   type="button"
-  class="btn btn-ghost btn-sm w-full"
+  class="action action-plain"
   onclick={() => login.submit("use-authenticator", {})}
 >
   Use my authenticator instead

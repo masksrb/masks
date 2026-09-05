@@ -1,20 +1,20 @@
 <% content_for :title, "Sign out?" %>
 
-<div id="logout-confirm" class="flex flex-col gap-4">
-  <div class="flex flex-col gap-1">
-    <h1 class="text-2xl font-bold">Sign out?</h1>
-    <p class="text-sm opacity-75">
-      Signed in as <strong class="font-semibold"><%= current_actor.nickname %></strong>.
+<div id="logout-confirm" class="flow">
+  <div class="prompt-head">
+    <h1 class="prompt-title">Sign out?</h1>
+    <p class="prompt-lede">
+      Signed in as <strong><%= current_actor.nickname %></strong>.
     </p>
   </div>
 
   <% if @client %>
-    <p class="text-sm">
+    <p class="prompt-lede">
       <%= @client.name %> asked to sign you out of every app this account signs
       in to, not only itself.
     </p>
   <% else %>
-    <p class="text-sm">
+    <p class="prompt-lede">
       This signs you out of every app this account signs in to.
     </p>
   <% end %>
@@ -24,9 +24,9 @@
     <%= form.hidden_field :client_id, value: @client&.client_id %>
     <%= form.hidden_field :state, value: @logout.state %>
 
-    <div class="flex gap-2">
-      <%= form.submit "Sign out", class: "btn btn-primary grow" %>
-      <%= link_to "Stay signed in", root_path, class: "btn btn-ghost" %>
+    <div class="action-row">
+      <button type="submit" class="action action-grow">Sign out</button>
+      <%= link_to "Stay signed in", root_path, class: "action action-quiet action-fit" %>
     </div>
   <% end %>
 </div>

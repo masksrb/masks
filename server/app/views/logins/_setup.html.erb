@@ -1,49 +1,45 @@
-<%= render "logins/header",
-      heading: login.tenant&.name ? "Set up #{login.tenant.name}" : "Set up",
-      login: login %>
+<%= render "logins/header", heading: "Create the owner", login: login %>
 
-<p class="text-sm opacity-75">
+<p class="prompt-lede">
   Nobody has an account here yet. The first one you make owns this tenant.
 </p>
 
-<%= render "logins/warnings", login: login %>
-
-<%= form_with url: login_path, method: :post, id: "setup", class: "flex flex-col gap-4" do |form| %>
+<%= form_with url: login_path, method: :post, id: "setup", class: "flow" do |form| %>
   <%= hidden_field_tag :rid, login.rid %>
   <%= form.hidden_field :event, value: "setup" %>
 
   <% if LoginStates::Setup.token_required? %>
-    <label class="flex flex-col gap-1.5">
-      <span class="text-sm font-medium">Setup token</span>
-      <%= form.password_field :token, autocomplete: "off", class: "input input-bordered w-full" %>
-      <span class="text-xs opacity-75">Whoever deployed this server set one.</span>
+    <label class="field">
+      <span class="field-label">Setup token</span>
+      <%= form.password_field :token, autocomplete: "off", class: "control" %>
+      <span class="field-hint">Whoever deployed this server set one.</span>
     </label>
   <% end %>
 
-  <label class="flex flex-col gap-1.5">
-    <span class="text-sm font-medium">Username</span>
+  <label class="field">
+    <span class="field-label">Username</span>
     <%= form.text_field :nickname, value: login.updates["nickname"],
           autocomplete: "username", autocapitalize: "none", autocorrect: "off",
-          spellcheck: "false", class: "input input-bordered w-full" %>
+          spellcheck: "false", class: "control" %>
   </label>
 
-  <label class="flex flex-col gap-1.5">
-    <span class="text-sm font-medium">Email</span>
+  <label class="field">
+    <span class="field-label">Email</span>
     <%= form.email_field :email, value: login.updates["email"],
-          autocomplete: "email", class: "input input-bordered w-full" %>
-    <span class="text-xs opacity-75">
-      Applications you sign in to are given this address, and most refuse an account without one.
+          autocomplete: "email", class: "control" %>
+    <span class="field-hint">
+      Applications you sign in to are given this address, and most refuse an
+      account without one.
     </span>
   </label>
 
-  <label class="flex flex-col gap-1.5">
-    <span class="text-sm font-medium">Password</span>
-    <%= form.password_field :password, autocomplete: "new-password",
-          class: "input input-bordered w-full" %>
-    <span class="text-xs opacity-75">
+  <label class="field">
+    <span class="field-label">Password</span>
+    <%= form.password_field :password, autocomplete: "new-password", class: "control" %>
+    <span class="field-hint">
       At least <%= LoginStates::Setup::MINIMUM_PASSWORD %> characters.
     </span>
   </label>
 
-  <button type="submit" class="btn btn-primary w-full">Create the owner</button>
+  <button type="submit" class="action">Create the owner</button>
 <% end %>

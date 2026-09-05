@@ -28,7 +28,7 @@ class FirstRunTest < ActionDispatch::IntegrationTest
     get "/login"
 
     assert_response :success
-    assert_match "Set up", response.body
+    assert_match "Create the owner", response.body
     assert_match "owns this tenant", response.body
 
     post "/login", params: { event: "start-over" }, as: :json
@@ -144,7 +144,7 @@ class FirstRunTest < ActionDispatch::IntegrationTest
     host! host_for(@other)
     get "/login"
 
-    assert_match "Set up", response.body
+    assert_match "Create the owner", response.body
     assert_equal 0, within(@other) { Actor.count }
   end
 
@@ -163,7 +163,7 @@ class FirstRunTest < ActionDispatch::IntegrationTest
       get "/login"
 
       assert_response :success
-      assert_match "Set up", response.body
+      assert_match "Create the owner", response.body
       assert_equal "fresh", Tenant.sole.subdomain
       assert Tenant.sole.signing_key.kid.present?
     end

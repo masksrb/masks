@@ -4,26 +4,29 @@
   let { boot, failure } = $props();
 </script>
 
-<div class="min-h-screen flex items-center justify-center p-4">
-  <div class="card bg-base-100 shadow-xl w-full max-w-lg">
-    <div class="card-body gap-4">
-      <h1 class="card-title">Connect this admin app</h1>
+<div class="auth-page">
+  <main class="auth-card">
+    <div class="auth-rail">{boot.tenant.name}</div>
 
-      <p class="text-sm opacity-80">
-        This page is a client of {boot.tenant.name} like any other. Approving it registers it
-        against <span class="font-mono text-xs">{boot.resource}</span> and grants it
-        <span class="font-mono text-xs">masks:manage</span>. No secret is issued to this browser.
-      </p>
+    <div class="auth-body flow">
+      <div class="prompt-head">
+        <h1 class="prompt-title">Connect this console</h1>
+        <p class="prompt-lede">
+          It is a client like any other. Approving registers it against
+          <span class="aside-mono">{boot.resource}</span> and grants it
+          <span class="aside-mono">masks:manage</span>.
+        </p>
+      </div>
 
       {#if failure}
-        <div class="alert alert-error text-sm" role="alert">{failure}</div>
+        <div class="note note-bad" role="alert">{failure}</div>
       {/if}
 
-      <a class="btn btn-primary" href={handshakeUrl(boot)}>Approve as an administrator</a>
+      <a class="action" href={handshakeUrl(boot)}>Approve as an administrator</a>
 
-      <p class="text-xs opacity-60">
-        You will be asked to sign in first if you are not already.
+      <p class="aside">
+        No secret is issued to this browser. You are asked to sign in first if you are not already.
       </p>
     </div>
-  </div>
+  </main>
 </div>

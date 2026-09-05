@@ -19,44 +19,40 @@ function onsubmit(event) {
 }
 </script>
 
-<PromptHeader heading="Choose a new password" {login} />
+<PromptHeader heading="Set a new password" {login} />
 
-<p class="text-sm opacity-75">
+<p class="prompt-lede">
   Setting a password here signs {reset.nickname} out everywhere else.
 </p>
 
-<form {onsubmit} class="flex flex-col gap-4">
-  <label class="flex flex-col gap-1.5">
-    <span class="text-sm font-medium">Username</span>
+<form {onsubmit} class="flow">
+  <label class="field">
+    <span class="field-label">Username</span>
     <input
       type="text"
-      class="input input-bordered w-full"
+      class="control"
       autocomplete="username"
       value={reset.nickname ?? ""}
       readonly
     />
   </label>
 
-  <label class="flex flex-col gap-1.5">
-    <span class="text-sm font-medium">New password</span>
+  <label class="field">
+    <span class="field-label">New password</span>
     <!-- svelte-ignore a11y_autofocus -->
     <input
       type="password"
       name="password"
-      class="input input-bordered w-full"
+      class="control"
       autocomplete="new-password"
       autofocus
       bind:value={password}
     />
-    <span class="text-xs opacity-75">At least {minimum} characters.</span>
+    <span class="field-hint">At least {minimum} characters.</span>
   </label>
 
-  <button
-    type="submit"
-    class="btn btn-primary w-full"
-    disabled={!valid || login.loading}
-  >
-    {#if login.loading}<span class="loading loading-spinner loading-sm"></span>{/if}
-    {login.loading ? "Saving..." : "Set the password"}
+  <button type="submit" class="action" disabled={!valid || login.loading}>
+    {#if login.loading}<span class="spinner"></span>{/if}
+    {login.loading ? "Setting" : "Set the password"}
   </button>
 </form>

@@ -28,20 +28,33 @@ let { auth } = $props();
 
 const login = createLogin(untrack(() => auth));
 const Prompt = $derived(prompts[login.prompt]);
+
+const GRANTING = ["consent"];
+
+$effect(() => {
+  const granting = GRANTING.includes(login.prompt);
+
+  document.querySelector(".auth-card")?.classList.toggle("grant", granting);
+});
 </script>
 
-<div class="flex flex-col gap-4">
-  <Warnings {login} />
+<Warnings {login} />
 
-  {#if Prompt}
-    <Prompt {login} />
-  {:else}
-    <h1 class="text-2xl font-bold">Something went wrong</h1>
-    <p class="text-sm opacity-75">
-      This sign-in cannot continue. Start over and try again.
-    </p>
-    <button type="button" class="btn btn-primary" onclick={() => login.startOver()}>
-      Start over
-    </button>
-  {/if}
-</div>
+{#key login.prompt}
+  <div class="prompt-in flow">
+    {#if Prompt}
+      <Prompt {login} />
+    {:else}
+      <div class="prompt-head">
+        <h1 class="prompt-title">Something went wrong</h1>
+        <p class="prompt-lede">
+          This sign-in cannot continue. Start over and try again.
+        </p>
+      </div>
+
+      <button type="button" class="action" onclick={() => login.startOver()}>
+        Start over
+      </button>
+    {/if}
+  </div>
+{/key}
