@@ -141,7 +141,7 @@ class ConnectionBrokerTest < ActionDispatch::IntegrationTest
 
   def bearer_for(actor: @actor, scope: "openid #{GOOGLE_SCOPE}")
     registration = within(@tenant) do
-      client = create_client(@tenant, name: "things")
+      client = create_client(@tenant, name: "uris")
       client.update!(
         allowed_scopes: "openid profile email offline_access #{GOOGLE_SCOPE}",
         approved_at: Time.current,

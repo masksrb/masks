@@ -49,6 +49,13 @@ refusal surfaces at boot, from the `masks:tenants` the entrypoint runs.
 | | Default | |
 | --- | --- | --- |
 | `MASKS_MAIL_FROM` | *unset* | the address invitations are sent from; unset means no mail is sent |
+| `MASKS_SMTP_ADDRESS` | *unset* | the relay host; required whenever `MASKS_MAIL_FROM` is set |
+| `MASKS_SMTP_PORT` | `587` | |
+| `MASKS_SMTP_USERNAME` | *unset* | |
+| `MASKS_SMTP_PASSWORD` | *unset* | |
+| `MASKS_SMTP_AUTHENTICATION` | `plain` | `plain`, `login` or `cram_md5` |
+| `MASKS_SMTP_DOMAIN` | *unset* | the HELO domain, when the relay wants one |
+| `MASKS_SMTP_TLS` | `true` on port 465 | implicit TLS rather than STARTTLS |
 | `MASKS_INVITATION_LIFETIME` | `604800` — seven days | seconds an invitation stays open |
 | `MASKS_PASSWORD_RESET_LIFETIME` | `1800` — thirty minutes | seconds a reset link stays open |
 | `MASKS_EMAIL_VERIFICATION_LIFETIME` | `172800` — two days | seconds a confirmation link stays open |
@@ -73,8 +80,15 @@ to deliver by hand and the address stays unverified.
 a link sent to it, and by no other route — not by an administrator setting it, and not by being the
 owner. Relying parties that require a verified address will refuse those accounts.
 
-Delivery is ordinary Action Mailer — set `config.action_mailer.smtp_settings` in
-`config/environments/production.rb`.
+The relay is configured entirely from the environment, so moving between providers is a change to
+the deployment rather than to the image. Transport encryption is not optional: port 465 uses
+implicit TLS, every other port requires STARTTLS rather than negotiating for it, and the relay's
+certificate is verified in both cases. There is no setting that sends credentials in the clear.
+
+Setting `MASKS_MAIL_FROM` without `MASKS_SMTP_ADDRESS` is refused at boot outside development.
+That pairing is otherwise silent — masks would consider itself able to send, hand every invitation
+and password reset to a local sendmail that is not installed, and no one would find out until a
+person who never received their link said so.
 
 ### Rate limits
 
@@ -125,7 +139,7 @@ Masks::Rails.configure do |config|
   config.issuer = "https://demo.auth.example"
   config.credentials = -> { { client_id: ENV["MASKS_CLIENT_ID"], client_secret: ENV["MASKS_CLIENT_SECRET"] } }
   config.store = ->(request, registration) { Credentials.store!(registration) }
-  config.name = "things"
+  config.name = "uris"
   config.resource = nil
   config.resource_scopes = []
   config.scope = %w[openid profile email]

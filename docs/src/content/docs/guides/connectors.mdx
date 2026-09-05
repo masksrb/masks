@@ -85,7 +85,7 @@ GET /authorize
   &scope=openid+profile+email+offline_access
   &state=…
   &code_challenge=…&code_challenge_method=S256
-  &resource=https%3A%2F%2Fdemo.things.example%2Fmcp
+  &resource=https%3A%2F%2Fdemo.uris.example%2Fmcp
 ```
 
 `resource` is what makes the resulting access token usable at your API and useless anywhere else —
@@ -101,7 +101,7 @@ curl -X POST https://demo.auth.example/token \
   -d client_id=… \
   -d redirect_uri=https://claude.ai/api/mcp/auth_callback \
   -d code_verifier=… \
-  -d resource=https://demo.things.example/mcp
+  -d resource=https://demo.uris.example/mcp
 ```
 
 ## From Ruby
@@ -111,13 +111,13 @@ issuer = Masks::Client.issuer("https://demo.auth.example")
 
 registration = Masks::Client::Registration.create(
   issuer,
-  name: "things",
-  redirect_uris: ["https://demo.things.example/auth/callback"],
+  name: "uris",
+  redirect_uris: ["https://demo.uris.example/auth/callback"],
   scope: %w[openid profile email offline_access]
 )
 
-session = registration.session(redirect_uri: "https://demo.things.example/auth/callback")
-started = session.start(resource: "https://demo.things.example/mcp")
+session = registration.session(redirect_uri: "https://demo.uris.example/auth/callback")
+started = session.start(resource: "https://demo.uris.example/mcp")
 
 # redirect the browser to started[:url], keep started[:verifier] and started[:state]
 

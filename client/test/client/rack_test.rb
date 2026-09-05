@@ -29,7 +29,7 @@ class RackTest < ClientTest
   end
 
   def test_an_insufficient_scope_is_403
-    token = issuer.access_token(scope: "things:read")
+    token = issuer.access_token(scope: "uris:read")
 
     status, headers, body = app(scope: "resources:command").call(env(authorization: "Bearer #{token}"))
 

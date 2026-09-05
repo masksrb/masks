@@ -114,7 +114,7 @@ than each scope under it. Scopes outside the namespace are sent unchanged.
 ## Authentication
 
 ```ruby
-class ThingsController < ApplicationController
+class UrisController < ApplicationController
   include Masks::Rails::Authentication
 
   before_action :authenticate_masks!
@@ -223,7 +223,7 @@ For an app that also accepts bearer tokens.
 class ApiController < ApplicationController
   include Masks::Rails::ProtectedResource
 
-  masks_protect! scope: "things:read"
+  masks_protect! scope: "uris:read"
 end
 ```
 

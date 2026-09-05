@@ -1,11 +1,11 @@
 require "test_helper"
 
 class IntrospectionTest < ActionDispatch::IntegrationTest
-  RESOURCE = "https://things.example.com/mcp".freeze
+  RESOURCE = "https://uris.example.com/mcp".freeze
 
   setup do
     host! host_for(@tenant)
-    @actor = create_actor(@tenant, scopes: "openid profile email offline_access things:read")
+    @actor = create_actor(@tenant, scopes: "openid profile email offline_access uris:read")
   end
 
   def introspect(token, client_id:, client_secret:, **params)
@@ -20,7 +20,7 @@ class IntrospectionTest < ActionDispatch::IntegrationTest
     "Basic #{Base64.strict_encode64("#{id}:#{secret}")}"
   end
 
-  def granted(scope: "openid profile things:read", resource: RESOURCE)
+  def granted(scope: "openid profile uris:read", resource: RESOURCE)
     registered = register(scope: scope, resources: [ resource ])
 
     sign_in_as(@actor)
@@ -74,7 +74,7 @@ class IntrospectionTest < ActionDispatch::IntegrationTest
     assert_equal "Bearer", body["token_type"]
     assert_equal registered["client_id"], body["client_id"]
     assert_equal @actor.nickname, body["username"]
-    assert_includes body["scope"].split(" "), "things:read"
+    assert_includes body["scope"].split(" "), "uris:read"
     assert_equal [ RESOURCE ], body["aud"]
     assert_equal origin_for(@tenant), body["iss"]
     assert body["exp"] > Time.current.to_i
@@ -96,7 +96,7 @@ class IntrospectionTest < ActionDispatch::IntegrationTest
   end
 
   test "a refresh token introspects too" do
-    registered, tokens = granted(scope: "openid offline_access things:read")
+    registered, tokens = granted(scope: "openid offline_access uris:read")
 
     body = introspect(tokens["refresh_token"],
                       client_id: registered["client_id"],

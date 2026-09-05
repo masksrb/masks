@@ -89,7 +89,7 @@ client sends somewhere else. RFC 8707 lets the client name the API it intends to
 GET /authorize
   ?response_type=code
   &client_id=…
-  &resource=https%3A%2F%2Fdemo.things.example%2Fmcp
+  &resource=https%3A%2F%2Fdemo.uris.example%2Fmcp
 ```
 
 That value becomes the token's `aud`. The resource server checks it against its own URL and refuses

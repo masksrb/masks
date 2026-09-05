@@ -1,7 +1,7 @@
 require "test_helper"
 
 class ActorScopesTest < ActionDispatch::IntegrationTest
-  REQUESTED = "openid profile email things:read admin".freeze
+  REQUESTED = "openid profile email uris:read admin".freeze
 
   def token_for(actor, registration, scope: REQUESTED)
     sign_in_as(actor)
@@ -23,16 +23,16 @@ class ActorScopesTest < ActionDispatch::IntegrationTest
   end
 
   test "a custom scope the client and the actor both hold reaches the token" do
-    actor = create_actor(@tenant, scopes: "openid profile email things:read")
+    actor = create_actor(@tenant, scopes: "openid profile email uris:read")
 
     granted = token_for(actor, registration_for)
 
-    assert_includes granted["scope"].split, "things:read"
-    assert_includes claims_in(granted["access_token"])["scope"].split, "things:read"
+    assert_includes granted["scope"].split, "uris:read"
+    assert_includes claims_in(granted["access_token"])["scope"].split, "uris:read"
   end
 
   test "a scope the client requests but the actor does not hold is withheld" do
-    actor = create_actor(@tenant, scopes: "openid profile email things:read")
+    actor = create_actor(@tenant, scopes: "openid profile email uris:read")
 
     granted = token_for(actor, registration_for)
 
@@ -53,11 +53,11 @@ class ActorScopesTest < ActionDispatch::IntegrationTest
   end
 
   test "the client bound is a refusal and the actor bound is a narrowing" do
-    actor = create_actor(@tenant, scopes: "openid profile email things:read")
+    actor = create_actor(@tenant, scopes: "openid profile email uris:read")
 
     granted = token_for(actor, registration_for)
 
-    assert_equal %w[email openid profile things:read], granted["scope"].split.sort,
+    assert_equal %w[email openid profile uris:read], granted["scope"].split.sort,
                  "an actor short of a scope the client may request signs in without it, " \
                  "rather than being unable to sign in at all"
   end
@@ -90,7 +90,7 @@ class ActorScopesTest < ActionDispatch::IntegrationTest
   end
 
   test "the id token is still issued when custom scopes are in play" do
-    actor = create_actor(@tenant, scopes: "openid profile email things:read")
+    actor = create_actor(@tenant, scopes: "openid profile email uris:read")
 
     granted = token_for(actor, registration_for)
 

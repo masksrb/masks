@@ -70,24 +70,24 @@ class ResourceMetadataTest < ActiveSupport::TestCase
   test "a scope the resource server describes reads as a sentence" do
     published = {
       "/.well-known/oauth-protected-resource/mcp" => {
-        "scopes_supported" => [ "things:read" ],
-        "scope_descriptions" => { "things:read" => "Search and read your catalog" }
+        "scopes_supported" => [ "uris:read" ],
+        "scope_descriptions" => { "uris:read" => "Search and read your catalog" }
       }
     }
 
     with_resource(published) do |server|
-      described = ResourceMetadata.describe(server.url, "openid things:read")
+      described = ResourceMetadata.describe(server.url, "openid uris:read")
 
       assert_equal [
         [ "openid", "Confirm who you are" ],
-        [ "things:read", "Search and read your catalog" ]
+        [ "uris:read", "Search and read your catalog" ]
       ], described
     end
   end
 
   test "the RFC 9728 path is tried before the bare one" do
     with_resource({ "/.well-known/oauth-protected-resource" => { "scope_descriptions" => {} } }) do |server|
-      ResourceMetadata.describe(server.url, "things:read")
+      ResourceMetadata.describe(server.url, "uris:read")
 
       assert_equal [
         "/.well-known/oauth-protected-resource/mcp",
@@ -98,25 +98,25 @@ class ResourceMetadataTest < ActiveSupport::TestCase
 
   test "a resource that describes nothing leaves the scope named rather than blank" do
     with_resource({}) do |server|
-      assert_equal [ [ "things:read", nil ] ], ResourceMetadata.describe(server.url, "things:read")
+      assert_equal [ [ "uris:read", nil ] ], ResourceMetadata.describe(server.url, "uris:read")
     end
   end
 
   test "a resource that cannot be reached does not stop the screen rendering" do
-    described = ResourceMetadata.describe("https://127.0.0.1:1/mcp", "openid things:read")
+    described = ResourceMetadata.describe("https://127.0.0.1:1/mcp", "openid uris:read")
 
-    assert_equal [ [ "openid", "Confirm who you are" ], [ "things:read", nil ] ], described
+    assert_equal [ [ "openid", "Confirm who you are" ], [ "uris:read", nil ] ], described
   end
 
   test "a description is not a place to put a paragraph" do
     published = {
       "/.well-known/oauth-protected-resource/mcp" => {
-        "scope_descriptions" => { "things:read" => "x" * 500 }
+        "scope_descriptions" => { "uris:read" => "x" * 500 }
       }
     }
 
     with_resource(published) do |server|
-      description = ResourceMetadata.describe(server.url, "things:read").first.last
+      description = ResourceMetadata.describe(server.url, "uris:read").first.last
 
       assert_operator description.length, :<=, ResourceMetadata::LONGEST
     end
@@ -125,12 +125,12 @@ class ResourceMetadataTest < ActiveSupport::TestCase
   test "a document is fetched once and held, because consent renders on every sign-in" do
     published = {
       "/.well-known/oauth-protected-resource/mcp" => {
-        "scope_descriptions" => { "things:read" => "Search and read your catalog" }
+        "scope_descriptions" => { "uris:read" => "Search and read your catalog" }
       }
     }
 
     with_resource(published) do |server|
-      2.times { ResourceMetadata.describe(server.url, "things:read") }
+      2.times { ResourceMetadata.describe(server.url, "uris:read") }
 
       assert_equal 1, server.paths.count
     end
@@ -138,19 +138,19 @@ class ResourceMetadataTest < ActiveSupport::TestCase
 
   test "several resources are asked, and the first to describe a scope wins" do
     first = { "/.well-known/oauth-protected-resource/mcp" => {
-      "scope_descriptions" => { "things:read" => "Read your catalog" }
+      "scope_descriptions" => { "uris:read" => "Read your catalog" }
     } }
     second = { "/.well-known/oauth-protected-resource/mcp" => {
-      "scope_descriptions" => { "things:read" => "Something else", "jobs:run" => "Run a job" }
+      "scope_descriptions" => { "uris:read" => "Something else", "jobs:run" => "Run a job" }
     } }
 
     with_resource(first) do |one|
       with_resource(second) do |two|
-        described = ResourceMetadata.describe([ one.url, two.url ], "things:read jobs:run")
+        described = ResourceMetadata.describe([ one.url, two.url ], "uris:read jobs:run")
 
         assert_equal [
           [ "jobs:run", "Run a job" ],
-          [ "things:read", "Read your catalog" ]
+          [ "uris:read", "Read your catalog" ]
         ], described
       end
     end
@@ -158,7 +158,7 @@ class ResourceMetadataTest < ActiveSupport::TestCase
 
   test "a document that is not a document is simply not one" do
     with_resource({ "/.well-known/oauth-protected-resource/mcp" => "<html>nope</html>" }) do |server|
-      assert_equal [ [ "things:read", nil ] ], ResourceMetadata.describe(server.url, "things:read")
+      assert_equal [ [ "uris:read", nil ] ], ResourceMetadata.describe(server.url, "uris:read")
     end
   end
 end

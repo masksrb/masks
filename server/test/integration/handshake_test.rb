@@ -1,21 +1,21 @@
 require "test_helper"
 
 class HandshakeTest < ActionDispatch::IntegrationTest
-  APP = "https://demo.things.test".freeze
+  APP = "https://demo.uris.test".freeze
   RESOURCE = "#{APP}/mcp".freeze
   RETURN_TO = "#{APP}/auth/handshake/callback".freeze
   REDIRECT_URI = "#{APP}/auth/masks/callback".freeze
-  SCOPE = "openid profile email offline_access things:read".freeze
+  SCOPE = "openid profile email offline_access uris:read".freeze
 
   setup do
     @owner = create_actor(@tenant, nickname: "owner", password: "password",
-                          scopes: Scopes.join(Scopes::STANDARD + [ Scopes::HANDSHAKE, "things:read" ]))
+                          scopes: Scopes.join(Scopes::STANDARD + [ Scopes::HANDSHAKE, "uris:read" ]))
     host! host_for(@tenant)
   end
 
   def connect(redirect_uris: [ REDIRECT_URI ], **overrides)
     params = {
-      client_name: "things",
+      client_name: "uris",
       resource: RESOURCE,
       scope: SCOPE,
       return_to: RETURN_TO,
@@ -62,9 +62,9 @@ class HandshakeTest < ActionDispatch::IntegrationTest
     connect
 
     assert_response :success
-    assert_match "Connect things?", response.body
+    assert_match "Connect uris?", response.body
     assert_match APP, response.body
-    assert_match "things:read", response.body
+    assert_match "uris:read", response.body
     assert_match REDIRECT_URI, response.body
   end
 
@@ -102,7 +102,7 @@ class HandshakeTest < ActionDispatch::IntegrationTest
     registration = redeem(approve!)
 
     assert_equal [ REDIRECT_URI ], registration["redirect_uris"]
-    assert_equal "things", registration["client_name"]
+    assert_equal "uris", registration["client_name"]
     assert_equal Scopes.list(SCOPE), Scopes.list(registration["scope"])
     assert_equal [ RESOURCE ], approved.resources
   end
@@ -261,7 +261,7 @@ class HandshakeTest < ActionDispatch::IntegrationTest
   end
 
   test "approving the screen that was rendered connects that app, not the newer one" do
-    other = "https://other.things.test"
+    other = "https://other.uris.test"
 
     sign_in_as(@owner)
 
@@ -279,7 +279,7 @@ class HandshakeTest < ActionDispatch::IntegrationTest
 
     assert response.location.start_with?(RETURN_TO), "connected the wrong app"
 
-    assert_equal [ "things" ], within(@tenant) { Client.all.map(&:name) }
+    assert_equal [ "uris" ], within(@tenant) { Client.all.map(&:name) }
   end
 
   test "a hid from another browser connects nothing" do
@@ -357,7 +357,7 @@ class HandshakeTest < ActionDispatch::IntegrationTest
     get resumed
 
     assert_response :success
-    assert_match "Connect things?", response.body
+    assert_match "Connect uris?", response.body
   end
 
   test "an approved client does not ask again for what a person already approved" do
@@ -411,7 +411,7 @@ class HandshakeTest < ActionDispatch::IntegrationTest
     claims = claims_in(granted["access_token"])
 
     assert_equal [ RESOURCE ], Array(claims["aud"])
-    assert_includes Scopes.list(claims["scope"]), "things:read"
+    assert_includes Scopes.list(claims["scope"]), "uris:read"
   end
 
   test "the endpoint an app sends a person to is the one discovery advertises" do

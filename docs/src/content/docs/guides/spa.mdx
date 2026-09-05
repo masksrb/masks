@@ -73,7 +73,7 @@ const client = createBrowserClient({
   clientId: "2bb32482-…",
   redirectUri: `${location.origin}/callback`,
   scope: "openid profile email offline_access",
-  resource: "https://demo.things.example/mcp",
+  resource: "https://demo.uris.example/mcp",
 });
 
 await client.authorize({ returnTo: "/dashboard" });   // on a "sign in" click
