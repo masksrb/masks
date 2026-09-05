@@ -115,13 +115,13 @@ jobs:
         working-directory: web
         run: npm run typecheck
 
-      - name: Test
-        working-directory: web
-        run: npm test
-
       - name: Build
         working-directory: web
         run: npm run build
+
+      - name: Test
+        working-directory: web
+        run: npm test
 
       - name: Publish
         working-directory: web
