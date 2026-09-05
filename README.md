@@ -12,9 +12,9 @@ web/       @masks/client                    BFF and browser PKCE, for an SPA
 docs/      the site above                   Astro + Starlight
 ```
 
-The provider is a deployable, not a gem — it holds a database and the signing keys, and it stays
-standalone. Everything an application needs to sign in against it is the one `masks` gem, whose
-Rails half loads only when Rails does.
+The provider is a deployable rather than a gem: it holds a database and the signing keys, and it
+stays standalone. Everything an application needs to sign in against it is the one `masks` gem,
+whose Rails half loads only when Rails does.
 
 ```sh
 bin/setup   # dependencies, databases, two declared tenants

@@ -7,9 +7,9 @@ gem "masks"
 ```
 
 Three parts, in one gem. **Consumers spend tokens. Resource servers accept them.** Most
-client libraries only build the first, so everything above the second gets written by
-hand in each resource server — its scope check, its `WWW-Authenticate` header, its
-metadata document. Both halves are here, and a Rails engine that mounts them.
+client libraries build only the first, leaving each resource server to write its own
+scope check, its `WWW-Authenticate` header and its metadata document. Both halves are
+here, with a Rails engine that mounts them.
 
 The engine loads only when Rails does. A Sinatra, Hanami or plain-Rack app requiring
 this gem pulls in `jwt` and nothing else.
@@ -29,9 +29,9 @@ the file credentials land in. Set `MASKS_ISSUER`, start the app, and open
 
 ### The handshake
 
-A first-party app must not self-register anonymously — that is how a stranger's
-connector also arrives. So an unconnected app is offered one button, the browser goes to
-its own issuer's approval screen, and the one-time token that comes back is redeemed
+A first-party app must not self-register anonymously, since that is also how a
+stranger's connector arrives. An unconnected app is offered one button, the browser goes
+to its own issuer's approval screen, and the one-time token that comes back is redeemed
 server-side. **The secret never travels through the browser and nobody types it
 anywhere.**
 
@@ -60,7 +60,7 @@ end
 ```
 
 `masks_identity`, `masks_tenant` and `masks_scopes` are what a signed-in request carries.
-Tokens live in the encrypted Rails session and never reach JavaScript — this is the
+Tokens live in the encrypted Rails session and never reach JavaScript. This is the
 backend-for-frontend pattern, and it is the default because an SPA holding a token is an
 SPA where XSS lifts one.
 
@@ -79,10 +79,9 @@ const session = createSession()
 const status = await session.status()
 ```
 
-`status()` answers one of three things, and the third is why it exists: `signed_in`,
-`signed_out` with where to sign in, and `handshake_required` with where to go instead —
-because an app nobody has connected must not offer a sign-in button that leads to an
-error page at the issuer.
+`status()` answers one of three states: `signed_in`, `signed_out` with where to sign in,
+and `handshake_required` with where to go instead. The third exists because an app nobody
+has connected must not offer a sign-in button that leads to an error page at the issuer.
 
 ### Accepting tokens
 
@@ -92,9 +91,12 @@ An app that is also a resource server:
 class ApiController < ApplicationController
   include Masks::Rails::ProtectedResource
 
-  before_action { masks_protect!(scope: "things:read") }
+  masks_protect! scope: "things:read"
 end
 ```
+
+`masks_protect!` is a class method that installs the `before_action` itself, and passes `:only` and
+`:except` through.
 
 `masks_claims` is the verified token. A refusal carries the RFC 6750 challenge with
 `resource_metadata`, so a client handed nothing but a URL can find its way to the issuer
@@ -169,8 +171,7 @@ identity = session.identity(tokens)
 ```
 
 `start` sends a nonce only when `openid` was asked for, so holding one means an id token
-is owed — which is what lets the check on the way back be exact rather than vacuously
-true.
+is owed, and the check on the way back is exact.
 
 Also: `refresh`, `exchange`, `revoke`, `introspect`, `userinfo`, and `end_session_url`.
 
@@ -181,8 +182,7 @@ constructing one per request.
 
 ### The handshake
 
-The flow that connects a first-party app, rather than two helpers and sixty lines of
-state in every consumer:
+The flow that connects a first-party app:
 
 ```ruby
 handshake = Masks::Client::Handshake.new(
@@ -221,7 +221,7 @@ response.headers["WWW-Authenticate"] = resource.challenge(error)
 
 `resource.metadata` is the RFC 9728 document to serve at
 `/.well-known/oauth-protected-resource`. The `scope_descriptions` extension in it is how
-an auth server renders your scopes as sentences on its consent screen — it has no other
+an auth server renders your scopes as sentences on its consent screen; it has no other
 way to know what `things:read` means.
 
 There is a Rack middleware for consumers that want the challenge below the framework:
@@ -233,7 +233,7 @@ use Masks::Client::Rack, resource: resource, scope: "things:read"
 ### Introspection
 
 A resource server doing JWT-only validation cannot see a revocation until the token
-expires. Asking is the honest answer:
+expires. Ask the issuer instead:
 
 ```ruby
 found = session.introspect(token)
@@ -241,15 +241,20 @@ found.active? && found.permits?("things:read")
 ```
 
 `Introspection` is a `Claims` whose `permit!` raises when the issuer says the token is
-not active, so switching from local verification to asking does not mean remembering to
-check a boolean.
+not active, so moving from local verification to introspection needs no extra boolean
+check.
 
 ## Which issuers this speaks to
 
 masks publishes `masks_protocol_version` in its discovery document, and this gem needs at
 least version 1 — the one that serves `handshake_endpoint` and the approval flow behind
-it. An older issuer is refused with a sentence saying so, rather than at the first screen
-anybody touches.
+it. An older issuer is refused at configuration time, with a sentence saying so.
+
+## Documentation
+
+Full API reference at [masks.pages.dev](https://masks.pages.dev):
+[Masks::Client](https://masks.pages.dev/libraries/ruby/) for the protocol half,
+[Masks::Rails](https://masks.pages.dev/libraries/rails/) for the engine.
 
 ## License
 
