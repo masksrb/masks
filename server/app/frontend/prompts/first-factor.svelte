@@ -1,7 +1,6 @@
 <script>
 import Identified from "../shared/Identified.svelte";
 import PasskeyButton from "../shared/PasskeyButton.svelte";
-import PromptHeader from "../shared/PromptHeader.svelte";
 
 let { login } = $props();
 
@@ -20,7 +19,9 @@ function onsubmit(event) {
 }
 </script>
 
-<PromptHeader heading="Enter your password" {login} />
+<div class="prompt-head">
+  <h1 class="prompt-title">Enter your password</h1>
+</div>
 
 <Identified {login} />
 
@@ -40,17 +41,17 @@ function onsubmit(event) {
 
   <button type="submit" class="action" disabled={!valid || login.loading}>
     {#if login.loading}<span class="spinner"></span>{/if}
-    {login.loading ? "Signing in" : "Sign in"}
+    {login.loading ? "Checking" : "Continue"}
   </button>
 </form>
 
-<PasskeyButton {login} label="Use a passkey instead" />
+<PasskeyButton {login} label="Use a passkey" />
 
 <button
   type="button"
-  class="textlink self-start"
+  class="action action-plain"
   disabled={login.loading}
   onclick={() => login.submit("forgot-password", {})}
 >
-  Forgot your password?
+  Forgot it?
 </button>

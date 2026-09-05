@@ -3,15 +3,14 @@
 </p>
 
 <p>
-  Your username is <strong><%= @actor.nickname %></strong>. Open the link below
-  to choose a password and finish setting up the account.
+  Your username is <strong><%= @actor.nickname %></strong>.
+  Open the link to choose a password.
 </p>
 
 <p><%= link_to @url, @url %></p>
 
 <p>
-  The link works once, and expires in
-  <%= ActiveSupport::Duration.build(Invitation.lifetime.to_i).inspect %>. If you
-  were not expecting this, you can ignore it — nothing happens until somebody
-  opens the link.
+  Works once, expires in
+  <%= ActiveSupport::Duration.build(Invitation.lifetime.to_i).inspect %>.
+  Nothing happens until somebody opens it.
 </p>

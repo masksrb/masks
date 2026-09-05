@@ -1,17 +1,32 @@
 <% state = login.state("consent") %>
+<% hot, rest = ranked_scopes(ResourceMetadata.describe(state.audience, state.scopes)) %>
 
-<div class="prompt-head">
-  <h1 class="prompt-title"><%= login.client&.name %> wants access</h1>
-  <p class="prompt-lede">
-    Signed in as <strong><%= login.actor&.nickname %></strong>.
-  </p>
+<div class="auth-pair">
+  <span class="auth-mark auth-mark-client" aria-hidden="true"><%= login.client&.name.to_s.first&.upcase %></span>
+  <span class="auth-wire"></span>
+  <span class="auth-mark" aria-hidden="true"><%= Current.tenant&.name.to_s.first&.upcase %></span>
 </div>
 
-<div class="ledger">
+<div class="prompt-head">
+  <h1 class="prompt-title">Allow <%= login.client&.name %>?</h1>
+</div>
+
+<div class="slab">
   <div class="ledger-row">
-    <span class="ledger-label">It is asking to</span>
+    <span class="ledger-label">Access</span>
     <ul class="grant-scopes">
-      <% ResourceMetadata.describe(state.audience, state.scopes).each do |scope, description| %>
+      <% hot.each do |scope, description| %>
+        <li class="grant-scope grant-scope-hot">
+          <span><%= description || "Use the #{scope} scope" %></span>
+          <span class="chip-key"><%= scope %></span>
+        </li>
+      <% end %>
+
+      <% if hot.any? && rest.any? %>
+        <li class="grant-scope-split"></li>
+      <% end %>
+
+      <% rest.each do |scope, description| %>
         <li class="grant-scope">
           <span><%= description || "Use the #{scope} scope" %></span>
           <span class="chip-key"><%= scope %></span>
@@ -45,4 +60,4 @@
   <% end %>
 </div>
 
-<p class="aside">Not you? <%= link_to "Sign out", logout_path, class: "textlink" %>.</p>
+<p class="aside"><%= login.actor&.nickname %> · <%= link_to "Sign out", logout_path, class: "textlink" %></p>

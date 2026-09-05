@@ -1,13 +1,11 @@
 <% invitation = login.state("invitation").invitation %>
 
-<%= render "logins/header", heading: "Accept your invitation", login: login %>
-
-<p class="prompt-lede">
+<div class="prompt-head">
+  <h1 class="prompt-title">Accept your invitation</h1>
   <% if invitation.opened_by %>
-    <%= invitation.opened_by.nickname %> invited you.
+    <p class="prompt-lede"><%= invitation.opened_by.nickname %> invited you.</p>
   <% end %>
-  Choose a password and the account is yours.
-</p>
+</div>
 
 <%= form_with url: login_path, method: :post, id: "accept-invitation", class: "flow" do |form| %>
   <%= hidden_field_tag :rid, login.rid %>
@@ -34,5 +32,5 @@
     </span>
   </label>
 
-  <button type="submit" class="action">Accept the invitation</button>
+  <button type="submit" class="action">Continue</button>
 <% end %>

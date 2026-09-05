@@ -186,11 +186,23 @@ class Login
     states_by_key.fetch(key.to_s)
   end
 
+  def messages
+    warnings.filter_map do |key|
+      notice = I18n.t("logins.notices.#{key}", default: nil)
+      text = notice || I18n.t("logins.warnings.#{key}", default: nil)
+
+      next unless text
+
+      { "key" => key, "text" => text, "tone" => notice ? "note" : "note note-bad" }
+    end
+  end
+
   def as_json(*)
     base = {
       "prompt" => prompt,
       "settled" => settled?,
       "warnings" => warnings,
+      "messages" => messages,
       "identifier" => identifier,
       "rid" => rid,
       "actor" => actor && { "nickname" => actor.nickname, "name" => actor.name },

@@ -1,22 +1,42 @@
 <script>
+import { ranked } from "../lib/scopes.js";
+
 let { login } = $props();
 
-const scopes = $derived(login.consent?.scopes ?? []);
+const scopes = $derived(ranked(login.consent?.scopes ?? []));
 const audience = $derived(login.consent?.audience ?? []);
+const client = $derived(login.client?.name ?? "");
+const tenant = $derived(login.auth.tenant?.name ?? "");
+
+const initial = (name) => (name ? name.slice(0, 1).toUpperCase() : "");
 </script>
 
-<div class="prompt-head">
-  <h1 class="prompt-title">{login.client?.name} wants access</h1>
-  <p class="prompt-lede">
-    Signed in as <strong>{login.actor?.nickname}</strong>.
-  </p>
+<div class="auth-pair">
+  <span class="auth-mark auth-mark-client" aria-hidden="true">{initial(client)}</span>
+  <span class="auth-wire"></span>
+  <span class="auth-mark" aria-hidden="true">{initial(tenant)}</span>
 </div>
 
-<div class="ledger">
+<div class="prompt-head">
+  <h1 class="prompt-title">Allow {client}?</h1>
+</div>
+
+<div class="slab">
   <div class="ledger-row">
-    <span class="ledger-label">It is asking to</span>
+    <span class="ledger-label">Access</span>
     <ul class="grant-scopes">
-      {#each scopes as [scope, description] (scope)}
+      {#each scopes.hot as [scope, description] (scope)}
+        <li class="grant-scope grant-scope-hot">
+          <span>{description ?? `Use the ${scope} scope`}</span>
+          <span class="chip-key">{scope}</span>
+        </li>
+      {/each}
+
+      {#if scopes.hot.length && scopes.rest.length}
+        <li class="grant-scope-split"></li>
+      {/if}
+
+      {#each scopes.rest as [scope, description] (scope)}
         <li class="grant-scope">
           <span>{description ?? `Use the ${scope} scope`}</span>
           <span class="chip-key">{scope}</span>
@@ -56,4 +76,6 @@ const audience = $derived(login.consent?.audience ?? []);
   </button>
 </div>
 
-<p class="aside">Not you? <a class="textlink" href="/logout">Sign out</a>.</p>
+<p class="aside">
+  {login.actor?.nickname} · <a class="textlink" href="/logout">Sign out</a>
+</p>

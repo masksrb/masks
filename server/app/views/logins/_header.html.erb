@@ -1,7 +1,5 @@
 <div class="prompt-head">
-  <h1 class="prompt-title"><%= heading %></h1>
-
-  <% if login.client&.name %>
-    <p class="prompt-lede">to continue to <strong><%= login.client.name %></strong></p>
-  <% end %>
+  <h1 class="prompt-title">
+    <%= login.client&.name ? "#{heading} to #{login.client.name}" : heading %>
+  </h1>
 </div>

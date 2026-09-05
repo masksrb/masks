@@ -1,18 +1,12 @@
 <p>
-  Confirm that this address belongs to the <%= @tenant_name %> account
-  <strong><%= @actor.nickname %></strong>.
-</p>
-
-<p>
-  Until you do, applications you sign in to are told the address has not been
-  confirmed, and some will refuse it.
+  Confirm this address for <strong><%= @actor.nickname %></strong>
+  at <%= @tenant_name %>.
 </p>
 
 <p><%= link_to @url, @url %></p>
 
 <p>
-  The link works once, and expires in
+  Works once, expires in
   <%= ActiveSupport::Duration.build(EmailVerification.lifetime.to_i).inspect %>.
-  If you do not recognise this account, ignore it — confirming is the only thing
-  the link does, and nothing else changes.
+  If this was not you, ignore it — nothing else changes.
 </p>

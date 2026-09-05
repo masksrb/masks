@@ -1,45 +1,78 @@
-<%= render "logins/header", heading: "Create the owner", login: login %>
+<% nickname = login.updates["nickname"].to_s %>
+<% email = login.updates["email"].to_s %>
 
-<p class="prompt-lede">
-  Nobody has an account here yet. The first one you make owns this tenant.
-</p>
+<div class="ceremony">
+  <aside class="record">
+    <span class="record-cap">Creating</span>
 
-<%= form_with url: login_path, method: :post, id: "setup", class: "flow" do |form| %>
-  <%= hidden_field_tag :rid, login.rid %>
-  <%= form.hidden_field :event, value: "setup" %>
+    <div class="rec-rows">
+      <div class="rec-row">
+        <span class="rec-key">owner</span>
+        <span class="rec-val <%= "rec-val-pending" if nickname.blank? %>">
+          <%= nickname.presence || "—" %>
+        </span>
+      </div>
+      <div class="rec-row">
+        <span class="rec-key">email</span>
+        <span class="rec-val <%= "rec-val-pending" if email.blank? %>">
+          <%= email.presence || "—" %>
+        </span>
+      </div>
+      <div class="rec-row">
+        <span class="rec-key">password</span>
+        <span class="rec-val rec-val-pending">—</span>
+      </div>
+      <div class="rec-row">
+        <span class="rec-key">tenant</span>
+        <span class="rec-val rec-val-fixed"><%= Current.tenant&.name %></span>
+      </div>
+      <div class="rec-row">
+        <span class="rec-key">role</span>
+        <span class="rec-val rec-val-fixed">owner</span>
+      </div>
+    </div>
+  </aside>
 
-  <% if LoginStates::Setup.token_required? %>
-    <label class="field">
-      <span class="field-label">Setup token</span>
-      <%= form.password_field :token, autocomplete: "off", class: "control" %>
-      <span class="field-hint">Whoever deployed this server set one.</span>
-    </label>
-  <% end %>
+  <div class="flow">
+    <div class="prompt-head">
+      <span class="record-cap">First run</span>
+      <h1 class="prompt-title">Create the owner</h1>
+    </div>
 
-  <label class="field">
-    <span class="field-label">Username</span>
-    <%= form.text_field :nickname, value: login.updates["nickname"],
-          autocomplete: "username", autocapitalize: "none", autocorrect: "off",
-          spellcheck: "false", class: "control" %>
-  </label>
+    <%= form_with url: login_path, method: :post, id: "setup", class: "flow" do |form| %>
+      <%= hidden_field_tag :rid, login.rid %>
+      <%= form.hidden_field :event, value: "setup" %>
 
-  <label class="field">
-    <span class="field-label">Email</span>
-    <%= form.email_field :email, value: login.updates["email"],
-          autocomplete: "email", class: "control" %>
-    <span class="field-hint">
-      Applications you sign in to are given this address, and most refuse an
-      account without one.
-    </span>
-  </label>
+      <% if LoginStates::Setup.token_required? %>
+        <label class="field">
+          <span class="field-label">Setup token</span>
+          <%= form.password_field :token, autocomplete: "off", class: "control" %>
+        </label>
+      <% end %>
 
-  <label class="field">
-    <span class="field-label">Password</span>
-    <%= form.password_field :password, autocomplete: "new-password", class: "control" %>
-    <span class="field-hint">
-      At least <%= LoginStates::Setup::MINIMUM_PASSWORD %> characters.
-    </span>
-  </label>
+      <label class="field">
+        <span class="field-label">Username</span>
+        <%= form.text_field :nickname, value: nickname,
+              autocomplete: "username", autocapitalize: "none", autocorrect: "off",
+              spellcheck: "false", class: "control" %>
+      </label>
 
-  <button type="submit" class="action">Create the owner</button>
-<% end %>
+      <label class="field">
+        <span class="field-label">Email</span>
+        <%= form.email_field :email, value: email, autocomplete: "email", class: "control" %>
+      </label>
+
+      <label class="field">
+        <span class="field-label">Password</span>
+        <%= form.password_field :password, autocomplete: "new-password", class: "control" %>
+        <span class="field-hint">
+          At least <%= LoginStates::Setup::MINIMUM_PASSWORD %> characters.
+        </span>
+      </label>
+
+      <button type="submit" class="action">Create the owner</button>
+    <% end %>
+
+    <p class="aside">This screen will not appear again.</p>
+  </div>
+</div>

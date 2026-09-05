@@ -1,10 +1,8 @@
 <% content_for :title, "Address confirmed" %>
+<% content_for :surface, "terminus" %>
 
-<h1 class="prompt-title">Address confirmed</h1>
+<span class="state state-done">Confirmed</span>
 
-<p class="prompt-lede">
-  <%= @actor.email %> is confirmed for <%= @actor.nickname %>. Applications you
-  sign in to are now told the address has been checked.
-</p>
+<h1 class="prompt-title"><%= @actor.email %> is confirmed.</h1>
 
-<%= link_to "Go to your account", root_path, class: "action" %>
+<%= link_to "Your account", root_path, class: "action action-fit" %>

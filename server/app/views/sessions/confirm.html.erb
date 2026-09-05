@@ -2,22 +2,9 @@
 
 <div id="logout-confirm" class="flow">
   <div class="prompt-head">
-    <h1 class="prompt-title">Sign out?</h1>
-    <p class="prompt-lede">
-      Signed in as <strong><%= current_actor.nickname %></strong>.
-    </p>
+    <h1 class="prompt-title">Sign out everywhere?</h1>
+    <p class="prompt-lede">Signed in as <strong><%= current_actor.nickname %></strong>.</p>
   </div>
-
-  <% if @client %>
-    <p class="prompt-lede">
-      <%= @client.name %> asked to sign you out of every app this account signs
-      in to, not only itself.
-    </p>
-  <% else %>
-    <p class="prompt-lede">
-      This signs you out of every app this account signs in to.
-    </p>
-  <% end %>
 
   <%= form_with url: logout_path, method: :delete do |form| %>
     <%= form.hidden_field :post_logout_redirect_uri, value: @logout.redirect_uri %>
@@ -26,7 +13,7 @@
 
     <div class="action-row">
       <button type="submit" class="action action-grow">Sign out</button>
-      <%= link_to "Stay signed in", root_path, class: "action action-quiet action-fit" %>
+      <%= link_to "Stay", root_path, class: "action action-quiet action-fit" %>
     </div>
   <% end %>
 </div>

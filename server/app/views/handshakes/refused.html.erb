@@ -1,20 +1,14 @@
-<% content_for :title, "This connection cannot be set up" %>
-<% content_for :surface, "grant" %>
+<% content_for :title, "This connection was refused" %>
+<% content_for :surface, "terminus" %>
 
-<h1 class="prompt-title">This connection cannot be set up</h1>
+<span class="state state-bad">Stopped</span>
 
-<p class="prompt-lede">
-  The application that sent you here described itself in a way this server will
-  not accept, so nothing has been connected and nothing has been shared.
-</p>
+<h1 class="prompt-title">
+  The application described itself in a way this server will not accept.
+</h1>
 
-<div class="ledger">
-  <div class="ledger-row">
-    <span class="ledger-label">What it said</span>
-    <span class="ledger-value aside-mono"><%= @description %></span>
-  </div>
-</div>
+<p class="said"><%= @description %></p>
 
 <p class="prompt-lede">
-  Nothing is wrong with your account. The application has to fix this.
+  Nothing was shared. The application has to fix this.
 </p>

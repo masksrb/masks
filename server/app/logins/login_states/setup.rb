@@ -32,7 +32,12 @@ module LoginStates
     end
 
     def as_json
-      { "setup" => { "token" => self.class.token_required? } }
+      {
+        "setup" => {
+          "token" => self.class.token_required?,
+          "minimum" => MINIMUM_PASSWORD
+        }
+      }
     end
 
     private

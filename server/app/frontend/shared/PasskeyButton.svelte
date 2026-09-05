@@ -1,7 +1,7 @@
 <script>
 import { assert, available, refused } from "../lib/passkey.js";
 
-let { login, label = "Sign in with a passkey" } = $props();
+let { login, label = "Use a passkey" } = $props();
 
 let busy = $state(false);
 let unusable = $state(null);

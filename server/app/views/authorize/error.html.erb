@@ -1,14 +1,12 @@
 <% content_for :title, "This request cannot be completed" %>
+<% content_for :surface, "terminus" %>
 
 <div id="authorize-error" class="flow" data-error="<%= @error_code %>">
+  <span class="state state-bad">Stopped</span>
+
   <h1 class="prompt-title"><%= t(".heading") %></h1>
 
-  <p class="prompt-lede"><%= t(".explanation") %></p>
+  <p class="said"><%= @error_code %> — <%= @error_description %></p>
 
-  <div class="note note-bad" role="alert">
-    <span class="note-code"><%= @error_code %></span>
-    <span><%= @error_description %></span>
-  </div>
-
-  <p class="aside"><%= t(".contact") %></p>
+  <p class="prompt-lede"><%= t(".contact") %></p>
 </div>

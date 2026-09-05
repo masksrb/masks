@@ -29,12 +29,22 @@ let { auth } = $props();
 const login = createLogin(untrack(() => auth));
 const Prompt = $derived(prompts[login.prompt]);
 
-const GRANTING = ["consent"];
+const SURFACES = { consent: "grant", setup: "ceremony" };
 
 $effect(() => {
-  const granting = GRANTING.includes(login.prompt);
+  const surface = SURFACES[login.prompt] ?? "challenge";
+  const column = document.querySelector(".auth-col");
 
-  document.querySelector(".auth-card")?.classList.toggle("grant", granting);
+  if (!column) return;
+
+  for (const name of ["challenge", "grant", "ceremony"]) {
+    column.classList.toggle(`surface-${name}`, name === surface);
+  }
+
+  document.querySelector(".auth-id")?.toggleAttribute(
+    "hidden",
+    surface !== "challenge",
+  );
 });
 </script>
 
@@ -45,14 +55,15 @@ $effect(() => {
     {#if Prompt}
       <Prompt {login} />
     {:else}
-      <div class="prompt-head">
-        <h1 class="prompt-title">Something went wrong</h1>
-        <p class="prompt-lede">
-          This sign-in cannot continue. Start over and try again.
-        </p>
-      </div>
+      <span class="state state-bad">Stopped</span>
 
-      <button type="button" class="action" onclick={() => login.startOver()}>
+      <h1 class="prompt-title">This sign-in cannot continue.</h1>
+
+      <button
+        type="button"
+        class="action action-quiet action-fit"
+        onclick={() => login.startOver()}
+      >
         Start over
       </button>
     {/if}

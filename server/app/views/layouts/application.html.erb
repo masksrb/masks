@@ -12,11 +12,18 @@
     <%= yield :scripts %>
   </head>
 
-  <body class="auth-page">
-    <main class="auth-card <%= content_for(:surface) %>">
-      <div class="auth-rail"><%= Current.tenant&.name || "Sign in" %></div>
+  <% surface = content_for(:surface).to_s.strip.presence || "challenge" %>
 
-      <div class="auth-body flow">
+  <body class="auth-page">
+    <main class="auth-col surface-<%= surface %>">
+      <% if surface == "challenge" && Current.tenant&.name.present? %>
+        <div class="auth-id">
+          <span class="auth-mark" aria-hidden="true"><%= Current.tenant.name.first.upcase %></span>
+          <span class="auth-tenant"><%= Current.tenant.name %></span>
+        </div>
+      <% end %>
+
+      <div class="flow">
         <% if flash[:alert].present? %>
           <div class="note note-bad" role="alert"><%= flash[:alert] %></div>
         <% end %>
