@@ -1,4 +1,6 @@
 <script>
+  import Spinner from "./Spinner.svelte";
+
   let { load, children } = $props();
 
   let state = $state({ loading: true, failure: null, data: null });
@@ -20,11 +22,11 @@
 </script>
 
 {#if state.loading}
-  <div class="py-16 grid place-items-center"><span class="loading loading-spinner"></span></div>
+  <Spinner />
 {:else if state.failure}
-  <div class="alert alert-error text-sm" role="alert">
+  <div class="alert alert-error alert-soft text-sm" role="alert">
     <span>{state.failure}</span>
-    <button class="btn btn-sm" onclick={run}>Try again</button>
+    <button type="button" class="btn btn-sm" onclick={run}>Try again</button>
   </div>
 {:else}
   {@render children(state.data, run)}

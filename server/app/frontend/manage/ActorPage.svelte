@@ -1,7 +1,14 @@
 <script>
+  import { createFeedback } from "./lib/feedback.svelte.js";
+  import { day, since } from "./lib/format.js";
   import ScopesEditor from "./ScopesEditor.svelte";
+  import Card from "./ui/Card.svelte";
+  import Field from "./ui/Field.svelte";
+  import Notices from "./ui/Notices.svelte";
+  import Page from "./ui/Page.svelte";
+  import Spinner from "./ui/Spinner.svelte";
 
-  let { api, uuid, router } = $props();
+  let { api, uuid } = $props();
 
   const FIELDS = [
     ["name", "Name"],
@@ -31,12 +38,12 @@
     }
   `;
 
+  const feedback = createFeedback();
+
   let actor = $state(null);
   let supported = $state([]);
   let draft = $state({});
   let loading = $state(true);
-  let notice = $state(null);
-  let failure = $state(null);
   let codes = $state(null);
   let link = $state(null);
 
@@ -50,7 +57,7 @@
       supported = data.scopesSupported;
       draft = Object.fromEntries(FIELDS.map(([key]) => [key, data.actor?.[key] ?? ""]));
     } catch (thrown) {
-      failure = thrown.message;
+      feedback.blame(thrown);
     } finally {
       loading = false;
     }
@@ -58,27 +65,18 @@
 
   load();
 
-  async function act(document, variables, message) {
-    notice = null;
-    failure = null;
+  async function act(document, variables, notice) {
+    const data = await feedback.attempt(() => api.query(document, variables), notice);
 
-    try {
-      await api.query(document, variables);
-      notice = message;
-      await load();
+    if (data) await load();
 
-      return true;
-    } catch (thrown) {
-      failure = thrown.message;
-
-      return false;
-    }
+    return data;
   }
 
   const saveProfile = () =>
     act(
-      `mutation Save($uuid: ID!, ${FIELDS.map(([k]) => `$${k}: String`).join(", ")}) {
-        updateActor(uuid: $uuid, ${FIELDS.map(([k]) => `${k}: $${k}`).join(", ")}) { actor { uuid } }
+      `mutation Save($uuid: ID!, ${FIELDS.map(([key]) => `$${key}: String`).join(", ")}) {
+        updateActor(uuid: $uuid, ${FIELDS.map(([key]) => `${key}: $${key}`).join(", ")}) { actor { uuid } }
       }`,
       {
         uuid,
@@ -86,7 +84,7 @@
           Object.entries(draft).map(([key, value]) => [key, value === "" ? null : value]),
         ),
       },
-      "Saved.",
+      "Profile saved.",
     );
 
   const saveScopes = (scopes) =>
@@ -99,51 +97,40 @@
     );
 
   async function generate() {
-    notice = null;
-    failure = null;
+    codes = null;
 
-    try {
-      const data = await api.query(
-        `mutation Codes($uuid: ID!) { generateBackupCodes(uuid: $uuid) { codes } }`,
-        { uuid },
-      );
+    const data = await act(
+      `mutation Codes($uuid: ID!) { generateBackupCodes(uuid: $uuid) { codes } }`,
+      { uuid },
+      "Backup codes generated. They are shown once and never again.",
+    );
 
-      codes = data.generateBackupCodes.codes;
-      notice = "Backup codes generated. They are shown once and never again.";
-      await load();
-    } catch (thrown) {
-      failure = thrown.message;
-    }
+    if (data) codes = data.generateBackupCodes.codes;
   }
 
   async function recover(document, confirmation) {
     if (!confirm(confirmation)) return;
 
-    notice = null;
-    failure = null;
     link = null;
 
-    try {
-      const data = await api.query(document, { uuid });
-      const result = Object.values(data)[0];
+    const data = await act(document, { uuid }, null);
 
-      if (result.delivered) {
-        notice = "Emailed. The link is not shown here, so that using it proves the address.";
-      } else {
-        notice = "No mailer is configured, so pass this link along yourself. It works once.";
-        link = result.url;
-      }
+    if (!data) return;
 
-      await load();
-    } catch (thrown) {
-      failure = thrown.message;
+    const result = Object.values(data)[0];
+
+    if (result.delivered) {
+      feedback.say("Emailed. The link is not shown here, so that using it proves the address.");
+    } else {
+      feedback.say("No mailer is configured, so pass this link along yourself. It works once.");
+      link = result.url;
     }
   }
 
   const reset = () =>
     recover(
       `mutation Reset($uuid: ID!) { resetPassword(uuid: $uuid) { delivered url } }`,
-      "Start a password reset? Every session and refresh token ends when it is used.",
+      "Start a password reset? Every session and refresh token ends when the link is used.",
     );
 
   const resend = () =>
@@ -152,12 +139,12 @@
       "Send a fresh invitation? The previous one stops working.",
     );
 
-  function revokePasskey(id, label) {
-    if (!confirm(`Remove the passkey "${label}"?`)) return;
+  function revokePasskey(passkey) {
+    if (!confirm(`Remove the passkey “${passkey.label}”?`)) return;
 
     act(
       `mutation Revoke($uuid: ID!, $id: ID!) { revokePasskey(uuid: $uuid, id: $id) { actor { uuid } } }`,
-      { uuid, id },
+      { uuid, id: passkey.id },
       "Passkey removed.",
     );
   }
@@ -173,88 +160,87 @@
   }
 </script>
 
-<button class="btn btn-ghost btn-sm mb-4" onclick={() => router.go("/actors")}>← Actors</button>
-
 {#if loading && !actor}
-  <div class="py-16 grid place-items-center"><span class="loading loading-spinner"></span></div>
+  <Spinner />
 {:else if !actor}
-  <div class="alert alert-error text-sm" role="alert">{failure ?? "No actor with that uuid."}</div>
+  <div class="alert alert-error alert-soft text-sm" role="alert">
+    {feedback.state.failure ?? "There is no actor with that uuid."}
+  </div>
 {:else}
-  <h1 class="text-xl font-bold mb-1">{actor.nickname}</h1>
-  <p class="text-xs opacity-60 font-mono mb-4">{actor.uuid}</p>
+  <Page
+    title={actor.nickname}
+    id={actor.uuid}
+    back={{ to: "/actors", label: "Actors" }}
+    lede={actor.activated
+      ? `Signed in ${since(actor.lastLoginAt, "never")}.`
+      : "Invited, and has not accepted yet."}
+  >
+    <Notices feedback={feedback.state} />
 
-  {#if notice}<div class="alert alert-success text-sm mb-4">{notice}</div>{/if}
-  {#if failure}<div class="alert alert-error text-sm mb-4" role="alert">{failure}</div>{/if}
-
-  {#if codes}
-    <div class="alert alert-warning flex-col items-start gap-2 mb-4">
-      <span class="font-medium">Write these down. They are not recoverable.</span>
-      <div class="font-mono text-sm grid grid-cols-2 md:grid-cols-5 gap-2">
-        {#each codes as code (code)}<span>{code}</span>{/each}
+    {#if link}
+      <div class="alert alert-info alert-soft flex-col items-start gap-2" role="status">
+        <span class="font-medium">This link works once.</span>
+        <code class="font-mono text-xs break-all">{link}</code>
       </div>
-    </div>
-  {/if}
+    {/if}
 
-  <div class="grid md:grid-cols-2 gap-4 items-start">
-    <section class="card bg-base-100">
-      <div class="card-body gap-3">
-        <h2 class="card-title text-base">Profile</h2>
-        <p class="text-xs opacity-70">
-          Released under the <span class="font-mono">profile</span> and
-          <span class="font-mono">email</span> scopes.
-        </p>
-
-        {#each FIELDS as [key, label] (key)}
-          <label class="form-control">
-            <span class="label-text text-xs opacity-70">{label}</span>
-            <input class="input input-sm input-bordered w-full" bind:value={draft[key]} />
-          </label>
-        {/each}
-
-        <button class="btn btn-primary btn-sm" onclick={saveProfile}>Save profile</button>
-      </div>
-    </section>
-
-    <div class="flex flex-col gap-4">
-      <section class="card bg-base-100">
-        <div class="card-body gap-3">
-          <h2 class="card-title text-base">Scopes</h2>
-          <p class="text-xs opacity-70">
-            The ceiling on what any client may be granted on this actor's behalf.
-          </p>
-
-          <ScopesEditor value={actor.scopes} available={supported} onchange={saveScopes} />
+    {#if codes}
+      <div class="alert alert-warning alert-soft flex-col items-start gap-2" role="status">
+        <span class="font-medium">Write these down. They are not recoverable.</span>
+        <div class="grid grid-cols-2 gap-2 font-mono text-sm md:grid-cols-5">
+          {#each codes as code (code)}<span>{code}</span>{/each}
         </div>
-      </section>
+      </div>
+    {/if}
 
-      <section class="card bg-base-100">
-        <div class="card-body gap-3">
-          <h2 class="card-title text-base">Access</h2>
+    <div class="grid items-start gap-4 md:grid-cols-2">
+      <Card
+        title="Profile"
+        lede="Released to clients under the profile and email scopes, and nowhere else."
+      >
+        <div class="grid gap-3 sm:grid-cols-2">
+          {#each FIELDS as [key, label] (key)}
+            <Field {label} bind:value={draft[key]} />
+          {/each}
+        </div>
 
+        <button type="button" class="btn btn-primary btn-sm self-start" onclick={saveProfile}>
+          Save profile
+        </button>
+      </Card>
+
+      <div class="flex flex-col gap-4">
+        <Card
+          title="Scopes"
+          lede="The ceiling on what any client may be granted on this actor's behalf."
+        >
+          <ScopesEditor value={actor.scopes} available={supported} onchange={saveScopes} />
+        </Card>
+
+        <Card title="Access">
           {#if actor.activated}
-            <p class="text-sm opacity-70">
+            <p class="max-w-prose text-sm opacity-70">
               This account has a password. A reset sends a one-time link and signs it out
               everywhere.
             </p>
-            <button class="btn btn-sm self-start" onclick={reset}>Reset password</button>
+            <button type="button" class="btn btn-sm self-start" onclick={reset}>
+              Reset password
+            </button>
           {:else}
-            <p class="text-sm opacity-70">
-              Invited{actor.invitedAt ? ` on ${actor.invitedAt.slice(0, 10)}` : ""}, and has not
-              accepted yet. There is no password to reset until they do.
+            <p class="max-w-prose text-sm opacity-70">
+              Invited{actor.invitedAt ? ` on ${day(actor.invitedAt)}` : ""}, and has not accepted
+              yet. There is no password to reset until they do.
             </p>
-            <button class="btn btn-sm self-start" onclick={resend}>Resend invitation</button>
+            <button type="button" class="btn btn-sm self-start" onclick={resend}>
+              Resend invitation
+            </button>
           {/if}
+        </Card>
 
-          {#if link}
-            <p class="font-mono text-xs break-all bg-base-200 rounded px-2 py-1">{link}</p>
-          {/if}
-        </div>
-      </section>
-
-      <section class="card bg-base-100">
-        <div class="card-body gap-3">
-          <h2 class="card-title text-base">Passkeys</h2>
-
+        <Card
+          title="Passkeys"
+          lede="A passkey counts as both factors on its own, so each one here is a way in."
+        >
           {#if actor.passkeys.length === 0}
             <p class="text-sm opacity-70">None enrolled.</p>
           {:else}
@@ -271,9 +257,12 @@
                         <span class="badge badge-ghost badge-xs">{passkey.certification}</span>
                       {/if}
                       <button
+                        type="button"
                         class="link text-xs text-error"
-                        onclick={() => revokePasskey(passkey.id, passkey.label)}
-                      >Remove</button>
+                        onclick={() => revokePasskey(passkey)}
+                      >
+                        Remove
+                      </button>
                     </span>
                   </div>
 
@@ -285,36 +274,39 @@
                     </span>
                   {/if}
 
-                  <span class="text-xs opacity-60 font-mono">{passkey.aaguid ?? "no aaguid"}</span>
+                  <div class="flex flex-wrap gap-x-4 text-xs opacity-60">
+                    <span class="font-mono">{passkey.aaguid ?? "no aaguid"}</span>
+                    <span>Last used {since(passkey.lastUsedAt, "never")}</span>
+                  </div>
                 </li>
               {/each}
             </ul>
           {/if}
-        </div>
-      </section>
+        </Card>
 
-      <section class="card bg-base-100">
-        <div class="card-body gap-3">
-          <h2 class="card-title text-base">Second factor</h2>
-
+        <Card title="Second factor">
           {#if actor.otpEnabled}
             <p class="text-sm">
               Authenticator enabled. {actor.backupCodesRemaining} backup
               code{actor.backupCodesRemaining === 1 ? "" : "s"} remaining.
             </p>
 
-            <div class="flex gap-2">
-              <button class="btn btn-sm" onclick={generate}>Generate backup codes</button>
-              <button class="btn btn-sm btn-error btn-outline" onclick={disable}>Remove</button>
+            <div class="flex flex-wrap gap-2">
+              <button type="button" class="btn btn-sm" onclick={generate}>
+                Generate backup codes
+              </button>
+              <button type="button" class="btn btn-sm btn-error btn-outline" onclick={disable}>
+                Remove authenticator
+              </button>
             </div>
           {:else}
-            <p class="text-sm opacity-70">
+            <p class="max-w-prose text-sm opacity-70">
               Password only. A backup code is a way past a second factor, so there is nothing to
               generate until this actor enrols an authenticator.
             </p>
           {/if}
-        </div>
-      </section>
+        </Card>
+      </div>
     </div>
-  </div>
+  </Page>
 {/if}

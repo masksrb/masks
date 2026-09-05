@@ -5,49 +5,55 @@ const scopes = $derived(login.consent?.scopes ?? []);
 const audience = $derived(login.consent?.audience ?? []);
 </script>
 
-<div class="flex flex-col gap-1">
-  <h1 class="text-2xl font-bold">{login.client?.name} wants access</h1>
-  <p class="text-sm opacity-75">
-    Signed in as <strong class="font-semibold">{login.actor?.nickname}</strong>.
+<div class="prompt-head">
+  <h1 class="prompt-title">{login.client?.name} wants access</h1>
+  <p class="prompt-lede">
+    Signed in as <strong>{login.actor?.nickname}</strong>.
   </p>
 </div>
 
-<h2 class="text-xs font-bold uppercase opacity-75">It is asking to</h2>
-<ul class="flex flex-col gap-2">
-  {#each scopes as [scope, description] (scope)}
-    <li
-      class="flex items-baseline justify-between gap-3 rounded-lg border border-base-content/15 bg-base-200 px-3 py-2"
-    >
-      <span class="text-sm">{description ?? `Use the ${scope} scope`}</span>
-      <span class="font-mono text-xs opacity-75">{scope}</span>
-    </li>
-  {/each}
-</ul>
+<div class="ledger">
+  <div class="ledger-row">
+    <span class="ledger-label">It is asking to</span>
+    <ul class="grant-scopes">
+      {#each scopes as [scope, description] (scope)}
+        <li class="grant-scope">
+          <span>{description ?? `Use the ${scope} scope`}</span>
+          <span class="chip-key">{scope}</span>
+        </li>
+      {/each}
+    </ul>
+  </div>
 
-{#if audience.length}
-  <h2 class="text-xs font-bold uppercase opacity-75">On your behalf at</h2>
-  {#each audience as resource (resource)}
-    <p class="font-mono text-xs break-all opacity-75">{resource}</p>
-  {/each}
-{/if}
+  {#if audience.length}
+    <div class="ledger-row">
+      <span class="ledger-label">On your behalf at</span>
+      {#each audience as resource (resource)}
+        <span class="ledger-value aside-mono">{resource}</span>
+      {/each}
+    </div>
+  {/if}
+</div>
 
-<div class="flex gap-2">
+<div class="action-row">
   <button
     type="button"
-    class="btn btn-primary grow"
+    class="action action-grow"
     disabled={login.loading}
     onclick={() => login.submit("consent", { approve: "yes" })}
   >
-    {#if login.loading}<span class="loading loading-spinner loading-sm"></span>{/if}
-    {login.loading ? "Allowing..." : "Allow"}
+    {#if login.loading}<span class="spinner"></span>{/if}
+    {login.loading ? "Allowing" : "Allow"}
   </button>
 
   <button
     type="button"
-    class="btn btn-ghost"
+    class="action action-quiet action-fit"
     disabled={login.loading}
     onclick={() => login.submit("decline", {})}
   >
     Deny
   </button>
 </div>
+
+<p class="aside">Not you? <a class="textlink" href="/logout">Sign out</a>.</p>

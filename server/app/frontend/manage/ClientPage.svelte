@@ -1,7 +1,15 @@
 <script>
+  import { createFeedback } from "./lib/feedback.svelte.js";
+  import { day, joined } from "./lib/format.js";
   import ScopesEditor from "./ScopesEditor.svelte";
+  import Card from "./ui/Card.svelte";
+  import Facts from "./ui/Facts.svelte";
+  import Field from "./ui/Field.svelte";
+  import Notices from "./ui/Notices.svelte";
+  import Page from "./ui/Page.svelte";
+  import Spinner from "./ui/Spinner.svelte";
 
-  let { api, clientId, router } = $props();
+  let { api, clientId } = $props();
 
   const QUERY = `
     query Client($clientId: ID!) {
@@ -16,13 +24,30 @@
     }
   `;
 
+  const feedback = createFeedback();
+
   let client = $state(null);
   let supported = $state([]);
   let name = $state("");
   let loading = $state(true);
-  let notice = $state(null);
-  let failure = $state(null);
   let secret = $state(null);
+
+  const facts = $derived(
+    client
+      ? [
+          {
+            term: "How it got here",
+            value: client.dynamic ? "registered itself" : "approved by a person",
+          },
+          { term: "Approved by", value: client.approvedBy?.nickname },
+          { term: "Registered", value: day(client.createdAt) },
+          { term: "Authenticates with", value: client.tokenEndpointAuthMethod, mono: true },
+          { term: "Resources", value: joined(client.resources), mono: true },
+          { term: "Redirect URIs", value: joined(client.redirectUris), mono: true },
+          { term: "Grants", value: joined(client.grantTypes), mono: true },
+        ]
+      : [],
+  );
 
   async function load() {
     loading = true;
@@ -34,7 +59,7 @@
       supported = data.scopesSupported;
       name = data.client?.name ?? "";
     } catch (thrown) {
-      failure = thrown.message;
+      feedback.blame(thrown);
     } finally {
       loading = false;
     }
@@ -42,24 +67,15 @@
 
   load();
 
-  async function act(document, variables, message) {
-    notice = null;
-    failure = null;
+  async function act(document, variables, notice) {
+    const data = await feedback.attempt(() => api.query(document, variables), notice);
 
-    try {
-      const data = await api.query(document, variables);
-      notice = message;
-      await load();
+    if (data) await load();
 
-      return data;
-    } catch (thrown) {
-      failure = thrown.message;
-
-      return null;
-    }
+    return data;
   }
 
-  const update = (changes, message) =>
+  const update = (changes, notice) =>
     act(
       `mutation Update($clientId: ID!, $name: String, $requiredScopes: [String!], $allowedScopes: [String!]) {
         updateClient(clientId: $clientId, name: $name, requiredScopes: $requiredScopes, allowedScopes: $allowedScopes) {
@@ -67,16 +83,16 @@
         }
       }`,
       { clientId, ...changes },
-      message,
+      notice,
     );
 
   async function rotate() {
-    if (!confirm("Issue a new secret? The current one stops working immediately.")) return;
+    if (!confirm("Issue a new secret? The one in use stops working immediately.")) return;
 
     const data = await act(
       `mutation Rotate($clientId: ID!) { rotateClientSecret(clientId: $clientId) { secret } }`,
       { clientId },
-      "A new secret was issued. It is shown once.",
+      "A new secret was issued.",
     );
 
     if (data) secret = data.rotateClientSecret.secret;
@@ -93,112 +109,77 @@
   }
 </script>
 
-<button class="btn btn-ghost btn-sm mb-4" onclick={() => router.go("/clients")}>← Clients</button>
-
 {#if loading && !client}
-  <div class="py-16 grid place-items-center"><span class="loading loading-spinner"></span></div>
+  <Spinner />
 {:else if !client}
-  <div class="alert alert-error text-sm" role="alert">{failure ?? "No client with that id."}</div>
+  <div class="alert alert-error alert-soft text-sm" role="alert">
+    {feedback.state.failure ?? "There is no client with that id."}
+  </div>
 {:else}
-  <h1 class="text-xl font-bold mb-1">{client.name}</h1>
-  <p class="text-xs opacity-60 font-mono mb-4">{client.clientId}</p>
+  <Page title={client.name} id={client.clientId} back={{ to: "/clients", label: "Clients" }}>
+    <Notices feedback={feedback.state} />
 
-  {#if notice}<div class="alert alert-success text-sm mb-4">{notice}</div>{/if}
-  {#if failure}<div class="alert alert-error text-sm mb-4" role="alert">{failure}</div>{/if}
+    {#if client.archivedAt}
+      <div class="alert alert-warning alert-soft text-sm" role="status">
+        Archived on {day(client.archivedAt)}. It can no longer sign anybody in.
+      </div>
+    {/if}
 
-  {#if secret}
-    <div class="alert alert-warning flex-col items-start gap-2 mb-4">
-      <span class="font-medium">This secret is shown once.</span>
-      <code class="font-mono text-sm break-all">{secret}</code>
-    </div>
-  {/if}
+    {#if secret}
+      <div class="alert alert-warning alert-soft flex-col items-start gap-2" role="status">
+        <span class="font-medium">This secret is shown once. Copy it now.</span>
+        <code class="font-mono text-sm break-all">{secret}</code>
+      </div>
+    {/if}
 
-  {#if client.archivedAt}
-    <div class="alert alert-error text-sm mb-4">Archived {client.archivedAt.slice(0, 10)}.</div>
-  {/if}
+    <div class="grid items-start gap-4 md:grid-cols-2">
+      <Card title="Registration">
+        <Field label="Name" bind:value={name} onsave={() => update({ name }, "Renamed.")} />
 
-  <div class="grid md:grid-cols-2 gap-4 items-start">
-    <section class="card bg-base-100">
-      <div class="card-body gap-3">
-        <h2 class="card-title text-base">Registration</h2>
+        <Facts rows={facts} />
 
-        <label class="form-control">
-          <span class="label-text text-xs opacity-70">Name</span>
-          <div class="join">
-            <input class="input input-sm input-bordered join-item w-full" bind:value={name} />
-            <button class="btn btn-sm join-item" onclick={() => update({ name }, "Renamed.")}>Save</button>
-          </div>
-        </label>
-
-        <dl class="text-sm grid grid-cols-3 gap-y-2">
-          <dt class="opacity-60">Kind</dt>
-          <dd class="col-span-2">{client.dynamic ? "dynamically registered" : "approved by a person"}</dd>
-
-          <dt class="opacity-60">Auth method</dt>
-          <dd class="col-span-2 font-mono text-xs">{client.tokenEndpointAuthMethod}</dd>
-
-          <dt class="opacity-60">Approved by</dt>
-          <dd class="col-span-2">{client.approvedBy?.nickname ?? "—"}</dd>
-
-          <dt class="opacity-60">Resources</dt>
-          <dd class="col-span-2 font-mono text-xs break-all">{client.resources.join(" ") || "—"}</dd>
-
-          <dt class="opacity-60">Redirect URIs</dt>
-          <dd class="col-span-2 font-mono text-xs break-all">{client.redirectUris.join(" ")}</dd>
-
-          <dt class="opacity-60">Grants</dt>
-          <dd class="col-span-2 font-mono text-xs">{client.grantTypes.join(" ")}</dd>
-        </dl>
-
-        <div class="flex gap-2 pt-2">
+        <div class="flex flex-wrap gap-2 pt-1">
           {#if client.tokenEndpointAuthMethod !== "none"}
-            <button class="btn btn-sm" onclick={rotate}>Rotate secret</button>
+            <button type="button" class="btn btn-sm" onclick={rotate}>Rotate secret</button>
           {/if}
           {#if !client.archivedAt}
-            <button class="btn btn-sm btn-error btn-outline" onclick={archive}>Archive</button>
+            <button type="button" class="btn btn-sm btn-error btn-outline" onclick={archive}>
+              Archive
+            </button>
           {/if}
         </div>
-      </div>
-    </section>
+      </Card>
 
-    <div class="flex flex-col gap-4">
-      <section class="card bg-base-100">
-        <div class="card-body gap-3">
-          <h2 class="card-title text-base">Required scopes</h2>
-          <p class="text-xs opacity-70">
-            Granted whether or not the client asks for them.
-          </p>
-
+      <div class="flex flex-col gap-4">
+        <Card
+          title="Always granted"
+          lede="Held whether or not the client asks for them, and never shown on a consent screen."
+        >
           <ScopesEditor
             value={client.requiredScopes}
             available={supported}
-            onchange={(requiredScopes) => update({ requiredScopes }, "Required scopes updated.")}
+            onchange={(requiredScopes) => update({ requiredScopes }, "Scopes updated.")}
           />
-        </div>
-      </section>
+        </Card>
 
-      <section class="card bg-base-100">
-        <div class="card-body gap-3">
-          <h2 class="card-title text-base">Allowed scopes</h2>
-          <p class="text-xs opacity-70">
-            Grantable on request. Their union with the required set is the ceiling this client is
-            refused outside.
-          </p>
-
+        <Card
+          title="Granted on request"
+          lede="Everything else this client may ask for. Together with the set above, this is the ceiling it is refused outside."
+        >
           <ScopesEditor
             value={client.allowedScopes}
             available={supported}
-            onchange={(allowedScopes) => update({ allowedScopes }, "Allowed scopes updated.")}
+            onchange={(allowedScopes) => update({ allowedScopes }, "Scopes updated.")}
           />
 
           {#if client.dynamic}
-            <p class="text-xs opacity-60">
+            <p class="text-sm opacity-70">
               Nobody approved this client, so it may not hold a
-              <span class="font-mono">masks:</span> scope.
+              <span class="font-mono text-xs">masks:</span> scope.
             </p>
           {/if}
-        </div>
-      </section>
+        </Card>
+      </div>
     </div>
-  </div>
+  </Page>
 {/if}

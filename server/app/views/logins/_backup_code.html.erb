@@ -2,28 +2,25 @@
 
 <%= render "logins/identified", login: login %>
 
-<%= render "logins/warnings", login: login %>
-
-<%= form_with url: login_path, method: :post, id: "backup-code", class: "flex flex-col gap-4" do |form| %>
+<%= form_with url: login_path, method: :post, id: "backup-code", class: "flow" do |form| %>
   <%= hidden_field_tag :rid, login.rid %>
   <%= form.hidden_field :event, value: "backup" %>
 
-  <label class="flex flex-col gap-1.5">
-    <span class="text-sm font-medium">Backup code</span>
+  <label class="field">
+    <span class="field-label">Backup code</span>
     <%= form.text_field :backup_code, autocomplete: "one-time-code",
-          spellcheck: "false", autocapitalize: "off",
-          class: "input input-bordered w-full font-mono tracking-widest" %>
-    <span class="text-xs opacity-75">
+          spellcheck: "false", autocapitalize: "off", class: "control control-mono" %>
+    <span class="field-hint">
       One of the codes you saved when you set up your authenticator. Each one
       works once.
     </span>
   </label>
 
-  <button type="submit" class="btn btn-primary w-full">Verify</button>
+  <button type="submit" class="action">Verify</button>
 <% end %>
 
 <%= form_with url: login_path, method: :post, id: "use-authenticator" do |form| %>
   <%= hidden_field_tag :rid, login.rid %>
   <%= form.hidden_field :event, value: "use-authenticator" %>
-  <button type="submit" class="btn btn-ghost btn-sm w-full">Use my authenticator instead</button>
+  <button type="submit" class="action action-plain">Use my authenticator instead</button>
 <% end %>

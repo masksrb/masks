@@ -1,9 +1,7 @@
-<div class="flex flex-col gap-1">
-  <h1 class="text-2xl font-bold"><%= heading %></h1>
+<div class="prompt-head">
+  <h1 class="prompt-title"><%= heading %></h1>
 
   <% if login.client&.name %>
-    <p class="text-sm opacity-75">
-      to continue to <strong class="font-semibold"><%= login.client.name %></strong>
-    </p>
+    <p class="prompt-lede">to continue to <strong><%= login.client.name %></strong></p>
   <% end %>
 </div>

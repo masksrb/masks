@@ -10,10 +10,6 @@ let password = $state("");
 
 const minimum = 8;
 
-const heading = $derived(
-  login.auth.tenant?.name ? `Set up ${login.auth.tenant.name}` : "Set up",
-);
-
 const needsToken = $derived(login.auth.setup?.token === true);
 
 const valid = $derived(
@@ -32,34 +28,34 @@ function onsubmit(event) {
 }
 </script>
 
-<PromptHeader {heading} {login} />
+<PromptHeader heading="Create the owner" {login} />
 
-<p class="text-sm opacity-75">
+<p class="prompt-lede">
   Nobody has an account here yet. The first one you make owns this tenant.
 </p>
 
-<form {onsubmit} class="flex flex-col gap-4">
+<form {onsubmit} class="flow">
   {#if needsToken}
-    <label class="flex flex-col gap-1.5">
-      <span class="text-sm font-medium">Setup token</span>
+    <label class="field">
+      <span class="field-label">Setup token</span>
       <input
         type="password"
         name="token"
-        class="input input-bordered w-full"
+        class="control"
         autocomplete="off"
         bind:value={token}
       />
-      <span class="text-xs opacity-75">Whoever deployed this server set one.</span>
+      <span class="field-hint">Whoever deployed this server set one.</span>
     </label>
   {/if}
 
-  <label class="flex flex-col gap-1.5">
-    <span class="text-sm font-medium">Username</span>
+  <label class="field">
+    <span class="field-label">Username</span>
     <!-- svelte-ignore a11y_autofocus -->
     <input
       type="text"
       name="nickname"
-      class="input input-bordered w-full"
+      class="control"
       autocomplete="username"
       autocapitalize="none"
       autocorrect="off"
@@ -69,38 +65,35 @@ function onsubmit(event) {
     />
   </label>
 
-  <label class="flex flex-col gap-1.5">
-    <span class="text-sm font-medium">Email</span>
+  <label class="field">
+    <span class="field-label">Email</span>
     <input
       type="email"
       name="email"
-      class="input input-bordered w-full"
+      class="control"
       autocomplete="email"
       bind:value={email}
     />
-    <span class="text-xs opacity-75">
-      Applications you sign in to are given this address, and most refuse an account without one.
+    <span class="field-hint">
+      Applications you sign in to are given this address, and most refuse an
+      account without one.
     </span>
   </label>
 
-  <label class="flex flex-col gap-1.5">
-    <span class="text-sm font-medium">Password</span>
+  <label class="field">
+    <span class="field-label">Password</span>
     <input
       type="password"
       name="password"
-      class="input input-bordered w-full"
+      class="control"
       autocomplete="new-password"
       bind:value={password}
     />
-    <span class="text-xs opacity-75">At least {minimum} characters.</span>
+    <span class="field-hint">At least {minimum} characters.</span>
   </label>
 
-  <button
-    type="submit"
-    class="btn btn-primary w-full"
-    disabled={!valid || login.loading}
-  >
-    {#if login.loading}<span class="loading loading-spinner loading-sm"></span>{/if}
-    {login.loading ? "Creating..." : "Create the owner"}
+  <button type="submit" class="action" disabled={!valid || login.loading}>
+    {#if login.loading}<span class="spinner"></span>{/if}
+    {login.loading ? "Creating" : "Create the owner"}
   </button>
 </form>

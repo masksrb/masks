@@ -10,7 +10,7 @@ const button = document.getElementById("add-passkey-button");
 const unusable = document.getElementById("passkey-unusable");
 
 async function options() {
-  const response = await fetch("/account/passkeys/options", {
+  const response = await fetch(form.dataset.challenge, {
     method: "POST",
     credentials: "same-origin",
     headers: { Accept: "application/json", "X-CSRF-Token": csrf() },

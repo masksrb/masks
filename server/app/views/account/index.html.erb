@@ -4,134 +4,186 @@
   <%= vite_javascript_tag "account" %>
 <% end %>
 
-<div class="flex flex-col gap-4">
-  <% if @actor %>
-    <h1 class="text-2xl font-bold">Signed in as <%= @actor.nickname %></h1>
+<% if @actor %>
+  <div class="flow-wide">
+  <h1 class="prompt-title">Signed in as <%= @actor.nickname %></h1>
+
+  <div class="flow-tight">
+    <h2 class="group-title">Applications you have authorized</h2>
 
     <% if @consents.any? %>
-      <h2 class="text-xs font-bold uppercase opacity-75">Applications you have authorized</h2>
-      <ul class="flex flex-col gap-2">
+      <ul class="chip-list">
         <% @consents.each do |consent| %>
-          <li class="flex items-baseline justify-between gap-3 rounded-lg border border-base-content/15 bg-base-200 px-3 py-2">
-            <span class="text-sm"><%= consent.client.name %></span>
-            <span class="font-mono text-xs opacity-75"><%= consent.scopes %></span>
+          <li class="chip">
+            <span><%= consent.client.name %></span>
+            <span class="chip-key"><%= consent.scopes %></span>
           </li>
         <% end %>
       </ul>
     <% else %>
-      <p class="text-sm opacity-75">You have not authorized any applications yet.</p>
+      <p class="aside">You have not authorized any applications yet.</p>
+    <% end %>
+  </div>
+
+  <div data-passkeys class="flow-tight">
+    <h2 class="group-title">Passkeys</h2>
+
+    <% if @passkeys.any? %>
+      <ul class="chip-list">
+        <% @passkeys.each do |passkey| %>
+          <li class="chip chip-stack">
+            <span class="chip-line">
+              <span class="chip-name">
+                <% if passkey.icon %>
+                  <img src="<%= passkey.icon %>" alt="" width="16" height="16" />
+                <% end %>
+                <span><%= passkey.label %></span>
+                <% if passkey.authenticator&.certified? %>
+                  <span class="tag">certified</span>
+                <% end %>
+              </span>
+              <span class="chip-meta">
+                <span>
+                  <%= passkey.last_used_at ? "used #{time_ago_in_words(passkey.last_used_at)} ago" : "never used" %>
+                </span>
+                <%= button_to "Remove", passkey_path(passkey), method: :delete,
+                      class: "textlink", form_class: "chip-action",
+                      form: { data: { turbo_confirm: "Remove this passkey?" } } %>
+              </span>
+            </span>
+
+            <% if passkey.compromised? %>
+              <span class="aside aside-bad">
+                The FIDO Alliance reports a compromise for this model of authenticator
+                (<%= passkey.compromise.downcase.tr("_", " ") %>). Replace it and remove this passkey.
+              </span>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="aside">
+        No passkeys yet. A passkey signs you in with the fingerprint, face or PIN
+        your device already uses — and counts as both factors on its own.
+      </p>
     <% end %>
 
-    <h2 class="text-xs font-bold uppercase opacity-75">Passkeys</h2>
+    <%= form_with url: passkeys_path, method: :post, id: "add-passkey",
+          hidden: true, data: { challenge: passkey_challenge_path },
+          class: "flow-tight" do |form| %>
+      <%= form.hidden_field :credential, id: "passkey-credential" %>
 
-    <div data-passkeys class="flex flex-col gap-3">
-      <% if @passkeys.any? %>
-        <ul class="flex flex-col gap-2">
-          <% @passkeys.each do |passkey| %>
-            <li class="flex flex-col gap-1 rounded-lg border border-base-content/15 bg-base-200 px-3 py-2">
-              <span class="flex items-baseline justify-between gap-3">
-                <span class="flex items-center gap-2">
-                  <% if passkey.icon %>
-                    <img src="<%= passkey.icon %>" alt="" width="16" height="16" />
-                  <% end %>
-                  <span class="text-sm"><%= passkey.label %></span>
-                  <% if passkey.authenticator&.certified? %>
-                    <span class="badge badge-ghost badge-xs">certified</span>
-                  <% end %>
-                </span>
-                <span class="flex items-baseline gap-3">
-                  <span class="text-xs opacity-75">
-                    <%= passkey.last_used_at ? "used #{time_ago_in_words(passkey.last_used_at)} ago" : "never used" %>
-                  </span>
-                  <%= button_to "Remove", passkey_path(passkey), method: :delete,
-                        class: "link text-xs", form: { data: { turbo_confirm: "Remove this passkey?" } } %>
-                </span>
+      <label class="field">
+        <span class="field-label">Name</span>
+        <%= form.text_field :name, id: "passkey-name", placeholder: "This laptop",
+              class: "control control-sm" %>
+      </label>
+
+      <button type="button" id="add-passkey-button" class="action action-sm">Add a passkey</button>
+    <% end %>
+
+    <p id="passkey-unusable" hidden class="aside aside-bad"></p>
+  </div>
+
+  <div class="flow-tight">
+    <h2 class="group-title">Devices</h2>
+
+    <% if @devices.any? %>
+      <ul class="chip-list">
+        <% @devices.each do |device| %>
+          <li class="chip chip-stack">
+            <span class="chip-line">
+              <span class="chip-name">
+                <span><%= device.label %></span>
+                <% if device == current_device %>
+                  <span class="tag tag-live">this device</span>
+                <% end %>
+                <% if @trusted.include?(device.id) %>
+                  <span class="tag">skips your code</span>
+                <% end %>
+                <% if device.blocked? %>
+                  <span class="tag tag-bad">blocked</span>
+                <% end %>
               </span>
+              <span class="chip-meta">
+                <span>seen <%= time_ago_in_words(device.last_seen_at) %> ago</span>
+                <%= button_to "Sign out", device_path(device), method: :delete,
+                      class: "textlink", form_class: "chip-action",
+                      form: { data: { turbo_confirm: "Sign this device out and make it ask for everything again?" } } %>
+              </span>
+            </span>
 
-              <% if passkey.compromised? %>
-                <span class="text-xs text-error">
-                  The FIDO Alliance reports a compromise for this model of authenticator
-                  (<%= passkey.compromise.downcase.tr("_", " ") %>). Replace it and remove this passkey.
-                </span>
-              <% end %>
-            </li>
-          <% end %>
-        </ul>
-      <% else %>
-        <p class="text-sm opacity-75">
-          No passkeys yet. A passkey signs you in with the fingerprint, face or PIN
-          your device already uses — and counts as both factors on its own.
-        </p>
-      <% end %>
+            <span class="chip-meta">
+              <span class="aside-mono"><%= device.ip_address || "—" %></span>
+              <span><%= device.category %></span>
+            </span>
 
-      <%= form_with url: passkeys_path, method: :post, id: "add-passkey",
-            hidden: true, class: "flex flex-wrap items-end gap-3" do |form| %>
-        <%= form.hidden_field :credential, id: "passkey-credential" %>
+            <%= form_with url: device_path(device), method: :patch, class: "action-row" do |form| %>
+              <%= form.text_field :name, value: device.name, placeholder: device.label,
+                    class: "control control-sm action-grow" %>
+              <button type="submit" class="action action-quiet action-sm">Rename</button>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    <% else %>
+      <p class="aside">No devices have signed in to this account yet.</p>
+    <% end %>
+  </div>
 
-        <label class="flex flex-col gap-1.5">
-          <span class="text-sm font-medium">Name</span>
-          <%= form.text_field :name, id: "passkey-name", placeholder: "This laptop",
-                class: "input input-bordered" %>
-        </label>
-
-        <button type="button" id="add-passkey-button" class="btn btn-primary">Add a passkey</button>
-      <% end %>
-
-      <p id="passkey-unusable" hidden class="text-xs text-error"></p>
-    </div>
-
-    <h2 class="text-xs font-bold uppercase opacity-75">Email</h2>
+  <div class="flow-tight">
+    <h2 class="group-title">Email</h2>
 
     <% if @actor.email.blank? %>
-      <p class="text-sm opacity-75">
+      <p class="aside">
         This account has no email address. Applications that require one will refuse it.
       </p>
     <% elsif @actor.email_verified_at.present? %>
-      <p class="text-sm opacity-75">
-        <%= @actor.email %> — confirmed.
-      </p>
+      <p class="aside"><%= @actor.email %> — confirmed.</p>
     <% else %>
-      <p class="text-sm opacity-75">
+      <p class="aside">
         <%= @actor.email %> is not confirmed, so applications are told so and some will
         refuse it.
       </p>
 
       <%= button_to "Send a confirmation link", account_verification_path,
-            class: "btn btn-sm self-start" %>
+            class: "action action-quiet action-sm" %>
     <% end %>
+  </div>
 
-    <h2 class="text-xs font-bold uppercase opacity-75">Password</h2>
+  <div class="flow-tight">
+    <h2 class="group-title">Password</h2>
 
     <%= form_with url: account_password_path, method: :patch, id: "change-password",
-          class: "flex flex-col gap-3" do |form| %>
-      <label class="flex flex-col gap-1.5">
-        <span class="text-sm font-medium">Current password</span>
+          class: "flow-tight" do |form| %>
+      <label class="field">
+        <span class="field-label">Current password</span>
         <%= form.password_field :current_password, autocomplete: "current-password",
-              class: "input input-bordered w-full" %>
+              class: "control" %>
       </label>
 
-      <label class="flex flex-col gap-1.5">
-        <span class="text-sm font-medium">New password</span>
-        <%= form.password_field :password, autocomplete: "new-password",
-              class: "input input-bordered w-full" %>
-        <span class="text-xs opacity-75">
+      <label class="field">
+        <span class="field-label">New password</span>
+        <%= form.password_field :password, autocomplete: "new-password", class: "control" %>
+        <span class="field-hint">
           At least <%= PasswordsController::MINIMUM %> characters. Changing it signs out
           every other session and stops every application from refreshing.
         </span>
       </label>
 
-      <button type="submit" class="btn btn-primary self-start">Change password</button>
+      <button type="submit" class="action action-sm">Change password</button>
     <% end %>
+  </div>
 
-    <p><%= link_to "Sign out", logout_path, class: "link text-sm" %></p>
-  <% else %>
-    <div class="flex flex-col gap-1">
-      <h1 class="text-2xl font-bold"><%= Current.tenant.name %></h1>
-      <p class="text-sm opacity-75">
-        Sign in to manage your account and authorized applications.
-      </p>
-    </div>
+  <p><%= link_to "Sign out", logout_path, class: "textlink" %></p>
+  </div>
+<% else %>
+  <div class="prompt-head">
+    <h1 class="prompt-title">Your account</h1>
+    <p class="prompt-lede">
+      Sign in to manage your account and the applications you have authorized.
+    </p>
+  </div>
 
-    <%= link_to "Log in", login_path, class: "btn btn-primary w-full" %>
-  <% end %>
-</div>
+  <%= link_to "Sign in", login_path, class: "action" %>
+<% end %>

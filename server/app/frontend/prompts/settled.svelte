@@ -6,7 +6,7 @@ let { login } = $props();
 
 <PromptHeader heading="Signed in" {login} />
 
-<p class="flex items-center gap-2 text-sm opacity-75">
-  <span class="loading loading-spinner loading-sm"></span>
-  Taking you back...
+<p class="waiting">
+  <span class="spinner"></span>
+  Taking you back
 </p>

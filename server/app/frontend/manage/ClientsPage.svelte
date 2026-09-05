@@ -1,11 +1,14 @@
 <script>
-  import Loader from "./Loader.svelte";
+  import { joined } from "./lib/format.js";
+  import Link from "./ui/Link.svelte";
+  import Loader from "./ui/Loader.svelte";
+  import Page from "./ui/Page.svelte";
+  import Row from "./ui/Row.svelte";
+  import Search from "./ui/Search.svelte";
+  import Switch from "./ui/Switch.svelte";
+  import Table from "./ui/Table.svelte";
 
-  let { api, router } = $props();
-
-  let search = $state("");
-  let archived = $state(false);
-  let token = $state(0);
+  let { api } = $props();
 
   const QUERY = `
     query Clients($search: String, $archived: Boolean) {
@@ -16,68 +19,84 @@
       }
     }
   `;
+
+  const COLUMNS = ["Name", "Resources", "How it got here", "Scopes", "Approved by"];
+
+  let search = $state("");
+  let query = $state("");
+  let archived = $state(false);
+
+  const stamp = $derived(`${query}:${archived}`);
+
+  const nothing = $derived(
+    query
+      ? `No ${archived ? "archived " : ""}client matches “${query}”.`
+      : archived
+        ? "Nothing has been archived."
+        : "No applications are registered yet. One appears here as soon as it completes a handshake.",
+  );
 </script>
 
-<div class="flex items-center gap-3 mb-4">
-  <h1 class="text-xl font-bold flex-1">Clients</h1>
+<Page
+  title="Clients"
+  lede="Applications registered against this server. A client may never be granted more than its scopes allow."
+>
+  {#snippet actions()}
+    <Switch bind:checked={archived} label="Archived" />
+    <Search
+      bind:value={search}
+      label="Search clients"
+      placeholder="name or client_id"
+      onsearch={() => (query = search)}
+    />
+  {/snippet}
 
-  <label class="label cursor-pointer gap-2 text-sm">
-    <input type="checkbox" class="toggle toggle-sm" bind:checked={archived} onchange={() => (token += 1)} />
-    Archived
-  </label>
-
-  <input
-    class="input input-sm input-bordered"
-    placeholder="name or client_id"
-    bind:value={search}
-    onkeydown={(e) => e.key === "Enter" && (token += 1)}
-  />
-</div>
-
-{#key token}
-  <Loader load={() => api.query(QUERY, { search: search || null, archived })}>
-    {#snippet children(data)}
-      <div class="overflow-x-auto bg-base-100 rounded-box">
-        <table class="table">
-          <thead>
-            <tr><th>Name</th><th>Origin</th><th>Kind</th><th>Scopes</th><th>Approved</th></tr>
-          </thead>
-          <tbody>
+  {#key stamp}
+    <Loader load={() => api.query(QUERY, { search: query || null, archived })}>
+      {#snippet children(data)}
+        <Table columns={COLUMNS} count={data.clients.length} empty={nothing}>
+          {#snippet rows()}
             {#each data.clients as client (client.clientId)}
-              <tr class="hover cursor-pointer" onclick={() => router.go(`/clients/${client.clientId}`)}>
+              <Row to={`/clients/${client.clientId}`}>
                 <td>
-                  <div class="font-medium">{client.name}</div>
+                  <Link to={`/clients/${client.clientId}`} class="link link-hover font-medium">
+                    {client.name}
+                  </Link>
                   <div class="font-mono text-xs opacity-50">{client.clientId}</div>
                 </td>
-                <td class="text-xs font-mono opacity-70">{client.resources.join(" ") || "—"}</td>
-                <td class="flex flex-col gap-1 items-start">
-                  {#if client.dynamic}
-                    <span class="badge badge-ghost badge-sm">dynamic</span>
-                  {:else}
-                    <span class="badge badge-success badge-sm">approved</span>
-                  {/if}
-                  {#if client.tokenEndpointAuthMethod === "none"}
-                    <span class="badge badge-outline badge-xs">public</span>
-                  {/if}
+                <td class="font-mono text-xs opacity-70">{joined(client.resources)}</td>
+                <td>
+                  <div class="flex flex-col items-start gap-1">
+                    {#if client.dynamic}
+                      <span class="badge badge-ghost badge-sm">registered itself</span>
+                    {:else}
+                      <span class="badge badge-success badge-sm">approved by a person</span>
+                    {/if}
+                    {#if client.tokenEndpointAuthMethod === "none"}
+                      <span class="badge badge-outline badge-xs">holds no secret</span>
+                    {/if}
+                  </div>
                 </td>
                 <td class="font-mono text-xs">
                   {#if client.requiredScopes.length}
-                    <div><span class="opacity-50">required</span> {client.requiredScopes.join(" ")}</div>
+                    <div>
+                      <span class="opacity-50">always</span>
+                      {joined(client.requiredScopes)}
+                    </div>
                   {/if}
-                  <div class="opacity-70">{client.allowedScopes.join(" ")}</div>
+                  {#if client.allowedScopes.length}
+                    <div class="opacity-70">
+                      <span class="opacity-70">on request</span>
+                      {joined(client.allowedScopes)}
+                    </div>
+                  {/if}
                 </td>
-                <td class="text-xs opacity-70">
-                  {client.approvedBy?.nickname ?? "—"}
-                </td>
-              </tr>
+                <td class="text-xs opacity-70">{client.approvedBy?.nickname ?? "—"}</td>
+              </Row>
             {/each}
-          </tbody>
-        </table>
-
-        {#if data.clients.length === 0}
-          <p class="p-6 text-sm opacity-70">No clients match that.</p>
-        {/if}
-      </div>
-    {/snippet}
-  </Loader>
-{/key}
+          {/snippet}
+        </Table>
+      {/snippet}
+    </Loader>
+  {/key}
+</Page>

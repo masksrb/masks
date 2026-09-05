@@ -35,17 +35,19 @@ async function start() {
 </script>
 
 {#if offered}
-  <button
-    type="button"
-    class="btn btn-outline w-full"
-    disabled={busy || login.loading}
-    onclick={start}
-  >
-    {#if busy}<span class="loading loading-spinner loading-sm"></span>{/if}
-    {busy ? "Waiting for your passkey..." : label}
-  </button>
+  <div class="flow-tight">
+    <button
+      type="button"
+      class="action action-quiet"
+      disabled={busy || login.loading}
+      onclick={start}
+    >
+      {#if busy}<span class="spinner"></span>{/if}
+      {busy ? "Waiting for your passkey" : label}
+    </button>
 
-  {#if unusable}
-    <p class="text-xs text-error">{unusable}</p>
-  {/if}
+    {#if unusable}
+      <p class="aside aside-bad">{unusable}</p>
+    {/if}
+  </div>
 {/if}
