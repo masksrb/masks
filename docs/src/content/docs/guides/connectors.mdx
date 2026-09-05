@@ -11,7 +11,7 @@ admin UI first. RFC 7591 dynamic client registration is what makes that possible
 ## Register
 
 ```sh
-curl -X POST https://jons.auth.example/register \
+curl -X POST https://demo.auth.example/register \
   -H 'Content-Type: application/json' \
   -d '{
     "client_name": "Claude",
@@ -28,7 +28,7 @@ curl -X POST https://jons.auth.example/register \
   "client_name": "Claude",
   "token_endpoint_auth_method": "none",
   "registration_access_token": "…",
-  "registration_client_uri": "https://jons.auth.example/register/2bb32482-…"
+  "registration_client_uri": "https://demo.auth.example/register/2bb32482-…"
 }
 ```
 
@@ -59,7 +59,7 @@ The `registration_access_token` is the only credential that works against
 
 ```sh
 curl -H "Authorization: Bearer $REGISTRATION_TOKEN" \
-  https://jons.auth.example/register/$CLIENT_ID
+  https://demo.auth.example/register/$CLIENT_ID
 ```
 
 `PUT` updates the metadata, `DELETE` archives the client. A wrong token, or the right token against
@@ -85,7 +85,7 @@ GET /authorize
   &scope=openid+profile+email+offline_access
   &state=…
   &code_challenge=…&code_challenge_method=S256
-  &resource=https%3A%2F%2Fjons.things.example%2Fmcp
+  &resource=https%3A%2F%2Fdemo.things.example%2Fmcp
 ```
 
 `resource` is what makes the resulting access token usable at your API and useless anywhere else —
@@ -95,29 +95,29 @@ Sign-in and consent happen in the browser; the redirect back carries `code`, `st
 exchange it:
 
 ```sh
-curl -X POST https://jons.auth.example/token \
+curl -X POST https://demo.auth.example/token \
   -d grant_type=authorization_code \
   -d code=… \
   -d client_id=… \
   -d redirect_uri=https://claude.ai/api/mcp/auth_callback \
   -d code_verifier=… \
-  -d resource=https://jons.things.example/mcp
+  -d resource=https://demo.things.example/mcp
 ```
 
 ## From Ruby
 
 ```ruby
-issuer = Masks::Client.issuer("https://jons.auth.example")
+issuer = Masks::Client.issuer("https://demo.auth.example")
 
 registration = Masks::Client::Registration.create(
   issuer,
   name: "things",
-  redirect_uris: ["https://jons.things.example/auth/callback"],
+  redirect_uris: ["https://demo.things.example/auth/callback"],
   scope: %w[openid profile email offline_access]
 )
 
-session = registration.session(redirect_uri: "https://jons.things.example/auth/callback")
-started = session.start(resource: "https://jons.things.example/mcp")
+session = registration.session(redirect_uri: "https://demo.things.example/auth/callback")
+started = session.start(resource: "https://demo.things.example/mcp")
 
 # redirect the browser to started[:url], keep started[:verifier] and started[:state]
 

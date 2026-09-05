@@ -62,11 +62,11 @@ class InstallGeneratorTest < ::Rails::Generators::TestCase
 
     written = File.read(File.join(destination_root, "config/initializers/masks.rb"))
 
-    ENV["MASKS_ISSUER"] = "https://jons.auth.test"
+    ENV["MASKS_ISSUER"] = "https://demo.auth.test"
     eval(written) # rubocop:disable Security/Eval
 
     assert_equal "https://app.example.com/mcp", Masks::Rails.config.resource
-    assert_equal "https://jons.auth.test", Masks::Rails.config.issuer_for(nil)
+    assert_equal "https://demo.auth.test", Masks::Rails.config.issuer_for(nil)
   ensure
     ENV.delete("MASKS_ISSUER")
     Masks::Rails.instance_variable_set(:@config, Masks::Rails::Configuration.new)

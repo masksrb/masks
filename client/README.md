@@ -155,7 +155,7 @@ holds no protocol of its own.
 
 ```ruby
 session = Masks::Client::Session.new(
-  issuer: "https://jons.auth.example.com",
+  issuer: "https://demo.auth.example.com",
   client_id: id, client_secret: secret,
   redirect_uri: "https://app.example.com/auth/callback"
 )
@@ -202,7 +202,7 @@ that is not the issuer it asked — each **before** anything is redeemed.
 
 ```ruby
 resource = Masks::Client::Resource.new(
-  issuer: "https://jons.auth.example.com",
+  issuer: "https://demo.auth.example.com",
   url: "https://app.example.com/mcp",
   scopes: { "things:read" => "Search your catalog" }
 )

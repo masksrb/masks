@@ -11,8 +11,8 @@ A resource server receives bearer tokens and signs nobody in. It needs `masks` a
 
 ```ruby
 verifier = Masks::Client.verifier(
-  "https://jons.auth.example",
-  audience: "https://jons.things.example/mcp"
+  "https://demo.auth.example",
+  audience: "https://demo.things.example/mcp"
 )
 
 claims = verifier.verify(token)
@@ -63,8 +63,8 @@ whoever presents the token.
 
 ```ruby
 profile = session.userinfo(access_token)
-profile["name"]   # => "Jon"
-profile["email"]  # => "jon@example.com"
+profile["name"]   # => "Ada"
+profile["email"]  # => "user@example.com"
 ```
 
 `Masks::Client::Session#identity` does this at a callback, merging userinfo *underneath* the

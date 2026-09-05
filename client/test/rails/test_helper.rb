@@ -10,8 +10,8 @@ require "rails/dom/testing"
 class EngineTest < ActiveSupport::TestCase
   include ActiveSupport::Testing::Assertions
 
-  SUBDOMAIN = "jons".freeze
-  HOST = "jons.app.test".freeze
+  SUBDOMAIN = "demo".freeze
+  HOST = "demo.app.test".freeze
 
   setup do
     Masks::Client.registry.clear!

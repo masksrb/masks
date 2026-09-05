@@ -108,7 +108,7 @@ when someone asks why a request failed an hour ago.
 
 ## A passkey is bound to one tenant
 
-`RelyingParty#id` is `URI.parse(origin).host` — the tenant's own host, `jons.auth.example`, not the
+`RelyingParty#id` is `URI.parse(origin).host` — the tenant's own host, `demo.auth.example`, not the
 registrable suffix `auth.example`. A credential enrolled at one tenant is not offered at another, and
 an assertion produced for one cannot be replayed at the next.
 

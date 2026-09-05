@@ -1,7 +1,7 @@
 require "test_helper"
 
 class NamespaceClaimTest < ActionDispatch::IntegrationTest
-  APP = "https://jons.things.test".freeze
+  APP = "https://demo.things.test".freeze
   RESOURCE = "#{APP}/mcp".freeze
   RETURN_TO = "#{APP}/auth/handshake/callback".freeze
   REDIRECT_URI = "#{APP}/auth/masks/callback".freeze

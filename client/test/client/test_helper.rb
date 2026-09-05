@@ -9,7 +9,7 @@ class FakeIssuer
 
   attr_reader :key, :kid, :port, :requests, :received
 
-  def initialize(tenant: { "uuid" => "t-1", "subdomain" => "jons", "name" => "Jons" })
+  def initialize(tenant: { "uuid" => "t-1", "subdomain" => "demo", "name" => "Demo" })
     @key = OpenSSL::PKey::RSA.generate(2048)
     @kid = SecureRandom.uuid
     @tenant = tenant

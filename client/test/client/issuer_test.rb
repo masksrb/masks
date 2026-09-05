@@ -79,6 +79,6 @@ class IssuerTest < ClientTest
   end
 
   def test_the_tenant_travels_in_the_discovery_document
-    assert_equal "jons", Masks::Client.issuer(issuer.url).tenant["subdomain"]
+    assert_equal "demo", Masks::Client.issuer(issuer.url).tenant["subdomain"]
   end
 end

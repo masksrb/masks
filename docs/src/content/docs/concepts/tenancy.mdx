@@ -26,14 +26,14 @@ to from the token rather than by asking:
 
 ```json
 {
-  "iss": "https://jons.auth.example",
+  "iss": "https://demo.auth.example",
   "sub": "3f3ef7a0-9a3e-49c6-955e-f73032bcf5f8",
-  "aud": "https://jons.things.example/mcp",
+  "aud": "https://demo.things.example/mcp",
   "scope": "openid profile email",
   "tenant": {
     "uuid": "45638a95-b76b-439a-a2cc-f2cb71d56fbd",
-    "subdomain": "jons",
-    "name": "Jon's"
+    "subdomain": "demo",
+    "name": "Demo"
   }
 }
 ```
@@ -121,7 +121,7 @@ only while no tenant exists at all, so it cannot mint tenants against a wildcard
 
 ## One tenant
 
-`MASKS_TENANT=jons` pins the whole installation to one tenant, and `Tenant.resolve` returns before it
+`MASKS_TENANT=demo` pins the whole installation to one tenant, and `Tenant.resolve` returns before it
 ever looks at the hostname:
 
 ```ruby

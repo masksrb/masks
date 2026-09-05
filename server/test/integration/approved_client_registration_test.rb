@@ -1,7 +1,7 @@
 require "test_helper"
 
 class ApprovedClientRegistrationTest < ActionDispatch::IntegrationTest
-  APP = "https://jons.things.test".freeze
+  APP = "https://demo.things.test".freeze
   RESOURCE = "#{APP}/mcp".freeze
 
   setup do
@@ -80,10 +80,10 @@ class ApprovedClientRegistrationTest < ActionDispatch::IntegrationTest
   test "what a human did not approve is still the client's to describe" do
     registration = paired
 
-    amended = amend(registration, client_name: "things, renamed", logo_uri: "https://jons.things.test/logo.png")
+    amended = amend(registration, client_name: "things, renamed", logo_uri: "https://demo.things.test/logo.png")
 
     assert_equal "things, renamed", amended["client_name"]
-    assert_equal "https://jons.things.test/logo.png", amended["logo_uri"]
+    assert_equal "https://demo.things.test/logo.png", amended["logo_uri"]
   end
 
   test "a dynamic client still describes its own redirect uris" do

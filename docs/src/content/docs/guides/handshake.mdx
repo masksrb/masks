@@ -132,9 +132,9 @@ another server's routes down.
 handshake = Masks::Client::Handshake.new(
   issuer,
   name: "catalog",
-  resource: "https://jons.catalog.example/mcp",
-  redirect_uris: [ "https://jons.catalog.example/auth/callback" ],
-  return_to: "https://jons.catalog.example/connected",
+  resource: "https://demo.catalog.example/mcp",
+  redirect_uris: [ "https://demo.catalog.example/auth/callback" ],
+  return_to: "https://demo.catalog.example/connected",
   scope: %w[openid profile email offline_access catalog:read]
 )
 
