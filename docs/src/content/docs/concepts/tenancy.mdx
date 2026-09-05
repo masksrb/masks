@@ -4,7 +4,7 @@ description: masks owns the tenant record, three layers isolate it, and every to
 ---
 
 A tenant is the unit masks isolates everything by. Actors, clients, tokens, sessions, consents,
-passkeys, providers, connections and signing keys all belong to exactly one.
+passkeys, providers, connections and signing keys each belong to exactly one.
 
 `server/app/models/tenant.rb`
 
@@ -17,12 +17,12 @@ passkeys, providers, connections and signing keys all belong to exactly one.
 `Tenant#to_identity` returns those three as `{ uuid, subdomain, name }`. That hash is the `tenant`
 claim and the `tenant` field in discovery.
 
-Store the uuid. A subdomain is a routing fact and someone will eventually want to change theirs.
+Store the uuid. A subdomain is a routing fact, and someone will eventually want to change theirs.
 
-## masks is the source of truth
+## The tenant claim
 
-Downstream applications hold a projection keyed by the uuid, and learn which tenant a caller belongs
-to from the token rather than by asking:
+Downstream applications hold a projection keyed by the uuid and learn which tenant a caller belongs
+to from the token:
 
 ```json
 {
@@ -38,16 +38,12 @@ to from the token rather than by asking:
 }
 ```
 
-The same identity is in the discovery document, so an application can resolve a tenant before anyone
-has signed in.
-
-:::tip[Why a claim rather than an endpoint]
-A lookup endpoint means the application either forwards the caller's token upstream, or holds a
-second credential to ask a question the token already answers.
-:::
+The same identity is in the discovery document, so an application can resolve a tenant before
+anyone has signed in. A lookup endpoint would mean either forwarding the caller's token upstream or
+holding a second credential to ask a question the token already answers.
 
 `tenant` is one of two deliberate divergences from the specs, recorded in
-`conformance/expected-failures.json` — see [Conformance](/reference/conformance).
+`conformance/expected-failures.json`. See [Conformance](/reference/conformance).
 
 ## Three layers of isolation
 
@@ -55,14 +51,14 @@ second credential to ask a question the token already answers.
 | --- | --- | --- |
 | application | `TenantScoped` default scope | quietly, if someone forgets a scope |
 | database | Postgres RLS, `FORCE` + policy | silently, if the app role is a superuser |
-| signature | per-tenant RSA key, per-tenant JWKS | loudly, and undeniably |
+| signature | per-tenant RSA key, per-tenant JWKS | loudly |
 
-Two traps: a table's owner bypasses RLS unless the table is marked `FORCE ROW LEVEL SECURITY`, and a
-superuser bypasses it regardless. `db/docker-entrypoint-initdb.d` therefore creates a separate
-non-superuser role rather than letting Rails connect as `POSTGRES_USER`.
+Two traps. A table's owner bypasses RLS unless the table is marked `FORCE ROW LEVEL SECURITY`, and
+a superuser bypasses it regardless. `db/docker-entrypoint-initdb.d` creates a separate non-superuser
+role rather than letting Rails connect as `POSTGRES_USER`.
 
-The schema is dumped as SQL (`config.active_record.schema_format = :sql`) because `schema.rb` cannot
-represent a policy.
+The schema is dumped as SQL (`config.active_record.schema_format = :sql`), because `schema.rb`
+cannot represent a policy.
 
 Asserted by `server/test/models/tenant_isolation_test.rb` and
 `server/test/models/row_level_security_test.rb`.
@@ -79,20 +75,19 @@ Tenant.switch(tenant) do
 end
 ```
 
-Nesting restores the *outer* tenant rather than clearing the setting. Switching to the tenant already
-current is a plain `yield` — no savepoint, no round trip — because `Current.tenant` is written by
-`Tenant.switch` and by nothing else.
+Nesting restores the outer tenant rather than clearing the setting. Switching to the tenant already
+current is a plain `yield`, with no savepoint and no round trip, because `Current.tenant` is written
+by `Tenant.switch` and by nothing else.
 
-The setting is transaction-local, so the switch owns a transaction for as long as the block runs. A
-session-scoped setting would avoid holding one across a request, at the price of a connection that
-can be returned to the pool still carrying a tenant. That failure is a cross-tenant read, and it is
-silent, so the transaction is the deliberate cost.
+The setting is transaction-local, so the switch holds a transaction open for as long as the block
+runs. A session-scoped setting would avoid that, at the price of a connection returning to the pool
+still carrying a tenant — a silent cross-tenant read.
 
 ## Jobs carry the tenant that enqueued them
 
-A background job resolves no hostname, so nothing would put it in a tenant. `TenantAware` — included
-in `ApplicationJob`, and in the `MailDeliveryJob` that `config.action_mailer.delivery_job` names —
-records `Current.tenant` at enqueue and switches back into it before the arguments are deserialized:
+A background job resolves no hostname. `TenantAware`, included in `ApplicationJob` and in the
+`MailDeliveryJob` that `config.action_mailer.delivery_job` names, records `Current.tenant` at
+enqueue and switches back into it before the arguments are deserialized:
 
 ```ruby
 def perform_now
@@ -103,26 +98,26 @@ end
 ```
 
 Before the arguments, because they are Global IDs of tenant-scoped records. Deserializing an `Actor`
-outside its tenant does not return the wrong row — RLS and the default scope both fail closed — it
-finds nothing, and the job dies with `ActiveJob::DeserializationError`. Every invitation, reset and
-verification mail went that way until the tenant travelled with them.
+outside its tenant finds nothing — RLS and the default scope both fail closed — and the job dies
+with `ActiveJob::DeserializationError`.
 
-A job enqueued outside a tenant performs outside one, which is what `CleanupJob` wants: it switches
+A job enqueued outside a tenant performs outside one, which is what `CleanupJob` needs: it switches
 into each tenant itself.
 
 ## Declaring tenants
 
-`MASKS_TENANTS` is ensured on boot and by `bin/rails masks:tenants`. Declaring it turns claiming off.
+`MASKS_TENANTS` is ensured on boot and by `bin/rails masks:tenants`. Declaring it turns claiming
+off.
 
 Leave it unset and the first request to a hostname nothing serves claims that subdomain — once, and
 only while no tenant exists at all, so it cannot mint tenants against a wildcard.
 
-`Tenant.active` excludes archived tenants; `archived_at` is the soft delete.
+`Tenant.active` excludes archived tenants. `archived_at` is the soft delete.
 
 ## One tenant
 
-`MASKS_TENANT=demo` pins the whole installation to one tenant, and `Tenant.resolve` returns before it
-ever looks at the hostname:
+`MASKS_TENANT=demo` pins the installation to one tenant, and `Tenant.resolve` returns before it
+looks at the hostname:
 
 ```ruby
 def resolve(host)
@@ -132,33 +127,31 @@ def resolve(host)
 end
 ```
 
-So `auth.example.com`, the apex, a tailnet name, an IP, `localhost:5555` — all of them answer, and
-none of them has to be a subdomain of anything. Nothing below this line changes: the record, the
-default scope, the RLS policy, the signing key and the `tenant` claim are the same machinery serving
-one row.
+So `auth.example.com`, the apex, a tailnet name, an IP and `localhost:5555` all answer, and none has
+to be a subdomain of anything. The record, the default scope, the RLS policy, the signing key and
+the `tenant` claim are the same machinery serving one row.
 
 Two consequences follow from the host no longer being consulted.
 
-**It names the record, not the route.** The value lands in `subdomain`, which is what
-`to_identity` publishes and what downstream applications read. Pick it for what should appear in the
-claim. It is also the reason to set it rather than let an apex host claim: `example.com` claims a
-tenant named `example`, and `auth.example.com` one named `auth`.
+**It names the record.** The value lands in `subdomain`, which is what `to_identity`
+publishes and what downstream applications read. Pick it for what should appear in the claim. This
+is also why to set it rather than let an apex host claim: `example.com` claims a tenant named
+`example`, and `auth.example.com` one named `auth`.
 
-**Pin the origin too.** Since every hostname resolves, every hostname would otherwise mint tokens
-under whichever `iss` the request arrived at — two issuers against one key, half of them failing
-verification, and emailed links pointing wherever the caller said. `MASKS_PUBLIC_ORIGIN_TEMPLATE` is
-required outside development for that reason; a single-tenant deployment sets it to a literal URL,
-because the `%{subdomain}` is optional.
+**Pin the origin too.** Every hostname resolves, so every hostname would otherwise mint tokens under
+whichever `iss` the request arrived at, and emailed links would point wherever the caller said.
+`MASKS_PUBLIC_ORIGIN_TEMPLATE` is required outside development for that reason. A single-tenant
+deployment sets it to a literal URL, since the `%{subdomain}` is optional.
 
 Declaring `MASKS_TENANT` turns claiming off the same way `MASKS_TENANTS` does, so the tenant and its
-key exist before the first request rather than being claimed by it, and the first run is the setup
-prompt. Setting both raises `Tenant::TenancyConflict` rather than picking one.
+key exist before the first request and the first run is the setup prompt. Setting both raises
+`Tenant::TenancyConflict`.
 
 :::note[Pinning selects, it does not migrate]
 Point `MASKS_TENANT` at a database holding three tenants and the other two still exist, with their
-rows and keys intact. They are unreachable, not gone.
+rows and keys intact. They are simply unreachable.
 :::
 
-In development, Rails' own host authorization is the one place a hostname still matters —
+In development, Rails' own host authorization is the one place a hostname still matters.
 `config.hosts` is built from `MASKS_HOST_SUFFIX`, and a host it does not allow is a 403 raised before
 any of this runs.

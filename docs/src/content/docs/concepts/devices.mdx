@@ -3,7 +3,7 @@ title: Devices
 description: A browser that has signed in is a row that outlives every session on it — nameable, trustable, blockable, and revocable in one write.
 ---
 
-A session lasts fourteen days and dies. A **device** is the browser behind it, and it outlives every
+A session lasts fourteen days and dies. A device is the browser behind it, and it outlives every
 session it ever held.
 
 `server/app/models/device.rb`, `server/app/models/device_factor.rb`
@@ -15,11 +15,19 @@ tokens           device_id
 device_factors   device_id  actor_id  factor  satisfied_at  expires_at
 ```
 
+| Constant | |
+| --- | --- |
+| `Device::COOKIE` | `masks_device` |
+| `Device::LIFETIME` | 400 days |
+| `Device::IDLE` | 5 minutes between `last_seen_at` writes |
+| `DeviceFactor::LIFETIME` | 30 days |
+
 ## Where the identity lives
 
-The `public_id` is 24 random bytes in a signed, `httponly` cookie with a 400-day sliding expiry. It
-is not the session cookie and does not travel with it: signing out clears `masks_session` and leaves
-the device alone, which is the point — the next sign-in from that browser lands on the same row.
+`public_id` is `SecureRandom.urlsafe_base64(24)`, held in a signed, `httponly` cookie with a
+400-day sliding expiry. It is not the session cookie and does not travel with it: signing out
+clears `masks_session` and leaves the device alone, so the next sign-in from that browser lands on
+the same row.
 
 A device is minted on the first `POST /login`, never on a `GET`. Anonymous traffic, crawlers and the
 machine endpoints (`/token`, `/introspect`, `/userinfo`) send no device cookie and create no rows.
@@ -35,7 +43,7 @@ def bound?
 end
 ```
 
-So `rotate!` — one `UPDATE` of one column — invalidates every session on that device at once,
+`rotate!` is one `UPDATE` of one column, and invalidates every session on that device at once
 without walking them. `sign_out!` rotates, revokes the sessions and tokens the device holds, and
 drops what it was trusted for:
 
@@ -52,7 +60,7 @@ end
 
 Tokens inherit the device from their parent, so an authorization code issued to a browser passes it
 to the access and refresh tokens minted from it. Signing a device out therefore stops the
-applications it authorized, not just the browser.
+applications it authorized as well as the browser.
 
 ## Blocking
 
@@ -60,8 +68,8 @@ applications it authorized, not just the browser.
 carrying a blocked device's cookie, and in `carries?`, so a blocked device resumes nothing even if
 the cookie survives. `block!` signs the device out in the same transaction.
 
-Blocking your own device locks you out of `/manage` from that browser. That is not a bug — it is
-what the control is for.
+Blocking your own device locks you out of `/manage` from that browser, which is what the control is
+for.
 
 ## What a device is called
 
@@ -73,9 +81,10 @@ def label
 end
 ```
 
-An unreadable user agent is recorded, not rejected. `known?` reports the difference; it does not
-gate anything. Neither does the IP: a mismatch between the address a device was last seen at and the
-one it arrives from is normal on mobile and behind a VPN, so masks tracks it and never enforces it.
+An unreadable user agent is recorded rather than rejected. `known?` reports the difference and
+gates nothing. Neither does the IP: a mismatch between the address a device was last seen at and
+the one it arrives from is normal on mobile and behind a VPN, so masks tracks it and never enforces
+it.
 
 ## Trusting a device with a factor
 
@@ -94,9 +103,10 @@ end
 Only the second factor is ever remembered. The first is asked for every time, so a stolen device
 cookie is worth nothing without the password or the passkey.
 
-A remembered device notes `mfa` in `amr` and not `otp` — multi-factor authentication is what this
+A remembered device notes `mfa` in `amr` and not `otp`: multi-factor authentication is what this
 browser proved, and a code is not what was entered this time. `max_age` and `prompt=login` are
-untouched by any of it: `reauthenticating?` and `stale?` short-circuit ahead of the remembered row.
+untouched by any of it — `reauthenticating?` and `stale?` short-circuit ahead of the remembered
+row.
 
 Every remembered factor for an actor is dropped when their password changes, when an admin disables
 their authenticator, and when the device is signed out.

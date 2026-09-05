@@ -36,9 +36,12 @@ One gem carries both halves, and `Masks::Rails` loads only when Rails is already
 | --- | --- |
 | `GET /` | start the flow |
 | `GET /session` | who is signed in, as JSON |
+| `GET /avatar` | proxy the actor's [photo](/concepts/avatars) |
 | `GET /callback` | the redirect target |
 | `GET POST DELETE /logout` | |
 | `GET POST /handshake`, `GET /handshake/callback`, `DELETE /handshake` | [connecting this app](/guides/handshake) |
+
+Full API at [Masks::Rails](/libraries/rails).
 
 ## Configure
 
@@ -80,7 +83,7 @@ end
 ```
 
 The concern is opt-in per controller. Set `config.authenticate_everything = true` to have the engine
-include it into every controller instead; it is off by default because it lands twenty-five `masks_*`
+include it into every controller instead. It is off by default because it lands thirty-four `masks_*`
 methods on code you own.
 
 `authenticate_masks!` returns true if there is a live session, silently refreshes when the access

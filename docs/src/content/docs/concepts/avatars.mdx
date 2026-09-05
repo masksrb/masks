@@ -15,7 +15,8 @@ one to draw.
 | `initials` | two letters from `name`, else `nickname` | nothing |
 
 Only the photo is stored. The other two are pure functions of columns the actor already has, drawn
-as SVG on the way out, so they cost a hash and a string and cannot fall out of sync with the account.
+as SVG on the way out, so they cost a hash and a string and cannot fall out of sync with the
+account.
 
 ## The endpoint
 
@@ -26,12 +27,13 @@ GET /avatars/:uuid/:style/:digest     the same, immutable
 GET /avatars/:uuid/:style?size=128    32, 64, 128, 256 or 512
 ```
 
-The `uuid` is the `sub` the client already holds. A size outside the allowlist is clamped to the
-next one up rather than honoured, so nobody can ask the server to resize to 40000 pixels.
+The `uuid` is the `sub` the client already holds. `Avatars::SIZES` is the allowlist, and a size
+outside it is rounded up to the next allowed one, so nobody can ask the server to resize to 40000
+pixels.
 
 The stamped form is content-addressed and answers `Cache-Control: immutable`. When the digest does
-not match what the actor has now, the request **redirects** to the one that does — so a client
-holding a month-old id token still draws a face, and lands on a URL it can cache forever.
+not match what the actor has now, the request redirects to the one that does, so a client holding a
+month-old id token still draws a face and lands on a URL it can cache forever.
 
 ## What the token carries
 
@@ -51,8 +53,7 @@ Every id token and every `/userinfo` response carries all three:
 
 `photo` is `null` when the actor has not uploaded one. `picture` is the standard OIDC claim and
 resolves in order: the `picture_url` on the profile if the actor set one, then the photo, then the
-identicon. So a client that only knows OIDC still gets a working image, and one that knows masks can
-choose.
+identicon. A client that only knows OIDC gets a working image, and one that knows masks can choose.
 
 Discovery advertises the endpoint, which is how a client builds a URL for a subject it did not
 receive a token for:
@@ -67,23 +68,23 @@ receive a token for:
 
 ## Who may see a photo
 
-The generated styles are **public**. They are drawn from an opaque uuid the caller already holds and
-say nothing a `sub` did not, and an `<img>` tag cannot carry an `Authorization` header — gating them
-would mean every consumer proxies every avatar for no privacy gained.
+The generated styles are public. They are drawn from an opaque uuid the caller already holds and
+say nothing a `sub` did not, and an `<img>` tag cannot carry an `Authorization` header, so gating
+them would mean every consumer proxies every avatar for no privacy gained.
 
-A photo is a likeness of a person, so it is **gated**. It is released to:
+A photo is a likeness of a person, so it is gated. It is released to:
 
 - a bearer token carrying `profile` whose `sub` is the actor asked for,
 - a bearer token carrying `masks:manage`,
 - the actor's own browser session,
 - an administrator's browser session, which is how the console draws them.
 
-Anything else gets `401` with a `WWW-Authenticate` header. The bare `/avatars/:uuid` never refuses —
-without the right to the photo it quietly serves the identicon instead, so an unauthenticated `<img>`
-still draws something.
+Anything else gets `401` with a `WWW-Authenticate` header. The bare `/avatars/:uuid` never refuses:
+without the right to the photo it serves the identicon instead, so an unauthenticated `<img>` still
+draws something.
 
-This means an application listing its users draws identicons for everyone and the real photo for the
-person signed in. That is the honest consequence of the rule, not an oversight.
+An application listing its users therefore draws identicons for everyone and the real photo for the
+person signed in.
 
 ### Drawing a photo in a browser
 
@@ -115,12 +116,16 @@ if (blob) img.src = URL.createObjectURL(blob);
 else img.src = await auth.avatarUrl(subject, { style: "identicon" });
 ```
 
+See [@masks/client](/libraries/browser).
+
 ## Uploads
 
-An upload is sniffed by magic bytes and refused unless it is PNG, JPEG, GIF or WebP — an SVG is not
-an avatar, because serving a caller's SVG from the origin that holds the session cookie is a script
-you did not write. What survives is re-encoded through libvips to a 512px square WebP with metadata
-stripped, so none of the original file's bytes reach anyone: no EXIF, no GPS, no polyglot.
+An upload is sniffed by magic bytes and refused unless it is PNG, JPEG, GIF or WebP. An SVG is
+refused because serving a caller's SVG from the origin that holds the session cookie is a script
+you did not write.
+
+What survives is re-encoded through libvips to a 512px square WebP with metadata stripped, so none
+of the original file's bytes reach anyone: no EXIF, no GPS, no polyglot.
 
 ```ruby
 Vips::Image.thumbnail_buffer(bytes, 512, height: 512, size: :both, crop: :attention)
@@ -128,7 +133,13 @@ Vips::Image.thumbnail_buffer(bytes, 512, height: 512, size: :both, crop: :attent
 ```
 
 `crop: :attention` picks the salient region rather than the middle, which is usually the face.
-Anything over 8MB, or with more than 100 megapixels in its header, is refused before decoding.
+
+| `Avatar::` | |
+| --- | --- |
+| `STORED` | 512 |
+| `QUALITY` | 82 |
+| `LIMIT` | 8 MB, refused before decoding |
+| `PIXELS` | 100,000,000, read from the header |
 
 Smaller sizes are resized on demand and cached. The row holds the 512px original, its digest, and
 nothing else:
@@ -143,5 +154,5 @@ tenants even if the Ruby scope is wrong.
 ## Where they show up
 
 The account page draws all three and takes the upload. The console draws one in the actor list and
-all three on an actor, where an administrator can remove a photo but never set one — a photo is the
-actor's to upload, and an admin who could set one could impersonate them in every application's UI.
+all three on an actor, where an administrator can remove a photo but never set one — an admin who
+could set one could impersonate that actor in every application's UI.

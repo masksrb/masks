@@ -3,7 +3,9 @@ title: Tokens and audiences
 description: What masks issues, what it stores, and how a resource server insists a token was minted for it.
 ---
 
-`server/app/models/token.rb` and its three subclasses.
+`server/app/models/token.rb` and its nine subclasses. Five of them are what the flows below issue;
+the rest carry invitations, resets, verifications and requests in flight. See
+[Models](/reference/models).
 
 ## What gets issued
 
@@ -13,20 +15,22 @@ description: What masks issues, what it stores, and how a resource server insist
 | access token | signed JWT (RS256) | 1 hour | no |
 | id token | signed JWT (RS256) | 15 minutes | no |
 | refresh token | opaque, 48 random bytes base64url | 30 days | yes, rotated |
+| initial access token | opaque | 10 minutes | yes |
 
-Lifetimes are `Token.lifetime` per subclass; the id token's is inline in `Issuer#id_token`.
+Lifetimes are `Token.lifetime` per subclass. The id token's is inline in `Issuer#id_token`, and it
+has no row of its own. The initial access token is what a [handshake](/guides/handshake) redeems.
 
 Opaque tokens are stored as `Digest::SHA256.hexdigest(secret)`. `Token.mint!` returns the record
-with `#secret` readable exactly once and never stored.
+with `#secret` readable once.
 
-An access token's `digest` column holds its `jti` — a UUID — because the JWT itself is never stored.
-A row still exists per access token, so it can be revoked and inspected.
+An access token's `digest` column holds its `jti`, a UUID, because the JWT itself is never stored. A
+row exists per access token so it can be revoked and inspected.
 
 | | |
 | --- | --- |
 | `Token.redeem(secret)` | find a live one by digest |
 | `Token.claim(secret)` | redeem and consume atomically, in one `UPDATE` |
-| `Token.spent(secret)` | find one `redeem` has already refused — how a replay is noticed |
+| `Token.spent(secret)` | find one `redeem` has already refused |
 | `#consume!` | burn it |
 | `#revoke!` | burn it and everything below it, breadth-first through `children` |
 
@@ -56,17 +60,17 @@ No `name`, no `email`, no `preferred_username`. OIDC Core 5.4 puts scope-request
 
 | | |
 | --- | --- |
-| `auth_time` | when the person signed in, not when the token was built |
+| `auth_time` | when the person signed in |
 | `acr` | `urn:masks:acr:mfa` if `amr` includes `mfa`, else `urn:masks:acr:pwd` |
 | `amr` | `pwd`, `otp`, `swk`, `user`, `mfa` (RFC 8176) |
 | `at_hash` / `c_hash` | left half of the SHA-256, base64url unpadded |
-| `tenant` | who answered — see [Tenancy](/concepts/tenancy) |
+| `tenant` | which tenant answered — see [Tenancy](/concepts/tenancy) |
 
-`acr` and `amr` describe the sign-in, never the account. `Login#noted!` accumulates `amr` as states
-satisfy factors; `Issuer#acr_for` reads it. An actor with an authenticator enrolled who signed in
-with a password alone gets `pwd`.
+`acr` and `amr` describe the sign-in rather than the account. `Login#noted!` accumulates `amr` as
+states satisfy factors, and `Issuer#acr_for` reads it. An actor with an authenticator enrolled who
+signed in with a password alone gets `pwd`.
 
-`max_age` is enforced against `auth_time` through `Login#stale?`, not against `iat`.
+`max_age` is enforced against `auth_time` through `Login#stale?`.
 
 ## The access token
 
@@ -74,14 +78,12 @@ with a password alone gets `pwd`.
 { "iss", "sub", "aud", "exp", "iat", "jti", "client_id", "scope", "act", "tenant" }
 ```
 
-`aud` is a bare string when there is one audience and an array otherwise. Nils are compacted out.
+`aud` is a bare string for one audience and an array otherwise. Nils are compacted out.
 
 ## Audiences and `resource`
 
-By default a token's `aud` is the client it was issued to — fine for an id token, useless for an
-access token the client sends somewhere else.
-
-RFC 8707: the client names the API it intends to call.
+By default a token's `aud` is the client it was issued to, which is useless for an access token the
+client sends somewhere else. RFC 8707 lets the client name the API it intends to call:
 
 ```
 GET /authorize
@@ -90,41 +92,40 @@ GET /authorize
   &resource=https%3A%2F%2Fdemo.things.example%2Fmcp
 ```
 
-That value becomes the token's `aud`. The resource server verifies it against its own URL and
-refuses anything else. Without it, a token minted for one API is valid at every other API trusting
-the same issuer.
+That value becomes the token's `aud`. The resource server checks it against its own URL and refuses
+anything else. Without it, a token minted for one API is valid at every other API trusting the same
+issuer.
 
-`resource` may repeat. It can be sent at `/authorize`, at `/token`, or both; at the token endpoint it
-may only narrow what the code already authorized. `AuthorizationPolicy#resources_are_absolute`
-rejects a relative one.
+`resource` may repeat, and may be sent at `/authorize`, at `/token`, or both. At the token endpoint
+it may only narrow what the code already authorized.
+`AuthorizationPolicy#resources_are_absolute` rejects a relative one.
 
 :::caution[Repeated parameters]
-Rails keeps only the last value of a repeated query parameter, so masks parses `resource` off the raw
-query string and raw body rather than out of `params`.
+Rails keeps only the last value of a repeated query parameter, so masks parses `resource` off the
+raw query string and raw body rather than out of `params`.
 :::
 
 `resource_indicators_supported` is published in discovery. RFC 8414 does not register it, which is
-the second deliberate divergence recorded in `conformance/expected-failures.json`.
+one of two deliberate divergences recorded in `conformance/expected-failures.json`.
 
 ## PKCE
 
-`code_challenge` with `S256` is required for public clients (`token_endpoint_auth_method: "none"`)
-and accepted from every client. `Client::CHALLENGE_METHODS` is `["S256"]` — `plain` is not
-supported.
+`code_challenge` with `S256` is required for public clients
+(`token_endpoint_auth_method: "none"`) and accepted from every client. `Client::CHALLENGE_METHODS`
+is `["S256"]`; `plain` is not supported.
 
 ```
 challenge = BASE64URL(SHA256(verifier))
 ```
 
 The verifier is checked at the token endpoint with a constant-time comparison, and the code is
-consumed whether or not it matches. Burning it only on success would let a wrong verifier be retried
-with the right one.
+consumed whether or not it matches, so a wrong verifier cannot be retried with the right one.
 
-## A replayed code takes its tokens with it
+## Replayed codes
 
 Presenting a code twice is evidence the first presentation may not have been the client's. The
-second attempt is refused *and* everything the first minted is revoked — both the access token and
-the refresh token record the code as their `parent`.
+second attempt is refused, and the access and refresh tokens the first one minted are revoked with
+it — both record the code as their `parent`.
 
 ```
 POST /token  code=abc…   → 200, access + refresh issued
@@ -137,8 +138,8 @@ POST /token  code=abc…   → 400 invalid_grant, and both of those are now dead
 
 ## Refresh rotation
 
-Refreshing consumes the presented token and mints a child that records its parent. A replayed
-refresh token fails, because the first use already consumed it.
+Refreshing consumes the presented token and mints a child recording its parent. A replayed refresh
+token fails, because the first use already consumed it.
 
-`parent_id` is one chain doing three jobs: rotating refresh tokens, recording provenance through
-[an exchange](/guides/exchange), and letting a replayed code revoke what it already issued.
+`parent_id` does three jobs: rotating refresh tokens, recording provenance through
+[an exchange](/guides/exchange), and letting a replayed code revoke what it issued.
