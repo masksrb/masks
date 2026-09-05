@@ -16,6 +16,7 @@ class EngineTest < ActiveSupport::TestCase
   setup do
     Masks::Client.registry.clear!
     CREDENTIALS.clear!
+    issuer.forgotten = false
     configure!
   end
 
@@ -46,6 +47,8 @@ class EngineTest < ActiveSupport::TestCase
 end
 
 class EngineIntegrationTest < ActionDispatch::IntegrationTest
+  include ActiveSupport::Testing::TimeHelpers
+
   SUBDOMAIN = EngineTest::SUBDOMAIN
   HOST = EngineTest::HOST
 
@@ -53,6 +56,7 @@ class EngineIntegrationTest < ActionDispatch::IntegrationTest
     Masks::Client.registry.clear!
     CREDENTIALS.clear!
     issuer.id_tokens = :normal
+    issuer.forgotten = false
     configure!
   end
 

@@ -70,6 +70,36 @@ module Masks
         masks_config.configured?(request)
       end
 
+      def masks_registration
+        Masks::Client::Registration.held(
+          masks_config.issuer_for(request),
+          masks_config.credentials_for(request)
+        )
+      end
+
+      def masks_registered?
+        held = masks_registration
+
+        held.nil? || held.known?
+      rescue Masks::Client::Error
+        true
+      end
+
+      def masks_disconnect!
+        return false unless masks_configured? && masks_config.can_forget?
+
+        masks_config.forget!(request)
+        masks_forget
+
+        true
+      end
+
+      def masks_reconnect!
+        return false if masks_registered?
+
+        masks_disconnect!
+      end
+
       def masks_handshake_path
         Masks::Rails::Engine.routes.url_helpers.handshake_path
       end
@@ -107,6 +137,9 @@ module Masks
           )
         )
         true
+      rescue Masks::Client::Unregistered
+        masks_disconnect!
+        false
       rescue Masks::Client::Rejected
         masks_forget
         false

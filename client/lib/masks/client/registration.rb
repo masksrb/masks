@@ -59,18 +59,30 @@ module Masks
         metadata["registration_client_uri"]
       end
 
+      REFUSED = [ 401, 403 ].freeze
+      GONE = (REFUSED + [ 404 ]).freeze
+
       def read
-        HTTP.get(uri, authorization)
+        still_ours(REFUSED) { HTTP.get(uri, authorization) }
       end
 
       def update(**attributes)
-        @metadata = metadata.merge(HTTP.put_json(uri, self.class.stringify(attributes), authorization))
+        @metadata = metadata.merge(
+          still_ours(REFUSED) { HTTP.put_json(uri, self.class.stringify(attributes), authorization) }
+        )
         self
       end
 
       def delete
-        HTTP.delete(uri, authorization)
+        still_ours(GONE) { HTTP.delete(uri, authorization) }
         true
+      end
+
+      def known?
+        read
+        true
+      rescue Unregistered
+        false
       end
 
       def authorization
@@ -86,6 +98,18 @@ module Masks
           scope: scope
         )
       end
+
+      private
+
+        def still_ours(statuses)
+          yield
+        rescue Unregistered
+          raise
+        rescue Rejected => e
+          raise unless statuses.include?(e.status)
+
+          raise Unregistered.new(Unregistered::CODE, e.description, status: e.status)
+        end
     end
   end
 end

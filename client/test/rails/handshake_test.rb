@@ -186,6 +186,37 @@ class HandshakeTest < EngineIntegrationTest
                  "RFC 7592 delete is authenticated by the registration access token"
   end
 
+  test "disconnecting drops what is held even when the issuer has forgotten the registration" do
+    sign_in!
+    shake_hands!
+
+    issuer.forgotten = true
+
+    delete "/auth/handshake", headers: host
+
+    assert_redirected_to "/auth/handshake"
+    assert_nil CREDENTIALS[HOST],
+               "a registration the issuer no longer knows must not strand the app that holds it"
+  end
+
+  test "an issuer that cannot be reached does not cost an app its registration" do
+    sign_in!
+
+    CREDENTIALS.hold!(
+      HOST,
+      client_id: "test-client",
+      client_secret: "test-secret",
+      registration_access_token: "held",
+      registration_client_uri: "http://127.0.0.1:1/#{SUBDOMAIN}/register/test-client"
+    )
+
+    delete "/auth/handshake", headers: host
+
+    assert_response :bad_request
+    refute_nil CREDENTIALS[HOST],
+               "an issuer that is merely down is a reason to try again, not to forget"
+  end
+
   test "disconnecting is refused to a browser that is not signed in" do
     connect!
 

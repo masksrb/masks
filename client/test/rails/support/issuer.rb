@@ -7,6 +7,9 @@ require "base64"
 
 class TestIssuer
   ALGORITHM = "RS256".freeze
+  REASONS = { 400 => "Bad Request", 401 => "Unauthorized", 404 => "Not Found" }.freeze
+
+  Refusal = Struct.new(:status, :body)
 
   class << self
     def current
@@ -15,7 +18,7 @@ class TestIssuer
   end
 
   attr_reader :port, :registrations, :deletions
-  attr_accessor :id_tokens
+  attr_accessor :id_tokens, :forgotten
 
   def initialize
     @keys = {}
@@ -24,6 +27,7 @@ class TestIssuer
     @registrations = []
     @deletions = []
     @id_tokens = :normal
+    @forgotten = false
     @lock = Mutex.new
     @server = TCPServer.new("127.0.0.1", 0)
     @port = @server.addr[1]
@@ -121,14 +125,14 @@ class TestIssuer
       else get_for(path.to_s, bearer)
       end
 
-      body = JSON.generate(found || { "error" => "not_found" })
-      status = if found.nil?
-        "404 Not Found"
-      elsif found["error"]
-        "400 Bad Request"
-      else
-        "200 OK"
+      code, payload = case found
+      when nil then [ 404, { "error" => "not_found" } ]
+      when Refusal then [ found.status, found.body ]
+      else found["error"] ? [ 400, found ] : [ 200, found ]
       end
+
+      body = JSON.generate(payload)
+      status = code == 200 ? "200 OK" : "#{code} #{REASONS.fetch(code, 'Error')}"
 
       socket.print [
         "HTTP/1.1 #{status}",
@@ -145,6 +149,7 @@ class TestIssuer
 
     def deleted(path, bearer)
       return nil unless path =~ %r{\A/([^/]+)/register/([^/]+)\z}
+      return unknown_registration if forgotten
 
       @lock.synchronize { @deletions << { subdomain: $1, client_id: $2, token: bearer } }
 
@@ -156,12 +161,34 @@ class TestIssuer
       when %r{\A/([^/]+)/\.well-known/openid-configuration\z} then discovery($1)
       when %r{\A/([^/]+)/\.well-known/jwks\.json\z} then jwks($1)
       when %r{\A/([^/]+)/userinfo\z} then userinfo($1, bearer)
+      when %r{\A/([^/]+)/register/([^/]+)\z} then held($1, $2)
       end
+    end
+
+    def held(subdomain, client_id)
+      return unknown_registration if forgotten
+
+      { "client_id" => client_id, "registration_client_uri" => "#{url_for(subdomain)}/register/#{client_id}" }
+    end
+
+    def unknown_registration
+      Refusal.new(401, {
+        "error" => "invalid_token",
+        "error_description" => "a registration access token is required"
+      })
+    end
+
+    def unknown_client
+      Refusal.new(401, {
+        "error" => "invalid_client",
+        "error_description" => "no client is registered with that client_id"
+      })
     end
 
     def post_for(path, payload, bearer)
       return registered($1, payload, bearer) if path =~ %r{\A/([^/]+)/register\z}
       return nil unless path =~ %r{\A/([^/]+)/token\z}
+      return unknown_client if forgotten
 
       subdomain = $1
       form = URI.decode_www_form(payload).to_h

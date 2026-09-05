@@ -64,6 +64,81 @@ class SessionTest < EngineIntegrationTest
     assert_equal "#{origin}/mcp", query["resource"]
   end
 
+  test "an issuer that has forgotten the client asks for a reconnect rather than an authorize it will refuse" do
+    shake_hands!
+
+    issuer.forgotten = true
+
+    get "/auth", headers: host
+
+    assert_redirected_to "/auth/handshake"
+    assert_nil CREDENTIALS[HOST],
+               "a client_id the issuer does not know is worth nothing but a dead end"
+
+    get "/auth/session", headers: host.merge("HTTP_ACCEPT" => "application/json")
+
+    assert_response :unauthorized
+    assert_equal "handshake_required", json["error"]
+  end
+
+  test "an issuer that does not answer a registration read is not taken to have forgotten anything" do
+    shake_hands!
+
+    CREDENTIALS.hold!(
+      HOST,
+      **CREDENTIALS[HOST],
+      registration_client_uri: "#{issuer.url_for(SUBDOMAIN)}/register"
+    )
+
+    get "/auth", headers: host
+
+    assert_response :redirect
+    assert response.location.start_with?("#{issuer.url_for(SUBDOMAIN)}/authorize"),
+           "404 means the issuer does not answer RFC 7592 reads, not that the client is gone"
+    refute_nil CREDENTIALS[HOST]
+  end
+
+  test "an app whose store cannot forget keeps the sign-in it has always had" do
+    configure!(forget: nil)
+
+    CREDENTIALS.hold!(
+      HOST,
+      client_id: "test-client",
+      client_secret: "test-secret",
+      registration_access_token: "held",
+      registration_client_uri: "#{issuer.url_for(SUBDOMAIN)}/register/test-client"
+    )
+
+    issuer.forgotten = true
+
+    get "/auth", headers: host
+
+    assert_response :redirect
+    assert response.location.start_with?("#{issuer.url_for(SUBDOMAIN)}/authorize")
+  end
+
+  test "a refresh the issuer refuses as an unknown client asks for a reconnect, not another sign-in" do
+    shake_hands!
+
+    get "/auth", headers: host
+    landed = issuer.authorize!(response.location)
+
+    get "/auth/callback?code=#{landed[:code]}&state=#{landed[:state]}", headers: host
+
+    assert_redirected_to "/"
+
+    issuer.forgotten = true
+
+    travel 2.hours do
+      get "/auth/session", headers: host.merge("HTTP_ACCEPT" => "application/json")
+    end
+
+    assert_response :unauthorized
+    assert_equal "handshake_required", json["error"]
+    assert_nil CREDENTIALS[HOST]
+    assert_empty session_payload
+  end
+
   test "a completed callback establishes a session that says who signed in" do
     sign_in!
 

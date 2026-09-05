@@ -67,7 +67,9 @@ module Masks
         end
 
         unless response.is_a?(Net::HTTPSuccess)
-          raise Rejected.new(
+          refusal = Unregistered.raised_by?(body) ? Unregistered : Rejected
+
+          raise refusal.new(
             body["error"] || "http_#{response.code}",
             body["error_description"] || response.message,
             status: response.code.to_i
