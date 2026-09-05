@@ -79,7 +79,36 @@ Tenant.switch(tenant) do
 end
 ```
 
-Nesting restores the *outer* tenant rather than clearing the setting.
+Nesting restores the *outer* tenant rather than clearing the setting. Switching to the tenant already
+current is a plain `yield` — no savepoint, no round trip — because `Current.tenant` is written by
+`Tenant.switch` and by nothing else.
+
+The setting is transaction-local, so the switch owns a transaction for as long as the block runs. A
+session-scoped setting would avoid holding one across a request, at the price of a connection that
+can be returned to the pool still carrying a tenant. That failure is a cross-tenant read, and it is
+silent, so the transaction is the deliberate cost.
+
+## Jobs carry the tenant that enqueued them
+
+A background job resolves no hostname, so nothing would put it in a tenant. `TenantAware` — included
+in `ApplicationJob`, and in the `MailDeliveryJob` that `config.action_mailer.delivery_job` names —
+records `Current.tenant` at enqueue and switches back into it before the arguments are deserialized:
+
+```ruby
+def perform_now
+  return super if @tenant_uuid.blank?
+
+  Tenant.switch(Tenant.active.find_by!(uuid: @tenant_uuid)) { super }
+end
+```
+
+Before the arguments, because they are Global IDs of tenant-scoped records. Deserializing an `Actor`
+outside its tenant does not return the wrong row — RLS and the default scope both fail closed — it
+finds nothing, and the job dies with `ActiveJob::DeserializationError`. Every invitation, reset and
+verification mail went that way until the tenant travelled with them.
+
+A job enqueued outside a tenant performs outside one, which is what `CleanupJob` wants: it switches
+into each tenant itself.
 
 ## Declaring tenants
 
@@ -89,3 +118,47 @@ Leave it unset and the first request to a hostname nothing serves claims that su
 only while no tenant exists at all, so it cannot mint tenants against a wildcard.
 
 `Tenant.active` excludes archived tenants; `archived_at` is the soft delete.
+
+## One tenant
+
+`MASKS_TENANT=jons` pins the whole installation to one tenant, and `Tenant.resolve` returns before it
+ever looks at the hostname:
+
+```ruby
+def resolve(host)
+  return active.find_by(subdomain: pinned) if pinned
+
+  active.find_by(subdomain: host.to_s.split(".").first)
+end
+```
+
+So `auth.example.com`, the apex, a tailnet name, an IP, `localhost:5555` — all of them answer, and
+none of them has to be a subdomain of anything. Nothing below this line changes: the record, the
+default scope, the RLS policy, the signing key and the `tenant` claim are the same machinery serving
+one row.
+
+Two consequences follow from the host no longer being consulted.
+
+**It names the record, not the route.** The value lands in `subdomain`, which is what
+`to_identity` publishes and what downstream applications read. Pick it for what should appear in the
+claim. It is also the reason to set it rather than let an apex host claim: `example.com` claims a
+tenant named `example`, and `auth.example.com` one named `auth`.
+
+**Pin the origin too.** Since every hostname resolves, every hostname mints tokens, and `iss`
+defaults to the one the request arrived on. Reach the same installation over two names and you have
+issued two issuers against one key, half of which will fail verification. Set
+`MASKS_PUBLIC_ORIGIN_TEMPLATE` to a literal URL — the `%{subdomain}` is optional — and the issuer is
+that, whatever the host header says.
+
+Declaring `MASKS_TENANT` turns claiming off the same way `MASKS_TENANTS` does, so the tenant and its
+key exist before the first request rather than being claimed by it, and the first run is the setup
+prompt. Setting both raises `Tenant::TenancyConflict` rather than picking one.
+
+:::note[Pinning selects, it does not migrate]
+Point `MASKS_TENANT` at a database holding three tenants and the other two still exist, with their
+rows and keys intact. They are unreachable, not gone.
+:::
+
+In development, Rails' own host authorization is the one place a hostname still matters —
+`config.hosts` is built from `MASKS_HOST_SUFFIX`, and a host it does not allow is a 403 raised before
+any of this runs.

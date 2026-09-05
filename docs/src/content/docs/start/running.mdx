@@ -67,8 +67,10 @@ variable.
 | `POSTGRES_*` | where the database is; port 5435 in development |
 | `ENCRYPTION_*` | ActiveRecord encryption keys — replace before storing anything real |
 | `MASKS_TENANTS` | comma or space separated, ensured on boot |
+| `MASKS_TENANT` | one tenant, reached at every hostname — see [Tenancy](/concepts/tenancy) |
 | `MASKS_HOST_SUFFIX` | the suffix tenant subdomains hang off in development |
 | `MASKS_PUBLIC_ORIGIN_TEMPLATE` | overrides the derived issuer origin; takes `%{subdomain}` |
 
 Leave `MASKS_PUBLIC_ORIGIN_TEMPLATE` blank unless something in front of the app is rewriting the
-host.
+host, or `MASKS_TENANT` is set — a single-tenant deployment wants a literal origin there, because
+every hostname resolves and the issuer would otherwise follow whichever one was used.
