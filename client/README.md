@@ -91,7 +91,7 @@ An app that is also a resource server:
 class ApiController < ApplicationController
   include Masks::Rails::ProtectedResource
 
-  masks_protect! scope: "uris:read"
+  masks_protect! scope: "uris:catalog:read"
 end
 ```
 
@@ -204,10 +204,10 @@ that is not the issuer it asked — each **before** anything is redeemed.
 resource = Masks::Client::Resource.new(
   issuer: "https://demo.auth.example.com",
   url: "https://app.example.com/mcp",
-  scopes: { "uris:read" => "Search your catalog" }
+  scopes: { "uris:catalog:read" => "Search your catalog" }
 )
 
-claims = resource.authenticate(request.authorization, scope: "uris:read")
+claims = resource.authenticate(request.authorization, scope: "uris:catalog:read")
 claims.subject
 claims.tenant.subdomain
 ```
@@ -222,12 +222,12 @@ response.headers["WWW-Authenticate"] = resource.challenge(error)
 `resource.metadata` is the RFC 9728 document to serve at
 `/.well-known/oauth-protected-resource`. The `scope_descriptions` extension in it is how
 an auth server renders your scopes as sentences on its consent screen; it has no other
-way to know what `uris:read` means.
+way to know what `uris:catalog:read` means.
 
 There is a Rack middleware for consumers that want the challenge below the framework:
 
 ```ruby
-use Masks::Client::Rack, resource: resource, scope: "uris:read"
+use Masks::Client::Rack, resource: resource, scope: "uris:catalog:read"
 ```
 
 ### Introspection
@@ -237,7 +237,7 @@ expires. Ask the issuer instead:
 
 ```ruby
 found = session.introspect(token)
-found.active? && found.permits?("uris:read")
+found.active? && found.permits?("uris:catalog:read")
 ```
 
 `Introspection` is a `Claims` whose `permit!` raises when the issuer says the token is

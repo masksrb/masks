@@ -1,42 +1,223 @@
+/* Rose Window — the palette is drawn from the mark. Lead is the ground and the
+   neutrals, came is the brass and silver that joins the panes, glass is the
+   rainbow. See /reference/design. */
+
 :root {
-  --sl-color-accent-low: #182a45;
-  --sl-color-accent: #3f6bb0;
-  --sl-color-accent-high: #c6d8f2;
-  --sl-color-white: #f4f6fa;
-  --sl-color-gray-1: #dfe4ed;
-  --sl-color-gray-2: #b6bfcd;
-  --sl-color-gray-3: #7f8a9b;
-  --sl-color-gray-4: #4c5666;
-  --sl-color-gray-5: #2c3441;
-  --sl-color-gray-6: #1c222c;
-  --sl-color-black: #12161d;
+  --lead-000: #000000;
+  --lead-050: #0f0b09;
+  --lead-100: #1a1614;
+  --lead-200: #292421;
+  --lead-300: #3d3834;
+  --lead-400: #605955;
+  --lead-500: #88827d;
+  --lead-600: #aca6a2;
+  --lead-700: #cfc9c5;
+  --lead-800: #e9e5e2;
+
+  --came-brass: #b58a41;
+  --came-brass-lit: #deaf56;
+  --came-silver: #a9b3b4;
+
+  --glass-ruby: #ff867a;
+  --glass-ember: #ff8f53;
+  --glass-amber: #f19c29;
+  --glass-gold: #d4ad03;
+  --glass-verdant: #78c966;
+  --glass-emerald: #1dcf98;
+  --glass-cyan: #00cecf;
+  --glass-sky: #00c2fe;
+  --glass-cobalt: #70b1ff;
+  --glass-violet: #b49dff;
+
+  --sl-color-accent-low: #3a1d0e;
+  --sl-color-accent: #b04000;
+  --sl-color-accent-high: #ffb894;
+
+  --sl-color-white: #ffffff;
+  --sl-color-gray-1: var(--lead-800);
+  --sl-color-gray-2: var(--lead-600);
+  --sl-color-gray-3: var(--lead-500);
+  --sl-color-gray-4: var(--lead-400);
+  --sl-color-gray-5: var(--lead-300);
+  --sl-color-gray-6: var(--lead-100);
+  --sl-color-gray-7: var(--lead-050);
+  --sl-color-black: var(--lead-000);
+
+  --sl-color-bg: var(--lead-000);
+  --sl-color-bg-nav: var(--lead-050);
+  --sl-color-bg-sidebar: var(--lead-000);
+  --sl-color-hairline: var(--lead-200);
+  --sl-color-hairline-light: var(--lead-200);
+  --sl-color-hairline-shade: var(--lead-200);
+
+  --sl-color-text-accent: var(--glass-ember);
+  --sl-color-text-invert: var(--lead-000);
+
+  --sl-color-red: var(--glass-ruby);
+  --sl-color-orange: var(--glass-amber);
+  --sl-color-green: var(--glass-emerald);
+  --sl-color-blue: var(--glass-cobalt);
+  --sl-color-purple: var(--glass-violet);
+
+  --sl-color-asides-text-accent: var(--glass-cobalt);
+  --sl-color-asides-border: var(--glass-cobalt);
+
+  --pane: 5px;
+  --step: 3px;
+
+  --sl-font: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --sl-font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+    "Liberation Mono", monospace;
 }
 
 :root[data-theme="light"] {
-  --sl-color-accent-low: #d9e3f4;
-  --sl-color-accent: #21406f;
-  --sl-color-accent-high: #16294a;
-  --sl-color-white: #12161d;
-  --sl-color-gray-1: #2c3441;
-  --sl-color-gray-2: #4c5666;
-  --sl-color-gray-3: #6f7889;
-  --sl-color-gray-4: #a8b1c0;
-  --sl-color-gray-5: #dde2ea;
-  --sl-color-gray-6: #eef1f6;
-  --sl-color-gray-7: #f6f8fb;
+  --lead-000: #fcf9f7;
+  --lead-050: #ffffff;
+  --lead-100: #f5f1ee;
+  --lead-200: #e5ded9;
+  --lead-300: #d1c9c3;
+  --lead-400: #a49d97;
+  --lead-500: #7a736e;
+  --lead-600: #58514c;
+  --lead-700: #393430;
+  --lead-800: #211c18;
+
+  --came-brass: #87611e;
+  --came-brass-lit: #6d4702;
+  --came-silver: #636b6b;
+
+  --glass-ruby: #b53530;
+  --glass-ember: #b04000;
+  --glass-amber: #a44f00;
+  --glass-gold: #8b6200;
+  --glass-verdant: #267e05;
+  --glass-emerald: #008450;
+  --glass-cyan: #008386;
+  --glass-sky: #0077b2;
+  --glass-cobalt: #2065c5;
+  --glass-violet: #6e50be;
+
+  --sl-color-accent-low: #f7e2d5;
+  --sl-color-accent: #b04000;
+  --sl-color-accent-high: #6d2800;
+
+  --sl-color-white: var(--lead-800);
+  --sl-color-gray-1: var(--lead-700);
+  --sl-color-gray-2: var(--lead-600);
+  --sl-color-gray-3: var(--lead-500);
+  --sl-color-gray-4: var(--lead-400);
+  --sl-color-gray-5: var(--lead-300);
+  --sl-color-gray-6: var(--lead-200);
+  --sl-color-gray-7: var(--lead-100);
   --sl-color-black: #ffffff;
+
+  --sl-color-bg: var(--lead-000);
+  --sl-color-bg-nav: var(--lead-050);
+  --sl-color-bg-sidebar: var(--lead-000);
+}
+
+/* ---- Chrome ------------------------------------------------------------ */
+
+/* Ground and spacing separate the chrome, not rules. The header is raised a
+   step so content passing under it while it is stuck still reads as behind. */
+.header {
+  border-bottom: 0;
+  background: var(--sl-color-bg-nav);
+}
+
+.sidebar-pane {
+  border-inline-end: 0;
+  background: var(--sl-color-bg-sidebar);
+}
+
+.right-sidebar {
+  border-inline-start: 0;
+}
+
+/* The sidebar's group headings are the same eyebrow the console uses. */
+.sidebar-content summary,
+.sidebar-content .large {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--came-brass);
+}
+
+.sidebar-content a {
+  border-radius: var(--step);
+}
+
+.sidebar-content a[aria-current="page"] {
+  background: transparent;
+  color: var(--glass-ember);
+  font-weight: 600;
+}
+
+/* Glass is state: the site title carries the window in miniature. */
+.site-title::before {
+  content: "";
+  flex: none;
+  width: var(--step);
+  align-self: stretch;
+  min-height: 1.4em;
+  background: linear-gradient(
+    to bottom,
+    var(--glass-ruby),
+    var(--glass-amber),
+    var(--glass-emerald),
+    var(--glass-cobalt)
+  );
+}
+
+/* ---- Long-form --------------------------------------------------------- */
+
+/* Sections should read as groups: more air above a heading than below it. */
+.sl-markdown-content :is(h2, h3, h4) {
+  margin-block: 2.25em 0.65em;
+  letter-spacing: -0.02em;
+}
+
+.sl-markdown-content h2 {
+  border-top: 0;
+}
+
+.sl-markdown-content a {
+  color: var(--glass-ember);
+  text-underline-offset: 3px;
+}
+
+/* Bare fences carry schematics — route tables, column lists — not code. */
+.sl-markdown-content .expressive-code {
+  margin-block: 1.4rem;
+}
+
+.sl-markdown-content :not(pre) > code {
+  font-size: 0.9em;
+  color: var(--came-silver);
+  background: var(--lead-100);
+  border: 0;
+  border-radius: var(--step);
+}
+
+.sl-markdown-content .starlight-aside {
+  border-radius: 0 var(--pane) var(--pane) 0;
+  border-inline-start-width: var(--step);
+}
+
+.sl-markdown-content .starlight-aside__title {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
 }
 
 .rejects {
-  --sl-color-asides-text-accent: var(--sl-color-red);
-  --sl-color-asides-border: var(--sl-color-red);
+  --sl-color-asides-text-accent: var(--glass-ruby);
+  --sl-color-asides-border: var(--glass-ruby);
 }
 
-table code {
-  white-space: nowrap;
-}
-
-/* ---- Layout ------------------------------------------------------------ */
+/* ---- Tables ------------------------------------------------------------ */
 
 /* Most tables here are definition lists: two columns, no header row. Markdown
    still emits a <thead> of empty cells, which renders as a blank ruled band. */
@@ -48,18 +229,21 @@ table code {
   width: 100%;
   font-size: var(--sl-text-sm);
   line-height: 1.55;
+  font-variant-numeric: tabular-nums;
 }
 
 .sl-markdown-content :is(th, td) {
   vertical-align: baseline;
   padding-block: 0.55rem;
+  border-bottom: 0;
 }
 
 .sl-markdown-content th {
   font-size: var(--sl-text-xs);
-  letter-spacing: 0.04em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--sl-color-gray-3);
+  font-weight: 700;
+  color: var(--came-brass);
 }
 
 /* In a headerless table the first column is the term being defined. */
@@ -72,16 +256,29 @@ table code {
   white-space: nowrap;
 }
 
-/* Sections should read as groups: more air above a heading than below it. */
-.sl-markdown-content :is(h2, h3, h4) {
-  margin-block: 2.25em 0.65em;
-}
+/* ---- The design reference --------------------------------------------- */
 
-/* Bare fences carry schematics — route tables, column lists — not code. */
-.sl-markdown-content .expressive-code {
+.plate {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(5.5rem, 1fr));
+  border-radius: var(--pane);
+  overflow: hidden;
   margin-block: 1.4rem;
 }
 
-.sl-markdown-content :not(pre) > code {
-  font-size: 0.9em;
+.plate > div {
+  height: 5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 0.0625rem;
+  padding: 0.5rem;
+  font-family: var(--sl-font-mono);
+  font-size: 0.625rem;
+  line-height: 1.35;
+}
+
+.plate b {
+  font-weight: 700;
+  letter-spacing: 0.06em;
 }

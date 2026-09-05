@@ -5,11 +5,11 @@ class HandshakeTest < ActionDispatch::IntegrationTest
   RESOURCE = "#{APP}/mcp".freeze
   RETURN_TO = "#{APP}/auth/handshake/callback".freeze
   REDIRECT_URI = "#{APP}/auth/masks/callback".freeze
-  SCOPE = "openid profile email offline_access uris:read".freeze
+  SCOPE = "openid profile email offline_access uris:catalog:read".freeze
 
   setup do
     @owner = create_actor(@tenant, nickname: "owner", password: "password",
-                          scopes: Scopes.join(Scopes::STANDARD + [ Scopes::HANDSHAKE, "uris:read" ]))
+                          scopes: Scopes.join(Scopes::STANDARD + [ Scopes::HANDSHAKE, "uris:catalog:read" ]))
     host! host_for(@tenant)
   end
 
@@ -64,7 +64,7 @@ class HandshakeTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_match "Connect uris?", response.body
     assert_match APP, response.body
-    assert_match "uris:read", response.body
+    assert_match "uris:catalog:read", response.body
     assert_match REDIRECT_URI, response.body
   end
 
@@ -411,7 +411,7 @@ class HandshakeTest < ActionDispatch::IntegrationTest
     claims = claims_in(granted["access_token"])
 
     assert_equal [ RESOURCE ], Array(claims["aud"])
-    assert_includes Scopes.list(claims["scope"]), "uris:read"
+    assert_includes Scopes.list(claims["scope"]), "uris:catalog:read"
   end
 
   test "the endpoint an app sends a person to is the one discovery advertises" do

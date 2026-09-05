@@ -4,7 +4,7 @@ class SessionTest < ClientTest
   def session
     Masks::Client::Session.new(
       issuer: issuer.url, client_id: "app",
-      redirect_uri: "https://app.test/callback", scope: %w[openid uris:read]
+      redirect_uri: "https://app.test/callback", scope: %w[openid uris:catalog:read]
     )
   end
 
@@ -26,7 +26,7 @@ class SessionTest < ClientTest
     assert_equal started[:nonce], query.assoc("nonce").last
     refute_nil started[:nonce]
 
-    started = session.start(scope: %w[uris:read])
+    started = session.start(scope: %w[uris:catalog:read])
     query = URI.decode_www_form(URI.parse(started[:url]).query)
 
     assert_nil started[:nonce]
@@ -55,19 +55,19 @@ class SessionTest < ClientTest
 
   def test_a_granted_response_becomes_tokens
     issuer.override("/token", { "access_token" => "at", "token_type" => "Bearer",
-                                "scope" => "openid uris:read", "expires_in" => 3600 })
+                                "scope" => "openid uris:catalog:read", "expires_in" => 3600 })
 
     tokens = session.complete(code: "abc", verifier: "v")
 
     assert_equal "at", tokens.access_token
-    assert_equal %w[openid uris:read], tokens.scopes
+    assert_equal %w[openid uris:catalog:read], tokens.scopes
     assert_equal "Bearer at", tokens.authorization
     refute tokens.expired?
   end
 
   def test_introspection_answers_a_claims_object_rather_than_a_hash
     issuer.override("/introspect", {
-                      "active" => true, "scope" => "uris:read", "sub" => "actor-1",
+                      "active" => true, "scope" => "uris:catalog:read", "sub" => "actor-1",
                       "client_id" => "app", "username" => "owner", "token_type" => "Bearer",
                       "exp" => Time.now.to_i + 60, "aud" => [ "https://app.test/mcp" ]
                     })
@@ -78,20 +78,20 @@ class SessionTest < ClientTest
     assert_equal "actor-1", found.subject
     assert_equal "owner", found.username
     assert_equal "Bearer", found.token_type
-    assert_equal [ "uris:read" ], found.scopes
-    assert found.permits?("uris:read")
+    assert_equal [ "uris:catalog:read" ], found.scopes
+    assert found.permits?("uris:catalog:read")
     assert_equal "access_token", issuer.last("/introspect")[:body]["token_type_hint"]
   end
 
   def test_an_inactive_token_permits_nothing_however_wide_its_scope_reads
-    issuer.override("/introspect", { "active" => false, "scope" => "uris:read" })
+    issuer.override("/introspect", { "active" => false, "scope" => "uris:catalog:read" })
 
     found = session.introspect("revoked")
 
     refute found.active?
-    refute found.permits?("uris:read")
+    refute found.permits?("uris:catalog:read")
 
-    error = assert_raises(Masks::Client::Unauthorized) { found.permit!("uris:read") }
+    error = assert_raises(Masks::Client::Unauthorized) { found.permit!("uris:catalog:read") }
 
     assert_match(/not active/, error.message)
   end

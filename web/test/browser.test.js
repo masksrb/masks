@@ -108,7 +108,7 @@ function client(options = {}) {
       issuer: ISSUER,
       clientId: "app-1",
       redirectUri: "https://app.test/callback",
-      scope: "openid profile uris:read",
+      scope: "openid profile uris:catalog:read",
       resource: "https://app.test/mcp",
       fetch: upstream.fetch,
       storage: store,
@@ -121,7 +121,7 @@ const GRANTED = {
   access_token: "at-1",
   refresh_token: "rt-1",
   token_type: "Bearer",
-  scope: "openid profile uris:read",
+  scope: "openid profile uris:catalog:read",
   expires_in: 3600,
 };
 
@@ -169,7 +169,7 @@ test("the authorize url carries pkce, the resource, and a stored state", async (
   assert.equal(url.searchParams.get("response_type"), "code");
   assert.equal(url.searchParams.get("client_id"), "app-1");
   assert.equal(url.searchParams.get("code_challenge_method"), "S256");
-  assert.equal(url.searchParams.get("scope"), "openid profile uris:read");
+  assert.equal(url.searchParams.get("scope"), "openid profile uris:catalog:read");
   assert.deepEqual(url.searchParams.getAll("resource"), [
     "https://app.test/mcp",
   ]);
@@ -503,7 +503,7 @@ test("a client that asks for no id token sends no nonce and checks none", async 
   const upstream = server();
   const { subject, store } = client({
     server: upstream,
-    client: { scope: "uris:read" },
+    client: { scope: "uris:catalog:read" },
   });
 
   const url = new URL(await subject.authorizeUrl({ returnTo: "/" }));
@@ -512,7 +512,7 @@ test("a client that asks for no id token sends no nonce and checks none", async 
   assert.equal(url.searchParams.get("nonce"), null);
   assert.equal(waiting.nonce, "");
 
-  upstream.held.token = { ...GRANTED, scope: "uris:read" };
+  upstream.held.token = { ...GRANTED, scope: "uris:catalog:read" };
 
   const { identity } = await subject.callback(
     `https://app.test/callback?code=a&state=${waiting.state}`,

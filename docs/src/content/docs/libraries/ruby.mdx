@@ -123,10 +123,10 @@ checked with `Claims#permit!`.
 resource = Masks::Client.resource(
   "https://app.example.com/mcp",
   issuer: "https://demo.auth.example",
-  scopes: { "uris:read" => "Search your catalog" }
+  scopes: { "uris:catalog:read" => "Search your catalog" }
 )
 
-claims = resource.authenticate(request.authorization, scope: "uris:read")
+claims = resource.authenticate(request.authorization, scope: "uris:catalog:read")
 claims.subject
 claims.tenant.subdomain
 ```
@@ -335,7 +335,7 @@ Readers: `#access_token` `#id_token` `#refresh_token` `#token_type` `#scope` `#e
 Middleware that authenticates a bearer token and refuses below the framework.
 
 ```ruby
-use Masks::Client::Rack, resource: resource, scope: "uris:read"
+use Masks::Client::Rack, resource: resource, scope: "uris:catalog:read"
 ```
 
 ```ruby

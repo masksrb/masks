@@ -10,7 +10,7 @@ class HandshakeTest < ClientTest
         name: "uris",
         resource: "#{APP}/mcp",
         redirect_uris: [ "#{APP}/auth/callback" ],
-        scope: %w[openid uris:read],
+        scope: %w[openid uris:catalog:read],
         return_to: "#{APP}/auth/handshake/callback"
       }.merge(overrides)
     )
@@ -28,7 +28,7 @@ class HandshakeTest < ClientTest
       "client_secret" => client_secret,
       "client_name" => "uris",
       "redirect_uris" => [ "#{APP}/auth/callback" ],
-      "scope" => "openid uris:read",
+      "scope" => "openid uris:catalog:read",
       "registration_access_token" => "registration-token",
       "registration_client_uri" => "#{issuer.url}/register/#{client_id}"
     })
@@ -66,7 +66,7 @@ class HandshakeTest < ClientTest
 
     assert_equal [ "uris" ], held["client_name"]
     assert_equal [ "#{APP}/mcp" ], held["resource"]
-    assert_equal [ "openid uris:read" ], held["scope"]
+    assert_equal [ "openid uris:catalog:read" ], held["scope"]
     assert_equal [ "#{APP}/auth/handshake/callback" ], held["return_to"]
     assert_equal [ "a-state" ], held["state"]
   end
@@ -78,7 +78,7 @@ class HandshakeTest < ClientTest
   end
 
   def test_a_scope_string_and_a_scope_list_ask_for_the_same_thing
-    assert_equal query(scope: "openid uris:read"), query(scope: %w[openid uris:read])
+    assert_equal query(scope: "openid uris:catalog:read"), query(scope: %w[openid uris:catalog:read])
   end
 
   def test_starting_mints_the_state_the_caller_has_to_hold
@@ -104,7 +104,7 @@ class HandshakeTest < ClientTest
     assert_equal "Bearer one-time", sent[:headers]["authorization"]
     assert_equal "uris", sent[:body]["client_name"]
     assert_equal [ "#{APP}/auth/callback" ], sent[:body]["redirect_uris"]
-    assert_equal "openid uris:read", sent[:body]["scope"]
+    assert_equal "openid uris:catalog:read", sent[:body]["scope"]
     assert_includes sent[:body]["grant_types"], "refresh_token"
   end
 
