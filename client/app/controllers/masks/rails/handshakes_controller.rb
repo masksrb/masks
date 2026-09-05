@@ -39,7 +39,7 @@ module Masks
         return redirect_to(masks_config.after_sign_out) unless masks_signed_in?
         return redirect_to(masks_handshake_path) unless masks_config.can_forget?
 
-        masks_registration&.delete
+        forget_upstream
 
         masks_config.forget!(request)
         masks_forget
@@ -51,11 +51,10 @@ module Masks
 
       private
 
-        def masks_registration
-          Masks::Client::Registration.held(
-            masks_config.issuer_for(request),
-            masks_config.credentials_for(request)
-          )
+        def forget_upstream
+          masks_registration&.delete
+        rescue Masks::Client::Unregistered
+          false
         end
 
         def returned

@@ -46,7 +46,7 @@ The engine ships the whole consumer half. Tell it how to read and write credenti
 
 ```ruby
 Masks::Rails.configure do |config|
-  config.name = "things"
+  config.name = "catalog"
   config.issuer = ->(request) { "https://#{request.host.split('.').first}.auth.example" }
   config.resource = ->(request) { "https://#{request.host}/mcp" }
   config.credentials = ->(request) { Tenant.resolve(request.host)&.masks_credentials }
@@ -74,6 +74,26 @@ sending a browser to a login that cannot work:
 An app that has already been connected will not offer the handshake again to a browser that is not
 signed in.
 
+## When the issuer has forgotten the client
+
+An app can hold credentials masks no longer knows: the database behind an issuer was reset, or the
+client was archived from `/manage`. Nothing about that is the browser's fault, and there is nothing
+the person at it can do except connect the app again — so the engine treats `invalid_client` as the
+answer to a question rather than an error to render.
+
+| where it shows up | what happens |
+| --- | --- |
+| `GET /auth` | the registration is read (RFC 7592) before the browser is sent anywhere; a refused read drops the credentials and renders the handshake instead of an authorize masks would refuse |
+| a refresh at `/auth/session` | `invalid_client` drops the credentials, and the refusal becomes `handshake_required` |
+| the callback | the same, and the browser lands on the handshake rather than a sign-in failure |
+| `DELETE /auth/handshake` | a registration the issuer does not know is already gone, so what is held locally is dropped anyway |
+
+Only a definite refusal counts. An issuer that cannot be reached, or that answers `404` to a
+registration read because it does not implement RFC 7592, costs an app nothing —
+`Masks::Client::Unregistered` is raised for `401` and `403`, and for `404` only when deleting. An
+app that has no `forget` keeps the behaviour it has always had, since the engine will not drop what
+it cannot be told how to drop.
+
 `Configuration#issuer_speaks!` checks `masks_protocol_version` in discovery against
 `MINIMUM_ISSUER`, so an issuer predating the handshake says so rather than failing at the one screen
 that exists to be the first thing anybody touches.
@@ -86,11 +106,11 @@ another server's routes down.
 ```ruby
 handshake = Masks::Client::Handshake.new(
   issuer,
-  name: "things",
-  resource: "https://jons.things.example/mcp",
-  redirect_uris: [ "https://jons.things.example/auth/callback" ],
-  return_to: "https://jons.things.example/connected",
-  scope: %w[openid profile email offline_access things:read]
+  name: "catalog",
+  resource: "https://jons.catalog.example/mcp",
+  redirect_uris: [ "https://jons.catalog.example/auth/callback" ],
+  return_to: "https://jons.catalog.example/connected",
+  scope: %w[openid profile email offline_access catalog:read]
 )
 
 started = handshake.start          # => { url:, state: } — send the browser, hold the state

@@ -31,6 +31,10 @@ class CredentialStore
     @held[host] = { client_id: client_id, client_secret: client_secret }
   end
 
+  def hold!(host, **held)
+    @held[host] = held
+  end
+
   def write(host, registration)
     @held[host] = {
       client_id: registration.client_id,

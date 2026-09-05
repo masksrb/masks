@@ -16,6 +16,14 @@ module Masks
       end
     end
 
+    class Unregistered < Rejected
+      CODE = "invalid_client".freeze
+
+      def self.raised_by?(body)
+        body["error"].to_s == CODE
+      end
+    end
+
     class InvalidToken < Error; end
 
     class Challenge < Error

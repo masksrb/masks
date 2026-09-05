@@ -14,6 +14,7 @@ module Masks
 
       def start
         return redirect_to(masks_handshake_path) unless masks_configured?
+        return redirect_to(masks_handshake_path) if masks_reconnect!
 
         pending = masks_requests.open(
           return_to: requested_return_to || session.delete(:masks_return_to)
@@ -55,6 +56,10 @@ module Masks
         masks_store(tokens, identity: identity)
 
         redirect_to pending[:return_to] || masks_config.after_sign_in
+      rescue Masks::Client::Unregistered => e
+        return redirect_to(masks_handshake_path) if masks_disconnect!
+
+        refuse(e.code, e.description, pending)
       rescue Masks::Client::Error => e
         refuse(e.class.name.demodulize.underscore, e.message, pending)
       end
