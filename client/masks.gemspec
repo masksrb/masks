@@ -3,7 +3,7 @@ require_relative "lib/masks/version"
 Gem::Specification.new do |spec|
   spec.name = "masks"
   spec.version = Masks::VERSION
-  spec.authors = [ "geiger" ]
+  spec.authors = [ "the masks authors" ]
 
   spec.summary = "Sign a Ruby or Rails app in against a masks issuer."
   spec.description = "Discovery, PKCE authorization, token exchange, and token " \
