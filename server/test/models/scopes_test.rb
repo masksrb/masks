@@ -21,7 +21,7 @@ class ScopesTest < ActiveSupport::TestCase
   end
 
   test "a prefix does not leak across a neighbouring name" do
-    assert_not Scopes.covered?(%w[uris:], "thingsomething:read")
+    assert_not Scopes.covered?(%w[uris:], "urisomething:read")
   end
 
   test "refused names what a prefix does not reach" do
