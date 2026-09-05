@@ -10,11 +10,15 @@ function detach(variables) {
       return null;
     }
 
-    if (Array.isArray(value)) return value.map((one, at) => walk(one, `${path}.${at}`));
+    if (Array.isArray(value))
+      return value.map((one, at) => walk(one, `${path}.${at}`));
 
     if (value?.constructor === Object) {
       return Object.fromEntries(
-        Object.entries(value).map(([key, one]) => [key, walk(one, `${path}.${key}`)]),
+        Object.entries(value).map(([key, one]) => [
+          key,
+          walk(one, `${path}.${key}`),
+        ]),
       );
     }
 
@@ -115,25 +119,41 @@ export function createApi(boot) {
 
     async query(document, variables = {}) {
       const { held, files } = detach(variables);
-      const headers = { Accept: "application/json", Authorization: await authorization() };
+      const headers = {
+        Accept: "application/json",
+        Authorization: await authorization(),
+      };
       let sent;
 
       if (files.size) {
         sent = new FormData();
 
-        sent.append("operations", JSON.stringify({ query: document, variables: held }));
+        sent.append(
+          "operations",
+          JSON.stringify({ query: document, variables: held }),
+        );
         sent.append(
           "map",
-          JSON.stringify(Object.fromEntries([...files.keys()].map((path, at) => [at, [path]]))),
+          JSON.stringify(
+            Object.fromEntries(
+              [...files.keys()].map((path, at) => [at, [path]]),
+            ),
+          ),
         );
 
-        [...files.values()].forEach((file, at) => sent.append(String(at), file));
+        [...files.values()].forEach((file, at) => {
+          sent.append(String(at), file);
+        });
       } else {
         headers["Content-Type"] = "application/json";
         sent = JSON.stringify({ query: document, variables });
       }
 
-      const response = await fetch(boot.graphql, { method: "POST", headers, body: sent });
+      const response = await fetch(boot.graphql, {
+        method: "POST",
+        headers,
+        body: sent,
+      });
 
       const body = await response.json().catch(() => ({}));
 
