@@ -15,12 +15,12 @@ class SingleTenantTest < ActionDispatch::IntegrationTest
   end
 
   def with_origin(origin)
-    was = ENV["MASKS_PUBLIC_ORIGIN_TEMPLATE"]
-    ENV["MASKS_PUBLIC_ORIGIN_TEMPLATE"] = origin
+    was = Rails.configuration.masks.public_origin_template
+    Rails.configuration.masks.public_origin_template = origin
 
     yield
   ensure
-    ENV["MASKS_PUBLIC_ORIGIN_TEMPLATE"] = was
+    Rails.configuration.masks.public_origin_template = was
   end
 
   def discovery

@@ -35,7 +35,7 @@ class RegistrationsController < ApplicationController
   end
 
   def update
-    @client.update!(attributes.except(:scopes, :dynamic).merge(scope_updates))
+    @client.update!(described.merge(scope_updates))
 
     render json: @client.metadata.merge("registration_client_uri" => registration_uri(@client))
   rescue ActiveRecord::RecordInvalid => e
@@ -88,6 +88,14 @@ class RegistrationsController < ApplicationController
         tos_uri: body[:tos_uri],
         policy_uri: body[:policy_uri]
       }.compact
+    end
+
+    APPROVED = %i[redirect_uris post_logout_redirect_uris token_endpoint_auth_method resources].freeze
+
+    def described
+      held = attributes.except(:scopes, :dynamic)
+
+      @client.approved? ? held.except(*APPROVED) : held
     end
 
     def scope_updates
