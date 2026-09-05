@@ -1,7 +1,7 @@
 # @masks/client
 
-An OIDC client for masks, in the browser. Two modes, because a single-page app has two honest ways to
-hold a token and they have different threat models.
+An OIDC client for masks, in the browser. Two modes, because a single-page app has two ways to hold
+a token and they have different threat models.
 
 ```sh
 npm install @masks/client
@@ -10,7 +10,7 @@ npm install @masks/client
 ## Session mode — a backend-for-frontend holds the tokens
 
 The browser holds a cookie; your server holds the tokens and never hands them down. Nothing sensitive
-reaches JavaScript, which is the mode to reach for when you have a backend at all.
+reaches JavaScript. Use this mode whenever you have a backend.
 
 ```js
 import { createSession } from "@masks/client";
@@ -81,7 +81,7 @@ img.src = blob
 ## Audiences
 
 Pass `resource` to name the API the token is for. Every token names the API it was issued for and is
-rejected elsewhere, so one leaked token does not open everything — pass an array when a page talks to
+rejected elsewhere, so one leaked token does not open everything. Pass an array when a page talks to
 more than one.
 
 ## Verifying an id token
@@ -100,5 +100,10 @@ Errors are `MasksError`. Types — `Account`, `Claims`, `Discovery`, `Refusal`, 
 A Ruby or Rails app signs in against the same issuer with the [`masks`](https://rubygems.org/gems/masks)
 gem, which carries the Rails engine that mounts the consumer side of the code flow. This package
 exists because an SPA is a consumer the engine cannot serve: the engine redirects.
+
+## Documentation
+
+Full API reference at
+[masks.pages.dev/libraries/browser](https://masks.pages.dev/libraries/browser/).
 
 MIT.
