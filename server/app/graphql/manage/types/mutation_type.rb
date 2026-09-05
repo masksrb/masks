@@ -16,11 +16,16 @@ module Manage
       field :update_client, mutation: Mutations::UpdateClient
       field :rotate_client_secret, mutation: Mutations::RotateClientSecret
       field :archive_client, mutation: Mutations::ArchiveClient
+      field :release_namespace, mutation: Mutations::ReleaseNamespace
       field :revoke_session, mutation: Mutations::RevokeSession
       field :block_device, mutation: Mutations::BlockDevice
       field :unblock_device, mutation: Mutations::UnblockDevice
       field :sign_out_device, mutation: Mutations::SignOutDevice
       field :update_tenant, mutation: Mutations::UpdateTenant
+      field :stage_signing_key, mutation: Mutations::StageSigningKey
+      field :activate_signing_key, mutation: Mutations::ActivateSigningKey
+      field :discard_signing_key, mutation: Mutations::DiscardSigningKey
+      field :rotate_signing_key, mutation: Mutations::RotateSigningKey
     end
   end
 end

@@ -68,24 +68,24 @@
                 <td>
                   <div class="flex flex-col items-start gap-1">
                     {#if client.dynamic}
-                      <span class="badge badge-ghost badge-sm">registered itself</span>
+                      <span class="badge badge-ghost badge-sm">self-registered</span>
                     {:else}
-                      <span class="badge badge-success badge-sm">approved by a person</span>
+                      <span class="badge badge-success badge-sm">approved</span>
                     {/if}
                     {#if client.tokenEndpointAuthMethod === "none"}
-                      <span class="badge badge-outline badge-xs">holds no secret</span>
+                      <span class="badge badge-outline badge-xs">secretless</span>
                     {/if}
                   </div>
                 </td>
-                <td class="font-mono text-xs">
+                <td class="max-w-64 font-mono text-xs">
                   {#if client.requiredScopes.length}
-                    <div>
+                    <div class="truncate" title={joined(client.requiredScopes)}>
                       <span class="opacity-50">always</span>
                       {joined(client.requiredScopes)}
                     </div>
                   {/if}
                   {#if client.allowedScopes.length}
-                    <div class="opacity-70">
+                    <div class="truncate opacity-70" title={joined(client.allowedScopes)}>
                       <span class="opacity-70">on request</span>
                       {joined(client.allowedScopes)}
                     </div>

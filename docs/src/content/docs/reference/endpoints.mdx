@@ -138,7 +138,8 @@ ever holding the upstream refresh token. Rate limited to 120 per minute.
 `verifyEmail`, `updateActor`, `setActorScopes`, `signOutActor`, `deleteActor`,
 `generateBackupCodes`, `disableAuthenticator`, `revokePasskey`, `removeAvatar`, `updateClient`,
 `rotateClientSecret`, `archiveClient`, `revokeSession`, `blockDevice`, `unblockDevice`,
-`signOutDevice`, `updateTenant`.
+`signOutDevice`, `updateTenant`, `stageSigningKey`, `activateSigningKey`, `discardSigningKey`,
+`rotateSigningKey`.
 
 `deleteActor` takes the account and everything hanging off it — sessions, tokens, consents,
 passkeys, connections, avatar — and refuses on the actor holding the token, who would be locking

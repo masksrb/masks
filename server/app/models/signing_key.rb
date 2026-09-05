@@ -8,6 +8,7 @@ class SigningKey < ApplicationRecord
   encrypts :private_pem
 
   scope :active, -> { where(retired_at: nil).where.not(activated_at: nil).order(activated_at: :desc) }
+  scope :staged, -> { where(activated_at: nil, retired_at: nil).order(created_at: :desc) }
   scope :published, -> { where("retired_at IS NULL OR retired_at > ?", Time.current).order(activated_at: :desc) }
 
   class << self
@@ -25,10 +26,12 @@ class SigningKey < ApplicationRecord
       )
     end
 
+    def stage!(tenant:)
+      generate!(tenant: tenant, activate: false)
+    end
+
     def rotate!(tenant:)
-      replacement = generate!(tenant: tenant)
-      active.where.not(id: replacement.id).update_all(retired_at: OVERLAP.from_now)
-      replacement
+      stage!(tenant: tenant).activate!
     end
 
     def jwk_for(public_key, kid)
@@ -49,6 +52,23 @@ class SigningKey < ApplicationRecord
 
   def sign(claims)
     JWT.encode(claims, private_key, algorithm, kid: kid, typ: "JWT")
+  end
+
+  def activate!
+    transaction do
+      update!(activated_at: Time.current)
+      self.class.active.where.not(id: id).update_all(retired_at: OVERLAP.from_now)
+    end
+
+    self
+  end
+
+  def staged?
+    activated_at.nil? && retired_at.nil?
+  end
+
+  def active?
+    activated_at.present? && retired_at.nil?
   end
 
   def retired?

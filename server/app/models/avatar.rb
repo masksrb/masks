@@ -24,10 +24,13 @@ class Avatar < ApplicationRecord
   validates :actor_id, uniqueness: { scope: :tenant_id }
 
   def self.store!(actor:, upload:)
+    refuse_size!(upload.size) if upload.respond_to?(:size)
+
     bytes = bytes_in(upload)
 
     raise Unreadable, "an avatar has to be an image" if sniff(bytes).nil?
-    raise Unreadable, "an avatar has to be smaller than #{LIMIT / 1.megabyte}MB" if bytes.bytesize > LIMIT
+
+    refuse_size!(bytes.bytesize)
 
     square = square(bytes)
     held = find_or_initialize_by(actor_id: actor.id)
@@ -54,8 +57,16 @@ class Avatar < ApplicationRecord
     MAGIC.find { |magic, _| head.start_with?(magic) }&.last
   end
 
+  # Asked of the upload before it is read, so a body far past the limit is
+  # refused rather than held in memory on its way to being refused.
+  def self.refuse_size!(size)
+    return if size.nil? || size <= LIMIT
+
+    raise Unreadable, "an avatar has to be smaller than #{LIMIT / 1.megabyte}MB"
+  end
+
   def self.bytes_in(upload)
-    return upload.read.to_s.b if upload.respond_to?(:read)
+    return upload.read(LIMIT + 1).to_s.b if upload.respond_to?(:read)
 
     upload.to_s.b
   end
