@@ -1,4 +1,5 @@
 require "test_helper"
+require "vips"
 
 class ManageApiTest < ActionDispatch::IntegrationTest
   include ActiveJob::TestHelper
@@ -469,6 +470,97 @@ class ManageApiTest < ActionDispatch::IntegrationTest
     GQL
 
     assert_match(/has not accepted/, refused["errors"].first["message"])
+  end
+
+  def png(width = 900, height = 300)
+    Vips::Image.black(width, height)
+      .add(120).cast(:uchar)
+      .bandjoin([ Vips::Image.black(width, height).add(60).cast(:uchar),
+                  Vips::Image.black(width, height).add(200).cast(:uchar) ])
+      .copy(interpretation: :srgb)
+      .pngsave_buffer
+  end
+
+  def photo(bytes = png)
+    file = Tempfile.new([ "avatar", ".png" ], binmode: true)
+    file.write(bytes)
+    file.rewind
+
+    Rack::Test::UploadedFile.new(file.path, "image/png")
+  end
+
+  UPLOAD = <<~GQL.freeze
+    mutation Upload($uuid: ID!, $photo: Upload!) {
+      uploadAvatar(uuid: $uuid, photo: $photo) { actor { uuid avatars { photo } } }
+    }
+  GQL
+
+  def upload(uuid:, token: admin, file: photo)
+    post manage_graphql_path,
+         params: {
+           operations: {
+             query: UPLOAD, variables: { uuid: uuid, photo: nil }
+           }.to_json,
+           map: { "0" => [ "variables.photo" ] }.to_json,
+           "0" => file
+         },
+         headers: { "Authorization" => "Bearer #{token}" }
+  end
+
+  test "an admin uploads a photo over the multipart spec, squared and re-encoded" do
+    subject = within(@tenant) { create_actor(@tenant, nickname: "sam") }
+
+    upload(uuid: subject.uuid)
+
+    assert_response :success
+    assert_nil response.parsed_body["errors"]
+    assert_match %r{/avatars/#{subject.uuid}},
+                 response.parsed_body.dig("data", "uploadAvatar", "actor", "avatars", "photo")
+
+    within(@tenant) do
+      held = Avatar.sole
+      square = Vips::Image.new_from_buffer(held.data, "")
+
+      assert_equal subject.id, held.actor_id
+      assert_equal Avatar::CONTENT_TYPE, held.content_type
+      assert_equal [ Avatar::STORED, Avatar::STORED ], [ square.width, square.height ]
+    end
+  end
+
+  test "an upload that is not an image is refused rather than stored" do
+    upload(uuid: @actor.uuid, file: Rack::Test::UploadedFile.new(__FILE__, "image/png"))
+
+    assert_match(/has to be an image/, response.parsed_body["errors"].first["message"])
+    assert_equal 0, within(@tenant) { Avatar.count }
+  end
+
+  test "uploading for an unknown actor is refused" do
+    upload(uuid: SecureRandom.uuid)
+
+    assert_match(/no actor with that uuid/, response.parsed_body["errors"].first["message"])
+    assert_equal 0, within(@tenant) { Avatar.count }
+  end
+
+  test "a variable the map never filled in is refused as a missing file" do
+    post manage_graphql_path,
+         params: {
+           operations: { query: UPLOAD, variables: { uuid: @actor.uuid, photo: nil } }.to_json,
+           map: {}.to_json
+         },
+         headers: { "Authorization" => "Bearer #{admin}" }
+
+    assert response.parsed_body["errors"].any?
+    assert_equal 0, within(@tenant) { Avatar.count }
+  end
+
+  test "a token without masks:manage cannot upload a photo for anybody" do
+    plain = create_actor(@tenant, nickname: "plain", scopes: "openid profile email")
+
+    upload(uuid: @actor.uuid, token: bearer(scope: "openid", actor: plain))
+
+    assert_response :forbidden
+    assert_match(/insufficient_scope/, response.parsed_body["error"])
+    assert_equal 0, within(@tenant) { Avatar.count }
   end
 
   test "backup codes are refused for an actor with no second factor" do

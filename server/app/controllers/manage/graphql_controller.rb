@@ -1,28 +1,13 @@
 module Manage
   class GraphqlController < ApplicationController
-    include RackOAuth2Endpoint
-    include BearerResource
-
-    skip_forgery_protection
+    include ManageEndpoint
 
     def execute
-      with_access_token(scope: Scopes::MANAGE) do |token|
-        actor = token.actor
-
-        next refuse_token("that token has no subject") if actor.nil?
-
-        unless actor.scope_list.include?(Scopes::MANAGE)
-          next refuse_token("that actor no longer holds #{Scopes::MANAGE}")
-        end
-
-        unless token.audience.include?(issuer.manage_resource)
-          next refuse_token("that token was not issued for #{issuer.manage_resource}")
-        end
-
+      with_manage_token do |token, actor|
         render json: ManageSchema.execute(
-          params[:query],
-          variables: variables,
-          operation_name: params[:operationName],
+          document["query"],
+          variables: document["variables"],
+          operation_name: document["operationName"],
           context: { actor: actor, client: token.client, token: token }
         )
       end
@@ -30,11 +15,48 @@ module Manage
 
     private
 
-      def variables
-        case params[:variables]
-        when String then JSON.parse(params[:variables].presence || "{}")
-        when ActionController::Parameters then params[:variables].to_unsafe_h
-        when Hash then params[:variables]
+      def document
+        @document ||= uploaded? ? attached : sent
+      end
+
+      def sent
+        {
+          "query" => params[:query],
+          "variables" => parse(params[:variables]),
+          "operationName" => params[:operationName]
+        }
+      end
+
+      def attached
+        operation = parse(params[:operations])
+        variables = parse(operation["variables"])
+
+        parse(params[:map]).each do |part, paths|
+          Array(paths).each { |path| place(variables, path, params[part]) }
+        end
+
+        operation.merge("variables" => variables)
+      end
+
+      def place(variables, path, file)
+        keys = path.to_s.split(".")
+
+        return unless keys.shift == "variables" && keys.any?
+
+        held = keys[0..-2].inject(variables) { |inner, key| inner.is_a?(Hash) ? inner[key] : nil }
+
+        held[keys.last] = file if held.is_a?(Hash)
+      end
+
+      def uploaded?
+        params[:operations].present? && params[:map].present?
+      end
+
+      def parse(value)
+        case value
+        when String then JSON.parse(value.presence || "{}")
+        when ActionController::Parameters then value.to_unsafe_h
+        when Hash then value
         else {}
         end
       rescue JSON::ParserError

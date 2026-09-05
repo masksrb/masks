@@ -134,9 +134,17 @@ ever holding the upstream refresh token. Rate limited to 120 per minute.
 | `POST /manage/graphql` | the administration API — requires `masks:manage` |
 | `GET /manage(/*path)` | the administration UI |
 
+`POST /manage/graphql` also speaks the [GraphQL multipart request
+spec](https://github.com/jaydenseric/graphql-multipart-request-spec), so a photo is a mutation
+argument rather than an endpoint of its own. Send `operations` (the query and its variables, with
+each file's variable left `null`), `map` (part name to variable path), and the file parts alongside.
+`Upload` is a scalar that only ever coerces in — it refuses to be returned. `uploadAvatar` is the
+one mutation taking one today, and `removeAvatar` is the way back out.
+
 `server/app/graphql/manage/mutations/`: `createActor`, `resendInvitation`, `resetPassword`,
 `verifyEmail`, `updateActor`, `setActorScopes`, `signOutActor`, `deleteActor`,
-`generateBackupCodes`, `disableAuthenticator`, `revokePasskey`, `removeAvatar`, `updateClient`,
+`generateBackupCodes`, `disableAuthenticator`, `revokePasskey`, `uploadAvatar`, `removeAvatar`,
+`updateClient`,
 `rotateClientSecret`, `archiveClient`, `revokeSession`, `blockDevice`, `unblockDevice`,
 `signOutDevice`, `updateTenant`, `stageSigningKey`, `activateSigningKey`, `discardSigningKey`,
 `rotateSigningKey`.
