@@ -37,7 +37,7 @@
       ? [
           {
             term: "How it got here",
-            value: client.dynamic ? "registered itself" : "approved by a person",
+            value: client.dynamic ? "self-registered" : "approved",
           },
           { term: "Approved by", value: client.approvedBy?.nickname },
           { term: "Registered", value: day(client.createdAt) },
