@@ -10,11 +10,24 @@ class TestIssuer
   REASONS = { 400 => "Bad Request", 401 => "Unauthorized", 404 => "Not Found" }.freeze
 
   Refusal = Struct.new(:status, :body)
+  Raw = Struct.new(:status, :content_type, :body, :location)
 
   class << self
     def current
       @current ||= new
     end
+  end
+
+  PHOTO = "webp-bytes-stand-in".freeze
+
+  def avatars(subdomain, subject = "actor-1")
+    base = "#{url_for(subdomain)}/avatars/#{subject}"
+
+    {
+      "photo" => "#{base}/photo/#{'a' * 16}",
+      "identicon" => "#{base}/identicon/#{'b' * 16}",
+      "initials" => "#{base}/initials/#{'c' * 16}"
+    }
   end
 
   attr_reader :port, :registrations, :deletions
@@ -125,6 +138,8 @@ class TestIssuer
       else get_for(path.to_s, bearer)
       end
 
+      return raw(socket, found) if found.is_a?(Raw)
+
       code, payload = case found
       when nil then [ 404, { "error" => "not_found" } ]
       when Refusal then [ found.status, found.body ]
@@ -147,6 +162,20 @@ class TestIssuer
       socket.close rescue nil
     end
 
+    def raw(socket, found)
+      status = found.status == 200 ? "200 OK" : "#{found.status} #{REASONS.fetch(found.status, 'Found')}"
+      body = found.body.to_s
+
+      socket.print ([
+        "HTTP/1.1 #{status}",
+        "Content-Type: #{found.content_type}",
+        "Content-Length: #{body.bytesize}",
+        found.location ? "Location: #{found.location}" : nil,
+        "Connection: close",
+        "", body
+      ].compact).join("\r\n")
+    end
+
     def deleted(path, bearer)
       return nil unless path =~ %r{\A/([^/]+)/register/([^/]+)\z}
       return unknown_registration if forgotten
@@ -162,6 +191,7 @@ class TestIssuer
       when %r{\A/([^/]+)/\.well-known/jwks\.json\z} then jwks($1)
       when %r{\A/([^/]+)/userinfo\z} then userinfo($1, bearer)
       when %r{\A/([^/]+)/register/([^/]+)\z} then held($1, $2)
+      when %r{\A/([^/]+)/avatars/([^/?]+)/photo} then photo(bearer)
       end
     end
 
@@ -236,7 +266,7 @@ class TestIssuer
       mint(subdomain: subdomain, audience: pending[:client_id], scopes: [],
            nonce: nonce, name: "Test Owner",
            preferred_username: "owner", email: "owner@example.invalid",
-           email_verified: true)
+           email_verified: true, "masks:avatars" => avatars(subdomain))
     end
 
     def refreshed(subdomain, form)
@@ -286,6 +316,12 @@ class TestIssuer
       }
     end
 
+    def photo(bearer)
+      return Refusal.new(401, { "error" => "invalid_token" }) if bearer.nil? || bearer.empty?
+
+      Raw.new(200, "image/webp", PHOTO)
+    end
+
     def discovery(subdomain)
       url = url_for(subdomain)
 
@@ -300,6 +336,9 @@ class TestIssuer
         "revocation_endpoint" => "#{url}/revoke",
         "end_session_endpoint" => "#{url}/logout",
         "introspection_endpoint" => "#{url}/introspect",
+        "avatar_endpoint" => "#{url}/avatars",
+        "avatar_styles_supported" => %w[photo identicon initials],
+        "avatar_sizes_supported" => [ 32, 64, 128, 256, 512 ],
         "tenant" => { "uuid" => "uuid-#{subdomain}", "subdomain" => subdomain }
       }
     end

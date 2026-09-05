@@ -1,5 +1,6 @@
 import {
   type Account,
+  type AvatarStyle,
   MasksError,
   type Refusal,
   type Status,
@@ -19,7 +20,15 @@ export interface SessionClient {
   loginUrl(options?: { returnTo?: string }): string;
   handshake(): void;
   handshakeUrl(): string;
+  avatarUrl(
+    account: Account | null,
+    options?: { style?: AvatarStyle; size?: number },
+  ): string | null;
   logout(options?: { everywhere?: boolean }): Promise<void>;
+}
+
+function sized(url: string, size?: number): string {
+  return size ? `${url}${url.includes("?") ? "&" : "?"}size=${size}` : url;
 }
 
 function metaToken(): string | null {
@@ -101,6 +110,20 @@ export function createSession(options: SessionOptions = {}): SessionClient {
     status,
     loginUrl,
     handshakeUrl,
+
+    avatarUrl(account, { style, size } = {}) {
+      const held = account?.avatars;
+
+      if (!held) return null;
+
+      const wanted = style ?? (held.photo ? "photo" : "identicon");
+
+      if (wanted === "photo") {
+        return held.photo ? sized(url("/avatar"), size) : null;
+      }
+
+      return sized(held[wanted], size);
+    },
 
     login(opts = {}) {
       window.location.assign(loginUrl(opts));

@@ -10,7 +10,7 @@
   <div id="account" class="place">
     <aside class="place-rail">
       <div class="place-id">
-        <span class="auth-mark" aria-hidden="true"><%= @actor.nickname.first.upcase %></span>
+        <%= avatar_tag @actor, size: 64 %>
         <span class="place-who"><%= @actor.nickname %></span>
         <% if Current.tenant&.name.present? %>
           <span class="auth-tenant"><%= Current.tenant.name %></span>
@@ -18,6 +18,7 @@
       </div>
 
       <ul class="place-nav">
+        <li><a href="#avatar">Avatar</a></li>
         <li><a href="#applications">Applications</a></li>
         <li><a href="#passkeys">Passkeys</a></li>
         <li><a href="#devices">Devices</a></li>
@@ -29,6 +30,48 @@
     </aside>
 
     <div class="place-body">
+      <section id="avatar" class="place-section">
+        <h2>Avatar</h2>
+
+        <p class="aside">
+          All three are always available to an application that asks. A photo is yours to
+          upload; the other two are drawn from your account and cannot be removed.
+        </p>
+
+        <ul class="avatar-set">
+          <% Avatars::STYLES.each do |style| %>
+            <li class="avatar-choice">
+              <% if style == Avatars::PHOTO && !Avatars.held?(@actor) %>
+                <span class="avatar avatar-empty" aria-hidden="true"></span>
+              <% else %>
+                <%= avatar_tag @actor, style: style, size: 96 %>
+              <% end %>
+              <span class="avatar-name"><%= style %></span>
+            </li>
+          <% end %>
+        </ul>
+
+        <%= form_with url: account_avatar_path, method: :post, class: "flow-tight",
+              html: { multipart: true } do |form| %>
+          <label class="field">
+            <span class="field-label">Photo</span>
+            <%= form.file_field :avatar, accept: "image/png,image/jpeg,image/webp,image/gif",
+                  required: true, class: "control control-sm" %>
+            <span class="field-hint">
+              Cropped to a square and re-encoded, so nothing of the original file survives.
+            </span>
+          </label>
+
+          <button type="submit" class="action action-sm">Upload</button>
+        <% end %>
+
+        <% if Avatars.photo(@actor) %>
+          <%= button_to "Remove photo", account_avatar_path, method: :delete,
+                class: "action action-quiet action-sm",
+                form: { data: { turbo_confirm: "Remove your photo?" } } %>
+        <% end %>
+      </section>
+
       <section id="applications" class="place-section">
         <h2>Applications</h2>
 

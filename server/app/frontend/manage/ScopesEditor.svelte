@@ -23,11 +23,14 @@
     <div class="flex flex-wrap gap-2">
       {#each known as scope (scope)}
         {@const held = value.includes(scope)}
+        {@const privileged = scope.startsWith("masks:")}
         <button
           type="button"
           class="badge badge-lg font-mono text-xs {held
-            ? 'badge-primary'
-            : 'badge-ghost opacity-60'} disabled:opacity-40"
+            ? privileged
+              ? 'badge-error'
+              : 'badge-neutral'
+            : 'badge-ghost opacity-45'} disabled:opacity-40"
           aria-pressed={held}
           {disabled}
           onclick={() => toggle(scope)}

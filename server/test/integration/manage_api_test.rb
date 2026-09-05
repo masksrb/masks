@@ -207,6 +207,117 @@ class ManageApiTest < ActionDispatch::IntegrationTest
     assert_includes body.dig("data", "setActorScopes", "actor", "scopes"), "masks:manage"
   end
 
+  test "an actor carries their own sessions and devices, so one query draws the page" do
+    body = ask(<<~GQL, bearer)
+      query {
+        actors {
+          uuid nickname
+          sessions { id ipAddress authenticatedAt expiresAt }
+          devices { id label blockedAt }
+        }
+        viewer { uuid }
+        scopesSupported
+      }
+    GQL
+
+    assert_nil body["errors"], body["errors"].to_s
+
+    person = body.dig("data", "actors").sole
+
+    assert_equal @actor.uuid, person["uuid"]
+    assert_equal 1, person["sessions"].length
+    assert_equal 1, person["devices"].length
+    assert_equal @actor.uuid, body.dig("data", "viewer", "uuid")
+  end
+
+  test "an actor's sessions are the live ones, and revoking one drops it from them" do
+    held = bearer
+
+    id = ask("{ actors { sessions { id } } }", held).dig("data", "actors").sole["sessions"].sole["id"]
+
+    ask(%(mutation { revokeSession(id: "#{id}") { session { revokedAt } } }), held)
+
+    assert_empty ask("{ actors { sessions { id } } }", held).dig("data", "actors").sole["sessions"]
+  end
+
+  test "devices nobody signed in on are askable on their own, so they stay blockable" do
+    held = bearer
+
+    within(@tenant) { ::Device.identify(nil, user_agent: "curl/8", ip_address: "10.0.0.9") }
+
+    listed = ask("{ devices(unattached: true) { id label userAgent } }", held).dig("data", "devices")
+
+    assert_equal [ "curl/8" ], listed.map { |one| one["userAgent"] }
+
+    blocked = ask(%(mutation { blockDevice(id: "#{listed.sole['id']}") { device { blockedAt } } }), held)
+
+    assert_not_nil blocked.dig("data", "blockDevice", "device", "blockedAt")
+  end
+
+  test "a nickname is writable, so a rename does not mean a new account" do
+    body = ask(<<~GQL, bearer)
+      mutation { updateActor(uuid: "#{@actor.uuid}", nickname: "renamed") { actor { nickname } } }
+    GQL
+
+    assert_equal "renamed", body.dig("data", "updateActor", "actor", "nickname")
+    assert_equal "renamed", within(@tenant) { @actor.reload.nickname }
+  end
+
+  test "a nickname cannot be emptied on the way through" do
+    body = ask(%(mutation { updateActor(uuid: "#{@actor.uuid}", nickname: "") { actor { uuid } } }), bearer)
+
+    assert_match(/nickname/i, body["errors"].first["message"])
+  end
+
+  test "signing an actor out ends every session and refresh token they hold" do
+    held = bearer
+    second = create_actor(@tenant, nickname: "second")
+
+    within(@tenant) do
+      Session.start!(actor: second)
+      RefreshToken.mint!(actor: second, client: @client)
+    end
+
+    ask(%(mutation { signOutActor(uuid: "#{second.uuid}") { actor { uuid } } }), held)
+
+    within(@tenant) do
+      assert_empty Session.live.where(actor: second).to_a
+      assert_empty RefreshToken.live.where(actor: second).to_a
+    end
+  end
+
+  test "deleting an actor takes everything that pointed at them with it" do
+    held = bearer
+    second = create_actor(@tenant, nickname: "second")
+    approved = create_client(@tenant, name: "Theirs", approved_at: Time.current, approved_by: second)
+
+    within(@tenant) do
+      Session.start!(actor: second)
+      Consent.create!(actor: second, client: @client, scopes: "openid")
+      RefreshToken.mint!(actor: second, client: @client)
+    end
+
+    body = ask(%(mutation { deleteActor(uuid: "#{second.uuid}") { uuid nickname } }), held)
+
+    assert_nil body["errors"]
+    assert_equal "second", body.dig("data", "deleteActor", "nickname")
+
+    within(@tenant) do
+      assert_nil Actor.find_by(uuid: second.uuid)
+      assert_empty Session.where(actor_id: second.id).to_a
+      assert_empty Consent.where(actor_id: second.id).to_a
+      assert_empty Token.where(actor_id: second.id).to_a
+      assert_nil approved.reload.approved_by_id
+    end
+  end
+
+  test "an admin cannot delete themselves" do
+    body = ask(%(mutation { deleteActor(uuid: "#{@actor.uuid}") { uuid } }), bearer)
+
+    assert_match "would lock you out", body["errors"].first["message"]
+    assert_not_nil within(@tenant) { Actor.find_by(uuid: @actor.uuid) }
+  end
+
   def admin
     @admin ||= bearer
   end

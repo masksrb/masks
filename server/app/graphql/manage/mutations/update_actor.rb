@@ -2,6 +2,7 @@ module Manage
   module Mutations
     class UpdateActor < BaseMutation
       argument :uuid, ID
+      argument :nickname, String, required: false
       argument :email, String, required: false
       argument :name, String, required: false
       argument :given_name, String, required: false

@@ -1,6 +1,8 @@
 import { type Jwk, verifyIdToken } from "./jwt.js";
 import { challenge, method, random } from "./pkce.js";
 import {
+  type AvatarStyle,
+  type Avatars,
   type Claims,
   type Discovery,
   MasksError,
@@ -38,6 +40,12 @@ export interface BrowserClient {
     url?: string,
   ): Promise<{ tokens: Tokens; identity: Claims | null; returnTo: string }>;
   identity(): Claims | null;
+  avatars(): Avatars | null;
+  avatarUrl(
+    subject: string,
+    options?: { style?: AvatarStyle; size?: number },
+  ): Promise<string>;
+  photo(subject?: string): Promise<Blob | null>;
   refresh(): Promise<Tokens>;
   accessToken(): string | null;
   tokens(): Tokens | null;
@@ -210,9 +218,35 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
     return `${authorization_endpoint}?${query.toString()}`;
   };
 
+  const avatarUrl = async (
+    subject: string,
+    { style = "identicon", size }: { style?: AvatarStyle; size?: number } = {},
+  ): Promise<string> => {
+    const { avatar_endpoint, avatar_styles_supported } = await discover();
+
+    if (!avatar_endpoint) {
+      throw new MasksError(
+        "invalid_issuer",
+        `${issuer} publishes no avatar_endpoint`,
+      );
+    }
+
+    if (avatar_styles_supported && !avatar_styles_supported.includes(style)) {
+      throw new MasksError(
+        "invalid_style",
+        `${issuer} does not serve ${style} avatars`,
+      );
+    }
+
+    const base = `${avatar_endpoint}/${encodeURIComponent(subject)}/${style}`;
+
+    return size ? `${base}?size=${size}` : base;
+  };
+
   return {
     discover,
     authorizeUrl,
+    avatarUrl,
 
     async authorize(opts = {}) {
       window.location.assign(await authorizeUrl(opts));
@@ -298,6 +332,26 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
 
     identity() {
       return claims;
+    },
+
+    avatars() {
+      return (claims?.["masks:avatars"] as Avatars | undefined) ?? null;
+    },
+
+    async photo(subject = claims?.sub as string | undefined) {
+      if (!subject || !held) return null;
+
+      const response = await call(
+        await avatarUrl(subject, { style: "photo" }),
+        {
+          headers: {
+            Authorization: `${held.token_type} ${held.access_token}`,
+            Accept: "image/*",
+          },
+        },
+      );
+
+      return response.ok ? await response.blob() : null;
     },
 
     async refresh() {

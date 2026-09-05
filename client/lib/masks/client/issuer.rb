@@ -51,6 +51,22 @@ module Masks
         discovery.fetch(name) { raise Rejected.new("invalid_issuer", "#{url} publishes no #{name}") }
       end
 
+      def avatar_styles
+        discovery["avatar_styles_supported"] || Claims::Avatars::STYLES
+      end
+
+      def avatar_url(subject, style: nil, size: nil)
+        wanted = (style || Claims::Avatars::FALLBACK).to_s
+
+        unless avatar_styles.include?(wanted)
+          raise Rejected.new("invalid_style", "#{url} does not serve #{wanted} avatars")
+        end
+
+        query = size ? "?size=#{size.to_i}" : ""
+
+        "#{endpoint('avatar_endpoint')}/#{subject}/#{wanted}#{query}"
+      end
+
       def refresh!
         @lock.synchronize { @cache = {} }
         self

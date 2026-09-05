@@ -72,7 +72,8 @@ class Issuer
       "nonce" => nonce,
       "at_hash" => half_hash(access_token),
       "c_hash" => half_hash(code),
-      "tenant" => tenant.to_identity
+      "tenant" => tenant.to_identity,
+      Actor::AVATARS_CLAIM => Avatars.urls(actor, origin: url)
     }.compact)
   end
 
@@ -87,6 +88,9 @@ class Issuer
       "authorization_endpoint" => "#{url}/authorize",
       "token_endpoint" => "#{url}/token",
       "userinfo_endpoint" => "#{url}/userinfo",
+      "avatar_endpoint" => "#{url}/avatars",
+      "avatar_styles_supported" => Avatars::STYLES,
+      "avatar_sizes_supported" => Avatars::SIZES,
       "jwks_uri" => "#{url}/.well-known/jwks.json",
       "registration_endpoint" => "#{url}/register",
       "handshake_endpoint" => "#{url}/handshake",
@@ -109,8 +113,8 @@ class Issuer
       "code_challenge_methods_supported" => Client::CHALLENGE_METHODS,
       "claims_supported" => %w[
         iss sub aud exp iat auth_time nonce
-        preferred_username name email email_verified tenant act
-      ],
+        preferred_username name picture email email_verified tenant act
+      ] + [ Actor::AVATARS_CLAIM ],
       "authorization_response_iss_parameter_supported" => true,
       "resource_indicators_supported" => true,
       "require_pushed_authorization_requests" => false,

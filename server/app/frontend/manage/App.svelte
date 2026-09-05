@@ -6,12 +6,10 @@
   import Link from "./ui/Link.svelte";
   import Spinner from "./ui/Spinner.svelte";
   import Pair from "./Pair.svelte";
-  import ActorsPage from "./ActorsPage.svelte";
+  import PeoplePage from "./PeoplePage.svelte";
   import ActorPage from "./ActorPage.svelte";
   import ClientsPage from "./ClientsPage.svelte";
   import ClientPage from "./ClientPage.svelte";
-  import SessionsPage from "./SessionsPage.svelte";
-  import DevicesPage from "./DevicesPage.svelte";
   import SettingsPage from "./SettingsPage.svelte";
 
   let { boot } = $props();
@@ -27,10 +25,8 @@
 
   const NAV = [
     ["", "Overview"],
-    ["/actors", "Actors"],
+    ["/people", "People"],
     ["/clients", "Clients"],
-    ["/sessions", "Sessions"],
-    ["/devices", "Devices"],
     ["/settings", "Settings"],
   ];
 
@@ -39,6 +35,8 @@
 
     try {
       if (query.get("error")) {
+        if (query.get("error") === "invalid_client") api.unpair();
+
         failure = query.get("error_description") || query.get("error");
         phase = "pairing";
         return;
@@ -98,9 +96,8 @@
     location.assign(boot.root);
   }
 
-  function signOut() {
-    api.signOut();
-    location.assign(boot.root);
+  async function signOut() {
+    location.assign((await api.signOut()) ?? boot.root);
   }
 </script>
 
@@ -112,19 +109,18 @@
   </div>
 {:else if phase === "failed"}
   <div class="auth-page">
-    <main class="auth-card">
-      <div class="auth-rail">{boot.tenant.name}</div>
+    <main class="auth-col surface-terminus">
+      <div class="flow">
+        <span class="state state-bad">Stopped</span>
 
-      <div class="auth-body flow">
-        <div class="prompt-head">
-          <h1 class="prompt-title">This console could not start</h1>
-          <p class="prompt-lede">
-            Its registration may have been archived. Pairing again registers this browser from
-            scratch.
-          </p>
-        </div>
+        <h1 class="prompt-title">This console could not start</h1>
 
-        <div class="note note-bad" role="alert">{failure}</div>
+        <p class="said">{failure}</p>
+
+        <p class="prompt-lede">
+          Its registration may have been archived. Pairing again registers this browser from
+          scratch.
+        </p>
 
         <button type="button" class="action" onclick={repair}>Pair again</button>
       </div>
@@ -166,11 +162,11 @@
     <main class="mx-auto w-full max-w-6xl flex-1 p-4 md:p-6">
       {#if current === ""}
         <SettingsPage {api} {boot} overview />
-      {:else if current === "actors"}
+      {:else if current === "people"}
         {#if router.segments[1]}
           <ActorPage {api} uuid={router.segments[1]} />
         {:else}
-          <ActorsPage {api} />
+          <PeoplePage {api} />
         {/if}
       {:else if current === "clients"}
         {#if router.segments[1]}
@@ -178,10 +174,6 @@
         {:else}
           <ClientsPage {api} />
         {/if}
-      {:else if current === "sessions"}
-        <SessionsPage {api} />
-      {:else if current === "devices"}
-        <DevicesPage {api} />
       {:else if current === "settings"}
         <SettingsPage {api} {boot} />
       {:else}

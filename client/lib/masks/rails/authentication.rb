@@ -6,7 +6,8 @@ module Masks
 
       included do
         if respond_to?(:helper_method)
-          helper_method :masks_signed_in?, :masks_identity, :masks_tenant, :masks_scopes
+          helper_method :masks_signed_in?, :masks_identity, :masks_tenant, :masks_scopes,
+                        :masks_claims
         end
       end
 
@@ -48,7 +49,10 @@ module Masks
         session[masks_config.session_key] || {}
       end
 
-      IDENTITY = %w[sub name preferred_username email email_verified tenant].freeze
+      IDENTITY = [
+        "sub", "name", "preferred_username", "email", "email_verified", "tenant",
+        "picture", Masks::Client::Claims::AVATARS
+      ].freeze
 
       def masks_identity_from(tokens)
         return nil if tokens.id_token.nil?
@@ -114,6 +118,10 @@ module Masks
         masks_identity&.dig("tenant")
       end
 
+      def masks_claims
+        @masks_claims ||= Masks::Client::Claims.new(masks_identity || {})
+      end
+
       def masks_scopes
         masks_tokens&.scopes || []
       end
@@ -177,6 +185,8 @@ module Masks
           "nickname" => identity["preferred_username"],
           "email" => identity["email"],
           "email_verified" => identity["email_verified"],
+          "picture" => masks_claims.picture,
+          "avatars" => masks_claims.avatars.to_h.presence,
           "tenant" => masks_tenant,
           "scopes" => masks_scopes,
           "expires_at" => masks_tokens&.expires_at

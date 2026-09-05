@@ -6,6 +6,8 @@ export type { SessionClient, SessionOptions } from "./session.js";
 export { createSession } from "./session.js";
 export type {
   Account,
+  AvatarStyle,
+  Avatars,
   Claims,
   Discovery,
   Refusal,

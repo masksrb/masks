@@ -31,6 +31,7 @@ module Manage
       field :devices, [ DeviceType ], null: false do
         argument :actor, ID, required: false
         argument :blocked, Boolean, required: false
+        argument :unattached, Boolean, required: false
         argument :limit, Integer, required: false
       end
 
@@ -97,10 +98,11 @@ module Manage
         scope.limit(bounded(limit))
       end
 
-      def devices(actor: nil, blocked: nil, limit: nil)
+      def devices(actor: nil, blocked: nil, unattached: nil, limit: nil)
         scope = ::Device.newest_first
         scope = scope.for_actor(::Actor.find_by(uuid: actor)) if actor.present?
         scope = blocked ? scope.where.not(blocked_at: nil) : scope.allowed unless blocked.nil?
+        scope = scope.where.not(id: signed_in_on) if unattached
 
         scope.limit(bounded(limit))
       end
@@ -137,6 +139,10 @@ module Manage
       end
 
       private
+
+        def signed_in_on
+          Session.where.not(device_id: nil).select(:device_id)
+        end
 
         def bounded(limit)
           [ limit || LIMIT, CEILING ].min

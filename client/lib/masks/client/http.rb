@@ -31,6 +31,19 @@ module Masks
         request(Net::HTTP::Delete.new(URI.parse(url.to_s), default_headers.merge(headers)))
       end
 
+      def fetch(url, headers = {})
+        uri = URI.parse(url.to_s)
+
+        Net::HTTP.start(
+          uri.hostname, uri.port,
+          use_ssl: uri.scheme == "https",
+          open_timeout: OPEN_TIMEOUT,
+          read_timeout: READ_TIMEOUT
+        ) { |http| http.request(Net::HTTP::Get.new(uri, headers)) }
+      rescue SystemCallError, SocketError, Net::OpenTimeout, Net::ReadTimeout, OpenSSL::SSL::SSLError => e
+        raise Unreachable, "#{uri.host} is unreachable (#{e.class})"
+      end
+
       def json(verb, url, body, headers)
         uri = URI.parse(url.to_s)
         request = verb.new(uri, default_headers.merge(headers))

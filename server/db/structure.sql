@@ -135,6 +135,44 @@ ALTER SEQUENCE public.authenticators_id_seq OWNED BY public.authenticators.id;
 
 
 --
+-- Name: avatars; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.avatars (
+    id bigint NOT NULL,
+    tenant_id bigint NOT NULL,
+    actor_id bigint NOT NULL,
+    content_type character varying NOT NULL,
+    digest character varying NOT NULL,
+    byte_size integer NOT NULL,
+    data bytea NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+ALTER TABLE ONLY public.avatars FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: avatars_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.avatars_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: avatars_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.avatars_id_seq OWNED BY public.avatars.id;
+
+
+--
 -- Name: clients; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -630,6 +668,13 @@ ALTER TABLE ONLY public.authenticators ALTER COLUMN id SET DEFAULT nextval('publ
 
 
 --
+-- Name: avatars id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.avatars ALTER COLUMN id SET DEFAULT nextval('public.avatars_id_seq'::regclass);
+
+
+--
 -- Name: clients id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -728,6 +773,14 @@ ALTER TABLE ONLY public.ar_internal_metadata
 
 ALTER TABLE ONLY public.authenticators
     ADD CONSTRAINT authenticators_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: avatars avatars_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.avatars
+    ADD CONSTRAINT avatars_pkey PRIMARY KEY (id);
 
 
 --
@@ -859,6 +912,27 @@ CREATE UNIQUE INDEX index_actors_on_uuid ON public.actors USING btree (uuid);
 --
 
 CREATE UNIQUE INDEX index_authenticators_on_aaguid ON public.authenticators USING btree (aaguid);
+
+
+--
+-- Name: index_avatars_on_actor_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_avatars_on_actor_id ON public.avatars USING btree (actor_id);
+
+
+--
+-- Name: index_avatars_on_tenant_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_avatars_on_tenant_id ON public.avatars USING btree (tenant_id);
+
+
+--
+-- Name: index_avatars_on_tenant_id_and_actor_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_avatars_on_tenant_id_and_actor_id ON public.avatars USING btree (tenant_id, actor_id);
 
 
 --
@@ -1181,6 +1255,14 @@ ALTER TABLE ONLY public.clients
 
 
 --
+-- Name: avatars fk_rails_1ba249dc92; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.avatars
+    ADD CONSTRAINT fk_rails_1ba249dc92 FOREIGN KEY (tenant_id) REFERENCES public.tenants(id);
+
+
+--
 -- Name: tokens fk_rails_3bbe3ff1e4; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1325,6 +1407,14 @@ ALTER TABLE ONLY public.passkeys
 
 
 --
+-- Name: avatars fk_rails_c4fab594a7; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.avatars
+    ADD CONSTRAINT fk_rails_c4fab594a7 FOREIGN KEY (actor_id) REFERENCES public.actors(id);
+
+
+--
 -- Name: devices fk_rails_d5b7012cbc; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1353,6 +1443,12 @@ ALTER TABLE ONLY public.tokens
 --
 
 ALTER TABLE public.actors ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: avatars; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.avatars ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: clients; Type: ROW SECURITY; Schema: public; Owner: -
@@ -1413,6 +1509,13 @@ ALTER TABLE public.signing_keys ENABLE ROW LEVEL SECURITY;
 --
 
 CREATE POLICY tenant_isolation ON public.actors USING ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint)) WITH CHECK ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint));
+
+
+--
+-- Name: avatars tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.avatars USING ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint)) WITH CHECK ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint));
 
 
 --
@@ -1498,6 +1601,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260905000003'),
 ('20260905000002'),
 ('20260905000001'),
 ('20260904000003'),

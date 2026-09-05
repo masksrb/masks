@@ -43,7 +43,8 @@ services:
   client:
     image: ruby:3.4
     working_dir: /masks/client
-    command: ["sh", "-c", "bundle install --quiet && exec bundle exec rake test"]
+    command:
+      ["sh", "-c", "bundle install --quiet && exec bundle exec rake test"]
     environment:
       BUNDLE_PATH: /bundle
     volumes:
@@ -54,7 +55,12 @@ services:
   web:
     image: node:22-alpine
     working_dir: /masks/web
-    command: ["sh", "-c", "npm ci --no-audit --no-fund && npm run build && exec npm test"]
+    command:
+      [
+        "sh",
+        "-c",
+        "npm ci --no-audit --no-fund && npm run build && exec npm test",
+      ]
     volumes:
       - ./web:/masks/web
       - web-modules:/masks/web/node_modules

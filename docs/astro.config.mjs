@@ -40,6 +40,7 @@ export default defineConfig({
             { label: "Signing keys", slug: "concepts/keys" },
             { label: "The login machine", slug: "concepts/login" },
             { label: "Devices", slug: "concepts/devices" },
+            { label: "Avatars", slug: "concepts/avatars" },
             { label: "Policies", slug: "concepts/policies" },
             { label: "Tokens and audiences", slug: "concepts/tokens" },
             { label: "Hardening", slug: "concepts/hardening" },

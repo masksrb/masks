@@ -100,6 +100,26 @@ end
 `resource_metadata`, so a client handed nothing but a URL can find its way to the issuer
 and back.
 
+### Avatars
+
+Every actor has three faces at once — an uploaded `photo`, an `identicon`, and two-letter
+`initials`. All three arrive on the id token, so drawing one costs no request.
+
+```erb
+<img src="<%= masks_claims.avatars.identicon %>?size=64" width="64" height="64" alt="">
+```
+
+A photo is a likeness of a person and needs a token, which an `<img>` cannot carry, so the engine
+proxies it with the token this app already holds:
+
+```erb
+<img src="/auth/avatar" width="64" height="64" alt="">
+```
+
+`masks_claims.picture` resolves the standard OIDC claim — an offsite `picture_url` if the actor set
+one, then the photo, then the identicon. `issuer.avatar_url(sub, style:, size:)` builds a URL for a
+subject this app holds no token for. Sizes are 32, 64, 128, 256 or 512.
+
 ### Signing out
 
 `DELETE /auth/logout` ends this app's session. Add `?everywhere=1` and the response

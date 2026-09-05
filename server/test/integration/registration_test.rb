@@ -135,4 +135,24 @@ class RegistrationTest < ActionDispatch::IntegrationTest
     assert_response :bad_request
     assert_select "#authorize-error[data-error=?]", "invalid_client"
   end
+
+  test "an unknown client_id is handed back when the redirect_uri is one masks serves" do
+    authorize(
+      client_id: SecureRandom.uuid,
+      redirect_uri: "#{origin_for(@tenant)}/manage/callback",
+      state: "console"
+    )
+
+    assert_response :redirect
+    assert_equal "invalid_client", redirected["error"]
+    assert_equal "console", redirected["state"]
+    assert_equal origin_for(@tenant), redirected["iss"]
+  end
+
+  test "an unknown client_id dead-ends when the redirect_uri belongs to someone else" do
+    authorize(client_id: SecureRandom.uuid, redirect_uri: "#{origin_for(@other)}/manage/callback")
+
+    assert_response :bad_request
+    assert_select "#authorize-error[data-error=?]", "invalid_client"
+  end
 end

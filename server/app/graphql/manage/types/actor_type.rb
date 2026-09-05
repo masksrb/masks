@@ -11,10 +11,15 @@ module Manage
       field :otp_enabled, Boolean, null: false
       field :backup_codes_remaining, Integer, null: false
       field :passkeys, [ PasskeyType ], null: false
+      field :sessions, [ "Manage::Types::SessionType" ], null: false
+      field :devices, [ "Manage::Types::DeviceType" ], null: false
       field :backup_codes_generated_at, GraphQL::Types::ISO8601DateTime
       field :last_login_at, GraphQL::Types::ISO8601DateTime
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
+
+      field :avatars, AvatarsType, null: false
+      field :photo_uploaded, Boolean, null: false
 
       field :name, String
       field :given_name, String
@@ -50,8 +55,24 @@ module Manage
         object.otp?
       end
 
+      def avatars
+        ::Avatars.urls(object)
+      end
+
+      def photo_uploaded
+        ::Avatars.photo(object).present?
+      end
+
       def passkeys
         ::Passkey.where(actor_id: object.id).includes(:authenticator).newest_first
+      end
+
+      def sessions
+        ::Session.live.where(actor_id: object.id).order(created_at: :desc)
+      end
+
+      def devices
+        ::Device.for_actor(object).newest_first
       end
     end
   end

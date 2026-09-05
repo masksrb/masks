@@ -25,6 +25,15 @@ Rails.application.routes.draw do
   patch "/account/devices/:id", to: "devices#update", as: :device
   delete "/account/devices/:id", to: "devices#destroy"
 
+  post "/account/avatar", to: "avatars#create", as: :account_avatar
+  delete "/account/avatar", to: "avatars#destroy"
+
+  scope constraints: { style: Regexp.union(Avatars::STYLES), digest: /[0-9a-f]{16}/ } do
+    get "/avatars/:uuid", to: "avatars#show", as: :avatar
+    get "/avatars/:uuid/:style", to: "avatars#show", as: :styled_avatar
+    get "/avatars/:uuid/:style/:digest", to: "avatars#show", as: :stamped_avatar
+  end
+
   get "/handshake", to: "handshakes#show", as: :handshake
   post "/handshake", to: "handshakes#create"
 

@@ -48,6 +48,7 @@ Also published: `grant_types_supported` (`authorization_code`, `refresh_token`, 
 | `POST /revoke` | RFC 7009 — revokes a token and everything exchanged from it |
 | `POST /introspect` | RFC 7662 |
 | `GET POST /userinfo` | claims for the bearer, requires the `openid` scope |
+| `GET /avatars/:uuid/:style` | an actor's [avatar](/concepts/avatars/); generated styles are public, a photo is gated |
 
 ### `/authorize` parameters
 
@@ -133,10 +134,15 @@ ever holding the upstream refresh token. Rate limited to 120 per minute.
 | `POST /manage/graphql` | the administration API — requires `masks:manage` |
 | `GET /manage(/*path)` | the administration UI |
 
-`server/app/graphql/manage/mutations/`: `inviteActor`, `resendInvitation`, `updateActor`,
-`setActorScopes`, `resetPassword`, `verifyEmail`, `generateBackupCodes`, `disableAuthenticator`,
-`revokePasskey`, `revokeSession`, `updateClient`, `rotateClientSecret`, `archiveClient`,
-`updateTenant`.
+`server/app/graphql/manage/mutations/`: `inviteActor`, `resendInvitation`, `resetPassword`,
+`verifyEmail`, `updateActor`, `setActorScopes`, `signOutActor`, `deleteActor`,
+`generateBackupCodes`, `disableAuthenticator`, `revokePasskey`, `removeAvatar`, `updateClient`,
+`rotateClientSecret`, `archiveClient`, `revokeSession`, `blockDevice`, `unblockDevice`,
+`signOutDevice`, `updateTenant`.
+
+`deleteActor` takes the account and everything hanging off it — sessions, tokens, consents,
+passkeys, connections, avatar — and refuses on the actor holding the token, who would be locking
+themselves out. `signOutActor` ends every session and refresh token without touching the password.
 
 ## Errors
 
