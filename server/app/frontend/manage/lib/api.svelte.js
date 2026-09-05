@@ -1,6 +1,29 @@
 import { createBrowserClient } from "@masks/client";
 import { callbackUri, clientId, forget, SCOPE } from "./pairing.js";
 
+function detach(variables) {
+  const files = new Map();
+
+  const walk = (value, path) => {
+    if (value instanceof Blob) {
+      files.set(path, value);
+      return null;
+    }
+
+    if (Array.isArray(value)) return value.map((one, at) => walk(one, `${path}.${at}`));
+
+    if (value?.constructor === Object) {
+      return Object.fromEntries(
+        Object.entries(value).map(([key, one]) => [key, walk(one, `${path}.${key}`)]),
+      );
+    }
+
+    return value;
+  };
+
+  return { held: walk(variables, "variables"), files };
+}
+
 export function createApi(boot) {
   const state = $state({
     ready: false,
@@ -91,15 +114,26 @@ export function createApi(boot) {
     },
 
     async query(document, variables = {}) {
-      const response = await fetch(boot.graphql, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          Authorization: await authorization(),
-        },
-        body: JSON.stringify({ query: document, variables }),
-      });
+      const { held, files } = detach(variables);
+      const headers = { Accept: "application/json", Authorization: await authorization() };
+      let sent;
+
+      if (files.size) {
+        sent = new FormData();
+
+        sent.append("operations", JSON.stringify({ query: document, variables: held }));
+        sent.append(
+          "map",
+          JSON.stringify(Object.fromEntries([...files.keys()].map((path, at) => [at, [path]]))),
+        );
+
+        [...files.values()].forEach((file, at) => sent.append(String(at), file));
+      } else {
+        headers["Content-Type"] = "application/json";
+        sent = JSON.stringify({ query: document, variables });
+      }
+
+      const response = await fetch(boot.graphql, { method: "POST", headers, body: sent });
 
       const body = await response.json().catch(() => ({}));
 

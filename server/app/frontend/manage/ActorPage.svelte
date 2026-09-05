@@ -56,6 +56,7 @@
   let loading = $state(true);
   let codes = $state(null);
   let link = $state(null);
+  let uploading = $state(false);
 
   const yourself = $derived(Boolean(actor && viewer && actor.uuid === viewer.uuid));
 
@@ -166,6 +167,26 @@
       { uuid, id: passkey.id },
       "Passkey removed.",
     );
+  }
+
+  async function choose(event) {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+
+    if (!file) return;
+
+    uploading = true;
+
+    await act(
+      `mutation Upload($uuid: ID!, $photo: Upload!) {
+        uploadAvatar(uuid: $uuid, photo: $photo) { actor { uuid } }
+      }`,
+      { uuid, photo: file },
+      "Photo updated.",
+    );
+
+    uploading = false;
+    input.value = "";
   }
 
   function removePhoto() {
@@ -280,10 +301,25 @@
             {/each}
           </div>
 
-          {#if actor.photoUploaded}
-            <button type="button" class="btn btn-ghost btn-sm self-start" onclick={removePhoto}>
-              Remove photo
-            </button>
+          <div class="flex flex-wrap items-center gap-2">
+            <input
+              type="file"
+              class="file-input file-input-sm max-w-full"
+              accept="image/png,image/jpeg,image/gif,image/webp"
+              aria-label="Upload a photo"
+              disabled={uploading}
+              onchange={choose}
+            />
+
+            {#if actor.photoUploaded}
+              <button type="button" class="btn btn-ghost btn-sm" onclick={removePhoto}>
+                Remove photo
+              </button>
+            {/if}
+          </div>
+
+          {#if uploading}
+            <span class="text-xs opacity-60">Storing...</span>
           {/if}
         </Card>
 

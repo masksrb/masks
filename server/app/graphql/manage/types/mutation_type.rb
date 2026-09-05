@@ -12,6 +12,7 @@ module Manage
       field :generate_backup_codes, mutation: Mutations::GenerateBackupCodes
       field :disable_authenticator, mutation: Mutations::DisableAuthenticator
       field :revoke_passkey, mutation: Mutations::RevokePasskey
+      field :upload_avatar, mutation: Mutations::UploadAvatar
       field :remove_avatar, mutation: Mutations::RemoveAvatar
       field :update_client, mutation: Mutations::UpdateClient
       field :rotate_client_secret, mutation: Mutations::RotateClientSecret
