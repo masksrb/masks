@@ -4,13 +4,15 @@ module Scopes
   EMAIL = "email".freeze
   OFFLINE = "offline_access".freeze
   MANAGE = "masks:manage".freeze
+  HANDSHAKE = "masks:handshake".freeze
 
   DESCRIBED = {
     OPENID => "Confirm who you are",
     PROFILE => "Read your name and nickname",
     EMAIL => "Read your email address",
     OFFLINE => "Stay signed in when you are away",
-    MANAGE => "Modify the masks backend"
+    MANAGE => "Modify the masks backend",
+    HANDSHAKE => "Connect an application to this tenant"
   }.freeze
 
   STANDARD = [ OPENID, PROFILE, EMAIL, OFFLINE ].freeze

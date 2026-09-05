@@ -83,8 +83,12 @@ class Actor < ApplicationRecord
               .filter_map { |held| held.provider&.release_scope }.uniq
   end
 
-  def grant!(requested)
-    update!(scopes: Scopes.join(scope_list | Scopes.list(requested)))
+  def holds?(scope)
+    scope_list.include?(scope.to_s)
+  end
+
+  def withheld(requested)
+    Scopes.list(requested) - permitted_scopes(requested)
   end
 
   def activated?

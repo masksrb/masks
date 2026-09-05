@@ -59,6 +59,7 @@ export default defineConfig({
         {
           label: "Reference",
           items: [
+            { label: "Protocol", slug: "reference/protocol" },
             { label: "Endpoints", slug: "reference/endpoints" },
             { label: "Configuration", slug: "reference/configuration" },
             { label: "Models", slug: "reference/models" },

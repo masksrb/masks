@@ -1,9 +1,9 @@
 class HandshakesController < ApplicationController
   before_action :require_handshake
   before_action :require_actor
+  before_action :require_pairing
 
   def show
-    @existing = Client.approved_for(@handshake.resource)
     @scopes = ResourceMetadata.describe(@handshake.resource, @handshake.scopes)
   end
 
@@ -14,7 +14,6 @@ class HandshakesController < ApplicationController
     return redirect_to(@handshake.declined, allow_other_host: true) if params[:approve].blank?
 
     client = Client.approve!(@handshake, actor: current_actor)
-    current_actor.grant!(@handshake.scopes)
 
     token = InitialAccessToken.mint!(
       actor: current_actor,
@@ -38,6 +37,7 @@ class HandshakesController < ApplicationController
       return refuse("that connection request has already been answered") if @pending.consumed?
 
       @handshake = @pending.handshake
+      @existing = Client.approved_for(@handshake.resource)
     end
 
     def opening
@@ -51,6 +51,23 @@ class HandshakesController < ApplicationController
 
     def require_actor
       redirect_to login_path if current_actor.nil?
+    end
+
+    def require_pairing
+      return if current_actor.holds?(Scopes::MANAGE)
+
+      unless current_actor.holds?(Scopes::HANDSHAKE)
+        return refuse("connecting an application is not something this account may do")
+      end
+
+      if @existing && @existing.approved_by_id != current_actor.id
+        return refuse("#{@handshake.resource} is already connected; an administrator must reconnect it")
+      end
+
+      withheld = current_actor.withheld(@handshake.scopes)
+      return if withheld.empty?
+
+      refuse("#{Scopes.join(withheld)} is more than this account holds")
     end
 
     def refuse(description)

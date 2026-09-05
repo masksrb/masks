@@ -105,7 +105,7 @@ the updates a state `accepts`, and answers HTML or JSON from one code path.
 
 | Route | Auth | |
 | --- | --- | --- |
-| `GET POST /handshake` | a signed-in actor | approve an app, and mint the token that registers it |
+| `GET POST /handshake` | `masks:handshake` or `masks:manage` | approve an app, and mint the token that registers it |
 | `POST /register` | none, or an initial access token | RFC 7591 — create |
 | `GET /register/:client_id` | registration token | read |
 | `PUT /register/:client_id` | registration token | update |

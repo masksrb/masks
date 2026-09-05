@@ -1,0 +1,167 @@
+---
+title: Protocol
+description: What an issuer and a client agree on — five exchanges, three of which are not in anybody else's specification.
+---
+
+This page is the contract. The server and the gem are both implementations of it, and where either
+disagrees with this page, the implementation is wrong.
+
+The current version is **1**, published as `masks_protocol_version` in the discovery document.
+
+## The five exchanges
+
+| | | |
+| --- | --- | --- |
+| **Discovery** | `/.well-known/openid-configuration`, `/.well-known/oauth-authorization-server` | OIDC Discovery, plus two additions |
+| | `/.well-known/jwks.json` | this tenant's published keys |
+| | `/.well-known/oauth-protected-resource(/*resource)` | RFC 9728 |
+| **Handshake** | `GET POST /handshake` | **masks' own** |
+| **Registration** | `POST /register` | RFC 7591 |
+| | `GET PUT DELETE /register/:client_id` | RFC 7592 |
+| **Authorization** | `/authorize`, `/token`, `/userinfo`, `/introspect`, `/revoke`, `/logout` | OAuth 2.1 shaped — code + PKCE `S256` only |
+| **Verification** | the tokens themselves | RS256, per-tenant keys |
+
+Parameters for the authorization half are in [Endpoints](/reference/endpoints). This page covers
+what is specific to masks.
+
+## The three things that are ours
+
+**The handshake**, below — a human-approved pairing that authorizes registration.
+
+**The `tenant` claim**, in every access token, id token, discovery document and resource metadata
+document. See [Tenancy](/concepts/tenancy). It is one of two deliberate divergences recorded in
+`conformance/expected-failures.json`.
+
+**`masks_protocol_version`**, so a client refuses an issuer it cannot work with rather than finding
+out at the first screen. The gem checks it before the handshake and raises `Unconfigured` when the
+issuer speaks a version older than it needs.
+
+## Discovery
+
+Read first, and re-read rather than writing paths down. A client needs `issuer`, `jwks_uri`, the
+endpoint it is about to use, `handshake_endpoint` if it intends to pair, and
+`masks_protocol_version`.
+
+`issuer` is per tenant. Two tenants of one installation are two issuers with two key sets, and a
+token from one does not verify against the other.
+
+## The handshake
+
+**It is not registration.** `POST /register` is open and unauthenticated; anybody may register a
+client without ever performing a handshake. The handshake is the *approval* that makes a client
+trusted, and registration is how the credentials for it are delivered.
+
+An app sends the browser to `handshake_endpoint`:
+
+| | |
+| --- | --- |
+| `client_name` | what the approval screen shows |
+| `resource` | the app's own identifier — an absolute https URL |
+| `redirect_uris` | may repeat; read off the raw query string so repetition is not collapsed |
+| `return_to` | where the answer is delivered |
+| `scope` | space separated |
+| `state` | echoed back; check it |
+| `token_endpoint_auth_method` | optional; `client_secret_basic` by default |
+
+`resource`, every `redirect_uris` and `return_to` must share one origin, and it must be https
+outside development. The approval screen names one place, so a crafted URL cannot get an app at one
+origin approved and the token delivered to another.
+
+The answer comes back to `return_to`:
+
+| | |
+| --- | --- |
+| approved | `initial_access_token`, `iss`, and `state` if one was sent |
+| declined | `error=access_denied`, `error_description` |
+
+### Who may approve one
+
+Approval is an act of authority, not of identity, so it takes a scope of its own.
+
+| | |
+| --- | --- |
+| `masks:handshake` | may approve an application for scopes **the approver already holds**, and may reconnect only an application they connected themselves |
+| `masks:manage` | may approve an application for any scope, and may reconnect any of them |
+
+An actor holding neither is refused at the screen, before anything is created. `masks:handshake` is
+the delegable half — it lets somebody connect the applications they can themselves use without
+handing them the administration API.
+
+The second half of that sentence is the reconnection rule, and it matters because a second handshake
+for a resource **rewrites the existing client** rather than adding one. Without it, `masks:handshake`
+would let its holder name any already-connected application, collect its reissued secret from the
+redirect, and re-point it — so the scope would confer far more than the applications the holder can
+use. Reconnecting somebody else's application takes `masks:manage`.
+
+`masks:manage` is deliberately unbounded, because bounding it would be theatre: an administrator can
+grant themselves a scope and come back. The first-run owner holds it, which is what allows the very
+first application to be paired before anybody has been granted anything.
+
+The scopes an approver holds include those they hold through a live
+[connection](/guides/connectors), so `masks:connections:<provider>` is approvable by the person who
+connected that provider.
+
+### What approval confers
+
+Everything here is the difference between an approved client and one that registered openly.
+
+| | |
+| --- | --- |
+| `dynamic: false` | exempt from the ceiling open registration is bounded by, **including** the refusal of the reserved `masks:` namespace |
+| the client exists first | redeeming the token releases credentials for the approved row; the registration body cannot widen it |
+| consent is recorded | the approved client does not ask the approver again |
+| one origin | the client is bound to the origin that was approved |
+| one per resource | a second handshake for the same `resource` rotates that client rather than adding another |
+
+Approving does not widen the approver. It grants them nothing.
+
+## Registration
+
+Two ways in, and they are not equivalent:
+
+| | |
+| --- | --- |
+| no authorization | RFC 7591 open registration. Rate limited, `dynamic: true`, bounded by the tenant's ceiling, and refused outright if it asks for anything under `masks:` |
+| `Bearer <initial_access_token>` | releases credentials for the client a human already approved. The body cannot change what was approved |
+
+The response carries the client metadata plus `client_secret`, `client_secret_expires_at`,
+`registration_access_token` and `registration_client_uri`. RFC 7592 read, update and delete are
+reachable at that URI with that token, and a client that has lost the token has to be re-approved by
+a human.
+
+### Client metadata
+
+The vocabulary is RFC 7591's, plus `resources`. These fields mean the same thing on both sides and
+travel in both directions:
+
+`client_id`, `client_name`, `redirect_uris`, `post_logout_redirect_uris`, `grant_types`,
+`response_types`, `scope`, `token_endpoint_auth_method`, `application_type`, `client_uri`,
+`logo_uri`, `tos_uri`, `policy_uri`, `resources`
+
+The rest is not shared, and the difference is not cosmetic. **An issuer stores digests of the client
+secret and the registration access token, because it only ever verifies what is presented to it. A
+client stores both recoverably, because it presents them.** Anything that holds a client — the
+server's `clients` table, the gem's own store — implements one of those two halves and never both.
+
+Issuer-side only: the tenant, the two digests, whether the client is dynamic, who approved it and
+when, the scope ceiling, and when it was archived.
+
+Client-side only: which issuer this is a client of, the recoverable secret, the registration access
+token, the registration client URI, and when the pairing happened.
+
+## Verification
+
+Tokens are RS256, signed with the tenant's key, and published at that tenant's `jwks_uri`. A token
+minted for one tenant cannot verify against another — see [Signing keys](/concepts/keys).
+
+An access token names its audience, and a resource server must check it. See
+[Tokens and audiences](/concepts/tokens).
+
+## What a version bump means
+
+`masks_protocol_version` goes up when the surface a client depends on changes in a way an older
+client cannot discover for itself. Adding a discovery field does not bump it; changing what the
+handshake returns, or what registration requires, does.
+
+A client states the minimum it needs and refuses an issuer below it. An issuer never refuses an old
+client on the basis of the version alone.
