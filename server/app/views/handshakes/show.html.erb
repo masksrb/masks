@@ -1,33 +1,42 @@
 <% content_for :title, "Connect #{@handshake.name}" %>
 <% content_for :surface, "grant" %>
 
+<% hot, rest = ranked_scopes(@scopes) %>
+
+<div class="auth-pair">
+  <span class="auth-mark auth-mark-client" aria-hidden="true"><%= @handshake.name.to_s.first&.upcase %></span>
+  <span class="auth-wire"></span>
+  <span class="auth-mark" aria-hidden="true"><%= Current.tenant&.name.to_s.first&.upcase %></span>
+</div>
+
 <div class="prompt-head">
   <h1 class="prompt-title">
     <%= @existing ? "Reconnect" : "Connect" %> <%= @handshake.name %>?
   </h1>
-  <p class="prompt-lede">
-    Signed in as <strong><%= current_actor.nickname %></strong>.
-  </p>
 </div>
 
 <% if @existing %>
   <div class="note note-warn" role="alert">
-    This tenant is already connected to something at that address. Approving
-    replaces the credentials it holds now, and it will stop working until it
-    picks up the new ones.
+    This replaces the credentials <%= @handshake.name %> holds now.
   </div>
 <% end %>
 
-<div class="ledger">
+<div class="slab">
   <div class="ledger-row">
-    <span class="ledger-label">Asking from</span>
-    <span class="ledger-value aside-mono"><%= @handshake.origin %></span>
-  </div>
-
-  <div class="ledger-row">
-    <span class="ledger-label">It will be able to ask you for</span>
+    <span class="ledger-label">Access</span>
     <ul class="grant-scopes">
-      <% @scopes.each do |scope, description| %>
+      <% hot.each do |scope, description| %>
+        <li class="grant-scope grant-scope-hot">
+          <span><%= description || "The #{scope} scope" %></span>
+          <span class="chip-key"><%= scope %></span>
+        </li>
+      <% end %>
+
+      <% if hot.any? && rest.any? %>
+        <li class="grant-scope-split"></li>
+      <% end %>
+
+      <% rest.each do |scope, description| %>
         <li class="grant-scope">
           <span><%= description || "The #{scope} scope" %></span>
           <span class="chip-key"><%= scope %></span>
@@ -37,12 +46,17 @@
   </div>
 
   <div class="ledger-row">
-    <span class="ledger-label">It will sign you in at</span>
+    <span class="ledger-label">From</span>
+    <span class="ledger-value aside-mono"><%= @handshake.origin %></span>
+  </div>
+
+  <div class="ledger-row">
+    <span class="ledger-label">Signs you in at</span>
     <span class="ledger-value aside-mono"><%= @handshake.resource %></span>
   </div>
 
   <div class="ledger-row">
-    <span class="ledger-label">It will be sent back to</span>
+    <span class="ledger-label">Returns to</span>
     <% @handshake.redirect_uris.each do |uri| %>
       <span class="ledger-value aside-mono"><%= uri %></span>
     <% end %>
@@ -57,4 +71,4 @@
   </div>
 <% end %>
 
-<p class="aside">Not you? <%= link_to "Sign out", logout_path, class: "textlink" %>.</p>
+<p class="aside"><%= current_actor.nickname %> · <%= link_to "Sign out", logout_path, class: "textlink" %></p>

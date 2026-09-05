@@ -1,14 +1,10 @@
 <% content_for :title, "This #{@noun} is no longer valid" %>
+<% content_for :surface, "terminus" %>
 
-<h1 class="prompt-title">This <%= @noun %> is no longer valid</h1>
+<span class="state">Expired</span>
 
-<p class="prompt-lede">
-  Links like this one work once and expire. This one has already been used, or
-  it has been open long enough to lapse, or a newer one replaced it.
-</p>
+<h1 class="prompt-title">This <%= @noun %> is no longer valid.</h1>
 
-<p class="prompt-lede">
-  Nothing has changed on the account. Ask for another.
-</p>
+<p class="prompt-lede">Nothing changed on the account.</p>
 
-<%= link_to "Go to sign in", login_path, class: "action" %>
+<%= link_to "Sign in", login_path, class: "action action-quiet action-fit" %>

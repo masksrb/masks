@@ -1,6 +1,4 @@
 <script>
-import PromptHeader from "../shared/PromptHeader.svelte";
-
 let { login } = $props();
 
 let password = $state("");
@@ -19,12 +17,12 @@ function onsubmit(event) {
 }
 </script>
 
-<PromptHeader heading="Accept your invitation" {login} />
-
-<p class="prompt-lede">
-  {#if invitation.invitedBy}{invitation.invitedBy} invited you.{/if}
-  Choose a password and the account is yours.
-</p>
+<div class="prompt-head">
+  <h1 class="prompt-title">Accept your invitation</h1>
+  {#if invitation.invitedBy}
+    <p class="prompt-lede">{invitation.invitedBy} invited you.</p>
+  {/if}
+</div>
 
 <form {onsubmit} class="flow">
   <label class="field">
@@ -41,12 +39,7 @@ function onsubmit(event) {
   {#if invitation.email}
     <label class="field">
       <span class="field-label">Email</span>
-      <input
-        type="email"
-        class="control"
-        value={invitation.email}
-        readonly
-      />
+      <input type="email" class="control" value={invitation.email} readonly />
     </label>
   {/if}
 
@@ -66,6 +59,6 @@ function onsubmit(event) {
 
   <button type="submit" class="action" disabled={!valid || login.loading}>
     {#if login.loading}<span class="spinner"></span>{/if}
-    {login.loading ? "Accepting" : "Accept the invitation"}
+    {login.loading ? "Accepting" : "Continue"}
   </button>
 </form>

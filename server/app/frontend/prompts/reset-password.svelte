@@ -1,6 +1,4 @@
 <script>
-import PromptHeader from "../shared/PromptHeader.svelte";
-
 let { login } = $props();
 
 let password = $state("");
@@ -19,11 +17,9 @@ function onsubmit(event) {
 }
 </script>
 
-<PromptHeader heading="Set a new password" {login} />
-
-<p class="prompt-lede">
-  Setting a password here signs {reset.nickname} out everywhere else.
-</p>
+<div class="prompt-head">
+  <h1 class="prompt-title">Set a new password</h1>
+</div>
 
 <form {onsubmit} class="flow">
   <label class="field">
@@ -48,11 +44,13 @@ function onsubmit(event) {
       autofocus
       bind:value={password}
     />
-    <span class="field-hint">At least {minimum} characters.</span>
+    <span class="field-hint">
+      At least {minimum} characters. Signs you out everywhere else.
+    </span>
   </label>
 
   <button type="submit" class="action" disabled={!valid || login.loading}>
     {#if login.loading}<span class="spinner"></span>{/if}
-    {login.loading ? "Setting" : "Set the password"}
+    {login.loading ? "Setting" : "Continue"}
   </button>
 </form>

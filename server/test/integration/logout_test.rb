@@ -21,7 +21,7 @@ class LogoutTest < ActionDispatch::IntegrationTest
 
   def signed_in?
     get "/"
-    response.body.include?("Signed in as")
+    response.body.include?("id=\"account\"")
   end
 
   def hint(audience: @client.client_id, subject: @actor.uuid)

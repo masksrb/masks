@@ -1,6 +1,5 @@
 <script>
 import Identified from "../shared/Identified.svelte";
-import PromptHeader from "../shared/PromptHeader.svelte";
 
 let { login } = $props();
 
@@ -20,7 +19,9 @@ function onsubmit(event) {
 }
 </script>
 
-<PromptHeader heading="Use a backup code" {login} />
+<div class="prompt-head">
+  <h1 class="prompt-title">Use a backup code</h1>
+</div>
 
 <Identified {login} />
 
@@ -38,15 +39,12 @@ function onsubmit(event) {
       autofocus
       bind:value={code}
     />
-    <span class="field-hint">
-      One of the codes you saved when you set up your authenticator. Each one
-      works once.
-    </span>
+    <span class="field-hint">Each one works once.</span>
   </label>
 
   <button type="submit" class="action" disabled={!valid || login.loading}>
     {#if login.loading}<span class="spinner"></span>{/if}
-    {login.loading ? "Verifying" : "Verify"}
+    {login.loading ? "Checking" : "Continue"}
   </button>
 </form>
 
@@ -55,5 +53,5 @@ function onsubmit(event) {
   class="action action-plain"
   onclick={() => login.submit("use-authenticator", {})}
 >
-  Use my authenticator instead
+  Use your authenticator
 </button>

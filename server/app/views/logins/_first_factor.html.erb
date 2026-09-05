@@ -1,4 +1,6 @@
-<%= render "logins/header", heading: "Enter your password", login: login %>
+<div class="prompt-head">
+  <h1 class="prompt-title">Enter your password</h1>
+</div>
 
 <%= render "logins/identified", login: login %>
 
@@ -11,12 +13,12 @@
     <%= form.password_field :password, autocomplete: "current-password", class: "control" %>
   </label>
 
-  <button type="submit" class="action">Sign in</button>
+  <button type="submit" class="action">Continue</button>
 <% end %>
 
-<%= form_with url: login_path, method: :post, id: "forgot-password" do |form| %>
+<%= form_with url: login_path, method: :post, id: "forgot-password", class: "flow" do |form| %>
   <%= hidden_field_tag :rid, login.rid %>
   <%= form.hidden_field :event, value: "forgot-password" %>
 
-  <button type="submit" class="textlink">Forgot your password?</button>
+  <button type="submit" class="action action-plain">Forgot it?</button>
 <% end %>

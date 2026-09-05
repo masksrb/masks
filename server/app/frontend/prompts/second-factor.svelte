@@ -1,6 +1,5 @@
 <script>
 import Identified from "../shared/Identified.svelte";
-import PromptHeader from "../shared/PromptHeader.svelte";
 
 let { login } = $props();
 
@@ -28,7 +27,9 @@ $effect(() => {
 });
 </script>
 
-<PromptHeader heading="Enter your code" {login} />
+<div class="prompt-head">
+  <h1 class="prompt-title">Enter your code</h1>
+</div>
 
 <Identified {login} />
 
@@ -48,19 +49,18 @@ $effect(() => {
       autofocus
       bind:value={code}
     />
-    <span class="field-hint">From your authenticator app.</span>
   </label>
 
   {#if login.rememberable}
     <label class="check">
       <input type="checkbox" bind:checked={remember} />
-      <span>Do not ask for a code on this device for 30 days</span>
+      <span>Trust this device for 30 days</span>
     </label>
   {/if}
 
   <button type="submit" class="action" disabled={!valid || login.loading}>
     {#if login.loading}<span class="spinner"></span>{/if}
-    {login.loading ? "Verifying" : "Verify"}
+    {login.loading ? "Checking" : "Continue"}
   </button>
 </form>
 

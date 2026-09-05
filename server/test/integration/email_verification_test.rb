@@ -27,7 +27,8 @@ class EmailVerificationTest < ActionDispatch::IntegrationTest
     get "/verify/#{verification.secret}"
 
     assert_response :success
-    assert_match "Address confirmed", response.body
+    assert_match "is confirmed", response.body
+    assert_match @actor.email, response.body
 
     within(@tenant) { assert @actor.reload.email_verified_at.present? }
   end

@@ -1,188 +1,207 @@
 <% content_for :title, Current.tenant&.name %>
 
+<% content_for :surface, "place" if @actor %>
+
 <% content_for :scripts do %>
   <%= vite_javascript_tag "account" %>
 <% end %>
 
 <% if @actor %>
-  <div class="flow-wide">
-  <h1 class="prompt-title">Signed in as <%= @actor.nickname %></h1>
-
-  <div class="flow-tight">
-    <h2 class="group-title">Applications you have authorized</h2>
-
-    <% if @consents.any? %>
-      <ul class="chip-list">
-        <% @consents.each do |consent| %>
-          <li class="chip">
-            <span><%= consent.client.name %></span>
-            <span class="chip-key"><%= consent.scopes %></span>
-          </li>
+  <div id="account" class="place">
+    <aside class="place-rail">
+      <div class="place-id">
+        <span class="auth-mark" aria-hidden="true"><%= @actor.nickname.first.upcase %></span>
+        <span class="place-who"><%= @actor.nickname %></span>
+        <% if Current.tenant&.name.present? %>
+          <span class="auth-tenant"><%= Current.tenant.name %></span>
         <% end %>
+      </div>
+
+      <ul class="place-nav">
+        <li><a href="#applications">Applications</a></li>
+        <li><a href="#passkeys">Passkeys</a></li>
+        <li><a href="#devices">Devices</a></li>
+        <li><a href="#email">Email</a></li>
+        <li><a href="#password">Password</a></li>
       </ul>
-    <% else %>
-      <p class="aside">You have not authorized any applications yet.</p>
-    <% end %>
-  </div>
 
-  <div data-passkeys class="flow-tight">
-    <h2 class="group-title">Passkeys</h2>
+      <div><%= link_to "Sign out", logout_path, class: "textlink" %></div>
+    </aside>
 
-    <% if @passkeys.any? %>
-      <ul class="chip-list">
-        <% @passkeys.each do |passkey| %>
-          <li class="chip chip-stack">
-            <span class="chip-line">
-              <span class="chip-name">
-                <% if passkey.icon %>
-                  <img src="<%= passkey.icon %>" alt="" width="16" height="16" />
-                <% end %>
-                <span><%= passkey.label %></span>
-                <% if passkey.authenticator&.certified? %>
-                  <span class="tag">certified</span>
-                <% end %>
-              </span>
-              <span class="chip-meta">
-                <span>
-                  <%= passkey.last_used_at ? "used #{time_ago_in_words(passkey.last_used_at)} ago" : "never used" %>
+    <div class="place-body">
+      <section id="applications" class="place-section">
+        <h2>Applications</h2>
+
+        <% if @consents.any? %>
+          <ul class="chip-list">
+            <% @consents.each do |consent| %>
+              <li class="chip">
+                <span><%= consent.client.name %></span>
+                <span class="chip-key"><%= consent.scopes %></span>
+              </li>
+            <% end %>
+          </ul>
+        <% else %>
+          <p class="aside">None yet.</p>
+        <% end %>
+      </section>
+
+      <section id="passkeys" data-passkeys class="place-section">
+        <h2>Passkeys</h2>
+
+        <% if @passkeys.any? %>
+          <ul class="chip-list">
+            <% @passkeys.each do |passkey| %>
+              <li class="chip chip-stack">
+                <span class="chip-line">
+                  <span class="chip-name">
+                    <% if passkey.icon %>
+                      <img src="<%= passkey.icon %>" alt="" width="16" height="16" />
+                    <% end %>
+                    <span><%= passkey.label %></span>
+                    <% if passkey.authenticator&.certified? %>
+                      <span class="tag">certified</span>
+                    <% end %>
+                  </span>
+                  <span class="chip-meta">
+                    <span>
+                      <%= passkey.last_used_at ? "used #{time_ago_in_words(passkey.last_used_at)} ago" : "never used" %>
+                    </span>
+                    <%= button_to "Remove", passkey_path(passkey), method: :delete,
+                          class: "textlink", form_class: "chip-action",
+                          form: { data: { turbo_confirm: "Remove this passkey?" } } %>
+                  </span>
                 </span>
-                <%= button_to "Remove", passkey_path(passkey), method: :delete,
-                      class: "textlink", form_class: "chip-action",
-                      form: { data: { turbo_confirm: "Remove this passkey?" } } %>
-              </span>
-            </span>
 
-            <% if passkey.compromised? %>
-              <span class="aside aside-bad">
-                The FIDO Alliance reports a compromise for this model of authenticator
-                (<%= passkey.compromise.downcase.tr("_", " ") %>). Replace it and remove this passkey.
-              </span>
+                <% if passkey.compromised? %>
+                  <span class="aside aside-bad">
+                    The FIDO Alliance reports a compromise for this model
+                    (<%= passkey.compromise.downcase.tr("_", " ") %>). Replace it.
+                  </span>
+                <% end %>
+              </li>
             <% end %>
-          </li>
+          </ul>
+        <% else %>
+          <p class="aside">None yet.</p>
+
+          <details class="disclosure">
+            <summary class="textlink">What is a passkey?</summary>
+            <p class="aside">
+              It signs you in with the fingerprint, face or PIN your device already
+              uses, and counts as both factors on its own.
+            </p>
+          </details>
         <% end %>
-      </ul>
-    <% else %>
-      <p class="aside">
-        No passkeys yet. A passkey signs you in with the fingerprint, face or PIN
-        your device already uses — and counts as both factors on its own.
-      </p>
-    <% end %>
 
-    <%= form_with url: passkeys_path, method: :post, id: "add-passkey",
-          hidden: true, data: { challenge: passkey_challenge_path },
-          class: "flow-tight" do |form| %>
-      <%= form.hidden_field :credential, id: "passkey-credential" %>
+        <%= form_with url: passkeys_path, method: :post, id: "add-passkey",
+              hidden: true, data: { challenge: passkey_challenge_path },
+              class: "flow-tight" do |form| %>
+          <%= form.hidden_field :credential, id: "passkey-credential" %>
 
-      <label class="field">
-        <span class="field-label">Name</span>
-        <%= form.text_field :name, id: "passkey-name", placeholder: "This laptop",
-              class: "control control-sm" %>
-      </label>
+          <label class="field">
+            <span class="field-label">Name</span>
+            <%= form.text_field :name, id: "passkey-name", placeholder: "This laptop",
+                  class: "control control-sm" %>
+          </label>
 
-      <button type="button" id="add-passkey-button" class="action action-sm">Add a passkey</button>
-    <% end %>
+          <button type="button" id="add-passkey-button" class="action action-quiet action-sm">
+            Add a passkey
+          </button>
+        <% end %>
 
-    <p id="passkey-unusable" hidden class="aside aside-bad"></p>
-  </div>
+        <p id="passkey-unusable" hidden class="aside aside-bad"></p>
+      </section>
 
-  <div class="flow-tight">
-    <h2 class="group-title">Devices</h2>
+      <section id="devices" class="place-section">
+        <h2>Devices</h2>
 
-    <% if @devices.any? %>
-      <ul class="chip-list">
-        <% @devices.each do |device| %>
-          <li class="chip chip-stack">
-            <span class="chip-line">
-              <span class="chip-name">
-                <span><%= device.label %></span>
-                <% if device == current_device %>
-                  <span class="tag tag-live">this device</span>
+        <% if @devices.any? %>
+          <ul class="chip-list">
+            <% @devices.each do |device| %>
+              <li class="chip chip-stack">
+                <span class="chip-line">
+                  <span class="chip-name">
+                    <span><%= device.label %></span>
+                    <% if device == current_device %>
+                      <span class="tag tag-live">this device</span>
+                    <% end %>
+                    <% if @trusted.include?(device.id) %>
+                      <span class="tag">skips your code</span>
+                    <% end %>
+                    <% if device.blocked? %>
+                      <span class="tag tag-bad">blocked</span>
+                    <% end %>
+                  </span>
+                  <span class="chip-meta">
+                    <span>seen <%= time_ago_in_words(device.last_seen_at) %> ago</span>
+                    <%= button_to "Sign out", device_path(device), method: :delete,
+                          class: "textlink", form_class: "chip-action",
+                          form: { data: { turbo_confirm: "Sign this device out?" } } %>
+                  </span>
+                </span>
+
+                <span class="chip-meta">
+                  <span class="aside-mono"><%= device.ip_address || "—" %></span>
+                  <span><%= device.category %></span>
+                </span>
+
+                <%= form_with url: device_path(device), method: :patch, class: "action-row" do |form| %>
+                  <%= form.text_field :name, value: device.name, placeholder: device.label,
+                        class: "control control-sm action-grow" %>
+                  <button type="submit" class="action action-quiet action-sm">Rename</button>
                 <% end %>
-                <% if @trusted.include?(device.id) %>
-                  <span class="tag">skips your code</span>
-                <% end %>
-                <% if device.blocked? %>
-                  <span class="tag tag-bad">blocked</span>
-                <% end %>
-              </span>
-              <span class="chip-meta">
-                <span>seen <%= time_ago_in_words(device.last_seen_at) %> ago</span>
-                <%= button_to "Sign out", device_path(device), method: :delete,
-                      class: "textlink", form_class: "chip-action",
-                      form: { data: { turbo_confirm: "Sign this device out and make it ask for everything again?" } } %>
-              </span>
-            </span>
-
-            <span class="chip-meta">
-              <span class="aside-mono"><%= device.ip_address || "—" %></span>
-              <span><%= device.category %></span>
-            </span>
-
-            <%= form_with url: device_path(device), method: :patch, class: "action-row" do |form| %>
-              <%= form.text_field :name, value: device.name, placeholder: device.label,
-                    class: "control control-sm action-grow" %>
-              <button type="submit" class="action action-quiet action-sm">Rename</button>
+              </li>
             <% end %>
-          </li>
+          </ul>
+        <% else %>
+          <p class="aside">None yet.</p>
         <% end %>
-      </ul>
-    <% else %>
-      <p class="aside">No devices have signed in to this account yet.</p>
-    <% end %>
-  </div>
+      </section>
 
-  <div class="flow-tight">
-    <h2 class="group-title">Email</h2>
+      <section id="email" class="place-section">
+        <h2>Email</h2>
 
-    <% if @actor.email.blank? %>
-      <p class="aside">
-        This account has no email address. Applications that require one will refuse it.
-      </p>
-    <% elsif @actor.email_verified_at.present? %>
-      <p class="aside"><%= @actor.email %> — confirmed.</p>
-    <% else %>
-      <p class="aside">
-        <%= @actor.email %> is not confirmed, so applications are told so and some will
-        refuse it.
-      </p>
+        <% if @actor.email.blank? %>
+          <p class="aside">None set.</p>
+        <% elsif @actor.email_verified_at.present? %>
+          <p class="aside"><%= @actor.email %> — confirmed.</p>
+        <% else %>
+          <p class="aside"><%= @actor.email %> — unconfirmed.</p>
 
-      <%= button_to "Send a confirmation link", account_verification_path,
-            class: "action action-quiet action-sm" %>
-    <% end %>
-  </div>
+          <%= button_to "Send a link", account_verification_path,
+                class: "action action-quiet action-sm" %>
+        <% end %>
+      </section>
 
-  <div class="flow-tight">
-    <h2 class="group-title">Password</h2>
+      <section id="password" class="place-section">
+        <h2>Password</h2>
 
-    <%= form_with url: account_password_path, method: :patch, id: "change-password",
-          class: "flow-tight" do |form| %>
-      <label class="field">
-        <span class="field-label">Current password</span>
-        <%= form.password_field :current_password, autocomplete: "current-password",
-              class: "control" %>
-      </label>
+        <%= form_with url: account_password_path, method: :patch, id: "change-password",
+              class: "flow-tight" do |form| %>
+          <label class="field">
+            <span class="field-label">Current password</span>
+            <%= form.password_field :current_password, autocomplete: "current-password",
+                  class: "control" %>
+          </label>
 
-      <label class="field">
-        <span class="field-label">New password</span>
-        <%= form.password_field :password, autocomplete: "new-password", class: "control" %>
-        <span class="field-hint">
-          At least <%= PasswordsController::MINIMUM %> characters. Changing it signs out
-          every other session and stops every application from refreshing.
-        </span>
-      </label>
+          <label class="field">
+            <span class="field-label">New password</span>
+            <%= form.password_field :password, autocomplete: "new-password", class: "control" %>
+            <span class="field-hint">
+              At least <%= PasswordsController::MINIMUM %> characters.
+              Signs out every other session.
+            </span>
+          </label>
 
-      <button type="submit" class="action action-sm">Change password</button>
-    <% end %>
-  </div>
-
-  <p><%= link_to "Sign out", logout_path, class: "textlink" %></p>
+          <button type="submit" class="action action-sm">Change password</button>
+        <% end %>
+      </section>
+    </div>
   </div>
 <% else %>
   <div class="prompt-head">
     <h1 class="prompt-title">Your account</h1>
-    <p class="prompt-lede">
-      Sign in to manage your account and the applications you have authorized.
-    </p>
   </div>
 
   <%= link_to "Sign in", login_path, class: "action" %>

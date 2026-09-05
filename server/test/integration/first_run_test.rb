@@ -29,7 +29,8 @@ class FirstRunTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_match "Create the owner", response.body
-    assert_match "owns this tenant", response.body
+    assert_match "First run", response.body
+    assert_match "This screen will not appear again", response.body
 
     post "/login", params: { event: "start-over" }, as: :json
 

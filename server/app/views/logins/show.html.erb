@@ -1,6 +1,7 @@
 <% content_for :title, Current.tenant&.name ? "Sign in to #{Current.tenant.name}" : "Sign in" %>
 
 <% content_for :surface, "grant" if @login.prompt == "consent" %>
+<% content_for :surface, "ceremony" if @login.prompt == "setup" %>
 
 <% content_for :scripts do %>
   <%= vite_client_tag %>
