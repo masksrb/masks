@@ -140,6 +140,31 @@ class ConfigurationTest < EngineTest
     end
   end
 
+  test "without a namespace the handshake asks for exactly what a sign-in does" do
+    Masks::Rails.config.namespace = nil
+    Masks::Rails.config.scope = %w[openid profile email offline_access things:catalog:read]
+
+    assert_equal %w[openid profile email offline_access things:catalog:read],
+                 config.approved_scope
+  end
+
+  test "a namespace collapses the scopes beneath it and keeps the rest" do
+    Masks::Rails.config.namespace = "things:"
+    Masks::Rails.config.scope =
+      %w[openid profile email offline_access things:catalog:read things:settings:write]
+
+    assert_equal %w[openid profile email offline_access things:], config.approved_scope
+  end
+
+  test "the handshake carries the namespace, so a new capability needs no approval" do
+    Masks::Rails.config.namespace = "things:"
+    Masks::Rails.config.scope = %w[openid things:catalog:read]
+
+    handshake = config.handshake_for(request_for(HOST))
+
+    assert_equal %w[openid things:], handshake.scope
+  end
+
   private
 
     def config

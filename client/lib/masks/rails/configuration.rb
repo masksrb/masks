@@ -3,8 +3,8 @@ module Masks
     class Configuration
       class Unconfigured < Masks::Client::Error; end
 
-      attr_accessor :scope, :resource, :resource_scopes, :after_sign_in, :after_sign_out,
-                    :session_key, :sign_out_of_issuer, :parent_controller,
+      attr_accessor :scope, :namespace, :resource, :resource_scopes, :after_sign_in,
+                    :after_sign_out, :session_key, :sign_out_of_issuer, :parent_controller,
                     :credentials_path, :authenticate_everything
       attr_writer :issuer, :redirect_uri, :name, :credentials, :store, :forget
 
@@ -134,8 +134,20 @@ module Masks
             raise(Unconfigured, "Masks::Rails.config.resource is not set"),
           redirect_uris: [ redirect_uri_for(request) ],
           return_to: return_to_for(request),
-          scope: scope
+          scope: approved_scope
         )
+      end
+
+      # What the handshake asks to be approved for, which is not what a sign-in
+      # requests. An app that owns a namespace asks for the namespace once, so
+      # that adding a capability later is a deployment rather than an approval
+      # round; the authorize request still names the scopes it actually wants.
+      def approved_scope
+        return scope if namespace.blank?
+
+        outside = Array(scope).reject { |name| name.to_s.start_with?(namespace) }
+
+        outside + [ namespace ]
       end
 
       def return_to_for(request)

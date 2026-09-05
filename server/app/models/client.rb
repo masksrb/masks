@@ -84,11 +84,11 @@ class Client < ApplicationRecord
     end
 
     def bounded(requested)
-      reserved = Scopes.reserved(requested)
+      reserved = Scopes.reserved(requested) + Scopes.list(requested).select { |s| Scopes.prefix?(s) }
 
       if reserved.any?
         raise ScopesUnavailable,
-              "#{Scopes.join(reserved)} may only be granted to an approved client"
+              "#{Scopes.join(reserved.uniq)} may only be granted to an approved client"
       end
 
       ceiling = Current.tenant&.dynamic_client_ceiling

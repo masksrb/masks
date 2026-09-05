@@ -47,7 +47,7 @@ class AuthorizationPolicy < Policy
     end
 
     def scopes_are_permitted
-      refused = Scopes.list(requested_scopes) - client.scope_list
+      refused = Scopes.refused(client.scope_list, requested_scopes)
 
       if refused.any?
         deny!("invalid_scope",
