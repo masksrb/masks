@@ -1,0 +1,14 @@
+en:
+  links:
+    expired:
+      page_title: "This %{noun} is no longer valid"
+      state: "Expired"
+      title: "This %{noun} is no longer valid."
+      lede: "Nothing changed on the account."
+      sign_in: "Sign in"
+
+    verified:
+      page_title: "Address confirmed"
+      state: "Confirmed"
+      title: "%{email} is confirmed."
+      account: "Your account"

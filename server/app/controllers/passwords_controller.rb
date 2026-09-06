@@ -4,18 +4,18 @@ class PasswordsController < ApplicationController
   rate_limit to: Rails.configuration.masks.account_attempt_limit,
              within: 3.minutes,
              by: -> { [ current_tenant.id, current_actor&.id ].join(":") },
-             with: -> { refuse("Too many attempts. Wait a few minutes and try again.") }
+             with: -> { refuse(t("passwords.too_many_attempts")) }
 
   before_action :require_actor
 
   def update
-    return refuse("That password is too short.") if replacement.length < MINIMUM
+    return refuse(t("passwords.too_short")) if replacement.length < MINIMUM
 
     changed = current_actor.change_password!(current, replacement, keeping: current_session)
 
-    return refuse("That is not your current password.") unless changed
+    return refuse(t("passwords.wrong_current")) unless changed
 
-    redirect_to root_path, notice: "Your password has been changed, and every other session signed out."
+    redirect_to root_path, notice: t("passwords.changed")
   end
 
   private

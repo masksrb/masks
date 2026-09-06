@@ -1,0 +1,37 @@
+en:
+  devices:
+    unknown: "There is no such device on this account."
+    renamed: "Device renamed."
+    signed_out: "That device has been signed out."
+
+  passkeys:
+    expired: "That enrolment expired. Try again."
+    crowded: "You already have as many passkeys as this server keeps."
+    unusable: "That passkey could not be added."
+    unknown: "There is no such passkey on this account."
+    added: "Passkey added."
+    removed: "Passkey removed."
+
+  passwords:
+    too_many_attempts: "Too many attempts. Wait a few minutes and try again."
+    too_short: "That password is too short."
+    wrong_current: "That is not your current password."
+    changed: "Your password has been changed, and every other session signed out."
+
+  verifications:
+    too_many_requests: "Too many requests. Wait a few minutes."
+    no_address: "There is no address on this account to confirm."
+    already_confirmed: "That address is already confirmed."
+    no_mailer: "This server cannot send email. Ask an administrator."
+    sent: "A confirmation link is on its way to %{email}."
+
+  avatars:
+    updated: "Your photo has been updated."
+    removed: "Your photo has been removed."
+
+  handshakes:
+    answered: "that connection request has already been answered"
+    none_in_progress: "no connection request is in progress"
+    not_permitted: "connecting an application is not something this account may do"
+    already_connected: "%{resource} is already connected; an administrator must reconnect it"
+    beyond_account: "%{scopes} is more than this account holds"

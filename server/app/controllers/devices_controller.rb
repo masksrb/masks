@@ -2,24 +2,24 @@ class DevicesController < ApplicationController
   before_action :require_actor
 
   def update
-    return refuse("There is no such device on this account.") if device.nil?
+    return refuse(t("devices.unknown")) if device.nil?
 
     device.update!(name: params[:name].to_s.strip.presence)
 
-    redirect_to root_path, notice: "Device renamed."
+    redirect_to root_path, notice: t("devices.renamed")
   end
 
   def destroy
-    return refuse("There is no such device on this account.") if device.nil?
+    return refuse(t("devices.unknown")) if device.nil?
 
     device.sign_out!
 
     if device == current_device
       cookies.delete(:masks_session)
-      return redirect_to login_path, notice: "That device has been signed out."
+      return redirect_to login_path, notice: t("devices.signed_out")
     end
 
-    redirect_to root_path, notice: "That device has been signed out."
+    redirect_to root_path, notice: t("devices.signed_out")
   end
 
   private

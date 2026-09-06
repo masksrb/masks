@@ -1,12 +1,9 @@
 <p class="lede">
-  Confirm this address for <span class="strong"><%= @actor.nickname %></span>
-  at <%= @tenant_name %>.
+  <%= t(".confirm_html", nickname: tag.span(@actor.nickname, class: "strong"), tenant: @tenant_name) %>
 </p>
 
-<%= render "action", url: @url, label: "Confirm this address" %>
+<%= render "action", url: @url, label: t(".action") %>
 
 <p class="meta">
-  Works once, expires in
-  <%= ActiveSupport::Duration.build(EmailVerification.lifetime.to_i).inspect %>.
-  If this was not you, ignore it — nothing else changes.
+  <%= t(".expiry", duration: ActiveSupport::Duration.build(EmailVerification.lifetime.to_i).inspect) %>
 </p>

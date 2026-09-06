@@ -10,7 +10,7 @@ class ActorMailer < ApplicationMailer
     mail(
       from: self.class.from,
       to: actor.email,
-      subject: "You have been invited to #{tenant_name}"
+      subject: t("actor_mailer.invitation.subject", tenant: tenant_name)
     )
   end
 
@@ -25,7 +25,7 @@ class ActorMailer < ApplicationMailer
     mail(
       from: self.class.from,
       to: actor.email,
-      subject: "Reset your #{tenant_name} password"
+      subject: t("actor_mailer.password_reset.subject", tenant: tenant_name)
     )
   end
 
@@ -39,7 +39,7 @@ class ActorMailer < ApplicationMailer
     mail(
       from: self.class.from,
       to: actor.email,
-      subject: "Confirm your email address for #{tenant_name}"
+      subject: t("actor_mailer.email_verification.subject", tenant: tenant_name)
     )
   end
 end

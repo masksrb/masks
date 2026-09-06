@@ -45,16 +45,32 @@ class LocaleNegotiationTest < ActionDispatch::IntegrationTest
     assert_nil copy["token_hint"]
   end
 
-  test "every string a prompt renders exists in the default locale" do
-    I18n.t("logins").each do |prompt, strings|
-      next unless strings.is_a?(Hash)
+  NAMESPACES = %i[
+    logins account handshakes links sessions authorize scopes actor_mailer
+    devices passkeys passwords verifications avatars
+  ].freeze
 
-      strings.each do |key, value|
-        assert_kind_of String, value, "logins.#{prompt}.#{key} is not a string"
-        assert value.present?, "logins.#{prompt}.#{key} is blank"
+  test "every string masks ships is a string, and none of them is blank" do
+    NAMESPACES.each do |namespace|
+      walk(I18n.t(namespace), namespace.to_s) do |key, value|
+        assert_kind_of String, value, "#{key} is not a string"
+        assert value.present?, "#{key} is blank"
       end
     end
   end
+
+  test "a locale directory is all it takes to add a language" do
+    assert_equal Dir[Rails.root.join("config/locales/*/")].map { |path| File.basename(path).to_sym },
+                 I18n.available_locales
+  end
+
+  private
+
+    def walk(tree, path, &block)
+      return yield(path, tree) unless tree.is_a?(Hash)
+
+      tree.each { |key, value| walk(value, "#{path}.#{key}", &block) }
+    end
 
   test "the issuer says which languages it can prompt in" do
     assert_equal I18n.available_locales.map { |locale| Locales.tag(locale) },

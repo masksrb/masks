@@ -1,0 +1,27 @@
+en:
+  handshakes:
+    show:
+      page_title: "Connect %{name}"
+      title: "Connect %{name}?"
+      title_again: "Reconnect %{name}?"
+      replaces: "This replaces the credentials %{name} holds now."
+      access: "Access"
+      beneath:
+        one: "What that covers today (1)"
+        other: "What that covers today (%{count})"
+      claims: "Claims"
+      claimed: "%{namespaces} becomes %{name}'s, and is granted to you."
+      origin: "From"
+      resource: "Signs you in at"
+      returns: "Returns to"
+      connect: "Connect"
+      cancel: "Cancel"
+      sign_out: "Sign out"
+
+    refused:
+      page_title: "This connection was refused"
+      stopped: "Stopped"
+      title: "The application described itself in a way this server will not accept."
+      settle: "Nothing was shared. A namespace stays claimed until somebody releases it, so this is yours to settle rather than the application's — archive whatever holds the name, then release it."
+      open_console: "Open the console"
+      contact: "Nothing was shared. The application has to fix this."

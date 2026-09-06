@@ -13,7 +13,7 @@ class HandshakesController < ApplicationController
   def create
     claimed = PendingHandshake.claim(hid_for(@pending))
 
-    return refuse("that connection request has already been answered") if claimed.nil?
+    return refuse(t("handshakes.answered")) if claimed.nil?
     return redirect_to(@handshake.declined, allow_other_host: true) if params[:approve].blank?
 
     client = Client.approve!(@handshake, actor: current_actor)
@@ -42,8 +42,8 @@ class HandshakesController < ApplicationController
       @pending = opening || pending_handshake(params[:hid])
 
       return if performed?
-      return refuse("no connection request is in progress") if @pending.nil?
-      return refuse("that connection request has already been answered") if @pending.consumed?
+      return refuse(t("handshakes.none_in_progress")) if @pending.nil?
+      return refuse(t("handshakes.answered")) if @pending.consumed?
 
       @handshake = @pending.handshake
       @existing = Client.approved_for(@handshake.resource)
@@ -66,17 +66,17 @@ class HandshakesController < ApplicationController
       return if current_actor.holds?(Scopes::MANAGE)
 
       unless current_actor.holds?(Scopes::HANDSHAKE)
-        return refuse("connecting an application is not something this account may do")
+        return refuse(t("handshakes.not_permitted"))
       end
 
       if @existing && @existing.approved_by_id != current_actor.id
-        return refuse("#{@handshake.resource} is already connected; an administrator must reconnect it")
+        return refuse(t("handshakes.already_connected", resource: @handshake.resource))
       end
 
       withheld = current_actor.withheld(@handshake.scopes)
       return if withheld.empty?
 
-      refuse("#{Scopes.join(withheld)} is more than this account holds")
+      refuse(t("handshakes.beyond_account", scopes: Scopes.join(withheld)))
     end
 
     def published_beneath(prefixes)

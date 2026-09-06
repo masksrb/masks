@@ -208,7 +208,7 @@
               </td>
             </tr>
             <tr>
-              <td class="foot">This message was sent by <%= @tenant_name %>&rsquo;s sign-in service.</td>
+              <td class="foot"><%= t("actor_mailer.shared.sent_by_html", tenant: @tenant_name) %></td>
             </tr>
           </table>
           <!--[if mso]></td></tr></table><![endif]-->

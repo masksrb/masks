@@ -1,16 +1,14 @@
 <p class="lede">
-  <%= @invited_by ? "#{@invited_by.nickname} invited you to #{@tenant_name}." : "You have been invited to #{@tenant_name}." %>
+  <%= @invited_by ? t(".invited_by", nickname: @invited_by.nickname, tenant: @tenant_name) :
+        t(".invited", tenant: @tenant_name) %>
 </p>
 
 <p class="lede">
-  Your username is <span class="strong"><%= @actor.nickname %></span>.
-  Open the link to choose a password.
+  <%= t(".username_html", nickname: tag.span(@actor.nickname, class: "strong")) %>
 </p>
 
-<%= render "action", url: @url, label: "Choose a password" %>
+<%= render "action", url: @url, label: t(".action") %>
 
 <p class="meta">
-  Works once, expires in
-  <%= ActiveSupport::Duration.build(Invitation.lifetime.to_i).inspect %>.
-  Nothing happens until somebody opens it.
+  <%= t(".expiry", duration: ActiveSupport::Duration.build(Invitation.lifetime.to_i).inspect) %>
 </p>
