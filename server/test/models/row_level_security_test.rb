@@ -1,5 +1,17 @@
 require "test_helper"
 
+module PretendsToBypass
+  mattr_accessor :pretending, default: false
+
+  def role_privileges
+    return { "rolname" => "postgres", "bypasses" => true } if PretendsToBypass.pretending
+
+    super
+  end
+end
+
+Tenant.singleton_class.prepend(PretendsToBypass)
+
 class RowLevelSecurityTest < ActiveSupport::TestCase
   setup do
     Rails.application.eager_load!
@@ -67,18 +79,24 @@ class RowLevelSecurityTest < ActiveSupport::TestCase
   end
 
   test "a role that bypasses row-level security is refused before a switch, not after" do
-    Tenant.remove_instance_variable(:@isolated) if Tenant.instance_variable_defined?(:@isolated)
+    forget_isolation
+    PretendsToBypass.pretending = true
 
-    Tenant.stub(:connection, Struct.new(:held).new.tap { |held|
-      def held.select_one(*) = { "rolname" => "postgres", "bypasses" => true }
-    }) do
-      assert_raises(Tenant::Exposed) { Tenant.switch(@tenant) { flunk "the switch went through" } }
+    refused = assert_raises(Tenant::Exposed) do
+      Tenant.switch(@tenant) { flunk "the switch went through on a role that sees every tenant" }
     end
+
+    assert_match "postgres", refused.message
   ensure
-    Tenant.remove_instance_variable(:@isolated) if Tenant.instance_variable_defined?(:@isolated)
+    PretendsToBypass.pretending = false
+    forget_isolation
   end
 
   private
+
+    def forget_isolation
+      Tenant.remove_instance_variable(:@isolated) if Tenant.instance_variable_defined?(:@isolated)
+    end
 
     def carrying
       @carrying ||= connection.select_values(<<~SQL)

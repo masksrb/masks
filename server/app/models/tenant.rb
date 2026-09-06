@@ -84,14 +84,18 @@ class Tenant < ApplicationRecord
     def isolated!
       return true if @isolated
 
-      held = connection.select_one(<<~SQL)
-        SELECT rolname, rolsuper OR rolbypassrls AS bypasses
-        FROM pg_roles WHERE rolname = current_user
-      SQL
+      held = role_privileges
 
       raise Exposed, held&.fetch("rolname", nil) unless held && held["bypasses"] == false
 
       @isolated = true
+    end
+
+    def role_privileges
+      connection.select_one(<<~SQL)
+        SELECT rolname, rolsuper OR rolbypassrls AS bypasses
+        FROM pg_roles WHERE rolname = current_user
+      SQL
     end
 
     def switch(tenant)
@@ -101,33 +105,33 @@ class Tenant < ApplicationRecord
 
       return yield tenant if Current.tenant&.id == tenant.id
 
-      previous_tenant = Current.tenant
+      held = Current.tenant
 
-      ActiveRecord::Base.transaction(requires_new: true) do
-        previous_setting = setting
-        assign_setting(tenant.id)
-        Current.tenant = tenant
+      enter(tenant)
 
-        begin
-          yield tenant
-        ensure
-          Current.tenant = previous_tenant
-          assign_setting(previous_setting)
-        end
+      begin
+        yield tenant
+      ensure
+        enter(held)
       end
+    end
+
+    def clear!
+      enter(nil)
     end
 
     private
 
-      def setting
-        connection.select_value("SELECT current_setting('#{TenantIsolation::SETTING}', true)")
-      end
+      def enter(tenant)
+        Current.tenant = tenant
 
-      def assign_setting(id)
         connection.exec_query(
-          "SELECT set_config('#{TenantIsolation::SETTING}', $1, true)", "tenant", [ id.to_s ]
+          "SELECT set_config($1, $2, false)", "tenant",
+          [ TenantIsolation::SETTING, tenant&.id.to_s ]
         )
-      rescue ActiveRecord::StatementInvalid
+
+        connection.clear_query_cache
+      rescue ActiveRecord::ConnectionNotEstablished, ActiveRecord::ConnectionFailed
         nil
       end
   end

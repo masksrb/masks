@@ -1,25 +1,20 @@
 class ApplicationController < ActionController::Base
-  class TenantMissing < StandardError; end
-
   REQUESTS = "requests".freeze
   HANDSHAKES = "handshakes".freeze
   TRACKED = 5
 
   around_action :in_locale
-  around_action :within_tenant
   before_action :withhold_referrer
   before_action :refuse_blocked_device
 
   helper_method :current_actor, :current_tenant, :current_device, :hid_for
 
-  rescue_from TenantMissing, with: :no_such_tenant
   rescue_from Policy::Denied, with: :policy_denied
 
   private
 
     def current_tenant
-      @current_tenant ||=
-        Tenant.resolve(request.host) || Tenant.claim(request.host) || raise(TenantMissing)
+      Current.tenant
     end
 
     def withhold_referrer
@@ -34,21 +29,6 @@ class ApplicationController < ActionController::Base
       response.headers["Content-Language"] = Locales.tag(locale)
       response.headers["Vary"] =
         [ response.headers["Vary"].presence, "Accept-Language" ].compact.join(", ")
-    end
-
-    def within_tenant
-      Current.origin = origin
-      Current.ip_address = request.remote_ip
-      Current.user_agent = request.user_agent
-
-      Tenant.switch(current_tenant) { yield }
-    end
-
-    def origin
-      template = Rails.configuration.masks.public_origin_template
-      return request.base_url if template.nil?
-
-      format(template, subdomain: request.host.split(".").first)
     end
 
     def issuer
@@ -213,10 +193,6 @@ class ApplicationController < ActionController::Base
 
     def authorize_url_for(pending)
       "#{authorize_path}?#{URI.encode_www_form(pending.authorization.query_pairs)}"
-    end
-
-    def no_such_tenant
-      render plain: "no tenant is served at this hostname", status: :not_found
     end
 
     def policy_denied(denial)

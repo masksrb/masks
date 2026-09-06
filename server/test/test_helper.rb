@@ -195,6 +195,7 @@ class ActiveSupport::TestCase
   include TenantSetup
 
   setup { Rails.cache.clear }
+  teardown { Tenant.clear! }
 end
 
 class ActionDispatch::IntegrationTest
