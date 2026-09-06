@@ -1,6 +1,7 @@
 <% content_for :title, Current.tenant&.name %>
 
 <% content_for :surface, "place" if @actor %>
+<% content_for :surface, "ceremony" if @first_run %>
 
 <% content_for :scripts do %>
   <%= vite_javascript_tag "account" %>
@@ -244,6 +245,55 @@
           <button type="submit" class="action action-sm">Change password</button>
         <% end %>
       </section>
+    </div>
+  </div>
+<% elsif @first_run %>
+  <div class="ceremony">
+    <aside class="record">
+      <span class="record-cap">This instance</span>
+
+      <div class="rec-rows">
+        <div class="rec-row">
+          <span class="rec-key">tenant</span>
+          <span class="rec-val rec-val-fixed"><%= Current.tenant&.name %></span>
+        </div>
+        <div class="rec-row">
+          <span class="rec-key">owner</span>
+          <span class="rec-val rec-val-pending">none yet</span>
+        </div>
+        <div class="rec-row">
+          <span class="rec-key">console</span>
+          <span class="rec-val <%= @connected ? "rec-val-fixed" : "rec-val-pending" %>">
+            <%= @connected ? "connected" : "not connected" %>
+          </span>
+        </div>
+        <div class="rec-row">
+          <span class="rec-key">keys</span>
+          <span class="rec-val rec-val-fixed">generated</span>
+        </div>
+      </div>
+    </aside>
+
+    <div class="flow">
+      <div class="prompt-head">
+        <span class="record-cap">First run</span>
+        <h1 class="prompt-title">Nobody owns this yet</h1>
+        <p class="prompt-lede">
+          The tenant is up and its signing keys exist. It has no accounts, so nothing can sign in
+          until you make the first one.
+        </p>
+      </div>
+
+      <%= link_to "Create the owner", login_path, class: "action" %>
+
+      <%= link_to "Open the console", manage_path, class: "action action-quiet" %>
+
+      <p class="aside">
+        The owner comes first — the console signs you in against this tenant, so it needs an account
+        to sign in as. Read the
+        <%= link_to "documentation", Rails.configuration.masks.docs_url,
+              class: "textlink", rel: "noopener" %> for what to do after that.
+      </p>
     </div>
   </div>
 <% else %>
