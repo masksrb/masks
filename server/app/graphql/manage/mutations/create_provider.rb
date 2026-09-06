@@ -1,0 +1,33 @@
+module Manage
+  module Mutations
+    class CreateProvider < BaseMutation
+      argument :key, ID
+      argument :name, String
+      argument :authorization_url, String
+      argument :token_url, String
+      argument :client_id, String
+      argument :client_secret, String, required: false
+      argument :revocation_url, String, required: false
+      argument :userinfo_url, String, required: false
+      argument :scopes, [ String ], required: false
+      argument :authorize_params, GraphQL::Types::JSON, required: false
+      argument :subject_claim, String, required: false
+      argument :label_claim, String, required: false
+
+      field :provider, Types::ProviderType, null: false
+
+      def resolve(key:, scopes: nil, authorize_params: nil, **attributes)
+        refuse!("a provider is already keyed #{key}") if ::Provider.exists?(key: key)
+
+        provider = ::Provider.new(**attributes.compact, key: key)
+        provider.scopes = Scopes.join(scopes) if scopes
+        provider.authorize_params = authorize_params if authorize_params
+
+        save!(provider)
+        audit!(::Event::PROVIDER_CREATED, provider: provider.key, name: provider.name)
+
+        { provider: provider }
+      end
+    end
+  end
+end

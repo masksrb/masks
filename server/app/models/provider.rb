@@ -17,6 +17,11 @@ class Provider < ApplicationRecord
                   format: { with: /\A[a-z0-9][a-z0-9-]*\z/ }
   validates :name, :client_id, presence: true
   validates :authorization_url, :token_url, presence: true
+  validate :urls_are_usable
+  validate :authorize_params_stay_out_of_the_way
+
+  URLS = %i[authorization_url token_url revocation_url userinfo_url].freeze
+  RESERVED_PARAMS = %w[response_type client_id redirect_uri scope state].freeze
 
   scope :active, -> { where(archived_at: nil) }
 
@@ -73,6 +78,44 @@ class Provider < ApplicationRecord
   end
 
   private
+
+    def urls_are_usable
+      URLS.each do |field|
+        value = public_send(field)
+        next if value.blank?
+
+        uri = usable_uri(value)
+
+        next errors.add(field, "must be an absolute http or https URL") if uri.nil?
+        next if uri.scheme == "https" || Client::LOOPBACK.include?(uri.host)
+
+        errors.add(field, "must use https unless it points at a loopback address")
+      end
+    end
+
+    def authorize_params_stay_out_of_the_way
+      held = authorize_params
+
+      return errors.add(:authorize_params, "must be a set of names and values") unless held.is_a?(Hash)
+
+      taken = held.keys.map(&:to_s) & RESERVED_PARAMS
+
+      if taken.any?
+        errors.add(:authorize_params, "may not set #{taken.join(', ')} — the request builds those")
+      end
+
+      unless held.values.all? { |value| value.is_a?(String) || value.is_a?(Numeric) || [ true, false ].include?(value) }
+        errors.add(:authorize_params, "values have to be plain, not nested")
+      end
+    end
+
+    def usable_uri(value)
+      uri = URI.parse(value.to_s)
+
+      uri.is_a?(URI::HTTP) && uri.host.present? ? uri : nil
+    rescue URI::InvalidURIError
+      nil
+    end
 
     def post(url, **params)
       request(url) do |uri|

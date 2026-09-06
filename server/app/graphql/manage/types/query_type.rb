@@ -41,6 +41,14 @@ module Manage
 
       field :namespaces, [ NamespaceType ], null: false
 
+      field :providers, [ ProviderType ], null: false do
+        argument :archived, Boolean, required: false
+      end
+
+      field :provider, ProviderType do
+        argument :key, ID
+      end
+
       field :scopes_supported, [ String ], null: false
 
       field :minimum_password, Integer, null: false
@@ -126,6 +134,16 @@ module Manage
 
       def namespaces
         Namespace.includes(:client).order(:name)
+      end
+
+      def providers(archived: false)
+        scope = archived ? ::Provider.where.not(archived_at: nil) : ::Provider.active
+
+        scope.order(:name)
+      end
+
+      def provider(key:)
+        ::Provider.find_by(key: key)
       end
 
       def scopes_supported
