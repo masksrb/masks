@@ -8,3 +8,9 @@ masks_postgres_port: 5432
 masks_postgres_user: masks
 masks_postgres_database: masks
 masks_tenants: []
+masks_mail_from: ""
+masks_smtp_address: ""
+masks_smtp_port: 587
+masks_smtp_username: ""
+masks_smtp_password: ""
+masks_smtp_domain: ""

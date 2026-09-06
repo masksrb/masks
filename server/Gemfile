@@ -15,6 +15,7 @@ gem "webauthn", "~> 3.4"
 gem "fido_metadata", "~> 0.5"
 gem "device_detector", "~> 1.1"
 gem "graphql", "~> 2.6"
+gem "premailer-rails", "~> 1.12"
 gem "ruby-vips", "~> 2.2", require: false
 
 gem "tzinfo-data", platforms: %i[ windows jruby ]
@@ -35,6 +36,7 @@ end
 
 group :development do
   gem "web-console"
+  gem "letter_opener_web", "~> 3.0"
 end
 
 group :test do

@@ -13,6 +13,16 @@ services:
       MASKS_TENANTS: "{{ masks_tenants | join(',') }}"
       MASKS_PUBLIC_ORIGIN_TEMPLATE: "{{ masks_public_origin_template }}"
       MASKS_SETUP_TOKEN: "{{ masks_setup_token }}"
+{% if masks_mail_from %}
+      MASKS_MAIL_FROM: "{{ masks_mail_from }}"
+      MASKS_SMTP_ADDRESS: "{{ masks_smtp_address }}"
+      MASKS_SMTP_PORT: "{{ masks_smtp_port }}"
+      MASKS_SMTP_USERNAME: "{{ masks_smtp_username }}"
+      MASKS_SMTP_PASSWORD: "{{ masks_smtp_password }}"
+{% if masks_smtp_domain %}
+      MASKS_SMTP_DOMAIN: "{{ masks_smtp_domain }}"
+{% endif %}
+{% endif %}
       SECRET_KEY_BASE: "{{ masks_secret_key_base }}"
       ENCRYPTION_PRIMARY_KEY: "{{ masks_encryption_primary_key }}"
       ENCRYPTION_DETERMINISTIC_KEY: "{{ masks_encryption_deterministic_key }}"
