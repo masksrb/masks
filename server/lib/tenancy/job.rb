@@ -27,6 +27,12 @@ module Tenancy
       end
     end
 
+    def initialize(...)
+      super
+
+      @tenant_held = Current.tenant&.uuid
+    end
+
     def serialize
       super.merge(KEY => enqueued_in)
     end
@@ -35,19 +41,24 @@ module Tenancy
       super
 
       @tenant_carried = true
-      @tenant_uuid = job_data[KEY]
+      @tenant_held = job_data[KEY]
     end
 
     def perform_now
-      return super if self.class.across_tenants || @tenant_uuid == EVERY
+      within_tenant { super }
+    end
 
-      held = @tenant_uuid.presence
+    def within_tenant(&block)
+      return yield if self.class.across_tenants || @tenant_held == EVERY
+      return yield if @tenant_held.blank? && !@tenant_carried
 
-      return Tenant.switch(Tenant.active.find_by!(uuid: held)) { super } if held
+      raise Homeless, self.class.name if @tenant_held.blank?
 
-      raise Homeless, self.class.name if @tenant_carried
+      Tenant.switch(held_tenant, &block)
+    end
 
-      super
+    def held_tenant
+      @tenant_held.presence && Tenant.active.find_by!(uuid: @tenant_held)
     end
 
     private
@@ -55,7 +66,7 @@ module Tenancy
       def enqueued_in
         return EVERY if self.class.across_tenants
 
-        Current.tenant&.uuid || raise(Homeless, self.class.name)
+        @tenant_held || Current.tenant&.uuid || raise(Homeless, self.class.name)
       end
   end
 end
