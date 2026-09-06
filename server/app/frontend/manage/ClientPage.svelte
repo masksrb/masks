@@ -4,6 +4,7 @@
   import Consents from "./Consents.svelte";
   import Events from "./Events.svelte";
   import Namespaces from "./Namespaces.svelte";
+  import Tokens from "./Tokens.svelte";
   import ScopesEditor from "./ScopesEditor.svelte";
   import Card from "./ui/Card.svelte";
   import Facts from "./ui/Facts.svelte";
@@ -33,6 +34,11 @@
         consents(limit: 25) {
           id scopes audience updatedAt
           actor { uuid nickname }
+        }
+        tokens(limit: 25) {
+          id kind scopes audience parentId createdAt expiresAt
+          actor { uuid nickname }
+          device { id label }
         }
       }
       scopesSupported
@@ -222,6 +228,13 @@
 
         <Card title="Who has allowed it in" lede="Cutting somebody off revokes every token it holds for them.">
           <Consents {api} {feedback} rows={client.consents} onchange={load} showActor />
+        </Card>
+
+        <Card
+          title="Tokens outstanding"
+          lede="What this client is holding right now, newest first."
+        >
+          <Tokens {api} {feedback} rows={client.tokens} onchange={load} showActor />
         </Card>
 
         <Card title="Activity" lede="What this client has done, and what has been done to it.">

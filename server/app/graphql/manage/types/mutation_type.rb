@@ -23,6 +23,7 @@ module Manage
       field :update_provider, mutation: Mutations::UpdateProvider
       field :archive_provider, mutation: Mutations::ArchiveProvider
       field :restore_provider, mutation: Mutations::RestoreProvider
+      field :revoke_token, mutation: Mutations::RevokeToken
       field :revoke_connection, mutation: Mutations::RevokeConnection
       field :revoke_consent, mutation: Mutations::RevokeConsent
       field :revoke_session, mutation: Mutations::RevokeSession

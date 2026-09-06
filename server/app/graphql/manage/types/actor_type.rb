@@ -15,6 +15,7 @@ module Manage
       field :devices, [ "Manage::Types::DeviceType" ], null: false
       field :connections, [ "Manage::Types::ConnectionType" ], null: false
       field :consents, [ "Manage::Types::ConsentType" ], null: false
+      field :tokens, [ "Manage::Types::TokenType" ], null: false
 
       field :events, [ "Manage::Types::EventType" ], null: false do
         argument :limit, Integer, required: false
@@ -87,6 +88,13 @@ module Manage
 
       def consents
         ::Consent.live.where(actor_id: object.id).includes(:client).order(updated_at: :desc)
+      end
+
+      def tokens
+        ::Token.where(type: TokenType::GRANTS, actor_id: object.id)
+               .live
+               .includes(:client, :device)
+               .order(created_at: :desc)
       end
 
       def events(limit: nil)

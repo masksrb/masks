@@ -39,6 +39,14 @@ module Manage
         argument :id, ID
       end
 
+      field :tokens, [ TokenType ], null: false do
+        argument :actor, ID, required: false
+        argument :client, ID, required: false
+        argument :kind, String, required: false
+        argument :live, Boolean, required: false
+        argument :limit, Integer, required: false
+      end
+
       field :connections, [ ConnectionType ], null: false do
         argument :actor, ID, required: false
         argument :provider, ID, required: false
@@ -148,6 +156,22 @@ module Manage
         ::Device.find_by(id: id)
       end
 
+      def tokens(actor: nil, client: nil, kind: nil, live: true, limit: nil)
+        subject = actor.present? ? Actor.find_by(uuid: actor) : nil
+        held = client.present? ? Client.find_by(client_id: client) : nil
+
+        return ::Token.none if actor.present? && subject.nil?
+        return ::Token.none if client.present? && held.nil?
+
+        scope = granted.includes(:actor, :client, :device).order(created_at: :desc)
+        scope = scope.live if live
+        scope = scope.where(actor: subject) if subject
+        scope = scope.where(client: held) if held
+        scope = scope.where(type: typed(kind)) if kind.present?
+
+        scope.limit(bounded(limit))
+      end
+
       def connections(actor: nil, provider: nil, revoked: false, limit: nil)
         subject = actor.present? ? Actor.find_by(uuid: actor) : nil
         held = provider.present? ? ::Provider.find_by(key: provider) : nil
@@ -245,6 +269,15 @@ module Manage
       end
 
       private
+
+        def granted
+          ::Token.where(type: Types::TokenType::GRANTS)
+        end
+
+        def typed(kind)
+          Types::TokenType::KINDS.key(kind.to_s) ||
+            raise(GraphQL::ExecutionError, "no token kind called #{kind}")
+        end
 
         def signed_in_on
           Session.where.not(device_id: nil).select(:device_id)
