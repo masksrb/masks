@@ -73,6 +73,26 @@ class Token < ApplicationRecord
     revoked
   end
 
+  def root
+    held = self
+    held = held.parent while held.parent
+
+    held
+  end
+
+  def revoke_family!
+    revoked = 0
+    frontier = [ root ]
+
+    while (token = frontier.shift)
+      revoked += 1 if token.live?
+      token.update!(consumed_at: Time.current) unless token.consumed?
+      frontier.concat(token.children.to_a)
+    end
+
+    revoked
+  end
+
   def consumed?
     consumed_at.present?
   end
