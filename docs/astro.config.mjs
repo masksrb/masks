@@ -26,11 +26,24 @@ const staticIndex = {
   },
 };
 
+const clientPort = Number(process.env.DEV_CLIENT_PORT) || undefined;
+const allowedHosts = process.env.DEV_ALLOWED_HOSTS?.split(",").filter(Boolean);
+
 export default defineConfig({
   // Where it is published. DOCS_SITE overrides it for a preview deploy; without
   // either, @astrojs/sitemap silently emits nothing and canonical URLs are absent.
   site: process.env.DOCS_SITE || "https://masks.pages.dev",
   image: { service: passthroughImageService() },
+  server: allowedHosts ? { host: true, allowedHosts } : {},
+  vite: clientPort
+    ? {
+        server: {
+          allowedHosts,
+          ws: { clientPort },
+          watch: { usePolling: true, interval: 300 },
+        },
+      }
+    : {},
   integrations: [starlight({
     title: "masks",
     description:
