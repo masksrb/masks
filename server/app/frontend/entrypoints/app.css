@@ -135,11 +135,11 @@
     --ink: #211c18;
     --ink-soft: #58514c;
 
-    --came: #87611e;
-    --signal: #b04000;
-    --signal-ink: #ffffff;
-    --signal-lift: #8f3400;
-    --ring: rgba(176, 64, 0, 0.28);
+    --came: #58514c;
+    --signal: #211c18;
+    --signal-ink: #fcf9f7;
+    --signal-lift: #000000;
+    --ring: rgba(33, 28, 24, 0.22);
 
     --bad: #b53530;
     --bad-field: #fbf0ef;
@@ -148,7 +148,7 @@
     --info: #0077b2;
     --info-field: #edf5fa;
 
-    --glow: rgba(176, 64, 0, 0.06);
+    --glow: rgba(33, 28, 24, 0.05);
     --bend: 5px;
   }
 
@@ -161,11 +161,11 @@
       --ink: #e9e5e2;
       --ink-soft: #aca6a2;
 
-      --came: #b58a41;
-      --signal: #ff8f53;
+      --came: #aca6a2;
+      --signal: #e9e5e2;
       --signal-ink: #1a1614;
-      --signal-lift: #ffa877;
-      --ring: rgba(255, 143, 83, 0.32);
+      --signal-lift: #ffffff;
+      --ring: rgba(233, 229, 226, 0.26);
 
       --bad: #ff867a;
       --bad-field: rgba(255, 134, 122, 0.1);
@@ -174,7 +174,7 @@
       --info: #00c2fe;
       --info-field: rgba(0, 194, 254, 0.1);
 
-      --glow: rgba(181, 138, 65, 0.14);
+      --glow: rgba(233, 229, 226, 0.06);
     }
   }
 
@@ -216,6 +216,19 @@
     max-width: 30rem;
   }
 
+  .setup-ready {
+    --signal: var(--glass-emerald);
+    --signal-ink: #ffffff;
+    --signal-lift: var(--glass-verdant);
+    --ring: color-mix(in oklab, var(--glass-emerald) 26%, transparent);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .setup-ready {
+      --signal-ink: #06231a;
+    }
+  }
+
   .surface-place {
     max-width: 52rem;
     margin: 0 auto;
@@ -232,11 +245,6 @@
     margin-inline: auto;
     padding-left: 2rem;
     padding-right: 2rem;
-  }
-
-  .surface-ceremony .prompt-head {
-    align-items: flex-start;
-    text-align: left;
   }
 
   .disclosure {
@@ -386,11 +394,6 @@
     overflow-wrap: anywhere;
   }
 
-  .surface-ceremony {
-    max-width: 40rem;
-    margin: 0 auto;
-  }
-
   .auth-pair {
     display: flex;
     align-items: center;
@@ -455,101 +458,12 @@
     list-style: none;
   }
 
-  .ceremony {
-    display: grid;
-    grid-template-columns: 13rem 1fr;
-    gap: 3rem;
-    align-items: start;
-  }
-
-  @media (max-width: 44rem) {
-    .ceremony {
-      grid-template-columns: 1fr;
-      gap: 1.75rem;
-    }
-  }
-
-  .record {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-  }
-
   .record-cap {
     font-size: 0.6875rem;
     font-weight: 700;
     letter-spacing: 0.16em;
     text-transform: uppercase;
     color: var(--came);
-  }
-
-  .rec-rows {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .rec-row {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 0.75rem;
-    padding: 0.5rem 0;
-    border-top: 1px solid var(--line);
-    font-size: 0.8125rem;
-  }
-
-  .rec-row:first-child {
-    padding-top: 0;
-    border-top: 0;
-  }
-
-  .rec-key {
-    flex: none;
-    color: var(--ink-soft);
-  }
-
-  .rec-val {
-    min-width: 0;
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-    text-align: right;
-    overflow-wrap: anywhere;
-  }
-
-  .rec-val-pending {
-    color: color-mix(in oklab, var(--ink-soft) 42%, transparent);
-  }
-
-  .rec-val-fixed {
-    color: var(--ink-soft);
-  }
-
-  .rec-meter {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .rec-bar {
-    display: flex;
-    gap: 3px;
-  }
-
-  .rec-seg {
-    flex: 1;
-    height: 3px;
-    border-radius: 2px;
-    background: var(--line-firm);
-  }
-
-  .rec-seg-on {
-    background: var(--signal);
-  }
-
-  .rec-count {
-    font-size: 0.75rem;
-    color: var(--ink-soft);
-    font-variant-numeric: tabular-nums;
   }
 
   .place {
@@ -734,6 +648,64 @@
     font-size: 0.9375rem;
     line-height: 1.5;
     overflow-wrap: anywhere;
+  }
+
+  .ledger-row-tight {
+    padding: 0.625rem 0;
+    gap: 0.25rem;
+  }
+
+  .ledger-row-tight .ledger-value {
+    font-size: 0.8125rem;
+  }
+
+  .ledger-step {
+    --step: var(--line-firm);
+  }
+
+  .ledger-step-1 {
+    --earned: var(--glass-violet);
+  }
+
+  .ledger-step-2 {
+    --earned: var(--glass-cobalt);
+  }
+
+  .ledger-step-3 {
+    --earned: var(--glass-cyan);
+  }
+
+  .ledger-step-4 {
+    --earned: var(--glass-emerald);
+  }
+
+  .ledger-step-done {
+    --step: var(--earned);
+  }
+
+  .ledger-step .ledger-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--ink-soft);
+    transition: color 0.2s ease;
+  }
+
+  .ledger-step .ledger-label::before {
+    content: "";
+    width: 0.4375rem;
+    height: 0.4375rem;
+    border-radius: 50%;
+    background: var(--step);
+    transition: background-color 0.2s ease;
+  }
+
+  .ledger-step-done .ledger-label {
+    color: var(--step);
+  }
+
+  .ledger-step-done .control:not(:focus) {
+    border-color: color-mix(in oklab, var(--step) 45%, var(--line));
   }
 
   .grant-scopes {
