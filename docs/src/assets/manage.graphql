@@ -321,9 +321,9 @@ type Provider {
 type Query {
   activity(days: Int): [ActivityDay!]!
   actor(uuid: ID!): Actor
-  actors(limit: Int, search: String): [Actor!]!
+  actors(afterId: ID, limit: Int, search: String): [Actor!]!
   client(clientId: ID!): Client
-  clients(archived: Boolean, limit: Int, search: String): [Client!]!
+  clients(afterId: ID, archived: Boolean, limit: Int, search: String): [Client!]!
   connections(actor: ID, limit: Int, provider: ID, revoked: Boolean): [Connection!]!
   consents(actor: ID, client: ID, limit: Int, revoked: Boolean): [Consent!]!
   device(id: ID!): Device

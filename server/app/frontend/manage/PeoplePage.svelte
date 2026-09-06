@@ -19,9 +19,11 @@
     devices { id label category known ipAddress userAgent lastSeenAt blockedAt }
   `;
 
+  const PAGE = 50;
+
   const QUERY = `
-    query People($search: String) {
-      actors(search: $search) {
+    query People($search: String, $afterId: ID, $limit: Int) {
+      actors(search: $search, afterId: $afterId, limit: $limit) {
         uuid nickname name email emailVerified otpEnabled backupCodesRemaining
         lastLoginAt scopes activated invitedAt
         avatars { photo identicon }
@@ -57,6 +59,8 @@
   let people = $state([]);
   let loose = $state([]);
   let loading = $state(true);
+  let more = $state(false);
+  let exhausted = $state(false);
 
   let adding = $state(false);
   let nickname = $state("");
@@ -68,22 +72,36 @@
   let busy = $state(false);
   let created = $state(null);
 
-  async function load() {
-    loading = true;
+  async function load(afterId = null) {
+    if (afterId) more = true;
+    else loading = true;
 
     try {
-      const data = await api.query(QUERY, { search: search.trim() || null });
+      const data = await api.query(QUERY, {
+        search: search.trim() || null,
+        afterId,
+        limit: PAGE,
+      });
 
-      people = data.actors;
+      people = afterId ? [...people, ...data.actors] : data.actors;
       loose = data.devices;
+      exhausted = data.actors.length < PAGE;
     } catch (thrown) {
       feedback.blame(thrown);
     } finally {
       loading = false;
+      more = false;
     }
   }
 
+  function again() {
+    exhausted = false;
+    load();
+  }
+
   load();
+
+  const oldest = $derived(people.at(-1)?.uuid ?? null);
 
   async function open() {
     nickname = "";
@@ -175,7 +193,7 @@
       bind:value={search}
       label="Search people"
       placeholder="nickname, email or name"
-      onsearch={load}
+      onsearch={again}
     />
     <button type="button" class="btn btn-primary btn-sm" onclick={open}>Add somebody</button>
   {/snippet}
@@ -339,6 +357,19 @@
         {/each}
       {/snippet}
     </Table>
+
+    {#if !exhausted && people.length}
+      <div>
+        <button
+          type="button"
+          class="btn btn-ghost btn-sm"
+          disabled={more}
+          onclick={() => load(oldest)}
+        >
+          {more ? "Loading..." : "Show more"}
+        </button>
+      </div>
+    {/if}
 
     {#if loose.length}
       <Card title="Devices nobody has signed in on">

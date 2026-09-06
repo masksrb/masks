@@ -91,14 +91,7 @@ class Event < ApplicationRecord
 
   validates :action, inclusion: { in: ACTIONS }
 
-  scope :newest_first, -> { order(created_at: :desc, id: :desc) }
-  scope :after, ->(id) {
-    held = klass.where(id: id).pick(:created_at, :id)
-
-    next none if held.nil?
-
-    where("(events.created_at, events.id) < (?, ?)", *held)
-  }
+  include Paged
 
   class << self
     def record!(action, actor: nil, by: :subject, client: nil, device: :ambient,

@@ -944,6 +944,87 @@ class ManageApiTest < ActionDispatch::IntegrationTest
     assert_not within(@tenant) { Namespace.exists?(name: "uris:") }
   end
 
+  test "people page past the first screenful, without repeating or skipping anybody" do
+    token = bearer
+
+    within(@tenant) do
+      6.times { |at| Actor.create!(nickname: "paged#{at}", password: "password") }
+    end
+
+    first = ask("query { actors(limit: 4) { uuid nickname } }", token).dig("data", "actors")
+
+    assert_equal 4, first.length
+
+    rest = ask(
+      "query Rest($afterId: ID!) { actors(afterId: $afterId, limit: 10) { uuid nickname } }",
+      token, afterId: first.last["uuid"]
+    ).dig("data", "actors")
+
+    held = (first + rest).map { |one| one["uuid"] }
+
+    assert_equal held.uniq, held
+    assert_equal within(@tenant) { Actor.count }, held.length
+  end
+
+  test "a search pages too, and keeps to what matches" do
+    token = bearer
+
+    within(@tenant) do
+      5.times { |at| Actor.create!(nickname: "seeker#{at}", password: "password") }
+      2.times { |at| Actor.create!(nickname: "other#{at}", password: "password") }
+    end
+
+    first = ask(
+      'query { actors(search: "seeker", limit: 3) { uuid nickname } }', token
+    ).dig("data", "actors")
+
+    assert_equal 3, first.length
+
+    rest = ask(
+      'query Rest($afterId: ID!) {
+        actors(search: "seeker", afterId: $afterId, limit: 10) { uuid nickname }
+      }',
+      token, afterId: first.last["uuid"]
+    ).dig("data", "actors")
+
+    held = (first + rest).map { |one| one["nickname"] }
+
+    assert_equal 5, held.length
+    assert(held.all? { |one| one.start_with?("seeker") })
+  end
+
+  test "clients page past the first screenful" do
+    token = bearer
+
+    within(@tenant) do
+      5.times { |at| create_client(@tenant, name: "Paged #{at}") }
+    end
+
+    first = ask("query { clients(limit: 3) { clientId } }", token).dig("data", "clients")
+
+    assert_equal 3, first.length
+
+    rest = ask(
+      "query Rest($afterId: ID!) { clients(afterId: $afterId, limit: 10) { clientId } }",
+      token, afterId: first.last["clientId"]
+    ).dig("data", "clients")
+
+    held = (first + rest).map { |one| one["clientId"] }
+
+    assert_equal held.uniq, held
+    assert_equal within(@tenant) { Client.active.count }, held.length
+  end
+
+  test "a cursor that names nothing yields nothing rather than starting over" do
+    token = bearer
+
+    body = ask(
+      'query { actors(afterId: "not-a-uuid", limit: 10) { uuid } }', token
+    )
+
+    assert_empty body.dig("data", "actors")
+  end
+
   private
 
     def claim!(resource: "https://demo.uris.test/mcp", name: "uris:")
