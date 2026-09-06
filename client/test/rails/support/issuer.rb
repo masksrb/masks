@@ -335,6 +335,8 @@ class TestIssuer
         "handshake_endpoint" => "#{url}/handshake",
         "revocation_endpoint" => "#{url}/revoke",
         "end_session_endpoint" => "#{url}/logout",
+        "backchannel_logout_supported" => true,
+        "backchannel_logout_session_supported" => true,
         "introspection_endpoint" => "#{url}/introspect",
         "avatar_endpoint" => "#{url}/avatars",
         "avatar_styles_supported" => %w[photo identicon initials],

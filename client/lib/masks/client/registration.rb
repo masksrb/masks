@@ -23,7 +23,8 @@ module Masks
           "token_endpoint_auth_method" => attributes[:token_endpoint_auth_method],
           "application_type" => attributes[:application_type],
           "client_uri" => attributes[:client_uri],
-          "logo_uri" => attributes[:logo_uri]
+          "logo_uri" => attributes[:logo_uri],
+          "backchannel_logout_uri" => attributes[:backchannel_logout_uri]
         }.reject { |_, value| value.nil? || (value.respond_to?(:empty?) && value.empty?) }
       end
 

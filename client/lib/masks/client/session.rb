@@ -92,6 +92,10 @@ module Masks
         true
       end
 
+      def logout_token(token)
+        Logout.verify(token, issuer: issuer, audience: client_id)
+      end
+
       def end_session_url(post_logout_redirect_uri: nil, state: nil, id_token_hint: nil)
         pairs = [ [ "client_id", client_id ] ]
         pairs << [ "id_token_hint", id_token_hint ] if id_token_hint

@@ -1,7 +1,8 @@
 class Handshake
   GRANT_TYPES = %w[authorization_code refresh_token].freeze
 
-  attr_reader :name, :redirect_uris, :resource, :scopes, :return_to, :state, :auth_method
+  attr_reader :name, :redirect_uris, :resource, :scopes, :return_to, :state, :auth_method,
+              :backchannel_logout_uri
 
   class << self
     def from_request(request)
@@ -15,7 +16,8 @@ class Handshake
         scopes: params["scope"],
         return_to: params["return_to"],
         state: params["state"],
-        auth_method: params["token_endpoint_auth_method"]
+        auth_method: params["token_endpoint_auth_method"],
+        backchannel_logout_uri: params["backchannel_logout_uri"]
       )
     end
 
@@ -31,7 +33,8 @@ class Handshake
         scopes: row.scopes,
         return_to: row.redirect_uri,
         state: held["state"],
-        auth_method: held["auth_method"]
+        auth_method: held["auth_method"],
+        backchannel_logout_uri: held["backchannel_logout_uri"]
       )
     end
   end
@@ -44,7 +47,8 @@ class Handshake
       "return_to" => return_to,
       "state" => state,
       "redirect_uris" => redirect_uris.sort,
-      "auth_method" => auth_method
+      "auth_method" => auth_method,
+      "backchannel_logout_uri" => backchannel_logout_uri
     }.compact
   end
 
@@ -62,12 +66,13 @@ class Handshake
     ]
 
     pairs << [ "state", state ] if state
+    pairs << [ "backchannel_logout_uri", backchannel_logout_uri ] if backchannel_logout_uri
     redirect_uris.each { |uri| pairs << [ "redirect_uris", uri ] }
     pairs
   end
 
   def initialize(name: nil, redirect_uris: nil, resource: nil, scopes: nil,
-                 return_to: nil, state: nil, auth_method: nil)
+                 return_to: nil, state: nil, auth_method: nil, backchannel_logout_uri: nil)
     @name = name.to_s.strip.presence || "An application"
     @redirect_uris = Array(redirect_uris).map(&:to_s).reject(&:empty?).uniq
     @resource = resource.to_s
@@ -75,6 +80,7 @@ class Handshake
     @return_to = return_to.to_s
     @state = state.presence
     @auth_method = auth_method.to_s.presence || Client::DEFAULT_AUTH_METHOD
+    @backchannel_logout_uri = backchannel_logout_uri.to_s.strip.presence
   end
 
   def origin
@@ -115,7 +121,8 @@ class Handshake
         return "token_endpoint_auth_method must be one of #{Client::AUTH_METHODS.join(', ')}"
       end
 
-      elsewhere = ([ return_to ] + redirect_uris).reject { |uri| origin_of(uri) == origin }
+      elsewhere = ([ return_to ] + redirect_uris + Array(backchannel_logout_uri))
+        .reject { |uri| origin_of(uri) == origin }
       return "everything must share the origin #{origin}: #{elsewhere.join(', ')}" if elsewhere.any?
 
       nil

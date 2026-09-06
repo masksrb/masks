@@ -46,6 +46,7 @@ class Client < ApplicationRecord
         grant_types: Handshake::GRANT_TYPES,
         response_types: [ "code" ],
         token_endpoint_auth_method: handshake.auth_method,
+        backchannel_logout_uri: handshake.backchannel_logout_uri,
         client_uri: handshake.origin,
         dynamic: false,
         approved_at: Time.current,

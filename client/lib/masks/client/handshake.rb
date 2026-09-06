@@ -5,16 +5,18 @@ module Masks
       GRANT_TYPES = %w[authorization_code refresh_token].freeze
       AUTH_METHOD = "client_secret_basic".freeze
 
-      attr_reader :issuer, :name, :resource, :redirect_uris, :scope, :return_to
+      attr_reader :issuer, :name, :resource, :redirect_uris, :scope, :return_to,
+                  :backchannel_logout_uri
 
       def initialize(issuer, name:, resource:, redirect_uris:, return_to:,
-                     scope: Session::DEFAULT_SCOPE)
+                     scope: Session::DEFAULT_SCOPE, backchannel_logout_uri: nil)
         @issuer = Issuer.resolve(issuer)
         @name = name.to_s
         @resource = resource.to_s
         @redirect_uris = Array(redirect_uris).map(&:to_s)
         @scope = Array(scope).flat_map { |value| value.to_s.split(/\s+/) }.reject(&:empty?)
         @return_to = return_to.to_s
+        @backchannel_logout_uri = backchannel_logout_uri&.to_s
       end
 
       def endpoint
@@ -34,6 +36,7 @@ module Masks
           [ "state", state ]
         ]
 
+        query << [ "backchannel_logout_uri", backchannel_logout_uri ] if backchannel_logout_uri
         redirect_uris.each { |uri| query << [ "redirect_uris", uri ] }
 
         "#{endpoint}?#{URI.encode_www_form(query)}"
@@ -61,7 +64,8 @@ module Masks
           redirect_uris: redirect_uris,
           grant_types: GRANT_TYPES,
           scope: scope,
-          token_endpoint_auth_method: AUTH_METHOD
+          token_endpoint_auth_method: AUTH_METHOD,
+          backchannel_logout_uri: backchannel_logout_uri
         )
       end
 

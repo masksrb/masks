@@ -327,6 +327,7 @@ Inherits `Masks::Client::Challenge`.
 
 | Attribute | Access |
 | --- | --- |
+| `backchannel_logout_uri` | R |
 | `issuer` | R |
 | `name` | R |
 | `redirect_uris` | R |
@@ -337,7 +338,7 @@ Inherits `Masks::Client::Challenge`.
 ### ::new
 
 ```ruby
-::new(issuer, name:, resource:, redirect_uris:, return_to:, scope: Session::DEFAULT_SCOPE)
+::new(issuer, name:, resource:, redirect_uris:, return_to:, scope: Session::DEFAULT_SCOPE, backchannel_logout_uri: nil)
 ```
 
 ### #complete
@@ -477,6 +478,60 @@ Inherits `Masks::Client::Error`.
 
 ```ruby
 #tenant()
+```
+
+## Masks::Client::Logout
+
+| Constant | Value |
+| --- | --- |
+| `EVENT` | `"http://schemas.openid.net/event/backchannel-logout".freeze` |
+| `ALGORITHMS` | `Verifier::ALGORITHMS` |
+| `LEEWAY` | `60` |
+
+| Attribute | Access |
+| --- | --- |
+| `claims` | R |
+
+### ::new
+
+```ruby
+::new(claims)
+```
+
+### ::verify
+
+```ruby
+::verify(token, issuer:, audience:, algorithms: ALGORITHMS)
+```
+
+### #issued_at
+
+```ruby
+#issued_at()
+```
+
+### #jti
+
+```ruby
+#jti()
+```
+
+### #sid
+
+```ruby
+#sid()
+```
+
+### #subject
+
+```ruby
+#subject()
+```
+
+### #validate!
+
+```ruby
+#validate!()
 ```
 
 ## Masks::Client::Pkce
@@ -769,6 +824,12 @@ Inherits `Masks::Client::Error`.
 
 ```ruby
 #introspect(token, hint: nil)
+```
+
+### #logout_token
+
+```ruby
+#logout_token(token)
 ```
 
 ### #profile

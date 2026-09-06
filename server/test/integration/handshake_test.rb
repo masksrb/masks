@@ -57,6 +57,32 @@ class HandshakeTest < ActionDispatch::IntegrationTest
     within(@tenant) { Client.approved.sole }
   end
 
+  BACKCHANNEL = "#{APP}/auth/logout/backchannel".freeze
+
+  test "an app that asks to be told about logout is registered for it" do
+    sign_in_as(@owner)
+    connect(backchannel_logout_uri: BACKCHANNEL)
+    approve!
+
+    assert_equal BACKCHANNEL, approved.backchannel_logout_uri
+  end
+
+  test "a logout uri somewhere other than the app's own origin is refused" do
+    sign_in_as(@owner)
+    connect(backchannel_logout_uri: "https://elsewhere.test/out")
+
+    assert_response :bad_request
+    assert_match "must share the origin", response.body
+  end
+
+  test "an app that asks for nothing is registered for nothing" do
+    sign_in_as(@owner)
+    connect
+    approve!
+
+    assert_nil approved.backchannel_logout_uri
+  end
+
   test "a signed-in owner is shown what is being connected, and where it will be sent back" do
     sign_in_as(@owner)
     connect

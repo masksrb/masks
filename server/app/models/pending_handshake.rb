@@ -16,7 +16,8 @@ class PendingHandshake < Token
         "name" => handshake.name,
         "redirect_uris" => handshake.redirect_uris,
         "state" => handshake.state,
-        "auth_method" => handshake.auth_method
+        "auth_method" => handshake.auth_method,
+        "backchannel_logout_uri" => handshake.backchannel_logout_uri
       }.compact
     )
   end
