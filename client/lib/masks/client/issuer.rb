@@ -51,6 +51,10 @@ module Masks
         discovery.fetch(name) { raise Rejected.new("invalid_issuer", "#{url} publishes no #{name}") }
       end
 
+      def backchannel_logout?
+        discovery["backchannel_logout_supported"] == true
+      end
+
       def avatar_styles
         discovery["avatar_styles_supported"] || Claims::Avatars::STYLES
       end

@@ -6,7 +6,7 @@ module Masks
       attr_accessor :scope, :namespace, :resource, :resource_scopes, :after_sign_in,
                     :after_sign_out, :session_key, :sign_out_of_issuer, :parent_controller,
                     :credentials_path, :authenticate_everything
-      attr_writer :issuer, :redirect_uri, :name, :credentials, :store, :forget
+      attr_writer :issuer, :redirect_uri, :name, :credentials, :store, :forget, :logged_out
 
       def initialize
         @scope = Masks::Client::Session::DEFAULT_SCOPE
@@ -60,6 +60,21 @@ module Masks
 
       def configured?(request)
         client_id_for(request).present?
+      end
+
+      def backchannel_logout_uri_for(request)
+        return nil unless @logged_out.respond_to?(:call)
+        return nil unless Masks::Client::Issuer.resolve(issuer_for(request)).backchannel_logout?
+
+        "#{request.base_url}#{routes.backchannel_logout_path}"
+      end
+
+      def logged_out!(request, logout)
+        return false unless @logged_out.respond_to?(:call)
+
+        @logged_out.arity == 1 ? @logged_out.call(logout) : @logged_out.call(request, logout)
+
+        true
       end
 
       def can_forget?
@@ -124,7 +139,8 @@ module Masks
             raise(Unconfigured, "Masks::Rails.config.resource is not set"),
           redirect_uris: [ redirect_uri_for(request) ],
           return_to: return_to_for(request),
-          scope: approved_scope
+          scope: approved_scope,
+          backchannel_logout_uri: backchannel_logout_uri_for(request)
         )
       end
 

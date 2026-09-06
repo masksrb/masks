@@ -228,6 +228,7 @@ prose is the RDoc in the source.
 | `credentials_path` | RW |
 | `forget` | W |
 | `issuer` | W |
+| `logged_out` | W |
 | `name` | W |
 | `namespace` | RW |
 | `parent_controller` | RW |
@@ -249,6 +250,12 @@ prose is the RDoc in the source.
 
 ```ruby
 #approved_scope()
+```
+
+### #backchannel_logout_uri_for
+
+```ruby
+#backchannel_logout_uri_for(request)
 ```
 
 ### #can_forget?
@@ -309,6 +316,12 @@ prose is the RDoc in the source.
 
 ```ruby
 #issuer_speaks!(request)
+```
+
+### #logged_out!
+
+```ruby
+#logged_out!(request, logout)
 ```
 
 ### #name_for
