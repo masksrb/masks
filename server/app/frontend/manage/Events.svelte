@@ -35,7 +35,9 @@
             {/if}
 
             {#if event.client}
-              <span class="badge badge-ghost badge-xs">{event.client.name}</span>
+              <Link to={`/clients/${event.client.clientId}`} class="badge badge-ghost badge-xs">
+                {event.client.name}
+              </Link>
             {/if}
           </span>
 
