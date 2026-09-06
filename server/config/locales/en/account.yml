@@ -7,6 +7,7 @@ en:
       nav:
         avatar: "Avatar"
         applications: "Applications"
+        connections: "Connections"
         passkeys: "Passkeys"
         devices: "Devices"
         email: "Email"
@@ -24,6 +25,16 @@ en:
 
       applications:
         heading: "Applications"
+        revoke: "Cut off"
+        confirm_revoke: "Cut %{client} off? It has to ask again the next time you sign in, and anything it is holding stops working."
+
+      connections:
+        heading: "Connections"
+        lede: "Accounts elsewhere that are linked to this one. An application you allow in can be handed one, and a connection may be a way of signing in here."
+        signs_you_in: "signs you in"
+        connect: "Connect %{provider}"
+        disconnect: "Disconnect"
+        confirm_disconnect: "Disconnect %{provider}? Anything relying on it stops working, and if you sign in with it you will need another way in."
 
       passkeys:
         heading: "Passkeys"

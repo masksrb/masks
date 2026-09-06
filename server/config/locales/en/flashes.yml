@@ -4,6 +4,14 @@ en:
     renamed: "Device renamed."
     signed_out: "That device has been signed out."
 
+  consents:
+    unknown: "There is no such application on this account."
+    revoked: "%{client} has been cut off, and has to ask again."
+
+  connections:
+    unknown: "There is no such connection on this account."
+    disconnected: "%{provider} has been disconnected."
+
   passkeys:
     expired: "That enrolment expired. Try again."
     crowded: "You already have as many passkeys as this server keeps."

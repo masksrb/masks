@@ -1,6 +1,7 @@
 <script>
   import { createFeedback } from "./lib/feedback.svelte.js";
   import { day, joined } from "./lib/format.js";
+  import Consents from "./Consents.svelte";
   import Events from "./Events.svelte";
   import Namespaces from "./Namespaces.svelte";
   import ScopesEditor from "./ScopesEditor.svelte";
@@ -29,6 +30,10 @@
         }
         approvedBy { nickname }
         namespaces { name resource claimedAt releasable }
+        consents(limit: 25) {
+          id scopes audience updatedAt
+          actor { uuid nickname }
+        }
       }
       scopesSupported
     }
@@ -213,6 +218,10 @@
             A signed logout token is posted there, carrying the subject and the session id, and
             retried for a while if the client does not answer.
           </p>
+        </Card>
+
+        <Card title="Who has allowed it in" lede="Cutting somebody off revokes every token it holds for them.">
+          <Consents {api} {feedback} rows={client.consents} onchange={load} showActor />
         </Card>
 
         <Card title="Activity" lede="What this client has done, and what has been done to it.">

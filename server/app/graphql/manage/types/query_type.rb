@@ -39,6 +39,20 @@ module Manage
         argument :id, ID
       end
 
+      field :connections, [ ConnectionType ], null: false do
+        argument :actor, ID, required: false
+        argument :provider, ID, required: false
+        argument :revoked, Boolean, required: false
+        argument :limit, Integer, required: false
+      end
+
+      field :consents, [ ConsentType ], null: false do
+        argument :actor, ID, required: false
+        argument :client, ID, required: false
+        argument :revoked, Boolean, required: false
+        argument :limit, Integer, required: false
+      end
+
       field :namespaces, [ NamespaceType ], null: false
 
       field :providers, [ ProviderType ], null: false do
@@ -132,6 +146,36 @@ module Manage
 
       def device(id:)
         ::Device.find_by(id: id)
+      end
+
+      def connections(actor: nil, provider: nil, revoked: false, limit: nil)
+        subject = actor.present? ? Actor.find_by(uuid: actor) : nil
+        held = provider.present? ? ::Provider.find_by(key: provider) : nil
+
+        return ::Connection.none if actor.present? && subject.nil?
+        return ::Connection.none if provider.present? && held.nil?
+
+        scope = ::Connection.includes(:provider, :actor).order(created_at: :desc)
+        scope = revoked ? scope.where.not(revoked_at: nil) : scope.live unless revoked.nil?
+        scope = scope.where(actor: subject) if subject
+        scope = scope.where(provider: held) if held
+
+        scope.limit(bounded(limit))
+      end
+
+      def consents(actor: nil, client: nil, revoked: false, limit: nil)
+        subject = actor.present? ? Actor.find_by(uuid: actor) : nil
+        held = client.present? ? Client.find_by(client_id: client) : nil
+
+        return ::Consent.none if actor.present? && subject.nil?
+        return ::Consent.none if client.present? && held.nil?
+
+        scope = ::Consent.includes(:client, :actor).order(updated_at: :desc)
+        scope = revoked ? scope.where.not(revoked_at: nil) : scope.live unless revoked.nil?
+        scope = scope.where(actor: subject) if subject
+        scope = scope.where(client: held) if held
+
+        scope.limit(bounded(limit))
       end
 
       def namespaces

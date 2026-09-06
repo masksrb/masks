@@ -26,8 +26,20 @@ module Manage
       field :secret_expires_at, GraphQL::Types::ISO8601DateTime
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
 
+      field :consents, [ "Manage::Types::ConsentType" ], null: false do
+        argument :limit, Integer, required: false
+      end
+
       field :events, [ "Manage::Types::EventType" ], null: false do
         argument :limit, Integer, required: false
+      end
+
+      def consents(limit: nil)
+        ::Consent.live
+                 .where(client_id: object.id)
+                 .includes(:actor)
+                 .order(updated_at: :desc)
+                 .limit(limit || QueryType::LIMIT)
       end
 
       def events(limit: nil)
