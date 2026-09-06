@@ -169,7 +169,10 @@ test("the authorize url carries pkce, the resource, and a stored state", async (
   assert.equal(url.searchParams.get("response_type"), "code");
   assert.equal(url.searchParams.get("client_id"), "app-1");
   assert.equal(url.searchParams.get("code_challenge_method"), "S256");
-  assert.equal(url.searchParams.get("scope"), "openid profile uris:catalog:read");
+  assert.equal(
+    url.searchParams.get("scope"),
+    "openid profile uris:catalog:read",
+  );
   assert.deepEqual(url.searchParams.getAll("resource"), [
     "https://app.test/mcp",
   ]);

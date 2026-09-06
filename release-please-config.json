@@ -3,6 +3,18 @@
   "separate-pull-requests": true,
   "include-component-in-tag": true,
   "packages": {
+    "server": {
+      "release-type": "simple",
+      "component": "server",
+      "changelog-path": "CHANGELOG.md",
+      "changelog-sections": [
+        { "type": "feat", "section": "Features" },
+        { "type": "fix", "section": "Fixes" },
+        { "type": "perf", "section": "Performance" },
+        { "type": "docs", "section": "Documentation" },
+        { "type": "refactor", "section": "Refactoring" }
+      ]
+    },
     "client": {
       "release-type": "ruby",
       "component": "gem",

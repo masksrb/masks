@@ -16,6 +16,32 @@ The provider is a deployable rather than a gem: it holds a database and the sign
 stays standalone. Everything an application needs to sign in against it is the one `masks` gem,
 whose Rails half loads only when Rails does.
 
+The server ships as a container image, built for amd64 and arm64 and attested to the commit it came
+from. It needs a Postgres and four secrets, and it migrates itself on the way up.
+
+```sh
+docker pull ghcr.io/masksrb/masks:latest
+```
+
+```yml
+services:
+  masks:
+    image: ghcr.io/masksrb/masks:latest
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: masks
+      POSTGRES_PASSWORD: ...
+      POSTGRES_DATABASE: masks
+      MASKS_TENANTS: acme
+      MASKS_PUBLIC_ORIGIN_TEMPLATE: https://%{subdomain}.auth.example.com
+      SECRET_KEY_BASE: ...
+      ENCRYPTION_PRIMARY_KEY: ...
+      ENCRYPTION_DETERMINISTIC_KEY: ...
+      ENCRYPTION_KEY_DERIVATION_SALT: ...
+```
+
+`deploy/roles/masks` is the same thing as an Ansible role, behind a reverse proxy.
+
 ```sh
 bin/setup   # dependencies, databases, two declared tenants
 bin/dev     # http://demo.auth.test:5555
