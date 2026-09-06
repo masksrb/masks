@@ -13,6 +13,8 @@ en:
       not_you: "Not you?"
       sign_out: "Sign out"
       use_passkey: "Use a passkey"
+      or: "or"
+      continue_with: "Continue with %{provider}"
       waiting_for_passkey: "Waiting for your passkey"
       passkey_unoffered: "This server did not offer a passkey challenge."
       passkey_unusable: "That passkey could not be used on this device."
@@ -99,6 +101,12 @@ en:
       invitation-expired: "That invitation is no longer valid. Ask for another."
       reset-expired: "That reset link is no longer valid. Ask for another."
       no-mailer: "This server cannot send email. Ask an administrator."
+      sso-failed: "That sign-in did not complete. Try again."
+      sso-expired: "That sign-in took too long. Try again."
+      sso-unavailable: "That way of signing in is not available."
+      sso-no-account: "No account here matches that sign-in. Ask for an invitation."
+      sso-unverified: "That provider did not confirm the address belongs to you."
+      sso-domain-refused: "That address is not allowed to sign in here."
 
     notices:
       reset-sent: "If that account exists, a reset link is on its way."

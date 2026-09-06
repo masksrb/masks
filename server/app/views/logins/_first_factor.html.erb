@@ -16,6 +16,8 @@
   <button type="submit" class="action"><%= t("logins.shared.continue") %></button>
 <% end %>
 
+<%= render "logins/providers", login: login %>
+
 <%= form_with url: login_path, method: :post, id: "forgot-password", class: "flow" do |form| %>
   <%= hidden_field_tag :rid, login.rid %>
   <%= form.hidden_field :event, value: "forgot-password" %>

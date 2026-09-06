@@ -35,8 +35,11 @@ const SAID = {
   "consent.granted": "Consent granted",
   "connection.linked": "Provider connected",
   "connection.unlinked": "Provider disconnected",
+  "connection.signed_in": "Signed in with a provider",
+  "connection.refused": "Provider sign-in refused",
 
   "actor.created": "Person added",
+  "actor.provisioned": "Person created by a provider",
   "actor.updated": "Profile edited",
   "actor.deleted": "Person deleted",
   "actor.scopes_changed": "Scopes changed",
@@ -71,6 +74,7 @@ const GRAVE = new Set([
   "device.blocked",
   "actor.deleted",
   "authenticator.disabled",
+  "connection.refused",
 ]);
 
 const NOTABLE = new Set([

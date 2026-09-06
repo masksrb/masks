@@ -249,7 +249,10 @@ CREATE TABLE public.connections (
     revoked_at timestamp(6) without time zone,
     revoked_reason character varying,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    email character varying,
+    email_verified boolean DEFAULT false NOT NULL,
+    signed_in_at timestamp(6) without time zone
 );
 
 ALTER TABLE ONLY public.connections FORCE ROW LEVEL SECURITY;
@@ -530,7 +533,15 @@ CREATE TABLE public.providers (
     label_claim character varying DEFAULT 'email'::character varying NOT NULL,
     archived_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    issuer character varying,
+    jwks_uri character varying,
+    jwks jsonb DEFAULT '{}'::jsonb NOT NULL,
+    jwks_fetched_at timestamp(6) without time zone,
+    signs_in boolean DEFAULT false NOT NULL,
+    provisions boolean DEFAULT false NOT NULL,
+    email_domains text DEFAULT ''::text NOT NULL,
+    signup_scopes text DEFAULT ''::text NOT NULL
 );
 
 ALTER TABLE ONLY public.providers FORCE ROW LEVEL SECURITY;
@@ -1307,6 +1318,13 @@ CREATE UNIQUE INDEX index_providers_on_tenant_id_and_key ON public.providers USI
 
 
 --
+-- Name: index_providers_on_tenant_id_and_signs_in; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_providers_on_tenant_id_and_signs_in ON public.providers USING btree (tenant_id, signs_in);
+
+
+--
 -- Name: index_sessions_on_actor_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1901,6 +1919,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260906000003'),
 ('20260906000002'),
 ('20260906000001'),
 ('20260905000004'),

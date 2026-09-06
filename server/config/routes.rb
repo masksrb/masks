@@ -9,6 +9,7 @@ Rails.application.routes.draw do
   get "/login", to: "logins#show", as: :login
   post "/login", to: "logins#update"
   delete "/login", to: "logins#destroy"
+  get "/login/provider/:key/callback", to: "logins#provider", as: :login_provider_callback
   match "/logout", to: "sessions#destroy", via: %i[get post delete], as: :logout
 
   get "/invite/:token", to: "links#invitation", as: :invitation

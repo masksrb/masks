@@ -4,6 +4,7 @@ class Login
     LoginStates::Invitation,
     LoginStates::PasswordReset,
     LoginStates::Passkey,
+    LoginStates::Provider,
     LoginStates::Identifier,
     LoginStates::Password,
     LoginStates::FirstFactor,
@@ -20,6 +21,7 @@ class Login
   end
 
   attr_reader :store, :updates, :event, :prompt, :warnings, :request, :session, :device, :refusal, :rid
+  attr_accessor :redirect_to
 
   def initialize(store:, request: nil, session: nil, device: nil, rid: nil, event: nil, updates: {})
     @store = store
