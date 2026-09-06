@@ -2,81 +2,80 @@
 import { defineConfig, passthroughImageService } from "astro/config";
 import starlight from "@astrojs/starlight";
 
+import react from "@astrojs/react";
+
+// The RDoc site under public/api/ is plain files. Cloudflare Pages resolves a
+// directory to its index.html; `astro dev` does not, so /api/ruby/ 404s only
+// while developing. Do it here so the published URL and the local one match.
+const staticIndex = {
+  name: "masks:static-index",
+  hooks: {
+    "astro:server:setup"({ server }) {
+      server.middlewares.use((request, _response, next) => {
+        const [path, query] = (request.url ?? "").split("?");
+
+        if (path.startsWith("/api/") && !path.split("/").pop().includes(".")) {
+          const directory = path.endsWith("/") ? path : `${path}/`;
+
+          request.url = `${directory}index.html${query ? `?${query}` : ""}`;
+        }
+
+        next();
+      });
+    },
+  },
+};
+
 export default defineConfig({
   // Where it is published. DOCS_SITE overrides it for a preview deploy; without
   // either, @astrojs/sitemap silently emits nothing and canonical URLs are absent.
   site: process.env.DOCS_SITE || "https://masks.pages.dev",
   image: { service: passthroughImageService() },
-  integrations: [
-    starlight({
-      title: "masks",
-      logo: {
-        src: "./src/assets/dark-logo.png",
-        alt: "masks",
+  integrations: [starlight({
+    title: "masks",
+    description:
+      "A standalone OIDC provider with per-tenant signing keys, and the client gem that signs apps in against it.",
+    customCss: ["./src/styles/global.css"],
+    social: [
+      {
+        icon: "github",
+        label: "GitHub",
+        href: "https://github.com/masksrb/masks",
       },
-      description:
-        "A standalone OIDC provider with per-tenant signing keys, and the client gem that signs apps in against it.",
-      customCss: ["./src/styles/global.css"],
-      social: [
-        {
-          icon: "github",
-          label: "GitHub",
-          href: "https://github.com/masksrb/masks",
-        },
-      ],
-      sidebar: [
-        {
-          label: "Start here",
-          items: [
-            { label: "Overview", slug: "index" },
-            { label: "Running it", slug: "start/running" },
-            { label: "The three pieces", slug: "start/pieces" },
-          ],
-        },
-        {
-          label: "Concepts",
-          items: [
-            { label: "Tenancy", slug: "concepts/tenancy" },
-            { label: "Signing keys", slug: "concepts/keys" },
-            { label: "The login machine", slug: "concepts/login" },
-            { label: "Devices", slug: "concepts/devices" },
-            { label: "Avatars", slug: "concepts/avatars" },
-            { label: "Policies", slug: "concepts/policies" },
-            { label: "Tokens and audiences", slug: "concepts/tokens" },
-            { label: "Hardening", slug: "concepts/hardening" },
-          ],
-        },
-        {
-          label: "Guides",
-          items: [
-            { label: "Connect an app", slug: "guides/handshake" },
-            { label: "Sign a Rails app in", slug: "guides/rails" },
-            { label: "Sign an SPA in", slug: "guides/spa" },
-            { label: "Verify a token", slug: "guides/verifying" },
-            { label: "Register a connector", slug: "guides/connectors" },
-            { label: "Narrow a token", slug: "guides/exchange" },
-          ],
-        },
-        {
-          label: "Libraries",
-          items: [
-            { label: "Masks::Client", slug: "libraries/ruby" },
-            { label: "Masks::Rails", slug: "libraries/rails" },
-            { label: "@masks/client", slug: "libraries/browser" },
-          ],
-        },
-        {
-          label: "Reference",
-          items: [
-            { label: "Protocol", slug: "reference/protocol" },
-            { label: "Endpoints", slug: "reference/endpoints" },
-            { label: "Configuration", slug: "reference/configuration" },
-            { label: "Models", slug: "reference/models" },
-            { label: "Conformance", slug: "reference/conformance" },
-            { label: "Releasing", slug: "reference/releasing" },
-          ],
-        },
-      ],
-    }),
-  ],
+    ],
+    sidebar: [
+      { label: "Overview", slug: "index" },
+      { label: "Quickstart", slug: "quickstart", badge: { text: "todo", variant: "caution" } },
+      { label: "Demo", slug: "demo", badge: { text: "todo", variant: "caution" } },
+      {
+        label: "Concepts",
+        items: [
+          { label: "Tenants", slug: "concepts/tenants" },
+          { label: "Actors", slug: "concepts/actors" },
+          { label: "Clients", slug: "concepts/clients" },
+          { label: "Scopes", slug: "concepts/scopes" },
+          { label: "Namespaces", slug: "concepts/namespaces" },
+          { label: "Sessions and devices", slug: "concepts/sessions" },
+          { label: "Signing keys", slug: "concepts/keys" },
+        ],
+      },
+      {
+        label: "Reference",
+        items: [
+          { label: "GraphQL", slug: "reference/manage" },
+          { label: "Explorer", slug: "reference/explorer" },
+          { label: "@masks/client", slug: "reference/browser" },
+          { label: "Masks::Client", slug: "reference/ruby" },
+          { label: "Masks::Rails", slug: "reference/rails" },
+          {
+            label: "Masks::Client",
+            link: "/api/ruby/",
+            attrs: { target: "_blank" },
+            badge: { text: "sdoc", variant: "note" },
+          },
+          { label: "Design", slug: "reference/design" },
+        ],
+      },
+    ],
+  }), react(), staticIndex],
 });

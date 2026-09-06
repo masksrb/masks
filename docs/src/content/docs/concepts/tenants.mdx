@@ -1,0 +1,23 @@
+---
+title: Tenants
+description: One masks deployment serves many tenants, isolated three ways.
+---
+
+A tenant is a subdomain with its own actors, clients and signing keys. One deployment serves many,
+and nothing crosses between them.
+
+Isolation is three layers, because each fails differently:
+
+| Layer | What it does | How it fails |
+| --- | --- | --- |
+| `TenantScoped` | scopes every query in the application | by omission — a forgotten scope leaks |
+| Row-level security | `FORCE ROW LEVEL SECURITY` in Postgres | silently, if the connecting role is a superuser |
+| Per-tenant signing keys | a token from one tenant has no `kid` the next can look up | loudly — verification refuses |
+
+The application connects as a non-superuser role precisely so the second layer cannot be bypassed by
+the table's owner.
+
+`Tenant.switch(tenant) { ... }` is how code enters a tenant. Outside it, a query returns nothing
+rather than everything — `Model.unscoped` is zero rows, not all rows.
+
+Tenants come from `MASKS_TENANTS` at deploy, or the first visit claims one when none are declared.

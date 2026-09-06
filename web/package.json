@@ -31,10 +31,13 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "biome check",
     "lint:fix": "biome check --write",
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "reference": "node bin/reference.mjs ../docs/src/content/docs/reference/browser.mdx"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.15",
+    "typedoc": "^0.28.20",
+    "typedoc-plugin-markdown": "^4.13.0",
     "typescript": "^6.0.3"
   }
 }

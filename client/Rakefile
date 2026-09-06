@@ -1,4 +1,79 @@
+require "fileutils"
 require "rake/testtask"
+require "rdoc/task"
+require_relative "doc/mdx_generator"
+
+SDOC_SITE = "../docs/public/api/ruby".freeze
+MDX_PAGES = "../docs/src/content/docs/reference".freeze
+MDX_SCRATCH = "tmp/mdx".freeze
+SOURCES = [ "lib/**/*.rb", "README.md" ].freeze
+
+# Two renderings of one parse. The MDX pages read as part of the docs and are
+# what the sidebar points at; SDoc — the generator behind api.rubyonrails.org —
+# keeps its own search panel and class tree, and is published beside them.
+namespace :reference do
+  RDoc::Task.new(:classic) do |doc|
+    doc.rdoc_dir = SDOC_SITE
+    doc.title = "Masks::Client"
+    doc.rdoc_files.include(*SOURCES)
+    doc.main = "README.md"
+    doc.generator = "sdoc"
+    doc.template = "rails"
+  end
+
+  # RDoc refuses to write into a directory holding files it did not create, and
+  # reference/ already holds the other generated pages. Build in tmp/ and move
+  # the two it produces across.
+  RDoc::Task.new(:mdx) do |doc|
+    doc.rdoc_dir = MDX_SCRATCH
+    doc.title = "Masks::Client"
+    doc.rdoc_files.include("lib/**/*.rb")
+    doc.generator = "mdx"
+  end
+end
+
+Rake::Task["reference:mdx"].enhance do
+  FileUtils.mkdir_p(MDX_PAGES)
+
+  Dir.glob("#{MDX_SCRATCH}/*.mdx").each do |page|
+    FileUtils.cp(page, File.join(MDX_PAGES, File.basename(page)))
+  end
+
+  FileUtils.rm_rf(MDX_SCRATCH)
+end
+
+desc "Build both renderings of the gem's API reference"
+task reference: %w[reference:mdx reference:classic]
+
+# SDoc copies the main page to index.html without rewriting its relative links,
+# so every ../classes/ href on it resolves a directory too high. The real page
+# is under files/; make the root redirect to it rather than serve broken links.
+Rake::Task["reference:classic"].enhance do
+  site = SDOC_SITE
+  landing = "files/README_md.html"
+
+  File.write("#{site}/index.html", <<~HTML)
+    <!doctype html>
+    <meta charset="utf-8">
+    <title>Masks::Client</title>
+    <link rel="canonical" href="#{landing}">
+    <meta http-equiv="refresh" content="0; url=#{landing}">
+    <p><a href="#{landing}">Masks::Client</a></p>
+  HTML
+
+  # The palette is the docs' own; SDoc hardcodes hex, so it goes on last. Each
+  # page sits at its own depth, so the link is copied from the one already
+  # there rather than guessed.
+  FileUtils.cp("doc/rose.css", "#{site}/css/rose.css")
+
+  Dir.glob("#{site}/**/*.html").each do |page|
+    html = File.read(page)
+    github = html[/<link[^>]*href="[^"]*github\.css"[^>]*>/]
+    next if github.nil? || html.include?("rose.css")
+
+    File.write(page, html.sub(github, "#{github}\n#{github.sub('github.css', 'rose.css')}"))
+  end
+end
 
 %w[client rails].each do |half|
   Rake::TestTask.new("test:#{half}") do |t|

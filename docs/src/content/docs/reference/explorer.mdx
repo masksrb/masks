@@ -1,0 +1,16 @@
+---
+title: Explorer
+description: Browse the /manage GraphQL schema, with autocomplete and the docs pane.
+---
+
+import sdl from "../../../assets/manage.graphql?raw";
+import Explorer from "../../../components/Explorer.tsx";
+
+The same schema as the [Manage API](/reference/manage/) reference, in GraphiQL. Autocomplete, the
+docs pane and validation all run against the published schema — nothing here talks to a server.
+
+To actually run a query, put your own instance's `/manage/graphql` in the endpoint box. It answers
+only to a bearer carrying `masks:manage` issued for that tenant's manage resource, so the browser
+has to be signed in to the console on the same origin.
+
+<Explorer client:only="react" sdl={sdl} />

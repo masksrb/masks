@@ -1,0 +1,28 @@
+---
+title: Scopes
+description: What a token is allowed to do, and the prefixes an app publishes beneath.
+---
+
+A scope is a string. Four are standard — `openid`, `profile`, `email`, `offline_access` — and masks
+reserves the `masks:` prefix for itself.
+
+| Scope | |
+| --- | --- |
+| `masks:manage` | the console, and the GraphQL API behind it |
+| `masks:handshake` | connect an application to this tenant |
+| `masks:connections:*` | act through a connected provider |
+
+## Prefixes
+
+A scope ending in a colon is a prefix — a [namespace](/concepts/namespaces/) an application claims,
+so it can publish scopes of its own beneath it without masks knowing them in advance.
+
+Coverage is one-directional: holding `things:` grants `things:read`, but a bare prefix is never
+itself *covered* by anything. So a prefix cannot be granted by holding it — it is granted by
+claiming the namespace, which adds it to the actor's list outright.
+
+## The ceiling
+
+Every grant is bounded twice: by the client's `allowed_scopes`, and by the actor's own list. A token
+carries the intersection, never more, and an actor stripped of a scope cannot keep using a token
+that still names it.

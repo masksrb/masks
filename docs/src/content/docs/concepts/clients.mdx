@@ -1,0 +1,35 @@
+---
+title: Clients
+description: An application registered against a tenant.
+---
+
+A client is an application allowed to start a sign-in. It holds redirect URIs, the resources it
+speaks for, and the scopes it may ask for.
+
+## How one gets here
+
+Two ways, and the console shows which:
+
+- **approved** — a person completed the `/handshake` flow and the credentials came back server to
+  server. Nothing was pasted between the two.
+- **self-registered** — RFC 7591 dynamic registration. Bounded by the tenant's ceiling, and never
+  granted a `masks:` scope.
+
+Only an approved client may hold a reserved `masks:` scope. That is what stops a stranger's
+connector registering itself with administrative reach.
+
+## Scopes
+
+| | |
+| --- | --- |
+| `required_scopes` | always granted, never shown on a consent screen |
+| `allowed_scopes` | everything else it may ask for |
+
+## Secrets and archiving
+
+`token_endpoint_auth_method` is `client_secret_basic`, `client_secret_post`, or `none` for a public
+client with no secret to rotate. Rotating issues a new secret and the old one stops working
+immediately.
+
+Archiving is the end of a client — it can no longer sign anybody in — but it is not a delete, and
+any [namespace](/concepts/namespaces/) it claimed survives until released.
