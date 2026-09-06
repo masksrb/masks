@@ -2,6 +2,7 @@
   import { createFeedback } from "./lib/feedback.svelte.js";
   import { day } from "./lib/format.js";
   import Events from "./Events.svelte";
+  import Namespaces from "./Namespaces.svelte";
   import ScopesEditor from "./ScopesEditor.svelte";
   import BarChart from "./ui/BarChart.svelte";
   import Card from "./ui/Card.svelte";
@@ -23,6 +24,10 @@
       }
       viewer { nickname scopes }
       tally { actors clients sessions devices }
+      namespaces {
+        name resource claimedAt releasable
+        client { clientId name }
+      }
       scopesSupported
     }
   `;
@@ -259,6 +264,10 @@
             onchange={(dynamicClientScopes) => update({ dynamicClientScopes }, "Ceiling updated.")}
           />
         </Card>
+
+        {#if data.namespaces.length}
+          <Namespaces {api} rows={data.namespaces} onreleased={load} showClient />
+        {/if}
 
         <Card
           title="Signing keys"

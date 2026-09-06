@@ -321,7 +321,7 @@ type Provider {
 type Query {
   activity(days: Int): [ActivityDay!]!
   actor(uuid: ID!): Actor
-  actors(afterId: ID, limit: Int, search: String): [Actor!]!
+  actors(activated: Boolean, afterId: ID, holds: String, limit: Int, search: String): [Actor!]!
   client(clientId: ID!): Client
   clients(afterId: ID, archived: Boolean, limit: Int, search: String): [Client!]!
   connections(actor: ID, limit: Int, provider: ID, revoked: Boolean): [Connection!]!
