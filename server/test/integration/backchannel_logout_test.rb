@@ -150,6 +150,29 @@ class BackchannelLogoutTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "a client that never answers is written down once the retries run out" do
+    stub_request(:post, LOGOUT_URI).to_return(status: 500)
+
+    access_token_for(actor: @actor, registration: @registration)
+
+    perform_enqueued_jobs do
+      within(@tenant) { Session.live.first.revoke! }
+    rescue BackchannelLogout::Refused
+      nil
+    end
+
+    said, named = within(@tenant) do
+      held = Event.where(action: Event::LOGOUT_UNDELIVERED).first
+
+      [ held, held&.client&.client_id ]
+    end
+
+    assert_not_nil said, "an application that never heard is the thing to know about"
+    assert_equal @actor.id, said.actor_id
+    assert_equal @registration["client_id"], named
+    assert_match(/500/, said.details["said"])
+  end
+
   test "a logout uri with a fragment is refused at registration" do
     body = register(client_name: "Fragmentary", backchannel_logout_uri: "#{LOGOUT_URI}#here")
 

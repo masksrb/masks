@@ -19,7 +19,7 @@ class BackchannelLogoutJob < ApplicationJob
   end
 
   def gave_up!(error)
-    held = arguments.first
+    held = arguments.first.to_h.symbolize_keys
 
     Event.record!(
       Event::LOGOUT_UNDELIVERED,
