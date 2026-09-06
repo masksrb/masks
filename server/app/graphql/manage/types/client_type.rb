@@ -10,6 +10,7 @@ module Manage
       field :resources, [ String ], null: false
       field :required_scopes, [ String ], null: false
       field :allowed_scopes, [ String ], null: false
+      field :namespaces, [ "Manage::Types::NamespaceType" ], null: false
       field :token_endpoint_auth_method, String, null: false
       field :application_type, String, null: false
       field :client_uri, String

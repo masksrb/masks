@@ -17,6 +17,7 @@ class Client < ApplicationRecord
 
   has_many :tokens, dependent: :destroy
   has_many :consents, dependent: :destroy
+  has_many :namespaces, -> { order(:name) }, dependent: :nullify
 
   validates :client_id, presence: true, uniqueness: { scope: :tenant_id }
   validates :name, presence: true

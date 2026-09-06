@@ -9,6 +9,15 @@
 
 <p class="said"><%= @description %></p>
 
-<p class="prompt-lede">
-  Nothing was shared. The application has to fix this.
-</p>
+<% if @console %>
+  <p class="prompt-lede">
+    Nothing was shared. A namespace stays claimed until somebody releases it, so this is yours to
+    settle rather than the application's — archive whatever holds the name, then release it.
+  </p>
+
+  <a class="action" href="<%= @console %>">Open the console</a>
+<% else %>
+  <p class="prompt-lede">
+    Nothing was shared. The application has to fix this.
+  </p>
+<% end %>

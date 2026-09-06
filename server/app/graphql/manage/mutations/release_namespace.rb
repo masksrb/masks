@@ -8,7 +8,7 @@ module Manage
       def resolve(name:)
         held = Namespace.find_by(name: name) || refuse!("no namespace by that name is claimed")
 
-        if held.client && held.client.archived_at.nil?
+        unless held.releasable?
           refuse!("#{held.name} is in use by #{held.client.name}; archive it first")
         end
 
