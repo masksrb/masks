@@ -54,7 +54,7 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.16em;
-  color: var(--dimmer);
+  color: var(--color-secondary);
 }
 
 .stamp {
@@ -84,8 +84,13 @@
   width: 3px;
   align-self: stretch;
   min-height: 1.05em;
-  background: var(--color-secondary);
-  box-shadow: 0 0 10px color-mix(in oklab, var(--color-secondary) 60%, transparent);
+  background: linear-gradient(
+    to bottom,
+    var(--glass-ruby),
+    var(--glass-amber),
+    var(--glass-emerald),
+    var(--glass-cobalt)
+  );
 }
 
 .nav {
@@ -126,8 +131,7 @@
   position: absolute;
   inset: auto 0 -1px 0;
   height: 2px;
-  background: var(--color-secondary);
-  box-shadow: 0 0 12px color-mix(in oklab, var(--color-secondary) 70%, transparent);
+  background: var(--color-primary);
 }
 
 .tally {
@@ -176,13 +180,13 @@
   position: absolute;
   inset: 0 auto 0 0;
   width: 2px;
-  background: var(--color-secondary);
+  background: var(--color-primary);
   opacity: 0;
   transition: opacity 0.18s ease;
 }
 
 .tally-cell:hover {
-  background: color-mix(in oklab, var(--color-base-100) 88%, var(--color-secondary));
+  background: color-mix(in oklab, var(--color-base-100) 88%, var(--color-primary));
 }
 
 .tally-cell:hover::before {
@@ -274,7 +278,7 @@
 }
 
 .console {
-  --chart-ink: var(--color-secondary);
+  --chart-ink: var(--color-primary);
   --chart-idle: color-mix(in oklab, var(--color-base-content) 14%, transparent);
 }
 
@@ -411,27 +415,28 @@
 }
 
 .console .auth-page {
-  --ground: #0a0a0c;
-  --surface: #131316;
-  --line: #26262c;
-  --line-firm: #33333a;
-  --ink: #e7e7ea;
-  --ink-soft: #8b8b95;
+  --ground: #000000;
+  --surface: #0f0b09;
+  --line: #292421;
+  --line-firm: #3d3834;
+  --ink: #e9e5e2;
+  --ink-soft: #aca6a2;
 
-  --signal: #ff3b30;
-  --signal-ink: #14060a;
-  --signal-lift: #ff5a50;
-  --ring: rgba(255, 59, 48, 0.3);
+  --came: #b58a41;
+  --signal: #ff8f53;
+  --signal-ink: #1a1614;
+  --signal-lift: #ffa877;
+  --ring: rgba(255, 143, 83, 0.32);
 
-  --bad: #ff4d4f;
-  --bad-field: rgba(255, 77, 79, 0.1);
-  --warn: #d29a35;
-  --warn-field: rgba(210, 154, 53, 0.1);
-  --info: #97a0ae;
-  --info-field: rgba(151, 160, 174, 0.1);
+  --bad: #ff867a;
+  --bad-field: rgba(255, 134, 122, 0.1);
+  --warn: #d4ad03;
+  --warn-field: rgba(212, 173, 3, 0.1);
+  --info: #00c2fe;
+  --info-field: rgba(0, 194, 254, 0.1);
 
-  --glow: rgba(255, 59, 48, 0.08);
-  --bend: 4px;
+  --glow: rgba(181, 138, 65, 0.14);
+  --bend: 3px;
 }
 
 .console .prompt-title {

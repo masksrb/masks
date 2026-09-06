@@ -256,6 +256,86 @@ table code {
   white-space: nowrap;
 }
 
+/* ---- The explorer ------------------------------------------------------ */
+
+/* GraphiQL takes its theme from nine HSL triples. Handing it the rose palette
+   is cheaper than overriding its components, and it then follows the site. */
+.graphiql-container {
+  --color-primary: 21, 100%, 66%;
+  --color-secondary: 38, 47%, 48%;
+  --color-tertiary: 180, 100%, 41%;
+  --color-info: 194, 100%, 50%;
+  --color-success: 161, 75%, 46%;
+  --color-warning: 49, 97%, 42%;
+  --color-error: 5, 100%, 74%;
+  --color-neutral: 24, 6%, 65%;
+  --color-base: 0, 0%, 0%;
+
+  --font-family: var(--sl-font);
+  --font-family-mono: var(--sl-font-mono);
+  --border-radius-4: var(--step);
+  --border-radius-8: var(--pane);
+  --border-radius-12: var(--pane);
+}
+
+:root[data-theme="light"] .graphiql-container {
+  --color-primary: 22, 100%, 35%;
+  --color-secondary: 38, 64%, 32%;
+  --color-tertiary: 181, 100%, 26%;
+  --color-info: 200, 100%, 35%;
+  --color-success: 156, 100%, 26%;
+  --color-warning: 42, 100%, 27%;
+  --color-error: 2, 58%, 45%;
+  --color-neutral: 25, 7%, 32%;
+  --color-base: 24, 45%, 98%;
+}
+
+.explorer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-block: 1.5rem;
+}
+
+.explorer-endpoint {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  font-size: 0.8125rem;
+}
+
+.explorer-endpoint span {
+  flex: none;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--came-brass);
+}
+
+.explorer-endpoint input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.4375rem 0.625rem;
+  border-radius: var(--step);
+  border: 1px solid var(--lead-200);
+  background: var(--lead-050);
+  color: var(--sl-color-white);
+  font-family: var(--sl-font-mono);
+  font-size: 0.75rem;
+}
+
+.explorer-endpoint input:focus-visible {
+  outline: 2px solid var(--came-brass-lit);
+  outline-offset: 1px;
+}
+
+.explorer-frame {
+  height: min(72vh, 40rem);
+  border-radius: var(--pane);
+  overflow: hidden;
+}
+
 /* ---- The design reference --------------------------------------------- */
 
 .plate {
