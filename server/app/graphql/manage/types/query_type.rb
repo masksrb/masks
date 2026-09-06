@@ -223,7 +223,9 @@ module Manage
       end
 
       def scopes_supported
-        Scopes::DESCRIBED.keys
+        Scopes::DESCRIBED.keys +
+          ::Provider.active.order(:key).map(&:release_scope) +
+          Namespace.order(:name).pluck(:name)
       end
 
       def minimum_password

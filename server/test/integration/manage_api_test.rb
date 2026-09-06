@@ -944,6 +944,27 @@ class ManageApiTest < ActionDispatch::IntegrationTest
     assert_not within(@tenant) { Namespace.exists?(name: "uris:") }
   end
 
+  test "the scopes on offer include what providers and namespaces publish" do
+    token = bearer
+
+    within(@tenant) do
+      Provider.create!(
+        key: "acme", name: "Acme",
+        authorization_url: "https://acme.test/authorize",
+        token_url: "https://acme.test/token",
+        client_id: "upstream"
+      )
+    end
+
+    claim!
+
+    held = ask("query { scopesSupported }", token).dig("data", "scopesSupported")
+
+    assert_includes held, "masks:connections:acme"
+    assert_includes held, "uris:"
+    assert_includes held, Scopes::MANAGE
+  end
+
   test "people page past the first screenful, without repeating or skipping anybody" do
     token = bearer
 
