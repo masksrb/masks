@@ -34,6 +34,28 @@ class RowLevelSecurityTest < ActiveSupport::TestCase
                  "which is the role the application connects as"
   end
 
+  test "every table carrying a tenant_id carries an isolation policy too" do
+    policed = connection.select_values(<<~SQL)
+      SELECT tablename FROM pg_policies WHERE policyname = 'tenant_isolation'
+    SQL
+
+    assert_empty carrying - policed,
+                 "a migration gave these tables a tenant_id and never called " \
+                 "enable_row_level_security, so the database will hand one tenant another's rows"
+  end
+
+  test "every table carrying a tenant_id has a model that scopes itself to one" do
+    unscoped = carrying.reject do |table|
+      models = ApplicationRecord.descendants.select { |model| model.table_name == table }
+
+      models.any? && models.all? { |model| model.include?(TenantScoped) }
+    end
+
+    assert_empty unscoped,
+                 "these tables are tenant data the application reads without TenantScoped, so " \
+                 "every query against them depends on row-level security alone"
+  end
+
   test "the application does not connect as a role that bypasses row-level security" do
     bypasses = connection.select_value(<<~SQL)
       SELECT rolbypassrls OR rolsuper FROM pg_roles WHERE rolname = current_user
@@ -44,7 +66,26 @@ class RowLevelSecurityTest < ActiveSupport::TestCase
                "policy above decorative"
   end
 
+  test "a role that bypasses row-level security is refused before a switch, not after" do
+    Tenant.remove_instance_variable(:@isolated) if Tenant.instance_variable_defined?(:@isolated)
+
+    Tenant.stub(:connection, Struct.new(:held).new.tap { |held|
+      def held.select_one(*) = { "rolname" => "postgres", "bypasses" => true }
+    }) do
+      assert_raises(Tenant::Exposed) { Tenant.switch(@tenant) { flunk "the switch went through" } }
+    end
+  ensure
+    Tenant.remove_instance_variable(:@isolated) if Tenant.instance_variable_defined?(:@isolated)
+  end
+
   private
+
+    def carrying
+      @carrying ||= connection.select_values(<<~SQL)
+        SELECT table_name FROM information_schema.columns
+        WHERE table_schema = 'public' AND column_name = 'tenant_id'
+      SQL
+    end
 
     def connection
       ActiveRecord::Base.connection

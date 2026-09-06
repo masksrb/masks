@@ -5,6 +5,18 @@ class Tenant < ApplicationRecord
     end
   end
 
+  class Exposed < StandardError
+    def initialize(role)
+      super(
+        "this server connects to Postgres as #{role || 'a role it cannot read back'}, which sees " \
+        "through row-level security. Every tenant_isolation policy on the database is decorative " \
+        "while it does, and the only thing left between one tenant and another's actors, tokens " \
+        "and signing keys is a default scope in Ruby. Connect as a role holding neither SUPERUSER " \
+        "nor BYPASSRLS."
+      )
+    end
+  end
+
   has_many :signing_keys, dependent: :destroy
   has_many :actors, dependent: :destroy
   has_many :clients, dependent: :destroy
@@ -69,8 +81,24 @@ class Tenant < ApplicationRecord
       nil
     end
 
+    def isolated!
+      return true if @isolated
+
+      held = connection.select_one(<<~SQL)
+        SELECT rolname, rolsuper OR rolbypassrls AS bypasses
+        FROM pg_roles WHERE rolname = current_user
+      SQL
+
+      raise Exposed, held&.fetch("rolname", nil) unless held && held["bypasses"] == false
+
+      @isolated = true
+    end
+
     def switch(tenant)
       raise ArgumentError, "no tenant" if tenant.nil?
+
+      isolated!
+
       return yield tenant if Current.tenant&.id == tenant.id
 
       previous_tenant = Current.tenant
