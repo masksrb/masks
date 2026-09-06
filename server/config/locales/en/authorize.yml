@@ -1,0 +1,5 @@
+en:
+  authorize:
+    error:
+      heading: "The application asked for something this server will not do."
+      contact: "Nothing was shared. The application has to fix this."

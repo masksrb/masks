@@ -1,3 +1,5 @@
+import { translator } from "./copy.js";
+
 const csrf = () =>
   document.querySelector('meta[name="csrf-token"]')?.content ?? "";
 
@@ -52,7 +54,10 @@ export function createLogin(initial, options = {}) {
     }
   }
 
+  const t = translator(() => auth.copy);
+
   return {
+    t,
     get auth() {
       return auth;
     },

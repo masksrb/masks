@@ -98,14 +98,18 @@ class ResourceMetadataTest < ActiveSupport::TestCase
 
   test "a resource that describes nothing leaves the scope named rather than blank" do
     with_resource({}) do |server|
-      assert_equal [ [ "uris:catalog:read", nil ] ], ResourceMetadata.describe(server.url, "uris:catalog:read")
+      assert_equal [ [ "uris:catalog:read", "Use the uris:catalog:read scope" ] ],
+                   ResourceMetadata.describe(server.url, "uris:catalog:read")
     end
   end
 
   test "a resource that cannot be reached does not stop the screen rendering" do
     described = ResourceMetadata.describe("https://127.0.0.1:1/mcp", "openid uris:catalog:read")
 
-    assert_equal [ [ "openid", "Confirm who you are" ], [ "uris:catalog:read", nil ] ], described
+    assert_equal [
+      [ "openid", "Confirm who you are" ],
+      [ "uris:catalog:read", "Use the uris:catalog:read scope" ]
+    ], described
   end
 
   test "a description is not a place to put a paragraph" do
@@ -158,7 +162,63 @@ class ResourceMetadataTest < ActiveSupport::TestCase
 
   test "a document that is not a document is simply not one" do
     with_resource({ "/.well-known/oauth-protected-resource/mcp" => "<html>nope</html>" }) do |server|
-      assert_equal [ [ "uris:catalog:read", nil ] ], ResourceMetadata.describe(server.url, "uris:catalog:read")
+      assert_equal [ [ "uris:catalog:read", "Use the uris:catalog:read scope" ] ],
+                   ResourceMetadata.describe(server.url, "uris:catalog:read")
     end
+  end
+
+  test "a resource that publishes a language tag is read in that language" do
+    published = {
+      "/.well-known/oauth-protected-resource/mcp" => {
+        "scope_descriptions" => { "uris:catalog:read" => "Search and read your catalog" },
+        "scope_descriptions#fr" => { "uris:catalog:read" => "Chercher et lire votre catalogue" }
+      }
+    }
+
+    with_resource(published) do |server|
+      I18n.with_locale(:en) do
+        assert_equal [ [ "uris:catalog:read", "Search and read your catalog" ] ],
+                     ResourceMetadata.describe(server.url, "uris:catalog:read")
+      end
+    end
+  end
+
+  test "a language masks does not speak falls back to the untagged descriptions" do
+    published = {
+      "/.well-known/oauth-protected-resource/mcp" => {
+        "scope_descriptions" => { "uris:catalog:read" => "Search and read your catalog" },
+        "scope_descriptions#fr" => { "uris:catalog:read" => "Chercher et lire votre catalogue" }
+      }
+    }
+
+    with_resource(published) do |server|
+      described = Localized.fields(
+        JSON.parse(JSON.generate(published.values.first)), "scope_descriptions", locale: :de
+      )
+
+      assert_equal({ "uris:catalog:read" => "Search and read your catalog" }, described)
+      assert_equal [ [ "uris:catalog:read", "Search and read your catalog" ] ],
+                   ResourceMetadata.describe(server.url, "uris:catalog:read")
+    end
+  end
+
+  test "a region asks for its language when the region itself is not published" do
+    document = {
+      "scope_descriptions" => { "jobs:run" => "Run a job" },
+      "scope_descriptions#fr" => { "jobs:run" => "Lancer une tâche" }
+    }
+
+    assert_equal({ "jobs:run" => "Lancer une tâche" },
+                 Localized.fields(document, "scope_descriptions", locale: :"fr-CA"))
+  end
+
+  test "a tagged document adds to the untagged one rather than replacing it" do
+    document = {
+      "scope_descriptions" => { "jobs:run" => "Run a job", "jobs:stop" => "Stop a job" },
+      "scope_descriptions#fr" => { "jobs:run" => "Lancer une tâche" }
+    }
+
+    assert_equal({ "jobs:run" => "Lancer une tâche", "jobs:stop" => "Stop a job" },
+                 Localized.fields(document, "scope_descriptions", locale: :fr))
   end
 end

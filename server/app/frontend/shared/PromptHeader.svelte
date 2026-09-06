@@ -1,8 +1,13 @@
 <script>
-let { heading, login } = $props();
+let { login } = $props();
 
 const client = $derived(login.auth.client);
-const title = $derived(client?.name ? `${heading} to ${client.name}` : heading);
+
+const title = $derived(
+  client?.name
+    ? login.t("heading_to", { client: client.name })
+    : login.t("heading"),
+);
 </script>
 
 <div class="prompt-head">

@@ -1,7 +1,7 @@
 <script>
 import { assert, available, refused } from "../lib/passkey.js";
 
-let { login, label = "Use a passkey" } = $props();
+let { login } = $props();
 
 let busy = $state(false);
 let unusable = $state(null);
@@ -17,7 +17,7 @@ async function start() {
     const options = offer.passkey?.options;
 
     if (!options) {
-      unusable = "This server did not offer a passkey challenge.";
+      unusable = login.t("passkey_unoffered");
       return;
     }
 
@@ -26,7 +26,7 @@ async function start() {
     await login.submit("passkey:verify", { passkey: credential });
   } catch (error) {
     if (!refused(error)) {
-      unusable = "That passkey could not be used on this device.";
+      unusable = login.t("passkey_unusable");
     }
   } finally {
     busy = false;
@@ -43,7 +43,7 @@ async function start() {
       onclick={start}
     >
       {#if busy}<span class="spinner"></span>{/if}
-      {busy ? "Waiting for your passkey" : label}
+      {busy ? login.t("waiting_for_passkey") : login.t("use_passkey")}
     </button>
 
     {#if unusable}

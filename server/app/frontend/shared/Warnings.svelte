@@ -10,6 +10,6 @@ const messages = $derived(login.auth.messages ?? []);
 
 {#if login.failed}
   <div class="note note-warn" role="alert">
-    Could not reach the server. Check your connection.
+    {login.t("unreachable")}
   </div>
 {/if}

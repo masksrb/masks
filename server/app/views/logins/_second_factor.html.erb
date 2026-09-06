@@ -1,5 +1,5 @@
 <div class="prompt-head">
-  <h1 class="prompt-title">Enter your code</h1>
+  <h1 class="prompt-title"><%= t(".title") %></h1>
 </div>
 
 <%= render "logins/identified", login: login %>
@@ -9,7 +9,7 @@
   <%= form.hidden_field :event, value: "otp" %>
 
   <label class="field">
-    <span class="field-label">Six-digit code</span>
+    <span class="field-label"><%= t(".code") %></span>
     <%= form.text_field :code, inputmode: "numeric", pattern: "[0-9]*",
           autocomplete: "one-time-code", maxlength: 6, spellcheck: "false",
           class: "control control-code" %>
@@ -18,19 +18,17 @@
   <% if login.device %>
     <label class="check">
       <%= form.check_box :remember %>
-      <span>
-        Trust this device for <%= distance_of_time_in_words(DeviceFactor::LIFETIME) %>
-      </span>
+      <span><%= t(".trust", duration: distance_of_time_in_words(DeviceFactor::LIFETIME)) %></span>
     </label>
   <% end %>
 
-  <button type="submit" class="action">Continue</button>
+  <button type="submit" class="action"><%= t("logins.shared.continue") %></button>
 <% end %>
 
 <% if login.actor&.backup_codes? %>
   <%= form_with url: login_path, method: :post, id: "use-backup-code", class: "flow" do |form| %>
     <%= hidden_field_tag :rid, login.rid %>
     <%= form.hidden_field :event, value: "use-backup-code" %>
-    <button type="submit" class="action action-plain">Use a backup code</button>
+    <button type="submit" class="action action-plain"><%= t(".use_backup_code") %></button>
   <% end %>
 <% end %>

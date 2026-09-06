@@ -1,6 +1,6 @@
 <div class="chip">
   <span class="chip-mono"><%= login.identifier %></span>
 
-  <%= button_to "Not you?", login_path, method: :delete, params: { rid: login.rid },
+  <%= button_to t("logins.shared.not_you"), login_path, method: :delete, params: { rid: login.rid },
         form_class: "chip-action", class: "textlink" %>
 </div>

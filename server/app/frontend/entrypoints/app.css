@@ -1108,6 +1108,12 @@
     background: var(--bad-field);
   }
 
+  .note-plain {
+    color: var(--ink);
+    background: var(--glow);
+    border-color: var(--line-firm);
+  }
+
   .note-warn {
     color: var(--warn);
     background: var(--warn-field);

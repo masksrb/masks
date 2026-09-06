@@ -1,78 +1,64 @@
 <% nickname = login.updates["nickname"].to_s %>
 <% email = login.updates["email"].to_s %>
+<% tenant = Current.tenant&.name.to_s %>
 
-<div class="ceremony">
-  <aside class="record">
-    <span class="record-cap">Creating</span>
+<div class="auth-pair">
+  <span class="auth-mark auth-mark-client <%= "auth-mark-pending" if nickname.blank? %>" aria-hidden="true"><%= nickname.first&.upcase %></span>
+  <span class="auth-wire"></span>
+  <span class="auth-mark" aria-hidden="true"><%= tenant.first&.upcase %></span>
+</div>
 
-    <div class="rec-rows">
-      <div class="rec-row">
-        <span class="rec-key">owner</span>
-        <span class="rec-val <%= "rec-val-pending" if nickname.blank? %>">
-          <%= nickname.presence || "—" %>
-        </span>
-      </div>
-      <div class="rec-row">
-        <span class="rec-key">email</span>
-        <span class="rec-val <%= "rec-val-pending" if email.blank? %>">
-          <%= email.presence || "—" %>
-        </span>
-      </div>
-      <div class="rec-row">
-        <span class="rec-key">password</span>
-        <span class="rec-val rec-val-pending">—</span>
-      </div>
-      <div class="rec-row">
-        <span class="rec-key">tenant</span>
-        <span class="rec-val rec-val-fixed"><%= Current.tenant&.name %></span>
-      </div>
-      <div class="rec-row">
-        <span class="rec-key">role</span>
-        <span class="rec-val rec-val-fixed">owner</span>
-      </div>
-    </div>
-  </aside>
+<div class="prompt-head">
+  <span class="record-cap"><%= t(".cap") %></span>
+  <h1 class="prompt-title">
+    <%= tenant.present? ? t(".title_named", tenant: tenant) : t(".title") %>
+  </h1>
+</div>
 
-  <div class="flow">
-    <div class="prompt-head">
-      <span class="record-cap">First run</span>
-      <h1 class="prompt-title">Create the owner</h1>
-    </div>
+<div class="note note-plain" role="status"><%= t(".note") %></div>
 
-    <%= form_with url: login_path, method: :post, id: "setup", class: "flow" do |form| %>
-      <%= hidden_field_tag :rid, login.rid %>
-      <%= form.hidden_field :event, value: "setup" %>
+<%= form_with url: login_path, method: :post, id: "setup", class: "flow" do |form| %>
+  <%= hidden_field_tag :rid, login.rid %>
+  <%= form.hidden_field :event, value: "setup" %>
 
-      <% if LoginStates::Setup.token_required? %>
-        <label class="field">
-          <span class="field-label">Setup token</span>
-          <%= form.password_field :token, autocomplete: "off", class: "control" %>
-        </label>
-      <% end %>
-
-      <label class="field">
-        <span class="field-label">Username</span>
-        <%= form.text_field :nickname, value: nickname,
-              autocomplete: "username", autocapitalize: "none", autocorrect: "off",
-              spellcheck: "false", class: "control" %>
+  <div class="slab">
+    <% if LoginStates::Setup.token_required? %>
+      <label class="ledger-row">
+        <span class="ledger-label"><%= t(".token") %></span>
+        <%= form.password_field :token, autocomplete: "off", class: "control" %>
+        <span class="field-hint"><%= t(".token_hint") %></span>
       </label>
-
-      <label class="field">
-        <span class="field-label">Email</span>
-        <%= form.email_field :email, value: email, autocomplete: "email", class: "control" %>
-      </label>
-
-      <label class="field">
-        <span class="field-label">Password</span>
-        <%= form.password_field :password, autocomplete: "new-password", class: "control" %>
-        <span class="field-hint">
-          At least <%= LoginStates::Setup::MINIMUM_PASSWORD %> characters.
-        </span>
-      </label>
-
-      <button type="submit" class="action">Create the owner</button>
     <% end %>
 
-    <p class="aside">This screen will not appear again.</p>
+    <label class="ledger-row">
+      <span class="ledger-label"><%= t("logins.shared.username") %></span>
+      <%= form.text_field :nickname, value: nickname,
+            autocomplete: "username", autocapitalize: "none", autocorrect: "off",
+            spellcheck: "false", class: "control" %>
+    </label>
+
+    <label class="ledger-row">
+      <span class="ledger-label"><%= t("logins.shared.email") %></span>
+      <%= form.email_field :email, value: email, autocomplete: "email", class: "control" %>
+    </label>
+
+    <label class="ledger-row">
+      <span class="ledger-label"><%= t("logins.shared.password") %></span>
+      <%= form.password_field :password, autocomplete: "new-password", class: "control" %>
+      <span class="field-hint"><%= t(".password_hint", minimum: LoginStates::Setup::MINIMUM_PASSWORD) %></span>
+    </label>
+
+    <div class="ledger-row">
+      <span class="ledger-label"><%= t(".origin") %></span>
+      <span class="ledger-value aside-mono"><%= Current.origin %></span>
+    </div>
   </div>
-</div>
+
+  <button type="submit" class="action"><%= t(".submit") %></button>
+<% end %>
+
+<p class="aside">
+  <%= t(".once") %>
+  <%= link_to t(".docs"), Rails.configuration.masks.docs_url,
+        class: "textlink", rel: "noopener", target: "_blank" %>
+</p>

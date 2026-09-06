@@ -36,10 +36,21 @@ class Issuer
       "resource" => manage_resource,
       "authorization_servers" => [ url ],
       "scopes_supported" => [ Scopes::MANAGE ],
-      "scope_descriptions" => { Scopes::MANAGE => Scopes::DESCRIBED[Scopes::MANAGE] },
       "bearer_methods_supported" => [ "header" ],
       "tenant" => tenant.to_identity
-    }
+    }.merge(manage_descriptions)
+  end
+
+  def manage_descriptions
+    default = { "scope_descriptions" => described_manage(I18n.default_locale) }
+
+    Locales.available.reduce(default) do |held, locale|
+      held.merge("scope_descriptions##{Locales.tag(locale)}" => described_manage(locale))
+    end
+  end
+
+  def described_manage(locale)
+    { Scopes::MANAGE => Scopes.description_for(Scopes::MANAGE, locale: locale) }
   end
 
   def sign(claims)
@@ -101,6 +112,7 @@ class Issuer
       "frontchannel_logout_supported" => false,
       "backchannel_logout_supported" => false,
       "scopes_supported" => Scopes::DESCRIBED.keys + connection_scopes,
+      "ui_locales_supported" => Locales.available.map { |locale| Locales.tag(locale) },
       "response_types_supported" => Client::RESPONSE_TYPES,
       "response_modes_supported" => [ "query" ],
       "grant_types_supported" => Client::GRANT_TYPES,

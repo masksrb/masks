@@ -23,10 +23,7 @@ class ResourceMetadata
   end
 
   def descriptions
-    found = document["scope_descriptions"]
-    return {} unless found.is_a?(Hash)
-
-    found.each_with_object({}) do |(scope, description), held|
+    Localized.fields(document, "scope_descriptions").each_with_object({}) do |(scope, description), held|
       held[scope.to_s] = description.to_s.truncate(LONGEST)
     end
   end

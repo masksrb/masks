@@ -1,5 +1,9 @@
 <div class="prompt-head">
   <h1 class="prompt-title">
-    <%= login.client&.name ? "#{heading} to #{login.client.name}" : heading %>
+    <% if login.client&.name %>
+      <%= t("logins.#{key}.heading_to", client: login.client.name) %>
+    <% else %>
+      <%= t("logins.#{key}.heading") %>
+    <% end %>
   </h1>
 </div>

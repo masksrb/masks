@@ -197,14 +197,24 @@ class Login
     end
   end
 
+  def copy
+    key = prompt.to_s.tr("-", "_")
+    shared = I18n.t("logins.shared", default: {})
+    named = key.present? ? I18n.t("logins.#{key}", default: {}) : {}
+
+    shared.merge(named.is_a?(Hash) ? named : {}).transform_keys(&:to_s)
+  end
+
   def as_json(*)
     base = {
       "prompt" => prompt,
       "settled" => settled?,
+      "copy" => copy,
       "warnings" => warnings,
       "messages" => messages,
       "identifier" => identifier,
       "rid" => rid,
+      "docs" => Rails.configuration.masks.docs_url,
       "actor" => actor && { "nickname" => actor.nickname, "name" => actor.name },
       "client" => client && { "name" => client.name, "id" => client.client_id },
       "tenant" => tenant && { "name" => tenant.name }

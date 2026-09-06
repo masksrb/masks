@@ -29,7 +29,7 @@ let { auth } = $props();
 const login = createLogin(untrack(() => auth));
 const Prompt = $derived(prompts[login.prompt]);
 
-const SURFACES = { consent: "grant", setup: "ceremony" };
+const SURFACES = { consent: "grant", setup: "grant" };
 
 $effect(() => {
   const surface = SURFACES[login.prompt] ?? "challenge";
@@ -55,16 +55,16 @@ $effect(() => {
     {#if Prompt}
       <Prompt {login} />
     {:else}
-      <span class="state state-bad">Stopped</span>
+      <span class="state state-bad">{login.t("stopped")}</span>
 
-      <h1 class="prompt-title">This sign-in cannot continue.</h1>
+      <h1 class="prompt-title">{login.t("halted")}</h1>
 
       <button
         type="button"
         class="action action-quiet action-fit"
         onclick={() => login.startOver()}
       >
-        Start over
+        {login.t("start_over")}
       </button>
     {/if}
   </div>

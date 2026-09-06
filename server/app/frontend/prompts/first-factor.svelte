@@ -20,14 +20,14 @@ function onsubmit(event) {
 </script>
 
 <div class="prompt-head">
-  <h1 class="prompt-title">Enter your password</h1>
+  <h1 class="prompt-title">{login.t("title")}</h1>
 </div>
 
 <Identified {login} />
 
 <form {onsubmit} class="flow">
   <label class="field">
-    <span class="field-label">Password</span>
+    <span class="field-label">{login.t("password")}</span>
     <!-- svelte-ignore a11y_autofocus -->
     <input
       type="password"
@@ -41,11 +41,11 @@ function onsubmit(event) {
 
   <button type="submit" class="action" disabled={!valid || login.loading}>
     {#if login.loading}<span class="spinner"></span>{/if}
-    {login.loading ? "Checking" : "Continue"}
+    {login.loading ? login.t("checking") : login.t("continue")}
   </button>
 </form>
 
-<PasskeyButton {login} label="Use a passkey" />
+<PasskeyButton {login} />
 
 <button
   type="button"
@@ -53,5 +53,5 @@ function onsubmit(event) {
   disabled={login.loading}
   onclick={() => login.submit("forgot-password", {})}
 >
-  Forgot it?
+  {login.t("forgot")}
 </button>

@@ -7,12 +7,12 @@ module Scopes
   HANDSHAKE = "masks:handshake".freeze
 
   DESCRIBED = {
-    OPENID => "Confirm who you are",
-    PROFILE => "Read your name and nickname",
-    EMAIL => "Read your email address",
-    OFFLINE => "Stay signed in when you are away",
-    MANAGE => "Modify the masks backend",
-    HANDSHAKE => "Connect an application to this tenant"
+    OPENID => "openid",
+    PROFILE => "profile",
+    EMAIL => "email",
+    OFFLINE => "offline_access",
+    MANAGE => "manage",
+    HANDSHAKE => "handshake"
   }.freeze
 
   STANDARD = [ OPENID, PROFILE, EMAIL, OFFLINE ].freeze
@@ -83,19 +83,25 @@ module Scopes
       list(value).map { |scope| [ scope, description_for(scope) ] }
     end
 
-    def description_for(scope)
-      return DESCRIBED[scope] || described_connection(scope) unless prefix?(scope)
+    def description_for(scope, locale: I18n.locale)
+      if prefix?(scope)
+        return I18n.t("scopes.namespace", namespace: scope.chomp(":"), locale: locale)
+      end
 
-      "Everything #{scope.chomp(':')} asks for, including capabilities it adds later"
+      key = DESCRIBED[scope]
+      return I18n.t("scopes.#{key}", locale: locale) if key
+
+      described_connection(scope, locale: locale) ||
+        I18n.t("scopes.generic", name: scope, locale: locale)
     end
 
-    def described_connection(scope)
+    def described_connection(scope, locale: I18n.locale)
       key = provider_key(scope)
       return nil if key.nil?
 
       name = Provider.active.find_by(key: key)&.name || key
 
-      "Use your #{name} account on your behalf"
+      I18n.t("scopes.connection", provider: name, locale: locale)
     end
   end
 end

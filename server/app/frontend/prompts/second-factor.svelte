@@ -28,14 +28,14 @@ $effect(() => {
 </script>
 
 <div class="prompt-head">
-  <h1 class="prompt-title">Enter your code</h1>
+  <h1 class="prompt-title">{login.t("title")}</h1>
 </div>
 
 <Identified {login} />
 
 <form {onsubmit} class="flow">
   <label class="field">
-    <span class="field-label">Six-digit code</span>
+    <span class="field-label">{login.t("code")}</span>
     <!-- svelte-ignore a11y_autofocus -->
     <input
       type="text"
@@ -54,13 +54,13 @@ $effect(() => {
   {#if login.rememberable}
     <label class="check">
       <input type="checkbox" bind:checked={remember} />
-      <span>Trust this device for 30 days</span>
+      <span>{login.t("trust", { duration: login.auth.trustFor })}</span>
     </label>
   {/if}
 
   <button type="submit" class="action" disabled={!valid || login.loading}>
     {#if login.loading}<span class="spinner"></span>{/if}
-    {login.loading ? "Checking" : "Continue"}
+    {login.loading ? login.t("checking") : login.t("continue")}
   </button>
 </form>
 
@@ -70,6 +70,6 @@ $effect(() => {
     class="action action-plain"
     onclick={() => login.submit("use-backup-code", {})}
   >
-    Use a backup code
+    {login.t("use_backup_code")}
   </button>
 {/if}
