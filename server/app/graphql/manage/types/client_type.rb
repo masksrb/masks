@@ -30,8 +30,20 @@ module Manage
         argument :limit, Integer, required: false
       end
 
+      field :tokens, [ "Manage::Types::TokenType" ], null: false do
+        argument :limit, Integer, required: false
+      end
+
       field :events, [ "Manage::Types::EventType" ], null: false do
         argument :limit, Integer, required: false
+      end
+
+      def tokens(limit: nil)
+        ::Token.where(type: TokenType::GRANTS, client_id: object.id)
+               .live
+               .includes(:actor, :device)
+               .order(created_at: :desc)
+               .limit(limit || QueryType::LIMIT)
       end
 
       def consents(limit: nil)

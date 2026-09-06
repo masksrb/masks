@@ -6,6 +6,7 @@
   import Consents from "./Consents.svelte";
   import Events from "./Events.svelte";
   import Presence from "./Presence.svelte";
+  import Tokens from "./Tokens.svelte";
   import ScopesEditor from "./ScopesEditor.svelte";
   import Card from "./ui/Card.svelte";
   import Field from "./ui/Field.svelte";
@@ -51,6 +52,11 @@
         consents {
           id scopes audience updatedAt
           client { clientId name }
+        }
+        tokens {
+          id kind scopes audience parentId createdAt expiresAt
+          client { clientId name }
+          device { id label }
         }
         events(limit: 25) {
           id action createdAt ipAddress details
@@ -307,6 +313,13 @@
           lede="Upstream accounts linked to this one. A connection that signs in is a way into this account."
         >
           <Connections {api} {feedback} rows={actor.connections} onchange={load} />
+        </Card>
+
+        <Card
+          title="Tokens outstanding"
+          lede="Live tokens issued for this account. Revoking a refresh chain ends everything exchanged along it."
+        >
+          <Tokens {api} {feedback} rows={actor.tokens} onchange={load} />
         </Card>
       </div>
 

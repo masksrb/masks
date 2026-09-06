@@ -128,6 +128,139 @@ class GrantsTest < ActionDispatch::IntegrationTest
     assert_empty missing["data"]["connections"]
   end
 
+  test "the console lists the tokens a person is holding" do
+    refresh = refresh_token!
+
+    data = manage(
+      "query Held($uuid: ID!, $clientId: ID!) {
+        tokens(actor: $uuid, client: $clientId) { id kind scopes client { name } }
+        actor(uuid: $uuid) { tokens { id } }
+      }",
+      uuid: @actor.uuid, clientId: @client.client_id
+    )
+
+    held = data["data"]["tokens"]
+
+    assert_equal [ refresh.id.to_s ], held.map { |one| one["id"] }
+    assert_equal "refresh", held.first["kind"]
+    assert_equal "Probe", held.first["client"]["name"]
+
+    assert_includes data["data"]["actor"]["tokens"].map { |one| one["id"] }, refresh.id.to_s
+  end
+
+  test "invitations and resets are never handed out as tokens" do
+    refresh = refresh_token!
+
+    invitation = within(@tenant) do
+      PasswordReset.mint!(actor: @actor, expires_at: 1.hour.from_now)
+    end
+
+    data = manage("query { tokens { id kind } }")
+    held = data["data"]["tokens"].map { |one| one["id"] }
+
+    assert_includes held, refresh.id.to_s
+    assert_not_includes held, invitation.id.to_s
+  end
+
+  test "a reset token cannot be revoked through the token surface" do
+    reset = within(@tenant) { PasswordReset.mint!(actor: @actor, expires_at: 1.hour.from_now) }
+
+    post "/manage/graphql",
+         params: {
+           query: "mutation Cut($id: ID!) { revokeToken(id: $id) { revoked } }",
+           variables: { id: reset.id }
+         }.to_json,
+         headers: {
+           "CONTENT_TYPE" => "application/json",
+           "HTTP_AUTHORIZATION" => "Bearer #{manage_token}"
+         }
+
+    body = JSON.parse(response.body)
+
+    assert_match(/no token with that id/, body["errors"].to_s)
+    assert_nil within(@tenant) { reset.reload.consumed_at }
+  end
+
+  test "revoking a refresh chain ends everything exchanged along it" do
+    root = refresh_token!
+
+    rotated = within(@tenant) do
+      RefreshToken.mint!(
+        actor: @actor, client: @client, scopes: "openid",
+        parent: root, expires_at: 30.days.from_now
+      )
+    end
+
+    access = within(@tenant) do
+      AccessToken.mint!(
+        actor: @actor, client: @client, scopes: "openid",
+        parent: rotated, expires_at: 1.hour.from_now
+      )
+    end
+
+    data = manage(
+      "mutation Cut($id: ID!) { revokeToken(id: $id, family: true) { revoked } }",
+      id: rotated.id
+    )
+
+    assert_equal 3, data["data"]["revokeToken"]["revoked"]
+
+    within(@tenant) do
+      assert root.reload.consumed_at.present?
+      assert rotated.reload.consumed_at.present?
+      assert access.reload.consumed_at.present?
+      assert Event.exists?(action: Event::TOKEN_REVOKED)
+    end
+  end
+
+  test "revoking one token leaves the rest of the chain alone" do
+    root = refresh_token!
+    other = refresh_token!
+
+    manage("mutation Cut($id: ID!) { revokeToken(id: $id) { revoked } }", id: root.id)
+
+    within(@tenant) do
+      assert root.reload.consumed_at.present?
+      assert_nil other.reload.consumed_at
+    end
+  end
+
+  test "tokens filter by kind, and an unknown kind is refused" do
+    refresh = refresh_token!
+
+    data = manage('query { tokens(kind: "access") { id kind } }')
+    held = data["data"]["tokens"]
+
+    assert_not_empty held
+    assert_equal [ "access" ], held.map { |one| one["kind"] }.uniq
+    assert_not_includes held.map { |one| one["id"] }, refresh.id.to_s
+
+    post "/manage/graphql",
+         params: { query: 'query { tokens(kind: "nonsense") { id } }' }.to_json,
+         headers: {
+           "CONTENT_TYPE" => "application/json",
+           "HTTP_AUTHORIZATION" => "Bearer #{manage_token}"
+         }
+
+    assert_match(/no token kind called nonsense/, JSON.parse(response.body)["errors"].to_s)
+  end
+
+  test "a client shows what it is holding" do
+    refresh_token!
+
+    data = manage(
+      "query Client($clientId: ID!) {
+        client(clientId: $clientId) { tokens { id kind actor { nickname } } }
+      }",
+      clientId: @client.client_id
+    )
+
+    held = data["data"]["client"]["tokens"]
+
+    assert_equal [ "ada" ], held.map { |one| one["actor"]["nickname"] }
+    assert_equal [ "refresh" ], held.map { |one| one["kind"] }
+  end
+
   test "somebody cuts an application off from their own account page" do
     consent = consent!
     token = refresh_token!
