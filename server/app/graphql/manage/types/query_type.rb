@@ -6,6 +6,7 @@ module Manage
 
       field :actors, [ ActorType ], null: false do
         argument :search, String, required: false
+        argument :after_id, ID, required: false
         argument :limit, Integer, required: false
       end
 
@@ -16,6 +17,7 @@ module Manage
       field :clients, [ ClientType ], null: false do
         argument :search, String, required: false
         argument :archived, Boolean, required: false
+        argument :after_id, ID, required: false
         argument :limit, Integer, required: false
       end
 
@@ -105,13 +107,15 @@ module Manage
         Current.tenant
       end
 
-      def actors(search: nil, limit: nil)
-        scope = Actor.order(created_at: :desc)
+      def actors(search: nil, after_id: nil, limit: nil)
+        scope = Actor.newest_first
 
         if search.present?
           term = "%#{Actor.sanitize_sql_like(search.strip)}%"
           scope = scope.where("nickname ILIKE :term OR email ILIKE :term OR name ILIKE :term", term: term)
         end
+
+        scope = scope.after(Actor.find_by(uuid: after_id)&.id) if after_id.present?
 
         scope.limit(bounded(limit))
       end
@@ -120,14 +124,16 @@ module Manage
         Actor.find_by(uuid: uuid)
       end
 
-      def clients(search: nil, archived: false, limit: nil)
+      def clients(search: nil, archived: false, after_id: nil, limit: nil)
         scope = archived ? Client.where.not(archived_at: nil) : Client.active
-        scope = scope.includes(:approved_by, :namespaces).order(created_at: :desc)
+        scope = scope.includes(:approved_by, :namespaces).newest_first
 
         if search.present?
           term = "%#{Client.sanitize_sql_like(search.strip)}%"
           scope = scope.where("name ILIKE :term OR client_id = :exact", term: term, exact: search.strip)
         end
+
+        scope = scope.after(Client.find_by(client_id: after_id)&.id) if after_id.present?
 
         scope.limit(bounded(limit))
       end

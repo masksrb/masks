@@ -17,9 +17,9 @@ schema disagree.
 | --- | --- |
 | `viewer` | [`Actor!`](#actor) |
 | `tenant` | [`Tenant!`](#tenant) |
-| `actors`<br />`search: String`<br />`limit: Int` | [`[Actor!]!`](#actor) |
+| `actors`<br />`search: String`<br />`afterId: ID`<br />`limit: Int` | [`[Actor!]!`](#actor) |
 | `actor`<br />`uuid: ID!` | [`Actor`](#actor) |
-| `clients`<br />`search: String`<br />`archived: Boolean`<br />`limit: Int` | [`[Client!]!`](#client) |
+| `clients`<br />`search: String`<br />`archived: Boolean`<br />`afterId: ID`<br />`limit: Int` | [`[Client!]!`](#client) |
 | `client`<br />`clientId: ID!` | [`Client`](#client) |
 | `sessions`<br />`actor: ID`<br />`limit: Int` | [`[Session!]!`](#session) |
 | `devices`<br />`actor: ID`<br />`blocked: Boolean`<br />`unattached: Boolean`<br />`limit: Int` | [`[Device!]!`](#device) |

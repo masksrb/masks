@@ -1,5 +1,6 @@
 class Client < ApplicationRecord
   include TenantScoped
+  include Paged
 
   AUTH_METHODS = %w[client_secret_basic client_secret_post none].freeze
   DEFAULT_AUTH_METHOD = "client_secret_basic".freeze

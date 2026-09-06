@@ -1,5 +1,6 @@
 class Actor < ApplicationRecord
   include TenantScoped
+  include Paged
 
   MINIMUM_PASSWORD = 8
 
