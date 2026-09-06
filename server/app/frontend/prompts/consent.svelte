@@ -18,16 +18,16 @@ const initial = (name) => (name ? name.slice(0, 1).toUpperCase() : "");
 </div>
 
 <div class="prompt-head">
-  <h1 class="prompt-title">Allow {client}?</h1>
+  <h1 class="prompt-title">{login.t("title", { client })}</h1>
 </div>
 
 <div class="slab">
   <div class="ledger-row">
-    <span class="ledger-label">Access</span>
+    <span class="ledger-label">{login.t("access")}</span>
     <ul class="grant-scopes">
       {#each scopes.hot as [scope, description] (scope)}
         <li class="grant-scope grant-scope-hot">
-          <span>{description ?? `Use the ${scope} scope`}</span>
+          <span>{description}</span>
           <span class="chip-key">{scope}</span>
         </li>
       {/each}
@@ -38,7 +38,7 @@ const initial = (name) => (name ? name.slice(0, 1).toUpperCase() : "");
 
       {#each scopes.rest as [scope, description] (scope)}
         <li class="grant-scope">
-          <span>{description ?? `Use the ${scope} scope`}</span>
+          <span>{description}</span>
           <span class="chip-key">{scope}</span>
         </li>
       {/each}
@@ -47,7 +47,7 @@ const initial = (name) => (name ? name.slice(0, 1).toUpperCase() : "");
 
   {#if audience.length}
     <div class="ledger-row">
-      <span class="ledger-label">On your behalf at</span>
+      <span class="ledger-label">{login.t("audience")}</span>
       {#each audience as resource (resource)}
         <span class="ledger-value aside-mono">{resource}</span>
       {/each}
@@ -63,7 +63,7 @@ const initial = (name) => (name ? name.slice(0, 1).toUpperCase() : "");
     onclick={() => login.submit("consent", { approve: "yes" })}
   >
     {#if login.loading}<span class="spinner"></span>{/if}
-    {login.loading ? "Allowing" : "Allow"}
+    {login.loading ? login.t("working") : login.t("allow")}
   </button>
 
   <button
@@ -72,10 +72,10 @@ const initial = (name) => (name ? name.slice(0, 1).toUpperCase() : "");
     disabled={login.loading}
     onclick={() => login.submit("decline", {})}
   >
-    Deny
+    {login.t("deny")}
   </button>
 </div>
 
 <p class="aside">
-  {login.actor?.nickname} · <a class="textlink" href="/logout">Sign out</a>
+  {login.actor?.nickname} · <a class="textlink" href="/logout">{login.t("sign_out")}</a>
 </p>

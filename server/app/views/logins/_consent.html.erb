@@ -8,16 +8,16 @@
 </div>
 
 <div class="prompt-head">
-  <h1 class="prompt-title">Allow <%= login.client&.name %>?</h1>
+  <h1 class="prompt-title"><%= t(".title", client: login.client&.name) %></h1>
 </div>
 
 <div class="slab">
   <div class="ledger-row">
-    <span class="ledger-label">Access</span>
+    <span class="ledger-label"><%= t(".access") %></span>
     <ul class="grant-scopes">
       <% hot.each do |scope, description| %>
         <li class="grant-scope grant-scope-hot">
-          <span><%= description || "Use the #{scope} scope" %></span>
+          <span><%= description %></span>
           <span class="chip-key"><%= scope %></span>
         </li>
       <% end %>
@@ -28,7 +28,7 @@
 
       <% rest.each do |scope, description| %>
         <li class="grant-scope">
-          <span><%= description || "Use the #{scope} scope" %></span>
+          <span><%= description %></span>
           <span class="chip-key"><%= scope %></span>
         </li>
       <% end %>
@@ -37,7 +37,7 @@
 
   <% if state.audience.any? %>
     <div class="ledger-row">
-      <span class="ledger-label">On your behalf at</span>
+      <span class="ledger-label"><%= t(".audience") %></span>
       <% state.audience.each do |resource| %>
         <span class="ledger-value aside-mono"><%= resource %></span>
       <% end %>
@@ -50,14 +50,14 @@
     <%= hidden_field_tag :rid, login.rid %>
     <%= form.hidden_field :event, value: "consent" %>
     <%= form.hidden_field :approve, value: "yes" %>
-    <button type="submit" class="action">Allow</button>
+    <button type="submit" class="action"><%= t(".allow") %></button>
   <% end %>
 
   <%= form_with url: login_path, method: :post, id: "decline" do |form| %>
     <%= hidden_field_tag :rid, login.rid %>
     <%= form.hidden_field :event, value: "decline" %>
-    <button type="submit" class="action action-quiet action-fit">Deny</button>
+    <button type="submit" class="action action-quiet action-fit"><%= t(".deny") %></button>
   <% end %>
 </div>
 
-<p class="aside"><%= login.actor&.nickname %> · <%= link_to "Sign out", logout_path, class: "textlink" %></p>
+<p class="aside"><%= login.actor&.nickname %> · <%= link_to t("logins.shared.sign_out"), logout_path, class: "textlink" %></p>

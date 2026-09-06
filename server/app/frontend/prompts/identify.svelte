@@ -17,11 +17,11 @@ function onsubmit(event) {
 }
 </script>
 
-<PromptHeader heading="Sign in" {login} />
+<PromptHeader {login} />
 
 <form {onsubmit} class="flow">
   <label class="field">
-    <span class="field-label">Username or email</span>
+    <span class="field-label">{login.t("identifier")}</span>
     <!-- svelte-ignore a11y_autofocus -->
     <input
       type="text"
@@ -38,7 +38,7 @@ function onsubmit(event) {
 
   <button type="submit" class="action" disabled={!valid || login.loading}>
     {#if login.loading}<span class="spinner"></span>{/if}
-    {login.loading ? "Checking" : "Continue"}
+    {login.loading ? login.t("checking") : login.t("continue")}
   </button>
 </form>
 

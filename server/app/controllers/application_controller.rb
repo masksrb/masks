@@ -5,6 +5,7 @@ class ApplicationController < ActionController::Base
   HANDSHAKES = "handshakes".freeze
   TRACKED = 5
 
+  around_action :in_locale
   around_action :within_tenant
   before_action :withhold_referrer
   before_action :refuse_blocked_device
@@ -23,6 +24,16 @@ class ApplicationController < ActionController::Base
 
     def withhold_referrer
       response.headers["Referrer-Policy"] = "same-origin"
+    end
+
+    def in_locale
+      locale = Locales.negotiate(request.headers["Accept-Language"])
+
+      I18n.with_locale(locale) { yield }
+
+      response.headers["Content-Language"] = Locales.tag(locale)
+      response.headers["Vary"] =
+        [ response.headers["Vary"].presence, "Accept-Language" ].compact.join(", ")
     end
 
     def within_tenant

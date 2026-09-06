@@ -8,6 +8,6 @@ let { login } = $props();
     type="button"
     class="textlink chip-action"
     disabled={login.loading}
-    onclick={() => login.startOver()}>Not you?</button
+    onclick={() => login.startOver()}>{login.t("not_you")}</button
   >
 </div>

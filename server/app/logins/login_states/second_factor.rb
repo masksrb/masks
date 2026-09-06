@@ -15,7 +15,10 @@ module LoginStates
     end
 
     def as_json
-      { "rememberable" => device.present? }
+      {
+        "rememberable" => device.present?,
+        "trustFor" => ActionController::Base.helpers.distance_of_time_in_words(DeviceFactor::LIFETIME)
+      }
     end
 
     def start_over!

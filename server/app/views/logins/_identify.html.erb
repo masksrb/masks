@@ -1,15 +1,15 @@
-<%= render "logins/header", heading: "Sign in", login: login %>
+<%= render "logins/header", key: "identify", login: login %>
 
 <%= form_with url: login_path, method: :post, id: "identify", class: "flow" do |form| %>
   <%= hidden_field_tag :rid, login.rid %>
   <%= form.hidden_field :event, value: "identify" %>
 
   <label class="field">
-    <span class="field-label">Username or email</span>
+    <span class="field-label"><%= t(".identifier") %></span>
     <%= form.text_field :identifier, value: login.identifier,
           autocomplete: "username", autocapitalize: "none", autocorrect: "off",
           spellcheck: "false", class: "control" %>
   </label>
 
-  <button type="submit" class="action">Continue</button>
+  <button type="submit" class="action"><%= t("logins.shared.continue") %></button>
 <% end %>

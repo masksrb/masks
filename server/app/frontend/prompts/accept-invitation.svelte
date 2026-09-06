@@ -18,15 +18,17 @@ function onsubmit(event) {
 </script>
 
 <div class="prompt-head">
-  <h1 class="prompt-title">Accept your invitation</h1>
+  <h1 class="prompt-title">{login.t("title")}</h1>
   {#if invitation.invitedBy}
-    <p class="prompt-lede">{invitation.invitedBy} invited you.</p>
+    <p class="prompt-lede">
+      {login.t("invited_by", { nickname: invitation.invitedBy })}
+    </p>
   {/if}
 </div>
 
 <form {onsubmit} class="flow">
   <label class="field">
-    <span class="field-label">Username</span>
+    <span class="field-label">{login.t("username")}</span>
     <input
       type="text"
       class="control"
@@ -38,13 +40,13 @@ function onsubmit(event) {
 
   {#if invitation.email}
     <label class="field">
-      <span class="field-label">Email</span>
+      <span class="field-label">{login.t("email")}</span>
       <input type="email" class="control" value={invitation.email} readonly />
     </label>
   {/if}
 
   <label class="field">
-    <span class="field-label">Password</span>
+    <span class="field-label">{login.t("password")}</span>
     <!-- svelte-ignore a11y_autofocus -->
     <input
       type="password"
@@ -54,11 +56,11 @@ function onsubmit(event) {
       autofocus
       bind:value={password}
     />
-    <span class="field-hint">At least {minimum} characters.</span>
+    <span class="field-hint">{login.t("hint", { minimum })}</span>
   </label>
 
   <button type="submit" class="action" disabled={!valid || login.loading}>
     {#if login.loading}<span class="spinner"></span>{/if}
-    {login.loading ? "Accepting" : "Continue"}
+    {login.loading ? login.t("working") : login.t("continue")}
   </button>
 </form>

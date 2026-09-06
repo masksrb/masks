@@ -1,9 +1,9 @@
 <% invitation = login.state("invitation").invitation %>
 
 <div class="prompt-head">
-  <h1 class="prompt-title">Accept your invitation</h1>
+  <h1 class="prompt-title"><%= t(".title") %></h1>
   <% if invitation.opened_by %>
-    <p class="prompt-lede"><%= invitation.opened_by.nickname %> invited you.</p>
+    <p class="prompt-lede"><%= t(".invited_by", nickname: invitation.opened_by.nickname) %></p>
   <% end %>
 </div>
 
@@ -12,25 +12,25 @@
   <%= form.hidden_field :event, value: "accept-invitation" %>
 
   <label class="field">
-    <span class="field-label">Username</span>
+    <span class="field-label"><%= t("logins.shared.username") %></span>
     <input type="text" value="<%= invitation.actor.nickname %>" readonly
            autocomplete="username" class="control" />
   </label>
 
   <% if invitation.actor.email.present? %>
     <label class="field">
-      <span class="field-label">Email</span>
+      <span class="field-label"><%= t("logins.shared.email") %></span>
       <input type="email" value="<%= invitation.actor.email %>" readonly class="control" />
     </label>
   <% end %>
 
   <label class="field">
-    <span class="field-label">Password</span>
+    <span class="field-label"><%= t("logins.shared.password") %></span>
     <%= form.password_field :password, autocomplete: "new-password", class: "control" %>
     <span class="field-hint">
-      At least <%= LoginStates::Invitation::MINIMUM_PASSWORD %> characters.
+      <%= t(".hint", minimum: LoginStates::Invitation::MINIMUM_PASSWORD) %>
     </span>
   </label>
 
-  <button type="submit" class="action">Continue</button>
+  <button type="submit" class="action"><%= t("logins.shared.continue") %></button>
 <% end %>

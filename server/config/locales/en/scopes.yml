@@ -1,0 +1,11 @@
+en:
+  scopes:
+    openid: "Confirm who you are"
+    profile: "Read your name and nickname"
+    email: "Read your email address"
+    offline_access: "Stay signed in when you are away"
+    manage: "Modify the masks backend"
+    handshake: "Connect an application to this tenant"
+    connection: "Use your %{provider} account on your behalf"
+    namespace: "Everything %{namespace} asks for, including capabilities it adds later"
+    generic: "Use the %{name} scope"

@@ -28,6 +28,8 @@ Rails.application.configure do
 
   config.action_mailer.default_url_options = { host: "localhost", port: 3000 }
 
+  config.action_mailer.delivery_method = :letter_opener_web unless config.masks.smtp_address
+
   config.active_support.deprecation = :log
 
   config.active_record.migration_error = :page_load

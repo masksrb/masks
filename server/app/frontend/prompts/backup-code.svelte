@@ -20,14 +20,14 @@ function onsubmit(event) {
 </script>
 
 <div class="prompt-head">
-  <h1 class="prompt-title">Use a backup code</h1>
+  <h1 class="prompt-title">{login.t("title")}</h1>
 </div>
 
 <Identified {login} />
 
 <form {onsubmit} class="flow">
   <label class="field">
-    <span class="field-label">Backup code</span>
+    <span class="field-label">{login.t("code")}</span>
     <!-- svelte-ignore a11y_autofocus -->
     <input
       type="text"
@@ -39,12 +39,12 @@ function onsubmit(event) {
       autofocus
       bind:value={code}
     />
-    <span class="field-hint">Each one works once.</span>
+    <span class="field-hint">{login.t("hint")}</span>
   </label>
 
   <button type="submit" class="action" disabled={!valid || login.loading}>
     {#if login.loading}<span class="spinner"></span>{/if}
-    {login.loading ? "Checking" : "Continue"}
+    {login.loading ? login.t("checking") : login.t("continue")}
   </button>
 </form>
 
@@ -53,5 +53,5 @@ function onsubmit(event) {
   class="action action-plain"
   onclick={() => login.submit("use-authenticator", {})}
 >
-  Use your authenticator
+  {login.t("use_authenticator")}
 </button>
