@@ -162,7 +162,7 @@ jobs:
 
       - name: Name the image after the release, or the commit that made it
         id: tags
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ghcr.io/${{ github.repository }}
           tags: |
