@@ -42,6 +42,7 @@ en:
         removed: "Photo removed"
       consent:
         granted: "An application was allowed in"
+        revoked: "An application was cut off"
       connection:
         linked: "A provider was connected"
         unlinked: "A provider was disconnected"

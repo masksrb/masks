@@ -40,6 +40,7 @@ class Event < ApplicationRecord
   AVATAR_REMOVED = "avatar.removed".freeze
 
   CONSENT_GRANTED = "consent.granted".freeze
+  CONSENT_REVOKED = "consent.revoked".freeze
   CONNECTION_LINKED = "connection.linked".freeze
   CONNECTION_UNLINKED = "connection.unlinked".freeze
   CONNECTION_SIGNED_IN = "connection.signed_in".freeze

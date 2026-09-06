@@ -15,6 +15,7 @@ module Manage
       field :release_scope, String, null: false
       field :secret_held, Boolean, null: false
       field :connections, Integer, null: false
+      field :signed_in, Integer, null: false
       field :archived_at, GraphQL::Types::ISO8601DateTime
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
 
@@ -44,6 +45,10 @@ module Manage
 
       def connections
         ::Connection.live.where(provider_id: object.id).count
+      end
+
+      def signed_in
+        ::Connection.live.where(provider_id: object.id).where.not(signed_in_at: nil).count
       end
     end
   end

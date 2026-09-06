@@ -8,7 +8,7 @@ class ConnectionsController < ApplicationController
 
   skip_forgery_protection only: :index
 
-  before_action :require_actor, only: %i[create callback destroy]
+  before_action :require_actor, only: %i[create callback destroy detach]
 
   def index
     with_access_token do |token|
@@ -61,21 +61,39 @@ class ConnectionsController < ApplicationController
   end
 
   def destroy
-    connection = Connection.find_by(uuid: params[:id], actor_id: current_actor.id)
+    connection = held(params[:id])
 
     return render json: { "error" => "invalid_target" }, status: :not_found if connection.nil?
 
-    connection.revoke!(reason: "revoked by #{current_actor.nickname}")
-
-    Event.record!(
-      Event::CONNECTION_UNLINKED,
-      actor: current_actor, provider: connection.provider.key
-    )
+    disconnect!(connection)
 
     render json: connection.to_h
   end
 
+  def detach
+    connection = held(params[:id])
+
+    return redirect_to root_path, alert: t("connections.unknown") if connection.nil?
+
+    disconnect!(connection)
+
+    redirect_to root_path, notice: t("connections.disconnected", provider: connection.provider.name)
+  end
+
   private
+
+    def held(id)
+      Connection.find_by(uuid: id, actor_id: current_actor.id)
+    end
+
+    def disconnect!(connection)
+      connection.revoke!(reason: "revoked by #{current_actor.nickname}")
+
+      Event.record!(
+        Event::CONNECTION_UNLINKED,
+        actor: current_actor, provider: connection.provider.key
+      )
+    end
 
     def require_actor
       return if current_actor

@@ -2,6 +2,8 @@
   import { createFeedback } from "./lib/feedback.svelte.js";
   import { day, since } from "./lib/format.js";
   import { useRouter } from "./lib/router.svelte.js";
+  import Connections from "./Connections.svelte";
+  import Consents from "./Consents.svelte";
   import Events from "./Events.svelte";
   import Presence from "./Presence.svelte";
   import ScopesEditor from "./ScopesEditor.svelte";
@@ -42,6 +44,14 @@
         photoUploaded avatars { photo identicon initials }
         sessions { id ipAddress userAgent authenticatedAt expiresAt }
         devices { id label category known ipAddress userAgent lastSeenAt blockedAt }
+        connections {
+          id subject label email emailVerified connectedAt signedInAt
+          provider { key name releaseScope }
+        }
+        consents {
+          id scopes audience updatedAt
+          client { clientId name }
+        }
         events(limit: 25) {
           id action createdAt ipAddress details
           by { uuid nickname }
@@ -283,6 +293,20 @@
           lede={yourself ? "Signing out everywhere takes this console with it." : null}
         >
           <Presence {api} {feedback} {actor} onchange={load} />
+        </Card>
+
+        <Card
+          title="Applications allowed in"
+          lede="What they have consented to, and what it may ask for on their behalf."
+        >
+          <Consents {api} {feedback} rows={actor.consents} onchange={load} />
+        </Card>
+
+        <Card
+          title="Connected accounts"
+          lede="Upstream accounts linked to this one. A connection that signs in is a way into this account."
+        >
+          <Connections {api} {feedback} rows={actor.connections} onchange={load} />
         </Card>
       </div>
 

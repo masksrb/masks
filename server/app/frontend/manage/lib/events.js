@@ -33,6 +33,7 @@ const SAID = {
   "avatar.removed": "Photo removed",
 
   "consent.granted": "Consent granted",
+  "consent.revoked": "Consent revoked",
   "connection.linked": "Provider connected",
   "connection.unlinked": "Provider disconnected",
   "connection.signed_in": "Signed in with a provider",
@@ -86,6 +87,7 @@ const NOTABLE = new Set([
   "signing_key.activated",
   "backup_code.spent",
   "connection.unlinked",
+  "consent.revoked",
 ]);
 
 export function said(action) {

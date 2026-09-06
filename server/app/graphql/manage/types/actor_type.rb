@@ -13,6 +13,8 @@ module Manage
       field :passkeys, [ PasskeyType ], null: false
       field :sessions, [ "Manage::Types::SessionType" ], null: false
       field :devices, [ "Manage::Types::DeviceType" ], null: false
+      field :connections, [ "Manage::Types::ConnectionType" ], null: false
+      field :consents, [ "Manage::Types::ConsentType" ], null: false
 
       field :events, [ "Manage::Types::EventType" ], null: false do
         argument :limit, Integer, required: false
@@ -77,6 +79,14 @@ module Manage
 
       def devices
         ::Device.for_actor(object).newest_first
+      end
+
+      def connections
+        ::Connection.live.where(actor_id: object.id).includes(:provider).order(created_at: :desc)
+      end
+
+      def consents
+        ::Consent.live.where(actor_id: object.id).includes(:client).order(updated_at: :desc)
       end
 
       def events(limit: nil)

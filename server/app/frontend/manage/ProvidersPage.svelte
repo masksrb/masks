@@ -1,4 +1,5 @@
 <script>
+  import Connections from "./Connections.svelte";
   import { createFeedback } from "./lib/feedback.svelte.js";
   import { day } from "./lib/format.js";
   import Card from "./ui/Card.svelte";
@@ -38,6 +39,11 @@
     query Providers {
       active: providers { ${FIELDS} }
       archived: providers(archived: true) { ${FIELDS} }
+      connections {
+        id subject label email emailVerified connectedAt signedInAt
+        provider { key name releaseScope }
+        actor { uuid nickname }
+      }
     }
   `;
 
@@ -97,6 +103,7 @@
 
   let active = $state([]);
   let archived = $state([]);
+  let connected = $state([]);
   let loading = $state(true);
   let busy = $state(false);
   let editing = $state(null);
@@ -113,7 +120,11 @@
 
     active = data.active;
     archived = data.archived;
+    connected = data.connections;
   }
+
+  const connectionsFor = (provider) =>
+    connected.filter((held) => held.provider.key === provider.key);
 
   load();
 
@@ -487,9 +498,32 @@
           </div>
           <div>
             <dt class="text-xs opacity-60">Connections</dt>
-            <dd>{provider.connections}</dd>
+            <dd>
+              {provider.connections}
+              {#if provider.signedIn}
+                <span class="text-xs opacity-60">· {provider.signedIn} sign in with it</span>
+              {/if}
+            </dd>
           </div>
         </dl>
+
+        {#if connectionsFor(provider).length}
+          <details class="text-sm">
+            <summary class="cursor-pointer opacity-70">
+              Who is connected ({connectionsFor(provider).length})
+            </summary>
+
+            <div class="pt-3">
+              <Connections
+                {api}
+                {feedback}
+                rows={connectionsFor(provider)}
+                onchange={load}
+                showActor
+              />
+            </div>
+          </details>
+        {/if}
       </Card>
     {/each}
 

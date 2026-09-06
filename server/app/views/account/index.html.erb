@@ -20,6 +20,7 @@
       <ul class="place-nav">
         <li><a href="#avatar"><%= t(".nav.avatar") %></a></li>
         <li><a href="#applications"><%= t(".nav.applications") %></a></li>
+        <li><a href="#connections"><%= t(".nav.connections") %></a></li>
         <li><a href="#passkeys"><%= t(".nav.passkeys") %></a></li>
         <li><a href="#devices"><%= t(".nav.devices") %></a></li>
         <li><a href="#email"><%= t(".nav.email") %></a></li>
@@ -74,14 +75,67 @@
         <% if @consents.any? %>
           <ul class="chip-list">
             <% @consents.each do |consent| %>
-              <li class="chip">
-                <span><%= consent.client.name %></span>
+              <li class="chip chip-stack">
+                <span class="chip-line">
+                  <span class="chip-name"><%= consent.client.name %></span>
+                  <span class="chip-meta">
+                    <%= button_to t(".applications.revoke"), account_consent_path(consent),
+                          method: :delete, class: "textlink", form_class: "chip-action",
+                          form: { data: { turbo_confirm: t(".applications.confirm_revoke",
+                                                            client: consent.client.name) } } %>
+                  </span>
+                </span>
+
                 <span class="chip-key"><%= consent.scopes %></span>
               </li>
             <% end %>
           </ul>
         <% else %>
           <p class="aside"><%= t(".none_yet") %></p>
+        <% end %>
+      </section>
+
+      <section id="connections" class="place-section">
+        <h2><%= t(".connections.heading") %></h2>
+
+        <p class="aside"><%= t(".connections.lede") %></p>
+
+        <% if @connections.any? %>
+          <ul class="chip-list">
+            <% @connections.each do |connection| %>
+              <li class="chip chip-stack">
+                <span class="chip-line">
+                  <span class="chip-name">
+                    <span><%= connection.provider.name %></span>
+                    <% if connection.signed_in_at %>
+                      <span class="tag"><%= t(".connections.signs_you_in") %></span>
+                    <% end %>
+                  </span>
+                  <span class="chip-meta">
+                    <%= button_to t(".connections.disconnect"), account_connection_path(connection.uuid),
+                          method: :delete, class: "textlink", form_class: "chip-action",
+                          form: { data: { turbo_confirm: t(".connections.confirm_disconnect",
+                                                            provider: connection.provider.name) } } %>
+                  </span>
+                </span>
+
+                <span class="chip-meta">
+                  <span><%= connection.label || connection.email || connection.subject %></span>
+                </span>
+              </li>
+            <% end %>
+          </ul>
+        <% else %>
+          <p class="aside"><%= t(".none_yet") %></p>
+        <% end %>
+
+        <% if @providers.any? %>
+          <div class="action-row">
+            <% @providers.each do |provider| %>
+              <%= button_to t(".connections.connect", provider: provider.name),
+                    connect_path(provider.key), class: "action action-quiet action-sm" %>
+            <% end %>
+          </div>
         <% end %>
       </section>
 

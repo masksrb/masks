@@ -29,6 +29,9 @@ Rails.application.routes.draw do
   post "/account/avatar", to: "avatars#create", as: :account_avatar
   delete "/account/avatar", to: "avatars#destroy"
 
+  delete "/account/consents/:id", to: "consents#destroy", as: :account_consent
+  delete "/account/connections/:id", to: "connections#detach", as: :account_connection
+
   scope constraints: { style: Regexp.union(Avatars::STYLES), digest: /[0-9a-f]{16}/ } do
     get "/avatars/:uuid", to: "avatars#show", as: :avatar
     get "/avatars/:uuid/:style", to: "avatars#show", as: :styled_avatar
