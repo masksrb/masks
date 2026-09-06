@@ -27,6 +27,10 @@ module Manage
           ::Device.find_by(id: id) || refuse!("no device with that id")
         end
 
+        def provider!(key)
+          ::Provider.find_by(key: key) || refuse!("no provider keyed #{key}")
+        end
+
         def signing_key!(kid)
           ::SigningKey.find_by(kid: kid) || refuse!("no signing key with that kid")
         end

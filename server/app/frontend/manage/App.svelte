@@ -12,6 +12,7 @@
   import ClientPage from "./ClientPage.svelte";
   import SettingsPage from "./SettingsPage.svelte";
   import ActivityPage from "./ActivityPage.svelte";
+  import ProvidersPage from "./ProvidersPage.svelte";
 
   let { boot } = $props();
 
@@ -28,6 +29,7 @@
     ["", "Overview"],
     ["/people", "People"],
     ["/clients", "Clients"],
+    ["/providers", "Providers"],
     ["/activity", "Activity"],
     ["/settings", "Settings"],
   ];
@@ -176,6 +178,8 @@
         {:else}
           <ClientsPage {api} />
         {/if}
+      {:else if current === "providers"}
+        <ProvidersPage {api} />
       {:else if current === "activity"}
         <ActivityPage {api} />
       {:else if current === "settings"}
