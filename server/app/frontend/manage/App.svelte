@@ -8,6 +8,8 @@
   import Pair from "./Pair.svelte";
   import PeoplePage from "./PeoplePage.svelte";
   import ActorPage from "./ActorPage.svelte";
+  import DevicesPage from "./DevicesPage.svelte";
+  import DevicePage from "./DevicePage.svelte";
   import ClientsPage from "./ClientsPage.svelte";
   import ClientPage from "./ClientPage.svelte";
   import SettingsPage from "./SettingsPage.svelte";
@@ -28,6 +30,7 @@
   const NAV = [
     ["", "Overview"],
     ["/people", "People"],
+    ["/devices", "Devices"],
     ["/clients", "Clients"],
     ["/providers", "Providers"],
     ["/activity", "Activity"],
@@ -171,6 +174,12 @@
           <ActorPage {api} uuid={router.segments[1]} />
         {:else}
           <PeoplePage {api} />
+        {/if}
+      {:else if current === "devices"}
+        {#if router.segments[1]}
+          <DevicePage {api} id={router.segments[1]} />
+        {:else}
+          <DevicesPage {api} />
         {/if}
       {:else if current === "clients"}
         {#if router.segments[1]}

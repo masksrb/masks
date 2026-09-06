@@ -1,5 +1,6 @@
 <script>
   import { day, moment, since } from "./lib/format.js";
+  import Link from "./ui/Link.svelte";
 
   let { api, feedback, actor, onchange, columns = false } = $props();
 
@@ -92,7 +93,9 @@
             <li class="slat">
               <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                 <span class="flex flex-wrap items-baseline gap-2">
-                  <span class="text-sm font-medium">{device.label}</span>
+                  <Link to={`/devices/${device.id}`} class="link link-hover text-sm font-medium">
+                    {device.label}
+                  </Link>
                   {#if device.blockedAt}
                     <span class="badge badge-error badge-xs">blocked</span>
                   {:else if !device.known}

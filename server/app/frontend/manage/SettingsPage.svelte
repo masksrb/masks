@@ -77,7 +77,7 @@
           { to: "/people", label: "People", value: data.tally.actors },
           { to: "/clients", label: "Clients", value: data.tally.clients },
           { to: "/people", label: "Live sessions", value: data.tally.sessions },
-          { to: "/people", label: "Devices", value: data.tally.devices },
+          { to: "/devices", label: "Devices", value: data.tally.devices },
         ]
       : [],
   );
