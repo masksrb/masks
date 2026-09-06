@@ -2,9 +2,10 @@
   import { createFeedback } from "./lib/feedback.svelte.js";
   import { day } from "./lib/format.js";
   import Card from "./ui/Card.svelte";
+  import Link from "./ui/Link.svelte";
   import Notices from "./ui/Notices.svelte";
 
-  let { api, rows, onreleased } = $props();
+  let { api, rows, onreleased, showClient = false } = $props();
 
   const RELEASE = `
     mutation Release($name: String!) {
@@ -43,6 +44,7 @@
       <thead>
         <tr>
           <th>Name</th>
+          {#if showClient}<th>Claimed by</th>{/if}
           <th class="hidden sm:table-cell">Resource</th>
           <th class="hidden sm:table-cell">Claimed</th>
           <th></th>
@@ -52,6 +54,18 @@
         {#each rows as row (row.name)}
           <tr>
             <td class="font-mono text-xs">{row.name}</td>
+
+            {#if showClient}
+              <td class="text-xs">
+                {#if row.client}
+                  <Link to={`/clients/${row.client.clientId}`} class="link link-hover">
+                    {row.client.name}
+                  </Link>
+                {:else}
+                  <span class="opacity-60">nothing</span>
+                {/if}
+              </td>
+            {/if}
 
             <td class="hidden max-w-[18rem] font-mono text-xs opacity-70 sm:table-cell">
               <div class="truncate" title={row.resource}>{row.resource}</div>

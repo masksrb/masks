@@ -6,6 +6,8 @@ module Manage
 
       field :actors, [ ActorType ], null: false do
         argument :search, String, required: false
+        argument :activated, Boolean, required: false
+        argument :holds, String, required: false
         argument :after_id, ID, required: false
         argument :limit, Integer, required: false
       end
@@ -107,7 +109,7 @@ module Manage
         Current.tenant
       end
 
-      def actors(search: nil, after_id: nil, limit: nil)
+      def actors(search: nil, activated: nil, holds: nil, after_id: nil, limit: nil)
         scope = Actor.newest_first
 
         if search.present?
@@ -115,6 +117,8 @@ module Manage
           scope = scope.where("nickname ILIKE :term OR email ILIKE :term OR name ILIKE :term", term: term)
         end
 
+        scope = activated ? scope.where.not(activated_at: nil) : scope.where(activated_at: nil) unless activated.nil?
+        scope = holding(scope, holds) if holds.present?
         scope = scope.after(Actor.find_by(uuid: after_id)&.id) if after_id.present?
 
         scope.limit(bounded(limit))
@@ -277,6 +281,26 @@ module Manage
       end
 
       private
+
+        HOLDING = <<~SQL.squish.freeze
+          EXISTS (
+            SELECT 1 FROM regexp_split_to_table(actors.scopes, '[\\s,]+') AS entry
+            WHERE entry <> ''
+              AND (
+                entry = :held
+                OR (
+                  right(entry, 1) = ':'
+                  AND starts_with(:held, entry)
+                  AND length(:held) > length(entry)
+                )
+              )
+          )
+          OR (btrim(actors.scopes) = '' AND :held = ANY(ARRAY[:standard]))
+        SQL
+
+        def holding(scope, held)
+          scope.where(HOLDING, held: held.to_s.strip, standard: Scopes::STANDARD)
+        end
 
         def granted
           ::Token.where(type: Types::TokenType::GRANTS)

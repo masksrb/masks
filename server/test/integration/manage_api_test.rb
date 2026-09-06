@@ -944,6 +944,75 @@ class ManageApiTest < ActionDispatch::IntegrationTest
     assert_not within(@tenant) { Namespace.exists?(name: "uris:") }
   end
 
+  test "people narrow to the ones still waiting on an invitation" do
+    token = bearer
+
+    within(@tenant) do
+      Actor.invite!(nickname: "waiting", email: "waiting@example.com")
+      Actor.create!(nickname: "settled", password: "password")
+    end
+
+    held = ask(
+      "query { actors(activated: false) { nickname } }", token
+    ).dig("data", "actors").map { |one| one["nickname"] }
+
+    assert_equal [ "waiting" ], held
+
+    settled = ask(
+      "query { actors(activated: true) { nickname } }", token
+    ).dig("data", "actors").map { |one| one["nickname"] }
+
+    assert_includes settled, "settled"
+    assert_not_includes settled, "waiting"
+  end
+
+  test "people narrow to the ones holding a scope, prefixes included" do
+    token = bearer
+
+    within(@tenant) do
+      Actor.create!(nickname: "plain", password: "password", scopes: "openid profile")
+      Actor.create!(nickname: "named", password: "password", scopes: "openid masks:manage")
+      Actor.create!(nickname: "prefixed", password: "password", scopes: "openid masks:")
+    end
+
+    held = ask(
+      'query { actors(holds: "masks:manage") { nickname } }', token
+    ).dig("data", "actors").map { |one| one["nickname"] }
+
+    assert_includes held, "named"
+    assert_includes held, "prefixed"
+    assert_not_includes held, "plain"
+  end
+
+  test "an account with no scopes of its own still counts as holding the standard ones" do
+    token = bearer
+
+    within(@tenant) { Actor.create!(nickname: "bare", password: "password", scopes: "") }
+
+    held = ask('query { actors(holds: "openid") { nickname } }', token)
+      .dig("data", "actors").map { |one| one["nickname"] }
+
+    assert_includes held, "bare"
+
+    privileged = ask('query { actors(holds: "masks:manage") { nickname } }', token)
+      .dig("data", "actors").map { |one| one["nickname"] }
+
+    assert_not_includes privileged, "bare"
+  end
+
+  test "the console lists every namespace claimed, and what claimed it" do
+    token = bearer
+
+    claim!
+
+    held = ask(
+      "query { namespaces { name resource client { name } } }", token
+    ).dig("data", "namespaces")
+
+    assert_equal [ "uris:" ], held.map { |one| one["name"] }
+    assert_equal "uris", held.first["client"]["name"]
+  end
+
   test "the scopes on offer include what providers and namespaces publish" do
     token = bearer
 

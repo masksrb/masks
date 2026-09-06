@@ -21,9 +21,20 @@
 
   const PAGE = 50;
 
+  const LENSES = [
+    ["everyone", "Everyone", {}],
+    ["invited", "Invited", { activated: false }],
+    ["administrators", "Administrators", { holds: "masks:manage" }],
+  ];
+
   const QUERY = `
-    query People($search: String, $afterId: ID, $limit: Int) {
-      actors(search: $search, afterId: $afterId, limit: $limit) {
+    query People(
+      $search: String, $activated: Boolean, $holds: String, $afterId: ID, $limit: Int
+    ) {
+      actors(
+        search: $search, activated: $activated, holds: $holds,
+        afterId: $afterId, limit: $limit
+      ) {
         uuid nickname name email emailVerified otpEnabled backupCodesRemaining
         lastLoginAt scopes activated invitedAt
         avatars { photo identicon }
@@ -61,6 +72,9 @@
   let loading = $state(true);
   let more = $state(false);
   let exhausted = $state(false);
+  let lens = $state("everyone");
+
+  const narrowing = $derived(LENSES.find(([key]) => key === lens)?.[2] ?? {});
 
   let adding = $state(false);
   let nickname = $state("");
@@ -79,6 +93,8 @@
     try {
       const data = await api.query(QUERY, {
         search: search.trim() || null,
+        activated: narrowing.activated ?? null,
+        holds: narrowing.holds ?? null,
         afterId,
         limit: PAGE,
       });
@@ -97,6 +113,11 @@
   function again() {
     exhausted = false;
     load();
+  }
+
+  function look(chosen) {
+    lens = chosen;
+    again();
   }
 
   load();
@@ -189,6 +210,12 @@
 
 <Page title="People">
   {#snippet actions()}
+    <div class="range" role="group" aria-label="Who to show">
+      {#each LENSES as [key, label] (key)}
+        <button type="button" aria-pressed={lens === key} onclick={() => look(key)}>{label}</button>
+      {/each}
+    </div>
+
     <Search
       bind:value={search}
       label="Search people"
@@ -277,7 +304,11 @@
       count={people.length}
       empty={search.trim()
         ? `No person matches “${search.trim()}”.`
-        : "Nobody can sign in yet. Add the first person."}
+        : lens === "invited"
+          ? "Nobody is waiting on an invitation."
+          : lens === "administrators"
+            ? "Nobody else holds masks:manage."
+            : "Nobody can sign in yet. Add the first person."}
     >
       {#snippet rows()}
         {#each people as actor (actor.uuid)}
