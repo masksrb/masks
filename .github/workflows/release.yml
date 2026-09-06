@@ -132,6 +132,9 @@ jobs:
 
   image:
     needs: release-please
+    concurrency:
+      group: image-${{ github.ref }}
+      cancel-in-progress: true
     if: >-
       !cancelled() &&
       needs.release-please.result != 'failure' &&
@@ -151,6 +154,7 @@ jobs:
           ref: ${{ needs.release-please.outputs.server_tag || github.sha }}
 
       - uses: docker/setup-qemu-action@v3
+        if: needs.release-please.outputs.server == 'true'
 
       - uses: docker/setup-buildx-action@v3
 
@@ -171,13 +175,16 @@ jobs:
             type=raw,value=main,enable=${{ github.ref == 'refs/heads/main' }}
             type=sha,format=long
 
+      # arm64 is emulated, and emulating a bundle install and an asset build
+      # costs about ten times what running them natively does. A release is
+      # worth waiting for; a commit on main is not.
       - name: Build and push
         id: push
         uses: docker/build-push-action@v6
         with:
           context: server
           build-contexts: web=web
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ needs.release-please.outputs.server == 'true' && 'linux/amd64,linux/arm64' || 'linux/amd64' }}
           push: true
           tags: ${{ steps.tags.outputs.tags }}
           labels: ${{ steps.tags.outputs.labels }}
