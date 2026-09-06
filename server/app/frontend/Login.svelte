@@ -37,7 +37,7 @@ $effect(() => {
 
   if (!column) return;
 
-  for (const name of ["challenge", "grant", "ceremony"]) {
+  for (const name of ["challenge", "grant"]) {
     column.classList.toggle(`surface-${name}`, name === surface);
   }
 
