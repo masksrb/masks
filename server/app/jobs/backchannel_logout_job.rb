@@ -21,12 +21,14 @@ class BackchannelLogoutJob < ApplicationJob
   def gave_up!(error)
     held = arguments.first.to_h.symbolize_keys
 
-    Event.record!(
-      Event::LOGOUT_UNDELIVERED,
-      actor: Actor.find_by(uuid: held[:subject]), by: nil,
-      client: Client.find_by(client_id: held[:client_id]),
-      device: nil, ip_address: nil, user_agent: nil,
-      said: error.message
-    )
+    Tenant.switch(held_tenant) do
+      Event.record!(
+        Event::LOGOUT_UNDELIVERED,
+        actor: Actor.find_by(uuid: held[:subject]), by: nil,
+        client: Client.find_by(client_id: held[:client_id]),
+        device: nil, ip_address: nil, user_agent: nil,
+        said: error.message
+      )
+    end
   end
 end
