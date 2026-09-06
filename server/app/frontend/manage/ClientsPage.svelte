@@ -1,5 +1,5 @@
 <script>
-  import { joined } from "./lib/format.js";
+  import { NONE, day, joined } from "./lib/format.js";
   import Link from "./ui/Link.svelte";
   import Loader from "./ui/Loader.svelte";
   import Page from "./ui/Page.svelte";
@@ -13,9 +13,10 @@
   const QUERY = `
     query Clients($search: String, $archived: Boolean) {
       clients(search: $search, archived: $archived) {
-        clientId name dynamic approvedAt archivedAt tokenEndpointAuthMethod
+        clientId name dynamic approvedAt archivedAt
         requiredScopes allowedScopes resources createdAt
         approvedBy { nickname }
+        namespaces { name }
       }
     }
   `;
@@ -23,9 +24,11 @@
   const COLUMNS = [
     "Name",
     { label: "Resources", hide: true },
-    "How it got here",
+    "Source",
+    { label: "Namespaces", hide: true, right: true },
     { label: "Scopes", hide: true },
     { label: "Approved by", hide: true },
+    "Created",
   ];
 
   let search = $state("");
@@ -78,16 +81,14 @@
                   </div>
                 </td>
                 <td>
-                  <div class="flex flex-col items-start gap-1">
-                    {#if client.dynamic}
-                      <span class="badge badge-ghost badge-sm">self-registered</span>
-                    {:else}
-                      <span class="badge badge-success badge-sm">approved</span>
-                    {/if}
-                    {#if client.tokenEndpointAuthMethod === "none"}
-                      <span class="badge badge-outline badge-xs">secretless</span>
-                    {/if}
-                  </div>
+                  {#if client.dynamic}
+                    <span class="badge badge-ghost badge-sm">self-registered</span>
+                  {:else}
+                    <span class="badge badge-success badge-sm">approved</span>
+                  {/if}
+                </td>
+                <td class="hidden text-right text-xs opacity-70 md:table-cell">
+                  {client.namespaces.length || NONE}
                 </td>
                 <td class="hidden max-w-64 font-mono text-xs md:table-cell">
                   {#if client.requiredScopes.length}
@@ -104,8 +105,9 @@
                   {/if}
                 </td>
                 <td class="hidden text-xs opacity-70 md:table-cell">
-                  {client.approvedBy?.nickname ?? "—"}
+                  {client.approvedBy?.nickname ?? NONE}
                 </td>
+                <td class="text-xs whitespace-nowrap opacity-70">{day(client.createdAt)}</td>
               </Row>
             {/each}
           {/snippet}

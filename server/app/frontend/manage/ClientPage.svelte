@@ -1,6 +1,7 @@
 <script>
   import { createFeedback } from "./lib/feedback.svelte.js";
   import { day, joined } from "./lib/format.js";
+  import Namespaces from "./Namespaces.svelte";
   import ScopesEditor from "./ScopesEditor.svelte";
   import Card from "./ui/Card.svelte";
   import Facts from "./ui/Facts.svelte";
@@ -19,6 +20,7 @@
         redirectUris postLogoutRedirectUris grantTypes responseTypes resources
         requiredScopes allowedScopes
         approvedBy { nickname }
+        namespaces { name resource claimedAt releasable }
       }
       scopesSupported
     }
@@ -172,6 +174,10 @@
             </p>
           {/if}
         </Card>
+
+        {#if client.namespaces.length}
+          <Namespaces {api} rows={client.namespaces} onreleased={load} />
+        {/if}
       </div>
     </div>
   </Page>

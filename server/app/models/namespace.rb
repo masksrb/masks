@@ -61,6 +61,10 @@ class Namespace < ApplicationRecord
     end
   end
 
+  def releasable?
+    client.nil? || client.archived_at.present?
+  end
+
   def release!
     destroy!
   end

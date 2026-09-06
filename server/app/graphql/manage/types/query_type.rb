@@ -81,7 +81,7 @@ module Manage
 
       def clients(search: nil, archived: false, limit: nil)
         scope = archived ? Client.where.not(archived_at: nil) : Client.active
-        scope = scope.includes(:approved_by).order(created_at: :desc)
+        scope = scope.includes(:approved_by, :namespaces).order(created_at: :desc)
 
         if search.present?
           term = "%#{Client.sanitize_sql_like(search.strip)}%"

@@ -89,8 +89,11 @@ class HandshakesController < ApplicationController
 
     def require_unclaimed_namespaces
       refusal = Namespace.refusal(@handshake)
+      return if refusal.nil?
 
-      refuse(refusal) if refusal
+      @console = manage_path
+
+      refuse(refusal)
     end
 
     def refuse(description)
