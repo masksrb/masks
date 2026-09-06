@@ -1,19 +1,21 @@
 require_relative "test_helper"
 
 class HandshakeTest < EngineIntegrationTest
-  test "an app nobody has connected offers the handshake" do
+  test "an app nobody has connected starts the handshake rather than asking first" do
     get "/auth/handshake", headers: host
 
-    assert_response :success
-    assert_includes response.body, "has not been connected"
-    assert_includes response.body, "Connect it"
+    assert_response :redirect
+    assert response.location.start_with?("#{issuer.url_for(SUBDOMAIN)}/handshake")
   end
 
-  test "the page does not name the issuer it is about to send you to" do
+  test "an app configured too little to shake hands is told so rather than sent away" do
+    configure!(resource: nil)
+
     get "/auth/handshake", headers: host
 
-    refute_includes response.body, issuer.origin
-    refute_includes response.body, "127.0.0.1"
+    assert_response :bad_request
+    assert_includes response.body, "could not be connected"
+    assert_includes response.body, "resource is not set"
   end
 
   test "an unconnected app sends a browser to the handshake rather than a login it cannot run" do
