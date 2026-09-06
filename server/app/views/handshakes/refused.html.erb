@@ -1,23 +1,16 @@
-<% content_for :title, "This connection was refused" %>
+<% content_for :title, t(".page_title") %>
 <% content_for :surface, "terminus" %>
 
-<span class="state state-bad">Stopped</span>
+<span class="state state-bad"><%= t(".stopped") %></span>
 
-<h1 class="prompt-title">
-  The application described itself in a way this server will not accept.
-</h1>
+<h1 class="prompt-title"><%= t(".title") %></h1>
 
 <p class="said"><%= @description %></p>
 
 <% if @console %>
-  <p class="prompt-lede">
-    Nothing was shared. A namespace stays claimed until somebody releases it, so this is yours to
-    settle rather than the application's — archive whatever holds the name, then release it.
-  </p>
+  <p class="prompt-lede"><%= t(".settle") %></p>
 
-  <a class="action" href="<%= @console %>">Open the console</a>
+  <a class="action" href="<%= @console %>"><%= t(".open_console") %></a>
 <% else %>
-  <p class="prompt-lede">
-    Nothing was shared. The application has to fix this.
-  </p>
+  <p class="prompt-lede"><%= t(".contact") %></p>
 <% end %>
