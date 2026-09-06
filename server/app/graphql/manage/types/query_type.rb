@@ -88,6 +88,7 @@ module Manage
       field :events, [ EventType ], null: false do
         argument :actor, ID, required: false
         argument :client, ID, required: false
+        argument :device, ID, required: false
         argument :action, String, required: false
         argument :grave, Boolean, required: false
         argument :after_id, ID, required: false
@@ -259,16 +260,19 @@ module Manage
         end
       end
 
-      def events(actor: nil, client: nil, action: nil, grave: false, after_id: nil, limit: nil)
+      def events(actor: nil, client: nil, device: nil, action: nil, grave: false, after_id: nil, limit: nil)
         subject = actor.present? ? Actor.find_by(uuid: actor) : nil
         held = client.present? ? Client.find_by(client_id: client) : nil
+        seen = device.present? ? ::Device.find_by(id: device) : nil
 
         return ::Event.none if actor.present? && subject.nil?
         return ::Event.none if client.present? && held.nil?
+        return ::Event.none if device.present? && seen.nil?
 
         scope = ::Event.newest_first.includes(:actor, :by, :client, :device)
         scope = scope.where(actor: subject) if subject
         scope = scope.where(client: held) if held
+        scope = scope.where(device: seen) if seen
         scope = scope.where(action: action) if action.present?
         scope = scope.where(action: ::Event::GRAVE) if grave
         scope = scope.after(after_id) if after_id.present?

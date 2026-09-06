@@ -329,7 +329,7 @@ type Query {
   device(id: ID!): Device
   devices(actor: ID, blocked: Boolean, limit: Int, unattached: Boolean): [Device!]!
   eventActions: [String!]!
-  events(action: String, actor: ID, afterId: ID, client: ID, grave: Boolean, limit: Int): [Event!]!
+  events(action: String, actor: ID, afterId: ID, client: ID, device: ID, grave: Boolean, limit: Int): [Event!]!
   minimumPassword: Int!
   namespaces: [Namespace!]!
   provider(key: ID!): Provider

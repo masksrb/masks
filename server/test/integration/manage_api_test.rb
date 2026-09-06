@@ -944,6 +944,32 @@ class ManageApiTest < ActionDispatch::IntegrationTest
     assert_not within(@tenant) { Namespace.exists?(name: "uris:") }
   end
 
+  test "activity narrows to one device" do
+    token = bearer
+
+    device = within(@tenant) do
+      held = ::Device.identify(::Device.mint, user_agent: "Probe", ip_address: "10.0.0.1")
+
+      Event.record!(Event::SESSION_STARTED, actor: @actor, device: held)
+      Event.record!(Event::LOGIN_REFUSED, actor: @actor, by: nil, device: nil)
+
+      held
+    end
+
+    held = ask(
+      "query Seen($device: ID!) { events(device: $device) { action } }",
+      token, device: device.id
+    ).dig("data", "events").map { |one| one["action"] }
+
+    assert_equal [ Event::SESSION_STARTED ], held
+
+    missing = ask(
+      'query { events(device: "0") { action } }', token
+    ).dig("data", "events")
+
+    assert_empty missing
+  end
+
   test "people narrow to the ones still waiting on an invitation" do
     token = bearer
 
