@@ -34,6 +34,7 @@ module Tenancy
     def deserialize(job_data)
       super
 
+      @tenant_carried = true
       @tenant_uuid = job_data[KEY]
     end
 
@@ -42,11 +43,11 @@ module Tenancy
 
       held = @tenant_uuid.presence
 
-      return super if held.nil? && Current.tenant
+      return Tenant.switch(Tenant.active.find_by!(uuid: held)) { super } if held
 
-      raise Homeless, self.class.name if held.nil?
+      raise Homeless, self.class.name if @tenant_carried
 
-      Tenant.switch(Tenant.active.find_by!(uuid: held)) { super }
+      super
     end
 
     private
