@@ -11,6 +11,10 @@ module Manage
           raise GraphQL::ExecutionError, message
         end
 
+        def audit!(action, actor: nil, client: nil, **details)
+          ::Event.record!(action, actor: actor, by: viewer, client: client, **details)
+        end
+
         def actor!(uuid)
           Actor.find_by(uuid: uuid) || refuse!("no actor with that uuid")
         end

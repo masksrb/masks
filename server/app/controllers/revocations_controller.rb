@@ -5,7 +5,15 @@ class RevocationsController < ApplicationController
     client = authenticate_client!
     token = presented_token
 
-    token.revoke! if token && token.client_id == client.id
+    if token && token.client_id == client.id
+      revoked = token.revoke!
+
+      Event.record!(
+        Event::TOKEN_REVOKED,
+        actor: token.actor, by: nil, client: client,
+        kind: token.class.name.underscore, revoked: revoked
+      )
+    end
 
     head :ok
   end

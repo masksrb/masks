@@ -24,7 +24,11 @@ module Manage
           refuse!("#{Scopes.join(reserved)} may only be granted to an approved client")
         end
 
-        { client: save!(client) }
+        save!(client)
+
+        audit!(::Event::CLIENT_UPDATED, client: client, name: client.name)
+
+        { client: client }
       end
     end
   end

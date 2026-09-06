@@ -31,8 +31,15 @@ module LoginStates
         forget!
         factored! :second_factor, expiry: OneTimePassword::EXPIRY
         login.noted! "otp", "mfa"
+
+        Event.record!(
+          Event::BACKUP_CODE_SPENT,
+          actor: actor, remaining: actor.backup_codes_remaining
+        )
+
         true
       else
+        refused! "backup_code"
         warn! "invalid-backup-code"
         false
       end

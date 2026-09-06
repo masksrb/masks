@@ -50,6 +50,11 @@ class ConnectionsController < ApplicationController
       identity: provider.identify(tokens["access_token"])
     )
 
+    Event.record!(
+      Event::CONNECTION_LINKED,
+      actor: current_actor, provider: provider.key
+    )
+
     settle(pending, connection: connection.uuid)
   rescue Provider::Refused, Provider::Unreachable, ArgumentError => e
     refuse(pending, e.message)
@@ -61,6 +66,11 @@ class ConnectionsController < ApplicationController
     return render json: { "error" => "invalid_target" }, status: :not_found if connection.nil?
 
     connection.revoke!(reason: "revoked by #{current_actor.nickname}")
+
+    Event.record!(
+      Event::CONNECTION_UNLINKED,
+      actor: current_actor, provider: connection.provider.key
+    )
 
     render json: connection.to_h
   end

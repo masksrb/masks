@@ -18,6 +18,12 @@ class HandshakesController < ApplicationController
 
     client = Client.approve!(@handshake, actor: current_actor)
 
+    Event.record!(
+      Event::CLIENT_APPROVED,
+      actor: current_actor, client: client,
+      name: client.name, resource: @handshake.resource
+    )
+
     begin
       Namespace.claim!(@handshake, client: client, actor: current_actor)
     rescue Namespace::Taken => taken

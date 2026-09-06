@@ -9,6 +9,7 @@ module Manage
         session = Session.find_by(id: id) || refuse!("no session with that id")
 
         session.revoke!
+        audit!(::Event::SESSION_REVOKED, actor: session.actor, device: session.device)
 
         { session: session }
       end

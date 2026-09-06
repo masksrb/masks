@@ -54,6 +54,8 @@ module LoginStates
 
         return warn!("invalid-account") unless actor.save
 
+        Event.record!(Event::ACCOUNT_CREATED, actor: actor, first_run: true)
+
         Verifications.open(actor: actor)
 
         login.identifier = actor.nickname

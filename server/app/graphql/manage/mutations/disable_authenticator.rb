@@ -17,6 +17,7 @@ module Manage
 
         save!(actor)
         DeviceFactor.forget!(actor: actor)
+        audit!(::Event::AUTHENTICATOR_DISABLED, actor: actor)
 
         { actor: actor }
       end

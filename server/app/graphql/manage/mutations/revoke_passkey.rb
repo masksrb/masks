@@ -13,6 +13,7 @@ module Manage
         refuse!("that actor has no such passkey") if passkey.nil?
 
         passkey.destroy!
+        audit!(::Event::PASSKEY_REMOVED, actor: actor, passkey: passkey.name)
 
         { actor: actor.reload }
       end

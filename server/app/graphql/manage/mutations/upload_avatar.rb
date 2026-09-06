@@ -10,6 +10,7 @@ module Manage
         actor = actor!(uuid)
 
         Avatar.store!(actor: actor, upload: photo)
+        audit!(::Event::AVATAR_UPLOADED, actor: actor)
 
         { actor: actor }
       rescue Avatar::Unreadable => e

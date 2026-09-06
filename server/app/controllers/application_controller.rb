@@ -38,6 +38,8 @@ class ApplicationController < ActionController::Base
 
     def within_tenant
       Current.origin = origin
+      Current.ip_address = request.remote_ip
+      Current.user_agent = request.user_agent
 
       Tenant.switch(current_tenant) { yield }
     end
@@ -96,7 +98,7 @@ class ApplicationController < ActionController::Base
         secure: request.ssl?
       }
 
-      device
+      Current.device = device
     end
 
     def sign_in(actor, amr: [])
@@ -123,13 +125,20 @@ class ApplicationController < ActionController::Base
       }
 
       actor.update!(last_login_at: Time.current)
+
+      Event.record!(Event::SESSION_STARTED, actor: actor, device: device, amr: amr.presence)
+
       @current_session = record
     end
 
     def sign_out
-      current_session&.revoke!
+      ended = current_session
+
+      ended&.revoke!
       cookies.delete(:masks_session)
       @current_session = nil
+
+      Event.record!(Event::SESSION_ENDED, actor: ended.actor) if ended
     end
 
     def tracked(key)

@@ -1,4 +1,6 @@
 class AccountController < ApplicationController
+  RECENT = 20
+
   def index
     @actor = current_actor
 
@@ -9,5 +11,6 @@ class AccountController < ApplicationController
     @devices = @actor ? @actor.devices.newest_first : []
     @trusted = @actor ? DeviceFactor.live.where(actor: @actor).pluck(:device_id).to_set : Set.new
     @live = @actor ? Session.live.where(device_id: @devices.map(&:id)).pluck(:device_id).to_set : Set.new
+    @events = @actor ? Event.where(actor: @actor).newest_first.includes(:device).limit(RECENT) : []
   end
 end

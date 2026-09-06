@@ -13,8 +13,11 @@ module Manage
         end
 
         client.archived_at = Time.current
+        save!(client)
 
-        { client: save!(client) }
+        audit!(::Event::CLIENT_ARCHIVED, client: client, name: client.name)
+
+        { client: client }
       end
     end
   end

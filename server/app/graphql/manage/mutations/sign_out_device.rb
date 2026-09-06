@@ -6,7 +6,12 @@ module Manage
       field :device, Types::DeviceType, null: false
 
       def resolve(id:)
-        { device: device!(id).sign_out! }
+        device = device!(id)
+
+        device.sign_out!
+        audit!(::Event::DEVICE_FORGOTTEN, device: device)
+
+        { device: device }
       end
     end
   end

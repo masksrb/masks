@@ -13,7 +13,11 @@ module Manage
           refuse!("a backup code is a way past a second factor, and this actor has none")
         end
 
-        { codes: actor.generate_backup_codes!, actor: actor }
+        codes = actor.generate_backup_codes!
+
+        audit!(::Event::BACKUP_CODES_GENERATED, actor: actor, count: codes.length)
+
+        { codes: codes, actor: actor }
       end
     end
   end

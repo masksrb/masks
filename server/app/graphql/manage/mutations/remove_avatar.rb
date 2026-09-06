@@ -12,6 +12,7 @@ module Manage
         refuse!("that actor has no photo") if held.nil?
 
         held.destroy!
+        audit!(::Event::AVATAR_REMOVED, actor: actor)
 
         { actor: actor.reload }
       end

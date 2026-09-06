@@ -4,6 +4,8 @@ module Verifications
 
     verification = EmailVerification.open!(actor: actor, by: by)
 
+    Event.record!(Event::EMAIL_VERIFICATION_SENT, actor: actor, by: by, email: actor.email)
+
     return { delivered: false, url: verification.url(Current.origin) } unless ActorMailer.deliverable?
 
     ActorMailer.email_verification(

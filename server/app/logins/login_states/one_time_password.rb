@@ -21,6 +21,7 @@ module LoginStates
         login.noted! "otp", "mfa"
         true
       else
+        refused! "otp"
         warn! "invalid-code"
         false
       end

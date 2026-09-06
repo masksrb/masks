@@ -6,6 +6,11 @@ class DevicesController < ApplicationController
 
     device.update!(name: params[:name].to_s.strip.presence)
 
+    Event.record!(
+      Event::DEVICE_NAMED,
+      actor: current_actor, device: device, name: device.name
+    )
+
     redirect_to root_path, notice: t("devices.renamed")
   end
 
@@ -13,6 +18,8 @@ class DevicesController < ApplicationController
     return refuse(t("devices.unknown")) if device.nil?
 
     device.sign_out!
+
+    Event.record!(Event::DEVICE_FORGOTTEN, actor: current_actor, device: device)
 
     if device == current_device
       cookies.delete(:masks_session)

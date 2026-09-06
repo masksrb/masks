@@ -11,6 +11,7 @@ en:
         devices: "Devices"
         email: "Email"
         password: "Password"
+        activity: "Activity"
 
       avatar:
         heading: "Avatar"
@@ -61,6 +62,12 @@ en:
         new: "New password"
         hint: "At least %{minimum} characters. Signs out every other session."
         submit: "Change password"
+
+      activity:
+        heading: "Activity"
+        lede: "What has happened to your account lately. Anything you do not recognise is worth a password change."
+        ago: "%{age} ago"
+        check_this: "worth a look"
 
       signed_out:
         title: "Your account"

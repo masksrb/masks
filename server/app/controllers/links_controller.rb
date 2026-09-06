@@ -15,6 +15,8 @@ class LinksController < ApplicationController
       return render :expired, status: :gone
     end
 
+    Event.record!(Event::EMAIL_VERIFIED, actor: @actor, email: @actor.email)
+
     render :verified
   end
 

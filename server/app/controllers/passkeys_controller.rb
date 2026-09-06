@@ -11,7 +11,9 @@ class PasskeysController < ApplicationController
 
     credential = RelyingParty.for.verify_registration(attestation, held)
 
-    Passkey.enrol!(actor: current_actor, credential: credential, name: params[:name])
+    passkey = Passkey.enrol!(actor: current_actor, credential: credential, name: params[:name])
+
+    Event.record!(Event::PASSKEY_ADDED, actor: current_actor, passkey: passkey.name)
 
     redirect_to root_path, notice: t("passkeys.added")
   rescue WebAuthn::Error, ActiveRecord::RecordInvalid, JSON::ParserError
@@ -32,6 +34,8 @@ class PasskeysController < ApplicationController
     return refuse(t("passkeys.unknown")) if passkey.nil?
 
     passkey.destroy!
+
+    Event.record!(Event::PASSKEY_REMOVED, actor: current_actor, passkey: passkey.name)
 
     redirect_to root_path, notice: t("passkeys.removed")
   end

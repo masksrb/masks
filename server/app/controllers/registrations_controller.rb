@@ -23,6 +23,8 @@ class RegistrationsController < ApplicationController
 
     client = Client.register!(attributes)
 
+    Event.record!(Event::CLIENT_REGISTERED, client: client, name: client.name, dynamic: true)
+
     render json: issued(client), status: :created
   rescue ActiveRecord::RecordInvalid => e
     invalid_metadata(e.record.errors.full_messages.join("; "))
@@ -37,6 +39,8 @@ class RegistrationsController < ApplicationController
   def update
     @client.update!(described.merge(scope_updates))
 
+    Event.record!(Event::CLIENT_UPDATED, client: @client, name: @client.name, dynamic: true)
+
     render json: @client.metadata.merge("registration_client_uri" => registration_uri(@client))
   rescue ActiveRecord::RecordInvalid => e
     invalid_metadata(e.record.errors.full_messages.join("; "))
@@ -46,6 +50,9 @@ class RegistrationsController < ApplicationController
 
   def destroy
     @client.update!(archived_at: Time.current)
+
+    Event.record!(Event::CLIENT_ARCHIVED, client: @client, name: @client.name)
+
     head :no_content
   end
 

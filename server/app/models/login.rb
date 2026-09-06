@@ -139,6 +139,8 @@ class Login
   end
 
   def remember!(factor, expiry: DeviceFactor::LIFETIME)
+    Event.record!(Event::DEVICE_TRUSTED, actor: actor, device: device, factor: factor.to_s)
+
     DeviceFactor.remember!(device: device, actor: actor, factor: factor, expiry: expiry)
   end
 

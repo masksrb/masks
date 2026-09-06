@@ -9,6 +9,7 @@ module Manage
         actor = actor!(uuid)
 
         actor.sign_out_everywhere!
+        audit!(::Event::ACTOR_SIGNED_OUT, actor: actor)
 
         { actor: actor }
       end
