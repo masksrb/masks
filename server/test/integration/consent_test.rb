@@ -114,7 +114,7 @@ class ConsentTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_match @registration["client_name"], response.body
-    assert_match "Read your email address", response.body
+    assert_match "Your email", response.body
   end
 
   test "consent given by one actor does not carry to another" do

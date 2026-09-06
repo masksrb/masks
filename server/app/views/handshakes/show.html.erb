@@ -1,4 +1,4 @@
-<% content_for :title, "Connect #{@handshake.name}" %>
+<% content_for :title, t(".page_title", name: @handshake.name) %>
 <% content_for :surface, "grant" %>
 
 <% hot, rest = ranked_scopes(@scopes) %>
@@ -11,23 +11,21 @@
 
 <div class="prompt-head">
   <h1 class="prompt-title">
-    <%= @existing ? "Reconnect" : "Connect" %> <%= @handshake.name %>?
+    <%= @existing ? t(".title_again", name: @handshake.name) : t(".title", name: @handshake.name) %>
   </h1>
 </div>
 
 <% if @existing %>
-  <div class="note note-warn" role="alert">
-    This replaces the credentials <%= @handshake.name %> holds now.
-  </div>
+  <div class="note note-warn" role="alert"><%= t(".replaces", name: @handshake.name) %></div>
 <% end %>
 
 <div class="slab">
   <div class="ledger-row">
-    <span class="ledger-label">Access</span>
+    <span class="ledger-label"><%= t(".access") %></span>
     <ul class="grant-scopes">
       <% hot.each do |scope, description| %>
         <li class="grant-scope grant-scope-hot">
-          <span><%= description || "The #{scope} scope" %></span>
+          <span><%= description %></span>
           <span class="chip-key"><%= scope %></span>
         </li>
       <% end %>
@@ -38,49 +36,48 @@
 
       <% rest.each do |scope, description| %>
         <li class="grant-scope">
-          <span><%= description || "The #{scope} scope" %></span>
+          <span><%= description %></span>
           <span class="chip-key"><%= scope %></span>
         </li>
       <% end %>
     </ul>
+
+    <% if @beneath.present? %>
+      <details class="disclosure">
+        <summary class="textlink"><%= t(".beneath", count: @beneath.size) %></summary>
+        <ul class="grant-scopes">
+          <% @beneath.each do |scope, description| %>
+            <li class="grant-scope">
+              <span><%= description %></span>
+              <span class="chip-key"><%= scope %></span>
+            </li>
+          <% end %>
+        </ul>
+      </details>
+    <% end %>
   </div>
 
-  <% if @beneath.present? %>
-    <div class="ledger-row">
-      <span class="ledger-label">Which today is</span>
-      <ul class="grant-scopes">
-        <% @beneath.each do |scope, description| %>
-          <li class="grant-scope">
-            <span><%= description %></span>
-            <span class="chip-key"><%= scope %></span>
-          </li>
-        <% end %>
-      </ul>
-    </div>
-  <% end %>
-
   <% if @granting.present? %>
-    <div class="ledger-row">
-      <span class="ledger-label">Claims</span>
+    <div class="ledger-row ledger-row-tight">
+      <span class="ledger-label"><%= t(".claims") %></span>
       <span class="ledger-value">
-        <%= @granting.to_sentence %> becomes <%= @handshake.name %>'s here, and is granted to you so
-        you can use what you are connecting.
+        <%= t(".claimed", namespaces: @granting.to_sentence, name: @handshake.name) %>
       </span>
     </div>
   <% end %>
 
-  <div class="ledger-row">
-    <span class="ledger-label">From</span>
+  <div class="ledger-row ledger-row-tight">
+    <span class="ledger-label"><%= t(".origin") %></span>
     <span class="ledger-value aside-mono"><%= @handshake.origin %></span>
   </div>
 
-  <div class="ledger-row">
-    <span class="ledger-label">Signs you in at</span>
+  <div class="ledger-row ledger-row-tight">
+    <span class="ledger-label"><%= t(".resource") %></span>
     <span class="ledger-value aside-mono"><%= @handshake.resource %></span>
   </div>
 
-  <div class="ledger-row">
-    <span class="ledger-label">Returns to</span>
+  <div class="ledger-row ledger-row-tight">
+    <span class="ledger-label"><%= t(".returns") %></span>
     <% @handshake.redirect_uris.each do |uri| %>
       <span class="ledger-value aside-mono"><%= uri %></span>
     <% end %>
@@ -90,9 +87,9 @@
 <%= form_with url: handshake_path, method: :post do |form| %>
   <%= hidden_field_tag :hid, hid_for(@pending) %>
   <div class="action-row">
-    <button type="submit" name="approve" value="yes" class="action action-grow">Connect</button>
-    <button type="submit" name="deny" value="yes" class="action action-quiet action-fit">Cancel</button>
+    <button type="submit" name="approve" value="yes" class="action action-grow"><%= t(".connect") %></button>
+    <button type="submit" name="deny" value="yes" class="action action-quiet action-fit"><%= t(".cancel") %></button>
   </div>
 <% end %>
 
-<p class="aside"><%= current_actor.nickname %> · <%= link_to "Sign out", logout_path, class: "textlink" %></p>
+<p class="aside"><%= current_actor.nickname %> · <%= link_to t(".sign_out"), logout_path, class: "textlink" %></p>
