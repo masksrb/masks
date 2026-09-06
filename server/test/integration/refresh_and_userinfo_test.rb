@@ -54,6 +54,18 @@ class RefreshAndUserinfoTest < ActionDispatch::IntegrationTest
     assert_nil claims["email"]
   end
 
+  def introspect(value)
+    post "/introspect",
+         params: URI.encode_www_form(
+           token: value,
+           client_id: @registration["client_id"],
+           client_secret: @registration["client_secret"]
+         ),
+         headers: { "CONTENT_TYPE" => "application/x-www-form-urlencoded" }
+
+    JSON.parse(response.body)
+  end
+
   def userinfo(access)
     get "/userinfo", headers: { "HTTP_AUTHORIZATION" => "Bearer #{access}" }
     JSON.parse(response.body)
@@ -73,6 +85,34 @@ class RefreshAndUserinfoTest < ActionDispatch::IntegrationTest
 
     assert refresh(issued["refresh_token"])["access_token"].present?
     assert_equal "invalid_grant", refresh(issued["refresh_token"])["error"]
+  end
+
+  test "a replay takes the whole family down with it, not just the token replayed" do
+    issued = access_token_for(actor: @actor, registration: @registration)
+    rotated = refresh(issued["refresh_token"])
+
+    assert_equal "invalid_grant", refresh(issued["refresh_token"])["error"]
+
+    assert_equal "invalid_grant", refresh(rotated["refresh_token"])["error"],
+                 "the branch the thief did not touch has to die too"
+
+    assert_not introspect(rotated["access_token"])["active"],
+               "an access token minted from the family is no longer live"
+    assert_not introspect(issued["access_token"])["active"],
+               "the first access token of the family is no longer live either"
+  end
+
+  test "a replay is written down, with what it cost" do
+    issued = access_token_for(actor: @actor, registration: @registration)
+
+    refresh(issued["refresh_token"])
+    refresh(issued["refresh_token"])
+
+    replay = Tenant.switch(@tenant) { Event.where(action: Event::REFRESH_REUSED).first }
+
+    assert_not_nil replay
+    assert_equal @actor.id, replay.actor_id
+    assert replay.details["revoked"].to_i.positive?
   end
 
   test "a refresh may narrow scope but not widen it" do

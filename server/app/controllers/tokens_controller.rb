@@ -74,7 +74,11 @@ class TokensController < ApplicationController
     def refresh(req, res, client)
       token = RefreshToken.claim(req.refresh_token)
 
-      req.invalid_grant!("that refresh token is not valid or has expired") if token.nil?
+      if token.nil?
+        replayed!(RefreshToken.spent(req.refresh_token), client)
+        req.invalid_grant!("that refresh token is not valid or has expired")
+      end
+
       req.invalid_grant!("that refresh token was issued to another client") if token.client_id != client.id
 
       scopes = req.scope.present? ? Scopes.granted(req.scope, token.scopes) : token.scope_list
@@ -82,7 +86,7 @@ class TokensController < ApplicationController
 
       access = AccessToken.issue!(
         issuer: issuer, actor: token.actor, client: client,
-        scopes: scopes, audience: audience
+        scopes: scopes, audience: audience, parent: token
       )
 
       rotated = RefreshToken.mint!(
@@ -97,6 +101,18 @@ class TokensController < ApplicationController
         "expires_in" => access.expires_in,
         "scope" => Scopes.join(scopes),
         "refresh_token" => rotated.secret
+      )
+    end
+
+    def replayed!(spent, client)
+      return if spent.nil? || !spent.consumed?
+
+      revoked = spent.revoke_family!
+
+      Event.record!(
+        Event::REFRESH_REUSED,
+        actor: spent.actor, by: nil, client: client,
+        issued_to: spent.client&.client_id, revoked: revoked
       )
     end
 
