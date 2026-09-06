@@ -3,11 +3,14 @@ import { getContext, setContext } from "svelte";
 const ROUTER = Symbol("router");
 
 export function createRouter(root) {
-  const state = $state({ path: location.pathname });
+  const state = $state({ path: location.pathname, search: location.search });
 
-  addEventListener("popstate", () => {
+  const settle = () => {
     state.path = location.pathname;
-  });
+    state.search = location.search;
+  };
+
+  addEventListener("popstate", settle);
 
   return {
     state,
@@ -16,19 +19,23 @@ export function createRouter(root) {
       return state.path.slice(root.length).split("/").filter(Boolean);
     },
 
+    get query() {
+      return new URLSearchParams(state.search);
+    },
+
     href(to) {
       return `${root}${to}`;
     },
 
     go(to) {
       history.pushState({}, "", `${root}${to}`);
-      state.path = location.pathname;
+      settle();
       scrollTo({ top: 0 });
     },
 
     replace(to) {
       history.replaceState({}, "", `${root}${to}`);
-      state.path = location.pathname;
+      settle();
     },
   };
 }

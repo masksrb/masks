@@ -57,6 +57,7 @@ class Event < ApplicationRecord
   CLIENT_APPROVED = "client.approved".freeze
   CLIENT_UPDATED = "client.updated".freeze
   CLIENT_ARCHIVED = "client.archived".freeze
+  CLIENT_RESTORED = "client.restored".freeze
   CLIENT_SECRET_ROTATED = "client.secret_rotated".freeze
 
   TOKEN_REVOKED = "token.revoked".freeze

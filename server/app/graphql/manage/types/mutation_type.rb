@@ -17,6 +17,7 @@ module Manage
       field :update_client, mutation: Mutations::UpdateClient
       field :rotate_client_secret, mutation: Mutations::RotateClientSecret
       field :archive_client, mutation: Mutations::ArchiveClient
+      field :restore_client, mutation: Mutations::RestoreClient
       field :release_namespace, mutation: Mutations::ReleaseNamespace
       field :discover_provider, mutation: Mutations::DiscoverProvider
       field :create_provider, mutation: Mutations::CreateProvider

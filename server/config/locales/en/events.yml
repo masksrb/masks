@@ -60,6 +60,7 @@ en:
         approved: "An application was approved"
         updated: "An application was edited"
         archived: "An application was archived"
+        restored: "An application was restored"
         secret_rotated: "An application secret was rotated"
       token:
         revoked: "A token was revoked"

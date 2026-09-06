@@ -9,6 +9,8 @@
   import Card from "./ui/Card.svelte";
   import Facts from "./ui/Facts.svelte";
   import Field from "./ui/Field.svelte";
+  import Lines from "./ui/Lines.svelte";
+  import Link from "./ui/Link.svelte";
   import Notices from "./ui/Notices.svelte";
   import Page from "./ui/Page.svelte";
   import Spinner from "./ui/Spinner.svelte";
@@ -64,9 +66,8 @@
           { term: "Approved by", value: client.approvedBy?.nickname },
           { term: "Registered", value: day(client.createdAt) },
           { term: "Authenticates with", value: client.tokenEndpointAuthMethod, mono: true },
-          { term: "Resources", value: joined(client.resources), mono: true },
-          { term: "Redirect URIs", value: joined(client.redirectUris), mono: true },
           { term: "Grants", value: joined(client.grantTypes), mono: true },
+          { term: "Response types", value: joined(client.responseTypes), mono: true },
         ]
       : [],
   );
@@ -102,11 +103,14 @@
     act(
       `mutation Update(
         $clientId: ID!, $name: String, $requiredScopes: [String!], $allowedScopes: [String!],
-        $backchannelLogoutUri: String
+        $backchannelLogoutUri: String, $redirectUris: [String!],
+        $postLogoutRedirectUris: [String!], $resources: [String!]
       ) {
         updateClient(
           clientId: $clientId, name: $name, requiredScopes: $requiredScopes,
-          allowedScopes: $allowedScopes, backchannelLogoutUri: $backchannelLogoutUri
+          allowedScopes: $allowedScopes, backchannelLogoutUri: $backchannelLogoutUri,
+          redirectUris: $redirectUris, postLogoutRedirectUris: $postLogoutRedirectUris,
+          resources: $resources
         ) {
           client { clientId }
         }
@@ -114,6 +118,18 @@
       { clientId, ...changes },
       notice,
     );
+
+  function restore() {
+    if (!confirm("Restore this client? It can sign people in again immediately.")) return;
+
+    act(
+      `mutation Restore($clientId: ID!) {
+        restoreClient(clientId: $clientId) { client { archivedAt } }
+      }`,
+      { clientId },
+      "Restored.",
+    );
+  }
 
   async function rotate() {
     if (!confirm("Issue a new secret? The one in use stops working immediately.")) return;
@@ -149,8 +165,9 @@
     <Notices feedback={feedback.state} />
 
     {#if client.archivedAt}
-      <div class="alert alert-warning alert-soft text-sm" role="status">
-        Archived on {day(client.archivedAt)}. It can no longer sign anybody in.
+      <div class="alert alert-warning alert-soft flex-wrap items-center gap-3 text-sm" role="status">
+        <span>Archived on {day(client.archivedAt)}. It can no longer sign anybody in.</span>
+        <button type="button" class="btn btn-sm" onclick={restore}>Restore it</button>
       </div>
     {/if}
 
@@ -180,6 +197,32 @@
       </Card>
 
       <div class="flex flex-col gap-4">
+        <Card
+          title="Where it may send people"
+          lede="One per line. A redirect URI must be absolute, carry no fragment, and use https unless it is loopback."
+        >
+          <Lines
+            label="Redirect URIs"
+            value={client.redirectUris}
+            onsave={(redirectUris) => update({ redirectUris }, "Redirect URIs saved.")}
+          />
+
+          <Lines
+            label="Post-logout redirect URIs"
+            value={client.postLogoutRedirectUris}
+            hint="Where it may send somebody after signing out."
+            onsave={(postLogoutRedirectUris) =>
+              update({ postLogoutRedirectUris }, "Post-logout URIs saved.")}
+          />
+
+          <Lines
+            label="Resources"
+            value={client.resources}
+            hint="The audiences it may ask a token for."
+            onsave={(resources) => update({ resources }, "Resources saved.")}
+          />
+        </Card>
+
         <Card title="Always granted" lede="Never shown on a consent screen.">
           <ScopesEditor
             value={client.requiredScopes}
@@ -238,6 +281,12 @@
         </Card>
 
         <Card title="Activity" lede="What this client has done, and what has been done to it.">
+          {#snippet actions()}
+            <Link to={`/activity?client=${client.clientId}`} class="btn btn-ghost btn-sm">
+              All of it
+            </Link>
+          {/snippet}
+
           <Events events={client.events} empty="Nothing recorded for this client yet." />
         </Card>
 
