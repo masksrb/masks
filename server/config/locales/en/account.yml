@@ -1,0 +1,67 @@
+en:
+  account:
+    index:
+      none_yet: "None yet."
+      sign_out: "Sign out"
+
+      nav:
+        avatar: "Avatar"
+        applications: "Applications"
+        passkeys: "Passkeys"
+        devices: "Devices"
+        email: "Email"
+        password: "Password"
+
+      avatar:
+        heading: "Avatar"
+        lede: "All three are always available to an application that asks. A photo is yours to upload; the other two are drawn from your account and cannot be removed."
+        photo: "Photo"
+        hint: "Cropped to a square and re-encoded, so nothing of the original file survives."
+        upload: "Upload"
+        remove: "Remove photo"
+        confirm_remove: "Remove your photo?"
+
+      applications:
+        heading: "Applications"
+
+      passkeys:
+        heading: "Passkeys"
+        certified: "certified"
+        used: "used %{age} ago"
+        never_used: "never used"
+        remove: "Remove"
+        confirm_remove: "Remove this passkey?"
+        compromised: "The FIDO Alliance reports a compromise for this model (%{report}). Replace it."
+        what_is_one: "What is a passkey?"
+        explained: "It signs you in with the fingerprint, face or PIN your device already uses, and counts as both factors on its own."
+        name: "Name"
+        name_placeholder: "This laptop"
+        add: "Add a passkey"
+
+      devices:
+        heading: "Devices"
+        this_device: "this device"
+        skips_code: "skips your code"
+        blocked: "blocked"
+        signed_out: "signed out"
+        seen: "seen %{age} ago"
+        sign_out: "Sign out"
+        rename: "Rename"
+
+      email:
+        heading: "Email"
+        none_set: "None set."
+        confirmed: "%{email} — confirmed."
+        unconfirmed: "%{email} — unconfirmed."
+        send_link: "Send a link"
+
+      password:
+        heading: "Password"
+        current: "Current password"
+        new: "New password"
+        hint: "At least %{minimum} characters. Signs out every other session."
+        submit: "Change password"
+
+      signed_out:
+        title: "Your account"
+        sign_in: "Sign in"

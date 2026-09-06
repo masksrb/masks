@@ -1,0 +1,29 @@
+en:
+  actor_mailer:
+    shared:
+      fallback: "Or paste this into your browser:"
+      sent_by: "Sent by %{tenant}'s sign-in service."
+      sent_by_html: "This message was sent by %{tenant}&rsquo;s sign-in service."
+
+    invitation:
+      subject: "You have been invited to %{tenant}"
+      invited_by: "%{nickname} invited you to %{tenant}."
+      invited: "You have been invited to %{tenant}."
+      username_html: "Your username is %{nickname}. Open the link to choose a password."
+      username: "Your username is %{nickname}. Open the link to choose a password."
+      action: "Choose a password"
+      expiry: "Works once, expires in %{duration}. Nothing happens until somebody opens it."
+
+    password_reset:
+      subject: "Reset your %{tenant} password"
+      opened_by: "%{nickname} started a password reset for your %{tenant} account."
+      opened: "Somebody asked to reset the password for your %{tenant} account."
+      action: "Reset your password"
+      expiry: "Works once, expires in %{duration}. Setting a new password signs you out everywhere else. If this was not you, ignore it — nothing has changed."
+
+    email_verification:
+      subject: "Confirm your email address for %{tenant}"
+      confirm_html: "Confirm this address for %{nickname} at %{tenant}."
+      confirm: "Confirm this address for %{nickname} at %{tenant}."
+      action: "Confirm this address"
+      expiry: "Works once, expires in %{duration}. If this was not you, ignore it — nothing else changes."

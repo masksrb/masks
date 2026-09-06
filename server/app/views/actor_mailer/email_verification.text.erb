@@ -1,6 +1,5 @@
-Confirm this address for <%= @actor.nickname %> at <%= @tenant_name %>.
+<%= t(".confirm", nickname: @actor.nickname, tenant: @tenant_name) %>
 
 <%= @url %>
 
-Works once, expires in <%= ActiveSupport::Duration.build(EmailVerification.lifetime.to_i).inspect %>.
-If this was not you, ignore it — nothing else changes.
+<%= t(".expiry", duration: ActiveSupport::Duration.build(EmailVerification.lifetime.to_i).inspect) %>

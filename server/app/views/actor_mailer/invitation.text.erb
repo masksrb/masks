@@ -1,8 +1,7 @@
-<%= @invited_by ? "#{@invited_by.nickname} invited you to #{@tenant_name}." : "You have been invited to #{@tenant_name}." %>
+<%= @invited_by ? t(".invited_by", nickname: @invited_by.nickname, tenant: @tenant_name) : t(".invited", tenant: @tenant_name) %>
 
-Your username is <%= @actor.nickname %>. Open the link to choose a password.
+<%= t(".username", nickname: @actor.nickname) %>
 
 <%= @url %>
 
-Works once, expires in <%= ActiveSupport::Duration.build(Invitation.lifetime.to_i).inspect %>.
-Nothing happens until somebody opens it.
+<%= t(".expiry", duration: ActiveSupport::Duration.build(Invitation.lifetime.to_i).inspect) %>

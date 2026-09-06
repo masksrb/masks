@@ -6,16 +6,16 @@ class PasskeysController < ApplicationController
   def create
     held = session.delete(HELD)
 
-    return refuse("That enrolment expired. Try again.") if held.blank?
-    return refuse("You already have as many passkeys as this server keeps.") if crowded?
+    return refuse(t("passkeys.expired")) if held.blank?
+    return refuse(t("passkeys.crowded")) if crowded?
 
     credential = RelyingParty.for.verify_registration(attestation, held)
 
     Passkey.enrol!(actor: current_actor, credential: credential, name: params[:name])
 
-    redirect_to root_path, notice: "Passkey added."
+    redirect_to root_path, notice: t("passkeys.added")
   rescue WebAuthn::Error, ActiveRecord::RecordInvalid, JSON::ParserError
-    refuse("That passkey could not be added.")
+    refuse(t("passkeys.unusable"))
   end
 
   def challenge
@@ -29,11 +29,11 @@ class PasskeysController < ApplicationController
   def destroy
     passkey = Passkey.find_by(id: params[:id], actor_id: current_actor.id)
 
-    return refuse("There is no such passkey on this account.") if passkey.nil?
+    return refuse(t("passkeys.unknown")) if passkey.nil?
 
     passkey.destroy!
 
-    redirect_to root_path, notice: "Passkey removed."
+    redirect_to root_path, notice: t("passkeys.removed")
   end
 
   private

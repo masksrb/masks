@@ -1,9 +1,11 @@
-<% content_for :title, "Sign out?" %>
+<% content_for :title, t(".page_title") %>
 
 <div id="logout-confirm" class="flow">
   <div class="prompt-head">
-    <h1 class="prompt-title">Sign out everywhere?</h1>
-    <p class="prompt-lede">Signed in as <strong><%= current_actor.nickname %></strong>.</p>
+    <h1 class="prompt-title"><%= t(".title") %></h1>
+    <p class="prompt-lede">
+      <%= t(".signed_in_as_html", nickname: tag.strong(current_actor.nickname)) %>
+    </p>
   </div>
 
   <%= form_with url: logout_path, method: :delete do |form| %>
@@ -12,8 +14,8 @@
     <%= form.hidden_field :state, value: @logout.state %>
 
     <div class="action-row">
-      <button type="submit" class="action action-grow">Sign out</button>
-      <%= link_to "Stay", root_path, class: "action action-quiet action-fit" %>
+      <button type="submit" class="action action-grow"><%= t(".sign_out") %></button>
+      <%= link_to t(".stay"), root_path, class: "action action-quiet action-fit" %>
     </div>
   <% end %>
 </div>

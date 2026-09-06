@@ -1,8 +1,8 @@
-<% content_for :title, "This request cannot be completed" %>
+<% content_for :title, t(".page_title") %>
 <% content_for :surface, "terminus" %>
 
 <div id="authorize-error" class="flow" data-error="<%= @error_code %>">
-  <span class="state state-bad">Stopped</span>
+  <span class="state state-bad"><%= t(".stopped") %></span>
 
   <h1 class="prompt-title"><%= t(".heading") %></h1>
 

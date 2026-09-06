@@ -1,8 +1,8 @@
-<% content_for :title, "Address confirmed" %>
+<% content_for :title, t(".page_title") %>
 <% content_for :surface, "terminus" %>
 
-<span class="state state-done">Confirmed</span>
+<span class="state state-done"><%= t(".state") %></span>
 
-<h1 class="prompt-title"><%= @actor.email %> is confirmed.</h1>
+<h1 class="prompt-title"><%= t(".title", email: @actor.email) %></h1>
 
-<%= link_to "Your account", root_path, class: "action action-fit" %>
+<%= link_to t(".account"), root_path, class: "action action-fit" %>

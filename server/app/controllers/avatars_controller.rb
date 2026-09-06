@@ -28,7 +28,7 @@ class AvatarsController < ApplicationController
 
     Avatar.store!(actor: current_actor, upload: params[:avatar])
 
-    redirect_to root_path(anchor: "avatar"), notice: "Your photo has been updated."
+    redirect_to root_path(anchor: "avatar"), notice: t("avatars.updated")
   rescue Avatar::Unreadable => e
     redirect_to root_path(anchor: "avatar"), alert: e.message
   end
@@ -38,7 +38,7 @@ class AvatarsController < ApplicationController
 
     Avatars.photo(current_actor)&.destroy!
 
-    redirect_to root_path(anchor: "avatar"), notice: "Your photo has been removed."
+    redirect_to root_path(anchor: "avatar"), notice: t("avatars.removed")
   end
 
   private

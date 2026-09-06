@@ -1,0 +1,8 @@
+en:
+  sessions:
+    confirm:
+      page_title: "Sign out?"
+      title: "Sign out everywhere?"
+      signed_in_as_html: "Signed in as %{nickname}."
+      sign_out: "Sign out"
+      stay: "Stay"
