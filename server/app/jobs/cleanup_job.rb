@@ -1,5 +1,6 @@
 class CleanupJob < ApplicationJob
   queue_as :maintenance
+  across_tenants!
 
   GRACE = 7.days
 

@@ -11,13 +11,15 @@ require "rails/test_unit/railtie"
 
 Bundler.require(*Rails.groups)
 
+require_relative "../lib/tenancy/middleware"
+
 module Server
   class Application < Rails::Application
     config.load_defaults 8.1
 
-    config.autoload_lib(ignore: %w[assets tasks rack])
+    config.autoload_lib(ignore: %w[assets tasks rack tenancy])
 
-    config.action_mailer.delivery_job = "MailDeliveryJob"
+    config.middleware.use Tenancy::Middleware
 
     config.i18n.load_path += Dir[Rails.root.join("config/locales/*/*.yml")]
     config.i18n.available_locales = Dir[Rails.root.join("config/locales/*/")].map do |path|

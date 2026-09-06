@@ -61,18 +61,20 @@ class Token < ApplicationRecord
   end
 
   def revoke!
-    revoked = 0
-    frontier = [ self ]
+    transaction do
+      revoked = 0
+      frontier = [ self ]
 
-    while (token = frontier.shift)
-      next if token.consumed?
+      while (token = frontier.shift)
+        next if token.consumed?
 
-      token.update!(consumed_at: Time.current)
-      revoked += 1
-      frontier.concat(token.children.to_a)
+        token.update!(consumed_at: Time.current)
+        revoked += 1
+        frontier.concat(token.children.to_a)
+      end
+
+      revoked
     end
-
-    revoked
   end
 
   def root
@@ -83,16 +85,18 @@ class Token < ApplicationRecord
   end
 
   def revoke_family!
-    revoked = 0
-    frontier = [ root ]
+    transaction do
+      revoked = 0
+      frontier = [ root ]
 
-    while (token = frontier.shift)
-      revoked += 1 if token.live?
-      token.update!(consumed_at: Time.current) unless token.consumed?
-      frontier.concat(token.children.to_a)
+      while (token = frontier.shift)
+        revoked += 1 if token.live?
+        token.update!(consumed_at: Time.current) unless token.consumed?
+        frontier.concat(token.children.to_a)
+      end
+
+      revoked
     end
-
-    revoked
   end
 
   def consumed?

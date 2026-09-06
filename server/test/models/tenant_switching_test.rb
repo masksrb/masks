@@ -1,5 +1,19 @@
 require "test_helper"
 
+class ProbeJob < ApplicationJob
+  cattr_accessor :performed_in
+
+  def perform = self.class.performed_in = Current.tenant&.subdomain
+end
+
+class SweepJob < ApplicationJob
+  across_tenants!
+
+  cattr_accessor :performed_in
+
+  def perform = self.class.performed_in = Current.tenant&.subdomain
+end
+
 class TenantSwitchingTest < ActiveSupport::TestCase
   include ActiveJob::TestHelper
 
@@ -101,8 +115,53 @@ class TenantSwitchingTest < ActiveSupport::TestCase
     assert_raises(ActiveRecord::RecordNotFound) { perform_enqueued_jobs }
   end
 
-  test "a job enqueued outside a tenant performs outside one" do
+  test "a job enqueued outside a tenant is refused rather than left to guess" do
+    assert_raises(Tenancy::Job::Homeless) { ProbeJob.perform_later }
+  end
+
+  test "a job that declares itself across tenants may be enqueued outside one" do
+    assert_nothing_raised { SweepJob.perform_later }
+
+    perform_enqueued_jobs
+
+    assert_nil SweepJob.performed_in
+  end
+
+  test "the recurring sweep is enqueued outside a tenant, as its schedule reaches it" do
     assert_nothing_raised { CleanupJob.perform_later }
     assert_nothing_raised { perform_enqueued_jobs }
+  end
+
+  test "mail is carried by the framework's own delivery job, with no subclass to remember" do
+    assert_equal ActionMailer::MailDeliveryJob, ActionMailer::Base.delivery_job
+    assert ActionMailer::MailDeliveryJob < Tenancy::Job
+  end
+
+  test "a switch holds no transaction open" do
+    depth = ActiveRecord::Base.connection.open_transactions
+
+    within(@other) do
+      assert_equal depth, ActiveRecord::Base.connection.open_transactions,
+                   "a request must not sit inside a transaction for its whole life, or an " \
+                   "outbound call to a provider holds one open for its timeout"
+    end
+  end
+
+  test "leaving a tenant leaves nothing behind on the connection" do
+    create_actor(@tenant, nickname: "owner")
+
+    within(@tenant) { assert_equal 1, Actor.count }
+
+    assert_equal 0, Actor.unscoped.count,
+                 "the setting outlived the switch, so the next request to pick up this " \
+                 "connection would read the last one's rows"
+  end
+
+  test "a switch that raises leaves nothing behind either" do
+    create_actor(@tenant, nickname: "owner")
+
+    assert_raises(RuntimeError) { within(@tenant) { raise "boom" } }
+
+    assert_equal 0, Actor.unscoped.count
   end
 end
