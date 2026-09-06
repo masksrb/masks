@@ -1,8 +1,11 @@
 <script>
+  import { untrack } from "svelte";
   import Events from "./Events.svelte";
   import { createFeedback } from "./lib/feedback.svelte.js";
   import { said } from "./lib/events.js";
+  import { useRouter } from "./lib/router.svelte.js";
   import Card from "./ui/Card.svelte";
+  import Link from "./ui/Link.svelte";
   import Notices from "./ui/Notices.svelte";
   import Page from "./ui/Page.svelte";
   import Spinner from "./ui/Spinner.svelte";
@@ -20,13 +23,23 @@
   `;
 
   const QUERY = `
-    query Activity($action: String, $grave: Boolean, $afterId: ID, $limit: Int) {
-      events(action: $action, grave: $grave, afterId: $afterId, limit: $limit) { ${FIELDS} }
+    query Activity(
+      $action: String, $grave: Boolean, $afterId: ID, $limit: Int,
+      $actor: ID, $client: ID
+    ) {
+      events(
+        action: $action, grave: $grave, afterId: $afterId, limit: $limit,
+        actor: $actor, client: $client
+      ) { ${FIELDS} }
       eventActions
     }
   `;
 
+  const ABOUT_ACTOR = `query About($uuid: ID!) { actor(uuid: $uuid) { uuid nickname } }`;
+  const ABOUT_CLIENT = `query About($clientId: ID!) { client(clientId: $clientId) { clientId name } }`;
+
   const feedback = createFeedback();
+  const router = useRouter();
 
   let events = $state([]);
   let actions = $state([]);
@@ -35,13 +48,25 @@
   let loading = $state(true);
   let more = $state(false);
   let exhausted = $state(false);
+  let about = $state(null);
+
+  const actorId = $derived(router.query.get("actor"));
+  const clientId = $derived(router.query.get("client"));
+  const narrowed = $derived(Boolean(actorId || clientId));
 
   async function load(afterId = null) {
     if (afterId) more = true;
     else loading = true;
 
     const data = await feedback.attempt(() =>
-      api.query(QUERY, { action: action || null, grave, afterId, limit: PAGE }),
+      api.query(QUERY, {
+        action: action || null,
+        grave,
+        afterId,
+        limit: PAGE,
+        actor: actorId,
+        client: clientId,
+      }),
     );
 
     loading = false;
@@ -54,7 +79,38 @@
     exhausted = data.events.length < PAGE;
   }
 
-  load();
+  async function describe() {
+    about = null;
+
+    if (actorId) {
+      const data = await api.query(ABOUT_ACTOR, { uuid: actorId }).catch(() => null);
+
+      if (data?.actor) {
+        about = { label: data.actor.nickname, to: `/people/${data.actor.uuid}`, noun: "person" };
+      }
+
+      return;
+    }
+
+    if (!clientId) return;
+
+    const data = await api.query(ABOUT_CLIENT, { clientId }).catch(() => null);
+
+    if (data?.client) {
+      about = { label: data.client.name, to: `/clients/${data.client.clientId}`, noun: "client" };
+    }
+  }
+
+  $effect(() => {
+    actorId;
+    clientId;
+
+    untrack(() => {
+      exhausted = false;
+      load();
+      describe();
+    });
+  });
 
   function filter(chosen) {
     action = chosen;
@@ -77,6 +133,21 @@
   lede="Every sign-in, credential change and administrative act, newest first."
 >
   <Notices feedback={feedback.state} />
+
+  {#if narrowed}
+    <div class="alert alert-info alert-soft flex-wrap items-center gap-3 text-sm" role="status">
+      {#if about}
+        <span>
+          Only what involves the {about.noun}
+          <Link to={about.to} class="link font-medium">{about.label}</Link>.
+        </span>
+      {:else}
+        <span>Only what involves one {actorId ? "person" : "client"}, which no longer exists.</span>
+      {/if}
+
+      <Link to="/activity" class="btn btn-sm">Show everything</Link>
+    </div>
+  {/if}
 
   <Card>
     <div class="flex flex-wrap items-end gap-4">

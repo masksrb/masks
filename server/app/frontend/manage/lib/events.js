@@ -50,6 +50,7 @@ const SAID = {
   "client.approved": "Client approved",
   "client.updated": "Client edited",
   "client.archived": "Client archived",
+  "client.restored": "Client restored",
   "client.secret_rotated": "Client secret rotated",
 
   "token.revoked": "Token revoked",

@@ -10,6 +10,7 @@
   import ScopesEditor from "./ScopesEditor.svelte";
   import Card from "./ui/Card.svelte";
   import Field from "./ui/Field.svelte";
+  import Link from "./ui/Link.svelte";
   import Notices from "./ui/Notices.svelte";
   import Page from "./ui/Page.svelte";
   import Spinner from "./ui/Spinner.svelte";
@@ -458,6 +459,10 @@
         </Card>
 
         <Card title="Activity" lede="What has happened to this account, newest first.">
+          {#snippet actions()}
+            <Link to={`/activity?actor=${actor.uuid}`} class="btn btn-ghost btn-sm">All of it</Link>
+          {/snippet}
+
           <Events events={actor.events} showActor={false} empty="Nothing recorded yet." />
         </Card>
 
