@@ -1,6 +1,7 @@
 <script>
 import PasskeyButton from "../shared/PasskeyButton.svelte";
 import PromptHeader from "../shared/PromptHeader.svelte";
+import ProviderButtons from "../shared/ProviderButtons.svelte";
 
 let { login } = $props();
 
@@ -43,3 +44,5 @@ function onsubmit(event) {
 </form>
 
 <PasskeyButton {login} />
+
+<ProviderButtons {login} />

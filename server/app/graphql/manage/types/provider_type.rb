@@ -18,8 +18,24 @@ module Manage
       field :archived_at, GraphQL::Types::ISO8601DateTime
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
 
+      field :issuer, String
+      field :jwks_uri, String
+      field :jwks_fetched_at, GraphQL::Types::ISO8601DateTime
+      field :signs_in, Boolean, null: false
+      field :provisions, Boolean, null: false
+      field :email_domains, [ String ], null: false
+      field :signup_scopes, [ String ], null: false
+
       def scopes
         object.scope_list
+      end
+
+      def email_domains
+        object.email_domain_list
+      end
+
+      def signup_scopes
+        Scopes.list(object.signup_scopes)
       end
 
       def secret_held

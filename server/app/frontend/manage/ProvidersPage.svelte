@@ -13,6 +13,25 @@
     key name authorizationUrl tokenUrl revocationUrl userinfoUrl clientId
     scopes authorizeParams subjectClaim labelClaim releaseScope
     secretHeld connections archivedAt createdAt
+    issuer jwksUri signsIn provisions emailDomains signupScopes
+  `;
+
+  const SSO_ARGS = `
+    $issuer: String, $jwksUri: String, $signsIn: Boolean, $provisions: Boolean,
+    $emailDomains: [String!], $signupScopes: [String!]
+  `;
+
+  const SSO_PASS = `
+    issuer: $issuer, jwksUri: $jwksUri, signsIn: $signsIn, provisions: $provisions,
+    emailDomains: $emailDomains, signupScopes: $signupScopes
+  `;
+
+  const DISCOVER = `
+    mutation Discover($issuer: String!) {
+      discoverProvider(issuer: $issuer) {
+        issuer authorizationUrl tokenUrl userinfoUrl revocationUrl jwksUri
+      }
+    }
   `;
 
   const QUERY = `
@@ -26,13 +45,14 @@
     mutation Create(
       $key: ID!, $name: String!, $authorizationUrl: String!, $tokenUrl: String!,
       $clientId: String!, $clientSecret: String, $revocationUrl: String,
-      $userinfoUrl: String, $scopes: [String!], $subjectClaim: String, $labelClaim: String
+      $userinfoUrl: String, $scopes: [String!], $subjectClaim: String, $labelClaim: String,
+      ${SSO_ARGS}
     ) {
       createProvider(
         key: $key, name: $name, authorizationUrl: $authorizationUrl, tokenUrl: $tokenUrl,
         clientId: $clientId, clientSecret: $clientSecret, revocationUrl: $revocationUrl,
         userinfoUrl: $userinfoUrl, scopes: $scopes, subjectClaim: $subjectClaim,
-        labelClaim: $labelClaim
+        labelClaim: $labelClaim, ${SSO_PASS}
       ) { provider { key } }
     }
   `;
@@ -41,13 +61,14 @@
     mutation Update(
       $key: ID!, $name: String, $authorizationUrl: String, $tokenUrl: String,
       $clientId: String, $clientSecret: String, $revocationUrl: String,
-      $userinfoUrl: String, $scopes: [String!], $subjectClaim: String, $labelClaim: String
+      $userinfoUrl: String, $scopes: [String!], $subjectClaim: String, $labelClaim: String,
+      ${SSO_ARGS}
     ) {
       updateProvider(
         key: $key, name: $name, authorizationUrl: $authorizationUrl, tokenUrl: $tokenUrl,
         clientId: $clientId, clientSecret: $clientSecret, revocationUrl: $revocationUrl,
         userinfoUrl: $userinfoUrl, scopes: $scopes, subjectClaim: $subjectClaim,
-        labelClaim: $labelClaim
+        labelClaim: $labelClaim, ${SSO_PASS}
       ) { provider { key } }
     }
   `;
@@ -64,6 +85,12 @@
     scopes: "",
     subjectClaim: "sub",
     labelClaim: "email",
+    issuer: "",
+    jwksUri: "",
+    signsIn: false,
+    provisions: false,
+    emailDomains: "",
+    signupScopes: "",
   };
 
   const feedback = createFeedback();
@@ -110,6 +137,12 @@
       scopes: provider.scopes.join(" "),
       subjectClaim: provider.subjectClaim,
       labelClaim: provider.labelClaim,
+      issuer: provider.issuer ?? "",
+      jwksUri: provider.jwksUri ?? "",
+      signsIn: provider.signsIn,
+      provisions: provider.provisions,
+      emailDomains: provider.emailDomains.join(" "),
+      signupScopes: provider.signupScopes.join(" "),
     };
     feedback.clear();
   }
@@ -134,7 +167,35 @@
       scopes: draft.scopes.split(/[\s,]+/).filter(Boolean),
       subjectClaim: draft.subjectClaim.trim() || "sub",
       labelClaim: draft.labelClaim.trim() || "email",
+      issuer: trimmed(draft.issuer),
+      jwksUri: trimmed(draft.jwksUri),
+      signsIn: draft.signsIn,
+      provisions: draft.provisions,
+      emailDomains: draft.emailDomains.split(/[\s,]+/).filter(Boolean),
+      signupScopes: draft.signupScopes.split(/[\s,]+/).filter(Boolean),
     };
+  }
+
+  async function discover() {
+    busy = true;
+
+    const data = await feedback.attempt(
+      () => api.query(DISCOVER, { issuer: draft.issuer.trim() }),
+      "Endpoints filled in from the discovery document.",
+    );
+
+    busy = false;
+
+    if (!data) return;
+
+    const found = data.discoverProvider;
+
+    draft.issuer = found.issuer;
+    draft.authorizationUrl = found.authorizationUrl;
+    draft.tokenUrl = found.tokenUrl;
+    draft.jwksUri = found.jwksUri;
+    draft.userinfoUrl = found.userinfoUrl ?? draft.userinfoUrl;
+    draft.revocationUrl = found.revocationUrl ?? draft.revocationUrl;
   }
 
   async function save() {
@@ -218,6 +279,32 @@
         The key names the scope: <span class="font-mono">masks:connections:{draft.key || "…"}</span>
       </p>
 
+      <div class="flex flex-wrap items-end gap-3">
+        <div class="min-w-64 flex-1">
+          <Field
+            label="Issuer"
+            bind:value={draft.issuer}
+            autocapitalize="none"
+            autocorrect="off"
+            spellcheck="false"
+            placeholder="https://accounts.google.com"
+          />
+        </div>
+        <button
+          type="button"
+          class="btn btn-sm"
+          disabled={busy || !draft.issuer.trim()}
+          onclick={discover}
+        >
+          Discover
+        </button>
+      </div>
+
+      <p class="text-xs opacity-60">
+        Needed to sign people in — the id_token is checked against this issuer and its published
+        keys. Leave it empty for a provider that only ever brokers a connection.
+      </p>
+
       <div class="grid gap-3 sm:grid-cols-2">
         <Field
           label="Authorization URL"
@@ -256,6 +343,67 @@
       <div class="grid gap-3 sm:grid-cols-2">
         <Field label="Subject claim" bind:value={draft.subjectClaim} />
         <Field label="Label claim" bind:value={draft.labelClaim} />
+        <Field
+          label="JWKS URI"
+          bind:value={draft.jwksUri}
+          autocapitalize="none"
+          autocorrect="off"
+          spellcheck="false"
+          placeholder="discovered if left empty"
+        />
+      </div>
+
+      <div class="flex flex-col gap-3 rounded-lg bg-base-200 p-3">
+        <span class="legend">Signing in</span>
+
+        <label class="flex items-start gap-3 text-sm">
+          <input type="checkbox" class="toggle toggle-sm" bind:checked={draft.signsIn} />
+          <span>
+            People can sign in with {draft.name.trim() || "this provider"}
+            <span class="block text-xs opacity-60">
+              A button appears on the sign-in page. It counts as a password, not as a second factor.
+            </span>
+          </span>
+        </label>
+
+        <label class="flex items-start gap-3 text-sm">
+          <input
+            type="checkbox"
+            class="toggle toggle-sm"
+            disabled={!draft.signsIn}
+            bind:checked={draft.provisions}
+          />
+          <span>
+            Create an account for somebody new
+            <span class="block text-xs opacity-60">
+              Off, only people who already have an account here can sign in. A confirmed address
+              always links to the account that holds it; an unconfirmed one never does.
+            </span>
+          </span>
+        </label>
+
+        {#if draft.signsIn}
+          <div class="grid gap-3 sm:grid-cols-2">
+            <Field
+              label="Allowed email domains"
+              bind:value={draft.emailDomains}
+              autocapitalize="none"
+              autocorrect="off"
+              spellcheck="false"
+              placeholder="any domain"
+            />
+            {#if draft.provisions}
+              <Field
+                label="Scopes for a new account"
+                bind:value={draft.signupScopes}
+                autocapitalize="none"
+                autocorrect="off"
+                spellcheck="false"
+                placeholder="openid profile email offline_access"
+              />
+            {/if}
+          </div>
+        {/if}
       </div>
 
       <div class="flex gap-2">
@@ -293,6 +441,22 @@
             Archive
           </button>
         {/snippet}
+
+        <div class="flex flex-wrap gap-2">
+          {#if provider.signsIn}
+            <span class="badge badge-success badge-sm">signs people in</span>
+            {#if provider.provisions}
+              <span class="badge badge-warning badge-sm">creates accounts</span>
+            {:else}
+              <span class="badge badge-ghost badge-sm">existing accounts only</span>
+            {/if}
+            {#each provider.emailDomains as domain (domain)}
+              <span class="badge badge-ghost badge-sm font-mono">@{domain}</span>
+            {/each}
+          {:else}
+            <span class="badge badge-ghost badge-sm">connections only</span>
+          {/if}
+        </div>
 
         <dl class="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
           <div>

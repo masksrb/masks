@@ -20,8 +20,13 @@ class LoginsController < ApplicationController
              by: -> { [ current_tenant.id, request.remote_ip ].join(":") },
              with: -> { too_many("too-many-attempts") }
 
+  rate_limit to: Rails.configuration.masks.attempt_limit,
+             within: 3.minutes, only: :provider, name: "provider",
+             by: -> { [ current_tenant.id, request.remote_ip ].join(":") },
+             with: -> { too_many("too-many-attempts") }
+
   before_action :verify_authenticity_token
-  before_action :establish_device, only: :update
+  before_action :establish_device, only: %i[update provider]
 
   def show
     return redirect_to after_login_path if current_actor && pending.nil?
@@ -43,6 +48,14 @@ class LoginsController < ApplicationController
     end
   end
 
+  def provider
+    login = run(event: "provider:callback", updates: callback_params)
+
+    settle(login) if login.settled? && pending.nil?
+
+    resume(login)
+  end
+
   def destroy
     login = run
     login.start_over!
@@ -59,7 +72,18 @@ class LoginsController < ApplicationController
     def pending
       return @pending if defined?(@pending)
 
-      @pending = pending_request(params[:rid])
+      @pending = pending_request(resolved_rid)
+    end
+
+    def resolved_rid
+      @resolved_rid ||= params[:rid].presence ||
+        session.dig(STORE, LoginStates::Provider::HELD, "rid").presence
+    end
+
+    def callback_params
+      params.permit(:code, :state, :error, :error_description)
+            .to_h
+            .merge("provider" => params[:key])
     end
 
     def run(event: nil, updates: {})
@@ -68,7 +92,7 @@ class LoginsController < ApplicationController
         request: pending,
         session: current_session,
         device: current_device,
-        rid: params[:rid].presence,
+        rid: resolved_rid,
         event: event,
         updates: updates
       ).update
@@ -100,6 +124,7 @@ class LoginsController < ApplicationController
     end
 
     def next_location(login)
+      return login.redirect_to if login.redirect_to.present?
       return deny(pending, login.refusal.error, login.refusal.description) if login.refused? && pending
       return authorize_url_for(pending) if pending
       return after_login_path if login.settled?

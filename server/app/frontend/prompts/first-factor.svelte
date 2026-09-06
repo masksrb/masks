@@ -1,6 +1,7 @@
 <script>
 import Identified from "../shared/Identified.svelte";
 import PasskeyButton from "../shared/PasskeyButton.svelte";
+import ProviderButtons from "../shared/ProviderButtons.svelte";
 
 let { login } = $props();
 
@@ -46,6 +47,8 @@ function onsubmit(event) {
 </form>
 
 <PasskeyButton {login} />
+
+<ProviderButtons {login} />
 
 <button
   type="button"

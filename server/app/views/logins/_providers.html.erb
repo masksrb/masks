@@ -1,0 +1,19 @@
+<% offered = login.as_json["providers"] || [] %>
+
+<% if offered.any? %>
+  <div class="providers">
+    <span class="providers-rule"><%= t("logins.shared.or") %></span>
+
+    <% offered.each do |provider| %>
+      <%= form_with url: login_path, method: :post, class: "contents" do |form| %>
+        <%= hidden_field_tag :rid, login.rid %>
+        <%= form.hidden_field :event, value: "provider" %>
+        <%= form.hidden_field :provider, value: provider["key"] %>
+
+        <button type="submit" class="action action-quiet">
+          <%= t("logins.shared.continue_with", provider: provider["name"]) %>
+        </button>
+      <% end %>
+    <% end %>
+  </div>
+<% end %>

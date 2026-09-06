@@ -45,8 +45,11 @@ en:
       connection:
         linked: "A provider was connected"
         unlinked: "A provider was disconnected"
+        signed_in: "Signed in with a provider"
+        refused: "A provider sign-in was refused"
       actor:
         created: "Account created"
+        provisioned: "Account created by a provider"
         updated: "Profile edited"
         deleted: "Account deleted"
         scopes_changed: "Scopes changed"

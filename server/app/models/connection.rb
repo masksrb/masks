@@ -23,7 +23,7 @@ class Connection < ApplicationRecord
         tokens["sub"].presence ||
         raise(ArgumentError, "#{provider.name} returned no #{provider.subject_claim} to identify the account by")
 
-      connection = live.find_or_initialize_by(provider: provider, subject: subject.to_s)
+      connection = find_or_initialize_by(provider: provider, subject: subject.to_s)
 
       connection.actor = actor
       connection.label = identity[provider.label_claim].presence || connection.label
@@ -32,10 +32,28 @@ class Connection < ApplicationRecord
       connection.revoked_at = nil
       connection.revoked_reason = nil
       connection.absorb(tokens)
+      connection.absorb_identity(identity)
       connection.save!
 
       connection
     end
+  end
+
+  def absorb_identity(identity)
+    held = identity["email"].to_s.strip.downcase.presence
+
+    return self if held.nil?
+
+    self.email = held
+    self.email_verified = identity["email_verified"] == true
+
+    self
+  end
+
+  def signed_in!
+    update!(signed_in_at: Time.current)
+
+    self
   end
 
   def revoked?
