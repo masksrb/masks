@@ -1,8 +1,9 @@
 class AccountController < ApplicationController
   def index
     @actor = current_actor
-    @first_run = @actor.nil? && !Actor.exists?
-    @connected = Client.approved_for(issuer.manage_resource).present?
+
+    return redirect_to login_path if @actor.nil? && !Actor.exists?
+
     @consents = @actor ? Consent.live.where(actor: @actor).includes(:client) : []
     @passkeys = @actor ? Passkey.where(actor: @actor).includes(:authenticator).newest_first : []
     @devices = @actor ? @actor.devices.newest_first : []
