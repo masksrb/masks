@@ -11,6 +11,8 @@ module Manage
         refuse!("that key is already signing") if key.active?
         refuse!("a retired key cannot be activated") unless key.staged?
 
+        audit!(::Event::SIGNING_KEY_ACTIVATED, kid: key.kid)
+
         { signing_key: key.activate! }
       end
     end

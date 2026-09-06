@@ -15,6 +15,8 @@ class PasswordsController < ApplicationController
 
     return refuse(t("passwords.wrong_current")) unless changed
 
+    Event.record!(Event::PASSWORD_CHANGED, actor: current_actor)
+
     redirect_to root_path, notice: t("passwords.changed")
   end
 

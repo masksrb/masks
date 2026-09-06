@@ -13,6 +13,7 @@ module Manage
         end
 
         held.release!
+        audit!(::Event::NAMESPACE_RELEASED, name: held.name)
 
         { released: held.name }
       end

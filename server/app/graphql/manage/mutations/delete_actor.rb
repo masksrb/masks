@@ -13,9 +13,12 @@ module Manage
           refuse!("that is you, and deleting yourself would lock you out")
         end
 
-        actor.destroy!
+        held = { uuid: actor.uuid, nickname: actor.nickname }
 
-        { uuid: actor.uuid, nickname: actor.nickname }
+        actor.destroy!
+        audit!(::Event::ACTOR_DELETED, **held)
+
+        held
       end
     end
   end

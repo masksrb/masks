@@ -18,6 +18,7 @@ module LoginStates
         factored! :first_factor, expiry: EXPIRY
         login.noted! "pwd"
       else
+        refused! "password"
         warn! "invalid-credentials"
       end
 

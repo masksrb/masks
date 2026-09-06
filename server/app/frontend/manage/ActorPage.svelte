@@ -2,6 +2,7 @@
   import { createFeedback } from "./lib/feedback.svelte.js";
   import { day, since } from "./lib/format.js";
   import { useRouter } from "./lib/router.svelte.js";
+  import Events from "./Events.svelte";
   import Presence from "./Presence.svelte";
   import ScopesEditor from "./ScopesEditor.svelte";
   import Card from "./ui/Card.svelte";
@@ -41,6 +42,12 @@
         photoUploaded avatars { photo identicon initials }
         sessions { id ipAddress userAgent authenticatedAt expiresAt }
         devices { id label category known ipAddress userAgent lastSeenAt blockedAt }
+        events(limit: 25) {
+          id action createdAt ipAddress details
+          by { uuid nickname }
+          client { clientId name }
+          device { id label }
+        }
       }
       viewer { uuid }
       scopesSupported
@@ -411,6 +418,10 @@
           {:else}
             <p class="text-sm opacity-70">Password only — nothing enrolled.</p>
           {/if}
+        </Card>
+
+        <Card title="Activity" lede="What has happened to this account, newest first.">
+          <Events events={actor.events} showActor={false} empty="Nothing recorded yet." />
         </Card>
 
         <Card title="Delete">

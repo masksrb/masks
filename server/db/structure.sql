@@ -389,6 +389,46 @@ ALTER SEQUENCE public.devices_id_seq OWNED BY public.devices.id;
 
 
 --
+-- Name: events; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.events (
+    id bigint NOT NULL,
+    tenant_id bigint NOT NULL,
+    actor_id bigint,
+    by_id bigint,
+    client_id bigint,
+    device_id bigint,
+    action character varying NOT NULL,
+    ip_address character varying,
+    user_agent character varying,
+    details jsonb DEFAULT '{}'::jsonb NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL
+);
+
+ALTER TABLE ONLY public.events FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: events_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.events_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: events_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.events_id_seq OWNED BY public.events.id;
+
+
+--
 -- Name: namespaces; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -747,6 +787,13 @@ ALTER TABLE ONLY public.devices ALTER COLUMN id SET DEFAULT nextval('public.devi
 
 
 --
+-- Name: events id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.events ALTER COLUMN id SET DEFAULT nextval('public.events_id_seq'::regclass);
+
+
+--
 -- Name: namespaces id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -865,6 +912,14 @@ ALTER TABLE ONLY public.device_factors
 
 ALTER TABLE ONLY public.devices
     ADD CONSTRAINT devices_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: events events_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.events
+    ADD CONSTRAINT events_pkey PRIMARY KEY (id);
 
 
 --
@@ -1128,6 +1183,62 @@ CREATE UNIQUE INDEX index_devices_on_tenant_id_and_public_id ON public.devices U
 
 
 --
+-- Name: index_events_on_actor_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_events_on_actor_id ON public.events USING btree (actor_id);
+
+
+--
+-- Name: index_events_on_by_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_events_on_by_id ON public.events USING btree (by_id);
+
+
+--
+-- Name: index_events_on_client_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_events_on_client_id ON public.events USING btree (client_id);
+
+
+--
+-- Name: index_events_on_device_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_events_on_device_id ON public.events USING btree (device_id);
+
+
+--
+-- Name: index_events_on_tenant_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_events_on_tenant_id ON public.events USING btree (tenant_id);
+
+
+--
+-- Name: index_events_on_tenant_id_and_action_and_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_events_on_tenant_id_and_action_and_created_at ON public.events USING btree (tenant_id, action, created_at);
+
+
+--
+-- Name: index_events_on_tenant_id_and_actor_id_and_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_events_on_tenant_id_and_actor_id_and_created_at ON public.events USING btree (tenant_id, actor_id, created_at);
+
+
+--
+-- Name: index_events_on_tenant_id_and_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_events_on_tenant_id_and_created_at ON public.events USING btree (tenant_id, created_at);
+
+
+--
 -- Name: index_namespaces_on_client_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1343,6 +1454,14 @@ ALTER TABLE ONLY public.avatars
 
 
 --
+-- Name: events fk_rails_2c515e778f; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.events
+    ADD CONSTRAINT fk_rails_2c515e778f FOREIGN KEY (actor_id) REFERENCES public.actors(id) ON DELETE SET NULL;
+
+
+--
 -- Name: tokens fk_rails_3bbe3ff1e4; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1423,6 +1542,22 @@ ALTER TABLE ONLY public.consents
 
 
 --
+-- Name: events fk_rails_6844d4946c; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.events
+    ADD CONSTRAINT fk_rails_6844d4946c FOREIGN KEY (tenant_id) REFERENCES public.tenants(id);
+
+
+--
+-- Name: events fk_rails_6a6456eb31; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.events
+    ADD CONSTRAINT fk_rails_6a6456eb31 FOREIGN KEY (device_id) REFERENCES public.devices(id) ON DELETE SET NULL;
+
+
+--
 -- Name: tokens fk_rails_759b47e63a; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1460,6 +1595,14 @@ ALTER TABLE ONLY public.passkeys
 
 ALTER TABLE ONLY public.tokens
     ADD CONSTRAINT fk_rails_86c4a10c3c FOREIGN KEY (client_id) REFERENCES public.clients(id);
+
+
+--
+-- Name: events fk_rails_96944fe3ef; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.events
+    ADD CONSTRAINT fk_rails_96944fe3ef FOREIGN KEY (by_id) REFERENCES public.actors(id) ON DELETE SET NULL;
 
 
 --
@@ -1519,6 +1662,14 @@ ALTER TABLE ONLY public.devices
 
 
 --
+-- Name: events fk_rails_e77ed48c6c; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.events
+    ADD CONSTRAINT fk_rails_e77ed48c6c FOREIGN KEY (client_id) REFERENCES public.clients(id) ON DELETE SET NULL;
+
+
+--
 -- Name: consents fk_rails_eb0bd2c006; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1575,6 +1726,12 @@ ALTER TABLE public.device_factors ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.devices ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: events; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: namespaces; Type: ROW SECURITY; Schema: public; Owner: -
@@ -1656,6 +1813,13 @@ CREATE POLICY tenant_isolation ON public.devices USING ((tenant_id = (NULLIF(cur
 
 
 --
+-- Name: events tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.events USING ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint)) WITH CHECK ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint));
+
+
+--
 -- Name: namespaces tenant_isolation; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -1710,6 +1874,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260906000001'),
 ('20260905000004'),
 ('20260905000003'),
 ('20260905000002'),

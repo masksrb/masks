@@ -6,7 +6,12 @@ module Manage
       field :device, Types::DeviceType, null: false
 
       def resolve(id:)
-        { device: device!(id).tap(&:unblock!) }
+        device = device!(id)
+
+        device.unblock!
+        audit!(::Event::DEVICE_UNBLOCKED, device: device)
+
+        { device: device }
       end
     end
   end

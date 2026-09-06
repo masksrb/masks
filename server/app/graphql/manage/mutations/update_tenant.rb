@@ -21,7 +21,11 @@ module Manage
           tenant.dynamic_client_scopes = Scopes.join(dynamic_client_scopes).presence
         end
 
-        { tenant: save!(tenant) }
+        save!(tenant)
+
+        audit!(::Event::TENANT_UPDATED, name: tenant.name)
+
+        { tenant: tenant }
       end
     end
   end

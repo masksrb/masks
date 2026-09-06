@@ -62,6 +62,11 @@ module LoginStates
           actor: actor, client: client, scopes: scopes, audience: audience
         )
 
+        Event.record!(
+          Event::CONSENT_GRANTED,
+          actor: actor, client: client, scopes: scopes, audience: audience.presence
+        )
+
         factored! :consent, expiry: EXPIRY
       end
   end

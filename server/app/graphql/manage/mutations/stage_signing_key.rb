@@ -10,7 +10,11 @@ module Manage
           refuse!("a key is already staged — activate or discard it before staging another")
         end
 
-        { signing_key: ::SigningKey.stage!(tenant: tenant) }
+        key = ::SigningKey.stage!(tenant: tenant)
+
+        audit!(::Event::SIGNING_KEY_STAGED, kid: key.kid)
+
+        { signing_key: key }
       end
     end
   end

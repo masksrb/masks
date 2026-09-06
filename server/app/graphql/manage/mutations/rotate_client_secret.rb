@@ -14,8 +14,11 @@ module Manage
 
         secret = client.issue_secret!
         client.secret_expires_at = expires_in && expires_in.seconds.from_now
+        save!(client)
 
-        { client: save!(client), secret: secret }
+        audit!(::Event::CLIENT_SECRET_ROTATED, client: client, name: client.name)
+
+        { client: client, secret: secret }
       end
     end
   end

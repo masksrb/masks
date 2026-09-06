@@ -19,5 +19,6 @@ class CleanupJob < ApplicationJob
       Session.where(expires_at: ...cutoff).delete_all
       Session.where.not(revoked_at: nil).where(revoked_at: ...cutoff).delete_all
       SigningKey.where.not(retired_at: nil).where(retired_at: ...cutoff).delete_all
+      Event.where(created_at: ...Event::RETENTION.ago).delete_all
     end
 end

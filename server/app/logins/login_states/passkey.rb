@@ -55,17 +55,27 @@ module LoginStates
 
       def settle(challenge, response)
         passkey = ::Passkey.find_by(external_id: response["id"])
-        return warn!("invalid-passkey") if passkey.nil?
+        if passkey.nil?
+          refused! "passkey"
+          return warn!("invalid-passkey")
+        end
 
         credential = relying_party.verify_authentication(response, challenge, passkey)
         verified = !!credential.response.authenticator_data.user_verified?
 
-        return warn!("invalid-passkey") if passkey.cloned?(credential.sign_count)
+        if passkey.cloned?(credential.sign_count)
+          Event.record!(
+            Event::LOGIN_REFUSED,
+            actor: passkey.actor, by: nil, factor: "passkey", cloned: true
+          )
+          return warn!("invalid-passkey")
+        end
 
         passkey.used!(credential.sign_count, user_verified: verified)
 
         accept(passkey, verified)
       rescue WebAuthn::Error, JSON::ParserError
+        refused! "passkey"
         warn! "invalid-passkey"
       end
 

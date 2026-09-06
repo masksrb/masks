@@ -11,6 +11,7 @@ module Manage
         refuse!("only a staged key may be discarded") unless key.staged?
 
         key.destroy!
+        audit!(::Event::SIGNING_KEY_DISCARDED, kid: kid)
 
         { kid: kid }
       end

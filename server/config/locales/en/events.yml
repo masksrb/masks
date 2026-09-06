@@ -1,0 +1,74 @@
+en:
+  events:
+    actions:
+      session:
+        started: "Signed in"
+        ended: "Signed out"
+        revoked: "A session was ended for you"
+      login:
+        refused: "A sign-in was refused"
+        throttled: "Sign-ins were throttled"
+      account:
+        created: "Account created"
+      invitation:
+        sent: "Invitation sent"
+        accepted: "Invitation accepted"
+      password:
+        changed: "Password changed"
+        reset_requested: "A password reset was requested"
+        reset_completed: "Password reset"
+      email:
+        verification_sent: "Confirmation link sent"
+        verified: "Email confirmed"
+      passkey:
+        added: "Passkey added"
+        removed: "Passkey removed"
+      backup_codes:
+        generated: "Backup codes generated"
+      backup_code:
+        spent: "Backup code used"
+      authenticator:
+        disabled: "Authenticator removed"
+      device:
+        trusted: "Device trusted"
+        named: "Device renamed"
+        forgotten: "Device signed out"
+        blocked: "Device blocked"
+        unblocked: "Device unblocked"
+      avatar:
+        uploaded: "Photo uploaded"
+        removed: "Photo removed"
+      consent:
+        granted: "An application was allowed in"
+      connection:
+        linked: "A provider was connected"
+        unlinked: "A provider was disconnected"
+      actor:
+        created: "Account created"
+        updated: "Profile edited"
+        deleted: "Account deleted"
+        scopes_changed: "Scopes changed"
+        signed_out: "Signed out everywhere"
+      client:
+        registered: "An application registered"
+        approved: "An application was approved"
+        updated: "An application was edited"
+        archived: "An application was archived"
+        secret_rotated: "An application secret was rotated"
+      token:
+        revoked: "A token was revoked"
+      refresh:
+        reused: "A refresh token was replayed"
+      signing_key:
+        staged: "A signing key was staged"
+        rotated: "A signing key was rotated"
+        activated: "A signing key was activated"
+        discarded: "A signing key was discarded"
+      namespace:
+        released: "A namespace was released"
+      provider:
+        created: "A provider was added"
+        updated: "A provider was edited"
+        archived: "A provider was archived"
+      tenant:
+        updated: "Settings changed"

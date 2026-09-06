@@ -28,6 +28,8 @@ class AvatarsController < ApplicationController
 
     Avatar.store!(actor: current_actor, upload: params[:avatar])
 
+    Event.record!(Event::AVATAR_UPLOADED, actor: current_actor)
+
     redirect_to root_path(anchor: "avatar"), notice: t("avatars.updated")
   rescue Avatar::Unreadable => e
     redirect_to root_path(anchor: "avatar"), alert: e.message
@@ -36,7 +38,9 @@ class AvatarsController < ApplicationController
   def destroy
     return head :unauthorized if current_actor.nil?
 
-    Avatars.photo(current_actor)&.destroy!
+    removed = Avatars.photo(current_actor)&.destroy!
+
+    Event.record!(Event::AVATAR_REMOVED, actor: current_actor) if removed
 
     redirect_to root_path(anchor: "avatar"), notice: t("avatars.removed")
   end

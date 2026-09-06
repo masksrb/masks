@@ -67,6 +67,8 @@ module LoginStates
         actor = ::PasswordReset.settle!(login.store[HELD], password)
         return warn!("reset-expired") if actor.nil?
 
+        Event.record!(Event::PASSWORD_RESET_COMPLETED, actor: actor)
+
         login.store.delete(HELD)
         reload!
         login.identifier = actor.nickname

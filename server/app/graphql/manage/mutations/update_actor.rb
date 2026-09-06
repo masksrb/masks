@@ -27,6 +27,8 @@ module Manage
 
         save!(actor)
 
+        audit!(::Event::ACTOR_UPDATED, actor: actor, changed: attributes.keys.map(&:to_s))
+
         Verifications.open(actor: actor, by: viewer) if changing_email
 
         { actor: actor }

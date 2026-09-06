@@ -25,6 +25,7 @@ module Manage
 
         actor.password = password
         save!(actor)
+        created!(actor, invited: false)
 
         Verifications.open(actor: actor, by: viewer).merge(actor: actor)
       end
@@ -33,8 +34,17 @@ module Manage
 
         def invite(actor)
           save!(actor)
+          created!(actor, invited: true)
 
           Invitations.open(actor: actor, by: viewer).merge(actor: actor)
+        end
+
+        def created!(actor, invited:)
+          audit!(
+            ::Event::ACTOR_CREATED,
+            actor: actor, nickname: actor.nickname,
+            scopes: actor.scope_list, invited: invited
+          )
         end
     end
   end

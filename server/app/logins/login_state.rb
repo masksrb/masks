@@ -116,4 +116,14 @@ class LoginState
   def refuse!(error, description)
     raise Refused.new(error, description)
   end
+
+  def refused!(factor)
+    Event.record!(
+      Event::LOGIN_REFUSED,
+      actor: actor || (identifier.present? && Actor.locate(identifier)) || nil,
+      by: nil,
+      factor: factor,
+      identifier: identifier.presence
+    )
+  end
 end

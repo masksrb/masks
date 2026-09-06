@@ -11,6 +11,7 @@ class Tenant < ApplicationRecord
   has_many :tokens, dependent: :destroy
   has_many :sessions, dependent: :destroy
   has_many :consents, dependent: :destroy
+  has_many :events, dependent: :delete_all
 
   validates :subdomain, presence: true, uniqueness: true,
                         format: { with: /\A[a-z0-9][a-z0-9-]*\z/ }

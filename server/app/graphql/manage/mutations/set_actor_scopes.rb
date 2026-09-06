@@ -14,9 +14,13 @@ module Manage
           refuse!("you cannot take #{Scopes::MANAGE} away from yourself")
         end
 
+        was = actor.scope_list
         actor.scopes = Scopes.join(requested)
+        save!(actor)
 
-        { actor: save!(actor) }
+        audit!(::Event::ACTOR_SCOPES_CHANGED, actor: actor, was: was, now: actor.scope_list)
+
+        { actor: actor }
       end
     end
   end

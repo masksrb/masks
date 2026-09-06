@@ -13,6 +13,10 @@ module Manage
       field :passkeys, [ PasskeyType ], null: false
       field :sessions, [ "Manage::Types::SessionType" ], null: false
       field :devices, [ "Manage::Types::DeviceType" ], null: false
+
+      field :events, [ "Manage::Types::EventType" ], null: false do
+        argument :limit, Integer, required: false
+      end
       field :backup_codes_generated_at, GraphQL::Types::ISO8601DateTime
       field :last_login_at, GraphQL::Types::ISO8601DateTime
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
@@ -73,6 +77,14 @@ module Manage
 
       def devices
         ::Device.for_actor(object).newest_first
+      end
+
+      def events(limit: nil)
+        ::Event
+          .where(actor_id: object.id)
+          .newest_first
+          .includes(:by, :client, :device)
+          .limit(::Event.bounded(limit))
       end
     end
   end

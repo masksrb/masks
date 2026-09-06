@@ -51,6 +51,15 @@ module Manage
         argument :days, Integer, required: false
       end
 
+      field :events, [ EventType ], null: false do
+        argument :actor, ID, required: false
+        argument :action, String, required: false
+        argument :before, GraphQL::Types::ISO8601DateTime, required: false
+        argument :limit, Integer, required: false
+      end
+
+      field :event_actions, [ String ], null: false
+
       LIMIT = 50
       CEILING = 200
       SPAN = 30
@@ -148,6 +157,23 @@ module Manage
         (from..Date.current).map do |on|
           { date: on, sign_ins: counted[on] || 0 }
         end
+      end
+
+      def events(actor: nil, action: nil, before: nil, limit: nil)
+        subject = actor.present? ? Actor.find_by(uuid: actor) : nil
+
+        return ::Event.none if actor.present? && subject.nil?
+
+        scope = ::Event.newest_first.includes(:actor, :by, :client, :device)
+        scope = scope.where(actor: subject) if subject
+        scope = scope.where(action: action) if action.present?
+        scope = scope.where(created_at: ...before) if before.present?
+
+        scope.limit(::Event.bounded(limit))
+      end
+
+      def event_actions
+        ::Event::ACTIONS.sort
       end
 
       private

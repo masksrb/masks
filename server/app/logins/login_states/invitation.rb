@@ -59,6 +59,8 @@ module LoginStates
         actor = ::Invitation.accept!(login.store[HELD], password)
         return warn!("invitation-expired") if actor.nil?
 
+        Event.record!(Event::INVITATION_ACCEPTED, actor: actor)
+
         login.store.delete(HELD)
         reload!
         login.identifier = actor.nickname
