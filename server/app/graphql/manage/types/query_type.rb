@@ -64,7 +64,7 @@ module Manage
         argument :client, ID, required: false
         argument :action, String, required: false
         argument :grave, Boolean, required: false
-        argument :before, GraphQL::Types::ISO8601DateTime, required: false
+        argument :after_id, ID, required: false
         argument :limit, Integer, required: false
       end
 
@@ -179,7 +179,7 @@ module Manage
         end
       end
 
-      def events(actor: nil, client: nil, action: nil, grave: false, before: nil, limit: nil)
+      def events(actor: nil, client: nil, action: nil, grave: false, after_id: nil, limit: nil)
         subject = actor.present? ? Actor.find_by(uuid: actor) : nil
         held = client.present? ? Client.find_by(client_id: client) : nil
 
@@ -191,7 +191,7 @@ module Manage
         scope = scope.where(client: held) if held
         scope = scope.where(action: action) if action.present?
         scope = scope.where(action: ::Event::GRAVE) if grave
-        scope = scope.where(created_at: ...before) if before.present?
+        scope = scope.after(after_id) if after_id.present?
 
         scope.limit(::Event.bounded(limit))
       end

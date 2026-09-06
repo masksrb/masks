@@ -174,6 +174,46 @@ class EventsTest < ActionDispatch::IntegrationTest
     assert_includes answer["data"]["eventActions"], Event::PASSWORD_CHANGED
   end
 
+  test "paging past a page boundary does not skip events sharing a timestamp" do
+    @admin = create_actor(@tenant, nickname: "admin", scopes: "openid profile email masks:manage")
+
+    at = 2.hours.ago.change(usec: 0)
+
+    within(@tenant) do
+      Event.insert_all!(
+        4.times.map do
+          {
+            tenant_id: @tenant.id, actor_id: @actor.id, by_id: @actor.id,
+            action: Event::PASSWORD_CHANGED, details: {}, created_at: at
+          }
+        end
+      )
+    end
+
+    token = bearer
+
+    page = ask(<<~GQL, token, action: Event::PASSWORD_CHANGED, limit: 2)
+      query Log($action: String, $limit: Int) {
+        events(action: $action, limit: $limit) { id }
+      }
+    GQL
+
+    held = page["data"]["events"].map { |event| event["id"] }
+
+    assert_equal 2, held.length
+
+    rest = ask(<<~GQL, token, action: Event::PASSWORD_CHANGED, afterId: held.last, limit: 10)
+      query Log($action: String, $afterId: ID, $limit: Int) {
+        events(action: $action, afterId: $afterId, limit: $limit) { id }
+      }
+    GQL
+
+    following = rest["data"]["events"].map { |event| event["id"] }
+
+    assert_equal 2, following.length, "the other two share a timestamp and must not be skipped"
+    assert_empty held & following, "and must not be handed back twice either"
+  end
+
   test "an actor carries their own history" do
     sign_in_as(@actor)
     delete "/login"

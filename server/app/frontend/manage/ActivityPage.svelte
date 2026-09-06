@@ -20,8 +20,8 @@
   `;
 
   const QUERY = `
-    query Activity($action: String, $grave: Boolean, $before: ISO8601DateTime, $limit: Int) {
-      events(action: $action, grave: $grave, before: $before, limit: $limit) { ${FIELDS} }
+    query Activity($action: String, $grave: Boolean, $afterId: ID, $limit: Int) {
+      events(action: $action, grave: $grave, afterId: $afterId, limit: $limit) { ${FIELDS} }
       eventActions
     }
   `;
@@ -36,12 +36,12 @@
   let more = $state(false);
   let exhausted = $state(false);
 
-  async function load(before = null) {
-    if (before) more = true;
+  async function load(afterId = null) {
+    if (afterId) more = true;
     else loading = true;
 
     const data = await feedback.attempt(() =>
-      api.query(QUERY, { action: action || null, grave, before, limit: PAGE }),
+      api.query(QUERY, { action: action || null, grave, afterId, limit: PAGE }),
     );
 
     loading = false;
@@ -50,7 +50,7 @@
     if (!data) return;
 
     actions = data.eventActions;
-    events = before ? [...events, ...data.events] : data.events;
+    events = afterId ? [...events, ...data.events] : data.events;
     exhausted = data.events.length < PAGE;
   }
 
@@ -69,7 +69,7 @@
     load();
   }
 
-  const oldest = $derived(events.at(-1)?.createdAt ?? null);
+  const oldest = $derived(events.at(-1)?.id ?? null);
 </script>
 
 <Page
