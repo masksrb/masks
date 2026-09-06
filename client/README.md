@@ -30,10 +30,14 @@ the file credentials land in. Set `MASKS_ISSUER`, start the app, and open
 ### The handshake
 
 A first-party app must not self-register anonymously, since that is also how a
-stranger's connector arrives. An unconnected app is offered one button, the browser goes
-to its own issuer's approval screen, and the one-time token that comes back is redeemed
+stranger's connector arrives. An unconnected app sends the browser straight on to its
+own issuer's approval screen, and the one-time token that comes back is redeemed
 server-side. **The secret never travels through the browser and nobody types it
 anywhere.**
+
+The only thing `/auth/handshake` stops a browser to say is that the app is configured
+too little to shake hands at all, or that the issuer refused. A connected app asks
+before it rotates, since reconnecting takes it offline for a moment.
 
 The engine writes what comes back to `config/masks.json`, mode 600. An app that wants
 somewhere else says so:
@@ -70,7 +74,7 @@ controller if that is what you want; otherwise include it where you mean it.
 ### An SPA in front of it
 
 `GET /auth/session` answers identity, tenant and scopes as JSON, or `401` with somewhere
-to send the browser. [`@masks/client`](../web) speaks it:
+to send the browser. [`@masks/client`](https://masks.pages.dev/reference/browser/) speaks it:
 
 ```js
 import { createSession } from "@masks/client"
@@ -252,9 +256,8 @@ it. An older issuer is refused at configuration time, with a sentence saying so.
 
 ## Documentation
 
-Full API reference at [masks.pages.dev](https://masks.pages.dev):
-[Masks::Client](https://masks.pages.dev/libraries/ruby/) for the protocol half,
-[Masks::Rails](https://masks.pages.dev/libraries/rails/) for the engine.
+This README is the reference for the gem. [masks.pages.dev](https://masks.pages.dev) carries what is
+generated from the server's own code — the `/manage` GraphQL schema, and the design system.
 
 ## License
 

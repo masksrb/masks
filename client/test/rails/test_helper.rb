@@ -111,7 +111,6 @@ class EngineIntegrationTest < ActionDispatch::IntegrationTest
   end
 
   def shake_hands!
-    get "/auth/handshake", headers: host
     post "/auth/handshake", headers: host
 
     started = URI.decode_www_form(URI.parse(response.location).query).to_h

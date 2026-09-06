@@ -4,17 +4,13 @@ module Masks
       before_action :require_unconfigured_or_signed_in
 
       def show
-        @connected = masks_config.configured?(request)
-        @can_disconnect = @connected && masks_config.can_forget?
+        return begin! unless masks_config.configured?(request)
+
+        @can_disconnect = masks_config.can_forget?
       end
 
       def create
-        pending = masks_handshakes.open
-        started = masks_config.handshake_for(request).start(state: pending.id)
-
-        redirect_to started[:url], allow_other_host: true
-      rescue Masks::Client::Error => e
-        refuse(e)
+        begin!
       end
 
       def callback
@@ -46,6 +42,15 @@ module Masks
       end
 
       private
+
+        def begin!
+          pending = masks_handshakes.open
+          started = masks_config.handshake_for(request).start(state: pending.id)
+
+          redirect_to started[:url], allow_other_host: true
+        rescue Masks::Client::Error => e
+          refuse(e)
+        end
 
         def forget_upstream
           masks_registration&.delete
