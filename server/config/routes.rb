@@ -56,6 +56,8 @@ Rails.application.routes.draw do
   post "/manage/graphql", to: "manage/graphql#execute", as: :manage_graphql
   get "/manage(/*path)", to: "manage#index", as: :manage
 
+  mount LetterOpenerWeb::Engine, at: "/letter_opener" if Rails.env.development?
+
   get "up" => "rails/health#show", as: :rails_health_check
 
   root "account#index"

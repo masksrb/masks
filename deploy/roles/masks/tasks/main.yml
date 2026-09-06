@@ -1,3 +1,13 @@
+- name: Refuse a mail_from with nowhere to send it
+  ansible.builtin.assert:
+    that:
+      - masks_smtp_address | length > 0
+      - masks_smtp_password | length > 0
+    fail_msg: >-
+      masks_mail_from is set without a reachable relay behind it. masks would accept every
+      invitation and password reset and drop it silently.
+  when: masks_mail_from | length > 0
+
 - name: Create the masks deploy directory
   ansible.builtin.file:
     path: "{{ masks_deploy_path }}"

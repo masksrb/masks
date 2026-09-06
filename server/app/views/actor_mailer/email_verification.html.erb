@@ -1,11 +1,11 @@
-<p>
-  Confirm this address for <strong><%= @actor.nickname %></strong>
+<p class="lede">
+  Confirm this address for <span class="strong"><%= @actor.nickname %></span>
   at <%= @tenant_name %>.
 </p>
 
-<p><%= link_to @url, @url %></p>
+<%= render "action", url: @url, label: "Confirm this address" %>
 
-<p>
+<p class="meta">
   Works once, expires in
   <%= ActiveSupport::Duration.build(EmailVerification.lifetime.to_i).inspect %>.
   If this was not you, ignore it — nothing else changes.

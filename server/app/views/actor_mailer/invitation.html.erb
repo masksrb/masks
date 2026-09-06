@@ -1,15 +1,15 @@
-<p>
+<p class="lede">
   <%= @invited_by ? "#{@invited_by.nickname} invited you to #{@tenant_name}." : "You have been invited to #{@tenant_name}." %>
 </p>
 
-<p>
-  Your username is <strong><%= @actor.nickname %></strong>.
+<p class="lede">
+  Your username is <span class="strong"><%= @actor.nickname %></span>.
   Open the link to choose a password.
 </p>
 
-<p><%= link_to @url, @url %></p>
+<%= render "action", url: @url, label: "Choose a password" %>
 
-<p>
+<p class="meta">
   Works once, expires in
   <%= ActiveSupport::Duration.build(Invitation.lifetime.to_i).inspect %>.
   Nothing happens until somebody opens it.
