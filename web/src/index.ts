@@ -1,6 +1,6 @@
 export type { BrowserClient, BrowserOptions } from "./browser.js";
 export { createBrowserClient } from "./browser.js";
-export type { Jwk } from "./jwt.js";
+export type { Jwk, VerifyOptions } from "./jwt.js";
 export { verifyIdToken } from "./jwt.js";
 export type { SessionClient, SessionOptions } from "./session.js";
 export { createSession } from "./session.js";
