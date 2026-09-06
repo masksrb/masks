@@ -1,0 +1,26 @@
+---
+title: Actors
+description: An account on a tenant — who signs in, and what they may ask for.
+---
+
+An actor is an account. It carries a nickname, optionally an email, and a list of scopes that bounds
+everything it can be granted.
+
+| Field | |
+| --- | --- |
+| `nickname` | the identifier typed at sign-in; renameable without a new account |
+| `email` / `email_verified_at` | changing the address takes its verification with it |
+| `scopes` | the ceiling on what any token for this actor may carry |
+| `activated_at` | unset while an invitation is outstanding |
+
+Second factors are a TOTP authenticator, passkeys, and backup codes. A passkey can serve as both
+factors at once.
+
+Three predicates decide what an actor may have:
+
+- `holds?(scope)` — is this exact scope in their list
+- `withheld(scopes)` — which of these they cannot be granted
+- `grant!(scopes)` — add scopes, as claiming a [namespace](/concepts/namespaces/) does
+
+The first actor on a tenant is made by the first-run screen and holds `masks:manage`. After that,
+accounts are invited or created from the console.

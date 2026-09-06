@@ -1,0 +1,446 @@
+---
+title: "Masks::Rails"
+description: "The Rails engine that mounts the code flow into an application."
+---
+
+
+The consumer half: a Rails engine that mounts the code flow into an
+application, so signing in against a masks issuer is configuration rather than
+a controller you write.
+
+It loads only when `Rails::Engine` is already defined. Requiring the gem from
+a plain Ruby process gets Masks::Client and nothing else.
+
+Three pieces do the work:
+
+- **Configuration** — the issuer, credentials and routes, set once in an initializer and
+    validated on boot rather than on the first request that needs them
+
+- **Authentication** — `masks_login_url`, the callback, and the session the app reads
+    `current_actor` from
+
+- **ProtectedResource** — the other direction — checking a bearer this app was
+
+    handed, for an API rather than a browser
+
+This engine is the client. It never runs in the same process as the provider,
+which is a standalone deployable holding its own database.
+
+Generated from `client/lib` by `bundle exec rake reference`. Its shape is the code's; the
+prose is the RDoc in the source.
+
+## Masks::Rails::Authentication
+
+| Constant | Value |
+| --- | --- |
+| `REQUESTS` | `"masks_requests".freeze` |
+| `HANDSHAKES` | `"masks_handshakes".freeze` |
+| `IDENTITY` | `[ "sub", "name", "preferred_username", "email", "email_verified", "tenant", "picture", Masks::Client::Claims::AVATARS ].freeze` |
+
+### #authenticate_masks!
+
+```ruby
+#authenticate_masks!()
+```
+
+### #masks_access_token
+
+```ruby
+#masks_access_token()
+```
+
+### #masks_account
+
+```ruby
+#masks_account()
+```
+
+### #masks_claims
+
+```ruby
+#masks_claims()
+```
+
+### #masks_configured?
+
+```ruby
+#masks_configured?()
+```
+
+### #masks_disconnect!
+
+```ruby
+#masks_disconnect!()
+```
+
+### #masks_forget
+
+```ruby
+#masks_forget()
+```
+
+### #masks_handshake_path
+
+```ruby
+#masks_handshake_path()
+```
+
+### #masks_handshakes
+
+```ruby
+#masks_handshakes()
+```
+
+### #masks_held
+
+```ruby
+#masks_held()
+```
+
+### #masks_identity
+
+```ruby
+#masks_identity()
+```
+
+### #masks_identity_from
+
+```ruby
+#masks_identity_from(tokens)
+```
+
+### #masks_login_url
+
+```ruby
+#masks_login_url(return_to: nil)
+```
+
+### #masks_logout_url
+
+```ruby
+#masks_logout_url(return_to: nil)
+```
+
+### #masks_permits?
+
+```ruby
+#masks_permits?(scope)
+```
+
+### #masks_post_logout_redirect_uri
+
+```ruby
+#masks_post_logout_redirect_uri()
+```
+
+### #masks_reconnect!
+
+```ruby
+#masks_reconnect!()
+```
+
+### #masks_refresh!
+
+```ruby
+#masks_refresh!()
+```
+
+### #masks_registered?
+
+```ruby
+#masks_registered?()
+```
+
+### #masks_registration
+
+```ruby
+#masks_registration()
+```
+
+### #masks_requests
+
+```ruby
+#masks_requests()
+```
+
+### #masks_scopes
+
+```ruby
+#masks_scopes()
+```
+
+### #masks_session
+
+```ruby
+#masks_session()
+```
+
+### #masks_signed_in?
+
+```ruby
+#masks_signed_in?()
+```
+
+### #masks_store
+
+```ruby
+#masks_store(tokens, identity: nil)
+```
+
+### #masks_tenant
+
+```ruby
+#masks_tenant()
+```
+
+### #masks_tokens
+
+```ruby
+#masks_tokens()
+```
+
+### #masks_tracker
+
+```ruby
+#masks_tracker(key)
+```
+
+## Masks::Rails::Configurable
+
+### #masks_config
+
+```ruby
+#masks_config()
+```
+
+## Masks::Rails::Configuration
+
+| Constant | Value |
+| --- | --- |
+| `MINIMUM_ISSUER` | `1` |
+
+| Attribute | Access |
+| --- | --- |
+| `after_sign_in` | RW |
+| `after_sign_out` | RW |
+| `authenticate_everything` | RW |
+| `credentials` | W |
+| `credentials_path` | RW |
+| `forget` | W |
+| `issuer` | W |
+| `name` | W |
+| `namespace` | RW |
+| `parent_controller` | RW |
+| `redirect_uri` | W |
+| `resource` | RW |
+| `resource_scopes` | RW |
+| `scope` | RW |
+| `session_key` | RW |
+| `sign_out_of_issuer` | RW |
+| `store` | W |
+
+### ::new
+
+```ruby
+::new()
+```
+
+### #approved_scope
+
+```ruby
+#approved_scope()
+```
+
+### #can_forget?
+
+```ruby
+#can_forget?()
+```
+
+### #client_id_for
+
+```ruby
+#client_id_for(request)
+```
+
+### #client_secret_for
+
+```ruby
+#client_secret_for(request)
+```
+
+### #configured?
+
+```ruby
+#configured?(request)
+```
+
+### #credentials_for
+
+```ruby
+#credentials_for(request)
+```
+
+### #default_credentials
+
+```ruby
+#default_credentials()
+```
+
+### #forget!
+
+```ruby
+#forget!(request)
+```
+
+### #handshake_for
+
+```ruby
+#handshake_for(request)
+```
+
+### #issuer_for
+
+```ruby
+#issuer_for(request)
+```
+
+### #issuer_speaks!
+
+```ruby
+#issuer_speaks!(request)
+```
+
+### #name_for
+
+```ruby
+#name_for(request)
+```
+
+### #redirect_uri_for
+
+```ruby
+#redirect_uri_for(request)
+```
+
+### #resource_for
+
+```ruby
+#resource_for(request)
+```
+
+### #resource_server_for
+
+```ruby
+#resource_server_for(request)
+```
+
+### #return_to_for
+
+```ruby
+#return_to_for(request)
+```
+
+### #session_for
+
+```ruby
+#session_for(request)
+```
+
+### #store!
+
+```ruby
+#store!(request, registration)
+```
+
+## Masks::Rails::Configuration::Unconfigured
+
+Inherits `Masks::Client::Error`.
+
+## Masks::Rails::Credentials
+
+| Constant | Value |
+| --- | --- |
+| `KEYS` | `%w[client_id client_secret registration_access_token registration_client_uri].freeze` |
+
+| Attribute | Access |
+| --- | --- |
+| `path` | R |
+
+### ::new
+
+```ruby
+::new(path)
+```
+
+### #clear!
+
+```ruby
+#clear!()
+```
+
+### #connected?
+
+```ruby
+#connected?()
+```
+
+### #read
+
+```ruby
+#read()
+```
+
+### #write
+
+```ruby
+#write(registration)
+```
+
+## Masks::Rails::Engine
+
+Inherits `Rails::Engine`.
+
+## Masks::Rails::ProtectedResource
+
+### #masks_authenticate
+
+```ruby
+#masks_authenticate(scope: nil)
+```
+
+### #masks_authenticate!
+
+```ruby
+#masks_authenticate!(scope: nil, **)
+```
+
+### #masks_challenge
+
+```ruby
+#masks_challenge(error)
+```
+
+### #masks_claims
+
+```ruby
+#masks_claims()
+```
+
+### #masks_protect!
+
+```ruby
+#masks_protect!(**options)
+```
+
+### #masks_resource
+
+```ruby
+#masks_resource()
+```
+
+### #masks_resource_metadata
+
+```ruby
+#masks_resource_metadata()
+```

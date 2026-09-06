@@ -103,7 +103,7 @@ exists because an SPA is a consumer the engine cannot serve: the engine redirect
 
 ## Documentation
 
-Full API reference at
-[masks.pages.dev/libraries/browser](https://masks.pages.dev/libraries/browser/).
+This README is the reference for the package. [masks.pages.dev](https://masks.pages.dev) carries what
+is generated from the server's own code — the `/manage` GraphQL schema, and the design system.
 
 MIT.

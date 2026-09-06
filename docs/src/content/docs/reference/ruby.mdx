@@ -1,0 +1,1068 @@
+---
+title: "Masks::Client"
+description: "The protocol half of the masks gem: discovery, PKCE, exchange, verification."
+---
+
+
+The protocol half of the gem: plain Ruby, no Rails, no database. Every entry
+point here is a class method that builds one of the objects below.
+
+Which one you want depends on what the application is doing:
+
+- **issuer** — an app signing people in — discovery, PKCE, the code exchange
+
+- **verifier** — an API checking a bearer it was handed
+
+- **resource** — an API publishing what it is and which scopes it takes
+
+- **handshake** — an app registering itself, once, without a copied secret
+
+
+Everything reachable from here talks HTTP to a masks issuer and holds no state
+of its own beyond the discovery cache in ::registry.
+
+Generated from `client/lib` by `bundle exec rake reference`. Its shape is the code's; the
+prose is the RDoc in the source.
+
+## Masks::Client::Challenge
+
+Inherits `Masks::Client::Error`.
+
+| Attribute | Access |
+| --- | --- |
+| `code` | R |
+| `description` | R |
+| `scope` | R |
+| `status` | R |
+
+### ::new
+
+```ruby
+::new(code, description, status:, scope: nil)
+```
+
+## Masks::Client::Claims
+
+| Constant | Value |
+| --- | --- |
+| `AVATARS` | `"masks:avatars".freeze` |
+
+| Attribute | Access |
+| --- | --- |
+| `to_h` | R |
+
+### ::new
+
+```ruby
+::new(claims)
+```
+
+### #[]
+
+```ruby
+#[](name)
+```
+
+### #act
+
+```ruby
+#act()
+```
+
+### #audience
+
+```ruby
+#audience()
+```
+
+### #avatars
+
+```ruby
+#avatars()
+```
+
+### #client_id
+
+```ruby
+#client_id()
+```
+
+### #expired?
+
+```ruby
+#expired?(leeway: 0)
+```
+
+### #expires_at
+
+```ruby
+#expires_at()
+```
+
+### #issued_at
+
+```ruby
+#issued_at()
+```
+
+### #issuer
+
+```ruby
+#issuer()
+```
+
+### #jti
+
+```ruby
+#jti()
+```
+
+### #permit!
+
+```ruby
+#permit!(scope)
+```
+
+### #permits?
+
+```ruby
+#permits?(scope)
+```
+
+### #picture
+
+```ruby
+#picture()
+```
+
+### #scopes
+
+```ruby
+#scopes()
+```
+
+### #subject
+
+```ruby
+#subject()
+```
+
+### #tenant
+
+```ruby
+#tenant()
+```
+
+## Masks::Client::Claims::Avatars
+
+| Constant | Value |
+| --- | --- |
+| `STYLES` | `%w[photo identicon initials].freeze` |
+| `FALLBACK` | `"identicon".freeze` |
+
+| Attribute | Access |
+| --- | --- |
+| `to_h` | R |
+
+### ::new
+
+```ruby
+::new(hash)
+```
+
+### #==
+
+```ruby
+#==(other)
+```
+
+### #[]
+
+```ruby
+#[](style)
+```
+
+### #photo?
+
+```ruby
+#photo?()
+```
+
+### #present?
+
+```ruby
+#present?()
+```
+
+## Masks::Client::Claims::Tenant
+
+| Attribute | Access |
+| --- | --- |
+| `to_h` | R |
+
+### ::new
+
+```ruby
+::new(hash)
+```
+
+### #==
+
+```ruby
+#==(other)
+```
+
+### #name
+
+```ruby
+#name()
+```
+
+### #present?
+
+```ruby
+#present?()
+```
+
+### #subdomain
+
+```ruby
+#subdomain()
+```
+
+### #uuid
+
+```ruby
+#uuid()
+```
+
+## Masks::Client::Error
+
+Inherits `StandardError`.
+
+## Masks::Client::Forbidden
+
+Inherits `Masks::Client::Challenge`.
+
+### ::new
+
+```ruby
+::new(code, description, scope: nil)
+```
+
+## Masks::Client::HTTP
+
+| Constant | Value |
+| --- | --- |
+| `OPEN_TIMEOUT` | `5` |
+| `READ_TIMEOUT` | `10` |
+
+### #default_headers
+
+```ruby
+#default_headers()
+```
+
+### #delete
+
+```ruby
+#delete(url, headers = {})
+```
+
+### #fetch
+
+```ruby
+#fetch(url, headers = {})
+```
+
+### #get
+
+```ruby
+#get(url, headers = {})
+```
+
+### #json
+
+```ruby
+#json(verb, url, body, headers)
+```
+
+### #parse
+
+```ruby
+#parse(response)
+```
+
+### #post_form
+
+```ruby
+#post_form(url, form, headers = {})
+```
+
+### #post_json
+
+```ruby
+#post_json(url, body, headers = {})
+```
+
+### #put_json
+
+```ruby
+#put_json(url, body, headers = {})
+```
+
+### #request
+
+```ruby
+#request(request)
+```
+
+## Masks::Client::Handshake
+
+| Constant | Value |
+| --- | --- |
+| `PATH` | `"/handshake".freeze` |
+| `GRANT_TYPES` | `%w[authorization_code refresh_token].freeze` |
+| `AUTH_METHOD` | `"client_secret_basic".freeze` |
+
+| Attribute | Access |
+| --- | --- |
+| `issuer` | R |
+| `name` | R |
+| `redirect_uris` | R |
+| `resource` | R |
+| `return_to` | R |
+| `scope` | R |
+
+### ::new
+
+```ruby
+::new(issuer, name:, resource:, redirect_uris:, return_to:, scope: Session::DEFAULT_SCOPE)
+```
+
+### #complete
+
+```ruby
+#complete(params, state:)
+```
+
+### #endpoint
+
+```ruby
+#endpoint()
+```
+
+### #redeem
+
+```ruby
+#redeem(token)
+```
+
+### #start
+
+```ruby
+#start(state: SecureRandom.urlsafe_base64(32))
+```
+
+### #url
+
+```ruby
+#url(state:)
+```
+
+## Masks::Client::Introspection
+
+Inherits `Masks::Client::Claims`.
+
+### #active?
+
+```ruby
+#active?()
+```
+
+### #permit!
+
+```ruby
+#permit!(scope)
+```
+
+### #permits?
+
+```ruby
+#permits?(scope)
+```
+
+### #token_type
+
+```ruby
+#token_type()
+```
+
+### #username
+
+```ruby
+#username()
+```
+
+## Masks::Client::InvalidToken
+
+Inherits `Masks::Client::Error`.
+
+## Masks::Client::Issuer
+
+| Constant | Value |
+| --- | --- |
+| `DISCOVERY_PATH` | `"/.well-known/openid-configuration".freeze` |
+| `TTL` | `300` |
+
+| Attribute | Access |
+| --- | --- |
+| `url` | R |
+
+### ::new
+
+```ruby
+::new(url, ttl: TTL)
+```
+
+### ::normalize
+
+```ruby
+::normalize(url)
+```
+
+### ::resolve
+
+```ruby
+::resolve(issuer, ttl: TTL)
+```
+
+### #avatar_styles
+
+```ruby
+#avatar_styles()
+```
+
+### #avatar_url
+
+```ruby
+#avatar_url(subject, style: nil, size: nil)
+```
+
+### #discovery
+
+```ruby
+#discovery()
+```
+
+### #endpoint
+
+```ruby
+#endpoint(name)
+```
+
+### #jwks
+
+```ruby
+#jwks()
+```
+
+### #refresh!
+
+```ruby
+#refresh!()
+```
+
+### #tenant
+
+```ruby
+#tenant()
+```
+
+## Masks::Client::Pkce
+
+| Constant | Value |
+| --- | --- |
+| `METHOD` | `"S256".freeze` |
+
+| Attribute | Access |
+| --- | --- |
+| `verifier` | R |
+
+### ::generate
+
+```ruby
+::generate()
+```
+
+### ::new
+
+```ruby
+::new(verifier)
+```
+
+### #challenge
+
+```ruby
+#challenge()
+```
+
+### #method
+
+```ruby
+#method()
+```
+
+## Masks::Client::Rack
+
+| Constant | Value |
+| --- | --- |
+| `CLAIMS` | `"masks.claims".freeze` |
+| `ERROR` | `"masks.error".freeze` |
+
+### ::new
+
+```ruby
+::new(app, resource:, scope: nil, only: nil, optional: false)
+```
+
+### #call
+
+```ruby
+#call(env)
+```
+
+## Masks::Client::Registration
+
+| Constant | Value |
+| --- | --- |
+| `REFUSED` | `[ 401, 403 ].freeze` |
+| `GONE` | `(REFUSED + [ 404 ]).freeze` |
+
+| Attribute | Access |
+| --- | --- |
+| `access_token` | R |
+| `issuer` | R |
+| `metadata` | R |
+
+### ::create
+
+```ruby
+::create(issuer, token: nil, **attributes)
+```
+
+### ::fallback
+
+```ruby
+::fallback(value, default)
+```
+
+### ::held
+
+```ruby
+::held(issuer, credentials)
+```
+
+### ::new
+
+```ruby
+::new(issuer, body)
+```
+
+### ::stringify
+
+```ruby
+::stringify(attributes)
+```
+
+### #authorization
+
+```ruby
+#authorization()
+```
+
+### #client_id
+
+```ruby
+#client_id()
+```
+
+### #client_secret
+
+```ruby
+#client_secret()
+```
+
+### #delete
+
+```ruby
+#delete()
+```
+
+### #known?
+
+```ruby
+#known?()
+```
+
+### #read
+
+```ruby
+#read()
+```
+
+### #session
+
+```ruby
+#session(redirect_uri:, scope: Session::DEFAULT_SCOPE)
+```
+
+### #update
+
+```ruby
+#update(**attributes)
+```
+
+### #uri
+
+```ruby
+#uri()
+```
+
+## Masks::Client::Registry
+
+### ::new
+
+```ruby
+::new()
+```
+
+### #[]
+
+```ruby
+#[](url, ttl: Issuer::TTL)
+```
+
+### #clear!
+
+```ruby
+#clear!()
+```
+
+### #urls
+
+```ruby
+#urls()
+```
+
+## Masks::Client::Rejected
+
+Inherits `Masks::Client::Error`.
+
+| Attribute | Access |
+| --- | --- |
+| `code` | R |
+| `description` | R |
+| `status` | R |
+
+### ::new
+
+```ruby
+::new(code, description, status: nil)
+```
+
+## Masks::Client::Resource
+
+| Constant | Value |
+| --- | --- |
+| `BEARER` | `/\ABearer[ \t]+([^\s,]+)[ \t]*\z/i.freeze` |
+| `METADATA_PATH` | `"/.well-known/oauth-protected-resource".freeze` |
+| `REQUIRED` | `%w[iss sub exp].freeze` |
+
+| Attribute | Access |
+| --- | --- |
+| `issuer` | R |
+| `scopes` | R |
+| `url` | R |
+
+### ::new
+
+```ruby
+::new(issuer:, url:, scopes: [], metadata_url: nil, algorithms: Verifier::ALGORITHMS, required: REQUIRED, verifier: nil)
+```
+
+### #authenticate
+
+```ruby
+#authenticate(authorization, scope: nil)
+```
+
+### #challenge
+
+```ruby
+#challenge(error = nil)
+```
+
+### #metadata
+
+```ruby
+#metadata()
+```
+
+### #metadata_url
+
+```ruby
+#metadata_url()
+```
+
+### #token
+
+```ruby
+#token(authorization)
+```
+
+## Masks::Client::Session
+
+| Constant | Value |
+| --- | --- |
+| `DEFAULT_SCOPE` | `%w[openid profile email].freeze` |
+
+| Attribute | Access |
+| --- | --- |
+| `client_id` | R |
+| `client_secret` | R |
+| `issuer` | R |
+| `redirect_uri` | R |
+| `scope` | R |
+
+### ::new
+
+```ruby
+::new(issuer:, client_id:, redirect_uri:, client_secret: nil, scope: DEFAULT_SCOPE)
+```
+
+### #complete
+
+```ruby
+#complete(code:, verifier:, resource: nil)
+```
+
+### #end_session_url
+
+```ruby
+#end_session_url(post_logout_redirect_uri: nil, state: nil, id_token_hint: nil)
+```
+
+### #exchange
+
+```ruby
+#exchange(subject_token, scope: nil, resource: nil, lifetime: nil)
+```
+
+### #identity
+
+```ruby
+#identity(tokens)
+```
+
+### #introspect
+
+```ruby
+#introspect(token, hint: nil)
+```
+
+### #profile
+
+```ruby
+#profile(tokens)
+```
+
+### #refresh
+
+```ruby
+#refresh(refresh_token, resource: nil, scope: nil)
+```
+
+### #revoke
+
+```ruby
+#revoke(token, hint: nil)
+```
+
+### #start
+
+```ruby
+#start(resource: nil, prompt: nil, scope: nil, state: SecureRandom.urlsafe_base64(24), nonce: SecureRandom.urlsafe_base64(24))
+```
+
+### #userinfo
+
+```ruby
+#userinfo(access_token)
+```
+
+## Masks::Client::Stores
+
+## Masks::Client::Stores::Memory
+
+| Attribute | Access |
+| --- | --- |
+| `held` | R |
+
+### ::new
+
+```ruby
+::new(held = {})
+```
+
+### #read
+
+```ruby
+#read()
+```
+
+### #write
+
+```ruby
+#write(value)
+```
+
+## Masks::Client::Stores::Session
+
+### ::new
+
+```ruby
+::new(session, key)
+```
+
+### #read
+
+```ruby
+#read()
+```
+
+### #write
+
+```ruby
+#write(value)
+```
+
+## Masks::Client::Tokens
+
+| Constant | Value |
+| --- | --- |
+| `EXCHANGE` | `"urn:ietf:params:oauth:grant-type:token-exchange".freeze` |
+| `ACCESS_TOKEN` | `"urn:ietf:params:oauth:token-type:access_token".freeze` |
+
+| Attribute | Access |
+| --- | --- |
+| `access_token` | R |
+| `expires_in` | R |
+| `id_token` | R |
+| `obtained_at` | R |
+| `refresh_token` | R |
+| `scope` | R |
+| `token_type` | R |
+
+### ::from_h
+
+```ruby
+::from_h(data)
+```
+
+### ::granted
+
+```ruby
+::granted(body)
+```
+
+### ::new
+
+```ruby
+::new(body)
+```
+
+### #authorization
+
+```ruby
+#authorization()
+```
+
+### #expired?
+
+```ruby
+#expired?(leeway: 30)
+```
+
+### #expires_at
+
+```ruby
+#expires_at()
+```
+
+### #scopes
+
+```ruby
+#scopes()
+```
+
+### #to_h
+
+```ruby
+#to_h()
+```
+
+## Masks::Client::Tracker
+
+| Constant | Value |
+| --- | --- |
+| `TTL` | `3600` |
+| `LIMIT` | `5` |
+
+| Attribute | Access |
+| --- | --- |
+| `limit` | R |
+| `store` | R |
+| `ttl` | R |
+
+### ::new
+
+```ruby
+::new(store, ttl: TTL, limit: LIMIT)
+```
+
+### #amend
+
+```ruby
+#amend(id, **data)
+```
+
+### #claim
+
+```ruby
+#claim(id)
+```
+
+### #clear!
+
+```ruby
+#clear!()
+```
+
+### #open
+
+```ruby
+#open(**data)
+```
+
+### #size
+
+```ruby
+#size()
+```
+
+## Masks::Client::Tracker::Entry
+
+| Attribute | Access |
+| --- | --- |
+| `data` | R |
+| `expires_at` | R |
+| `id` | R |
+| `opened_at` | R |
+
+### ::from_h
+
+```ruby
+::from_h(id, held)
+```
+
+### ::new
+
+```ruby
+::new(id:, data:, opened_at:, expires_at:)
+```
+
+### #[]
+
+```ruby
+#[](key)
+```
+
+### #live?
+
+```ruby
+#live?(now = Time.now.to_f)
+```
+
+### #to_h
+
+```ruby
+#to_h()
+```
+
+## Masks::Client::Unauthenticated
+
+Inherits `Masks::Client::Challenge`.
+
+### ::new
+
+```ruby
+::new(description = "a bearer token is required", code: nil)
+```
+
+## Masks::Client::Unauthorized
+
+Inherits `Masks::Client::Challenge`.
+
+### ::new
+
+```ruby
+::new(description, code: "invalid_token")
+```
+
+## Masks::Client::Unreachable
+
+Inherits `Masks::Client::Error`.
+
+## Masks::Client::Unregistered
+
+Inherits `Masks::Client::Rejected`.
+
+| Constant | Value |
+| --- | --- |
+| `CODE` | `"invalid_client".freeze` |
+
+### ::raised_by?
+
+```ruby
+::raised_by?(body)
+```
+
+## Masks::Client::Verifier
+
+| Constant | Value |
+| --- | --- |
+| `ALGORITHMS` | `%w[RS256 ES256].freeze` |
+
+| Attribute | Access |
+| --- | --- |
+| `audience` | R |
+| `issuer` | R |
+
+### ::new
+
+```ruby
+::new(issuer, audience:, algorithms: ALGORITHMS)
+```
+
+### #tenant
+
+```ruby
+#tenant(token)
+```
+
+### #verify
+
+```ruby
+#verify(token, required: %w[iss sub exp])
+```

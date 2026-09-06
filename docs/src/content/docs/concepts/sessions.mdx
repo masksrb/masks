@@ -1,0 +1,26 @@
+---
+title: Sessions and devices
+description: A sign-in belongs to a browser you can name, trust, or shut out.
+---
+
+A **session** is one signed-in browser: when it authenticated, when it expires, and the address it
+came from. Revoking one ends that sign-in and nothing else.
+
+A **device** is the browser itself, remembered across sessions, so a second factor can be skipped on
+one you have already trusted.
+
+| | |
+| --- | --- |
+| `label` | what to call it — editable, because "Chrome on macOS" is not a name |
+| `known` | seen before |
+| `blocked_at` | refused **before any password is checked** |
+| `last_seen_at` | the most recent request from it |
+
+Blocking is the strongest of the three, because it happens ahead of authentication: a blocked device
+cannot even attempt a password.
+
+Signing a device out revokes every session and refresh token it holds. Signing an *actor* out does
+the same across all of theirs at once.
+
+A device with no session on it is still listed — the console asks for those separately, so a browser
+that never completed a sign-in stays blockable.

@@ -1,0 +1,31 @@
+---
+title: Namespaces
+description: A scope prefix an application claims, so it can publish scopes masks never has to know.
+---
+
+An application that needs scopes of its own — `things:read`, `things:settings:admin` — claims the
+prefix `things:` once. After that it publishes whatever it likes beneath it, and masks does not need
+to be told.
+
+## Claiming
+
+A namespace is taken when an administrator approves a handshake that asks for a prefix. The claim
+records the name, the resource that holds it, and when — and grants the prefix to whoever approved
+it, so the person who connected the app can use it.
+
+**One name, one resource.** A second application asking for a prefix another resource already holds
+is refused before its approval screen renders, naming the resource that has it.
+
+## Releasing
+
+A claim outlives the client that holds it, including archiving. Releasing frees the name for the
+next application to take.
+
+The rule is a two-step, and the console enforces it in that order:
+
+1. archive the client that holds the namespace
+2. release the namespace
+
+A namespace whose client is still live cannot be released — the console shows *archive to release*
+rather than a button. Once released, the scopes beneath the name stop meaning what they meant, so
+nothing decorative should ever claim one.

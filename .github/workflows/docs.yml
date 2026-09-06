@@ -5,10 +5,16 @@ on:
     branches: [main]
     paths:
       - "docs/**"
+      - "client/lib/**"
+      - "client/README.md"
+      - "client/Rakefile"
       - ".github/workflows/docs.yml"
   pull_request:
     paths:
       - "docs/**"
+      - "client/lib/**"
+      - "client/README.md"
+      - "client/Rakefile"
       - ".github/workflows/docs.yml"
   workflow_dispatch:
 
@@ -50,6 +56,15 @@ jobs:
           else
             echo "site=https://$slug.$PAGES_DOMAIN" >> "$GITHUB_OUTPUT"
           fi
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+          working-directory: client
+
+      - name: Build the Ruby API site, which Astro copies out of public/
+        working-directory: client
+        run: bundle exec rake reference
 
       - name: Install
         working-directory: docs

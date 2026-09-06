@@ -1,107 +1,31 @@
 ---
 title: Signing keys
-description: One RSA keypair per tenant, published only at that tenant's JWKS endpoint.
+description: One keypair per tenant, rotated with an overlap rather than a cutover.
 ---
 
-`server/app/models/signing_key.rb`
+Every tenant generates its own RSA keypair when it is created. The private half is encrypted at
+rest; the public half is published as a JWK at that tenant's JWKS endpoint and nowhere else.
 
-A tenant generates a keypair on `after_create_commit`. `private_pem` is encrypted at rest.
-`public_jwk` is published as a JWK at that tenant's JWKS endpoint and nowhere else.
+That is what makes tenant isolation fail loudly: a token minted for one tenant carries a `kid` the
+next tenant's JWKS does not list, so verification refuses rather than quietly accepting it.
 
-| | |
+## States
+
+| State | |
 | --- | --- |
-| `SigningKey::SIZE` | 2048 |
-| `SigningKey::ALGORITHM` | `RS256` |
-| `SigningKey::OVERLAP` | 24 hours |
-
-```
-GET https://demo.auth.example/.well-known/jwks.json
-{"keys":[{"kty":"RSA","use":"sig","alg":"RS256","kid":"e9914114-…","n":"…","e":"AQAB"}]}
-```
-
-`kid` is a UUID generated with the key.
-
-## Why keys are per tenant
-
-Of the three isolation layers described in [Tenancy](/concepts/tenancy), application scopes fail by
-omission and row-level security fails silently when the connecting role is a superuser. A per-tenant
-key fails loudly:
-
-```
-{"error":"invalid_token",
- "error_description":"Could not find public key for kid e9914114-08c3-438b-a4f4-d71b70489bde"}
-```
-
-The wrong tenant never evaluates the token at all. The key that signed it was never published where
-that tenant would look.
-
-:::caution[Not retrofittable]
-Splitting an installation-wide key into per-tenant keys invalidates every token in flight and
-requires rewriting every stored `kid`.
-:::
-
-## Scopes
-
-| | |
-| --- | --- |
-| `SigningKey.active` | activated, `retired_at IS NULL` — what signing uses |
-| `SigningKey.staged` | `activated_at IS NULL` and not retired — published, signing nothing |
-| `SigningKey.published` | `retired_at IS NULL OR retired_at > now()` — what JWKS lists |
-
-`published` is wider than `active` at both ends. It carries a staged key that has not started
-signing, and a key retiring in the future. That overlap is what lets a key change hands without a
-token failing to verify.
-
-Every key is in one of four states, which `/manage` badges:
-
-| | |
-| --- | --- |
-| `staged` | published, signing nothing |
+| `staged` | published at JWKS, signing nothing yet |
 | `active` | signing every new token |
-| `retiring` | `retired_at` set in the future — still published, no longer signing |
-| `retired` | past `retired_at`, no longer published, awaiting `CleanupJob` |
+| `retiring` | no longer signing, still verifying |
+| `retired` | done |
 
-## Rotation
+## Rotating
 
-```ruby
-SigningKey.rotate!(tenant: tenant)
-```
+Staging first is the point. A client that caches JWKS sees the new key *before* anything is signed
+with it, so activation does not race the cache.
 
-Mints a replacement, activates it, and sets `retired_at` on the outgoing key to `OVERLAP.from_now`.
-The outgoing key stays published for 24 hours, so tokens signed just before the rotation still
-verify.
+- **Stage** publishes a key ahead of time. Only one may be staged at a time, and a staged key can be
+  discarded because nothing has been signed with it.
+- **Activate** makes a staged key the signing key. The outgoing one keeps verifying for 24 hours.
+- **Rotate** does both at once, for when there is no time to wait.
 
-`CleanupJob` deletes keys past their retirement. See [Hardening](/concepts/hardening).
-
-The Ruby client refetches JWKS once on an unknown `kid`, so a rotation is picked up without a
-restart. See [Verify a token](/guides/verifying).
-
-## Staging
-
-A client that caches JWKS and does not refetch on an unknown `kid` will reject tokens signed by a
-key it has never seen. Staging splits rotation in two:
-
-```ruby
-key = SigningKey.stage!(tenant: tenant)   # published, signing nothing
-key.activate!                             # signs from here, incumbent retires after OVERLAP
-```
-
-Between the two calls, JWKS lists both keys and the incumbent keeps signing. Leave a gap longer than
-the longest cache any client holds and the changeover costs no failed verification.
-
-## From the console
-
-Settings carries four mutations. `stageSigningKey` and `activateSigningKey` are the two halves
-above, `discardSigningKey` drops a staged key, and `rotateSigningKey` is the immediate path for a
-key you believe is compromised.
-
-| | |
-| --- | --- |
-| `stageSigningKey` | refused if a key is already staged |
-| `activateSigningKey(kid:)` | refused unless that key is staged |
-| `discardSigningKey(kid:)` | refused unless that key is staged |
-| `rotateSigningKey` | always available |
-
-:::note[TODO]
-There is no schedule. Rotation happens when someone asks for it.
-:::
+A key that is already signing cannot be activated again, and a signing key cannot be discarded.

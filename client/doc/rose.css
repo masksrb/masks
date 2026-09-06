@@ -1,0 +1,359 @@
+/* Rose Window over SDoc's Rails template. SDoc hardcodes hex and ships no
+   variables, so this is an override sheet rather than a theme: it is linked
+   last on every generated page by the `reference` task in the Rakefile.
+   See masks.pages.dev/reference/design. */
+
+:root {
+  --lead-000: #000000;
+  --lead-050: #0f0b09;
+  --lead-100: #1a1614;
+  --lead-200: #292421;
+  --lead-300: #3d3834;
+  --lead-500: #88827d;
+  --lead-600: #aca6a2;
+  --lead-800: #e9e5e2;
+
+  --came-brass: #b58a41;
+  --came-brass-lit: #deaf56;
+  --came-silver: #a9b3b4;
+
+  --glass-ruby: #ff867a;
+  --glass-ember: #ff8f53;
+  --glass-amber: #f19c29;
+  --glass-gold: #d4ad03;
+  --glass-verdant: #78c966;
+  --glass-emerald: #1dcf98;
+  --glass-cyan: #00cecf;
+  --glass-sky: #00c2fe;
+  --glass-cobalt: #70b1ff;
+  --glass-violet: #b49dff;
+
+  --ground: var(--lead-000);
+  --surface: var(--lead-050);
+  --raised: var(--lead-100);
+  --line: var(--lead-200);
+  --ink: var(--lead-800);
+  --ink-dim: var(--lead-600);
+  --ink-mute: var(--lead-500);
+
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+    "Liberation Mono", monospace;
+
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --lead-000: #fcf9f7;
+    --lead-050: #ffffff;
+    --lead-100: #f5f1ee;
+    --lead-200: #e5ded9;
+    --lead-300: #d1c9c3;
+    --lead-500: #7a736e;
+    --lead-600: #58514c;
+    --lead-800: #211c18;
+
+    --came-brass: #87611e;
+    --came-brass-lit: #6d4702;
+    --came-silver: #636b6b;
+
+    --glass-ruby: #b53530;
+    --glass-ember: #b04000;
+    --glass-amber: #a44f00;
+    --glass-gold: #8b6200;
+    --glass-verdant: #267e05;
+    --glass-emerald: #008450;
+    --glass-cyan: #008386;
+    --glass-sky: #0077b2;
+    --glass-cobalt: #2065c5;
+    --glass-violet: #6e50be;
+
+    color-scheme: light;
+  }
+}
+
+body {
+  background: var(--ground);
+  color: var(--ink);
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a:link,
+a:active,
+a:visited {
+  color: var(--glass-ember);
+}
+
+a:hover {
+  color: var(--came-brass-lit);
+}
+
+/* ---- The banner, and the search panel beside it ------------------------ */
+
+.banner {
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+}
+
+.banner h1,
+.banner h1 a,
+.banner .type,
+.banner a {
+  color: var(--ink);
+}
+
+.banner a:hover {
+  color: var(--glass-ember);
+}
+
+.panel {
+  background: var(--surface);
+  color: var(--ink);
+  border-right: 1px solid var(--line);
+}
+
+/* The header carries the magnifier as a background image, so only the colour
+   under it is replaced — setting `background` outright would drop the icon. */
+.panel .header {
+  background-color: var(--raised);
+  border-bottom: 1px solid var(--line);
+}
+
+.panel .header input {
+  background: transparent;
+  color: var(--ink);
+  border: 0;
+  font-family: inherit;
+}
+
+.panel .header input::placeholder {
+  color: var(--ink-mute);
+}
+
+.panel .header input:focus-visible {
+  outline: 2px solid var(--came-brass-lit);
+  outline-offset: -2px;
+}
+
+.panel .result ul li,
+.panel .result ul li:nth-child(2n) {
+  background: var(--surface);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+.panel .result ul li:hover,
+.panel .result ul li.selected,
+.panel .result ul li.current {
+  background: var(--raised);
+}
+
+.panel .result ul li h1,
+.panel .result ul li b {
+  color: var(--ink);
+}
+
+.panel .result ul li p,
+.panel .result ul li p.snippet,
+.panel .result ul li h1 i {
+  color: var(--ink-dim);
+}
+
+.panel .result ul li .badge {
+  color: var(--lead-000);
+}
+
+.tree,
+.tree ul,
+.tree ul li {
+  background: var(--surface);
+  border-color: var(--line);
+}
+
+.tree ul li h1,
+.tree ul li p {
+  color: var(--ink-dim);
+}
+
+.tree ul li:hover,
+.tree ul li.current {
+  background: var(--raised);
+}
+
+.tree ul li.current > h1,
+.tree ul li.current > p,
+.tree ul li:hover > h1 {
+  color: var(--glass-ember);
+}
+
+/* ---- Content ----------------------------------------------------------- */
+
+#content,
+#bodyContent {
+  background: var(--ground);
+  color: var(--ink);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5 {
+  color: var(--ink);
+  letter-spacing: -0.02em;
+}
+
+/* Section headings are the eyebrow the console and the docs both use. */
+.sectiontitle,
+.contenttitle {
+  color: var(--came-brass);
+  border-bottom: 1px solid var(--line);
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+
+.description p,
+#description p,
+p {
+  color: var(--ink);
+}
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+
+/* ---- Methods, constants, attributes ------------------------------------ */
+
+.method {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+}
+
+.method .method-title,
+.method .method-title a {
+  color: var(--ink);
+  font-family: var(--mono);
+}
+
+.method .method-title a.permalink,
+.method .sourcecode p.source-link a {
+  color: var(--came-brass);
+}
+
+.method .aka {
+  color: var(--ink-mute);
+}
+
+.attr-rw {
+  color: var(--came-brass);
+}
+
+.attr-name {
+  color: var(--ink);
+  font-family: var(--mono);
+}
+
+.attr-desc,
+.attr-value {
+  color: var(--ink-dim);
+}
+
+/* ---- Code -------------------------------------------------------------- */
+
+pre,
+code,
+tt,
+.description pre,
+.dyn-source {
+  font-family: var(--mono);
+}
+
+pre,
+.description pre,
+.dyn-source {
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  color: var(--ink);
+}
+
+:not(pre) > code,
+:not(pre) > tt {
+  color: var(--came-silver);
+  background: var(--raised);
+  border-radius: 3px;
+  padding: 0.05em 0.3em;
+}
+
+/* Glass carries meaning, so it carries the syntax too. */
+.ruby-constant,
+.hljs-type,
+.hljs-title.class_ {
+  color: var(--glass-gold);
+}
+
+.ruby-keyword,
+.dyn-source .kw,
+.hljs-keyword,
+.hljs-built_in {
+  color: var(--glass-ember);
+}
+
+.ruby-title,
+.hljs-title,
+.hljs-section {
+  color: var(--glass-cobalt);
+}
+
+.ruby-ivar,
+.hljs-variable,
+.hljs-attr,
+.hljs-attribute {
+  color: var(--glass-violet);
+}
+
+.ruby-identifier,
+.hljs-name {
+  color: var(--ink);
+}
+
+.ruby-operator,
+.hljs-operator,
+.hljs-punctuation {
+  color: var(--ink-mute);
+}
+
+.ruby-string,
+.hljs-string,
+.hljs-regexp {
+  color: var(--glass-emerald);
+}
+
+.ruby-comment,
+.dyn-source .cmt,
+.hljs-comment,
+.hljs-quote {
+  color: var(--ink-mute);
+  font-style: italic;
+}
+
+.ruby-value,
+.hljs-number,
+.hljs-literal,
+.hljs-symbol {
+  color: var(--glass-cyan);
+}
+
+/* ---- Back to the docs -------------------------------------------------- */
+
+.banner::after {
+  content: "";
+  display: block;
+}

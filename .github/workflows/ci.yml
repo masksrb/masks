@@ -115,6 +115,42 @@ jobs:
           POSTGRES_PORT: 5435
         run: bin/rails db:prepare test
 
+      - name: The generated Manage API page still matches the schema
+        working-directory: server
+        env:
+          RAILS_ENV: test
+          POSTGRES_HOST: 127.0.0.1
+          POSTGRES_PORT: 5435
+        run: |
+          bin/rails docs:schema > ../docs/src/content/docs/reference/manage.mdx
+          git diff --exit-code -- ../docs/src/content/docs/reference/manage.mdx ||
+            {
+              echo "::error::ManageSchema changed. Run 'bin/rails docs:schema > ../docs/src/content/docs/reference/manage.mdx' and commit."
+              exit 1
+            }
+
+      - name: The generated @masks/client page still matches the source
+        working-directory: web
+        run: |
+          npm run reference
+          git diff --exit-code -- ../docs/src/content/docs/reference/browser.mdx ||
+            {
+              echo "::error::@masks/client changed. Run 'npm run reference' in web/ and commit."
+              exit 1
+            }
+
+      - name: The generated gem pages still match the source
+        working-directory: client
+        run: |
+          bundle install --quiet
+          bundle exec rake reference:mdx
+          git diff --exit-code -- ../docs/src/content/docs/reference/ruby.mdx \
+                                  ../docs/src/content/docs/reference/rails.mdx ||
+            {
+              echo "::error::Masks::Client or Masks::Rails changed. Run 'bundle exec rake reference:mdx' in client/ and commit."
+              exit 1
+            }
+
   boot:
     runs-on: ubuntu-latest
     services:

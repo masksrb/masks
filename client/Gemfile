@@ -8,3 +8,8 @@ gem "actionview", "~> 8.1"
 gem "rails-dom-testing", "~> 2.2"
 gem "minitest", "~> 5.25"
 gem "rake", "~> 13.2"
+
+group :development do
+  gem "sdoc", "~> 2.6"
+  gem "rdoc", "~> 6.14"
+end

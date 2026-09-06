@@ -5,44 +5,21 @@ template: splash
 hero:
   tagline: self-hosted auth for the open web...
   actions:
-    - text: Run it
-      link: /start/running/
-      icon: document
-    - text: Register a connector
-      link: /guides/connectors/
+    - text: Manage API
+      link: /reference/manage/
       icon: right-arrow
+    - text: Design
+      link: /reference/design/
+      icon: document
       variant: minimal
 ---
 
-import { Card, CardGrid, LinkCard } from "@astrojs/starlight/components";
+A standalone OpenID Connect provider with per-tenant signing keys, a Ruby gem that signs apps in
+against it, and a browser package for single-page apps. Certified against the OpenID Foundation's
+own test suite.
 
-A standalone OpenID Connect provider, a Ruby gem that signs apps in against it, and a browser
-package for single-page apps. Certified against the OpenID Foundation's own test suite.
-
-<CardGrid stagger>
-  <Card title="A key per tenant" icon="seti:db">
-    Every tenant gets its own RS256 keypair on create, published only at its own JWKS endpoint. A
-    token from one tenant has no `kid` the next can look up.
-  </Card>
-  <Card title="A server, not an engine" icon="seti:config">
-    `server/` runs beside your app and owns its own routes, session and cookie. The Rails engine in
-    the gem is the *consumer* half, and never loads in the same process.
-  </Card>
-  <Card title="Apps register themselves" icon="puzzle">
-    RFC 7591 dynamic client registration, plus a `/handshake` flow where a person approves an app
-    and the credentials are fetched server to server.
-  </Card>
-  <Card title="Tokens name their API" icon="approve-check">
-    RFC 8707 resource indicators put the API's URL in `aud`. A resource server checks it against its
-    own URL and refuses anything else.
-  </Card>
-</CardGrid>
-
-<CardGrid>
-  <LinkCard title="Run it" href="/start/running/" description="bin/setup, bin/dev, two tenants." />
-  <LinkCard title="The three pieces" href="/start/pieces/" description="server/, client/, web/ — and which you need." />
-  <LinkCard title="Tenancy" href="/concepts/tenancy/" description="Three isolation layers, and the tenant claim." />
-  <LinkCard title="Tokens" href="/concepts/tokens/" description="Lifetimes, claims, audiences and PKCE." />
-  <LinkCard title="The login machine" href="/concepts/login/" description="Eleven ordered states; the order is the flow." />
-  <LinkCard title="Conformance" href="/reference/conformance/" description="bin/conformance, and what it caught." />
-</CardGrid>
+Every reference here is generated from the code it describes, so a page cannot claim something the
+source does not do: the [Manage API](/reference/manage/) from `ManageSchema`,
+[@masks/client](/reference/browser/) from its TypeScript, and
+[Masks::Client](/api/ruby/) from the gem with SDoc. The READMEs in `server/`, `client/` and `web/`
+cover running each piece.
