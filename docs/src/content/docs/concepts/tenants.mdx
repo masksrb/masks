@@ -20,7 +20,27 @@ Postgres says nothing when it does, so `Tenant.switch` asks the database once pe
 connected as and refuses to enter a tenant at all if the answer is such a role. Point
 `POSTGRES_USER` at an ordinary role.
 
-`Tenant.switch(tenant) { ... }` is how code enters a tenant. Outside it, a query returns nothing
-rather than everything — `Model.unscoped` is zero rows, not all rows.
+## Entering one
+
+Nothing in the application enters a tenant by hand. A Rack middleware resolves the request's
+hostname and enters it before any controller runs, and a module on `ActiveJob::Base` carries the
+tenant a job was enqueued in through to the worker that performs it. Neither is opted into, so
+neither can be forgotten by a controller that inherits from somewhere unexpected or a job that
+belongs to a framework.
+
+A job enqueued outside any tenant is refused rather than left to perform against whichever tenant
+its worker thread happened to hold last. Maintenance meant to span every tenant says so:
+
+```ruby
+class CleanupJob < ApplicationJob
+  across_tenants!
+end
+```
+
+`Tenant.switch(tenant) { ... }` remains for code that deliberately crosses — the sweep above, or an
+issuer reading another tenant's keys. It sets a session-scoped Postgres setting rather than a
+transaction-scoped one, so it holds no transaction open and applies to every query and every
+transaction beneath it. Outside a tenant a query returns nothing rather than everything:
+`Model.unscoped` is zero rows, not all rows.
 
 Tenants come from `MASKS_TENANTS` at deploy, or the first visit claims one when none are declared.
