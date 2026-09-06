@@ -21,6 +21,12 @@ class Tenant < ApplicationRecord
 
   after_create_commit :ensure_signing_key!
 
+  def public_origin
+    template = Rails.configuration.masks.public_origin_template
+
+    template && format(template, subdomain: subdomain).chomp("/")
+  end
+
   def dynamic_client_ceiling
     declared = dynamic_client_scopes.presence ||
       Rails.configuration.masks.dynamic_client_scopes

@@ -24,6 +24,7 @@ class Client < ApplicationRecord
   validates :token_endpoint_auth_method, inclusion: { in: AUTH_METHODS }
   validate :redirect_uris_are_usable
   validate :grant_types_are_known
+  validate :backchannel_logout_uri_is_usable
 
   belongs_to :approved_by, class_name: "Actor", optional: true
 
@@ -78,6 +79,9 @@ class Client < ApplicationRecord
         logo_uri: attributes[:logo_uri],
         tos_uri: attributes[:tos_uri],
         policy_uri: attributes[:policy_uri],
+        backchannel_logout_uri: attributes[:backchannel_logout_uri],
+        backchannel_logout_session_required:
+          ActiveModel::Type::Boolean.new.cast(attributes[:backchannel_logout_session_required]) || false,
         dynamic: true
       )
 
@@ -183,11 +187,33 @@ class Client < ApplicationRecord
       "logo_uri" => logo_uri,
       "tos_uri" => tos_uri,
       "policy_uri" => policy_uri,
+      "backchannel_logout_uri" => backchannel_logout_uri,
+      "backchannel_logout_session_required" => backchannel_logout_session_required,
       "client_id_issued_at" => created_at&.to_i
     }.compact
   end
 
+  def notified_on_logout?
+    backchannel_logout_uri.present?
+  end
+
   private
+
+    def backchannel_logout_uri_is_usable
+      return if backchannel_logout_uri.blank?
+
+      uri = URI.parse(backchannel_logout_uri.to_s)
+
+      if uri.fragment.present?
+        errors.add(:backchannel_logout_uri, "must not contain a fragment")
+      elsif uri.scheme.blank? || uri.host.blank?
+        errors.add(:backchannel_logout_uri, "must be absolute")
+      elsif uri.scheme == "http" && !loopback?(uri) && !Rails.env.local?
+        errors.add(:backchannel_logout_uri, "must use https unless it is loopback")
+      end
+    rescue URI::InvalidURIError
+      errors.add(:backchannel_logout_uri, "is not a URI")
+    end
 
     def redirect_uris_are_usable
       if redirect_uris.blank?

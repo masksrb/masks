@@ -10,6 +10,7 @@ class AccessToken < Token
       actor: actor,
       client: client,
       device: parent&.device,
+      session: parent&.session,
       parent: parent,
       scopes: Scopes.join(scopes),
       audience: Array(audience),

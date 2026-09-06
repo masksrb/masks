@@ -61,7 +61,9 @@ module Manage
 
       field :events, [ EventType ], null: false do
         argument :actor, ID, required: false
+        argument :client, ID, required: false
         argument :action, String, required: false
+        argument :grave, Boolean, required: false
         argument :before, GraphQL::Types::ISO8601DateTime, required: false
         argument :limit, Integer, required: false
       end
@@ -177,14 +179,18 @@ module Manage
         end
       end
 
-      def events(actor: nil, action: nil, before: nil, limit: nil)
+      def events(actor: nil, client: nil, action: nil, grave: false, before: nil, limit: nil)
         subject = actor.present? ? Actor.find_by(uuid: actor) : nil
+        held = client.present? ? Client.find_by(client_id: client) : nil
 
         return ::Event.none if actor.present? && subject.nil?
+        return ::Event.none if client.present? && held.nil?
 
         scope = ::Event.newest_first.includes(:actor, :by, :client, :device)
         scope = scope.where(actor: subject) if subject
+        scope = scope.where(client: held) if held
         scope = scope.where(action: action) if action.present?
+        scope = scope.where(action: ::Event::GRAVE) if grave
         scope = scope.where(created_at: ...before) if before.present?
 
         scope.limit(::Event.bounded(limit))

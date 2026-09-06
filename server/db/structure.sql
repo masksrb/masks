@@ -202,7 +202,9 @@ CREATE TABLE public.clients (
     approved_at timestamp(6) without time zone,
     approved_by_id bigint,
     required_scopes text DEFAULT ''::text NOT NULL,
-    post_logout_redirect_uris jsonb DEFAULT '[]'::jsonb NOT NULL
+    post_logout_redirect_uris jsonb DEFAULT '[]'::jsonb NOT NULL,
+    backchannel_logout_uri character varying,
+    backchannel_logout_session_required boolean DEFAULT false NOT NULL
 );
 
 ALTER TABLE ONLY public.clients FORCE ROW LEVEL SECURITY;
@@ -580,7 +582,9 @@ CREATE TABLE public.sessions (
     updated_at timestamp(6) without time zone NOT NULL,
     amr jsonb DEFAULT '[]'::jsonb NOT NULL,
     device_id bigint,
-    device_version character varying
+    device_version character varying,
+    uuid uuid DEFAULT gen_random_uuid() NOT NULL,
+    origin character varying
 );
 
 ALTER TABLE ONLY public.sessions FORCE ROW LEVEL SECURITY;
@@ -705,7 +709,8 @@ CREATE TABLE public.tokens (
     authenticated_at timestamp(6) without time zone,
     requested_claims jsonb,
     payload jsonb,
-    device_id bigint
+    device_id bigint,
+    session_id bigint
 );
 
 ALTER TABLE ONLY public.tokens FORCE ROW LEVEL SECURITY;
@@ -1330,6 +1335,13 @@ CREATE INDEX index_sessions_on_tenant_id ON public.sessions USING btree (tenant_
 
 
 --
+-- Name: index_sessions_on_tenant_id_and_uuid; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_sessions_on_tenant_id_and_uuid ON public.sessions USING btree (tenant_id, uuid);
+
+
+--
 -- Name: index_signing_keys_on_tenant_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1397,6 +1409,13 @@ CREATE UNIQUE INDEX index_tokens_on_digest ON public.tokens USING btree (digest)
 --
 
 CREATE INDEX index_tokens_on_parent_id ON public.tokens USING btree (parent_id);
+
+
+--
+-- Name: index_tokens_on_session_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_tokens_on_session_id ON public.tokens USING btree (session_id);
 
 
 --
@@ -1686,6 +1705,14 @@ ALTER TABLE ONLY public.tokens
 
 
 --
+-- Name: tokens fk_rails_fc9481b3fa; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tokens
+    ADD CONSTRAINT fk_rails_fc9481b3fa FOREIGN KEY (session_id) REFERENCES public.sessions(id) ON DELETE SET NULL;
+
+
+--
 -- Name: actors; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -1874,6 +1901,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260906000002'),
 ('20260906000001'),
 ('20260905000004'),
 ('20260905000003'),

@@ -40,7 +40,8 @@ class LogoutTest < ActionDispatch::IntegrationTest
 
     assert_equal "#{origin_for(@tenant)}/logout", document["end_session_endpoint"]
     assert_equal false, document["frontchannel_logout_supported"]
-    assert_equal false, document["backchannel_logout_supported"]
+    assert_equal true, document["backchannel_logout_supported"]
+    assert_equal true, document["backchannel_logout_session_supported"]
   end
 
   test "an id_token_hint proves who is asking, so the session ends without a click" do

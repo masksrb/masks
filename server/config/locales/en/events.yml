@@ -5,6 +5,8 @@ en:
         started: "Signed in"
         ended: "Signed out"
         revoked: "A session was ended for you"
+      logout:
+        undelivered: "An application could not be told you signed out"
       login:
         refused: "A sign-in was refused"
         throttled: "Sign-ins were throttled"

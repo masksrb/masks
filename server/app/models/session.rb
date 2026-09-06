@@ -11,7 +11,7 @@ class Session < ApplicationRecord
   attr_reader :secret
 
   class << self
-    def start!(actor:, device: nil, user_agent: nil, ip_address: nil, amr: [])
+    def start!(actor:, device: nil, user_agent: nil, ip_address: nil, amr: [], origin: nil)
       secret = SecureRandom.urlsafe_base64(48)
 
       session = create!(
@@ -21,6 +21,7 @@ class Session < ApplicationRecord
         digest: Digest::SHA256.hexdigest(secret),
         user_agent: user_agent,
         ip_address: ip_address,
+        origin: origin.presence || Current.origin,
         authenticated_at: Time.current,
         amr: Array(amr),
         expires_at: LIFETIME.from_now
@@ -43,7 +44,19 @@ class Session < ApplicationRecord
     device.nil? || device.carries?(self)
   end
 
+  def relying_parties
+    Client
+      .where(id: Token.where(session_id: id).select(:client_id))
+      .where.not(backchannel_logout_uri: [ nil, "" ])
+      .distinct
+  end
+
   def revoke!
+    return true if revoked_at.present?
+
     update!(revoked_at: Time.current)
+    BackchannelLogout.announce(self)
+
+    true
   end
 end

@@ -1,6 +1,7 @@
 <script>
   import { createFeedback } from "./lib/feedback.svelte.js";
   import { day } from "./lib/format.js";
+  import Events from "./Events.svelte";
   import ScopesEditor from "./ScopesEditor.svelte";
   import BarChart from "./ui/BarChart.svelte";
   import Card from "./ui/Card.svelte";
@@ -26,9 +27,24 @@
     }
   `;
 
+  const EVENT_FIELDS = `
+    id action createdAt ipAddress details
+    actor { uuid nickname }
+    by { uuid nickname }
+    client { clientId name }
+    device { id label }
+  `;
+
   const ACTIVITY = `
     query Activity($days: Int) {
       activity(days: $days) { date signIns }
+    }
+  `;
+
+  const RECENT = `
+    query Recent {
+      worrying: events(grave: true, limit: 8) { ${EVENT_FIELDS} }
+      latest: events(limit: 8) { ${EVENT_FIELDS} }
     }
   `;
 
@@ -182,6 +198,28 @@
         </Loader>
       {/key}
     </Card>
+
+    <Loader load={() => api.query(RECENT)}>
+      {#snippet children(recent)}
+        {#if recent.worrying.length}
+          <Card title="Worth a look" lede="Refusals, replays and blocks, newest first.">
+            {#snippet actions()}
+              <Link to="/activity" class="btn btn-sm">All activity</Link>
+            {/snippet}
+
+            <Events events={recent.worrying} />
+          </Card>
+        {/if}
+
+        <Card title="Lately">
+          {#snippet actions()}
+            <Link to="/activity" class="btn btn-ghost btn-sm">All activity</Link>
+          {/snippet}
+
+          <Events events={recent.latest} empty="Nothing has happened yet." />
+        </Card>
+      {/snippet}
+    </Loader>
 
     <Card title="You are signed in as {data.viewer.nickname}">
       <Facts

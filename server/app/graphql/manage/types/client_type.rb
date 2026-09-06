@@ -17,12 +17,26 @@ module Manage
       field :logo_uri, String
       field :tos_uri, String
       field :policy_uri, String
+      field :backchannel_logout_uri, String
+      field :backchannel_logout_session_required, Boolean, null: false
       field :dynamic, Boolean, null: false
       field :approved_at, GraphQL::Types::ISO8601DateTime
       field :approved_by, ActorType
       field :archived_at, GraphQL::Types::ISO8601DateTime
       field :secret_expires_at, GraphQL::Types::ISO8601DateTime
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
+
+      field :events, [ "Manage::Types::EventType" ], null: false do
+        argument :limit, Integer, required: false
+      end
+
+      def events(limit: nil)
+        ::Event
+          .where(client_id: object.id)
+          .newest_first
+          .includes(:actor, :by, :device)
+          .limit(::Event.bounded(limit))
+      end
 
       def required_scopes
         Scopes.list(object.required_scopes)

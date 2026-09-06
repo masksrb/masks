@@ -4,6 +4,7 @@ class Token < ApplicationRecord
   belongs_to :actor, optional: true
   belongs_to :client, optional: true
   belongs_to :device, optional: true
+  belongs_to :session, optional: true
   belongs_to :parent, class_name: "Token", optional: true
 
   has_many :children, class_name: "Token", foreign_key: :parent_id, dependent: :nullify
@@ -20,6 +21,7 @@ class Token < ApplicationRecord
     def mint!(**attributes)
       secret = SecureRandom.urlsafe_base64(48)
       attributes[:device] ||= attributes[:parent]&.device
+      attributes[:session] ||= attributes[:parent]&.session
 
       token = create!(
         **attributes,
