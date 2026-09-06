@@ -16,6 +16,7 @@ class RegistrationsController < ApplicationController
     client_name redirect_uris grant_types response_types scope
     post_logout_redirect_uris token_endpoint_auth_method application_type
     client_uri logo_uri tos_uri policy_uri resources
+    backchannel_logout_uri backchannel_logout_session_required
   ].freeze
 
   def create
@@ -93,7 +94,9 @@ class RegistrationsController < ApplicationController
         client_uri: body[:client_uri],
         logo_uri: body[:logo_uri],
         tos_uri: body[:tos_uri],
-        policy_uri: body[:policy_uri]
+        policy_uri: body[:policy_uri],
+        backchannel_logout_uri: body[:backchannel_logout_uri],
+        backchannel_logout_session_required: body[:backchannel_logout_session_required]
       }.compact
     end
 

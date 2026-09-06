@@ -67,10 +67,11 @@ class PendingRequest < Token
     authorization.scopes_for(actor)
   end
 
-  def issue_code!(actor:, device: nil, authenticated_at: nil, amr: nil)
+  def issue_code!(actor:, device: nil, session: nil, authenticated_at: nil, amr: nil)
     AuthorizationCode.mint!(
       actor: actor,
       device: device,
+      session: session,
       parent: self,
       authenticated_at: authenticated_at,
       payload: { "amr" => Array(amr) },

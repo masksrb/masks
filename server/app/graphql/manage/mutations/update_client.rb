@@ -8,6 +8,8 @@ module Manage
       argument :resources, [ String ], required: false
       argument :required_scopes, [ String ], required: false
       argument :allowed_scopes, [ String ], required: false
+      argument :backchannel_logout_uri, String, required: false
+      argument :backchannel_logout_session_required, Boolean, required: false
 
       field :client, Types::ClientType, null: false
 

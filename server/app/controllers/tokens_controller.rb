@@ -152,7 +152,8 @@ class TokensController < ApplicationController
           actor: code.actor, client: client, nonce: code.nonce,
           authenticated_at: code.authenticated_at,
           amr: (code.payload || {})["amr"],
-          access_token: access.jwt
+          access_token: access.jwt,
+          sid: code.session&.uuid
         )
       end
 

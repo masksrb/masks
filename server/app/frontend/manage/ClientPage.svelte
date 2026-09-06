@@ -1,6 +1,7 @@
 <script>
   import { createFeedback } from "./lib/feedback.svelte.js";
   import { day, joined } from "./lib/format.js";
+  import Events from "./Events.svelte";
   import Namespaces from "./Namespaces.svelte";
   import ScopesEditor from "./ScopesEditor.svelte";
   import Card from "./ui/Card.svelte";
@@ -19,6 +20,13 @@
         tokenEndpointAuthMethod applicationType clientUri
         redirectUris postLogoutRedirectUris grantTypes responseTypes resources
         requiredScopes allowedScopes
+        backchannelLogoutUri backchannelLogoutSessionRequired
+        events(limit: 25) {
+          id action createdAt ipAddress details
+          actor { uuid nickname }
+          by { uuid nickname }
+          device { id label }
+        }
         approvedBy { nickname }
         namespaces { name resource claimedAt releasable }
       }
@@ -31,6 +39,7 @@
   let client = $state(null);
   let supported = $state([]);
   let name = $state("");
+  let logoutUri = $state("");
   let loading = $state(true);
   let secret = $state(null);
 
@@ -60,6 +69,7 @@
       client = data.client;
       supported = data.scopesSupported;
       name = data.client?.name ?? "";
+      logoutUri = data.client?.backchannelLogoutUri ?? "";
     } catch (thrown) {
       feedback.blame(thrown);
     } finally {
@@ -79,8 +89,14 @@
 
   const update = (changes, notice) =>
     act(
-      `mutation Update($clientId: ID!, $name: String, $requiredScopes: [String!], $allowedScopes: [String!]) {
-        updateClient(clientId: $clientId, name: $name, requiredScopes: $requiredScopes, allowedScopes: $allowedScopes) {
+      `mutation Update(
+        $clientId: ID!, $name: String, $requiredScopes: [String!], $allowedScopes: [String!],
+        $backchannelLogoutUri: String
+      ) {
+        updateClient(
+          clientId: $clientId, name: $name, requiredScopes: $requiredScopes,
+          allowedScopes: $allowedScopes, backchannelLogoutUri: $backchannelLogoutUri
+        ) {
           client { clientId }
         }
       }`,
@@ -173,6 +189,34 @@
               Self-registered, so no <span class="font-mono text-xs">masks:</span> scope.
             </p>
           {/if}
+        </Card>
+
+        <Card
+          title="Back-channel logout"
+          lede="Where to tell this client that a session it was part of has ended."
+        >
+          <Field
+            label="Logout URI"
+            bind:value={logoutUri}
+            placeholder="https://app.example.com/logout/backchannel"
+            autocapitalize="none"
+            autocorrect="off"
+            spellcheck="false"
+            onsave={() =>
+              update(
+                { backchannelLogoutUri: logoutUri.trim() || null },
+                logoutUri.trim() ? "Saved. Signing out will notify it." : "Cleared.",
+              )}
+          />
+
+          <p class="text-xs opacity-60">
+            A signed logout token is posted there, carrying the subject and the session id, and
+            retried for a while if the client does not answer.
+          </p>
+        </Card>
+
+        <Card title="Activity" lede="What this client has done, and what has been done to it.">
+          <Events events={client.events} empty="Nothing recorded for this client yet." />
         </Card>
 
         {#if client.namespaces.length}

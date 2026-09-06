@@ -20,8 +20,8 @@
   `;
 
   const QUERY = `
-    query Activity($action: String, $before: ISO8601DateTime, $limit: Int) {
-      events(action: $action, before: $before, limit: $limit) { ${FIELDS} }
+    query Activity($action: String, $grave: Boolean, $before: ISO8601DateTime, $limit: Int) {
+      events(action: $action, grave: $grave, before: $before, limit: $limit) { ${FIELDS} }
       eventActions
     }
   `;
@@ -31,6 +31,7 @@
   let events = $state([]);
   let actions = $state([]);
   let action = $state("");
+  let grave = $state(false);
   let loading = $state(true);
   let more = $state(false);
   let exhausted = $state(false);
@@ -40,7 +41,7 @@
     else loading = true;
 
     const data = await feedback.attempt(() =>
-      api.query(QUERY, { action: action || null, before, limit: PAGE }),
+      api.query(QUERY, { action: action || null, grave, before, limit: PAGE }),
     );
 
     loading = false;
@@ -61,6 +62,13 @@
     load();
   }
 
+  function only(worrying) {
+    grave = worrying;
+    if (worrying) action = "";
+    exhausted = false;
+    load();
+  }
+
   const oldest = $derived(events.at(-1)?.createdAt ?? null);
 </script>
 
@@ -71,19 +79,32 @@
   <Notices feedback={feedback.state} />
 
   <Card>
-    <label class="flex flex-col gap-1.5">
-      <span class="legend">Show</span>
-      <select
-        class="select select-sm w-full max-w-xs"
-        value={action}
-        onchange={(event) => filter(event.currentTarget.value)}
-      >
-        <option value="">everything</option>
-        {#each actions as one (one)}
-          <option value={one}>{said(one)}</option>
-        {/each}
-      </select>
-    </label>
+    <div class="flex flex-wrap items-end gap-4">
+      <label class="flex flex-col gap-1.5">
+        <span class="legend">Show</span>
+        <select
+          class="select select-sm w-full max-w-xs"
+          value={action}
+          disabled={grave}
+          onchange={(event) => filter(event.currentTarget.value)}
+        >
+          <option value="">everything</option>
+          {#each actions as one (one)}
+            <option value={one}>{said(one)}</option>
+          {/each}
+        </select>
+      </label>
+
+      <label class="flex items-center gap-2 pb-1 text-sm">
+        <input
+          type="checkbox"
+          class="toggle toggle-sm"
+          checked={grave}
+          onchange={(event) => only(event.currentTarget.checked)}
+        />
+        Only what is worth a look
+      </label>
+    </div>
   </Card>
 
   {#if loading && events.length === 0}
@@ -92,7 +113,11 @@
     <Card>
       <Events
         {events}
-        empty={action ? "Nothing of that kind has happened yet." : "Nothing has happened yet."}
+        empty={grave
+          ? "Nothing worth a look. Refusals, replays and blocks would show here."
+          : action
+            ? "Nothing of that kind has happened yet."
+            : "Nothing has happened yet."}
       />
 
       {#if !exhausted && events.length}

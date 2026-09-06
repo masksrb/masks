@@ -3,6 +3,8 @@ class Issuer
   ACR_MULTI_FACTOR = "urn:masks:acr:mfa".freeze
   MULTI_FACTOR = "mfa".freeze
   ACR_VALUES = [ ACR_PASSWORD, ACR_MULTI_FACTOR ].freeze
+  LOGOUT_EVENT = "http://schemas.openid.net/event/backchannel-logout".freeze
+  LOGOUT_TOKEN_LIFETIME = 2.minutes
 
   attr_reader :tenant, :origin
 
@@ -70,7 +72,7 @@ class Issuer
   end
 
   def id_token(actor:, client:, nonce: nil, issued_at: Time.current,
-               authenticated_at: nil, access_token: nil, code: nil, amr: nil)
+               authenticated_at: nil, access_token: nil, code: nil, amr: nil, sid: nil)
     sign({
       "iss" => url,
       "sub" => actor.uuid,
@@ -81,10 +83,24 @@ class Issuer
       "acr" => acr_for(amr),
       "amr" => Array(amr).presence,
       "nonce" => nonce,
+      "sid" => sid,
       "at_hash" => half_hash(access_token),
       "c_hash" => half_hash(code),
       "tenant" => tenant.to_identity,
       Actor::AVATARS_CLAIM => Avatars.urls(actor, origin: url)
+    }.compact)
+  end
+
+  def logout_token(client:, subject:, sid: nil, issued_at: Time.current)
+    sign({
+      "iss" => url,
+      "aud" => client.client_id,
+      "iat" => issued_at.to_i,
+      "exp" => (issued_at + LOGOUT_TOKEN_LIFETIME).to_i,
+      "jti" => SecureRandom.uuid,
+      "events" => { LOGOUT_EVENT => {} },
+      "sub" => subject,
+      "sid" => sid
     }.compact)
   end
 
@@ -110,7 +126,8 @@ class Issuer
       "introspection_endpoint" => "#{url}/introspect",
       "end_session_endpoint" => "#{url}/logout",
       "frontchannel_logout_supported" => false,
-      "backchannel_logout_supported" => false,
+      "backchannel_logout_supported" => true,
+      "backchannel_logout_session_supported" => true,
       "scopes_supported" => Scopes::DESCRIBED.keys + connection_scopes,
       "ui_locales_supported" => Locales.available.map { |locale| Locales.tag(locale) },
       "response_types_supported" => Client::RESPONSE_TYPES,
@@ -124,7 +141,7 @@ class Issuer
       "token_endpoint_auth_methods_supported" => Client::AUTH_METHODS,
       "code_challenge_methods_supported" => Client::CHALLENGE_METHODS,
       "claims_supported" => %w[
-        iss sub aud exp iat auth_time nonce
+        iss sub aud exp iat auth_time nonce sid
         preferred_username name picture email email_verified tenant act
       ] + [ Actor::AVATARS_CLAIM ],
       "authorization_response_iss_parameter_supported" => true,

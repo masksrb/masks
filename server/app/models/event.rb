@@ -9,6 +9,7 @@ class Event < ApplicationRecord
   SESSION_STARTED = "session.started".freeze
   SESSION_ENDED = "session.ended".freeze
   SESSION_REVOKED = "session.revoked".freeze
+  LOGOUT_UNDELIVERED = "logout.undelivered".freeze
   LOGIN_REFUSED = "login.refused".freeze
   LOGIN_THROTTLED = "login.throttled".freeze
 
@@ -67,6 +68,11 @@ class Event < ApplicationRecord
   PROVIDER_UPDATED = "provider.updated".freeze
   PROVIDER_ARCHIVED = "provider.archived".freeze
   TENANT_UPDATED = "tenant.updated".freeze
+
+  GRAVE = [
+    LOGIN_REFUSED, LOGIN_THROTTLED, LOGOUT_UNDELIVERED, REFRESH_REUSED,
+    DEVICE_BLOCKED, ACTOR_DELETED, AUTHENTICATOR_DISABLED
+  ].freeze
 
   ACTIONS = constants(false).filter_map do |name|
     value = const_get(name)

@@ -2,6 +2,7 @@ const SAID = {
   "session.started": "Signed in",
   "session.ended": "Signed out",
   "session.revoked": "Session revoked",
+  "logout.undelivered": "Logout not delivered",
   "login.refused": "Sign-in refused",
   "login.throttled": "Sign-in throttled",
 
@@ -63,6 +64,7 @@ const SAID = {
 };
 
 const GRAVE = new Set([
+  "logout.undelivered",
   "login.refused",
   "login.throttled",
   "refresh.reused",
@@ -95,7 +97,12 @@ export function tone(action) {
 
 export function detailed(details) {
   return Object.entries(details ?? {})
-    .filter(([, value]) => value !== null && value !== "" && !(Array.isArray(value) && !value.length))
+    .filter(
+      ([, value]) =>
+        value !== null &&
+        value !== "" &&
+        !(Array.isArray(value) && !value.length),
+    )
     .map(([key, value]) => [key.replace(/_/g, " "), phrase(value)]);
 }
 
