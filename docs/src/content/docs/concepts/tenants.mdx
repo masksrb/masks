@@ -11,11 +11,14 @@ Isolation is three layers, because each fails differently:
 | Layer | What it does | How it fails |
 | --- | --- | --- |
 | `TenantScoped` | scopes every query in the application | by omission — a forgotten scope leaks |
-| Row-level security | `FORCE ROW LEVEL SECURITY` in Postgres | silently, if the connecting role is a superuser |
+| Row-level security | `FORCE ROW LEVEL SECURITY` in Postgres | it cannot fail quietly — see below |
 | Per-tenant signing keys | a token from one tenant has no `kid` the next can look up | loudly — verification refuses |
 
 The application connects as a non-superuser role precisely so the second layer cannot be bypassed by
-the table's owner.
+the table's owner. A role holding `SUPERUSER` or `BYPASSRLS` sees straight through every policy, and
+Postgres says nothing when it does, so `Tenant.switch` asks the database once per process who it is
+connected as and refuses to enter a tenant at all if the answer is such a role. Point
+`POSTGRES_USER` at an ordinary role.
 
 `Tenant.switch(tenant) { ... }` is how code enters a tenant. Outside it, a query returns nothing
 rather than everything — `Model.unscoped` is zero rows, not all rows.
