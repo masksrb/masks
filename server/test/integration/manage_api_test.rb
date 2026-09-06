@@ -62,7 +62,7 @@ class ManageApiTest < ActionDispatch::IntegrationTest
     assert_equal resource, body["resource"]
     assert_equal [ origin_for(@tenant) ], body["authorization_servers"]
     assert_equal [ "masks:manage" ], body["scopes_supported"]
-    assert_equal "Modify the masks backend", body.dig("scope_descriptions", "masks:manage")
+    assert_equal "Manage masks", body.dig("scope_descriptions", "masks:manage")
   end
 
   test "the document is also served under the resource path, as RFC 9728 asks" do

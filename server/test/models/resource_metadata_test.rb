@@ -79,7 +79,7 @@ class ResourceMetadataTest < ActiveSupport::TestCase
       described = ResourceMetadata.describe(server.url, "openid uris:catalog:read")
 
       assert_equal [
-        [ "openid", "Confirm who you are" ],
+        [ "openid", "Who you are" ],
         [ "uris:catalog:read", "Search and read your catalog" ]
       ], described
     end
@@ -98,7 +98,7 @@ class ResourceMetadataTest < ActiveSupport::TestCase
 
   test "a resource that describes nothing leaves the scope named rather than blank" do
     with_resource({}) do |server|
-      assert_equal [ [ "uris:catalog:read", "Use the uris:catalog:read scope" ] ],
+      assert_equal [ [ "uris:catalog:read", "uris:catalog:read" ] ],
                    ResourceMetadata.describe(server.url, "uris:catalog:read")
     end
   end
@@ -107,8 +107,8 @@ class ResourceMetadataTest < ActiveSupport::TestCase
     described = ResourceMetadata.describe("https://127.0.0.1:1/mcp", "openid uris:catalog:read")
 
     assert_equal [
-      [ "openid", "Confirm who you are" ],
-      [ "uris:catalog:read", "Use the uris:catalog:read scope" ]
+      [ "openid", "Who you are" ],
+      [ "uris:catalog:read", "uris:catalog:read" ]
     ], described
   end
 
@@ -162,7 +162,7 @@ class ResourceMetadataTest < ActiveSupport::TestCase
 
   test "a document that is not a document is simply not one" do
     with_resource({ "/.well-known/oauth-protected-resource/mcp" => "<html>nope</html>" }) do |server|
-      assert_equal [ [ "uris:catalog:read", "Use the uris:catalog:read scope" ] ],
+      assert_equal [ [ "uris:catalog:read", "uris:catalog:read" ] ],
                    ResourceMetadata.describe(server.url, "uris:catalog:read")
     end
   end
