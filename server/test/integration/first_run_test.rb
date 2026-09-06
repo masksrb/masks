@@ -37,18 +37,18 @@ class FirstRunTest < ActionDispatch::IntegrationTest
     assert_equal "setup", JSON.parse(response.body)["prompt"]
   end
 
-  test "the root of an empty tenant is a first run, not a sign-in nobody can complete" do
+  test "the root of an empty tenant goes straight to the only thing that can happen there" do
     host! host_for(@tenant)
 
     get "/"
 
+    assert_redirected_to login_path
+
+    follow_redirect!
+
     assert_response :success
-    assert_match "Nobody owns this yet", response.body
     assert_match "First run", response.body
-    assert_select "a[href=?]", login_path, "Create the owner"
-    assert_select "a[href=?]", manage_path, "Open the console"
     assert_select "a[href=?]", Rails.configuration.masks.docs_url
-    assert_select "span.rec-val-pending", text: /none yet/
   end
 
   test "the root stops being a first run as soon as an actor exists" do
@@ -59,24 +59,7 @@ class FirstRunTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_match "Your account", response.body
-    assert_no_match(/Nobody owns this yet/, response.body)
     assert_select "a[href=?]", manage_path, false
-  end
-
-  test "the first run says whether the console has been connected yet" do
-    host! host_for(@tenant)
-
-    get "/"
-
-    assert_select "span.rec-val-pending", text: /not connected/
-
-    create_client(@tenant, name: "console", approved_at: Time.current,
-                  resources: [ "http://#{host_for(@tenant)}/manage" ])
-
-    get "/"
-
-    assert_select "span.rec-val-fixed", text: /connected/
-    assert_select "span.rec-val-pending", text: /not connected/, count: 0
   end
 
   test "setup settles the login and signs the owner in, over JSON" do

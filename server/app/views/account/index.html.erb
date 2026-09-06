@@ -1,7 +1,6 @@
 <% content_for :title, Current.tenant&.name %>
 
 <% content_for :surface, "place" if @actor %>
-<% content_for :surface, "ceremony" if @first_run %>
 
 <% content_for :scripts do %>
   <%= vite_javascript_tag "account" %>
@@ -19,25 +18,22 @@
       </div>
 
       <ul class="place-nav">
-        <li><a href="#avatar">Avatar</a></li>
-        <li><a href="#applications">Applications</a></li>
-        <li><a href="#passkeys">Passkeys</a></li>
-        <li><a href="#devices">Devices</a></li>
-        <li><a href="#email">Email</a></li>
-        <li><a href="#password">Password</a></li>
+        <li><a href="#avatar"><%= t(".nav.avatar") %></a></li>
+        <li><a href="#applications"><%= t(".nav.applications") %></a></li>
+        <li><a href="#passkeys"><%= t(".nav.passkeys") %></a></li>
+        <li><a href="#devices"><%= t(".nav.devices") %></a></li>
+        <li><a href="#email"><%= t(".nav.email") %></a></li>
+        <li><a href="#password"><%= t(".nav.password") %></a></li>
       </ul>
 
-      <div><%= link_to "Sign out", logout_path, class: "textlink" %></div>
+      <div><%= link_to t(".sign_out"), logout_path, class: "textlink" %></div>
     </aside>
 
     <div class="place-body">
       <section id="avatar" class="place-section">
-        <h2>Avatar</h2>
+        <h2><%= t(".avatar.heading") %></h2>
 
-        <p class="aside">
-          All three are always available to an application that asks. A photo is yours to
-          upload; the other two are drawn from your account and cannot be removed.
-        </p>
+        <p class="aside"><%= t(".avatar.lede") %></p>
 
         <ul class="avatar-set">
           <% Avatars::STYLES.each do |style| %>
@@ -55,26 +51,24 @@
         <%= form_with url: account_avatar_path, method: :post, class: "flow-tight",
               html: { multipart: true } do |form| %>
           <label class="field">
-            <span class="field-label">Photo</span>
+            <span class="field-label"><%= t(".avatar.photo") %></span>
             <%= form.file_field :avatar, accept: "image/png,image/jpeg,image/webp,image/gif",
                   required: true, class: "control control-sm" %>
-            <span class="field-hint">
-              Cropped to a square and re-encoded, so nothing of the original file survives.
-            </span>
+            <span class="field-hint"><%= t(".avatar.hint") %></span>
           </label>
 
-          <button type="submit" class="action action-sm">Upload</button>
+          <button type="submit" class="action action-sm"><%= t(".avatar.upload") %></button>
         <% end %>
 
         <% if Avatars.photo(@actor) %>
-          <%= button_to "Remove photo", account_avatar_path, method: :delete,
+          <%= button_to t(".avatar.remove"), account_avatar_path, method: :delete,
                 class: "action action-quiet action-sm",
-                form: { data: { turbo_confirm: "Remove your photo?" } } %>
+                form: { data: { turbo_confirm: t(".avatar.confirm_remove") } } %>
         <% end %>
       </section>
 
       <section id="applications" class="place-section">
-        <h2>Applications</h2>
+        <h2><%= t(".applications.heading") %></h2>
 
         <% if @consents.any? %>
           <ul class="chip-list">
@@ -86,12 +80,12 @@
             <% end %>
           </ul>
         <% else %>
-          <p class="aside">None yet.</p>
+          <p class="aside"><%= t(".none_yet") %></p>
         <% end %>
       </section>
 
       <section id="passkeys" data-passkeys class="place-section">
-        <h2>Passkeys</h2>
+        <h2><%= t(".passkeys.heading") %></h2>
 
         <% if @passkeys.any? %>
           <ul class="chip-list">
@@ -104,37 +98,35 @@
                     <% end %>
                     <span><%= passkey.label %></span>
                     <% if passkey.authenticator&.certified? %>
-                      <span class="tag">certified</span>
+                      <span class="tag"><%= t(".passkeys.certified") %></span>
                     <% end %>
                   </span>
                   <span class="chip-meta">
                     <span>
-                      <%= passkey.last_used_at ? "used #{time_ago_in_words(passkey.last_used_at)} ago" : "never used" %>
+                      <%= passkey.last_used_at ?
+                            t(".passkeys.used", age: time_ago_in_words(passkey.last_used_at)) :
+                            t(".passkeys.never_used") %>
                     </span>
-                    <%= button_to "Remove", passkey_path(passkey), method: :delete,
+                    <%= button_to t(".passkeys.remove"), passkey_path(passkey), method: :delete,
                           class: "textlink", form_class: "chip-action",
-                          form: { data: { turbo_confirm: "Remove this passkey?" } } %>
+                          form: { data: { turbo_confirm: t(".passkeys.confirm_remove") } } %>
                   </span>
                 </span>
 
                 <% if passkey.compromised? %>
                   <span class="aside aside-bad">
-                    The FIDO Alliance reports a compromise for this model
-                    (<%= passkey.compromise.downcase.tr("_", " ") %>). Replace it.
+                    <%= t(".passkeys.compromised", report: passkey.compromise.downcase.tr("_", " ")) %>
                   </span>
                 <% end %>
               </li>
             <% end %>
           </ul>
         <% else %>
-          <p class="aside">None yet.</p>
+          <p class="aside"><%= t(".none_yet") %></p>
 
           <details class="disclosure">
-            <summary class="textlink">What is a passkey?</summary>
-            <p class="aside">
-              It signs you in with the fingerprint, face or PIN your device already
-              uses, and counts as both factors on its own.
-            </p>
+            <summary class="textlink"><%= t(".passkeys.what_is_one") %></summary>
+            <p class="aside"><%= t(".passkeys.explained") %></p>
           </details>
         <% end %>
 
@@ -144,13 +136,13 @@
           <%= form.hidden_field :credential, id: "passkey-credential" %>
 
           <label class="field">
-            <span class="field-label">Name</span>
-            <%= form.text_field :name, id: "passkey-name", placeholder: "This laptop",
-                  class: "control control-sm" %>
+            <span class="field-label"><%= t(".passkeys.name") %></span>
+            <%= form.text_field :name, id: "passkey-name",
+                  placeholder: t(".passkeys.name_placeholder"), class: "control control-sm" %>
           </label>
 
           <button type="button" id="add-passkey-button" class="action action-quiet action-sm">
-            Add a passkey
+            <%= t(".passkeys.add") %>
           </button>
         <% end %>
 
@@ -158,7 +150,7 @@
       </section>
 
       <section id="devices" class="place-section">
-        <h2>Devices</h2>
+        <h2><%= t(".devices.heading") %></h2>
 
         <% if @devices.any? %>
           <ul class="chip-list">
@@ -168,22 +160,22 @@
                   <span class="chip-name">
                     <span><%= device.label %></span>
                     <% if device == current_device %>
-                      <span class="tag tag-live">this device</span>
+                      <span class="tag tag-live"><%= t(".devices.this_device") %></span>
                     <% end %>
                     <% if @trusted.include?(device.id) %>
-                      <span class="tag">skips your code</span>
+                      <span class="tag"><%= t(".devices.skips_code") %></span>
                     <% end %>
                     <% if device.blocked? %>
-                      <span class="tag tag-bad">blocked</span>
+                      <span class="tag tag-bad"><%= t(".devices.blocked") %></span>
                     <% end %>
                     <% unless @live.include?(device.id) %>
-                      <span class="tag">signed out</span>
+                      <span class="tag"><%= t(".devices.signed_out") %></span>
                     <% end %>
                   </span>
                   <span class="chip-meta">
-                    <span>seen <%= time_ago_in_words(device.last_seen_at) %> ago</span>
+                    <span><%= t(".devices.seen", age: time_ago_in_words(device.last_seen_at)) %></span>
                     <% if @live.include?(device.id) %>
-                      <%= button_to "Sign out", device_path(device), method: :delete,
+                      <%= button_to t(".devices.sign_out"), device_path(device), method: :delete,
                             class: "textlink", form_class: "chip-action" %>
                     <% end %>
                   </span>
@@ -197,109 +189,59 @@
                 <%= form_with url: device_path(device), method: :patch, class: "action-row" do |form| %>
                   <%= form.text_field :name, value: device.name, placeholder: device.label,
                         class: "control control-sm action-grow" %>
-                  <button type="submit" class="action action-quiet action-sm">Rename</button>
+                  <button type="submit" class="action action-quiet action-sm"><%= t(".devices.rename") %></button>
                 <% end %>
               </li>
             <% end %>
           </ul>
         <% else %>
-          <p class="aside">None yet.</p>
+          <p class="aside"><%= t(".none_yet") %></p>
         <% end %>
       </section>
 
       <section id="email" class="place-section">
-        <h2>Email</h2>
+        <h2><%= t(".email.heading") %></h2>
 
         <% if @actor.email.blank? %>
-          <p class="aside">None set.</p>
+          <p class="aside"><%= t(".email.none_set") %></p>
         <% elsif @actor.email_verified_at.present? %>
-          <p class="aside"><%= @actor.email %> — confirmed.</p>
+          <p class="aside"><%= t(".email.confirmed", email: @actor.email) %></p>
         <% else %>
-          <p class="aside"><%= @actor.email %> — unconfirmed.</p>
+          <p class="aside"><%= t(".email.unconfirmed", email: @actor.email) %></p>
 
-          <%= button_to "Send a link", account_verification_path,
+          <%= button_to t(".email.send_link"), account_verification_path,
                 class: "action action-quiet action-sm" %>
         <% end %>
       </section>
 
       <section id="password" class="place-section">
-        <h2>Password</h2>
+        <h2><%= t(".password.heading") %></h2>
 
         <%= form_with url: account_password_path, method: :patch, id: "change-password",
               class: "flow-tight" do |form| %>
           <label class="field">
-            <span class="field-label">Current password</span>
+            <span class="field-label"><%= t(".password.current") %></span>
             <%= form.password_field :current_password, autocomplete: "current-password",
                   class: "control" %>
           </label>
 
           <label class="field">
-            <span class="field-label">New password</span>
+            <span class="field-label"><%= t(".password.new") %></span>
             <%= form.password_field :password, autocomplete: "new-password", class: "control" %>
             <span class="field-hint">
-              At least <%= PasswordsController::MINIMUM %> characters.
-              Signs out every other session.
+              <%= t(".password.hint", minimum: PasswordsController::MINIMUM) %>
             </span>
           </label>
 
-          <button type="submit" class="action action-sm">Change password</button>
+          <button type="submit" class="action action-sm"><%= t(".password.submit") %></button>
         <% end %>
       </section>
     </div>
   </div>
-<% elsif @first_run %>
-  <div class="ceremony">
-    <aside class="record">
-      <span class="record-cap">This instance</span>
-
-      <div class="rec-rows">
-        <div class="rec-row">
-          <span class="rec-key">tenant</span>
-          <span class="rec-val rec-val-fixed"><%= Current.tenant&.name %></span>
-        </div>
-        <div class="rec-row">
-          <span class="rec-key">owner</span>
-          <span class="rec-val rec-val-pending">none yet</span>
-        </div>
-        <div class="rec-row">
-          <span class="rec-key">console</span>
-          <span class="rec-val <%= @connected ? "rec-val-fixed" : "rec-val-pending" %>">
-            <%= @connected ? "connected" : "not connected" %>
-          </span>
-        </div>
-        <div class="rec-row">
-          <span class="rec-key">keys</span>
-          <span class="rec-val rec-val-fixed">generated</span>
-        </div>
-      </div>
-    </aside>
-
-    <div class="flow">
-      <div class="prompt-head">
-        <span class="record-cap">First run</span>
-        <h1 class="prompt-title">Nobody owns this yet</h1>
-        <p class="prompt-lede">
-          The tenant is up and its signing keys exist. It has no accounts, so nothing can sign in
-          until you make the first one.
-        </p>
-      </div>
-
-      <%= link_to "Create the owner", login_path, class: "action" %>
-
-      <%= link_to "Open the console", manage_path, class: "action action-quiet" %>
-
-      <p class="aside">
-        The owner comes first — the console signs you in against this tenant, so it needs an account
-        to sign in as. Read the
-        <%= link_to "documentation", Rails.configuration.masks.docs_url,
-              class: "textlink", rel: "noopener" %> for what to do after that.
-      </p>
-    </div>
-  </div>
 <% else %>
   <div class="prompt-head">
-    <h1 class="prompt-title">Your account</h1>
+    <h1 class="prompt-title"><%= t(".signed_out.title") %></h1>
   </div>
 
-  <%= link_to "Sign in", login_path, class: "action" %>
+  <%= link_to t(".signed_out.sign_in"), login_path, class: "action" %>
 <% end %>
