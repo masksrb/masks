@@ -1,8 +1,10 @@
 <script>
+  import { untrack } from "svelte";
+
   let { label, hint = null, value = [], onsave, save = "Save", rows = 3 } = $props();
 
-  let draft = $state(value.join("\n"));
-  let held = $state(value.join("\n"));
+  let draft = $state(untrack(() => value.join("\n")));
+  let held = $state(untrack(() => value.join("\n")));
 
   $effect(() => {
     const fresh = value.join("\n");
