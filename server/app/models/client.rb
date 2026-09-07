@@ -210,6 +210,11 @@ class Client < ApplicationRecord
         errors.add(:backchannel_logout_uri, "must not contain a fragment")
       elsif uri.scheme.blank? || uri.host.blank?
         errors.add(:backchannel_logout_uri, "must be absolute")
+      elsif !uri.is_a?(URI::HTTP)
+        errors.add(:backchannel_logout_uri, "must be an http or https URL")
+      elsif dynamic? && !Rails.env.local?
+        errors.add(:backchannel_logout_uri, "must use https") unless uri.scheme == "https"
+        errors.add(:backchannel_logout_uri, "must not point at a loopback address") if loopback?(uri)
       elsif uri.scheme == "http" && !loopback?(uri) && !Rails.env.local?
         errors.add(:backchannel_logout_uri, "must use https unless it is loopback")
       end

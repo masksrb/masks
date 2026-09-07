@@ -179,4 +179,69 @@ class BackchannelLogoutTest < ActionDispatch::IntegrationTest
     assert_equal "invalid_client_metadata", body["error"]
     assert_match(/fragment/, body["error_description"])
   end
+
+  def registered_client
+    within(@tenant) { Client.find_by(client_id: @registration["client_id"]) }
+  end
+
+  def deployed
+    Rails.env.define_singleton_method(:local?) { false }
+
+    yield
+  ensure
+    Rails.env.singleton_class.remove_method(:local?)
+  end
+
+  def resolving(address)
+    held = [ Addrinfo.tcp(address, 443) ]
+    original = Addrinfo.method(:getaddrinfo)
+
+    Addrinfo.define_singleton_method(:getaddrinfo) { |*| held }
+
+    yield
+  ensure
+    Addrinfo.define_singleton_method(:getaddrinfo, original)
+  end
+
+  test "a self-registered client may not aim the back channel at loopback" do
+    deployed do
+      client = registered_client
+      client.backchannel_logout_uri = "http://127.0.0.1:9200/_cluster/settings"
+
+      assert_not client.valid?
+      assert_match(/loopback/, client.errors[:backchannel_logout_uri].join("; "))
+    end
+  end
+
+  test "a self-registered client may not aim the back channel over plain http" do
+    deployed do
+      client = registered_client
+      client.backchannel_logout_uri = "http://probe.example.com/logout/backchannel"
+
+      assert_not client.valid?
+      assert_match(/https/, client.errors[:backchannel_logout_uri].join("; "))
+    end
+  end
+
+  test "a self-registered client is not called at an address inside the network" do
+    deployed do
+      resolving("10.1.2.3") do
+        error = assert_raises(BackchannelLogout::Refused) do
+          BackchannelLogout.deliver!(registered_client, "a-logout-token")
+        end
+
+        assert_match(/will not call/, error.message)
+      end
+    end
+  end
+
+  test "a self-registered client is still called at an address of its own" do
+    stub_request(:post, LOGOUT_URI).to_return(status: 200)
+
+    deployed do
+      resolving("93.184.216.34") do
+        assert BackchannelLogout.deliver!(registered_client, "a-logout-token")
+      end
+    end
+  end
 end
