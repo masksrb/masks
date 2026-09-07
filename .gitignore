@@ -3,6 +3,8 @@
 # Every host, domain, and credential arrives through the environment.
 .env*
 !.env.example
+**/config/master.key
+**/config/credentials.yml.enc
 
 **/log/*
 **/tmp/*
@@ -21,5 +23,3 @@ web/dist/
 client/*.gem
 client/Gemfile.lock
 engine/*.gem
-
-**/config/master.key
