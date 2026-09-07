@@ -3,7 +3,6 @@ ENV["RAILS_ENV"] ||= "test"
 require_relative "../config/environment"
 require "rails/test_help"
 require_relative "support/offline"
-require_relative "support/dpop"
 
 module TenantSetup
   extend ActiveSupport::Concern
@@ -30,7 +29,7 @@ module TenantSetup
       Client.create!(
         name: attributes.delete(:name) || "Probe",
         client_id: SecureRandom.uuid,
-        redirect_uris: [ "https://probe.example.com/cb" ],
+        redirect_uris: [ OidcFlow::REDIRECT_URI ],
         token_endpoint_auth_method: "none",
         **attributes
       )
@@ -85,8 +84,8 @@ module OidcFlow
     @verifier ||= SecureRandom.urlsafe_base64(64)
   end
 
-  def challenge(from = verifier)
-    Base64.urlsafe_encode64(OpenSSL::Digest::SHA256.digest(from), padding: false)
+  def challenge
+    Proof.digest(verifier)
   end
 
   def authorize(client_id:, resource: nil, **params)
@@ -140,8 +139,8 @@ module OidcFlow
     Rack::Utils.parse_query(URI.parse(response.location).query)
   end
 
-  def code_from(location = response.location)
-    Rack::Utils.parse_query(URI.parse(location).query)["code"]
+  def code_from
+    redirected["code"]
   end
 
   def token(**params)
@@ -201,5 +200,4 @@ end
 
 class ActionDispatch::IntegrationTest
   include OidcFlow
-  include DpopProofs
 end

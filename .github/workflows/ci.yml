@@ -5,6 +5,10 @@ on:
   push:
     branches: [main]
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -36,10 +40,8 @@ jobs:
             "server/config/**/*.{yml,yaml}" "conformance/**/*.{yml,yaml}"
       - name: Shell
         run: |
-          scripts=()
-          while IFS= read -r s; do scripts+=("$s"); done < <(shfmt -f bin server/bin)
-          shfmt -d -i 2 -ci "${scripts[@]}"
-          shellcheck "${scripts[@]}"
+          shfmt -d -i 2 -ci bin server/bin
+          shfmt -f bin server/bin | xargs shellcheck
 
   actions:
     runs-on: ubuntu-latest
@@ -65,6 +67,8 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    env:
+      RAILS_ENV: test
     services:
       postgres:
         image: postgres:17-alpine
@@ -87,7 +91,10 @@ jobs:
         with:
           node-version-file: server/.node-version
           cache: npm
-          cache-dependency-path: server/package-lock.json
+          cache-dependency-path: |
+            server/package-lock.json
+            web/package-lock.json
+            docs/package-lock.json
       - name: libvips, which ruby-vips loads to square an avatar
         run: |
           sudo apt-get update -qq
@@ -98,71 +105,23 @@ jobs:
         run: npm ci && npm run build
       - name: Build the assets the tests render
         working-directory: server
-        env:
-          RAILS_ENV: test
         run: npm ci && bin/vite build --mode=test
       - name: Create the non-superuser application role
         env:
           PGPASSWORD: postgres
         run: |
-          psql -h 127.0.0.1 -p 5435 -U postgres -c \
-            "CREATE ROLE masks WITH LOGIN PASSWORD 'masks' CREATEDB;"
+          psql -h 127.0.0.1 -p 5435 -U postgres \
+            -f server/db/docker-entrypoint-initdb.d/01-app-role.sql
       - name: Test
         working-directory: server
-        env:
-          RAILS_ENV: test
-          POSTGRES_HOST: 127.0.0.1
-          POSTGRES_PORT: 5435
         run: bin/rails db:prepare test
 
-      - name: The generated Manage API page still matches the schema
-        working-directory: server
-        env:
-          RAILS_ENV: test
-          POSTGRES_HOST: 127.0.0.1
-          POSTGRES_PORT: 5435
+      - name: The generated reference pages still match their sources
         run: |
-          bin/rails docs:schema > ../docs/src/content/docs/reference/manage.mdx
-          git diff --exit-code -- ../docs/src/content/docs/reference/manage.mdx ||
+          bin/reference
+          git diff --exit-code -- docs ||
             {
-              echo "::error::ManageSchema changed. Run 'bin/rails docs:schema > ../docs/src/content/docs/reference/manage.mdx' and commit."
-              exit 1
-            }
-
-      - name: The SDL the docs explorer reads still matches the schema
-        working-directory: server
-        env:
-          RAILS_ENV: test
-          POSTGRES_HOST: 127.0.0.1
-          POSTGRES_PORT: 5435
-        run: |
-          bin/rails docs:sdl > ../docs/src/assets/manage.graphql
-          git diff --exit-code -- ../docs/src/assets/manage.graphql ||
-            {
-              echo "::error::ManageSchema changed. Run 'bin/rails docs:sdl > ../docs/src/assets/manage.graphql' and commit."
-              exit 1
-            }
-
-      - name: The generated @masks/client page still matches the source
-        working-directory: docs
-        run: |
-          npm ci
-          npm run reference
-          git diff --exit-code -- src/content/docs/reference/browser.mdx ||
-            {
-              echo "::error::@masks/client changed. Run 'npm run reference' in docs/ and commit."
-              exit 1
-            }
-
-      - name: The generated gem pages still match the source
-        working-directory: client
-        run: |
-          bundle install --quiet
-          bundle exec rake reference:mdx
-          git diff --exit-code -- ../docs/src/content/docs/reference/ruby.mdx \
-                                  ../docs/src/content/docs/reference/rails.mdx ||
-            {
-              echo "::error::Masks::Client or Masks::Rails changed. Run 'bundle exec rake reference:mdx' in client/ and commit."
+              echo "::error::The reference pages are stale. Run bin/reference and commit."
               exit 1
             }
 
@@ -174,7 +133,7 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-        ports: ["5436:5432"]
+        ports: ["5435:5432"]
         options: >-
           --health-cmd "pg_isready -U postgres"
           --health-interval 5s
@@ -190,16 +149,12 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: |
-          psql -h 127.0.0.1 -p 5436 -U postgres -c \
-            "CREATE ROLE masks WITH LOGIN PASSWORD 'masks' CREATEDB;"
+          psql -h 127.0.0.1 -p 5435 -U postgres \
+            -f server/db/docker-entrypoint-initdb.d/01-app-role.sql
       - name: Eager load the way production does
         working-directory: server
         env:
           RAILS_ENV: production
-          POSTGRES_HOST: 127.0.0.1
-          POSTGRES_PORT: 5436
-          POSTGRES_USER: masks
-          POSTGRES_PASSWORD: masks
           POSTGRES_DATABASE: masks_boot
           MASKS_PUBLIC_ORIGIN_TEMPLATE: https://%{subdomain}.auth.invalid
           SECRET_KEY_BASE: boot_check_secret_key_base_not_for_real_deployments
@@ -216,7 +171,9 @@ jobs:
         with:
           node-version-file: server/.node-version
           cache: npm
-          cache-dependency-path: server/package-lock.json
+          cache-dependency-path: |
+            server/package-lock.json
+            web/package-lock.json
       - name: Lint the frontend
         working-directory: server
         run: npm ci && npm run lint
@@ -230,35 +187,27 @@ jobs:
         working-directory: server
         run: npx vite build
 
-  gem:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: "3.4"
-      - name: Build the gem
-        working-directory: client
-        run: gem build masks.gemspec
-
   client:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
     steps:
       - uses: actions/checkout@v7
       - uses: ruby/setup-ruby@v1
         with:
-          ruby-version: "3.4"
           bundler-cache: true
           working-directory: client
-      - name: Test the client half
-        working-directory: client
-        run: bundle exec rake test:client
-      - name: Test the Rails half
-        working-directory: client
-        run: bundle exec rake test:rails
+      - name: Test both halves of the gem
+        run: bundle exec rake test
+      - name: Build the gem
+        run: gem build masks.gemspec
 
   web:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -267,51 +216,30 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
       - name: Install
-        working-directory: web
         run: npm ci
       - name: Lint
-        working-directory: web
         run: npm run lint
-      - name: Typecheck
-        working-directory: web
-        run: npm run typecheck
-      - name: Build
-        working-directory: web
+      - name: Build, which is the typecheck that emits
         run: npm run build
       - name: Test
-        working-directory: web
         run: npm test
 
+  # Pushing is release.yml's job, and it already tags every commit on main. This
+  # only proves the Dockerfile still builds before the merge that would publish it.
   image:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write
     steps:
       - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v4
-      - id: meta
-        uses: docker/metadata-action@v6
-        with:
-          images: ghcr.io/${{ github.repository }}
-          tags: |
-            type=ref,event=branch
-            type=sha,format=long
-            type=raw,value=latest,enable={{is_default_branch}}
-      - if: github.event_name == 'push'
-        uses: docker/login-action@v4
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
       - name: Build the server image
         uses: docker/build-push-action@v7
         with:
           context: server
           build-contexts: web=web
           platforms: linux/amd64
-          push: ${{ github.event_name == 'push' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          push: false
           cache-from: type=gha
           cache-to: type=gha,mode=max

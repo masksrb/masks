@@ -1,6 +1,9 @@
 require "test_helper"
+require_relative "../support/dpop"
 
 class DpopTest < ActionDispatch::IntegrationTest
+  include DpopProofs
+
   setup do
     @actor = create_actor(email: "owner@example.com")
     host! host_for(@tenant)

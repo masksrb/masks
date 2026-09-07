@@ -1,13 +1,16 @@
 require_relative "../schema_reference"
 
 namespace :docs do
-  desc "Print the /manage GraphQL reference as an Astro page, for docs/"
-  task schema: :environment do
-    puts SchemaReference.new(ManageSchema).page
-  end
+  desc "Write the /manage reference page and the SDL the docs explorer reads"
+  task reference: :environment do
+    docs = File.expand_path("../../../docs", __dir__)
 
-  desc "Print the /manage schema as SDL, which the docs explorer reads"
-  task sdl: :environment do
-    puts ManageSchema.to_definition.strip
+    File.open("#{docs}/src/content/docs/reference/manage.mdx", "w") do |page|
+      page.puts SchemaReference.new(ManageSchema).page
+    end
+
+    File.open("#{docs}/src/assets/manage.graphql", "w") do |sdl|
+      sdl.puts ManageSchema.to_definition.strip
+    end
   end
 end

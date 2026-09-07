@@ -10,7 +10,10 @@ on:
       suite_ref:
         description: Conformance suite release tag
         required: false
-        default: release-v5.2.4
+
+concurrency:
+  group: conformance-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   SUITE_REF: ${{ inputs.suite_ref || 'release-v5.2.4' }}
@@ -48,7 +51,3 @@ jobs:
           name: conformance-results
           path: conformance/results
           if-no-files-found: warn
-
-      - name: Tear down
-        if: always()
-        run: bin/conformance down

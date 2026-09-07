@@ -57,17 +57,12 @@ jobs:
 
       - uses: ruby/setup-ruby@v1
         with:
-          ruby-version: "3.4"
           bundler-cache: true
           working-directory: client
 
-      - name: Test the client half
+      - name: Test both halves of the gem
         working-directory: client
-        run: bundle exec rake test:client
-
-      - name: Test the Rails half
-        working-directory: client
-        run: bundle exec rake test:rails
+        run: bundle exec rake test
 
       - uses: rubygems/configure-rubygems-credentials@v2.1.0
 
@@ -114,11 +109,7 @@ jobs:
         working-directory: web
         run: npm run lint
 
-      - name: Typecheck
-        working-directory: web
-        run: npm run typecheck
-
-      - name: Build
+      - name: Build, which is the typecheck that emits
         working-directory: web
         run: npm run build
 

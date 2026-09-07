@@ -15,9 +15,11 @@ npx --yes prettier --write --no-error-on-unmatched-pattern \
   "server/config/**/*.{yml,yaml}" "conformance/**/*.{yml,yaml}" || status=$?
 
 if command -v shfmt >/dev/null; then
-  scripts=()
-  while IFS= read -r script; do scripts+=("$script"); done < <(shfmt -f bin server/bin 2>/dev/null)
-  [ ${#scripts[@]} -gt 0 ] && { shfmt -w -i 2 -ci "${scripts[@]}" || status=$?; }
+  shfmt -w -i 2 -ci bin server/bin || status=$?
+
+  if command -v shellcheck >/dev/null; then
+    shfmt -f bin server/bin | xargs shellcheck || status=$?
+  fi
 fi
 
 exit $status

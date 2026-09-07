@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-cd "$(dirname "$0")/.."
-
-cd server
+cd "$(dirname "$0")/../server"
 
 [ -f .env ] || cp .env.example .env
 
