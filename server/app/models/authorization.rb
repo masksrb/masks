@@ -1,7 +1,7 @@
 class Authorization
   attr_reader :client_id, :redirect_uri, :response_type, :state, :nonce,
               :code_challenge, :code_challenge_method, :prompt, :audience,
-              :requested_scopes, :max_age, :requested_claims
+              :requested_scopes, :max_age, :requested_claims, :request_uri
 
   def self.from_request(request)
     repeated = Rack::Utils.parse_query(request.query_string)

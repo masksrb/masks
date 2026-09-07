@@ -1,0 +1,88 @@
+---
+title: Pushed requests
+description: Handing an authorization request to the server before sending anybody to it.
+---
+
+An ordinary authorization request travels in the browser's address bar. Every parameter — the
+scopes, the resources, the redirect URI, the PKCE challenge — is visible to the person, to anything
+reading their history or logs, and to whatever else the page later loads.
+
+A pushed request moves that to the back channel. The client posts the request to `/par` over the
+same authenticated connection it uses for `/token`, and gets back a reference to it. Only the
+reference goes in the URL.
+
+masks implements [RFC 9126](https://www.rfc-editor.org/rfc/rfc9126.html). The endpoint is
+advertised as `pushed_authorization_request_endpoint`.
+
+## Pushing one
+
+Post the parameters you would otherwise have put in the query, authenticating the way you would at
+the token endpoint.
+
+```sh
+curl -u "$CLIENT_ID:$CLIENT_SECRET" https://demo.auth.example.com/par \
+  -d response_type=code \
+  -d redirect_uri=https://app.example.com/cb \
+  -d scope="openid profile" \
+  -d code_challenge="$CHALLENGE" \
+  -d code_challenge_method=S256 \
+  -d state="$STATE"
+```
+
+```json
+{
+  "request_uri": "urn:ietf:params:oauth:request_uri:8mZ1...",
+  "expires_in": 90
+}
+```
+
+Then send the person to `/authorize` with nothing but the client and that reference:
+
+```
+https://demo.auth.example.com/authorize
+  ?client_id=...
+  &request_uri=urn%3Aietf%3Aparams%3Aoauth%3Arequest_uri%3A8mZ1...
+```
+
+A public client — `token_endpoint_auth_method` of `none` — pushes with its `client_id` and no
+secret, and still gets the benefit: the request itself never reaches the address bar.
+
+## What the reference is worth
+
+| | |
+| --- | --- |
+| lifetime | 90 seconds |
+| uses | one |
+| bound to | the client that pushed it |
+
+It is spent when it is followed, whether or not the `client_id` beside it was right — a reference
+that has been in an address bar has had its chance. Following one twice, following one that has
+expired, or following one pushed by a different client all answer `invalid_request_uri`.
+
+Anything else in the query is ignored. The request is what was pushed, so appending a wider `scope`
+or a different `redirect_uri` on the way to `/authorize` changes nothing.
+
+## Requiring it
+
+A client can be held to it, from the console or through the manage API:
+
+```graphql
+mutation {
+  updateClient(clientId: "...", requirePushedAuthorizationRequests: true) {
+    client { clientId }
+  }
+}
+```
+
+Once required, a plain `/authorize` link for that client is refused with `invalid_request`. Turn it
+on after the client is pushing, not before. A self-registering client can ask for it at
+registration with the same name.
+
+Signing in and consenting return through a URL this server builds for itself, and that return is
+the same request rather than a second one — requiring a push does not break the flow it started.
+
+## What it does not do
+
+Pushing keeps the request off the front channel. It does not sign it: masks does not support
+request objects, so `request` and `request_uri` pointing at a JWT are both refused, and
+`request_parameter_supported` and `request_uri_parameter_supported` are `false` in discovery.

@@ -19,6 +19,7 @@ module Manage
       field :policy_uri, String
       field :backchannel_logout_uri, String
       field :backchannel_logout_session_required, Boolean, null: false
+      field :require_pushed_authorization_requests, Boolean, null: false
       field :dynamic, Boolean, null: false
       field :approved_at, GraphQL::Types::ISO8601DateTime
       field :approved_by, ActorType

@@ -5,6 +5,18 @@ class AuthorizeController < ApplicationController
 
   def show
     authorization = Authorization.from_request(request)
+
+    if authorization.request_uri?
+      return refuse(unsupported_request_uri) unless PushedRequest.urn?(authorization.request_uri)
+
+      pushed = PushedRequest.claim_urn(authorization.request_uri)
+      return refuse(invalid_request_uri) unless pushed&.pushed_by?(authorization.client)
+
+      authorization = pushed.authorization
+    elsif authorization.client&.require_pushed_authorization_requests? && !admitted?(authorization)
+      return refuse(pushing_required)
+    end
+
     attempt = validate(authorization)
 
     return refuse(attempt.error) if attempt.refused?
@@ -37,7 +49,6 @@ class AuthorizeController < ApplicationController
         res.redirect_uri = req.verified_redirect_uri
 
         req.bad_request!(:request_not_supported, "request objects are not supported") if authorization.request_object?
-        req.bad_request!(:request_uri_not_supported, "request_uri is not supported") if authorization.request_uri?
 
         permit(req) { authorization.validate! }
       end
@@ -117,6 +128,26 @@ class AuthorizeController < ApplicationController
           }, status: error.status
         end
       end
+    end
+
+    def admitted?(authorization)
+      tracked(REQUESTS).key?(authorization.fingerprint)
+    end
+
+    def unsupported_request_uri
+      bad_request(:request_uri_not_supported, "request_uri is only supported for a pushed authorization request")
+    end
+
+    def invalid_request_uri
+      bad_request(:invalid_request_uri, "that request_uri is unknown, has expired, or has already been used")
+    end
+
+    def pushing_required
+      bad_request(:invalid_request, "this client has to push its authorization request before sending anyone here")
+    end
+
+    def bad_request(error, description)
+      Rack::OAuth2::Server::Authorize::BadRequest.new(error, description)
     end
 
     def ours?(target)

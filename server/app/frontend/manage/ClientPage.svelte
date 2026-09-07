@@ -9,6 +9,7 @@
   import Card from "./ui/Card.svelte";
   import Facts from "./ui/Facts.svelte";
   import Field from "./ui/Field.svelte";
+  import Switch from "./ui/Switch.svelte";
   import Lines from "./ui/Lines.svelte";
   import Link from "./ui/Link.svelte";
   import Notices from "./ui/Notices.svelte";
@@ -25,6 +26,7 @@
         redirectUris postLogoutRedirectUris grantTypes responseTypes resources
         requiredScopes allowedScopes
         backchannelLogoutUri backchannelLogoutSessionRequired
+        requirePushedAuthorizationRequests
         events(limit: 25) {
           id action createdAt ipAddress details
           actor { uuid nickname }
@@ -104,13 +106,15 @@
       `mutation Update(
         $clientId: ID!, $name: String, $requiredScopes: [String!], $allowedScopes: [String!],
         $backchannelLogoutUri: String, $redirectUris: [String!],
-        $postLogoutRedirectUris: [String!], $resources: [String!]
+        $postLogoutRedirectUris: [String!], $resources: [String!],
+        $requirePushedAuthorizationRequests: Boolean
       ) {
         updateClient(
           clientId: $clientId, name: $name, requiredScopes: $requiredScopes,
           allowedScopes: $allowedScopes, backchannelLogoutUri: $backchannelLogoutUri,
           redirectUris: $redirectUris, postLogoutRedirectUris: $postLogoutRedirectUris,
-          resources: $resources
+          resources: $resources,
+          requirePushedAuthorizationRequests: $requirePushedAuthorizationRequests
         ) {
           client { clientId }
         }
@@ -266,6 +270,31 @@
           <p class="text-xs opacity-60">
             A signed logout token is posted there, carrying the subject and the session id, and
             retried for a while if the client does not answer.
+          </p>
+        </Card>
+
+        <Card
+          title="Pushed authorization requests"
+          lede="Whether this client has to hand its request to the server before sending anyone here."
+        >
+          <Switch
+            checked={client.requirePushedAuthorizationRequests}
+            label="Require a pushed request"
+            onchange={(on) =>
+              update(
+                { requirePushedAuthorizationRequests: on },
+                on
+                  ? "Required. A plain /authorize link is refused from now on."
+                  : "No longer required.",
+              )}
+          />
+
+          <p class="text-xs opacity-60">
+            The client posts the request to <span class="font-mono">/par</span> over its own
+            authenticated channel and gets back a one-time
+            <span class="font-mono">request_uri</span>, so nothing but that reference travels in the
+            browser. Required, an ordinary <span class="font-mono">/authorize</span> link stops
+            working, so turn it on once the client is pushing.
           </p>
         </Card>
 

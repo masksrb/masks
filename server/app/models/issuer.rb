@@ -120,6 +120,7 @@ class Issuer
       "avatar_sizes_supported" => Avatars::SIZES,
       "jwks_uri" => "#{url}/.well-known/jwks.json",
       "registration_endpoint" => "#{url}/register",
+      "pushed_authorization_request_endpoint" => "#{url}/par",
       "handshake_endpoint" => "#{url}/handshake",
       "masks_protocol_version" => Masks::PROTOCOL_VERSION,
       "revocation_endpoint" => "#{url}/revoke",

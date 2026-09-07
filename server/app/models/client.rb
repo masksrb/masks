@@ -84,6 +84,8 @@ class Client < ApplicationRecord
         backchannel_logout_uri: attributes[:backchannel_logout_uri],
         backchannel_logout_session_required:
           ActiveModel::Type::Boolean.new.cast(attributes[:backchannel_logout_session_required]) || false,
+        require_pushed_authorization_requests:
+          ActiveModel::Type::Boolean.new.cast(attributes[:require_pushed_authorization_requests]) || false,
         dynamic: true
       )
 
@@ -191,6 +193,7 @@ class Client < ApplicationRecord
       "policy_uri" => policy_uri,
       "backchannel_logout_uri" => backchannel_logout_uri,
       "backchannel_logout_session_required" => backchannel_logout_session_required,
+      "require_pushed_authorization_requests" => require_pushed_authorization_requests,
       "client_id_issued_at" => created_at&.to_i
     }.compact
   end

@@ -204,7 +204,8 @@ CREATE TABLE public.clients (
     required_scopes text DEFAULT ''::text NOT NULL,
     post_logout_redirect_uris jsonb DEFAULT '[]'::jsonb NOT NULL,
     backchannel_logout_uri character varying,
-    backchannel_logout_session_required boolean DEFAULT false NOT NULL
+    backchannel_logout_session_required boolean DEFAULT false NOT NULL,
+    require_pushed_authorization_requests boolean DEFAULT false NOT NULL
 );
 
 ALTER TABLE ONLY public.clients FORCE ROW LEVEL SECURITY;
@@ -1919,6 +1920,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260907000001'),
 ('20260906000003'),
 ('20260906000002'),
 ('20260906000001'),

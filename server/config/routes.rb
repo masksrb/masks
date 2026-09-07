@@ -5,6 +5,7 @@ Rails.application.routes.draw do
   get "/.well-known/oauth-protected-resource(/*resource)", to: "discovery#resource"
 
   match "/authorize", to: "authorize#show", via: %i[get post], as: :authorize
+  post "/par", to: "pushed_authorizations#create", as: :pushed_authorization
 
   get "/login", to: "logins#show", as: :login
   post "/login", to: "logins#update"
