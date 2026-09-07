@@ -135,6 +135,7 @@ class TenantSwitchingTest < ActiveSupport::TestCase
   test "every job the schedule reaches declares itself across tenants" do
     [ CleanupJob, RefreshAuthenticatorsJob ].each do |job|
       assert job.across_tenants, "#{job} is reached by the scheduler, which holds no tenant"
+      assert_nothing_raised { job.perform_later }
     end
   end
 
