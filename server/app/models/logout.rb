@@ -39,6 +39,12 @@ class Logout
     claims && claims["sub"]
   end
 
+  def names?(actor)
+    return false if actor.nil? || subject.blank?
+
+    Subjects.locate(subject)&.id == actor.id
+  end
+
   private
 
     def claims

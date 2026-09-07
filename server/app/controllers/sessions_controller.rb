@@ -25,7 +25,7 @@ class SessionsController < ApplicationController
 
     def asking?(logout)
       return false unless request.get? || request.head?
-      return false if logout.verified?
+      return false if logout.names?(current_actor)
 
       current_session.present?
     end
