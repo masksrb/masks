@@ -132,6 +132,12 @@ class TenantSwitchingTest < ActiveSupport::TestCase
     assert_nothing_raised { perform_enqueued_jobs }
   end
 
+  test "every job the schedule reaches declares itself across tenants" do
+    [ CleanupJob, RefreshAuthenticatorsJob ].each do |job|
+      assert job.across_tenants, "#{job} is reached by the scheduler, which holds no tenant"
+    end
+  end
+
   test "mail is carried by the framework's own delivery job, with no subclass to remember" do
     assert_equal ActionMailer::MailDeliveryJob, ActionMailer::Base.delivery_job
     assert ActionMailer::MailDeliveryJob < Tenancy::Job

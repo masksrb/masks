@@ -4,6 +4,11 @@ default: &default
     queue: maintenance
     schedule: every day at 4am
 
+  authenticators:
+    class: RefreshAuthenticatorsJob
+    queue: maintenance
+    schedule: every day at 3am
+
 development:
   <<: *default
 
