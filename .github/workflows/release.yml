@@ -191,7 +191,10 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      # Provenance is a public-repository feature on this plan, so it waits
+      # for the repository to be one rather than failing the release.
       - name: Attest what built it
+        if: github.event.repository.visibility == 'public'
         uses: actions/attest-build-provenance@v2
         with:
           subject-name: ghcr.io/${{ github.repository }}
