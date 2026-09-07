@@ -8,8 +8,8 @@ The consumer half: a Rails engine that mounts the code flow into an
 application, so signing in against a masks issuer is configuration rather than
 a controller you write.
 
-It loads only when `Rails::Engine` is already defined. Requiring the gem from
-a plain Ruby process gets Masks::Client and nothing else.
+It loads only when `Rails::Engine` is already defined. Requiring
+the gem from a plain Ruby process gets Masks::Client and nothing else.
 
 Three pieces do the work:
 
@@ -416,6 +416,12 @@ Inherits `Rails::Engine`.
 
 ## Masks::Rails::ProtectedResource
 
+### ::masks_protect!
+
+```ruby
+::masks_protect!(**options)
+```
+
 ### #masks_authenticate
 
 ```ruby
@@ -438,12 +444,6 @@ Inherits `Rails::Engine`.
 
 ```ruby
 #masks_claims()
-```
-
-### #masks_protect!
-
-```ruby
-#masks_protect!(**options)
 ```
 
 ### #masks_resource

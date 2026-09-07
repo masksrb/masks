@@ -2,6 +2,7 @@ require "fileutils"
 require "rake/testtask"
 require "rdoc/task"
 require_relative "doc/mdx_generator"
+require_relative "doc/sdoc_compat"
 
 SDOC_SITE = "../docs/public/api/ruby".freeze
 MDX_PAGES = "../docs/src/content/docs/reference".freeze

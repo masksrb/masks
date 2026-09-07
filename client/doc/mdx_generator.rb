@@ -1,5 +1,6 @@
 require "rdoc"
 require "fileutils"
+require "prism"
 
 # Emits the gem's API as Astro pages, so it reads as part of the docs rather
 # than as a second site beside them. Registered with RDoc as `--format mdx`.
@@ -23,6 +24,66 @@ class RDoc::Generator::Mdx
     }
   }.freeze
 
+  Entry = Struct.new(:sigil, :name, :params, :comment) do
+    def order
+      [ sigil == "::" ? 0 : 1, name ]
+    end
+  end
+
+  # Prism, rather than RDoc, because RDoc stopped reading the bodies of blocks
+  # and a Concern's class methods live in one.
+  class ClassMethods
+    BLOCK = "class_methods".freeze
+
+    def initialize(source)
+      @source = source
+    end
+
+    def of(full_name)
+      found = []
+      walk(Prism.parse(@source).value, [], full_name, found)
+      found
+    end
+
+    private
+
+      def walk(node, path, target, found)
+        node.compact_child_nodes.each do |child|
+          unless child.is_a?(Prism::ModuleNode) || child.is_a?(Prism::ClassNode)
+            walk(child, path, target, found)
+            next
+          end
+
+          here = path + [ child.constant_path.slice ]
+
+          collect(child, found) if here.join("::") == target
+          walk(child.body, here, target, found) if child.body
+        end
+      end
+
+      def collect(mod, found)
+        return unless mod.body
+
+        mod.body.compact_child_nodes.each do |statement|
+          next unless opens_class_methods?(statement)
+
+          statement.block.body.compact_child_nodes.each do |inner|
+            next unless inner.is_a?(Prism::DefNode) && inner.receiver.nil?
+
+            found << Entry.new("::", inner.name.to_s, "(#{inner.parameters&.slice})", nil)
+          end
+        end
+      end
+
+      def opens_class_methods?(node)
+        node.is_a?(Prism::CallNode) &&
+          node.name.to_s == BLOCK &&
+          node.receiver.nil? &&
+          node.block.is_a?(Prism::BlockNode) &&
+          !node.block.body.nil?
+      end
+  end
+
   def self.setup_options(options)
     options.option_parser&.separator ""
   end
@@ -34,6 +95,7 @@ class RDoc::Generator::Mdx
     # RDoc chdirs into the output directory before calling generate, so a
     # relative op_dir would nest itself inside the run.
     @out = File.expand_path(options.op_dir)
+    @sources = Dir.pwd
   end
 
   def generate
@@ -128,20 +190,33 @@ class RDoc::Generator::Mdx
     end
 
     def methods_of(mod)
-      mod.method_list
-         .select { |method| method.visibility == :public }
-         .sort_by { |method| [ method.singleton ? 0 : 1, method.name ] }
-         .map { |method| method_entry(method) }
+      parsed = mod.method_list
+                  .select { |method| method.visibility == :public }
+                  .map { |method| Entry.new(method.singleton ? "::" : "#", method.name, method.params, method.comment) }
+
+      (parsed + concerned(mod)).sort_by(&:order).map { |entry| method_entry(entry) }
     end
 
-    def method_entry(method)
-      sigil = method.singleton ? "::" : "#"
-      params = method.params.to_s.strip
+    # A method defined in a Concern's class_methods block belongs to whatever
+    # includes the module, and RDoc does not descend into the block to find it.
+    def concerned(mod)
+      mod.in_files.flat_map do |file|
+        path = File.expand_path(file.absolute_name, @sources)
+        next [] unless File.file?(path)
+
+        ClassMethods.new(File.read(path)).of(mod.full_name)
+      end
+    end
+
+    # RDoc wraps a long signature across lines; a fenced one line reads better
+    # and is what the page held before.
+    def method_entry(entry)
+      signature = "#{entry.sigil}#{entry.name}#{one_line(entry.params)}"
 
       [
-        "### #{sigil}#{method.name}\n",
-        "```ruby\n#{sigil}#{method.name}#{params}\n```\n",
-        prose(method.comment)
+        "### #{entry.sigil}#{entry.name}\n",
+        "```ruby\n#{signature}\n```\n",
+        prose(entry.comment)
       ].compact.join("\n")
     end
 
@@ -181,6 +256,7 @@ class RDoc::Generator::Mdx
       markdown
         .sub(/\A\s*#\s+[^\n]*\n+/, "")
         .gsub(/^(\S[^\n]*)\n:   ([^\n]*)$/) { "- **#{Regexp.last_match(1)}** — #{Regexp.last_match(2)}" }
+        .gsub(%r{<code>(.+?)</code>}m) { "`#{Regexp.last_match(1).gsub(/\s+/, ' ')}`" }
         .strip
     end
 
