@@ -34,7 +34,7 @@ class AccessToken < Token
   def claims(issuer, act: nil)
     {
       "iss" => issuer.url,
-      "sub" => actor&.uuid,
+      "sub" => Subjects.for(actor, client),
       "aud" => audience.one? ? audience.first : audience,
       "exp" => expires_at.to_i,
       "iat" => created_at.to_i,

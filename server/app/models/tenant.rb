@@ -17,6 +17,8 @@ class Tenant < ApplicationRecord
     end
   end
 
+  encrypts :pairwise_salt
+
   has_many :signing_keys, dependent: :destroy
   has_many :actors, dependent: :destroy
   has_many :clients, dependent: :destroy
@@ -138,6 +140,14 @@ class Tenant < ApplicationRecord
 
   def signing_key
     Tenant.switch(self) { signing_keys.active.first } || ensure_signing_key!
+  end
+
+  def pairwise_salt!
+    return pairwise_salt if pairwise_salt.present?
+
+    with_lock { update!(pairwise_salt: SecureRandom.hex(32)) if pairwise_salt.blank? }
+
+    pairwise_salt
   end
 
   def ensure_signing_key!

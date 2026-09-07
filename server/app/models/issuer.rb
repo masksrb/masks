@@ -71,11 +71,17 @@ class Issuer
     Base64.urlsafe_encode64(digest[0, digest.bytesize / 2], padding: false)
   end
 
+  def subject_for(actor, client)
+    Subjects.for(actor, client)
+  end
+
   def id_token(actor:, client:, nonce: nil, issued_at: Time.current,
                authenticated_at: nil, access_token: nil, code: nil, amr: nil, sid: nil)
+    subject = subject_for(actor, client)
+
     sign({
       "iss" => url,
-      "sub" => actor.uuid,
+      "sub" => subject,
       "aud" => client.client_id,
       "exp" => 15.minutes.from_now.to_i,
       "iat" => issued_at.to_i,
@@ -87,7 +93,7 @@ class Issuer
       "at_hash" => half_hash(access_token),
       "c_hash" => half_hash(code),
       "tenant" => tenant.to_identity,
-      Actor::AVATARS_CLAIM => Avatars.urls(actor, origin: url)
+      Actor::AVATARS_CLAIM => Avatars.urls(actor, origin: url, subject: subject)
     }.compact)
   end
 
@@ -136,7 +142,7 @@ class Issuer
       "grant_types_supported" => Client::GRANT_TYPES,
       "revocation_endpoint_auth_methods_supported" => Client::AUTH_METHODS,
       "introspection_endpoint_auth_methods_supported" => Client::AUTH_METHODS,
-      "subject_types_supported" => [ "public" ],
+      "subject_types_supported" => Subjects::TYPES,
       "acr_values_supported" => ACR_VALUES,
       "id_token_signing_alg_values_supported" => [ SigningKey::ALGORITHM ],
       "token_endpoint_auth_methods_supported" => Client::AUTH_METHODS,

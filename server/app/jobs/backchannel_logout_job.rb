@@ -5,7 +5,7 @@ class BackchannelLogoutJob < ApplicationJob
     job.gave_up!(error)
   end
 
-  def perform(client_id:, subject:, sid:, origin:)
+  def perform(client_id:, subject:, sid:, origin:, actor: nil)
     client = Client.active.find_by(client_id: client_id)
 
     return if client.nil? || !client.notified_on_logout?
@@ -24,7 +24,7 @@ class BackchannelLogoutJob < ApplicationJob
     Tenant.switch(held_tenant) do
       Event.record!(
         Event::LOGOUT_UNDELIVERED,
-        actor: Actor.find_by(uuid: held[:subject]), by: nil,
+        actor: Subjects.locate(held[:actor] || held[:subject]), by: nil,
         client: Client.find_by(client_id: held[:client_id]),
         device: nil, ip_address: nil, user_agent: nil,
         said: error.message

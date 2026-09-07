@@ -25,6 +25,29 @@ connector registering itself with administrative reach.
 | `required_scopes` | always granted, never shown on a consent screen |
 | `allowed_scopes` | everything else it may ask for |
 
+## Who it thinks it is talking to
+
+`subject_type` decides what a client is told about a person.
+
+| | |
+| --- | --- |
+| `public` | the actor's own identifier — every client sees the same `sub` |
+| `pairwise` | one derived for this client's sector, and nobody else's |
+
+Two pairwise clients cannot tell they are looking at the same person by comparing subjects, and the
+avatar URLs in the token carry the pairwise subject too, so nothing else in the payload gives the
+person away.
+
+The sector is the host of the redirect URIs by default. A client whose redirect URIs span more than
+one host needs a `sector_identifier_uri` instead — an `https` URL holding a JSON array of every
+redirect URI it uses. masks reads it at registration and refuses the client unless the document
+names them all, which is what stops one client claiming another's sector and correlating its
+people. Clients that share a sector share subjects, deliberately: that is how a suite of
+applications sees one identity.
+
+A pairwise subject is minted once and kept, so it holds steady across sign-ins, and it is
+tenant-local — the same string means nothing in another tenant.
+
 ## Secrets and archiving
 
 `token_endpoint_auth_method` is `client_secret_basic`, `client_secret_post`, or `none` for a public

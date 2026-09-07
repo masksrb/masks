@@ -6,7 +6,7 @@ class AvatarsController < ApplicationController
   skip_before_action :refuse_blocked_device, only: :show
 
   def show
-    actor = Actor.find_by(uuid: params[:uuid])
+    actor = Subjects.locate(params[:uuid])
 
     return head :not_found if actor.nil?
 
@@ -18,7 +18,7 @@ class AvatarsController < ApplicationController
     stamp = Avatars.digest(actor, style)
 
     return head :not_found if stamp.nil?
-    return redirect_to stamped_avatar_path(actor.uuid, style, stamp, **size_param) if stale?(stamp)
+    return redirect_to stamped_avatar_path(params[:uuid], style, stamp, **size_param) if stale?(stamp)
 
     deliver(actor, style, stamp)
   end

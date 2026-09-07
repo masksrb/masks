@@ -8,6 +8,8 @@ module Manage
       argument :resources, [ String ], required: false
       argument :required_scopes, [ String ], required: false
       argument :allowed_scopes, [ String ], required: false
+      argument :subject_type, String, required: false
+      argument :sector_identifier_uri, String, required: false
       argument :backchannel_logout_uri, String, required: false
       argument :backchannel_logout_session_required, Boolean, required: false
       argument :require_pushed_authorization_requests, Boolean, required: false

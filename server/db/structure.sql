@@ -205,7 +205,9 @@ CREATE TABLE public.clients (
     post_logout_redirect_uris jsonb DEFAULT '[]'::jsonb NOT NULL,
     backchannel_logout_uri character varying,
     backchannel_logout_session_required boolean DEFAULT false NOT NULL,
-    require_pushed_authorization_requests boolean DEFAULT false NOT NULL
+    require_pushed_authorization_requests boolean DEFAULT false NOT NULL,
+    subject_type character varying DEFAULT 'public'::character varying NOT NULL,
+    sector_identifier_uri character varying
 );
 
 ALTER TABLE ONLY public.clients FORCE ROW LEVEL SECURITY;
@@ -661,6 +663,42 @@ ALTER SEQUENCE public.signing_keys_id_seq OWNED BY public.signing_keys.id;
 
 
 --
+-- Name: subjects; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.subjects (
+    id bigint NOT NULL,
+    tenant_id bigint NOT NULL,
+    actor_id bigint NOT NULL,
+    sector character varying NOT NULL,
+    sub character varying NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+ALTER TABLE ONLY public.subjects FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: subjects_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.subjects_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: subjects_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.subjects_id_seq OWNED BY public.subjects.id;
+
+
+--
 -- Name: tenants; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -673,7 +711,8 @@ CREATE TABLE public.tenants (
     archived_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    dynamic_client_scopes text
+    dynamic_client_scopes text,
+    pairwise_salt text
 );
 
 
@@ -846,6 +885,13 @@ ALTER TABLE ONLY public.signing_keys ALTER COLUMN id SET DEFAULT nextval('public
 
 
 --
+-- Name: subjects id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subjects ALTER COLUMN id SET DEFAULT nextval('public.subjects_id_seq'::regclass);
+
+
+--
 -- Name: tenants id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -985,6 +1031,14 @@ ALTER TABLE ONLY public.sessions
 
 ALTER TABLE ONLY public.signing_keys
     ADD CONSTRAINT signing_keys_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: subjects subjects_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subjects
+    ADD CONSTRAINT subjects_pkey PRIMARY KEY (id);
 
 
 --
@@ -1382,6 +1436,34 @@ CREATE UNIQUE INDEX index_signing_keys_on_tenant_id_and_kid ON public.signing_ke
 
 
 --
+-- Name: index_subjects_on_actor_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_subjects_on_actor_id ON public.subjects USING btree (actor_id);
+
+
+--
+-- Name: index_subjects_on_tenant_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_subjects_on_tenant_id ON public.subjects USING btree (tenant_id);
+
+
+--
+-- Name: index_subjects_on_tenant_id_and_actor_id_and_sector; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_subjects_on_tenant_id_and_actor_id_and_sector ON public.subjects USING btree (tenant_id, actor_id, sector);
+
+
+--
+-- Name: index_subjects_on_tenant_id_and_sub; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_subjects_on_tenant_id_and_sub ON public.subjects USING btree (tenant_id, sub);
+
+
+--
 -- Name: index_tenants_on_subdomain; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1652,6 +1734,14 @@ ALTER TABLE ONLY public.connections
 
 
 --
+-- Name: subjects fk_rails_ad855a4b96; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subjects
+    ADD CONSTRAINT fk_rails_ad855a4b96 FOREIGN KEY (tenant_id) REFERENCES public.tenants(id);
+
+
+--
 -- Name: sessions fk_rails_aec6d92ac2; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1713,6 +1803,14 @@ ALTER TABLE ONLY public.events
 
 ALTER TABLE ONLY public.consents
     ADD CONSTRAINT fk_rails_eb0bd2c006 FOREIGN KEY (client_id) REFERENCES public.clients(id);
+
+
+--
+-- Name: subjects fk_rails_f1afff3115; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.subjects
+    ADD CONSTRAINT fk_rails_f1afff3115 FOREIGN KEY (actor_id) REFERENCES public.actors(id) ON DELETE CASCADE;
 
 
 --
@@ -1810,6 +1908,12 @@ ALTER TABLE public.sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.signing_keys ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: subjects; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.subjects ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: actors tenant_isolation; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -1901,6 +2005,13 @@ CREATE POLICY tenant_isolation ON public.signing_keys USING ((tenant_id = (NULLI
 
 
 --
+-- Name: subjects tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.subjects USING ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint)) WITH CHECK ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint));
+
+
+--
 -- Name: tokens tenant_isolation; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -1920,6 +2031,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260907000002'),
 ('20260907000001'),
 ('20260906000003'),
 ('20260906000002'),

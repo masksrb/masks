@@ -15,6 +15,7 @@ class RegistrationsController < ApplicationController
   METADATA = %i[
     client_name redirect_uris grant_types response_types scope
     post_logout_redirect_uris token_endpoint_auth_method application_type
+    subject_type sector_identifier_uri
     client_uri logo_uri tos_uri policy_uri resources
     backchannel_logout_uri backchannel_logout_session_required
     require_pushed_authorization_requests
@@ -91,6 +92,8 @@ class RegistrationsController < ApplicationController
         resources: body[:resources],
         scopes: body[:scope],
         token_endpoint_auth_method: body[:token_endpoint_auth_method],
+        subject_type: body[:subject_type],
+        sector_identifier_uri: body[:sector_identifier_uri],
         application_type: body[:application_type],
         client_uri: body[:client_uri],
         logo_uri: body[:logo_uri],
@@ -102,7 +105,10 @@ class RegistrationsController < ApplicationController
       }.compact
     end
 
-    APPROVED = %i[redirect_uris post_logout_redirect_uris token_endpoint_auth_method resources].freeze
+    APPROVED = %i[
+      redirect_uris post_logout_redirect_uris token_endpoint_auth_method resources
+      subject_type sector_identifier_uri
+    ].freeze
 
     def described
       held = attributes.except(:scopes, :dynamic)

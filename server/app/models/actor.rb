@@ -212,12 +212,13 @@ class Actor < ApplicationRecord
 
   AVATARS_CLAIM = "masks:avatars".freeze
 
-  def claims(scopes, requested: nil, origin: Current.origin)
+  def claims(scopes, requested: nil, origin: Current.origin, subject: nil)
     granted = Scopes.list(scopes)
-    claims = { "sub" => uuid, AVATARS_CLAIM => Avatars.urls(self, origin: origin) }
+    held = subject || uuid
+    claims = { "sub" => held, AVATARS_CLAIM => Avatars.urls(self, origin: origin, subject: held) }
 
     if granted.include?(Scopes::PROFILE)
-      PROFILE_CLAIMS.each_key { |claim| claims[claim] = claim_value(claim, origin) }
+      PROFILE_CLAIMS.each_key { |claim| claims[claim] = claim_value(claim, origin, held) }
       claims["updated_at"] = updated_at.to_i
     end
 
@@ -227,7 +228,7 @@ class Actor < ApplicationRecord
     end
 
     asked(requested).each do |claim|
-      claims[claim] = claim_value(claim, origin) if PROFILE_CLAIMS.key?(claim)
+      claims[claim] = claim_value(claim, origin, held) if PROFILE_CLAIMS.key?(claim)
     end
 
     claims.compact
@@ -235,8 +236,8 @@ class Actor < ApplicationRecord
 
   private
 
-    def claim_value(claim, origin)
-      return Avatars.picture(self, origin: origin) if claim == "picture"
+    def claim_value(claim, origin, subject)
+      return Avatars.picture(self, origin: origin, subject: subject) if claim == "picture"
 
       public_send(PROFILE_CLAIMS[claim])
     end

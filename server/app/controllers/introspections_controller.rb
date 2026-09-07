@@ -33,7 +33,7 @@ class IntrospectionsController < ApplicationController
         "token_type" => token.is_a?(AccessToken) ? "Bearer" : nil,
         "exp" => token.expires_at.to_i,
         "iat" => token.created_at.to_i,
-        "sub" => token.actor&.uuid,
+        "sub" => Subjects.for(token.actor, token.client),
         "aud" => token.audience.presence,
         "iss" => issuer.url,
         "jti" => token.digest,

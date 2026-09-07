@@ -1,14 +1,8 @@
 module BackchannelLogout
   class Refused < StandardError; end
 
-  OPEN_TIMEOUT = 5
-  READ_TIMEOUT = 10
-  UNROUTABLE = %w[
-    0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16
-    172.16.0.0/12 192.0.0.0/24 192.0.2.0/24 192.168.0.0/16 198.18.0.0/15
-    198.51.100.0/24 203.0.113.0/24 224.0.0.0/4 240.0.0.0/4
-    ::/128 ::1/128 fc00::/7 fe80::/10 ff00::/8
-  ].map { |range| IPAddr.new(range) }.freeze
+  OPEN_TIMEOUT = Outbound::OPEN_TIMEOUT
+  READ_TIMEOUT = Outbound::READ_TIMEOUT
 
   def self.announce(session)
     origin = session.origin.presence || Current.origin.presence || session.tenant.public_origin
@@ -18,7 +12,8 @@ module BackchannelLogout
     session.relying_parties.find_each do |client|
       BackchannelLogoutJob.perform_later(
         client_id: client.client_id,
-        subject: session.actor.uuid,
+        subject: Subjects.for(session.actor, client),
+        actor: session.actor.uuid,
         sid: session.uuid,
         origin: origin
       )
@@ -56,18 +51,8 @@ module BackchannelLogout
 
     raise Refused, "#{client.name} is not reachable over http" unless uri.is_a?(URI::HTTP)
 
-    addresses = Addrinfo.getaddrinfo(uri.hostname, uri.port, nil, :STREAM).map do |info|
-      held = IPAddr.new(info.ip_address.split("%").first)
-
-      held.ipv4_mapped? ? held.native : held
-    end
-
-    raise Refused, "#{client.name} resolves to nothing" if addresses.empty?
-
-    return unless addresses.any? { |address| UNROUTABLE.any? { |range| range.include?(address) } }
+    return if Outbound.routable?(uri)
 
     raise Refused, "#{client.name} resolves to an address this server will not call"
-  rescue SocketError => e
-    raise Refused, "#{client.name} could not be reached: #{e.class}"
   end
 end

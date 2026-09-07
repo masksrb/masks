@@ -23,6 +23,7 @@
       client(clientId: $clientId) {
         clientId name dynamic approvedAt archivedAt secretExpiresAt createdAt
         tokenEndpointAuthMethod applicationType clientUri
+        subjectType sectorIdentifierUri
         redirectUris postLogoutRedirectUris grantTypes responseTypes resources
         requiredScopes allowedScopes
         backchannelLogoutUri backchannelLogoutSessionRequired
@@ -70,6 +71,8 @@
           { term: "Authenticates with", value: client.tokenEndpointAuthMethod, mono: true },
           { term: "Grants", value: joined(client.grantTypes), mono: true },
           { term: "Response types", value: joined(client.responseTypes), mono: true },
+          { term: "Knows people as", value: client.subjectType, mono: true },
+          { term: "Sector", value: client.sectorIdentifierUri, mono: true },
         ]
       : [],
   );

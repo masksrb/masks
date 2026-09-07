@@ -23,9 +23,12 @@ class Client < ApplicationRecord
   validates :client_id, presence: true, uniqueness: { scope: :tenant_id }
   validates :name, presence: true
   validates :token_endpoint_auth_method, inclusion: { in: AUTH_METHODS }
+  validates :subject_type, inclusion: { in: Subjects::TYPES }
   validate :redirect_uris_are_usable
   validate :grant_types_are_known
   validate :backchannel_logout_uri_is_usable
+  validate :sector_is_derivable
+  validate :sector_identifier_uri_is_owned, if: :sector_declared?
 
   belongs_to :approved_by, class_name: "Actor", optional: true
 
@@ -76,6 +79,8 @@ class Client < ApplicationRecord
         resources: Array(attributes[:resources]).map(&:to_s),
         allowed_scopes: Scopes.join(bounded(attributes[:scopes].presence || DEFAULT_SCOPES)),
         token_endpoint_auth_method: attributes[:token_endpoint_auth_method].presence || DEFAULT_AUTH_METHOD,
+        subject_type: attributes[:subject_type].presence || Subjects::PUBLIC,
+        sector_identifier_uri: attributes[:sector_identifier_uri],
         application_type: attributes[:application_type].presence || "web",
         client_uri: attributes[:client_uri],
         logo_uri: attributes[:logo_uri],
@@ -124,6 +129,20 @@ class Client < ApplicationRecord
 
   def public?
     token_endpoint_auth_method == "none"
+  end
+
+  def pairwise?
+    subject_type == Subjects::PAIRWISE
+  end
+
+  def sector_identifier
+    return SectorIdentifier.host(sector_identifier_uri) if sector_identifier_uri.present?
+
+    redirect_hosts.one? ? redirect_hosts.first : nil
+  end
+
+  def redirect_hosts
+    redirect_uris.filter_map { |value| SectorIdentifier.host(value) }.uniq
   end
 
   def approved?
@@ -186,6 +205,8 @@ class Client < ApplicationRecord
       "response_types" => response_types,
       "scope" => Scopes.join(scope_list),
       "token_endpoint_auth_method" => token_endpoint_auth_method,
+      "subject_type" => subject_type,
+      "sector_identifier_uri" => sector_identifier_uri,
       "application_type" => application_type,
       "client_uri" => client_uri,
       "logo_uri" => logo_uri,
@@ -255,5 +276,26 @@ class Client < ApplicationRecord
     def grant_types_are_known
       unknown = grant_types - GRANT_TYPES
       errors.add(:grant_types, "not supported: #{unknown.join(', ')}") if unknown.any?
+    end
+
+    def sector_declared?
+      sector_identifier_uri.present? &&
+        (sector_identifier_uri_changed? || redirect_uris_changed?)
+    end
+
+    def sector_is_derivable
+      return unless pairwise?
+      return if sector_identifier.present?
+
+      errors.add(
+        :sector_identifier_uri,
+        "is required when the redirect URIs do not share one host"
+      )
+    end
+
+    def sector_identifier_uri_is_owned
+      SectorIdentifier.verify!(sector_identifier_uri, redirect_uris)
+    rescue SectorIdentifier::Refused => e
+      errors.add(:sector_identifier_uri, e.message)
     end
 end
