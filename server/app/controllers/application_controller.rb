@@ -223,8 +223,17 @@ class ApplicationController < ActionController::Base
     end
 
     def settle!(login)
-      sign_in(login.actor, amr: login.amr) if current_session.nil?
+      hold(login.actor, amr: login.amr)
       session.delete(LoginsController::STORE)
+    end
+
+    def hold(actor, amr: [])
+      return if actor.nil?
+      return if current_session&.actor_id == actor.id
+
+      sign_out if current_session
+
+      sign_in(actor, amr: amr)
     end
 
     def policy_denied(denial)

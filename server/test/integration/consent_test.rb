@@ -85,6 +85,48 @@ class ConsentTest < ActionDispatch::IntegrationTest
                     "the code carried the old session's auth_time after a fresh first factor"
   end
 
+  test "reauthenticating as somebody else names the person who just proved themselves" do
+    other = create_actor(nickname: "other", email: "other@probe.example.com")
+
+    sign_in_as(@actor)
+    authorize(client_id: @registration["client_id"], prompt: "login")
+
+    rid = current_rid
+
+    post "/login", params: { event: "start-over", rid: rid }, as: :json
+    post "/login", params: { event: "identify", identifier: other.nickname, rid: rid }, as: :json
+    post "/login", params: { event: "password", password: "password", rid: rid }, as: :json
+
+    get JSON.parse(response.body)["redirectTo"]
+    consent! if awaiting_consent?
+
+    body = token(
+      grant_type: "authorization_code", code: code_from,
+      redirect_uri: OidcFlow::REDIRECT_URI, code_verifier: verifier,
+      client_id: @registration["client_id"], client_secret: @registration["client_secret"]
+    )
+
+    assert_equal within { other.reload.uuid }, claims_in(body["id_token"])["sub"]
+  end
+
+  test "reauthenticating as somebody else ends the session it replaced" do
+    other = create_actor(nickname: "other", email: "other@probe.example.com")
+
+    sign_in_as(@actor)
+    authorize(client_id: @registration["client_id"], prompt: "login")
+
+    rid = current_rid
+
+    post "/login", params: { event: "start-over", rid: rid }, as: :json
+    post "/login", params: { event: "identify", identifier: other.nickname, rid: rid }, as: :json
+    post "/login", params: { event: "password", password: "password", rid: rid }, as: :json
+
+    get JSON.parse(response.body)["redirectTo"]
+    consent! if awaiting_consent?
+
+    assert_equal [ other.id ], within { Session.live.pluck(:actor_id) }
+  end
+
   test "prompt=none refuses to interact when nobody is signed in" do
     authorize(client_id: @registration["client_id"], prompt: "none")
 
