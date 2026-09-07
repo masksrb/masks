@@ -20,6 +20,18 @@ class IntrospectionTest < ActionDispatch::IntegrationTest
     "Basic #{Base64.strict_encode64("#{id}:#{secret}")}"
   end
 
+  def approved_server(resource = RESOURCE)
+    within do
+      client = Client.new(
+        client_id: SecureRandom.uuid, name: "resource server",
+        redirect_uris: [ OidcFlow::REDIRECT_URI ], resources: [ resource ],
+        approved_at: Time.current
+      )
+
+      client.issue_credentials!
+    end
+  end
+
   def granted(scope: "openid profile uris:catalog:read", resource: RESOURCE)
     registered = register(scope: scope, resources: [ resource ])
 
@@ -107,16 +119,28 @@ class IntrospectionTest < ActionDispatch::IntegrationTest
     assert_nil body["token_type"]
   end
 
-  test "a resource server named in the audience may ask about a token presented to it" do
+  test "a resource server approved for the audience may ask about a token presented to it" do
     _issuedto, tokens = granted
 
-    server = register(client_name: "resource server", resources: [ RESOURCE ])
+    server = approved_server
 
     body = introspect(tokens["access_token"],
-                      client_id: server["client_id"],
-                      client_secret: server["client_secret"])
+                      client_id: server.client_id,
+                      client_secret: server.secret)
 
     assert_equal true, body["active"]
+  end
+
+  test "a client that named the audience itself learns nothing until somebody approves it" do
+    _issuedto, tokens = granted
+
+    claiming = register(client_name: "self-declared", resources: [ RESOURCE ])
+
+    body = introspect(tokens["access_token"],
+                      client_id: claiming["client_id"],
+                      client_secret: claiming["client_secret"])
+
+    assert_equal false, body["active"]
   end
 
   test "a stranger's client learns nothing, and learns it the same way a revoked token does" do

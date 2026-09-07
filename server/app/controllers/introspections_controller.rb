@@ -20,6 +20,7 @@ class IntrospectionsController < ApplicationController
 
     def entitled?(client, token)
       return true if token.client_id == client.id
+      return false unless client.approved?
 
       (Array(token.audience) & Array(client.resources)).any?
     end
