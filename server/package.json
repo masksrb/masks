@@ -13,10 +13,10 @@
     "svelte": "^5.46.4"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.4.15",
+    "@biomejs/biome": "2.5.12",
     "@sveltejs/vite-plugin-svelte": "^7.3.0",
     "@tailwindcss/vite": "^4.3.3",
-    "daisyui": "^5.7.22",
+    "daisyui": "^5.7.28",
     "svelte-check": "4.7.6",
     "tailwindcss": "^4.3.3",
     "vite": "^8.2.2",

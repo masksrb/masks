@@ -13,6 +13,7 @@ updates:
     directories:
       - "/server"
       - "/web"
+      - "/docs"
     schedule:
       interval: weekly
     open-pull-requests-limit: 10
