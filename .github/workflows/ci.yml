@@ -129,6 +129,20 @@ jobs:
               exit 1
             }
 
+      - name: The SDL the docs explorer reads still matches the schema
+        working-directory: server
+        env:
+          RAILS_ENV: test
+          POSTGRES_HOST: 127.0.0.1
+          POSTGRES_PORT: 5435
+        run: |
+          bin/rails docs:sdl > ../docs/src/assets/manage.graphql
+          git diff --exit-code -- ../docs/src/assets/manage.graphql ||
+            {
+              echo "::error::ManageSchema changed. Run 'bin/rails docs:sdl > ../docs/src/assets/manage.graphql' and commit."
+              exit 1
+            }
+
       - name: The generated @masks/client page still matches the source
         working-directory: web
         run: |
