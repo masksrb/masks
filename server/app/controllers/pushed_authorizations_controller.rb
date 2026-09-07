@@ -7,7 +7,7 @@ class PushedAuthorizationsController < ApplicationController
 
   def create
     client = authenticate_client!
-    authorization = Authorization.from_request(request)
+    authorization = Authorization.from_request(request, client_id: client.client_id)
 
     check!(client, authorization)
 
@@ -28,7 +28,9 @@ class PushedAuthorizationsController < ApplicationController
       refuse!("a pushed request may not carry a request_uri of its own") if authorization.request_uri?
       refuse!("request objects are not supported") if authorization.request_object?
 
-      unless authorization.client_id == client.client_id
+      presented = params[:client_id].to_s
+
+      if presented.present? && presented != client.client_id
         refuse!("client_id does not match the authenticated client")
       end
 

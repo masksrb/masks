@@ -126,6 +126,30 @@ class PushedAuthorizationTest < ActionDispatch::IntegrationTest
     assert_equal "invalid_client", JSON.parse(response.body)["error"]
   end
 
+  test "a client that authenticates in the header need not repeat its id in the body" do
+    credentials = ActionController::HttpAuthentication::Basic.encode_credentials(
+      @registration["client_id"], @registration["client_secret"]
+    )
+
+    post "/par",
+         params: {
+           response_type: "code", redirect_uri: OidcFlow::REDIRECT_URI,
+           scope: "openid profile email",
+           code_challenge: challenge, code_challenge_method: "S256"
+         },
+         headers: { "HTTP_AUTHORIZATION" => credentials }
+
+    assert_response :created
+
+    request_uri = JSON.parse(response.body)["request_uri"]
+
+    sign_in_as(@actor)
+    visit(request_uri)
+    consent!
+
+    assert redirected["code"].present?
+  end
+
   test "a pushed request may not speak for another client" do
     other = register(client_name: "Other")
     host! host_for(@tenant)
