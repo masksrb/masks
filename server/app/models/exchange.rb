@@ -69,7 +69,7 @@ class Exchange
     self
   end
 
-  def issue!
+  def issue!(jkt: nil)
     AccessToken.issue!(
       issuer: issuer,
       actor: subject_access_token.actor,
@@ -78,7 +78,8 @@ class Exchange
       audience: granted_audience,
       parent: subject_access_token,
       expires_at: expires_at,
-      act: actor_claim
+      act: actor_claim,
+      jkt: jkt
     )
   end
 end

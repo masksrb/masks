@@ -68,6 +68,7 @@ export default defineConfig({
           { label: "Clients", slug: "concepts/clients" },
           { label: "Pushed requests", slug: "concepts/pushing" },
           { label: "Device sign-in", slug: "concepts/device-grant" },
+          { label: "Holding a token", slug: "concepts/holding" },
           { label: "Scopes", slug: "concepts/scopes" },
           { label: "Namespaces", slug: "concepts/namespaces" },
           { label: "Sessions and devices", slug: "concepts/sessions" },
@@ -77,6 +78,7 @@ export default defineConfig({
       {
         label: "Reference",
         items: [
+          { label: "OIDC and OAuth", slug: "reference/specs" },
           { label: "GraphQL", slug: "reference/manage" },
           { label: "Explorer", slug: "reference/explorer" },
           { label: "@masks/client", slug: "reference/browser" },

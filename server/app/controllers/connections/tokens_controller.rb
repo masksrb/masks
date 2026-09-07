@@ -1,7 +1,7 @@
 module Connections
   class TokensController < ApplicationController
     include RackOAuth2Endpoint
-    include BearerResource
+    include ResourceToken
 
     skip_forgery_protection
 

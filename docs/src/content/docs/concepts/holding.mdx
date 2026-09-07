@@ -1,0 +1,87 @@
+---
+title: Holding a token
+description: Binding a token to a key, so stealing it is not enough.
+---
+
+A bearer token is worth whatever it can reach to whoever is holding it. DPoP,
+[RFC 9449](https://www.rfc-editor.org/rfc/rfc9449), binds a token to a key the client generated
+and never sends, so a token lifted off the wire, out of a log, or out of a browser is useless to
+anybody who does not also hold the key.
+
+masks issues a bound token to any client that asks for one, and a bearer token to any client that
+does not. Nothing has to be turned on.
+
+## Asking for one
+
+The client makes a key pair, keeps it, and signs a small JWT — a *proof* — for each request. The
+proof names the method and URL it is for, carries its public key in the header, and is typed
+`dpop+jwt`.
+
+```
+POST /token HTTP/1.1
+DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwiandr...
+```
+
+The token comes back bound:
+
+```json
+{ "access_token": "...", "token_type": "DPoP", "expires_in": 3600 }
+```
+
+Inside it is a `cnf` claim holding `jkt` — the SHA-256 thumbprint of that public key
+([RFC 7638](https://www.rfc-editor.org/rfc/rfc7638)). A resource server checks the token it is
+handed against the proof that came with it, and refuses the pair if the thumbprints differ.
+
+Present it as `DPoP`, not `Bearer`, with a fresh proof each time. A proof presented alongside a
+token also carries `ath`, the hash of the token itself, so a proof taken from one request cannot
+be moved onto another.
+
+```
+GET /userinfo HTTP/1.1
+Authorization: DPoP eyJhbGciOiJSUzI1NiIs...
+DPoP: eyJ0eXAiOiJkcG9wK2p3dCIs...
+```
+
+## What masks refuses
+
+| | |
+| --- | --- |
+| a bound token presented as `Bearer` | the binding is not optional once it exists |
+| a proof signed by a different key than the token is bound to | |
+| a proof whose `htm` or `htu` is for another request | |
+| a proof with no `ath`, or the wrong one, when a token came with it | |
+| a proof made more than a minute ago, or in the future | |
+| a proof whose `jti` has been seen before | replay, within the window a proof is good for |
+| a proof carrying a private key, a symmetric key, or `alg: none` | |
+| a proof signed with anything but `ES256`, `ES384`, `ES512`, `PS256`, `PS384`, `PS512`, `RS256` or `EdDSA` | |
+
+Refusals come back as `401` with `WWW-Authenticate: DPoP error="invalid_dpop_proof"` and the
+algorithms this server will take, so a client can correct itself without guessing.
+
+masks does not demand a server-chosen nonce. Proofs are held against replay by their `jti` for as
+long as they are valid, which is the protection a nonce would buy on an endpoint that is not
+being used to pre-compute proofs.
+
+## Binding earlier
+
+Two things extend the binding beyond a single token.
+
+`dpop_jkt` on the authorization request pins the code itself to the key, so a code stolen in the
+redirect cannot be redeemed by whoever stole it:
+
+```
+GET /authorize?...&dpop_jkt=NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs
+```
+
+A refresh token issued against a bound grant stays bound. Refreshing needs a proof from the same
+key, forever — and a proof that does not match is refused *before* the refresh token is spent, so
+somebody guessing at it cannot burn a token that is not theirs.
+
+## Making it the only way
+
+A client registered with `dpop_bound_access_tokens: true` is refused a token unless it proves a
+key, which closes the door on a downgrade to bearer.
+
+```json
+{ "client_name": "...", "dpop_bound_access_tokens": true }
+```

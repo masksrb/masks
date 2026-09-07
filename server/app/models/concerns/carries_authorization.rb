@@ -12,6 +12,7 @@ module CarriesAuthorization
         code_challenge: authorization.code_challenge,
         code_challenge_method: authorization.code_challenge_method,
         requested_claims: authorization.requested_claims,
+        jkt: authorization.dpop_jkt,
         payload: {
           "response_type" => authorization.response_type,
           "state" => authorization.state,
@@ -37,7 +38,8 @@ module CarriesAuthorization
       max_age: held("max_age"),
       resource: audience,
       claims: requested_claims,
-      user_code: held("user_code")
+      user_code: held("user_code"),
+      dpop_jkt: jkt
     )
   end
 

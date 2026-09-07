@@ -3,6 +3,7 @@ ENV["RAILS_ENV"] ||= "test"
 require_relative "../config/environment"
 require "rails/test_help"
 require_relative "support/offline"
+require_relative "support/dpop"
 
 module TenantSetup
   extend ActiveSupport::Concern
@@ -200,4 +201,5 @@ end
 
 class ActionDispatch::IntegrationTest
   include OidcFlow
+  include DpopProofs
 end

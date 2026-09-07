@@ -81,6 +81,8 @@ class Client < ApplicationRecord
         allowed_scopes: Scopes.join(bounded(attributes[:scopes].presence || DEFAULT_SCOPES)),
         token_endpoint_auth_method: attributes[:token_endpoint_auth_method].presence || DEFAULT_AUTH_METHOD,
         subject_type: attributes[:subject_type].presence || Subjects::PUBLIC,
+        dpop_bound_access_tokens:
+          ActiveModel::Type::Boolean.new.cast(attributes[:dpop_bound_access_tokens]) || false,
         sector_identifier_uri: attributes[:sector_identifier_uri],
         application_type: attributes[:application_type].presence || "web",
         client_uri: attributes[:client_uri],
@@ -207,6 +209,7 @@ class Client < ApplicationRecord
       "scope" => Scopes.join(scope_list),
       "token_endpoint_auth_method" => token_endpoint_auth_method,
       "subject_type" => subject_type,
+      "dpop_bound_access_tokens" => dpop_bound_access_tokens,
       "sector_identifier_uri" => sector_identifier_uri,
       "application_type" => application_type,
       "client_uri" => client_uri,

@@ -1,5 +1,5 @@
 class ConnectionsController < ApplicationController
-  include BearerResource
+  include ResourceToken
   include RackOAuth2Endpoint
 
   PENDING = "connections".freeze

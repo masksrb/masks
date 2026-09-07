@@ -114,4 +114,12 @@ class Token < ApplicationRecord
   def scope_list
     Scopes.list(scopes)
   end
+
+  def bound?
+    jkt.present?
+  end
+
+  def bound_to?(proof)
+    proof.present? && ActiveSupport::SecurityUtils.secure_compare(jkt.to_s, proof.jkt.to_s)
+  end
 end

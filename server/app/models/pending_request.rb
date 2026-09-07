@@ -46,6 +46,7 @@ class PendingRequest < Token
       authenticated_at: authenticated_at,
       payload: { "amr" => Array(amr) },
       client: client,
+      jkt: jkt,
       scopes: Scopes.join(scopes_for(actor)),
       audience: audience,
       redirect_uri: redirect_uri,

@@ -148,6 +148,7 @@ class Issuer
       "id_token_signing_alg_values_supported" => [ SigningKey::ALGORITHM ],
       "token_endpoint_auth_methods_supported" => Client::AUTH_METHODS,
       "code_challenge_methods_supported" => Client::CHALLENGE_METHODS,
+      "dpop_signing_alg_values_supported" => Proof::ALGORITHMS,
       "claims_supported" => %w[
         iss sub aud exp iat auth_time nonce sid
         preferred_username name picture email email_verified tenant act

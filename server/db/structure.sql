@@ -207,7 +207,8 @@ CREATE TABLE public.clients (
     backchannel_logout_session_required boolean DEFAULT false NOT NULL,
     require_pushed_authorization_requests boolean DEFAULT false NOT NULL,
     subject_type character varying DEFAULT 'public'::character varying NOT NULL,
-    sector_identifier_uri character varying
+    sector_identifier_uri character varying,
+    dpop_bound_access_tokens boolean DEFAULT false NOT NULL
 );
 
 ALTER TABLE ONLY public.clients FORCE ROW LEVEL SECURITY;
@@ -762,7 +763,8 @@ CREATE TABLE public.tokens (
     payload jsonb,
     device_id bigint,
     session_id bigint,
-    user_code_digest character varying
+    user_code_digest character varying,
+    jkt character varying
 );
 
 ALTER TABLE ONLY public.tokens FORCE ROW LEVEL SECURITY;
@@ -2039,6 +2041,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260907000004'),
 ('20260907000003'),
 ('20260907000002'),
 ('20260907000001'),

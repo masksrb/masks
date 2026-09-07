@@ -85,6 +85,7 @@ type Client {
   clientUri: String
   consents(limit: Int): [Consent!]!
   createdAt: ISO8601DateTime!
+  dpopBoundAccessTokens: Boolean!
   dynamic: Boolean!
   events(limit: Int): [Event!]!
   grantTypes: [String!]!
@@ -267,7 +268,7 @@ type Mutation {
   stageSigningKey: StageSigningKeyPayload
   unblockDevice(id: ID!): UnblockDevicePayload
   updateActor(birthdate: String, email: String, familyName: String, gender: String, givenName: String, locale: String, middleName: String, name: String, nickname: String, pictureUrl: String, profileUrl: String, uuid: ID!, websiteUrl: String, zoneinfo: String): UpdateActorPayload
-  updateClient(allowedScopes: [String!], backchannelLogoutSessionRequired: Boolean, backchannelLogoutUri: String, clientId: ID!, name: String, postLogoutRedirectUris: [String!], redirectUris: [String!], requirePushedAuthorizationRequests: Boolean, requiredScopes: [String!], resources: [String!], sectorIdentifierUri: String, subjectType: String): UpdateClientPayload
+  updateClient(allowedScopes: [String!], backchannelLogoutSessionRequired: Boolean, backchannelLogoutUri: String, clientId: ID!, dpopBoundAccessTokens: Boolean, name: String, postLogoutRedirectUris: [String!], redirectUris: [String!], requirePushedAuthorizationRequests: Boolean, requiredScopes: [String!], resources: [String!], sectorIdentifierUri: String, subjectType: String): UpdateClientPayload
   updateProvider(authorizationUrl: String, authorizeParams: JSON, clientId: String, clientSecret: String, emailDomains: [String!], issuer: String, jwksUri: String, key: ID!, labelClaim: String, name: String, provisions: Boolean, revocationUrl: String, scopes: [String!], signsIn: Boolean, signupScopes: [String!], subjectClaim: String, tokenUrl: String, userinfoUrl: String): UpdateProviderPayload
   updateTenant(dynamicClientScopes: [String!], name: String): UpdateTenantPayload
   uploadAvatar(photo: Upload!, uuid: ID!): UploadAvatarPayload

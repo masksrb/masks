@@ -3,7 +3,7 @@ class AccessToken < Token
     1.hour
   end
 
-  def self.issue!(issuer:, actor:, client:, scopes:, audience:, parent: nil, expires_at: nil, act: nil, requested_claims: nil)
+  def self.issue!(issuer:, actor:, client:, scopes:, audience:, parent: nil, expires_at: nil, act: nil, requested_claims: nil, jkt: nil)
     ceiling = [ expires_at, lifetime.from_now ].compact.min
 
     token = create!(
@@ -16,6 +16,7 @@ class AccessToken < Token
       audience: Array(audience),
       requested_claims: requested_claims,
       digest: SecureRandom.uuid,
+      jkt: jkt,
       expires_at: ceiling
     )
 
@@ -42,7 +43,16 @@ class AccessToken < Token
       "client_id" => client&.client_id,
       "scope" => Scopes.join(scopes),
       "act" => act,
+      "cnf" => confirmation,
       "tenant" => tenant.to_identity
     }.compact
+  end
+
+  def confirmation
+    { "jkt" => jkt } if bound?
+  end
+
+  def token_type
+    bound? ? Proof::SCHEME : "Bearer"
   end
 end

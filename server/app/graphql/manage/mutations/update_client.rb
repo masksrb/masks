@@ -9,6 +9,7 @@ module Manage
       argument :required_scopes, [ String ], required: false
       argument :allowed_scopes, [ String ], required: false
       argument :subject_type, String, required: false
+      argument :dpop_bound_access_tokens, Boolean, required: false
       argument :sector_identifier_uri, String, required: false
       argument :backchannel_logout_uri, String, required: false
       argument :backchannel_logout_session_required, Boolean, required: false

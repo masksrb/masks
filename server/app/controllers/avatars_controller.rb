@@ -1,4 +1,7 @@
 class AvatarsController < ApplicationController
+  include RackOAuth2Endpoint
+  include ResourceToken
+
   SEALED = "default-src 'none'; sandbox".freeze
   FOREVER = 1.year.to_i
   BRIEFLY = 5.minutes.to_i
@@ -119,23 +122,6 @@ class AvatarsController < ApplicationController
     def bearer
       return @bearer if defined?(@bearer)
 
-      header = request.authorization.to_s
-
-      @bearer = header.start_with?("Bearer ") ? verified(header.split(" ", 2).last) : nil
-    end
-
-    def verified(secret)
-      claims = JWT.decode(
-        secret, nil, true,
-        algorithms: [ SigningKey::ALGORITHM ],
-        jwks: issuer.jwks,
-        iss: issuer.url, verify_iss: true,
-        verify_expiration: true,
-        required_claims: %w[iss sub exp jti]
-      ).first
-
-      AccessToken.live.find_by(digest: claims["jti"])
-    rescue JWT::DecodeError
-      nil
+      @bearer = presented_token_for(request)
     end
 end

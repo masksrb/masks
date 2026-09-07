@@ -2,7 +2,7 @@ class Authorization
   attr_reader :client_id, :redirect_uri, :response_type, :state, :nonce,
               :code_challenge, :code_challenge_method, :prompt, :audience,
               :requested_scopes, :max_age, :requested_claims, :request_uri,
-              :user_code
+              :user_code, :dpop_jkt
 
   def self.from_request(request)
     repeated = Rack::Utils.parse_query(request.query_string)
@@ -23,14 +23,16 @@ class Authorization
       resource: repeated["resource"],
       request: params["request"],
       request_uri: params["request_uri"],
-      claims: params["claims"]
+      claims: params["claims"],
+      dpop_jkt: params["dpop_jkt"]
     )
   end
 
   def initialize(client_id:, redirect_uri:, response_type:, scope: nil, state: nil,
                  nonce: nil, code_challenge: nil, code_challenge_method: nil,
                  prompt: nil, max_age: nil, resource: nil, request: nil,
-                 request_uri: nil, claims: nil, user_code: nil)
+                 request_uri: nil, claims: nil, user_code: nil, dpop_jkt: nil)
+    @dpop_jkt = dpop_jkt.presence
     @user_code = user_code.presence
     @requested_claims = self.class.parse_claims(claims)
     @request_object = request.presence
@@ -129,7 +131,8 @@ class Authorization
       "max_age" => max_age,
       "resource" => audience.sort,
       "claims" => requested_claims&.to_json,
-      "user_code" => user_code
+      "user_code" => user_code,
+      "dpop_jkt" => dpop_jkt
     }.compact
   end
 

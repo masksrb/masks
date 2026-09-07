@@ -1,0 +1,87 @@
+---
+title: OIDC and OAuth
+description: The specifications masks implements, and how far each one goes.
+---
+
+masks is an OpenID Connect provider before it is anything else. This is every specification it
+speaks, what part of it is implemented, and — where it matters more — what part is not.
+
+Both OpenID Foundation certification plans pass: `oidcc-config` and `oidcc-basic`, 2,213
+conditions, zero failures. `bin/conformance` runs them against a local server.
+
+## The core
+
+| | | |
+| --- | --- | --- |
+| [OpenID Connect Core 1.0](https://openid.net/specs/openid-connect-core-1_0.html) | ✅ | authorization code flow, ID tokens, userinfo, `prompt`, `max_age`, `acr`/`amr`, the `claims` parameter |
+| [OpenID Connect Discovery 1.0](https://openid.net/specs/openid-connect-discovery-1_0.html) | ✅ | `/.well-known/openid-configuration`, per-tenant |
+| [OpenID Connect Dynamic Registration 1.0](https://openid.net/specs/openid-connect-registration-1_0.html) | ✅ | bounded by the tenant's ceiling |
+| [RFC 6749](https://www.rfc-editor.org/rfc/rfc6749) — OAuth 2.0 | ◐ | `authorization_code` and `refresh_token`. No implicit, no password, no client credentials |
+| [RFC 6750](https://www.rfc-editor.org/rfc/rfc6750) — Bearer tokens | ✅ | header only, never a query parameter |
+| [RFC 7519](https://www.rfc-editor.org/rfc/rfc7519) — JWT | ✅ | `RS256`, a signing key per tenant |
+| [RFC 7517](https://www.rfc-editor.org/rfc/rfc7517) — JWK | ✅ | `/.well-known/jwks.json`, staged and retired keys published through a rotation |
+
+Response types are `code` and only `code`. Response modes are `query` and only `query`.
+
+## Hardening
+
+| | | |
+| --- | --- | --- |
+| [RFC 7636](https://www.rfc-editor.org/rfc/rfc7636) — PKCE | ✅ | `S256` only, required of every public client |
+| [RFC 9126](https://www.rfc-editor.org/rfc/rfc9126) — Pushed authorization requests | ✅ | and a client may be made to use them — see [pushed requests](/concepts/pushing/) |
+| [RFC 9449](https://www.rfc-editor.org/rfc/rfc9449) — DPoP | ✅ | including `dpop_jkt`, bound refresh tokens, and `dpop_bound_access_tokens` — see [holding a token](/concepts/holding/) |
+| [RFC 9207](https://www.rfc-editor.org/rfc/rfc9207) — Issuer identification | ✅ | `iss` on every authorization response |
+| [RFC 8707](https://www.rfc-editor.org/rfc/rfc8707) — Resource indicators | ✅ | `resource` narrows an audience at both endpoints |
+| [RFC 9101](https://www.rfc-editor.org/rfc/rfc9101) — Request objects (JAR) | ✗ | `request` and `request_uri` are refused, and discovery says so |
+| [FAPI 2.0](https://openid.net/specs/fapi-security-profile-2_0-final.html) | ✗ | needs JAR and `private_key_jwt` first |
+
+## Grants
+
+| | | |
+| --- | --- | --- |
+| [RFC 8628](https://www.rfc-editor.org/rfc/rfc8628) — Device authorization | ✅ | see [device sign-in](/concepts/device-grant/) |
+| [RFC 8693](https://www.rfc-editor.org/rfc/rfc8693) — Token exchange | ◐ | access tokens only, with an `act` chain. No actor tokens, no ID token exchange |
+| `client_credentials` | ✗ | nothing signs in without a person behind it, yet |
+
+## Tokens
+
+| | | |
+| --- | --- | --- |
+| [RFC 7662](https://www.rfc-editor.org/rfc/rfc7662) — Introspection | ✅ | a client sees its own tokens and the ones for a resource it speaks for |
+| [RFC 7009](https://www.rfc-editor.org/rfc/rfc7009) — Revocation | ✅ | revoking a refresh token takes its whole family down |
+| [RFC 9068](https://www.rfc-editor.org/rfc/rfc9068) — JWT access tokens | ◐ | access tokens are JWTs carrying `jti`, `client_id`, `scope`, `aud` and `cnf`, but are not typed `at+jwt` |
+| [RFC 7591](https://www.rfc-editor.org/rfc/rfc7591) — Dynamic registration | ✅ | |
+| [RFC 7592](https://www.rfc-editor.org/rfc/rfc7592) — Registration management | ✅ | read, update and delete against a registration access token |
+| [RFC 9728](https://www.rfc-editor.org/rfc/rfc9728) — Protected resource metadata | ✅ | `/.well-known/oauth-protected-resource` |
+
+## Sessions
+
+| | | |
+| --- | --- | --- |
+| [Back-channel logout 1.0](https://openid.net/specs/openid-connect-backchannel-1_0.html) | ✅ | signed logout tokens, retried, and written down when nobody answers |
+| [RP-initiated logout 1.0](https://openid.net/specs/openid-connect-rpinitiated-1_0.html) | ✅ | `end_session_endpoint` |
+| [Front-channel logout 1.0](https://openid.net/specs/openid-connect-frontchannel-1_0.html) | ✗ | discovery says `false` |
+| [Session management 1.0](https://openid.net/specs/openid-connect-session-1_0.html) | ✗ | not planned — the iframe it needs no longer works in a browser |
+
+## Identity
+
+| | | |
+| --- | --- | --- |
+| Pairwise subject identifiers | ✅ | including a verified `sector_identifier_uri` — see [clients](/concepts/clients/) |
+| [WebAuthn Level 2](https://www.w3.org/TR/webauthn-2/) | ✅ | passkeys, as a first factor or a second |
+| [RFC 6238](https://www.rfc-editor.org/rfc/rfc6238) — TOTP | ✅ | with backup codes |
+| [SCIM 2.0](https://www.rfc-editor.org/rfc/rfc7644) | ✗ | nothing provisions actors from outside yet |
+| SAML 2.0 | ✗ | not planned in either direction |
+
+## Client authentication
+
+`client_secret_basic`, `client_secret_post`, and `none` for a public client. `private_key_jwt`,
+`client_secret_jwt` and mTLS ([RFC 8705](https://www.rfc-editor.org/rfc/rfc8705)) are not
+implemented.
+
+## What ✅ and ◐ mean here
+
+✅ means the specification is implemented and covered by the test suite, and where a conformance
+plan exists, that it passes. ◐ means the part of it masks needs is implemented and the rest is
+named above rather than left for you to discover. ✗ means it is not there, and the server says so
+in its discovery document rather than failing quietly when you try.

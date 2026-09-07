@@ -1,6 +1,6 @@
 class UserinfoController < ApplicationController
   include RackOAuth2Endpoint
-  include BearerResource
+  include ResourceToken
 
   skip_forgery_protection
 

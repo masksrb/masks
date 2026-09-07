@@ -85,7 +85,7 @@ class DeviceGrant < Token
     update!(payload: payload.merge("polled_at" => Time.current.iso8601(6)))
   end
 
-  def issue!(issuer:)
+  def issue!(issuer:, jkt: nil)
     AccessToken.issue!(
       issuer: issuer,
       actor: actor,
@@ -93,7 +93,8 @@ class DeviceGrant < Token
       scopes: scopes_for(actor),
       audience: audience.presence || [ client.client_id ],
       parent: self,
-      requested_claims: requested_claims
+      requested_claims: requested_claims,
+      jkt: jkt
     )
   end
 

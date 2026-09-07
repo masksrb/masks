@@ -3,7 +3,7 @@ module ManageEndpoint
 
   included do
     include RackOAuth2Endpoint
-    include BearerResource
+    include ResourceToken
 
     skip_forgery_protection
   end

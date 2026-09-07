@@ -22,6 +22,8 @@ class TokensController < ApplicationController
       Rack::OAuth2::Server::Token.new do |req, res|
         client = authenticate_client!(req)
 
+        holding!(req, client)
+
         case req.grant_type.to_s
         when "authorization_code" then exchange_code(req, res, client)
         when "refresh_token" then refresh(req, res, client)
@@ -29,6 +31,34 @@ class TokensController < ApplicationController
         when EXCHANGE then exchange_token(req, res, client)
         else req.unsupported_grant_type!
         end
+      end
+    end
+
+    def proof
+      return @proof if defined?(@proof)
+
+      @proof = Proof.presented?(request) ? Proof.read!(request) : nil
+    end
+
+    def jkt
+      proof&.jkt
+    end
+
+    def holding!(req, client)
+      proof
+
+      if client.dpop_bound_access_tokens? && proof.nil?
+        req.bad_request!(:invalid_dpop_proof, "this client has to hold its tokens to a key")
+      end
+    rescue Proof::Refused => refusal
+      req.bad_request!(:invalid_dpop_proof, refusal.message)
+    end
+
+    def held!(req, token)
+      return if token.nil? || !token.bound?
+
+      unless token.bound_to?(proof)
+        req.bad_request!(:invalid_dpop_proof, "that grant is held to a key this proof does not carry")
       end
     end
 
@@ -63,17 +93,21 @@ class TokensController < ApplicationController
         req.invalid_grant!("code_verifier does not match the challenge")
       end
 
+      held!(req, code)
+
       audience = narrow(req, code.audience, client)
       access = AccessToken.issue!(
         issuer: issuer, actor: code.actor, client: client,
         scopes: code.scopes, audience: audience, parent: code,
-        requested_claims: code.requested_claims
+        requested_claims: code.requested_claims, jkt: jkt
       )
 
       res.access_token = Payload.new(payload(access, code: code, client: client))
     end
 
     def refresh(req, res, client)
+      held!(req, RefreshToken.redeem(req.refresh_token))
+
       token = RefreshToken.claim(req.refresh_token)
 
       if token.nil?
@@ -83,23 +117,24 @@ class TokensController < ApplicationController
 
       req.invalid_grant!("that refresh token was issued to another client") if token.client_id != client.id
 
+      held = token.bound? ? token.jkt : jkt
       scopes = req.scope.present? ? Scopes.granted(req.scope, token.scopes) : token.scope_list
       audience = narrow(req, token.audience, client)
 
       access = AccessToken.issue!(
         issuer: issuer, actor: token.actor, client: client,
-        scopes: scopes, audience: audience, parent: token
+        scopes: scopes, audience: audience, parent: token, jkt: held
       )
 
       rotated = RefreshToken.mint!(
         actor: token.actor, client: client, parent: token,
-        scopes: Scopes.join(scopes), audience: audience,
+        scopes: Scopes.join(scopes), audience: audience, jkt: held,
         expires_at: RefreshToken.lifetime.from_now
       )
 
       res.access_token = Payload.new(
         "access_token" => access.jwt,
-        "token_type" => "Bearer",
+        "token_type" => access.token_type,
         "expires_in" => access.expires_in,
         "scope" => Scopes.join(scopes),
         "refresh_token" => rotated.secret
@@ -152,11 +187,11 @@ class TokensController < ApplicationController
     end
 
     def granted(grant, client)
-      access = grant.issue!(issuer: issuer)
+      access = grant.issue!(issuer: issuer, jkt: jkt)
 
       body = {
         "access_token" => access.jwt,
-        "token_type" => "Bearer",
+        "token_type" => access.token_type,
         "expires_in" => access.expires_in,
         "scope" => Scopes.join(access.scopes)
       }
@@ -174,7 +209,7 @@ class TokensController < ApplicationController
       if access.scope_list.include?(Scopes::OFFLINE)
         body["refresh_token"] = RefreshToken.mint!(
           actor: grant.actor, client: client, parent: grant,
-          scopes: access.scopes, audience: access.audience,
+          scopes: access.scopes, audience: access.audience, jkt: access.jkt,
           expires_at: RefreshToken.lifetime.from_now
         ).secret
       end
@@ -194,12 +229,12 @@ class TokensController < ApplicationController
         lifetime: req.requested_lifetime
       ).validate!
 
-      access = exchange.issue!
+      access = exchange.issue!(jkt: jkt)
 
       res.access_token = Payload.new(
         "access_token" => access.jwt,
         "issued_token_type" => Exchange::ACCESS_TOKEN,
-        "token_type" => "Bearer",
+        "token_type" => access.token_type,
         "expires_in" => access.expires_in,
         "scope" => Scopes.join(access.scopes)
       )
@@ -208,7 +243,7 @@ class TokensController < ApplicationController
     def payload(access, code:, client:)
       body = {
         "access_token" => access.jwt,
-        "token_type" => "Bearer",
+        "token_type" => access.token_type,
         "expires_in" => access.expires_in,
         "scope" => Scopes.join(access.scopes)
       }
@@ -226,7 +261,7 @@ class TokensController < ApplicationController
       if code.scope_list.include?(Scopes::OFFLINE)
         body["refresh_token"] = RefreshToken.mint!(
           actor: code.actor, client: client, parent: code,
-          scopes: code.scopes, audience: access.audience,
+          scopes: code.scopes, audience: access.audience, jkt: access.jkt,
           expires_at: RefreshToken.lifetime.from_now
         ).secret
       end
