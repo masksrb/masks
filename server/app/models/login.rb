@@ -58,8 +58,17 @@ class Login
   end
 
   def actor=(record)
+    disowned = actor&.id != record&.id
+
     remove_instance_variable(:@actor) if defined?(@actor)
     store["actor_id"] = record&.id
+
+    disown! if disowned
+  end
+
+  def disown!
+    store.delete("factors")
+    store.delete("amr")
   end
 
   def factors
