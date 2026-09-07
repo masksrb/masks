@@ -2,24 +2,57 @@
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 
-status=0
+PRETTIER="prettier@3.9.6"
 
-bundle exec rubocop -a || status=$?
+GLOBS=(
+  "*.{yml,yaml,md}"
+  ".github/**/*.{yml,yaml}"
+  "server/config/**/*.{yml,yaml}"
+  "conformance/**/*.{yml,yaml}"
+)
 
-for dir in server web; do
-  (cd "$dir" && npx biome check --write) || status=$?
+checking=false
+
+case "${1:-}" in
+  --check) checking=true ;;
+  "") ;;
+  *)
+    echo "usage: bin/fmt [--check]" >&2
+    exit 64
+    ;;
+esac
+
+for tool in shfmt shellcheck; do
+  command -v "$tool" >/dev/null || {
+    echo "$tool is not on your PATH, and CI checks with it. brew bundle" >&2
+    exit 1
+  }
 done
 
-npx --yes prettier --write --no-error-on-unmatched-pattern \
-  "*.{yml,yaml,md}" ".github/**/*.{yml,yaml}" \
-  "server/config/**/*.{yml,yaml}" "conformance/**/*.{yml,yaml}" || status=$?
+status=0
 
-if command -v shfmt >/dev/null; then
+if $checking; then
+  bundle exec rubocop --format "${RUBOCOP_FORMAT:-progress}" || status=$?
+
+  for dir in server web; do
+    (cd "$dir" && npx biome check) || status=$?
+  done
+
+  npx --yes "$PRETTIER" --check --no-error-on-unmatched-pattern "${GLOBS[@]}" || status=$?
+
+  shfmt -d -i 2 -ci bin server/bin || status=$?
+else
+  bundle exec rubocop -a || status=$?
+
+  for dir in server web; do
+    (cd "$dir" && npx biome check --write) || status=$?
+  done
+
+  npx --yes "$PRETTIER" --write --no-error-on-unmatched-pattern "${GLOBS[@]}" || status=$?
+
   shfmt -w -i 2 -ci bin server/bin || status=$?
-
-  if command -v shellcheck >/dev/null; then
-    shfmt -f bin server/bin | xargs shellcheck || status=$?
-  fi
 fi
+
+shfmt -f bin server/bin | xargs shellcheck || status=$?
 
 exit $status

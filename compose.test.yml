@@ -32,7 +32,11 @@ services:
     image: ruby:3.4.7
     working_dir: /masks/client
     command:
-      ["sh", "-c", "bundle install --quiet && exec bundle exec rake test"]
+      [
+        "sh",
+        "-c",
+        "bundle install --quiet && bundle exec rake test && exec gem build masks.gemspec -o /tmp/masks.gem",
+      ]
     environment:
       BUNDLE_PATH: /bundle
     volumes:

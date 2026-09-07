@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
-  lint:
+  format:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -18,35 +18,26 @@ jobs:
         with:
           bundler-cache: true
           ruby-version: "3.4"
-      - name: Lint every Ruby file, the gem and the harness included
-        run: bundle exec rubocop -f github
-
-  format:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version-file: server/.node-version
-      - name: Install shfmt
+          cache: npm
+          cache-dependency-path: |
+            server/package-lock.json
+            web/package-lock.json
+      - name: Install shfmt, which the runner does not ship
         run: |
           curl -fsSL -o /usr/local/bin/shfmt \
             https://github.com/mvdan/sh/releases/download/v3.14.0/shfmt_v3.14.0_linux_amd64
           chmod +x /usr/local/bin/shfmt
-      - name: YAML and Markdown
+      - name: The biome the repo pins, not whatever npx would fetch
         run: |
-          npx --yes prettier --check --no-error-on-unmatched-pattern \
-            "*.{yml,yaml,md}" ".github/**/*.{yml,yaml}" \
-            "server/config/**/*.{yml,yaml}" "conformance/**/*.{yml,yaml}"
-      - name: Shell
-        run: |
-          shfmt -d -i 2 -ci bin server/bin
-          shfmt -f bin server/bin | xargs shellcheck
-
-  actions:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
+          npm ci --prefix server
+          npm ci --prefix web
+      - name: Every formatter and linter, the same ones bin/fmt runs
+        env:
+          RUBOCOP_FORMAT: github
+        run: bin/fmt --check
       - name: Lint the workflows
         uses: raven-actions/actionlint@v2
 
@@ -67,63 +58,26 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
-    env:
-      RAILS_ENV: test
-    services:
-      postgres:
-        image: postgres:17-alpine
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-        ports: ["5435:5432"]
-        options: >-
-          --health-cmd "pg_isready -U postgres"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
     steps:
       - uses: actions/checkout@v7
-      - uses: ruby/setup-ruby@v1
-        with:
-          bundler-cache: true
-          working-directory: server
-      - uses: actions/setup-node@v7
-        with:
-          node-version-file: server/.node-version
-          cache: npm
-          cache-dependency-path: |
-            server/package-lock.json
-            web/package-lock.json
-            docs/package-lock.json
-      - name: libvips, which ruby-vips loads to square an avatar
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install --no-install-recommends -y libvips42t64 \
-            || sudo apt-get install --no-install-recommends -y libvips42
-      - name: Build @masks/client, which the manage bundle imports by path
-        working-directory: web
-        run: npm ci && npm run build
-      - name: Build the assets the tests render
-        working-directory: server
-        run: npm ci && bin/vite build --mode=test
-      - name: Create the non-superuser application role
-        env:
-          PGPASSWORD: postgres
-        run: |
-          psql -h 127.0.0.1 -p 5435 -U postgres \
-            -f server/db/docker-entrypoint-initdb.d/01-app-role.sql
-      - name: Test
-        working-directory: server
-        run: bin/rails db:prepare test
+      - uses: docker/setup-buildx-action@v4
+      - uses: crazy-max/ghaction-github-runtime@v3
+      - name: The Rails suite, in the container it ships in
+        run: bin/test server
 
-      - name: The generated reference pages still match their sources
-        run: |
-          bin/reference
-          git diff --exit-code -- docs ||
-            {
-              echo "::error::The reference pages are stale. Run bin/reference and commit."
-              exit 1
-            }
+  client:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Both halves of the gem, and a gem build
+        run: bin/test client
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: The browser package
+        run: bin/test web
 
   boot:
     runs-on: ubuntu-latest
@@ -174,55 +128,40 @@ jobs:
           cache-dependency-path: |
             server/package-lock.json
             web/package-lock.json
-      - name: Lint the frontend
-        working-directory: server
-        run: npm ci && npm run lint
       - name: Build @masks/client, which the manage bundle imports by path
         working-directory: web
         run: npm ci && npm run build
       - name: Check the components against their templates
         working-directory: server
-        run: npm run check:svelte
+        run: npm ci && npm run check:svelte
       - name: Build the login bundle
         working-directory: server
         run: npx vite build
 
-  client:
+  # The generators read the code, not the database, so this needs no postgres.
+  reference:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: client
     steps:
       - uses: actions/checkout@v7
       - uses: ruby/setup-ruby@v1
         with:
           bundler-cache: true
-          working-directory: client
-      - name: Test both halves of the gem
-        run: bundle exec rake test
-      - name: Build the gem
-        run: gem build masks.gemspec
-
-  web:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: web
-    steps:
-      - uses: actions/checkout@v7
+          working-directory: server
       - uses: actions/setup-node@v7
         with:
           node-version-file: server/.node-version
           cache: npm
-          cache-dependency-path: web/package-lock.json
-      - name: Install
-        run: npm ci
-      - name: Lint
-        run: npm run lint
-      - name: Build, which is the typecheck that emits
-        run: npm run build
-      - name: Test
-        run: npm test
+          cache-dependency-path: docs/package-lock.json
+      - name: The generated reference pages still match their sources
+        env:
+          RAILS_ENV: test
+        run: |
+          bin/reference
+          git diff --exit-code -- docs ||
+            {
+              echo "::error::The reference pages are stale. Run bin/reference and commit."
+              exit 1
+            }
 
   # Pushing is release.yml's job, and it already tags every commit on main. This
   # only proves the Dockerfile still builds before the merge that would publish it.
