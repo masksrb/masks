@@ -16,8 +16,7 @@ class DeviceAuthorizationsController < ApplicationController
 
     Event.record!(Event::DEVICE_CODE_ISSUED, client: client, scopes: grant.scope_list)
 
-    response.headers["Cache-Control"] = "no-store"
-    response.headers["Pragma"] = "no-cache"
+    no_store!
 
     render json: described(grant), status: :ok
   end
@@ -59,10 +58,6 @@ class DeviceAuthorizationsController < ApplicationController
       end
 
       DevicePolicy.new(authorization).call
-    end
-
-    def refuse!(description)
-      raise Policy::Denied.new("invalid_request", description, status: :bad_request)
     end
 
     def slow_down

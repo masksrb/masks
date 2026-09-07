@@ -2,27 +2,28 @@ module Subjects
   PUBLIC = "public".freeze
   PAIRWISE = "pairwise".freeze
   TYPES = [ PUBLIC, PAIRWISE ].freeze
+  UUID = /\A[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}\z/i
 
   class << self
-    def for(actor, client = nil)
+    def for(actor, client)
       return nil if actor.nil?
       return actor.uuid unless client&.pairwise?
 
-      pairwise(actor, client.sector_identifier.presence || client.client_id)
-    end
+      sector = Subject.normalize_value_for(
+        :sector, client.sector_identifier.presence || client.client_id
+      )
 
-    def pairwise(actor, sector)
-      held = sector.to_s.strip.downcase
-
-      held.present? or raise ArgumentError, "a pairwise subject needs a sector"
-
-      settled(actor, held)
+      Subject.find_by(actor_id: actor.id, sector: sector)&.sub ||
+        Subject.create!(actor: actor, sector: sector, sub: derive(actor, sector)).sub
+    rescue ActiveRecord::RecordNotUnique
+      Subject.find_by!(actor_id: actor.id, sector: sector).sub
     end
 
     def locate(sub)
       return nil if sub.blank?
+      return Actor.find_by(uuid: sub) if sub.match?(UUID)
 
-      Actor.find_by(uuid: sub) || Subject.find_by(sub: sub)&.actor
+      Actor.joins(:subjects).find_by(subjects: { sub: sub })
     end
 
     def derive(actor, sector)
@@ -30,17 +31,5 @@ module Subjects
 
       Base64.urlsafe_encode64(digest, padding: false)
     end
-
-    private
-
-      def settled(actor, sector)
-        held = Subject.find_by(actor_id: actor.id, sector: sector)
-
-        return held.sub if held
-
-        Subject.create!(actor: actor, sector: sector, sub: derive(actor, sector)).sub
-      rescue ActiveRecord::RecordNotUnique
-        Subject.find_by!(actor_id: actor.id, sector: sector).sub
-      end
   end
 end

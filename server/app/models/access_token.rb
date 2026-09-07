@@ -35,7 +35,7 @@ class AccessToken < Token
   def claims(issuer, act: nil)
     {
       "iss" => issuer.url,
-      "sub" => Subjects.for(actor, client),
+      "sub" => issuer.subject_for(actor, client),
       "aud" => audience.one? ? audience.first : audience,
       "exp" => expires_at.to_i,
       "iat" => created_at.to_i,
@@ -46,10 +46,6 @@ class AccessToken < Token
       "cnf" => confirmation,
       "tenant" => tenant.to_identity
     }.compact
-  end
-
-  def confirmation
-    { "jkt" => jkt } if bound?
   end
 
   def token_type

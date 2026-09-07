@@ -12,15 +12,6 @@ class RegistrationsController < ApplicationController
 
   before_action :require_registration_token, except: :create
 
-  METADATA = %i[
-    client_name redirect_uris grant_types response_types scope
-    post_logout_redirect_uris token_endpoint_auth_method application_type
-    subject_type sector_identifier_uri dpop_bound_access_tokens
-    client_uri logo_uri tos_uri policy_uri resources
-    backchannel_logout_uri backchannel_logout_session_required
-    require_pushed_authorization_requests
-  ].freeze
-
   def create
     return redeem if bearer.present?
 

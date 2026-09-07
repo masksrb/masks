@@ -196,20 +196,35 @@ class ApplicationController < ActionController::Base
     end
 
     def device_url_for(pending)
-      device_verification_path(user_code: UserCodes.spaced(pending.authorization.user_code))
+      device_verification_path(user_code: UserCodes.spaced(pending.held("user_code")))
     end
 
-    def refuse_device(pending)
+    def refuse_device(pending, grant = DeviceGrant.awaiting(pending.held("user_code")))
       PendingRequest.claim(rid_for(pending))
-      grant = DeviceGrant.for_pending(pending)
-
-      grant&.deny!
-
-      Event.record!(
-        Event::DEVICE_CODE_REFUSED, actor: current_actor, client: grant&.client
-      )
+      grant&.refuse!(by: current_actor)
 
       device_verification_path(refused: DeviceVerificationsController::DECLINED)
+    end
+
+    def advance(pending)
+      Login.new(
+        store: session[LoginsController::STORE] ||= {},
+        request: pending,
+        session: current_session,
+        device: current_device,
+        rid: rid_for(pending)
+      ).update
+    end
+
+    def prompt(login)
+      @login = login
+
+      render template: "logins/show"
+    end
+
+    def settle!(login)
+      sign_in(login.actor, amr: login.amr) if current_session.nil?
+      session.delete(LoginsController::STORE)
     end
 
     def policy_denied(denial)

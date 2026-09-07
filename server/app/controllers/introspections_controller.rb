@@ -31,7 +31,7 @@ class IntrospectionsController < ApplicationController
         "client_id" => token.client&.client_id,
         "username" => token.actor&.nickname,
         "token_type" => (token.token_type if token.is_a?(AccessToken)),
-        "cnf" => ({ "jkt" => token.jkt } if token.bound?),
+        "cnf" => token.confirmation,
         "exp" => token.expires_at.to_i,
         "iat" => token.created_at.to_i,
         "sub" => Subjects.for(token.actor, token.client),

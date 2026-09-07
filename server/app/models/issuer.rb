@@ -60,7 +60,7 @@ class Issuer
   end
 
   def jwks
-    { "keys" => Tenant.switch(tenant) { SigningKey.published.map(&:public_jwk) } }
+    @jwks ||= { "keys" => Tenant.switch(tenant) { SigningKey.published.map(&:public_jwk) } }
   end
 
   def half_hash(value)
@@ -72,7 +72,11 @@ class Issuer
   end
 
   def subject_for(actor, client)
-    Subjects.for(actor, client)
+    return nil if actor.nil?
+
+    held = [ actor.id, client&.id ]
+
+    (@subjects ||= {}).fetch(held) { @subjects[held] = Subjects.for(actor, client) }
   end
 
   def id_token(actor:, client:, nonce: nil, issued_at: Time.current,
@@ -93,7 +97,7 @@ class Issuer
       "at_hash" => half_hash(access_token),
       "c_hash" => half_hash(code),
       "tenant" => tenant.to_identity,
-      Actor::AVATARS_CLAIM => Avatars.urls(actor, origin: url, subject: subject)
+      Actor::AVATARS_CLAIM => Avatars.urls(actor, subject: subject, origin: url)
     }.compact)
   end
 

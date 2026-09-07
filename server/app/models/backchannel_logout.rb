@@ -1,9 +1,6 @@
 module BackchannelLogout
   class Refused < StandardError; end
 
-  OPEN_TIMEOUT = Outbound::OPEN_TIMEOUT
-  READ_TIMEOUT = Outbound::READ_TIMEOUT
-
   def self.announce(session)
     origin = session.origin.presence || Current.origin.presence || session.tenant.public_origin
 
@@ -25,17 +22,7 @@ module BackchannelLogout
 
     routable!(client, uri)
 
-    response = Net::HTTP.start(
-      uri.hostname, uri.port,
-      use_ssl: uri.scheme == "https",
-      open_timeout: OPEN_TIMEOUT,
-      read_timeout: READ_TIMEOUT
-    ) do |http|
-      request = Net::HTTP::Post.new(uri, "Content-Type" => "application/x-www-form-urlencoded")
-      request.body = URI.encode_www_form(logout_token: token)
-
-      http.request(request)
-    end
+    response = Outbound.post(uri, { logout_token: token })
 
     return true if response.is_a?(Net::HTTPSuccess)
 

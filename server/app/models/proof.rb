@@ -5,29 +5,27 @@ class Proof
   HEADER = "HTTP_DPOP".freeze
   TYPE = "dpop+jwt".freeze
 
-  ALGORITHMS = %w[ES256 ES384 ES512 PS256 PS384 PS512 RS256 EdDSA].freeze
+  ALGORITHMS = %w[ES256 ES384 ES512 PS256 PS384 PS512 RS256].freeze
   SECRET = %w[d p q dp dq qi k].freeze
   THUMBED = {
     "EC" => %w[crv kty x y],
-    "RSA" => %w[e kty n],
-    "OKP" => %w[crv kty x]
+    "RSA" => %w[e kty n]
   }.freeze
 
   LEEWAY = 30
   WINDOW = 60
   MEMORY = WINDOW + (LEEWAY * 2)
 
-  attr_reader :jkt, :jti, :claims
+  attr_reader :jkt
 
   class << self
     def presented?(request)
       request.get_header(HEADER).present?
     end
 
-    def read!(request, access_token: nil)
-      new(header(request), method: request.request_method, url: url_for(request)).tap do |proof|
-        proof.check!(access_token: access_token)
-      end
+    def read!(request, url:, access_token: nil)
+      new(header(request), method: request.request_method, url: url)
+        .check!(access_token: access_token)
     end
 
     def header(request)
@@ -36,12 +34,6 @@ class Proof
       raise Refused, "exactly one DPoP proof is required" unless held.one?
 
       held.first
-    end
-
-    def url_for(request)
-      origin = Current.origin.presence || request.base_url
-
-      "#{origin.to_s.chomp('/')}#{request.path}"
     end
 
     def thumbprint(jwk)
@@ -72,7 +64,6 @@ class Proof
 
     @claims = verified(header, jwk)
     @jkt = self.class.thumbprint(jwk)
-    @jti = claims["jti"]
 
     matches!
     timely!
@@ -84,7 +75,7 @@ class Proof
 
   private
 
-    attr_reader :token, :method, :url
+    attr_reader :token, :method, :url, :claims
 
     def keyed
       held = JWT.decode(token, nil, false).last
@@ -164,9 +155,11 @@ class Proof
     end
 
     def once!
-      raise Refused, "a proof must carry a jti" if jti.blank?
+      held = claims["jti"]
 
-      key = "dpop:#{Current.tenant&.id}:#{jkt}:#{jti}"
+      raise Refused, "a proof must carry a jti" if held.blank?
+
+      key = "dpop:#{Current.tenant&.id}:#{jkt}:#{held}"
 
       unless Rails.cache.write(key, true, expires_in: MEMORY, unless_exist: true)
         raise Refused, "that proof has already been used"

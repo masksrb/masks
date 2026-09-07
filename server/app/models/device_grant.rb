@@ -13,14 +13,11 @@ class DeviceGrant < Token
     code = UserCodes.generate
     held = attributes_for(authorization)
 
-    grant = mint!(
+    mint!(
       **held,
       payload: held[:payload].merge("user_code" => code),
       user_code_digest: UserCodes.digest(code)
     )
-
-    grant.instance_variable_set(:@user_code, code)
-    grant
   end
 
   def self.awaiting(value)
@@ -31,12 +28,8 @@ class DeviceGrant < Token
     live.find_by(user_code_digest: UserCodes.digest(code))
   end
 
-  def self.for_pending(pending)
-    awaiting(pending.authorization.user_code)
-  end
-
   def user_code
-    @user_code || held("user_code")
+    held("user_code")
   end
 
   def device_code
@@ -69,20 +62,14 @@ class DeviceGrant < Token
     )
   end
 
-  def deny!
+  def refuse!(by: nil)
     update!(payload: payload.merge("denied" => true))
+
+    Event.record!(Event::DEVICE_CODE_REFUSED, actor: by, client: client)
   end
 
   def hurried?
-    last = held("polled_at")
-
-    last.present? && Time.iso8601(last) > INTERVAL.seconds.ago
-  rescue ArgumentError
-    false
-  end
-
-  def polled!
-    update!(payload: payload.merge("polled_at" => Time.current.iso8601(6)))
+    !Rails.cache.write("device:#{id}:polled", true, expires_in: INTERVAL, unless_exist: true)
   end
 
   def issue!(issuer:, jkt: nil)
@@ -96,9 +83,5 @@ class DeviceGrant < Token
       requested_claims: requested_claims,
       jkt: jkt
     )
-  end
-
-  def scopes_for(actor)
-    authorization.scopes_for(actor)
   end
 end

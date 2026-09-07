@@ -63,7 +63,7 @@ module Manage
       end
 
       def avatars
-        ::Avatars.urls(object)
+        ::Avatars.urls(object, subject: object.uuid)
       end
 
       def photo_uploaded

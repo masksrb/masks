@@ -62,28 +62,11 @@ class AuthorizeController < ApplicationController
       req.bad_request!(denial.error.to_sym, denial.description)
     end
 
-    def advance(pending)
-      Login.new(
-        store: session[LoginsController::STORE] ||= {},
-        request: pending,
-        session: current_session,
-        device: current_device,
-        rid: rid_for(pending)
-      ).update
-    end
-
-    def prompt(login)
-      @login = login
-
-      render template: "logins/show"
-    end
-
     def complete(pending, attempt, login)
       claimed = PendingRequest.claim(rid_for(pending))
       return spent(pending) if claimed.nil?
 
-      sign_in(login.actor, amr: login.amr) if current_session.nil?
-      session.delete(LoginsController::STORE)
+      settle!(login)
 
       code = claimed.issue_code!(
         actor: current_actor,

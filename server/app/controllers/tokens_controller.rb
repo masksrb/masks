@@ -37,7 +37,9 @@ class TokensController < ApplicationController
     def proof
       return @proof if defined?(@proof)
 
-      @proof = Proof.presented?(request) ? Proof.read!(request) : nil
+      @proof = if Proof.presented?(request)
+        Proof.read!(request, url: "#{issuer.url}#{request.path}")
+      end
     end
 
     def jkt
@@ -45,9 +47,7 @@ class TokensController < ApplicationController
     end
 
     def holding!(req, client)
-      proof
-
-      if client.dpop_bound_access_tokens? && proof.nil?
+      if proof.nil? && client.dpop_bound_access_tokens?
         req.bad_request!(:invalid_dpop_proof, "this client has to hold its tokens to a key")
       end
     rescue Proof::Refused => refusal
@@ -102,7 +102,7 @@ class TokensController < ApplicationController
         requested_claims: code.requested_claims, jkt: jkt
       )
 
-      res.access_token = Payload.new(payload(access, code: code, client: client))
+      res.access_token = Payload.new(issued(access, code, client))
     end
 
     def refresh(req, res, client)
@@ -168,10 +168,7 @@ class TokensController < ApplicationController
       req.invalid_grant!("that device code has already been used") if grant.consumed?
       req.bad_request!(:expired_token, "that device code has expired") unless grant.live?
 
-      hurried = grant.hurried?
-      grant.polled!
-
-      if hurried
+      if grant.hurried?
         req.bad_request!(:slow_down, "poll no more often than every #{grant.interval} seconds")
       end
 
@@ -183,38 +180,7 @@ class TokensController < ApplicationController
 
       req.invalid_grant!("that device code has already been used") if claimed.nil?
 
-      res.access_token = Payload.new(granted(claimed, client))
-    end
-
-    def granted(grant, client)
-      access = grant.issue!(issuer: issuer, jkt: jkt)
-
-      body = {
-        "access_token" => access.jwt,
-        "token_type" => access.token_type,
-        "expires_in" => access.expires_in,
-        "scope" => Scopes.join(access.scopes)
-      }
-
-      if access.scope_list.include?(Scopes::OPENID)
-        body["id_token"] = issuer.id_token(
-          actor: grant.actor, client: client,
-          authenticated_at: grant.authenticated_at,
-          amr: grant.held("amr"),
-          access_token: access.jwt,
-          sid: grant.session&.uuid
-        )
-      end
-
-      if access.scope_list.include?(Scopes::OFFLINE)
-        body["refresh_token"] = RefreshToken.mint!(
-          actor: grant.actor, client: client, parent: grant,
-          scopes: access.scopes, audience: access.audience, jkt: access.jkt,
-          expires_at: RefreshToken.lifetime.from_now
-        ).secret
-      end
-
-      body
+      res.access_token = Payload.new(issued(claimed.issue!(issuer: issuer, jkt: jkt), claimed, client))
     end
 
     def exchange_token(req, res, client)
@@ -240,7 +206,7 @@ class TokensController < ApplicationController
       )
     end
 
-    def payload(access, code:, client:)
+    def issued(access, grant, client)
       body = {
         "access_token" => access.jwt,
         "token_type" => access.token_type,
@@ -248,20 +214,20 @@ class TokensController < ApplicationController
         "scope" => Scopes.join(access.scopes)
       }
 
-      if code.scope_list.include?(Scopes::OPENID)
+      if access.scope_list.include?(Scopes::OPENID)
         body["id_token"] = issuer.id_token(
-          actor: code.actor, client: client, nonce: code.nonce,
-          authenticated_at: code.authenticated_at,
-          amr: (code.payload || {})["amr"],
+          actor: grant.actor, client: client, nonce: grant.nonce,
+          authenticated_at: grant.authenticated_at,
+          amr: grant.held("amr"),
           access_token: access.jwt,
-          sid: code.session&.uuid
+          sid: grant.session&.uuid
         )
       end
 
-      if code.scope_list.include?(Scopes::OFFLINE)
+      if access.scope_list.include?(Scopes::OFFLINE)
         body["refresh_token"] = RefreshToken.mint!(
-          actor: code.actor, client: client, parent: code,
-          scopes: code.scopes, audience: access.audience, jkt: access.jkt,
+          actor: grant.actor, client: client, parent: grant,
+          scopes: access.scopes, audience: access.audience, jkt: access.jkt,
           expires_at: RefreshToken.lifetime.from_now
         ).secret
       end

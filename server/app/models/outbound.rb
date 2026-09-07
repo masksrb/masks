@@ -33,13 +33,24 @@ module Outbound
       UNROUTABLE.any? { |range| range.include?(address) }
     end
 
-    def get(uri)
+    def get(uri, open: OPEN_TIMEOUT, read: READ_TIMEOUT)
+      call(uri, Net::HTTP::Get.new(uri), open: open, read: read)
+    end
+
+    def post(uri, form, open: OPEN_TIMEOUT, read: READ_TIMEOUT)
+      request = Net::HTTP::Post.new(uri, "Content-Type" => "application/x-www-form-urlencoded")
+      request.body = URI.encode_www_form(form)
+
+      call(uri, request, open: open, read: read)
+    end
+
+    def call(uri, request, open:, read:)
       Net::HTTP.start(
         uri.hostname, uri.port,
         use_ssl: uri.scheme == "https",
-        open_timeout: OPEN_TIMEOUT,
-        read_timeout: READ_TIMEOUT
-      ) { |http| http.request(Net::HTTP::Get.new(uri)) }
+        open_timeout: open,
+        read_timeout: read
+      ) { |http| http.request(request) }
     end
 
     def body(response)

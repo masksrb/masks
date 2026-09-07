@@ -115,8 +115,16 @@ class Token < ApplicationRecord
     Scopes.list(scopes)
   end
 
+  def held(key)
+    (payload || {})[key]
+  end
+
   def bound?
     jkt.present?
+  end
+
+  def confirmation
+    { "jkt" => jkt } if bound?
   end
 
   def bound_to?(proof)

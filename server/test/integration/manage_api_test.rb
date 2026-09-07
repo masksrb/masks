@@ -151,7 +151,7 @@ class ManageApiTest < ActionDispatch::IntegrationTest
     actor = within(@tenant) { @actor.reload }
 
     assert_nil actor.gender
-    refute_includes actor.claims("openid profile").keys, "gender"
+    refute_includes actor.claims("openid profile", subject: actor.uuid).keys, "gender"
   end
 
   test "changing an email takes its verification with it" do

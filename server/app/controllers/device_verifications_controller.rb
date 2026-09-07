@@ -40,27 +40,8 @@ class DeviceVerificationsController < ApplicationController
       render :show, status: status
     end
 
-    def advance(pending)
-      Login.new(
-        store: session[LoginsController::STORE] ||= {},
-        request: pending,
-        session: current_session,
-        device: current_device,
-        rid: rid_for(pending)
-      ).update
-    end
-
-    def prompt(login)
-      @login = login
-
-      render template: "logins/show"
-    end
-
     def declined(grant, pending)
-      PendingRequest.claim(rid_for(pending))
-      grant.deny!
-
-      Event.record!(Event::DEVICE_CODE_REFUSED, actor: current_actor, client: grant.client)
+      refuse_device(pending, grant)
 
       asking(DECLINED)
     end
@@ -70,8 +51,7 @@ class DeviceVerificationsController < ApplicationController
 
       return asking(UNKNOWN) if claimed.nil?
 
-      sign_in(login.actor, amr: login.amr) if current_session.nil?
-      session.delete(LoginsController::STORE)
+      settle!(login)
 
       grant.approve!(
         actor: current_actor,

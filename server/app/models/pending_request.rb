@@ -33,10 +33,6 @@ class PendingRequest < Token
     held("max_age")
   end
 
-  def scopes_for(actor)
-    authorization.scopes_for(actor)
-  end
-
   def issue_code!(actor:, device: nil, session: nil, authenticated_at: nil, amr: nil)
     AuthorizationCode.mint!(
       actor: actor,

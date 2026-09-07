@@ -122,6 +122,6 @@ class AvatarsController < ApplicationController
     def bearer
       return @bearer if defined?(@bearer)
 
-      @bearer = presented_token_for(request)
+      @bearer = presented_access_token
     end
 end

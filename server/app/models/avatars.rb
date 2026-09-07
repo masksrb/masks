@@ -55,7 +55,7 @@ module Avatars
       end
     end
 
-    def url(actor, style, origin: Current.origin, size: nil, subject: nil)
+    def url(actor, style, subject:, origin: Current.origin, size: nil)
       return nil if origin.blank?
 
       held = digest(actor, style)
@@ -63,23 +63,23 @@ module Avatars
 
       query = size ? "?size=#{size}" : ""
 
-      "#{origin}/avatars/#{subject || actor.uuid}/#{style}/#{held}#{query}"
+      "#{origin}/avatars/#{subject}/#{style}/#{held}#{query}"
     end
 
-    def urls(actor, origin: Current.origin, subject: nil)
+    def urls(actor, subject:, origin: Current.origin)
       return nil if origin.blank?
 
       {
-        PHOTO => (url(actor, PHOTO, origin: origin, subject: subject) if held?(actor)),
-        IDENTICON => url(actor, IDENTICON, origin: origin, subject: subject),
-        INITIALS => url(actor, INITIALS, origin: origin, subject: subject)
+        PHOTO => (url(actor, PHOTO, subject: subject, origin: origin) if held?(actor)),
+        IDENTICON => url(actor, IDENTICON, subject: subject, origin: origin),
+        INITIALS => url(actor, INITIALS, subject: subject, origin: origin)
       }
     end
 
-    def picture(actor, origin: Current.origin, subject: nil)
+    def picture(actor, subject:, origin: Current.origin)
       return actor.picture_url if actor.picture_url.present?
 
-      url(actor, held?(actor) ? PHOTO : FALLBACK, origin: origin, subject: subject)
+      url(actor, held?(actor) ? PHOTO : FALLBACK, subject: subject, origin: origin)
     end
 
     private

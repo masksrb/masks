@@ -13,6 +13,7 @@ class Actor < ApplicationRecord
   has_many :consents, dependent: :destroy
   has_many :device_factors, dependent: :destroy
   has_many :passkeys, dependent: :destroy
+  has_many :subjects, dependent: :destroy
   has_many :connections, dependent: :destroy
   has_many :approvals, class_name: "Client", foreign_key: :approved_by_id, dependent: :nullify
   has_one :avatar, dependent: :destroy
@@ -212,13 +213,12 @@ class Actor < ApplicationRecord
 
   AVATARS_CLAIM = "masks:avatars".freeze
 
-  def claims(scopes, requested: nil, origin: Current.origin, subject: nil)
+  def claims(scopes, subject:, requested: nil, origin: Current.origin)
     granted = Scopes.list(scopes)
-    held = subject || uuid
-    claims = { "sub" => held, AVATARS_CLAIM => Avatars.urls(self, origin: origin, subject: held) }
+    claims = { "sub" => subject, AVATARS_CLAIM => Avatars.urls(self, subject: subject, origin: origin) }
 
     if granted.include?(Scopes::PROFILE)
-      PROFILE_CLAIMS.each_key { |claim| claims[claim] = claim_value(claim, origin, held) }
+      PROFILE_CLAIMS.each_key { |claim| claims[claim] = claim_value(claim, origin, subject) }
       claims["updated_at"] = updated_at.to_i
     end
 
@@ -228,7 +228,7 @@ class Actor < ApplicationRecord
     end
 
     asked(requested).each do |claim|
-      claims[claim] = claim_value(claim, origin, held) if PROFILE_CLAIMS.key?(claim)
+      claims[claim] = claim_value(claim, origin, subject) if PROFILE_CLAIMS.key?(claim)
     end
 
     claims.compact
@@ -237,7 +237,7 @@ class Actor < ApplicationRecord
   private
 
     def claim_value(claim, origin, subject)
-      return Avatars.picture(self, origin: origin, subject: subject) if claim == "picture"
+      return Avatars.picture(self, subject: subject, origin: origin) if claim == "picture"
 
       public_send(PROFILE_CLAIMS[claim])
     end

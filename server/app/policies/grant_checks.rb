@@ -1,6 +1,10 @@
 module GrantChecks
   private
 
+    def client_is_known
+      deny!("invalid_client", "no client is registered with that client_id") if client.nil?
+    end
+
     def scopes_are_permitted
       refused = Scopes.refused(client.scope_list, requested_scopes)
 

@@ -9,6 +9,15 @@ module TokenPresented
 
   private
 
+    def refuse!(description)
+      raise Policy::Denied.new("invalid_request", description, status: :bad_request)
+    end
+
+    def no_store!
+      response.headers["Cache-Control"] = "no-store"
+      response.headers["Pragma"] = "no-cache"
+    end
+
     def presented_token(secret = params[:token], hint = params[:token_type_hint])
       return nil if secret.blank?
 

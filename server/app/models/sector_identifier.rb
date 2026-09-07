@@ -1,6 +1,9 @@
 module SectorIdentifier
   class Refused < StandardError; end
 
+  OPEN_TIMEOUT = 2
+  READ_TIMEOUT = 3
+
   class << self
     def verify!(uri, redirect_uris)
       held = parse(uri)
@@ -33,7 +36,7 @@ module SectorIdentifier
       end
 
       def declared(uri)
-        response = Outbound.get(uri)
+        response = Outbound.get(uri, open: OPEN_TIMEOUT, read: READ_TIMEOUT)
 
         raise Refused, "answered #{response.code}" unless response.is_a?(Net::HTTPSuccess)
 

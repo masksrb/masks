@@ -47,7 +47,7 @@ module CarriesAuthorization
     authorization.device?
   end
 
-  def held(key)
-    (payload || {})[key]
+  def scopes_for(actor)
+    authorization.scopes_for(actor)
   end
 end

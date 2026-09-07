@@ -1,6 +1,8 @@
 module ResourceToken
   extend ActiveSupport::Concern
 
+  class Refused < StandardError; end
+
   private
 
     def with_access_token(scope: nil, &block)
@@ -53,23 +55,16 @@ module ResourceToken
       ).first
     end
 
+    def credentials
+      @credentials ||= request.authorization.to_s.split(" ", 2)
+    end
+
     def dpop_presented?
-      request.authorization.to_s.split(" ", 2).first.to_s.casecmp?(Proof::SCHEME)
+      credentials.first.to_s.casecmp?(Proof::SCHEME)
     end
 
     def with_bound_token(scope: nil)
-      secret = request.authorization.to_s.split(" ", 2).last.to_s
-
-      return refuse_proof("a token is required") if secret.blank?
-
-      token = held_token(secret)
-
-      return refuse_proof("that token has been revoked") if token.nil?
-      return refuse_proof("that token is not bound to a key") unless token.bound?
-
-      proof = Proof.read!(request, access_token: secret)
-
-      return refuse_proof("that proof was made with another key") unless token.bound_to?(proof)
+      token = bound_token!(credentials[1].to_s)
 
       if scope.present? && !token.scope_list.include?(scope.to_s)
         return refuse_proof("this token does not carry #{scope}", error: "insufficient_scope", scope: scope)
@@ -78,6 +73,27 @@ module ResourceToken
       yield token
     rescue Proof::Refused => refusal
       refuse_proof(refusal.message, error: "invalid_dpop_proof")
+    rescue Refused => refusal
+      refuse_proof(refusal.message)
+    end
+
+    def bound_token!(secret)
+      raise Refused, "a token is required" if secret.blank?
+
+      token = held_token(secret)
+
+      raise Refused, "that token has been revoked" if token.nil?
+      raise Refused, "that token is not bound to a key" unless token.bound?
+
+      unless token.bound_to?(proof_for(secret))
+        raise Refused, "that proof was made with another key"
+      end
+
+      token
+    end
+
+    def proof_for(secret = nil)
+      Proof.read!(request, url: "#{issuer.url}#{request.path}", access_token: secret)
     end
 
     def held_token(secret)
@@ -86,23 +102,16 @@ module ResourceToken
       nil
     end
 
-    def presented_token_for(request)
-      scheme, secret = request.authorization.to_s.split(" ", 2)
+    def presented_access_token
+      secret = credentials[1].to_s
 
       return nil if secret.blank?
+      return bound_token!(secret) if dpop_presented?
 
       token = held_token(secret)
 
-      return nil if token.nil?
-
-      if token.bound?
-        return nil unless scheme.to_s.casecmp?(Proof::SCHEME)
-
-        token.bound_to?(Proof.read!(request, access_token: secret)) ? token : nil
-      else
-        scheme.to_s.casecmp?(Proof::SCHEME) ? nil : token
-      end
-    rescue Proof::Refused
+      token unless token.nil? || token.bound?
+    rescue Proof::Refused, Refused
       nil
     end
 

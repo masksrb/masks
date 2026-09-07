@@ -13,8 +13,7 @@ class PushedAuthorizationsController < ApplicationController
 
     pushed = PushedRequest.push!(authorization)
 
-    response.headers["Cache-Control"] = "no-store"
-    response.headers["Pragma"] = "no-cache"
+    no_store!
 
     render json: {
       "request_uri" => pushed.request_uri,
@@ -42,10 +41,6 @@ class PushedAuthorizationsController < ApplicationController
       end
 
       authorization.validate!
-    end
-
-    def refuse!(description)
-      raise Policy::Denied.new("invalid_request", description, status: :bad_request)
     end
 
     def slow_down

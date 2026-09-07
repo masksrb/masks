@@ -119,7 +119,7 @@ class FirstRunTest < ActionDispatch::IntegrationTest
     assert_equal "owner@example.invalid", actor.email
     assert_nil actor.email_verified_at
 
-    claims = within(@tenant) { actor.claims(Scopes::STANDARD) }
+    claims = within(@tenant) { actor.claims(Scopes::STANDARD, subject: actor.uuid) }
 
     assert_equal "owner@example.invalid", claims["email"]
     assert_equal false, claims["email_verified"]

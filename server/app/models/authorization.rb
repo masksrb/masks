@@ -131,7 +131,6 @@ class Authorization
       "max_age" => max_age,
       "resource" => audience.sort,
       "claims" => requested_claims&.to_json,
-      "user_code" => user_code,
       "dpop_jkt" => dpop_jkt
     }.compact
   end
@@ -141,7 +140,7 @@ class Authorization
   end
 
   def fingerprint
-    Digest::SHA256.hexdigest(canonical.to_json)
+    Digest::SHA256.hexdigest(canonical.merge("user_code" => user_code).compact.to_json)
   end
 
   def to_params
