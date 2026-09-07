@@ -237,12 +237,13 @@ class TokensController < ApplicationController
 
     def narrow(req, granted, client)
       requested = repeated("resource")
+      held = granted.presence || [ client.client_id ]
 
-      return granted.presence || [ client.client_id ] if requested.empty?
+      return held if requested.empty?
 
-      refused = requested - granted
+      refused = requested - held
 
-      if granted.any? && refused.any?
+      if refused.any?
         req.bad_request!(:invalid_target, "resource was not authorized: #{refused.join(', ')}")
       end
 

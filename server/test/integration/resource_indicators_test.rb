@@ -52,10 +52,19 @@ class ResourceIndicatorsTest < ActionDispatch::IntegrationTest
     assert_equal @registration["client_id"], claims_in(redeem(code)["access_token"])["aud"]
   end
 
-  test "a code carrying no audience lets the token endpoint name any resource" do
+  test "a code carrying no audience is held to the client, not to whatever the token endpoint names" do
     code = authorized_code(actor: @actor, registration: @registration)
+    body = redeem(code, resource: FILES)
 
-    assert_equal FILES, claims_in(redeem(code, resource: FILES)["access_token"])["aud"]
+    assert_equal "invalid_target", body["error"]
+    assert_match FILES, body["error_description"]
+  end
+
+  test "a code carrying no audience may still name the client the person consented to" do
+    code = authorized_code(actor: @actor, registration: @registration)
+    claims = claims_in(redeem(code, resource: @registration["client_id"])["access_token"])
+
+    assert_equal @registration["client_id"], claims["aud"]
   end
 
   test "a resource that is not an absolute URI is refused at authorize" do

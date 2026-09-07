@@ -43,8 +43,6 @@ class ExchangePolicy < Policy
     end
 
     def audience_only_narrows
-      return if subject_access_token.audience.empty?
-
       widened = requested_audience - subject_access_token.audience
 
       if widened.any?
