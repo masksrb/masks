@@ -1,11 +1,7 @@
 <% invitation = login.state("invitation").invitation %>
 
-<div class="prompt-head">
-  <h1 class="prompt-title"><%= t(".title") %></h1>
-  <% if invitation.opened_by %>
-    <p class="prompt-lede"><%= t(".invited_by", nickname: invitation.opened_by.nickname) %></p>
-  <% end %>
-</div>
+<%= render "logins/head", title: t(".title"),
+      lede: (t(".invited_by", nickname: invitation.opened_by.nickname) if invitation.opened_by) %>
 
 <%= form_with url: login_path, method: :post, id: "accept-invitation", class: "flow" do |form| %>
   <%= hidden_field_tag :rid, login.rid %>

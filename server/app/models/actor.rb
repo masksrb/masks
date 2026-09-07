@@ -149,10 +149,17 @@ class Actor < ApplicationRecord
     otp_enabled_at.present? && otp_secret.present?
   end
 
+  OTP_DRIFT = 30
+
   def verify_otp(code)
     return false unless otp?
 
-    ROTP::TOTP.new(otp_secret).verify(code.to_s.strip, drift_behind: 30).present?
+    totp = ROTP::TOTP.new(otp_secret)
+    at = totp.verify(code.to_s.strip, drift_behind: OTP_DRIFT)
+
+    return false if at.nil?
+
+    spend_otp_step(at.to_i / totp.interval)
   end
 
   BACKUP_CODES = 10
@@ -235,6 +242,17 @@ class Actor < ApplicationRecord
   end
 
   private
+
+    def spend_otp_step(step)
+      taken = self.class.where(id: id)
+                  .where("otp_last_step IS NULL OR otp_last_step < ?", step)
+                  .update_all(otp_last_step: step)
+
+      return false if taken.zero?
+
+      self.otp_last_step = step
+      true
+    end
 
     def claim_value(claim, origin, subject)
       return Avatars.picture(self, subject: subject, origin: origin) if claim == "picture"

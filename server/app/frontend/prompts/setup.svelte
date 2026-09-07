@@ -1,4 +1,7 @@
 <script>
+import Action from "../shared/Action.svelte";
+import Head from "../shared/Head.svelte";
+
 let { login } = $props();
 
 let token = $state("");
@@ -54,14 +57,11 @@ function onsubmit(event) {
     <span class="auth-mark" aria-hidden="true">{initial(tenant)}</span>
   </div>
 
-  <div class="prompt-head">
-    <span class="record-cap">{login.t("cap")}</span>
-    <h1 class="prompt-title">{title}</h1>
-  </div>
+  <Head {login} {title} cap={login.t("cap")} />
 
   <div class="note note-plain" role="status">{login.t("note")}</div>
 
-  <form {onsubmit} class="flow">
+  <form {onsubmit} class="flow" aria-busy={login.loading || undefined}>
     <div class="slab">
       {#if needsToken}
         <label class={step(0)}>
@@ -122,10 +122,14 @@ function onsubmit(event) {
       </div>
     </div>
 
-    <button type="submit" class="action" disabled={!valid || login.loading}>
-      {#if login.loading}<span class="spinner"></span>{/if}
-      {login.loading ? login.t("working") : login.t("submit")}
-    </button>
+    <Action
+      {login}
+      type="submit"
+      ready={valid}
+      busy={login.loading}
+      label={login.t("submit")}
+      working={login.t("working")}
+    />
   </form>
 
   <p class="aside">

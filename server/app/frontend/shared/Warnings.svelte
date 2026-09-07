@@ -9,7 +9,16 @@ const messages = $derived(login.auth.messages ?? []);
 {/each}
 
 {#if login.failed}
-  <div class="note note-warn" role="alert">
-    {login.t("unreachable")}
+  <div class="note note-warn recover" role="alert">
+    <span>{login.t("unreachable")}</span>
+
+    <button
+      type="button"
+      class="textlink"
+      disabled={login.loading}
+      onclick={() => login.retry()}
+    >
+      {login.loading ? login.t("checking") : login.t("try_again")}
+    </button>
   </div>
 {/if}

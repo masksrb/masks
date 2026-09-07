@@ -1,7 +1,7 @@
 <script>
-import PasskeyButton from "../shared/PasskeyButton.svelte";
+import Action from "../shared/Action.svelte";
+import Otherwise from "../shared/Otherwise.svelte";
 import PromptHeader from "../shared/PromptHeader.svelte";
-import ProviderButtons from "../shared/ProviderButtons.svelte";
 
 let { login } = $props();
 
@@ -20,7 +20,7 @@ function onsubmit(event) {
 
 <PromptHeader {login} />
 
-<form {onsubmit} class="flow">
+<form {onsubmit} class="flow" aria-busy={login.loading || undefined}>
   <label class="field">
     <span class="field-label">{login.t("identifier")}</span>
     <!-- svelte-ignore a11y_autofocus -->
@@ -37,12 +37,14 @@ function onsubmit(event) {
     />
   </label>
 
-  <button type="submit" class="action" disabled={!valid || login.loading}>
-    {#if login.loading}<span class="spinner"></span>{/if}
-    {login.loading ? login.t("checking") : login.t("continue")}
-  </button>
+  <Action
+    {login}
+    type="submit"
+    ready={valid}
+    busy={login.loading}
+    label={login.t("continue")}
+    working={login.t("checking")}
+  />
 </form>
 
-<PasskeyButton {login} />
-
-<ProviderButtons {login} />
+<Otherwise {login} />

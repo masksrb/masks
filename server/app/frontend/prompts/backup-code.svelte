@@ -1,4 +1,6 @@
 <script>
+import Action from "../shared/Action.svelte";
+import Head from "../shared/Head.svelte";
 import Identified from "../shared/Identified.svelte";
 
 let { login } = $props();
@@ -19,13 +21,11 @@ function onsubmit(event) {
 }
 </script>
 
-<div class="prompt-head">
-  <h1 class="prompt-title">{login.t("title")}</h1>
-</div>
+<Head {login} title={login.t("title")} />
 
 <Identified {login} />
 
-<form {onsubmit} class="flow">
+<form {onsubmit} class="flow" aria-busy={login.loading || undefined}>
   <label class="field">
     <span class="field-label">{login.t("code")}</span>
     <!-- svelte-ignore a11y_autofocus -->
@@ -42,16 +42,19 @@ function onsubmit(event) {
     <span class="field-hint">{login.t("hint")}</span>
   </label>
 
-  <button type="submit" class="action" disabled={!valid || login.loading}>
-    {#if login.loading}<span class="spinner"></span>{/if}
-    {login.loading ? login.t("checking") : login.t("continue")}
-  </button>
+  <Action
+    {login}
+    type="submit"
+    ready={valid}
+    busy={login.loading}
+    label={login.t("continue")}
+    working={login.t("checking")}
+  />
 </form>
 
-<button
-  type="button"
-  class="action action-plain"
+<Action
+  {login}
+  plain
+  label={login.t("use_authenticator")}
   onclick={() => login.submit("use-authenticator", {})}
->
-  {login.t("use_authenticator")}
-</button>
+/>

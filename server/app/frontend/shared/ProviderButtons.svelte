@@ -1,4 +1,6 @@
 <script>
+import Action from "./Action.svelte";
+
 let { login } = $props();
 
 const providers = $derived(login.auth.providers ?? []);
@@ -9,14 +11,12 @@ const providers = $derived(login.auth.providers ?? []);
     <span class="providers-rule">{login.t("or")}</span>
 
     {#each providers as provider (provider.key)}
-      <button
-        type="button"
-        class="action action-quiet"
-        disabled={login.loading}
+      <Action
+        {login}
+        quiet
+        label={login.t("continue_with", { provider: provider.name })}
         onclick={() => login.submit("provider", { provider: provider.key })}
-      >
-        {login.t("continue_with", { provider: provider.name })}
-      </button>
+      />
     {/each}
   </div>
 {/if}

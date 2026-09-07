@@ -16,11 +16,14 @@ en:
       or: "or"
       continue_with: "Continue with %{provider}"
       waiting_for_passkey: "Waiting for your passkey"
+      passkey_hint: "Confirm with your device to keep going."
       passkey_unoffered: "This server did not offer a passkey challenge."
       passkey_unusable: "That passkey could not be used on this device."
       unreachable: "Could not reach the server. Check your connection."
-      stopped: "Stopped"
+      try_again: "Try again"
+      working: "Working"
       halted: "This sign-in cannot continue."
+      halted_lede: "The request expired or was cancelled. Nothing was saved, and no one was signed in."
       start_over: "Start over"
 
     identify:
@@ -73,6 +76,7 @@ en:
     consent:
       title: "Allow %{client}?"
       access: "Access"
+      no_access: "Nothing beyond confirming who you are."
       audience: "On your behalf at"
       allow: "Allow"
       deny: "Deny"

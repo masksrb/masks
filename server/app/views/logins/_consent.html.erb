@@ -7,13 +7,16 @@
   <span class="auth-mark" aria-hidden="true"><%= Current.tenant&.name.to_s.first&.upcase %></span>
 </div>
 
-<div class="prompt-head">
-  <h1 class="prompt-title"><%= t(".title", client: login.client&.name) %></h1>
-</div>
+<%= render "logins/head", title: t(".title", client: login.client&.name) %>
 
 <div class="slab">
   <div class="ledger-row">
     <span class="ledger-label"><%= t(".access") %></span>
+
+    <% if hot.empty? && rest.empty? %>
+      <p class="empty"><%= t(".no_access") %></p>
+    <% end %>
+
     <ul class="grant-scopes">
       <% hot.each do |scope, description| %>
         <li class="grant-scope grant-scope-hot">

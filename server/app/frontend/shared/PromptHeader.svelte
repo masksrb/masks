@@ -1,5 +1,7 @@
 <script>
-let { login } = $props();
+import Head from "./Head.svelte";
+
+let { login, tone = null } = $props();
 
 const client = $derived(login.auth.client);
 
@@ -10,6 +12,4 @@ const title = $derived(
 );
 </script>
 
-<div class="prompt-head">
-  <h1 class="prompt-title">{title}</h1>
-</div>
+<Head {login} {title} {tone} />

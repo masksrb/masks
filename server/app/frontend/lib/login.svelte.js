@@ -28,10 +28,12 @@ export function createLogin(initial, options = {}) {
   let auth = $state(initial);
   let loading = $state(false);
   let failed = $state(false);
+  let last = null;
 
   async function dispatch(method, body) {
     loading = true;
     failed = false;
+    last = [method, body];
 
     try {
       auth = await send(
@@ -93,6 +95,9 @@ export function createLogin(initial, options = {}) {
     },
     startOver() {
       return dispatch("DELETE");
+    },
+    retry() {
+      return last ? dispatch(...last) : Promise.resolve(auth);
     },
   };
 }

@@ -1,4 +1,5 @@
 <script>
+import Action from "./Action.svelte";
 import { assert, available, refused } from "../lib/passkey.js";
 
 let { login } = $props();
@@ -36,18 +37,21 @@ async function start() {
 
 {#if offered}
   <div class="flow-tight">
-    <button
-      type="button"
-      class="action action-quiet"
-      disabled={busy || login.loading}
+    <Action
+      {login}
+      quiet
+      {busy}
+      label={login.t("use_passkey")}
+      working={login.t("waiting_for_passkey")}
       onclick={start}
-    >
-      {#if busy}<span class="spinner"></span>{/if}
-      {busy ? login.t("waiting_for_passkey") : login.t("use_passkey")}
-    </button>
+    />
+
+    {#if busy}
+      <p class="aside">{login.t("passkey_hint")}</p>
+    {/if}
 
     {#if unusable}
-      <p class="aside aside-bad">{unusable}</p>
+      <p class="aside aside-bad" role="alert">{unusable}</p>
     {/if}
   </div>
 {/if}

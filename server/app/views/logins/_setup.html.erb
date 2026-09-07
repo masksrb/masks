@@ -15,12 +15,8 @@
     <span class="auth-mark" aria-hidden="true"><%= tenant.first&.upcase %></span>
   </div>
 
-  <div class="prompt-head">
-    <span class="record-cap"><%= t(".cap") %></span>
-    <h1 class="prompt-title">
-      <%= tenant.present? ? t(".title_named", tenant: tenant) : t(".title") %>
-    </h1>
-  </div>
+  <%= render "logins/head", cap: t(".cap"),
+        title: (tenant.present? ? t(".title_named", tenant: tenant) : t(".title")) %>
 
   <div class="note note-plain" role="status"><%= t(".note") %></div>
 

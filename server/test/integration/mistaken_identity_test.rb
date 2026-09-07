@@ -87,6 +87,22 @@ class MistakenIdentityTest < ActionDispatch::IntegrationTest
     assert_equal "second-factor", step("password", rid: rid, password: "password")["prompt"]
   end
 
+  test "a one time password is spent by the sign-in that used it" do
+    code = enable_otp(@alice).now
+
+    assert_equal "settled", step("identify", identifier: "alice") &&
+                            step("password", password: "password") &&
+                            step("otp", code: code)["prompt"]
+
+    reset!
+    host! host_for(@tenant)
+
+    step("identify", identifier: "alice")
+    step("password", password: "password")
+
+    assert_equal "second-factor", step("otp", code: code)["prompt"]
+  end
+
   test "the methods a login reports are those of the person it settled on" do
     mallory = enable_otp(@mallory)
 

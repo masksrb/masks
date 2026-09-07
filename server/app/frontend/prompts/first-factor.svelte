@@ -1,7 +1,8 @@
 <script>
+import Action from "../shared/Action.svelte";
+import Head from "../shared/Head.svelte";
 import Identified from "../shared/Identified.svelte";
-import PasskeyButton from "../shared/PasskeyButton.svelte";
-import ProviderButtons from "../shared/ProviderButtons.svelte";
+import Otherwise from "../shared/Otherwise.svelte";
 
 let { login } = $props();
 
@@ -20,17 +21,28 @@ function onsubmit(event) {
 }
 </script>
 
-<div class="prompt-head">
-  <h1 class="prompt-title">{login.t("title")}</h1>
-</div>
+<Head {login} title={login.t("title")} />
 
 <Identified {login} />
 
-<form {onsubmit} class="flow">
-  <label class="field">
-    <span class="field-label">{login.t("password")}</span>
+<form {onsubmit} class="flow" aria-busy={login.loading || undefined}>
+  <div class="field">
+    <div class="field-line">
+      <label class="field-label" for="password">{login.t("password")}</label>
+
+      <button
+        type="button"
+        class="textlink"
+        disabled={login.loading}
+        onclick={() => login.submit("forgot-password", {})}
+      >
+        {login.t("forgot")}
+      </button>
+    </div>
+
     <!-- svelte-ignore a11y_autofocus -->
     <input
+      id="password"
       type="password"
       name="password"
       class="control"
@@ -38,23 +50,16 @@ function onsubmit(event) {
       autofocus
       bind:value={password}
     />
-  </label>
+  </div>
 
-  <button type="submit" class="action" disabled={!valid || login.loading}>
-    {#if login.loading}<span class="spinner"></span>{/if}
-    {login.loading ? login.t("checking") : login.t("continue")}
-  </button>
+  <Action
+    {login}
+    type="submit"
+    ready={valid}
+    busy={login.loading}
+    label={login.t("continue")}
+    working={login.t("checking")}
+  />
 </form>
 
-<PasskeyButton {login} />
-
-<ProviderButtons {login} />
-
-<button
-  type="button"
-  class="action action-plain"
-  disabled={login.loading}
-  onclick={() => login.submit("forgot-password", {})}
->
-  {login.t("forgot")}
-</button>
+<Otherwise {login} />

@@ -1,9 +1,3 @@
-<div class="prompt-head">
-  <h1 class="prompt-title">
-    <% if login.client&.name %>
-      <%= t("logins.#{key}.heading_to", client: login.client.name) %>
-    <% else %>
-      <%= t("logins.#{key}.heading") %>
-    <% end %>
-  </h1>
-</div>
+<%= render "logins/head", title: (login.client&.name ?
+      t("logins.#{key}.heading_to", client: login.client.name) :
+      t("logins.#{key}.heading")) %>

@@ -1,4 +1,6 @@
 <script>
+import Action from "../shared/Action.svelte";
+import Head from "../shared/Head.svelte";
 import { ranked } from "../lib/scopes.js";
 
 let { login } = $props();
@@ -17,13 +19,16 @@ const initial = (name) => (name ? name.slice(0, 1).toUpperCase() : "");
   <span class="auth-mark" aria-hidden="true">{initial(tenant)}</span>
 </div>
 
-<div class="prompt-head">
-  <h1 class="prompt-title">{login.t("title", { client })}</h1>
-</div>
+<Head {login} title={login.t("title", { client })} />
 
 <div class="slab">
   <div class="ledger-row">
     <span class="ledger-label">{login.t("access")}</span>
+
+    {#if !scopes.hot.length && !scopes.rest.length}
+      <p class="empty">{login.t("no_access")}</p>
+    {/if}
+
     <ul class="grant-scopes">
       {#each scopes.hot as [scope, description] (scope)}
         <li class="grant-scope grant-scope-hot">
@@ -56,24 +61,22 @@ const initial = (name) => (name ? name.slice(0, 1).toUpperCase() : "");
 </div>
 
 <div class="action-row">
-  <button
-    type="button"
-    class="action action-grow"
-    disabled={login.loading}
+  <Action
+    {login}
+    grow
+    busy={login.loading}
+    label={login.t("allow")}
+    working={login.t("working")}
     onclick={() => login.submit("consent", { approve: "yes" })}
-  >
-    {#if login.loading}<span class="spinner"></span>{/if}
-    {login.loading ? login.t("working") : login.t("allow")}
-  </button>
+  />
 
-  <button
-    type="button"
-    class="action action-quiet action-fit"
-    disabled={login.loading}
+  <Action
+    {login}
+    quiet
+    fit
+    label={login.t("deny")}
     onclick={() => login.submit("decline", {})}
-  >
-    {login.t("deny")}
-  </button>
+  />
 </div>
 
 <p class="aside">

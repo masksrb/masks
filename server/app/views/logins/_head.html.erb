@@ -1,0 +1,13 @@
+<div class="prompt-head">
+  <% if local_assigns[:cap].present? %>
+    <span class="record-cap"><%= cap %></span>
+  <% end %>
+
+  <h1 class="prompt-title"><%= title %></h1>
+
+  <% if local_assigns[:lede].present? %>
+    <p class="prompt-lede"><%= lede %></p>
+  <% end %>
+
+  <span class="pulse<%= " pulse-#{local_assigns[:tone]}" if local_assigns[:tone].present? %>" aria-hidden="true"></span>
+</div>

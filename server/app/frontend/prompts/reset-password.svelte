@@ -1,4 +1,7 @@
 <script>
+import Action from "../shared/Action.svelte";
+import Head from "../shared/Head.svelte";
+
 let { login } = $props();
 
 let password = $state("");
@@ -17,11 +20,9 @@ function onsubmit(event) {
 }
 </script>
 
-<div class="prompt-head">
-  <h1 class="prompt-title">{login.t("title")}</h1>
-</div>
+<Head {login} title={login.t("title")} />
 
-<form {onsubmit} class="flow">
+<form {onsubmit} class="flow" aria-busy={login.loading || undefined}>
   <label class="field">
     <span class="field-label">{login.t("username")}</span>
     <input
@@ -47,8 +48,12 @@ function onsubmit(event) {
     <span class="field-hint">{login.t("hint", { minimum })}</span>
   </label>
 
-  <button type="submit" class="action" disabled={!valid || login.loading}>
-    {#if login.loading}<span class="spinner"></span>{/if}
-    {login.loading ? login.t("working") : login.t("continue")}
-  </button>
+  <Action
+    {login}
+    type="submit"
+    ready={valid}
+    busy={login.loading}
+    label={login.t("continue")}
+    working={login.t("working")}
+  />
 </form>
