@@ -31,7 +31,7 @@ class SingleSignOn
 
     return returning(held) if held
 
-    refuse_domain! unless email.nil? || provider.welcomes?(email)
+    admit!
 
     claimed || provisioned || refuse_unknown!
   end
@@ -56,12 +56,21 @@ class SingleSignOn
       link(connection.actor)
     end
 
+    def admit!
+      return if provider.email_domain_list.empty?
+
+      refuse_unconfirmed! unless verified?
+      refuse_domain! unless provider.welcomes?(email)
+    end
+
     def claimed
       return nil unless verified?
 
       actor = Actor.find_by(email: email)
 
       return nil if actor.nil?
+
+      refuse_unclaimed! if actor.activated? && !actor.email_verified_at?
 
       link(actor)
     end
@@ -72,7 +81,7 @@ class SingleSignOn
 
       actor = Actor.create!(
         nickname: nickname,
-        email: email,
+        email: (email if verified?),
         email_verified_at: (Time.current if verified?),
         activated_at: Time.current,
         scopes: Scopes.join(provider.signup_scope_list),
@@ -142,6 +151,20 @@ class SingleSignOn
       refuse!(
         "sso-domain-refused",
         "#{provider.name} signed in an address outside #{provider.email_domain_list.join(', ')}"
+      )
+    end
+
+    def refuse_unconfirmed!
+      refuse!(
+        "sso-unverified",
+        "#{provider.name} confirmed no address, and only #{provider.email_domain_list.join(', ')} may sign in"
+      )
+    end
+
+    def refuse_unclaimed!
+      refuse!(
+        "sso-unverified",
+        "an account here holds that address without having confirmed it"
       )
     end
 

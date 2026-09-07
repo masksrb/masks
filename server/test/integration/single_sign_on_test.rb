@@ -293,6 +293,83 @@ class SingleSignOnTest < ActionDispatch::IntegrationTest
     assert_equal 1, within(@tenant) { Actor.count }
   end
 
+  test "an identity carrying no address is refused when the list is set" do
+    create_provider(provisions: true, email_domains: "acme.test")
+    create_actor(@tenant, nickname: "owner", email: "owner@acme.test")
+
+    finish_sso(sub: "upstream-11", email: nil, verified: false)
+
+    assert_nil signed_in_actor
+    assert_equal 1, within(@tenant) { Actor.count }
+  end
+
+  test "an unconfirmed address inside the list is refused" do
+    create_provider(provisions: true, email_domains: "acme.test")
+    create_actor(@tenant, nickname: "owner", email: "owner@acme.test")
+
+    finish_sso(sub: "upstream-12", email: "someone@acme.test", verified: false)
+
+    assert_nil signed_in_actor
+    assert_equal 1, within(@tenant) { Actor.count }
+  end
+
+  test "a provisioned account holds no address the provider did not confirm" do
+    create_provider(provisions: true)
+    create_actor(@tenant, nickname: "owner", email: "owner@acme.test")
+
+    finish_sso(sub: "upstream-13", email: "hopeful@acme.test", verified: false)
+
+    actor = signed_in_actor
+
+    assert actor, refusals.join("; ")
+    assert_nil actor.email
+    assert_nil actor.email_verified_at
+  end
+
+  test "an unconfirmed address cannot lie in wait for the person it names" do
+    create_provider(provisions: true)
+    create_actor(@tenant, nickname: "owner", email: "owner@acme.test")
+
+    finish_sso(sub: "intruder", email: "ada@acme.test", verified: false)
+
+    planted = signed_in_actor
+
+    assert planted, refusals.join("; ")
+
+    reset!
+    host! host_for(@tenant)
+
+    finish_sso(sub: "ada", email: "ada@acme.test", verified: true)
+
+    within(@tenant) do
+      arrived = Connection.live.find_by(subject: "ada")
+
+      assert arrived, refusals.join("; ")
+      assert_not_equal planted.id, arrived.actor_id
+      assert_equal "ada@acme.test", arrived.actor.email
+    end
+  end
+
+  test "a confirmed address stays out of an active account that never confirmed it" do
+    create_provider
+    create_actor(@tenant, nickname: "ada", email: "ada@acme.test")
+
+    finish_sso(sub: "upstream-14", email: "ada@acme.test")
+
+    assert_nil signed_in_actor
+    assert_equal 1, within(@tenant) { Actor.count }
+  end
+
+  test "a confirmed address still takes up an invitation that is waiting" do
+    create_provider
+    create_actor(@tenant, nickname: "owner", email: "owner@acme.test")
+    invited = within(@tenant) { Actor.create!(nickname: "ada", email: "ada@acme.test") }
+
+    finish_sso(sub: "upstream-15", email: "ada@acme.test")
+
+    assert_equal invited.id, signed_in_actor&.id
+  end
+
   test "a state from another browser is refused" do
     create_provider(provisions: true)
     create_actor(@tenant, nickname: "owner", email: "owner@acme.test")
