@@ -65,7 +65,7 @@ class EmailVerificationTest < ActionDispatch::IntegrationTest
   test "a link from another tenant is not valid here" do
     verification = open_verification
 
-    host! host_for(@other)
+    host! host_for(other_tenant)
     get "/verify/#{verification.secret}"
 
     assert_response :gone

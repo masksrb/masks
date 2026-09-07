@@ -96,10 +96,10 @@ class TokenExchangeTest < ActionDispatch::IntegrationTest
   end
 
   test "a token signed for another tenant is not exchangeable here" do
-    stranger = create_actor(@other, nickname: "stranger")
-    elsewhere = register(@other, grant_types: [ "authorization_code", EXCHANGE ])
+    stranger = create_actor(other_tenant, nickname: "stranger")
+    elsewhere = register(other_tenant, grant_types: [ "authorization_code", EXCHANGE ])
 
-    host! host_for(@other)
+    host! host_for(other_tenant)
     foreign = access_token_for(actor: stranger, registration: elsewhere)["access_token"]
 
     host! host_for(@tenant)

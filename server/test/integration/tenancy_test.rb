@@ -33,7 +33,7 @@ class TenancyTest < ActionDispatch::IntegrationTest
   test "one tenant's request cannot see another's actors" do
     create_actor(@tenant, nickname: "owner", email: "owner@example.invalid")
 
-    host! host_for(@other)
+    host! host_for(other_tenant)
     get "/login"
 
     assert_response :success

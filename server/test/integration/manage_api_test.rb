@@ -124,7 +124,7 @@ class ManageApiTest < ActionDispatch::IntegrationTest
   end
 
   test "another tenant's actors are not visible" do
-    create_actor(@other, nickname: "elsewhere")
+    create_actor(other_tenant, nickname: "elsewhere")
 
     body = ask("{ actors { nickname } }", bearer)
 

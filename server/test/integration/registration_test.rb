@@ -83,7 +83,7 @@ class RegistrationTest < ActionDispatch::IntegrationTest
   test "a registration token is refused against another tenant" do
     registered = register
 
-    manage(:get, registered, tenant: @other)
+    manage(:get, registered, tenant: other_tenant)
 
     assert_response :unauthorized
   end
@@ -129,7 +129,7 @@ class RegistrationTest < ActionDispatch::IntegrationTest
   test "a client registered here is unknown to another tenant" do
     registered = register
 
-    host! host_for(@other)
+    host! host_for(other_tenant)
     authorize(client_id: registered["client_id"])
 
     assert_response :bad_request
@@ -150,7 +150,7 @@ class RegistrationTest < ActionDispatch::IntegrationTest
   end
 
   test "an unknown client_id dead-ends when the redirect_uri belongs to someone else" do
-    authorize(client_id: SecureRandom.uuid, redirect_uri: "#{origin_for(@other)}/manage/callback")
+    authorize(client_id: SecureRandom.uuid, redirect_uri: "#{origin_for(other_tenant)}/manage/callback")
 
     assert_response :bad_request
     assert_select "#authorize-error[data-error=?]", "invalid_client"

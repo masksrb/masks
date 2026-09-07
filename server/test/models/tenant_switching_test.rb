@@ -63,7 +63,7 @@ class TenantSwitchingTest < ActiveSupport::TestCase
 
     within(@tenant) do
       within(@tenant) { assert_equal 1, Actor.count }
-      within(@other) { assert_equal 0, Actor.count }
+      within(other_tenant) { assert_equal 0, Actor.count }
 
       assert_equal 1, Actor.count
     end
@@ -87,14 +87,14 @@ class TenantSwitchingTest < ActiveSupport::TestCase
 
   test "a job enqueued in one tenant does not perform in whichever ran last" do
     mine = create_actor(@tenant, nickname: "mine", email: "mine@example.invalid")
-    theirs = create_actor(@other, nickname: "theirs", email: "theirs@example.invalid")
+    theirs = create_actor(other_tenant, nickname: "theirs", email: "theirs@example.invalid")
 
     within(@tenant) do
       ActorMailer.email_verification(mine, "http://auth.example.test/a", tenant_name: @tenant.name).deliver_later
     end
 
-    within(@other) do
-      ActorMailer.email_verification(theirs, "http://auth.example.test/b", tenant_name: @other.name).deliver_later
+    within(other_tenant) do
+      ActorMailer.email_verification(theirs, "http://auth.example.test/b", tenant_name: other_tenant.name).deliver_later
     end
 
     perform_enqueued_jobs
@@ -147,7 +147,7 @@ class TenantSwitchingTest < ActiveSupport::TestCase
   test "a switch holds no transaction open" do
     depth = ActiveRecord::Base.connection.open_transactions
 
-    within(@other) do
+    within(other_tenant) do
       assert_equal depth, ActiveRecord::Base.connection.open_transactions,
                    "a request must not sit inside a transaction for its whole life, or an " \
                    "outbound call to a provider holds one open for its timeout"

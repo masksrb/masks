@@ -166,7 +166,7 @@ class RefreshAndUserinfoTest < ActionDispatch::IntegrationTest
   test "userinfo refuses a token this tenant did not sign" do
     issued = access_token_for(actor: @actor, registration: @registration)
 
-    host! host_for(@other)
+    host! host_for(other_tenant)
     get "/userinfo", headers: { "HTTP_AUTHORIZATION" => "Bearer #{issued['access_token']}" }
 
     assert_response :unauthorized

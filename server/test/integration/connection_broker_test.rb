@@ -422,7 +422,7 @@ class ConnectionBrokerTest < ActionDispatch::IntegrationTest
 
       connection = within(@tenant) { Connection.live.sole }
 
-      assert_nil within(@other) { Connection.find_by(uuid: connection.uuid) },
+      assert_nil within(other_tenant) { Connection.find_by(uuid: connection.uuid) },
                  "a connection must not be visible from another tenant"
     end
   end

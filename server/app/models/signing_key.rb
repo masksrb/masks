@@ -12,8 +12,14 @@ class SigningKey < ApplicationRecord
   scope :published, -> { where("retired_at IS NULL OR retired_at > ?", Time.current).order(activated_at: :desc) }
 
   class << self
+    attr_writer :generator
+
+    def generator
+      @generator ||= -> { OpenSSL::PKey::RSA.generate(SIZE) }
+    end
+
     def generate!(tenant:, activate: true)
-      rsa = OpenSSL::PKey::RSA.generate(SIZE)
+      rsa = generator.call
       kid = SecureRandom.uuid
 
       create!(

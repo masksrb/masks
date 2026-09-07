@@ -357,11 +357,11 @@ class HandshakeTest < ActionDispatch::IntegrationTest
     secret = approve!
 
     reset!
-    host! host_for(@other)
+    host! host_for(other_tenant)
     redeem(secret)
 
     assert_response :unauthorized
-    assert_equal 0, within(@other) { Client.count }
+    assert_equal 0, within(other_tenant) { Client.count }
   end
 
   test "the setup prompt runs first when nobody has an account yet, and comes back here" do

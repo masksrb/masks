@@ -17,7 +17,7 @@ class FirstRunTest < ActionDispatch::IntegrationTest
   end
 
   def with_nothing_deployed
-    [ @tenant, @other ].each { |tenant| Tenant.switch(tenant) { tenant.destroy! } }
+    [ @tenant, other_tenant ].each { |tenant| Tenant.switch(tenant) { tenant.destroy! } }
 
     yield
   end
@@ -167,11 +167,11 @@ class FirstRunTest < ActionDispatch::IntegrationTest
     post "/login", params: setup_params, as: :json
 
     reset!
-    host! host_for(@other)
+    host! host_for(other_tenant)
     get "/login"
 
     assert_match "Create the owner", response.body
-    assert_equal 0, within(@other) { Actor.count }
+    assert_equal 0, within(other_tenant) { Actor.count }
   end
 
   test "an unknown host is still a 404 once any tenant exists" do

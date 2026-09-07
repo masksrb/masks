@@ -185,7 +185,7 @@ class AvatarsTest < ActionDispatch::IntegrationTest
   end
 
   test "one tenant cannot reach another tenant's actor" do
-    stranger = create_actor(@other, nickname: "stranger")
+    stranger = create_actor(other_tenant, nickname: "stranger")
 
     get "/avatars/#{stranger.uuid}/identicon"
 

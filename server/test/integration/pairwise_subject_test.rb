@@ -223,7 +223,7 @@ class PairwiseSubjectTest < ActionDispatch::IntegrationTest
     registration = register(@tenant, subject_type: "pairwise")
     held = within { Subjects.for(@actor, Client.find_by(client_id: registration["client_id"])) }
 
-    assert_nil within(@other) { Subjects.locate(held) }
+    assert_nil within(other_tenant) { Subjects.locate(held) }
     assert_equal @actor.id, within { Subjects.locate(held).id }
   end
 

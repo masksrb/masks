@@ -40,11 +40,11 @@ class DeviceTest < ActiveSupport::TestCase
 
   test "the same public id in another tenant is another device" do
     mine = within { Device.identify(nil, user_agent: CHROME) }
-    theirs = within(@other) { Device.identify(mine.public_id, user_agent: CHROME) }
+    theirs = within(other_tenant) { Device.identify(mine.public_id, user_agent: CHROME) }
 
     assert_not_equal mine.id, theirs.id
     assert_equal 1, within { Device.count }
-    assert_equal 1, within(@other) { Device.count }
+    assert_equal 1, within(other_tenant) { Device.count }
   end
 
   test "a session resumes only while the device still carries the version it started with" do

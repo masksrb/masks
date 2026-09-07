@@ -128,7 +128,7 @@ class InvitationTest < ActionDispatch::IntegrationTest
   test "the invitation belongs to its tenant and no other" do
     _actor, invitation = invite
 
-    host! host_for(@other)
+    host! host_for(other_tenant)
     get "/invite/#{invitation.secret}"
 
     assert_response :gone

@@ -45,13 +45,13 @@ class DiscoveryTest < ActionDispatch::IntegrationTest
 
   test "each tenant's discovery names its own origin" do
     assert_equal origin_for(@tenant), document["issuer"]
-    assert_equal origin_for(@other),
-                 document("/.well-known/openid-configuration", @other)["issuer"]
+    assert_equal origin_for(other_tenant),
+                 document("/.well-known/openid-configuration", other_tenant)["issuer"]
   end
 
   test "each tenant publishes its own key" do
     mine = document("/.well-known/jwks.json")["keys"]
-    theirs = document("/.well-known/jwks.json", @other)["keys"]
+    theirs = document("/.well-known/jwks.json", other_tenant)["keys"]
 
     assert_equal 1, mine.length
     assert_equal 1, theirs.length

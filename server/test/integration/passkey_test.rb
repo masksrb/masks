@@ -124,8 +124,8 @@ class PasskeyTest < ActionDispatch::IntegrationTest
     enrol
     reset!
 
-    host! host_for(@other)
-    create_actor(@other, nickname: "elsewhere")
+    host! host_for(other_tenant)
+    create_actor(other_tenant, nickname: "elsewhere")
 
     post "/login", params: { event: "passkey:challenge" }, as: :json
     offer = JSON.parse(response.body)

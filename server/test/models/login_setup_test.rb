@@ -79,7 +79,7 @@ class LoginSetupTest < ActiveSupport::TestCase
     create_actor
 
     assert_equal "identify", step.prompt
-    assert_equal "setup", within(@other) {
+    assert_equal "setup", within(other_tenant) {
       Login.new(store: {}, event: nil, updates: {}).update
     }.prompt
   end

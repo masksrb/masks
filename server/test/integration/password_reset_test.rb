@@ -141,7 +141,7 @@ class PasswordResetTest < ActionDispatch::IntegrationTest
   test "a reset link from another tenant is not valid here" do
     reset = open_reset
 
-    host! host_for(@other)
+    host! host_for(other_tenant)
     get "/reset/#{reset.secret}"
 
     assert_response :gone

@@ -48,7 +48,7 @@ class TokenClaimTest < ActiveSupport::TestCase
   test "a token of another tenant cannot be claimed" do
     minted = mint
 
-    assert_nil Tenant.switch(@other) { AuthorizationCode.claim(minted.secret) }
+    assert_nil Tenant.switch(other_tenant) { AuthorizationCode.claim(minted.secret) }
     assert_not within { AuthorizationCode.find(minted.id).consumed? }
   end
 
@@ -73,7 +73,7 @@ class TokenClaimRaceTest < ActiveSupport::TestCase
   end
 
   teardown do
-    [ @tenant, @other ].compact.each do |tenant|
+    [ @tenant, other_tenant ].compact.each do |tenant|
       Tenant.switch(tenant) { SCOPED.each(&:delete_all) }
       tenant.destroy
     end

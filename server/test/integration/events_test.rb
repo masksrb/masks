@@ -96,9 +96,9 @@ class EventsTest < ActionDispatch::IntegrationTest
     sign_in_as(@actor)
 
     assert_equal 1, events(action: Event::SESSION_STARTED).length
-    assert_equal 0, events(@other, action: Event::SESSION_STARTED).length
+    assert_equal 0, events(other_tenant, action: Event::SESSION_STARTED).length
 
-    within(@other) do
+    within(other_tenant) do
       assert_equal 0, Event.unscoped.count,
                    "the database, not the default scope, has to be what isolates the log"
     end

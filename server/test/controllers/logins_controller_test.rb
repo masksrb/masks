@@ -91,8 +91,8 @@ class LoginsControllerTest < ActionDispatch::IntegrationTest
   end
 
   test "one tenant's actor cannot sign in against another" do
-    create_actor(@other, nickname: "theirs", password: "another-password")
-    host! host_for(@other)
+    create_actor(other_tenant, nickname: "theirs", password: "another-password")
+    host! host_for(other_tenant)
 
     event("identify", identifier: "owner")
     body = event("password", password: "password")

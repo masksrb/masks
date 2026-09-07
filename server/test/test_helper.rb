@@ -3,6 +3,7 @@ ENV["RAILS_ENV"] ||= "test"
 require_relative "../config/environment"
 require "rails/test_help"
 require_relative "support/offline"
+require_relative "support/signing_keys"
 
 module TenantSetup
   extend ActiveSupport::Concern
@@ -10,8 +11,11 @@ module TenantSetup
   included do
     setup do
       @tenant = Tenant.create!(subdomain: "demo-#{SecureRandom.hex(4)}", name: "Demo")
-      @other = Tenant.create!(subdomain: "acme-#{SecureRandom.hex(4)}", name: "Acme")
     end
+  end
+
+  def other_tenant
+    @other_tenant ||= Tenant.create!(subdomain: "acme-#{SecureRandom.hex(4)}", name: "Acme")
   end
 
   def within(tenant = @tenant, &block)

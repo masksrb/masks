@@ -40,7 +40,7 @@ class SingleTenantTest < ActionDispatch::IntegrationTest
 
   test "every hostname reaches the same tenant, including the other tenant's own" do
     with_pinned(@tenant.subdomain) do
-      [ "example.test", "auth.example.test", host_for(@other) ].each do |host|
+      [ "example.test", "auth.example.test", host_for(other_tenant) ].each do |host|
         host! host
 
         assert_equal @tenant.uuid, discovery.dig("tenant", "uuid"), "#{host} resolved elsewhere"
@@ -74,7 +74,7 @@ class SingleTenantTest < ActionDispatch::IntegrationTest
   end
 
   test "claiming is off while a tenant is pinned" do
-    [ @tenant, @other ].each { |tenant| Tenant.switch(tenant) { tenant.destroy! } }
+    [ @tenant, other_tenant ].each { |tenant| Tenant.switch(tenant) { tenant.destroy! } }
 
     with_pinned("fresh") do
       host! "auth.example.test"
@@ -105,11 +105,11 @@ class SingleTenantTest < ActionDispatch::IntegrationTest
 
   test "the tenants nothing is pinned to still exist, and are simply unreachable" do
     with_pinned(@tenant.subdomain) do
-      host! host_for(@other)
+      host! host_for(other_tenant)
 
       assert_equal @tenant.uuid, discovery.dig("tenant", "uuid")
     end
 
-    assert Tenant.active.exists?(id: @other.id)
+    assert Tenant.active.exists?(id: other_tenant.id)
   end
 end
