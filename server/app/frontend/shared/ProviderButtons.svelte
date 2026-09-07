@@ -8,8 +8,6 @@ const providers = $derived(login.auth.providers ?? []);
 
 {#if providers.length}
   <div class="providers">
-    <span class="providers-rule">{login.t("or")}</span>
-
     {#each providers as provider (provider.key)}
       <Action
         {login}

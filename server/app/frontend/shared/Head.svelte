@@ -6,6 +6,14 @@ const running = $derived(tone === null && (busy || login.loading));
 </script>
 
 <div class="prompt-head">
+  <span
+    class="pulse"
+    class:pulse-on={running}
+    class:pulse-done={tone === "done"}
+    class:pulse-bad={tone === "bad"}
+    aria-hidden="true"
+  ></span>
+
   {#if cap}
     <span class="record-cap">{cap}</span>
   {/if}
@@ -15,12 +23,4 @@ const running = $derived(tone === null && (busy || login.loading));
   {#if lede}
     <p class="prompt-lede">{lede}</p>
   {/if}
-
-  <span
-    class="pulse"
-    class:pulse-on={running}
-    class:pulse-done={tone === "done"}
-    class:pulse-bad={tone === "bad"}
-    aria-hidden="true"
-  ></span>
 </div>

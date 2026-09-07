@@ -2,12 +2,15 @@
 let { login } = $props();
 </script>
 
-<div class="chip">
-  <span class="chip-mono">{login.auth.identifier}</span>
+<div class="whom">
+  <span class="whom-name">{login.auth.identifier}</span>
+
   <button
     type="button"
-    class="textlink chip-action"
+    class="textlink"
     disabled={login.loading}
-    onclick={() => login.startOver()}>{login.t("not_you")}</button
+    onclick={() => login.startOver()}
   >
+    {login.t("not_you")}
+  </button>
 </div>
