@@ -144,12 +144,13 @@ jobs:
             }
 
       - name: The generated @masks/client page still matches the source
-        working-directory: web
+        working-directory: docs
         run: |
+          npm ci
           npm run reference
-          git diff --exit-code -- ../docs/src/content/docs/reference/browser.mdx ||
+          git diff --exit-code -- src/content/docs/reference/browser.mdx ||
             {
-              echo "::error::@masks/client changed. Run 'npm run reference' in web/ and commit."
+              echo "::error::@masks/client changed. Run 'npm run reference' in docs/ and commit."
               exit 1
             }
 

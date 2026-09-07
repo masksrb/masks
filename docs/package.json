@@ -8,7 +8,8 @@
     "start": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "reference": "node bin/reference.mjs src/content/docs/reference/browser.mdx"
   },
   "dependencies": {
     "@astrojs/react": "^6.0.5",
@@ -21,5 +22,10 @@
     "graphql": "^17.0.2",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "typedoc": "^0.28.20",
+    "typedoc-plugin-markdown": "^4.13.0",
+    "typescript": "^6.0.3"
   }
 }
