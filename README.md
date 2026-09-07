@@ -16,8 +16,9 @@ The provider is a deployable rather than a gem: it holds a database and the sign
 stays standalone. Everything an application needs to sign in against it is the one `masks` gem,
 whose Rails half loads only when Rails does.
 
-The server ships as a container image, built for amd64 and arm64 and attested to the commit it came
-from. It needs a Postgres and four secrets, and it migrates itself on the way up.
+The server ships as a container image. Main is published as `:main` and by commit sha; a release
+publishes its version, moves `:latest`, and is built for arm64 as well. It needs a Postgres and
+four secrets, and it migrates itself on the way up.
 
 ```sh
 docker pull ghcr.io/masksrb/masks:latest
