@@ -47,7 +47,7 @@ export default defineConfig({
   integrations: [starlight({
     title: "masks",
     description:
-      "A standalone OIDC provider with per-tenant signing keys, and the client gem that signs apps in against it.",
+      "Self-hosted auth for the open web, with a signing key for every tenant.",
     customCss: ["./src/styles/global.css"],
     social: [
       {
