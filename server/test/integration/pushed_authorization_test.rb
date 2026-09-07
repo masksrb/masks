@@ -126,13 +126,14 @@ class PushedAuthorizationTest < ActionDispatch::IntegrationTest
     assert_equal "invalid_client", JSON.parse(response.body)["error"]
   end
 
-  test "a client that authenticates in the header need not repeat its id in the body" do
+  test "a client that authenticates in the header still names itself in the body" do
     credentials = ActionController::HttpAuthentication::Basic.encode_credentials(
       @registration["client_id"], @registration["client_secret"]
     )
 
     post "/par",
          params: {
+           client_id: @registration["client_id"],
            response_type: "code", redirect_uri: OidcFlow::REDIRECT_URI,
            scope: "openid profile email",
            code_challenge: challenge, code_challenge_method: "S256"
@@ -148,6 +149,24 @@ class PushedAuthorizationTest < ActionDispatch::IntegrationTest
     consent!
 
     assert redirected["code"].present?
+  end
+
+  test "a pushed request without a client_id is refused, however the client authenticated" do
+    credentials = ActionController::HttpAuthentication::Basic.encode_credentials(
+      @registration["client_id"], @registration["client_secret"]
+    )
+
+    post "/par",
+         params: {
+           response_type: "code", redirect_uri: OidcFlow::REDIRECT_URI,
+           scope: "openid profile email",
+           code_challenge: challenge, code_challenge_method: "S256"
+         },
+         headers: { "HTTP_AUTHORIZATION" => credentials }
+
+    assert_response :bad_request
+    assert_equal "invalid_request", JSON.parse(response.body)["error"]
+    assert_match(/client_id is required/, JSON.parse(response.body)["error_description"])
   end
 
   test "a pushed request may not speak for another client" do

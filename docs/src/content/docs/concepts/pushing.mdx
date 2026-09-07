@@ -17,10 +17,12 @@ advertised as `pushed_authorization_request_endpoint`.
 ## Pushing one
 
 Post the parameters you would otherwise have put in the query, authenticating the way you would at
-the token endpoint.
+the token endpoint. `client_id` is one of those parameters, so it belongs in the body even when the
+same id is already in the credentials you authenticate with.
 
 ```sh
 curl -u "$CLIENT_ID:$CLIENT_SECRET" https://demo.auth.example.com/par \
+  -d client_id="$CLIENT_ID" \
   -d response_type=code \
   -d redirect_uri=https://app.example.com/cb \
   -d scope="openid profile" \

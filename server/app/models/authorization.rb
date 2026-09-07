@@ -3,13 +3,13 @@ class Authorization
               :code_challenge, :code_challenge_method, :prompt, :audience,
               :requested_scopes, :max_age, :requested_claims, :request_uri
 
-  def self.from_request(request, client_id: nil)
+  def self.from_request(request)
     repeated = Rack::Utils.parse_query(request.query_string)
     repeated = repeated.merge(Rack::Utils.parse_query(request.raw_post)) { |_, a, b| Array(a) + Array(b) } if request.post?
     params = request.params
 
     new(
-      client_id: params["client_id"].presence || client_id,
+      client_id: params["client_id"],
       redirect_uri: params["redirect_uri"],
       response_type: params["response_type"],
       scope: params["scope"],
