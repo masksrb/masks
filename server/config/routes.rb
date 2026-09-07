@@ -6,6 +6,10 @@ Rails.application.routes.draw do
 
   match "/authorize", to: "authorize#show", via: %i[get post], as: :authorize
   post "/par", to: "pushed_authorizations#create", as: :pushed_authorization
+  post "/device_authorization", to: "device_authorizations#create", as: :device_authorization
+
+  get "/device", to: "device_verifications#show", as: :device_verification
+  post "/device", to: "device_verifications#create", as: :device_code
 
   get "/login", to: "logins#show", as: :login
   post "/login", to: "logins#update"

@@ -761,7 +761,8 @@ CREATE TABLE public.tokens (
     requested_claims jsonb,
     payload jsonb,
     device_id bigint,
-    session_id bigint
+    session_id bigint,
+    user_code_digest character varying
 );
 
 ALTER TABLE ONLY public.tokens FORCE ROW LEVEL SECURITY;
@@ -1534,6 +1535,13 @@ CREATE INDEX index_tokens_on_tenant_id_and_type_and_expires_at ON public.tokens 
 
 
 --
+-- Name: index_tokens_on_tenant_id_and_user_code_digest; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_tokens_on_tenant_id_and_user_code_digest ON public.tokens USING btree (tenant_id, user_code_digest) WHERE (user_code_digest IS NOT NULL);
+
+
+--
 -- Name: actors fk_rails_06ef63a7f5; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2031,6 +2039,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260907000003'),
 ('20260907000002'),
 ('20260907000001'),
 ('20260906000003'),

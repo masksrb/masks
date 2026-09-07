@@ -127,6 +127,7 @@ class Issuer
       "jwks_uri" => "#{url}/.well-known/jwks.json",
       "registration_endpoint" => "#{url}/register",
       "pushed_authorization_request_endpoint" => "#{url}/par",
+      "device_authorization_endpoint" => "#{url}/device_authorization",
       "handshake_endpoint" => "#{url}/handshake",
       "masks_protocol_version" => Masks::PROTOCOL_VERSION,
       "revocation_endpoint" => "#{url}/revoke",

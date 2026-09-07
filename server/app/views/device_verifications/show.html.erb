@@ -1,0 +1,23 @@
+<% content_for :title, t(".page_title") %>
+
+<div class="prompt-head">
+  <h1 class="prompt-title"><%= t(".title") %></h1>
+  <p class="prompt-lede"><%= t(".lede") %></p>
+</div>
+
+<% if @refused == DeviceVerificationsController::DECLINED %>
+  <div class="note note-warn" role="alert"><%= t(".declined") %></div>
+<% elsif @refused.present? %>
+  <div class="note note-bad" role="alert"><%= t(".unknown") %></div>
+<% end %>
+
+<%= form_with url: device_verification_path, method: :post, id: "device", class: "flow" do |form| %>
+  <label class="field">
+    <span class="field-label"><%= t(".code") %></span>
+    <%= form.text_field :user_code, value: params[:user_code],
+          autocomplete: "one-time-code", autocapitalize: "characters", autocorrect: "off",
+          spellcheck: "false", autofocus: true, class: "control" %>
+  </label>
+
+  <button type="submit" class="action"><%= t("logins.shared.continue") %></button>
+<% end %>

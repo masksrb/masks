@@ -30,6 +30,10 @@ class Event < ApplicationRecord
   BACKUP_CODE_SPENT = "backup_code.spent".freeze
   AUTHENTICATOR_DISABLED = "authenticator.disabled".freeze
 
+  DEVICE_CODE_ISSUED = "device_code.issued".freeze
+  DEVICE_CODE_APPROVED = "device_code.approved".freeze
+  DEVICE_CODE_REFUSED = "device_code.refused".freeze
+
   DEVICE_TRUSTED = "device.trusted".freeze
   DEVICE_NAMED = "device.named".freeze
   DEVICE_FORGOTTEN = "device.forgotten".freeze

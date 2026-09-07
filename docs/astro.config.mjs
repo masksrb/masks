@@ -67,6 +67,7 @@ export default defineConfig({
           { label: "Actors", slug: "concepts/actors" },
           { label: "Clients", slug: "concepts/clients" },
           { label: "Pushed requests", slug: "concepts/pushing" },
+          { label: "Device sign-in", slug: "concepts/device-grant" },
           { label: "Scopes", slug: "concepts/scopes" },
           { label: "Namespaces", slug: "concepts/namespaces" },
           { label: "Sessions and devices", slug: "concepts/sessions" },

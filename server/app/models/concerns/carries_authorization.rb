@@ -16,7 +16,8 @@ module CarriesAuthorization
           "response_type" => authorization.response_type,
           "state" => authorization.state,
           "prompt" => authorization.prompt,
-          "max_age" => authorization.max_age
+          "max_age" => authorization.max_age,
+          "user_code" => authorization.user_code
         }.compact
       }
     end
@@ -35,13 +36,16 @@ module CarriesAuthorization
       prompt: Scopes.join(Array(held("prompt"))),
       max_age: held("max_age"),
       resource: audience,
-      claims: requested_claims
+      claims: requested_claims,
+      user_code: held("user_code")
     )
   end
 
-  private
+  def device?
+    authorization.device?
+  end
 
-    def held(key)
-      (payload || {})[key]
-    end
+  def held(key)
+    (payload || {})[key]
+  end
 end

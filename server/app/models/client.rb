@@ -7,6 +7,7 @@ class Client < ApplicationRecord
   GRANT_TYPES = [
     "authorization_code",
     "refresh_token",
+    DeviceGrant::GRANT_TYPE,
     Exchange::GRANT_TYPE
   ].freeze
   RESPONSE_TYPES = %w[code].freeze

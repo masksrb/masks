@@ -1,0 +1,15 @@
+en:
+  device_verifications:
+    show:
+      page_title: "Sign in a device"
+      title: "Sign in a device"
+      lede: "Type the code the device is showing you."
+      code: "Code"
+      unknown: "That code is not one this server is waiting on. It may have expired, or already been answered — ask the device for a new one."
+      declined: "Nothing was signed in. The device is still waiting, and will give up on its own."
+
+    approved:
+      page_title: "The device is signed in"
+      signed_in: "Signed in"
+      title: "%{name} is signed in"
+      lede: "You can put this away and go back to %{name}."

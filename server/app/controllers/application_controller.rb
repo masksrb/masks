@@ -195,6 +195,23 @@ class ApplicationController < ActionController::Base
       "#{authorize_path}?#{URI.encode_www_form(pending.authorization.query_pairs)}"
     end
 
+    def device_url_for(pending)
+      device_verification_path(user_code: UserCodes.spaced(pending.authorization.user_code))
+    end
+
+    def refuse_device(pending)
+      PendingRequest.claim(rid_for(pending))
+      grant = DeviceGrant.for_pending(pending)
+
+      grant&.deny!
+
+      Event.record!(
+        Event::DEVICE_CODE_REFUSED, actor: current_actor, client: grant&.client
+      )
+
+      device_verification_path(refused: DeviceVerificationsController::DECLINED)
+    end
+
     def policy_denied(denial)
       render json: denial.to_h, status: denial.status
     end

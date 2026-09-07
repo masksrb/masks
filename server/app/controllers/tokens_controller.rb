@@ -2,6 +2,7 @@ class TokensController < ApplicationController
   include RackOAuth2Endpoint
 
   EXCHANGE = Rack::OAuth2::Server::Token::Extension::TokenExchange::GRANT_TYPE_URN
+  DEVICE = Rack::OAuth2::Server::Token::Extension::DeviceCode::GRANT_TYPE_URN
 
   skip_forgery_protection
 
@@ -24,6 +25,7 @@ class TokensController < ApplicationController
         case req.grant_type.to_s
         when "authorization_code" then exchange_code(req, res, client)
         when "refresh_token" then refresh(req, res, client)
+        when DEVICE then redeem_device(req, res, client)
         when EXCHANGE then exchange_token(req, res, client)
         else req.unsupported_grant_type!
         end
@@ -114,6 +116,70 @@ class TokensController < ApplicationController
         actor: spent.actor, by: nil, client: client,
         issued_to: spent.client&.client_id, revoked: revoked
       )
+    end
+
+    def redeem_device(req, res, client)
+      grant = DeviceGrant.spent(req.device_code)
+
+      unless client.grants?(DeviceGrant::GRANT_TYPE)
+        req.bad_request!(:unauthorized_client, "this client is not registered for the device grant")
+      end
+
+      if grant.nil? || grant.client_id != client.id
+        req.invalid_grant!("that device code is not valid")
+      end
+
+      req.bad_request!(:access_denied, "the person turned this device away") if grant.denied?
+      req.invalid_grant!("that device code has already been used") if grant.consumed?
+      req.bad_request!(:expired_token, "that device code has expired") unless grant.live?
+
+      hurried = grant.hurried?
+      grant.polled!
+
+      if hurried
+        req.bad_request!(:slow_down, "poll no more often than every #{grant.interval} seconds")
+      end
+
+      unless grant.approved?
+        req.bad_request!(:authorization_pending, "nobody has approved this device yet")
+      end
+
+      claimed = DeviceGrant.claim(req.device_code)
+
+      req.invalid_grant!("that device code has already been used") if claimed.nil?
+
+      res.access_token = Payload.new(granted(claimed, client))
+    end
+
+    def granted(grant, client)
+      access = grant.issue!(issuer: issuer)
+
+      body = {
+        "access_token" => access.jwt,
+        "token_type" => "Bearer",
+        "expires_in" => access.expires_in,
+        "scope" => Scopes.join(access.scopes)
+      }
+
+      if access.scope_list.include?(Scopes::OPENID)
+        body["id_token"] = issuer.id_token(
+          actor: grant.actor, client: client,
+          authenticated_at: grant.authenticated_at,
+          amr: grant.held("amr"),
+          access_token: access.jwt,
+          sid: grant.session&.uuid
+        )
+      end
+
+      if access.scope_list.include?(Scopes::OFFLINE)
+        body["refresh_token"] = RefreshToken.mint!(
+          actor: grant.actor, client: client, parent: grant,
+          scopes: access.scopes, audience: access.audience,
+          expires_at: RefreshToken.lifetime.from_now
+        ).secret
+      end
+
+      body
     end
 
     def exchange_token(req, res, client)

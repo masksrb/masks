@@ -1,0 +1,8 @@
+<% content_for :title, t(".page_title") %>
+<% content_for :surface, "terminus" %>
+
+<span class="state"><%= t(".signed_in") %></span>
+
+<h1 class="prompt-title"><%= t(".title", name: @client.name) %></h1>
+
+<p class="prompt-lede"><%= t(".lede", name: @client.name) %></p>

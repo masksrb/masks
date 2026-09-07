@@ -33,6 +33,7 @@ module Server
     config.masks.account_attempt_limit = ENV.fetch("MASKS_ACCOUNT_ATTEMPT_LIMIT", 5).to_i
     config.masks.registration_limit = ENV.fetch("MASKS_REGISTRATION_LIMIT", 10).to_i
     config.masks.recovery_limit = ENV.fetch("MASKS_RECOVERY_LIMIT", 5).to_i
+    config.masks.device_code_limit = ENV.fetch("MASKS_DEVICE_CODE_LIMIT", 30).to_i
     config.masks.setup_token = ENV["MASKS_SETUP_TOKEN"].presence
     config.masks.docs_url = ENV.fetch("MASKS_DOCS_URL", "https://masks.pages.dev")
     config.masks.public_origin_template = ENV["MASKS_PUBLIC_ORIGIN_TEMPLATE"].presence

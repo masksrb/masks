@@ -1,7 +1,8 @@
 class Authorization
   attr_reader :client_id, :redirect_uri, :response_type, :state, :nonce,
               :code_challenge, :code_challenge_method, :prompt, :audience,
-              :requested_scopes, :max_age, :requested_claims, :request_uri
+              :requested_scopes, :max_age, :requested_claims, :request_uri,
+              :user_code
 
   def self.from_request(request)
     repeated = Rack::Utils.parse_query(request.query_string)
@@ -29,7 +30,8 @@ class Authorization
   def initialize(client_id:, redirect_uri:, response_type:, scope: nil, state: nil,
                  nonce: nil, code_challenge: nil, code_challenge_method: nil,
                  prompt: nil, max_age: nil, resource: nil, request: nil,
-                 request_uri: nil, claims: nil)
+                 request_uri: nil, claims: nil, user_code: nil)
+    @user_code = user_code.presence
     @requested_claims = self.class.parse_claims(claims)
     @request_object = request.presence
     @request_uri = request_uri.presence
@@ -126,8 +128,13 @@ class Authorization
       "prompt" => prompt.sort.join(" ").presence,
       "max_age" => max_age,
       "resource" => audience.sort,
-      "claims" => requested_claims&.to_json
+      "claims" => requested_claims&.to_json,
+      "user_code" => user_code
     }.compact
+  end
+
+  def device?
+    user_code.present?
   end
 
   def fingerprint

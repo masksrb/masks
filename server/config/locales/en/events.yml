@@ -31,6 +31,10 @@ en:
         spent: "Backup code used"
       authenticator:
         disabled: "Authenticator removed"
+      device_code:
+        issued: "A device asked to be signed in"
+        approved: "A device was signed in"
+        refused: "A device was turned away"
       device:
         trusted: "Device trusted"
         named: "Device renamed"
