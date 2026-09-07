@@ -11,7 +11,7 @@ gem "rake", "~> 13.2"
 
 group :development do
   gem "sdoc", "~> 2.6"
-  gem "rdoc", "~> 6.14"
+  gem "rdoc", "~> 8.0"
 end
 
 group :test do
