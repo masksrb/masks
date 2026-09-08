@@ -105,6 +105,8 @@ class SingleSignOn
       )
 
       link(actor, fresh: true)
+    rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique
+      refuse!("sso-no-account", "an account here already answers for that address")
     end
 
     def profile

@@ -21,7 +21,10 @@ class Actor < ApplicationRecord
   validates :nickname, presence: true,
                        uniqueness: { scope: :tenant_id, case_sensitive: false },
                        format: { with: /\A[a-z0-9][a-z0-9._-]*\z/i }
-  validates :email, format: { with: URI::MailTo::EMAIL_REGEXP }, allow_blank: true
+  validates :email,
+            format: { with: URI::MailTo::EMAIL_REGEXP },
+            uniqueness: { scope: :tenant_id, case_sensitive: false },
+            allow_blank: true
 
   before_save :activate_once_a_password_exists
 

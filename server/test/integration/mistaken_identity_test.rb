@@ -528,6 +528,56 @@ class MistakenIdentityTest < ActionDispatch::IntegrationTest
     end
   end
 
+  # an address belongs to one account
+
+  test "the manage api refuses to give an address to a second account" do
+    within { @alice.update!(scopes: "openid masks:manage") }
+
+    client = create_client(@tenant, allowed_scopes: "openid masks:manage", approved_at: Time.current)
+    resource = issuer_for(@tenant).manage_resource
+
+    sign_in_as(@alice)
+    authorize(client_id: client.client_id, scope: "openid masks:manage", resource: resource)
+    consent! if awaiting_consent?
+
+    granted = token(
+      grant_type: "authorization_code", code: code_from,
+      redirect_uri: OidcFlow::REDIRECT_URI, code_verifier: verifier,
+      client_id: client.client_id
+    )
+
+    post "/manage/graphql",
+         params: {
+           query: "mutation($n: String!, $e: String) { createActor(nickname: $n, email: $e) { actor { uuid } } }",
+           variables: { n: "impostor", e: "alice@probe.example.com" }
+         }.to_json,
+         headers: {
+           "CONTENT_TYPE" => "application/json",
+           "HTTP_AUTHORIZATION" => "Bearer #{granted['access_token']}"
+         }
+
+    body = JSON.parse(response.body)
+
+    assert_match(/already been taken/i, body.dig("errors", 0, "message").to_s)
+    assert_nil within { Actor.find_by(nickname: "impostor") }
+  end
+
+  test "two tenants each keep an account at the same address" do
+    elsewhere = create_actor(other_tenant, nickname: "alice", email: "alice@probe.example.com")
+
+    assert elsewhere.persisted?
+    assert_not_equal @alice.id, elsewhere.id
+  end
+
+  test "an account with no address does not crowd out the others" do
+    within do
+      Actor.create!(nickname: "nobody")
+      Actor.create!(nickname: "nobody-else")
+
+      assert_equal 2, Actor.where(email: nil).count
+    end
+  end
+
   # one tenant's identity is not another's
 
   test "an access token minted in one tenant is refused in another" do

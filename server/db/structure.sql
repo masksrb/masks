@@ -1072,7 +1072,7 @@ CREATE INDEX index_actors_on_tenant_id ON public.actors USING btree (tenant_id);
 -- Name: index_actors_on_tenant_id_and_email; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX index_actors_on_tenant_id_and_email ON public.actors USING btree (tenant_id, email);
+CREATE UNIQUE INDEX index_actors_on_tenant_id_and_email ON public.actors USING btree (tenant_id, email);
 
 
 --
@@ -2042,6 +2042,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260908000001'),
 ('20260907000005'),
 ('20260907000004'),
 ('20260907000003'),
