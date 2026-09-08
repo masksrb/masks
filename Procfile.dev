@@ -1,4 +1,4 @@
 web: cd server && bin/rails server -p ${PORT:-5555} -b 127.0.0.1
 vite: cd server && bin/vite dev
 worker: cd server && bin/jobs
-docs: cd docs && npm run dev -- --port ${DOCS_PORT:-4321}
+docs: cd docs && ASTRO_DEV_BACKGROUND=1 npm run dev -- --port ${DOCS_PORT:-4321}

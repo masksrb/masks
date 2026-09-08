@@ -2,10 +2,12 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+PORT="${PORT:-5555}"
+
 if command -v overmind >/dev/null; then
-  exec overmind start -f Procfile.dev
+  exec env OVERMIND_PORT="$PORT" overmind start -f Procfile.dev
 elif command -v foreman >/dev/null; then
-  exec foreman start -f Procfile.dev
+  exec foreman start -f Procfile.dev -p "$PORT"
 else
   cd server && exec bin/rails server -p "${PORT:-5555}" -b 127.0.0.1
 fi
