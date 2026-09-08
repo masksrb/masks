@@ -61,7 +61,8 @@ CREATE TABLE public.actors (
     backup_codes_generated_at timestamp(6) without time zone,
     activated_at timestamp(6) without time zone,
     webauthn_id character varying,
-    otp_last_step bigint
+    otp_last_step bigint,
+    muted_notifications jsonb DEFAULT '[]'::jsonb NOT NULL
 );
 
 ALTER TABLE ONLY public.actors FORCE ROW LEVEL SECURITY;
@@ -2043,6 +2044,7 @@ SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
 ('20260908000001'),
+('20260907000006'),
 ('20260907000005'),
 ('20260907000004'),
 ('20260907000003'),

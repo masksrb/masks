@@ -148,6 +148,18 @@ class Actor < ApplicationRecord
     DeviceFactor.forget!(actor: self)
   end
 
+  def notified?(action)
+    Notifications.mailed?(action) && !muted_notifications.include?(action.to_s)
+  end
+
+  def notifications
+    Notifications::MAILED - muted_notifications
+  end
+
+  def notifications=(wanted)
+    self.muted_notifications = Notifications::MAILED - Array(wanted).map(&:to_s)
+  end
+
   def otp?
     otp_enabled_at.present? && otp_secret.present?
   end

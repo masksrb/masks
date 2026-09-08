@@ -29,6 +29,28 @@ class ActorMailer < ApplicationMailer
     )
   end
 
+  def notification(actor, event, tenant_name:, origin: nil)
+    return message unless deliverable?
+
+    told = Notifications.told(event, tenant_name)
+
+    @actor = actor
+    @event = event
+    @tenant_name = tenant_name
+    @said = t("actor_mailer.notification.said.#{event.action}", **told, default: Notifications.said(event))
+    @where = Notifications.where(event)
+    @at = Notifications.at(event, actor)
+    @by = event.by if event.by && event.by_id != actor.id
+    @url = origin.presence && "#{origin}/"
+    @settings = origin.presence && "#{origin}/#notifications"
+
+    mail(
+      from: self.class.from,
+      to: actor.email,
+      subject: t("actor_mailer.notification.subject", said: Notifications.said(event), tenant: tenant_name)
+    )
+  end
+
   def email_verification(actor, url, tenant_name:)
     return message unless deliverable?
 

@@ -876,6 +876,26 @@
     outline-offset: 2px;
   }
 
+  .check-set {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0.875rem 0 0;
+    border: 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .check-set:first-of-type {
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  .check-set legend {
+    padding: 0;
+    margin-bottom: 0.5rem;
+  }
+
   .action {
     position: relative;
     display: inline-flex;

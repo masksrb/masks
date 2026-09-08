@@ -1,0 +1,15 @@
+<%= @said %>
+<% if @by %>
+<%= t(".by", nickname: @by.nickname) %>
+<% end %>
+<%= t(".seen", at: l(@at, format: :notification)) %>
+<% if @where.present? %>
+<%= @where %>
+<% end %>
+<%= t(".wrong") %>
+<% if @url %>
+<%= @url %>
+<% end %>
+<% if @settings %>
+<%= t(".manage") %> <%= @settings %>
+<% end %>

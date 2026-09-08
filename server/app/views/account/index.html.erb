@@ -24,6 +24,7 @@
         <li><a href="#passkeys"><%= t(".nav.passkeys") %></a></li>
         <li><a href="#devices"><%= t(".nav.devices") %></a></li>
         <li><a href="#email"><%= t(".nav.email") %></a></li>
+        <li><a href="#notifications"><%= t(".nav.notifications") %></a></li>
         <li><a href="#password"><%= t(".nav.password") %></a></li>
         <li><a href="#activity"><%= t(".nav.activity") %></a></li>
       </ul>
@@ -266,6 +267,36 @@
 
           <%= button_to t(".email.send_link"), account_verification_path,
                 class: "action action-quiet action-sm" %>
+        <% end %>
+      </section>
+
+      <section id="notifications" class="place-section">
+        <h2><%= t(".notifications.heading") %></h2>
+
+        <p class="aside"><%= t(".notifications.lede") %></p>
+
+        <% unless Notifications.mailable?(@actor) %>
+          <p class="aside"><%= t(".notifications.silent") %></p>
+        <% end %>
+
+        <%= form_with url: account_notifications_path, method: :patch, class: "flow-tight" do |form| %>
+          <%= hidden_field_tag "notifications[]", "" %>
+
+          <% Notifications::GROUPS.each do |group, actions| %>
+            <fieldset class="check-set">
+              <legend class="field-label"><%= t("notifications.groups.#{group}") %></legend>
+
+              <% actions.each do |action| %>
+                <label class="check">
+                  <%= check_box_tag "notifications[]", action, @actor.notified?(action),
+                        id: "notify-#{action.tr('.', '-')}" %>
+                  <span><%= t("events.actions.#{action}") %></span>
+                </label>
+              <% end %>
+            </fieldset>
+          <% end %>
+
+          <button type="submit" class="action action-sm"><%= t(".notifications.submit") %></button>
         <% end %>
       </section>
 

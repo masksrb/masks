@@ -1,0 +1,14 @@
+en:
+  time:
+    formats:
+      notification: "%B %-d, %Y at %H:%M %Z"
+
+  notifications:
+    saved: "Saved."
+
+    groups:
+      password: "Password"
+      factors: "Passkeys and second factors"
+      sessions: "Sign-ins and devices"
+      applications: "Applications and providers"
+      account: "Account"

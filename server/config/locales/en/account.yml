@@ -11,6 +11,7 @@ en:
         passkeys: "Passkeys"
         devices: "Devices"
         email: "Email"
+        notifications: "Notifications"
         password: "Password"
         activity: "Activity"
 
@@ -66,6 +67,12 @@ en:
         confirmed: "%{email} — confirmed."
         unconfirmed: "%{email} — unconfirmed."
         send_link: "Send a link"
+
+      notifications:
+        heading: "Notifications"
+        lede: "Everything here is on until you turn it off. These arrive as they happen — nothing is batched, and none of them can be replied to."
+        silent: "Nothing is being sent. These only go to a confirmed address, and this account does not have one yet."
+        submit: "Save"
 
       password:
         heading: "Password"

@@ -97,6 +97,8 @@ class Event < ApplicationRecord
 
   include Paged
 
+  after_create_commit :raise_notification
+
   class << self
     def record!(action, actor: nil, by: :subject, client: nil, device: :ambient,
                 ip_address: :ambient, user_agent: :ambient, **details)
@@ -124,4 +126,10 @@ class Event < ApplicationRecord
   def readonly?
     persisted?
   end
+
+  private
+
+    def raise_notification
+      Notifications.raised(self)
+    end
 end

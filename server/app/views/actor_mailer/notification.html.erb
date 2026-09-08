@@ -1,0 +1,20 @@
+<p class="lede"><%= @said %></p>
+
+<% if @by %>
+  <p class="lede"><%= t(".by", nickname: @by.nickname) %></p>
+<% end %>
+
+<% if @url %>
+  <%= render "action", url: @url, label: t(".action") %>
+<% end %>
+
+<p class="meta">
+  <%= t(".seen", at: l(@at, format: :notification)) %>
+  <% if @where.present? %>
+    <br><span class="strong"><%= @where %></span>
+  <% end %>
+  <br><%= t(".wrong") %>
+  <% if @settings %>
+    <br><%= link_to t(".manage"), @settings %>
+  <% end %>
+</p>

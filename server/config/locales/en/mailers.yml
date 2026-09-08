@@ -21,6 +21,42 @@ en:
       action: "Reset your password"
       expiry: "Works once, expires in %{duration}. Setting a new password signs you out everywhere else. If this was not you, ignore it — nothing has changed."
 
+    notification:
+      subject: "%{said} — %{tenant}"
+      action: "Review your account"
+      by: "%{nickname} did this, not you."
+      seen: "Recorded %{at}."
+      wrong: "If this was not you, change your password and sign out everywhere."
+      manage: "Choose which of these arrive"
+
+      said:
+        password:
+          changed: "The password on your %{tenant} account was changed."
+          reset_completed: "Your %{tenant} password was reset through a link sent to this address. Every other session was signed out."
+        passkey:
+          added: "A passkey was added to your %{tenant} account. It can now sign in without a password."
+          removed: "A passkey was removed from your %{tenant} account."
+        backup_codes:
+          generated: "A fresh set of backup codes was generated for your %{tenant} account. The codes printed before this no longer work."
+        backup_code:
+          spent: "A backup code was used to sign in to your %{tenant} account. %{remaining} are left."
+        authenticator:
+          disabled: "The authenticator app on your %{tenant} account was removed. It is no longer asked for at sign-in."
+        session:
+          started: "Somebody signed in to your %{tenant} account on a device that had not been seen before."
+          revoked: "A session on your %{tenant} account was ended for you."
+        device:
+          blocked: "A device was blocked from your %{tenant} account. It cannot sign in until somebody unblocks it."
+        consent:
+          granted: "%{client} was allowed into your %{tenant} account and can now read what you agreed to share."
+        connection:
+          linked: "%{provider} was connected to your %{tenant} account and can now be used to sign in."
+          unlinked: "%{provider} was disconnected from your %{tenant} account."
+        device_code:
+          approved: "%{client} was signed in to your %{tenant} account from a device that showed you a code."
+        actor:
+          scopes_changed: "What your %{tenant} account is allowed to do was changed."
+
     email_verification:
       subject: "Confirm your email address for %{tenant}"
       confirm_html: "Confirm this address for %{nickname} at %{tenant}."
