@@ -30,7 +30,7 @@ class SchemaReference
         Everything the console can ask for and everything it can change. `/manage/graphql` accepts a
         bearer carrying `masks:manage`, issued for this tenant's manage resource and no other.
 
-        Generated from `ManageSchema` by `bin/reference`. CI fails when this page and the
+        Generated from `ManageSchema` by `./dev reference`. CI fails when this page and the
         schema disagree.
       HEAD
     end

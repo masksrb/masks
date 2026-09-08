@@ -36,7 +36,7 @@ jobs:
           key: suite-${{ env.SUITE_REF }}
 
       - name: Run the OpenID Foundation OP test plans
-        run: bin/conformance run
+        run: ./dev conformance run
 
       - name: Collect the suite's logs
         if: always()

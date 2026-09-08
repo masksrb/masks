@@ -10,7 +10,7 @@ description: The browser package that signs a single-page app in against masks.
 ---
 
 The BFF and browser-PKCE halves of \`@masks/client\`, generated from its TypeScript by
-\`bin/reference\`. CI fails when this page and the source disagree.
+\`./dev reference\`. CI fails when this page and the source disagree.
 
 `;
 

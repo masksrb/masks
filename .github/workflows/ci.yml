@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
-  format:
+  lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -34,14 +34,15 @@ jobs:
         run: |
           npm ci --prefix server
           npm ci --prefix web
-      - name: Every formatter and linter, the same ones bin/fmt runs
+      - name: Every formatter and linter, the same ones dev fmt runs
         env:
           RUBOCOP_FORMAT: github
-        run: bin/fmt --check
+        run: ./dev fmt --check
       - name: Lint the workflows
         uses: raven-actions/actionlint@v2
 
   scan:
+    needs: lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -57,29 +58,21 @@ jobs:
         run: bin/bundler-audit
 
   test:
+    needs: lint
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [unit, integration, engine, client, web]
     steps:
       - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v4
       - uses: crazy-max/ghaction-github-runtime@v3
-      - name: The Rails suite, in the container it ships in
-        run: bin/test server
-
-  client:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - name: Both halves of the gem, and a gem build
-        run: bin/test client
-
-  web:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - name: The browser package
-        run: bin/test web
+      - name: ${{ matrix.suite }}, in the container it ships in
+        run: ./dev test ${{ matrix.suite }}
 
   boot:
+    needs: lint
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -118,6 +111,7 @@ jobs:
         run: bin/rails db:prepare zeitwerk:check
 
   frontend:
+    needs: lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -138,8 +132,8 @@ jobs:
         working-directory: server
         run: npx vite build
 
-  # The generators read the code, not the database, so this needs no postgres.
   reference:
+    needs: lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -156,24 +150,37 @@ jobs:
         env:
           RAILS_ENV: test
         run: |
-          bin/reference
+          ./dev reference
           git diff --exit-code -- docs ||
             {
-              echo "::error::The reference pages are stale. Run bin/reference and commit."
+              echo "::error::The reference pages are stale. Run ./dev reference and commit."
               exit 1
             }
 
-  # Pushing is release.yml's job, and it already tags every commit on main. This
-  # only proves the Dockerfile still builds before the merge that would publish it.
-  image:
-    if: github.event_name == 'pull_request'
+  build:
+    needs: [test, scan, boot, frontend, reference]
     runs-on: ubuntu-latest
     permissions:
       contents: read
     steps:
       - uses: actions/checkout@v7
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+          working-directory: client
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: server/.node-version
+          cache: npm
+          cache-dependency-path: web/package-lock.json
       - uses: docker/setup-buildx-action@v4
-      - name: Build the server image
+      - name: The gem
+        working-directory: client
+        run: gem build masks.gemspec
+      - name: The browser package
+        working-directory: web
+        run: npm ci && npm run build
+      - name: The server image
         uses: docker/build-push-action@v7
         with:
           context: server

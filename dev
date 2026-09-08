@@ -24,6 +24,9 @@ USAGE = <<~TEXT
     console        a rails console
     test [suite]   unit, integration, engine, client, web, conformance
     image [build]  run the production image the way it deploys, and check it
+    conformance    up | run | logs | down | plans
+    reference      regenerate the reference pages from the code
+    fmt [--check]  format everything, or check it
 
   One tenant answers at http://masks.localhost:#{APP_PORT}, its docs at
   http://masks.localhost:#{DOCS_PORT}. With --multi the stack declares demo and
@@ -103,6 +106,104 @@ def image(args)
   puts "  http://demo.masks.localhost:#{IMAGE_PORT}\n\n"
 end
 
+SUITE_REF = ENV.fetch("SUITE_REF", "release-v5.2.4")
+SUITE_REPO = ENV.fetch("SUITE_REPO", "https://gitlab.com/openid/conformance-suite.git")
+
+PLANS = [
+  "oidcc-config-certification-test-plan",
+  "oidcc-basic-certification-test-plan[server_metadata=discovery][client_registration=dynamic_client]"
+].freeze
+
+def conformance(args)
+  here = File.join(ROOT, "test", "conformance")
+  suite = File.join(here, ".suite")
+  ENV["SUITE_REF"] = SUITE_REF
+  ENV["SUITE_PORT"] ||= "8443"
+
+  case args.first
+  when "logs" then return run("docker", "compose", "logs", "-f", args[1] || "server", chdir: here)
+  when "down" then return run("docker", "compose", "down", "-v", "--remove-orphans", chdir: here)
+  when "plans" then return puts(PLANS)
+  end
+
+  if File.directory?(File.join(suite, ".git"))
+    run!("git", "-C", suite, "fetch", "--depth", "1", "origin", "refs/tags/#{SUITE_REF}")
+    run!("git", "-C", suite, "checkout", "--detach", "FETCH_HEAD")
+  else
+    run!("git", "clone", "--depth", "1", "--branch", SUITE_REF, SUITE_REPO, suite)
+  end
+
+  Dir.mkdir(File.join(here, "results")) unless File.directory?(File.join(here, "results"))
+
+  run!("docker", "compose", "up", "-d", "--wait", "masks", "proxy", "mongodb", "server", "nginx",
+       chdir: here)
+  run!("sh", "-c", "docker compose exec -T masks ./bin/rails runner - < owner.rb", chdir: here)
+
+  return true if args.first == "up"
+
+  plan = PLANS.flat_map { |name| [ "'#{name}'", "/conformance/masks.json" ] }.join(" ")
+
+  run("sh", "-c", <<~SH, chdir: here)
+    docker compose run --rm runner \
+      "pip install --quiet -r /suite/scripts/requirements.txt && \
+       exec python /suite/scripts/run-test-plan.py \
+         --export-dir /results \
+         --expected-failures-file /conformance/expected-failures.json \
+         --expected-skips-file /conformance/expected-skips.json \
+         --verbose #{plan}" 2>&1 | tee results/run.log
+  SH
+end
+
+def reference
+  run!("bin/rails", "docs:reference", chdir: File.join(ROOT, "server"))
+
+  client = File.join(ROOT, "client")
+  run("sh", "-c", "bundle check >/dev/null 2>&1 || bundle install --quiet", chdir: client)
+  run!("bundle", "exec", "rake", "reference:mdx", chdir: client)
+
+  docs = File.join(ROOT, "docs")
+  run!("npm", "ci", chdir: docs) unless File.directory?(File.join(docs, "node_modules"))
+  run!("npm", "run", "reference", chdir: docs)
+end
+
+GLOBS = [
+  "*.{yml,yaml,md}",
+  ".github/**/*.{yml,yaml}",
+  "server/config/**/*.{yml,yaml}",
+  "test/conformance/**/*.{yml,yaml}"
+].freeze
+
+def shellcheck
+  scripts, = Open3.capture2("shfmt", "-f", "server/bin", chdir: ROOT)
+  scripts = scripts.split("\n").reject(&:empty?)
+
+  scripts.empty? || run("shellcheck", *scripts)
+end
+
+def fmt(args)
+  usage unless args.empty? || args == [ "--check" ]
+  check = args.first == "--check"
+
+  %w[shfmt shellcheck].each do |tool|
+    next if system("command -v #{tool} > /dev/null")
+
+    die("#{tool} is not on your PATH, and CI checks with it. brew bundle")
+  end
+
+  ok = [
+    run("bundle", "exec", "rubocop", *(check ? [ "--format", ENV.fetch("RUBOCOP_FORMAT", "progress") ] : [ "-a" ])),
+    *%w[server web].map do |dir|
+      run("npx", "biome", "check", *([ "--write" ] unless check), chdir: File.join(ROOT, dir))
+    end,
+    run("npx", "--yes", "prettier@3.9.6", check ? "--check" : "--write",
+        "--no-error-on-unmatched-pattern", *GLOBS),
+    run("shfmt", check ? "-d" : "-w", "-i", "2", "-ci", "server/bin"),
+    shellcheck
+  ]
+
+  exit(ok.all? ? 0 : 1)
+end
+
 SUITES = {
   "unit" => [ "server", "bin/rake", "db:prepare", "test:unit" ],
   "integration" => [ "server", "bin/rake", "db:prepare", "test:integration" ],
@@ -125,7 +226,7 @@ def test(names)
     puts "\n== #{name}\n\n"
 
     if name == "conformance"
-      run("bin/conformance", "run")
+      conformance([ "run" ])
     else
       run(*tests("run", "--rm", "--build", *SUITES.fetch(name)))
     end
@@ -152,5 +253,8 @@ when "psql" then run!(*compose("exec", "postgres", "psql", "-U", "postgres", mul
 when "console" then run!(*compose("exec", "masks", "bin/rails", "console", multi: multi))
 when "image" then image(ARGV)
 when "test" then test(ARGV)
+when "conformance" then conformance(ARGV)
+when "reference" then reference
+when "fmt" then fmt(ARGV)
 else usage
 end
