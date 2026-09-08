@@ -1,0 +1,147 @@
+name: masks
+
+x-app: &app
+  build:
+    context: ./server
+    dockerfile: Dockerfile.dev
+    additional_contexts:
+      web: ./web
+  image: masks-dev
+  pull_policy: never
+  volumes:
+    - ./server:/rails
+    - ./web:/web
+    - ./compose/no-dotenv:/rails/.env:ro
+    - modules:/rails/node_modules
+    - web-modules:/web/node_modules
+
+x-env: &env
+  POSTGRES_HOST: postgres
+  POSTGRES_PORT: 5432
+  POSTGRES_USER: masks
+  POSTGRES_PASSWORD: masks
+  SECRET_KEY_BASE: dev_only_secret_key_base_not_for_real_deployments
+  ENCRYPTION_PRIMARY_KEY: dev_only_primary_key_not_for_real_credentials
+  ENCRYPTION_DETERMINISTIC_KEY: dev_only_deterministic_key_not_for_real_use
+  ENCRYPTION_KEY_DERIVATION_SALT: dev_only_key_derivation_salt_not_for_real
+  RAILS_ASSUME_SSL: "false"
+  RAILS_FORCE_SSL: "false"
+  PG_BIN_PATH: ""
+  MASKS_TENANT: ${MASKS_TENANT:-masks}
+  MASKS_HOST_SUFFIX: masks.localhost
+  DEV_ALLOWED_HOSTS: .localhost,masks-vite
+  DEV_CLIENT_PORT: ${MASKS_VITE_PORT:-3036}
+  VITE_RUBY_HOST: masks-vite
+  VITE_RUBY_SKIP_PROXY: "false"
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "${MASKS_POSTGRES_PORT:-5435}:5432"
+    volumes:
+      - postgres:/var/lib/postgresql/data
+      - ./server/db/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  masks:
+    <<: *app
+    environment: *env
+    ports:
+      - "${MASKS_PORT:-12345}:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost/up > /dev/null"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 180s
+
+  masks-vite:
+    <<: *app
+    command: ["./bin/dev-assets"]
+    environment:
+      <<: *env
+      VITE_RUBY_HOST: 0.0.0.0
+    ports:
+      - "${MASKS_VITE_PORT:-3036}:3036"
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo > /dev/tcp/127.0.0.1/3036"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 180s
+
+  masks-worker:
+    <<: *app
+    command: ["./bin/jobs"]
+    environment: *env
+    depends_on:
+      masks:
+        condition: service_healthy
+
+  masks-image:
+    profiles: ["image"]
+    build:
+      context: ./server
+      additional_contexts:
+        web: ./web
+    image: masks:dev
+    environment:
+      <<: *env
+      MASKS_TENANT: ""
+      MASKS_TENANTS: demo,acme
+      MASKS_PUBLIC_ORIGIN_TEMPLATE: http://%{subdomain}.masks.localhost:${MASKS_IMAGE_PORT:-5556}
+      POSTGRES_DATABASE: masks_image
+      SOLID_QUEUE_IN_PUMA: "true"
+      VITE_RUBY_HOST: ""
+    ports:
+      - "${MASKS_IMAGE_PORT:-5556}:80"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost/up > /dev/null"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  masks-docs:
+    image: node:22-alpine
+    working_dir: /docs
+    command:
+      - sh
+      - -c
+      - "npm ci && exec npx astro dev --ignore-lock --host 0.0.0.0 --port 4321"
+    environment:
+      ASTRO_DEV_BACKGROUND: "1"
+      DEV_ALLOWED_HOSTS: .localhost
+      DEV_CLIENT_PORT: ${MASKS_DOCS_PORT:-12346}
+    ports:
+      - "${MASKS_DOCS_PORT:-12346}:4321"
+    volumes:
+      - ./docs:/docs
+      - docs-modules:/docs/node_modules
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:4321/"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 120s
+
+volumes:
+  postgres:
+  modules:
+  web-modules:
+  docs-modules:

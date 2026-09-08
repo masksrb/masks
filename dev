@@ -1,0 +1,120 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require "json"
+require "net/http"
+require "open3"
+require "shellwords"
+
+ROOT = __dir__
+
+APP_PORT = ENV.fetch("MASKS_PORT", "12345")
+DOCS_PORT = ENV.fetch("MASKS_DOCS_PORT", "12346")
+IMAGE_PORT = ENV.fetch("MASKS_IMAGE_PORT", "5556")
+
+USAGE = <<~TEXT
+  usage: dev [command] [--multi]
+
+    up             build and run the stack in the foreground
+    down           stop it, keeping the volumes
+    reset          throw the volumes away and start over
+    logs [service] follow one service, or all of them
+    ps             what is running
+    psql           a shell on postgres
+    console        a rails console
+    image [build]  run the production image the way it deploys, and check it
+
+  One tenant answers at http://masks.localhost:#{APP_PORT}, its docs at
+  http://masks.localhost:#{DOCS_PORT}. With --multi the stack declares demo and
+  acme instead, at http://demo.masks.localhost:#{APP_PORT}.
+TEXT
+
+def die(message)
+  warn message
+  exit 1
+end
+
+def usage
+  warn USAGE
+  exit 64
+end
+
+def run(*command, chdir: ROOT)
+  system(*command, chdir: chdir)
+end
+
+def run!(*command, chdir: ROOT)
+  run(*command, chdir: chdir) || die("failed: #{command.shelljoin}")
+end
+
+def compose(*args, multi: false, profile: nil)
+  files = [ "compose.yml", *("compose.multi.yml" if multi) ]
+
+  [ "docker", "compose",
+   *files.flat_map { |file| [ "-f", file ] },
+   *([ "--profile", profile ] if profile),
+   *args ]
+end
+
+def announce(multi)
+  hosts = multi ? %w[demo acme].map { |t| "#{t}.masks.localhost" } : [ "masks.localhost" ]
+
+  puts
+  hosts.each { |host| puts "  masks   http://#{host}:#{APP_PORT}" }
+  puts "  docs    http://masks.localhost:#{DOCS_PORT}"
+  puts
+end
+
+def up(multi)
+  announce(multi)
+  run!(*compose("up", "--build", "--abort-on-container-failure", multi: multi))
+end
+
+def get(url)
+  response = Net::HTTP.get_response(URI(url))
+  response.is_a?(Net::HTTPSuccess) ? response.body : die("#{url} answered #{response.code}")
+rescue SystemCallError => error
+  die("#{url} is unreachable: #{error.message}")
+end
+
+def image(args)
+  return run!(*compose("build", "masks-image", profile: "image")) if args.first == "build"
+
+  run!(*compose("up", "-d", "--build", "--wait", "masks-image", profile: "image"))
+
+  kids = %w[demo acme].map do |tenant|
+    origin = "http://#{tenant}.masks.localhost:#{IMAGE_PORT}"
+    config = JSON.parse(get("#{origin}/.well-known/openid-configuration"))
+
+    unless config["issuer"] == origin
+      die("#{tenant} advertises #{config["issuer"].inspect}, expected #{origin.inspect}")
+    end
+
+    keys = JSON.parse(get("#{origin}/.well-known/jwks.json"))["keys"]
+    die("#{tenant} publishes no signing keys") if keys.nil? || keys.empty?
+
+    keys.first["kid"]
+  end
+
+  die("both tenants sign with #{kids.first} — keys are not per-tenant") if kids.uniq.size == 1
+
+  puts "\n  demo and acme each answer at their own origin, with keys of their own."
+  puts "  http://demo.masks.localhost:#{IMAGE_PORT}\n\n"
+end
+
+command = ARGV.shift || "up"
+multi = !ARGV.delete("--multi").nil?
+
+case command
+when "up" then up(multi)
+when "down" then run!(*compose("down", multi: multi, profile: "image"))
+when "reset"
+  run!(*compose("down", "-v", "--remove-orphans", multi: multi, profile: "image"))
+  up(multi)
+when "logs" then run!(*compose("logs", "-f", *ARGV, multi: multi))
+when "ps" then run!(*compose("ps", multi: multi))
+when "psql" then run!(*compose("exec", "postgres", "psql", "-U", "postgres", multi: multi))
+when "console" then run!(*compose("exec", "masks", "bin/rails", "console", multi: multi))
+when "image" then image(ARGV)
+else usage
+end

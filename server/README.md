@@ -9,11 +9,11 @@ against* it takes the [`masks` gem](../client) instead.
 **Documentation: [masks.pages.dev](https://masks.pages.dev)**
 
 ```sh
-bin/setup   # dependencies, database, two declared tenants
-bin/dev     # http://demo.auth.test:5555
+./dev       # http://masks.localhost:12345
 ```
 
-Run these from the repository root, not from here.
+Run that from the repository root, not from here. It builds and runs the whole stack in
+containers — nothing is installed on the host.
 
 ## What it is
 
@@ -41,7 +41,8 @@ db/                  structure.sql, because schema.rb cannot represent a policy
 ## Configuration
 
 Everything that names a host, a port or a credential arrives through the environment.
-`.env.example` documents the full set, and `bin/setup` copies it to `.env`.
+`.env.example` documents the full set; `compose.yml` at the repository root sets what the dev
+stack needs.
 
 The four that matter most:
 

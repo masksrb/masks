@@ -44,14 +44,22 @@ services:
 `deploy/roles/masks` is the same thing as an Ansible role, behind a reverse proxy.
 
 ```sh
-bin/setup   # dependencies, databases, two declared tenants
-bin/dev     # http://demo.auth.test:5555
+./dev       # http://masks.localhost:12345, docs on :12346
 bin/test    # all three suites, in containers
 ```
 
-`bin/test` needs docker and nothing else — no ruby, no node, no postgres on the host. It runs the
-three trees above that have suites, keeps going after a failure, and names the ones that failed at
-the end. `bin/test client web` runs a subset; `bin/test down` drops the cache volumes.
+`./dev` needs docker and nothing else — no ruby, no node, no postgres on the host. It runs the whole
+stack in the foreground: the provider, vite, the worker and the doc site, all reloading. One tenant
+answers at `masks.localhost`, which is what a single-tenant deployment looks like. `./dev --multi`
+declares `demo` and `acme` instead and serves them at `demo.masks.localhost:12345` — no proxy and no
+`/etc/hosts`, because Rails reads the tenant off the Host header and `*.localhost` already resolves.
+
+`./dev image` runs the production image the way it deploys, then checks that each tenant advertises
+its own issuer and signs with a key of its own.
+
+`bin/test` also needs only docker. It runs the three trees above that have suites, keeps going after
+a failure, and names the ones that failed at the end. `bin/test client web` runs a subset;
+`bin/test down` drops the cache volumes.
 
 Both OpenID Foundation certification plans pass — `oidcc-config` and `oidcc-basic`, 2213 conditions,
 zero failures. `bin/conformance` runs them.

@@ -1,0 +1,14 @@
+x-tenants: &tenants
+  MASKS_TENANT: ""
+  MASKS_TENANTS: demo,acme
+  MASKS_PUBLIC_ORIGIN_TEMPLATE: http://%{subdomain}.masks.localhost:${MASKS_PORT:-12345}
+
+services:
+  masks:
+    environment: *tenants
+
+  masks-vite:
+    environment: *tenants
+
+  masks-worker:
+    environment: *tenants
