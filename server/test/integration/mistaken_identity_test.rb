@@ -1,7 +1,10 @@
 require "test_helper"
 require_relative "../support/fake_authenticator"
+require_relative "../support/upstream"
 
 class MistakenIdentityTest < ActionDispatch::IntegrationTest
+  include Federated
+
   API = "https://api.probe.example.com".freeze
   OTHER_API = "https://other.probe.example.com".freeze
 
@@ -469,6 +472,60 @@ class MistakenIdentityTest < ActionDispatch::IntegrationTest
 
     assert_response :redirect
     assert_empty within { Session.live.to_a }
+  end
+
+  # a federated identity reaches an account only by proving it
+
+  test "an upstream identity does not reach an account by naming its address" do
+    create_provider
+    within { @alice.update!(email_verified_at: Time.current) }
+
+    finish_sso(sub: "intruder", email: "alice@probe.example.com")
+
+    assert_nil signed_in_actor
+    assert_nil within { Connection.find_by(subject: "intruder") }
+  end
+
+  test "an upstream identity reaches the account once that account proves itself" do
+    create_provider
+    within { @alice.update!(email_verified_at: Time.current) }
+
+    finish_sso(sub: "upstream-alice", email: "alice@probe.example.com")
+    prove
+
+    assert_equal @alice.id, signed_in_actor&.id
+    assert_equal @alice.id, within { Connection.live.find_by(subject: "upstream-alice").actor_id }
+  end
+
+  test "the proof that links an upstream identity has to be the matched account's" do
+    create_provider
+    within { @alice.update!(email_verified_at: Time.current) }
+
+    finish_sso(sub: "intruder", email: "alice@probe.example.com")
+
+    post "/login", params: { event: "identify", identifier: "mallory" }, as: :json
+    prove
+
+    assert_equal @mallory.id, signed_in_actor&.id
+    assert_nil within { Connection.find_by(subject: "intruder") }
+  end
+
+  test "a provider answering for no domain provisions nobody" do
+    create_provider(provisions: true)
+
+    finish_sso(sub: "stranger", email: "stranger@probe.example.com")
+
+    assert_nil signed_in_actor
+    assert_equal 2, within { Actor.count }
+  end
+
+  test "a provider is bound to a claim its issuer never reassigns" do
+    within do
+      provider = Provider.new(key: "loose", name: "Loose", subject_claim: "email")
+
+      assert_not provider.valid?
+      assert_match(/never reassigns/, provider.errors.full_messages.join)
+    end
   end
 
   # one tenant's identity is not another's
