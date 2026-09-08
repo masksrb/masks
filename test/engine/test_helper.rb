@@ -1,9 +1,9 @@
-$LOAD_PATH.unshift File.expand_path("../lib", __dir__)
+$LOAD_PATH.unshift File.expand_path("../../client/lib", __dir__)
 
 ENV["RAILS_ENV"] = "test"
 
 require "minitest/autorun"
-require_relative "../offline"
+require_relative "../support/offline"
 require_relative "support/issuer"
 require_relative "support/dummy"
 require "rails/dom/testing"

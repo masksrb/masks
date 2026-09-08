@@ -32,7 +32,7 @@ jobs:
       - name: Cache the suite checkout
         uses: actions/cache@v6
         with:
-          path: conformance/.suite
+          path: test/conformance/.suite
           key: suite-${{ env.SUITE_REF }}
 
       - name: Run the OpenID Foundation OP test plans
@@ -40,7 +40,7 @@ jobs:
 
       - name: Collect the suite's logs
         if: always()
-        working-directory: conformance
+        working-directory: test/conformance
         run: |
           docker compose logs --no-color server > results/suite.log 2>&1 || true
           docker compose logs --no-color masks > results/masks.log 2>&1 || true
@@ -49,5 +49,5 @@ jobs:
         if: always()
         with:
           name: conformance-results
-          path: conformance/results
+          path: test/conformance/results
           if-no-files-found: warn

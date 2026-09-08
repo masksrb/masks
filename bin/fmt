@@ -8,7 +8,7 @@ GLOBS=(
   "*.{yml,yaml,md}"
   ".github/**/*.{yml,yaml}"
   "server/config/**/*.{yml,yaml}"
-  "conformance/**/*.{yml,yaml}"
+  "test/conformance/**/*.{yml,yaml}"
 )
 
 checking=false

@@ -20,10 +20,12 @@ services:
       target: test
       additional_contexts:
         web: ./web
-    command: ["bin/rails", "db:prepare", "test"]
+    command: ["bin/rake", "db:prepare", "test"]
     environment:
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
+    volumes:
+      - ./test:/test:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -41,6 +43,7 @@ services:
       BUNDLE_PATH: /bundle
     volumes:
       - ./client:/masks/client
+      - ./test:/masks/test:ro
       - client-bundle:/bundle
 
   web:

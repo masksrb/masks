@@ -1,7 +1,7 @@
-$LOAD_PATH.unshift File.expand_path("../lib", __dir__)
+$LOAD_PATH.unshift File.expand_path("../../client/lib", __dir__)
 
 require "minitest/autorun"
-require_relative "../offline"
+require_relative "../support/offline"
 require "socket"
 require "masks/client"
 

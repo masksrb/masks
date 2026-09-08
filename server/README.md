@@ -65,13 +65,13 @@ connect as `POSTGRES_USER`.
 ## Tests
 
 ```sh
-bin/test server      # in containers, from the repository root
-bin/rails test       # on the host, if you have the toolchain
+./dev test unit      # in containers, from the repository root
+bin/rake test        # on the host, if you have the toolchain
 ```
 
-Isolation is asserted directly in `test/models/tenant_isolation_test.rb` and
-`test/models/row_level_security_test.rb`. Enumeration resistance is asserted in
-`test/models/login_enumeration_test.rb`.
+Isolation is asserted directly in `test/unit/models/tenant_isolation_test.rb` and
+`test/unit/models/row_level_security_test.rb`. Enumeration resistance is asserted in
+`test/unit/models/login_enumeration_test.rb`.
 
 Rate limiting runs on `Rails.cache`, and the real store is configured in development and test as
 well as production — a `:null_store` would make every limit a silent no-op exactly where you would

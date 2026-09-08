@@ -76,14 +76,14 @@ Rake::Task["reference:classic"].enhance do
   end
 end
 
-%w[client rails].each do |half|
+%w[client engine].each do |half|
   Rake::TestTask.new("test:#{half}") do |t|
-    t.libs << "lib" << "test"
-    t.test_files = FileList["test/#{half}/**/*_test.rb"]
+    t.libs = [ "lib" ]
+    t.test_files = FileList["../test/#{half}/**/*_test.rb"]
     t.warning = false
   end
 end
 
-task test: %w[test:client test:rails]
+task test: %w[test:client test:engine]
 
 task default: :test

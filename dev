@@ -22,6 +22,7 @@ USAGE = <<~TEXT
     ps             what is running
     psql           a shell on postgres
     console        a rails console
+    test [suite]   unit, integration, engine, client, web, conformance
     image [build]  run the production image the way it deploys, and check it
 
   One tenant answers at http://masks.localhost:#{APP_PORT}, its docs at
@@ -102,6 +103,40 @@ def image(args)
   puts "  http://demo.masks.localhost:#{IMAGE_PORT}\n\n"
 end
 
+SUITES = {
+  "unit" => [ "server", "bin/rake", "db:prepare", "test:unit" ],
+  "integration" => [ "server", "bin/rake", "db:prepare", "test:integration" ],
+  "engine" => [ "client", "sh", "-c", "bundle install --quiet && bundle exec rake test:engine" ],
+  "client" => [ "client", "sh", "-c", "bundle install --quiet && bundle exec rake test:client" ],
+  "web" => [ "web" ]
+}.freeze
+
+def tests(*args)
+  [ "docker", "compose", "-f", "compose.test.yml",
+    *([ "-f", "compose.test.ci.yml" ] if ENV["CI"]),
+    *args ].compact
+end
+
+def test(names)
+  names = SUITES.keys + [ "conformance" ] if names.empty?
+  names.each { |name| usage unless SUITES.key?(name) || name == "conformance" }
+
+  failed = names.reject do |name|
+    puts "\n== #{name}\n\n"
+
+    if name == "conformance"
+      run("bin/conformance", "run")
+    else
+      run(*tests("run", "--rm", "--build", *SUITES.fetch(name)))
+    end
+  end
+
+  run(*tests("down", "--remove-orphans"))
+
+  die("\nfailed: #{failed.join(' ')}") if failed.any?
+  puts "\npassed: #{names.join(' ')}"
+end
+
 command = ARGV.shift || "up"
 multi = !ARGV.delete("--multi").nil?
 
@@ -116,5 +151,6 @@ when "ps" then run!(*compose("ps", multi: multi))
 when "psql" then run!(*compose("exec", "postgres", "psql", "-U", "postgres", multi: multi))
 when "console" then run!(*compose("exec", "masks", "bin/rails", "console", multi: multi))
 when "image" then image(ARGV)
+when "test" then test(ARGV)
 else usage
 end

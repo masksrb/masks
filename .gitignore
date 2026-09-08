@@ -15,8 +15,8 @@
 server/public/vite*
 docs/dist
 docs/.astro
-conformance/.suite
-conformance/results
+test/conformance/.suite
+test/conformance/results
 
 web/node_modules/
 web/dist/

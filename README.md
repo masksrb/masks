@@ -45,7 +45,7 @@ services:
 
 ```sh
 ./dev       # http://masks.localhost:12345, docs on :12346
-bin/test    # all three suites, in containers
+./dev test  # all five suites, in containers
 ```
 
 `./dev` needs docker and nothing else — no ruby, no node, no postgres on the host. It runs the whole
@@ -57,9 +57,11 @@ declares `demo` and `acme` instead and serves them at `demo.masks.localhost:1234
 `./dev image` runs the production image the way it deploys, then checks that each tenant advertises
 its own issuer and signs with a key of its own.
 
-`bin/test` also needs only docker. It runs the three trees above that have suites, keeps going after
-a failure, and names the ones that failed at the end. `bin/test client web` runs a subset;
-`bin/test down` drops the cache volumes.
+`./dev test` also needs only docker. Each suite is named for what it proves rather than for the tree
+it lives in: `unit` and `integration` are the provider, `engine` and `client` are the two halves of
+the gem, and `conformance` is the OpenID Foundation suite. Those five sit under `test/`, one
+directory each. `web` stays with the package it tests. `./dev test client web` runs a subset; it
+keeps going after a failure and names what failed.
 
 Both OpenID Foundation certification plans pass — `oidcc-config` and `oidcc-basic`, 2213 conditions,
-zero failures. `bin/conformance` runs them.
+zero failures. `./dev test conformance` runs them.

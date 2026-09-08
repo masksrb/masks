@@ -8,7 +8,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: postgres
     volumes:
-      - ../server/db/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d:ro
+      - ../../server/db/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -17,7 +17,7 @@ services:
 
   masks:
     build:
-      context: ../server
+      context: ../../server
     image: masks:conformance
     environment:
       POSTGRES_HOST: postgres

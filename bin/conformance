@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-cd "$(dirname "$0")/../conformance"
+cd "$(dirname "$0")/../test/conformance"
 
 export SUITE_REF="${SUITE_REF:-release-v5.2.4}"
 export SUITE_PORT="${SUITE_PORT:-8443}"
