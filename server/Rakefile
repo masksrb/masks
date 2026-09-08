@@ -1,22 +1,4 @@
-require "rake/testtask"
+
 require_relative "config/application"
 
 Rails.application.load_tasks
-
-%w[test test:integration].each do |name|
-  Rake::Task[name].clear if Rake::Task.task_defined?(name)
-end
-
-{ "unit" => "unit", "integration" => "integration" }.each do |name, dir|
-  Rake::TestTask.new("test:#{name}") do |t|
-    t.libs = [ "../test" ]
-    t.test_files = FileList["../test/#{dir}/**/*_test.rb"]
-    t.warning = false
-  end
-end
-
-Rake::TestTask.new(:test) do |t|
-  t.libs = [ "../test" ]
-  t.test_files = FileList["../test/{unit,integration}/**/*_test.rb"]
-  t.warning = false
-end
