@@ -12,6 +12,7 @@ class Provider < ApplicationRecord
   JWKS_INTERVAL = 5.minutes
   DISCOVERY_PATH = "/.well-known/openid-configuration".freeze
   ALGORITHMS = %w[RS256 RS384 RS512 ES256 ES384 ES512 PS256 PS384 PS512].freeze
+  SUBJECT_CLAIMS = %w[sub oid].freeze
 
   encrypts :client_secret
 
@@ -22,6 +23,10 @@ class Provider < ApplicationRecord
                   format: { with: /\A[a-z0-9][a-z0-9-]*\z/ }
   validates :name, :client_id, presence: true
   validates :authorization_url, :token_url, presence: true
+  validates :subject_claim, inclusion: {
+    in: SUBJECT_CLAIMS,
+    message: "must be a claim an issuer never reassigns: #{SUBJECT_CLAIMS.join(' or ')}"
+  }
   validate :urls_are_usable
   validate :authorize_params_stay_out_of_the_way
   validate :signing_in_needs_an_issuer
@@ -97,6 +102,12 @@ class Provider < ApplicationRecord
     domain = email.to_s.split("@").last.to_s.downcase
 
     domain.present? && allowed.include?(domain)
+  end
+
+  def authoritative_for?(email)
+    domain = email.to_s.split("@").last.to_s.downcase
+
+    domain.present? && email_domain_list.include?(domain)
   end
 
   def authorize_url(redirect_uri:, state:, scopes: nil, nonce: nil, challenge: nil, prompt: nil)
@@ -192,7 +203,7 @@ class Provider < ApplicationRecord
 
       profile = identify(tokens["access_token"]).except("iss", "aud", "exp", "iat", "nonce")
 
-      return claims unless profile["sub"].blank? || profile["sub"] == claims["sub"]
+      return claims unless profile["sub"].present? && profile["sub"] == claims["sub"]
 
       profile.merge(claims)
     rescue Refused, Unreachable

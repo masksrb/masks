@@ -3,6 +3,7 @@ module LoginStates
     EXPIRY = 12.hours
     WINDOW = 15.minutes
     HELD = "provider_handoff".freeze
+    CLAIM = "provider_claim".freeze
 
     accepts :provider, :code, :state, :error, :error_description
 
@@ -26,12 +27,23 @@ module LoginStates
 
     def start_over!
       login.store.delete(HELD)
+      login.store.delete(CLAIM)
+    end
+
+    def factor!
+      return unless enabled?
+
+      attach!
+
+      super
     end
 
     def cleanup!
-      held = login.store[HELD]
+      [ HELD, CLAIM ].each do |key|
+        held = login.store[key]
 
-      login.store.delete(HELD) if held && held["expires_at"].to_i <= Time.current.to_i
+        login.store.delete(key) if held && held["expires_at"].to_i <= Time.current.to_i
+      end
     end
 
     private
@@ -107,6 +119,8 @@ module LoginStates
       def signed_in(provider, settled)
         actor = settled[:actor]
 
+        return claim!(provider, actor, settled[:identity]) if settled[:claiming]
+
         login.identifier = actor.nickname
         login.actor = actor
 
@@ -116,6 +130,45 @@ module LoginStates
         Event.record!(
           Event::CONNECTION_SIGNED_IN,
           actor: actor, by: nil, provider: provider.key
+        )
+      end
+
+      def claim!(provider, actor, identity)
+        login.store[CLAIM] = {
+          "provider_id" => provider.id,
+          "actor_id" => actor.id,
+          "identity" => identity.slice(
+            provider.subject_claim, provider.label_claim, "email", "email_verified"
+          ),
+          "expires_at" => WINDOW.from_now.to_i
+        }
+
+        login.identifier = actor.nickname
+
+        warn! "sso-claiming"
+      end
+
+      def attach!
+        held = login.store[CLAIM]
+
+        return if held.blank?
+        return unless login.actor&.id == held["actor_id"] && login.touched?(:first_factor)
+
+        provider = ::Provider.signing_in.find_by(id: held["provider_id"])
+
+        login.store.delete(CLAIM)
+
+        return if provider.nil?
+
+        Connection.record!(
+          provider: provider, actor: login.actor, tokens: {}, identity: held["identity"]
+        ).signed_in!
+
+        login.noted! "oidc"
+
+        Event.record!(
+          Event::CONNECTION_LINKED,
+          actor: login.actor, by: nil, provider: provider.key
         )
       end
 

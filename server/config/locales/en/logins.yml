@@ -111,6 +111,8 @@ en:
       sso-no-account: "No account here matches that sign-in. Ask for an invitation."
       sso-unverified: "That provider did not confirm the address belongs to you."
       sso-domain-refused: "That address is not allowed to sign in here."
+      sso-unauthoritative: "That provider does not answer for that address here."
 
     notices:
       reset-sent: "If that account exists, a reset link is on its way."
+      sso-claiming: "An account here already holds that address. Sign in to it once and the two are linked."

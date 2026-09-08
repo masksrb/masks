@@ -33,7 +33,7 @@ class SingleSignOn
 
     admit!
 
-    claimed || provisioned || refuse_unknown!
+    matched || provisioned || refuse_unknown!
   end
 
   private
@@ -63,20 +63,31 @@ class SingleSignOn
       refuse_domain! unless provider.welcomes?(email)
     end
 
-    def claimed
+    def matched
       return nil unless verified?
 
       actor = Actor.find_by(email: email)
 
       return nil if actor.nil?
 
-      refuse_unclaimed! if actor.activated? && !actor.email_verified_at?
+      if actor.activated?
+        refuse_unclaimed! unless actor.email_verified_at?
+
+        return { actor: actor, identity: claims, claiming: true }
+      end
+
+      refuse_uninvited! unless authoritative?
 
       link(actor)
     end
 
+    def authoritative?
+      verified? && provider.authoritative_for?(email)
+    end
+
     def provisioned
       return nil unless provider.provisions?
+      return nil if email.present? && !authoritative?
       return nil if email.present? && Actor.exists?(email: email)
 
       actor = Actor.create!(
@@ -165,6 +176,14 @@ class SingleSignOn
       refuse!(
         "sso-unverified",
         "an account here holds that address without having confirmed it"
+      )
+    end
+
+    def refuse_uninvited!
+      refuse!(
+        "sso-unauthoritative",
+        "#{provider.name} does not answer for #{email.to_s.split('@').last}, " \
+        "so it cannot take up an invitation waiting there"
       )
     end
 

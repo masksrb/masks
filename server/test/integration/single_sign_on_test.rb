@@ -1,180 +1,23 @@
 require "test_helper"
-require "socket"
+require_relative "../support/upstream"
 
 class SingleSignOnTest < ActionDispatch::IntegrationTest
-  class Upstream
-    attr_reader :port, :requests, :claims
+  include Federated
 
-    def initialize(key)
-      @key = key
-      @claims = {}
-      @requests = []
-      @lock = Mutex.new
-      @server = TCPServer.new("127.0.0.1", 0)
-      @port = @server.addr[1]
-      @thread = Thread.new { serve }
-    end
-
-    def url(path = "")
-      "http://127.0.0.1:#{port}#{path}"
-    end
-
-    def announce(claims)
-      @lock.synchronize { @claims = claims }
-    end
-
-    def bodies_for(path)
-      @lock.synchronize { @requests.select { |one| one[:path] == path }.map { |one| one[:body] } }
-    end
-
-    def stop
-      @thread.kill
-      @server.close
-    rescue IOError
-      nil
-    end
-
-    def jwk
-      SigningKey.jwk_for(@key.public_key, "upstream-key")
-    end
-
-    private
-
-      def payload_for(path)
-        case path
-        when "/.well-known/openid-configuration"
-          {
-            "issuer" => url,
-            "authorization_endpoint" => url("/o/authorize"),
-            "token_endpoint" => url("/o/token"),
-            "userinfo_endpoint" => url("/o/userinfo"),
-            "jwks_uri" => url("/o/jwks")
-          }
-        when "/borrowed/.well-known/openid-configuration"
-          { "issuer" => "https://accounts.google.com" }
-        when "/o/jwks" then { "keys" => [ jwk ] }
-        when "/o/token" then { "access_token" => "upstream-access", "expires_in" => 3600, "id_token" => id_token }
-        when "/o/userinfo" then @lock.synchronize { @claims.slice("sub", "email", "email_verified") }
-        end
-      end
-
-      def id_token
-        held = @lock.synchronize { @claims.dup }
-
-        JWT.encode(
-          { "iss" => url, "aud" => "upstream-client", "exp" => 5.minutes.from_now.to_i,
-            "iat" => Time.current.to_i }.merge(held),
-          @key, "RS256", kid: "upstream-key", typ: "JWT"
-        )
-      end
-
-      def serve
-        loop do
-          socket = @server.accept
-          Thread.new { respond(socket) }
-        end
-      rescue IOError, Errno::EBADF
-        nil
-      end
-
-      def respond(socket)
-        line = socket.gets.to_s
-        length = 0
-
-        while (header = socket.gets) && header.strip != ""
-          length = header.split(":", 2).last.to_i if header.downcase.start_with?("content-length")
-        end
-
-        path = line.split(" ")[1].to_s.split("?").first
-        body = length.positive? ? socket.read(length).to_s : ""
-
-        @lock.synchronize { @requests << { path: path, body: Rack::Utils.parse_query(body) } }
-
-        found = payload_for(path)
-        payload = JSON.generate(found || { "error" => "not_found" })
-
-        socket.print [
-          "HTTP/1.1 #{found ? '200 OK' : '404 Not Found'}",
-          "Content-Type: application/json",
-          "Content-Length: #{payload.bytesize}",
-          "Connection: close",
-          "", payload
-        ].join("\r\n")
-      rescue Errno::EPIPE, IOError
-        nil
-      ensure
-        socket.close rescue nil
-      end
-  end
-
-  setup do
-    @upstream = Upstream.new(OpenSSL::PKey::RSA.generate(2048))
-    host! host_for(@tenant)
-  end
-
-  teardown { @upstream&.stop }
-
-  def create_provider(**attributes)
-    within(@tenant) do
-      Provider.create!(
-        key: "acme",
-        name: "Acme",
-        issuer: @upstream.url,
-        authorization_url: @upstream.url("/o/authorize"),
-        token_url: @upstream.url("/o/token"),
-        userinfo_url: @upstream.url("/o/userinfo"),
-        jwks_uri: @upstream.url("/o/jwks"),
-        client_id: "upstream-client",
-        client_secret: "upstream-secret",
-        signs_in: true,
-        **attributes
-      )
-    end
-  end
-
-  def begin_sso(key: "acme", rid: nil)
-    post "/login", params: { event: "provider", provider: key, rid: rid }.compact, as: :json
-
-    body = JSON.parse(response.body)
-    handed = body["redirectTo"]
-
-    handed ? Rack::Utils.parse_query(URI.parse(handed).query).merge("body" => body) : body
-  end
-
-  def finish_sso(sub:, email:, verified: true, key: "acme", **overrides)
-    handoff = overrides.delete(:handoff) || begin_sso(key: key)
-
-    @upstream.announce(
-      { "sub" => sub, "email" => email, "email_verified" => verified,
-        "nonce" => handoff["nonce"] }.merge(overrides.stringify_keys)
-    )
-
-    get "/login/provider/#{key}/callback",
-        params: { code: "upstream-code", state: handoff["state"] }
-
-    handoff
-  end
-
-  def refusals
-    within(@tenant) do
-      Event.where(action: Event::CONNECTION_REFUSED).map { |event| event.details["reason"].to_s }
-    end
-  end
-
-  def signed_in_actor
-    within(@tenant) { Session.live.order(created_at: :desc).first&.actor }
-  end
-
-  def warnings
-    flash[:warnings] || JSON.parse(response.body)["warnings"] rescue []
-  end
-
-  test "a confirmed address signs into the account that already holds it" do
+  test "a confirmed address asks the account that holds it to prove itself first" do
     create_provider
     actor = create_actor(@tenant, nickname: "ada", email: "ada@acme.test")
     within(@tenant) { actor.update!(email_verified_at: Time.current) }
 
     finish_sso(sub: "upstream-1", email: "ada@acme.test")
+
+    assert_nil signed_in_actor
+    assert_nil within(@tenant) { Connection.find_by(subject: "upstream-1") }
+
+    get "/login"
+    assert_equal "first-factor", auth_data["prompt"]
+
+    prove
 
     assert_equal actor.id, signed_in_actor&.id
 
@@ -193,6 +36,7 @@ class SingleSignOnTest < ActionDispatch::IntegrationTest
     within(@tenant) { actor.update!(email_verified_at: Time.current) }
 
     finish_sso(sub: "upstream-1", email: "ada@acme.test")
+    prove
     within(@tenant) { actor.update!(email: "moved@acme.test") }
 
     reset!
@@ -203,17 +47,26 @@ class SingleSignOnTest < ActionDispatch::IntegrationTest
     assert_equal 1, within(@tenant) { Connection.live.count }
   end
 
-  test "a revoked connection is taken up again rather than refused" do
+  test "a revoked connection is taken up again once the account proves itself" do
     create_provider
     actor = create_actor(@tenant, nickname: "ada", email: "ada@acme.test")
     within(@tenant) { actor.update!(email_verified_at: Time.current) }
 
     finish_sso(sub: "upstream-1", email: "ada@acme.test")
-    within(@tenant) { Connection.find_by(subject: "upstream-1").revoke!(upstream: false) }
+    prove
+
+    within(@tenant) do
+      Connection.find_by(subject: "upstream-1").revoke!(upstream: false)
+      Session.live.find_each(&:revoke!)
+    end
 
     reset!
     host! host_for(@tenant)
     finish_sso(sub: "upstream-1", email: "ada@acme.test")
+
+    assert_nil signed_in_actor
+
+    prove
 
     assert_equal actor.id, signed_in_actor&.id
     assert_equal 1, within(@tenant) { Connection.count }
@@ -257,7 +110,7 @@ class SingleSignOnTest < ActionDispatch::IntegrationTest
   end
 
   test "a provider that provisions creates the account and signs it in" do
-    create_provider(provisions: true)
+    create_provider(provisions: true, email_domains: "acme.test")
     create_actor(@tenant, nickname: "owner", email: "owner@acme.test")
 
     finish_sso(sub: "upstream-2", email: "grace@acme.test", name: "Grace Hopper")
@@ -275,7 +128,7 @@ class SingleSignOnTest < ActionDispatch::IntegrationTest
   end
 
   test "a provisioned username steps aside when the obvious one is taken" do
-    create_provider(provisions: true)
+    create_provider(provisions: true, email_domains: "acme.test")
     create_actor(@tenant, nickname: "grace", email: "someone@elsewhere.test")
 
     finish_sso(sub: "upstream-3", email: "grace@acme.test")
@@ -313,11 +166,21 @@ class SingleSignOnTest < ActionDispatch::IntegrationTest
     assert_equal 1, within(@tenant) { Actor.count }
   end
 
-  test "a provisioned account holds no address the provider did not confirm" do
+  test "a provider that answers for no domain provisions nobody" do
     create_provider(provisions: true)
     create_actor(@tenant, nickname: "owner", email: "owner@acme.test")
 
-    finish_sso(sub: "upstream-13", email: "hopeful@acme.test", verified: false)
+    finish_sso(sub: "upstream-13", email: "hopeful@acme.test")
+
+    assert_nil signed_in_actor
+    assert_equal 1, within(@tenant) { Actor.count }
+  end
+
+  test "a provider that confirms no address provisions an account without one" do
+    create_provider(provisions: true)
+    create_actor(@tenant, nickname: "owner", email: "owner@acme.test")
+
+    finish_sso(sub: "upstream-13b", email: nil, verified: false)
 
     actor = signed_in_actor
 
@@ -326,28 +189,15 @@ class SingleSignOnTest < ActionDispatch::IntegrationTest
     assert_nil actor.email_verified_at
   end
 
-  test "an unconfirmed address cannot lie in wait for the person it names" do
+  test "an invitation is taken up only by a provider that answers for its address" do
     create_provider(provisions: true)
     create_actor(@tenant, nickname: "owner", email: "owner@acme.test")
+    within(@tenant) { Actor.create!(nickname: "ada", email: "ada@acme.test") }
 
-    finish_sso(sub: "intruder", email: "ada@acme.test", verified: false)
+    finish_sso(sub: "stranger", email: "ada@acme.test")
 
-    planted = signed_in_actor
-
-    assert planted, refusals.join("; ")
-
-    reset!
-    host! host_for(@tenant)
-
-    finish_sso(sub: "ada", email: "ada@acme.test", verified: true)
-
-    within(@tenant) do
-      arrived = Connection.live.find_by(subject: "ada")
-
-      assert arrived, refusals.join("; ")
-      assert_not_equal planted.id, arrived.actor_id
-      assert_equal "ada@acme.test", arrived.actor.email
-    end
+    assert_nil signed_in_actor
+    assert_match "does not answer for acme.test", refusals.join("; ")
   end
 
   test "a confirmed address stays out of an active account that never confirmed it" do
@@ -361,7 +211,7 @@ class SingleSignOnTest < ActionDispatch::IntegrationTest
   end
 
   test "a confirmed address still takes up an invitation that is waiting" do
-    create_provider
+    create_provider(email_domains: "acme.test")
     create_actor(@tenant, nickname: "owner", email: "owner@acme.test")
     invited = within(@tenant) { Actor.create!(nickname: "ada", email: "ada@acme.test") }
 
@@ -448,8 +298,15 @@ class SingleSignOnTest < ActionDispatch::IntegrationTest
     create_provider
     actor = create_actor(@tenant, nickname: "ada", email: "ada@acme.test")
     within(@tenant) { actor.update!(email_verified_at: Time.current) }
-    enable_otp(actor)
 
+    finish_sso(sub: "upstream-8", email: "ada@acme.test")
+    prove
+
+    enable_otp(actor)
+    within(@tenant) { Session.live.find_each(&:revoke!) }
+
+    reset!
+    host! host_for(@tenant)
     finish_sso(sub: "upstream-8", email: "ada@acme.test")
 
     assert_nil signed_in_actor
@@ -460,7 +317,7 @@ class SingleSignOnTest < ActionDispatch::IntegrationTest
   end
 
   test "an authorize request survives the trip to the provider and back" do
-    create_provider(provisions: true)
+    create_provider(provisions: true, email_domains: "acme.test")
     create_actor(@tenant, nickname: "owner", email: "owner@acme.test")
     registration = register(@tenant)
 
