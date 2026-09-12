@@ -15,17 +15,17 @@
     "@astrojs/react": "^6.0.5",
     "@astrojs/starlight": "^0.42.0",
     "@graphiql/react": "^0.39.0",
-    "@types/react": "^19.2.18",
-    "@types/react-dom": "^19.2.7",
-    "astro": "^7.2.9",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "astro": "^7.3.2",
     "graphiql": "^5.4.0",
     "graphql": "^17.0.2",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
   },
   "devDependencies": {
     "typedoc": "^0.28.20",
     "typedoc-plugin-markdown": "^4.13.0",
-    "typescript": "^6.0.3"
+    "typescript": "^7.0.2"
   }
 }
