@@ -106,7 +106,7 @@ class LoginSetupTest < ActiveSupport::TestCase
     login = name_by(
       Tenant::EITHER,
       called: "  Payroll  ",
-      registration: LoginStates::Setup::BOUNDED,
+      registration: Tenant::REGISTRATION_BOUNDED,
       registration_scopes: "openid profile masks:manage"
     )
 
@@ -118,10 +118,21 @@ class LoginSetupTest < ActiveSupport::TestCase
     assert_equal %w[openid profile], tenant.dynamic_client_ceiling
   end
 
+  test "dynamic registration can be turned off on the way in" do
+    identify
+    credit
+    name_by(Tenant::EITHER, registration: Tenant::REGISTRATION_OFF)
+
+    tenant = @tenant.reload
+
+    assert_equal Tenant::REGISTRATION_OFF, tenant.dynamic_registration
+    refute tenant.registers?
+  end
+
   test "apps may register for anything a manager does not have to grant" do
     identify
     credit
-    name_by(Tenant::EITHER, registration: LoginStates::Setup::ANYTHING,
+    name_by(Tenant::EITHER, registration: Tenant::REGISTRATION_ANYTHING,
             registration_scopes: "openid profile")
 
     assert_nil @tenant.reload.dynamic_client_ceiling
@@ -135,7 +146,7 @@ class LoginSetupTest < ActiveSupport::TestCase
     published = within { login.as_json["setup"] }
 
     assert_equal @tenant.name, published["called"]
-    assert_equal LoginStates::Setup::BOUNDED, published["registration"]
+    assert_equal Tenant::REGISTRATION_BOUNDED, published["registration"]
     assert_equal Scopes.join(Scopes::STANDARD), published["registrationScopes"]
     assert_equal ActorMailer.deliverable?, published["mails"]
   end

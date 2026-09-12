@@ -7,7 +7,7 @@ let { login } = $props();
 
 const setup = $derived(login.auth.setup ?? {});
 const names = $derived(setup.names ?? ["nickname", "email", "either"]);
-const offers = ["anything", "bounded"];
+const offers = ["off", "anything", "bounded"];
 const tenant = $derived(login.auth.tenant?.name ?? "");
 const docs = $derived(login.auth.docs);
 const manager = $derived(login.actor?.identifier ?? "");

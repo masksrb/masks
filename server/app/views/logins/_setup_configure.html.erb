@@ -42,7 +42,7 @@
         <legend class="ledger-label"><%= t(".registration") %></legend>
 
         <div class="check-set">
-          <% LoginStates::Setup::REGISTRATIONS.each do |offer| %>
+          <% Tenant::REGISTRATIONS.each do |offer| %>
             <label class="check">
               <%= form.radio_button :registration, offer, checked: offer == setup["registration"] %>
               <span><%= t(".registration_#{offer}") %></span>

@@ -5,9 +5,6 @@ module LoginStates
     HELD = "setup_identity".freeze
     CONFIGURING = "setup_configuring".freeze
     MINIMUM_PASSWORD = Actor::MINIMUM_PASSWORD
-    ANYTHING = "anything".freeze
-    BOUNDED = "bounded".freeze
-    REGISTRATIONS = [ ANYTHING, BOUNDED ].freeze
 
     accepts :nickname, :email, :name, :password, :password_confirmation, :token,
             :named_by, :called, :registration, :registration_scopes
@@ -67,7 +64,7 @@ module LoginStates
           "names" => Tenant::NAMES,
           "namedBy" => tenant&.named_by,
           "called" => tenant&.name,
-          "registration" => BOUNDED,
+          "registration" => Tenant::REGISTRATION_BOUNDED,
           "registrationScopes" => Scopes.join(tenant&.dynamic_client_ceiling || Scopes::STANDARD),
           "mails" => ActorMailer.deliverable?
         }
@@ -163,7 +160,8 @@ module LoginStates
 
         tenant.named_by = wanted
         tenant.name = called if called.present?
-        tenant.dynamic_client_scopes = ceiling
+        tenant.dynamic_registration = registration if registration
+        tenant.dynamic_client_scopes = ceiling if registration == Tenant::REGISTRATION_BOUNDED
 
         return warn!("invalid-configuration") unless tenant.save
 
@@ -174,10 +172,15 @@ module LoginStates
         update(:called).to_s.strip
       end
 
-      def ceiling
-        return nil unless update(:registration).to_s == BOUNDED
+      def registration
+        wanted = update(:registration).to_s
 
-        offered = Scopes.list(update(:registration_scopes)) - Scopes.reserved(update(:registration_scopes))
+        Tenant::REGISTRATIONS.include?(wanted) ? wanted : nil
+      end
+
+      def ceiling
+        offered = Scopes.list(update(:registration_scopes)) -
+          Scopes.reserved(update(:registration_scopes))
 
         Scopes.join(offered).presence
       end

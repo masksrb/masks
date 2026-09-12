@@ -14,6 +14,7 @@ class RegistrationsController < ApplicationController
 
   def create
     return redeem if bearer.present?
+    return refused unless current_tenant.registers?
 
     client = Client.register!(attributes)
 
@@ -112,6 +113,13 @@ class RegistrationsController < ApplicationController
       return {} if body[:scope].blank? || @client.approved?
 
       { allowed_scopes: Scopes.join(Client.bounded(body[:scope])) }
+    end
+
+    def refused
+      render json: {
+        "error" => "access_denied",
+        "error_description" => "dynamic registration is off here, and a manager adds every client"
+      }, status: :forbidden
     end
 
     def invalid_metadata(description)

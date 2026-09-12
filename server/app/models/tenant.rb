@@ -32,7 +32,13 @@ class Tenant < ApplicationRecord
   EITHER = "either".freeze
   NAMES = [ NICKNAME, EMAIL, EITHER ].freeze
 
+  REGISTRATION_OFF = "off".freeze
+  REGISTRATION_ANYTHING = "anything".freeze
+  REGISTRATION_BOUNDED = "bounded".freeze
+  REGISTRATIONS = [ REGISTRATION_OFF, REGISTRATION_ANYTHING, REGISTRATION_BOUNDED ].freeze
+
   validates :named_by, inclusion: { in: NAMES }, allow_nil: true
+  validates :dynamic_registration, inclusion: { in: REGISTRATIONS }, allow_nil: true
   validates :subdomain, presence: true, uniqueness: true,
                         format: { with: /\A[a-z0-9][a-z0-9-]*\z/ }
   validates :name, presence: true
@@ -55,11 +61,31 @@ class Tenant < ApplicationRecord
     self.class.pinned_names.present?
   end
 
+  def dynamic_registration
+    self.class.pinned_registration.presence || super.presence || registration_unset
+  end
+
+  def registration_pinned?
+    self.class.pinned_registration.present?
+  end
+
+  def registers?
+    dynamic_registration != REGISTRATION_OFF
+  end
+
+  def registration_unset
+    held = dynamic_client_scopes.presence || Rails.configuration.masks.dynamic_client_scopes
+
+    held.present? ? REGISTRATION_BOUNDED : REGISTRATION_ANYTHING
+  end
+
   def dynamic_client_ceiling
+    return nil unless dynamic_registration == REGISTRATION_BOUNDED
+
     declared = dynamic_client_scopes.presence ||
       Rails.configuration.masks.dynamic_client_scopes
 
-    declared && Scopes.list(declared)
+    Scopes.list(declared.presence || Scopes.join(Scopes::STANDARD))
   end
 
   class << self
@@ -69,6 +95,10 @@ class Tenant < ApplicationRecord
 
     def pinned_names
       Rails.configuration.masks.named_by
+    end
+
+    def pinned_registration
+      Rails.configuration.masks.dynamic_registration
     end
 
     def resolve(host)

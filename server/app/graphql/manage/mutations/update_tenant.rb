@@ -3,13 +3,22 @@ module Manage
     class UpdateTenant < BaseMutation
       argument :name, String, required: false
       argument :dynamic_client_scopes, [ String ], required: false
+      argument :dynamic_registration, String, required: false
 
       field :tenant, Types::TenantType, null: false
 
-      def resolve(name: nil, dynamic_client_scopes: nil)
+      def resolve(name: nil, dynamic_client_scopes: nil, dynamic_registration: nil)
         tenant = Current.tenant
 
         tenant.name = name unless name.nil?
+
+        unless dynamic_registration.nil?
+          unless ::Tenant::REGISTRATIONS.include?(dynamic_registration)
+            refuse!("dynamic registration is off, anything or bounded")
+          end
+
+          tenant.dynamic_registration = dynamic_registration
+        end
 
         unless dynamic_client_scopes.nil?
           reserved = Scopes.reserved(dynamic_client_scopes)

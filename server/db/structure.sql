@@ -717,7 +717,8 @@ CREATE TABLE public.tenants (
     updated_at timestamp(6) without time zone NOT NULL,
     dynamic_client_scopes text,
     pairwise_salt text,
-    named_by character varying
+    named_by character varying,
+    dynamic_registration character varying
 );
 
 

@@ -129,7 +129,7 @@ class Issuer
       "avatar_styles_supported" => Avatars::STYLES,
       "avatar_sizes_supported" => Avatars::SIZES,
       "jwks_uri" => "#{url}/.well-known/jwks.json",
-      "registration_endpoint" => "#{url}/register",
+      "registration_endpoint" => (("#{url}/register") if tenant.registers?),
       "pushed_authorization_request_endpoint" => "#{url}/par",
       "device_authorization_endpoint" => "#{url}/device_authorization",
       "handshake_endpoint" => "#{url}/handshake",
@@ -163,6 +163,6 @@ class Issuer
       "request_parameter_supported" => false,
       "request_uri_parameter_supported" => false,
       "claims_parameter_supported" => true
-    }
+    }.compact
   end
 end

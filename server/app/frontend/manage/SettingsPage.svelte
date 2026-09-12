@@ -19,7 +19,7 @@
   const QUERY = `
     query Tenant {
       tenant {
-        uuid subdomain name dynamicClientScopes createdAt
+        uuid subdomain name dynamicRegistration dynamicClientScopes createdAt
         signingKeys { kid algorithm activatedAt retiredAt state }
       }
       viewer { identifier scopes }
@@ -108,8 +108,14 @@
     const done = await feedback.attempt(
       () =>
         api.query(
-          `mutation Update($name: String, $dynamicClientScopes: [String!]) {
-            updateTenant(name: $name, dynamicClientScopes: $dynamicClientScopes) { tenant { name } }
+          `mutation Update(
+            $name: String, $dynamicClientScopes: [String!], $dynamicRegistration: String
+          ) {
+            updateTenant(
+              name: $name
+              dynamicClientScopes: $dynamicClientScopes
+              dynamicRegistration: $dynamicRegistration
+            ) { tenant { name } }
           }`,
           changes,
         ),
@@ -255,9 +261,25 @@
 
       <div class="flex flex-col gap-4">
         <Card
-          title="Ceiling on open registration"
-          lede="The most a self-registering client may ask for. Empty means anything outside masks:."
+          title="Dynamic registration"
+          lede="Whether an app may register itself here, and the most it may ask for."
         >
+          <select
+            class="select select-sm w-full"
+            value={data.tenant.dynamicRegistration}
+            onchange={(event) =>
+              update(
+                { dynamicRegistration: event.currentTarget.value },
+                "Dynamic registration updated.",
+              )}
+          >
+            <option value="off">Off — a manager adds every app by hand</option>
+            <option value="anything">
+              On, for anything a manager does not have to grant
+            </option>
+            <option value="bounded">On, held to the scopes below</option>
+          </select>
+
           <ScopesEditor
             value={data.tenant.dynamicClientScopes ?? []}
             available={data.scopesSupported}

@@ -41,6 +41,7 @@ module Server
     config.masks.tenants = ENV["MASKS_TENANTS"].to_s.split(/[\s,]+/).reject(&:empty?)
     config.masks.dynamic_client_scopes = ENV["MASKS_DYNAMIC_CLIENT_SCOPES"].presence
     config.masks.named_by = ENV["MASKS_NAMED_BY"].presence
+    config.masks.dynamic_registration = ENV["MASKS_DYNAMIC_REGISTRATION"].presence
     config.masks.mail_from = ENV["MASKS_MAIL_FROM"].presence
     config.masks.smtp_address = ENV["MASKS_SMTP_ADDRESS"].presence
     config.masks.invitation_lifetime = ENV.fetch("MASKS_INVITATION_LIFETIME", 7 * 24 * 60 * 60).to_i.seconds
@@ -72,6 +73,14 @@ module Server
             "account can be named by are a nickname, an email address, or either one. " \
             "Set it to nickname, email or either, or leave it unset and let the first-run " \
             "screen decide."
+    end
+
+    if config.masks.dynamic_registration &&
+       !%w[off anything bounded].include?(config.masks.dynamic_registration)
+      raise "MASKS_DYNAMIC_REGISTRATION is #{config.masks.dynamic_registration.inspect}. " \
+            "Dynamic registration is off, on for anything a manager does not have to grant, " \
+            "or on and bounded by MASKS_DYNAMIC_CLIENT_SCOPES. Set it to off, anything or " \
+            "bounded, or leave it unset and let the first-run screen decide."
     end
 
     if config.masks.mail_from && config.masks.smtp_address.nil? && !Rails.env.local?

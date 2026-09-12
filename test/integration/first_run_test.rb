@@ -102,12 +102,12 @@ class FirstRunTest < ActionDispatch::IntegrationTest
     assert_match "This installation is called", response.body
     assert_match "An account is named by", response.body
     assert_match "Managers always need both", response.body
-    assert_match "An app that registers itself may ask for", response.body
+    assert_match "Dynamic registration", response.body
     assert_match "No mailer is configured", response.body
 
     post "/login", params: { event: "setup-configure", named_by: Tenant::EMAIL,
                              called: "Payroll",
-                             registration: LoginStates::Setup::BOUNDED,
+                             registration: Tenant::REGISTRATION_BOUNDED,
                              registration_scopes: "openid profile" }, as: :json
 
     assert JSON.parse(response.body)["settled"]

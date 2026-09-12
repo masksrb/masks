@@ -34,6 +34,7 @@ class CreateMasksSchema < ActiveRecord::Migration[8.1]
       t.text :dynamic_client_scopes
       t.text :pairwise_salt
       t.string :named_by
+      t.string :dynamic_registration
 
       t.index :uuid, unique: true
       t.index :subdomain, unique: true

@@ -4,6 +4,7 @@ module Manage
       field :uuid, ID, null: false
       field :subdomain, String, null: false
       field :name, String, null: false
+      field :dynamic_registration, String, null: false
       field :dynamic_client_scopes, [ String ]
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
       field :signing_keys, [ SigningKeyType ], null: false

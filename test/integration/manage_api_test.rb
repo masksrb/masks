@@ -223,6 +223,32 @@ class ManageApiTest < ActionDispatch::IntegrationTest
     refute_includes within(@tenant) { second.reload.scope_list }, "masks:manage"
   end
 
+  test "dynamic registration is turned off, and the endpoint and discovery both say so" do
+    body = ask(<<~GQL, bearer)
+      mutation {
+        updateTenant(dynamicRegistration: "off") { tenant { dynamicRegistration } }
+      }
+    GQL
+
+    assert_nil body["errors"]
+    assert_equal "off", body.dig("data", "updateTenant", "tenant", "dynamicRegistration")
+
+    refute issuer_for(@tenant.reload).discovery.key?("registration_endpoint")
+
+    post "/register", params: { redirect_uris: [ OidcFlow::REDIRECT_URI ], client_name: "Nope" },
+         as: :json
+
+    assert_response :forbidden
+    assert_equal "access_denied", JSON.parse(response.body)["error"]
+  end
+
+  test "a mode masks does not know is refused" do
+    body = ask(%(mutation { updateTenant(dynamicRegistration: "sometimes") { tenant { name } } }),
+               bearer)
+
+    assert_match "off, anything or bounded", body["errors"].first["message"]
+  end
+
   test "an actor carries their own sessions and devices, so one query draws the page" do
     body = ask(<<~GQL, bearer)
       query {
