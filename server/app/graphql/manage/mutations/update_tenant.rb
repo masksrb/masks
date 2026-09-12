@@ -4,10 +4,23 @@ module Manage
       argument :name, String, required: false
       argument :dynamic_client_scopes, [ String ], required: false
       argument :dynamic_registration, String, required: false
+      argument :mail_from, String, required: false
+      argument :smtp_address, String, required: false
+      argument :smtp_port, Integer, required: false
+      argument :smtp_username, String, required: false
+      argument :smtp_password, String, required: false
+      argument :smtp_authentication, String, required: false
+      argument :smtp_domain, String, required: false
+      argument :smtp_tls, Boolean, required: false
 
       field :tenant, Types::TenantType, null: false
 
-      def resolve(name: nil, dynamic_client_scopes: nil, dynamic_registration: nil)
+      MAIL = %i[
+        mail_from smtp_address smtp_port smtp_username smtp_password
+        smtp_authentication smtp_domain smtp_tls
+      ].freeze
+
+      def resolve(name: nil, dynamic_client_scopes: nil, dynamic_registration: nil, **mail)
         tenant = Current.tenant
 
         tenant.name = name unless name.nil?
@@ -30,9 +43,15 @@ module Manage
           tenant.dynamic_client_scopes = Scopes.join(dynamic_client_scopes).presence
         end
 
+        MAIL.each do |field|
+          next unless mail.key?(field)
+
+          tenant.public_send("#{field}=", mail[field])
+        end
+
         save!(tenant)
 
-        audit!(::Event::TENANT_UPDATED, name: tenant.name)
+        audit!(::Event::TENANT_UPDATED, name: tenant.name, mails: tenant.mails?)
 
         { tenant: tenant }
       end

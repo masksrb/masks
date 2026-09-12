@@ -271,7 +271,7 @@ type Mutation {
   updateActor(birthdate: String, email: String, familyName: String, gender: String, givenName: String, locale: String, middleName: String, name: String, nickname: String, pictureUrl: String, profileUrl: String, uuid: ID!, websiteUrl: String, zoneinfo: String): UpdateActorPayload
   updateClient(allowedScopes: [String!], backchannelLogoutSessionRequired: Boolean, backchannelLogoutUri: String, clientId: ID!, dpopBoundAccessTokens: Boolean, name: String, postLogoutRedirectUris: [String!], redirectUris: [String!], requirePushedAuthorizationRequests: Boolean, requiredScopes: [String!], resources: [String!], sectorIdentifierUri: String, subjectType: String): UpdateClientPayload
   updateProvider(authorizationUrl: String, authorizeParams: JSON, clientId: String, clientSecret: String, emailDomains: [String!], issuer: String, jwksUri: String, key: ID!, labelClaim: String, name: String, provisions: Boolean, revocationUrl: String, scopes: [String!], signsIn: Boolean, signupScopes: [String!], subjectClaim: String, tokenUrl: String, userinfoUrl: String): UpdateProviderPayload
-  updateTenant(dynamicClientScopes: [String!], dynamicRegistration: String, name: String): UpdateTenantPayload
+  updateTenant(dynamicClientScopes: [String!], dynamicRegistration: String, mailFrom: String, name: String, smtpAddress: String, smtpAuthentication: String, smtpDomain: String, smtpPassword: String, smtpPort: Int, smtpTls: Boolean, smtpUsername: String): UpdateTenantPayload
   uploadAvatar(photo: Upload!, uuid: ID!): UploadAvatarPayload
   verifyEmail(uuid: ID!): VerifyEmailPayload
 }
@@ -504,8 +504,16 @@ type Tenant {
   createdAt: ISO8601DateTime!
   dynamicClientScopes: [String!]
   dynamicRegistration: String!
+  mailFrom: String
+  mails: Boolean!
   name: String!
   signingKeys: [SigningKey!]!
+  smtpAddress: String
+  smtpAuthentication: String
+  smtpDomain: String
+  smtpPort: Int
+  smtpTls: Boolean!
+  smtpUsername: String
   subdomain: String!
   uuid: ID!
 }

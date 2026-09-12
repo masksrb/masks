@@ -35,6 +35,14 @@ class CreateMasksSchema < ActiveRecord::Migration[8.1]
       t.text :pairwise_salt
       t.string :named_by
       t.string :dynamic_registration
+      t.string :mail_from
+      t.string :smtp_address
+      t.integer :smtp_port
+      t.string :smtp_username
+      t.text :smtp_password
+      t.string :smtp_authentication
+      t.string :smtp_domain
+      t.boolean :smtp_tls, null: false, default: false
 
       t.index :uuid, unique: true
       t.index :subdomain, unique: true

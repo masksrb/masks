@@ -242,6 +242,39 @@ class ManageApiTest < ActionDispatch::IntegrationTest
     assert_equal "access_denied", JSON.parse(response.body)["error"]
   end
 
+  test "mail is configured at runtime, and the password never comes back out" do
+    held = bearer
+    body = ask(<<~GQL, held)
+      mutation {
+        updateTenant(
+          mailFrom: "masks@example.invalid"
+          smtpAddress: "smtp.example.invalid"
+          smtpPort: 2525
+          smtpUsername: "postmaster"
+          smtpPassword: "hunter2"
+          smtpTls: true
+        ) {
+          tenant { mails mailFrom smtpAddress smtpPort smtpUsername smtpTls }
+        }
+      }
+    GQL
+
+    assert_nil body["errors"]
+
+    mail = body.dig("data", "updateTenant", "tenant")
+
+    assert mail["mails"]
+    assert_equal "masks@example.invalid", mail["mailFrom"]
+    assert_equal 2525, mail["smtpPort"]
+    assert mail["smtpTls"]
+    refute mail.key?("smtpPassword")
+    assert_equal "hunter2", @tenant.reload.smtp_password
+
+    asked = ask(%(query { tenant { smtpPassword } }), held)
+
+    assert_match(/smtpPassword/, asked["errors"].first["message"])
+  end
+
   test "a mode masks does not know is refused" do
     body = ask(%(mutation { updateTenant(dynamicRegistration: "sometimes") { tenant { name } } }),
                bearer)

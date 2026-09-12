@@ -44,3 +44,22 @@ transaction beneath it. Outside a tenant a query returns nothing rather than eve
 `Model.unscoped` is zero rows, not all rows.
 
 Tenants come from `MASKS_TENANTS` at deploy, or the first visit claims one when none are declared.
+
+## What a tenant decides for itself
+
+A tenant holds its own name, [what names an account](/concepts/actors/), whether an app may
+[register itself](/concepts/clients/), and where its mail goes. The first-run screen asks for the
+first three; the console changes any of them afterwards, and nothing restarts.
+
+| Held by the tenant | Pinned at deploy | When both |
+| --- | --- | --- |
+| `named_by` | `MASKS_NAMED_BY` | the deployment wins |
+| `dynamic_registration` | `MASKS_DYNAMIC_REGISTRATION` | the deployment wins |
+| `dynamic_client_scopes` | `MASKS_DYNAMIC_CLIENT_SCOPES` | the tenant wins |
+| `mail_from`, `smtp_*` | `MASKS_MAIL_FROM`, `MASKS_SMTP_*` | the tenant wins |
+
+Mail is the one that carries a secret. A tenant that names its own server holds the password for it
+encrypted, the way it holds its pairwise salt, and the manage API never reads it back out — it can
+only be written. A tenant with no server of its own mails through whatever the deployment
+configured, and a deployment with no mailer either means invitations and password resets are links a
+manager passes along by hand.

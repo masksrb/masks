@@ -718,7 +718,15 @@ CREATE TABLE public.tenants (
     dynamic_client_scopes text,
     pairwise_salt text,
     named_by character varying,
-    dynamic_registration character varying
+    dynamic_registration character varying,
+    mail_from character varying,
+    smtp_address character varying,
+    smtp_port integer,
+    smtp_username character varying,
+    smtp_password text,
+    smtp_authentication character varying,
+    smtp_domain character varying,
+    smtp_tls boolean DEFAULT false NOT NULL
 );
 
 
