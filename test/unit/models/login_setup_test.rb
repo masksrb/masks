@@ -99,53 +99,26 @@ class LoginSetupTest < ActiveSupport::TestCase
     assert_equal "Payroll", @tenant.reload.name
   end
 
-  test "configuring names the installation and points its mail somewhere" do
+  test "configuring names the installation" do
     identify
     credit
 
-    login = configure(
-      called: "  Payroll  ",
-      mail_from: "masks@example.invalid",
-      smtp_address: "smtp.example.invalid",
-      smtp_port: "2525",
-      smtp_username: "postmaster",
-      smtp_password: "hunter2",
-      smtp_tls: "true"
-    )
+    login = configure(called: "  Payroll  ")
 
     assert login.settled?
-
-    tenant = @tenant.reload
-
-    assert_equal "Payroll", tenant.name
-    assert_equal "masks@example.invalid", tenant.read_attribute(:mail_from)
-    assert_equal "smtp.example.invalid", tenant.smtp_address
-    assert_equal 2525, tenant.smtp_port
-    assert_equal "postmaster", tenant.smtp_username
-    assert_equal "hunter2", tenant.smtp_password
-    assert tenant.smtp_tls
-    assert tenant.mails?
+    assert_equal "Payroll", @tenant.reload.name
   end
 
-  test "a mailer left empty settles all the same, and nothing is emailed" do
+  test "a name left as it was settles all the same" do
     identify
     credit
-    login = configure
+    login = configure(called: "")
 
     assert login.settled?
-    refute @tenant.reload.mails?
+    assert_equal "Demo", @tenant.reload.name
   end
 
-  test "a from address the tenant refuses keeps the screen up" do
-    identify
-    credit
-    login = configure(mail_from: "not-an-address")
-
-    assert_equal "setup-configure", login.prompt
-    assert_includes login.warnings, "invalid-configuration"
-  end
-
-  test "the configuration screen offers what the tenant already holds" do
+  test "the configuration screen offers the name the tenant already holds" do
     identify
     credit
 
@@ -153,8 +126,6 @@ class LoginSetupTest < ActiveSupport::TestCase
     published = within { login.as_json["setup"] }
 
     assert_equal @tenant.name, published["called"]
-    assert_equal Tenant::SMTP_PORT, published["smtpPort"]
-    refute published["mails"]
   end
 
   test "one post that carries everything sets up in one step" do

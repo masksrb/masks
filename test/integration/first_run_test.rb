@@ -100,22 +100,13 @@ class FirstRunTest < ActionDispatch::IntegrationTest
     get "/login"
 
     assert_match "This installation is called", response.body
-    assert_match "Email comes from", response.body
-    assert_match "Mail server", response.body
+    assert_match "Set up at", response.body
+    assert_match origin_for(@tenant), response.body
 
-    post "/login", params: { event: "setup-configure", called: "Payroll",
-                             mail_from: "masks@example.invalid",
-                             smtp_address: "smtp.example.invalid",
-                             smtp_port: "2525", smtp_username: "postmaster",
-                             smtp_password: "hunter2", smtp_tls: "true" }, as: :json
+    post "/login", params: { event: "setup-configure", called: "Payroll" }, as: :json
 
     assert JSON.parse(response.body)["settled"]
-
-    tenant = @tenant.reload
-
-    assert_equal "Payroll", tenant.name
-    assert_equal 2525, tenant.smtp_port
-    assert tenant.mails?
+    assert_equal "Payroll", @tenant.reload.name
   end
 
   test "an account is named by whatever the tenant was configured for" do

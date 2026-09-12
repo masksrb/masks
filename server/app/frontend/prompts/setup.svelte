@@ -1,4 +1,5 @@
 <script>
+import { untrack } from "svelte";
 import Action from "../shared/Action.svelte";
 import Head from "../shared/Head.svelte";
 import SetupSteps from "../shared/SetupSteps.svelte";
@@ -12,9 +13,11 @@ const docs = $derived(login.auth.docs);
 const origin = typeof location === "undefined" ? "" : location.origin;
 
 let token = $state("");
-let nickname = $state(setup.nickname ?? "");
-let email = $state(setup.email ?? "");
-let person = $state(setup.name ?? "");
+const held = untrack(() => login.auth.setup ?? {});
+
+let nickname = $state(held.nickname ?? "");
+let email = $state(held.email ?? "");
+let person = $state(held.name ?? "");
 
 const steps = $derived(
   (needsToken ? [token.length > 0] : []).concat(
