@@ -5,7 +5,11 @@ class FirstRunTest < ActionDispatch::IntegrationTest
 
   def setup_params(**overrides)
     { event: "setup", nickname: "owner", email: "owner@example.invalid",
-      password: PASSWORD }.merge(overrides)
+      password: PASSWORD, password_confirmation: PASSWORD }.merge(overrides)
+  end
+
+  def identify_params(**overrides)
+    { event: "setup", nickname: "owner", email: "owner@example.invalid" }.merge(overrides)
   end
 
   def with_declared(list)
@@ -28,8 +32,9 @@ class FirstRunTest < ActionDispatch::IntegrationTest
     get "/login"
 
     assert_response :success
-    assert_match "Create the owner", response.body
-    assert_match "First run", response.body
+    assert_match "Set up", response.body
+    assert_match "<em>#{@tenant.name}</em>", response.body
+    assert_match "Continue", response.body
     assert_match "This screen will not appear again", response.body
 
     post "/login", params: { event: "start-over" }, as: :json
@@ -47,7 +52,7 @@ class FirstRunTest < ActionDispatch::IntegrationTest
     follow_redirect!
 
     assert_response :success
-    assert_match "First run", response.body
+    assert_match "Set up", response.body
     assert_select "a[href=?]", Rails.configuration.masks.docs_url
   end
 
@@ -60,6 +65,44 @@ class FirstRunTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_match "Your account", response.body
     assert_select "a[href=?]", manage_path, false
+  end
+
+  test "the name and address are taken first, then the password on its own screen" do
+    host! host_for(@tenant)
+
+    post "/login", params: identify_params, as: :json
+    body = JSON.parse(response.body)
+
+    assert_equal "setup-confirm", body["prompt"]
+    assert_equal "owner", body.dig("setup", "nickname")
+    assert_equal 0, within(@tenant) { Actor.count }
+
+    get "/login"
+
+    assert_response :success
+    assert_match "Create the owner", response.body
+    assert_match "Confirm password", response.body
+
+    post "/login", params: { event: "setup", password: PASSWORD,
+                             password_confirmation: PASSWORD }, as: :json
+
+    assert JSON.parse(response.body)["settled"]
+    assert_equal "owner", within(@tenant) { Actor.sole.nickname }
+  end
+
+  test "editing from the confirmation screen goes back with the entries kept" do
+    host! host_for(@tenant)
+
+    post "/login", params: identify_params, as: :json
+    post "/login", params: { event: "setup-edit" }, as: :json
+    body = JSON.parse(response.body)
+
+    assert_equal "setup", body["prompt"]
+    assert_equal "owner", body.dig("setup", "nickname")
+
+    get "/login"
+
+    assert_match "Continue", response.body
   end
 
   test "setup settles the login and signs the owner in, over JSON" do
@@ -89,10 +132,11 @@ class FirstRunTest < ActionDispatch::IntegrationTest
   test "a refused setup re-renders the prompt rather than advancing" do
     host! host_for(@tenant)
 
-    post "/login", params: setup_params(password: "short"), as: :json
+    post "/login", params: setup_params(password: "short", password_confirmation: "short"),
+         as: :json
     body = JSON.parse(response.body)
 
-    assert_equal "setup", body["prompt"]
+    assert_equal "setup-confirm", body["prompt"]
     assert_includes body["warnings"], "short-password"
     assert_equal 0, within(@tenant) { Actor.count }
   end
@@ -170,7 +214,7 @@ class FirstRunTest < ActionDispatch::IntegrationTest
     host! host_for(other_tenant)
     get "/login"
 
-    assert_match "Create the owner", response.body
+    assert_match "Continue", response.body
     assert_equal 0, within(other_tenant) { Actor.count }
   end
 
@@ -189,7 +233,7 @@ class FirstRunTest < ActionDispatch::IntegrationTest
       get "/login"
 
       assert_response :success
-      assert_match "Create the owner", response.body
+      assert_match "Continue", response.body
       assert_equal "fresh", Tenant.sole.subdomain
       assert Tenant.sole.signing_key.kid.present?
     end

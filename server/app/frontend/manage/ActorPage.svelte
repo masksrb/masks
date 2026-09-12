@@ -20,7 +20,7 @@
   const router = useRouter();
 
   const FIELDS = [
-    ["nickname", "Username"],
+    ["nickname", "Nickname"],
     ["name", "Name"],
     ["givenName", "Given name"],
     ["familyName", "Family name"],

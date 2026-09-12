@@ -127,7 +127,7 @@ class SingleSignOnTest < ActionDispatch::IntegrationTest
     assert within(@tenant) { Event.exists?(action: Event::ACTOR_PROVISIONED) }
   end
 
-  test "a provisioned username steps aside when the obvious one is taken" do
+  test "a provisioned nickname steps aside when the obvious one is taken" do
     create_provider(provisions: true, email_domains: "acme.test")
     create_actor(@tenant, nickname: "grace", email: "someone@elsewhere.test")
 

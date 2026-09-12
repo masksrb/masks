@@ -30,7 +30,7 @@ function onsubmit(event) {
 
 <form {onsubmit} class="flow" aria-busy={login.loading || undefined}>
   <label class="field">
-    <span class="field-label">{login.t("username")}</span>
+    <span class="field-label">{login.t("nickname")}</span>
     <input
       type="text"
       class="control"

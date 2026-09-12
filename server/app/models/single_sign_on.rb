@@ -126,7 +126,7 @@ class SingleSignOn
 
       return wanted unless Actor.exists?(nickname: wanted)
 
-      spare(wanted) || refuse!("sso-unavailable", "no username was free for that account")
+      spare(wanted) || refuse!("sso-unavailable", "no nickname was free for that account")
     end
 
     def tidy(value)

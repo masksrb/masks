@@ -9,8 +9,8 @@ en:
       subject: "You have been invited to %{tenant}"
       invited_by: "%{nickname} invited you to %{tenant}."
       invited: "You have been invited to %{tenant}."
-      username_html: "Your username is %{nickname}. Open the link to choose a password."
-      username: "Your username is %{nickname}. Open the link to choose a password."
+      nickname_html: "Your nickname is %{nickname}. Open the link to choose a password."
+      nickname: "Your nickname is %{nickname}. Open the link to choose a password."
       action: "Choose a password"
       expiry: "Works once, expires in %{duration}. Nothing happens until somebody opens it."
 

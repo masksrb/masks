@@ -28,7 +28,7 @@ class LocaleNegotiationTest < ActionDispatch::IntegrationTest
 
     copy = auth_data["copy"]
 
-    assert_equal I18n.t("logins.setup.submit"), copy["submit"]
+    assert_equal I18n.t("logins.setup.note_keep"), copy["note_keep"]
     assert_equal I18n.t("logins.shared.continue"), copy["continue"]
     assert_match CGI.escapeHTML(copy["note"]), response.body
   end

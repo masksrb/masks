@@ -1,6 +1,13 @@
 <script>
-let { login, title, lede = null, cap = null, tone = null, busy = false } =
-  $props();
+let {
+  login,
+  title,
+  name = null,
+  lede = null,
+  cap = null,
+  tone = null,
+  busy = false,
+} = $props();
 
 const running = $derived(tone === null && (busy || login.loading));
 </script>
@@ -18,7 +25,9 @@ const running = $derived(tone === null && (busy || login.loading));
     <span class="record-cap">{cap}</span>
   {/if}
 
-  <h1 class="prompt-title">{title}</h1>
+  <h1 class="prompt-title">
+    {title}{#if name}&nbsp;<em>{name}</em>{/if}
+  </h1>
 
   {#if lede}
     <p class="prompt-lede">{lede}</p>

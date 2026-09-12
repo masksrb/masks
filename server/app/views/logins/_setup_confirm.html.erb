@@ -1,0 +1,64 @@
+<% held = login.state("setup").as_json["setup"] %>
+<% nickname = held["nickname"].to_s %>
+<% email = held["email"].to_s %>
+<% tenant = Current.tenant&.name.to_s %>
+
+<div class="setup flow">
+  <div class="auth-pair">
+    <span class="auth-mark auth-mark-client" aria-hidden="true"><%= nickname.first&.upcase %></span>
+    <span class="auth-wire"></span>
+    <span class="auth-mark" aria-hidden="true"><%= tenant.first&.upcase %></span>
+  </div>
+
+  <%= render "logins/head", cap: t(".cap"), title: t(".title"), name: tenant %>
+
+  <div class="note note-warn" role="status">
+    <span><%= t(".note") %> <strong><%= t(".note_keep") %></strong></span>
+  </div>
+
+  <%= form_with url: login_path, method: :post, id: "setup-confirm", class: "flow" do |form| %>
+    <%= hidden_field_tag :rid, login.rid %>
+
+    <div class="slab">
+      <div class="ledger-row ledger-row-aside">
+        <span class="ledger-label"><%= t("logins.shared.nickname") %></span>
+        <span class="ledger-value"><%= nickname %></span>
+        <button type="submit" name="event" value="setup-edit" class="textlink ledger-aside">
+          <%= t(".edit") %>
+        </button>
+      </div>
+
+      <div class="ledger-row ledger-row-aside">
+        <span class="ledger-label"><%= t("logins.shared.email") %></span>
+        <span class="ledger-value"><%= email %></span>
+        <button type="submit" name="event" value="setup-edit" class="textlink ledger-aside">
+          <%= t(".edit") %>
+        </button>
+      </div>
+
+      <label class="ledger-row ledger-step ledger-step-3">
+        <span class="ledger-label"><%= t("logins.shared.password") %></span>
+        <%= form.password_field :password, autocomplete: "new-password", class: "control" %>
+        <span class="field-hint"><%= t(".password_hint", minimum: LoginStates::Setup::MINIMUM_PASSWORD) %></span>
+      </label>
+
+      <label class="ledger-row ledger-step ledger-step-4">
+        <span class="ledger-label"><%= t(".confirm") %></span>
+        <%= form.password_field :password_confirmation, autocomplete: "new-password", class: "control" %>
+      </label>
+
+      <div class="ledger-row">
+        <span class="ledger-label"><%= t(".origin") %></span>
+        <span class="ledger-value aside-mono"><%= Current.origin %></span>
+      </div>
+    </div>
+
+    <button type="submit" name="event" value="setup" class="action"><%= t(".submit") %></button>
+  <% end %>
+
+  <p class="aside">
+    <%= t(".once") %>
+    <%= link_to t(".docs"), Rails.configuration.masks.docs_url,
+          class: "textlink", rel: "noopener", target: "_blank" %>
+  </p>
+</div>

@@ -13,9 +13,11 @@ import ResetPassword from "./prompts/reset-password.svelte";
 import SecondFactor from "./prompts/second-factor.svelte";
 import Settled from "./prompts/settled.svelte";
 import Setup from "./prompts/setup.svelte";
+import SetupConfirm from "./prompts/setup-confirm.svelte";
 
 const prompts = {
   setup: Setup,
+  "setup-confirm": SetupConfirm,
   "accept-invitation": AcceptInvitation,
   identify: Identify,
   "reset-password": ResetPassword,
@@ -31,7 +33,11 @@ let { auth } = $props();
 const login = createLogin(untrack(() => auth));
 const Prompt = $derived(prompts[login.prompt]);
 
-const SURFACES = { consent: "grant", setup: "grant" };
+const SURFACES = {
+  consent: "grant",
+  setup: "grant",
+  "setup-confirm": "grant",
+};
 
 let frame = $state(null);
 let entering = $state(false);

@@ -7,7 +7,7 @@ en:
     shared:
       continue: "Continue"
       checking: "Checking"
-      username: "Username"
+      nickname: "Nickname"
       email: "Email"
       password: "Password"
       not_you: "Not you?"
@@ -29,7 +29,7 @@ en:
     identify:
       heading: "Sign in"
       heading_to: "Sign in to %{client}"
-      identifier: "Username or email"
+      identifier: "Nickname or email"
 
     first_factor:
       title: "Enter your password"
@@ -60,13 +60,24 @@ en:
       working: "Setting"
 
     setup:
-      cap: "First run"
+      cap: "Welcome!"
       title: "Set up"
-      title_named: "Set up “%{tenant}”"
-      note: "You're creating the first login to this auth server. You will be a manager of the system."
+      note: "Enter credentials for the first manager."
+      note_keep: "Make sure to store them somewhere safe."
       token: "Setup token"
       token_hint: "This instance was started with one, and will not run without it."
+      origin: "Set up at"
+      once: "This screen will not appear again."
+      docs: "Read the documentation."
+
+    setup_confirm:
+      cap: "Welcome!"
+      title: "Set up"
+      note: "Check this over."
+      note_keep: "The password cannot be recovered."
+      confirm: "Confirm password"
       password_hint: "At least %{minimum} characters."
+      edit: "Edit"
       origin: "Set up at"
       submit: "Create the owner"
       working: "Creating"
@@ -88,19 +99,20 @@ en:
       waiting: "Taking you back"
 
     warnings:
-      invalid-credentials: "That username and password do not match."
+      invalid-credentials: "That nickname and password do not match."
       invalid-code: "That code is not valid."
       invalid-backup-code: "That backup code is not valid."
       invalid-passkey: "That passkey could not be used."
       passkey-expired: "That passkey attempt expired. Try again."
-      missing-identifier: "Enter your username or email."
+      missing-identifier: "Enter your nickname or email."
       missing-first-factor: "That step expired. Start over."
       too-many-attempts: "Too many attempts. Wait a few minutes."
       too-many-attempts-for-account: "Too many attempts for that account."
       invalid-setup-token: "That setup token is wrong."
-      missing-nickname: "Choose a username."
+      missing-nickname: "Choose a nickname."
       short-password: "That password is too short."
-      invalid-account: "That username cannot be used here."
+      mismatched-password: "Those passwords do not match."
+      invalid-account: "That nickname cannot be used here."
       missing-email: "Enter an email address."
       invitation-expired: "That invitation is no longer valid. Ask for another."
       reset-expired: "That reset link is no longer valid. Ask for another."

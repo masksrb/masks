@@ -8,7 +8,7 @@
   <%= form.hidden_field :event, value: "accept-invitation" %>
 
   <label class="field">
-    <span class="field-label"><%= t("logins.shared.username") %></span>
+    <span class="field-label"><%= t("logins.shared.nickname") %></span>
     <input type="text" value="<%= invitation.actor.nickname %>" readonly
            autocomplete="username" class="control" />
   </label>

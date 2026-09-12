@@ -1,6 +1,6 @@
 <%= @invited_by ? t(".invited_by", nickname: @invited_by.nickname, tenant: @tenant_name) : t(".invited", tenant: @tenant_name) %>
 
-<%= t(".username", nickname: @actor.nickname) %>
+<%= t(".nickname", nickname: @actor.nickname) %>
 
 <%= @url %>
 

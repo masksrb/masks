@@ -231,7 +231,7 @@
     <Card title="Add somebody">
       <div class="grid gap-3 sm:grid-cols-2">
         <Field
-          label="Username"
+          label="Nickname"
           bind:value={nickname}
           autocapitalize="none"
           autocorrect="off"

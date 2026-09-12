@@ -1,9 +1,10 @@
-<% nickname = login.updates["nickname"].to_s %>
-<% email = login.updates["email"].to_s %>
+<% held = login.state("setup").as_json["setup"] %>
+<% nickname = login.updates["nickname"].presence || held["nickname"].to_s %>
+<% email = login.updates["email"].presence || held["email"].to_s %>
 <% tenant = Current.tenant&.name.to_s %>
 <% token_required = LoginStates::Setup.token_required? %>
-<% steps = (token_required ? [ false ] : []) + [ nickname.present?, email.present?, false ] %>
-<% stops = steps.size == 4 ? [ 1, 2, 3, 4 ] : [ 1, 2, 4 ] %>
+<% steps = (token_required ? [ false ] : []) + [ nickname.present?, email.present? ] %>
+<% stops = steps.size == 3 ? [ 1, 2, 3 ] : [ 1, 2 ] %>
 <% step = ->(index) {
      "ledger-row ledger-step ledger-step-#{stops[index]}#{" ledger-step-done" if steps[index]}"
    } %>
@@ -15,14 +16,14 @@
     <span class="auth-mark" aria-hidden="true"><%= tenant.first&.upcase %></span>
   </div>
 
-  <%= render "logins/head", cap: t(".cap"),
-        title: (tenant.present? ? t(".title_named", tenant: tenant) : t(".title")) %>
+  <%= render "logins/head", cap: t(".cap"), title: t(".title"), name: tenant %>
 
-  <div class="note note-plain" role="status"><%= t(".note") %></div>
+  <div class="note note-warn" role="status">
+    <span><%= t(".note") %> <strong><%= t(".note_keep") %></strong></span>
+  </div>
 
   <%= form_with url: login_path, method: :post, id: "setup", class: "flow" do |form| %>
     <%= hidden_field_tag :rid, login.rid %>
-    <%= form.hidden_field :event, value: "setup" %>
 
     <div class="slab">
       <% if token_required %>
@@ -34,7 +35,7 @@
       <% end %>
 
       <label class="<%= step.(token_required ? 1 : 0) %>">
-        <span class="ledger-label"><%= t("logins.shared.username") %></span>
+        <span class="ledger-label"><%= t("logins.shared.nickname") %></span>
         <%= form.text_field :nickname, value: nickname,
               autocomplete: "username", autocapitalize: "none", autocorrect: "off",
               spellcheck: "false", class: "control" %>
@@ -45,19 +46,15 @@
         <%= form.email_field :email, value: email, autocomplete: "email", class: "control" %>
       </label>
 
-      <label class="<%= step.(token_required ? 3 : 2) %>">
-        <span class="ledger-label"><%= t("logins.shared.password") %></span>
-        <%= form.password_field :password, autocomplete: "new-password", class: "control" %>
-        <span class="field-hint"><%= t(".password_hint", minimum: LoginStates::Setup::MINIMUM_PASSWORD) %></span>
-      </label>
-
       <div class="ledger-row">
         <span class="ledger-label"><%= t(".origin") %></span>
         <span class="ledger-value aside-mono"><%= Current.origin %></span>
       </div>
     </div>
 
-    <button type="submit" class="action"><%= t(".submit") %></button>
+    <button type="submit" name="event" value="setup" class="action">
+      <%= t("logins.shared.continue") %>
+    </button>
   <% end %>
 
   <p class="aside">

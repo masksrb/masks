@@ -77,8 +77,9 @@ class EmailVerificationTest < ActionDispatch::IntegrationTest
 
     with_mailer do
       post "/login", params: {
-        event: "setup", nickname: "owner",
-        email: "owner@example.invalid", password: "a-long-enough-password"
+        event: "setup", nickname: "owner", email: "owner@example.invalid",
+        password: "a-long-enough-password",
+        password_confirmation: "a-long-enough-password"
       }, as: :json
 
       assert JSON.parse(response.body)["settled"]

@@ -5,7 +5,9 @@
     <span class="record-cap"><%= cap %></span>
   <% end %>
 
-  <h1 class="prompt-title"><%= title %></h1>
+  <h1 class="prompt-title">
+    <%= title %><% if local_assigns[:name].present? %> <em><%= name %></em><% end %>
+  </h1>
 
   <% if local_assigns[:lede].present? %>
     <p class="prompt-lede"><%= lede %></p>

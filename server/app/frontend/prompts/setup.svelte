@@ -4,33 +4,26 @@ import Head from "../shared/Head.svelte";
 
 let { login } = $props();
 
-let token = $state("");
-let nickname = $state("");
-let email = $state("");
-let password = $state("");
-
 const setup = $derived(login.auth.setup ?? {});
-const minimum = $derived(setup.minimum ?? 8);
 const needsToken = $derived(setup.token === true);
 const tenant = $derived(login.auth.tenant?.name ?? "");
 const docs = $derived(login.auth.docs);
 const origin = typeof location === "undefined" ? "" : location.origin;
 
-const title = $derived(
-  tenant ? login.t("title_named", { tenant }) : login.t("title"),
-);
+let token = $state("");
+let nickname = $state(setup.nickname ?? "");
+let email = $state(setup.email ?? "");
 
 const steps = $derived(
   (needsToken ? [token.length > 0] : []).concat(
     nickname.trim().length > 0,
     email.trim().length > 0,
-    password.length >= minimum,
   ),
 );
 
 const valid = $derived(steps.every(Boolean));
 
-const stops = $derived(steps.length === 4 ? [1, 2, 3, 4] : [1, 2, 4]);
+const stops = $derived(steps.length === 3 ? [1, 2, 3] : [1, 2]);
 
 const step = (index) =>
   `ledger-row ledger-step ledger-step-${stops[index]}` +
@@ -42,7 +35,7 @@ function onsubmit(event) {
   event.preventDefault();
 
   if (valid && !login.loading) {
-    login.submit("setup", { token, nickname, email, password });
+    login.submit("setup", { token, nickname, email });
   }
 }
 </script>
@@ -57,9 +50,19 @@ function onsubmit(event) {
     <span class="auth-mark" aria-hidden="true">{initial(tenant)}</span>
   </div>
 
-  <Head {login} {title} cap={login.t("cap")} />
+  <Head
+    {login}
+    title={login.t("title")}
+    name={tenant}
+    cap={login.t("cap")} />
 
-  <div class="note note-plain" role="status">{login.t("note")}</div>
+  <div
+    class="note"
+    class:note-warn={!valid}
+    class:note-plain={valid}
+    role="status">
+    <span>{login.t("note")} <strong>{login.t("note_keep")}</strong></span>
+  </div>
 
   <form {onsubmit} class="flow" aria-busy={login.loading || undefined}>
     <div class="slab">
@@ -78,7 +81,7 @@ function onsubmit(event) {
       {/if}
 
       <label class={step(needsToken ? 1 : 0)}>
-        <span class="ledger-label">{login.t("username")}</span>
+        <span class="ledger-label">{login.t("nickname")}</span>
         <!-- svelte-ignore a11y_autofocus -->
         <input
           type="text"
@@ -104,18 +107,6 @@ function onsubmit(event) {
         />
       </label>
 
-      <label class={step(needsToken ? 3 : 2)}>
-        <span class="ledger-label">{login.t("password")}</span>
-        <input
-          type="password"
-          name="password"
-          class="control"
-          autocomplete="new-password"
-          bind:value={password}
-        />
-        <span class="field-hint">{login.t("password_hint", { minimum })}</span>
-      </label>
-
       <div class="ledger-row">
         <span class="ledger-label">{login.t("origin")}</span>
         <span class="ledger-value aside-mono">{origin}</span>
@@ -127,7 +118,7 @@ function onsubmit(event) {
       type="submit"
       ready={valid}
       busy={login.loading}
-      label={login.t("submit")}
+      label={login.t("continue")}
       working={login.t("working")}
     />
   </form>

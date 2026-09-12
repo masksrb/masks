@@ -373,7 +373,8 @@ class HandshakeTest < ActionDispatch::IntegrationTest
 
     post "/login",
          params: { event: "setup", nickname: "owner", email: "owner@example.invalid",
-                   password: "a-long-enough-password" },
+                   password: "a-long-enough-password",
+                   password_confirmation: "a-long-enough-password" },
          as: :json
 
     resumed = JSON.parse(response.body)["redirectTo"]
