@@ -21,8 +21,8 @@ const long = $derived(password.length >= minimum);
 const matched = $derived(long && confirmation === password);
 const valid = $derived(long && matched);
 
-const step = (index, done) =>
-  `ledger-row ledger-step ledger-step-${index}${done ? " ledger-step-done" : ""}`;
+const step = (done) =>
+  `ledger-row ledger-step${done ? " ledger-step-done" : ""}`;
 
 const initial = (name) => (name ? name.trim().slice(0, 1).toUpperCase() : "");
 
@@ -84,7 +84,7 @@ function onsubmit(event) {
         </div>
       {/if}
 
-      <label class={step(3, long)}>
+      <label class={step(long)}>
         <span class="ledger-label">{login.t("password")}</span>
         <!-- svelte-ignore a11y_autofocus -->
         <input
@@ -98,7 +98,7 @@ function onsubmit(event) {
         <span class="field-hint">{login.t("password_hint", { minimum })}</span>
       </label>
 
-      <label class={step(4, matched)}>
+      <label class={step(matched)}>
         <span class="ledger-label">{login.t("confirm")}</span>
         <input
           type="password"

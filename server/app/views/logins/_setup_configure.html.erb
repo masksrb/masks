@@ -17,7 +17,7 @@
     <%= hidden_field_tag :rid, login.rid %>
 
     <div class="slab">
-      <label class="ledger-row ledger-step ledger-step-4<%= " ledger-step-done" if setup["called"].present? %>">
+      <label class="ledger-row ledger-step<%= " ledger-step-done" if setup["called"].present? %>">
         <span class="ledger-label"><%= t(".called") %></span>
         <%= form.text_field :called, value: setup["called"], class: "control" %>
         <span class="field-hint"><%= t(".called_hint") %></span>

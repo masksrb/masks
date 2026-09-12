@@ -18,7 +18,7 @@ const initial = (name) => (name ? name.trim().slice(0, 1).toUpperCase() : "");
 const ready = $derived(called.trim().length > 0);
 
 const step = $derived(
-  `ledger-row ledger-step ledger-step-4${ready ? " ledger-step-done" : ""}`,
+  `ledger-row ledger-step${ready ? " ledger-step-done" : ""}`,
 );
 
 function onsubmit(event) {

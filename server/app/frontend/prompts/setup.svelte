@@ -28,11 +28,8 @@ const steps = $derived(
 
 const valid = $derived(steps.every(Boolean));
 
-const stops = $derived(steps.length === 3 ? [1, 2, 3] : [1, 2]);
-
 const step = (index) =>
-  `ledger-row ledger-step ledger-step-${stops[index]}` +
-  (steps[index] ? " ledger-step-done" : "");
+  `ledger-row ledger-step${steps[index] ? " ledger-step-done" : ""}`;
 
 const initial = (name) => (name ? name.trim().slice(0, 1).toUpperCase() : "");
 

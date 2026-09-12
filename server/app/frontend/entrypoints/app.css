@@ -1499,24 +1499,8 @@
     --step: var(--line-firm);
   }
 
-  .ledger-step-1 {
-    --earned: var(--glass-ruby);
-  }
-
-  .ledger-step-2 {
-    --earned: var(--glass-violet);
-  }
-
-  .ledger-step-3 {
-    --earned: var(--glass-cobalt);
-  }
-
-  .ledger-step-4 {
-    --earned: var(--glass-emerald);
-  }
-
   .ledger-step-done {
-    --step: var(--earned);
+    --step: var(--glass-emerald);
   }
 
   .ledger-step .ledger-label {

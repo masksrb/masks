@@ -5,9 +5,8 @@
 <% tenant = Current.tenant&.name.to_s %>
 <% token_required = LoginStates::Setup.token_required? %>
 <% steps = (token_required ? [ false ] : []) + [ nickname.present?, email.present? ] %>
-<% stops = steps.size == 3 ? [ 1, 2, 3 ] : [ 1, 2 ] %>
 <% step = ->(index) {
-     "ledger-row ledger-step ledger-step-#{stops[index]}#{" ledger-step-done" if steps[index]}"
+     "ledger-row ledger-step#{" ledger-step-done" if steps[index]}"
    } %>
 
 <div class="setup flow">
