@@ -47,7 +47,7 @@
       </div>
     </div>
 
-    <a class="action" href={handshakeUrl(boot)}>Approve as an administrator</a>
+    <a class="action" href={handshakeUrl(boot)}>Approve as a manager</a>
 
     <p class="aside">
       No secret is issued to this browser. You are asked to sign in first if you are not already.

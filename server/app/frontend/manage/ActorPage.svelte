@@ -468,7 +468,7 @@
 
         <Card title="Delete">
           {#if yourself}
-            <p class="text-sm opacity-70">This is you — another administrator has to do it.</p>
+            <p class="text-sm opacity-70">This is you — another manager has to do it.</p>
           {:else}
             <button
               type="button"

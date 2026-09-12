@@ -213,7 +213,7 @@ class HandshakeTest < ActionDispatch::IntegrationTest
     assert_response :success
   end
 
-  test "an administrator holding masks:manage may pair the admin ui with it" do
+  test "a manager holding masks:manage may pair the console with it" do
     admin = create_actor(@tenant, nickname: "admin", password: "password",
                          scopes: Scopes.join(Scopes::STANDARD + [ Scopes::MANAGE ]))
 
@@ -227,7 +227,7 @@ class HandshakeTest < ActionDispatch::IntegrationTest
     assert_includes within(@tenant) { Client.approved.sole.scope_list }, Scopes::MANAGE
   end
 
-  test "an administrator approves a scope they do not hold, because they may grant it to themselves" do
+  test "a manager approves a scope they do not hold, because they may grant it to themselves" do
     admin = create_actor(@tenant, nickname: "admin", password: "password",
                          scopes: Scopes.join(Scopes::STANDARD + [ Scopes::MANAGE ]))
 

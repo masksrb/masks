@@ -137,7 +137,7 @@ class EventsTest < ActionDispatch::IntegrationTest
     assert_equal [ Event::SESSION_STARTED ], events(actor_id: @actor.id).map(&:action)
   end
 
-  test "an administrator resetting a password is named as the one who did it" do
+  test "a manager resetting a password is named as the one who did it" do
     @admin = create_actor(@tenant, nickname: "admin", scopes: "openid profile email masks:manage")
 
     token = bearer
@@ -150,7 +150,7 @@ class EventsTest < ActionDispatch::IntegrationTest
     requested = events(actor_id: @actor.id, action: Event::PASSWORD_RESET_REQUESTED).first
 
     assert_not_nil requested
-    assert_equal @admin.id, requested.by_id, "the administrator, not the subject, did this"
+    assert_equal @admin.id, requested.by_id, "the manager, not the subject, did this"
   end
 
   test "the manage API reads the log back, newest first, and filters by action" do
@@ -169,7 +169,7 @@ class EventsTest < ActionDispatch::IntegrationTest
 
     held = answer["data"]["events"]
 
-    assert held.any?, "the administrator signed in, so there is something to read"
+    assert held.any?, "the manager signed in, so there is something to read"
     assert held.all? { |event| event["action"] == Event::SESSION_STARTED }
     assert_includes answer["data"]["eventActions"], Event::PASSWORD_CHANGED
   end

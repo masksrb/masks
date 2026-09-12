@@ -24,7 +24,7 @@
   const LENSES = [
     ["everyone", "Everyone", {}],
     ["invited", "Invited", { activated: false }],
-    ["administrators", "Administrators", { holds: "masks:manage" }],
+    ["managers", "Managers", { holds: "masks:manage" }],
   ];
 
   const QUERY = `
@@ -306,7 +306,7 @@
         ? `No person matches “${search.trim()}”.`
         : lens === "invited"
           ? "Nobody is waiting on an invitation."
-          : lens === "administrators"
+          : lens === "managers"
             ? "Nobody else holds masks:manage."
             : "Nobody can sign in yet. Add the first person."}
     >

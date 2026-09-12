@@ -130,7 +130,7 @@
 
 <Page
   title="Activity"
-  lede="Every sign-in, credential change and administrative act, newest first."
+  lede="Every sign-in, credential change and act of a manager, newest first."
 >
   <Notices feedback={feedback.state} />
 

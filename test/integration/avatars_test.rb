@@ -288,7 +288,7 @@ class AvatarsTest < ActionDispatch::IntegrationTest
     assert_response :unauthorized
   end
 
-  test "an administrator's session sees another actor's photo, so the console can draw it" do
+  test "a manager's session sees another actor's photo, so the console can draw it" do
     subject = create_actor(nickname: "someone")
     store!(subject)
     admin = create_actor(nickname: "admin", scopes: Scopes.join(Scopes::STANDARD + [ Scopes::MANAGE ]))

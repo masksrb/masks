@@ -110,7 +110,7 @@ class BackchannelLogoutTest < ActionDispatch::IntegrationTest
     assert_equal 1, delivered.length
   end
 
-  test "an administrator revoking a session reaches the client as well" do
+  test "a manager revoking a session reaches the client as well" do
     access_token_for(actor: @actor, registration: @registration)
 
     catching { within(@tenant) { Session.live.first.revoke! } }

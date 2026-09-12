@@ -131,7 +131,7 @@ en:
       missing-email: "Enter an email address."
       invitation-expired: "That invitation is no longer valid. Ask for another."
       reset-expired: "That reset link is no longer valid. Ask for another."
-      no-mailer: "This server cannot send email. Ask an administrator."
+      no-mailer: "This server cannot send email. Ask a manager."
       sso-failed: "That sign-in did not complete. Try again."
       sso-expired: "That sign-in took too long. Try again."
       sso-unavailable: "That way of signing in is not available."
