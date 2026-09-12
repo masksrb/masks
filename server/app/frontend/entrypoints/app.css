@@ -679,6 +679,10 @@
     border-top: 0;
   }
 
+  .setup .prompt-head {
+    margin-bottom: 0.75rem;
+  }
+
   .tabset {
     display: flex;
     gap: 0.25rem;
