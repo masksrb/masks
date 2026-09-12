@@ -86,7 +86,7 @@ class Tenant < ApplicationRecord
 
     def declare!
       declared.map do |subdomain|
-        active.find_by(subdomain: subdomain) || create!(subdomain: subdomain, name: subdomain.titleize)
+        active.find_by(subdomain: subdomain) || create!(subdomain: subdomain, name: subdomain)
       end
     end
 
@@ -96,7 +96,7 @@ class Tenant < ApplicationRecord
 
       subdomain = host.to_s.split(".").first
 
-      create!(subdomain: subdomain, name: subdomain.titleize)
+      create!(subdomain: subdomain, name: subdomain)
     rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique
       nil
     end
