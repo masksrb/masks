@@ -1,15 +1,14 @@
 <section class="group" id="devices">
   <h2><%= account_text("devices.heading") %></h2>
 
-  <p class="aside"><%= account_text("devices.lede") %></p>
-
   <% if devices.any? %>
-    <div class="rows">
+    <div class="entries">
       <% devices.each do |device| %>
-        <details class="row">
+        <details class="entry">
           <summary>
-            <span class="row-label"><%= device.label %></span>
-            <span class="row-state <%= "row-state-bad" if device.blocked? %>">
+            <span class="entry-icon"><%= account_icon(:device) %></span>
+            <span class="entry-label"><%= device.label %></span>
+            <span class="entry-state <%= "entry-state-bad" if device.blocked? %>">
               <% if device.blocked? %>
                 <%= account_text("devices.state.blocked") %>
               <% elsif device == current_device %>
@@ -20,10 +19,10 @@
                 <%= account_text("devices.state.signed_out") %>
               <% end %>
             </span>
-            <span class="row-mark" aria-hidden="true"></span>
+            <span class="entry-mark" aria-hidden="true"></span>
           </summary>
 
-          <div class="row-body">
+          <div class="entry-body">
             <p class="aside">
               <%= account_text("devices.seen", age: time_ago_in_words(device.last_seen_at)) %>
               <% if device.ip_address.present? %>

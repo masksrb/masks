@@ -475,46 +475,99 @@
   .place {
     display: flex;
     flex-direction: column;
-    gap: 2.5rem;
+    gap: 1.75rem;
+    --accent: var(--glass-gold);
   }
 
-  .place-head {
+  .hero {
+    position: relative;
+    isolation: isolate;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.25rem;
+    padding: 1.75rem 1rem 0.5rem;
     text-align: center;
-    padding: 1.25rem 0 0.5rem;
   }
 
-  .place-head .avatar {
-    width: 5rem;
-    height: 5rem;
+  .hero::before {
+    content: "";
+    position: absolute;
+    inset: -3rem -3rem auto;
+    height: 18rem;
+    z-index: -1;
+    pointer-events: none;
+    background: radial-gradient(
+      44% 58% at 50% 0%,
+      color-mix(in oklab, var(--glass-amber) 20%, transparent),
+      transparent 72%
+    );
+  }
+
+  .hero-avatar {
+    width: 5.5rem;
+    height: 5.5rem;
     border-radius: 50%;
+    object-fit: cover;
+    box-shadow:
+      0 0 0 1px var(--line-firm),
+      0 16px 34px -18px color-mix(in oklab, var(--glass-amber) 55%, transparent);
   }
 
-  .place-title {
-    margin: 0;
-    font-size: 1.875rem;
-    font-weight: 600;
-    letter-spacing: -0.028em;
-    line-height: 1.1;
+  .hero-name {
+    margin: 0.75rem 0 0;
+    font-size: 1.625rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.15;
   }
 
-  .place-lede {
+  .hero-sub {
     margin: 0;
-    max-width: 44ch;
     font-size: 1rem;
-    line-height: 1.55;
     color: var(--ink-soft);
   }
 
-  .place-who {
+  .hero-pills {
     display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-top: 1rem;
+  }
+
+  .pill {
+    display: inline-flex;
     align-items: center;
-    gap: 0.75rem;
+    gap: 0.4375rem;
+    padding: 0.5rem 1rem;
+    border-radius: 999px;
+    border: 1px solid var(--line-firm);
+    background: var(--glow);
+    color: var(--ink-soft);
     font-size: 0.875rem;
-    color: var(--came);
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .pill:hover {
+    border-color: var(--came);
+    color: var(--ink);
+  }
+
+  .pill-accent {
+    color: var(--accent);
+    border-color: color-mix(in oklab, var(--accent) 40%, var(--line));
+  }
+
+  .pill-accent:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .pill svg {
+    width: 1rem;
+    height: 1rem;
   }
 
   .group {
@@ -525,152 +578,193 @@
   }
 
   .group > h2 {
-    margin: 0;
-    font-size: 1.125rem;
-    font-weight: 600;
-    letter-spacing: -0.018em;
+    margin: 0 0 0.125rem 0.25rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--came);
   }
 
-  .group > .aside {
-    max-width: 62ch;
-  }
-
-  .group .rows {
-    margin-top: 0.5rem;
-  }
-
-  .todos {
+  .tiles {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
-    gap: 0.75rem;
-    margin-top: 0.25rem;
+    grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+    gap: 0.5rem;
   }
 
-  .todo {
+  .tile {
     display: flex;
     flex-direction: column;
-    gap: 0.4375rem;
+    gap: 0.5rem;
     padding: 1rem;
-    border-radius: var(--bend);
-    border: 1px solid color-mix(in oklab, var(--warn) 35%, var(--line));
-    background: var(--warn-field);
+    border-radius: 1rem;
+    background: var(--surface);
+    border: 1px solid color-mix(in oklab, var(--accent) 28%, var(--line));
+    color: inherit;
+    text-decoration: none;
   }
 
-  .todo-bad {
-    border-color: color-mix(in oklab, var(--bad) 35%, var(--line));
-    background: var(--bad-field);
+  .tile-bad {
+    --accent: var(--bad);
   }
 
-  .todo-title {
+  .tile-icon {
+    display: grid;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    background: color-mix(in oklab, var(--accent) 16%, transparent);
+    color: var(--accent);
+  }
+
+  .tile-icon svg {
+    width: 1.0625rem;
+    height: 1.0625rem;
+  }
+
+  .tile-title {
     font-size: 0.9375rem;
     font-weight: 600;
-    letter-spacing: -0.01em;
-    color: var(--warn);
+    line-height: 1.25;
   }
 
-  .todo-bad .todo-title {
-    color: var(--bad);
-  }
-
-  .todo-body {
-    flex: 1;
-    font-size: 0.875rem;
-    line-height: 1.45;
+  .tile-body {
+    font-size: 0.8125rem;
+    line-height: 1.4;
     color: var(--ink-soft);
   }
 
-  .todo > form,
-  .todo > .action {
-    align-self: flex-start;
-    margin-top: 0.25rem;
+  .tile-go {
+    margin-top: auto;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--accent);
+    font: inherit;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
   }
 
-  .rows {
+  @media (max-width: 32rem) {
+    .tiles {
+      grid-template-columns: 1fr;
+    }
+
+    .tile {
+      flex-direction: row;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem;
+    }
+
+    .tile-body {
+      display: none;
+    }
+
+    .tile-go {
+      margin-top: 0;
+      margin-left: auto;
+      white-space: nowrap;
+    }
+  }
+
+  .entries {
     display: flex;
     flex-direction: column;
-    border-top: 1px solid var(--line);
+    gap: 0.5rem;
   }
 
-  .row {
-    border-bottom: 1px solid var(--line);
+  .entry {
+    border-radius: 1rem;
+    background: var(--surface);
+    border: 1px solid var(--line);
     scroll-margin-top: 1.25rem;
   }
 
-  .row > summary {
+  .entry[open] {
+    border-color: var(--line-firm);
+  }
+
+  .entry > summary {
     display: flex;
     align-items: center;
     gap: 0.875rem;
-    padding: 0.9375rem 0.125rem;
+    padding: 0.9375rem 1rem;
     cursor: pointer;
     list-style: none;
   }
 
-  .row > summary::-webkit-details-marker {
+  .entry > summary::-webkit-details-marker {
     display: none;
   }
 
-  .row > summary:hover .row-label {
-    color: var(--signal);
+  .entry-icon {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 50%;
+    border: 1px solid var(--line-firm);
+    color: var(--ink-soft);
   }
 
-  .row-label {
+  .entry-icon svg {
+    width: 1.125rem;
+    height: 1.125rem;
+  }
+
+  .entry-label {
     font-size: 1rem;
     font-weight: 500;
     letter-spacing: -0.012em;
   }
 
-  .row-state {
+  .entry-state {
     margin-left: auto;
     font-size: 0.875rem;
-    color: var(--ink-soft);
+    color: var(--came);
     text-align: right;
   }
 
-  .row-state-warn {
-    color: var(--warn);
+  .entry-state-warn {
+    color: var(--accent);
   }
 
-  .row-state-bad {
+  .entry-state-bad {
     color: var(--bad);
   }
 
-  .row-mark {
+  .entry-mark {
     flex: none;
     width: 0.4375rem;
     height: 0.4375rem;
-    border-right: 1.5px solid var(--came);
-    border-bottom: 1.5px solid var(--came);
+    border-right: 1.5px solid var(--line-firm);
+    border-bottom: 1.5px solid var(--line-firm);
     transform: rotate(-45deg);
     transition: transform 0.2s var(--swing);
   }
 
-  .row[open] .row-mark {
+  .entry[open] .entry-mark {
     transform: rotate(45deg);
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .row-mark {
+    .entry-mark {
       transition: none;
     }
   }
 
-  .row-body {
+  .entry-body {
     display: flex;
     flex-direction: column;
     gap: 0.875rem;
-    padding: 0 0.125rem 1.125rem;
-    max-width: 34rem;
+    padding: 0 1rem 1.125rem;
   }
 
-  .row-body > .aside {
-    max-width: 46ch;
-  }
-
-  .panel-part > h3 {
-    margin: 0;
-    font-size: 0.8125rem;
-    font-weight: 600;
-    color: var(--ink-soft);
+  .entry-body > .aside {
+    max-width: 52ch;
   }
 
   .flow {

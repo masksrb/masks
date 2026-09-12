@@ -25,8 +25,7 @@ en:
             other: "%{count} of the devices you have used are blocked."
 
       signing_in:
-        heading: "How you sign in"
-        lede: "Your email address, your password, and anything else that proves it is you."
+        heading: "Signing in"
 
       email:
         heading: "Email address"
@@ -35,7 +34,7 @@ en:
           unconfirmed: "Not confirmed"
         none_set: "This account has no email address. Nothing can be sent to it, and you cannot reset your own password. Ask whoever runs this server to add one."
         body: "Password resets and confirmations go to %{email}."
-        send_link: "Send me a link"
+        send_link: "Send verification"
 
       password:
         heading: "Password"
@@ -63,7 +62,7 @@ en:
         add: "Set this up"
 
       devices:
-        heading: "Your devices"
+        heading: "Devices"
         lede: "Every phone, tablet and computer that has signed in to this account."
         none: "Nothing has signed in yet."
         state:
@@ -78,8 +77,7 @@ en:
         save_name: "Save name"
 
       apps:
-        heading: "Apps and other accounts"
-        lede: "What else can see this account, and what else can get you into it."
+        heading: "Apps and accounts"
         state:
           none: "None"
 
@@ -98,8 +96,7 @@ en:
         confirm_disconnect: "Disconnect %{provider}? Anything relying on it stops working, and if you sign in with it you will need another way in."
 
       info:
-        heading: "Your details"
-        lede: "The picture apps see, and what gets emailed to you."
+        heading: "Details"
 
       picture:
         heading: "Picture"
@@ -128,7 +125,8 @@ en:
         submit: "Save"
 
       activity:
-        heading: "Recent activity"
+        heading: "Activity"
+        entry: "Recent activity"
         lede: "What has happened to your account lately. Anything you do not recognise is worth changing your password over."
         ago: "%{age} ago"
         check_this: "worth a look"

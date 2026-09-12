@@ -1,20 +1,19 @@
 <section class="group" id="info">
   <h2><%= account_text("info.heading") %></h2>
 
-  <p class="aside"><%= account_text("info.lede") %></p>
-
-  <div class="rows">
-    <details class="row" id="picture">
+  <div class="entries">
+    <details class="entry" id="picture">
       <summary>
-        <span class="row-label"><%= account_text("picture.heading") %></span>
-        <span class="row-state">
+        <span class="entry-icon"><%= account_icon(:picture) %></span>
+        <span class="entry-label"><%= account_text("picture.heading") %></span>
+        <span class="entry-state">
           <%= Avatars.held?(actor) ? account_text("picture.state.set") :
                 account_text("picture.state.none") %>
         </span>
-        <span class="row-mark" aria-hidden="true"></span>
+        <span class="entry-mark" aria-hidden="true"></span>
       </summary>
 
-      <div class="row-body">
+      <div class="entry-body">
         <p class="aside"><%= account_text("picture.lede") %></p>
 
         <ul class="avatar-set">
@@ -52,16 +51,17 @@
       </div>
     </details>
 
-    <details class="row" id="notifications">
+    <details class="entry" id="notifications">
       <summary>
-        <span class="row-label"><%= account_text("notifications.heading") %></span>
-        <span class="row-state">
+        <span class="entry-icon"><%= account_icon(:bell) %></span>
+        <span class="entry-label"><%= account_text("notifications.heading") %></span>
+        <span class="entry-state">
           <%= account_text("notifications.state", count: actor.muted_notifications.size) %>
         </span>
-        <span class="row-mark" aria-hidden="true"></span>
+        <span class="entry-mark" aria-hidden="true"></span>
       </summary>
 
-      <div class="row-body">
+      <div class="entry-body">
         <p class="aside"><%= account_text("notifications.lede") %></p>
 
         <% unless Notifications.mailable?(actor) %>

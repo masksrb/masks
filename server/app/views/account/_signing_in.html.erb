@@ -1,13 +1,12 @@
 <section class="group" id="signing-in">
   <h2><%= account_text("signing_in.heading") %></h2>
 
-  <p class="aside"><%= account_text("signing_in.lede") %></p>
-
-  <div class="rows">
-    <details class="row" id="email">
+  <div class="entries">
+    <details class="entry" id="email">
       <summary>
-        <span class="row-label"><%= account_text("email.heading") %></span>
-        <span class="row-state <%= "row-state-warn" if actor.email.present? && actor.email_verified_at.nil? %>">
+        <span class="entry-icon"><%= account_icon(:email) %></span>
+        <span class="entry-label"><%= account_text("email.heading") %></span>
+        <span class="entry-state <%= "entry-state-warn" if actor.email.present? && actor.email_verified_at.nil? %>">
           <% if actor.email.blank? %>
             <%= account_text("email.state.none") %>
           <% elsif actor.email_verified_at.present? %>
@@ -16,10 +15,10 @@
             <%= account_text("email.state.unconfirmed") %>
           <% end %>
         </span>
-        <span class="row-mark" aria-hidden="true"></span>
+        <span class="entry-mark" aria-hidden="true"></span>
       </summary>
 
-      <div class="row-body">
+      <div class="entry-body">
         <% if actor.email.blank? %>
           <p class="aside"><%= account_text("email.none_set") %></p>
         <% else %>
@@ -35,14 +34,15 @@
       </div>
     </details>
 
-    <details class="row" id="password">
+    <details class="entry" id="password">
       <summary>
-        <span class="row-label"><%= account_text("password.heading") %></span>
-        <span class="row-state"><%= account_text("password.state") %></span>
-        <span class="row-mark" aria-hidden="true"></span>
+        <span class="entry-icon"><%= account_icon(:password) %></span>
+        <span class="entry-label"><%= account_text("password.heading") %></span>
+        <span class="entry-state"><%= account_text("password.state") %></span>
+        <span class="entry-mark" aria-hidden="true"></span>
       </summary>
 
-      <div class="row-body">
+      <div class="entry-body">
         <%= form_with url: account_password_path, method: :patch, id: "change-password",
               class: "flow-tight" do |form| %>
           <label class="field">
@@ -66,17 +66,18 @@
       </div>
     </details>
 
-    <details class="row" id="passkeys" data-passkeys>
+    <details class="entry" id="passkeys" data-passkeys>
       <summary>
-        <span class="row-label"><%= account_text("passkeys.heading") %></span>
-        <span class="row-state">
+        <span class="entry-icon"><%= account_icon(:passkey) %></span>
+        <span class="entry-label"><%= account_text("passkeys.heading") %></span>
+        <span class="entry-state">
           <%= passkeys.any? ? account_text("passkeys.state.set", count: passkeys.size) :
                 account_text("passkeys.state.none") %>
         </span>
-        <span class="row-mark" aria-hidden="true"></span>
+        <span class="entry-mark" aria-hidden="true"></span>
       </summary>
 
-      <div class="row-body">
+      <div class="entry-body">
         <p class="aside"><%= account_text("passkeys.explained") %></p>
 
         <% if passkeys.any? %>

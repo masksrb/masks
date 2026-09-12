@@ -1,19 +1,18 @@
 <section class="group" id="apps">
   <h2><%= account_text("apps.heading") %></h2>
 
-  <p class="aside"><%= account_text("apps.lede") %></p>
-
-  <div class="rows">
-    <details class="row">
+  <div class="entries">
+    <details class="entry">
       <summary>
-        <span class="row-label"><%= account_text("applications.heading") %></span>
-        <span class="row-state">
+        <span class="entry-icon"><%= account_icon(:apps) %></span>
+        <span class="entry-label"><%= account_text("applications.heading") %></span>
+        <span class="entry-state">
           <%= consents.any? ? consents.size : account_text("apps.state.none") %>
         </span>
-        <span class="row-mark" aria-hidden="true"></span>
+        <span class="entry-mark" aria-hidden="true"></span>
       </summary>
 
-      <div class="row-body">
+      <div class="entry-body">
         <% if consents.any? %>
           <ul class="chip-list">
             <% consents.each do |consent| %>
@@ -39,16 +38,17 @@
       </div>
     </details>
 
-    <details class="row" id="connections">
+    <details class="entry" id="connections">
       <summary>
-        <span class="row-label"><%= account_text("connections.heading") %></span>
-        <span class="row-state">
+        <span class="entry-icon"><%= account_icon(:linked) %></span>
+        <span class="entry-label"><%= account_text("connections.heading") %></span>
+        <span class="entry-state">
           <%= connections.any? ? connections.size : account_text("apps.state.none") %>
         </span>
-        <span class="row-mark" aria-hidden="true"></span>
+        <span class="entry-mark" aria-hidden="true"></span>
       </summary>
 
-      <div class="row-body">
+      <div class="entry-body">
         <p class="aside"><%= account_text("connections.lede") %></p>
 
         <% if connections.any? %>

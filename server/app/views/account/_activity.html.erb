@@ -1,35 +1,48 @@
 <section class="group" id="activity">
   <h2><%= account_text("activity.heading") %></h2>
 
-  <p class="aside"><%= account_text("activity.lede") %></p>
+  <div class="entries">
+    <details class="entry">
+      <summary>
+        <span class="entry-icon"><%= account_icon(:activity) %></span>
+        <span class="entry-label"><%= account_text("activity.entry") %></span>
+        <span class="entry-state"><%= events.size %></span>
+        <span class="entry-mark" aria-hidden="true"></span>
+      </summary>
 
-  <% if events.any? %>
-    <ul class="chip-list">
-      <% events.each do |event| %>
-        <li class="chip chip-stack">
-          <span class="chip-line">
-            <span class="chip-name">
-              <span><%= event_said(event) %></span>
-              <% if event_grave?(event) %>
-                <span class="tag tag-bad"><%= account_text("activity.check_this") %></span>
-              <% end %>
-            </span>
-            <span class="chip-meta">
-              <span title="<%= l(event.created_at, format: :long) %>">
-                <%= account_text("activity.ago", age: time_ago_in_words(event.created_at)) %>
-              </span>
-            </span>
-          </span>
+      <div class="entry-body">
+        <p class="aside"><%= account_text("activity.lede") %></p>
 
-          <% if event_where(event).present? %>
-            <span class="chip-meta">
-              <span class="aside-mono"><%= event_where(event) %></span>
-            </span>
-          <% end %>
-        </li>
-      <% end %>
-    </ul>
-  <% else %>
-    <p class="aside"><%= account_text("none_yet") %></p>
-  <% end %>
+        <% if events.any? %>
+          <ul class="chip-list">
+            <% events.each do |event| %>
+              <li class="chip chip-stack">
+                <span class="chip-line">
+                  <span class="chip-name">
+                    <span><%= event_said(event) %></span>
+                    <% if event_grave?(event) %>
+                      <span class="tag tag-bad"><%= account_text("activity.check_this") %></span>
+                    <% end %>
+                  </span>
+                  <span class="chip-meta">
+                    <span title="<%= l(event.created_at, format: :long) %>">
+                      <%= account_text("activity.ago", age: time_ago_in_words(event.created_at)) %>
+                    </span>
+                  </span>
+                </span>
+
+                <% if event_where(event).present? %>
+                  <span class="chip-meta">
+                    <span class="aside-mono"><%= event_where(event) %></span>
+                  </span>
+                <% end %>
+              </li>
+            <% end %>
+          </ul>
+        <% else %>
+          <p class="aside"><%= account_text("none_yet") %></p>
+        <% end %>
+      </div>
+    </details>
+  </div>
 </section>

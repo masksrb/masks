@@ -6,38 +6,37 @@
   <section class="group" id="to-do">
     <h2><%= account_text("check.heading") %></h2>
 
-    <div class="todos">
+    <div class="tiles">
       <% if unconfirmed %>
-        <div class="todo">
-          <span class="todo-title"><%= account_text("check.email.title") %></span>
-          <span class="todo-body"><%= account_text("check.email.body") %></span>
+        <div class="tile">
+          <span class="tile-icon"><%= account_icon(:email) %></span>
+          <span class="tile-title"><%= account_text("check.email.title") %></span>
+          <span class="tile-body"><%= account_text("check.email.body") %></span>
           <%= button_to account_text("email.send_link"), account_verification_path,
-                class: "action action-quiet action-sm" %>
+                class: "tile-go" %>
         </div>
       <% end %>
 
       <% if compromised.any? %>
-        <div class="todo todo-bad">
-          <span class="todo-title"><%= account_text("check.passkey.title") %></span>
-          <span class="todo-body">
+        <a class="tile tile-bad" href="#passkeys">
+          <span class="tile-icon"><%= account_icon(:passkey) %></span>
+          <span class="tile-title"><%= account_text("check.passkey.title") %></span>
+          <span class="tile-body">
             <%= account_text("check.passkey.body", count: compromised.size) %>
           </span>
-          <a class="action action-quiet action-sm" href="#passkeys">
-            <%= account_text("check.look") %>
-          </a>
-        </div>
+          <span class="tile-go"><%= account_text("check.look") %></span>
+        </a>
       <% end %>
 
       <% if blocked.any? %>
-        <div class="todo todo-bad">
-          <span class="todo-title"><%= account_text("check.device.title") %></span>
-          <span class="todo-body">
+        <a class="tile tile-bad" href="#devices">
+          <span class="tile-icon"><%= account_icon(:device) %></span>
+          <span class="tile-title"><%= account_text("check.device.title") %></span>
+          <span class="tile-body">
             <%= account_text("check.device.body", count: blocked.size) %>
           </span>
-          <a class="action action-quiet action-sm" href="#devices">
-            <%= account_text("check.look") %>
-          </a>
-        </div>
+          <span class="tile-go"><%= account_text("check.look") %></span>
+        </a>
       <% end %>
     </div>
   </section>
