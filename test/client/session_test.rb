@@ -76,7 +76,7 @@ class SessionTest < ClientTest
 
     assert found.active?
     assert_equal "actor-1", found.subject
-    assert_equal "owner", found.username
+    assert_equal "owner", found.nickname
     assert_equal "Bearer", found.token_type
     assert_equal [ "uris:catalog:read" ], found.scopes
     assert found.permits?("uris:catalog:read")

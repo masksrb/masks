@@ -5,7 +5,7 @@ module Masks
         to_h["active"] == true
       end
 
-      def username
+      def nickname
         self["username"]
       end
 
