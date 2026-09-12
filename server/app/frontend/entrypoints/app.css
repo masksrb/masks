@@ -679,6 +679,36 @@
     border-top: 0;
   }
 
+  .tabset {
+    display: flex;
+    gap: 0.25rem;
+  }
+
+  .tabset-tab {
+    flex: 1;
+    padding: 0 0 0.5rem;
+    border-bottom: 2px solid var(--line);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-align: center;
+    color: var(--line-firm);
+    transition:
+      color 0.2s ease,
+      border-color 0.2s ease;
+  }
+
+  .tabset-done {
+    border-bottom-color: var(--glass-emerald);
+    color: var(--came);
+  }
+
+  .tabset-now {
+    border-bottom-color: var(--signal);
+    color: var(--ink);
+  }
+
   .ledger-row-aside {
     display: grid;
     grid-template-columns: 1fr auto;
@@ -881,7 +911,8 @@
     cursor: pointer;
   }
 
-  .check input[type="checkbox"] {
+  .check input[type="checkbox"],
+  .check input[type="radio"] {
     flex: none;
     width: 1rem;
     height: 1rem;
@@ -889,7 +920,8 @@
     accent-color: var(--signal);
   }
 
-  .check input[type="checkbox"]:focus-visible {
+  .check input[type="checkbox"]:focus-visible,
+  .check input[type="radio"]:focus-visible {
     outline: 2px solid var(--signal);
     outline-offset: 2px;
   }

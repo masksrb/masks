@@ -11,7 +11,7 @@
   `;
 
   async function revoke(connection) {
-    const held = showActor ? connection.actor.nickname : connection.provider.name;
+    const held = showActor ? connection.actor.identifier : connection.provider.name;
 
     if (
       !confirm(
@@ -40,7 +40,7 @@
           <span class="flex flex-wrap items-baseline gap-2">
             {#if showActor}
               <Link to={`/people/${connection.actor.uuid}`} class="link link-hover text-sm font-medium">
-                {connection.actor.nickname}
+                {connection.actor.identifier}
               </Link>
             {:else}
               <span class="text-sm font-medium">{connection.provider.name}</span>

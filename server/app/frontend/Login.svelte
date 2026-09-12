@@ -13,11 +13,13 @@ import ResetPassword from "./prompts/reset-password.svelte";
 import SecondFactor from "./prompts/second-factor.svelte";
 import Settled from "./prompts/settled.svelte";
 import Setup from "./prompts/setup.svelte";
-import SetupConfirm from "./prompts/setup-confirm.svelte";
+import SetupPassword from "./prompts/setup-password.svelte";
+import SetupConfigure from "./prompts/setup-configure.svelte";
 
 const prompts = {
   setup: Setup,
-  "setup-confirm": SetupConfirm,
+  "setup-password": SetupPassword,
+  "setup-configure": SetupConfigure,
   "accept-invitation": AcceptInvitation,
   identify: Identify,
   "reset-password": ResetPassword,
@@ -36,7 +38,8 @@ const Prompt = $derived(prompts[login.prompt]);
 const SURFACES = {
   consent: "grant",
   setup: "grant",
-  "setup-confirm": "grant",
+  "setup-password": "grant",
+  "setup-configure": "grant",
 };
 
 let frame = $state(null);

@@ -80,7 +80,7 @@ module LoginStates
       end
 
       def accept(passkey, verified)
-        login.identifier = passkey.actor.nickname
+        login.identifier = passkey.actor.identifier
         login.actor = passkey.actor
 
         factored! :first_factor, expiry: FIRST_EXPIRY

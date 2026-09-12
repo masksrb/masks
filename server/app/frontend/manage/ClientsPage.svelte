@@ -19,7 +19,7 @@
       clients(search: $search, archived: $archived, afterId: $afterId, limit: $limit) {
         clientId name dynamic approvedAt archivedAt
         requiredScopes allowedScopes resources createdAt
-        approvedBy { nickname }
+        approvedBy { identifier }
         namespaces { name }
       }
     }
@@ -153,7 +153,7 @@
               {/if}
             </td>
             <td class="hidden text-xs opacity-70 md:table-cell">
-              {client.approvedBy?.nickname ?? NONE}
+              {client.approvedBy?.identifier ?? NONE}
             </td>
             <td class="text-xs whitespace-nowrap opacity-70">{day(client.createdAt)}</td>
           </Row>

@@ -42,7 +42,7 @@
       connections {
         id subject label email emailVerified connectedAt signedInAt
         provider { key name releaseScope }
-        actor { uuid nickname }
+        actor { uuid identifier }
       }
     }
   `;

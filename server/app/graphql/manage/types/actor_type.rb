@@ -2,7 +2,8 @@ module Manage
   module Types
     class ActorType < BaseObject
       field :uuid, ID, null: false
-      field :nickname, String, null: false
+      field :identifier, String, null: false
+      field :nickname, String
       field :email, String
       field :email_verified, Boolean, null: false
       field :activated, Boolean, null: false

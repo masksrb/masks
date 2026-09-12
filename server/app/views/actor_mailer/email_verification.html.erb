@@ -1,5 +1,5 @@
 <p class="lede">
-  <%= t(".confirm_html", nickname: tag.span(@actor.nickname, class: "strong"), tenant: @tenant_name) %>
+  <%= t(".confirm_html", nickname: tag.span(@actor.identifier, class: "strong"), tenant: @tenant_name) %>
 </p>
 
 <%= render "action", url: @url, label: t(".action") %>

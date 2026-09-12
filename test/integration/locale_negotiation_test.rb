@@ -28,9 +28,9 @@ class LocaleNegotiationTest < ActionDispatch::IntegrationTest
 
     copy = auth_data["copy"]
 
-    assert_equal I18n.t("logins.setup.note_keep"), copy["note_keep"]
+    assert_equal I18n.t("logins.setup.origin"), copy["origin"]
     assert_equal I18n.t("logins.shared.continue"), copy["continue"]
-    assert_match CGI.escapeHTML(copy["note"]), response.body
+    assert_match CGI.escapeHTML(copy["origin"]), response.body
   end
 
   test "a prompt ships the strings its own screen needs and no others" do

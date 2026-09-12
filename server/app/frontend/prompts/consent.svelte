@@ -80,5 +80,5 @@ const initial = (name) => (name ? name.slice(0, 1).toUpperCase() : "");
 </div>
 
 <p class="aside">
-  {login.actor?.nickname} · <a class="textlink" href="/logout">{login.t("sign_out")}</a>
+  {login.actor?.identifier} · <a class="textlink" href="/logout">{login.t("sign_out")}</a>
 </p>

@@ -11,7 +11,7 @@
     <aside class="place-rail">
       <div class="place-id">
         <%= avatar_tag @actor, size: 64 %>
-        <span class="place-who"><%= @actor.nickname %></span>
+        <span class="place-who"><%= @actor.identifier %></span>
         <% if Current.tenant&.name.present? %>
           <span class="auth-tenant"><%= Current.tenant.name %></span>
         <% end %>

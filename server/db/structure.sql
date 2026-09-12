@@ -36,7 +36,7 @@ CREATE TABLE public.actors (
     id bigint NOT NULL,
     tenant_id bigint NOT NULL,
     uuid uuid DEFAULT gen_random_uuid() NOT NULL,
-    nickname character varying NOT NULL,
+    nickname character varying,
     name character varying,
     email character varying,
     password_digest character varying,
@@ -62,7 +62,8 @@ CREATE TABLE public.actors (
     activated_at timestamp(6) without time zone,
     webauthn_id character varying,
     otp_last_step bigint,
-    muted_notifications jsonb DEFAULT '[]'::jsonb NOT NULL
+    muted_notifications jsonb DEFAULT '[]'::jsonb NOT NULL,
+    CONSTRAINT actors_are_named CHECK (((nickname IS NOT NULL) OR (email IS NOT NULL)))
 );
 
 ALTER TABLE ONLY public.actors FORCE ROW LEVEL SECURITY;
@@ -715,7 +716,8 @@ CREATE TABLE public.tenants (
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
     dynamic_client_scopes text,
-    pairwise_salt text
+    pairwise_salt text,
+    named_by character varying
 );
 
 

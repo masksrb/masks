@@ -21,9 +21,14 @@ class LoginSetupTest < ActiveSupport::TestCase
     step(event: "setup", password: password, password_confirmation: confirmation)
   end
 
+  def name_by(named_by = Tenant::EITHER)
+    step(event: "setup-configure", named_by: named_by)
+  end
+
   def set_up(**updates)
     identify(**updates)
     credit
+    name_by
   end
 
   def with_token(value)
@@ -41,7 +46,7 @@ class LoginSetupTest < ActiveSupport::TestCase
   test "the name and address are taken first, and nothing is created yet" do
     login = identify
 
-    assert_equal "setup-confirm", login.prompt
+    assert_equal "setup-password", login.prompt
     assert_nil login.actor
     assert_equal 0, within { Actor.count }
   end
@@ -55,29 +60,62 @@ class LoginSetupTest < ActiveSupport::TestCase
     assert_equal "owner@example.invalid", published["email"]
   end
 
-  test "the password creates the owner, signs them in, and settles" do
+  test "the password creates the manager and asks how masks is configured" do
     identify
     login = credit
 
-    assert_equal "settled", login.prompt
-    assert login.settled?
+    assert_equal "setup-configure", login.prompt
     assert_equal "owner", login.actor.nickname
     assert_equal "owner", login.identifier
   end
 
-  test "one post that carries everything sets up without a second screen" do
+  test "configuring settles the login and signs the manager in" do
+    identify
+    credit
+    login = name_by(Tenant::EMAIL)
+
+    assert_equal "settled", login.prompt
+    assert login.settled?
+    assert_equal Tenant::EMAIL, @tenant.reload.named_by
+  end
+
+  test "a rule masks does not know is refused" do
+    identify
+    credit
+    login = name_by("whatever")
+
+    assert_equal "setup-configure", login.prompt
+    assert_includes login.warnings, "unknown-name-rule"
+  end
+
+  test "one post that carries everything, the rule included, sets up in one step" do
     login = step(event: "setup", nickname: "owner", email: "owner@example.invalid",
-                 password: PASSWORD, password_confirmation: PASSWORD)
+                 password: PASSWORD, password_confirmation: PASSWORD,
+                 named_by: Tenant::NICKNAME)
 
     assert login.settled?
     assert_equal "owner", login.actor.nickname
+    assert_equal Tenant::NICKNAME, @tenant.reload.named_by
+  end
+
+  test "a deployment that pins the rule is never asked for it" do
+    was = Rails.configuration.masks.named_by
+    Rails.configuration.masks.named_by = Tenant::EMAIL
+
+    identify
+    login = credit
+
+    assert login.settled?
+    assert_nil @tenant.reload.read_attribute(:named_by)
+  ensure
+    Rails.configuration.masks.named_by = was
   end
 
   test "a password the confirmation does not match creates nothing" do
     identify
     login = credit(password: PASSWORD, confirmation: "a-different-password")
 
-    assert_equal "setup-confirm", login.prompt
+    assert_equal "setup-password", login.prompt
     assert_includes login.warnings, "mismatched-password"
     assert_equal 0, within { Actor.count }
   end
@@ -90,7 +128,7 @@ class LoginSetupTest < ActiveSupport::TestCase
     assert_equal "setup", login.prompt
     assert_equal "owner", login.as_json.dig("setup", "nickname")
 
-    assert_equal "setup-confirm", identify(nickname: "second").prompt
+    assert_equal "setup-password", identify(nickname: "second").prompt
     assert_equal "second", step.as_json.dig("setup", "nickname")
   end
 
@@ -166,7 +204,7 @@ class LoginSetupTest < ActiveSupport::TestCase
     identify
     login = credit(password: "short")
 
-    assert_equal "setup-confirm", login.prompt
+    assert_equal "setup-password", login.prompt
     assert_includes login.warnings, "short-password"
     assert_equal 0, within { Actor.count }
   end
@@ -175,7 +213,7 @@ class LoginSetupTest < ActiveSupport::TestCase
     identify(nickname: "-nope-")
     login = credit
 
-    assert_equal "setup-confirm", login.prompt
+    assert_equal "setup-password", login.prompt
     assert_includes login.warnings, "invalid-account"
     assert_equal 0, within { Actor.count }
   end
@@ -207,21 +245,23 @@ class LoginSetupTest < ActiveSupport::TestCase
     end
   end
 
-  test "the right setup token gets past the first screen, and the owner is created" do
+  test "the right setup token gets past the first screen, and the manager is created" do
     with_token("the-real-token") do
-      assert_equal "setup-confirm", identify(token: "the-real-token").prompt
+      assert_equal "setup-password", identify(token: "the-real-token").prompt
 
       login = credit
 
-      assert login.settled?
+      assert_equal "setup-configure", login.prompt
       assert_equal "owner", login.actor.nickname
+      assert name_by.settled?
     end
   end
 
-  test "the setup key stops being published once the tenant has an owner" do
+  test "the setup key stops being published once the tenant is set up" do
     with_token("the-real-token") do
       identify(token: "the-real-token")
       credit
+      name_by
 
       assert_nil step.as_json["setup"]
     end

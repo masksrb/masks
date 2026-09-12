@@ -84,7 +84,7 @@
     phase = "ready";
 
     api
-      .query("query Viewer { viewer { nickname } }")
+      .query("query Viewer { viewer { identifier } }")
       .then((data) => {
         viewer = data.viewer;
       })
@@ -95,7 +95,7 @@
 
   const current = $derived(router.segments[0] ?? "");
   const signedInAs = $derived(
-    viewer?.nickname ?? api.state.identity?.preferred_username ?? "Account",
+    viewer?.identifier ?? api.state.identity?.preferred_username ?? "Account",
   );
 
   function repair() {

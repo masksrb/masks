@@ -84,10 +84,10 @@ module Notifications
     def told(event, tenant_name)
       {
         tenant: tenant_name,
-        nickname: event.actor&.nickname,
+        nickname: event.actor&.identifier,
         client: event.client&.name,
         device: event.device&.label,
-        by: event.by&.nickname,
+        by: event.by&.identifier,
         provider: provider_name(event),
         remaining: detail(event, "remaining"),
         passkey: detail(event, "passkey")

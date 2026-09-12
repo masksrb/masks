@@ -1,0 +1,11 @@
+<% tabs = [ t("logins.shared.tab_identification"),
+            t("logins.shared.tab_credentials"),
+            t("logins.shared.tab_configuration") ] %>
+
+<nav class="tabset" aria-label="<%= t("logins.shared.tabs") %>">
+  <% tabs.each_with_index do |text, index| %>
+    <% place = index + 1 %>
+    <span class="tabset-tab<%= " tabset-done" if place < at %><%= " tabset-now" if place == at %>"
+          <%= tag.attributes(aria: { current: place == at ? "step" : nil }) %>><%= text %></span>
+  <% end %>
+</nav>

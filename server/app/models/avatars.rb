@@ -32,7 +32,7 @@ module Avatars
     end
 
     def initials(actor)
-      Initials.new(actor.uuid, actor.name, actor.nickname)
+      Initials.new(actor.uuid, actor.name, actor.nickname, actor.email&.split("@")&.first)
     end
 
     def held?(actor)

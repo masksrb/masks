@@ -15,16 +15,16 @@
     query Device($id: ID!) {
       device(id: $id) {
         id label name category known ipAddress userAgent lastSeenAt blockedAt createdAt
-        actors { uuid nickname }
+        actors { uuid identifier }
         sessions {
           id ipAddress userAgent authenticatedAt expiresAt
-          actor { uuid nickname }
+          actor { uuid identifier }
         }
       }
       events(device: $id, limit: 25) {
         id action createdAt ipAddress details
-        actor { uuid nickname }
-        by { uuid nickname }
+        actor { uuid identifier }
+        by { uuid identifier }
         client { clientId name }
       }
     }
@@ -138,7 +138,7 @@
               {#each device.actors as actor (actor.uuid)}
                 <li class="slat">
                   <Link to={`/people/${actor.uuid}`} class="link link-hover text-sm font-medium">
-                    {actor.nickname}
+                    {actor.identifier}
                   </Link>
                 </li>
               {/each}
@@ -158,7 +158,7 @@
                       to={`/people/${session.actor.uuid}`}
                       class="link link-hover text-sm font-medium"
                     >
-                      {session.actor.nickname}
+                      {session.actor.identifier}
                     </Link>
                     <span class="font-mono text-xs opacity-60">{session.ipAddress ?? "—"}</span>
                   </div>

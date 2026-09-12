@@ -29,7 +29,7 @@ class RelyingParty
       user: {
         id: handle_for(actor),
         name: actor.email.presence || actor.nickname,
-        display_name: actor.name.presence || actor.nickname
+        display_name: actor.name.presence || actor.identifier
       },
       exclude: Passkey.where(actor_id: actor.id).pluck(:external_id),
       authenticator_selection: {

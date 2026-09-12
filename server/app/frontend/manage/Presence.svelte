@@ -46,7 +46,7 @@
       `mutation SignOut($uuid: ID!) { signOutActor(uuid: $uuid) { actor { uuid } } }`,
       { uuid: actor.uuid },
       "Signed out everywhere.",
-      `Sign ${actor.nickname} out everywhere? Every session and refresh token ends, and no device counts as a second factor any more.`,
+      `Sign ${actor.identifier} out everywhere? Every session and refresh token ends, and no device counts as a second factor any more.`,
     );
 </script>
 

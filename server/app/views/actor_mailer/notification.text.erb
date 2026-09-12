@@ -1,6 +1,6 @@
 <%= @said %>
 <% if @by %>
-<%= t(".by", nickname: @by.nickname) %>
+<%= t(".by", nickname: @by.identifier) %>
 <% end %>
 <%= t(".seen", at: l(@at, format: :notification)) %>
 <% if @where.present? %>

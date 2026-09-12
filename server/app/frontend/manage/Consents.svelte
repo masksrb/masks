@@ -11,7 +11,7 @@
   `;
 
   async function revoke(consent) {
-    const held = showActor ? consent.actor.nickname : consent.client.name;
+    const held = showActor ? consent.actor.identifier : consent.client.name;
 
     if (
       !confirm(
@@ -39,7 +39,7 @@
         <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
           {#if showActor}
             <Link to={`/people/${consent.actor.uuid}`} class="link link-hover text-sm font-medium">
-              {consent.actor.nickname}
+              {consent.actor.identifier}
             </Link>
           {:else}
             <Link

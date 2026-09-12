@@ -1,6 +1,7 @@
 <script>
 import Action from "../shared/Action.svelte";
 import Head from "../shared/Head.svelte";
+import SetupSteps from "../shared/SetupSteps.svelte";
 
 let { login } = $props();
 
@@ -46,13 +47,7 @@ function onsubmit(event) {
 
   <Head {login} title={login.t("title")} name={tenant} cap={login.t("cap")} />
 
-  <div
-    class="note"
-    class:note-warn={!valid}
-    class:note-plain={valid}
-    role="status">
-    <span>{login.t("note")} <strong>{login.t("note_keep")}</strong></span>
-  </div>
+  <SetupSteps {login} at={2} />
 
   <form {onsubmit} class="flow" aria-busy={login.loading || undefined}>
     <div class="slab">

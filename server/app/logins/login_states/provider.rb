@@ -121,7 +121,7 @@ module LoginStates
 
         return claim!(provider, actor, settled[:identity]) if settled[:claiming]
 
-        login.identifier = actor.nickname
+        login.identifier = actor.identifier
         login.actor = actor
 
         factored! :first_factor, expiry: EXPIRY
@@ -143,7 +143,7 @@ module LoginStates
           "expires_at" => WINDOW.from_now.to_i
         }
 
-        login.identifier = actor.nickname
+        login.identifier = actor.identifier
 
         warn! "sso-claiming"
       end

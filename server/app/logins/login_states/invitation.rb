@@ -29,9 +29,9 @@ module LoginStates
 
       {
         "invitation" => {
-          "nickname" => held.actor.nickname,
+          "nickname" => held.actor.identifier,
           "email" => held.actor.email,
-          "invitedBy" => held.opened_by&.nickname,
+          "invitedBy" => held.opened_by&.identifier,
           "minimum" => MINIMUM_PASSWORD
         }
       }
@@ -63,7 +63,7 @@ module LoginStates
 
         login.store.delete(HELD)
         reload!
-        login.identifier = actor.nickname
+        login.identifier = actor.identifier
         login.actor = actor
         factored! :first_factor, expiry: EXPIRY
       end

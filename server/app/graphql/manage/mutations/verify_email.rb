@@ -10,7 +10,7 @@ module Manage
       def resolve(uuid:)
         actor = actor!(uuid)
 
-        refuse!("#{actor.nickname} has no email address") if actor.email.blank?
+        refuse!("#{actor.identifier} has no email address") if actor.email.blank?
         refuse!("#{actor.email} is already confirmed") if actor.email_verified_at.present?
 
         Verifications.open(actor: actor, by: viewer).merge(actor: actor)

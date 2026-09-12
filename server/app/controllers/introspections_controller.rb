@@ -30,7 +30,7 @@ class IntrospectionsController < ApplicationController
         "active" => true,
         "scope" => Scopes.join(token.scopes),
         "client_id" => token.client&.client_id,
-        "username" => token.actor&.nickname,
+        "username" => token.actor&.identifier,
         "token_type" => (token.token_type if token.is_a?(AccessToken)),
         "cnf" => token.confirmation,
         "exp" => token.expires_at.to_i,

@@ -3,7 +3,7 @@ module LoginStates
     accepts :identifier
 
     def reload!
-      login.identifier ||= session&.actor&.nickname
+      login.identifier ||= session&.actor&.identifier
     end
 
     handles "identify" do

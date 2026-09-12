@@ -3,9 +3,10 @@ module LoginStates
     EXPIRY = 12.hours
     WINDOW = 30.minutes
     HELD = "setup_identity".freeze
+    CONFIGURING = "setup_configuring".freeze
     MINIMUM_PASSWORD = Actor::MINIMUM_PASSWORD
 
-    accepts :nickname, :email, :password, :password_confirmation, :token
+    accepts :nickname, :email, :password, :password_confirmation, :token, :named_by
 
     class << self
       def token
@@ -20,18 +21,27 @@ module LoginStates
     handles "setup" do
       hold
       claim
+      configure
     end
 
     handles "setup-edit" do
       edit
     end
 
-    prompts "setup" do
-      held.blank? || held["editing"]
+    handles "setup-configure" do
+      configure
     end
 
-    prompts "setup-confirm" do
-      true
+    prompts "setup" do
+      !configuring? && (held.blank? || held["editing"])
+    end
+
+    prompts "setup-password" do
+      !configuring?
+    end
+
+    prompts "setup-configure" do
+      configuring?
     end
 
     def reload!
@@ -39,7 +49,7 @@ module LoginStates
     end
 
     def enabled?
-      @pending.present?
+      @pending.present? || configuring?
     end
 
     def as_json
@@ -48,13 +58,16 @@ module LoginStates
           "token" => self.class.token_required?,
           "minimum" => MINIMUM_PASSWORD,
           "nickname" => held["nickname"],
-          "email" => held["email"]
+          "email" => held["email"],
+          "names" => Tenant::NAMES,
+          "namedBy" => tenant&.named_by
         }
       }
     end
 
     def start_over!
       login.store.delete(HELD)
+      login.store.delete(CONFIGURING)
     end
 
     def cleanup!
@@ -67,6 +80,10 @@ module LoginStates
 
       def held
         login.store[HELD] || {}
+      end
+
+      def configuring?
+        login.store[CONFIGURING].present?
       end
 
       def hold
@@ -117,10 +134,24 @@ module LoginStates
         Verifications.open(actor: actor)
 
         login.store.delete(HELD)
-        login.identifier = actor.nickname
+        login.identifier = actor.identifier
         login.actor = actor
         factored! :first_factor, expiry: EXPIRY
+        login.store[CONFIGURING] = true unless tenant.names_pinned?
         @pending = false
+      end
+
+      def configure
+        return unless configuring?
+
+        wanted = update(:named_by).to_s
+        asked = login.event == "setup-configure"
+
+        return if wanted.blank? && !asked
+        return warn!("unknown-name-rule") unless Tenant::NAMES.include?(wanted)
+
+        tenant.update!(named_by: wanted)
+        login.store.delete(CONFIGURING)
       end
 
       def kept

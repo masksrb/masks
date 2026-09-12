@@ -38,7 +38,7 @@
   const QUERY = `
     query Actor($uuid: ID!) {
       actor(uuid: $uuid) {
-        uuid nickname email emailVerified scopes otpEnabled backupCodesRemaining
+        uuid identifier nickname email emailVerified scopes otpEnabled backupCodesRemaining
         backupCodesGeneratedAt lastLoginAt createdAt activated invitedAt
         passkeys { id label aaguid certification compromise userVerified lastUsedAt }
         name givenName familyName middleName profileUrl pictureUrl websiteUrl
@@ -61,7 +61,7 @@
         }
         events(limit: 25) {
           id action createdAt ipAddress details
-          by { uuid nickname }
+          by { uuid identifier }
           client { clientId name }
           device { id label }
         }
@@ -235,13 +235,13 @@
 
   async function remove() {
     const question =
-      `Delete ${actor.nickname}? Their sessions, tokens, passkeys, consents and avatar go with them. ` +
+      `Delete ${actor.identifier}? Their sessions, tokens, passkeys, consents and avatar go with them. ` +
       "There is no undo, and nothing is kept.";
 
     if (!confirm(question)) return;
 
     const data = await feedback.attempt(() =>
-      api.query(`mutation Delete($uuid: ID!) { deleteActor(uuid: $uuid) { nickname } }`, { uuid }),
+      api.query(`mutation Delete($uuid: ID!) { deleteActor(uuid: $uuid) { identifier } }`, { uuid }),
     );
 
     if (data) router.go("/people");
@@ -256,7 +256,7 @@
   </div>
 {:else}
   <Page
-    title={actor.nickname}
+    title={actor.identifier}
     id={actor.uuid}
     back={{ to: "/people", label: "People" }}
     lede={actor.activated
@@ -475,7 +475,7 @@
               class="btn btn-sm btn-error btn-outline self-start"
               onclick={remove}
             >
-              Delete {actor.nickname}
+              Delete {actor.identifier}
             </button>
           {/if}
         </Card>

@@ -20,7 +20,7 @@
     query Devices($blocked: Boolean, $unattached: Boolean, $limit: Int) {
       devices(blocked: $blocked, unattached: $unattached, limit: $limit) {
         id label category known ipAddress userAgent lastSeenAt blockedAt
-        actors { uuid nickname }
+        actors { uuid identifier }
         sessions { id }
       }
     }
@@ -116,7 +116,7 @@
                 <div class="truncate">
                   {#each device.actors as actor, at (actor.uuid)}{at ? ", " : ""}<Link
                       to={`/people/${actor.uuid}`}
-                      class="link link-hover">{actor.nickname}</Link
+                      class="link link-hover">{actor.identifier}</Link
                     >{/each}
                 </div>
               {:else}

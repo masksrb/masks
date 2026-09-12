@@ -228,7 +228,8 @@ class Login
       "identifier" => identifier,
       "rid" => rid,
       "docs" => Rails.configuration.masks.docs_url,
-      "actor" => actor && { "nickname" => actor.nickname, "name" => actor.name },
+      "actor" => actor && { "nickname" => actor.nickname, "name" => actor.name,
+                            "identifier" => actor.identifier },
       "client" => client && { "name" => client.name, "id" => client.client_id },
       "tenant" => tenant && { "name" => tenant.name }
     }

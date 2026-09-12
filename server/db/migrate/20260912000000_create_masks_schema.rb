@@ -33,6 +33,7 @@ class CreateMasksSchema < ActiveRecord::Migration[8.1]
 
       t.text :dynamic_client_scopes
       t.text :pairwise_salt
+      t.string :named_by
 
       t.index :uuid, unique: true
       t.index :subdomain, unique: true
@@ -41,7 +42,7 @@ class CreateMasksSchema < ActiveRecord::Migration[8.1]
     create_table :actors do |t|
       t.references :tenant, null: false, foreign_key: true
       t.uuid :uuid, null: false, default: -> { "gen_random_uuid()" }
-      t.string :nickname, null: false
+      t.string :nickname
       t.string :name
       t.string :email
       t.string :password_digest
@@ -69,6 +70,9 @@ class CreateMasksSchema < ActiveRecord::Migration[8.1]
       t.string :webauthn_id
       t.bigint :otp_last_step
       t.jsonb :muted_notifications, null: false, default: []
+
+      t.check_constraint "nickname IS NOT NULL OR email IS NOT NULL",
+                         name: "actors_are_named"
 
       t.index :uuid, unique: true
       t.index [ :tenant_id, :nickname ], unique: true

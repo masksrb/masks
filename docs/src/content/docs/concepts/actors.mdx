@@ -3,15 +3,36 @@ title: Actors
 description: An account on a tenant — who signs in, and what they may ask for.
 ---
 
-An actor is an account. It carries a nickname, optionally an email, and a list of scopes that bounds
-everything it can be granted.
+An actor is an account. It is named by a nickname, an email address, or both, and carries a list of
+scopes that bounds everything it can be granted.
 
 | Field | |
 | --- | --- |
-| `nickname` | the identifier typed at sign-in; renameable without a new account |
+| `nickname` | typed at sign-in; renameable without a new account |
 | `email` / `email_verified_at` | changing the address takes its verification with it |
 | `scopes` | the ceiling on what any token for this actor may carry |
 | `activated_at` | unset while an invitation is outstanding |
+
+## What names an account
+
+Which half an account must have is one setting, decided once. The first-run screen asks for it, and
+`MASKS_NAMED_BY` pins it at deploy instead — a pinned rule wins over the stored one, and changing it
+means changing the deployment.
+
+| `MASKS_NAMED_BY` | |
+| --- | --- |
+| `nickname` | every account needs one; an address is optional |
+| `email` | every account needs an address; a nickname is optional |
+| `either` | one of the two is enough (the default) |
+
+Whatever the rule, no account can have neither — the database refuses it as well as the model — and
+**an actor holding `masks:manage` needs both**. A manager is written to, not just about: invitations,
+password resets and address confirmations all go somewhere. Granting `masks:manage` to an account
+with only one half is refused until the other is filled in.
+
+Either half signs in: `Actor.locate` takes a nickname or an address, and the sign-in screen asks for
+whichever you have. `identifier` answers with the nickname when there is one and the address when
+there is not, which is what the console, the audit trail and the introspection endpoint display.
 
 Second factors are a TOTP authenticator, passkeys, and backup codes. A passkey can serve as both
 factors at once.
@@ -22,5 +43,7 @@ Three predicates decide what an actor may have:
 - `withheld(scopes)` — which of these they cannot be granted
 - `grant!(scopes)` — add scopes, as claiming a [namespace](/concepts/namespaces/) does
 
-The first actor on a tenant is made by the first-run screen and holds `masks:manage`. After that,
-accounts are invited or created from the console.
+The first actor on a tenant is made by the first-run screen and holds `masks:manage`. That screen is
+three steps — the manager, their password, then what accounts here are named by — and it never
+appears again once the tenant has an actor. After that, accounts are invited or created from the
+console.

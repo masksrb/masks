@@ -1,15 +1,15 @@
 <% invitation = login.state("invitation").invitation %>
 
 <%= render "logins/head", title: t(".title"),
-      lede: (t(".invited_by", nickname: invitation.opened_by.nickname) if invitation.opened_by) %>
+      lede: (t(".invited_by", nickname: invitation.opened_by.identifier) if invitation.opened_by) %>
 
 <%= form_with url: login_path, method: :post, id: "accept-invitation", class: "flow" do |form| %>
   <%= hidden_field_tag :rid, login.rid %>
   <%= form.hidden_field :event, value: "accept-invitation" %>
 
   <label class="field">
-    <span class="field-label"><%= t("logins.shared.nickname") %></span>
-    <input type="text" value="<%= invitation.actor.nickname %>" readonly
+    <span class="field-label"><%= t("logins.shared.account") %></span>
+    <input type="text" value="<%= invitation.actor.identifier %>" readonly
            autocomplete="username" class="control" />
   </label>
 

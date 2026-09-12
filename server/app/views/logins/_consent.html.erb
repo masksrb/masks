@@ -63,4 +63,4 @@
   <% end %>
 </div>
 
-<p class="aside"><%= login.actor&.nickname %> · <%= link_to t("logins.shared.sign_out"), logout_path, class: "textlink" %></p>
+<p class="aside"><%= login.actor&.identifier %> · <%= link_to t("logins.shared.sign_out"), logout_path, class: "textlink" %></p>

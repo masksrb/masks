@@ -22,7 +22,7 @@
         uuid subdomain name dynamicClientScopes createdAt
         signingKeys { kid algorithm activatedAt retiredAt state }
       }
-      viewer { nickname scopes }
+      viewer { identifier scopes }
       tally { actors clients sessions devices }
       namespaces {
         name resource claimedAt releasable
@@ -34,8 +34,8 @@
 
   const EVENT_FIELDS = `
     id action createdAt ipAddress details
-    actor { uuid nickname }
-    by { uuid nickname }
+    actor { uuid identifier }
+    by { uuid identifier }
     client { clientId name }
     device { id label }
   `;
@@ -226,7 +226,7 @@
       {/snippet}
     </Loader>
 
-    <Card title="You are signed in as {data.viewer.nickname}">
+    <Card title="You are signed in as {data.viewer.identifier}">
       <Facts
         rows={[
           { term: "Token for", value: boot.resource, mono: true },

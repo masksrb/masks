@@ -1,6 +1,6 @@
-<%= @invited_by ? t(".invited_by", nickname: @invited_by.nickname, tenant: @tenant_name) : t(".invited", tenant: @tenant_name) %>
+<%= @invited_by ? t(".invited_by", nickname: @invited_by.identifier, tenant: @tenant_name) : t(".invited", tenant: @tenant_name) %>
 
-<%= t(".nickname", nickname: @actor.nickname) %>
+<% if @actor.nickname.present? %><%= t(".nickname", nickname: @actor.nickname) %><% end %>
 
 <%= @url %>
 

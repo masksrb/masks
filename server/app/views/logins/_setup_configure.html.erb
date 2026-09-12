@@ -1,0 +1,47 @@
+<% setup = login.state("setup").as_json["setup"] %>
+<% tenant = Current.tenant&.name.to_s %>
+<% chosen = setup["namedBy"] %>
+<% manager = login.actor&.identifier.to_s %>
+
+<div class="setup flow">
+  <div class="auth-pair">
+    <span class="auth-mark auth-mark-client" aria-hidden="true"><%= manager.first&.upcase %></span>
+    <span class="auth-wire"></span>
+    <span class="auth-mark" aria-hidden="true"><%= tenant.first&.upcase %></span>
+  </div>
+
+  <%= render "logins/head", cap: t(".cap"), title: t(".title"), name: tenant %>
+
+  <%= render "logins/setup_steps", at: 3 %>
+
+  <%= form_with url: login_path, method: :post, id: "setup-configure", class: "flow" do |form| %>
+    <%= hidden_field_tag :rid, login.rid %>
+
+    <div class="slab">
+      <fieldset class="ledger-row">
+        <legend class="ledger-label"><%= t(".named_by") %></legend>
+
+        <div class="check-set">
+          <% Tenant::NAMES.each do |name| %>
+            <label class="check">
+              <%= form.radio_button :named_by, name, checked: name == chosen %>
+              <span><%= t(".named_by_#{name}") %></span>
+            </label>
+          <% end %>
+        </div>
+
+        <span class="field-hint"><%= t(".managers") %></span>
+      </fieldset>
+    </div>
+
+    <button type="submit" name="event" value="setup-configure" class="action">
+      <%= t(".submit") %>
+    </button>
+  <% end %>
+
+  <p class="aside">
+    <%= t(".once") %>
+    <%= link_to t(".docs"), Rails.configuration.masks.docs_url,
+          class: "textlink", rel: "noopener", target: "_blank" %>
+  </p>
+</div>

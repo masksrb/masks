@@ -23,6 +23,10 @@ module TenantSetup
   end
 
   def create_actor(tenant = @tenant, nickname: "owner", password: "password", **attributes)
+    if attributes[:scopes].to_s.include?(Scopes::MANAGE) && !attributes.key?(:email)
+      attributes[:email] = "#{nickname}@example.invalid"
+    end
+
     within(tenant) do
       Actor.create!(nickname: nickname, password: password, **attributes)
     end

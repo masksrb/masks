@@ -8,7 +8,7 @@ module Manage
       def resolve(id:)
         connection = ::Connection.find_by(uuid: id) || refuse!("no connection with that id")
 
-        connection.revoke!(reason: "revoked by #{viewer.nickname}")
+        connection.revoke!(reason: "revoked by #{viewer.identifier}")
 
         audit!(
           ::Event::CONNECTION_UNLINKED,

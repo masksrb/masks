@@ -40,6 +40,7 @@ module Server
     config.masks.tenant = ENV["MASKS_TENANT"].presence
     config.masks.tenants = ENV["MASKS_TENANTS"].to_s.split(/[\s,]+/).reject(&:empty?)
     config.masks.dynamic_client_scopes = ENV["MASKS_DYNAMIC_CLIENT_SCOPES"].presence
+    config.masks.named_by = ENV["MASKS_NAMED_BY"].presence
     config.masks.mail_from = ENV["MASKS_MAIL_FROM"].presence
     config.masks.smtp_address = ENV["MASKS_SMTP_ADDRESS"].presence
     config.masks.invitation_lifetime = ENV.fetch("MASKS_INVITATION_LIFETIME", 7 * 24 * 60 * 60).to_i.seconds
@@ -64,6 +65,13 @@ module Server
         open_timeout: 10,
         read_timeout: 10
       }.compact
+    end
+
+    if config.masks.named_by && !%w[nickname email either].include?(config.masks.named_by)
+      raise "MASKS_NAMED_BY is #{config.masks.named_by.inspect}, and the only things an " \
+            "account can be named by are a nickname, an email address, or either one. " \
+            "Set it to nickname, email or either, or leave it unset and let the first-run " \
+            "screen decide."
     end
 
     if config.masks.mail_from && config.masks.smtp_address.nil? && !Rails.env.local?

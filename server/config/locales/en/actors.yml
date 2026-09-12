@@ -1,0 +1,8 @@
+en:
+  activerecord:
+    errors:
+      models:
+        actor:
+          attributes:
+            base:
+              unnamed: "An account needs a nickname or an email address."

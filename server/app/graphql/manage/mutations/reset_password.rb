@@ -10,7 +10,7 @@ module Manage
       def resolve(uuid:)
         actor = actor!(uuid)
 
-        refuse!("#{actor.nickname} has not accepted an invitation yet") unless actor.activated?
+        refuse!("#{actor.identifier} has not accepted an invitation yet") unless actor.activated?
 
         Recoveries.open(actor: actor, by: viewer).merge(actor: actor)
       end

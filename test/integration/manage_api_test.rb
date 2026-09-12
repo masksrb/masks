@@ -195,7 +195,7 @@ class ManageApiTest < ActionDispatch::IntegrationTest
   end
 
   test "an admin may grant masks:manage to somebody else" do
-    second = create_actor(@tenant, nickname: "second")
+    second = create_actor(@tenant, nickname: "second", email: "second@example.invalid")
 
     body = ask(<<~GQL, bearer)
       mutation {
@@ -206,6 +206,21 @@ class ManageApiTest < ActionDispatch::IntegrationTest
     GQL
 
     assert_includes body.dig("data", "setActorScopes", "actor", "scopes"), "masks:manage"
+  end
+
+  test "masks:manage is refused to an account that is only half named" do
+    second = create_actor(@tenant, nickname: "second")
+
+    body = ask(<<~GQL, bearer)
+      mutation {
+        setActorScopes(uuid: "#{second.uuid}", scopes: ["openid", "masks:manage"]) {
+          actor { scopes }
+        }
+      }
+    GQL
+
+    assert_match(/email/i, body["errors"].first["message"])
+    refute_includes within(@tenant) { second.reload.scope_list }, "masks:manage"
   end
 
   test "an actor carries their own sessions and devices, so one query draws the page" do
@@ -264,7 +279,7 @@ class ManageApiTest < ActionDispatch::IntegrationTest
     assert_equal "renamed", within(@tenant) { @actor.reload.nickname }
   end
 
-  test "a nickname cannot be emptied on the way through" do
+  test "a manager cannot empty the nickname a manager has to have" do
     body = ask(%(mutation { updateActor(uuid: "#{@actor.uuid}", nickname: "") { actor { uuid } } }), bearer)
 
     assert_match(/nickname/i, body["errors"].first["message"])
@@ -298,10 +313,10 @@ class ManageApiTest < ActionDispatch::IntegrationTest
       RefreshToken.mint!(actor: second, client: @client)
     end
 
-    body = ask(%(mutation { deleteActor(uuid: "#{second.uuid}") { uuid nickname } }), held)
+    body = ask(%(mutation { deleteActor(uuid: "#{second.uuid}") { uuid identifier } }), held)
 
     assert_nil body["errors"]
-    assert_equal "second", body.dig("data", "deleteActor", "nickname")
+    assert_equal "second", body.dig("data", "deleteActor", "identifier")
 
     within(@tenant) do
       assert_nil Actor.find_by(uuid: second.uuid)
@@ -997,7 +1012,8 @@ class ManageApiTest < ActionDispatch::IntegrationTest
 
     within(@tenant) do
       Actor.create!(nickname: "plain", password: "password", scopes: "openid profile")
-      Actor.create!(nickname: "named", password: "password", scopes: "openid masks:manage")
+      Actor.create!(nickname: "named", email: "named@example.invalid", password: "password",
+                    scopes: "openid masks:manage")
       Actor.create!(nickname: "prefixed", password: "password", scopes: "openid masks:")
     end
 

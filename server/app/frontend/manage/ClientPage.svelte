@@ -30,19 +30,19 @@
         requirePushedAuthorizationRequests
         events(limit: 25) {
           id action createdAt ipAddress details
-          actor { uuid nickname }
-          by { uuid nickname }
+          actor { uuid identifier }
+          by { uuid identifier }
           device { id label }
         }
-        approvedBy { nickname }
+        approvedBy { identifier }
         namespaces { name resource claimedAt releasable }
         consents(limit: 25) {
           id scopes audience updatedAt
-          actor { uuid nickname }
+          actor { uuid identifier }
         }
         tokens(limit: 25) {
           id kind scopes audience parentId createdAt expiresAt
-          actor { uuid nickname }
+          actor { uuid identifier }
           device { id label }
         }
       }
@@ -66,7 +66,7 @@
             term: "How it got here",
             value: client.dynamic ? "self-registered" : "approved",
           },
-          { term: "Approved by", value: client.approvedBy?.nickname },
+          { term: "Approved by", value: client.approvedBy?.identifier },
           { term: "Registered", value: day(client.createdAt) },
           { term: "Authenticates with", value: client.tokenEndpointAuthMethod, mono: true },
           { term: "Grants", value: joined(client.grantTypes), mono: true },

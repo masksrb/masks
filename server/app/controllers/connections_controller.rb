@@ -87,7 +87,7 @@ class ConnectionsController < ApplicationController
     end
 
     def disconnect!(connection)
-      connection.revoke!(reason: "revoked by #{current_actor.nickname}")
+      connection.revoke!(reason: "revoked by #{current_actor.identifier}")
 
       Event.record!(
         Event::CONNECTION_UNLINKED,

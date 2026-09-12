@@ -1,7 +1,7 @@
 module Manage
   module Mutations
     class CreateActor < BaseMutation
-      argument :nickname, String
+      argument :nickname, String, required: false
       argument :email, String, required: false
       argument :password, String, required: false
       argument :scopes, [ String ], required: false
@@ -10,7 +10,7 @@ module Manage
       field :delivered, Boolean, null: false
       field :url, String
 
-      def resolve(nickname:, email: nil, password: nil, scopes: nil)
+      def resolve(nickname: nil, email: nil, password: nil, scopes: nil)
         actor = Actor.new(
           nickname: nickname,
           email: email,

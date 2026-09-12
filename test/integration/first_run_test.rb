@@ -5,7 +5,8 @@ class FirstRunTest < ActionDispatch::IntegrationTest
 
   def setup_params(**overrides)
     { event: "setup", nickname: "owner", email: "owner@example.invalid",
-      password: PASSWORD, password_confirmation: PASSWORD }.merge(overrides)
+      password: PASSWORD, password_confirmation: PASSWORD,
+      named_by: Tenant::EITHER }.merge(overrides)
   end
 
   def identify_params(**overrides)
@@ -67,27 +68,64 @@ class FirstRunTest < ActionDispatch::IntegrationTest
     assert_select "a[href=?]", manage_path, false
   end
 
-  test "the name and address are taken first, then the password on its own screen" do
+  test "three screens: the manager, their password, and what masks is configured to do" do
     host! host_for(@tenant)
+
+    get "/login"
+
+    assert_match "Identification", response.body
+    assert_match "Credentials", response.body
+    assert_match "Configuration", response.body
 
     post "/login", params: identify_params, as: :json
     body = JSON.parse(response.body)
 
-    assert_equal "setup-confirm", body["prompt"]
+    assert_equal "setup-password", body["prompt"]
     assert_equal "owner", body.dig("setup", "nickname")
     assert_equal 0, within(@tenant) { Actor.count }
 
     get "/login"
 
     assert_response :success
-    assert_match "Create the owner", response.body
+    assert_match "Create the manager", response.body
     assert_match "Confirm password", response.body
 
     post "/login", params: { event: "setup", password: PASSWORD,
                              password_confirmation: PASSWORD }, as: :json
+    body = JSON.parse(response.body)
+
+    assert_equal "setup-configure", body["prompt"]
+    assert_equal "owner", within(@tenant) { Actor.sole.nickname }
+
+    get "/login"
+
+    assert_match "An account is named by", response.body
+    assert_match "Managers always need both", response.body
+
+    post "/login", params: { event: "setup-configure", named_by: Tenant::EMAIL }, as: :json
 
     assert JSON.parse(response.body)["settled"]
-    assert_equal "owner", within(@tenant) { Actor.sole.nickname }
+    assert_equal Tenant::EMAIL, @tenant.reload.named_by
+  end
+
+  test "an account is named by whatever the tenant was configured for" do
+    host! host_for(@tenant)
+
+    post "/login", params: setup_params(named_by: Tenant::EMAIL), as: :json
+
+    assert JSON.parse(response.body)["settled"]
+
+    within(@tenant) do
+      by_address = Actor.create!(email: "reader@example.invalid", password: PASSWORD)
+
+      assert_nil by_address.nickname
+      assert_equal "reader@example.invalid", by_address.identifier
+
+      refused = Actor.new(nickname: "nameless", password: PASSWORD)
+
+      refute refused.valid?
+      assert_includes refused.errors.attribute_names, :email
+    end
   end
 
   test "editing from the confirmation screen goes back with the entries kept" do
@@ -136,7 +174,7 @@ class FirstRunTest < ActionDispatch::IntegrationTest
          as: :json
     body = JSON.parse(response.body)
 
-    assert_equal "setup-confirm", body["prompt"]
+    assert_equal "setup-password", body["prompt"]
     assert_includes body["warnings"], "short-password"
     assert_equal 0, within(@tenant) { Actor.count }
   end

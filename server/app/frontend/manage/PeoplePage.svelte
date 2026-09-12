@@ -35,7 +35,7 @@
         search: $search, activated: $activated, holds: $holds,
         afterId: $afterId, limit: $limit
       ) {
-        uuid nickname name email emailVerified otpEnabled backupCodesRemaining
+        uuid identifier nickname name email emailVerified otpEnabled backupCodesRemaining
         lastLoginAt scopes activated invitedAt
         avatars { photo identicon }
         ${PRESENCE}
@@ -47,9 +47,9 @@
   `;
 
   const CREATE = `
-    mutation Create($nickname: String!, $email: String, $password: String, $scopes: [String!]) {
+    mutation Create($nickname: String, $email: String, $password: String, $scopes: [String!]) {
       createActor(nickname: $nickname, email: $email, password: $password, scopes: $scopes) {
-        delivered url actor { uuid nickname activated }
+        delivered url actor { uuid identifier activated }
       }
     }
   `;
@@ -155,7 +155,7 @@
 
     const data = await feedback.attempt(() =>
       api.query(CREATE, {
-        nickname,
+        nickname: nickname.trim() || null,
         email: email.trim() || null,
         password: password || null,
         scopes,
@@ -266,7 +266,7 @@
         <button
           type="button"
           class="btn btn-primary btn-sm"
-          disabled={busy || !nickname.trim()}
+          disabled={busy || !(nickname.trim() || email.trim())}
           onclick={send}
         >
           {busy ? "Adding..." : password ? "Create the account" : "Send the invitation"}
@@ -280,7 +280,7 @@
     <Card title={created.actor.activated ? "Account created" : "Invitation sent"}>
       <p class="text-sm opacity-70">
         {#if created.actor.activated}
-          {created.actor.nickname} can sign in now.{created.url
+          {created.actor.identifier} can sign in now.{created.url
             ? " This link confirms their address:"
             : ""}
         {:else if created.delivered}
@@ -325,7 +325,7 @@
                 />
                 <div class="min-w-0">
                   <Link to={`/people/${actor.uuid}`} class="link link-hover font-medium">
-                    {actor.nickname}
+                    {actor.identifier}
                   </Link>
                   <div class="flex items-center gap-1.5 text-xs opacity-50">
                     <span class="truncate">

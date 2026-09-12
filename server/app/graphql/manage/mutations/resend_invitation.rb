@@ -10,7 +10,7 @@ module Manage
       def resolve(uuid:)
         actor = actor!(uuid)
 
-        refuse!("#{actor.nickname} has already accepted an invitation") if actor.activated?
+        refuse!("#{actor.identifier} has already accepted an invitation") if actor.activated?
 
         Invitations.open(actor: actor, by: viewer).merge(actor: actor)
       end

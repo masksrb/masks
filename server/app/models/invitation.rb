@@ -10,7 +10,7 @@ class Invitation < Token
   end
 
   def self.open!(actor:, by: nil)
-    raise Refused, "#{actor.nickname} has already accepted an invitation" if actor.activated?
+    raise Refused, "#{actor.identifier} has already accepted an invitation" if actor.activated?
 
     super
   end

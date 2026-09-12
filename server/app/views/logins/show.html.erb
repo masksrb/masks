@@ -1,7 +1,7 @@
 <% content_for :title, Current.tenant&.name ?
      t("logins.page.title_to", tenant: Current.tenant.name) : t("logins.page.title") %>
 
-<% content_for :surface, "grant" if %w[consent setup setup-confirm].include?(@login.prompt) %>
+<% content_for :surface, "grant" if %w[consent setup setup-password setup-configure].include?(@login.prompt) %>
 
 <% content_for :scripts do %>
   <%= vite_client_tag %>

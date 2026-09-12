@@ -17,7 +17,7 @@
   };
 
   async function revoke(token, family) {
-    const held = showActor ? token.actor?.nickname : token.client?.name;
+    const held = showActor ? token.actor?.identifier : token.client?.name;
     const question = family
       ? `Revoke every token in this chain? Anything ${held} is holding stops working at once.`
       : `Revoke this ${token.kind} token? Whatever it was exchanged for goes with it.`;
@@ -50,7 +50,7 @@
 
             {#if showActor && token.actor}
               <Link to={`/people/${token.actor.uuid}`} class="link link-hover text-sm font-medium">
-                {token.actor.nickname}
+                {token.actor.identifier}
               </Link>
             {:else if token.client}
               <Link

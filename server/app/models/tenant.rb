@@ -27,6 +27,12 @@ class Tenant < ApplicationRecord
   has_many :consents, dependent: :destroy
   has_many :events, dependent: :delete_all
 
+  NICKNAME = "nickname".freeze
+  EMAIL = "email".freeze
+  EITHER = "either".freeze
+  NAMES = [ NICKNAME, EMAIL, EITHER ].freeze
+
+  validates :named_by, inclusion: { in: NAMES }, allow_nil: true
   validates :subdomain, presence: true, uniqueness: true,
                         format: { with: /\A[a-z0-9][a-z0-9-]*\z/ }
   validates :name, presence: true
@@ -41,6 +47,14 @@ class Tenant < ApplicationRecord
     template && format(template, subdomain: subdomain).chomp("/")
   end
 
+  def named_by
+    self.class.pinned_names.presence || super.presence || EITHER
+  end
+
+  def names_pinned?
+    self.class.pinned_names.present?
+  end
+
   def dynamic_client_ceiling
     declared = dynamic_client_scopes.presence ||
       Rails.configuration.masks.dynamic_client_scopes
@@ -51,6 +65,10 @@ class Tenant < ApplicationRecord
   class << self
     def pinned
       Rails.configuration.masks.tenant
+    end
+
+    def pinned_names
+      Rails.configuration.masks.named_by
     end
 
     def resolve(host)

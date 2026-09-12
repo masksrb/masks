@@ -1,11 +1,13 @@
 <p class="lede">
-  <%= @invited_by ? t(".invited_by", nickname: @invited_by.nickname, tenant: @tenant_name) :
+  <%= @invited_by ? t(".invited_by", nickname: @invited_by.identifier, tenant: @tenant_name) :
         t(".invited", tenant: @tenant_name) %>
 </p>
 
-<p class="lede">
-  <%= t(".nickname_html", nickname: tag.span(@actor.nickname, class: "strong")) %>
-</p>
+<% if @actor.nickname.present? %>
+  <p class="lede">
+    <%= t(".nickname_html", nickname: tag.span(@actor.nickname, class: "strong")) %>
+  </p>
+<% end %>
 
 <%= render "action", url: @url, label: t(".action") %>
 

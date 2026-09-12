@@ -18,17 +18,20 @@ class Actor < ApplicationRecord
   has_many :approvals, class_name: "Client", foreign_key: :approved_by_id, dependent: :nullify
   has_one :avatar, dependent: :destroy
 
-  validates :nickname, presence: true,
-                       uniqueness: { scope: :tenant_id, case_sensitive: false },
-                       format: { with: /\A[a-z0-9][a-z0-9._-]*\z/i }
+  validates :nickname,
+            uniqueness: { scope: :tenant_id, case_sensitive: false },
+            format: { with: /\A[a-z0-9][a-z0-9._-]*\z/i },
+            allow_blank: true
   validates :email,
             format: { with: URI::MailTo::EMAIL_REGEXP },
             uniqueness: { scope: :tenant_id, case_sensitive: false },
             allow_blank: true
 
+  validate :named
+
   before_save :activate_once_a_password_exists
 
-  normalizes :nickname, with: ->(value) { value.to_s.strip }
+  normalizes :nickname, with: ->(value) { value.to_s.strip.presence }
   normalizes :email, with: ->(value) { value.to_s.strip.downcase.presence }
 
   normalizes :name, :given_name, :family_name, :middle_name, :profile_url, :picture_url,
@@ -37,8 +40,10 @@ class Actor < ApplicationRecord
 
   class << self
     def locate(identifier)
-      find_by(nickname: identifier.to_s.strip) ||
-        find_by(email: identifier.to_s.strip.downcase)
+      wanted = identifier.to_s.strip
+      return nil if wanted.blank?
+
+      find_by(nickname: wanted) || find_by(email: wanted.downcase)
     end
 
     def authenticate(identifier, password)
@@ -49,7 +54,7 @@ class Actor < ApplicationRecord
       actor.authenticate(password.to_s) || nil
     end
 
-    def invite!(nickname:, email:, scopes: nil)
+    def invite!(email:, nickname: nil, scopes: nil)
       create!(
         nickname: nickname,
         email: email,
@@ -109,6 +114,14 @@ class Actor < ApplicationRecord
 
   def withheld(requested)
     Scopes.list(requested) - permitted_scopes(requested)
+  end
+
+  def identifier
+    nickname.presence || email
+  end
+
+  def manages?
+    holds?(Scopes::MANAGE)
   end
 
   def activated?
@@ -277,6 +290,21 @@ class Actor < ApplicationRecord
 
     def activate_once_a_password_exists
       self.activated_at ||= Time.current if password_digest.present?
+    end
+
+    def named
+      return manages_by_both if manages?
+
+      case tenant&.named_by
+      when Tenant::NICKNAME then errors.add(:nickname, :blank) if nickname.blank?
+      when Tenant::EMAIL then errors.add(:email, :blank) if email.blank?
+      else errors.add(:base, :unnamed) if nickname.blank? && email.blank?
+      end
+    end
+
+    def manages_by_both
+      errors.add(:nickname, :blank) if nickname.blank?
+      errors.add(:email, :blank) if email.blank?
     end
 
     def asked(requested)

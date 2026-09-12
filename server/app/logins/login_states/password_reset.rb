@@ -30,7 +30,7 @@ module LoginStates
 
       {
         "reset" => {
-          "nickname" => held.actor.nickname,
+          "nickname" => held.actor.identifier,
           "minimum" => MINIMUM_PASSWORD
         }
       }
@@ -71,7 +71,7 @@ module LoginStates
 
         login.store.delete(HELD)
         reload!
-        login.identifier = actor.nickname
+        login.identifier = actor.identifier
         login.actor = actor
         factored! :first_factor, expiry: EXPIRY
       end

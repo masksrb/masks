@@ -1,7 +1,7 @@
 <p class="lede"><%= @said %></p>
 
 <% if @by %>
-  <p class="lede"><%= t(".by", nickname: @by.nickname) %></p>
+  <p class="lede"><%= t(".by", nickname: @by.identifier) %></p>
 <% end %>
 
 <% if @url %>

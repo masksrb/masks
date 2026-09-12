@@ -16,8 +16,8 @@
 
   const FIELDS = `
     id action createdAt ipAddress userAgent details
-    actor { uuid nickname }
-    by { uuid nickname }
+    actor { uuid identifier }
+    by { uuid identifier }
     client { clientId name }
     device { id label }
   `;
@@ -35,7 +35,7 @@
     }
   `;
 
-  const ABOUT_ACTOR = `query About($uuid: ID!) { actor(uuid: $uuid) { uuid nickname } }`;
+  const ABOUT_ACTOR = `query About($uuid: ID!) { actor(uuid: $uuid) { uuid identifier } }`;
   const ABOUT_CLIENT = `query About($clientId: ID!) { client(clientId: $clientId) { clientId name } }`;
 
   const feedback = createFeedback();
@@ -86,7 +86,7 @@
       const data = await api.query(ABOUT_ACTOR, { uuid: actorId }).catch(() => null);
 
       if (data?.actor) {
-        about = { label: data.actor.nickname, to: `/people/${data.actor.uuid}`, noun: "person" };
+        about = { label: data.actor.identifier, to: `/people/${data.actor.uuid}`, noun: "person" };
       }
 
       return;
