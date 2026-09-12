@@ -9,6 +9,7 @@ const setup = $derived(login.auth.setup ?? {});
 const minimum = $derived(setup.minimum ?? 8);
 const nickname = $derived(setup.nickname ?? "");
 const email = $derived(setup.email ?? "");
+const person = $derived(setup.name ?? "");
 const tenant = $derived(login.auth.tenant?.name ?? "");
 const docs = $derived(login.auth.docs);
 const origin = typeof location === "undefined" ? "" : location.origin;
@@ -70,6 +71,18 @@ function onsubmit(event) {
           disabled={login.loading}
           onclick={() => login.submit("setup-edit")}>{login.t("edit")}</button>
       </div>
+
+      {#if person}
+        <div class="ledger-row ledger-row-aside">
+          <span class="ledger-label">{login.t("name")}</span>
+          <span class="ledger-value">{person}</span>
+          <button
+            type="button"
+            class="textlink ledger-aside"
+            disabled={login.loading}
+            onclick={() => login.submit("setup-edit")}>{login.t("edit")}</button>
+        </div>
+      {/if}
 
       <label class={step(3, long)}>
         <span class="ledger-label">{login.t("password")}</span>

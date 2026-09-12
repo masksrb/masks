@@ -14,6 +14,7 @@ const origin = typeof location === "undefined" ? "" : location.origin;
 let token = $state("");
 let nickname = $state(setup.nickname ?? "");
 let email = $state(setup.email ?? "");
+let person = $state(setup.name ?? "");
 
 const steps = $derived(
   (needsToken ? [token.length > 0] : []).concat(
@@ -36,7 +37,7 @@ function onsubmit(event) {
   event.preventDefault();
 
   if (valid && !login.loading) {
-    login.submit("setup", { token, nickname, email });
+    login.submit("setup", { token, nickname, email, name: person });
   }
 }
 </script>
@@ -100,6 +101,18 @@ function onsubmit(event) {
           autocomplete="email"
           bind:value={email}
         />
+      </label>
+
+      <label class="ledger-row">
+        <span class="ledger-label">{login.t("name")}</span>
+        <input
+          type="text"
+          name="name"
+          class="control"
+          autocomplete="name"
+          bind:value={person}
+        />
+        <span class="field-hint">{login.t("name_hint")}</span>
       </label>
 
       <div class="ledger-row">

@@ -17,6 +17,10 @@ class LoginSetupTest < ActiveSupport::TestCase
     step(event: "setup", nickname: nickname, email: email, **updates)
   end
 
+  def name_of(login)
+    login.as_json.dig("setup", "name")
+  end
+
   def credit(password: PASSWORD, confirmation: password)
     step(event: "setup", password: password, password_confirmation: confirmation)
   end
@@ -51,13 +55,29 @@ class LoginSetupTest < ActiveSupport::TestCase
     assert_equal 0, within { Actor.count }
   end
 
-  test "the confirmation screen reads back what was entered" do
-    identify(nickname: "owner", email: "owner@example.invalid")
+  test "the credentials screen reads back what was entered" do
+    identify(nickname: "owner", email: "owner@example.invalid", name: "Ada Lovelace")
 
     published = step.as_json["setup"]
 
     assert_equal "owner", published["nickname"]
     assert_equal "owner@example.invalid", published["email"]
+    assert_equal "Ada Lovelace", published["name"]
+  end
+
+  test "a name is optional, and kept when it is given" do
+    identify(name: "  Ada Lovelace  ")
+    credit
+    name_by
+
+    assert_equal "Ada Lovelace", within { Actor.sole.name }
+  end
+
+  test "no name is no obstacle" do
+    login = set_up
+
+    assert_nil login.actor.name
+    assert_nil name_of(step)
   end
 
   test "the password creates the manager and asks how masks is configured" do

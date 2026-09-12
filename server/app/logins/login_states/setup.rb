@@ -6,7 +6,7 @@ module LoginStates
     CONFIGURING = "setup_configuring".freeze
     MINIMUM_PASSWORD = Actor::MINIMUM_PASSWORD
 
-    accepts :nickname, :email, :password, :password_confirmation, :token, :named_by
+    accepts :nickname, :email, :name, :password, :password_confirmation, :token, :named_by
 
     class << self
       def token
@@ -59,6 +59,7 @@ module LoginStates
           "minimum" => MINIMUM_PASSWORD,
           "nickname" => held["nickname"],
           "email" => held["email"],
+          "name" => held["name"],
           "names" => Tenant::NAMES,
           "namedBy" => tenant&.named_by
         }
@@ -100,6 +101,7 @@ module LoginStates
         login.store[HELD] = {
           "nickname" => nickname,
           "email" => email,
+          "name" => name,
           "expires_at" => (Time.current + WINDOW).to_i
         }
       end
@@ -123,6 +125,7 @@ module LoginStates
         actor = Actor.new(
           nickname: held["nickname"],
           email: held["email"],
+          name: held["name"],
           password: password,
           scopes: Scopes.join(Scopes::STANDARD + [ Scopes::MANAGE ])
         )
@@ -163,7 +166,7 @@ module LoginStates
       end
 
       def identifying?
-        updates.key?("nickname") || updates.key?("email")
+        updates.key?("nickname") || updates.key?("email") || updates.key?("name")
       end
 
       def crediting?
@@ -189,6 +192,10 @@ module LoginStates
 
       def email
         update(:email).to_s.strip.presence
+      end
+
+      def name
+        update(:name).to_s.strip.presence
       end
 
       def password

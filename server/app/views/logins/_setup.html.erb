@@ -1,6 +1,7 @@
 <% held = login.state("setup").as_json["setup"] %>
 <% nickname = login.updates["nickname"].presence || held["nickname"].to_s %>
 <% email = login.updates["email"].presence || held["email"].to_s %>
+<% person = login.updates["name"].presence || held["name"].to_s %>
 <% tenant = Current.tenant&.name.to_s %>
 <% token_required = LoginStates::Setup.token_required? %>
 <% steps = (token_required ? [ false ] : []) + [ nickname.present?, email.present? ] %>
@@ -42,6 +43,12 @@
       <label class="<%= step.(token_required ? 2 : 1) %>">
         <span class="ledger-label"><%= t("logins.shared.email") %></span>
         <%= form.email_field :email, value: email, autocomplete: "email", class: "control" %>
+      </label>
+
+      <label class="ledger-row">
+        <span class="ledger-label"><%= t("logins.shared.name") %></span>
+        <%= form.text_field :name, value: person, autocomplete: "name", class: "control" %>
+        <span class="field-hint"><%= t(".name_hint") %></span>
       </label>
 
       <div class="ledger-row">
