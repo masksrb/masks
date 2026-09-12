@@ -8,21 +8,20 @@
 
 <% if @actor %>
   <div id="account" class="place">
-    <%= render "account/head", actor: @actor, passkeys: @passkeys, devices: @devices,
-          consents: @consents, connections: @connections %>
+    <%= render "account/head", actor: @actor %>
 
     <%= render "account/needs", actor: @actor, passkeys: @passkeys, devices: @devices %>
 
-    <div class="panel-grid">
-      <%= render "account/signing_in", actor: @actor %>
-      <%= render "account/passkeys", passkeys: @passkeys %>
-      <%= render "account/devices", devices: @devices, trusted: @trusted, live: @live %>
-      <%= render "account/consents", consents: @consents %>
-      <%= render "account/connections", connections: @connections, providers: @providers %>
-      <%= render "account/notifications", actor: @actor %>
-      <%= render "account/picture", actor: @actor %>
-      <%= render "account/activity", events: @events %>
-    </div>
+    <%= render "account/signing_in", actor: @actor, passkeys: @passkeys %>
+
+    <%= render "account/devices", devices: @devices, trusted: @trusted, live: @live %>
+
+    <%= render "account/apps", consents: @consents, connections: @connections,
+          providers: @providers %>
+
+    <%= render "account/info", actor: @actor %>
+
+    <%= render "account/activity", events: @events %>
   </div>
 <% else %>
   <div class="prompt-head">

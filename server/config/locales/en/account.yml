@@ -1,113 +1,135 @@
 en:
   account:
     index:
-      none_yet: "None yet."
+      none_yet: "Nothing yet."
       sign_out: "Sign out"
-      title: "Your account"
-      signed_in_as_html: "Signed in as %{nickname}."
+      welcome: "Welcome, %{name}"
+      manage: "Manage this server"
+      lede: "This is where you change how you sign in, see the devices you are signed in on, and check what has been happening to your account."
 
-      facts:
-        no_address: "No address"
-        passkeys:
-          one: "passkey"
-          other: "passkeys"
-        devices:
-          one: "device"
-          other: "devices"
-        apps:
-          one: "app"
-          other: "apps"
-        linked:
-          one: "linked account"
-          other: "linked accounts"
-
-      needs:
-        no_address: "This account has no address, so nothing can be sent to it. A manager can add one."
-        unconfirmed: "%{email} is not confirmed yet, and a password reset can only go to a confirmed address."
-        compromised:
-          one: "A passkey here is a model with a reported compromise."
-          other: "%{count} passkeys here are models with a reported compromise."
-        blocked:
-          one: "A device here is blocked."
-          other: "%{count} devices here are blocked."
-        no_passkey: "No passkey yet. One signs you in with the fingerprint, face or PIN your device already uses."
+      check:
+        heading: "To-do"
         look: "Take a look"
-        add_passkey: "Add one"
+        email:
+          title: "Confirm your email"
+          body: "Until you do, you cannot reset your own password."
+        passkey:
+          title: "Replace a passkey"
+          body:
+            one: "One of yours is a model with a reported security problem."
+            other: "%{count} of yours are models with a reported security problem."
+        device:
+          title: "Look at a device"
+          body:
+            one: "One of the devices you have used is blocked."
+            other: "%{count} of the devices you have used are blocked."
 
       signing_in:
-        heading: "Signing in"
+        heading: "How you sign in"
+        lede: "Your email address, your password, and anything else that proves it is you."
 
-      picture:
-        heading: "Picture"
-        lede: "All three are always available to an application that asks. A photo is yours to upload; the other two are drawn from your account and cannot be removed."
-        photo: "Photo"
-        hint: "Cropped to a square and re-encoded, so nothing of the original file survives."
-        upload: "Upload"
-        remove: "Remove photo"
-        confirm_remove: "Remove your photo?"
+      email:
+        heading: "Email address"
+        state:
+          none: "None"
+          unconfirmed: "Not confirmed"
+        none_set: "This account has no email address. Nothing can be sent to it, and you cannot reset your own password. Ask whoever runs this server to add one."
+        body: "Password resets and confirmations go to %{email}."
+        send_link: "Send me a link"
+
+      password:
+        heading: "Password"
+        state: "Change it"
+        current: "Your current password"
+        new: "Your new password"
+        hint: "At least %{minimum} characters. Changing it signs you out everywhere else."
+        submit: "Change password"
+
+      passkeys:
+        heading: "Fingerprint, face or PIN"
+        state:
+          none: "Not set up"
+          set:
+            one: "1 set up"
+            other: "%{count} set up"
+        explained: "Instead of typing a password, your device checks it is you the way it already unlocks. It counts as both steps at once, so there is no code to wait for."
+        used: "last used %{age} ago"
+        never_used: "never used"
+        remove: "Remove"
+        confirm_remove: "Remove this?"
+        compromised: "The FIDO Alliance reports a problem with this model (%{report}). Replace it."
+        name: "What is this device called?"
+        name_placeholder: "My laptop"
+        add: "Set this up"
+
+      devices:
+        heading: "Your devices"
+        lede: "Every phone, tablet and computer that has signed in to this account."
+        none: "Nothing has signed in yet."
+        state:
+          here: "You are here"
+          signed_in: "Signed in"
+          signed_out: "Signed out"
+          blocked: "Blocked"
+        seen: "Last seen %{age} ago."
+        from: "Last used from %{address}."
+        skips_code: "This device does not have to enter a code."
+        sign_out: "Sign this device out"
+        save_name: "Save name"
+
+      apps:
+        heading: "Apps and other accounts"
+        lede: "What else can see this account, and what else can get you into it."
+        state:
+          none: "None"
 
       applications:
-        heading: "Apps you have allowed"
-        none_yet: "Nothing has asked yet. An app you sign in to appears here, with what it may read."
+        heading: "Apps you have let in"
+        none_yet: "Nothing has asked yet. An app appears here once you sign in to it, with what you agreed it may see."
         revoke: "Cut off"
         confirm_revoke: "Cut %{client} off? It has to ask again the next time you sign in, and anything it is holding stops working."
 
       connections:
-        heading: "Accounts you have linked"
-        lede: "Accounts elsewhere that are linked to this one. An application you allow in can be handed one, and a connection may be a way of signing in here."
+        heading: "Accounts you sign in with"
+        lede: "An account somewhere else — a work account, say — that is linked to this one. It can be a way of signing in here."
         signs_you_in: "signs you in"
         connect: "Connect %{provider}"
         disconnect: "Disconnect"
         confirm_disconnect: "Disconnect %{provider}? Anything relying on it stops working, and if you sign in with it you will need another way in."
 
-      passkeys:
-        heading: "Passkeys"
-        certified: "certified"
-        used: "used %{age} ago"
-        never_used: "never used"
-        remove: "Remove"
-        confirm_remove: "Remove this passkey?"
-        compromised: "The FIDO Alliance reports a compromise for this model (%{report}). Replace it."
-        what_is_one: "What is a passkey?"
-        explained: "It signs you in with the fingerprint, face or PIN your device already uses, and counts as both factors on its own."
-        name: "Name"
-        name_placeholder: "This laptop"
-        add: "Add a passkey"
+      info:
+        heading: "Your details"
+        lede: "The picture apps see, and what gets emailed to you."
 
-      devices:
-        heading: "Devices"
-        this_device: "this device"
-        skips_code: "skips your code"
-        blocked: "blocked"
-        signed_out: "signed out"
-        seen: "seen %{age} ago"
-        sign_out: "Sign out"
-        rename: "Rename"
-        save_name: "Save"
-
-      email:
-        heading: "Email"
-        none_set: "None set."
-        confirmed: "%{email} — confirmed."
-        unconfirmed: "%{email} — unconfirmed."
-        send_link: "Send a link"
+      picture:
+        heading: "Picture"
+        state:
+          set: "A photo"
+          none: "Drawn for you"
+        lede: "All three are offered to any app that asks. The photo is yours to upload; the other two are drawn from your account and cannot be removed."
+        styles:
+          photo: "Photo"
+          identicon: "Pattern"
+          initials: "Initials"
+        photo: "Choose a photo"
+        hint: "Cropped to a square and re-encoded, so nothing of the original file survives."
+        upload: "Upload"
+        remove: "Remove photo"
+        confirm_remove: "Remove your photo?"
 
       notifications:
-        heading: "Notifications"
-        lede: "Everything here is on until you turn it off. These arrive as they happen — nothing is batched, and none of them can be replied to."
-        silent: "Nothing is being sent. These only go to a confirmed address, and this account does not have one yet."
+        heading: "Emails we send you"
+        state:
+          zero: "All of them"
+          one: "One turned off"
+          other: "%{count} turned off"
+        lede: "Everything here is on until you turn it off. These arrive as they happen, and none of them can be replied to."
+        silent: "Nothing is being sent, because these only go to a confirmed email address."
         submit: "Save"
-
-      password:
-        heading: "Password"
-        current: "Current password"
-        new: "New password"
-        hint: "At least %{minimum} characters. Signs out every other session."
-        submit: "Change password"
 
       activity:
         heading: "Recent activity"
-        lede: "What has happened to your account lately. Anything you do not recognise is worth a password change."
+        lede: "What has happened to your account lately. Anything you do not recognise is worth changing your password over."
         ago: "%{age} ago"
         check_this: "worth a look"
 

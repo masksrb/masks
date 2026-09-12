@@ -1,8 +1,7 @@
-<section id="activity" class="panel panel-wide slab">
-  <div class="panel-head">
-    <h2 class="panel-title"><%= account_text("activity.heading") %></h2>
-    <span class="panel-count"><%= events.size %></span>
-  </div>
+<section class="group" id="activity">
+  <h2><%= account_text("activity.heading") %></h2>
+
+  <p class="aside"><%= account_text("activity.lede") %></p>
 
   <% if events.any? %>
     <ul class="chip-list">
@@ -31,6 +30,6 @@
       <% end %>
     </ul>
   <% else %>
-    <p class="aside"><%= account_text("activity.lede") %></p>
+    <p class="aside"><%= account_text("none_yet") %></p>
   <% end %>
 </section>

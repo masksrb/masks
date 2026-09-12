@@ -1,45 +1,38 @@
-<section id="devices" class="panel slab">
-  <div class="panel-head">
-    <h2 class="panel-title"><%= account_text("devices.heading") %></h2>
-    <span class="panel-count"><%= devices.size %></span>
-  </div>
+<section class="group" id="devices">
+  <h2><%= account_text("devices.heading") %></h2>
+
+  <p class="aside"><%= account_text("devices.lede") %></p>
 
   <% if devices.any? %>
-    <ul class="chip-list">
+    <div class="rows">
       <% devices.each do |device| %>
-        <li class="chip chip-stack">
-          <span class="chip-line">
-            <span class="chip-name">
-              <span><%= device.label %></span>
-              <% if device == current_device %>
-                <span class="tag tag-live"><%= account_text("devices.this_device") %></span>
+        <details class="row">
+          <summary>
+            <span class="row-label"><%= device.label %></span>
+            <span class="row-state <%= "row-state-bad" if device.blocked? %>">
+              <% if device.blocked? %>
+                <%= account_text("devices.state.blocked") %>
+              <% elsif device == current_device %>
+                <%= account_text("devices.state.here") %>
+              <% elsif live.include?(device.id) %>
+                <%= account_text("devices.state.signed_in") %>
+              <% else %>
+                <%= account_text("devices.state.signed_out") %>
+              <% end %>
+            </span>
+            <span class="row-mark" aria-hidden="true"></span>
+          </summary>
+
+          <div class="row-body">
+            <p class="aside">
+              <%= account_text("devices.seen", age: time_ago_in_words(device.last_seen_at)) %>
+              <% if device.ip_address.present? %>
+                <%= account_text("devices.from", address: device.ip_address) %>
               <% end %>
               <% if trusted.include?(device.id) %>
-                <span class="tag"><%= account_text("devices.skips_code") %></span>
+                <%= account_text("devices.skips_code") %>
               <% end %>
-              <% if device.blocked? %>
-                <span class="tag tag-bad"><%= account_text("devices.blocked") %></span>
-              <% end %>
-              <% unless live.include?(device.id) %>
-                <span class="tag"><%= account_text("devices.signed_out") %></span>
-              <% end %>
-            </span>
-            <span class="chip-meta">
-              <span><%= account_text("devices.seen", age: time_ago_in_words(device.last_seen_at)) %></span>
-              <% if live.include?(device.id) %>
-                <%= button_to account_text("devices.sign_out"), device_path(device), method: :delete,
-                      class: "textlink", form_class: "chip-action" %>
-              <% end %>
-            </span>
-          </span>
-
-          <span class="chip-meta">
-            <span class="aside-mono"><%= device.ip_address || "—" %></span>
-            <span><%= device.category %></span>
-          </span>
-
-          <details class="disclosure">
-            <summary class="textlink"><%= account_text("devices.rename") %></summary>
+            </p>
 
             <%= form_with url: device_path(device), method: :patch, class: "action-row" do |form| %>
               <%= form.text_field :name, value: device.name, placeholder: device.label,
@@ -48,11 +41,18 @@
                 <%= account_text("devices.save_name") %>
               </button>
             <% end %>
-          </details>
-        </li>
+
+            <% if live.include?(device.id) %>
+              <div class="action-row">
+                <%= button_to account_text("devices.sign_out"), device_path(device),
+                      method: :delete, class: "action action-quiet action-sm" %>
+              </div>
+            <% end %>
+          </div>
+        </details>
       <% end %>
-    </ul>
+    </div>
   <% else %>
-    <p class="aside"><%= account_text("none_yet") %></p>
+    <p class="aside"><%= account_text("devices.none") %></p>
   <% end %>
 </section>

@@ -182,7 +182,7 @@ class PasskeyTest < ActionDispatch::IntegrationTest
     end
 
     get root_path
-    assert_match(/reports a compromise/, response.body)
+    assert_match(/reports a problem with this model/, response.body)
   end
 
   test "signing in with a passkey never reaches the metadata service" do

@@ -1,41 +1,44 @@
 <% compromised = passkeys.select(&:compromised?) %>
 <% blocked = devices.select(&:blocked?) %>
-<% needed = actor.email.blank? || actor.email_verified_at.nil? ||
-            compromised.any? || blocked.any? || passkeys.none? %>
+<% unconfirmed = actor.email.present? && actor.email_verified_at.nil? %>
 
-<% if needed %>
-  <div class="needs">
-    <% if actor.email.blank? %>
-      <div class="need">
-        <span><%= account_text("needs.no_address") %></span>
-      </div>
-    <% elsif actor.email_verified_at.nil? %>
-      <div class="need">
-        <span><%= account_text("needs.unconfirmed", email: actor.email) %></span>
-        <%= button_to account_text("email.send_link"), account_verification_path,
-              class: "action action-quiet action-sm" %>
-      </div>
-    <% end %>
+<% if unconfirmed || compromised.any? || blocked.any? %>
+  <section class="group" id="to-do">
+    <h2><%= account_text("check.heading") %></h2>
 
-    <% if compromised.any? %>
-      <div class="need need-bad">
-        <span><%= account_text("needs.compromised", count: compromised.size) %></span>
-        <a class="action action-quiet action-sm" href="#passkeys"><%= account_text("needs.look") %></a>
-      </div>
-    <% end %>
+    <div class="todos">
+      <% if unconfirmed %>
+        <div class="todo">
+          <span class="todo-title"><%= account_text("check.email.title") %></span>
+          <span class="todo-body"><%= account_text("check.email.body") %></span>
+          <%= button_to account_text("email.send_link"), account_verification_path,
+                class: "action action-quiet action-sm" %>
+        </div>
+      <% end %>
 
-    <% if blocked.any? %>
-      <div class="need need-bad">
-        <span><%= account_text("needs.blocked", count: blocked.size) %></span>
-        <a class="action action-quiet action-sm" href="#devices"><%= account_text("needs.look") %></a>
-      </div>
-    <% end %>
+      <% if compromised.any? %>
+        <div class="todo todo-bad">
+          <span class="todo-title"><%= account_text("check.passkey.title") %></span>
+          <span class="todo-body">
+            <%= account_text("check.passkey.body", count: compromised.size) %>
+          </span>
+          <a class="action action-quiet action-sm" href="#passkeys">
+            <%= account_text("check.look") %>
+          </a>
+        </div>
+      <% end %>
 
-    <% if passkeys.none? %>
-      <div class="need">
-        <span><%= account_text("needs.no_passkey") %></span>
-        <a class="action action-quiet action-sm" href="#passkeys"><%= account_text("needs.add_passkey") %></a>
-      </div>
-    <% end %>
-  </div>
+      <% if blocked.any? %>
+        <div class="todo todo-bad">
+          <span class="todo-title"><%= account_text("check.device.title") %></span>
+          <span class="todo-body">
+            <%= account_text("check.device.body", count: blocked.size) %>
+          </span>
+          <a class="action action-quiet action-sm" href="#devices">
+            <%= account_text("check.look") %>
+          </a>
+        </div>
+      <% end %>
+    </div>
+  </section>
 <% end %>
