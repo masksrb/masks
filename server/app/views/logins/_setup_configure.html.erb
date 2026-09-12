@@ -1,6 +1,5 @@
 <% setup = login.state("setup").as_json["setup"] %>
 <% tenant = Current.tenant&.name.to_s %>
-<% chosen = setup["namedBy"] %>
 <% manager = login.actor&.identifier.to_s %>
 
 <div class="setup flow">
@@ -18,13 +17,19 @@
     <%= hidden_field_tag :rid, login.rid %>
 
     <div class="slab">
+      <label class="ledger-row">
+        <span class="ledger-label"><%= t(".called") %></span>
+        <%= form.text_field :called, value: setup["called"], class: "control" %>
+        <span class="field-hint"><%= t(".called_hint") %></span>
+      </label>
+
       <fieldset class="ledger-row">
         <legend class="ledger-label"><%= t(".named_by") %></legend>
 
         <div class="check-set">
           <% Tenant::NAMES.each do |name| %>
             <label class="check">
-              <%= form.radio_button :named_by, name, checked: name == chosen %>
+              <%= form.radio_button :named_by, name, checked: name == setup["namedBy"] %>
               <span><%= t(".named_by_#{name}") %></span>
             </label>
           <% end %>
@@ -32,6 +37,34 @@
 
         <span class="field-hint"><%= t(".managers") %></span>
       </fieldset>
+
+      <fieldset class="ledger-row">
+        <legend class="ledger-label"><%= t(".registration") %></legend>
+
+        <div class="check-set">
+          <% LoginStates::Setup::REGISTRATIONS.each do |offer| %>
+            <label class="check">
+              <%= form.radio_button :registration, offer, checked: offer == setup["registration"] %>
+              <span><%= t(".registration_#{offer}") %></span>
+            </label>
+          <% end %>
+        </div>
+
+        <%= form.text_field :registration_scopes, value: setup["registrationScopes"],
+              autocapitalize: "none", autocorrect: "off", spellcheck: "false", class: "control" %>
+
+        <span class="field-hint"><%= t(".registration_hint") %></span>
+      </fieldset>
+
+      <div class="ledger-row ledger-row-tight">
+        <span class="ledger-label"><%= t(".mail") %></span>
+        <span class="ledger-value"><%= setup["mails"] ? t(".mail_on") : t(".mail_off") %></span>
+      </div>
+
+      <div class="ledger-row ledger-row-tight">
+        <span class="ledger-label"><%= t(".origin") %></span>
+        <span class="ledger-value aside-mono"><%= Current.origin %></span>
+      </div>
     </div>
 
     <button type="submit" name="event" value="setup-configure" class="action">

@@ -5,8 +5,12 @@ module LoginStates
     HELD = "setup_identity".freeze
     CONFIGURING = "setup_configuring".freeze
     MINIMUM_PASSWORD = Actor::MINIMUM_PASSWORD
+    ANYTHING = "anything".freeze
+    BOUNDED = "bounded".freeze
+    REGISTRATIONS = [ ANYTHING, BOUNDED ].freeze
 
-    accepts :nickname, :email, :name, :password, :password_confirmation, :token, :named_by
+    accepts :nickname, :email, :name, :password, :password_confirmation, :token,
+            :named_by, :called, :registration, :registration_scopes
 
     class << self
       def token
@@ -61,7 +65,11 @@ module LoginStates
           "email" => held["email"],
           "name" => held["name"],
           "names" => Tenant::NAMES,
-          "namedBy" => tenant&.named_by
+          "namedBy" => tenant&.named_by,
+          "called" => tenant&.name,
+          "registration" => BOUNDED,
+          "registrationScopes" => Scopes.join(tenant&.dynamic_client_ceiling || Scopes::STANDARD),
+          "mails" => ActorMailer.deliverable?
         }
       }
     end
@@ -153,8 +161,25 @@ module LoginStates
         return if wanted.blank? && !asked
         return warn!("unknown-name-rule") unless Tenant::NAMES.include?(wanted)
 
-        tenant.update!(named_by: wanted)
+        tenant.named_by = wanted
+        tenant.name = called if called.present?
+        tenant.dynamic_client_scopes = ceiling
+
+        return warn!("invalid-configuration") unless tenant.save
+
         login.store.delete(CONFIGURING)
+      end
+
+      def called
+        update(:called).to_s.strip
+      end
+
+      def ceiling
+        return nil unless update(:registration).to_s == BOUNDED
+
+        offered = Scopes.list(update(:registration_scopes)) - Scopes.reserved(update(:registration_scopes))
+
+        Scopes.join(offered).presence
       end
 
       def kept

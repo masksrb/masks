@@ -25,8 +25,8 @@ class LoginSetupTest < ActiveSupport::TestCase
     step(event: "setup", password: password, password_confirmation: confirmation)
   end
 
-  def name_by(named_by = Tenant::EITHER)
-    step(event: "setup-configure", named_by: named_by)
+  def name_by(named_by = Tenant::EITHER, **updates)
+    step(event: "setup-configure", named_by: named_by, **updates)
   end
 
   def set_up(**updates)
@@ -97,6 +97,47 @@ class LoginSetupTest < ActiveSupport::TestCase
     assert_equal "settled", login.prompt
     assert login.settled?
     assert_equal Tenant::EMAIL, @tenant.reload.named_by
+  end
+
+  test "configuring names the installation and bounds what apps may register for" do
+    identify
+    credit
+
+    login = name_by(
+      Tenant::EITHER,
+      called: "  Payroll  ",
+      registration: LoginStates::Setup::BOUNDED,
+      registration_scopes: "openid profile masks:manage"
+    )
+
+    assert login.settled?
+
+    tenant = @tenant.reload
+
+    assert_equal "Payroll", tenant.name
+    assert_equal %w[openid profile], tenant.dynamic_client_ceiling
+  end
+
+  test "apps may register for anything a manager does not have to grant" do
+    identify
+    credit
+    name_by(Tenant::EITHER, registration: LoginStates::Setup::ANYTHING,
+            registration_scopes: "openid profile")
+
+    assert_nil @tenant.reload.dynamic_client_ceiling
+  end
+
+  test "the configuration screen offers what the tenant already holds" do
+    identify
+    credit
+
+    login = step
+    published = within { login.as_json["setup"] }
+
+    assert_equal @tenant.name, published["called"]
+    assert_equal LoginStates::Setup::BOUNDED, published["registration"]
+    assert_equal Scopes.join(Scopes::STANDARD), published["registrationScopes"]
+    assert_equal ActorMailer.deliverable?, published["mails"]
   end
 
   test "a rule masks does not know is refused" do
