@@ -12,7 +12,7 @@ gem "rake", "~> 13.2"
 group :development do
   gem "sdoc", "~> 2.6"
   gem "rdoc", "~> 8.0"
-  gem "json", "< 3"
+  gem "json", "< 4"
 end
 
 group :test do
