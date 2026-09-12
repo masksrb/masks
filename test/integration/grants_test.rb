@@ -266,7 +266,7 @@ class GrantsTest < ActionDispatch::IntegrationTest
     token = refresh_token!
 
     sign_in_as(@actor)
-    delete "/account/consents/#{consent.id}"
+    delete "/account/apps/#{@client.client_id}"
 
     assert_redirected_to root_path
 
@@ -274,6 +274,23 @@ class GrantsTest < ActionDispatch::IntegrationTest
       assert consent.reload.revoked_at.present?
       assert token.reload.consumed_at.present?
     end
+  end
+
+  test "an app that never had to ask is listed, and can be cut off too" do
+    within(@tenant) { @client.update!(approved_at: Time.current) }
+    token = refresh_token!
+
+    sign_in_as(@actor)
+    get "/"
+
+    assert_response :success
+    assert_match @client.name, response.body
+    assert_nil within(@tenant) { Consent.find_by(actor: @actor, client: @client) }
+
+    delete "/account/apps/#{@client.client_id}"
+
+    assert_redirected_to root_path
+    assert within(@tenant) { token.reload.consumed_at.present? }
   end
 
   test "somebody disconnects an upstream account from their own account page" do
@@ -309,13 +326,18 @@ class GrantsTest < ActionDispatch::IntegrationTest
 
   test "nobody cuts off an application on somebody else's account" do
     consent = consent!
+    token = refresh_token!
     intruder = create_actor(@tenant, nickname: "eve", email: "eve@example.com")
 
     sign_in_as(intruder)
-    delete "/account/consents/#{consent.id}"
+    delete "/account/apps/#{@client.client_id}"
 
     assert_redirected_to root_path
-    assert_nil within(@tenant) { consent.reload.revoked_at }
+
+    within(@tenant) do
+      assert_nil consent.reload.revoked_at
+      assert_nil token.reload.consumed_at
+    end
   end
 
   test "the account page lists connections and offers the rest" do

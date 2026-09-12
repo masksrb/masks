@@ -10,13 +10,11 @@
   <div id="account" class="place">
     <%= render "account/head", actor: @actor %>
 
-    <%= render "account/needs", actor: @actor, passkeys: @passkeys, devices: @devices %>
-
     <%= render "account/signing_in", actor: @actor, passkeys: @passkeys %>
 
     <%= render "account/devices", devices: @devices, trusted: @trusted, live: @live %>
 
-    <%= render "account/apps", consents: @consents, connections: @connections,
+    <%= render "account/apps", apps: @apps, connections: @connections,
           providers: @providers %>
 
     <%= render "account/info", actor: @actor %>

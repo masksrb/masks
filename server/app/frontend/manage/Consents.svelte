@@ -23,7 +23,7 @@
 
     const done = await feedback.attempt(
       () => api.query(REVOKE, { id: consent.id }),
-      "Cut off. It will have to ask again.",
+      "Access revoked. It will have to ask again.",
     );
 
     if (done) await onchange();
@@ -51,7 +51,7 @@
           {/if}
 
           <button type="button" class="link text-xs text-error" onclick={() => revoke(consent)}>
-            Cut off
+            Revoke access
           </button>
         </div>
 

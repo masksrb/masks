@@ -274,7 +274,7 @@ class AvatarsTest < ActionDispatch::IntegrationTest
 
     post "/account/avatar", params: { avatar: upload }
 
-    assert_redirected_to root_path(anchor: "avatar")
+    assert_redirected_to root_path
     assert within(@tenant) { Avatars.photo(@actor.reload) }.present?
 
     delete "/account/avatar"

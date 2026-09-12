@@ -14,31 +14,27 @@
         <p class="aside"><%= account_text("activity.lede") %></p>
 
         <% if events.any? %>
-          <ul class="chip-list">
+          <div class="items">
             <% events.each do |event| %>
-              <li class="chip chip-stack">
-                <span class="chip-line">
-                  <span class="chip-name">
-                    <span><%= event_said(event) %></span>
-                    <% if event_grave?(event) %>
-                      <span class="tag tag-bad"><%= account_text("activity.check_this") %></span>
-                    <% end %>
-                  </span>
-                  <span class="chip-meta">
-                    <span title="<%= l(event.created_at, format: :long) %>">
-                      <%= account_text("activity.ago", age: time_ago_in_words(event.created_at)) %>
-                    </span>
-                  </span>
+              <div class="item">
+                <span class="item-name">
+                  <span><%= event_said(event) %></span>
+                  <% if event_grave?(event) %>
+                    <span class="tag tag-bad"><%= account_text("activity.check_this") %></span>
+                  <% end %>
                 </span>
 
-                <% if event_where(event).present? %>
-                  <span class="chip-meta">
-                    <span class="aside-mono"><%= event_where(event) %></span>
+                <span class="item-meta">
+                  <span title="<%= l(event.created_at, format: :long) %>">
+                    <%= account_text("activity.ago", age: time_ago_in_words(event.created_at)) %>
                   </span>
-                <% end %>
-              </li>
+                  <% if event_where(event).present? %>
+                    · <%= event_where(event) %>
+                  <% end %>
+                </span>
+              </div>
             <% end %>
-          </ul>
+          </div>
         <% else %>
           <p class="aside"><%= account_text("none_yet") %></p>
         <% end %>

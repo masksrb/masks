@@ -33,9 +33,9 @@ class AvatarsController < ApplicationController
 
     Event.record!(Event::AVATAR_UPLOADED, actor: current_actor)
 
-    redirect_to root_path(anchor: "avatar"), notice: t("avatars.updated")
+    redirect_to root_path, notice: t("avatars.updated")
   rescue Avatar::Unreadable => e
-    redirect_to root_path(anchor: "avatar"), alert: e.message
+    redirect_to root_path, alert: e.message
   end
 
   def destroy
@@ -45,7 +45,7 @@ class AvatarsController < ApplicationController
 
     Event.record!(Event::AVATAR_REMOVED, actor: current_actor) if removed
 
-    redirect_to root_path(anchor: "avatar"), notice: t("avatars.removed")
+    redirect_to root_path, notice: t("avatars.removed")
   end
 
   private

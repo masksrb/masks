@@ -81,37 +81,35 @@
         <p class="aside"><%= account_text("passkeys.explained") %></p>
 
         <% if passkeys.any? %>
-          <ul class="chip-list">
+          <div class="items">
             <% passkeys.each do |passkey| %>
-              <li class="chip chip-stack">
-                <span class="chip-line">
-                  <span class="chip-name">
-                    <% if passkey.icon %>
-                      <img src="<%= passkey.icon %>" alt="" width="16" height="16" />
-                    <% end %>
-                    <span><%= passkey.label %></span>
-                  </span>
-                  <span class="chip-meta">
-                    <span>
-                      <%= passkey.last_used_at ?
-                            account_text("passkeys.used", age: time_ago_in_words(passkey.last_used_at)) :
-                            account_text("passkeys.never_used") %>
-                    </span>
-                    <%= button_to account_text("passkeys.remove"), passkey_path(passkey),
-                          method: :delete, class: "textlink", form_class: "chip-action",
-                          form: { data: { turbo_confirm: account_text("passkeys.confirm_remove") } } %>
-                  </span>
+              <div class="item">
+                <span class="item-name">
+                  <% if passkey.icon %>
+                    <img src="<%= passkey.icon %>" alt="" width="16" height="16" />
+                  <% end %>
+                  <span><%= passkey.label %></span>
                 </span>
 
-                <% if passkey.compromised? %>
-                  <span class="aside aside-bad">
-                    <%= account_text("passkeys.compromised",
-                          report: passkey.compromise.downcase.tr("_", " ")) %>
-                  </span>
-                <% end %>
-              </li>
+                <span class="item-meta">
+                  <%= passkey.last_used_at ?
+                        account_text("passkeys.used", age: time_ago_in_words(passkey.last_used_at)) :
+                        account_text("passkeys.never_used") %>
+                  <% if passkey.compromised? %>
+                    <span class="aside-bad">
+                      <%= account_text("passkeys.compromised",
+                            report: passkey.compromise.downcase.tr("_", " ")) %>
+                    </span>
+                  <% end %>
+                </span>
+
+                <%= button_to account_text("passkeys.remove"), passkey_path(passkey),
+                      method: :delete, class: "action action-quiet action-sm",
+                      form_class: "item-act",
+                      form: { data: { turbo_confirm: account_text("passkeys.confirm_remove") } } %>
+              </div>
             <% end %>
-          </ul>
+          </div>
         <% end %>
 
         <%= form_with url: passkeys_path, method: :post, id: "add-passkey",

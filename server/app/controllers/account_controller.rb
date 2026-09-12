@@ -6,7 +6,7 @@ class AccountController < ApplicationController
 
     return redirect_to login_path if @actor.nil? && !Actor.exists?
 
-    @consents = @actor ? Consent.live.where(actor: @actor).includes(:client) : []
+    @apps = @actor ? Apps.held_by(@actor) : []
     @connections = @actor ? Connection.live.where(actor: @actor).includes(:provider).order(:created_at) : []
     @providers = @actor ? Provider.active.where.not(id: @connections.map(&:provider_id)).order(:name) : []
     @passkeys = @actor ? Passkey.where(actor: @actor).includes(:authenticator).newest_first : []

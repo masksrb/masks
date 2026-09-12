@@ -4,9 +4,9 @@ en:
     renamed: "Device renamed."
     signed_out: "That device has been signed out."
 
-  consents:
-    unknown: "There is no such application on this account."
-    revoked: "%{client} has been cut off, and has to ask again."
+  apps:
+    unknown: "There is no such app on this account."
+    revoked: "%{client} has been revoked. Anything it was holding stops working, and it has to ask again."
 
   connections:
     unknown: "There is no such connection on this account."

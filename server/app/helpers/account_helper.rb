@@ -9,6 +9,7 @@ module AccountHelper
     picture: '<rect x="3" y="4" width="14" height="12" rx="2"/><circle cx="7.5" cy="8.5" r="1.5"/><path d="m4 14 4-3.5 3 2.5 2.5-2 2.5 3"/>',
     bell: '<path d="M6 9a4 4 0 0 1 8 0c0 3 .8 4.2 1.5 5h-11C5.2 13.2 6 12 6 9Z"/><path d="M8.5 14.5a1.5 1.5 0 0 0 3 0"/>',
     activity: '<circle cx="10" cy="10" r="7"/><path d="M10 6v4.2l2.6 1.8"/>',
+    close: '<path d="M6.5 6.5l7 7M13.5 6.5l-7 7"/>',
     manage: '<path d="M10 2.5 3.5 5v5c0 3.4 2.7 6.2 6.5 7.5 3.8-1.3 6.5-4.1 6.5-7.5V5L10 2.5Z"/>'
   }.freeze
 

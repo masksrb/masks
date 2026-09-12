@@ -3,26 +3,9 @@ en:
     index:
       none_yet: "Nothing yet."
       sign_out: "Sign out"
-      welcome: "Welcome, %{name}"
+      title: "Your account"
       manage: "Manage this server"
       lede: "This is where you change how you sign in, see the devices you are signed in on, and check what has been happening to your account."
-
-      check:
-        heading: "To-do"
-        look: "Take a look"
-        email:
-          title: "Confirm your email"
-          body: "Until you do, you cannot reset your own password."
-        passkey:
-          title: "Replace a passkey"
-          body:
-            one: "One of yours is a model with a reported security problem."
-            other: "%{count} of yours are models with a reported security problem."
-        device:
-          title: "Look at a device"
-          body:
-            one: "One of the devices you have used is blocked."
-            other: "%{count} of the devices you have used are blocked."
 
       signing_in:
         heading: "Signing in"
@@ -84,8 +67,11 @@ en:
       applications:
         heading: "Apps you have let in"
         none_yet: "Nothing has asked yet. An app appears here once you sign in to it, with what you agreed it may see."
-        revoke: "Cut off"
-        confirm_revoke: "Cut %{client} off? It has to ask again the next time you sign in, and anything it is holding stops working."
+        revoke: "Revoke access"
+        more:
+          one: "and one more"
+          other: "and %{count} more"
+        confirm_revoke: "Revoke %{client}? Anything it is holding stops working, and it has to ask again the next time you sign in."
 
       connections:
         heading: "Accounts you sign in with"
@@ -99,18 +85,7 @@ en:
         heading: "Details"
 
       picture:
-        heading: "Picture"
-        state:
-          set: "A photo"
-          none: "Drawn for you"
-        lede: "All three are offered to any app that asks. The photo is yours to upload; the other two are drawn from your account and cannot be removed."
-        styles:
-          photo: "Photo"
-          identicon: "Pattern"
-          initials: "Initials"
-        photo: "Choose a photo"
-        hint: "Cropped to a square and re-encoded, so nothing of the original file survives."
-        upload: "Upload"
+        change: "Change your picture"
         remove: "Remove photo"
         confirm_remove: "Remove your photo?"
 

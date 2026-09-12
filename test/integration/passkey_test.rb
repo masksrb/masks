@@ -56,7 +56,7 @@ class PasskeyTest < ActionDispatch::IntegrationTest
     assert passkey.user_verified
 
     get root_path
-    assert_select "li", text: /This laptop/
+    assert_select ".item", text: /This laptop/
   end
 
   test "enrolling needs a session" do

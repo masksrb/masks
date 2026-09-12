@@ -47,3 +47,9 @@ if (form && available()) {
 } else if (name) {
   name.closest("[data-passkeys]")?.setAttribute("data-unsupported", "true");
 }
+
+const picture = document.getElementById("picture-file");
+
+picture?.addEventListener("change", () => {
+  if (picture.files?.length) picture.form?.requestSubmit();
+});
