@@ -1,0 +1,40 @@
+<section id="picture" class="panel slab">
+  <div class="panel-head">
+    <h2 class="panel-title"><%= account_text("picture.heading") %></h2>
+  </div>
+
+  <p class="aside"><%= account_text("picture.lede") %></p>
+
+  <ul class="avatar-set">
+    <% Avatars::STYLES.each do |style| %>
+      <li class="avatar-choice">
+        <% if style == Avatars::PHOTO && !Avatars.held?(actor) %>
+          <span class="avatar avatar-empty" aria-hidden="true"></span>
+        <% else %>
+          <%= avatar_tag actor, style: style, size: 96 %>
+        <% end %>
+        <span class="avatar-name"><%= style %></span>
+      </li>
+    <% end %>
+  </ul>
+
+  <%= form_with url: account_avatar_path, method: :post, class: "flow-tight",
+        html: { multipart: true } do |form| %>
+    <label class="field">
+      <span class="field-label"><%= account_text("picture.photo") %></span>
+      <%= form.file_field :avatar, accept: "image/png,image/jpeg,image/webp,image/gif",
+            required: true, class: "control control-sm" %>
+      <span class="field-hint"><%= account_text("picture.hint") %></span>
+    </label>
+
+    <div class="action-row">
+      <button type="submit" class="action action-sm"><%= account_text("picture.upload") %></button>
+
+      <% if Avatars.photo(actor) %>
+        <%= button_to account_text("picture.remove"), account_avatar_path, method: :delete,
+              class: "action action-quiet action-sm",
+              form: { data: { turbo_confirm: account_text("picture.confirm_remove") } } %>
+      <% end %>
+    </div>
+  <% end %>
+</section>

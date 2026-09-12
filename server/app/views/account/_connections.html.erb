@@ -1,0 +1,45 @@
+<section id="connections" class="panel slab">
+  <div class="panel-head">
+    <h2 class="panel-title"><%= account_text("connections.heading") %></h2>
+    <span class="panel-count"><%= connections.size %></span>
+  </div>
+
+  <% if connections.any? %>
+    <ul class="chip-list">
+      <% connections.each do |connection| %>
+        <li class="chip chip-stack">
+          <span class="chip-line">
+            <span class="chip-name">
+              <span><%= connection.provider.name %></span>
+              <% if connection.signed_in_at %>
+                <span class="tag"><%= account_text("connections.signs_you_in") %></span>
+              <% end %>
+            </span>
+            <span class="chip-meta">
+              <%= button_to account_text("connections.disconnect"),
+                    account_connection_path(connection.uuid),
+                    method: :delete, class: "textlink", form_class: "chip-action",
+                    form: { data: { turbo_confirm: account_text("connections.confirm_disconnect",
+                                                      provider: connection.provider.name) } } %>
+            </span>
+          </span>
+
+          <span class="chip-meta">
+            <span><%= connection.label || connection.email || connection.subject %></span>
+          </span>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <p class="aside"><%= account_text("connections.lede") %></p>
+  <% end %>
+
+  <% if providers.any? %>
+    <div class="action-row">
+      <% providers.each do |provider| %>
+        <%= button_to account_text("connections.connect", provider: provider.name),
+              connect_path(provider.key), class: "action action-quiet action-sm" %>
+      <% end %>
+    </div>
+  <% end %>
+</section>

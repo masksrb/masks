@@ -1,0 +1,35 @@
+<div class="place-head">
+  <div class="place-brand">
+    <% if Current.tenant&.name.present? %>
+      <span class="auth-mark" aria-hidden="true"><%= Current.tenant.name.first.upcase %></span>
+      <span class="auth-tenant"><%= Current.tenant.name %></span>
+    <% end %>
+  </div>
+
+  <h1 class="place-title"><%= account_text("title") %></h1>
+
+  <p class="place-lede">
+    <%= account_text("signed_in_as_html", nickname: tag.b(actor.identifier)) %>
+    <%= link_to account_text("sign_out"), logout_path, class: "textlink" %>
+  </p>
+
+  <div class="place-facts">
+    <a class="place-fact" href="#signing-in">
+      <%= actor.email.presence || account_text("facts.no_address") %>
+    </a>
+    <a class="place-fact" href="#passkeys">
+      <b><%= passkeys.size %></b> <%= account_text("facts.passkeys", count: passkeys.size) %>
+    </a>
+    <a class="place-fact" href="#devices">
+      <b><%= devices.size %></b> <%= account_text("facts.devices", count: devices.size) %>
+    </a>
+    <a class="place-fact" href="#apps">
+      <b><%= consents.size %></b> <%= account_text("facts.apps", count: consents.size) %>
+    </a>
+    <% if connections.any? %>
+      <a class="place-fact" href="#connections">
+        <b><%= connections.size %></b> <%= account_text("facts.linked", count: connections.size) %>
+      </a>
+    <% end %>
+  </div>
+</div>

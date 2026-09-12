@@ -1,0 +1,43 @@
+<section id="signing-in" class="panel slab">
+  <div class="panel-head">
+    <h2 class="panel-title"><%= account_text("signing_in.heading") %></h2>
+  </div>
+
+  <div class="panel-part">
+    <h3><%= account_text("email.heading") %></h3>
+
+    <% if actor.email.blank? %>
+      <p class="aside"><%= account_text("email.none_set") %></p>
+    <% elsif actor.email_verified_at.present? %>
+      <p class="aside"><%= account_text("email.confirmed", email: actor.email) %></p>
+    <% else %>
+      <p class="aside"><%= account_text("email.unconfirmed", email: actor.email) %></p>
+
+      <%= button_to account_text("email.send_link"), account_verification_path,
+            class: "action action-quiet action-sm" %>
+    <% end %>
+  </div>
+
+  <div class="panel-part">
+    <h3><%= account_text("password.heading") %></h3>
+
+    <%= form_with url: account_password_path, method: :patch, id: "change-password",
+          class: "flow-tight" do |form| %>
+      <label class="field">
+        <span class="field-label"><%= account_text("password.current") %></span>
+        <%= form.password_field :current_password, autocomplete: "current-password",
+              class: "control control-sm" %>
+      </label>
+
+      <label class="field">
+        <span class="field-label"><%= account_text("password.new") %></span>
+        <%= form.password_field :password, autocomplete: "new-password", class: "control control-sm" %>
+        <span class="field-hint">
+          <%= account_text("password.hint", minimum: PasswordsController::MINIMUM) %>
+        </span>
+      </label>
+
+      <button type="submit" class="action action-sm"><%= account_text("password.submit") %></button>
+    <% end %>
+  </div>
+</section>

@@ -1,0 +1,31 @@
+<section id="notifications" class="panel slab">
+  <div class="panel-head">
+    <h2 class="panel-title"><%= account_text("notifications.heading") %></h2>
+  </div>
+
+  <p class="aside"><%= account_text("notifications.lede") %></p>
+
+  <% unless Notifications.mailable?(actor) %>
+    <p class="aside aside-bad"><%= account_text("notifications.silent") %></p>
+  <% end %>
+
+  <%= form_with url: account_notifications_path, method: :patch, class: "flow-tight" do |form| %>
+    <%= hidden_field_tag "notifications[]", "" %>
+
+    <% Notifications::GROUPS.each do |group, actions| %>
+      <fieldset class="check-set">
+        <legend class="field-label"><%= t("notifications.groups.#{group}") %></legend>
+
+        <% actions.each do |action| %>
+          <label class="check">
+            <%= check_box_tag "notifications[]", action, actor.notified?(action),
+                  id: "notify-#{action.tr('.', '-')}" %>
+            <span><%= t("events.actions.#{action}") %></span>
+          </label>
+        <% end %>
+      </fieldset>
+    <% end %>
+
+    <button type="submit" class="action action-sm"><%= account_text("notifications.submit") %></button>
+  <% end %>
+</section>

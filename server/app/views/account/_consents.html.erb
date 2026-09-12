@@ -1,0 +1,28 @@
+<section id="apps" class="panel slab">
+  <div class="panel-head">
+    <h2 class="panel-title"><%= account_text("applications.heading") %></h2>
+    <span class="panel-count"><%= consents.size %></span>
+  </div>
+
+  <% if consents.any? %>
+    <ul class="chip-list">
+      <% consents.each do |consent| %>
+        <li class="chip chip-stack">
+          <span class="chip-line">
+            <span class="chip-name"><%= consent.client.name %></span>
+            <span class="chip-meta">
+              <%= button_to account_text("applications.revoke"), account_consent_path(consent),
+                    method: :delete, class: "textlink", form_class: "chip-action",
+                    form: { data: { turbo_confirm: account_text("applications.confirm_revoke",
+                                                      client: consent.client.name) } } %>
+            </span>
+          </span>
+
+          <span class="chip-key"><%= consent.scopes %></span>
+        </li>
+      <% end %>
+    </ul>
+  <% else %>
+    <p class="aside"><%= account_text("applications.none_yet") %></p>
+  <% end %>
+</section>

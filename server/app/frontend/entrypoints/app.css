@@ -473,86 +473,160 @@
   }
 
   .place {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+  }
+
+  .place-head {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .place-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .place-head .auth-mark {
+    flex: none;
+    width: 1.875rem;
+    height: 1.875rem;
+    font-size: 0.8125rem;
+  }
+
+  .place-title {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+    letter-spacing: -0.024em;
+    line-height: 1.1;
+  }
+
+  .place-lede {
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    font-size: 0.9375rem;
+    color: var(--ink-soft);
+  }
+
+  .place-facts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.125rem 1rem;
+    font-size: 0.875rem;
+    color: var(--ink-soft);
+  }
+
+  .place-fact {
+    color: inherit;
+    text-decoration: none;
+    border-bottom: 1px solid transparent;
+  }
+
+  .place-fact:hover,
+  .place-fact:focus-visible {
+    color: var(--ink);
+    border-bottom-color: var(--line-firm);
+  }
+
+  .place-fact b {
+    color: var(--ink);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .needs {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .need {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    padding: 0.75rem 0.875rem;
+    border-radius: var(--bend);
+    border: 1px solid currentColor;
+    font-size: 0.9375rem;
+    line-height: 1.4;
+    color: var(--warn);
+    background: var(--warn-field);
+  }
+
+  .need-bad {
+    color: var(--bad);
+    background: var(--bad-field);
+  }
+
+  .need > form,
+  .need > .action {
+    flex: none;
+  }
+
+  .panel-grid {
     display: grid;
-    grid-template-columns: 12rem 1fr;
-    gap: 2.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+    gap: 1rem;
     align-items: start;
   }
 
-  @media (max-width: 46rem) {
-    .place {
-      grid-template-columns: 1fr;
-      gap: 1.5rem;
-    }
+  .panel {
+    gap: 0.875rem;
+    scroll-margin-top: 1.25rem;
   }
 
-  .place-rail {
+  .panel-wide {
+    grid-column: 1 / -1;
+  }
+
+  .panel-head {
     display: flex;
-    flex-direction: column;
+    align-items: baseline;
+    justify-content: space-between;
     gap: 1rem;
   }
 
-  .place-id {
-    display: flex;
-    flex-direction: column;
-    gap: 0.625rem;
-  }
-
-  .place-id .auth-mark {
-    width: 2.5rem;
-    height: 2.5rem;
-    font-size: 1rem;
-  }
-
-  .place-who {
-    font-size: 1rem;
-    font-weight: 500;
-    letter-spacing: -0.014em;
-  }
-
-  .place-nav {
-    display: flex;
-    flex-direction: column;
-    gap: 0.0625rem;
+  .panel-title {
     margin: 0;
-    padding: 0;
-    list-style: none;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
   }
 
-  .place-nav a {
-    display: block;
-    padding: 0.3125rem 0 0.3125rem 0.6875rem;
-    border-left: 2px solid transparent;
-    font-size: 0.875rem;
-    color: var(--ink-soft);
-    text-decoration: none;
-  }
-
-  .place-nav a:hover {
-    color: var(--ink);
-  }
-
-  .place-body {
-    display: flex;
-    flex-direction: column;
-    gap: 1.75rem;
-    min-width: 0;
-  }
-
-  .place-section {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    scroll-margin-top: 1.5rem;
-  }
-
-  .place-section > h2 {
-    margin: 0;
-    font-size: 0.6875rem;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
+  .panel-count {
+    flex: none;
+    font-size: 0.8125rem;
     color: var(--came);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .panel-part {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6875rem;
+    padding-top: 0.875rem;
+    border-top: 1px solid var(--line);
+  }
+
+  .panel-part:first-of-type {
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  .panel-part > h3 {
+    margin: 0;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--ink-soft);
   }
 
   .flow {
