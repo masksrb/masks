@@ -144,7 +144,7 @@ jobs:
         with:
           ref: ${{ needs.release-please.outputs.server_tag || github.sha }}
 
-      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-qemu-action@v4
         if: needs.release-please.outputs.server == 'true'
 
       - uses: docker/setup-buildx-action@v4
@@ -186,7 +186,7 @@ jobs:
       # for the repository to be one rather than failing the release.
       - name: Attest what built it
         if: github.event.repository.visibility == 'public'
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4
         with:
           subject-name: ghcr.io/${{ github.repository }}
           subject-digest: ${{ steps.push.outputs.digest }}
