@@ -5,6 +5,8 @@ module Manage
       argument :dynamic_client_scopes, [ String ], required: false
       argument :dynamic_registration, String, required: false
       argument :named_by, String, required: false
+      argument :browsers_only, Boolean, required: false
+      argument :blocked_agents, String, required: false
       argument :mail_from, String, required: false
       argument :smtp_address, String, required: false
       argument :smtp_port, Integer, required: false
@@ -22,7 +24,7 @@ module Manage
       ].freeze
 
       def resolve(name: nil, dynamic_client_scopes: nil, dynamic_registration: nil,
-                  named_by: nil, **mail)
+                  named_by: nil, browsers_only: nil, blocked_agents: nil, **mail)
         tenant = Current.tenant
 
         tenant.name = name unless name.nil?
@@ -56,6 +58,18 @@ module Manage
           end
 
           tenant.dynamic_client_scopes = Scopes.join(dynamic_client_scopes).presence
+        end
+
+        unless browsers_only.nil?
+          refuse!("MASKS_BROWSERS_ONLY pins who may sign in here") if tenant.browsers_pinned?
+
+          tenant.browsers_only = browsers_only
+        end
+
+        unless blocked_agents.nil?
+          refuse!("MASKS_BLOCKED_AGENTS pins the agents refused here") if tenant.agents_pinned?
+
+          tenant.blocked_agents = blocked_agents.presence
         end
 
         MAIL.each do |field|

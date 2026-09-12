@@ -35,6 +35,52 @@ class DevicesTest < ActionDispatch::IntegrationTest
     cookies.delete(Device::COOKIE)
   end
 
+  test "a tenant that only lets browsers in turns a script away before it becomes a device" do
+    within(@tenant) { @tenant.update!(browsers_only: true) }
+
+    script = { "HTTP_USER_AGENT" => "curl/8.7.1" }
+
+    get "/login", headers: script
+
+    assert_response :forbidden
+
+    post "/login", params: { event: "identify", identifier: @actor.nickname }, headers: script
+
+    assert_response :forbidden
+    assert_equal 0, within(@tenant) { Device.count }
+
+    get "/login", headers: browser
+
+    assert_response :success
+
+    event("identify", identifier: @actor.nickname)
+
+    assert_equal 1, within(@tenant) { Device.count }
+  end
+
+  test "a tenant refuses the agents it names, and lets the rest through" do
+    within(@tenant) { @tenant.update!(blocked_agents: "curl\npython-requests") }
+
+    get "/login", headers: { "HTTP_USER_AGENT" => "python-requests/2.31.0" }
+
+    assert_response :forbidden
+
+    get "/login", headers: { "HTTP_USER_AGENT" => "Curl/8.7.1" }
+
+    assert_response :forbidden
+    assert_equal 0, within(@tenant) { Device.count }
+
+    get "/login", headers: browser
+
+    assert_response :success
+  end
+
+  test "nothing is refused until a tenant says so" do
+    get "/login", headers: { "HTTP_USER_AGENT" => "curl/8.7.1" }
+
+    assert_response :success
+  end
+
   test "signing in records the device the session came from" do
     to_second_factor
     settled = event("otp", code: @totp.now)

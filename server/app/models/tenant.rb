@@ -70,6 +70,36 @@ class Tenant < ApplicationRecord
     self.class.pinned_names.present?
   end
 
+  def browsers_only
+    pinned = Rails.configuration.masks.browsers_only
+
+    pinned.nil? ? super : ActiveModel::Type::Boolean.new.cast(pinned)
+  end
+
+  def browsers_pinned?
+    Rails.configuration.masks.browsers_only.present?
+  end
+
+  def blocked_agents
+    Rails.configuration.masks.blocked_agents.presence || super
+  end
+
+  def agents_pinned?
+    Rails.configuration.masks.blocked_agents.present?
+  end
+
+  def agent_list
+    blocked_agents.to_s.split(/[\r\n,]+/).map { |one| one.strip.downcase }.reject(&:empty?)
+  end
+
+  def refuses?(user_agent)
+    return true if browsers_only && !Device.browser?(user_agent)
+
+    held = user_agent.to_s.downcase
+
+    held.present? && agent_list.any? { |pattern| held.include?(pattern) }
+  end
+
   def mail_from
     super.presence || Rails.configuration.masks.mail_from
   end

@@ -32,6 +32,15 @@ class Device < ApplicationRecord
       SecureRandom.hex(16)
     end
 
+    def browser?(user_agent)
+      detected = DeviceDetector.new(user_agent.to_s)
+
+      return false if detected.bot?
+      return false unless detected.known?
+
+      detected.os_name.present? || detected.device_type.present?
+    end
+
     def for_actor(actor)
       where(id: Session.where(actor: actor).select(:device_id))
     end
@@ -56,6 +65,14 @@ class Device < ApplicationRecord
 
   def known?
     user_agent.present? && detected.known?
+  end
+
+  def browser?
+    self.class.browser?(user_agent)
+  end
+
+  def bot?
+    detected.bot?
   end
 
   def blocked?

@@ -24,6 +24,21 @@
   provideRouter(router);
 
   let phase = $state("starting");
+  let open = $state(false);
+  let menu = $state(null);
+
+  function leave(go) {
+    open = false;
+    go();
+  }
+
+  function elsewhere(event) {
+    if (open && menu && !menu.contains(event.target)) open = false;
+  }
+
+  function escaped(event) {
+    if (event.key === "Escape") open = false;
+  }
   let failure = $state(null);
   let viewer = $state(null);
 
@@ -108,6 +123,8 @@
   }
 </script>
 
+<svelte:window onpointerdown={elsewhere} onkeydown={escaped} />
+
 {#if phase === "pairing"}
   <Pair {boot} {failure} />
 {:else if phase === "starting"}
@@ -148,20 +165,36 @@
           {/each}
         </nav>
 
-        <div class="dropdown dropdown-end ms-auto md:ms-0">
-          <div tabindex="0" role="button" class="btn btn-ghost btn-sm gap-2">
+        <div class="dropdown dropdown-end ms-auto md:ms-0" bind:this={menu}>
+          <button
+            type="button"
+            class="btn btn-ghost btn-sm gap-2"
+            aria-haspopup="menu"
+            aria-expanded={open}
+            onclick={() => (open = !open)}
+          >
             {signedInAs}
             <span class="opacity-50">&#9662;</span>
-          </div>
-          <ul class="dropdown-content menu z-30 w-60 gap-1 rounded-box border border-base-300 bg-base-100 p-2 shadow-lg">
-            <li><button type="button" onclick={signOut}>Sign out</button></li>
-            <li>
-              <button type="button" onclick={repair}>
-                Unpair this browser
-                <span class="text-xs opacity-60">Forgets the registration</span>
-              </button>
-            </li>
-          </ul>
+          </button>
+
+          {#if open}
+            <ul
+              class="dropdown-content menu z-30 w-60 gap-1 rounded-box border border-base-300 bg-base-100 p-2 shadow-lg"
+              role="menu"
+            >
+              <li>
+                <button type="button" role="menuitem" onclick={() => leave(signOut)}>
+                  Sign out
+                </button>
+              </li>
+              <li>
+                <button type="button" role="menuitem" onclick={() => leave(repair)}>
+                  Unpair this browser
+                  <span class="text-xs opacity-60">Forgets the registration</span>
+                </button>
+              </li>
+            </ul>
+          {/if}
         </div>
       </div>
     </header>

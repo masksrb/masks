@@ -43,6 +43,8 @@ class CreateMasksSchema < ActiveRecord::Migration[8.1]
       t.string :smtp_authentication
       t.string :smtp_domain
       t.boolean :smtp_tls, null: false, default: false
+      t.boolean :browsers_only, null: false, default: false
+      t.text :blocked_agents
 
       t.index :uuid, unique: true
       t.index :subdomain, unique: true

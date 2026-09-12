@@ -21,6 +21,7 @@
     query Tenant {
       tenant {
         uuid subdomain name namedBy dynamicRegistration dynamicClientScopes createdAt
+        browsersOnly blockedAgents
         mails mailFrom smtpAddress smtpPort smtpUsername smtpAuthentication smtpDomain smtpTls
         signingKeys { kid algorithm activatedAt retiredAt state }
       }
@@ -71,6 +72,7 @@
   let data = $state(null);
   let name = $state("");
   let mail = $state(null);
+  let agents = $state("");
   let secret = $state("");
   let loading = $state(true);
   let days = $state(30);
@@ -109,6 +111,7 @@
         smtpTls: data.tenant.smtpTls ?? false,
       };
       secret = "";
+      agents = data.tenant.blockedAgents ?? "";
     } catch (thrown) {
       feedback.blame(thrown);
     } finally {
@@ -124,7 +127,7 @@
         api.query(
           `mutation Update(
             $name: String, $dynamicClientScopes: [String!], $dynamicRegistration: String,
-            $namedBy: String,
+            $namedBy: String, $browsersOnly: Boolean, $blockedAgents: String,
             $mailFrom: String, $smtpAddress: String, $smtpPort: Int, $smtpUsername: String,
             $smtpPassword: String, $smtpAuthentication: String, $smtpDomain: String,
             $smtpTls: Boolean
@@ -134,6 +137,8 @@
               dynamicClientScopes: $dynamicClientScopes
               dynamicRegistration: $dynamicRegistration
               namedBy: $namedBy
+              browsersOnly: $browsersOnly
+              blockedAgents: $blockedAgents
               mailFrom: $mailFrom
               smtpAddress: $smtpAddress
               smtpPort: $smtpPort
@@ -301,6 +306,29 @@
             <option value="email">An email address</option>
             <option value="either">Either one</option>
           </select>
+        </Card>
+
+        <Card
+          title="Who may sign in"
+          lede="Sign-in is refused before a device is recorded, so a turned-away agent leaves nothing behind."
+        >
+          <Switch
+            label="Only browsers may sign in"
+            checked={data.tenant.browsersOnly}
+            onchange={(browsersOnly) =>
+              update({ browsersOnly }, "Sign-in rules updated.")}
+          />
+
+          <Field
+            label="Refuse these user agents"
+            bind:value={agents}
+            placeholder="curl, python-requests"
+            onsave={() => update({ blockedAgents: agents }, "Sign-in rules updated.")}
+          />
+
+          <p class="text-xs opacity-60">
+            One per line or comma separated. Matched anywhere in the agent, ignoring case.
+          </p>
         </Card>
 
         <Card

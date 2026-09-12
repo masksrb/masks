@@ -5,6 +5,8 @@ module Manage
       field :subdomain, String, null: false
       field :name, String, null: false
       field :named_by, String, null: false
+      field :browsers_only, Boolean, null: false
+      field :blocked_agents, String
       field :mails, Boolean, null: false
       field :mail_from, String
       field :smtp_address, String

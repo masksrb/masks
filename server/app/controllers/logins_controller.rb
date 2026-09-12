@@ -25,6 +25,7 @@ class LoginsController < ApplicationController
              by: -> { [ current_tenant.id, request.remote_ip ].join(":") },
              with: -> { too_many("too-many-attempts") }
 
+  before_action :refuse_blocked_agent
   before_action :verify_authenticity_token
   before_action :establish_device, only: %i[update provider]
 

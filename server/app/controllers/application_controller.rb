@@ -54,7 +54,19 @@ class ApplicationController < ActionController::Base
     end
 
     def establish_device
+      return refuse_blocked_agent if blocked_agent?
+
       @current_device = recognise(cookies.signed[Device::COOKIE].presence)
+    end
+
+    def blocked_agent?
+      current_tenant&.refuses?(request.user_agent)
+    end
+
+    def refuse_blocked_agent
+      return unless blocked_agent?
+
+      render plain: t("devices.refused_agent"), status: :forbidden
     end
 
     def refuse_blocked_device

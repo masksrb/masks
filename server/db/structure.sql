@@ -726,7 +726,9 @@ CREATE TABLE public.tenants (
     smtp_password text,
     smtp_authentication character varying,
     smtp_domain character varying,
-    smtp_tls boolean DEFAULT false NOT NULL
+    smtp_tls boolean DEFAULT false NOT NULL,
+    browsers_only boolean DEFAULT false NOT NULL,
+    blocked_agents text
 );
 
 
