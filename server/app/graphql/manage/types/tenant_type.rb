@@ -4,6 +4,7 @@ module Manage
       field :uuid, ID, null: false
       field :subdomain, String, null: false
       field :name, String, null: false
+      field :named_by, String, null: false
       field :mails, Boolean, null: false
       field :mail_from, String
       field :smtp_address, String

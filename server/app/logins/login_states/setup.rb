@@ -6,8 +6,9 @@ module LoginStates
     CONFIGURING = "setup_configuring".freeze
     MINIMUM_PASSWORD = Actor::MINIMUM_PASSWORD
 
-    accepts :nickname, :email, :name, :password, :password_confirmation, :token,
-            :named_by, :called, :registration, :registration_scopes
+    MAIL = %i[mail_from smtp_address smtp_port smtp_username smtp_password smtp_tls].freeze
+
+    accepts :nickname, :email, :name, :password, :password_confirmation, :token, :called, *MAIL
 
     class << self
       def token
@@ -61,12 +62,13 @@ module LoginStates
           "nickname" => held["nickname"],
           "email" => held["email"],
           "name" => held["name"],
-          "names" => Tenant::NAMES,
-          "namedBy" => tenant&.named_by,
           "called" => tenant&.name,
-          "registration" => Tenant::REGISTRATION_BOUNDED,
-          "registrationScopes" => Scopes.join(tenant&.dynamic_client_ceiling || Scopes::STANDARD),
-          "mails" => ActorMailer.deliverable?
+          "mailFrom" => tenant&.read_attribute(:mail_from),
+          "smtpAddress" => tenant&.smtp_address,
+          "smtpPort" => tenant&.smtp_port || Tenant::SMTP_PORT,
+          "smtpUsername" => tenant&.smtp_username,
+          "smtpTls" => tenant&.smtp_tls || false,
+          "mails" => tenant&.mails? || false
         }
       }
     end
@@ -145,44 +147,46 @@ module LoginStates
         login.identifier = actor.identifier
         login.actor = actor
         factored! :first_factor, expiry: EXPIRY
-        login.store[CONFIGURING] = true unless tenant.names_pinned?
+        login.store[CONFIGURING] = true
         @pending = false
       end
 
       def configure
         return unless configuring?
 
-        wanted = update(:named_by).to_s
         asked = login.event == "setup-configure"
 
-        return if wanted.blank? && !asked
-        return warn!("unknown-name-rule") unless Tenant::NAMES.include?(wanted)
+        return unless asked || configured?
 
-        tenant.named_by = wanted
         tenant.name = called if called.present?
-        tenant.dynamic_registration = registration if registration
-        tenant.dynamic_client_scopes = ceiling if registration == Tenant::REGISTRATION_BOUNDED
+
+        MAIL.each do |field|
+          next unless updates.key?(field.to_s)
+
+          tenant.public_send("#{field}=", mailed(field))
+        end
 
         return warn!("invalid-configuration") unless tenant.save
 
         login.store.delete(CONFIGURING)
       end
 
+      def configured?
+        updates.key?("called") || MAIL.any? { |field| updates.key?(field.to_s) }
+      end
+
       def called
         update(:called).to_s.strip
       end
 
-      def registration
-        wanted = update(:registration).to_s
+      def mailed(field)
+        held = update(field)
 
-        Tenant::REGISTRATIONS.include?(wanted) ? wanted : nil
-      end
-
-      def ceiling
-        offered = Scopes.list(update(:registration_scopes)) -
-          Scopes.reserved(update(:registration_scopes))
-
-        Scopes.join(offered).presence
+        case field
+        when :smtp_port then held.presence && held.to_i
+        when :smtp_tls then ActiveModel::Type::Boolean.new.cast(held) || false
+        else held.to_s.strip.presence
+        end
       end
 
       def kept

@@ -20,7 +20,7 @@
   const QUERY = `
     query Tenant {
       tenant {
-        uuid subdomain name dynamicRegistration dynamicClientScopes createdAt
+        uuid subdomain name namedBy dynamicRegistration dynamicClientScopes createdAt
         mails mailFrom smtpAddress smtpPort smtpUsername smtpAuthentication smtpDomain smtpTls
         signingKeys { kid algorithm activatedAt retiredAt state }
       }
@@ -124,6 +124,7 @@
         api.query(
           `mutation Update(
             $name: String, $dynamicClientScopes: [String!], $dynamicRegistration: String,
+            $namedBy: String,
             $mailFrom: String, $smtpAddress: String, $smtpPort: Int, $smtpUsername: String,
             $smtpPassword: String, $smtpAuthentication: String, $smtpDomain: String,
             $smtpTls: Boolean
@@ -132,6 +133,7 @@
               name: $name
               dynamicClientScopes: $dynamicClientScopes
               dynamicRegistration: $dynamicRegistration
+              namedBy: $namedBy
               mailFrom: $mailFrom
               smtpAddress: $smtpAddress
               smtpPort: $smtpPort
@@ -285,6 +287,22 @@
       </Card>
 
       <div class="flex flex-col gap-4">
+        <Card
+          title="What names an account"
+          lede="Managers always need both a nickname and an address, whichever this is."
+        >
+          <select
+            class="select select-sm w-full"
+            value={data.tenant.namedBy}
+            onchange={(event) =>
+              update({ namedBy: event.currentTarget.value }, "Naming updated.")}
+          >
+            <option value="nickname">A nickname</option>
+            <option value="email">An email address</option>
+            <option value="either">Either one</option>
+          </select>
+        </Card>
+
         <Card
           title="Mail"
           lede={data.tenant.mails

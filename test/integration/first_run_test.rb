@@ -6,7 +6,7 @@ class FirstRunTest < ActionDispatch::IntegrationTest
   def setup_params(**overrides)
     { event: "setup", nickname: "owner", email: "owner@example.invalid",
       password: PASSWORD, password_confirmation: PASSWORD,
-      named_by: Tenant::EITHER }.merge(overrides)
+      called: "Demo" }.merge(overrides)
   end
 
   def identify_params(**overrides)
@@ -100,29 +100,29 @@ class FirstRunTest < ActionDispatch::IntegrationTest
     get "/login"
 
     assert_match "This installation is called", response.body
-    assert_match "An account is named by", response.body
-    assert_match "Managers always need both", response.body
-    assert_match "Dynamic registration", response.body
-    assert_match "No mailer is configured", response.body
+    assert_match "Email comes from", response.body
+    assert_match "Mail server", response.body
 
-    post "/login", params: { event: "setup-configure", named_by: Tenant::EMAIL,
-                             called: "Payroll",
-                             registration: Tenant::REGISTRATION_BOUNDED,
-                             registration_scopes: "openid profile" }, as: :json
+    post "/login", params: { event: "setup-configure", called: "Payroll",
+                             mail_from: "masks@example.invalid",
+                             smtp_address: "smtp.example.invalid",
+                             smtp_port: "2525", smtp_username: "postmaster",
+                             smtp_password: "hunter2", smtp_tls: "true" }, as: :json
 
     assert JSON.parse(response.body)["settled"]
 
     tenant = @tenant.reload
 
-    assert_equal Tenant::EMAIL, tenant.named_by
     assert_equal "Payroll", tenant.name
-    assert_equal %w[openid profile], tenant.dynamic_client_ceiling
+    assert_equal 2525, tenant.smtp_port
+    assert tenant.mails?
   end
 
   test "an account is named by whatever the tenant was configured for" do
     host! host_for(@tenant)
 
-    post "/login", params: setup_params(named_by: Tenant::EMAIL), as: :json
+    post "/login", params: setup_params, as: :json
+    @tenant.update!(named_by: Tenant::EMAIL)
 
     assert JSON.parse(response.body)["settled"]
 

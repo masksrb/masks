@@ -80,7 +80,7 @@ class EmailVerificationTest < ActionDispatch::IntegrationTest
         event: "setup", nickname: "owner", email: "owner@example.invalid",
         password: "a-long-enough-password",
         password_confirmation: "a-long-enough-password",
-        named_by: Tenant::EITHER
+        called: "Demo"
       }, as: :json
 
       assert JSON.parse(response.body)["settled"]

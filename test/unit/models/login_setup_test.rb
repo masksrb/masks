@@ -25,14 +25,14 @@ class LoginSetupTest < ActiveSupport::TestCase
     step(event: "setup", password: password, password_confirmation: confirmation)
   end
 
-  def name_by(named_by = Tenant::EITHER, **updates)
-    step(event: "setup-configure", named_by: named_by, **updates)
+  def configure(called: "Demo", **updates)
+    step(event: "setup-configure", called: called, **updates)
   end
 
   def set_up(**updates)
     identify(**updates)
     credit
-    name_by
+    configure
   end
 
   def with_token(value)
@@ -68,7 +68,7 @@ class LoginSetupTest < ActiveSupport::TestCase
   test "a name is optional, and kept when it is given" do
     identify(name: "  Ada Lovelace  ")
     credit
-    name_by
+    configure
 
     assert_equal "Ada Lovelace", within { Actor.sole.name }
   end
@@ -92,22 +92,25 @@ class LoginSetupTest < ActiveSupport::TestCase
   test "configuring settles the login and signs the manager in" do
     identify
     credit
-    login = name_by(Tenant::EMAIL)
+    login = configure(called: "Payroll")
 
     assert_equal "settled", login.prompt
     assert login.settled?
-    assert_equal Tenant::EMAIL, @tenant.reload.named_by
+    assert_equal "Payroll", @tenant.reload.name
   end
 
-  test "configuring names the installation and bounds what apps may register for" do
+  test "configuring names the installation and points its mail somewhere" do
     identify
     credit
 
-    login = name_by(
-      Tenant::EITHER,
+    login = configure(
       called: "  Payroll  ",
-      registration: Tenant::REGISTRATION_BOUNDED,
-      registration_scopes: "openid profile masks:manage"
+      mail_from: "masks@example.invalid",
+      smtp_address: "smtp.example.invalid",
+      smtp_port: "2525",
+      smtp_username: "postmaster",
+      smtp_password: "hunter2",
+      smtp_tls: "true"
     )
 
     assert login.settled?
@@ -115,27 +118,31 @@ class LoginSetupTest < ActiveSupport::TestCase
     tenant = @tenant.reload
 
     assert_equal "Payroll", tenant.name
-    assert_equal %w[openid profile], tenant.dynamic_client_ceiling
+    assert_equal "masks@example.invalid", tenant.read_attribute(:mail_from)
+    assert_equal "smtp.example.invalid", tenant.smtp_address
+    assert_equal 2525, tenant.smtp_port
+    assert_equal "postmaster", tenant.smtp_username
+    assert_equal "hunter2", tenant.smtp_password
+    assert tenant.smtp_tls
+    assert tenant.mails?
   end
 
-  test "dynamic registration can be turned off on the way in" do
+  test "a mailer left empty settles all the same, and nothing is emailed" do
     identify
     credit
-    name_by(Tenant::EITHER, registration: Tenant::REGISTRATION_OFF)
+    login = configure
 
-    tenant = @tenant.reload
-
-    assert_equal Tenant::REGISTRATION_OFF, tenant.dynamic_registration
-    refute tenant.registers?
+    assert login.settled?
+    refute @tenant.reload.mails?
   end
 
-  test "apps may register for anything a manager does not have to grant" do
+  test "a from address the tenant refuses keeps the screen up" do
     identify
     credit
-    name_by(Tenant::EITHER, registration: Tenant::REGISTRATION_ANYTHING,
-            registration_scopes: "openid profile")
+    login = configure(mail_from: "not-an-address")
 
-    assert_nil @tenant.reload.dynamic_client_ceiling
+    assert_equal "setup-configure", login.prompt
+    assert_includes login.warnings, "invalid-configuration"
   end
 
   test "the configuration screen offers what the tenant already holds" do
@@ -146,41 +153,18 @@ class LoginSetupTest < ActiveSupport::TestCase
     published = within { login.as_json["setup"] }
 
     assert_equal @tenant.name, published["called"]
-    assert_equal Tenant::REGISTRATION_BOUNDED, published["registration"]
-    assert_equal Scopes.join(Scopes::STANDARD), published["registrationScopes"]
-    assert_equal ActorMailer.deliverable?, published["mails"]
+    assert_equal Tenant::SMTP_PORT, published["smtpPort"]
+    refute published["mails"]
   end
 
-  test "a rule masks does not know is refused" do
-    identify
-    credit
-    login = name_by("whatever")
-
-    assert_equal "setup-configure", login.prompt
-    assert_includes login.warnings, "unknown-name-rule"
-  end
-
-  test "one post that carries everything, the rule included, sets up in one step" do
+  test "one post that carries everything sets up in one step" do
     login = step(event: "setup", nickname: "owner", email: "owner@example.invalid",
                  password: PASSWORD, password_confirmation: PASSWORD,
-                 named_by: Tenant::NICKNAME)
+                 called: "Payroll")
 
     assert login.settled?
     assert_equal "owner", login.actor.nickname
-    assert_equal Tenant::NICKNAME, @tenant.reload.named_by
-  end
-
-  test "a deployment that pins the rule is never asked for it" do
-    was = Rails.configuration.masks.named_by
-    Rails.configuration.masks.named_by = Tenant::EMAIL
-
-    identify
-    login = credit
-
-    assert login.settled?
-    assert_nil @tenant.reload.read_attribute(:named_by)
-  ensure
-    Rails.configuration.masks.named_by = was
+    assert_equal "Payroll", @tenant.reload.name
   end
 
   test "a password the confirmation does not match creates nothing" do
@@ -325,7 +309,7 @@ class LoginSetupTest < ActiveSupport::TestCase
 
       assert_equal "setup-configure", login.prompt
       assert_equal "owner", login.actor.nickname
-      assert name_by.settled?
+      assert configure.settled?
     end
   end
 
@@ -333,7 +317,7 @@ class LoginSetupTest < ActiveSupport::TestCase
     with_token("the-real-token") do
       identify(token: "the-real-token")
       credit
-      name_by
+      configure
 
       assert_nil step.as_json["setup"]
     end

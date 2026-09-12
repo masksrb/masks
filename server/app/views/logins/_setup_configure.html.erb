@@ -23,42 +23,39 @@
         <span class="field-hint"><%= t(".called_hint") %></span>
       </label>
 
-      <fieldset class="ledger-row">
-        <legend class="ledger-label"><%= t(".named_by") %></legend>
+      <label class="ledger-row">
+        <span class="ledger-label"><%= t(".mail_from") %></span>
+        <%= form.email_field :mail_from, value: setup["mailFrom"], class: "control" %>
+        <span class="field-hint"><%= t(".mail_hint") %></span>
+      </label>
 
-        <div class="check-set">
-          <% Tenant::NAMES.each do |name| %>
-            <label class="check">
-              <%= form.radio_button :named_by, name, checked: name == setup["namedBy"] %>
-              <span><%= t(".named_by_#{name}") %></span>
-            </label>
-          <% end %>
-        </div>
-
-        <span class="field-hint"><%= t(".managers") %></span>
-      </fieldset>
-
-      <fieldset class="ledger-row">
-        <legend class="ledger-label"><%= t(".registration") %></legend>
-
-        <div class="check-set">
-          <% Tenant::REGISTRATIONS.each do |offer| %>
-            <label class="check">
-              <%= form.radio_button :registration, offer, checked: offer == setup["registration"] %>
-              <span><%= t(".registration_#{offer}") %></span>
-            </label>
-          <% end %>
-        </div>
-
-        <%= form.text_field :registration_scopes, value: setup["registrationScopes"],
+      <label class="ledger-row">
+        <span class="ledger-label"><%= t(".smtp_address") %></span>
+        <%= form.text_field :smtp_address, value: setup["smtpAddress"],
               autocapitalize: "none", autocorrect: "off", spellcheck: "false", class: "control" %>
+      </label>
 
-        <span class="field-hint"><%= t(".registration_hint") %></span>
-      </fieldset>
+      <label class="ledger-row">
+        <span class="ledger-label"><%= t(".smtp_port") %></span>
+        <%= form.number_field :smtp_port, value: setup["smtpPort"], class: "control" %>
+      </label>
 
-      <div class="ledger-row ledger-row-tight">
-        <span class="ledger-label"><%= t(".mail") %></span>
-        <span class="ledger-value"><%= setup["mails"] ? t(".mail_on") : t(".mail_off") %></span>
+      <label class="ledger-row">
+        <span class="ledger-label"><%= t(".smtp_username") %></span>
+        <%= form.text_field :smtp_username, value: setup["smtpUsername"],
+              autocapitalize: "none", autocorrect: "off", spellcheck: "false", class: "control" %>
+      </label>
+
+      <label class="ledger-row">
+        <span class="ledger-label"><%= t(".smtp_password") %></span>
+        <%= form.password_field :smtp_password, autocomplete: "off", class: "control" %>
+      </label>
+
+      <div class="ledger-row">
+        <label class="check">
+          <%= form.check_box :smtp_tls, checked: setup["smtpTls"] %>
+          <span><%= t(".smtp_tls") %></span>
+        </label>
       </div>
 
       <div class="ledger-row ledger-row-tight">
