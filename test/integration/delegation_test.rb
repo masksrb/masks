@@ -272,6 +272,26 @@ class DelegationTest < ActionDispatch::IntegrationTest
     assert awaiting_consent?
   end
 
+  test "stopping one delegation leaves another to the same provider working" do
+    body = delegated!
+    kept = within(@tenant) do
+      other = Connection.record!(provider: Provider.find_by!(key: "acme"), actor: @actor, identity: { "sub" => "acme-2" })
+      Delegation.grant!(client: @client, actor: @actor, connection: other)
+    end
+    stopped = within(@tenant) { Delegation.live.where.not(id: kept.id).sole }
+
+    delete "/account/delegations/#{stopped.uuid}"
+
+    assert within(@tenant) { stopped.reload.revoked? }
+    assert_not within(@tenant) { kept.reload.revoked? }
+
+    refreshed = token(grant_type: "refresh_token", refresh_token: body["refresh_token"],
+                      client_id: @client.client_id, client_secret: @secret)
+
+    assert refreshed["access_token"].present?
+    assert_includes refreshed["scope"].split, "masks:delegate:acme"
+  end
+
   test "disconnecting the account ends every delegation made from it" do
     body = delegated!
     connection = body["delegations"].sole["connection"]

@@ -45,15 +45,7 @@ class Delegation < ApplicationRecord
     transaction do
       update!(revoked_at: Time.current, revoked_reason: reason)
 
-      scope = connection.provider.delegation_scope
-
-      RefreshToken.live.where(client: client, actor: actor).find_each do |token|
-        token.revoke! if token.scope_list.include?(scope)
-      end
-
-      Consent.live.where(client: client, actor: actor).find_each do |consent|
-        consent.update!(scopes: Scopes.join(Scopes.list(consent.scopes) - [ scope ]))
-      end
+      withdraw_scope! unless siblings.exists?
 
       Event.record!(
         Event::DELEGATION_REVOKED,
@@ -62,6 +54,11 @@ class Delegation < ApplicationRecord
     end
 
     self
+  end
+
+  def siblings
+    Delegation.live.where(client: client, actor: actor).where.not(id: id)
+      .joins(:connection).where(connections: { provider_id: connection.provider_id, revoked_at: nil })
   end
 
   def release!
@@ -76,4 +73,18 @@ class Delegation < ApplicationRecord
 
     upstream
   end
+
+  private
+
+    def withdraw_scope!
+      scope = connection.provider.delegation_scope
+
+      RefreshToken.live.where(client: client, actor: actor).find_each do |token|
+        token.revoke! if token.scope_list.include?(scope)
+      end
+
+      Consent.live.where(client: client, actor: actor).find_each do |consent|
+        consent.update!(scopes: Scopes.join(Scopes.list(consent.scopes) - [ scope ]))
+      end
+    end
 end
