@@ -8,11 +8,11 @@ module Masks
 
         logout = masks_session.logout_token(params[:logout_token])
 
-        masks_config.logged_out!(request, logout)
+        heard = masks_config.logged_out!(request, logout)
 
         response.headers["Cache-Control"] = "no-store"
 
-        head :ok
+        head(heard ? :ok : :not_implemented)
       rescue Masks::Client::InvalidToken => e
         refuse("invalid_request", e.message)
       rescue Masks::Rails::Configuration::Unconfigured => e

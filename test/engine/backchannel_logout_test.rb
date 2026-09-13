@@ -74,6 +74,15 @@ class BackchannelLogoutTest < EngineIntegrationTest
     assert_empty @heard
   end
 
+  test "an app that says nothing about logout tells the issuer nobody was signed out" do
+    Masks::Rails.config.logged_out = nil
+
+    post_logout token
+
+    assert_response :not_implemented
+    assert_equal "no-store", response.headers["Cache-Control"]
+  end
+
   test "the endpoint takes no csrf token, because the issuer has no browser" do
     post_logout token
 
