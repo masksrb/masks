@@ -419,6 +419,27 @@ class DelegationTest < ActionDispatch::IntegrationTest
     assert_nil redeemed["client_secret"]
   end
 
+  test "an MCP server that takes a client secret is registered with one, and sends it" do
+    @upstream.route("/.well-known/oauth-protected-resource/mcp", "authorization_servers" => [ @upstream.url ])
+    @upstream.route("/.well-known/oauth-authorization-server",
+                    "issuer" => @upstream.url, "authorization_endpoint" => @upstream.url("/mcp/authorize"),
+                    "token_endpoint" => @upstream.url("/mcp/token"), "registration_endpoint" => @upstream.url("/mcp/register"),
+                    "code_challenge_methods_supported" => %w[plain S256],
+                    "token_endpoint_auth_methods_supported" => %w[client_secret_basic client_secret_post none])
+    @upstream.route("/mcp/register", "client_id" => "confidential", "client_secret" => "kept-by-masks",
+                                     "token_endpoint_auth_method" => "client_secret_basic")
+
+    provider = within(@tenant) do
+      Provider.new(key: "notion", name: "Notion", protocol: "mcp", resource_url: @upstream.url("/mcp")).tap do |held|
+        held.register!(callback: "https://example.test/cb")
+        held.save!
+      end
+    end
+
+    assert_equal "client_secret_basic", provider.token_auth_method
+    assert_equal "kept-by-masks", within(@tenant) { provider.reload.client_secret }
+  end
+
   test "an MCP provider never signs anybody in" do
     mcp_server!
 

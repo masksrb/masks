@@ -376,11 +376,9 @@ class Provider < ApplicationRecord
     end
 
     def registration_auth_method(server)
-      offered = Array(server["token_endpoint_auth_methods_supported"])
+      offered = Array(server["token_endpoint_auth_methods_supported"]).presence || [ CLIENT_SECRET_BASIC ]
 
-      return PUBLIC if offered.include?(PUBLIC) || offered.empty?
-
-      (offered & [ CLIENT_SECRET_BASIC, CLIENT_SECRET_POST ]).first || PUBLIC
+      ([ CLIENT_SECRET_BASIC, CLIENT_SECRET_POST ] & offered).first || PUBLIC
     end
 
     def auth_method_for(registered)
