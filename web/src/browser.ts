@@ -101,7 +101,9 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
     return found;
   };
 
-  const fetchKeys = async (): Promise<Record<string, Jwk>> => {
+  const fetchKeys = async (
+    revalidate: boolean,
+  ): Promise<Record<string, Jwk>> => {
     const { jwks_uri } = await discover();
 
     if (!jwks_uri) {
@@ -113,6 +115,7 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
 
     const response = await call(jwks_uri, {
       headers: { Accept: "application/json" },
+      ...(revalidate ? { cache: "no-cache" as const } : {}),
     });
 
     if (!response.ok) {
@@ -133,7 +136,7 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
   };
 
   const keyFor = async (kid: string, refresh = false): Promise<Jwk> => {
-    if (refresh || !keys) keys = await fetchKeys();
+    if (refresh || !keys) keys = await fetchKeys(refresh);
 
     const found = keys[kid];
 

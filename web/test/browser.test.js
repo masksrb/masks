@@ -426,6 +426,23 @@ test("an id token signed by a key the issuer does not publish is refused", async
   );
 });
 
+test("a key the issuer rotated in is found past a cached key set", async () => {
+  const upstream = server();
+  const cached = keys({ kid: "retired-key" });
+  const fetch = upstream.fetch;
+  upstream.fetch = async (url, init = {}) =>
+    String(url).includes("jwks") && init.cache !== "no-cache"
+      ? new Response(JSON.stringify(cached), { status: 200 })
+      : fetch(url, init);
+  const { subject, store } = client({ server: upstream });
+
+  const { state } = await landing(subject, store, upstream);
+
+  await subject.callback(`https://app.test/callback?code=a&state=${state}`);
+
+  assert.equal(subject.accessToken(), GRANTED.access_token);
+});
+
 test("an id token whose payload was edited after signing is refused", async () => {
   const upstream = server();
   const { subject, store } = client({ server: upstream });
