@@ -4,6 +4,7 @@ en:
     profile: "Your name"
     email: "Your email"
     offline_access: "Stay signed in"
+    identities: "The accounts elsewhere you sign in with"
     manage: "Manage masks"
     handshake: "Connect apps"
     namespace: "Everything %{namespace} asks for"

@@ -56,7 +56,7 @@
     }
   `;
 
-  const STANDARD = ["openid", "profile", "email", "offline_access"];
+  const STANDARD = ["openid", "profile", "email", "offline_access", "identities"];
 
   const COLUMNS = [
     "Person",

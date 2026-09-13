@@ -147,7 +147,7 @@ class Issuer
       "dpop_signing_alg_values_supported" => Proof::ALGORITHMS,
       "claims_supported" => %w[
         iss sub aud exp iat auth_time nonce sid
-        preferred_username name picture email email_verified tenant act
+        preferred_username name picture email email_verified tenant act identities
       ] + [ Actor::AVATARS_CLAIM ],
       "authorization_response_iss_parameter_supported" => true,
       "resource_indicators_supported" => true,

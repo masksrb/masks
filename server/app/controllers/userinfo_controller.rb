@@ -18,7 +18,7 @@ class UserinfoController < ApplicationController
       )
       standard = OpenIDConnect::ResponseObject::UserInfo.new(claims.symbolize_keys).as_json
 
-      render json: standard.merge(claims.slice(Actor::AVATARS_CLAIM))
+      render json: standard.merge(claims.slice(Actor::AVATARS_CLAIM, Actor::IDENTITIES_CLAIM))
     end
   end
 end

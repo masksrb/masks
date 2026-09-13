@@ -3,6 +3,7 @@ module Scopes
   PROFILE = "profile".freeze
   EMAIL = "email".freeze
   OFFLINE = "offline_access".freeze
+  IDENTITIES = "identities".freeze
   MANAGE = "masks:manage".freeze
   HANDSHAKE = "masks:handshake".freeze
 
@@ -11,11 +12,12 @@ module Scopes
     PROFILE => "profile",
     EMAIL => "email",
     OFFLINE => "offline_access",
+    IDENTITIES => "identities",
     MANAGE => "manage",
     HANDSHAKE => "handshake"
   }.freeze
 
-  STANDARD = [ OPENID, PROFILE, EMAIL, OFFLINE ].freeze
+  STANDARD = [ OPENID, PROFILE, EMAIL, OFFLINE, IDENTITIES ].freeze
   NAMESPACE = "masks:".freeze
 
   class << self

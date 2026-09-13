@@ -275,6 +275,7 @@ class Actor < ApplicationRecord
   }.freeze
 
   AVATARS_CLAIM = "masks:avatars".freeze
+  IDENTITIES_CLAIM = "identities".freeze
 
   def claims(scopes, subject:, requested: nil, origin: Current.origin)
     granted = Scopes.list(scopes)
@@ -290,11 +291,26 @@ class Actor < ApplicationRecord
       claims["email_verified"] = email_verified_at.present?
     end
 
+    claims[IDENTITIES_CLAIM] = identities if granted.include?(Scopes::IDENTITIES) && subject == uuid
+
     asked(requested).each do |claim|
       claims[claim] = claim_value(claim, origin, subject) if PROFILE_CLAIMS.key?(claim)
     end
 
     claims.compact
+  end
+
+  def identities
+    connections.live.includes(:provider).order(:created_at).filter_map do |connection|
+      next if connection.provider.archived?
+
+      {
+        "provider" => connection.provider.key,
+        "protocol" => connection.provider.protocol,
+        "sub" => connection.subject,
+        "email" => (connection.email if connection.email_verified)
+      }.compact
+    end
   end
 
   private
