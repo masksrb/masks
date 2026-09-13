@@ -279,8 +279,13 @@ class AvatarsTest < ActionDispatch::IntegrationTest
 
     follow_redirect!
 
-    assert_select ".plaque .plaque-notes .note-plain[role=status]", I18n.t("avatars.updated")
-    assert_select ".flow > .note", count: 0
+    assert_select ".plaque-shot-done .plaque-done svg"
+    assert_select ".plaque-shot [role=status]", I18n.t("avatars.updated")
+    assert_select ".note", count: 0
+
+    get root_path
+
+    assert_select ".plaque-shot-done", count: 0
 
     delete "/account/avatar"
 

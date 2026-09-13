@@ -12,7 +12,7 @@
     <div class="plaque-notes"><%= render "application/flashes" %></div>
   <% end %>
 
-  <div class="plaque-shot">
+  <div class="plaque-shot<%= ' plaque-shot-done' if flash[:avatar].present? %>">
     <%= form_with url: account_avatar_path, method: :post, id: "picture",
           html: { multipart: true } do |form| %>
       <label class="plaque-pick">
@@ -33,6 +33,11 @@
             title: account_text("picture.remove") do %>
         <%= account_icon(:close) %>
       <% end %>
+    <% end %>
+
+    <% if flash[:avatar].present? %>
+      <span class="plaque-done" aria-hidden="true"><%= account_icon(:check) %></span>
+      <span class="plaque-file-label" role="status"><%= flash[:avatar] %></span>
     <% end %>
   </div>
 

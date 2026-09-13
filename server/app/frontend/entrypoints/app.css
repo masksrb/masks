@@ -994,6 +994,53 @@
     color: var(--bad);
   }
 
+  .plaque-done {
+    position: absolute;
+    right: -0.1875rem;
+    bottom: -0.1875rem;
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 50%;
+    background: var(--glass-emerald);
+    color: var(--surface);
+    pointer-events: none;
+    opacity: 0;
+    animation: plaque-done 2.4s ease-out;
+  }
+
+  .plaque-done svg {
+    width: 0.875rem;
+    height: 0.875rem;
+    stroke-width: 2.2;
+  }
+
+  .plaque-shot-done .plaque-avatar {
+    animation: plaque-ring 2.4s ease-out;
+  }
+
+  @keyframes plaque-done {
+    0%,
+    65% {
+      opacity: 1;
+    }
+
+    100% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes plaque-ring {
+    0%,
+    65% {
+      box-shadow:
+        0 0 0 2px var(--glass-emerald),
+        0 16px 34px -18px color-mix(in oklab, var(--glass-amber) 55%, transparent);
+    }
+  }
+
   .plaque-file {
     position: absolute;
     width: 1px;
