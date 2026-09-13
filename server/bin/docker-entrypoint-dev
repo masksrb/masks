@@ -15,7 +15,7 @@ bundle check >/dev/null 2>&1 || bundle install
 rm -f tmp/pids/server.pid
 
 if [ "${*: -2:1}" == "./bin/rails" ] && [ "${*: -1:1}" == "server" ]; then
-  ./bin/rails db:prepare
+  SKIP_TEST_DATABASE=true ./bin/rails db:prepare
   ./bin/rails masks:tenants
   ./bin/rails runner 'RefreshAuthenticatorsJob.perform_later if Authenticator.none?'
 fi
