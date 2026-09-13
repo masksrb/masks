@@ -1,95 +1,153 @@
 ---
 title: Delegation
-description: Letting an application use somebody's account elsewhere while they are away, without handing it the keys.
+description: Let an application use somebody's Google, Microsoft or MCP account while they are away.
 ---
 
-A **delegation** lets one application act as somebody at a provider — read their Google Drive, sync
-their OneDrive, call a Notion MCP server — when nobody is signed in. masks keeps that person's tokens
-for the provider, refreshes them, and hands an access token only to the application the person said
-yes to.
+A **delegation** lets one application act as one person at a provider — sync their Drive at 3am,
+call their Notion MCP server from an agent — with nobody signed in.
 
-It is narrower than handing an application a provider's tokens in three ways:
+- masks keeps the provider's tokens and refreshes them.
+- The application gets an access token for **one** person's account, and only after that person
+  said yes to **that** application.
+- The application calls the provider directly. It asks masks again only when its token runs out.
 
-- **One application.** A token is released to the client the person consented to, and to no other,
-  even one holding a token for the same person.
-- **One account.** The connection released is the one that person holds here, and it has to belong
-  to whoever the application's token speaks for.
-- **Masks is asked when a token runs out, not per call.** The application keeps the upstream access
-  token until it expires and calls the provider directly.
+The person sees every application using each account on their masks account page, and can stop
+any of them there.
 
-A person sees every application using each of their connected accounts on their account page, and
-stops any of them there. Disconnecting the account stops them all.
+## 1. Set up the provider
 
-## Letting a provider delegate
+In the console, on the provider's page:
 
-A provider delegates when it is switched on for it and it names what applications may do there —
-the scopes asked for beyond identity. Google's preset suggests
-`https://www.googleapis.com/auth/drive.readonly`; Microsoft's `offline_access Files.Read.All`.
+1. Switch on **Let applications use somebody's account**.
+2. Fill in **What applications may do** — the provider's own scopes, beyond sign-in.
+3. Fill in **Extra parameters** if the provider needs them to hand back a refresh token.
+
+| provider | what applications may do | extra parameters |
+| --- | --- | --- |
+| Google | `https://www.googleapis.com/auth/drive.readonly` | `access_type=offline prompt=consent` |
+| Microsoft | `offline_access Files.Read.All` | |
+| an MCP server | nothing | |
+
+The presets fill these in. The redirect URI you gave the provider for sign-in is the one delegation
+uses too.
+
+An MCP server needs only its URL: masks finds its authorization server and registers itself. See
+[MCP servers](#mcp-servers).
+
+## 2. Let the application ask
+
+Only an **approved** client can be delegated to, and it needs two things:
 
 | | |
 | --- | --- |
-| `delegates` | applications may be let use this provider |
-| `delegated_scopes` | what they may do, asked for when somebody connects |
-| `delegation_params` | anything else the provider needs to hand back a refresh token, as `access_type=offline prompt=consent` for Google |
+| `allowed_scopes` | includes `masks:delegate:` (every provider) or `masks:delegate:google` (one) |
+| `grant_types` | includes `refresh_token` and `urn:ietf:params:oauth:grant-type:token-exchange` |
 
-Changing `delegated_scopes` asks everybody to connect again, since the tokens masks holds were
-granted for the old ones. A SAML identity provider cannot delegate: it hands back no tokens.
+A [handshake](/concepts/clients/) that asks for `masks:delegate:` gets both. With the Rails engine:
 
-## Connecting
-
-An application sends the person to `/authorize` asking for `masks:delegate:<provider>`, with
-`openid offline_access`, and PKCE.
-
-```
-GET /authorize?response_type=code&client_id=…&scope=openid+offline_access+masks:delegate:google
-    &code_challenge=…&code_challenge_method=S256&state=…&redirect_uri=…
+```ruby
+config.delegates = true
+config.delegation_redirect_uri = ->(request) { "#{request.base_url}/connect/callback" }
 ```
 
-1. The person signs in, if they have not.
-2. They are asked to consent, every time masks does not already hold a delegation for this
-   application and that account — even for a client that skips consent otherwise.
-3. If masks holds no usable token for them at that provider, the browser goes on to the provider,
-   asking for `delegated_scopes`, and comes back to the same callback signing in uses.
-4. The application gets a code, and redeems it.
+## 3. Connect an account
+
+Send the person's browser to `/authorize`:
+
+```
+GET https://auth.example.com/authorize
+  ?response_type=code
+  &client_id=CLIENT_ID
+  &redirect_uri=https://app.example.com/connect/callback
+  &scope=openid offline_access masks:delegate:google
+  &state=STATE
+  &code_challenge=CHALLENGE
+  &code_challenge_method=S256
+```
+
+Keep `state` and the PKCE verifier in the person's session. masks signs them in, asks their
+consent, sends them on to Google if it holds no usable token for them, and comes back:
+
+```
+GET https://app.example.com/connect/callback?code=CODE&state=STATE
+```
+
+Check `state` matches, then redeem the code. Authenticate as the client registered — basic auth, or
+`client_id` and `client_secret` in the body:
+
+```
+POST https://auth.example.com/token
+Authorization: Basic base64(CLIENT_ID:CLIENT_SECRET)
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=authorization_code
+&code=CODE
+&redirect_uri=https://app.example.com/connect/callback
+&code_verifier=VERIFIER
+```
 
 ```json
 {
   "access_token": "eyJ…",
-  "refresh_token": "…",
+  "refresh_token": "Xk2…",
   "delegations": [
-    { "connection": "3f1c…", "provider": "google", "provider_name": "Google",
-      "label": "grace@example.com", "subject": "8f4c…" }
+    { "connection": "3f1c9a0e-…", "provider": "google", "provider_name": "Google",
+      "label": "ada@example.com", "subject": "8f4c…" }
   ]
 }
 ```
 
-The refresh token is what the application keeps, encrypted. `connection` names the account.
+**Store two things**, encrypted, against whatever uses the account:
 
-### What connecting refuses
-
-| error | when |
+| | |
 | --- | --- |
-| `unauthorized_client` | the client was not approved by somebody here |
-| `invalid_scope` | no provider by that key delegates |
-| `access_denied` | the person declined, here or at the provider, or the account they chose is connected to somebody else, or is not the one already connected to them |
-| `login_required` | the account is new to them and they last signed in more than fifteen minutes ago |
-| `interaction_required` | `prompt=none`, and something needs asking |
+| `delegations[].connection` | which account |
+| `refresh_token` | the secret you trade for tokens |
 
-Connecting an account masks has not seen for this person before asks for a recent sign-in, the same
-as connecting one from the account page, so a borrowed session cannot tie somebody else's account to
-theirs.
+`subject` is the person who connected it — the same `sub` your sign-in sees — so you can refuse a
+connection finished by somebody other than who started it.
 
-## A token
+If it comes back with an error instead of a code:
 
-Refresh the masks token, then exchange it ([RFC 8693](https://www.rfc-editor.org/rfc/rfc8693)):
+| `error` | do |
+| --- | --- |
+| `access_denied` | they said no, here or at the provider, or picked an account that is not theirs here |
+| `login_required` | send them again with `prompt=login` — connecting a new account needs a sign-in in the last 15 minutes |
+| `interaction_required` | you sent `prompt=none`, and something needs asking |
+| `unauthorized_client` | the client is not approved |
+| `invalid_scope` | no provider by that key lets applications use it |
+
+## 4. Get a token
+
+Whenever you have no provider token, or it is about to expire, make two requests.
+
+**Refresh** the secret:
 
 ```
-POST /token
+POST https://auth.example.com/token
+Authorization: Basic base64(CLIENT_ID:CLIENT_SECRET)
+
+grant_type=refresh_token
+&refresh_token=SECRET
+```
+
+```json
+{ "access_token": "eyJ…", "refresh_token": "NEW_SECRET", "expires_in": 3600 }
+```
+
+**Save `NEW_SECRET` now**, before anything else. The old one is spent.
+
+**Exchange** the masks access token for the provider's:
+
+```
+POST https://auth.example.com/token
+Authorization: Basic base64(CLIENT_ID:CLIENT_SECRET)
+
 grant_type=urn:ietf:params:oauth:grant-type:token-exchange
-&subject_token=<masks access token>
+&subject_token=eyJ…
 &subject_token_type=urn:ietf:params:oauth:token-type:access_token
 &requested_token_type=urn:masks:params:oauth:token-type:upstream_access_token
-&audience=<connection>
+&audience=3f1c9a0e-…
 ```
 
 ```json
@@ -102,57 +160,72 @@ grant_type=urn:ietf:params:oauth:grant-type:token-exchange
 }
 ```
 
-masks refreshes the provider's token itself when it is within a minute of expiring, holding the
-connection while it does so two releases never spend the same refresh token. It releases only when
-every one of these holds:
+Call Google with `ya29.…` until `expires_in` runs out. If Google answers 401 early, drop the token
+and do step 4 once more.
 
-- the client is registered for token exchange, and approved
-- the subject token is live, was issued to this client, and carries `masks:delegate:<provider>`
-- the connection is live and belongs to the person the subject token speaks for
-- the provider still delegates
-- a live delegation joins the three
+| answer | means | do |
+| --- | --- | --- |
+| `400 invalid_grant` | the person stopped your app, disconnected the account, or the provider refused | stop, and ask them to connect again |
+| `403 insufficient_scope` | the token lacks `masks:delegate:<provider>` | you narrowed the scope on refresh; don't |
+| `503 temporarily_unavailable` | the provider did not answer | retry later; nothing was lost |
 
-and an upstream token is asked for plainly — no `scope`, `resource` or `requested_lifetime`, which it
-could not honour. Every release is a `delegation.released` event.
+## Three rules
 
-| answer | means |
-| --- | --- |
-| `400 invalid_grant` | the delegation was stopped, the account disconnected, or the provider refused a refresh — somebody has to connect again |
-| `403 insufficient_scope` | the subject token does not carry the delegation scope |
-| `503 temporarily_unavailable` | the provider did not answer — try again later; nothing was forgotten |
+1. **Keep every new secret.** Each refresh replaces it, even when the exchange after it fails.
+2. **One refresh per secret at a time.** A secret spent twice revokes the whole chain, and the
+   person has to connect again. Lock around step 4 if more than one worker can reach it.
+3. **Use it within 30 days.** An unspent secret expires; each refresh starts the 30 days again.
 
-A masks refresh token rotates each time it is spent, and spending one twice revokes the whole family.
-An application that runs several workers has to take turns with it.
+## What masks checks
+
+An upstream token is released only when all of these hold:
+
+- the client is approved and registered for token exchange
+- the masks token is live, was issued to this client, and carries `masks:delegate:<provider>`
+- the connection is live and belongs to the person that token speaks for
+- the provider still lets applications use it
+- the person's delegation to this client for this connection is live
+
+and the exchange asks for nothing else — no `scope`, `resource` or `requested_lifetime`. Every
+release is a `delegation.released` event.
+
+masks refreshes the provider's token itself when it is within a minute of expiring, one release at
+a time per connection. The provider's tokens are encrypted at rest. Changing what a provider lets
+applications do asks everybody to connect again.
 
 ## MCP servers
 
-An MCP server that is its own authorization server — `mcp.notion.com` is one — is a provider too, with
-protocol `mcp`. Give masks the server's URL and it finds the rest:
+An MCP server that is its own OAuth server, like `https://mcp.notion.com/mcp`, is a provider with
+protocol `mcp`. Give masks the URL and it:
 
-1. the protected resource metadata at `/.well-known/oauth-protected-resource`
-   ([RFC 9728](https://www.rfc-editor.org/rfc/rfc9728)), naming the authorization server
-2. that server's metadata, which has to offer PKCE with S256 and dynamic registration
-3. a registration ([RFC 7591](https://www.rfc-editor.org/rfc/rfc7591)) with the provider's callback
+1. reads `/.well-known/oauth-protected-resource` for the authorization server
+   ([RFC 9728](https://www.rfc-editor.org/rfc/rfc9728))
+2. reads that server's metadata, which has to offer PKCE with S256 and registration
+3. registers itself ([RFC 7591](https://www.rfc-editor.org/rfc/rfc7591)), with a client secret
+   whenever the server takes one
 
-Every authorization and token request carries the server's URL as `resource`
-([RFC 8707](https://www.rfc-editor.org/rfc/rfc8707)). An MCP provider never signs anybody in. When
-its authorization server names nobody, the connection is tied to the person who made it.
+Every request to it carries the server's URL as `resource`
+([RFC 8707](https://www.rfc-editor.org/rfc/rfc8707)). An MCP provider never signs anybody in. Your
+application does steps 3 and 4 exactly as above, and sends the token it gets as
+`Authorization: Bearer` to the MCP server.
 
 ## From Ruby
-
-The `masks` gem speaks all of this, and ships a fake to test against.
 
 ```ruby
 delegations = Masks::Client.delegations(issuer, client_id:, client_secret:, redirect_uri:)
 
 started = delegations.start(provider: "google")
-held = delegations.finish(params: callback_params, started: started)
+session[:connecting] = started
+redirect_to started["url"]
 
-upstream = delegations.token(held.secret, connection: held.connection)
+held = delegations.finish(params: params, started: session.delete(:connecting))
+save(held.connection, held.secret)
+
+upstream = delegations.token(secret, connection: connection)
+save(connection, upstream.secret)
 upstream.access_token
-upstream.secret
 ```
 
-`token` raises `Delegations::Refused` when somebody has to connect again and
-`Delegations::Unavailable` when it is worth retrying. Both carry `secret`, the rotated refresh token,
-whenever masks had already rotated it.
+`token` does step 4. It raises `Delegations::Refused` for "connect again" and
+`Delegations::Unavailable` for "retry later"; both carry `secret` when the refresh already rotated
+it, so save that too. Tests use `Masks::Client::Delegations::Fake`, which needs no issuer.

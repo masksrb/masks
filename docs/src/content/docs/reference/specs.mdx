@@ -40,7 +40,7 @@ Response types are `code` and only `code`. Response modes are `query` and only `
 | | | |
 | --- | --- | --- |
 | [RFC 8628](https://www.rfc-editor.org/rfc/rfc8628) — Device authorization | ✅ | see [device sign-in](/concepts/device-grant/) |
-| [RFC 8693](https://www.rfc-editor.org/rfc/rfc8693) — Token exchange | ◐ | access tokens only, with an `act` chain. No actor tokens, no ID token exchange |
+| [RFC 8693](https://www.rfc-editor.org/rfc/rfc8693) — Token exchange | ◐ | masks access tokens with an `act` chain, and a provider's access token for a [delegation](/concepts/delegation/). No actor tokens, no ID token exchange |
 | `client_credentials` | ✗ | nothing signs in without a person behind it, yet |
 
 ## Tokens

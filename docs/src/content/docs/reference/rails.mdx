@@ -227,6 +227,7 @@ prose is the RDoc in the source.
 | `credentials` | W |
 | `credentials_path` | RW |
 | `delegates` | RW |
+| `delegation_redirect_uri` | W |
 | `forget` | W |
 | `issuer` | W |
 | `logged_out` | W |
@@ -293,6 +294,12 @@ prose is the RDoc in the source.
 
 ```ruby
 #default_credentials()
+```
+
+### #delegation_redirect_uri_for
+
+```ruby
+#delegation_redirect_uri_for(request)
 ```
 
 ### #forget!
