@@ -198,6 +198,16 @@
     background: transparent;
   }
 
+  .btn-error.btn-outline {
+    color: var(--color-error);
+    border-color: color-mix(in oklab, var(--color-error) 45%, transparent);
+  }
+
+  .btn-error.btn-outline:hover:not(:disabled) {
+    background: color-mix(in oklab, var(--color-error) 12%, transparent);
+    border-color: var(--color-error);
+  }
+
   .link {
     color: inherit;
     text-decoration: underline;

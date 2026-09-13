@@ -31,7 +31,7 @@
 </script>
 
 {#if rows.length === 0}
-  <p class="text-sm opacity-70">Nothing has been allowed in.</p>
+  <p class="text-sm opacity-70">None.</p>
 {:else}
   <ul class="flex flex-col gap-1.5">
     {#each rows as consent (consent.id)}

@@ -194,38 +194,94 @@
     {/if}
 
     <div class="grid items-start gap-4 md:grid-cols-2">
-      <Card title="Registration">
-        <Field label="Name" bind:value={name} onsave={() => update({ name }, "Renamed.")} />
+      <div class="flex flex-col gap-4">
+        <Card title="Registration">
+          <Field label="Name" bind:value={name} onsave={() => update({ name }, "Renamed.")} />
 
-        <Facts rows={facts} />
+          <Facts rows={facts} />
 
-        <div class="flex flex-wrap gap-2 pt-1">
-          {#if client.tokenEndpointAuthMethod !== "none"}
-            <button type="button" class="btn btn-sm" onclick={rotate}>Rotate secret</button>
-          {/if}
-          {#if !client.archivedAt}
-            <button type="button" class="btn btn-sm btn-error btn-outline" onclick={archive}>
-              Archive
-            </button>
-          {/if}
-        </div>
-      </Card>
+          <div class="flex flex-wrap gap-2 pt-1">
+            {#if client.tokenEndpointAuthMethod !== "none"}
+              <button type="button" class="btn btn-sm" onclick={rotate}>Rotate secret</button>
+            {/if}
+            {#if !client.archivedAt}
+              <button type="button" class="btn btn-sm btn-error btn-outline" onclick={archive}>
+                Archive
+              </button>
+            {/if}
+          </div>
+        </Card>
+
+        <Card title="Sign-in">
+          <label class="flex flex-col gap-1.5">
+            <span class="text-xs font-medium opacity-70">Policy</span>
+            <select
+              class="select select-sm w-full"
+              value={client.signInPolicy?.key ?? ""}
+              onchange={(event) =>
+                update({ signInPolicy: event.currentTarget.value }, "Policy updated.")}
+            >
+              <option value="">Default ({tenantPolicy?.name ?? "built-in"})</option>
+              {#each policies as policy (policy.key)}
+                <option value={policy.key}>{policy.name}</option>
+              {/each}
+            </select>
+          </label>
+
+          <Switch
+            checked={client.requirePushedAuthorizationRequests}
+            label="Require pushed requests (PAR)"
+            onchange={(on) =>
+              update(
+                { requirePushedAuthorizationRequests: on },
+                on ? "PAR required. Plain /authorize links are refused." : "PAR optional.",
+              )}
+          />
+
+          <Field
+            label="Back-channel logout URI"
+            bind:value={logoutUri}
+            placeholder="https://app.example.com/logout"
+            autocapitalize="none"
+            autocorrect="off"
+            spellcheck="false"
+            onsave={() =>
+              update({ backchannelLogoutUri: logoutUri.trim() || null }, logoutUri.trim() ? "Saved." : "Cleared.")}
+          />
+        </Card>
+
+        <Card title="Scopes">
+          <div class="flex flex-col gap-1.5">
+            <span class="text-xs font-medium opacity-70">Always granted</span>
+            <ScopesEditor
+              value={client.requiredScopes}
+              available={supported}
+              onchange={(requiredScopes) => update({ requiredScopes }, "Scopes updated.")}
+            />
+          </div>
+
+          <div class="flex flex-col gap-1.5">
+            <span class="text-xs font-medium opacity-70">On request</span>
+            <ScopesEditor
+              value={client.allowedScopes}
+              available={supported}
+              onchange={(allowedScopes) => update({ allowedScopes }, "Scopes updated.")}
+            />
+          </div>
+        </Card>
+      </div>
 
       <div class="flex flex-col gap-4">
-        <Card
-          title="Where it may send people"
-          lede="One per line. A redirect URI must be absolute, carry no fragment, and use https unless it is loopback."
-        >
+        <Card title="URIs">
           <Lines
-            label="Redirect URIs"
+            label="Redirect"
             value={client.redirectUris}
             onsave={(redirectUris) => update({ redirectUris }, "Redirect URIs saved.")}
           />
 
           <Lines
-            label="Post-logout redirect URIs"
+            label="Post-logout redirect"
             value={client.postLogoutRedirectUris}
-            hint="Where it may send somebody after signing out."
             onsave={(postLogoutRedirectUris) =>
               update({ postLogoutRedirectUris }, "Post-logout URIs saved.")}
           />
@@ -233,120 +289,24 @@
           <Lines
             label="Resources"
             value={client.resources}
-            hint="The audiences it may ask a token for."
             onsave={(resources) => update({ resources }, "Resources saved.")}
           />
         </Card>
 
-        <Card title="Always granted" lede="Never shown on a consent screen.">
-          <ScopesEditor
-            value={client.requiredScopes}
-            available={supported}
-            onchange={(requiredScopes) => update({ requiredScopes }, "Scopes updated.")}
-          />
-        </Card>
-
-        <Card title="Granted on request" lede="Everything else it may ask for.">
-          <ScopesEditor
-            value={client.allowedScopes}
-            available={supported}
-            onchange={(allowedScopes) => update({ allowedScopes }, "Scopes updated.")}
-          />
-
-          {#if client.dynamic}
-            <p class="text-sm opacity-70">
-              Self-registered, so no <span class="font-mono text-xs">masks:</span> scope.
-            </p>
-          {/if}
-        </Card>
-
-        <Card
-          title="Back-channel logout"
-          lede="Where to tell this client that a session it was part of has ended."
-        >
-          <Field
-            label="Logout URI"
-            bind:value={logoutUri}
-            placeholder="https://app.example.com/logout/backchannel"
-            autocapitalize="none"
-            autocorrect="off"
-            spellcheck="false"
-            onsave={() =>
-              update(
-                { backchannelLogoutUri: logoutUri.trim() || null },
-                logoutUri.trim() ? "Saved. Signing out will notify it." : "Cleared.",
-              )}
-          />
-
-          <p class="text-xs opacity-60">
-            A signed logout token is posted there, carrying the subject and the session id, and
-            retried for a while if the client does not answer.
-          </p>
-        </Card>
-
-        <Card
-          title="Sign-in policy"
-          lede="What somebody signing in to this client has to have, and whether they can sign up here."
-        >
-          <select
-            class="select select-sm w-full"
-            value={client.signInPolicy?.key ?? ""}
-            onchange={(event) =>
-              update({ signInPolicy: event.currentTarget.value }, "Sign-in policy updated.")}
-          >
-            <option value="">The tenant's default ({tenantPolicy?.name ?? "masks' built-in"})</option>
-            {#each policies as policy (policy.key)}
-              <option value={policy.key}>{policy.name}</option>
-            {/each}
-          </select>
-
-          <Link to="/policies" class="link link-hover text-xs opacity-70">Edit policies</Link>
-        </Card>
-
-        <Card
-          title="Pushed authorization requests"
-          lede="Whether this client has to hand its request to the server before sending anyone here."
-        >
-          <Switch
-            checked={client.requirePushedAuthorizationRequests}
-            label="Require a pushed request"
-            onchange={(on) =>
-              update(
-                { requirePushedAuthorizationRequests: on },
-                on
-                  ? "Required. A plain /authorize link is refused from now on."
-                  : "No longer required.",
-              )}
-          />
-
-          <p class="text-xs opacity-60">
-            The client posts the request to <span class="font-mono">/par</span> over its own
-            authenticated channel and gets back a one-time
-            <span class="font-mono">request_uri</span>, so nothing but that reference travels in the
-            browser. Required, an ordinary <span class="font-mono">/authorize</span> link stops
-            working, so turn it on once the client is pushing.
-          </p>
-        </Card>
-
-        <Card title="Who has allowed it in" lede="Cutting somebody off revokes every token it holds for them.">
+        <Card title="Consents">
           <Consents {api} {feedback} rows={client.consents} onchange={load} showActor />
         </Card>
 
-        <Card
-          title="Tokens outstanding"
-          lede="What this client is holding right now, newest first."
-        >
+        <Card title="Tokens">
           <Tokens {api} {feedback} rows={client.tokens} onchange={load} showActor />
         </Card>
 
-        <Card title="Activity" lede="What this client has done, and what has been done to it.">
+        <Card title="Activity">
           {#snippet actions()}
-            <Link to={`/activity?client=${client.clientId}`} class="btn btn-ghost btn-sm">
-              All of it
-            </Link>
+            <Link to={`/activity?client=${client.clientId}`} class="btn btn-ghost btn-sm">All</Link>
           {/snippet}
 
-          <Events events={client.events} empty="Nothing recorded for this client yet." />
+          <Events events={client.events} empty="Nothing yet." />
         </Card>
 
         {#if client.namespaces.length}

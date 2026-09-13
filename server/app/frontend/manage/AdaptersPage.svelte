@@ -253,7 +253,6 @@
 
 <Page
   title="Adapters"
-  lede="The services masks sends through. Each tenant keeps its own, with secrets encrypted and never shown again."
 >
   <Notices feedback={feedback.state} />
 

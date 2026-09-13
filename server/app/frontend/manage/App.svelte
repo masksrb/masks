@@ -17,6 +17,7 @@
   import ProvidersPage from "./ProvidersPage.svelte";
   import AdaptersPage from "./AdaptersPage.svelte";
   import PoliciesPage from "./PoliciesPage.svelte";
+  import SettingsShell from "./SettingsShell.svelte";
 
   let { boot } = $props();
 
@@ -26,21 +27,6 @@
   provideRouter(router);
 
   let phase = $state("starting");
-  let open = $state(false);
-  let menu = $state(null);
-
-  function leave(go) {
-    open = false;
-    go();
-  }
-
-  function elsewhere(event) {
-    if (open && menu && !menu.contains(event.target)) open = false;
-  }
-
-  function escaped(event) {
-    if (event.key === "Escape") open = false;
-  }
   let failure = $state(null);
   let viewer = $state(null);
 
@@ -49,12 +35,9 @@
     ["/people", "People"],
     ["/devices", "Devices"],
     ["/clients", "Clients"],
-    ["/policies", "Policies"],
-    ["/providers", "Providers"],
-    ["/adapters", "Adapters"],
-    ["/activity", "Activity"],
-    ["/settings", "Settings"],
   ];
+
+  const SETTINGS = ["settings", "policies", "providers", "adapters", "activity"];
 
   async function start() {
     const query = new URLSearchParams(location.search);
@@ -103,7 +86,7 @@
     phase = "ready";
 
     api
-      .query("query Viewer { viewer { identifier } }")
+      .query("query Viewer { viewer { identifier avatars { photo identicon } } }")
       .then((data) => {
         viewer = data.viewer;
       })
@@ -113,6 +96,7 @@
   start();
 
   const current = $derived(router.segments[0] ?? "");
+  const inSettings = $derived(SETTINGS.includes(current));
   const signedInAs = $derived(
     viewer?.identifier ?? api.state.identity?.preferred_username ?? "Account",
   );
@@ -126,8 +110,6 @@
     location.assign((await api.signOut()) ?? boot.root);
   }
 </script>
-
-<svelte:window onpointerdown={elsewhere} onkeydown={escaped} />
 
 {#if phase === "pairing"}
   <Pair {boot} {failure} />
@@ -169,37 +151,25 @@
           {/each}
         </nav>
 
-        <div class="dropdown dropdown-end ms-auto md:ms-0" bind:this={menu}>
-          <button
-            type="button"
-            class="btn btn-ghost btn-sm gap-2"
-            aria-haspopup="menu"
-            aria-expanded={open}
-            onclick={() => (open = !open)}
-          >
-            {signedInAs}
-            <span class="opacity-50">&#9662;</span>
-          </button>
-
-          {#if open}
-            <ul
-              class="dropdown-content menu z-30 w-60 gap-1 rounded-box border border-base-300 bg-base-100 p-2 shadow-lg"
-              role="menu"
-            >
-              <li>
-                <button type="button" role="menuitem" onclick={() => leave(signOut)}>
-                  Sign out
-                </button>
-              </li>
-              <li>
-                <button type="button" role="menuitem" onclick={() => leave(repair)}>
-                  Unpair this browser
-                  <span class="text-xs opacity-60">Forgets the registration</span>
-                </button>
-              </li>
-            </ul>
+        <Link
+          to="/settings"
+          class="console-me ms-auto md:ms-0 {inSettings ? 'console-me-on' : ''}"
+          aria-label="Settings, signed in as {signedInAs}"
+          title={signedInAs}
+        >
+          {#if viewer}
+            <img
+              src={`${viewer.avatars.photo ?? viewer.avatars.identicon}?size=64`}
+              width="32"
+              height="32"
+              alt=""
+              class:drawn={!viewer.avatars.photo}
+              onerror={(event) => (event.currentTarget.src = `${viewer.avatars.identicon}?size=64`)}
+            />
+          {:else}
+            <span>{signedInAs.slice(0, 1).toUpperCase()}</span>
           {/if}
-        </div>
+        </Link>
       </div>
     </header>
 
@@ -224,16 +194,20 @@
         {:else}
           <ClientsPage {api} />
         {/if}
-      {:else if current === "providers"}
-        <ProvidersPage {api} />
-      {:else if current === "policies"}
-        <PoliciesPage {api} />
-      {:else if current === "adapters"}
-        <AdaptersPage {api} />
-      {:else if current === "activity"}
-        <ActivityPage {api} />
-      {:else if current === "settings"}
-        <SettingsPage {api} {boot} />
+      {:else if inSettings}
+        <SettingsShell {current} identifier={signedInAs} onsignout={signOut} onunpair={repair}>
+          {#if current === "providers"}
+            <ProvidersPage {api} />
+          {:else if current === "policies"}
+            <PoliciesPage {api} />
+          {:else if current === "adapters"}
+            <AdaptersPage {api} />
+          {:else if current === "activity"}
+            <ActivityPage {api} />
+          {:else}
+            <SettingsPage {api} {boot} />
+          {/if}
+        </SettingsShell>
       {:else}
         <div class="rounded-box border border-base-300 bg-base-100 px-6 py-14 text-center">
           <p class="text-sm opacity-70">There is no page at this address.</p>

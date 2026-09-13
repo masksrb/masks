@@ -224,7 +224,7 @@
     <Loader load={() => api.query(RECENT)}>
       {#snippet children(recent)}
         {#if recent.worrying.length}
-          <Card title="Worth a look" lede="Refusals, replays and blocks, newest first.">
+          <Card title="Worth a look">
             {#snippet actions()}
               <Link to="/activity" class="btn btn-sm">All activity</Link>
             {/snippet}
@@ -242,21 +242,12 @@
         </Card>
       {/snippet}
     </Loader>
-
-    <Card title="You are signed in as {data.viewer.identifier}">
-      <Facts
-        rows={[
-          { term: "Token for", value: boot.resource, mono: true },
-          { term: "Carrying", value: data.viewer.scopes.join(" "), mono: true },
-        ]}
-      />
-    </Card>
   </Page>
 {:else}
-  <Page title="Settings">
+  <Page title="General">
     <Notices feedback={feedback.state} />
 
-    <div class="grid items-start gap-4 md:grid-cols-2">
+    <div class="grid items-start gap-4 lg:grid-cols-2">
       <Card title="Tenant">
         <Field label="Name" bind:value={name} onsave={() => update({ name }, "Renamed.")} />
 
@@ -272,8 +263,7 @@
 
       <div class="flex flex-col gap-4">
         <Card
-          title="What names an account"
-          lede="Managers always need both a nickname and an address, whichever this is."
+          title="Accounts are named by"
         >
           <select
             class="select select-sm w-full"
@@ -281,15 +271,14 @@
             onchange={(event) =>
               update({ namedBy: event.currentTarget.value }, "Naming updated.")}
           >
-            <option value="nickname">A nickname</option>
-            <option value="email">An email address</option>
-            <option value="either">Either one</option>
+            <option value="nickname">Nickname</option>
+            <option value="email">Email</option>
+            <option value="either">Either</option>
           </select>
         </Card>
 
         <Card
-          title="Default sign-in policy"
-          lede="Applies to the account page, the console, and every client that does not name its own."
+          title="Default policy"
         >
           <select
             class="select select-sm w-full"
@@ -297,41 +286,35 @@
             onchange={(event) =>
               update({ signInPolicy: event.currentTarget.value }, "Default sign-in policy updated.")}
           >
-            <option value="">masks' built-in default</option>
+            <option value="">Built-in</option>
             {#each data.signInPolicies as policy (policy.key)}
               <option value={policy.key}>{policy.name}</option>
             {/each}
           </select>
 
-          <Link to="/policies" class="link link-hover text-xs opacity-70">Edit policies</Link>
+
         </Card>
 
         <Card
           title="Who may sign in"
-          lede="Sign-in is refused before a device is recorded, so a turned-away agent leaves nothing behind."
         >
           <Switch
-            label="Only browsers may sign in"
+            label="Browsers only"
             checked={data.tenant.browsersOnly}
             onchange={(browsersOnly) =>
               update({ browsersOnly }, "Sign-in rules updated.")}
           />
 
           <Field
-            label="Refuse these user agents"
+            label="Refused user agents"
             bind:value={agents}
             placeholder="curl, python-requests"
             onsave={() => update({ blockedAgents: agents }, "Sign-in rules updated.")}
           />
-
-          <p class="text-xs opacity-60">
-            One per line or comma separated. Matched anywhere in the agent, ignoring case.
-          </p>
         </Card>
 
         <Card
           title="Dynamic registration"
-          lede="Whether an app may register itself here, and the most it may ask for."
         >
           <select
             class="select select-sm w-full"
@@ -342,11 +325,9 @@
                 "Dynamic registration updated.",
               )}
           >
-            <option value="off">Off — a manager adds every app by hand</option>
-            <option value="anything">
-              On, for anything a manager does not have to grant
-            </option>
-            <option value="bounded">On, held to the scopes below</option>
+            <option value="off">Off</option>
+            <option value="anything">On</option>
+            <option value="bounded">On, limited to these scopes</option>
           </select>
 
           <ScopesEditor
@@ -362,7 +343,6 @@
 
         <Card
           title="Signing keys"
-          lede="Stage to publish ahead of time; rotate to do both at once."
         >
           {#snippet actions()}
             <button type="button" class="btn btn-sm" onclick={stage}>Stage</button>

@@ -33,10 +33,7 @@
   }
 </script>
 
-<Card
-  title="Namespaces"
-  lede="Scope prefixes this application claimed, so it can publish scopes of its own beneath them. One name, one resource, until it is released."
->
+<Card title="Namespaces">
   <Notices feedback={feedback.state} />
 
   <div class="overflow-x-auto">

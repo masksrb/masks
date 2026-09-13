@@ -263,7 +263,6 @@
 
 <Page
   title="Providers"
-  lede="Upstream accounts people can connect. Each one publishes a scope an application asks for to be handed the connection."
 >
   {#snippet actions()}
     <button type="button" class="btn btn-primary btn-sm" onclick={add}>Add a provider</button>
@@ -528,7 +527,7 @@
     {/each}
 
     {#if archived.length}
-      <Card title="Archived" lede="Kept so the connections made through them still make sense.">
+      <Card title="Archived">
         <ul class="flex flex-col gap-1.5">
           {#each archived as provider (provider.key)}
             <li class="slat">

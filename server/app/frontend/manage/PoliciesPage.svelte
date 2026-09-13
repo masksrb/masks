@@ -47,7 +47,7 @@
   `;
 
   const PRESENCE = [
-    ["off", "Not asked"],
+    ["off", "Off"],
     ["optional", "Optional"],
     ["required", "Required"],
   ];
@@ -55,20 +55,20 @@
   const FIRST = [
     ["password", "Password"],
     ["passkey", "Passkey"],
-    ["provider", "A connected provider"],
+    ["provider", "Provider"],
   ];
 
   const SECOND = [
-    ["otp", "Authenticator app"],
+    ["otp", "Authenticator"],
     ["passkey", "Passkey"],
     ["backup_codes", "Backup codes"],
   ];
 
   const CONFIRMATIONS = [
-    ["none", "None — the account works at once"],
-    ["code", "A code emailed to them, entered on the spot"],
-    ["link", "A link emailed to them"],
-    ["approval", "A manager approves it"],
+    ["none", "Not confirmed"],
+    ["code", "Emailed code"],
+    ["link", "Emailed link"],
+    ["approval", "Manager approval"],
   ];
 
   const BLANK = {
@@ -114,6 +114,7 @@
 
   function add() {
     editing = "";
+    keyTouched = false;
     draft = structuredClone(BLANK);
     feedback.clear();
   }
@@ -125,6 +126,20 @@
       emailDomains: policy.emailDomains.join(" "),
     };
     feedback.clear();
+  }
+
+  const slug = (name) =>
+    name
+      .toLowerCase()
+      .normalize("NFKD")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+
+  let keyTouched = $state(false);
+
+  function named(name) {
+    draft.name = name;
+    if (editing === "" && !keyTouched) draft.key = slug(name);
   }
 
   function close() {
@@ -202,7 +217,7 @@
       policy.secondFactorRequired ? "second factor required" : null,
       policy.confirmation !== "none" ? `confirmed by ${policy.confirmation}` : null,
       policy.phone === "required" ? "phone required" : null,
-      policy.hidden ? "hides who has an account" : null,
+      policy.hidden ? "hidden accounts" : null,
     ]
       .filter(Boolean)
       .join(" · ");
@@ -210,12 +225,11 @@
   const signingProviders = $derived((data?.providers ?? []).filter((held) => held.signsIn));
 </script>
 
-<Page
-  title="Policies"
-  lede="What a person needs to sign in to a client, and whether they can sign up there. A client follows the tenant's default unless it names its own."
->
+<Page title="Policies">
   {#snippet actions()}
-    <button type="button" class="btn btn-primary btn-sm" onclick={add}>Add a policy</button>
+    {#if editing === null}
+      <button type="button" class="btn btn-primary btn-sm" onclick={add}>Add</button>
+    {/if}
   {/snippet}
 
   <Notices feedback={feedback.state} />
@@ -224,161 +238,157 @@
     <Spinner />
   {:else if data}
     {#if editing !== null}
-      <Card title={editing === "" ? "Add a policy" : `Edit ${draft.name}`}>
-        <div class="grid gap-3 sm:grid-cols-2">
+      <Card title={editing === "" ? "New policy" : draft.name}>
+        <div class="grid gap-3 sm:grid-cols-[2fr_1fr]">
+          <Field label="Name" value={draft.name} oninput={(event) => named(event.currentTarget.value)} placeholder="Customers" />
           <Field
             label="Key"
             bind:value={draft.key}
+            oninput={() => (keyTouched = true)}
             disabled={editing !== ""}
             autocapitalize="none"
             autocorrect="off"
             spellcheck="false"
-            placeholder="customers"
+            class="input input-sm w-full font-mono"
           />
-          <Field label="Name" bind:value={draft.name} placeholder="Customers" />
         </div>
 
-        <div class="flex flex-col gap-3 rounded-lg bg-base-200 p-3">
-          <span class="legend">Signing up</span>
+        <div class="policy-rows">
+          <div class="policy-row">
+            <span class="legend">Sign up</span>
+            <div class="policy-controls">
+              <Switch label="Open" bind:checked={draft.signup} />
 
-          <Switch label="Somebody new can create an account" bind:checked={draft.signup} />
+              {#if draft.signup}
+                <div class="grid gap-3 sm:grid-cols-2">
+                  <Field
+                    label="Domains"
+                    bind:value={draft.emailDomains}
+                    autocapitalize="none"
+                    spellcheck="false"
+                    placeholder="any"
+                  />
 
-          {#if draft.signup}
-            <Field
-              label="Only addresses at these domains (blank for any)"
-              bind:value={draft.emailDomains}
-              autocapitalize="none"
-              spellcheck="false"
-              placeholder="example.com"
-            />
+                  <label class="flex flex-col gap-1.5">
+                    <span class="text-xs font-medium opacity-70">Confirmation</span>
+                    <select class="select select-sm w-full" bind:value={draft.confirmation}>
+                      {#each CONFIRMATIONS as [value, label] (value)}
+                        <option {value}>{label}</option>
+                      {/each}
+                    </select>
+                  </label>
+                </div>
 
-            <label class="flex flex-col gap-1.5">
-              <span class="text-xs font-medium opacity-70">A new account is confirmed by</span>
-              <select class="select select-sm w-full" bind:value={draft.confirmation}>
-                {#each CONFIRMATIONS as [value, label] (value)}
-                  <option {value}>{label}</option>
-                {/each}
-              </select>
-            </label>
+                {#if (draft.confirmation === "code" || draft.confirmation === "link") && !data.tenant.mails}
+                  <p class="text-xs text-warning">
+                    No mail adapter. <Link to="/adapters" class="link">Add one</Link>
+                  </p>
+                {/if}
 
-            {#if (draft.confirmation === "code" || draft.confirmation === "link") && !data.tenant.mails}
-              <p class="text-xs text-warning">
-                Nothing can be emailed yet. <Link to="/adapters" class="link">Add a mail adapter</Link>.
-              </p>
-            {/if}
+                <div class="flex flex-col gap-1.5">
+                  <span class="text-xs font-medium opacity-70">Scopes</span>
+                  <ScopesEditor
+                    value={draft.signupScopes}
+                    available={data.scopesSupported.filter((scope) => !scope.startsWith("masks:"))}
+                    onchange={(scopes) => (draft.signupScopes = scopes)}
+                  />
+                </div>
 
-            <div class="flex flex-col gap-1">
-              <span class="text-xs font-medium opacity-70">Scopes a new account holds</span>
-              <ScopesEditor
-                value={draft.signupScopes}
-                available={data.scopesSupported.filter((scope) => !scope.startsWith("masks:"))}
-                onchange={(scopes) => (draft.signupScopes = scopes)}
-              />
+                <Switch label="Hide who has an account" bind:checked={draft.hidden} />
+              {/if}
             </div>
-
-            <label class="flex items-start gap-3 text-sm">
-              <input type="checkbox" class="toggle toggle-sm" bind:checked={draft.hidden} />
-              <span>
-                Do not reveal who has an account
-                <span class="block text-xs opacity-60">
-                  An email address always gets a code first, account or not, so the screens only
-                  differ once the inbox is proven. Off, signing up after an unknown address shows
-                  that no account exists for it.
-                </span>
-              </span>
-            </label>
-          {/if}
-        </div>
-
-        <div class="flex flex-col gap-3 rounded-lg bg-base-200 p-3">
-          <span class="legend">What an account has</span>
-
-          <div class="grid gap-3 sm:grid-cols-3">
-            {#each [["nickname", "Nickname"], ["email", "Email"], ["phone", "Phone"]] as [field, label] (field)}
-              <label class="flex flex-col gap-1.5">
-                <span class="text-xs font-medium opacity-70">{label}</span>
-                <select class="select select-sm w-full" bind:value={draft[field]}>
-                  {#each PRESENCE as [value, text] (value)}
-                    <option {value}>{text}</option>
-                  {/each}
-                </select>
-              </label>
-            {/each}
           </div>
 
-          <Switch label="The email has to be confirmed" bind:checked={draft.emailVerified} />
-          <Switch label="The phone has to be confirmed by a text" bind:checked={draft.phoneVerified} />
+          <div class="policy-row">
+            <span class="legend">Account</span>
+            <div class="policy-controls">
+              <div class="grid gap-3 sm:grid-cols-3">
+                {#each [["nickname", "Nickname"], ["email", "Email"], ["phone", "Phone"]] as [field, label] (field)}
+                  <label class="flex flex-col gap-1.5">
+                    <span class="text-xs font-medium opacity-70">{label}</span>
+                    <select class="select select-sm w-full" bind:value={draft[field]}>
+                      {#each PRESENCE as [value, text] (value)}
+                        <option {value}>{text}</option>
+                      {/each}
+                    </select>
+                  </label>
+                {/each}
+              </div>
 
-          {#if draft.phone !== "off" && draft.phoneVerified && !data.tenant.texts}
-            <p class="text-xs text-warning">
-              No texts can be sent yet. <Link to="/adapters" class="link">Add an SMS adapter</Link>.
-            </p>
-          {/if}
+              <div class="flex flex-wrap gap-x-5 gap-y-2">
+                <Switch label="Verified email" bind:checked={draft.emailVerified} />
+                <Switch label="Verified phone" bind:checked={draft.phoneVerified} />
+              </div>
 
-          <p class="text-xs opacity-60">
-            This tenant names accounts by {data.tenant.namedBy}. Somebody who already has an
-            account is asked for whatever is missing the next time they sign in here.
-          </p>
-        </div>
-
-        <div class="flex flex-col gap-3 rounded-lg bg-base-200 p-3">
-          <span class="legend">Signing in</span>
-
-          <div class="flex flex-wrap gap-4">
-            {#each FIRST as [value, label] (value)}
-              <Switch
-                label={label}
-                checked={draft.firstFactors.includes(value)}
-                onchange={(on) => (draft.firstFactors = toggle(draft.firstFactors, value, on))}
-              />
-            {/each}
+              {#if draft.phone !== "off" && draft.phoneVerified && !data.tenant.texts}
+                <p class="text-xs text-warning">
+                  No SMS adapter. <Link to="/adapters" class="link">Add one</Link>
+                </p>
+              {/if}
+            </div>
           </div>
 
-          <div class="grid gap-3 sm:grid-cols-2">
-            <Field label="Shortest password" type="number" bind:value={draft.passwordMinimum} min="8" />
-          </div>
+          <div class="policy-row">
+            <span class="legend">Sign in</span>
+            <div class="policy-controls">
+              <div class="flex flex-wrap gap-x-5 gap-y-2">
+                {#each FIRST as [value, label] (value)}
+                  <Switch
+                    label={label}
+                    checked={draft.firstFactors.includes(value)}
+                    onchange={(on) => (draft.firstFactors = toggle(draft.firstFactors, value, on))}
+                  />
+                {/each}
+              </div>
 
-          <Switch label="Refuse common passwords" bind:checked={draft.refuseCommonPasswords} />
+              {#if draft.firstFactors.includes("password")}
+                <div class="flex flex-wrap items-center gap-x-5 gap-y-2">
+                  <label class="flex items-center gap-2 text-sm">
+                    <input class="input input-sm w-16" type="number" min="8" bind:value={draft.passwordMinimum} />
+                    characters minimum
+                  </label>
+                  <Switch label="Refuse common passwords" bind:checked={draft.refuseCommonPasswords} />
+                </div>
+              {/if}
 
-          {#if draft.firstFactors.includes("provider") && signingProviders.length}
-            <div class="flex flex-col gap-2">
-              <Switch
-                label="Offer every provider that signs people in"
-                checked={draft.providers === null}
-                onchange={(on) => (draft.providers = on ? null : signingProviders.map((held) => held.key))}
-              />
+              {#if draft.firstFactors.includes("provider") && signingProviders.length}
+                <div class="flex flex-wrap gap-x-5 gap-y-2">
+                  <Switch
+                    label="All providers"
+                    checked={draft.providers === null}
+                    onchange={(on) => (draft.providers = on ? null : signingProviders.map((held) => held.key))}
+                  />
 
-              {#if draft.providers !== null}
-                <div class="flex flex-wrap gap-4">
-                  {#each signingProviders as provider (provider.key)}
-                    <Switch
-                      label={provider.name}
-                      checked={draft.providers.includes(provider.key)}
-                      onchange={(on) => (draft.providers = toggle(draft.providers, provider.key, on))}
-                    />
-                  {/each}
+                  {#if draft.providers !== null}
+                    {#each signingProviders as provider (provider.key)}
+                      <Switch
+                        label={provider.name}
+                        checked={draft.providers.includes(provider.key)}
+                        onchange={(on) => (draft.providers = toggle(draft.providers, provider.key, on))}
+                      />
+                    {/each}
+                  {/if}
                 </div>
               {/if}
             </div>
-          {/if}
-        </div>
-
-        <div class="flex flex-col gap-3 rounded-lg bg-base-200 p-3">
-          <span class="legend">Second factors</span>
-
-          <div class="flex flex-wrap gap-4">
-            {#each SECOND as [value, label] (value)}
-              <Switch
-                label={label}
-                checked={draft.secondFactors.includes(value)}
-                onchange={(on) => (draft.secondFactors = toggle(draft.secondFactors, value, on))}
-              />
-            {/each}
           </div>
 
-          <Switch label="Everybody needs at least one" bind:checked={draft.secondFactorRequired} />
+          <div class="policy-row">
+            <span class="legend">Second factor</span>
+            <div class="policy-controls">
+              <div class="flex flex-wrap gap-x-5 gap-y-2">
+                {#each SECOND as [value, label] (value)}
+                  <Switch
+                    label={label}
+                    checked={draft.secondFactors.includes(value)}
+                    onchange={(on) => (draft.secondFactors = toggle(draft.secondFactors, value, on))}
+                  />
+                {/each}
+              </div>
 
-          <p class="text-xs opacity-60">Managers always need one, whatever this says.</p>
+              <Switch label="Required for everyone, not just managers" bind:checked={draft.secondFactorRequired} />
+            </div>
+          </div>
         </div>
 
         <div class="flex gap-2">
@@ -397,10 +407,7 @@
 
     <Card>
       {#if data.active.length === 0}
-        <p class="text-sm opacity-70">
-          No policies yet. Every client follows masks' built-in default: invitation only, a password or
-          passkey, and a second factor for managers.
-        </p>
+        <p class="text-sm opacity-70">None yet. Clients use the built-in default.</p>
       {/if}
 
       {#each data.active as policy (policy.key)}
@@ -432,7 +439,7 @@
                     "archiveSignInPolicy",
                     policy,
                     `${policy.name} is archived.`,
-                    `Archive ${policy.name}? Clients using it fall back to the tenant's default.`,
+                    `Archive ${policy.name}? Its clients go back to the default.`,
                   )}
               >
                 Archive
