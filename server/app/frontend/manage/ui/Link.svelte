@@ -1,7 +1,7 @@
 <script>
   import { useRouter } from "../lib/router.svelte.js";
 
-  let { to, class: klass = "link link-hover", children } = $props();
+  let { to, class: klass = "link link-hover", children, ...rest } = $props();
 
   const router = useRouter();
 
@@ -16,4 +16,4 @@
   }
 </script>
 
-<a class={klass} href={router.href(to)} onclick={follow}>{@render children()}</a>
+<a {...rest} class={klass} href={router.href(to)} onclick={follow}>{@render children()}</a>
