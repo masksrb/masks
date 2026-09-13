@@ -57,6 +57,10 @@
           <% end %>
         </ol>
         <span class="field-hint"><%= t(".backup_codes_hint") %></span>
+        <% saved = [ t(".backup_codes_file", account: login.actor&.identifier.to_s, origin: Current.origin), t(".backup_codes_hint"), "", *issued, "" ].join("\n") %>
+        <div class="codes-actions">
+          <a class="textlink" href="data:text/plain;charset=utf-8,<%= ERB::Util.url_encode(saved) %>" download="backup-codes-<%= request.host %>.txt"><%= t(".download") %></a>
+        </div>
       <% elsif remaining.positive? %>
         <span class="field-hint"><%= t(".backup_codes_left", count: remaining) %></span>
       <% else %>

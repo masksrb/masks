@@ -39,6 +39,21 @@ function turnOn(event) {
   login.submit("enrol:otp", { code: entered });
 }
 
+const origin = typeof location === "undefined" ? "" : location.origin;
+const host = typeof location === "undefined" ? "masks" : location.hostname;
+
+const saved = $derived.by(() => {
+  const lines = [
+    login.t("backup_codes_file", { account: login.actor?.identifier ?? "", origin }),
+    login.t("backup_codes_hint"),
+    "",
+    ...issued,
+    "",
+  ];
+
+  return `data:text/plain;charset=utf-8,${encodeURIComponent(lines.join("\n"))}`;
+});
+
 async function copy() {
   try {
     await navigator.clipboard.writeText(issued.join("\n"));
@@ -135,9 +150,12 @@ function done(event) {
           {/each}
         </ol>
         <span class="field-hint">{login.t("backup_codes_hint")}</span>
-        <button type="button" class="textlink codes-copy" onclick={copy}>
-          {copied ? login.t("copied") : login.t("copy")}
-        </button>
+        <div class="codes-actions">
+          <button type="button" class="textlink" onclick={copy}>
+            {copied ? login.t("copied") : login.t("copy")}
+          </button>
+          <a class="textlink" href={saved} download="backup-codes-{host}.txt">{login.t("download")}</a>
+        </div>
       {:else if codes.remaining > 0}
         <span class="field-hint">{login.t("backup_codes_left", { count: codes.remaining })}</span>
       {:else}

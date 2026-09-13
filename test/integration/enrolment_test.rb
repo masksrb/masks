@@ -73,6 +73,21 @@ class EnrolmentTest < ActionDispatch::IntegrationTest
     assert_includes within(@tenant) { Session.live.find_by(actor_id: @manager.id).amr }, "mfa"
   end
 
+  test "issued backup codes can be downloaded as a file, without a request of their own" do
+    body = sign_in_as(@manager)
+    secret = body.dig("enrolment", "otp", "secret").delete(" ")
+    issued = event("enrol:otp", code: ROTP::TOTP.new(secret).now).dig("enrolment", "backupCodes", "issued")
+
+    get "/login"
+
+    assert_select "a[download^='backup-codes-']" do |links|
+      saved = CGI.unescape(links.first["href"].delete_prefix("data:text/plain;charset=utf-8,"))
+
+      assert_equal issued, saved.lines.map(&:strip).last(issued.length)
+      assert_includes saved, @manager.identifier
+    end
+  end
+
   test "an authenticator already on cannot be replaced through enrolment" do
     body = sign_in_as(@manager)
     secret = body.dig("enrolment", "otp", "secret").delete(" ")
