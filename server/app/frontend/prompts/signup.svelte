@@ -52,10 +52,15 @@ function onsubmit(event) {
         </label>
       {/if}
 
+      <label class="ledger-row ledger-step" class:ledger-step-done={filled(person)}>
+        <span class="ledger-label">{login.t("name")}</span>
+        <!-- svelte-ignore a11y_autofocus -->
+        <input type="text" name="name" class="control" autocomplete="name" autofocus bind:value={person} />
+      </label>
+
       {#if asks.nickname !== "off"}
         <label class="ledger-row ledger-step" class:ledger-step-done={filled(nickname)}>
           <span class="ledger-label">{login.t("nickname")}</span>
-          <!-- svelte-ignore a11y_autofocus -->
           <input
             type="text"
             name="nickname"
@@ -64,7 +69,6 @@ function onsubmit(event) {
             autocapitalize="none"
             autocorrect="off"
             spellcheck="false"
-            autofocus
             bind:value={nickname}
           />
         </label>
@@ -90,11 +94,6 @@ function onsubmit(event) {
           />
         </label>
       {/if}
-
-      <label class="ledger-row ledger-step" class:ledger-step-done={filled(person)}>
-        <span class="ledger-label">{login.t("name")}</span>
-        <input type="text" name="name" class="control" autocomplete="name" bind:value={person} />
-      </label>
 
       {#if firstRun}
         <div class="ledger-row">

@@ -11,10 +11,10 @@ const docs = $derived(login.auth.docs);
 
 const rows = $derived(
   [
+    ["name", signup.name],
     ["nickname", signup.nickname],
     ["email", signup.email],
     ["phone", signup.phone],
-    ["name", signup.name],
   ].filter(([, value]) => value),
 );
 

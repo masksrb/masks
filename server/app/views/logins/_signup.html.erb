@@ -19,6 +19,11 @@
         </label>
       <% end %>
 
+      <label class="ledger-row ledger-step<%= done.("name") %>">
+        <span class="ledger-label"><%= t("logins.shared.name") %></span>
+        <%= form.text_field :name, value: value.("name"), autocomplete: "name", class: "control" %>
+      </label>
+
       <% if asks["nickname"] != "off" %>
         <label class="ledger-row ledger-step<%= done.("nickname") %>">
           <span class="ledger-label"><%= t("logins.shared.nickname") %></span>
@@ -42,11 +47,6 @@
                 placeholder: "+15551234567", class: "control" %>
         </label>
       <% end %>
-
-      <label class="ledger-row ledger-step<%= done.("name") %>">
-        <span class="ledger-label"><%= t("logins.shared.name") %></span>
-        <%= form.text_field :name, value: value.("name"), autocomplete: "name", class: "control" %>
-      </label>
 
       <% if signup["firstRun"] %>
         <div class="ledger-row">
