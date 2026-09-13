@@ -156,6 +156,16 @@ class ConfigurationTest < EngineTest
     assert_equal %w[openid profile email offline_access uris:], config.approved_scope
   end
 
+  test "an app that delegates asks the handshake for delegation too" do
+    Masks::Rails.config.namespace = "uris:"
+    Masks::Rails.config.delegates = true
+    Masks::Rails.config.scope = %w[openid offline_access uris:catalog:read]
+
+    assert_equal %w[openid offline_access uris: masks:delegate:], config.approved_scope
+  ensure
+    Masks::Rails.config.delegates = false
+  end
+
   test "the handshake carries the namespace, so a new capability needs no approval" do
     Masks::Rails.config.namespace = "uris:"
     Masks::Rails.config.scope = %w[openid uris:catalog:read]

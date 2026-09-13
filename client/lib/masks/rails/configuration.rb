@@ -5,7 +5,7 @@ module Masks
 
       attr_accessor :scope, :namespace, :resource, :resource_scopes, :after_sign_in,
                     :after_sign_out, :session_key, :sign_out_of_issuer, :parent_controller,
-                    :credentials_path, :authenticate_everything
+                    :credentials_path, :authenticate_everything, :delegates
       attr_writer :issuer, :redirect_uri, :name, :credentials, :store, :forget, :logged_out
 
       def initialize
@@ -17,6 +17,7 @@ module Masks
         @sign_out_of_issuer = false
         @parent_controller = "ActionController::Base"
         @authenticate_everything = false
+        @delegates = false
       end
 
       def default_credentials
@@ -145,11 +146,13 @@ module Masks
       end
 
       def approved_scope
-        return scope if namespace.blank?
+        delegated = delegates ? [ Masks::Client::Delegations::SCOPE ] : []
+
+        return Array(scope) + delegated if namespace.blank?
 
         outside = Array(scope).reject { |name| name.to_s.start_with?(namespace) }
 
-        outside + [ namespace ]
+        outside + [ namespace ] + delegated
       end
 
       def return_to_for(request)

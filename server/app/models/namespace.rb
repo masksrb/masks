@@ -12,7 +12,7 @@ class Namespace < ApplicationRecord
 
   class << self
     def prefixes(scopes)
-      Scopes.list(scopes).select { |scope| Scopes.prefix?(scope) }
+      Scopes.list(scopes).select { |scope| Scopes.prefix?(scope) && !scope.start_with?(Scopes::NAMESPACE) }
     end
 
     def named(scopes)

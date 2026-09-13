@@ -276,6 +276,9 @@ upstream.expires_at
 upstream.secret
 ```
 
+A Rails app sets `config.delegates = true`, so its handshake asks for `masks:delegate:` and the token
+exchange with it.
+
 `upstream.secret` replaces the one you passed in, every time. `Delegations::Refused` means somebody
 has to connect again; `Delegations::Unavailable` is worth retrying. Both carry `secret` when masks had
 already rotated it, so keep it. Spend a secret from one place at a time: spending one twice revokes

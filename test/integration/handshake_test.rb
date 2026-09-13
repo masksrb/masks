@@ -145,6 +145,20 @@ class HandshakeTest < ActionDispatch::IntegrationTest
     assert_redirected_to RETURN_TO
   end
 
+  test "an app that will ask people for their accounts elsewhere is approved for delegation, and claims no namespace" do
+    sign_in_as(@owner)
+    connect(scope: "#{SCOPE} masks:delegate:")
+
+    assert_includes response.body, "Ask each person to let it use their accounts elsewhere"
+
+    approve!
+
+    assert_includes approved.scope_list, "masks:delegate:"
+    assert approved.grants?(Exchange::GRANT_TYPE)
+    assert_equal 0, within(@tenant) { Namespace.count }
+    assert_not within(@tenant) { @owner.reload.holds?("masks:delegate:") }
+  end
+
   test "an approved client is not a dynamic one, and records who approved it" do
     sign_in_as(@owner)
     connect

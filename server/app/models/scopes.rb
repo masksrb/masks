@@ -67,6 +67,10 @@ module Scopes
       list(value).select { |scope| scope.start_with?(DELEGATE) && scope.length > DELEGATE.length }
     end
 
+    def delegable(value)
+      list(value).select { |scope| scope.start_with?(DELEGATE) }
+    end
+
     def delegated_provider(scope)
       scope.to_s.delete_prefix(DELEGATE) if scope.to_s.start_with?(DELEGATE) && scope.to_s.length > DELEGATE.length
     end
@@ -80,6 +84,8 @@ module Scopes
     end
 
     def description_for(scope, locale: I18n.locale)
+      return I18n.t("scopes.delegates", locale: locale) if scope == DELEGATE
+
       if prefix?(scope)
         return I18n.t("scopes.namespace", namespace: scope.chomp(":"), locale: locale)
       end

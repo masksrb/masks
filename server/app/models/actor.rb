@@ -110,7 +110,7 @@ class Actor < ApplicationRecord
   end
 
   def permitted_scopes(requested)
-    Scopes.union(Scopes.granted(Scopes.list(requested), scope_list), Scopes.delegations(requested))
+    Scopes.union(Scopes.granted(Scopes.list(requested), scope_list), Scopes.delegable(requested))
   end
 
   def holds?(scope)

@@ -10,3 +10,4 @@ en:
     namespace: "Everything %{namespace} asks for"
     generic: "%{name}"
     delegate: "Use your %{provider} account while you are away"
+    delegates: "Ask each person to let it use their accounts elsewhere"
