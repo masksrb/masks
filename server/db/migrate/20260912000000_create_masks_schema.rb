@@ -20,6 +20,12 @@ class CreateMasksSchema < ActiveRecord::Migration[8.1]
   ].freeze
 
   def up
+    if table_exists?(:tenants)
+      raise ActiveRecord::MigrationError,
+            "this database was built by the migrations masks collapsed before 1.0. " \
+            "Dump what it holds, drop it, and let db:prepare load db/structure.sql"
+    end
+
     enable_extension "pgcrypto" unless extension_enabled?("pgcrypto")
 
     create_table :tenants do |t|
