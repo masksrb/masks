@@ -44,7 +44,7 @@
         <%= form.email_field :email, value: email, autocomplete: "email", class: "control" %>
       </label>
 
-      <label class="ledger-row">
+      <label class="ledger-row ledger-step<%= " ledger-step-done" if person.present? %>">
         <span class="ledger-label"><%= t("logins.shared.name") %></span>
         <%= form.text_field :name, value: person, autocomplete: "name", class: "control" %>
         <span class="field-hint"><%= t(".name_hint") %></span>

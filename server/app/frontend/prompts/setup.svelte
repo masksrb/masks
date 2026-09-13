@@ -103,7 +103,7 @@ function onsubmit(event) {
         />
       </label>
 
-      <label class="ledger-row">
+      <label class="ledger-row ledger-step" class:ledger-step-done={person.trim()}>
         <span class="ledger-label">{login.t("name")}</span>
         <input
           type="text"
