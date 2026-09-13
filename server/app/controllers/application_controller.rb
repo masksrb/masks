@@ -1,4 +1,6 @@
 class ApplicationController < ActionController::Base
+  include HoldsLogin
+
   REQUESTS = "requests".freeze
   HANDSHAKES = "handshakes".freeze
   TRACKED = 5
@@ -220,7 +222,7 @@ class ApplicationController < ActionController::Base
 
     def advance(pending)
       Login.new(
-        store: session[LoginsController::STORE] ||= {},
+        store: login_store,
         request: pending,
         session: current_session,
         device: current_device,
@@ -236,7 +238,7 @@ class ApplicationController < ActionController::Base
 
     def settle!(login)
       hold(login.actor, amr: login.amr)
-      session.delete(LoginsController::STORE)
+      forget_login
     end
 
     def hold(actor, amr: [])

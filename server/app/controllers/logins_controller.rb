@@ -1,5 +1,4 @@
 class LoginsController < ApplicationController
-  STORE = "login".freeze
   VERIFYING = %w[password otp backup signup enrol:otp enrol:passkey confirm:email confirm:phone].freeze
 
   skip_forgery_protection
@@ -11,7 +10,7 @@ class LoginsController < ApplicationController
 
   rate_limit to: Rails.configuration.masks.account_attempt_limit,
              within: 3.minutes, only: :update, name: "identifier", if: -> { verifying? },
-             by: -> { [ current_tenant.id, session.dig(STORE, "identifier").to_s.downcase ].join(":") },
+             by: -> { [ current_tenant.id, login_store["identifier"].to_s.downcase ].join(":") },
              with: -> { too_many("too-many-attempts-for-account") }
 
   rate_limit to: Rails.configuration.masks.recovery_limit,
@@ -78,7 +77,7 @@ class LoginsController < ApplicationController
 
     def resolved_rid
       @resolved_rid ||= params[:rid].presence ||
-        session.dig(STORE, LoginStates::Provider::HELD, "rid").presence
+        login_store.dig(LoginStates::Provider::HELD, "rid").presence
     end
 
     def callback_params
@@ -89,7 +88,7 @@ class LoginsController < ApplicationController
 
     def run(event: nil, updates: {})
       Login.new(
-        store: session[STORE] ||= {},
+        store: login_store,
         request: pending,
         session: current_session,
         device: current_device,
@@ -107,7 +106,7 @@ class LoginsController < ApplicationController
       return unless login.actor
 
       sign_in(login.actor, amr: login.amr)
-      session.delete(STORE)
+      forget_login
     end
 
     def serialize(login)

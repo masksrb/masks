@@ -30,7 +30,7 @@ class LinksController < ApplicationController
 
       sign_out if current_actor
 
-      session[LoginsController::STORE] = { slot => params[:token] }
+      replace_login(slot => params[:token])
 
       redirect_to login_path
     end

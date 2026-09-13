@@ -52,6 +52,26 @@ class LoginsControllerTest < ActionDispatch::IntegrationTest
     event("password", password: "password")
 
     assert_nil session["login"]
+    assert_equal 0, within { PendingLogin.count }
+  end
+
+  test "a login in progress is held on the server, and the cookie carries only a reference to it" do
+    event("identify", identifier: "owner")
+
+    held = within { PendingLogin.sole }
+
+    assert_equal "owner", held.payload["identifier"]
+    assert_equal Digest::SHA256.hexdigest(session["login"]), held.digest
+    refute_includes session.to_hash.to_json, "owner"
+  end
+
+  test "an old copy of the cookie cannot rewind a login, because the state is not in it" do
+    event("identify", identifier: "owner")
+    before = session["login"]
+    event("password", password: "wrong")
+
+    assert_equal before, session["login"]
+    assert within { PendingLogin.sole.payload.key?("identifier") }
   end
 
   test "starting over clears the flow" do
