@@ -26,7 +26,6 @@ class Provider < ApplicationRecord
   SIGNED_SECRET = "signed_secret".freeze
   PUBLIC = "none".freeze
   TOKEN_AUTH_METHODS = [ CLIENT_SECRET_POST, CLIENT_SECRET_BASIC, SIGNED_SECRET, PUBLIC ].freeze
-  DELEGATION_SCOPE = "masks:delegate:".freeze
   PROTECTED_RESOURCE_PATH = "/.well-known/oauth-protected-resource".freeze
   AUTHORIZATION_SERVER_PATHS = %w[/.well-known/oauth-authorization-server /.well-known/openid-configuration].freeze
 
@@ -64,13 +63,13 @@ class Provider < ApplicationRecord
   }, if: :oidc?
   validates :team_id, :key_id, :private_key, presence: true, if: :signs_its_secret?
   validate :urls_are_usable
-  validate :authorize_params_stay_out_of_the_way
+  validate { params_stay_out_of_the_way(:authorize_params) }
   validate :claims_are_mapped
   validate :private_key_is_usable, if: :signs_its_secret?
   validate :certificates_are_usable, if: :saml?
   validate :signup_scopes_stay_ordinary
   validate :delegation_is_possible
-  validate :delegation_params_stay_out_of_the_way
+  validate { params_stay_out_of_the_way(:delegation_params) }
 
   normalizes :issuer, with: ->(value) { value.to_s.strip.chomp("/").presence }
   normalizes :response_mode, with: ->(value) { value.to_s.strip.presence }
@@ -132,7 +131,11 @@ class Provider < ApplicationRecord
   end
 
   def delegation_scope
-    "#{DELEGATION_SCOPE}#{key}"
+    "#{Scopes::DELEGATE}#{key}"
+  end
+
+  def callback_url
+    "#{Current.origin}/login/provider/#{key}/callback"
   end
 
   def delegated_scope_list
@@ -470,19 +473,16 @@ class Provider < ApplicationRecord
       end
     end
 
-    def authorize_params_stay_out_of_the_way
-      held = authorize_params
+    def params_stay_out_of_the_way(field)
+      held = public_send(field)
 
-      return errors.add(:authorize_params, "must be a set of names and values") unless held.is_a?(Hash)
+      return errors.add(field, "must be a set of names and values") unless held.is_a?(Hash)
 
       taken = held.keys.map(&:to_s) & RESERVED_PARAMS
-
-      if taken.any?
-        errors.add(:authorize_params, "may not set #{taken.join(', ')} — the request builds those")
-      end
+      errors.add(field, "may not set #{taken.join(', ')} — the request builds those") if taken.any?
 
       unless held.values.all? { |value| value.is_a?(String) || value.is_a?(Numeric) || [ true, false ].include?(value) }
-        errors.add(:authorize_params, "values have to be plain, not nested")
+        errors.add(field, "values have to be plain, not nested")
       end
     end
 
@@ -509,19 +509,6 @@ class Provider < ApplicationRecord
 
       reserved = Scopes.reserved(delegated_scopes)
       errors.add(:delegated_scopes, "may not name #{Scopes.join(reserved)}") if reserved.any?
-    end
-
-    def delegation_params_stay_out_of_the_way
-      held = delegation_params
-
-      return errors.add(:delegation_params, "must be a set of names and values") unless held.is_a?(Hash)
-
-      taken = held.keys.map(&:to_s) & RESERVED_PARAMS
-      errors.add(:delegation_params, "may not set #{taken.join(', ')} — the request builds those") if taken.any?
-
-      unless held.values.all? { |value| value.is_a?(String) || value.is_a?(Numeric) || [ true, false ].include?(value) }
-        errors.add(:delegation_params, "values have to be plain, not nested")
-      end
     end
 
     def name_the_subject

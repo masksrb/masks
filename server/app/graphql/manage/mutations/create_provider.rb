@@ -77,7 +77,7 @@ module Manage
 
           refuse!("an MCP server needs its URL") if provider.resource_url.blank?
 
-          provider.register!(callback: "#{Current.origin}/login/provider/#{provider.key}/callback")
+          provider.register!(callback: provider.callback_url)
         rescue ::Provider::Untrusted, ::Provider::Refused, ::Provider::Unreachable => e
           refuse!(e.message)
         end

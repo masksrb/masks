@@ -11,6 +11,7 @@ class Connection < ApplicationRecord
   belongs_to :actor
 
   has_many :delegations, dependent: :destroy
+  has_many :live_delegations, -> { live }, class_name: "Delegation", inverse_of: :connection
 
   validates :subject, presence: true,
                       uniqueness: { scope: [ :tenant_id, :provider_id ] }
@@ -59,8 +60,8 @@ class Connection < ApplicationRecord
 
   def revoke!(reason: "revoked", by: nil)
     transaction do
-      update!(revoked_at: Time.current, revoked_reason: reason, access_token: nil, refresh_token: nil,
-              access_token_expires_at: nil, delegated_scopes: nil)
+      update!(revoked_at: Time.current, revoked_reason: reason)
+      forget_tokens!
 
       delegations.live.find_each { |delegation| delegation.revoke!(reason: reason, by: by) }
     end
@@ -71,13 +72,8 @@ class Connection < ApplicationRecord
   def hold!(tokens)
     raise Delegation::Refused, "#{provider.name} returned no access token" if tokens["access_token"].blank?
 
-    update!(
-      access_token: tokens["access_token"],
-      refresh_token: tokens["refresh_token"].presence,
-      access_token_expires_at: expiry_from(tokens),
-      delegated_scopes: Scopes.join(provider.delegated_scope_list),
-      tokens_refreshed_at: Time.current
-    )
+    store_tokens!(tokens, refresh_token: tokens["refresh_token"].presence,
+                          delegated_scopes: Scopes.join(provider.delegated_scope_list))
 
     self
   end
@@ -99,22 +95,15 @@ class Connection < ApplicationRecord
       next :fresh unless stale?
       next :refused if refresh_token.blank?
 
-      refreshed = refresh_upstream
+      refreshed = provider.refresh!(refresh_token)
+      next :refused if refreshed["access_token"].blank?
 
-      if refreshed.is_a?(Hash)
-        next :refused if refreshed["access_token"].blank?
-
-        update!(
-          access_token: refreshed["access_token"],
-          refresh_token: refreshed["refresh_token"].presence || refresh_token,
-          access_token_expires_at: expiry_from(refreshed),
-          tokens_refreshed_at: Time.current
-        )
-
-        :fresh
-      else
-        refreshed
-      end
+      store_tokens!(refreshed, refresh_token: refreshed["refresh_token"].presence || refresh_token)
+      :fresh
+    rescue Provider::Refused
+      :refused
+    rescue Provider::Unreachable
+      :unavailable
     end
 
     case outcome
@@ -134,12 +123,9 @@ class Connection < ApplicationRecord
 
   private
 
-    def refresh_upstream
-      provider.refresh!(refresh_token)
-    rescue Provider::Refused
-      :refused
-    rescue Provider::Unreachable
-      :unavailable
+    def store_tokens!(tokens, **attributes)
+      update!(access_token: tokens["access_token"], access_token_expires_at: expiry_from(tokens),
+              tokens_refreshed_at: Time.current, **attributes)
     end
 
     def expiry_from(tokens)

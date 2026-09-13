@@ -4,7 +4,8 @@ module Masks
       EXCHANGE = "urn:ietf:params:oauth:grant-type:token-exchange".freeze
       ACCESS_TOKEN = "urn:ietf:params:oauth:token-type:access_token".freeze
 
-      attr_reader :access_token, :id_token, :refresh_token, :token_type, :scope, :expires_in, :obtained_at
+      attr_reader :access_token, :id_token, :refresh_token, :token_type, :scope, :expires_in, :obtained_at,
+                  :delegations
 
       def self.granted(body)
         token = new(body)
@@ -26,6 +27,7 @@ module Masks
         @token_type = body["token_type"] || "Bearer"
         @scope = body["scope"].to_s
         @expires_in = body["expires_in"].to_i
+        @delegations = Array(body["delegations"])
         @obtained_at = Time.now.to_i
       end
 

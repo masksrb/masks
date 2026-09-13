@@ -64,7 +64,7 @@ module Scopes
     end
 
     def delegations(value)
-      list(value).select { |scope| scope.start_with?(DELEGATE) && scope.length > DELEGATE.length }
+      list(value).select { |scope| delegated_provider(scope) }
     end
 
     def delegable(value)
@@ -72,7 +72,7 @@ module Scopes
     end
 
     def delegated_provider(scope)
-      scope.to_s.delete_prefix(DELEGATE) if scope.to_s.start_with?(DELEGATE) && scope.to_s.length > DELEGATE.length
+      scope.to_s.delete_prefix(DELEGATE).presence if scope.to_s.start_with?(DELEGATE)
     end
 
     def reserved(value)

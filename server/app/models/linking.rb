@@ -19,7 +19,7 @@ class Linking
       raise Refused, I18n.t("connections.unavailable") if provider.nil? || !offered(actor).include?(provider)
       raise Refused, I18n.t("connections.stale") if authenticated_at.nil? || authenticated_at < FRESHNESS.ago
 
-      location, handoff = provider.federation.start(callback: callback_for(provider))
+      location, handoff = provider.federation.start(callback: provider.callback_url)
 
       session[HELD] = handoff.merge(
         "provider_id" => provider.id,
@@ -33,8 +33,10 @@ class Linking
     def pending?(session, params)
       held = session[HELD]
 
-      presented = params["RelayState"].presence || params["state"]
+      answers?(held, params["RelayState"].presence || params["state"])
+    end
 
+    def answers?(held, presented)
       held.present? && presented.present? &&
         ActiveSupport::SecurityUtils.secure_compare(presented.to_s, held["state"].to_s)
     end
@@ -46,17 +48,13 @@ class Linking
       raise Refused, I18n.t("connections.expired") unless actor && actor.id == held["actor_id"]
       raise Refused, I18n.t("connections.unavailable") unless provider && provider.id == held["provider_id"]
 
-      identity = provider.federation.finish(params, handoff: held, callback: callback_for(provider))
+      identity = provider.federation.finish(params, handoff: held, callback: provider.callback_url)
 
       link!(provider, actor, identity)
     rescue Provider::Untrusted, Provider::Refused, Provider::Unreachable => e
       Event.record!(Event::CONNECTION_REFUSED, actor: actor, by: nil, provider: provider&.key, reason: e.message)
 
       raise Refused, I18n.t("connections.failed", provider: provider&.name)
-    end
-
-    def callback_for(provider)
-      "#{Current.origin}/login/provider/#{provider.key}/callback"
     end
 
     private

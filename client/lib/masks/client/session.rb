@@ -14,7 +14,7 @@ module Masks
       end
 
       def start(resource: nil, prompt: nil, scope: nil, state: SecureRandom.urlsafe_base64(24),
-                nonce: SecureRandom.urlsafe_base64(24))
+                nonce: SecureRandom.urlsafe_base64(24), max_age: nil)
         pkce = Pkce.generate
         scopes = Array(scope || self.scope)
         nonce = nil unless scopes.include?("openid")
@@ -33,6 +33,7 @@ module Masks
 
         Array(resource).each { |value| pairs << [ "resource", value ] }
         pairs << [ "prompt", prompt ] if prompt
+        pairs << [ "max_age", max_age.to_i ] if max_age
 
         {
           url: "#{issuer.endpoint('authorization_endpoint')}?#{URI.encode_www_form(pairs)}",
@@ -69,13 +70,16 @@ module Masks
         Tokens.granted(HTTP.post_form(issuer.endpoint("token_endpoint"), form, authorization))
       end
 
-      def exchange(subject_token, scope: nil, resource: nil, lifetime: nil)
+      def exchange(subject_token, scope: nil, resource: nil, lifetime: nil, requested_token_type: nil, audience: nil)
         form = [
           [ "grant_type", Tokens::EXCHANGE ],
           [ "client_id", client_id ],
           [ "subject_token", subject_token ],
           [ "subject_token_type", Tokens::ACCESS_TOKEN ]
         ]
+
+        form << [ "requested_token_type", requested_token_type ] if requested_token_type
+        Array(audience).each { |value| form << [ "audience", value ] }
 
         form << [ "scope", Array(scope).join(" ") ] if scope
         form << [ "requested_lifetime", lifetime.to_i ] if lifetime

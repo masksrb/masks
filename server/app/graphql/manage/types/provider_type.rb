@@ -74,7 +74,7 @@ module Manage
       end
 
       def callback_url
-        "#{Current.origin}/login/provider/#{object.key}/callback"
+        object.callback_url
       end
 
       def connections

@@ -11,11 +11,7 @@ module LoginStates
     end
 
     def self.pending?(store, params)
-      held = store[HELD]
-      presented = params["state"]
-
-      held.present? && presented.present? &&
-        ActiveSupport::SecurityUtils.secure_compare(presented.to_s, held["state"].to_s)
+      Linking.answers?(store[HELD], params["state"])
     end
 
     def enabled?
@@ -49,6 +45,11 @@ module LoginStates
       end
     end
 
+    def reload!
+      @wanted = nil
+      @connections = nil
+    end
+
     def cleanup!
       held = login.store[HELD]
 
@@ -74,8 +75,13 @@ module LoginStates
       def wanted
         return [] if request.nil? || actor.nil?
 
-        Scopes.delegations(request.scopes_for(actor)).map do |scope|
-          [ scope, ::Provider.delegating.find_by(key: Scopes.delegated_provider(scope)) ]
+        @wanted = nil unless @wanted_for == actor.id
+        @wanted_for = actor.id
+        @wanted ||= begin
+          scopes = Scopes.delegations(request.scopes_for(actor))
+          found = ::Provider.delegating.where(key: scopes.map { |scope| Scopes.delegated_provider(scope) }).index_by(&:key)
+
+          scopes.map { |scope| [ scope, found[Scopes.delegated_provider(scope)] ] }
         end
       end
 
@@ -84,7 +90,11 @@ module LoginStates
       end
 
       def connection_for(provider)
-        ::Connection.live.where(provider: provider, actor: actor).order(connected_at: :desc).find(&:delegable?)
+        @connections ||= {}
+        @connections.fetch([ actor.id, provider.id ]) do
+          @connections[[ actor.id, provider.id ]] =
+            ::Connection.live.where(provider: provider, actor: actor).order(connected_at: :desc).find(&:delegable?)
+        end
       end
 
       def grant!
@@ -93,12 +103,10 @@ module LoginStates
 
           ::Delegation.grant!(client: client, actor: actor, connection: connection) if connection
         end
-      rescue ::Delegation::Refused => e
-        refuse!("access_denied", e.message)
       end
 
       def start(provider)
-        location, handoff = provider.federation.start(callback: callback_url(provider), delegated: true)
+        location, handoff = provider.federation.start(callback: provider.callback_url, delegated: true)
 
         login.store[HELD] = handoff.merge(
           "provider_id" => provider.id,
@@ -120,7 +128,7 @@ module LoginStates
 
         refuse!("access_denied", "that provider is no longer available") if provider.nil? || provider.key != update(:provider).to_s
 
-        identity = provider.federation.finish(login.updates, handoff: held, callback: callback_url(provider))
+        identity = provider.federation.finish(login.updates, handoff: held, callback: provider.callback_url)
 
         connect!(provider, identity, provider.federation.tokens)
       rescue ::Provider::Untrusted, ::Provider::Refused, ::Provider::Unreachable, ::Delegation::Refused, ArgumentError => e
@@ -151,14 +159,11 @@ module LoginStates
 
         connection = ::Connection.record!(provider: provider, actor: actor, identity: identity.merge("sub" => subject))
         connection.hold!(tokens)
+        @connections = nil
 
         Event.record!(Event::CONNECTION_LINKED, actor: actor, by: nil, provider: provider.key) if taken.nil?
 
         connection
-      end
-
-      def callback_url(provider)
-        "#{Current.origin}/login/provider/#{provider.key}/callback"
       end
   end
 end

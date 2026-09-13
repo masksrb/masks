@@ -31,13 +31,15 @@ class Exchange
 
     id = named_audience.one? ? named_audience.first : nil
 
-    @connection = id&.match?(/\A\h{8}-\h{4}-\h{4}-\h{4}-\h{12}\z/) ? Connection.find_by(uuid: id) : nil
+    @connection = id&.match?(Subjects::UUID) ? Connection.includes(:provider).find_by(uuid: id) : nil
   end
 
   def delegation
     return @delegation if defined?(@delegation)
 
-    @delegation = Delegation.covering(client: client, actor: subject_access_token.actor, connection: connection)
+    @delegation = Delegation.covering(client: client, actor: subject_access_token.actor, connection: connection)&.tap do |held|
+      held.association(:connection).target = connection
+    end
   end
 
   def release!

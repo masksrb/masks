@@ -38,7 +38,7 @@ class DelegationsTest < ClientTest
 
     assert_equal "authorization_code", sent["grant_type"]
     assert_equal started["verifier"], sent["code_verifier"]
-    assert_equal "shh", sent["client_secret"]
+    assert_equal "Basic #{Base64.strict_encode64('uris:shh')}", issuer.last("/token")[:headers]["authorization"]
   end
 
   def test_a_state_that_does_not_match_is_refused_before_anything_is_redeemed

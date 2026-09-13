@@ -14,10 +14,7 @@ class Delegation < ApplicationRecord
 
   class << self
     def grant!(client:, actor:, connection:)
-      raise Refused, "only an approved client can be trusted with somebody's account elsewhere" unless client.approved?
-      raise Refused, "that connection belongs to somebody else" unless connection.actor_id == actor.id
-
-      held = live.find_by(client: client, actor: actor, connection: connection)
+      held = covering(client: client, actor: actor, connection: connection)
       return held if held
 
       delegation = create!(

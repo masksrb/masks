@@ -953,7 +953,7 @@ Inherits `Masks::Client::Error`.
 ### #exchange
 
 ```ruby
-#exchange(subject_token, scope: nil, resource: nil, lifetime: nil)
+#exchange(subject_token, scope: nil, resource: nil, lifetime: nil, requested_token_type: nil, audience: nil)
 ```
 
 ### #identity
@@ -995,7 +995,7 @@ Inherits `Masks::Client::Error`.
 ### #start
 
 ```ruby
-#start(resource: nil, prompt: nil, scope: nil, state: SecureRandom.urlsafe_base64(24), nonce: SecureRandom.urlsafe_base64(24))
+#start(resource: nil, prompt: nil, scope: nil, state: SecureRandom.urlsafe_base64(24), nonce: SecureRandom.urlsafe_base64(24), max_age: nil)
 ```
 
 ### #userinfo
@@ -1060,6 +1060,7 @@ Inherits `Masks::Client::Error`.
 | Attribute | Access |
 | --- | --- |
 | `access_token` | R |
+| `delegations` | R |
 | `expires_in` | R |
 | `id_token` | R |
 | `obtained_at` | R |

@@ -74,7 +74,7 @@
                   <%= connection.label || connection.email || connection.subject %>
                 </span>
 
-                <% held = connection.delegations.select { |delegation| delegation.revoked_at.nil? } %>
+                <% held = connection.live_delegations %>
                 <% if held.any? %>
                   <ul class="item-delegations">
                     <% held.each do |delegation| %>

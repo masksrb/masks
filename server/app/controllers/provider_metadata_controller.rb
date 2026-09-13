@@ -4,6 +4,6 @@ class ProviderMetadataController < ApplicationController
 
     return head :not_found if provider.nil?
 
-    render xml: provider.federation.metadata(callback: Linking.callback_for(provider))
+    render xml: provider.federation.metadata(callback: provider.callback_url)
   end
 end

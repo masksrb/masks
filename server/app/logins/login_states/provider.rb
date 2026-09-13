@@ -61,7 +61,7 @@ module LoginStates
 
         return warn!("sso-unavailable") if provider.nil?
 
-        location, handoff = provider.federation.start(callback: callback_url(provider))
+        location, handoff = provider.federation.start(callback: provider.callback_url)
 
         login.store[HELD] = handoff.merge(
           "provider_id" => provider.id,
@@ -81,7 +81,7 @@ module LoginStates
 
         return warn!("sso-unavailable") if provider.nil? || provider.key != update(:provider).to_s
 
-        identity = provider.federation.finish(login.updates, handoff: held, callback: callback_url(provider))
+        identity = provider.federation.finish(login.updates, handoff: held, callback: provider.callback_url)
         settled = SingleSignOn.resolve!(provider: provider, claims: identity, policy: login.policy)
 
         signed_in(provider, settled)
@@ -152,10 +152,6 @@ module LoginStates
         )
 
         warn! warning
-      end
-
-      def callback_url(provider)
-        "#{Current.origin}/login/provider/#{provider.key}/callback"
       end
   end
 end
