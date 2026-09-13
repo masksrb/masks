@@ -4,6 +4,19 @@ require_relative "../support/upstream"
 class SingleSignOnTest < ActionDispatch::IntegrationTest
   include Federated
 
+  def client_policy(**attributes)
+    registration = register(@tenant)
+
+    within(@tenant) do
+      policy = SignInPolicy.create!(key: "client", name: "Client", **attributes)
+      Client.find_by!(client_id: registration["client_id"]).update!(sign_in_policy: policy)
+    end
+
+    authorize(client_id: registration["client_id"])
+
+    current_rid
+  end
+
   test "a confirmed address asks the account that holds it to prove itself first" do
     create_provider
     actor = create_actor(@tenant, nickname: "ada", email: "ada@acme.test")
@@ -74,7 +87,7 @@ class SingleSignOnTest < ActionDispatch::IntegrationTest
   end
 
   test "an unconfirmed address never reaches the account that holds it" do
-    create_provider(provisions: true)
+    create_provider(role: "delegate")
     actor = create_actor(@tenant, nickname: "ada", email: "ada@acme.test")
     within(@tenant) { actor.update!(email_verified_at: Time.current) }
 
@@ -85,7 +98,7 @@ class SingleSignOnTest < ActionDispatch::IntegrationTest
   end
 
   test "an empty instance is set up locally, never over sso" do
-    create_provider(provisions: true)
+    create_provider(role: "delegate")
 
     finish_sso(sub: "upstream-0", email: "first@acme.test")
 
@@ -98,7 +111,7 @@ class SingleSignOnTest < ActionDispatch::IntegrationTest
     assert_nil auth_data["providers"]
   end
 
-  test "a provider that does not provision refuses somebody with no account" do
+  test "a credential provider refuses somebody with no account" do
     create_provider
     create_actor(@tenant, nickname: "owner", email: "owner@acme.test")
 
@@ -109,8 +122,8 @@ class SingleSignOnTest < ActionDispatch::IntegrationTest
     assert within(@tenant) { Event.exists?(action: Event::CONNECTION_REFUSED) }
   end
 
-  test "a provider that provisions creates the account and signs it in" do
-    create_provider(provisions: true, email_domains: "acme.test")
+  test "a delegate creates the account and signs it in" do
+    create_provider(role: "delegate", email_domains: "acme.test")
     create_actor(@tenant, nickname: "owner", email: "owner@acme.test")
 
     finish_sso(sub: "upstream-2", email: "grace@acme.test", name: "Grace Hopper")
@@ -128,7 +141,7 @@ class SingleSignOnTest < ActionDispatch::IntegrationTest
   end
 
   test "a provisioned nickname steps aside when the obvious one is taken" do
-    create_provider(provisions: true, email_domains: "acme.test")
+    create_provider(role: "delegate", email_domains: "acme.test")
     create_actor(@tenant, nickname: "grace", email: "someone@elsewhere.test")
 
     finish_sso(sub: "upstream-3", email: "grace@acme.test")
@@ -137,7 +150,7 @@ class SingleSignOnTest < ActionDispatch::IntegrationTest
   end
 
   test "an email domain outside the list is refused" do
-    create_provider(provisions: true, email_domains: "acme.test")
+    create_provider(role: "delegate", email_domains: "acme.test")
     create_actor(@tenant, nickname: "owner", email: "owner@acme.test")
 
     finish_sso(sub: "upstream-4", email: "someone@evil.test")
@@ -147,7 +160,7 @@ class SingleSignOnTest < ActionDispatch::IntegrationTest
   end
 
   test "an identity carrying no address is refused when the list is set" do
-    create_provider(provisions: true, email_domains: "acme.test")
+    create_provider(role: "delegate", email_domains: "acme.test")
     create_actor(@tenant, nickname: "owner", email: "owner@acme.test")
 
     finish_sso(sub: "upstream-11", email: nil, verified: false)
@@ -157,7 +170,7 @@ class SingleSignOnTest < ActionDispatch::IntegrationTest
   end
 
   test "an unconfirmed address inside the list is refused" do
-    create_provider(provisions: true, email_domains: "acme.test")
+    create_provider(role: "delegate", email_domains: "acme.test")
     create_actor(@tenant, nickname: "owner", email: "owner@acme.test")
 
     finish_sso(sub: "upstream-12", email: "someone@acme.test", verified: false)
@@ -166,8 +179,8 @@ class SingleSignOnTest < ActionDispatch::IntegrationTest
     assert_equal 1, within(@tenant) { Actor.count }
   end
 
-  test "a provider that answers for no domain provisions nobody" do
-    create_provider(provisions: true)
+  test "a delegate that answers for no domain and trusts no address provisions nobody" do
+    create_provider(role: "delegate")
     create_actor(@tenant, nickname: "owner", email: "owner@acme.test")
 
     finish_sso(sub: "upstream-13", email: "hopeful@acme.test")
@@ -176,8 +189,8 @@ class SingleSignOnTest < ActionDispatch::IntegrationTest
     assert_equal 1, within(@tenant) { Actor.count }
   end
 
-  test "a provider that confirms no address provisions an account without one" do
-    create_provider(provisions: true)
+  test "a delegate that confirms no address provisions an account without one" do
+    create_provider(role: "delegate")
     create_actor(@tenant, nickname: "owner", email: "owner@acme.test")
 
     finish_sso(sub: "upstream-13b", email: nil, verified: false)
@@ -190,7 +203,7 @@ class SingleSignOnTest < ActionDispatch::IntegrationTest
   end
 
   test "an invitation is taken up only by a provider that answers for its address" do
-    create_provider(provisions: true)
+    create_provider(role: "delegate")
     create_actor(@tenant, nickname: "owner", email: "owner@acme.test")
     within(@tenant) { Actor.create!(nickname: "ada", email: "ada@acme.test") }
 
@@ -221,7 +234,7 @@ class SingleSignOnTest < ActionDispatch::IntegrationTest
   end
 
   test "a state from another browser is refused" do
-    create_provider(provisions: true)
+    create_provider(role: "delegate")
     create_actor(@tenant, nickname: "owner", email: "owner@acme.test")
 
     handoff = begin_sso
@@ -236,7 +249,7 @@ class SingleSignOnTest < ActionDispatch::IntegrationTest
   end
 
   test "an id_token minted for another sign-in is refused" do
-    create_provider(provisions: true)
+    create_provider(role: "delegate")
     create_actor(@tenant, nickname: "owner", email: "owner@acme.test")
 
     handoff = begin_sso
@@ -252,7 +265,7 @@ class SingleSignOnTest < ActionDispatch::IntegrationTest
   end
 
   test "the handoff carries pkce and a nonce, and redeems with the verifier" do
-    create_provider(provisions: true)
+    create_provider(role: "delegate")
     create_actor(@tenant, nickname: "owner", email: "owner@acme.test")
 
     handoff = begin_sso
@@ -272,8 +285,10 @@ class SingleSignOnTest < ActionDispatch::IntegrationTest
     assert_equal handoff["code_challenge"], digest
   end
 
-  test "a provider that only brokers connections signs nobody in" do
-    create_provider(signs_in: false, issuer: nil)
+  test "an archived provider signs nobody in" do
+    provider = create_provider
+    create_actor(@tenant, nickname: "ada", email: "ada@acme.test")
+    within(@tenant) { provider.update!(archived_at: Time.current) }
 
     body = begin_sso
 
@@ -284,7 +299,8 @@ class SingleSignOnTest < ActionDispatch::IntegrationTest
 
   test "the sign-in page offers the providers that sign people in" do
     create_provider
-    create_provider(key: "quiet", name: "Quiet", signs_in: false, issuer: nil)
+    quiet = create_provider(key: "quiet", name: "Quiet")
+    within(@tenant) { quiet.update!(archived_at: Time.current) }
     create_actor(@tenant, nickname: "ada", email: "ada@acme.test")
 
     get "/login"
@@ -316,8 +332,134 @@ class SingleSignOnTest < ActionDispatch::IntegrationTest
     assert_equal "second-factor", auth_data["prompt"]
   end
 
+  test "a delegate trusted with confirmed addresses provisions somebody from any domain" do
+    create_provider(role: "delegate", trusts_email: true)
+    create_actor(@tenant, nickname: "owner", email: "owner@acme.test")
+
+    finish_sso(sub: "upstream-20", email: "grace@gmail.test")
+
+    actor = signed_in_actor
+
+    assert actor, refusals.join("; ")
+    assert_equal "grace@gmail.test", actor.email
+    assert actor.email_verified_at.present?
+  end
+
+  test "trusting confirmed addresses does not trust an unconfirmed one" do
+    create_provider(role: "delegate", trusts_email: true)
+    create_actor(@tenant, nickname: "owner", email: "owner@acme.test")
+
+    finish_sso(sub: "upstream-21", email: "grace@gmail.test", verified: false)
+
+    assert_nil signed_in_actor
+    assert_equal 1, within(@tenant) { Actor.count }
+  end
+
+  test "an address in a domain the provider answers for is confirmed without the claim" do
+    create_provider(role: "delegate", email_domains: "acme.test")
+    create_actor(@tenant, nickname: "owner", email: "owner@acme.test")
+
+    finish_sso(sub: "upstream-22", email: "grace@acme.test", verified: nil)
+
+    assert_equal "grace@acme.test", signed_in_actor&.email
+  end
+
+  test "a delegate keeps the account's name and address in step with each sign-in" do
+    create_provider(role: "delegate", email_domains: "acme.test")
+    create_actor(@tenant, nickname: "owner", email: "owner@acme.test")
+
+    finish_sso(sub: "upstream-23", email: "grace@acme.test", name: "Grace Hopper")
+    actor = signed_in_actor
+
+    reset!
+    host! host_for(@tenant)
+    finish_sso(sub: "upstream-23", email: "hopper@acme.test", name: "Grace Brewster Hopper")
+
+    within(@tenant) do
+      actor.reload
+
+      assert_equal "Grace Brewster Hopper", actor.name
+      assert_equal "hopper@acme.test", actor.email
+      assert actor.email_verified_at.present?
+    end
+  end
+
+  test "a credential provider leaves the account's details alone" do
+    create_provider(email_domains: "acme.test")
+    actor = create_actor(@tenant, nickname: "ada", email: "ada@acme.test", name: "Ada")
+    within(@tenant) { actor.update!(email_verified_at: Time.current) }
+
+    finish_sso(sub: "upstream-24", email: "ada@acme.test", name: "Ada Lovelace")
+    prove
+
+    reset!
+    host! host_for(@tenant)
+    finish_sso(sub: "upstream-24", email: "countess@acme.test", name: "Countess of Lovelace")
+
+    within(@tenant) do
+      actor.reload
+
+      assert_equal "Ada", actor.name
+      assert_equal "ada@acme.test", actor.email
+    end
+  end
+
+  test "a policy offers only the providers it names" do
+    create_provider
+    create_provider(key: "other", name: "Other")
+    create_actor(@tenant, nickname: "ada", email: "ada@acme.test")
+    client_policy(providers: [ "other" ])
+
+    get "/login", params: { rid: current_rid }
+
+    assert_equal [ "other" ], auth_data["providers"].map { |one| one["key"] }
+  end
+
+  test "a policy without the provider factor offers none, and refuses one started anyway" do
+    create_provider
+    create_actor(@tenant, nickname: "ada", email: "ada@acme.test")
+    rid = client_policy(first_factors: [ "password" ])
+
+    get "/login", params: { rid: rid }
+
+    assert_nil auth_data["providers"]
+
+    body = begin_sso(rid: rid)
+
+    assert_nil body["redirectTo"]
+  end
+
+  test "a policy that signs in only through a provider refuses a password" do
+    create_provider
+    create_actor(@tenant, nickname: "ada", email: "ada@acme.test")
+    rid = client_policy(first_factors: [ "provider" ])
+
+    get "/login", params: { rid: rid }
+
+    assert_equal false, auth_data["identifies"]
+    assert_equal [ "acme" ], auth_data["providers"].map { |one| one["key"] }
+
+    post "/login", params: { event: "identify", identifier: "ada", rid: rid }, as: :json
+    post "/login", params: { event: "password", password: "password", rid: rid }, as: :json
+
+    assert_includes JSON.parse(response.body)["warnings"], "factor-not-offered"
+    assert_nil signed_in_actor
+  end
+
+  test "the tenant's default policy keeps a password or a passkey" do
+    within(@tenant) do
+      policy = SignInPolicy.create!(key: "house", name: "House")
+      @tenant.update!(sign_in_policy: policy)
+
+      policy.first_factors = [ "provider" ]
+
+      assert_not policy.valid?
+      assert_match "locked out", policy.errors.full_messages.join
+    end
+  end
+
   test "an authorize request survives the trip to the provider and back" do
-    create_provider(provisions: true, email_domains: "acme.test")
+    create_provider(role: "delegate", email_domains: "acme.test")
     create_actor(@tenant, nickname: "owner", email: "owner@acme.test")
     registration = register(@tenant)
 
@@ -335,7 +477,7 @@ class SingleSignOnTest < ActionDispatch::IntegrationTest
   end
 
   test "scopes handed to a provisioned account may not be privileged" do
-    provider = create_provider(provisions: true)
+    provider = create_provider(role: "delegate")
 
     within(@tenant) do
       provider.signup_scopes = "openid masks:manage"

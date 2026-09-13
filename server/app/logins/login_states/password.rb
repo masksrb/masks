@@ -10,6 +10,7 @@ module LoginStates
 
     def verify
       return warn!("missing-identifier") if login.identifier.blank?
+      return warn!("factor-not-offered") unless login.policy.first_factor?(:password)
 
       authenticated = Actor.authenticate(login.identifier, update(:password))
 

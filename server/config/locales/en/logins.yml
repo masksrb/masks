@@ -165,6 +165,7 @@ en:
       invalid-code: "That code is not valid."
       invalid-backup-code: "That backup code is not valid."
       invalid-passkey: "That passkey could not be used."
+      factor-not-offered: "That way of signing in is not offered here."
       passkey-expired: "That passkey attempt expired. Try again."
       passkey-unverified: "That passkey did not ask who you are. Use one that checks a PIN or fingerprint."
       passkey-unusable: "That passkey could not be added."

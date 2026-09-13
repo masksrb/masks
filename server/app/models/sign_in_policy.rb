@@ -30,6 +30,7 @@ class SignInPolicy < ApplicationRecord
   validate :confirmation_has_somewhere_to_go
   validate :hiding_needs_a_code
   validate :signup_scopes_stay_ordinary
+  validate :a_default_keeps_a_local_way_in
 
   normalizes :email_domains, with: ->(held) {
     Array(held).map { |one| one.to_s.strip.downcase.delete_prefix("@") }.reject(&:empty?).uniq
@@ -59,6 +60,10 @@ class SignInPolicy < ApplicationRecord
 
   def first_factor?(factor)
     first_factors.include?(factor.to_s)
+  end
+
+  def local?
+    first_factor?(:password) || first_factor?(:passkey)
   end
 
   def second_factor?(factor)
@@ -120,6 +125,13 @@ class SignInPolicy < ApplicationRecord
       return unless hidden
 
       errors.add(:hidden, "needs the email to be required") unless requires?(:email)
+    end
+
+    def a_default_keeps_a_local_way_in
+      return if local? || !persisted?
+      return unless Tenant.exists?(sign_in_policy_id: id)
+
+      errors.add(:first_factors, "must keep a password or a passkey while this is the tenant's default, so the console cannot be locked out")
     end
 
     def signup_scopes_stay_ordinary

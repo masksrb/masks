@@ -64,6 +64,10 @@ module Manage
           tenant.sign_in_policy = sign_in_policy.empty? ? nil : sign_in_policy!(sign_in_policy)
 
           refuse!("#{tenant.sign_in_policy.name} is archived") if tenant.sign_in_policy&.archived?
+
+          if tenant.sign_in_policy && !tenant.sign_in_policy.local?
+            refuse!("#{tenant.sign_in_policy.name} offers no password or passkey, so it cannot be the default the console signs in with")
+          end
         end
 
         save!(tenant)

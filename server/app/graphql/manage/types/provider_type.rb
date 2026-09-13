@@ -20,8 +20,8 @@ module Manage
       field :issuer, String
       field :jwks_uri, String
       field :jwks_fetched_at, GraphQL::Types::ISO8601DateTime
-      field :signs_in, Boolean, null: false
-      field :provisions, Boolean, null: false
+      field :role, String, null: false
+      field :trusts_email, Boolean, null: false
       field :email_domains, [ String ], null: false
       field :signup_scopes, [ String ], null: false
 

@@ -49,7 +49,11 @@ module LoginStates
     private
 
       def offered
-        @offered ||= ::Provider.signing_in.order(:name).to_a
+        @offered ||= if login.policy.first_factor?(:provider)
+          ::Provider.signing_in.order(:name).select { |provider| login.policy.offers?(provider) }
+        else
+          []
+        end
       end
 
       def start
@@ -107,7 +111,7 @@ module LoginStates
         )
 
         claims = provider.assert!(tokens, nonce: held["nonce"])
-        settled = SingleSignOn.resolve!(provider: provider, claims: claims)
+        settled = SingleSignOn.resolve!(provider: provider, claims: claims, policy: login.policy)
 
         signed_in(provider, settled)
       rescue SingleSignOn::Refused => e

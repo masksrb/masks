@@ -12,15 +12,16 @@ class SingleSignOn
   NICKNAME = /\A[a-z0-9][a-z0-9._-]*\z/i
   SPARE = 500
 
-  attr_reader :provider, :claims
+  attr_reader :provider, :claims, :policy
 
-  def self.resolve!(provider:, claims:)
-    new(provider: provider, claims: claims).resolve!
+  def self.resolve!(provider:, claims:, policy: SignInPolicy.default)
+    new(provider: provider, claims: claims, policy: policy).resolve!
   end
 
-  def initialize(provider:, claims:)
+  def initialize(provider:, claims:, policy: SignInPolicy.default)
     @provider = provider
     @claims = claims
+    @policy = policy
   end
 
   def resolve!
@@ -47,19 +48,44 @@ class SingleSignOn
       @email = claims["email"].to_s.strip.downcase.presence
     end
 
+    def claimed_verified?
+      [ true, "true" ].include?(claims["email_verified"])
+    end
+
     def verified?
-      email.present? && claims["email_verified"] == true
+      return false if email.blank?
+      return claimed_verified? if claims.key?("email_verified")
+
+      provider.authoritative_for?(email)
+    end
+
+    def vouched?
+      provider.vouches_for?(email, verified: claimed_verified?)
     end
 
     def returning(connection)
+      sync(connection.actor) if provider.delegate?
+
       link(connection.actor)
     end
 
     def admit!
-      return if provider.email_domain_list.empty?
+      return if provider.email_domain_list.empty? && policy.email_domains.empty?
 
       refuse_unconfirmed! unless verified?
-      refuse_domain! unless provider.welcomes?(email)
+      refuse_domain! unless provider.welcomes?(email) && policy.admits?(email)
+    end
+
+    def sync(actor)
+      actor.assign_attributes(profile)
+
+      if vouched? && email != actor.email && !Actor.where.not(id: actor.id).exists?(email: email)
+        actor.assign_attributes(email: email, email_verified_at: Time.current)
+      end
+
+      actor.save! if actor.changed?
+    rescue ActiveRecord::RecordInvalid
+      actor.restore_attributes
     end
 
     def matched
@@ -75,24 +101,20 @@ class SingleSignOn
         return { actor: actor, identity: claims, claiming: true }
       end
 
-      refuse_uninvited! unless authoritative?
+      refuse_uninvited! unless vouched?
 
       link(actor)
     end
 
-    def authoritative?
-      verified? && provider.authoritative_for?(email)
-    end
-
     def provisioned
-      return nil unless provider.provisions?
-      return nil if email.present? && !authoritative?
+      return nil unless provider.delegate?
+      return nil if email.present? && !vouched?
       return nil if email.present? && Actor.exists?(email: email)
 
       actor = Actor.create!(
         nickname: nickname,
-        email: (email if verified?),
-        email_verified_at: (Time.current if verified?),
+        email: email,
+        email_verified_at: (Time.current if email),
         activated_at: Time.current,
         scopes: Scopes.join(provider.signup_scope_list),
         **profile
@@ -158,17 +180,21 @@ class SingleSignOn
       { actor: actor, connection: connection }
     end
 
+    def domains
+      (provider.email_domain_list | policy.email_domains).join(", ")
+    end
+
     def refuse_domain!
       refuse!(
         "sso-domain-refused",
-        "#{provider.name} signed in an address outside #{provider.email_domain_list.join(', ')}"
+        "#{provider.name} signed in an address outside #{domains}"
       )
     end
 
     def refuse_unconfirmed!
       refuse!(
         "sso-unverified",
-        "#{provider.name} confirmed no address, and only #{provider.email_domain_list.join(', ')} may sign in"
+        "#{provider.name} confirmed no address, and only #{domains} may sign in"
       )
     end
 

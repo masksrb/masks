@@ -14,16 +14,16 @@
     key name authorizationUrl tokenUrl userinfoUrl clientId
     scopes authorizeParams subjectClaim labelClaim
     secretHeld connections archivedAt createdAt
-    issuer jwksUri signsIn provisions emailDomains signupScopes
+    issuer jwksUri role trustsEmail emailDomains signupScopes
   `;
 
   const SSO_ARGS = `
-    $issuer: String, $jwksUri: String, $signsIn: Boolean, $provisions: Boolean,
+    $issuer: String, $jwksUri: String, $role: String, $trustsEmail: Boolean,
     $emailDomains: [String!], $signupScopes: [String!]
   `;
 
   const SSO_PASS = `
-    issuer: $issuer, jwksUri: $jwksUri, signsIn: $signsIn, provisions: $provisions,
+    issuer: $issuer, jwksUri: $jwksUri, role: $role, trustsEmail: $trustsEmail,
     emailDomains: $emailDomains, signupScopes: $signupScopes
   `;
 
@@ -92,8 +92,8 @@
     labelClaim: "email",
     issuer: "",
     jwksUri: "",
-    signsIn: false,
-    provisions: false,
+    role: "credential",
+    trustsEmail: false,
     emailDomains: "",
     signupScopes: "",
   };
@@ -148,8 +148,8 @@
       labelClaim: provider.labelClaim,
       issuer: provider.issuer ?? "",
       jwksUri: provider.jwksUri ?? "",
-      signsIn: provider.signsIn,
-      provisions: provider.provisions,
+      role: provider.role,
+      trustsEmail: provider.trustsEmail,
       emailDomains: provider.emailDomains.join(" "),
       signupScopes: provider.signupScopes.join(" "),
     };
@@ -177,8 +177,8 @@
       labelClaim: draft.labelClaim.trim() || "email",
       issuer: trimmed(draft.issuer),
       jwksUri: trimmed(draft.jwksUri),
-      signsIn: draft.signsIn,
-      provisions: draft.provisions,
+      role: draft.role,
+      trustsEmail: draft.trustsEmail,
       emailDomains: draft.emailDomains.split(/[\s,]+/).filter(Boolean),
       signupScopes: draft.signupScopes.split(/[\s,]+/).filter(Boolean),
     };
@@ -358,33 +358,35 @@
         <span class="legend">Signing in</span>
 
         <label class="flex items-start gap-3 text-sm">
-          <input type="checkbox" class="toggle toggle-sm" bind:checked={draft.signsIn} />
+          <input
+            type="checkbox"
+            class="toggle toggle-sm"
+            checked={draft.role === "delegate"}
+            onchange={(event) => (draft.role = event.currentTarget.checked ? "delegate" : "credential")}
+          />
           <span>
-            People can sign in with {draft.name.trim() || "this provider"}
+            {draft.name.trim() || "This provider"} owns the account
             <span class="block text-xs opacity-60">
-              A button appears on the sign-in page. It counts as a password, not as a second factor.
+              On, somebody new gets an account here, and their name, photo and address follow
+              {draft.name.trim() || "the provider"} each time they sign in. Off, it is only another way
+              into an account that already exists. Either way it stands in for a password, never for a
+              second factor.
             </span>
           </span>
         </label>
 
         <label class="flex items-start gap-3 text-sm">
-          <input
-            type="checkbox"
-            class="toggle toggle-sm"
-            disabled={!draft.signsIn}
-            bind:checked={draft.provisions}
-          />
+          <input type="checkbox" class="toggle toggle-sm" bind:checked={draft.trustsEmail} />
           <span>
-            Create an account for somebody new
+            Trust the addresses it confirms
             <span class="block text-xs opacity-60">
-              Off, only people who already have an account here can sign in. A confirmed address
-              always links to the account that holds it; an unconfirmed one never does.
+              Only for a provider that really checks a person holds the mailbox, as Google, Apple and
+              GitHub do. Off, only addresses in the domains below are taken at its word.
             </span>
           </span>
         </label>
 
-        {#if draft.signsIn}
-          <div class="grid gap-3 sm:grid-cols-2">
+        <div class="grid gap-3 sm:grid-cols-2">
             <Field
               label="Email domains"
               bind:value={draft.emailDomains}
@@ -393,7 +395,7 @@
               spellcheck="false"
               placeholder="any domain"
             />
-            {#if draft.provisions}
+            {#if draft.role === "delegate"}
               <Field
                 label="Signup scopes"
                 bind:value={draft.signupScopes}
@@ -403,8 +405,7 @@
                 placeholder="openid profile email offline_access"
               />
             {/if}
-          </div>
-        {/if}
+        </div>
       </div>
 
       <div class="flex gap-2">
@@ -444,19 +445,17 @@
         {/snippet}
 
         <div class="flex flex-wrap gap-2">
-          {#if provider.signsIn}
-            <span class="badge badge-success badge-sm">signs people in</span>
-            {#if provider.provisions}
-              <span class="badge badge-warning badge-sm">creates accounts</span>
-            {:else}
-              <span class="badge badge-ghost badge-sm">existing accounts only</span>
-            {/if}
-            {#each provider.emailDomains as domain (domain)}
-              <span class="badge badge-ghost badge-sm font-mono">@{domain}</span>
-            {/each}
+          {#if provider.role === "delegate"}
+            <span class="badge badge-warning badge-sm">owns accounts</span>
           {:else}
-            <span class="badge badge-ghost badge-sm">connected accounts only</span>
+            <span class="badge badge-ghost badge-sm">existing accounts only</span>
           {/if}
+          {#if provider.trustsEmail}
+            <span class="badge badge-ghost badge-sm">trusts confirmed addresses</span>
+          {/if}
+          {#each provider.emailDomains as domain (domain)}
+            <span class="badge badge-ghost badge-sm font-mono">@{domain}</span>
+          {/each}
         </div>
 
         <dl class="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">

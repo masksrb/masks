@@ -513,7 +513,7 @@ class MistakenIdentityTest < ActionDispatch::IntegrationTest
   end
 
   test "a provider answering for no domain provisions nobody" do
-    create_provider(provisions: true)
+    create_provider(role: "delegate")
 
     finish_sso(sub: "stranger", email: "stranger@probe.example.com")
 

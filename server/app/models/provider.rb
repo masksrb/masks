@@ -14,6 +14,9 @@ class Provider < ApplicationRecord
   DISCOVERY_PATH = "/.well-known/openid-configuration".freeze
   ALGORITHMS = %w[RS256 RS384 RS512 ES256 ES384 ES512 PS256 PS384 PS512].freeze
   SUBJECT_CLAIMS = %w[sub oid].freeze
+  CREDENTIAL = "credential".freeze
+  DELEGATE = "delegate".freeze
+  ROLES = [ CREDENTIAL, DELEGATE ].freeze
 
   encrypts :client_secret
 
@@ -23,14 +26,14 @@ class Provider < ApplicationRecord
                   uniqueness: { scope: :tenant_id },
                   format: { with: /\A[a-z0-9][a-z0-9-]*\z/ }
   validates :name, :client_id, presence: true
-  validates :authorization_url, :token_url, presence: true
+  validates :authorization_url, :token_url, :issuer, presence: true
+  validates :role, inclusion: { in: ROLES }
   validates :subject_claim, inclusion: {
     in: SUBJECT_CLAIMS,
     message: "must be a claim an issuer never reassigns: #{SUBJECT_CLAIMS.join(' or ')}"
   }
   validate :urls_are_usable
   validate :authorize_params_stay_out_of_the_way
-  validate :signing_in_needs_an_issuer
   validate :signup_scopes_stay_ordinary
 
   normalizes :issuer, with: ->(value) { value.to_s.strip.chomp("/").presence }
@@ -40,7 +43,7 @@ class Provider < ApplicationRecord
   RESERVED_PARAMS = %w[response_type client_id redirect_uri scope state nonce
                        code_challenge code_challenge_method].freeze
 
-  scope :signing_in, -> { active.where(signs_in: true).where.not(issuer: nil) }
+  scope :signing_in, -> { active.where.not(issuer: nil) }
 
   class << self
     def discover(issuer)
@@ -79,7 +82,11 @@ class Provider < ApplicationRecord
   end
 
   def signs_in?
-    signs_in && issuer.present? && !archived?
+    issuer.present? && !archived?
+  end
+
+  def delegate?
+    role == DELEGATE
   end
 
   def sign_in_scopes
@@ -100,6 +107,12 @@ class Provider < ApplicationRecord
     domain = email.to_s.split("@").last.to_s.downcase
 
     domain.present? && email_domain_list.include?(domain)
+  end
+
+  def vouches_for?(email, verified:)
+    return false if email.blank?
+
+    authoritative_for?(email) || (trusts_email && verified)
   end
 
   def authorize_url(redirect_uri:, state:, scopes: nil, nonce: nil, challenge: nil, prompt: nil)
@@ -230,12 +243,6 @@ class Provider < ApplicationRecord
       JSON.parse(Base64.urlsafe_decode64(header.to_s + "=" * ((4 - header.to_s.length % 4) % 4)))
     rescue ArgumentError, JSON::ParserError
       {}
-    end
-
-    def signing_in_needs_an_issuer
-      return unless signs_in
-
-      errors.add(:issuer, "is needed before this provider can sign anybody in") if issuer.blank?
     end
 
     def signup_scopes_stay_ordinary

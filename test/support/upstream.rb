@@ -129,7 +129,6 @@ module Federated
         jwks_uri: @upstream.url("/o/jwks"),
         client_id: "upstream-client",
         client_secret: "upstream-secret",
-        signs_in: true,
         **attributes
       )
     end
@@ -149,7 +148,7 @@ module Federated
 
     @upstream.announce(
       { "sub" => sub, "email" => email, "email_verified" => verified,
-        "nonce" => handoff["nonce"] }.merge(overrides.stringify_keys)
+        "nonce" => handoff["nonce"] }.compact.merge(overrides.stringify_keys)
     )
 
     get "/login/provider/#{key}/callback",

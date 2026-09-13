@@ -22,7 +22,7 @@
     query Policies {
       active: signInPolicies { ${FIELDS} }
       archived: signInPolicies(archived: true) { ${FIELDS} }
-      providers { key name signsIn }
+      providers { key name }
       tenant { namedBy texts mails }
       scopesSupported
     }
@@ -222,7 +222,7 @@
       .filter(Boolean)
       .join(" · ");
 
-  const signingProviders = $derived((data?.providers ?? []).filter((held) => held.signsIn));
+  const signingProviders = $derived(data?.providers ?? []);
 </script>
 
 <Page title="Policies">

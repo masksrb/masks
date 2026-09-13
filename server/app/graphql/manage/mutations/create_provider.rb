@@ -14,8 +14,8 @@ module Manage
       argument :label_claim, String, required: false
       argument :issuer, String, required: false
       argument :jwks_uri, String, required: false
-      argument :signs_in, Boolean, required: false
-      argument :provisions, Boolean, required: false
+      argument :role, String, required: false
+      argument :trusts_email, Boolean, required: false
       argument :email_domains, [ String ], required: false
       argument :signup_scopes, [ String ], required: false
 

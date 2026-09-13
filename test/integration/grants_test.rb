@@ -19,6 +19,7 @@ class GrantsTest < ActionDispatch::IntegrationTest
         key: key, name: key.capitalize,
         authorization_url: "https://#{key}.test/authorize",
         token_url: "https://#{key}.test/token",
+        issuer: "https://#{key}.test",
         client_id: "upstream"
       )
     end

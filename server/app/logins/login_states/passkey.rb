@@ -19,7 +19,7 @@ module LoginStates
     end
 
     def as_json
-      { "passkey" => { "offered" => true }.merge(challenge_json) }
+      { "passkey" => { "offered" => offered? }.merge(challenge_json) }
     end
 
     def start_over!
@@ -27,6 +27,10 @@ module LoginStates
     end
 
     private
+
+      def offered?
+        login.policy.first_factor?(:passkey) || login.first_factored?
+      end
 
       def challenge_json
         @options ? { "options" => @options } : {}
@@ -78,6 +82,8 @@ module LoginStates
       end
 
       def accept(passkey, verified)
+        return second(passkey, verified) unless login.policy.first_factor?(:passkey)
+
         login.identifier = passkey.actor.identifier
         login.actor = passkey.actor
 
@@ -85,6 +91,16 @@ module LoginStates
         login.noted! "swk"
 
         return unless verified
+
+        factored! :second_factor, expiry: SECOND_EXPIRY
+        login.noted! "user", "mfa"
+      end
+
+      def second(passkey, verified)
+        unless verified && login.first_factored? && login.actor&.id == passkey.actor_id
+          refused! "passkey"
+          return warn!("factor-not-offered")
+        end
 
         factored! :second_factor, expiry: SECOND_EXPIRY
         login.noted! "user", "mfa"

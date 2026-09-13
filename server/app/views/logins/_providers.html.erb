@@ -2,7 +2,9 @@
 
 <% if offered.any? %>
   <div class="providers">
-    <span class="providers-rule"><%= t("logins.shared.or") %></span>
+    <% unless local_assigns[:bare] %>
+      <span class="providers-rule"><%= t("logins.shared.or") %></span>
+    <% end %>
 
     <% offered.each do |provider| %>
       <%= form_with url: login_path, method: :post, class: "contents" do |form| %>

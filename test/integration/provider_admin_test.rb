@@ -5,12 +5,12 @@ class ProviderAdminTest < ActionDispatch::IntegrationTest
     mutation Add(
       $key: ID!, $name: String!, $authorizationUrl: String!, $tokenUrl: String!,
       $clientId: String!, $clientSecret: String, $scopes: [String!],
-      $authorizeParams: JSON
+      $authorizeParams: JSON, $issuer: String
     ) {
       createProvider(
         key: $key, name: $name, authorizationUrl: $authorizationUrl, tokenUrl: $tokenUrl,
         clientId: $clientId, clientSecret: $clientSecret, scopes: $scopes,
-        authorizeParams: $authorizeParams
+        authorizeParams: $authorizeParams, issuer: $issuer
       ) {
         provider { key name secretHeld scopes connections }
       }
@@ -66,6 +66,7 @@ class ProviderAdminTest < ActionDispatch::IntegrationTest
       **{
         key: "google",
         name: "Google",
+        issuer: "https://accounts.google.com",
         authorizationUrl: "https://accounts.google.com/o/oauth2/v2/auth",
         tokenUrl: "https://oauth2.googleapis.com/token",
         clientId: "upstream-client",
