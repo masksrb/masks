@@ -36,7 +36,7 @@ module LoginStates
     end
 
     def required?
-      return false if touched?(:consent)
+      return false if consented_here?
       return true if request.consent?
       return true if login.state("delegation").undelegated.any?
       return false if client && !client.consent_required?
@@ -54,6 +54,10 @@ module LoginStates
       request.audience
     end
 
+    def consented_here?
+      touched?(:consent) && login.factors.dig("consent", "rid") == login.rid.to_s
+    end
+
     private
 
       def record
@@ -68,7 +72,7 @@ module LoginStates
           actor: actor, client: client, scopes: scopes, audience: audience.presence
         )
 
-        factored! :consent, expiry: EXPIRY
+        factored!(:consent, expiry: EXPIRY)["rid"] = login.rid.to_s
       end
   end
 end

@@ -114,6 +114,48 @@ class DeviceGrantTest < ActionDispatch::IntegrationTest
     assert_equal "access_denied", answer["error"]
   end
 
+  test "following a link to a device's code never signs the device in on its own" do
+    held = ask
+    first = ask
+
+    approve!(first["user_code"])
+
+    get "/device?#{URI.encode_www_form(user_code: held['user_code'])}"
+
+    assert awaiting_consent?
+
+    travel DeviceGrant::INTERVAL.seconds + 1.second
+
+    assert_equal "authorization_pending", poll(held["device_code"])["error"]
+  end
+
+  test "a device is asked about even when its client skips consent" do
+    within { Client.find_by(client_id: @registration["client_id"]).update_columns(approved_at: Time.current, consent_required: false) }
+    held = ask
+
+    sign_in_as(@actor)
+    get "/device?#{URI.encode_www_form(user_code: held['user_code'])}"
+
+    assert awaiting_consent?
+
+    travel DeviceGrant::INTERVAL.seconds + 1.second
+
+    assert_equal "authorization_pending", poll(held["device_code"])["error"]
+  end
+
+  test "consenting to one device does not answer for another" do
+    first = ask
+    second = ask
+
+    sign_in_as(@actor)
+    get "/device?#{URI.encode_www_form(user_code: first['user_code'])}"
+    consent!
+
+    get "/device?#{URI.encode_www_form(user_code: second['user_code'])}"
+
+    assert awaiting_consent?
+  end
+
   test "a device code stops working once it has expired" do
     held = ask
 

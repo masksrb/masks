@@ -95,7 +95,7 @@ class Authorization
   end
 
   def consent?
-    prompt.include?("consent")
+    prompt.include?("consent") || device?
   end
 
   def silent?
