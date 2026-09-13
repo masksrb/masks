@@ -4,7 +4,11 @@
 <div class="auth-pair">
   <span class="auth-mark auth-mark-client<%= " auth-mark-pending" if mark.blank? %>" aria-hidden="true"><%= mark.to_s.first&.upcase %></span>
   <span class="auth-wire"></span>
-  <span class="auth-mark" aria-hidden="true"><%= tenant.first&.upcase %></span>
+  <% if journey["firstRun"] %>
+    <img src="/icon.svg" alt="" class="auth-mark auth-mark-rose">
+  <% else %>
+    <span class="auth-mark" aria-hidden="true"><%= tenant.first&.upcase %></span>
+  <% end %>
 </div>
 
 <% if journey["firstRun"] %>

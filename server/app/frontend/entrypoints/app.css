@@ -820,6 +820,12 @@
     color: var(--came);
   }
 
+  .auth-mark-rose {
+    border: 0;
+    border-radius: 50%;
+    background: none;
+  }
+
   .auth-wire {
     position: relative;
     flex: 0 0 3.5rem;

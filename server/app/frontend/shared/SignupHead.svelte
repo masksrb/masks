@@ -14,7 +14,11 @@ const initial = (name) => (name ? name.trim().slice(0, 1).toUpperCase() : "");
   <span class="auth-mark auth-mark-client" class:auth-mark-pending={!mark.trim()} aria-hidden="true"
     >{initial(mark)}</span>
   <span class="auth-wire"></span>
-  <span class="auth-mark" aria-hidden="true">{initial(tenant)}</span>
+  {#if journey.firstRun}
+    <img src="/icon.svg" alt="" class="auth-mark auth-mark-rose" />
+  {:else}
+    <span class="auth-mark" aria-hidden="true">{initial(tenant)}</span>
+  {/if}
 </div>
 
 {#if journey.firstRun}

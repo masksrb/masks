@@ -9,7 +9,7 @@
 <div class="auth-page">
   <main class="auth-col surface-grant">
     <div class="auth-pair">
-      <span class="auth-mark auth-mark-client" aria-hidden="true">M</span>
+      <img src="/icon.svg" alt="" class="auth-mark auth-mark-rose" />
       <span class="auth-wire"></span>
       <span class="auth-mark" aria-hidden="true">{tenant.slice(0, 1).toUpperCase()}</span>
     </div>
