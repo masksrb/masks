@@ -10,11 +10,11 @@ module SectorIdentifier
 
       raise Refused, "must be an https URL" unless held.is_a?(URI::HTTPS)
 
-      unless Rails.env.local? || Outbound.routable?(held)
-        raise Refused, "resolves to an address this server will not call"
-      end
+      address = Rails.env.local? ? nil : Outbound.vetted(held)
 
-      missing = Array(redirect_uris).map(&:to_s) - declared(held)
+      raise Refused, "resolves to an address this server will not call" unless Rails.env.local? || address
+
+      missing = Array(redirect_uris).map(&:to_s) - declared(held, address)
 
       raise Refused, "does not list #{missing.join(', ')}" if missing.any?
 
@@ -35,8 +35,8 @@ module SectorIdentifier
         raise Refused, "is not a URI"
       end
 
-      def declared(uri)
-        response = Outbound.get(uri, open: OPEN_TIMEOUT, read: READ_TIMEOUT)
+      def declared(uri, address)
+        response = Outbound.get(uri, open: OPEN_TIMEOUT, read: READ_TIMEOUT, address: address)
 
         raise Refused, "answered #{response.code}" unless response.is_a?(Net::HTTPSuccess)
 

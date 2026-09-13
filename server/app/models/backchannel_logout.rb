@@ -20,9 +20,7 @@ module BackchannelLogout
   def self.deliver!(client, token)
     uri = URI.parse(client.backchannel_logout_uri)
 
-    routable!(client, uri)
-
-    response = Outbound.post(uri, { logout_token: token })
+    response = Outbound.post(uri, { logout_token: token }, address: routable!(client, uri))
 
     return true if response.is_a?(Net::HTTPSuccess)
 
@@ -38,8 +36,6 @@ module BackchannelLogout
 
     raise Refused, "#{client.name} is not reachable over http" unless uri.is_a?(URI::HTTP)
 
-    return if Outbound.routable?(uri)
-
-    raise Refused, "#{client.name} resolves to an address this server will not call"
+    Outbound.vetted(uri) || raise(Refused, "#{client.name} resolves to an address this server will not call")
   end
 end
