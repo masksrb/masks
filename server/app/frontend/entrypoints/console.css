@@ -78,19 +78,10 @@
   overflow-wrap: anywhere;
 }
 
-.brand::before {
-  content: "";
+.brand-mark {
   flex: none;
-  width: 3px;
-  align-self: stretch;
-  min-height: 1.05em;
-  background: linear-gradient(
-    to bottom,
-    var(--glass-ruby),
-    var(--glass-amber),
-    var(--glass-emerald),
-    var(--glass-cobalt)
-  );
+  width: 1.75rem;
+  height: 1.75rem;
 }
 
 .nav {
