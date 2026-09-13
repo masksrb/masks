@@ -31,6 +31,10 @@ module Manage
           ::Provider.find_by(key: key) || refuse!("no provider keyed #{key}")
         end
 
+        def adapter!(key)
+          ::Adapter.find_by(key: key) || refuse!("no adapter keyed #{key}")
+        end
+
         def signing_key!(kid)
           ::SigningKey.find_by(kid: kid) || refuse!("no signing key with that kid")
         end

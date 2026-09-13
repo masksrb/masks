@@ -15,6 +15,7 @@
   import SettingsPage from "./SettingsPage.svelte";
   import ActivityPage from "./ActivityPage.svelte";
   import ProvidersPage from "./ProvidersPage.svelte";
+  import AdaptersPage from "./AdaptersPage.svelte";
 
   let { boot } = $props();
 
@@ -48,6 +49,7 @@
     ["/devices", "Devices"],
     ["/clients", "Clients"],
     ["/providers", "Providers"],
+    ["/adapters", "Adapters"],
     ["/activity", "Activity"],
     ["/settings", "Settings"],
   ];
@@ -222,6 +224,8 @@
         {/if}
       {:else if current === "providers"}
         <ProvidersPage {api} />
+      {:else if current === "adapters"}
+        <AdaptersPage {api} />
       {:else if current === "activity"}
         <ActivityPage {api} />
       {:else if current === "settings"}

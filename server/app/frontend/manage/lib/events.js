@@ -67,6 +67,10 @@ const SAID = {
   "provider.updated": "Provider edited",
   "provider.archived": "Provider archived",
   "tenant.updated": "Settings changed",
+  "adapter.created": "Adapter added",
+  "adapter.updated": "Adapter changed",
+  "adapter.archived": "Adapter archived",
+  "adapter.tested": "Adapter tested",
 };
 
 const GRAVE = new Set([

@@ -89,6 +89,47 @@ ALTER SEQUENCE public.actors_id_seq OWNED BY public.actors.id;
 
 
 --
+-- Name: adapters; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.adapters (
+    id bigint NOT NULL,
+    tenant_id bigint NOT NULL,
+    type character varying NOT NULL,
+    kind character varying NOT NULL,
+    key character varying NOT NULL,
+    name character varying NOT NULL,
+    settings jsonb DEFAULT '{}'::jsonb NOT NULL,
+    secrets text,
+    "primary" boolean DEFAULT false NOT NULL,
+    archived_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+ALTER TABLE ONLY public.adapters FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: adapters_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.adapters_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: adapters_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.adapters_id_seq OWNED BY public.adapters.id;
+
+
+--
 -- Name: ar_internal_metadata; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -719,14 +760,6 @@ CREATE TABLE public.tenants (
     pairwise_salt text,
     named_by character varying,
     dynamic_registration character varying,
-    mail_from character varying,
-    smtp_address character varying,
-    smtp_port integer,
-    smtp_username character varying,
-    smtp_password text,
-    smtp_authentication character varying,
-    smtp_domain character varying,
-    smtp_tls boolean DEFAULT false NOT NULL,
     browsers_only boolean DEFAULT false NOT NULL,
     blocked_agents text
 );
@@ -809,6 +842,13 @@ ALTER SEQUENCE public.tokens_id_seq OWNED BY public.tokens.id;
 --
 
 ALTER TABLE ONLY public.actors ALTER COLUMN id SET DEFAULT nextval('public.actors_id_seq'::regclass);
+
+
+--
+-- Name: adapters id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.adapters ALTER COLUMN id SET DEFAULT nextval('public.adapters_id_seq'::regclass);
 
 
 --
@@ -929,6 +969,14 @@ ALTER TABLE ONLY public.tokens ALTER COLUMN id SET DEFAULT nextval('public.token
 
 ALTER TABLE ONLY public.actors
     ADD CONSTRAINT actors_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: adapters adapters_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.adapters
+    ADD CONSTRAINT adapters_pkey PRIMARY KEY (id);
 
 
 --
@@ -1101,6 +1149,27 @@ CREATE UNIQUE INDEX index_actors_on_tenant_id_and_nickname ON public.actors USIN
 --
 
 CREATE UNIQUE INDEX index_actors_on_uuid ON public.actors USING btree (uuid);
+
+
+--
+-- Name: index_adapters_on_tenant_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_adapters_on_tenant_id ON public.adapters USING btree (tenant_id);
+
+
+--
+-- Name: index_adapters_on_tenant_id_and_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_adapters_on_tenant_id_and_key ON public.adapters USING btree (tenant_id, key);
+
+
+--
+-- Name: index_adapters_one_primary_per_kind; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_adapters_one_primary_per_kind ON public.adapters USING btree (tenant_id, kind) WHERE ("primary" AND (archived_at IS NULL));
 
 
 --
@@ -1759,6 +1828,14 @@ ALTER TABLE ONLY public.connections
 
 
 --
+-- Name: adapters fk_rails_a63d408d03; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.adapters
+    ADD CONSTRAINT fk_rails_a63d408d03 FOREIGN KEY (tenant_id) REFERENCES public.tenants(id);
+
+
+--
 -- Name: subjects fk_rails_ad855a4b96; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1861,6 +1938,12 @@ ALTER TABLE ONLY public.tokens
 ALTER TABLE public.actors ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: adapters; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.adapters ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: avatars; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -1943,6 +2026,13 @@ ALTER TABLE public.subjects ENABLE ROW LEVEL SECURITY;
 --
 
 CREATE POLICY tenant_isolation ON public.actors USING ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint)) WITH CHECK ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint));
+
+
+--
+-- Name: adapters tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.adapters USING ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint)) WITH CHECK ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint));
 
 
 --
@@ -2056,5 +2146,6 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260913000000'),
 ('20260912000000');
 

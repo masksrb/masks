@@ -22,7 +22,6 @@
       tenant {
         uuid subdomain name namedBy dynamicRegistration dynamicClientScopes createdAt
         browsersOnly blockedAgents
-        mails mailFrom smtpAddress smtpPort smtpUsername smtpAuthentication smtpDomain smtpTls
         signingKeys { kid algorithm activatedAt retiredAt state }
       }
       viewer { identifier scopes }
@@ -71,9 +70,7 @@
 
   let data = $state(null);
   let name = $state("");
-  let mail = $state(null);
   let agents = $state("");
-  let secret = $state("");
   let loading = $state(true);
   let days = $state(30);
 
@@ -101,16 +98,6 @@
     try {
       data = await api.query(QUERY);
       name = data.tenant.name;
-      mail = {
-        mailFrom: data.tenant.mailFrom ?? "",
-        smtpAddress: data.tenant.smtpAddress ?? "",
-        smtpPort: data.tenant.smtpPort ?? 587,
-        smtpUsername: data.tenant.smtpUsername ?? "",
-        smtpAuthentication: data.tenant.smtpAuthentication ?? "plain",
-        smtpDomain: data.tenant.smtpDomain ?? "",
-        smtpTls: data.tenant.smtpTls ?? false,
-      };
-      secret = "";
       agents = data.tenant.blockedAgents ?? "";
     } catch (thrown) {
       feedback.blame(thrown);
@@ -127,10 +114,7 @@
         api.query(
           `mutation Update(
             $name: String, $dynamicClientScopes: [String!], $dynamicRegistration: String,
-            $namedBy: String, $browsersOnly: Boolean, $blockedAgents: String,
-            $mailFrom: String, $smtpAddress: String, $smtpPort: Int, $smtpUsername: String,
-            $smtpPassword: String, $smtpAuthentication: String, $smtpDomain: String,
-            $smtpTls: Boolean
+            $namedBy: String, $browsersOnly: Boolean, $blockedAgents: String
           ) {
             updateTenant(
               name: $name
@@ -139,14 +123,6 @@
               namedBy: $namedBy
               browsersOnly: $browsersOnly
               blockedAgents: $blockedAgents
-              mailFrom: $mailFrom
-              smtpAddress: $smtpAddress
-              smtpPort: $smtpPort
-              smtpUsername: $smtpUsername
-              smtpPassword: $smtpPassword
-              smtpAuthentication: $smtpAuthentication
-              smtpDomain: $smtpDomain
-              smtpTls: $smtpTls
             ) { tenant { name } }
           }`,
           changes,
@@ -329,58 +305,6 @@
           <p class="text-xs opacity-60">
             One per line or comma separated. Matched anywhere in the agent, ignoring case.
           </p>
-        </Card>
-
-        <Card
-          title="Mail"
-          lede={data.tenant.mails
-            ? "Invitations, resets and confirmations are emailed from here."
-            : "Nothing is emailed until a from address and a server are set. Until then, invitations and resets are links a manager passes along."}
-        >
-          {#if mail}
-            <div class="grid gap-3 sm:grid-cols-2">
-              <Field label="From address" type="email" bind:value={mail.mailFrom} />
-              <Field label="Server" bind:value={mail.smtpAddress} placeholder="smtp.example.com" />
-              <Field label="Port" type="number" bind:value={mail.smtpPort} />
-              <Field label="Username" bind:value={mail.smtpUsername} />
-              <Field
-                label="Password"
-                type="password"
-                bind:value={secret}
-                placeholder="unchanged"
-              />
-              <Field label="HELO domain" bind:value={mail.smtpDomain} />
-            </div>
-
-            <label class="flex flex-col gap-1.5">
-              <span class="text-xs font-medium opacity-70">Authentication</span>
-              <select class="select select-sm w-full" bind:value={mail.smtpAuthentication}>
-                <option value="plain">plain</option>
-                <option value="login">login</option>
-                <option value="cram_md5">cram_md5</option>
-              </select>
-            </label>
-
-            <Switch label="Implicit TLS — off means STARTTLS" bind:checked={mail.smtpTls} />
-
-            <div class="flex gap-2">
-              <button
-                type="button"
-                class="btn btn-primary btn-sm"
-                onclick={() =>
-                  update(
-                    {
-                      ...mail,
-                      smtpPort: Number(mail.smtpPort) || 587,
-                      ...(secret ? { smtpPassword: secret } : {}),
-                    },
-                    "Mail updated.",
-                  )}
-              >
-                Save mail settings
-              </button>
-            </div>
-          {/if}
         </Card>
 
         <Card

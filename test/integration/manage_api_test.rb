@@ -242,37 +242,97 @@ class ManageApiTest < ActionDispatch::IntegrationTest
     assert_equal "access_denied", JSON.parse(response.body)["error"]
   end
 
-  test "mail is configured at runtime, and the password never comes back out" do
+  test "mail is configured at runtime through an adapter, and its password never comes back out" do
     held = bearer
     body = ask(<<~GQL, held)
       mutation {
-        updateTenant(
-          mailFrom: "masks@example.invalid"
-          smtpAddress: "smtp.example.invalid"
-          smtpPort: 2525
-          smtpUsername: "postmaster"
-          smtpPassword: "hunter2"
-          smtpTls: true
+        createAdapter(
+          key: "relay"
+          service: "smtp"
+          name: "Relay"
+          config: { from: "masks@example.invalid", address: "smtp.example.invalid", port: 2525,
+                    username: "postmaster", password: "hunter2", tls: true }
         ) {
-          tenant { mails mailFrom smtpAddress smtpPort smtpUsername smtpTls }
+          adapter { key kind service primary settings secretsHeld }
         }
       }
     GQL
 
     assert_nil body["errors"]
 
-    mail = body.dig("data", "updateTenant", "tenant")
+    adapter = body.dig("data", "createAdapter", "adapter")
 
-    assert mail["mails"]
-    assert_equal "masks@example.invalid", mail["mailFrom"]
-    assert_equal 2525, mail["smtpPort"]
-    assert mail["smtpTls"]
-    refute mail.key?("smtpPassword")
-    assert_equal "hunter2", @tenant.reload.smtp_password
+    assert adapter["primary"], "the first adapter of its kind is primary"
+    assert_equal "mail", adapter["kind"]
+    assert_equal 2525, adapter.dig("settings", "port")
+    assert adapter.dig("settings", "tls")
+    refute adapter["settings"].key?("password")
+    assert_equal [ "password" ], adapter["secretsHeld"]
+    assert ask(%(query { tenant { mails } }), held).dig("data", "tenant", "mails")
+    assert_equal "hunter2", within(@tenant) { Adapter.sole[:password] }
 
-    asked = ask(%(query { tenant { smtpPassword } }), held)
+    asked = ask(%(query { adapters { secrets } }), held)
 
-    assert_match(/smtpPassword/, asked["errors"].first["message"])
+    assert_match(/secrets/, asked["errors"].first["message"])
+  end
+
+  test "adapters of every kind are offered, with the fields each one needs" do
+    body = ask(%(query { adapterServices { service kind label fields { key secret required } } }), bearer)
+    services = body.dig("data", "adapterServices").index_by { |held| held["service"] }
+
+    assert_equal "mail", services.dig("smtp", "kind")
+    %w[twilio vonage plivo telnyx sinch message_bird infobip sns click_send].each do |name|
+      assert_equal "sms", services.dig(name, "kind"), name
+    end
+    assert services.dig("twilio", "fields").any? { |field| field["key"] == "auth_token" && field["secret"] }
+  end
+
+  test "making another adapter primary demotes the one before it, and archiving takes it out of use" do
+    held = bearer
+
+    %w[first second].each do |key|
+      ask(<<~GQL, held)
+        mutation {
+          createAdapter(key: "#{key}", service: "twilio", name: "#{key}",
+                        config: { account_sid: "AC1", auth_token: "t", from: "+15551234567" }) { adapter { key } }
+        }
+      GQL
+    end
+
+    assert_equal "first", within(@tenant) { @tenant.sms_adapter.key }
+
+    ask(%(mutation { updateAdapter(key: "second", primary: true) { adapter { key } } }), held)
+
+    assert_equal "second", within(@tenant) { @tenant.sms_adapter.key }
+    refute within(@tenant) { Adapter.find_by(key: "first").primary }
+
+    ask(%(mutation { archiveAdapter(key: "second") { adapter { key } } }), held)
+
+    assert_nil within(@tenant) { @tenant.sms_adapter }
+  end
+
+  test "a test message reports what the service said rather than failing the request" do
+    held = bearer
+    ask(<<~GQL, held)
+      mutation {
+        createAdapter(key: "sms", service: "twilio", name: "Twilio",
+                      config: { account_sid: "AC1", auth_token: "wrong", from: "+15551234567" }) { adapter { key } }
+      }
+    GQL
+
+    stub_request(:post, %r{api.twilio.com}).to_return(status: 401, body: %({"message":"Authenticate"}))
+
+    body = ask(%(mutation { testAdapter(key: "sms", to: "+15557654321") { delivered failure } }), held)
+
+    refute body.dig("data", "testAdapter", "delivered")
+    assert_match "Authenticate", body.dig("data", "testAdapter", "failure")
+    assert within(@tenant) { Event.where(action: Event::ADAPTER_TESTED).exists? }
+  end
+
+  test "an adapter for a service masks does not have is refused" do
+    body = ask(%(mutation { createAdapter(key: "x", service: "carrier-pigeon", name: "x") { adapter { key } } }), bearer)
+
+    assert_match "no adapter for carrier-pigeon", body["errors"].first["message"]
   end
 
   test "a mode masks does not know is refused" do

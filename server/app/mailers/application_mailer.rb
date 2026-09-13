@@ -15,9 +15,9 @@ class ApplicationMailer < ActionMailer::Base
 
   def mail(headers = {}, &block)
     super.tap do |message|
-      held = Current.tenant
+      adapter = Current.tenant&.mail_adapter
 
-      message.delivery_method(:smtp, held.smtp_settings) if held&.own_smtp?
+      message.delivery_method(*adapter.delivery_method) if adapter
     end
   end
 

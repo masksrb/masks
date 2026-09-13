@@ -84,3 +84,8 @@ en:
         archived: "A provider was archived"
       tenant:
         updated: "Settings changed"
+      adapter:
+        created: "Adapter added"
+        updated: "Adapter changed"
+        archived: "Adapter archived"
+        tested: "Adapter tested"

@@ -75,6 +75,13 @@ module Manage
         argument :key, ID
       end
 
+      field :adapters, [ AdapterType ], null: false do
+        argument :kind, String, required: false
+        argument :archived, Boolean, required: false
+      end
+
+      field :adapter_services, [ AdapterServiceType ], null: false
+
       field :scopes_supported, [ String ], null: false
 
       field :minimum_password, Integer, null: false
@@ -225,6 +232,19 @@ module Manage
 
       def provider(key:)
         ::Provider.find_by(key: key)
+      end
+
+      def adapters(kind: nil, archived: false)
+        scope = archived ? ::Adapter.where.not(archived_at: nil) : ::Adapter.active
+        scope = scope.where(kind: kind) if kind
+
+        scope.order(:kind, primary: :desc, name: :asc)
+      end
+
+      def adapter_services
+        ::Adapter.services.map do |klass|
+          { service: klass.service, kind: klass.kind, label: klass.label, fields: klass.fields.map(&:to_h) }
+        end
       end
 
       def scopes_supported

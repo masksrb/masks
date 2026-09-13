@@ -7,24 +7,11 @@ module Manage
       argument :named_by, String, required: false
       argument :browsers_only, Boolean, required: false
       argument :blocked_agents, String, required: false
-      argument :mail_from, String, required: false
-      argument :smtp_address, String, required: false
-      argument :smtp_port, Integer, required: false
-      argument :smtp_username, String, required: false
-      argument :smtp_password, String, required: false
-      argument :smtp_authentication, String, required: false
-      argument :smtp_domain, String, required: false
-      argument :smtp_tls, Boolean, required: false
 
       field :tenant, Types::TenantType, null: false
 
-      MAIL = %i[
-        mail_from smtp_address smtp_port smtp_username smtp_password
-        smtp_authentication smtp_domain smtp_tls
-      ].freeze
-
       def resolve(name: nil, dynamic_client_scopes: nil, dynamic_registration: nil,
-                  named_by: nil, browsers_only: nil, blocked_agents: nil, **mail)
+                  named_by: nil, browsers_only: nil, blocked_agents: nil)
         tenant = Current.tenant
 
         tenant.name = name unless name.nil?
@@ -72,15 +59,9 @@ module Manage
           tenant.blocked_agents = blocked_agents.presence
         end
 
-        MAIL.each do |field|
-          next unless mail.key?(field)
-
-          tenant.public_send("#{field}=", mail[field])
-        end
-
         save!(tenant)
 
-        audit!(::Event::TENANT_UPDATED, name: tenant.name, mails: tenant.mails?)
+        audit!(::Event::TENANT_UPDATED, name: tenant.name)
 
         { tenant: tenant }
       end

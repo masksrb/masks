@@ -26,28 +26,20 @@ class Tenant < ApplicationRecord
   has_many :sessions, dependent: :destroy
   has_many :consents, dependent: :destroy
   has_many :events, dependent: :delete_all
+  has_many :adapters, dependent: :destroy
 
   NICKNAME = "nickname".freeze
   EMAIL = "email".freeze
   EITHER = "either".freeze
   NAMES = [ NICKNAME, EMAIL, EITHER ].freeze
 
-  AUTHENTICATIONS = %w[plain login cram_md5].freeze
-  SMTP_PORT = 587
-  SMTP_TIMEOUT = 10
-
   REGISTRATION_OFF = "off".freeze
   REGISTRATION_ANYTHING = "anything".freeze
   REGISTRATION_BOUNDED = "bounded".freeze
   REGISTRATIONS = [ REGISTRATION_OFF, REGISTRATION_ANYTHING, REGISTRATION_BOUNDED ].freeze
 
-  encrypts :smtp_password
-
   validates :named_by, inclusion: { in: NAMES }, allow_nil: true
   validates :dynamic_registration, inclusion: { in: REGISTRATIONS }, allow_nil: true
-  validates :smtp_authentication, inclusion: { in: AUTHENTICATIONS }, allow_blank: true
-  validates :smtp_port, numericality: { only_integer: true, in: 1..65_535 }, allow_nil: true
-  validates :mail_from, format: { with: URI::MailTo::EMAIL_REGEXP }, allow_blank: true
   validates :subdomain, presence: true, uniqueness: true,
                         format: { with: /\A[a-z0-9][a-z0-9-]*\z/ }
   validates :name, presence: true
@@ -100,35 +92,30 @@ class Tenant < ApplicationRecord
     held.present? && agent_list.any? { |pattern| held.include?(pattern) }
   end
 
+  def adapter(kind)
+    Tenant.switch(self) { Adapter.primary(kind) }
+  end
+
+  def mail_adapter
+    adapter(Adapter::MAIL)
+  end
+
+  def sms_adapter
+    adapter(Adapter::SMS)
+  end
+
   def mail_from
-    super.presence || Rails.configuration.masks.mail_from
-  end
-
-  def own_smtp?
-    self[:smtp_address].present?
-  end
-
-  def smtp_settings
-    return ActionMailer::Base.smtp_settings if !own_smtp? && ActionMailer::Base.smtp_settings.present?
-    return nil unless own_smtp?
-
-    {
-      address: smtp_address,
-      port: smtp_port || SMTP_PORT,
-      user_name: smtp_username.presence,
-      password: smtp_password.presence,
-      authentication: (smtp_authentication.presence || AUTHENTICATIONS.first).to_sym,
-      domain: smtp_domain.presence,
-      tls: smtp_tls,
-      enable_starttls: !smtp_tls,
-      openssl_verify_mode: OpenSSL::SSL::VERIFY_PEER,
-      open_timeout: SMTP_TIMEOUT,
-      read_timeout: SMTP_TIMEOUT
-    }.compact
+    mail_adapter&.from || Rails.configuration.masks.mail_from
   end
 
   def mails?
-    mail_from.present? && smtp_settings.present?
+    return true if mail_adapter
+
+    Rails.configuration.masks.mail_from.present? && ActionMailer::Base.smtp_settings.present?
+  end
+
+  def texts?
+    sms_adapter.present?
   end
 
   def dynamic_registration

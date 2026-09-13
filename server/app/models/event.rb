@@ -78,6 +78,10 @@ class Event < ApplicationRecord
   PROVIDER_UPDATED = "provider.updated".freeze
   PROVIDER_ARCHIVED = "provider.archived".freeze
   TENANT_UPDATED = "tenant.updated".freeze
+  ADAPTER_CREATED = "adapter.created".freeze
+  ADAPTER_UPDATED = "adapter.updated".freeze
+  ADAPTER_ARCHIVED = "adapter.archived".freeze
+  ADAPTER_TESTED = "adapter.tested".freeze
 
   GRAVE = [
     LOGIN_REFUSED, LOGIN_THROTTLED, LOGOUT_UNDELIVERED, REFRESH_REUSED,

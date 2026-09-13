@@ -8,13 +8,7 @@ module Manage
       field :browsers_only, Boolean, null: false
       field :blocked_agents, String
       field :mails, Boolean, null: false
-      field :mail_from, String
-      field :smtp_address, String
-      field :smtp_port, Integer
-      field :smtp_username, String
-      field :smtp_authentication, String
-      field :smtp_domain, String
-      field :smtp_tls, Boolean, null: false
+      field :texts, Boolean, null: false
       field :dynamic_registration, String, null: false
       field :dynamic_client_scopes, [ String ]
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
@@ -24,8 +18,8 @@ module Manage
         object.mails?
       end
 
-      def mail_from
-        object.read_attribute(:mail_from)
+      def texts
+        object.texts?
       end
 
       def dynamic_client_scopes

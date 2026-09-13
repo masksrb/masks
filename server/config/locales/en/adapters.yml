@@ -1,0 +1,9 @@
+en:
+  adapters:
+    test:
+      sms: "This is a test message from %{tenant}. Texts from masks will arrive like this."
+
+  adapter_mailer:
+    test:
+      subject: "A test message from %{tenant}"
+      body: "This is a test message from %{tenant}. Email from masks will arrive like this."
