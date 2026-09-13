@@ -571,15 +571,14 @@ CREATE TABLE public.providers (
     tenant_id bigint NOT NULL,
     key character varying NOT NULL,
     name character varying NOT NULL,
-    authorization_url character varying NOT NULL,
-    token_url character varying NOT NULL,
+    authorization_url character varying,
+    token_url character varying,
     userinfo_url character varying,
-    client_id character varying NOT NULL,
+    client_id character varying,
     client_secret text,
     scopes text DEFAULT ''::text NOT NULL,
     authorize_params jsonb DEFAULT '{}'::jsonb NOT NULL,
     subject_claim character varying DEFAULT 'sub'::character varying NOT NULL,
-    label_claim character varying DEFAULT 'email'::character varying NOT NULL,
     archived_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
@@ -590,7 +589,16 @@ CREATE TABLE public.providers (
     email_domains text DEFAULT ''::text NOT NULL,
     signup_scopes text DEFAULT ''::text NOT NULL,
     role character varying DEFAULT 'credential'::character varying NOT NULL,
-    trusts_email boolean DEFAULT false NOT NULL
+    trusts_email boolean DEFAULT false NOT NULL,
+    protocol character varying DEFAULT 'oidc'::character varying NOT NULL,
+    preset character varying,
+    claims jsonb DEFAULT '{}'::jsonb NOT NULL,
+    emails_url character varying,
+    token_auth_method character varying DEFAULT 'client_secret_post'::character varying NOT NULL,
+    response_mode character varying,
+    team_id character varying,
+    key_id character varying,
+    private_key text
 );
 
 ALTER TABLE ONLY public.providers FORCE ROW LEVEL SECURITY;
@@ -2280,6 +2288,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260913060000'),
 ('20260913050000'),
 ('20260913040000'),
 ('20260913030000'),

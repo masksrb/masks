@@ -87,6 +87,40 @@ class ProviderAdminTest < ActionDispatch::IntegrationTest
     assert_equal 0, held["connections"]
   end
 
+  test "a preset is enough to add github, and the console is told where to send people back" do
+    answer = ask(<<~GQL)
+      mutation {
+        createProvider(key: "github", name: "GitHub", preset: "github", clientId: "gh", clientSecret: "shh") {
+          provider { key protocol preset userinfoUrl emailsUrl subjectClaim trustsEmail callbackUrl }
+        }
+      }
+    GQL
+
+    assert_nil answer["errors"]
+
+    held = answer.dig("data", "createProvider", "provider")
+
+    assert_equal "oauth2", held["protocol"]
+    assert_equal "github", held["preset"]
+    assert_equal "https://api.github.com/user/emails", held["emailsUrl"]
+    assert_equal "id", held["subjectClaim"]
+    assert held["trustsEmail"]
+    assert held["callbackUrl"].end_with?("/login/provider/github/callback")
+  end
+
+  test "a preset that asks for something refuses to be added without it" do
+    answer = ask(%(mutation { createProvider(key: "okta", name: "Okta", preset: "okta", clientId: "o") { provider { key } } }))
+
+    assert_match "needs a domain", answer["errors"].first["message"]
+  end
+
+  test "the presets are listed with what each one asks for" do
+    held = ask("{ providerPresets { key protocol asks needs } }").dig("data", "providerPresets")
+
+    assert_equal %w[team_id key_id private_key], held.find { |one| one["key"] == "apple" }["needs"]
+    assert_equal %w[domain realm], held.find { |one| one["key"] == "keycloak" }["asks"]
+  end
+
   test "the secret is stored but never handed back" do
     add
 

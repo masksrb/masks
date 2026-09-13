@@ -77,6 +77,8 @@ module Manage
         argument :key, ID
       end
 
+      field :provider_presets, [ ProviderPresetType ], null: false
+
       field :adapters, [ AdapterType ], null: false do
         argument :kind, String, required: false
         argument :archived, Boolean, required: false
@@ -244,6 +246,10 @@ module Manage
 
       def provider(key:)
         ::Provider.find_by(key: key)
+      end
+
+      def provider_presets
+        ::ProviderPreset.all
       end
 
       def adapters(kind: nil, archived: false)

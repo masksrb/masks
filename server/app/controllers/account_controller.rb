@@ -8,6 +8,7 @@ class AccountController < ApplicationController
 
     @apps = @actor ? Apps.held_by(@actor) : []
     @connections = @actor ? Connection.live.where(actor: @actor).includes(:provider).order(:created_at) : []
+    @linkable = @actor ? Linking.offered(@actor) : []
     @passkeys = @actor ? Passkey.where(actor: @actor).includes(:authenticator).newest_first : []
     @devices = @actor ? @actor.devices.newest_first : []
     @trusted = @actor ? DeviceFactor.live.where(actor: @actor).pluck(:device_id).to_set : Set.new

@@ -1,4 +1,8 @@
 class LoginsController < ApplicationController
+  POSTED = %w[code state error error_description user SAMLResponse RelayState].freeze
+  POSTED_LIMIT = 256.kilobytes
+  POSTED_WINDOW = 5.minutes
+
   skip_forgery_protection
 
   rate_limit to: Rails.configuration.masks.attempt_limit,
@@ -18,12 +22,12 @@ class LoginsController < ApplicationController
              with: -> { too_many("too-many-attempts") }
 
   rate_limit to: Rails.configuration.masks.attempt_limit,
-             within: 3.minutes, only: :provider, name: "provider",
+             within: 3.minutes, only: %i[provider posted_provider], name: "provider",
              by: -> { [ current_tenant.id, request.remote_ip ].join(":") },
              with: -> { too_many("too-many-attempts") }
 
   before_action :refuse_blocked_agent
-  before_action :verify_authenticity_token
+  before_action :verify_authenticity_token, except: :posted_provider
   before_action :establish_device, only: %i[update provider]
 
   def show
@@ -47,11 +51,21 @@ class LoginsController < ApplicationController
   end
 
   def provider
+    return link_connection if Linking.pending?(session, callback_params)
+
     login = run(event: "provider:callback", updates: callback_params)
 
     settle(login) if login.settled? && pending.nil?
 
     resume(login)
+  end
+
+  def posted_provider
+    handle = SecureRandom.urlsafe_base64(24)
+
+    Rails.cache.write(posted_key(handle), posted_params, expires_in: POSTED_WINDOW)
+
+    redirect_to login_provider_callback_path(params[:key], posted: handle), status: :see_other
   end
 
   def destroy
@@ -79,9 +93,36 @@ class LoginsController < ApplicationController
     end
 
     def callback_params
-      params.permit(:code, :state, :error, :error_description)
-            .to_h
-            .merge("provider" => params[:key])
+      @callback_params ||= (params[:posted].present? ? take_posted(params[:posted]) : posted_params)
+        .merge("provider" => params[:key].to_s)
+    end
+
+    def posted_params
+      params.permit(*POSTED).to_h.transform_values { |value| value.to_s[0, POSTED_LIMIT] }
+    end
+
+    def take_posted(handle)
+      key = posted_key(handle)
+      held = Rails.cache.read(key)
+      Rails.cache.delete(key)
+
+      held.is_a?(Hash) ? held.slice(*POSTED) : {}
+    end
+
+    def posted_key(handle)
+      "provider-callback:#{current_tenant.id}:#{Digest::SHA256.hexdigest(handle.to_s)}"
+    end
+
+    def link_connection
+      provider = Provider.signing_in.find_by(key: params[:key].to_s)
+
+      connection = Linking.finish!(
+        session: session, provider: provider, actor: current_actor, params: callback_params
+      )
+
+      redirect_to root_path(anchor: "connections"), notice: t("connections.linked", provider: connection.provider.name)
+    rescue Linking::Refused => e
+      redirect_to root_path(anchor: "connections"), alert: e.message
     end
 
     def run(event: nil, updates: {})

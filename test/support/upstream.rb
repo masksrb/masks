@@ -9,6 +9,7 @@ module Federated
     def initialize(key)
       @key = key
       @claims = {}
+      @routes = {}
       @requests = []
       @lock = Mutex.new
       @server = TCPServer.new("127.0.0.1", 0)
@@ -28,6 +29,22 @@ module Federated
       @lock.synchronize { @requests.select { |one| one[:path] == path }.map { |one| one[:body] } }
     end
 
+    def headers_for(path)
+      @lock.synchronize { @requests.select { |one| one[:path] == path }.map { |one| one[:headers] } }
+    end
+
+    def route(path, payload = nil, &block)
+      @lock.synchronize { @routes[path] = block || -> { payload } }
+    end
+
+    def id_token_for(claims)
+      JWT.encode(
+        { "iss" => url, "aud" => "upstream-client", "exp" => 5.minutes.from_now.to_i,
+          "iat" => Time.current.to_i }.merge(claims),
+        @key, "RS256", kid: "upstream-key", typ: "JWT"
+      )
+    end
+
     def stop
       @thread.kill
       @server.close
@@ -42,6 +59,10 @@ module Federated
     private
 
       def payload_for(path)
+        routed = @lock.synchronize { @routes[path] }
+
+        return routed.call if routed
+
         case path
         when "/.well-known/openid-configuration"
           {
@@ -60,13 +81,7 @@ module Federated
       end
 
       def id_token
-        held = @lock.synchronize { @claims.dup }
-
-        JWT.encode(
-          { "iss" => url, "aud" => "upstream-client", "exp" => 5.minutes.from_now.to_i,
-            "iat" => Time.current.to_i }.merge(held),
-          @key, "RS256", kid: "upstream-key", typ: "JWT"
-        )
+        id_token_for(@lock.synchronize { @claims.dup })
       end
 
       def serve
@@ -81,15 +96,18 @@ module Federated
       def respond(socket)
         line = socket.gets.to_s
         length = 0
+        headers = {}
 
         while (header = socket.gets) && header.strip != ""
-          length = header.split(":", 2).last.to_i if header.downcase.start_with?("content-length")
+          name, value = header.split(":", 2)
+          headers[name.to_s.strip.downcase] = value.to_s.strip
+          length = value.to_i if name.to_s.strip.downcase == "content-length"
         end
 
         path = line.split(" ")[1].to_s.split("?").first
         body = length.positive? ? socket.read(length).to_s : ""
 
-        @lock.synchronize { @requests << { path: path, body: Rack::Utils.parse_query(body) } }
+        @lock.synchronize { @requests << { path: path, body: Rack::Utils.parse_query(body), headers: headers } }
 
         found = payload_for(path)
         payload = JSON.generate(found || { "error" => "not_found" })

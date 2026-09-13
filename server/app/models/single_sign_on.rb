@@ -39,7 +39,7 @@ class SingleSignOn
   private
 
     def subject
-      @subject ||= claims[provider.subject_claim].presence || claims["sub"].presence
+      @subject ||= claims["sub"].presence
     end
 
     def email

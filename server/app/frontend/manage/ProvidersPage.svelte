@@ -12,7 +12,7 @@
 
   const FIELDS = `
     key name authorizationUrl tokenUrl userinfoUrl clientId
-    scopes authorizeParams subjectClaim labelClaim
+    scopes authorizeParams subjectClaim
     secretHeld connections archivedAt createdAt
     issuer jwksUri role trustsEmail emailDomains signupScopes
   `;
@@ -51,14 +51,14 @@
     mutation Create(
       $key: ID!, $name: String!, $authorizationUrl: String!, $tokenUrl: String!,
       $clientId: String!, $clientSecret: String,
-      $userinfoUrl: String, $scopes: [String!], $subjectClaim: String, $labelClaim: String,
+      $userinfoUrl: String, $scopes: [String!], $subjectClaim: String,
       ${SSO_ARGS}
     ) {
       createProvider(
         key: $key, name: $name, authorizationUrl: $authorizationUrl, tokenUrl: $tokenUrl,
         clientId: $clientId, clientSecret: $clientSecret,
         userinfoUrl: $userinfoUrl, scopes: $scopes, subjectClaim: $subjectClaim,
-        labelClaim: $labelClaim, ${SSO_PASS}
+        ${SSO_PASS}
       ) { provider { key } }
     }
   `;
@@ -67,14 +67,14 @@
     mutation Update(
       $key: ID!, $name: String, $authorizationUrl: String, $tokenUrl: String,
       $clientId: String, $clientSecret: String,
-      $userinfoUrl: String, $scopes: [String!], $subjectClaim: String, $labelClaim: String,
+      $userinfoUrl: String, $scopes: [String!], $subjectClaim: String,
       ${SSO_ARGS}
     ) {
       updateProvider(
         key: $key, name: $name, authorizationUrl: $authorizationUrl, tokenUrl: $tokenUrl,
         clientId: $clientId, clientSecret: $clientSecret,
         userinfoUrl: $userinfoUrl, scopes: $scopes, subjectClaim: $subjectClaim,
-        labelClaim: $labelClaim, ${SSO_PASS}
+        ${SSO_PASS}
       ) { provider { key } }
     }
   `;
@@ -89,7 +89,6 @@
     clientSecret: "",
     scopes: "",
     subjectClaim: "sub",
-    labelClaim: "email",
     issuer: "",
     jwksUri: "",
     role: "credential",
@@ -145,7 +144,6 @@
       clientSecret: "",
       scopes: provider.scopes.join(" "),
       subjectClaim: provider.subjectClaim,
-      labelClaim: provider.labelClaim,
       issuer: provider.issuer ?? "",
       jwksUri: provider.jwksUri ?? "",
       role: provider.role,
@@ -174,7 +172,6 @@
       clientSecret: trimmed(draft.clientSecret),
       scopes: draft.scopes.split(/[\s,]+/).filter(Boolean),
       subjectClaim: draft.subjectClaim.trim() || "sub",
-      labelClaim: draft.labelClaim.trim() || "email",
       issuer: trimmed(draft.issuer),
       jwksUri: trimmed(draft.jwksUri),
       role: draft.role,
@@ -343,7 +340,6 @@
 
       <div class="grid gap-3 sm:grid-cols-2">
         <Field label="Subject claim" bind:value={draft.subjectClaim} />
-        <Field label="Label claim" bind:value={draft.labelClaim} />
         <Field
           label="JWKS URI"
           bind:value={draft.jwksUri}

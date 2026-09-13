@@ -11,14 +11,13 @@ class Connection < ApplicationRecord
 
   class << self
     def record!(provider:, actor:, identity:)
-      subject = identity[provider.subject_claim].presence ||
-        identity["sub"].presence ||
+      subject = identity["sub"].presence ||
         raise(ArgumentError, "#{provider.name} returned no #{provider.subject_claim} to identify the account by")
 
       connection = find_or_initialize_by(provider: provider, subject: subject.to_s)
 
       connection.actor = actor
-      connection.label = identity[provider.label_claim].presence || connection.label
+      connection.label = identity.values_at("email", "preferred_username", "name").find(&:present?) || connection.label
       connection.connected_at = Time.current
       connection.revoked_at = nil
       connection.revoked_reason = nil

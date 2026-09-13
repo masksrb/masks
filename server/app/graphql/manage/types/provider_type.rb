@@ -3,14 +3,23 @@ module Manage
     class ProviderType < BaseObject
       field :key, ID, null: false
       field :name, String, null: false
-      field :authorization_url, String, null: false
-      field :token_url, String, null: false
+      field :protocol, String, null: false
+      field :preset, String
+      field :authorization_url, String
+      field :token_url, String
       field :userinfo_url, String
-      field :client_id, String, null: false
+      field :client_id, String
+      field :emails_url, String
+      field :claims, GraphQL::Types::JSON, null: false
+      field :token_auth_method, String, null: false
+      field :response_mode, String
+      field :team_id, String
+      field :key_id, String
+      field :private_key_held, Boolean, null: false
+      field :callback_url, String, null: false
       field :scopes, [ String ], null: false
       field :authorize_params, GraphQL::Types::JSON, null: false
       field :subject_claim, String, null: false
-      field :label_claim, String, null: false
       field :secret_held, Boolean, null: false
       field :connections, Integer, null: false
       field :signed_in, Integer, null: false
@@ -39,6 +48,14 @@ module Manage
 
       def secret_held
         object.client_secret.present?
+      end
+
+      def private_key_held
+        object.private_key.present?
+      end
+
+      def callback_url
+        "#{Current.origin}/login/provider/#{object.key}/callback"
       end
 
       def connections

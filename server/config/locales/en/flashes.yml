@@ -12,6 +12,12 @@ en:
   connections:
     unknown: "There is no such connected account."
     disconnected: "%{provider} has been disconnected."
+    linked: "%{provider} is linked. You can sign in with it from now on."
+    unavailable: "That provider cannot be linked here."
+    stale: "Sign in again before linking another account. It has been a while since you did."
+    expired: "That linking attempt expired. Try again."
+    failed: "%{provider} did not confirm who you are, so nothing was linked."
+    taken: "That %{provider} account is already linked to somebody else here."
 
   passkeys:
     expired: "That enrolment expired. Try again."

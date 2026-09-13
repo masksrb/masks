@@ -15,6 +15,7 @@ Rails.application.routes.draw do
   post "/login", to: "logins#update"
   delete "/login", to: "logins#destroy"
   get "/login/provider/:key/callback", to: "logins#provider", as: :login_provider_callback
+  post "/login/provider/:key/callback", to: "logins#posted_provider"
   match "/logout", to: "sessions#destroy", via: %i[get post delete], as: :logout
 
   get "/invite/:token", to: "links#invitation", as: :invitation
@@ -36,6 +37,7 @@ Rails.application.routes.draw do
   delete "/account/avatar", to: "avatars#destroy"
 
   delete "/account/apps/:client_id", to: "apps#destroy", as: :account_app
+  post "/account/connections", to: "connections#create", as: :account_connections
   delete "/account/connections/:id", to: "connections#detach", as: :account_connection
 
   scope constraints: { style: Regexp.union(Avatars::STYLES), digest: /[0-9a-f]{16}/ } do

@@ -83,6 +83,16 @@
             <% end %>
           </div>
         <% end %>
+
+        <% if linkable.any? %>
+          <div class="action-row">
+            <% linkable.each do |provider| %>
+              <%= button_to account_text("connections.link", provider: provider.name),
+                    account_connections_path, params: { provider: provider.key },
+                    class: "action action-quiet action-sm" %>
+            <% end %>
+          </div>
+        <% end %>
       </div>
     </details>
   </div>

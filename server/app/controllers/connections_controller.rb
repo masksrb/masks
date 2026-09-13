@@ -1,6 +1,21 @@
 class ConnectionsController < ApplicationController
   before_action :require_actor
 
+  def create
+    provider = Provider.signing_in.find_by(key: params[:provider].to_s)
+
+    location = Linking.start!(
+      session: session,
+      provider: provider,
+      actor: current_actor,
+      authenticated_at: current_session&.authenticated_at
+    )
+
+    redirect_to location, allow_other_host: true
+  rescue Linking::Refused => e
+    redirect_to root_path(anchor: "connections"), alert: e.message
+  end
+
   def detach
     connection = Connection.live.find_by(uuid: params[:id], actor_id: current_actor.id)
 
