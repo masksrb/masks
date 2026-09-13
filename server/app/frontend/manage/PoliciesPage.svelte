@@ -326,16 +326,11 @@
 
           <div class="flex flex-wrap gap-4">
             {#each FIRST as [value, label] (value)}
-              <label class="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  class="toggle toggle-sm"
-                  checked={draft.firstFactors.includes(value)}
-                  onchange={(event) =>
-                    (draft.firstFactors = toggle(draft.firstFactors, value, event.currentTarget.checked))}
-                />
-                {label}
-              </label>
+              <Switch
+                label={label}
+                checked={draft.firstFactors.includes(value)}
+                onchange={(on) => (draft.firstFactors = toggle(draft.firstFactors, value, on))}
+              />
             {/each}
           </div>
 
@@ -356,16 +351,11 @@
               {#if draft.providers !== null}
                 <div class="flex flex-wrap gap-4">
                   {#each signingProviders as provider (provider.key)}
-                    <label class="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        class="toggle toggle-sm"
-                        checked={draft.providers.includes(provider.key)}
-                        onchange={(event) =>
-                          (draft.providers = toggle(draft.providers, provider.key, event.currentTarget.checked))}
-                      />
-                      {provider.name}
-                    </label>
+                    <Switch
+                      label={provider.name}
+                      checked={draft.providers.includes(provider.key)}
+                      onchange={(on) => (draft.providers = toggle(draft.providers, provider.key, on))}
+                    />
                   {/each}
                 </div>
               {/if}
@@ -378,16 +368,11 @@
 
           <div class="flex flex-wrap gap-4">
             {#each SECOND as [value, label] (value)}
-              <label class="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  class="toggle toggle-sm"
-                  checked={draft.secondFactors.includes(value)}
-                  onchange={(event) =>
-                    (draft.secondFactors = toggle(draft.secondFactors, value, event.currentTarget.checked))}
-                />
-                {label}
-              </label>
+              <Switch
+                label={label}
+                checked={draft.secondFactors.includes(value)}
+                onchange={(on) => (draft.secondFactors = toggle(draft.secondFactors, value, on))}
+              />
             {/each}
           </div>
 

@@ -252,7 +252,7 @@ module Manage
       end
 
       def sign_in_policies(archived: false)
-        scope = ::SignInPolicy.listed(archived)
+        scope = ::SignInPolicy.listed(archived).includes(:clients)
 
         scope.order(:name)
       end

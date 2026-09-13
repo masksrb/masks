@@ -13,14 +13,6 @@ class SignupTest < ActionDispatch::IntegrationTest
     Adapters::SmsLog.deliveries.clear
   end
 
-  def with_mailer(from: "masks@example.com")
-    held = Rails.configuration.masks.mail_from
-    Rails.configuration.masks.mail_from = from
-    yield
-  ensure
-    Rails.configuration.masks.mail_from = held
-  end
-
   def policy!(**attributes)
     within(@tenant) do
       SignInPolicy.create!({ key: "open", name: "Open", signup: true, second_factors: [ "backup_codes" ] }.merge(attributes))

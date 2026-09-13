@@ -29,7 +29,7 @@ module Manage
       end
 
       def clients
-        object.clients.active.order(:name)
+        object.clients.reject(&:archived?).sort_by(&:name)
       end
 
       def default

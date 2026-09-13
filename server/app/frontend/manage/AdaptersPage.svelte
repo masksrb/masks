@@ -377,22 +377,13 @@
               </div>
             </div>
 
-            <div class="join">
-              <input
-                class="input input-sm join-item w-full"
-                placeholder={group.to}
-                bind:value={testing[adapter.key]}
-                aria-label="Send a test to"
-              />
-              <button
-                type="button"
-                class="btn btn-sm join-item"
-                disabled={busy || !(testing[adapter.key] ?? "").trim()}
-                onclick={() => test(adapter)}
-              >
-                Send a test
-              </button>
-            </div>
+            <Field
+              label="Send a test to"
+              bind:value={testing[adapter.key]}
+              placeholder={group.to}
+              save="Send a test"
+              onsave={() => test(adapter)}
+            />
           </div>
         {/each}
       </Card>

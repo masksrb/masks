@@ -9,14 +9,6 @@ class EmailVerificationTest < ActionDispatch::IntegrationTest
     @actor = create_actor(@tenant, email: "owner@example.com")
   end
 
-  def with_mailer(from: "masks@example.com")
-    held = Rails.configuration.masks.mail_from
-    Rails.configuration.masks.mail_from = from
-    yield
-  ensure
-    Rails.configuration.masks.mail_from = held
-  end
-
   def open_verification(actor = @actor)
     within(@tenant) { EmailVerification.open!(actor: actor) }
   end

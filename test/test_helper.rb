@@ -22,19 +22,24 @@ module TenantSetup
     Tenant.switch(tenant, &block)
   end
 
+  def with_mailer(from: "masks@example.com")
+    held = Rails.configuration.masks.mail_from
+    Rails.configuration.masks.mail_from = from
+    yield
+  ensure
+    Rails.configuration.masks.mail_from = held
+  end
+
   def create_actor(tenant = @tenant, nickname: "owner", password: "password", otp: nil, **attributes)
     manages = attributes[:scopes].to_s.include?(Scopes::MANAGE)
 
     attributes[:email] = "#{nickname}@example.invalid" if manages && !attributes.key?(:email)
 
-    if otp.nil? ? manages : otp
-      attributes[:otp_secret] = ROTP::Base32.random
-      attributes[:otp_enabled_at] = Time.current
-    end
+    actor = within(tenant) { Actor.create!(nickname: nickname, password: password, **attributes) }
 
-    within(tenant) do
-      Actor.create!(nickname: nickname, password: password, **attributes)
-    end
+    enable_otp(actor, tenant) if otp.nil? ? manages : otp
+
+    actor
   end
 
   def create_client(tenant = @tenant, **attributes)
@@ -92,7 +97,7 @@ module OidcFlow
     post "/login", params: { event: "password", password: password }, as: :json
     body = JSON.parse(response.body)
 
-    return body unless body["prompt"] == "second-factor"
+    return body unless body["prompt"] == "second-factor" && body.dig("secondFactors", "otp")
 
     post "/login", params: { event: "otp", code: current_code(actor) }, as: :json
     JSON.parse(response.body)

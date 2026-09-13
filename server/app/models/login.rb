@@ -230,8 +230,14 @@ class Login
     forget_vanished_actor!
     states.each(&:reload!)
     states.each { |state| state.event!(event) } if event
-    states.each(&:factor!)
+    @prompting = nil
 
+    states.each do |state|
+      @prompting = state
+      state.factor!
+    end
+
+    @prompting = nil
     @prompt = SETTLED
     self
   rescue LoginState::PromptRequired => denial
@@ -303,7 +309,7 @@ class Login
         "surface" => surface
       }
 
-      states.reduce(base) { |json, state| state.enabled? ? json.merge(state.as_json) : json }
+      answering.reduce(base) { |json, state| state.enabled? ? json.merge(state.as_json) : json }
     end
 
     def forget_vanished_actor!
@@ -324,6 +330,12 @@ class Login
 
     def states
       states_by_key.values
+    end
+
+    def answering
+      return states if @prompting.nil?
+
+      states.take(states.index(@prompting) + 1)
     end
 
     def states_by_key

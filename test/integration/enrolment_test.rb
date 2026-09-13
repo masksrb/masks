@@ -9,12 +9,6 @@ class EnrolmentTest < ActionDispatch::IntegrationTest
     @device = FakeAuthenticator.new(origin_for(@tenant))
   end
 
-  def password_in(actor = @manager)
-    post "/login", params: { event: "identify", identifier: actor.nickname }, as: :json
-    post "/login", params: { event: "password", password: "password" }, as: :json
-    JSON.parse(response.body)
-  end
-
   def event(name, **params)
     post "/login", params: { event: name, **params }, as: :json
     JSON.parse(response.body)
@@ -32,7 +26,7 @@ class EnrolmentTest < ActionDispatch::IntegrationTest
   end
 
   test "a manager with no second factor is stopped at sign-in until one is added" do
-    body = password_in
+    body = sign_in_as(@manager)
 
     assert_equal "enrol", body["prompt"]
     assert body.dig("enrolment", "required")
@@ -47,11 +41,11 @@ class EnrolmentTest < ActionDispatch::IntegrationTest
   test "a person who does not manage anything is not asked" do
     reader = create_actor(@tenant, nickname: "reader")
 
-    assert_equal "settled", password_in(reader)["prompt"]
+    assert_equal "settled", sign_in_as(reader)["prompt"]
   end
 
   test "a wrong code turns nothing on" do
-    password_in
+    sign_in_as(@manager)
 
     body = event("enrol:otp", code: "000000")
 
@@ -60,7 +54,7 @@ class EnrolmentTest < ActionDispatch::IntegrationTest
   end
 
   test "an authenticator app, then backup codes that must be kept, then signed in" do
-    body = password_in
+    body = sign_in_as(@manager)
     secret = body.dig("enrolment", "otp", "secret").delete(" ")
 
     body = event("enrol:otp", code: ROTP::TOTP.new(secret).now)
@@ -80,7 +74,7 @@ class EnrolmentTest < ActionDispatch::IntegrationTest
   end
 
   test "an authenticator already on cannot be replaced through enrolment" do
-    body = password_in
+    body = sign_in_as(@manager)
     secret = body.dig("enrolment", "otp", "secret").delete(" ")
     event("enrol:otp", code: ROTP::TOTP.new(secret).now)
     held = factored.otp_secret
@@ -91,7 +85,7 @@ class EnrolmentTest < ActionDispatch::IntegrationTest
   end
 
   test "a passkey counts, and as many can be added as are wanted" do
-    password_in
+    sign_in_as(@manager)
 
     body = add_passkey
 
@@ -123,7 +117,7 @@ class EnrolmentTest < ActionDispatch::IntegrationTest
   end
 
   test "a passkey that does not verify the person is refused" do
-    password_in
+    sign_in_as(@manager)
 
     body = add_passkey(user_verified: false)
 
@@ -132,13 +126,13 @@ class EnrolmentTest < ActionDispatch::IntegrationTest
   end
 
   test "a manager with only a passkey is asked for it after a password" do
-    password_in
+    sign_in_as(@manager)
     add_passkey
     event("enrol:done", kept: "1")
     reset!
     host! host_for(@tenant)
 
-    body = password_in
+    body = sign_in_as(@manager)
 
     assert_equal "second-factor", body["prompt"]
     assert_equal({ "otp" => false, "passkey" => true }, body["secondFactors"])

@@ -13,8 +13,7 @@ module LoginStates
     end
 
     def enabled?
-      login.store[HELD].present? && actor.present? && login.first_factored? &&
-        actor.second_factor? && login.store[Enrolment::HELD].blank?
+      login.store[HELD].present? && actor.present? && login.first_factored? && actor.second_factor?
     end
 
     def as_json

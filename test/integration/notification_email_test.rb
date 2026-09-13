@@ -9,14 +9,6 @@ class NotificationEmailTest < ActionDispatch::IntegrationTest
     @actor = create_actor(@tenant, email: "owner@example.com", email_verified_at: Time.current)
   end
 
-  def with_mailer(from: "masks@example.com")
-    held = Rails.configuration.masks.mail_from
-    Rails.configuration.masks.mail_from = from
-    yield
-  ensure
-    Rails.configuration.masks.mail_from = held
-  end
-
   def delivered
     perform_enqueued_jobs { yield }
 

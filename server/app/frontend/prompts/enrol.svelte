@@ -3,7 +3,8 @@ import Action from "../shared/Action.svelte";
 import Head from "../shared/Head.svelte";
 import Identified from "../shared/Identified.svelte";
 import SignupHead from "../shared/SignupHead.svelte";
-import { available, enrol, refused } from "../lib/passkey.js";
+import PasskeyButton from "../shared/PasskeyButton.svelte";
+import { available } from "../lib/passkey.js";
 
 let { login } = $props();
 
@@ -21,8 +22,6 @@ const passkeyable = $derived(offers.passkey && available());
 let code = $state("");
 let kept = $state(false);
 let copied = $state(false);
-let adding = $state(false);
-let unusable = $state(null);
 
 const coded = $derived(code.replace(/\D/g, "").length === 6);
 const ready = $derived(secured && (issued.length === 0 || kept));
@@ -38,29 +37,6 @@ function turnOn(event) {
   code = "";
 
   login.submit("enrol:otp", { code: entered });
-}
-
-async function addPasskey() {
-  adding = true;
-  unusable = null;
-
-  try {
-    const offer = await login.submit("enrol:passkey-challenge", {});
-    const options = offer.enrolment?.passkeys?.options;
-
-    if (!options) {
-      unusable = login.t("passkey_unoffered");
-      return;
-    }
-
-    const credential = await enrol(options);
-
-    await login.submit("enrol:passkey", { passkey: credential });
-  } catch (error) {
-    if (!refused(error)) unusable = login.t("passkey_unusable");
-  } finally {
-    adding = false;
-  }
 }
 
 async function copy() {
@@ -140,18 +116,11 @@ function done(event) {
             : login.t("passkeys_none")}
         </span>
 
-        <Action
+        <PasskeyButton
           {login}
-          quiet
-          busy={adding}
+          enrolling
           label={passkeys.count > 0 ? login.t("add_another_passkey") : login.t("add_passkey")}
-          working={login.t("waiting_for_passkey")}
-          onclick={addPasskey}
         />
-
-        {#if unusable}
-          <p class="aside aside-bad" role="alert">{unusable}</p>
-        {/if}
       </div>
     {/if}
 

@@ -1,30 +1,30 @@
 <script>
 import Action from "./Action.svelte";
-import { assert, available, refused } from "../lib/passkey.js";
+import { assert, available, enrol, refused } from "../lib/passkey.js";
 
-let { login } = $props();
+let { login, enrolling = false, label = null } = $props();
 
 let busy = $state(false);
 let unusable = $state(null);
 
-const offered = $derived(Boolean(login.auth.passkey?.offered) && available());
+const offered = $derived((enrolling || Boolean(login.auth.passkey?.offered)) && available());
 
 async function start() {
   busy = true;
   unusable = null;
 
   try {
-    const offer = await login.submit("passkey:challenge", {});
-    const options = offer.passkey?.options;
+    const offer = await login.submit(enrolling ? "enrol:passkey-challenge" : "passkey:challenge", {});
+    const options = enrolling ? offer.enrolment?.passkeys?.options : offer.passkey?.options;
 
     if (!options) {
       unusable = login.t("passkey_unoffered");
       return;
     }
 
-    const credential = await assert(options);
+    const credential = enrolling ? await enrol(options) : await assert(options);
 
-    await login.submit("passkey:verify", { passkey: credential });
+    await login.submit(enrolling ? "enrol:passkey" : "passkey:verify", { passkey: credential });
   } catch (error) {
     if (!refused(error)) {
       unusable = login.t("passkey_unusable");
@@ -41,7 +41,7 @@ async function start() {
       {login}
       quiet
       {busy}
-      label={login.t("use_passkey")}
+      label={label ?? login.t("use_passkey")}
       working={login.t("waiting_for_passkey")}
       onclick={start}
     />

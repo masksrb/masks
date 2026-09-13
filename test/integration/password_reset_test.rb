@@ -9,14 +9,6 @@ class PasswordResetTest < ActionDispatch::IntegrationTest
     @actor = create_actor(@tenant, email: "owner@example.com")
   end
 
-  def with_mailer(from: "masks@example.com")
-    held = Rails.configuration.masks.mail_from
-    Rails.configuration.masks.mail_from = from
-    yield
-  ensure
-    Rails.configuration.masks.mail_from = held
-  end
-
   def ask_to_reset(identifier = @actor.nickname)
     post "/login", params: { event: "identify", identifier: identifier }, as: :json
     post "/login", params: { event: "forgot-password" }, as: :json

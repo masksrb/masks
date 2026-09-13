@@ -52,7 +52,7 @@ module LoginStates
     end
 
     def enabled?
-      actor.present? && login.first_factored? && !enrolling? &&
+      actor.present? && login.first_factored? &&
         (actor.pending_approval_at.present? || phone_missing? || CHANNELS.keys.any? { |channel| unconfirmed?(channel) })
     end
 
@@ -77,10 +77,6 @@ module LoginStates
 
       def policy
         login.policy
-      end
-
-      def enrolling?
-        login.store[Enrolment::HELD].present?
       end
 
       def held

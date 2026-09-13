@@ -4,14 +4,6 @@ require "vips"
 class ManageApiTest < ActionDispatch::IntegrationTest
   include ActiveJob::TestHelper
 
-  def with_mailer(from: "masks@example.com")
-    held = Rails.configuration.masks.mail_from
-    Rails.configuration.masks.mail_from = from
-    yield
-  ensure
-    Rails.configuration.masks.mail_from = held
-  end
-
   setup do
     host! host_for(@tenant)
 

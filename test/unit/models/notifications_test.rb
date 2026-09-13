@@ -5,14 +5,6 @@ class NotificationsTest < ActiveSupport::TestCase
     @actor = create_actor(@tenant, email: "owner@example.com", email_verified_at: Time.current)
   end
 
-  def with_mailer(from: "masks@example.com")
-    held = Rails.configuration.masks.mail_from
-    Rails.configuration.masks.mail_from = from
-    yield
-  ensure
-    Rails.configuration.masks.mail_from = held
-  end
-
   test "every mailable action is one the audit log actually records" do
     Notifications::MAILED.each do |action|
       assert_includes Event::ACTIONS, action, "#{action} is offered but never recorded"
