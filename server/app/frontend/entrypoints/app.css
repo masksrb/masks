@@ -962,7 +962,7 @@
   .plaque::before {
     content: "";
     position: absolute;
-    inset: -3rem -3rem auto;
+    inset: -3rem 0 auto;
     height: 18rem;
     z-index: -1;
     pointer-events: none;

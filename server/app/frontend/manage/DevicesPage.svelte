@@ -164,7 +164,6 @@
 
 <Page
   title="Devices"
-  lede="Every browser that has reached this server. Blocking one refuses it before a password is checked."
 >
   {#snippet actions()}
     <Search

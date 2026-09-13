@@ -63,7 +63,7 @@
     { label: "Scopes", hide: true },
     { label: "Second factor", hide: true },
     { label: "Signed in on", hide: true },
-    "Last seen",
+    { label: "Last seen", hide: true },
   ];
 
   const feedback = createFeedback();
@@ -341,6 +341,14 @@
                     {/if}
                   </div>
 
+                  <div class="mt-1 flex flex-wrap items-center gap-1 text-xs opacity-70 md:hidden">
+                    {#if !actor.activated}
+                      <span class="badge badge-info badge-xs">invited</span>
+                    {:else}
+                      <span>Last seen {day(actor.lastLoginAt, "never")}</span>
+                    {/if}
+                  </div>
+
                   {#if actor.otpEnabled || blocked(actor)}
                     <div class="mt-1 flex flex-wrap gap-1 md:hidden">
                       {#if actor.otpEnabled}
@@ -382,7 +390,7 @@
               {/if}
             </td>
 
-            <td class="text-xs whitespace-nowrap opacity-70">
+            <td class="hidden text-xs whitespace-nowrap opacity-70 md:table-cell">
               {#if !actor.activated}
                 <span class="badge badge-info badge-sm">invited</span>
               {:else}

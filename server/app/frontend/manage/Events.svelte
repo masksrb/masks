@@ -3,14 +3,18 @@
   import { moment, since } from "./lib/format.js";
   import Link from "./ui/Link.svelte";
 
-  let { events, showActor = true, empty = "Nothing yet." } = $props();
+  let { events, showActor = true, empty = "Nothing yet.", limit = 5 } = $props();
+
+  let all = $state(false);
+
+  const shown = $derived(all ? events : events.slice(0, limit));
 </script>
 
 {#if events.length === 0}
   <p class="text-sm opacity-60">{empty}</p>
 {:else}
   <ol class="flex flex-col gap-1.5">
-    {#each events as event (event.id)}
+    {#each shown as event (event.id)}
       <li class="slat">
         <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
           <span class="flex flex-wrap items-baseline gap-2">
@@ -18,6 +22,7 @@
               class="text-sm font-medium"
               class:text-error={tone(event.action) === "bad"}
               class:text-warning={tone(event.action) === "watch"}
+              title={event.action}
             >{event.label}</span>
 
             {#if showActor && event.actor}
@@ -59,9 +64,14 @@
           {#if event.device}
             <span class="truncate">{event.device.label}</span>
           {/if}
-          <span class="font-mono opacity-70">{event.action}</span>
         </div>
       </li>
     {/each}
   </ol>
+
+  {#if !all && events.length > limit}
+    <button type="button" class="btn btn-ghost btn-sm self-start" onclick={() => (all = true)}>
+      Show {events.length - limit} more
+    </button>
+  {/if}
 {/if}

@@ -2,7 +2,11 @@
   import { joined, moment, since } from "./lib/format.js";
   import Link from "./ui/Link.svelte";
 
-  let { api, feedback, rows, onchange, showActor = false } = $props();
+  let { api, feedback, rows, onchange, showActor = false, limit = 5 } = $props();
+
+  let all = $state(false);
+
+  const shown = $derived(all ? rows : rows.slice(0, limit));
 
   const REVOKE = `
     mutation Revoke($id: ID!, $family: Boolean) {
@@ -42,7 +46,7 @@
   <p class="text-sm opacity-70">Nothing outstanding.</p>
 {:else}
   <ul class="flex flex-col gap-1.5">
-    {#each rows as token (token.id)}
+    {#each shown as token (token.id)}
       <li class="slat">
         <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
           <span class="flex flex-wrap items-baseline gap-2">
@@ -103,4 +107,10 @@
       </li>
     {/each}
   </ul>
+
+  {#if !all && rows.length > limit}
+    <button type="button" class="btn btn-ghost btn-sm self-start" onclick={() => (all = true)}>
+      Show {rows.length - limit} more
+    </button>
+  {/if}
 {/if}

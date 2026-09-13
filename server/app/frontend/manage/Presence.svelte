@@ -48,6 +48,13 @@
       "Signed out everywhere.",
       `Sign ${actor.identifier} out everywhere? Every session and refresh token ends, and no device counts as a second factor any more.`,
     );
+  const LIMIT = 4;
+
+  let allSessions = $state(false);
+  let allDevices = $state(false);
+
+  const sessions = $derived(allSessions ? actor.sessions : actor.sessions.slice(0, LIMIT));
+  const devices = $derived(allDevices ? actor.devices : actor.devices.slice(0, LIMIT));
 </script>
 
 <div class="flex flex-col gap-5">
@@ -59,7 +66,7 @@
         <p class="text-sm opacity-55">Not signed in anywhere right now.</p>
       {:else}
         <ul class="flex flex-col gap-1.5">
-          {#each actor.sessions as session (session.id)}
+          {#each sessions as session (session.id)}
             <li class="slat">
               <div class="flex items-baseline justify-between gap-3">
                 <span class="font-mono text-sm">{session.ipAddress ?? "—"}</span>
@@ -79,6 +86,12 @@
             </li>
           {/each}
         </ul>
+
+        {#if !allSessions && actor.sessions.length > LIMIT}
+          <button type="button" class="btn btn-ghost btn-sm self-start" onclick={() => (allSessions = true)}>
+            Show {actor.sessions.length - LIMIT} more
+          </button>
+        {/if}
       {/if}
     </section>
 
@@ -89,7 +102,7 @@
         <p class="text-sm opacity-55">Nothing has signed in on their behalf yet.</p>
       {:else}
         <ul class="flex flex-col gap-1.5">
-          {#each actor.devices as device (device.id)}
+          {#each devices as device (device.id)}
             <li class="slat">
               <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                 <span class="flex flex-wrap items-baseline gap-2">
@@ -137,6 +150,12 @@
             </li>
           {/each}
         </ul>
+
+        {#if !allDevices && actor.devices.length > LIMIT}
+          <button type="button" class="btn btn-ghost btn-sm self-start" onclick={() => (allDevices = true)}>
+            Show {actor.devices.length - LIMIT} more
+          </button>
+        {/if}
       {/if}
     </section>
   </div>

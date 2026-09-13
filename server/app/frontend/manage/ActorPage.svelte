@@ -22,10 +22,13 @@
   const FIELDS = [
     ["nickname", "Nickname"],
     ["name", "Name"],
+    ["email", "Email"],
+  ];
+
+  const MORE = [
     ["givenName", "Given name"],
     ["familyName", "Family name"],
     ["middleName", "Middle name"],
-    ["email", "Email"],
     ["profileUrl", "Profile URL"],
     ["pictureUrl", "Picture URL"],
     ["websiteUrl", "Website"],
@@ -34,6 +37,8 @@
     ["zoneinfo", "Time zone"],
     ["locale", "Locale"],
   ];
+
+  const PROFILE = [...FIELDS, ...MORE];
 
   const QUERY = `
     query Actor($uuid: ID!) {
@@ -94,7 +99,7 @@
       actor = data.actor;
       viewer = data.viewer;
       supported = data.scopesSupported;
-      draft = Object.fromEntries(FIELDS.map(([key]) => [key, data.actor?.[key] ?? ""]));
+      draft = Object.fromEntries(PROFILE.map(([key]) => [key, data.actor?.[key] ?? ""]));
     } catch (thrown) {
       feedback.blame(thrown);
     } finally {
@@ -114,8 +119,8 @@
 
   const saveProfile = () =>
     act(
-      `mutation Save($uuid: ID!, ${FIELDS.map(([key]) => `$${key}: String`).join(", ")}) {
-        updateActor(uuid: $uuid, ${FIELDS.map(([key]) => `${key}: $${key}`).join(", ")}) { actor { uuid } }
+      `mutation Save($uuid: ID!, ${PROFILE.map(([key]) => `$${key}: String`).join(", ")}) {
+        updateActor(uuid: $uuid, ${PROFILE.map(([key]) => `${key}: $${key}`).join(", ")}) { actor { uuid } }
       }`,
       {
         uuid,
@@ -285,11 +290,20 @@
     <div class="grid items-start gap-4 md:grid-cols-2">
       <div class="flex flex-col gap-4">
         <Card title="Profile">
-          <div class="grid gap-3 sm:grid-cols-2">
+          <div class="grid gap-3 sm:grid-cols-3">
             {#each FIELDS as [key, label] (key)}
               <Field {label} bind:value={draft[key]} />
             {/each}
           </div>
+
+          <details class="more" open={MORE.some(([key]) => draft[key])}>
+            <summary>More fields</summary>
+            <div class="grid gap-3 pt-3 sm:grid-cols-2">
+              {#each MORE as [key, label] (key)}
+                <Field {label} bind:value={draft[key]} />
+              {/each}
+            </div>
+          </details>
 
           <button type="button" class="btn btn-primary btn-sm self-start" onclick={saveProfile}>
             Save profile
@@ -297,7 +311,7 @@
         </Card>
 
         <Card
-          title="Sessions"
+          title="Signed in"
           lede={yourself ? "Signing out everywhere signs you out of this console too." : null}
         >
           <Presence {api} {feedback} {actor} onchange={load} />
@@ -341,14 +355,16 @@
           </div>
 
           <div class="flex flex-wrap items-center gap-2">
-            <input
-              type="file"
-              class="file-input file-input-sm max-w-full"
-              accept="image/png,image/jpeg,image/gif,image/webp"
-              aria-label="Upload a photo"
-              disabled={uploading}
-              onchange={choose}
-            />
+            <label class="btn btn-sm" class:btn-disabled={uploading}>
+              Upload photo
+              <input
+                type="file"
+                class="sr-only"
+                accept="image/png,image/jpeg,image/gif,image/webp"
+                disabled={uploading}
+                onchange={choose}
+              />
+            </label>
 
             {#if actor.photoUploaded}
               <button type="button" class="btn btn-ghost btn-sm" onclick={removePhoto}>

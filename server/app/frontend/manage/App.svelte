@@ -31,10 +31,10 @@
   let viewer = $state(null);
 
   const NAV = [
-    ["", "Overview"],
-    ["/people", "People"],
-    ["/devices", "Devices"],
-    ["/clients", "Clients"],
+    ["", "Overview", '<path d="M3.5 10.5 10 4l6.5 6.5"/><path d="M5.5 9v7h9V9"/>'],
+    ["/people", "People", '<circle cx="10" cy="7" r="3"/><path d="M4 17c.8-3 3.2-4.5 6-4.5s5.2 1.5 6 4.5"/>'],
+    ["/devices", "Devices", '<rect x="6" y="2.5" width="8" height="15" rx="2"/><path d="M9 15h2"/>'],
+    ["/clients", "Clients", '<rect x="3" y="3" width="6" height="6" rx="1.5"/><rect x="11" y="3" width="6" height="6" rx="1.5"/><rect x="3" y="11" width="6" height="6" rx="1.5"/><rect x="11" y="11" width="6" height="6" rx="1.5"/>'],
   ];
 
   const SETTINGS = ["settings", "policies", "providers", "adapters", "activity"];
@@ -139,10 +139,10 @@
 {:else}
   <div class="flex min-h-screen flex-col">
     <header class="sticky top-0 z-20 border-b border-base-300 bg-base-100/95 backdrop-blur">
-      <div class="mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-6 gap-y-2 px-4 py-2">
+      <div class="mx-auto flex w-full max-w-6xl items-center gap-x-6 px-4 py-2">
         <Link to="" class="brand"><img src="/icon.svg" alt="" class="brand-mark" />{boot.tenant.name}</Link>
 
-        <nav class="nav order-3 w-full md:order-none md:w-auto md:flex-1">
+        <nav class="nav md:flex-1">
           {#each NAV as [to, label] (to)}
             <Link
               {to}
@@ -153,7 +153,7 @@
 
         <Link
           to="/settings"
-          class="console-me ms-auto md:ms-0 {inSettings ? 'console-me-on' : ''}"
+          class="console-me ms-auto {inSettings ? 'console-me-on' : ''}"
           aria-label="Settings, signed in as {signedInAs}"
           title={signedInAs}
         >
@@ -173,7 +173,7 @@
       </div>
     </header>
 
-    <main class="mx-auto w-full max-w-6xl flex-1 p-4 md:p-6">
+    <main class="console-main mx-auto w-full max-w-6xl flex-1 p-4 md:p-6">
       {#if current === ""}
         <SettingsPage {api} {boot} overview />
       {:else if current === "people"}
@@ -214,5 +214,14 @@
         </div>
       {/if}
     </main>
+
+    <nav class="tabbar md:hidden" aria-label="Sections">
+      {#each NAV as [to, label, icon] (to)}
+        <Link {to} class="tabbar-item {current === to.replace('/', '') ? 'tabbar-item-on' : ''}">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">{@html icon}</svg>
+          <span>{label}</span>
+        </Link>
+      {/each}
+    </nav>
   </div>
 {/if}
