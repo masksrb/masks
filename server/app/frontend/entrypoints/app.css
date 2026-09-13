@@ -1632,6 +1632,11 @@
     color: var(--ink-soft);
   }
 
+  .field-hint-bad {
+    color: var(--bad);
+    font-weight: 500;
+  }
+
   .control {
     width: 100%;
     font: inherit;

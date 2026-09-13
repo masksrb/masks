@@ -1,7 +1,6 @@
 module LoginStates
   class Invitation < LoginState
     EXPIRY = 12.hours
-    MINIMUM_PASSWORD = Actor::MINIMUM_PASSWORD
     HELD = "invitation".freeze
 
     accepts :password
@@ -32,7 +31,7 @@ module LoginStates
           "nickname" => held.actor.identifier,
           "email" => held.actor.email,
           "invitedBy" => held.opened_by&.identifier,
-          "minimum" => MINIMUM_PASSWORD
+          "minimum" => login.policy.password_minimum
         }
       }
     end
@@ -54,7 +53,8 @@ module LoginStates
 
       def accept
         return warn!("invitation-expired") if invitation.nil?
-        return warn!("short-password") if password.length < MINIMUM_PASSWORD
+        refusal = Passwords.refusal(password, login.policy)
+        return warn!(refusal) if refusal
 
         actor = ::Invitation.accept!(login.store[HELD], password)
         return warn!("invitation-expired") if actor.nil?

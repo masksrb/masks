@@ -1,5 +1,6 @@
 <script>
 import Action from "../shared/Action.svelte";
+import Hint from "../shared/Hint.svelte";
 import Head from "../shared/Head.svelte";
 
 let { login } = $props();
@@ -45,7 +46,7 @@ function onsubmit(event) {
       autofocus
       bind:value={password}
     />
-    <span class="field-hint">{login.t("hint", { minimum })}</span>
+    <Hint {login} field="password" hint={login.t("hint", { minimum })} />
   </label>
 
   <Action

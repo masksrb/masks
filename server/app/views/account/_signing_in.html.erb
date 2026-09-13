@@ -34,7 +34,8 @@
       </div>
     </details>
 
-    <details class="entry" id="password">
+    <% refused = flash[:password_field] || {} %>
+    <details class="entry" id="password"<%= " open" if refused.any? %>>
       <summary>
         <span class="entry-icon"><%= account_icon(:password) %></span>
         <span class="entry-label"><%= account_text("password.heading") %></span>
@@ -49,14 +50,21 @@
             <span class="field-label"><%= account_text("password.current") %></span>
             <%= form.password_field :current_password, autocomplete: "current-password",
                   class: "control" %>
+            <% if refused["current_password"] %>
+              <span class="field-hint field-hint-bad" role="alert"><%= refused["current_password"] %></span>
+            <% end %>
           </label>
 
           <label class="field">
             <span class="field-label"><%= account_text("password.new") %></span>
             <%= form.password_field :password, autocomplete: "new-password", class: "control" %>
-            <span class="field-hint">
-              <%= account_text("password.hint", minimum: PasswordsController::MINIMUM) %>
-            </span>
+            <% if refused["password"] %>
+              <span class="field-hint field-hint-bad" role="alert"><%= refused["password"] %></span>
+            <% else %>
+              <span class="field-hint">
+                <%= account_text("password.hint", minimum: SignInPolicy.for(tenant: Current.tenant).password_minimum) %>
+              </span>
+            <% end %>
           </label>
 
           <div class="action-row">

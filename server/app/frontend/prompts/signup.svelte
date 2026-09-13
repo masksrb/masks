@@ -1,6 +1,7 @@
 <script>
 import { untrack } from "svelte";
 import Action from "../shared/Action.svelte";
+import Hint from "../shared/Hint.svelte";
 import SignupHead from "../shared/SignupHead.svelte";
 
 let { login } = $props();
@@ -48,7 +49,7 @@ function onsubmit(event) {
         <label class="ledger-row ledger-step" class:ledger-step-done={filled(token)}>
           <span class="ledger-label">{login.t("token")}</span>
           <input type="password" name="token" class="control" autocomplete="off" bind:value={token} />
-          <span class="field-hint">{login.t("token_hint")}</span>
+          <Hint {login} field="token" hint={login.t("token_hint")} />
         </label>
       {/if}
 
@@ -71,6 +72,7 @@ function onsubmit(event) {
             spellcheck="false"
             bind:value={nickname}
           />
+          <Hint {login} field="nickname" />
         </label>
       {/if}
 
@@ -78,6 +80,7 @@ function onsubmit(event) {
         <label class="ledger-row ledger-step" class:ledger-step-done={filled(email)}>
           <span class="ledger-label">{login.t("email")}</span>
           <input type="email" name="email" class="control" autocomplete="email" bind:value={email} />
+          <Hint {login} field="email" />
         </label>
       {/if}
 
@@ -92,6 +95,7 @@ function onsubmit(event) {
             placeholder="+15551234567"
             bind:value={phone}
           />
+          <Hint {login} field="phone" />
         </label>
       {/if}
 

@@ -23,7 +23,8 @@ en:
 
   passwords:
     too_many_attempts: "Too many attempts. Wait a few minutes and try again."
-    too_short: "That password is too short."
+    short_password: "A password here needs at least %{minimum} characters."
+    common_password: "That password is one of the most common. Choose another."
     wrong_current: "That is not your current password."
     changed: "Your password has been changed, and every other session signed out."
 

@@ -1,7 +1,7 @@
 <script>
 let { login } = $props();
 
-const messages = $derived(login.auth.messages ?? []);
+const messages = $derived((login.auth.messages ?? []).filter((message) => !message.field));
 </script>
 
 {#each messages as message (message.key)}

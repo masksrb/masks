@@ -217,6 +217,18 @@ class Login
     states_by_key.fetch(key.to_s)
   end
 
+  FIELDS = {
+    "short-password" => "password",
+    "common-password" => "password",
+    "mismatched-password" => "password_confirmation",
+    "missing-nickname" => "nickname",
+    "missing-email" => "email",
+    "signup-domain-refused" => "email",
+    "missing-phone" => "phone",
+    "invalid-phone" => "phone",
+    "invalid-setup-token" => "token"
+  }.freeze
+
   def messages
     warnings.filter_map do |key|
       notice = I18n.t("logins.notices.#{key}", default: nil)
@@ -224,8 +236,12 @@ class Login
 
       next unless text
 
-      { "key" => key, "text" => text, "tone" => notice ? "note" : "note note-bad" }
+      { "key" => key, "text" => text, "tone" => notice ? "note" : "note note-bad", "field" => FIELDS[key] }.compact
     end
+  end
+
+  def message_for(field)
+    messages.find { |message| message["field"] == field.to_s }
   end
 
   SIGNING_UP = %w[signup signup-password setup-configure enrol confirm-email confirm-phone

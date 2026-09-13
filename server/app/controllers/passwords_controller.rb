@@ -1,6 +1,4 @@
 class PasswordsController < ApplicationController
-  MINIMUM = LoginStates::PasswordReset::MINIMUM_PASSWORD
-
   rate_limit to: Rails.configuration.masks.account_attempt_limit,
              within: 3.minutes,
              by: -> { [ current_tenant.id, current_actor&.id ].join(":") },
@@ -9,11 +7,13 @@ class PasswordsController < ApplicationController
   before_action :require_actor
 
   def update
-    return refuse(t("passwords.too_short")) if replacement.length < MINIMUM
+    refusal = Passwords.refusal(replacement, policy)
+
+    return refuse(t("passwords.#{refusal.underscore}", minimum: policy.password_minimum), field: :password) if refusal
 
     changed = current_actor.change_password!(current, replacement, keeping: current_session)
 
-    return refuse(t("passwords.wrong_current")) unless changed
+    return refuse(t("passwords.wrong_current"), field: :current_password) unless changed
 
     Event.record!(Event::PASSWORD_CHANGED, actor: current_actor)
 
@@ -34,7 +34,14 @@ class PasswordsController < ApplicationController
       params.require(:password).to_s
     end
 
-    def refuse(message)
-      redirect_to root_path, alert: message
+    def policy
+      @policy ||= SignInPolicy.for(tenant: current_tenant)
+    end
+
+    def refuse(message, field: nil)
+      return redirect_to root_path, alert: message if field.nil?
+
+      flash[:password_field] = { field.to_s => message }
+      redirect_to root_path(anchor: "password")
     end
 end

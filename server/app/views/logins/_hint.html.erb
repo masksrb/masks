@@ -1,0 +1,6 @@
+<% message = login.message_for(field) %>
+<% if message %>
+  <span class="field-hint field-hint-bad" role="alert"><%= message["text"] %></span>
+<% elsif local_assigns[:hint].present? %>
+  <span class="field-hint"><%= hint %></span>
+<% end %>

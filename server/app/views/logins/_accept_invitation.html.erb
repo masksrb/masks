@@ -23,9 +23,8 @@
   <label class="field">
     <span class="field-label"><%= t("logins.shared.password") %></span>
     <%= form.password_field :password, autocomplete: "new-password", class: "control" %>
-    <span class="field-hint">
-      <%= t(".hint", minimum: LoginStates::Invitation::MINIMUM_PASSWORD) %>
-    </span>
+    <%= render "logins/hint", login: login, field: "password",
+                              hint: t(".hint", minimum: login.policy.password_minimum) %>
   </label>
 
   <button type="submit" class="action"><%= t("logins.shared.continue") %></button>

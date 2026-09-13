@@ -1,7 +1,6 @@
 module LoginStates
   class PasswordReset < LoginState
     EXPIRY = 12.hours
-    MINIMUM_PASSWORD = Actor::MINIMUM_PASSWORD
     HELD = "reset".freeze
     SENT = "reset-sent".freeze
 
@@ -31,7 +30,7 @@ module LoginStates
       {
         "reset" => {
           "nickname" => held.actor.identifier,
-          "minimum" => MINIMUM_PASSWORD
+          "minimum" => login.policy.password_minimum
         }
       }
     end
@@ -62,7 +61,8 @@ module LoginStates
 
       def settle
         return warn!("reset-expired") if reset.nil?
-        return warn!("short-password") if password.length < MINIMUM_PASSWORD
+        refusal = Passwords.refusal(password, login.policy)
+        return warn!(refusal) if refusal
 
         actor = ::PasswordReset.settle!(login.store[HELD], password)
         return warn!("reset-expired") if actor.nil?

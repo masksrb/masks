@@ -1,5 +1,6 @@
 <script>
 import Action from "../shared/Action.svelte";
+import Hint from "../shared/Hint.svelte";
 import SignupHead from "../shared/SignupHead.svelte";
 
 let { login } = $props();
@@ -61,7 +62,7 @@ function onsubmit(event) {
           autofocus
           bind:value={password}
         />
-        <span class="field-hint">{login.t("password_hint", { minimum })}</span>
+        <Hint {login} field="password" hint={login.t("password_hint", { minimum })} />
       </label>
 
       <label class="ledger-row ledger-step" class:ledger-step-done={matched}>
@@ -73,6 +74,7 @@ function onsubmit(event) {
           autocomplete="new-password"
           bind:value={confirmation}
         />
+        <Hint {login} field="password_confirmation" />
       </label>
     </div>
 

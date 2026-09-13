@@ -123,6 +123,22 @@ class SignupTest < ActionDispatch::IntegrationTest
     assert_nil created
   end
 
+  test "a refused password is said under the password field, not above the form" do
+    policy!
+
+    event("identify", identifier: "ada@example.com")
+    event("signup", nickname: "ada", email: "ada@example.com")
+    body = event("signup", password: "password1234", password_confirmation: "password1234")
+
+    assert_equal "password", body["messages"].find { |message| message["key"] == "common-password" }["field"]
+
+    post "/login", params: { event: "signup", password: "short", password_confirmation: "short" }
+    follow_redirect!
+
+    assert_select ".field-hint-bad", text: I18n.t("logins.warnings.short-password")
+    assert_select ".note-bad", false
+  end
+
   test "a policy that requires a second factor stops a new account at enrolment" do
     policy!(second_factors: %w[otp backup_codes], second_factor_required: true)
 

@@ -187,7 +187,11 @@ class PasswordResetTest < ActionDispatch::IntegrationTest
     patch "/account/password",
           params: { current_password: "wrong", password: "a-new-password" }
 
-    assert_equal "That is not your current password.", flash[:alert]
+    assert_equal({ "current_password" => "That is not your current password." }, flash[:password_field])
+
+    follow_redirect!
+
+    assert_select "details#password[open] .field-hint-bad", text: "That is not your current password."
 
     within(@tenant) { assert_equal @actor, Actor.authenticate(@actor.nickname, "password") }
   end
