@@ -84,15 +84,25 @@ class Token < ApplicationRecord
     held
   end
 
+  def lineage
+    held = []
+    frontier = [ self ]
+
+    while (token = frontier.shift)
+      held << token
+      frontier.concat(token.children.to_a)
+    end
+
+    held
+  end
+
   def revoke_family!
     transaction do
       revoked = 0
-      frontier = [ root ]
 
-      while (token = frontier.shift)
+      root.lineage.each do |token|
         revoked += 1 if token.live?
         token.update!(consumed_at: Time.current) unless token.consumed?
-        frontier.concat(token.children.to_a)
       end
 
       revoked

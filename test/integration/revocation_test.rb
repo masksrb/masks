@@ -109,4 +109,42 @@ class RevocationTest < ActionDispatch::IntegrationTest
 
     assert_equal "invalid_grant", body["error"]
   end
+
+  test "revoking a refresh token ends the access token issued beside it" do
+    issued = access_token_for(actor: @actor, registration: @registration)
+
+    assert live?(issued["access_token"])
+
+    revoke(issued["refresh_token"], token_type_hint: "refresh_token")
+
+    assert_not live?(issued["access_token"])
+  end
+
+  test "revoking a rotated refresh token ends every access token its grant issued" do
+    issued = access_token_for(actor: @actor, registration: @registration)
+    rotated = token(
+      grant_type: "refresh_token", refresh_token: issued["refresh_token"],
+      client_id: @registration["client_id"], client_secret: @registration["client_secret"]
+    )
+    child = exchange(rotated["access_token"])["access_token"]
+
+    revoke(rotated["refresh_token"])
+
+    assert_not live?(issued["access_token"])
+    assert_not live?(rotated["access_token"])
+    assert_not live?(child)
+  end
+
+  test "revoking an access token leaves its refresh token alone" do
+    issued = access_token_for(actor: @actor, registration: @registration)
+
+    revoke(issued["access_token"])
+
+    body = token(
+      grant_type: "refresh_token", refresh_token: issued["refresh_token"],
+      client_id: @registration["client_id"], client_secret: @registration["client_secret"]
+    )
+
+    assert body["access_token"].present?
+  end
 end
