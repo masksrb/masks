@@ -10,12 +10,29 @@
     }
   `;
 
+  const STOP = `
+    mutation Stop($id: ID!) {
+      revokeDelegation(id: $id) { delegation { id revokedAt } }
+    }
+  `;
+
+  async function stop(connection, delegation) {
+    if (!confirm(`Stop ${delegation.client.name} using this ${connection.provider.name} account? It has to ask again.`)) return;
+
+    const done = await feedback.attempt(
+      () => api.query(STOP, { id: delegation.id }),
+      `${delegation.client.name} can no longer use it.`,
+    );
+
+    if (done) await onchange();
+  }
+
   async function revoke(connection) {
     const held = showActor ? connection.actor.identifier : connection.provider.name;
 
     if (
       !confirm(
-        `Disconnect ${held}? It stops signing anybody in until it is linked again.`,
+        `Disconnect ${held}? It stops signing anybody in until it is linked again, and every application using it stops.`,
       )
     )
       return;
@@ -51,6 +68,9 @@
             {#if connection.email && !connection.emailVerified}
               <span class="badge badge-warning badge-xs">unconfirmed</span>
             {/if}
+            {#if connection.delegable}
+              <span class="badge badge-info badge-xs">tokens held</span>
+            {/if}
           </span>
 
           <button type="button" class="link text-xs text-error" onclick={() => revoke(connection)}>
@@ -72,6 +92,18 @@
             </span>
           {/if}
         </div>
+
+        {#each connection.delegations ?? [] as delegation (delegation.id)}
+          <div class="flex flex-wrap items-baseline justify-between gap-x-3 border-l-2 border-base-300 pl-2 text-xs">
+            <span>
+              <Link to={`/clients/${delegation.client.clientId}`} class="link link-hover">{delegation.client.name}</Link>
+              <span class="opacity-60">
+                can use it{delegation.releasedAt ? ` · last used ${since(delegation.releasedAt)}` : ""}
+              </span>
+            </span>
+            <button type="button" class="link text-error" onclick={() => stop(connection, delegation)}>Stop</button>
+          </div>
+        {/each}
       </li>
     {/each}
   </ul>

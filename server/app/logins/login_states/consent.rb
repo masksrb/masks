@@ -38,6 +38,7 @@ module LoginStates
     def required?
       return false if touched?(:consent)
       return true if request.consent?
+      return true if login.state("delegation").undelegated.any?
       return false if client && !client.consent_required?
 
       !::Consent.covers?(

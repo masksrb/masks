@@ -14,6 +14,7 @@ class Actor < ApplicationRecord
   has_many :device_factors, dependent: :destroy
   has_many :passkeys, dependent: :destroy
   has_many :subjects, dependent: :destroy
+  has_many :delegations, dependent: :destroy
   has_many :connections, dependent: :destroy
   has_many :approvals, class_name: "Client", foreign_key: :approved_by_id, dependent: :nullify
   has_one :avatar, dependent: :destroy
@@ -109,7 +110,7 @@ class Actor < ApplicationRecord
   end
 
   def permitted_scopes(requested)
-    Scopes.granted(Scopes.list(requested), scope_list)
+    Scopes.union(Scopes.granted(Scopes.list(requested), scope_list), Scopes.delegations(requested))
   end
 
   def holds?(scope)

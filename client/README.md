@@ -250,6 +250,51 @@ found.active? && found.permits?("uris:catalog:read")
 not active, so moving from local verification to introspection needs no extra boolean
 check.
 
+### Somebody else's account
+
+An app that acts as somebody at Google, Microsoft or an MCP server while they are away asks masks for
+a [delegation](https://masks.pages.dev/concepts/delegation/). masks keeps and refreshes the
+provider's tokens; the app keeps one secret per connection and trades it for a live access token when
+the last one runs out.
+
+```ruby
+delegations = Masks::Client.delegations(
+  ENV["MASKS_ISSUER"], client_id: id, client_secret: secret, redirect_uri: "https://app.test/connect/callback"
+)
+
+started = delegations.start(provider: "google")
+session[:connecting] = started
+redirect_to started["url"]
+
+held = delegations.finish(params: params, started: session.delete(:connecting))
+held.connection
+held.secret
+
+upstream = delegations.token(held.secret, connection: held.connection)
+upstream.access_token
+upstream.expires_at
+upstream.secret
+```
+
+`upstream.secret` replaces the one you passed in, every time. `Delegations::Refused` means somebody
+has to connect again; `Delegations::Unavailable` is worth retrying. Both carry `secret` when masks had
+already rotated it, so keep it. Spend a secret from one place at a time: spending one twice revokes
+it.
+
+Tests use the fake, which needs no issuer:
+
+```ruby
+require "masks/client/delegations/fake"
+
+fake = Masks::Client::Delegations::Fake.new
+started = fake.start(provider: "notion")
+held = fake.finish(params: fake.approve(started), started: started)
+
+fake.token(held.secret, connection: held.connection)
+fake.revoke(held.connection)
+fake.unavailable(held.connection)
+```
+
 ## Which issuers this speaks to
 
 masks publishes `masks_protocol_version` in its discovery document, and this gem needs at

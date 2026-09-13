@@ -117,10 +117,12 @@ class FakeIssuer
       end
 
       found = body_for(path)
+      found = found.call(@received.last[:body]) if found.respond_to?(:call)
+      status, found = found.is_a?(Array) ? found : [ found ? 200 : 404, found ]
       body = JSON.generate(found || { "error" => "not_found" })
 
       socket.print [
-        "HTTP/1.1 #{found ? '200 OK' : '404 Not Found'}",
+        "HTTP/1.1 #{status} #{status == 200 ? 'OK' : 'Refused'}",
         "Content-Type: application/json",
         "Content-Length: #{body.bytesize}",
         "Connection: close",

@@ -9,3 +9,4 @@ en:
     handshake: "Connect apps"
     namespace: "Everything %{namespace} asks for"
     generic: "%{name}"
+    delegate: "Use your %{provider} account while you are away"

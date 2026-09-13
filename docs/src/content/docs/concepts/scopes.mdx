@@ -11,6 +11,11 @@ somebody signs in with — and masks reserves the `masks:` prefix for itself.
 | --- | --- |
 | `masks:manage` | the console, and the GraphQL API behind it |
 | `masks:handshake` | connect an application to this tenant |
+| `masks:delegate:<provider>` | use somebody's account at that provider while they are away — see [delegation](/concepts/delegation/) |
+
+Only an approved client may hold a `masks:` scope. `masks:delegate:` scopes are the exception on the
+actor's side: every person holds them for their own accounts, and consents to each application
+separately.
 
 ## Prefixes
 

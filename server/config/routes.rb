@@ -40,6 +40,7 @@ Rails.application.routes.draw do
   delete "/account/apps/:client_id", to: "apps#destroy", as: :account_app
   post "/account/connections", to: "connections#create", as: :account_connections
   delete "/account/connections/:id", to: "connections#detach", as: :account_connection
+  delete "/account/delegations/:id", to: "delegations#destroy", as: :account_delegation
 
   scope constraints: { style: Regexp.union(Avatars::STYLES), digest: /[0-9a-f]{16}/ } do
     get "/avatars/:uuid", to: "avatars#show", as: :avatar

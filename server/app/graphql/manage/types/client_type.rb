@@ -32,6 +32,8 @@ module Manage
       field :secret_expires_at, GraphQL::Types::ISO8601DateTime
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
 
+      field :delegations, [ "Manage::Types::DelegationType" ], null: false
+
       field :consents, [ "Manage::Types::ConsentType" ], null: false do
         argument :limit, Integer, required: false
       end
@@ -50,6 +52,10 @@ module Manage
                .includes(:actor, :device)
                .order(created_at: :desc)
                .limit(limit || QueryType::LIMIT)
+      end
+
+      def delegations
+        ::Delegation.live.where(client_id: object.id).includes(:actor, connection: :provider).order(created_at: :desc)
       end
 
       def consents(limit: nil)

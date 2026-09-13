@@ -24,6 +24,7 @@ require_relative "client/resource"
 require_relative "client/rack"
 require_relative "client/registration"
 require_relative "client/handshake"
+require_relative "client/delegations"
 
 module Masks
   # = Masks::Client
@@ -86,6 +87,10 @@ module Masks
       # @return [Masks::Client::Handshake]
       def handshake(url, **options)
         Handshake.new(url, **options)
+      end
+
+      def delegations(issuer, **options)
+        Delegations.new(issuer: issuer, **options)
       end
     end
   end

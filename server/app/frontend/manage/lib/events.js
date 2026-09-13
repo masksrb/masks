@@ -7,6 +7,7 @@ const GRAVE = new Set([
   "actor.deleted",
   "authenticator.disabled",
   "connection.refused",
+  "delegation.refused",
 ]);
 
 const NOTABLE = new Set([
@@ -19,6 +20,8 @@ const NOTABLE = new Set([
   "backup_code.spent",
   "connection.unlinked",
   "consent.revoked",
+  "delegation.granted",
+  "delegation.revoked",
 ]);
 
 export function tone(action) {

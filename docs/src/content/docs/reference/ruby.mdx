@@ -236,6 +236,142 @@ Inherits `Masks::Client::Error`.
 #uuid()
 ```
 
+## Masks::Client::Delegations
+
+| Constant | Value |
+| --- | --- |
+| `SCOPE` | `"masks:delegate:".freeze` |
+| `UPSTREAM_ACCESS_TOKEN` | `"urn:masks:params:oauth:token-type:upstream_access_token".freeze` |
+| `REFUSALS` | `%w[invalid_grant insufficient_scope invalid_target unauthorized_client access_denied login_required interaction_required consent_required invalid_scope].freeze` |
+| `Held` | `Struct.new(:connection, :provider, :provider_name, :label, :subject, :secret, keyword_init: true)` |
+| `Upstream` | `Struct.new(:access_token, :expires_at, :scope, :secret, keyword_init: true) do def expired?(leeway: 60) Time.now.to_i + leeway >= expires_at.to_i end end` |
+
+| Attribute | Access |
+| --- | --- |
+| `client_id` | R |
+| `client_secret` | R |
+| `issuer` | R |
+| `redirect_uri` | R |
+
+### ::new
+
+```ruby
+::new(issuer:, client_id:, client_secret:, redirect_uri:)
+```
+
+### #finish
+
+```ruby
+#finish(params:, started:)
+```
+
+### #start
+
+```ruby
+#start(provider:, prompt: nil, max_age: nil, state: SecureRandom.urlsafe_base64(24))
+```
+
+### #token
+
+```ruby
+#token(secret, connection:)
+```
+
+## Masks::Client::Delegations::Fake
+
+| Constant | Value |
+| --- | --- |
+| `Connected` | `Struct.new(:connection, :provider, :subject, :secret, :refused, :unavailable, keyword_init: true)` |
+
+| Attribute | Access |
+| --- | --- |
+| `redirect_uri` | R |
+| `releases` | R |
+
+### ::new
+
+```ruby
+::new(redirect_uri: "https://app.test/connect/callback", lifetime: 3600)
+```
+
+### #approve
+
+```ruby
+#approve(started, subject: "fake-subject", connection: SecureRandom.uuid)
+```
+
+### #deny
+
+```ruby
+#deny(started, error: "access_denied", description: "the person declined")
+```
+
+### #finish
+
+```ruby
+#finish(params:, started:)
+```
+
+### #revoke
+
+```ruby
+#revoke(connection, reason: "the person stopped this application using that account")
+```
+
+### #start
+
+```ruby
+#start(provider:, prompt: nil, max_age: nil, state: SecureRandom.urlsafe_base64(24))
+```
+
+### #token
+
+```ruby
+#token(secret, connection:)
+```
+
+### #unavailable
+
+```ruby
+#unavailable(connection, now: true)
+```
+
+## Masks::Client::Delegations::Refused
+
+Inherits `Error`.
+
+| Attribute | Access |
+| --- | --- |
+| `code` | R |
+| `description` | R |
+| `secret` | R |
+
+### ::new
+
+```ruby
+::new(code, description, secret: nil)
+```
+
+### #signed_in_again?
+
+```ruby
+#signed_in_again?()
+```
+
+## Masks::Client::Delegations::Unavailable
+
+Inherits `Error`.
+
+| Attribute | Access |
+| --- | --- |
+| `secret` | R |
+
+### ::new
+
+```ruby
+::new(message, secret: nil)
+```
+
 ## Masks::Client::Error
 
 Inherits `StandardError`.

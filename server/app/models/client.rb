@@ -20,6 +20,7 @@ class Client < ApplicationRecord
 
   has_many :tokens, dependent: :destroy
   has_many :consents, dependent: :destroy
+  has_many :delegations, dependent: :destroy
   has_many :namespaces, -> { order(:name) }, dependent: :nullify
 
   validates :client_id, presence: true, uniqueness: { scope: :tenant_id }
@@ -50,7 +51,7 @@ class Client < ApplicationRecord
         post_logout_redirect_uris: [ handshake.return_to ].compact,
         resources: [ handshake.resource ],
         allowed_scopes: Scopes.join(handshake.scopes),
-        grant_types: Handshake::GRANT_TYPES,
+        grant_types: handshake.grant_types,
         response_types: [ "code" ],
         token_endpoint_auth_method: handshake.auth_method,
         backchannel_logout_uri: handshake.backchannel_logout_uri,

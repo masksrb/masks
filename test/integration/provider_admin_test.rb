@@ -119,6 +119,50 @@ class ProviderAdminTest < ActionDispatch::IntegrationTest
 
     assert_equal %w[team_id key_id private_key], held.find { |one| one["key"] == "apple" }["needs"]
     assert_equal %w[domain realm], held.find { |one| one["key"] == "keycloak" }["asks"]
+    assert_equal "mcp", held.find { |one| one["key"] == "notion" }["protocol"]
+  end
+
+  test "a provider lets applications use it only when it names what they may do" do
+    refused = ask(%(mutation { updateProvider(key: "google", delegates: true) { provider { key } } })) if add.dig("data", "createProvider")
+
+    assert_match "must name what applications may do", refused["errors"].first["message"]
+
+    answer = ask(<<~GQL)
+      mutation {
+        updateProvider(key: "google", delegates: true, delegatedScopes: ["https://www.googleapis.com/auth/drive.readonly"],
+                       delegationParams: { access_type: "offline" }) {
+          provider { delegates delegatedScopes delegationParams delegationScope delegations }
+        }
+      }
+    GQL
+
+    held = answer.dig("data", "updateProvider", "provider")
+
+    assert held["delegates"]
+    assert_equal [ "https://www.googleapis.com/auth/drive.readonly" ], held["delegatedScopes"]
+    assert_equal({ "access_type" => "offline" }, held["delegationParams"])
+    assert_equal "masks:delegate:google", held["delegationScope"]
+    assert_equal 0, held["delegations"]
+  end
+
+  test "a delegation is revoked through the manage API" do
+    add
+    @token ||= token!
+
+    delegation = within(@tenant) do
+      provider = Provider.find_by!(key: "google")
+      provider.update!(delegates: true, delegated_scopes: "drive")
+      connection = Connection.record!(provider: provider, actor: @admin, identity: { "sub" => "g-1" })
+      connection.update!(refresh_token: "held", delegated_scopes: "drive")
+
+      Delegation.grant!(client: @client, actor: @admin, connection: connection)
+    end
+
+    answer = ask(%(mutation { revokeDelegation(id: "#{delegation.uuid}") { delegation { revokedAt client { name } provider { key } } } }))
+
+    assert answer.dig("data", "revokeDelegation", "delegation", "revokedAt"), answer.inspect
+    assert within(@tenant) { delegation.reload.revoked? }
+    assert_equal 1, within(@tenant) { Event.where(action: Event::DELEGATION_REVOKED).count }
   end
 
   test "the secret is stored but never handed back" do

@@ -19,6 +19,10 @@ en:
     failed: "%{provider} did not confirm who you are, so nothing was connected."
     taken: "That %{provider} account is already connected to somebody else here."
 
+  delegations:
+    unknown: "There is no such application using that account."
+    stopped: "%{client} can no longer use your %{provider} account."
+
   passkeys:
     expired: "That enrolment expired. Try again."
     crowded: "You already have as many passkeys as this server keeps."

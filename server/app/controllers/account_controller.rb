@@ -7,7 +7,7 @@ class AccountController < ApplicationController
     return redirect_to login_path if @actor.nil? && !Actor.exists?
 
     @apps = @actor ? Apps.held_by(@actor) : []
-    @connections = @actor ? Connection.live.where(actor: @actor).includes(:provider).order(:created_at) : []
+    @connections = @actor ? Connection.live.where(actor: @actor).includes(:provider, delegations: :client).order(:created_at) : []
     @linkable = @actor ? Linking.offered(@actor) : []
     @passkeys = @actor ? Passkey.where(actor: @actor).includes(:authenticator).newest_first : []
     @devices = @actor ? @actor.devices.newest_first : []

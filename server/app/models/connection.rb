@@ -1,8 +1,16 @@
 class Connection < ApplicationRecord
   include TenantScoped
 
+  SKEW = 60.seconds
+  DEFAULT_LIFETIME = 55.minutes
+
+  encrypts :access_token
+  encrypts :refresh_token
+
   belongs_to :provider
   belongs_to :actor
+
+  has_many :delegations, dependent: :destroy
 
   validates :subject, presence: true,
                       uniqueness: { scope: [ :tenant_id, :provider_id ] }
@@ -49,9 +57,94 @@ class Connection < ApplicationRecord
     revoked_at.present?
   end
 
-  def revoke!(reason: "revoked")
-    update!(revoked_at: Time.current, revoked_reason: reason)
+  def revoke!(reason: "revoked", by: nil)
+    transaction do
+      update!(revoked_at: Time.current, revoked_reason: reason, access_token: nil, refresh_token: nil,
+              access_token_expires_at: nil, delegated_scopes: nil)
+
+      delegations.live.find_each { |delegation| delegation.revoke!(reason: reason, by: by) }
+    end
 
     self
   end
+
+  def hold!(tokens)
+    raise Delegation::Refused, "#{provider.name} returned no access token" if tokens["access_token"].blank?
+
+    update!(
+      access_token: tokens["access_token"],
+      refresh_token: tokens["refresh_token"].presence,
+      access_token_expires_at: expiry_from(tokens),
+      delegated_scopes: Scopes.join(provider.delegated_scope_list),
+      tokens_refreshed_at: Time.current
+    )
+
+    self
+  end
+
+  def delegable?
+    return false if revoked? || !provider.delegating? || delegated_scopes.nil?
+    return false unless Scopes.list(delegated_scopes) == provider.delegated_scope_list
+
+    refresh_token.present? || !stale?
+  end
+
+  def stale?
+    access_token.blank? || access_token_expires_at.nil? || access_token_expires_at <= SKEW.from_now
+  end
+
+  def release!
+    outcome = with_lock do
+      next :refused if revoked?
+      next :fresh unless stale?
+      next :refused if refresh_token.blank?
+
+      refreshed = refresh_upstream
+
+      if refreshed.is_a?(Hash)
+        next :refused if refreshed["access_token"].blank?
+
+        update!(
+          access_token: refreshed["access_token"],
+          refresh_token: refreshed["refresh_token"].presence || refresh_token,
+          access_token_expires_at: expiry_from(refreshed),
+          tokens_refreshed_at: Time.current
+        )
+
+        :fresh
+      else
+        refreshed
+      end
+    end
+
+    case outcome
+    when :fresh then { "access_token" => access_token, "expires_at" => access_token_expires_at, "scope" => delegated_scopes }
+    when :unavailable then raise Delegation::Unavailable, "#{provider.name} did not answer a refresh"
+    else
+      forget_tokens! unless revoked?
+      raise Delegation::Refused, "#{provider.name} no longer honours this connection; connect it again"
+    end
+  end
+
+  def forget_tokens!
+    update!(access_token: nil, refresh_token: nil, access_token_expires_at: nil, delegated_scopes: nil)
+
+    self
+  end
+
+  private
+
+    def refresh_upstream
+      provider.refresh!(refresh_token)
+    rescue Provider::Refused
+      :refused
+    rescue Provider::Unreachable
+      :unavailable
+    end
+
+    def expiry_from(tokens)
+      seconds = tokens["expires_in"].to_i
+
+      seconds.positive? ? seconds.seconds.from_now : DEFAULT_LIFETIME.from_now
+    end
 end

@@ -11,6 +11,10 @@ class AppsController < ApplicationController
 
     consent&.revoke!
 
+    Delegation.live.where(actor: current_actor, client: client).find_each do |delegation|
+      delegation.revoke!(reason: "access for #{client.name} revoked by #{current_actor.identifier}", by: current_actor)
+    end
+
     Token.live.where(actor: current_actor, client: client).find_each(&:revoke!)
 
     Event.record!(

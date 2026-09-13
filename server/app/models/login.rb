@@ -14,6 +14,7 @@ class Login
     LoginStates::Enrolment,
     LoginStates::Confirmation,
     LoginStates::Configure,
+    LoginStates::Delegation,
     LoginStates::Consent
   ].freeze
 

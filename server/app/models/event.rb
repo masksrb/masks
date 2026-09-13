@@ -54,6 +54,10 @@ class Event < ApplicationRecord
   CONNECTION_UNLINKED = "connection.unlinked".freeze
   CONNECTION_SIGNED_IN = "connection.signed_in".freeze
   CONNECTION_REFUSED = "connection.refused".freeze
+  DELEGATION_GRANTED = "delegation.granted".freeze
+  DELEGATION_RELEASED = "delegation.released".freeze
+  DELEGATION_REFUSED = "delegation.refused".freeze
+  DELEGATION_REVOKED = "delegation.revoked".freeze
 
   ACTOR_CREATED = "actor.created".freeze
   ACTOR_PROVISIONED = "actor.provisioned".freeze
@@ -92,7 +96,7 @@ class Event < ApplicationRecord
 
   GRAVE = [
     LOGIN_REFUSED, LOGIN_THROTTLED, LOGOUT_UNDELIVERED, REFRESH_REUSED,
-    DEVICE_BLOCKED, ACTOR_DELETED, AUTHENTICATOR_DISABLED, CONNECTION_REFUSED
+    DEVICE_BLOCKED, ACTOR_DELETED, AUTHENTICATOR_DISABLED, CONNECTION_REFUSED, DELEGATION_REFUSED
   ].freeze
 
   ACTIONS = constants(false).filter_map do |name|

@@ -32,10 +32,15 @@ module Manage
       argument :trusts_email, Boolean, required: false
       argument :email_domains, [ String ], required: false
       argument :signup_scopes, [ String ], required: false
+      argument :delegates, Boolean, required: false
+      argument :delegated_scopes, [ String ], required: false
+      argument :delegation_params, GraphQL::Types::JSON, required: false
+      argument :resource_url, String, required: false
 
       field :provider, Types::ProviderType, null: false
 
-      def resolve(key:, preset: nil, preset_values: nil, scopes: nil, email_domains: nil, signup_scopes: nil, **attributes)
+      def resolve(key:, preset: nil, preset_values: nil, scopes: nil, email_domains: nil, signup_scopes: nil,
+                  delegated_scopes: nil, **attributes)
         refuse!("a provider is already keyed #{key}") if ::Provider.exists?(key: key)
 
         provider = ::Provider.new(**preset_attributes(preset, preset_values), key: key)
@@ -43,9 +48,11 @@ module Manage
         provider.scopes = Scopes.join(scopes) if scopes
         provider.email_domains = ProviderDomains.join(email_domains) if email_domains
         provider.signup_scopes = Scopes.join(signup_scopes) if signup_scopes
+        provider.delegated_scopes = Scopes.join(delegated_scopes) if delegated_scopes
 
         discover(provider)
         read_metadata(provider)
+        register(provider)
 
         save!(provider)
         audit!(::Event::PROVIDER_CREATED, provider: provider.key, name: provider.name)
@@ -62,6 +69,16 @@ module Manage
 
           found.attributes(values.is_a?(Hash) ? values : {})
         rescue ::ProviderPreset::Unusable => e
+          refuse!(e.message)
+        end
+
+        def register(provider)
+          return unless provider.mcp? && provider.client_id.blank?
+
+          refuse!("an MCP server needs its URL") if provider.resource_url.blank?
+
+          provider.register!(callback: "#{Current.origin}/login/provider/#{provider.key}/callback")
+        rescue ::Provider::Untrusted, ::Provider::Refused, ::Provider::Unreachable => e
           refuse!(e.message)
         end
 

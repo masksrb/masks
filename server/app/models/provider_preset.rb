@@ -10,6 +10,7 @@ class ProviderPreset
   SETTINGS = %i[
     protocol issuer authorization_url token_url userinfo_url emails_url jwks_uri
     scopes subject_claim claims trusts_email token_auth_method response_mode authorize_params name_id_format
+    delegated_scopes delegation_params resource_url
   ].freeze
 
   ALL = [
@@ -21,12 +22,15 @@ class ProviderPreset
       userinfo_url: "https://openidconnect.googleapis.com/v1/userinfo",
       jwks_uri: "https://www.googleapis.com/oauth2/v3/certs",
       trusts_email: true,
+      delegated_scopes: "https://www.googleapis.com/auth/drive.readonly",
+      delegation_params: { "access_type" => "offline", "prompt" => "consent" },
       guide: "https://console.cloud.google.com/apis/credentials"
     },
     {
       key: "microsoft", name: "Microsoft", protocol: "oidc",
       issuer: "https://login.microsoftonline.com/{tenant}/v2.0",
       asks: %w[tenant],
+      delegated_scopes: "offline_access Files.Read.All",
       guide: "https://entra.microsoft.com/#view/Microsoft_AAD_RegisteredApps/ApplicationsListBlade"
     },
     {
@@ -155,6 +159,13 @@ class ProviderPreset
       needs: %w[metadata],
       guide: "https://support.google.com/a/answer/12032922"
     },
+    {
+      key: "notion", name: "Notion (MCP)", protocol: "mcp",
+      resource_url: "https://mcp.notion.com/mcp",
+      needs: [],
+      guide: "https://developers.notion.com/docs/mcp"
+    },
+    { key: "mcp", name: "MCP server", protocol: "mcp", custom: true, needs: %w[resource_url] },
     { key: "oidc", name: "OpenID Connect", protocol: "oidc", custom: true },
     { key: "oauth2", name: "OAuth 2.0", protocol: "oauth2", custom: true },
     { key: "saml", name: "SAML 2.0", protocol: "saml", custom: true, needs: %w[metadata] }
@@ -187,6 +198,8 @@ class ProviderPreset
   def guide = definition[:guide]
   def trusts_email = definition.fetch(:trusts_email, false)
   def custom? = definition.fetch(:custom, false)
+  def delegated_scopes = Scopes.list(definition[:delegated_scopes])
+  def delegates? = protocol == Provider::MCP
 
   def attributes(values = {})
     given = defaults.merge(values.to_h.stringify_keys.slice(*asks).compact_blank)

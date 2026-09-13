@@ -74,6 +74,23 @@
                   <%= connection.label || connection.email || connection.subject %>
                 </span>
 
+                <% held = connection.delegations.select { |delegation| delegation.revoked_at.nil? } %>
+                <% if held.any? %>
+                  <ul class="item-delegations">
+                    <% held.each do |delegation| %>
+                      <li>
+                        <span><%= account_text("connections.delegated", client: delegation.client.name) %></span>
+                        <%= button_to account_text("connections.stop"),
+                              account_delegation_path(delegation.uuid), method: :delete,
+                              class: "action action-quiet action-sm",
+                              form: { data: { turbo_confirm: account_text("connections.confirm_stop",
+                                                                client: delegation.client.name,
+                                                                provider: connection.provider.name) } } %>
+                      </li>
+                    <% end %>
+                  </ul>
+                <% end %>
+
                 <%= button_to account_text("connections.disconnect"),
                       account_connection_path(connection.uuid), method: :delete,
                       class: "action action-quiet action-sm", form_class: "item-act",

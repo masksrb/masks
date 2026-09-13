@@ -29,6 +29,7 @@ class AuthorizeController < ApplicationController
 
     return answer(deny(pending, login.refusal.error, login.refusal.description)) if login.refused?
     return interaction_required(pending) if login.prompted? && pending.silent?
+    return redirect_to(login.redirect_to, allow_other_host: true) if login.redirect_to.present?
     return prompt(login) unless login.settled?
 
     complete(pending, attempt, login)

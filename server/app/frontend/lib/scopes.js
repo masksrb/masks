@@ -1,5 +1,5 @@
 const CONSEQUENTIAL =
-  /(:write|:command|:exec|:delete|:admin)$|^offline_access$/;
+  /(:write|:command|:exec|:delete|:admin)$|^offline_access$|^masks:delegate:./;
 
 export function consequential(scope) {
   return CONSEQUENTIAL.test(String(scope));

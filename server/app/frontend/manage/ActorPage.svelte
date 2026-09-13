@@ -53,8 +53,9 @@
         sessions { id ipAddress userAgent authenticatedAt expiresAt }
         devices { id label category known ipAddress userAgent lastSeenAt blockedAt }
         connections {
-          id subject label email emailVerified connectedAt signedInAt
+          id subject label email emailVerified connectedAt signedInAt delegable
           provider { key name }
+          delegations { id releasedAt client { clientId name } }
         }
         consents {
           id scopes audience updatedAt

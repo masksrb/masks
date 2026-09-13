@@ -10,7 +10,7 @@
 
   let { api } = $props();
 
-  const PROTOCOLS = { oidc: "OpenID Connect", oauth2: "OAuth 2.0", saml: "SAML 2.0" };
+  const PROTOCOLS = { oidc: "OpenID Connect", oauth2: "OAuth 2.0", saml: "SAML 2.0", mcp: "MCP server" };
 
   const MAPPED = [
     ["email", "Email"],
@@ -41,17 +41,19 @@
     secretHeld privateKeyHeld connections signedIn archivedAt createdAt callbackUrl
     issuer jwksUri role trustsEmail emailDomains signupScopes
     idpEntityId idpSsoUrl idpCertificates metadataUrl metadataFetchedAt nameIdFormat spEntityId
+    delegates delegatedScopes delegationParams delegationScope resourceUrl registeredAt delegations
   `;
 
   const QUERY = `
     query Providers {
       active: providers { ${FIELDS} }
       archived: providers(archived: true) { ${FIELDS} }
-      providerPresets { key name protocol asks needs defaults guide custom trustsEmail }
+      providerPresets { key name protocol asks needs defaults guide custom trustsEmail delegates delegatedScopes }
       connections {
-        id subject label email emailVerified connectedAt signedInAt
+        id subject label email emailVerified connectedAt signedInAt delegable
         provider { key name }
         actor { uuid identifier }
+        delegations { id releasedAt client { clientId name } }
       }
     }
   `;
@@ -84,6 +86,10 @@
     ["trustsEmail", "Boolean"],
     ["emailDomains", "[String!]"],
     ["signupScopes", "[String!]"],
+    ["delegates", "Boolean"],
+    ["delegatedScopes", "[String!]"],
+    ["delegationParams", "JSON"],
+    ["resourceUrl", "String"],
   ];
 
   const declared = (extra) =>
@@ -155,6 +161,10 @@
     trustsEmail: Boolean(preset.trustsEmail),
     emailDomains: "",
     signupScopes: "",
+    delegates: Boolean(preset.delegates),
+    delegatedScopes: (preset.delegatedScopes ?? []).join(" "),
+    delegationParams: "",
+    resourceUrl: "",
   });
 
   const feedback = createFeedback();
@@ -197,6 +207,7 @@
   const saml = $derived(draft?.protocol === "saml");
   const oauth2 = $derived(draft?.protocol === "oauth2");
   const oidc = $derived(draft?.protocol === "oidc");
+  const mcp = $derived(draft?.protocol === "mcp");
   const signsSecret = $derived(draft?.tokenAuthMethod === "signed_secret");
   const origin = typeof window === "undefined" ? "" : window.location.origin;
   const callbackUrl = $derived(`${origin}/login/provider/${draft?.key?.trim() || "…"}/callback`);
@@ -249,6 +260,10 @@
       trustsEmail: provider.trustsEmail,
       emailDomains: provider.emailDomains.join(" "),
       signupScopes: provider.signupScopes.join(" "),
+      delegates: provider.delegates,
+      delegatedScopes: provider.delegatedScopes.join(" "),
+      delegationParams: pairs(provider.delegationParams),
+      resourceUrl: provider.resourceUrl ?? "",
     };
     feedback.clear();
   }
@@ -262,6 +277,17 @@
 
   const trimmed = (value) => value?.trim() || null;
   const words = (value) => value.split(/[\s,]+/).filter(Boolean);
+  const pairs = (held) =>
+    Object.entries(held ?? {})
+      .map(([name, value]) => `${name}=${value}`)
+      .join(" ");
+  const params = (value) =>
+    Object.fromEntries(
+      words(value)
+        .map((pair) => pair.split("="))
+        .filter(([name, held]) => name && held !== undefined)
+        .map(([name, ...rest]) => [name, rest.join("=")]),
+    );
 
   function claims() {
     return Object.fromEntries(
@@ -281,6 +307,9 @@
       signupScopes: words(draft.signupScopes),
       clientSecret: trimmed(draft.clientSecret),
       privateKey: trimmed(draft.privateKey),
+      delegates: saml ? false : mcp || draft.delegates,
+      delegatedScopes: saml ? [] : words(draft.delegatedScopes),
+      delegationParams: saml ? {} : params(draft.delegationParams),
     };
 
     if (fresh && !custom) {
@@ -293,6 +322,7 @@
         keyId: trimmed(draft.keyId),
         metadataUrl: trimmed(draft.metadataUrl),
         ...(saml ? metadataFields() : {}),
+        ...(mcp ? { resourceUrl: trimmed(draft.resourceUrl) } : {}),
       };
     }
 
@@ -315,6 +345,7 @@
       keyId: signsSecret ? trimmed(draft.keyId) : null,
       metadataUrl: saml ? trimmed(draft.metadataUrl) : null,
       nameIdFormat: saml ? trimmed(draft.nameIdFormat) : null,
+      resourceUrl: mcp ? trimmed(draft.resourceUrl) : null,
       ...(saml ? metadataFields() : { idpEntityId: null, idpSsoUrl: null, idpCertificates: null }),
     };
   }
@@ -373,7 +404,11 @@
     const adding = fresh;
     const done = await feedback.attempt(
       () => api.query(adding ? CREATE : UPDATE, variables()),
-      adding ? `${draft.name} can sign people in now.` : `${draft.name} saved.`,
+      adding
+        ? mcp
+          ? `${draft.name} is registered, and applications can be let use it.`
+          : `${draft.name} can sign people in now.`
+        : `${draft.name} saved.`,
     );
 
     busy = false;
@@ -409,19 +444,28 @@
 
   const restore = (provider) => act("restoreProvider", provider, `${provider.name} is back.`);
 
+  const register = (provider) =>
+    act(
+      "registerProvider",
+      provider,
+      `masks registered itself with ${provider.name} again.`,
+      `Register with ${provider.name} again? Everybody connected to it has to connect again.`,
+    );
+
   function copy(value) {
     navigator.clipboard?.writeText(value);
     feedback.clear();
   }
 
   const needsSecret = $derived(
-    !saml && !signsSecret && (fresh ? (chosen?.needs ?? ["client_secret"]).includes("client_secret") : true),
+    !saml && !mcp && !signsSecret && (fresh ? (chosen?.needs ?? ["client_secret"]).includes("client_secret") : true),
   );
 
   const complete = $derived.by(() => {
     if (!draft?.key.trim() || !draft.name.trim()) return false;
     if (fresh && !custom) return (chosen?.asks ?? []).every((variable) => draft.asked[variable]?.trim());
     if (saml) return draft.idpEntityId.trim() && draft.idpSsoUrl.trim() && draft.idpCertificates.trim();
+    if (mcp) return fresh ? draft.resourceUrl.trim() : true;
 
     return draft.clientId.trim() && draft.authorizationUrl.trim() && draft.tokenUrl.trim();
   });
@@ -565,6 +609,28 @@
         </div>
       {/if}
 
+      {#if mcp}
+        <div class="flex flex-col gap-2">
+          {#if fresh && custom}
+            <Field
+              label="MCP server URL"
+              bind:value={draft.resourceUrl}
+              autocapitalize="none"
+              autocorrect="off"
+              spellcheck="false"
+              placeholder="https://mcp.acme.test/mcp"
+            />
+          {:else}
+            <span class="font-mono text-xs break-all opacity-70">{draft.resourceUrl}</span>
+          {/if}
+          <p class="text-xs opacity-60">
+            masks finds the server's own authorization server from its protected resource metadata and
+            registers itself there, so there is no client ID to copy. An MCP server never signs anybody in;
+            it is only something applications can be let use.
+          </p>
+        </div>
+      {/if}
+
       {#if custom && oidc}
         <div class="flex flex-wrap items-end gap-3">
           <div class="min-w-64 flex-1">
@@ -583,7 +649,7 @@
         </div>
       {/if}
 
-      {#if custom && !saml}
+      {#if custom && !saml && !mcp}
         <div class="grid gap-3 sm:grid-cols-2">
           <Field label="Authorization URL" bind:value={draft.authorizationUrl} />
           <Field label="Token URL" bind:value={draft.tokenUrl} />
@@ -596,7 +662,7 @@
         </div>
       {/if}
 
-      {#if !saml}
+      {#if !saml && !mcp}
         <div class="flex flex-col gap-3">
           <span class="legend">Credentials</span>
 
@@ -653,7 +719,7 @@
         </div>
       {/if}
 
-      {#if custom}
+      {#if custom && !mcp}
         <details class="text-sm" open={oauth2 || saml}>
           <summary class="cursor-pointer opacity-70">Where each claim comes from</summary>
 
@@ -679,6 +745,52 @@
         </details>
       {/if}
 
+      {#if !saml}
+        <div class="flex flex-col gap-3 rounded-lg bg-base-200 p-3">
+          <span class="legend">Applications</span>
+
+          {#if !mcp}
+            <label class="flex items-start gap-3 text-sm">
+              <input type="checkbox" class="toggle toggle-sm" bind:checked={draft.delegates} />
+              <span>
+                Let applications use somebody's {draft.name.trim() || "provider"} account
+                <span class="block text-xs opacity-60">
+                  An approved application can ask a person to let it act as them at
+                  {draft.name.trim() || "the provider"} while they are away. masks keeps the tokens, refreshes
+                  them, and hands each one only to the application that person said yes to.
+                </span>
+              </span>
+            </label>
+          {/if}
+
+          {#if draft.delegates || mcp}
+            <div class="grid gap-3 sm:grid-cols-2">
+              <Field
+                label="What applications may do"
+                bind:value={draft.delegatedScopes}
+                autocapitalize="none"
+                autocorrect="off"
+                spellcheck="false"
+                placeholder={mcp ? "whatever the server grants" : "https://www.googleapis.com/auth/drive.readonly"}
+              />
+              <Field
+                label="Extra parameters when connecting"
+                bind:value={draft.delegationParams}
+                autocapitalize="none"
+                autocorrect="off"
+                spellcheck="false"
+                placeholder="access_type=offline prompt=consent"
+              />
+            </div>
+            <p class="text-xs opacity-60">
+              An application asks for <span class="font-mono">masks:delegate:{draft.key.trim() || "key"}</span>.
+              Changing what applications may do asks everybody to connect again.
+            </p>
+          {/if}
+        </div>
+      {/if}
+
+      {#if !mcp}
       <div class="flex flex-col gap-3 rounded-lg bg-base-200 p-3">
         <span class="legend">Signing in</span>
 
@@ -734,6 +846,7 @@
           {/if}
         </div>
       </div>
+      {/if}
 
       <div class="flex gap-2">
         <button type="button" class="btn btn-primary btn-sm" disabled={busy || !complete} onclick={save}>
@@ -758,6 +871,9 @@
       <Card title={provider.name} lede={provider.key}>
         {#snippet actions()}
           <button type="button" class="btn btn-sm" onclick={() => edit(provider)}>Edit</button>
+          {#if provider.protocol === "mcp"}
+            <button type="button" class="btn btn-sm" onclick={() => register(provider)}>Register again</button>
+          {/if}
           <button type="button" class="btn btn-sm btn-error btn-outline" onclick={() => archive(provider)}>
             Archive
           </button>
@@ -765,13 +881,18 @@
 
         <div class="flex flex-wrap gap-2">
           <span class="badge badge-ghost badge-sm">{PROTOCOLS[provider.protocol]}</span>
-          {#if provider.role === "delegate"}
+          {#if provider.protocol === "mcp"}
+            <span class="badge badge-ghost badge-sm">never signs in</span>
+          {:else if provider.role === "delegate"}
             <span class="badge badge-warning badge-sm">owns accounts</span>
           {:else}
             <span class="badge badge-ghost badge-sm">existing accounts only</span>
           {/if}
           {#if provider.trustsEmail}
             <span class="badge badge-ghost badge-sm">trusts confirmed addresses</span>
+          {/if}
+          {#if provider.delegates}
+            <span class="badge badge-info badge-sm">applications can use it</span>
           {/if}
           {#each provider.emailDomains as domain (domain)}
             <span class="badge badge-ghost badge-sm font-mono">@{domain}</span>
@@ -811,7 +932,7 @@
                 {/if}
               </dd>
             </div>
-          {:else}
+          {:else if provider.protocol !== "mcp"}
             <div>
               <dt class="text-xs opacity-60">Client ID</dt>
               <dd class="font-mono break-all">{provider.clientId}</dd>
@@ -836,6 +957,34 @@
               <dt class="text-xs opacity-60">Scopes asked upstream</dt>
               <dd class="font-mono text-xs break-all">{provider.scopes.join(" ") || "—"}</dd>
             </div>
+          {/if}
+
+          {#if provider.protocol === "mcp"}
+            <div class="sm:col-span-2">
+              <dt class="text-xs opacity-60">MCP server</dt>
+              <dd class="font-mono text-xs break-all">{provider.resourceUrl}</dd>
+            </div>
+            <div>
+              <dt class="text-xs opacity-60">Registered</dt>
+              <dd class="text-xs">{provider.registeredAt ? day(provider.registeredAt) : "never"}</dd>
+            </div>
+          {/if}
+
+          {#if provider.delegates}
+            <div>
+              <dt class="text-xs opacity-60">Applications ask for</dt>
+              <dd class="font-mono text-xs break-all">{provider.delegationScope}</dd>
+            </div>
+            <div>
+              <dt class="text-xs opacity-60">Applications using it</dt>
+              <dd>{provider.delegations}</dd>
+            </div>
+            {#if provider.delegatedScopes.length}
+              <div class="sm:col-span-2">
+                <dt class="text-xs opacity-60">What applications may do</dt>
+                <dd class="font-mono text-xs break-all">{provider.delegatedScopes.join(" ")}</dd>
+              </div>
+            {/if}
           {/if}
 
           <div>

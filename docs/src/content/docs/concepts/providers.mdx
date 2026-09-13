@@ -7,6 +7,9 @@ A provider is somewhere else people can sign in with: Google, GitHub, Apple, a c
 Entra, or anything that speaks OpenID Connect, OAuth 2.0 or SAML 2.0. The account there is linked
 to an account here, and that link is a **connected account**.
 
+A provider can also be something applications use on somebody's behalf: see
+[delegation](/concepts/delegation/).
+
 A provider only ever stands in for a password. It is never a second factor: somebody who signs in
 with one is still asked for an authenticator app or a passkey whenever their policy wants one.
 
@@ -145,14 +148,15 @@ Adding a provider starts from a preset, which fills in everything but the creden
 | Okta, Auth0 | OpenID Connect | domain |
 | Keycloak | OpenID Connect | domain, realm |
 | Microsoft Entra, Okta, Google Workspace | SAML 2.0 | metadata |
-| OpenID Connect, OAuth 2.0, SAML 2.0 | | everything |
+| Notion | MCP | nothing; masks registers itself |
+| OpenID Connect, OAuth 2.0, SAML 2.0, MCP server | | everything |
 
 ## Calling a provider's API
 
-masks signs people in and says who they are. It does not keep a provider's tokens, and it does not
-stand between an application and somebody else's API.
+An application that has to act as somebody at a provider while they are away — a nightly sync, an
+agent — asks for a [delegation](/concepts/delegation/), and masks keeps and refreshes the tokens.
 
-An application that wants to call Google Drive or the GitHub API does its own OAuth with that
+One that only calls a provider while the person is in front of it can do its own OAuth with that
 provider. The `identities` scope tells it which account to send the person to: userinfo carries each
 connected account, and the provider remembers the person, so the trip is a redirect and back.
 

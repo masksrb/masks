@@ -132,13 +132,14 @@ class TokensController < ApplicationController
         expires_at: RefreshToken.lifetime.from_now
       )
 
-      res.access_token = Payload.new(
+      res.access_token = Payload.new({
         "access_token" => access.jwt,
         "token_type" => access.token_type,
         "expires_in" => access.expires_in,
         "scope" => Scopes.join(scopes),
-        "refresh_token" => rotated.secret
-      )
+        "refresh_token" => rotated.secret,
+        "delegations" => delegated(token.actor, client, scopes)
+      }.compact)
     end
 
     def replayed!(spent, client)
@@ -192,8 +193,11 @@ class TokensController < ApplicationController
         requested_token_type: req.requested_token_type,
         scope: req.scope,
         resource: repeated("resource"),
-        lifetime: req.requested_lifetime
+        lifetime: req.requested_lifetime,
+        audience: repeated("audience")
       ).validate!
+
+      return res.access_token = Payload.new(exchange.release!) if exchange.upstream?
 
       access = exchange.issue!(jkt: jkt)
 
@@ -232,7 +236,27 @@ class TokensController < ApplicationController
         ).secret
       end
 
-      body
+      body.merge("delegations" => delegated(grant.actor, client, access.scopes)).compact
+    end
+
+    def delegated(actor, client, scopes)
+      wanted = Scopes.delegations(scopes).filter_map { |scope| Scopes.delegated_provider(scope) }
+
+      return nil if wanted.empty? || actor.nil?
+
+      Delegation.live.joins(connection: :provider)
+        .where(client: client, actor: actor, providers: { key: wanted })
+        .merge(Connection.live)
+        .includes(connection: :provider)
+        .map do |delegation|
+          {
+            "connection" => delegation.connection.uuid,
+            "provider" => delegation.connection.provider.key,
+            "provider_name" => delegation.connection.provider.name,
+            "label" => delegation.connection.label,
+            "subject" => issuer.subject_for(actor, client)
+          }.compact
+        end
     end
 
     def narrow(req, granted, client)

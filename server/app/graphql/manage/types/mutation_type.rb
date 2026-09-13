@@ -29,6 +29,8 @@ module Manage
       field :revoke_token, mutation: Mutations::RevokeToken
       field :revoke_connection, mutation: Mutations::RevokeConnection
       field :revoke_consent, mutation: Mutations::RevokeConsent
+      field :revoke_delegation, mutation: Mutations::RevokeDelegation
+      field :register_provider, mutation: Mutations::RegisterProvider
       field :revoke_session, mutation: Mutations::RevokeSession
       field :block_device, mutation: Mutations::BlockDevice
       field :unblock_device, mutation: Mutations::UnblockDevice

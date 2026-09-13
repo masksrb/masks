@@ -13,9 +13,20 @@ module Manage
       field :revoked_at, GraphQL::Types::ISO8601DateTime
       field :revoked_reason, String
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
+      field :delegable, Boolean, null: false
+      field :tokens_refreshed_at, GraphQL::Types::ISO8601DateTime
+      field :delegations, [ "Manage::Types::DelegationType" ], null: false
 
       def id
         object.uuid
+      end
+
+      def delegable
+        object.delegable?
+      end
+
+      def delegations
+        object.delegations.live.includes(:client).order(created_at: :desc)
       end
     end
   end

@@ -302,7 +302,12 @@ CREATE TABLE public.connections (
     updated_at timestamp(6) without time zone NOT NULL,
     email character varying,
     email_verified boolean DEFAULT false NOT NULL,
-    signed_in_at timestamp(6) without time zone
+    signed_in_at timestamp(6) without time zone,
+    access_token text,
+    refresh_token text,
+    access_token_expires_at timestamp(6) without time zone,
+    delegated_scopes character varying,
+    tokens_refreshed_at timestamp(6) without time zone
 );
 
 ALTER TABLE ONLY public.connections FORCE ROW LEVEL SECURITY;
@@ -363,6 +368,48 @@ CREATE SEQUENCE public.consents_id_seq
 --
 
 ALTER SEQUENCE public.consents_id_seq OWNED BY public.consents.id;
+
+
+--
+-- Name: delegations; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.delegations (
+    id bigint NOT NULL,
+    tenant_id bigint NOT NULL,
+    uuid uuid DEFAULT gen_random_uuid() NOT NULL,
+    client_id bigint NOT NULL,
+    actor_id bigint NOT NULL,
+    connection_id bigint NOT NULL,
+    scopes character varying DEFAULT ''::character varying NOT NULL,
+    consented_at timestamp(6) without time zone NOT NULL,
+    released_at timestamp(6) without time zone,
+    revoked_at timestamp(6) without time zone,
+    revoked_reason character varying,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+ALTER TABLE ONLY public.delegations FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: delegations_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.delegations_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: delegations_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.delegations_id_seq OWNED BY public.delegations.id;
 
 
 --
@@ -604,7 +651,13 @@ CREATE TABLE public.providers (
     idp_certificates text,
     metadata_url character varying,
     metadata_fetched_at timestamp(6) without time zone,
-    name_id_format character varying
+    name_id_format character varying,
+    delegates boolean DEFAULT false NOT NULL,
+    delegated_scopes character varying DEFAULT ''::character varying NOT NULL,
+    delegation_params jsonb DEFAULT '{}'::jsonb NOT NULL,
+    resource_url character varying,
+    registration_url character varying,
+    registered_at timestamp(6) without time zone
 );
 
 ALTER TABLE ONLY public.providers FORCE ROW LEVEL SECURITY;
@@ -955,6 +1008,13 @@ ALTER TABLE ONLY public.consents ALTER COLUMN id SET DEFAULT nextval('public.con
 
 
 --
+-- Name: delegations id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.delegations ALTER COLUMN id SET DEFAULT nextval('public.delegations_id_seq'::regclass);
+
+
+--
 -- Name: device_factors id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1100,6 +1160,14 @@ ALTER TABLE ONLY public.connections
 
 ALTER TABLE ONLY public.consents
     ADD CONSTRAINT consents_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: delegations delegations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.delegations
+    ADD CONSTRAINT delegations_pkey PRIMARY KEY (id);
 
 
 --
@@ -1386,6 +1454,48 @@ CREATE INDEX index_consents_on_client_id ON public.consents USING btree (client_
 --
 
 CREATE INDEX index_consents_on_tenant_id ON public.consents USING btree (tenant_id);
+
+
+--
+-- Name: index_delegations_on_actor_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_delegations_on_actor_id ON public.delegations USING btree (actor_id);
+
+
+--
+-- Name: index_delegations_on_client_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_delegations_on_client_id ON public.delegations USING btree (client_id);
+
+
+--
+-- Name: index_delegations_on_connection_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_delegations_on_connection_id ON public.delegations USING btree (connection_id);
+
+
+--
+-- Name: index_delegations_on_tenant_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_delegations_on_tenant_id ON public.delegations USING btree (tenant_id);
+
+
+--
+-- Name: index_delegations_on_tenant_id_and_uuid; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_delegations_on_tenant_id_and_uuid ON public.delegations USING btree (tenant_id, uuid);
+
+
+--
+-- Name: index_delegations_one_live; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_delegations_one_live ON public.delegations USING btree (client_id, actor_id, connection_id) WHERE (revoked_at IS NULL);
 
 
 --
@@ -1859,6 +1969,14 @@ ALTER TABLE ONLY public.namespaces
 
 
 --
+-- Name: delegations fk_rails_59ff52706f; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.delegations
+    ADD CONSTRAINT fk_rails_59ff52706f FOREIGN KEY (client_id) REFERENCES public.clients(id);
+
+
+--
 -- Name: connections fk_rails_6314b09676; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1899,6 +2017,14 @@ ALTER TABLE ONLY public.events
 
 
 --
+-- Name: delegations fk_rails_72cabb0bd2; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.delegations
+    ADD CONSTRAINT fk_rails_72cabb0bd2 FOREIGN KEY (tenant_id) REFERENCES public.tenants(id);
+
+
+--
 -- Name: tokens fk_rails_759b47e63a; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1928,6 +2054,14 @@ ALTER TABLE ONLY public.namespaces
 
 ALTER TABLE ONLY public.passkeys
     ADD CONSTRAINT fk_rails_79adc8e12d FOREIGN KEY (actor_id) REFERENCES public.actors(id);
+
+
+--
+-- Name: delegations fk_rails_82d8dbeda6; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.delegations
+    ADD CONSTRAINT fk_rails_82d8dbeda6 FOREIGN KEY (actor_id) REFERENCES public.actors(id);
 
 
 --
@@ -2027,6 +2161,14 @@ ALTER TABLE ONLY public.devices
 
 
 --
+-- Name: delegations fk_rails_daf4c679f6; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.delegations
+    ADD CONSTRAINT fk_rails_daf4c679f6 FOREIGN KEY (connection_id) REFERENCES public.connections(id);
+
+
+--
 -- Name: events fk_rails_e77ed48c6c; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2101,6 +2243,12 @@ ALTER TABLE public.connections ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.consents ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: delegations; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.delegations ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: device_factors; Type: ROW SECURITY; Schema: public; Owner: -
@@ -2205,6 +2353,13 @@ CREATE POLICY tenant_isolation ON public.consents USING ((tenant_id = (NULLIF(cu
 
 
 --
+-- Name: delegations tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.delegations USING ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint)) WITH CHECK ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint));
+
+
+--
 -- Name: device_factors tenant_isolation; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -2294,6 +2449,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260913090000'),
 ('20260913080000'),
 ('20260913070000'),
 ('20260913060000'),

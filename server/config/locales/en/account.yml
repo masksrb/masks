@@ -79,7 +79,10 @@ en:
         signs_you_in: "signs you in"
         link: "Connect %{provider}"
         disconnect: "Disconnect"
-        confirm_disconnect: "Disconnect %{provider}? If you sign in with it, you will need another way in."
+        confirm_disconnect: "Disconnect %{provider}? If you sign in with it, you will need another way in. Every application using it stops."
+        delegated: "%{client} can use it while you are away"
+        stop: "Stop"
+        confirm_stop: "Stop %{client} using your %{provider} account? It has to ask you again."
 
       info:
         heading: "Details"

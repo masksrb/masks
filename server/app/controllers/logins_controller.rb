@@ -53,7 +53,8 @@ class LoginsController < ApplicationController
   def provider
     return link_connection if Linking.pending?(session, callback_params)
 
-    login = run(event: "provider:callback", updates: callback_params)
+    event = LoginStates::Delegation.pending?(login_store, callback_params) ? "delegation:callback" : "provider:callback"
+    login = run(event: event, updates: callback_params)
 
     settle(login) if login.settled? && pending.nil?
 
@@ -89,7 +90,8 @@ class LoginsController < ApplicationController
 
     def resolved_rid
       @resolved_rid ||= params[:rid].presence ||
-        login_store.dig(LoginStates::Provider::HELD, "rid").presence
+        login_store.dig(LoginStates::Provider::HELD, "rid").presence ||
+        login_store.dig(LoginStates::Delegation::HELD, "rid").presence
     end
 
     def callback_params

@@ -14,7 +14,8 @@ class Provider < ApplicationRecord
   OIDC = "oidc".freeze
   OAUTH2 = "oauth2".freeze
   SAML = "saml".freeze
-  PROTOCOLS = [ OIDC, OAUTH2, SAML ].freeze
+  MCP = "mcp".freeze
+  PROTOCOLS = [ OIDC, OAUTH2, SAML, MCP ].freeze
 
   CREDENTIAL = "credential".freeze
   DELEGATE = "delegate".freeze
@@ -23,7 +24,11 @@ class Provider < ApplicationRecord
   CLIENT_SECRET_POST = "client_secret_post".freeze
   CLIENT_SECRET_BASIC = "client_secret_basic".freeze
   SIGNED_SECRET = "signed_secret".freeze
-  TOKEN_AUTH_METHODS = [ CLIENT_SECRET_POST, CLIENT_SECRET_BASIC, SIGNED_SECRET ].freeze
+  PUBLIC = "none".freeze
+  TOKEN_AUTH_METHODS = [ CLIENT_SECRET_POST, CLIENT_SECRET_BASIC, SIGNED_SECRET, PUBLIC ].freeze
+  DELEGATION_SCOPE = "masks:delegate:".freeze
+  PROTECTED_RESOURCE_PATH = "/.well-known/oauth-protected-resource".freeze
+  AUTHORIZATION_SERVER_PATHS = %w[/.well-known/oauth-authorization-server /.well-known/openid-configuration].freeze
 
   FORM_POST = "form_post".freeze
   SIGNED_SECRET_LIFETIME = 5.minutes
@@ -36,6 +41,7 @@ class Provider < ApplicationRecord
   encrypts :private_key
 
   has_many :connections, dependent: :destroy
+  has_many :delegations, through: :connections
 
   validates :key, presence: true,
                   uniqueness: { scope: :tenant_id },
@@ -49,6 +55,8 @@ class Provider < ApplicationRecord
   validates :idp_entity_id, :idp_sso_url, :idp_certificates, presence: true, if: :saml?
   validates :issuer, presence: true, if: :oidc?
   validates :userinfo_url, presence: true, if: :oauth2?
+  validates :resource_url, presence: true, if: :mcp?
+  validates :token_auth_method, exclusion: { in: [ PUBLIC ], message: "none is only for an MCP server's own authorization server" }, unless: :mcp?
   validates :subject_claim, format: { with: CLAIM_PATH }
   validates :subject_claim, inclusion: {
     in: OIDC_SUBJECT_CLAIMS,
@@ -61,17 +69,22 @@ class Provider < ApplicationRecord
   validate :private_key_is_usable, if: :signs_its_secret?
   validate :certificates_are_usable, if: :saml?
   validate :signup_scopes_stay_ordinary
+  validate :delegation_is_possible
+  validate :delegation_params_stay_out_of_the_way
 
   normalizes :issuer, with: ->(value) { value.to_s.strip.chomp("/").presence }
   normalizes :response_mode, with: ->(value) { value.to_s.strip.presence }
 
   before_validation :name_the_subject, if: :saml?
+  before_validation :delegate_always, if: :mcp?
 
-  URLS = %i[authorization_url token_url userinfo_url emails_url jwks_uri issuer idp_sso_url metadata_url].freeze
+  URLS = %i[authorization_url token_url userinfo_url emails_url jwks_uri issuer idp_sso_url metadata_url
+            resource_url registration_url].freeze
   RESERVED_PARAMS = %w[response_type client_id redirect_uri scope state nonce
                        code_challenge code_challenge_method response_mode].freeze
 
-  scope :signing_in, -> { active }
+  scope :signing_in, -> { active.where.not(protocol: MCP) }
+  scope :delegating, -> { active.where(delegates: true) }
 
   class << self
     def discover(issuer)
@@ -98,7 +111,7 @@ class Provider < ApplicationRecord
   end
 
   def federation
-    @federation ||= { OIDC => Federation::Oidc, OAUTH2 => Federation::OAuth2, SAML => Federation::Saml }
+    @federation ||= { OIDC => Federation::Oidc, OAUTH2 => Federation::OAuth2, SAML => Federation::Saml, MCP => Federation::Mcp }
       .fetch(protocol, Federation::Oidc).new(self)
   end
 
@@ -112,6 +125,22 @@ class Provider < ApplicationRecord
 
   def saml?
     protocol == SAML
+  end
+
+  def mcp?
+    protocol == MCP
+  end
+
+  def delegation_scope
+    "#{DELEGATION_SCOPE}#{key}"
+  end
+
+  def delegated_scope_list
+    Scopes.list(delegated_scopes)
+  end
+
+  def delegating?
+    delegates? && !archived?
   end
 
   def idp_certificate_list
@@ -148,7 +177,7 @@ class Provider < ApplicationRecord
   end
 
   def signs_in?
-    !archived?
+    !archived? && !mcp?
   end
 
   def signs_its_secret?
@@ -199,8 +228,8 @@ class Provider < ApplicationRecord
     held.merge("sub" => subject_claim)
   end
 
-  def authorize_url(redirect_uri:, state:, scopes: nil, nonce: nil, challenge: nil, prompt: nil)
-    query = authorize_params.merge(
+  def authorize_url(redirect_uri:, state:, scopes: nil, nonce: nil, challenge: nil, prompt: nil, extra: {})
+    query = authorize_params.merge(extra).merge(
       "response_type" => "code",
       "client_id" => client_id,
       "redirect_uri" => redirect_uri,
@@ -227,7 +256,64 @@ class Provider < ApplicationRecord
          grant_type: "authorization_code",
          code: code,
          redirect_uri: redirect_uri,
-         code_verifier: verifier)
+         code_verifier: verifier,
+         resource: resource_url.presence)
+  end
+
+  def refresh!(refresh_token)
+    post(token_url,
+         grant_type: "refresh_token",
+         refresh_token: refresh_token,
+         resource: resource_url.presence)
+  end
+
+  def register!(callback:)
+    raise Untrusted, "#{name} is not an MCP server" unless mcp?
+
+    server = authorization_server
+    raise Untrusted, "#{name}'s authorization server does not offer PKCE with S256" unless Array(server["code_challenge_methods_supported"]).include?("S256")
+    raise Untrusted, "#{name}'s authorization server does not let clients register themselves" if server["registration_endpoint"].blank?
+
+    registered = post_json(server["registration_endpoint"],
+                           "client_name" => "masks for #{Current.tenant&.name || name}",
+                           "redirect_uris" => [ callback ],
+                           "grant_types" => %w[authorization_code refresh_token],
+                           "response_types" => %w[code],
+                           "token_endpoint_auth_method" => registration_auth_method(server))
+
+    raise Untrusted, "#{name}'s authorization server registered no client_id" if registered["client_id"].blank?
+
+    assign_attributes(
+      issuer: server["issuer"].to_s.chomp("/").presence,
+      authorization_url: server["authorization_endpoint"],
+      token_url: server["token_endpoint"],
+      registration_url: server["registration_endpoint"],
+      client_id: registered["client_id"],
+      client_secret: registered["client_secret"].presence,
+      token_auth_method: registered["client_secret"].present? ? auth_method_for(registered) : PUBLIC,
+      registered_at: Time.current
+    )
+
+    self
+  end
+
+  def authorization_server
+    metadata = protected_resource_metadata
+    base = Array(metadata["authorization_servers"]).first.to_s.chomp("/")
+
+    raise Untrusted, "#{resource_url} names no authorization server" if base.blank?
+
+    usable = usable_uri(base)
+    raise Untrusted, "#{resource_url} names an authorization server that is not a URL" if usable.nil?
+
+    authorization_server_candidates(usable).each do |url|
+      document = get(url)
+      return document if document["issuer"].to_s.chomp("/") == base && document["authorization_endpoint"].present?
+    rescue Refused
+      next
+    end
+
+    raise Untrusted, "#{base} publishes no authorization server metadata"
   end
 
   def get(url, access_token = nil)
@@ -256,6 +342,59 @@ class Provider < ApplicationRecord
 
   private
 
+    def protected_resource_metadata
+      uri = usable_uri(resource_url)
+      raise Untrusted, "#{name} has no MCP server URL" if uri.nil?
+
+      path = uri.path.to_s.chomp("/")
+      candidates = [ "#{origin_of(uri)}#{PROTECTED_RESOURCE_PATH}#{path}" ]
+      candidates << "#{origin_of(uri)}#{PROTECTED_RESOURCE_PATH}" if path.present?
+
+      candidates.each do |url|
+        document = get(url)
+        return document if Array(document["authorization_servers"]).any?
+      rescue Refused
+        next
+      end
+
+      raise Untrusted, "#{resource_url} publishes no protected resource metadata"
+    end
+
+    def authorization_server_candidates(uri)
+      path = uri.path.to_s.chomp("/")
+      origin = origin_of(uri)
+
+      AUTHORIZATION_SERVER_PATHS.flat_map do |well_known|
+        path.present? ? [ "#{origin}#{well_known}#{path}", "#{origin}#{path}#{well_known}" ] : [ "#{origin}#{well_known}" ]
+      end
+    end
+
+    def origin_of(uri)
+      port = uri.port == uri.default_port ? "" : ":#{uri.port}"
+
+      "#{uri.scheme}://#{uri.host}#{port}"
+    end
+
+    def registration_auth_method(server)
+      offered = Array(server["token_endpoint_auth_methods_supported"])
+
+      return PUBLIC if offered.include?(PUBLIC) || offered.empty?
+
+      (offered & [ CLIENT_SECRET_BASIC, CLIENT_SECRET_POST ]).first || PUBLIC
+    end
+
+    def auth_method_for(registered)
+      [ CLIENT_SECRET_BASIC, CLIENT_SECRET_POST ].include?(registered["token_endpoint_auth_method"]) ? registered["token_endpoint_auth_method"] : CLIENT_SECRET_POST
+    end
+
+    def post_json(url, body)
+      request(url) do |uri|
+        Net::HTTP::Post.new(uri, "Accept" => "application/json", "Content-Type" => "application/json").tap do |post|
+          post.body = JSON.generate(body)
+        end
+      end
+    end
+
     def post(url, **params)
       request(url) do |uri|
         Net::HTTP::Post.new(uri, "Accept" => "application/json").tap do |post|
@@ -271,6 +410,8 @@ class Provider < ApplicationRecord
         post.set_form_data(params.compact)
       when SIGNED_SECRET
         post.set_form_data(params.merge(client_id: client_id, client_secret: signed_secret).compact)
+      when PUBLIC
+        post.set_form_data(params.merge(client_id: client_id).compact)
       else
         post.set_form_data(params.merge(client_id: client_id, client_secret: client_secret).compact)
       end
@@ -355,6 +496,33 @@ class Provider < ApplicationRecord
 
       unless claims.values.all? { |path| path.is_a?(String) && path.match?(CLAIM_PATH) }
         errors.add(:claims, "paths are names separated by dots")
+      end
+    end
+
+    def delegate_always
+      self.delegates = true
+    end
+
+    def delegation_is_possible
+      return unless delegates?
+
+      errors.add(:delegates, "is not something a SAML identity provider can do") if saml?
+      errors.add(:delegated_scopes, "must name what applications may do with the account") if delegated_scope_list.empty? && !mcp?
+
+      reserved = Scopes.reserved(delegated_scopes)
+      errors.add(:delegated_scopes, "may not name #{Scopes.join(reserved)}") if reserved.any?
+    end
+
+    def delegation_params_stay_out_of_the_way
+      held = delegation_params
+
+      return errors.add(:delegation_params, "must be a set of names and values") unless held.is_a?(Hash)
+
+      taken = held.keys.map(&:to_s) & RESERVED_PARAMS
+      errors.add(:delegation_params, "may not set #{taken.join(', ')} — the request builds those") if taken.any?
+
+      unless held.values.all? { |value| value.is_a?(String) || value.is_a?(Numeric) || [ true, false ].include?(value) }
+        errors.add(:delegation_params, "values have to be plain, not nested")
       end
     end
 

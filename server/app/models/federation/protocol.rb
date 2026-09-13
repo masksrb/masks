@@ -3,16 +3,17 @@ module Federation
     STATE_BYTES = 32
     VERIFIER_BYTES = 64
 
-    attr_reader :provider
+    attr_reader :provider, :tokens
 
     def initialize(provider)
       @provider = provider
     end
 
-    def start(callback:)
+    def start(callback:, delegated: false)
       handoff = {
         "state" => SecureRandom.urlsafe_base64(STATE_BYTES),
-        "verifier" => SecureRandom.urlsafe_base64(VERIFIER_BYTES)
+        "verifier" => SecureRandom.urlsafe_base64(VERIFIER_BYTES),
+        "delegated" => delegated
       }.merge(extra_handoff)
 
       [ authorize_url(callback, handoff), handoff ]
@@ -27,11 +28,11 @@ module Federation
       raise Provider::Refused, upstream_error(params) if params["error"].present?
       raise Provider::Refused, "#{provider.name} returned no code" if params["code"].blank?
 
-      tokens = provider.redeem!(code: params["code"].to_s, redirect_uri: callback, verifier: handoff["verifier"])
+      @tokens = provider.redeem!(code: params["code"].to_s, redirect_uri: callback, verifier: handoff["verifier"])
 
       identity = normalize(identify(tokens, handoff, params)).merge(supplement(tokens)).compact
 
-      raise Provider::Untrusted, "#{provider.name} returned no #{provider.subject_claim} to identify the account by" if identity["sub"].blank?
+      raise Provider::Untrusted, "#{provider.name} returned no #{provider.subject_claim} to identify the account by" if identity["sub"].blank? && !anonymous?
 
       identity
     end
@@ -40,6 +41,10 @@ module Federation
 
       def extra_handoff
         {}
+      end
+
+      def anonymous?
+        false
       end
 
       def supplement(_tokens)
@@ -51,13 +56,20 @@ module Federation
       end
 
       def authorize_url(callback, handoff)
+        delegated = handoff["delegated"]
+
         provider.authorize_url(
           redirect_uri: callback,
           state: handoff["state"],
-          scopes: scopes,
+          scopes: delegated ? Scopes.union(scopes, provider.delegated_scope_list) : scopes,
           nonce: handoff["nonce"],
-          challenge: challenge(handoff["verifier"])
+          challenge: challenge(handoff["verifier"]),
+          extra: delegated ? delegation_extra : {}
         )
+      end
+
+      def delegation_extra
+        provider.delegation_params.is_a?(Hash) ? provider.delegation_params.stringify_keys : {}
       end
 
       def challenge(verifier)

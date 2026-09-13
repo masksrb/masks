@@ -1,5 +1,5 @@
 module ScopesHelper
-  CONSEQUENTIAL = /(:write|:command|:exec|:delete|:admin)\z|\Aoffline_access\z/
+  CONSEQUENTIAL = /(:write|:command|:exec|:delete|:admin)\z|\Aoffline_access\z|\Amasks:delegate:./
 
   def consequential_scope?(scope)
     scope.to_s.match?(CONSEQUENTIAL)

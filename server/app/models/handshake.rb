@@ -39,6 +39,10 @@ class Handshake
     end
   end
 
+  def grant_types
+    Scopes.delegations(scopes).any? || scopes.include?(Provider::DELEGATION_SCOPE) ? GRANT_TYPES + [ Exchange::GRANT_TYPE ] : GRANT_TYPES
+  end
+
   def canonical
     {
       "name" => name,

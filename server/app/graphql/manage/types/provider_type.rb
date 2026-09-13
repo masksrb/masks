@@ -40,6 +40,14 @@ module Manage
       field :trusts_email, Boolean, null: false
       field :email_domains, [ String ], null: false
       field :signup_scopes, [ String ], null: false
+      field :delegates, Boolean, null: false
+      field :delegated_scopes, [ String ], null: false
+      field :delegation_params, GraphQL::Types::JSON, null: false
+      field :delegation_scope, String, null: false
+      field :resource_url, String
+      field :registration_url, String
+      field :registered_at, GraphQL::Types::ISO8601DateTime
+      field :delegations, Integer, null: false
 
       def scopes
         object.scope_list
@@ -71,6 +79,14 @@ module Manage
 
       def connections
         ::Connection.live.where(provider_id: object.id).count
+      end
+
+      def delegated_scopes
+        object.delegated_scope_list
+      end
+
+      def delegations
+        ::Delegation.live.joins(:connection).where(connections: { provider_id: object.id }).count
       end
 
       def signed_in

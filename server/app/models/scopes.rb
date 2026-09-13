@@ -6,6 +6,7 @@ module Scopes
   IDENTITIES = "identities".freeze
   MANAGE = "masks:manage".freeze
   HANDSHAKE = "masks:handshake".freeze
+  DELEGATE = "masks:delegate:".freeze
 
   DESCRIBED = {
     OPENID => "openid",
@@ -62,6 +63,14 @@ module Scopes
       refused(available, requested).empty?
     end
 
+    def delegations(value)
+      list(value).select { |scope| scope.start_with?(DELEGATE) && scope.length > DELEGATE.length }
+    end
+
+    def delegated_provider(scope)
+      scope.to_s.delete_prefix(DELEGATE) if scope.to_s.start_with?(DELEGATE) && scope.to_s.length > DELEGATE.length
+    end
+
     def reserved(value)
       list(value).select { |scope| scope.start_with?(NAMESPACE) }
     end
@@ -73,6 +82,11 @@ module Scopes
     def description_for(scope, locale: I18n.locale)
       if prefix?(scope)
         return I18n.t("scopes.namespace", namespace: scope.chomp(":"), locale: locale)
+      end
+
+      if (provider = delegated_provider(scope))
+        named = Provider.find_by(key: provider)&.name || provider
+        return I18n.t("scopes.delegate", provider: named, locale: locale)
       end
 
       key = DESCRIBED[scope]

@@ -30,11 +30,15 @@ module Manage
       argument :trusts_email, Boolean, required: false
       argument :email_domains, [ String ], required: false
       argument :signup_scopes, [ String ], required: false
+      argument :delegates, Boolean, required: false
+      argument :delegated_scopes, [ String ], required: false
+      argument :delegation_params, GraphQL::Types::JSON, required: false
+      argument :resource_url, String, required: false
 
       field :provider, Types::ProviderType, null: false
 
       def resolve(key:, scopes: nil, authorize_params: nil, client_secret: nil, private_key: nil,
-                  email_domains: nil, signup_scopes: nil, **attributes)
+                  email_domains: nil, signup_scopes: nil, delegated_scopes: nil, **attributes)
         provider = provider!(key)
 
         provider.assign_attributes(attributes)
@@ -44,13 +48,15 @@ module Manage
         provider.private_key = private_key if private_key.present?
         provider.email_domains = ProviderDomains.join(email_domains) unless email_domains.nil?
         provider.signup_scopes = Scopes.join(signup_scopes) unless signup_scopes.nil?
+        provider.delegated_scopes = Scopes.join(delegated_scopes) unless delegated_scopes.nil?
         provider.assign_attributes(jwks: {}, jwks_fetched_at: nil) if provider.jwks_uri_changed? || provider.issuer_changed?
 
         save!(provider)
         audit!(
           ::Event::PROVIDER_UPDATED,
           provider: provider.key,
-          changed: changed(attributes, scopes, client_secret, private_key, email_domains, signup_scopes)
+          changed: changed(attributes, scopes, client_secret, private_key, email_domains, signup_scopes) +
+            (delegated_scopes.nil? ? [] : [ "delegated_scopes" ])
         )
 
         { provider: provider }

@@ -10,6 +10,8 @@ module Manage
       field :guide, String
       field :trusts_email, Boolean, null: false
       field :custom, Boolean, null: false, method: :custom?
+      field :delegated_scopes, [ String ], null: false
+      field :delegates, Boolean, null: false, method: :delegates?
     end
   end
 end
