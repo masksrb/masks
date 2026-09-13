@@ -23,19 +23,23 @@ module LoginStates
     end
 
     prompts "enrol" do
-      open! if required?
+      open! if required? || offered_at_signup?
       open?
     end
 
     def enabled?
-      actor.present? && login.first_factored? && (required? || open?)
+      actor.present? && login.first_factored? && (required? || open? || offered_at_signup?)
     end
 
     def as_json
+      signing_up = login.store[Signup::SIGNED_UP]
+
       {
         "enrolment" => {
           "required" => required?,
-          "settingUp" => login.store[Setup::CONFIGURING].present?,
+          "signingUp" => signing_up,
+          "steps" => signing_up && Signup.steps(signing_up["first_run"]),
+          "offers" => offers,
           "otp" => otp_json,
           "passkeys" => {
             "count" => actor.passkeys.count,
@@ -61,7 +65,14 @@ module LoginStates
     end
 
     def required?
-      login.first_factored? && actor.manages? && !actor.second_factor?
+      login.first_factored? && !actor.second_factor? && (actor.manages? || login.policy.second_factor_required)
+    end
+
+    def offers
+      offered = actor.manages? ? SignInPolicy::SECOND_FACTORS : login.policy.second_factors
+
+      { "otp" => offered.include?("otp"), "passkey" => offered.include?("passkey"),
+        "backupCodes" => offered.include?("backup_codes") }
     end
 
     private
@@ -76,8 +87,17 @@ module LoginStates
         held.present?
       end
 
+      def offered_at_signup?
+        signed_up = login.store[Signup::SIGNED_UP]
+
+        signed_up.present? && !signed_up["enrolment_offered"] && (offers["otp"] || offers["passkey"])
+      end
+
       def open!
         return if open?
+
+        signed_up = login.store[Signup::SIGNED_UP]
+        login.store[Signup::SIGNED_UP] = signed_up.merge("enrolment_offered" => true) if signed_up.present?
 
         login.store[HELD] = { "actor_id" => actor.id, "expires_at" => (Time.current + WINDOW).to_i }
       end
@@ -105,7 +125,7 @@ module LoginStates
       end
 
       def enrol_otp
-        return unless open? && !actor.otp?
+        return unless open? && !actor.otp? && offers["otp"]
 
         secret = otp_secret
         totp = ROTP::TOTP.new(secret)
@@ -126,7 +146,7 @@ module LoginStates
       end
 
       def offer_passkey
-        return unless open?
+        return unless open? && offers["passkey"]
 
         options = relying_party.registration_options(actor, user_verification: "required")
 
@@ -134,7 +154,7 @@ module LoginStates
       end
 
       def enrol_passkey
-        return unless open?
+        return unless open? && offers["passkey"]
 
         challenge = held.dig("passkey", "challenge")
         hold(passkey: nil)
@@ -160,7 +180,7 @@ module LoginStates
       end
 
       def enrolled!(*methods)
-        unless actor.backup_codes?
+        if offers["backupCodes"] && !actor.backup_codes?
           codes = actor.generate_backup_codes!
 
           Event.record!(Event::BACKUP_CODES_GENERATED, actor: actor, count: codes.length)

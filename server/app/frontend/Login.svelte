@@ -13,13 +13,13 @@ import Identify from "./prompts/identify.svelte";
 import ResetPassword from "./prompts/reset-password.svelte";
 import SecondFactor from "./prompts/second-factor.svelte";
 import Settled from "./prompts/settled.svelte";
-import Setup from "./prompts/setup.svelte";
-import SetupPassword from "./prompts/setup-password.svelte";
+import Signup from "./prompts/signup.svelte";
+import SignupPassword from "./prompts/signup-password.svelte";
 import SetupConfigure from "./prompts/setup-configure.svelte";
 
 const prompts = {
-  setup: Setup,
-  "setup-password": SetupPassword,
+  signup: Signup,
+  "signup-password": SignupPassword,
   "setup-configure": SetupConfigure,
   "accept-invitation": AcceptInvitation,
   identify: Identify,
@@ -39,8 +39,8 @@ const Prompt = $derived(prompts[login.prompt]);
 
 const SURFACES = {
   consent: "grant",
-  setup: "grant",
-  "setup-password": "grant",
+  signup: "grant",
+  "signup-password": "grant",
   "setup-configure": "grant",
 };
 
@@ -63,7 +63,7 @@ $effect.pre(() => {
 
 $effect(() => {
   const surface =
-    SURFACES[login.prompt] ?? (login.auth.enrolment?.settingUp ? "grant" : "challenge");
+    SURFACES[login.prompt] ?? (login.auth.enrolment?.signingUp ? "grant" : "challenge");
   const paired = login.prompt === "settled" && Boolean(login.client?.name);
   const column = document.querySelector(".auth-col");
 

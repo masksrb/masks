@@ -1,0 +1,15 @@
+<% tenant = Current.tenant&.name.to_s %>
+
+<div class="auth-pair">
+  <span class="auth-mark auth-mark-client<%= " auth-mark-pending" if mark.blank? %>" aria-hidden="true"><%= mark.to_s.first&.upcase %></span>
+  <span class="auth-wire"></span>
+  <span class="auth-mark" aria-hidden="true"><%= tenant.first&.upcase %></span>
+</div>
+
+<% if first_run %>
+  <%= render "logins/head", cap: t("logins.shared.setup_cap"), title: t("logins.shared.setup_title"), name: tenant %>
+<% else %>
+  <%= render "logins/head", title: t("logins.shared.signup_title"), name: tenant %>
+<% end %>
+
+<%= render "logins/steps", steps: steps, at: at %>

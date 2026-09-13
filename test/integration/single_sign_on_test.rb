@@ -94,7 +94,7 @@ class SingleSignOnTest < ActionDispatch::IntegrationTest
 
     get "/login"
 
-    assert_equal "setup", auth_data["prompt"]
+    assert_equal "signup", auth_data["prompt"]
     assert_nil auth_data["providers"]
   end
 

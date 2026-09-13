@@ -37,7 +37,7 @@ class TenancyTest < ActionDispatch::IntegrationTest
     get "/login"
 
     assert_response :success
-    assert_equal "setup", auth_data["prompt"],
+    assert_equal "signup", auth_data["prompt"],
                  "the other tenant has no actors of its own and must be asked to set up"
   end
 end

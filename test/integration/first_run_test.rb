@@ -4,13 +4,13 @@ class FirstRunTest < ActionDispatch::IntegrationTest
   PASSWORD = "a-long-enough-password".freeze
 
   def setup_params(**overrides)
-    { event: "setup", nickname: "owner", email: "owner@example.invalid",
+    { event: "signup", nickname: "owner", email: "owner@example.invalid",
       password: PASSWORD, password_confirmation: PASSWORD,
       called: "Demo" }.merge(overrides)
   end
 
   def identify_params(**overrides)
-    { event: "setup", nickname: "owner", email: "owner@example.invalid" }.merge(overrides)
+    { event: "signup", nickname: "owner", email: "owner@example.invalid" }.merge(overrides)
   end
 
   def with_declared(list)
@@ -40,7 +40,7 @@ class FirstRunTest < ActionDispatch::IntegrationTest
 
     post "/login", params: { event: "start-over" }, as: :json
 
-    assert_equal "setup", JSON.parse(response.body)["prompt"]
+    assert_equal "signup", JSON.parse(response.body)["prompt"]
   end
 
   test "the root of an empty tenant goes straight to the only thing that can happen there" do
@@ -80,8 +80,8 @@ class FirstRunTest < ActionDispatch::IntegrationTest
     post "/login", params: identify_params, as: :json
     body = JSON.parse(response.body)
 
-    assert_equal "setup-password", body["prompt"]
-    assert_equal "owner", body.dig("setup", "nickname")
+    assert_equal "signup-password", body["prompt"]
+    assert_equal "owner", body.dig("signup", "nickname")
     assert_equal 0, within(@tenant) { Actor.count }
 
     get "/login"
@@ -90,7 +90,7 @@ class FirstRunTest < ActionDispatch::IntegrationTest
     assert_match "Create the manager", response.body
     assert_match "Confirm password", response.body
 
-    post "/login", params: { event: "setup", password: PASSWORD,
+    post "/login", params: { event: "signup", password: PASSWORD,
                              password_confirmation: PASSWORD }, as: :json
     body = JSON.parse(response.body)
 
@@ -142,11 +142,11 @@ class FirstRunTest < ActionDispatch::IntegrationTest
     host! host_for(@tenant)
 
     post "/login", params: identify_params, as: :json
-    post "/login", params: { event: "setup-edit" }, as: :json
+    post "/login", params: { event: "signup-edit" }, as: :json
     body = JSON.parse(response.body)
 
-    assert_equal "setup", body["prompt"]
-    assert_equal "owner", body.dig("setup", "nickname")
+    assert_equal "signup", body["prompt"]
+    assert_equal "owner", body.dig("signup", "nickname")
 
     get "/login"
 
@@ -192,7 +192,7 @@ class FirstRunTest < ActionDispatch::IntegrationTest
          as: :json
     body = JSON.parse(response.body)
 
-    assert_equal "setup-password", body["prompt"]
+    assert_equal "signup-password", body["prompt"]
     assert_includes body["warnings"], "short-password"
     assert_equal 0, within(@tenant) { Actor.count }
   end
@@ -203,7 +203,7 @@ class FirstRunTest < ActionDispatch::IntegrationTest
     post "/login", params: setup_params(email: ""), as: :json
     body = JSON.parse(response.body)
 
-    assert_equal "setup", body["prompt"]
+    assert_equal "signup", body["prompt"]
     assert_includes body["warnings"], "missing-email"
     assert_equal 0, within(@tenant) { Actor.count }
   end

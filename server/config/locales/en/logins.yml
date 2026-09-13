@@ -11,6 +11,23 @@ en:
       tab_identification: "Identification"
       tab_credentials: "Credentials"
       tab_configuration: "Configuration"
+      tab_confirmation: "Confirmation"
+      setup_cap: "Welcome!"
+      setup_title: "Set up"
+      signup_title: "Create an account at"
+      token: "Setup token"
+      token_hint: "This instance was started with one, and will not run without it."
+      origin: "Set up at"
+      once: "This screen will not appear again."
+      docs: "Read the documentation."
+      phone: "Phone"
+      confirm: "Confirm password"
+      password_hint: "At least %{minimum} characters."
+      edit: "Edit"
+      submit_first_run: "Create the manager"
+      submit_signup: "Create my account"
+      have_account: "Already have an account?"
+      sign_in_instead: "Sign in instead"
       nickname: "Nickname"
       account: "Account"
       email: "Email"
@@ -36,6 +53,7 @@ en:
       heading: "Sign in"
       heading_to: "Sign in to %{client}"
       identifier: "Nickname or email"
+      signup_hint: "New here? Enter the address you want to use, and an account is made for it."
 
     first_factor:
       title: "Enter your password"
@@ -48,9 +66,7 @@ en:
       use_backup_code: "Use a backup code"
 
     enrol:
-      cap: "Welcome!"
       title: "Secure your account"
-      setup_title: "Set up"
       lede: "Add as many second factors as you like. This account needs at least one."
       lede_optional: "Add as many second factors as you like."
       otp: "Authenticator app"
@@ -72,6 +88,7 @@ en:
       copied: "Copied"
       kept: "I have kept my backup codes somewhere safe"
       done: "Continue"
+      skip: "Skip for now"
 
     backup_code:
       title: "Use a backup code"
@@ -91,37 +108,17 @@ en:
       hint: "At least %{minimum} characters. Signs you out everywhere else."
       working: "Setting"
 
-    setup:
-      cap: "Welcome!"
-      title: "Set up"
-      token: "Setup token"
-      token_hint: "This instance was started with one, and will not run without it."
-      origin: "Set up at"
-      once: "This screen will not appear again."
-      docs: "Read the documentation."
+    signup: {}
 
-    setup_password:
-      cap: "Welcome!"
-      title: "Set up"
-      confirm: "Confirm password"
-      password_hint: "At least %{minimum} characters."
-      edit: "Edit"
-      origin: "Set up at"
-      submit: "Create the manager"
+    signup_password:
+      submit: "Create my account"
       working: "Creating"
-      once: "This screen will not appear again."
-      docs: "Read the documentation."
 
     setup_configure:
-      cap: "Welcome!"
-      title: "Set up"
       called: "This installation is called"
       called_hint: "It heads every screen, and every email masks sends."
-      origin: "Set up at"
       submit: "Finish setting up"
       working: "Finishing"
-      once: "This screen will not appear again."
-      docs: "Read the documentation."
 
     consent:
       title: "Allow %{client}?"
@@ -159,6 +156,10 @@ en:
       invalid-configuration: "That configuration cannot be saved."
       invalid-account: "That nickname cannot be used here."
       missing-email: "Enter an email address."
+      missing-phone: "Enter a phone number."
+      invalid-phone: "Enter the phone number in international form, like +15551234567."
+      common-password: "That password is one of the most common. Choose another."
+      signup-domain-refused: "Accounts here cannot be made with that address."
       invitation-expired: "That invitation is no longer valid. Ask for another."
       reset-expired: "That reset link is no longer valid. Ask for another."
       no-mailer: "This server cannot send email. Ask a manager."

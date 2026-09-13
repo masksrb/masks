@@ -27,12 +27,18 @@ class Actor < ApplicationRecord
             uniqueness: { scope: :tenant_id, case_sensitive: false },
             allow_blank: true
 
+  validates :phone,
+            format: { with: Adapters::Sms::NUMBER },
+            uniqueness: { scope: :tenant_id },
+            allow_blank: true
+
   validate :named
 
   before_save :activate_once_a_password_exists
 
   normalizes :nickname, with: ->(value) { value.to_s.strip.presence }
   normalizes :email, with: ->(value) { value.to_s.strip.downcase.presence }
+  normalizes :phone, with: ->(value) { value.to_s.gsub(/[\s().-]/, "").presence }
 
   normalizes :name, :given_name, :family_name, :middle_name, :profile_url, :picture_url,
              :website_url, :gender, :birthdate, :zoneinfo, :locale,

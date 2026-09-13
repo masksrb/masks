@@ -2,7 +2,7 @@
 import Action from "../shared/Action.svelte";
 import Head from "../shared/Head.svelte";
 import Identified from "../shared/Identified.svelte";
-import SetupSteps from "../shared/SetupSteps.svelte";
+import SignupHead from "../shared/SignupHead.svelte";
 import { available, enrol, refused } from "../lib/passkey.js";
 
 let { login } = $props();
@@ -11,13 +11,12 @@ const enrolment = $derived(login.auth.enrolment ?? {});
 const otp = $derived(enrolment.otp ?? {});
 const passkeys = $derived(enrolment.passkeys ?? { count: 0 });
 const codes = $derived(enrolment.backupCodes ?? {});
-const settingUp = $derived(Boolean(enrolment.settingUp));
-const tenant = $derived(login.auth.tenant?.name ?? "");
-const manager = $derived(login.actor?.identifier ?? "");
+const signingUp = $derived(enrolment.signingUp ?? null);
+const offers = $derived(enrolment.offers ?? { otp: true, passkey: true, backupCodes: true });
 const secured = $derived(!enrolment.required);
 const issued = $derived(codes.issued ?? []);
 
-const passkeyable = available();
+const passkeyable = $derived(offers.passkey && available());
 
 let code = $state("");
 let kept = $state(false);
@@ -27,8 +26,7 @@ let unusable = $state(null);
 
 const coded = $derived(code.replace(/\D/g, "").length === 6);
 const ready = $derived(secured && (issued.length === 0 || kept));
-
-const initial = (name) => (name ? name.trim().slice(0, 1).toUpperCase() : "");
+const anything = $derived(Boolean(otp.enabled || passkeys.count > 0));
 
 function turnOn(event) {
   event.preventDefault();
@@ -80,18 +78,17 @@ function done(event) {
 }
 </script>
 
-<div class="flow" class:setup={settingUp} class:setup-ready={settingUp && ready}>
-  {#if settingUp}
-    <div class="auth-pair">
-      <span class="auth-mark auth-mark-client" aria-hidden="true"
-        >{initial(manager)}</span>
-      <span class="auth-wire"></span>
-      <span class="auth-mark" aria-hidden="true">{initial(tenant)}</span>
-    </div>
+<div class="flow" class:setup={signingUp} class:setup-ready={signingUp && ready}>
+  {#if signingUp}
+    <SignupHead
+      {login}
+      firstRun={signingUp.first_run}
+      steps={enrolment.steps}
+      at={2}
+      mark={login.actor?.identifier ?? ""}
+    />
 
-    <Head {login} title={login.t("setup_title")} name={tenant} cap={login.t("cap")} />
-
-    <SetupSteps {login} at={2} />
+    <p class="aside">{enrolment.required ? login.t("lede") : login.t("lede_optional")}</p>
   {:else}
     <Head
       {login}
@@ -103,6 +100,7 @@ function done(event) {
   {/if}
 
   <div class="slab">
+    {#if offers.otp}
     <div class="ledger-row ledger-step" class:ledger-step-done={otp.enabled}>
       <span class="ledger-label">{login.t("otp")}</span>
 
@@ -136,6 +134,7 @@ function done(event) {
         </form>
       {/if}
     </div>
+    {/if}
 
     {#if passkeyable}
       <div class="ledger-row ledger-step" class:ledger-step-done={passkeys.verified}>
@@ -161,6 +160,7 @@ function done(event) {
       </div>
     {/if}
 
+    {#if offers.backupCodes}
     <div class="ledger-row ledger-step" class:ledger-step-done={issued.length > 0 || codes.remaining > 0}>
       <span class="ledger-label">{login.t("backup_codes")}</span>
 
@@ -180,6 +180,7 @@ function done(event) {
         <span class="field-hint">{login.t("backup_codes_waiting")}</span>
       {/if}
     </div>
+    {/if}
   </div>
 
   <form class="flow" onsubmit={done}>
@@ -195,7 +196,7 @@ function done(event) {
       type="submit"
       {ready}
       busy={login.loading}
-      label={login.t("done")}
+      label={anything || enrolment.required ? login.t("done") : login.t("skip")}
       working={login.t("working")}
     />
   </form>

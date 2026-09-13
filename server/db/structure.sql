@@ -63,6 +63,10 @@ CREATE TABLE public.actors (
     webauthn_id character varying,
     otp_last_step bigint,
     muted_notifications jsonb DEFAULT '[]'::jsonb NOT NULL,
+    phone character varying,
+    phone_verified_at timestamp(6) without time zone,
+    signed_up_at timestamp(6) without time zone,
+    pending_approval_at timestamp(6) without time zone,
     CONSTRAINT actors_are_named CHECK (((nickname IS NOT NULL) OR (email IS NOT NULL)))
 );
 
@@ -1214,6 +1218,13 @@ CREATE UNIQUE INDEX index_actors_on_tenant_id_and_nickname ON public.actors USIN
 
 
 --
+-- Name: index_actors_on_tenant_id_and_phone; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_actors_on_tenant_id_and_phone ON public.actors USING btree (tenant_id, phone) WHERE (phone IS NOT NULL);
+
+
+--
 -- Name: index_actors_on_uuid; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2280,6 +2291,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260913020000'),
 ('20260913010000'),
 ('20260913000000'),
 ('20260912000000');

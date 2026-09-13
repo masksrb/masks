@@ -1,17 +1,18 @@
 class Login
   STATES = [
-    LoginStates::Setup,
     LoginStates::Invitation,
     LoginStates::PasswordReset,
     LoginStates::Passkey,
     LoginStates::Provider,
     LoginStates::Identifier,
+    LoginStates::Signup,
     LoginStates::Password,
     LoginStates::FirstFactor,
     LoginStates::OneTimePassword,
     LoginStates::BackupCode,
     LoginStates::SecondFactor,
     LoginStates::Enrolment,
+    LoginStates::Configure,
     LoginStates::Consent
   ].freeze
 
@@ -41,6 +42,20 @@ class Login
 
   def tenant
     Current.tenant
+  end
+
+  def policy
+    @policy ||= SignInPolicy.for(client: client, tenant: tenant)
+  end
+
+  def first_run?
+    return @first_run if defined?(@first_run)
+
+    @first_run = !Actor.exists?
+  end
+
+  def first_run!
+    remove_instance_variable(:@first_run) if defined?(@first_run)
   end
 
   def identifier

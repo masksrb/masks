@@ -9,6 +9,9 @@
     <%= form.text_field :identifier, value: login.identifier,
           autocomplete: "username", autocapitalize: "none", autocorrect: "off",
           spellcheck: "false", class: "control" %>
+    <% if login.as_json["signupOpen"] %>
+      <span class="field-hint"><%= t(".signup_hint") %></span>
+    <% end %>
   </label>
 
   <button type="submit" class="action"><%= t("logins.shared.continue") %></button>

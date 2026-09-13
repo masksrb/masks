@@ -108,7 +108,7 @@ module OidcFlow
   end
 
   def set_up!(**params)
-    post "/login", params: { event: "setup", nickname: "owner", email: "owner@example.invalid",
+    post "/login", params: { event: "signup", nickname: "owner", email: "owner@example.invalid",
                              password: "a-long-enough-password",
                              password_confirmation: "a-long-enough-password" }.merge(params.except(:called)),
          as: :json
@@ -213,7 +213,7 @@ module OidcFlow
   end
 
   def awaiting_login?
-    !response.redirect? && %w[setup identify first-factor second-factor backup-code enrol].include?(auth_data&.dig("prompt"))
+    !response.redirect? && %w[signup identify first-factor second-factor backup-code enrol].include?(auth_data&.dig("prompt"))
   end
 
   def authorized_code(actor:, registration:, resource: nil, scope: "openid profile email offline_access")

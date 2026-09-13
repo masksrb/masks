@@ -14,15 +14,15 @@ class LoginSetupTest < ActiveSupport::TestCase
   end
 
   def identify(nickname: "owner", email: "owner@example.invalid", **updates)
-    step(event: "setup", nickname: nickname, email: email, **updates)
+    step(event: "signup", nickname: nickname, email: email, **updates)
   end
 
   def name_of(login)
-    login.as_json.dig("setup", "name")
+    login.as_json.dig("signup", "name")
   end
 
   def credit(password: PASSWORD, confirmation: password)
-    step(event: "setup", password: password, password_confirmation: confirmation)
+    step(event: "signup", password: password, password_confirmation: confirmation)
   end
 
   def enrol
@@ -52,13 +52,13 @@ class LoginSetupTest < ActiveSupport::TestCase
   end
 
   test "a tenant with no actors asks to be set up before it asks who you are" do
-    assert_equal "setup", step.prompt
+    assert_equal "signup", step.prompt
   end
 
   test "the name and address are taken first, and nothing is created yet" do
     login = identify
 
-    assert_equal "setup-password", login.prompt
+    assert_equal "signup-password", login.prompt
     assert_nil login.actor
     assert_equal 0, within { Actor.count }
   end
@@ -66,7 +66,7 @@ class LoginSetupTest < ActiveSupport::TestCase
   test "the credentials screen reads back what was entered" do
     identify(nickname: "owner", email: "owner@example.invalid", name: "Ada Lovelace")
 
-    published = step.as_json["setup"]
+    published = step.as_json["signup"]
 
     assert_equal "owner", published["nickname"]
     assert_equal "owner@example.invalid", published["email"]
@@ -136,13 +136,13 @@ class LoginSetupTest < ActiveSupport::TestCase
     enrol
 
     login = step
-    published = within { login.as_json["setup"] }
+    published = within { login.as_json["signup"] }
 
     assert_equal @tenant.name, published["called"]
   end
 
   test "one post that carries everything creates the manager but still stops for a second factor" do
-    login = step(event: "setup", nickname: "owner", email: "owner@example.invalid",
+    login = step(event: "signup", nickname: "owner", email: "owner@example.invalid",
                  password: PASSWORD, password_confirmation: PASSWORD,
                  called: "Payroll")
 
@@ -170,7 +170,7 @@ class LoginSetupTest < ActiveSupport::TestCase
     identify
     login = credit(password: PASSWORD, confirmation: "a-different-password")
 
-    assert_equal "setup-password", login.prompt
+    assert_equal "signup-password", login.prompt
     assert_includes login.warnings, "mismatched-password"
     assert_equal 0, within { Actor.count }
   end
@@ -178,22 +178,22 @@ class LoginSetupTest < ActiveSupport::TestCase
   test "editing goes back to the first screen with the entries kept" do
     identify(nickname: "owner", email: "owner@example.invalid")
 
-    login = step(event: "setup-edit")
+    login = step(event: "signup-edit")
 
-    assert_equal "setup", login.prompt
-    assert_equal "owner", login.as_json.dig("setup", "nickname")
+    assert_equal "signup", login.prompt
+    assert_equal "owner", login.as_json.dig("signup", "nickname")
 
-    assert_equal "setup-password", identify(nickname: "second").prompt
-    assert_equal "second", step.as_json.dig("setup", "nickname")
+    assert_equal "signup-password", identify(nickname: "second").prompt
+    assert_equal "second", step.as_json.dig("signup", "nickname")
   end
 
   test "a password posted while editing creates nothing" do
     identify
-    step(event: "setup-edit")
+    step(event: "signup-edit")
 
     login = credit
 
-    assert_equal "setup", login.prompt
+    assert_equal "signup", login.prompt
     assert_equal 0, within { Actor.count }
   end
 
@@ -227,7 +227,7 @@ class LoginSetupTest < ActiveSupport::TestCase
   test "setup without an email warns rather than moving on" do
     login = identify(nickname: "solo", email: nil)
 
-    assert_equal "setup", login.prompt
+    assert_equal "signup", login.prompt
     assert_includes login.warnings, "missing-email"
     assert_equal 0, within { Actor.count }
   end
@@ -242,7 +242,7 @@ class LoginSetupTest < ActiveSupport::TestCase
     create_actor
 
     assert_equal "identify", step.prompt
-    assert_equal "setup", within(other_tenant) {
+    assert_equal "signup", within(other_tenant) {
       Login.new(store: {}, event: nil, updates: {}).update
     }.prompt
   end
@@ -250,7 +250,7 @@ class LoginSetupTest < ActiveSupport::TestCase
   test "a blank nickname does not move on" do
     login = identify(nickname: " ")
 
-    assert_equal "setup", login.prompt
+    assert_equal "signup", login.prompt
     assert_includes login.warnings, "missing-nickname"
     assert_equal 0, within { Actor.count }
   end
@@ -259,7 +259,7 @@ class LoginSetupTest < ActiveSupport::TestCase
     identify
     login = credit(password: "short")
 
-    assert_equal "setup-password", login.prompt
+    assert_equal "signup-password", login.prompt
     assert_includes login.warnings, "short-password"
     assert_equal 0, within { Actor.count }
   end
@@ -268,23 +268,23 @@ class LoginSetupTest < ActiveSupport::TestCase
     identify(nickname: "-nope-")
     login = credit
 
-    assert_equal "setup-password", login.prompt
+    assert_equal "signup-password", login.prompt
     assert_includes login.warnings, "invalid-account"
     assert_equal 0, within { Actor.count }
   end
 
   test "no setup token configured means none is asked for" do
     refute LoginStates::Setup.token_required?
-    refute step.as_json.dig("setup", "token")
+    refute step.as_json.dig("signup", "token")
   end
 
   test "a configured setup token is required, and a wrong one creates nothing" do
     with_token("the-real-token") do
-      assert step.as_json.dig("setup", "token")
+      assert step.as_json.dig("signup", "token")
 
       login = identify(token: "not-the-token")
 
-      assert_equal "setup", login.prompt
+      assert_equal "signup", login.prompt
       assert_includes login.warnings, "invalid-setup-token"
       assert_equal 0, within { Actor.count }
     end
@@ -294,7 +294,7 @@ class LoginSetupTest < ActiveSupport::TestCase
     with_token("the-real-token") do
       login = identify
 
-      assert_equal "setup", login.prompt
+      assert_equal "signup", login.prompt
       assert_includes login.warnings, "invalid-setup-token"
       assert_equal 0, within { Actor.count }
     end
@@ -302,7 +302,7 @@ class LoginSetupTest < ActiveSupport::TestCase
 
   test "the right setup token gets past the first screen, and the manager is created" do
     with_token("the-real-token") do
-      assert_equal "setup-password", identify(token: "the-real-token").prompt
+      assert_equal "signup-password", identify(token: "the-real-token").prompt
 
       login = credit
 
@@ -320,7 +320,7 @@ class LoginSetupTest < ActiveSupport::TestCase
       enrol
       configure
 
-      assert_nil step.as_json["setup"]
+      assert_nil step.as_json["signup"]
     end
   end
 end

@@ -17,7 +17,11 @@ module LoginStates
     end
 
     prompts "identify" do
-      login.identifier.blank? && !login.first_factored?
+      login.identifier.blank? && !login.first_factored? && !login.first_run?
+    end
+
+    def as_json
+      { "signupOpen" => login.policy.signup && login.policy.first_factor?(:password) }
     end
 
     def start_over!

@@ -35,6 +35,9 @@ function onsubmit(event) {
       autofocus
       bind:value={identifier}
     />
+    {#if login.auth.signupOpen}
+      <span class="field-hint">{login.t("signup_hint")}</span>
+    {/if}
   </label>
 
   <Action
