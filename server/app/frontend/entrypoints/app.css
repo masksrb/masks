@@ -357,6 +357,15 @@
     background-repeat: no-repeat;
   }
 
+  .checkbox {
+    flex: none;
+    width: 1rem;
+    height: 1rem;
+    margin: 0;
+    accent-color: var(--color-primary);
+    cursor: pointer;
+  }
+
   .toggle {
     appearance: none;
     flex: none;

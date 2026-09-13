@@ -31,6 +31,8 @@ module Manage
       field :revoke_session, mutation: Mutations::RevokeSession
       field :block_device, mutation: Mutations::BlockDevice
       field :unblock_device, mutation: Mutations::UnblockDevice
+      field :block_devices, mutation: Mutations::BlockDevices
+      field :unblock_devices, mutation: Mutations::UnblockDevices
       field :sign_out_device, mutation: Mutations::SignOutDevice
       field :update_tenant, mutation: Mutations::UpdateTenant
       field :create_sign_in_policy, mutation: Mutations::CreateSignInPolicy

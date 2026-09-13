@@ -451,6 +451,85 @@ class ManageApiTest < ActionDispatch::IntegrationTest
     assert_not_nil blocked.dig("data", "blockDevice", "device", "blockedAt")
   end
 
+  test "devices are filtered by a fragment of their agent, ignoring case" do
+    held = bearer
+
+    within(@tenant) do
+      ::Device.identify(nil, user_agent: "curl/8.4.0")
+      ::Device.identify(nil, user_agent: "python-requests/2.31")
+    end
+
+    listed = ask(%({ devices(agent: "CURL") { userAgent } }), held).dig("data", "devices")
+
+    assert_equal [ "curl/8.4.0" ], listed.map { |one| one["userAgent"] }
+  end
+
+  test "every device matching an agent is blocked at once, and the agent is refused from then on" do
+    held = bearer
+
+    curls = within(@tenant) do
+      [ ::Device.identify(nil, user_agent: "curl/8.4.0"), ::Device.identify(nil, user_agent: "curl/7.1") ]
+    end
+    other = within(@tenant) { ::Device.identify(nil, user_agent: "python-requests/2.31") }
+
+    body = ask(%(mutation { blockDevices(agent: "curl", refuse: true) { count spared } }), held)
+
+    assert_equal({ "count" => 2, "spared" => false }, body.dig("data", "blockDevices"))
+    within(@tenant) do
+      assert curls.all? { |device| device.reload.blocked? }
+      assert_not other.reload.blocked?
+      assert_equal 2, Event.where(action: Event::DEVICE_BLOCKED).count
+      assert Tenant.find(@tenant.id).refuses?("curl/9")
+    end
+
+    ask(%(mutation { blockDevices(agent: "curl", refuse: true) { count } }), held)
+
+    assert_equal "curl", within(@tenant) { Tenant.find(@tenant.id).blocked_agents }
+  end
+
+  test "a bulk block never shuts out the device the manager is asking from" do
+    held = bearer
+
+    within(@tenant) do
+      Token.where.not(device_id: nil).last.device.update!(user_agent: "Mozilla/5.0 console")
+      ::Device.identify(nil, user_agent: "Mozilla/5.0 elsewhere")
+    end
+
+    body = ask(%(mutation { blockDevices(agent: "mozilla") { count spared } }), held)
+
+    assert_equal({ "count" => 1, "spared" => true }, body.dig("data", "blockDevices"))
+    assert_nil ask("{ viewer { nickname } }", held)["errors"]
+    assert_response :success
+  end
+
+  test "chosen devices are blocked and unblocked together" do
+    held = bearer
+
+    chosen = within(@tenant) { Array.new(3) { |n| ::Device.identify(nil, user_agent: "bot/#{n}") } }
+    ids = chosen.map { |device| device.id.to_s }
+
+    blocked = ask("mutation($ids: [ID!]) { blockDevices(ids: $ids) { count } }", held, ids: ids)
+
+    assert_equal 3, blocked.dig("data", "blockDevices", "count")
+
+    unblocked = ask("mutation($ids: [ID!]!) { unblockDevices(ids: $ids) { count } }", held, ids: ids.first(2))
+
+    assert_equal 2, unblocked.dig("data", "unblockDevices", "count")
+    assert_equal [ false, false, true ], within(@tenant) { chosen.map { |device| device.reload.blocked? } }
+  end
+
+  test "a bulk block names its devices one way, and an agent is needed to refuse one" do
+    held = bearer
+
+    [
+      %(mutation { blockDevices { count } }),
+      %(mutation { blockDevices(ids: ["1"], agent: "curl") { count } }),
+      %(mutation { blockDevices(ids: ["1"], refuse: true) { count } })
+    ].each do |query|
+      assert ask(query, held)["errors"].present?, query
+    end
+  end
+
   test "a nickname is writable, so a rename does not mean a new account" do
     body = ask(<<~GQL, bearer)
       mutation { updateActor(uuid: "#{@actor.uuid}", nickname: "renamed") { actor { nickname } } }

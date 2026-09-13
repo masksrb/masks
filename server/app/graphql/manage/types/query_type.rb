@@ -37,6 +37,7 @@ module Manage
         argument :actor, ID, required: false
         argument :blocked, Boolean, required: false
         argument :unattached, Boolean, required: false
+        argument :agent, String, required: false
         argument :limit, Integer, required: false
       end
 
@@ -171,11 +172,12 @@ module Manage
         scope.limit(bounded(limit))
       end
 
-      def devices(actor: nil, blocked: nil, unattached: nil, limit: nil)
+      def devices(actor: nil, blocked: nil, unattached: nil, agent: nil, limit: nil)
         scope = ::Device.newest_first
         scope = scope.for_actor(::Actor.find_by(uuid: actor)) if actor.present?
-        scope = blocked ? scope.where.not(blocked_at: nil) : scope.allowed unless blocked.nil?
+        scope = blocked ? scope.blocked : scope.allowed unless blocked.nil?
         scope = scope.where.not(id: signed_in_on) if unattached
+        scope = scope.agent_like(agent) if agent.present?
 
         scope.limit(bounded(limit))
       end

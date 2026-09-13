@@ -14,6 +14,8 @@ class Device < ApplicationRecord
 
   scope :newest_first, -> { order(last_seen_at: :desc) }
   scope :allowed, -> { where(blocked_at: nil) }
+  scope :blocked, -> { where.not(blocked_at: nil) }
+  scope :agent_like, ->(pattern) { where("user_agent ILIKE ?", "%#{sanitize_sql_like(pattern.to_s.strip)}%") }
 
   after_initialize :generate_defaults, if: :new_record?
 
