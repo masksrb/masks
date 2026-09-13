@@ -29,16 +29,14 @@ module LoginStates
     private
 
       def challenge_json
-        held = login.store[HELD]
-        return {} if held.blank?
-
-        { "options" => held["options"] }
+        @options ? { "options" => @options } : {}
       end
 
       def offer
         options = relying_party.authentication_options(login.actor)
 
-        login.store[HELD] = { "challenge" => options.challenge, "options" => options.as_json }
+        @options = options.as_json
+        login.store[HELD] = { "challenge" => options.challenge }
       end
 
       def verify

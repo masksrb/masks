@@ -44,7 +44,7 @@ module LoginStates
           "passkeys" => {
             "count" => actor.passkeys.count,
             "verified" => actor.verified_passkeys?,
-            "options" => held.dig("passkey", "options")
+            "options" => @passkey_options
           }.compact,
           "backupCodes" => {
             "issued" => held["codes"],
@@ -150,7 +150,8 @@ module LoginStates
 
         options = relying_party.registration_options(actor, user_verification: "required")
 
-        hold(passkey: { "challenge" => options.challenge, "options" => options.as_json })
+        @passkey_options = options.as_json
+        hold(passkey: { "challenge" => options.challenge })
       end
 
       def enrol_passkey

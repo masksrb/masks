@@ -105,6 +105,23 @@ class EnrolmentTest < ActionDispatch::IntegrationTest
     assert event("enrol:done", kept: "1")["settled"]
   end
 
+  test "first-run setup can ask for a passkey without the session cookie overflowing" do
+    within(@tenant) { Actor.delete_all }
+
+    post "/login", params: { event: "signup", name: "Ada Lovelace", nickname: "admin-with-a-long-nickname",
+                             email: "a-rather-long-address@a-long-domain.example.com",
+                             password: "a-long-enough-password", password_confirmation: "a-long-enough-password" },
+         as: :json
+
+    assert_equal "enrol", JSON.parse(response.body)["prompt"]
+
+    offer = event("enrol:passkey-challenge")
+
+    assert_response :success
+    assert offer.dig("enrolment", "passkeys", "options", "challenge")
+    assert_operator cookies.to_hash.values.sum(&:bytesize), :<, 3500
+  end
+
   test "a passkey that does not verify the person is refused" do
     password_in
 
