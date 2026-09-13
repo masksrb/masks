@@ -13,9 +13,9 @@
     <div class="slab">
       <% if signup["token"] %>
         <label class="ledger-row ledger-step">
-          <span class="ledger-label"><%= t("logins.shared.token") %></span>
+          <span class="ledger-label"><%= t("logins.signing_up.token") %></span>
           <%= form.password_field :token, autocomplete: "off", class: "control" %>
-          <span class="field-hint"><%= t("logins.shared.token_hint") %></span>
+          <span class="field-hint"><%= t("logins.signing_up.token_hint") %></span>
         </label>
       <% end %>
 
@@ -50,7 +50,7 @@
 
       <% if signup["firstRun"] %>
         <div class="ledger-row">
-          <span class="ledger-label"><%= t("logins.shared.origin") %></span>
+          <span class="ledger-label"><%= t("logins.signing_up.origin") %></span>
           <span class="ledger-value aside-mono"><%= Current.origin %></span>
         </div>
       <% end %>
@@ -63,15 +63,15 @@
 
   <% if signup["firstRun"] %>
     <p class="aside">
-      <%= t("logins.shared.once") %>
-      <%= link_to t("logins.shared.docs"), Rails.configuration.masks.docs_url,
+      <%= t("logins.signing_up.once") %>
+      <%= link_to t("logins.signing_up.docs"), Rails.configuration.masks.docs_url,
             class: "textlink", rel: "noopener", target: "_blank" %>
     </p>
   <% else %>
     <%= form_with url: login_path, method: :delete, class: "aside" do %>
       <%= hidden_field_tag :rid, login.rid %>
-      <%= t("logins.shared.have_account") %>
-      <button type="submit" class="textlink"><%= t("logins.shared.sign_in_instead") %></button>
+      <%= t("logins.signing_up.have_account") %>
+      <button type="submit" class="textlink"><%= t("logins.signing_up.sign_in_instead") %></button>
     <% end %>
   <% end %>
 </div>

@@ -58,6 +58,21 @@ en:
         actor:
           scopes_changed: "What your %{tenant} account is allowed to do was changed."
 
+    confirmation_code:
+      subject: "%{code} is your %{tenant} confirmation code"
+      lede: "Enter this code where you are signing in to %{tenant}."
+      expiry: "It works once and expires in %{duration}. If this was not you, ignore it."
+
+    approval_requested:
+      subject: "%{nickname} is waiting to be let in to %{tenant}"
+      lede: "%{nickname} created an account at %{tenant}. It cannot sign in until a manager approves it."
+      action: "Review the account"
+
+    approved:
+      subject: "Your %{tenant} account is ready"
+      lede: "A manager approved your account at %{tenant}. You can sign in now."
+      action: "Sign in"
+
     email_verification:
       subject: "Confirm your email address for %{tenant}"
       confirm_html: "Confirm this address for %{nickname} at %{tenant}."

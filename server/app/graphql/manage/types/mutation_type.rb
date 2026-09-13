@@ -6,6 +6,7 @@ module Manage
       field :reset_password, mutation: Mutations::ResetPassword
       field :verify_email, mutation: Mutations::VerifyEmail
       field :update_actor, mutation: Mutations::UpdateActor
+      field :approve_actor, mutation: Mutations::ApproveActor
       field :set_actor_scopes, mutation: Mutations::SetActorScopes
       field :sign_out_actor, mutation: Mutations::SignOutActor
       field :delete_actor, mutation: Mutations::DeleteActor

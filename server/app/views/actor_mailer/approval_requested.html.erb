@@ -1,0 +1,5 @@
+<p class="lede"><%= t(".lede", nickname: @actor.identifier, tenant: @tenant_name) %></p>
+
+<% if @url %>
+  <%= render "action", url: @url, label: t(".action") %>
+<% end %>

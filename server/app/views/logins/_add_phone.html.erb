@@ -1,0 +1,14 @@
+<%= render "logins/confirm_head", login: login, title: t(".title"), lede: t(".lede") %>
+
+<%= form_with url: login_path, method: :post, id: "add-phone", class: "flow" do |form| %>
+  <%= hidden_field_tag :rid, login.rid %>
+  <%= form.hidden_field :event, value: "confirm:add-phone" %>
+
+  <label class="field">
+    <span class="field-label"><%= t("logins.shared.phone") %></span>
+    <%= form.telephone_field :phone, autocomplete: "tel", placeholder: "+15551234567", class: "control" %>
+    <span class="field-hint"><%= t(".hint") %></span>
+  </label>
+
+  <button type="submit" class="action"><%= t("logins.shared.continue") %></button>
+<% end %>

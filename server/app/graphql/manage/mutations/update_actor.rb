@@ -4,6 +4,7 @@ module Manage
       argument :uuid, ID
       argument :nickname, String, required: false
       argument :email, String, required: false
+      argument :phone, String, required: false
       argument :name, String, required: false
       argument :given_name, String, required: false
       argument :family_name, String, required: false
@@ -24,6 +25,7 @@ module Manage
 
         actor.assign_attributes(attributes)
         actor.email_verified_at = nil if changing_email
+        actor.phone_verified_at = nil if attributes.key?(:phone) && actor.phone_changed?
 
         save!(actor)
 

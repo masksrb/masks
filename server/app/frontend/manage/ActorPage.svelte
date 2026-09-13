@@ -38,7 +38,8 @@
   const QUERY = `
     query Actor($uuid: ID!) {
       actor(uuid: $uuid) {
-        uuid identifier nickname email emailVerified scopes otpEnabled backupCodesRemaining
+        uuid identifier nickname email emailVerified phone phoneVerified signedUpAt pendingApproval
+        scopes otpEnabled backupCodesRemaining
         backupCodesGeneratedAt lastLoginAt createdAt activated invitedAt
         passkeys { id label aaguid certification compromise userVerified lastUsedAt }
         name givenName familyName middleName profileUrl pictureUrl websiteUrl
@@ -437,6 +438,28 @@
             </ul>
           {/if}
         </Card>
+
+        {#if actor.pendingApproval}
+          <Card
+            title="Waiting to be let in"
+            lede="This person signed up under a policy that needs a manager's approval. They cannot sign in until somebody approves them."
+          >
+            <div class="flex flex-wrap gap-2">
+              <button
+                type="button"
+                class="btn btn-primary btn-sm"
+                onclick={() =>
+                  act(
+                    `mutation Approve($uuid: ID!) { approveActor(uuid: $uuid) { actor { uuid } } }`,
+                    { uuid },
+                    "Approved. They can sign in now, and they have been told.",
+                  )}
+              >
+                Approve
+              </button>
+            </div>
+          </Card>
+        {/if}
 
         <Card title="Second factor">
           {#if actor.otpEnabled}

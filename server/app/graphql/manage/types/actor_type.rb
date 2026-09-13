@@ -6,6 +6,10 @@ module Manage
       field :nickname, String
       field :email, String
       field :email_verified, Boolean, null: false
+      field :phone, String
+      field :phone_verified, Boolean, null: false
+      field :signed_up_at, GraphQL::Types::ISO8601DateTime
+      field :pending_approval, Boolean, null: false
       field :activated, Boolean, null: false
       field :invited_at, GraphQL::Types::ISO8601DateTime
       field :scopes, [ String ], null: false
@@ -43,6 +47,14 @@ module Manage
 
       def email_verified
         object.email_verified_at.present?
+      end
+
+      def phone_verified
+        object.phone_verified_at.present?
+      end
+
+      def pending_approval
+        object.pending_approval_at.present?
       end
 
       def activated

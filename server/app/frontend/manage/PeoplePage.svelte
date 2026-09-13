@@ -24,15 +24,17 @@
   const LENSES = [
     ["everyone", "Everyone", {}],
     ["invited", "Invited", { activated: false }],
+    ["waiting", "Awaiting approval", { pendingApproval: true }],
     ["managers", "Managers", { holds: "masks:manage" }],
   ];
 
   const QUERY = `
     query People(
-      $search: String, $activated: Boolean, $holds: String, $afterId: ID, $limit: Int
+      $search: String, $activated: Boolean, $holds: String, $pendingApproval: Boolean,
+      $afterId: ID, $limit: Int
     ) {
       actors(
-        search: $search, activated: $activated, holds: $holds,
+        search: $search, activated: $activated, holds: $holds, pendingApproval: $pendingApproval,
         afterId: $afterId, limit: $limit
       ) {
         uuid identifier nickname name email emailVerified otpEnabled backupCodesRemaining
@@ -95,6 +97,7 @@
         search: search.trim() || null,
         activated: narrowing.activated ?? null,
         holds: narrowing.holds ?? null,
+        pendingApproval: narrowing.pendingApproval ?? null,
         afterId,
         limit: PAGE,
       });
@@ -304,7 +307,9 @@
       count={people.length}
       empty={search.trim()
         ? `No person matches “${search.trim()}”.`
-        : lens === "invited"
+        : lens === "waiting"
+          ? "Nobody is waiting to be let in."
+          : lens === "invited"
           ? "Nobody is waiting on an invitation."
           : lens === "managers"
             ? "Nobody else holds masks:manage."

@@ -315,6 +315,24 @@ class ManageApiTest < ActionDispatch::IntegrationTest
     assert_match "default", refused["errors"].first["message"]
   end
 
+  test "a manager lists who is waiting for approval and lets them in" do
+    waiting = create_actor(@tenant, nickname: "waiting", pending_approval_at: Time.current, signed_up_at: Time.current)
+    held = bearer
+
+    listed = ask(%(query { actors(pendingApproval: true) { nickname pendingApproval } }), held)
+
+    assert_equal [ "waiting" ], listed.dig("data", "actors").map { |actor| actor["nickname"] }
+
+    body = ask(%(mutation { approveActor(uuid: "#{waiting.uuid}") { actor { pendingApproval } } }), held)
+
+    refute body.dig("data", "approveActor", "actor", "pendingApproval")
+    assert within(@tenant) { Event.where(action: Event::ACTOR_APPROVED, actor_id: waiting.id).exists? }
+
+    again = ask(%(mutation { approveActor(uuid: "#{waiting.uuid}") { actor { pendingApproval } } }), held)
+
+    assert_match "not waiting", again["errors"].first["message"]
+  end
+
   test "a sign-in policy cannot hand out masks: scopes to whoever signs up" do
     body = ask(<<~GQL, bearer)
       mutation {

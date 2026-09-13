@@ -136,7 +136,7 @@ class LoginSetupTest < ActiveSupport::TestCase
     enrol
 
     login = step
-    published = within { login.as_json["signup"] }
+    published = within { login.as_json["configure"] }
 
     assert_equal @tenant.name, published["called"]
   end
@@ -274,7 +274,7 @@ class LoginSetupTest < ActiveSupport::TestCase
   end
 
   test "no setup token configured means none is asked for" do
-    refute LoginStates::Setup.token_required?
+    refute LoginStates::Signup.token_required?
     refute step.as_json.dig("signup", "token")
   end
 

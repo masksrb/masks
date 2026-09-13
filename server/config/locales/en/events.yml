@@ -22,6 +22,11 @@ en:
       email:
         verification_sent: "Confirmation link sent"
         verified: "Email confirmed"
+      phone:
+        verification_sent: "Confirmation code texted"
+        verified: "Phone confirmed"
+      approval:
+        requested: "Waiting for approval"
       passkey:
         added: "Passkey added"
         removed: "Passkey removed"
@@ -54,6 +59,7 @@ en:
         signed_in: "Signed in with a provider"
         refused: "A provider sign-in was refused"
       actor:
+        approved: "Account approved"
         created: "Account created"
         provisioned: "Account created by a provider"
         updated: "Profile edited"

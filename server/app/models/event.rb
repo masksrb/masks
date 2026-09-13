@@ -23,6 +23,10 @@ class Event < ApplicationRecord
 
   EMAIL_VERIFICATION_SENT = "email.verification_sent".freeze
   EMAIL_VERIFIED = "email.verified".freeze
+  PHONE_VERIFICATION_SENT = "phone.verification_sent".freeze
+  PHONE_VERIFIED = "phone.verified".freeze
+  APPROVAL_REQUESTED = "approval.requested".freeze
+  ACTOR_APPROVED = "actor.approved".freeze
 
   PASSKEY_ADDED = "passkey.added".freeze
   PASSKEY_REMOVED = "passkey.removed".freeze

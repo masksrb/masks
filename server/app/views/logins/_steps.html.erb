@@ -1,7 +1,7 @@
-<nav class="tabset" aria-label="<%= t("logins.shared.tabs") %>">
+<nav class="tabset" aria-label="<%= t("logins.signing_up.tabs") %>">
   <% steps.each_with_index do |step, index| %>
     <% place = index + 1 %>
     <span class="tabset-tab<%= " tabset-done" if place < at %><%= " tabset-now" if place == at %>"
-          <%= tag.attributes(aria: { current: place == at ? "step" : nil }) %>><%= t("logins.shared.tab_#{step}") %></span>
+          <%= tag.attributes(aria: { current: place == at ? "step" : nil }) %>><%= t("logins.signing_up.tab_#{step}") %></span>
   <% end %>
 </nav>

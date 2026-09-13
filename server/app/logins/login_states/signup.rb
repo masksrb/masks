@@ -18,8 +18,12 @@ module LoginStates
         token.present?
       end
 
-      def steps(first_run)
-        first_run ? FIRST_RUN_STEPS : STEPS
+      def steps(first_run, policy = nil)
+        return FIRST_RUN_STEPS if first_run
+
+        confirming = policy && (policy.confirmation != SignInPolicy::NONE || policy.email_verified || policy.phone_verified)
+
+        confirming ? STEPS + [ "confirmation" ] : STEPS
       end
     end
 
@@ -53,7 +57,7 @@ module LoginStates
       {
         "signup" => {
           "firstRun" => first_run,
-          "steps" => self.class.steps(first_run),
+          "steps" => self.class.steps(first_run, policy),
           "token" => first_run && self.class.token_required?,
           "minimum" => policy.password_minimum,
           "asks" => {
@@ -157,7 +161,8 @@ module LoginStates
         Event.record!(Event::ACCOUNT_CREATED, actor: actor, first_run: @first_run,
                                               signup: !@first_run, policy: login.policy.key)
 
-        Verifications.open(actor: actor)
+        Verifications.open(actor: actor) unless !@first_run && login.policy.confirmation == SignInPolicy::CODE
+        Confirmations.request_approval(actor) if actor.pending_approval_at.present?
 
         login.store.delete(HELD)
         login.identifier = actor.identifier
@@ -187,6 +192,7 @@ module LoginStates
             phone: held["phone"],
             password: password,
             signed_up_at: Time.current,
+            pending_approval_at: !@first_run && login.policy.confirmation == SignInPolicy::APPROVAL ? Time.current : nil,
             scopes: Scopes.join(@first_run ? Scopes::STANDARD + [ Scopes::MANAGE ] : login.policy.signup_scope_list)
           )
 

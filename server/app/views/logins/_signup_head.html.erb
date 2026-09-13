@@ -7,9 +7,9 @@
 </div>
 
 <% if first_run %>
-  <%= render "logins/head", cap: t("logins.shared.setup_cap"), title: t("logins.shared.setup_title"), name: tenant %>
+  <%= render "logins/head", cap: t("logins.signing_up.setup_cap"), title: t("logins.signing_up.setup_title"), name: tenant %>
 <% else %>
-  <%= render "logins/head", title: t("logins.shared.signup_title"), name: tenant %>
+  <%= render "logins/head", title: t("logins.signing_up.signup_title"), name: tenant %>
 <% end %>
 
 <%= render "logins/steps", steps: steps, at: at %>

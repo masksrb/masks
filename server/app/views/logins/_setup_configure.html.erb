@@ -15,7 +15,7 @@
       </label>
 
       <div class="ledger-row">
-        <span class="ledger-label"><%= t("logins.shared.origin") %></span>
+        <span class="ledger-label"><%= t("logins.signing_up.origin") %></span>
         <span class="ledger-value aside-mono"><%= Current.origin %></span>
       </div>
     </div>
@@ -26,8 +26,8 @@
   <% end %>
 
   <p class="aside">
-    <%= t("logins.shared.once") %>
-    <%= link_to t("logins.shared.docs"), Rails.configuration.masks.docs_url,
+    <%= t("logins.signing_up.once") %>
+    <%= link_to t("logins.signing_up.docs"), Rails.configuration.masks.docs_url,
           class: "textlink", rel: "noopener", target: "_blank" %>
   </p>
 </div>

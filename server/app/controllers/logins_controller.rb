@@ -1,6 +1,6 @@
 class LoginsController < ApplicationController
   STORE = "login".freeze
-  VERIFYING = %w[password otp backup setup enrol:otp enrol:passkey].freeze
+  VERIFYING = %w[password otp backup signup enrol:otp enrol:passkey confirm:email confirm:phone].freeze
 
   skip_forgery_protection
 
@@ -16,7 +16,7 @@ class LoginsController < ApplicationController
 
   rate_limit to: Rails.configuration.masks.recovery_limit,
              within: 15.minutes, only: :update, name: "recovery",
-             if: -> { params[:event].to_s == "forgot-password" },
+             if: -> { %w[forgot-password confirm:resend].include?(params[:event].to_s) },
              by: -> { [ current_tenant.id, request.remote_ip ].join(":") },
              with: -> { too_many("too-many-attempts") }
 

@@ -1,0 +1,15 @@
+<% confirmation = login.as_json["confirmation"] %>
+
+<% if confirmation["signingUp"] %>
+  <%= render "logins/signup_head", first_run: false, steps: confirmation["steps"],
+                                   at: confirmation["steps"].length, mark: login.actor&.identifier.to_s %>
+
+  <div class="prompt-head">
+    <h2 class="prompt-title"><%= title %></h2>
+    <% if local_assigns[:lede].present? %><p class="prompt-lede"><%= lede %></p><% end %>
+  </div>
+<% else %>
+  <%= render "logins/head", title: title, lede: local_assigns[:lede] %>
+
+  <%= render "logins/identified", login: login %>
+<% end %>

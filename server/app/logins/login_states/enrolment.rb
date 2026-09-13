@@ -38,7 +38,7 @@ module LoginStates
         "enrolment" => {
           "required" => required?,
           "signingUp" => signing_up,
-          "steps" => signing_up && Signup.steps(signing_up["first_run"]),
+          "steps" => signing_up && Signup.steps(signing_up["first_run"], login.policy),
           "offers" => offers,
           "otp" => otp_json,
           "passkeys" => {

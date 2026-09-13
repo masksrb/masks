@@ -13,6 +13,10 @@ import Identify from "./prompts/identify.svelte";
 import ResetPassword from "./prompts/reset-password.svelte";
 import SecondFactor from "./prompts/second-factor.svelte";
 import Settled from "./prompts/settled.svelte";
+import AddPhone from "./prompts/add-phone.svelte";
+import AwaitingApproval from "./prompts/awaiting-approval.svelte";
+import ConfirmEmail from "./prompts/confirm-email.svelte";
+import ConfirmPhone from "./prompts/confirm-phone.svelte";
 import Signup from "./prompts/signup.svelte";
 import SignupPassword from "./prompts/signup-password.svelte";
 import SetupConfigure from "./prompts/setup-configure.svelte";
@@ -28,6 +32,10 @@ const prompts = {
   "second-factor": SecondFactor,
   "backup-code": BackupCode,
   enrol: Enrol,
+  "confirm-email": ConfirmEmail,
+  "confirm-phone": ConfirmPhone,
+  "add-phone": AddPhone,
+  "awaiting-approval": AwaitingApproval,
   consent: Consent,
   settled: Settled,
 };
@@ -63,7 +71,7 @@ $effect.pre(() => {
 
 $effect(() => {
   const surface =
-    SURFACES[login.prompt] ?? (login.auth.enrolment?.signingUp ? "grant" : "challenge");
+    SURFACES[login.prompt] ?? (login.auth.enrolment?.signingUp || login.auth.confirmation?.signingUp ? "grant" : "challenge");
   const paired = login.prompt === "settled" && Boolean(login.client?.name);
   const column = document.querySelector(".auth-col");
 

@@ -64,4 +64,46 @@ class ActorMailer < ApplicationMailer
       subject: t("actor_mailer.email_verification.subject", tenant: tenant_name)
     )
   end
+
+  def confirmation_code(actor, code, tenant_name:)
+    return message unless deliverable?
+
+    @actor = actor
+    @code = code
+    @tenant_name = tenant_name
+
+    mail(
+      from: self.class.from,
+      to: actor.email,
+      subject: t("actor_mailer.confirmation_code.subject", code: code, tenant: tenant_name)
+    )
+  end
+
+  def approval_requested(manager, actor, tenant_name:, origin: nil)
+    return message unless deliverable?
+
+    @actor = actor
+    @tenant_name = tenant_name
+    @url = origin.presence && "#{origin}/manage/people/#{actor.uuid}"
+
+    mail(
+      from: self.class.from,
+      to: manager.email,
+      subject: t("actor_mailer.approval_requested.subject", nickname: actor.identifier, tenant: tenant_name)
+    )
+  end
+
+  def approved(actor, tenant_name:, origin: nil)
+    return message unless deliverable?
+
+    @actor = actor
+    @tenant_name = tenant_name
+    @url = origin.presence && "#{origin}/"
+
+    mail(
+      from: self.class.from,
+      to: actor.email,
+      subject: t("actor_mailer.approved.subject", tenant: tenant_name)
+    )
+  end
 end

@@ -3,6 +3,9 @@ en:
     test:
       sms: "This is a test message from %{tenant}. Texts from masks will arrive like this."
 
+  texts:
+    code: "%{code} is your %{tenant} confirmation code. It expires in 10 minutes."
+
   adapter_mailer:
     test:
       subject: "A test message from %{tenant}"

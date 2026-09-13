@@ -8,6 +8,7 @@ module Manage
         argument :search, String, required: false
         argument :activated, Boolean, required: false
         argument :holds, String, required: false
+        argument :pending_approval, Boolean, required: false
         argument :after_id, ID, required: false
         argument :limit, Integer, required: false
       end
@@ -125,7 +126,7 @@ module Manage
         Current.tenant
       end
 
-      def actors(search: nil, activated: nil, holds: nil, after_id: nil, limit: nil)
+      def actors(search: nil, activated: nil, holds: nil, pending_approval: nil, after_id: nil, limit: nil)
         scope = Actor.newest_first
 
         if search.present?
@@ -135,6 +136,7 @@ module Manage
 
         scope = activated ? scope.where.not(activated_at: nil) : scope.where(activated_at: nil) unless activated.nil?
         scope = holding(scope, holds) if holds.present?
+        scope = pending_approval ? scope.where.not(pending_approval_at: nil) : scope.where(pending_approval_at: nil) unless pending_approval.nil?
         scope = scope.after(Actor.find_by(uuid: after_id)&.id) if after_id.present?
 
         scope.limit(bounded(limit))

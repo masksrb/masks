@@ -16,6 +16,10 @@ const SAID = {
 
   "email.verification_sent": "Confirmation sent",
   "email.verified": "Email confirmed",
+  "phone.verification_sent": "Confirmation code texted",
+  "phone.verified": "Phone confirmed",
+  "approval.requested": "Waiting for approval",
+  "actor.approved": "Account approved",
 
   "passkey.added": "Passkey added",
   "passkey.removed": "Passkey removed",

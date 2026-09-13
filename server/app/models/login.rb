@@ -12,6 +12,7 @@ class Login
     LoginStates::BackupCode,
     LoginStates::SecondFactor,
     LoginStates::Enrolment,
+    LoginStates::Confirmation,
     LoginStates::Configure,
     LoginStates::Consent
   ].freeze
@@ -226,9 +227,13 @@ class Login
     end
   end
 
+  SIGNING_UP = %w[signup signup-password setup-configure enrol confirm-email confirm-phone
+                  add-phone awaiting-approval].freeze
+
   def copy
     key = prompt.to_s.tr("-", "_")
     shared = I18n.t("logins.shared", default: {})
+    shared = shared.merge(I18n.t("logins.signing_up", default: {})) if SIGNING_UP.include?(prompt.to_s)
     named = key.present? ? I18n.t("logins.#{key}", default: {}) : {}
 
     shared.merge(named.is_a?(Hash) ? named : {}).transform_keys(&:to_s)
