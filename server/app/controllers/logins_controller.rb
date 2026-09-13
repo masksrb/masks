@@ -1,6 +1,6 @@
 class LoginsController < ApplicationController
   STORE = "login".freeze
-  VERIFYING = %w[password otp backup setup].freeze
+  VERIFYING = %w[password otp backup setup enrol:otp enrol:passkey].freeze
 
   skip_forgery_protection
 

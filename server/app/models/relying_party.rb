@@ -24,7 +24,7 @@ class RelyingParty
     )
   end
 
-  def registration_options(actor)
+  def registration_options(actor, user_verification: "preferred")
     party.options_for_registration(
       user: {
         id: handle_for(actor),
@@ -34,7 +34,7 @@ class RelyingParty
       exclude: Passkey.where(actor_id: actor.id).pluck(:external_id),
       authenticator_selection: {
         resident_key: "preferred",
-        user_verification: "preferred"
+        user_verification: user_verification
       }
     )
   end

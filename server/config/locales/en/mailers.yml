@@ -41,6 +41,7 @@ en:
         backup_code:
           spent: "A backup code was used to sign in to your %{tenant} account. %{remaining} are left."
         authenticator:
+          enabled: "An authenticator app was added to your %{tenant} account. Signing in now asks for its code."
           disabled: "The authenticator app on your %{tenant} account was removed. It is no longer asked for at sign-in."
         session:
           started: "Somebody signed in to your %{tenant} account on a device that had not been seen before."

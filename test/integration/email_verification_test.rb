@@ -76,14 +76,7 @@ class EmailVerificationTest < ActionDispatch::IntegrationTest
     host! host_for(fresh)
 
     with_mailer do
-      post "/login", params: {
-        event: "setup", nickname: "owner", email: "owner@example.invalid",
-        password: "a-long-enough-password",
-        password_confirmation: "a-long-enough-password",
-        called: "Demo"
-      }, as: :json
-
-      assert JSON.parse(response.body)["settled"]
+      assert set_up!["settled"]
 
       Tenant.switch(fresh) do
         actor = Actor.sole

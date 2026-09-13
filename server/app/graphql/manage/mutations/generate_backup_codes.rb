@@ -9,7 +9,7 @@ module Manage
       def resolve(uuid:)
         actor = actor!(uuid)
 
-        unless actor.otp?
+        unless actor.second_factor?
           refuse!("a backup code is a way past a second factor, and this actor has none")
         end
 

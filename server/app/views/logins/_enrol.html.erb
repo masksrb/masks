@@ -1,0 +1,84 @@
+<% enrolment = login.as_json["enrolment"] %>
+<% otp = enrolment["otp"] %>
+<% issued = enrolment.dig("backupCodes", "issued") || [] %>
+<% remaining = enrolment.dig("backupCodes", "remaining").to_i %>
+<% tenant = Current.tenant&.name.to_s %>
+<% manager = login.actor&.identifier.to_s %>
+
+<div class="flow<%= " setup" if enrolment["settingUp"] %>">
+  <% if enrolment["settingUp"] %>
+    <div class="auth-pair">
+      <span class="auth-mark auth-mark-client" aria-hidden="true"><%= manager.first&.upcase %></span>
+      <span class="auth-wire"></span>
+      <span class="auth-mark" aria-hidden="true"><%= tenant.first&.upcase %></span>
+    </div>
+
+    <%= render "logins/head", cap: t(".cap"), title: t(".setup_title"), name: tenant %>
+
+    <%= render "logins/setup_steps", at: 2 %>
+  <% else %>
+    <%= render "logins/head", title: t(".title"),
+          lede: enrolment["required"] ? t(".lede") : t(".lede_optional") %>
+
+    <%= render "logins/identified", login: login %>
+  <% end %>
+
+  <div class="slab">
+    <div class="ledger-row ledger-step<%= " ledger-step-done" if otp["enabled"] %>">
+      <span class="ledger-label"><%= t(".otp") %></span>
+
+      <% if otp["enabled"] %>
+        <span class="ledger-value"><%= t(".otp_on") %></span>
+      <% else %>
+        <div class="enrol">
+          <a class="enrol-qr" href="<%= otp["uri"] %>" aria-label="<%= t(".open") %>"><%= otp["qr"].html_safe %></a>
+          <div class="enrol-key">
+            <span class="field-hint"><%= t(".scan_hint") %></span>
+            <span class="aside-mono enrol-secret"><%= otp["secret"] %></span>
+          </div>
+        </div>
+
+        <%= form_with url: login_path, method: :post, id: "enrol-otp", class: "flow-tight" do |form| %>
+          <%= hidden_field_tag :rid, login.rid %>
+          <%= form.hidden_field :event, value: "enrol:otp" %>
+          <%= form.text_field :code, inputmode: "numeric", pattern: "[0-9 ]*",
+                autocomplete: "one-time-code", maxlength: 7, spellcheck: "false",
+                placeholder: t(".code"), aria: { label: t(".code") },
+                class: "control control-code" %>
+          <button type="submit" class="action action-quiet"><%= t(".turn_on") %></button>
+        <% end %>
+      <% end %>
+    </div>
+
+    <div class="ledger-row ledger-step<%= " ledger-step-done" if issued.any? || remaining.positive? %>">
+      <span class="ledger-label"><%= t(".backup_codes") %></span>
+
+      <% if issued.any? %>
+        <ol class="codes">
+          <% issued.each do |held| %>
+            <li class="aside-mono"><%= held %></li>
+          <% end %>
+        </ol>
+        <span class="field-hint"><%= t(".backup_codes_hint") %></span>
+      <% elsif remaining.positive? %>
+        <span class="field-hint"><%= t(".backup_codes_left", count: remaining) %></span>
+      <% else %>
+        <span class="field-hint"><%= t(".backup_codes_waiting") %></span>
+      <% end %>
+    </div>
+  </div>
+
+  <%= form_with url: login_path, method: :post, id: "enrol-done", class: "flow" do |form| %>
+    <%= hidden_field_tag :rid, login.rid %>
+    <%= form.hidden_field :event, value: "enrol:done" %>
+
+    <% if issued.any? %>
+      <label class="check">
+        <%= check_box_tag :kept, "1", false, required: true %>
+        <span><%= t(".kept") %></span>
+      </label>
+    <% end %>
+
+    <button type="submit" class="action"><%= t(".done") %></button>
+  <% end %>
+</div>

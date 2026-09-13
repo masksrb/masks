@@ -41,7 +41,7 @@ module LoginStates
     end
 
     prompts "setup-configure" do
-      configuring?
+      configuring? && enrolled?
     end
 
     def reload!
@@ -84,6 +84,10 @@ module LoginStates
 
       def configuring?
         login.store[CONFIGURING].present?
+      end
+
+      def enrolled?
+        actor&.second_factor? && login.store[Enrolment::HELD].blank?
       end
 
       def hold
@@ -144,7 +148,7 @@ module LoginStates
       end
 
       def configure
-        return unless configuring?
+        return unless configuring? && enrolled?
 
         asked = login.event == "setup-configure"
 

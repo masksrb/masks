@@ -379,6 +379,7 @@ class GrantsTest < ActionDispatch::IntegrationTest
         )
 
         within(@tenant) { @actor.update!(scopes: "openid profile email #{Scopes::MANAGE}") }
+        enable_otp(@actor)
 
         sign_in_as(@actor)
         authorize(

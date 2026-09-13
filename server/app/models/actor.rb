@@ -177,6 +177,14 @@ class Actor < ApplicationRecord
     otp_enabled_at.present? && otp_secret.present?
   end
 
+  def verified_passkeys?
+    passkeys.where(user_verified: true).exists?
+  end
+
+  def second_factor?
+    otp? || verified_passkeys?
+  end
+
   OTP_DRIFT = 30
 
   def verify_otp(code)

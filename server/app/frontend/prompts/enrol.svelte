@@ -1,0 +1,202 @@
+<script>
+import Action from "../shared/Action.svelte";
+import Head from "../shared/Head.svelte";
+import Identified from "../shared/Identified.svelte";
+import SetupSteps from "../shared/SetupSteps.svelte";
+import { available, enrol, refused } from "../lib/passkey.js";
+
+let { login } = $props();
+
+const enrolment = $derived(login.auth.enrolment ?? {});
+const otp = $derived(enrolment.otp ?? {});
+const passkeys = $derived(enrolment.passkeys ?? { count: 0 });
+const codes = $derived(enrolment.backupCodes ?? {});
+const settingUp = $derived(Boolean(enrolment.settingUp));
+const tenant = $derived(login.auth.tenant?.name ?? "");
+const manager = $derived(login.actor?.identifier ?? "");
+const secured = $derived(!enrolment.required);
+const issued = $derived(codes.issued ?? []);
+
+const passkeyable = available();
+
+let code = $state("");
+let kept = $state(false);
+let copied = $state(false);
+let adding = $state(false);
+let unusable = $state(null);
+
+const coded = $derived(code.replace(/\D/g, "").length === 6);
+const ready = $derived(secured && (issued.length === 0 || kept));
+
+const initial = (name) => (name ? name.trim().slice(0, 1).toUpperCase() : "");
+
+function turnOn(event) {
+  event.preventDefault();
+
+  if (!coded || login.loading) return;
+
+  const entered = code;
+  code = "";
+
+  login.submit("enrol:otp", { code: entered });
+}
+
+async function addPasskey() {
+  adding = true;
+  unusable = null;
+
+  try {
+    const offer = await login.submit("enrol:passkey-challenge", {});
+    const options = offer.enrolment?.passkeys?.options;
+
+    if (!options) {
+      unusable = login.t("passkey_unoffered");
+      return;
+    }
+
+    const credential = await enrol(options);
+
+    await login.submit("enrol:passkey", { passkey: credential });
+  } catch (error) {
+    if (!refused(error)) unusable = login.t("passkey_unusable");
+  } finally {
+    adding = false;
+  }
+}
+
+async function copy() {
+  try {
+    await navigator.clipboard.writeText(issued.join("\n"));
+    copied = true;
+  } catch {
+    copied = false;
+  }
+}
+
+function done(event) {
+  event.preventDefault();
+
+  if (ready && !login.loading) login.submit("enrol:done", { kept });
+}
+</script>
+
+<div class="flow" class:setup={settingUp} class:setup-ready={settingUp && ready}>
+  {#if settingUp}
+    <div class="auth-pair">
+      <span class="auth-mark auth-mark-client" aria-hidden="true"
+        >{initial(manager)}</span>
+      <span class="auth-wire"></span>
+      <span class="auth-mark" aria-hidden="true">{initial(tenant)}</span>
+    </div>
+
+    <Head {login} title={login.t("setup_title")} name={tenant} cap={login.t("cap")} />
+
+    <SetupSteps {login} at={2} />
+  {:else}
+    <Head
+      {login}
+      title={login.t("title")}
+      lede={enrolment.required ? login.t("lede") : login.t("lede_optional")}
+    />
+
+    <Identified {login} />
+  {/if}
+
+  <div class="slab">
+    <div class="ledger-row ledger-step" class:ledger-step-done={otp.enabled}>
+      <span class="ledger-label">{login.t("otp")}</span>
+
+      {#if otp.enabled}
+        <span class="ledger-value">{login.t("otp_on")}</span>
+      {:else}
+        <div class="enrol">
+          <a class="enrol-qr" href={otp.uri} aria-label={login.t("open")}>{@html otp.qr}</a>
+          <div class="enrol-key">
+            <span class="field-hint">{login.t("scan_hint")}</span>
+            <span class="aside-mono enrol-secret">{otp.secret}</span>
+          </div>
+        </div>
+
+        <form class="flow-tight" onsubmit={turnOn} aria-busy={login.loading || undefined}>
+          <input
+            type="text"
+            name="code"
+            class="control control-code"
+            inputmode="numeric"
+            pattern="[0-9 ]*"
+            autocomplete="one-time-code"
+            maxlength="7"
+            spellcheck="false"
+            aria-label={login.t("code")}
+            placeholder={login.t("code")}
+            bind:value={code}
+          />
+
+          <Action {login} type="submit" quiet ready={coded} label={login.t("turn_on")} />
+        </form>
+      {/if}
+    </div>
+
+    {#if passkeyable}
+      <div class="ledger-row ledger-step" class:ledger-step-done={passkeys.verified}>
+        <span class="ledger-label">{login.t("passkeys")}</span>
+        <span class="field-hint">
+          {passkeys.count > 0
+            ? login.t("passkeys_some", { count: passkeys.count })
+            : login.t("passkeys_none")}
+        </span>
+
+        <Action
+          {login}
+          quiet
+          busy={adding}
+          label={passkeys.count > 0 ? login.t("add_another_passkey") : login.t("add_passkey")}
+          working={login.t("waiting_for_passkey")}
+          onclick={addPasskey}
+        />
+
+        {#if unusable}
+          <p class="aside aside-bad" role="alert">{unusable}</p>
+        {/if}
+      </div>
+    {/if}
+
+    <div class="ledger-row ledger-step" class:ledger-step-done={issued.length > 0 || codes.remaining > 0}>
+      <span class="ledger-label">{login.t("backup_codes")}</span>
+
+      {#if issued.length > 0}
+        <ol class="codes">
+          {#each issued as held (held)}
+            <li class="aside-mono">{held}</li>
+          {/each}
+        </ol>
+        <span class="field-hint">{login.t("backup_codes_hint")}</span>
+        <button type="button" class="textlink codes-copy" onclick={copy}>
+          {copied ? login.t("copied") : login.t("copy")}
+        </button>
+      {:else if codes.remaining > 0}
+        <span class="field-hint">{login.t("backup_codes_left", { count: codes.remaining })}</span>
+      {:else}
+        <span class="field-hint">{login.t("backup_codes_waiting")}</span>
+      {/if}
+    </div>
+  </div>
+
+  <form class="flow" onsubmit={done}>
+    {#if issued.length > 0}
+      <label class="check">
+        <input type="checkbox" name="kept" required bind:checked={kept} />
+        <span>{login.t("kept")}</span>
+      </label>
+    {/if}
+
+    <Action
+      {login}
+      type="submit"
+      {ready}
+      busy={login.loading}
+      label={login.t("done")}
+      working={login.t("working")}
+    />
+  </form>
+</div>

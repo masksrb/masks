@@ -9,6 +9,7 @@ module Notifications
       Event::PASSKEY_REMOVED,
       Event::BACKUP_CODES_GENERATED,
       Event::BACKUP_CODE_SPENT,
+      Event::AUTHENTICATOR_ENABLED,
       Event::AUTHENTICATOR_DISABLED
     ],
     "sessions" => [

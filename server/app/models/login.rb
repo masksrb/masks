@@ -11,6 +11,7 @@ class Login
     LoginStates::OneTimePassword,
     LoginStates::BackupCode,
     LoginStates::SecondFactor,
+    LoginStates::Enrolment,
     LoginStates::Consent
   ].freeze
 

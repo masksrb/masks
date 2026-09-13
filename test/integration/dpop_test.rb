@@ -307,6 +307,7 @@ class DpopTest < ActionDispatch::IntegrationTest
 
   test "the manage API takes a bound token" do
     within { @actor.grant!([ Scopes::MANAGE ]) }
+    enable_otp(@actor)
 
     @registration = { "client_id" => manager.client_id, "client_secret" => nil }
 

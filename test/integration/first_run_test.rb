@@ -94,8 +94,18 @@ class FirstRunTest < ActionDispatch::IntegrationTest
                              password_confirmation: PASSWORD }, as: :json
     body = JSON.parse(response.body)
 
-    assert_equal "setup-configure", body["prompt"]
+    assert_equal "enrol", body["prompt"]
+    assert body.dig("enrolment", "required")
     assert_equal "owner", within(@tenant) { Actor.sole.nickname }
+
+    get "/login"
+
+    assert_match "Authenticator app", response.body
+    assert_match "Backup codes", response.body
+
+    body = enrol_otp!(body)
+
+    assert_equal "setup-configure", body["prompt"]
 
     get "/login"
 
@@ -112,10 +122,8 @@ class FirstRunTest < ActionDispatch::IntegrationTest
   test "an account is named by whatever the tenant was configured for" do
     host! host_for(@tenant)
 
-    post "/login", params: setup_params, as: :json
+    assert set_up!["settled"]
     @tenant.update!(named_by: Tenant::EMAIL)
-
-    assert JSON.parse(response.body)["settled"]
 
     within(@tenant) do
       by_address = Actor.create!(email: "reader@example.invalid", password: PASSWORD)
@@ -148,8 +156,7 @@ class FirstRunTest < ActionDispatch::IntegrationTest
   test "setup settles the login and signs the owner in, over JSON" do
     host! host_for(@tenant)
 
-    post "/login", params: setup_params, as: :json
-    body = JSON.parse(response.body)
+    body = set_up!
 
     assert_response :success
     assert body["settled"]
@@ -164,6 +171,15 @@ class FirstRunTest < ActionDispatch::IntegrationTest
     host! host_for(@tenant)
 
     post "/login", params: setup_params
+
+    assert_redirected_to login_path
+
+    follow_redirect!
+    secret = response.body[/class="aside-mono enrol-secret">([^<]+)</, 1].delete(" ")
+
+    post "/login", params: { event: "enrol:otp", code: ROTP::TOTP.new(secret).now }
+    post "/login", params: { event: "enrol:done", kept: "1" }
+    post "/login", params: { event: "setup-configure", called: "Demo" }
 
     assert_redirected_to root_path
     assert_equal "owner", within(@tenant) { Actor.sole.nickname }
@@ -195,8 +211,7 @@ class FirstRunTest < ActionDispatch::IntegrationTest
   test "the owner's address is recorded but not yet confirmed, because nothing confirmed it" do
     host! host_for(@tenant)
 
-    post "/login", params: setup_params, as: :json
-    assert JSON.parse(response.body)["settled"]
+    assert set_up!["settled"]
 
     actor = within(@tenant) { Actor.sole }
 
@@ -213,8 +228,7 @@ class FirstRunTest < ActionDispatch::IntegrationTest
   test "the owner the wizard created can complete the whole OIDC flow" do
     host! host_for(@tenant)
 
-    post "/login", params: setup_params, as: :json
-    assert JSON.parse(response.body)["settled"]
+    assert set_up!["settled"]
 
     registration = register(@tenant)
 
@@ -248,7 +262,7 @@ class FirstRunTest < ActionDispatch::IntegrationTest
 
   test "one tenant's setup does not set up another" do
     host! host_for(@tenant)
-    post "/login", params: setup_params, as: :json
+    set_up!
 
     reset!
     host! host_for(other_tenant)

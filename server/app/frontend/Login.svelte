@@ -5,6 +5,7 @@ import Action from "./shared/Action.svelte";
 import Head from "./shared/Head.svelte";
 import Warnings from "./shared/Warnings.svelte";
 import AcceptInvitation from "./prompts/accept-invitation.svelte";
+import Enrol from "./prompts/enrol.svelte";
 import BackupCode from "./prompts/backup-code.svelte";
 import Consent from "./prompts/consent.svelte";
 import FirstFactor from "./prompts/first-factor.svelte";
@@ -26,6 +27,7 @@ const prompts = {
   "first-factor": FirstFactor,
   "second-factor": SecondFactor,
   "backup-code": BackupCode,
+  enrol: Enrol,
   consent: Consent,
   settled: Settled,
 };
@@ -60,7 +62,8 @@ $effect.pre(() => {
 });
 
 $effect(() => {
-  const surface = SURFACES[login.prompt] ?? "challenge";
+  const surface =
+    SURFACES[login.prompt] ?? (login.auth.enrolment?.settingUp ? "grant" : "challenge");
   const paired = login.prompt === "settled" && Boolean(login.client?.name);
   const column = document.querySelector(".auth-col");
 

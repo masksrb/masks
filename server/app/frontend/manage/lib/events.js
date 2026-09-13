@@ -21,6 +21,7 @@ const SAID = {
   "passkey.removed": "Passkey removed",
   "backup_codes.generated": "Backup codes generated",
   "backup_code.spent": "Backup code used",
+  "authenticator.enabled": "Authenticator added",
   "authenticator.disabled": "Authenticator disabled",
 
   "device.trusted": "Device trusted",

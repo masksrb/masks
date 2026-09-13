@@ -28,6 +28,7 @@ class Event < ApplicationRecord
   PASSKEY_REMOVED = "passkey.removed".freeze
   BACKUP_CODES_GENERATED = "backup_codes.generated".freeze
   BACKUP_CODE_SPENT = "backup_code.spent".freeze
+  AUTHENTICATOR_ENABLED = "authenticator.enabled".freeze
   AUTHENTICATOR_DISABLED = "authenticator.disabled".freeze
 
   DEVICE_CODE_ISSUED = "device_code.issued".freeze

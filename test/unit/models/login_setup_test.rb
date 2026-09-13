@@ -25,6 +25,13 @@ class LoginSetupTest < ActiveSupport::TestCase
     step(event: "setup", password: password, password_confirmation: confirmation)
   end
 
+  def enrol
+    secret = within { Login.new(store: @store).update.as_json }.dig("enrolment", "otp", "secret").delete(" ")
+
+    step(event: "enrol:otp", code: ROTP::TOTP.new(secret).now)
+    step(event: "enrol:done", kept: "1")
+  end
+
   def configure(called: "Demo", **updates)
     step(event: "setup-configure", called: called, **updates)
   end
@@ -32,6 +39,7 @@ class LoginSetupTest < ActiveSupport::TestCase
   def set_up(**updates)
     identify(**updates)
     credit
+    enrol
     configure
   end
 
@@ -80,11 +88,12 @@ class LoginSetupTest < ActiveSupport::TestCase
     assert_nil name_of(step)
   end
 
-  test "the password creates the manager and asks how masks is configured" do
+  test "the password creates the manager, who adds a second factor before anything is configured" do
     identify
     login = credit
 
-    assert_equal "setup-configure", login.prompt
+    assert_equal "enrol", login.prompt
+    assert_equal "setup-configure", enrol.prompt
     assert_equal "owner", login.actor.nickname
     assert_equal "owner", login.identifier
   end
@@ -92,6 +101,7 @@ class LoginSetupTest < ActiveSupport::TestCase
   test "configuring settles the login and signs the manager in" do
     identify
     credit
+    enrol
     login = configure(called: "Payroll")
 
     assert_equal "settled", login.prompt
@@ -102,6 +112,7 @@ class LoginSetupTest < ActiveSupport::TestCase
   test "configuring names the installation" do
     identify
     credit
+    enrol
 
     login = configure(called: "  Payroll  ")
 
@@ -112,6 +123,7 @@ class LoginSetupTest < ActiveSupport::TestCase
   test "a name left as it was settles all the same" do
     identify
     credit
+    enrol
     login = configure(called: "")
 
     assert login.settled?
@@ -121,6 +133,7 @@ class LoginSetupTest < ActiveSupport::TestCase
   test "the configuration screen offers the name the tenant already holds" do
     identify
     credit
+    enrol
 
     login = step
     published = within { login.as_json["setup"] }
@@ -128,14 +141,29 @@ class LoginSetupTest < ActiveSupport::TestCase
     assert_equal @tenant.name, published["called"]
   end
 
-  test "one post that carries everything sets up in one step" do
+  test "one post that carries everything creates the manager but still stops for a second factor" do
     login = step(event: "setup", nickname: "owner", email: "owner@example.invalid",
                  password: PASSWORD, password_confirmation: PASSWORD,
                  called: "Payroll")
 
-    assert login.settled?
+    assert_equal "enrol", login.prompt
     assert_equal "owner", login.actor.nickname
-    assert_equal "Payroll", @tenant.reload.name
+    assert_equal "Demo", @tenant.reload.name
+  end
+
+  test "setup cannot be finished without a second factor" do
+    identify
+    credit
+
+    login = step(event: "enrol:done", kept: "1")
+
+    assert_equal "enrol", login.prompt
+    assert_includes login.warnings, "second-factor-required"
+
+    login = configure(called: "Payroll")
+
+    assert_equal "enrol", login.prompt
+    assert_equal "Demo", @tenant.reload.name
   end
 
   test "a password the confirmation does not match creates nothing" do
@@ -278,8 +306,9 @@ class LoginSetupTest < ActiveSupport::TestCase
 
       login = credit
 
-      assert_equal "setup-configure", login.prompt
+      assert_equal "enrol", login.prompt
       assert_equal "owner", login.actor.nickname
+      enrol
       assert configure.settled?
     end
   end
@@ -288,6 +317,7 @@ class LoginSetupTest < ActiveSupport::TestCase
     with_token("the-real-token") do
       identify(token: "the-real-token")
       credit
+      enrol
       configure
 
       assert_nil step.as_json["setup"]

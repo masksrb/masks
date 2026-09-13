@@ -297,6 +297,7 @@ class MistakenIdentityTest < ActionDispatch::IntegrationTest
 
   test "the manage api refuses a token that was not issued for it" do
     within { @alice.update!(scopes: "openid masks:manage") }
+    enable_otp(@alice)
 
     client = create_client(@tenant, allowed_scopes: "openid masks:manage", approved_at: Time.current)
 
@@ -322,6 +323,7 @@ class MistakenIdentityTest < ActionDispatch::IntegrationTest
 
   test "the manage api refuses a token whose person no longer holds the scope" do
     within { @alice.update!(scopes: "openid masks:manage") }
+    enable_otp(@alice)
 
     client = create_client(@tenant, allowed_scopes: "openid masks:manage", approved_at: Time.current)
     resource = issuer_for(@tenant).manage_resource
@@ -532,6 +534,7 @@ class MistakenIdentityTest < ActionDispatch::IntegrationTest
 
   test "the manage api refuses to give an address to a second account" do
     within { @alice.update!(scopes: "openid masks:manage") }
+    enable_otp(@alice)
 
     client = create_client(@tenant, allowed_scopes: "openid masks:manage", approved_at: Time.current)
     resource = issuer_for(@tenant).manage_resource

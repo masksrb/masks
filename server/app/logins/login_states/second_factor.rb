@@ -1,7 +1,7 @@
 module LoginStates
   class SecondFactor < LoginState
     def enabled?
-      actor&.otp?
+      actor&.second_factor?
     end
 
     prompts "second-factor" do
@@ -16,6 +16,7 @@ module LoginStates
 
     def as_json
       {
+        "secondFactors" => { "otp" => actor.otp?, "passkey" => actor.verified_passkeys? },
         "rememberable" => device.present?,
         "trustFor" => ActionController::Base.helpers.distance_of_time_in_words(DeviceFactor::LIFETIME)
       }

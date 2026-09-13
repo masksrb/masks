@@ -30,6 +30,7 @@ en:
       backup_code:
         spent: "Backup code used"
       authenticator:
+        enabled: "Authenticator added"
         disabled: "Authenticator removed"
       device_code:
         issued: "A device asked to be signed in"

@@ -638,7 +638,8 @@ class ManageApiTest < ActionDispatch::IntegrationTest
   end
 
   test "backup codes are refused for an actor with no second factor" do
-    body = ask(%(mutation { generateBackupCodes(uuid: "#{@actor.uuid}") { codes } }), bearer)
+    plain = create_actor(@tenant, nickname: "plain")
+    body = ask(%(mutation { generateBackupCodes(uuid: "#{plain.uuid}") { codes } }), bearer)
 
     assert_match "way past a second factor", body["errors"].first["message"]
   end

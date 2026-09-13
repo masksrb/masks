@@ -371,14 +371,7 @@ class HandshakeTest < ActionDispatch::IntegrationTest
 
     assert_redirected_to login_path
 
-    post "/login",
-         params: { event: "setup", nickname: "owner", email: "owner@example.invalid",
-                   password: "a-long-enough-password",
-                   password_confirmation: "a-long-enough-password",
-                   called: "Demo" },
-         as: :json
-
-    resumed = JSON.parse(response.body)["redirectTo"]
+    resumed = set_up!["redirectTo"]
 
     assert resumed.start_with?("/handshake?"), "setup did not come back to the connection request"
 

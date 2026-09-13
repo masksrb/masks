@@ -22,9 +22,14 @@ module TenantSetup
     Tenant.switch(tenant, &block)
   end
 
-  def create_actor(tenant = @tenant, nickname: "owner", password: "password", **attributes)
-    if attributes[:scopes].to_s.include?(Scopes::MANAGE) && !attributes.key?(:email)
-      attributes[:email] = "#{nickname}@example.invalid"
+  def create_actor(tenant = @tenant, nickname: "owner", password: "password", otp: nil, **attributes)
+    manages = attributes[:scopes].to_s.include?(Scopes::MANAGE)
+
+    attributes[:email] = "#{nickname}@example.invalid" if manages && !attributes.key?(:email)
+
+    if otp.nil? ? manages : otp
+      attributes[:otp_secret] = ROTP::Base32.random
+      attributes[:otp_enabled_at] = Time.current
     end
 
     within(tenant) do
@@ -85,7 +90,41 @@ module OidcFlow
   def sign_in_as(actor, password: "password")
     post "/login", params: { event: "identify", identifier: actor.nickname }, as: :json
     post "/login", params: { event: "password", password: password }, as: :json
+    body = JSON.parse(response.body)
+
+    return body unless body["prompt"] == "second-factor"
+
+    post "/login", params: { event: "otp", code: current_code(actor) }, as: :json
     JSON.parse(response.body)
+  end
+
+  def enrol_otp!(body)
+    secret = body.dig("enrolment", "otp", "secret").to_s.delete(" ")
+
+    post "/login", params: { event: "enrol:otp", code: ROTP::TOTP.new(secret).now }, as: :json
+    post "/login", params: { event: "enrol:done", kept: "1" }, as: :json
+
+    JSON.parse(response.body)
+  end
+
+  def set_up!(**params)
+    post "/login", params: { event: "setup", nickname: "owner", email: "owner@example.invalid",
+                             password: "a-long-enough-password",
+                             password_confirmation: "a-long-enough-password" }.merge(params.except(:called)),
+         as: :json
+
+    enrol_otp!(JSON.parse(response.body))
+
+    post "/login", params: { event: "setup-configure", called: params.fetch(:called, "Demo") }, as: :json
+
+    JSON.parse(response.body)
+  end
+
+  def current_code(actor)
+    Tenant.switch(actor.tenant) do
+      actor.reload.update_columns(otp_last_step: nil)
+      ROTP::TOTP.new(actor.otp_secret).now
+    end
   end
 
   def verifier
@@ -174,7 +213,7 @@ module OidcFlow
   end
 
   def awaiting_login?
-    !response.redirect? && %w[setup identify first-factor second-factor backup-code].include?(auth_data&.dig("prompt"))
+    !response.redirect? && %w[setup identify first-factor second-factor backup-code enrol].include?(auth_data&.dig("prompt"))
   end
 
   def authorized_code(actor:, registration:, resource: nil, scope: "openid profile email offline_access")
