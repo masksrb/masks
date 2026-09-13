@@ -112,7 +112,6 @@ function onsubmit(event) {
           autocomplete="name"
           bind:value={person}
         />
-        <span class="field-hint">{login.t("name_hint")}</span>
       </label>
 
       <div class="ledger-row">
