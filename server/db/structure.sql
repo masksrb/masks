@@ -257,7 +257,8 @@ CREATE TABLE public.clients (
     subject_type character varying DEFAULT 'public'::character varying NOT NULL,
     sector_identifier_uri character varying,
     dpop_bound_access_tokens boolean DEFAULT false NOT NULL,
-    sign_in_policy_id bigint
+    sign_in_policy_id bigint,
+    consent_required boolean DEFAULT true NOT NULL
 );
 
 ALTER TABLE ONLY public.clients FORCE ROW LEVEL SECURITY;
@@ -2291,6 +2292,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260913030000'),
 ('20260913020000'),
 ('20260913010000'),
 ('20260913000000'),

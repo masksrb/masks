@@ -27,7 +27,7 @@
         redirectUris postLogoutRedirectUris grantTypes responseTypes resources
         requiredScopes allowedScopes
         backchannelLogoutUri backchannelLogoutSessionRequired
-        requirePushedAuthorizationRequests
+        requirePushedAuthorizationRequests consentRequired
         signInPolicy { key name }
         events(limit: 25) {
           id action label createdAt ipAddress details
@@ -117,7 +117,8 @@
         $clientId: ID!, $name: String, $requiredScopes: [String!], $allowedScopes: [String!],
         $backchannelLogoutUri: String, $redirectUris: [String!],
         $postLogoutRedirectUris: [String!], $resources: [String!],
-        $requirePushedAuthorizationRequests: Boolean, $signInPolicy: ID
+        $requirePushedAuthorizationRequests: Boolean, $consentRequired: Boolean,
+        $signInPolicy: ID
       ) {
         updateClient(
           clientId: $clientId, name: $name, requiredScopes: $requiredScopes,
@@ -125,6 +126,7 @@
           redirectUris: $redirectUris, postLogoutRedirectUris: $postLogoutRedirectUris,
           resources: $resources,
           requirePushedAuthorizationRequests: $requirePushedAuthorizationRequests,
+          consentRequired: $consentRequired,
           signInPolicy: $signInPolicy
         ) {
           client { clientId }
@@ -237,6 +239,20 @@
                 on ? "PAR required. Plain /authorize links are refused." : "PAR optional.",
               )}
           />
+
+          {#if client.approvedAt}
+            <Switch
+              checked={client.consentRequired}
+              label="Ask people to consent"
+              onchange={(on) =>
+                update(
+                  { consentRequired: on },
+                  on
+                    ? "Consent required. Each person approves what this client asks for."
+                    : "Consent skipped. Nobody is asked before this client is granted access.",
+                )}
+            />
+          {/if}
 
           <Field
             label="Back-channel logout URI"

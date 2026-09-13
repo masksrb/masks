@@ -7,7 +7,7 @@ class GrantsTest < ActionDispatch::IntegrationTest
     host! host_for(@tenant)
   end
 
-  def consent!(scopes: "openid profile", audience: [])
+  def record_consent!(scopes: "openid profile", audience: [])
     within(@tenant) do
       Consent.record!(actor: @actor, client: @client, scopes: scopes, audience: audience)
     end
@@ -43,7 +43,7 @@ class GrantsTest < ActionDispatch::IntegrationTest
   end
 
   test "the console lists what a person has allowed in and what they have connected" do
-    consent!
+    record_consent!
     connection!(provider!)
 
     data = manage(
@@ -65,7 +65,7 @@ class GrantsTest < ActionDispatch::IntegrationTest
   end
 
   test "cutting a client off revokes its refresh tokens as well as the consent" do
-    consent = consent!
+    consent = record_consent!
     token = refresh_token!
 
     data = manage(
@@ -98,7 +98,7 @@ class GrantsTest < ActionDispatch::IntegrationTest
   end
 
   test "a client shows who has allowed it in" do
-    consent!
+    record_consent!
 
     data = manage(
       "query Client($clientId: ID!) {
@@ -262,7 +262,7 @@ class GrantsTest < ActionDispatch::IntegrationTest
   end
 
   test "somebody cuts an application off from their own account page" do
-    consent = consent!
+    consent = record_consent!
     token = refresh_token!
 
     sign_in_as(@actor)
@@ -325,7 +325,7 @@ class GrantsTest < ActionDispatch::IntegrationTest
   end
 
   test "nobody cuts off an application on somebody else's account" do
-    consent = consent!
+    consent = record_consent!
     token = refresh_token!
     intruder = create_actor(@tenant, nickname: "eve", email: "eve@example.com")
 
@@ -375,6 +375,7 @@ class GrantsTest < ActionDispatch::IntegrationTest
           name: "Console",
           allowed_scopes: "openid #{Scopes::MANAGE}",
           approved_at: Time.current,
+          consent_required: false,
           grant_types: [ "authorization_code", "refresh_token" ]
         )
 
@@ -387,7 +388,6 @@ class GrantsTest < ActionDispatch::IntegrationTest
           scope: "openid #{Scopes::MANAGE}",
           resource: issuer_for(@tenant).manage_resource
         )
-        consent! if awaiting_consent?
 
         issued = token(
           grant_type: "authorization_code",

@@ -25,6 +25,20 @@ connector registering itself with administrative reach.
 | `required_scopes` | always granted, never shown on a consent screen |
 | `allowed_scopes` | everything else it may ask for |
 
+## Consent
+
+Every person is asked, once, before a client is granted anything on their behalf. What they approve
+is remembered, and they are asked again only when the client wants more, or passes
+`prompt=consent`.
+
+Approving a handshake counts as the approver's consent, and is recorded as one, so the approver is
+not asked twice. It says nothing about anybody else: a colleague who signs in to the same client
+sees the consent screen as they would for any other client.
+
+`consent_required` is on for every client. A manager may switch it off for an approved client — a
+first-party application nobody should be asked about — and then nobody is shown the screen unless
+the client asks with `prompt=consent`. A self-registered client always asks.
+
 ## Who it thinks it is talking to
 
 `subject_type` decides what a client is told about a person.

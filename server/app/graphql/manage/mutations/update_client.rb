@@ -14,6 +14,7 @@ module Manage
       argument :backchannel_logout_uri, String, required: false
       argument :backchannel_logout_session_required, Boolean, required: false
       argument :require_pushed_authorization_requests, Boolean, required: false
+      argument :consent_required, Boolean, required: false
       argument :sign_in_policy, ID, required: false
 
       field :client, Types::ClientType, null: false

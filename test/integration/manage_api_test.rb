@@ -870,6 +870,38 @@ class ManageApiTest < ActionDispatch::IntegrationTest
     assert_empty within(@tenant) { Scopes.reserved(dynamic.reload.scope_list) }
   end
 
+  test "consent is asked for by default, and a manager may switch it off for an approved client" do
+    token = bearer
+
+    assert within(@tenant) { @client.reload.consent_required? }
+
+    body = ask(<<~GQL, token)
+      mutation {
+        updateClient(clientId: "#{@client.client_id}", consentRequired: false) {
+          client { consentRequired }
+        }
+      }
+    GQL
+
+    assert_equal false, body.dig("data", "updateClient", "client", "consentRequired")
+    assert_not within(@tenant) { @client.reload.consent_required? }
+  end
+
+  test "consent cannot be switched off for a client nobody approved" do
+    dynamic = create_client(@tenant, name: "Dynamic", dynamic: true)
+
+    body = ask(<<~GQL, bearer)
+      mutation {
+        updateClient(clientId: "#{dynamic.client_id}", consentRequired: false) {
+          client { consentRequired }
+        }
+      }
+    GQL
+
+    assert_match "may only be switched off for an approved client", body["errors"].first["message"]
+    assert within(@tenant) { dynamic.reload.consent_required? }
+  end
+
   test "the ceiling offered to dynamic registration cannot include a masks: scope" do
     body = ask(<<~GQL, bearer)
       mutation {

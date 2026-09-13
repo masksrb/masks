@@ -30,6 +30,7 @@ class Client < ApplicationRecord
   validate :grant_types_are_known
   validate :backchannel_logout_uri_is_usable
   validate :sector_is_derivable
+  validate :consent_is_skipped_only_when_approved
   validate :sector_identifier_uri_is_owned, if: :sector_declared?
 
   belongs_to :approved_by, class_name: "Actor", optional: true
@@ -229,6 +230,12 @@ class Client < ApplicationRecord
   end
 
   private
+
+    def consent_is_skipped_only_when_approved
+      return if consent_required? || approved?
+
+      errors.add(:consent_required, "may only be switched off for an approved client")
+    end
 
     def backchannel_logout_uri_is_usable
       return if backchannel_logout_uri.blank?

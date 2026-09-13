@@ -23,6 +23,7 @@ module Manage
       field :backchannel_logout_uri, String
       field :backchannel_logout_session_required, Boolean, null: false
       field :require_pushed_authorization_requests, Boolean, null: false
+      field :consent_required, Boolean, null: false
       field :sign_in_policy, SignInPolicyType
       field :dynamic, Boolean, null: false
       field :approved_at, GraphQL::Types::ISO8601DateTime

@@ -392,6 +392,71 @@ class HandshakeTest < ActionDispatch::IntegrationTest
     assert code_from.present?
   end
 
+  test "approving is the approver's consent, and it is recorded like any other" do
+    sign_in_as(@owner)
+    connect
+    registration = redeem(approve!)
+
+    within(@tenant) do
+      client = Client.find_by!(client_id: registration["client_id"])
+      consent = Consent.live.find_by!(actor: @owner, client: client)
+
+      assert_equal Scopes.list(SCOPE), Scopes.list(consent.scopes)
+      assert_equal [ RESOURCE ], consent.audience
+      assert Event.exists?(action: Event::CONSENT_GRANTED, actor: @owner, client: client)
+    end
+  end
+
+  test "somebody other than the approver is asked before an approved client gets anything" do
+    sign_in_as(@owner)
+    connect
+    registration = redeem(approve!)
+
+    colleague = create_actor(@tenant, nickname: "colleague", password: "password",
+                             scopes: Scopes.join(Scopes::STANDARD + [ "uris:catalog:read" ]))
+    reset!
+    host! host_for(@tenant)
+    sign_in_as(colleague)
+
+    authorize(client_id: registration["client_id"], redirect_uri: REDIRECT_URI, scope: SCOPE)
+
+    assert awaiting_consent?
+  end
+
+  test "an approved client whose consent is switched off asks nobody" do
+    sign_in_as(@owner)
+    connect
+    registration = redeem(approve!)
+    within(@tenant) { Client.find_by!(client_id: registration["client_id"]).update!(consent_required: false) }
+
+    colleague = create_actor(@tenant, nickname: "colleague", password: "password",
+                             scopes: Scopes.join(Scopes::STANDARD + [ "uris:catalog:read" ]))
+    reset!
+    host! host_for(@tenant)
+    sign_in_as(colleague)
+
+    authorize(client_id: registration["client_id"], redirect_uri: REDIRECT_URI, scope: SCOPE)
+
+    assert_not awaiting_consent?
+    assert code_from.present?
+  end
+
+  test "prompt=consent asks even when the client's consent is switched off" do
+    sign_in_as(@owner)
+    connect
+    registration = redeem(approve!)
+    within(@tenant) { Client.find_by!(client_id: registration["client_id"]).update!(consent_required: false) }
+
+    authorize(
+      client_id: registration["client_id"],
+      redirect_uri: REDIRECT_URI,
+      scope: SCOPE,
+      prompt: "consent"
+    )
+
+    assert awaiting_consent?
+  end
+
   test "prompt=consent still asks an approved client's caller" do
     sign_in_as(@owner)
     connect

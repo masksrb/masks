@@ -24,6 +24,17 @@ class HandshakesController < ApplicationController
       name: client.name, resource: @handshake.resource
     )
 
+    Consent.record!(
+      actor: current_actor, client: client,
+      scopes: @handshake.scopes, audience: [ @handshake.resource ]
+    )
+
+    Event.record!(
+      Event::CONSENT_GRANTED,
+      actor: current_actor, client: client,
+      scopes: @handshake.scopes, audience: [ @handshake.resource ]
+    )
+
     begin
       Namespace.claim!(@handshake, client: client, actor: current_actor)
     rescue Namespace::Taken => taken

@@ -149,6 +149,7 @@ type Client {
   backchannelLogoutUri: String
   clientId: ID!
   clientUri: String
+  consentRequired: Boolean!
   consents(limit: Int): [Consent!]!
   createdAt: ISO8601DateTime!
   dpopBoundAccessTokens: Boolean!
@@ -366,7 +367,7 @@ type Mutation {
   unblockDevices(ids: [ID!]!): UnblockDevicesPayload
   updateActor(birthdate: String, email: String, familyName: String, gender: String, givenName: String, locale: String, middleName: String, name: String, nickname: String, phone: String, pictureUrl: String, profileUrl: String, uuid: ID!, websiteUrl: String, zoneinfo: String): UpdateActorPayload
   updateAdapter(config: JSON, key: ID!, name: String, primary: Boolean): UpdateAdapterPayload
-  updateClient(allowedScopes: [String!], backchannelLogoutSessionRequired: Boolean, backchannelLogoutUri: String, clientId: ID!, dpopBoundAccessTokens: Boolean, name: String, postLogoutRedirectUris: [String!], redirectUris: [String!], requirePushedAuthorizationRequests: Boolean, requiredScopes: [String!], resources: [String!], sectorIdentifierUri: String, signInPolicy: ID, subjectType: String): UpdateClientPayload
+  updateClient(allowedScopes: [String!], backchannelLogoutSessionRequired: Boolean, backchannelLogoutUri: String, clientId: ID!, consentRequired: Boolean, dpopBoundAccessTokens: Boolean, name: String, postLogoutRedirectUris: [String!], redirectUris: [String!], requirePushedAuthorizationRequests: Boolean, requiredScopes: [String!], resources: [String!], sectorIdentifierUri: String, signInPolicy: ID, subjectType: String): UpdateClientPayload
   updateProvider(authorizationUrl: String, authorizeParams: JSON, clientId: String, clientSecret: String, emailDomains: [String!], issuer: String, jwksUri: String, key: ID!, labelClaim: String, name: String, provisions: Boolean, revocationUrl: String, scopes: [String!], signsIn: Boolean, signupScopes: [String!], subjectClaim: String, tokenUrl: String, userinfoUrl: String): UpdateProviderPayload
   updateSignInPolicy(confirmation: String, email: String, emailDomains: [String!], emailVerified: Boolean, everyProvider: Boolean, firstFactors: [String!], hidden: Boolean, key: ID!, name: String, nickname: String, passwordMinimum: Int, phone: String, phoneVerified: Boolean, providers: [String!], refuseCommonPasswords: Boolean, secondFactorRequired: Boolean, secondFactors: [String!], signup: Boolean, signupScopes: [String!]): UpdateSignInPolicyPayload
   updateTenant(blockedAgents: String, browsersOnly: Boolean, dynamicClientScopes: [String!], dynamicRegistration: String, name: String, namedBy: String, signInPolicy: ID): UpdateTenantPayload

@@ -38,7 +38,7 @@ module LoginStates
     def required?
       return false if touched?(:consent)
       return true if request.consent?
-      return false if client&.approved?
+      return false if client && !client.consent_required?
 
       !::Consent.covers?(
         actor: actor, client: client, scopes: scopes, audience: audience
