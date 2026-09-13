@@ -44,19 +44,19 @@ class ConfirmationCode < Token
   end
 
   def verify(code)
-    return false unless live?
-
     entered = code.to_s.delete("^0-9")
     matched = entered.length == DIGITS &&
               ActiveSupport::SecurityUtils.secure_compare(self.class.digest(held("salt"), entered), held("digest"))
 
     with_lock do
+      next false unless live?
+
       attempts = held("attempts").to_i + 1
       spent = matched || attempts >= ATTEMPTS
 
       update!(payload: payload.merge("attempts" => attempts), consumed_at: spent ? Time.current : nil)
-    end
 
-    matched
+      matched
+    end
   end
 end
