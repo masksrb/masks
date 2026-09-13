@@ -105,6 +105,21 @@ class PushedAuthorizationTest < ActionDispatch::IntegrationTest
     assert_match "invalid_request_uri", response.body
   end
 
+  test "a request_uri followed with another client's name is still good for the client that pushed it" do
+    request_uri = push["request_uri"]
+    other = register(client_name: "Other")
+
+    sign_in_as(@actor)
+    visit(request_uri, client_id: other["client_id"])
+
+    assert_response :bad_request
+
+    visit(request_uri)
+    consent! if awaiting_consent?
+
+    assert redirected["code"].present?
+  end
+
   test "a request_uri this server never issued is not a request_uri it supports" do
     sign_in_as(@actor)
     visit("https://evil.example.com/request.jwt")

@@ -15,10 +15,14 @@ class PushedRequest < Token
     value.to_s.start_with?(PREFIX)
   end
 
-  def self.claim_urn(value)
+  def self.claim_urn(value, client:)
     return nil unless urn?(value)
 
-    claim(value.to_s.delete_prefix(PREFIX))
+    secret = value.to_s.delete_prefix(PREFIX)
+
+    return nil unless redeem(secret)&.pushed_by?(client)
+
+    claim(secret)
   end
 
   def request_uri

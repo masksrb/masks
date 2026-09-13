@@ -9,8 +9,8 @@ class AuthorizeController < ApplicationController
     if authorization.request_uri?
       return refuse(unsupported_request_uri) unless PushedRequest.urn?(authorization.request_uri)
 
-      pushed = PushedRequest.claim_urn(authorization.request_uri)
-      return refuse(invalid_request_uri) unless pushed&.pushed_by?(authorization.client)
+      pushed = PushedRequest.claim_urn(authorization.request_uri, client: authorization.client)
+      return refuse(invalid_request_uri) if pushed.nil?
 
       authorization = pushed.authorization
     elsif authorization.client&.require_pushed_authorization_requests? && !admitted?(authorization)
