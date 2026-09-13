@@ -2,6 +2,7 @@ class Adapter < ApplicationRecord
   class Failed < StandardError; end
 
   include TenantScoped
+  include Archivable
 
   Field = Data.define(:key, :label, :type, :secret, :required, :options, :default, :hint)
 
@@ -20,8 +21,7 @@ class Adapter < ApplicationRecord
   validate :options_are_offered
 
   before_validation { self.kind = self.class.kind }
-
-  scope :active, -> { where(archived_at: nil) }
+  before_save :demote_other_primaries, if: -> { primary && archived_at.nil? }
 
   class << self
     attr_writer :kind, :label
@@ -72,10 +72,6 @@ class Adapter < ApplicationRecord
     self.class.service
   end
 
-  def archived?
-    archived_at.present?
-  end
-
   def [](key)
     field = self.class.fields.find { |held| held.key == key.to_s }
     return nil if field.nil?
@@ -122,6 +118,10 @@ class Adapter < ApplicationRecord
   end
 
   private
+
+    def demote_other_primaries
+      self.class.base_class.active.where(kind: kind, primary: true).where.not(id: id).update_all(primary: false)
+    end
 
     def secret_values
       @secret_values = nil if @secret_source != secrets

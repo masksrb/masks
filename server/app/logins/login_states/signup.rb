@@ -27,7 +27,7 @@ module LoginStates
       end
     end
 
-    handles "signup" do
+    handles "signup", limit: :verifying do
       hold
       claim
     end
@@ -51,20 +51,13 @@ module LoginStates
     end
 
     def as_json
-      first_run = login.first_run?
       policy = login.policy
 
       {
         "signup" => {
-          "firstRun" => first_run,
-          "steps" => self.class.steps(first_run, policy),
-          "token" => first_run && self.class.token_required?,
+          "token" => login.first_run? && self.class.token_required?,
           "minimum" => policy.password_minimum,
-          "asks" => {
-            "nickname" => first_run ? SignInPolicy::REQUIRED : policy.nickname,
-            "email" => first_run ? SignInPolicy::REQUIRED : policy.email,
-            "phone" => first_run ? SignInPolicy::OFF : policy.phone
-          },
+          "asks" => { "nickname" => policy.nickname, "email" => policy.email, "phone" => policy.phone },
           "nickname" => held.fetch("nickname") { suggested("nickname") },
           "email" => held.fetch("email") { suggested("email") },
           "name" => held["name"],
@@ -93,29 +86,29 @@ module LoginStates
         policy = login.policy
 
         return false unless policy.signup && policy.first_factor?(:password)
-        return false if identifier.blank? || ::Actor.locate(identifier)
+        return false if identifier.blank? || located?(identifier)
 
         !identifier.include?("@") || policy.admits?(identifier)
+      end
+
+      def located?(identifier)
+        @located ||= {}
+        @located.fetch(identifier) { @located[identifier] = ::Actor.locate(identifier).present? }
       end
 
       def suggested(field)
         return nil if login.identifier.blank?
 
-        email = login.identifier.include?("@")
-
-        field == "email" ? (email ? login.identifier : nil) : (email ? nil : login.identifier)
+        (field == "email") == login.identifier.include?("@") ? login.identifier : nil
       end
 
       def hold
         return if held.present? && !held["editing"] && !identifying?
         return unless permitted?
 
-        values = {
-          "nickname" => update(:nickname).to_s.strip.presence,
-          "email" => update(:email).to_s.strip.downcase.presence,
-          "name" => update(:name).to_s.strip.presence,
-          "phone" => update(:phone).to_s.gsub(/[\s().-]/, "").presence
-        }
+        values = %w[nickname email name phone].to_h do |field|
+          [ field, ::Actor.normalize_value_for(field.to_sym, update(field)) ]
+        end
 
         return unless described?(values)
 
@@ -123,16 +116,16 @@ module LoginStates
       end
 
       def described?(values)
-        kept do
-          asks = as_json.dig("signup", "asks")
+        policy = login.policy
 
-          warn! "missing-nickname" if asks["nickname"] == SignInPolicy::REQUIRED && values["nickname"].blank?
-          warn! "missing-email" if asks["email"] == SignInPolicy::REQUIRED && values["email"].blank?
-          warn! "missing-phone" if asks["phone"] == SignInPolicy::REQUIRED && values["phone"].blank?
+        kept do
+          %w[nickname email phone].each do |field|
+            warn! "missing-#{field}", field: field if policy.requires?(field) && values[field].blank?
+          end
+
           warn! "missing-identifier" if values["nickname"].blank? && values["email"].blank?
-          warn! "invalid-phone" if values["phone"].present? && !values["phone"].match?(Adapters::Sms::NUMBER)
-          warn! "signup-domain-refused" if values["email"].present? && !login.first_run? &&
-                                            !login.policy.admits?(values["email"])
+          warn! "invalid-phone", field: "phone" if values["phone"].present? && Adapters::Sms.number(values["phone"]).nil?
+          warn! "signup-domain-refused", field: "email" if values["email"].present? && !policy.admits?(values["email"])
         end
       end
 
@@ -145,11 +138,11 @@ module LoginStates
       def claim
         return if held.blank? || held["editing"] || !crediting?
 
-        refusal = Passwords.refusal(password, login.first_run? ? SignInPolicy.default : login.policy)
+        refusal = Passwords.refusal(password, login.policy)
 
         credited = kept do
-          warn! refusal if refusal
-          warn! "mismatched-password" if password != update(:password_confirmation).to_s
+          warn! refusal, field: "password" if refusal
+          warn! "mismatched-password", field: "password_confirmation" if password != update(:password_confirmation).to_s
         end
 
         return unless credited
@@ -179,6 +172,7 @@ module LoginStates
           ::Tenant.where(id: tenant.id).lock.pick(:id)
 
           @first_run = !::Actor.exists?
+          login.first_run! unless @first_run
 
           unless @first_run || open_to?(held["email"] || held["nickname"])
             warn! "invalid-account"
@@ -229,7 +223,7 @@ module LoginStates
         return true if given.present? &&
                        ActiveSupport::SecurityUtils.secure_compare(given, self.class.token)
 
-        warn! "invalid-setup-token"
+        warn! "invalid-setup-token", field: "token"
         false
       end
 

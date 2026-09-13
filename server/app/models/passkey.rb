@@ -29,6 +29,16 @@ class Passkey < ApplicationRecord
     )
   end
 
+  def self.crowded?(actor)
+    where(actor_id: actor.id).count >= MAX_PER_ACTOR
+  end
+
+  def self.register!(actor:, credential:, name: nil)
+    enrol!(actor: actor, credential: credential, name: name).tap do |passkey|
+      Event.record!(Event::PASSKEY_ADDED, actor: actor, passkey: passkey.name)
+    end
+  end
+
   def self.aaguid_of(credential)
     credential.response&.attestation_object&.authenticator_data&.attested_credential_data&.aaguid
   rescue StandardError

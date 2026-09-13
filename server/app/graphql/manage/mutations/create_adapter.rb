@@ -16,24 +16,14 @@ module Manage
 
         adapter = klass.new(key: key, name: name)
         adapter.configure(config)
-        adapter.primary = primary.nil? ? !::Adapter.active.exists?(kind: klass.kind, primary: true) : primary
+        adapter.primary = primary.nil? ? ::Adapter.primary(klass.kind).nil? : primary
 
-        ::Adapter.transaction do
-          demote_others(adapter) if adapter.primary
-          save!(adapter)
-        end
+        save!(adapter)
 
         audit!(::Event::ADAPTER_CREATED, adapter: adapter.key, service: adapter.service)
 
         { adapter: adapter }
       end
-
-      private
-
-        def demote_others(adapter)
-          ::Adapter.active.where(kind: adapter.kind, primary: true).where.not(key: adapter.key)
-                   .update_all(primary: false)
-        end
     end
   end
 end

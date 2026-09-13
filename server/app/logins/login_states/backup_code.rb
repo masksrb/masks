@@ -10,7 +10,7 @@ module LoginStates
       login.first_factored? && !login.second_factored? && requested?
     end
 
-    handles "backup" do
+    handles "backup", limit: :verifying do
       verify
     end
 

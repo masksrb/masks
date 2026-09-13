@@ -1,9 +1,9 @@
 module Passwords
-  LIST = Rails.root.join("config/passwords/common.txt")
+  COMMON = Set.new(File.foreach(Rails.root.join("config/passwords/common.txt"), chomp: true)).freeze
 
   class << self
     def common?(password)
-      common.include?(password.to_s.downcase)
+      COMMON.include?(password.to_s.downcase)
     end
 
     def refusal(password, policy)
@@ -12,11 +12,5 @@ module Passwords
 
       nil
     end
-
-    private
-
-      def common
-        @common ||= Set.new(File.foreach(LIST, chomp: true))
-      end
   end
 end

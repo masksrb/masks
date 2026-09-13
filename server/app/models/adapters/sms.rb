@@ -1,15 +1,13 @@
 module Adapters
   class Sms < Adapter
-    OPEN_TIMEOUT = 5
-    READ_TIMEOUT = 10
     NUMBER = /\A\+[1-9]\d{6,14}\z/
 
     self.kind = SMS
 
     def self.number(value)
-      held = value.to_s.gsub(/[\s().-]/, "")
+      held = Actor.normalize_value_for(:phone, value)
 
-      held.match?(NUMBER) ? held : nil
+      held&.match?(NUMBER) ? held : nil
     end
 
     def deliver(to:, body:)
@@ -35,8 +33,11 @@ module Adapters
       end
 
       def post_form(url, form, headers = {})
-        request(url, URI.encode_www_form(form),
-                headers.merge("Content-Type" => "application/x-www-form-urlencoded"))
+        post_encoded(url, URI.encode_www_form(form), headers)
+      end
+
+      def post_encoded(url, body, headers = {})
+        request(url, body, headers.merge("Content-Type" => "application/x-www-form-urlencoded"))
       end
 
       def basic(user, password)
@@ -48,10 +49,7 @@ module Adapters
         held = Net::HTTP::Post.new(uri, headers.merge("Accept" => "application/json"))
         held.body = body
 
-        response = Net::HTTP.start(uri.hostname, uri.port, use_ssl: true,
-                                   open_timeout: OPEN_TIMEOUT, read_timeout: READ_TIMEOUT) do |http|
-          http.request(held)
-        end
+        response = Outbound.call(uri, held, open: Outbound::OPEN_TIMEOUT, read: Outbound::READ_TIMEOUT)
 
         refuse!(response) unless response.is_a?(Net::HTTPSuccess)
 
@@ -62,11 +60,11 @@ module Adapters
 
       def refuse!(response)
         raise Failed, "#{self.class.label} refused the message (#{response.code}): " \
-                      "#{response.body.to_s.byteslice(0, 300)}"
+                      "#{Outbound.body(response).byteslice(0, 300)}"
       end
 
       def parsed(response)
-        JSON.parse(response.body.to_s)
+        JSON.parse(Outbound.body(response))
       rescue JSON::ParserError
         {}
       end

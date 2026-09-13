@@ -44,6 +44,24 @@ class Actor < ApplicationRecord
              :website_url, :gender, :birthdate, :zoneinfo, :locale,
              with: ->(value) { value.to_s.strip.presence }
 
+  HOLDING = <<~SQL.squish.freeze
+    EXISTS (
+      SELECT 1 FROM regexp_split_to_table(actors.scopes, '[\\s,]+') AS entry
+      WHERE entry <> ''
+        AND (
+          entry = :held
+          OR (
+            right(entry, 1) = ':'
+            AND starts_with(:held, entry)
+            AND length(:held) > length(entry)
+          )
+        )
+    )
+    OR (btrim(actors.scopes) = '' AND :held = ANY(ARRAY[:standard]))
+  SQL
+
+  scope :holding, ->(held) { where(HOLDING, held: held.to_s.strip, standard: Scopes::STANDARD) }
+
   class << self
     def locate(identifier)
       wanted = identifier.to_s.strip
@@ -196,12 +214,19 @@ class Actor < ApplicationRecord
   def verify_otp(code)
     return false unless otp?
 
-    totp = ROTP::TOTP.new(otp_secret)
-    at = totp.verify(code.to_s.strip, drift_behind: OTP_DRIFT)
+    step = otp_step(otp_secret, code)
 
-    return false if at.nil?
+    step.present? && spend_otp_step(step)
+  end
 
-    spend_otp_step(at.to_i / totp.interval)
+  def adopt_otp!(secret, code)
+    return false if otp?
+
+    step = otp_step(secret, code)
+
+    return false if step.nil?
+
+    update!(otp_secret: secret, otp_enabled_at: Time.current, otp_last_step: step)
   end
 
   BACKUP_CODES = 10
@@ -284,6 +309,13 @@ class Actor < ApplicationRecord
   end
 
   private
+
+    def otp_step(secret, code)
+      totp = ROTP::TOTP.new(secret)
+      at = totp.verify(code.to_s.delete("^0-9"), drift_behind: OTP_DRIFT)
+
+      at && at.to_i / totp.interval
+    end
 
     def spend_otp_step(step)
       taken = self.class.where(id: id)

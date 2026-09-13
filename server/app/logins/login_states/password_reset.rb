@@ -6,7 +6,7 @@ module LoginStates
 
     accepts :password
 
-    handles "forgot-password" do
+    handles "forgot-password", limit: :sending do
       open
     end
 
@@ -62,7 +62,7 @@ module LoginStates
       def settle
         return warn!("reset-expired") if reset.nil?
         refusal = Passwords.refusal(password, login.policy)
-        return warn!(refusal) if refusal
+        return warn!(refusal, field: "password") if refusal
 
         actor = ::PasswordReset.settle!(login.store[HELD], password)
         return warn!("reset-expired") if actor.nil?

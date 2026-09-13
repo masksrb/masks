@@ -18,7 +18,7 @@ module LoginStates
     end
 
     def as_json
-      { "configure" => { "called" => tenant&.name, "steps" => Signup.steps(true) } }
+      { "configure" => { "called" => tenant&.name } }
     end
 
     def start_over!

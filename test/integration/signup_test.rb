@@ -70,7 +70,7 @@ class SignupTest < ActionDispatch::IntegrationTest
 
     assert_equal "signup", body["prompt"]
     assert_equal "ada@example.com", body.dig("signup", "email")
-    assert_equal %w[identification credentials], body.dig("signup", "steps")
+    assert_equal %w[identification credentials], body.dig("journey", "steps")
 
     body = event("signup", nickname: "ada", email: "ada@example.com", name: "Ada Lovelace")
 
@@ -182,8 +182,8 @@ class SignupTest < ActionDispatch::IntegrationTest
       body = sign_up
 
       assert_equal "confirm-email", body["prompt"]
-      assert_equal %w[identification credentials confirmation], body.dig("confirmation", "steps")
-      assert body.dig("confirmation", "signingUp")
+      assert_equal %w[identification credentials confirmation], body.dig("journey", "steps")
+      assert_equal "grant", body["surface"]
       assert_nil created.email_verified_at
 
       body = event("confirm:email", code: "000000")

@@ -1,9 +1,8 @@
 <% confirmation = login.as_json["confirmation"] %>
 <% linked = confirmation["mode"] == "link" %>
 
-<%= render "logins/confirm_head", login: login,
-      title: linked ? t(".title_link") : t(".title"),
-      lede: linked ? t(".lede_link", email: confirmation["email"]) : t(".lede", email: confirmation["email"]) %>
+<%= render "logins/confirm_head", login: login, title: t(".title"),
+      lede: t(linked ? ".lede_link" : ".lede", email: confirmation["email"]) %>
 
 <% if !confirmation["mails"] %>
   <p class="note note-warn" role="alert"><%= t(".no_mailer") %></p>
@@ -14,18 +13,7 @@
     <button type="submit" class="action"><%= t("logins.shared.continue") %></button>
   <% end %>
 <% else %>
-  <%= form_with url: login_path, method: :post, id: "confirm-email", class: "flow" do |form| %>
-    <%= hidden_field_tag :rid, login.rid %>
-    <%= form.hidden_field :event, value: "confirm:email" %>
-
-    <label class="field">
-      <span class="field-label"><%= t(".code") %></span>
-      <%= form.text_field :code, inputmode: "numeric", pattern: "[0-9]*", autocomplete: "one-time-code",
-            maxlength: 6, spellcheck: "false", class: "control control-code" %>
-    </label>
-
-    <button type="submit" class="action"><%= t("logins.shared.continue") %></button>
-  <% end %>
+  <%= render "logins/code_form", login: login, event: "confirm:email" %>
 <% end %>
 
 <%= render "logins/resend", login: login if confirmation["mails"] %>

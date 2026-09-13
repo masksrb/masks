@@ -5,7 +5,6 @@ import SignupHead from "../shared/SignupHead.svelte";
 
 let { login } = $props();
 
-const configure = $derived(login.auth.configure ?? {});
 const docs = $derived(login.auth.docs);
 const origin = typeof location === "undefined" ? "" : location.origin;
 
@@ -23,7 +22,7 @@ function onsubmit(event) {
 </script>
 
 <div class="setup flow" class:setup-ready={ready}>
-  <SignupHead {login} firstRun steps={configure.steps} at={3} mark={login.actor?.identifier ?? ""} />
+  <SignupHead {login} at={3} mark={login.actor?.identifier ?? ""} />
 
   <form {onsubmit} class="flow" aria-busy={login.loading || undefined}>
     <div class="slab">

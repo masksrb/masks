@@ -12,8 +12,8 @@ class PendingLogin < Token
   end
 
   def keep!(held)
-    with_lock do
-      update!(payload: held, expires_at: self.class.lifetime.from_now)
-    end
+    return if held == payload && expires_at > (self.class.lifetime / 2).from_now
+
+    update_columns(payload: held, expires_at: self.class.lifetime.from_now, updated_at: Time.current)
   end
 end

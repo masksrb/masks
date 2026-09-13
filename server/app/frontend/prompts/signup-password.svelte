@@ -6,7 +6,7 @@ import SignupHead from "../shared/SignupHead.svelte";
 let { login } = $props();
 
 const signup = $derived(login.auth.signup ?? {});
-const firstRun = $derived(Boolean(signup.firstRun));
+const firstRun = $derived(Boolean(login.auth.journey?.firstRun));
 const minimum = $derived(signup.minimum ?? 8);
 const docs = $derived(login.auth.docs);
 
@@ -35,7 +35,7 @@ function onsubmit(event) {
 </script>
 
 <div class="setup flow" class:setup-ready={matched}>
-  <SignupHead {login} {firstRun} steps={signup.steps} at={2} mark={signup.nickname || signup.email || ""} />
+  <SignupHead {login} at={2} mark={signup.nickname || signup.email || ""} />
 
   <form {onsubmit} class="flow" aria-busy={login.loading || undefined}>
     <div class="slab">
@@ -83,7 +83,7 @@ function onsubmit(event) {
       type="submit"
       ready={matched}
       busy={login.loading}
-      label={firstRun ? login.t("submit_first_run") : login.t("submit")}
+      label={firstRun ? login.t("submit_first_run") : login.t("submit_signup")}
       working={login.t("working")}
     />
   </form>

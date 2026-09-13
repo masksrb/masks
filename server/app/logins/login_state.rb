@@ -30,8 +30,12 @@ class LoginState
       self
     end
 
-    def handles(*names, &handler)
-      names.each { |name| declared_events << [ name.to_s, handler ] }
+    def handles(*names, limit: nil, &handler)
+      names.each do |name|
+        declared_events << [ name.to_s, handler ]
+        declared_limits[name.to_s] = limit if limit
+      end
+
       self
     end
 
@@ -50,6 +54,10 @@ class LoginState
 
     def declared_updates
       @declared_updates ||= inherited_from(:declared_updates)
+    end
+
+    def declared_limits
+      @declared_limits ||= {}
     end
 
     private

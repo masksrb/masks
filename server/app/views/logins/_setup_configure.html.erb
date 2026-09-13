@@ -1,8 +1,7 @@
 <% configure = login.state("configure").as_json["configure"] %>
 
 <div class="setup flow">
-  <%= render "logins/signup_head", first_run: true, steps: configure["steps"], at: 3,
-                                   mark: login.actor&.identifier.to_s %>
+  <%= render "logins/signup_head", login: login, at: 3, mark: login.actor&.identifier.to_s %>
 
   <%= form_with url: login_path, method: :post, id: "setup-configure", class: "flow" do |form| %>
     <%= hidden_field_tag :rid, login.rid %>

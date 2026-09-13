@@ -1,12 +1,13 @@
 module LoginStates
   class Enrolment < LoginState
     HELD = "enrolment".freeze
+    OFFERED = "enrolment_offered".freeze
     WINDOW = 15.minutes
     GROUP = 4
 
     accepts :code, :passkey, :kept
 
-    handles "enrol:otp" do
+    handles "enrol:otp", limit: :verifying do
       enrol_otp
     end
 
@@ -14,7 +15,7 @@ module LoginStates
       offer_passkey
     end
 
-    handles "enrol:passkey" do
+    handles "enrol:passkey", limit: :verifying do
       enrol_passkey
     end
 
@@ -32,13 +33,9 @@ module LoginStates
     end
 
     def as_json
-      signing_up = login.store[Signup::SIGNED_UP]
-
       {
         "enrolment" => {
           "required" => required?,
-          "signingUp" => signing_up,
-          "steps" => signing_up && Signup.steps(signing_up["first_run"], login.policy),
           "offers" => offers,
           "otp" => otp_json,
           "passkeys" => {
@@ -56,6 +53,7 @@ module LoginStates
 
     def start_over!
       login.store.delete(HELD)
+      login.store.delete(OFFERED)
     end
 
     def cleanup!
@@ -88,16 +86,13 @@ module LoginStates
       end
 
       def offered_at_signup?
-        signed_up = login.store[Signup::SIGNED_UP]
-
-        signed_up.present? && !signed_up["enrolment_offered"] && (offers["otp"] || offers["passkey"])
+        login.store[Signup::SIGNED_UP].present? && login.store[OFFERED].blank? && (offers["otp"] || offers["passkey"])
       end
 
       def open!
         return if open?
 
-        signed_up = login.store[Signup::SIGNED_UP]
-        login.store[Signup::SIGNED_UP] = signed_up.merge("enrolment_offered" => true) if signed_up.present?
+        login.store[OFFERED] = true
 
         login.store[HELD] = { "actor_id" => actor.id, "expires_at" => (Time.current + WINDOW).to_i }
       end
@@ -127,17 +122,10 @@ module LoginStates
       def enrol_otp
         return unless open? && !actor.otp? && offers["otp"]
 
-        secret = otp_secret
-        totp = ROTP::TOTP.new(secret)
-        at = totp.verify(update(:code).to_s.delete("^0-9"), drift_behind: Actor::OTP_DRIFT)
-
-        if at.nil?
+        unless actor.adopt_otp!(otp_secret, update(:code))
           refused! "enrol_otp"
           return warn!("invalid-code")
         end
-
-        actor.update!(otp_secret: secret, otp_enabled_at: Time.current,
-                      otp_last_step: at.to_i / totp.interval)
 
         Event.record!(Event::AUTHENTICATOR_ENABLED, actor: actor)
 
@@ -161,7 +149,7 @@ module LoginStates
         hold(passkey: nil)
 
         return warn!("passkey-expired") if challenge.blank?
-        return warn!("passkey-crowded") if actor.passkeys.count >= ::Passkey::MAX_PER_ACTOR
+        return warn!("passkey-crowded") if ::Passkey.crowded?(actor)
 
         credential = relying_party.verify_registration(JSON.parse(update(:passkey).to_s), challenge)
 
@@ -170,9 +158,7 @@ module LoginStates
           return warn!("passkey-unverified")
         end
 
-        passkey = ::Passkey.enrol!(actor: actor, credential: credential, name: nil)
-
-        Event.record!(Event::PASSKEY_ADDED, actor: actor, passkey: passkey.name)
+        ::Passkey.register!(actor: actor, credential: credential)
 
         enrolled! "swk", "user", "mfa"
       rescue WebAuthn::Error, JSON::ParserError, ActiveRecord::RecordInvalid

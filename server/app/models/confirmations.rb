@@ -1,23 +1,15 @@
 module Confirmations
   class << self
-    def send_email_code(actor)
-      token, code = ConfirmationCode.open!(actor: actor, channel: ConfirmationCode::EMAIL, address: actor.email)
+    def send_code(actor, channel)
+      token, code = ConfirmationCode.open!(actor: actor, channel: channel, address: actor.public_send(channel))
 
-      if ActorMailer.deliverable?
+      if channel == ConfirmationCode::EMAIL
         ActorMailer.confirmation_code(actor, code, tenant_name: Current.tenant&.name).deliver_later
+        Event.record!(Event::EMAIL_VERIFICATION_SENT, actor: actor, email: actor.email, by_code: true)
+      else
+        Texting.deliver_later(to: actor.phone, body: I18n.t("texts.code", code: code, tenant: Current.tenant&.name))
+        Event.record!(Event::PHONE_VERIFICATION_SENT, actor: actor)
       end
-
-      Event.record!(Event::EMAIL_VERIFICATION_SENT, actor: actor, email: actor.email, by_code: true)
-
-      token
-    end
-
-    def send_phone_code(actor)
-      token, code = ConfirmationCode.open!(actor: actor, channel: ConfirmationCode::PHONE, address: actor.phone)
-
-      Texting.deliver_later(to: actor.phone, body: I18n.t("texts.code", code: code, tenant: Current.tenant&.name))
-
-      Event.record!(Event::PHONE_VERIFICATION_SENT, actor: actor)
 
       token
     end
@@ -27,9 +19,7 @@ module Confirmations
 
       return unless ActorMailer.deliverable?
 
-      Actor.where("scopes LIKE ?", "%#{Scopes::MANAGE}%").where.not(email_verified_at: nil).find_each do |manager|
-        next unless manager.manages?
-
+      Actor.holding(Scopes::MANAGE).where.not(email_verified_at: nil).find_each do |manager|
         ActorMailer.approval_requested(manager, actor, tenant_name: Current.tenant&.name,
                                                        origin: Current.origin).deliver_later
       end
@@ -40,7 +30,7 @@ module Confirmations
 
       Event.record!(Event::ACTOR_APPROVED, actor: actor, by: by)
 
-      return unless ActorMailer.deliverable? && actor.email.present?
+      return if actor.email.blank?
 
       ActorMailer.approved(actor, tenant_name: Current.tenant&.name, origin: Current.origin).deliver_later
     end

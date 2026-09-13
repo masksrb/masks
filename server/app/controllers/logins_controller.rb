@@ -1,6 +1,4 @@
 class LoginsController < ApplicationController
-  VERIFYING = %w[password otp backup signup enrol:otp enrol:passkey confirm:email confirm:phone].freeze
-
   skip_forgery_protection
 
   rate_limit to: Rails.configuration.masks.attempt_limit,
@@ -15,7 +13,7 @@ class LoginsController < ApplicationController
 
   rate_limit to: Rails.configuration.masks.recovery_limit,
              within: 15.minutes, only: :update, name: "recovery",
-             if: -> { %w[forgot-password confirm:resend].include?(params[:event].to_s) },
+             if: -> { Login.limit_for(params[:event]) == :sending },
              by: -> { [ current_tenant.id, request.remote_ip ].join(":") },
              with: -> { too_many("too-many-attempts") }
 
@@ -32,7 +30,7 @@ class LoginsController < ApplicationController
     return redirect_to after_login_path if current_actor && pending.nil?
 
     @login = run
-    @login.warn!(*flash[:warnings]) if flash[:warnings].present?
+    @login.carry!(flash[:warnings]) if flash[:warnings].present?
 
     redirect_to after_login_path if @login.settled?
   end
@@ -114,11 +112,11 @@ class LoginsController < ApplicationController
     end
 
     def verifying?
-      VERIFYING.include?(params[:event].to_s)
+      Login.limit_for(params[:event]) == :verifying
     end
 
     def resume(login)
-      flash[:warnings] = login.warnings if login.warnings.any?
+      flash[:warnings] = login.carried if login.warnings.any?
 
       redirect_to next_location(login) || login_path, allow_other_host: true
     end

@@ -7,13 +7,11 @@ class PasskeysController < ApplicationController
     held = session.delete(HELD)
 
     return refuse(t("passkeys.expired")) if held.blank?
-    return refuse(t("passkeys.crowded")) if crowded?
+    return refuse(t("passkeys.crowded")) if Passkey.crowded?(current_actor)
 
     credential = RelyingParty.for.verify_registration(attestation, held)
 
-    passkey = Passkey.enrol!(actor: current_actor, credential: credential, name: params[:name])
-
-    Event.record!(Event::PASSKEY_ADDED, actor: current_actor, passkey: passkey.name)
+    Passkey.register!(actor: current_actor, credential: credential, name: params[:name])
 
     redirect_to root_path, notice: t("passkeys.added")
   rescue WebAuthn::Error, ActiveRecord::RecordInvalid, JSON::ParserError
@@ -46,9 +44,6 @@ class PasskeysController < ApplicationController
       redirect_to login_path unless current_actor
     end
 
-    def crowded?
-      Passkey.where(actor_id: current_actor.id).count >= Passkey::MAX_PER_ACTOR
-    end
 
     def attestation
       JSON.parse(params.require(:credential))

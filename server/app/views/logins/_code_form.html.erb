@@ -1,0 +1,12 @@
+<%= form_with url: login_path, method: :post, id: event.tr(":", "-"), class: "flow" do |form| %>
+  <%= hidden_field_tag :rid, login.rid %>
+  <%= form.hidden_field :event, value: event %>
+
+  <label class="field">
+    <span class="field-label"><%= t("logins.shared.code") %></span>
+    <%= form.text_field :code, inputmode: "numeric", pattern: "[0-9]*", autocomplete: "one-time-code",
+          maxlength: 6, spellcheck: "false", class: "control control-code" %>
+  </label>
+
+  <button type="submit" class="action"><%= t("logins.shared.continue") %></button>
+<% end %>

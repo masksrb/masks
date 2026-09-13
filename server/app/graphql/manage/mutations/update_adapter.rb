@@ -17,14 +17,7 @@ module Manage
         adapter.configure(config) unless config.nil?
         adapter.primary = primary unless primary.nil?
 
-        ::Adapter.transaction do
-          if adapter.primary
-            ::Adapter.active.where(kind: adapter.kind, primary: true).where.not(id: adapter.id)
-                     .update_all(primary: false)
-          end
-
-          save!(adapter)
-        end
+        save!(adapter)
 
         audit!(::Event::ADAPTER_UPDATED, adapter: adapter.key, service: adapter.service,
                                          changed: Array(config&.keys) + [ name && "name", primary.nil? ? nil : "primary" ].compact)

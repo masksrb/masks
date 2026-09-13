@@ -4,7 +4,7 @@
 <% done = ->(field) { " ledger-step-done" if value.(field).present? } %>
 
 <div class="setup flow">
-  <%= render "logins/signup_head", first_run: signup["firstRun"], steps: signup["steps"], at: 1,
+  <%= render "logins/signup_head", login: login, at: 1,
                                    mark: value.("nickname").presence || value.("email") %>
 
   <%= form_with url: login_path, method: :post, id: "signup", class: "flow" do |form| %>
@@ -51,7 +51,7 @@
         </label>
       <% end %>
 
-      <% if signup["firstRun"] %>
+      <% if login.journey["firstRun"] %>
         <div class="ledger-row">
           <span class="ledger-label"><%= t("logins.signing_up.origin") %></span>
           <span class="ledger-value aside-mono"><%= Current.origin %></span>
@@ -64,7 +64,7 @@
     </button>
   <% end %>
 
-  <% if signup["firstRun"] %>
+  <% if login.journey["firstRun"] %>
     <p class="aside">
       <%= t("logins.signing_up.once") %>
       <%= link_to t("logins.signing_up.docs"), Rails.configuration.masks.docs_url,

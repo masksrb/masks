@@ -4,7 +4,7 @@ module LoginStates
 
     accepts :password
 
-    handles "password" do
+    handles "password", limit: :verifying do
       verify
     end
 

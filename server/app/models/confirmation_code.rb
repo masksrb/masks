@@ -12,7 +12,7 @@ class ConfirmationCode < Token
     end
 
     def open!(actor:, channel:, address:)
-      where(actor_id: actor.id).live.select { |held| held.channel == channel }.each(&:consume!)
+      where(actor_id: actor.id).live.where("payload->>'channel' = ?", channel).update_all(consumed_at: Time.current)
 
       code = SecureRandom.random_number(10**DIGITS).to_s.rjust(DIGITS, "0")
       salt = SecureRandom.hex(16)

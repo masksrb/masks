@@ -45,13 +45,6 @@ let { auth } = $props();
 const login = createLogin(untrack(() => auth));
 const Prompt = $derived(prompts[login.prompt]);
 
-const SURFACES = {
-  consent: "grant",
-  signup: "grant",
-  "signup-password": "grant",
-  "setup-configure": "grant",
-};
-
 let frame = $state(null);
 let entering = $state(false);
 let leaving = $state(0);
@@ -70,8 +63,7 @@ $effect.pre(() => {
 });
 
 $effect(() => {
-  const surface =
-    SURFACES[login.prompt] ?? (login.auth.enrolment?.signingUp || login.auth.confirmation?.signingUp ? "grant" : "challenge");
+  const surface = login.auth.surface ?? "challenge";
   const paired = login.prompt === "settled" && Boolean(login.client?.name);
   const column = document.querySelector(".auth-col");
 

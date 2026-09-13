@@ -54,7 +54,7 @@ module LoginStates
       def accept
         return warn!("invitation-expired") if invitation.nil?
         refusal = Passwords.refusal(password, login.policy)
-        return warn!(refusal) if refusal
+        return warn!(refusal, field: "password") if refusal
 
         actor = ::Invitation.accept!(login.store[HELD], password)
         return warn!("invitation-expired") if actor.nil?

@@ -4,6 +4,7 @@ class Provider < ApplicationRecord
   class Untrusted < StandardError; end
 
   include TenantScoped
+  include Archivable
 
   OPEN_TIMEOUT = 5
   READ_TIMEOUT = 10
@@ -39,7 +40,6 @@ class Provider < ApplicationRecord
   RESERVED_PARAMS = %w[response_type client_id redirect_uri scope state nonce
                        code_challenge code_challenge_method].freeze
 
-  scope :active, -> { where(archived_at: nil) }
   scope :signing_in, -> { active.where(signs_in: true).where.not(issuer: nil) }
 
   class << self
@@ -80,10 +80,6 @@ class Provider < ApplicationRecord
 
   def release_scope
     Scopes.connection(key)
-  end
-
-  def archived?
-    archived_at.present?
   end
 
   def signs_in?

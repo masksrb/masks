@@ -24,14 +24,10 @@ module Adapters
 
       payload = URI.encode_www_form(form)
 
-      post_form(endpoint, form, signed(payload))
+      post_encoded("https://#{host}/", payload, signed(payload))
     end
 
     private
-
-      def endpoint
-        "https://#{host}/"
-      end
 
       def host
         "sns.#{self[:region]}.amazonaws.com"

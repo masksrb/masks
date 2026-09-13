@@ -11,7 +11,7 @@ const enrolment = $derived(login.auth.enrolment ?? {});
 const otp = $derived(enrolment.otp ?? {});
 const passkeys = $derived(enrolment.passkeys ?? { count: 0 });
 const codes = $derived(enrolment.backupCodes ?? {});
-const signingUp = $derived(enrolment.signingUp ?? null);
+const signingUp = $derived(Boolean(login.auth.journey));
 const offers = $derived(enrolment.offers ?? { otp: true, passkey: true, backupCodes: true });
 const secured = $derived(!enrolment.required);
 const issued = $derived(codes.issued ?? []);
@@ -27,6 +27,7 @@ let unusable = $state(null);
 const coded = $derived(code.replace(/\D/g, "").length === 6);
 const ready = $derived(secured && (issued.length === 0 || kept));
 const anything = $derived(Boolean(otp.enabled || passkeys.count > 0));
+const lede = $derived(enrolment.required ? login.t("lede") : login.t("lede_optional"));
 
 function turnOn(event) {
   event.preventDefault();
@@ -80,20 +81,14 @@ function done(event) {
 
 <div class="flow" class:setup={signingUp} class:setup-ready={signingUp && ready}>
   {#if signingUp}
-    <SignupHead
-      {login}
-      firstRun={signingUp.first_run}
-      steps={enrolment.steps}
-      at={2}
-      mark={login.actor?.identifier ?? ""}
-    />
+    <SignupHead {login} at={2} mark={login.actor?.identifier ?? ""} />
 
-    <p class="aside">{enrolment.required ? login.t("lede") : login.t("lede_optional")}</p>
+    <p class="aside">{lede}</p>
   {:else}
     <Head
       {login}
       title={login.t("title")}
-      lede={enrolment.required ? login.t("lede") : login.t("lede_optional")}
+      {lede}
     />
 
     <Identified {login} />

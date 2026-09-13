@@ -1,5 +1,6 @@
 class SignInPolicy < ApplicationRecord
   include TenantScoped
+  include Archivable
 
   OFF = "off".freeze
   OPTIONAL = "optional".freeze
@@ -34,23 +35,18 @@ class SignInPolicy < ApplicationRecord
     Array(held).map { |one| one.to_s.strip.downcase.delete_prefix("@") }.reject(&:empty?).uniq
   }
 
-  scope :active, -> { where(archived_at: nil) }
-
   class << self
     def default
       new(key: "default", name: "Default")
     end
 
-    def for(client: nil, tenant: Current.tenant)
-      held = client&.sign_in_policy
-      held = nil if held&.archived?
-
-      held || tenant&.sign_in_policy&.then { |policy| policy.archived? ? nil : policy } || default
+    def first_run
+      new(key: "first-run", name: "First run", signup: true, nickname: REQUIRED, email: REQUIRED, phone: OFF)
     end
-  end
 
-  def archived?
-    archived_at.present?
+    def for(client: nil, tenant: Current.tenant)
+      [ client&.sign_in_policy, tenant&.sign_in_policy ].compact.find { |policy| !policy.archived? } || default
+    end
   end
 
   def asks?(field)

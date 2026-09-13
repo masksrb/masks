@@ -6,6 +6,9 @@ en:
 
     shared:
       continue: "Continue"
+      code: "Six-digit code"
+      send_again: "Send it again"
+      sent_again: "Sent again"
       checking: "Checking"
       nickname: "Nickname"
       account: "Account"
@@ -50,8 +53,6 @@ en:
       submit_signup: "Create my account"
       have_account: "Already have an account?"
       sign_in_instead: "Sign in instead"
-      sent_again: "Sent again"
-      send_again: "Send it again"
 
     identify:
       heading: "Sign in"
@@ -65,7 +66,6 @@ en:
 
     second_factor:
       title: "Enter your code"
-      code: "Six-digit code"
       trust: "Trust this device for %{duration}"
       use_backup_code: "Use a backup code"
 
@@ -77,7 +77,6 @@ en:
       otp_on: "On"
       scan_hint: "Scan it, or enter this key by hand:"
       open: "Open in your authenticator app"
-      code: "Six-digit code"
       turn_on: "Turn it on"
       passkeys: "Passkeys"
       passkeys_none: "None yet. One that checks a PIN or fingerprint counts."
@@ -112,10 +111,7 @@ en:
       hint: "At least %{minimum} characters. Signs you out everywhere else."
       working: "Setting"
 
-    signup: {}
-
     signup_password:
-      submit: "Create my account"
       working: "Creating"
 
     setup_configure:
@@ -126,17 +122,14 @@ en:
 
     confirm_email:
       title: "Check your email"
-      title_link: "Check your email"
       lede: "A six-digit code is on its way to %{email}."
       lede_link: "A link is on its way to %{email}. Open it, and this page carries on by itself."
-      code: "Six-digit code"
       waiting: "Waiting for the link to be opened"
       no_mailer: "This server cannot send email yet, so the address cannot be confirmed. Ask a manager."
 
     confirm_phone:
       title: "Check your phone"
       lede: "A six-digit code is on its way to %{phone}."
-      code: "Six-digit code"
       change_phone: "Use a different number"
       no_texts: "This server cannot send text messages yet, so the number cannot be confirmed. Ask a manager."
 

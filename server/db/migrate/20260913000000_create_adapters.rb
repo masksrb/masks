@@ -25,7 +25,7 @@ class CreateAdapters < ActiveRecord::Migration[8.1]
 
     enable_row_level_security(:adapters)
 
-    SMTP.each { |column| remove_column :tenants, column, if_exists: true }
+    SMTP.each { |column| remove_column :tenants, column }
   end
 
   def down

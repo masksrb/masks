@@ -8,7 +8,7 @@ module LoginStates
       actor&.otp?
     end
 
-    handles "otp" do
+    handles "otp", limit: :verifying do
       verify
     end
 

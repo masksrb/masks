@@ -147,8 +147,8 @@ module Manage
       end
 
       def clients(search: nil, archived: false, after_id: nil, limit: nil)
-        scope = archived ? Client.where.not(archived_at: nil) : Client.active
-        scope = scope.includes(:approved_by, :namespaces).newest_first
+        scope = Client.listed(archived)
+        scope = scope.includes(:approved_by, :namespaces, :sign_in_policy).newest_first
 
         if search.present?
           term = "%#{Client.sanitize_sql_like(search.strip)}%"
@@ -235,7 +235,7 @@ module Manage
       end
 
       def providers(archived: false)
-        scope = archived ? ::Provider.where.not(archived_at: nil) : ::Provider.active
+        scope = ::Provider.listed(archived)
 
         scope.order(:name)
       end
@@ -245,14 +245,14 @@ module Manage
       end
 
       def adapters(kind: nil, archived: false)
-        scope = archived ? ::Adapter.where.not(archived_at: nil) : ::Adapter.active
+        scope = ::Adapter.listed(archived)
         scope = scope.where(kind: kind) if kind
 
         scope.order(:kind, primary: :desc, name: :asc)
       end
 
       def sign_in_policies(archived: false)
-        scope = archived ? ::SignInPolicy.where.not(archived_at: nil) : ::SignInPolicy.active
+        scope = ::SignInPolicy.listed(archived)
 
         scope.order(:name)
       end
@@ -326,24 +326,8 @@ module Manage
 
       private
 
-        HOLDING = <<~SQL.squish.freeze
-          EXISTS (
-            SELECT 1 FROM regexp_split_to_table(actors.scopes, '[\\s,]+') AS entry
-            WHERE entry <> ''
-              AND (
-                entry = :held
-                OR (
-                  right(entry, 1) = ':'
-                  AND starts_with(:held, entry)
-                  AND length(:held) > length(entry)
-                )
-              )
-          )
-          OR (btrim(actors.scopes) = '' AND :held = ANY(ARRAY[:standard]))
-        SQL
-
         def holding(scope, held)
-          scope.where(HOLDING, held: held.to_s.strip, standard: Scopes::STANDARD)
+          scope.holding(held)
         end
 
         def granted

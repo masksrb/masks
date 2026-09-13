@@ -23,6 +23,15 @@ class Login
     STATES.flat_map { |state| state.declared_updates }.uniq
   end
 
+  def self.limit_for(event)
+    STATES.each do |state|
+      limit = state.declared_limits[event.to_s]
+      return limit if limit
+    end
+
+    nil
+  end
+
   attr_reader :store, :updates, :event, :prompt, :warnings, :request, :session, :device, :refusal, :rid
   attr_accessor :redirect_to
 
@@ -35,6 +44,7 @@ class Login
     @event = event.presence&.to_s
     @updates = (updates || {}).stringify_keys
     @warnings = []
+    @warning_fields = {}
   end
 
   def client
@@ -46,7 +56,7 @@ class Login
   end
 
   def policy
-    @policy ||= SignInPolicy.for(client: client, tenant: tenant)
+    @policy ||= first_run? ? SignInPolicy.first_run : SignInPolicy.for(client: client, tenant: tenant)
   end
 
   def first_run?
@@ -57,6 +67,20 @@ class Login
 
   def first_run!
     remove_instance_variable(:@first_run) if defined?(@first_run)
+    remove_instance_variable(:@policy) if defined?(@policy)
+  end
+
+  def journey
+    signed_up = store[LoginStates::Signup::SIGNED_UP]
+    first = signed_up ? signed_up["first_run"] : first_run?
+
+    return nil unless signed_up || state("signup").enabled?
+
+    { "firstRun" => first, "steps" => LoginStates::Signup.steps(first, policy) }
+  end
+
+  def surface
+    prompt == "consent" || (journey && !settled?) ? "grant" : "challenge"
   end
 
   def identifier
@@ -172,9 +196,21 @@ class Login
     DeviceFactor.remember!(device: device, actor: actor, factor: factor, expiry: expiry)
   end
 
-  def warn!(*keys)
-    warnings.concat(keys.compact.map(&:to_s))
-    warnings.uniq!
+  def warn!(*keys, field: nil)
+    @as_json = nil
+
+    keys.compact.map(&:to_s).each do |key|
+      warnings << key unless warnings.include?(key)
+      @warning_fields[key] = field.to_s if field
+    end
+  end
+
+  def carried
+    warnings.map { |key| [ key, @warning_fields[key] ] }
+  end
+
+  def carry!(held)
+    Array(held).each { |key, field| warn!(key, field: field) }
   end
 
   def settled?
@@ -190,6 +226,7 @@ class Login
   end
 
   def update
+    @as_json = nil
     forget_vanished_actor!
     states.each(&:reload!)
     states.each { |state| state.event!(event) } if event
@@ -208,6 +245,7 @@ class Login
   end
 
   def start_over!
+    @as_json = nil
     states.each(&:start_over!)
     store.replace({})
     self
@@ -217,18 +255,6 @@ class Login
     states_by_key.fetch(key.to_s)
   end
 
-  FIELDS = {
-    "short-password" => "password",
-    "common-password" => "password",
-    "mismatched-password" => "password_confirmation",
-    "missing-nickname" => "nickname",
-    "missing-email" => "email",
-    "signup-domain-refused" => "email",
-    "missing-phone" => "phone",
-    "invalid-phone" => "phone",
-    "invalid-setup-token" => "token"
-  }.freeze
-
   def messages
     warnings.filter_map do |key|
       notice = I18n.t("logins.notices.#{key}", default: nil)
@@ -236,7 +262,7 @@ class Login
 
       next unless text
 
-      { "key" => key, "text" => text, "tone" => notice ? "note" : "note note-bad", "field" => FIELDS[key] }.compact
+      { "key" => key, "text" => text, "tone" => notice ? "note" : "note note-bad", "field" => @warning_fields[key] }.compact
     end
   end
 
@@ -244,38 +270,41 @@ class Login
     messages.find { |message| message["field"] == field.to_s }
   end
 
-  SIGNING_UP = %w[signup signup-password setup-configure enrol confirm-email confirm-phone
-                  add-phone awaiting-approval].freeze
-
   def copy
     key = prompt.to_s.tr("-", "_")
     shared = I18n.t("logins.shared", default: {})
-    shared = shared.merge(I18n.t("logins.signing_up", default: {})) if SIGNING_UP.include?(prompt.to_s)
+    shared = shared.merge(I18n.t("logins.signing_up", default: {})) if journey
     named = key.present? ? I18n.t("logins.#{key}", default: {}) : {}
 
     shared.merge(named.is_a?(Hash) ? named : {}).transform_keys(&:to_s)
   end
 
   def as_json(*)
-    base = {
-      "prompt" => prompt,
-      "settled" => settled?,
-      "copy" => copy,
-      "warnings" => warnings,
-      "messages" => messages,
-      "identifier" => identifier,
-      "rid" => rid,
-      "docs" => Rails.configuration.masks.docs_url,
-      "actor" => actor && { "nickname" => actor.nickname, "name" => actor.name,
-                            "identifier" => actor.identifier },
-      "client" => client && { "name" => client.name, "id" => client.client_id },
-      "tenant" => tenant && { "name" => tenant.name }
-    }
-
-    states.reduce(base) { |json, state| state.enabled? ? json.merge(state.as_json) : json }
+    @as_json ||= build_json
   end
 
   private
+
+    def build_json
+      base = {
+        "prompt" => prompt,
+        "settled" => settled?,
+        "copy" => copy,
+        "warnings" => warnings,
+        "messages" => messages,
+        "identifier" => identifier,
+        "rid" => rid,
+        "docs" => Rails.configuration.masks.docs_url,
+        "actor" => actor && { "nickname" => actor.nickname, "name" => actor.name,
+                              "identifier" => actor.identifier },
+        "client" => client && { "name" => client.name, "id" => client.client_id },
+        "tenant" => tenant && { "name" => tenant.name },
+        "journey" => journey,
+        "surface" => surface
+      }
+
+      states.reduce(base) { |json, state| state.enabled? ? json.merge(state.as_json) : json }
+    end
 
     def forget_vanished_actor!
       return if store["actor_id"].blank? || actor.present?

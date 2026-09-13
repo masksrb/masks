@@ -2,9 +2,10 @@
 import Head from "./Head.svelte";
 import Steps from "./Steps.svelte";
 
-let { login, firstRun, steps, at, mark = "" } = $props();
+let { login, at, mark = "" } = $props();
 
 const tenant = $derived(login.auth.tenant?.name ?? "");
+const journey = $derived(login.auth.journey ?? { steps: [] });
 
 const initial = (name) => (name ? name.trim().slice(0, 1).toUpperCase() : "");
 </script>
@@ -16,10 +17,10 @@ const initial = (name) => (name ? name.trim().slice(0, 1).toUpperCase() : "");
   <span class="auth-mark" aria-hidden="true">{initial(tenant)}</span>
 </div>
 
-{#if firstRun}
+{#if journey.firstRun}
   <Head {login} title={login.t("setup_title")} name={tenant} cap={login.t("setup_cap")} />
 {:else}
   <Head {login} title={login.t("signup_title")} name={tenant} />
 {/if}
 
-<Steps {login} {steps} {at} />
+<Steps {login} steps={journey.steps} at={at ?? journey.steps.length} />

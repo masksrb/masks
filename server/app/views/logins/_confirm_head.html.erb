@@ -1,8 +1,5 @@
-<% confirmation = login.as_json["confirmation"] %>
-
-<% if confirmation["signingUp"] %>
-  <%= render "logins/signup_head", first_run: false, steps: confirmation["steps"],
-                                   at: confirmation["steps"].length, mark: login.actor&.identifier.to_s %>
+<% if login.journey %>
+  <%= render "logins/signup_head", login: login, mark: login.actor&.identifier.to_s %>
 
   <div class="prompt-head">
     <h2 class="prompt-title"><%= title %></h2>

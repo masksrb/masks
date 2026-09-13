@@ -1,5 +1,6 @@
 class Client < ApplicationRecord
   include TenantScoped
+  include Archivable
   include Paged
 
   AUTH_METHODS = %w[client_secret_basic client_secret_post none].freeze
@@ -34,7 +35,6 @@ class Client < ApplicationRecord
   belongs_to :approved_by, class_name: "Actor", optional: true
   belongs_to :sign_in_policy, optional: true
 
-  scope :active, -> { where(archived_at: nil) }
   scope :approved, -> { where.not(approved_at: nil) }
 
   attr_reader :secret, :registration_token

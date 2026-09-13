@@ -8,7 +8,7 @@ let { login } = $props();
 
 const signup = $derived(login.auth.signup ?? {});
 const asks = $derived(signup.asks ?? {});
-const firstRun = $derived(Boolean(signup.firstRun));
+const firstRun = $derived(Boolean(login.auth.journey?.firstRun));
 const docs = $derived(login.auth.docs);
 const origin = typeof location === "undefined" ? "" : location.origin;
 
@@ -41,7 +41,7 @@ function onsubmit(event) {
 </script>
 
 <div class="setup flow" class:setup-ready={valid}>
-  <SignupHead {login} {firstRun} steps={signup.steps} at={1} mark={nickname || email} />
+  <SignupHead {login} at={1} mark={nickname || email} />
 
   <form {onsubmit} class="flow" aria-busy={login.loading || undefined}>
     <div class="slab">

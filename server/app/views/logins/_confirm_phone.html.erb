@@ -3,19 +3,7 @@
 <%= render "logins/confirm_head", login: login, title: t(".title"), lede: t(".lede", phone: confirmation["phone"]) %>
 
 <% if confirmation["texts"] %>
-  <%= form_with url: login_path, method: :post, id: "confirm-phone", class: "flow" do |form| %>
-    <%= hidden_field_tag :rid, login.rid %>
-    <%= form.hidden_field :event, value: "confirm:phone" %>
-
-    <label class="field">
-      <span class="field-label"><%= t(".code") %></span>
-      <%= form.text_field :code, inputmode: "numeric", pattern: "[0-9]*", autocomplete: "one-time-code",
-            maxlength: 6, spellcheck: "false", class: "control control-code" %>
-    </label>
-
-    <button type="submit" class="action"><%= t("logins.shared.continue") %></button>
-  <% end %>
-
+  <%= render "logins/code_form", login: login, event: "confirm:phone" %>
   <%= render "logins/resend", login: login %>
 <% else %>
   <p class="note note-warn" role="alert"><%= t(".no_texts") %></p>
