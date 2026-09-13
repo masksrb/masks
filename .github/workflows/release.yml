@@ -124,8 +124,8 @@ jobs:
   image:
     needs: release-please
     concurrency:
-      group: image-${{ github.ref }}
-      cancel-in-progress: true
+      group: image-${{ github.ref }}-${{ needs.release-please.outputs.server == 'true' && needs.release-please.outputs.server_tag || 'build' }}
+      cancel-in-progress: ${{ needs.release-please.outputs.server != 'true' }}
     if: >-
       !cancelled() &&
       needs.release-please.result != 'failure' &&
