@@ -84,6 +84,10 @@ en:
         archived: "A provider was archived"
       tenant:
         updated: "Settings changed"
+      sign_in_policy:
+        created: "Sign-in policy added"
+        updated: "Sign-in policy changed"
+        archived: "Sign-in policy archived"
       adapter:
         created: "Adapter added"
         updated: "Adapter changed"

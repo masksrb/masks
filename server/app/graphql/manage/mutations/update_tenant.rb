@@ -7,11 +7,12 @@ module Manage
       argument :named_by, String, required: false
       argument :browsers_only, Boolean, required: false
       argument :blocked_agents, String, required: false
+      argument :sign_in_policy, ID, required: false
 
       field :tenant, Types::TenantType, null: false
 
       def resolve(name: nil, dynamic_client_scopes: nil, dynamic_registration: nil,
-                  named_by: nil, browsers_only: nil, blocked_agents: nil)
+                  named_by: nil, browsers_only: nil, blocked_agents: nil, sign_in_policy: nil)
         tenant = Current.tenant
 
         tenant.name = name unless name.nil?
@@ -57,6 +58,12 @@ module Manage
           refuse!("MASKS_BLOCKED_AGENTS pins the agents refused here") if tenant.agents_pinned?
 
           tenant.blocked_agents = blocked_agents.presence
+        end
+
+        unless sign_in_policy.nil?
+          tenant.sign_in_policy = sign_in_policy.empty? ? nil : sign_in_policy!(sign_in_policy)
+
+          refuse!("#{tenant.sign_in_policy.name} is archived") if tenant.sign_in_policy&.archived?
         end
 
         save!(tenant)

@@ -9,6 +9,7 @@ module Manage
       field :blocked_agents, String
       field :mails, Boolean, null: false
       field :texts, Boolean, null: false
+      field :sign_in_policy, SignInPolicyType
       field :dynamic_registration, String, null: false
       field :dynamic_client_scopes, [ String ]
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false

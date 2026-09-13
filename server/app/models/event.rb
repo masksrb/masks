@@ -78,6 +78,9 @@ class Event < ApplicationRecord
   PROVIDER_UPDATED = "provider.updated".freeze
   PROVIDER_ARCHIVED = "provider.archived".freeze
   TENANT_UPDATED = "tenant.updated".freeze
+  SIGN_IN_POLICY_CREATED = "sign_in_policy.created".freeze
+  SIGN_IN_POLICY_UPDATED = "sign_in_policy.updated".freeze
+  SIGN_IN_POLICY_ARCHIVED = "sign_in_policy.archived".freeze
   ADAPTER_CREATED = "adapter.created".freeze
   ADAPTER_UPDATED = "adapter.updated".freeze
   ADAPTER_ARCHIVED = "adapter.archived".freeze

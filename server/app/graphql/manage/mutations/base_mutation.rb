@@ -31,6 +31,10 @@ module Manage
           ::Provider.find_by(key: key) || refuse!("no provider keyed #{key}")
         end
 
+        def sign_in_policy!(key)
+          ::SignInPolicy.find_by(key: key) || refuse!("no sign-in policy keyed #{key}")
+        end
+
         def adapter!(key)
           ::Adapter.find_by(key: key) || refuse!("no adapter keyed #{key}")
         end

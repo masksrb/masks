@@ -82,6 +82,14 @@ module Manage
 
       field :adapter_services, [ AdapterServiceType ], null: false
 
+      field :sign_in_policies, [ SignInPolicyType ], null: false do
+        argument :archived, Boolean, required: false
+      end
+
+      field :sign_in_policy, SignInPolicyType do
+        argument :key, ID
+      end
+
       field :scopes_supported, [ String ], null: false
 
       field :minimum_password, Integer, null: false
@@ -239,6 +247,16 @@ module Manage
         scope = scope.where(kind: kind) if kind
 
         scope.order(:kind, primary: :desc, name: :asc)
+      end
+
+      def sign_in_policies(archived: false)
+        scope = archived ? ::SignInPolicy.where.not(archived_at: nil) : ::SignInPolicy.active
+
+        scope.order(:name)
+      end
+
+      def sign_in_policy(key:)
+        ::SignInPolicy.find_by(key: key)
       end
 
       def adapter_services

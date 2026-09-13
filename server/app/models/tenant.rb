@@ -27,6 +27,8 @@ class Tenant < ApplicationRecord
   has_many :consents, dependent: :destroy
   has_many :events, dependent: :delete_all
   has_many :adapters, dependent: :destroy
+  has_many :sign_in_policies, dependent: :destroy
+  belongs_to :sign_in_policy, optional: true
 
   NICKNAME = "nickname".freeze
   EMAIL = "email".freeze

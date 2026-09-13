@@ -276,6 +276,58 @@ class ManageApiTest < ActionDispatch::IntegrationTest
     assert_match(/secrets/, asked["errors"].first["message"])
   end
 
+  test "a sign-in policy is created, named as the default, and chosen by a client" do
+    held = bearer
+
+    body = ask(<<~GQL, held)
+      mutation {
+        createSignInPolicy(key: "customers", name: "Customers", signup: true, confirmation: "code",
+                           secondFactorRequired: true, emailDomains: ["@Example.com"],
+                           signupScopes: ["openid", "email"]) {
+          signInPolicy { key signup confirmation secondFactorRequired emailDomains signupScopes default }
+        }
+      }
+    GQL
+
+    assert_nil body["errors"]
+
+    created = body.dig("data", "createSignInPolicy", "signInPolicy")
+
+    assert created["signup"]
+    assert_equal [ "example.com" ], created["emailDomains"]
+    assert_equal %w[email openid], created["signupScopes"].sort
+    refute created["default"]
+
+    ask(%(mutation { updateTenant(signInPolicy: "customers") { tenant { name } } }), held)
+
+    assert ask(%(query { signInPolicy(key: "customers") { default } }), held).dig("data", "signInPolicy", "default")
+
+    ask(%(mutation { updateClient(clientId: "#{@client.client_id}", signInPolicy: "customers") { client { clientId } } }), held)
+
+    assert_equal "customers", within(@tenant) { @client.reload.sign_in_policy.key }
+
+    ask(%(mutation { updateClient(clientId: "#{@client.client_id}", signInPolicy: "") { client { clientId } } }), held)
+
+    assert_nil within(@tenant) { @client.reload.sign_in_policy }
+
+    refused = ask(%(mutation { archiveSignInPolicy(key: "customers") { signInPolicy { key } } }), held)
+
+    assert_match "default", refused["errors"].first["message"]
+  end
+
+  test "a sign-in policy cannot hand out masks: scopes to whoever signs up" do
+    body = ask(<<~GQL, bearer)
+      mutation {
+        createSignInPolicy(key: "open", name: "Open", signup: true, signupScopes: ["openid", "masks:manage"]) {
+          signInPolicy { key }
+        }
+      }
+    GQL
+
+    assert_match "masks:manage", body["errors"].first["message"]
+    assert_equal 0, within(@tenant) { SignInPolicy.count }
+  end
+
   test "adapters of every kind are offered, with the fields each one needs" do
     body = ask(%(query { adapterServices { service kind label fields { key secret required } } }), bearer)
     services = body.dig("data", "adapterServices").index_by { |held| held["service"] }

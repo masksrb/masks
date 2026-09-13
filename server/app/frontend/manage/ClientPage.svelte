@@ -28,6 +28,7 @@
         requiredScopes allowedScopes
         backchannelLogoutUri backchannelLogoutSessionRequired
         requirePushedAuthorizationRequests
+        signInPolicy { key name }
         events(limit: 25) {
           id action createdAt ipAddress details
           actor { uuid identifier }
@@ -47,6 +48,8 @@
         }
       }
       scopesSupported
+      signInPolicies { key name }
+      tenant { signInPolicy { key name } }
     }
   `;
 
@@ -54,6 +57,8 @@
 
   let client = $state(null);
   let supported = $state([]);
+  let policies = $state([]);
+  let tenantPolicy = $state(null);
   let name = $state("");
   let logoutUri = $state("");
   let loading = $state(true);
@@ -85,6 +90,8 @@
 
       client = data.client;
       supported = data.scopesSupported;
+      policies = data.signInPolicies;
+      tenantPolicy = data.tenant.signInPolicy;
       name = data.client?.name ?? "";
       logoutUri = data.client?.backchannelLogoutUri ?? "";
     } catch (thrown) {
@@ -110,14 +117,15 @@
         $clientId: ID!, $name: String, $requiredScopes: [String!], $allowedScopes: [String!],
         $backchannelLogoutUri: String, $redirectUris: [String!],
         $postLogoutRedirectUris: [String!], $resources: [String!],
-        $requirePushedAuthorizationRequests: Boolean
+        $requirePushedAuthorizationRequests: Boolean, $signInPolicy: ID
       ) {
         updateClient(
           clientId: $clientId, name: $name, requiredScopes: $requiredScopes,
           allowedScopes: $allowedScopes, backchannelLogoutUri: $backchannelLogoutUri,
           redirectUris: $redirectUris, postLogoutRedirectUris: $postLogoutRedirectUris,
           resources: $resources,
-          requirePushedAuthorizationRequests: $requirePushedAuthorizationRequests
+          requirePushedAuthorizationRequests: $requirePushedAuthorizationRequests,
+          signInPolicy: $signInPolicy
         ) {
           client { clientId }
         }
@@ -274,6 +282,25 @@
             A signed logout token is posted there, carrying the subject and the session id, and
             retried for a while if the client does not answer.
           </p>
+        </Card>
+
+        <Card
+          title="Sign-in policy"
+          lede="What somebody signing in to this client has to have, and whether they can sign up here."
+        >
+          <select
+            class="select select-sm w-full"
+            value={client.signInPolicy?.key ?? ""}
+            onchange={(event) =>
+              update({ signInPolicy: event.currentTarget.value }, "Sign-in policy updated.")}
+          >
+            <option value="">The tenant's default ({tenantPolicy?.name ?? "masks' built-in"})</option>
+            {#each policies as policy (policy.key)}
+              <option value={policy.key}>{policy.name}</option>
+            {/each}
+          </select>
+
+          <Link to="/policies" class="link link-hover text-xs opacity-70">Edit policies</Link>
         </Card>
 
         <Card

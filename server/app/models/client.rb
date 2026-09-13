@@ -32,6 +32,7 @@ class Client < ApplicationRecord
   validate :sector_identifier_uri_is_owned, if: :sector_declared?
 
   belongs_to :approved_by, class_name: "Actor", optional: true
+  belongs_to :sign_in_policy, optional: true
 
   scope :active, -> { where(archived_at: nil) }
   scope :approved, -> { where.not(approved_at: nil) }

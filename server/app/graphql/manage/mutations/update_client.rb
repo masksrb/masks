@@ -14,11 +14,18 @@ module Manage
       argument :backchannel_logout_uri, String, required: false
       argument :backchannel_logout_session_required, Boolean, required: false
       argument :require_pushed_authorization_requests, Boolean, required: false
+      argument :sign_in_policy, ID, required: false
 
       field :client, Types::ClientType, null: false
 
-      def resolve(client_id:, required_scopes: nil, allowed_scopes: nil, **attributes)
+      def resolve(client_id:, required_scopes: nil, allowed_scopes: nil, sign_in_policy: nil, **attributes)
         client = client!(client_id)
+
+        unless sign_in_policy.nil?
+          client.sign_in_policy = sign_in_policy.empty? ? nil : sign_in_policy!(sign_in_policy)
+
+          refuse!("#{client.sign_in_policy.name} is archived") if client.sign_in_policy&.archived?
+        end
 
         client.assign_attributes(attributes)
         client.required_scopes = Scopes.join(required_scopes) unless required_scopes.nil?

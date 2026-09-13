@@ -252,7 +252,8 @@ CREATE TABLE public.clients (
     require_pushed_authorization_requests boolean DEFAULT false NOT NULL,
     subject_type character varying DEFAULT 'public'::character varying NOT NULL,
     sector_identifier_uri character varying,
-    dpop_bound_access_tokens boolean DEFAULT false NOT NULL
+    dpop_bound_access_tokens boolean DEFAULT false NOT NULL,
+    sign_in_policy_id bigint
 );
 
 ALTER TABLE ONLY public.clients FORCE ROW LEVEL SECURITY;
@@ -669,6 +670,58 @@ ALTER SEQUENCE public.sessions_id_seq OWNED BY public.sessions.id;
 
 
 --
+-- Name: sign_in_policies; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.sign_in_policies (
+    id bigint NOT NULL,
+    tenant_id bigint NOT NULL,
+    key character varying NOT NULL,
+    name character varying NOT NULL,
+    signup boolean DEFAULT false NOT NULL,
+    nickname character varying DEFAULT 'optional'::character varying NOT NULL,
+    email character varying DEFAULT 'required'::character varying NOT NULL,
+    email_verified boolean DEFAULT false NOT NULL,
+    phone character varying DEFAULT 'off'::character varying NOT NULL,
+    phone_verified boolean DEFAULT false NOT NULL,
+    password_minimum integer DEFAULT 8 NOT NULL,
+    refuse_common_passwords boolean DEFAULT true NOT NULL,
+    first_factors jsonb DEFAULT '["password", "passkey", "provider"]'::jsonb NOT NULL,
+    second_factors jsonb DEFAULT '["otp", "passkey", "backup_codes"]'::jsonb NOT NULL,
+    second_factor_required boolean DEFAULT false NOT NULL,
+    email_domains jsonb DEFAULT '[]'::jsonb NOT NULL,
+    providers jsonb,
+    confirmation character varying DEFAULT 'none'::character varying NOT NULL,
+    hidden boolean DEFAULT false NOT NULL,
+    signup_scopes text,
+    archived_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+ALTER TABLE ONLY public.sign_in_policies FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: sign_in_policies_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.sign_in_policies_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: sign_in_policies_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.sign_in_policies_id_seq OWNED BY public.sign_in_policies.id;
+
+
+--
 -- Name: signing_keys; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -761,7 +814,8 @@ CREATE TABLE public.tenants (
     named_by character varying,
     dynamic_registration character varying,
     browsers_only boolean DEFAULT false NOT NULL,
-    blocked_agents text
+    blocked_agents text,
+    sign_in_policy_id bigint
 );
 
 
@@ -936,6 +990,13 @@ ALTER TABLE ONLY public.sessions ALTER COLUMN id SET DEFAULT nextval('public.ses
 
 
 --
+-- Name: sign_in_policies id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sign_in_policies ALTER COLUMN id SET DEFAULT nextval('public.sign_in_policies_id_seq'::regclass);
+
+
+--
 -- Name: signing_keys id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1092,6 +1153,14 @@ ALTER TABLE ONLY public.sessions
 
 
 --
+-- Name: sign_in_policies sign_in_policies_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sign_in_policies
+    ADD CONSTRAINT sign_in_policies_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: signing_keys signing_keys_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1212,6 +1281,13 @@ CREATE INDEX index_clients_on_approved_by_id ON public.clients USING btree (appr
 --
 
 CREATE INDEX index_clients_on_registration_token_digest ON public.clients USING btree (registration_token_digest);
+
+
+--
+-- Name: index_clients_on_sign_in_policy_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_clients_on_sign_in_policy_id ON public.clients USING btree (sign_in_policy_id);
 
 
 --
@@ -1502,6 +1578,20 @@ CREATE UNIQUE INDEX index_sessions_on_tenant_id_and_uuid ON public.sessions USIN
 
 
 --
+-- Name: index_sign_in_policies_on_tenant_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_sign_in_policies_on_tenant_id ON public.sign_in_policies USING btree (tenant_id);
+
+
+--
+-- Name: index_sign_in_policies_on_tenant_id_and_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_sign_in_policies_on_tenant_id_and_key ON public.sign_in_policies USING btree (tenant_id, key);
+
+
+--
 -- Name: index_signing_keys_on_tenant_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1548,6 +1638,13 @@ CREATE UNIQUE INDEX index_subjects_on_tenant_id_and_actor_id_and_sector ON publi
 --
 
 CREATE UNIQUE INDEX index_subjects_on_tenant_id_and_sub ON public.subjects USING btree (tenant_id, sub);
+
+
+--
+-- Name: index_tenants_on_sign_in_policy_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_tenants_on_sign_in_policy_id ON public.tenants USING btree (sign_in_policy_id);
 
 
 --
@@ -1644,6 +1741,14 @@ ALTER TABLE ONLY public.consents
 
 
 --
+-- Name: tenants fk_rails_15dcd25064; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tenants
+    ADD CONSTRAINT fk_rails_15dcd25064 FOREIGN KEY (sign_in_policy_id) REFERENCES public.sign_in_policies(id) ON DELETE SET NULL;
+
+
+--
 -- Name: tokens fk_rails_16bf6d7922; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1665,6 +1770,14 @@ ALTER TABLE ONLY public.clients
 
 ALTER TABLE ONLY public.avatars
     ADD CONSTRAINT fk_rails_1ba249dc92 FOREIGN KEY (tenant_id) REFERENCES public.tenants(id);
+
+
+--
+-- Name: sign_in_policies fk_rails_1d5b06a975; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sign_in_policies
+    ADD CONSTRAINT fk_rails_1d5b06a975 FOREIGN KEY (tenant_id) REFERENCES public.tenants(id);
 
 
 --
@@ -1833,6 +1946,14 @@ ALTER TABLE ONLY public.connections
 
 ALTER TABLE ONLY public.adapters
     ADD CONSTRAINT fk_rails_a63d408d03 FOREIGN KEY (tenant_id) REFERENCES public.tenants(id);
+
+
+--
+-- Name: clients fk_rails_a7782c61a4; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.clients
+    ADD CONSTRAINT fk_rails_a7782c61a4 FOREIGN KEY (sign_in_policy_id) REFERENCES public.sign_in_policies(id) ON DELETE SET NULL;
 
 
 --
@@ -2010,6 +2131,12 @@ ALTER TABLE public.providers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.sessions ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: sign_in_policies; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.sign_in_policies ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: signing_keys; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -2113,6 +2240,13 @@ CREATE POLICY tenant_isolation ON public.sessions USING ((tenant_id = (NULLIF(cu
 
 
 --
+-- Name: sign_in_policies tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.sign_in_policies USING ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint)) WITH CHECK ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint));
+
+
+--
 -- Name: signing_keys tenant_isolation; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -2146,6 +2280,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260913010000'),
 ('20260913000000'),
 ('20260912000000');
 

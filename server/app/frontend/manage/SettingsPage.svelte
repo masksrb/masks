@@ -22,6 +22,7 @@
       tenant {
         uuid subdomain name namedBy dynamicRegistration dynamicClientScopes createdAt
         browsersOnly blockedAgents
+        signInPolicy { key name }
         signingKeys { kid algorithm activatedAt retiredAt state }
       }
       viewer { identifier scopes }
@@ -31,6 +32,7 @@
         client { clientId name }
       }
       scopesSupported
+      signInPolicies { key name }
     }
   `;
 
@@ -114,7 +116,7 @@
         api.query(
           `mutation Update(
             $name: String, $dynamicClientScopes: [String!], $dynamicRegistration: String,
-            $namedBy: String, $browsersOnly: Boolean, $blockedAgents: String
+            $namedBy: String, $browsersOnly: Boolean, $blockedAgents: String, $signInPolicy: ID
           ) {
             updateTenant(
               name: $name
@@ -123,6 +125,7 @@
               namedBy: $namedBy
               browsersOnly: $browsersOnly
               blockedAgents: $blockedAgents
+              signInPolicy: $signInPolicy
             ) { tenant { name } }
           }`,
           changes,
@@ -282,6 +285,25 @@
             <option value="email">An email address</option>
             <option value="either">Either one</option>
           </select>
+        </Card>
+
+        <Card
+          title="Default sign-in policy"
+          lede="Applies to the account page, the console, and every client that does not name its own."
+        >
+          <select
+            class="select select-sm w-full"
+            value={data.tenant.signInPolicy?.key ?? ""}
+            onchange={(event) =>
+              update({ signInPolicy: event.currentTarget.value }, "Default sign-in policy updated.")}
+          >
+            <option value="">masks' built-in default</option>
+            {#each data.signInPolicies as policy (policy.key)}
+              <option value={policy.key}>{policy.name}</option>
+            {/each}
+          </select>
+
+          <Link to="/policies" class="link link-hover text-xs opacity-70">Edit policies</Link>
         </Card>
 
         <Card
