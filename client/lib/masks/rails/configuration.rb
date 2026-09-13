@@ -6,7 +6,8 @@ module Masks
       attr_accessor :scope, :namespace, :resource, :resource_scopes, :after_sign_in,
                     :after_sign_out, :session_key, :sign_out_of_issuer, :parent_controller,
                     :credentials_path, :authenticate_everything, :delegates
-      attr_writer :issuer, :redirect_uri, :name, :credentials, :store, :forget, :logged_out
+      attr_writer :issuer, :redirect_uri, :name, :credentials, :store, :forget, :logged_out,
+                  :delegation_redirect_uri
 
       def initialize
         @scope = Masks::Client::Session::DEFAULT_SCOPE
@@ -38,6 +39,12 @@ module Masks
       def redirect_uri_for(request)
         resolve(@redirect_uri, request) ||
           "#{request.base_url}#{routes.callback_path}"
+      end
+
+      def delegation_redirect_uri_for(request)
+        return nil unless delegates
+
+        resolve(@delegation_redirect_uri, request)
       end
 
       def resource_for(request)
@@ -138,7 +145,7 @@ module Masks
           name: name_for(request),
           resource: Array(resource_for(request)).first ||
             raise(Unconfigured, "Masks::Rails.config.resource is not set"),
-          redirect_uris: [ redirect_uri_for(request) ],
+          redirect_uris: [ redirect_uri_for(request), delegation_redirect_uri_for(request) ].compact.uniq,
           return_to: return_to_for(request),
           scope: approved_scope,
           backchannel_logout_uri: backchannel_logout_uri_for(request)

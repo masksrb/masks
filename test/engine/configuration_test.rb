@@ -156,6 +156,18 @@ class ConfigurationTest < EngineTest
     assert_equal %w[openid profile email offline_access uris:], config.approved_scope
   end
 
+  test "an app that delegates registers where connecting comes back to" do
+    Masks::Rails.config.delegates = true
+    Masks::Rails.config.delegation_redirect_uri = ->(request) { "#{request.base_url}/connect/callback" }
+
+    handshake = config.handshake_for(request_for(HOST))
+
+    assert_equal [ "#{origin}/auth/callback", "#{origin}/connect/callback" ], handshake.redirect_uris
+  ensure
+    Masks::Rails.config.delegates = false
+    Masks::Rails.config.delegation_redirect_uri = nil
+  end
+
   test "an app that delegates asks the handshake for delegation too" do
     Masks::Rails.config.namespace = "uris:"
     Masks::Rails.config.delegates = true
