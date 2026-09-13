@@ -196,7 +196,7 @@ class FederationTest < ActionDispatch::IntegrationTest
     return_from("acme", handoff)
 
     assert_equal ada.id, within(@tenant) { Connection.find_by(subject: "shared").actor_id }
-    assert_match "already linked", flash[:alert]
+    assert_match "already connected", flash[:alert]
   end
 
   test "linking asks for a recent sign-in" do

@@ -333,13 +333,14 @@ type Mutation {
   blockDevices(agent: String, ids: [ID!], refuse: Boolean): BlockDevicesPayload
   createActor(email: String, nickname: String, password: String, scopes: [String!]): CreateActorPayload
   createAdapter(config: JSON, key: ID!, name: String!, primary: Boolean, service: String!): CreateAdapterPayload
-  createProvider(authorizationUrl: String, authorizeParams: JSON, claims: JSON, clientId: String, clientSecret: String, emailDomains: [String!], emailsUrl: String, issuer: String, jwksUri: String, key: ID!, keyId: String, name: String!, preset: ID, presetValues: JSON, privateKey: String, protocol: String, responseMode: String, role: String, scopes: [String!], signupScopes: [String!], subjectClaim: String, teamId: String, tokenAuthMethod: String, tokenUrl: String, trustsEmail: Boolean, userinfoUrl: String): CreateProviderPayload
+  createProvider(authorizationUrl: String, authorizeParams: JSON, claims: JSON, clientId: String, clientSecret: String, emailDomains: [String!], emailsUrl: String, idpCertificates: String, idpEntityId: String, idpSsoUrl: String, issuer: String, jwksUri: String, key: ID!, keyId: String, metadataUrl: String, name: String!, nameIdFormat: String, preset: ID, presetValues: JSON, privateKey: String, protocol: String, responseMode: String, role: String, scopes: [String!], signupScopes: [String!], subjectClaim: String, teamId: String, tokenAuthMethod: String, tokenUrl: String, trustsEmail: Boolean, userinfoUrl: String): CreateProviderPayload
   createSignInPolicy(confirmation: String, email: String, emailDomains: [String!], emailVerified: Boolean, everyProvider: Boolean, firstFactors: [String!], hidden: Boolean, key: ID!, name: String, nickname: String, passwordMinimum: Int, phone: String, phoneVerified: Boolean, providers: [String!], refuseCommonPasswords: Boolean, secondFactorRequired: Boolean, secondFactors: [String!], signup: Boolean, signupScopes: [String!]): CreateSignInPolicyPayload
   deleteActor(uuid: ID!): DeleteActorPayload
   disableAuthenticator(uuid: ID!): DisableAuthenticatorPayload
   discardSigningKey(kid: ID!): DiscardSigningKeyPayload
   discoverProvider(issuer: String!): DiscoverProviderPayload
   generateBackupCodes(uuid: ID!): GenerateBackupCodesPayload
+  readSamlMetadata(metadataUrl: String, metadataXml: String): ReadSamlMetadataPayload
   releaseNamespace(name: String!): ReleaseNamespacePayload
   removeAvatar(uuid: ID!): RemoveAvatarPayload
   resendInvitation(uuid: ID!): ResendInvitationPayload
@@ -365,7 +366,7 @@ type Mutation {
   updateActor(birthdate: String, email: String, familyName: String, gender: String, givenName: String, locale: String, middleName: String, name: String, nickname: String, phone: String, pictureUrl: String, profileUrl: String, uuid: ID!, websiteUrl: String, zoneinfo: String): UpdateActorPayload
   updateAdapter(config: JSON, key: ID!, name: String, primary: Boolean): UpdateAdapterPayload
   updateClient(allowedScopes: [String!], backchannelLogoutSessionRequired: Boolean, backchannelLogoutUri: String, clientId: ID!, consentRequired: Boolean, dpopBoundAccessTokens: Boolean, name: String, postLogoutRedirectUris: [String!], redirectUris: [String!], requirePushedAuthorizationRequests: Boolean, requiredScopes: [String!], resources: [String!], sectorIdentifierUri: String, signInPolicy: ID, subjectType: String): UpdateClientPayload
-  updateProvider(authorizationUrl: String, authorizeParams: JSON, claims: JSON, clientId: String, clientSecret: String, emailDomains: [String!], emailsUrl: String, issuer: String, jwksUri: String, key: ID!, keyId: String, name: String, privateKey: String, protocol: String, responseMode: String, role: String, scopes: [String!], signupScopes: [String!], subjectClaim: String, teamId: String, tokenAuthMethod: String, tokenUrl: String, trustsEmail: Boolean, userinfoUrl: String): UpdateProviderPayload
+  updateProvider(authorizationUrl: String, authorizeParams: JSON, claims: JSON, clientId: String, clientSecret: String, emailDomains: [String!], emailsUrl: String, idpCertificates: String, idpEntityId: String, idpSsoUrl: String, issuer: String, jwksUri: String, key: ID!, keyId: String, metadataUrl: String, name: String, nameIdFormat: String, privateKey: String, protocol: String, responseMode: String, role: String, scopes: [String!], signupScopes: [String!], subjectClaim: String, teamId: String, tokenAuthMethod: String, tokenUrl: String, trustsEmail: Boolean, userinfoUrl: String): UpdateProviderPayload
   updateSignInPolicy(confirmation: String, email: String, emailDomains: [String!], emailVerified: Boolean, everyProvider: Boolean, firstFactors: [String!], hidden: Boolean, key: ID!, name: String, nickname: String, passwordMinimum: Int, phone: String, phoneVerified: Boolean, providers: [String!], refuseCommonPasswords: Boolean, secondFactorRequired: Boolean, secondFactors: [String!], signup: Boolean, signupScopes: [String!]): UpdateSignInPolicyPayload
   updateTenant(blockedAgents: String, browsersOnly: Boolean, dynamicClientScopes: [String!], dynamicRegistration: String, name: String, namedBy: String, signInPolicy: ID): UpdateTenantPayload
   uploadAvatar(photo: Upload!, uuid: ID!): UploadAvatarPayload
@@ -403,12 +404,18 @@ type Provider {
   createdAt: ISO8601DateTime!
   emailDomains: [String!]!
   emailsUrl: String
+  idpCertificates: String
+  idpEntityId: String
+  idpSsoUrl: String
   issuer: String
   jwksFetchedAt: ISO8601DateTime
   jwksUri: String
   key: ID!
   keyId: String
+  metadataFetchedAt: ISO8601DateTime
+  metadataUrl: String
   name: String!
+  nameIdFormat: String
   preset: String
   privateKeyHeld: Boolean!
   protocol: String!
@@ -418,6 +425,7 @@ type Provider {
   secretHeld: Boolean!
   signedIn: Int!
   signupScopes: [String!]!
+  spEntityId: String
   subjectClaim: String!
   teamId: String
   tokenAuthMethod: String!
@@ -435,6 +443,7 @@ type ProviderPreset {
   name: String!
   needs: [String!]!
   protocol: String!
+  trustsEmail: Boolean!
 }
 
 type Query {
@@ -464,6 +473,15 @@ type Query {
   tenant: Tenant!
   tokens(actor: ID, client: ID, kind: String, limit: Int, live: Boolean): [Token!]!
   viewer: Actor!
+}
+
+"""
+Autogenerated return type of ReadSamlMetadata.
+"""
+type ReadSamlMetadataPayload {
+  idpCertificates: String!
+  idpEntityId: String!
+  idpSsoUrl: String!
 }
 
 """

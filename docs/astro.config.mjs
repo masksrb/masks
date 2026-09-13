@@ -69,6 +69,7 @@ export default defineConfig({
           { label: "Tenants", slug: "concepts/tenants" },
           { label: "Actors", slug: "concepts/actors" },
           { label: "Clients", slug: "concepts/clients" },
+          { label: "Providers", slug: "concepts/providers" },
           { label: "Pushed requests", slug: "concepts/pushing" },
           { label: "Device sign-in", slug: "concepts/device-grant" },
           { label: "Holding a token", slug: "concepts/holding" },

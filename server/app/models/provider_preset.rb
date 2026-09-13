@@ -185,6 +185,7 @@ class ProviderPreset
   def needs = definition.fetch(:needs, %w[client_secret])
   def defaults = definition.fetch(:defaults, {})
   def guide = definition[:guide]
+  def trusts_email = definition.fetch(:trusts_email, false)
   def custom? = definition.fetch(:custom, false)
 
   def attributes(values = {})

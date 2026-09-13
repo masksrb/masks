@@ -1,0 +1,173 @@
+---
+title: Providers
+description: Signing in with an account somewhere else, over OpenID Connect, OAuth 2.0 or SAML.
+---
+
+A provider is somewhere else people can sign in with: Google, GitHub, Apple, a company's Okta or
+Entra, or anything that speaks OpenID Connect, OAuth 2.0 or SAML 2.0. The account there is linked
+to an account here, and that link is a **connected account**.
+
+A provider only ever stands in for a password. It is never a second factor: somebody who signs in
+with one is still asked for an authenticator app or a passkey whenever their policy wants one.
+
+## What a provider is for
+
+Every provider has a role.
+
+| | |
+| --- | --- |
+| `credential` | another way into an account that already exists here |
+| `delegate` | the provider owns the account |
+
+A **credential** provider signs in the account it is connected to, and nobody else. An address it
+confirms reaches an account that holds that address only once that account signs in some other way
+and so proves it is the same person; the two are connected from then on. It never creates an
+account.
+
+A **delegate** does everything a credential provider does, and also creates an account for
+somebody new, and keeps their name, photo and address in step with what it says each time they
+sign in. It is the provider to choose when the company's directory is the truth about who works
+there.
+
+## Which addresses are taken at the provider's word
+
+masks tells applications `email_verified: true`, so it cannot believe every provider that says an
+address is confirmed. A provider has standing for an address in two ways:
+
+- the address is in one of the **email domains** listed for the provider, or
+- the provider is trusted to confirm addresses (`trusts_email`), and it says this one is confirmed.
+
+Turn `trusts_email` on only for a provider that really checks a person holds the mailbox. Google,
+Apple, GitHub, GitLab, Slack, LinkedIn and Discord do, and their presets say so. A self-hosted
+OpenID Connect server whose administrators can type any address does not.
+
+A provider that says an address is unconfirmed is believed even inside a listed domain. SAML says
+nothing about confirmation at all, so a SAML provider has standing only in its listed domains.
+
+Without standing, a delegate creates no account for that address rather than one that claims an
+address nobody proved, and an invitation waiting for that address is not taken up. Somebody the
+provider names with no address at all still gets an account, just without one.
+
+## Where a provider is offered
+
+The sign-in policy for the client decides.
+
+- `first_factors` has to include `provider` for any provider to be offered.
+- `providers` names which ones; left unset, every provider is offered.
+- A password or passkey the policy does not list is refused, not just hidden.
+- A policy whose only first factor is `provider` shows no identifier field at all: the sign-in page
+  is the provider buttons and nothing else.
+
+The console and the account page sign in through the tenant's default policy, so that policy has to
+keep a password or a passkey. A provider that goes down cannot lock the managers out. Signing in
+only through a provider is something a client's own policy does.
+
+## Connecting from the account page
+
+Somebody signed in can connect any provider their default policy offers from their account page. It
+uses the same callback the provider already knows, asks for a sign-in within the last fifteen
+minutes, and refuses an upstream account that is already connected to somebody else.
+
+## Protocols
+
+### OpenID Connect
+
+The `id_token` is the identity: its signature is checked against the issuer's published keys, and
+its issuer, audience and nonce against the sign-in that asked for it. The request carries PKCE. The
+subject is `sub`, or `oid` for a Microsoft directory that should not change subject per application.
+
+### OAuth 2.0
+
+For a provider with no `id_token`, the identity is its userinfo endpoint. `subject_claim` and
+`claims` map each claim to a path in whatever that endpoint returns — `data.id` for X, `id` for
+GitHub. The request still carries PKCE, and the provider's tokens are thrown away the moment the
+profile has been read.
+
+An **emails URL** is for a provider that keeps confirmed addresses apart from its public profile, as
+GitHub does. The primary confirmed address from that list is used; an address that only appears in
+the public profile never is.
+
+### SAML 2.0
+
+masks is the service provider. Give the identity provider two things from the provider's page:
+
+| | |
+| --- | --- |
+| assertion consumer service URL | `https://<tenant>/login/provider/<key>/callback` |
+| service provider entity ID | `https://<tenant>/login/provider/<key>/metadata`, which also serves masks' metadata |
+
+and give masks the identity provider's metadata, as a URL or pasted in. A metadata URL is read again
+every night, so a rotated certificate is picked up.
+
+An assertion is trusted only when all of these hold:
+
+- it is signed, by a certificate in the identity provider's metadata
+- it answers the request this browser sent (`InResponseTo`)
+- its audience and recipient are this service provider
+- its issuer is the identity provider's entity
+- it is inside its validity window, give or take a minute
+
+An unsolicited, identity-provider-initiated response is refused, and a response cannot be replayed
+into another sign-in, because the request it answers is spent the first time.
+
+Ask for a **persistent** name ID where the identity provider offers one. A transient one changes
+every sign-in, and every sign-in would look like somebody new.
+
+### Apple
+
+Apple's client secret is a short-lived ES256 token masks signs with the key Apple issued, so the
+provider holds a team ID, a key ID and the `.p8` private key instead of a secret. Apple posts its
+answer back, and sends the person's name on their first sign-in only; masks keeps it.
+
+## Posted callbacks
+
+Apple and SAML post back across sites, and a `SameSite=Lax` cookie does not come along on a
+cross-site POST. masks parks what was posted on the server for five minutes under a one-time handle
+and redirects to the same URL as a GET, where the cookie does arrive and the sign-in carries on. A
+handle is redeemed once.
+
+## Presets
+
+Adding a provider starts from a preset, which fills in everything but the credentials.
+
+| preset | protocol | asks for |
+| --- | --- | --- |
+| Google | OpenID Connect | |
+| Microsoft | OpenID Connect | directory (tenant) ID |
+| Apple | OpenID Connect | team ID, key ID, private key |
+| GitHub | OAuth 2.0 | |
+| GitLab | OpenID Connect | domain, `gitlab.com` by default |
+| Slack | OpenID Connect | |
+| LinkedIn | OpenID Connect | |
+| Discord | OAuth 2.0 | |
+| Facebook | OAuth 2.0 | |
+| X | OAuth 2.0 | |
+| Okta, Auth0 | OpenID Connect | domain |
+| Keycloak | OpenID Connect | domain, realm |
+| Microsoft Entra, Okta, Google Workspace | SAML 2.0 | metadata |
+| OpenID Connect, OAuth 2.0, SAML 2.0 | | everything |
+
+## Calling a provider's API
+
+masks signs people in and says who they are. It does not keep a provider's tokens, and it does not
+stand between an application and somebody else's API.
+
+An application that wants to call Google Drive or the GitHub API does its own OAuth with that
+provider. The `identities` scope tells it which account to send the person to: userinfo carries each
+connected account, and the provider remembers the person, so the trip is a redirect and back.
+
+```json
+{
+  "sub": "8f4c…",
+  "identities": [
+    { "provider": "google", "protocol": "oidc", "sub": "10769150350006150715", "email": "ada@gmail.com" }
+  ]
+}
+```
+
+```
+https://accounts.google.com/o/oauth2/v2/auth?…&login_hint=ada@gmail.com
+```
+
+A pairwise client is never given `identities`: an upstream subject is the same everywhere, and would
+let it correlate somebody pairwise subjects are meant to keep apart.

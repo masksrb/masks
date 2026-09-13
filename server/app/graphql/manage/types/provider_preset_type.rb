@@ -8,6 +8,7 @@ module Manage
       field :needs, [ String ], null: false
       field :defaults, GraphQL::Types::JSON, null: false
       field :guide, String
+      field :trusts_email, Boolean, null: false
       field :custom, Boolean, null: false, method: :custom?
     end
   end
