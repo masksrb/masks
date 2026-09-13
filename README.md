@@ -1,3 +1,5 @@
+<p align="center"><img src="server/public/icon.svg" width="120" alt="The masks rose window"></p>
+
 # masks
 
 A standalone, self-hostable OpenID Connect provider, with per-tenant signing keys — plus the pieces

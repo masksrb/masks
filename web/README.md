@@ -1,3 +1,5 @@
+<p align="center"><img src="https://raw.githubusercontent.com/masksrb/masks/main/server/public/icon.svg" width="120" alt="The masks rose window"></p>
+
 # @masks/client
 
 An OIDC client for masks, in the browser. Two modes, because a single-page app has two ways to hold

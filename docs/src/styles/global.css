@@ -154,53 +154,9 @@
   font-weight: 600;
 }
 
-/* Glass is state: the site title carries the window in miniature. */
-.site-title::before {
-  content: "";
-  flex: none;
-  width: var(--step);
-  align-self: stretch;
-  min-height: 1.4em;
-  background: linear-gradient(
-    to bottom,
-    var(--glass-ruby),
-    var(--glass-amber),
-    var(--glass-emerald),
-    var(--glass-cobalt)
-  );
-}
-
-.rose {
-  width: 100%;
+.mark {
+  width: 12rem;
   height: auto;
-  transform-box: view-box;
-}
-
-.rose-outer,
-.rose-inner {
-  transform-box: view-box;
-  transform-origin: 100px 100px;
-}
-
-.rose-outer {
-  animation: rose-turn 240s linear infinite;
-}
-
-.rose-inner {
-  animation: rose-turn 160s linear infinite reverse;
-}
-
-@keyframes rose-turn {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .rose-outer,
-  .rose-inner {
-    animation: none;
-  }
 }
 
 .hero {

@@ -46,6 +46,9 @@ export default defineConfig({
     : {},
   integrations: [starlight({
     title: "masks",
+    logo: { src: "./src/assets/masks.svg", alt: "" },
+    favicon: "/favicon.svg",
+    head: [{ tag: "link", attrs: { rel: "apple-touch-icon", href: "/apple-touch-icon.png" } }],
     description:
       "Self-hosted auth for the open web, with a signing key for every tenant.",
     customCss: ["./src/styles/global.css"],

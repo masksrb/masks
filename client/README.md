@@ -1,3 +1,5 @@
+<p align="center"><img src="https://raw.githubusercontent.com/masksrb/masks/main/server/public/icon.svg" width="120" alt="The masks rose window"></p>
+
 # masks
 
 Sign a Ruby or Rails app in against a [masks](https://github.com/masksrb/masks) issuer.
