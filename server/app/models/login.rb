@@ -149,13 +149,13 @@ class Login
   end
 
   def first_factored?
-    return false if reauthenticating? || stale?
+    return false if reauthenticating? || stale? || actor.nil?
 
     touched?(:first_factor) || signed_in?
   end
 
   def second_factored?
-    return false if reauthenticating? || stale?
+    return false if reauthenticating? || stale? || actor.nil?
 
     touched?(:second_factor) || signed_in? || remembered?(:second_factor)
   end
@@ -190,6 +190,7 @@ class Login
   end
 
   def update
+    forget_vanished_actor!
     states.each(&:reload!)
     states.each { |state| state.event!(event) } if event
     states.each(&:factor!)
@@ -259,6 +260,13 @@ class Login
   end
 
   private
+
+    def forget_vanished_actor!
+      return if store["actor_id"].blank? || actor.present?
+
+      store.replace({})
+      remove_instance_variable(:@actor) if defined?(@actor)
+    end
 
     def stamp(key, field)
       value = store["factors"]&.dig(key.to_s, field)

@@ -57,6 +57,26 @@ class FirstRunTest < ActionDispatch::IntegrationTest
     assert_select "a[href=?]", Rails.configuration.masks.docs_url
   end
 
+  test "a cookie left over from a database that was reset starts over instead of looping" do
+    create_actor(@tenant, nickname: "owner", password: PASSWORD, scopes: "openid masks:manage", otp: false)
+    host! host_for(@tenant)
+    post "/login", params: { event: "identify", identifier: "owner" }, as: :json
+    post "/login", params: { event: "password", password: PASSWORD }, as: :json
+
+    assert_equal "enrol", JSON.parse(response.body)["prompt"], "half way through, with a first factor held"
+
+    within(@tenant) { Actor.delete_all }
+
+    get "/login"
+
+    assert_response :success
+    assert_equal "signup", auth_data["prompt"]
+
+    get "/"
+
+    assert_redirected_to login_path
+  end
+
   test "the root stops being a first run as soon as an actor exists" do
     create_actor(@tenant, nickname: "owner", password: PASSWORD)
     host! host_for(@tenant)
