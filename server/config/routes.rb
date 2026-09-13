@@ -16,6 +16,7 @@ Rails.application.routes.draw do
   delete "/login", to: "logins#destroy"
   get "/login/provider/:key/callback", to: "logins#provider", as: :login_provider_callback
   post "/login/provider/:key/callback", to: "logins#posted_provider"
+  get "/login/provider/:key/metadata", to: "provider_metadata#show", as: :login_provider_metadata
   match "/logout", to: "sessions#destroy", via: %i[get post delete], as: :logout
 
   get "/invite/:token", to: "links#invitation", as: :invitation

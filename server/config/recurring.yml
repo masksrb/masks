@@ -9,6 +9,11 @@ default: &default
     queue: maintenance
     schedule: every day at 3am
 
+  saml_metadata:
+    class: RefreshSamlMetadataJob
+    queue: maintenance
+    schedule: every day at 2am
+
 development:
   <<: *default
 

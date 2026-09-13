@@ -33,8 +33,10 @@ class Linking
     def pending?(session, params)
       held = session[HELD]
 
-      held.present? && params["state"].present? &&
-        ActiveSupport::SecurityUtils.secure_compare(params["state"].to_s, held["state"].to_s)
+      presented = params["RelayState"].presence || params["state"]
+
+      held.present? && presented.present? &&
+        ActiveSupport::SecurityUtils.secure_compare(presented.to_s, held["state"].to_s)
     end
 
     def finish!(session:, provider:, actor:, params:)

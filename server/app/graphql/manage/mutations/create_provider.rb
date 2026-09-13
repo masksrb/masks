@@ -23,6 +23,11 @@ module Manage
       argument :team_id, String, required: false
       argument :key_id, String, required: false
       argument :private_key, String, required: false
+      argument :idp_entity_id, String, required: false
+      argument :idp_sso_url, String, required: false
+      argument :idp_certificates, String, required: false
+      argument :metadata_url, String, required: false
+      argument :name_id_format, String, required: false
       argument :role, String, required: false
       argument :trusts_email, Boolean, required: false
       argument :email_domains, [ String ], required: false
@@ -40,6 +45,7 @@ module Manage
         provider.signup_scopes = Scopes.join(signup_scopes) if signup_scopes
 
         discover(provider)
+        read_metadata(provider)
 
         save!(provider)
         audit!(::Event::PROVIDER_CREATED, provider: provider.key, name: provider.name)
@@ -56,6 +62,15 @@ module Manage
 
           found.attributes(values.is_a?(Hash) ? values : {})
         rescue ::ProviderPreset::Unusable => e
+          refuse!(e.message)
+        end
+
+        def read_metadata(provider)
+          return unless provider.saml? && provider.metadata_url.present? && provider.idp_sso_url.blank?
+
+          provider.assign_attributes(::Federation::Saml.parse_metadata(provider.fetch_text(provider.metadata_url, ::Federation::Saml::METADATA_LIMIT)))
+          provider.metadata_fetched_at = Time.current
+        rescue ::Provider::Untrusted, ::Provider::Refused, ::Provider::Unreachable => e
           refuse!(e.message)
         end
 

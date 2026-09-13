@@ -1,5 +1,6 @@
 require "test_helper"
 require_relative "../support/upstream"
+require_relative "../support/saml_idp"
 
 class FederationTest < ActionDispatch::IntegrationTest
   include Federated
@@ -249,6 +250,11 @@ class FederationTest < ActionDispatch::IntegrationTest
 
         provider.authorization_url ||= "https://id.acme.test/authorize"
         provider.token_url ||= "https://id.acme.test/token"
+
+        if provider.saml?
+          idp = SamlIdp.new
+          provider.assign_attributes(Federation::Saml.parse_metadata(idp.metadata))
+        end
 
         if provider.signs_its_secret?
           provider.assign_attributes(team_id: "T", key_id: "K", private_key: OpenSSL::PKey::EC.generate("prime256v1").to_pem)

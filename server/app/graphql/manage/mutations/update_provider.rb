@@ -16,6 +16,11 @@ module Manage
       argument :team_id, String, required: false
       argument :key_id, String, required: false
       argument :private_key, String, required: false
+      argument :idp_entity_id, String, required: false
+      argument :idp_sso_url, String, required: false
+      argument :idp_certificates, String, required: false
+      argument :metadata_url, String, required: false
+      argument :name_id_format, String, required: false
       argument :scopes, [ String ], required: false
       argument :authorize_params, GraphQL::Types::JSON, required: false
       argument :subject_claim, String, required: false

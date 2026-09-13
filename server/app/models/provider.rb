@@ -13,7 +13,8 @@ class Provider < ApplicationRecord
 
   OIDC = "oidc".freeze
   OAUTH2 = "oauth2".freeze
-  PROTOCOLS = [ OIDC, OAUTH2 ].freeze
+  SAML = "saml".freeze
+  PROTOCOLS = [ OIDC, OAUTH2, SAML ].freeze
 
   CREDENTIAL = "credential".freeze
   DELEGATE = "delegate".freeze
@@ -29,7 +30,7 @@ class Provider < ApplicationRecord
 
   OIDC_SUBJECT_CLAIMS = %w[sub oid].freeze
   MAPPED_CLAIMS = (%w[email email_verified] + Actor::PROFILE_CLAIMS.keys).freeze
-  CLAIM_PATH = /\A[A-Za-z0-9_:@.-]+\z/
+  CLAIM_PATH = %r{\A[A-Za-z0-9_:@./#-]{1,256}\z}
 
   encrypts :client_secret
   encrypts :private_key
@@ -44,7 +45,8 @@ class Provider < ApplicationRecord
   validates :role, inclusion: { in: ROLES }
   validates :token_auth_method, inclusion: { in: TOKEN_AUTH_METHODS }
   validates :response_mode, inclusion: { in: [ FORM_POST ] }, allow_nil: true
-  validates :client_id, :authorization_url, :token_url, presence: true
+  validates :client_id, :authorization_url, :token_url, presence: true, unless: :saml?
+  validates :idp_entity_id, :idp_sso_url, :idp_certificates, presence: true, if: :saml?
   validates :issuer, presence: true, if: :oidc?
   validates :userinfo_url, presence: true, if: :oauth2?
   validates :subject_claim, format: { with: CLAIM_PATH }
@@ -57,12 +59,15 @@ class Provider < ApplicationRecord
   validate :authorize_params_stay_out_of_the_way
   validate :claims_are_mapped
   validate :private_key_is_usable, if: :signs_its_secret?
+  validate :certificates_are_usable, if: :saml?
   validate :signup_scopes_stay_ordinary
 
   normalizes :issuer, with: ->(value) { value.to_s.strip.chomp("/").presence }
   normalizes :response_mode, with: ->(value) { value.to_s.strip.presence }
 
-  URLS = %i[authorization_url token_url userinfo_url emails_url jwks_uri issuer].freeze
+  before_validation :name_the_subject, if: :saml?
+
+  URLS = %i[authorization_url token_url userinfo_url emails_url jwks_uri issuer idp_sso_url metadata_url].freeze
   RESERVED_PARAMS = %w[response_type client_id redirect_uri scope state nonce
                        code_challenge code_challenge_method response_mode].freeze
 
@@ -93,7 +98,8 @@ class Provider < ApplicationRecord
   end
 
   def federation
-    @federation ||= (oauth2? ? Federation::OAuth2 : Federation::Oidc).new(self)
+    @federation ||= { OIDC => Federation::Oidc, OAUTH2 => Federation::OAuth2, SAML => Federation::Saml }
+      .fetch(protocol, Federation::Oidc).new(self)
   end
 
   def oidc?
@@ -102,6 +108,39 @@ class Provider < ApplicationRecord
 
   def oauth2?
     protocol == OAUTH2
+  end
+
+  def saml?
+    protocol == SAML
+  end
+
+  def idp_certificate_list
+    idp_certificates.to_s.scan(/-----BEGIN CERTIFICATE-----.+?-----END CERTIFICATE-----/m)
+  end
+
+  def refresh_metadata!
+    raise Untrusted, "#{name} has no metadata URL" if metadata_url.blank?
+
+    xml = fetch_text(metadata_url, Federation::Saml::METADATA_LIMIT)
+
+    update!(**Federation::Saml.parse_metadata(xml), metadata_fetched_at: Time.current)
+  end
+
+  def fetch_text(url, limit)
+    uri = URI.parse(url)
+
+    response = Net::HTTP.start(
+      uri.hostname, uri.port,
+      use_ssl: uri.scheme == "https", open_timeout: OPEN_TIMEOUT, read_timeout: READ_TIMEOUT
+    ) { |http| http.request(Net::HTTP::Get.new(uri, "Accept" => "application/samlmetadata+xml, application/xml")) }
+
+    raise Refused, "#{name} answered #{response.code}" unless response.is_a?(Net::HTTPSuccess)
+    raise Refused, "#{name} published more than #{limit / 1.kilobyte} KB" if response.body.to_s.bytesize > limit
+
+    response.body.to_s
+  rescue Net::HTTPBadResponse, Net::OpenTimeout, Net::ReadTimeout, SocketError, SystemCallError,
+         OpenSSL::SSL::SSLError, URI::InvalidURIError => e
+    raise Unreachable, "#{name} did not answer: #{e.class}"
   end
 
   def delegate?
@@ -317,6 +356,20 @@ class Provider < ApplicationRecord
       unless claims.values.all? { |path| path.is_a?(String) && path.match?(CLAIM_PATH) }
         errors.add(:claims, "paths are names separated by dots")
       end
+    end
+
+    def name_the_subject
+      self.subject_claim = Federation::Saml::NAME_ID if subject_claim.blank? || (new_record? && subject_claim == "sub")
+    end
+
+    def certificates_are_usable
+      held = idp_certificate_list
+
+      return errors.add(:idp_certificates, "must hold at least one PEM certificate") if held.empty? && idp_certificates.present?
+
+      held.each { |pem| OpenSSL::X509::Certificate.new(pem) }
+    rescue OpenSSL::X509::CertificateError
+      errors.add(:idp_certificates, "holds a certificate that could not be read")
     end
 
     def private_key_is_usable

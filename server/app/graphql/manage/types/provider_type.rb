@@ -17,6 +17,13 @@ module Manage
       field :key_id, String
       field :private_key_held, Boolean, null: false
       field :callback_url, String, null: false
+      field :idp_entity_id, String
+      field :idp_sso_url, String
+      field :idp_certificates, String
+      field :metadata_url, String
+      field :metadata_fetched_at, GraphQL::Types::ISO8601DateTime
+      field :name_id_format, String
+      field :sp_entity_id, String
       field :scopes, [ String ], null: false
       field :authorize_params, GraphQL::Types::JSON, null: false
       field :subject_claim, String, null: false
@@ -48,6 +55,10 @@ module Manage
 
       def secret_held
         object.client_secret.present?
+      end
+
+      def sp_entity_id
+        object.saml? ? object.federation.entity_id : nil
       end
 
       def private_key_held

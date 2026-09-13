@@ -9,7 +9,7 @@ class ProviderPreset
 
   SETTINGS = %i[
     protocol issuer authorization_url token_url userinfo_url emails_url jwks_uri
-    scopes subject_claim claims trusts_email token_auth_method response_mode authorize_params
+    scopes subject_claim claims trusts_email token_auth_method response_mode authorize_params name_id_format
   ].freeze
 
   ALL = [
@@ -132,8 +132,32 @@ class ProviderPreset
       asks: %w[domain realm],
       guide: "https://www.keycloak.org/docs/latest/server_admin/#_oidc_clients"
     },
+    {
+      key: "entra-saml", name: "Microsoft Entra (SAML)", protocol: "saml",
+      claims: {
+        "email" => "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress",
+        "given_name" => "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname",
+        "family_name" => "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname",
+        "name" => "http://schemas.microsoft.com/identity/claims/displayname"
+      },
+      needs: %w[metadata],
+      guide: "https://learn.microsoft.com/entra/identity/enterprise-apps/add-application-portal-setup-sso"
+    },
+    {
+      key: "okta-saml", name: "Okta (SAML)", protocol: "saml",
+      claims: { "given_name" => "firstName", "family_name" => "lastName" },
+      needs: %w[metadata],
+      guide: "https://help.okta.com/en-us/content/topics/apps/apps_app_integration_wizard_saml.htm"
+    },
+    {
+      key: "google-workspace-saml", name: "Google Workspace (SAML)", protocol: "saml",
+      name_id_format: "urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress",
+      needs: %w[metadata],
+      guide: "https://support.google.com/a/answer/12032922"
+    },
     { key: "oidc", name: "OpenID Connect", protocol: "oidc", custom: true },
-    { key: "oauth2", name: "OAuth 2.0", protocol: "oauth2", custom: true }
+    { key: "oauth2", name: "OAuth 2.0", protocol: "oauth2", custom: true },
+    { key: "saml", name: "SAML 2.0", protocol: "saml", custom: true, needs: %w[metadata] }
   ].map(&:freeze).freeze
 
   class << self

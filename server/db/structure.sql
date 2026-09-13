@@ -598,7 +598,13 @@ CREATE TABLE public.providers (
     response_mode character varying,
     team_id character varying,
     key_id character varying,
-    private_key text
+    private_key text,
+    idp_entity_id character varying,
+    idp_sso_url character varying,
+    idp_certificates text,
+    metadata_url character varying,
+    metadata_fetched_at timestamp(6) without time zone,
+    name_id_format character varying
 );
 
 ALTER TABLE ONLY public.providers FORCE ROW LEVEL SECURITY;
@@ -2288,6 +2294,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260913070000'),
 ('20260913060000'),
 ('20260913050000'),
 ('20260913040000'),

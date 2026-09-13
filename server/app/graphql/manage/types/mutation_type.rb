@@ -21,6 +21,7 @@ module Manage
       field :restore_client, mutation: Mutations::RestoreClient
       field :release_namespace, mutation: Mutations::ReleaseNamespace
       field :discover_provider, mutation: Mutations::DiscoverProvider
+      field :read_saml_metadata, mutation: Mutations::ReadSamlMetadata
       field :create_provider, mutation: Mutations::CreateProvider
       field :update_provider, mutation: Mutations::UpdateProvider
       field :archive_provider, mutation: Mutations::ArchiveProvider
