@@ -1,5 +1,32 @@
 # Changelog
 
+## [2.2.0](https://github.com/masksrb/masks/compare/client-v2.1.0...client-v2.2.0) (2026-09-13)
+
+
+### Features
+
+* **client:** the browser package builds on typescript 7 ([85975ce](https://github.com/masksrb/masks/commit/85975cebe1e393f6e283bc1531f5843fd886d674))
+* **client:** verifyIdToken's options type is exported ([3220524](https://github.com/masksrb/masks/commit/3220524a1507a78348aa1625fac1937ff7803a69))
+* the server is published as a container image ([16630a8](https://github.com/masksrb/masks/commit/16630a8e71c5244e404d4f7d7a3a8dc016117eb2))
+
+
+### Fixes
+
+* **client:** a key the issuer rotated in is found even while the browser holds a cached key set ([b4a1a9f](https://github.com/masksrb/masks/commit/b4a1a9fbf2cb176da5fc41f68c29a610cda5d00f))
+
+
+### Documentation
+
+* hold the copyright as the masks authors ([cffdeb5](https://github.com/masksrb/masks/commit/cffdeb59f14eb02f6a9513d5f7cda21ebaee2171))
+* READMEs that match the code, and a server one that is not the scaffold ([e0148e1](https://github.com/masksrb/masks/commit/e0148e14e0092731bcd095bc0fc22a1589c3acc0))
+* references are generated from the code that defines them ([ba74550](https://github.com/masksrb/masks/commit/ba745501e651b797948e5abd5640a1825616100c))
+* the rose window is the site's logo, favicon and hero, and heads every README ([72176e4](https://github.com/masksrb/masks/commit/72176e49c81bc0a5d6730f3b9e5eaa693db8a659))
+
+
+### Refactoring
+
+* rename the example tenant from jons to demo ([aef32a6](https://github.com/masksrb/masks/commit/aef32a670b4b3c696089c07bf15103e1d981eb00))
+
 ## [2.1.0](https://github.com/masksrb/masks/compare/client-v2.0.0...client-v2.1.0) (2026-09-05)
 
 
