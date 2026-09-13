@@ -225,13 +225,13 @@
       placeholder="nickname, email or name"
       onsearch={again}
     />
-    <button type="button" class="btn btn-primary btn-sm" onclick={open}>Add somebody</button>
+    <button type="button" class="btn btn-primary btn-sm" onclick={open}>Add person</button>
   {/snippet}
 
   <Notices feedback={feedback.state} />
 
   {#if adding}
-    <Card title="Add somebody">
+    <Card title="Add person">
       <div class="grid gap-3 sm:grid-cols-2">
         <Field
           label="Nickname"
@@ -308,7 +308,7 @@
       empty={search.trim()
         ? `No person matches “${search.trim()}”.`
         : lens === "waiting"
-          ? "Nobody is waiting to be let in."
+          ? "Nobody is awaiting approval."
           : lens === "invited"
           ? "Nobody is waiting on an invitation."
           : lens === "managers"

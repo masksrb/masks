@@ -112,7 +112,7 @@ module Manage
         argument :limit, Integer, required: false
       end
 
-      field :event_actions, [ String ], null: false
+      field :event_actions, [ EventActionType ], null: false
 
       LIMIT = 50
       CEILING = 200

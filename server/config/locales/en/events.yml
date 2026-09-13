@@ -4,29 +4,29 @@ en:
       session:
         started: "Signed in"
         ended: "Signed out"
-        revoked: "A session was ended for you"
+        revoked: "Session revoked"
       logout:
-        undelivered: "An application could not be told you signed out"
+        undelivered: "Sign-out not delivered to an app"
       login:
-        refused: "A sign-in was refused"
-        throttled: "Sign-ins were throttled"
+        refused: "Sign-in refused"
+        throttled: "Sign-ins throttled"
       account:
-        created: "Account created"
+        created: "Signed up"
       invitation:
         sent: "Invitation sent"
         accepted: "Invitation accepted"
       password:
         changed: "Password changed"
-        reset_requested: "A password reset was requested"
+        reset_requested: "Password reset requested"
         reset_completed: "Password reset"
       email:
-        verification_sent: "Confirmation link sent"
+        verification_sent: "Email confirmation sent"
         verified: "Email confirmed"
       phone:
-        verification_sent: "Confirmation code texted"
+        verification_sent: "Phone confirmation sent"
         verified: "Phone confirmed"
       approval:
-        requested: "Waiting for approval"
+        requested: "Approval requested"
       passkey:
         added: "Passkey added"
         removed: "Passkey removed"
@@ -35,12 +35,12 @@ en:
       backup_code:
         spent: "Backup code used"
       authenticator:
-        enabled: "Authenticator added"
-        disabled: "Authenticator removed"
+        enabled: "Authenticator app added"
+        disabled: "Authenticator app removed"
       device_code:
-        issued: "A device asked to be signed in"
-        approved: "A device was signed in"
-        refused: "A device was turned away"
+        issued: "Device sign-in requested"
+        approved: "Device signed in"
+        refused: "Device sign-in refused"
       device:
         trusted: "Device trusted"
         named: "Device renamed"
@@ -51,49 +51,49 @@ en:
         uploaded: "Photo uploaded"
         removed: "Photo removed"
       consent:
-        granted: "An application was allowed in"
-        revoked: "An application was cut off"
+        granted: "App allowed"
+        revoked: "App access revoked"
       connection:
-        linked: "A provider was connected"
-        unlinked: "A provider was disconnected"
-        signed_in: "Signed in with a provider"
-        refused: "A provider sign-in was refused"
+        linked: "Account connected"
+        unlinked: "Account disconnected"
+        signed_in: "Signed in with a connected account"
+        refused: "Connected account sign-in refused"
       actor:
         approved: "Account approved"
-        created: "Account created"
-        provisioned: "Account created by a provider"
-        updated: "Profile edited"
-        deleted: "Account deleted"
+        created: "Person added"
+        provisioned: "Person added by a provider"
+        updated: "Profile changed"
+        deleted: "Person deleted"
         scopes_changed: "Scopes changed"
         signed_out: "Signed out everywhere"
       client:
-        registered: "An application registered"
-        approved: "An application was approved"
-        updated: "An application was edited"
-        archived: "An application was archived"
-        restored: "An application was restored"
-        secret_rotated: "An application secret was rotated"
+        registered: "Client registered"
+        approved: "Client approved"
+        updated: "Client changed"
+        archived: "Client archived"
+        restored: "Client restored"
+        secret_rotated: "Client secret rotated"
       token:
-        revoked: "A token was revoked"
+        revoked: "Token revoked"
       refresh:
-        reused: "A refresh token was replayed"
+        reused: "Refresh token replayed"
       signing_key:
-        staged: "A signing key was staged"
-        rotated: "A signing key was rotated"
-        activated: "A signing key was activated"
-        discarded: "A signing key was discarded"
+        staged: "Signing key staged"
+        rotated: "Signing key rotated"
+        activated: "Signing key activated"
+        discarded: "Signing key discarded"
       namespace:
-        released: "A namespace was released"
+        released: "Namespace released"
       provider:
-        created: "A provider was added"
-        updated: "A provider was edited"
-        archived: "A provider was archived"
+        created: "Provider added"
+        updated: "Provider changed"
+        archived: "Provider archived"
       tenant:
         updated: "Settings changed"
       sign_in_policy:
-        created: "Sign-in policy added"
-        updated: "Sign-in policy changed"
-        archived: "Sign-in policy archived"
+        created: "Policy added"
+        updated: "Policy changed"
+        archived: "Policy archived"
       adapter:
         created: "Adapter added"
         updated: "Adapter changed"

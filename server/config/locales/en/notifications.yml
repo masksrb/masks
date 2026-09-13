@@ -10,5 +10,5 @@ en:
       password: "Password"
       factors: "Passkeys and second factors"
       sessions: "Sign-ins and devices"
-      applications: "Applications and providers"
+      applications: "Apps and connected accounts"
       account: "Account"

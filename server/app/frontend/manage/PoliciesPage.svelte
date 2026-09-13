@@ -59,13 +59,13 @@
   ];
 
   const SECOND = [
-    ["otp", "Authenticator"],
+    ["otp", "Authenticator app"],
     ["passkey", "Passkey"],
     ["backup_codes", "Backup codes"],
   ];
 
   const CONFIRMATIONS = [
-    ["none", "Not confirmed"],
+    ["none", "None"],
     ["code", "Emailed code"],
     ["link", "Emailed link"],
     ["approval", "Manager approval"],
@@ -228,7 +228,7 @@
 <Page title="Policies">
   {#snippet actions()}
     {#if editing === null}
-      <button type="button" class="btn btn-primary btn-sm" onclick={add}>Add</button>
+      <button type="button" class="btn btn-primary btn-sm" onclick={add}>Add policy</button>
     {/if}
   {/snippet}
 
@@ -262,7 +262,7 @@
               {#if draft.signup}
                 <div class="grid gap-3 sm:grid-cols-2">
                   <Field
-                    label="Domains"
+                    label="Email domains"
                     bind:value={draft.emailDomains}
                     autocapitalize="none"
                     spellcheck="false"
@@ -286,7 +286,7 @@
                 {/if}
 
                 <div class="flex flex-col gap-1.5">
-                  <span class="text-xs font-medium opacity-70">Scopes</span>
+                  <span class="text-xs font-medium opacity-70">Signup scopes</span>
                   <ScopesEditor
                     value={draft.signupScopes}
                     available={data.scopesSupported.filter((scope) => !scope.startsWith("masks:"))}
@@ -316,8 +316,8 @@
               </div>
 
               <div class="flex flex-wrap gap-x-5 gap-y-2">
-                <Switch label="Verified email" bind:checked={draft.emailVerified} />
-                <Switch label="Verified phone" bind:checked={draft.phoneVerified} />
+                <Switch label="Confirmed email" bind:checked={draft.emailVerified} />
+                <Switch label="Confirmed phone" bind:checked={draft.phoneVerified} />
               </div>
 
               {#if draft.phone !== "off" && draft.phoneVerified && !data.tenant.texts}

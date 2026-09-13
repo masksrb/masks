@@ -3,5 +3,5 @@ en:
     error:
       page_title: "This request cannot be completed"
       stopped: "Stopped"
-      heading: "The application asked for something this server will not do."
-      contact: "Nothing was shared. The application has to fix this."
+      heading: "The app asked for something this server will not do."
+      contact: "Nothing was shared. The app has to fix this."

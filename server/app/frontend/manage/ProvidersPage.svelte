@@ -265,13 +265,13 @@
   title="Providers"
 >
   {#snippet actions()}
-    <button type="button" class="btn btn-primary btn-sm" onclick={add}>Add a provider</button>
+    <button type="button" class="btn btn-primary btn-sm" onclick={add}>Add provider</button>
   {/snippet}
 
   <Notices feedback={feedback.state} />
 
   {#if editing !== null}
-    <Card title={editing === "" ? "Add a provider" : `Edit ${draft.name}`}>
+    <Card title={editing === "" ? "Add provider" : `Edit ${draft.name}`}>
       <div class="grid gap-3 sm:grid-cols-2">
         <Field
           label="Key"
@@ -395,7 +395,7 @@
         {#if draft.signsIn}
           <div class="grid gap-3 sm:grid-cols-2">
             <Field
-              label="Allowed email domains"
+              label="Email domains"
               bind:value={draft.emailDomains}
               autocapitalize="none"
               autocorrect="off"
@@ -404,7 +404,7 @@
             />
             {#if draft.provisions}
               <Field
-                label="Scopes for a new account"
+                label="Signup scopes"
                 bind:value={draft.signupScopes}
                 autocapitalize="none"
                 autocorrect="off"
@@ -423,7 +423,7 @@
           disabled={busy || !complete}
           onclick={save}
         >
-          {busy ? "Saving..." : editing === "" ? "Add it" : "Save"}
+          {busy ? "Saving..." : editing === "" ? "Add" : "Save"}
         </button>
         <button type="button" class="btn btn-ghost btn-sm" onclick={close}>Cancel</button>
       </div>
@@ -464,7 +464,7 @@
               <span class="badge badge-ghost badge-sm font-mono">@{domain}</span>
             {/each}
           {:else}
-            <span class="badge badge-ghost badge-sm">connections only</span>
+            <span class="badge badge-ghost badge-sm">connected accounts only</span>
           {/if}
         </div>
 
@@ -496,7 +496,7 @@
             <dd class="font-mono text-xs break-all">{provider.scopes.join(" ") || "—"}</dd>
           </div>
           <div>
-            <dt class="text-xs opacity-60">Connections</dt>
+            <dt class="text-xs opacity-60">Connected accounts</dt>
             <dd>
               {provider.connections}
               {#if provider.signedIn}

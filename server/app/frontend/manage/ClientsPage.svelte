@@ -32,7 +32,7 @@
     { label: "Namespaces", hide: true, right: true },
     { label: "Scopes", hide: true },
     { label: "Approved by", hide: true },
-    "Created",
+    "Registered",
   ];
 
   const feedback = createFeedback();
@@ -91,7 +91,7 @@
       ? `No ${archived ? "archived " : ""}client matches “${query}”.`
       : archived
         ? "Nothing has been archived."
-        : "No applications are registered yet. One appears here as soon as it completes a handshake.",
+        : "No clients registered yet.",
   );
 </script>
 

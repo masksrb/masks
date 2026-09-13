@@ -260,7 +260,7 @@
     <Spinner />
   {:else if data}
     {#if draft}
-      <Card title={editing === "" ? "Add an adapter" : `Edit ${draft.name}`}>
+      <Card title={editing === "" ? "Add adapter" : `Edit ${draft.name}`}>
         {#if editing === ""}
           <label class="flex flex-col gap-1.5">
             <span class="text-xs font-medium opacity-70">Service</span>

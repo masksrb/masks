@@ -2,7 +2,6 @@
   import { untrack } from "svelte";
   import Events from "./Events.svelte";
   import { createFeedback } from "./lib/feedback.svelte.js";
-  import { said } from "./lib/events.js";
   import { useRouter } from "./lib/router.svelte.js";
   import Card from "./ui/Card.svelte";
   import Link from "./ui/Link.svelte";
@@ -15,7 +14,7 @@
   const PAGE = 50;
 
   const FIELDS = `
-    id action createdAt ipAddress userAgent details
+    id action label createdAt ipAddress userAgent details
     actor { uuid identifier }
     by { uuid identifier }
     client { clientId name }
@@ -31,7 +30,7 @@
         action: $action, grave: $grave, afterId: $afterId, limit: $limit,
         actor: $actor, client: $client
       ) { ${FIELDS} }
-      eventActions
+      eventActions { action label }
     }
   `;
 
@@ -159,8 +158,8 @@
           onchange={(event) => filter(event.currentTarget.value)}
         >
           <option value="">everything</option>
-          {#each actions as one (one)}
-            <option value={one}>{said(one)}</option>
+          {#each actions as one (one.action)}
+            <option value={one.action}>{one.label}</option>
           {/each}
         </select>
       </label>
@@ -184,10 +183,10 @@
       <Events
         {events}
         empty={grave
-          ? "Nothing worth a look. Refusals, replays and blocks would show here."
+          ? "Nothing worth a look."
           : action
-            ? "Nothing of that kind has happened yet."
-            : "Nothing has happened yet."}
+            ? "Nothing yet."
+            : "Nothing yet."}
       />
 
       {#if !exhausted && events.length}

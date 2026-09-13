@@ -61,7 +61,7 @@
           device { id label }
         }
         events(limit: 25) {
-          id action createdAt ipAddress details
+          id action label createdAt ipAddress details
           by { uuid identifier }
           client { clientId name }
           device { id label }
@@ -215,7 +215,7 @@
   }
 
   function removePhoto() {
-    if (!confirm("Remove this actor's uploaded photo?")) return;
+    if (!confirm("Remove this person's photo?")) return;
 
     act(
       `mutation Remove($uuid: ID!) { removeAvatar(uuid: $uuid) { actor { uuid } } }`,
@@ -225,7 +225,7 @@
   }
 
   function disable() {
-    if (!confirm("Remove this actor's authenticator and every backup code?")) return;
+    if (!confirm("Remove this person's authenticator app and every backup code?")) return;
 
     act(
       `mutation Disable($uuid: ID!) { disableAuthenticator(uuid: $uuid) { actor { otpEnabled } } }`,
@@ -253,7 +253,7 @@
   <Spinner />
 {:else if !actor}
   <div class="alert alert-error alert-soft text-sm" role="alert">
-    {feedback.state.failure ?? "There is no actor with that uuid."}
+    {feedback.state.failure ?? "There is no such person."}
   </div>
 {:else}
   <Page
@@ -284,7 +284,7 @@
 
     <div class="grid items-start gap-4 md:grid-cols-2">
       <div class="flex flex-col gap-4">
-        <Card title="Profile" lede="Released under the profile and email scopes.">
+        <Card title="Profile">
           <div class="grid gap-3 sm:grid-cols-2">
             {#each FIELDS as [key, label] (key)}
               <Field {label} bind:value={draft[key]} />
@@ -297,36 +297,29 @@
         </Card>
 
         <Card
-          title="Where they are"
-          lede={yourself ? "Signing out everywhere takes this console with it." : null}
+          title="Sessions"
+          lede={yourself ? "Signing out everywhere signs you out of this console too." : null}
         >
           <Presence {api} {feedback} {actor} onchange={load} />
         </Card>
 
-        <Card
-          title="Applications allowed in"
-          lede="What they have consented to, and what it may ask for on their behalf."
-        >
+        <Card title="Consents">
           <Consents {api} {feedback} rows={actor.consents} onchange={load} />
         </Card>
 
-        <Card
-          title="Connected accounts"
-          lede="Upstream accounts linked to this one. A connection that signs in is a way into this account."
-        >
+        <Card title="Connected accounts">
           <Connections {api} {feedback} rows={actor.connections} onchange={load} />
         </Card>
 
         <Card
-          title="Tokens outstanding"
-          lede="Live tokens issued for this account. Revoking a refresh chain ends everything exchanged along it."
+          title="Tokens"
         >
           <Tokens {api} {feedback} rows={actor.tokens} onchange={load} />
         </Card>
       </div>
 
       <div class="flex flex-col gap-4">
-        <Card title="Avatar" lede="Only the photo is stored; the rest are drawn.">
+        <Card title="Photo">
           <div class="flex flex-wrap gap-5">
             {#each ["photo", "identicon", "initials"] as style (style)}
               <div class="flex flex-col items-start gap-2">
@@ -365,11 +358,11 @@
           </div>
 
           {#if uploading}
-            <span class="text-xs opacity-60">Storing...</span>
+            <span class="text-xs opacity-60">Uploading...</span>
           {/if}
         </Card>
 
-        <Card title="Scopes" lede="The ceiling for any client acting on their behalf.">
+        <Card title="Scopes">
           <ScopesEditor value={actor.scopes} available={supported} onchange={saveScopes} />
         </Card>
 
@@ -395,7 +388,7 @@
           {/if}
         </Card>
 
-        <Card title="Passkeys" lede="Each one counts as both factors on its own.">
+        <Card title="Passkeys">
           {#if actor.passkeys.length === 0}
             <p class="text-sm opacity-70">None enrolled.</p>
           {:else}
@@ -441,8 +434,8 @@
 
         {#if actor.pendingApproval}
           <Card
-            title="Waiting to be let in"
-            lede="This person signed up under a policy that needs a manager's approval. They cannot sign in until somebody approves them."
+            title="Awaiting approval"
+            lede="They cannot sign in until a manager approves them."
           >
             <div class="flex flex-wrap gap-2">
               <button
@@ -473,7 +466,7 @@
                 Generate backup codes
               </button>
               <button type="button" class="btn btn-sm btn-error btn-outline" onclick={disable}>
-                Remove authenticator
+                Remove authenticator app
               </button>
             </div>
           {:else}
@@ -481,12 +474,12 @@
           {/if}
         </Card>
 
-        <Card title="Activity" lede="What has happened to this account, newest first.">
+        <Card title="Activity">
           {#snippet actions()}
-            <Link to={`/activity?actor=${actor.uuid}`} class="btn btn-ghost btn-sm">All of it</Link>
+            <Link to={`/activity?actor=${actor.uuid}`} class="btn btn-ghost btn-sm">All activity</Link>
           {/snippet}
 
-          <Events events={actor.events} showActor={false} empty="Nothing recorded yet." />
+          <Events events={actor.events} showActor={false} empty="Nothing yet." />
         </Card>
 
         <Card title="Delete">

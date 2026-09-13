@@ -129,7 +129,7 @@ class FirstRunTest < ActionDispatch::IntegrationTest
 
     get "/login"
 
-    assert_match "This installation is called", response.body
+    assert_match "This server is called", response.body
     assert_match "Set up at", response.body
     assert_match origin_for(@tenant), response.body
 

@@ -22,7 +22,7 @@
         }
       }
       events(device: $id, limit: 25) {
-        id action createdAt ipAddress details
+        id action label createdAt ipAddress details
         actor { uuid identifier }
         by { uuid identifier }
         client { clientId name }
@@ -84,7 +84,7 @@
     device
       ? [
           { term: "Kind", value: device.category },
-          { term: "Address", value: device.ipAddress, mono: true },
+          { term: "IP address", value: device.ipAddress, mono: true },
           { term: "User agent", value: device.userAgent, mono: true },
           { term: "First seen", value: day(device.createdAt) },
           { term: "Last seen", value: moment(device.lastSeenAt) },
@@ -175,8 +175,8 @@
           {/if}
         </Card>
 
-        <Card title="Activity" lede="What has happened on this device, newest first.">
-          <Events {events} empty="Nothing recorded on it yet." />
+        <Card title="Activity">
+          <Events {events} empty="Nothing yet." />
         </Card>
       </div>
     </div>

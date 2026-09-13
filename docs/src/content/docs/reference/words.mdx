@@ -1,0 +1,58 @@
+---
+title: Words
+description: One name for each thing, across the console, the sign-in pages, the account page and mail.
+---
+
+`server/config/locales/en/` · `server/app/frontend/manage/`
+
+Every screen says the same thing the same way. Two audiences read masks, and a few words change
+between them: **managers** in `/manage`, and **people** on the sign-in pages, their account page
+and the mail masks sends.
+
+## One name each
+
+| Say | Not | |
+| --- | --- | --- |
+| **activity** | audit log, history, events | what happened, newest first — every list of events |
+| **client** | application | in `/manage`, where OAuth is the subject |
+| **app** | application, client | to people, who allow an app in |
+| **person**, **people** | actor, user | in `/manage` |
+| **account** | actor, user | what a person has, and on their own pages |
+| **manager** | admin, whoever runs this server | somebody holding `masks:manage` |
+| **server** | instance, installation | the thing a person signs in to |
+| **confirm**, **confirmation** | verify, verification | proving an email address or a phone number |
+| **photo** | picture, avatar | the uploaded image; identicons and initials are drawn, not uploaded |
+| **passkey** | fingerprint, face or PIN | |
+| **authenticator app** | authenticator, OTP, TOTP | |
+| **second factor** | second step, 2FA, MFA | |
+| **connected account** | connection, linked account | an account elsewhere linked through a provider |
+| **policy** | sign-in policy, rules | a sign-in policy, once the context is sign-in |
+| **IP address** | address | an address alone means an email address |
+| **user agent** | agent, UA | |
+| **refused** | turned away, rejected, denied | a request masks would not serve |
+| **revoked** | cut off, ended | a session, token or consent taken away |
+| **blocked** | banned | a device that is refused from then on |
+| **registered** | created | a client |
+
+`actor` stays in code, in the GraphQL schema and in these concept pages, where it names the model.
+It never reaches a screen.
+
+## Verbs and nouns
+
+**Sign in**, **sign out** and **sign up** are verbs; **sign-in**, **sign-out** and **signup** are
+nouns. A button says *Sign in*; a chart counts *sign-ins*; a policy decides whether *signup* is open.
+
+## Events
+
+An event's label is written once, in `events.yml`, and served to the console as `label` on `Event`
+and `EventAction`. The account page reads the same file. Labels are a noun and a past participle —
+*Passkey added*, *Client archived*, *Device sign-in refused* — and a change is always *changed*,
+never *edited* or *updated*.
+
+## Buttons and empty lists
+
+A page's add button names what it adds: *Add person*, *Add policy*, *Add provider*, *Add adapter*.
+The form's own submit is *Add* or *Save*.
+
+A list with nothing in it says *Nothing yet.*, or *None.* where nothing will ever arrive on its own.
+A link to more of a list says *All activity*.

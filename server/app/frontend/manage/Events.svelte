@@ -1,9 +1,9 @@
 <script>
-  import { detailed, said, tone } from "./lib/events.js";
+  import { detailed, tone } from "./lib/events.js";
   import { moment, since } from "./lib/format.js";
   import Link from "./ui/Link.svelte";
 
-  let { events, showActor = true, empty = "Nothing has happened yet." } = $props();
+  let { events, showActor = true, empty = "Nothing yet." } = $props();
 </script>
 
 {#if events.length === 0}
@@ -18,7 +18,7 @@
               class="text-sm font-medium"
               class:text-error={tone(event.action) === "bad"}
               class:text-warning={tone(event.action) === "watch"}
-            >{said(event.action)}</span>
+            >{event.label}</span>
 
             {#if showActor && event.actor}
               <Link to={`/people/${event.actor.uuid}`} class="link link-hover text-xs">

@@ -160,8 +160,8 @@ class EventsTest < ActionDispatch::IntegrationTest
 
     answer = ask(<<~GQL, token, action: Event::SESSION_STARTED)
       query Log($action: String) {
-        events(action: $action) { action actor { nickname } }
-        eventActions
+        events(action: $action) { action label actor { nickname } }
+        eventActions { action label }
       }
     GQL
 
@@ -171,7 +171,8 @@ class EventsTest < ActionDispatch::IntegrationTest
 
     assert held.any?, "the manager signed in, so there is something to read"
     assert held.all? { |event| event["action"] == Event::SESSION_STARTED }
-    assert_includes answer["data"]["eventActions"], Event::PASSWORD_CHANGED
+    assert held.all? { |event| event["label"] == "Signed in" }
+    assert_includes answer["data"]["eventActions"], { "action" => Event::PASSWORD_CHANGED, "label" => "Password changed" }
   end
 
   test "paging past a page boundary does not skip events sharing a timestamp" do

@@ -30,7 +30,7 @@
         requirePushedAuthorizationRequests
         signInPolicy { key name }
         events(limit: 25) {
-          id action createdAt ipAddress details
+          id action label createdAt ipAddress details
           actor { uuid identifier }
           by { uuid identifier }
           device { id label }
@@ -303,7 +303,7 @@
 
         <Card title="Activity">
           {#snippet actions()}
-            <Link to={`/activity?client=${client.clientId}`} class="btn btn-ghost btn-sm">All</Link>
+            <Link to={`/activity?client=${client.clientId}`} class="btn btn-ghost btn-sm">All activity</Link>
           {/snippet}
 
           <Events events={client.events} empty="Nothing yet." />

@@ -21,7 +21,7 @@ en:
     refused:
       page_title: "This connection was refused"
       stopped: "Stopped"
-      title: "The application described itself in a way this server will not accept."
-      settle: "Nothing was shared. A namespace stays claimed until somebody releases it, so this is yours to settle rather than the application's — archive whatever holds the name, then release it."
+      title: "The app described itself in a way this server will not accept."
+      settle: "Nothing was shared. A namespace stays claimed until somebody releases it, so this is yours to settle rather than the app's — archive whatever holds the name, then release it."
       open_console: "Open the console"
-      contact: "Nothing was shared. The application has to fix this."
+      contact: "Nothing was shared. The app has to fix this."

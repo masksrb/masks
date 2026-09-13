@@ -292,7 +292,13 @@ type Event {
   device: Device
   id: ID!
   ipAddress: String
+  label: String!
   userAgent: String
+}
+
+type EventAction {
+  action: String!
+  label: String!
 }
 
 """
@@ -427,7 +433,7 @@ type Query {
   consents(actor: ID, client: ID, limit: Int, revoked: Boolean): [Consent!]!
   device(id: ID!): Device
   devices(actor: ID, agent: String, blocked: Boolean, limit: Int, unattached: Boolean): [Device!]!
-  eventActions: [String!]!
+  eventActions: [EventAction!]!
   events(action: String, actor: ID, afterId: ID, client: ID, device: ID, grave: Boolean, limit: Int): [Event!]!
   minimumPassword: Int!
   namespaces: [Namespace!]!

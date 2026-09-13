@@ -94,6 +94,7 @@ export default defineConfig({
             badge: { text: "sdoc", variant: "note" },
           },
           { label: "Design", slug: "reference/design" },
+          { label: "Words", slug: "reference/words" },
         ],
       },
     ],

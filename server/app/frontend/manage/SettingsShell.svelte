@@ -8,7 +8,7 @@
     ["/policies", "Policies"],
     ["/providers", "Providers"],
     ["/adapters", "Adapters"],
-    ["/activity", "Audit log"],
+    ["/activity", "Activity"],
   ];
 
   function unpair() {

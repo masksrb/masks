@@ -1,85 +1,3 @@
-const SAID = {
-  "session.started": "Signed in",
-  "session.ended": "Signed out",
-  "session.revoked": "Session revoked",
-  "logout.undelivered": "Logout not delivered",
-  "login.refused": "Sign-in refused",
-  "login.throttled": "Sign-in throttled",
-
-  "account.created": "Account created",
-  "invitation.sent": "Invitation sent",
-  "invitation.accepted": "Invitation accepted",
-
-  "password.changed": "Password changed",
-  "password.reset_requested": "Password reset requested",
-  "password.reset_completed": "Password reset",
-
-  "email.verification_sent": "Confirmation sent",
-  "email.verified": "Email confirmed",
-  "phone.verification_sent": "Confirmation code texted",
-  "phone.verified": "Phone confirmed",
-  "approval.requested": "Waiting for approval",
-  "actor.approved": "Account approved",
-
-  "passkey.added": "Passkey added",
-  "passkey.removed": "Passkey removed",
-  "backup_codes.generated": "Backup codes generated",
-  "backup_code.spent": "Backup code used",
-  "authenticator.enabled": "Authenticator added",
-  "authenticator.disabled": "Authenticator disabled",
-
-  "device.trusted": "Device trusted",
-  "device.named": "Device renamed",
-  "device.forgotten": "Device signed out",
-  "device.blocked": "Device blocked",
-  "device.unblocked": "Device unblocked",
-
-  "avatar.uploaded": "Photo uploaded",
-  "avatar.removed": "Photo removed",
-
-  "consent.granted": "Consent granted",
-  "consent.revoked": "Consent revoked",
-  "connection.linked": "Provider connected",
-  "connection.unlinked": "Provider disconnected",
-  "connection.signed_in": "Signed in with a provider",
-  "connection.refused": "Provider sign-in refused",
-
-  "actor.created": "Person added",
-  "actor.provisioned": "Person created by a provider",
-  "actor.updated": "Profile edited",
-  "actor.deleted": "Person deleted",
-  "actor.scopes_changed": "Scopes changed",
-  "actor.signed_out": "Signed out everywhere",
-
-  "client.registered": "Client registered",
-  "client.approved": "Client approved",
-  "client.updated": "Client edited",
-  "client.archived": "Client archived",
-  "client.restored": "Client restored",
-  "client.secret_rotated": "Client secret rotated",
-
-  "token.revoked": "Token revoked",
-  "refresh.reused": "Refresh token replayed",
-
-  "signing_key.staged": "Signing key staged",
-  "signing_key.rotated": "Signing key rotated",
-  "signing_key.activated": "Signing key activated",
-  "signing_key.discarded": "Signing key discarded",
-
-  "namespace.released": "Namespace released",
-  "provider.created": "Provider added",
-  "provider.updated": "Provider edited",
-  "provider.archived": "Provider archived",
-  "tenant.updated": "Settings changed",
-  "sign_in_policy.created": "Sign-in policy added",
-  "sign_in_policy.updated": "Sign-in policy changed",
-  "sign_in_policy.archived": "Sign-in policy archived",
-  "adapter.created": "Adapter added",
-  "adapter.updated": "Adapter changed",
-  "adapter.archived": "Adapter archived",
-  "adapter.tested": "Adapter tested",
-};
-
 const GRAVE = new Set([
   "logout.undelivered",
   "login.refused",
@@ -102,10 +20,6 @@ const NOTABLE = new Set([
   "connection.unlinked",
   "consent.revoked",
 ]);
-
-export function said(action) {
-  return SAID[action] ?? action;
-}
 
 export function tone(action) {
   if (GRAVE.has(action)) return "bad";

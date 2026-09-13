@@ -37,7 +37,7 @@
   `;
 
   const EVENT_FIELDS = `
-    id action createdAt ipAddress details
+    id action label createdAt ipAddress details
     actor { uuid identifier }
     by { uuid identifier }
     client { clientId name }
@@ -238,7 +238,7 @@
             <Link to="/activity" class="btn btn-ghost btn-sm">All activity</Link>
           {/snippet}
 
-          <Events events={recent.latest} empty="Nothing has happened yet." />
+          <Events events={recent.latest} empty="Nothing yet." />
         </Card>
       {/snippet}
     </Loader>
@@ -284,7 +284,7 @@
             class="select select-sm w-full"
             value={data.tenant.signInPolicy?.key ?? ""}
             onchange={(event) =>
-              update({ signInPolicy: event.currentTarget.value }, "Default sign-in policy updated.")}
+              update({ signInPolicy: event.currentTarget.value }, "Default policy updated.")}
           >
             <option value="">Built-in</option>
             {#each data.signInPolicies as policy (policy.key)}

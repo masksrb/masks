@@ -33,7 +33,7 @@
     "",
     "Device",
     { label: "Who signs in on it", hide: true },
-    { label: "Address", hide: true },
+    { label: "IP address", hide: true },
     "Last seen",
   ];
 
@@ -190,7 +190,7 @@
       </p>
       <label class="flex items-center gap-2 text-sm">
         <input type="checkbox" class="checkbox" bind:checked={refuse} />
-        Refuse this agent from now on, so new devices sending it are turned away too
+        Also refuse this user agent from now on
       </label>
       <button
         type="button"
