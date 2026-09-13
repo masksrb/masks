@@ -277,6 +277,11 @@ class AvatarsTest < ActionDispatch::IntegrationTest
     assert_redirected_to root_path
     assert within(@tenant) { Avatars.photo(@actor.reload) }.present?
 
+    follow_redirect!
+
+    assert_select ".plaque .plaque-notes .note-plain[role=status]", I18n.t("avatars.updated")
+    assert_select ".flow > .note", count: 0
+
     delete "/account/avatar"
 
     assert_nil within(@tenant) { Avatars.photo(@actor.reload) }

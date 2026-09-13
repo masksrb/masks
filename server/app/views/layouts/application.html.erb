@@ -26,12 +26,7 @@
       <% end %>
 
       <div class="flow">
-        <% if flash[:alert].present? %>
-          <div class="note note-bad" role="alert"><%= flash[:alert] %></div>
-        <% end %>
-        <% if flash[:notice].present? %>
-          <div class="note"><%= flash[:notice] %></div>
-        <% end %>
+        <%= render "application/flashes" unless surface == "place" %>
 
         <%= yield %>
       </div>

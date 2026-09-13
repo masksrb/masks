@@ -49,7 +49,7 @@ en:
         lede: "Every phone, tablet and computer that has signed in to this account."
         none: "Nothing has signed in yet."
         state:
-          here: "You are here"
+          here: "This device"
           signed_in: "Signed in"
           signed_out: "Signed out"
           blocked: "Blocked"

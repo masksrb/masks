@@ -8,6 +8,10 @@
 
   <h1 class="plaque-title"><%= account_text("title") %></h1>
 
+  <% if flash[:alert].present? || flash[:notice].present? %>
+    <div class="plaque-notes"><%= render "application/flashes" %></div>
+  <% end %>
+
   <div class="plaque-shot">
     <%= form_with url: account_avatar_path, method: :post, id: "picture",
           html: { multipart: true } do |form| %>
