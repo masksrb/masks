@@ -107,7 +107,7 @@ module LoginStates
         )
 
         claims = provider.assert!(tokens, nonce: held["nonce"])
-        settled = SingleSignOn.resolve!(provider: provider, claims: claims, tokens: tokens)
+        settled = SingleSignOn.resolve!(provider: provider, claims: claims)
 
         signed_in(provider, settled)
       rescue SingleSignOn::Refused => e
@@ -161,7 +161,7 @@ module LoginStates
         return if provider.nil?
 
         Connection.record!(
-          provider: provider, actor: login.actor, tokens: {}, identity: held["identity"]
+          provider: provider, actor: login.actor, identity: held["identity"]
         ).signed_in!
 
         login.noted! "oidc"

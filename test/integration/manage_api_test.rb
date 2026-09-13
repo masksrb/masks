@@ -1348,23 +1348,13 @@ class ManageApiTest < ActionDispatch::IntegrationTest
     assert_equal "uris", held.first["client"]["name"]
   end
 
-  test "the scopes on offer include what providers and namespaces publish" do
+  test "the scopes on offer include what namespaces publish" do
     token = bearer
-
-    within(@tenant) do
-      Provider.create!(
-        key: "acme", name: "Acme",
-        authorization_url: "https://acme.test/authorize",
-        token_url: "https://acme.test/token",
-        client_id: "upstream"
-      )
-    end
 
     claim!
 
     held = ask("query { scopesSupported }", token).dig("data", "scopesSupported")
 
-    assert_includes held, "masks:connections:acme"
     assert_includes held, "uris:"
     assert_includes held, Scopes::MANAGE
   end

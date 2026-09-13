@@ -83,15 +83,6 @@
             <% end %>
           </div>
         <% end %>
-
-        <% if providers.any? %>
-          <div class="action-row">
-            <% providers.each do |provider| %>
-              <%= button_to account_text("connections.connect", provider: provider.name),
-                    connect_path(provider.key), class: "action action-quiet action-sm" %>
-            <% end %>
-          </div>
-        <% end %>
       </div>
     </details>
   </div>

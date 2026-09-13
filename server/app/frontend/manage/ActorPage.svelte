@@ -54,7 +54,7 @@
         devices { id label category known ipAddress userAgent lastSeenAt blockedAt }
         connections {
           id subject label email emailVerified connectedAt signedInAt
-          provider { key name releaseScope }
+          provider { key name }
         }
         consents {
           id scopes audience updatedAt

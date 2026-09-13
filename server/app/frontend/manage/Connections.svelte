@@ -15,8 +15,7 @@
 
     if (
       !confirm(
-        `Disconnect ${held}? The upstream tokens are handed back and any client holding ` +
-          `${connection.provider.releaseScope} stops being released one.`,
+        `Disconnect ${held}? It stops signing anybody in until it is linked again.`,
       )
     )
       return;
@@ -64,7 +63,6 @@
         </span>
 
         <div class="flex flex-wrap gap-x-4 text-xs opacity-60">
-          <span class="font-mono">{connection.provider.releaseScope}</span>
           <span title={moment(connection.connectedAt)}>
             Connected {since(connection.connectedAt)}
           </span>

@@ -5,14 +5,12 @@ module Manage
       field :name, String, null: false
       field :authorization_url, String, null: false
       field :token_url, String, null: false
-      field :revocation_url, String
       field :userinfo_url, String
       field :client_id, String, null: false
       field :scopes, [ String ], null: false
       field :authorize_params, GraphQL::Types::JSON, null: false
       field :subject_claim, String, null: false
       field :label_claim, String, null: false
-      field :release_scope, String, null: false
       field :secret_held, Boolean, null: false
       field :connections, Integer, null: false
       field :signed_in, Integer, null: false

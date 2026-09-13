@@ -7,7 +7,6 @@ module Manage
       argument :token_url, String, required: false
       argument :client_id, String, required: false
       argument :client_secret, String, required: false
-      argument :revocation_url, String, required: false
       argument :userinfo_url, String, required: false
       argument :scopes, [ String ], required: false
       argument :authorize_params, GraphQL::Types::JSON, required: false

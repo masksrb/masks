@@ -50,7 +50,7 @@ class GrantsTest < ActionDispatch::IntegrationTest
       "query Actor($uuid: ID!) {
         actor(uuid: $uuid) {
           consents { id scopes client { clientId name } }
-          connections { id label signedInAt provider { key name releaseScope } }
+          connections { id label signedInAt provider { key name } }
         }
       }",
       uuid: @actor.uuid
@@ -61,7 +61,6 @@ class GrantsTest < ActionDispatch::IntegrationTest
     assert_equal [ "Probe" ], held["consents"].map { |one| one["client"]["name"] }
     assert_equal [ "openid", "profile" ], held["consents"].first["scopes"]
     assert_equal [ "Acme" ], held["connections"].map { |one| one["provider"]["name"] }
-    assert_equal "masks:connections:acme", held["connections"].first["provider"]["releaseScope"]
   end
 
   test "cutting a client off revokes its refresh tokens as well as the consent" do
@@ -303,16 +302,6 @@ class GrantsTest < ActionDispatch::IntegrationTest
     assert within(@tenant) { connection.reload.revoked_at.present? }
   end
 
-  test "the json api that clients use still answers with json" do
-    connection = connection!(provider!)
-
-    sign_in_as(@actor)
-    delete "/connections/#{connection.uuid}"
-
-    assert_response :success
-    assert_equal connection.uuid, JSON.parse(response.body)["id"]
-  end
-
   test "nobody disconnects an upstream account on somebody else's page" do
     connection = connection!(provider!)
     intruder = create_actor(@tenant, nickname: "eve", email: "eve@example.com")
@@ -340,16 +329,14 @@ class GrantsTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "the account page lists connections and offers the rest" do
+  test "the account page lists connected accounts" do
     connection!(provider!(key: "acme"))
-    provider!(key: "beta")
 
     sign_in_as(@actor)
     get "/"
 
     assert_response :success
     assert_match "Acme", response.body
-    assert_match "Connect Beta", response.body
     assert_match "Disconnect", response.body
   end
 

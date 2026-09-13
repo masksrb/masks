@@ -56,7 +56,7 @@ class SingleSignOnTest < ActionDispatch::IntegrationTest
     prove
 
     within(@tenant) do
-      Connection.find_by(subject: "upstream-1").revoke!(upstream: false)
+      Connection.find_by(subject: "upstream-1").revoke!
       Session.live.find_each(&:revoke!)
     end
 

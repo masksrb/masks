@@ -12,7 +12,7 @@ class ProviderAdminTest < ActionDispatch::IntegrationTest
         clientId: $clientId, clientSecret: $clientSecret, scopes: $scopes,
         authorizeParams: $authorizeParams
       ) {
-        provider { key name releaseScope secretHeld scopes connections }
+        provider { key name secretHeld scopes connections }
       }
     }
   GQL
@@ -75,22 +75,15 @@ class ProviderAdminTest < ActionDispatch::IntegrationTest
     )
   end
 
-  test "a provider added through the console is one people can connect" do
+  test "a provider added through the console holds its secret and connects nobody yet" do
     answer = add
 
     assert_nil answer["errors"]
 
     held = answer["data"]["createProvider"]["provider"]
 
-    assert_equal "masks:connections:google", held["releaseScope"]
     assert held["secretHeld"], "the secret was stored"
     assert_equal 0, held["connections"]
-
-    get "/connections/google/start"
-
-    assert_response :redirect
-    assert response.location.start_with?("https://accounts.google.com/o/oauth2/v2/auth"),
-           "the provider the console added is the one the browser is sent to"
   end
 
   test "the secret is stored but never handed back" do
@@ -130,10 +123,12 @@ class ProviderAdminTest < ActionDispatch::IntegrationTest
 
     assert_nil answer["errors"]
 
-    get "/connections/google/start"
+    location = within(@tenant) do
+      Provider.find_by!(key: "google").authorize_url(redirect_uri: "https://masks.test/cb", state: "s")
+    end
 
-    assert_includes response.location, "access_type=offline"
-    assert_includes response.location, "prompt=consent"
+    assert_includes location, "access_type=offline"
+    assert_includes location, "prompt=consent"
   end
 
   test "a key is claimed once" do
@@ -167,14 +162,12 @@ class ProviderAdminTest < ActionDispatch::IntegrationTest
     assert_nil ask("mutation Off($key: ID!) { archiveProvider(key: $key) { provider { key } } }",
                    key: "google")["errors"]
 
-    get "/connections/google/start"
-    assert_response :not_found
+    assert_empty within(@tenant) { Provider.active.to_a }
 
     assert_nil ask("mutation On($key: ID!) { restoreProvider(key: $key) { provider { key } } }",
                    key: "google")["errors"]
 
-    get "/connections/google/start"
-    assert_response :redirect
+    assert_equal [ "google" ], within(@tenant) { Provider.active.pluck(:key) }
   end
 
   test "adding, editing and archiving a provider are all written down" do

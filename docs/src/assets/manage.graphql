@@ -184,10 +184,8 @@ type Connection {
   id: ID!
   label: String
   provider: Provider!
-  refreshable: Boolean!
   revokedAt: ISO8601DateTime
   revokedReason: String
-  scopes: [String!]!
   signedInAt: ISO8601DateTime
   subject: String!
 }
@@ -277,7 +275,6 @@ type DiscoverProviderPayload {
   authorizationUrl: String!
   issuer: String!
   jwksUri: String!
-  revocationUrl: String
   scopesSupported: [String!]!
   tokenUrl: String!
   userinfoUrl: String
@@ -336,7 +333,7 @@ type Mutation {
   blockDevices(agent: String, ids: [ID!], refuse: Boolean): BlockDevicesPayload
   createActor(email: String, nickname: String, password: String, scopes: [String!]): CreateActorPayload
   createAdapter(config: JSON, key: ID!, name: String!, primary: Boolean, service: String!): CreateAdapterPayload
-  createProvider(authorizationUrl: String!, authorizeParams: JSON, clientId: String!, clientSecret: String, emailDomains: [String!], issuer: String, jwksUri: String, key: ID!, labelClaim: String, name: String!, provisions: Boolean, revocationUrl: String, scopes: [String!], signsIn: Boolean, signupScopes: [String!], subjectClaim: String, tokenUrl: String!, userinfoUrl: String): CreateProviderPayload
+  createProvider(authorizationUrl: String!, authorizeParams: JSON, clientId: String!, clientSecret: String, emailDomains: [String!], issuer: String, jwksUri: String, key: ID!, labelClaim: String, name: String!, provisions: Boolean, scopes: [String!], signsIn: Boolean, signupScopes: [String!], subjectClaim: String, tokenUrl: String!, userinfoUrl: String): CreateProviderPayload
   createSignInPolicy(confirmation: String, email: String, emailDomains: [String!], emailVerified: Boolean, everyProvider: Boolean, firstFactors: [String!], hidden: Boolean, key: ID!, name: String, nickname: String, passwordMinimum: Int, phone: String, phoneVerified: Boolean, providers: [String!], refuseCommonPasswords: Boolean, secondFactorRequired: Boolean, secondFactors: [String!], signup: Boolean, signupScopes: [String!]): CreateSignInPolicyPayload
   deleteActor(uuid: ID!): DeleteActorPayload
   disableAuthenticator(uuid: ID!): DisableAuthenticatorPayload
@@ -368,7 +365,7 @@ type Mutation {
   updateActor(birthdate: String, email: String, familyName: String, gender: String, givenName: String, locale: String, middleName: String, name: String, nickname: String, phone: String, pictureUrl: String, profileUrl: String, uuid: ID!, websiteUrl: String, zoneinfo: String): UpdateActorPayload
   updateAdapter(config: JSON, key: ID!, name: String, primary: Boolean): UpdateAdapterPayload
   updateClient(allowedScopes: [String!], backchannelLogoutSessionRequired: Boolean, backchannelLogoutUri: String, clientId: ID!, consentRequired: Boolean, dpopBoundAccessTokens: Boolean, name: String, postLogoutRedirectUris: [String!], redirectUris: [String!], requirePushedAuthorizationRequests: Boolean, requiredScopes: [String!], resources: [String!], sectorIdentifierUri: String, signInPolicy: ID, subjectType: String): UpdateClientPayload
-  updateProvider(authorizationUrl: String, authorizeParams: JSON, clientId: String, clientSecret: String, emailDomains: [String!], issuer: String, jwksUri: String, key: ID!, labelClaim: String, name: String, provisions: Boolean, revocationUrl: String, scopes: [String!], signsIn: Boolean, signupScopes: [String!], subjectClaim: String, tokenUrl: String, userinfoUrl: String): UpdateProviderPayload
+  updateProvider(authorizationUrl: String, authorizeParams: JSON, clientId: String, clientSecret: String, emailDomains: [String!], issuer: String, jwksUri: String, key: ID!, labelClaim: String, name: String, provisions: Boolean, scopes: [String!], signsIn: Boolean, signupScopes: [String!], subjectClaim: String, tokenUrl: String, userinfoUrl: String): UpdateProviderPayload
   updateSignInPolicy(confirmation: String, email: String, emailDomains: [String!], emailVerified: Boolean, everyProvider: Boolean, firstFactors: [String!], hidden: Boolean, key: ID!, name: String, nickname: String, passwordMinimum: Int, phone: String, phoneVerified: Boolean, providers: [String!], refuseCommonPasswords: Boolean, secondFactorRequired: Boolean, secondFactors: [String!], signup: Boolean, signupScopes: [String!]): UpdateSignInPolicyPayload
   updateTenant(blockedAgents: String, browsersOnly: Boolean, dynamicClientScopes: [String!], dynamicRegistration: String, name: String, namedBy: String, signInPolicy: ID): UpdateTenantPayload
   uploadAvatar(photo: Upload!, uuid: ID!): UploadAvatarPayload
@@ -410,8 +407,6 @@ type Provider {
   labelClaim: String!
   name: String!
   provisions: Boolean!
-  releaseScope: String!
-  revocationUrl: String
   scopes: [String!]!
   secretHeld: Boolean!
   signedIn: Int!

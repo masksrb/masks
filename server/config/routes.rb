@@ -57,12 +57,6 @@ Rails.application.routes.draw do
   put "/register/:client_id", to: "registrations#update"
   delete "/register/:client_id", to: "registrations#destroy"
 
-  get "/connections", to: "connections#index", as: :connections
-  post "/connections/token", to: "connections/tokens#create", as: :connection_token
-  match "/connections/:provider/start", to: "connections#create", via: %i[get post], as: :connect
-  get "/connections/:provider/callback", to: "connections#callback", as: :connection_callback
-  delete "/connections/:id", to: "connections#destroy", as: :connection
-
   post "/manage/graphql", to: "manage/graphql#execute", as: :manage_graphql
   get "/manage(/*path)", to: "manage#index", as: :manage
 

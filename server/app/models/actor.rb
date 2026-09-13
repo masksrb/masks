@@ -109,18 +109,7 @@ class Actor < ApplicationRecord
   end
 
   def permitted_scopes(requested)
-    wanted = Scopes.list(requested)
-    available = scope_list
-    available |= connection_scopes if wanted.any? { |scope| Scopes.connection?(scope) }
-
-    Scopes.granted(wanted, available)
-  end
-
-  def connection_scopes
-    return [] unless persisted?
-
-    Connection.live.where(actor_id: id).includes(:provider)
-              .filter_map { |held| held.provider&.release_scope }.uniq
+    Scopes.granted(Scopes.list(requested), scope_list)
   end
 
   def holds?(scope)

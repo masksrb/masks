@@ -35,7 +35,7 @@ class Provider < ApplicationRecord
 
   normalizes :issuer, with: ->(value) { value.to_s.strip.chomp("/").presence }
 
-  URLS = %i[authorization_url token_url revocation_url userinfo_url].freeze
+  URLS = %i[authorization_url token_url userinfo_url].freeze
   ISSUED_URLS = (URLS + %i[jwks_uri issuer]).freeze
   RESERVED_PARAMS = %w[response_type client_id redirect_uri scope state nonce
                        code_challenge code_challenge_method].freeze
@@ -76,10 +76,6 @@ class Provider < ApplicationRecord
 
   def email_domain_list
     email_domains.to_s.downcase.split(/[\s,]+/).reject(&:empty?)
-  end
-
-  def release_scope
-    Scopes.connection(key)
   end
 
   def signs_in?
@@ -132,21 +128,6 @@ class Provider < ApplicationRecord
          code: code,
          redirect_uri: redirect_uri,
          code_verifier: verifier)
-  end
-
-  def refresh!(refresh_token)
-    post(token_url,
-         grant_type: "refresh_token",
-         refresh_token: refresh_token)
-  end
-
-  def revoke!(token)
-    return false if revocation_url.blank? || token.blank?
-
-    post(revocation_url, token: token)
-    true
-  rescue Refused, Unreachable
-    false
   end
 
   def identify(access_token)

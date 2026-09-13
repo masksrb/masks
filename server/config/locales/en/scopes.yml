@@ -6,6 +6,5 @@ en:
     offline_access: "Stay signed in"
     manage: "Manage masks"
     handshake: "Connect apps"
-    connection: "Your %{provider} account"
     namespace: "Everything %{namespace} asks for"
     generic: "%{name}"

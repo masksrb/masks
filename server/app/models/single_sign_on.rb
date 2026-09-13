@@ -12,16 +12,15 @@ class SingleSignOn
   NICKNAME = /\A[a-z0-9][a-z0-9._-]*\z/i
   SPARE = 500
 
-  attr_reader :provider, :claims, :tokens
+  attr_reader :provider, :claims
 
-  def self.resolve!(provider:, claims:, tokens:)
-    new(provider: provider, claims: claims, tokens: tokens).resolve!
+  def self.resolve!(provider:, claims:)
+    new(provider: provider, claims: claims).resolve!
   end
 
-  def initialize(provider:, claims:, tokens:)
+  def initialize(provider:, claims:)
     @provider = provider
     @claims = claims
-    @tokens = tokens
   end
 
   def resolve!
@@ -149,7 +148,6 @@ class SingleSignOn
       connection = Connection.record!(
         provider: provider,
         actor: actor,
-        tokens: tokens,
         identity: claims
       )
 

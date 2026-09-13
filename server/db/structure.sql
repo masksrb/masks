@@ -295,10 +295,6 @@ CREATE TABLE public.connections (
     uuid uuid DEFAULT gen_random_uuid() NOT NULL,
     subject character varying NOT NULL,
     label character varying,
-    scopes text DEFAULT ''::text NOT NULL,
-    refresh_token text,
-    access_token text,
-    access_token_expires_at timestamp(6) without time zone,
     connected_at timestamp(6) without time zone,
     revoked_at timestamp(6) without time zone,
     revoked_reason character varying,
@@ -577,7 +573,6 @@ CREATE TABLE public.providers (
     name character varying NOT NULL,
     authorization_url character varying NOT NULL,
     token_url character varying NOT NULL,
-    revocation_url character varying,
     userinfo_url character varying,
     client_id character varying NOT NULL,
     client_secret text,
@@ -2292,6 +2287,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260913040000'),
 ('20260913030000'),
 ('20260913020000'),
 ('20260913010000'),

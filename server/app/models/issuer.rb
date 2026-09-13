@@ -25,14 +25,6 @@ class Issuer
     "#{url}/manage"
   end
 
-  def connections_resource
-    "#{url}/connections"
-  end
-
-  def connection_scopes
-    Tenant.switch(tenant) { Provider.active.map(&:release_scope) }
-  end
-
   def protected_resource
     {
       "resource" => manage_resource,
@@ -140,7 +132,7 @@ class Issuer
       "frontchannel_logout_supported" => false,
       "backchannel_logout_supported" => true,
       "backchannel_logout_session_supported" => true,
-      "scopes_supported" => Scopes::DESCRIBED.keys + connection_scopes,
+      "scopes_supported" => Scopes::DESCRIBED.keys,
       "ui_locales_supported" => Locales.available.map { |locale| Locales.tag(locale) },
       "response_types_supported" => Client::RESPONSE_TYPES,
       "response_modes_supported" => [ "query" ],

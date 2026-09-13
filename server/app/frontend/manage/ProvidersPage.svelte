@@ -11,8 +11,8 @@
   let { api } = $props();
 
   const FIELDS = `
-    key name authorizationUrl tokenUrl revocationUrl userinfoUrl clientId
-    scopes authorizeParams subjectClaim labelClaim releaseScope
+    key name authorizationUrl tokenUrl userinfoUrl clientId
+    scopes authorizeParams subjectClaim labelClaim
     secretHeld connections archivedAt createdAt
     issuer jwksUri signsIn provisions emailDomains signupScopes
   `;
@@ -30,7 +30,7 @@
   const DISCOVER = `
     mutation Discover($issuer: String!) {
       discoverProvider(issuer: $issuer) {
-        issuer authorizationUrl tokenUrl userinfoUrl revocationUrl jwksUri
+        issuer authorizationUrl tokenUrl userinfoUrl jwksUri
       }
     }
   `;
@@ -41,7 +41,7 @@
       archived: providers(archived: true) { ${FIELDS} }
       connections {
         id subject label email emailVerified connectedAt signedInAt
-        provider { key name releaseScope }
+        provider { key name }
         actor { uuid identifier }
       }
     }
@@ -50,13 +50,13 @@
   const CREATE = `
     mutation Create(
       $key: ID!, $name: String!, $authorizationUrl: String!, $tokenUrl: String!,
-      $clientId: String!, $clientSecret: String, $revocationUrl: String,
+      $clientId: String!, $clientSecret: String,
       $userinfoUrl: String, $scopes: [String!], $subjectClaim: String, $labelClaim: String,
       ${SSO_ARGS}
     ) {
       createProvider(
         key: $key, name: $name, authorizationUrl: $authorizationUrl, tokenUrl: $tokenUrl,
-        clientId: $clientId, clientSecret: $clientSecret, revocationUrl: $revocationUrl,
+        clientId: $clientId, clientSecret: $clientSecret,
         userinfoUrl: $userinfoUrl, scopes: $scopes, subjectClaim: $subjectClaim,
         labelClaim: $labelClaim, ${SSO_PASS}
       ) { provider { key } }
@@ -66,13 +66,13 @@
   const UPDATE = `
     mutation Update(
       $key: ID!, $name: String, $authorizationUrl: String, $tokenUrl: String,
-      $clientId: String, $clientSecret: String, $revocationUrl: String,
+      $clientId: String, $clientSecret: String,
       $userinfoUrl: String, $scopes: [String!], $subjectClaim: String, $labelClaim: String,
       ${SSO_ARGS}
     ) {
       updateProvider(
         key: $key, name: $name, authorizationUrl: $authorizationUrl, tokenUrl: $tokenUrl,
-        clientId: $clientId, clientSecret: $clientSecret, revocationUrl: $revocationUrl,
+        clientId: $clientId, clientSecret: $clientSecret,
         userinfoUrl: $userinfoUrl, scopes: $scopes, subjectClaim: $subjectClaim,
         labelClaim: $labelClaim, ${SSO_PASS}
       ) { provider { key } }
@@ -84,7 +84,6 @@
     name: "",
     authorizationUrl: "",
     tokenUrl: "",
-    revocationUrl: "",
     userinfoUrl: "",
     clientId: "",
     clientSecret: "",
@@ -141,7 +140,6 @@
       name: provider.name,
       authorizationUrl: provider.authorizationUrl,
       tokenUrl: provider.tokenUrl,
-      revocationUrl: provider.revocationUrl ?? "",
       userinfoUrl: provider.userinfoUrl ?? "",
       clientId: provider.clientId,
       clientSecret: "",
@@ -171,7 +169,6 @@
       name: draft.name.trim(),
       authorizationUrl: draft.authorizationUrl.trim(),
       tokenUrl: draft.tokenUrl.trim(),
-      revocationUrl: trimmed(draft.revocationUrl),
       userinfoUrl: trimmed(draft.userinfoUrl),
       clientId: draft.clientId.trim(),
       clientSecret: trimmed(draft.clientSecret),
@@ -206,7 +203,6 @@
     draft.tokenUrl = found.tokenUrl;
     draft.jwksUri = found.jwksUri;
     draft.userinfoUrl = found.userinfoUrl ?? draft.userinfoUrl;
-    draft.revocationUrl = found.revocationUrl ?? draft.revocationUrl;
   }
 
   async function save() {
@@ -285,10 +281,6 @@
         <Field label="Name" bind:value={draft.name} placeholder="Google" />
       </div>
 
-      <p class="text-xs opacity-60">
-        The key names the scope: <span class="font-mono">masks:connections:{draft.key || "…"}</span>
-      </p>
-
       <div class="flex flex-wrap items-end gap-3">
         <div class="min-w-64 flex-1">
           <Field
@@ -326,7 +318,6 @@
           bind:value={draft.tokenUrl}
           placeholder="https://oauth2.googleapis.com/token"
         />
-        <Field label="Revocation URL" bind:value={draft.revocationUrl} placeholder="optional" />
         <Field label="Userinfo URL" bind:value={draft.userinfoUrl} placeholder="optional" />
       </div>
 
@@ -435,12 +426,12 @@
   {:else if active.length === 0 && archived.length === 0}
     <div class="rounded-box border border-base-300 bg-base-100 px-6 py-14 text-center">
       <p class="mx-auto max-w-sm text-sm opacity-70">
-        No provider is set up. Add one and people can connect that account from their own page.
+        No provider is set up. Add one and people can sign in with that account.
       </p>
     </div>
   {:else}
     {#each active as provider (provider.key)}
-      <Card title={provider.name} lede={provider.releaseScope}>
+      <Card title={provider.name} lede={provider.key}>
         {#snippet actions()}
           <button type="button" class="btn btn-sm" onclick={() => edit(provider)}>Edit</button>
           <button
@@ -534,7 +525,7 @@
               <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                 <span class="flex flex-wrap items-baseline gap-2">
                   <span class="text-sm font-medium">{provider.name}</span>
-                  <span class="font-mono text-xs opacity-50">{provider.releaseScope}</span>
+                  <span class="font-mono text-xs opacity-50">{provider.key}</span>
                 </span>
 
                 <span class="flex items-baseline gap-3 text-xs">

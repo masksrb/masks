@@ -7,7 +7,6 @@ module Manage
       field :authorization_url, String, null: false
       field :token_url, String, null: false
       field :userinfo_url, String
-      field :revocation_url, String
       field :jwks_uri, String, null: false
       field :scopes_supported, [ String ], null: false
 
@@ -23,7 +22,6 @@ module Manage
           authorization_url: document["authorization_endpoint"],
           token_url: document["token_endpoint"],
           userinfo_url: document["userinfo_endpoint"],
-          revocation_url: document["revocation_endpoint"],
           jwks_uri: document["jwks_uri"],
           scopes_supported: Array(document["scopes_supported"])
         }

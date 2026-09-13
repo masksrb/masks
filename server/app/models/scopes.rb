@@ -17,7 +17,6 @@ module Scopes
 
   STANDARD = [ OPENID, PROFILE, EMAIL, OFFLINE ].freeze
   NAMESPACE = "masks:".freeze
-  CONNECTIONS = "masks:connections:".freeze
 
   class << self
     def list(value)
@@ -65,20 +64,6 @@ module Scopes
       list(value).select { |scope| scope.start_with?(NAMESPACE) }
     end
 
-    def connection(provider_key)
-      "#{CONNECTIONS}#{provider_key}"
-    end
-
-    def connection?(scope)
-      scope.to_s.start_with?(CONNECTIONS) && scope.to_s.length > CONNECTIONS.length
-    end
-
-    def provider_key(scope)
-      return nil unless connection?(scope)
-
-      scope.to_s.delete_prefix(CONNECTIONS)
-    end
-
     def describe(value)
       list(value).map { |scope| [ scope, description_for(scope) ] }
     end
@@ -91,17 +76,7 @@ module Scopes
       key = DESCRIBED[scope]
       return I18n.t("scopes.#{key}", locale: locale) if key
 
-      described_connection(scope, locale: locale) ||
-        I18n.t("scopes.generic", name: scope, locale: locale)
-    end
-
-    def described_connection(scope, locale: I18n.locale)
-      key = provider_key(scope)
-      return nil if key.nil?
-
-      name = Provider.active.find_by(key: key)&.name || key
-
-      I18n.t("scopes.connection", provider: name, locale: locale)
+      I18n.t("scopes.generic", name: scope, locale: locale)
     end
   end
 end
