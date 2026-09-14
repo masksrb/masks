@@ -192,6 +192,8 @@ class TokensController < ApplicationController
         issuer: issuer,
         subject_token: req.subject_token,
         subject_token_type: req.subject_token_type,
+        actor_token: params[:actor_token],
+        actor_token_type: params[:actor_token_type],
         requested_token_type: req.requested_token_type,
         scope: req.scope,
         resource: repeated("resource"),

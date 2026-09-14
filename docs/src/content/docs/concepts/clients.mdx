@@ -44,7 +44,7 @@ at userinfo and at the manage API. No refresh token is issued; the service asks 
 is narrowed to the client's resources, and it can be held to a DPoP key like any other.
 
 A resource server tells the two apart by comparing `sub` with the `client_id` it knows: a person's
-`sub` is never a client's. When the token is [exchanged](/concepts/delegation/) onward, `sub` keeps
+`sub` is never a client's. When the token is [exchanged](/concepts/exchange/) onward, `sub` keeps
 naming the service it started with and `act` names who holds it now.
 
 ## Scopes

@@ -9,9 +9,8 @@ class TokenExchangeTest < ActionDispatch::IntegrationTest
     @registration = register(grant_types: [ "authorization_code", "refresh_token", EXCHANGE ])
     host! host_for(@tenant)
 
-    @subject = access_token_for(
-      actor: @actor, registration: @registration, resource: RESOURCES
-    )["access_token"]
+    @granted = access_token_for(actor: @actor, registration: @registration, resource: RESOURCES)
+    @subject = @granted["access_token"]
   end
 
   def exchange(subject_token = @subject, registration: @registration, **params)
@@ -107,8 +106,82 @@ class TokenExchangeTest < ActionDispatch::IntegrationTest
   end
 
   test "an unsupported token type is refused" do
-    body = exchange(subject_token_type: "urn:ietf:params:oauth:token-type:id_token")
+    body = exchange(subject_token_type: "urn:ietf:params:oauth:token-type:saml2")
 
     assert_equal "invalid_request", body["error"]
+  end
+
+  test "a client exchanges the id token it was issued for an access token within what the person consented to" do
+    body = exchange(@granted["id_token"], subject_token_type: Exchange::ID_TOKEN, scope: "openid profile",
+                                         resource: RESOURCES.first)
+
+    assert_equal "openid profile", body["scope"], body
+    claims = claims_in(body["access_token"])
+
+    assert_equal @actor.uuid, claims["sub"]
+    assert_equal RESOURCES.first, claims["aud"]
+    assert_nil claims["act"]
+    assert_operator body["expires_in"], :<=, 15.minutes.to_i
+  end
+
+  test "an id token cannot be exchanged for more than the person consented to" do
+    body = exchange(@granted["id_token"], subject_token_type: Exchange::ID_TOKEN, scope: "openid admin")
+
+    assert_equal "invalid_scope", body["error"]
+  end
+
+  test "another client cannot exchange somebody else's id token" do
+    thief = register(client_name: "Thief", grant_types: [ "authorization_code", EXCHANGE ])
+
+    body = exchange(@granted["id_token"], registration: thief, subject_token_type: Exchange::ID_TOKEN, scope: "openid")
+
+    assert_equal "invalid_grant", body["error"]
+  end
+
+  test "an id token from a session that has ended is not exchangeable" do
+    within { Session.where(actor: @actor).find_each(&:revoke!) }
+
+    body = exchange(@granted["id_token"], subject_token_type: Exchange::ID_TOKEN, scope: "openid")
+
+    assert_equal "invalid_grant", body["error"]
+  end
+
+  test "an access token cannot pass as an id token" do
+    body = exchange(@subject, subject_token_type: Exchange::ID_TOKEN)
+
+    assert_equal "invalid_grant", body["error"]
+  end
+
+  test "an actor token names who is acting in the act claim" do
+    within do
+      Client.find_by!(client_id: @registration["client_id"]).update!(
+        grant_types: [ "authorization_code", "refresh_token", EXCHANGE, Client::CLIENT_CREDENTIALS ],
+        approved_at: Time.current, allowed_scopes: "openid profile email offline_access agent:run"
+      )
+    end
+
+    own = token(grant_type: Client::CLIENT_CREDENTIALS, client_id: @registration["client_id"],
+                client_secret: @registration["client_secret"])["access_token"]
+
+    body = exchange(actor_token: own, actor_token_type: Exchange::ACCESS_TOKEN, scope: "openid")
+    claims = claims_in(body["access_token"])
+
+    assert_equal @actor.uuid, claims["sub"], body
+    assert_equal @registration["client_id"], claims.dig("act", "sub")
+    assert_equal @registration["client_id"], claims.dig("act", "client_id")
+  end
+
+  test "an actor token issued to another client is refused" do
+    other = register(client_name: "Other", grant_types: [ "authorization_code", EXCHANGE ])
+    theirs = access_token_for(actor: create_actor(nickname: "else", email: "else@probe.example.com"), registration: other)["access_token"]
+
+    body = exchange(actor_token: theirs, actor_token_type: Exchange::ACCESS_TOKEN)
+
+    assert_equal "invalid_grant", body["error"]
+    assert_match "actor_token", body["error_description"]
+  end
+
+  test "an actor token without its type is refused" do
+    assert_equal "invalid_request", exchange(actor_token: @subject)["error"]
   end
 end

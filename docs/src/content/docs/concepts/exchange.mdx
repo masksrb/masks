@@ -1,0 +1,69 @@
+---
+title: Exchanging a token
+description: Trading a token for a narrower one, and saying who is acting on whose behalf.
+---
+
+A token exchange ([RFC 8693](https://www.rfc-editor.org/rfc/rfc8693)) trades one token for
+another at `/token`. An API gateway hands a downstream service a token for that service alone. An
+agent working for somebody carries a token that says so. A backend turns the ID token its browser
+half was given into an access token of its own. A client has to be registered for
+`urn:ietf:params:oauth:grant-type:token-exchange`.
+
+```sh
+curl -u "$CLIENT_ID:$CLIENT_SECRET" https://demo.masks.example/token \
+  -d grant_type=urn:ietf:params:oauth:grant-type:token-exchange \
+  -d subject_token="$ACCESS_TOKEN" \
+  -d subject_token_type=urn:ietf:params:oauth:token-type:access_token \
+  -d scope="uris:catalog:read" \
+  -d resource=https://uris.example/mcp
+```
+
+## What can be exchanged
+
+| `subject_token_type` | |
+| --- | --- |
+| `urn:ietf:params:oauth:token-type:access_token` | a live access token this issuer signed |
+| `urn:ietf:params:oauth:token-type:id_token` | an ID token this issuer signed, presented by the client it was issued to |
+
+An exchange only ever narrows. `scope`, `resource` and `requested_lifetime` may each ask for less
+than the subject token holds and never more, and the subject token's expiry is the ceiling however
+long a lifetime is asked for. Revoking the subject token takes every token exchanged from it down
+too.
+
+An ID token carries no scopes, so exchanging one is bounded by what the person consented to for
+this client, and by the resources the client speaks for. It lives no longer than the ID token did,
+it is refused once the session it was issued in has ended, and no client can exchange an ID token
+issued to another one: that would be signing in as somebody with a token lifted from their browser.
+
+## Who is acting
+
+Every access token exchanged onward carries an `act` claim naming who holds it now, and nests the
+one before it, so a chain of services is written down in the token itself:
+
+```json
+{
+  "sub": "8b1f…",
+  "client_id": "search-service",
+  "act": { "sub": "search-service", "act": { "sub": "gateway" } }
+}
+```
+
+A client that acts as something more specific than itself presents that as an `actor_token`, with
+`actor_token_type`. The actor token has to be live and issued to the client presenting it, and then
+`act` names its subject and the client it belongs to. An agent that signs in as itself with
+[`client_credentials`](/concepts/clients/) and acts for a person presents its own token as the
+actor and theirs as the subject.
+
+An ID token exchanged by the client it was issued to is that client speaking for itself, so the
+token it gets carries no `act` unless an actor token was presented.
+
+## Somebody's account elsewhere
+
+Asking for `urn:masks:params:oauth:token-type:upstream_access_token` releases the access token masks
+holds at a provider rather than a masks token, under much narrower rules — see
+[delegation](/concepts/delegation/).
+
+## What is not exchanged
+
+A refresh token, a SAML assertion, or a token another issuer signed. `may_act` in the subject token
+is not read.
