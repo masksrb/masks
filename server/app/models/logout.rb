@@ -54,14 +54,18 @@ class Logout
     end
 
     def decode(token)
-      JWT.decode(
+      claims, header = JWT.decode(
         token, nil, true,
         algorithms: [ SigningKey::ALGORITHM ],
         jwks: @issuer.jwks,
         iss: @issuer.url, verify_iss: true,
         verify_expiration: false,
         required_claims: %w[iss aud]
-      ).first
+      )
+
+      raise JWT::DecodeError unless header["typ"].to_s.casecmp?("JWT")
+
+      claims
     rescue JWT::DecodeError
       raise Refused.new("invalid_request", "the id_token_hint is not a token this issuer signed")
     end

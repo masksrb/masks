@@ -59,6 +59,14 @@ export async function verifyIdToken(
   }
 
   const header = json(rawHeader);
+
+  if (header.typ !== undefined && String(header.typ).toUpperCase() !== "JWT") {
+    throw new MasksError(
+      "invalid_token",
+      `the id token is typed ${header.typ}, which is not an id token`,
+    );
+  }
+
   const hash = HASHES[String(header.alg)];
 
   if (!hash) {

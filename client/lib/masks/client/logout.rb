@@ -9,7 +9,7 @@ module Masks
         def verify(token, issuer:, audience:, algorithms: ALGORITHMS)
           held = Verifier
             .new(issuer, audience: audience, algorithms: algorithms)
-            .verify(token, required: %w[iss aud iat jti events])
+            .verify(token, required: %w[iss aud iat jti events], typ: Verifier::LOGOUT_TOKEN)
 
           new(held).validate!
         end

@@ -19,6 +19,7 @@ class BackchannelLogoutTest < EngineIntegrationTest
       subdomain: SUBDOMAIN,
       audience: "test-client",
       subject: "actor-1",
+      typ: "logout+jwt",
       **{
         "sid" => "session-1",
         "events" => { EVENT => {} },
@@ -59,7 +60,7 @@ class BackchannelLogoutTest < EngineIntegrationTest
 
   test "a token for another application is refused" do
     post_logout issuer.mint(
-      subdomain: SUBDOMAIN, audience: "someone-else", subject: "actor-1",
+      subdomain: SUBDOMAIN, audience: "someone-else", subject: "actor-1", typ: "logout+jwt",
       "events" => { EVENT => {} }, "scope" => nil, "exp" => nil
     )
 

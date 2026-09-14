@@ -5,6 +5,7 @@ class Issuer
   ACR_VALUES = [ ACR_PASSWORD, ACR_MULTI_FACTOR ].freeze
   LOGOUT_EVENT = "http://schemas.openid.net/event/backchannel-logout".freeze
   LOGOUT_TOKEN_LIFETIME = 2.minutes
+  LOGOUT_TOKEN_TYPE = "logout+jwt".freeze
 
   attr_reader :tenant, :origin
 
@@ -47,8 +48,8 @@ class Issuer
     { Scopes::MANAGE => Scopes.description_for(Scopes::MANAGE, locale: locale) }
   end
 
-  def sign(claims)
-    key.sign(claims)
+  def sign(claims, typ: "JWT")
+    key.sign(claims, typ: typ)
   end
 
   def jwks
@@ -103,7 +104,7 @@ class Issuer
       "events" => { LOGOUT_EVENT => {} },
       "sub" => subject,
       "sid" => sid
-    }.compact)
+    }.compact, typ: LOGOUT_TOKEN_TYPE)
   end
 
   def acr_for(amr)

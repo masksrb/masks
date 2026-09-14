@@ -24,7 +24,7 @@ class LogoutTest < Minitest::Test
       "events" => { EVENT => {} }
     }.merge(overrides)
 
-    @issuer.sign(claims.compact)
+    @issuer.sign(claims.compact, typ: "logout+jwt")
   end
 
   def verify(value)
@@ -57,6 +57,13 @@ class LogoutTest < Minitest::Test
 
   def test_an_id_token_handed_over_in_its_place_is_refused
     refused token("nonce" => "n-1")
+  end
+
+  def test_a_logout_token_not_typed_as_one_is_refused
+    claims = JWT.decode(token, nil, false).first
+
+    refused(@issuer.sign(claims, typ: "at+jwt"))
+    refused(@issuer.sign(claims))
   end
 
   def test_a_token_about_something_else_is_refused

@@ -19,7 +19,7 @@ module Masks
       end
 
       def authenticate(authorization, scope: nil)
-        claims = Claims.new(@verifier.verify(token!(authorization), required: @required))
+        claims = Claims.new(@verifier.verify(token!(authorization), required: @required, typ: Verifier::ACCESS_TOKEN))
 
         Array(scope).each { |name| claims.permit!(name) }
 

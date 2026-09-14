@@ -26,9 +26,9 @@ function b64(value) {
   return Buffer.from(value).toString("base64url");
 }
 
-function mint(claims = {}, { kid = KID, alg = "RS256" } = {}) {
+function mint(claims = {}, { kid = KID, alg = "RS256", typ = "JWT" } = {}) {
   const now = Math.floor(Date.now() / 1000);
-  const header = b64(JSON.stringify({ alg, typ: "JWT", kid }));
+  const header = b64(JSON.stringify({ alg, typ, kid }));
   const payload = b64(
     JSON.stringify({
       iss: ISSUER,
@@ -399,6 +399,26 @@ test("an id token carrying no nonce at all is refused", async () => {
     () => subject.callback(`https://app.test/callback?code=a&state=${state}`),
     (error) => error.code === "invalid_nonce",
   );
+});
+
+test("an access token handed back as the id token is refused", async () => {
+  const upstream = server();
+  const { subject, store } = client({ server: upstream });
+
+  const waiting = await landing(subject, store, upstream, { minted: null });
+  upstream.held.token.id_token = mint(
+    { nonce: waiting.nonce },
+    { typ: "at+jwt" },
+  );
+
+  await assert.rejects(
+    () =>
+      subject.callback(
+        `https://app.test/callback?code=a&state=${waiting.state}`,
+      ),
+    (error) => error.code === "invalid_token",
+  );
+  assert.equal(subject.accessToken(), null);
 });
 
 test("a token response with no id token is refused when openid was asked for", async () => {

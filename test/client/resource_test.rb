@@ -67,6 +67,18 @@ class ResourceTest < ClientTest
     other&.stop
   end
 
+  def test_an_id_token_is_not_accepted_as_an_access_token
+    claims = JWT.decode(issuer.access_token, nil, false).first
+
+    assert_raises(Masks::Client::Unauthorized) { resource.authenticate("Bearer #{issuer.sign(claims)}") }
+  end
+
+  def test_the_media_type_form_of_the_access_token_type_is_accepted
+    claims = JWT.decode(issuer.access_token, nil, false).first
+
+    assert resource.authenticate("Bearer #{issuer.sign(claims, typ: 'application/at+jwt')}")
+  end
+
   def test_a_required_scope_is_enforced
     token = issuer.access_token(scope: "uris:catalog:read")
 

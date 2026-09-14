@@ -56,8 +56,8 @@ class SigningKey < ApplicationRecord
     @private_key ||= OpenSSL::PKey::RSA.new(private_pem)
   end
 
-  def sign(claims)
-    JWT.encode(claims, private_key, algorithm, kid: kid, typ: "JWT")
+  def sign(claims, typ: "JWT")
+    JWT.encode(claims, private_key, algorithm, kid: kid, typ: typ)
   end
 
   def activate!

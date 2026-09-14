@@ -70,14 +70,7 @@ class Exchange
   def claims
     return @claims if defined?(@claims)
 
-    @claims = JWT.decode(
-      subject_token, nil, true,
-      algorithms: [ SigningKey::ALGORITHM ],
-      jwks: issuer.jwks,
-      iss: issuer.url, verify_iss: true,
-      verify_expiration: true,
-      required_claims: %w[iss exp jti]
-    ).first
+    @claims = AccessToken.decode(subject_token, issuer: issuer)
   rescue JWT::DecodeError
     @claims = nil
   end

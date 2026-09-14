@@ -18,7 +18,7 @@ conditions, zero failures. `./dev conformance` runs them against a local server.
 | [OpenID Connect Dynamic Registration 1.0](https://openid.net/specs/openid-connect-registration-1_0.html) | ✅ | bounded by the tenant's ceiling |
 | [RFC 6749](https://www.rfc-editor.org/rfc/rfc6749) — OAuth 2.0 | ◐ | `authorization_code` and `refresh_token`. No implicit, no password, no client credentials |
 | [RFC 6750](https://www.rfc-editor.org/rfc/rfc6750) — Bearer tokens | ✅ | header only, never a query parameter |
-| [RFC 7519](https://www.rfc-editor.org/rfc/rfc7519) — JWT | ✅ | `RS256`, a signing key per tenant |
+| [RFC 7519](https://www.rfc-editor.org/rfc/rfc7519) — JWT | ✅ | `RS256`, a signing key per tenant. ID tokens are typed `JWT`, access tokens `at+jwt` and logout tokens `logout+jwt` |
 | [RFC 7517](https://www.rfc-editor.org/rfc/rfc7517) — JWK | ✅ | `/.well-known/jwks.json`, staged and retired keys published through a rotation |
 
 Response types are `code` and only `code`. Response modes are `query` and only `query`.
@@ -49,7 +49,7 @@ Response types are `code` and only `code`. Response modes are `query` and only `
 | --- | --- | --- |
 | [RFC 7662](https://www.rfc-editor.org/rfc/rfc7662) — Introspection | ✅ | a client sees its own tokens and the ones for a resource it speaks for |
 | [RFC 7009](https://www.rfc-editor.org/rfc/rfc7009) — Revocation | ✅ | revoking a refresh token takes its whole family down |
-| [RFC 9068](https://www.rfc-editor.org/rfc/rfc9068) — JWT access tokens | ◐ | access tokens are JWTs carrying `jti`, `client_id`, `scope`, `aud` and `cnf`, but are not typed `at+jwt` |
+| [RFC 9068](https://www.rfc-editor.org/rfc/rfc9068) — JWT access tokens | ✅ | typed `at+jwt`, carrying `jti`, `client_id`, `scope`, `aud` and `cnf`. Nothing that reads one here takes a token of another type in its place |
 | [RFC 7591](https://www.rfc-editor.org/rfc/rfc7591) — Dynamic registration | ✅ | |
 | [RFC 7592](https://www.rfc-editor.org/rfc/rfc7592) — Registration management | ✅ | read, update and delete against a registration access token |
 | [RFC 9728](https://www.rfc-editor.org/rfc/rfc9728) — Protected resource metadata | ✅ | `/.well-known/oauth-protected-resource` |
@@ -71,7 +71,7 @@ Response types are `code` and only `code`. Response modes are `query` and only `
 | [WebAuthn Level 2](https://www.w3.org/TR/webauthn-2/) | ✅ | passkeys, as a first factor or a second |
 | [RFC 6238](https://www.rfc-editor.org/rfc/rfc6238) — TOTP | ✅ | with backup codes |
 | [SCIM 2.0](https://www.rfc-editor.org/rfc/rfc7644) | ✗ | nothing provisions actors from outside yet |
-| SAML 2.0 | ✗ | not planned in either direction |
+| SAML 2.0 | ◐ | a SAML identity provider signs people in — see [providers](/concepts/providers/). masks does not yet answer as an identity provider itself |
 
 ## Client authentication
 

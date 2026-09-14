@@ -1,6 +1,24 @@
 class AccessToken < Token
+  TYPE = "at+jwt".freeze
+  TYPES = [ TYPE, "application/#{TYPE}" ].freeze
+
   def self.lifetime
     1.hour
+  end
+
+  def self.decode(secret, issuer:, verify_expiration: true, required: %w[iss exp jti])
+    claims, header = JWT.decode(
+      secret, nil, true,
+      algorithms: [ SigningKey::ALGORITHM ],
+      jwks: issuer.jwks,
+      iss: issuer.url, verify_iss: true,
+      verify_expiration: verify_expiration,
+      required_claims: required
+    )
+
+    raise JWT::DecodeError, "that token is not an access token" unless TYPES.include?(header["typ"].to_s.downcase)
+
+    claims
   end
 
   def self.issue!(issuer:, actor:, client:, scopes:, audience:, parent: nil, expires_at: nil, act: nil, requested_claims: nil, jkt: nil)
@@ -20,7 +38,7 @@ class AccessToken < Token
       expires_at: ceiling
     )
 
-    token.instance_variable_set(:@jwt, issuer.sign(token.claims(issuer, act: act)))
+    token.instance_variable_set(:@jwt, issuer.sign(token.claims(issuer, act: act), typ: TYPE))
     token
   end
 

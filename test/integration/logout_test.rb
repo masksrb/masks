@@ -26,10 +26,10 @@ class LogoutTest < ActionDispatch::IntegrationTest
 
   def hint(audience: @client.client_id, subject: @actor.uuid)
     within(@tenant) do
-      Issuer.new(@tenant, origin_for(@tenant)).sign(
+      Issuer.new(@tenant, origin_for(@tenant)).sign({
         "iss" => origin_for(@tenant), "sub" => subject, "aud" => audience,
         "exp" => 1.hour.ago.to_i, "iat" => 2.hours.ago.to_i
-      )
+      })
     end
   end
 
@@ -117,10 +117,10 @@ class LogoutTest < ActionDispatch::IntegrationTest
   test "an id_token_hint from another tenant is refused here" do
     elsewhere = Tenant.create!(subdomain: "acme-#{SecureRandom.hex(4)}", name: "Acme")
     theirs = within(elsewhere) do
-      Issuer.new(elsewhere, origin_for(elsewhere)).sign(
+      Issuer.new(elsewhere, origin_for(elsewhere)).sign({
         "iss" => origin_for(elsewhere), "sub" => "x", "aud" => @client.client_id,
         "exp" => 1.hour.from_now.to_i
-      )
+      })
     end
 
     signed_in

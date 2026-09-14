@@ -69,8 +69,8 @@ class FakeIssuer
     }
   end
 
-  def sign(claims, kid: self.kid, key: self.key)
-    JWT.encode(claims, key, ALGORITHM, { kid: kid })
+  def sign(claims, kid: self.kid, key: self.key, typ: "JWT")
+    JWT.encode(claims, key, ALGORITHM, { kid: kid, typ: typ })
   end
 
   def access_token(subject: "actor-1", scope: "uris:catalog:read uris:catalog:write",
@@ -84,7 +84,7 @@ class FakeIssuer
       "jti" => SecureRandom.uuid,
       "scope" => scope,
       "tenant" => @tenant
-    }.merge(extra))
+    }.merge(extra), typ: "at+jwt")
   end
 
   private

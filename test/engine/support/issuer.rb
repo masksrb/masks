@@ -92,7 +92,7 @@ class TestIssuer
   end
 
   def mint(subdomain:, audience:, subject: "actor-1", scopes: [], expires_in: 3600,
-           tenant: nil, **extra)
+           tenant: nil, typ: "at+jwt", **extra)
     held = key_for(subdomain)
 
     JWT.encode({
@@ -104,7 +104,7 @@ class TestIssuer
       "jti" => SecureRandom.uuid,
       "scope" => Array(scopes).join(" "),
       "tenant" => tenant || { "uuid" => "uuid-#{subdomain}", "subdomain" => subdomain }
-    }.merge(extra).compact, held[:key], ALGORITHM, { kid: held[:kid] })
+    }.merge(extra).compact, held[:key], ALGORITHM, { kid: held[:kid], typ: typ })
   end
 
   private
@@ -263,7 +263,7 @@ class TestIssuer
       else pending[:nonce]
       end
 
-      mint(subdomain: subdomain, audience: pending[:client_id], scopes: [],
+      mint(subdomain: subdomain, audience: pending[:client_id], scopes: [], typ: "JWT",
            nonce: nonce, name: "Test Owner",
            preferred_username: "owner", email: "owner@example.invalid",
            email_verified: true, "masks:avatars" => avatars(subdomain))

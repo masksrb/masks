@@ -29,14 +29,7 @@ module TokenPresented
     end
 
     def access_token_from(token)
-      claims = JWT.decode(
-        token, nil, true,
-        algorithms: [ SigningKey::ALGORITHM ],
-        jwks: issuer.jwks,
-        iss: issuer.url, verify_iss: true,
-        verify_expiration: false,
-        required_claims: %w[iss jti]
-      ).first
+      claims = AccessToken.decode(token, issuer: issuer, verify_expiration: false, required: %w[iss jti])
 
       AccessToken.find_by(digest: claims["jti"])
     rescue JWT::DecodeError

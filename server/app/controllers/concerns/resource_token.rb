@@ -45,14 +45,7 @@ module ResourceToken
     end
 
     def claims_in_token(secret)
-      JWT.decode(
-        secret, nil, true,
-        algorithms: [ SigningKey::ALGORITHM ],
-        jwks: issuer.jwks,
-        iss: issuer.url, verify_iss: true,
-        verify_expiration: true,
-        required_claims: %w[iss sub exp jti]
-      ).first
+      AccessToken.decode(secret, issuer: issuer, required: %w[iss sub exp jti])
     end
 
     def credentials
