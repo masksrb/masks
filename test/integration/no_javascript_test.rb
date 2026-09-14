@@ -11,6 +11,10 @@ class NoJavascriptTest < ActionDispatch::IntegrationTest
     assert_equal prompt, auth_data["prompt"]
     assert_operator login_forms.size, :>, 0, "#{prompt} rendered no form posting to /login"
 
+    nested = response.body.scan(%r{<form\b(?:(?!</form>).)*?<form\b}m)
+
+    assert_empty nested, "#{prompt} nests a form inside another, and a browser merges their fields"
+
     rids = form_rids
 
     assert_empty rids.compact_blank.reject { |rid| rid == current_rid },
