@@ -71,7 +71,7 @@ Response types are `code` and only `code`. Response modes are `query` and only `
 | [WebAuthn Level 2](https://www.w3.org/TR/webauthn-2/) | ✅ | passkeys, as a first factor or a second |
 | [RFC 6238](https://www.rfc-editor.org/rfc/rfc6238) — TOTP | ✅ | with backup codes |
 | [SCIM 2.0](https://www.rfc-editor.org/rfc/rfc7644) | ◐ | `/Users` with filters, `PATCH`, `ETag`s and suspension, and the discovery endpoints — see [provisioning](/concepts/provisioning/). No groups, bulk or sorting |
-| SAML 2.0 | ◐ | a SAML identity provider signs people in — see [providers](/concepts/providers/). masks does not yet answer as an identity provider itself |
+| SAML 2.0 | ◐ | both directions: a SAML identity provider signs people into masks — see [providers](/concepts/providers/) — and masks signs people into SAML applications, HTTP-Redirect and HTTP-POST, with signed requests checked — see [SAML applications](/concepts/saml-applications/). No single logout or encrypted assertions |
 
 ## Client authentication
 

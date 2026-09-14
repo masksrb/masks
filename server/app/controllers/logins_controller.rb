@@ -167,6 +167,8 @@ class LoginsController < ApplicationController
     def next_location(login)
       return login.redirect_to if login.redirect_to.present?
       return refuse_device(pending) if login.refused? && pending&.device?
+      return refuse_saml(pending) if login.refused? && pending&.saml?
+      return saml_resume_path(rid: rid_for(pending)) if pending&.saml?
       return deny(pending, login.refusal.error, login.refusal.description) if login.refused? && pending
       return device_url_for(pending) if pending&.device?
       return authorize_url_for(pending) if pending

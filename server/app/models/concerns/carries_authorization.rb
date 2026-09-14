@@ -19,7 +19,8 @@ module CarriesAuthorization
           "prompt" => authorization.prompt,
           "max_age" => authorization.max_age,
           "user_code" => authorization.user_code,
-          "signed" => (true if authorization.signed?)
+          "signed" => (true if authorization.signed?),
+          "saml" => authorization.saml
         }.compact
       }
     end
@@ -41,12 +42,17 @@ module CarriesAuthorization
       claims: requested_claims,
       user_code: held("user_code"),
       dpop_jkt: jkt,
-      signed: held("signed") == true
+      signed: held("signed") == true,
+      saml: held("saml")
     )
   end
 
   def device?
     authorization.device?
+  end
+
+  def saml?
+    authorization.saml?
   end
 
   def scopes_for(actor)

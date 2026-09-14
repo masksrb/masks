@@ -1,0 +1,6 @@
+en:
+  saml:
+    post:
+      page_title: "Signing you in"
+      heading: "Signing you in to %{name}"
+      continue: "Continue"

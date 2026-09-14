@@ -99,6 +99,7 @@ module Manage
 
       field :provisioning_tokens, [ ProvisioningTokenType ], null: false
       field :scim_base_url, String, null: false
+      field :saml_metadata_url, String, null: false
 
       field :minimum_password, Integer, null: false
 
@@ -156,6 +157,10 @@ module Manage
 
       def provisioning_tokens
         ProvisioningToken.live.order(created_at: :desc)
+      end
+
+      def saml_metadata_url
+        SamlIdentity.metadata_url(Issuer.new(Current.tenant, Current.origin))
       end
 
       def scim_base_url

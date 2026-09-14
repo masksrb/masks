@@ -20,6 +20,8 @@ module Manage
       field :upload_avatar, mutation: Mutations::UploadAvatar
       field :remove_avatar, mutation: Mutations::RemoveAvatar
       field :create_client, mutation: Mutations::CreateClient
+      field :create_saml_application, mutation: Mutations::CreateSamlApplication
+      field :read_saml_application_metadata, mutation: Mutations::ReadSamlApplicationMetadata
       field :update_client, mutation: Mutations::UpdateClient
       field :rotate_client_secret, mutation: Mutations::RotateClientSecret
       field :archive_client, mutation: Mutations::ArchiveClient

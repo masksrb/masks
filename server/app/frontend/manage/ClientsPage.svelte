@@ -42,9 +42,20 @@
     }
   `;
 
+  const SAML = `
+    mutation Saml($name: String!, $entityId: String!, $acsUrls: [String!]!, $certificate: String, $requestsSigned: Boolean) {
+      createSamlApplication(
+        name: $name, entityId: $entityId, acsUrls: $acsUrls, certificate: $certificate, requestsSigned: $requestsSigned
+      ) {
+        client { clientId name }
+      }
+    }
+  `;
+
   const KINDS = [
     ["service", "Signs in as itself", ["client_credentials"]],
     ["app", "Signs people in", ["authorization_code", "refresh_token"]],
+    ["saml", "SAML app", []],
   ];
 
   const COLUMNS = [
@@ -66,7 +77,17 @@
   let draft = $state(blank());
 
   function blank() {
-    return { name: "", kind: "service", redirects: "", resources: "", scopes: [] };
+    return {
+      name: "",
+      kind: "service",
+      redirects: "",
+      resources: "",
+      scopes: [],
+      metadata: "",
+      entityId: "",
+      certificate: "",
+      requestsSigned: false,
+    };
   }
 
   const lines = (text) =>
@@ -88,7 +109,52 @@
     if (data) supported = data.scopesSupported;
   }
 
+  async function readMetadata() {
+    const data = await feedback.attempt(() =>
+      api.query(
+        `mutation Read($xml: String!) {
+          readSamlApplicationMetadata(xml: $xml) { entityId acsUrls certificate requestsSigned }
+        }`,
+        { xml: draft.metadata },
+      ),
+    );
+
+    if (!data) return;
+
+    const read = data.readSamlApplicationMetadata;
+
+    draft.entityId = read.entityId ?? draft.entityId;
+    draft.redirects = read.acsUrls.join("\n") || draft.redirects;
+    draft.certificate = read.certificate ?? draft.certificate;
+    draft.requestsSigned = read.requestsSigned;
+  }
+
+  async function sendSaml() {
+    busy = true;
+
+    const data = await feedback.attempt(() =>
+      api.query(SAML, {
+        name: draft.name.trim(),
+        entityId: draft.entityId.trim(),
+        acsUrls: lines(draft.redirects),
+        certificate: draft.certificate.trim() || null,
+        requestsSigned: draft.requestsSigned,
+      }),
+    );
+
+    busy = false;
+
+    if (!data) return;
+
+    created = data.createSamlApplication;
+    adding = false;
+
+    again();
+  }
+
   async function send() {
+    if (draft.kind === "saml") return sendSaml();
+
     busy = true;
 
     const data = await feedback.attempt(() =>
@@ -198,8 +264,56 @@
       <p class="text-xs opacity-60">
         {draft.kind === "service"
           ? "It asks the token endpoint for its own token with client_credentials. No person is behind it, so it never holds openid, profile, email or masks:manage."
-          : "It sends people to sign in and is handed a token on their behalf."}
+          : draft.kind === "saml"
+            ? "It sends people here with a SAML AuthnRequest, and masks posts a signed assertion back. Paste its metadata to fill the rest in."
+            : "It sends people to sign in and is handed a token on their behalf."}
       </p>
+
+      {#if draft.kind === "saml"}
+        <label class="flex flex-col gap-1.5">
+          <span class="text-xs font-medium opacity-70">Its metadata</span>
+          <textarea
+            class="textarea textarea-sm w-full font-mono text-xs"
+            rows="3"
+            spellcheck="false"
+            placeholder="<md:EntityDescriptor …"
+            bind:value={draft.metadata}
+          ></textarea>
+        </label>
+        <button
+          type="button"
+          class="btn btn-sm self-start"
+          disabled={!draft.metadata.trim()}
+          onclick={readMetadata}
+        >
+          Read it
+        </button>
+
+        <Field label="Entity ID" bind:value={draft.entityId} placeholder="https://wiki.example.com/saml" />
+
+        <label class="flex flex-col gap-1.5">
+          <span class="text-xs font-medium opacity-70">Assertion consumer services</span>
+          <textarea
+            class="textarea textarea-sm w-full font-mono text-xs"
+            rows="2"
+            spellcheck="false"
+            placeholder="https://wiki.example.com/saml/acs"
+            bind:value={draft.redirects}
+          ></textarea>
+        </label>
+
+        <label class="flex flex-col gap-1.5">
+          <span class="text-xs font-medium opacity-70">Signing certificate, if it signs its requests</span>
+          <textarea
+            class="textarea textarea-sm w-full font-mono text-xs"
+            rows="2"
+            spellcheck="false"
+            bind:value={draft.certificate}
+          ></textarea>
+        </label>
+
+        <Switch bind:checked={draft.requestsSigned} label="Refuse requests it did not sign" />
+      {/if}
 
       {#if draft.kind === "app"}
         <label class="flex flex-col gap-1.5">
@@ -216,6 +330,7 @@
         </label>
       {/if}
 
+      {#if draft.kind !== "saml"}
       <label class="flex flex-col gap-1.5">
         <span class="text-xs font-medium opacity-70">Resources</span>
         <textarea
@@ -237,12 +352,13 @@
           onchange={(chosen) => (draft.scopes = chosen)}
         />
       </div>
+      {/if}
 
       <div class="flex gap-2">
         <button
           type="button"
           class="btn btn-primary btn-sm"
-          disabled={busy || !draft.name.trim()}
+          disabled={busy || !draft.name.trim() || (draft.kind === "saml" && !draft.entityId.trim())}
           onclick={send}
         >
           {busy ? "Adding..." : "Add the client"}

@@ -19,6 +19,12 @@ module Manage
       argument :jwks_uri, String, required: false
       argument :require_signed_request_object, Boolean, required: false
       argument :token_endpoint_auth_method, String, required: false
+      argument :saml_entity_id, String, required: false
+      argument :saml_certificate, String, required: false
+      argument :saml_name_id_format, String, required: false
+      argument :saml_requests_signed, Boolean, required: false
+      argument :saml_idp_initiated, Boolean, required: false
+      argument :saml_attributes, GraphQL::Types::JSON, required: false
       argument :consent_required, Boolean, required: false
       argument :sign_in_policy, ID, required: false
 

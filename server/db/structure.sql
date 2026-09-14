@@ -263,7 +263,14 @@ CREATE TABLE public.clients (
     consent_required boolean DEFAULT true NOT NULL,
     jwks jsonb,
     jwks_uri character varying,
-    require_signed_request_object boolean DEFAULT false NOT NULL
+    require_signed_request_object boolean DEFAULT false NOT NULL,
+    protocol character varying DEFAULT 'oidc'::character varying NOT NULL,
+    saml_entity_id character varying,
+    saml_certificate text,
+    saml_name_id_format character varying,
+    saml_requests_signed boolean DEFAULT false NOT NULL,
+    saml_idp_initiated boolean DEFAULT false NOT NULL,
+    saml_attributes jsonb DEFAULT '{}'::jsonb NOT NULL
 );
 
 ALTER TABLE ONLY public.clients FORCE ROW LEVEL SECURITY;
@@ -807,7 +814,8 @@ CREATE TABLE public.signing_keys (
     activated_at timestamp(6) without time zone,
     retired_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    certificate_pem text
 );
 
 ALTER TABLE ONLY public.signing_keys FORCE ROW LEVEL SECURITY;
@@ -1403,6 +1411,13 @@ CREATE INDEX index_clients_on_tenant_id ON public.clients USING btree (tenant_id
 --
 
 CREATE UNIQUE INDEX index_clients_on_tenant_id_and_client_id ON public.clients USING btree (tenant_id, client_id);
+
+
+--
+-- Name: index_clients_on_tenant_id_and_saml_entity_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_clients_on_tenant_id_and_saml_entity_id ON public.clients USING btree (tenant_id, saml_entity_id) WHERE (saml_entity_id IS NOT NULL);
 
 
 --
@@ -2461,6 +2476,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260914030000'),
 ('20260914020000'),
 ('20260914010000'),
 ('20260914000000'),

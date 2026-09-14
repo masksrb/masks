@@ -25,6 +25,13 @@ module Manage
       field :require_pushed_authorization_requests, Boolean, null: false
       field :jwks, GraphQL::Types::JSON
       field :jwks_uri, String
+      field :protocol, String, null: false
+      field :saml_entity_id, String
+      field :saml_certificate, String
+      field :saml_name_id_format, String
+      field :saml_requests_signed, Boolean, null: false
+      field :saml_idp_initiated, Boolean, null: false
+      field :saml_attributes, GraphQL::Types::JSON, null: false
       field :require_signed_request_object, Boolean, null: false
       field :consent_required, Boolean, null: false
       field :sign_in_policy, SignInPolicyType

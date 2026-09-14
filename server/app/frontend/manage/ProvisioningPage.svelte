@@ -91,10 +91,10 @@
   {:else if data}
     <div class="grid items-start gap-4 md:grid-cols-2">
       <Card title="Connect a provider">
-        <label class="flex flex-col gap-1.5">
+        <div class="flex flex-col gap-1.5">
           <span class="text-xs font-medium opacity-70">SCIM base URL</span>
           <code class="rounded bg-base-200 px-2 py-1 font-mono text-xs break-all">{data.scimBaseUrl}</code>
-        </label>
+        </div>
 
         <p class="text-xs opacity-60">
           Give it this URL and a token. A provisioned person is known by their email, which masks takes as

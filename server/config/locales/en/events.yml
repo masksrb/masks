@@ -78,6 +78,8 @@ en:
         secret_rotated: "Client secret rotated"
       token:
         revoked: "Token revoked"
+      saml:
+        asserted: "Signed into a SAML application"
       provisioning_token:
         issued: "Provisioning token issued"
         revoked: "Provisioning token revoked"

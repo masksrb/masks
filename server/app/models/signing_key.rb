@@ -56,6 +56,14 @@ class SigningKey < ApplicationRecord
     @private_key ||= OpenSSL::PKey::RSA.new(private_pem)
   end
 
+  def certificate
+    return OpenSSL::X509::Certificate.new(certificate_pem) if certificate_pem.present?
+
+    issued = self_signed
+    update_column(:certificate_pem, issued.to_pem)
+    issued
+  end
+
   def sign(claims, typ: "JWT")
     JWT.encode(claims, private_key, algorithm, kid: kid, typ: typ)
   end
@@ -80,4 +88,21 @@ class SigningKey < ApplicationRecord
   def retired?
     retired_at.present? && retired_at <= Time.current
   end
+
+  private
+
+    def self_signed
+      name = OpenSSL::X509::Name.new([ [ "CN", "#{tenant.subdomain} masks" ], [ "O", tenant.name.to_s.presence || tenant.subdomain ] ])
+
+      OpenSSL::X509::Certificate.new.tap do |certificate|
+        certificate.version = 2
+        certificate.serial = OpenSSL::BN.new(Digest::SHA256.hexdigest(kid)[0, 30], 16)
+        certificate.subject = name
+        certificate.issuer = name
+        certificate.public_key = private_key.public_key
+        certificate.not_before = (activated_at || created_at || Time.current) - 1.day
+        certificate.not_after = certificate.not_before + 10.years
+        certificate.sign(private_key, OpenSSL::Digest.new("SHA256"))
+      end
+    end
 end

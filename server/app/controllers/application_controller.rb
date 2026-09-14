@@ -220,6 +220,12 @@ class ApplicationController < ActionController::Base
       device_verification_path(refused: DeviceVerificationsController::DECLINED)
     end
 
+    def refuse_saml(pending)
+      PendingRequest.claim(rid_for(pending))
+
+      saml_refused_path(rid: rid_for(pending))
+    end
+
     def advance(pending)
       Login.new(
         store: login_store,

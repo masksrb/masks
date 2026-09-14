@@ -31,11 +31,13 @@ class Client < ApplicationRecord
   validates :client_id, presence: true, uniqueness: { scope: :tenant_id }
   validates :name, presence: true
   validates :token_endpoint_auth_method, inclusion: { in: AUTH_METHODS }
+  validates :protocol, inclusion: { in: [ "oidc", SamlIdentity::PROTOCOL ] }
   validates :subject_type, inclusion: { in: Subjects::TYPES }
   validate :redirect_uris_are_usable
   validate :grant_types_are_known
   validate :client_credentials_are_confidential
   validate :keys_are_usable
+  validate :saml_is_described, if: :saml?
   validate :backchannel_logout_uri_is_usable
   validate :sector_is_derivable
   validate :consent_is_skipped_only_when_approved
@@ -45,6 +47,8 @@ class Client < ApplicationRecord
   belongs_to :sign_in_policy, optional: true
 
   scope :approved, -> { where.not(approved_at: nil) }
+  scope :oauth, -> { where(protocol: "oidc") }
+  scope :saml, -> { where(protocol: SamlIdentity::PROTOCOL) }
 
   attr_reader :secret, :registration_token
 
@@ -136,7 +140,11 @@ class Client < ApplicationRecord
     end
 
     def authenticating(client_id)
-      active.find_by(client_id: client_id.to_s)
+      active.oauth.find_by(client_id: client_id.to_s)
+    end
+
+    def saml_for(entity_id)
+      active.saml.find_by(saml_entity_id: entity_id.to_s)
     end
 
     def by_registration_token(token)
@@ -214,7 +222,19 @@ class Client < ApplicationRecord
   end
 
   def redirects?
-    (grant_types & REDIRECTED_GRANT_TYPES).any?
+    saml? || (grant_types & REDIRECTED_GRANT_TYPES).any?
+  end
+
+  def saml?
+    protocol == SamlIdentity::PROTOCOL
+  end
+
+  def saml_x509_certificate
+    return nil if saml_certificate.blank?
+
+    OpenSSL::X509::Certificate.new(OneLogin::RubySaml::Utils.format_cert(saml_certificate.to_s.strip))
+  rescue OpenSSL::X509::CertificateError
+    nil
   end
 
   def unattended_scopes
@@ -233,6 +253,7 @@ class Client < ApplicationRecord
 
   def metadata
     {
+      "protocol" => (protocol unless protocol == "oidc"),
       "client_id" => client_id,
       "client_name" => name,
       "redirect_uris" => redirect_uris,
@@ -322,6 +343,22 @@ class Client < ApplicationRecord
     def grant_types_are_known
       unknown = grant_types - GRANT_TYPES
       errors.add(:grant_types, "not supported: #{unknown.join(', ')}") if unknown.any?
+    end
+
+    def saml_is_described
+      errors.add(:saml_entity_id, "is required for a SAML application") if saml_entity_id.blank?
+      errors.add(:grant_types, "are not used by a SAML application") if grant_types.any?
+      errors.add(:token_endpoint_auth_method, "is none for a SAML application") unless public?
+      errors.add(:saml_certificate, "is not a certificate masks can read") if saml_certificate.present? && saml_x509_certificate.nil?
+      errors.add(:saml_certificate, "is required to check signed requests") if saml_requests_signed? && saml_certificate.blank?
+
+      if saml_name_id_format.present? && !SamlIdentity::NAME_ID_FORMATS.include?(saml_name_id_format)
+        errors.add(:saml_name_id_format, "is not one masks issues")
+      end
+
+      unless saml_attributes.is_a?(Hash) && saml_attributes.all? { |name, claim| name.to_s.match?(/\A[\w:.\/-]{1,256}\z/) && claim.is_a?(String) }
+        errors.add(:saml_attributes, "map attribute names to claim names")
+      end
     end
 
     def client_credentials_are_confidential

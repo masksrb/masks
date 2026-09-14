@@ -1,0 +1,77 @@
+---
+title: SAML applications
+description: Signing people into an application that only speaks SAML 2.0, with masks as its identity provider.
+---
+
+Some applications a company already pays for — a wiki, a ticketing system, a cloud console — only
+sign people in over SAML 2.0. masks answers them as an identity provider: the application sends the
+person here with an `AuthnRequest`, masks signs them in the way it signs anybody in, with the tenant's
+[sign-in policy](/concepts/tenants/), second factors and passkeys, and posts a signed assertion back.
+
+The other direction, signing into masks through somebody else's SAML identity provider, is a
+[provider](/concepts/providers/).
+
+## What to give the application
+
+| | |
+| --- | --- |
+| metadata | `https://demo.masks.example/saml/metadata` |
+| entity ID | the same URL |
+| single sign-on | `https://demo.masks.example/saml/sso`, HTTP-Redirect or HTTP-POST |
+| certificate | in the metadata — a self-signed certificate for each of the tenant's signing keys |
+
+Most applications take the metadata URL and need nothing else. The certificate is made from the key
+masks signs tokens with, so after a [key rotation](/concepts/keys/) the application has to read the
+metadata again; the retiring key's certificate stays in it for the overlap.
+
+## Registering one
+
+In the console, **Clients → Add client → SAML app**. Paste the application's own metadata and
+**Read it** fills in its entity ID, its HTTP-POST assertion consumer services, and the certificate it
+signs requests with. A SAML application is an approved client with no grants and no secret: it
+cannot be used at `/authorize` or `/token`, and nothing that authenticates an OAuth client finds it.
+
+| | |
+| --- | --- |
+| entity ID | what its `AuthnRequest` names as `Issuer` |
+| assertion consumer services | the only places an assertion is ever posted |
+| names people by | a persistent identifier — pairwise if the client is — or their email |
+| refuse unsigned requests | check every request against its certificate |
+| let people start from masks | answer `/saml/initiate/<client_id>` without a request |
+
+## What is checked
+
+A request is refused on an error page here, and never posted anywhere, when:
+
+- nothing is registered under its `Issuer`
+- its `AssertionConsumerServiceURL` is not one of the application's, or it asks for a binding other
+  than HTTP-POST
+- it was made more than eight minutes ago, or is addressed to another `Destination`
+- it has been answered once already
+- the application signs its requests and this one's signature — on the query string for a redirect,
+  enveloped in the XML for a post — does not verify with SHA-256 or stronger, or any `ID` in it
+  appears twice
+- it declares a document type, which is how external entities get in
+
+`ForceAuthn` asks for the password again. `IsPassive` answers `NoPassive` rather than showing anybody
+a page. When the person is refused — suspended, declining, or held back by the sign-in policy — the
+application is posted a `RequestDenied` status instead of an assertion.
+
+## What is asserted
+
+The response and the assertion inside it are both signed with RSA-SHA256. The assertion is
+addressed to the application's entity ID, confirmed for its assertion consumer service and the
+request's `ID`, valid for five minutes, and carries the session as its `SessionIndex` and
+`https://refeds.org/profile/mfa` as the authentication context when a second factor was used.
+
+Attributes are released as their claim names — `email`, `name`, `given_name`, `family_name`,
+`preferred_username` — unless the application's `samlAttributes` maps its own names to claims. Only
+claims the person's `openid profile email` consent covers are released.
+
+The page that posts the assertion carries a content security policy that lets its one script run
+and its one form go only to the application's origin.
+
+## Not yet
+
+Single logout, encrypted assertions, artifact binding, and choosing an assertion consumer service by
+index.

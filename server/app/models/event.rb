@@ -79,6 +79,7 @@ class Event < ApplicationRecord
   CLIENT_SECRET_ROTATED = "client.secret_rotated".freeze
 
   TOKEN_REVOKED = "token.revoked".freeze
+  SAML_ASSERTED = "saml.asserted".freeze
   REFRESH_REUSED = "refresh.reused".freeze
 
   SIGNING_KEY_STAGED = "signing_key.staged".freeze

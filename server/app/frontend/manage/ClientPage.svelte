@@ -28,6 +28,7 @@
         requiredScopes allowedScopes
         backchannelLogoutUri backchannelLogoutSessionRequired
         requirePushedAuthorizationRequests requireSignedRequestObject consentRequired jwks jwksUri
+        protocol samlEntityId samlCertificate samlNameIdFormat samlRequestsSigned samlIdpInitiated samlAttributes
         signInPolicy { key name }
         events(limit: 25) {
           id action label createdAt ipAddress details
@@ -48,6 +49,7 @@
         }
       }
       scopesSupported
+      samlMetadataUrl
       signInPolicies { key name }
       tenant { signInPolicy { key name } }
     }
@@ -63,8 +65,17 @@
   let logoutUri = $state("");
   let jwksUri = $state("");
   let method = $state("");
+  let metadataUrl = $state("");
+  let certificate = $state("");
   let loading = $state(true);
   let secret = $state(null);
+
+  const NAME_IDS = [
+    ["urn:oasis:names:tc:SAML:2.0:nameid-format:persistent", "A persistent identifier"],
+    ["urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress", "Their email"],
+  ];
+
+  const saml = $derived(client?.protocol === "saml");
 
   const facts = $derived(
     client
@@ -97,6 +108,8 @@
       logoutUri = data.client?.backchannelLogoutUri ?? "";
       jwksUri = data.client?.jwksUri ?? "";
       method = data.client?.tokenEndpointAuthMethod ?? "";
+      metadataUrl = data.samlMetadataUrl;
+      certificate = data.client?.samlCertificate ?? "";
     } catch (thrown) {
       feedback.blame(thrown);
     } finally {
@@ -122,7 +135,9 @@
         $postLogoutRedirectUris: [String!], $resources: [String!],
         $requirePushedAuthorizationRequests: Boolean, $consentRequired: Boolean,
         $signInPolicy: ID, $grantTypes: [String!], $jwksUri: String,
-        $tokenEndpointAuthMethod: String, $requireSignedRequestObject: Boolean
+        $tokenEndpointAuthMethod: String, $requireSignedRequestObject: Boolean,
+        $samlCertificate: String, $samlRequestsSigned: Boolean, $samlIdpInitiated: Boolean,
+        $samlNameIdFormat: String
       ) {
         updateClient(
           clientId: $clientId, name: $name, requiredScopes: $requiredScopes,
@@ -135,7 +150,11 @@
           grantTypes: $grantTypes,
           jwksUri: $jwksUri,
           tokenEndpointAuthMethod: $tokenEndpointAuthMethod,
-          requireSignedRequestObject: $requireSignedRequestObject
+          requireSignedRequestObject: $requireSignedRequestObject,
+          samlCertificate: $samlCertificate,
+          samlRequestsSigned: $samlRequestsSigned,
+          samlIdpInitiated: $samlIdpInitiated,
+          samlNameIdFormat: $samlNameIdFormat
         ) {
           client { clientId }
         }
@@ -246,7 +265,9 @@
 
           <Facts rows={facts} />
 
-          {#if client.tokenEndpointAuthMethod === "none"}
+          {#if saml}
+            <p class="text-xs opacity-60">A SAML application. It is signed into with an assertion, not a token.</p>
+          {:else if client.tokenEndpointAuthMethod === "none"}
             <p class="text-xs opacity-60">A public client. It authenticates with nothing, and proves itself with PKCE.</p>
           {:else}
             <label class="flex flex-col gap-1.5">
@@ -299,6 +320,67 @@
           </div>
         </Card>
 
+        {#if saml}
+          <Card title="SAML">
+            <Facts
+              rows={[
+                { term: "Entity ID", value: client.samlEntityId, mono: true },
+                { term: "masks metadata", value: metadataUrl, mono: true },
+                { term: "Start from masks", value: client.samlIdpInitiated ? `/saml/initiate/${client.clientId}` : null, mono: true },
+              ]}
+            />
+
+            <label class="flex flex-col gap-1.5">
+              <span class="text-xs font-medium opacity-70">Names people by</span>
+              <select
+                class="select select-sm w-full"
+                value={client.samlNameIdFormat ?? NAME_IDS[0][0]}
+                onchange={(event) => update({ samlNameIdFormat: event.currentTarget.value }, "Saved.")}
+              >
+                {#each NAME_IDS as [format, label] (format)}
+                  <option value={format}>{label}</option>
+                {/each}
+              </select>
+            </label>
+
+            <label class="flex flex-col gap-1.5">
+              <span class="text-xs font-medium opacity-70">Its signing certificate</span>
+              <textarea
+                class="textarea textarea-sm w-full font-mono text-xs"
+                rows="3"
+                spellcheck="false"
+                bind:value={certificate}
+              ></textarea>
+              <button
+                type="button"
+                class="btn btn-sm self-start"
+                onclick={() => update({ samlCertificate: certificate.trim() }, certificate.trim() ? "Certificate saved." : "Certificate removed.")}
+              >
+                Save
+              </button>
+            </label>
+
+            <Switch
+              checked={client.samlRequestsSigned}
+              label="Refuse requests it did not sign"
+              onchange={(on) =>
+                update({ samlRequestsSigned: on }, on ? "Unsigned requests are refused." : "Unsigned requests are read.")}
+            />
+
+            <Switch
+              checked={client.samlIdpInitiated}
+              label="Let people start from masks"
+              onchange={(on) =>
+                update(
+                  { samlIdpInitiated: on },
+                  on
+                    ? "People can be signed into it from masks, without it asking."
+                    : "It is signed into only when it asks.",
+                )}
+            />
+          </Card>
+        {/if}
+
         <Card title="Sign-in">
           <label class="flex flex-col gap-1.5">
             <span class="text-xs font-medium opacity-70">Policy</span>
@@ -315,6 +397,7 @@
             </select>
           </label>
 
+          {#if !saml}
           <Switch
             checked={client.requirePushedAuthorizationRequests}
             label="Require pushed requests (PAR)"
@@ -337,6 +420,7 @@
                     : "Signed requests optional.",
                 )}
             />
+          {/if}
           {/if}
 
           {#if client.approvedAt}
@@ -389,7 +473,7 @@
       <div class="flex flex-col gap-4">
         <Card title="URIs">
           <Lines
-            label="Redirect"
+            label={saml ? "Assertion consumer services" : "Redirect"}
             value={client.redirectUris}
             onsave={(redirectUris) => update({ redirectUris }, "Redirect URIs saved.")}
           />

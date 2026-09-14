@@ -61,6 +61,12 @@ Rails.application.routes.draw do
   put "/register/:client_id", to: "registrations#update"
   delete "/register/:client_id", to: "registrations#destroy"
 
+  get "/saml/metadata", to: "saml#metadata", as: :saml_metadata
+  match "/saml/sso", to: "saml#sso", via: %i[get post], as: :saml_sso
+  get "/saml/resume", to: "saml#resume", as: :saml_resume
+  get "/saml/refused", to: "saml#refused", as: :saml_refused
+  get "/saml/initiate/:client_id", to: "saml#initiate", as: :saml_initiate
+
   scope "/scim/v2", module: :scim, defaults: { format: :json } do
     get "ServiceProviderConfig", to: "metadata#service_provider_config"
     get "ResourceTypes", to: "metadata#resource_types"

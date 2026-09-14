@@ -1,0 +1,16 @@
+<% content_for :title, t(".page_title") %>
+<% content_for :surface, "terminus" %>
+
+<div id="saml-post" class="flow">
+  <h1 class="prompt-title"><%= t(".heading", name: @client.name) %></h1>
+
+  <form id="saml-response" method="post" action="<%= @destination %>" class="flow">
+    <input type="hidden" name="SAMLResponse" value="<%= @saml_response %>">
+    <% if @relay_state %>
+      <input type="hidden" name="RelayState" value="<%= @relay_state %>">
+    <% end %>
+    <button type="submit" class="action"><%= t(".continue") %></button>
+  </form>
+
+  <script nonce="<%= @script_nonce %>">document.getElementById("saml-response").submit()</script>
+</div>
