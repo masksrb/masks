@@ -33,6 +33,44 @@ class SessionTest < ClientTest
     assert_nil query.assoc("nonce")
   end
 
+  def test_a_service_asks_for_its_own_token_with_a_secret
+    issuer.override("/token", { "access_token" => "at", "token_type" => "Bearer", "scope" => "uris:catalog:read", "expires_in" => 60 })
+
+    service = Masks::Client::Session.new(issuer: issuer.url, client_id: "indexer", client_secret: "shh")
+    tokens = service.client_credentials(scope: "uris:catalog:read", resource: "https://app.test/mcp")
+    sent = issuer.last("/token")
+
+    assert_equal "at", tokens.access_token
+    assert_equal "client_credentials", sent[:body]["grant_type"]
+    assert_equal "https://app.test/mcp", sent[:body]["resource"]
+    assert_equal "Basic #{Base64.strict_encode64('indexer:shh')}", sent[:headers]["authorization"]
+  end
+
+  def test_a_client_holding_a_private_key_signs_an_assertion_instead_of_sending_a_secret
+    issuer.override("/token", { "access_token" => "at", "token_type" => "Bearer", "expires_in" => 60 })
+    key = OpenSSL::PKey::EC.generate("prime256v1")
+
+    service = Masks::Client::Session.new(issuer: issuer.url, client_id: "indexer", private_key: key.to_pem, key_id: "k-1")
+    service.client_credentials
+    service.client_credentials
+
+    sent = issuer.last("/token")
+    claims, header = JWT.decode(sent[:body]["client_assertion"], key, true, algorithms: [ "ES256" ])
+
+    assert_nil sent[:headers]["authorization"]
+    assert_equal Masks::Client::Session::ASSERTION_TYPE, sent[:body]["client_assertion_type"]
+    assert_equal "k-1", header["kid"]
+    assert_equal [ "indexer", "indexer", issuer.url ], claims.values_at("iss", "sub", "aud")
+    assert_operator claims["exp"], :<=, Time.now.to_i + 60
+  end
+
+  def test_a_secret_and_a_private_key_together_are_refused
+    assert_raises(ArgumentError) do
+      Masks::Client::Session.new(issuer: issuer.url, client_id: "x", client_secret: "s",
+                                 private_key: OpenSSL::PKey::EC.generate("prime256v1"))
+    end
+  end
+
   def test_a_token_response_without_an_access_token_is_refused
     issuer.override("/token", { "token_type" => "Bearer", "expires_in" => 3600 })
 

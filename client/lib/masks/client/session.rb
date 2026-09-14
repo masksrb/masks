@@ -2,13 +2,20 @@ module Masks
   module Client
     class Session
       DEFAULT_SCOPE = %w[openid profile email].freeze
+      ASSERTION_TYPE = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer".freeze
+      ASSERTION_LIFETIME = 60
 
-      attr_reader :issuer, :client_id, :client_secret, :redirect_uri, :scope
+      attr_reader :issuer, :client_id, :client_secret, :redirect_uri, :scope, :private_key, :key_id
 
-      def initialize(issuer:, client_id:, redirect_uri:, client_secret: nil, scope: DEFAULT_SCOPE)
+      def initialize(issuer:, client_id:, redirect_uri: nil, client_secret: nil, private_key: nil, key_id: nil,
+                     scope: DEFAULT_SCOPE)
+        raise ArgumentError, "a client authenticates with a secret or a private key, not both" if client_secret && private_key
+
         @issuer = Issuer.resolve(issuer)
         @client_id = client_id
         @client_secret = client_secret
+        @private_key = private_key.is_a?(String) ? OpenSSL::PKey.read(private_key) : private_key
+        @key_id = key_id
         @redirect_uri = redirect_uri
         @scope = Array(scope)
       end
@@ -54,7 +61,16 @@ module Masks
 
         Array(resource).each { |value| form << [ "resource", value ] }
 
-        Tokens.granted(HTTP.post_form(issuer.endpoint("token_endpoint"), form, authorization))
+        Tokens.granted(post("token_endpoint", form))
+      end
+
+      def client_credentials(scope: nil, resource: nil)
+        form = [ [ "grant_type", "client_credentials" ], [ "client_id", client_id ] ]
+
+        form << [ "scope", Array(scope).join(" ") ] if scope
+        Array(resource).each { |value| form << [ "resource", value ] }
+
+        Tokens.granted(post("token_endpoint", form))
       end
 
       def refresh(refresh_token, resource: nil, scope: nil)
@@ -67,7 +83,7 @@ module Masks
         form << [ "scope", Array(scope).join(" ") ] if scope
         Array(resource).each { |value| form << [ "resource", value ] }
 
-        Tokens.granted(HTTP.post_form(issuer.endpoint("token_endpoint"), form, authorization))
+        Tokens.granted(post("token_endpoint", form))
       end
 
       def exchange(subject_token, scope: nil, resource: nil, lifetime: nil, requested_token_type: nil, audience: nil)
@@ -85,14 +101,14 @@ module Masks
         form << [ "requested_lifetime", lifetime.to_i ] if lifetime
         Array(resource).each { |value| form << [ "resource", value ] }
 
-        Tokens.granted(HTTP.post_form(issuer.endpoint("token_endpoint"), form, authorization))
+        Tokens.granted(post("token_endpoint", form))
       end
 
       def revoke(token, hint: nil)
         form = [ [ "token", token ], [ "client_id", client_id ] ]
         form << [ "token_type_hint", hint ] if hint
 
-        HTTP.post_form(issuer.endpoint("revocation_endpoint"), form, authorization)
+        post("revocation_endpoint", form)
         true
       end
 
@@ -114,7 +130,7 @@ module Masks
         form << [ "token_type_hint", hint ] if hint
 
         Introspection.new(
-          HTTP.post_form(issuer.endpoint("introspection_endpoint"), form, authorization)
+          post("introspection_endpoint", form)
         )
       end
 
@@ -139,6 +155,36 @@ module Masks
       end
 
       private
+
+        def post(endpoint, form)
+          url = issuer.endpoint(endpoint)
+
+          HTTP.post_form(url, form + assertion, authorization)
+        end
+
+        def assertion
+          return [] if private_key.nil?
+
+          now = Time.now.to_i
+          claims = {
+            "iss" => client_id, "sub" => client_id, "aud" => issuer.url,
+            "iat" => now, "exp" => now + ASSERTION_LIFETIME, "jti" => SecureRandom.uuid
+          }
+          header = key_id ? { kid: key_id } : {}
+
+          [
+            [ "client_assertion_type", ASSERTION_TYPE ],
+            [ "client_assertion", JWT.encode(claims, private_key, signing_algorithm, header) ]
+          ]
+        end
+
+        def signing_algorithm
+          return "RS256" if private_key.is_a?(OpenSSL::PKey::RSA)
+
+          { "prime256v1" => "ES256", "secp384r1" => "ES384", "secp521r1" => "ES512" }.fetch(private_key.group.curve_name) do
+            raise ArgumentError, "#{private_key.group.curve_name} is not a curve masks checks assertions for"
+          end
+        end
 
         def authorization
           return {} if client_secret.nil?
