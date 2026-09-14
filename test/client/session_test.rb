@@ -64,6 +64,17 @@ class SessionTest < ClientTest
     assert_operator claims["exp"], :<=, Time.now.to_i + 60
   end
 
+  def test_an_exchange_carries_an_id_token_and_an_actor_token_when_given
+    issuer.override("/token", { "access_token" => "at", "token_type" => "Bearer", "expires_in" => 60 })
+
+    session.exchange("the-id-token", subject_token_type: Masks::Client::Tokens::ID_TOKEN, actor_token: "the-agent")
+    sent = issuer.last("/token")[:body]
+
+    assert_equal Masks::Client::Tokens::ID_TOKEN, sent["subject_token_type"]
+    assert_equal "the-agent", sent["actor_token"]
+    assert_equal Masks::Client::Tokens::ACCESS_TOKEN, sent["actor_token_type"]
+  end
+
   def test_a_secret_and_a_private_key_together_are_refused
     assert_raises(ArgumentError) do
       Masks::Client::Session.new(issuer: issuer.url, client_id: "x", client_secret: "s",

@@ -86,13 +86,16 @@ module Masks
         Tokens.granted(post("token_endpoint", form))
       end
 
-      def exchange(subject_token, scope: nil, resource: nil, lifetime: nil, requested_token_type: nil, audience: nil)
+      def exchange(subject_token, scope: nil, resource: nil, lifetime: nil, requested_token_type: nil, audience: nil,
+                   subject_token_type: Tokens::ACCESS_TOKEN, actor_token: nil, actor_token_type: Tokens::ACCESS_TOKEN)
         form = [
           [ "grant_type", Tokens::EXCHANGE ],
           [ "client_id", client_id ],
           [ "subject_token", subject_token ],
-          [ "subject_token_type", Tokens::ACCESS_TOKEN ]
+          [ "subject_token_type", subject_token_type ]
         ]
+
+        form.push([ "actor_token", actor_token ], [ "actor_token_type", actor_token_type ]) if actor_token
 
         form << [ "requested_token_type", requested_token_type ] if requested_token_type
         Array(audience).each { |value| form << [ "audience", value ] }
