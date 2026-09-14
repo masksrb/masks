@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.3.0](https://github.com/masksrb/masks/compare/server-v0.2.0...server-v0.3.0) (2026-09-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* a resource server on an older gem still accepts the new tokens, but this gem refuses access tokens from a server that does not type them.
+
+### Features
+
+* an access token is typed at+jwt, and nothing takes a token of another type in its place ([d0b4cfd](https://github.com/masksrb/masks/commit/d0b4cfdf802053359695495d417225e3a1578302))
+* **server:** a client authenticates with an assertion signed by its own key ([532a497](https://github.com/masksrb/masks/commit/532a497b0ea16c1b2427e28368d18d61912d8a1e))
+* **server:** a service with nobody behind it signs in as itself with client_credentials ([61e1f43](https://github.com/masksrb/masks/commit/61e1f434bc8fcfdb4a8e29da6999190fc3d4432b))
+* **server:** a token exchange takes an ID token or an actor token, and says who is acting ([9d771be](https://github.com/masksrb/masks/commit/9d771be0b49cf453fba41923e6910053d9e686cd))
+* **server:** an authorization request can be signed by the client that makes it ([49c30e3](https://github.com/masksrb/masks/commit/49c30e36aa465b74a555b8b07b5e613d7167eb2d))
+* **server:** an identity provider adds, changes, suspends and removes people over SCIM 2.0 ([09c2025](https://github.com/masksrb/masks/commit/09c2025059b3642d6196956b929cb21357e5c780))
+* **server:** masks signs people into SAML applications as their identity provider ([c929fdc](https://github.com/masksrb/masks/commit/c929fdcb8cd7453c87bb9aa549e63e92e056c0f5))
+
+
+### Fixes
+
+* **server:** a browser without javascript signs in with its password instead of asking to reset it ([2904954](https://github.com/masksrb/masks/commit/29049541224636547db157056562c08f1279e0f8))
+* **server:** a SAML request cannot be forged past its signature, and an unconfirmed email is never asserted ([b89761b](https://github.com/masksrb/masks/commit/b89761b8dc6f9c839c9cfd00f58e42595429d18f))
+
 ## [0.2.0](https://github.com/masksrb/masks/compare/server-v0.1.0...server-v0.2.0) (2026-09-13)
 
 
