@@ -17,6 +17,7 @@ module Manage
       argument :require_pushed_authorization_requests, Boolean, required: false
       argument :jwks, GraphQL::Types::JSON, required: false
       argument :jwks_uri, String, required: false
+      argument :require_signed_request_object, Boolean, required: false
       argument :token_endpoint_auth_method, String, required: false
       argument :consent_required, Boolean, required: false
       argument :sign_in_policy, ID, required: false

@@ -156,7 +156,8 @@ class Issuer
       "authorization_response_iss_parameter_supported" => true,
       "resource_indicators_supported" => true,
       "require_pushed_authorization_requests" => false,
-      "request_parameter_supported" => false,
+      "request_parameter_supported" => true,
+      "request_object_signing_alg_values_supported" => ClientKeys::ALGORITHMS,
       "request_uri_parameter_supported" => false,
       "claims_parameter_supported" => true
     }.compact

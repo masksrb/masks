@@ -260,7 +260,8 @@ CREATE TABLE public.clients (
     sign_in_policy_id bigint,
     consent_required boolean DEFAULT true NOT NULL,
     jwks jsonb,
-    jwks_uri character varying
+    jwks_uri character varying,
+    require_signed_request_object boolean DEFAULT false NOT NULL
 );
 
 ALTER TABLE ONLY public.clients FORCE ROW LEVEL SECURITY;
@@ -2451,6 +2452,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260914010000'),
 ('20260914000000'),
 ('20260913090000'),
 ('20260913080000'),

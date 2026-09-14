@@ -83,8 +83,53 @@ registration with the same name.
 Signing in and consenting return through a URL this server builds for itself, and that return is
 the same request rather than a second one — requiring a push does not break the flow it started.
 
-## What it does not do
+## Signing it
 
-Pushing keeps the request off the front channel. It does not sign it: masks does not support
-request objects, so `request` and `request_uri` pointing at a JWT are both refused, and
-`request_parameter_supported` and `request_uri_parameter_supported` are `false` in discovery.
+Pushing keeps the request off the front channel. Signing it proves the client wrote it. A client
+that has registered `jwks` or a `jwks_uri` may send the whole request as a request object
+([RFC 9101](https://www.rfc-editor.org/rfc/rfc9101.html)): a JWT it signs with one of those keys,
+carrying the parameters as claims.
+
+```json
+{
+  "iss": "$CLIENT_ID",
+  "aud": "https://demo.auth.example.com",
+  "client_id": "$CLIENT_ID",
+  "exp": 1789000300,
+  "nbf": 1789000000,
+  "jti": "5c1f...",
+  "response_type": "code",
+  "redirect_uri": "https://app.example.com/cb",
+  "scope": "openid profile",
+  "code_challenge": "$CHALLENGE",
+  "code_challenge_method": "S256",
+  "state": "$STATE"
+}
+```
+
+Send it as `request`, beside the `client_id`, either straight to `/authorize` or pushed to `/par`,
+where the `client_id` comes from how the client authenticated. Typing it `oauth-authz-req+jwt` is
+recommended.
+
+| | |
+| --- | --- |
+| signed with | RSA, RSA-PSS or ECDSA, by a key the client registered — never `none`, never a shared secret |
+| `iss` | the client |
+| `aud` | this issuer |
+| `client_id` | the same client as the one beside it |
+| `exp` | required, and within the hour |
+| `nbf` | if present, not in the future and not more than an hour gone |
+| `jti` | if present, spent the first time it is used |
+
+When a request object arrives, it is the entire request. Nothing in the query beside it is read,
+so an unsigned `scope` or `redirect_uri` added on the way is ignored rather than merged. One that
+does not verify is refused with `invalid_request_object`, including one that carries a `request`
+or `request_uri` of its own.
+
+`requireSignedRequestObject` holds a client to signing, the way `requirePushedAuthorizationRequests`
+holds it to pushing. Holding a client to both is what FAPI 2.0 asks for. Discovery answers
+`request_parameter_supported: true` and lists the algorithms in
+`request_object_signing_alg_values_supported`.
+
+A `request_uri` is only ever one this server issued from `/par`. masks never fetches a request
+object from a URL a client names, so `request_uri_parameter_supported` stays `false`.

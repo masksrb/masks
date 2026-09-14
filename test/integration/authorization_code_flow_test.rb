@@ -285,11 +285,11 @@ class AuthorizationCodeFlowTest < ActionDispatch::IntegrationTest
     assert_equal %w[https://one.example https://two.example], code.audience.sort
   end
 
-  test "a request object is refused rather than ignored" do
+  test "an unsigned request object is refused rather than ignored" do
     sign_in_as(@actor)
     authorize(client_id: @registration["client_id"], request: "eyJhbGciOiJub25lIn0.e30.")
 
-    assert_equal "request_not_supported", redirected["error"]
+    assert_equal "invalid_request_object", redirected["error"]
   end
 
   test "a request_uri is refused rather than ignored" do

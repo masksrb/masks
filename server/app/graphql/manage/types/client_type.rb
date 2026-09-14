@@ -25,6 +25,7 @@ module Manage
       field :require_pushed_authorization_requests, Boolean, null: false
       field :jwks, GraphQL::Types::JSON
       field :jwks_uri, String
+      field :require_signed_request_object, Boolean, null: false
       field :consent_required, Boolean, null: false
       field :sign_in_policy, SignInPolicyType
       field :dynamic, Boolean, null: false

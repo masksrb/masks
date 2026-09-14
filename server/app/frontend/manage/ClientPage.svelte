@@ -27,7 +27,7 @@
         redirectUris postLogoutRedirectUris grantTypes responseTypes resources
         requiredScopes allowedScopes
         backchannelLogoutUri backchannelLogoutSessionRequired
-        requirePushedAuthorizationRequests consentRequired jwksUri
+        requirePushedAuthorizationRequests requireSignedRequestObject consentRequired jwks jwksUri
         signInPolicy { key name }
         events(limit: 25) {
           id action label createdAt ipAddress details
@@ -122,7 +122,7 @@
         $postLogoutRedirectUris: [String!], $resources: [String!],
         $requirePushedAuthorizationRequests: Boolean, $consentRequired: Boolean,
         $signInPolicy: ID, $grantTypes: [String!], $jwksUri: String,
-        $tokenEndpointAuthMethod: String
+        $tokenEndpointAuthMethod: String, $requireSignedRequestObject: Boolean
       ) {
         updateClient(
           clientId: $clientId, name: $name, requiredScopes: $requiredScopes,
@@ -134,7 +134,8 @@
           signInPolicy: $signInPolicy,
           grantTypes: $grantTypes,
           jwksUri: $jwksUri,
-          tokenEndpointAuthMethod: $tokenEndpointAuthMethod
+          tokenEndpointAuthMethod: $tokenEndpointAuthMethod,
+          requireSignedRequestObject: $requireSignedRequestObject
         ) {
           client { clientId }
         }
@@ -323,6 +324,20 @@
                 on ? "PAR required. Plain /authorize links are refused." : "PAR optional.",
               )}
           />
+
+          {#if client.jwks || client.jwksUri}
+            <Switch
+              checked={client.requireSignedRequestObject}
+              label="Require signed request objects (JAR)"
+              onchange={(on) =>
+                update(
+                  { requireSignedRequestObject: on },
+                  on
+                    ? "Signed requests required. An unsigned /authorize or pushed request is refused."
+                    : "Signed requests optional.",
+                )}
+            />
+          {/if}
 
           {#if client.approvedAt}
             <Switch

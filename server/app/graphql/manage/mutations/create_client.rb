@@ -12,6 +12,7 @@ module Manage
       argument :dpop_bound_access_tokens, Boolean, required: false
       argument :jwks, GraphQL::Types::JSON, required: false
       argument :jwks_uri, String, required: false
+      argument :require_signed_request_object, Boolean, required: false
 
       field :client, Types::ClientType, null: false
       field :secret, String

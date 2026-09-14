@@ -32,8 +32,8 @@ Response types are `code` and only `code`. Response modes are `query` and only `
 | [RFC 9449](https://www.rfc-editor.org/rfc/rfc9449) — DPoP | ✅ | including `dpop_jkt`, bound refresh tokens, and `dpop_bound_access_tokens` — see [holding a token](/concepts/holding/) |
 | [RFC 9207](https://www.rfc-editor.org/rfc/rfc9207) — Issuer identification | ✅ | `iss` on every authorization response |
 | [RFC 8707](https://www.rfc-editor.org/rfc/rfc8707) — Resource indicators | ✅ | `resource` narrows an audience at both endpoints |
-| [RFC 9101](https://www.rfc-editor.org/rfc/rfc9101) — Request objects (JAR) | ✗ | `request` and `request_uri` are refused, and discovery says so |
-| [FAPI 2.0](https://openid.net/specs/fapi-security-profile-2_0-final.html) | ✗ | needs JAR first |
+| [RFC 9101](https://www.rfc-editor.org/rfc/rfc9101) — Request objects (JAR) | ◐ | a signed `request` at `/authorize` and `/par`, and a client may be made to sign — see [pushed requests](/concepts/pushing/). A `request_uri` is only ever one `/par` issued; encrypted request objects are not read |
+| [FAPI 2.0](https://openid.net/specs/fapi-security-profile-2_0-final.html) | ◐ | PAR, PKCE, `private_key_jwt`, DPoP, `iss` on the response and signed requests are all here, and a client can be held to each. The certification plan has not been run |
 
 ## Grants
 

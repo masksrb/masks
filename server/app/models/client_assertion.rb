@@ -2,7 +2,7 @@ class ClientAssertion
   class Refused < StandardError; end
 
   TYPE = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer".freeze
-  ALGORITHMS = %w[RS256 RS384 RS512 PS256 PS384 PS512 ES256 ES384 ES512].freeze
+  ALGORITHMS = ClientKeys::ALGORITHMS
   LEEWAY = 30
   LONGEST = 1.hour
 
@@ -23,12 +23,7 @@ class ClientAssertion
   end
 
   def verify!
-    header = JWT.decode(token, nil, false).last
-    algorithm = header["alg"].to_s
-
-    raise Refused, "#{algorithm.presence || 'that'} is not an algorithm a client assertion may use" unless ALGORITHMS.include?(algorithm)
-
-    claims = signed(header, algorithm)
+    claims, = ClientKeys.new(client).decode(token, subject: "that client assertion")
 
     named!(claims)
     addressed!(claims)
@@ -36,43 +31,13 @@ class ClientAssertion
     once!(claims)
 
     self
-  rescue JWT::DecodeError
-    raise Refused, "that client assertion is not a readable JWT"
+  rescue ClientKeys::Refused => e
+    raise Refused, e.message
   end
 
   private
 
     attr_reader :client, :audiences
-
-    def signed(header, algorithm)
-      verified = attempt(header, algorithm, fresh: false)
-      verified ||= attempt(header, algorithm, fresh: true) if keys.remote?
-
-      verified || raise(Refused, "that client assertion was not signed by a key this client registered")
-    end
-
-    def attempt(header, algorithm, fresh:)
-      candidates(header, fresh).each do |jwk|
-        return JWT.decode(token, JWT::JWK.new(jwk).verify_key, true, algorithms: [ algorithm ], verify_expiration: false).first
-      rescue JWT::VerificationError, JWT::IncorrectAlgorithm, JWT::JWKError, OpenSSL::PKey::PKeyError, ArgumentError
-        next
-      end
-
-      nil
-    rescue ClientKeys::Refused => e
-      raise Refused, "this client's keys could not be read: #{e.message}"
-    end
-
-    def candidates(header, fresh)
-      held = keys.keys(fresh: fresh).select { |jwk| jwk.is_a?(Hash) && jwk["use"].to_s != "enc" }
-      kid = header["kid"].presence
-
-      kid ? held.select { |jwk| jwk["kid"] == kid } : held
-    end
-
-    def keys
-      @keys ||= ClientKeys.new(client)
-    end
 
     def named!(claims)
       unless claims["iss"] == client.client_id && claims["sub"] == client.client_id

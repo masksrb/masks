@@ -5,6 +5,7 @@ class ClientKeys
   OPEN_TIMEOUT = 2
   READ_TIMEOUT = 3
   SECRET = %w[d p q dp dq qi k].freeze
+  ALGORITHMS = %w[RS256 RS384 RS512 PS256 PS384 PS512 ES256 ES384 ES512].freeze
   KINDS = %w[RSA EC].freeze
 
   class << self
@@ -70,7 +71,42 @@ class ClientKeys
     client.jwks.blank? && client.jwks_uri.present?
   end
 
+  def any?
+    client.jwks.present? || client.jwks_uri.present?
+  end
+
+  def decode(token, subject: "that token")
+    header = JWT.decode(token.to_s, nil, false).last
+    algorithm = header["alg"].to_s
+
+    raise Refused, "#{algorithm.presence || 'that'} is not an algorithm #{subject} may be signed with" unless ALGORITHMS.include?(algorithm)
+
+    verified = attempt(token, header, algorithm, fresh: false)
+    verified ||= attempt(token, header, algorithm, fresh: true) if remote?
+
+    verified || raise(Refused, "#{subject} was not signed by a key this client registered")
+  rescue JWT::DecodeError
+    raise Refused, "#{subject} is not a readable JWT"
+  end
+
   private
+
+    def attempt(token, header, algorithm, fresh:)
+      candidates(header, fresh).each do |jwk|
+        return [ *JWT.decode(token.to_s, JWT::JWK.new(jwk).verify_key, true, algorithms: [ algorithm ], verify_expiration: false) ]
+      rescue JWT::VerificationError, JWT::IncorrectAlgorithm, JWT::JWKError, OpenSSL::PKey::PKeyError, ArgumentError
+        next
+      end
+
+      nil
+    end
+
+    def candidates(header, fresh)
+      held = keys(fresh: fresh).select { |jwk| jwk.is_a?(Hash) && jwk["use"].to_s != "enc" }
+      kid = header["kid"].presence
+
+      kid ? held.select { |jwk| jwk["kid"] == kid } : held
+    end
 
     def cache_key
       "client-jwks:#{client.tenant_id}:#{client.id}:#{Digest::SHA256.hexdigest(client.jwks_uri.to_s)}"

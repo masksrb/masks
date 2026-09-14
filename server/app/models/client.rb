@@ -108,6 +108,8 @@ class Client < ApplicationRecord
           ActiveModel::Type::Boolean.new.cast(attributes[:require_pushed_authorization_requests]) || false,
         jwks: attributes[:jwks],
         jwks_uri: attributes[:jwks_uri],
+        require_signed_request_object:
+          ActiveModel::Type::Boolean.new.cast(attributes[:require_signed_request_object]) || false,
         dynamic: true
       )
 
@@ -250,6 +252,7 @@ class Client < ApplicationRecord
       "backchannel_logout_uri" => backchannel_logout_uri,
       "backchannel_logout_session_required" => backchannel_logout_session_required,
       "require_pushed_authorization_requests" => require_pushed_authorization_requests,
+      "require_signed_request_object" => require_signed_request_object,
       "jwks" => jwks.presence,
       "jwks_uri" => jwks_uri.presence,
       "client_id_issued_at" => created_at&.to_i
@@ -330,6 +333,10 @@ class Client < ApplicationRecord
 
     def keys_are_usable
       errors.add(:jwks, "and jwks_uri cannot both be registered") if jwks.present? && jwks_uri.present?
+
+      if require_signed_request_object? && jwks.blank? && jwks_uri.blank?
+        errors.add(:require_signed_request_object, "needs jwks or a jwks_uri to check request objects against")
+      end
 
       if asserts? && jwks.blank? && jwks_uri.blank?
         errors.add(:token_endpoint_auth_method, "private_key_jwt needs jwks or a jwks_uri to check assertions against")

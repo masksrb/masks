@@ -3,8 +3,16 @@ class AuthorizeController < ApplicationController
 
   skip_forgery_protection only: :show, if: -> { request.post? }
 
+  rescue_from RequestObject::Refused do |refusal|
+    refuse(bad_request(:invalid_request_object, refusal.message))
+  end
+
   def show
     authorization = Authorization.from_request(request)
+
+    if authorization.request_uri? && authorization.request_object?
+      return refuse(bad_request(:invalid_request, "request and request_uri cannot both be sent"))
+    end
 
     if authorization.request_uri?
       return refuse(unsupported_request_uri) unless PushedRequest.urn?(authorization.request_uri)
@@ -13,8 +21,16 @@ class AuthorizeController < ApplicationController
       return refuse(invalid_request_uri) if pushed.nil?
 
       authorization = pushed.authorization
-    elsif authorization.client&.require_pushed_authorization_requests? && !admitted?(authorization)
-      return refuse(pushing_required)
+    else
+      if authorization.request_object?
+        authorization = RequestObject.unpack!(authorization, issuer: issuer)
+      end
+
+      client = authorization.client
+      admitted = admitted?(authorization)
+
+      return refuse(pushing_required) if client&.require_pushed_authorization_requests? && !admitted
+      return refuse(signing_required) if client&.require_signed_request_object? && !authorization.signed? && !admitted
     end
 
     attempt = validate(authorization)
@@ -48,8 +64,6 @@ class AuthorizeController < ApplicationController
         req.verify_redirect_uri!(client.redirect_uris)
         req.verified_redirect_uri = with_issuer(req.verified_redirect_uri)
         res.redirect_uri = req.verified_redirect_uri
-
-        req.bad_request!(:request_not_supported, "request objects are not supported") if authorization.request_object?
 
         permit(req) { authorization.validate! }
       end
@@ -128,6 +142,10 @@ class AuthorizeController < ApplicationController
 
     def pushing_required
       bad_request(:invalid_request, "this client has to push its authorization request before sending anyone here")
+    end
+
+    def signing_required
+      bad_request(:invalid_request, "this client has to sign its authorization requests")
     end
 
     def bad_request(error, description)

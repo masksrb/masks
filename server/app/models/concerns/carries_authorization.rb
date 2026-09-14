@@ -18,7 +18,8 @@ module CarriesAuthorization
           "state" => authorization.state,
           "prompt" => authorization.prompt,
           "max_age" => authorization.max_age,
-          "user_code" => authorization.user_code
+          "user_code" => authorization.user_code,
+          "signed" => (true if authorization.signed?)
         }.compact
       }
     end
@@ -39,7 +40,8 @@ module CarriesAuthorization
       resource: audience,
       claims: requested_claims,
       user_code: held("user_code"),
-      dpop_jkt: jkt
+      dpop_jkt: jkt,
+      signed: held("signed") == true
     )
   end
 
