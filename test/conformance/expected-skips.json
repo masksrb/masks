@@ -33,6 +33,12 @@
         "test-name": "oidcc-unsigned-request-object-supported-correctly-or-rejected-as-unsupported",
         "variant": "*",
         "configuration-filename": "/conformance/masks.json",
-        "comment": "request_parameter_supported is declared false, for the same reason: silently preferring unsigned query parameters over a signed request object is the wrong direction to fail in."
+        "comment": "request objects are read, but only signed with a key the client registered, so 'none' is never listed in request_object_signing_alg_values_supported and an unsigned one is refused with invalid_request_object."
+    },
+    {
+        "test-name": "oidcc-ensure-request-object-with-redirect-uri",
+        "variant": "*",
+        "configuration-filename": "/conformance/masks.json",
+        "comment": "The module sends an unsigned request object, and the suite skips it because 'none' is not in request_object_signing_alg_values_supported. That is deliberate: a request object masks reads is signed by the client."
     }
 ]

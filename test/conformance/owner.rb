@@ -6,7 +6,7 @@ Tenant.all.each do |tenant|
       name: "Conformance Owner",
       email: "owner@#{tenant.subdomain}.invalid",
       password: ENV.fetch("OWNER_PASSWORD", "password"),
-      scopes: Scopes.join(Scopes::DESCRIBED.keys),
+      scopes: Scopes.join(Scopes::STANDARD),
       email_verified_at: Time.current,
       given_name: "Conformance",
       family_name: "Owner",

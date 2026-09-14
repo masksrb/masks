@@ -18,6 +18,8 @@ services:
   masks:
     build:
       context: ../../server
+      additional_contexts:
+        web: ../../web
     image: masks:conformance
     environment:
       POSTGRES_HOST: postgres

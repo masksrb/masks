@@ -135,7 +135,7 @@ def conformance(args)
 
   Dir.mkdir(File.join(here, "results")) unless File.directory?(File.join(here, "results"))
 
-  run!("docker", "compose", "up", "-d", "--wait", "masks", "proxy", "mongodb", "server", "nginx",
+  run!("docker", "compose", "up", "-d", "--build", "--wait", "masks", "proxy", "mongodb", "server", "nginx",
        chdir: here)
   run!("sh", "-c", "docker compose exec -T masks ./bin/rails runner - < owner.rb", chdir: here)
 
