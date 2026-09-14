@@ -10,6 +10,8 @@ module Manage
       field :phone_verified, Boolean, null: false
       field :signed_up_at, GraphQL::Types::ISO8601DateTime
       field :pending_approval, Boolean, null: false
+      field :suspended_at, GraphQL::Types::ISO8601DateTime
+      field :external_id, String
       field :activated, Boolean, null: false
       field :invited_at, GraphQL::Types::ISO8601DateTime
       field :scopes, [ String ], null: false

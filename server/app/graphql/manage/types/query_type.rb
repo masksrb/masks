@@ -9,6 +9,7 @@ module Manage
         argument :activated, Boolean, required: false
         argument :holds, String, required: false
         argument :pending_approval, Boolean, required: false
+        argument :suspended, Boolean, required: false
         argument :after_id, ID, required: false
         argument :limit, Integer, required: false
       end
@@ -96,6 +97,9 @@ module Manage
 
       field :scopes_supported, [ String ], null: false
 
+      field :provisioning_tokens, [ ProvisioningTokenType ], null: false
+      field :scim_base_url, String, null: false
+
       field :minimum_password, Integer, null: false
 
       field :tally, TallyType, null: false
@@ -129,7 +133,7 @@ module Manage
         Current.tenant
       end
 
-      def actors(search: nil, activated: nil, holds: nil, pending_approval: nil, after_id: nil, limit: nil)
+      def actors(search: nil, activated: nil, holds: nil, pending_approval: nil, suspended: nil, after_id: nil, limit: nil)
         scope = Actor.newest_first
 
         if search.present?
@@ -140,6 +144,7 @@ module Manage
         scope = activated ? scope.where.not(activated_at: nil) : scope.where(activated_at: nil) unless activated.nil?
         scope = holding(scope, holds) if holds.present?
         scope = pending_approval ? scope.where.not(pending_approval_at: nil) : scope.where(pending_approval_at: nil) unless pending_approval.nil?
+        scope = suspended ? scope.where.not(suspended_at: nil) : scope.where(suspended_at: nil) unless suspended.nil?
         scope = scope.after(Actor.find_by(uuid: after_id)&.id) if after_id.present?
 
         scope.limit(bounded(limit))
@@ -147,6 +152,14 @@ module Manage
 
       def actor(uuid:)
         Actor.find_by(uuid: uuid)
+      end
+
+      def provisioning_tokens
+        ProvisioningToken.live.order(created_at: :desc)
+      end
+
+      def scim_base_url
+        Scim.base(Issuer.new(Current.tenant, Current.origin))
       end
 
       def clients(search: nil, archived: false, after_id: nil, limit: nil)

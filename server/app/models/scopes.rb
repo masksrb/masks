@@ -6,6 +6,7 @@ module Scopes
   IDENTITIES = "identities".freeze
   MANAGE = "masks:manage".freeze
   HANDSHAKE = "masks:handshake".freeze
+  SCIM = "masks:scim".freeze
   DELEGATE = "masks:delegate:".freeze
 
   DESCRIBED = {
@@ -15,7 +16,8 @@ module Scopes
     OFFLINE => "offline_access",
     IDENTITIES => "identities",
     MANAGE => "manage",
-    HANDSHAKE => "handshake"
+    HANDSHAKE => "handshake",
+    SCIM => "scim"
   }.freeze
 
   STANDARD = [ OPENID, PROFILE, EMAIL, OFFLINE, IDENTITIES ].freeze

@@ -9,7 +9,11 @@ module Manage
       field :approve_actor, mutation: Mutations::ApproveActor
       field :set_actor_scopes, mutation: Mutations::SetActorScopes
       field :sign_out_actor, mutation: Mutations::SignOutActor
+      field :suspend_actor, mutation: Mutations::SuspendActor
+      field :restore_actor, mutation: Mutations::RestoreActor
       field :delete_actor, mutation: Mutations::DeleteActor
+      field :issue_provisioning_token, mutation: Mutations::IssueProvisioningToken
+      field :revoke_provisioning_token, mutation: Mutations::RevokeProvisioningToken
       field :generate_backup_codes, mutation: Mutations::GenerateBackupCodes
       field :disable_authenticator, mutation: Mutations::DisableAuthenticator
       field :revoke_passkey, mutation: Mutations::RevokePasskey

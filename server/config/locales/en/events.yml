@@ -66,6 +66,8 @@ en:
         deleted: "Person deleted"
         scopes_changed: "Scopes changed"
         signed_out: "Signed out everywhere"
+        suspended: "Person suspended"
+        restored: "Person restored"
       client:
         created: "Client added"
         registered: "Client registered"
@@ -76,6 +78,9 @@ en:
         secret_rotated: "Client secret rotated"
       token:
         revoked: "Token revoked"
+      provisioning_token:
+        issued: "Provisioning token issued"
+        revoked: "Provisioning token revoked"
       refresh:
         reused: "Refresh token replayed"
       signing_key:

@@ -1,0 +1,69 @@
+---
+title: Provisioning
+description: An identity provider adds, changes, suspends and removes people over SCIM 2.0.
+---
+
+An organisation that already keeps its people in Entra ID, Okta, Google Workspace or JumpCloud does
+not want to keep a second list in masks. SCIM 2.0 ([RFC 7643](https://www.rfc-editor.org/rfc/rfc7643),
+[RFC 7644](https://www.rfc-editor.org/rfc/rfc7644)) lets that provider do it: when somebody joins
+they are added here, when they are renamed they are renamed here, and when they leave they are
+switched off here in the same minute.
+
+Each tenant answers at its own base URL:
+
+```
+https://demo.masks.example/scim/v2
+```
+
+## Connecting a provider
+
+In the console, under **Settings → Provisioning**, issue a token, give it a label the provider will
+recognise, and choose how long it lives — a year at most. It is shown once. Paste the base URL and
+the token into the provider as a bearer token. The list shows when each token was last used, and
+revoking one refuses whatever provisions with it from then on.
+
+A client can provision instead of a token: an approved client allowed `masks:scim` asks for its own
+token with [`client_credentials`](/concepts/clients/), addressed to the base URL as its `resource`.
+
+## What is provisioned
+
+`/Users` is read, filtered, created, replaced with `PUT`, changed with `PATCH` and deleted.
+
+| SCIM | masks |
+| --- | --- |
+| `id` | the actor's `uuid` |
+| `userName` | the nickname, or the email when it is an address |
+| `externalId` | kept, unique in the tenant, and filterable |
+| `name`, `displayName` | the name claims |
+| `emails` | the primary email, taken as confirmed |
+| `phoneNumbers`, `photos`, `profileUrl`, `locale`, `timezone` | the matching claims |
+| `active` | whether the person is suspended |
+| `password` | set, if a provider sends one |
+
+A provisioned person holds the standard scopes and has no password unless one was sent. They sign
+in through a [provider](/concepts/providers/) that trusts the same email, or by accepting an
+invitation a manager sends. Filters understand `eq`, `ne`, `co`, `sw`, `ew`, `pr` and the
+comparisons, joined by `and`, on `userName`, `externalId`, `emails.value`, `displayName`,
+`name.givenName`, `name.familyName`, `active` and the `meta` dates. Every response carries a weak
+`ETag`, and a stale `If-Match` is refused.
+
+`/ServiceProviderConfig`, `/ResourceTypes` and `/Schemas` describe the rest. Groups, bulk
+operations and sorting are not offered.
+
+## Suspending
+
+`active: false` suspends somebody, and so does **Suspend** on their page in the console. They are
+signed out of every session, every token they hold stops working at once — refresh tokens included
+— and signing in is refused after the first factor, so a stranger typing their name learns nothing.
+`active: true` restores them. `DELETE` removes them outright, the way deleting in the console does.
+
+## What a provider cannot do
+
+A provisioning token is worth a great deal, so it is worth less than a manager:
+
+- it never sets the password or email of anybody holding a `masks:` scope, because either would be
+  the first step to taking over their account
+- it cannot suspend or delete the last person who manages masks here
+- it cannot change anybody's scopes
+
+Every change is written down as the person's activity, marked as having come through SCIM.

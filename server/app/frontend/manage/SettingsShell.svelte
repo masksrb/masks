@@ -7,6 +7,7 @@
     ["/settings", "General"],
     ["/policies", "Policies"],
     ["/providers", "Providers"],
+    ["/provisioning", "Provisioning"],
     ["/adapters", "Adapters"],
     ["/activity", "Activity"],
   ];

@@ -28,6 +28,8 @@ class Actor < ApplicationRecord
             uniqueness: { scope: :tenant_id, case_sensitive: false },
             allow_blank: true
 
+  validates :external_id, uniqueness: { scope: :tenant_id }, allow_nil: true
+
   validates :phone,
             format: { with: Adapters::Sms::NUMBER },
             uniqueness: { scope: :tenant_id },
@@ -39,6 +41,7 @@ class Actor < ApplicationRecord
 
   normalizes :nickname, with: ->(value) { value.to_s.strip.presence }
   normalizes :email, with: ->(value) { value.to_s.strip.downcase.presence }
+  normalizes :external_id, with: ->(value) { value.to_s.strip.presence }
   normalizes :phone, with: ->(value) { value.to_s.gsub(/[\s().-]/, "").presence }
 
   normalizes :name, :given_name, :family_name, :middle_name, :profile_url, :picture_url,
@@ -164,6 +167,27 @@ class Actor < ApplicationRecord
 
     reset_password!(password, keeping: keeping)
     true
+  end
+
+  def suspended?
+    suspended_at.present?
+  end
+
+  def suspend!
+    return self if suspended?
+
+    transaction do
+      update!(suspended_at: Time.current)
+      sign_out_everywhere!
+      Token.where(actor_id: id).live.find_each(&:consume!)
+    end
+
+    self
+  end
+
+  def restore!
+    update!(suspended_at: nil) if suspended?
+    self
   end
 
   def sign_out_everywhere!(keeping: nil)

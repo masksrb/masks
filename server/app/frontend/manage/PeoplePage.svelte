@@ -26,16 +26,17 @@
     ["invited", "Invited", { activated: false }],
     ["waiting", "Awaiting approval", { pendingApproval: true }],
     ["managers", "Managers", { holds: "masks:manage" }],
+    ["suspended", "Suspended", { suspended: true }],
   ];
 
   const QUERY = `
     query People(
       $search: String, $activated: Boolean, $holds: String, $pendingApproval: Boolean,
-      $afterId: ID, $limit: Int
+      $suspended: Boolean, $afterId: ID, $limit: Int
     ) {
       actors(
         search: $search, activated: $activated, holds: $holds, pendingApproval: $pendingApproval,
-        afterId: $afterId, limit: $limit
+        suspended: $suspended, afterId: $afterId, limit: $limit
       ) {
         uuid identifier nickname name email emailVerified otpEnabled backupCodesRemaining
         lastLoginAt scopes activated invitedAt
@@ -98,6 +99,7 @@
         activated: narrowing.activated ?? null,
         holds: narrowing.holds ?? null,
         pendingApproval: narrowing.pendingApproval ?? null,
+        suspended: narrowing.suspended ?? null,
         afterId,
         limit: PAGE,
       });
@@ -313,6 +315,8 @@
           ? "Nobody is waiting on an invitation."
           : lens === "managers"
             ? "Nobody else holds masks:manage."
+            : lens === "suspended"
+            ? "Nobody is suspended."
             : "Nobody can sign in yet. Add the first person."}
     >
       {#snippet rows()}

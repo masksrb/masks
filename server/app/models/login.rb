@@ -8,6 +8,7 @@ class Login
     LoginStates::Signup,
     LoginStates::Password,
     LoginStates::FirstFactor,
+    LoginStates::Suspension,
     LoginStates::OneTimePassword,
     LoginStates::BackupCode,
     LoginStates::SecondFactor,

@@ -44,6 +44,7 @@
     query Actor($uuid: ID!) {
       actor(uuid: $uuid) {
         uuid identifier nickname email emailVerified phone phoneVerified signedUpAt pendingApproval
+        suspendedAt externalId
         scopes otpEnabled backupCodesRemaining
         backupCodesGeneratedAt lastLoginAt createdAt activated invitedAt
         passkeys { id label aaguid certification compromise userVerified lastUsedAt }
@@ -240,6 +241,28 @@
     );
   }
 
+  function suspend() {
+    const question =
+      `Suspend ${actor.identifier}? They are signed out everywhere, every token they hold stops working, ` +
+      "and they cannot sign in until they are restored.";
+
+    if (!confirm(question)) return;
+
+    act(
+      `mutation Suspend($uuid: ID!) { suspendActor(uuid: $uuid) { actor { suspendedAt } } }`,
+      { uuid },
+      "Suspended.",
+    );
+  }
+
+  function restore() {
+    act(
+      `mutation Restore($uuid: ID!) { restoreActor(uuid: $uuid) { actor { suspendedAt } } }`,
+      { uuid },
+      "Restored. They can sign in again.",
+    );
+  }
+
   async function remove() {
     const question =
       `Delete ${actor.identifier}? Their sessions, tokens, passkeys, consents and avatar go with them. ` +
@@ -384,6 +407,19 @@
         </Card>
 
         <Card title="Access">
+          {#if actor.suspendedAt}
+            <div class="alert alert-warning alert-soft flex-wrap items-center gap-3 text-sm" role="status">
+              <span>Suspended {day(actor.suspendedAt)}. They cannot sign in.</span>
+              <button type="button" class="btn btn-sm" onclick={restore}>Restore</button>
+            </div>
+          {/if}
+
+          {#if actor.externalId}
+            <p class="text-xs opacity-60">
+              Provisioned as <span class="font-mono">{actor.externalId}</span>. The identity provider may change or
+              suspend this person too.
+            </p>
+          {/if}
           {#if actor.activated}
             <button type="button" class="btn btn-sm self-start" onclick={reset}>
               Reset password
@@ -499,10 +535,15 @@
           <Events events={actor.events} showActor={false} empty="Nothing yet." />
         </Card>
 
-        <Card title="Delete">
+        <Card title="Suspend or delete">
           {#if yourself}
             <p class="text-sm opacity-70">This is you — another manager has to do it.</p>
           {:else}
+            {#if !actor.suspendedAt}
+              <button type="button" class="btn btn-sm btn-warning btn-outline self-start" onclick={suspend}>
+                Suspend {actor.identifier}
+              </button>
+            {/if}
             <button
               type="button"
               class="btn btn-sm btn-error btn-outline self-start"

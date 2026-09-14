@@ -61,6 +61,21 @@ Rails.application.routes.draw do
   put "/register/:client_id", to: "registrations#update"
   delete "/register/:client_id", to: "registrations#destroy"
 
+  scope "/scim/v2", module: :scim, defaults: { format: :json } do
+    get "ServiceProviderConfig", to: "metadata#service_provider_config"
+    get "ResourceTypes", to: "metadata#resource_types"
+    get "ResourceTypes/:id", to: "metadata#resource_type"
+    get "Schemas", to: "metadata#schemas"
+    get "Schemas/:id", to: "metadata#schema", constraints: { id: /[^\/]+/ }
+
+    get "Users", to: "users#index"
+    post "Users", to: "users#create"
+    get "Users/:id", to: "users#show"
+    put "Users/:id", to: "users#replace"
+    patch "Users/:id", to: "users#update"
+    delete "Users/:id", to: "users#destroy"
+  end
+
   post "/manage/graphql", to: "manage/graphql#execute", as: :manage_graphql
   get "/manage(/*path)", to: "manage#index", as: :manage
 

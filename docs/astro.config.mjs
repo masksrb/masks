@@ -70,6 +70,7 @@ export default defineConfig({
           { label: "Actors", slug: "concepts/actors" },
           { label: "Clients", slug: "concepts/clients" },
           { label: "Providers", slug: "concepts/providers" },
+          { label: "Provisioning", slug: "concepts/provisioning" },
           { label: "Delegation", slug: "concepts/delegation" },
           { label: "Exchanging a token", slug: "concepts/exchange" },
           { label: "Pushed requests", slug: "concepts/pushing" },
