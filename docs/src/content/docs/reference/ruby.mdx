@@ -923,19 +923,29 @@ Inherits `Masks::Client::Error`.
 | Constant | Value |
 | --- | --- |
 | `DEFAULT_SCOPE` | `%w[openid profile email].freeze` |
+| `ASSERTION_TYPE` | `"urn:ietf:params:oauth:client-assertion-type:jwt-bearer".freeze` |
+| `ASSERTION_LIFETIME` | `60` |
 
 | Attribute | Access |
 | --- | --- |
 | `client_id` | R |
 | `client_secret` | R |
 | `issuer` | R |
+| `key_id` | R |
+| `private_key` | R |
 | `redirect_uri` | R |
 | `scope` | R |
 
 ### ::new
 
 ```ruby
-::new(issuer:, client_id:, redirect_uri:, client_secret: nil, scope: DEFAULT_SCOPE)
+::new(issuer:, client_id:, redirect_uri: nil, client_secret: nil, private_key: nil, key_id: nil, scope: DEFAULT_SCOPE)
+```
+
+### #client_credentials
+
+```ruby
+#client_credentials(scope: nil, resource: nil)
 ```
 
 ### #complete
@@ -953,7 +963,7 @@ Inherits `Masks::Client::Error`.
 ### #exchange
 
 ```ruby
-#exchange(subject_token, scope: nil, resource: nil, lifetime: nil, requested_token_type: nil, audience: nil)
+#exchange(subject_token, scope: nil, resource: nil, lifetime: nil, requested_token_type: nil, audience: nil, subject_token_type: Tokens::ACCESS_TOKEN, actor_token: nil, actor_token_type: Tokens::ACCESS_TOKEN)
 ```
 
 ### #identity
@@ -1056,6 +1066,7 @@ Inherits `Masks::Client::Error`.
 | --- | --- |
 | `EXCHANGE` | `"urn:ietf:params:oauth:grant-type:token-exchange".freeze` |
 | `ACCESS_TOKEN` | `"urn:ietf:params:oauth:token-type:access_token".freeze` |
+| `ID_TOKEN` | `"urn:ietf:params:oauth:token-type:id_token".freeze` |
 
 | Attribute | Access |
 | --- | --- |
@@ -1247,6 +1258,9 @@ Inherits `Masks::Client::Rejected`.
 | Constant | Value |
 | --- | --- |
 | `ALGORITHMS` | `%w[RS256 ES256].freeze` |
+| `ACCESS_TOKEN` | `"at+jwt".freeze` |
+| `LOGOUT_TOKEN` | `"logout+jwt".freeze` |
+| `ID_TOKEN` | `[ "jwt", nil ].freeze` |
 
 | Attribute | Access |
 | --- | --- |
@@ -1268,5 +1282,5 @@ Inherits `Masks::Client::Rejected`.
 ### #verify
 
 ```ruby
-#verify(token, required: %w[iss sub exp])
+#verify(token, required: %w[iss sub exp], typ: ID_TOKEN)
 ```
