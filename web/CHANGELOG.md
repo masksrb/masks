@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.0.0](https://github.com/masksrb/masks/compare/client-v2.2.0...client-v3.0.0) (2026-09-14)
+
+
+### ⚠ BREAKING CHANGES
+
+* a resource server on an older gem still accepts the new tokens, but this gem refuses access tokens from a server that does not type them.
+
+### Features
+
+* an access token is typed at+jwt, and nothing takes a token of another type in its place ([d0b4cfd](https://github.com/masksrb/masks/commit/d0b4cfdf802053359695495d417225e3a1578302))
+* **client:** the session says where the person manages their account, as account_url ([1d36e1d](https://github.com/masksrb/masks/commit/1d36e1d4daa8c5acfc9133a1896aa9384771dbd6))
+
 ## [2.2.0](https://github.com/masksrb/masks/compare/client-v2.1.0...client-v2.2.0) (2026-09-13)
 
 
