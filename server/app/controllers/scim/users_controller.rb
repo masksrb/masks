@@ -8,13 +8,13 @@ module Scim
       relation = Scim::Filter.apply(Actor.all, params[:filter])
       start = [ params[:startIndex].to_i, 1 ].max
       count = params[:count].present? ? params[:count].to_i.clamp(0, Scim::MAX_RESULTS) : DEFAULT_COUNT
-      actors = relation.order(:created_at, :id).offset(start - 1).limit(count)
+      actors = relation.order(:created_at, :id).offset(start - 1).limit(count).to_a
 
       scim({
         "schemas" => [ Scim::LIST ],
         "totalResults" => relation.count,
         "startIndex" => start,
-        "itemsPerPage" => actors.size,
+        "itemsPerPage" => actors.length,
         "Resources" => actors.map { |actor| represent(actor) }
       })
     end
@@ -27,13 +27,7 @@ module Scim
     end
 
     def create
-      actor = Actor.new
-      user = Scim::User.new(actor)
-
-      raise Scim::Error.new(:bad_request, "userName is required", scim_type: "invalidValue") if document["userName"].blank?
-
-      user.merge(document)
-      settle!(user, Event::ACTOR_PROVISIONED)
+      actor = settle!(Scim::User.new(Actor.new).replace(document), Event::ACTOR_PROVISIONED)
 
       response.headers["Location"] = "#{scim_base}/Users/#{actor.uuid}"
       scim(represent(actor), status: :created)
@@ -104,6 +98,8 @@ module Scim
         end
 
         Event.record!(action, actor: actor, by: nil, via: "scim", external_id: actor.external_id)
+
+        actor
       rescue ActiveRecord::RecordInvalid => e
         taken = e.record.errors.details.values.flatten.any? { |detail| detail[:error] == :taken }
 
@@ -135,8 +131,7 @@ module Scim
       end
 
       def last_manager!(actor)
-        return unless actor.persisted? && actor.manages?
-        return if Actor.holding(Scopes::MANAGE).where(suspended_at: nil).where.not(id: actor.id).exists?
+        return unless actor.last_manager?
 
         raise Scim::Error.new(:conflict, "#{actor.identifier} is the last person who manages masks here", scim_type: "mutability")
       end

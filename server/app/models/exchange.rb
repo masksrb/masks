@@ -113,7 +113,7 @@ class Exchange
     return available_scopes if requested_scopes.empty? && subject.access_token?
     return requested_scopes if requested_scopes.any?
 
-    Scopes.list(available_scopes).reject { |scope| Scopes.prefix?(scope) }
+    Scopes.concrete(available_scopes)
   end
 
   def granted_audience

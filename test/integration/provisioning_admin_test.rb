@@ -10,22 +10,10 @@ class ProvisioningAdminTest < ActionDispatch::IntegrationTest
                                       approved_at: Time.current, grant_types: [ "authorization_code" ])
   end
 
-  def bearer
-    @bearer ||= begin
-      sign_in_as(@manager)
-      authorize(client_id: @console.client_id, scope: "openid masks:manage", resource: issuer_for(@tenant).manage_resource)
-      consent! if awaiting_consent?
-
-      token(grant_type: "authorization_code", code: code_from, redirect_uri: OidcFlow::REDIRECT_URI,
-            code_verifier: verifier, client_id: @console.client_id)["access_token"]
-    end
-  end
-
   def ask(query, **variables)
-    post "/manage/graphql", params: { query: query, variables: variables }.to_json,
-                            headers: { "CONTENT_TYPE" => "application/json", "HTTP_AUTHORIZATION" => "Bearer #{bearer}" }
+    @bearer ||= manage_bearer(@manager, @console)
 
-    JSON.parse(response.body)
+    manage(query, bearer: @bearer, **variables)
   end
 
   test "a manager issues a provisioning token, sees it listed, and revokes it" do
@@ -100,6 +88,13 @@ class ProvisioningAdminTest < ActionDispatch::IntegrationTest
     assert created["samlRequestsSigned"]
     assert_empty created["grantTypes"]
     assert_equal "manager", created.dig("approvedBy", "identifier")
+
+    again = ask(<<~GRAPHQL, entityId: " #{read['entityId']} ", acsUrls: read["acsUrls"])
+      mutation($entityId: String!, $acsUrls: [String!]!) {
+        createSamlApplication(name: "Wiki again", entityId: $entityId, acsUrls: $acsUrls) { client { clientId } }
+      }
+    GRAPHQL
+    assert_match "already been taken", again["errors"].first["message"]
 
     refused = ask("mutation { readSamlApplicationMetadata(xml: \"<!DOCTYPE x [<!ENTITY e SYSTEM 'file:///etc/passwd'>]><x>&e;</x>\") { entityId } }")
     assert_match "document type", refused["errors"].first["message"]

@@ -49,8 +49,9 @@ A request is refused on an error page here, and never posted anywhere, when:
 - it was made more than eight minutes ago, or is addressed to another `Destination`
 - it has been answered once already
 - the application signs its requests and this one's signature — on the query string for a redirect,
-  enveloped in the XML for a post — does not verify with SHA-256 or stronger, or any `ID` in it
-  appears twice
+  enveloped in the XML for a post — does not verify with SHA-256 or stronger, carries a second
+  signature anywhere inside it, or any `ID` in it appears twice
+- any parameter is sent twice, or the request inflates past 64 KB
 - it declares a document type, which is how external entities get in
 
 `ForceAuthn` asks for the password again. `IsPassive` answers `NoPassive` rather than showing anybody
@@ -68,8 +69,10 @@ Attributes are released as their claim names — `email`, `name`, `given_name`, 
 `preferred_username` — unless the application's `samlAttributes` maps its own names to claims. Only
 claims the person's `openid profile email` consent covers are released.
 
-The page that posts the assertion carries a content security policy that lets its one script run
-and its one form go only to the application's origin.
+An email is only ever released once the person has confirmed it — as an attribute, or as the NameID
+when the application asks to name people by email — because most applications match accounts by
+email, and an unconfirmed one is how somebody walks into another person's account there. The page
+that posts the assertion carries a content security policy that lets only its one script run.
 
 ## Not yet
 

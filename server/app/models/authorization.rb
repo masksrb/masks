@@ -53,7 +53,7 @@ class Authorization
   end
 
   def client
-    @client ||= saml? ? Client.active.saml.find_by(client_id: client_id) : Client.authenticating(client_id)
+    @client ||= Client.authenticating(client_id, protocol: saml? ? SamlIdentity::PROTOCOL : Client::OIDC)
   end
 
   def saml?

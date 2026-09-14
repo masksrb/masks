@@ -23,7 +23,7 @@ module Manage
           client_id: SecureRandom.uuid,
           name: name,
           grant_types: grant_types,
-          response_types: (grant_types & ::Client::REDIRECTED_GRANT_TYPES).any? ? [ "code" ] : [],
+          response_types: ::Client.response_types_for(grant_types),
           required_scopes: Scopes.join(required_scopes),
           allowed_scopes: Scopes.join(allowed_scopes),
           token_endpoint_auth_method: token_endpoint_auth_method,

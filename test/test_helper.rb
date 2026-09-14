@@ -228,6 +228,22 @@ module OidcFlow
     code_from
   end
 
+  def manage_bearer(actor, console)
+    sign_in_as(actor)
+    authorize(client_id: console.client_id, scope: "openid masks:manage", resource: issuer_for(console.tenant).manage_resource)
+    consent! if awaiting_consent?
+
+    token(grant_type: "authorization_code", code: code_from, redirect_uri: REDIRECT_URI,
+          code_verifier: verifier, client_id: console.client_id)["access_token"]
+  end
+
+  def manage(query, bearer:, **variables)
+    post "/manage/graphql", params: { query: query, variables: variables }.to_json,
+                            headers: { "CONTENT_TYPE" => "application/json", "HTTP_AUTHORIZATION" => "Bearer #{bearer}" }
+
+    JSON.parse(response.body)
+  end
+
   def access_token_for(actor:, registration:, resource: nil, **params)
     code = authorized_code(actor: actor, registration: registration, resource: resource)
 

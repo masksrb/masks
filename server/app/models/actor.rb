@@ -179,10 +179,14 @@ class Actor < ApplicationRecord
     transaction do
       update!(suspended_at: Time.current)
       sign_out_everywhere!
-      Token.where(actor_id: id).live.find_each(&:consume!)
+      Token.where(actor_id: id).live.update_all(consumed_at: Time.current, updated_at: Time.current)
     end
 
     self
+  end
+
+  def last_manager?
+    persisted? && manages? && !Actor.holding(Scopes::MANAGE).where(suspended_at: nil).where.not(id: id).exists?
   end
 
   def restore!

@@ -43,7 +43,7 @@ module Manage
         end
 
         client.assign_attributes(attributes)
-        client.response_types = (client.grant_types & ::Client::REDIRECTED_GRANT_TYPES).any? ? [ "code" ] : [] if attributes.key?(:grant_types)
+        client.response_types = client.default_response_types if attributes.key?(:grant_types)
         client.required_scopes = Scopes.join(required_scopes) unless required_scopes.nil?
         client.allowed_scopes = Scopes.join(allowed_scopes) unless allowed_scopes.nil?
 

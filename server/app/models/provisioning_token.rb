@@ -1,10 +1,6 @@
 class ProvisioningToken < Token
   LONGEST = 1.year
 
-  def self.lifetime
-    LONGEST
-  end
-
   def self.issue!(label:, by:, expires_in: nil)
     lifetime = [ expires_in&.seconds || LONGEST, LONGEST ].min
 

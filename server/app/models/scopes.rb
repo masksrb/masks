@@ -78,6 +78,10 @@ module Scopes
       scope.to_s.delete_prefix(DELEGATE).presence if scope.to_s.start_with?(DELEGATE)
     end
 
+    def concrete(value)
+      list(value).reject { |scope| prefix?(scope) }
+    end
+
     def unattended(value)
       list(value).reject { |scope| PERSONAL.include?(scope) || scope.start_with?(DELEGATE) }
     end

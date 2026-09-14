@@ -155,25 +155,15 @@ class ClientCredentialsTest < ActionDispatch::IntegrationTest
     console = create_client(@tenant, name: "Console", allowed_scopes: "openid masks:manage",
                                      approved_at: Time.current, grant_types: [ "authorization_code" ])
 
-    sign_in_as(manager)
-    authorize(client_id: console.client_id, scope: "openid masks:manage",
-              resource: issuer_for(@tenant).manage_resource)
-    consent! if awaiting_consent?
-    bearer = token(grant_type: "authorization_code", code: code_from, redirect_uri: OidcFlow::REDIRECT_URI,
-                   code_verifier: verifier, client_id: console.client_id)["access_token"]
-
-    post "/manage/graphql",
-         params: {
-           query: "mutation Add($name: String!, $resources: [String!], $allowedScopes: [String!]) {
-             createClient(name: $name, resources: $resources, allowedScopes: $allowedScopes) {
-               secret client { clientId grantTypes responseTypes approvedBy { identifier } }
-             }
-           }",
-           variables: { name: "Nightly", resources: [ RESOURCE ], allowedScopes: [ "uris:catalog:read" ] }
-         }.to_json,
-         headers: { "CONTENT_TYPE" => "application/json", "HTTP_AUTHORIZATION" => "Bearer #{bearer}" }
-
-    created = JSON.parse(response.body).dig("data", "createClient")
+    created = manage(
+      "mutation Add($name: String!, $resources: [String!], $allowedScopes: [String!]) {
+        createClient(name: $name, resources: $resources, allowedScopes: $allowedScopes) {
+          secret client { clientId grantTypes responseTypes approvedBy { identifier } }
+        }
+      }",
+      bearer: manage_bearer(manager, console),
+      name: "Nightly", resources: [ RESOURCE ], allowedScopes: [ "uris:catalog:read" ]
+    ).dig("data", "createClient")
 
     assert_equal [ GRANT ], created.dig("client", "grantTypes")
     assert_empty created.dig("client", "responseTypes")

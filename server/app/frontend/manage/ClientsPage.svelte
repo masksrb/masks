@@ -129,49 +129,46 @@
     draft.requestsSigned = read.requestsSigned;
   }
 
-  async function sendSaml() {
-    busy = true;
+  function request() {
+    if (draft.kind === "saml") {
+      return [
+        SAML,
+        {
+          name: draft.name.trim(),
+          entityId: draft.entityId.trim(),
+          acsUrls: lines(draft.redirects),
+          certificate: draft.certificate.trim() || null,
+          requestsSigned: draft.requestsSigned,
+        },
+        "createSamlApplication",
+      ];
+    }
 
-    const data = await feedback.attempt(() =>
-      api.query(SAML, {
-        name: draft.name.trim(),
-        entityId: draft.entityId.trim(),
-        acsUrls: lines(draft.redirects),
-        certificate: draft.certificate.trim() || null,
-        requestsSigned: draft.requestsSigned,
-      }),
-    );
-
-    busy = false;
-
-    if (!data) return;
-
-    created = data.createSamlApplication;
-    adding = false;
-
-    again();
-  }
-
-  async function send() {
-    if (draft.kind === "saml") return sendSaml();
-
-    busy = true;
-
-    const data = await feedback.attempt(() =>
-      api.query(CREATE, {
+    return [
+      CREATE,
+      {
         name: draft.name.trim(),
         grantTypes: KINDS.find(([key]) => key === draft.kind)[2],
         redirectUris: draft.kind === "app" ? lines(draft.redirects) : [],
         resources: lines(draft.resources),
         allowedScopes: draft.scopes,
-      }),
-    );
+      },
+      "createClient",
+    ];
+  }
+
+  async function send() {
+    const [document, variables, key] = request();
+
+    busy = true;
+
+    const data = await feedback.attempt(() => api.query(document, variables));
 
     busy = false;
 
     if (!data) return;
 
-    created = data.createClient;
+    created = data[key];
     adding = false;
 
     again();

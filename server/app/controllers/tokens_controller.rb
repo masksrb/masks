@@ -134,14 +134,10 @@ class TokensController < ApplicationController
         expires_at: RefreshToken.lifetime.from_now
       )
 
-      res.access_token = Payload.new({
-        "access_token" => access.jwt,
-        "token_type" => access.token_type,
-        "expires_in" => access.expires_in,
-        "scope" => Scopes.join(scopes),
+      res.access_token = Payload.new(bearer(access).merge(
         "refresh_token" => rotated.secret,
         "delegations" => delegated(token.actor, client, scopes)
-      }.compact)
+      ).compact)
     end
 
     def replayed!(spent, client)
@@ -205,13 +201,7 @@ class TokensController < ApplicationController
 
       access = exchange.issue!(jkt: jkt)
 
-      res.access_token = Payload.new(
-        "access_token" => access.jwt,
-        "issued_token_type" => Exchange::ACCESS_TOKEN,
-        "token_type" => access.token_type,
-        "expires_in" => access.expires_in,
-        "scope" => Scopes.join(access.scopes)
-      )
+      res.access_token = Payload.new(bearer(access).merge("issued_token_type" => Exchange::ACCESS_TOKEN))
     end
 
     def client_credentials(req, res, client)
@@ -227,43 +217,29 @@ class TokensController < ApplicationController
         req.bad_request!(:invalid_scope, "this client may not ask for #{refused.join(', ')} on its own behalf")
       end
 
-      scopes = requested.presence || available.reject { |scope| Scopes.prefix?(scope) }
+      scopes = requested.presence || Scopes.concrete(available)
 
       req.bad_request!(:invalid_scope, "this client has no scope it may hold on its own behalf") if scopes.empty?
 
       access = AccessToken.issue!(
         issuer: issuer, actor: nil, client: client,
-        scopes: scopes, audience: unattended_audience(req, client), jkt: jkt
+        scopes: scopes, audience: narrow(req, client.resources, client), jkt: jkt
       )
 
-      res.access_token = Payload.new(
-        "access_token" => access.jwt,
-        "token_type" => access.token_type,
-        "expires_in" => access.expires_in,
-        "scope" => Scopes.join(access.scopes)
-      )
+      res.access_token = Payload.new(bearer(access))
     end
 
-    def unattended_audience(req, client)
-      requested = repeated("resource")
-      held = client.resources.presence || [ client.client_id ]
-
-      return held if requested.empty?
-
-      refused = requested - held
-
-      req.bad_request!(:invalid_target, "resource is not one this client speaks for: #{refused.join(', ')}") if refused.any?
-
-      requested
-    end
-
-    def issued(access, grant, client)
-      body = {
+    def bearer(access)
+      {
         "access_token" => access.jwt,
         "token_type" => access.token_type,
         "expires_in" => access.expires_in,
         "scope" => Scopes.join(access.scopes)
       }
+    end
+
+    def issued(access, grant, client)
+      body = bearer(access)
 
       if access.scope_list.include?(Scopes::OPENID)
         body["id_token"] = issuer.id_token(

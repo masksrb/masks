@@ -24,7 +24,7 @@ class SamlController < ApplicationController
   end
 
   def initiate
-    client = Client.active.saml.find_by(client_id: params[:client_id].to_s)
+    client = Client.authenticating(params[:client_id], protocol: SamlIdentity::PROTOCOL)
 
     raise SamlIdentity::Refused, "no application is registered here with that id" if client.nil?
     raise SamlIdentity::Refused, "#{client.name} is only signed into from its own sign-in page" unless client.saml_idp_initiated?
@@ -133,17 +133,10 @@ class SamlController < ApplicationController
       @script_nonce = SecureRandom.base64(16)
 
       response.headers["Content-Security-Policy"] =
-        "default-src 'self'; script-src 'nonce-#{@script_nonce}'; form-action #{form_origin(@destination)}; frame-ancestors 'none'"
+        "default-src 'self'; script-src 'nonce-#{@script_nonce}'; frame-ancestors 'none'"
       response.headers["Cache-Control"] = "no-store"
 
       render :post
-    end
-
-    def form_origin(url)
-      uri = URI.parse(url)
-      port = ":#{uri.port}" unless uri.port == uri.default_port
-
-      "#{uri.scheme}://#{uri.host}#{port}"
     end
 
     def refuse(description, status: :bad_request)

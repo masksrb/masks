@@ -2,6 +2,8 @@ module ScimEndpoint
   extend ActiveSupport::Concern
 
   included do
+    include ResourceToken
+
     skip_forgery_protection
 
     rate_limit to: 600, within: 1.minute,
@@ -14,16 +16,14 @@ module ScimEndpoint
 
   private
 
-    attr_reader :provisioner
-
     def require_provisioner
-      secret = request.authorization.to_s[/\ABearer[ \t]+(\S+)\z/i, 1]
+      scheme, secret = credentials
 
-      raise Scim::Error.new(:unauthorized, "a bearer token is required") if secret.blank?
+      raise Scim::Error.new(:unauthorized, "a bearer token is required") unless scheme.to_s.casecmp?("Bearer") && secret.present?
 
-      @provisioner = provisioning_token(secret) || scim_access_token(secret)
+      return if provisioning_token(secret) || scim_access_token(secret)
 
-      raise Scim::Error.new(:unauthorized, "that token is not one this tenant provisions with") if provisioner.nil?
+      raise Scim::Error.new(:unauthorized, "that token is not one this tenant provisions with")
     end
 
     def provisioning_token(secret)
@@ -31,14 +31,9 @@ module ScimEndpoint
     end
 
     def scim_access_token(secret)
-      token = AccessToken.live.find_by(digest: AccessToken.decode(secret, issuer: issuer)["jti"])
+      token = held_token(secret)
 
-      return nil if token.nil? || token.bound?
-      return nil unless token.scope_list.include?(Scopes::SCIM) && token.audience.include?(scim_base)
-
-      token
-    rescue JWT::DecodeError
-      nil
+      token if token && !token.bound? && token.scope_list.include?(Scopes::SCIM) && token.audience.include?(scim_base)
     end
 
     def scim_base

@@ -50,7 +50,7 @@
     const done = await feedback.attempt(() =>
       api.query(
         `mutation Issue($label: String!, $expiresIn: Int) {
-          issueProvisioningToken(label: $label, expiresIn: $expiresIn) { secret provisioningToken { label } }
+          issueProvisioningToken(label: $label, expiresIn: $expiresIn) { secret }
         }`,
         { label: label.trim() || "Provisioning", expiresIn: lifetime * DAY },
       ),

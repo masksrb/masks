@@ -3,11 +3,7 @@ module Federation
     CLOCK_DRIFT = 60.seconds
     METADATA_LIMIT = 512.kilobytes
     NAME_ID = "name_id".freeze
-    NAME_ID_FORMATS = %w[
-      urn:oasis:names:tc:SAML:2.0:nameid-format:persistent
-      urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress
-      urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified
-    ].freeze
+    NAME_ID_FORMATS = SamlIdentity::NAME_ID_FORMATS
 
     class << self
       def parse_metadata(xml)

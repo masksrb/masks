@@ -1,10 +1,8 @@
 module SamlIdentity
   class Request
-    SIGNATURE_ALGORITHMS = {
-      "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256" => "SHA256",
-      "http://www.w3.org/2001/04/xmldsig-more#rsa-sha384" => "SHA384",
-      "http://www.w3.org/2001/04/xmldsig-more#rsa-sha512" => "SHA512"
-    }.freeze
+    SIGNATURE_ALGORITHMS = [
+      XMLSecurity::Document::RSA_SHA256, XMLSecurity::Document::RSA_SHA384, XMLSecurity::Document::RSA_SHA512
+    ].freeze
 
     attr_reader :client, :id, :acs_url, :relay_state, :name_id_format, :force_authn, :passive
 
@@ -15,17 +13,17 @@ module SamlIdentity
     def initialize(request, issuer:)
       @request = request
       @issuer = issuer
-      @relay_state = request.params["RelayState"].presence
+      @relay_state = carried("RelayState").presence
     end
 
     def read!
-      raw = request.params["SAMLRequest"].to_s
+      raw = carried("SAMLRequest").to_s
 
       raise Refused, "a SAMLRequest is required" if raw.blank?
       raise Refused, "that SAMLRequest is too large" if raw.bytesize > LIMIT
 
       @xml = decode(raw)
-      document = parse(@xml)
+      document = SamlIdentity.parse!(@xml, what: "that SAMLRequest")
       root = document.root
 
       raise Refused, "that is not an AuthnRequest" unless root&.name == "AuthnRequest" && root.namespace&.href == PROTOCOL_NS
@@ -56,6 +54,19 @@ module SamlIdentity
         request.get?
       end
 
+      def raw_query
+        @raw_query ||= request.query_string.split("&").each_with_object({}) do |pair, held|
+          name, value = pair.split("=", 2)
+          raise Refused, "#{CGI.unescape(name.to_s)} is sent more than once" if held.key?(CGI.unescape(name.to_s))
+
+          held[CGI.unescape(name.to_s)] = value.to_s
+        end
+      end
+
+      def carried(name)
+        redirect? ? raw_query[name]&.then { |value| CGI.unescape(value) } : request.request_parameters[name]
+      end
+
       def decode(raw)
         bytes = Base64.decode64(raw)
         xml = bytes.lstrip.start_with?("<") ? bytes : inflate(bytes)
@@ -69,23 +80,18 @@ module SamlIdentity
 
       def inflate(bytes)
         inflater = Zlib::Inflate.new(-Zlib::MAX_WBITS)
-        inflated = inflater.inflate(bytes)
+        inflated = +""
 
-        raise Refused, "that SAMLRequest is too large" if inflated.bytesize > LIMIT
+        inflater.inflate(bytes) do |chunk|
+          inflated << chunk
+          raise Refused, "that SAMLRequest is too large" if inflated.bytesize > LIMIT
+        end
 
         inflated
       rescue Zlib::Error
         raise Refused, "that SAMLRequest could not be read"
       ensure
         inflater&.close
-      end
-
-      def parse(xml)
-        raise Refused, "a SAMLRequest may not declare a document type" if xml.match?(/<!DOCTYPE/i)
-
-        Nokogiri::XML(xml) { |config| config.strict.nonet }
-      rescue Nokogiri::XML::SyntaxError
-        raise Refused, "that SAMLRequest is not well-formed XML"
       end
 
       def registered(document)
@@ -144,33 +150,35 @@ module SamlIdentity
       end
 
       def query_signed!(certificate)
-        pairs = request.query_string.split("&").to_h { |pair| pair.split("=", 2) }
-        algorithm = SIGNATURE_ALGORITHMS[CGI.unescape(pairs["SigAlg"].to_s)]
+        algorithm = CGI.unescape(raw_query["SigAlg"].to_s)
 
-        raise Refused, "a signed redirect carries SigAlg with SHA-256 or stronger" if algorithm.nil?
-        raise Refused, "a signed redirect carries a Signature" if pairs["Signature"].blank?
+        raise Refused, "a signed redirect carries SigAlg with SHA-256 or stronger" unless SIGNATURE_ALGORITHMS.include?(algorithm)
+        raise Refused, "a signed redirect carries a Signature" if raw_query["Signature"].blank?
 
-        signed = [ "SAMLRequest=#{pairs['SAMLRequest']}", ("RelayState=#{pairs['RelayState']}" if pairs.key?("RelayState")),
-                   "SigAlg=#{pairs['SigAlg']}" ].compact.join("&")
-        signature = Base64.decode64(CGI.unescape(pairs["Signature"]))
+        signed = OneLogin::RubySaml::Utils.build_query_from_raw_parts(
+          type: "SAMLRequest", raw_data: raw_query["SAMLRequest"], raw_relay_state: raw_query["RelayState"],
+          raw_sig_alg: raw_query["SigAlg"]
+        )
 
-        return if certificate.public_key.verify(OpenSSL::Digest.new(algorithm), signature, signed)
+        verified = OneLogin::RubySaml::Utils.verify_signature(
+          cert: certificate, sig_alg: algorithm, signature: CGI.unescape(raw_query["Signature"]), query_string: signed
+        )
 
-        raise Refused, "that AuthnRequest's signature does not verify"
+        raise Refused, "that AuthnRequest's signature does not verify" unless verified
       rescue OpenSSL::PKey::PKeyError
         raise Refused, "that AuthnRequest's signature does not verify"
       end
 
       def document_signed!(document, certificate)
-        signatures = document.xpath("/samlp:AuthnRequest/ds:Signature", "samlp" => PROTOCOL_NS, "ds" => DSIG_NS)
+        signatures = document.xpath("//ds:Signature", "ds" => DSIG_NS)
 
-        raise Refused, "a signed AuthnRequest carries one Signature of its own" unless signatures.one?
+        raise Refused, "a signed AuthnRequest carries exactly one Signature, its own" unless signatures.one? && signatures.first.parent == document.root
 
         reference = signatures.first.at_xpath("ds:SignedInfo/ds:Reference", "ds" => DSIG_NS)&.[]("URI")
         raise Refused, "that signature covers something other than the request" unless reference == "##{id}"
 
         algorithm = signatures.first.at_xpath("ds:SignedInfo/ds:SignatureMethod", "ds" => DSIG_NS)&.[]("Algorithm")
-        raise Refused, "a signed AuthnRequest uses SHA-256 or stronger" unless SIGNATURE_ALGORITHMS.key?(algorithm)
+        raise Refused, "a signed AuthnRequest uses SHA-256 or stronger" unless SIGNATURE_ALGORITHMS.include?(algorithm)
 
         verified = XMLSecurity::SignedDocument.new(xml).validate_document_with_cert(certificate, true)
 
@@ -178,9 +186,7 @@ module SamlIdentity
       end
 
       def once!
-        key = "saml-request:#{client.tenant_id}:#{client.id}:#{Digest::SHA256.hexdigest(id)}"
-
-        return if Rails.cache.write(key, true, expires_in: LIFETIME + (CLOCK_SKEW * 2), unless_exist: true)
+        return if Replay.first?("saml-request", id, within: client.id, expires_in: LIFETIME + (CLOCK_SKEW * 2))
 
         raise Refused, "that AuthnRequest has already been answered"
       end

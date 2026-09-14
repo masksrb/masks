@@ -7,6 +7,8 @@ class ClientKeys
   SECRET = %w[d p q dp dq qi k].freeze
   ALGORITHMS = %w[RS256 RS384 RS512 PS256 PS384 PS512 ES256 ES384 ES512].freeze
   KINDS = %w[RSA EC].freeze
+  LEEWAY = 30
+  LONGEST = 1.hour
 
   class << self
     def check!(value)
@@ -71,10 +73,6 @@ class ClientKeys
     client.jwks.blank? && client.jwks_uri.present?
   end
 
-  def any?
-    client.jwks.present? || client.jwks_uri.present?
-  end
-
   def decode(token, subject: "that token")
     header = JWT.decode(token.to_s, nil, false).last
     algorithm = header["alg"].to_s
@@ -82,14 +80,37 @@ class ClientKeys
     raise Refused, "#{algorithm.presence || 'that'} is not an algorithm #{subject} may be signed with" unless ALGORITHMS.include?(algorithm)
 
     verified = attempt(token, header, algorithm, fresh: false)
-    verified ||= attempt(token, header, algorithm, fresh: true) if remote?
+    verified ||= attempt(token, header, algorithm, fresh: true) if remote? && unknown_kid?(header)
 
     verified || raise(Refused, "#{subject} was not signed by a key this client registered")
   rescue JWT::DecodeError
     raise Refused, "#{subject} is not a readable JWT"
   end
 
+  def timely!(claims, subject:)
+    now = Time.current.to_i
+    expires = claims["exp"]
+
+    raise Refused, "#{subject} must say when it expires" unless expires.is_a?(Numeric)
+    raise Refused, "#{subject} has expired" if expires < now - LEEWAY
+    raise Refused, "#{subject} lives longer than #{LONGEST.inspect}" if expires > now + LONGEST.to_i + LEEWAY
+    raise Refused, "#{subject} was made in the future" if claims["iat"].is_a?(Numeric) && claims["iat"] > now + LEEWAY
+    raise Refused, "#{subject} is not valid yet" if claims["nbf"].is_a?(Numeric) && claims["nbf"] > now + LEEWAY
+  end
+
+  def once!(claims, kind:, subject:)
+    remaining = [ claims["exp"].to_i - Time.current.to_i + LEEWAY, LEEWAY ].max
+
+    raise Refused, "#{subject} has already been used" unless Replay.first?(kind, claims["jti"], within: client.id, expires_in: remaining)
+  end
+
   private
+
+    def unknown_kid?(header)
+      kid = header["kid"].presence
+
+      kid.nil? || keys.none? { |jwk| jwk.is_a?(Hash) && jwk["kid"] == kid }
+    end
 
     def attempt(token, header, algorithm, fresh:)
       candidates(header, fresh).each do |jwk|

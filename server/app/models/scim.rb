@@ -1,6 +1,5 @@
 module Scim
   USER = "urn:ietf:params:scim:schemas:core:2.0:User".freeze
-  ENTERPRISE_USER = "urn:ietf:params:scim:schemas:extension:enterprise:2.0:User".freeze
   LIST = "urn:ietf:params:scim:api:messages:2.0:ListResponse".freeze
   ERROR = "urn:ietf:params:scim:api:messages:2.0:Error".freeze
   PATCH = "urn:ietf:params:scim:api:messages:2.0:PatchOp".freeze

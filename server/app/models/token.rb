@@ -77,6 +77,10 @@ class Token < ApplicationRecord
     end
   end
 
+  def subject(issuer)
+    actor ? issuer.subject_for(actor, client) : root.client&.client_id
+  end
+
   def root
     held = self
     held = held.parent while held.parent

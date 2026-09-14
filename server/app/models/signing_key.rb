@@ -29,7 +29,7 @@ class SigningKey < ApplicationRecord
         private_pem: rsa.to_pem,
         public_jwk: jwk_for(rsa.public_key, kid),
         activated_at: (Time.current if activate)
-      )
+      ).tap(&:certificate)
     end
 
     def stage!(tenant:)
@@ -57,11 +57,11 @@ class SigningKey < ApplicationRecord
   end
 
   def certificate
-    return OpenSSL::X509::Certificate.new(certificate_pem) if certificate_pem.present?
-
-    issued = self_signed
-    update_column(:certificate_pem, issued.to_pem)
-    issued
+    @certificate ||= if certificate_pem.present?
+      OpenSSL::X509::Certificate.new(certificate_pem)
+    else
+      self_signed.tap { |issued| update_column(:certificate_pem, issued.to_pem) }
+    end
   end
 
   def sign(claims, typ: "JWT")

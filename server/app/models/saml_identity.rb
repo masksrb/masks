@@ -14,10 +14,8 @@ module SamlIdentity
 
   SUCCESS = "urn:oasis:names:tc:SAML:2.0:status:Success".freeze
   RESPONDER = "urn:oasis:names:tc:SAML:2.0:status:Responder".freeze
-  REQUESTER = "urn:oasis:names:tc:SAML:2.0:status:Requester".freeze
   REQUEST_DENIED = "urn:oasis:names:tc:SAML:2.0:status:RequestDenied".freeze
   NO_PASSIVE = "urn:oasis:names:tc:SAML:2.0:status:NoPassive".freeze
-  INVALID_NAME_ID_POLICY = "urn:oasis:names:tc:SAML:2.0:status:InvalidNameIDPolicy".freeze
 
   PASSWORD_CONTEXT = "urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport".freeze
   MFA_CONTEXT = "https://refeds.org/profile/mfa".freeze
@@ -36,6 +34,15 @@ module SamlIdentity
   LIMIT = 64.kilobytes
 
   class Refused < StandardError; end
+
+  def self.parse!(xml, what:)
+    raise Refused, "#{what} is too large" if xml.bytesize > LIMIT
+    raise Refused, "#{what} may not declare a document type" if xml.match?(/<!DOCTYPE/i)
+
+    Nokogiri::XML(xml) { |config| config.strict.nonet }
+  rescue Nokogiri::XML::SyntaxError
+    raise Refused, "#{what} is not well-formed XML"
+  end
 
   def self.sso_url(issuer)
     "#{issuer.url}/saml/sso"

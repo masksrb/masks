@@ -52,6 +52,23 @@ class Issuer
     key.sign(claims, typ: typ)
   end
 
+  def verify(token, typ:, required:, verify_expiration: true)
+    claims, header = JWT.decode(
+      token.to_s, nil, true,
+      algorithms: [ SigningKey::ALGORITHM ],
+      jwks: jwks,
+      iss: url, verify_iss: true,
+      verify_expiration: verify_expiration,
+      required_claims: required
+    )
+
+    held = header["typ"].to_s.downcase.delete_prefix("application/")
+
+    raise JWT::DecodeError, "that token is typed #{header['typ'].inspect}, not #{typ}" unless held == typ
+
+    claims
+  end
+
   def jwks
     @jwks ||= { "keys" => Tenant.switch(tenant) { SigningKey.published.map(&:public_jwk) } }
   end
@@ -144,9 +161,9 @@ class Issuer
       "acr_values_supported" => ACR_VALUES,
       "id_token_signing_alg_values_supported" => [ SigningKey::ALGORITHM ],
       "token_endpoint_auth_methods_supported" => Client::AUTH_METHODS,
-      "token_endpoint_auth_signing_alg_values_supported" => ClientAssertion::ALGORITHMS,
-      "revocation_endpoint_auth_signing_alg_values_supported" => ClientAssertion::ALGORITHMS,
-      "introspection_endpoint_auth_signing_alg_values_supported" => ClientAssertion::ALGORITHMS,
+      "token_endpoint_auth_signing_alg_values_supported" => ClientKeys::ALGORITHMS,
+      "revocation_endpoint_auth_signing_alg_values_supported" => ClientKeys::ALGORITHMS,
+      "introspection_endpoint_auth_signing_alg_values_supported" => ClientKeys::ALGORITHMS,
       "code_challenge_methods_supported" => Client::CHALLENGE_METHODS,
       "dpop_signing_alg_values_supported" => Proof::ALGORITHMS,
       "claims_supported" => %w[

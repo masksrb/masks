@@ -14,13 +14,11 @@ module Manage
 
       def resolve(name:, entity_id:, acs_urls:, certificate: nil, name_id_format: nil, requests_signed: false,
                   idp_initiated: false, attributes: nil)
-        refuse!("an application is already registered as #{entity_id}") if ::Client.saml.exists?(saml_entity_id: entity_id)
-
         client = ::Client.new(
           client_id: SecureRandom.uuid,
           name: name,
           protocol: SamlIdentity::PROTOCOL,
-          saml_entity_id: entity_id.strip,
+          saml_entity_id: entity_id,
           redirect_uris: acs_urls.map(&:strip).compact_blank,
           saml_certificate: certificate.presence,
           saml_name_id_format: name_id_format.presence,

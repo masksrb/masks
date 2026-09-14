@@ -3,6 +3,7 @@ class Client < ApplicationRecord
   include Archivable
   include Paged
 
+  OIDC = "oidc".freeze
   PRIVATE_KEY_JWT = "private_key_jwt".freeze
   SECRET_AUTH_METHODS = %w[client_secret_basic client_secret_post].freeze
   AUTH_METHODS = (SECRET_AUTH_METHODS + [ PRIVATE_KEY_JWT, "none" ]).freeze
@@ -31,7 +32,8 @@ class Client < ApplicationRecord
   validates :client_id, presence: true, uniqueness: { scope: :tenant_id }
   validates :name, presence: true
   validates :token_endpoint_auth_method, inclusion: { in: AUTH_METHODS }
-  validates :protocol, inclusion: { in: [ "oidc", SamlIdentity::PROTOCOL ] }
+  validates :protocol, inclusion: { in: [ OIDC, SamlIdentity::PROTOCOL ] }
+  validates :saml_entity_id, uniqueness: { scope: :tenant_id }, allow_nil: true
   validates :subject_type, inclusion: { in: Subjects::TYPES }
   validate :redirect_uris_are_usable
   validate :grant_types_are_known
@@ -43,12 +45,13 @@ class Client < ApplicationRecord
   validate :consent_is_skipped_only_when_approved
   validate :sector_identifier_uri_is_owned, if: :sector_declared?
 
+  normalizes :saml_entity_id, with: ->(value) { value.to_s.strip.presence }
+
   belongs_to :approved_by, class_name: "Actor", optional: true
   belongs_to :sign_in_policy, optional: true
 
   scope :approved, -> { where.not(approved_at: nil) }
-  scope :oauth, -> { where(protocol: "oidc") }
-  scope :saml, -> { where(protocol: SamlIdentity::PROTOCOL) }
+  scope :speaking, ->(protocol) { active.where(protocol: protocol) }
 
   attr_reader :secret, :registration_token
 
@@ -92,7 +95,7 @@ class Client < ApplicationRecord
         redirect_uris: Array(attributes[:redirect_uris]).map(&:to_s),
         post_logout_redirect_uris: Array(attributes[:post_logout_redirect_uris]).map(&:to_s),
         grant_types: grant_types,
-        response_types: Scopes.list(attributes[:response_types]).presence || ((grant_types & REDIRECTED_GRANT_TYPES).any? ? [ "code" ] : []),
+        response_types: Scopes.list(attributes[:response_types]).presence || response_types_for(grant_types),
         resources: Array(attributes[:resources]).map(&:to_s),
         allowed_scopes: Scopes.join(bounded(attributes[:scopes].presence || DEFAULT_SCOPES)),
         token_endpoint_auth_method: attributes[:token_endpoint_auth_method].presence || DEFAULT_AUTH_METHOD,
@@ -139,12 +142,16 @@ class Client < ApplicationRecord
       bounded
     end
 
-    def authenticating(client_id)
-      active.oauth.find_by(client_id: client_id.to_s)
+    def response_types_for(grant_types)
+      (Array(grant_types) & REDIRECTED_GRANT_TYPES).any? ? [ "code" ] : []
+    end
+
+    def authenticating(client_id, protocol: OIDC)
+      speaking(protocol).find_by(client_id: client_id.to_s)
     end
 
     def saml_for(entity_id)
-      active.saml.find_by(saml_entity_id: entity_id.to_s)
+      speaking(SamlIdentity::PROTOCOL).find_by(saml_entity_id: entity_id.to_s)
     end
 
     def by_registration_token(token)
@@ -229,6 +236,14 @@ class Client < ApplicationRecord
     protocol == SamlIdentity::PROTOCOL
   end
 
+  def keys?
+    jwks.present? || jwks_uri.present?
+  end
+
+  def default_response_types
+    self.class.response_types_for(grant_types)
+  end
+
   def saml_x509_certificate
     return nil if saml_certificate.blank?
 
@@ -253,7 +268,7 @@ class Client < ApplicationRecord
 
   def metadata
     {
-      "protocol" => (protocol unless protocol == "oidc"),
+      "protocol" => (protocol unless protocol == OIDC),
       "client_id" => client_id,
       "client_name" => name,
       "redirect_uris" => redirect_uris,
@@ -371,11 +386,11 @@ class Client < ApplicationRecord
     def keys_are_usable
       errors.add(:jwks, "and jwks_uri cannot both be registered") if jwks.present? && jwks_uri.present?
 
-      if require_signed_request_object? && jwks.blank? && jwks_uri.blank?
+      if require_signed_request_object? && !keys?
         errors.add(:require_signed_request_object, "needs jwks or a jwks_uri to check request objects against")
       end
 
-      if asserts? && jwks.blank? && jwks_uri.blank?
+      if asserts? && !keys?
         errors.add(:token_endpoint_auth_method, "private_key_jwt needs jwks or a jwks_uri to check assertions against")
       end
 

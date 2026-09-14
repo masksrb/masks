@@ -50,7 +50,7 @@ class PresentedToken
     return record&.client_id == client.id if access_token?
 
     Array(claims["aud"]).include?(client.client_id) && (claims["azp"].blank? || claims["azp"] == client.client_id) &&
-      actor.present? && Subjects.for(actor, client) == subject
+      actor.present? && issuer.subject_for(actor, client) == subject
   end
 
   def scope_list
@@ -87,16 +87,8 @@ class PresentedToken
     end
 
     def id_token_claims
-      claims, header = JWT.decode(
-        token, nil, true,
-        algorithms: [ SigningKey::ALGORITHM ],
-        jwks: issuer.jwks,
-        iss: issuer.url, verify_iss: true,
-        verify_expiration: true,
-        required_claims: %w[iss sub aud exp]
-      )
+      claims = issuer.verify(token, typ: "jwt", required: %w[iss sub aud exp])
 
-      raise JWT::DecodeError, "that token is not an id token" unless header["typ"].to_s.casecmp?("JWT")
       raise JWT::DecodeError, "that token is not an id token" if claims.key?("jti") || claims.key?("events")
 
       claims

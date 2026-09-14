@@ -94,7 +94,9 @@ module SamlIdentity
       def name_id(actor, format)
         case format
         when EMAIL
-          actor.email.presence || raise(Refused, "#{actor.identifier} has no email to be named by")
+          raise Refused, "#{actor.identifier} has no confirmed email to be named by" unless actor.email.present? && actor.email_verified_at
+
+          actor.email
         else
           issuer.subject_for(actor, client)
         end
@@ -103,8 +105,10 @@ module SamlIdentity
       def attributes(claims)
         mapping = client.saml_attributes.presence || DEFAULT_ATTRIBUTES
 
+        confirmed = claims.except(*("email" unless claims["email_verified"]))
+
         mapping.filter_map do |name, claim|
-          value = claims[claim.to_s]
+          value = confirmed[claim.to_s]
           [ name.to_s, value ] unless value.nil? || value == ""
         end
       end

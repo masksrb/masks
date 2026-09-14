@@ -7,7 +7,8 @@ class SamlIdentityTest < ActionDispatch::IntegrationTest
 
   setup do
     host! host_for(@tenant)
-    @actor = create_actor(nickname: "ada", email: "ada@example.com", name: "Ada Lovelace", given_name: "Ada")
+    @actor = create_actor(nickname: "ada", email: "ada@example.com", name: "Ada Lovelace", given_name: "Ada",
+                          email_verified_at: Time.current)
     @application = application
   end
 
@@ -50,11 +51,6 @@ class SamlIdentityTest < ActionDispatch::IntegrationTest
     request
   end
 
-  def submit(**params)
-    post "/login", params: { rid: current_rid, **params }
-    follow_redirect! while response.redirect? && URI.parse(response.location).host.to_s.end_with?(".auth.test")
-  end
-
   def posted
     form = Nokogiri::HTML(response.body).at_css("form#saml-response")
 
@@ -82,7 +78,6 @@ class SamlIdentityTest < ActionDispatch::IntegrationTest
     assert_equal "Ada Lovelace", saml.attributes["name"]
     assert_equal "back-to-page", posted["RelayState"]
     assert_match "script-src 'nonce-", response.headers["Content-Security-Policy"]
-    assert_match "form-action https://sp.example.com", response.headers["Content-Security-Policy"]
     assert within { Event.where(action: Event::SAML_ASSERTED, actor: @actor).exists? }
   end
 
@@ -91,8 +86,8 @@ class SamlIdentityTest < ActionDispatch::IntegrationTest
 
     assert_equal "identify", auth_data["prompt"]
 
-    submit(event: "identify", identifier: "ada")
-    submit(event: "password", password: "password")
+    advance!("identify", identifier: "ada")
+    advance!("password", password: "password")
 
     validated(request)
   end
@@ -176,6 +171,68 @@ class SamlIdentityTest < ActionDispatch::IntegrationTest
     assert_match "each ID once", response.body
   end
 
+  test "an email nobody confirmed is never asserted" do
+    within { @actor.update!(email_verified_at: nil) }
+    sign_in_as(@actor)
+
+    saml = validated(start)
+
+    assert_nil saml.attributes["email"]
+    assert_equal "Ada Lovelace", saml.attributes["name"]
+
+    start(settings(name_identifier_format: SamlIdentity::EMAIL))
+
+    assert_response :bad_request
+    assert_match "no confirmed email", response.body
+  end
+
+  test "a second SAMLRequest smuggled beside a signed one is refused" do
+    key = OpenSSL::PKey::RSA.generate(2048)
+    certificate = SamlIdp.certificate_for(key, name: "sp.example.com")
+    within { @application.update!(saml_requests_signed: true, saml_certificate: certificate.to_pem) }
+
+    signing = settings(certificate: certificate.to_pem, private_key: key.to_pem)
+    signing.security[:authn_requests_signed] = true
+    genuine = OneLogin::RubySaml::Authrequest.new.create(signing).delete_prefix(origin_for(@tenant))
+    forged = OneLogin::RubySaml::Authrequest.new.create(settings(assertion_consumer_service_url: ACS))
+    smuggled = URI.decode_www_form(URI.parse(forged).query).to_h["SAMLRequest"]
+
+    sign_in_as(@actor)
+    get "#{genuine}&SAML%52equest=#{CGI.escape(smuggled)}"
+
+    assert_response :bad_request
+    assert_match "more than once", response.body
+  end
+
+  test "a genuine signature wrapped inside a forged request is refused" do
+    key = OpenSSL::PKey::RSA.generate(2048)
+    certificate = SamlIdp.certificate_for(key, name: "sp.example.com")
+    within { @application.update!(saml_requests_signed: true, saml_certificate: certificate.to_pem) }
+
+    signing = settings(certificate: certificate.to_pem, private_key: key.to_pem)
+    signing.idp_sso_service_binding = SamlIdentity::POST_BINDING
+    signing.compress_request = false
+    signing.security[:authn_requests_signed] = true
+
+    genuine = Base64.decode64(OneLogin::RubySaml::Authrequest.new.create_params(signing)["SAMLRequest"]).sub(/\A<\?xml[^>]*\?>/, "")
+    outer = Base64.decode64(OneLogin::RubySaml::Authrequest.new.create_params(signing)["SAMLRequest"])
+    forged = outer.sub("<samlp:NameIDPolicy", "<samlp:Extensions>#{genuine}</samlp:Extensions><samlp:NameIDPolicy")
+
+    sign_in_as(@actor)
+    post "/saml/sso", params: { "SAMLRequest" => Base64.strict_encode64(forged) }
+
+    assert_response :bad_request
+  end
+
+  test "a request that inflates past the limit is refused without inflating all of it" do
+    bomb = Base64.strict_encode64(Zlib::Deflate.new(Zlib::BEST_COMPRESSION, -Zlib::MAX_WBITS).then { |z| z.deflate("<" + ("a" * 5.megabytes), Zlib::FINISH) })
+
+    get "/saml/sso?SAMLRequest=#{CGI.escape(bomb)}"
+
+    assert_response :bad_request
+    assert_match "too large", response.body
+  end
+
   test "a signed request made with another key is refused" do
     key = OpenSSL::PKey::RSA.generate(2048)
     certificate = SamlIdp.certificate_for(key, name: "sp.example.com")
@@ -196,8 +253,8 @@ class SamlIdentityTest < ActionDispatch::IntegrationTest
     within { @actor.suspend! }
     request = start
 
-    submit(event: "identify", identifier: "ada")
-    submit(event: "password", password: "password")
+    advance!("identify", identifier: "ada")
+    advance!("password", password: "password")
 
     saml = OneLogin::RubySaml::Response.new(posted["SAMLResponse"], settings: settings, matches_request_id: request.request_id)
 

@@ -159,9 +159,7 @@ class Proof
 
       raise Refused, "a proof must carry a jti" if held.blank?
 
-      key = "dpop:#{Current.tenant&.id}:#{jkt}:#{held}"
-
-      unless Rails.cache.write(key, true, expires_in: MEMORY, unless_exist: true)
+      unless Replay.first?("dpop", held, within: jkt, expires_in: MEMORY)
         raise Refused, "that proof has already been used"
       end
     end
