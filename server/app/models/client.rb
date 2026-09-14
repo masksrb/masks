@@ -5,9 +5,12 @@ class Client < ApplicationRecord
 
   AUTH_METHODS = %w[client_secret_basic client_secret_post none].freeze
   DEFAULT_AUTH_METHOD = "client_secret_basic".freeze
+  CLIENT_CREDENTIALS = "client_credentials".freeze
+  REDIRECTED_GRANT_TYPES = %w[authorization_code].freeze
   GRANT_TYPES = [
     "authorization_code",
     "refresh_token",
+    CLIENT_CREDENTIALS,
     DeviceGrant::GRANT_TYPE,
     Exchange::GRANT_TYPE
   ].freeze
@@ -29,6 +32,7 @@ class Client < ApplicationRecord
   validates :subject_type, inclusion: { in: Subjects::TYPES }
   validate :redirect_uris_are_usable
   validate :grant_types_are_known
+  validate :client_credentials_are_confidential
   validate :backchannel_logout_uri_is_usable
   validate :sector_is_derivable
   validate :consent_is_skipped_only_when_approved
@@ -73,13 +77,15 @@ class Client < ApplicationRecord
     end
 
     def register!(attributes)
+      grant_types = Scopes.list(attributes[:grant_types]).presence || [ "authorization_code" ]
+
       client = new(
         client_id: SecureRandom.uuid,
         name: attributes[:name].presence || "Unnamed client",
         redirect_uris: Array(attributes[:redirect_uris]).map(&:to_s),
         post_logout_redirect_uris: Array(attributes[:post_logout_redirect_uris]).map(&:to_s),
-        grant_types: Scopes.list(attributes[:grant_types]).presence || [ "authorization_code" ],
-        response_types: Scopes.list(attributes[:response_types]).presence || [ "code" ],
+        grant_types: grant_types,
+        response_types: Scopes.list(attributes[:response_types]).presence || ((grant_types & REDIRECTED_GRANT_TYPES).any? ? [ "code" ] : []),
         resources: Array(attributes[:resources]).map(&:to_s),
         allowed_scopes: Scopes.join(bounded(attributes[:scopes].presence || DEFAULT_SCOPES)),
         token_endpoint_auth_method: attributes[:token_endpoint_auth_method].presence || DEFAULT_AUTH_METHOD,
@@ -191,6 +197,14 @@ class Client < ApplicationRecord
     grant_types.include?(grant_type.to_s)
   end
 
+  def redirects?
+    (grant_types & REDIRECTED_GRANT_TYPES).any?
+  end
+
+  def unattended_scopes
+    Scopes.unattended(scope_list)
+  end
+
   def scope_list
     Scopes.union(required_scopes, allowed_scopes)
   end
@@ -261,7 +275,7 @@ class Client < ApplicationRecord
 
     def redirect_uris_are_usable
       if redirect_uris.blank?
-        errors.add(:redirect_uris, "must include at least one URI")
+        errors.add(:redirect_uris, "must include at least one URI") if redirects?
         return
       end
 
@@ -289,6 +303,13 @@ class Client < ApplicationRecord
     def grant_types_are_known
       unknown = grant_types - GRANT_TYPES
       errors.add(:grant_types, "not supported: #{unknown.join(', ')}") if unknown.any?
+    end
+
+    def client_credentials_are_confidential
+      return unless grants?(CLIENT_CREDENTIALS)
+
+      errors.add(:grant_types, "client_credentials needs a client that authenticates, not a public one") if public?
+      errors.add(:grant_types, "client_credentials may only be granted to an approved client") unless approved?
     end
 
     def sector_declared?

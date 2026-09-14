@@ -53,7 +53,7 @@ class AccessToken < Token
   def claims(issuer, act: nil)
     {
       "iss" => issuer.url,
-      "sub" => issuer.subject_for(actor, client),
+      "sub" => subject(issuer),
       "aud" => audience.one? ? audience.first : audience,
       "exp" => expires_at.to_i,
       "iat" => created_at.to_i,
@@ -64,6 +64,14 @@ class AccessToken < Token
       "cnf" => confirmation,
       "tenant" => tenant.to_identity
     }.compact
+  end
+
+  def subject(issuer)
+    actor ? issuer.subject_for(actor, client) : root.client&.client_id
+  end
+
+  def unattended?
+    actor.nil?
   end
 
   def token_type

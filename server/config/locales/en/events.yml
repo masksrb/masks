@@ -67,6 +67,7 @@ en:
         scopes_changed: "Scopes changed"
         signed_out: "Signed out everywhere"
       client:
+        created: "Client added"
         registered: "Client registered"
         approved: "Client approved"
         updated: "Client changed"

@@ -3,13 +3,15 @@ title: Clients
 description: An application registered against a tenant.
 ---
 
-A client is an application allowed to start a sign-in. It holds redirect URIs, the resources it
-speaks for, and the scopes it may ask for.
+A client is an application allowed to start a sign-in, or to sign in as itself. It holds redirect
+URIs, the resources it speaks for, and the scopes it may ask for.
 
 ## How one gets here
 
-Two ways, and the console shows which:
+Three ways, and the console shows which:
 
+- **added** — a manager adds it from the console, and it is approved by them as it is created. Its
+  secret is shown once.
 - **approved** — a person completed the `/handshake` flow and the credentials came back server to
   server. Nothing was pasted between the two.
 - **self-registered** — RFC 7591 dynamic registration. Bounded by the tenant's ceiling, and never
@@ -18,6 +20,32 @@ Two ways, and the console shows which:
 Only an approved client may hold a reserved `masks:` scope. That is what stops a stranger's
 connector registering itself with administrative reach — and why only an approved client can be
 let use somebody's account elsewhere through a [delegation](/concepts/delegation/).
+
+## Signing in as itself
+
+A service with nobody behind it — an indexer, a nightly job, a worker — asks the token endpoint for
+a token of its own with `client_credentials`:
+
+```sh
+curl -u "$CLIENT_ID:$CLIENT_SECRET" https://demo.masks.example/token \
+  -d grant_type=client_credentials \
+  -d scope="uris:catalog:read" \
+  -d resource=https://uris.example/mcp
+```
+
+Only an approved client that authenticates may be given the grant. A self-registered client never
+is, and neither registration management nor a handshake can add it: a manager switches it on.
+Without that, anybody able to register could hand themselves any scope a resource server honours.
+
+The token's `sub` is the client's own `client_id`, as RFC 9068 asks, and `client_id` names it again.
+It carries only the scopes that do not speak for a person — never `openid`, `profile`, `email`,
+`offline_access`, `identities`, `masks:manage`, `masks:handshake` or a delegation — so it is refused
+at userinfo and at the manage API. No refresh token is issued; the service asks again. Its audience
+is narrowed to the client's resources, and it can be held to a DPoP key like any other.
+
+A resource server tells the two apart by comparing `sub` with the `client_id` it knows: a person's
+`sub` is never a client's. When the token is [exchanged](/concepts/delegation/) onward, `sub` keeps
+naming the service it started with and `act` names who holds it now.
 
 ## Scopes
 

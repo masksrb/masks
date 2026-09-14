@@ -29,6 +29,7 @@ class TokensController < ApplicationController
         when "refresh_token" then refresh(req, res, client)
         when DEVICE then redeem_device(req, res, client)
         when EXCHANGE then exchange_token(req, res, client)
+        when Client::CLIENT_CREDENTIALS then client_credentials(req, res, client)
         else req.unsupported_grant_type!
         end
       end
@@ -208,6 +209,49 @@ class TokensController < ApplicationController
         "expires_in" => access.expires_in,
         "scope" => Scopes.join(access.scopes)
       )
+    end
+
+    def client_credentials(req, res, client)
+      unless client.grants?(Client::CLIENT_CREDENTIALS) && client.approved? && !client.public?
+        req.bad_request!(:unauthorized_client, "this client is not registered for client_credentials")
+      end
+
+      available = client.unattended_scopes
+      requested = Scopes.list(req.scope)
+      refused = Scopes.refused(available, requested)
+
+      if refused.any?
+        req.bad_request!(:invalid_scope, "this client may not ask for #{refused.join(', ')} on its own behalf")
+      end
+
+      scopes = requested.presence || available.reject { |scope| Scopes.prefix?(scope) }
+
+      req.bad_request!(:invalid_scope, "this client has no scope it may hold on its own behalf") if scopes.empty?
+
+      access = AccessToken.issue!(
+        issuer: issuer, actor: nil, client: client,
+        scopes: scopes, audience: unattended_audience(req, client), jkt: jkt
+      )
+
+      res.access_token = Payload.new(
+        "access_token" => access.jwt,
+        "token_type" => access.token_type,
+        "expires_in" => access.expires_in,
+        "scope" => Scopes.join(access.scopes)
+      )
+    end
+
+    def unattended_audience(req, client)
+      requested = repeated("resource")
+      held = client.resources.presence || [ client.client_id ]
+
+      return held if requested.empty?
+
+      refused = requested - held
+
+      req.bad_request!(:invalid_target, "resource is not one this client speaks for: #{refused.join(', ')}") if refused.any?
+
+      requested
     end
 
     def issued(access, grant, client)

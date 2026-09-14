@@ -16,7 +16,7 @@ conditions, zero failures. `./dev conformance` runs them against a local server.
 | [OpenID Connect Core 1.0](https://openid.net/specs/openid-connect-core-1_0.html) | ✅ | authorization code flow, ID tokens, userinfo, `prompt`, `max_age`, `acr`/`amr`, the `claims` parameter |
 | [OpenID Connect Discovery 1.0](https://openid.net/specs/openid-connect-discovery-1_0.html) | ✅ | `/.well-known/openid-configuration`, per-tenant |
 | [OpenID Connect Dynamic Registration 1.0](https://openid.net/specs/openid-connect-registration-1_0.html) | ✅ | bounded by the tenant's ceiling |
-| [RFC 6749](https://www.rfc-editor.org/rfc/rfc6749) — OAuth 2.0 | ◐ | `authorization_code` and `refresh_token`. No implicit, no password, no client credentials |
+| [RFC 6749](https://www.rfc-editor.org/rfc/rfc6749) — OAuth 2.0 | ◐ | `authorization_code`, `refresh_token` and `client_credentials`. No implicit, no password |
 | [RFC 6750](https://www.rfc-editor.org/rfc/rfc6750) — Bearer tokens | ✅ | header only, never a query parameter |
 | [RFC 7519](https://www.rfc-editor.org/rfc/rfc7519) — JWT | ✅ | `RS256`, a signing key per tenant. ID tokens are typed `JWT`, access tokens `at+jwt` and logout tokens `logout+jwt` |
 | [RFC 7517](https://www.rfc-editor.org/rfc/rfc7517) — JWK | ✅ | `/.well-known/jwks.json`, staged and retired keys published through a rotation |
@@ -41,7 +41,7 @@ Response types are `code` and only `code`. Response modes are `query` and only `
 | --- | --- | --- |
 | [RFC 8628](https://www.rfc-editor.org/rfc/rfc8628) — Device authorization | ✅ | see [device sign-in](/concepts/device-grant/) |
 | [RFC 8693](https://www.rfc-editor.org/rfc/rfc8693) — Token exchange | ◐ | masks access tokens with an `act` chain, and a provider's access token for a [delegation](/concepts/delegation/). No actor tokens, no ID token exchange |
-| `client_credentials` | ✗ | nothing signs in without a person behind it, yet |
+| `client_credentials` | ✅ | for an approved client that authenticates, holding only scopes that do not speak for a person — see [clients](/concepts/clients/) |
 
 ## Tokens
 

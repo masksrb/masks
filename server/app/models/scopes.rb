@@ -19,6 +19,7 @@ module Scopes
   }.freeze
 
   STANDARD = [ OPENID, PROFILE, EMAIL, OFFLINE, IDENTITIES ].freeze
+  PERSONAL = (STANDARD + [ MANAGE, HANDSHAKE ]).freeze
   NAMESPACE = "masks:".freeze
 
   class << self
@@ -73,6 +74,10 @@ module Scopes
 
     def delegated_provider(scope)
       scope.to_s.delete_prefix(DELEGATE).presence if scope.to_s.start_with?(DELEGATE)
+    end
+
+    def unattended(value)
+      list(value).reject { |scope| PERSONAL.include?(scope) || scope.start_with?(DELEGATE) }
     end
 
     def reserved(value)

@@ -1,6 +1,9 @@
 <script>
   import { NONE, day, joined } from "./lib/format.js";
   import { createFeedback } from "./lib/feedback.svelte.js";
+  import ScopesEditor from "./ScopesEditor.svelte";
+  import Card from "./ui/Card.svelte";
+  import Field from "./ui/Field.svelte";
   import Link from "./ui/Link.svelte";
   import Notices from "./ui/Notices.svelte";
   import Page from "./ui/Page.svelte";
@@ -25,6 +28,25 @@
     }
   `;
 
+  const CREATE = `
+    mutation Create(
+      $name: String!, $grantTypes: [String!], $redirectUris: [String!],
+      $resources: [String!], $allowedScopes: [String!]
+    ) {
+      createClient(
+        name: $name, grantTypes: $grantTypes, redirectUris: $redirectUris,
+        resources: $resources, allowedScopes: $allowedScopes
+      ) {
+        secret client { clientId name }
+      }
+    }
+  `;
+
+  const KINDS = [
+    ["service", "Signs in as itself", ["client_credentials"]],
+    ["app", "Signs people in", ["authorization_code", "refresh_token"]],
+  ];
+
   const COLUMNS = [
     "Name",
     { label: "Resources", hide: true },
@@ -36,6 +58,58 @@
   ];
 
   const feedback = createFeedback();
+
+  let adding = $state(false);
+  let busy = $state(false);
+  let created = $state(null);
+  let supported = $state([]);
+  let draft = $state(blank());
+
+  function blank() {
+    return { name: "", kind: "service", redirects: "", resources: "", scopes: [] };
+  }
+
+  const lines = (text) =>
+    text
+      .split("\n")
+      .map((one) => one.trim())
+      .filter(Boolean);
+
+  async function open() {
+    draft = blank();
+    created = null;
+    adding = true;
+    feedback.clear();
+
+    if (supported.length) return;
+
+    const data = await feedback.attempt(() => api.query("query Scopes { scopesSupported }"));
+
+    if (data) supported = data.scopesSupported;
+  }
+
+  async function send() {
+    busy = true;
+
+    const data = await feedback.attempt(() =>
+      api.query(CREATE, {
+        name: draft.name.trim(),
+        grantTypes: KINDS.find(([key]) => key === draft.kind)[2],
+        redirectUris: draft.kind === "app" ? lines(draft.redirects) : [],
+        resources: lines(draft.resources),
+        allowedScopes: draft.scopes,
+      }),
+    );
+
+    busy = false;
+
+    if (!data) return;
+
+    created = data.createClient;
+    adding = false;
+
+    again();
+  }
 
   let search = $state("");
   let query = $state("");
@@ -104,9 +178,97 @@
       placeholder="name or client_id"
       onsearch={look}
     />
+    <button type="button" class="btn btn-primary btn-sm" onclick={open}>Add client</button>
   {/snippet}
 
   <Notices feedback={feedback.state} />
+
+  {#if adding}
+    <Card title="Add client">
+      <Field label="Name" bind:value={draft.name} placeholder="Nightly indexer" />
+
+      <div class="range" role="group" aria-label="What kind of client">
+        {#each KINDS as [key, label] (key)}
+          <button type="button" aria-pressed={draft.kind === key} onclick={() => (draft.kind = key)}>
+            {label}
+          </button>
+        {/each}
+      </div>
+
+      <p class="text-xs opacity-60">
+        {draft.kind === "service"
+          ? "It asks the token endpoint for its own token with client_credentials. No person is behind it, so it never holds openid, profile, email or masks:manage."
+          : "It sends people to sign in and is handed a token on their behalf."}
+      </p>
+
+      {#if draft.kind === "app"}
+        <label class="flex flex-col gap-1.5">
+          <span class="text-xs font-medium opacity-70">Redirect URIs</span>
+          <textarea
+            class="textarea textarea-sm w-full font-mono text-xs"
+            rows="2"
+            autocapitalize="none"
+            autocorrect="off"
+            spellcheck="false"
+            placeholder="https://app.example.com/callback"
+            bind:value={draft.redirects}
+          ></textarea>
+        </label>
+      {/if}
+
+      <label class="flex flex-col gap-1.5">
+        <span class="text-xs font-medium opacity-70">Resources</span>
+        <textarea
+          class="textarea textarea-sm w-full font-mono text-xs"
+          rows="2"
+          autocapitalize="none"
+          autocorrect="off"
+          spellcheck="false"
+          placeholder="https://api.example.com/mcp"
+          bind:value={draft.resources}
+        ></textarea>
+      </label>
+
+      <div class="flex flex-col gap-2">
+        <span class="legend">Scopes</span>
+        <ScopesEditor
+          value={draft.scopes}
+          available={supported}
+          onchange={(chosen) => (draft.scopes = chosen)}
+        />
+      </div>
+
+      <div class="flex gap-2">
+        <button
+          type="button"
+          class="btn btn-primary btn-sm"
+          disabled={busy || !draft.name.trim()}
+          onclick={send}
+        >
+          {busy ? "Adding..." : "Add the client"}
+        </button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick={() => (adding = false)}>
+          Cancel
+        </button>
+      </div>
+    </Card>
+  {/if}
+
+  {#if created}
+    <Card title={`${created.client.name} is ready`}>
+      <p class="text-sm opacity-70">
+        Its client_id is below{created.secret ? ", with a secret shown this once. Copy it now" : ""}.
+      </p>
+
+      <p class="rounded bg-base-200 px-2 py-1 font-mono text-xs break-all">{created.client.clientId}</p>
+
+      {#if created.secret}
+        <p class="rounded bg-base-200 px-2 py-1 font-mono text-xs break-all">{created.secret}</p>
+      {/if}
+
+      <Link to={`/clients/${created.client.clientId}`} class="btn btn-sm self-start">Open it</Link>
+    </Card>
+  {/if}
 
   {#if loading && clients.length === 0}
     <Spinner />

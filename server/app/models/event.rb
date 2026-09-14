@@ -66,6 +66,7 @@ class Event < ApplicationRecord
   ACTOR_SCOPES_CHANGED = "actor.scopes_changed".freeze
   ACTOR_SIGNED_OUT = "actor.signed_out".freeze
 
+  CLIENT_CREATED = "client.created".freeze
   CLIENT_REGISTERED = "client.registered".freeze
   CLIENT_APPROVED = "client.approved".freeze
   CLIENT_UPDATED = "client.updated".freeze

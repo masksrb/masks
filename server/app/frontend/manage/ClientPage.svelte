@@ -118,7 +118,7 @@
         $backchannelLogoutUri: String, $redirectUris: [String!],
         $postLogoutRedirectUris: [String!], $resources: [String!],
         $requirePushedAuthorizationRequests: Boolean, $consentRequired: Boolean,
-        $signInPolicy: ID
+        $signInPolicy: ID, $grantTypes: [String!]
       ) {
         updateClient(
           clientId: $clientId, name: $name, requiredScopes: $requiredScopes,
@@ -127,7 +127,8 @@
           resources: $resources,
           requirePushedAuthorizationRequests: $requirePushedAuthorizationRequests,
           consentRequired: $consentRequired,
-          signInPolicy: $signInPolicy
+          signInPolicy: $signInPolicy,
+          grantTypes: $grantTypes
         ) {
           client { clientId }
         }
@@ -135,6 +136,21 @@
       { clientId, ...changes },
       notice,
     );
+
+  const unattended = $derived(client?.grantTypes.includes("client_credentials") ?? false);
+
+  function signsInAsItself(on) {
+    const grantTypes = on
+      ? [...client.grantTypes, "client_credentials"]
+      : client.grantTypes.filter((grant) => grant !== "client_credentials");
+
+    update(
+      { grantTypes },
+      on
+        ? "It can ask for a token of its own now, with client_credentials."
+        : "It can no longer ask for a token of its own.",
+    );
+  }
 
   function restore() {
     if (!confirm("Restore this client? It can sign people in again immediately.")) return;
@@ -201,6 +217,14 @@
           <Field label="Name" bind:value={name} onsave={() => update({ name }, "Renamed.")} />
 
           <Facts rows={facts} />
+
+          {#if client.approvedAt && client.tokenEndpointAuthMethod !== "none"}
+            <Switch
+              checked={unattended}
+              label="Signs in as itself (client_credentials)"
+              onchange={signsInAsItself}
+            />
+          {/if}
 
           <div class="flex flex-wrap gap-2 pt-1">
             {#if client.tokenEndpointAuthMethod !== "none"}

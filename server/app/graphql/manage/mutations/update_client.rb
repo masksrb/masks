@@ -3,6 +3,7 @@ module Manage
     class UpdateClient < BaseMutation
       argument :client_id, ID
       argument :name, String, required: false
+      argument :grant_types, [ String ], required: false
       argument :redirect_uris, [ String ], required: false
       argument :post_logout_redirect_uris, [ String ], required: false
       argument :resources, [ String ], required: false
@@ -29,6 +30,7 @@ module Manage
         end
 
         client.assign_attributes(attributes)
+        client.response_types = (client.grant_types & ::Client::REDIRECTED_GRANT_TYPES).any? ? [ "code" ] : [] if attributes.key?(:grant_types)
         client.required_scopes = Scopes.join(required_scopes) unless required_scopes.nil?
         client.allowed_scopes = Scopes.join(allowed_scopes) unless allowed_scopes.nil?
 

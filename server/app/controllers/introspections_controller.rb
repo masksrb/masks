@@ -35,7 +35,7 @@ class IntrospectionsController < ApplicationController
         "cnf" => token.confirmation,
         "exp" => token.expires_at.to_i,
         "iat" => token.created_at.to_i,
-        "sub" => Subjects.for(token.actor, token.client),
+        "sub" => token.is_a?(AccessToken) ? token.subject(issuer) : Subjects.for(token.actor, token.client),
         "aud" => token.audience.presence,
         "iss" => issuer.url,
         "jti" => token.digest,

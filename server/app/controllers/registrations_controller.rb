@@ -100,7 +100,7 @@ class RegistrationsController < ApplicationController
 
     APPROVED = %i[
       redirect_uris post_logout_redirect_uris token_endpoint_auth_method resources
-      subject_type sector_identifier_uri dpop_bound_access_tokens
+      subject_type sector_identifier_uri dpop_bound_access_tokens grant_types response_types
     ].freeze
 
     def described

@@ -15,6 +15,7 @@ module Manage
       field :revoke_passkey, mutation: Mutations::RevokePasskey
       field :upload_avatar, mutation: Mutations::UploadAvatar
       field :remove_avatar, mutation: Mutations::RemoveAvatar
+      field :create_client, mutation: Mutations::CreateClient
       field :update_client, mutation: Mutations::UpdateClient
       field :rotate_client_secret, mutation: Mutations::RotateClientSecret
       field :archive_client, mutation: Mutations::ArchiveClient
