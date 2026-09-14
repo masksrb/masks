@@ -11,6 +11,7 @@ module Manage
         client = client!(client_id)
 
         refuse!("a public client has no secret to rotate") if client.public?
+        refuse!("this client signs assertions with its own keys, and has no secret to rotate") if client.asserts?
 
         secret = client.issue_secret!
         client.secret_expires_at = expires_in && expires_in.seconds.from_now

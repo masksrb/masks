@@ -157,6 +157,8 @@ type Client {
   dynamic: Boolean!
   events(limit: Int): [Event!]!
   grantTypes: [String!]!
+  jwks: JSON
+  jwksUri: String
   logoUri: String
   name: String!
   namespaces: [Namespace!]!
@@ -358,7 +360,7 @@ type Mutation {
   blockDevices(agent: String, ids: [ID!], refuse: Boolean): BlockDevicesPayload
   createActor(email: String, nickname: String, password: String, scopes: [String!]): CreateActorPayload
   createAdapter(config: JSON, key: ID!, name: String!, primary: Boolean, service: String!): CreateAdapterPayload
-  createClient(allowedScopes: [String!], dpopBoundAccessTokens: Boolean, grantTypes: [String!], name: String!, postLogoutRedirectUris: [String!], redirectUris: [String!], requiredScopes: [String!], resources: [String!], tokenEndpointAuthMethod: String): CreateClientPayload
+  createClient(allowedScopes: [String!], dpopBoundAccessTokens: Boolean, grantTypes: [String!], jwks: JSON, jwksUri: String, name: String!, postLogoutRedirectUris: [String!], redirectUris: [String!], requiredScopes: [String!], resources: [String!], tokenEndpointAuthMethod: String): CreateClientPayload
   createProvider(authorizationUrl: String, authorizeParams: JSON, claims: JSON, clientId: String, clientSecret: String, delegatedScopes: [String!], delegates: Boolean, delegationParams: JSON, emailDomains: [String!], emailsUrl: String, idpCertificates: String, idpEntityId: String, idpSsoUrl: String, issuer: String, jwksUri: String, key: ID!, keyId: String, metadataUrl: String, name: String!, nameIdFormat: String, preset: ID, presetValues: JSON, privateKey: String, protocol: String, resourceUrl: String, responseMode: String, role: String, scopes: [String!], signupScopes: [String!], subjectClaim: String, teamId: String, tokenAuthMethod: String, tokenUrl: String, trustsEmail: Boolean, userinfoUrl: String): CreateProviderPayload
   createSignInPolicy(confirmation: String, email: String, emailDomains: [String!], emailVerified: Boolean, everyProvider: Boolean, firstFactors: [String!], hidden: Boolean, key: ID!, name: String, nickname: String, passwordMinimum: Int, phone: String, phoneVerified: Boolean, providers: [String!], refuseCommonPasswords: Boolean, secondFactorRequired: Boolean, secondFactors: [String!], signup: Boolean, signupScopes: [String!]): CreateSignInPolicyPayload
   deleteActor(uuid: ID!): DeleteActorPayload
@@ -393,7 +395,7 @@ type Mutation {
   unblockDevices(ids: [ID!]!): UnblockDevicesPayload
   updateActor(birthdate: String, email: String, familyName: String, gender: String, givenName: String, locale: String, middleName: String, name: String, nickname: String, phone: String, pictureUrl: String, profileUrl: String, uuid: ID!, websiteUrl: String, zoneinfo: String): UpdateActorPayload
   updateAdapter(config: JSON, key: ID!, name: String, primary: Boolean): UpdateAdapterPayload
-  updateClient(allowedScopes: [String!], backchannelLogoutSessionRequired: Boolean, backchannelLogoutUri: String, clientId: ID!, consentRequired: Boolean, dpopBoundAccessTokens: Boolean, grantTypes: [String!], name: String, postLogoutRedirectUris: [String!], redirectUris: [String!], requirePushedAuthorizationRequests: Boolean, requiredScopes: [String!], resources: [String!], sectorIdentifierUri: String, signInPolicy: ID, subjectType: String): UpdateClientPayload
+  updateClient(allowedScopes: [String!], backchannelLogoutSessionRequired: Boolean, backchannelLogoutUri: String, clientId: ID!, consentRequired: Boolean, dpopBoundAccessTokens: Boolean, grantTypes: [String!], jwks: JSON, jwksUri: String, name: String, postLogoutRedirectUris: [String!], redirectUris: [String!], requirePushedAuthorizationRequests: Boolean, requiredScopes: [String!], resources: [String!], sectorIdentifierUri: String, signInPolicy: ID, subjectType: String, tokenEndpointAuthMethod: String): UpdateClientPayload
   updateProvider(authorizationUrl: String, authorizeParams: JSON, claims: JSON, clientId: String, clientSecret: String, delegatedScopes: [String!], delegates: Boolean, delegationParams: JSON, emailDomains: [String!], emailsUrl: String, idpCertificates: String, idpEntityId: String, idpSsoUrl: String, issuer: String, jwksUri: String, key: ID!, keyId: String, metadataUrl: String, name: String, nameIdFormat: String, privateKey: String, protocol: String, resourceUrl: String, responseMode: String, role: String, scopes: [String!], signupScopes: [String!], subjectClaim: String, teamId: String, tokenAuthMethod: String, tokenUrl: String, trustsEmail: Boolean, userinfoUrl: String): UpdateProviderPayload
   updateSignInPolicy(confirmation: String, email: String, emailDomains: [String!], emailVerified: Boolean, everyProvider: Boolean, firstFactors: [String!], hidden: Boolean, key: ID!, name: String, nickname: String, passwordMinimum: Int, phone: String, phoneVerified: Boolean, providers: [String!], refuseCommonPasswords: Boolean, secondFactorRequired: Boolean, secondFactors: [String!], signup: Boolean, signupScopes: [String!]): UpdateSignInPolicyPayload
   updateTenant(blockedAgents: String, browsersOnly: Boolean, dynamicClientScopes: [String!], dynamicRegistration: String, name: String, namedBy: String, signInPolicy: ID): UpdateTenantPayload

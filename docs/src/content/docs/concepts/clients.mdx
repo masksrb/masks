@@ -91,11 +91,35 @@ applications sees one identity.
 A pairwise subject is minted once and kept, so it holds steady across sign-ins, and it is
 tenant-local — the same string means nothing in another tenant.
 
-## Secrets and archiving
+## Secrets, keys and archiving
 
-`token_endpoint_auth_method` is `client_secret_basic`, `client_secret_post`, or `none` for a public
-client with no secret to rotate. Rotating issues a new secret and the old one stops working
-immediately.
+`token_endpoint_auth_method` is one of
+
+| | |
+| --- | --- |
+| `client_secret_basic` | a secret, in a Basic header |
+| `client_secret_post` | a secret, in the form |
+| `private_key_jwt` | an assertion the client signs with its own key, fresh for every request |
+| `none` | a public client, which proves itself with PKCE and has nothing to rotate |
+
+Rotating a secret issues a new one and the old one stops working immediately. masks keeps only a
+hash of it, which is why `client_secret_jwt` — an assertion signed with the secret itself — is not
+offered.
+
+A `private_key_jwt` client registers `jwks`, or a `jwks_uri` masks reads and holds for five minutes,
+and is issued no secret at all. Its assertion names the client as `iss` and `sub`, is addressed to
+the issuer, or to the endpoint it is sent to, carries a `jti`, and expires within the hour:
+
+```ruby
+Masks::Client::Session.new(issuer: "https://demo.masks.example", client_id: id,
+                           private_key: File.read("indexer.pem"), key_id: "2026-09")
+  .client_credentials(scope: "uris:catalog:read")
+```
+
+The same assertion is spent the first time it is used, an assertion signed with a key the set does
+not hold makes masks read a `jwks_uri` once more before refusing it, so a key can be rotated in
+without a word to the server, and a client registered for one way of authenticating is refused if
+it tries another.
 
 Archiving is the end of a client — it can no longer sign anybody in — but it is not a delete, and
 any [namespace](/concepts/namespaces/) it claimed survives until released.

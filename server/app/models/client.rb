@@ -3,7 +3,9 @@ class Client < ApplicationRecord
   include Archivable
   include Paged
 
-  AUTH_METHODS = %w[client_secret_basic client_secret_post none].freeze
+  PRIVATE_KEY_JWT = "private_key_jwt".freeze
+  SECRET_AUTH_METHODS = %w[client_secret_basic client_secret_post].freeze
+  AUTH_METHODS = (SECRET_AUTH_METHODS + [ PRIVATE_KEY_JWT, "none" ]).freeze
   DEFAULT_AUTH_METHOD = "client_secret_basic".freeze
   CLIENT_CREDENTIALS = "client_credentials".freeze
   REDIRECTED_GRANT_TYPES = %w[authorization_code].freeze
@@ -33,6 +35,7 @@ class Client < ApplicationRecord
   validate :redirect_uris_are_usable
   validate :grant_types_are_known
   validate :client_credentials_are_confidential
+  validate :keys_are_usable
   validate :backchannel_logout_uri_is_usable
   validate :sector_is_derivable
   validate :consent_is_skipped_only_when_approved
@@ -103,6 +106,8 @@ class Client < ApplicationRecord
           ActiveModel::Type::Boolean.new.cast(attributes[:backchannel_logout_session_required]) || false,
         require_pushed_authorization_requests:
           ActiveModel::Type::Boolean.new.cast(attributes[:require_pushed_authorization_requests]) || false,
+        jwks: attributes[:jwks],
+        jwks_uri: attributes[:jwks_uri],
         dynamic: true
       )
 
@@ -143,6 +148,14 @@ class Client < ApplicationRecord
     token_endpoint_auth_method == "none"
   end
 
+  def asserts?
+    token_endpoint_auth_method == PRIVATE_KEY_JWT
+  end
+
+  def secret?
+    SECRET_AUTH_METHODS.include?(token_endpoint_auth_method)
+  end
+
   def pairwise?
     subject_type == Subjects::PAIRWISE
   end
@@ -162,7 +175,7 @@ class Client < ApplicationRecord
   end
 
   def issue_credentials!
-    issue_secret! unless public?
+    issue_secret! if secret?
     issue_registration_token!
     save!
     self
@@ -182,6 +195,7 @@ class Client < ApplicationRecord
 
   def authenticate_secret(candidate)
     return true if public?
+    return false unless secret?
     return false if secret_digest.blank? || candidate.blank?
 
     BCrypt::Password.new(secret_digest) == candidate.to_s
@@ -236,6 +250,8 @@ class Client < ApplicationRecord
       "backchannel_logout_uri" => backchannel_logout_uri,
       "backchannel_logout_session_required" => backchannel_logout_session_required,
       "require_pushed_authorization_requests" => require_pushed_authorization_requests,
+      "jwks" => jwks.presence,
+      "jwks_uri" => jwks_uri.presence,
       "client_id_issued_at" => created_at&.to_i
     }.compact
   end
@@ -310,6 +326,19 @@ class Client < ApplicationRecord
 
       errors.add(:grant_types, "client_credentials needs a client that authenticates, not a public one") if public?
       errors.add(:grant_types, "client_credentials may only be granted to an approved client") unless approved?
+    end
+
+    def keys_are_usable
+      errors.add(:jwks, "and jwks_uri cannot both be registered") if jwks.present? && jwks_uri.present?
+
+      if asserts? && jwks.blank? && jwks_uri.blank?
+        errors.add(:token_endpoint_auth_method, "private_key_jwt needs jwks or a jwks_uri to check assertions against")
+      end
+
+      self.jwks = ClientKeys.check!(jwks) if jwks.present? && will_save_change_to_jwks?
+      ClientKeys.fetch(jwks_uri) if jwks_uri.present? && will_save_change_to_jwks_uri?
+    rescue ClientKeys::Refused => e
+      errors.add(jwks_uri.present? && jwks.blank? ? :jwks_uri : :jwks, e.message)
     end
 
     def sector_declared?

@@ -94,7 +94,9 @@ class RegistrationsController < ApplicationController
         policy_uri: body[:policy_uri],
         backchannel_logout_uri: body[:backchannel_logout_uri],
         backchannel_logout_session_required: body[:backchannel_logout_session_required],
-        require_pushed_authorization_requests: body[:require_pushed_authorization_requests]
+        require_pushed_authorization_requests: body[:require_pushed_authorization_requests],
+        jwks: body[:jwks],
+        jwks_uri: body[:jwks_uri]
       }.compact
     end
 

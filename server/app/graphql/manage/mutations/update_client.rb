@@ -15,13 +15,19 @@ module Manage
       argument :backchannel_logout_uri, String, required: false
       argument :backchannel_logout_session_required, Boolean, required: false
       argument :require_pushed_authorization_requests, Boolean, required: false
+      argument :jwks, GraphQL::Types::JSON, required: false
+      argument :jwks_uri, String, required: false
+      argument :token_endpoint_auth_method, String, required: false
       argument :consent_required, Boolean, required: false
       argument :sign_in_policy, ID, required: false
 
       field :client, Types::ClientType, null: false
 
-      def resolve(client_id:, required_scopes: nil, allowed_scopes: nil, sign_in_policy: nil, **attributes)
+      def resolve(client_id:, required_scopes: nil, allowed_scopes: nil, sign_in_policy: nil,
+                  token_endpoint_auth_method: nil, **attributes)
         client = client!(client_id)
+
+        authenticates!(client, token_endpoint_auth_method) if token_endpoint_auth_method
 
         unless sign_in_policy.nil?
           client.sign_in_policy = sign_in_policy.empty? ? nil : sign_in_policy!(sign_in_policy)
@@ -46,6 +52,17 @@ module Manage
 
         { client: client }
       end
+
+      private
+
+        def authenticates!(client, method)
+          if client.public? || method == "none"
+            refuse!("a public client stays public, and a confidential one stays confidential")
+          end
+
+          client.token_endpoint_auth_method = method
+          client.secret_digest = nil unless client.secret?
+        end
     end
   end
 end

@@ -27,7 +27,7 @@
         redirectUris postLogoutRedirectUris grantTypes responseTypes resources
         requiredScopes allowedScopes
         backchannelLogoutUri backchannelLogoutSessionRequired
-        requirePushedAuthorizationRequests consentRequired
+        requirePushedAuthorizationRequests consentRequired jwksUri
         signInPolicy { key name }
         events(limit: 25) {
           id action label createdAt ipAddress details
@@ -61,6 +61,8 @@
   let tenantPolicy = $state(null);
   let name = $state("");
   let logoutUri = $state("");
+  let jwksUri = $state("");
+  let method = $state("");
   let loading = $state(true);
   let secret = $state(null);
 
@@ -73,7 +75,6 @@
           },
           { term: "Approved by", value: client.approvedBy?.identifier },
           { term: "Registered", value: day(client.createdAt) },
-          { term: "Authenticates with", value: client.tokenEndpointAuthMethod, mono: true },
           { term: "Grants", value: joined(client.grantTypes), mono: true },
           { term: "Response types", value: joined(client.responseTypes), mono: true },
           { term: "Knows people as", value: client.subjectType, mono: true },
@@ -94,6 +95,8 @@
       tenantPolicy = data.tenant.signInPolicy;
       name = data.client?.name ?? "";
       logoutUri = data.client?.backchannelLogoutUri ?? "";
+      jwksUri = data.client?.jwksUri ?? "";
+      method = data.client?.tokenEndpointAuthMethod ?? "";
     } catch (thrown) {
       feedback.blame(thrown);
     } finally {
@@ -118,7 +121,8 @@
         $backchannelLogoutUri: String, $redirectUris: [String!],
         $postLogoutRedirectUris: [String!], $resources: [String!],
         $requirePushedAuthorizationRequests: Boolean, $consentRequired: Boolean,
-        $signInPolicy: ID, $grantTypes: [String!]
+        $signInPolicy: ID, $grantTypes: [String!], $jwksUri: String,
+        $tokenEndpointAuthMethod: String
       ) {
         updateClient(
           clientId: $clientId, name: $name, requiredScopes: $requiredScopes,
@@ -128,7 +132,9 @@
           requirePushedAuthorizationRequests: $requirePushedAuthorizationRequests,
           consentRequired: $consentRequired,
           signInPolicy: $signInPolicy,
-          grantTypes: $grantTypes
+          grantTypes: $grantTypes,
+          jwksUri: $jwksUri,
+          tokenEndpointAuthMethod: $tokenEndpointAuthMethod
         ) {
           client { clientId }
         }
@@ -150,6 +156,27 @@
         ? "It can ask for a token of its own now, with client_credentials."
         : "It can no longer ask for a token of its own.",
     );
+  }
+
+  const METHODS = [
+    ["client_secret_basic", "Secret, in a Basic header"],
+    ["client_secret_post", "Secret, in the form"],
+    ["private_key_jwt", "An assertion signed with its own key"],
+  ];
+
+  function authenticates(chosen) {
+    method = chosen;
+
+    if (chosen === "private_key_jwt" && !client.jwksUri) return;
+
+    const notice =
+      chosen === "private_key_jwt"
+        ? "It signs its own assertions now. Its secret no longer works."
+        : client.tokenEndpointAuthMethod === "private_key_jwt"
+          ? "It uses a secret now. Rotate one to hand it."
+          : "Saved.";
+
+    update({ tokenEndpointAuthMethod: chosen }, notice);
   }
 
   function restore() {
@@ -218,6 +245,39 @@
 
           <Facts rows={facts} />
 
+          {#if client.tokenEndpointAuthMethod === "none"}
+            <p class="text-xs opacity-60">A public client. It authenticates with nothing, and proves itself with PKCE.</p>
+          {:else}
+            <label class="flex flex-col gap-1.5">
+              <span class="text-xs font-medium opacity-70">Authenticates with</span>
+              <select
+                class="select select-sm w-full"
+                value={method}
+                onchange={(event) => authenticates(event.currentTarget.value)}
+              >
+                {#each METHODS as [key, label] (key)}
+                  <option value={key}>{label}</option>
+                {/each}
+              </select>
+            </label>
+          {/if}
+
+          {#if method === "private_key_jwt"}
+            <Field
+              label="Key set URL (jwks_uri)"
+              bind:value={jwksUri}
+              placeholder="https://app.example.com/.well-known/jwks.json"
+              autocapitalize="none"
+              autocorrect="off"
+              spellcheck="false"
+              onsave={() =>
+                update(
+                  { jwksUri: jwksUri.trim() || null, tokenEndpointAuthMethod: method },
+                  "Its keys are read from there.",
+                )}
+            />
+          {/if}
+
           {#if client.approvedAt && client.tokenEndpointAuthMethod !== "none"}
             <Switch
               checked={unattended}
@@ -227,7 +287,7 @@
           {/if}
 
           <div class="flex flex-wrap gap-2 pt-1">
-            {#if client.tokenEndpointAuthMethod !== "none"}
+            {#if client.tokenEndpointAuthMethod.startsWith("client_secret")}
               <button type="button" class="btn btn-sm" onclick={rotate}>Rotate secret</button>
             {/if}
             {#if !client.archivedAt}

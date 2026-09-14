@@ -10,6 +10,8 @@ module Manage
       argument :allowed_scopes, [ String ], required: false
       argument :token_endpoint_auth_method, String, required: false
       argument :dpop_bound_access_tokens, Boolean, required: false
+      argument :jwks, GraphQL::Types::JSON, required: false
+      argument :jwks_uri, String, required: false
 
       field :client, Types::ClientType, null: false
       field :secret, String
@@ -30,7 +32,7 @@ module Manage
           **attributes.compact
         )
 
-        client.issue_secret! unless client.public?
+        client.issue_secret! if client.secret?
         save!(client)
 
         audit!(::Event::CLIENT_CREATED, client: client, name: client.name, grant_types: client.grant_types)

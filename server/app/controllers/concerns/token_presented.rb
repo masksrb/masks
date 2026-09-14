@@ -1,6 +1,8 @@
 module TokenPresented
   extend ActiveSupport::Concern
 
+  include ClientAuthentication
+
   included do
     skip_forgery_protection
 
@@ -37,26 +39,7 @@ module TokenPresented
     end
 
     def authenticate_client!
-      id, secret = client_credentials
-      client = Client.authenticating(id) if id.present?
-
-      unless client&.authenticate_secret(secret)
-        raise Policy::Denied.new(
-          "invalid_client", "client authentication failed", status: :unauthorized
-        )
-      end
-
-      client
-    end
-
-    def client_credentials
-      header = request.authorization.to_s
-
-      if header.start_with?("Basic ")
-        Base64.decode64(header.split(" ", 2).last.to_s).split(":", 2).map { |p| CGI.unescape(p.to_s) }
-      else
-        [ params[:client_id], params[:client_secret] ]
-      end
+      authenticated_client
     end
 
     def client_denied(denial)

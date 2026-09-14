@@ -144,6 +144,9 @@ class Issuer
       "acr_values_supported" => ACR_VALUES,
       "id_token_signing_alg_values_supported" => [ SigningKey::ALGORITHM ],
       "token_endpoint_auth_methods_supported" => Client::AUTH_METHODS,
+      "token_endpoint_auth_signing_alg_values_supported" => ClientAssertion::ALGORITHMS,
+      "revocation_endpoint_auth_signing_alg_values_supported" => ClientAssertion::ALGORITHMS,
+      "introspection_endpoint_auth_signing_alg_values_supported" => ClientAssertion::ALGORITHMS,
       "code_challenge_methods_supported" => Client::CHALLENGE_METHODS,
       "dpop_signing_alg_values_supported" => Proof::ALGORITHMS,
       "claims_supported" => %w[

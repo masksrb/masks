@@ -1,5 +1,6 @@
 class TokensController < ApplicationController
   include RackOAuth2Endpoint
+  include ClientAuthentication
 
   EXCHANGE = Rack::OAuth2::Server::Token::Extension::TokenExchange::GRANT_TYPE_URN
   DEVICE = Rack::OAuth2::Server::Token::Extension::DeviceCode::GRANT_TYPE_URN
@@ -319,16 +320,8 @@ class TokensController < ApplicationController
     end
 
     def authenticate_client!(req)
-      req.invalid_client!("client_id is required") if req.client_id.blank?
-
-      client = Client.authenticating(req.client_id)
-
-      req.invalid_client!("no client is registered with that client_id") if client.nil?
-
-      unless client.authenticate_secret(req.client_secret)
-        req.invalid_client!("client authentication failed")
-      end
-
-      client
+      authenticated_client
+    rescue Policy::Denied => denial
+      req.invalid_client!(denial.description)
     end
 end
