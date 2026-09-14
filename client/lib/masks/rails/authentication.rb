@@ -189,8 +189,15 @@ module Masks
           "avatars" => masks_claims.avatars.to_h.presence,
           "tenant" => masks_tenant,
           "scopes" => masks_scopes,
-          "expires_at" => masks_tokens&.expires_at
+          "expires_at" => masks_tokens&.expires_at,
+          "account_url" => masks_account_url
         }.compact
+      end
+
+      def masks_account_url
+        "#{masks_config.issuer_for(request).to_s.chomp('/')}/"
+      rescue Masks::Rails::Configuration::Unconfigured
+        nil
       end
 
       def authenticate_masks!

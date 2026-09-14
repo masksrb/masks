@@ -152,6 +152,7 @@ class SessionTest < EngineIntegrationTest
     assert_equal "owner@example.invalid", json["email"]
     assert_equal SUBDOMAIN, json.dig("tenant", "subdomain")
     assert_includes json["scopes"], "catalog:read"
+    assert_equal "#{issuer.url_for(SUBDOMAIN)}/", json["account_url"], "where the person manages their account in masks"
   end
 
   test "the id token is not kept in the session" do

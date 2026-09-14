@@ -10,7 +10,7 @@ The BFF and browser-PKCE halves of `@masks/client`, generated from its TypeScrip
 
 ### MasksError
 
-Defined in: [types.ts:70](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L70)
+Defined in: [types.ts:71](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L71)
 
 #### Extends
 
@@ -28,7 +28,7 @@ new MasksError(
 ): MasksError;
 ```
 
-Defined in: [types.ts:75](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L75)
+Defined in: [types.ts:76](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L76)
 
 ###### Parameters
 
@@ -52,9 +52,9 @@ Error.constructor
 
 | Property | Modifier | Type | Defined in |
 | ------ | ------ | ------ | ------ |
-| <a id="code"></a> `code` | `readonly` | `string` | [types.ts:71](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L71) |
-| <a id="description"></a> `description?` | `readonly` | `string` | [types.ts:72](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L72) |
-| <a id="status"></a> `status?` | `readonly` | `number` | [types.ts:73](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L73) |
+| <a id="code"></a> `code` | `readonly` | `string` | [types.ts:72](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L72) |
+| <a id="description"></a> `description?` | `readonly` | `string` | [types.ts:73](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L73) |
+| <a id="status"></a> `status?` | `readonly` | `number` | [types.ts:74](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L74) |
 
 ## Interfaces
 
@@ -66,6 +66,7 @@ Defined in: [types.ts:15](https://github.com/masksrb/masks/blob/main/web/src/typ
 
 | Property | Type | Defined in |
 | ------ | ------ | ------ |
+| <a id="account_url"></a> `account_url?` | `string` | [types.ts:27](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L27) |
 | <a id="avatars"></a> `avatars?` | [`Avatars`](#avatars-1) | [types.ts:23](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L23) |
 | <a id="email"></a> `email?` | `string` | [types.ts:20](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L20) |
 | <a id="email_verified"></a> `email_verified?` | `boolean` | [types.ts:21](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L21) |
@@ -353,7 +354,7 @@ Defined in: [browser.ts:14](https://github.com/masksrb/masks/blob/main/web/src/b
 
 ### Claims
 
-Defined in: [types.ts:41](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L41)
+Defined in: [types.ts:42](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L42)
 
 #### Indexable
 
@@ -365,7 +366,7 @@ Defined in: [types.ts:41](https://github.com/masksrb/masks/blob/main/web/src/typ
 
 ### Discovery
 
-Defined in: [types.ts:55](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L55)
+Defined in: [types.ts:56](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L56)
 
 #### Indexable
 
@@ -377,17 +378,17 @@ Defined in: [types.ts:55](https://github.com/masksrb/masks/blob/main/web/src/typ
 
 | Property | Type | Defined in |
 | ------ | ------ | ------ |
-| <a id="authorization_endpoint"></a> `authorization_endpoint` | `string` | [types.ts:57](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L57) |
-| <a id="avatar_endpoint"></a> `avatar_endpoint?` | `string` | [types.ts:60](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L60) |
-| <a id="avatar_sizes_supported"></a> `avatar_sizes_supported?` | `number`[] | [types.ts:62](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L62) |
-| <a id="avatar_styles_supported"></a> `avatar_styles_supported?` | [`AvatarStyle`](#avatarstyle)[] | [types.ts:61](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L61) |
-| <a id="end_session_endpoint"></a> `end_session_endpoint?` | `string` | [types.ts:65](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L65) |
-| <a id="issuer-1"></a> `issuer` | `string` | [types.ts:56](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L56) |
-| <a id="jwks_uri"></a> `jwks_uri?` | `string` | [types.ts:63](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L63) |
-| <a id="revocation_endpoint"></a> `revocation_endpoint?` | `string` | [types.ts:64](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L64) |
-| <a id="tenant-1"></a> `tenant?` | [`Tenant`](#tenant-2) | [types.ts:66](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L66) |
-| <a id="token_endpoint"></a> `token_endpoint` | `string` | [types.ts:58](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L58) |
-| <a id="userinfo_endpoint"></a> `userinfo_endpoint?` | `string` | [types.ts:59](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L59) |
+| <a id="authorization_endpoint"></a> `authorization_endpoint` | `string` | [types.ts:58](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L58) |
+| <a id="avatar_endpoint"></a> `avatar_endpoint?` | `string` | [types.ts:61](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L61) |
+| <a id="avatar_sizes_supported"></a> `avatar_sizes_supported?` | `number`[] | [types.ts:63](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L63) |
+| <a id="avatar_styles_supported"></a> `avatar_styles_supported?` | [`AvatarStyle`](#avatarstyle)[] | [types.ts:62](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L62) |
+| <a id="end_session_endpoint"></a> `end_session_endpoint?` | `string` | [types.ts:66](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L66) |
+| <a id="issuer-1"></a> `issuer` | `string` | [types.ts:57](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L57) |
+| <a id="jwks_uri"></a> `jwks_uri?` | `string` | [types.ts:64](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L64) |
+| <a id="revocation_endpoint"></a> `revocation_endpoint?` | `string` | [types.ts:65](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L65) |
+| <a id="tenant-1"></a> `tenant?` | [`Tenant`](#tenant-2) | [types.ts:67](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L67) |
+| <a id="token_endpoint"></a> `token_endpoint` | `string` | [types.ts:59](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L59) |
+| <a id="userinfo_endpoint"></a> `userinfo_endpoint?` | `string` | [types.ts:60](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L60) |
 
 ***
 
@@ -409,16 +410,16 @@ Defined in: [jwt.ts:11](https://github.com/masksrb/masks/blob/main/web/src/jwt.t
 
 ### Refusal
 
-Defined in: [types.ts:29](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L29)
+Defined in: [types.ts:30](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L30)
 
 #### Properties
 
 | Property | Type | Defined in |
 | ------ | ------ | ------ |
-| <a id="error"></a> `error` | `string` | [types.ts:31](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L31) |
-| <a id="handshake_url"></a> `handshake_url?` | `string` | [types.ts:33](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L33) |
-| <a id="login_url"></a> `login_url?` | `string` | [types.ts:32](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L32) |
-| <a id="signed_in-1"></a> `signed_in` | `false` | [types.ts:30](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L30) |
+| <a id="error"></a> `error` | `string` | [types.ts:32](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L32) |
+| <a id="handshake_url"></a> `handshake_url?` | `string` | [types.ts:34](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L34) |
+| <a id="login_url"></a> `login_url?` | `string` | [types.ts:33](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L33) |
+| <a id="signed_in-1"></a> `signed_in` | `false` | [types.ts:31](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L31) |
 
 ***
 
@@ -605,19 +606,19 @@ Defined in: [types.ts:1](https://github.com/masksrb/masks/blob/main/web/src/type
 
 ### Tokens
 
-Defined in: [types.ts:45](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L45)
+Defined in: [types.ts:46](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L46)
 
 #### Properties
 
 | Property | Type | Defined in |
 | ------ | ------ | ------ |
-| <a id="access_token"></a> `access_token` | `string` | [types.ts:46](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L46) |
-| <a id="expires_in"></a> `expires_in` | `number` | [types.ts:51](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L51) |
-| <a id="id_token"></a> `id_token?` | `string` | [types.ts:47](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L47) |
-| <a id="obtained_at"></a> `obtained_at` | `number` | [types.ts:52](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L52) |
-| <a id="refresh_token"></a> `refresh_token?` | `string` | [types.ts:48](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L48) |
-| <a id="scope-1"></a> `scope` | `string` | [types.ts:50](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L50) |
-| <a id="token_type"></a> `token_type` | `string` | [types.ts:49](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L49) |
+| <a id="access_token"></a> `access_token` | `string` | [types.ts:47](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L47) |
+| <a id="expires_in"></a> `expires_in` | `number` | [types.ts:52](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L52) |
+| <a id="id_token"></a> `id_token?` | `string` | [types.ts:48](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L48) |
+| <a id="obtained_at"></a> `obtained_at` | `number` | [types.ts:53](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L53) |
+| <a id="refresh_token"></a> `refresh_token?` | `string` | [types.ts:49](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L49) |
+| <a id="scope-1"></a> `scope` | `string` | [types.ts:51](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L51) |
+| <a id="token_type"></a> `token_type` | `string` | [types.ts:50](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L50) |
 
 ***
 
@@ -665,7 +666,7 @@ type Status =
 };
 ```
 
-Defined in: [types.ts:36](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L36)
+Defined in: [types.ts:37](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L37)
 
 ## Functions
 

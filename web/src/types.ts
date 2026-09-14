@@ -24,6 +24,7 @@ export interface Account {
   tenant?: Tenant;
   scopes: string[];
   expires_at?: number;
+  account_url?: string;
 }
 
 export interface Refusal {
