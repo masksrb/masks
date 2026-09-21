@@ -18,7 +18,12 @@
             <% apps.each do |app| %>
               <% told = ResourceMetadata.describe(app.audience, app.scopes) %>
               <div class="item">
-                <span class="item-name"><%= app.name %></span>
+                <span class="item-name">
+                  <% if (logo = app.client.logo_url) %>
+                    <img src="<%= logo %>&size=32" alt="" width="20" height="20" class="item-logo" referrerpolicy="no-referrer" />
+                  <% end %>
+                  <span><%= app.name %></span>
+                </span>
 
                 <ul class="item-list">
                   <% told.first(3).each do |_scope, description| %>

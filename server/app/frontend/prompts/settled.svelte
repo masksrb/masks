@@ -1,4 +1,5 @@
 <script>
+import ClientMark from "../shared/ClientMark.svelte";
 import Head from "../shared/Head.svelte";
 
 let { login } = $props();
@@ -18,9 +19,7 @@ const initial = (name) => (name ? name.trim().slice(0, 1).toUpperCase() : "");
     <div class="auth-pair">
       <span class="auth-mark" aria-hidden="true">{initial(tenant)}</span>
       <span class="auth-wire auth-wire-live"></span>
-      <span class="auth-mark auth-mark-client" aria-hidden="true"
-        >{initial(client)}</span
-      >
+      <ClientMark client={login.client} />
     </div>
   {/if}
 

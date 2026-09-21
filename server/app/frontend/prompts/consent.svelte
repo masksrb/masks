@@ -1,5 +1,6 @@
 <script>
 import Action from "../shared/Action.svelte";
+import ClientMark from "../shared/ClientMark.svelte";
 import Head from "../shared/Head.svelte";
 import { ranked } from "../lib/scopes.js";
 
@@ -14,7 +15,7 @@ const initial = (name) => (name ? name.slice(0, 1).toUpperCase() : "");
 </script>
 
 <div class="auth-pair">
-  <span class="auth-mark auth-mark-client" aria-hidden="true">{initial(client)}</span>
+  <ClientMark client={login.client} />
   <span class="auth-wire"></span>
   <span class="auth-mark" aria-hidden="true">{initial(tenant)}</span>
 </div>
@@ -58,7 +59,28 @@ const initial = (name) => (name ? name.slice(0, 1).toUpperCase() : "");
       {/each}
     </div>
   {/if}
+
+  {#if login.client?.returnsTo}
+    <div class="ledger-row">
+      <span class="ledger-label">{login.t("returns_to")}</span>
+      <span class="ledger-value aside-mono">{login.client.returnsTo}</span>
+    </div>
+  {/if}
 </div>
+
+{#if login.client?.site || login.client?.terms || login.client?.privacy}
+  <p class="aside client-links">
+    {#if login.client.site}
+      <a class="textlink" href={login.client.site} rel="noopener noreferrer" target="_blank">{login.t("site", { client })}</a>
+    {/if}
+    {#if login.client.terms}
+      <a class="textlink" href={login.client.terms} rel="noopener noreferrer" target="_blank">{login.t("terms")}</a>
+    {/if}
+    {#if login.client.privacy}
+      <a class="textlink" href={login.client.privacy} rel="noopener noreferrer" target="_blank">{login.t("privacy")}</a>
+    {/if}
+  </p>
+{/if}
 
 <div class="action-row">
   <Action

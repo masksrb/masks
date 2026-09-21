@@ -1,8 +1,13 @@
 <% state = login.state("consent") %>
+<% client = login.as_json["client"] || {} %>
 <% hot, rest = ranked_scopes(ResourceMetadata.describe(state.audience, state.scopes)) %>
 
 <div class="auth-pair">
-  <span class="auth-mark auth-mark-client" aria-hidden="true"><%= login.client&.name.to_s.first&.upcase %></span>
+  <% if client["logo"] %>
+    <%= image_tag client["logo"], alt: "", class: "auth-mark auth-mark-client auth-mark-logo", referrerpolicy: "no-referrer" %>
+  <% else %>
+    <span class="auth-mark auth-mark-client" aria-hidden="true"><%= login.client&.name.to_s.first&.upcase %></span>
+  <% end %>
   <span class="auth-wire"></span>
   <span class="auth-mark" aria-hidden="true"><%= Current.tenant&.name.to_s.first&.upcase %></span>
 </div>
@@ -46,7 +51,23 @@
       <% end %>
     </div>
   <% end %>
+
+  <% if client["returnsTo"] %>
+    <div class="ledger-row">
+      <span class="ledger-label"><%= t(".returns_to") %></span>
+      <span class="ledger-value aside-mono"><%= client["returnsTo"] %></span>
+    </div>
+  <% end %>
 </div>
+
+<% links = { "site" => t(".site", client: client["name"]), "terms" => t(".terms"), "privacy" => t(".privacy") }.select { |key, _| client[key] } %>
+<% if links.any? %>
+  <p class="aside client-links">
+    <% links.each do |key, label| %>
+      <%= link_to label, client[key], class: "textlink", rel: "noopener noreferrer", target: "_blank" %>
+    <% end %>
+  </p>
+<% end %>
 
 <div class="action-row">
   <%= form_with url: login_path, method: :post, id: "consent", class: "action-grow" do |form| %>

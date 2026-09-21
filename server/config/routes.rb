@@ -48,6 +48,8 @@ Rails.application.routes.draw do
     get "/avatars/:uuid/:style/:digest", to: "avatars#show", as: :stamped_avatar
   end
 
+  get "/clients/:client_id/logo", to: "client_logos#show", as: :client_logo, constraints: { client_id: %r{[^/]+} }
+
   get "/handshake", to: "handshakes#show", as: :handshake
   post "/handshake", to: "handshakes#create"
 

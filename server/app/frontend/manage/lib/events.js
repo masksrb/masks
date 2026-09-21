@@ -18,6 +18,7 @@ const NOTABLE = new Set([
   "provisioning_token.issued",
   "provisioning_token.revoked",
   "client.secret_rotated",
+  "client.logo_refused",
   "signing_key.rotated",
   "signing_key.activated",
   "backup_code.spent",

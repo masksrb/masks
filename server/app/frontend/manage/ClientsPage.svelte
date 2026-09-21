@@ -20,7 +20,7 @@
   const QUERY = `
     query Clients($search: String, $archived: Boolean, $afterId: ID, $limit: Int) {
       clients(search: $search, archived: $archived, afterId: $afterId, limit: $limit) {
-        clientId name dynamic approvedAt archivedAt
+        clientId name dynamic approvedAt archivedAt logoUrl
         requiredScopes allowedScopes resources createdAt
         approvedBy { identifier }
         namespaces { name }
@@ -391,11 +391,22 @@
         {#each clients as client (client.clientId)}
           <Row to={`/clients/${client.clientId}`}>
             <td class="max-w-[15rem]">
-              <Link to={`/clients/${client.clientId}`} class="link link-hover font-medium">
-                {client.name}
-              </Link>
-              <div class="truncate font-mono text-xs opacity-50" title={client.clientId}>
-                {client.clientId}
+              <div class="flex items-center gap-2.5">
+                {#if client.logoUrl}
+                  <img src={`${client.logoUrl}&size=64`} alt="" class="size-8 shrink-0 rounded" />
+                {:else}
+                  <span class="grid size-8 shrink-0 place-items-center rounded bg-base-200 text-sm font-semibold" aria-hidden="true"
+                    >{client.name.trim().slice(0, 1).toUpperCase()}</span
+                  >
+                {/if}
+                <div class="min-w-0">
+                  <Link to={`/clients/${client.clientId}`} class="link link-hover font-medium">
+                    {client.name}
+                  </Link>
+                  <div class="truncate font-mono text-xs opacity-50" title={client.clientId}>
+                    {client.clientId}
+                  </div>
+                </div>
               </div>
             </td>
             <td class="hidden max-w-[16rem] md:table-cell">

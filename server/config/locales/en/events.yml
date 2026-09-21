@@ -76,6 +76,7 @@ en:
         archived: "Client archived"
         restored: "Client restored"
         secret_rotated: "Client secret rotated"
+        logo_refused: "Client logo could not be used"
       token:
         revoked: "Token revoked"
       saml:

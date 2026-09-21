@@ -834,6 +834,21 @@
     border-color: var(--line-firm);
   }
 
+  .auth-mark-logo {
+    object-fit: cover;
+    background: var(--surface);
+  }
+
+  .item-logo {
+    border-radius: 0.3rem;
+  }
+
+  .client-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+  }
+
   .auth-mark-pending {
     border-style: dashed;
     color: var(--came);

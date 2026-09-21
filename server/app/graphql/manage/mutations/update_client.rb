@@ -27,6 +27,10 @@ module Manage
       argument :saml_attributes, GraphQL::Types::JSON, required: false
       argument :consent_required, Boolean, required: false
       argument :sign_in_policy, ID, required: false
+      argument :client_uri, String, required: false
+      argument :logo_uri, String, required: false
+      argument :tos_uri, String, required: false
+      argument :policy_uri, String, required: false
 
       field :client, Types::ClientType, null: false
 
@@ -54,6 +58,8 @@ module Manage
         end
 
         save!(client)
+
+        ClientLogoJob.perform_later(client.id) if attributes.key?(:logo_uri) && !client.saved_change_to_logo_uri?
 
         audit!(::Event::CLIENT_UPDATED, client: client, name: client.name)
 

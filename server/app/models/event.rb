@@ -77,6 +77,7 @@ class Event < ApplicationRecord
   CLIENT_ARCHIVED = "client.archived".freeze
   CLIENT_RESTORED = "client.restored".freeze
   CLIENT_SECRET_ROTATED = "client.secret_rotated".freeze
+  CLIENT_LOGO_REFUSED = "client.logo_refused".freeze
 
   TOKEN_REVOKED = "token.revoked".freeze
   SAML_ASSERTED = "saml.asserted".freeze

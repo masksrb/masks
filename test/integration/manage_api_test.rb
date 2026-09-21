@@ -307,6 +307,33 @@ class ManageApiTest < ActionDispatch::IntegrationTest
     assert_match "default", refused["errors"].first["message"]
   end
 
+  test "a manager sets the links and logo people are shown, and a link that is not a URL is refused" do
+    held = bearer
+    stub_request(:get, "https://probe.example.com/logo.png")
+      .to_return(body: Vips::Image.black(40, 40).pngsave_buffer, headers: { "Content-Type" => "image/png" })
+
+    refused = ask(%(mutation { updateClient(clientId: "#{@client.client_id}", tosUri: "javascript:alert(1)") { client { tosUri } } }), held)
+
+    assert_match "must be an http or https URL", refused["errors"].first["message"]
+
+    body = nil
+
+    perform_enqueued_jobs do
+      body = ask(<<~GQL, held)
+        mutation {
+          updateClient(clientId: "#{@client.client_id}", tosUri: "https://probe.example.com/terms",
+                       logoUri: "https://probe.example.com/logo.png") { client { tosUri } }
+        }
+      GQL
+    end
+
+    assert_equal "https://probe.example.com/terms", body.dig("data", "updateClient", "client", "tosUri")
+
+    shown = ask(%(query { client(clientId: "#{@client.client_id}") { logoUrl } }), held)
+
+    assert_match %r{/clients/#{@client.client_id}/logo\?v=\h{16}}, shown.dig("data", "client", "logoUrl")
+  end
+
   test "the policy a client falls back to is the tenant's default, or the built-in one without it" do
     held = bearer
     fallback = %(query { defaultSignInPolicy { key name signup createdAt default } })

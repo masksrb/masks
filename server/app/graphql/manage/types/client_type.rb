@@ -20,6 +20,7 @@ module Manage
       field :logo_uri, String
       field :tos_uri, String
       field :policy_uri, String
+      field :logo_url, String
       field :backchannel_logout_uri, String
       field :backchannel_logout_session_required, Boolean, null: false
       field :require_pushed_authorization_requests, Boolean, null: false
@@ -82,6 +83,10 @@ module Manage
           .newest_first
           .includes(:actor, :by, :device)
           .limit(::Event.bounded(limit))
+      end
+
+      def logo_url
+        object.logo_url(shown: true)
       end
 
       def required_scopes

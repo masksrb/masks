@@ -21,6 +21,8 @@ class Client < ApplicationRecord
   CHALLENGE_METHODS = %w[S256].freeze
   LOOPBACK = %w[localhost 127.0.0.1 ::1].freeze
   DEFAULT_SCOPES = Scopes::STANDARD
+  METADATA_URIS = %i[client_uri logo_uri tos_uri policy_uri].freeze
+  METADATA_URI_LIMIT = 2048
 
   class ScopesUnavailable < StandardError; end
 
@@ -28,6 +30,7 @@ class Client < ApplicationRecord
   has_many :consents, dependent: :destroy
   has_many :delegations, dependent: :destroy
   has_many :namespaces, -> { order(:name) }, dependent: :nullify
+  has_one :logo, class_name: "ClientLogo", dependent: :delete
 
   validates :client_id, presence: true, uniqueness: { scope: :tenant_id }
   validates :name, presence: true
@@ -44,8 +47,12 @@ class Client < ApplicationRecord
   validate :sector_is_derivable
   validate :consent_is_skipped_only_when_approved
   validate :sector_identifier_uri_is_owned, if: :sector_declared?
+  validate :metadata_uris_are_usable
 
   normalizes :saml_entity_id, with: ->(value) { value.to_s.strip.presence }
+  normalizes(*METADATA_URIS, with: ->(value) { value.to_s.strip.presence })
+
+  after_commit :fetch_logo, on: %i[create update], if: :saved_change_to_logo_uri?
 
   belongs_to :approved_by, class_name: "Actor", optional: true
   belongs_to :sign_in_policy, optional: true
@@ -189,6 +196,18 @@ class Client < ApplicationRecord
 
   def approved?
     approved_at.present?
+  end
+
+  def shown_logo
+    logo if approved?
+  end
+
+  def logo_url(origin = Current.origin, shown: approved?)
+    return nil unless shown
+
+    digest = ClientLogo.where(client_id: id).pick(:digest)
+
+    digest && "#{origin}/clients/#{client_id}/logo?v=#{digest}"
   end
 
   def issue_credentials!
@@ -403,6 +422,37 @@ class Client < ApplicationRecord
     def sector_declared?
       sector_identifier_uri.present? &&
         (sector_identifier_uri_changed? || redirect_uris_changed?)
+    end
+
+    def metadata_uris_are_usable
+      METADATA_URIS.each do |field|
+        value = public_send(field)
+
+        next if value.blank? || !will_save_change_to_attribute?(field)
+
+        refusal = metadata_uri_refusal(value)
+        errors.add(field, refusal) if refusal
+      end
+    end
+
+    def metadata_uri_refusal(value)
+      return "must be at most #{METADATA_URI_LIMIT} characters" if value.length > METADATA_URI_LIMIT
+
+      uri = URI.parse(value)
+
+      if !uri.is_a?(URI::HTTP) || uri.host.blank?
+        "must be an http or https URL"
+      elsif uri.userinfo.present?
+        "must not carry a username or password"
+      elsif uri.scheme == "http" && !loopback?(uri) && !Rails.env.local?
+        "must use https unless it is loopback"
+      end
+    rescue URI::InvalidURIError
+      "is not a URI"
+    end
+
+    def fetch_logo
+      ClientLogoJob.perform_later(id)
     end
 
     def sector_is_derivable
