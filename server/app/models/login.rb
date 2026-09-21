@@ -155,11 +155,11 @@ class Login
   end
 
   def authenticated_at
-    factored_at(:first_factor) || session&.authenticated_at
+    factored_at(:first_factor) || (signed_in? ? session.authenticated_at : nil)
   end
 
   def signed_in?
-    session.present?
+    session.present? && actor.present? && session.actor_id == actor.id
   end
 
   def reauthenticating?
