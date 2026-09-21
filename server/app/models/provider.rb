@@ -170,8 +170,7 @@ class Provider < ApplicationRecord
     raise Refused, "#{name} published more than #{limit / 1.kilobyte} KB" if response.body.to_s.bytesize > limit
 
     response.body.to_s
-  rescue Net::HTTPBadResponse, Net::OpenTimeout, Net::ReadTimeout, SocketError, SystemCallError,
-         OpenSSL::SSL::SSLError, URI::InvalidURIError => e
+  rescue *Outbound::UNREADABLE, URI::InvalidURIError => e
     raise Unreachable, "#{name} did not answer: #{e.class}"
   end
 
@@ -433,8 +432,7 @@ class Provider < ApplicationRecord
       raise Refused, upstream_error(parsed, response) unless response.is_a?(Net::HTTPSuccess)
 
       list ? Array(parsed).grep(Hash) : (parsed.is_a?(Hash) ? parsed : {})
-    rescue Net::HTTPBadResponse, Net::OpenTimeout, Net::ReadTimeout, SocketError, SystemCallError,
-           OpenSSL::SSL::SSLError, URI::InvalidURIError => e
+    rescue *Outbound::UNREADABLE, URI::InvalidURIError => e
       raise Unreachable, "#{name} did not answer: #{e.class}"
     end
 
