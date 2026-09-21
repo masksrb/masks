@@ -10,6 +10,7 @@ import BackupCode from "./prompts/backup-code.svelte";
 import Consent from "./prompts/consent.svelte";
 import FirstFactor from "./prompts/first-factor.svelte";
 import Identify from "./prompts/identify.svelte";
+import ProveEmail from "./prompts/prove-email.svelte";
 import ResetPassword from "./prompts/reset-password.svelte";
 import SecondFactor from "./prompts/second-factor.svelte";
 import Settled from "./prompts/settled.svelte";
@@ -18,15 +19,16 @@ import AwaitingApproval from "./prompts/awaiting-approval.svelte";
 import ConfirmEmail from "./prompts/confirm-email.svelte";
 import ConfirmPhone from "./prompts/confirm-phone.svelte";
 import Signup from "./prompts/signup.svelte";
-import SignupPassword from "./prompts/signup-password.svelte";
+import SignupCredentials from "./prompts/signup-credentials.svelte";
 import SetupConfigure from "./prompts/setup-configure.svelte";
 
 const prompts = {
   signup: Signup,
-  "signup-password": SignupPassword,
+  "signup-credentials": SignupCredentials,
   "setup-configure": SetupConfigure,
   "accept-invitation": AcceptInvitation,
   identify: Identify,
+  "prove-email": ProveEmail,
   "reset-password": ResetPassword,
   "first-factor": FirstFactor,
   "second-factor": SecondFactor,

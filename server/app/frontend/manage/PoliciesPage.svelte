@@ -293,8 +293,24 @@
                     onchange={(scopes) => (draft.signupScopes = scopes)}
                   />
                 </div>
+              {/if}
 
-                <Switch label="Hide who has an account" bind:checked={draft.hidden} />
+              <Switch label="Hide who has an account" bind:checked={draft.hidden} />
+
+              {#if draft.hidden}
+                <p class="text-xs opacity-70">
+                  An email address is sent a code before anything else, whether it has an account or not, and a
+                  device that account has used before skips it. Nicknames sign in as they always have.
+                </p>
+                {#if !data.tenant.mails}
+                  <p class="text-xs text-warning">
+                    No mail adapter, so nobody can sign in with an email address. <Link to="/adapters" class="link">Add one</Link>
+                  </p>
+                {/if}
+              {:else if draft.signup}
+                <p class="text-xs text-warning">
+                  An unknown address goes straight to signup, which tells anybody which addresses have accounts here.
+                </p>
               {/if}
             </div>
           </div>

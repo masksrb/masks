@@ -7,7 +7,7 @@ module LoginStates
     FIRST_RUN_STEPS = %w[identification credentials configuration].freeze
     STEPS = %w[identification credentials].freeze
 
-    accepts :nickname, :email, :name, :phone, :password, :password_confirmation, :token
+    accepts :nickname, :email, :name, :phone, :password, :password_confirmation, :token, :passkey
 
     class << self
       def token
@@ -36,11 +36,19 @@ module LoginStates
       edit
     end
 
+    handles "signup:passkey-challenge" do
+      offer_passkey
+    end
+
+    handles "signup:passkey", limit: :verifying do
+      claim_with_passkey
+    end
+
     prompts "signup" do
       held.blank? || held["editing"]
     end
 
-    prompts "signup-password" do
+    prompts "signup-credentials" do
       true
     end
 
@@ -58,11 +66,14 @@ module LoginStates
           "token" => login.first_run? && self.class.token_required?,
           "minimum" => policy.password_minimum,
           "asks" => { "nickname" => policy.nickname, "email" => policy.email, "phone" => policy.phone },
+          "fixed" => proven_email ? [ "email" ] : [],
+          "credentials" => { "password" => policy.first_factor?(:password), "passkey" => policy.first_factor?(:passkey) },
           "nickname" => held.fetch("nickname") { suggested("nickname") },
-          "email" => held.fetch("email") { suggested("email") },
+          "email" => proven_email || held.fetch("email") { suggested("email") },
           "name" => held["name"],
-          "phone" => held["phone"]
-        }
+          "phone" => held["phone"],
+          "passkeyOptions" => @passkey_options
+        }.compact
       }
     end
 
@@ -85,10 +96,17 @@ module LoginStates
       def open_to?(identifier)
         policy = login.policy
 
-        return false unless policy.signup && policy.first_factor?(:password)
+        return false unless policy.signup && policy.local?
         return false if identifier.blank? || located?(identifier)
+        return false if policy.hidden && !login.state("inbox").proven?(identifier)
 
         !identifier.include?("@") || policy.admits?(identifier)
+      end
+
+      def proven_email
+        return nil unless login.policy.hidden && login.state("inbox").proven?
+
+        Inbox.address(login.identifier)
       end
 
       def located?(identifier)
@@ -109,6 +127,8 @@ module LoginStates
         values = %w[nickname email name phone].to_h do |field|
           [ field, ::Actor.normalize_value_for(field.to_sym, update(field)) ]
         end
+
+        values["email"] = proven_email if proven_email
 
         return unless described?(values)
 
@@ -137,6 +157,7 @@ module LoginStates
 
       def claim
         return if held.blank? || held["editing"] || !crediting?
+        return warn!("factor-not-offered") unless login.policy.first_factor?(:password)
 
         refusal = Passwords.refusal(password, login.policy)
 
@@ -147,10 +168,59 @@ module LoginStates
 
         return unless credited
 
-        actor = create
+        actor = create(password: password)
 
         return if actor.nil?
 
+        settle(actor)
+        login.noted! "pwd"
+      end
+
+      def offer_passkey
+        return if held.blank? || held["editing"]
+        return warn!("factor-not-offered") unless login.policy.first_factor?(:passkey)
+
+        handle = held["webauthn_id"] || WebAuthn.generate_user_id
+        options = relying_party.registration_options(
+          ::Actor.new(held.slice("nickname", "email", "name").merge("webauthn_id" => handle)),
+          user_verification: "required", resident_key: "required"
+        )
+
+        @passkey_options = options.as_json
+        login.store[HELD] = held.merge("webauthn_id" => handle, "passkey_challenge" => options.challenge)
+      end
+
+      def claim_with_passkey
+        return if held.blank? || held["editing"]
+        return warn!("factor-not-offered") unless login.policy.first_factor?(:passkey)
+
+        challenge = held["passkey_challenge"]
+        login.store[HELD] = held.except("passkey_challenge")
+
+        return warn!("passkey-expired") if challenge.blank?
+
+        credential = relying_party.verify_registration(JSON.parse(update(:passkey).to_s), challenge)
+
+        unless credential.response.authenticator_data.user_verified?
+          refused! "signup_passkey"
+          return warn!("passkey-unverified")
+        end
+
+        actor = create(webauthn_id: held["webauthn_id"]) do |created|
+          ::Passkey.register!(actor: created, credential: credential)
+        end
+
+        return if actor.nil?
+
+        settle(actor)
+        factored! :second_factor, expiry: EXPIRY
+        login.noted! "swk", "user", "mfa"
+      rescue WebAuthn::Error, JSON::ParserError
+        refused! "signup_passkey"
+        warn! "passkey-unusable"
+      end
+
+      def settle(actor)
         Event.record!(Event::ACCOUNT_CREATED, actor: actor, first_run: @first_run,
                                               signup: !@first_run, policy: login.policy.key)
 
@@ -162,12 +232,13 @@ module LoginStates
         login.actor = actor
         login.first_run!
         factored! :first_factor, expiry: EXPIRY
-        login.noted! "pwd"
         login.store[SIGNED_UP] = { "first_run" => @first_run, "expires_at" => (Time.current + EXPIRY).to_i }
         login.store[Configure::HELD] = true if @first_run
       end
 
-      def create
+      def create(password: nil, webauthn_id: nil)
+        proven = proven_email
+
         ::Actor.transaction do
           ::Tenant.where(id: tenant.id).lock.pick(:id)
 
@@ -179,14 +250,18 @@ module LoginStates
             raise ActiveRecord::Rollback
           end
 
+          now = Time.current
           actor = ::Actor.new(
             nickname: held["nickname"],
             email: held["email"],
             name: held["name"],
             phone: held["phone"],
             password: password,
-            signed_up_at: Time.current,
-            pending_approval_at: !@first_run && login.policy.confirmation == SignInPolicy::APPROVAL ? Time.current : nil,
+            webauthn_id: webauthn_id,
+            activated_at: password ? nil : now,
+            email_verified_at: proven.present? && held["email"] == proven ? now : nil,
+            signed_up_at: now,
+            pending_approval_at: !@first_run && login.policy.confirmation == SignInPolicy::APPROVAL ? now : nil,
             scopes: Scopes.join(@first_run ? Scopes::STANDARD + [ Scopes::MANAGE ] : login.policy.signup_scope_list)
           )
 
@@ -195,8 +270,19 @@ module LoginStates
             raise ActiveRecord::Rollback
           end
 
+          begin
+            yield actor if block_given?
+          rescue ActiveRecord::RecordInvalid
+            warn! "passkey-unusable"
+            raise ActiveRecord::Rollback
+          end
+
           actor
         end
+      end
+
+      def relying_party
+        RelyingParty.for(tenant, Current.origin)
       end
 
       def kept

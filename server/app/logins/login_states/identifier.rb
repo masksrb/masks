@@ -22,7 +22,7 @@ module LoginStates
 
     def as_json
       {
-        "signupOpen" => login.policy.signup && login.policy.first_factor?(:password),
+        "signupOpen" => login.policy.signup && login.policy.local?,
         "identifies" => login.policy.first_factor?(:password) || login.policy.first_factor?(:passkey)
       }
     end

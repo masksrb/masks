@@ -113,8 +113,17 @@ en:
       hint: "At least %{minimum} characters. Signs you out everywhere else."
       working: "Setting"
 
-    signup_password:
+    signup_credentials:
       working: "Creating"
+      create_passkey: "Create a passkey"
+      with_passkey: "Use a passkey instead"
+      passkey_lede: "Your device keeps the passkey and checks it is you the way it already unlocks. There is no password to remember."
+      no_passkeys: "This browser cannot make a passkey. Try another browser or device."
+
+    prove_email:
+      title: "Check your email"
+      lede: "A six-digit code is on its way to %{email}. Enter it to carry on."
+      no_mailer: "This server cannot send email yet, so an address cannot be used to sign in. Use your nickname, or ask a manager."
 
     setup_configure:
       called: "This server is called"
@@ -176,6 +185,9 @@ en:
       missing-first-factor: "That step expired. Start over."
       too-many-attempts: "Too many attempts. Wait a few minutes."
       too-many-attempts-for-account: "Too many attempts for that account."
+      too-many-codes: "Too many codes have gone to that address. Wait a few minutes."
+      prove-email-first: "Enter the code sent to that address first."
+      no-account-for-email: "No account here uses that address."
       invalid-setup-token: "That setup token is wrong."
       missing-nickname: "Choose a nickname."
       short-password: "That password is too short."

@@ -66,7 +66,7 @@ class SignupTest < ActionDispatch::IntegrationTest
 
     body = event("signup", nickname: "ada", email: "ada@example.com", name: "Ada Lovelace")
 
-    assert_equal "signup-password", body["prompt"]
+    assert_equal "signup-credentials", body["prompt"]
     assert_nil created
 
     body = event("signup", password: PASSWORD, password_confirmation: PASSWORD)

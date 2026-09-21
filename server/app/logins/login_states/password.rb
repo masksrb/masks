@@ -11,6 +11,7 @@ module LoginStates
     def verify
       return warn!("missing-identifier") if login.identifier.blank?
       return warn!("factor-not-offered") unless login.policy.first_factor?(:password)
+      return warn!("prove-email-first") if login.state("inbox").pending?
 
       authenticated = Actor.authenticate(login.identifier, update(:password))
 

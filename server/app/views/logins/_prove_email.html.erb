@@ -1,0 +1,12 @@
+<% inbox = login.as_json["inbox"] %>
+
+<%= render "logins/head", title: t(".title"), lede: (t(".lede", email: inbox["email"]) if inbox["mails"]) %>
+
+<%= render "logins/identified", login: login %>
+
+<% if inbox["mails"] %>
+  <%= render "logins/code_form", login: login, event: "inbox:verify" %>
+  <%= render "logins/resend", login: login, event: "inbox:resend" %>
+<% else %>
+  <p class="note note-warn" role="alert"><%= t(".no_mailer") %></p>
+<% end %>

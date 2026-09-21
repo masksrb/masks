@@ -100,7 +100,7 @@ class FirstRunTest < ActionDispatch::IntegrationTest
     post "/login", params: identify_params, as: :json
     body = JSON.parse(response.body)
 
-    assert_equal "signup-password", body["prompt"]
+    assert_equal "signup-credentials", body["prompt"]
     assert_equal "owner", body.dig("signup", "nickname")
     assert_equal 0, within(@tenant) { Actor.count }
 
@@ -212,7 +212,7 @@ class FirstRunTest < ActionDispatch::IntegrationTest
          as: :json
     body = JSON.parse(response.body)
 
-    assert_equal "signup-password", body["prompt"]
+    assert_equal "signup-credentials", body["prompt"]
     assert_includes body["warnings"], "short-password"
     assert_equal 0, within(@tenant) { Actor.count }
   end

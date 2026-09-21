@@ -65,16 +65,15 @@ class ActorMailer < ApplicationMailer
     )
   end
 
-  def confirmation_code(actor, code, tenant_name:)
+  def confirmation_code(email, code, tenant_name:)
     return message unless deliverable?
 
-    @actor = actor
     @code = code
     @tenant_name = tenant_name
 
     mail(
       from: self.class.from,
-      to: actor.email,
+      to: email,
       subject: t("actor_mailer.confirmation_code.subject", code: code, tenant: tenant_name)
     )
   end

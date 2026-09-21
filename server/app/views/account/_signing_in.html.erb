@@ -39,37 +39,41 @@
       <summary>
         <span class="entry-icon"><%= account_icon(:password) %></span>
         <span class="entry-label"><%= account_text("password.heading") %></span>
-        <span class="entry-state"><%= account_text("password.state") %></span>
+        <span class="entry-state"><%= account_text(actor.password? ? "password.state" : "password.state_none") %></span>
         <span class="entry-mark" aria-hidden="true"></span>
       </summary>
 
       <div class="entry-body">
-        <%= form_with url: account_password_path, method: :patch, id: "change-password",
-              class: "flow-tight" do |form| %>
-          <label class="field">
-            <span class="field-label"><%= account_text("password.current") %></span>
-            <%= form.password_field :current_password, autocomplete: "current-password",
-                  class: "control" %>
-            <% if refused["current_password"] %>
-              <span class="field-hint field-hint-bad" role="alert"><%= refused["current_password"] %></span>
-            <% end %>
-          </label>
+        <% if !actor.password? %>
+          <p class="aside"><%= account_text("password.none") %></p>
+        <% else %>
+          <%= form_with url: account_password_path, method: :patch, id: "change-password",
+                class: "flow-tight" do |form| %>
+            <label class="field">
+              <span class="field-label"><%= account_text("password.current") %></span>
+              <%= form.password_field :current_password, autocomplete: "current-password",
+                    class: "control" %>
+              <% if refused["current_password"] %>
+                <span class="field-hint field-hint-bad" role="alert"><%= refused["current_password"] %></span>
+              <% end %>
+            </label>
 
-          <label class="field">
-            <span class="field-label"><%= account_text("password.new") %></span>
-            <%= form.password_field :password, autocomplete: "new-password", class: "control" %>
-            <% if refused["password"] %>
-              <span class="field-hint field-hint-bad" role="alert"><%= refused["password"] %></span>
-            <% else %>
-              <span class="field-hint">
-                <%= account_text("password.hint", minimum: SignInPolicy.for(tenant: Current.tenant).password_minimum) %>
-              </span>
-            <% end %>
-          </label>
+            <label class="field">
+              <span class="field-label"><%= account_text("password.new") %></span>
+              <%= form.password_field :password, autocomplete: "new-password", class: "control" %>
+              <% if refused["password"] %>
+                <span class="field-hint field-hint-bad" role="alert"><%= refused["password"] %></span>
+              <% else %>
+                <span class="field-hint">
+                  <%= account_text("password.hint", minimum: SignInPolicy.for(tenant: Current.tenant).password_minimum) %>
+                </span>
+              <% end %>
+            </label>
 
-          <div class="action-row">
-            <button type="submit" class="action action-sm"><%= account_text("password.submit") %></button>
-          </div>
+            <div class="action-row">
+              <button type="submit" class="action action-sm"><%= account_text("password.submit") %></button>
+            </div>
+          <% end %>
         <% end %>
       </div>
     </details>

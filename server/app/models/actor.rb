@@ -227,6 +227,14 @@ class Actor < ApplicationRecord
     otp? || verified_passkeys?
   end
 
+  def password?
+    password_digest.present?
+  end
+
+  def last_way_in?(passkey)
+    !password? && !passkeys.where.not(id: passkey.id).exists? && !connections.live.exists?
+  end
+
   OTP_DRIFT = 30
 
   def verify_otp(code)

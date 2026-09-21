@@ -37,7 +37,8 @@
       <% if asks["email"] != "off" %>
         <label class="ledger-row ledger-step<%= done.("email") %>">
           <span class="ledger-label"><%= t("logins.shared.email") %></span>
-          <%= form.email_field :email, value: value.("email"), autocomplete: "email", class: "control" %>
+          <%= form.email_field :email, value: value.("email"), autocomplete: "email", class: "control",
+                readonly: signup["fixed"].include?("email") %>
           <%= render "logins/hint", login: login, field: "email" %>
         </label>
       <% end %>

@@ -30,6 +30,7 @@ class PasskeysController < ApplicationController
     passkey = Passkey.find_by(id: params[:id], actor_id: current_actor.id)
 
     return refuse(t("passkeys.unknown")) if passkey.nil?
+    return refuse(t("passkeys.last_way_in")) if current_actor.last_way_in?(passkey)
 
     passkey.destroy!
 

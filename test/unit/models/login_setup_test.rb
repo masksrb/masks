@@ -58,7 +58,7 @@ class LoginSetupTest < ActiveSupport::TestCase
   test "the name and address are taken first, and nothing is created yet" do
     login = identify
 
-    assert_equal "signup-password", login.prompt
+    assert_equal "signup-credentials", login.prompt
     assert_nil login.actor
     assert_equal 0, within { Actor.count }
   end
@@ -170,7 +170,7 @@ class LoginSetupTest < ActiveSupport::TestCase
     identify
     login = credit(password: PASSWORD, confirmation: "a-different-password")
 
-    assert_equal "signup-password", login.prompt
+    assert_equal "signup-credentials", login.prompt
     assert_includes login.warnings, "mismatched-password"
     assert_equal 0, within { Actor.count }
   end
@@ -183,7 +183,7 @@ class LoginSetupTest < ActiveSupport::TestCase
     assert_equal "signup", login.prompt
     assert_equal "owner", login.as_json.dig("signup", "nickname")
 
-    assert_equal "signup-password", identify(nickname: "second").prompt
+    assert_equal "signup-credentials", identify(nickname: "second").prompt
     assert_equal "second", step.as_json.dig("signup", "nickname")
   end
 
@@ -259,7 +259,7 @@ class LoginSetupTest < ActiveSupport::TestCase
     identify
     login = credit(password: "short")
 
-    assert_equal "signup-password", login.prompt
+    assert_equal "signup-credentials", login.prompt
     assert_includes login.warnings, "short-password"
     assert_equal 0, within { Actor.count }
   end
@@ -268,7 +268,7 @@ class LoginSetupTest < ActiveSupport::TestCase
     identify(nickname: "-nope-")
     login = credit
 
-    assert_equal "signup-password", login.prompt
+    assert_equal "signup-credentials", login.prompt
     assert_includes login.warnings, "invalid-account"
     assert_equal 0, within { Actor.count }
   end
@@ -302,7 +302,7 @@ class LoginSetupTest < ActiveSupport::TestCase
 
   test "the right setup token gets past the first screen, and the manager is created" do
     with_token("the-real-token") do
-      assert_equal "signup-password", identify(token: "the-real-token").prompt
+      assert_equal "signup-credentials", identify(token: "the-real-token").prompt
 
       login = credit
 

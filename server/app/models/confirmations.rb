@@ -4,7 +4,7 @@ module Confirmations
       token, code = ConfirmationCode.open!(actor: actor, channel: channel, address: actor.public_send(channel))
 
       if channel == ConfirmationCode::EMAIL
-        ActorMailer.confirmation_code(actor, code, tenant_name: Current.tenant&.name).deliver_later
+        ActorMailer.confirmation_code(actor.email, code, tenant_name: Current.tenant&.name).deliver_later
         Event.record!(Event::EMAIL_VERIFICATION_SENT, actor: actor, email: actor.email, by_code: true)
       else
         Texting.deliver_later(to: actor.phone, body: I18n.t("texts.code", code: code, tenant: Current.tenant&.name))

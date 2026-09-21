@@ -86,7 +86,8 @@ module LoginStates
       end
 
       def offered_at_signup?
-        login.store[Signup::SIGNED_UP].present? && login.store[OFFERED].blank? && (offers["otp"] || offers["passkey"])
+        login.store[Signup::SIGNED_UP].present? && login.store[OFFERED].blank? && !actor.second_factor? &&
+          (offers["otp"] || offers["passkey"])
       end
 
       def open!

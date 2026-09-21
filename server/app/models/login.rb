@@ -5,6 +5,7 @@ class Login
     LoginStates::Passkey,
     LoginStates::Provider,
     LoginStates::Identifier,
+    LoginStates::Inbox,
     LoginStates::Signup,
     LoginStates::Password,
     LoginStates::FirstFactor,

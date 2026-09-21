@@ -8,6 +8,7 @@ let { login } = $props();
 
 const signup = $derived(login.auth.signup ?? {});
 const asks = $derived(signup.asks ?? {});
+const fixed = $derived(new Set(signup.fixed ?? []));
 const firstRun = $derived(Boolean(login.auth.journey?.firstRun));
 const docs = $derived(login.auth.docs);
 const origin = typeof location === "undefined" ? "" : location.origin;
@@ -79,7 +80,14 @@ function onsubmit(event) {
       {#if asks.email !== "off"}
         <label class="ledger-row ledger-step" class:ledger-step-done={filled(email)}>
           <span class="ledger-label">{login.t("email")}</span>
-          <input type="email" name="email" class="control" autocomplete="email" bind:value={email} />
+          <input
+            type="email"
+            name="email"
+            class="control"
+            autocomplete="email"
+            readonly={fixed.has("email")}
+            bind:value={email}
+          />
           <Hint {login} field="email" />
         </label>
       {/if}

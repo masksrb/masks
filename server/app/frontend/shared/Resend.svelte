@@ -1,12 +1,12 @@
 <script>
 import Action from "./Action.svelte";
 
-let { login } = $props();
+let { login, event = "confirm:resend", ready = null } = $props();
 
 let sent = $state(false);
 
 async function resend() {
-  await login.submit("confirm:resend", {});
+  await login.submit(event, {});
   sent = true;
 }
 </script>
@@ -14,7 +14,7 @@ async function resend() {
 <Action
   {login}
   plain
-  ready={login.auth.confirmation?.resendable !== false}
+  ready={ready ?? login.auth.confirmation?.resendable !== false}
   label={sent ? login.t("sent_again") : login.t("send_again")}
   onclick={resend}
 />

@@ -28,6 +28,7 @@ en:
     crowded: "You already have as many passkeys as this server keeps."
     unusable: "That passkey could not be added."
     unknown: "There is no such passkey on this account."
+    last_way_in: "That passkey is the only way into this account. Add another before removing it."
     added: "Passkey added."
     removed: "Passkey removed."
 
