@@ -22,7 +22,7 @@ module Manage
       field :clients, [ "Manage::Types::ClientType" ], null: false
       field :default, Boolean, null: false
       field :archived_at, GraphQL::Types::ISO8601DateTime
-      field :created_at, GraphQL::Types::ISO8601DateTime, null: false
+      field :created_at, GraphQL::Types::ISO8601DateTime
 
       def signup_scopes
         object.signup_scope_list

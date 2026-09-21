@@ -95,6 +95,8 @@ module Manage
         argument :key, ID
       end
 
+      field :default_sign_in_policy, SignInPolicyType, null: false
+
       field :scopes_supported, [ String ], null: false
 
       field :provisioning_tokens, [ ProvisioningTokenType ], null: false
@@ -285,6 +287,10 @@ module Manage
 
       def sign_in_policy(key:)
         ::SignInPolicy.find_by(key: key)
+      end
+
+      def default_sign_in_policy
+        ::SignInPolicy.for(tenant: Current.tenant)
       end
 
       def adapter_services

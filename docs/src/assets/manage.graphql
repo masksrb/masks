@@ -536,6 +536,7 @@ type Query {
   clients(afterId: ID, archived: Boolean, limit: Int, search: String): [Client!]!
   connections(actor: ID, limit: Int, provider: ID, revoked: Boolean): [Connection!]!
   consents(actor: ID, client: ID, limit: Int, revoked: Boolean): [Consent!]!
+  defaultSignInPolicy: SignInPolicy!
   device(id: ID!): Device
   devices(actor: ID, agent: String, blocked: Boolean, limit: Int, unattached: Boolean): [Device!]!
   eventActions: [EventAction!]!
@@ -740,7 +741,7 @@ type SignInPolicy {
   archivedAt: ISO8601DateTime
   clients: [Client!]!
   confirmation: String!
-  createdAt: ISO8601DateTime!
+  createdAt: ISO8601DateTime
   default: Boolean!
   email: String!
   emailDomains: [String!]!

@@ -307,6 +307,26 @@ class ManageApiTest < ActionDispatch::IntegrationTest
     assert_match "default", refused["errors"].first["message"]
   end
 
+  test "the policy a client falls back to is the tenant's default, or the built-in one without it" do
+    held = bearer
+    fallback = %(query { defaultSignInPolicy { key name signup createdAt default } })
+
+    built_in = ask(fallback, held).dig("data", "defaultSignInPolicy")
+
+    assert_equal "default", built_in["key"]
+    assert_nil built_in["createdAt"]
+    assert built_in["default"]
+
+    ask(%(mutation { createSignInPolicy(key: "customers", name: "Customers", signup: true) { signInPolicy { key } } }), held)
+    ask(%(mutation { updateTenant(signInPolicy: "customers") { tenant { name } } }), held)
+
+    chosen = ask(fallback, held).dig("data", "defaultSignInPolicy")
+
+    assert_equal "customers", chosen["key"]
+    assert chosen["signup"]
+    assert chosen["createdAt"]
+  end
+
   test "a manager lists who is waiting for approval and lets them in" do
     waiting = create_actor(@tenant, nickname: "waiting", pending_approval_at: Time.current, signed_up_at: Time.current)
     held = bearer

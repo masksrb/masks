@@ -1,6 +1,7 @@
 <script>
   import { createFeedback } from "./lib/feedback.svelte.js";
   import { day, joined } from "./lib/format.js";
+  import { POLICY_FIELDS, policyDifferences } from "./lib/policies.js";
   import Consents from "./Consents.svelte";
   import Events from "./Events.svelte";
   import Namespaces from "./Namespaces.svelte";
@@ -29,7 +30,7 @@
         backchannelLogoutUri backchannelLogoutSessionRequired
         requirePushedAuthorizationRequests requireSignedRequestObject consentRequired jwks jwksUri
         protocol samlEntityId samlCertificate samlNameIdFormat samlRequestsSigned samlIdpInitiated samlAttributes
-        signInPolicy { key name }
+        signInPolicy { ${POLICY_FIELDS} }
         events(limit: 25) {
           id action label createdAt ipAddress details
           actor { uuid identifier }
@@ -51,7 +52,7 @@
       scopesSupported
       samlMetadataUrl
       signInPolicies { key name }
-      tenant { signInPolicy { key name } }
+      defaultSignInPolicy { ${POLICY_FIELDS} }
     }
   `;
 
@@ -60,13 +61,17 @@
   let client = $state(null);
   let supported = $state([]);
   let policies = $state([]);
-  let tenantPolicy = $state(null);
+  let fallbackPolicy = $state(null);
   let name = $state("");
   let logoutUri = $state("");
   let jwksUri = $state("");
+  let jwks = $state("");
   let method = $state("");
+  let sector = $state("");
   let metadataUrl = $state("");
   let certificate = $state("");
+  let entityId = $state("");
+  let attributes = $state("");
   let loading = $state(true);
   let secret = $state(null);
 
@@ -88,11 +93,33 @@
           { term: "Registered", value: day(client.createdAt) },
           { term: "Grants", value: joined(client.grantTypes), mono: true },
           { term: "Response types", value: joined(client.responseTypes), mono: true },
-          { term: "Knows people as", value: client.subjectType, mono: true },
-          { term: "Sector", value: client.sectorIdentifierUri, mono: true },
         ]
       : [],
   );
+
+  const SUBJECTS = [
+    ["public", "The same identifier every client sees (public)"],
+    ["pairwise", "An identifier only it knows (pairwise)"],
+  ];
+
+  const GRANTS = [
+    ["refresh_token", "Keeps people signed in (refresh tokens)"],
+    ["urn:ietf:params:oauth:grant-type:device_code", "Signs in on devices without a browser (device code)"],
+    ["urn:ietf:params:oauth:grant-type:token-exchange", "Swaps one token for another (token exchange)"],
+  ];
+
+  const SAML_DEFAULTS = "email = email\nname = name\ngiven_name = given_name\nfamily_name = family_name\npreferred_username = preferred_username";
+
+  const differences = $derived(
+    client?.signInPolicy && fallbackPolicy ? policyDifferences(client.signInPolicy, fallbackPolicy) : [],
+  );
+
+  const keyed = $derived(Boolean(client?.jwks || client?.jwksUri));
+
+  const mapped = (held) =>
+    Object.entries(held ?? {})
+      .map(([attribute, claim]) => `${attribute} = ${claim}`)
+      .join("\n");
 
   async function load() {
     loading = true;
@@ -103,13 +130,17 @@
       client = data.client;
       supported = data.scopesSupported;
       policies = data.signInPolicies;
-      tenantPolicy = data.tenant.signInPolicy;
+      fallbackPolicy = data.defaultSignInPolicy;
       name = data.client?.name ?? "";
       logoutUri = data.client?.backchannelLogoutUri ?? "";
       jwksUri = data.client?.jwksUri ?? "";
+      jwks = data.client?.jwks ? JSON.stringify(data.client.jwks, null, 2) : "";
       method = data.client?.tokenEndpointAuthMethod ?? "";
+      sector = data.client?.sectorIdentifierUri ?? "";
       metadataUrl = data.samlMetadataUrl;
       certificate = data.client?.samlCertificate ?? "";
+      entityId = data.client?.samlEntityId ?? "";
+      attributes = mapped(data.client?.samlAttributes);
     } catch (thrown) {
       feedback.blame(thrown);
     } finally {
@@ -137,7 +168,9 @@
         $signInPolicy: ID, $grantTypes: [String!], $jwksUri: String,
         $tokenEndpointAuthMethod: String, $requireSignedRequestObject: Boolean,
         $samlCertificate: String, $samlRequestsSigned: Boolean, $samlIdpInitiated: Boolean,
-        $samlNameIdFormat: String
+        $samlNameIdFormat: String, $samlEntityId: String, $samlAttributes: JSON, $jwks: JSON,
+        $subjectType: String, $sectorIdentifierUri: String, $dpopBoundAccessTokens: Boolean,
+        $backchannelLogoutSessionRequired: Boolean
       ) {
         updateClient(
           clientId: $clientId, name: $name, requiredScopes: $requiredScopes,
@@ -154,7 +187,14 @@
           samlCertificate: $samlCertificate,
           samlRequestsSigned: $samlRequestsSigned,
           samlIdpInitiated: $samlIdpInitiated,
-          samlNameIdFormat: $samlNameIdFormat
+          samlNameIdFormat: $samlNameIdFormat,
+          samlEntityId: $samlEntityId,
+          samlAttributes: $samlAttributes,
+          jwks: $jwks,
+          subjectType: $subjectType,
+          sectorIdentifierUri: $sectorIdentifierUri,
+          dpopBoundAccessTokens: $dpopBoundAccessTokens,
+          backchannelLogoutSessionRequired: $backchannelLogoutSessionRequired
         ) {
           client { clientId }
         }
@@ -165,16 +205,67 @@
 
   const unattended = $derived(client?.grantTypes.includes("client_credentials") ?? false);
 
-  function signsInAsItself(on) {
-    const grantTypes = on
-      ? [...client.grantTypes, "client_credentials"]
-      : client.grantTypes.filter((grant) => grant !== "client_credentials");
+  const granting = (grant, on) =>
+    on ? [...new Set([...client.grantTypes, grant])] : client.grantTypes.filter((held) => held !== grant);
 
+  function signsInAsItself(on) {
     update(
-      { grantTypes },
+      { grantTypes: granting("client_credentials", on) },
       on
         ? "It can ask for a token of its own now, with client_credentials."
         : "It can no longer ask for a token of its own.",
+    );
+  }
+
+  function knowsPeopleAs(chosen) {
+    const question =
+      "Everybody gets a different identifier at this client. It will not recognise anybody it already knows. Change it?";
+
+    if (chosen === client.subjectType || !confirm(question)) {
+      load();
+      return;
+    }
+
+    update({ subjectType: chosen }, "Saved. Everybody has a new identifier at this client.");
+  }
+
+  function saveKeys(held) {
+    const pending = method === "private_key_jwt" && client.tokenEndpointAuthMethod !== "private_key_jwt";
+    const changes = pending ? { ...held, tokenEndpointAuthMethod: method } : held;
+
+    update(changes, pending ? "Its keys are saved, and it signs its own assertions now." : "Keys saved.");
+  }
+
+  function saveKeySet() {
+    const text = jwks.trim();
+
+    if (!text) {
+      saveKeys({ jwks: null });
+      return;
+    }
+
+    try {
+      saveKeys({ jwks: JSON.parse(text), jwksUri: null });
+    } catch {
+      feedback.blame(new Error("That key set is not JSON."));
+    }
+  }
+
+  function saveAttributes() {
+    const pairs = attributes
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => line.split("=").map((part) => part.trim()));
+
+    if (pairs.some((pair) => pair.length !== 2 || !pair[0] || !pair[1])) {
+      feedback.blame(new Error("Write one attribute = claim on each line."));
+      return;
+    }
+
+    update(
+      { samlAttributes: Object.fromEntries(pairs) },
+      pairs.length ? "Attributes saved." : "It is sent the usual attributes.",
     );
   }
 
@@ -187,7 +278,7 @@
   function authenticates(chosen) {
     method = chosen;
 
-    if (chosen === "private_key_jwt" && !client.jwksUri) return;
+    if (chosen === "private_key_jwt" && !keyed) return;
 
     const notice =
       chosen === "private_key_jwt"
@@ -284,20 +375,44 @@
             </label>
           {/if}
 
-          {#if method === "private_key_jwt"}
-            <Field
-              label="Key set URL (jwks_uri)"
-              bind:value={jwksUri}
-              placeholder="https://app.example.com/.well-known/jwks.json"
-              autocapitalize="none"
-              autocorrect="off"
-              spellcheck="false"
-              onsave={() =>
-                update(
-                  { jwksUri: jwksUri.trim() || null, tokenEndpointAuthMethod: method },
-                  "Its keys are read from there.",
-                )}
-            />
+          {#if method === "private_key_jwt" && !keyed}
+            <p class="text-xs text-warning">Give it keys under Keys, and it switches to signing its own assertions.</p>
+          {/if}
+
+          {#if !saml}
+            <label class="flex flex-col gap-1.5">
+              <span class="text-xs font-medium opacity-70">Knows people as</span>
+              <select
+                class="select select-sm w-full"
+                value={client.subjectType}
+                onchange={(event) => knowsPeopleAs(event.currentTarget.value)}
+              >
+                {#each SUBJECTS as [key, label] (key)}
+                  <option value={key}>{label}</option>
+                {/each}
+              </select>
+            </label>
+
+            {#if client.subjectType === "pairwise" || client.sectorIdentifierUri}
+              <Field
+                label="Sector identifier URI"
+                bind:value={sector}
+                placeholder="needed when its redirect URIs span several hosts"
+                autocapitalize="none"
+                autocorrect="off"
+                spellcheck="false"
+                onsave={() =>
+                  update({ sectorIdentifierUri: sector.trim() || null }, sector.trim() ? "Saved." : "Cleared.")}
+              />
+            {/if}
+
+            {#each GRANTS as [grant, label] (grant)}
+              <Switch
+                checked={client.grantTypes.includes(grant)}
+                {label}
+                onchange={(on) => update({ grantTypes: granting(grant, on) }, "Grants updated.")}
+              />
+            {/each}
           {/if}
 
           {#if client.approvedAt && client.tokenEndpointAuthMethod !== "none"}
@@ -322,9 +437,17 @@
 
         {#if saml}
           <Card title="SAML">
+            <Field
+              label="Entity ID"
+              bind:value={entityId}
+              autocapitalize="none"
+              autocorrect="off"
+              spellcheck="false"
+              onsave={() => update({ samlEntityId: entityId.trim() }, "Entity ID saved.")}
+            />
+
             <Facts
               rows={[
-                { term: "Entity ID", value: client.samlEntityId, mono: true },
                 { term: "masks metadata", value: metadataUrl, mono: true },
                 { term: "Start from masks", value: client.samlIdpInitiated ? `/saml/initiate/${client.clientId}` : null, mono: true },
               ]}
@@ -360,6 +483,19 @@
               </button>
             </label>
 
+            <label class="flex flex-col gap-1.5">
+              <span class="text-xs font-medium opacity-70">Attributes it is sent, one attribute = claim a line</span>
+              <textarea
+                class="textarea textarea-sm w-full font-mono text-xs"
+                rows="5"
+                spellcheck="false"
+                placeholder={SAML_DEFAULTS}
+                bind:value={attributes}
+              ></textarea>
+              <span class="text-xs opacity-60">Left empty, it is sent the ones shown. An email is sent only once confirmed.</span>
+              <button type="button" class="btn btn-sm self-start" onclick={saveAttributes}>Save</button>
+            </label>
+
             <Switch
               checked={client.samlRequestsSigned}
               label="Refuse requests it did not sign"
@@ -390,12 +526,32 @@
               onchange={(event) =>
                 update({ signInPolicy: event.currentTarget.value }, "Policy updated.")}
             >
-              <option value="">Default ({tenantPolicy?.name ?? "built-in"})</option>
+              <option value="">Default ({fallbackPolicy?.name ?? "built-in"})</option>
               {#each policies as policy (policy.key)}
                 <option value={policy.key}>{policy.name}</option>
               {/each}
             </select>
           </label>
+
+          {#if client.signInPolicy?.archivedAt}
+            <p class="text-xs text-warning">
+              {client.signInPolicy.name} is archived, so {fallbackPolicy?.name} applies instead.
+            </p>
+          {:else if client.signInPolicy}
+            {#if differences.length}
+              <div class="flex flex-col gap-1.5">
+                <span class="text-xs font-medium opacity-70">Where it differs from {fallbackPolicy?.name}</span>
+                <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+                  {#each differences as { term, value, instead } (term)}
+                    <dt class="opacity-60">{term}</dt>
+                    <dd>{value} <span class="opacity-50 line-through">{instead}</span></dd>
+                  {/each}
+                </dl>
+              </div>
+            {:else}
+              <p class="text-xs opacity-60">The same as {fallbackPolicy?.name} in every way.</p>
+            {/if}
+          {/if}
 
           {#if !saml}
           <Switch
@@ -408,19 +564,15 @@
               )}
           />
 
-          {#if client.jwks || client.jwksUri}
-            <Switch
-              checked={client.requireSignedRequestObject}
-              label="Require signed request objects (JAR)"
-              onchange={(on) =>
-                update(
-                  { requireSignedRequestObject: on },
-                  on
-                    ? "Signed requests required. An unsigned /authorize or pushed request is refused."
-                    : "Signed requests optional.",
-                )}
-            />
-          {/if}
+          <Switch
+            checked={client.dpopBoundAccessTokens}
+            label="Bind its access tokens to a key (DPoP)"
+            onchange={(on) =>
+              update(
+                { dpopBoundAccessTokens: on },
+                on ? "Its access tokens are bound to its key. A token without a proof is refused." : "Bearer tokens.",
+              )}
+          />
           {/if}
 
           {#if client.approvedAt}
@@ -447,7 +599,60 @@
             onsave={() =>
               update({ backchannelLogoutUri: logoutUri.trim() || null }, logoutUri.trim() ? "Saved." : "Cleared.")}
           />
+
+          {#if client.backchannelLogoutUri}
+            <Switch
+              checked={client.backchannelLogoutSessionRequired}
+              label="Its logout token names the session (sid)"
+              onchange={(on) => update({ backchannelLogoutSessionRequired: on }, "Saved.")}
+            />
+          {/if}
         </Card>
+
+        {#if !saml}
+          <Card title="Keys">
+            <p class="text-xs opacity-60">
+              What masks checks its signed assertions (private_key_jwt) and signed requests (JAR) against. A URL or the
+              key set itself, not both.
+            </p>
+
+            <Field
+              label="Key set URL (jwks_uri)"
+              bind:value={jwksUri}
+              placeholder="https://app.example.com/.well-known/jwks.json"
+              autocapitalize="none"
+              autocorrect="off"
+              spellcheck="false"
+              onsave={() => saveKeys(jwksUri.trim() ? { jwksUri: jwksUri.trim(), jwks: null } : { jwksUri: null })}
+            />
+
+            <label class="flex flex-col gap-1.5">
+              <span class="text-xs font-medium opacity-70">Or the key set (JWKS)</span>
+              <textarea
+                class="textarea textarea-sm w-full font-mono text-xs"
+                rows="4"
+                spellcheck="false"
+                placeholder={'{ "keys": [ ... ] }'}
+                bind:value={jwks}
+              ></textarea>
+              <button type="button" class="btn btn-sm self-start" onclick={saveKeySet}>Save</button>
+            </label>
+
+            {#if keyed}
+              <Switch
+                checked={client.requireSignedRequestObject}
+                label="Require signed request objects (JAR)"
+                onchange={(on) =>
+                  update(
+                    { requireSignedRequestObject: on },
+                    on
+                      ? "Signed requests required. An unsigned /authorize or pushed request is refused."
+                      : "Signed requests optional.",
+                  )}
+              />
+            {/if}
+          </Card>
+        {/if}
 
         <Card title="Scopes">
           <div class="flex flex-col gap-1.5">
