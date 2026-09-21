@@ -13,7 +13,7 @@ module Manage
         audit!(::Event::AVATAR_UPLOADED, actor: actor)
 
         { actor: actor }
-      rescue Avatar::Unreadable => e
+      rescue Pictures::Unreadable => e
         refuse!(e.message)
       end
     end

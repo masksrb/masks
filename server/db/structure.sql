@@ -309,7 +309,8 @@ CREATE TABLE public.clients (
     saml_name_id_format character varying,
     saml_requests_signed boolean DEFAULT false NOT NULL,
     saml_idp_initiated boolean DEFAULT false NOT NULL,
-    saml_attributes jsonb DEFAULT '{}'::jsonb NOT NULL
+    saml_attributes jsonb DEFAULT '{}'::jsonb NOT NULL,
+    logo_digest character varying
 );
 
 ALTER TABLE ONLY public.clients FORCE ROW LEVEL SECURITY;

@@ -844,7 +844,7 @@ class ManageApiTest < ActionDispatch::IntegrationTest
       square = Vips::Image.new_from_buffer(held.data, "")
 
       assert_equal subject.id, held.actor_id
-      assert_equal Avatar::CONTENT_TYPE, held.content_type
+      assert_equal Pictures::CONTENT_TYPE, held.content_type
       assert_equal [ Avatar::STORED, Avatar::STORED ], [ square.width, square.height ]
     end
   end

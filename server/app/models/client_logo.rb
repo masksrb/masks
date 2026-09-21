@@ -1,11 +1,10 @@
 class ClientLogo < ApplicationRecord
   include TenantScoped
 
-  class Unreachable < StandardError; end
-
   STORED = 256
   OPEN_TIMEOUT = 3
   READ_TIMEOUT = 5
+  WITHIN = 15
 
   belongs_to :client
 
@@ -13,44 +12,36 @@ class ClientLogo < ApplicationRecord
 
   class << self
     def fetch!(client)
-      source = client.logo_uri
+      return forget(client) if client.logo_uri.blank?
 
-      return where(client_id: client.id).delete_all if source.blank?
-
-      bytes = download(source)
+      bytes = Outbound.fetch!(URI.parse(client.logo_uri), open: OPEN_TIMEOUT, read: READ_TIMEOUT, within: WITHIN)
 
       raise Pictures::Unreadable, "a logo has to be an image" if Pictures.sniff(bytes).nil?
 
-      square = Pictures.square(bytes, STORED)
-      held = find_or_initialize_by(client_id: client.id)
+      keep(client, Pictures.square(bytes, STORED))
+    end
 
-      held.update!(
-        source_uri: source,
-        content_type: Pictures::CONTENT_TYPE,
-        digest: Pictures.digest(square),
-        byte_size: square.bytesize,
-        data: square
-      )
-
-      held
+    def forget(client)
+      transaction do
+        where(client_id: client.id).delete_all
+        client.update_column(:logo_digest, nil)
+      end
     end
 
     private
 
-      def download(source)
-        uri = URI.parse(source)
-        address = Rails.env.local? ? nil : Outbound.vetted(uri)
+      def keep(client, square)
+        digest = Pictures.digest(square)
 
-        raise Unreachable, "#{uri.host} resolves to an address this server will not call" if address.nil? && !Rails.env.local?
-
-        response = Outbound.get(uri, open: OPEN_TIMEOUT, read: READ_TIMEOUT, address: address)
-
-        raise Unreachable, "#{uri.host} answered #{response.code}" unless response.is_a?(Net::HTTPSuccess)
-        raise Pictures::Unreadable, "a logo has to be smaller than #{Outbound::CEILING / 1.kilobyte}KB" if response.body.to_s.bytesize >= Outbound::CEILING
-
-        response.body.to_s.b
-      rescue URI::InvalidURIError, SocketError, SystemCallError, Net::OpenTimeout, Net::ReadTimeout, OpenSSL::SSL::SSLError => e
-        raise Unreachable, e.message
+        transaction do
+          find_or_initialize_by(client_id: client.id).update!(
+            source_uri: client.logo_uri, content_type: Pictures::CONTENT_TYPE,
+            digest: digest, byte_size: square.bytesize, data: square
+          )
+          client.update_column(:logo_digest, digest)
+        end
+      rescue ActiveRecord::RecordNotUnique
+        retry
       end
   end
 

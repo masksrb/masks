@@ -1,10 +1,7 @@
 class AvatarsController < ApplicationController
   include RackOAuth2Endpoint
   include ResourceToken
-
-  SEALED = "default-src 'none'; sandbox".freeze
-  FOREVER = 1.year.to_i
-  BRIEFLY = 5.minutes.to_i
+  include ServesPictures
 
   skip_before_action :refuse_blocked_device, only: :show
 
@@ -34,7 +31,7 @@ class AvatarsController < ApplicationController
     Event.record!(Event::AVATAR_UPLOADED, actor: current_actor)
 
     redirect_to root_path, flash: { avatar: t("avatars.updated") }
-  rescue Avatar::Unreadable => e
+  rescue Pictures::Unreadable => e
     redirect_to root_path, alert: e.message
   end
 
@@ -76,19 +73,9 @@ class AvatarsController < ApplicationController
     end
 
     def deliver(actor, style, stamp)
-      content_type, bytes = Avatars.render(actor, style, size: Avatars.size(params[:size]))
-
-      return head :not_found if bytes.nil?
-
-      response.headers["X-Content-Type-Options"] = "nosniff"
-      response.headers["Content-Security-Policy"] = SEALED
-      response.headers["Cache-Control"] = caching(style, stamp)
-      response.headers["Vary"] = "Cookie, Authorization" unless named_style?
-      response.headers["ETag"] = %("#{stamp}")
-
-      return head :not_modified if request.headers["If-None-Match"].to_s.include?(stamp)
-
-      send_data bytes, type: content_type, disposition: "inline"
+      deliver_picture(stamp, cache_control: caching(style, stamp), vary: ("Cookie, Authorization" unless named_style?)) do
+        Avatars.render(actor, style, size: Avatars.size(params[:size]))
+      end
     end
 
     def named_style?

@@ -1,4 +1,5 @@
 <script>
+import { initial } from "../lib/initial.js";
 import ClientMark from "../shared/ClientMark.svelte";
 import Head from "../shared/Head.svelte";
 
@@ -11,7 +12,6 @@ const title = $derived(
   client ? login.t("heading_to", { client }) : login.t("heading"),
 );
 
-const initial = (name) => (name ? name.trim().slice(0, 1).toUpperCase() : "");
 </script>
 
 <div class="over">

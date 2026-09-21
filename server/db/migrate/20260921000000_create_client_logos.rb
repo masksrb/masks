@@ -17,9 +17,13 @@ class CreateClientLogos < ActiveRecord::Migration[8.1]
     end
 
     enable_row_level_security(:client_logos)
+
+    add_column :clients, :logo_digest, :string
   end
 
   def down
+    remove_column :clients, :logo_digest
+
     disable_row_level_security(:client_logos)
     drop_table :client_logos
   end

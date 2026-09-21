@@ -93,6 +93,37 @@ class HiddenAccountsTest < ActionDispatch::IntegrationTest
     end
   end
 
+  test "proving an address confirms nobody's account until that account signs in" do
+    with_mailer do
+      policy!
+
+      event("identify", identifier: "owner@example.com")
+      event("inbox:verify", code: mailed_code("owner@example.com"))
+
+      assert_nil within(@tenant) { @owner.reload.email_verified_at }
+
+      event("password", password: "password")
+
+      assert within(@tenant) { @owner.reload.email_verified_at }
+    end
+  end
+
+  test "somebody signed in to one account still proves the address of another" do
+    with_mailer do
+      policy!
+      other = create_actor(@tenant, nickname: "other", email: "other@example.com", otp: false)
+
+      event("identify", identifier: "owner@example.com")
+      event("inbox:verify", code: mailed_code("owner@example.com"))
+      assert event("password", password: "password")["settled"]
+
+      body = event("identify", identifier: other.email)
+
+      assert_equal "prove-email", body["prompt"]
+      assert_includes event("password", password: "password")["warnings"], "prove-email-first"
+    end
+  end
+
   test "no password is checked before the address is proven" do
     with_mailer do
       policy!

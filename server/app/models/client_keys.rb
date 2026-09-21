@@ -37,20 +37,11 @@ class ClientKeys
 
       raise Refused, "must be an https URL" unless held.is_a?(URI::HTTPS) || (Rails.env.local? && held.is_a?(URI::HTTP))
 
-      address = Rails.env.local? ? nil : Outbound.vetted(held)
-
-      raise Refused, "resolves to an address this server will not call" unless Rails.env.local? || address
-
-      response = Outbound.get(held, open: OPEN_TIMEOUT, read: READ_TIMEOUT, address: address)
-
-      raise Refused, "answered #{response.code}" unless response.is_a?(Net::HTTPSuccess)
-
-      check!(Outbound.body(response))
+      check!(Outbound.fetch!(held, open: OPEN_TIMEOUT, read: READ_TIMEOUT))
     rescue URI::InvalidURIError
       raise Refused, "is not a URI"
-    rescue Net::HTTPBadResponse, Net::OpenTimeout, Net::ReadTimeout, SocketError,
-           SystemCallError, OpenSSL::SSL::SSLError => e
-      raise Refused, "could not be read: #{e.class}"
+    rescue Outbound::Refused => e
+      raise Refused, e.message
     end
   end
 

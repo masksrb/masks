@@ -292,6 +292,20 @@ class Login
     @as_json ||= build_json
   end
 
+  def client_json
+    return nil if client.nil?
+
+    {
+      "name" => client.name,
+      "id" => client.client_id,
+      "logo" => client.logo_url(actor),
+      "site" => client.link(:client_uri),
+      "terms" => client.link(:tos_uri),
+      "privacy" => client.link(:policy_uri),
+      "returnsTo" => SectorIdentifier.host(request.redirect_uri)
+    }.compact
+  end
+
   private
 
     def build_json
@@ -313,26 +327,6 @@ class Login
       }
 
       answering.reduce(base) { |json, state| state.enabled? ? json.merge(state.as_json) : json }
-    end
-
-    def client_json
-      return nil if client.nil?
-
-      {
-        "name" => client.name,
-        "id" => client.client_id,
-        "logo" => client.logo_url,
-        "site" => client.client_uri,
-        "terms" => client.tos_uri,
-        "privacy" => client.policy_uri,
-        "returnsTo" => returns_to
-      }.compact
-    end
-
-    def returns_to
-      held = request.respond_to?(:redirect_uri) ? request.redirect_uri : nil
-
-      held.present? ? SectorIdentifier.host(held) : nil
     end
 
     def forget_vanished_actor!

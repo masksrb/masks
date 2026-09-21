@@ -45,6 +45,18 @@ module LoginStates
       login.store.delete(HELD)
     end
 
+    def cleanup!
+      proven = login.store.dig(HELD, "proven")
+      owner = login.actor
+
+      return if proven.blank? || owner.nil? || owner.email_verified_at.present? || !login.first_factored?
+      return unless owner.email.to_s.casecmp?(proven)
+
+      owner.update!(email_verified_at: Time.current)
+
+      Event.record!(Event::EMAIL_VERIFIED, actor: owner)
+    end
+
     def self.address(identifier)
       held = identifier.to_s.strip.downcase
 
@@ -58,17 +70,18 @@ module LoginStates
       end
 
       def passed?
-        login.first_factored? || remembered_here?
+        located = named
+
+        located.present? &&
+          ((login.first_factored? && login.actor&.id == located.id) ||
+           session&.actor&.id == located.id ||
+           (device.present? && DeviceFactor.live.exists?(device: device, actor: located)))
       end
 
-      def remembered_here?
-        return @remembered if defined?(@remembered)
+      def named
+        return @named[address] if @named&.key?(address)
 
-        located = ::Actor.locate(address)
-
-        @remembered = located.present? &&
-                      (session&.actor&.id == located.id ||
-                       (device.present? && DeviceFactor.live.exists?(device: device, actor: located)))
+        (@named ||= {})[address] = ::Actor.locate(address)
       end
 
       def address
@@ -132,15 +145,7 @@ module LoginStates
       end
 
       def settle
-        located = ::Actor.locate(address)
-
-        if located.nil?
-          reveal_absence unless login.state("signup").enabled?
-        elsif located.email.to_s.casecmp?(address) && located.email_verified_at.nil?
-          located.update!(email_verified_at: Time.current)
-
-          Event.record!(Event::EMAIL_VERIFIED, actor: located)
-        end
+        reveal_absence if named.nil? && !login.state("signup").enabled?
       end
 
       def reveal_absence

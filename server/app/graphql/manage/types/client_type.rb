@@ -20,7 +20,9 @@ module Manage
       field :logo_uri, String
       field :tos_uri, String
       field :policy_uri, String
-      field :logo_url, String
+      field :logo_url, String do
+        argument :size, Integer, required: false
+      end
       field :backchannel_logout_uri, String
       field :backchannel_logout_session_required, Boolean, null: false
       field :require_pushed_authorization_requests, Boolean, null: false
@@ -85,8 +87,8 @@ module Manage
           .limit(::Event.bounded(limit))
       end
 
-      def logo_url
-        object.logo_url(shown: true)
+      def logo_url(size: nil)
+        object.logo_url(context[:actor], size: size)
       end
 
       def required_scopes

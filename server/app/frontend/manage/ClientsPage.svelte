@@ -3,6 +3,7 @@
   import { createFeedback } from "./lib/feedback.svelte.js";
   import ScopesEditor from "./ScopesEditor.svelte";
   import Card from "./ui/Card.svelte";
+  import ClientLogo from "./ui/ClientLogo.svelte";
   import Field from "./ui/Field.svelte";
   import Link from "./ui/Link.svelte";
   import Notices from "./ui/Notices.svelte";
@@ -20,7 +21,7 @@
   const QUERY = `
     query Clients($search: String, $archived: Boolean, $afterId: ID, $limit: Int) {
       clients(search: $search, archived: $archived, afterId: $afterId, limit: $limit) {
-        clientId name dynamic approvedAt archivedAt logoUrl
+        clientId name dynamic approvedAt archivedAt logoUrl(size: 64)
         requiredScopes allowedScopes resources createdAt
         approvedBy { identifier }
         namespaces { name }
@@ -392,13 +393,7 @@
           <Row to={`/clients/${client.clientId}`}>
             <td class="max-w-[15rem]">
               <div class="flex items-center gap-2.5">
-                {#if client.logoUrl}
-                  <img src={`${client.logoUrl}&size=64`} alt="" class="size-8 shrink-0 rounded" />
-                {:else}
-                  <span class="grid size-8 shrink-0 place-items-center rounded bg-base-200 text-sm font-semibold" aria-hidden="true"
-                    >{client.name.trim().slice(0, 1).toUpperCase()}</span
-                  >
-                {/if}
+                <ClientLogo {client} class="size-8 rounded text-sm" />
                 <div class="min-w-0">
                   <Link to={`/clients/${client.clientId}`} class="link link-hover font-medium">
                     {client.name}

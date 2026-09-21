@@ -1,12 +1,12 @@
 <% state = login.state("consent") %>
-<% client = login.as_json["client"] || {} %>
+<% client = login.client_json || {} %>
 <% hot, rest = ranked_scopes(ResourceMetadata.describe(state.audience, state.scopes)) %>
 
 <div class="auth-pair">
   <% if client["logo"] %>
     <%= image_tag client["logo"], alt: "", class: "auth-mark auth-mark-client auth-mark-logo", referrerpolicy: "no-referrer" %>
   <% else %>
-    <span class="auth-mark auth-mark-client" aria-hidden="true"><%= login.client&.name.to_s.first&.upcase %></span>
+    <span class="auth-mark auth-mark-client" aria-hidden="true"><%= client["name"].to_s.strip.first&.upcase %></span>
   <% end %>
   <span class="auth-wire"></span>
   <span class="auth-mark" aria-hidden="true"><%= Current.tenant&.name.to_s.first&.upcase %></span>

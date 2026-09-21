@@ -10,11 +10,7 @@ module SectorIdentifier
 
       raise Refused, "must be an https URL" unless held.is_a?(URI::HTTPS)
 
-      address = Rails.env.local? ? nil : Outbound.vetted(held)
-
-      raise Refused, "resolves to an address this server will not call" unless Rails.env.local? || address
-
-      missing = Array(redirect_uris).map(&:to_s) - declared(held, address)
+      missing = Array(redirect_uris).map(&:to_s) - declared(held)
 
       raise Refused, "does not list #{missing.join(', ')}" if missing.any?
 
@@ -35,21 +31,16 @@ module SectorIdentifier
         raise Refused, "is not a URI"
       end
 
-      def declared(uri, address)
-        response = Outbound.get(uri, open: OPEN_TIMEOUT, read: READ_TIMEOUT, address: address)
-
-        raise Refused, "answered #{response.code}" unless response.is_a?(Net::HTTPSuccess)
-
-        held = JSON.parse(Outbound.body(response))
+      def declared(uri)
+        held = JSON.parse(Outbound.fetch!(uri, open: OPEN_TIMEOUT, read: READ_TIMEOUT))
 
         raise Refused, "must hold a JSON array of redirect URIs" unless held.is_a?(Array)
 
         held.map(&:to_s)
       rescue JSON::ParserError
         raise Refused, "did not answer with JSON"
-      rescue Net::HTTPBadResponse, Net::OpenTimeout, Net::ReadTimeout, SocketError,
-             SystemCallError, OpenSSL::SSL::SSLError => e
-        raise Refused, "could not be read: #{e.class}"
+      rescue Outbound::Refused => e
+        raise Refused, e.message
       end
   end
 end

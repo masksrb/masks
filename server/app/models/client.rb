@@ -21,8 +21,9 @@ class Client < ApplicationRecord
   CHALLENGE_METHODS = %w[S256].freeze
   LOOPBACK = %w[localhost 127.0.0.1 ::1].freeze
   DEFAULT_SCOPES = Scopes::STANDARD
-  METADATA_URIS = %i[client_uri logo_uri tos_uri policy_uri].freeze
-  METADATA_URI_LIMIT = 2048
+  LINKS = %i[client_uri tos_uri policy_uri].freeze
+  METADATA_URIS = (LINKS + [ :logo_uri ]).freeze
+  URI_LIMIT = 2048
 
   class ScopesUnavailable < StandardError; end
 
@@ -52,7 +53,7 @@ class Client < ApplicationRecord
   normalizes :saml_entity_id, with: ->(value) { value.to_s.strip.presence }
   normalizes(*METADATA_URIS, with: ->(value) { value.to_s.strip.presence })
 
-  after_commit :fetch_logo, on: %i[create update], if: :saved_change_to_logo_uri?
+  after_commit :refresh_logo!, on: %i[create update], if: :saved_change_to_logo_uri?
 
   belongs_to :approved_by, class_name: "Actor", optional: true
   belongs_to :sign_in_policy, optional: true
@@ -198,16 +199,24 @@ class Client < ApplicationRecord
     approved_at.present?
   end
 
-  def shown_logo
-    logo if approved?
+  def logo_shown_to?(viewer)
+    logo_digest.present? && (approved? || viewer&.manages? || false)
   end
 
-  def logo_url(origin = Current.origin, shown: approved?)
-    return nil unless shown
+  def logo_url(viewer, size: nil)
+    return nil unless logo_shown_to?(viewer)
 
-    digest = ClientLogo.where(client_id: id).pick(:digest)
+    "#{Current.origin}#{Rails.application.routes.url_helpers.client_logo_path(client_id, v: logo_digest, size: size)}"
+  end
 
-    digest && "#{origin}/clients/#{client_id}/logo?v=#{digest}"
+  def link(field)
+    value = public_send(field)
+
+    value if LINKS.include?(field) && value.present? && web_uri_refusal(value).nil?
+  end
+
+  def refresh_logo!
+    ClientLogoJob.perform_later(id)
   end
 
   def issue_credentials!
@@ -329,22 +338,8 @@ class Client < ApplicationRecord
     def backchannel_logout_uri_is_usable
       return if backchannel_logout_uri.blank?
 
-      uri = URI.parse(backchannel_logout_uri.to_s)
-
-      if uri.fragment.present?
-        errors.add(:backchannel_logout_uri, "must not contain a fragment")
-      elsif uri.scheme.blank? || uri.host.blank?
-        errors.add(:backchannel_logout_uri, "must be absolute")
-      elsif !uri.is_a?(URI::HTTP)
-        errors.add(:backchannel_logout_uri, "must be an http or https URL")
-      elsif dynamic? && !Rails.env.local?
-        errors.add(:backchannel_logout_uri, "must use https") unless uri.scheme == "https"
-        errors.add(:backchannel_logout_uri, "must not point at a loopback address") if loopback?(uri)
-      elsif uri.scheme == "http" && !loopback?(uri) && !Rails.env.local?
-        errors.add(:backchannel_logout_uri, "must use https unless it is loopback")
-      end
-    rescue URI::InvalidURIError
-      errors.add(:backchannel_logout_uri, "is not a URI")
+      refusal = web_uri_refusal(backchannel_logout_uri.to_s, fetched: true)
+      errors.add(:backchannel_logout_uri, refusal) if refusal
     end
 
     def redirect_uris_are_usable
@@ -430,20 +425,26 @@ class Client < ApplicationRecord
 
         next if value.blank? || !will_save_change_to_attribute?(field)
 
-        refusal = metadata_uri_refusal(value)
+        refusal = web_uri_refusal(value, fetched: field == :logo_uri)
         errors.add(field, refusal) if refusal
       end
     end
 
-    def metadata_uri_refusal(value)
-      return "must be at most #{METADATA_URI_LIMIT} characters" if value.length > METADATA_URI_LIMIT
+    def web_uri_refusal(value, fetched: false)
+      return "must be at most #{URI_LIMIT} characters" if value.length > URI_LIMIT
 
       uri = URI.parse(value)
 
-      if !uri.is_a?(URI::HTTP) || uri.host.blank?
+      if !uri.is_a?(URI::HTTP)
         "must be an http or https URL"
+      elsif uri.host.blank?
+        "must be absolute"
       elsif uri.userinfo.present?
         "must not carry a username or password"
+      elsif fetched && uri.fragment.present?
+        "must not contain a fragment"
+      elsif fetched && dynamic? && !Rails.env.local?
+        dynamic_fetch_refusal(uri)
       elsif uri.scheme == "http" && !loopback?(uri) && !Rails.env.local?
         "must use https unless it is loopback"
       end
@@ -451,8 +452,10 @@ class Client < ApplicationRecord
       "is not a URI"
     end
 
-    def fetch_logo
-      ClientLogoJob.perform_later(id)
+    def dynamic_fetch_refusal(uri)
+      return "must not point at a loopback address" if loopback?(uri)
+
+      "must use https" unless uri.scheme == "https"
     end
 
     def sector_is_derivable

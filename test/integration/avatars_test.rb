@@ -204,7 +204,7 @@ class AvatarsTest < ActionDispatch::IntegrationTest
   end
 
   test "an svg is not an avatar" do
-    assert_raises(Avatar::Unreadable) do
+    assert_raises(Pictures::Unreadable) do
       within(@tenant) do
         Avatar.store!(actor: @actor, upload: %(<svg xmlns="http://www.w3.org/2000/svg"/>))
       end

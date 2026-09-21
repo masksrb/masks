@@ -25,8 +25,7 @@ module BackchannelLogout
     return true if response.is_a?(Net::HTTPSuccess)
 
     raise Refused, "#{client.name} answered #{response.code}"
-  rescue Net::HTTPBadResponse, Net::OpenTimeout, Net::ReadTimeout, SocketError, SystemCallError,
-         OpenSSL::SSL::SSLError, URI::InvalidURIError => e
+  rescue *Outbound::UNREADABLE, URI::InvalidURIError => e
     raise Refused, "#{client.name} could not be reached: #{e.class}"
   end
 

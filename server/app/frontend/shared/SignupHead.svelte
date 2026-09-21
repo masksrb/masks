@@ -1,4 +1,5 @@
 <script>
+import { initial } from "../lib/initial.js";
 import Head from "./Head.svelte";
 import Steps from "./Steps.svelte";
 
@@ -7,7 +8,6 @@ let { login, at, mark = "" } = $props();
 const tenant = $derived(login.auth.tenant?.name ?? "");
 const journey = $derived(login.auth.journey ?? { steps: [] });
 
-const initial = (name) => (name ? name.trim().slice(0, 1).toUpperCase() : "");
 </script>
 
 <div class="auth-pair">

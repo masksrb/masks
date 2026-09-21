@@ -1,12 +1,11 @@
 <script>
-let { client } = $props();
+import { initial } from "../lib/initial.js";
 
-const name = $derived(client?.name ?? "");
-const initial = $derived(name.trim().slice(0, 1).toUpperCase());
+let { client } = $props();
 </script>
 
 {#if client?.logo}
   <img src={client.logo} alt="" class="auth-mark auth-mark-client auth-mark-logo" referrerpolicy="no-referrer" />
 {:else}
-  <span class="auth-mark auth-mark-client" aria-hidden="true">{initial}</span>
+  <span class="auth-mark auth-mark-client" aria-hidden="true">{initial(client?.name)}</span>
 {/if}

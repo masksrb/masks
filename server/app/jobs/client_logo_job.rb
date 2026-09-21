@@ -7,8 +7,8 @@ class ClientLogoJob < ApplicationJob
     client = Client.find(client_id)
 
     ClientLogo.fetch!(client)
-  rescue ClientLogo::Unreachable, Pictures::Unreadable => e
-    ClientLogo.where(client_id: client.id).delete_all
+  rescue Outbound::Refused, Pictures::Unreadable, URI::InvalidURIError => e
+    ClientLogo.forget(client)
 
     Event.record!(Event::CLIENT_LOGO_REFUSED, actor: nil, by: nil, client: client, said: e.message)
   end

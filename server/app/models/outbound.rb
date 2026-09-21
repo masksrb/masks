@@ -11,6 +11,13 @@ module Outbound
   ].map { |range| IPAddr.new(range) }.freeze
 
   class Overflow < StandardError; end
+  class Refused < StandardError; end
+  class Slow < StandardError; end
+
+  UNREADABLE = [
+    Net::HTTPBadResponse, Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, SocketError, SystemCallError,
+    OpenSSL::SSL::SSLError, EOFError, IOError, Zlib::Error
+  ].freeze
 
   class << self
     def routable?(uri)
@@ -45,6 +52,24 @@ module Outbound
       call(uri, Net::HTTP::Get.new(uri), open: open, read: read, address: address)
     end
 
+    def fetch!(uri, open: OPEN_TIMEOUT, read: READ_TIMEOUT, ceiling: CEILING, within: nil)
+      address = Rails.env.local? ? nil : vetted(uri)
+
+      raise Refused, "resolves to an address this server will not call" unless Rails.env.local? || address
+
+      response = call(uri, Net::HTTP::Get.new(uri), open: open, read: read, address: address,
+                                                     ceiling: ceiling + 1, within: within)
+
+      raise Refused, "answered #{response.code}" unless response.is_a?(Net::HTTPSuccess)
+      raise Refused, "answered with more than #{ceiling / 1.kilobyte}KB" if response.body.bytesize > ceiling
+
+      response.body
+    rescue Slow
+      raise Refused, "took longer than #{within} seconds to answer"
+    rescue *UNREADABLE => e
+      raise Refused, "could not be read: #{e.class}"
+    end
+
     def post(uri, form, open: OPEN_TIMEOUT, read: READ_TIMEOUT, address: nil)
       request = Net::HTTP::Post.new(uri, "Content-Type" => "application/x-www-form-urlencoded")
       request.body = URI.encode_www_form(form)
@@ -52,9 +77,10 @@ module Outbound
       call(uri, request, open: open, read: read, address: address)
     end
 
-    def call(uri, request, open:, read:, address: nil)
+    def call(uri, request, open:, read:, address: nil, ceiling: CEILING, within: nil)
       kept = +""
       answered = nil
+      deadline = within && Process.clock_gettime(Process::CLOCK_MONOTONIC) + within
 
       begin
         connection(uri, open: open, read: read, address: address).start do |http|
@@ -63,7 +89,8 @@ module Outbound
 
             response.read_body do |chunk|
               kept << chunk
-              raise Overflow if kept.bytesize > CEILING
+              raise Overflow if kept.bytesize > ceiling
+              raise Slow if deadline && Process.clock_gettime(Process::CLOCK_MONOTONIC) > deadline
             end
           end
         end
@@ -71,7 +98,7 @@ module Outbound
         answered.instance_variable_set(:@read, true)
       end
 
-      answered.body = kept.byteslice(0, CEILING)
+      answered.body = kept.byteslice(0, ceiling)
       answered
     end
 

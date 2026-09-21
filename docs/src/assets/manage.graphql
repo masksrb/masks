@@ -162,7 +162,7 @@ type Client {
   jwks: JSON
   jwksUri: String
   logoUri: String
-  logoUrl: String
+  logoUrl(size: Int): String
   name: String!
   namespaces: [Namespace!]!
   policyUri: String

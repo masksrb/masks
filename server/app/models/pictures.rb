@@ -28,28 +28,9 @@ module Pictures
       MAGIC.find { |magic, _| head.start_with?(magic) }&.last
     end
 
-    def images
-      require "vips"
-
-      Vips::Image
-    end
-
     def square(bytes, size)
       refuse_a_bomb(bytes)
-
-      images.thumbnail_buffer(
-        bytes, size, height: size, size: :both, crop: :attention
-      ).webpsave_buffer(Q: QUALITY, strip: true)
-    rescue Vips::Error => e
-      raise Unreadable, e.message
-    end
-
-    def refuse_a_bomb(bytes)
-      header = images.new_from_buffer(bytes, "", access: :sequential)
-
-      return if header.width.to_i * header.height.to_i <= PIXELS
-
-      raise Unreadable, "that image has too many pixels to resize"
+      thumbnail(bytes, size)
     rescue Vips::Error => e
       raise Unreadable, e.message
     end
@@ -57,7 +38,28 @@ module Pictures
     def resized(data, digest, size, stored:, kind:)
       return data if size.nil? || size >= stored
 
-      Rails.cache.fetch([ kind, digest, size ], expires_in: 1.day) { square(data, size) }
+      Rails.cache.fetch([ kind, digest, size ], expires_in: 1.day) { thumbnail(data, size) }
     end
+
+    private
+
+      def images
+        require "vips"
+
+        Vips::Image
+      end
+
+      def thumbnail(bytes, size)
+        images.thumbnail_buffer(bytes, size, height: size, size: :both, crop: :attention)
+              .webpsave_buffer(Q: QUALITY, strip: true)
+      end
+
+      def refuse_a_bomb(bytes)
+        header = images.new_from_buffer(bytes, "", access: :sequential)
+
+        return if header.width.to_i * header.height.to_i <= PIXELS
+
+        raise Unreadable, "that image has too many pixels to resize"
+      end
   end
 end

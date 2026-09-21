@@ -8,6 +8,7 @@
   import Tokens from "./Tokens.svelte";
   import ScopesEditor from "./ScopesEditor.svelte";
   import Card from "./ui/Card.svelte";
+  import ClientLogo from "./ui/ClientLogo.svelte";
   import Facts from "./ui/Facts.svelte";
   import Field from "./ui/Field.svelte";
   import Switch from "./ui/Switch.svelte";
@@ -23,7 +24,7 @@
     query Client($clientId: ID!) {
       client(clientId: $clientId) {
         clientId name dynamic approvedAt archivedAt secretExpiresAt createdAt
-        tokenEndpointAuthMethod applicationType clientUri logoUri tosUri policyUri logoUrl
+        tokenEndpointAuthMethod applicationType clientUri logoUri tosUri policyUri logoUrl(size: 128)
         subjectType sectorIdentifierUri
         redirectUris postLogoutRedirectUris grantTypes responseTypes resources
         requiredScopes allowedScopes
@@ -71,7 +72,7 @@
   let metadataUrl = $state("");
   let certificate = $state("");
   let entityId = $state("");
-  let links = $state({ clientUri: "", logoUri: "", tosUri: "", policyUri: "" });
+  let links = $state({});
   let attributes = $state("");
   let loading = $state(true);
   let secret = $state(null);
@@ -110,18 +111,18 @@
   ];
 
   const LINKS = [
+    ["logoUri", "Logo URL", "https://app.example.com/logo.png", "The logo is being fetched. It shows here in a moment."],
     ["clientUri", "Home page", "https://app.example.com", "Home page saved."],
     ["tosUri", "Terms of service", "https://app.example.com/terms", "Terms saved."],
     ["policyUri", "Privacy policy", "https://app.example.com/privacy", "Privacy policy saved."],
   ];
 
-  function saveLogo() {
-    const value = links.logoUri.trim();
+  async function saveLink(key, notice) {
+    const value = links[key].trim();
 
-    update(
-      { logoUri: value || null },
-      value ? "The logo is being fetched. It shows here in a moment." : "Logo removed.",
-    ).then(() => value && setTimeout(load, 3000));
+    await update({ [key]: value || null }, value ? notice : "Cleared.");
+
+    if (key === "logoUri" && value) setTimeout(load, 3000);
   }
 
   const SAML_DEFAULTS = "email = email\nname = name\ngiven_name = given_name\nfamily_name = family_name\npreferred_username = preferred_username";
@@ -156,12 +157,7 @@
       metadataUrl = data.samlMetadataUrl;
       certificate = data.client?.samlCertificate ?? "";
       entityId = data.client?.samlEntityId ?? "";
-      links = {
-        clientUri: data.client?.clientUri ?? "",
-        logoUri: data.client?.logoUri ?? "",
-        tosUri: data.client?.tosUri ?? "",
-        policyUri: data.client?.policyUri ?? "",
-      };
+      links = Object.fromEntries(LINKS.map(([key]) => [key, data.client?.[key] ?? ""]));
       attributes = mapped(data.client?.samlAttributes);
     } catch (thrown) {
       feedback.blame(thrown);
@@ -546,13 +542,7 @@
 
         <Card title="Shown to people">
           <div class="flex items-center gap-3">
-            {#if client.logoUrl}
-              <img src={`${client.logoUrl}&size=128`} alt="" class="size-14 rounded-lg border border-base-300" />
-            {:else}
-              <span class="grid size-14 place-items-center rounded-lg bg-base-200 text-xl font-semibold" aria-hidden="true"
-                >{client.name.trim().slice(0, 1).toUpperCase()}</span
-              >
-            {/if}
+            <ClientLogo {client} class="size-14 rounded-lg border border-base-300 text-xl" />
             <p class="text-xs opacity-60">
               {#if !client.approvedAt}
                 Nobody sees its logo until it is approved: a client that registered itself could borrow anybody's.
@@ -562,16 +552,6 @@
             </p>
           </div>
 
-          <Field
-            label="Logo URL"
-            bind:value={links.logoUri}
-            placeholder="https://app.example.com/logo.png"
-            autocapitalize="none"
-            autocorrect="off"
-            spellcheck="false"
-            onsave={saveLogo}
-          />
-
           {#each LINKS as [key, label, placeholder, notice] (key)}
             <Field
               {label}
@@ -580,7 +560,7 @@
               autocapitalize="none"
               autocorrect="off"
               spellcheck="false"
-              onsave={() => update({ [key]: links[key].trim() || null }, links[key].trim() ? notice : "Cleared.")}
+              onsave={() => saveLink(key, notice)}
             />
           {/each}
         </Card>

@@ -19,8 +19,8 @@
               <% told = ResourceMetadata.describe(app.audience, app.scopes) %>
               <div class="item">
                 <span class="item-name">
-                  <% if (logo = app.client.logo_url) %>
-                    <img src="<%= logo %>&size=32" alt="" width="20" height="20" class="item-logo" referrerpolicy="no-referrer" />
+                  <% if (logo = app.client.logo_url(current_actor, size: 32)) %>
+                    <img src="<%= logo %>" alt="" width="20" height="20" class="item-logo" referrerpolicy="no-referrer" />
                   <% end %>
                   <span><%= app.name %></span>
                 </span>

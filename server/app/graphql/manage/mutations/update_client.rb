@@ -59,7 +59,7 @@ module Manage
 
         save!(client)
 
-        ClientLogoJob.perform_later(client.id) if attributes.key?(:logo_uri) && !client.saved_change_to_logo_uri?
+        client.refresh_logo! if attributes.key?(:logo_uri) && !client.saved_change_to_logo_uri?
 
         audit!(::Event::CLIENT_UPDATED, client: client, name: client.name)
 

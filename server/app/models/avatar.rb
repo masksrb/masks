@@ -1,9 +1,6 @@
 class Avatar < ApplicationRecord
   include TenantScoped
 
-  Unreadable = Pictures::Unreadable
-
-  CONTENT_TYPE = Pictures::CONTENT_TYPE
   STORED = 512
   LIMIT = 8.megabytes
 
@@ -16,7 +13,7 @@ class Avatar < ApplicationRecord
 
     bytes = bytes_in(upload)
 
-    raise Unreadable, "an avatar has to be an image" if Pictures.sniff(bytes).nil?
+    raise Pictures::Unreadable, "an avatar has to be an image" if Pictures.sniff(bytes).nil?
 
     refuse_size!(bytes.bytesize)
 
@@ -24,7 +21,7 @@ class Avatar < ApplicationRecord
     held = find_or_initialize_by(actor_id: actor.id)
 
     held.update!(
-      content_type: CONTENT_TYPE,
+      content_type: Pictures::CONTENT_TYPE,
       digest: Pictures.digest(square),
       byte_size: square.bytesize,
       data: square
@@ -36,7 +33,7 @@ class Avatar < ApplicationRecord
   def self.refuse_size!(size)
     return if size.nil? || size <= LIMIT
 
-    raise Unreadable, "an avatar has to be smaller than #{LIMIT / 1.megabyte}MB"
+    raise Pictures::Unreadable, "an avatar has to be smaller than #{LIMIT / 1.megabyte}MB"
   end
 
   def self.bytes_in(upload)

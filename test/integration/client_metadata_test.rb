@@ -108,7 +108,7 @@ class ClientMetadataTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_equal "image/webp", response.media_type
     assert_equal "nosniff", response.headers["X-Content-Type-Options"]
-    assert_equal ClientLogosController::SEALED, response.headers["Content-Security-Policy"]
+    assert_equal ServesPictures::SEALED, response.headers["Content-Security-Policy"]
     assert_includes response.headers["Cache-Control"], "immutable"
     assert_equal 64, Vips::Image.new_from_buffer(response.body, "").width
 

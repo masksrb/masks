@@ -1,4 +1,5 @@
 <script>
+import { initial } from "../lib/initial.js";
 import Action from "../shared/Action.svelte";
 import ClientMark from "../shared/ClientMark.svelte";
 import Head from "../shared/Head.svelte";
@@ -10,8 +11,14 @@ const scopes = $derived(ranked(login.consent?.scopes ?? []));
 const audience = $derived(login.consent?.audience ?? []);
 const client = $derived(login.client?.name ?? "");
 const tenant = $derived(login.auth.tenant?.name ?? "");
+const links = $derived(
+  [
+    ["site", login.t("site", { client })],
+    ["terms", login.t("terms")],
+    ["privacy", login.t("privacy")],
+  ].filter(([key]) => login.client?.[key]),
+);
 
-const initial = (name) => (name ? name.slice(0, 1).toUpperCase() : "");
 </script>
 
 <div class="auth-pair">
@@ -68,17 +75,11 @@ const initial = (name) => (name ? name.slice(0, 1).toUpperCase() : "");
   {/if}
 </div>
 
-{#if login.client?.site || login.client?.terms || login.client?.privacy}
+{#if links.length}
   <p class="aside client-links">
-    {#if login.client.site}
-      <a class="textlink" href={login.client.site} rel="noopener noreferrer" target="_blank">{login.t("site", { client })}</a>
-    {/if}
-    {#if login.client.terms}
-      <a class="textlink" href={login.client.terms} rel="noopener noreferrer" target="_blank">{login.t("terms")}</a>
-    {/if}
-    {#if login.client.privacy}
-      <a class="textlink" href={login.client.privacy} rel="noopener noreferrer" target="_blank">{login.t("privacy")}</a>
-    {/if}
+    {#each links as [key, label] (key)}
+      <a class="textlink" href={login.client[key]} rel="noopener noreferrer" target="_blank">{label}</a>
+    {/each}
   </p>
 {/if}
 
