@@ -3,13 +3,14 @@ title: Provisioning
 description: An identity provider adds, changes, suspends and removes people over SCIM 2.0.
 ---
 
-An organisation that already keeps its people in Entra ID, Okta, Google Workspace or JumpCloud does
-not want to keep a second list in masks. SCIM 2.0 ([RFC 7643](https://www.rfc-editor.org/rfc/rfc7643),
-[RFC 7644](https://www.rfc-editor.org/rfc/rfc7644)) lets that provider do it: when somebody joins
-they are added here, when they are renamed they are renamed here, and when they leave they are
-switched off here in the same minute.
+Many organizations already keep their people in Entra ID, Okta, Google Workspace, or JumpCloud. SCIM
+2.0 ([RFC 7643](https://www.rfc-editor.org/rfc/rfc7643),
+[RFC 7644](https://www.rfc-editor.org/rfc/rfc7644)) lets that provider maintain the same list in
+masks. When a person joins, the provider adds them to masks. When a person is renamed, the provider
+renames them in masks. When a person leaves, the provider suspends them in masks within the same
+minute.
 
-Each tenant answers at its own base URL:
+Each tenant has its own SCIM base URL:
 
 ```
 https://demo.masks.example/scim/v2
@@ -17,53 +18,69 @@ https://demo.masks.example/scim/v2
 
 ## Connecting a provider
 
-In the console, under **Settings → Provisioning**, issue a token, give it a label the provider will
-recognise, and choose how long it lives — a year at most. It is shown once. Paste the base URL and
-the token into the provider as a bearer token. The list shows when each token was last used, and
-revoking one refuses whatever provisions with it from then on.
+To connect a provider with a provisioning token:
 
-A client can provision instead of a token: an approved client allowed `masks:scim` asks for its own
-token with [`client_credentials`](/concepts/clients/), addressed to the base URL as its `resource`.
+1. In the console, open **Settings → Provisioning** and issue a token.
+2. Give the token a label that identifies the provider.
+3. Choose how long the token lasts. The longest lifetime is one year.
+4. Copy the token. masks shows it only once.
+5. In the provider, enter the base URL, and enter the token as a bearer token.
+
+The list of tokens shows when each token was last used. After a token is revoked, masks refuses every
+request made with it.
+
+A client can provision in place of a provisioning token. The client must be approved and allowed
+`masks:scim`. It requests its own token with [`client_credentials`](/concepts/clients/), and names the
+base URL as its `resource`.
 
 ## What is provisioned
 
-`/Users` is read, filtered, created, replaced with `PUT`, changed with `PATCH` and deleted.
+The `/Users` endpoint supports reads, filters, creation, replacement with `PUT`, changes with
+`PATCH`, and deletion.
 
 | SCIM | masks |
 | --- | --- |
 | `id` | the actor's `uuid` |
 | `userName` | the nickname, or the email when it is an address |
-| `externalId` | kept, unique in the tenant, and filterable |
+| `externalId` | stored, unique in the tenant, and filterable |
 | `name`, `displayName` | the name claims |
-| `emails` | the primary email, taken as confirmed |
+| `emails` | the primary email, treated as confirmed |
 | `phoneNumbers`, `photos`, `profileUrl`, `locale`, `timezone` | the matching claims |
 | `active` | whether the person is suspended |
 | `password` | set, if a provider sends one |
 
-A provisioned person holds the standard scopes and has no password unless one was sent. They sign
-in through a [provider](/concepts/providers/) that trusts the same email, or by accepting an
-invitation a manager sends. Filters understand `eq`, `ne`, `co`, `sw`, `ew`, `pr` and the
-comparisons, joined by `and`, on `userName`, `externalId`, `emails.value`, `displayName`,
-`name.givenName`, `name.familyName`, `active` and the `meta` dates. Every response carries a weak
-`ETag`, and a stale `If-Match` is refused.
+A provisioned person holds the standard scopes. They have no password unless the provider sent one.
+They sign in through a [provider](/concepts/providers/) that trusts the same email, or by accepting an
+invitation from a manager.
 
-`/ServiceProviderConfig`, `/ResourceTypes` and `/Schemas` describe the rest. Groups, bulk
-operations and sorting are not offered.
+Filters support `eq`, `ne`, `co`, `sw`, `ew`, `pr`, `gt`, `ge`, `lt`, and `le`. Up to four
+comparisons can be joined with `and`. The filterable attributes are `userName`, `externalId`,
+`emails.value`, `displayName`, `name.givenName`, `name.familyName`, `active`, and the `meta` dates.
+`userName` and `active` accept only `eq`.
+
+Every response includes a weak `ETag`. masks refuses a request whose `If-Match` header names an
+older version.
+
+The `/ServiceProviderConfig`, `/ResourceTypes`, and `/Schemas` endpoints describe the rest of the
+service. masks does not support groups, bulk operations, or sorting.
 
 ## Suspending
 
-`active: false` suspends somebody, and so does **Suspend** on their page in the console. They are
-signed out of every session, every token they hold stops working at once — refresh tokens included
-— and signing in is refused after the first factor, so a stranger typing their name learns nothing.
-`active: true` restores them. `DELETE` removes them outright, the way deleting in the console does.
+Sending `active: false` suspends a person. **Suspend** on the person's page in the console does the
+same. A suspended person is signed out of every session, and every token they hold stops working
+immediately, including refresh tokens. masks refuses their sign-in after the first factor, so
+someone who enters only the person's name cannot learn that the account is suspended.
+
+Sending `active: true` restores the person. `DELETE` removes the person entirely, the same as
+deleting them in the console.
 
 ## What a provider cannot do
 
-A provisioning token is worth a great deal, so it is worth less than a manager:
+A provisioning token can change many accounts, so it has fewer permissions than a manager:
 
-- it never sets the password or email of anybody holding a `masks:` scope, because either would be
-  the first step to taking over their account
-- it cannot suspend or delete the last person who manages masks here
-- it cannot change anybody's scopes
+- It cannot set the password or email of a person who holds a `masks:` scope. Either change would
+  allow an attacker to take over that account.
+- It cannot suspend or delete the last active person who holds `masks:manage` in the tenant.
+- It cannot change a person's scopes.
 
-Every change is written down as the person's activity, marked as having come through SCIM.
+masks records every change in the person's activity, marked as coming through SCIM.
