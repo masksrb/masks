@@ -1,137 +1,147 @@
 ---
 title: Providers
-description: Signing in with an account somewhere else, over OpenID Connect, OAuth 2.0 or SAML.
+description: A provider lets a person sign in with an account on another service over OpenID Connect, OAuth 2.0, or SAML.
 ---
 
-A provider is somewhere else people can sign in with: Google, GitHub, Apple, a company's Okta or
-Entra, or anything that speaks OpenID Connect, OAuth 2.0 or SAML 2.0. The account there is linked
-to an account here, and that link is a **connected account**.
+A provider is another service that people can sign in with, such as Google, GitHub, Apple, or a
+company's Okta or Entra, or any service that supports OpenID Connect, OAuth 2.0, or SAML 2.0. masks
+links the account on the provider to an account in masks. That link is a **connected account**.
 
-A provider can also be something applications use on somebody's behalf: see
+Applications can also use a provider on a person's behalf. See
 [delegation](/concepts/delegation/).
 
-A provider only ever stands in for a password. It is never a second factor: somebody who signs in
-with one is still asked for an authenticator app or a passkey whenever their policy wants one.
+A provider replaces a password only. It is never a second factor. A person who signs in with a
+provider is still asked for an authenticator app or a passkey whenever their sign-in policy
+requires one.
 
-## What a provider is for
+## Provider roles
 
 Every provider has a role.
 
 | | |
 | --- | --- |
-| `credential` | another way into an account that already exists here |
-| `delegate` | the provider owns the account |
+| `credential` | Another way to sign in to an account that already exists in masks. |
+| `delegate` | The provider owns the account. |
 
-A **credential** provider signs in the account it is connected to, and nobody else. An address it
-confirms reaches an account that holds that address only once that account signs in some other way
-and so proves it is the same person; the two are connected from then on. It never creates an
-account.
+A **credential** provider signs in only the account it is connected to, and it never creates an
+account. When it confirms an address that belongs to an existing account, masks connects the two
+only after that account signs in by another method and so proves it belongs to the same person. The
+two stay connected after that.
 
-A **delegate** does everything a credential provider does, and also creates an account for
-somebody new, and keeps their name, photo and address in step with what it says each time they
-sign in. It is the provider to choose when the company's directory is the truth about who works
+A **delegate** provider does everything a credential provider does. It also creates an account for a
+new person, and it updates the person's name, photo, and address from the provider's values on every
+sign-in. Use a delegate provider when the company's directory is the source of truth for who works
 there.
 
-## Which addresses are taken at the provider's word
+## Trusted email addresses
 
-masks tells applications `email_verified: true`, so it cannot believe every provider that says an
-address is confirmed. A provider has standing for an address in two ways:
+masks tells applications `email_verified: true`, so it accepts a provider's claim that an address
+is confirmed only in specific cases. A provider is trusted for an address in either of two cases:
 
-- the address is in one of the **email domains** listed for the provider, or
-- the provider is trusted to confirm addresses (`trusts_email`), and it says this one is confirmed.
+- The address is in one of the **email domains** listed for the provider.
+- The provider is trusted to confirm addresses (`trusts_email`), and it reports this address as
+  confirmed.
 
-Turn `trusts_email` on only for a provider that really checks a person holds the mailbox. Google,
-Apple, GitHub, GitLab, Slack, LinkedIn and Discord do, and their presets say so. A self-hosted
-OpenID Connect server whose administrators can type any address does not.
+Turn on `trusts_email` only for a provider that verifies that a person controls the mailbox.
+Google, Apple, GitHub, GitLab, Slack, LinkedIn, and Discord verify addresses, and their presets turn
+`trusts_email` on. A self-hosted OpenID Connect server whose administrators can enter any address
+does not verify addresses.
 
-A provider that says an address is unconfirmed is believed even inside a listed domain. SAML says
-nothing about confirmation at all, so a SAML provider has standing only in its listed domains.
+When a provider reports an address as unconfirmed, masks treats it as unconfirmed, even inside a
+listed domain. SAML has no field for confirmation, so masks trusts a SAML provider only for
+addresses in its listed domains.
 
-Without standing, a delegate creates no account for that address rather than one that claims an
-address nobody proved, and an invitation waiting for that address is not taken up. Somebody the
-provider names with no address at all still gets an account, just without one.
+When masks does not trust a provider for an address, a delegate provider creates no account for that
+address, and a pending invitation for that address is not accepted. A person whom the provider
+identifies with no address at all still gets an account, and that account has no address.
 
 ## Where a provider is offered
 
-The sign-in policy for the client decides.
+The sign-in policy for the client controls which providers appear:
 
-- `first_factors` has to include `provider` for any provider to be offered.
-- `providers` names which ones; left unset, every provider is offered.
-- A password or passkey the policy does not list is refused, not just hidden.
-- A policy whose only first factor is `provider` shows no identifier field at all: the sign-in page
-  is the provider buttons and nothing else.
+- `first_factors` must include `provider` for any provider to be offered.
+- `providers` lists the providers to offer. When it is unset, every provider is offered.
+- masks hides a password or passkey option that the policy does not list, and refuses it if it is
+  submitted anyway.
+- When a policy's only first factor is `provider`, the sign-in page shows no identifier field. It
+  shows only the provider buttons.
 
-The console and the account page sign in through the tenant's default policy, so that policy has to
-keep a password or a passkey. A provider that goes down cannot lock the managers out. Signing in
-only through a provider is something a client's own policy does.
+The console and the account page use the tenant's default policy, so that policy must keep a
+password or a passkey. This keeps managers able to sign in when a provider is unavailable. Only a
+client's own policy can restrict sign-in to providers.
 
 ## Connecting from the account page
 
-Somebody signed in can connect any provider their default policy offers from their account page. It
-uses the same callback the provider already knows, asks for a sign-in within the last fifteen
-minutes, and refuses an upstream account that is already connected to somebody else.
+A signed-in person can connect any provider that their default policy offers from their account
+page. The connection uses the same callback URL the provider already has. masks requires that the
+person signed in within the last fifteen minutes, and refuses an upstream account that is already
+connected to a different person.
 
 ## Protocols
 
 ### OpenID Connect
 
-The `id_token` is the identity: its signature is checked against the issuer's published keys, and
-its issuer, audience and nonce against the sign-in that asked for it. The request carries PKCE. The
-subject is `sub`, or `oid` for a Microsoft directory that should not change subject per application.
+The `id_token` identifies the person. masks checks its signature against the issuer's published
+keys, and checks its issuer, audience, and nonce against the sign-in request that asked for it. The
+request uses PKCE. The subject is `sub`, or `oid` for a Microsoft directory where the subject must
+stay the same across applications.
 
 ### OAuth 2.0
 
-For a provider with no `id_token`, the identity is its userinfo endpoint. `subject_claim` and
-`claims` map each claim to a path in whatever that endpoint returns — `data.id` for X, `id` for
-GitHub. The request still carries PKCE, and the provider's tokens are thrown away the moment the
-profile has been read.
+For a provider that issues no `id_token`, masks reads the identity from the provider's userinfo
+endpoint. `subject_claim` and `claims` map each claim to a path in the endpoint's response, for
+example `data.id` for X and `id` for GitHub. The request uses PKCE, and masks discards the
+provider's tokens as soon as it has read the profile.
 
-An **emails URL** is for a provider that keeps confirmed addresses apart from its public profile, as
-GitHub does. The primary confirmed address from that list is used; an address that only appears in
-the public profile never is.
+An **emails URL** serves a provider that lists confirmed addresses separately from its public
+profile, as GitHub does. masks uses the primary confirmed address from that list. It never uses an
+address that appears only in the public profile.
 
 ### SAML 2.0
 
-masks is the service provider. Give the identity provider two things from the provider's page:
+masks is the service provider. Setting up a SAML provider takes two steps:
 
-| | |
-| --- | --- |
-| assertion consumer service URL | `https://<tenant>/login/provider/<key>/callback` |
-| service provider entity ID | `https://<tenant>/login/provider/<key>/metadata`, which also serves masks' metadata |
+1. Give the identity provider these two values from the provider's page in the console:
 
-and give masks the identity provider's metadata, as a URL or pasted in. A metadata URL is read again
-every night, so a rotated certificate is picked up.
+   | | |
+   | --- | --- |
+   | Assertion consumer service URL | `https://<tenant>/login/provider/<key>/callback` |
+   | Service provider entity ID | `https://<tenant>/login/provider/<key>/metadata`, which also serves the masks metadata |
 
-An assertion is trusted only when all of these hold:
+2. Give masks the identity provider's metadata, either as a URL or pasted in. masks fetches a
+   metadata URL again every night, so it picks up a rotated certificate.
 
-- it is signed, by a certificate in the identity provider's metadata
-- it answers the request this browser sent (`InResponseTo`)
-- its audience and recipient are this service provider
-- its issuer is the identity provider's entity
-- it is inside its validity window, give or take a minute
+masks trusts an assertion only when all of these conditions hold:
 
-An unsolicited, identity-provider-initiated response is refused, and a response cannot be replayed
-into another sign-in, because the request it answers is spent the first time.
+- It is signed by a certificate in the identity provider's metadata.
+- It answers the request this browser sent (`InResponseTo`).
+- Its audience and recipient are this service provider.
+- Its issuer is the identity provider's entity ID.
+- The current time is within its validity window, allowing one minute of clock drift.
 
-Ask for a **persistent** name ID where the identity provider offers one. A transient one changes
-every sign-in, and every sign-in would look like somebody new.
+masks refuses an unsolicited, identity-provider-initiated response. A response cannot be replayed
+into another sign-in, because masks marks the request it answers as used the first time.
+
+Request a **persistent** name ID when the identity provider offers one. A transient name ID changes
+on every sign-in, so every sign-in would appear to come from a new person.
 
 ### Apple
 
-Apple's client secret is a short-lived ES256 token masks signs with the key Apple issued, so the
-provider holds a team ID, a key ID and the `.p8` private key instead of a secret. Apple posts its
-answer back, and sends the person's name on their first sign-in only; masks keeps it.
+Apple's client secret is a short-lived ES256 token that masks signs with the key Apple issued. The
+provider therefore stores a team ID, a key ID, and the `.p8` private key in place of a secret. Apple
+posts its response back to masks, and it sends the person's name only on their first sign-in. masks
+stores that name.
 
 ## Posted callbacks
 
-Apple and SAML post back across sites, and a `SameSite=Lax` cookie does not come along on a
-cross-site POST. masks parks what was posted on the server for five minutes under a one-time handle
-and redirects to the same URL as a GET, where the cookie does arrive and the sign-in carries on. A
-handle is redeemed once.
+Apple and SAML post their responses back across sites, and a browser does not send a
+`SameSite=Lax` cookie with a cross-site POST. masks stores the posted parameters on the server for
+five minutes under a one-time handle. It then redirects to the same URL as a GET request, which does
+include the cookie, and the sign-in continues. Each handle can be redeemed once.
 
 ## Presets
 
-Adding a provider starts from a preset, which fills in everything but the credentials.
+Adding a provider starts from a preset, which fills in every setting except the credentials.
 
 | preset | protocol | asks for |
 | --- | --- | --- |
@@ -153,12 +163,14 @@ Adding a provider starts from a preset, which fills in everything but the creden
 
 ## Calling a provider's API
 
-An application that has to act as somebody at a provider while they are away — a nightly sync, an
-agent — asks for a [delegation](/concepts/delegation/), and masks keeps and refreshes the tokens.
+An application that must act for a person at a provider while that person is away, such as a
+nightly sync or an agent, requests a [delegation](/concepts/delegation/). masks stores and
+refreshes the provider's tokens.
 
-One that only calls a provider while the person is in front of it can do its own OAuth with that
-provider. The `identities` scope tells it which account to send the person to: userinfo carries each
-connected account, and the provider remembers the person, so the trip is a redirect and back.
+An application that calls a provider only while the person is using it can run its own OAuth flow
+with that provider. The `identities` scope tells the application which provider account to send the
+person to. Userinfo lists each connected account, and the provider already recognizes the person,
+so the flow is a redirect to the provider and back.
 
 ```json
 {
@@ -173,5 +185,5 @@ connected account, and the provider remembers the person, so the trip is a redir
 https://accounts.google.com/o/oauth2/v2/auth?…&login_hint=ada@gmail.com
 ```
 
-A pairwise client is never given `identities`: an upstream subject is the same everywhere, and would
-let it correlate somebody pairwise subjects are meant to keep apart.
+masks never gives `identities` to a pairwise client. An upstream subject is the same for every
+client, so it would let the client correlate a person that pairwise subjects keep separate.
