@@ -1,13 +1,17 @@
 ---
 title: Exchanging a token
-description: Trading a token for a narrower one, and saying who is acting on whose behalf.
+description: How a client exchanges a token for a narrower one that records who is acting for whom.
 ---
 
-A token exchange ([RFC 8693](https://www.rfc-editor.org/rfc/rfc8693)) trades one token for
-another at `/token`. An API gateway hands a downstream service a token for that service alone. An
-agent working for somebody carries a token that says so. A backend turns the ID token its browser
-half was given into an access token of its own. A client has to be registered for
-`urn:ietf:params:oauth:grant-type:token-exchange`.
+A token exchange ([RFC 8693](https://www.rfc-editor.org/rfc/rfc8693)) issues one token in return
+for another at `/token`. Some common uses:
+
+- An API gateway gives a downstream service a token for that service only.
+- An agent acting for a person holds a token that records that it acts for them.
+- A backend exchanges the ID token that its browser frontend received for an access token of its
+  own.
+
+The client must be registered for `urn:ietf:params:oauth:grant-type:token-exchange`.
 
 ```sh
 curl -u "$CLIENT_ID:$CLIENT_SECRET" https://demo.masks.example/token \
@@ -25,20 +29,21 @@ curl -u "$CLIENT_ID:$CLIENT_SECRET" https://demo.masks.example/token \
 | `urn:ietf:params:oauth:token-type:access_token` | a live access token this issuer signed |
 | `urn:ietf:params:oauth:token-type:id_token` | an ID token this issuer signed, presented by the client it was issued to |
 
-An exchange only ever narrows. `scope`, `resource` and `requested_lifetime` may each ask for less
-than the subject token holds and never more, and the subject token's expiry is the ceiling however
-long a lifetime is asked for. Revoking the subject token takes every token exchanged from it down
-too.
+An exchange can only narrow a token. `scope`, `resource`, and `requested_lifetime` may each request
+less than the subject token holds, and never more. The new token expires no later than the subject
+token, whatever lifetime is requested. Revoking the subject token also revokes every token exchanged
+from it.
 
-An ID token carries no scopes, so exchanging one is bounded by what the person consented to for
-this client, and by the resources the client speaks for. It lives no longer than the ID token did,
-it is refused once the session it was issued in has ended, and no client can exchange an ID token
-issued to another one: that would be signing in as somebody with a token lifted from their browser.
+An ID token has no scopes. Exchanging one grants at most the scopes the person consented to for
+this client and the resources the client is registered for. The new token expires no later than
+the ID token. The exchange is refused once the session the ID token was issued in has ended. A
+client cannot exchange an ID token that was issued to another client, because that would let
+anyone who obtained an ID token from a person's browser sign in as that person.
 
 ## Who is acting
 
-Every access token exchanged onward carries an `act` claim naming who holds it now, and nests the
-one before it, so a chain of services is written down in the token itself:
+Each access token issued by an exchange has an `act` claim that names the party holding it. The
+claim nests the previous `act` claim, so the token records the whole chain of services:
 
 ```json
 {
@@ -48,22 +53,22 @@ one before it, so a chain of services is written down in the token itself:
 }
 ```
 
-A client that acts as something more specific than itself presents that as an `actor_token`, with
-`actor_token_type`. The actor token has to be live and issued to the client presenting it, and then
-`act` names its subject and the client it belongs to. An agent that signs in as itself with
-[`client_credentials`](/concepts/clients/) and acts for a person presents its own token as the
-actor and theirs as the subject.
+A client that acts as a more specific party than itself presents that party's token as an
+`actor_token`, with `actor_token_type`. The actor token must be live and issued to the client
+presenting it. The `act` claim then names the actor token's subject and client. For example, an
+agent that signs in as itself with [`client_credentials`](/concepts/clients/) and acts for a person
+presents its own token as the actor token and the person's token as the subject token.
 
-An ID token exchanged by the client it was issued to is that client speaking for itself, so the
-token it gets carries no `act` unless an actor token was presented.
+When a client exchanges an ID token that was issued to it, the client is acting for itself, so the
+new token has no `act` claim unless an actor token was presented.
 
-## Somebody's account elsewhere
+## A person's account at a provider
 
-Asking for `urn:masks:params:oauth:token-type:upstream_access_token` releases the access token masks
-holds at a provider rather than a masks token, under much narrower rules — see
+Requesting `urn:masks:params:oauth:token-type:upstream_access_token` returns the access token that
+masks holds for the person at a provider, instead of a masks token. Much narrower rules apply. See
 [delegation](/concepts/delegation/).
 
 ## What is not exchanged
 
-A refresh token, a SAML assertion, or a token another issuer signed. `may_act` in the subject token
-is not read.
+masks does not exchange refresh tokens, SAML assertions, or tokens signed by another issuer. It
+does not read a `may_act` claim in the subject token.
