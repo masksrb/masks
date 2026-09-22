@@ -3,32 +3,39 @@ title: Scopes
 description: What a token is allowed to do, and the prefixes an app publishes beneath.
 ---
 
-A scope is a string. Five are standard — `openid`, `profile`, `email`, `offline_access` and
-`identities`, which names the [accounts elsewhere](/concepts/providers/#calling-a-providers-api)
-somebody signs in with — and masks reserves the `masks:` prefix for itself.
+A scope is a string. masks treats five scopes as standard: `openid`, `profile`, `email`,
+`offline_access`, and `identities`. The `identities` scope names the
+[accounts elsewhere](/concepts/providers/#calling-a-providers-api) that a person signs in with. masks
+reserves the `masks:` prefix for its own scopes.
 
 | Scope | |
 | --- | --- |
-| `masks:manage` | the console, and the GraphQL API behind it |
-| `masks:handshake` | connect an application to this tenant |
-| `masks:scim` | provision people over SCIM, for a client that signs in as itself — see [provisioning](/concepts/provisioning/) |
-| `masks:delegate:<provider>` | use somebody's account at that provider while they are away — see [delegation](/concepts/delegation/) |
+| `masks:manage` | The console, and the GraphQL API behind it. |
+| `masks:handshake` | Connect an application to this tenant. |
+| `masks:scim` | Provision people over SCIM, for a client that signs in as itself. See [provisioning](/concepts/provisioning/). |
+| `masks:delegate:<provider>` | Use a person's account at that provider while they are away. See [delegation](/concepts/delegation/). |
 
-Only an approved client may hold a `masks:` scope. `masks:delegate:` scopes are the exception on the
-actor's side: every person holds them for their own accounts, and consents to each application
-separately.
+Only an approved client may hold a `masks:` scope. masks refuses to add one to a client that is not
+approved, and it refuses to offer one to dynamic registration.
+
+On the actor's side, `masks:delegate:` scopes are an exception. Every person holds them for their own
+accounts, and each person consents to each application separately.
 
 ## Prefixes
 
-A scope ending in a colon is a prefix — a [namespace](/concepts/namespaces/) an application claims,
-so it can publish scopes of its own beneath it without masks knowing them in advance.
+A scope that ends in a colon is a prefix. A prefix is a [namespace](/concepts/namespaces/) that an
+application claims. The application can then publish scopes of its own beneath it, and masks does
+not need to know those scopes in advance.
 
-Coverage is one-directional: holding `things:` grants `things:read`, but a bare prefix is never
-itself *covered* by anything. So a prefix cannot be granted by holding it — it is granted by
-claiming the namespace, which adds it to the actor's list outright.
+Coverage works in one direction. Holding `things:` grants `things:read`, but nothing covers a bare
+prefix, including the prefix itself. Holding a prefix therefore never grants it. An actor gets a
+prefix when they claim the namespace, and masks adds it to their list directly.
 
 ## The ceiling
 
-Every grant is bounded twice: by the client's `allowed_scopes`, and by the actor's own list. A token
-carries the intersection, never more, and an actor stripped of a scope cannot keep using a token
-that still names it.
+Two lists bound every grant. The first is the client's `allowed_scopes`, and the second is the
+actor's own list. An access token holds the intersection of the requested scopes with both lists.
+
+masks checks these lists when it issues a token. A refresh keeps the scopes of the refresh token, or
+a subset of them. The manage API checks the actor's list again on every request, so an actor who
+loses `masks:manage` cannot keep using a token that still names it.
