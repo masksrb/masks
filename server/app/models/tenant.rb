@@ -17,7 +17,7 @@ class Tenant < ApplicationRecord
     end
   end
 
-  encrypts :pairwise_salt
+  encrypts :pairwise_salt, :setup_token
 
   has_many :signing_keys, dependent: :destroy
   has_many :actors, dependent: :destroy
@@ -48,7 +48,7 @@ class Tenant < ApplicationRecord
 
   scope :active, -> { where(archived_at: nil) }
 
-  after_create_commit :ensure_signing_key!
+  after_create_commit :ensure_signing_key!, :setup_token!
 
   def public_origin
     template = Rails.configuration.masks.public_origin_template
@@ -179,9 +179,15 @@ class Tenant < ApplicationRecord
       end
     end
 
+    def wildcard?
+      template = Rails.configuration.masks.public_origin_template
+
+      template.present? && template.include?("%{subdomain}")
+    end
+
     def claim(host)
       return nil if declared.any?
-      return nil if exists?
+      return nil if exists? && !wildcard?
 
       subdomain = host.to_s.split(".").first
 
@@ -257,6 +263,28 @@ class Tenant < ApplicationRecord
     pairwise_salt
   end
 
+  def set_up?
+    Tenant.switch(self) { Actor.exists? }
+  end
+
+  def setup_token!
+    Rails.configuration.masks.setup_token || minted_setup_token
+  end
+
+  def setup_token_pinned?
+    Rails.configuration.masks.setup_token.present?
+  end
+
+  def set_up!
+    update!(setup_token: nil) if setup_token.present?
+  end
+
+  def setup_announcement
+    return "#{subdomain} is not set up. Its setup token is the one MASKS_SETUP_TOKEN holds." if setup_token_pinned?
+
+    "#{subdomain} is not set up. Its setup token is #{setup_token!}"
+  end
+
   def ensure_signing_key!
     Tenant.switch(self) do
       signing_keys.active.first || SigningKey.generate!(tenant: self)
@@ -266,4 +294,20 @@ class Tenant < ApplicationRecord
   def to_identity
     { "uuid" => uuid, "subdomain" => subdomain, "name" => name }
   end
+
+  private
+
+    def minted_setup_token
+      return setup_token if setup_token.present?
+
+      minted = with_lock do
+        next false if setup_token.present?
+
+        update!(setup_token: SecureRandom.base58(32))
+      end
+
+      Rails.logger.warn("masks: #{setup_announcement}") if minted
+
+      setup_token
+    end
 end

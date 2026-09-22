@@ -935,7 +935,8 @@ CREATE TABLE public.tenants (
     dynamic_registration character varying,
     browsers_only boolean DEFAULT false NOT NULL,
     blocked_agents text,
-    sign_in_policy_id bigint
+    sign_in_policy_id bigint,
+    setup_token text
 );
 
 
@@ -2581,6 +2582,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260921010000'),
 ('20260921000000'),
 ('20260914030000'),
 ('20260914020000'),

@@ -4,13 +4,13 @@ class FirstRunTest < ActionDispatch::IntegrationTest
   PASSWORD = "a-long-enough-password".freeze
 
   def setup_params(**overrides)
-    { event: "signup", nickname: "owner", email: "owner@example.invalid",
+    { event: "signup", token: @tenant.setup_token!, nickname: "owner", email: "owner@example.invalid",
       password: PASSWORD, password_confirmation: PASSWORD,
       called: "Demo" }.merge(overrides)
   end
 
   def identify_params(**overrides)
-    { event: "signup", nickname: "owner", email: "owner@example.invalid" }.merge(overrides)
+    { event: "signup", token: @tenant.setup_token!, nickname: "owner", email: "owner@example.invalid" }.merge(overrides)
   end
 
   def with_declared(list)
@@ -25,6 +25,14 @@ class FirstRunTest < ActionDispatch::IntegrationTest
     [ @tenant, other_tenant ].each { |tenant| Tenant.switch(tenant) { tenant.destroy! } }
 
     yield
+  end
+
+  def with_public_origin_template(template)
+    was = Rails.configuration.masks.public_origin_template
+    Rails.configuration.masks.public_origin_template = template
+    yield
+  ensure
+    Rails.configuration.masks.public_origin_template = was
   end
 
   test "a tenant with no actors asks to be set up, and says so in both renderings" do
@@ -349,6 +357,55 @@ class FirstRunTest < ActionDispatch::IntegrationTest
 
       assert_response :not_found
       assert_equal 1, Tenant.count
+    end
+  end
+
+  test "a wildcard public origin template claims a tenant for every unseen host" do
+    with_nothing_deployed do
+      with_public_origin_template("http://%{subdomain}.auth.test") do
+        host! "fresh.auth.test"
+        get "/login"
+        assert_response :success
+
+        reset!
+        host! "second.auth.test"
+        get "/login"
+
+        assert_response :success
+        assert_equal %w[fresh second], Tenant.order(:subdomain).pluck(:subdomain)
+      end
+    end
+  end
+
+  test "a public origin template with no subdomain placeholder claims only the first host" do
+    with_nothing_deployed do
+      with_public_origin_template("http://auth.test") do
+        host! "fresh.auth.test"
+        get "/login"
+        assert_response :success
+
+        reset!
+        host! "second.auth.test"
+        get "/login"
+
+        assert_response :not_found
+        assert_equal 1, Tenant.count
+      end
+    end
+  end
+
+  test "claiming is off under a wildcard template too, once tenants are declared at deploy" do
+    with_nothing_deployed do
+      with_public_origin_template("http://%{subdomain}.auth.test") do
+        with_declared([ "declared" ]) do
+          host! "fresh.auth.test"
+
+          get "/login"
+
+          assert_response :not_found
+          refute Tenant.exists?
+        end
+      end
     end
   end
 

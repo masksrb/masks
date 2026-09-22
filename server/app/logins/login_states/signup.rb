@@ -10,14 +10,6 @@ module LoginStates
     accepts :nickname, :email, :name, :phone, :password, :password_confirmation, :token, :passkey
 
     class << self
-      def token
-        Rails.configuration.masks.setup_token
-      end
-
-      def token_required?
-        token.present?
-      end
-
       def steps(first_run, policy = nil)
         return FIRST_RUN_STEPS if first_run
 
@@ -63,7 +55,7 @@ module LoginStates
 
       {
         "signup" => {
-          "token" => login.first_run? && self.class.token_required?,
+          "token" => login.first_run? && !held["vouched"],
           "minimum" => policy.password_minimum,
           "asks" => { "nickname" => policy.nickname, "email" => policy.email, "phone" => policy.phone },
           "fixed" => proven_email ? [ "email" ] : [],
@@ -132,7 +124,7 @@ module LoginStates
 
         return unless described?(values)
 
-        login.store[HELD] = values.merge("expires_at" => (Time.current + WINDOW).to_i)
+        login.store[HELD] = values.merge("vouched" => login.first_run?, "expires_at" => (Time.current + WINDOW).to_i)
       end
 
       def described?(values)
@@ -234,6 +226,7 @@ module LoginStates
         factored! :first_factor, expiry: EXPIRY
         login.store[SIGNED_UP] = { "first_run" => @first_run, "expires_at" => (Time.current + EXPIRY).to_i }
         login.store[Configure::HELD] = true if @first_run
+        tenant.set_up! if @first_run
       end
 
       def create(password: nil, webauthn_id: nil)
@@ -302,12 +295,13 @@ module LoginStates
       end
 
       def permitted?
-        return true unless login.first_run? && self.class.token_required?
+        return true unless login.first_run?
+        return true if held["vouched"]
 
         given = update(:token).to_s
 
         return true if given.present? &&
-                       ActiveSupport::SecurityUtils.secure_compare(given, self.class.token)
+                       ActiveSupport::SecurityUtils.secure_compare(given, tenant.setup_token!)
 
         warn! "invalid-setup-token", field: "token"
         false

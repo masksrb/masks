@@ -6,6 +6,33 @@ description: One masks deployment serves many tenants and isolates them from eac
 A tenant is a subdomain with its own actors, clients, and signing keys. One deployment serves many
 tenants, and no record belongs to more than one of them.
 
+## Declaring tenants
+
+A deployment declares its tenants in one of three ways. Setting both `MASKS_TENANT` and
+`MASKS_TENANTS` is an error.
+
+| | Declared by | A request resolves by |
+| --- | --- | --- |
+| Single | `MASKS_TENANT=acme` | Nothing. Every host is that tenant. |
+| Multi | `MASKS_TENANTS=demo,acme` | The first label of the hostname. `demo.auth.example.com` is `demo`. |
+| Dynamic | Neither set | The first label of the hostname, the first time it's seen. |
+
+Single and Multi are declared up front: `bin/rails masks:tenants` creates them, and the container
+entrypoint runs it on boot. Dynamic declares nothing, and what it does with an unseen hostname
+depends on `MASKS_PUBLIC_ORIGIN_TEMPLATE`:
+
+| `MASKS_PUBLIC_ORIGIN_TEMPLATE` | An unseen hostname | Checked by |
+| --- | --- | --- |
+| Has `%{subdomain}`, such as `https://%{subdomain}.auth.example.com` | Claims a tenant, every time, indefinitely | Rails' host authorization, before `Tenancy::Middleware` runs at all |
+| Anything else, or unset | Claims a tenant only once, the first request to an empty database | Nothing — the host header is trusted as given |
+
+With a wildcard template, Dynamic claims a tenant on every unseen hostname — a deployment that
+doesn't know its tenants in advance, such as one subdomain per signup, needs nothing more than a
+matching hostname to get one. Without one, it only bootstraps: the first request claims the one
+tenant, and every later request whose host names a tenant that doesn't exist yet gets a 404. This
+is also the shape Single and Multi settle into before they're declared: whoever reaches an empty,
+unconfigured server first names its one tenant.
+
 masks isolates tenants at three layers. Each layer fails in a different way:
 
 | Layer | What it does | How it fails |
@@ -48,16 +75,25 @@ session-scoped Postgres setting. It holds no transaction open, and the setting a
 query and every transaction inside the block. Outside a tenant, every query returns zero rows,
 including a query through `Model.unscoped`.
 
-Tenants are declared at deploy time. `MASKS_TENANTS` lists the subdomains to create, and
-`MASKS_TENANT` serves a single tenant at every hostname. Setting both is an error. When neither is
-set and no tenant exists yet, the first request creates a tenant named after the first label of its
-hostname.
+## Setting a tenant up
+
+masks generates a setup token for each new tenant and prints it in the server's logs. It prints it
+when it creates the tenant, and again every time the container starts until the tenant is set up:
+
+```
+masks: demo is not set up. Its setup token is 7Hq2…
+```
+
+The first-run screen asks for this token before it creates the tenant's first account, so only
+somebody who can read the logs can become the tenant's manager. Each tenant has its own token. It is
+stored encrypted, and it is deleted once the first account exists. `MASKS_SETUP_TOKEN` replaces the
+generated tokens with one token for every tenant.
 
 ## Tenant settings
 
 A tenant holds its own name, [what names an account](/concepts/actors/), whether an app may
-[register itself](/concepts/clients/), which user agents may sign in, and which sign-in policy the
-console uses by default. The first-run screen asks for the name. The console edits all of these
+[register itself](/concepts/clients/), which user agents may sign in, and which sign-in policy
+`/manage` uses by default. The first-run screen asks for the name. `/manage` edits all of these
 settings, and a change takes effect without a restart. When the deployment pins a setting, the
 manage API refuses to write it.
 

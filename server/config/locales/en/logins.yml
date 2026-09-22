@@ -42,7 +42,7 @@ en:
       setup_title: "Set up"
       signup_title: "Create an account at"
       token: "Setup token"
-      token_hint: "This server was started with one, and will not run without it."
+      token_hint: "Printed in the server's logs, where only whoever runs masks can read it."
       origin: "Set up at"
       once: "This screen will not appear again."
       docs: "Read the documentation."

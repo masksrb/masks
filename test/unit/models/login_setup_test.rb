@@ -14,7 +14,7 @@ class LoginSetupTest < ActiveSupport::TestCase
   end
 
   def identify(nickname: "owner", email: "owner@example.invalid", **updates)
-    step(event: "signup", nickname: nickname, email: email, **updates)
+    step(event: "signup", token: @tenant.setup_token!, nickname: nickname, email: email, **updates)
   end
 
   def name_of(login)
@@ -142,7 +142,7 @@ class LoginSetupTest < ActiveSupport::TestCase
   end
 
   test "one post that carries everything creates the manager but still stops for a second factor" do
-    login = step(event: "signup", nickname: "owner", email: "owner@example.invalid",
+    login = step(event: "signup", token: @tenant.setup_token!, nickname: "owner", email: "owner@example.invalid",
                  password: PASSWORD, password_confirmation: PASSWORD,
                  called: "Payroll")
 
@@ -273,54 +273,84 @@ class LoginSetupTest < ActiveSupport::TestCase
     assert_equal 0, within { Actor.count }
   end
 
-  test "no setup token configured means none is asked for" do
-    refute LoginStates::Signup.token_required?
-    refute step.as_json.dig("signup", "token")
+  test "a first run asks for the setup token even when none was configured" do
+    assert step.as_json.dig("signup", "token")
+    assert_match(/\A[1-9A-HJ-NP-Za-km-z]{32}\z/, @tenant.setup_token!)
   end
 
-  test "a configured setup token is required, and a wrong one creates nothing" do
-    with_token("the-real-token") do
-      assert step.as_json.dig("signup", "token")
+  test "a wrong setup token creates nothing" do
+    login = identify(token: "not-the-token")
 
-      login = identify(token: "not-the-token")
-
-      assert_equal "signup", login.prompt
-      assert_includes login.warnings, "invalid-setup-token"
-      assert_equal 0, within { Actor.count }
-    end
+    assert_equal "signup", login.prompt
+    assert_includes login.warnings, "invalid-setup-token"
+    assert_equal 0, within { Actor.count }
   end
 
   test "a missing setup token is refused rather than treated as blank" do
-    with_token("the-real-token") do
-      login = identify
+    login = identify(token: nil)
 
-      assert_equal "signup", login.prompt
-      assert_includes login.warnings, "invalid-setup-token"
-      assert_equal 0, within { Actor.count }
+    assert_equal "signup", login.prompt
+    assert_includes login.warnings, "invalid-setup-token"
+    assert_equal 0, within { Actor.count }
+  end
+
+  test "one tenant's setup token does not set up another" do
+    login = identify(token: other_tenant.setup_token!)
+
+    assert_includes login.warnings, "invalid-setup-token"
+    assert_equal 0, within { Actor.count }
+  end
+
+  test "the setup token is the tenant's own, and stays the same until it is used" do
+    first = @tenant.setup_token!
+
+    assert_equal first, Tenant.find(@tenant.id).setup_token!
+    refute_equal first, other_tenant.setup_token!
+  end
+
+  test "the setup token is kept encrypted" do
+    token = @tenant.setup_token!
+    stored = Tenant.connection.select_value("SELECT setup_token FROM tenants WHERE id = #{@tenant.id}")
+
+    refute_includes stored, token
+  end
+
+  test "a setup token pinned at deploy stands in for the one the tenant minted" do
+    with_token("the-real-token") do
+      assert_equal "signup", identify(token: "not-the-token").prompt
+      assert_equal "signup-credentials", identify(token: "the-real-token").prompt
     end
   end
 
   test "the right setup token gets past the first screen, and the manager is created" do
-    with_token("the-real-token") do
-      assert_equal "signup-credentials", identify(token: "the-real-token").prompt
+    assert_equal "signup-credentials", identify.prompt
 
-      login = credit
+    login = credit
 
-      assert_equal "enrol", login.prompt
-      assert_equal "owner", login.actor.nickname
-      enrol
-      assert configure.settled?
-    end
+    assert_equal "enrol", login.prompt
+    assert_equal "owner", login.actor.nickname
+    enrol
+    assert configure.settled?
+  end
+
+  test "going back to edit does not ask for the setup token again" do
+    identify
+    login = step(event: "signup-edit")
+
+    refute login.as_json.dig("signup", "token")
+    assert_equal "signup-credentials", step(event: "signup", nickname: "second", email: "owner@example.invalid").prompt
+  end
+
+  test "the setup token is spent once the owner exists" do
+    identify
+    credit
+
+    assert_nil @tenant.reload.setup_token
   end
 
   test "the setup key stops being published once the tenant is set up" do
-    with_token("the-real-token") do
-      identify(token: "the-real-token")
-      credit
-      enrol
-      configure
+    set_up
 
-      assert_nil step.as_json["signup"]
-    end
+    assert_nil step.as_json["signup"]
   end
 end

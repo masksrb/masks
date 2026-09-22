@@ -112,8 +112,16 @@ module OidcFlow
     JSON.parse(response.body)
   end
 
-  def set_up!(**params)
-    post "/login", params: { event: "signup", nickname: "owner", email: "owner@example.invalid",
+  def approve_handshake(hid: nil, body: response.body)
+    hid ||= body[/name="hid"[^>]*value="([^"]*)"/, 1]
+    shown = body[/name="shown"[^>]*value="([^"]*)"/, 1]
+
+    travel(HandshakesController::WAIT + 1.second) { post "/handshake", params: { approve: "yes", hid: hid, shown: shown } }
+  end
+
+  def set_up!(tenant: @tenant, **params)
+    post "/login", params: { event: "signup", token: tenant.setup_token!,
+                             nickname: "owner", email: "owner@example.invalid",
                              password: "a-long-enough-password",
                              password_confirmation: "a-long-enough-password" }.merge(params.except(:called)),
          as: :json

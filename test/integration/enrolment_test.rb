@@ -117,7 +117,8 @@ class EnrolmentTest < ActionDispatch::IntegrationTest
   test "first-run setup can ask for a passkey without the session cookie overflowing" do
     within(@tenant) { Actor.delete_all }
 
-    post "/login", params: { event: "signup", name: "Ada Lovelace", nickname: "admin-with-a-long-nickname",
+    post "/login", params: { event: "signup", token: @tenant.setup_token!, name: "Ada Lovelace",
+                             nickname: "admin-with-a-long-nickname",
                              email: "a-rather-long-address@a-long-domain.example.com",
                              password: "a-long-enough-password", password_confirmation: "a-long-enough-password" },
          as: :json

@@ -68,7 +68,7 @@ class EmailVerificationTest < ActionDispatch::IntegrationTest
     host! host_for(fresh)
 
     with_mailer do
-      assert set_up!["settled"]
+      assert set_up!(tenant: fresh)["settled"]
 
       Tenant.switch(fresh) do
         actor = Actor.sole
