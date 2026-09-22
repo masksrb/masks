@@ -4,6 +4,8 @@ module Masks
       layout "masks/server/mailer"
       helper ApplicationHelper
 
+      self.delivery_job = MailDeliveryJob
+
       class << self
         def from
           Current.tenant&.mail_from || ::Rails.configuration.masks.mail_from

@@ -1,6 +1,6 @@
 module Masks
   module Server
-    class ApplicationJob < ActiveJob::Base
+    class MailDeliveryJob < ActionMailer::MailDeliveryJob
       include Tenancy::Job
     end
   end
