@@ -80,6 +80,34 @@ img.src = blob
 
 `avatars()` reads the three URLs straight off the id token. Sizes are 32, 64, 128, 256 or 512.
 
+## Who's signed in
+
+`Person` renders an account as a name, a handle or email underneath it, an unconfirmed-email note,
+a manager badge, and an avatar that falls back to initials when there is none. It takes plain data
+as props, so it renders identically wherever the framework renders: in a browser, or on a server.
+
+```jsx
+import { Person } from "@masks/client/react";
+
+<Person
+  account={account}
+  avatarUrl={auth.avatarUrl(account, { size: 88 })}
+  onSignOut={() => auth.logout()}
+/>;
+```
+
+```svelte
+<script>
+  import Person from "@masks/client/svelte";
+</script>
+
+<Person account={account} avatarUrl={auth.avatarUrl(account, { size: 88 })} onSignOut={() => auth.logout()} />
+```
+
+`onSignOut` is optional. Without it, no sign-out button renders. Both read the account through
+`personFrom`, exported from the package root for any other framework to use directly. The class
+names are `masks-person` and its children; the package ships no CSS.
+
 ## Audiences
 
 Pass `resource` to name the API the token is for. Every token names the API it was issued for and is

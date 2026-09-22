@@ -17,6 +17,15 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./react": {
+      "types": "./dist/react/index.d.ts",
+      "default": "./dist/react/index.js"
+    },
+    "./svelte": {
+      "svelte": "./dist/svelte/Person.svelte",
+      "types": "./dist/svelte/Person.svelte.d.ts",
+      "default": "./dist/svelte/Person.svelte"
     }
   },
   "files": [
@@ -27,14 +36,30 @@
   ],
   "sideEffects": false,
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && mkdir -p dist/svelte && cp src/svelte/Person.svelte src/svelte/Person.svelte.d.ts dist/svelte/",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "biome check",
     "lint:fix": "biome check --write",
     "test": "node --test test/*.test.js"
   },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0",
+    "svelte": "^5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "svelte": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@biomejs/biome": "2.5.13",
+    "@types/react": "^19.2.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "svelte": "^5.57.0",
     "typescript": "^7.0.2"
   }
 }
