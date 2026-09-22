@@ -12,12 +12,12 @@
     "reference": "node bin/reference.mjs src/content/docs/reference/browser.mdx"
   },
   "dependencies": {
-    "@astrojs/react": "^6.0.5",
-    "@astrojs/starlight": "^0.42.0",
+    "@astrojs/react": "^6.0.6",
+    "@astrojs/starlight": "^0.42.1",
     "@graphiql/react": "^0.39.0",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
-    "astro": "^7.3.2",
+    "astro": "^7.3.3",
     "graphiql": "^5.4.0",
     "graphql": "^17.0.2",
     "react": "^19.3.0",
