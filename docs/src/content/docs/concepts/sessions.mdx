@@ -1,26 +1,29 @@
 ---
 title: Sessions and devices
-description: A sign-in belongs to a browser you can name, trust, or shut out.
+description: Each sign-in is a session on a device, and a device can be named, signed out, or blocked.
 ---
 
-A **session** is one signed-in browser: when it authenticated, when it expires, and the address it
-came from. Revoking one ends that sign-in and nothing else.
+A **session** is one signed-in browser. It records when it authenticated, when it expires, and the
+address it came from. Revoking a session ends that sign-in and leaves the actor's other sessions
+alone.
 
-A **device** is the browser itself, remembered across sessions, so a second factor can be skipped on
-one you have already trusted.
+A **device** is the browser itself. masks identifies it by a cookie that lasts 400 days, across
+sessions. When an actor completes a one-time password and asks masks to remember the device, the
+second factor is skipped on that device for 30 days.
 
 | | |
 | --- | --- |
-| `label` | what to call it — editable, because "Chrome on macOS" is not a name |
-| `known` | seen before |
-| `blocked_at` | refused **before any password is checked** |
+| `label` | the device's name; it defaults to the detected browser and system, such as "Chrome on macOS", and can be edited |
+| `known` | the user agent is one masks recognizes |
+| `blocked_at` | when the device was blocked; a blocked device is refused **before any password is checked** |
 | `last_seen_at` | the most recent request from it |
 
-Blocking is the strongest of the three, because it happens ahead of authentication: a blocked device
-cannot even attempt a password.
+Blocking a device refuses every request from it before authentication, so a blocked device cannot
+submit a password. Blocking also signs the device out.
 
-Signing a device out revokes every session and refresh token it holds. Signing an *actor* out does
-the same across all of theirs at once.
+Signing a device out revokes every session, access token, and refresh token on it, and forgets the
+second factors remembered on it. Signing an *actor* out revokes all of the actor's sessions and
+refresh tokens on every device, and forgets their remembered second factors.
 
-A device with no session on it is still listed — the console asks for those separately, so a browser
-that never completed a sign-in stays blockable.
+A device with no session on it is still listed. The console queries these devices separately, so a
+browser that never completed a sign-in can still be blocked.
