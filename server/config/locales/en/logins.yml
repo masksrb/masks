@@ -25,7 +25,6 @@ en:
       passkey_hint: "Confirm with your device to keep going."
       passkey_unoffered: "This server did not offer a passkey challenge."
       passkey_unusable: "That passkey could not be used on this device."
-      passkey_missing: "No passkey for this account is on this device."
       unreachable: "Could not reach the server. Check your connection."
       try_again: "Try again"
       working: "Working"

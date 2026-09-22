@@ -32,10 +32,8 @@ async function start() {
 
     await login.submit(enrolling ? "enrol:passkey" : "passkey:verify", { passkey: credential });
   } catch (error) {
-    if (!refused(error)) {
+    if (!refused(error) || (asked !== null && performance.now() - asked < DELIBERATE)) {
       unusable = login.t("passkey_unusable");
-    } else if (asked !== null && performance.now() - asked < DELIBERATE) {
-      unusable = login.t("passkey_missing");
     }
   } finally {
     busy = false;

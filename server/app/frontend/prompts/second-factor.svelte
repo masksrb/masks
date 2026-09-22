@@ -10,7 +10,7 @@ let code = $state("");
 let remember = $state(false);
 
 const methods = $derived(login.auth.secondFactors ?? { otp: true });
-const valid = $derived(code.replace(/\s/g, "").length === 6);
+const valid = $derived(code.replace(/\D/g, "").length === 6);
 
 function submit() {
   if (!valid || login.loading) return;
@@ -45,9 +45,9 @@ $effect(() => {
         name="code"
         class="control control-code"
         inputmode="numeric"
-        pattern="[0-9]*"
+        pattern="[0-9 ]*"
         autocomplete="one-time-code"
-        maxlength="6"
+        maxlength="7"
         spellcheck="false"
         autofocus
         bind:value={code}
