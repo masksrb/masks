@@ -1,9 +1,9 @@
+<script module>
+const token = document.querySelector('meta[name="csrf-token"]')?.content ?? "";
+</script>
+
 <script>
 let { person, signOut = null } = $props();
-
-const token = $derived(
-  signOut ? (document.querySelector('meta[name="csrf-token"]')?.content ?? "") : "",
-);
 </script>
 
 <div class="person">

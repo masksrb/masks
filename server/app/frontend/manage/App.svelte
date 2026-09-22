@@ -181,13 +181,13 @@
       {#if current === ""}
         <SettingsPage {api} {boot} overview />
       {:else if current === "people"}
-        {#if router.segments[1]}
+        {#if router.segments[1] === "devices" && router.segments[2]}
+          <DevicePage {api} id={router.segments[2]} />
+        {:else if router.segments[1]}
           <ActorPage {api} uuid={router.segments[1]} />
         {:else}
           <PeoplePage {api} />
         {/if}
-      {:else if current === "devices" && router.segments[1]}
-        <DevicePage {api} id={router.segments[1]} />
       {:else if current === "clients"}
         {#if router.segments[1]}
           <ClientPage {api} clientId={router.segments[1]} />

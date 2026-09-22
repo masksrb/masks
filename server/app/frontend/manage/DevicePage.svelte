@@ -103,7 +103,7 @@
   <Page
     title={device.label}
     id={device.id}
-    back={{ to: "/people", label: "People" }}
+    back={{ to: "/people#devices", label: "Devices" }}
     lede={device.blockedAt
       ? `Blocked on ${day(device.blockedAt)}. Nobody can sign in on it.`
       : `Last seen ${since(device.lastSeenAt)}.`}
