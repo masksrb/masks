@@ -10,6 +10,8 @@ module Masks
       before_action :require_wait, only: :create
 
       def show
+        return repair if repeat?
+
         @scopes = ResourceMetadata.describe(@handshake.resource, @handshake.scopes)
         @granting = Namespace.prefixes(@handshake.scopes) - current_actor.scope_list
         @beneath = published_beneath(Namespace.prefixes(@handshake.scopes))
@@ -48,19 +50,40 @@ module Masks
           return refuse(taken.message)
         end
 
-        token = InitialAccessToken.mint!(
-          actor: current_actor,
-          client: client,
-          parent: claimed,
-          scopes: Scopes.join(@handshake.scopes),
-          audience: [ @handshake.resource ],
-          redirect_uri: @handshake.return_to
-        )
-
-        redirect_to @handshake.approved(token.secret, issuer: issuer.url), allow_other_host: true
+        hand_back(client, claimed)
       end
 
       private
+
+        def repeat?
+          @existing.present? && @existing.public? && @existing.approved_as?(@handshake) &&
+            (Namespace.prefixes(@handshake.scopes) - current_actor.scope_list).empty? &&
+            Consent.covers?(
+              actor: current_actor, client: @existing,
+              scopes: @handshake.scopes, audience: [ @handshake.resource ]
+            )
+        end
+
+        def repair
+          claimed = PendingHandshake.claim(hid_for(@pending))
+
+          return refuse(t("handshakes.answered")) if claimed.nil?
+
+          hand_back(@existing, claimed)
+        end
+
+        def hand_back(client, claimed)
+          token = InitialAccessToken.mint!(
+            actor: current_actor,
+            client: client,
+            parent: claimed,
+            scopes: Scopes.join(@handshake.scopes),
+            audience: [ @handshake.resource ],
+            redirect_uri: @handshake.return_to
+          )
+
+          redirect_to @handshake.approved(token.secret, issuer: issuer.url), allow_other_host: true
+        end
 
         def require_handshake
           @pending = opening || pending_handshake(params[:hid])

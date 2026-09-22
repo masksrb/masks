@@ -70,6 +70,15 @@ module Masks
           client = approved_for(handshake.resource) || new(client_id: SecureRandom.uuid)
 
           client.assign_attributes(
+            described_by(handshake).merge(approved_at: Time.current, approved_by: actor, archived_at: nil)
+          )
+
+          client.save!
+          client
+        end
+
+        def described_by(handshake)
+          {
             name: handshake.name,
             redirect_uris: handshake.redirect_uris,
             post_logout_redirect_uris: [ handshake.return_to ].compact,
@@ -80,14 +89,8 @@ module Masks
             token_endpoint_auth_method: handshake.auth_method,
             backchannel_logout_uri: handshake.backchannel_logout_uri,
             client_uri: handshake.origin,
-            dynamic: false,
-            approved_at: Time.current,
-            approved_by: actor,
-            archived_at: nil
-          )
-
-          client.save!
-          client
+            dynamic: false
+          }
         end
 
         def approved_for(resource)
@@ -173,6 +176,13 @@ module Masks
 
       def public?
         token_endpoint_auth_method == "none"
+      end
+
+      def approved_as?(handshake)
+        described = self.class.described_by(handshake)
+        candidate = self.class.new(described)
+
+        described.keys.all? { |key| public_send(key) == candidate.public_send(key) }
       end
 
       def asserts?

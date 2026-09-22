@@ -39,6 +39,10 @@ masks asks each person once before granting a client anything, and asks again on
 requests more scopes or passes `prompt=consent`.
 
 - Approving a handshake counts as the approver's consent, and only the approver's.
+- A handshake from a public client that is already approved skips the approval screen when it asks
+  for nothing new and the person's consent still covers it. masks returns a fresh initial access
+  token to the same `return_to`. A confidential client always sees the screen, because approving it
+  issues a new secret. `/manage` pairs each new browser this way.
 - `consent_required` is on for every client. A manager can turn it off for an approved client, such
   as a first-party app.
 - A self-registered client always asks.

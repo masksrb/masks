@@ -89,6 +89,72 @@ module Masks
         assert_nil approved.backchannel_logout_uri
       end
 
+      def events(action)
+        within(@tenant) { Event.where(action: action).count }
+      end
+
+      test "a public app that is already approved and allowed pairs again without asking" do
+        sign_in_as(@owner)
+        connect(token_endpoint_auth_method: "none")
+        approve!
+
+        connect(token_endpoint_auth_method: "none")
+
+        assert_equal RETURN_TO, redirected_uri.to_s.split("?").first
+        secret = redirected["initial_access_token"]
+
+        assert_equal approved.client_id, redeem(secret)["client_id"]
+        assert_nil redeem(secret)["client_id"], "the token is good once"
+        assert_equal 1, within(@tenant) { Client.count }
+        assert_equal 1, events(Event::CLIENT_APPROVED)
+        assert_equal 1, events(Event::CONSENT_GRANTED)
+      end
+
+      test "a confidential app is asked about again, because approving rotates its secret" do
+        sign_in_as(@owner)
+        connect
+        approve!
+
+        connect
+
+        assert_response :success
+        assert_match "Replace an existing client?", response.body
+      end
+
+      test "a public app asking for more than it was allowed is asked about again" do
+        sign_in_as(@owner)
+        connect(token_endpoint_auth_method: "none", scope: "openid profile")
+        approve!
+
+        connect(token_endpoint_auth_method: "none")
+
+        assert_response :success
+        assert_match "Replace an existing client?", response.body
+      end
+
+      test "a public app whose access was revoked is asked about again" do
+        sign_in_as(@owner)
+        connect(token_endpoint_auth_method: "none")
+        approve!
+
+        within(@tenant) { Consent.live.find_each(&:revoke!) }
+        connect(token_endpoint_auth_method: "none")
+
+        assert_response :success
+        assert_match "Replace an existing client?", response.body
+      end
+
+      test "a public app sent back somewhere new is asked about again" do
+        sign_in_as(@owner)
+        connect(token_endpoint_auth_method: "none")
+        approve!
+
+        connect(token_endpoint_auth_method: "none", return_to: "#{APP}/elsewhere")
+
+        assert_response :success
+        assert_match "Replace an existing client?", response.body
+      end
+
       test "a signed-in owner is shown what is being connected, and where it will be sent back" do
         sign_in_as(@owner)
         connect
