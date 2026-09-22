@@ -53,7 +53,7 @@ such as `assets:precompile` that boots the application without serving it.
 | --- | --- | --- |
 | `MASKS_TENANTS` | none | Declares Multi tenancy: the subdomains this server serves, separated by commas or spaces, such as `demo,acme`. The Docker entrypoint creates any that do not exist before the server starts. |
 | `MASKS_TENANT` | none | Declares Single tenancy: serves one tenant at every hostname. Cannot be combined with `MASKS_TENANTS`. |
-| `MASKS_SETUP_TOKEN` | none | Replaces the setup token masks generates for each tenant, and applies to every tenant. Without it, each tenant gets a token of its own, printed in the server's logs. The first-run screen asks for the token before it creates a tenant's first account. The dev stack sets it to `masks-dev`. |
+| `MASKS_SETUP_TOKEN` | none | Replaces the setup token masks generates for each tenant, and applies to every tenant. Without it, each tenant gets a token of its own, printed in the server's logs. The first-run screen asks for the token before it creates a tenant's first account. Must be at least 24 characters outside development. The dev stack sets it to `masks-dev`. |
 
 Leaving both unset declares Dynamic tenancy instead. See
 [Declaring tenants](/guides/core-concepts/#declaring-tenants) for how the three modes differ.

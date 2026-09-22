@@ -107,6 +107,7 @@ services:
       <<: *env
       MASKS_TENANT: ""
       MASKS_TENANTS: demo,acme
+      MASKS_SETUP_TOKEN: ""
       MASKS_PUBLIC_ORIGIN_TEMPLATE: http://%{subdomain}.masks.localhost:${MASKS_IMAGE_PORT:-5556}
       POSTGRES_DATABASE: masks_image
       MASKS_JOBS_IN_WEB_SERVER: "true"
