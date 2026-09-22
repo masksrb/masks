@@ -31,7 +31,7 @@ $effect(() => {
 });
 </script>
 
-<Head {login} title={login.t("title")} />
+<Head {login} title={login.t(methods.otp ? "title" : "title_passkey")} />
 
 <Identified {login} />
 

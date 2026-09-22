@@ -4,6 +4,8 @@ import { assert, available, enrol, refused } from "../lib/passkey.js";
 
 let { login, enrolling = false, label = null } = $props();
 
+const DELIBERATE = 500;
+
 let busy = $state(false);
 let unusable = $state(null);
 
@@ -12,6 +14,8 @@ const offered = $derived((enrolling || Boolean(login.auth.passkey?.offered)) && 
 async function start() {
   busy = true;
   unusable = null;
+
+  let asked = null;
 
   try {
     const offer = await login.submit(enrolling ? "enrol:passkey-challenge" : "passkey:challenge", {});
@@ -22,12 +26,16 @@ async function start() {
       return;
     }
 
+    asked = performance.now();
+
     const credential = enrolling ? await enrol(options) : await assert(options);
 
     await login.submit(enrolling ? "enrol:passkey" : "passkey:verify", { passkey: credential });
   } catch (error) {
     if (!refused(error)) {
       unusable = login.t("passkey_unusable");
+    } else if (asked !== null && performance.now() - asked < DELIBERATE) {
+      unusable = login.t("passkey_missing");
     }
   } finally {
     busy = false;
