@@ -94,7 +94,7 @@ module Masks
         connect
 
         assert_response :success
-        assert_match "Register uris as a client?", response.body
+        assert_match "Register a new client?", response.body
         assert_match APP, response.body
         assert_match "uris:catalog:read", response.body
         assert_match REDIRECT_URI, response.body
@@ -415,9 +415,9 @@ module Masks
         sign_in_as(@owner)
         connect
 
-        assert_match "Registers on", response.body
-        assert_match "Every sign-in through", response.body
-        assert_match "Allows your account", response.body
+        assert_match "Register a new client?", response.body
+        assert_match "for everyone on", response.body
+        assert_match "allows only your account", response.body
         assert_match "Confidential. It receives a secret.", response.body
         assert_match RETURN_TO, response.body
       end
@@ -445,7 +445,7 @@ module Masks
 
         connect
 
-        assert_match "Replace the uris client?", response.body
+        assert_match "Replace an existing client?", response.body
         assert_match "The uris client you approved on", response.body
       end
 
@@ -476,7 +476,7 @@ module Masks
         get resumed
 
         assert_response :success
-        assert_match "Register uris as a client?", response.body
+        assert_match "Register a new client?", response.body
       end
 
       test "an approved client does not ask again for what a person already approved" do

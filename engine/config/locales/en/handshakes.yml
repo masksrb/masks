@@ -1,12 +1,13 @@
 en:
   handshakes:
     show:
-      page_title: "Register %{name}"
-      title: "Register %{name} as a client?"
-      title_again: "Replace the %{name} client?"
-      registers: "Registers on %{tenant}"
-      registers_lede: "Every sign-in through %{name} uses what you approve here."
-      client: "Client"
+      page_title: "Register a new client"
+      page_title_again: "Replace an existing client"
+      title: "Register a new client?"
+      title_again: "Replace an existing client?"
+      lede_html: "Approving registers <strong>%{name}</strong> for everyone on %{tenant} and allows only your account."
+      lede_again_html: "Approving replaces <strong>%{name}</strong> for everyone on %{tenant} and allows only your account."
+      client: "Credentials"
       credentials:
         public: "Public. It holds no secret."
         secret: "Confidential. It receives a secret."
@@ -23,8 +24,6 @@ en:
       signs_in_at: "Signs in at"
       claims: "Claims"
       claimed: "%{namespaces} becomes %{name}'s, and you are granted it now."
-      allows: "Allows your account"
-      allows_body: "%{name} can use your account with the access above. You are not asked again. Everyone else who signs in through it is asked on their own."
       details: "Additional details"
       origin: "From"
       redirect_uris: "Redirect URIs"
