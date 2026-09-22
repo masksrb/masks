@@ -111,6 +111,3 @@ en:
         ago: "%{age} ago"
         check_this: "worth a look"
 
-      signed_out:
-        title: "Your account"
-        sign_in: "Sign in"

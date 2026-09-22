@@ -55,7 +55,7 @@ en:
       sign_in_instead: "Sign in instead"
 
     identify:
-      heading: "Sign in"
+      heading: "Sign in to continue"
       heading_to: "Sign in to %{client}"
       identifier: "Nickname or email"
       signup_hint: "New here? Enter the address you want to use, and an account is made for it."

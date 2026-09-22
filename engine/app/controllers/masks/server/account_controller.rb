@@ -6,16 +6,16 @@ module Masks
       def index
         @actor = current_actor
 
-        return redirect_to login_path if @actor.nil? && !Actor.exists?
+        return redirect_to login_path if @actor.nil?
 
-        @apps = @actor ? Apps.held_by(@actor) : []
-        @connections = @actor ? Connection.live.where(actor: @actor).includes(:provider, live_delegations: :client).order(:created_at) : []
-        @linkable = @actor ? Linking.offered(@actor) : []
-        @passkeys = @actor ? Passkey.where(actor: @actor).includes(:authenticator).newest_first : []
-        @devices = @actor ? @actor.devices.newest_first : []
-        @trusted = @actor ? DeviceFactor.live.where(actor: @actor).pluck(:device_id).to_set : Set.new
-        @live = @actor ? Session.live.where(device_id: @devices.map(&:id)).pluck(:device_id).to_set : Set.new
-        @events = @actor ? Event.where(actor: @actor).newest_first.includes(:device).limit(RECENT) : []
+        @apps = Apps.held_by(@actor)
+        @connections = Connection.live.where(actor: @actor).includes(:provider, live_delegations: :client).order(:created_at)
+        @linkable = Linking.offered(@actor)
+        @passkeys = Passkey.where(actor: @actor).includes(:authenticator).newest_first
+        @devices = @actor.devices.newest_first
+        @trusted = DeviceFactor.live.where(actor: @actor).pluck(:device_id).to_set
+        @live = Session.live.where(device_id: @devices.map(&:id)).pluck(:device_id).to_set
+        @events = Event.where(actor: @actor).newest_first.includes(:device).limit(RECENT)
       end
     end
   end

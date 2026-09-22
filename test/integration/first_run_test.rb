@@ -92,10 +92,12 @@ module Masks
         host! host_for(@tenant)
 
         get "/"
+        assert_redirected_to login_path
+
+        follow_redirect!
 
         assert_response :success
-        assert_match "Your account", response.body
-        assert_select "a[href=?]", manage_path, false
+        assert_equal "identify", auth_data["prompt"]
       end
 
       test "three screens: the manager, their password, and what masks is configured to do" do
