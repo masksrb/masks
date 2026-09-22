@@ -570,7 +570,7 @@
     --info-field: #edf5fa;
 
     --glow: rgba(33, 28, 24, 0.05);
-    --window: url("/icon.svg");
+    --window: url("/masks-public/icon.svg");
     --window-strength: 0.2;
     --pane: color-mix(in oklab, var(--surface) 58%, transparent);
     --pane-rim: color-mix(in oklab, var(--brass) 30%, var(--line));

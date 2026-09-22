@@ -20,7 +20,7 @@ module Masks
 
       def party
         @party ||= WebAuthn::RelyingParty.new(
-          allowed_origins: [ origin ],
+          allowed_origins: [ URI.parse(origin).then { |uri| "#{uri.scheme}://#{uri.authority}" } ],
           name: tenant&.name.presence || id,
           id: id
         )

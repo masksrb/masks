@@ -8,7 +8,7 @@ module Masks
           issuer: issuer.url,
           resource: issuer.manage_resource,
           graphql: manage_graphql_path,
-          root: "/manage",
+          root: manage_path,
           tenant: current_tenant.to_identity
         }
       end

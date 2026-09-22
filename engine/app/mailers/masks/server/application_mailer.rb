@@ -22,7 +22,11 @@ module Masks
         super.tap do |message|
           adapter = Current.tenant&.mail_adapter
 
-          message.delivery_method(*adapter.delivery_method) if adapter
+          if adapter
+            message.delivery_method(*adapter.delivery_method)
+          elsif Server.config.smtp_settings && delivery_method != :test
+            message.delivery_method(:smtp, Server.config.smtp_settings)
+          end
         end
       end
 

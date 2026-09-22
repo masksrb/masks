@@ -1,5 +1,5 @@
 module Masks
   module Server
-    VERSION = "0.2.0".freeze
+    VERSION = File.read(File.expand_path("../../../version.txt", __dir__)).strip.freeze
   end
 end

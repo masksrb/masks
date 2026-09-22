@@ -1,4 +1,6 @@
 <script module>
+import { root } from "../lib/root.js";
+
 const token = document.querySelector('meta[name="csrf-token"]')?.content ?? "";
 </script>
 
@@ -27,7 +29,7 @@ let { person, signOut = null } = $props();
   </div>
 
   {#if signOut}
-    <form class="signout" method="post" action="/logout">
+    <form class="signout" method="post" action={`${root}/logout`}>
       <input type="hidden" name="authenticity_token" value={token} />
       <button type="submit" class="textlink">{signOut}</button>
     </form>

@@ -10,7 +10,7 @@ one of these contexts:
 | Context | Reads |
 | --- | --- |
 | [Server](#server) | The `ghcr.io/masksrb/masks` image and any other way of running `server/`. Nearly everything on this page. |
-| [Engine](#engine) | `Masks::Rails` mounted in your application. One variable, and only through the initializer the install generator writes. |
+| [Client engine](#client-engine) | `Masks::Rails` mounted in your application. One variable, and only through the initializer the install generator writes. |
 | [Client](#client) | `Masks::Client` in Ruby and `@masks/client` in the browser. Nothing. |
 | [Development](#development) | `./dev`, the compose stack, and the test suites. Not read by a deployed server. |
 
@@ -21,6 +21,12 @@ one the code no longer reads.
 
 These are read when the server boots. Changing one requires a restart. Values are strings, so a
 boolean is the text `true` or `false`.
+
+### Mode
+
+| Variable | Default | |
+| --- | --- | --- |
+| `MASKS_MODE` | `server` | `server` runs masks as an app of its own. `engine` runs it mounted inside another Rails app, with a database, a session, and secrets of its own. `config.masks.mode` sets the same thing. See [Rails apps](/guides/rails/). |
 
 ### Required in production
 
@@ -165,7 +171,7 @@ run inside Puma by default, or in a separate `bin/jobs` process with
 | --- | --- | --- |
 | `MASKS_DOCS_URL` | `https://masks.pages.dev` | The documentation linked from the first-run screens and from SCIM's `/ServiceProviderConfig`. |
 
-## Engine
+## Client engine
 
 `Masks::Rails` reads no ENV vars. Configuration goes in an initializer. The one that
 `bin/rails generate masks:install` writes reads the issuer from the environment:
@@ -209,6 +215,7 @@ Read by `./dev`, the compose files, and the test suites. A deployed server ignor
 
 | Variable | Default | |
 | --- | --- | --- |
+| `MASKS_SERVER_ROOT` | `/rails` | Where the provider suite finds the Server-mode app's built test assets, for the dummy Engine-mode host it boots. |
 | `TEST_ENV_NUMBER` | none | Added to the test database names, such as `masks_test2`, so a second run does not share a database with the first. |
 | `CI` | unset | Eager loads the application in tests, as production does, and has `./dev test` use `compose.test.ci.yml`. |
 | `RUBOCOP_FORMAT` | `progress` | The RuboCop formatter used by `./dev fmt --check`. |

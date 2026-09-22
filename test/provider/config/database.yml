@@ -1,0 +1,16 @@
+default: &default
+  adapter: postgresql
+  host: <%= ENV.fetch("POSTGRES_HOST", "127.0.0.1") %>
+  port: <%= ENV.fetch("POSTGRES_PORT", 5435) %>
+  username: <%= ENV.fetch("POSTGRES_USER", "masks") %>
+  password: <%= ENV.fetch("POSTGRES_PASSWORD", "masks") %>
+
+test:
+  primary:
+    <<: *default
+    database: masks_host_test
+  masks:
+    <<: *default
+    database: masks_host_masks_test
+    migrations_paths: <%= Masks::Server::Engine.root.join("db/migrate") %>
+    schema_dump: false

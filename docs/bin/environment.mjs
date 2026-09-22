@@ -6,7 +6,7 @@ const ROOT = join(import.meta.dirname, "..", "..");
 const PAGE = join(ROOT, "docs/src/content/docs/reference/environment.mdx");
 
 const SOURCES = [
-  { roots: ["server/app", "server/config", "server/lib", "server/bin", "client/lib", "test", "dev"], files: /(\.(rb|erb|yml|rake|tt)|\/dev)$/, reads: /ENV(?:\.fetch)?[[(]\s*["']([A-Z][A-Z0-9_]*)["']/g },
+  { roots: ["server/app", "server/config", "server/lib", "server/bin", "engine/app", "engine/config", "engine/lib", "client/lib", "test", "dev"], files: /(\.(rb|erb|yml|rake|tt)|\/dev)$/, reads: /ENV(?:\.fetch)?[[(]\s*["']([A-Z][A-Z0-9_]*)["']/g },
   { roots: ["server/vite.config.ts", "docs/astro.config.mjs", "web/src"], files: /\.(ts|mjs|js)$/, reads: /process\.env\.([A-Z][A-Z0-9_]*)/g },
   { roots: ["compose.yml", "compose.multi.yml", "compose.test.yml", "compose.test.ci.yml"], files: /\.yml$/, reads: /\$\{([A-Z][A-Z0-9_]*)/g },
 ];

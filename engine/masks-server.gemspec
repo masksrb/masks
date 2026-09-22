@@ -13,12 +13,12 @@ Gem::Specification.new do |spec|
   spec.homepage = "https://github.com/masksrb/masks"
   spec.metadata = {
     "source_code_uri" => "https://github.com/masksrb/masks",
-    "changelog_uri" => "https://github.com/masksrb/masks/blob/main/server/CHANGELOG.md",
+    "changelog_uri" => "https://github.com/masksrb/masks/blob/main/engine/CHANGELOG.md",
     "rubygems_mfa_required" => "true"
   }
   spec.required_ruby_version = ">= 3.4"
 
-  spec.files = Dir["app/**/*", "config/**/*", "db/**/*", "lib/**/*"]
+  spec.files = Dir["app/**/*", "config/**/*", "db/**/*", "lib/**/*", "public/**/*", "version.txt"]
   spec.require_paths = [ "lib" ]
 
   spec.add_dependency "rails", "~> 8.1"
@@ -36,4 +36,5 @@ Gem::Specification.new do |spec|
   spec.add_dependency "graphql", "~> 2.6"
   spec.add_dependency "premailer-rails", "~> 1.12"
   spec.add_dependency "ruby-vips", "~> 2.2"
+  spec.add_dependency "vite_rails", "~> 3.0"
 end

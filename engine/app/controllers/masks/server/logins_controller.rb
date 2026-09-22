@@ -33,6 +33,7 @@ module Masks
       before_action :establish_device, only: %i[update provider]
 
       def show
+        hold_return_to
         return redirect_to after_login_path if current_actor && pending.nil?
 
         @login = run
@@ -193,7 +194,13 @@ module Masks
           pending = latest_handshake
           return handshake_url_for(pending) if pending
 
-          root_path
+          session.delete(RETURN_TO) || root_path
+        end
+
+        def hold_return_to
+          held = params[:return_to].to_s
+
+          session[RETURN_TO] = held if held.start_with?("/") && !held.start_with?("//", "/\\")
         end
     end
   end

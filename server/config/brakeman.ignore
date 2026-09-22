@@ -1,22 +1,10 @@
 {
   "ignored_warnings": [
     {
-      "fingerprint": "6c44c27e1448d12806f914832c27d09590051f58e7aaa168b0f9f68c14c1d1ac",
       "warning_type": "Redirect",
-      "file": "app/controllers/authorize_controller.rb",
+      "fingerprint": "f09d9fdeed713af8fe9e5898fb0b79bec1e7fb4287f85cbfa43dc74046af6af8",
+      "file": "../engine/app/controllers/masks/server/authorize_controller.rb",
       "note": "Guarded. refuse redirects only when client.redirect_uri?(target) says the URI is registered to the authenticating client, which is the check an authorization endpoint exists to make. Brakeman cannot follow the guard to the redirect_to on the next line."
-    },
-    {
-      "fingerprint": "1f14855797814af203418bf755d218ea395451ee3aa40fcf273d777e89c0ac13",
-      "warning_type": "Redirect",
-      "file": "app/controllers/connections_controller.rb",
-      "note": "The target is not a request parameter. params[:provider] only picks a configured provider out of the ones offered to this actor, and Linking.start! redirects to that provider's own authorization endpoint, built by its federation. Leaving for another host is the point of linking."
-    },
-    {
-      "fingerprint": "5c54edcc0ce44de5e8c97aa84342b54e7e19ab64a0ecda8b9ffea9d2bb3d40c9",
-      "warning_type": "Redirect",
-      "file": "app/controllers/handshakes_controller.rb",
-      "note": "The target is not a request parameter. approved builds it from the claimed PendingHandshake's stored return_to, which was validated when the handshake was created; params[:hid] only looks that record up. Redirecting to another host is the point of the code flow."
     }
   ],
   "brakeman_version": "8.0.6"

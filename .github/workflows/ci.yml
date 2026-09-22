@@ -52,7 +52,7 @@ jobs:
           working-directory: server
       - name: Scan for Rails security defects
         working-directory: server
-        run: bin/brakeman --no-pager
+        run: bin/brakeman --no-pager --add-engines-path ../engine
       - name: Scan gems for known vulnerabilities
         working-directory: server
         run: bin/bundler-audit
@@ -63,7 +63,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: [unit, integration, engine, client, web]
+        suite: [unit, integration, provider, engine, client, web]
     steps:
       - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v4

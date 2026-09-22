@@ -5,7 +5,20 @@ module Masks
 
       REQUESTS = "requests".freeze
       HANDSHAKES = "handshakes".freeze
+      RETURN_TO = "masks_return_to".freeze
       TRACKED = 5
+
+      content_security_policy do |policy|
+        policy.default_src :self
+        policy.base_uri :none
+        policy.object_src :none
+        policy.frame_ancestors :none
+        policy.script_src :self
+        policy.style_src :self, :unsafe_inline
+        policy.img_src :self, :data
+        policy.font_src :self, :data
+        policy.connect_src(*([ :self ] + (::Rails.env.development? ? %i[ws wss http] : [])))
+      end
 
       around_action :in_locale
       before_action :withhold_referrer
@@ -113,7 +126,7 @@ module Masks
         end
 
         def sign_in(actor, amr: [])
-          carried = session.to_hash.slice(REQUESTS, HANDSHAKES, "login", "masks_return_to")
+          carried = session.to_hash.slice(REQUESTS, HANDSHAKES, "login", RETURN_TO)
           reset_session
           carried.each { |key, value| session[key] = value }
 

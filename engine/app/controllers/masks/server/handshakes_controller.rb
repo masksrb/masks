@@ -96,7 +96,7 @@ module Masks
         end
 
         def shown_clock
-          ::Rails.application.message_verifier("handshakes/shown")
+          Server.message_verifier("handshakes/shown")
         end
 
         def require_actor

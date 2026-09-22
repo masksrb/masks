@@ -30,7 +30,7 @@ module Masks
           def origin_for(request)
             template = ::Rails.configuration.masks.public_origin_template
 
-            return request.base_url if template.nil?
+            return "#{request.base_url}#{request.script_name}" if template.nil?
 
             format(template, subdomain: request.host.split(".").first)
           end

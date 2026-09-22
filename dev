@@ -22,7 +22,7 @@ USAGE = <<~TEXT
     ps             what is running
     psql           a shell on postgres
     console        a rails console
-    test [suite]   unit, integration, engine, client, web, conformance
+    test [suite]   unit, integration, provider, engine, client, web, conformance
     image [build]  run the production image the way it deploys, and check it
     conformance    up | run | logs | down | plans
     reference      regenerate the reference pages from the code
@@ -208,6 +208,8 @@ end
 SUITES = {
   "unit" => [ "server", "bin/rake", "db:prepare", "test:unit" ],
   "integration" => [ "server", "bin/rake", "db:prepare", "test:integration" ],
+  "provider" => [ "server", "bundle", "exec", "ruby", "-I/test/provider", "-e",
+                  "Dir['/test/provider/*_test.rb'].sort.each { |file| require file }" ],
   "engine" => [ "client", "sh", "-c", "bundle install --quiet && bundle exec rake test:engine" ],
   "client" => [ "client", "sh", "-c", "bundle install --quiet && bundle exec rake test:client" ],
   "web" => [ "web" ]

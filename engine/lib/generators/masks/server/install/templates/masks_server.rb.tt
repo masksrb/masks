@@ -1,0 +1,7 @@
+Rails.application.configure do
+  config.masks.mode = :<%= options[:mode] %>
+<% if engine? -%>
+  config.masks.database = :<%= options[:database] %>
+  config.masks.tenant = "<%= options[:tenant] %>"
+<% end -%>
+end

@@ -1,4 +1,5 @@
 import { translator } from "./copy.js";
+import { root } from "./root.js";
 
 const csrf = () =>
   document.querySelector('meta[name="csrf-token"]')?.content ?? "";
@@ -23,7 +24,7 @@ async function send(url, method, body) {
 }
 
 export function createLogin(initial, options = {}) {
-  const url = options.url ?? "/login";
+  const url = options.url ?? `${root}/login`;
 
   let auth = $state(initial);
   let loading = $state(false);
