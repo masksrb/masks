@@ -19,8 +19,8 @@ stays standalone. Everything an application needs to sign in against it is the o
 whose Rails half loads only when Rails does.
 
 The server ships as a container image. Main is published as `:main` and by commit sha; a release
-publishes its version, moves `:latest`, and is built for arm64 as well. It needs a Postgres and
-four secrets, and it migrates itself on the way up.
+publishes its version, moves `:latest`, and is built for arm64 as well. It needs a Postgres, and it
+migrates itself and generates its own secrets on the way up.
 
 ```sh
 docker pull ghcr.io/masksrb/masks:latest
@@ -37,13 +37,12 @@ services:
       POSTGRES_DATABASE: masks
       MASKS_TENANTS: acme
       MASKS_PUBLIC_ORIGIN_TEMPLATE: https://%{subdomain}.auth.example.com
-      SECRET_KEY_BASE: ...
-      ENCRYPTION_PRIMARY_KEY: ...
-      ENCRYPTION_DETERMINISTIC_KEY: ...
-      ENCRYPTION_KEY_DERIVATION_SALT: ...
+    volumes:
+      - masks-storage:/rails/storage
 ```
 
-`deploy/roles/masks` is the same thing as an Ansible role, behind a reverse proxy.
+See [self-hosting](https://masks.pages.dev/guides/self-hosting/) for a Postgres, a reverse proxy,
+and the Ansible role in `deploy/roles/masks`.
 
 ```sh
 ./dev       # http://masks.localhost:12345, docs on :12346

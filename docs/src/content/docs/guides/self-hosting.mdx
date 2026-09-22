@@ -1,0 +1,138 @@
+---
+title: Self-hosting
+description: Run the masks server in production.
+---
+
+masks ships as a container image. Point it at a Postgres, and it migrates itself on the way up.
+
+```sh
+docker pull ghcr.io/masksrb/masks:latest
+```
+
+## Image tags
+
+| Tag | Pushed on | Platforms |
+| --- | --- | --- |
+| `:main` | every push to main | amd64 |
+| `:<sha>` | every push to main | amd64 |
+| `:<version>`, such as `:0.2.0` | a server release | amd64, arm64 |
+| `:latest` | a server release, moved to its version | amd64, arm64 |
+
+Pin a version in production, and read
+[CHANGELOG.md](https://github.com/masksrb/masks/blob/main/server/CHANGELOG.md) before moving to a
+new one:
+
+```yaml
+image: ghcr.io/masksrb/masks:0.2.0
+```
+
+## `compose.yml`
+
+```yaml
+services:
+  masks:
+    image: ghcr.io/masksrb/masks:latest
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: masks
+      POSTGRES_PASSWORD: ...
+      POSTGRES_DATABASE: masks
+      MASKS_TENANTS: acme
+      MASKS_PUBLIC_ORIGIN_TEMPLATE: https://%{subdomain}.auth.example.com
+    volumes:
+      - masks-storage:/rails/storage
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: masks
+      POSTGRES_PASSWORD: ...
+      POSTGRES_DB: masks
+    volumes:
+      - postgres:/var/lib/postgresql/data
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+    depends_on:
+      - masks
+
+volumes:
+  postgres:
+  masks-storage:
+  caddy-data:
+```
+
+```
+*.auth.example.com {
+  reverse_proxy masks:80
+}
+```
+
+`SECRET_KEY_BASE` and the three `ENCRYPTION_` keys aren't set here. The server generates each one
+it doesn't find in the environment on its first boot, and writes it to `/rails/storage/secrets.env`
+— mount that path to a volume, as above, and the same keys come back on every restart. Set any of
+the four as an environment variable instead to manage it your own way, such as through your
+orchestrator's secrets. Either way, keep them: they cannot change once data is written, and losing
+them makes every encrypted column unreadable. See
+[encryption](/reference/environment/#required-in-production).
+
+Thruster can also terminate TLS itself, without Caddy in front: set `TLS_DOMAIN` and it obtains a
+certificate from Let's Encrypt. See [Thruster](https://github.com/basecamp/thruster). Every
+variable the server reads, including rate limits, mail, and the database connection, is in
+[Environment variables](/reference/environment/).
+
+## Ansible
+
+`deploy/roles/masks` in the repository is the same deployment as an Ansible role, behind a
+reverse proxy. Its defaults:
+
+```yaml
+masks_image: ghcr.io/masksrb/masks
+masks_image_tag: latest
+masks_image_digest: ""
+masks_deploy_path: /srv/masks
+masks_network: edge
+masks_postgres_host: postgres
+masks_postgres_port: 5432
+masks_postgres_user: masks
+masks_postgres_database: masks
+masks_tenants: []
+masks_setup_token: ""
+masks_mail_from: ""
+masks_smtp_address: ""
+masks_smtp_port: 587
+masks_smtp_username: ""
+masks_smtp_password: ""
+masks_smtp_domain: ""
+```
+
+Pass secrets and the public origin template through your own vault or inventory. The role does
+not generate them.
+
+## Tenants
+
+`MASKS_TENANTS` lists the subdomains this server answers for, such as `acme,example`. The
+container creates any that do not exist before it starts serving. `MASKS_TENANT` serves one
+tenant at every hostname instead, and cannot be combined with `MASKS_TENANTS`. With neither set,
+the first request to an empty database creates a tenant named after its host's first label.
+
+`MASKS_SETUP_TOKEN` replaces the token masks generates for each tenant. Without it, each tenant
+gets its own, printed in the server's logs, and its first-run screen asks for that token before
+creating the first account. See [Tenants](/concepts/tenants/).
+
+## Confirm it
+
+```sh
+curl https://acme.auth.example.com/.well-known/openid-configuration
+```
+
+A tenant's discovery document confirms its issuer, its keys, and that the public origin template
+resolved the way you expected.

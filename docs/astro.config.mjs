@@ -61,8 +61,15 @@ export default defineConfig({
     ],
     sidebar: [
       { label: "Overview", slug: "index" },
-      { label: "Quickstart", slug: "quickstart", badge: { text: "todo", variant: "caution" } },
-      { label: "Demo", slug: "demo", badge: { text: "todo", variant: "caution" } },
+      {
+        label: "Get started",
+        items: [
+          { label: "Quickstart", slug: "quickstart", badge: { text: "todo", variant: "caution" } },
+          { label: "Self-hosting", slug: "guides/self-hosting" },
+          { label: "Rails apps", slug: "guides/rails" },
+          { label: "Demo", slug: "demo", badge: { text: "todo", variant: "caution" } },
+        ],
+      },
       {
         label: "Concepts",
         items: [
