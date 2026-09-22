@@ -142,6 +142,21 @@ module Masks
         end
       end
 
+      test "a resource that could not be read is asked again at the next sign-in" do
+        published = {}
+
+        with_resource(published) do |server|
+          ResourceMetadata.describe(server.url, "uris:catalog:read")
+
+          published["/.well-known/oauth-protected-resource/mcp"] = {
+            "scope_descriptions" => { "uris:catalog:read" => "Search and read your catalog" }
+          }
+
+          assert_equal [ [ "uris:catalog:read", "Search and read your catalog" ] ],
+                       ResourceMetadata.describe(server.url, "uris:catalog:read")
+        end
+      end
+
       test "several resources are asked, and the first to describe a scope wins" do
         first = { "/.well-known/oauth-protected-resource/mcp" => {
           "scope_descriptions" => { "uris:catalog:read" => "Read your catalog" }

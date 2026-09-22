@@ -33,9 +33,9 @@ module Masks
       private
 
         def document
-          @document ||= ::Rails.cache.fetch([ "resource_metadata", @resource ], expires_in: TTL) do
-            candidates.lazy.filter_map { |url| fetch(url) }.first || {}
-          end
+          @document ||= ::Rails.cache.fetch([ "resource_metadata", @resource ], expires_in: TTL, skip_nil: true) do
+            candidates.lazy.filter_map { |url| fetch(url) }.first
+          end || {}
         end
 
         def candidates
