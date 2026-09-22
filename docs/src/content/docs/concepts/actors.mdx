@@ -1,50 +1,59 @@
 ---
 title: Actors
-description: An account on a tenant — who signs in, and what they may ask for.
+description: An actor is an account on a tenant. It signs in and holds the scopes it may be granted.
 ---
 
-An actor is an account. It is named by a nickname, an email address, or both, and carries a list of
-scopes that bounds everything it can be granted.
+An actor is an account. It has a nickname, an email address, or both, and a list of scopes. A token
+issued for the actor contains only scopes from that list.
 
 | Field | |
 | --- | --- |
-| `nickname` | typed at sign-in; renameable without a new account |
-| `email` / `email_verified_at` | changing the address takes its verification with it |
-| `scopes` | the ceiling on what any token for this actor may carry |
-| `activated_at` | unset while an invitation is outstanding |
+| `nickname` | Typed at sign-in. It can be renamed without creating a new account. |
+| `email` / `email_verified_at` | Changing the address clears its verification. |
+| `scopes` | The upper limit on the scopes of any token for this actor. |
+| `activated_at` | Unset while an invitation is outstanding. |
 
 ## What names an account
 
-Which half an account must have is one setting, decided once. The first-run screen asks for it, and
-`MASKS_NAMED_BY` pins it at deploy instead — a pinned rule wins over the stored one, and changing it
-means changing the deployment.
+One tenant setting, `named_by`, controls which of the two fields every account must have. A manager
+sets it in the console. `MASKS_NAMED_BY` pins it at deploy time. A pinned value takes precedence over
+the stored one, and changing it requires changing the deployment.
 
 | `MASKS_NAMED_BY` | |
 | --- | --- |
-| `nickname` | every account needs one; an address is optional |
-| `email` | every account needs an address; a nickname is optional |
-| `either` | one of the two is enough (the default) |
+| `nickname` | Every account needs a nickname. An address is optional. |
+| `email` | Every account needs an address. A nickname is optional. |
+| `either` | Either one is enough. This is the default. |
 
-Whatever the rule, no account can have neither — the database refuses it as well as the model — and
-**an actor holding `masks:manage` needs both**. A manager is written to, not just about: invitations,
-password resets and address confirmations all go somewhere. Granting `masks:manage` to an account
-with only one half is refused until the other is filled in.
+Under every setting, an account must have at least one of the two fields. Both the model and a
+database constraint enforce this. **An actor holding `masks:manage` needs both.** masks sends
+invitations, password resets, and address confirmations to managers, so a manager must have a
+place to receive them. masks refuses to grant `masks:manage` to an account that has
+only one of the two until the other is filled in.
 
-Either half signs in: `Actor.locate` takes a nickname or an address, and the sign-in screen asks for
-whichever you have. `identifier` answers with the nickname when there is one and the address when
-there is not, which is what the console, the audit trail and the introspection endpoint display.
+An actor signs in with either field. `Actor.locate` accepts a nickname or an address, and the
+sign-in screen accepts whichever one the person has. `identifier` returns the nickname when one is
+set and the address otherwise. The console, the audit trail, and the introspection endpoint display
+`identifier`.
 
 Second factors are a TOTP authenticator, passkeys, and backup codes. A passkey can serve as both
-factors at once.
+the first and the second factor.
 
-Three predicates decide what an actor may have:
+Three methods determine which scopes an actor may have:
 
-- `holds?(scope)` — is this exact scope in their list
-- `withheld(scopes)` — which of these they cannot be granted
-- `grant!(scopes)` — add scopes, as claiming a [namespace](/concepts/namespaces/) does
+- `holds?(scope)` returns whether this exact scope is in the actor's list.
+- `withheld(scopes)` returns the scopes from the argument that the actor cannot be granted.
+- `grant!(scopes)` adds scopes to the actor's list. Claiming a [namespace](/concepts/namespaces/)
+  calls it.
 
-The first actor on a tenant is made by the first-run screen and holds `masks:manage`. That screen is
-three tabs — identification, credentials, configuration — asking for the manager's nickname, address
-and optional name, then their password twice, then what this installation is called. It never
-appears again once the tenant has an actor. After that, accounts are invited or created from the
-console, and the console holds every other setting a tenant has.
+## The first actor
+
+The first-run screen creates the first actor on a tenant, and that actor holds `masks:manage`. The
+screen has three tabs:
+
+1. **Identification** asks for the manager's nickname, address, and optional name.
+2. **Credentials** asks for a password, entered twice.
+3. **Configuration** asks for the name of this installation.
+
+The screen does not appear again once the tenant has an actor. After that, managers invite or create
+accounts from the console, and the console edits every other tenant setting.
