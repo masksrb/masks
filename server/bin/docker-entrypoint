@@ -1,37 +1,8 @@
 #!/bin/bash -e
 
-secrets_file="${MASKS_SECRETS_FILE:-/rails/storage/secrets.env}"
-secret_vars=(SECRET_KEY_BASE ENCRYPTION_PRIMARY_KEY ENCRYPTION_DETERMINISTIC_KEY ENCRYPTION_KEY_DERIVATION_SALT)
-
-autogenerate_secrets() {
-  if [ -f "$secrets_file" ]; then
-    while IFS='=' read -r name value; do
-      for known in "${secret_vars[@]}"; do
-        if [ "$name" = "$known" ] && [ -z "${!known}" ]; then
-          export "$known=$value"
-        fi
-      done
-    done < "$secrets_file"
-  fi
-
-  missing=()
-  for name in "${secret_vars[@]}"; do
-    [ -z "${!name}" ] && missing+=("$name")
-  done
-
-  if [ "${#missing[@]}" -gt 0 ]; then
-    mkdir -p "$(dirname "$secrets_file")"
-    ( umask 077 && touch "$secrets_file" )
-    for name in "${missing[@]}"; do
-      value=$(openssl rand -hex 64)
-      export "$name=$value"
-      echo "$name=$value" >> "$secrets_file"
-    done
-  fi
-}
-
 if [ -z "$SECRET_KEY_BASE_DUMMY" ]; then
-  autogenerate_secrets
+  secrets="$(./bin/derive-secrets)"
+  eval "$secrets"
 fi
 
 if [ "${*: -2:1}" == "./bin/rails" ] && [ "${*: -1:1}" == "server" ]; then
