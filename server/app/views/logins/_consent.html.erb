@@ -84,4 +84,4 @@
   <% end %>
 </div>
 
-<div class="aside"><%= login.actor&.identifier %> · <%= button_to t("logins.shared.sign_out"), logout_path, class: "textlink", form_class: "signout" %></div>
+<%= render "application/person", actor: login.actor, sign_out: true if login.actor %>

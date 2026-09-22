@@ -70,6 +70,7 @@ class LogoutTest < ActionDispatch::IntegrationTest
     assert_response :success
     assert_match "Sign out?", response.body
     assert_match @client.name, response.body
+    assert_select ".person .person-name", @actor.display_name
     assert_select "a[href=?]", BACK, text: "Stay signed in"
     assert signed_in?, "a GET nobody confirmed must not end the session"
   end

@@ -110,6 +110,17 @@ class LoginsControllerTest < ActionDispatch::IntegrationTest
     assert_nil body["actor"]
   end
 
+  test "who is signing in is shown once the first factor passes and not before" do
+    enable_otp(@actor)
+
+    assert_nil event("identify", identifier: "owner")["person"]
+
+    person = event("password", password: "password")["person"]
+
+    assert_equal @actor.display_name, person["name"]
+    assert_match %r{/avatars/#{@actor.uuid}/}, person["avatar"]
+  end
+
   test "one tenant's actor cannot sign in against another" do
     create_actor(other_tenant, nickname: "theirs", password: "another-password")
     host! host_for(other_tenant)

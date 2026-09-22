@@ -3,6 +3,7 @@ import { initial } from "../lib/initial.js";
 import Action from "../shared/Action.svelte";
 import ClientMark from "../shared/ClientMark.svelte";
 import Head from "../shared/Head.svelte";
+import Person from "../shared/Person.svelte";
 import { ranked } from "../lib/scopes.js";
 
 let { login } = $props();
@@ -11,8 +12,6 @@ const scopes = $derived(ranked(login.consent?.scopes ?? []));
 const audience = $derived(login.consent?.audience ?? []);
 const client = $derived(login.client?.name ?? "");
 const tenant = $derived(login.auth.tenant?.name ?? "");
-const token =
-  document.querySelector('meta[name="csrf-token"]')?.content ?? "";
 const links = $derived(
   [
     ["site", login.t("site", { client })],
@@ -104,10 +103,6 @@ const links = $derived(
   />
 </div>
 
-<div class="aside">
-  {login.actor?.identifier} ·
-  <form class="signout" method="post" action="/logout">
-    <input type="hidden" name="authenticity_token" value={token} />
-    <button type="submit" class="textlink">{login.t("sign_out")}</button>
-  </form>
-</div>
+{#if login.auth.person}
+  <Person person={login.auth.person} signOut={login.t("sign_out")} />
+{/if}

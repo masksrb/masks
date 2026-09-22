@@ -2070,6 +2070,61 @@
     font-size: 0.875rem;
   }
 
+  .person {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 0.875rem;
+    padding: 0.75rem 0.875rem;
+    border: 1px solid var(--line);
+    border-radius: 0.75rem;
+  }
+
+  .person-avatar {
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 999px;
+    object-fit: cover;
+  }
+
+  .person-who {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 0;
+  }
+
+  .person-name {
+    font-weight: 600;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+  }
+
+  .person-sub {
+    font-size: 0.8125rem;
+    line-height: 1.4;
+    color: var(--ink-soft);
+    overflow-wrap: anywhere;
+  }
+
+  .person-note {
+    color: var(--came);
+  }
+
+  .person-role {
+    width: fit-content;
+    margin-top: 0.25rem;
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--signal);
+  }
+
+  .person .textlink {
+    font-size: 0.875rem;
+  }
+
   .chip-list {
     display: flex;
     flex-direction: column;

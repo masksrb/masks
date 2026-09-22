@@ -5,6 +5,6 @@ en:
       title: "Sign out?"
       asked_by_html: "%{client} wants to sign you out."
       asked_html: "A link brought you here to sign out."
-      scope_html: "This ends your session as %{nickname} in this browser. Your other devices stay signed in."
+      scope: "This ends your session in this browser. Your other devices stay signed in."
       sign_out: "Sign out"
       stay: "Stay signed in"

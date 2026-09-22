@@ -137,6 +137,22 @@ class Actor < ApplicationRecord
     nickname.presence || email
   end
 
+  def handle
+    "@#{nickname}" if nickname.present?
+  end
+
+  def display_name
+    name.presence || handle || email
+  end
+
+  def display_details
+    [ handle, email.presence ].compact - [ display_name ]
+  end
+
+  def email_unconfirmed?
+    email.present? && email_verified_at.nil?
+  end
+
   def manages?
     holds?(Scopes::MANAGE)
   end

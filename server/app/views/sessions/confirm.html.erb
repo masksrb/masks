@@ -9,9 +9,12 @@
       <% else %>
         <%= t(".asked_html") %>
       <% end %>
-      <%= t(".scope_html", nickname: tag.strong(current_actor.identifier)) %>
     </p>
   </div>
+
+  <%= render "application/person", actor: current_actor %>
+
+  <p class="aside"><%= t(".scope") %></p>
 
   <%= form_with url: logout_path, method: :delete do |form| %>
     <%= form.hidden_field :post_logout_redirect_uri, value: @logout.redirect_uri %>

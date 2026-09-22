@@ -1,0 +1,6 @@
+en:
+  application:
+    person:
+      manager: "Manager"
+      unconfirmed: "unconfirmed"
+      sign_out: "Sign out"

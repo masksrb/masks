@@ -320,6 +320,7 @@ class Login
         "docs" => Rails.configuration.masks.docs_url,
         "actor" => actor && { "nickname" => actor.nickname, "name" => actor.name,
                               "identifier" => actor.identifier },
+        "person" => person_json,
         "client" => client_json,
         "tenant" => tenant && { "name" => tenant.name },
         "journey" => journey,
@@ -327,6 +328,20 @@ class Login
       }
 
       answering.reduce(base) { |json, state| state.enabled? ? json.merge(state.as_json) : json }
+    end
+
+    def person_json
+      return nil if actor.nil? || authenticated_at.nil?
+
+      style = Avatars.held?(actor) ? Avatars::PHOTO : Avatars::FALLBACK
+
+      {
+        "name" => actor.display_name,
+        "details" => actor.display_details,
+        "note" => (I18n.t("application.person.unconfirmed") if actor.email_unconfirmed?),
+        "role" => (I18n.t("application.person.manager") if actor.manages?),
+        "avatar" => Avatars.url(actor, style, subject: actor.uuid, size: 128)
+      }
     end
 
     def forget_vanished_actor!
