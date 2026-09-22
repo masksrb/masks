@@ -54,7 +54,9 @@ services:
 
   masks:
     <<: *app
-    environment: *env
+    environment:
+      <<: *env
+      MASKS_JOBS_IN_WEB_SERVER: "false"
     ports:
       - "${MASKS_PORT:-12345}:80"
     depends_on:
@@ -103,15 +105,15 @@ services:
       MASKS_TENANTS: demo,acme
       MASKS_PUBLIC_ORIGIN_TEMPLATE: http://%{subdomain}.masks.localhost:${MASKS_IMAGE_PORT:-5556}
       POSTGRES_DATABASE: masks_image
-      SOLID_QUEUE_IN_PUMA: "true"
+      MASKS_JOBS_IN_WEB_SERVER: "true"
       VITE_RUBY_HOST: ""
     ports:
-      - "${MASKS_IMAGE_PORT:-5556}:80"
+      - "${MASKS_IMAGE_PORT:-5556}:3000"
     depends_on:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost/up > /dev/null"]
+      test: ["CMD-SHELL", "curl -fsS http://localhost:3000/up > /dev/null"]
       interval: 5s
       timeout: 5s
       retries: 20

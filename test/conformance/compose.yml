@@ -38,12 +38,12 @@ services:
       MASKS_REGISTRATION_LIMIT: "100000"
       RAILS_ASSUME_SSL: "true"
       RAILS_FORCE_SSL: "false"
-      SOLID_QUEUE_IN_PUMA: "true"
+      MASKS_JOBS_IN_WEB_SERVER: "true"
     depends_on:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost/up > /dev/null"]
+      test: ["CMD-SHELL", "curl -fsS http://localhost:3000/up > /dev/null"]
       interval: 5s
       timeout: 5s
       retries: 30

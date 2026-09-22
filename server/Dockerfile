@@ -62,9 +62,11 @@ RUN groupadd --system --gid 1000 rails && \
 COPY --chown=rails:rails --from=build "${BUNDLE_PATH}" "${BUNDLE_PATH}"
 COPY --chown=rails:rails --from=build /rails /rails
 
+RUN mkdir -p /rails/storage && chown rails:rails /rails/storage
+
 USER 1000:1000
 
 ENTRYPOINT ["/rails/bin/docker-entrypoint"]
 
-EXPOSE 80
-CMD ["./bin/thrust", "./bin/rails", "server"]
+EXPOSE 3000
+CMD ["./bin/rails", "server"]

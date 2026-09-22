@@ -5,6 +5,6 @@ port ENV.fetch("PORT", 3000)
 
 plugin :tmp_restart
 
-plugin :solid_queue if ENV["SOLID_QUEUE_IN_PUMA"]
+plugin :solid_queue if Masks.to_bool(ENV["MASKS_JOBS_IN_WEB_SERVER"], default: true)
 
 pidfile ENV["PIDFILE"] if ENV["PIDFILE"]
