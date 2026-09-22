@@ -89,6 +89,12 @@ module Masks
                 "so anyone who can reach this server can have a password reset delivered to theirs."
         end
 
+        if config.setup_token && config.setup_token.length < 24
+          raise "MASKS_SETUP_TOKEN is #{config.setup_token.length} characters, and at least 24 are " \
+                "required outside development. Whoever holds it creates the first account of every " \
+                "tenant that has none, and that account manages the tenant."
+        end
+
         if config.mode == :engine && config.database.nil?
           raise "masks in engine mode needs a database of its own. Set config.masks.database to " \
                 "the name of a database.yml entry whose role cannot bypass row-level security."
