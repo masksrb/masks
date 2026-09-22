@@ -555,10 +555,11 @@
     --ink: #211c18;
     --ink-soft: #58514c;
 
-    --came: #58514c;
-    --signal: #211c18;
-    --signal-ink: #fcf9f7;
-    --signal-lift: #000000;
+    --came: #77531b;
+    --brass: #77531b;
+    --brass-lit: #87611e;
+    --signal: #b04000;
+    --signal-ink: #ffffff;
     --ring: rgba(33, 28, 24, 0.22);
 
     --bad: #b53530;
@@ -569,6 +570,13 @@
     --info-field: #edf5fa;
 
     --glow: rgba(33, 28, 24, 0.05);
+    --window: url("/icon.svg");
+    --window-strength: 0.2;
+    --pane: color-mix(in oklab, var(--surface) 58%, transparent);
+    --pane-rim: color-mix(in oklab, var(--brass) 30%, var(--line));
+    --pane-shine: rgba(255, 255, 255, 0.7);
+    --pane-sheen: rgba(255, 255, 255, 0.45);
+    --pane-shadow: 0 18px 44px -30px rgba(33, 28, 24, 0.35);
     --bend: 5px;
 
     --swing: cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -576,17 +584,18 @@
 
   @media (prefers-color-scheme: dark) {
     .auth-page {
-      --ground: #1c1917;
-      --surface: #25211e;
-      --line: #38332f;
-      --line-firm: #4b4540;
+      --ground: #15120f;
+      --surface: #1f1b18;
+      --line: #342f2b;
+      --line-firm: #48423d;
       --ink: #ede8e4;
       --ink-soft: #b3aca6;
 
-      --came: #b3aca6;
-      --signal: #ede8e4;
-      --signal-ink: #1c1917;
-      --signal-lift: #ffffff;
+      --came: #b58a41;
+      --brass: #b58a41;
+      --brass-lit: #deaf56;
+      --signal: #ff8f53;
+      --signal-ink: #15120f;
       --ring: rgba(237, 232, 228, 0.28);
 
       --bad: #ff867a;
@@ -597,6 +606,11 @@
       --info-field: rgba(0, 194, 254, 0.1);
 
       --glow: rgba(237, 232, 228, 0.07);
+      --window-strength: 0.36;
+      --pane: color-mix(in oklab, var(--surface) 52%, transparent);
+      --pane-shine: rgba(255, 255, 255, 0.08);
+      --pane-sheen: rgba(255, 255, 255, 0.045);
+      --pane-shadow: 0 22px 50px -28px rgba(0, 0, 0, 0.7);
     }
   }
 
@@ -613,15 +627,17 @@
   }
 
   .auth-page::before {
+    --window-size: min(64rem, 150vw);
     content: "";
     position: fixed;
-    inset: 0;
+    top: calc(var(--window-size) * -0.42);
+    right: calc(var(--window-size) * -0.2);
+    width: var(--window-size);
+    aspect-ratio: 1;
     pointer-events: none;
-    background-image: radial-gradient(
-      58% 34% at 82% -6%,
-      var(--glow) 0%,
-      transparent 72%
-    );
+    background: var(--window) center / contain no-repeat;
+    filter: blur(56px) saturate(1.2);
+    opacity: var(--window-strength);
   }
 
   .auth-col {
@@ -641,7 +657,6 @@
   .setup-ready {
     --signal: var(--glass-emerald);
     --signal-ink: #ffffff;
-    --signal-lift: var(--glass-verdant);
     --ring: color-mix(in oklab, var(--glass-emerald) 26%, transparent);
   }
 
@@ -753,7 +768,7 @@
     display: grid;
     place-items: center;
     background: var(--surface);
-    border: 1px solid var(--line);
+    border: 1px solid color-mix(in oklab, var(--brass) 55%, var(--line));
     color: var(--signal);
     font-size: 1.0625rem;
     font-weight: 700;
@@ -898,8 +913,15 @@
     gap: 1rem;
     padding: 1.125rem;
     border-radius: var(--bend);
-    background: var(--surface);
-    border: 1px solid var(--line);
+    background:
+      linear-gradient(160deg, var(--pane-sheen), transparent 45%),
+      var(--pane);
+    border: 1px solid var(--pane-rim);
+    box-shadow:
+      inset 0 1px 0 var(--pane-shine),
+      var(--pane-shadow);
+    -webkit-backdrop-filter: blur(22px) saturate(1.5);
+    backdrop-filter: blur(22px) saturate(1.5);
   }
 
   .grant-scope-hot,
@@ -1197,13 +1219,20 @@
 
   .entry {
     border-radius: 1rem;
-    background: var(--surface);
-    border: 1px solid var(--line);
+    background:
+      linear-gradient(160deg, var(--pane-sheen), transparent 45%),
+      var(--pane);
+    border: 1px solid var(--pane-rim);
+    box-shadow:
+      inset 0 1px 0 var(--pane-shine),
+      var(--pane-shadow);
+    -webkit-backdrop-filter: blur(22px) saturate(1.5);
+    backdrop-filter: blur(22px) saturate(1.5);
     scroll-margin-top: 1.25rem;
   }
 
   .entry[open] {
-    border-color: var(--line-firm);
+    border-color: color-mix(in oklab, var(--brass) 45%, var(--line-firm));
   }
 
   .entry > summary {
@@ -1477,7 +1506,7 @@
     height: 2px;
     margin-bottom: 0.625rem;
     border-radius: 1px;
-    background: var(--line-firm);
+    background: color-mix(in oklab, var(--brass) 60%, transparent);
     overflow: hidden;
   }
 
@@ -1565,7 +1594,7 @@
     letter-spacing: 0.06em;
     text-transform: uppercase;
     text-align: center;
-    color: var(--line-firm);
+    color: var(--ink-soft);
     transition:
       color 0.2s ease,
       border-color 0.2s ease;
@@ -1770,13 +1799,25 @@
     padding: 0.9375rem 1rem;
     border-radius: var(--bend);
     border: 1px solid var(--line);
-    background: var(--surface);
+    background: color-mix(in oklab, var(--surface) 72%, transparent);
     color: var(--ink);
     caret-color: var(--signal);
     transition:
       border-color 0.15s ease,
       box-shadow 0.15s ease,
       background-color 0.15s ease;
+  }
+
+  .control:autofill {
+    -webkit-text-fill-color: var(--ink);
+    caret-color: var(--signal);
+    box-shadow: inset 0 0 0 100vmax var(--surface);
+  }
+
+  .control:autofill:focus {
+    box-shadow:
+      inset 0 0 0 1px var(--brass-lit),
+      inset 0 0 0 100vmax var(--surface);
   }
 
   .control::placeholder {
@@ -1789,8 +1830,8 @@
 
   .control:focus {
     outline: none;
-    border-color: var(--signal);
-    box-shadow: inset 0 0 0 1px var(--signal);
+    border-color: var(--brass-lit);
+    box-shadow: inset 0 0 0 1px var(--brass-lit);
   }
 
   .control[readonly] {
@@ -1880,9 +1921,9 @@
     text-align: center;
     padding: 0.9375rem 1.125rem;
     border-radius: var(--bend);
-    border: 1px solid transparent;
-    background: var(--signal);
-    color: var(--signal-ink);
+    border: 1px solid color-mix(in oklab, var(--signal) 60%, transparent);
+    background: color-mix(in oklab, var(--signal) 14%, var(--ground));
+    color: var(--signal);
     cursor: pointer;
     transition:
       background-color 0.15s ease,
@@ -1891,11 +1932,12 @@
   }
 
   .action:hover:not(:disabled) {
-    background: var(--signal-lift);
+    border-color: var(--signal);
+    background: color-mix(in oklab, var(--signal) 24%, var(--ground));
   }
 
   .action:focus-visible {
-    outline: 2px solid var(--signal);
+    outline: 2px solid var(--brass-lit);
     outline-offset: 2px;
   }
 
