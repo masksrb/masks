@@ -10,7 +10,7 @@ on:
         description: Publish a package without cutting a release
         required: true
         type: choice
-        options: [gem, client, image]
+        options: [gem, server-gem, client, image]
 
 permissions: {}
 
@@ -29,6 +29,8 @@ jobs:
       server: ${{ steps.release.outputs['server--release_created'] }}
       server_tag: ${{ steps.release.outputs['server--tag_name'] }}
       server_version: ${{ steps.release.outputs['server--version'] }}
+      engine: ${{ steps.release.outputs['engine--release_created'] }}
+      engine_tag: ${{ steps.release.outputs['engine--tag_name'] }}
 
     steps:
       - name: Maintain the release pull requests
@@ -73,6 +75,56 @@ jobs:
       - name: Push
         working-directory: client
         run: gem push masks-*.gem
+
+  server-gem:
+    needs: release-please
+    if: >-
+      !cancelled() &&
+      needs.release-please.result != 'failure' &&
+      (needs.release-please.outputs.engine == 'true' || inputs.package == 'server-gem')
+    runs-on: ubuntu-latest
+    environment: rubygems
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.release-please.outputs.engine_tag }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: server/.node-version
+          cache: npm
+          cache-dependency-path: |
+            web/package-lock.json
+            server/package-lock.json
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+          working-directory: server
+
+      - name: Build @masks/client, which the frontend imports
+        working-directory: web
+        run: npm ci && npm run build
+
+      - name: Build the assets the gem ships
+        working-directory: server
+        env:
+          SECRET_KEY_BASE_DUMMY: "1"
+        run: npm ci && bin/rake masks:engine_assets
+
+      - uses: rubygems/configure-rubygems-credentials@v2.1.0
+
+      - name: Build
+        working-directory: engine
+        run: gem build masks-server.gemspec
+
+      - name: Push
+        working-directory: engine
+        run: gem push masks-server-*.gem
 
   client:
     needs: release-please

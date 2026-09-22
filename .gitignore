@@ -13,6 +13,7 @@
 **/node_modules
 **/.bundle
 server/public/vite*
+engine/public/masks-assets
 docs/dist
 docs/.astro
 test/conformance/.suite
