@@ -1,16 +1,16 @@
 default: &default
   cleanup:
-    class: CleanupJob
+    class: Masks::Server::CleanupJob
     queue: maintenance
     schedule: every day at 4am
 
   authenticators:
-    class: RefreshAuthenticatorsJob
+    class: Masks::Server::RefreshAuthenticatorsJob
     queue: maintenance
     schedule: every day at 3am
 
   saml_metadata:
-    class: RefreshSamlMetadataJob
+    class: Masks::Server::RefreshSamlMetadataJob
     queue: maintenance
     schedule: every day at 2am
 

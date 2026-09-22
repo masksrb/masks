@@ -6,6 +6,8 @@ gem "pg", "~> 1.1"
 gem "puma", ">= 5.0"
 gem "json", "< 3"
 
+gem "masks-server", path: "../engine"
+
 gem "bcrypt", "~> 3.1.7"
 gem "jwt", "~> 3.1"
 gem "ruby-saml", "~> 1.18"

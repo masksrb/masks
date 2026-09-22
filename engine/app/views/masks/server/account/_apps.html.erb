@@ -1,0 +1,121 @@
+<section class="group" id="apps">
+  <h2><%= account_text("apps.heading") %></h2>
+
+  <div class="entries">
+    <details class="entry">
+      <summary>
+        <span class="entry-icon"><%= account_icon(:apps) %></span>
+        <span class="entry-label"><%= account_text("applications.heading") %></span>
+        <span class="entry-state">
+          <%= apps.any? ? apps.size : account_text("apps.state.none") %>
+        </span>
+        <span class="entry-mark" aria-hidden="true"></span>
+      </summary>
+
+      <div class="entry-body">
+        <% if apps.any? %>
+          <div class="items">
+            <% apps.each do |app| %>
+              <% told = Masks::Server::ResourceMetadata.describe(app.audience, app.scopes) %>
+              <div class="item">
+                <span class="item-name">
+                  <% if (logo = app.client.logo_url(current_actor, size: 32)) %>
+                    <img src="<%= logo %>" alt="" width="20" height="20" class="item-logo" referrerpolicy="no-referrer" />
+                  <% end %>
+                  <span><%= app.name %></span>
+                </span>
+
+                <ul class="item-list">
+                  <% told.first(3).each do |_scope, description| %>
+                    <li><%= description %></li>
+                  <% end %>
+
+                  <% if told.size > 3 %>
+                    <li class="item-more">
+                      <%= account_text("applications.more", count: told.size - 3) %>
+                    </li>
+                  <% end %>
+                </ul>
+
+                <%= button_to account_text("applications.revoke"),
+                      account_app_path(app.client_id), method: :delete,
+                      class: "action action-quiet action-sm", form_class: "item-act",
+                      form: { data: { turbo_confirm: account_text("applications.confirm_revoke",
+                                                        client: app.name) } } %>
+              </div>
+            <% end %>
+          </div>
+        <% else %>
+          <p class="aside"><%= account_text("applications.none_yet") %></p>
+        <% end %>
+      </div>
+    </details>
+
+    <details class="entry" id="connections">
+      <summary>
+        <span class="entry-icon"><%= account_icon(:linked) %></span>
+        <span class="entry-label"><%= account_text("connections.heading") %></span>
+        <span class="entry-state">
+          <%= connections.any? ? connections.size : account_text("apps.state.none") %>
+        </span>
+        <span class="entry-mark" aria-hidden="true"></span>
+      </summary>
+
+      <div class="entry-body">
+        <p class="aside"><%= account_text("connections.lede") %></p>
+
+        <% if connections.any? %>
+          <div class="items">
+            <% connections.each do |connection| %>
+              <div class="item">
+                <span class="item-name">
+                  <span><%= connection.provider.name %></span>
+                  <% if connection.signed_in_at %>
+                    <span class="tag"><%= account_text("connections.signs_you_in") %></span>
+                  <% end %>
+                </span>
+
+                <span class="item-meta">
+                  <%= connection.label || connection.email || connection.subject %>
+                </span>
+
+                <% held = connection.live_delegations %>
+                <% if held.any? %>
+                  <ul class="item-delegations">
+                    <% held.each do |delegation| %>
+                      <li>
+                        <span><%= account_text("connections.delegated", client: delegation.client.name) %></span>
+                        <%= button_to account_text("connections.stop"),
+                              account_delegation_path(delegation.uuid), method: :delete,
+                              class: "action action-quiet action-sm",
+                              form: { data: { turbo_confirm: account_text("connections.confirm_stop",
+                                                                client: delegation.client.name,
+                                                                provider: connection.provider.name) } } %>
+                      </li>
+                    <% end %>
+                  </ul>
+                <% end %>
+
+                <%= button_to account_text("connections.disconnect"),
+                      account_connection_path(connection.uuid), method: :delete,
+                      class: "action action-quiet action-sm", form_class: "item-act",
+                      form: { data: { turbo_confirm: account_text("connections.confirm_disconnect",
+                                                        provider: connection.provider.name) } } %>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
+
+        <% if linkable.any? %>
+          <div class="action-row">
+            <% linkable.each do |provider| %>
+              <%= button_to account_text("connections.link", provider: provider.name),
+                    account_connections_path, params: { provider: provider.key },
+                    class: "action action-quiet action-sm" %>
+            <% end %>
+          </div>
+        <% end %>
+      </div>
+    </details>
+  </div>
+</section>

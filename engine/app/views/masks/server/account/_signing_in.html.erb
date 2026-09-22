@@ -1,0 +1,149 @@
+<section class="group" id="signing-in">
+  <h2><%= account_text("signing_in.heading") %></h2>
+
+  <div class="entries">
+    <details class="entry" id="email">
+      <summary>
+        <span class="entry-icon"><%= account_icon(:email) %></span>
+        <span class="entry-label"><%= account_text("email.heading") %></span>
+        <span class="entry-state <%= "entry-state-warn" if actor.email.present? && actor.email_verified_at.nil? %>">
+          <% if actor.email.blank? %>
+            <%= account_text("email.state.none") %>
+          <% elsif actor.email_verified_at.present? %>
+            <%= actor.email %>
+          <% else %>
+            <%= account_text("email.state.unconfirmed") %>
+          <% end %>
+        </span>
+        <span class="entry-mark" aria-hidden="true"></span>
+      </summary>
+
+      <div class="entry-body">
+        <% if actor.email.blank? %>
+          <p class="aside"><%= account_text("email.none_set") %></p>
+        <% else %>
+          <p class="aside"><%= account_text("email.body", email: actor.email) %></p>
+
+          <% if actor.email_verified_at.nil? %>
+            <div class="action-row">
+              <%= button_to account_text("email.send_link"), account_verification_path,
+                    class: "action action-sm" %>
+            </div>
+          <% end %>
+        <% end %>
+      </div>
+    </details>
+
+    <% refused = flash[:password_field] || {} %>
+    <details class="entry" id="password"<%= " open" if refused.any? %>>
+      <summary>
+        <span class="entry-icon"><%= account_icon(:password) %></span>
+        <span class="entry-label"><%= account_text("password.heading") %></span>
+        <span class="entry-state"><%= account_text(actor.password? ? "password.state" : "password.state_none") %></span>
+        <span class="entry-mark" aria-hidden="true"></span>
+      </summary>
+
+      <div class="entry-body">
+        <% if !actor.password? %>
+          <p class="aside"><%= account_text("password.none") %></p>
+        <% else %>
+          <%= form_with url: account_password_path, method: :patch, id: "change-password",
+                class: "flow-tight" do |form| %>
+            <label class="field">
+              <span class="field-label"><%= account_text("password.current") %></span>
+              <%= form.password_field :current_password, autocomplete: "current-password",
+                    class: "control" %>
+              <% if refused["current_password"] %>
+                <span class="field-hint field-hint-bad" role="alert"><%= refused["current_password"] %></span>
+              <% end %>
+            </label>
+
+            <label class="field">
+              <span class="field-label"><%= account_text("password.new") %></span>
+              <%= form.password_field :password, autocomplete: "new-password", class: "control" %>
+              <% if refused["password"] %>
+                <span class="field-hint field-hint-bad" role="alert"><%= refused["password"] %></span>
+              <% else %>
+                <span class="field-hint">
+                  <%= account_text("password.hint", minimum: Masks::Server::SignInPolicy.for(tenant: Masks::Server::Current.tenant).password_minimum) %>
+                </span>
+              <% end %>
+            </label>
+
+            <div class="action-row">
+              <button type="submit" class="action action-sm"><%= account_text("password.submit") %></button>
+            </div>
+          <% end %>
+        <% end %>
+      </div>
+    </details>
+
+    <details class="entry" id="passkeys" data-passkeys>
+      <summary>
+        <span class="entry-icon"><%= account_icon(:passkey) %></span>
+        <span class="entry-label"><%= account_text("passkeys.heading") %></span>
+        <span class="entry-state">
+          <%= passkeys.any? ? account_text("passkeys.state.set", count: passkeys.size) :
+                account_text("passkeys.state.none") %>
+        </span>
+        <span class="entry-mark" aria-hidden="true"></span>
+      </summary>
+
+      <div class="entry-body">
+        <p class="aside"><%= account_text("passkeys.explained") %></p>
+
+        <% if passkeys.any? %>
+          <div class="items">
+            <% passkeys.each do |passkey| %>
+              <div class="item">
+                <span class="item-name">
+                  <% if passkey.icon %>
+                    <img src="<%= passkey.icon %>" alt="" width="16" height="16" />
+                  <% end %>
+                  <span><%= passkey.label %></span>
+                </span>
+
+                <span class="item-meta">
+                  <%= passkey.last_used_at ?
+                        account_text("passkeys.used", age: time_ago_in_words(passkey.last_used_at)) :
+                        account_text("passkeys.never_used") %>
+                  <% if passkey.compromised? %>
+                    <span class="aside-bad">
+                      <%= account_text("passkeys.compromised",
+                            report: passkey.compromise.downcase.tr("_", " ")) %>
+                    </span>
+                  <% end %>
+                </span>
+
+                <%= button_to account_text("passkeys.remove"), passkey_path(passkey),
+                      method: :delete, class: "action action-quiet action-sm",
+                      form_class: "item-act",
+                      form: { data: { turbo_confirm: account_text("passkeys.confirm_remove") } } %>
+              </div>
+            <% end %>
+          </div>
+        <% end %>
+
+        <%= form_with url: passkeys_path, method: :post, id: "add-passkey",
+              hidden: true, data: { challenge: passkey_challenge_path },
+              class: "flow-tight" do |form| %>
+          <%= form.hidden_field :credential, id: "passkey-credential" %>
+
+          <label class="field">
+            <span class="field-label"><%= account_text("passkeys.name") %></span>
+            <%= form.text_field :name, id: "passkey-name",
+                  placeholder: account_text("passkeys.name_placeholder"), class: "control" %>
+          </label>
+
+          <div class="action-row">
+            <button type="button" id="add-passkey-button" class="action action-sm">
+              <%= account_text("passkeys.add") %>
+            </button>
+          </div>
+        <% end %>
+
+        <p id="passkey-unusable" hidden class="aside aside-bad"></p>
+      </div>
+    </details>
+  </div>
+</section>

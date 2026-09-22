@@ -11,18 +11,15 @@ require "rails/test_unit/railtie"
 
 Bundler.require(*Rails.groups)
 
-require_relative "../lib/tenancy/middleware"
-
 module Server
   class Application < Rails::Application
     config.load_defaults 8.1
 
-    config.autoload_lib(ignore: %w[assets tasks rack tenancy])
+    config.autoload_lib(ignore: %w[assets tasks])
 
-    config.middleware.use Tenancy::Middleware
+    config.middleware.use Masks::Server::Tenancy::Middleware
 
-    config.i18n.load_path += Dir[Rails.root.join("config/locales/*/*.yml")]
-    config.i18n.available_locales = Dir[Rails.root.join("config/locales/*/")].map do |path|
+    config.i18n.available_locales = Dir[Masks::Server::Engine.root.join("config/locales/*/")].map do |path|
       File.basename(path).to_sym
     end
     config.i18n.default_locale = :en

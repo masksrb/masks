@@ -1,61 +1,65 @@
-require "test_helper"
+module Masks
+  module Server
+    require "test_helper"
 
-class TenantIsolationTest < ActiveSupport::TestCase
-  test "rows created under one tenant are invisible to another" do
-    create_actor(@tenant, nickname: "owner")
+    class TenantIsolationTest < ActiveSupport::TestCase
+      test "rows created under one tenant are invisible to another" do
+        create_actor(@tenant, nickname: "owner")
 
-    within(other_tenant) do
-      assert_nil Actor.find_by(nickname: "owner")
-      assert_equal 0, Actor.count
-    end
-  end
-
-  test "row-level security hides rows even from an unscoped query" do
-    create_actor(@tenant, nickname: "owner")
-
-    within(other_tenant) do
-      assert_equal 0, Actor.unscoped.count,
-                   "the database, not the default scope, must be what isolates tenants"
-    end
-  end
-
-  test "switching restores the outer tenant on the way out" do
-    within(@tenant) do
-      within(other_tenant) do
-        assert_equal other_tenant, Current.tenant
+        within(other_tenant) do
+          assert_nil Actor.find_by(nickname: "owner")
+          assert_equal 0, Actor.count
+        end
       end
 
-      assert_equal @tenant, Current.tenant, "nesting must not blind the caller to its own rows"
-    end
-  end
+      test "row-level security hides rows even from an unscoped query" do
+        create_actor(@tenant, nickname: "owner")
 
-  test "switching restores the outer tenant even when the block raises" do
-    within(@tenant) do
-      assert_raises(RuntimeError) do
-        within(other_tenant) { raise "boom" }
+        within(other_tenant) do
+          assert_equal 0, Actor.unscoped.count,
+                       "the database, not the default scope, must be what isolates tenants"
+        end
       end
 
-      assert_equal @tenant, Current.tenant
-    end
-  end
+      test "switching restores the outer tenant on the way out" do
+        within(@tenant) do
+          within(other_tenant) do
+            assert_equal other_tenant, Current.tenant
+          end
 
-  test "a tenant cannot write a row belonging to another" do
-    assert_raises(ActiveRecord::StatementInvalid) do
-      within(other_tenant) do
-        Actor.create!(nickname: "smuggled", password: "password", tenant_id: @tenant.id)
+          assert_equal @tenant, Current.tenant, "nesting must not blind the caller to its own rows"
+        end
       end
-    end
-  end
 
-  test "signing keys are per tenant" do
-    mine = @tenant.ensure_signing_key!
-    theirs = other_tenant.ensure_signing_key!
+      test "switching restores the outer tenant even when the block raises" do
+        within(@tenant) do
+          assert_raises(RuntimeError) do
+            within(other_tenant) { raise "boom" }
+          end
 
-    assert_not_equal mine.kid, theirs.kid
+          assert_equal @tenant, Current.tenant
+        end
+      end
 
-    within(other_tenant) do
-      assert_nil SigningKey.find_by(kid: mine.kid),
-                 "one tenant must not be able to see another's signing key"
+      test "a tenant cannot write a row belonging to another" do
+        assert_raises(ActiveRecord::StatementInvalid) do
+          within(other_tenant) do
+            Actor.create!(nickname: "smuggled", password: "password", tenant_id: @tenant.id)
+          end
+        end
+      end
+
+      test "signing keys are per tenant" do
+        mine = @tenant.ensure_signing_key!
+        theirs = other_tenant.ensure_signing_key!
+
+        assert_not_equal mine.kid, theirs.kid
+
+        within(other_tenant) do
+          assert_nil SigningKey.find_by(kid: mine.kid),
+                     "one tenant must not be able to see another's signing key"
+        end
+      end
     end
   end
 end

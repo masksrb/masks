@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="<%= Masks::Server::Locales.tag %>">
+  <head>
+    <title><%= content_for(:title) || Masks::Server::Current.tenant&.name %></title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/icon.png">
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    <%= vite_client_tag %>
+    <%= vite_stylesheet_tag "app" %>
+    <% Masks::Server::Themes.for(tenant: Masks::Server::Current.tenant, client: themed_client).each do |theme| %>
+      <%= tag.link rel: "stylesheet", href: theme_path(theme.digest) %>
+    <% end %>
+    <%= yield :scripts %>
+  </head>
+
+  <% surface = content_for(:surface).to_s.strip.presence || "challenge" %>
+
+  <body class="auth-page">
+    <main class="auth-col surface-<%= surface %>">
+      <% if surface == "challenge" && Masks::Server::Current.tenant&.name.present? %>
+        <div class="auth-id">
+          <span class="auth-mark" aria-hidden="true"><%= Masks::Server::Current.tenant.name.first.upcase %></span>
+          <span class="auth-tenant"><%= Masks::Server::Current.tenant.name %></span>
+        </div>
+      <% end %>
+
+      <div class="flow">
+        <%= render "masks/server/application/flashes" unless surface == "place" %>
+
+        <%= yield %>
+      </div>
+    </main>
+  </body>
+</html>

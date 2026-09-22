@@ -1,0 +1,3 @@
+<%= render "masks/server/logins/head", title: (login.client&.name ?
+      t("logins.#{key}.heading_to", client: login.client.name) :
+      t("logins.#{key}.heading")) %>

@@ -28,6 +28,8 @@ ENV RAILS_ENV="development" \
     BINDING="0.0.0.0" \
     PORT="80"
 
+COPY --from=engine . /engine
+
 COPY Gemfile Gemfile.lock ./
 RUN bundle install
 

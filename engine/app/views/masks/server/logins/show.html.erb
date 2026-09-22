@@ -1,0 +1,14 @@
+<% content_for :title, Masks::Server::Current.tenant&.name ?
+     t("logins.page.title_to", tenant: Masks::Server::Current.tenant.name) : t("logins.page.title") %>
+
+<% content_for :surface, "grant" if @login.surface == "grant" %>
+
+<% content_for :scripts do %>
+  <%= vite_client_tag %>
+  <%= vite_javascript_tag "login" %>
+<% end %>
+
+<div id="login" class="flow" data-auth="<%= @login.as_json.to_json %>">
+  <%= render "masks/server/logins/warnings", login: @login %>
+  <%= render "masks/server/logins/#{@login.prompt.tr("-", "_")}", login: @login %>
+</div>

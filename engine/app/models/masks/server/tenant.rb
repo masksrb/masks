@@ -1,0 +1,313 @@
+module Masks
+  module Server
+    class Tenant < ApplicationRecord
+      class TenancyConflict < StandardError
+        def initialize(message = "MASKS_TENANT and MASKS_TENANTS are both set; declare one or the other")
+          super
+        end
+      end
+
+      class Exposed < StandardError
+        def initialize(role)
+          super(
+            "this server connects to Postgres as #{role || 'a role it cannot read back'}, which sees " \
+            "through row-level security. Every tenant_isolation policy on the database is decorative " \
+            "while it does, and the only thing left between one tenant and another's actors, tokens " \
+            "and signing keys is a default scope in Ruby. Connect as a role holding neither SUPERUSER " \
+            "nor BYPASSRLS."
+          )
+        end
+      end
+
+      encrypts :pairwise_salt, :setup_token
+
+      has_many :signing_keys, dependent: :destroy
+      has_many :actors, dependent: :destroy
+      has_many :clients, dependent: :destroy
+      has_many :tokens, dependent: :destroy
+      has_many :sessions, dependent: :destroy
+      has_many :consents, dependent: :destroy
+      has_many :events, dependent: :delete_all
+      has_many :adapters, dependent: :destroy
+      has_many :sign_in_policies, dependent: :destroy
+      belongs_to :sign_in_policy, optional: true
+
+      NICKNAME = "nickname".freeze
+      EMAIL = "email".freeze
+      EITHER = "either".freeze
+      NAMES = [ NICKNAME, EMAIL, EITHER ].freeze
+
+      REGISTRATION_OFF = "off".freeze
+      REGISTRATION_ANYTHING = "anything".freeze
+      REGISTRATION_BOUNDED = "bounded".freeze
+      REGISTRATIONS = [ REGISTRATION_OFF, REGISTRATION_ANYTHING, REGISTRATION_BOUNDED ].freeze
+
+      validates :named_by, inclusion: { in: NAMES }, allow_nil: true
+      validates :dynamic_registration, inclusion: { in: REGISTRATIONS }, allow_nil: true
+      validates :subdomain, presence: true, uniqueness: true,
+                            format: { with: /\A[a-z0-9][a-z0-9-]*\z/ }
+      validates :name, presence: true
+
+      scope :active, -> { where(archived_at: nil) }
+
+      after_create_commit :ensure_signing_key!, :setup_token!
+
+      def public_origin
+        template = ::Rails.configuration.masks.public_origin_template
+
+        template && format(template, subdomain: subdomain).chomp("/")
+      end
+
+      def named_by
+        self.class.pinned_names.presence || super.presence || EITHER
+      end
+
+      def names_pinned?
+        self.class.pinned_names.present?
+      end
+
+      def browsers_only
+        pinned = ::Rails.configuration.masks.browsers_only
+
+        pinned.nil? ? super : ActiveModel::Type::Boolean.new.cast(pinned)
+      end
+
+      def browsers_pinned?
+        ::Rails.configuration.masks.browsers_only.present?
+      end
+
+      def blocked_agents
+        ::Rails.configuration.masks.blocked_agents.presence || super
+      end
+
+      def agents_pinned?
+        ::Rails.configuration.masks.blocked_agents.present?
+      end
+
+      def agent_list
+        blocked_agents.to_s.split(/[\r\n,]+/).map { |one| one.strip.downcase }.reject(&:empty?)
+      end
+
+      def refuses?(user_agent)
+        return true if browsers_only && !Device.browser?(user_agent)
+
+        held = user_agent.to_s.downcase
+
+        held.present? && agent_list.any? { |pattern| held.include?(pattern) }
+      end
+
+      def adapter(kind)
+        Tenant.switch(self) { Adapter.primary(kind) }
+      end
+
+      def mail_adapter
+        adapter(Adapter::MAIL)
+      end
+
+      def sms_adapter
+        adapter(Adapter::SMS)
+      end
+
+      def mail_from
+        mail_adapter&.from || ::Rails.configuration.masks.mail_from
+      end
+
+      def mails?
+        return true if mail_adapter
+
+        ::Rails.configuration.masks.mail_from.present? && ActionMailer::Base.smtp_settings.present?
+      end
+
+      def texts?
+        sms_adapter.present?
+      end
+
+      def dynamic_registration
+        self.class.pinned_registration.presence || super.presence || registration_unset
+      end
+
+      def registration_pinned?
+        self.class.pinned_registration.present?
+      end
+
+      def registers?
+        dynamic_registration != REGISTRATION_OFF
+      end
+
+      def registration_unset
+        held = dynamic_client_scopes.presence || ::Rails.configuration.masks.dynamic_client_scopes
+
+        held.present? ? REGISTRATION_BOUNDED : REGISTRATION_ANYTHING
+      end
+
+      def dynamic_client_ceiling
+        return nil unless dynamic_registration == REGISTRATION_BOUNDED
+
+        declared = dynamic_client_scopes.presence ||
+          ::Rails.configuration.masks.dynamic_client_scopes
+
+        Scopes.list(declared.presence || Scopes.join(Scopes::STANDARD))
+      end
+
+      class << self
+        def pinned
+          ::Rails.configuration.masks.tenant
+        end
+
+        def pinned_names
+          ::Rails.configuration.masks.named_by
+        end
+
+        def pinned_registration
+          ::Rails.configuration.masks.dynamic_registration
+        end
+
+        def resolve(host)
+          return active.find_by(subdomain: pinned) if pinned
+
+          active.find_by(subdomain: host.to_s.split(".").first)
+        end
+
+        def declared
+          return ::Rails.configuration.masks.tenants unless pinned
+          raise TenancyConflict if ::Rails.configuration.masks.tenants.any?
+
+          [ pinned ]
+        end
+
+        def declare!
+          declared.map do |subdomain|
+            active.find_by(subdomain: subdomain) || create!(subdomain: subdomain, name: subdomain)
+          end
+        end
+
+        def wildcard?
+          template = ::Rails.configuration.masks.public_origin_template
+
+          template.present? && template.include?("%{subdomain}")
+        end
+
+        def claim(host)
+          return nil if declared.any?
+          return nil if exists? && !wildcard?
+
+          subdomain = host.to_s.split(".").first
+
+          create!(subdomain: subdomain, name: subdomain)
+        rescue ActiveRecord::RecordInvalid, ActiveRecord::RecordNotUnique
+          nil
+        end
+
+        def isolated!
+          return true if @isolated
+
+          held = role_privileges
+
+          raise Exposed, held&.fetch("rolname", nil) unless held && held["bypasses"] == false
+
+          @isolated = true
+        end
+
+        def role_privileges
+          connection.select_one(<<~SQL)
+            SELECT rolname, rolsuper OR rolbypassrls AS bypasses
+            FROM pg_roles WHERE rolname = current_user
+          SQL
+        end
+
+        def switch(tenant)
+          raise ArgumentError, "no tenant" if tenant.nil?
+
+          isolated!
+
+          return yield tenant if Current.tenant&.id == tenant.id
+
+          held = Current.tenant
+
+          enter(tenant)
+
+          begin
+            yield tenant
+          ensure
+            enter(held)
+          end
+        end
+
+        def clear!
+          enter(nil)
+        end
+
+        private
+
+          def enter(tenant)
+            Current.tenant = tenant
+
+            connection.exec_query(
+              "SELECT set_config($1, $2, false)", "tenant",
+              [ TenantIsolation::SETTING, tenant&.id.to_s ]
+            )
+
+            connection.clear_query_cache
+          rescue ActiveRecord::ConnectionNotEstablished, ActiveRecord::ConnectionFailed
+            nil
+          end
+      end
+
+      def signing_key
+        Tenant.switch(self) { signing_keys.active.first } || ensure_signing_key!
+      end
+
+      def pairwise_salt!
+        return pairwise_salt if pairwise_salt.present?
+
+        with_lock { update!(pairwise_salt: SecureRandom.hex(32)) if pairwise_salt.blank? }
+
+        pairwise_salt
+      end
+
+      def set_up?
+        Tenant.switch(self) { Actor.exists? }
+      end
+
+      def setup_token!
+        ::Rails.configuration.masks.setup_token || minted_setup_token
+      end
+
+      def set_up!
+        update!(setup_token: nil) if setup_token.present?
+      end
+
+      def setup_announcement
+        return "#{subdomain} is not set up. Its setup token is the one MASKS_SETUP_TOKEN holds." if ::Rails.configuration.masks.setup_token.present?
+
+        "#{subdomain} is not set up. Its setup token is #{setup_token!}"
+      end
+
+      def ensure_signing_key!
+        Tenant.switch(self) do
+          signing_keys.active.first || SigningKey.generate!(tenant: self)
+        end
+      end
+
+      def to_identity
+        { "uuid" => uuid, "subdomain" => subdomain, "name" => name }
+      end
+
+      private
+
+        def minted_setup_token
+          return setup_token if setup_token.present?
+
+          minted = with_lock do
+            next false if setup_token.present?
+
+            update!(setup_token: SecureRandom.base58(32))
+          end
+
+          ::Rails.logger.warn("masks: #{setup_announcement}") if minted
+
+          setup_token
+        end
+    end
+  end
+end

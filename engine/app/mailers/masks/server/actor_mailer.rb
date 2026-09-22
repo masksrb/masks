@@ -1,0 +1,112 @@
+module Masks
+  module Server
+    class ActorMailer < ApplicationMailer
+      def invitation(actor, url, tenant_name:, invited_by: nil)
+        return message unless deliverable?
+
+        @actor = actor
+        @url = url
+        @tenant_name = tenant_name
+        @invited_by = invited_by
+
+        mail(
+          from: self.class.from,
+          to: actor.email,
+          subject: t("actor_mailer.invitation.subject", tenant: tenant_name)
+        )
+      end
+
+      def password_reset(actor, url, tenant_name:, opened_by: nil)
+        return message unless deliverable?
+
+        @actor = actor
+        @url = url
+        @tenant_name = tenant_name
+        @opened_by = opened_by
+
+        mail(
+          from: self.class.from,
+          to: actor.email,
+          subject: t("actor_mailer.password_reset.subject", tenant: tenant_name)
+        )
+      end
+
+      def notification(actor, event, tenant_name:, origin: nil)
+        return message unless deliverable?
+
+        told = Notifications.told(event, tenant_name)
+
+        @actor = actor
+        @event = event
+        @tenant_name = tenant_name
+        @said = t("actor_mailer.notification.said.#{event.action}", **told, default: Notifications.said(event))
+        @where = Notifications.where(event)
+        @at = Notifications.at(event, actor)
+        @by = event.by if event.by && event.by_id != actor.id
+        @url = origin.presence && "#{origin}/"
+        @settings = origin.presence && "#{origin}/#notifications"
+
+        mail(
+          from: self.class.from,
+          to: actor.email,
+          subject: t("actor_mailer.notification.subject", said: Notifications.said(event), tenant: tenant_name)
+        )
+      end
+
+      def email_verification(actor, url, tenant_name:)
+        return message unless deliverable?
+
+        @actor = actor
+        @url = url
+        @tenant_name = tenant_name
+
+        mail(
+          from: self.class.from,
+          to: actor.email,
+          subject: t("actor_mailer.email_verification.subject", tenant: tenant_name)
+        )
+      end
+
+      def confirmation_code(email, code, tenant_name:)
+        return message unless deliverable?
+
+        @code = code
+        @tenant_name = tenant_name
+
+        mail(
+          from: self.class.from,
+          to: email,
+          subject: t("actor_mailer.confirmation_code.subject", code: code, tenant: tenant_name)
+        )
+      end
+
+      def approval_requested(manager, actor, tenant_name:, origin: nil)
+        return message unless deliverable?
+
+        @actor = actor
+        @tenant_name = tenant_name
+        @url = origin.presence && "#{origin}/manage/actors/#{actor.uuid}"
+
+        mail(
+          from: self.class.from,
+          to: manager.email,
+          subject: t("actor_mailer.approval_requested.subject", nickname: actor.identifier, tenant: tenant_name)
+        )
+      end
+
+      def approved(actor, tenant_name:, origin: nil)
+        return message unless deliverable?
+
+        @actor = actor
+        @tenant_name = tenant_name
+        @url = origin.presence && "#{origin}/"
+
+        mail(
+          from: self.class.from,
+          to: actor.email,
+          subject: t("actor_mailer.approved.subject", tenant: tenant_name)
+        )
+      end
+    end
+  end
+end

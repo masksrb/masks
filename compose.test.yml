@@ -20,6 +20,7 @@ services:
       target: test
       additional_contexts:
         web: ./web
+        engine: ./engine
     command: ["bin/rake", "db:prepare", "test"]
     environment:
       POSTGRES_HOST: postgres

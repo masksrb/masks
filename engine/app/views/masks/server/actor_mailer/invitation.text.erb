@@ -1,0 +1,7 @@
+<%= @invited_by ? t(".invited_by", nickname: @invited_by.identifier, tenant: @tenant_name) : t(".invited", tenant: @tenant_name) %>
+
+<% if @actor.nickname.present? %><%= t(".nickname", nickname: @actor.nickname) %><% end %>
+
+<%= @url %>
+
+<%= t(".expiry", duration: ActiveSupport::Duration.build(Masks::Server::Invitation.lifetime.to_i).inspect) %>

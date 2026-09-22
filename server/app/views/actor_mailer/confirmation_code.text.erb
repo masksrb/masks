@@ -1,5 +1,0 @@
-<%= t(".lede", tenant: @tenant_name) %>
-
-<%= @code %>
-
-<%= t(".expiry", duration: ActiveSupport::Duration.build(ConfirmationCode.lifetime.to_i).inspect) %>

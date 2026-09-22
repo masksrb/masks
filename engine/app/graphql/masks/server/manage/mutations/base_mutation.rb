@@ -1,0 +1,57 @@
+module Masks
+  module Server
+    module Manage
+      module Mutations
+        class BaseMutation < GraphQL::Schema::Mutation
+          private
+
+            def viewer
+              context[:actor]
+            end
+
+            def refuse!(message)
+              raise GraphQL::ExecutionError, message
+            end
+
+            def audit!(action, actor: nil, client: nil, **details)
+              Masks::Server::Event.record!(action, actor: actor, by: viewer, client: client, **details)
+            end
+
+            def actor!(uuid)
+              Actor.find_by(uuid: uuid) || refuse!("no actor with that uuid")
+            end
+
+            def client!(client_id)
+              Client.find_by(client_id: client_id) || refuse!("no client with that client_id")
+            end
+
+            def device!(id)
+              Masks::Server::Device.find_by(id: id) || refuse!("no device with that id")
+            end
+
+            def provider!(key)
+              Masks::Server::Provider.find_by(key: key) || refuse!("no provider keyed #{key}")
+            end
+
+            def sign_in_policy!(key)
+              Masks::Server::SignInPolicy.find_by(key: key) || refuse!("no sign-in policy keyed #{key}")
+            end
+
+            def adapter!(key)
+              Masks::Server::Adapter.find_by(key: key) || refuse!("no adapter keyed #{key}")
+            end
+
+            def signing_key!(kid)
+              Masks::Server::SigningKey.find_by(kid: kid) || refuse!("no signing key with that kid")
+            end
+
+            def save!(record)
+              refuse!(record.errors.full_messages.join("; ")) unless record.save
+
+              record
+            end
+        end
+      end
+    end
+  end
+end

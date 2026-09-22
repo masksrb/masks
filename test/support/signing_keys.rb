@@ -1,12 +1,16 @@
-module TestSigningKeys
-  KEYS = Array.new(4) { OpenSSL::PKey::RSA.generate(SigningKey::SIZE) }.freeze
+module Masks
+  module Server
+    module TestSigningKeys
+      KEYS = Array.new(4) { OpenSSL::PKey::RSA.generate(SigningKey::SIZE) }.freeze
 
-  class << self
-    def next_key
-      @cursor = ((@cursor || -1) + 1) % KEYS.size
-      KEYS[@cursor]
+      class << self
+        def next_key
+          @cursor = ((@cursor || -1) + 1) % KEYS.size
+          KEYS[@cursor]
+        end
+      end
     end
+
+    SigningKey.generator = -> { TestSigningKeys.next_key }
   end
 end
-
-SigningKey.generator = -> { TestSigningKeys.next_key }

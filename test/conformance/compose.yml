@@ -20,6 +20,7 @@ services:
       context: ../../server
       additional_contexts:
         web: ../../web
+        engine: ../../engine
     image: masks:conformance
     environment:
       POSTGRES_HOST: postgres

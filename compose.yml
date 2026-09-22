@@ -6,10 +6,12 @@ x-app: &app
     dockerfile: Dockerfile.dev
     additional_contexts:
       web: ./web
+      engine: ./engine
   image: masks-dev
   pull_policy: never
   volumes:
     - ./server:/rails
+    - ./engine:/engine
     - ./web:/web
     - ./compose/no-dotenv:/rails/.env:ro
     - modules:/rails/node_modules
@@ -99,6 +101,7 @@ services:
       context: ./server
       additional_contexts:
         web: ./web
+        engine: ./engine
     image: masks:dev
     environment:
       <<: *env

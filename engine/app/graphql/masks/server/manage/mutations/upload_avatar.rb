@@ -1,0 +1,25 @@
+module Masks
+  module Server
+    module Manage
+      module Mutations
+        class UploadAvatar < BaseMutation
+          argument :uuid, ID
+          argument :photo, Types::UploadType
+
+          field :actor, Types::ActorType, null: false
+
+          def resolve(uuid:, photo:)
+            actor = actor!(uuid)
+
+            Avatar.store!(actor: actor, upload: photo)
+            audit!(Masks::Server::Event::AVATAR_UPLOADED, actor: actor)
+
+            { actor: actor }
+          rescue Pictures::Unreadable => e
+            refuse!(e.message)
+          end
+        end
+      end
+    end
+  end
+end

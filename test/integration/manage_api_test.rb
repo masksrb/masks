@@ -1,1500 +1,1504 @@
-require "test_helper"
-require "vips"
-
-class ManageApiTest < ActionDispatch::IntegrationTest
-  include ActiveJob::TestHelper
-
-  setup do
-    host! host_for(@tenant)
-
-    @actor = create_actor(@tenant, scopes: "openid profile email masks:manage")
-    @client = create_client(
-      @tenant,
-      allowed_scopes: "openid profile email masks:manage",
-      approved_at: Time.current,
-      grant_types: [ "authorization_code", "refresh_token" ]
-    )
-  end
-
-  def resource
-    @resource ||= issuer_for(@tenant).manage_resource
-  end
-
-  def bearer(scope: "openid masks:manage", for_resource: nil, actor: @actor)
-    sign_in_as(actor)
-    authorize(client_id: @client.client_id, scope: scope, resource: for_resource || resource)
-    consent! if awaiting_consent?
-
-    token(
-      grant_type: "authorization_code",
-      code: code_from,
-      redirect_uri: OidcFlow::REDIRECT_URI,
-      code_verifier: verifier,
-      client_id: @client.client_id
-    )["access_token"]
-  end
-
-  def ask(query, token, **variables)
-    post "/manage/graphql",
-         params: { query: query, variables: variables }.to_json,
-         headers: {
-           "CONTENT_TYPE" => "application/json",
-           "HTTP_AUTHORIZATION" => "Bearer #{token}"
-         }
-
-    JSON.parse(response.body)
-  end
-
-  test "the protected resource document names the scope and describes it" do
-    get "/.well-known/oauth-protected-resource"
-
-    body = JSON.parse(response.body)
-
-    assert_response :success
-    assert_equal resource, body["resource"]
-    assert_equal [ origin_for(@tenant) ], body["authorization_servers"]
-    assert_equal [ "masks:manage" ], body["scopes_supported"]
-    assert_equal "Manage masks", body.dig("scope_descriptions", "masks:manage")
-  end
-
-  test "the document is also served under the resource path, as RFC 9728 asks" do
-    get "/.well-known/oauth-protected-resource/manage"
-
-    assert_response :success
-    assert_equal resource, JSON.parse(response.body)["resource"]
-  end
-
-  test "a bearer carrying masks:manage reaches the schema" do
-    body = ask("{ viewer { nickname scopes } }", bearer)
-
-    assert_response :success
-    assert_equal @actor.nickname, body.dig("data", "viewer", "nickname")
-    assert_includes body.dig("data", "viewer", "scopes"), "masks:manage"
-  end
-
-  test "no bearer at all is refused" do
-    post "/manage/graphql", params: { query: "{ viewer { nickname } }" }.to_json,
-                            headers: { "CONTENT_TYPE" => "application/json" }
-
-    assert_response :unauthorized
-  end
-
-  test "a token without masks:manage is refused with insufficient_scope, naming the scope" do
-    held = bearer(scope: "openid profile")
-
-    body = ask("{ viewer { nickname } }", held)
-
-    assert_response :forbidden
-    assert_equal "insufficient_scope", body["error"]
-    assert_equal "masks:manage", body["scope"]
-  end
-
-  test "a token issued for another resource is refused" do
-    held = bearer(for_resource: "https://uris.example.com/api")
-
-    ask("{ viewer { nickname } }", held)
-
-    assert_response :unauthorized
-  end
-
-  test "an actor stripped of masks:manage cannot use a token that still carries it" do
-    held = bearer
-
-    within(@tenant) { @actor.update!(scopes: "openid profile email") }
-
-    ask("{ viewer { nickname } }", held)
-
-    assert_response :unauthorized
-  end
-
-  test "actors and clients are listed, and the tenant is readable" do
-    body = ask("{ actors { nickname } clients { clientId } tenant { subdomain } }", bearer)
-
-    assert_equal [ @actor.nickname ], body.dig("data", "actors").map { |a| a["nickname"] }
-    assert_equal [ @client.client_id ], body.dig("data", "clients").map { |c| c["clientId"] }
-    assert_equal @tenant.subdomain, body.dig("data", "tenant", "subdomain")
-  end
-
-  test "another tenant's actors are not visible" do
-    create_actor(other_tenant, nickname: "elsewhere")
-
-    body = ask("{ actors { nickname } }", bearer)
-
-    refute_includes body.dig("data", "actors").map { |a| a["nickname"] }, "elsewhere"
-  end
-
-  test "the ten profile claims that had no editor are writable" do
-    body = ask(<<~GQL, bearer)
-      mutation {
-        updateActor(uuid: "#{@actor.uuid}", givenName: "Ada", locale: "en-CA", zoneinfo: "America/Vancouver") {
-          actor { givenName locale zoneinfo }
-        }
-      }
-    GQL
-
-    assert_nil body["errors"]
-    assert_equal "Ada", body.dig("data", "updateActor", "actor", "givenName")
-    assert_equal "America/Vancouver", body.dig("data", "updateActor", "actor", "zoneinfo")
-  end
-
-  test "a profile field cleared to empty leaves the claim absent, not present and blank" do
-    ask(%(mutation { updateActor(uuid: "#{@actor.uuid}", gender: "") { actor { gender } } }), bearer)
-
-    actor = within(@tenant) { @actor.reload }
-
-    assert_nil actor.gender
-    refute_includes actor.claims("openid profile", subject: actor.uuid).keys, "gender"
-  end
-
-  test "changing an email takes its verification with it" do
-    within(@tenant) { @actor.update!(email: "owner@example.invalid", email_verified_at: Time.current) }
-
-    body = ask(<<~GQL, bearer)
-      mutation {
-        updateActor(uuid: "#{@actor.uuid}", email: "moved@example.invalid") {
-          actor { email emailVerified }
-        }
-      }
-    GQL
-
-    assert_equal "moved@example.invalid", body.dig("data", "updateActor", "actor", "email")
-    refute body.dig("data", "updateActor", "actor", "emailVerified")
-  end
-
-  test "required_scopes is writable, which nothing but the console could do" do
-    body = ask(<<~GQL, bearer)
-      mutation {
-        updateClient(clientId: "#{@client.client_id}", requiredScopes: ["openid"]) {
-          client { requiredScopes }
-        }
-      }
-    GQL
-
-    assert_equal [ "openid" ], body.dig("data", "updateClient", "client", "requiredScopes")
-  end
-
-  test "an admin cannot take masks:manage away from themselves" do
-    body = ask(<<~GQL, bearer)
-      mutation {
-        setActorScopes(uuid: "#{@actor.uuid}", scopes: ["openid", "profile"]) {
-          actor { scopes }
-        }
-      }
-    GQL
-
-    assert_match "cannot take masks:manage away from yourself", body["errors"].first["message"]
-    assert_includes within(@tenant) { @actor.reload.scope_list }, "masks:manage"
-  end
-
-  test "an admin may grant masks:manage to somebody else" do
-    second = create_actor(@tenant, nickname: "second", email: "second@example.invalid")
-
-    body = ask(<<~GQL, bearer)
-      mutation {
-        setActorScopes(uuid: "#{second.uuid}", scopes: ["openid", "masks:manage"]) {
-          actor { scopes }
-        }
-      }
-    GQL
-
-    assert_includes body.dig("data", "setActorScopes", "actor", "scopes"), "masks:manage"
-  end
-
-  test "masks:manage is refused to an account that is only half named" do
-    second = create_actor(@tenant, nickname: "second")
-
-    body = ask(<<~GQL, bearer)
-      mutation {
-        setActorScopes(uuid: "#{second.uuid}", scopes: ["openid", "masks:manage"]) {
-          actor { scopes }
-        }
-      }
-    GQL
-
-    assert_match(/email/i, body["errors"].first["message"])
-    refute_includes within(@tenant) { second.reload.scope_list }, "masks:manage"
-  end
-
-  test "dynamic registration is turned off, and the endpoint and discovery both say so" do
-    body = ask(<<~GQL, bearer)
-      mutation {
-        updateTenant(dynamicRegistration: "off") { tenant { dynamicRegistration } }
-      }
-    GQL
-
-    assert_nil body["errors"]
-    assert_equal "off", body.dig("data", "updateTenant", "tenant", "dynamicRegistration")
-
-    refute issuer_for(@tenant.reload).discovery.key?("registration_endpoint")
-
-    post "/register", params: { redirect_uris: [ OidcFlow::REDIRECT_URI ], client_name: "Nope" },
-         as: :json
-
-    assert_response :forbidden
-    assert_equal "access_denied", JSON.parse(response.body)["error"]
-  end
-
-  test "mail is configured at runtime through an adapter, and its password never comes back out" do
-    held = bearer
-    body = ask(<<~GQL, held)
-      mutation {
-        createAdapter(
-          key: "relay"
-          service: "smtp"
-          name: "Relay"
-          config: { from: "masks@example.invalid", address: "smtp.example.invalid", port: 2525,
-                    username: "postmaster", password: "hunter2", tls: true }
-        ) {
-          adapter { key kind service primary settings secretsHeld }
-        }
-      }
-    GQL
-
-    assert_nil body["errors"]
-
-    adapter = body.dig("data", "createAdapter", "adapter")
-
-    assert adapter["primary"], "the first adapter of its kind is primary"
-    assert_equal "mail", adapter["kind"]
-    assert_equal 2525, adapter.dig("settings", "port")
-    assert adapter.dig("settings", "tls")
-    refute adapter["settings"].key?("password")
-    assert_equal [ "password" ], adapter["secretsHeld"]
-    assert ask(%(query { tenant { mails } }), held).dig("data", "tenant", "mails")
-    assert_equal "hunter2", within(@tenant) { Adapter.sole[:password] }
-
-    asked = ask(%(query { adapters { secrets } }), held)
-
-    assert_match(/secrets/, asked["errors"].first["message"])
-  end
-
-  test "a sign-in policy is created, named as the default, and chosen by a client" do
-    held = bearer
-
-    body = ask(<<~GQL, held)
-      mutation {
-        createSignInPolicy(key: "customers", name: "Customers", signup: true, confirmation: "code",
-                           secondFactorRequired: true, emailDomains: ["@Example.com"],
-                           signupScopes: ["openid", "email"]) {
-          signInPolicy { key signup confirmation secondFactorRequired emailDomains signupScopes default }
-        }
-      }
-    GQL
-
-    assert_nil body["errors"]
-
-    created = body.dig("data", "createSignInPolicy", "signInPolicy")
-
-    assert created["signup"]
-    assert_equal [ "example.com" ], created["emailDomains"]
-    assert_equal %w[email openid], created["signupScopes"].sort
-    refute created["default"]
-
-    ask(%(mutation { updateTenant(signInPolicy: "customers") { tenant { name } } }), held)
-
-    assert ask(%(query { signInPolicy(key: "customers") { default } }), held).dig("data", "signInPolicy", "default")
-
-    ask(%(mutation { updateClient(clientId: "#{@client.client_id}", signInPolicy: "customers") { client { clientId } } }), held)
-
-    assert_equal "customers", within(@tenant) { @client.reload.sign_in_policy.key }
-
-    ask(%(mutation { updateClient(clientId: "#{@client.client_id}", signInPolicy: "") { client { clientId } } }), held)
-
-    assert_nil within(@tenant) { @client.reload.sign_in_policy }
-
-    refused = ask(%(mutation { archiveSignInPolicy(key: "customers") { signInPolicy { key } } }), held)
-
-    assert_match "default", refused["errors"].first["message"]
-  end
-
-  test "a manager sets the links and logo people are shown, and a link that is not a URL is refused" do
-    held = bearer
-    stub_request(:get, "https://probe.example.com/logo.png")
-      .to_return(body: Vips::Image.black(40, 40).pngsave_buffer, headers: { "Content-Type" => "image/png" })
-
-    refused = ask(%(mutation { updateClient(clientId: "#{@client.client_id}", tosUri: "javascript:alert(1)") { client { tosUri } } }), held)
-
-    assert_match "must be an http or https URL", refused["errors"].first["message"]
-
-    body = nil
-
-    perform_enqueued_jobs do
-      body = ask(<<~GQL, held)
-        mutation {
-          updateClient(clientId: "#{@client.client_id}", tosUri: "https://probe.example.com/terms",
-                       logoUri: "https://probe.example.com/logo.png") { client { tosUri } }
-        }
-      GQL
-    end
-
-    assert_equal "https://probe.example.com/terms", body.dig("data", "updateClient", "client", "tosUri")
-
-    shown = ask(%(query { client(clientId: "#{@client.client_id}") { logoUrl } }), held)
-
-    assert_match %r{/clients/#{@client.client_id}/logo\?v=\h{16}}, shown.dig("data", "client", "logoUrl")
-  end
-
-  test "the policy a client falls back to is the tenant's default, or the built-in one without it" do
-    held = bearer
-    fallback = %(query { defaultSignInPolicy { key name signup createdAt default } })
-
-    built_in = ask(fallback, held).dig("data", "defaultSignInPolicy")
-
-    assert_equal "default", built_in["key"]
-    assert_nil built_in["createdAt"]
-    assert built_in["default"]
-
-    ask(%(mutation { createSignInPolicy(key: "customers", name: "Customers", signup: true) { signInPolicy { key } } }), held)
-    ask(%(mutation { updateTenant(signInPolicy: "customers") { tenant { name } } }), held)
-
-    chosen = ask(fallback, held).dig("data", "defaultSignInPolicy")
-
-    assert_equal "customers", chosen["key"]
-    assert chosen["signup"]
-    assert chosen["createdAt"]
-  end
-
-  test "a manager lists who is waiting for approval and lets them in" do
-    waiting = create_actor(@tenant, nickname: "waiting", pending_approval_at: Time.current, signed_up_at: Time.current)
-    held = bearer
-
-    listed = ask(%(query { actors(pendingApproval: true) { nickname pendingApproval } }), held)
-
-    assert_equal [ "waiting" ], listed.dig("data", "actors").map { |actor| actor["nickname"] }
-
-    body = ask(%(mutation { approveActor(uuid: "#{waiting.uuid}") { actor { pendingApproval } } }), held)
-
-    refute body.dig("data", "approveActor", "actor", "pendingApproval")
-    assert within(@tenant) { Event.where(action: Event::ACTOR_APPROVED, actor_id: waiting.id).exists? }
-
-    again = ask(%(mutation { approveActor(uuid: "#{waiting.uuid}") { actor { pendingApproval } } }), held)
-
-    assert_match "not waiting", again["errors"].first["message"]
-  end
-
-  test "a sign-in policy cannot hand out masks: scopes to whoever signs up" do
-    body = ask(<<~GQL, bearer)
-      mutation {
-        createSignInPolicy(key: "open", name: "Open", signup: true, signupScopes: ["openid", "masks:manage"]) {
-          signInPolicy { key }
-        }
-      }
-    GQL
-
-    assert_match "masks:manage", body["errors"].first["message"]
-    assert_equal 0, within(@tenant) { SignInPolicy.count }
-  end
-
-  test "adapters of every kind are offered, with the fields each one needs" do
-    body = ask(%(query { adapterServices { service kind label fields { key secret required } } }), bearer)
-    services = body.dig("data", "adapterServices").index_by { |held| held["service"] }
-
-    assert_equal "mail", services.dig("smtp", "kind")
-    %w[twilio vonage plivo telnyx sinch message_bird infobip sns click_send].each do |name|
-      assert_equal "sms", services.dig(name, "kind"), name
-    end
-    assert services.dig("twilio", "fields").any? { |field| field["key"] == "auth_token" && field["secret"] }
-  end
-
-  test "making another adapter primary demotes the one before it, and archiving takes it out of use" do
-    held = bearer
-
-    %w[first second].each do |key|
-      ask(<<~GQL, held)
-        mutation {
-          createAdapter(key: "#{key}", service: "twilio", name: "#{key}",
-                        config: { account_sid: "AC1", auth_token: "t", from: "+15551234567" }) { adapter { key } }
-        }
-      GQL
-    end
-
-    assert_equal "first", within(@tenant) { @tenant.sms_adapter.key }
-
-    ask(%(mutation { updateAdapter(key: "second", primary: true) { adapter { key } } }), held)
-
-    assert_equal "second", within(@tenant) { @tenant.sms_adapter.key }
-    refute within(@tenant) { Adapter.find_by(key: "first").primary }
-
-    ask(%(mutation { archiveAdapter(key: "second") { adapter { key } } }), held)
-
-    assert_nil within(@tenant) { @tenant.sms_adapter }
-  end
-
-  test "a test message reports what the service said rather than failing the request" do
-    held = bearer
-    ask(<<~GQL, held)
-      mutation {
-        createAdapter(key: "sms", service: "twilio", name: "Twilio",
-                      config: { account_sid: "AC1", auth_token: "wrong", from: "+15551234567" }) { adapter { key } }
-      }
-    GQL
-
-    stub_request(:post, %r{api.twilio.com}).to_return(status: 401, body: %({"message":"Authenticate"}))
-
-    body = ask(%(mutation { testAdapter(key: "sms", to: "+15557654321") { delivered failure } }), held)
-
-    refute body.dig("data", "testAdapter", "delivered")
-    assert_match "Authenticate", body.dig("data", "testAdapter", "failure")
-    assert within(@tenant) { Event.where(action: Event::ADAPTER_TESTED).exists? }
-  end
-
-  test "an adapter for a service masks does not have is refused" do
-    body = ask(%(mutation { createAdapter(key: "x", service: "carrier-pigeon", name: "x") { adapter { key } } }), bearer)
-
-    assert_match "no adapter for carrier-pigeon", body["errors"].first["message"]
-  end
-
-  test "a mode masks does not know is refused" do
-    body = ask(%(mutation { updateTenant(dynamicRegistration: "sometimes") { tenant { name } } }),
-               bearer)
-
-    assert_match "off, anything or bounded", body["errors"].first["message"]
-  end
-
-  test "an actor carries their own sessions and devices, so one query draws the page" do
-    body = ask(<<~GQL, bearer)
-      query {
-        actors {
-          uuid nickname
-          sessions { id ipAddress authenticatedAt expiresAt }
-          devices { id label blockedAt }
-        }
-        viewer { uuid }
-        scopesSupported
-      }
-    GQL
-
-    assert_nil body["errors"], body["errors"].to_s
-
-    person = body.dig("data", "actors").sole
-
-    assert_equal @actor.uuid, person["uuid"]
-    assert_equal 1, person["sessions"].length
-    assert_equal 1, person["devices"].length
-    assert_equal @actor.uuid, body.dig("data", "viewer", "uuid")
-  end
-
-  test "an actor's sessions are the live ones, and revoking one drops it from them" do
-    held = bearer
-
-    id = ask("{ actors { sessions { id } } }", held).dig("data", "actors").sole["sessions"].sole["id"]
-
-    ask(%(mutation { revokeSession(id: "#{id}") { session { revokedAt } } }), held)
-
-    assert_empty ask("{ actors { sessions { id } } }", held).dig("data", "actors").sole["sessions"]
-  end
-
-  test "devices nobody signed in on are askable on their own, so they stay blockable" do
-    held = bearer
-
-    within(@tenant) { ::Device.identify(nil, user_agent: "curl/8", ip_address: "10.0.0.9") }
-
-    listed = ask("{ devices(unattached: true) { id label userAgent } }", held).dig("data", "devices")
-
-    assert_equal [ "curl/8" ], listed.map { |one| one["userAgent"] }
-
-    blocked = ask(%(mutation { blockDevice(id: "#{listed.sole['id']}") { device { blockedAt } } }), held)
-
-    assert_not_nil blocked.dig("data", "blockDevice", "device", "blockedAt")
-  end
-
-  test "devices are filtered by a fragment of their agent, ignoring case" do
-    held = bearer
-
-    within(@tenant) do
-      ::Device.identify(nil, user_agent: "curl/8.4.0")
-      ::Device.identify(nil, user_agent: "python-requests/2.31")
-    end
-
-    listed = ask(%({ devices(agent: "CURL") { userAgent } }), held).dig("data", "devices")
-
-    assert_equal [ "curl/8.4.0" ], listed.map { |one| one["userAgent"] }
-  end
-
-  test "every device matching an agent is blocked at once, and the agent is refused from then on" do
-    held = bearer
-
-    curls = within(@tenant) do
-      [ ::Device.identify(nil, user_agent: "curl/8.4.0"), ::Device.identify(nil, user_agent: "curl/7.1") ]
-    end
-    other = within(@tenant) { ::Device.identify(nil, user_agent: "python-requests/2.31") }
-
-    body = ask(%(mutation { blockDevices(agent: "curl", refuse: true) { count spared } }), held)
-
-    assert_equal({ "count" => 2, "spared" => false }, body.dig("data", "blockDevices"))
-    within(@tenant) do
-      assert curls.all? { |device| device.reload.blocked? }
-      assert_not other.reload.blocked?
-      assert_equal 2, Event.where(action: Event::DEVICE_BLOCKED).count
-      assert Tenant.find(@tenant.id).refuses?("curl/9")
-    end
-
-    ask(%(mutation { blockDevices(agent: "curl", refuse: true) { count } }), held)
-
-    assert_equal "curl", within(@tenant) { Tenant.find(@tenant.id).blocked_agents }
-  end
-
-  test "a bulk block never shuts out the device the manager is asking from" do
-    held = bearer
-
-    within(@tenant) do
-      Token.where.not(device_id: nil).last.device.update!(user_agent: "Mozilla/5.0 console")
-      ::Device.identify(nil, user_agent: "Mozilla/5.0 elsewhere")
-    end
-
-    body = ask(%(mutation { blockDevices(agent: "mozilla") { count spared } }), held)
-
-    assert_equal({ "count" => 1, "spared" => true }, body.dig("data", "blockDevices"))
-    assert_nil ask("{ viewer { nickname } }", held)["errors"]
-    assert_response :success
-  end
-
-  test "chosen devices are blocked and unblocked together" do
-    held = bearer
-
-    chosen = within(@tenant) { Array.new(3) { |n| ::Device.identify(nil, user_agent: "bot/#{n}") } }
-    ids = chosen.map { |device| device.id.to_s }
-
-    blocked = ask("mutation($ids: [ID!]) { blockDevices(ids: $ids) { count } }", held, ids: ids)
-
-    assert_equal 3, blocked.dig("data", "blockDevices", "count")
-
-    unblocked = ask("mutation($ids: [ID!]!) { unblockDevices(ids: $ids) { count } }", held, ids: ids.first(2))
-
-    assert_equal 2, unblocked.dig("data", "unblockDevices", "count")
-    assert_equal [ false, false, true ], within(@tenant) { chosen.map { |device| device.reload.blocked? } }
-  end
-
-  test "a bulk block names its devices one way, and an agent is needed to refuse one" do
-    held = bearer
-
-    [
-      %(mutation { blockDevices { count } }),
-      %(mutation { blockDevices(ids: ["1"], agent: "curl") { count } }),
-      %(mutation { blockDevices(ids: ["1"], refuse: true) { count } })
-    ].each do |query|
-      assert ask(query, held)["errors"].present?, query
-    end
-  end
-
-  test "a nickname is writable, so a rename does not mean a new account" do
-    body = ask(<<~GQL, bearer)
-      mutation { updateActor(uuid: "#{@actor.uuid}", nickname: "renamed") { actor { nickname } } }
-    GQL
-
-    assert_equal "renamed", body.dig("data", "updateActor", "actor", "nickname")
-    assert_equal "renamed", within(@tenant) { @actor.reload.nickname }
-  end
-
-  test "a manager cannot empty the nickname a manager has to have" do
-    body = ask(%(mutation { updateActor(uuid: "#{@actor.uuid}", nickname: "") { actor { uuid } } }), bearer)
-
-    assert_match(/nickname/i, body["errors"].first["message"])
-  end
-
-  test "signing an actor out ends every session and refresh token they hold" do
-    held = bearer
-    second = create_actor(@tenant, nickname: "second")
-
-    within(@tenant) do
-      Session.start!(actor: second)
-      RefreshToken.mint!(actor: second, client: @client)
-    end
-
-    ask(%(mutation { signOutActor(uuid: "#{second.uuid}") { actor { uuid } } }), held)
-
-    within(@tenant) do
-      assert_empty Session.live.where(actor: second).to_a
-      assert_empty RefreshToken.live.where(actor: second).to_a
-    end
-  end
-
-  test "deleting an actor takes everything that pointed at them with it" do
-    held = bearer
-    second = create_actor(@tenant, nickname: "second")
-    approved = create_client(@tenant, name: "Theirs", approved_at: Time.current, approved_by: second)
-
-    within(@tenant) do
-      Session.start!(actor: second)
-      Consent.create!(actor: second, client: @client, scopes: "openid")
-      RefreshToken.mint!(actor: second, client: @client)
-    end
-
-    body = ask(%(mutation { deleteActor(uuid: "#{second.uuid}") { uuid identifier } }), held)
-
-    assert_nil body["errors"]
-    assert_equal "second", body.dig("data", "deleteActor", "identifier")
-
-    within(@tenant) do
-      assert_nil Actor.find_by(uuid: second.uuid)
-      assert_empty Session.where(actor_id: second.id).to_a
-      assert_empty Consent.where(actor_id: second.id).to_a
-      assert_empty Token.where(actor_id: second.id).to_a
-      assert_nil approved.reload.approved_by_id
-    end
-  end
-
-  test "an admin cannot delete themselves" do
-    body = ask(%(mutation { deleteActor(uuid: "#{@actor.uuid}") { uuid } }), bearer)
-
-    assert_match "would lock you out", body["errors"].first["message"]
-    assert_not_nil within(@tenant) { Actor.find_by(uuid: @actor.uuid) }
-  end
-
-  def admin
-    @admin ||= bearer
-  end
-
-  def invite(nickname: "sam", email: "sam@example.com", password: nil, scopes: nil)
-    ask(<<~GQL, admin)
-      mutation {
-        createActor(
-          nickname: "#{nickname}"
-          #{email ? ", email: \"#{email}\"" : ''}
-          #{password ? ", password: \"#{password}\"" : ''}
-          #{scopes ? ", scopes: #{scopes.inspect}" : ''}
-        ) {
-          delivered url actor { uuid nickname activated emailVerified invitedAt }
-        }
-      }
-    GQL
-  end
-
-  test "an admin invites somebody, and gets a link back when there is no mailer" do
-    body = invite
-
-    invited = body.dig("data", "createActor")
-
-    assert_nil body["errors"]
-    assert_equal false, invited["delivered"]
-    assert_match %r{/invite/}, invited["url"]
-    assert_equal false, invited.dig("actor", "activated")
-    assert_not_nil invited.dig("actor", "invitedAt")
-  end
-
-  test "with a mailer configured the link is mailed and never handed to the admin" do
-    with_mailer do
-      body = invite
-
-      invited = body.dig("data", "createActor")
-
-      assert_equal true, invited["delivered"]
-      assert_nil invited["url"]
-      assert_equal 1, enqueued_jobs.count { |job| job[:args].first == "ActorMailer" }
-    end
-  end
-
-  test "an admin adds somebody with no address at all, and hands the link over" do
-    body = invite(email: nil)
-
-    invited = body.dig("data", "createActor")
-
-    assert_nil body["errors"]
-    assert_equal false, invited["delivered"]
-    assert_match %r{/invite/}, invited["url"]
-    assert_equal false, invited.dig("actor", "activated")
-  end
-
-  test "an admin sets the password, and that actor is activated without a link" do
-    body = invite(email: nil, password: "correct-horse")
-
-    created = body.dig("data", "createActor")
-
-    assert_nil body["errors"]
-    assert_equal true, created.dig("actor", "activated")
-    assert_nil created["url"]
-
-    within(@tenant) do
-      assert_not_nil Actor.authenticate("sam", "correct-horse")
-    end
-  end
-
-  test "an admin-set password still has to clear the minimum" do
-    body = invite(password: "short")
-
-    assert_match(/at least #{Actor::MINIMUM_PASSWORD}/, body["errors"].first["message"])
-    assert_nil within(@tenant) { Actor.find_by(nickname: "sam") }
-  end
-
-  test "an admin-set password leaves the address unconfirmed, and opens a link for it" do
-    created = invite(password: "correct-horse").dig("data", "createActor")
-
-    assert_equal false, created.dig("actor", "emailVerified")
-    assert_match %r{/verify/}, created["url"]
-  end
-
-  test "an invitation carries the scopes it names, the way setActorScopes does" do
-    body = ask(<<~GQL, bearer)
-      mutation {
-        createActor(nickname: "sam", email: "sam@example.com", scopes: ["openid", "masks:manage"]) {
-          actor { scopes }
-        }
-      }
-    GQL
-
-    assert_includes body.dig("data", "createActor", "actor", "scopes"), "masks:manage"
-  end
-
-  test "an invited nickname already in use is refused rather than duplicated" do
-    invite
-
-    assert_match(/nickname/i, invite["errors"].first["message"])
-  end
-
-  test "an invitation can be resent, and the admin cannot resend to somebody activated" do
-    invited = invite.dig("data", "createActor", "actor", "uuid")
-
-    resent = ask(<<~GQL, admin)
-      mutation { resendInvitation(uuid: "#{invited}") { delivered url } }
-    GQL
-
-    assert_match %r{/invite/}, resent.dig("data", "resendInvitation", "url")
-
-    refused = ask(<<~GQL, admin)
-      mutation { resendInvitation(uuid: "#{@actor.uuid}") { delivered } }
-    GQL
-
-    assert_match(/already accepted/, refused["errors"].first["message"])
-  end
-
-  test "changing an address opens a confirmation for the new one" do
-    with_mailer do
-      body = ask(<<~GQL, admin)
-        mutation {
-          updateActor(uuid: "#{@actor.uuid}", email: "moved@example.invalid") {
-            actor { email emailVerified }
-          }
-        }
-      GQL
-
-      assert_equal false, body.dig("data", "updateActor", "actor", "emailVerified")
-
-      within(@tenant) do
-        held = EmailVerification.where(actor_id: @actor.id).live.sole
-
-        assert_equal "moved@example.invalid", held.address
-        assert held.delivered?
+module Masks
+  module Server
+    require "test_helper"
+    require "vips"
+
+    class ManageApiTest < ActionDispatch::IntegrationTest
+      include ActiveJob::TestHelper
+
+      setup do
+        host! host_for(@tenant)
+
+        @actor = create_actor(@tenant, scopes: "openid profile email masks:manage")
+        @client = create_client(
+          @tenant,
+          allowed_scopes: "openid profile email masks:manage",
+          approved_at: Time.current,
+          grant_types: [ "authorization_code", "refresh_token" ]
+        )
       end
-    end
-  end
 
-  test "an admin starts a password reset, and cannot start one for somebody invited" do
-    started = ask(<<~GQL, admin)
-      mutation { resetPassword(uuid: "#{@actor.uuid}") { delivered url } }
-    GQL
+      def resource
+        @resource ||= issuer_for(@tenant).manage_resource
+      end
 
-    assert_match %r{/reset/}, started.dig("data", "resetPassword", "url")
+      def bearer(scope: "openid masks:manage", for_resource: nil, actor: @actor)
+        sign_in_as(actor)
+        authorize(client_id: @client.client_id, scope: scope, resource: for_resource || resource)
+        consent! if awaiting_consent?
 
-    waiting = invite.dig("data", "createActor", "actor", "uuid")
+        token(
+          grant_type: "authorization_code",
+          code: code_from,
+          redirect_uri: OidcFlow::REDIRECT_URI,
+          code_verifier: verifier,
+          client_id: @client.client_id
+        )["access_token"]
+      end
 
-    refused = ask(<<~GQL, admin)
-      mutation { resetPassword(uuid: "#{waiting}") { delivered } }
-    GQL
+      def ask(query, token, **variables)
+        post "/manage/graphql",
+             params: { query: query, variables: variables }.to_json,
+             headers: {
+               "CONTENT_TYPE" => "application/json",
+               "HTTP_AUTHORIZATION" => "Bearer #{token}"
+             }
 
-    assert_match(/has not accepted/, refused["errors"].first["message"])
-  end
+        JSON.parse(response.body)
+      end
 
-  def png(width = 900, height = 300)
-    Vips::Image.black(width, height)
-      .add(120).cast(:uchar)
-      .bandjoin([ Vips::Image.black(width, height).add(60).cast(:uchar),
-                  Vips::Image.black(width, height).add(200).cast(:uchar) ])
-      .copy(interpretation: :srgb)
-      .pngsave_buffer
-  end
+      test "the protected resource document names the scope and describes it" do
+        get "/.well-known/oauth-protected-resource"
 
-  def photo(bytes = png)
-    file = Tempfile.new([ "avatar", ".png" ], binmode: true)
-    file.write(bytes)
-    file.rewind
+        body = JSON.parse(response.body)
 
-    Rack::Test::UploadedFile.new(file.path, "image/png")
-  end
+        assert_response :success
+        assert_equal resource, body["resource"]
+        assert_equal [ origin_for(@tenant) ], body["authorization_servers"]
+        assert_equal [ "masks:manage" ], body["scopes_supported"]
+        assert_equal "Manage masks", body.dig("scope_descriptions", "masks:manage")
+      end
 
-  UPLOAD = <<~GQL.freeze
-    mutation Upload($uuid: ID!, $photo: Upload!) {
-      uploadAvatar(uuid: $uuid, photo: $photo) { actor { uuid avatars { photo } } }
-    }
-  GQL
+      test "the document is also served under the resource path, as RFC 9728 asks" do
+        get "/.well-known/oauth-protected-resource/manage"
 
-  def upload(uuid:, token: admin, file: photo)
-    post manage_graphql_path,
-         params: {
-           operations: {
-             query: UPLOAD, variables: { uuid: uuid, photo: nil }
-           }.to_json,
-           map: { "0" => [ "variables.photo" ] }.to_json,
-           "0" => file
-         },
-         headers: { "Authorization" => "Bearer #{token}" }
-  end
+        assert_response :success
+        assert_equal resource, JSON.parse(response.body)["resource"]
+      end
 
-  test "an admin uploads a photo over the multipart spec, squared and re-encoded" do
-    subject = within(@tenant) { create_actor(@tenant, nickname: "sam") }
+      test "a bearer carrying masks:manage reaches the schema" do
+        body = ask("{ viewer { nickname scopes } }", bearer)
 
-    upload(uuid: subject.uuid)
+        assert_response :success
+        assert_equal @actor.nickname, body.dig("data", "viewer", "nickname")
+        assert_includes body.dig("data", "viewer", "scopes"), "masks:manage"
+      end
 
-    assert_response :success
-    assert_nil response.parsed_body["errors"]
-    assert_match %r{/avatars/#{subject.uuid}},
-                 response.parsed_body.dig("data", "uploadAvatar", "actor", "avatars", "photo")
+      test "no bearer at all is refused" do
+        post "/manage/graphql", params: { query: "{ viewer { nickname } }" }.to_json,
+                                headers: { "CONTENT_TYPE" => "application/json" }
 
-    within(@tenant) do
-      held = Avatar.sole
-      square = Vips::Image.new_from_buffer(held.data, "")
+        assert_response :unauthorized
+      end
 
-      assert_equal subject.id, held.actor_id
-      assert_equal Pictures::CONTENT_TYPE, held.content_type
-      assert_equal [ Avatar::STORED, Avatar::STORED ], [ square.width, square.height ]
-    end
-  end
+      test "a token without masks:manage is refused with insufficient_scope, naming the scope" do
+        held = bearer(scope: "openid profile")
 
-  test "an upload that is not an image is refused rather than stored" do
-    upload(uuid: @actor.uuid, file: Rack::Test::UploadedFile.new(__FILE__, "image/png"))
+        body = ask("{ viewer { nickname } }", held)
 
-    assert_match(/has to be an image/, response.parsed_body["errors"].first["message"])
-    assert_equal 0, within(@tenant) { Avatar.count }
-  end
+        assert_response :forbidden
+        assert_equal "insufficient_scope", body["error"]
+        assert_equal "masks:manage", body["scope"]
+      end
 
-  test "uploading for an unknown actor is refused" do
-    upload(uuid: SecureRandom.uuid)
+      test "a token issued for another resource is refused" do
+        held = bearer(for_resource: "https://uris.example.com/api")
 
-    assert_match(/no actor with that uuid/, response.parsed_body["errors"].first["message"])
-    assert_equal 0, within(@tenant) { Avatar.count }
-  end
+        ask("{ viewer { nickname } }", held)
 
-  test "a variable the map never filled in is refused as a missing file" do
-    post manage_graphql_path,
-         params: {
-           operations: { query: UPLOAD, variables: { uuid: @actor.uuid, photo: nil } }.to_json,
-           map: {}.to_json
-         },
-         headers: { "Authorization" => "Bearer #{admin}" }
+        assert_response :unauthorized
+      end
 
-    assert response.parsed_body["errors"].any?
-    assert_equal 0, within(@tenant) { Avatar.count }
-  end
+      test "an actor stripped of masks:manage cannot use a token that still carries it" do
+        held = bearer
 
-  test "a token without masks:manage cannot upload a photo for anybody" do
-    plain = create_actor(@tenant, nickname: "plain", scopes: "openid profile email")
+        within(@tenant) { @actor.update!(scopes: "openid profile email") }
 
-    upload(uuid: @actor.uuid, token: bearer(scope: "openid", actor: plain))
+        ask("{ viewer { nickname } }", held)
 
-    assert_response :forbidden
-    assert_match(/insufficient_scope/, response.parsed_body["error"])
-    assert_equal 0, within(@tenant) { Avatar.count }
-  end
+        assert_response :unauthorized
+      end
 
-  test "backup codes are refused for an actor with no second factor" do
-    plain = create_actor(@tenant, nickname: "plain")
-    body = ask(%(mutation { generateBackupCodes(uuid: "#{plain.uuid}") { codes } }), bearer)
+      test "actors and clients are listed, and the tenant is readable" do
+        body = ask("{ actors { nickname } clients { clientId } tenant { subdomain } }", bearer)
 
-    assert_match "way past a second factor", body["errors"].first["message"]
-  end
+        assert_equal [ @actor.nickname ], body.dig("data", "actors").map { |a| a["nickname"] }
+        assert_equal [ @client.client_id ], body.dig("data", "clients").map { |c| c["clientId"] }
+        assert_equal @tenant.subdomain, body.dig("data", "tenant", "subdomain")
+      end
 
-  test "backup codes are generated once an authenticator exists, retiring the rake task" do
-    held = bearer
-    enable_otp(@actor, @tenant)
+      test "another tenant's actors are not visible" do
+        create_actor(other_tenant, nickname: "elsewhere")
 
-    body = ask(%(mutation { generateBackupCodes(uuid: "#{@actor.uuid}") { codes actor { backupCodesRemaining } } }), held)
+        body = ask("{ actors { nickname } }", bearer)
 
-    assert_equal Actor::BACKUP_CODES, body.dig("data", "generateBackupCodes", "codes").length
-    assert_equal Actor::BACKUP_CODES, body.dig("data", "generateBackupCodes", "actor", "backupCodesRemaining")
-  end
+        refute_includes body.dig("data", "actors").map { |a| a["nickname"] }, "elsewhere"
+      end
 
-  test "the admin API cannot hand a masks: scope to a client nobody approved" do
-    dynamic = create_client(@tenant, name: "Dynamic", dynamic: true)
+      test "the ten profile claims that had no editor are writable" do
+        body = ask(<<~GQL, bearer)
+          mutation {
+            updateActor(uuid: "#{@actor.uuid}", givenName: "Ada", locale: "en-CA", zoneinfo: "America/Vancouver") {
+              actor { givenName locale zoneinfo }
+            }
+          }
+        GQL
 
-    body = ask(<<~GQL, bearer)
-      mutation {
-        updateClient(clientId: "#{dynamic.client_id}", allowedScopes: ["openid", "masks:manage"]) {
-          client { allowedScopes }
+        assert_nil body["errors"]
+        assert_equal "Ada", body.dig("data", "updateActor", "actor", "givenName")
+        assert_equal "America/Vancouver", body.dig("data", "updateActor", "actor", "zoneinfo")
+      end
+
+      test "a profile field cleared to empty leaves the claim absent, not present and blank" do
+        ask(%(mutation { updateActor(uuid: "#{@actor.uuid}", gender: "") { actor { gender } } }), bearer)
+
+        actor = within(@tenant) { @actor.reload }
+
+        assert_nil actor.gender
+        refute_includes actor.claims("openid profile", subject: actor.uuid).keys, "gender"
+      end
+
+      test "changing an email takes its verification with it" do
+        within(@tenant) { @actor.update!(email: "owner@example.invalid", email_verified_at: Time.current) }
+
+        body = ask(<<~GQL, bearer)
+          mutation {
+            updateActor(uuid: "#{@actor.uuid}", email: "moved@example.invalid") {
+              actor { email emailVerified }
+            }
+          }
+        GQL
+
+        assert_equal "moved@example.invalid", body.dig("data", "updateActor", "actor", "email")
+        refute body.dig("data", "updateActor", "actor", "emailVerified")
+      end
+
+      test "required_scopes is writable, which nothing but the console could do" do
+        body = ask(<<~GQL, bearer)
+          mutation {
+            updateClient(clientId: "#{@client.client_id}", requiredScopes: ["openid"]) {
+              client { requiredScopes }
+            }
+          }
+        GQL
+
+        assert_equal [ "openid" ], body.dig("data", "updateClient", "client", "requiredScopes")
+      end
+
+      test "an admin cannot take masks:manage away from themselves" do
+        body = ask(<<~GQL, bearer)
+          mutation {
+            setActorScopes(uuid: "#{@actor.uuid}", scopes: ["openid", "profile"]) {
+              actor { scopes }
+            }
+          }
+        GQL
+
+        assert_match "cannot take masks:manage away from yourself", body["errors"].first["message"]
+        assert_includes within(@tenant) { @actor.reload.scope_list }, "masks:manage"
+      end
+
+      test "an admin may grant masks:manage to somebody else" do
+        second = create_actor(@tenant, nickname: "second", email: "second@example.invalid")
+
+        body = ask(<<~GQL, bearer)
+          mutation {
+            setActorScopes(uuid: "#{second.uuid}", scopes: ["openid", "masks:manage"]) {
+              actor { scopes }
+            }
+          }
+        GQL
+
+        assert_includes body.dig("data", "setActorScopes", "actor", "scopes"), "masks:manage"
+      end
+
+      test "masks:manage is refused to an account that is only half named" do
+        second = create_actor(@tenant, nickname: "second")
+
+        body = ask(<<~GQL, bearer)
+          mutation {
+            setActorScopes(uuid: "#{second.uuid}", scopes: ["openid", "masks:manage"]) {
+              actor { scopes }
+            }
+          }
+        GQL
+
+        assert_match(/email/i, body["errors"].first["message"])
+        refute_includes within(@tenant) { second.reload.scope_list }, "masks:manage"
+      end
+
+      test "dynamic registration is turned off, and the endpoint and discovery both say so" do
+        body = ask(<<~GQL, bearer)
+          mutation {
+            updateTenant(dynamicRegistration: "off") { tenant { dynamicRegistration } }
+          }
+        GQL
+
+        assert_nil body["errors"]
+        assert_equal "off", body.dig("data", "updateTenant", "tenant", "dynamicRegistration")
+
+        refute issuer_for(@tenant.reload).discovery.key?("registration_endpoint")
+
+        post "/register", params: { redirect_uris: [ OidcFlow::REDIRECT_URI ], client_name: "Nope" },
+             as: :json
+
+        assert_response :forbidden
+        assert_equal "access_denied", JSON.parse(response.body)["error"]
+      end
+
+      test "mail is configured at runtime through an adapter, and its password never comes back out" do
+        held = bearer
+        body = ask(<<~GQL, held)
+          mutation {
+            createAdapter(
+              key: "relay"
+              service: "smtp"
+              name: "Relay"
+              config: { from: "masks@example.invalid", address: "smtp.example.invalid", port: 2525,
+                        username: "postmaster", password: "hunter2", tls: true }
+            ) {
+              adapter { key kind service primary settings secretsHeld }
+            }
+          }
+        GQL
+
+        assert_nil body["errors"]
+
+        adapter = body.dig("data", "createAdapter", "adapter")
+
+        assert adapter["primary"], "the first adapter of its kind is primary"
+        assert_equal "mail", adapter["kind"]
+        assert_equal 2525, adapter.dig("settings", "port")
+        assert adapter.dig("settings", "tls")
+        refute adapter["settings"].key?("password")
+        assert_equal [ "password" ], adapter["secretsHeld"]
+        assert ask(%(query { tenant { mails } }), held).dig("data", "tenant", "mails")
+        assert_equal "hunter2", within(@tenant) { Adapter.sole[:password] }
+
+        asked = ask(%(query { adapters { secrets } }), held)
+
+        assert_match(/secrets/, asked["errors"].first["message"])
+      end
+
+      test "a sign-in policy is created, named as the default, and chosen by a client" do
+        held = bearer
+
+        body = ask(<<~GQL, held)
+          mutation {
+            createSignInPolicy(key: "customers", name: "Customers", signup: true, confirmation: "code",
+                               secondFactorRequired: true, emailDomains: ["@Example.com"],
+                               signupScopes: ["openid", "email"]) {
+              signInPolicy { key signup confirmation secondFactorRequired emailDomains signupScopes default }
+            }
+          }
+        GQL
+
+        assert_nil body["errors"]
+
+        created = body.dig("data", "createSignInPolicy", "signInPolicy")
+
+        assert created["signup"]
+        assert_equal [ "example.com" ], created["emailDomains"]
+        assert_equal %w[email openid], created["signupScopes"].sort
+        refute created["default"]
+
+        ask(%(mutation { updateTenant(signInPolicy: "customers") { tenant { name } } }), held)
+
+        assert ask(%(query { signInPolicy(key: "customers") { default } }), held).dig("data", "signInPolicy", "default")
+
+        ask(%(mutation { updateClient(clientId: "#{@client.client_id}", signInPolicy: "customers") { client { clientId } } }), held)
+
+        assert_equal "customers", within(@tenant) { @client.reload.sign_in_policy.key }
+
+        ask(%(mutation { updateClient(clientId: "#{@client.client_id}", signInPolicy: "") { client { clientId } } }), held)
+
+        assert_nil within(@tenant) { @client.reload.sign_in_policy }
+
+        refused = ask(%(mutation { archiveSignInPolicy(key: "customers") { signInPolicy { key } } }), held)
+
+        assert_match "default", refused["errors"].first["message"]
+      end
+
+      test "a manager sets the links and logo people are shown, and a link that is not a URL is refused" do
+        held = bearer
+        stub_request(:get, "https://probe.example.com/logo.png")
+          .to_return(body: Vips::Image.black(40, 40).pngsave_buffer, headers: { "Content-Type" => "image/png" })
+
+        refused = ask(%(mutation { updateClient(clientId: "#{@client.client_id}", tosUri: "javascript:alert(1)") { client { tosUri } } }), held)
+
+        assert_match "must be an http or https URL", refused["errors"].first["message"]
+
+        body = nil
+
+        perform_enqueued_jobs do
+          body = ask(<<~GQL, held)
+            mutation {
+              updateClient(clientId: "#{@client.client_id}", tosUri: "https://probe.example.com/terms",
+                           logoUri: "https://probe.example.com/logo.png") { client { tosUri } }
+            }
+          GQL
+        end
+
+        assert_equal "https://probe.example.com/terms", body.dig("data", "updateClient", "client", "tosUri")
+
+        shown = ask(%(query { client(clientId: "#{@client.client_id}") { logoUrl } }), held)
+
+        assert_match %r{/clients/#{@client.client_id}/logo\?v=\h{16}}, shown.dig("data", "client", "logoUrl")
+      end
+
+      test "the policy a client falls back to is the tenant's default, or the built-in one without it" do
+        held = bearer
+        fallback = %(query { defaultSignInPolicy { key name signup createdAt default } })
+
+        built_in = ask(fallback, held).dig("data", "defaultSignInPolicy")
+
+        assert_equal "default", built_in["key"]
+        assert_nil built_in["createdAt"]
+        assert built_in["default"]
+
+        ask(%(mutation { createSignInPolicy(key: "customers", name: "Customers", signup: true) { signInPolicy { key } } }), held)
+        ask(%(mutation { updateTenant(signInPolicy: "customers") { tenant { name } } }), held)
+
+        chosen = ask(fallback, held).dig("data", "defaultSignInPolicy")
+
+        assert_equal "customers", chosen["key"]
+        assert chosen["signup"]
+        assert chosen["createdAt"]
+      end
+
+      test "a manager lists who is waiting for approval and lets them in" do
+        waiting = create_actor(@tenant, nickname: "waiting", pending_approval_at: Time.current, signed_up_at: Time.current)
+        held = bearer
+
+        listed = ask(%(query { actors(pendingApproval: true) { nickname pendingApproval } }), held)
+
+        assert_equal [ "waiting" ], listed.dig("data", "actors").map { |actor| actor["nickname"] }
+
+        body = ask(%(mutation { approveActor(uuid: "#{waiting.uuid}") { actor { pendingApproval } } }), held)
+
+        refute body.dig("data", "approveActor", "actor", "pendingApproval")
+        assert within(@tenant) { Event.where(action: Event::ACTOR_APPROVED, actor_id: waiting.id).exists? }
+
+        again = ask(%(mutation { approveActor(uuid: "#{waiting.uuid}") { actor { pendingApproval } } }), held)
+
+        assert_match "not waiting", again["errors"].first["message"]
+      end
+
+      test "a sign-in policy cannot hand out masks: scopes to whoever signs up" do
+        body = ask(<<~GQL, bearer)
+          mutation {
+            createSignInPolicy(key: "open", name: "Open", signup: true, signupScopes: ["openid", "masks:manage"]) {
+              signInPolicy { key }
+            }
+          }
+        GQL
+
+        assert_match "masks:manage", body["errors"].first["message"]
+        assert_equal 0, within(@tenant) { SignInPolicy.count }
+      end
+
+      test "adapters of every kind are offered, with the fields each one needs" do
+        body = ask(%(query { adapterServices { service kind label fields { key secret required } } }), bearer)
+        services = body.dig("data", "adapterServices").index_by { |held| held["service"] }
+
+        assert_equal "mail", services.dig("smtp", "kind")
+        %w[twilio vonage plivo telnyx sinch message_bird infobip sns click_send].each do |name|
+          assert_equal "sms", services.dig(name, "kind"), name
+        end
+        assert services.dig("twilio", "fields").any? { |field| field["key"] == "auth_token" && field["secret"] }
+      end
+
+      test "making another adapter primary demotes the one before it, and archiving takes it out of use" do
+        held = bearer
+
+        %w[first second].each do |key|
+          ask(<<~GQL, held)
+            mutation {
+              createAdapter(key: "#{key}", service: "twilio", name: "#{key}",
+                            config: { account_sid: "AC1", auth_token: "t", from: "+15551234567" }) { adapter { key } }
+            }
+          GQL
+        end
+
+        assert_equal "first", within(@tenant) { @tenant.sms_adapter.key }
+
+        ask(%(mutation { updateAdapter(key: "second", primary: true) { adapter { key } } }), held)
+
+        assert_equal "second", within(@tenant) { @tenant.sms_adapter.key }
+        refute within(@tenant) { Adapter.find_by(key: "first").primary }
+
+        ask(%(mutation { archiveAdapter(key: "second") { adapter { key } } }), held)
+
+        assert_nil within(@tenant) { @tenant.sms_adapter }
+      end
+
+      test "a test message reports what the service said rather than failing the request" do
+        held = bearer
+        ask(<<~GQL, held)
+          mutation {
+            createAdapter(key: "sms", service: "twilio", name: "Twilio",
+                          config: { account_sid: "AC1", auth_token: "wrong", from: "+15551234567" }) { adapter { key } }
+          }
+        GQL
+
+        stub_request(:post, %r{api.twilio.com}).to_return(status: 401, body: %({"message":"Authenticate"}))
+
+        body = ask(%(mutation { testAdapter(key: "sms", to: "+15557654321") { delivered failure } }), held)
+
+        refute body.dig("data", "testAdapter", "delivered")
+        assert_match "Authenticate", body.dig("data", "testAdapter", "failure")
+        assert within(@tenant) { Event.where(action: Event::ADAPTER_TESTED).exists? }
+      end
+
+      test "an adapter for a service masks does not have is refused" do
+        body = ask(%(mutation { createAdapter(key: "x", service: "carrier-pigeon", name: "x") { adapter { key } } }), bearer)
+
+        assert_match "no adapter for carrier-pigeon", body["errors"].first["message"]
+      end
+
+      test "a mode masks does not know is refused" do
+        body = ask(%(mutation { updateTenant(dynamicRegistration: "sometimes") { tenant { name } } }),
+                   bearer)
+
+        assert_match "off, anything or bounded", body["errors"].first["message"]
+      end
+
+      test "an actor carries their own sessions and devices, so one query draws the page" do
+        body = ask(<<~GQL, bearer)
+          query {
+            actors {
+              uuid nickname
+              sessions { id ipAddress authenticatedAt expiresAt }
+              devices { id label blockedAt }
+            }
+            viewer { uuid }
+            scopesSupported
+          }
+        GQL
+
+        assert_nil body["errors"], body["errors"].to_s
+
+        person = body.dig("data", "actors").sole
+
+        assert_equal @actor.uuid, person["uuid"]
+        assert_equal 1, person["sessions"].length
+        assert_equal 1, person["devices"].length
+        assert_equal @actor.uuid, body.dig("data", "viewer", "uuid")
+      end
+
+      test "an actor's sessions are the live ones, and revoking one drops it from them" do
+        held = bearer
+
+        id = ask("{ actors { sessions { id } } }", held).dig("data", "actors").sole["sessions"].sole["id"]
+
+        ask(%(mutation { revokeSession(id: "#{id}") { session { revokedAt } } }), held)
+
+        assert_empty ask("{ actors { sessions { id } } }", held).dig("data", "actors").sole["sessions"]
+      end
+
+      test "devices nobody signed in on are askable on their own, so they stay blockable" do
+        held = bearer
+
+        within(@tenant) { Masks::Server::Device.identify(nil, user_agent: "curl/8", ip_address: "10.0.0.9") }
+
+        listed = ask("{ devices(unattached: true) { id label userAgent } }", held).dig("data", "devices")
+
+        assert_equal [ "curl/8" ], listed.map { |one| one["userAgent"] }
+
+        blocked = ask(%(mutation { blockDevice(id: "#{listed.sole['id']}") { device { blockedAt } } }), held)
+
+        assert_not_nil blocked.dig("data", "blockDevice", "device", "blockedAt")
+      end
+
+      test "devices are filtered by a fragment of their agent, ignoring case" do
+        held = bearer
+
+        within(@tenant) do
+          Masks::Server::Device.identify(nil, user_agent: "curl/8.4.0")
+          Masks::Server::Device.identify(nil, user_agent: "python-requests/2.31")
+        end
+
+        listed = ask(%({ devices(agent: "CURL") { userAgent } }), held).dig("data", "devices")
+
+        assert_equal [ "curl/8.4.0" ], listed.map { |one| one["userAgent"] }
+      end
+
+      test "every device matching an agent is blocked at once, and the agent is refused from then on" do
+        held = bearer
+
+        curls = within(@tenant) do
+          [ Masks::Server::Device.identify(nil, user_agent: "curl/8.4.0"), Masks::Server::Device.identify(nil, user_agent: "curl/7.1") ]
+        end
+        other = within(@tenant) { Masks::Server::Device.identify(nil, user_agent: "python-requests/2.31") }
+
+        body = ask(%(mutation { blockDevices(agent: "curl", refuse: true) { count spared } }), held)
+
+        assert_equal({ "count" => 2, "spared" => false }, body.dig("data", "blockDevices"))
+        within(@tenant) do
+          assert curls.all? { |device| device.reload.blocked? }
+          assert_not other.reload.blocked?
+          assert_equal 2, Event.where(action: Event::DEVICE_BLOCKED).count
+          assert Tenant.find(@tenant.id).refuses?("curl/9")
+        end
+
+        ask(%(mutation { blockDevices(agent: "curl", refuse: true) { count } }), held)
+
+        assert_equal "curl", within(@tenant) { Tenant.find(@tenant.id).blocked_agents }
+      end
+
+      test "a bulk block never shuts out the device the manager is asking from" do
+        held = bearer
+
+        within(@tenant) do
+          Token.where.not(device_id: nil).last.device.update!(user_agent: "Mozilla/5.0 console")
+          Masks::Server::Device.identify(nil, user_agent: "Mozilla/5.0 elsewhere")
+        end
+
+        body = ask(%(mutation { blockDevices(agent: "mozilla") { count spared } }), held)
+
+        assert_equal({ "count" => 1, "spared" => true }, body.dig("data", "blockDevices"))
+        assert_nil ask("{ viewer { nickname } }", held)["errors"]
+        assert_response :success
+      end
+
+      test "chosen devices are blocked and unblocked together" do
+        held = bearer
+
+        chosen = within(@tenant) { Array.new(3) { |n| Masks::Server::Device.identify(nil, user_agent: "bot/#{n}") } }
+        ids = chosen.map { |device| device.id.to_s }
+
+        blocked = ask("mutation($ids: [ID!]) { blockDevices(ids: $ids) { count } }", held, ids: ids)
+
+        assert_equal 3, blocked.dig("data", "blockDevices", "count")
+
+        unblocked = ask("mutation($ids: [ID!]!) { unblockDevices(ids: $ids) { count } }", held, ids: ids.first(2))
+
+        assert_equal 2, unblocked.dig("data", "unblockDevices", "count")
+        assert_equal [ false, false, true ], within(@tenant) { chosen.map { |device| device.reload.blocked? } }
+      end
+
+      test "a bulk block names its devices one way, and an agent is needed to refuse one" do
+        held = bearer
+
+        [
+          %(mutation { blockDevices { count } }),
+          %(mutation { blockDevices(ids: ["1"], agent: "curl") { count } }),
+          %(mutation { blockDevices(ids: ["1"], refuse: true) { count } })
+        ].each do |query|
+          assert ask(query, held)["errors"].present?, query
+        end
+      end
+
+      test "a nickname is writable, so a rename does not mean a new account" do
+        body = ask(<<~GQL, bearer)
+          mutation { updateActor(uuid: "#{@actor.uuid}", nickname: "renamed") { actor { nickname } } }
+        GQL
+
+        assert_equal "renamed", body.dig("data", "updateActor", "actor", "nickname")
+        assert_equal "renamed", within(@tenant) { @actor.reload.nickname }
+      end
+
+      test "a manager cannot empty the nickname a manager has to have" do
+        body = ask(%(mutation { updateActor(uuid: "#{@actor.uuid}", nickname: "") { actor { uuid } } }), bearer)
+
+        assert_match(/nickname/i, body["errors"].first["message"])
+      end
+
+      test "signing an actor out ends every session and refresh token they hold" do
+        held = bearer
+        second = create_actor(@tenant, nickname: "second")
+
+        within(@tenant) do
+          Session.start!(actor: second)
+          RefreshToken.mint!(actor: second, client: @client)
+        end
+
+        ask(%(mutation { signOutActor(uuid: "#{second.uuid}") { actor { uuid } } }), held)
+
+        within(@tenant) do
+          assert_empty Session.live.where(actor: second).to_a
+          assert_empty RefreshToken.live.where(actor: second).to_a
+        end
+      end
+
+      test "deleting an actor takes everything that pointed at them with it" do
+        held = bearer
+        second = create_actor(@tenant, nickname: "second")
+        approved = create_client(@tenant, name: "Theirs", approved_at: Time.current, approved_by: second)
+
+        within(@tenant) do
+          Session.start!(actor: second)
+          Consent.create!(actor: second, client: @client, scopes: "openid")
+          RefreshToken.mint!(actor: second, client: @client)
+        end
+
+        body = ask(%(mutation { deleteActor(uuid: "#{second.uuid}") { uuid identifier } }), held)
+
+        assert_nil body["errors"]
+        assert_equal "second", body.dig("data", "deleteActor", "identifier")
+
+        within(@tenant) do
+          assert_nil Actor.find_by(uuid: second.uuid)
+          assert_empty Session.where(actor_id: second.id).to_a
+          assert_empty Consent.where(actor_id: second.id).to_a
+          assert_empty Token.where(actor_id: second.id).to_a
+          assert_nil approved.reload.approved_by_id
+        end
+      end
+
+      test "an admin cannot delete themselves" do
+        body = ask(%(mutation { deleteActor(uuid: "#{@actor.uuid}") { uuid } }), bearer)
+
+        assert_match "would lock you out", body["errors"].first["message"]
+        assert_not_nil within(@tenant) { Actor.find_by(uuid: @actor.uuid) }
+      end
+
+      def admin
+        @admin ||= bearer
+      end
+
+      def invite(nickname: "sam", email: "sam@example.com", password: nil, scopes: nil)
+        ask(<<~GQL, admin)
+          mutation {
+            createActor(
+              nickname: "#{nickname}"
+              #{email ? ", email: \"#{email}\"" : ''}
+              #{password ? ", password: \"#{password}\"" : ''}
+              #{scopes ? ", scopes: #{scopes.inspect}" : ''}
+            ) {
+              delivered url actor { uuid nickname activated emailVerified invitedAt }
+            }
+          }
+        GQL
+      end
+
+      test "an admin invites somebody, and gets a link back when there is no mailer" do
+        body = invite
+
+        invited = body.dig("data", "createActor")
+
+        assert_nil body["errors"]
+        assert_equal false, invited["delivered"]
+        assert_match %r{/invite/}, invited["url"]
+        assert_equal false, invited.dig("actor", "activated")
+        assert_not_nil invited.dig("actor", "invitedAt")
+      end
+
+      test "with a mailer configured the link is mailed and never handed to the admin" do
+        with_mailer do
+          body = invite
+
+          invited = body.dig("data", "createActor")
+
+          assert_equal true, invited["delivered"]
+          assert_nil invited["url"]
+          assert_equal 1, enqueued_jobs.count { |job| job[:args].first == "Masks::Server::ActorMailer" }
+        end
+      end
+
+      test "an admin adds somebody with no address at all, and hands the link over" do
+        body = invite(email: nil)
+
+        invited = body.dig("data", "createActor")
+
+        assert_nil body["errors"]
+        assert_equal false, invited["delivered"]
+        assert_match %r{/invite/}, invited["url"]
+        assert_equal false, invited.dig("actor", "activated")
+      end
+
+      test "an admin sets the password, and that actor is activated without a link" do
+        body = invite(email: nil, password: "correct-horse")
+
+        created = body.dig("data", "createActor")
+
+        assert_nil body["errors"]
+        assert_equal true, created.dig("actor", "activated")
+        assert_nil created["url"]
+
+        within(@tenant) do
+          assert_not_nil Actor.authenticate("sam", "correct-horse")
+        end
+      end
+
+      test "an admin-set password still has to clear the minimum" do
+        body = invite(password: "short")
+
+        assert_match(/at least #{Actor::MINIMUM_PASSWORD}/, body["errors"].first["message"])
+        assert_nil within(@tenant) { Actor.find_by(nickname: "sam") }
+      end
+
+      test "an admin-set password leaves the address unconfirmed, and opens a link for it" do
+        created = invite(password: "correct-horse").dig("data", "createActor")
+
+        assert_equal false, created.dig("actor", "emailVerified")
+        assert_match %r{/verify/}, created["url"]
+      end
+
+      test "an invitation carries the scopes it names, the way setActorScopes does" do
+        body = ask(<<~GQL, bearer)
+          mutation {
+            createActor(nickname: "sam", email: "sam@example.com", scopes: ["openid", "masks:manage"]) {
+              actor { scopes }
+            }
+          }
+        GQL
+
+        assert_includes body.dig("data", "createActor", "actor", "scopes"), "masks:manage"
+      end
+
+      test "an invited nickname already in use is refused rather than duplicated" do
+        invite
+
+        assert_match(/nickname/i, invite["errors"].first["message"])
+      end
+
+      test "an invitation can be resent, and the admin cannot resend to somebody activated" do
+        invited = invite.dig("data", "createActor", "actor", "uuid")
+
+        resent = ask(<<~GQL, admin)
+          mutation { resendInvitation(uuid: "#{invited}") { delivered url } }
+        GQL
+
+        assert_match %r{/invite/}, resent.dig("data", "resendInvitation", "url")
+
+        refused = ask(<<~GQL, admin)
+          mutation { resendInvitation(uuid: "#{@actor.uuid}") { delivered } }
+        GQL
+
+        assert_match(/already accepted/, refused["errors"].first["message"])
+      end
+
+      test "changing an address opens a confirmation for the new one" do
+        with_mailer do
+          body = ask(<<~GQL, admin)
+            mutation {
+              updateActor(uuid: "#{@actor.uuid}", email: "moved@example.invalid") {
+                actor { email emailVerified }
+              }
+            }
+          GQL
+
+          assert_equal false, body.dig("data", "updateActor", "actor", "emailVerified")
+
+          within(@tenant) do
+            held = EmailVerification.where(actor_id: @actor.id).live.sole
+
+            assert_equal "moved@example.invalid", held.address
+            assert held.delivered?
+          end
+        end
+      end
+
+      test "an admin starts a password reset, and cannot start one for somebody invited" do
+        started = ask(<<~GQL, admin)
+          mutation { resetPassword(uuid: "#{@actor.uuid}") { delivered url } }
+        GQL
+
+        assert_match %r{/reset/}, started.dig("data", "resetPassword", "url")
+
+        waiting = invite.dig("data", "createActor", "actor", "uuid")
+
+        refused = ask(<<~GQL, admin)
+          mutation { resetPassword(uuid: "#{waiting}") { delivered } }
+        GQL
+
+        assert_match(/has not accepted/, refused["errors"].first["message"])
+      end
+
+      def png(width = 900, height = 300)
+        Vips::Image.black(width, height)
+          .add(120).cast(:uchar)
+          .bandjoin([ Vips::Image.black(width, height).add(60).cast(:uchar),
+                      Vips::Image.black(width, height).add(200).cast(:uchar) ])
+          .copy(interpretation: :srgb)
+          .pngsave_buffer
+      end
+
+      def photo(bytes = png)
+        file = Tempfile.new([ "avatar", ".png" ], binmode: true)
+        file.write(bytes)
+        file.rewind
+
+        Rack::Test::UploadedFile.new(file.path, "image/png")
+      end
+
+      UPLOAD = <<~GQL.freeze
+        mutation Upload($uuid: ID!, $photo: Upload!) {
+          uploadAvatar(uuid: $uuid, photo: $photo) { actor { uuid avatars { photo } } }
         }
-      }
-    GQL
+      GQL
+
+      def upload(uuid:, token: admin, file: photo)
+        post manage_graphql_path,
+             params: {
+               operations: {
+                 query: UPLOAD, variables: { uuid: uuid, photo: nil }
+               }.to_json,
+               map: { "0" => [ "variables.photo" ] }.to_json,
+               "0" => file
+             },
+             headers: { "Authorization" => "Bearer #{token}" }
+      end
+
+      test "an admin uploads a photo over the multipart spec, squared and re-encoded" do
+        subject = within(@tenant) { create_actor(@tenant, nickname: "sam") }
+
+        upload(uuid: subject.uuid)
+
+        assert_response :success
+        assert_nil response.parsed_body["errors"]
+        assert_match %r{/avatars/#{subject.uuid}},
+                     response.parsed_body.dig("data", "uploadAvatar", "actor", "avatars", "photo")
+
+        within(@tenant) do
+          held = Avatar.sole
+          square = Vips::Image.new_from_buffer(held.data, "")
+
+          assert_equal subject.id, held.actor_id
+          assert_equal Pictures::CONTENT_TYPE, held.content_type
+          assert_equal [ Avatar::STORED, Avatar::STORED ], [ square.width, square.height ]
+        end
+      end
+
+      test "an upload that is not an image is refused rather than stored" do
+        upload(uuid: @actor.uuid, file: Rack::Test::UploadedFile.new(__FILE__, "image/png"))
+
+        assert_match(/has to be an image/, response.parsed_body["errors"].first["message"])
+        assert_equal 0, within(@tenant) { Avatar.count }
+      end
+
+      test "uploading for an unknown actor is refused" do
+        upload(uuid: SecureRandom.uuid)
+
+        assert_match(/no actor with that uuid/, response.parsed_body["errors"].first["message"])
+        assert_equal 0, within(@tenant) { Avatar.count }
+      end
+
+      test "a variable the map never filled in is refused as a missing file" do
+        post manage_graphql_path,
+             params: {
+               operations: { query: UPLOAD, variables: { uuid: @actor.uuid, photo: nil } }.to_json,
+               map: {}.to_json
+             },
+             headers: { "Authorization" => "Bearer #{admin}" }
+
+        assert response.parsed_body["errors"].any?
+        assert_equal 0, within(@tenant) { Avatar.count }
+      end
+
+      test "a token without masks:manage cannot upload a photo for anybody" do
+        plain = create_actor(@tenant, nickname: "plain", scopes: "openid profile email")
+
+        upload(uuid: @actor.uuid, token: bearer(scope: "openid", actor: plain))
+
+        assert_response :forbidden
+        assert_match(/insufficient_scope/, response.parsed_body["error"])
+        assert_equal 0, within(@tenant) { Avatar.count }
+      end
+
+      test "backup codes are refused for an actor with no second factor" do
+        plain = create_actor(@tenant, nickname: "plain")
+        body = ask(%(mutation { generateBackupCodes(uuid: "#{plain.uuid}") { codes } }), bearer)
+
+        assert_match "way past a second factor", body["errors"].first["message"]
+      end
+
+      test "backup codes are generated once an authenticator exists, retiring the rake task" do
+        held = bearer
+        enable_otp(@actor, @tenant)
+
+        body = ask(%(mutation { generateBackupCodes(uuid: "#{@actor.uuid}") { codes actor { backupCodesRemaining } } }), held)
+
+        assert_equal Actor::BACKUP_CODES, body.dig("data", "generateBackupCodes", "codes").length
+        assert_equal Actor::BACKUP_CODES, body.dig("data", "generateBackupCodes", "actor", "backupCodesRemaining")
+      end
+
+      test "the admin API cannot hand a masks: scope to a client nobody approved" do
+        dynamic = create_client(@tenant, name: "Dynamic", dynamic: true)
+
+        body = ask(<<~GQL, bearer)
+          mutation {
+            updateClient(clientId: "#{dynamic.client_id}", allowedScopes: ["openid", "masks:manage"]) {
+              client { allowedScopes }
+            }
+          }
+        GQL
+
+        assert_match "may only be granted to an approved client", body["errors"].first["message"]
+        assert_empty within(@tenant) { Scopes.reserved(dynamic.reload.scope_list) }
+      end
 
-    assert_match "may only be granted to an approved client", body["errors"].first["message"]
-    assert_empty within(@tenant) { Scopes.reserved(dynamic.reload.scope_list) }
-  end
+      test "consent is asked for by default, and a manager may switch it off for an approved client" do
+        token = bearer
 
-  test "consent is asked for by default, and a manager may switch it off for an approved client" do
-    token = bearer
+        assert within(@tenant) { @client.reload.consent_required? }
 
-    assert within(@tenant) { @client.reload.consent_required? }
+        body = ask(<<~GQL, token)
+          mutation {
+            updateClient(clientId: "#{@client.client_id}", consentRequired: false) {
+              client { consentRequired }
+            }
+          }
+        GQL
 
-    body = ask(<<~GQL, token)
-      mutation {
-        updateClient(clientId: "#{@client.client_id}", consentRequired: false) {
-          client { consentRequired }
-        }
-      }
-    GQL
+        assert_equal false, body.dig("data", "updateClient", "client", "consentRequired")
+        assert_not within(@tenant) { @client.reload.consent_required? }
+      end
 
-    assert_equal false, body.dig("data", "updateClient", "client", "consentRequired")
-    assert_not within(@tenant) { @client.reload.consent_required? }
-  end
+      test "consent cannot be switched off for a client nobody approved" do
+        dynamic = create_client(@tenant, name: "Dynamic", dynamic: true)
 
-  test "consent cannot be switched off for a client nobody approved" do
-    dynamic = create_client(@tenant, name: "Dynamic", dynamic: true)
+        body = ask(<<~GQL, bearer)
+          mutation {
+            updateClient(clientId: "#{dynamic.client_id}", consentRequired: false) {
+              client { consentRequired }
+            }
+          }
+        GQL
 
-    body = ask(<<~GQL, bearer)
-      mutation {
-        updateClient(clientId: "#{dynamic.client_id}", consentRequired: false) {
-          client { consentRequired }
-        }
-      }
-    GQL
+        assert_match "may only be switched off for an approved client", body["errors"].first["message"]
+        assert within(@tenant) { dynamic.reload.consent_required? }
+      end
 
-    assert_match "may only be switched off for an approved client", body["errors"].first["message"]
-    assert within(@tenant) { dynamic.reload.consent_required? }
-  end
+      test "the ceiling offered to dynamic registration cannot include a masks: scope" do
+        body = ask(<<~GQL, bearer)
+          mutation {
+            updateTenant(dynamicClientScopes: ["openid", "masks:manage"]) { tenant { dynamicClientScopes } }
+          }
+        GQL
 
-  test "the ceiling offered to dynamic registration cannot include a masks: scope" do
-    body = ask(<<~GQL, bearer)
-      mutation {
-        updateTenant(dynamicClientScopes: ["openid", "masks:manage"]) { tenant { dynamicClientScopes } }
-      }
-    GQL
+        assert_match "may not be offered to dynamic registration", body["errors"].first["message"]
+      end
 
-    assert_match "may not be offered to dynamic registration", body["errors"].first["message"]
-  end
+      def stage(token)
+        ask(%(mutation { stageSigningKey { signingKey { kid state } } }), token)
+          .dig("data", "stageSigningKey", "signingKey")
+      end
 
-  def stage(token)
-    ask(%(mutation { stageSigningKey { signingKey { kid state } } }), token)
-      .dig("data", "stageSigningKey", "signingKey")
-  end
+      test "a staged key is published before it signs anything" do
+        signing = within(@tenant) { SigningKey.active.first.kid }
+        staged = stage(bearer)
 
-  test "a staged key is published before it signs anything" do
-    signing = within(@tenant) { SigningKey.active.first.kid }
-    staged = stage(bearer)
+        assert_equal "staged", staged["state"]
+        assert_not_equal signing, staged["kid"]
+        assert_equal signing, within(@tenant) { SigningKey.active.first.kid }
 
-    assert_equal "staged", staged["state"]
-    assert_not_equal signing, staged["kid"]
-    assert_equal signing, within(@tenant) { SigningKey.active.first.kid }
+        get "/.well-known/jwks.json"
 
-    get "/.well-known/jwks.json"
+        assert_includes JSON.parse(response.body)["keys"].map { |key| key["kid"] }, staged["kid"]
+      end
 
-    assert_includes JSON.parse(response.body)["keys"].map { |key| key["kid"] }, staged["kid"]
-  end
+      test "only one key may be staged at a time" do
+        held = bearer
+        stage(held)
 
-  test "only one key may be staged at a time" do
-    held = bearer
-    stage(held)
+        body = ask(%(mutation { stageSigningKey { signingKey { kid } } }), held)
 
-    body = ask(%(mutation { stageSigningKey { signingKey { kid } } }), held)
+        assert_match "already staged", body["errors"].first["message"]
+        assert_equal 1, within(@tenant) { SigningKey.staged.count }
+      end
 
-    assert_match "already staged", body["errors"].first["message"]
-    assert_equal 1, within(@tenant) { SigningKey.staged.count }
-  end
+      test "activating a staged key retires the outgoing one after an overlap" do
+        held = bearer
+        outgoing = within(@tenant) { SigningKey.active.first }
+        staged = stage(held)
 
-  test "activating a staged key retires the outgoing one after an overlap" do
-    held = bearer
-    outgoing = within(@tenant) { SigningKey.active.first }
-    staged = stage(held)
+        body = ask(
+          %(mutation { activateSigningKey(kid: "#{staged['kid']}") { signingKey { state } } }), held
+        )
 
-    body = ask(
-      %(mutation { activateSigningKey(kid: "#{staged['kid']}") { signingKey { state } } }), held
-    )
+        assert_equal "active", body.dig("data", "activateSigningKey", "signingKey", "state")
+        assert_equal staged["kid"], within(@tenant) { SigningKey.active.first.kid }
 
-    assert_equal "active", body.dig("data", "activateSigningKey", "signingKey", "state")
-    assert_equal staged["kid"], within(@tenant) { SigningKey.active.first.kid }
+        retired = within(@tenant) { outgoing.reload.retired_at }
 
-    retired = within(@tenant) { outgoing.reload.retired_at }
+        assert_operator retired, :>, Time.current
+        assert_in_delta SigningKey::OVERLAP.from_now.to_f, retired.to_f, 5
 
-    assert_operator retired, :>, Time.current
-    assert_in_delta SigningKey::OVERLAP.from_now.to_f, retired.to_f, 5
+        assert_nil ask("{ viewer { nickname } }", held)["errors"]
+      end
 
-    assert_nil ask("{ viewer { nickname } }", held)["errors"]
-  end
+      test "a key already signing cannot be activated again" do
+        held = bearer
+        signing = within(@tenant) { SigningKey.active.first.kid }
 
-  test "a key already signing cannot be activated again" do
-    held = bearer
-    signing = within(@tenant) { SigningKey.active.first.kid }
+        body = ask(%(mutation { activateSigningKey(kid: "#{signing}") { signingKey { state } } }), held)
 
-    body = ask(%(mutation { activateSigningKey(kid: "#{signing}") { signingKey { state } } }), held)
+        assert_match "already signing", body["errors"].first["message"]
+      end
 
-    assert_match "already signing", body["errors"].first["message"]
-  end
+      test "a staged key can be discarded, and a signing key cannot" do
+        held = bearer
+        staged = stage(held)
 
-  test "a staged key can be discarded, and a signing key cannot" do
-    held = bearer
-    staged = stage(held)
+        refused = ask(
+          %(mutation { discardSigningKey(kid: "#{within(@tenant) { SigningKey.active.first.kid }}") { kid } }),
+          held
+        )
 
-    refused = ask(
-      %(mutation { discardSigningKey(kid: "#{within(@tenant) { SigningKey.active.first.kid }}") { kid } }),
-      held
-    )
+        assert_match "only a staged key", refused["errors"].first["message"]
 
-    assert_match "only a staged key", refused["errors"].first["message"]
+        body = ask(%(mutation { discardSigningKey(kid: "#{staged['kid']}") { kid } }), held)
 
-    body = ask(%(mutation { discardSigningKey(kid: "#{staged['kid']}") { kid } }), held)
+        assert_equal staged["kid"], body.dig("data", "discardSigningKey", "kid")
+        assert_empty within(@tenant) { SigningKey.staged.to_a }
+      end
 
-    assert_equal staged["kid"], body.dig("data", "discardSigningKey", "kid")
-    assert_empty within(@tenant) { SigningKey.staged.to_a }
-  end
+      test "rotating stages and activates in one step" do
+        held = bearer
+        outgoing = within(@tenant) { SigningKey.active.first }
 
-  test "rotating stages and activates in one step" do
-    held = bearer
-    outgoing = within(@tenant) { SigningKey.active.first }
+        body = ask(%(mutation { rotateSigningKey { signingKey { kid state } } }), held)
+        minted = body.dig("data", "rotateSigningKey", "signingKey")
 
-    body = ask(%(mutation { rotateSigningKey { signingKey { kid state } } }), held)
-    minted = body.dig("data", "rotateSigningKey", "signingKey")
+        assert_equal "active", minted["state"]
+        assert_not_equal outgoing.kid, minted["kid"]
+        assert_equal minted["kid"], within(@tenant) { SigningKey.active.first.kid }
+        assert_empty within(@tenant) { SigningKey.staged.to_a }
 
-    assert_equal "active", minted["state"]
-    assert_not_equal outgoing.kid, minted["kid"]
-    assert_equal minted["kid"], within(@tenant) { SigningKey.active.first.kid }
-    assert_empty within(@tenant) { SigningKey.staged.to_a }
+        get "/.well-known/jwks.json"
+        published = JSON.parse(response.body)["keys"].map { |key| key["kid"] }
 
-    get "/.well-known/jwks.json"
-    published = JSON.parse(response.body)["keys"].map { |key| key["kid"] }
+        assert_includes published, minted["kid"]
+        assert_includes published, outgoing.kid
+      end
 
-    assert_includes published, minted["kid"]
-    assert_includes published, outgoing.kid
-  end
+      test "signing keys carry the state the console badges them with" do
+        held = bearer
+        stage(held)
+        within(@tenant) { SigningKey.rotate!(tenant: @tenant) }
 
-  test "signing keys carry the state the console badges them with" do
-    held = bearer
-    stage(held)
-    within(@tenant) { SigningKey.rotate!(tenant: @tenant) }
+        states = ask("{ tenant { signingKeys { state } } }", held)
+          .dig("data", "tenant", "signingKeys").map { |key| key["state"] }
 
-    states = ask("{ tenant { signingKeys { state } } }", held)
-      .dig("data", "tenant", "signingKeys").map { |key| key["state"] }
+        assert_equal %w[active retiring staged].sort, states.sort
+      end
 
-    assert_equal %w[active retiring staged].sort, states.sort
-  end
+      test "archiving the client you are signed in with is refused" do
+        body = ask(%(mutation { archiveClient(clientId: "#{@client.client_id}") { client { archivedAt } } }), bearer)
 
-  test "archiving the client you are signed in with is refused" do
-    body = ask(%(mutation { archiveClient(clientId: "#{@client.client_id}") { client { archivedAt } } }), bearer)
+        assert_match "would lock you out", body["errors"].first["message"]
+        assert_nil within(@tenant) { @client.reload.archived_at }
+      end
 
-    assert_match "would lock you out", body["errors"].first["message"]
-    assert_nil within(@tenant) { @client.reload.archived_at }
-  end
+      test "a public client has no secret to rotate" do
+        body = ask(%(mutation { rotateClientSecret(clientId: "#{@client.client_id}") { secret } }), bearer)
 
-  test "a public client has no secret to rotate" do
-    body = ask(%(mutation { rotateClientSecret(clientId: "#{@client.client_id}") { secret } }), bearer)
+        assert_match "public client has no secret", body["errors"].first["message"]
+      end
 
-    assert_match "public client has no secret", body["errors"].first["message"]
-  end
+      test "a session can be listed and revoked" do
+        held = bearer
 
-  test "a session can be listed and revoked" do
-    held = bearer
+        listed = ask("{ sessions { id actor { nickname } } }", held)
+        id = listed.dig("data", "sessions").first["id"]
 
-    listed = ask("{ sessions { id actor { nickname } } }", held)
-    id = listed.dig("data", "sessions").first["id"]
+        revoked = ask(%(mutation { revokeSession(id: "#{id}") { session { revokedAt } } }), held)
 
-    revoked = ask(%(mutation { revokeSession(id: "#{id}") { session { revokedAt } } }), held)
+        assert_not_nil revoked.dig("data", "revokeSession", "session", "revokedAt")
+      end
 
-    assert_not_nil revoked.dig("data", "revokeSession", "session", "revokedAt")
-  end
+      test "a device is listed with who signed in from it, and blocking it shuts that browser out" do
+        held = bearer
 
-  test "a device is listed with who signed in from it, and blocking it shuts that browser out" do
-    held = bearer
+        listed = ask("{ devices { id label category known actors { nickname } } }", held)
+        device = listed.dig("data", "devices").first
 
-    listed = ask("{ devices { id label category known actors { nickname } } }", held)
-    device = listed.dig("data", "devices").first
+        assert_not_nil device
+        assert_equal [ @actor.nickname ], device["actors"].map { |one| one["nickname"] }
 
-    assert_not_nil device
-    assert_equal [ @actor.nickname ], device["actors"].map { |one| one["nickname"] }
+        blocked = ask(%(mutation { blockDevice(id: "#{device['id']}") { device { blockedAt } } }), held)
 
-    blocked = ask(%(mutation { blockDevice(id: "#{device['id']}") { device { blockedAt } } }), held)
+        assert_not_nil blocked.dig("data", "blockDevice", "device", "blockedAt")
+        assert_empty within(@tenant) { Session.live.where(actor: @actor).to_a }
 
-    assert_not_nil blocked.dig("data", "blockDevice", "device", "blockedAt")
-    assert_empty within(@tenant) { Session.live.where(actor: @actor).to_a }
+        post "/manage/graphql",
+             params: { query: "{ viewer { nickname } }" }.to_json,
+             headers: {
+               "CONTENT_TYPE" => "application/json",
+               "HTTP_AUTHORIZATION" => "Bearer #{held}"
+             }
 
-    post "/manage/graphql",
-         params: { query: "{ viewer { nickname } }" }.to_json,
-         headers: {
-           "CONTENT_TYPE" => "application/json",
-           "HTTP_AUTHORIZATION" => "Bearer #{held}"
-         }
+        assert_response :forbidden
+      end
 
-    assert_response :forbidden
-  end
+      test "signing a device out from the admin API revokes the sessions and tokens it holds" do
+        held = bearer
 
-  test "signing a device out from the admin API revokes the sessions and tokens it holds" do
-    held = bearer
+        id = ask("{ devices { id sessions { id } } }", held).dig("data", "devices").first["id"]
 
-    id = ask("{ devices { id sessions { id } } }", held).dig("data", "devices").first["id"]
+        ask(%(mutation { signOutDevice(id: "#{id}") { device { id } } }), held)
 
-    ask(%(mutation { signOutDevice(id: "#{id}") { device { id } } }), held)
+        assert_empty within(@tenant) { Session.live.where(actor: @actor).to_a }
+        assert_empty within(@tenant) { AccessToken.live.where(actor: @actor).to_a }
+      end
 
-    assert_empty within(@tenant) { Session.live.where(actor: @actor).to_a }
-    assert_empty within(@tenant) { AccessToken.live.where(actor: @actor).to_a }
-  end
+      test "the schema refuses a query past its token ceiling" do
+        huge = "{ #{Array.new(2000) { |i| "a#{i}: viewer { nickname }" }.join(' ')} }"
 
-  test "the schema refuses a query past its token ceiling" do
-    huge = "{ #{Array.new(2000) { |i| "a#{i}: viewer { nickname }" }.join(' ')} }"
+        body = ask(huge, bearer)
 
-    body = ask(huge, bearer)
+        assert body["errors"].any?, "a #{huge.length}-character query was accepted"
+        assert_nil body["data"], "the ceiling refused the query but something still executed"
+        assert_match(/too large|token/i, body["errors"].first["message"])
+      end
 
-    assert body["errors"].any?, "a #{huge.length}-character query was accepted"
-    assert_nil body["data"], "the ceiling refused the query but something still executed"
-    assert_match(/too large|token/i, body["errors"].first["message"])
-  end
+      test "the ceiling is not so low that an ordinary admin query trips it" do
+        body = ask(
+          "{ viewer { nickname } tenant { subdomain signingKeys { kid } } " \
+          "actors { uuid nickname email scopes } clients { clientId allowedScopes } " \
+          "sessions { id actor { nickname } } scopesSupported }",
+          bearer
+        )
 
-  test "the ceiling is not so low that an ordinary admin query trips it" do
-    body = ask(
-      "{ viewer { nickname } tenant { subdomain signingKeys { kid } } " \
-      "actors { uuid nickname email scopes } clients { clientId allowedScopes } " \
-      "sessions { id actor { nickname } } scopesSupported }",
-      bearer
-    )
+        assert_nil body["errors"], body["errors"].to_s
+      end
 
-    assert_nil body["errors"], body["errors"].to_s
-  end
+      test "the admin page is served for any path under /manage, so the SPA can route" do
+        get "/manage"
+        assert_response :success
+        assert_match "id=\"manage\"", response.body
 
-  test "the admin page is served for any path under /manage, so the SPA can route" do
-    get "/manage"
-    assert_response :success
-    assert_match "id=\"manage\"", response.body
+        get "/manage/clients/whatever"
+        assert_response :success
 
-    get "/manage/clients/whatever"
-    assert_response :success
+        boot = JSON.parse(CGI.unescapeHTML(response.body[/data-boot="([^"]*)"/, 1]))
 
-    boot = JSON.parse(CGI.unescapeHTML(response.body[/data-boot="([^"]*)"/, 1]))
+        assert_equal issuer_for(@tenant).manage_resource, boot["resource"]
+        assert_equal origin_for(@tenant), boot["issuer"]
+        assert_equal "/manage/graphql", boot["graphql"]
+      end
 
-    assert_equal issuer_for(@tenant).manage_resource, boot["resource"]
-    assert_equal origin_for(@tenant), boot["issuer"]
-    assert_equal "/manage/graphql", boot["graphql"]
-  end
+      test "the admin page itself is public, and carries no token" do
+        get "/manage"
 
-  test "the admin page itself is public, and carries no token" do
-    get "/manage"
+        refute_match "masks_session", response.body
+        refute_match "access_token", response.body
+      end
 
-    refute_match "masks_session", response.body
-    refute_match "access_token", response.body
-  end
+      test "the tally counts everything, not just the page of records a list query returns" do
+        crowd = Manage::Types::QueryType::LIMIT + 3
 
-  test "the tally counts everything, not just the page of records a list query returns" do
-    crowd = Manage::Types::QueryType::LIMIT + 3
+        within(@tenant) { crowd.times { |at| create_actor(@tenant, nickname: "extra#{at}") } }
 
-    within(@tenant) { crowd.times { |at| create_actor(@tenant, nickname: "extra#{at}") } }
+        token = bearer
+        answer = ask("query { actors { uuid } tally { actors clients sessions devices } }", token)
 
-    token = bearer
-    answer = ask("query { actors { uuid } tally { actors clients sessions devices } }", token)
+        listed = answer["data"]["actors"].length
+        counted = answer["data"]["tally"]["actors"]
 
-    listed = answer["data"]["actors"].length
-    counted = answer["data"]["tally"]["actors"]
+        assert_equal Manage::Types::QueryType::LIMIT, listed
+        assert_operator counted, :>, listed
+        assert_equal within(@tenant) { Actor.count }, counted
+      end
 
-    assert_equal Manage::Types::QueryType::LIMIT, listed
-    assert_operator counted, :>, listed
-    assert_equal within(@tenant) { Actor.count }, counted
-  end
+      test "activity buckets sign-ins by day and leaves quiet days in the series at zero" do
+        token = bearer
 
-  test "activity buckets sign-ins by day and leaves quiet days in the series at zero" do
-    token = bearer
+        within(@tenant) do
+          Session.where.not(id: nil).update_all(authenticated_at: 2.days.ago)
+        end
 
-    within(@tenant) do
-      Session.where.not(id: nil).update_all(authenticated_at: 2.days.ago)
-    end
+        days = ask("query { activity(days: 7) { date signIns } }", token)["data"]["activity"]
 
-    days = ask("query { activity(days: 7) { date signIns } }", token)["data"]["activity"]
+        assert_equal 7, days.length
+        assert_equal days.map { |one| one["date"] }.sort, days.map { |one| one["date"] }
+        assert_equal Date.current.to_s, days.last["date"]
+        assert_operator days.sum { |one| one["signIns"] }, :>, 0
+        assert days.any? { |one| one["signIns"].zero? }
+      end
 
-    assert_equal 7, days.length
-    assert_equal days.map { |one| one["date"] }.sort, days.map { |one| one["date"] }
-    assert_equal Date.current.to_s, days.last["date"]
-    assert_operator days.sum { |one| one["signIns"] }, :>, 0
-    assert days.any? { |one| one["signIns"].zero? }
-  end
+      test "activity refuses to reach further back than its ceiling" do
+        token = bearer
+        longest = Manage::Types::QueryType::LONGEST
 
-  test "activity refuses to reach further back than its ceiling" do
-    token = bearer
-    longest = Manage::Types::QueryType::LONGEST
+        days = ask("query { activity(days: 5000) { date } }", token)["data"]["activity"]
 
-    days = ask("query { activity(days: 5000) { date } }", token)["data"]["activity"]
+        assert_equal longest, days.length
+      end
 
-    assert_equal longest, days.length
-  end
+      test "claimed namespaces are listed with the resource that holds them" do
+        token = bearer
+        claim!
 
-  test "claimed namespaces are listed with the resource that holds them" do
-    token = bearer
-    claim!
+        held = ask("{ namespaces { name resource client { name } } }", token)["data"]["namespaces"]
 
-    held = ask("{ namespaces { name resource client { name } } }", token)["data"]["namespaces"]
+        assert_equal [ "uris:" ], held.map { |one| one["name"] }
+        assert_equal "https://demo.uris.test/mcp", held.first["resource"]
+        assert_equal "uris", held.first.dig("client", "name")
+      end
 
-    assert_equal [ "uris:" ], held.map { |one| one["name"] }
-    assert_equal "https://demo.uris.test/mcp", held.first["resource"]
-    assert_equal "uris", held.first.dig("client", "name")
-  end
+      test "a namespace says whether it can be released, so the console can offer the button" do
+        token = bearer
+        claim!
 
-  test "a namespace says whether it can be released, so the console can offer the button" do
-    token = bearer
-    claim!
+        listing = "{ namespaces { name resource claimedAt releasable client { clientId name archivedAt } } }"
 
-    listing = "{ namespaces { name resource claimedAt releasable client { clientId name archivedAt } } }"
+        held = ask(listing, token)["data"]["namespaces"].first
 
-    held = ask(listing, token)["data"]["namespaces"].first
+        assert_equal false, held["releasable"]
+        assert_nil held.dig("client", "archivedAt")
+        assert held["claimedAt"].present?
 
-    assert_equal false, held["releasable"]
-    assert_nil held.dig("client", "archivedAt")
-    assert held["claimedAt"].present?
+        within(@tenant) { Namespace.find_by(name: "uris:").client.update!(archived_at: Time.current) }
 
-    within(@tenant) { Namespace.find_by(name: "uris:").client.update!(archived_at: Time.current) }
+        freed = ask(listing, token)["data"]["namespaces"].first
 
-    freed = ask(listing, token)["data"]["namespaces"].first
+        assert_equal true, freed["releasable"]
+        assert freed.dig("client", "archivedAt").present?
+      end
 
-    assert_equal true, freed["releasable"]
-    assert freed.dig("client", "archivedAt").present?
-  end
+      test "a namespace whose client is gone is releasable" do
+        token = bearer
+        claim!
 
-  test "a namespace whose client is gone is releasable" do
-    token = bearer
-    claim!
+        within(@tenant) { Namespace.find_by(name: "uris:").update!(client: nil) }
 
-    within(@tenant) { Namespace.find_by(name: "uris:").update!(client: nil) }
+        held = ask("{ namespaces { name releasable client { name } } }", token)["data"]["namespaces"]
 
-    held = ask("{ namespaces { name releasable client { name } } }", token)["data"]["namespaces"]
+        assert_nil held.first["client"]
+        assert_equal true, held.first["releasable"]
+      end
 
-    assert_nil held.first["client"]
-    assert_equal true, held.first["releasable"]
-  end
+      test "a client carries the namespaces it holds, so its page draws them without a second query" do
+        token = bearer
+        claim!
 
-  test "a client carries the namespaces it holds, so its page draws them without a second query" do
-    token = bearer
-    claim!
-
-    client = ask(
-      "query Held($clientId: ID!) {
+        client = ask(
+          "query Held($clientId: ID!) {
         client(clientId: $clientId) { name namespaces { name resource claimedAt releasable } }
       }",
-      token,
-      clientId: within(@tenant) { Client.find_by(name: "uris").client_id }
-    )["data"]["client"]
+          token,
+          clientId: within(@tenant) { Client.find_by(name: "uris").client_id }
+        )["data"]["client"]
 
-    assert_equal [ "uris:" ], client["namespaces"].map { |one| one["name"] }
-    assert_equal "https://demo.uris.test/mcp", client["namespaces"].first["resource"]
-    assert_equal false, client["namespaces"].first["releasable"]
-  end
+        assert_equal [ "uris:" ], client["namespaces"].map { |one| one["name"] }
+        assert_equal "https://demo.uris.test/mcp", client["namespaces"].first["resource"]
+        assert_equal false, client["namespaces"].first["releasable"]
+      end
 
-  test "the clients list carries each holding, so the page counts them without asking again" do
-    token = bearer
-    claim!
+      test "the clients list carries each holding, so the page counts them without asking again" do
+        token = bearer
+        claim!
 
-    listed = ask("{ clients { name namespaces { name } } }", token)["data"]["clients"]
-    counted = listed.to_h { |one| [ one["name"], one["namespaces"].length ] }
+        listed = ask("{ clients { name namespaces { name } } }", token)["data"]["clients"]
+        counted = listed.to_h { |one| [ one["name"], one["namespaces"].length ] }
 
-    assert_equal 1, counted["uris"]
-    assert_equal 0, counted[@client.name]
-  end
+        assert_equal 1, counted["uris"]
+        assert_equal 0, counted[@client.name]
+      end
 
-  test "a namespace its client still holds cannot be released" do
-    token = bearer
-    claim!
+      test "a namespace its client still holds cannot be released" do
+        token = bearer
+        claim!
 
-    body = ask('mutation { releaseNamespace(name: "uris:") { released } }', token)
+        body = ask('mutation { releaseNamespace(name: "uris:") { released } }', token)
 
-    assert_match "is in use by uris", body.dig("errors", 0, "message")
-    assert within(@tenant) { Namespace.exists?(name: "uris:") }
-  end
+        assert_match "is in use by uris", body.dig("errors", 0, "message")
+        assert within(@tenant) { Namespace.exists?(name: "uris:") }
+      end
 
-  test "releasing an archived namespace frees the name" do
-    token = bearer
-    claim!
+      test "releasing an archived namespace frees the name" do
+        token = bearer
+        claim!
 
-    within(@tenant) { Namespace.find_by(name: "uris:").client.update!(archived_at: Time.current) }
+        within(@tenant) { Namespace.find_by(name: "uris:").client.update!(archived_at: Time.current) }
 
-    body = ask('mutation { releaseNamespace(name: "uris:") { released } }', token)
+        body = ask('mutation { releaseNamespace(name: "uris:") { released } }', token)
 
-    assert_equal "uris:", body.dig("data", "releaseNamespace", "released")
-    assert_not within(@tenant) { Namespace.exists?(name: "uris:") }
-  end
+        assert_equal "uris:", body.dig("data", "releaseNamespace", "released")
+        assert_not within(@tenant) { Namespace.exists?(name: "uris:") }
+      end
 
-  test "activity narrows to one device" do
-    token = bearer
+      test "activity narrows to one device" do
+        token = bearer
 
-    device = within(@tenant) do
-      held = ::Device.identify(::Device.mint, user_agent: "Probe", ip_address: "10.0.0.1")
+        device = within(@tenant) do
+          held = Masks::Server::Device.identify(Masks::Server::Device.mint, user_agent: "Probe", ip_address: "10.0.0.1")
 
-      Event.record!(Event::SESSION_STARTED, actor: @actor, device: held)
-      Event.record!(Event::LOGIN_REFUSED, actor: @actor, by: nil, device: nil)
+          Event.record!(Event::SESSION_STARTED, actor: @actor, device: held)
+          Event.record!(Event::LOGIN_REFUSED, actor: @actor, by: nil, device: nil)
 
-      held
-    end
+          held
+        end
 
-    held = ask(
-      "query Seen($device: ID!) { events(device: $device) { action } }",
-      token, device: device.id
-    ).dig("data", "events").map { |one| one["action"] }
+        held = ask(
+          "query Seen($device: ID!) { events(device: $device) { action } }",
+          token, device: device.id
+        ).dig("data", "events").map { |one| one["action"] }
 
-    assert_equal [ Event::SESSION_STARTED ], held
+        assert_equal [ Event::SESSION_STARTED ], held
 
-    missing = ask(
-      'query { events(device: "0") { action } }', token
-    ).dig("data", "events")
+        missing = ask(
+          'query { events(device: "0") { action } }', token
+        ).dig("data", "events")
 
-    assert_empty missing
-  end
+        assert_empty missing
+      end
 
-  test "people narrow to the ones still waiting on an invitation" do
-    token = bearer
+      test "people narrow to the ones still waiting on an invitation" do
+        token = bearer
 
-    within(@tenant) do
-      Actor.invite!(nickname: "waiting", email: "waiting@example.com")
-      Actor.create!(nickname: "settled", password: "password")
-    end
+        within(@tenant) do
+          Actor.invite!(nickname: "waiting", email: "waiting@example.com")
+          Actor.create!(nickname: "settled", password: "password")
+        end
 
-    held = ask(
-      "query { actors(activated: false) { nickname } }", token
-    ).dig("data", "actors").map { |one| one["nickname"] }
+        held = ask(
+          "query { actors(activated: false) { nickname } }", token
+        ).dig("data", "actors").map { |one| one["nickname"] }
 
-    assert_equal [ "waiting" ], held
+        assert_equal [ "waiting" ], held
 
-    settled = ask(
-      "query { actors(activated: true) { nickname } }", token
-    ).dig("data", "actors").map { |one| one["nickname"] }
+        settled = ask(
+          "query { actors(activated: true) { nickname } }", token
+        ).dig("data", "actors").map { |one| one["nickname"] }
 
-    assert_includes settled, "settled"
-    assert_not_includes settled, "waiting"
-  end
+        assert_includes settled, "settled"
+        assert_not_includes settled, "waiting"
+      end
 
-  test "people narrow to the ones holding a scope, prefixes included" do
-    token = bearer
+      test "people narrow to the ones holding a scope, prefixes included" do
+        token = bearer
 
-    within(@tenant) do
-      Actor.create!(nickname: "plain", password: "password", scopes: "openid profile")
-      Actor.create!(nickname: "named", email: "named@example.invalid", password: "password",
-                    scopes: "openid masks:manage")
-      Actor.create!(nickname: "prefixed", password: "password", scopes: "openid masks:")
-    end
+        within(@tenant) do
+          Actor.create!(nickname: "plain", password: "password", scopes: "openid profile")
+          Actor.create!(nickname: "named", email: "named@example.invalid", password: "password",
+                        scopes: "openid masks:manage")
+          Actor.create!(nickname: "prefixed", password: "password", scopes: "openid masks:")
+        end
 
-    held = ask(
-      'query { actors(holds: "masks:manage") { nickname } }', token
-    ).dig("data", "actors").map { |one| one["nickname"] }
+        held = ask(
+          'query { actors(holds: "masks:manage") { nickname } }', token
+        ).dig("data", "actors").map { |one| one["nickname"] }
 
-    assert_includes held, "named"
-    assert_includes held, "prefixed"
-    assert_not_includes held, "plain"
-  end
+        assert_includes held, "named"
+        assert_includes held, "prefixed"
+        assert_not_includes held, "plain"
+      end
 
-  test "an account with no scopes of its own still counts as holding the standard ones" do
-    token = bearer
+      test "an account with no scopes of its own still counts as holding the standard ones" do
+        token = bearer
 
-    within(@tenant) { Actor.create!(nickname: "bare", password: "password", scopes: "") }
+        within(@tenant) { Actor.create!(nickname: "bare", password: "password", scopes: "") }
 
-    held = ask('query { actors(holds: "openid") { nickname } }', token)
-      .dig("data", "actors").map { |one| one["nickname"] }
+        held = ask('query { actors(holds: "openid") { nickname } }', token)
+          .dig("data", "actors").map { |one| one["nickname"] }
 
-    assert_includes held, "bare"
+        assert_includes held, "bare"
 
-    privileged = ask('query { actors(holds: "masks:manage") { nickname } }', token)
-      .dig("data", "actors").map { |one| one["nickname"] }
+        privileged = ask('query { actors(holds: "masks:manage") { nickname } }', token)
+          .dig("data", "actors").map { |one| one["nickname"] }
 
-    assert_not_includes privileged, "bare"
-  end
+        assert_not_includes privileged, "bare"
+      end
 
-  test "the console lists every namespace claimed, and what claimed it" do
-    token = bearer
+      test "the console lists every namespace claimed, and what claimed it" do
+        token = bearer
 
-    claim!
+        claim!
 
-    held = ask(
-      "query { namespaces { name resource client { name } } }", token
-    ).dig("data", "namespaces")
+        held = ask(
+          "query { namespaces { name resource client { name } } }", token
+        ).dig("data", "namespaces")
 
-    assert_equal [ "uris:" ], held.map { |one| one["name"] }
-    assert_equal "uris", held.first["client"]["name"]
-  end
+        assert_equal [ "uris:" ], held.map { |one| one["name"] }
+        assert_equal "uris", held.first["client"]["name"]
+      end
 
-  test "the scopes on offer include what namespaces publish" do
-    token = bearer
+      test "the scopes on offer include what namespaces publish" do
+        token = bearer
 
-    claim!
+        claim!
 
-    held = ask("query { scopesSupported }", token).dig("data", "scopesSupported")
+        held = ask("query { scopesSupported }", token).dig("data", "scopesSupported")
 
-    assert_includes held, "uris:"
-    assert_includes held, Scopes::MANAGE
-  end
+        assert_includes held, "uris:"
+        assert_includes held, Scopes::MANAGE
+      end
 
-  test "people page past the first screenful, without repeating or skipping anybody" do
-    token = bearer
+      test "people page past the first screenful, without repeating or skipping anybody" do
+        token = bearer
 
-    within(@tenant) do
-      6.times { |at| Actor.create!(nickname: "paged#{at}", password: "password") }
-    end
+        within(@tenant) do
+          6.times { |at| Actor.create!(nickname: "paged#{at}", password: "password") }
+        end
 
-    first = ask("query { actors(limit: 4) { uuid nickname } }", token).dig("data", "actors")
+        first = ask("query { actors(limit: 4) { uuid nickname } }", token).dig("data", "actors")
 
-    assert_equal 4, first.length
+        assert_equal 4, first.length
 
-    rest = ask(
-      "query Rest($afterId: ID!) { actors(afterId: $afterId, limit: 10) { uuid nickname } }",
-      token, afterId: first.last["uuid"]
-    ).dig("data", "actors")
+        rest = ask(
+          "query Rest($afterId: ID!) { actors(afterId: $afterId, limit: 10) { uuid nickname } }",
+          token, afterId: first.last["uuid"]
+        ).dig("data", "actors")
 
-    held = (first + rest).map { |one| one["uuid"] }
+        held = (first + rest).map { |one| one["uuid"] }
 
-    assert_equal held.uniq, held
-    assert_equal within(@tenant) { Actor.count }, held.length
-  end
+        assert_equal held.uniq, held
+        assert_equal within(@tenant) { Actor.count }, held.length
+      end
 
-  test "a search pages too, and keeps to what matches" do
-    token = bearer
+      test "a search pages too, and keeps to what matches" do
+        token = bearer
 
-    within(@tenant) do
-      5.times { |at| Actor.create!(nickname: "seeker#{at}", password: "password") }
-      2.times { |at| Actor.create!(nickname: "other#{at}", password: "password") }
-    end
+        within(@tenant) do
+          5.times { |at| Actor.create!(nickname: "seeker#{at}", password: "password") }
+          2.times { |at| Actor.create!(nickname: "other#{at}", password: "password") }
+        end
 
-    first = ask(
-      'query { actors(search: "seeker", limit: 3) { uuid nickname } }', token
-    ).dig("data", "actors")
+        first = ask(
+          'query { actors(search: "seeker", limit: 3) { uuid nickname } }', token
+        ).dig("data", "actors")
 
-    assert_equal 3, first.length
+        assert_equal 3, first.length
 
-    rest = ask(
-      'query Rest($afterId: ID!) {
+        rest = ask(
+          'query Rest($afterId: ID!) {
         actors(search: "seeker", afterId: $afterId, limit: 10) { uuid nickname }
       }',
-      token, afterId: first.last["uuid"]
-    ).dig("data", "actors")
+          token, afterId: first.last["uuid"]
+        ).dig("data", "actors")
 
-    held = (first + rest).map { |one| one["nickname"] }
+        held = (first + rest).map { |one| one["nickname"] }
 
-    assert_equal 5, held.length
-    assert(held.all? { |one| one.start_with?("seeker") })
-  end
-
-  test "clients page past the first screenful" do
-    token = bearer
-
-    within(@tenant) do
-      5.times { |at| create_client(@tenant, name: "Paged #{at}") }
-    end
-
-    first = ask("query { clients(limit: 3) { clientId } }", token).dig("data", "clients")
-
-    assert_equal 3, first.length
-
-    rest = ask(
-      "query Rest($afterId: ID!) { clients(afterId: $afterId, limit: 10) { clientId } }",
-      token, afterId: first.last["clientId"]
-    ).dig("data", "clients")
-
-    held = (first + rest).map { |one| one["clientId"] }
-
-    assert_equal held.uniq, held
-    assert_equal within(@tenant) { Client.active.count }, held.length
-  end
-
-  test "a cursor that names nothing yields nothing rather than starting over" do
-    token = bearer
-
-    body = ask(
-      'query { actors(afterId: "not-a-uuid", limit: 10) { uuid } }', token
-    )
-
-    assert_empty body.dig("data", "actors")
-  end
-
-  private
-
-    def claim!(resource: "https://demo.uris.test/mcp", name: "uris:")
-      within(@tenant) do
-        holder = create_client(@tenant, name: "uris", allowed_scopes: "openid #{name}",
-                               approved_at: Time.current)
-
-        Namespace.create!(name: name, resource: resource, client: holder, claimed_at: Time.current)
+        assert_equal 5, held.length
+        assert(held.all? { |one| one.start_with?("seeker") })
       end
+
+      test "clients page past the first screenful" do
+        token = bearer
+
+        within(@tenant) do
+          5.times { |at| create_client(@tenant, name: "Paged #{at}") }
+        end
+
+        first = ask("query { clients(limit: 3) { clientId } }", token).dig("data", "clients")
+
+        assert_equal 3, first.length
+
+        rest = ask(
+          "query Rest($afterId: ID!) { clients(afterId: $afterId, limit: 10) { clientId } }",
+          token, afterId: first.last["clientId"]
+        ).dig("data", "clients")
+
+        held = (first + rest).map { |one| one["clientId"] }
+
+        assert_equal held.uniq, held
+        assert_equal within(@tenant) { Client.active.count }, held.length
+      end
+
+      test "a cursor that names nothing yields nothing rather than starting over" do
+        token = bearer
+
+        body = ask(
+          'query { actors(afterId: "not-a-uuid", limit: 10) { uuid } }', token
+        )
+
+        assert_empty body.dig("data", "actors")
+      end
+
+      private
+
+        def claim!(resource: "https://demo.uris.test/mcp", name: "uris:")
+          within(@tenant) do
+            holder = create_client(@tenant, name: "uris", allowed_scopes: "openid #{name}",
+                                   approved_at: Time.current)
+
+            Namespace.create!(name: name, resource: resource, client: holder, claimed_at: Time.current)
+          end
+        end
     end
+  end
 end

@@ -8,7 +8,7 @@ fi
 if [ "${*: -2:1}" == "./bin/rails" ] && [ "${*: -1:1}" == "server" ]; then
   ./bin/rails db:prepare
   ./bin/rails masks:tenants
-  ./bin/rails runner 'RefreshAuthenticatorsJob.perform_later if Authenticator.none?'
+  ./bin/rails runner 'Masks::Server::RefreshAuthenticatorsJob.perform_later if Masks::Server::Authenticator.none?'
 fi
 
 exec "${@}"

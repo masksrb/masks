@@ -1,404 +1,344 @@
-require "test_helper"
+module Masks
+  module Server
+    require "test_helper"
 
-class FirstRunTest < ActionDispatch::IntegrationTest
-  PASSWORD = "a-long-enough-password".freeze
+    class FirstRunTest < ActionDispatch::IntegrationTest
+      PASSWORD = "a-long-enough-password".freeze
 
-  def setup_params(**overrides)
-    { event: "signup", token: @tenant.setup_token!, nickname: "owner", email: "owner@example.invalid",
-      password: PASSWORD, password_confirmation: PASSWORD,
-      called: "Demo" }.merge(overrides)
-  end
+      def setup_params(**overrides)
+        { event: "signup", token: @tenant.setup_token!, nickname: "owner", email: "owner@example.invalid",
+          password: PASSWORD, password_confirmation: PASSWORD,
+          called: "Demo" }.merge(overrides)
+      end
 
-  def identify_params(**overrides)
-    { event: "signup", token: @tenant.setup_token!, nickname: "owner", email: "owner@example.invalid" }.merge(overrides)
-  end
+      def identify_params(**overrides)
+        { event: "signup", token: @tenant.setup_token!, nickname: "owner", email: "owner@example.invalid" }.merge(overrides)
+      end
 
-  def with_declared(list)
-    was = Rails.configuration.masks.tenants
-    Rails.configuration.masks.tenants = list
-    yield
-  ensure
-    Rails.configuration.masks.tenants = was
-  end
+      def with_declared(list)
+        was = ::Rails.configuration.masks.tenants
+        ::Rails.configuration.masks.tenants = list
+        yield
+      ensure
+        ::Rails.configuration.masks.tenants = was
+      end
 
-  def with_nothing_deployed
-    [ @tenant, other_tenant ].each { |tenant| Tenant.switch(tenant) { tenant.destroy! } }
+      def with_nothing_deployed
+        [ @tenant, other_tenant ].each { |tenant| Tenant.switch(tenant) { tenant.destroy! } }
 
-    yield
-  end
+        yield
+      end
 
-  def with_public_origin_template(template)
-    was = Rails.configuration.masks.public_origin_template
-    Rails.configuration.masks.public_origin_template = template
-    yield
-  ensure
-    Rails.configuration.masks.public_origin_template = was
-  end
+      def with_public_origin_template(template)
+        was = ::Rails.configuration.masks.public_origin_template
+        ::Rails.configuration.masks.public_origin_template = template
+        yield
+      ensure
+        ::Rails.configuration.masks.public_origin_template = was
+      end
 
-  test "a tenant with no actors asks to be set up, and says so in both renderings" do
-    host! host_for(@tenant)
+      test "a tenant with no actors asks to be set up, and says so in both renderings" do
+        host! host_for(@tenant)
 
-    get "/login"
+        get "/login"
 
-    assert_response :success
-    assert_match "Set up", response.body
-    assert_match "<em>#{@tenant.name}</em>", response.body
-    assert_match "Continue", response.body
-    assert_match "This screen will not appear again", response.body
+        assert_response :success
+        assert_match "Set up", response.body
+        assert_match "<em>#{@tenant.name}</em>", response.body
+        assert_match "Continue", response.body
+        assert_match "This screen will not appear again", response.body
 
-    post "/login", params: { event: "start-over" }, as: :json
+        post "/login", params: { event: "start-over" }, as: :json
 
-    assert_equal "signup", JSON.parse(response.body)["prompt"]
-  end
+        assert_equal "signup", JSON.parse(response.body)["prompt"]
+      end
 
-  test "the root of an empty tenant goes straight to the only thing that can happen there" do
-    host! host_for(@tenant)
+      test "the root of an empty tenant goes straight to the only thing that can happen there" do
+        host! host_for(@tenant)
 
-    get "/"
+        get "/"
 
-    assert_redirected_to login_path
+        assert_redirected_to login_path
 
-    follow_redirect!
+        follow_redirect!
 
-    assert_response :success
-    assert_match "Set up", response.body
-    assert_select "a[href=?]", Rails.configuration.masks.docs_url
-  end
+        assert_response :success
+        assert_match "Set up", response.body
+        assert_select "a[href=?]", ::Rails.configuration.masks.docs_url
+      end
 
-  test "a cookie left over from a database that was reset starts over instead of looping" do
-    create_actor(@tenant, nickname: "owner", password: PASSWORD, scopes: "openid masks:manage", otp: false)
-    host! host_for(@tenant)
-    post "/login", params: { event: "identify", identifier: "owner" }, as: :json
-    post "/login", params: { event: "password", password: PASSWORD }, as: :json
+      test "a cookie left over from a database that was reset starts over instead of looping" do
+        create_actor(@tenant, nickname: "owner", password: PASSWORD, scopes: "openid masks:manage", otp: false)
+        host! host_for(@tenant)
+        post "/login", params: { event: "identify", identifier: "owner" }, as: :json
+        post "/login", params: { event: "password", password: PASSWORD }, as: :json
 
-    assert_equal "enrol", JSON.parse(response.body)["prompt"], "half way through, with a first factor held"
+        assert_equal "enrol", JSON.parse(response.body)["prompt"], "half way through, with a first factor held"
 
-    within(@tenant) { Actor.delete_all }
+        within(@tenant) { Actor.delete_all }
 
-    get "/login"
+        get "/login"
 
-    assert_response :success
-    assert_equal "signup", auth_data["prompt"]
+        assert_response :success
+        assert_equal "signup", auth_data["prompt"]
 
-    get "/"
+        get "/"
 
-    assert_redirected_to login_path
-  end
+        assert_redirected_to login_path
+      end
 
-  test "the root stops being a first run as soon as an actor exists" do
-    create_actor(@tenant, nickname: "owner", password: PASSWORD)
-    host! host_for(@tenant)
+      test "the root stops being a first run as soon as an actor exists" do
+        create_actor(@tenant, nickname: "owner", password: PASSWORD)
+        host! host_for(@tenant)
 
-    get "/"
+        get "/"
 
-    assert_response :success
-    assert_match "Your account", response.body
-    assert_select "a[href=?]", manage_path, false
-  end
+        assert_response :success
+        assert_match "Your account", response.body
+        assert_select "a[href=?]", manage_path, false
+      end
 
-  test "three screens: the manager, their password, and what masks is configured to do" do
-    host! host_for(@tenant)
+      test "three screens: the manager, their password, and what masks is configured to do" do
+        host! host_for(@tenant)
 
-    get "/login"
+        get "/login"
 
-    assert_match "Identification", response.body
-    assert_match "Credentials", response.body
-    assert_match "Configuration", response.body
+        assert_match "Identification", response.body
+        assert_match "Credentials", response.body
+        assert_match "Configuration", response.body
 
-    post "/login", params: identify_params, as: :json
-    body = JSON.parse(response.body)
+        post "/login", params: identify_params, as: :json
+        body = JSON.parse(response.body)
 
-    assert_equal "signup-credentials", body["prompt"]
-    assert_equal "owner", body.dig("signup", "nickname")
-    assert_equal 0, within(@tenant) { Actor.count }
+        assert_equal "signup-credentials", body["prompt"]
+        assert_equal "owner", body.dig("signup", "nickname")
+        assert_equal 0, within(@tenant) { Actor.count }
 
-    get "/login"
+        get "/login"
 
-    assert_response :success
-    assert_match "Create the manager", response.body
-    assert_match "Confirm password", response.body
+        assert_response :success
+        assert_match "Create the manager", response.body
+        assert_match "Confirm password", response.body
 
-    post "/login", params: { event: "signup", password: PASSWORD,
-                             password_confirmation: PASSWORD }, as: :json
-    body = JSON.parse(response.body)
+        post "/login", params: { event: "signup", password: PASSWORD,
+                                 password_confirmation: PASSWORD }, as: :json
+        body = JSON.parse(response.body)
 
-    assert_equal "enrol", body["prompt"]
-    assert body.dig("enrolment", "required")
-    assert_equal "owner", within(@tenant) { Actor.sole.nickname }
+        assert_equal "enrol", body["prompt"]
+        assert body.dig("enrolment", "required")
+        assert_equal "owner", within(@tenant) { Actor.sole.nickname }
 
-    get "/login"
+        get "/login"
 
-    assert_match "Authenticator app", response.body
-    assert_match "Backup codes", response.body
+        assert_match "Authenticator app", response.body
+        assert_match "Backup codes", response.body
 
-    body = enrol_otp!(body)
+        body = enrol_otp!(body)
 
-    assert_equal "setup-configure", body["prompt"]
+        assert_equal "setup-configure", body["prompt"]
 
-    get "/login"
+        get "/login"
 
-    assert_match "This server is called", response.body
-    assert_match "Set up at", response.body
-    assert_match origin_for(@tenant), response.body
+        assert_match "This server is called", response.body
+        assert_match "Set up at", response.body
+        assert_match origin_for(@tenant), response.body
 
-    post "/login", params: { event: "setup-configure", called: "Payroll" }, as: :json
+        post "/login", params: { event: "setup-configure", called: "Payroll" }, as: :json
 
-    assert JSON.parse(response.body)["settled"]
-    assert_equal "Payroll", @tenant.reload.name
-  end
+        assert JSON.parse(response.body)["settled"]
+        assert_equal "Payroll", @tenant.reload.name
+      end
 
-  test "an account is named by whatever the tenant was configured for" do
-    host! host_for(@tenant)
+      test "an account is named by whatever the tenant was configured for" do
+        host! host_for(@tenant)
 
-    assert set_up!["settled"]
-    @tenant.update!(named_by: Tenant::EMAIL)
+        assert set_up!["settled"]
+        @tenant.update!(named_by: Tenant::EMAIL)
 
-    within(@tenant) do
-      by_address = Actor.create!(email: "reader@example.invalid", password: PASSWORD)
+        within(@tenant) do
+          by_address = Actor.create!(email: "reader@example.invalid", password: PASSWORD)
 
-      assert_nil by_address.nickname
-      assert_equal "reader@example.invalid", by_address.identifier
+          assert_nil by_address.nickname
+          assert_equal "reader@example.invalid", by_address.identifier
 
-      refused = Actor.new(nickname: "nameless", password: PASSWORD)
+          refused = Actor.new(nickname: "nameless", password: PASSWORD)
 
-      refute refused.valid?
-      assert_includes refused.errors.attribute_names, :email
-    end
-  end
+          refute refused.valid?
+          assert_includes refused.errors.attribute_names, :email
+        end
+      end
 
-  test "editing from the confirmation screen goes back with the entries kept" do
-    host! host_for(@tenant)
+      test "editing from the confirmation screen goes back with the entries kept" do
+        host! host_for(@tenant)
 
-    post "/login", params: identify_params, as: :json
-    post "/login", params: { event: "signup-edit" }, as: :json
-    body = JSON.parse(response.body)
+        post "/login", params: identify_params, as: :json
+        post "/login", params: { event: "signup-edit" }, as: :json
+        body = JSON.parse(response.body)
 
-    assert_equal "signup", body["prompt"]
-    assert_equal "owner", body.dig("signup", "nickname")
+        assert_equal "signup", body["prompt"]
+        assert_equal "owner", body.dig("signup", "nickname")
 
-    get "/login"
+        get "/login"
 
-    assert_match "Continue", response.body
-  end
+        assert_match "Continue", response.body
+      end
 
-  test "setup settles the login and signs the owner in, over JSON" do
-    host! host_for(@tenant)
+      test "setup settles the login and signs the owner in, over JSON" do
+        host! host_for(@tenant)
 
-    body = set_up!
+        body = set_up!
 
-    assert_response :success
-    assert body["settled"]
-    assert_equal "owner", body["actor"]["nickname"]
+        assert_response :success
+        assert body["settled"]
+        assert_equal "owner", body["actor"]["nickname"]
 
-    get "/login"
+        get "/login"
 
-    assert_redirected_to root_path
-  end
+        assert_redirected_to root_path
+      end
 
-  test "setup works with the bundle switched off, which is the whole point of the partials" do
-    host! host_for(@tenant)
+      test "setup works with the bundle switched off, which is the whole point of the partials" do
+        host! host_for(@tenant)
 
-    post "/login", params: setup_params
+        post "/login", params: setup_params
 
-    assert_redirected_to login_path
+        assert_redirected_to login_path
 
-    follow_redirect!
-    secret = response.body[/class="aside-mono enrol-secret">([^<]+)</, 1].delete(" ")
+        follow_redirect!
+        secret = response.body[/class="aside-mono enrol-secret">([^<]+)</, 1].delete(" ")
 
-    post "/login", params: { event: "enrol:otp", code: ROTP::TOTP.new(secret).now }
-    post "/login", params: { event: "enrol:done", kept: "1" }
-    post "/login", params: { event: "setup-configure", called: "Demo" }
+        post "/login", params: { event: "enrol:otp", code: ROTP::TOTP.new(secret).now }
+        post "/login", params: { event: "enrol:done", kept: "1" }
+        post "/login", params: { event: "setup-configure", called: "Demo" }
 
-    assert_redirected_to root_path
-    assert_equal "owner", within(@tenant) { Actor.sole.nickname }
-  end
+        assert_redirected_to root_path
+        assert_equal "owner", within(@tenant) { Actor.sole.nickname }
+      end
 
-  test "a refused setup re-renders the prompt rather than advancing" do
-    host! host_for(@tenant)
+      test "a refused setup re-renders the prompt rather than advancing" do
+        host! host_for(@tenant)
 
-    post "/login", params: setup_params(password: "short", password_confirmation: "short"),
-         as: :json
-    body = JSON.parse(response.body)
+        post "/login", params: setup_params(password: "short", password_confirmation: "short"),
+             as: :json
+        body = JSON.parse(response.body)
 
-    assert_equal "signup-credentials", body["prompt"]
-    assert_includes body["warnings"], "short-password"
-    assert_equal 0, within(@tenant) { Actor.count }
-  end
+        assert_equal "signup-credentials", body["prompt"]
+        assert_includes body["warnings"], "short-password"
+        assert_equal 0, within(@tenant) { Actor.count }
+      end
 
-  test "an owner without an email is refused, because it is an owner nothing can consume" do
-    host! host_for(@tenant)
+      test "an owner without an email is refused, because it is an owner nothing can consume" do
+        host! host_for(@tenant)
 
-    post "/login", params: setup_params(email: ""), as: :json
-    body = JSON.parse(response.body)
+        post "/login", params: setup_params(email: ""), as: :json
+        body = JSON.parse(response.body)
 
-    assert_equal "signup", body["prompt"]
-    assert_includes body["warnings"], "missing-email"
-    assert_equal 0, within(@tenant) { Actor.count }
-  end
+        assert_equal "signup", body["prompt"]
+        assert_includes body["warnings"], "missing-email"
+        assert_equal 0, within(@tenant) { Actor.count }
+      end
 
-  test "the owner's address is recorded but not yet confirmed, because nothing confirmed it" do
-    host! host_for(@tenant)
+      test "the owner's address is recorded but not yet confirmed, because nothing confirmed it" do
+        host! host_for(@tenant)
 
-    assert set_up!["settled"]
+        assert set_up!["settled"]
 
-    actor = within(@tenant) { Actor.sole }
+        actor = within(@tenant) { Actor.sole }
 
-    assert_equal "owner@example.invalid", actor.email
-    assert_nil actor.email_verified_at
+        assert_equal "owner@example.invalid", actor.email
+        assert_nil actor.email_verified_at
 
-    claims = within(@tenant) { actor.claims(Scopes::STANDARD, subject: actor.uuid) }
+        claims = within(@tenant) { actor.claims(Scopes::STANDARD, subject: actor.uuid) }
 
-    assert_equal "owner@example.invalid", claims["email"]
-    assert_equal false, claims["email_verified"]
-    assert_equal "owner", claims["preferred_username"]
-  end
+        assert_equal "owner@example.invalid", claims["email"]
+        assert_equal false, claims["email_verified"]
+        assert_equal "owner", claims["preferred_username"]
+      end
 
-  test "the owner the wizard created can complete the whole OIDC flow" do
-    host! host_for(@tenant)
+      test "the owner the wizard created can complete the whole OIDC flow" do
+        host! host_for(@tenant)
 
-    assert set_up!["settled"]
+        assert set_up!["settled"]
 
-    registration = register(@tenant)
+        registration = register(@tenant)
 
-    authorize(client_id: registration["client_id"])
-    consent! if awaiting_consent?
+        authorize(client_id: registration["client_id"])
+        consent! if awaiting_consent?
 
-    granted = token(
-      grant_type: "authorization_code",
-      code: code_from,
-      redirect_uri: OidcFlow::REDIRECT_URI,
-      code_verifier: verifier,
-      client_id: registration["client_id"],
-      client_secret: registration["client_secret"]
-    )
+        granted = token(
+          grant_type: "authorization_code",
+          code: code_from,
+          redirect_uri: OidcFlow::REDIRECT_URI,
+          code_verifier: verifier,
+          client_id: registration["client_id"],
+          client_secret: registration["client_secret"]
+        )
 
-    claims = claims_in(granted["access_token"])
+        claims = claims_in(granted["access_token"])
 
-    assert_equal @tenant.uuid, claims.dig("tenant", "uuid")
-    assert_equal %w[email openid profile], Scopes.list(claims["scope"])
-  end
+        assert_equal @tenant.uuid, claims.dig("tenant", "uuid")
+        assert_equal %w[email openid profile], Scopes.list(claims["scope"])
+      end
 
-  test "setup is refused once the tenant has an owner, whatever is posted" do
-    create_actor(@tenant, nickname: "first", password: PASSWORD)
-    host! host_for(@tenant)
+      test "setup is refused once the tenant has an owner, whatever is posted" do
+        create_actor(@tenant, nickname: "first", password: PASSWORD)
+        host! host_for(@tenant)
 
-    post "/login", params: setup_params(nickname: "second"), as: :json
+        post "/login", params: setup_params(nickname: "second"), as: :json
 
-    assert_equal "identify", JSON.parse(response.body)["prompt"]
-    assert_equal 1, within(@tenant) { Actor.count }
-  end
+        assert_equal "identify", JSON.parse(response.body)["prompt"]
+        assert_equal 1, within(@tenant) { Actor.count }
+      end
 
-  test "one tenant's setup does not set up another" do
-    host! host_for(@tenant)
-    set_up!
+      test "one tenant's setup does not set up another" do
+        host! host_for(@tenant)
+        set_up!
 
-    reset!
-    host! host_for(other_tenant)
-    get "/login"
+        reset!
+        host! host_for(other_tenant)
+        get "/login"
 
-    assert_match "Continue", response.body
-    assert_equal 0, within(other_tenant) { Actor.count }
-  end
+        assert_match "Continue", response.body
+        assert_equal 0, within(other_tenant) { Actor.count }
+      end
 
-  test "an unknown host is still a 404 once any tenant exists" do
-    host! "nobody.auth.test"
-
-    get "/login"
-
-    assert_response :not_found
-  end
-
-  test "the first visit to an empty deployment claims the tenant and asks to set it up" do
-    with_nothing_deployed do
-      host! "fresh.auth.test"
-
-      get "/login"
-
-      assert_response :success
-      assert_match "Continue", response.body
-      assert_equal "fresh", Tenant.sole.subdomain
-      assert Tenant.sole.signing_key.kid.present?
-    end
-  end
-
-  test "claiming is off once tenants are declared at deploy" do
-    with_nothing_deployed do
-      with_declared([ "declared" ]) do
-        host! "fresh.auth.test"
+      test "an unknown host is still a 404 once any tenant exists" do
+        host! "nobody.auth.test"
 
         get "/login"
 
         assert_response :not_found
-        refute Tenant.exists?
       end
-    end
-  end
 
-  test "a host that is not a usable subdomain claims nothing" do
-    with_nothing_deployed do
-      host! "-nope-.auth.test"
-
-      get "/login"
-
-      assert_response :not_found
-      refute Tenant.exists?
-    end
-  end
-
-  test "only the first host claims — the second is a 404, not a second tenant" do
-    with_nothing_deployed do
-      host! "fresh.auth.test"
-      get "/login"
-      assert_response :success
-
-      reset!
-      host! "second.auth.test"
-      get "/login"
-
-      assert_response :not_found
-      assert_equal 1, Tenant.count
-    end
-  end
-
-  test "a wildcard public origin template claims a tenant for every unseen host" do
-    with_nothing_deployed do
-      with_public_origin_template("http://%{subdomain}.auth.test") do
-        host! "fresh.auth.test"
-        get "/login"
-        assert_response :success
-
-        reset!
-        host! "second.auth.test"
-        get "/login"
-
-        assert_response :success
-        assert_equal %w[fresh second], Tenant.order(:subdomain).pluck(:subdomain)
-      end
-    end
-  end
-
-  test "a public origin template with no subdomain placeholder claims only the first host" do
-    with_nothing_deployed do
-      with_public_origin_template("http://auth.test") do
-        host! "fresh.auth.test"
-        get "/login"
-        assert_response :success
-
-        reset!
-        host! "second.auth.test"
-        get "/login"
-
-        assert_response :not_found
-        assert_equal 1, Tenant.count
-      end
-    end
-  end
-
-  test "claiming is off under a wildcard template too, once tenants are declared at deploy" do
-    with_nothing_deployed do
-      with_public_origin_template("http://%{subdomain}.auth.test") do
-        with_declared([ "declared" ]) do
+      test "the first visit to an empty deployment claims the tenant and asks to set it up" do
+        with_nothing_deployed do
           host! "fresh.auth.test"
+
+          get "/login"
+
+          assert_response :success
+          assert_match "Continue", response.body
+          assert_equal "fresh", Tenant.sole.subdomain
+          assert Tenant.sole.signing_key.kid.present?
+        end
+      end
+
+      test "claiming is off once tenants are declared at deploy" do
+        with_nothing_deployed do
+          with_declared([ "declared" ]) do
+            host! "fresh.auth.test"
+
+            get "/login"
+
+            assert_response :not_found
+            refute Tenant.exists?
+          end
+        end
+      end
+
+      test "a host that is not a usable subdomain claims nothing" do
+        with_nothing_deployed do
+          host! "-nope-.auth.test"
 
           get "/login"
 
@@ -406,16 +346,80 @@ class FirstRunTest < ActionDispatch::IntegrationTest
           refute Tenant.exists?
         end
       end
-    end
-  end
 
-  test "a declared tenant is created by the task the entrypoint runs" do
-    with_nothing_deployed do
-      with_declared([ "declared" ]) do
-        created = Tenant.declare!
+      test "only the first host claims — the second is a 404, not a second tenant" do
+        with_nothing_deployed do
+          host! "fresh.auth.test"
+          get "/login"
+          assert_response :success
 
-        assert_equal [ "declared" ], created.map(&:subdomain)
-        assert_equal created.map(&:id), Tenant.declare!.map(&:id)
+          reset!
+          host! "second.auth.test"
+          get "/login"
+
+          assert_response :not_found
+          assert_equal 1, Tenant.count
+        end
+      end
+
+      test "a wildcard public origin template claims a tenant for every unseen host" do
+        with_nothing_deployed do
+          with_public_origin_template("http://%{subdomain}.auth.test") do
+            host! "fresh.auth.test"
+            get "/login"
+            assert_response :success
+
+            reset!
+            host! "second.auth.test"
+            get "/login"
+
+            assert_response :success
+            assert_equal %w[fresh second], Tenant.order(:subdomain).pluck(:subdomain)
+          end
+        end
+      end
+
+      test "a public origin template with no subdomain placeholder claims only the first host" do
+        with_nothing_deployed do
+          with_public_origin_template("http://auth.test") do
+            host! "fresh.auth.test"
+            get "/login"
+            assert_response :success
+
+            reset!
+            host! "second.auth.test"
+            get "/login"
+
+            assert_response :not_found
+            assert_equal 1, Tenant.count
+          end
+        end
+      end
+
+      test "claiming is off under a wildcard template too, once tenants are declared at deploy" do
+        with_nothing_deployed do
+          with_public_origin_template("http://%{subdomain}.auth.test") do
+            with_declared([ "declared" ]) do
+              host! "fresh.auth.test"
+
+              get "/login"
+
+              assert_response :not_found
+              refute Tenant.exists?
+            end
+          end
+        end
+      end
+
+      test "a declared tenant is created by the task the entrypoint runs" do
+        with_nothing_deployed do
+          with_declared([ "declared" ]) do
+            created = Tenant.declare!
+
+            assert_equal [ "declared" ], created.map(&:subdomain)
+            assert_equal created.map(&:id), Tenant.declare!.map(&:id)
+          end
+        end
       end
     end
   end

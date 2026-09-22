@@ -1,0 +1,67 @@
+module Masks
+  module Server
+    module Manage
+      module Types
+        class MutationType < BaseObject
+          field :create_actor, mutation: Mutations::CreateActor
+          field :resend_invitation, mutation: Mutations::ResendInvitation
+          field :reset_password, mutation: Mutations::ResetPassword
+          field :verify_email, mutation: Mutations::VerifyEmail
+          field :update_actor, mutation: Mutations::UpdateActor
+          field :approve_actor, mutation: Mutations::ApproveActor
+          field :set_actor_scopes, mutation: Mutations::SetActorScopes
+          field :sign_out_actor, mutation: Mutations::SignOutActor
+          field :suspend_actor, mutation: Mutations::SuspendActor
+          field :restore_actor, mutation: Mutations::RestoreActor
+          field :delete_actor, mutation: Mutations::DeleteActor
+          field :issue_provisioning_token, mutation: Mutations::IssueProvisioningToken
+          field :revoke_provisioning_token, mutation: Mutations::RevokeProvisioningToken
+          field :generate_backup_codes, mutation: Mutations::GenerateBackupCodes
+          field :disable_authenticator, mutation: Mutations::DisableAuthenticator
+          field :revoke_passkey, mutation: Mutations::RevokePasskey
+          field :upload_avatar, mutation: Mutations::UploadAvatar
+          field :remove_avatar, mutation: Mutations::RemoveAvatar
+          field :create_client, mutation: Mutations::CreateClient
+          field :create_saml_application, mutation: Mutations::CreateSamlApplication
+          field :read_saml_application_metadata, mutation: Mutations::ReadSamlApplicationMetadata
+          field :update_client, mutation: Mutations::UpdateClient
+          field :rotate_client_secret, mutation: Mutations::RotateClientSecret
+          field :archive_client, mutation: Mutations::ArchiveClient
+          field :restore_client, mutation: Mutations::RestoreClient
+          field :release_namespace, mutation: Mutations::ReleaseNamespace
+          field :discover_provider, mutation: Mutations::DiscoverProvider
+          field :read_saml_metadata, mutation: Mutations::ReadSamlMetadata
+          field :create_provider, mutation: Mutations::CreateProvider
+          field :update_provider, mutation: Mutations::UpdateProvider
+          field :archive_provider, mutation: Mutations::ArchiveProvider
+          field :restore_provider, mutation: Mutations::RestoreProvider
+          field :revoke_token, mutation: Mutations::RevokeToken
+          field :revoke_connection, mutation: Mutations::RevokeConnection
+          field :revoke_consent, mutation: Mutations::RevokeConsent
+          field :revoke_delegation, mutation: Mutations::RevokeDelegation
+          field :register_provider, mutation: Mutations::RegisterProvider
+          field :revoke_session, mutation: Mutations::RevokeSession
+          field :block_device, mutation: Mutations::BlockDevice
+          field :unblock_device, mutation: Mutations::UnblockDevice
+          field :block_devices, mutation: Mutations::BlockDevices
+          field :unblock_devices, mutation: Mutations::UnblockDevices
+          field :sign_out_device, mutation: Mutations::SignOutDevice
+          field :update_tenant, mutation: Mutations::UpdateTenant
+          field :create_sign_in_policy, mutation: Mutations::CreateSignInPolicy
+          field :update_sign_in_policy, mutation: Mutations::UpdateSignInPolicy
+          field :archive_sign_in_policy, mutation: Mutations::ArchiveSignInPolicy
+          field :restore_sign_in_policy, mutation: Mutations::RestoreSignInPolicy
+          field :create_adapter, mutation: Mutations::CreateAdapter
+          field :update_adapter, mutation: Mutations::UpdateAdapter
+          field :archive_adapter, mutation: Mutations::ArchiveAdapter
+          field :restore_adapter, mutation: Mutations::RestoreAdapter
+          field :test_adapter, mutation: Mutations::TestAdapter
+          field :stage_signing_key, mutation: Mutations::StageSigningKey
+          field :activate_signing_key, mutation: Mutations::ActivateSigningKey
+          field :discard_signing_key, mutation: Mutations::DiscardSigningKey
+          field :rotate_signing_key, mutation: Mutations::RotateSigningKey
+        end
+      end
+    end
+  end
+end

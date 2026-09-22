@@ -1,0 +1,20 @@
+<% content_for :title, t(".page_title") %>
+<% content_for :surface, "terminus" %>
+
+<span class="state state-bad"><%= t(".stopped") %></span>
+
+<h1 class="prompt-title"><%= t(".title") %></h1>
+
+<% if current_actor %>
+  <%= render "masks/server/application/person", actor: current_actor, sign_out: true %>
+<% end %>
+
+<p class="said"><%= @description %></p>
+
+<% if @manage %>
+  <p class="prompt-lede"><%= t(".settle") %></p>
+
+  <a class="action" href="<%= @manage %>"><%= t(".open_manage") %></a>
+<% else %>
+  <p class="prompt-lede"><%= t(".contact") %></p>
+<% end %>

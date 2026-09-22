@@ -1,57 +1,61 @@
-require "test_helper"
+module Masks
+  module Server
+    require "test_helper"
 
-class NamespaceScopeTest < ActionDispatch::IntegrationTest
-  setup do
-    host! host_for(@tenant)
+    class NamespaceScopeTest < ActionDispatch::IntegrationTest
+      setup do
+        host! host_for(@tenant)
 
-    @client = Tenant.switch(@tenant) do
-      Client.create!(
-        client_id: SecureRandom.uuid,
-        name: "uris",
-        redirect_uris: [ OidcFlow::REDIRECT_URI ],
-        allowed_scopes: "openid profile email offline_access uris:",
-        grant_types: [ "authorization_code" ],
-        response_types: [ "code" ],
-        token_endpoint_auth_method: "none",
-        dynamic: false,
-        approved_at: Time.current
-      )
-    end
-  end
+        @client = Tenant.switch(@tenant) do
+          Client.create!(
+            client_id: SecureRandom.uuid,
+            name: "uris",
+            redirect_uris: [ OidcFlow::REDIRECT_URI ],
+            allowed_scopes: "openid profile email offline_access uris:",
+            grant_types: [ "authorization_code" ],
+            response_types: [ "code" ],
+            token_endpoint_auth_method: "none",
+            dynamic: false,
+            approved_at: Time.current
+          )
+        end
+      end
 
-  def refusal
-    return nil unless response.redirect?
+      def refusal
+        return nil unless response.redirect?
 
-    URI.decode_www_form(URI.parse(response.headers["Location"]).query).to_h
-  end
+        URI.decode_www_form(URI.parse(response.headers["Location"]).query).to_h
+      end
 
-  test "a namespace grant covers a scope nobody registered by name" do
-    authorize(client_id: @client.client_id, scope: "openid uris:catalog:read uris:settings:admin")
+      test "a namespace grant covers a scope nobody registered by name" do
+        authorize(client_id: @client.client_id, scope: "openid uris:catalog:read uris:settings:admin")
 
-    assert_nil refusal&.dig("error"),
-               "a client granted uris: may ask for anything beneath it"
-  end
+        assert_nil refusal&.dig("error"),
+                   "a client granted uris: may ask for anything beneath it"
+      end
 
-  test "a namespace grant does not reach past its own prefix" do
-    authorize(client_id: @client.client_id, scope: "openid uris:catalog:read masks:manage")
+      test "a namespace grant does not reach past its own prefix" do
+        authorize(client_id: @client.client_id, scope: "openid uris:catalog:read masks:manage")
 
-    assert_equal "invalid_scope", refusal["error"]
-    assert_equal "this client may not request masks:manage", refusal["error_description"]
-  end
+        assert_equal "invalid_scope", refusal["error"]
+        assert_equal "this client may not request masks:manage", refusal["error_description"]
+      end
 
-  test "the bare namespace is not a scope anyone can ask for" do
-    authorize(client_id: @client.client_id, scope: "openid uris:")
+      test "the bare namespace is not a scope anyone can ask for" do
+        authorize(client_id: @client.client_id, scope: "openid uris:")
 
-    assert_equal "invalid_scope", refusal["error"]
-    assert_equal "this client may not request uris:", refusal["error_description"]
-  end
+        assert_equal "invalid_scope", refusal["error"]
+        assert_equal "this client may not request uris:", refusal["error_description"]
+      end
 
-  test "what is granted is the scope asked for, never the prefix itself" do
-    Tenant.switch(@tenant) do
-      granted = @client.permitted_scopes(%w[uris:catalog:read uris:settings:admin])
+      test "what is granted is the scope asked for, never the prefix itself" do
+        Tenant.switch(@tenant) do
+          granted = @client.permitted_scopes(%w[uris:catalog:read uris:settings:admin])
 
-      assert_equal %w[uris:catalog:read uris:settings:admin], granted - Scopes::STANDARD
-      assert_not_includes granted, "uris:"
+          assert_equal %w[uris:catalog:read uris:settings:admin], granted - Scopes::STANDARD
+          assert_not_includes granted, "uris:"
+        end
+      end
     end
   end
 end

@@ -1,0 +1,7 @@
+<p class="lede"><%= t(".lede", tenant: @tenant_name) %></p>
+
+<p class="code"><%= @code %></p>
+
+<p class="meta">
+  <%= t(".expiry", duration: ActiveSupport::Duration.build(Masks::Server::ConfirmationCode.lifetime.to_i).inspect) %>
+</p>

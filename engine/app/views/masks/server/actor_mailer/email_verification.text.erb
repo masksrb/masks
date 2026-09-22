@@ -1,0 +1,5 @@
+<%= t(".confirm", nickname: @actor.identifier, tenant: @tenant_name) %>
+
+<%= @url %>
+
+<%= t(".expiry", duration: ActiveSupport::Duration.build(Masks::Server::EmailVerification.lifetime.to_i).inspect) %>

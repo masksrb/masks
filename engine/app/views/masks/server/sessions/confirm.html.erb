@@ -1,0 +1,29 @@
+<% content_for :title, t(".page_title") %>
+
+<div id="logout-confirm" class="flow">
+  <div class="prompt-head">
+    <h1 class="prompt-title"><%= t(".title") %></h1>
+    <p class="prompt-lede">
+      <% if @client %>
+        <%= t(".asked_by_html", client: tag.strong(@client.name)) %>
+      <% else %>
+        <%= t(".asked_html") %>
+      <% end %>
+    </p>
+  </div>
+
+  <%= render "masks/server/application/person", actor: current_actor %>
+
+  <p class="aside"><%= t(".scope") %></p>
+
+  <%= form_with url: logout_path, method: :delete do |form| %>
+    <%= form.hidden_field :post_logout_redirect_uri, value: @logout.redirect_uri %>
+    <%= form.hidden_field :client_id, value: @client&.client_id %>
+    <%= form.hidden_field :state, value: @logout.state %>
+
+    <div class="action-row">
+      <button type="submit" class="action action-grow"><%= t(".sign_out") %></button>
+      <%= link_to t(".stay"), @logout.redirect_to || root_path, class: "action action-quiet action-fit" %>
+    </div>
+  <% end %>
+</div>
