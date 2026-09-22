@@ -1,13 +1,15 @@
 ---
 title: Device sign-in
-description: Signing in something with no browser of its own.
+description: How a device without a browser, such as a television or a CLI, signs in with a short code.
 ---
 
-A television, a CLI, a box on a shelf — anything that can show a short code but cannot hold a
-browser signs in through the device grant, [RFC 8628](https://www.rfc-editor.org/rfc/rfc8628).
-The device asks for a code, shows it, and waits. The person walks over to a phone and types it in.
+A device that can display a short code but cannot run a browser, such as a television, a CLI, or
+an appliance, signs in through the device grant,
+[RFC 8628](https://www.rfc-editor.org/rfc/rfc8628). The device requests a code, displays it, and
+polls for a token. The person enters the code on another device, such as a phone, and approves the
+sign-in there.
 
-The client has to be registered for the grant, the same way it is registered for any other:
+The client must be registered for the grant, in the same way it is registered for any other grant:
 
 ```json
 { "grant_types": ["urn:ietf:params:oauth:grant-type:device_code"] }
@@ -15,52 +17,59 @@ The client has to be registered for the grant, the same way it is registered for
 
 ## What the device does
 
-```sh
-curl -X POST https://acme.auth.example.com/device_authorization \
-  -d client_id=... -d scope="openid profile"
-```
+1. The device requests a code:
 
-```json
-{
-  "device_code": "...",
-  "user_code": "BCDF-GHJK",
-  "verification_uri": "https://acme.auth.example.com/device",
-  "verification_uri_complete": "https://acme.auth.example.com/device?user_code=BCDF-GHJK",
-  "expires_in": 900,
-  "interval": 5
-}
-```
+   ```sh
+   curl -X POST https://acme.auth.example.com/device_authorization \
+     -d client_id=... -d scope="openid profile"
+   ```
 
-Show the `user_code` and the `verification_uri`. If the device can draw a QR code, point it at
-`verification_uri_complete` so the person does not have to type anything.
+   ```json
+   {
+     "device_code": "...",
+     "user_code": "BCDF-GHJK",
+     "verification_uri": "https://acme.auth.example.com/device",
+     "verification_uri_complete": "https://acme.auth.example.com/device?user_code=BCDF-GHJK",
+     "expires_in": 900,
+     "interval": 5
+   }
+   ```
 
-Then poll the token endpoint, no faster than `interval` seconds:
+2. The device displays the `user_code` and the `verification_uri`. A device that can display a QR
+   code can encode `verification_uri_complete` in it, so the person does not have to type the code.
 
-```sh
-curl -X POST https://acme.auth.example.com/token \
-  -d grant_type=urn:ietf:params:oauth:grant-type:device_code \
-  -d device_code=... -d client_id=...
-```
+3. The device polls the token endpoint, no more often than every `interval` seconds:
+
+   ```sh
+   curl -X POST https://acme.auth.example.com/token \
+     -d grant_type=urn:ietf:params:oauth:grant-type:device_code \
+     -d device_code=... -d client_id=...
+   ```
 
 | answer | what it means |
 | --- | --- |
-| `authorization_pending` | nobody has typed the code in yet — keep waiting |
-| `slow_down` | you polled inside `interval` — add five seconds and carry on |
-| `access_denied` | the person said no. Stop. |
-| `expired_token` | fifteen minutes went by. Ask for a new code. |
-| a token | done |
+| `authorization_pending` | nobody has entered the code yet. Keep polling. |
+| `slow_down` | the device polled within `interval`. Add five seconds to the interval and keep polling. |
+| `access_denied` | the person declined. Stop polling. |
+| `expired_token` | the code expired after fifteen minutes. Request a new code. |
+| a token | the person approved the sign-in |
 
-A device code is good for exactly one token. Polling again after it worked is an `invalid_grant`,
-which is what turns a stolen code into a dead one.
+A device code can be redeemed for one token only. Polling again after the token is issued returns
+`invalid_grant`, so a device code that is stolen after use cannot be redeemed.
 
 ## What the person does
 
-They open `/device`, type the code, and sign in the way they always do — password, passkey,
-a provider, a second factor, whatever the tenant asks of them. Then they see the same consent
-screen an application gets, naming the device's client and the scopes it asked for. Approving
-hands the waiting device its token; declining leaves the device with `access_denied`.
+1. The person opens `/device` and enters the code.
+2. They sign in with whatever the tenant requires, such as a password, a passkey, a provider, or a
+   second factor.
+3. They see the same consent screen that an application shows, naming the device's client and the
+   scopes it requested.
+4. Approving issues the token to the polling device. Declining returns `access_denied` to the
+   device.
 
-The code is eight letters from a twenty-letter alphabet with no vowels in it, so it cannot spell
-anything and cannot be misread between `O` and `0`. Case and dashes are ignored — `bcdfghjk` is
-the same code as `BCDF-GHJK`. Attempts against `/device` are rate limited per address, because a
-short code is only safe while guessing it is slow.
+## The user code
+
+The code is eight letters drawn from a twenty-letter alphabet with no vowels, so it cannot spell
+words, and `O` cannot be confused with `0`. Case and dashes are ignored, so `bcdfghjk` is the same
+code as `BCDF-GHJK`. Attempts at `/device` are rate limited per address, because a short code
+is secure only while guessing it is slow.
