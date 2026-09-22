@@ -41,8 +41,8 @@ services:
       - masks-storage:/rails/storage
 ```
 
-See [self-hosting](https://masks.pages.dev/guides/self-hosting/) for a Postgres, a reverse proxy,
-and the Ansible role in `deploy/roles/masks`.
+See [self-hosting](https://masks.pages.dev/guides/self-hosting/) for a Postgres and a reverse
+proxy.
 
 ```sh
 ./dev       # http://masks.localhost:12345, docs on :12346
