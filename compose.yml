@@ -9,6 +9,8 @@ x-app: &app
       engine: ./engine
   image: masks-dev
   pull_policy: never
+  extra_hosts:
+    - "uris.localhost:host-gateway"
   volumes:
     - ./server:/rails
     - ./engine:/engine
