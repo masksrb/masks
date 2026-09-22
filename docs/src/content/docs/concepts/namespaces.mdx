@@ -3,29 +3,31 @@ title: Namespaces
 description: A scope prefix an application claims, so it can publish scopes masks never has to know.
 ---
 
-An application that needs scopes of its own — `things:read`, `things:settings:admin` — claims the
-prefix `things:` once. After that it publishes whatever it likes beneath it, and masks does not need
-to be told.
+An application that needs scopes of its own, such as `things:read` and `things:settings:admin`,
+claims the prefix `things:` once. After that, the application publishes any scope beneath the prefix,
+and masks does not need to be told about it.
 
 ## Claiming
 
-A namespace is taken when a manager approves a handshake that asks for a prefix. The claim
-records the name, the resource that holds it, and when — and grants the prefix to whoever approved
-it, so the person who connected the app can use it.
+A namespace is claimed when a person approves a handshake that asks for a prefix. That person holds
+`masks:manage`, or holds `masks:handshake` and every scope the handshake asks for. The claim records
+the name, the resource that holds it, and the time of the claim. masks also grants the prefix to the
+person who approved the handshake, so the person who connected the application can use it.
 
-**One name, one resource.** A second application asking for a prefix another resource already holds
-is refused before its approval screen renders, naming the resource that has it.
+Each name belongs to one resource. When a second application asks for a prefix that another resource
+already holds, masks refuses the handshake before it renders the approval screen. The refusal names
+the resource that holds the prefix.
 
 ## Releasing
 
-A claim outlives the client that holds it, including archiving. Releasing frees the name for the
-next application to take.
+A claim remains after its client is archived or deleted. Releasing a namespace frees the name for the
+next application to claim.
 
-The rule is a two-step, and the console enforces it in that order:
+The console enforces two steps in this order:
 
-1. archive the client that holds the namespace
-2. release the namespace
+1. Archive the client that holds the namespace.
+2. Release the namespace.
 
-A namespace whose client is still live cannot be released — the console shows *archive to release*
-rather than a button. Once released, the scopes beneath the name stop meaning what they meant, so
-nothing decorative should ever claim one.
+A namespace whose client is still active cannot be released. The console shows *archive to release*
+in place of the **Release** button. After a release, the scopes beneath the name no longer refer to
+what they did before. Claim a namespace only for an application that needs its own scopes.
