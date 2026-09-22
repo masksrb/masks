@@ -1,4 +1,4 @@
-<p align="center"><img src="server/public/icon.svg" width="120" alt="The masks rose window"></p>
+<p align="center"><img src="engine/public/masks-public/icon.svg" width="120" alt="The masks rose window"></p>
 
 # masks
 
@@ -8,15 +8,17 @@ an application needs to sign in against it.
 **Documentation: [masks.pages.dev](https://masks.pages.dev)**
 
 ```
-server/    the standalone OIDC provider     Rails, Postgres, per-tenant keys
+engine/    masks-server                     the OIDC provider, as a Rails engine
+server/    the provider's own app           mounts the engine at /, builds the image
 client/    masks                            discovery, PKCE, exchange, verification, Rails engine
 web/       @masks/client                    BFF and browser PKCE, for an SPA
 docs/      the site above                   Astro + Starlight
 ```
 
-The provider is a deployable rather than a gem: it holds a database and the signing keys, and it
-stays standalone. Everything an application needs to sign in against it is the one `masks` gem,
-whose Rails half loads only when Rails does.
+The provider is the `masks-server` gem. It runs as an app of its own, which is what `server/` and
+the container image are, or mounted inside another Rails app with a database and secrets of its own.
+Everything an application needs to sign in against it is the `masks` gem, whose Rails half loads only
+when Rails does. See [Rails apps](https://masks.pages.dev/guides/rails/) for the three modes.
 
 The server ships as a container image. Main is published as `:main` and by commit sha; a release
 publishes its version, moves `:latest`, and is built for arm64 as well. It needs a Postgres, and it

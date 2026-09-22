@@ -1,68 +1,62 @@
 ---
 title: Rails apps
-description: Sign a Rails application in against a masks issuer.
+description: Use masks from a Rails app as a client, run a Rails app as a masks server, or mount masks inside one.
 ---
 
-`Masks::Rails` is a Rails engine inside the `masks` gem. It mounts the code flow into your
-application, so signing in against a masks issuer is configuration rather than a controller you
-write. It loads only when `Rails::Engine` is already defined; requiring the gem from a plain
-Ruby process gets `Masks::Client` and nothing else.
+masks works with a Rails app in three modes.
+
+| Mode | Gemfile | What your app does |
+| --- | --- | --- |
+| [Client](#client-mode) | `gem "masks"` | Signs people in against a masks server that runs somewhere else. |
+| [Server](#server-mode) | `gem "masks-server"` | Is a masks server, and nothing else. |
+| [Engine](#engine-mode) | `gem "masks-server"` | Mounts masks inside itself, and signs its own people in through it. |
+
+Server and Engine mode are the same engine, `Masks::Server::Engine`. Server mode mounts it at the
+root with the defaults the [container image](/guides/self-hosting/) uses. Engine mode mounts it at
+a path or on a subdomain, and keeps it apart from the app around it.
+
+## Client mode
+
+`Masks::Rails` is a Rails engine inside the `masks` gem. It mounts the code flow into your app, so
+signing in against a masks issuer is configuration, not a controller you write.
 
 ```ruby
 gem "masks"
 ```
-
-## Install
 
 ```sh
 bin/rails generate masks:install
 ```
 
 That mounts the engine at `/auth`, writes `config/initializers/masks.rb`, and adds
-`config/masks.json` to `.gitignore`. The initializer it writes:
+`config/masks.json` to `.gitignore`:
 
 ```ruby
 Masks::Rails.configure do |config|
   config.issuer = ENV.fetch("MASKS_ISSUER", "https://auth.example.com")
-
-  # Uncomment when this app also accepts tokens of its own. `resource` is the
-  # identifier tokens are minted for; `resource_scopes` are what it accepts.
-  # config.resource = "https://app.example.com/api"
-  # config.resource_scopes = []
-
   config.after_sign_in = "/"
   config.after_sign_out = "/"
-
-  # config.credentials = ->(request) { Tenant.for(request).masks_credentials }
-  # config.store = ->(request, registration) { Tenant.for(request).connect!(registration) }
-
-  # config.sign_out_of_issuer = false
-  # config.parent_controller = "ApplicationController"
 end
 ```
 
-Set `MASKS_ISSUER` to the tenant you're signing in against, such as
-`https://acme.auth.example.com`, start the app, and open `/auth/handshake`.
+Set `MASKS_ISSUER` to the tenant you sign in against, such as `https://acme.auth.example.com`,
+start the app, and open `/auth/handshake`.
 
-## The handshake
+### The handshake
 
-A first-party app doesn't self-register anonymously, since that's also how a stranger's
-connector would arrive. Opening `/auth/handshake` sends the browser to your masks server's
-approval screen instead. Approve it there, and the one-time token that comes back is redeemed
-server-side. The secret never travels through the browser and nobody types it anywhere.
+The handshake sends the browser to the masks server's approval screen. Approve it there, and the
+one-time token that comes back is redeemed server to server. The secret never travels through the
+browser.
 
-The engine writes what comes back to `config/masks.json`, mode 600. A multi-tenant app wants a
-row per tenant instead of a file per install, which is what `config.credentials` and
-`config.store` are for:
+The engine writes the credentials to `config/masks.json`, mode 600. A multi-tenant app keeps a row
+per tenant instead:
 
 ```ruby
 config.credentials = ->(request) { Tenant.for(request).masks_credentials }
 config.store = ->(request, registration) { Tenant.for(request).connect!(registration) }
 ```
 
-Those two lambdas are the whole integration for a multi-tenant app.
-
-## Signing in
+### Signing in
 
 ```ruby
 class ApplicationController < ActionController::Base
@@ -72,19 +66,21 @@ class ApplicationController < ActionController::Base
 end
 ```
 
-`authenticate_masks!` sends a signed-out visitor to `masks_login_url` and stops the request.
-Once signed in, `masks_account` and `masks_claims` read the session, and `masks_identity` narrows
-it to `sub`, `name`, `preferred_username`, `email`, `email_verified`, `tenant`, `picture`, and any
-avatar claims. `masks_access_token` is the token to spend against a resource server.
-`masks_disconnect!` tears the connection down and removes `config/masks.json`.
+| Method | |
+| --- | --- |
+| `authenticate_masks!` | Sends a signed-out visitor to `masks_login_url` and stops the request. |
+| `masks_account`, `masks_claims` | Read the signed-in session. |
+| `masks_identity` | `sub`, `name`, `preferred_username`, `email`, `email_verified`, `tenant`, `picture`, and avatar claims. |
+| `masks_access_token` | The token to spend against a resource server. |
+| `masks_disconnect!` | Removes the connection and `config/masks.json`. |
 
-The full method list, generated from the engine's source, is in the
-[Masks::Rails](/reference/rails/) reference.
+See [Masks::Rails](/reference/rails/) for the full list.
 
-## Accepting tokens
+### Accepting tokens
 
-An app that is also a resource server, not just a consumer, checks bearers with
-`Masks::Rails::ProtectedResource`:
+An app that is also a resource server checks bearers with `Masks::Rails::ProtectedResource`. Set
+`config.resource` (the identifier tokens are minted for, checked against `aud`) and
+`config.resource_scopes` first.
 
 ```ruby
 class ApiController < ActionController::Base
@@ -92,12 +88,108 @@ class ApiController < ActionController::Base
 end
 ```
 
-Set `config.resource` and `config.resource_scopes` in the initializer first. `resource` is the
-identifier tokens are minted for and what `aud` is checked against; `resource_scopes` is what
-this app accepts.
+Outside Rails, `Masks::Client` does discovery, PKCE, token exchange, and verification without the
+engine. See [Masks::Client](/reference/ruby/).
 
-## Plain Ruby
+## Server mode
 
-Outside Rails, `Masks::Client` does discovery, PKCE, token exchange, and verification without
-the engine. See [Masks::Client](/reference/ruby/) for the class and method reference, and the
-[generated RDoc](/api/ruby/) for the fuller source-level docs.
+```ruby
+gem "masks-server"
+```
+
+```sh
+bin/rails generate masks:server:install --mode server
+```
+
+That mounts masks at `/` and writes `config/initializers/masks_server.rb`. Your app reads the same
+environment variables as the [container image](/guides/self-hosting/), which is itself a Server-mode
+app. See [ENV vars](/reference/environment/) for every one.
+
+- masks keeps its tables in the primary database. Connect as a role holding neither `SUPERUSER`
+  nor `BYPASSRLS`, since [row-level security](/guides/security/#tenant-isolation) is what keeps
+  tenants apart.
+- Set `config.active_record.schema_format = :sql`. Row-level security does not survive a
+  `schema.rb`.
+- Run `bin/rails db:prepare` and `bin/rails masks:tenants`.
+
+## Engine mode
+
+```ruby
+gem "masks-server"
+```
+
+```sh
+bin/rails generate masks:server:install --at /auth
+bin/rails generate masks:server:install --host auth.example.com
+```
+
+The first mounts masks at `/auth` on your app's own domain. The second serves it at the root of a
+subdomain instead. Either writes:
+
+```ruby
+Rails.application.configure do
+  config.masks.mode = :engine
+  config.masks.database = :masks
+  config.masks.tenant = "app"
+end
+```
+
+### A database of its own
+
+masks keeps its tables in a database of its own, which you add to `config/database.yml` in each
+environment:
+
+```yaml
+masks:
+  <<: *default
+  database: myapp_masks_<%= Rails.env %>
+  username: masks
+  migrations_paths: <%= Masks::Server::Engine.root.join("db/migrate") %>
+  schema_dump: false
+```
+
+Its role must hold neither `SUPERUSER` nor `BYPASSRLS`, or masks refuses to start. Then run
+`bin/rails db:prepare` and `bin/rails masks:tenants`, and open `/auth/login` to set up the first
+account with the setup token masks prints.
+
+### Signing your own people in
+
+Mounted at a path, masks shares your app's origin, so your controllers read the signed-in account
+straight from masks' session, with no OAuth round trip:
+
+```ruby
+class DashboardController < ApplicationController
+  include Masks::Server::Host
+
+  before_action :require_masks_actor!
+
+  def show
+    @person = masks_actor
+  end
+end
+```
+
+`require_masks_actor!` sends a signed-out visitor to masks' sign-in page and back again afterwards.
+Only a path on your own app is followed back.
+
+On a subdomain, masks has an origin of its own and its cookies stay there. Sign your app in with
+[Client mode](#client-mode), with `MASKS_ISSUER` set to that subdomain.
+
+### What stays apart
+
+| | masks uses |
+| --- | --- |
+| Tables | Its own database, through `config.masks.database`. |
+| Session | Its own cookie, `_masks_session`. Signing in to masks never resets your app's session. |
+| Secrets | Its own, from `config.masks.secret`, or derived from your app's key under a label of its own. Your app's cookie jar cannot read masks' cookies. |
+| Encrypted columns | Its own key, derived the same way. |
+| Jobs | Its own job and mail classes carry a tenant. Your app's jobs are left alone. |
+| Routes | Only the paths it is mounted at. |
+
+| Setting | |
+| --- | --- |
+| `config.masks.mode` | `:server` or `:engine`. `MASKS_MODE` sets it too. |
+| `config.masks.database` | The `database.yml` entry masks uses in engine mode. |
+| `config.masks.tenant` | The tenant your app's people belong to. |
+| `config.masks.secret` | The secret masks signs and encrypts with in engine mode. Optional. |
+| `config.masks.public_origin_template` | The issuer, including the path it is mounted at, such as `https://app.example.com/auth`. Required in production, through `MASKS_PUBLIC_ORIGIN_TEMPLATE` or here. |

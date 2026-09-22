@@ -20,8 +20,8 @@ module Masks
   # [ProtectedResource] the other direction — checking a bearer this app was
   #                    handed, for an API rather than a browser
   #
-  # This engine is the client. It never runs in the same process as the
-  # provider, which is a standalone deployable holding its own database.
+  # This engine is the client. The provider is the masks-server gem, whether
+  # it runs elsewhere or is mounted on a subdomain of this app.
   module Rails
   end
 end

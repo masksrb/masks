@@ -10,7 +10,7 @@ Gem::Specification.new do |spec|
                      "verification against a masks issuer, with Rack middleware " \
                      "for a resource server and a Rails engine that mounts the " \
                      "consumer half of the code flow. The auth server itself " \
-                     "stays standalone."
+                     "is the masks-server gem."
   spec.license = "MIT"
   spec.homepage = "https://github.com/masksrb/masks"
   spec.metadata = {

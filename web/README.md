@@ -1,4 +1,4 @@
-<p align="center"><img src="https://raw.githubusercontent.com/masksrb/masks/main/server/public/icon.svg" width="120" alt="The masks rose window"></p>
+<p align="center"><img src="https://raw.githubusercontent.com/masksrb/masks/main/engine/public/masks-public/icon.svg" width="120" alt="The masks rose window"></p>
 
 # @masks/client
 

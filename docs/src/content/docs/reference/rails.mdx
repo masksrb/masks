@@ -23,8 +23,8 @@ Three pieces do the work:
 
     handed, for an API rather than a browser
 
-This engine is the client. It never runs in the same process as the provider,
-which is a standalone deployable holding its own database.
+This engine is the client. The provider is the masks-server gem, whether it
+runs elsewhere or is mounted on a subdomain of this app.
 
 Generated from `client/lib` by `bundle exec rake reference`. Its shape is the code's; the
 prose is the RDoc in the source.

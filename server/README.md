@@ -1,10 +1,9 @@
 # masks server
 
-The standalone OpenID Connect provider. Rails 8, Postgres, one RS256 signing key per tenant.
-
-This is a deployable rather than a library. It holds a database and the signing keys, and it owns
-its own routes, session and cookie — there is no host application. An app that wants to *sign in
-against* it takes the [`masks` gem](../client) instead.
+The app that runs the masks provider on its own: the `masks-server` engine in `../engine`, mounted
+at `/` with the configuration the container image uses. This is Server mode. An app that wants to
+*sign in against* masks takes the [`masks` gem](../client) instead, and an app that wants masks
+inside itself mounts the engine. See [Rails apps](https://masks.pages.dev/guides/rails/).
 
 **Documentation: [masks.pages.dev](https://masks.pages.dev)**
 

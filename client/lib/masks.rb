@@ -10,8 +10,8 @@
 #   issuer = Masks::Client.issuer("https://auth.example")
 #   issuer.authorization_url(client_id: id, redirect_uri: uri)
 #
-# The provider itself is not in here. It is a deployable that holds a database
-# and the per-tenant signing keys, and it stays standalone.
+# The provider itself is not in here. It is the masks-server gem, which runs
+# as an app of its own or mounted inside another Rails app.
 module Masks
 end
 
