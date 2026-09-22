@@ -43,9 +43,6 @@
         avatars { photo identicon }
         ${PRESENCE}
       }
-      devices(unattached: true) {
-        id label category known ipAddress userAgent lastSeenAt blockedAt
-      }
     }
   `;
 
@@ -71,7 +68,6 @@
 
   let search = $state("");
   let people = $state([]);
-  let loose = $state([]);
   let loading = $state(true);
   let more = $state(false);
   let exhausted = $state(false);
@@ -105,7 +101,6 @@
       });
 
       people = afterId ? [...people, ...data.actors] : data.actors;
-      loose = data.devices;
       exhausted = data.actors.length < PAGE;
     } catch (thrown) {
       feedback.blame(thrown);
@@ -177,30 +172,6 @@
     await load();
   }
 
-  async function onDevice(mutation, device, notice, question = null) {
-    if (question && !confirm(question)) return;
-
-    const done = await feedback.attempt(
-      () =>
-        api.query(`mutation Act($id: ID!) { ${mutation}(id: $id) { device { id } } }`, {
-          id: device.id,
-        }),
-      notice,
-    );
-
-    if (done) await load();
-  }
-
-  const block = (device) =>
-    onDevice(
-      "blockDevice",
-      device,
-      `${device.label} is blocked.`,
-      `Block ${device.label}? It is refused before any password is checked.`,
-    );
-
-  const unblock = (device) => onDevice("unblockDevice", device, `${device.label} is unblocked.`);
-
   const blocked = (actor) => actor.devices.some((device) => device.blockedAt);
 
   const presence = (actor) => {
@@ -211,6 +182,154 @@
 
     return parts.join(" · ");
   };
+
+  const DEVICE_LENSES = [
+    ["allowed", "Allowed", { blocked: false }],
+    ["blocked", "Blocked", { blocked: true }],
+    ["unattached", "Never signed in", { unattached: true }],
+  ];
+
+  const DEVICES_QUERY = `
+    query Devices($blocked: Boolean, $unattached: Boolean, $agent: String, $limit: Int) {
+      devices(blocked: $blocked, unattached: $unattached, agent: $agent, limit: $limit) {
+        id label category known ipAddress userAgent lastSeenAt blockedAt
+        actors { uuid identifier }
+        sessions { id }
+      }
+    }
+  `;
+
+  const DEVICE_LIMIT = 100;
+
+  const DEVICE_COLUMNS = [
+    "",
+    "Device",
+    { label: "Who signs in on it", hide: true },
+    { label: "IP address", hide: true },
+    "Last seen",
+  ];
+
+  let devices = $state([]);
+  let devicesLoading = $state(true);
+  let deviceLens = $state("allowed");
+  let deviceSearch = $state("");
+  let agent = $state("");
+  let chosenDevices = $state(new Set());
+  let refuse = $state(false);
+  let deviceBusy = $state(false);
+
+  const deviceNarrowing = $derived(DEVICE_LENSES.find(([key]) => key === deviceLens)?.[2] ?? {});
+
+  async function loadDevices() {
+    devicesLoading = true;
+
+    const data = await feedback.attempt(() =>
+      api.query(DEVICES_QUERY, {
+        blocked: deviceNarrowing.blocked ?? null,
+        unattached: deviceNarrowing.unattached ?? null,
+        agent: agent || null,
+        limit: DEVICE_LIMIT,
+      }),
+    );
+
+    devicesLoading = false;
+
+    if (data) {
+      devices = data.devices;
+      chosenDevices = new Set();
+    }
+  }
+
+  loadDevices();
+
+  function lookDevices(key) {
+    deviceLens = key;
+    loadDevices();
+  }
+
+  function filterDevices() {
+    agent = deviceSearch.trim();
+    refuse = false;
+    loadDevices();
+  }
+
+  function clearDeviceFilter() {
+    deviceSearch = "";
+    filterDevices();
+  }
+
+  function toggleDevice(id) {
+    const next = new Set(chosenDevices);
+
+    next.has(id) ? next.delete(id) : next.add(id);
+    chosenDevices = next;
+  }
+
+  const allDevicesChosen = $derived(devices.length > 0 && chosenDevices.size === devices.length);
+
+  function toggleAllDevices() {
+    chosenDevices = allDevicesChosen ? new Set() : new Set(devices.map((device) => device.id));
+  }
+
+  const blockingDevices = $derived(deviceLens !== "blocked");
+  const devicePlural = (count) => `${count} device${count === 1 ? "" : "s"}`;
+
+  function deviceOutcome(count, spared) {
+    const done = `${blockingDevices ? "Blocked" : "Unblocked"} ${devicePlural(count)}.`;
+
+    return spared ? `${done} The device you are using was left alone.` : done;
+  }
+
+  async function bulkDevices(variables, question) {
+    if (!confirm(question)) return;
+
+    deviceBusy = true;
+
+    const mutation = blockingDevices
+      ? `mutation Bulk($ids: [ID!], $agent: String, $refuse: Boolean) {
+          blockDevices(ids: $ids, agent: $agent, refuse: $refuse) { count spared }
+        }`
+      : `mutation Bulk($ids: [ID!]!) { unblockDevices(ids: $ids) { count } }`;
+
+    const data = await feedback.attempt(() => api.query(mutation, variables));
+
+    deviceBusy = false;
+
+    if (!data) return;
+
+    const answer = data.blockDevices ?? data.unblockDevices;
+
+    await loadDevices();
+    feedback.say(
+      refuse && variables.agent
+        ? `${deviceOutcome(answer.count, answer.spared)} "${variables.agent}" is refused from now on.`
+        : deviceOutcome(answer.count, answer.spared),
+    );
+  }
+
+  const blockChosenDevices = () =>
+    bulkDevices(
+      { ids: [...chosenDevices] },
+      blockingDevices
+        ? `Block ${devicePlural(chosenDevices.size)}? Each is signed out and refused before any password is checked.`
+        : `Unblock ${devicePlural(chosenDevices.size)}?`,
+    );
+
+  const blockMatchingDevices = () =>
+    bulkDevices(
+      { agent, refuse },
+      `Block every device whose user agent contains "${agent}", including any not listed here?${
+        refuse ? ` New devices sending it are refused too.` : ""
+      }`,
+    );
+
+  const noDevices = $derived(
+    deviceLens === "blocked"
+      ? "Nothing is blocked."
+      : deviceLens === "unattached"
+        ? "Every device here has signed somebody in."
+        : "No device has reached this server yet.",
+  );
 </script>
 
 <Page title="People">
@@ -308,7 +427,7 @@
       columns={COLUMNS}
       count={people.length}
       empty={search.trim()
-        ? `No person matches “${search.trim()}”.`
+        ? `No person matches "${search.trim()}".`
         : lens === "waiting"
           ? "Nobody is awaiting approval."
           : lens === "invited"
@@ -418,47 +537,143 @@
         </button>
       </div>
     {/if}
+  {/if}
 
-    {#if loose.length}
-      <Card title="Devices nobody has signed in on">
-        <ul class="flex flex-col gap-1.5">
-          {#each loose as device (device.id)}
-            <li class="slat">
-              <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                <span class="flex flex-wrap items-baseline gap-2">
-                  <span class="text-sm font-medium">{device.label}</span>
+  <Card title="Devices">
+    {#snippet actions()}
+      <Search
+        bind:value={deviceSearch}
+        label="Filter by user agent"
+        placeholder="curl, python-requests"
+        onsearch={filterDevices}
+      />
+      <div class="range" role="group" aria-label="Which devices">
+        {#each DEVICE_LENSES as [key, label] (key)}
+          <button type="button" aria-pressed={deviceLens === key} onclick={() => lookDevices(key)}
+            >{label}</button
+          >
+        {/each}
+      </div>
+    {/snippet}
+
+    {#if agent && blockingDevices}
+      <div class="alert alert-warning alert-soft flex-col items-start gap-2">
+        <p class="text-sm">
+          Showing devices whose user agent contains <code class="font-mono">{agent}</code>.
+          <button type="button" class="link" onclick={clearDeviceFilter}>Clear</button>
+        </p>
+        <label class="flex items-center gap-2 text-sm">
+          <input type="checkbox" class="checkbox" bind:checked={refuse} />
+          Also refuse this user agent from now on
+        </label>
+        <button
+          type="button"
+          class="btn btn-sm btn-error btn-outline"
+          disabled={deviceBusy}
+          onclick={blockMatchingDevices}
+        >
+          Block every matching device
+        </button>
+      </div>
+    {:else if agent}
+      <p class="text-sm opacity-70">
+        Showing blocked devices whose user agent contains <code class="font-mono">{agent}</code>.
+        <button type="button" class="link" onclick={clearDeviceFilter}>Clear</button>
+      </p>
+    {/if}
+
+    {#if devices.length}
+      <div class="flex flex-wrap items-center gap-3">
+        <label class="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            class="checkbox"
+            checked={allDevicesChosen}
+            indeterminate={chosenDevices.size > 0 && !allDevicesChosen}
+            onchange={toggleAllDevices}
+          />
+          {chosenDevices.size
+            ? `${chosenDevices.size} chosen`
+            : `Choose all ${devicePlural(devices.length)} shown`}
+        </label>
+        {#if chosenDevices.size}
+          <button
+            type="button"
+            class="btn btn-sm {blockingDevices ? 'btn-error btn-outline' : 'btn-outline'}"
+            disabled={deviceBusy}
+            onclick={blockChosenDevices}
+          >
+            {blockingDevices ? "Block" : "Unblock"} {devicePlural(chosenDevices.size)}
+          </button>
+        {/if}
+        {#if devices.length === DEVICE_LIMIT}
+          <span class="text-xs opacity-60">Only the newest {DEVICE_LIMIT} are shown.</span>
+        {/if}
+      </div>
+    {/if}
+
+    {#if devicesLoading && devices.length === 0}
+      <Spinner />
+    {:else}
+      <Table columns={DEVICE_COLUMNS} count={devices.length} empty={noDevices}>
+        {#snippet rows()}
+          {#each devices as device (device.id)}
+            <Row to={`/devices/${device.id}`}>
+              <td class="w-0">
+                <input
+                  type="checkbox"
+                  class="checkbox"
+                  aria-label={`Choose ${device.label}`}
+                  checked={chosenDevices.has(device.id)}
+                  onchange={() => toggleDevice(device.id)}
+                />
+              </td>
+              <td class="max-w-[18rem]">
+                <Link to={`/devices/${device.id}`} class="link link-hover font-medium">
+                  {device.label}
+                </Link>
+                <div class="flex flex-wrap items-center gap-1.5">
+                  <span class="truncate text-xs opacity-50">{device.category}</span>
                   {#if device.blockedAt}
                     <span class="badge badge-error badge-xs">blocked</span>
                   {:else if !device.known}
                     <span class="badge badge-warning badge-xs">unrecognised</span>
                   {/if}
-                </span>
-
-                {#if device.blockedAt}
-                  <button type="button" class="link text-xs" onclick={() => unblock(device)}>
-                    Unblock
-                  </button>
-                {:else}
-                  <button
-                    type="button"
-                    class="link text-xs text-error"
-                    onclick={() => block(device)}
-                  >
-                    Block
-                  </button>
+                  {#if device.sessions.length}
+                    <span class="badge badge-success badge-xs">signed in</span>
+                  {/if}
+                </div>
+                {#if agent && device.userAgent}
+                  <div class="truncate font-mono text-xs opacity-60" title={device.userAgent}>
+                    {device.userAgent}
+                  </div>
                 {/if}
-              </div>
+              </td>
 
-              <span class="truncate text-xs opacity-45">{device.userAgent ?? device.category}</span>
+              <td class="hidden max-w-[16rem] text-xs md:table-cell">
+                {#if device.actors.length}
+                  <div class="truncate">
+                    {#each device.actors as actor, at (actor.uuid)}{at ? ", " : ""}<Link
+                        to={`/people/${actor.uuid}`}
+                        class="link link-hover">{actor.identifier}</Link
+                      >{/each}
+                  </div>
+                {:else}
+                  <span class="opacity-60">nobody yet</span>
+                {/if}
+              </td>
 
-              <div class="flex flex-wrap gap-x-4 text-xs opacity-60">
-                <span class="font-mono">{device.ipAddress ?? "—"}</span>
-                <span title={moment(device.lastSeenAt)}>Last seen {since(device.lastSeenAt)}</span>
-              </div>
-            </li>
+              <td class="hidden font-mono text-xs opacity-70 md:table-cell">
+                {device.ipAddress ?? "—"}
+              </td>
+
+              <td class="text-xs whitespace-nowrap opacity-70" title={moment(device.lastSeenAt)}>
+                {since(device.lastSeenAt)}
+              </td>
+            </Row>
           {/each}
-        </ul>
-      </Card>
+        {/snippet}
+      </Table>
     {/if}
-  {/if}
+  </Card>
 </Page>

@@ -2,13 +2,11 @@
   import { untrack } from "svelte";
   import { createApi } from "./lib/api.svelte.js";
   import { createRouter, provideRouter } from "./lib/router.svelte.js";
-  import { redeem } from "./lib/pairing.js";
+  import { handshakeUrl, redeem } from "./lib/pairing.js";
   import Link from "./ui/Link.svelte";
   import Spinner from "./ui/Spinner.svelte";
-  import Pair from "./Pair.svelte";
   import PeoplePage from "./PeoplePage.svelte";
   import ActorPage from "./ActorPage.svelte";
-  import DevicesPage from "./DevicesPage.svelte";
   import DevicePage from "./DevicePage.svelte";
   import ClientsPage from "./ClientsPage.svelte";
   import ClientPage from "./ClientPage.svelte";
@@ -34,21 +32,29 @@
   const NAV = [
     ["", "Overview", '<path d="M3.5 10.5 10 4l6.5 6.5"/><path d="M5.5 9v7h9V9"/>'],
     ["/people", "People", '<circle cx="10" cy="7" r="3"/><path d="M4 17c.8-3 3.2-4.5 6-4.5s5.2 1.5 6 4.5"/>'],
-    ["/devices", "Devices", '<rect x="6" y="2.5" width="8" height="15" rx="2"/><path d="M9 15h2"/>'],
     ["/clients", "Clients", '<rect x="3" y="3" width="6" height="6" rx="1.5"/><rect x="11" y="3" width="6" height="6" rx="1.5"/><rect x="3" y="11" width="6" height="6" rx="1.5"/><rect x="11" y="11" width="6" height="6" rx="1.5"/>'],
   ];
 
   const SETTINGS = ["settings", "policies", "providers", "provisioning", "adapters", "activity"];
 
+  function register() {
+    location.replace(handshakeUrl(boot));
+  }
+
   async function start() {
     const query = new URLSearchParams(location.search);
 
     try {
-      if (query.get("error")) {
-        if (query.get("error") === "invalid_client") api.unpair();
+      if (query.get("error") === "invalid_client") {
+        api.unpair();
+        register();
+        return;
+      }
 
+      if (query.get("error")) {
         failure = query.get("error_description") || query.get("error");
-        phase = "pairing";
+        router.replace("");
+        phase = "failed";
         return;
       }
 
@@ -60,7 +66,7 @@
       }
 
       if (!api.paired()) {
-        phase = "pairing";
+        register();
         return;
       }
 
@@ -79,7 +85,7 @@
       ready();
     } catch (thrown) {
       failure = thrown.message;
-      phase = api.paired() ? "failed" : "pairing";
+      phase = "failed";
     }
   }
 
@@ -102,9 +108,13 @@
     viewer?.identifier ?? api.state.identity?.preferred_username ?? "Account",
   );
 
-  function repair() {
-    api.unpair();
+  function retry() {
     location.assign(boot.root);
+  }
+
+  function forget() {
+    api.unpair();
+    retry();
   }
 
   async function signOut() {
@@ -112,9 +122,7 @@
   }
 </script>
 
-{#if phase === "pairing"}
-  <Pair {boot} {failure} />
-{:else if phase === "starting"}
+{#if phase === "starting"}
   <div class="grid min-h-screen place-items-center">
     <Spinner label="Starting" />
   </div>
@@ -124,16 +132,11 @@
       <div class="flow">
         <span class="state state-bad">Stopped</span>
 
-        <h1 class="prompt-title">This console could not start</h1>
+        <h1 class="prompt-title">Could not sign in to manage {boot.tenant.name}</h1>
 
         <p class="said">{failure}</p>
 
-        <p class="prompt-lede">
-          Its registration may have been archived. Pairing again registers this browser from
-          scratch.
-        </p>
-
-        <button type="button" class="action" onclick={repair}>Pair again</button>
+        <button type="button" class="action" onclick={retry}>Try again</button>
       </div>
     </main>
   </div>
@@ -183,12 +186,8 @@
         {:else}
           <PeoplePage {api} />
         {/if}
-      {:else if current === "devices"}
-        {#if router.segments[1]}
-          <DevicePage {api} id={router.segments[1]} />
-        {:else}
-          <DevicesPage {api} />
-        {/if}
+      {:else if current === "devices" && router.segments[1]}
+        <DevicePage {api} id={router.segments[1]} />
       {:else if current === "clients"}
         {#if router.segments[1]}
           <ClientPage {api} clientId={router.segments[1]} />
@@ -196,7 +195,7 @@
           <ClientsPage {api} />
         {/if}
       {:else if inSettings}
-        <SettingsShell {current} identifier={signedInAs} onsignout={signOut} onunpair={repair}>
+        <SettingsShell {current} identifier={signedInAs} onsignout={signOut} onunpair={forget}>
           {#if current === "providers"}
             <ProvidersPage {api} />
           {:else if current === "policies"}

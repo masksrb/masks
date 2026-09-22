@@ -1,9 +1,9 @@
 <script>
 let { person, signOut = null } = $props();
 
-const token = signOut
-  ? (document.querySelector('meta[name="csrf-token"]')?.content ?? "")
-  : "";
+const token = $derived(
+  signOut ? (document.querySelector('meta[name="csrf-token"]')?.content ?? "") : "",
+);
 </script>
 
 <div class="person">
