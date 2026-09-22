@@ -1,55 +1,55 @@
 ---
 title: Pushed requests
-description: Handing an authorization request to the server before sending anybody to it.
+description: How a client sends its authorization request to masks directly before redirecting the person.
 ---
 
-An ordinary authorization request travels in the browser's address bar. Every parameter — the
-scopes, the resources, the redirect URI, the PKCE challenge — is visible to the person, to anything
-reading their history or logs, and to whatever else the page later loads.
+An ordinary authorization request is sent in the browser's address bar. Every parameter, including
+the scopes, the resources, the redirect URI, and the PKCE challenge, is visible to the person, to
+anything that reads their history or logs, and to any page that loads afterward.
 
-A pushed request moves that to the back channel. The client posts the request to `/par` over the
-same authenticated connection it uses for `/token`, and gets back a reference to it. Only the
-reference goes in the URL.
+A pushed request sends those parameters over the back channel instead. The client posts the request
+to `/par` with the same client authentication it uses at `/token`, and receives a reference to the
+request. Only the reference is sent in the URL.
 
-masks implements [RFC 9126](https://www.rfc-editor.org/rfc/rfc9126.html). The endpoint is
-advertised as `pushed_authorization_request_endpoint`.
+masks implements [RFC 9126](https://www.rfc-editor.org/rfc/rfc9126.html). Discovery advertises the
+endpoint as `pushed_authorization_request_endpoint`.
 
-## Pushing one
+## Pushing a request
 
-Post the parameters you would otherwise have put in the query, authenticating the way you would at
-the token endpoint. `client_id` is one of those parameters, so it belongs in the body even when the
-same id is already in the credentials you authenticate with.
+1. The client posts the parameters it would otherwise put in the query string, and authenticates
+   as it does at the token endpoint. `client_id` is one of those parameters, so it belongs in the
+   body even when the credentials already contain the same ID.
 
-```sh
-curl -u "$CLIENT_ID:$CLIENT_SECRET" https://demo.auth.example.com/par \
-  -d client_id="$CLIENT_ID" \
-  -d response_type=code \
-  -d redirect_uri=https://app.example.com/cb \
-  -d scope="openid profile" \
-  -d code_challenge="$CHALLENGE" \
-  -d code_challenge_method=S256 \
-  -d state="$STATE"
-```
+   ```sh
+   curl -u "$CLIENT_ID:$CLIENT_SECRET" https://demo.auth.example.com/par \
+     -d client_id="$CLIENT_ID" \
+     -d response_type=code \
+     -d redirect_uri=https://app.example.com/cb \
+     -d scope="openid profile" \
+     -d code_challenge="$CHALLENGE" \
+     -d code_challenge_method=S256 \
+     -d state="$STATE"
+   ```
 
-```json
-{
-  "request_uri": "urn:ietf:params:oauth:request_uri:8mZ1...",
-  "expires_in": 90
-}
-```
+   ```json
+   {
+     "request_uri": "urn:ietf:params:oauth:request_uri:8mZ1...",
+     "expires_in": 90
+   }
+   ```
 
-Then send the person to `/authorize` with nothing but the client and that reference:
+2. The client redirects the person to `/authorize` with only the client ID and the reference:
 
-```
-https://demo.auth.example.com/authorize
-  ?client_id=...
-  &request_uri=urn%3Aietf%3Aparams%3Aoauth%3Arequest_uri%3A8mZ1...
-```
+   ```
+   https://demo.auth.example.com/authorize
+     ?client_id=...
+     &request_uri=urn%3Aietf%3Aparams%3Aoauth%3Arequest_uri%3A8mZ1...
+   ```
 
-A public client — `token_endpoint_auth_method` of `none` — pushes with its `client_id` and no
-secret, and still gets the benefit: the request itself never reaches the address bar.
+A public client, whose `token_endpoint_auth_method` is `none`, pushes with its `client_id` and no
+secret. Its request parameters still stay out of the address bar.
 
-## What the reference is worth
+## The reference
 
 | | |
 | --- | --- |
@@ -57,16 +57,17 @@ secret, and still gets the benefit: the request itself never reaches the address
 | uses | one |
 | bound to | the client that pushed it |
 
-It is spent when it is followed, whether or not the `client_id` beside it was right — a reference
-that has been in an address bar has had its chance. Following one twice, following one that has
-expired, or following one pushed by a different client all answer `invalid_request_uri`.
+The reference is spent the first time the client that pushed it follows it to `/authorize`.
+Following it a second time, following it after it expires, or presenting it with a different
+client's `client_id` returns `invalid_request_uri`. A reference presented with the wrong
+`client_id` is refused and is not spent.
 
-Anything else in the query is ignored. The request is what was pushed, so appending a wider `scope`
-or a different `redirect_uri` on the way to `/authorize` changes nothing.
+masks ignores every other parameter in the query. The request is the one that was pushed, so a
+wider `scope` or a different `redirect_uri` appended to the `/authorize` URL has no effect.
 
-## Requiring it
+## Requiring pushed requests
 
-A client can be held to it, from the console or through the manage API:
+A client can be required to push its requests, from the console or through the manage API:
 
 ```graphql
 mutation {
@@ -76,19 +77,20 @@ mutation {
 }
 ```
 
-Once required, a plain `/authorize` link for that client is refused with `invalid_request`. Turn it
-on after the client is pushing, not before. A self-registering client can ask for it at
-registration with the same name.
+After this is set, masks refuses a plain `/authorize` link for that client with `invalid_request`.
+Set it only after the client is already pushing its requests. A client that registers itself can
+request the same setting at registration, under the same name.
 
-Signing in and consenting return through a URL this server builds for itself, and that return is
-the same request rather than a second one — requiring a push does not break the flow it started.
+When the person signs in and consents, masks returns them to a URL that it builds itself. That
+return continues the same pushed request, so requiring pushed requests does not interrupt sign-in
+or consent.
 
-## Signing it
+## Signing a request
 
-Pushing keeps the request off the front channel. Signing it proves the client wrote it. A client
-that has registered `jwks` or a `jwks_uri` may send the whole request as a request object
-([RFC 9101](https://www.rfc-editor.org/rfc/rfc9101.html)): a JWT it signs with one of those keys,
-carrying the parameters as claims.
+Pushing keeps the request out of the browser. Signing the request proves that the client created
+it. A client that has registered `jwks` or a `jwks_uri` may send the whole request as a request
+object ([RFC 9101](https://www.rfc-editor.org/rfc/rfc9101.html)). A request object is a JWT that the
+client signs with one of those keys, with the parameters as claims.
 
 ```json
 {
@@ -107,29 +109,29 @@ carrying the parameters as claims.
 }
 ```
 
-Send it as `request`, beside the `client_id`, either straight to `/authorize` or pushed to `/par`,
-where the `client_id` comes from how the client authenticated. Typing it `oauth-authz-req+jwt` is
-recommended.
+The client sends it as the `request` parameter, beside the `client_id`, either directly to
+`/authorize` or pushed to `/par`. At `/par`, the `client_id` comes from the client's
+authentication. The JWT should be typed `oauth-authz-req+jwt`.
 
 | | |
 | --- | --- |
-| signed with | RSA, RSA-PSS or ECDSA, by a key the client registered — never `none`, never a shared secret |
+| signed with | RSA, RSA-PSS, or ECDSA, by a key the client registered; `none` and shared secrets are refused |
 | `iss` | the client |
 | `aud` | this issuer |
-| `client_id` | the same client as the one beside it |
-| `exp` | required, and within the hour |
-| `nbf` | if present, not in the future and not more than an hour gone |
+| `client_id` | the same client as the `client_id` beside it |
+| `exp` | required, and no more than an hour away |
+| `nbf` | if present, not in the future and not more than an hour ago |
 | `jti` | if present, spent the first time it is used |
 
-When a request object arrives, it is the entire request. Nothing in the query beside it is read,
-so an unsigned `scope` or `redirect_uri` added on the way is ignored rather than merged. One that
-does not verify is refused with `invalid_request_object`, including one that carries a `request`
-or `request_uri` of its own.
+A request object is the entire request. masks reads nothing else in the query beside it, so an
+unsigned `scope` or `redirect_uri` added to the URL is ignored and is not merged in. A request
+object that does not verify is refused with `invalid_request_object`. So is a request object that
+contains its own `request` or `request_uri`.
 
-`requireSignedRequestObject` holds a client to signing, the way `requirePushedAuthorizationRequests`
-holds it to pushing. Holding a client to both is what FAPI 2.0 asks for. Discovery answers
-`request_parameter_supported: true` and lists the algorithms in
+`requireSignedRequestObject` requires a client to sign its requests, in the same way that
+`requirePushedAuthorizationRequests` requires it to push them. FAPI 2.0 requires both. Discovery
+returns `request_parameter_supported: true` and lists the accepted algorithms in
 `request_object_signing_alg_values_supported`.
 
-A `request_uri` is only ever one this server issued from `/par`. masks never fetches a request
-object from a URL a client names, so `request_uri_parameter_supported` stays `false`.
+masks accepts only a `request_uri` that it issued from `/par`. It never fetches a request object
+from a URL that a client provides, so `request_uri_parameter_supported` is `false`.
