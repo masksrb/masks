@@ -9,7 +9,7 @@ class ApplicationController < ActionController::Base
   before_action :withhold_referrer
   before_action :refuse_blocked_device
 
-  helper_method :current_actor, :current_tenant, :current_device, :hid_for
+  helper_method :current_actor, :current_tenant, :current_device, :hid_for, :themed_client
 
   rescue_from Policy::Denied, with: :policy_denied
 
@@ -17,6 +17,10 @@ class ApplicationController < ActionController::Base
 
     def current_tenant
       Current.tenant
+    end
+
+    def themed_client
+      @login&.client
     end
 
     def withhold_referrer

@@ -153,6 +153,12 @@ run inside Puma by default, or in a separate `bin/jobs` process with
 | `RAILS_FORCE_SSL` | `true` | Redirects HTTP to HTTPS and sends `Strict-Transport-Security`. Production only. |
 | `SECRET_KEY_BASE_DUMMY` | unset | Boots with a throwaway secret and skips the production checks above. For build steps only. A server running with it set is not secure. |
 
+### Themes
+
+| Variable | Default | |
+| --- | --- | --- |
+| `MASKS_THEMES_PATH` | `/rails/themes` | The directory of theme stylesheets, read at boot. See [themes](/guides/themes/). |
+
 ### Links
 
 | Variable | Default | |

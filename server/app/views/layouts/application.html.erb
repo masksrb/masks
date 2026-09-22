@@ -11,6 +11,9 @@
     <%= csp_meta_tag %>
     <%= vite_client_tag %>
     <%= vite_stylesheet_tag "app" %>
+    <% Themes.for(tenant: Current.tenant, client: themed_client).each do |theme| %>
+      <%= tag.link rel: "stylesheet", href: theme_path(theme.digest) %>
+    <% end %>
     <%= yield :scripts %>
   </head>
 

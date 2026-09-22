@@ -11,6 +11,9 @@ Rails.application.routes.draw do
   get "/device", to: "device_verifications#show", as: :device_verification
   post "/device", to: "device_verifications#create", as: :device_code
 
+  get "/themes/:digest.css", to: "themes#show", as: :theme, format: false,
+                             constraints: { digest: /[0-9a-f]{32}/ }
+
   get "/login", to: "logins#show", as: :login
   post "/login", to: "logins#update"
   delete "/login", to: "logins#destroy"

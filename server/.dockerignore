@@ -25,3 +25,4 @@
 /.dockerignore
 /Dockerfile*
 /compose.yml
+/themes

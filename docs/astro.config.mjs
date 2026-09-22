@@ -77,6 +77,7 @@ export default defineConfig({
           { label: "Client features", slug: "guides/client-features" },
           { label: "Login features", slug: "guides/login-features" },
           { label: "Logout features", slug: "guides/logout-features" },
+          { label: "Themes", slug: "guides/themes" },
           { label: "SSO / SAML", slug: "guides/sso-saml" },
           { label: "Connecting via SDK", slug: "guides/connecting-via-sdk" },
           { label: "Security", slug: "guides/security" },

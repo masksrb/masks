@@ -576,18 +576,18 @@
 
   @media (prefers-color-scheme: dark) {
     .auth-page {
-      --ground: #000000;
-      --surface: #0f0b09;
-      --line: #292421;
-      --line-firm: #3d3834;
-      --ink: #e9e5e2;
-      --ink-soft: #aca6a2;
+      --ground: #1c1917;
+      --surface: #25211e;
+      --line: #38332f;
+      --line-firm: #4b4540;
+      --ink: #ede8e4;
+      --ink-soft: #b3aca6;
 
-      --came: #aca6a2;
-      --signal: #e9e5e2;
-      --signal-ink: #1a1614;
+      --came: #b3aca6;
+      --signal: #ede8e4;
+      --signal-ink: #1c1917;
       --signal-lift: #ffffff;
-      --ring: rgba(233, 229, 226, 0.26);
+      --ring: rgba(237, 232, 228, 0.28);
 
       --bad: #ff867a;
       --bad-field: rgba(255, 134, 122, 0.1);
@@ -596,7 +596,7 @@
       --info: #00c2fe;
       --info-field: rgba(0, 194, 254, 0.1);
 
-      --glow: rgba(233, 229, 226, 0.06);
+      --glow: rgba(237, 232, 228, 0.07);
     }
   }
 

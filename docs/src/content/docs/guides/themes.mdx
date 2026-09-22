@@ -1,0 +1,95 @@
+---
+title: Themes
+description: Restyle the sign-in and account pages for a tenant or a client with a stylesheet.
+---
+
+A theme is a CSS file that masks loads after its own stylesheet on the sign-in, consent, and
+account pages. The built-in System theme applies when no file matches. Themes are read when the
+server boots, so a new or changed file applies on the next deploy or restart.
+
+## Naming a theme
+
+masks looks for themes in `/rails/themes`, or in the directory `MASKS_THEMES_PATH` names. A file's
+name decides where it applies:
+
+| File | Applies to |
+| --- | --- |
+| `acme.css` | Every sign-in and account page of the tenant `acme`. |
+| `acme/<client_id>.css` | The sign-in and consent pages of `acme` while the person signs in to that client. |
+
+A page loads the tenant's file, then the client's file, so a rule in the client's file takes
+precedence. A client's file applies only while a sign-in request names the client. The account page
+names no client and loads only the tenant's file. A file larger than 256 KB is skipped, and the
+server logs a warning.
+
+## Adding a theme
+
+1. Write the stylesheet. Set the custom properties below on `.auth-page`, once for light and once
+   inside `@media (prefers-color-scheme: dark)`:
+
+   ```css
+   .auth-page {
+     --ground: #f4f7fb;
+     --surface: #eaf0f7;
+     --line: #d3dce7;
+     --ink: #14202e;
+     --signal: #1f5fbf;
+     --signal-ink: #ffffff;
+   }
+
+   @media (prefers-color-scheme: dark) {
+     .auth-page {
+       --ground: #151c26;
+       --surface: #1d2632;
+       --line: #2e3a49;
+       --ink: #e6edf5;
+       --signal: #7fb0ff;
+       --signal-ink: #0d1520;
+     }
+   }
+   ```
+
+   Any property left unset keeps System's value.
+
+2. Mount the directory into the container:
+
+   ```yaml
+   services:
+     masks:
+       volumes:
+         - masks-storage:/rails/storage
+         - ./themes:/rails/themes:ro
+   ```
+
+3. Restart the server. The file is served from `/themes/<digest>.css`, where the digest changes
+   whenever the file does, so browsers cache each version indefinitely.
+
+## Custom properties
+
+| Property | |
+| --- | --- |
+| `--ground` | The page background. |
+| `--surface` | Panels, cards, and fields that sit on the ground. |
+| `--line` | Borders and dividers. |
+| `--line-firm` | Borders of fields and of hovered or focused controls. |
+| `--ink` | Body text. |
+| `--ink-soft` | Secondary text, hints, and labels. |
+| `--came` | Status labels and the name beside an avatar. |
+| `--signal` | The primary button and selected controls. |
+| `--signal-ink` | Text on `--signal`. |
+| `--signal-lift` | The primary button when hovered. |
+| `--bad`, `--bad-field` | Error text and the background behind it. |
+| `--warn`, `--warn-field` | Warning text and the background behind it. |
+| `--info`, `--info-field` | Informational text and the background behind it. |
+| `--glow` | The light in the top corner of the page, and the background of pills and plain notes. |
+| `--bend` | The corner radius of panels and controls. |
+
+A theme may style any other selector on these pages as well. These properties stay the same
+between releases, and class names can change.
+
+## What a theme can load
+
+The pages keep their content security policy when a theme is loaded. Images and fonts load only
+from masks itself or from `data:` URIs, so a theme embeds any image or font it uses as a `data:`
+URI and names fonts that are installed on the device. An `@import` or `url()` pointing at another
+host is refused by the browser.
