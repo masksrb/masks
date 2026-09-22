@@ -1,0 +1,78 @@
+---
+title: Logout features
+description: Signing a person out from an app, telling other apps they signed out, and revoking sessions and devices.
+---
+
+Signing out ends the person's masks session. Every app they used in that session can be told.
+
+## Signing out from an app
+
+An app sends the browser to `/logout`, the `end_session_endpoint` in discovery
+([RP-initiated logout](https://openid.net/specs/openid-connect-rpinitiated-1_0.html)):
+
+```
+GET https://demo.auth.example.com/logout
+  ?id_token_hint=eyJ…
+  &post_logout_redirect_uri=https://app.example.com/signed-out
+  &state=STATE
+```
+
+| Parameter | |
+| --- | --- |
+| `id_token_hint` | An ID token this issuer signed for the person. |
+| `client_id` | Identifies the app when there is no `id_token_hint`. |
+| `post_logout_redirect_uri` | Where to send the browser after. It must be one of the client's registered `post_logout_redirect_uris`, and needs `id_token_hint` or `client_id`. |
+| `state` | Returned with the redirect. |
+
+- A `GET` whose `id_token_hint` names the signed-in person signs them out at once.
+- A `GET` without a matching hint shows a confirmation screen first, so a link on another site
+  cannot sign someone out.
+- A `POST` signs out at once.
+
+With no `post_logout_redirect_uri`, masks shows its sign-in page.
+
+## Telling other apps
+
+When a session ends, masks posts a signed logout token to every app the person used in it that
+registered a `backchannel_logout_uri`
+([back-channel logout](https://openid.net/specs/openid-connect-backchannel-1_0.html)).
+
+| | |
+| --- | --- |
+| Token type | `logout+jwt`, signed with the tenant's key. |
+| Claims | `sub` as the app knows the person, and `sid`, the session. |
+| Delivery | Retried up to five times, backing off each time. |
+| A delivery that still fails | Recorded as an event on the person's activity. |
+
+A self-registered app's `backchannel_logout_uri` must use `http` or `https` and resolve to a public
+address. masks will not call a private one.
+
+## Sessions and devices
+
+A **session** is one signed-in browser. It records when it authenticated, when it expires, and the
+address it came from.
+
+A **device** is the browser itself, identified by a cookie that lasts 400 days across sessions.
+
+| | |
+| --- | --- |
+| `label` | Defaults to the browser and system, such as "Chrome on macOS". Editable. |
+| `known` | The user agent is one masks recognizes. |
+| `blocked_at` | When it was blocked. A blocked device is refused **before any password is checked**. |
+| `last_seen_at` | The most recent request from it. |
+
+| Action | Revokes |
+| --- | --- |
+| Revoke a session | That sign-in only. |
+| Sign a device out | Every session, access token, and refresh token on it, and its [remembered second factor](/guides/login-features/#remembered-devices). |
+| Sign an actor out | Every session and refresh token on every device, and every remembered second factor. |
+| Block a device | Every request from it, and signs it out. |
+
+`/manage` lists devices with no session too, so a browser that never finished signing in can still
+be blocked.
+
+## Not supported
+
+- Front-channel logout. Discovery sets `frontchannel_logout_supported` to `false`.
+- Session management. The iframe it depends on no longer works in current browsers.
+- SAML single logout. See [SAML applications](/guides/sso-saml/#saml-applications).

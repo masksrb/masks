@@ -1,0 +1,171 @@
+---
+title: Core concepts
+description: Tenants, actors, clients, scopes, namespaces, and signing keys.
+---
+
+The rest of the docs assume these six: tenants, actors, clients, scopes, namespaces, and signing
+keys. Each section defines one and links to the guide that covers it in depth.
+
+## Tenants
+
+A tenant is a subdomain with its own actors, clients, and signing keys. No record belongs to more
+than one tenant. See [tenant isolation](/guides/security/#tenant-isolation) for how they are kept
+apart.
+
+### Declaring tenants
+
+A deployment declares its tenants in one of three ways. Setting both `MASKS_TENANT` and
+`MASKS_TENANTS` is an error.
+
+| | Declared by | A request resolves by |
+| --- | --- | --- |
+| Single | `MASKS_TENANT=acme` | Nothing. Every host is that tenant. |
+| Multi | `MASKS_TENANTS=demo,acme` | The first label of the hostname. `demo.auth.example.com` is `demo`. |
+| Dynamic | Neither set | The first label of the hostname, the first time it is seen. |
+
+- Single and Multi: `bin/rails masks:tenants` creates them, and the container entrypoint runs it on
+  boot.
+- Dynamic: what happens to an unseen hostname depends on `MASKS_PUBLIC_ORIGIN_TEMPLATE`.
+
+| `MASKS_PUBLIC_ORIGIN_TEMPLATE` | An unseen hostname | Checked by |
+| --- | --- | --- |
+| Has `%{subdomain}`, such as `https://%{subdomain}.auth.example.com` | Claims a tenant, every time | Rails' host authorization, before `Tenancy::Middleware` runs |
+| Anything else, or unset | Claims a tenant once, on the first request to an empty database | Nothing. The host header is trusted. |
+
+With a wildcard template, one subdomain per signup needs only a matching hostname. Without one, the
+first request names the only tenant, and later unseen hosts get a 404.
+
+### Setting a tenant up
+
+masks prints a setup token for each new tenant in the server's logs, when it creates the tenant and
+on every boot until the tenant is set up:
+
+```
+masks: demo is not set up. Its setup token is 7Hq2…
+```
+
+- The first-run screen asks for the token before it creates the first account, so only someone who
+  can read the logs becomes the manager.
+- Each tenant has its own token. It is stored encrypted and deleted once the first account exists.
+- `MASKS_SETUP_TOKEN` replaces every generated token with one.
+
+The first account holds `masks:manage`. The first-run screen asks for its nickname, address, and
+password, and for the installation's name. The screen does not appear again.
+
+### Tenant settings
+
+`/manage` edits these without a restart. A setting the deployment pins cannot be changed through
+the manage API. See [ENV vars](/reference/environment/#sign-in-policy) for the variables.
+
+| Setting | Controls |
+| --- | --- |
+| `named_by` | Which field every account must have. See [what names an account](#what-names-an-account). |
+| `dynamic_registration` | Whether apps may [register themselves](/guides/client-features/#registering-a-client). |
+| `dynamic_client_scopes` | The scopes a self-registered app may request. |
+| `browsers_only`, `blocked_agents` | Which user agents may sign in. |
+| sign-in policy | The default [sign-in policy](/guides/login-features/#sign-in-policies). |
+| mail adapter | How the tenant sends invitations, codes, and resets. |
+
+A tenant with no mail adapter uses the deployment's SMTP server. With neither, invitations and
+password resets are links that a manager sends by hand.
+
+## Actors
+
+An actor is an account. It has a nickname, an email address, or both, and a list of scopes.
+
+| Field | |
+| --- | --- |
+| `nickname` | Typed at sign-in. It can be renamed. |
+| `email` / `email_verified_at` | Changing the address clears its confirmation. |
+| `scopes` | The most any token for this actor can hold. |
+| `activated_at` | Unset while an invitation is outstanding. |
+
+### What names an account
+
+`named_by` controls which field every account must have.
+
+| `named_by` | |
+| --- | --- |
+| `nickname` | Every account needs a nickname. |
+| `email` | Every account needs an address. |
+| `either` | Either one is enough. This is the default. |
+
+Every account has at least one of the two, enforced by the model and a database constraint. **An
+account holding `masks:manage` needs both**, because invitations and resets go to managers.
+
+A person signs in with either field. `/manage`, the activity list, and introspection show the
+nickname when there is one, and the address otherwise. See [login features](/guides/login-features/)
+for passwords, passkeys, and second factors.
+
+## Clients
+
+A client is an application that starts sign-ins or signs in as itself. It holds redirect URIs, the
+resources it acts for, and the scopes it may request. See
+[client features](/guides/client-features/) for registering and configuring one.
+
+## Scopes
+
+A scope is a string. Five are standard: `openid`, `profile`, `email`, `offline_access`, and
+`identities`. masks reserves the `masks:` prefix.
+
+| Scope | |
+| --- | --- |
+| `masks:manage` | `/manage` and the GraphQL API behind it. |
+| `masks:handshake` | Connect an application to this tenant. |
+| `masks:scim` | [Provision people over SCIM](/guides/sso-saml/#provisioning). |
+| `masks:delegate:<provider>` | [Use a person's account at a provider](/guides/connecting-via-sdk/#delegation). |
+
+Only an approved client may hold a `masks:` scope. Dynamic registration never offers one. Every
+person holds `masks:delegate:` for their own accounts, and consents to each application separately.
+
+### Prefixes
+
+A scope that ends in a colon is a prefix, which an application claims as a
+[namespace](#namespaces). `things:` covers `things:read`. Nothing covers a bare prefix, so masks
+adds it directly when the namespace is claimed.
+
+### The ceiling
+
+A token holds the requested scopes that are in both the client's `allowed_scopes` and the actor's
+list. A refresh keeps the refresh token's scopes or fewer. The manage API checks the actor's list
+on every request, so losing `masks:manage` takes effect at once.
+
+## Namespaces
+
+An application that needs its own scopes, such as `things:read`, claims the prefix `things:` once.
+It can then publish any scope beneath it without telling masks.
+
+### Claiming
+
+A namespace is claimed when someone approves a handshake that asks for a prefix. They hold
+`masks:manage`, or `masks:handshake` and every scope the handshake asks for. masks grants the
+prefix to them as well.
+
+Each name belongs to one resource. A handshake asking for a prefix another resource holds is
+refused before the approval screen, and the refusal names that resource.
+
+### Releasing
+
+A claim outlives its client. To free the name:
+
+1. Archive the client that holds it.
+2. Release the namespace in `/manage`.
+
+After a release, the scopes beneath the name mean something else to the next claimant. Claim a
+namespace only for an application that needs its own scopes.
+
+## Signing keys
+
+Every tenant has its own RSA keypair. The private key is encrypted at rest. The public key is
+published at the tenant's JWKS endpoint and in its [SAML metadata](/guides/sso-saml/#saml-applications).
+A token from one tenant has a `kid` no other tenant publishes, so it fails verification everywhere
+else.
+
+| State | |
+| --- | --- |
+| `staged` | Published at JWKS, signing nothing yet. |
+| `active` | Signing every new token. |
+| `retiring` | No longer signing, still verifying. |
+| `retired` | Removed from JWKS. |
+
+See [rotating signing keys](/guides/security/#rotating-signing-keys).

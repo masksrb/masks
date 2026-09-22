@@ -1,0 +1,243 @@
+---
+title: Security
+description: Tenant isolation, signing-key rotation, pushed and signed authorization requests, and DPoP-bound tokens.
+---
+
+| Threat | Defense | Section |
+| --- | --- | --- |
+| One tenant reading another's data | Three isolation layers, one enforced by Postgres | [Tenant isolation](#tenant-isolation) |
+| A leaked or aging signing key | Staged rotation with a 24-hour overlap | [Rotating signing keys](#rotating-signing-keys) |
+| Request parameters leaking from the address bar | Pushed authorization requests | [Pushed requests](#pushed-requests) |
+| A forged or altered authorization request | Signed request objects | [Signed requests](#signed-requests) |
+| A stolen token being replayed | Tokens bound to the client's key with DPoP | [Binding a token with DPoP](#binding-a-token-with-dpop) |
+
+Encryption of secrets at rest is covered in
+[self-hosting](/guides/self-hosting/#encryption--secrets). Blocking a device before it can try a
+password is in [logout features](/guides/logout-features/#sessions-and-devices).
+
+## Tenant isolation
+
+| Layer | What it does | If it fails |
+| --- | --- | --- |
+| `TenantScoped` | Scopes every query in the app. | A forgotten scope would leak rows. |
+| Row-level security | `FORCE ROW LEVEL SECURITY` in Postgres. | masks refuses to run as a role that bypasses it. |
+| Per-tenant signing keys | A token's `kid` exists in one tenant's JWKS only. | Verification refuses the token. |
+
+- The app connects as an ordinary Postgres role. A `SUPERUSER` or `BYPASSRLS` role skips every
+  policy with no error.
+- `Tenant.switch` checks the role once per process and raises if it holds either privilege. Set
+  `POSTGRES_USER` to an ordinary role. See [ENV vars](/reference/environment/#database).
+
+### Entering a tenant
+
+Nothing enters a tenant by hand:
+
+1. A Rack middleware resolves the hostname and enters its tenant before any controller runs. A
+   hostname with no tenant gets a 404.
+2. A module in `ActiveJob::Base` records the tenant a job was enqueued in, and the worker enters it
+   before performing the job.
+
+A job enqueued outside a tenant raises, so it cannot run against whichever tenant its thread last
+entered. Maintenance across every tenant declares it:
+
+```ruby
+class CleanupJob < ApplicationJob
+  across_tenants!
+end
+```
+
+- Cross-tenant code uses `Tenant.switch(tenant) { ... }`.
+- It sets a session-scoped Postgres setting and opens no transaction.
+- Outside a tenant, every query returns zero rows, including `Model.unscoped`.
+
+## Rotating signing keys
+
+A key is staged before it signs anything, so clients caching JWKS fetch it first. See
+[signing keys](/guides/core-concepts/#signing-keys) for the states.
+
+| Action | Does | The outgoing key |
+| --- | --- | --- |
+| Stage | Publishes a new key ahead of time. One at a time. | Keeps signing. |
+| Activate | Makes the staged key the signing key. | Verifies for 24 hours. |
+| Rotate | Generates and activates a key at once, for when caches cannot wait. | Verifies for 24 hours. |
+| Discard | Removes a staged key, which has signed nothing. | Keeps signing. |
+
+Only a staged key can be activated or discarded. SAML applications must re-read masks' metadata
+after a rotation.
+
+## Pushed requests
+
+A normal authorization request puts every parameter in the address bar, where history, logs, and
+later pages can read it. A pushed request ([RFC 9126](https://www.rfc-editor.org/rfc/rfc9126.html))
+sends them to `/par` over the back channel, and only a reference goes in the URL. Discovery
+advertises `pushed_authorization_request_endpoint`.
+
+1. Post the parameters, authenticating as at `/token`. Include `client_id` in the body, even with
+   Basic auth.
+
+   ```sh
+   curl -u "$CLIENT_ID:$CLIENT_SECRET" https://demo.auth.example.com/par \
+     -d client_id="$CLIENT_ID" \
+     -d response_type=code \
+     -d redirect_uri=https://app.example.com/cb \
+     -d scope="openid profile" \
+     -d code_challenge="$CHALLENGE" \
+     -d code_challenge_method=S256 \
+     -d state="$STATE"
+   ```
+
+   ```json
+   {
+     "request_uri": "urn:ietf:params:oauth:request_uri:8mZ1...",
+     "expires_in": 90
+   }
+   ```
+
+2. Redirect to `/authorize` with only the client ID and the reference:
+
+   ```
+   https://demo.auth.example.com/authorize
+     ?client_id=...
+     &request_uri=urn%3Aietf%3Aparams%3Aoauth%3Arequest_uri%3A8mZ1...
+   ```
+
+A public client pushes with its `client_id` and no secret.
+
+| Reference | |
+| --- | --- |
+| Lifetime | 90 seconds. |
+| Uses | One. |
+| Bound to | The client that pushed it. |
+
+Following it twice, late, or with another `client_id` returns `invalid_request_uri`. A wrong
+`client_id` does not spend it.
+
+### Requiring pushed requests
+
+```graphql
+mutation {
+  updateClient(clientId: "...", requirePushedAuthorizationRequests: true) {
+    client { clientId }
+  }
+}
+```
+
+masks then refuses a plain `/authorize` link for that client with `invalid_request`. A
+self-registered client can ask for the same setting at registration. Sign-in and consent continue
+the pushed request, so nothing is interrupted.
+
+:::caution
+Turn it on only after the client already pushes its requests.
+:::
+
+## Signed requests
+
+A client with `jwks` or a `jwks_uri` can send the whole request as a signed JWT, a request object
+([RFC 9101](https://www.rfc-editor.org/rfc/rfc9101.html)), with the parameters as claims:
+
+```json
+{
+  "iss": "$CLIENT_ID",
+  "aud": "https://demo.auth.example.com",
+  "client_id": "$CLIENT_ID",
+  "exp": 1789000300,
+  "nbf": 1789000000,
+  "jti": "5c1f...",
+  "response_type": "code",
+  "redirect_uri": "https://app.example.com/cb",
+  "scope": "openid profile",
+  "code_challenge": "$CHALLENGE",
+  "code_challenge_method": "S256",
+  "state": "$STATE"
+}
+```
+
+Send it as `request`, beside `client_id`, to `/authorize` or pushed to `/par`. Type it
+`oauth-authz-req+jwt`.
+
+| Claim or property | Rule |
+| --- | --- |
+| Signature | RSA, RSA-PSS, or ECDSA, with a registered key. `none` and shared secrets are refused. |
+| `iss` | The client. |
+| `aud` | This issuer. |
+| `client_id` | The same as the one beside it. |
+| `exp` | Required, at most an hour away. |
+| `nbf` | If present, not in the future and at most an hour ago. |
+| `jti` | If present, spent on first use. |
+
+- A pushed request or a request object is the whole request. Anything else in the `/authorize`
+  query is ignored, never merged in.
+- A request object that fails, or contains its own `request` or `request_uri`, is refused with
+  `invalid_request_object`.
+- `requireSignedRequestObject` requires signing, as `requirePushedAuthorizationRequests` requires
+  pushing. FAPI 2.0 requires both.
+- masks accepts only a `request_uri` it issued from `/par`, and never fetches one from a client URL.
+
+## Binding a token with DPoP
+
+A bearer token works for anyone who holds it. DPoP ([RFC 9449](https://www.rfc-editor.org/rfc/rfc9449))
+binds a token to a key the client keeps, so a copied token is useless without it. masks binds a
+token for any client that asks, with no configuration.
+
+1. The client generates a key pair and keeps it.
+2. For each request it signs a *proof*: a JWT typed `dpop+jwt` naming the method and URL, with the
+   public key in its header.
+3. It sends the proof in the `DPoP` header:
+
+   ```
+   POST /token HTTP/1.1
+   DPoP: eyJ0eXAiOiJkcG9wK2p3dCIsImFsZyI6IkVTMjU2Iiwiandr...
+   ```
+
+4. masks returns a bound token:
+
+   ```json
+   { "access_token": "...", "token_type": "DPoP", "expires_in": 3600 }
+   ```
+
+The token's `cnf` claim holds `jkt`, the key's SHA-256 thumbprint
+([RFC 7638](https://www.rfc-editor.org/rfc/rfc7638)). The client presents it with the `DPoP`
+scheme and a new proof every time. A proof sent with a token includes `ath`, the token's hash.
+
+```
+GET /userinfo HTTP/1.1
+Authorization: DPoP eyJhbGciOiJSUzI1NiIs...
+DPoP: eyJ0eXAiOiJkcG9wK2p3dCIs...
+```
+
+### What masks refuses
+
+| Refused | Why |
+| --- | --- |
+| A bound token sent as `Bearer` | A bound token needs a proof. |
+| A proof signed by another key | |
+| A proof whose `htm` or `htu` names another request | |
+| A proof with no `ath`, or the wrong one | |
+| A proof older than 90 seconds or more than 30 in the future | A 60-second window plus 30 seconds of leeway. |
+| A proof whose `jti` was seen | A replay. |
+| A proof carrying a private key, a symmetric key, or `alg: none` | |
+| Any algorithm but `ES256`, `ES384`, `ES512`, `PS256`, `PS384`, `PS512`, `RS256` | |
+
+A refused proof returns `401` with `WWW-Authenticate: DPoP error="invalid_dpop_proof"` and the
+accepted `algs` at a resource, or `400 invalid_dpop_proof` at `/token`. masks sends no nonce. A
+replayed `jti` is refused.
+
+### Binding earlier
+
+- **Authorization code.** `dpop_jkt` on `/authorize` binds the code to the key, so an intercepted
+  code cannot be redeemed:
+
+  ```
+  GET /authorize?...&dpop_jkt=NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs
+  ```
+
+- **Refresh token.** A bound grant's refresh token is bound too. A mismatched proof is refused
+  before the refresh token is spent.
+
+### Requiring a bound token
+
+A client registered with `dpop_bound_access_tokens: true` is refused a token without a proof.
+
+```json
+{ "client_name": "...", "dpop_bound_access_tokens": true }
+```

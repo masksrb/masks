@@ -22,6 +22,8 @@ const DEPENDENCIES = new Set([
   "TLS_DOMAIN",
   "VITE_RUBY_HOST",
   "VITE_RUBY_SKIP_PROXY",
+  "MASKS_MASTER_KEY",
+  "MASKS_MASTER_KEY_FILE",
 ]);
 
 function* walk(path) {

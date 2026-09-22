@@ -1,0 +1,316 @@
+---
+title: Connecting via SDK
+description: Choosing an SDK, connecting an app, acting for a person at a provider, and exchanging tokens.
+---
+
+An app connects to masks with one of three SDKs, registers through a handshake, and signs people in.
+From there it can act for a person at another provider, or trade a token for a narrower one.
+
+## Choosing an SDK
+
+| SDK | For | What it does |
+| --- | --- | --- |
+| [`Masks::Rails`](/reference/rails/) | A Rails app | Mounts the sign-in flow, the handshake, and bearer checks as an engine. |
+| [`Masks::Client`](/reference/ruby/) | Any Ruby process | Discovery, PKCE, the code exchange, verification, and the handshake. |
+| [`@masks/client`](/reference/browser/) | A single-page app | Signs in through your backend, or runs the code flow with PKCE in the page. |
+
+The `masks` gem holds both Ruby SDKs. `Masks::Rails` loads only when Rails does.
+
+## Connecting an app
+
+1. Install the SDK. For Rails, `bin/rails generate masks:install`. See [Rails apps](/guides/rails/)
+   for the whole walkthrough.
+2. Set the issuer, such as `https://acme.auth.example.com`.
+3. Open the handshake. The browser goes to masks' approval screen.
+4. Approve it as a person holding `masks:manage` or `masks:handshake`. The credentials go to the app
+   server to server, and nobody copies a secret.
+
+The app is then an approved [client](/guides/client-features/#registering-a-client). Sign people in
+with the SDK's login URL, and check bearers on your API with its verifier.
+
+## Delegation
+
+A **delegation** lets an app act as one person at a provider while nobody is signed in, such as
+syncing their Google Drive at 3 a.m. or calling their Notion MCP server.
+
+- masks stores and refreshes the provider's tokens.
+- The app gets a token for **one** person's account, after that person consented to **that** app.
+- The app calls the provider directly, and returns to masks only when its token expires.
+
+Each person sees every app using each of their accounts on their account page, and can stop any of
+them there.
+
+### Set up the provider
+
+In `/manage`, on the provider's page:
+
+1. Switch on **Let applications use somebody's Google account**. The label names the provider.
+2. Fill in **What applications may do** with the provider's scopes beyond sign-in.
+3. Fill in **Extra parameters when connecting** if the provider needs them for a refresh token.
+
+| Provider | What applications may do | Extra parameters |
+| --- | --- | --- |
+| Google | `https://www.googleapis.com/auth/drive.readonly` | `access_type=offline prompt=consent` |
+| Microsoft | `offline_access Files.Read.All` | |
+| An MCP server | nothing | |
+
+Presets fill these in. Delegation reuses the redirect URI the provider has for sign-in.
+
+### Let the app ask
+
+Only an approved client can receive a delegation. It needs:
+
+| | |
+| --- | --- |
+| `allowed_scopes` | `masks:delegate:` (every provider) or `masks:delegate:google` (one) |
+| `grant_types` | `refresh_token` and `urn:ietf:params:oauth:grant-type:token-exchange` |
+
+A handshake that asks for `masks:delegate:` sets both. With the Rails engine:
+
+```ruby
+config.delegates = true
+config.delegation_redirect_uri = ->(request) { "#{request.base_url}/connect/callback" }
+```
+
+### Connect an account
+
+1. Send the browser to `/authorize`, keeping `state` and the PKCE verifier in the session:
+
+   ```
+   GET https://auth.example.com/authorize
+     ?response_type=code
+     &client_id=CLIENT_ID
+     &redirect_uri=https://app.example.com/connect/callback
+     &scope=openid offline_access masks:delegate:google
+     &state=STATE
+     &code_challenge=CHALLENGE
+     &code_challenge_method=S256
+   ```
+
+2. masks signs the person in, asks for consent, sends them to Google if it holds no usable token,
+   and redirects back:
+
+   ```
+   GET https://app.example.com/connect/callback?code=CODE&state=STATE
+   ```
+
+3. Check `state`, then redeem the code as the client:
+
+   ```
+   POST https://auth.example.com/token
+   Authorization: Basic base64(CLIENT_ID:CLIENT_SECRET)
+   Content-Type: application/x-www-form-urlencoded
+
+   grant_type=authorization_code
+   &code=CODE
+   &redirect_uri=https://app.example.com/connect/callback
+   &code_verifier=VERIFIER
+   ```
+
+   ```json
+   {
+     "access_token": "eyJ…",
+     "refresh_token": "Xk2…",
+     "delegations": [
+       { "connection": "3f1c9a0e-…", "provider": "google", "provider_name": "Google",
+         "label": "ada@example.com", "subject": "8f4c…" }
+     ]
+   }
+   ```
+
+4. Store `delegations[].connection` (the account) and `refresh_token` (the secret), encrypted.
+
+`subject` is the same `sub` your sign-in receives, so you can refuse a connection finished by
+someone other than who started it.
+
+| `error` | Do |
+| --- | --- |
+| `access_denied` | The person declined, or chose a provider account belonging to someone else in masks. |
+| `login_required` | Send them again with `prompt=login`. Connecting needs a sign-in within 15 minutes. |
+| `interaction_required` | You sent `prompt=none`, and masks has to ask something. |
+| `unauthorized_client` | The client is not approved. |
+| `invalid_scope` | No provider with that key allows delegation. |
+
+### Get a provider token
+
+When you have no provider token, or it is about to expire:
+
+1. **Refresh** the secret:
+
+   ```
+   POST https://auth.example.com/token
+   Authorization: Basic base64(CLIENT_ID:CLIENT_SECRET)
+
+   grant_type=refresh_token
+   &refresh_token=SECRET
+   ```
+
+   ```json
+   { "access_token": "eyJ…", "refresh_token": "NEW_SECRET", "expires_in": 3600 }
+   ```
+
+   **Save `NEW_SECRET` first.** The old one is spent.
+
+2. **Exchange** the masks access token for the provider's:
+
+   ```
+   POST https://auth.example.com/token
+   Authorization: Basic base64(CLIENT_ID:CLIENT_SECRET)
+
+   grant_type=urn:ietf:params:oauth:grant-type:token-exchange
+   &subject_token=eyJ…
+   &subject_token_type=urn:ietf:params:oauth:token-type:access_token
+   &requested_token_type=urn:masks:params:oauth:token-type:upstream_access_token
+   &audience=3f1c9a0e-…
+   ```
+
+   ```json
+   {
+     "access_token": "ya29.…",
+     "issued_token_type": "urn:masks:params:oauth:token-type:upstream_access_token",
+     "token_type": "Bearer",
+     "expires_in": 3542,
+     "scope": "https://www.googleapis.com/auth/drive.readonly"
+   }
+   ```
+
+Call Google with `ya29.…` until `expires_in` runs out. On a 401, discard it and repeat.
+
+| Response | Means | Do |
+| --- | --- | --- |
+| `400 invalid_grant` | The person stopped the app or disconnected, or the provider refused. | Ask them to connect again. |
+| `403 insufficient_scope` | The token lacks `masks:delegate:<provider>`. | Request the full scope on refresh. |
+| `503 temporarily_unavailable` | The provider did not respond. | Retry later. Nothing was lost. |
+
+### Rules for the secret
+
+1. **Keep every new secret.** Each refresh replaces it, even when the exchange after fails.
+2. **Refresh each secret once at a time.** Spending it twice revokes the chain, and the person has
+   to connect again. Lock around the refresh if more than one worker can reach it.
+3. **Use it within 30 days.** An unused secret expires. Each refresh restarts the clock.
+
+### What masks checks
+
+masks releases a provider token only when:
+
+- the client is approved and registered for token exchange,
+- the masks token is live, issued to this client, and holds `masks:delegate:<provider>`,
+- the connection is live and belongs to that token's person,
+- the provider still allows delegation,
+- the person's delegation to this client for this connection is live,
+- the exchange sends no `scope`, `resource`, or `requested_lifetime`.
+
+- Every release is recorded as a `delegation.released` event.
+- The provider's token is refreshed within a minute of expiry, one refresh per connection at a time.
+- Provider tokens are encrypted at rest.
+- Changing what a provider allows makes everyone connect it again.
+
+### MCP servers
+
+An MCP server that is its own OAuth server, such as `https://mcp.notion.com/mcp`, is a provider
+with the protocol `mcp`. Given its URL, masks:
+
+1. reads `/.well-known/oauth-protected-resource` for its authorization server
+   ([RFC 9728](https://www.rfc-editor.org/rfc/rfc9728)),
+2. reads that server's metadata, which must offer PKCE with S256 and dynamic registration,
+3. registers itself ([RFC 7591](https://www.rfc-editor.org/rfc/rfc7591)), with a secret when the
+   server accepts one.
+
+Every request names the server's URL as `resource` ([RFC 8707](https://www.rfc-editor.org/rfc/rfc8707)).
+Connect an account and get a token as above, then send it to the MCP server as
+`Authorization: Bearer`.
+
+### From Ruby
+
+```ruby
+delegations = Masks::Client.delegations(issuer, client_id:, client_secret:, redirect_uri:)
+
+started = delegations.start(provider: "google")
+session[:connecting] = started
+redirect_to started["url"]
+
+held = delegations.finish(params: params, started: session.delete(:connecting))
+save(held.connection, held.secret)
+
+upstream = delegations.token(secret, connection: connection)
+save(connection, upstream.secret)
+upstream.access_token
+```
+
+`token` refreshes and exchanges in one call. See
+[Masks::Client](/reference/ruby/) for its errors and the test fake.
+
+## Calling a provider while the person is present
+
+An app that calls a provider only while the person uses it can run its own OAuth flow there. The
+`identities` scope names the person's connected accounts, so the flow is a redirect with a hint:
+
+```json
+{
+  "sub": "8f4c…",
+  "identities": [
+    { "provider": "google", "protocol": "oidc", "sub": "10769150350006150715", "email": "ada@gmail.com" }
+  ]
+}
+```
+
+```
+https://accounts.google.com/o/oauth2/v2/auth?…&login_hint=ada@gmail.com
+```
+
+A [pairwise](/guides/client-features/#subject-identifiers) client never receives `identities`. An
+upstream subject is the same for every client, so it would undo pairwise separation.
+
+## Exchanging a token
+
+A token exchange ([RFC 8693](https://www.rfc-editor.org/rfc/rfc8693)) trades one token for
+another at `/token`:
+
+- a gateway gives a downstream service a token for that service only,
+- an agent holds a token recording that it acts for a person,
+- a backend trades its frontend's ID token for an access token of its own.
+
+The client must be registered for `urn:ietf:params:oauth:grant-type:token-exchange`.
+
+```sh
+curl -u "$CLIENT_ID:$CLIENT_SECRET" https://demo.masks.example/token \
+  -d grant_type=urn:ietf:params:oauth:grant-type:token-exchange \
+  -d subject_token="$ACCESS_TOKEN" \
+  -d subject_token_type=urn:ietf:params:oauth:token-type:access_token \
+  -d scope="uris:catalog:read" \
+  -d resource=https://uris.example/mcp
+```
+
+### What can be exchanged
+
+| `subject_token_type` | At most | Expires no later than | Refused when |
+| --- | --- | --- | --- |
+| `…:access_token` | The subject token's scopes and resources. | The subject token. | It is not live, or another issuer signed it. |
+| `…:id_token` | What the person consented to for this client. | The ID token. | Its session ended, or it was issued to another client. |
+| `urn:masks:params:oauth:token-type:upstream_access_token` (requested) | See [delegation](#delegation). | | |
+
+An exchange only narrows. `scope`, `resource`, and `requested_lifetime` can ask for less, never
+more. Revoking the subject token revokes everything exchanged from it.
+
+### Who is acting
+
+Each exchanged token has an `act` claim naming its holder, nested so the chain is kept:
+
+```json
+{
+  "sub": "8b1f…",
+  "client_id": "search-service",
+  "act": { "sub": "search-service", "act": { "sub": "gateway" } }
+}
+```
+
+A client acting as a more specific party sends that party's token as `actor_token`, with
+`actor_token_type`. It must be live and issued to this client. An agent that
+[signs in as itself](/guides/client-features/#signing-in-as-itself) and acts for a person sends its
+own token as the actor and the person's as the subject.
+
+A client exchanging its own ID token acts for itself, so the new token has no `act` unless an actor
+token was sent.
+
+masks does not exchange refresh tokens, SAML assertions, or other issuers' tokens, and does not read
+`may_act`.

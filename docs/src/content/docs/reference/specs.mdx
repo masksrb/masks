@@ -34,20 +34,20 @@ The only response type is `code`, and the only response mode is `query`.
 | Specification | Status | Coverage |
 | --- | --- | --- |
 | [PKCE (RFC 7636)](https://www.rfc-editor.org/rfc/rfc7636) | ✅ | `S256` only. Every public client must send a challenge. |
-| [Pushed authorization requests (RFC 9126)](https://www.rfc-editor.org/rfc/rfc9126) | ✅ | A client can be required to use them. See [pushed requests](/concepts/pushing/). |
-| [DPoP (RFC 9449)](https://www.rfc-editor.org/rfc/rfc9449) | ✅ | Includes `dpop_jkt`, bound refresh tokens, and `dpop_bound_access_tokens`. See [holding a token](/concepts/holding/). |
+| [Pushed authorization requests (RFC 9126)](https://www.rfc-editor.org/rfc/rfc9126) | ✅ | A client can be required to use them. See [pushed requests](/guides/security/#pushed-requests). |
+| [DPoP (RFC 9449)](https://www.rfc-editor.org/rfc/rfc9449) | ✅ | Includes `dpop_jkt`, bound refresh tokens, and `dpop_bound_access_tokens`. See [binding a token with DPoP](/guides/security/#binding-a-token-with-dpop). |
 | [Issuer identification (RFC 9207)](https://www.rfc-editor.org/rfc/rfc9207) | ✅ | `iss` on every authorization response. |
 | [Resource indicators (RFC 8707)](https://www.rfc-editor.org/rfc/rfc8707) | ✅ | `resource` narrows the audience at both the authorization and token endpoints. |
-| [Request objects, JAR (RFC 9101)](https://www.rfc-editor.org/rfc/rfc9101) | ◐ | A signed `request` at `/authorize` and `/par`, and a client can be required to sign. See [pushed requests](/concepts/pushing/). The only `request_uri` accepted is one issued by `/par`. Encrypted request objects are not read. |
+| [Request objects, JAR (RFC 9101)](https://www.rfc-editor.org/rfc/rfc9101) | ◐ | A signed `request` at `/authorize` and `/par`, and a client can be required to sign. See [signed requests](/guides/security/#signed-requests). The only `request_uri` accepted is one issued by `/par`. Encrypted request objects are not read. |
 | [FAPI 2.0](https://openid.net/specs/fapi-security-profile-2_0-final.html) | ◐ | PAR, PKCE, `private_key_jwt`, DPoP, `iss` on the response, and signed requests are all implemented, and a client can be required to use each one. The FAPI certification plan has not been run. |
 
 ## Grants
 
 | Specification | Status | Coverage |
 | --- | --- | --- |
-| [Device authorization (RFC 8628)](https://www.rfc-editor.org/rfc/rfc8628) | ✅ | See [device sign-in](/concepts/device-grant/). |
-| [Token exchange (RFC 8693)](https://www.rfc-editor.org/rfc/rfc8693) | ✅ | Access tokens and ID tokens as the subject, actor tokens, a nested `act` chain, and a provider's access token for a [delegation](/concepts/delegation/). Tokens signed by other issuers are not exchanged. See [exchanging a token](/concepts/exchange/). |
-| `client_credentials` | ✅ | For an approved client that authenticates. The token holds only scopes that do not act for a person. See [clients](/concepts/clients/). |
+| [Device authorization (RFC 8628)](https://www.rfc-editor.org/rfc/rfc8628) | ✅ | See [device sign-in](/guides/login-features/#device-sign-in). |
+| [Token exchange (RFC 8693)](https://www.rfc-editor.org/rfc/rfc8693) | ✅ | Access tokens and ID tokens as the subject, actor tokens, a nested `act` chain, and a provider's access token for a [delegation](/guides/connecting-via-sdk/#delegation). Tokens signed by other issuers are not exchanged. See [exchanging a token](/guides/connecting-via-sdk/#exchanging-a-token). |
+| `client_credentials` | ✅ | For an approved client that authenticates. The token holds only scopes that do not act for a person. See [signing in as itself](/guides/client-features/#signing-in-as-itself). |
 
 ## Tokens
 
@@ -73,11 +73,11 @@ The only response type is `code`, and the only response mode is `query`.
 
 | Specification | Status | Coverage |
 | --- | --- | --- |
-| Pairwise subject identifiers | ✅ | Includes a verified `sector_identifier_uri`. See [clients](/concepts/clients/). |
+| Pairwise subject identifiers | ✅ | Includes a verified `sector_identifier_uri`. See [subject identifiers](/guides/client-features/#subject-identifiers). |
 | [WebAuthn Level 2](https://www.w3.org/TR/webauthn-2/) | ✅ | Passkeys, as a first factor or a second factor. |
 | [TOTP (RFC 6238)](https://www.rfc-editor.org/rfc/rfc6238) | ✅ | With backup codes. |
-| [SCIM 2.0](https://www.rfc-editor.org/rfc/rfc7644) | ◐ | `/Users` with filters, `PATCH`, ETags, and suspension, and the discovery endpoints. See [provisioning](/concepts/provisioning/). Groups, bulk operations, and sorting are not implemented. |
-| SAML 2.0 | ◐ | Both directions. A SAML identity provider can sign people in to masks (see [providers](/concepts/providers/)), and masks signs people in to SAML applications over HTTP-Redirect and HTTP-POST, checking signed requests (see [SAML applications](/concepts/saml-applications/)). Single logout and encrypted assertions are not implemented. |
+| [SCIM 2.0](https://www.rfc-editor.org/rfc/rfc7644) | ◐ | `/Users` with filters, `PATCH`, ETags, and suspension, and the discovery endpoints. See [provisioning](/guides/sso-saml/#provisioning). Groups, bulk operations, and sorting are not implemented. |
+| SAML 2.0 | ◐ | Both directions. A SAML identity provider can sign people in to masks (see [providers](/guides/sso-saml/#providers)), and masks signs people in to SAML applications over HTTP-Redirect and HTTP-POST, checking signed requests (see [SAML applications](/guides/sso-saml/#saml-applications)). Single logout and encrypted assertions are not implemented. |
 
 ## Client authentication
 
@@ -90,7 +90,7 @@ masks accepts these token endpoint authentication methods:
 | `private_key_jwt`     | A JWT assertion ([RFC 7523](https://www.rfc-editor.org/rfc/rfc7523)) signed with RSA, RSA-PSS, or ECDSA, checked against the client's `jwks` or `jwks_uri`. |
 | `none`                | A public client, which must use PKCE.                                                                            |
 
-See [clients](/concepts/clients/) for how each is configured.
+See [client authentication](/guides/client-features/#client-authentication) for how each is configured.
 
 `client_secret_jwt` is not offered, because masks stores only a hash of a client
 secret. Mutual TLS ([RFC 8705](https://www.rfc-editor.org/rfc/rfc8705)) is not

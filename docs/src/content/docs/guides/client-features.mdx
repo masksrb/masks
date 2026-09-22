@@ -1,0 +1,121 @@
+---
+title: Client features
+description: Registering a client, consent, subject identifiers, machine-to-machine tokens, and client authentication.
+---
+
+A [client](/guides/core-concepts/#clients) is an application that signs people in or signs in as
+itself. This page covers registering one and the settings that change what it receives.
+
+## Registering a client
+
+| How | Who | Approved |
+| --- | --- | --- |
+| Added | A manager, in `/manage`. `/manage` shows the secret once. | Yes |
+| Handshake | A person completes `/handshake`, and masks returns the credentials to the app server to server. | Yes |
+| Self-registered | The app, over RFC 7591 dynamic registration, within the tenant's scope ceiling. | No |
+
+Only an approved client may hold a `masks:` scope, sign in as itself, or receive a
+[delegation](/guides/connecting-via-sdk/#delegation). This keeps an unknown app from registering
+itself with administrative access. The [Rails engine](/guides/rails/) registers through a
+handshake.
+
+### Scopes
+
+| | |
+| --- | --- |
+| `required_scopes` | Always granted, never shown on the consent screen. |
+| `allowed_scopes` | Every other scope the client may request. |
+
+See [the ceiling](/guides/core-concepts/#the-ceiling) for how a token's scopes are chosen.
+
+### Archiving
+
+Archiving a client stops it signing anyone in. masks keeps the record, and any
+[namespace](/guides/core-concepts/#namespaces) it claimed stays claimed until released.
+
+## Consent
+
+masks asks each person once before granting a client anything, and asks again only when the client
+requests more scopes or passes `prompt=consent`.
+
+- Approving a handshake counts as the approver's consent, and only the approver's.
+- `consent_required` is on for every client. A manager can turn it off for an approved client, such
+  as a first-party app.
+- A self-registered client always asks.
+
+## Subject identifiers
+
+`subject_type` sets the `sub` a client receives for a person.
+
+| | |
+| --- | --- |
+| `public` | The actor's own identifier. Every client sees the same `sub`. |
+| `pairwise` | Derived for the client's sector. No other sector sees it. |
+
+- Two pairwise clients cannot compare subjects to find the same person. Avatar URLs use the
+  pairwise subject too.
+- The sector is the host of the redirect URIs. A client with more than one host registers a
+  `sector_identifier_uri`: an `https` URL returning a JSON array of every redirect URI. masks
+  refuses the client unless it lists them all.
+- Clients in one sector share subjects, so a suite of apps sees one identity.
+- A pairwise subject is generated once, stored, and belongs to one tenant.
+
+## Signing in as itself
+
+A service that acts for no person, such as an indexer or a nightly job, uses the
+`client_credentials` grant:
+
+```sh
+curl -u "$CLIENT_ID:$CLIENT_SECRET" https://demo.masks.example/token \
+  -d grant_type=client_credentials \
+  -d scope="uris:catalog:read" \
+  -d resource=https://uris.example/mcp
+```
+
+A manager enables it for an approved client that authenticates. A self-registered client never
+gets it. Otherwise anyone who could register a client could grant themselves any scope a resource
+server accepts.
+
+| | |
+| --- | --- |
+| `sub` and `client_id` | The client, as RFC 9068 specifies. A person's `sub` never equals a `client_id`. |
+| Scopes | Never `openid`, `profile`, `email`, `offline_access`, `identities`, `masks:manage`, `masks:handshake`, or a delegation scope. |
+| Refresh token | None. Request a new token when needed. |
+| Audience | The client's resources. |
+| DPoP | Supported, as for any token. See [binding a token](/guides/security/#binding-a-token-with-dpop). |
+
+When the token is [exchanged](/guides/connecting-via-sdk/#exchanging-a-token), `sub` still names
+the service and `act` names the current holder.
+
+## Client authentication
+
+| `token_endpoint_auth_method` | |
+| --- | --- |
+| `client_secret_basic` | A secret in a Basic `Authorization` header. |
+| `client_secret_post` | A secret in the form body. |
+| `private_key_jwt` | An assertion signed with the client's own key, new for every request. |
+| `none` | A public client. It proves itself with PKCE. |
+
+Rotating a secret replaces it at once. masks stores only a hash, so it has no `client_secret_jwt`.
+masks refuses a client that authenticates by another method than the one it registered.
+
+### Private key JWT
+
+The client registers `jwks` or a `jwks_uri`, which masks caches for five minutes. It gets no
+secret. Its assertion:
+
+- names the client as `iss` and `sub`,
+- has the issuer or the endpoint as `aud`,
+- has a `jti`, accepted once,
+- expires within an hour.
+
+An assertion signed by an unknown key makes masks fetch the `jwks_uri` again before refusing it, so
+a client can rotate keys without telling the server.
+
+```ruby
+Masks::Client::Session.new(issuer: "https://demo.masks.example", client_id: id,
+                           private_key: File.read("indexer.pem"), key_id: "2026-09")
+  .client_credentials(scope: "uris:catalog:read")
+```
+
+See [Masks::Client](/reference/ruby/) for the full signature.

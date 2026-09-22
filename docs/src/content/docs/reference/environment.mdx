@@ -56,7 +56,7 @@ such as `assets:precompile` that boots the application without serving it.
 | `MASKS_SETUP_TOKEN` | none | Replaces the setup token masks generates for each tenant, and applies to every tenant. Without it, each tenant gets a token of its own, printed in the server's logs. The first-run screen asks for the token before it creates a tenant's first account. |
 
 Leaving both unset declares Dynamic tenancy instead. See
-[Declaring tenants](/concepts/tenants/#declaring-tenants) for how the three modes differ.
+[Declaring tenants](/guides/core-concepts/#declaring-tenants) for how the three modes differ.
 
 ### Sign-in policy
 
@@ -126,13 +126,15 @@ that is not a superuser. Tenant isolation depends on row-level security, which a
 
 ### Processes
 
-The image runs [Thruster](https://github.com/basecamp/thruster) in front of Puma, and Puma in front
-of Rails. Background jobs run in a separate `bin/jobs` process, or inside Puma with
-`SOLID_QUEUE_IN_PUMA`.
+The image runs Puma in front of Rails, on `PORT`. Setting the container's command to
+`./bin/thrust ./bin/rails server` puts [Thruster](https://github.com/basecamp/thruster) in front of
+Puma, on `HTTP_PORT`. See [self-hosting](/guides/self-hosting/#example-composeyml). Background jobs
+run inside Puma by default, or in a separate `bin/jobs` process with
+`MASKS_JOBS_IN_WEB_SERVER=false`.
 
 | Variable | Default | |
 | --- | --- | --- |
-| `SOLID_QUEUE_IN_PUMA` | unset | Runs the job supervisor inside the web server, so one container does both. Any value turns it on, including `false`. Leave it unset to run `bin/jobs` separately. |
+| `MASKS_JOBS_IN_WEB_SERVER` | `true` | Runs the job supervisor inside the web server, so one container does both. `false` leaves jobs to a separate `bin/jobs` process. |
 | `JOB_CONCURRENCY` | `1` | Worker processes started by the job supervisor. Each runs 3 threads. |
 | `RAILS_MAX_THREADS` | `3` | Puma threads per process. Also the size of each database connection pool, which defaults to `5` when this is unset. |
 | `PORT` | `3000` | The port Puma listens on. Thruster forwards to `TARGET_PORT`, so change both together. |

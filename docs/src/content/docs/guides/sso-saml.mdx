@@ -1,0 +1,276 @@
+---
+title: SSO / SAML
+description: Signing in to masks with another service, signing SAML applications in with masks, and provisioning people over SCIM.
+---
+
+| Direction | masks is | See |
+| --- | --- | --- |
+| Sign in to masks with Google, Okta, Entra, or a SAML identity provider | the service provider | [Providers](#providers) |
+| Sign in to a SAML-only app, such as a wiki, with masks | the identity provider | [SAML applications](#saml-applications) |
+| Keep masks' people in sync with a directory | the SCIM service | [Provisioning](#provisioning) |
+
+## Providers
+
+A provider is another service people sign in with, over OpenID Connect, OAuth 2.0, or SAML 2.0.
+masks links the account there to an account in masks. That link is a **connected account**.
+
+A provider replaces the password, never the second factor. A person's
+[sign-in policy](/guides/login-features/#sign-in-policies) still asks for one when it requires it.
+
+### Provider roles
+
+| Role | Creates accounts | Updates the profile |
+| --- | --- | --- |
+| `credential` | No. It signs in only the account it is connected to. | No |
+| `delegate` | Yes, for a new person. | Name, photo, and address, on every sign-in |
+
+Use `delegate` when the company directory decides who works there. A `credential` provider that
+confirms an existing account's address connects to it only after that account signs in another way.
+
+### Trusted email addresses
+
+masks tells apps `email_verified: true`, so it trusts a provider's address only when:
+
+- the address is in one of the provider's **email domains**, or
+- the provider has `trusts_email` on and reports the address as confirmed.
+
+Turn on `trusts_email` only for a provider that checks mailboxes. Google, Apple, GitHub, GitLab,
+Slack, LinkedIn, and Discord do, and their presets turn it on.
+
+- An address the provider reports as unconfirmed stays unconfirmed, even in a listed domain.
+- SAML has no confirmation field, so a SAML provider is trusted only for its listed domains.
+- For an untrusted address, a `delegate` provider creates no account and no invitation is accepted.
+- A person with no address at all still gets an account, with no address.
+
+### Where a provider is offered
+
+The client's [sign-in policy](/guides/login-features/#sign-in-policies) decides:
+
+- `first_factors` must include `provider`.
+- `providers` lists which ones. Unset means all.
+
+A signed-in person can connect any offered provider from their account page. It needs a sign-in
+within the last fifteen minutes, and masks refuses an upstream account already connected to someone
+else.
+
+### Presets
+
+A preset fills in every setting except the credentials.
+
+| Preset | Protocol | Asks for |
+| --- | --- | --- |
+| Google | OpenID Connect | |
+| Microsoft | OpenID Connect | directory (tenant) ID |
+| Apple | OpenID Connect | team ID, key ID, private key |
+| GitHub | OAuth 2.0 | |
+| GitLab | OpenID Connect | domain, `gitlab.com` by default |
+| Slack | OpenID Connect | |
+| LinkedIn | OpenID Connect | |
+| Discord | OAuth 2.0 | |
+| Facebook | OAuth 2.0 | |
+| X | OAuth 2.0 | |
+| Okta, Auth0 | OpenID Connect | domain |
+| Keycloak | OpenID Connect | domain, realm |
+| Microsoft Entra, Okta, Google Workspace | SAML 2.0 | metadata |
+| Notion | MCP | nothing; masks registers itself |
+| OpenID Connect, OAuth 2.0, SAML 2.0, MCP server | | everything |
+
+An MCP provider signs nobody in. Apps use it through a
+[delegation](/guides/connecting-via-sdk/#delegation).
+
+## Provider protocols
+
+### OpenID Connect
+
+masks checks the `id_token`'s signature against the issuer's keys, and its issuer, audience, and
+nonce against the request. The request uses PKCE. The subject is `sub`, or `oid` for a Microsoft
+directory.
+
+### OAuth 2.0
+
+With no `id_token`, masks reads the provider's userinfo endpoint. `subject_claim` and `claims` map
+each claim to a path in the response, such as `data.id` for X or `id` for GitHub. The request uses
+PKCE, and masks discards the provider's tokens once it has the profile.
+
+An **emails URL** lists confirmed addresses separately from the profile, as GitHub does. masks
+uses the primary confirmed address from it, and never an address only in the public profile.
+
+### SAML 2.0
+
+Give the identity provider two values from the provider's page in `/manage`:
+
+| | |
+| --- | --- |
+| Assertion consumer service URL | `https://<tenant>/login/provider/<key>/callback` |
+| Service provider entity ID | `https://<tenant>/login/provider/<key>/metadata`, which also serves masks' metadata |
+
+Then give masks the identity provider's metadata, as a URL or pasted in. A URL is fetched again
+nightly, so a rotated certificate is picked up.
+
+masks trusts an assertion only when it:
+
+- is signed by a certificate in the identity provider's metadata,
+- answers the request this browser sent (`InResponseTo`),
+- names this service provider as audience and recipient,
+- names the identity provider's entity ID as issuer,
+- is within its validity window, with one minute of clock drift.
+
+masks refuses unsolicited, identity-provider-initiated responses, and marks each request used, so a
+response cannot be replayed. Ask for a **persistent** name ID. A transient one changes every
+sign-in, so every sign-in looks like a new person.
+
+### Apple
+
+Apple's client secret is a short-lived ES256 token masks signs with Apple's key, so the provider
+stores a team ID, key ID, and `.p8` private key. Apple sends the person's name only on their first
+sign-in, and masks keeps it.
+
+### Posted callbacks
+
+Apple and SAML post back across sites, and browsers do not send a `SameSite=Lax` cookie with a
+cross-site POST. masks holds the posted parameters for five minutes under a one-time handle, then
+redirects to the same URL as a GET, which carries the cookie.
+
+## SAML applications
+
+masks is the identity provider for apps that sign people in only over SAML 2.0. The app sends an
+`AuthnRequest`, masks signs the person in under their
+[sign-in policy](/guides/login-features/#sign-in-policies), and posts a signed assertion back.
+
+### What to give the application
+
+| | |
+| --- | --- |
+| Metadata | `https://demo.masks.example/saml/metadata` |
+| Entity ID | The same URL. |
+| Single sign-on | `https://demo.masks.example/saml/sso`, HTTP-Redirect or HTTP-POST. |
+| Certificate | In the metadata, one per tenant signing key. |
+
+Most apps need only the metadata URL. After a
+[key rotation](/guides/security/#rotating-signing-keys), the app has to read it again. The retiring
+key's certificate stays during the overlap.
+
+### Registering one
+
+1. In `/manage`, open **Clients → Add client → SAML app**.
+2. Paste the app's metadata.
+3. Click **Read it**. masks fills in its entity ID, HTTP-POST assertion consumer services, and
+   request-signing certificate.
+
+A SAML app is an approved client with no grants and no secret. It cannot use `/authorize` or
+`/token`.
+
+| Setting | |
+| --- | --- |
+| Entity ID | The `Issuer` its `AuthnRequest` names. |
+| Assertion consumer services | The only URLs masks posts to. |
+| Names people by | A persistent identifier (pairwise if the client is), or their email. |
+| Refuse unsigned requests | Check every request against the app's certificate. |
+| Let people start from masks | Answer `/saml/initiate/<client_id>` without a request. |
+
+### What is checked
+
+masks shows an error and posts nothing when a request:
+
+- names an `Issuer` with no registered app,
+- has an `AssertionConsumerServiceURL` not registered, or a binding other than HTTP-POST,
+- asks for a NameID format masks does not issue,
+- is more than eight minutes old, more than three minutes in the future, or has another
+  `Destination`,
+- was already received, or repeats an `ID`,
+- fails a required signature check (SHA-256 or stronger), or carries two signatures,
+- repeats a parameter, or is larger than 64 KB,
+- declares a document type, which is how XML external entities get in.
+
+| Request or outcome | Response |
+| --- | --- |
+| `ForceAuthn` | The person signs in again. |
+| `IsPassive` | `NoPassive`, with no page shown. |
+| Suspended, declined, or stopped by the policy | `RequestDenied`, in place of an assertion. |
+
+### What is asserted
+
+The response and the assertion are both signed with RSA-SHA256. The assertion is addressed to the
+app's entity ID, confirmed for its assertion consumer service and the request `ID`, valid for five
+minutes, names the session in `SessionIndex`, and names `https://refeds.org/profile/mfa` when a
+second factor was used.
+
+Attributes use claim names: `email`, `name`, `given_name`, `family_name`, `preferred_username`.
+`samlAttributes` maps an app's own names instead. masks releases only what the person's
+`openid profile email` consent covers, and an email only once it is confirmed, as attribute or
+NameID. The posting page's content security policy allows only its own script.
+
+Single logout, encrypted assertions, the artifact binding, and choosing an assertion consumer
+service by index are not supported.
+
+## Provisioning
+
+A directory such as Entra ID, Okta, Google Workspace, or JumpCloud keeps masks' people in sync over
+SCIM 2.0 ([RFC 7643](https://www.rfc-editor.org/rfc/rfc7643),
+[RFC 7644](https://www.rfc-editor.org/rfc/rfc7644)). It adds, renames, and suspends people in masks
+as it does in its own directory.
+
+Each tenant's base URL:
+
+```
+https://demo.masks.example/scim/v2
+```
+
+### Connecting a directory
+
+1. In `/manage`, open **Settings → Provisioning** and issue a token.
+2. Label it after the directory.
+3. Choose a lifetime, up to one year.
+4. Copy it. masks shows it once.
+5. In the directory, enter the base URL and the token as a bearer token.
+
+The token list shows each token's last use. A revoked token is refused.
+
+A client can provision instead of a token. It must be approved and allowed `masks:scim`, request
+its own token with [`client_credentials`](/guides/client-features/#signing-in-as-itself), and name
+the base URL as its `resource`.
+
+### What is provisioned
+
+`/Users` supports reads, filters, creation, `PUT`, `PATCH`, and deletion.
+
+| SCIM | masks |
+| --- | --- |
+| `id` | The actor's `uuid`. |
+| `userName` | The nickname, or the email when it is an address. |
+| `externalId` | Stored, unique in the tenant, filterable. |
+| `name`, `displayName` | The name claims. |
+| `emails` | The primary email, treated as confirmed. |
+| `phoneNumbers`, `photos`, `profileUrl`, `locale`, `timezone` | The matching claims. |
+| `active` | Whether the person is suspended. |
+| `password` | Set, if the directory sends one. |
+
+A provisioned person holds the standard scopes and has no password unless one was sent. They sign
+in through a [provider](#providers) that trusts the same email, or by accepting an invitation.
+
+| Filters | |
+| --- | --- |
+| Operators | `eq`, `ne`, `co`, `sw`, `ew`, `pr`, `gt`, `ge`, `lt`, `le` |
+| Joins | Up to four comparisons with `and`. |
+| Attributes | `userName`, `externalId`, `emails.value`, `displayName`, `name.givenName`, `name.familyName`, `active`, the `meta` dates |
+| `eq` only | `userName`, `active` |
+
+Every response has a weak `ETag`, and an `If-Match` naming an older version is refused.
+`/ServiceProviderConfig`, `/ResourceTypes`, and `/Schemas` describe the rest. Groups, bulk
+operations, and sorting are not supported.
+
+### Suspending
+
+`active: false`, or **Suspend** in `/manage`, suspends a person. Every session ends and every token
+stops working, refresh tokens included. Sign-in is refused after the first factor, so entering a
+name alone does not reveal the suspension. `active: true` restores them. `DELETE` removes them.
+
+### What a directory cannot do
+
+A provisioning token changes many accounts, so it can do less than a manager:
+
+- set the password or email of anyone holding a `masks:` scope,
+- suspend or delete the last active holder of `masks:manage`,
+- change anyone's scopes.
+
+Every change is recorded in the person's activity, marked as SCIM.

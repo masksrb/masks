@@ -3,11 +3,23 @@ title: Self-hosting
 description: Run the masks server in production.
 ---
 
-masks ships as a container image. Point it at a Postgres, and it migrates itself on the way up.
+masks ships as a container image. Point it at a Postgres, and it migrates itself on boot.
 
 ```sh
 docker pull ghcr.io/masksrb/masks:latest
 ```
+
+## What it runs
+
+masks is an OpenID Connect and OAuth 2.0 provider. It authenticates people, issues and verifies
+tokens, and publishes each tenant's signing keys. It stores nothing about your application's data.
+
+It runs as one container: Puma in front of Rails, with optional Thruster in front of Puma. It needs
+one Postgres server, holding a primary database, a cache, and a job queue, named from
+`POSTGRES_DATABASE`. The only local disk it uses is the master key.
+
+Background jobs (mail, retries) run in the web process by default. `MASKS_JOBS_IN_WEB_SERVER=false`
+moves them to a second container running `bin/jobs`.
 
 ## Image tags
 
@@ -18,7 +30,7 @@ docker pull ghcr.io/masksrb/masks:latest
 | `:<version>`, such as `:0.2.0` | a server release | amd64, arm64 |
 | `:latest` | a server release, moved to its version | amd64, arm64 |
 
-Pin a version in production, and read
+Pin a version, and read
 [CHANGELOG.md](https://github.com/masksrb/masks/blob/main/server/CHANGELOG.md) before moving to a
 new one:
 
@@ -26,7 +38,7 @@ new one:
 image: ghcr.io/masksrb/masks:0.2.0
 ```
 
-## `compose.yml`
+## Example `compose.yml`
 
 ```yaml
 services:
@@ -72,67 +84,74 @@ volumes:
 
 ```
 *.auth.example.com {
-  reverse_proxy masks:80
+  reverse_proxy masks:3000
 }
 ```
 
-`SECRET_KEY_BASE` and the three `ENCRYPTION_` keys aren't set here. The server generates each one
-it doesn't find in the environment on its first boot, and writes it to `/rails/storage/secrets.env`
-— mount that path to a volume, as above, and the same keys come back on every restart. Set any of
-the four as an environment variable instead to manage it your own way, such as through your
-orchestrator's secrets. Either way, keep them: they cannot change once data is written, and losing
-them makes every encrypted column unreadable. See
-[encryption](/reference/environment/#required-in-production).
+| Front | Command | Listens on | Adds |
+| --- | --- | --- | --- |
+| Puma alone (default) | none needed | `PORT`, `3000` | Nothing. Caddy handles TLS, as above. |
+| Thruster | `./bin/thrust ./bin/rails server` | `HTTP_PORT`, `80` | Let's Encrypt TLS with `TLS_DOMAIN`, HTTP/2, asset caching. |
 
-Thruster can also terminate TLS itself, without Caddy in front: set `TLS_DOMAIN` and it obtains a
-certificate from Let's Encrypt. See [Thruster](https://github.com/basecamp/thruster). Every
-variable the server reads, including rate limits, mail, and the database connection, is in
-[Environment variables](/reference/environment/).
+Every variable the server reads is in [ENV vars](/reference/environment/).
 
-## Ansible
+## Encryption & secrets
 
-`deploy/roles/masks` in the repository is the same deployment as an Ansible role, behind a
-reverse proxy. Its defaults:
+Per tenant, the database holds accounts, sign-in factors, clients, tokens, one RSA signing key, and
+an audit trail. Signing keys, second-factor secrets, and connected accounts' tokens are also
+encrypted with Rails' Active Record Encryption (AES-256-GCM). Reading them needs the keys as well
+as the database.
 
-```yaml
-masks_image: ghcr.io/masksrb/masks
-masks_image_tag: latest
-masks_image_digest: ""
-masks_deploy_path: /srv/masks
-masks_network: edge
-masks_postgres_host: postgres
-masks_postgres_port: 5432
-masks_postgres_user: masks
-masks_postgres_database: masks
-masks_tenants: []
-masks_setup_token: ""
-masks_mail_from: ""
-masks_smtp_address: ""
-masks_smtp_port: 587
-masks_smtp_username: ""
-masks_smtp_password: ""
-masks_smtp_domain: ""
-```
+These four secrets are not in the compose file. They are generated once and never change.
 
-Pass secrets and the public origin template through your own vault or inventory. The role does
-not generate them.
+| Secret | Protects |
+| --- | --- |
+| `SECRET_KEY_BASE` | The session cookie. Anyone holding it can forge one. |
+| `ENCRYPTION_PRIMARY_KEY` | The encrypted columns. |
+| `ENCRYPTION_DETERMINISTIC_KEY` | Columns looked up by value. Rails requires it. |
+| `ENCRYPTION_KEY_DERIVATION_SALT` | The per-column keys derived from the two above. |
 
-## Tenants
+On first boot masks derives all four from one master key and writes it to
+`/rails/storage/master.key`. Mount that path to a volume, as above. Setting any of the four as an
+environment variable overrides it. See [ENV vars](/reference/environment/#required-in-production)
+for `MASKS_MASTER_KEY` and `MASKS_MASTER_KEY_FILE`.
 
-`MASKS_TENANTS` lists the subdomains this server answers for, such as `acme,example`. The
-container creates any that do not exist before it starts serving. `MASKS_TENANT` serves one
-tenant at every hostname instead, and cannot be combined with `MASKS_TENANTS`. With neither set,
-the first request to an empty database creates a tenant named after its host's first label.
+:::caution
+Keep the master key with your database backups. Losing it makes every encrypted column unreadable,
+permanently.
+:::
 
-`MASKS_SETUP_TOKEN` replaces the token masks generates for each tenant. Without it, each tenant
-gets its own, printed in the server's logs, and its first-run screen asks for that token before
-creating the first account. See [Tenants](/concepts/tenants/).
+## Multi-tenancy
 
-## Confirm it
+A tenant is one organization's accounts, clients, and signing key, at its own subdomain. The
+compose file above declares Multi tenancy. Swap its `MASKS_TENANTS` line to change mode:
+
+| Mode | In `masks:`'s `environment:` | An unseen hostname |
+| --- | --- | --- |
+| Single | `MASKS_TENANT: acme` | Served by that one tenant. |
+| Multi | `MASKS_TENANTS: acme,demo` | 404. |
+| Dynamic | Neither (remove the line) | Claims a new tenant, since the template has `%{subdomain}`. |
+
+See [Declaring tenants](/guides/core-concepts/#declaring-tenants) for how each mode works.
+`MASKS_SETUP_TOKEN` sets one setup token for every tenant. See
+[Setting a tenant up](/guides/core-concepts/#setting-a-tenant-up).
+
+## System requirements
+
+masks is a small Rails app with no fixed CPU or memory floor. Two variables size it:
+
+| Variable | Default | Sizes |
+| --- | --- | --- |
+| `RAILS_MAX_THREADS` | `3` | Puma's threads and the database connection pool. |
+| `JOB_CONCURRENCY` | `1` | The job supervisor's worker processes. |
+
+Raise either if requests or jobs queue. See [Processes](/reference/environment/#processes).
+
+## Next steps
 
 ```sh
 curl https://acme.auth.example.com/.well-known/openid-configuration
 ```
 
-A tenant's discovery document confirms its issuer, its keys, and that the public origin template
-resolved the way you expected.
+The discovery document confirms the tenant's issuer, keys, and public origin. Then
+[connect an app](/guides/connecting-via-sdk/#connecting-an-app).

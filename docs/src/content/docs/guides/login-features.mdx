@@ -1,0 +1,120 @@
+---
+title: Login features
+description: Sign-in policies, passwords, passkeys, second factors, remembered devices, and device sign-in.
+---
+
+A person signs in with a first factor, then a second factor when their policy asks for one. A
+sign-in policy decides which factors are offered.
+
+## Sign-in policies
+
+A client uses its own policy, or the tenant's default, or a built-in default. `/manage` edits them.
+
+| Setting | Default | |
+| --- | --- | --- |
+| `first_factors` | `password`, `passkey`, `provider` | How a person proves who they are. |
+| `second_factors` | `otp`, `passkey`, `backup_codes` | What can serve as a second factor. |
+| `second_factor_required` | off | Require a second factor at every sign-in. |
+| `password_minimum` | `8` | Minimum password length, up to 256. |
+| `refuse_common_passwords` | on | Refuse passwords from a list of common ones. |
+| `providers` | every provider | Which [providers](/guides/sso-saml/#providers) to offer. |
+| `signup` | off | Let people create their own accounts. |
+| `nickname`, `email`, `phone` | optional, required, off | What signup asks for: `off`, `optional`, or `required`. |
+| `confirmation` | `none` | How a new account is confirmed: `none`, `code`, `link`, or `approval`. |
+| `email_domains` | any | The address domains that signup and provider sign-in accept. |
+
+- masks hides a factor the policy does not list, and refuses it if submitted anyway.
+- A policy whose only first factor is `provider` shows only provider buttons.
+- The tenant's default must keep a password or a passkey, so managers are never locked out. Only a
+  client's own policy can be provider-only.
+- A required second factor needs `otp` or `passkey`. Backup codes alone are not enough.
+
+## First factors
+
+| Factor | |
+| --- | --- |
+| Password | Checked against the policy's minimum and common-password list. |
+| Passkey | WebAuthn. It can be the first factor and the second at once. |
+| Provider | An account at Google, Okta, a SAML identity provider, and others. See [SSO / SAML](/guides/sso-saml/). |
+
+A person types their nickname or address, whichever they have. See
+[what names an account](/guides/core-concepts/#what-names-an-account).
+
+## Second factors
+
+| Factor | |
+| --- | --- |
+| TOTP | An authenticator app. |
+| Passkey | A registered passkey. |
+| Backup codes | One-time codes, for when the other factors are lost. They can be downloaded. |
+
+### Remembered devices
+
+A person who completes a one-time password can ask masks to remember the device. The second factor
+is then skipped on that device for 30 days. Signing the device out forgets it. See
+[sessions and devices](/guides/logout-features/#sessions-and-devices).
+
+## Device sign-in
+
+A device that can show a short code but cannot run a browser, such as a television or a CLI, uses
+the device grant ([RFC 8628](https://www.rfc-editor.org/rfc/rfc8628)). The person enters the code
+on another device and approves there.
+
+Register the client for the grant:
+
+```json
+{ "grant_types": ["urn:ietf:params:oauth:grant-type:device_code"] }
+```
+
+### What the device does
+
+1. Request a code:
+
+   ```sh
+   curl -X POST https://acme.auth.example.com/device_authorization \
+     -d client_id=... -d scope="openid profile"
+   ```
+
+   ```json
+   {
+     "device_code": "...",
+     "user_code": "BCDF-GHJK",
+     "verification_uri": "https://acme.auth.example.com/device",
+     "verification_uri_complete": "https://acme.auth.example.com/device?user_code=BCDF-GHJK",
+     "expires_in": 900,
+     "interval": 5
+   }
+   ```
+
+2. Show `user_code` and `verification_uri`, or a QR code of `verification_uri_complete`.
+
+3. Poll the token endpoint, no more often than every `interval` seconds:
+
+   ```sh
+   curl -X POST https://acme.auth.example.com/token \
+     -d grant_type=urn:ietf:params:oauth:grant-type:device_code \
+     -d device_code=... -d client_id=...
+   ```
+
+| Response | Do |
+| --- | --- |
+| `authorization_pending` | Keep polling. Nobody has entered the code yet. |
+| `slow_down` | Add five seconds to the interval and keep polling. |
+| `access_denied` | Stop. The person declined. |
+| `expired_token` | Request a new code. Codes last fifteen minutes. |
+| A token | Done. The person approved. |
+
+A device code is redeemed once. Polling again returns `invalid_grant`.
+
+### What the person does
+
+1. Open `/device` and enter the code.
+2. Sign in with whatever the policy requires.
+3. Approve or decline on the consent screen, which names the client and its scopes.
+
+### The user code
+
+- Eight letters from a twenty-letter alphabet with no vowels, so it spells nothing and has no `O`
+  to mistake for `0`.
+- Case and dashes are ignored: `bcdfghjk` is `BCDF-GHJK`.
+- `/device` is rate limited per address.
