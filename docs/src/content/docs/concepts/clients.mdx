@@ -1,30 +1,30 @@
 ---
 title: Clients
-description: An application registered against a tenant.
+description: A client is an application registered with a tenant that starts sign-ins or signs in as itself.
 ---
 
-A client is an application allowed to start a sign-in, or to sign in as itself. It holds redirect
-URIs, the resources it speaks for, and the scopes it may ask for.
+A client is an application that may start a sign-in or sign in as itself. It holds redirect URIs,
+the resources it acts for, and the scopes it may request.
 
-## How one gets here
+## How a client is registered
 
-Three ways, and the console shows which:
+A client is registered in one of three ways, and the console shows which one applies:
 
-- **added** — a manager adds it from the console, and it is approved by them as it is created. Its
-  secret is shown once.
-- **approved** — a person completed the `/handshake` flow and the credentials came back server to
-  server. Nothing was pasted between the two.
-- **self-registered** — RFC 7591 dynamic registration. Bounded by the tenant's ceiling, and never
-  granted a `masks:` scope.
+- **Added.** A manager adds the client from the console, and the client is approved by that manager
+  when it is created. The console shows its secret once.
+- **Approved.** A person completes the `/handshake` flow, and masks returns the credentials to the
+  application server to server. Nobody copies credentials between the two.
+- **Self-registered.** The application registers itself through RFC 7591 dynamic registration. Its
+  scopes are limited to the tenant's ceiling, and it is never granted a `masks:` scope.
 
-Only an approved client may hold a reserved `masks:` scope. That is what stops a stranger's
-connector registering itself with administrative reach — and why only an approved client can be
-let use somebody's account elsewhere through a [delegation](/concepts/delegation/).
+Only an approved client may hold a reserved `masks:` scope. This prevents an unknown connector from
+registering itself with administrative access. For the same reason, only an approved client may use
+a person's account on another service through a [delegation](/concepts/delegation/).
 
 ## Signing in as itself
 
-A service with nobody behind it — an indexer, a nightly job, a worker — asks the token endpoint for
-a token of its own with `client_credentials`:
+A service that acts for no person, such as an indexer, a nightly job, or a worker, requests its own
+token from the token endpoint with the `client_credentials` grant:
 
 ```sh
 curl -u "$CLIENT_ID:$CLIENT_SECRET" https://demo.masks.example/token \
@@ -33,82 +33,91 @@ curl -u "$CLIENT_ID:$CLIENT_SECRET" https://demo.masks.example/token \
   -d resource=https://uris.example/mcp
 ```
 
-Only an approved client that authenticates may be given the grant. A self-registered client never
-is, and neither registration management nor a handshake can add it: a manager switches it on.
-Without that, anybody able to register could hand themselves any scope a resource server honours.
+masks grants `client_credentials` only to an approved client that authenticates. A self-registered
+client never receives it, and neither registration management nor a handshake can add it. A manager
+enables it for the client. Without this restriction, anyone able to register a client could grant
+themselves any scope a resource server accepts.
 
-The token's `sub` is the client's own `client_id`, as RFC 9068 asks, and `client_id` names it again.
-It carries only the scopes that do not speak for a person — never `openid`, `profile`, `email`,
-`offline_access`, `identities`, `masks:manage`, `masks:handshake` or a delegation — so it is refused
-at userinfo and at the manage API. No refresh token is issued; the service asks again. Its audience
-is narrowed to the client's resources, and it can be held to a DPoP key like any other.
+As RFC 9068 specifies, the token's `sub` is the client's own `client_id`, and the `client_id` claim
+names the client as well. The token contains only scopes that do not act for a person. It never
+contains `openid`, `profile`, `email`, `offline_access`, `identities`, `masks:manage`,
+`masks:handshake`, or a delegation scope, so the userinfo endpoint and the manage API refuse it.
+masks issues no refresh token for this grant, and the service requests a new token when it needs
+one. The token's audience is limited to the client's resources, and the token can be bound to a
+DPoP key like any other token.
 
-A resource server tells the two apart by comparing `sub` with the `client_id` it knows: a person's
-`sub` is never a client's. When the token is [exchanged](/concepts/exchange/) onward, `sub` keeps
-naming the service it started with and `act` names who holds it now.
+A resource server distinguishes a service's token from a person's token by comparing `sub` with the
+`client_id` it knows. A person's `sub` never equals a client's `client_id`. When the token is
+[exchanged](/concepts/exchange/) for another, `sub` still names the original service, and `act`
+names the current holder.
 
 ## Scopes
 
 | | |
 | --- | --- |
-| `required_scopes` | always granted, never shown on a consent screen |
-| `allowed_scopes` | everything else it may ask for |
+| `required_scopes` | Always granted and never shown on a consent screen. |
+| `allowed_scopes` | Every other scope the client may request. |
 
 ## Consent
 
-Every person is asked, once, before a client is granted anything on their behalf. What they approve
-is remembered, and they are asked again only when the client wants more, or passes
-`prompt=consent`.
+masks asks each person for consent once before it grants a client anything on that person's behalf.
+It stores what the person approves and asks again only when the client requests more scopes or
+passes `prompt=consent`.
 
-Approving a handshake counts as the approver's consent, and is recorded as one, so the approver is
-not asked twice. It says nothing about anybody else: a colleague who signs in to the same client
-sees the consent screen as they would for any other client.
+Approving a handshake counts as the approver's consent and is recorded as a consent, so the approver
+is not asked a second time. It applies to the approver only. A colleague who signs in to the same
+client sees the consent screen as they would for any other client.
 
-`consent_required` is on for every client. A manager may switch it off for an approved client — a
-first-party application nobody should be asked about — and then nobody is shown the screen unless
-the client asks with `prompt=consent`. A self-registered client always asks.
+`consent_required` is on by default for every client. A manager may turn it off for an approved
+client, such as a first-party application. After that, nobody sees the consent screen unless the
+client passes `prompt=consent`. A self-registered client always asks for consent.
 
-## Who it thinks it is talking to
+## Subject types
 
-`subject_type` decides what a client is told about a person.
-
-| | |
-| --- | --- |
-| `public` | the actor's own identifier — every client sees the same `sub` |
-| `pairwise` | one derived for this client's sector, and nobody else's |
-
-Two pairwise clients cannot tell they are looking at the same person by comparing subjects, and the
-avatar URLs in the token carry the pairwise subject too, so nothing else in the payload gives the
-person away.
-
-The sector is the host of the redirect URIs by default. A client whose redirect URIs span more than
-one host needs a `sector_identifier_uri` instead — an `https` URL holding a JSON array of every
-redirect URI it uses. masks reads it at registration and refuses the client unless the document
-names them all, which is what stops one client claiming another's sector and correlating its
-people. Clients that share a sector share subjects, deliberately: that is how a suite of
-applications sees one identity.
-
-A pairwise subject is minted once and kept, so it holds steady across sign-ins, and it is
-tenant-local — the same string means nothing in another tenant.
-
-## Secrets, keys and archiving
-
-`token_endpoint_auth_method` is one of
+`subject_type` controls which subject identifier a client receives for a person.
 
 | | |
 | --- | --- |
-| `client_secret_basic` | a secret, in a Basic header |
-| `client_secret_post` | a secret, in the form |
-| `private_key_jwt` | an assertion the client signs with its own key, fresh for every request |
-| `none` | a public client, which proves itself with PKCE and has nothing to rotate |
+| `public` | The actor's own identifier. Every client receives the same `sub`. |
+| `pairwise` | A subject derived for this client's sector and used by no other sector. |
 
-Rotating a secret issues a new one and the old one stops working immediately. masks keeps only a
-hash of it, which is why `client_secret_jwt` — an assertion signed with the secret itself — is not
-offered.
+Two pairwise clients cannot compare subjects to learn that they see the same person. The avatar URLs
+in the token also use the pairwise subject, so no other value in the payload identifies the person.
 
-A `private_key_jwt` client registers `jwks`, or a `jwks_uri` masks reads and holds for five minutes,
-and is issued no secret at all. Its assertion names the client as `iss` and `sub`, is addressed to
-the issuer, or to the endpoint it is sent to, carries a `jti`, and expires within the hour:
+By default, the sector is the host of the client's redirect URIs. A client whose redirect URIs use
+more than one host must register a `sector_identifier_uri`. This is an `https` URL that returns a
+JSON array of every redirect URI the client uses. masks fetches it at registration and refuses the
+client unless the document lists all of them. This check prevents one client from claiming another
+client's sector and correlating that client's users. Clients that share a sector receive the same
+subjects by design, which lets a suite of applications see one identity.
+
+masks generates a pairwise subject once and stores it, so the subject stays the same across
+sign-ins. A pairwise subject belongs to one tenant, and the same string has no meaning in another
+tenant.
+
+## Secrets, keys, and archiving
+
+`token_endpoint_auth_method` is one of the following:
+
+| | |
+| --- | --- |
+| `client_secret_basic` | A secret, sent in a Basic `Authorization` header. |
+| `client_secret_post` | A secret, sent in the form body. |
+| `private_key_jwt` | An assertion that the client signs with its own key, created for every request. |
+| `none` | A public client, which proves itself with PKCE and has no secret to rotate. |
+
+Rotating a secret issues a new one, and the old secret stops working immediately. masks stores only
+a hash of the secret. For this reason masks does not offer `client_secret_jwt`, which is an
+assertion signed with the secret itself.
+
+A `private_key_jwt` client registers either `jwks` or a `jwks_uri`, which masks fetches and caches
+for five minutes. masks issues this client no secret. The client's assertion must meet these
+conditions:
+
+- It names the client as both `iss` and `sub`.
+- Its `aud` is the issuer or the endpoint the assertion is sent to.
+- It contains a `jti`.
+- It expires within one hour.
 
 ```ruby
 Masks::Client::Session.new(issuer: "https://demo.masks.example", client_id: id,
@@ -116,10 +125,10 @@ Masks::Client::Session.new(issuer: "https://demo.masks.example", client_id: id,
   .client_credentials(scope: "uris:catalog:read")
 ```
 
-The same assertion is spent the first time it is used, an assertion signed with a key the set does
-not hold makes masks read a `jwks_uri` once more before refusing it, so a key can be rotated in
-without a word to the server, and a client registered for one way of authenticating is refused if
-it tries another.
+masks accepts each assertion only once. When an assertion is signed with a key that is not in the
+cached set, masks fetches the `jwks_uri` again before it refuses the assertion, so a client can
+rotate in a new key without notifying the server. masks refuses a client that authenticates with a
+method other than the one it registered.
 
-Archiving is the end of a client — it can no longer sign anybody in — but it is not a delete, and
-any [namespace](/concepts/namespaces/) it claimed survives until released.
+Archiving a client stops it from signing anyone in. masks keeps the archived record, and any
+[namespace](/concepts/namespaces/) the client claimed stays claimed until it is released.
