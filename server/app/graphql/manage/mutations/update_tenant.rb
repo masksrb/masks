@@ -66,7 +66,7 @@ module Manage
           refuse!("#{tenant.sign_in_policy.name} is archived") if tenant.sign_in_policy&.archived?
 
           if tenant.sign_in_policy && !tenant.sign_in_policy.local?
-            refuse!("#{tenant.sign_in_policy.name} offers no password or passkey, so it cannot be the default the console signs in with")
+            refuse!("#{tenant.sign_in_policy.name} offers no password or passkey, so it cannot be the default managers sign in with")
           end
         end
 

@@ -49,7 +49,8 @@ function onsubmit(event) {
       {#if signup.token}
         <label class="ledger-row ledger-step" class:ledger-step-done={filled(token)}>
           <span class="ledger-label">{login.t("token")}</span>
-          <input type="password" name="token" class="control" autocomplete="off" bind:value={token} />
+          <!-- svelte-ignore a11y_autofocus -->
+          <input type="password" name="token" class="control" autocomplete="off" autofocus bind:value={token} />
           <Hint {login} field="token" hint={login.t("token_hint")} />
         </label>
       {/if}
@@ -57,7 +58,7 @@ function onsubmit(event) {
       <label class="ledger-row ledger-step" class:ledger-step-done={filled(person)}>
         <span class="ledger-label">{login.t("name")}</span>
         <!-- svelte-ignore a11y_autofocus -->
-        <input type="text" name="name" class="control" autocomplete="name" autofocus bind:value={person} />
+        <input type="text" name="name" class="control" autocomplete="name" autofocus={!signup.token} bind:value={person} />
       </label>
 
       {#if asks.nickname !== "off"}

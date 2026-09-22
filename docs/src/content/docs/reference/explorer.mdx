@@ -11,6 +11,6 @@ docs pane and validation all run against the published schema — nothing here t
 
 To actually run a query, put your own instance's `/manage/graphql` in the endpoint box. It answers
 only to a bearer carrying `masks:manage` issued for that tenant's manage resource, so the browser
-has to be signed in to the console on the same origin.
+has to be signed in to `/manage` on the same origin.
 
 <Explorer client:only="react" sdl={sdl} />

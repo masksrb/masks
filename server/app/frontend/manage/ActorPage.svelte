@@ -336,7 +336,7 @@
 
         <Card
           title="Signed in"
-          lede={yourself ? "Signing out everywhere signs you out of this console too." : null}
+          lede={yourself ? "Signing out everywhere signs you out here too." : null}
         >
           <Presence {api} {feedback} {actor} onchange={load} />
         </Card>

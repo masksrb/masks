@@ -2003,6 +2003,10 @@
     display: flex;
   }
 
+  .action-countdown {
+    font-variant-numeric: tabular-nums;
+  }
+
   .action-grow {
     flex: 1 1 auto;
   }
@@ -2068,6 +2072,55 @@
   .whom .textlink {
     flex: none;
     font-size: 0.875rem;
+  }
+
+  .handshake-part {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+  }
+
+  .handshake-part-head {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+
+  .handshake-part-title {
+    margin: 0;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink);
+  }
+
+  .handshake-part-lede {
+    margin: 0;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    color: var(--ink-soft);
+  }
+
+  .handshake-warn {
+    color: var(--warn);
+  }
+
+  .handshake-note {
+    margin: 0;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--ink-soft);
+  }
+
+  .handshake-note strong {
+    color: var(--ink);
+  }
+
+  .handshake-more > summary {
+    align-self: center;
+    font-size: 0.8125rem;
+    opacity: 0.5;
   }
 
   .person {

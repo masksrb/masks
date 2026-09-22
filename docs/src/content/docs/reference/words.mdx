@@ -1,6 +1,6 @@
 ---
 title: Words
-description: One name for each thing, across the console, the sign-in pages, the account page and mail.
+description: One name for each thing, across /manage, the sign-in pages, the account page and mail.
 ---
 
 `server/config/locales/en/` · `server/app/frontend/manage/`
@@ -20,6 +20,7 @@ and the mail masks sends.
 | **account** | actor, user | what a person has, and on their own pages |
 | **manager** | admin, whoever runs this server | somebody holding `masks:manage` |
 | **server** | instance, installation | the thing a person signs in to |
+| **manage**, `/manage` | console, dashboard, admin panel | where managers work; a screen says *Manage demo*, the docs say `/manage` |
 | **confirm**, **confirmation** | verify, verification | proving an email address or a phone number |
 | **photo** | picture, avatar | the uploaded image; identicons and initials are drawn, not uploaded |
 | **passkey** | fingerprint, face or PIN | |
@@ -49,7 +50,7 @@ nouns. A button says *Sign in*; a chart counts *sign-ins*; a policy decides whet
 
 ## Events
 
-An event's label is written once, in `events.yml`, and served to the console as `label` on `Event`
+An event's label is written once, in `events.yml`, and served to `/manage` as `label` on `Event`
 and `EventAction`. The account page reads the same file. Labels are a noun and a past participle —
 *Passkey added*, *Client archived*, *Device sign-in refused* — and a change is always *changed*,
 never *edited* or *updated*.

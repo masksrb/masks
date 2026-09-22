@@ -25,5 +25,5 @@ Signing a device out revokes every session, access token, and refresh token on i
 second factors remembered on it. Signing an *actor* out revokes all of the actor's sessions and
 refresh tokens on every device, and forgets their remembered second factors.
 
-A device with no session on it is still listed. The console queries these devices separately, so a
+A device with no session on it is still listed. `/manage` queries these devices separately, so a
 browser that never completed a sign-in can still be blocked.

@@ -333,15 +333,7 @@ class Login
     def person_json
       return nil if actor.nil? || authenticated_at.nil?
 
-      style = Avatars.held?(actor) ? Avatars::PHOTO : Avatars::FALLBACK
-
-      {
-        "name" => actor.display_name,
-        "details" => actor.display_details,
-        "note" => (I18n.t("application.person.unconfirmed") if actor.email_unconfirmed?),
-        "role" => (I18n.t("application.person.manager") if actor.manages?),
-        "avatar" => Avatars.url(actor, style, subject: actor.uuid, size: 128)
-      }
+      actor.person_json
     end
 
     def forget_vanished_actor!

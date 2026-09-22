@@ -32,8 +32,12 @@ class HandshakeTest < ActionDispatch::IntegrationTest
     response.body[/name="hid"[^>]*value="([^"]*)"/, 1]
   end
 
+  def current_shown
+    response.body[/name="shown"[^>]*value="([^"]*)"/, 1]
+  end
+
   def approve!(hid: current_hid)
-    post "/handshake", params: { approve: "yes", hid: hid }
+    approve_handshake(hid: hid)
     redirected["initial_access_token"]
   end
 
@@ -88,7 +92,7 @@ class HandshakeTest < ActionDispatch::IntegrationTest
     connect
 
     assert_response :success
-    assert_match "Connect uris?", response.body
+    assert_match "Register uris as a client?", response.body
     assert_match APP, response.body
     assert_match "uris:catalog:read", response.body
     assert_match REDIRECT_URI, response.body
@@ -307,6 +311,7 @@ class HandshakeTest < ActionDispatch::IntegrationTest
 
     connect
     theirs = current_hid
+    shown = response.body
 
     connect(
       client_name: "other", resource: "#{other}/mcp",
@@ -315,7 +320,7 @@ class HandshakeTest < ActionDispatch::IntegrationTest
     )
     refute_equal theirs, current_hid
 
-    post "/handshake", params: { approve: "yes", hid: theirs }
+    approve_handshake(hid: theirs, body: shown)
 
     assert response.location.start_with?(RETURN_TO), "connected the wrong app"
 
@@ -365,6 +370,83 @@ class HandshakeTest < ActionDispatch::IntegrationTest
     assert_not_equal first["client_secret"], second["client_secret"]
   end
 
+  test "approving before the countdown ends registers nothing and goes back to the request" do
+    sign_in_as(@owner)
+    connect
+
+    post "/handshake", params: { approve: "yes", hid: current_hid, shown: current_shown }
+
+    assert_response :redirect
+    assert_match %r{/handshake\?hid=}, response.location
+    assert_equal 0, within(@tenant) { Client.count }
+
+    follow_redirect!
+
+    assert_response :success
+    assert_match "Nothing was registered", response.body
+  end
+
+  test "a forged countdown stamp does not skip the wait" do
+    sign_in_as(@owner)
+    connect
+
+    travel(HandshakesController::WAIT + 1.second) { post "/handshake", params: { approve: "yes", hid: current_hid, shown: "forged" } }
+
+    assert_equal 0, within(@tenant) { Client.count }
+  end
+
+  test "a countdown stamp from another request does not skip the wait" do
+    sign_in_as(@owner)
+    connect
+    theirs = current_hid
+
+    connect(client_name: "other", resource: "https://other.uris.test/mcp",
+            return_to: "https://other.uris.test/auth/handshake/callback",
+            redirect_uris: [ "https://other.uris.test/auth/masks/callback" ])
+
+    travel(HandshakesController::WAIT + 1.second) { post "/handshake", params: { approve: "yes", hid: theirs, shown: current_shown } }
+
+    assert_equal 0, within(@tenant) { Client.count }
+  end
+
+  test "the request says it registers a client for everyone and allows only your account" do
+    sign_in_as(@owner)
+    connect
+
+    assert_match "Registers on", response.body
+    assert_match "Every sign-in through", response.body
+    assert_match "Allows your account", response.body
+    assert_match "Confidential. It receives a secret.", response.body
+    assert_match RETURN_TO, response.body
+  end
+
+  test "a public client is said to hold no secret" do
+    sign_in_as(@owner)
+    connect(token_endpoint_auth_method: "none")
+
+    assert_match "Public. It holds no secret.", response.body
+  end
+
+  test "asking for masks:manage is called out" do
+    manager = create_actor(@tenant, nickname: "manager", password: "password",
+                                    scopes: Scopes.join(Scopes::STANDARD + [ Scopes::MANAGE ]))
+    sign_in_as(manager)
+    connect(scope: "#{SCOPE} masks:manage")
+
+    assert_match "change every setting on this server", response.body
+  end
+
+  test "replacing a client says whose it was and when it was approved" do
+    sign_in_as(@owner)
+    connect
+    approve!
+
+    connect
+
+    assert_match "Replace the uris client?", response.body
+    assert_match "The uris client you approved on", response.body
+  end
+
   test "a token minted for one tenant registers nothing at another" do
     sign_in_as(@owner)
     connect
@@ -392,7 +474,7 @@ class HandshakeTest < ActionDispatch::IntegrationTest
     get resumed
 
     assert_response :success
-    assert_match "Connect uris?", response.body
+    assert_match "Register uris as a client?", response.body
   end
 
   test "an approved client does not ask again for what a person already approved" do

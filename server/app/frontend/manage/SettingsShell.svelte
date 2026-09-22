@@ -13,7 +13,7 @@
   ];
 
   function unpair() {
-    if (confirm("Unpair this browser? It forgets its registration and has to pair again.")) onunpair();
+    if (confirm("Forget this manage client? masks asks you to approve a new one right away. The old client stays under Clients until it is archived.")) onunpair();
   }
 </script>
 
@@ -31,7 +31,7 @@
     <div class="settings-me">
       <span class="settings-who" title={identifier}>{identifier}</span>
       <button type="button" class="settings-tab" onclick={onsignout}>Sign out</button>
-      <button type="button" class="settings-tab settings-quiet" onclick={unpair}>Unpair browser</button>
+      <button type="button" class="settings-tab settings-quiet" onclick={unpair}>Forget client</button>
     </div>
   </aside>
 

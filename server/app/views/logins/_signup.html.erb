@@ -14,7 +14,7 @@
       <% if signup["token"] %>
         <label class="ledger-row ledger-step">
           <span class="ledger-label"><%= t("logins.signing_up.token") %></span>
-          <%= form.password_field :token, autocomplete: "off", class: "control" %>
+          <%= form.password_field :token, autocomplete: "off", autofocus: true, class: "control" %>
           <%= render "logins/hint", login: login, field: "token", hint: t("logins.signing_up.token_hint") %>
         </label>
       <% end %>

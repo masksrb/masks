@@ -8,10 +8,10 @@ the resources it acts for, and the scopes it may request.
 
 ## How a client is registered
 
-A client is registered in one of three ways, and the console shows which one applies:
+A client is registered in one of three ways, and `/manage` shows which one applies:
 
-- **Added.** A manager adds the client from the console, and the client is approved by that manager
-  when it is created. The console shows its secret once.
+- **Added.** A manager adds the client from `/manage`, and the client is approved by that manager
+  when it is created. `/manage` shows its secret once.
 - **Approved.** A person completes the `/handshake` flow, and masks returns the credentials to the
   application server to server. Nobody copies credentials between the two.
 - **Self-registered.** The application registers itself through RFC 7591 dynamic registration. Its

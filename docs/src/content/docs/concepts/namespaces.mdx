@@ -23,11 +23,11 @@ the resource that holds the prefix.
 A claim remains after its client is archived or deleted. Releasing a namespace frees the name for the
 next application to claim.
 
-The console enforces two steps in this order:
+`/manage` enforces two steps in this order:
 
 1. Archive the client that holds the namespace.
 2. Release the namespace.
 
-A namespace whose client is still active cannot be released. The console shows *archive to release*
+A namespace whose client is still active cannot be released. `/manage` shows *archive to release*
 in place of the **Release** button. After a release, the scopes beneath the name no longer refer to
 what they did before. Claim a namespace only for an application that needs its own scopes.

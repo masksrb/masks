@@ -31,9 +31,7 @@ class NamespaceClaimTest < ActionDispatch::IntegrationTest
   end
 
   def approve!
-    hid = response.body[/name="hid"[^>]*value="([^"]*)"/, 1]
-
-    post "/handshake", params: { approve: "yes", hid: hid }
+    approve_handshake
   end
 
   def claimed(name = "uris:")
@@ -72,7 +70,7 @@ class NamespaceClaimTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_match "uris:", response.body
-    assert_match "granted to you", response.body
+    assert_match "you are granted it now", response.body
   end
 
   test "another resource cannot take a namespace that is claimed" do
@@ -95,7 +93,7 @@ class NamespaceClaimTest < ActionDispatch::IntegrationTest
     connect(resource: OTHER_RESOURCE, origin: OTHER, name: "impostor")
 
     assert_response :bad_request
-    assert_select "a[href=?]", manage_path, "Open the console"
+    assert_select "a[href=?]", manage_path, "Manage this server"
   end
 
   test "a namespace conflict is only ever an admin's to see, because a prefix is more than anybody else holds" do

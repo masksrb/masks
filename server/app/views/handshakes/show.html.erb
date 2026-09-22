@@ -1,12 +1,21 @@
 <% content_for :title, t(".page_title", name: @handshake.name) %>
 <% content_for :surface, "grant" %>
 
+<% content_for :scripts do %>
+  <%= vite_client_tag %>
+  <%= vite_javascript_tag "person" %>
+  <%= vite_javascript_tag "handshake" %>
+<% end %>
+
 <% hot, rest = ranked_scopes(@scopes) %>
+<% tenant = Current.tenant&.name.to_s %>
+<% credentials = Client::SECRET_AUTH_METHODS.include?(@handshake.auth_method) ? "secret" :
+                 @handshake.auth_method == Client::PRIVATE_KEY_JWT ? "key" : "public" %>
 
 <div class="auth-pair">
   <span class="auth-mark auth-mark-client" aria-hidden="true"><%= @handshake.name.to_s.first&.upcase %></span>
   <span class="auth-wire"></span>
-  <span class="auth-mark" aria-hidden="true"><%= Current.tenant&.name.to_s.first&.upcase %></span>
+  <span class="auth-mark" aria-hidden="true"><%= tenant.first&.upcase %></span>
 </div>
 
 <div class="prompt-head">
@@ -15,81 +24,134 @@
   </h1>
 </div>
 
-<% if @existing %>
-  <div class="note note-warn" role="alert"><%= t(".replaces", name: @handshake.name) %></div>
-<% end %>
+<%= render "application/person", actor: current_actor, sign_out: true %>
 
-<div class="slab">
-  <div class="ledger-row">
-    <span class="ledger-label"><%= t(".access") %></span>
-    <ul class="grant-scopes">
-      <% hot.each do |scope, description| %>
-        <li class="grant-scope grant-scope-hot">
-          <span><%= description %></span>
-          <span class="chip-key"><%= scope %></span>
-        </li>
-      <% end %>
-
-      <% if hot.any? && rest.any? %>
-        <li class="grant-scope-split"></li>
-      <% end %>
-
-      <% rest.each do |scope, description| %>
-        <li class="grant-scope">
-          <span><%= description %></span>
-          <span class="chip-key"><%= scope %></span>
-        </li>
-      <% end %>
-    </ul>
-
-    <% if @beneath.present? %>
-      <details class="disclosure">
-        <summary class="textlink"><%= t(".beneath", count: @beneath.size) %></summary>
-        <ul class="grant-scopes">
-          <% @beneath.each do |scope, description| %>
-            <li class="grant-scope">
-              <span><%= description %></span>
-              <span class="chip-key"><%= scope %></span>
-            </li>
-          <% end %>
-        </ul>
-      </details>
-    <% end %>
+<section class="handshake-part">
+  <div class="handshake-part-head">
+    <h2 class="handshake-part-title"><%= t(".registers", tenant: tenant) %></h2>
+    <p class="handshake-part-lede"><%= t(".registers_lede", name: @handshake.name) %></p>
   </div>
 
-  <% if @granting.present? %>
+  <div class="slab">
     <div class="ledger-row ledger-row-tight">
-      <span class="ledger-label"><%= t(".claims") %></span>
-      <span class="ledger-value">
-        <%= t(".claimed", namespaces: @granting.to_sentence, name: @handshake.name) %>
-      </span>
+      <span class="ledger-label"><%= t(".client") %></span>
+      <span class="ledger-value"><strong><%= @handshake.name %></strong> · <%= t(".credentials.#{credentials}") %></span>
     </div>
-  <% end %>
 
-  <div class="ledger-row ledger-row-tight">
-    <span class="ledger-label"><%= t(".origin") %></span>
-    <span class="ledger-value aside-mono"><%= @handshake.origin %></span>
-  </div>
+    <% if @existing %>
+      <div class="ledger-row ledger-row-tight">
+        <span class="ledger-label"><%= t(".replaces") %></span>
+        <span class="ledger-value handshake-warn">
+          <%= t(".replaced",
+                name: @existing.name,
+                who: @existing.approved_by_id == current_actor.id ? t(".you") : @existing.approved_by&.identifier || t(".someone"),
+                date: l(@existing.approved_at.to_date, format: :long)) %>
+        </span>
+      </div>
+    <% end %>
 
-  <div class="ledger-row ledger-row-tight">
-    <span class="ledger-label"><%= t(".resource") %></span>
-    <span class="ledger-value aside-mono"><%= @handshake.resource %></span>
-  </div>
+    <div class="ledger-row">
+      <span class="ledger-label"><%= t(".may_ask") %></span>
+      <ul class="grant-scopes">
+        <% hot.each do |scope, description| %>
+          <li class="grant-scope grant-scope-hot">
+            <span><%= description %></span>
+            <span class="chip-key"><%= scope %></span>
+          </li>
+        <% end %>
 
-  <div class="ledger-row ledger-row-tight">
-    <span class="ledger-label"><%= t(".returns") %></span>
-    <% @handshake.redirect_uris.each do |uri| %>
-      <span class="ledger-value aside-mono"><%= uri %></span>
+        <% if hot.any? && rest.any? %>
+          <li class="grant-scope-split"></li>
+        <% end %>
+
+        <% rest.each do |scope, description| %>
+          <li class="grant-scope">
+            <span><%= description %></span>
+            <span class="chip-key"><%= scope %></span>
+          </li>
+        <% end %>
+      </ul>
+
+      <% if @handshake.scopes.include?(Scopes::MANAGE) %>
+        <div class="note note-warn" role="alert"><%= t(".manage_warning", name: @handshake.name) %></div>
+      <% end %>
+
+      <% if @beneath.present? %>
+        <details class="disclosure">
+          <summary class="textlink"><%= t(".beneath", count: @beneath.size) %></summary>
+          <ul class="grant-scopes">
+            <% @beneath.each do |scope, description| %>
+              <li class="grant-scope">
+                <span><%= description %></span>
+                <span class="chip-key"><%= scope %></span>
+              </li>
+            <% end %>
+          </ul>
+        </details>
+      <% end %>
+    </div>
+
+    <div class="ledger-row ledger-row-tight">
+      <span class="ledger-label"><%= t(".signs_in_at") %></span>
+      <span class="ledger-value aside-mono"><%= @handshake.resource %></span>
+    </div>
+
+    <% if @granting.present? %>
+      <div class="ledger-row ledger-row-tight">
+        <span class="ledger-label"><%= t(".claims") %></span>
+        <span class="ledger-value"><%= t(".claimed", namespaces: @granting.to_sentence, name: @handshake.name) %></span>
+      </div>
     <% end %>
   </div>
-</div>
+</section>
+
+<p class="handshake-note">
+  <strong><%= t(".allows") %>.</strong> <%= t(".allows_body", name: @handshake.name) %>
+</p>
+
+<details class="disclosure handshake-more">
+  <summary class="textlink"><%= t(".details") %></summary>
+
+  <div class="slab">
+    <div class="ledger-row ledger-row-tight">
+      <span class="ledger-label"><%= t(".origin") %></span>
+      <span class="ledger-value aside-mono"><%= @handshake.origin %></span>
+    </div>
+
+    <div class="ledger-row ledger-row-tight">
+      <span class="ledger-label"><%= t(".redirect_uris") %></span>
+      <% @handshake.redirect_uris.each do |uri| %>
+        <span class="ledger-value aside-mono"><%= uri %></span>
+      <% end %>
+    </div>
+
+    <div class="ledger-row ledger-row-tight">
+      <span class="ledger-label"><%= t(".returns") %></span>
+      <span class="ledger-value aside-mono"><%= @handshake.return_to %></span>
+    </div>
+
+    <div class="ledger-row ledger-row-tight">
+      <span class="ledger-label"><%= t(".auth_method") %></span>
+      <span class="ledger-value aside-mono"><%= @handshake.auth_method %></span>
+    </div>
+
+    <% if @handshake.backchannel_logout_uri %>
+      <div class="ledger-row ledger-row-tight">
+        <span class="ledger-label"><%= t(".backchannel") %></span>
+        <span class="ledger-value aside-mono"><%= @handshake.backchannel_logout_uri %></span>
+      </div>
+    <% end %>
+  </div>
+</details>
 
 <%= form_with url: handshake_path, method: :post do |form| %>
   <%= hidden_field_tag :hid, hid_for(@pending) %>
+  <%= hidden_field_tag :shown, @shown %>
+  <% approve = @existing ? "replace" : "register" %>
   <div class="action-row">
-    <button type="submit" name="approve" value="yes" class="action action-grow"><%= t(".connect") %></button>
+    <button type="submit" name="approve" value="yes" class="action action-grow action-countdown"
+            data-countdown="<%= HandshakesController::WAIT.to_i %>"
+            data-waiting="<%= t(".#{approve}_in", seconds: "%{seconds}") %>"><%= t(".#{approve}") %></button>
     <button type="submit" name="deny" value="yes" class="action action-quiet action-fit"><%= t(".cancel") %></button>
   </div>
 <% end %>
-
-<p class="aside"><%= current_actor.identifier %> · <%= link_to t(".sign_out"), logout_path, class: "textlink" %></p>

@@ -1,5 +1,10 @@
 <% content_for :title, t(".page_title") %>
 
+<% content_for :scripts do %>
+  <%= vite_client_tag %>
+  <%= vite_javascript_tag "person" %>
+<% end %>
+
 <div id="logout-confirm" class="flow">
   <div class="prompt-head">
     <h1 class="prompt-title"><%= t(".title") %></h1>

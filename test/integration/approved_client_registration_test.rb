@@ -22,7 +22,7 @@ class ApprovedClientRegistrationTest < ActionDispatch::IntegrationTest
     ]
 
     get "/handshake?#{URI.encode_www_form(query)}"
-    post "/handshake", params: { approve: "yes", hid: response.body[/name="hid"[^>]*value="([^"]*)"/, 1] }
+    approve_handshake
 
     secret = Rack::Utils.parse_query(URI.parse(response.location).query)["initial_access_token"]
 

@@ -20,7 +20,7 @@ https://demo.masks.example/scim/v2
 
 To connect a provider with a provisioning token:
 
-1. In the console, open **Settings → Provisioning** and issue a token.
+1. In `/manage`, open **Settings → Provisioning** and issue a token.
 2. Give the token a label that identifies the provider.
 3. Choose how long the token lasts. The longest lifetime is one year.
 4. Copy the token. masks shows it only once.
@@ -66,13 +66,13 @@ service. masks does not support groups, bulk operations, or sorting.
 
 ## Suspending
 
-Sending `active: false` suspends a person. **Suspend** on the person's page in the console does the
+Sending `active: false` suspends a person. **Suspend** on the person's page in `/manage` does the
 same. A suspended person is signed out of every session, and every token they hold stops working
 immediately, including refresh tokens. masks refuses their sign-in after the first factor, so
 someone who enters only the person's name cannot learn that the account is suspended.
 
 Sending `active: true` restores the person. `DELETE` removes the person entirely, the same as
-deleting them in the console.
+deleting them in `/manage`.
 
 ## What a provider cannot do
 

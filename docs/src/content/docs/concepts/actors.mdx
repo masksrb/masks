@@ -16,7 +16,7 @@ issued for the actor contains only scopes from that list.
 ## What names an account
 
 One tenant setting, `named_by`, controls which of the two fields every account must have. A manager
-sets it in the console. `MASKS_NAMED_BY` pins it at deploy time. A pinned value takes precedence over
+sets it in `/manage`. `MASKS_NAMED_BY` pins it at deploy time. A pinned value takes precedence over
 the stored one, and changing it requires changing the deployment.
 
 | `MASKS_NAMED_BY` | |
@@ -33,7 +33,7 @@ only one of the two until the other is filled in.
 
 An actor signs in with either field. `Actor.locate` accepts a nickname or an address, and the
 sign-in screen accepts whichever one the person has. `identifier` returns the nickname when one is
-set and the address otherwise. The console, the audit trail, and the introspection endpoint display
+set and the address otherwise. `/manage`, the activity list, and the introspection endpoint display
 `identifier`.
 
 Second factors are a TOTP authenticator, passkeys, and backup codes. A passkey can serve as both
@@ -56,4 +56,4 @@ screen has three tabs:
 3. **Configuration** asks for the name of this installation.
 
 The screen does not appear again once the tenant has an actor. After that, managers invite or create
-accounts from the console, and the console edits every other tenant setting.
+accounts from `/manage`, which also edits every other tenant setting.

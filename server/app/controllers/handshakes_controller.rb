@@ -1,13 +1,17 @@
 class HandshakesController < ApplicationController
+  WAIT = 5.seconds
+
   before_action :require_handshake
   before_action :require_actor
   before_action :require_pairing
   before_action :require_unclaimed_namespaces
+  before_action :require_wait, only: :create
 
   def show
     @scopes = ResourceMetadata.describe(@handshake.resource, @handshake.scopes)
     @granting = Namespace.prefixes(@handshake.scopes) - current_actor.scope_list
     @beneath = published_beneath(Namespace.prefixes(@handshake.scopes))
+    @shown = shown_clock.generate(Time.current.to_f, purpose: hid_for(@pending), expires_in: PendingHandshake.lifetime)
   end
 
   def create
@@ -75,6 +79,23 @@ class HandshakesController < ApplicationController
       track_handshake!(handshake)
     end
 
+    def require_wait
+      return if params[:approve].blank? || waited?
+
+      flash[:alert] = t("handshakes.too_soon")
+      redirect_to "#{handshake_path}?#{URI.encode_www_form(hid: params[:hid])}"
+    end
+
+    def waited?
+      shown = shown_clock.verified(params[:shown].to_s, purpose: params[:hid].to_s)
+
+      shown.is_a?(Numeric) && Time.current.to_f - shown >= WAIT
+    end
+
+    def shown_clock
+      Rails.application.message_verifier("handshakes/shown")
+    end
+
     def require_actor
       redirect_to login_path if current_actor.nil?
     end
@@ -108,7 +129,7 @@ class HandshakesController < ApplicationController
       refusal = Namespace.refusal(@handshake)
       return if refusal.nil?
 
-      @console = manage_path
+      @manage = manage_path
 
       refuse(refusal)
     end

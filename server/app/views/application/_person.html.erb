@@ -1,27 +1,30 @@
 <% sign_out = local_assigns.fetch(:sign_out, false) %>
 <% details = actor.display_details %>
 
-<div class="person">
-  <%= avatar_tag actor, size: 44, class: "person-avatar" %>
+<div class="person-mount" data-person="<%= actor.person_json.to_json %>"
+     data-sign-out="<%= t("application.person.sign_out") if sign_out %>">
+  <div class="person">
+    <%= avatar_tag actor, size: 44, class: "person-avatar" %>
 
-  <div class="person-who">
-    <span class="person-name"><%= actor.display_name %></span>
+    <div class="person-who">
+      <span class="person-name"><%= actor.display_name %></span>
 
-    <% if details.any? || actor.email_unconfirmed? %>
-      <span class="person-sub">
-        <%= details.join(" · ") %>
-        <% if actor.email_unconfirmed? %>
-          <span class="person-note"><%= t("application.person.unconfirmed") %></span>
-        <% end %>
-      </span>
-    <% end %>
+      <% if details.any? || actor.email_unconfirmed? %>
+        <span class="person-sub">
+          <%= details.join(" · ") %>
+          <% if actor.email_unconfirmed? %>
+            <span class="person-note"><%= t("application.person.unconfirmed") %></span>
+          <% end %>
+        </span>
+      <% end %>
 
-    <% if actor.manages? %>
-      <span class="person-role"><%= t("application.person.manager") %></span>
+      <% if actor.manages? %>
+        <span class="person-role"><%= t("application.person.manager") %></span>
+      <% end %>
+    </div>
+
+    <% if sign_out %>
+      <%= button_to t("application.person.sign_out"), logout_path, class: "textlink", form_class: "signout" %>
     <% end %>
   </div>
-
-  <% if sign_out %>
-    <%= button_to t("application.person.sign_out"), logout_path, class: "textlink", form_class: "signout" %>
-  <% end %>
 </div>

@@ -131,7 +131,7 @@ class SignInPolicy < ApplicationRecord
       return if local? || !persisted?
       return unless Tenant.exists?(sign_in_policy_id: id)
 
-      errors.add(:first_factors, "must keep a password or a passkey while this is the tenant's default, so the console cannot be locked out")
+      errors.add(:first_factors, "must keep a password or a passkey while this is the tenant's default, so managers are never locked out")
     end
 
     def signup_scopes_stay_ordinary

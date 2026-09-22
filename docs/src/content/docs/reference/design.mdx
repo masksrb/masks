@@ -1,6 +1,6 @@
 ---
 title: Design
-description: One palette for the console, the sign-in pages and this site, drawn from the mark.
+description: One palette for /manage, the sign-in pages and this site, drawn from the mark.
 ---
 
 import mark from "../../../assets/masks.svg";
@@ -25,7 +25,7 @@ tokens, so a token changed in one place changes both.
 
 The mark is that window, traced. A photograph of it is smoothed, snapped to thirteen glass colours
 with anything near black taken as lead, and each colour traced as one vector layer. The same file is
-`server/public/icon.svg`, the favicon everywhere, the console's brand and this site's logo.
+`server/public/icon.svg`, the favicon everywhere, the brand in `/manage` and this site's logo.
 
 The window it came from is 188×188 and indexed, 28 significant colours. Pure black is 49.3% of it.
 Every value lands on `0x2a / 0x55 / 0x7f / 0xaa / 0xff`, so these are dithered index entries rather
@@ -101,13 +101,13 @@ brass or silver. If it carries meaning — a badge, a status, a link, an aside �
 never borrows a glass hue for its edge to look lively.
 
 **The spare hues are categorical, not decorative.** Amber, verdant, cyan and violet are assigned by
-hashing a name, so a namespace or a scope keeps the same colour everywhere it appears — console
-table, docs example, chart series. Colour becomes identity rather than garnish.
+hashing a name, so a namespace or a scope keeps the same colour everywhere it appears — a table
+in `/manage`, docs example, chart series. Colour becomes identity rather than garnish.
 
 ## Where it lives
 
-One daisyUI theme pair replaces the three that came before — `light`, `dark` and `console`. The
-console is no longer a separate palette; it is the dense expression of the shared one, keeping 3px
+One daisyUI theme pair replaces the three that came before — `light`, `dark` and `console`. `/manage`
+no longer has a separate palette; it is the dense expression of the shared one, keeping 3px
 fields and tight rows while drawing every colour from the same place.
 
 ```css
