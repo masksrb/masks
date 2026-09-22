@@ -55,7 +55,7 @@
         <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
           <span class="flex flex-wrap items-baseline gap-2">
             {#if showActor}
-              <Link to={`/people/${connection.actor.uuid}`} class="link link-hover text-sm font-medium">
+              <Link to={`/actors/${connection.actor.uuid}`} class="link link-hover text-sm font-medium">
                 {connection.actor.identifier}
               </Link>
             {:else}

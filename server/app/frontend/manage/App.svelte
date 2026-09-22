@@ -5,7 +5,7 @@
   import { handshakeUrl, redeem } from "./lib/pairing.js";
   import Link from "./ui/Link.svelte";
   import Spinner from "./ui/Spinner.svelte";
-  import PeoplePage from "./PeoplePage.svelte";
+  import ActorsPage from "./ActorsPage.svelte";
   import ActorPage from "./ActorPage.svelte";
   import DevicePage from "./DevicePage.svelte";
   import ClientsPage from "./ClientsPage.svelte";
@@ -31,7 +31,7 @@
 
   const NAV = [
     ["", "Overview", '<path d="M3.5 10.5 10 4l6.5 6.5"/><path d="M5.5 9v7h9V9"/>'],
-    ["/people", "People", '<circle cx="10" cy="7" r="3"/><path d="M4 17c.8-3 3.2-4.5 6-4.5s5.2 1.5 6 4.5"/>'],
+    ["/actors", "Actors", '<circle cx="10" cy="7" r="3"/><path d="M4 17c.8-3 3.2-4.5 6-4.5s5.2 1.5 6 4.5"/>'],
     ["/clients", "Clients", '<rect x="3" y="3" width="6" height="6" rx="1.5"/><rect x="11" y="3" width="6" height="6" rx="1.5"/><rect x="3" y="11" width="6" height="6" rx="1.5"/><rect x="11" y="11" width="6" height="6" rx="1.5"/>'],
   ];
 
@@ -180,13 +180,13 @@
     <main class="console-main mx-auto w-full max-w-6xl flex-1 p-4 md:p-6">
       {#if current === ""}
         <SettingsPage {api} {boot} overview />
-      {:else if current === "people"}
+      {:else if current === "actors"}
         {#if router.segments[1] === "devices" && router.segments[2]}
           <DevicePage {api} id={router.segments[2]} />
         {:else if router.segments[1]}
           <ActorPage {api} uuid={router.segments[1]} />
         {:else}
-          <PeoplePage {api} />
+          <ActorsPage {api} />
         {/if}
       {:else if current === "clients"}
         {#if router.segments[1]}

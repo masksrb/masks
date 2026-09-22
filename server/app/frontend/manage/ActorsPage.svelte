@@ -31,7 +31,7 @@
   ];
 
   const QUERY = `
-    query People(
+    query Actors(
       $search: String, $activated: Boolean, $holds: String, $pendingApproval: Boolean,
       $suspended: Boolean, $afterId: ID, $limit: Int
     ) {
@@ -58,7 +58,7 @@
   const STANDARD = ["openid", "profile", "email", "offline_access", "identities"];
 
   const COLUMNS = [
-    "Person",
+    "Actor",
     { label: "Scopes", hide: true },
     { label: "Second factor", hide: true },
     { label: "Signed in on", hide: true },
@@ -68,7 +68,7 @@
   const feedback = createFeedback();
 
   let search = $state("");
-  let people = $state([]);
+  let actors = $state([]);
   let loading = $state(true);
   let more = $state(false);
   let exhausted = $state(false);
@@ -101,7 +101,7 @@
         limit: PAGE,
       });
 
-      people = afterId ? [...people, ...data.actors] : data.actors;
+      actors = afterId ? [...actors, ...data.actors] : data.actors;
       exhausted = data.actors.length < PAGE;
     } catch (thrown) {
       feedback.blame(thrown);
@@ -123,7 +123,7 @@
 
   load();
 
-  const oldest = $derived(people.at(-1)?.uuid ?? null);
+  const oldest = $derived(actors.at(-1)?.uuid ?? null);
 
   async function open() {
     nickname = "";
@@ -185,7 +185,7 @@
   };
 </script>
 
-<Page title="People">
+<Page title="Actors">
   {#snippet actions()}
     <div class="range" role="group" aria-label="Who to show">
       {#each LENSES as [key, label] (key)}
@@ -195,17 +195,17 @@
 
     <Search
       bind:value={search}
-      label="Search people"
+      label="Search actors"
       placeholder="nickname, email or name"
       onsearch={again}
     />
-    <button type="button" class="btn btn-primary btn-sm" onclick={open}>Add person</button>
+    <button type="button" class="btn btn-primary btn-sm" onclick={open}>Add actor</button>
   {/snippet}
 
   <Notices feedback={feedback.state} />
 
   {#if adding}
-    <Card title="Add person">
+    <Card title="Add actor">
       <div class="grid gap-3 sm:grid-cols-2">
         <Field
           label="Nickname"
@@ -273,14 +273,14 @@
     </Card>
   {/if}
 
-  {#if loading && people.length === 0}
+  {#if loading && actors.length === 0}
     <Spinner />
   {:else}
     <Table
       columns={COLUMNS}
-      count={people.length}
+      count={actors.length}
       empty={search.trim()
-        ? `No person matches "${search.trim()}".`
+        ? `No actor matches "${search.trim()}".`
         : lens === "waiting"
           ? "Nobody is awaiting approval."
           : lens === "invited"
@@ -289,11 +289,11 @@
             ? "Nobody else holds masks:manage."
             : lens === "suspended"
             ? "Nobody is suspended."
-            : "Nobody can sign in yet. Add the first person."}
+            : "Nobody can sign in yet. Add the first actor."}
     >
       {#snippet rows()}
-        {#each people as actor (actor.uuid)}
-          <Row to={`/people/${actor.uuid}`}>
+        {#each actors as actor (actor.uuid)}
+          <Row to={`/actors/${actor.uuid}`}>
             <td>
               <div class="flex items-center gap-3">
                 <img
@@ -305,7 +305,7 @@
                   class:drawn={!actor.avatars.photo}
                 />
                 <div class="min-w-0">
-                  <Link to={`/people/${actor.uuid}`} class="link link-hover font-medium">
+                  <Link to={`/actors/${actor.uuid}`} class="link link-hover font-medium">
                     {actor.identifier}
                   </Link>
                   <div class="flex items-center gap-1.5 text-xs opacity-50">
@@ -378,7 +378,7 @@
       {/snippet}
     </Table>
 
-    {#if !exhausted && people.length}
+    {#if !exhausted && actors.length}
       <div>
         <button
           type="button"

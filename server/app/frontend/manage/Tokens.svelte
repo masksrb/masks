@@ -53,7 +53,7 @@
             <span class="badge badge-sm {KIND[token.kind] ?? 'badge-ghost'}">{token.kind}</span>
 
             {#if showActor && token.actor}
-              <Link to={`/people/${token.actor.uuid}`} class="link link-hover text-sm font-medium">
+              <Link to={`/actors/${token.actor.uuid}`} class="link link-hover text-sm font-medium">
                 {token.actor.identifier}
               </Link>
             {:else if token.client}

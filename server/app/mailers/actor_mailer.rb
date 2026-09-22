@@ -83,7 +83,7 @@ class ActorMailer < ApplicationMailer
 
     @actor = actor
     @tenant_name = tenant_name
-    @url = origin.presence && "#{origin}/manage/people/#{actor.uuid}"
+    @url = origin.presence && "#{origin}/manage/actors/#{actor.uuid}"
 
     mail(
       from: self.class.from,

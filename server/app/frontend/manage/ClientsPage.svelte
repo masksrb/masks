@@ -55,7 +55,7 @@
 
   const KINDS = [
     ["service", "Signs in as itself", ["client_credentials"]],
-    ["app", "Signs people in", ["authorization_code", "refresh_token"]],
+    ["app", "Signs actors in", ["authorization_code", "refresh_token"]],
     ["saml", "SAML app", []],
   ];
 
@@ -261,10 +261,10 @@
 
       <p class="text-xs opacity-60">
         {draft.kind === "service"
-          ? "It asks the token endpoint for its own token with client_credentials. No person is behind it, so it never holds openid, profile, email or masks:manage."
+          ? "It asks the token endpoint for its own token with client_credentials. No actor is behind it, so it never holds openid, profile, email or masks:manage."
           : draft.kind === "saml"
-            ? "It sends people here with a SAML AuthnRequest, and masks posts a signed assertion back. Paste its metadata to fill the rest in."
-            : "It sends people to sign in and is handed a token on their behalf."}
+            ? "It sends actors here with a SAML AuthnRequest, and masks posts a signed assertion back. Paste its metadata to fill the rest in."
+            : "It sends actors to sign in and is handed a token on their behalf."}
       </p>
 
       {#if draft.kind === "saml"}

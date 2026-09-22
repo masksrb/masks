@@ -38,7 +38,7 @@
       <li class="slat">
         <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
           {#if showActor}
-            <Link to={`/people/${consent.actor.uuid}`} class="link link-hover text-sm font-medium">
+            <Link to={`/actors/${consent.actor.uuid}`} class="link link-hover text-sm font-medium">
               {consent.actor.identifier}
             </Link>
           {:else}

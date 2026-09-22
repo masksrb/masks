@@ -16,7 +16,7 @@ and the mail masks sends.
 | **activity** | audit log, history, events | what happened, newest first — every list of events |
 | **client** | application | in `/manage`, where OAuth is the subject |
 | **app** | application, client | to people, who allow an app in |
-| **person**, **people** | actor, user | in `/manage` |
+| **actor**, **actors** | person, people, user | in `/manage` |
 | **account** | actor, user | what a person has, and on their own pages |
 | **manager** | admin, whoever runs this server | somebody holding `masks:manage` |
 | **server** | instance, installation | the thing a person signs in to |
@@ -40,8 +40,8 @@ and the mail masks sends.
 | **blocked** | banned | a device that is refused from then on |
 | **registered** | created | a client |
 
-`actor` stays in code, in the GraphQL schema and in these concept pages, where it names the model.
-It never reaches a screen.
+`actor` is the model's name in code, in the GraphQL schema and in the concept pages, and `/manage` uses
+the same word. Outside `/manage`, a screen says *account*.
 
 ## Verbs and nouns
 
@@ -57,7 +57,7 @@ never *edited* or *updated*.
 
 ## Buttons and empty lists
 
-A page's add button names what it adds: *Add person*, *Add policy*, *Add provider*, *Add adapter*.
+A page's add button names what it adds: *Add actor*, *Add policy*, *Add provider*, *Add adapter*.
 The form's own submit is *Add* or *Save*.
 
 A list with nothing in it says *Nothing yet.*, or *None.* where nothing will ever arrive on its own.

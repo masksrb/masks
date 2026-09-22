@@ -222,7 +222,7 @@
   }
 
   function removePhoto() {
-    if (!confirm("Remove this person's photo?")) return;
+    if (!confirm("Remove this actor's photo?")) return;
 
     act(
       `mutation Remove($uuid: ID!) { removeAvatar(uuid: $uuid) { actor { uuid } } }`,
@@ -232,7 +232,7 @@
   }
 
   function disable() {
-    if (!confirm("Remove this person's authenticator app and every backup code?")) return;
+    if (!confirm("Remove this actor's authenticator app and every backup code?")) return;
 
     act(
       `mutation Disable($uuid: ID!) { disableAuthenticator(uuid: $uuid) { actor { otpEnabled } } }`,
@@ -274,7 +274,7 @@
       api.query(`mutation Delete($uuid: ID!) { deleteActor(uuid: $uuid) { identifier } }`, { uuid }),
     );
 
-    if (data) router.go("/people");
+    if (data) router.go("/actors");
   }
 </script>
 
@@ -282,13 +282,13 @@
   <Spinner />
 {:else if !actor}
   <div class="alert alert-error alert-soft text-sm" role="alert">
-    {feedback.state.failure ?? "There is no such person."}
+    {feedback.state.failure ?? "There is no such actor."}
   </div>
 {:else}
   <Page
     title={actor.identifier}
     id={actor.uuid}
-    back={{ to: "/people", label: "People" }}
+    back={{ to: "/actors", label: "Actors" }}
     lede={actor.activated
       ? `Signed in ${since(actor.lastLoginAt, "never")}.`
       : "Invited, and has not accepted yet."}
@@ -417,7 +417,7 @@
           {#if actor.externalId}
             <p class="text-xs opacity-60">
               Provisioned as <span class="font-mono">{actor.externalId}</span>. The identity provider may change or
-              suspend this person too.
+              suspend this actor too.
             </p>
           {/if}
           {#if actor.activated}

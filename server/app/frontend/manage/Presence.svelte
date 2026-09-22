@@ -106,7 +106,7 @@
             <li class="slat">
               <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                 <span class="flex flex-wrap items-baseline gap-2">
-                  <Link to={`/people/devices/${device.id}`} class="link link-hover text-sm font-medium">
+                  <Link to={`/actors/devices/${device.id}`} class="link link-hover text-sm font-medium">
                     {device.label}
                   </Link>
                   {#if device.blockedAt}

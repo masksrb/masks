@@ -85,7 +85,7 @@
       const data = await api.query(ABOUT_ACTOR, { uuid: actorId }).catch(() => null);
 
       if (data?.actor) {
-        about = { label: data.actor.identifier, to: `/people/${data.actor.uuid}`, noun: "person" };
+        about = { label: data.actor.identifier, to: `/actors/${data.actor.uuid}`, noun: "actor" };
       }
 
       return;
@@ -140,7 +140,7 @@
           <Link to={about.to} class="link font-medium">{about.label}</Link>.
         </span>
       {:else}
-        <span>Only what involves one {actorId ? "person" : "client"}, which no longer exists.</span>
+        <span>Only what involves one {actorId ? "actor" : "client"}, which no longer exists.</span>
       {/if}
 
       <Link to="/activity" class="btn btn-sm">Show everything</Link>

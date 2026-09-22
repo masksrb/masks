@@ -26,14 +26,14 @@
             >{event.label}</span>
 
             {#if showActor && event.actor}
-              <Link to={`/people/${event.actor.uuid}`} class="link link-hover text-xs">
+              <Link to={`/actors/${event.actor.uuid}`} class="link link-hover text-xs">
                 {event.actor.identifier}
               </Link>
             {/if}
 
             {#if event.by && event.by.uuid !== event.actor?.uuid}
               <span class="text-xs opacity-60">
-                by <Link to={`/people/${event.by.uuid}`} class="link link-hover">
+                by <Link to={`/actors/${event.by.uuid}`} class="link link-hover">
                   {event.by.identifier}
                 </Link>
               </span>

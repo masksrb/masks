@@ -82,7 +82,7 @@
 
 <Page
   title="Provisioning"
-  lede="An identity provider adds, changes, suspends and removes people here over SCIM 2.0."
+  lede="An identity provider adds, changes, suspends and removes actors here over SCIM 2.0."
 >
   <Notices feedback={feedback.state} />
 
@@ -97,7 +97,7 @@
         </div>
 
         <p class="text-xs opacity-60">
-          Give it this URL and a token. A provisioned person is known by their email, which masks takes as
+          Give it this URL and a token. A provisioned actor is known by their email, which masks takes as
           confirmed, and signs in through a provider or an invitation. Nobody who holds a masks: scope has
           their password or email changed this way, and the last manager is never suspended or removed.
         </p>

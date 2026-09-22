@@ -407,7 +407,7 @@
       adding
         ? mcp
           ? `${draft.name} is registered, and applications can be let use it.`
-          : `${draft.name} can sign people in now.`
+          : `${draft.name} can sign actors in now.`
         : `${draft.name} saved.`,
     );
 
@@ -479,7 +479,7 @@
   <Notices feedback={feedback.state} />
 
   {#if picking}
-    <Card title="Add provider" lede="Pick who people will sign in with. Anything not listed speaks one of the three at the end.">
+    <Card title="Add provider" lede="Pick who actors will sign in with. Anything not listed speaks one of the three at the end.">
       {#snippet actions()}
         <button type="button" class="btn btn-ghost btn-sm" onclick={close}>Cancel</button>
       {/snippet}
@@ -755,9 +755,9 @@
               <span>
                 Let applications use somebody's {draft.name.trim() || "provider"} account
                 <span class="block text-xs opacity-60">
-                  An approved application can ask a person to let it act as them at
+                  An approved application can ask an actor to let it act as them at
                   {draft.name.trim() || "the provider"} while they are away. masks keeps the tokens, refreshes
-                  them, and hands each one only to the application that person said yes to.
+                  them, and hands each one only to the application that actor said yes to.
                 </span>
               </span>
             </label>
@@ -818,7 +818,7 @@
             <span>
               Trust the addresses it confirms
               <span class="block text-xs opacity-60">
-                Only for a provider that really checks a person holds the mailbox, as Google, Apple and
+                Only for a provider that really checks an actor holds the mailbox, as Google, Apple and
                 GitHub do. Off, only addresses in the domains below are taken at its word.
               </span>
             </span>
@@ -862,7 +862,7 @@
   {:else if active.length === 0 && archived.length === 0 && !picking && !draft}
     <div class="rounded-box border border-base-300 bg-base-100 px-6 py-14 text-center">
       <p class="mx-auto max-w-sm text-sm opacity-70">
-        No provider is set up. Add one and people can sign in with Google, GitHub, their company's
+        No provider is set up. Add one and actors can sign in with Google, GitHub, their company's
         identity provider, or anything that speaks OpenID Connect, OAuth 2.0 or SAML.
       </p>
     </div>

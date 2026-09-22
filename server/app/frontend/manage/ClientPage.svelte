@@ -105,7 +105,7 @@
   ];
 
   const GRANTS = [
-    ["refresh_token", "Keeps people signed in (refresh tokens)"],
+    ["refresh_token", "Keeps actors signed in (refresh tokens)"],
     ["urn:ietf:params:oauth:grant-type:device_code", "Signs in on devices without a browser (device code)"],
     ["urn:ietf:params:oauth:grant-type:token-exchange", "Swaps one token for another (token exchange)"],
   ];
@@ -240,7 +240,7 @@
     );
   }
 
-  function knowsPeopleAs(chosen) {
+  function knowsActorsAs(chosen) {
     const question =
       "Everybody gets a different identifier at this client. It will not recognise anybody it already knows. Change it?";
 
@@ -314,7 +314,7 @@
   }
 
   function restore() {
-    if (!confirm("Restore this client? It can sign people in again immediately.")) return;
+    if (!confirm("Restore this client? It can sign actors in again immediately.")) return;
 
     act(
       `mutation Restore($clientId: ID!) {
@@ -404,11 +404,11 @@
 
           {#if !saml}
             <label class="flex flex-col gap-1.5">
-              <span class="text-xs font-medium opacity-70">Knows people as</span>
+              <span class="text-xs font-medium opacity-70">Knows actors as</span>
               <select
                 class="select select-sm w-full"
                 value={client.subjectType}
-                onchange={(event) => knowsPeopleAs(event.currentTarget.value)}
+                onchange={(event) => knowsActorsAs(event.currentTarget.value)}
               >
                 {#each SUBJECTS as [key, label] (key)}
                   <option value={key}>{label}</option>
@@ -477,7 +477,7 @@
             />
 
             <label class="flex flex-col gap-1.5">
-              <span class="text-xs font-medium opacity-70">Names people by</span>
+              <span class="text-xs font-medium opacity-70">Names actors by</span>
               <select
                 class="select select-sm w-full"
                 value={client.samlNameIdFormat ?? NAME_IDS[0][0]}
@@ -528,26 +528,26 @@
 
             <Switch
               checked={client.samlIdpInitiated}
-              label="Let people start from masks"
+              label="Let actors start from masks"
               onchange={(on) =>
                 update(
                   { samlIdpInitiated: on },
                   on
-                    ? "People can be signed into it from masks, without it asking."
+                    ? "Actors can be signed into it from masks, without it asking."
                     : "It is signed into only when it asks.",
                 )}
             />
           </Card>
         {/if}
 
-        <Card title="Shown to people">
+        <Card title="Shown to actors">
           <div class="flex items-center gap-3">
             <ClientLogo {client} class="size-14 rounded-lg border border-base-300 text-xl" />
             <p class="text-xs opacity-60">
               {#if !client.approvedAt}
                 Nobody sees its logo until it is approved: a client that registered itself could borrow anybody's.
               {:else}
-                Its logo, and these links, are shown when people are asked to let it in.
+                Its logo, and these links, are shown when actors are asked to let it in.
               {/if}
             </p>
           </div>
@@ -626,12 +626,12 @@
           {#if client.approvedAt}
             <Switch
               checked={client.consentRequired}
-              label="Ask people to consent"
+              label="Ask actors to consent"
               onchange={(on) =>
                 update(
                   { consentRequired: on },
                   on
-                    ? "Consent required. Each person approves what this client asks for."
+                    ? "Consent required. Each actor approves what this client asks for."
                     : "Consent skipped. Nobody is asked before this client is granted access.",
                 )}
             />

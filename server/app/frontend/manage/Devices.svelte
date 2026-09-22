@@ -237,7 +237,7 @@
       <Table columns={COLUMNS} count={devices.length} empty={nothing}>
         {#snippet rows()}
           {#each devices as device (device.id)}
-            <Row to={`/people/devices/${device.id}`}>
+            <Row to={`/actors/devices/${device.id}`}>
               <td class="w-0">
                 <input
                   type="checkbox"
@@ -248,7 +248,7 @@
                 />
               </td>
               <td class="max-w-[18rem]">
-                <Link to={`/people/devices/${device.id}`} class="link link-hover font-medium">
+                <Link to={`/actors/devices/${device.id}`} class="link link-hover font-medium">
                   {device.label}
                 </Link>
                 <div class="flex flex-wrap items-center gap-1.5">
@@ -273,7 +273,7 @@
                 {#if device.actors.length}
                   <div class="truncate">
                     {#each device.actors as actor, at (actor.uuid)}{at ? ", " : ""}<Link
-                        to={`/people/${actor.uuid}`}
+                        to={`/actors/${actor.uuid}`}
                         class="link link-hover">{actor.identifier}</Link
                       >{/each}
                   </div>

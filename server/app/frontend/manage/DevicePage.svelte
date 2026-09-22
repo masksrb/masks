@@ -103,7 +103,7 @@
   <Page
     title={device.label}
     id={device.id}
-    back={{ to: "/people#devices", label: "Devices" }}
+    back={{ to: "/actors#devices", label: "Devices" }}
     lede={device.blockedAt
       ? `Blocked on ${day(device.blockedAt)}. Nobody can sign in on it.`
       : `Last seen ${since(device.lastSeenAt)}.`}
@@ -137,7 +137,7 @@
             <ul class="flex flex-col gap-1.5">
               {#each device.actors as actor (actor.uuid)}
                 <li class="slat">
-                  <Link to={`/people/${actor.uuid}`} class="link link-hover text-sm font-medium">
+                  <Link to={`/actors/${actor.uuid}`} class="link link-hover text-sm font-medium">
                     {actor.identifier}
                   </Link>
                 </li>
@@ -155,7 +155,7 @@
                 <li class="slat">
                   <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                     <Link
-                      to={`/people/${session.actor.uuid}`}
+                      to={`/actors/${session.actor.uuid}`}
                       class="link link-hover text-sm font-medium"
                     >
                       {session.actor.identifier}
