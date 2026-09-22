@@ -54,6 +54,6 @@ class PendingRequest < Token
   end
 
   def issued
-    children.find_by(type: AuthorizationCode.name)
+    children.find_by(kind: AuthorizationCode.sti_name)
   end
 end

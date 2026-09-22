@@ -60,7 +60,7 @@ module Manage
       end
 
       def tokens(limit: nil)
-        ::Token.where(type: TokenType::GRANTS, client_id: object.id)
+        ::Token.where(kind: TokenType::GRANTS, client_id: object.id)
                .live
                .includes(:actor, :device)
                .order(created_at: :desc)

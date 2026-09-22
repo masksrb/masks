@@ -1,6 +1,25 @@
 class Token < ApplicationRecord
   include TenantScoped
 
+  KINDS = {
+    "access" => "AccessToken",
+    "refresh" => "RefreshToken",
+    "code" => "AuthorizationCode",
+    "device" => "DeviceGrant",
+    "invitation" => "Invitation",
+    "provisioning" => "ProvisioningToken",
+    "handshake" => "PendingHandshake",
+    "email_verification" => "EmailVerification",
+    "password_reset" => "PasswordReset",
+    "confirmation" => "ConfirmationCode",
+    "initial_access" => "InitialAccessToken",
+    "request" => "PendingRequest",
+    "login" => "PendingLogin",
+    "pushed" => "PushedRequest"
+  }.freeze
+
+  self.inheritance_column = "kind"
+
   belongs_to :actor, optional: true
   belongs_to :client, optional: true
   belongs_to :device, optional: true
@@ -14,6 +33,16 @@ class Token < ApplicationRecord
   attr_reader :secret
 
   class << self
+    def sti_name
+      KINDS.key(name.demodulize) || raise(ArgumentError, "#{name} has no token kind")
+    end
+
+    def find_sti_class(kind)
+      class_name = KINDS.fetch(kind) { raise ActiveRecord::SubclassNotFound, "no token kind called #{kind}" }
+
+      module_parent.const_get(class_name, false)
+    end
+
     def lifetime
       10.minutes
     end

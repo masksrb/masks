@@ -10,6 +10,8 @@ class Adapter < ApplicationRecord
   SMS = "sms".freeze
   KINDS = [ MAIL, SMS ].freeze
 
+  self.inheritance_column = "service"
+
   encrypts :secrets
 
   validates :key, presence: true,
@@ -61,6 +63,14 @@ class Adapter < ApplicationRecord
 
     def service_for(name)
       services.find { |klass| klass.service == name.to_s }
+    end
+
+    def sti_name
+      service
+    end
+
+    def find_sti_class(service)
+      service_for(service) || raise(ActiveRecord::SubclassNotFound, "no adapter service called #{service}")
     end
 
     def primary(kind)

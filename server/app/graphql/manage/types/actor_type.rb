@@ -106,7 +106,7 @@ module Manage
       end
 
       def tokens
-        ::Token.where(type: TokenType::GRANTS, actor_id: object.id)
+        ::Token.where(kind: TokenType::GRANTS, actor_id: object.id)
                .live
                .includes(:client, :device)
                .order(created_at: :desc)

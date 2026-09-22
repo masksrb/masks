@@ -36,7 +36,7 @@ module Apps
   end
 
   def self.token_scopes(actor)
-    Token.live.where(actor: actor, type: [ "AccessToken", "RefreshToken" ])
+    Token.live.where(actor: actor, kind: [ AccessToken.sti_name, RefreshToken.sti_name ])
          .where.not(client_id: nil)
          .pluck(:client_id, :scopes)
          .each_with_object({}) do |(client_id, scopes), held|

@@ -205,7 +205,7 @@ class CreateMasksSchema < ActiveRecord::Migration[8.1]
 
     create_table :tokens do |t|
       t.references :tenant, null: false, foreign_key: true
-      t.string :type, null: false
+      t.string :kind, null: false
       t.references :actor, foreign_key: true
       t.references :client, foreign_key: true
       t.references :parent, foreign_key: { to_table: :tokens }
@@ -230,7 +230,7 @@ class CreateMasksSchema < ActiveRecord::Migration[8.1]
       t.string :jkt
 
       t.index :digest, unique: true
-      t.index [ :tenant_id, :type, :expires_at ]
+      t.index [ :tenant_id, :kind, :expires_at ]
       t.index [ :tenant_id, :user_code_digest ],
               unique: true, where: "user_code_digest IS NOT NULL"
     end

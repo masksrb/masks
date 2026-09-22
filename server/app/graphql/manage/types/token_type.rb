@@ -1,13 +1,7 @@
 module Manage
   module Types
     class TokenType < BaseObject
-      KINDS = {
-        "AccessToken" => "access",
-        "RefreshToken" => "refresh",
-        "AuthorizationCode" => "code"
-      }.freeze
-
-      GRANTS = KINDS.keys.freeze
+      GRANTS = %w[access refresh code].freeze
 
       field :id, ID, null: false
       field :kind, String, null: false
@@ -25,7 +19,7 @@ module Manage
       field :created_at, GraphQL::Types::ISO8601DateTime, null: false
 
       def kind
-        KINDS.fetch(object.type, object.type.underscore)
+        object.kind
       end
 
       def scopes

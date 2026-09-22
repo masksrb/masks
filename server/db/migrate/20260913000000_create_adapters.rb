@@ -7,7 +7,7 @@ class CreateAdapters < ActiveRecord::Migration[8.1]
   def up
     create_table :adapters do |t|
       t.references :tenant, null: false, foreign_key: true
-      t.string :type, null: false
+      t.string :service, null: false
       t.string :kind, null: false
       t.string :key, null: false
       t.string :name, null: false

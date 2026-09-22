@@ -219,7 +219,7 @@ module Manage
         scope = scope.live if live
         scope = scope.where(actor: subject) if subject
         scope = scope.where(client: held) if held
-        scope = scope.where(type: typed(kind)) if kind.present?
+        scope = scope.where(kind: typed(kind)) if kind.present?
 
         scope.limit(bounded(limit))
       end
@@ -361,12 +361,13 @@ module Manage
         end
 
         def granted
-          ::Token.where(type: Types::TokenType::GRANTS)
+          ::Token.where(kind: Types::TokenType::GRANTS)
         end
 
         def typed(kind)
-          Types::TokenType::KINDS.key(kind.to_s) ||
-            raise(GraphQL::ExecutionError, "no token kind called #{kind}")
+          raise GraphQL::ExecutionError, "no token kind called #{kind}" unless Types::TokenType::GRANTS.include?(kind.to_s)
+
+          kind.to_s
         end
 
         def signed_in_on

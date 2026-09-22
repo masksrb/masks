@@ -101,7 +101,7 @@ ALTER SEQUENCE public.actors_id_seq OWNED BY public.actors.id;
 CREATE TABLE public.adapters (
     id bigint NOT NULL,
     tenant_id bigint NOT NULL,
-    type character varying NOT NULL,
+    service character varying NOT NULL,
     kind character varying NOT NULL,
     key character varying NOT NULL,
     name character varying NOT NULL,
@@ -966,7 +966,7 @@ ALTER SEQUENCE public.tenants_id_seq OWNED BY public.tenants.id;
 CREATE TABLE public.tokens (
     id bigint NOT NULL,
     tenant_id bigint NOT NULL,
-    type character varying NOT NULL,
+    kind character varying NOT NULL,
     actor_id bigint,
     client_id bigint,
     parent_id bigint,
@@ -1939,10 +1939,10 @@ CREATE INDEX index_tokens_on_tenant_id ON public.tokens USING btree (tenant_id);
 
 
 --
--- Name: index_tokens_on_tenant_id_and_type_and_expires_at; Type: INDEX; Schema: public; Owner: -
+-- Name: index_tokens_on_tenant_id_and_kind_and_expires_at; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX index_tokens_on_tenant_id_and_type_and_expires_at ON public.tokens USING btree (tenant_id, type, expires_at);
+CREATE INDEX index_tokens_on_tenant_id_and_kind_and_expires_at ON public.tokens USING btree (tenant_id, kind, expires_at);
 
 
 --
