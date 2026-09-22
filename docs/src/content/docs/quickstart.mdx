@@ -1,11 +1,237 @@
 ---
 title: Quickstart
-description: Run masks and sign an app in against it.
+description: Run masks on your machine, set up its first account, register a client, and sign in to it.
 ---
 
-import { Aside } from "@astrojs/starlight/components";
+This tutorial runs masks on your own machine with `./dev`. You set up the first
+account, open the console, register a client, and sign in to that client. At the
+end you hold an ID token and an access token issued by masks, and you read your
+own claims back from the userinfo endpoint.
 
-<Aside type="caution" title="Not written yet">
-  This page is a placeholder. Until it exists, `server/README.md` covers `./dev`,
-  and the [Masks::Client](/reference/ruby/) reference covers the gem.
-</Aside>
+## Before you start
+
+You need the following on your machine:
+
+- Docker, with Compose.
+- Ruby. `./dev` is a Ruby script, and it uses only the standard library.
+- `curl` and `openssl`, for the last two sections.
+- An authenticator app, such as one on your phone. The first account has to turn
+  on a second factor.
+
+`./dev` publishes four ports on your machine. Each one has a variable that moves
+it.
+
+|                         |                                                  |
+| ----------------------- | ------------------------------------------------ |
+| `12345`                 | masks. Set `MASKS_PORT` to change it.            |
+| `12346`                 | This documentation. Set `MASKS_DOCS_PORT`.       |
+| `3036`                  | The Vite asset server. Set `MASKS_VITE_PORT`.    |
+| `5435`                  | Postgres. Set `MASKS_POSTGRES_PORT`.             |
+
+This tutorial uses the default ports. If you move `MASKS_PORT`, change `12345`
+in every URL below.
+
+## Start masks
+
+Clone the repository and run `./dev` from its root:
+
+```sh
+git clone https://github.com/masksrb/masks.git
+cd masks
+./dev
+```
+
+`./dev` builds the images and runs the stack in the foreground. The stack is
+Postgres, the masks server, the Vite asset server, the job worker, and this
+documentation site. The first build takes several minutes. Before it starts,
+`./dev` prints the two addresses:
+
+```text
+  masks   http://masks.localhost:12345
+  docs    http://masks.localhost:12346
+```
+
+Leave `./dev` running, and open a second terminal for the rest of the tutorial.
+
+masks serves one tenant, named `masks`, at `http://masks.localhost:12345`. Names
+under `.localhost` resolve to your own machine, so you do not need an entry in
+`/etc/hosts`. Once the server has migrated its database, it answers discovery
+requests:
+
+```sh
+curl http://masks.localhost:12345/.well-known/openid-configuration
+```
+
+The `issuer` in the response is `http://masks.localhost:12345`. Until the server
+is up, the request fails to connect.
+
+## Set up the first account
+
+Open `http://masks.localhost:12345` in a browser. A tenant with no accounts shows
+the **Set up masks** screen, with the tabs **Identification**, **Credentials**,
+and **Configuration**.
+
+1. Fill in **Name**, **Nickname**, and **Email**. Nickname and email are both
+   required for the first account. Click **Continue**.
+2. Enter a password of at least 8 characters in **Password** and **Confirm
+   password**, and click **Create the manager**. masks refuses the most common
+   passwords. To use a passkey instead of a password, click **Use a passkey
+   instead**.
+3. masks asks for a second factor, because the first account manages the server.
+   Under **Authenticator app**, scan the QR code or type the key into your
+   authenticator app. Enter the six-digit code it shows, and click **Turn it
+   on**. **Add a passkey** also satisfies this step.
+4. Backup codes appear under **Backup codes**. Save them with **Copy them** or
+   **Download them**, because masks does not show them again. Check **I have
+   kept my backup codes somewhere safe**, and click **Continue**.
+5. The **Configuration** tab asks what **This server is called**. The name heads
+   every screen and every email masks sends. Keep `masks` or type another name,
+   and click **Finish setting up**.
+
+masks signs you in and shows **Your account**. The first account holds the
+`masks:manage` scope, which lets it use the console. The set up screen does not
+appear again for this tenant.
+
+:::note
+The dev stack does not set `MASKS_SETUP_TOKEN`. When a deployment sets it, the
+set up screen asks for the **Setup token** first and refuses to create the
+account without it.
+:::
+
+## Open the console
+
+On **Your account**, click **Manage this server**. The console at `/manage` is a
+client of masks, and the first visit connects it to the tenant.
+
+1. Click **Approve as a manager**.
+2. masks asks **Connect Manage masks?** and lists the scopes the console asks for:
+   `openid`, `profile`, `email`, and `masks:manage`. If you renamed the server in
+   the last section, the new name replaces `masks`. Click **Connect**.
+
+The console opens on **Overview**. Connecting it registered the console as a
+client, so **Clients** already lists **Manage masks**, approved by you.
+
+## Register a client
+
+Register a client that signs people in:
+
+1. In the console, click **Clients**, then **Add client**.
+2. Enter `Tutorial app` in **Name**.
+3. Click **Signs people in**. This kind of client uses the authorization code
+   grant, and the form shows **Redirect URIs**.
+4. Enter `http://localhost:8000/callback` in **Redirect URIs**.
+5. Under **Scopes**, click `openid`, `profile`, and `email` to select them. masks
+   grants a client only the scopes selected here.
+6. Click **Add the client**.
+
+The **Tutorial app is ready** card shows the client's `client_id` and its secret.
+masks shows the secret only this once. Copy both into variables in your second
+terminal:
+
+```sh
+CLIENT_ID=paste-the-client-id
+CLIENT_SECRET=paste-the-secret
+```
+
+:::note
+In development, masks accepts any `http` redirect URI. Outside development it
+accepts `http` only for `localhost`, `127.0.0.1`, `::1`, and names under
+`.localhost`, and requires `https` for every other host.
+:::
+
+## Sign in to the client
+
+An application normally builds the sign-in request with
+[Masks::Client](/reference/ruby/) or [@masks/client](/reference/browser/). In
+this section you build it by hand.
+
+1. Make a PKCE verifier and its challenge:
+
+   ```sh
+   VERIFIER=$(openssl rand -hex 32)
+   CHALLENGE=$(printf %s "$VERIFIER" | openssl dgst -sha256 -binary | openssl base64 | tr '+/' '-_' | tr -d '=')
+   ```
+
+2. Print the authorization URL:
+
+   ```sh
+   echo "http://masks.localhost:12345/authorize?response_type=code&client_id=$CLIENT_ID&redirect_uri=http://localhost:8000/callback&scope=openid%20profile%20email&state=tutorial&code_challenge=$CHALLENGE&code_challenge_method=S256"
+   ```
+
+3. Open the URL in a private browser window, so that you sign in from the start.
+   In the window where you set up masks you are already signed in, and masks
+   skips to the consent screen in step 6.
+4. masks shows **Sign in to Tutorial app**. Enter your nickname in **Nickname or
+   email**, and click **Continue**. Enter your password under **Enter your
+   password**, and click **Continue**.
+5. Under **Enter your code**, type the current code from your authenticator app.
+   The form submits when the sixth digit is entered.
+6. masks asks **Allow Tutorial app?** and lists the access the client receives.
+   Click **Allow**.
+
+The browser goes to `http://localhost:8000/callback` with `iss`, `code`, and
+`state` in the query string. Nothing listens on port 8000, so the browser shows
+an error page. Copy the `code` parameter from the address bar:
+
+```sh
+CODE=paste-the-code
+```
+
+The code is valid for 10 minutes and can be exchanged once.
+
+## Exchange the code for tokens
+
+Send the code, the redirect URI, and the PKCE verifier to the token endpoint.
+The client authenticates with its `client_id` and secret over HTTP Basic:
+
+```sh
+curl -u "$CLIENT_ID:$CLIENT_SECRET" \
+  -d grant_type=authorization_code \
+  -d code="$CODE" \
+  -d redirect_uri=http://localhost:8000/callback \
+  -d code_verifier="$VERIFIER" \
+  http://masks.localhost:12345/token
+```
+
+The response holds an `access_token` of type `Bearer` that expires in an hour,
+the granted `scope`, and an `id_token`. It holds no refresh token, because the
+request did not ask for `offline_access`. Copy the two tokens:
+
+```sh
+ACCESS_TOKEN=paste-the-access-token
+ID_TOKEN=paste-the-id-token
+```
+
+The ID token is a JWT signed with the tenant's key. Print its claims:
+
+```sh
+ruby -rjson -e 'puts JSON.pretty_generate(JSON.parse(ARGV[0].split(".")[1].tr("-_", "+/").unpack1("m")))' "$ID_TOKEN"
+```
+
+`iss` is the tenant's issuer, `aud` is your `client_id`, and `sub` identifies
+your account. `amr` lists `pwd`, `otp`, and `mfa`, the factors you used to sign
+in. `tenant` names the tenant that issued the token.
+
+Ask the userinfo endpoint for the claims the access token covers:
+
+```sh
+curl -H "Authorization: Bearer $ACCESS_TOKEN" http://masks.localhost:12345/userinfo
+```
+
+The response carries your `name`, `nickname`, and `email`. `email_verified` is
+`false`, because nobody has confirmed the address yet.
+
+## Stop or start over
+
+Press `Ctrl-C` in the first terminal to stop the stack. `./dev down` stops it
+from another terminal, and keeps the database. `./dev reset` deletes the
+database and starts the stack again, which brings back the set up screen.
+
+## Next steps
+
+- [Clients](/concepts/clients/) explains the ways a client is registered and
+  what it holds.
+- [Tenants](/concepts/tenants/) explains how one masks installation serves
+  several tenants, each with its own issuer and keys.
+- [Masks::Rails](/reference/rails/) signs a Rails application in against masks.
+- The [demo](/demo/) runs two tenants side by side.
