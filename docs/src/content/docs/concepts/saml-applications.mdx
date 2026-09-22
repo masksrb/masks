@@ -3,13 +3,14 @@ title: SAML applications
 description: Signing people into an application that only speaks SAML 2.0, with masks as its identity provider.
 ---
 
-Some applications a company already pays for — a wiki, a ticketing system, a cloud console — only
-sign people in over SAML 2.0. masks answers them as an identity provider: the application sends the
-person here with an `AuthnRequest`, masks signs them in the way it signs anybody in, with the tenant's
-[sign-in policy](/concepts/tenants/), second factors and passkeys, and posts a signed assertion back.
+Some applications, such as wikis, ticketing systems, and cloud consoles, sign people in only over
+SAML 2.0. masks acts as the identity provider for these applications. The application sends the
+person to masks with an `AuthnRequest`. masks signs the person in the same way it signs in anyone
+else, with the tenant's [sign-in policy](/concepts/tenants/), second factors, and passkeys. masks then
+posts a signed assertion back to the application.
 
-The other direction, signing into masks through somebody else's SAML identity provider, is a
-[provider](/concepts/providers/).
+Signing in to masks through another organization's SAML identity provider is the opposite direction.
+That is configured as a [provider](/concepts/providers/).
 
 ## What to give the application
 
@@ -18,63 +19,80 @@ The other direction, signing into masks through somebody else's SAML identity pr
 | metadata | `https://demo.masks.example/saml/metadata` |
 | entity ID | the same URL |
 | single sign-on | `https://demo.masks.example/saml/sso`, HTTP-Redirect or HTTP-POST |
-| certificate | in the metadata — a self-signed certificate for each of the tenant's signing keys |
+| certificate | in the metadata, as a self-signed certificate for each of the tenant's signing keys |
 
-Most applications take the metadata URL and need nothing else. The certificate is made from the key
-masks signs tokens with, so after a [key rotation](/concepts/keys/) the application has to read the
-metadata again; the retiring key's certificate stays in it for the overlap.
+Most applications need only the metadata URL. masks builds the certificate from the key it signs
+tokens with. After a [key rotation](/concepts/keys/), the application has to read the metadata again.
+The retiring key's certificate stays in the metadata during the overlap.
 
 ## Registering one
 
-In the console, **Clients → Add client → SAML app**. Paste the application's own metadata and
-**Read it** fills in its entity ID, its HTTP-POST assertion consumer services, and the certificate it
-signs requests with. A SAML application is an approved client with no grants and no secret: it
-cannot be used at `/authorize` or `/token`, and nothing that authenticates an OAuth client finds it.
+To register a SAML application:
+
+1. In the console, open **Clients → Add client → SAML app**.
+2. Paste the application's own metadata.
+3. Click **Read it**. masks fills in the application's entity ID, its HTTP-POST assertion consumer
+   services, and the certificate it signs requests with.
+
+A SAML application is an approved client with no grants and no secret. It cannot be used at
+`/authorize` or `/token`, and the code that authenticates OAuth clients never matches it.
 
 | | |
 | --- | --- |
-| entity ID | what its `AuthnRequest` names as `Issuer` |
-| assertion consumer services | the only places an assertion is ever posted |
-| names people by | a persistent identifier — pairwise if the client is — or their email |
-| refuse unsigned requests | check every request against its certificate |
+| entity ID | the value its `AuthnRequest` names as `Issuer` |
+| assertion consumer services | the only URLs masks posts an assertion to |
+| names people by | a persistent identifier (pairwise if the client is pairwise), or their email |
+| refuse unsigned requests | check every request against the application's certificate |
 | let people start from masks | answer `/saml/initiate/<client_id>` without a request |
 
 ## What is checked
 
-A request is refused on an error page here, and never posted anywhere, when:
+masks refuses a request on an error page, and posts nothing to the application, when any of the
+following is true:
 
-- nothing is registered under its `Issuer`
-- its `AssertionConsumerServiceURL` is not one of the application's, or it asks for a binding other
-  than HTTP-POST
-- it was made more than eight minutes ago, or is addressed to another `Destination`
-- it has been answered once already
-- the application signs its requests and this one's signature — on the query string for a redirect,
-  enveloped in the XML for a post — does not verify with SHA-256 or stronger, carries a second
-  signature anywhere inside it, or any `ID` in it appears twice
-- any parameter is sent twice, or the request inflates past 64 KB
-- it declares a document type, which is how external entities get in
+- No application is registered under the request's `Issuer`.
+- Its `AssertionConsumerServiceURL` is not one of the application's, or it asks for a binding other
+  than HTTP-POST.
+- It asks for a NameID format that masks does not issue.
+- It was made more than eight minutes ago (a five-minute lifetime plus three minutes of clock skew),
+  it was made more than three minutes in the future, or it is addressed to another `Destination`.
+- masks has already received it.
+- Any `ID` in it appears twice.
+- The application signs its requests, and this request's signature does not verify with SHA-256 or
+  stronger, or the request contains a second signature. A redirect is signed on the query string. A
+  post is signed with a signature enveloped in the XML.
+- Any parameter is sent twice, or the request is larger than 64 KB.
+- It declares a document type. A document type declaration is how XML external entities are
+  introduced.
 
-`ForceAuthn` asks for the password again. `IsPassive` answers `NoPassive` rather than showing anybody
-a page. When the person is refused — suspended, declining, or held back by the sign-in policy — the
-application is posted a `RequestDenied` status instead of an assertion.
+`ForceAuthn` makes the person sign in again. `IsPassive` returns a `NoPassive` status without
+showing the person any page. When masks refuses the person, because they are suspended, they
+decline, or the sign-in policy stops them, masks posts a `RequestDenied` status to the application in
+place of an assertion.
 
 ## What is asserted
 
-The response and the assertion inside it are both signed with RSA-SHA256. The assertion is
-addressed to the application's entity ID, confirmed for its assertion consumer service and the
-request's `ID`, valid for five minutes, and carries the session as its `SessionIndex` and
-`https://refeds.org/profile/mfa` as the authentication context when a second factor was used.
+masks signs both the response and the assertion inside it with RSA-SHA256. The assertion:
 
-Attributes are released as their claim names — `email`, `name`, `given_name`, `family_name`,
-`preferred_username` — unless the application's `samlAttributes` maps its own names to claims. Only
-claims the person's `openid profile email` consent covers are released.
+- is addressed to the application's entity ID.
+- is confirmed for the application's assertion consumer service and the request's `ID`.
+- is valid for five minutes.
+- names the session in its `SessionIndex`.
+- names `https://refeds.org/profile/mfa` as the authentication context when the person used a
+  second factor.
 
-An email is only ever released once the person has confirmed it — as an attribute, or as the NameID
-when the application asks to name people by email — because most applications match accounts by
-email, and an unconfirmed one is how somebody walks into another person's account there. The page
-that posts the assertion carries a content security policy that lets only its one script run.
+masks releases attributes under their claim names: `email`, `name`, `given_name`, `family_name`, and
+`preferred_username`. The application's `samlAttributes` setting can map its own attribute names to
+claims instead. masks releases only the claims that the person's `openid profile email` consent
+covers.
 
-## Not yet
+masks releases an email only after the person has confirmed it. This applies both to the email
+attribute and to the NameID when the application names people by email. Most applications match
+accounts by email, so an unconfirmed email would let someone sign in to another person's account in
+that application. The page that posts the assertion has a content security policy that allows only
+its own script to run.
 
-Single logout, encrypted assertions, artifact binding, and choosing an assertion consumer service by
-index.
+## Not yet supported
+
+masks does not yet support single logout, encrypted assertions, the artifact binding, or choosing an
+assertion consumer service by index.
