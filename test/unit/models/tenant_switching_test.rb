@@ -141,9 +141,15 @@ module Masks
         end
       end
 
-      test "mail is carried by the framework's own delivery job, with no subclass to remember" do
-        assert_equal ActionMailer::MailDeliveryJob, ActionMailer::Base.delivery_job
-        assert ActionMailer::MailDeliveryJob < Tenancy::Job
+      test "the provider's mail carries its tenant, and a host app's mail is left alone" do
+        assert_equal MailDeliveryJob, ApplicationMailer.delivery_job
+        assert MailDeliveryJob < Tenancy::Job
+        assert_not ActionMailer::MailDeliveryJob < Tenancy::Job
+      end
+
+      test "a host app's jobs are left alone" do
+        assert ApplicationJob < Tenancy::Job
+        assert_not ActiveJob::Base < Tenancy::Job
       end
 
       test "a switch holds no transaction open" do
