@@ -131,4 +131,14 @@ class ActorNamingTest < ActiveSupport::TestCase
       assert Actor.create!(email: "two@example.invalid", password: PASSWORD).persisted?
     end
   end
+
+  test "an account is shown by its name, then its handle, then its email, and never twice" do
+    full = actor(name: "Ada Lovelace", nickname: "ada", email: "ada@example.com")
+    handle = actor(nickname: "ada", email: "ada@example.com")
+    bare = actor(email: "ada@example.com")
+
+    assert_equal [ "Ada Lovelace", [ "@ada", "ada@example.com" ] ], [ full.display_name, full.display_details ]
+    assert_equal [ "@ada", [ "ada@example.com" ] ], [ handle.display_name, handle.display_details ]
+    assert_equal [ "ada@example.com", [] ], [ bare.display_name, bare.display_details ]
+  end
 end
