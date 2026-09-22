@@ -28,6 +28,7 @@ x-env: &env
   RAILS_FORCE_SSL: "false"
   PG_BIN_PATH: ""
   MASKS_TENANT: ${MASKS_TENANT:-masks}
+  MASKS_SETUP_TOKEN: ${MASKS_SETUP_TOKEN:-masks-dev}
   MASKS_HOST_SUFFIX: masks.localhost
   DEV_ALLOWED_HOSTS: .localhost,masks-vite
   DEV_CLIENT_PORT: ${MASKS_VITE_PORT:-3036}
