@@ -84,4 +84,4 @@
   <% end %>
 </div>
 
-<p class="aside"><%= login.actor&.identifier %> · <%= link_to t("logins.shared.sign_out"), logout_path, class: "textlink" %></p>
+<div class="aside"><%= login.actor&.identifier %> · <%= button_to t("logins.shared.sign_out"), logout_path, class: "textlink", form_class: "signout" %></div>

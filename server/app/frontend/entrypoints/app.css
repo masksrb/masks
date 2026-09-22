@@ -1135,6 +1135,10 @@
     margin-top: 1rem;
   }
 
+  .signout {
+    display: contents;
+  }
+
   .pill {
     display: inline-flex;
     align-items: center;
@@ -1147,6 +1151,8 @@
     font-size: 0.875rem;
     font-weight: 600;
     text-decoration: none;
+    font-family: inherit;
+    cursor: pointer;
   }
 
   .pill:hover {

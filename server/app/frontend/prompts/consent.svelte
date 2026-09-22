@@ -11,6 +11,8 @@ const scopes = $derived(ranked(login.consent?.scopes ?? []));
 const audience = $derived(login.consent?.audience ?? []);
 const client = $derived(login.client?.name ?? "");
 const tenant = $derived(login.auth.tenant?.name ?? "");
+const token =
+  document.querySelector('meta[name="csrf-token"]')?.content ?? "";
 const links = $derived(
   [
     ["site", login.t("site", { client })],
@@ -102,6 +104,10 @@ const links = $derived(
   />
 </div>
 
-<p class="aside">
-  {login.actor?.identifier} · <a class="textlink" href="/logout">{login.t("sign_out")}</a>
-</p>
+<div class="aside">
+  {login.actor?.identifier} ·
+  <form class="signout" method="post" action="/logout">
+    <input type="hidden" name="authenticity_token" value={token} />
+    <button type="submit" class="textlink">{login.t("sign_out")}</button>
+  </form>
+</div>
