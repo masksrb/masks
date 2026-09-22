@@ -11,7 +11,8 @@ class HandshakesController < ApplicationController
     @scopes = ResourceMetadata.describe(@handshake.resource, @handshake.scopes)
     @granting = Namespace.prefixes(@handshake.scopes) - current_actor.scope_list
     @beneath = published_beneath(Namespace.prefixes(@handshake.scopes))
-    @shown = shown_clock.generate(Time.current.to_f, purpose: hid_for(@pending), expires_in: PendingHandshake.lifetime)
+    @hid = hid_for(@pending)
+    @shown = shown_clock.generate(Time.current.to_f, purpose: @hid, expires_in: PendingHandshake.lifetime)
   end
 
   def create
@@ -83,7 +84,7 @@ class HandshakesController < ApplicationController
       return if params[:approve].blank? || waited?
 
       flash[:alert] = t("handshakes.too_soon")
-      redirect_to "#{handshake_path}?#{URI.encode_www_form(hid: params[:hid])}"
+      redirect_to handshake_path(hid: params[:hid])
     end
 
     def waited?

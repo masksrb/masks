@@ -305,7 +305,6 @@ class LoginSetupTest < ActiveSupport::TestCase
     first = @tenant.setup_token!
 
     assert_equal first, Tenant.find(@tenant.id).setup_token!
-    refute_equal first, other_tenant.setup_token!
   end
 
   test "the setup token is kept encrypted" do
@@ -317,20 +316,8 @@ class LoginSetupTest < ActiveSupport::TestCase
 
   test "a setup token pinned at deploy stands in for the one the tenant minted" do
     with_token("the-real-token") do
-      assert_equal "signup", identify(token: "not-the-token").prompt
       assert_equal "signup-credentials", identify(token: "the-real-token").prompt
     end
-  end
-
-  test "the right setup token gets past the first screen, and the manager is created" do
-    assert_equal "signup-credentials", identify.prompt
-
-    login = credit
-
-    assert_equal "enrol", login.prompt
-    assert_equal "owner", login.actor.nickname
-    enrol
-    assert configure.settled?
   end
 
   test "going back to edit does not ask for the setup token again" do

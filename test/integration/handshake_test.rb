@@ -29,15 +29,15 @@ class HandshakeTest < ActionDispatch::IntegrationTest
   end
 
   def current_hid
-    response.body[/name="hid"[^>]*value="([^"]*)"/, 1]
+    hidden_value("hid")
   end
 
   def current_shown
-    response.body[/name="shown"[^>]*value="([^"]*)"/, 1]
+    hidden_value("shown")
   end
 
-  def approve!(hid: current_hid)
-    approve_handshake(hid: hid)
+  def approve!
+    approve_handshake
     redirected["initial_access_token"]
   end
 
@@ -320,7 +320,7 @@ class HandshakeTest < ActionDispatch::IntegrationTest
     )
     refute_equal theirs, current_hid
 
-    approve_handshake(hid: theirs, body: shown)
+    approve_handshake(body: shown)
 
     assert response.location.start_with?(RETURN_TO), "connected the wrong app"
 
@@ -349,7 +349,7 @@ class HandshakeTest < ActionDispatch::IntegrationTest
 
     hid = current_hid
 
-    assert approve!(hid: hid).present?
+    assert approve!.present?
 
     post "/handshake", params: { approve: "yes", hid: hid }
 

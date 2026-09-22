@@ -36,9 +36,6 @@ en:
       replace: "Replace and allow"
       replace_in: "Replace and allow in %{seconds}"
       cancel: "Cancel"
-      sign_out: "Sign out"
-      manager: "Manager"
-      unconfirmed: "unconfirmed"
 
     refused:
       page_title: "This connection was refused"

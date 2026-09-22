@@ -271,16 +271,12 @@ class Tenant < ApplicationRecord
     Rails.configuration.masks.setup_token || minted_setup_token
   end
 
-  def setup_token_pinned?
-    Rails.configuration.masks.setup_token.present?
-  end
-
   def set_up!
     update!(setup_token: nil) if setup_token.present?
   end
 
   def setup_announcement
-    return "#{subdomain} is not set up. Its setup token is the one MASKS_SETUP_TOKEN holds." if setup_token_pinned?
+    return "#{subdomain} is not set up. Its setup token is the one MASKS_SETUP_TOKEN holds." if Rails.configuration.masks.setup_token.present?
 
     "#{subdomain} is not set up. Its setup token is #{setup_token!}"
   end

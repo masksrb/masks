@@ -2,15 +2,11 @@
 <% content_for :surface, "grant" %>
 
 <% content_for :scripts do %>
-  <%= vite_client_tag %>
-  <%= vite_javascript_tag "person" %>
   <%= vite_javascript_tag "handshake" %>
 <% end %>
 
 <% hot, rest = ranked_scopes(@scopes) %>
 <% tenant = Current.tenant&.name.to_s %>
-<% credentials = Client::SECRET_AUTH_METHODS.include?(@handshake.auth_method) ? "secret" :
-                 @handshake.auth_method == Client::PRIVATE_KEY_JWT ? "key" : "public" %>
 
 <div class="auth-pair">
   <span class="auth-mark auth-mark-client" aria-hidden="true"><%= @handshake.name.to_s.first&.upcase %></span>
@@ -28,24 +24,22 @@
 
 <section class="handshake-part">
   <div class="handshake-part-head">
-    <h2 class="handshake-part-title"><%= t(".registers", tenant: tenant) %></h2>
+    <h2 class="ledger-label handshake-part-title"><%= t(".registers", tenant: tenant) %></h2>
     <p class="handshake-part-lede"><%= t(".registers_lede", name: @handshake.name) %></p>
   </div>
 
   <div class="slab">
     <div class="ledger-row ledger-row-tight">
       <span class="ledger-label"><%= t(".client") %></span>
-      <span class="ledger-value"><strong><%= @handshake.name %></strong> · <%= t(".credentials.#{credentials}") %></span>
+      <span class="ledger-value"><strong><%= @handshake.name %></strong> · <%= t(".credentials.#{@handshake.credentials}") %></span>
     </div>
 
     <% if @existing %>
+      <% who = @existing.approved_by_id == current_actor.id ? t(".you") : @existing.approved_by&.identifier || t(".someone") %>
       <div class="ledger-row ledger-row-tight">
         <span class="ledger-label"><%= t(".replaces") %></span>
         <span class="ledger-value handshake-warn">
-          <%= t(".replaced",
-                name: @existing.name,
-                who: @existing.approved_by_id == current_actor.id ? t(".you") : @existing.approved_by&.identifier || t(".someone"),
-                date: l(@existing.approved_at.to_date, format: :long)) %>
+          <%= t(".replaced", name: @existing.name, who: who, date: l(@existing.approved_at.to_date, format: :long)) %>
         </span>
       </div>
     <% end %>
@@ -105,7 +99,7 @@
   </div>
 </section>
 
-<p class="handshake-note">
+<p class="aside handshake-note">
   <strong><%= t(".allows") %>.</strong> <%= t(".allows_body", name: @handshake.name) %>
 </p>
 
@@ -145,7 +139,7 @@
 </details>
 
 <%= form_with url: handshake_path, method: :post do |form| %>
-  <%= hidden_field_tag :hid, hid_for(@pending) %>
+  <%= hidden_field_tag :hid, @hid %>
   <%= hidden_field_tag :shown, @shown %>
   <% approve = @existing ? "replace" : "register" %>
   <div class="action-row">

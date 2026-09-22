@@ -2088,10 +2088,6 @@
 
   .handshake-part-title {
     margin: 0;
-    font-size: 0.75rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
     color: var(--ink);
   }
 
@@ -2104,13 +2100,6 @@
 
   .handshake-warn {
     color: var(--warn);
-  }
-
-  .handshake-note {
-    margin: 0;
-    font-size: 0.875rem;
-    line-height: 1.5;
-    color: var(--ink-soft);
   }
 
   .handshake-note strong {

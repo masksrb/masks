@@ -112,11 +112,14 @@ module OidcFlow
     JSON.parse(response.body)
   end
 
-  def approve_handshake(hid: nil, body: response.body)
-    hid ||= body[/name="hid"[^>]*value="([^"]*)"/, 1]
-    shown = body[/name="shown"[^>]*value="([^"]*)"/, 1]
+  def hidden_value(name, body = response.body)
+    body[/name="#{name}"[^>]*value="([^"]*)"/, 1]
+  end
 
-    travel(HandshakesController::WAIT + 1.second) { post "/handshake", params: { approve: "yes", hid: hid, shown: shown } }
+  def approve_handshake(body: response.body)
+    params = { approve: "yes", hid: hidden_value("hid", body), shown: hidden_value("shown", body) }
+
+    travel(HandshakesController::WAIT + 1.second) { post "/handshake", params: params }
   end
 
   def set_up!(tenant: @tenant, **params)

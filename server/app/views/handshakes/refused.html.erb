@@ -1,11 +1,6 @@
 <% content_for :title, t(".page_title") %>
 <% content_for :surface, "terminus" %>
 
-<% content_for :scripts do %>
-  <%= vite_client_tag %>
-  <%= vite_javascript_tag "person" %>
-<% end %>
-
 <span class="state state-bad"><%= t(".stopped") %></span>
 
 <h1 class="prompt-title"><%= t(".title") %></h1>

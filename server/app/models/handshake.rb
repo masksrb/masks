@@ -91,6 +91,13 @@ class Handshake
     @origin ||= origin_of(resource)
   end
 
+  def credentials
+    return "secret" if Client::SECRET_AUTH_METHODS.include?(auth_method)
+    return "key" if auth_method == Client::PRIVATE_KEY_JWT
+
+    "public"
+  end
+
   def usable?
     refusal.nil?
   end
