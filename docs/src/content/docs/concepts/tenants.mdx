@@ -1,35 +1,40 @@
 ---
 title: Tenants
-description: One masks deployment serves many tenants, isolated three ways.
+description: One masks deployment serves many tenants and isolates them from each other at three layers.
 ---
 
-A tenant is a subdomain with its own actors, clients and signing keys. One deployment serves many,
-and nothing crosses between them.
+A tenant is a subdomain with its own actors, clients, and signing keys. One deployment serves many
+tenants, and no record belongs to more than one of them.
 
-Isolation is three layers, because each fails differently:
+masks isolates tenants at three layers. Each layer fails in a different way:
 
 | Layer | What it does | How it fails |
 | --- | --- | --- |
-| `TenantScoped` | scopes every query in the application | by omission — a forgotten scope leaks |
-| Row-level security | `FORCE ROW LEVEL SECURITY` in Postgres | it cannot fail quietly — see below |
-| Per-tenant signing keys | a token from one tenant has no `kid` the next can look up | loudly — verification refuses |
+| `TenantScoped` | Scopes every query in the application. | By omission. A forgotten scope leaks rows. |
+| Row-level security | Applies `FORCE ROW LEVEL SECURITY` in Postgres. | It does not fail silently. See below. |
+| Per-tenant signing keys | A token from one tenant has a `kid` that no other tenant can look up. | Verification refuses the token. |
 
-The application connects as a non-superuser role precisely so the second layer cannot be bypassed by
-the table's owner. A role holding `SUPERUSER` or `BYPASSRLS` sees straight through every policy, and
-Postgres says nothing when it does, so `Tenant.switch` asks the database once per process who it is
-connected as and refuses to enter a tenant at all if the answer is such a role. Point
-`POSTGRES_USER` at an ordinary role.
+The application connects to Postgres as a non-superuser role so that the table's owner cannot bypass
+the second layer. A role that holds `SUPERUSER` or `BYPASSRLS` ignores every policy, and Postgres
+reports nothing when it does. For this reason `Tenant.switch` queries the database once per process
+for the role it is connected as, and raises instead of entering a tenant if that role holds either
+privilege. Set `POSTGRES_USER` to an ordinary role.
 
-## Entering one
+## Entering a tenant
 
-Nothing in the application enters a tenant by hand. A Rack middleware resolves the request's
-hostname and enters it before any controller runs, and a module on `ActiveJob::Base` carries the
-tenant a job was enqueued in through to the worker that performs it. Neither is opted into, so
-neither can be forgotten by a controller that inherits from somewhere unexpected or a job that
-belongs to a framework.
+Application code does not enter a tenant by hand:
 
-A job enqueued outside any tenant is refused rather than left to perform against whichever tenant
-its worker thread happened to hold last. Maintenance meant to span every tenant says so:
+1. A Rack middleware resolves the request's hostname to a tenant and enters it before any
+   controller runs. A hostname that resolves to no tenant receives a 404.
+2. A module included in `ActiveJob::Base` records the tenant a job was enqueued in, and the worker
+   enters that tenant before it performs the job.
+
+Both apply automatically. A controller that inherits from an unexpected base class, or a job
+defined by a framework, runs inside the tenant as well.
+
+A job enqueued outside any tenant raises an error. Without that check it would perform against
+whichever tenant its worker thread entered last. A job that performs maintenance across every
+tenant declares it:
 
 ```ruby
 class CleanupJob < ApplicationJob
@@ -37,31 +42,36 @@ class CleanupJob < ApplicationJob
 end
 ```
 
-`Tenant.switch(tenant) { ... }` remains for code that deliberately crosses — the sweep above, or an
-issuer reading another tenant's keys. It sets a session-scoped Postgres setting rather than a
-transaction-scoped one, so it holds no transaction open and applies to every query and every
-transaction beneath it. Outside a tenant a query returns nothing rather than everything:
-`Model.unscoped` is zero rows, not all rows.
+Code that deliberately works across tenants uses `Tenant.switch(tenant) { ... }`. Examples are the
+cleanup job above and an issuer that reads another tenant's keys. `Tenant.switch` sets a
+session-scoped Postgres setting. It holds no transaction open, and the setting applies to every
+query and every transaction inside the block. Outside a tenant, every query returns zero rows,
+including a query through `Model.unscoped`.
 
-Tenants come from `MASKS_TENANTS` at deploy, or the first visit claims one when none are declared.
+Tenants are declared at deploy time. `MASKS_TENANTS` lists the subdomains to create, and
+`MASKS_TENANT` serves a single tenant at every hostname. Setting both is an error. When neither is
+set and no tenant exists yet, the first request creates a tenant named after the first label of its
+hostname.
 
-## What a tenant decides for itself
+## Tenant settings
 
 A tenant holds its own name, [what names an account](/concepts/actors/), whether an app may
-[register itself](/concepts/clients/), and where its mail goes. The first-run screen asks for the
-name; the console holds all four, and changing any of them restarts nothing. A
-setting the deployment pins cannot be written from the console — it is refused rather than quietly
-overridden.
+[register itself](/concepts/clients/), which user agents may sign in, and which sign-in policy the
+console uses by default. The first-run screen asks for the name. The console edits all of these
+settings, and a change takes effect without a restart. When the deployment pins a setting, the
+manage API refuses to write it.
 
-| Held by the tenant | Pinned at deploy | When both |
+| Held by the tenant | Pinned at deploy | When both are set |
 | --- | --- | --- |
-| `named_by` | `MASKS_NAMED_BY` | the deployment wins |
-| `dynamic_registration` | `MASKS_DYNAMIC_REGISTRATION` | the deployment wins |
-| `dynamic_client_scopes` | `MASKS_DYNAMIC_CLIENT_SCOPES` | the tenant wins |
-| `mail_from`, `smtp_*` | `MASKS_MAIL_FROM`, `MASKS_SMTP_*` | the tenant wins |
+| `named_by` | `MASKS_NAMED_BY` | The deployment's value applies. |
+| `dynamic_registration` | `MASKS_DYNAMIC_REGISTRATION` | The deployment's value applies. |
+| `dynamic_client_scopes` | `MASKS_DYNAMIC_CLIENT_SCOPES` | The tenant's value applies. |
+| `browsers_only` | `MASKS_BROWSERS_ONLY` | The deployment's value applies. |
+| `blocked_agents` | `MASKS_BLOCKED_AGENTS` | The deployment's value applies. |
+| Primary mail adapter | `MASKS_MAIL_FROM`, `MASKS_SMTP_*` | The tenant's adapter applies. |
 
-Mail is the one that carries a secret. A tenant that names its own server holds the password for it
-encrypted, the way it holds its pairwise salt, and the manage API never reads it back out — it can
-only be written. A tenant with no server of its own mails through whatever the deployment
-configured, and a deployment with no mailer either means invitations and password resets are links a
-manager passes along by hand.
+Mail settings include a secret. A tenant sends mail through its primary mail adapter, which stores
+its password encrypted in the same way the tenant stores its pairwise salt. The manage API accepts
+the password but never returns it. A tenant with no mail adapter sends mail through the SMTP server
+the deployment configures. If the deployment configures no mailer either, invitations and password
+resets are links that a manager sends to the person by hand.
