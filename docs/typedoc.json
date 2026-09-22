@@ -1,7 +1,11 @@
 {
   "$schema": "https://typedoc.org/schema.json",
-  "plugin": ["typedoc-plugin-markdown"],
-  "entryPoints": ["../web/src/index.ts"],
+  "plugin": [
+    "typedoc-plugin-markdown"
+  ],
+  "entryPoints": [
+    "../web/src/index.ts"
+  ],
   "tsconfig": "../web/tsconfig.json",
   "readme": "none",
   "excludePrivate": true,
@@ -20,5 +24,6 @@
   "outputFileStrategy": "modules",
   "flattenOutputFiles": true,
   "entryFileName": "browser",
-  "fileExtension": ".mdx"
+  "fileExtension": ".mdx",
+  "useHTMLAnchors": true
 }
