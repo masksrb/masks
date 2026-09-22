@@ -21,21 +21,21 @@ hero:
 <div class="panes">
   <div>
     <b style="color:var(--glass-amber)">server</b>
-    <span>The provider. Its own database, a signing key per tenant.</span>
+    <span>The OpenID Connect provider. It keeps its own database and a signing key for each tenant.</span>
   </div>
   <div>
     <b style="color:var(--glass-verdant)">masks</b>
-    <span>The gem. Discovery, PKCE, exchange, verification.</span>
+    <span>The Ruby gem. It handles discovery, PKCE, the code exchange, and token verification, and includes a Rails engine.</span>
   </div>
   <div>
     <b style="color:var(--glass-cyan)">@masks/client</b>
-    <span>The browser. The same flow, for single-page apps.</span>
+    <span>The browser package. It runs the same sign-in flow for single-page apps.</span>
   </div>
 </div>
 
 <div class="proof">
-  <span>OpenID Foundation certified</span>
-  <strong>2,213 conditions. Zero failures.</strong>
+  <span>OpenID Foundation conformance suite</span>
+  <strong>Both certification plans pass, with 2,213 conditions and no failures.</strong>
 </div>
 
 ```sh frame="none"
