@@ -87,6 +87,7 @@ export default defineConfig({
         label: "Reference",
         items: [
           { label: "OIDC and OAuth", slug: "reference/specs" },
+          { label: "Environment variables", slug: "reference/environment" },
           { label: "GraphQL", slug: "reference/manage" },
           { label: "Explorer", slug: "reference/explorer" },
           { label: "@masks/client", slug: "reference/browser" },

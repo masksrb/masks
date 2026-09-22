@@ -164,6 +164,7 @@ def reference
   docs = File.join(ROOT, "docs")
   run!("npm", "ci", chdir: docs) unless File.directory?(File.join(docs, "node_modules"))
   run!("npm", "run", "reference", chdir: docs)
+  run!("node", "bin/environment.mjs", chdir: docs)
 end
 
 GLOBS = [
