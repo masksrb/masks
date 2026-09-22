@@ -1,5 +1,76 @@
 # Changelog
 
+## [0.3.0](https://github.com/masksrb/masks/compare/server-v0.2.0...server-v0.3.0) (2026-09-22)
+
+
+### ⚠ BREAKING CHANGES
+
+* **server:** job classes in recurring.yml and anything naming a provider class are now Masks::Server::*.
+* **server:** the original migrations are edited in place. Existing databases must be rebuilt.
+* **server:** the image listens on 3000, not 80, and SOLID_QUEUE_IN_PUMA is now MASKS_JOBS_IN_WEB_SERVER, on by default. A deployment that runs its own bin/jobs container sets it to false.
+* a resource server on an older gem still accepts the new tokens, but this gem refuses access tokens from a server that does not type them.
+
+### Features
+
+* an access token is typed at+jwt, and nothing takes a token of another type in its place ([d0b4cfd](https://github.com/masksrb/masks/commit/d0b4cfdf802053359695495d417225e3a1578302))
+* **server:** a canonical person card shows who is signed in ([cc4d294](https://github.com/masksrb/masks/commit/cc4d294dba5c0e55c5b31cbf76ec1c079664ba8a))
+* **server:** a canonical person card shows who is signed in ([5df0aac](https://github.com/masksrb/masks/commit/5df0aacfbf795230d6004cd835f10c45b2d4c378))
+* **server:** a client authenticates with an assertion signed by its own key ([532a497](https://github.com/masksrb/masks/commit/532a497b0ea16c1b2427e28368d18d61912d8a1e))
+* **server:** a client's logo, home page, terms and privacy policy are shown when people are asked to let it in ([4ac3885](https://github.com/masksrb/masks/commit/4ac3885e30111beb62e989dadd701ea78c77a476))
+* **server:** a client's page edits everything the manage API can, and says how its sign-in policy differs from the default ([4fa26fc](https://github.com/masksrb/masks/commit/4fa26fccd4cdc7b65684456e5c0e09305342cb0c))
+* **server:** a freshly created tenant prints a setup token in its logs, and the first account is not created without it ([e91af7c](https://github.com/masksrb/masks/commit/e91af7c8f72e7c1471bf8131e84116ff11aa2558))
+* **server:** a service with nobody behind it signs in as itself with client_credentials ([61e1f43](https://github.com/masksrb/masks/commit/61e1f434bc8fcfdb4a8e29da6999190fc3d4432b))
+* **server:** a sign-in policy that hides who has an account sends any email address a code before anything else ([73e3d89](https://github.com/masksrb/masks/commit/73e3d8904ba3281c4375fc12001be5a698bdc758))
+* **server:** a sign-in policy that offers only passkeys signs people up with a passkey and no password ([73e3d89](https://github.com/masksrb/masks/commit/73e3d8904ba3281c4375fc12001be5a698bdc758))
+* **server:** a tenant or a client restyles the sign-in and account pages with a theme file ([cee38d1](https://github.com/masksrb/masks/commit/cee38d1538f92e899a8ae24af2555a43d34eaf5a))
+* **server:** a token exchange takes an ID token or an actor token, and says who is acting ([9d771be](https://github.com/masksrb/masks/commit/9d771be0b49cf453fba41923e6910053d9e686cd))
+* **server:** an authorization request can be signed by the client that makes it ([49c30e3](https://github.com/masksrb/masks/commit/49c30e36aa465b74a555b8b07b5e613d7167eb2d))
+* **server:** an identity provider adds, changes, suspends and removes people over SCIM 2.0 ([09c2025](https://github.com/masksrb/masks/commit/09c2025059b3642d6196956b929cb21357e5c780))
+* **server:** manage calls them actors, at /manage/actors ([d9567cc](https://github.com/masksrb/masks/commit/d9567cc407b475983b89ac31d8d248de31e4b26e))
+* **server:** masks signs people into SAML applications as their identity provider ([c929fdc](https://github.com/masksrb/masks/commit/c929fdcb8cd7453c87bb9aa549e63e92e056c0f5))
+* **server:** people and devices are one page in manage ([35548b5](https://github.com/masksrb/masks/commit/35548b531e75536ea09379e9e98c063a07ed42ca))
+* **server:** the connect screen asks one fixed question and says the rest in a line ([230afad](https://github.com/masksrb/masks/commit/230afad6a84bbc920d47b74e86e455cec93fc427))
+* **server:** the connect screen says what it registers and what it allows, and waits five seconds before either can happen ([d420eb3](https://github.com/masksrb/masks/commit/d420eb336bc4639fa455d91bc5cb74d73ac45b90))
+* **server:** the consent screen shows who is signing in under its heading, as the connect screen does ([22391b0](https://github.com/masksrb/masks/commit/22391b01256aaf3404d1469c6e5d9d6cf23a1d76))
+* **server:** the container derives its secrets from one master key ([68b9897](https://github.com/masksrb/masks/commit/68b9897f19a5e7838f475648a64c92efdcae2d83))
+* **server:** the container generates and persists its own secrets on first boot ([61158c4](https://github.com/masksrb/masks/commit/61158c42f457deb7ffc78bebf709f72c2e1cf4fa))
+* **server:** the image runs Puma alone on port 3000, with jobs in the same process ([203990f](https://github.com/masksrb/masks/commit/203990f84ad858689657766911dc55f3832d8c70))
+* **server:** the person card is a frosted pane like the panels around it ([2f79a67](https://github.com/masksrb/masks/commit/2f79a67d3fa40b8d01835f98f905f8ce1ef123e6))
+* **server:** the sign-in and account pages are lit by the rose window, with frosted panes, brass came, and an ember action ([dda4044](https://github.com/masksrb/masks/commit/dda40440a247d3c7b6c68385bf8406497fd5f9e3))
+* **server:** tokens and adapters store a kind, not a class name ([138628a](https://github.com/masksrb/masks/commit/138628a8d82a22a09fe60e6f08d4340c9c4fb718))
+
+
+### Fixes
+
+* **server:** a browser signed in to one account no longer passes for another's second factor ([37b6b26](https://github.com/masksrb/masks/commit/37b6b26bbd8407fd9f7ce9ac7bab0c9204e06181))
+* **server:** a browser without javascript signs in with its password instead of asking to reset it ([2904954](https://github.com/masksrb/masks/commit/29049541224636547db157056562c08f1279e0f8))
+* **server:** a client's home page, logo, terms and privacy policy must be http URLs ([4ac3885](https://github.com/masksrb/masks/commit/4ac3885e30111beb62e989dadd701ea78c77a476))
+* **server:** a client's links are checked again where they are shown, and fetching its logo gives up on a slow host ([00ea777](https://github.com/masksrb/masks/commit/00ea7771d2e22d20c04a9817d467d6d61a605c57))
+* **server:** a refused passkey does not claim the device holds none, and a pasted code is accepted ([9959322](https://github.com/masksrb/masks/commit/99593223012b870c25b998f1f984c2c2dbd02059))
+* **server:** a SAML request cannot be forged past its signature, and an unconfirmed email is never asserted ([b89761b](https://github.com/masksrb/masks/commit/b89761b8dc6f9c839c9cfd00f58e42595429d18f))
+* **server:** every page masks serves carries a content security policy ([e33c164](https://github.com/masksrb/masks/commit/e33c164e668ecd00469743e14f1ea81ba78a5092))
+* **server:** masks refuses to boot in production without its own encryption keys ([2169181](https://github.com/masksrb/masks/commit/21691813c4934caa6ed896372415e2b1edebfdd9))
+* **server:** production refuses a MASKS_SETUP_TOKEN shorter than 24 characters ([b57a2c5](https://github.com/masksrb/masks/commit/b57a2c5bc04a43e737312c5fb0a8891867bb2876))
+* **server:** proving an inbox in hidden mode confirms no account until that account signs in, and counts for nobody else ([00ea777](https://github.com/masksrb/masks/commit/00ea7771d2e22d20c04a9817d467d6d61a605c57))
+* **server:** signing out of masks takes one click, and the confirmation says what it does ([a869755](https://github.com/masksrb/masks/commit/a869755ae87a428a5fc461e8b78ae5081da47939))
+* **server:** signing out of masks takes one click, and the confirmation says what it does ([097d0fd](https://github.com/masksrb/masks/commit/097d0fdc7d461874460c647cd580b4867b130bf2))
+* **server:** the dev entrypoint names the authenticator job by its namespace ([1ed425b](https://github.com/masksrb/masks/commit/1ed425bde95961e062fec1c63852d4920853603a))
+* **server:** the favicon sits on the mark's black ([3ec6f86](https://github.com/masksrb/masks/commit/3ec6f86ae532700d5397fbb45818b179587d3ba3))
+* **server:** the second factor screen names what it asks for, and says when the device holds no passkey ([b4fcce4](https://github.com/masksrb/masks/commit/b4fcce4af6775d26c75988b075ff3798a2009435))
+
+
+### Documentation
+
+* the homepage links each column to a guide, and self-hosting covers secrets, tags, and Caddy ([c3d2409](https://github.com/masksrb/masks/commit/c3d24096bec35492e5eeb31d922c4aa992a87188))
+
+
+### Refactoring
+
+* **server:** a client's logo is stamped on the client, and avatars and logos are served one way ([00ea777](https://github.com/masksrb/masks/commit/00ea7771d2e22d20c04a9817d467d6d61a605c57))
+* **server:** the devices section is its own component, and a device lives under /people ([ebdfaf1](https://github.com/masksrb/masks/commit/ebdfaf15581bd7d888811b596fe833e8f389c8e5))
+* **server:** the person card renders once on the server, and the connect screen stops re-deriving what Client and the stylesheet already know ([209127e](https://github.com/masksrb/masks/commit/209127eb002fb31f998ecf4b42b4afed959c1507))
+* **server:** the provider is the masks-server engine, and server/ mounts it ([baabad1](https://github.com/masksrb/masks/commit/baabad19b0bca65b5077c7e6644918aafdca871f))
+
 ## [0.2.0](https://github.com/masksrb/masks/compare/server-v0.1.0...server-v0.2.0) (2026-09-13)
 
 
