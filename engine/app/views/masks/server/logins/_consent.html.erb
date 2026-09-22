@@ -14,6 +14,8 @@
 
 <%= render "masks/server/logins/head", title: t(".title", client: login.client&.name) %>
 
+<%= render "masks/server/application/person", actor: login.actor, sign_out: true if login.actor %>
+
 <div class="slab">
   <div class="ledger-row">
     <span class="ledger-label"><%= t(".access") %></span>
@@ -83,5 +85,3 @@
     <button type="submit" class="action action-quiet action-fit"><%= t(".deny") %></button>
   <% end %>
 </div>
-
-<%= render "masks/server/application/person", actor: login.actor, sign_out: true if login.actor %>

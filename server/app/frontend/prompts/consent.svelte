@@ -30,6 +30,10 @@ const links = $derived(
 
 <Head {login} title={login.t("title", { client })} />
 
+{#if login.auth.person}
+  <Person person={login.auth.person} signOut={login.t("sign_out")} />
+{/if}
+
 <div class="slab">
   <div class="ledger-row">
     <span class="ledger-label">{login.t("access")}</span>
@@ -102,7 +106,3 @@ const links = $derived(
     onclick={() => login.submit("decline", {})}
   />
 </div>
-
-{#if login.auth.person}
-  <Person person={login.auth.person} signOut={login.t("sign_out")} />
-{/if}
