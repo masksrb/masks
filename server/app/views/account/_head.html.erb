@@ -53,6 +53,6 @@
       <% end %>
     <% end %>
 
-    <%= link_to account_text("sign_out"), logout_path, class: "pill" %>
+    <%= button_to account_text("sign_out"), logout_path, class: "pill", form_class: "signout" %>
   </div>
 </div>

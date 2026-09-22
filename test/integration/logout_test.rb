@@ -69,7 +69,20 @@ class LogoutTest < ActionDispatch::IntegrationTest
 
     assert_response :success
     assert_match "Sign out?", response.body
+    assert_match @client.name, response.body
+    assert_select "a[href=?]", BACK, text: "Stay signed in"
     assert signed_in?, "a GET nobody confirmed must not end the session"
+  end
+
+  test "the account page signs out in one click rather than through a link that asks again" do
+    signed_in
+
+    assert_select "form.signout[action=\"/logout\"][method=\"post\"]"
+
+    post "/logout"
+
+    assert_redirected_to login_path
+    assert_not signed_in?
   end
 
   test "confirming it ends the session and goes back where the client asked" do
