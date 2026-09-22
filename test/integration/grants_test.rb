@@ -278,6 +278,26 @@ module Masks
         end
       end
 
+      test "an application that was cut off can be let back in, with only what is asked for again" do
+        within(@tenant) { @client.update!(allowed_scopes: "openid profile email") }
+        consent = record_consent!(scopes: "openid profile email")
+
+        sign_in_as(@actor)
+        delete "/account/apps/#{@client.client_id}"
+
+        authorize(client_id: @client.client_id, scope: "openid profile")
+        assert awaiting_consent?
+
+        consent!
+        assert code_from
+
+        within(@tenant) do
+          assert_nil consent.reload.revoked_at
+          assert_equal "openid profile", consent.scopes
+          assert_equal 1, Consent.where(actor: @actor, client: @client).count
+        end
+      end
+
       test "an app that never had to ask is listed, and can be cut off too" do
         within(@tenant) { @client.update!(approved_at: Time.current) }
         token = refresh_token!

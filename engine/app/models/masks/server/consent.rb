@@ -10,10 +10,10 @@ module Masks
 
       class << self
         def record!(actor:, client:, scopes:, audience:)
-          consent = live.find_or_initialize_by(actor: actor, client: client)
+          consent = find_or_initialize_by(actor: actor, client: client)
+          consent.assign_attributes(scopes: "", audience: [], revoked_at: nil) if consent.revoked_at
           consent.scopes = Scopes.join(Scopes.list(consent.scopes) | Scopes.list(scopes))
           consent.audience = (consent.audience | Array(audience)).compact
-          consent.revoked_at = nil
           consent.save!
           consent
         end
