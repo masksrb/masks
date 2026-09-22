@@ -24,7 +24,7 @@ guide links to a concept page for the why.
 - Use American English and the Oxford comma: "color", "authorize", "red, white,
   and blue".
 - Tutorials and guides may address the reader as "you". Concept pages mostly
-  describe uris and avoid it.
+  describe masks and avoid it.
 - Say what the software does. It does not decide, know, want, or remember.
 - Name things by the names in the code and the UI. Put UI labels in bold and
   code, paths, variables, and commands in backticks.
