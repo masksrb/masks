@@ -62,6 +62,8 @@
     ["otp", "Authenticator app"],
     ["passkey", "Passkey"],
     ["backup_codes", "Backup codes"],
+    ["email", "Email codes"],
+    ["sms", "Text message codes"],
   ];
 
   const CONFIRMATIONS = [

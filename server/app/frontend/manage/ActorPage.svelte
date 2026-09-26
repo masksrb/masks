@@ -45,7 +45,7 @@
       actor(uuid: $uuid) {
         uuid identifier nickname email emailVerified phone phoneVerified signedUpAt pendingApproval
         suspendedAt externalId
-        scopes otpEnabled backupCodesRemaining
+        scopes otpEnabled emailCodesEnabled textCodesEnabled backupCodesRemaining
         backupCodesGeneratedAt lastLoginAt createdAt activated invitedAt
         passkeys { id label aaguid certification compromise userVerified lastUsedAt }
         name givenName familyName middleName profileUrl pictureUrl websiteUrl
@@ -238,6 +238,18 @@
       `mutation Disable($uuid: ID!) { disableAuthenticator(uuid: $uuid) { actor { otpEnabled } } }`,
       { uuid },
       "Authenticator removed.",
+    );
+  }
+
+  function turnOff(factor, name) {
+    if (!confirm(`Turn off ${name} for this actor?`)) return;
+
+    act(
+      `mutation TurnOff($uuid: ID!, $factor: String!) {
+        disableCodeFactor(uuid: $uuid, factor: $factor) { actor { uuid } }
+      }`,
+      { uuid, factor },
+      `${name[0].toUpperCase()}${name.slice(1)} turned off.`,
     );
   }
 
@@ -522,8 +534,33 @@
                 Remove authenticator app
               </button>
             </div>
-          {:else}
+          {:else if !actor.emailCodesEnabled && !actor.textCodesEnabled}
             <p class="text-sm opacity-70">Password only — nothing enrolled.</p>
+          {/if}
+
+          {#if actor.emailCodesEnabled || actor.textCodesEnabled}
+            <div class="flex flex-wrap items-center gap-2">
+              {#if actor.emailCodesEnabled}
+                <span class="text-sm">Email codes on.</span>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-error btn-outline"
+                  onclick={() => turnOff("email", "email codes")}
+                >
+                  Turn off email codes
+                </button>
+              {/if}
+              {#if actor.textCodesEnabled}
+                <span class="text-sm">Text message codes on.</span>
+                <button
+                  type="button"
+                  class="btn btn-sm btn-error btn-outline"
+                  onclick={() => turnOff("sms", "text message codes")}
+                >
+                  Turn off text message codes
+                </button>
+              {/if}
+            </div>
           {/if}
         </Section>
 
