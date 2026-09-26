@@ -1,7 +1,7 @@
 <script>
   import { createFeedback } from "./lib/feedback.svelte.js";
   import { day } from "./lib/format.js";
-  import Card from "./ui/Card.svelte";
+  import Section from "./ui/Section.svelte";
   import Link from "./ui/Link.svelte";
   import Notices from "./ui/Notices.svelte";
 
@@ -33,7 +33,7 @@
   }
 </script>
 
-<Card title="Namespaces">
+<Section title="Namespaces">
   <Notices feedback={feedback.state} />
 
   <div class="overflow-x-auto">
@@ -88,4 +88,4 @@
       </tbody>
     </table>
   </div>
-</Card>
+</Section>

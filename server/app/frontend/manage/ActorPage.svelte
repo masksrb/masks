@@ -8,7 +8,7 @@
   import Presence from "./Presence.svelte";
   import Tokens from "./Tokens.svelte";
   import ScopesEditor from "./ScopesEditor.svelte";
-  import Card from "./ui/Card.svelte";
+  import Section from "./ui/Section.svelte";
   import Field from "./ui/Field.svelte";
   import Link from "./ui/Link.svelte";
   import Notices from "./ui/Notices.svelte";
@@ -313,7 +313,7 @@
 
     <div class="grid items-start gap-4 md:grid-cols-2">
       <div class="flex flex-col gap-4">
-        <Card title="Profile">
+        <Section title="Profile">
           <div class="grid gap-3 sm:grid-cols-3">
             {#each FIELDS as [key, label] (key)}
               <Field {label} bind:value={draft[key]} />
@@ -332,32 +332,32 @@
           <button type="button" class="btn btn-primary btn-sm self-start" onclick={saveProfile}>
             Save profile
           </button>
-        </Card>
+        </Section>
 
-        <Card
+        <Section
           title="Signed in"
           lede={yourself ? "Signing out everywhere signs you out here too." : null}
         >
           <Presence {api} {feedback} {actor} onchange={load} />
-        </Card>
+        </Section>
 
-        <Card title="Consents">
+        <Section title="Consents">
           <Consents {api} {feedback} rows={actor.consents} onchange={load} />
-        </Card>
+        </Section>
 
-        <Card title="Connected accounts">
+        <Section title="Connected accounts">
           <Connections {api} {feedback} rows={actor.connections} onchange={load} />
-        </Card>
+        </Section>
 
-        <Card
+        <Section
           title="Tokens"
         >
           <Tokens {api} {feedback} rows={actor.tokens} onchange={load} />
-        </Card>
+        </Section>
       </div>
 
       <div class="flex flex-col gap-4">
-        <Card title="Photo">
+        <Section title="Photo">
           <div class="flex flex-wrap gap-5">
             {#each ["photo", "identicon", "initials"] as style (style)}
               <div class="flex flex-col items-start gap-2">
@@ -400,13 +400,13 @@
           {#if uploading}
             <span class="text-xs opacity-60">Uploading...</span>
           {/if}
-        </Card>
+        </Section>
 
-        <Card title="Scopes">
+        <Section title="Scopes">
           <ScopesEditor value={actor.scopes} available={supported} onchange={saveScopes} />
-        </Card>
+        </Section>
 
-        <Card title="Access">
+        <Section title="Access">
           {#if actor.suspendedAt}
             <div class="alert alert-warning alert-soft flex-wrap items-center gap-3 text-sm" role="status">
               <span>Suspended {day(actor.suspendedAt)}. They cannot sign in.</span>
@@ -439,9 +439,9 @@
               Send a confirmation link
             </button>
           {/if}
-        </Card>
+        </Section>
 
-        <Card title="Passkeys">
+        <Section title="Passkeys">
           {#if actor.passkeys.length === 0}
             <p class="text-sm opacity-70">None enrolled.</p>
           {:else}
@@ -483,10 +483,10 @@
               {/each}
             </ul>
           {/if}
-        </Card>
+        </Section>
 
         {#if actor.pendingApproval}
-          <Card
+          <Section
             title="Awaiting approval"
             lede="They cannot sign in until a manager approves them."
           >
@@ -504,10 +504,10 @@
                 Approve
               </button>
             </div>
-          </Card>
+          </Section>
         {/if}
 
-        <Card title="Second factor">
+        <Section title="Second factor">
           {#if actor.otpEnabled}
             <p class="text-sm">
               Authenticator enabled. {actor.backupCodesRemaining} backup
@@ -525,17 +525,17 @@
           {:else}
             <p class="text-sm opacity-70">Password only — nothing enrolled.</p>
           {/if}
-        </Card>
+        </Section>
 
-        <Card title="Activity">
+        <Section title="Activity">
           {#snippet actions()}
             <Link to={`/activity?actor=${actor.uuid}`} class="btn btn-ghost btn-sm">All activity</Link>
           {/snippet}
 
           <Events events={actor.events} showActor={false} empty="Nothing yet." />
-        </Card>
+        </Section>
 
-        <Card title="Suspend or delete">
+        <Section title="Suspend or delete">
           {#if yourself}
             <p class="text-sm opacity-70">This is you — another manager has to do it.</p>
           {:else}
@@ -552,7 +552,7 @@
               Delete {actor.identifier}
             </button>
           {/if}
-        </Card>
+        </Section>
       </div>
     </div>
   </Page>

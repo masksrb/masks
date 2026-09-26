@@ -2,7 +2,7 @@
   import { createFeedback } from "./lib/feedback.svelte.js";
   import { day, moment, since } from "./lib/format.js";
   import Events from "./Events.svelte";
-  import Card from "./ui/Card.svelte";
+  import Section from "./ui/Section.svelte";
   import Facts from "./ui/Facts.svelte";
   import Link from "./ui/Link.svelte";
   import Notices from "./ui/Notices.svelte";
@@ -111,7 +111,7 @@
     <Notices feedback={feedback.state} />
 
     <div class="grid items-start gap-4 md:grid-cols-2">
-      <Card title="What it is">
+      <Section title="What it is">
         <Facts rows={facts} />
 
         <div class="flex flex-wrap gap-2 pt-1">
@@ -127,10 +127,10 @@
             </button>
           {/if}
         </div>
-      </Card>
+      </Section>
 
       <div class="flex flex-col gap-4">
-        <Card title="Who signs in on it">
+        <Section title="Who signs in on it">
           {#if device.actors.length === 0}
             <p class="text-sm opacity-70">Nobody has signed in on it.</p>
           {:else}
@@ -144,9 +144,9 @@
               {/each}
             </ul>
           {/if}
-        </Card>
+        </Section>
 
-        <Card title="Live sessions">
+        <Section title="Live sessions">
           {#if device.sessions.length === 0}
             <p class="text-sm opacity-70">Nobody is signed in on it right now.</p>
           {:else}
@@ -173,11 +173,11 @@
               {/each}
             </ul>
           {/if}
-        </Card>
+        </Section>
 
-        <Card title="Activity">
+        <Section title="Activity">
           <Events {events} empty="Nothing yet." />
-        </Card>
+        </Section>
       </div>
     </div>
   </Page>

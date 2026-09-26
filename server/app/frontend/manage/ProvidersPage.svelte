@@ -2,7 +2,7 @@
   import Connections from "./Connections.svelte";
   import { createFeedback } from "./lib/feedback.svelte.js";
   import { day } from "./lib/format.js";
-  import Card from "./ui/Card.svelte";
+  import Section from "./ui/Section.svelte";
   import Field from "./ui/Field.svelte";
   import Notices from "./ui/Notices.svelte";
   import Page from "./ui/Page.svelte";
@@ -479,7 +479,7 @@
   <Notices feedback={feedback.state} />
 
   {#if picking}
-    <Card title="Add provider" lede="Pick who actors will sign in with. Anything not listed speaks one of the three at the end.">
+    <Section title="Add provider" lede="Pick who actors will sign in with. Anything not listed speaks one of the three at the end.">
       {#snippet actions()}
         <button type="button" class="btn btn-ghost btn-sm" onclick={close}>Cancel</button>
       {/snippet}
@@ -497,11 +497,11 @@
           </button>
         {/each}
       </div>
-    </Card>
+    </Section>
   {/if}
 
   {#if draft}
-    <Card
+    <Section
       title={fresh ? `Add ${chosen?.custom ? PROTOCOLS[draft.protocol] : chosen?.name}` : `Edit ${draft.name}`}
       lede={chosen?.guide ? null : PROTOCOLS[draft.protocol]}
     >
@@ -854,7 +854,7 @@
         </button>
         <button type="button" class="btn btn-ghost btn-sm" onclick={close}>Cancel</button>
       </div>
-    </Card>
+    </Section>
   {/if}
 
   {#if loading && active.length === 0 && archived.length === 0}
@@ -868,7 +868,7 @@
     </div>
   {:else}
     {#each active as provider (provider.key)}
-      <Card title={provider.name} lede={provider.key}>
+      <Section title={provider.name} lede={provider.key}>
         {#snippet actions()}
           <button type="button" class="btn btn-sm" onclick={() => edit(provider)}>Edit</button>
           {#if provider.protocol === "mcp"}
@@ -1007,11 +1007,11 @@
             </div>
           </details>
         {/if}
-      </Card>
+      </Section>
     {/each}
 
     {#if archived.length}
-      <Card title="Archived">
+      <Section title="Archived">
         <ul class="flex flex-col gap-1.5">
           {#each archived as provider (provider.key)}
             <li class="slat">
@@ -1029,7 +1029,7 @@
             </li>
           {/each}
         </ul>
-      </Card>
+      </Section>
     {/if}
   {/if}
 </Page>

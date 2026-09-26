@@ -5,7 +5,7 @@
   import Namespaces from "./Namespaces.svelte";
   import ScopesEditor from "./ScopesEditor.svelte";
   import BarChart from "./ui/BarChart.svelte";
-  import Card from "./ui/Card.svelte";
+  import Section from "./ui/Section.svelte";
   import Facts from "./ui/Facts.svelte";
   import Field from "./ui/Field.svelte";
   import Link from "./ui/Link.svelte";
@@ -201,7 +201,7 @@
       {/each}
     </div>
 
-    <Card title="Sign-ins">
+    <Section title="Sign-ins">
       {#snippet actions()}
         <div class="range" role="group" aria-label="Time range">
           {#each SPANS as span (span)}
@@ -219,27 +219,27 @@
           {/snippet}
         </Loader>
       {/key}
-    </Card>
+    </Section>
 
     <Loader load={() => api.query(RECENT)}>
       {#snippet children(recent)}
         {#if recent.worrying.length}
-          <Card title="Worth a look">
+          <Section title="Worth a look">
             {#snippet actions()}
               <Link to="/activity" class="btn btn-sm">All activity</Link>
             {/snippet}
 
             <Events events={recent.worrying} />
-          </Card>
+          </Section>
         {/if}
 
-        <Card title="Lately">
+        <Section title="Lately">
           {#snippet actions()}
             <Link to="/activity" class="btn btn-ghost btn-sm">All activity</Link>
           {/snippet}
 
           <Events events={recent.latest} empty="Nothing yet." />
-        </Card>
+        </Section>
       {/snippet}
     </Loader>
   </Page>
@@ -248,7 +248,7 @@
     <Notices feedback={feedback.state} />
 
     <div class="grid gap-4">
-      <Card title="Tenant">
+      <Section title="Tenant">
         <Field label="Name" bind:value={name} onsave={() => update({ name }, "Renamed.")} />
 
         <Facts
@@ -259,9 +259,9 @@
             { term: "Serving since", value: day(data.tenant.createdAt) },
           ]}
         />
-      </Card>
+      </Section>
 
-      <Card
+      <Section
         title="Accounts are named by"
       >
         <select
@@ -274,9 +274,9 @@
           <option value="email">Email</option>
           <option value="either">Either</option>
         </select>
-      </Card>
+      </Section>
 
-      <Card
+      <Section
         title="Default policy"
       >
         <select
@@ -292,9 +292,9 @@
         </select>
 
 
-      </Card>
+      </Section>
 
-      <Card
+      <Section
         title="Who may sign in"
       >
         <Switch
@@ -310,9 +310,9 @@
           placeholder="curl, python-requests"
           onsave={() => update({ blockedAgents: agents }, "Sign-in rules updated.")}
         />
-      </Card>
+      </Section>
 
-      <Card
+      <Section
         title="Dynamic registration"
       >
         <select
@@ -334,13 +334,13 @@
           available={data.scopesSupported}
           onchange={(dynamicClientScopes) => update({ dynamicClientScopes }, "Ceiling updated.")}
         />
-      </Card>
+      </Section>
 
       {#if data.namespaces.length}
         <Namespaces {api} rows={data.namespaces} onreleased={load} showClient />
       {/if}
 
-      <Card
+      <Section
         title="Signing keys"
       >
         {#snippet actions()}
@@ -391,7 +391,7 @@
             </tbody>
           </table>
         </div>
-      </Card>
+      </Section>
     </div>
   </Page>
 {/if}

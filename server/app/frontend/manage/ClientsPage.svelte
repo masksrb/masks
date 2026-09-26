@@ -2,7 +2,7 @@
   import { NONE, day, joined } from "./lib/format.js";
   import { createFeedback } from "./lib/feedback.svelte.js";
   import ScopesEditor from "./ScopesEditor.svelte";
-  import Card from "./ui/Card.svelte";
+  import Section from "./ui/Section.svelte";
   import ClientLogo from "./ui/ClientLogo.svelte";
   import Field from "./ui/Field.svelte";
   import Link from "./ui/Link.svelte";
@@ -248,7 +248,7 @@
   <Notices feedback={feedback.state} />
 
   {#if adding}
-    <Card title="Add client">
+    <Section title="Add client">
       <Field label="Name" bind:value={draft.name} placeholder="Nightly indexer" />
 
       <div class="range" role="group" aria-label="What kind of client">
@@ -365,11 +365,11 @@
           Cancel
         </button>
       </div>
-    </Card>
+    </Section>
   {/if}
 
   {#if created}
-    <Card title={`${created.client.name} is ready`}>
+    <Section title={`${created.client.name} is ready`}>
       <p class="text-sm opacity-70">
         Its client_id is below{created.secret ? ", with a secret shown this once. Copy it now" : ""}.
       </p>
@@ -381,7 +381,7 @@
       {/if}
 
       <Link to={`/clients/${created.client.clientId}`} class="btn btn-sm self-start">Open it</Link>
-    </Card>
+    </Section>
   {/if}
 
   {#if loading && clients.length === 0}

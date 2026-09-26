@@ -1,6 +1,6 @@
 <script>
   import { moment, since } from "./lib/format.js";
-  import Card from "./ui/Card.svelte";
+  import Section from "./ui/Section.svelte";
   import Link from "./ui/Link.svelte";
   import Row from "./ui/Row.svelte";
   import Search from "./ui/Search.svelte";
@@ -162,7 +162,7 @@
 </script>
 
 <div id="devices" bind:this={section} class="scroll-mt-20">
-  <Card title="Devices">
+  <Section title="Devices">
     {#snippet actions()}
       <Search
         bind:value={search}
@@ -294,5 +294,5 @@
         {/snippet}
       </Table>
     {/if}
-  </Card>
+  </Section>
 </div>

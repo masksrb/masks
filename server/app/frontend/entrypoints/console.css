@@ -40,6 +40,15 @@
   color: var(--dim);
 }
 
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--edge);
+}
+
 .subhead {
   margin: 0;
   font-size: 0.75rem;
@@ -688,10 +697,6 @@
 
   .console-main {
     padding-bottom: calc(5.5rem + env(safe-area-inset-bottom));
-  }
-
-  .card-body {
-    padding: 0.875rem;
   }
 
   .tally-cell {

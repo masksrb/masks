@@ -1,7 +1,7 @@
 <script>
   import { createFeedback } from "./lib/feedback.svelte.js";
   import { day, since } from "./lib/format.js";
-  import Card from "./ui/Card.svelte";
+  import Section from "./ui/Section.svelte";
   import Field from "./ui/Field.svelte";
   import Notices from "./ui/Notices.svelte";
   import Page from "./ui/Page.svelte";
@@ -90,7 +90,7 @@
     <Spinner />
   {:else if data}
     <div class="grid gap-4">
-      <Card title="Connect a provider">
+      <Section title="Connect a provider">
         <div class="flex flex-col gap-1.5">
           <span class="text-xs font-medium opacity-70">SCIM base URL</span>
           <code class="rounded bg-base-200 px-2 py-1 font-mono text-xs break-all">{data.scimBaseUrl}</code>
@@ -120,9 +120,9 @@
             <code class="font-mono text-xs break-all">{issued.secret}</code>
           </div>
         {/if}
-      </Card>
+      </Section>
 
-      <Card title="Tokens">
+      <Section title="Tokens">
         {#if data.provisioningTokens.length === 0}
           <p class="text-sm opacity-70">None issued.</p>
         {:else}
@@ -141,7 +141,7 @@
             {/each}
           </ul>
         {/if}
-      </Card>
+      </Section>
     </div>
   {/if}
 </Page>

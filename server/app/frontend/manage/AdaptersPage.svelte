@@ -1,7 +1,7 @@
 <script>
   import { createFeedback } from "./lib/feedback.svelte.js";
   import { day } from "./lib/format.js";
-  import Card from "./ui/Card.svelte";
+  import Section from "./ui/Section.svelte";
   import Field from "./ui/Field.svelte";
   import Notices from "./ui/Notices.svelte";
   import Page from "./ui/Page.svelte";
@@ -260,7 +260,7 @@
     <Spinner />
   {:else if data}
     {#if draft}
-      <Card title={editing === "" ? "Add adapter" : `Edit ${draft.name}`}>
+      <Section title={editing === "" ? "Add adapter" : `Edit ${draft.name}`}>
         {#if editing === ""}
           <label class="flex flex-col gap-1.5">
             <span class="text-xs font-medium opacity-70">Service</span>
@@ -329,13 +329,13 @@
           </button>
           <button type="button" class="btn btn-ghost btn-sm" onclick={close}>Cancel</button>
         </div>
-      </Card>
+      </Section>
     {/if}
 
     {#each KINDS as group (group.kind)}
       {@const held = forKind(data.active, group.kind)}
 
-      <Card title={group.title} lede={held.length ? group.lede : group.idle}>
+      <Section title={group.title} lede={held.length ? group.lede : group.idle}>
         {#snippet actions()}
           <button type="button" class="btn btn-sm" onclick={() => add(group.kind)}>Add</button>
         {/snippet}
@@ -385,11 +385,11 @@
             />
           </div>
         {/each}
-      </Card>
+      </Section>
     {/each}
 
     {#if data.archived.length}
-      <Card title="Archived">
+      <Section title="Archived">
         {#each data.archived as adapter (adapter.key)}
           <div class="flex flex-wrap items-center justify-between gap-2">
             <span class="text-sm">
@@ -404,7 +404,7 @@
             </button>
           </div>
         {/each}
-      </Card>
+      </Section>
     {/if}
   {/if}
 </Page>

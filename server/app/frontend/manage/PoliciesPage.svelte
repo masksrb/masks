@@ -1,7 +1,7 @@
 <script>
   import { createFeedback } from "./lib/feedback.svelte.js";
   import ScopesEditor from "./ScopesEditor.svelte";
-  import Card from "./ui/Card.svelte";
+  import Section from "./ui/Section.svelte";
   import Field from "./ui/Field.svelte";
   import Link from "./ui/Link.svelte";
   import Notices from "./ui/Notices.svelte";
@@ -238,7 +238,7 @@
     <Spinner />
   {:else if data}
     {#if editing !== null}
-      <Card title={editing === "" ? "New policy" : draft.name}>
+      <Section title={editing === "" ? "New policy" : draft.name}>
         <div class="grid gap-3 sm:grid-cols-[2fr_1fr]">
           <Field label="Name" value={draft.name} oninput={(event) => named(event.currentTarget.value)} placeholder="Customers" />
           <Field
@@ -418,10 +418,10 @@
           </button>
           <button type="button" class="btn btn-ghost btn-sm" onclick={close}>Cancel</button>
         </div>
-      </Card>
+      </Section>
     {/if}
 
-    <Card>
+    <Section>
       {#if data.active.length === 0}
         <p class="text-sm opacity-70">None yet. Clients use the built-in default.</p>
       {/if}
@@ -464,10 +464,10 @@
           </div>
         </div>
       {/each}
-    </Card>
+    </Section>
 
     {#if data.archived.length}
-      <Card title="Archived">
+      <Section title="Archived">
         {#each data.archived as policy (policy.key)}
           <div class="flex items-center justify-between gap-2">
             <span class="text-sm">{policy.name}</span>
@@ -480,7 +480,7 @@
             </button>
           </div>
         {/each}
-      </Card>
+      </Section>
     {/if}
   {/if}
 </Page>

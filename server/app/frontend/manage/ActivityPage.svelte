@@ -3,7 +3,7 @@
   import Events from "./Events.svelte";
   import { createFeedback } from "./lib/feedback.svelte.js";
   import { useRouter } from "./lib/router.svelte.js";
-  import Card from "./ui/Card.svelte";
+  import Section from "./ui/Section.svelte";
   import Link from "./ui/Link.svelte";
   import Notices from "./ui/Notices.svelte";
   import Page from "./ui/Page.svelte";
@@ -147,7 +147,7 @@
     </div>
   {/if}
 
-  <Card>
+  <Section>
     <div class="flex flex-wrap items-end gap-4">
       <label class="flex flex-col gap-1.5">
         <span class="legend">Show</span>
@@ -174,12 +174,12 @@
         Only what is worth a look
       </label>
     </div>
-  </Card>
+  </Section>
 
   {#if loading && events.length === 0}
     <Spinner />
   {:else}
-    <Card>
+    <Section>
       <Events
         {events}
         empty={grave
@@ -201,6 +201,6 @@
           </button>
         </div>
       {/if}
-    </Card>
+    </Section>
   {/if}
 </Page>

@@ -7,7 +7,7 @@
   import Namespaces from "./Namespaces.svelte";
   import Tokens from "./Tokens.svelte";
   import ScopesEditor from "./ScopesEditor.svelte";
-  import Card from "./ui/Card.svelte";
+  import Section from "./ui/Section.svelte";
   import ClientLogo from "./ui/ClientLogo.svelte";
   import Facts from "./ui/Facts.svelte";
   import Field from "./ui/Field.svelte";
@@ -374,7 +374,7 @@
 
     <div class="grid items-start gap-4 md:grid-cols-2">
       <div class="flex flex-col gap-4">
-        <Card title="Registration">
+        <Section title="Registration">
           <Field label="Name" bind:value={name} onsave={() => update({ name }, "Renamed.")} />
 
           <Facts rows={facts} />
@@ -456,10 +456,10 @@
               </button>
             {/if}
           </div>
-        </Card>
+        </Section>
 
         {#if saml}
-          <Card title="SAML">
+          <Section title="SAML">
             <Field
               label="Entity ID"
               bind:value={entityId}
@@ -537,10 +537,10 @@
                     : "It is signed into only when it asks.",
                 )}
             />
-          </Card>
+          </Section>
         {/if}
 
-        <Card title="Shown to actors">
+        <Section title="Shown to actors">
           <div class="flex items-center gap-3">
             <ClientLogo {client} class="size-14 rounded-lg border border-base-300 text-xl" />
             <p class="text-xs opacity-60">
@@ -563,9 +563,9 @@
               onsave={() => saveLink(key, notice)}
             />
           {/each}
-        </Card>
+        </Section>
 
-        <Card title="Sign-in">
+        <Section title="Sign-in">
           <label class="flex flex-col gap-1.5">
             <span class="text-xs font-medium opacity-70">Policy</span>
             <select
@@ -655,10 +655,10 @@
               onchange={(on) => update({ backchannelLogoutSessionRequired: on }, "Saved.")}
             />
           {/if}
-        </Card>
+        </Section>
 
         {#if !saml}
-          <Card title="Keys">
+          <Section title="Keys">
             <p class="text-xs opacity-60">
               What masks checks its signed assertions (private_key_jwt) and signed requests (JAR) against. A URL or the
               key set itself, not both.
@@ -699,10 +699,10 @@
                   )}
               />
             {/if}
-          </Card>
+          </Section>
         {/if}
 
-        <Card title="Scopes">
+        <Section title="Scopes">
           <div class="flex flex-col gap-1.5">
             <span class="text-xs font-medium opacity-70">Always granted</span>
             <ScopesEditor
@@ -720,11 +720,11 @@
               onchange={(allowedScopes) => update({ allowedScopes }, "Scopes updated.")}
             />
           </div>
-        </Card>
+        </Section>
       </div>
 
       <div class="flex flex-col gap-4">
-        <Card title="URIs">
+        <Section title="URIs">
           <Lines
             label={saml ? "Assertion consumer services" : "Redirect"}
             value={client.redirectUris}
@@ -743,23 +743,23 @@
             value={client.resources}
             onsave={(resources) => update({ resources }, "Resources saved.")}
           />
-        </Card>
+        </Section>
 
-        <Card title="Consents">
+        <Section title="Consents">
           <Consents {api} {feedback} rows={client.consents} onchange={load} showActor />
-        </Card>
+        </Section>
 
-        <Card title="Tokens">
+        <Section title="Tokens">
           <Tokens {api} {feedback} rows={client.tokens} onchange={load} showActor />
-        </Card>
+        </Section>
 
-        <Card title="Activity">
+        <Section title="Activity">
           {#snippet actions()}
             <Link to={`/activity?client=${client.clientId}`} class="btn btn-ghost btn-sm">All activity</Link>
           {/snippet}
 
           <Events events={client.events} empty="Nothing yet." />
-        </Card>
+        </Section>
 
         {#if client.namespaces.length}
           <Namespaces {api} rows={client.namespaces} onreleased={load} />

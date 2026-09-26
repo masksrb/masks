@@ -3,7 +3,7 @@
   import { day, joined } from "./lib/format.js";
   import Devices from "./Devices.svelte";
   import ScopesEditor from "./ScopesEditor.svelte";
-  import Card from "./ui/Card.svelte";
+  import Section from "./ui/Section.svelte";
   import Field from "./ui/Field.svelte";
   import Link from "./ui/Link.svelte";
   import Notices from "./ui/Notices.svelte";
@@ -205,7 +205,7 @@
   <Notices feedback={feedback.state} />
 
   {#if adding}
-    <Card title="Add actor">
+    <Section title="Add actor">
       <div class="grid gap-3 sm:grid-cols-2">
         <Field
           label="Nickname"
@@ -250,11 +250,11 @@
         </button>
         <button type="button" class="btn btn-ghost btn-sm" onclick={close}>Cancel</button>
       </div>
-    </Card>
+    </Section>
   {/if}
 
   {#if created}
-    <Card title={created.actor.activated ? "Account created" : "Invitation sent"}>
+    <Section title={created.actor.activated ? "Account created" : "Invitation sent"}>
       <p class="text-sm opacity-70">
         {#if created.actor.activated}
           {created.actor.identifier} can sign in now.{created.url
@@ -270,7 +270,7 @@
       {#if created.url}
         <p class="rounded bg-base-200 px-2 py-1 font-mono text-xs break-all">{created.url}</p>
       {/if}
-    </Card>
+    </Section>
   {/if}
 
   {#if loading && actors.length === 0}
