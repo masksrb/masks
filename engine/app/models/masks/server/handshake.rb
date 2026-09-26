@@ -165,7 +165,7 @@ module Masks
         def http?(uri)
           return false unless uri.scheme == "http"
 
-          ::Rails.env.local? || Client::LOOPBACK.include?(uri.host) || uri.host.end_with?(".localhost")
+          ::Rails.env.local? || Client.loopback?(uri)
         end
     end
   end

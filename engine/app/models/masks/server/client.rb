@@ -66,6 +66,12 @@ module Masks
       attr_reader :secret, :registration_token
 
       class << self
+        def loopback?(uri)
+          host = uri.host.to_s
+
+          LOOPBACK.include?(host) || host.end_with?(".localhost")
+        end
+
         def approve!(handshake, actor:)
           client = approved_for(handshake.resource) || new(client_id: SecureRandom.uuid)
 
@@ -376,9 +382,7 @@ module Masks
         end
 
         def loopback?(uri)
-          host = uri.host.to_s
-
-          LOOPBACK.include?(host) || host.end_with?(".localhost")
+          self.class.loopback?(uri)
         end
 
         def grant_types_are_known

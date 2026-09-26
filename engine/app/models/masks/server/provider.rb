@@ -467,7 +467,7 @@ module Masks
             uri = usable_uri(value)
 
             next errors.add(field, "must be an absolute http or https URL") if uri.nil?
-            next if uri.scheme == "https" || Client::LOOPBACK.include?(uri.host)
+            next if uri.scheme == "https" || Client.loopback?(uri)
 
             errors.add(field, "must use https unless it points at a loopback address")
           end

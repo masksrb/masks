@@ -192,6 +192,15 @@ module Masks
         assert_nil answer["errors"]
       end
 
+      test "a name under .localhost is loopback too, and a name that merely contains it is not" do
+        assert_nil add(tokenUrl: "http://mcp.localhost:8190/token")["errors"]
+
+        within(@tenant) { Provider.delete_all }
+        answer = add(tokenUrl: "http://mcp.localhost.example.com/token")
+
+        assert_match(/https/, answer["errors"].first["message"])
+      end
+
       test "authorize params may not take over the parameters the request builds" do
         answer = add(authorizeParams: { "redirect_uri" => "https://elsewhere.example.com/cb" })
 
