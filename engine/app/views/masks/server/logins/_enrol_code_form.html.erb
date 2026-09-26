@@ -1,0 +1,9 @@
+<%= form_with url: login_path, method: :post, id: id, class: "flow-tight" do |form| %>
+  <%= hidden_field_tag :rid, login.rid %>
+  <%= form.hidden_field :event, value: event %>
+  <%= form.text_field :code, inputmode: "numeric", pattern: "[0-9 ]*",
+        autocomplete: "one-time-code", maxlength: 7, spellcheck: "false",
+        placeholder: t("logins.shared.code"), aria: { label: t("logins.shared.code") },
+        class: "control control-code" %>
+  <button type="submit" class="action action-quiet"><%= t("logins.enrol.turn_on") %></button>
+<% end %>

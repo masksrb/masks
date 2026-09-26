@@ -20,39 +20,27 @@ const sendable = $derived(Object.entries(enrolment.codes ?? {}));
 
 const passkeyable = $derived(offers.passkey && available());
 
-let code = $state("");
-let sentCode = $state("");
+let entered = $state({ "enrol:otp": "", "enrol:code": "" });
 let kept = $state(false);
 let copied = $state(false);
 
-const coded = $derived(code.replace(/\D/g, "").length === 6);
 const ready = $derived(secured && (issued.length === 0 || kept));
-const sentCoded = $derived(sentCode.replace(/\D/g, "").length === 6);
 const anything = $derived(
   Boolean(otp.enabled || passkeys.count > 0 || sendable.some(([, row]) => row.enabled)),
 );
 const lede = $derived(enrolment.required ? login.t("lede") : login.t("lede_optional"));
 
-function turnOn(event) {
-  event.preventDefault();
+const complete = (name) => entered[name].replace(/\D/g, "").length === 6;
 
-  if (!coded || login.loading) return;
+function turnOn(submitted, name) {
+  submitted.preventDefault();
 
-  const entered = code;
-  code = "";
+  if (!complete(name) || login.loading) return;
 
-  login.submit("enrol:otp", { code: entered });
-}
+  const code = entered[name];
+  entered[name] = "";
 
-function confirmSent(event) {
-  event.preventDefault();
-
-  if (!sentCoded || login.loading) return;
-
-  const entered = sentCode;
-  sentCode = "";
-
-  login.submit("enrol:code", { code: entered });
+  login.submit(name, { code });
 }
 
 const origin = typeof location === "undefined" ? "" : location.origin;
@@ -86,6 +74,26 @@ function done(event) {
 }
 </script>
 
+{#snippet codeForm(name)}
+  <form class="flow-tight" onsubmit={(submitted) => turnOn(submitted, name)} aria-busy={login.loading || undefined}>
+    <input
+      type="text"
+      name="code"
+      class="control control-code"
+      inputmode="numeric"
+      pattern="[0-9 ]*"
+      autocomplete="one-time-code"
+      maxlength="7"
+      spellcheck="false"
+      aria-label={login.t("code")}
+      placeholder={login.t("code")}
+      bind:value={entered[name]}
+    />
+
+    <Action {login} type="submit" quiet ready={complete(name)} label={login.t("turn_on")} />
+  </form>
+{/snippet}
+
 <div class="flow" class:setup={signingUp} class:setup-ready={signingUp && ready}>
   {#if signingUp}
     <SignupHead {login} at={2} mark={login.actor?.identifier ?? ""} />
@@ -117,23 +125,7 @@ function done(event) {
           </div>
         </div>
 
-        <form class="flow-tight" onsubmit={turnOn} aria-busy={login.loading || undefined}>
-          <input
-            type="text"
-            name="code"
-            class="control control-code"
-            inputmode="numeric"
-            pattern="[0-9 ]*"
-            autocomplete="one-time-code"
-            maxlength="7"
-            spellcheck="false"
-            aria-label={login.t("code")}
-            placeholder={login.t("code")}
-            bind:value={code}
-          />
-
-          <Action {login} type="submit" quiet ready={coded} label={login.t("turn_on")} />
-        </form>
+        {@render codeForm("enrol:otp")}
       {/if}
     </div>
     {/if}
@@ -164,23 +156,7 @@ function done(event) {
         {:else if row.sent}
           <span class="field-hint">{login.t("sent_to", { to: row.to })}</span>
 
-          <form class="flow-tight" onsubmit={confirmSent} aria-busy={login.loading || undefined}>
-            <input
-              type="text"
-              name="code"
-              class="control control-code"
-              inputmode="numeric"
-              pattern="[0-9 ]*"
-              autocomplete="one-time-code"
-              maxlength="7"
-              spellcheck="false"
-              aria-label={login.t("code")}
-              placeholder={login.t("code")}
-              bind:value={sentCode}
-            />
-
-            <Action {login} type="submit" quiet ready={sentCoded} label={login.t("turn_on")} />
-          </form>
+          {@render codeForm("enrol:code")}
         {:else}
           <span class="field-hint">{login.t(`codes_${factor}_hint`, { to: row.to })}</span>
 

@@ -2,8 +2,6 @@ module Masks
   module Server
     module LoginStates
       class OneTimePassword < LoginState
-        EXPIRY = 12.hours
-
         accepts :code, :remember
 
         def enabled?
@@ -18,9 +16,7 @@ module Masks
           return warn!("missing-first-factor") unless login.first_factored?
 
           if actor.verify_otp(update(:code))
-            factored! :second_factor, expiry: EXPIRY
-            remember! DeviceFactor::SECOND_FACTOR if remembering?
-            login.noted! "otp", "mfa"
+            second_factored! "otp"
             true
           else
             refused! "otp"
@@ -28,12 +24,6 @@ module Masks
             false
           end
         end
-
-        private
-
-          def remembering?
-            device.present? && ActiveModel::Type::Boolean.new.cast(update(:remember))
-          end
       end
     end
   end

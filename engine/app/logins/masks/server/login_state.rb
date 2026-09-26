@@ -119,6 +119,18 @@ module Masks
         updates[name.to_s] if self.class.declared_updates.include?(name.to_sym)
       end
 
+      SECOND_FACTOR_EXPIRY = 12.hours
+
+      def remembering?
+        device.present? && ActiveModel::Type::Boolean.new.cast(update(:remember))
+      end
+
+      def second_factored!(*methods, expiry: SECOND_FACTOR_EXPIRY)
+        factored! :second_factor, expiry: expiry
+        remember! DeviceFactor::SECOND_FACTOR if remembering?
+        login.noted!(*methods, "mfa")
+      end
+
       def prompt!(name)
         raise PromptRequired, name
       end

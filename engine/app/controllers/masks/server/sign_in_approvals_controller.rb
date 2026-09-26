@@ -22,21 +22,14 @@ module Masks
       end
 
       def update
-        approval = SignInApproval.live.find_by(id: session.delete(HELD), actor_id: current_actor.id)
+        approval = SignInApproval.waiting.find_by(id: session.delete(HELD), actor_id: current_actor.id)
+        verdict = params[:answer] == "approve" ? "approved" : "denied"
 
-        return refuse(t("sign_in_approvals.expired")) if approval.nil? || approval.answered?
+        return refuse(t("sign_in_approvals.expired")) unless approval&.answer!(verdict, by: current_device)
 
-        if params[:answer] == "approve"
-          approval.approve!(by: current_device)
-          Event.record!(Event::SIGN_IN_APPROVED, actor: current_actor, asking: approval.device&.label)
+        Event.record!("sign_in.#{verdict}", actor: current_actor, asking: approval.device&.label)
 
-          redirect_to root_path, notice: t("sign_in_approvals.approved")
-        else
-          approval.deny!(by: current_device)
-          Event.record!(Event::SIGN_IN_DENIED, actor: current_actor, asking: approval.device&.label)
-
-          redirect_to root_path, notice: t("sign_in_approvals.denied")
-        end
+        redirect_to root_path, notice: t("sign_in_approvals.#{verdict}")
       end
 
       private
@@ -44,7 +37,7 @@ module Masks
         def require_trusted_device
           return redirect_to login_path unless current_actor
 
-          refuse(t("sign_in_approvals.untrusted")) unless SignInApproval.trusted?(actor: current_actor, device: current_device)
+          refuse(t("sign_in_approvals.untrusted")) unless DeviceFactor.satisfied?(device: current_device, actor: current_actor)
         end
 
         def refuse(message)

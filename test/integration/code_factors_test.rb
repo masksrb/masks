@@ -68,7 +68,6 @@ module Masks
         body = to_second_factor
 
         assert_equal "second-factor", body["prompt"]
-        assert body.dig("secondFactors", "sms")
         assert_equal "•••• 4567", body.dig("codeFactors", "sms")
 
         body = event("code:send", factor: "sms")

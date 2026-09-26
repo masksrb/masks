@@ -34,9 +34,10 @@ Masks::Server::Engine.routes.draw do
   post "/account/passkeys", to: "passkeys#create", as: :passkeys
   delete "/account/passkeys/:id", to: "passkeys#destroy", as: :passkey
 
-  post "/account/codes/:factor", to: "code_factors#create", as: :account_code_factor,
-                                 constraints: { factor: /email|sms/ }
-  delete "/account/codes/:factor", to: "code_factors#destroy", constraints: { factor: /email|sms/ }
+  scope constraints: { factor: Regexp.union(Masks::Server::CodeFactors::FACTORS) } do
+    post "/account/codes/:factor", to: "code_factors#create", as: :account_code_factor
+    delete "/account/codes/:factor", to: "code_factors#destroy"
+  end
 
   post "/account/approve", to: "sign_in_approvals#create", as: :account_approval
   patch "/account/approve", to: "sign_in_approvals#update"

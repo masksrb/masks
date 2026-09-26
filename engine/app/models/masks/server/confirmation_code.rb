@@ -45,16 +45,28 @@ module Masks
           OpenSSL::HMAC.hexdigest("SHA256", salt.to_s, code.to_s)
         end
 
+        def generate
+          code = SecureRandom.random_number(10**DIGITS).to_s.rjust(DIGITS, "0")
+          salt = SecureRandom.hex(16)
+
+          [ code, { "salt" => salt, "digest" => digest(salt, code) } ]
+        end
+
+        def matches?(held, code)
+          entered = code.to_s.delete("^0-9")
+
+          entered.length == DIGITS &&
+            ActiveSupport::SecurityUtils.secure_compare(digest(held["salt"], entered), held["digest"].to_s)
+        end
+
         private
 
           def mint_code!(actor:, channel:, address:, ip: nil)
-            code = SecureRandom.random_number(10**DIGITS).to_s.rjust(DIGITS, "0")
-            salt = SecureRandom.hex(16)
+            code, secret = generate
 
             token = mint!(
               actor: actor,
-              payload: { "channel" => channel, "address" => address, "salt" => salt,
-                         "digest" => digest(salt, code), "attempts" => 0, "ip" => ip }.compact
+              payload: { "channel" => channel, "address" => address, **secret, "attempts" => 0, "ip" => ip }.compact
             )
 
             [ token, code ]
@@ -74,9 +86,7 @@ module Masks
       end
 
       def verify(code)
-        entered = code.to_s.delete("^0-9")
-        matched = entered.length == DIGITS &&
-                  ActiveSupport::SecurityUtils.secure_compare(self.class.digest(held("salt"), entered), held("digest"))
+        matched = self.class.matches?(payload, code)
 
         with_lock do
           next false unless live?

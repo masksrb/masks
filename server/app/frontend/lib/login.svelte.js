@@ -31,17 +31,25 @@ export function createLogin(initial, options = {}) {
   let failed = $state(false);
   let last = null;
 
-  async function dispatch(method, body) {
-    loading = true;
-    failed = false;
-    last = [method, body];
+  async function dispatch(method, body, { quiet = false } = {}) {
+    if (quiet && loading) return auth;
+
+    if (!quiet) {
+      loading = true;
+      failed = false;
+      last = [method, body];
+    }
 
     try {
-      auth = await send(
+      const held = await send(
         url,
         method,
         auth.rid ? { rid: auth.rid, ...body } : body,
       );
+
+      if (quiet && loading) return auth;
+
+      auth = held;
 
       if (auth.redirectTo) {
         window.location.assign(auth.redirectTo);
@@ -49,11 +57,11 @@ export function createLogin(initial, options = {}) {
 
       return auth;
     } catch {
-      failed = true;
+      if (!quiet) failed = true;
 
       return auth;
     } finally {
-      loading = false;
+      if (!quiet) loading = false;
     }
   }
 
@@ -97,26 +105,8 @@ export function createLogin(initial, options = {}) {
     startOver() {
       return dispatch("DELETE");
     },
-    async poll(event, updates = {}) {
-      if (loading) return auth;
-
-      try {
-        const held = await send(url, "POST", {
-          rid: auth.rid,
-          event,
-          ...updates,
-        });
-
-        if (loading) return auth;
-
-        auth = held;
-
-        if (auth.redirectTo) window.location.assign(auth.redirectTo);
-      } catch {
-        return auth;
-      }
-
-      return auth;
+    poll(event, updates = {}) {
+      return dispatch("POST", { event, ...updates }, { quiet: true });
     },
     retry() {
       return last ? dispatch(...last) : Promise.resolve(auth);

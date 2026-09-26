@@ -241,15 +241,20 @@
     );
   }
 
+  const CODE_FACTORS = [
+    ["email", "emailCodesEnabled", "Email codes"],
+    ["sms", "textCodesEnabled", "Text message codes"],
+  ];
+
   function turnOff(factor, name) {
-    if (!confirm(`Turn off ${name} for this actor?`)) return;
+    if (!confirm(`Turn off ${name.toLowerCase()} for this actor?`)) return;
 
     act(
       `mutation TurnOff($uuid: ID!, $factor: String!) {
         disableCodeFactor(uuid: $uuid, factor: $factor) { actor { uuid } }
       }`,
       { uuid, factor },
-      `${name[0].toUpperCase()}${name.slice(1)} turned off.`,
+      `${name} turned off.`,
     );
   }
 
@@ -538,30 +543,18 @@
             <p class="text-sm opacity-70">Password only — nothing enrolled.</p>
           {/if}
 
-          {#if actor.emailCodesEnabled || actor.textCodesEnabled}
+          {#each CODE_FACTORS.filter(([, field]) => actor[field]) as [factor, , name] (factor)}
             <div class="flex flex-wrap items-center gap-2">
-              {#if actor.emailCodesEnabled}
-                <span class="text-sm">Email codes on.</span>
-                <button
-                  type="button"
-                  class="btn btn-sm btn-error btn-outline"
-                  onclick={() => turnOff("email", "email codes")}
-                >
-                  Turn off email codes
-                </button>
-              {/if}
-              {#if actor.textCodesEnabled}
-                <span class="text-sm">Text message codes on.</span>
-                <button
-                  type="button"
-                  class="btn btn-sm btn-error btn-outline"
-                  onclick={() => turnOff("sms", "text message codes")}
-                >
-                  Turn off text message codes
-                </button>
-              {/if}
+              <span class="text-sm">{name} on.</span>
+              <button
+                type="button"
+                class="btn btn-sm btn-error btn-outline"
+                onclick={() => turnOff(factor, name)}
+              >
+                Turn off {name.toLowerCase()}
+              </button>
             </div>
-          {/if}
+          {/each}
         </Section>
 
         <Section title="Activity">

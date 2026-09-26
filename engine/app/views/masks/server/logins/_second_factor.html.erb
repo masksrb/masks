@@ -1,18 +1,17 @@
 <% otp = login.actor&.otp? %>
 <% backup_codes = login.actor&.backup_codes? %>
-<% codes = login.state("code-factor") %>
-<% code_json = codes.enabled? ? codes.as_json : {} %>
-<% usable = code_json.fetch("codeFactors", {}) %>
-<% sent = code_json["codeSent"] %>
-<% trusted = login.state("trusted-device") %>
-<% approval = trusted.enabled? ? trusted.as_json["approval"] : nil %>
-<% approving = approval && !approval["denied"] && !approval["expired"] %>
+<% json = login.as_json %>
+<% usable = json.fetch("codeFactors", {}) %>
+<% sent = json["codeSent"] %>
+<% trusted = json.dig("secondFactors", "trustedDevice") %>
+<% approval = json["approval"] %>
+<% approving = approval&.dig("state") == "waiting" %>
 
-<% if otp || backup_codes || usable.any? || trusted.enabled? %>
+<% if otp || backup_codes || usable.any? || trusted %>
   <%= render "masks/server/logins/head", title: t(otp || sent ? ".title" : ".title_passkey"),
                                          lede: sent && t(".sent_to", to: sent["to"]) %>
 <% else %>
-  <% why = if code_json["codesWithheld"].present? then ".stuck_inbox"
+  <% why = if json["codesWithheld"].present? then ".stuck_inbox"
            elsif login.actor&.verified_passkeys? then ".stuck_no_script"
            else ".stuck_nothing" end %>
   <noscript>
@@ -47,7 +46,7 @@
 
 <% if approving %>
   <div class="slab flow-tight">
-    <span class="aside-mono approval-code"><%= approval["code"].to_s.scan(/.{1,3}/).join(" ") %></span>
+    <span class="aside-mono approval-code"><%= approval["code"] %></span>
     <span class="field-hint"><%= t(".approval_code") %></span>
   </div>
 
@@ -62,7 +61,7 @@
     <% end %>
     <button type="submit" class="action"><%= t(".approval_checked") %></button>
   <% end %>
-<% elsif trusted.enabled? %>
+<% elsif trusted %>
   <%= form_with url: login_path, method: :post, id: "approval-request", class: "flow" do |form| %>
     <%= hidden_field_tag :rid, login.rid %>
     <%= form.hidden_field :event, value: "approval:request" %>

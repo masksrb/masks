@@ -20,25 +20,21 @@ module Masks
 
         def held_factors
           CodeFactors::FACTORS.select do |factor|
-            CodeFactors.held?(actor, factor) && (actor.manages? || login.policy.second_factor?(factor))
+            CodeFactors.held?(actor, factor) && CodeFactors.offered?(actor, factor, policy: login.policy)
           end
         end
 
-        def usable_factors
-          held_factors.select do |factor|
-            CodeFactors.deliverable?(factor) && (factor != "email" || independent_of_the_inbox?)
-          end
-        end
-
-        def withheld
-          held_factors.include?("email") && !independent_of_the_inbox? ? [ "email" ] : []
+        def usable_factors(held = held_factors)
+          held.select { |factor| CodeFactors.deliverable?(factor) && !withheld?(factor) }
         end
 
         def as_json
+          held = held_factors
+
           {
-            "codeFactors" => usable_factors.to_h { |factor| [ factor, CodeFactors.masked(actor, factor) ] },
+            "codeFactors" => usable_factors(held).to_h { |factor| [ factor, CodeFactors.masked(actor, factor) ] },
             "codeSent" => sent_json,
-            "codesWithheld" => withheld.presence
+            "codesWithheld" => held.select { |factor| withheld?(factor) }.presence
           }.compact
         end
 
@@ -48,8 +44,8 @@ module Masks
 
         private
 
-          def independent_of_the_inbox?
-            login.amr.intersect?(CodeFactors::INDEPENDENT_OF_THE_INBOX)
+          def withheld?(factor)
+            factor == "email" && !login.amr.intersect?(CodeFactors::INDEPENDENT_OF_THE_INBOX)
           end
 
           def held
@@ -65,7 +61,7 @@ module Masks
           end
 
           def sent_json
-            return nil if held["factor"].blank? || token.nil?
+            return nil if token.nil?
 
             { "factor" => held["factor"], "to" => CodeFactors.masked(actor, held["factor"]),
               "resendable" => token.resendable? }
@@ -93,18 +89,12 @@ module Masks
             if token.verify(update(:code))
               login.store.delete(HELD)
               remove_instance_variable(:@token)
-              factored! :second_factor, expiry: OneTimePassword::EXPIRY
-              remember! DeviceFactor::SECOND_FACTOR if remembering?
-              login.noted! CodeFactors.amr(factor), "mfa"
+              second_factored! CodeFactors.amr(factor)
             else
               remove_instance_variable(:@token)
               refused! "#{factor}_code"
               warn! "invalid-code"
             end
-          end
-
-          def remembering?
-            device.present? && ActiveModel::Type::Boolean.new.cast(update(:remember))
           end
       end
     end

@@ -18,8 +18,6 @@ module Masks
       def destroy
         factor = params[:factor].to_s
 
-        return refuse(t("code_factors.unoffered")) unless CodeFactors.known?(factor)
-
         CodeFactors.disable!(current_actor, factor)
 
         redirect_to root_path, notice: t("code_factors.disabled.#{factor}")

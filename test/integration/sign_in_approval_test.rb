@@ -62,7 +62,7 @@ module Masks
         body = event(asking, "approval:request")
         code = body.dig("approval", "code")
 
-        assert_match(/\A\d{6}\z/, code)
+        assert_match(/\A\d{3} \d{3}\z/, code)
         refute event(asking, "approval:check")["settled"]
 
         trusted.get "/", headers: { "HTTP_USER_AGENT" => CHROME }
@@ -95,7 +95,7 @@ module Masks
 
         refute body["settled"]
         assert_includes body["warnings"], "approval-denied"
-        assert body.dig("approval", "denied")
+        assert_equal "denied", body.dig("approval", "state")
       end
 
       test "an approval is claimed once, by the sign-in that asked for it" do

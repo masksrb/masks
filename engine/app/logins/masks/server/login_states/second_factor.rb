@@ -21,8 +21,6 @@ module Masks
             "secondFactors" => {
               "otp" => actor.otp?,
               "passkey" => actor.verified_passkeys?,
-              "email" => codes.usable_factors.include?("email"),
-              "sms" => codes.usable_factors.include?("sms"),
               "trustedDevice" => login.state("trusted-device").offered?
             },
             "rememberable" => device.present?,

@@ -266,24 +266,6 @@ module Masks
         phone_factor_at.present? && phone.present? && phone_verified_at.present?
       end
 
-      def code_factor?(channel)
-        channel.to_s == ConfirmationCode::EMAIL ? email_factor? : phone_factor?
-      end
-
-      def adopt_code_factor!(channel)
-        now = Time.current
-
-        if channel.to_s == ConfirmationCode::EMAIL
-          update!(email_factor_at: now, email_verified_at: email_verified_at || now)
-        else
-          update!(phone_factor_at: now, phone_verified_at: phone_verified_at || now)
-        end
-      end
-
-      def drop_code_factor!(channel)
-        update!(channel.to_s == ConfirmationCode::EMAIL ? { email_factor_at: nil } : { phone_factor_at: nil })
-      end
-
       def password?
         password_digest.present?
       end

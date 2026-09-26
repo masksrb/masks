@@ -13,11 +13,9 @@ let useApp = $state(false);
 
 const methods = $derived(login.auth.secondFactors ?? { otp: true });
 const codeFactors = $derived(login.auth.codeFactors ?? {});
+const sendable = $derived(Object.keys(codeFactors).length > 0);
 const approval = $derived(login.auth.approval);
-const approving = $derived(Boolean(approval && !approval.denied && !approval.expired));
-const shownCode = $derived(
-  approval?.code ? `${approval.code.slice(0, 3)} ${approval.code.slice(3)}` : "",
-);
+const approving = $derived(approval?.state === "waiting");
 const sent = $derived(useApp ? null : login.auth.codeSent);
 const valid = $derived(code.replace(/\D/g, "").length === 6);
 const passkeyReady = $derived(
@@ -29,7 +27,7 @@ const stuck = $derived(
     !passkeyReady &&
     !login.backupCodes &&
     !methods.trustedDevice &&
-    Object.keys(codeFactors).length === 0,
+    !sendable,
 );
 const why = $derived.by(() => {
   if (login.auth.codesWithheld?.includes("email")) return "stuck_inbox";
@@ -44,11 +42,7 @@ function submit() {
   const entered = code;
   code = "";
 
-  if (sent) {
-    login.submit("code:verify", { code: entered, remember });
-  } else {
-    login.submit("otp", { code: entered, remember });
-  }
+  login.submit(sent ? "code:verify" : "otp", { code: entered, remember });
 }
 
 function onsubmit(event) {
@@ -69,9 +63,20 @@ $effect(() => {
   if (!approving) return;
 
   const held = remember;
-  const timer = setInterval(() => login.poll("approval:check", { remember: held }), 2000);
+  let timer;
+  let stopped = false;
 
-  return () => clearInterval(timer);
+  const check = async () => {
+    if (!document.hidden) await login.poll("approval:check", { remember: held });
+    if (!stopped) timer = setTimeout(check, 2000);
+  };
+
+  timer = setTimeout(check, 2000);
+
+  return () => {
+    stopped = true;
+    clearTimeout(timer);
+  };
 });
 </script>
 
@@ -146,18 +151,18 @@ $effect(() => {
     <PasskeyButton {login} params={{ remember }} />
   {/if}
 
-  {#if !asking && !passkeyReady && (approving || Object.keys(codeFactors).length > 0)}
+  {#if !asking && !passkeyReady && (approving || sendable)}
     {@render trust()}
   {/if}
 
   {#if approving}
     <div class="slab flow-tight" aria-live="polite">
-      <span class="aside-mono approval-code">{shownCode}</span>
+      <span class="aside-mono approval-code">{approval.code}</span>
       <span class="field-hint">{login.t("approval_code")}</span>
       <span class="aside">{login.t("approval_waiting")}</span>
     </div>
   {:else if methods.trustedDevice}
-    {#if approval?.expired}
+    {#if approval?.state === "expired"}
       <p class="aside aside-bad" role="alert">{login.t("approval_expired")}</p>
     {/if}
 

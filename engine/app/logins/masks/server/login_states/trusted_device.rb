@@ -15,12 +15,14 @@ module Masks
         end
 
         def enabled?
-          actor.present? && login.first_factored? && !login.second_factored? && offered?
+          actor.present? && offered? && login.first_factored? && !login.second_factored?
         end
 
         def offered?
-          login.policy.second_factor?("trusted_device") &&
-            SignInApproval.approvers?(actor: actor, except: device)
+          return @offered if defined?(@offered)
+
+          @offered = login.policy.second_factor?("trusted_device") &&
+                     SignInApproval.approvers?(actor: actor, except: device)
         end
 
         def as_json
@@ -49,17 +51,18 @@ module Masks
           def approval_json
             return nil if approval.nil?
 
-            {
-              "code" => held["code"],
-              "expiresIn" => approval.expires_in,
-              "denied" => approval.denied? || nil,
-              "expired" => (!approval.live? && !approval.denied?) || nil
-            }.compact
+            state =
+              if approval.denied? then "denied"
+              elsif approval.live? then "waiting"
+              else "expired"
+              end
+
+            { "code" => held["code"].to_s.scan(/.{1,3}/).join(" "), "state" => state }
           end
 
           def request_approval
             return warn!("missing-first-factor") unless login.first_factored?
-            return if approval&.live? && !approval.answered? && approval.expires_in > SignInApproval.lifetime - 30.seconds
+            return if approval&.live? && !approval.answered? && !approval.resendable?
 
             opened, code = SignInApproval.open!(actor: actor, device: device)
 
@@ -73,13 +76,7 @@ module Masks
             return unless approval.approved? && approval.claim!
 
             login.store.delete(HELD)
-            factored! :second_factor, expiry: OneTimePassword::EXPIRY
-            remember! DeviceFactor::SECOND_FACTOR if remembering?
-            login.noted! "mfa"
-          end
-
-          def remembering?
-            device.present? && ActiveModel::Type::Boolean.new.cast(update(:remember))
+            second_factored!
           end
       end
     end

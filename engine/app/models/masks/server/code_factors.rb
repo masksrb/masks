@@ -1,22 +1,38 @@
 module Masks
   module Server
     module CodeFactors
-      FACTORS = %w[email sms].freeze
+      SPECS = {
+        "email" => {
+          channel: ConfirmationCode::EMAIL, sent_on: "email_factor", on: :email_factor_at,
+          verified: :email_verified_at, held: :email_factor?, amr: "otp", icon: :email,
+          enabled: Event::EMAIL_CODES_ENABLED, disabled: Event::EMAIL_CODES_DISABLED,
+          deliverable: -> { ActorMailer.deliverable? },
+          mask: ->(address) { name, domain = address.split("@", 2); "#{name.to_s[0]}•••@#{domain}" }
+        },
+        "sms" => {
+          channel: ConfirmationCode::PHONE, sent_on: "phone_factor", on: :phone_factor_at,
+          verified: :phone_verified_at, held: :phone_factor?, amr: "sms", icon: :device,
+          enabled: Event::TEXT_CODES_ENABLED, disabled: Event::TEXT_CODES_DISABLED,
+          deliverable: -> { Texting.deliverable? },
+          mask: ->(address) { "•••• #{address.last(4)}" }
+        }
+      }.freeze
 
-      CHANNELS = { "email" => ConfirmationCode::EMAIL, "sms" => ConfirmationCode::PHONE }.freeze
-      SENT_ON = { "email" => "email_factor", "sms" => "phone_factor" }.freeze
-      ENABLED = { "email" => Event::EMAIL_CODES_ENABLED, "sms" => Event::TEXT_CODES_ENABLED }.freeze
-      DISABLED = { "email" => Event::EMAIL_CODES_DISABLED, "sms" => Event::TEXT_CODES_DISABLED }.freeze
+      FACTORS = SPECS.keys.freeze
 
       INDEPENDENT_OF_THE_INBOX = %w[pwd swk].freeze
 
       class << self
         def known?(factor)
-          FACTORS.include?(factor.to_s)
+          SPECS.key?(factor.to_s)
+        end
+
+        def spec(factor)
+          SPECS.fetch(factor.to_s)
         end
 
         def held?(actor, factor)
-          known?(factor) && actor.code_factor?(CHANNELS.fetch(factor.to_s))
+          known?(factor) && actor.public_send(spec(factor)[:held])
         end
 
         def offered?(actor, factor, policy: SignInPolicy.for(tenant: Current.tenant))
@@ -24,40 +40,35 @@ module Masks
         end
 
         def confirmed?(actor, factor)
-          verified = factor.to_s == "email" ? actor.email_verified_at : actor.phone_verified_at
-
-          address(actor, factor).present? && verified.present?
+          address(actor, factor).present? && actor.public_send(spec(factor)[:verified]).present?
         end
 
         def deliverable?(factor)
-          factor.to_s == "email" ? ActorMailer.deliverable? : Texting.deliverable?
+          spec(factor)[:deliverable].call
         end
 
         def address(actor, factor)
-          actor.public_send(CHANNELS.fetch(factor.to_s))
+          actor.public_send(spec(factor)[:channel])
         end
 
         def masked(actor, factor)
-          held = address(actor, factor).to_s
+          spec(factor)[:mask].call(address(actor, factor).to_s)
+        end
 
-          if factor.to_s == "email"
-            name, domain = held.split("@", 2)
-            "#{name.to_s[0]}•••@#{domain}"
-          else
-            "•••• #{held.last(4)}"
-          end
+        def amr(factor)
+          spec(factor)[:amr]
+        end
+
+        def icon(factor)
+          spec(factor)[:icon]
         end
 
         def send!(actor, factor)
+          held = spec(factor)
           to = address(actor, factor)
-          token, code = ConfirmationCode.open!(actor: actor, channel: SENT_ON.fetch(factor.to_s), address: to)
-          tenant_name = Current.tenant&.name
+          token, code = ConfirmationCode.open!(actor: actor, channel: held[:sent_on], address: to)
 
-          if factor.to_s == "email"
-            ActorMailer.confirmation_code(to, code, tenant_name: tenant_name).deliver_later
-          else
-            Texting.deliver_later(to: to, body: I18n.t("texts.code", code: code, tenant: tenant_name))
-          end
+          Confirmations.deliver(held[:channel], to, code)
 
           token
         end
@@ -67,25 +78,24 @@ module Masks
 
           token = ConfirmationCode.find_by(id: id, actor_id: actor.id)
 
-          token if token&.live? && token.channel == SENT_ON.fetch(factor.to_s) && token.address == address(actor, factor)
+          token if token&.live? && token.channel == spec(factor)[:sent_on] && token.address == address(actor, factor)
         end
 
         def enable!(actor, factor)
-          actor.adopt_code_factor!(CHANNELS.fetch(factor.to_s))
+          held = spec(factor)
+          now = Time.current
 
-          Event.record!(ENABLED.fetch(factor.to_s), actor: actor)
+          actor.update!(held[:on] => now, held[:verified] => actor.public_send(held[:verified]) || now)
+
+          Event.record!(held[:enabled], actor: actor)
         end
 
         def disable!(actor, factor, by: :subject)
           return false unless held?(actor, factor)
 
-          actor.drop_code_factor!(CHANNELS.fetch(factor.to_s))
+          actor.update!(spec(factor)[:on] => nil)
 
-          Event.record!(DISABLED.fetch(factor.to_s), actor: actor, by: by)
-        end
-
-        def amr(factor)
-          factor.to_s == "sms" ? "sms" : "otp"
+          Event.record!(spec(factor)[:disabled], actor: actor, by: by)
         end
       end
     end

@@ -150,7 +150,7 @@
       <% on = Masks::Server::CodeFactors.held?(actor, factor) %>
       <details class="entry" id="<%= factor %>-codes">
         <summary>
-          <span class="entry-icon"><%= account_icon(factor == "email" ? :email : :device) %></span>
+          <span class="entry-icon"><%= account_icon(Masks::Server::CodeFactors.icon(factor)) %></span>
           <span class="entry-label"><%= account_text("codes.#{factor}.heading") %></span>
           <span class="entry-state"><%= account_text(on ? "codes.state.on" : "codes.state.off") %></span>
           <span class="entry-mark" aria-hidden="true"></span>

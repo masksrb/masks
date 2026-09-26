@@ -5,15 +5,25 @@ module Masks
         def send_code(actor, channel)
           token, code = ConfirmationCode.open!(actor: actor, channel: channel, address: actor.public_send(channel))
 
+          deliver(channel, actor.public_send(channel), code)
+
           if channel == ConfirmationCode::EMAIL
-            ActorMailer.confirmation_code(actor.email, code, tenant_name: Current.tenant&.name).deliver_later
             Event.record!(Event::EMAIL_VERIFICATION_SENT, actor: actor, email: actor.email, by_code: true)
           else
-            Texting.deliver_later(to: actor.phone, body: I18n.t("texts.code", code: code, tenant: Current.tenant&.name))
             Event.record!(Event::PHONE_VERIFICATION_SENT, actor: actor)
           end
 
           token
+        end
+
+        def deliver(channel, to, code)
+          tenant_name = Current.tenant&.name
+
+          if channel == ConfirmationCode::EMAIL
+            ActorMailer.confirmation_code(to, code, tenant_name: tenant_name).deliver_later
+          else
+            Texting.deliver_later(to: to, body: I18n.t("texts.code", code: code, tenant: tenant_name))
+          end
         end
 
         def request_approval(actor)

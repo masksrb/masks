@@ -80,12 +80,18 @@ module Masks
         end
 
         def offers
-          offered = actor.manages? ? SignInPolicy::SECOND_FACTORS : login.policy.second_factors
+          @offers ||= begin
+            offered = actor.manages? ? SignInPolicy::SECOND_FACTORS : login.policy.second_factors
 
-          { "otp" => offered.include?("otp"), "passkey" => offered.include?("passkey"),
-            "backupCodes" => offered.include?("backup_codes"),
-            "email" => offered.include?("email") && code_offerable?("email"),
-            "sms" => offered.include?("sms") && code_offerable?("sms") }
+            { "otp" => offered.include?("otp"), "passkey" => offered.include?("passkey"),
+              "backupCodes" => offered.include?("backup_codes") }.merge(
+                CodeFactors::FACTORS.to_h { |factor| [ factor, offered.include?(factor) && code_offerable?(factor) ] }
+              )
+          end
+        end
+
+        def reload!
+          @offers = nil
         end
 
         private
@@ -102,7 +108,7 @@ module Masks
 
           def offered_at_signup?
             login.store[Signup::SIGNED_UP].present? && login.store[OFFERED].blank? && !actor.second_factor? &&
-              held_codes.empty? && offers.values_at("otp", "passkey", "email", "sms").any?
+              held_codes.empty? && offers.except("backupCodes").values.any?
           end
 
           def open!
@@ -238,8 +244,7 @@ module Masks
           def enrolled!(*methods)
             issue_backup_codes
 
-            factored! :second_factor, expiry: OneTimePassword::EXPIRY
-            login.noted!(*methods)
+            second_factored!(*methods)
           end
 
           def finish
