@@ -1,29 +1,40 @@
-<%= render "masks/server/logins/head", title: t(".title") %>
+<% otp = login.actor&.otp? %>
+<% backup_codes = login.actor&.backup_codes? %>
+
+<% if otp || backup_codes %>
+  <%= render "masks/server/logins/head", title: t(otp ? ".title" : ".title_passkey") %>
+<% else %>
+  <noscript>
+    <%= render "masks/server/logins/head", tone: "bad", title: t("logins.shared.halted"), lede: t(".stuck_no_script") %>
+  </noscript>
+<% end %>
 
 <%= render "masks/server/logins/identified", login: login %>
 
-<%= form_with url: login_path, method: :post, id: "second-factor", class: "flow" do |form| %>
-  <%= hidden_field_tag :rid, login.rid %>
-  <%= form.hidden_field :event, value: "otp" %>
+<% if otp %>
+  <%= form_with url: login_path, method: :post, id: "second-factor", class: "flow" do |form| %>
+    <%= hidden_field_tag :rid, login.rid %>
+    <%= form.hidden_field :event, value: "otp" %>
 
-  <label class="field">
-    <span class="field-label"><%= t(".code") %></span>
-    <%= form.text_field :code, inputmode: "numeric", pattern: "[0-9]*",
-          autocomplete: "one-time-code", maxlength: 6, spellcheck: "false",
-          class: "control control-code" %>
-  </label>
-
-  <% if login.device %>
-    <label class="check">
-      <%= form.check_box :remember %>
-      <span><%= t(".trust", duration: distance_of_time_in_words(Masks::Server::DeviceFactor::LIFETIME)) %></span>
+    <label class="field">
+      <span class="field-label"><%= t(".code") %></span>
+      <%= form.text_field :code, inputmode: "numeric", pattern: "[0-9]*",
+            autocomplete: "one-time-code", maxlength: 6, spellcheck: "false",
+            class: "control control-code" %>
     </label>
-  <% end %>
 
-  <button type="submit" class="action"><%= t("logins.shared.continue") %></button>
+    <% if login.device %>
+      <label class="check">
+        <%= form.check_box :remember %>
+        <span><%= t(".trust", duration: distance_of_time_in_words(Masks::Server::DeviceFactor::LIFETIME)) %></span>
+      </label>
+    <% end %>
+
+    <button type="submit" class="action"><%= t("logins.shared.continue") %></button>
+  <% end %>
 <% end %>
 
-<% if login.actor&.backup_codes? %>
+<% if backup_codes %>
   <%= form_with url: login_path, method: :post, id: "use-backup-code", class: "flow" do |form| %>
     <%= hidden_field_tag :rid, login.rid %>
     <%= form.hidden_field :event, value: "use-backup-code" %>

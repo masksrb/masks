@@ -51,6 +51,37 @@ module Masks
         assert code_from.present?
       end
 
+      test "an account whose only second factor is a passkey is told javascript settles it" do
+        within do
+          Passkey.create!(actor: @actor, external_id: "passkey-only", public_key: "key",
+                          sign_count: 0, user_verified: true)
+        end
+
+        authorize(client_id: @registration["client_id"])
+        submit(event: "identify", identifier: @actor.nickname)
+        submit(event: "password", password: "password")
+
+        assert_equal "second-factor", auth_data["prompt"]
+        assert_select "noscript", text: /#{Regexp.escape(I18n.t("logins.second_factor.stuck_no_script"))}/
+        assert_select "form#second-factor", count: 0
+      end
+
+      test "an account holding backup codes and a passkey is offered the codes without javascript" do
+        within do
+          Passkey.create!(actor: @actor, external_id: "passkey-and-codes", public_key: "key",
+                          sign_count: 0, user_verified: true)
+          @actor.generate_backup_codes!
+        end
+
+        authorize(client_id: @registration["client_id"])
+        submit(event: "identify", identifier: @actor.nickname)
+        submit(event: "password", password: "password")
+
+        assert_select "form#use-backup-code"
+        assert_select "form#second-factor", count: 0
+        assert_select "noscript", count: 0
+      end
+
       test "a browser with no javascript signs in using only what the forms carry" do
         authorize(client_id: @registration["client_id"], state: "no-js")
 
