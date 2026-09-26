@@ -64,7 +64,7 @@ export default defineConfig({
       {
         label: "Get started",
         items: [
-          { label: "Quickstart", slug: "quickstart", badge: { text: "todo", variant: "caution" } },
+          { label: "Quickstart", slug: "quickstart" },
           { label: "Self-hosting", slug: "guides/self-hosting" },
           { label: "Rails apps", slug: "guides/rails" },
           { label: "Demo", slug: "demo", badge: { text: "todo", variant: "caution" } },

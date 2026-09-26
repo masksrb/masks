@@ -8,8 +8,8 @@ application. The demo is the two tenants `./dev --multi` declares, `demo` and
 `acme`. In this tutorial you run them side by side and see that each one is a
 separate issuer with its own signing keys and its own accounts.
 
-Work through the [quickstart](/quickstart/) first. This tutorial uses the same
-tools and the same set up screens.
+This tutorial runs the dev stack from [Try it locally](/quickstart/#try-it-locally),
+which needs Docker with Compose, and Ruby.
 
 ## Start two tenants
 
@@ -62,8 +62,8 @@ refuses it.
 ## Set up each tenant
 
 Open `http://demo.masks.localhost:12345` in a browser. `demo` has no accounts
-yet, so it shows the **Set up demo** screen. Create its first account as you did
-in the quickstart, and click **Finish setting up**.
+yet, so it shows the **Set up demo** screen. Create its first account with the
+setup token `masks-dev`, and click **Finish setting up**.
 
 Open `http://acme.masks.localhost:12345`. `acme` still shows **Set up acme**,
 because the account you made belongs to `demo` only. Each tenant keeps its own
