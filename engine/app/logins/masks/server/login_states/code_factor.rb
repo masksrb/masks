@@ -19,9 +19,7 @@ module Masks
         end
 
         def held_factors
-          CodeFactors::FACTORS.select do |factor|
-            CodeFactors.held?(actor, factor) && CodeFactors.offered?(actor, factor, policy: login.policy)
-          end
+          CodeFactors::FACTORS.select { |factor| CodeFactors.held?(actor, factor) }
         end
 
         def usable_factors(held = held_factors)

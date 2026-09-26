@@ -147,11 +147,68 @@ module Masks
         assert event("code:verify", code: texted_code)["settled"]
       end
 
-      test "a policy that stops offering a factor stops asking for it" do
+      test "a factor that is on is asked for under a policy that does not offer it" do
         turn_on("sms")
         policy!(key: "plain", name: "Plain", second_factors: %w[otp passkey backup_codes])
 
-        assert to_second_factor["settled"]
+        body = to_second_factor
+
+        assert_equal "second-factor", body["prompt"]
+        assert_equal "•••• 4567", body.dig("codeFactors", "sms")
+      end
+
+      test "a client whose own policy leaves codes out still asks for them" do
+        turn_on("sms")
+
+        client = create_client(@tenant, approved_at: Time.current, allowed_scopes: "openid profile email")
+        within(@tenant) do
+          plain = SignInPolicy.create!(key: "client-plain", name: "Client plain",
+                                       second_factors: %w[otp passkey backup_codes])
+          client.update!(sign_in_policy: plain)
+        end
+
+        authorize(client_id: client.client_id)
+        follow_redirect! while response.redirect?
+        rid = current_rid
+
+        assert rid.present?
+
+        event("identify", identifier: @actor.nickname, rid: rid)
+        body = event("password", password: "password", rid: rid)
+
+        assert_equal "Probe", body.dig("client", "name")
+        assert_equal "second-factor", body["prompt"]
+        refute body["settled"]
+        assert_nil within(@tenant) { Session.live.find_by(actor_id: @actor.id) }
+      end
+
+      test "a password reset through an emailed link turns email codes off" do
+        with_mailer do
+          turn_on("email")
+          turn_on("sms")
+
+          reset = within(@tenant) { PasswordReset.open!(actor: @actor).tap(&:delivered!) }
+          get "/reset/#{reset.secret}"
+          event("reset-password", password: "a-new-password-entirely")
+
+          within(@tenant) do
+            refute @actor.reload.email_factor?
+            assert @actor.phone_factor?
+            assert Event.exists?(actor: @actor, action: Event::EMAIL_CODES_DISABLED)
+          end
+
+          reset!
+          host! host_for(@tenant)
+          event("identify", identifier: @actor.nickname)
+          body = event("password", password: "a-new-password-entirely")
+
+          assert_equal "second-factor", body["prompt"]
+          assert_nil body.dig("codeFactors", "email")
+
+          body = event("code:send", factor: "email")
+
+          assert_includes body["warnings"], "factor-not-offered"
+        end
       end
 
       test "a new phone number or email address turns its codes off" do

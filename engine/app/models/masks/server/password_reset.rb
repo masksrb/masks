@@ -13,8 +13,14 @@ module Masks
         claimed = claim(secret)
         return nil if claimed.nil?
 
-        claimed.actor.reset_password!(password, verifying_email: claimed.delivered?)
-        claimed.actor
+        actor = claimed.actor
+
+        transaction do
+          actor.reset_password!(password, verifying_email: claimed.delivered?)
+          CodeFactors.disable!(actor, "email", by: nil) if claimed.delivered?
+        end
+
+        actor
       end
     end
   end
