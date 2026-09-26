@@ -15,7 +15,7 @@ A provider is another service people sign in with, over OpenID Connect, OAuth 2.
 masks links the account there to an account in masks. That link is a **connected account**.
 
 A provider replaces the password, never the second factor. A person's
-[sign-in policy](/guides/login-features/#sign-in-policies) still asks for one when it requires it.
+[sign-in policy](/guides/features/#sign-in-policies) still asks for one when it requires it.
 
 ### Provider roles
 
@@ -44,7 +44,7 @@ Slack, LinkedIn, and Discord do, and their presets turn it on.
 
 ### Where a provider is offered
 
-The client's [sign-in policy](/guides/login-features/#sign-in-policies) decides:
+The client's [sign-in policy](/guides/features/#sign-in-policies) decides:
 
 - `first_factors` must include `provider`.
 - `providers` lists which ones. Unset means all.
@@ -135,7 +135,7 @@ redirects to the same URL as a GET, which carries the cookie.
 
 masks is the identity provider for apps that sign people in only over SAML 2.0. The app sends an
 `AuthnRequest`, masks signs the person in under their
-[sign-in policy](/guides/login-features/#sign-in-policies), and posts a signed assertion back.
+[sign-in policy](/guides/features/#sign-in-policies), and posts a signed assertion back.
 
 ### What to give the application
 
@@ -227,7 +227,7 @@ https://demo.masks.example/scim/v2
 The token list shows each token's last use. A revoked token is refused.
 
 A client can provision instead of a token. It must be approved and allowed `masks:scim`, request
-its own token with [`client_credentials`](/guides/client-features/#signing-in-as-itself), and name
+its own token with [`client_credentials`](/guides/features/#signing-in-as-itself), and name
 the base URL as its `resource`.
 
 ### What is provisioned

@@ -25,7 +25,7 @@ The `masks` gem holds both Ruby SDKs. `Masks::Rails` loads only when Rails does.
 4. Approve it as a person holding `masks:manage` or `masks:handshake`. The credentials go to the app
    server to server, and nobody copies a secret.
 
-The app is then an approved [client](/guides/client-features/#registering-a-client). Sign people in
+The app is then an approved [client](/guides/features/#registering-a-client). Sign people in
 with the SDK's login URL, and check bearers on your API with its verifier.
 
 ## Delegation
@@ -258,7 +258,7 @@ An app that calls a provider only while the person uses it can run its own OAuth
 https://accounts.google.com/o/oauth2/v2/auth?…&login_hint=ada@gmail.com
 ```
 
-A [pairwise](/guides/client-features/#subject-identifiers) client never receives `identities`. An
+A [pairwise](/guides/features/#subject-identifiers) client never receives `identities`. An
 upstream subject is the same for every client, so it would undo pairwise separation.
 
 ## Exchanging a token
@@ -306,7 +306,7 @@ Each exchanged token has an `act` claim naming its holder, nested so the chain i
 
 A client acting as a more specific party sends that party's token as `actor_token`, with
 `actor_token_type`. It must be live and issued to this client. An agent that
-[signs in as itself](/guides/client-features/#signing-in-as-itself) and acts for a person sends its
+[signs in as itself](/guides/features/#signing-in-as-itself) and acts for a person sends its
 own token as the actor and the person's as the subject.
 
 A client exchanging its own ID token acts for itself, so the new token has no `act` unless an actor

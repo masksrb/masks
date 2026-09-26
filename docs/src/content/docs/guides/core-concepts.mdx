@@ -60,10 +60,10 @@ the manage API. See [ENV vars](/reference/environment/#sign-in-policy) for the v
 | Setting | Controls |
 | --- | --- |
 | `named_by` | Which field every account must have. See [what names an account](#what-names-an-account). |
-| `dynamic_registration` | Whether apps may [register themselves](/guides/client-features/#registering-a-client). |
+| `dynamic_registration` | Whether apps may [register themselves](/guides/features/#registering-a-client). |
 | `dynamic_client_scopes` | The scopes a self-registered app may request. |
 | `browsers_only`, `blocked_agents` | Which user agents may sign in. |
-| sign-in policy | The default [sign-in policy](/guides/login-features/#sign-in-policies). |
+| sign-in policy | The default [sign-in policy](/guides/features/#sign-in-policies). |
 | mail adapter | How the tenant sends invitations, codes, and resets. |
 
 A tenant with no mail adapter uses the deployment's SMTP server. With neither, invitations and
@@ -94,14 +94,14 @@ Every account has at least one of the two, enforced by the model and a database 
 account holding `masks:manage` needs both**, because invitations and resets go to managers.
 
 A person signs in with either field. `/manage`, the activity list, and introspection show the
-nickname when there is one, and the address otherwise. See [login features](/guides/login-features/)
+nickname when there is one, and the address otherwise. See [signing in](/guides/features/#signing-in)
 for passwords, passkeys, and second factors.
 
 ## Clients
 
 A client is an application that starts sign-ins or signs in as itself. It holds redirect URIs, the
 resources it acts for, and the scopes it may request. See
-[client features](/guides/client-features/) for registering and configuring one.
+[clients](/guides/features/#clients) for registering and configuring one.
 
 ## Scopes
 

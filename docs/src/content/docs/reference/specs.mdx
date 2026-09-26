@@ -45,9 +45,9 @@ The only response type is `code`, and the only response mode is `query`.
 
 | Specification | Status | Coverage |
 | --- | --- | --- |
-| [Device authorization (RFC 8628)](https://www.rfc-editor.org/rfc/rfc8628) | ✅ | See [device sign-in](/guides/login-features/#device-sign-in). |
+| [Device authorization (RFC 8628)](https://www.rfc-editor.org/rfc/rfc8628) | ✅ | See [device sign-in](/guides/features/#device-sign-in). |
 | [Token exchange (RFC 8693)](https://www.rfc-editor.org/rfc/rfc8693) | ✅ | Access tokens and ID tokens as the subject, actor tokens, a nested `act` chain, and a provider's access token for a [delegation](/guides/connecting-via-sdk/#delegation). Tokens signed by other issuers are not exchanged. See [exchanging a token](/guides/connecting-via-sdk/#exchanging-a-token). |
-| `client_credentials` | ✅ | For an approved client that authenticates. The token holds only scopes that do not act for a person. See [signing in as itself](/guides/client-features/#signing-in-as-itself). |
+| `client_credentials` | ✅ | For an approved client that authenticates. The token holds only scopes that do not act for a person. See [signing in as itself](/guides/features/#signing-in-as-itself). |
 
 ## Tokens
 
@@ -73,7 +73,7 @@ The only response type is `code`, and the only response mode is `query`.
 
 | Specification | Status | Coverage |
 | --- | --- | --- |
-| Pairwise subject identifiers | ✅ | Includes a verified `sector_identifier_uri`. See [subject identifiers](/guides/client-features/#subject-identifiers). |
+| Pairwise subject identifiers | ✅ | Includes a verified `sector_identifier_uri`. See [subject identifiers](/guides/features/#subject-identifiers). |
 | [WebAuthn Level 2](https://www.w3.org/TR/webauthn-2/) | ✅ | Passkeys, as a first factor or a second factor. |
 | [TOTP (RFC 6238)](https://www.rfc-editor.org/rfc/rfc6238) | ✅ | With backup codes. |
 | [SCIM 2.0](https://www.rfc-editor.org/rfc/rfc7644) | ◐ | `/Users` with filters, `PATCH`, ETags, and suspension, and the discovery endpoints. See [provisioning](/guides/sso-saml/#provisioning). Groups, bulk operations, and sorting are not implemented. |
@@ -90,7 +90,7 @@ masks accepts these token endpoint authentication methods:
 | `private_key_jwt`     | A JWT assertion ([RFC 7523](https://www.rfc-editor.org/rfc/rfc7523)) signed with RSA, RSA-PSS, or ECDSA, checked against the client's `jwks` or `jwks_uri`. |
 | `none`                | A public client, which must use PKCE.                                                                            |
 
-See [client authentication](/guides/client-features/#client-authentication) for how each is configured.
+See [client authentication](/guides/features/#client-authentication) for how each is configured.
 
 `client_secret_jwt` is not offered, because masks stores only a hash of a client
 secret. Mutual TLS ([RFC 8705](https://www.rfc-editor.org/rfc/rfc8705)) is not
