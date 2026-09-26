@@ -4,6 +4,9 @@ module Masks
     require_relative "../support/fake_authenticator"
 
     class PasskeyTest < ActionDispatch::IntegrationTest
+      CHROME = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 " \
+               "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36".freeze
+
       setup do
         host! host_for(@tenant)
 
@@ -48,6 +51,75 @@ module Masks
         post "/login", params: { event: "passkey:verify", passkey: JSON.generate(credential) }, as: :json
 
         JSON.parse(response.body)
+      end
+
+      def from_browser(name, **params)
+        post "/login", params: { event: name, **params }, as: :json,
+                       headers: { "HTTP_USER_AGENT" => CHROME }
+
+        JSON.parse(response.body)
+      end
+
+      def to_second_factor
+        from_browser("identify", identifier: @actor.nickname)
+        from_browser("password", password: "password")
+      end
+
+      def pass_second_factor_with_passkey(**params)
+        offer = from_browser("passkey:challenge")
+        credential = @device.assert(offer.dig("passkey", "options"))
+
+        from_browser("passkey:verify", passkey: JSON.generate(credential), **params)
+      end
+
+      def sign_out
+        delete "/login"
+        cookies.delete(:masks_session)
+      end
+
+      test "a passkey on the second factor screen trusts the device when asked to" do
+        enrol
+        enable_otp(@actor, @tenant)
+        reset!
+        host! host_for(@tenant)
+
+        assert_equal "second-factor", to_second_factor["prompt"]
+        assert pass_second_factor_with_passkey(remember: true)["settled"]
+
+        sign_out
+
+        assert to_second_factor["settled"]
+      end
+
+      test "a passkey alone trusts the device on the same terms" do
+        enrol
+        reset!
+        host! host_for(@tenant)
+
+        body = to_second_factor
+
+        assert_equal "second-factor", body["prompt"]
+        assert_equal({ "otp" => false, "passkey" => true }, body["secondFactors"])
+        assert body["rememberable"]
+        assert pass_second_factor_with_passkey(remember: true)["settled"]
+
+        sign_out
+
+        assert to_second_factor["settled"]
+      end
+
+      test "a passkey on the second factor screen leaves the device untrusted without the tick" do
+        enrol
+        enable_otp(@actor, @tenant)
+        reset!
+        host! host_for(@tenant)
+
+        to_second_factor
+        assert pass_second_factor_with_passkey["settled"]
+
+        sign_out
+
+        assert_equal "second-factor", to_second_factor["prompt"]
       end
 
       test "a passkey is enrolled from the account page and listed there" do

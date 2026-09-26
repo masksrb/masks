@@ -3,37 +3,14 @@
 Every account that reaches the second factor screen is offered a factor it can use, and the screen
 says so when it can offer none.
 
-Written 2026-09-21, after `b4fcce4` and `9959322`. Both phases are usable on their own.
+Written 2026-09-21, after `b4fcce4` and `9959322`. Phase 1, where a passkey on the second factor
+screen trusts the device on the same terms as a code, is done.
 
 Background: `b4fcce4` made the heading name the factor the screen offers, because
 `second-factor.svelte` asked for a code on accounts that hold a passkey and no authenticator app.
 `9959322` made a refused passkey report itself, because WebAuthn returns `NotAllowedError` both for
 a dismissed dialog and for a device that holds no credential, and the button treated every refusal
-as a dismissal. A review of those two commits recorded the two gaps below.
-
-## Decisions still open
-
-- [ ] **Does a passkey trust a device?** Trusting a device skips the second factor for
-      `DeviceFactor::LIFETIME`. A passkey already proves the device holds a credential the account
-      registered, so the trust it buys differs from the trust an authenticator app code buys.
-      Phase 1 assumes a passkey trusts a device on the same terms. Deciding otherwise keeps the
-      checkbox with the code form, and accounts holding a passkey alone never see it.
-
-## Phase 1 — trust survives the passkey path
-
-`second-factor.svelte` keeps the trust checkbox inside the block it renders for `methods.otp`, so
-an account holding a passkey and no authenticator app never sees it, while `SecondFactor#as_json`
-sends `rememberable` as `device.present?` for either factor. An account holding both factors sees
-the checkbox, checks it, signs in with a passkey, and loses the check:
-`LoginStates::OneTimePassword` accepts `:remember` and calls `remember!` when the device is
-present, and `LoginStates::Passkey` accepts `:passkey` alone and calls `factored!` without
-`remember!`.
-
-- `LoginStates::Passkey` accepts `:remember` and remembers the device on its second factor path,
-  under the same `device.present?` condition `OneTimePassword` uses.
-- `PasskeyButton` carries the checkbox's value on `passkey:verify`.
-- The checkbox moves out of the `methods.otp` block, so every account `rememberable` covers sees
-  it.
+as a dismissal. A review of those two commits recorded two gaps, and the one still open is below.
 
 ## Phase 2 — a screen that offers nothing says so
 
@@ -51,9 +28,6 @@ the identified row alone, and the heading names a factor the screen cannot offer
 
 ## Verification
 
-- An account holding a passkey and an authenticator app checks the trust box, signs in with the
-  passkey, and reaches the next sign-in from that device without a second factor.
-- An account holding a passkey alone is offered the trust box, and the same holds.
 - An account holding a passkey alone and no backup codes, served where
   `window.PublicKeyCredential` is absent, reads why the screen cannot continue.
 - `./dev test` passes.

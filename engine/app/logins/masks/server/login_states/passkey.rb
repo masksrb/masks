@@ -6,7 +6,7 @@ module Masks
         SECOND_EXPIRY = 12.hours
         HELD = "passkey_challenge".freeze
 
-        accepts :passkey
+        accepts :passkey, :remember
 
         handles "passkey:challenge" do
           offer
@@ -92,10 +92,7 @@ module Masks
             factored! :first_factor, expiry: FIRST_EXPIRY
             login.noted! "swk"
 
-            return unless verified
-
-            factored! :second_factor, expiry: SECOND_EXPIRY
-            login.noted! "user", "mfa"
+            second_factored! if verified
           end
 
           def second(passkey, verified)
@@ -104,8 +101,17 @@ module Masks
               return warn!("factor-not-offered")
             end
 
+            second_factored!
+          end
+
+          def second_factored!
             factored! :second_factor, expiry: SECOND_EXPIRY
+            remember! DeviceFactor::SECOND_FACTOR if remembering?
             login.noted! "user", "mfa"
+          end
+
+          def remembering?
+            device.present? && ActiveModel::Type::Boolean.new.cast(update(:remember))
           end
 
           def relying_party

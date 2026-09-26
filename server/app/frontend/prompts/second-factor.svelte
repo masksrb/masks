@@ -31,6 +31,15 @@ $effect(() => {
 });
 </script>
 
+{#snippet trust()}
+  {#if login.rememberable}
+    <label class="check">
+      <input type="checkbox" bind:checked={remember} />
+      <span>{login.t("trust", { duration: login.auth.trustFor })}</span>
+    </label>
+  {/if}
+{/snippet}
+
 <Head {login} title={login.t(methods.otp ? "title" : "title_passkey")} />
 
 <Identified {login} />
@@ -54,12 +63,7 @@ $effect(() => {
       />
     </label>
 
-    {#if login.rememberable}
-      <label class="check">
-        <input type="checkbox" bind:checked={remember} />
-        <span>{login.t("trust", { duration: login.auth.trustFor })}</span>
-      </label>
-    {/if}
+    {@render trust()}
 
     <Action
       {login}
@@ -73,7 +77,11 @@ $effect(() => {
 {/if}
 
 {#if methods.passkey}
-  <PasskeyButton {login} />
+  {#if !methods.otp}
+    {@render trust()}
+  {/if}
+
+  <PasskeyButton {login} params={{ remember }} />
 {/if}
 
 {#if login.backupCodes}

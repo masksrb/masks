@@ -2,7 +2,7 @@
 import Action from "./Action.svelte";
 import { assert, available, enrol, refused } from "../lib/passkey.js";
 
-let { login, enrolling = false, label = null } = $props();
+let { login, enrolling = false, label = null, params = {} } = $props();
 
 const DELIBERATE = 500;
 
@@ -30,7 +30,7 @@ async function start() {
 
     const credential = enrolling ? await enrol(options) : await assert(options);
 
-    await login.submit(enrolling ? "enrol:passkey" : "passkey:verify", { passkey: credential });
+    await login.submit(enrolling ? "enrol:passkey" : "passkey:verify", { ...params, passkey: credential });
   } catch (error) {
     if (!refused(error) || (asked !== null && performance.now() - asked < DELIBERATE)) {
       unusable = login.t("passkey_unusable");
