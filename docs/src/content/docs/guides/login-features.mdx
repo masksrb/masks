@@ -41,6 +41,27 @@ A client uses its own policy, or the tenant's default, or a built-in default. `/
 A person types their nickname or address, whichever they have. See
 [what names an account](/guides/core-concepts/#what-names-an-account).
 
+### Passwords
+
+masks stores a bcrypt hash of each password, never the password itself. A new password must be at
+least `password_minimum` characters long. With `refuse_common_passwords` on, masks also refuses any
+password on a bundled list of about 47,000 common passwords, compared without regard to case.
+
+### Passkeys
+
+masks reads the authenticator's AAGUID when a passkey is registered, and looks it up in the
+[FIDO Metadata Service](https://fidoalliance.org/metadata/). The account page names each passkey
+after its authenticator, such as iCloud Keychain or a YubiKey, unless the person names it. A daily job refreshes the metadata.
+
+- A passkey whose authenticator the metadata service reports as compromised is marked on the account
+  page with the reason reported.
+- Each sign-in checks the authenticator's signature counter. masks treats a counter that does not
+  advance past the last one seen as a copied credential, refuses the sign-in, and records a
+  `login.refused` event marked `cloned`. An authenticator that always reports zero is not checked.
+- A passkey created at signup or while enrolling a second factor must verify the person, with a
+  PIN or biometric. A passkey used as a first factor is also a second factor only when the
+  authenticator reports that it verified the person.
+
 ## Second factors
 
 | Factor | |

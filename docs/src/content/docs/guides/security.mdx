@@ -1,11 +1,13 @@
 ---
 title: Security
-description: Tenant isolation, signing-key rotation, pushed and signed authorization requests, and DPoP-bound tokens.
+description: Tenant isolation, rate limits, security emails, signing-key rotation, pushed and signed authorization requests, and DPoP-bound tokens.
 ---
 
 | Threat | Defense | Section |
 | --- | --- | --- |
 | One tenant reading another's data | Three isolation layers, one enforced by Postgres | [Tenant isolation](#tenant-isolation) |
+| Guessing a password or a code | Limits per address and per account | [Rate limits](#rate-limits) |
+| A change to an account going unnoticed | An email to the person for each security change | [Security emails](#security-emails) |
 | A leaked or aging signing key | Staged rotation with a 24-hour overlap | [Rotating signing keys](#rotating-signing-keys) |
 | Request parameters leaking from the address bar | Pushed authorization requests | [Pushed requests](#pushed-requests) |
 | A forged or altered authorization request | Signed request objects | [Signed requests](#signed-requests) |
@@ -49,6 +51,43 @@ end
 - Cross-tenant code uses `Tenant.switch(tenant) { ... }`.
 - It sets a session-scoped Postgres setting and opens no transaction.
 - Outside a tenant, every query returns zero rows, including `Model.unscoped`.
+
+## Rate limits
+
+masks counts attempts in a window and answers with an error once the count is reached. Each limit is
+set by an environment variable, listed in [ENV vars](/reference/environment/#rate-limits).
+
+| Limit | Counted per | Covers |
+| --- | --- | --- |
+| `MASKS_ATTEMPT_LIMIT` | IP address | Passwords, codes, and passkeys at sign-in, and sign-in through a provider. |
+| `MASKS_ACCOUNT_ATTEMPT_LIMIT` | Account | The same attempts against one account from any address, password changes, and sign-in approvals. |
+| `MASKS_RECOVERY_LIMIT` | IP address or account | Codes and links sent by email or text message. |
+| `MASKS_REGISTRATION_LIMIT` | IP address | Dynamic client registration. |
+| `MASKS_DEVICE_CODE_LIMIT` | IP address | User codes entered at `/device`. |
+
+- The per-account limit stops a guess spread across many addresses. Each limit is counted within
+  one tenant.
+- Other endpoints have fixed limits per IP address each minute: 60 for the token, pushed request,
+  device authorization, and SAML sign-in endpoints, 120 for introspection, and 600 for SCIM.
+
+## Security emails
+
+masks emails a person when something changes on their account:
+
+| Group | Sent when |
+| --- | --- |
+| Password | The password is changed or reset. |
+| Factors | A passkey, an authenticator app, backup codes, or email or text message codes are added or removed, or a backup code is spent. |
+| Sessions | A new device signs in, a session is signed out, or a device is blocked. |
+| Applications | An application is allowed in, an account elsewhere is linked or unlinked, or a device sign-in is approved. |
+| Account | A manager changes the person's scopes. |
+
+- A new sign-in is reported once per device, so signing in again on the same browser sends
+  nothing.
+- Emails go only to a confirmed address. An account with no confirmed address receives none, and
+  the account page says so.
+- Each person can turn any of these off under **Emails we send you** on the account page.
+- The email names the device and address the change came from, in the person's time zone.
 
 ## Rotating signing keys
 
