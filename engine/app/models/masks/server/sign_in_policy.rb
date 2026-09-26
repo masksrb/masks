@@ -10,7 +10,7 @@ module Masks
       PRESENCE = [ OFF, OPTIONAL, REQUIRED ].freeze
 
       FIRST_FACTORS = %w[password passkey provider].freeze
-      SECOND_FACTORS = %w[otp passkey backup_codes email sms].freeze
+      SECOND_FACTORS = %w[otp passkey backup_codes email sms trusted_device].freeze
 
       NONE = "none".freeze
       CODE = "code".freeze
@@ -99,7 +99,7 @@ module Masks
           unknown = Array(second_factors) - SECOND_FACTORS
           errors.add(:second_factors, "does not know #{unknown.join(', ')}") if unknown.any?
 
-          if second_factor_required && (Array(second_factors) - [ "backup_codes" ]).empty?
+          if second_factor_required && (Array(second_factors) - %w[backup_codes trusted_device]).empty?
             errors.add(:second_factors, "must offer more than backup codes when one is required")
           end
         end

@@ -46,6 +46,8 @@ module Masks
       DEVICE_CODE_REFUSED = "device_code.refused".freeze
 
       DEVICE_TRUSTED = "device.trusted".freeze
+      SIGN_IN_APPROVED = "sign_in.approved".freeze
+      SIGN_IN_DENIED = "sign_in.denied".freeze
       DEVICE_NAMED = "device.named".freeze
       DEVICE_FORGOTTEN = "device.forgotten".freeze
       DEVICE_BLOCKED = "device.blocked".freeze

@@ -13,7 +13,7 @@ A client uses its own policy, or the tenant's default, or a built-in default. `/
 | Setting | Default | |
 | --- | --- | --- |
 | `first_factors` | `password`, `passkey`, `provider` | How a person proves who they are. |
-| `second_factors` | `otp`, `passkey`, `backup_codes` | What can serve as a second factor. `email` and `sms` are also accepted. |
+| `second_factors` | `otp`, `passkey`, `backup_codes` | What can serve as a second factor. `email`, `sms`, and `trusted_device` are also accepted. |
 | `second_factor_required` | off | Require a second factor at every sign-in. |
 | `password_minimum` | `8` | Minimum password length, up to 256. |
 | `refuse_common_passwords` | on | Refuse passwords from a list of common ones. |
@@ -27,7 +27,7 @@ A client uses its own policy, or the tenant's default, or a built-in default. `/
 - A policy whose only first factor is `provider` shows only provider buttons.
 - The tenant's default must keep a password or a passkey, so managers are never locked out. Only a
   client's own policy can be provider-only.
-- A required second factor needs a factor besides `backup_codes`. A manager always needs `otp` or
+- A required second factor needs a factor besides `backup_codes` and `trusted_device`. A manager always needs `otp` or
   `passkey`, and email or text message codes do not count for one.
 
 ## First factors
@@ -50,6 +50,7 @@ A person types their nickname or address, whichever they have. See
 | Backup codes | One-time codes, for when the other factors are lost. They can be downloaded. |
 | Email codes | A six-digit code sent to a confirmed email address. |
 | Text message codes | A six-digit code sent to a confirmed phone number through the tenant's SMS adapter. |
+| Trusted device | Approval from another device the person trusted when they signed in there. |
 
 ### Email and text message codes
 
@@ -64,6 +65,22 @@ password makes the email code available again.
 A text message code is recorded as `sms` in `amr`, and an email code as `otp`. Both add `mfa`. An
 authenticator app or a passkey is harder to steal than either, which is why neither counts toward a
 manager's second factor.
+
+### Approval from a trusted device
+
+A policy offers this when its `second_factors` include `trusted_device`. It appears on the second
+factor screen once the person has another device they trusted with **Trust this device**.
+
+1. The new sign-in shows a six-digit code, valid for five minutes.
+2. On the trusted device, the person opens their account page and enters the code under
+   **Approve a sign-in**.
+3. The account page shows the browser and address that asked. **Approve** finishes the sign-in on
+   the other screen, and **Deny** stops it.
+
+Only a device with a live trust for that account can approve, and it cannot approve its own
+sign-in. A code matches only the account's own waiting sign-ins, and the approval is claimed once, by
+the sign-in that asked for it. Approvals and denials are recorded as `sign_in.approved` and
+`sign_in.denied`.
 
 ### Remembered devices
 

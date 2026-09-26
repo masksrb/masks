@@ -47,6 +47,9 @@ en:
         issued: "Device sign-in requested"
         approved: "Device signed in"
         refused: "Device sign-in refused"
+      sign_in:
+        approved: "Sign-in approved from a trusted device"
+        denied: "Sign-in denied from a trusted device"
       device:
         trusted: "Device trusted"
         named: "Device renamed"

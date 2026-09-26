@@ -38,6 +38,9 @@ Masks::Server::Engine.routes.draw do
                                  constraints: { factor: /email|sms/ }
   delete "/account/codes/:factor", to: "code_factors#destroy", constraints: { factor: /email|sms/ }
 
+  post "/account/approve", to: "sign_in_approvals#create", as: :account_approval
+  patch "/account/approve", to: "sign_in_approvals#update"
+
   patch "/account/devices/:id", to: "devices#update", as: :device
   delete "/account/devices/:id", to: "devices#destroy"
 

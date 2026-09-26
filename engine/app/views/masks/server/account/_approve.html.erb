@@ -1,0 +1,56 @@
+<% if approver %>
+  <section class="group" id="approve">
+    <h2><%= account_text("approve.heading") %></h2>
+
+    <div class="entries">
+      <details class="entry"<%= " open" if approving || flash[:alert].present? %>>
+        <summary>
+          <span class="entry-icon"><%= account_icon(:check) %></span>
+          <span class="entry-label"><%= account_text("approve.label") %></span>
+          <span class="entry-state"><%= account_text(approving ? "approve.state.waiting" : "approve.state.ready") %></span>
+          <span class="entry-mark" aria-hidden="true"></span>
+        </summary>
+
+        <div class="entry-body">
+          <% if approving %>
+            <% asking = approving.device %>
+            <p class="aside"><%= account_text("approve.confirm") %></p>
+
+            <div class="items">
+              <div class="item">
+                <span class="item-name"><%= asking&.label || Masks::Server::Device::UNKNOWN %></span>
+                <span class="item-meta">
+                  <%= account_text("approve.asked", age: time_ago_in_words(approving.created_at)) %>
+                  <% if asking&.ip_address.present? %>
+                    <%= account_text("devices.from", address: asking.ip_address) %>
+                  <% end %>
+                </span>
+              </div>
+            </div>
+
+            <div class="action-row">
+              <%= button_to account_text("approve.approve"), account_approval_path, method: :patch,
+                    params: { answer: "approve" }, class: "action action-sm" %>
+              <%= button_to account_text("approve.deny"), account_approval_path, method: :patch,
+                    params: { answer: "deny" }, class: "action action-quiet action-sm" %>
+            </div>
+          <% else %>
+            <p class="aside"><%= account_text("approve.explained") %></p>
+
+            <%= form_with url: account_approval_path, method: :post, id: "approve-sign-in", class: "flow-tight" do |form| %>
+              <label class="field">
+                <span class="field-label"><%= account_text("approve.code") %></span>
+                <%= form.text_field :code, inputmode: "numeric", pattern: "[0-9 ]*", maxlength: 7,
+                      autocomplete: "off", spellcheck: "false", class: "control control-code" %>
+              </label>
+
+              <div class="action-row">
+                <button type="submit" class="action action-sm"><%= account_text("approve.submit") %></button>
+              </div>
+            <% end %>
+          <% end %>
+        </div>
+      </details>
+    </div>
+  </section>
+<% end %>

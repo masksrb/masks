@@ -97,6 +97,27 @@ export function createLogin(initial, options = {}) {
     startOver() {
       return dispatch("DELETE");
     },
+    async poll(event, updates = {}) {
+      if (loading) return auth;
+
+      try {
+        const held = await send(url, "POST", {
+          rid: auth.rid,
+          event,
+          ...updates,
+        });
+
+        if (loading) return auth;
+
+        auth = held;
+
+        if (auth.redirectTo) window.location.assign(auth.redirectTo);
+      } catch {
+        return auth;
+      }
+
+      return auth;
+    },
     retry() {
       return last ? dispatch(...last) : Promise.resolve(auth);
     },

@@ -43,6 +43,14 @@ en:
       email: "Email codes are off."
       sms: "Text message codes are off."
 
+  sign_in_approvals:
+    untrusted: "Only a device you trusted when signing in can approve a sign-in."
+    no_match: "No sign-in on this account is waiting for that code."
+    expired: "That sign-in stopped waiting. Ask for a new code on the other screen."
+    too_many_attempts: "Too many attempts. Wait a few minutes and try again."
+    approved: "Sign-in approved."
+    denied: "Sign-in denied."
+
   passwords:
     too_many_attempts: "Too many attempts. Wait a few minutes and try again."
     short_password: "A password here needs at least %{minimum} characters."

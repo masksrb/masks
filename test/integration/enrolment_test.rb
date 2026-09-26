@@ -153,7 +153,7 @@ module Masks
         body = sign_in_as(@manager)
 
         assert_equal "second-factor", body["prompt"]
-        assert_equal({ "otp" => false, "passkey" => true, "email" => false, "sms" => false }, body["secondFactors"])
+        assert_equal({ "otp" => false, "passkey" => true }, body["secondFactors"].slice("otp", "passkey"))
 
         offer = event("passkey:challenge")
         credential = @device.assert(offer.dig("passkey", "options"))

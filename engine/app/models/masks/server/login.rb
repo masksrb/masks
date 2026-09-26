@@ -15,6 +15,7 @@ module Masks
         LoginStates::OneTimePassword,
         LoginStates::BackupCode,
         LoginStates::CodeFactor,
+        LoginStates::TrustedDevice,
         LoginStates::SecondFactor,
         LoginStates::Enrolment,
         LoginStates::Confirmation,

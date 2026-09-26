@@ -65,6 +65,20 @@ en:
           unconfirmed: "Add and confirm a phone number first."
           undeliverable: "This server cannot send text messages yet."
 
+      approve:
+        heading: "Approve a sign-in"
+        label: "A code from another device"
+        state:
+          ready: "Ready"
+          waiting: "Waiting for you"
+        explained: "This device is trusted, so it can confirm a sign-in happening somewhere else. Enter the code the other screen shows. Only enter a code you are looking at yourself."
+        code: "Code on the other screen"
+        submit: "Continue"
+        confirm: "This device is asking to sign in to your account. Approve it only if it is yours."
+        asked: "asked %{age} ago"
+        approve: "Approve"
+        deny: "Deny"
+
       devices:
         heading: "Devices"
         lede: "Every phone, tablet and computer that has signed in to this account."

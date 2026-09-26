@@ -17,7 +17,8 @@ module Masks
         "initial_access" => "InitialAccessToken",
         "request" => "PendingRequest",
         "login" => "PendingLogin",
-        "pushed" => "PushedRequest"
+        "pushed" => "PushedRequest",
+        "approval" => "SignInApproval"
       }.freeze
 
       self.inheritance_column = "kind"

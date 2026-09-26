@@ -79,6 +79,12 @@ en:
       send_sms: "Text a code to %{to}"
       send_again: "Send it again"
       use_app: "Use your authenticator app instead"
+      use_trusted_device: "Approve from a device you trust"
+      approval_code: "On a device you trusted before, open your account page and enter this code under Approve a sign-in."
+      approval_waiting: "Waiting for approval"
+      approval_expired: "That code expired."
+      approval_again: "Show a new code"
+      approval_checked: "I approved it"
 
     enrol:
       title: "Secure your account"
@@ -196,6 +202,7 @@ en:
       invalid-backup-code: "That backup code is not valid."
       invalid-passkey: "That passkey could not be used."
       factor-not-offered: "That way of signing in is not offered here."
+      approval-denied: "That sign-in was denied from a trusted device."
       passkey-expired: "That passkey attempt expired. Try again."
       passkey-unverified: "That passkey did not ask who you are. Use one that checks a PIN or fingerprint."
       passkey-unusable: "That passkey could not be added."

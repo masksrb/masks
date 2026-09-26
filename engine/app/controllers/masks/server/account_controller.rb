@@ -18,6 +18,8 @@ module Masks
         @devices = @actor.devices.newest_first
         @trusted = DeviceFactor.live.where(actor: @actor).pluck(:device_id).to_set
         @live = Session.live.where(device_id: @devices.map(&:id)).pluck(:device_id).to_set
+        @approver = SignInApproval.trusted?(actor: @actor, device: current_device)
+        @approving = @approver && SignInApproval.live.find_by(id: session[SignInApprovalsController::HELD], actor_id: @actor.id)
         @events = Event.where(actor: @actor).newest_first.includes(:device).limit(RECENT)
       end
     end

@@ -13,6 +13,11 @@ let useApp = $state(false);
 
 const methods = $derived(login.auth.secondFactors ?? { otp: true });
 const codeFactors = $derived(login.auth.codeFactors ?? {});
+const approval = $derived(login.auth.approval);
+const approving = $derived(Boolean(approval && !approval.denied && !approval.expired));
+const shownCode = $derived(
+  approval?.code ? `${approval.code.slice(0, 3)} ${approval.code.slice(3)}` : "",
+);
 const sent = $derived(useApp ? null : login.auth.codeSent);
 const valid = $derived(code.replace(/\D/g, "").length === 6);
 const passkeyReady = $derived(
@@ -20,7 +25,11 @@ const passkeyReady = $derived(
 );
 const asking = $derived(Boolean(sent) || methods.otp);
 const stuck = $derived(
-  !asking && !passkeyReady && !login.backupCodes && Object.keys(codeFactors).length === 0,
+  !asking &&
+    !passkeyReady &&
+    !login.backupCodes &&
+    !methods.trustedDevice &&
+    Object.keys(codeFactors).length === 0,
 );
 const why = $derived.by(() => {
   if (login.auth.codesWithheld?.includes("email")) return "stuck_inbox";
@@ -54,6 +63,15 @@ function send(factor) {
 
 $effect(() => {
   if (valid) submit();
+});
+
+$effect(() => {
+  if (!approving) return;
+
+  const held = remember;
+  const timer = setInterval(() => login.poll("approval:check", { remember: held }), 2000);
+
+  return () => clearInterval(timer);
 });
 </script>
 
@@ -128,8 +146,27 @@ $effect(() => {
     <PasskeyButton {login} params={{ remember }} />
   {/if}
 
-  {#if !asking && !passkeyReady && Object.keys(codeFactors).length > 0}
+  {#if !asking && !passkeyReady && (approving || Object.keys(codeFactors).length > 0)}
     {@render trust()}
+  {/if}
+
+  {#if approving}
+    <div class="slab flow-tight" aria-live="polite">
+      <span class="aside-mono approval-code">{shownCode}</span>
+      <span class="field-hint">{login.t("approval_code")}</span>
+      <span class="aside">{login.t("approval_waiting")}</span>
+    </div>
+  {:else if methods.trustedDevice}
+    {#if approval?.expired}
+      <p class="aside aside-bad" role="alert">{login.t("approval_expired")}</p>
+    {/if}
+
+    <Action
+      {login}
+      plain
+      label={approval ? login.t("approval_again") : login.t("use_trusted_device")}
+      onclick={() => login.submit("approval:request", {})}
+    />
   {/if}
 
   {#each Object.entries(codeFactors) as [factor, to] (factor)}

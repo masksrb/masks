@@ -64,6 +64,7 @@
     ["backup_codes", "Backup codes"],
     ["email", "Email codes"],
     ["sms", "Text message codes"],
+    ["trusted_device", "Approval from a trusted device"],
   ];
 
   const CONFIRMATIONS = [

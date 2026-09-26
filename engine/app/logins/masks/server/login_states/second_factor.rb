@@ -22,7 +22,8 @@ module Masks
               "otp" => actor.otp?,
               "passkey" => actor.verified_passkeys?,
               "email" => codes.usable_factors.include?("email"),
-              "sms" => codes.usable_factors.include?("sms")
+              "sms" => codes.usable_factors.include?("sms"),
+              "trustedDevice" => login.state("trusted-device").offered?
             },
             "rememberable" => device.present?,
             "trustFor" => ActionController::Base.helpers.distance_of_time_in_words(DeviceFactor::LIFETIME)

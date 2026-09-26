@@ -12,6 +12,8 @@
   <%= render "masks/server/account/signing_in", actor: @actor, passkeys: @passkeys,
                                                 code_factors: @code_factors %>
 
+  <%= render "masks/server/account/approve", approver: @approver, approving: @approving %>
+
   <%= render "masks/server/account/devices", devices: @devices, trusted: @trusted, live: @live %>
 
   <%= render "masks/server/account/apps", apps: @apps, connections: @connections, linkable: @linkable %>
