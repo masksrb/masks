@@ -490,16 +490,19 @@
   gap: 1.5rem;
 }
 
-.settings-side {
+.settings-bar {
   min-width: 0;
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--edge);
 }
 
 .settings-tabs {
   display: flex;
   gap: 0.25rem;
+  min-width: 0;
   overflow-x: auto;
 }
 
@@ -528,37 +531,17 @@
   font-weight: 500;
 }
 
-@media (max-width: 47.99rem) {
-  .settings-side {
-    display: contents;
-  }
-
-  .settings-tabs {
-    order: 0;
-  }
-
-  .settings > .min-w-0 {
-    order: 1;
-  }
-
-  .settings-me {
-    order: 2;
-    padding-top: 1rem;
-    border-top: 1px solid var(--edge);
-  }
-}
-
 .settings-me {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: flex-start;
   gap: 0.25rem;
+  min-width: 0;
 }
 
 .settings-who {
-  padding: 0 0.625rem 0.25rem;
-  text-align: left;
+  max-width: 14rem;
+  padding: 0 0.625rem;
   font-size: 0.75rem;
   color: var(--dimmer);
   overflow: hidden;
@@ -572,27 +555,29 @@
 }
 
 @media (min-width: 48rem) {
-  .settings {
-    grid-template-columns: 11rem minmax(0, 1fr);
-    gap: 2.5rem;
+  .settings-me {
+    flex-wrap: nowrap;
+    margin-inline-start: auto;
   }
+}
 
-  .settings-side {
-    position: sticky;
-    top: 5rem;
-    align-self: start;
+@media (max-width: 47.99rem) {
+  .settings-bar {
+    display: contents;
   }
 
   .settings-tabs {
-    flex-direction: column;
+    order: 0;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--edge);
+  }
+
+  .settings > .min-w-0 {
+    order: 1;
   }
 
   .settings-me {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    text-align: left;
-    gap: 0.125rem;
+    order: 2;
     padding-top: 1rem;
     border-top: 1px solid var(--edge);
   }

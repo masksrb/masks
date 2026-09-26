@@ -18,7 +18,7 @@
 </script>
 
 <div class="settings">
-  <aside class="settings-side">
+  <div class="settings-bar">
     <nav class="settings-tabs" aria-label="Settings">
       {#each TABS as [to, label] (to)}
         <Link
@@ -33,7 +33,7 @@
       <button type="button" class="settings-tab" onclick={onsignout}>Sign out</button>
       <button type="button" class="settings-tab settings-quiet" onclick={unpair}>Forget client</button>
     </div>
-  </aside>
+  </div>
 
   <div class="min-w-0">{@render children()}</div>
 </div>
