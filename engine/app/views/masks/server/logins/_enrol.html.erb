@@ -46,6 +46,37 @@
     </div>
     <% end %>
 
+    <% (enrolment["codes"] || {}).each do |factor, row| %>
+    <div class="ledger-row ledger-step<%= " ledger-step-done" if row["enabled"] %>">
+      <span class="ledger-label"><%= t(".codes_#{factor}") %></span>
+
+      <% if row["enabled"] %>
+        <span class="ledger-value"><%= t(".otp_on") %></span>
+      <% elsif row["sent"] %>
+        <span class="field-hint"><%= t(".sent_to", to: row["to"]) %></span>
+
+        <%= form_with url: login_path, method: :post, id: "enrol-#{factor}-code", class: "flow-tight" do |form| %>
+          <%= hidden_field_tag :rid, login.rid %>
+          <%= form.hidden_field :event, value: "enrol:code" %>
+          <%= form.text_field :code, inputmode: "numeric", pattern: "[0-9 ]*",
+                autocomplete: "one-time-code", maxlength: 7, spellcheck: "false",
+                placeholder: t(".code"), aria: { label: t(".code") },
+                class: "control control-code" %>
+          <button type="submit" class="action action-quiet"><%= t(".turn_on") %></button>
+        <% end %>
+      <% else %>
+        <span class="field-hint"><%= t(".codes_#{factor}_hint", to: row["to"]) %></span>
+
+        <%= form_with url: login_path, method: :post, id: "enrol-send-#{factor}-code", class: "flow-tight" do |form| %>
+          <%= hidden_field_tag :rid, login.rid %>
+          <%= form.hidden_field :event, value: "enrol:code-send" %>
+          <%= form.hidden_field :factor, value: factor %>
+          <button type="submit" class="action action-quiet"><%= t(".send_code") %></button>
+        <% end %>
+      <% end %>
+    </div>
+    <% end %>
+
     <% if offers["backupCodes"] %>
     <div class="ledger-row ledger-step<%= " ledger-step-done" if issued.any? || remaining.positive? %>">
       <span class="ledger-label"><%= t(".backup_codes") %></span>

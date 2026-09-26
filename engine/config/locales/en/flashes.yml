@@ -32,6 +32,17 @@ en:
     added: "Passkey added."
     removed: "Passkey removed."
 
+  code_factors:
+    unoffered: "This server does not offer that way of confirming a sign-in."
+    unconfirmed: "Confirm that address before codes are sent to it."
+    undeliverable: "This server cannot send those codes yet."
+    enabled:
+      email: "Sign-ins can now be confirmed with a code sent to your email."
+      sms: "Sign-ins can now be confirmed with a code sent to your phone."
+    disabled:
+      email: "Email codes are off."
+      sms: "Text message codes are off."
+
   passwords:
     too_many_attempts: "Too many attempts. Wait a few minutes and try again."
     short_password: "A password here needs at least %{minimum} characters."

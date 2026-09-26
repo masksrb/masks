@@ -7,7 +7,7 @@ module Masks
         WINDOW = 15.minutes
         GROUP = 4
 
-        accepts :code, :passkey, :kept
+        accepts :code, :passkey, :kept, :factor
 
         handles "enrol:otp", limit: :verifying do
           enrol_otp
@@ -19,6 +19,14 @@ module Masks
 
         handles "enrol:passkey", limit: :verifying do
           enrol_passkey
+        end
+
+        handles "enrol:code-send", limit: :sending do
+          send_code
+        end
+
+        handles "enrol:code", limit: :verifying do
+          enrol_code
         end
 
         handles "enrol:done" do
@@ -48,7 +56,8 @@ module Masks
               "backupCodes" => {
                 "issued" => held["codes"],
                 "remaining" => actor.backup_codes_remaining
-              }.compact
+              }.compact,
+              "codes" => codes_json
             }
           }
         end
@@ -65,14 +74,18 @@ module Masks
         end
 
         def required?
-          login.first_factored? && !actor.second_factor? && (actor.manages? || login.policy.second_factor_required)
+          return false unless login.first_factored? && !actor.second_factor?
+
+          actor.manages? || (login.policy.second_factor_required && held_codes.empty?)
         end
 
         def offers
           offered = actor.manages? ? SignInPolicy::SECOND_FACTORS : login.policy.second_factors
 
           { "otp" => offered.include?("otp"), "passkey" => offered.include?("passkey"),
-            "backupCodes" => offered.include?("backup_codes") }
+            "backupCodes" => offered.include?("backup_codes"),
+            "email" => offered.include?("email") && code_offerable?("email"),
+            "sms" => offered.include?("sms") && code_offerable?("sms") }
         end
 
         private
@@ -89,7 +102,7 @@ module Masks
 
           def offered_at_signup?
             login.store[Signup::SIGNED_UP].present? && login.store[OFFERED].blank? && !actor.second_factor? &&
-              (offers["otp"] || offers["passkey"])
+              held_codes.empty? && offers.values_at("otp", "passkey", "email", "sms").any?
           end
 
           def open!
@@ -169,14 +182,61 @@ module Masks
             warn! "passkey-unusable"
           end
 
-          def enrolled!(*methods)
-            if offers["backupCodes"] && !actor.backup_codes?
-              codes = actor.generate_backup_codes!
+          def held_codes
+            CodeFactors::FACTORS.select { |factor| CodeFactors.held?(actor, factor) }
+          end
 
-              Event.record!(Event::BACKUP_CODES_GENERATED, actor: actor, count: codes.length)
+          def code_offerable?(factor)
+            CodeFactors.address(actor, factor).present? && CodeFactors.deliverable?(factor)
+          end
 
-              hold(codes: codes)
+          def codes_json
+            CodeFactors::FACTORS.select { |factor| offers[factor] }.to_h do |factor|
+              [ factor, { "enabled" => CodeFactors.held?(actor, factor),
+                          "to" => CodeFactors.address(actor, factor),
+                          "sent" => held.dig("code", "factor") == factor || nil }.compact ]
             end
+          end
+
+          def send_code
+            factor = update(:factor).to_s
+            return unless open? && offers[factor] && !CodeFactors.held?(actor, factor)
+
+            sent = CodeFactors.send!(actor, factor)
+
+            hold(code: { "factor" => factor, "token_id" => sent.id })
+          end
+
+          def enrol_code
+            factor = held.dig("code", "factor")
+            return unless open? && offers[factor]
+
+            token = CodeFactors.sent(actor, factor, held.dig("code", "token_id"))
+            return warn!("confirmation-expired") if token.nil?
+
+            unless token.verify(update(:code))
+              refused! "enrol_#{factor}_code"
+              return warn!("invalid-code")
+            end
+
+            hold(code: nil)
+            CodeFactors.enable!(actor, factor)
+
+            enrolled! CodeFactors.amr(factor), "mfa"
+          end
+
+          def issue_backup_codes
+            return unless offers["backupCodes"] && !actor.backup_codes?
+
+            codes = actor.generate_backup_codes!
+
+            Event.record!(Event::BACKUP_CODES_GENERATED, actor: actor, count: codes.length)
+
+            hold(codes: codes)
+          end
+
+          def enrolled!(*methods)
+            issue_backup_codes
 
             factored! :second_factor, expiry: OneTimePassword::EXPIRY
             login.noted!(*methods)

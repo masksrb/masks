@@ -11,6 +11,9 @@ module Masks
         @apps = Apps.held_by(@actor)
         @connections = Connection.live.where(actor: @actor).includes(:provider, live_delegations: :client).order(:created_at)
         @linkable = Linking.offered(@actor)
+        @code_factors = CodeFactors::FACTORS.select do |factor|
+          CodeFactors.held?(@actor, factor) || CodeFactors.offered?(@actor, factor)
+        end
         @passkeys = Passkey.where(actor: @actor).includes(:authenticator).newest_first
         @devices = @actor.devices.newest_first
         @trusted = DeviceFactor.live.where(actor: @actor).pluck(:device_id).to_set

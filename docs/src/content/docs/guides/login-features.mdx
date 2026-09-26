@@ -13,7 +13,7 @@ A client uses its own policy, or the tenant's default, or a built-in default. `/
 | Setting | Default | |
 | --- | --- | --- |
 | `first_factors` | `password`, `passkey`, `provider` | How a person proves who they are. |
-| `second_factors` | `otp`, `passkey`, `backup_codes` | What can serve as a second factor. |
+| `second_factors` | `otp`, `passkey`, `backup_codes` | What can serve as a second factor. `email` and `sms` are also accepted. |
 | `second_factor_required` | off | Require a second factor at every sign-in. |
 | `password_minimum` | `8` | Minimum password length, up to 256. |
 | `refuse_common_passwords` | on | Refuse passwords from a list of common ones. |
@@ -27,7 +27,8 @@ A client uses its own policy, or the tenant's default, or a built-in default. `/
 - A policy whose only first factor is `provider` shows only provider buttons.
 - The tenant's default must keep a password or a passkey, so managers are never locked out. Only a
   client's own policy can be provider-only.
-- A required second factor needs `otp` or `passkey`. Backup codes alone are not enough.
+- A required second factor needs a factor besides `backup_codes`. A manager always needs `otp` or
+  `passkey`, and email or text message codes do not count for one.
 
 ## First factors
 
@@ -47,12 +48,28 @@ A person types their nickname or address, whichever they have. See
 | TOTP | An authenticator app. |
 | Passkey | A registered passkey. |
 | Backup codes | One-time codes, for when the other factors are lost. They can be downloaded. |
+| Email codes | A six-digit code sent to a confirmed email address. |
+| Text message codes | A six-digit code sent to a confirmed phone number through the tenant's SMS adapter. |
+
+### Email and text message codes
+
+A policy offers these when its `second_factors` include `email` or `sms`. Each person turns them on
+from the account page once the address is confirmed, or while enrolling, where the code they enter
+confirms it. Changing the address turns its codes off. A manager can turn them off for someone with the `disableCodeFactor` mutation.
+
+An email code does not confirm a sign-in that began from the same inbox. A sign-in whose first factor
+was a password reset link or a provider asks for another factor. Starting over and signing in with the
+password makes the email code available again.
+
+A text message code is recorded as `sms` in `amr`, and an email code as `otp`. Both add `mfa`. An
+authenticator app or a passkey is harder to steal than either, which is why neither counts toward a
+manager's second factor.
 
 ### Remembered devices
 
-A person who completes the second factor with a one-time password or a passkey can ask masks to
-remember the device. The second factor is then skipped on that device for 30 days. Signing the
-device out forgets it. See
+A person who completes the second factor with a one-time password, a passkey, or a sent code can ask
+masks to remember the device. The second factor is then skipped on that device for 30 days. Signing
+the device out forgets it. See
 [sessions and devices](/guides/logout-features/#sessions-and-devices).
 
 ## Device sign-in

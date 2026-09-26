@@ -40,6 +40,7 @@ module Masks
       validate :named
 
       before_save :activate_once_a_password_exists
+      before_save :forget_code_factors_for_new_addresses
 
       normalizes :nickname, with: ->(value) { value.to_s.strip.presence }
       normalizes :email, with: ->(value) { value.to_s.strip.downcase.presence }
@@ -257,6 +258,32 @@ module Masks
         otp? || verified_passkeys?
       end
 
+      def email_factor?
+        email_factor_at.present? && email.present? && email_verified_at.present?
+      end
+
+      def phone_factor?
+        phone_factor_at.present? && phone.present? && phone_verified_at.present?
+      end
+
+      def code_factor?(channel)
+        channel.to_s == ConfirmationCode::EMAIL ? email_factor? : phone_factor?
+      end
+
+      def adopt_code_factor!(channel)
+        now = Time.current
+
+        if channel.to_s == ConfirmationCode::EMAIL
+          update!(email_factor_at: now, email_verified_at: email_verified_at || now)
+        else
+          update!(phone_factor_at: now, phone_verified_at: phone_verified_at || now)
+        end
+      end
+
+      def drop_code_factor!(channel)
+        update!(channel.to_s == ConfirmationCode::EMAIL ? { email_factor_at: nil } : { phone_factor_at: nil })
+      end
+
       def password?
         password_digest.present?
       end
@@ -408,6 +435,11 @@ module Masks
 
         def activate_once_a_password_exists
           self.activated_at ||= Time.current if password_digest.present?
+        end
+
+        def forget_code_factors_for_new_addresses
+          self.email_factor_at = nil if will_save_change_to_email? && !new_record?
+          self.phone_factor_at = nil if will_save_change_to_phone? && !new_record?
         end
 
         def named

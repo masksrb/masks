@@ -69,6 +69,8 @@ CREATE TABLE public.actors (
     pending_approval_at timestamp(6) without time zone,
     external_id character varying,
     suspended_at timestamp(6) without time zone,
+    email_factor_at timestamp(6) without time zone,
+    phone_factor_at timestamp(6) without time zone,
     CONSTRAINT actors_are_named CHECK (((nickname IS NOT NULL) OR (email IS NOT NULL)))
 );
 
@@ -2582,6 +2584,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260926000000'),
 ('20260921010000'),
 ('20260921000000'),
 ('20260914030000'),

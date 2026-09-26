@@ -46,6 +46,25 @@ en:
         name_placeholder: "My laptop"
         add: "Set this up"
 
+      codes:
+        state:
+          "on": "On"
+          "off": "Off"
+        sent_to: "Codes go to %{to}."
+        turn_on: "Turn on"
+        turn_off: "Turn off"
+        confirm_turn_off: "Stop confirming sign-ins this way?"
+        email:
+          heading: "Email codes"
+          explained: "After your password, a sign-in can be confirmed with a code sent to your email address. It does not count after a password reset, because the reset link goes to the same inbox."
+          unconfirmed: "Confirm your email address first."
+          undeliverable: "This server cannot send email yet."
+        sms:
+          heading: "Text message codes"
+          explained: "After your password, a sign-in can be confirmed with a code sent to your phone by text message. An authenticator app or a passkey is harder to steal."
+          unconfirmed: "Add and confirm a phone number first."
+          undeliverable: "This server cannot send text messages yet."
+
       devices:
         heading: "Devices"
         lede: "Every phone, tablet and computer that has signed in to this account."

@@ -36,6 +36,10 @@ module Masks
       BACKUP_CODE_SPENT = "backup_code.spent".freeze
       AUTHENTICATOR_ENABLED = "authenticator.enabled".freeze
       AUTHENTICATOR_DISABLED = "authenticator.disabled".freeze
+      EMAIL_CODES_ENABLED = "email_codes.enabled".freeze
+      EMAIL_CODES_DISABLED = "email_codes.disabled".freeze
+      TEXT_CODES_ENABLED = "text_codes.enabled".freeze
+      TEXT_CODES_DISABLED = "text_codes.disabled".freeze
 
       DEVICE_CODE_ISSUED = "device_code.issued".freeze
       DEVICE_CODE_APPROVED = "device_code.approved".freeze

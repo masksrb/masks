@@ -99,7 +99,7 @@ module Masks
         body = to_second_factor
 
         assert_equal "second-factor", body["prompt"]
-        assert_equal({ "otp" => false, "passkey" => true }, body["secondFactors"])
+        assert_equal({ "otp" => false, "passkey" => true, "email" => false, "sms" => false }, body["secondFactors"])
         assert body["rememberable"]
         assert pass_second_factor_with_passkey(remember: true)["settled"]
 

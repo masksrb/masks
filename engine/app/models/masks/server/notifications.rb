@@ -12,7 +12,11 @@ module Masks
           Event::BACKUP_CODES_GENERATED,
           Event::BACKUP_CODE_SPENT,
           Event::AUTHENTICATOR_ENABLED,
-          Event::AUTHENTICATOR_DISABLED
+          Event::AUTHENTICATOR_DISABLED,
+          Event::EMAIL_CODES_ENABLED,
+          Event::EMAIL_CODES_DISABLED,
+          Event::TEXT_CODES_ENABLED,
+          Event::TEXT_CODES_DISABLED
         ],
         "sessions" => [
           Event::SESSION_STARTED,

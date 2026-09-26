@@ -43,6 +43,12 @@ en:
         authenticator:
           enabled: "An authenticator app was added to your %{tenant} account. Signing in now asks for its code."
           disabled: "The authenticator app on your %{tenant} account was removed. It is no longer asked for at sign-in."
+        email_codes:
+          enabled: "Signing in to your %{tenant} account can now be confirmed with a code sent to this address."
+          disabled: "Signing in to your %{tenant} account can no longer be confirmed with a code sent to this address."
+        text_codes:
+          enabled: "Signing in to your %{tenant} account can now be confirmed with a code sent to your phone."
+          disabled: "Signing in to your %{tenant} account can no longer be confirmed with a code sent to your phone."
         session:
           started: "Somebody signed in to your %{tenant} account on a device that had not been seen before."
           revoked: "A session on your %{tenant} account was ended for you."

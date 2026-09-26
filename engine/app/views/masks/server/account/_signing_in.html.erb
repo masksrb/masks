@@ -145,5 +145,40 @@
         <p id="passkey-unusable" hidden class="aside aside-bad"></p>
       </div>
     </details>
+
+    <% code_factors.each do |factor| %>
+      <% on = Masks::Server::CodeFactors.held?(actor, factor) %>
+      <details class="entry" id="<%= factor %>-codes">
+        <summary>
+          <span class="entry-icon"><%= account_icon(factor == "email" ? :email : :device) %></span>
+          <span class="entry-label"><%= account_text("codes.#{factor}.heading") %></span>
+          <span class="entry-state"><%= account_text(on ? "codes.state.on" : "codes.state.off") %></span>
+          <span class="entry-mark" aria-hidden="true"></span>
+        </summary>
+
+        <div class="entry-body">
+          <p class="aside"><%= account_text("codes.#{factor}.explained") %></p>
+
+          <% if on %>
+            <p class="aside"><%= account_text("codes.sent_to", to: Masks::Server::CodeFactors.masked(actor, factor)) %></p>
+
+            <div class="action-row">
+              <%= button_to account_text("codes.turn_off"), account_code_factor_path(factor), method: :delete,
+                    class: "action action-quiet action-sm",
+                    form: { data: { turbo_confirm: account_text("codes.confirm_turn_off") } } %>
+            </div>
+          <% elsif !Masks::Server::CodeFactors.confirmed?(actor, factor) %>
+            <p class="aside"><%= account_text("codes.#{factor}.unconfirmed") %></p>
+          <% elsif !Masks::Server::CodeFactors.deliverable?(factor) %>
+            <p class="aside"><%= account_text("codes.#{factor}.undeliverable") %></p>
+          <% else %>
+            <div class="action-row">
+              <%= button_to account_text("codes.turn_on"), account_code_factor_path(factor),
+                    class: "action action-sm" %>
+            </div>
+          <% end %>
+        </div>
+      </details>
+    <% end %>
   </div>
 </section>

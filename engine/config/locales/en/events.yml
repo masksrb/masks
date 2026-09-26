@@ -37,6 +37,12 @@ en:
       authenticator:
         enabled: "Authenticator app added"
         disabled: "Authenticator app removed"
+      email_codes:
+        enabled: "Email codes turned on"
+        disabled: "Email codes turned off"
+      text_codes:
+        enabled: "Text message codes turned on"
+        disabled: "Text message codes turned off"
       device_code:
         issued: "Device sign-in requested"
         approved: "Device signed in"

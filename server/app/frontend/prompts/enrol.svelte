@@ -16,16 +16,21 @@ const signingUp = $derived(Boolean(login.auth.journey));
 const offers = $derived(enrolment.offers ?? { otp: true, passkey: true, backupCodes: true });
 const secured = $derived(!enrolment.required);
 const issued = $derived(codes.issued ?? []);
+const sendable = $derived(Object.entries(enrolment.codes ?? {}));
 
 const passkeyable = $derived(offers.passkey && available());
 
 let code = $state("");
+let sentCode = $state("");
 let kept = $state(false);
 let copied = $state(false);
 
 const coded = $derived(code.replace(/\D/g, "").length === 6);
 const ready = $derived(secured && (issued.length === 0 || kept));
-const anything = $derived(Boolean(otp.enabled || passkeys.count > 0));
+const sentCoded = $derived(sentCode.replace(/\D/g, "").length === 6);
+const anything = $derived(
+  Boolean(otp.enabled || passkeys.count > 0 || sendable.some(([, row]) => row.enabled)),
+);
 const lede = $derived(enrolment.required ? login.t("lede") : login.t("lede_optional"));
 
 function turnOn(event) {
@@ -37,6 +42,17 @@ function turnOn(event) {
   code = "";
 
   login.submit("enrol:otp", { code: entered });
+}
+
+function confirmSent(event) {
+  event.preventDefault();
+
+  if (!sentCoded || login.loading) return;
+
+  const entered = sentCode;
+  sentCode = "";
+
+  login.submit("enrol:code", { code: entered });
 }
 
 const origin = typeof location === "undefined" ? "" : location.origin;
@@ -138,6 +154,45 @@ function done(event) {
         />
       </div>
     {/if}
+
+    {#each sendable as [factor, row] (factor)}
+      <div class="ledger-row ledger-step" class:ledger-step-done={row.enabled}>
+        <span class="ledger-label">{login.t(`codes_${factor}`)}</span>
+
+        {#if row.enabled}
+          <span class="ledger-value">{login.t("otp_on")}</span>
+        {:else if row.sent}
+          <span class="field-hint">{login.t("sent_to", { to: row.to })}</span>
+
+          <form class="flow-tight" onsubmit={confirmSent} aria-busy={login.loading || undefined}>
+            <input
+              type="text"
+              name="code"
+              class="control control-code"
+              inputmode="numeric"
+              pattern="[0-9 ]*"
+              autocomplete="one-time-code"
+              maxlength="7"
+              spellcheck="false"
+              aria-label={login.t("code")}
+              placeholder={login.t("code")}
+              bind:value={sentCode}
+            />
+
+            <Action {login} type="submit" quiet ready={sentCoded} label={login.t("turn_on")} />
+          </form>
+        {:else}
+          <span class="field-hint">{login.t(`codes_${factor}_hint`, { to: row.to })}</span>
+
+          <Action
+            {login}
+            quiet
+            label={login.t("send_code")}
+            onclick={() => login.submit("enrol:code-send", { factor })}
+          />
+        {/if}
+      </div>
+    {/each}
 
     {#if offers.backupCodes}
     <div class="ledger-row ledger-step" class:ledger-step-done={issued.length > 0 || codes.remaining > 0}>

@@ -14,6 +14,7 @@ module Masks
         LoginStates::Suspension,
         LoginStates::OneTimePassword,
         LoginStates::BackupCode,
+        LoginStates::CodeFactor,
         LoginStates::SecondFactor,
         LoginStates::Enrolment,
         LoginStates::Confirmation,

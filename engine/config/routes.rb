@@ -34,6 +34,10 @@ Masks::Server::Engine.routes.draw do
   post "/account/passkeys", to: "passkeys#create", as: :passkeys
   delete "/account/passkeys/:id", to: "passkeys#destroy", as: :passkey
 
+  post "/account/codes/:factor", to: "code_factors#create", as: :account_code_factor,
+                                 constraints: { factor: /email|sms/ }
+  delete "/account/codes/:factor", to: "code_factors#destroy", constraints: { factor: /email|sms/ }
+
   patch "/account/devices/:id", to: "devices#update", as: :device
   delete "/account/devices/:id", to: "devices#destroy"
 

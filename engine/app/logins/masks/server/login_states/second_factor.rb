@@ -3,7 +3,7 @@ module Masks
     module LoginStates
       class SecondFactor < LoginState
         def enabled?
-          actor&.second_factor?
+          actor.present? && (actor.second_factor? || codes.enabled?)
         end
 
         prompts "second-factor" do
@@ -18,7 +18,12 @@ module Masks
 
         def as_json
           {
-            "secondFactors" => { "otp" => actor.otp?, "passkey" => actor.verified_passkeys? },
+            "secondFactors" => {
+              "otp" => actor.otp?,
+              "passkey" => actor.verified_passkeys?,
+              "email" => codes.usable_factors.include?("email"),
+              "sms" => codes.usable_factors.include?("sms")
+            },
             "rememberable" => device.present?,
             "trustFor" => ActionController::Base.helpers.distance_of_time_in_words(DeviceFactor::LIFETIME)
           }
@@ -27,6 +32,12 @@ module Masks
         def start_over!
           expire! :second_factor
         end
+
+        private
+
+          def codes
+            login.state("code-factor")
+          end
       end
     end
   end
