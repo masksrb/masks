@@ -89,7 +89,7 @@
   {#if loading && !data}
     <Spinner />
   {:else if data}
-    <div class="grid items-start gap-4 md:grid-cols-2">
+    <div class="grid gap-4">
       <Card title="Connect a provider">
         <div class="flex flex-col gap-1.5">
           <span class="text-xs font-medium opacity-70">SCIM base URL</span>

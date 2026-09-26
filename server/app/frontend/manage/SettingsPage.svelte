@@ -247,7 +247,7 @@
   <Page title="General">
     <Notices feedback={feedback.state} />
 
-    <div class="grid items-start gap-4 lg:grid-cols-2">
+    <div class="grid gap-4">
       <Card title="Tenant">
         <Field label="Name" bind:value={name} onsave={() => update({ name }, "Renamed.")} />
 
@@ -261,139 +261,137 @@
         />
       </Card>
 
-      <div class="flex flex-col gap-4">
-        <Card
-          title="Accounts are named by"
+      <Card
+        title="Accounts are named by"
+      >
+        <select
+          class="select select-sm w-full"
+          value={data.tenant.namedBy}
+          onchange={(event) =>
+            update({ namedBy: event.currentTarget.value }, "Naming updated.")}
         >
-          <select
-            class="select select-sm w-full"
-            value={data.tenant.namedBy}
-            onchange={(event) =>
-              update({ namedBy: event.currentTarget.value }, "Naming updated.")}
-          >
-            <option value="nickname">Nickname</option>
-            <option value="email">Email</option>
-            <option value="either">Either</option>
-          </select>
-        </Card>
+          <option value="nickname">Nickname</option>
+          <option value="email">Email</option>
+          <option value="either">Either</option>
+        </select>
+      </Card>
 
-        <Card
-          title="Default policy"
+      <Card
+        title="Default policy"
+      >
+        <select
+          class="select select-sm w-full"
+          value={data.tenant.signInPolicy?.key ?? ""}
+          onchange={(event) =>
+            update({ signInPolicy: event.currentTarget.value }, "Default policy updated.")}
         >
-          <select
-            class="select select-sm w-full"
-            value={data.tenant.signInPolicy?.key ?? ""}
-            onchange={(event) =>
-              update({ signInPolicy: event.currentTarget.value }, "Default policy updated.")}
-          >
-            <option value="">Built-in</option>
-            {#each data.signInPolicies as policy (policy.key)}
-              <option value={policy.key}>{policy.name}</option>
-            {/each}
-          </select>
+          <option value="">Built-in</option>
+          {#each data.signInPolicies as policy (policy.key)}
+            <option value={policy.key}>{policy.name}</option>
+          {/each}
+        </select>
 
 
-        </Card>
+      </Card>
 
-        <Card
-          title="Who may sign in"
+      <Card
+        title="Who may sign in"
+      >
+        <Switch
+          label="Browsers only"
+          checked={data.tenant.browsersOnly}
+          onchange={(browsersOnly) =>
+            update({ browsersOnly }, "Sign-in rules updated.")}
+        />
+
+        <Field
+          label="Refused user agents"
+          bind:value={agents}
+          placeholder="curl, python-requests"
+          onsave={() => update({ blockedAgents: agents }, "Sign-in rules updated.")}
+        />
+      </Card>
+
+      <Card
+        title="Dynamic registration"
+      >
+        <select
+          class="select select-sm w-full"
+          value={data.tenant.dynamicRegistration}
+          onchange={(event) =>
+            update(
+              { dynamicRegistration: event.currentTarget.value },
+              "Dynamic registration updated.",
+            )}
         >
-          <Switch
-            label="Browsers only"
-            checked={data.tenant.browsersOnly}
-            onchange={(browsersOnly) =>
-              update({ browsersOnly }, "Sign-in rules updated.")}
-          />
+          <option value="off">Off</option>
+          <option value="anything">On</option>
+          <option value="bounded">On, limited to these scopes</option>
+        </select>
 
-          <Field
-            label="Refused user agents"
-            bind:value={agents}
-            placeholder="curl, python-requests"
-            onsave={() => update({ blockedAgents: agents }, "Sign-in rules updated.")}
-          />
-        </Card>
+        <ScopesEditor
+          value={data.tenant.dynamicClientScopes ?? []}
+          available={data.scopesSupported}
+          onchange={(dynamicClientScopes) => update({ dynamicClientScopes }, "Ceiling updated.")}
+        />
+      </Card>
 
-        <Card
-          title="Dynamic registration"
-        >
-          <select
-            class="select select-sm w-full"
-            value={data.tenant.dynamicRegistration}
-            onchange={(event) =>
-              update(
-                { dynamicRegistration: event.currentTarget.value },
-                "Dynamic registration updated.",
-              )}
-          >
-            <option value="off">Off</option>
-            <option value="anything">On</option>
-            <option value="bounded">On, limited to these scopes</option>
-          </select>
+      {#if data.namespaces.length}
+        <Namespaces {api} rows={data.namespaces} onreleased={load} showClient />
+      {/if}
 
-          <ScopesEditor
-            value={data.tenant.dynamicClientScopes ?? []}
-            available={data.scopesSupported}
-            onchange={(dynamicClientScopes) => update({ dynamicClientScopes }, "Ceiling updated.")}
-          />
-        </Card>
+      <Card
+        title="Signing keys"
+      >
+        {#snippet actions()}
+          <button type="button" class="btn btn-sm" onclick={stage}>Stage</button>
+          <button type="button" class="btn btn-sm btn-outline" onclick={rotate}>Rotate now</button>
+        {/snippet}
 
-        {#if data.namespaces.length}
-          <Namespaces {api} rows={data.namespaces} onreleased={load} showClient />
-        {/if}
-
-        <Card
-          title="Signing keys"
-        >
-          {#snippet actions()}
-            <button type="button" class="btn btn-sm" onclick={stage}>Stage</button>
-            <button type="button" class="btn btn-sm btn-outline" onclick={rotate}>Rotate now</button>
-          {/snippet}
-
-          <div class="overflow-x-auto">
-            <table class="table table-sm">
-              <thead>
+        <div class="overflow-x-auto">
+          <table class="table table-sm">
+            <thead>
+              <tr>
+                <th>Key</th>
+                <th class="hidden sm:table-cell">Algorithm</th>
+                <th>State</th>
+                <th class="hidden sm:table-cell">Activated</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {#each data.tenant.signingKeys as key (key.kid)}
                 <tr>
-                  <th>Key</th>
-                  <th class="hidden sm:table-cell">Algorithm</th>
-                  <th>State</th>
-                  <th class="hidden sm:table-cell">Activated</th>
-                  <th></th>
+                  <td class="font-mono text-xs">{key.kid.slice(0, 8)}</td>
+                  <td class="hidden text-xs sm:table-cell">{key.algorithm}</td>
+                  <td><span class="badge badge-sm {BADGE[key.state]}">{key.state}</span></td>
+                  <td class="hidden text-xs opacity-70 sm:table-cell">
+                    {#if key.state === "retiring"}
+                      until {day(key.retiredAt)}
+                    {:else}
+                      {day(key.activatedAt, "not yet")}
+                    {/if}
+                  </td>
+                  <td class="text-right whitespace-nowrap">
+                    {#if key.state === "staged"}
+                      <button type="button" class="btn btn-xs" onclick={() => activate(key.kid)}>
+                        Activate
+                      </button>
+                      <button
+                        type="button"
+                        class="btn btn-xs btn-ghost"
+                        onclick={() => discard(key.kid)}
+                      >
+                        Discard
+                      </button>
+                    {/if}
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {#each data.tenant.signingKeys as key (key.kid)}
-                  <tr>
-                    <td class="font-mono text-xs">{key.kid.slice(0, 8)}</td>
-                    <td class="hidden text-xs sm:table-cell">{key.algorithm}</td>
-                    <td><span class="badge badge-sm {BADGE[key.state]}">{key.state}</span></td>
-                    <td class="hidden text-xs opacity-70 sm:table-cell">
-                      {#if key.state === "retiring"}
-                        until {day(key.retiredAt)}
-                      {:else}
-                        {day(key.activatedAt, "not yet")}
-                      {/if}
-                    </td>
-                    <td class="text-right whitespace-nowrap">
-                      {#if key.state === "staged"}
-                        <button type="button" class="btn btn-xs" onclick={() => activate(key.kid)}>
-                          Activate
-                        </button>
-                        <button
-                          type="button"
-                          class="btn btn-xs btn-ghost"
-                          onclick={() => discard(key.kid)}
-                        >
-                          Discard
-                        </button>
-                      {/if}
-                    </td>
-                  </tr>
-                {/each}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-      </div>
+              {/each}
+            </tbody>
+          </table>
+        </div>
+      </Card>
     </div>
   </Page>
 {/if}
