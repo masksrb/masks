@@ -88,11 +88,6 @@ volumes:
 }
 ```
 
-| Front | Command | Listens on | Adds |
-| --- | --- | --- | --- |
-| Puma alone (default) | none needed | `PORT`, `3000` | Nothing. Caddy handles TLS, as above. |
-| Thruster | `./bin/thrust ./bin/rails server` | `HTTP_PORT`, `80` | Let's Encrypt TLS with `TLS_DOMAIN`, HTTP/2, asset caching. |
-
 Every variable the server reads is in [ENV vars](/reference/environment/).
 
 ## Encryption & secrets
