@@ -134,3 +134,11 @@ en:
         secret_rotated: "Event stream secret rotated"
         tested: "Event stream tested"
         failed: "Event stream gave up"
+      organization:
+        created: "Organization added"
+        updated: "Organization changed"
+        archived: "Organization archived"
+      membership:
+        added: "Added to an organization"
+        role_changed: "Organization role changed"
+        removed: "Removed from an organization"

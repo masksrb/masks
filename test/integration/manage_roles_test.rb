@@ -153,6 +153,45 @@ module Masks
         assert_response :unauthorized
       end
 
+      test "security creates an organization, and support fills it with people" do
+        security = bearer_for(manager(ManageRoles::SECURITY))
+
+        body = ask(%(mutation { createOrganization(key: "acme", name: "Acme", roles: ["billing"]) { organization { roles } } }), security)
+
+        assert_equal %w[owner member billing], body.dig("data", "createOrganization", "organization", "roles")
+
+        support = bearer_for(manager(ManageRoles::SUPPORT, nickname: "helper"))
+
+        body = ask(%(mutation { createOrganization(key: "globex", name: "Globex") { organization { key } } }), support)
+
+        assert_match "needs masks:manage or masks:manage:security", refusal(body)
+
+        body = ask(%(mutation { addMember(organization: "acme", email: "new@acme.example", role: "owner") { invited membership { role actor { email activated } } } }), support)
+
+        assert body.dig("data", "addMember", "invited"), body
+        assert_equal "owner", body.dig("data", "addMember", "membership", "role")
+        refute body.dig("data", "addMember", "membership", "actor", "activated")
+
+        body = ask(%(mutation { addMember(organization: "acme", email: "owner@example.invalid", role: "member") { invited } }), support)
+
+        assert_equal "only an owner can change another manager", refusal(body)
+      end
+
+      test "the last owner of an organization cannot be removed or demoted" do
+        person = create_actor(@tenant, nickname: "person", scopes: "openid")
+        within { Organization.create!(key: "acme", name: "Acme").memberships.create!(actor: person, role: "owner") }
+
+        held = bearer_for(manager(ManageRoles::SUPPORT))
+
+        body = ask(%(mutation($uuid: ID!) { removeMember(organization: "acme", uuid: $uuid) { organization { key } } }), held, uuid: person.uuid)
+
+        assert_equal "Acme needs an owner", refusal(body)
+
+        body = ask(%(mutation($uuid: ID!) { setMemberRole(organization: "acme", uuid: $uuid, role: "member") { membership { role } } }), held, uuid: person.uuid)
+
+        assert_match "needs an owner", refusal(body)
+      end
+
       test "every mutation in the schema declares the least role it needs" do
         undeclared = ManageSchema.mutation.fields.values.reject { |field| field.resolver.level_declared }
 

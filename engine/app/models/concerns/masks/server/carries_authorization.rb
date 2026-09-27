@@ -21,6 +21,7 @@ module Masks
               "prompt" => authorization.prompt,
               "max_age" => authorization.max_age,
               "acr_values" => authorization.acr_values.presence,
+              "organization" => authorization.organization,
               "user_code" => authorization.user_code,
               "signed" => (true if authorization.signed?),
               "saml" => authorization.saml
@@ -42,6 +43,7 @@ module Masks
           prompt: Scopes.join(Array(held("prompt"))),
           max_age: held("max_age"),
           acr_values: Scopes.join(Array(held("acr_values"))),
+          organization: held("organization"),
           resource: audience,
           claims: requested_claims,
           user_code: held("user_code"),

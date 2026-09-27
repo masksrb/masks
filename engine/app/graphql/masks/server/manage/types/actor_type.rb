@@ -27,6 +27,7 @@ module Masks
           field :connections, [ "Masks::Server::Manage::Types::ConnectionType" ], null: false
           field :consents, [ "Masks::Server::Manage::Types::ConsentType" ], null: false
           field :tokens, [ "Masks::Server::Manage::Types::TokenType" ], null: false
+          field :memberships, [ "Masks::Server::Manage::Types::MembershipType" ], null: false
 
           field :events, [ "Masks::Server::Manage::Types::EventType" ], null: false do
             argument :limit, Integer, required: false
@@ -117,6 +118,10 @@ module Masks
 
           def consents
             Masks::Server::Consent.live.where(actor_id: object.id).includes(:client).order(updated_at: :desc)
+          end
+
+          def memberships
+            object.memberships.includes(:organization).joins(:organization).order("organizations.name")
           end
 
           def tokens

@@ -178,6 +178,12 @@ en:
       waiting: "Checking every few seconds"
       check: "Check again"
 
+    choose_organization:
+      title: "Choose an organization"
+      title_to: "Choose an organization for %{client}"
+      lede: "You belong to more than one. You can switch later by signing in again."
+      as: "%{organization}, as %{role}"
+
     consent:
       title: "Allow %{client}?"
       access: "Access"

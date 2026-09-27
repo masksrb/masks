@@ -8,23 +8,23 @@ the work.
 
 ## State
 
-| Capability                      | State       | Commit or next step                                                                     |
-| ------------------------------- | ----------- | --------------------------------------------------------------------------------------- |
-| Audit log                       | Built       | `Event`, about 100 actions, 180-day retention                                           |
-| Event streaming                 | Built       | `03b525c`, `bbe2ea1`, guide at `guides/event-streams`                                   |
-| Single sign-on and provisioning | Built       | OIDC, OAuth, SAML in and out, SCIM                                                      |
-| Step-up authentication          | Built       | `a6fd2fe`, and `apps_require_second_factor` on sign-in policies                         |
-| Token exchange                  | Built       | RFC 8693, with `exchange.granted` and `exchange.refused` events. RFC 9396 is item 11    |
-| Manage roles                    | Built       | `ManageRoles`, a declared level on every mutation, and the limits in the security guide |
-| Organizations and roles         | Not started |                                                                                         |
-| Home-realm discovery            | Not started |                                                                                         |
-| Session policies                | Built       | `sign_in_policies.session_lifetime` and `session_idle_timeout`                          |
-| Audit export and retention      | Not started |                                                                                         |
-| Adaptive risk                   | Not started |                                                                                         |
-| Passwordless email              | Not started |                                                                                         |
-| Custom domains                  | Not started |                                                                                         |
-| Shared signals                  | Not started |                                                                                         |
-| Migration                       | Not started |                                                                                         |
+| Capability                      | State        | Commit or next step                                                                     |
+| ------------------------------- | ------------ | --------------------------------------------------------------------------------------- |
+| Audit log                       | Built        | `Event`, about 100 actions, 180-day retention                                           |
+| Event streaming                 | Built        | `03b525c`, `bbe2ea1`, guide at `guides/event-streams`                                   |
+| Single sign-on and provisioning | Built        | OIDC, OAuth, SAML in and out, SCIM                                                      |
+| Step-up authentication          | Built        | `a6fd2fe`, and `apps_require_second_factor` on sign-in policies                         |
+| Token exchange                  | Built        | RFC 8693, with `exchange.granted` and `exchange.refused` events. RFC 9396 is item 11    |
+| Manage roles                    | Built        | `ManageRoles`, a declared level on every mutation, and the limits in the security guide |
+| Organizations and roles         | Partly built | Step 1 of 4: tables, memberships, the `org` claim, and the picker                       |
+| Home-realm discovery            | Not started  |                                                                                         |
+| Session policies                | Built        | `sign_in_policies.session_lifetime` and `session_idle_timeout`                          |
+| Audit export and retention      | Not started  |                                                                                         |
+| Adaptive risk                   | Not started  |                                                                                         |
+| Passwordless email              | Not started  |                                                                                         |
+| Custom domains                  | Not started  |                                                                                         |
+| Shared signals                  | Not started  |                                                                                         |
+| Migration                       | Not started  |                                                                                         |
 
 ## What the code already has
 
@@ -121,29 +121,37 @@ Each capability is its own commit or series of commits, with tests, docs, a rege
 
 ### Organizations and roles
 
-- Tables `organizations` (tenant, key, name, settings, archived_at) and `memberships` (tenant,
-  organization, actor, role, invited_by, unique on organization and actor), both with row-level
-  security like `adapters`.
-- Roles are strings an organization defines, with `owner` and `member` built in. An organization has
-  at least one owner. Removing the last owner is refused.
-- Invitations reuse `Invitation` with an `organization_id` and a role. Accepting one creates the
-  membership in the same transaction.
-- A client asks for an organization with `organization=<key>` on `/authorize`, or with the scope
-  `org:<key>`. The ID token and access token get `org: { key, role }`. A non-member gets
-  `access_denied`. A request with no organization and an account in exactly one gets that one. An
-  account in several is shown a picker after sign-in.
-- `sign_in_policies.organization_id`. `SignInPolicy.for` checks the organization's policy, then the
-  client's, then the tenant's.
-- `events.organization_id`. Streams gain an optional organization filter, so one customer's log goes to
-  that customer's SIEM.
-- SCIM provisioning into an organization: a provisioning token can be issued for one organization, and
-  accounts it creates become members.
-- Manage: `organizations`, `organization`, `createOrganization`, `updateOrganization`,
-  `archiveOrganization`, `inviteMember`, `setMemberRole`, `removeMember`, and an Organizations page.
-- Events: `organization.created`, `.updated`, `.archived`, `membership.added`, `.role_changed`,
-  `.removed`.
-- Open question: whether an organization can own clients, so a customer registers its own apps. Leave it
-  out of the first cut.
+Decided 2026-09-27: an account may belong to no organization, and organizations do not own clients in
+the first cut. Apps stay tenant-wide and ask for an organization.
+
+**Step 1 (done).**
+
+- `organizations` (key, uuid, name, extra `roles`, archived) and `memberships` (organization, actor,
+  role, invited_by), both under row-level security. `tokens.organization_id` carries the choice from
+  the code to every access and refresh token after it.
+- `owner` and `member` are built in. `Membership` refuses to demote or remove the last owner, except
+  when the actor or organization itself is deleted.
+- The `organization` scope is standard. `LoginStates::OrganizationChoice` runs before consent when a
+  request's granted scopes include it: a named `organization` must be one of the person's, one
+  membership is taken without asking, several prompt `choose-organization`, and none is refused with
+  `access_denied`. The choice is tied to the request's rid.
+- `org` is `{ id, key, name, role }` on access and ID tokens, read from the membership each time a
+  token is issued. The token endpoint refuses a code or refresh whose account has left the
+  organization. Archiving an organization or removing a member revokes its live tokens.
+- Manage: `organizations`, `organization`, `create`/`update`/`archive`/`restoreOrganization`
+  (security), and `addMember`, `setMemberRole`, `removeMember` (support). `addMember` by email invites
+  an account that does not exist. Organizations has its own page in the main nav, and actors list
+  their memberships.
+
+**Step 2.** `sign_in_policies.organization_id`, with `SignInPolicy.for` checking the chosen
+organization's policy first. The policy has to be known before sign-in finishes, so a named
+`organization` on the request selects it up front and a chosen one applies from the choice onward.
+`providers.organization_id` with a group-claim-to-role map, and provisioning tokens scoped to one
+organization.
+
+**Step 3.** `events.organization_id`, and an optional organization filter on event streams.
+
+**Step 4.** A self-service admin view for an organization's owners, without any `masks:manage` scope.
 
 ### Home-realm discovery
 

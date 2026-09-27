@@ -1,6 +1,6 @@
 ---
 title: Features
-description: Clients, signing in, signing out, and accounts.
+description: Clients, signing in, signing out, organizations, and accounts.
 ---
 
 A [client](/guides/core-concepts/#clients) is an application that signs people in or signs in as
@@ -183,6 +183,45 @@ Both run from 5 minutes to 400 days, and the idle timeout is shorter than the li
 token issued in a session that either setting bounds stops working when the session ends, including
 when the person signs out. A session with neither setting leaves refresh tokens to their own
 lifetime.
+
+## Organizations
+
+An **organization** is a customer inside a tenant. Its **members** are accounts, and each member holds
+one **role** there. Every organization has `owner` and `member`, and can name more, such as
+`billing`. An account can belong to several organizations, or to none.
+
+### Adding one
+
+1. In `/manage`, open **Organizations** and choose **Add**. Its key is what apps ask for.
+2. Add the first member as `owner`. An organization always keeps at least one owner.
+3. Add the rest by email. An address with no account gets an invitation, and the membership is ready
+   when they accept it.
+
+Removing a member revokes their tokens for that organization. Archiving the organization revokes
+every token issued for it and stops it being offered.
+
+### Signing in as a member
+
+An app asks for the `organization` scope. Its tokens then carry an `org` claim for one organization:
+
+```json
+{ "org": { "id": "5f0c…", "key": "acme", "name": "Acme", "role": "billing" } }
+```
+
+| The person | What happens |
+| --- | --- |
+| Belongs to one organization | That one, without a question. |
+| Belongs to several | masks asks which, after they sign in. |
+| Belongs to none | The app gets `access_denied`. |
+
+An app that already knows the organization passes `organization=acme` on `/authorize`, which skips the
+question. A person who is not a member of it gets `access_denied`. To switch organizations, the app
+sends the person through `/authorize` again with another key. The session carries over, so they are
+not asked for a password.
+
+A refresh reads the member's role again, so a changed role reaches the app within one access token
+lifetime. A refresh for someone no longer a member is refused with `invalid_grant`. An app that does
+not ask for the scope gets no claim and no question.
 
 ## Accounts
 

@@ -21,6 +21,7 @@ module Masks
         LoginStates::Confirmation,
         LoginStates::Configure,
         LoginStates::Delegation,
+        LoginStates::OrganizationChoice,
         LoginStates::Consent
       ].freeze
 

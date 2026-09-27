@@ -24,6 +24,8 @@ module Masks
       has_many :subjects, dependent: :destroy
       has_many :delegations, dependent: :destroy
       has_many :connections, dependent: :destroy
+      has_many :memberships, dependent: :destroy
+      has_many :organizations, through: :memberships
       has_many :approvals, class_name: "Client", foreign_key: :approved_by_id, dependent: :nullify
       has_one :avatar, dependent: :destroy
 

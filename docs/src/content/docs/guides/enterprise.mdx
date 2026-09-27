@@ -16,7 +16,7 @@ today, and how the rest will be built.
 | Step-up authentication | Built | [Step-up authentication](#step-up-authentication) |
 | Token exchange | Built | [Token exchange](#token-exchange) |
 | Manage roles | Built | [Manage roles](#manage-roles) |
-| Organizations and roles | Planned | [Organizations and roles](#organizations-and-roles) |
+| Organizations and roles | Partly built | [Organizations and roles](#organizations-and-roles) |
 | Home-realm discovery | Planned | [Home-realm discovery](#home-realm-discovery) |
 | Session policies | Built | [Session policies](#session-policies) |
 | Audit export and retention | Planned | [Audit export and retention](#audit-export-and-retention) |
@@ -108,19 +108,32 @@ touching people. `masks:manage:read`, `masks:manage:support`, and
 `masks:manage:security` sit beside `masks:manage`, and no role can grant a
 role it does not hold. See [manage roles](/guides/security/#manage-roles).
 
-## Planned
+## Partly built
 
 ### Organizations and roles
 
 A business application has customers, and each customer has people in
 different roles.
 
-- An organization has members, invitations, and a role for each member.
-- A token can be scoped to one organization and carries the member's role there.
-- A sign-in policy can apply to one organization, so a customer can require a
-  passkey without changing another customer's sign-in.
-- Events record the organization, so one customer's log can be streamed to that
-  customer.
+Today:
+
+- An organization has members, and each member holds a role there. Apps ask for
+  the `organization` scope, and tokens carry the organization and the role in an
+  `org` claim. A person in several organizations chooses one when signing in.
+- Removing a member or archiving an organization revokes the tokens issued for
+  it. See [organizations](/guides/features/#organizations).
+
+Still to build:
+
+- A sign-in policy for one organization, so a customer can require a passkey
+  without changing another customer's sign-in.
+- A provider that belongs to one organization, mapping its groups to roles, and
+  provisioning into one organization over SCIM.
+- Events that record the organization, so one customer's log can be streamed to
+  that customer.
+- An admin view for each organization's own owners.
+
+## Planned
 
 ### Home-realm discovery
 

@@ -39,8 +39,9 @@ module Masks
         held("max_age")
       end
 
-      def issue_code!(actor:, device: nil, session: nil, authenticated_at: nil, amr: nil)
+      def issue_code!(actor:, device: nil, session: nil, authenticated_at: nil, amr: nil, organization: nil)
         AuthorizationCode.mint!(
+          organization: organization,
           actor: actor,
           device: device,
           session: session,

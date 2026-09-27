@@ -63,6 +63,13 @@ module Masks
           field :restore_event_stream, mutation: Mutations::RestoreEventStream
           field :rotate_event_stream_secret, mutation: Mutations::RotateEventStreamSecret
           field :test_event_stream, mutation: Mutations::TestEventStream
+          field :create_organization, mutation: Mutations::CreateOrganization
+          field :update_organization, mutation: Mutations::UpdateOrganization
+          field :archive_organization, mutation: Mutations::ArchiveOrganization
+          field :restore_organization, mutation: Mutations::RestoreOrganization
+          field :add_member, mutation: Mutations::AddMember
+          field :set_member_role, mutation: Mutations::SetMemberRole
+          field :remove_member, mutation: Mutations::RemoveMember
           field :stage_signing_key, mutation: Mutations::StageSigningKey
           field :activate_signing_key, mutation: Mutations::ActivateSigningKey
           field :discard_signing_key, mutation: Mutations::DiscardSigningKey

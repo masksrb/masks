@@ -3,7 +3,7 @@ module Masks
     class Authorization
       attr_reader :client_id, :redirect_uri, :response_type, :state, :nonce,
                   :code_challenge, :code_challenge_method, :prompt, :audience,
-                  :requested_scopes, :max_age, :acr_values, :requested_claims, :request_uri,
+                  :requested_scopes, :max_age, :acr_values, :organization, :requested_claims, :request_uri,
                   :user_code, :dpop_jkt, :request_object, :saml
 
       def self.from_request(request)
@@ -23,6 +23,7 @@ module Masks
           prompt: params["prompt"],
           max_age: params["max_age"],
           acr_values: params["acr_values"],
+          organization: params["organization"],
           resource: repeated["resource"],
           request: params["request"],
           request_uri: params["request_uri"],
@@ -33,7 +34,7 @@ module Masks
 
       def initialize(client_id:, redirect_uri:, response_type:, scope: nil, state: nil,
                      nonce: nil, code_challenge: nil, code_challenge_method: nil,
-                     prompt: nil, max_age: nil, acr_values: nil, resource: nil, request: nil,
+                     prompt: nil, max_age: nil, acr_values: nil, organization: nil, resource: nil, request: nil,
                      request_uri: nil, claims: nil, user_code: nil, dpop_jkt: nil, signed: false, saml: nil)
         @signed = signed
         @saml = saml.presence
@@ -53,6 +54,7 @@ module Masks
         @prompt = Scopes.list(prompt)
         @max_age = max_age.presence&.to_i
         @acr_values = Scopes.list(acr_values)
+        @organization = organization.to_s.strip.downcase.presence
         @audience = Array(resource).map(&:to_s).reject(&:empty?).uniq
       end
 
@@ -148,6 +150,7 @@ module Masks
           "prompt" => prompt.sort.join(" ").presence,
           "max_age" => max_age,
           "acr_values" => acr_values.join(" ").presence,
+          "organization" => organization,
           "resource" => audience.sort,
           "claims" => requested_claims&.to_json,
           "dpop_jkt" => dpop_jkt

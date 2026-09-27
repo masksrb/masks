@@ -39,6 +39,8 @@ schema disagree.
 | `providerPresets` | [`[ProviderPreset!]!`](#providerpreset) |  |
 | `adapters`<br />`kind: String`<br />`archived: Boolean` | [`[Adapter!]!`](#adapter) |  |
 | `adapterServices` | [`[AdapterService!]!`](#adapterservice) |  |
+| `organizations`<br />`archived: Boolean` | [`[Organization!]!`](#organization) |  |
+| `organization`<br />`key: ID!` | [`Organization`](#organization) |  |
 | `eventStreams`<br />`archived: Boolean` | [`[EventStream!]!`](#eventstream) |  |
 | `signInPolicies`<br />`archived: Boolean` | [`[SignInPolicy!]!`](#signinpolicy) |  |
 | `signInPolicy`<br />`key: ID!` | [`SignInPolicy`](#signinpolicy) |  |
@@ -59,72 +61,79 @@ schema disagree.
 
 ### Mutation
 
-| Field | Type |
-| --- | --- |
-| `createActor`<br />`nickname: String`<br />`email: String`<br />`password: String`<br />`scopes: [String!]` | [`CreateActorPayload`](#createactorpayload) |
-| `resendInvitation`<br />`uuid: ID!` | [`ResendInvitationPayload`](#resendinvitationpayload) |
-| `resetPassword`<br />`uuid: ID!` | [`ResetPasswordPayload`](#resetpasswordpayload) |
-| `verifyEmail`<br />`uuid: ID!` | [`VerifyEmailPayload`](#verifyemailpayload) |
-| `updateActor`<br />`uuid: ID!`<br />`nickname: String`<br />`email: String`<br />`phone: String`<br />`name: String`<br />`givenName: String`<br />`familyName: String`<br />`middleName: String`<br />`profileUrl: String`<br />`pictureUrl: String`<br />`websiteUrl: String`<br />`gender: String`<br />`birthdate: String`<br />`zoneinfo: String`<br />`locale: String` | [`UpdateActorPayload`](#updateactorpayload) |
-| `approveActor`<br />`uuid: ID!` | [`ApproveActorPayload`](#approveactorpayload) |
-| `setActorScopes`<br />`uuid: ID!`<br />`scopes: [String!]!` | [`SetActorScopesPayload`](#setactorscopespayload) |
-| `signOutActor`<br />`uuid: ID!` | [`SignOutActorPayload`](#signoutactorpayload) |
-| `suspendActor`<br />`uuid: ID!` | [`SuspendActorPayload`](#suspendactorpayload) |
-| `restoreActor`<br />`uuid: ID!` | [`RestoreActorPayload`](#restoreactorpayload) |
-| `deleteActor`<br />`uuid: ID!` | [`DeleteActorPayload`](#deleteactorpayload) |
-| `issueProvisioningToken`<br />`label: String!`<br />`expiresIn: Int` | [`IssueProvisioningTokenPayload`](#issueprovisioningtokenpayload) |
-| `revokeProvisioningToken`<br />`id: ID!` | [`RevokeProvisioningTokenPayload`](#revokeprovisioningtokenpayload) |
-| `generateBackupCodes`<br />`uuid: ID!` | [`GenerateBackupCodesPayload`](#generatebackupcodespayload) |
-| `disableAuthenticator`<br />`uuid: ID!` | [`DisableAuthenticatorPayload`](#disableauthenticatorpayload) |
-| `disableCodeFactor`<br />`uuid: ID!`<br />`factor: String!` | [`DisableCodeFactorPayload`](#disablecodefactorpayload) |
-| `revokePasskey`<br />`uuid: ID!`<br />`id: ID!` | [`RevokePasskeyPayload`](#revokepasskeypayload) |
-| `uploadAvatar`<br />`uuid: ID!`<br />`photo: Upload!` | [`UploadAvatarPayload`](#uploadavatarpayload) |
-| `removeAvatar`<br />`uuid: ID!` | [`RemoveAvatarPayload`](#removeavatarpayload) |
-| `createClient`<br />`name: String!`<br />`grantTypes: [String!]`<br />`redirectUris: [String!]`<br />`postLogoutRedirectUris: [String!]`<br />`resources: [String!]`<br />`requiredScopes: [String!]`<br />`allowedScopes: [String!]`<br />`tokenEndpointAuthMethod: String`<br />`dpopBoundAccessTokens: Boolean`<br />`jwks: JSON`<br />`jwksUri: String`<br />`requireSignedRequestObject: Boolean` | [`CreateClientPayload`](#createclientpayload) |
-| `createSamlApplication`<br />`name: String!`<br />`entityId: String!`<br />`acsUrls: [String!]!`<br />`certificate: String`<br />`nameIdFormat: String`<br />`requestsSigned: Boolean`<br />`idpInitiated: Boolean`<br />`attributes: JSON` | [`CreateSamlApplicationPayload`](#createsamlapplicationpayload) |
-| `readSamlApplicationMetadata`<br />`xml: String!` | [`ReadSamlApplicationMetadataPayload`](#readsamlapplicationmetadatapayload) |
-| `updateClient`<br />`clientId: ID!`<br />`name: String`<br />`grantTypes: [String!]`<br />`redirectUris: [String!]`<br />`postLogoutRedirectUris: [String!]`<br />`resources: [String!]`<br />`requiredScopes: [String!]`<br />`allowedScopes: [String!]`<br />`subjectType: String`<br />`dpopBoundAccessTokens: Boolean`<br />`sectorIdentifierUri: String`<br />`backchannelLogoutUri: String`<br />`backchannelLogoutSessionRequired: Boolean`<br />`requirePushedAuthorizationRequests: Boolean`<br />`jwks: JSON`<br />`jwksUri: String`<br />`requireSignedRequestObject: Boolean`<br />`tokenEndpointAuthMethod: String`<br />`samlEntityId: String`<br />`samlCertificate: String`<br />`samlNameIdFormat: String`<br />`samlRequestsSigned: Boolean`<br />`samlIdpInitiated: Boolean`<br />`samlAttributes: JSON`<br />`consentRequired: Boolean`<br />`signInPolicy: ID`<br />`clientUri: String`<br />`logoUri: String`<br />`tosUri: String`<br />`policyUri: String` | [`UpdateClientPayload`](#updateclientpayload) |
-| `rotateClientSecret`<br />`clientId: ID!`<br />`expiresIn: Int` | [`RotateClientSecretPayload`](#rotateclientsecretpayload) |
-| `archiveClient`<br />`clientId: ID!` | [`ArchiveClientPayload`](#archiveclientpayload) |
-| `restoreClient`<br />`clientId: ID!` | [`RestoreClientPayload`](#restoreclientpayload) |
-| `releaseNamespace`<br />`name: String!` | [`ReleaseNamespacePayload`](#releasenamespacepayload) |
-| `discoverProvider`<br />`issuer: String!` | [`DiscoverProviderPayload`](#discoverproviderpayload) |
-| `readSamlMetadata`<br />`metadataUrl: String`<br />`metadataXml: String` | [`ReadSamlMetadataPayload`](#readsamlmetadatapayload) |
-| `createProvider`<br />`key: ID!`<br />`name: String!`<br />`preset: ID`<br />`presetValues: JSON`<br />`protocol: String`<br />`authorizationUrl: String`<br />`tokenUrl: String`<br />`clientId: String`<br />`clientSecret: String`<br />`userinfoUrl: String`<br />`emailsUrl: String`<br />`scopes: [String!]`<br />`authorizeParams: JSON`<br />`claims: JSON`<br />`subjectClaim: String`<br />`issuer: String`<br />`jwksUri: String`<br />`tokenAuthMethod: String`<br />`responseMode: String`<br />`teamId: String`<br />`keyId: String`<br />`privateKey: String`<br />`idpEntityId: String`<br />`idpSsoUrl: String`<br />`idpCertificates: String`<br />`metadataUrl: String`<br />`nameIdFormat: String`<br />`role: String`<br />`trustsEmail: Boolean`<br />`emailDomains: [String!]`<br />`signupScopes: [String!]`<br />`delegates: Boolean`<br />`delegatedScopes: [String!]`<br />`delegationParams: JSON`<br />`resourceUrl: String` | [`CreateProviderPayload`](#createproviderpayload) |
-| `updateProvider`<br />`key: ID!`<br />`name: String`<br />`protocol: String`<br />`authorizationUrl: String`<br />`tokenUrl: String`<br />`clientId: String`<br />`clientSecret: String`<br />`userinfoUrl: String`<br />`emailsUrl: String`<br />`claims: JSON`<br />`tokenAuthMethod: String`<br />`responseMode: String`<br />`teamId: String`<br />`keyId: String`<br />`privateKey: String`<br />`idpEntityId: String`<br />`idpSsoUrl: String`<br />`idpCertificates: String`<br />`metadataUrl: String`<br />`nameIdFormat: String`<br />`scopes: [String!]`<br />`authorizeParams: JSON`<br />`subjectClaim: String`<br />`issuer: String`<br />`jwksUri: String`<br />`role: String`<br />`trustsEmail: Boolean`<br />`emailDomains: [String!]`<br />`signupScopes: [String!]`<br />`delegates: Boolean`<br />`delegatedScopes: [String!]`<br />`delegationParams: JSON`<br />`resourceUrl: String` | [`UpdateProviderPayload`](#updateproviderpayload) |
-| `archiveProvider`<br />`key: ID!` | [`ArchiveProviderPayload`](#archiveproviderpayload) |
-| `restoreProvider`<br />`key: ID!` | [`RestoreProviderPayload`](#restoreproviderpayload) |
-| `revokeToken`<br />`id: ID!`<br />`family: Boolean` | [`RevokeTokenPayload`](#revoketokenpayload) |
-| `revokeConnection`<br />`id: ID!` | [`RevokeConnectionPayload`](#revokeconnectionpayload) |
-| `revokeConsent`<br />`id: ID!` | [`RevokeConsentPayload`](#revokeconsentpayload) |
-| `revokeDelegation`<br />`id: ID!` | [`RevokeDelegationPayload`](#revokedelegationpayload) |
-| `registerProvider`<br />`key: ID!` | [`RegisterProviderPayload`](#registerproviderpayload) |
-| `revokeSession`<br />`id: ID!` | [`RevokeSessionPayload`](#revokesessionpayload) |
-| `blockDevice`<br />`id: ID!` | [`BlockDevicePayload`](#blockdevicepayload) |
-| `unblockDevice`<br />`id: ID!` | [`UnblockDevicePayload`](#unblockdevicepayload) |
-| `blockDevices`<br />`ids: [ID!]`<br />`agent: String`<br />`refuse: Boolean` | [`BlockDevicesPayload`](#blockdevicespayload) |
-| `unblockDevices`<br />`ids: [ID!]!` | [`UnblockDevicesPayload`](#unblockdevicespayload) |
-| `signOutDevice`<br />`id: ID!` | [`SignOutDevicePayload`](#signoutdevicepayload) |
-| `updateTenant`<br />`name: String`<br />`dynamicClientScopes: [String!]`<br />`dynamicRegistration: String`<br />`namedBy: String`<br />`browsersOnly: Boolean`<br />`blockedAgents: String`<br />`signInPolicy: ID`<br />`suspendAfter: Int`<br />`deleteAfter: Int` | [`UpdateTenantPayload`](#updatetenantpayload) |
-| `createSignInPolicy`<br />`name: String`<br />`signup: Boolean`<br />`nickname: String`<br />`email: String`<br />`emailVerified: Boolean`<br />`phone: String`<br />`phoneVerified: Boolean`<br />`passwordMinimum: Int`<br />`refuseCommonPasswords: Boolean`<br />`firstFactors: [String!]`<br />`secondFactors: [String!]`<br />`secondFactorRequired: Boolean`<br />`appsRequireSecondFactor: Boolean`<br />`sessionLifetime: Int`<br />`sessionIdleTimeout: Int`<br />`emailDomains: [String!]`<br />`providers: [String!]`<br />`everyProvider: Boolean`<br />`confirmation: String`<br />`hidden: Boolean`<br />`signupScopes: [String!]`<br />`key: ID!` | [`CreateSignInPolicyPayload`](#createsigninpolicypayload) |
-| `updateSignInPolicy`<br />`name: String`<br />`signup: Boolean`<br />`nickname: String`<br />`email: String`<br />`emailVerified: Boolean`<br />`phone: String`<br />`phoneVerified: Boolean`<br />`passwordMinimum: Int`<br />`refuseCommonPasswords: Boolean`<br />`firstFactors: [String!]`<br />`secondFactors: [String!]`<br />`secondFactorRequired: Boolean`<br />`appsRequireSecondFactor: Boolean`<br />`sessionLifetime: Int`<br />`sessionIdleTimeout: Int`<br />`emailDomains: [String!]`<br />`providers: [String!]`<br />`everyProvider: Boolean`<br />`confirmation: String`<br />`hidden: Boolean`<br />`signupScopes: [String!]`<br />`key: ID!` | [`UpdateSignInPolicyPayload`](#updatesigninpolicypayload) |
-| `archiveSignInPolicy`<br />`key: ID!` | [`ArchiveSignInPolicyPayload`](#archivesigninpolicypayload) |
-| `restoreSignInPolicy`<br />`key: ID!` | [`RestoreSignInPolicyPayload`](#restoresigninpolicypayload) |
-| `createAdapter`<br />`key: ID!`<br />`service: String!`<br />`name: String!`<br />`config: JSON`<br />`primary: Boolean` | [`CreateAdapterPayload`](#createadapterpayload) |
-| `updateAdapter`<br />`key: ID!`<br />`name: String`<br />`config: JSON`<br />`primary: Boolean` | [`UpdateAdapterPayload`](#updateadapterpayload) |
-| `archiveAdapter`<br />`key: ID!` | [`ArchiveAdapterPayload`](#archiveadapterpayload) |
-| `restoreAdapter`<br />`key: ID!` | [`RestoreAdapterPayload`](#restoreadapterpayload) |
-| `testAdapter`<br />`key: ID!`<br />`to: String!` | [`TestAdapterPayload`](#testadapterpayload) |
-| `createEventStream`<br />`key: ID!`<br />`name: String!`<br />`url: String!`<br />`actions: [String!]` | [`CreateEventStreamPayload`](#createeventstreampayload) |
-| `updateEventStream`<br />`key: ID!`<br />`name: String`<br />`url: String`<br />`actions: [String!]` | [`UpdateEventStreamPayload`](#updateeventstreampayload) |
-| `archiveEventStream`<br />`key: ID!` | [`ArchiveEventStreamPayload`](#archiveeventstreampayload) |
-| `restoreEventStream`<br />`key: ID!` | [`RestoreEventStreamPayload`](#restoreeventstreampayload) |
-| `rotateEventStreamSecret`<br />`key: ID!` | [`RotateEventStreamSecretPayload`](#rotateeventstreamsecretpayload) |
-| `testEventStream`<br />`key: ID!` | [`TestEventStreamPayload`](#testeventstreampayload) |
-| `stageSigningKey` | [`StageSigningKeyPayload`](#stagesigningkeypayload) |
-| `activateSigningKey`<br />`kid: ID!` | [`ActivateSigningKeyPayload`](#activatesigningkeypayload) |
-| `discardSigningKey`<br />`kid: ID!` | [`DiscardSigningKeyPayload`](#discardsigningkeypayload) |
-| `rotateSigningKey` | [`RotateSigningKeyPayload`](#rotatesigningkeypayload) |
+| Field | Type | Description |
+| --- | --- | --- |
+| `createActor`<br />`nickname: String`<br />`email: String`<br />`password: String`<br />`scopes: [String!]` | [`CreateActorPayload`](#createactorpayload) |  |
+| `resendInvitation`<br />`uuid: ID!` | [`ResendInvitationPayload`](#resendinvitationpayload) |  |
+| `resetPassword`<br />`uuid: ID!` | [`ResetPasswordPayload`](#resetpasswordpayload) |  |
+| `verifyEmail`<br />`uuid: ID!` | [`VerifyEmailPayload`](#verifyemailpayload) |  |
+| `updateActor`<br />`uuid: ID!`<br />`nickname: String`<br />`email: String`<br />`phone: String`<br />`name: String`<br />`givenName: String`<br />`familyName: String`<br />`middleName: String`<br />`profileUrl: String`<br />`pictureUrl: String`<br />`websiteUrl: String`<br />`gender: String`<br />`birthdate: String`<br />`zoneinfo: String`<br />`locale: String` | [`UpdateActorPayload`](#updateactorpayload) |  |
+| `approveActor`<br />`uuid: ID!` | [`ApproveActorPayload`](#approveactorpayload) |  |
+| `setActorScopes`<br />`uuid: ID!`<br />`scopes: [String!]!` | [`SetActorScopesPayload`](#setactorscopespayload) |  |
+| `signOutActor`<br />`uuid: ID!` | [`SignOutActorPayload`](#signoutactorpayload) |  |
+| `suspendActor`<br />`uuid: ID!` | [`SuspendActorPayload`](#suspendactorpayload) |  |
+| `restoreActor`<br />`uuid: ID!` | [`RestoreActorPayload`](#restoreactorpayload) |  |
+| `deleteActor`<br />`uuid: ID!` | [`DeleteActorPayload`](#deleteactorpayload) |  |
+| `issueProvisioningToken`<br />`label: String!`<br />`expiresIn: Int` | [`IssueProvisioningTokenPayload`](#issueprovisioningtokenpayload) |  |
+| `revokeProvisioningToken`<br />`id: ID!` | [`RevokeProvisioningTokenPayload`](#revokeprovisioningtokenpayload) |  |
+| `generateBackupCodes`<br />`uuid: ID!` | [`GenerateBackupCodesPayload`](#generatebackupcodespayload) |  |
+| `disableAuthenticator`<br />`uuid: ID!` | [`DisableAuthenticatorPayload`](#disableauthenticatorpayload) |  |
+| `disableCodeFactor`<br />`uuid: ID!`<br />`factor: String!` | [`DisableCodeFactorPayload`](#disablecodefactorpayload) |  |
+| `revokePasskey`<br />`uuid: ID!`<br />`id: ID!` | [`RevokePasskeyPayload`](#revokepasskeypayload) |  |
+| `uploadAvatar`<br />`uuid: ID!`<br />`photo: Upload!` | [`UploadAvatarPayload`](#uploadavatarpayload) |  |
+| `removeAvatar`<br />`uuid: ID!` | [`RemoveAvatarPayload`](#removeavatarpayload) |  |
+| `createClient`<br />`name: String!`<br />`grantTypes: [String!]`<br />`redirectUris: [String!]`<br />`postLogoutRedirectUris: [String!]`<br />`resources: [String!]`<br />`requiredScopes: [String!]`<br />`allowedScopes: [String!]`<br />`tokenEndpointAuthMethod: String`<br />`dpopBoundAccessTokens: Boolean`<br />`jwks: JSON`<br />`jwksUri: String`<br />`requireSignedRequestObject: Boolean` | [`CreateClientPayload`](#createclientpayload) |  |
+| `createSamlApplication`<br />`name: String!`<br />`entityId: String!`<br />`acsUrls: [String!]!`<br />`certificate: String`<br />`nameIdFormat: String`<br />`requestsSigned: Boolean`<br />`idpInitiated: Boolean`<br />`attributes: JSON` | [`CreateSamlApplicationPayload`](#createsamlapplicationpayload) |  |
+| `readSamlApplicationMetadata`<br />`xml: String!` | [`ReadSamlApplicationMetadataPayload`](#readsamlapplicationmetadatapayload) |  |
+| `updateClient`<br />`clientId: ID!`<br />`name: String`<br />`grantTypes: [String!]`<br />`redirectUris: [String!]`<br />`postLogoutRedirectUris: [String!]`<br />`resources: [String!]`<br />`requiredScopes: [String!]`<br />`allowedScopes: [String!]`<br />`subjectType: String`<br />`dpopBoundAccessTokens: Boolean`<br />`sectorIdentifierUri: String`<br />`backchannelLogoutUri: String`<br />`backchannelLogoutSessionRequired: Boolean`<br />`requirePushedAuthorizationRequests: Boolean`<br />`jwks: JSON`<br />`jwksUri: String`<br />`requireSignedRequestObject: Boolean`<br />`tokenEndpointAuthMethod: String`<br />`samlEntityId: String`<br />`samlCertificate: String`<br />`samlNameIdFormat: String`<br />`samlRequestsSigned: Boolean`<br />`samlIdpInitiated: Boolean`<br />`samlAttributes: JSON`<br />`consentRequired: Boolean`<br />`signInPolicy: ID`<br />`clientUri: String`<br />`logoUri: String`<br />`tosUri: String`<br />`policyUri: String` | [`UpdateClientPayload`](#updateclientpayload) |  |
+| `rotateClientSecret`<br />`clientId: ID!`<br />`expiresIn: Int` | [`RotateClientSecretPayload`](#rotateclientsecretpayload) |  |
+| `archiveClient`<br />`clientId: ID!` | [`ArchiveClientPayload`](#archiveclientpayload) |  |
+| `restoreClient`<br />`clientId: ID!` | [`RestoreClientPayload`](#restoreclientpayload) |  |
+| `releaseNamespace`<br />`name: String!` | [`ReleaseNamespacePayload`](#releasenamespacepayload) |  |
+| `discoverProvider`<br />`issuer: String!` | [`DiscoverProviderPayload`](#discoverproviderpayload) |  |
+| `readSamlMetadata`<br />`metadataUrl: String`<br />`metadataXml: String` | [`ReadSamlMetadataPayload`](#readsamlmetadatapayload) |  |
+| `createProvider`<br />`key: ID!`<br />`name: String!`<br />`preset: ID`<br />`presetValues: JSON`<br />`protocol: String`<br />`authorizationUrl: String`<br />`tokenUrl: String`<br />`clientId: String`<br />`clientSecret: String`<br />`userinfoUrl: String`<br />`emailsUrl: String`<br />`scopes: [String!]`<br />`authorizeParams: JSON`<br />`claims: JSON`<br />`subjectClaim: String`<br />`issuer: String`<br />`jwksUri: String`<br />`tokenAuthMethod: String`<br />`responseMode: String`<br />`teamId: String`<br />`keyId: String`<br />`privateKey: String`<br />`idpEntityId: String`<br />`idpSsoUrl: String`<br />`idpCertificates: String`<br />`metadataUrl: String`<br />`nameIdFormat: String`<br />`role: String`<br />`trustsEmail: Boolean`<br />`emailDomains: [String!]`<br />`signupScopes: [String!]`<br />`delegates: Boolean`<br />`delegatedScopes: [String!]`<br />`delegationParams: JSON`<br />`resourceUrl: String` | [`CreateProviderPayload`](#createproviderpayload) |  |
+| `updateProvider`<br />`key: ID!`<br />`name: String`<br />`protocol: String`<br />`authorizationUrl: String`<br />`tokenUrl: String`<br />`clientId: String`<br />`clientSecret: String`<br />`userinfoUrl: String`<br />`emailsUrl: String`<br />`claims: JSON`<br />`tokenAuthMethod: String`<br />`responseMode: String`<br />`teamId: String`<br />`keyId: String`<br />`privateKey: String`<br />`idpEntityId: String`<br />`idpSsoUrl: String`<br />`idpCertificates: String`<br />`metadataUrl: String`<br />`nameIdFormat: String`<br />`scopes: [String!]`<br />`authorizeParams: JSON`<br />`subjectClaim: String`<br />`issuer: String`<br />`jwksUri: String`<br />`role: String`<br />`trustsEmail: Boolean`<br />`emailDomains: [String!]`<br />`signupScopes: [String!]`<br />`delegates: Boolean`<br />`delegatedScopes: [String!]`<br />`delegationParams: JSON`<br />`resourceUrl: String` | [`UpdateProviderPayload`](#updateproviderpayload) |  |
+| `archiveProvider`<br />`key: ID!` | [`ArchiveProviderPayload`](#archiveproviderpayload) |  |
+| `restoreProvider`<br />`key: ID!` | [`RestoreProviderPayload`](#restoreproviderpayload) |  |
+| `revokeToken`<br />`id: ID!`<br />`family: Boolean` | [`RevokeTokenPayload`](#revoketokenpayload) |  |
+| `revokeConnection`<br />`id: ID!` | [`RevokeConnectionPayload`](#revokeconnectionpayload) |  |
+| `revokeConsent`<br />`id: ID!` | [`RevokeConsentPayload`](#revokeconsentpayload) |  |
+| `revokeDelegation`<br />`id: ID!` | [`RevokeDelegationPayload`](#revokedelegationpayload) |  |
+| `registerProvider`<br />`key: ID!` | [`RegisterProviderPayload`](#registerproviderpayload) |  |
+| `revokeSession`<br />`id: ID!` | [`RevokeSessionPayload`](#revokesessionpayload) |  |
+| `blockDevice`<br />`id: ID!` | [`BlockDevicePayload`](#blockdevicepayload) |  |
+| `unblockDevice`<br />`id: ID!` | [`UnblockDevicePayload`](#unblockdevicepayload) |  |
+| `blockDevices`<br />`ids: [ID!]`<br />`agent: String`<br />`refuse: Boolean` | [`BlockDevicesPayload`](#blockdevicespayload) |  |
+| `unblockDevices`<br />`ids: [ID!]!` | [`UnblockDevicesPayload`](#unblockdevicespayload) |  |
+| `signOutDevice`<br />`id: ID!` | [`SignOutDevicePayload`](#signoutdevicepayload) |  |
+| `updateTenant`<br />`name: String`<br />`dynamicClientScopes: [String!]`<br />`dynamicRegistration: String`<br />`namedBy: String`<br />`browsersOnly: Boolean`<br />`blockedAgents: String`<br />`signInPolicy: ID`<br />`suspendAfter: Int`<br />`deleteAfter: Int` | [`UpdateTenantPayload`](#updatetenantpayload) |  |
+| `createSignInPolicy`<br />`name: String`<br />`signup: Boolean`<br />`nickname: String`<br />`email: String`<br />`emailVerified: Boolean`<br />`phone: String`<br />`phoneVerified: Boolean`<br />`passwordMinimum: Int`<br />`refuseCommonPasswords: Boolean`<br />`firstFactors: [String!]`<br />`secondFactors: [String!]`<br />`secondFactorRequired: Boolean`<br />`appsRequireSecondFactor: Boolean`<br />`sessionLifetime: Int`<br />`sessionIdleTimeout: Int`<br />`emailDomains: [String!]`<br />`providers: [String!]`<br />`everyProvider: Boolean`<br />`confirmation: String`<br />`hidden: Boolean`<br />`signupScopes: [String!]`<br />`key: ID!` | [`CreateSignInPolicyPayload`](#createsigninpolicypayload) |  |
+| `updateSignInPolicy`<br />`name: String`<br />`signup: Boolean`<br />`nickname: String`<br />`email: String`<br />`emailVerified: Boolean`<br />`phone: String`<br />`phoneVerified: Boolean`<br />`passwordMinimum: Int`<br />`refuseCommonPasswords: Boolean`<br />`firstFactors: [String!]`<br />`secondFactors: [String!]`<br />`secondFactorRequired: Boolean`<br />`appsRequireSecondFactor: Boolean`<br />`sessionLifetime: Int`<br />`sessionIdleTimeout: Int`<br />`emailDomains: [String!]`<br />`providers: [String!]`<br />`everyProvider: Boolean`<br />`confirmation: String`<br />`hidden: Boolean`<br />`signupScopes: [String!]`<br />`key: ID!` | [`UpdateSignInPolicyPayload`](#updatesigninpolicypayload) |  |
+| `archiveSignInPolicy`<br />`key: ID!` | [`ArchiveSignInPolicyPayload`](#archivesigninpolicypayload) |  |
+| `restoreSignInPolicy`<br />`key: ID!` | [`RestoreSignInPolicyPayload`](#restoresigninpolicypayload) |  |
+| `createAdapter`<br />`key: ID!`<br />`service: String!`<br />`name: String!`<br />`config: JSON`<br />`primary: Boolean` | [`CreateAdapterPayload`](#createadapterpayload) |  |
+| `updateAdapter`<br />`key: ID!`<br />`name: String`<br />`config: JSON`<br />`primary: Boolean` | [`UpdateAdapterPayload`](#updateadapterpayload) |  |
+| `archiveAdapter`<br />`key: ID!` | [`ArchiveAdapterPayload`](#archiveadapterpayload) |  |
+| `restoreAdapter`<br />`key: ID!` | [`RestoreAdapterPayload`](#restoreadapterpayload) |  |
+| `testAdapter`<br />`key: ID!`<br />`to: String!` | [`TestAdapterPayload`](#testadapterpayload) |  |
+| `createEventStream`<br />`key: ID!`<br />`name: String!`<br />`url: String!`<br />`actions: [String!]` | [`CreateEventStreamPayload`](#createeventstreampayload) |  |
+| `updateEventStream`<br />`key: ID!`<br />`name: String`<br />`url: String`<br />`actions: [String!]` | [`UpdateEventStreamPayload`](#updateeventstreampayload) |  |
+| `archiveEventStream`<br />`key: ID!` | [`ArchiveEventStreamPayload`](#archiveeventstreampayload) |  |
+| `restoreEventStream`<br />`key: ID!` | [`RestoreEventStreamPayload`](#restoreeventstreampayload) |  |
+| `rotateEventStreamSecret`<br />`key: ID!` | [`RotateEventStreamSecretPayload`](#rotateeventstreamsecretpayload) |  |
+| `testEventStream`<br />`key: ID!` | [`TestEventStreamPayload`](#testeventstreampayload) |  |
+| `createOrganization`<br />`key: ID!`<br />`name: String!`<br />`roles: [String!]` | [`CreateOrganizationPayload`](#createorganizationpayload) |  |
+| `updateOrganization`<br />`key: ID!`<br />`name: String`<br />`roles: [String!]` | [`UpdateOrganizationPayload`](#updateorganizationpayload) |  |
+| `archiveOrganization`<br />`key: ID!` | [`ArchiveOrganizationPayload`](#archiveorganizationpayload) |  |
+| `restoreOrganization`<br />`key: ID!` | [`RestoreOrganizationPayload`](#restoreorganizationpayload) |  |
+| `addMember`<br />`organization: ID!`<br />`role: String!`<br />`uuid: ID`<br />`email: String` | [`AddMemberPayload`](#addmemberpayload) | Adds a person to an organization. Name an existing account by uuid, or an email address, which invites a new account when none holds it. |
+| `setMemberRole`<br />`organization: ID!`<br />`uuid: ID!`<br />`role: String!` | [`SetMemberRolePayload`](#setmemberrolepayload) |  |
+| `removeMember`<br />`organization: ID!`<br />`uuid: ID!` | [`RemoveMemberPayload`](#removememberpayload) |  |
+| `stageSigningKey` | [`StageSigningKeyPayload`](#stagesigningkeypayload) |  |
+| `activateSigningKey`<br />`kid: ID!` | [`ActivateSigningKeyPayload`](#activatesigningkeypayload) |  |
+| `discardSigningKey`<br />`kid: ID!` | [`DiscardSigningKeyPayload`](#discardsigningkeypayload) |  |
+| `rotateSigningKey` | [`RotateSigningKeyPayload`](#rotatesigningkeypayload) |  |
 
 ## Objects
 
@@ -171,6 +180,7 @@ Autogenerated return type of ActivateSigningKey.
 | `connections` | [`[Connection!]!`](#connection) |
 | `consents` | [`[Consent!]!`](#consent) |
 | `tokens` | [`[Token!]!`](#token) |
+| `memberships` | [`[Membership!]!`](#membership) |
 | `events`<br />`limit: Int` | [`[Event!]!`](#event) |
 | `backupCodesGeneratedAt` | `ISO8601DateTime` |
 | `lastLoginAt` | `ISO8601DateTime` |
@@ -230,6 +240,17 @@ Autogenerated return type of ActivateSigningKey.
 | `label` | `String!` |
 | `fields` | [`[AdapterField!]!`](#adapterfield) |
 
+### AddMemberPayload
+
+Autogenerated return type of AddMember.
+
+| Field | Type |
+| --- | --- |
+| `membership` | [`Membership!`](#membership) |
+| `invited` | `Boolean!` |
+| `delivered` | `Boolean!` |
+| `url` | `String` |
+
 ### ApproveActorPayload
 
 Autogenerated return type of ApproveActor.
@@ -261,6 +282,14 @@ Autogenerated return type of ArchiveEventStream.
 | Field | Type |
 | --- | --- |
 | `eventStream` | [`EventStream!`](#eventstream) |
+
+### ArchiveOrganizationPayload
+
+Autogenerated return type of ArchiveOrganization.
+
+| Field | Type |
+| --- | --- |
+| `organization` | [`Organization!`](#organization) |
 
 ### ArchiveProviderPayload
 
@@ -421,6 +450,14 @@ Autogenerated return type of CreateEventStream.
 | --- | --- |
 | `eventStream` | [`EventStream!`](#eventstream) |
 | `secret` | `String!` |
+
+### CreateOrganizationPayload
+
+Autogenerated return type of CreateOrganization.
+
+| Field | Type |
+| --- | --- |
+| `organization` | [`Organization!`](#organization) |
 
 ### CreateProviderPayload
 
@@ -593,6 +630,16 @@ Autogenerated return type of IssueProvisioningToken.
 | `html` | `String` |
 | `text` | `String` |
 
+### Membership
+
+| Field | Type |
+| --- | --- |
+| `actor` | [`Actor!`](#actor) |
+| `organization` | [`Organization!`](#organization) |
+| `role` | `String!` |
+| `invitedBy` | [`Actor`](#actor) |
+| `createdAt` | `ISO8601DateTime!` |
+
 ### Namespace
 
 | Field | Type |
@@ -603,6 +650,19 @@ Autogenerated return type of IssueProvisioningToken.
 | `claimedAt` | `ISO8601DateTime!` |
 | `releasable` | `Boolean!` |
 | `scopes` | `[String!]!` |
+
+### Organization
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `uuid` | `ID!` |  |
+| `key` | `ID!` |  |
+| `name` | `String!` |  |
+| `roles` | `[String!]!` | Every role a member can hold here, owner and member included. |
+| `members` | [`[Membership!]!`](#membership) |  |
+| `memberCount` | `Int!` |  |
+| `archivedAt` | `ISO8601DateTime` |  |
+| `createdAt` | `ISO8601DateTime!` |  |
 
 ### Passkey
 
@@ -741,6 +801,14 @@ Autogenerated return type of RemoveAvatar.
 | --- | --- |
 | `actor` | [`Actor!`](#actor) |
 
+### RemoveMemberPayload
+
+Autogenerated return type of RemoveMember.
+
+| Field | Type |
+| --- | --- |
+| `organization` | [`Organization!`](#organization) |
+
 ### ResendInvitationPayload
 
 Autogenerated return type of ResendInvitation.
@@ -792,6 +860,14 @@ Autogenerated return type of RestoreEventStream.
 | Field | Type |
 | --- | --- |
 | `eventStream` | [`EventStream!`](#eventstream) |
+
+### RestoreOrganizationPayload
+
+Autogenerated return type of RestoreOrganization.
+
+| Field | Type |
+| --- | --- |
+| `organization` | [`Organization!`](#organization) |
 
 ### RestoreProviderPayload
 
@@ -913,6 +989,14 @@ Autogenerated return type of SetActorScopes.
 | Field | Type |
 | --- | --- |
 | `actor` | [`Actor!`](#actor) |
+
+### SetMemberRolePayload
+
+Autogenerated return type of SetMemberRole.
+
+| Field | Type |
+| --- | --- |
+| `membership` | [`Membership!`](#membership) |
 
 ### SignInPolicy
 
@@ -1100,6 +1184,14 @@ Autogenerated return type of UpdateEventStream.
 | Field | Type |
 | --- | --- |
 | `eventStream` | [`EventStream!`](#eventstream) |
+
+### UpdateOrganizationPayload
+
+Autogenerated return type of UpdateOrganization.
+
+| Field | Type |
+| --- | --- |
+| `organization` | [`Organization!`](#organization) |
 
 ### UpdateProviderPayload
 

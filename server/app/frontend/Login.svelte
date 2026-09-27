@@ -7,6 +7,7 @@ import Warnings from "./shared/Warnings.svelte";
 import AcceptInvitation from "./prompts/accept-invitation.svelte";
 import Enrol from "./prompts/enrol.svelte";
 import BackupCode from "./prompts/backup-code.svelte";
+import ChooseOrganization from "./prompts/choose-organization.svelte";
 import Consent from "./prompts/consent.svelte";
 import FirstFactor from "./prompts/first-factor.svelte";
 import Identify from "./prompts/identify.svelte";
@@ -38,6 +39,7 @@ const prompts = {
   "confirm-phone": ConfirmPhone,
   "add-phone": AddPhone,
   "awaiting-approval": AwaitingApproval,
+  "choose-organization": ChooseOrganization,
   consent: Consent,
   settled: Settled,
 };

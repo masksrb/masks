@@ -629,6 +629,43 @@ ALTER SEQUENCE public.events_id_seq OWNED BY public.events.id;
 
 
 --
+-- Name: memberships; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.memberships (
+    id bigint NOT NULL,
+    tenant_id bigint NOT NULL,
+    organization_id bigint NOT NULL,
+    actor_id bigint NOT NULL,
+    invited_by_id bigint,
+    role character varying NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+ALTER TABLE ONLY public.memberships FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: memberships_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.memberships_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: memberships_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.memberships_id_seq OWNED BY public.memberships.id;
+
+
+--
 -- Name: namespaces; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -663,6 +700,44 @@ CREATE SEQUENCE public.namespaces_id_seq
 --
 
 ALTER SEQUENCE public.namespaces_id_seq OWNED BY public.namespaces.id;
+
+
+--
+-- Name: organizations; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.organizations (
+    id bigint NOT NULL,
+    tenant_id bigint NOT NULL,
+    uuid uuid DEFAULT gen_random_uuid() NOT NULL,
+    key character varying NOT NULL,
+    name character varying NOT NULL,
+    roles jsonb DEFAULT '[]'::jsonb NOT NULL,
+    archived_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+ALTER TABLE ONLY public.organizations FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: organizations_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.organizations_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: organizations_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.organizations_id_seq OWNED BY public.organizations.id;
 
 
 --
@@ -1041,7 +1116,8 @@ CREATE TABLE public.tokens (
     device_id bigint,
     session_id bigint,
     user_code_digest character varying,
-    jkt character varying
+    jkt character varying,
+    organization_id bigint
 );
 
 ALTER TABLE ONLY public.tokens FORCE ROW LEVEL SECURITY;
@@ -1158,10 +1234,24 @@ ALTER TABLE ONLY public.events ALTER COLUMN id SET DEFAULT nextval('public.event
 
 
 --
+-- Name: memberships id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.memberships ALTER COLUMN id SET DEFAULT nextval('public.memberships_id_seq'::regclass);
+
+
+--
 -- Name: namespaces id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.namespaces ALTER COLUMN id SET DEFAULT nextval('public.namespaces_id_seq'::regclass);
+
+
+--
+-- Name: organizations id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.organizations ALTER COLUMN id SET DEFAULT nextval('public.organizations_id_seq'::regclass);
 
 
 --
@@ -1333,11 +1423,27 @@ ALTER TABLE ONLY public.events
 
 
 --
+-- Name: memberships memberships_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.memberships
+    ADD CONSTRAINT memberships_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: namespaces namespaces_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.namespaces
     ADD CONSTRAINT namespaces_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: organizations organizations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.organizations
+    ADD CONSTRAINT organizations_pkey PRIMARY KEY (id);
 
 
 --
@@ -1791,6 +1897,41 @@ CREATE INDEX index_events_on_tenant_id_and_created_at ON public.events USING btr
 
 
 --
+-- Name: index_memberships_on_actor_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_memberships_on_actor_id ON public.memberships USING btree (actor_id);
+
+
+--
+-- Name: index_memberships_on_invited_by_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_memberships_on_invited_by_id ON public.memberships USING btree (invited_by_id);
+
+
+--
+-- Name: index_memberships_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_memberships_on_organization_id ON public.memberships USING btree (organization_id);
+
+
+--
+-- Name: index_memberships_on_organization_id_and_actor_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_memberships_on_organization_id_and_actor_id ON public.memberships USING btree (organization_id, actor_id);
+
+
+--
+-- Name: index_memberships_on_tenant_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_memberships_on_tenant_id ON public.memberships USING btree (tenant_id);
+
+
+--
 -- Name: index_namespaces_on_client_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1816,6 +1957,27 @@ CREATE UNIQUE INDEX index_namespaces_on_tenant_id_and_name ON public.namespaces 
 --
 
 CREATE INDEX index_namespaces_on_tenant_id_and_resource ON public.namespaces USING btree (tenant_id, resource);
+
+
+--
+-- Name: index_organizations_on_tenant_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_organizations_on_tenant_id ON public.organizations USING btree (tenant_id);
+
+
+--
+-- Name: index_organizations_on_tenant_id_and_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_organizations_on_tenant_id_and_key ON public.organizations USING btree (tenant_id, key);
+
+
+--
+-- Name: index_organizations_on_tenant_id_and_uuid; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_organizations_on_tenant_id_and_uuid ON public.organizations USING btree (tenant_id, uuid);
 
 
 --
@@ -2001,6 +2163,13 @@ CREATE UNIQUE INDEX index_tokens_on_digest ON public.tokens USING btree (digest)
 
 
 --
+-- Name: index_tokens_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_tokens_on_organization_id ON public.tokens USING btree (organization_id);
+
+
+--
 -- Name: index_tokens_on_parent_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2033,6 +2202,14 @@ CREATE INDEX index_tokens_on_tenant_id_and_kind_and_expires_at ON public.tokens 
 --
 
 CREATE UNIQUE INDEX index_tokens_on_tenant_id_and_user_code_digest ON public.tokens USING btree (tenant_id, user_code_digest) WHERE (user_code_digest IS NOT NULL);
+
+
+--
+-- Name: memberships fk_rails_04be6539e4; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.memberships
+    ADD CONSTRAINT fk_rails_04be6539e4 FOREIGN KEY (actor_id) REFERENCES public.actors(id) ON DELETE CASCADE;
 
 
 --
@@ -2140,6 +2317,14 @@ ALTER TABLE ONLY public.connections
 
 
 --
+-- Name: memberships fk_rails_42a6d48371; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.memberships
+    ADD CONSTRAINT fk_rails_42a6d48371 FOREIGN KEY (invited_by_id) REFERENCES public.actors(id) ON DELETE SET NULL;
+
+
+--
 -- Name: clients fk_rails_4904dbddb8; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2185,6 +2370,14 @@ ALTER TABLE ONLY public.delegations
 
 ALTER TABLE ONLY public.connections
     ADD CONSTRAINT fk_rails_6314b09676 FOREIGN KEY (tenant_id) REFERENCES public.tenants(id);
+
+
+--
+-- Name: memberships fk_rails_64267aab58; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.memberships
+    ADD CONSTRAINT fk_rails_64267aab58 FOREIGN KEY (organization_id) REFERENCES public.organizations(id) ON DELETE CASCADE;
 
 
 --
@@ -2308,6 +2501,22 @@ ALTER TABLE ONLY public.clients
 
 
 --
+-- Name: memberships fk_rails_a959f0d1fb; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.memberships
+    ADD CONSTRAINT fk_rails_a959f0d1fb FOREIGN KEY (tenant_id) REFERENCES public.tenants(id);
+
+
+--
+-- Name: organizations fk_rails_ad271c93a4; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.organizations
+    ADD CONSTRAINT fk_rails_ad271c93a4 FOREIGN KEY (tenant_id) REFERENCES public.tenants(id);
+
+
+--
 -- Name: subjects fk_rails_ad855a4b96; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2385,6 +2594,14 @@ ALTER TABLE ONLY public.events
 
 ALTER TABLE ONLY public.consents
     ADD CONSTRAINT fk_rails_eb0bd2c006 FOREIGN KEY (client_id) REFERENCES public.clients(id);
+
+
+--
+-- Name: tokens fk_rails_ef7a5301be; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tokens
+    ADD CONSTRAINT fk_rails_ef7a5301be FOREIGN KEY (organization_id) REFERENCES public.organizations(id) ON DELETE CASCADE;
 
 
 --
@@ -2492,10 +2709,22 @@ ALTER TABLE public.event_streams ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: memberships; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.memberships ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: namespaces; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
 ALTER TABLE public.namespaces ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: organizations; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.organizations ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: passkeys; Type: ROW SECURITY; Schema: public; Owner: -
@@ -2618,10 +2847,24 @@ CREATE POLICY tenant_isolation ON public.events USING ((tenant_id = (NULLIF(curr
 
 
 --
+-- Name: memberships tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.memberships USING ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint)) WITH CHECK ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint));
+
+
+--
 -- Name: namespaces tenant_isolation; Type: POLICY; Schema: public; Owner: -
 --
 
 CREATE POLICY tenant_isolation ON public.namespaces USING ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint)) WITH CHECK ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint));
+
+
+--
+-- Name: organizations tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.organizations USING ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint)) WITH CHECK ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint));
 
 
 --
@@ -2686,6 +2929,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260927020000'),
 ('20260927010000'),
 ('20260927000000'),
 ('20260926020000'),

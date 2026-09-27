@@ -120,6 +120,13 @@ module Masks
       STREAM_TESTED = "stream.tested".freeze
       STREAM_FAILED = "stream.failed".freeze
 
+      ORGANIZATION_CREATED = "organization.created".freeze
+      ORGANIZATION_UPDATED = "organization.updated".freeze
+      ORGANIZATION_ARCHIVED = "organization.archived".freeze
+      MEMBERSHIP_ADDED = "membership.added".freeze
+      MEMBERSHIP_ROLE_CHANGED = "membership.role_changed".freeze
+      MEMBERSHIP_REMOVED = "membership.removed".freeze
+
       GRAVE = [
         LOGIN_REFUSED, LOGIN_THROTTLED, LOGOUT_UNDELIVERED, REFRESH_REUSED, STREAM_FAILED,
         DEVICE_BLOCKED, ACTOR_DELETED, AUTHENTICATOR_DISABLED, CONNECTION_REFUSED, DELEGATION_REFUSED,

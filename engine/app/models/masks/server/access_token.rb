@@ -19,6 +19,7 @@ module Masks
           client: client,
           device: parent&.device,
           session: parent&.session,
+          organization: parent&.organization,
           parent: parent,
           scopes: Scopes.join(scopes),
           audience: Array(audience),
@@ -51,6 +52,7 @@ module Masks
           "client_id" => client&.client_id,
           "scope" => Scopes.join(scopes),
           "act" => act,
+          "org" => organization&.claim_for(actor),
           "cnf" => confirmation,
           "tenant" => tenant.to_identity
         }.compact

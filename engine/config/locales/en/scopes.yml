@@ -5,6 +5,7 @@ en:
     email: "Your email"
     offline_access: "Stay signed in"
     identities: "The accounts elsewhere you sign in with"
+    organization: "Which organization you sign in as, and your role there"
     manage: "Manage masks"
     manage_security: "Change masks' keys, apps, providers, and policies"
     manage_support: "Help people with their accounts"

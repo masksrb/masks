@@ -98,6 +98,7 @@ module Masks
           end
 
           held!(req, code)
+          member!(req, code)
 
           audience = narrow(req, code.audience, client)
           access = AccessToken.issue!(
@@ -121,6 +122,7 @@ module Masks
 
           req.invalid_grant!("that refresh token was issued to another client") if token.client_id != client.id
           req.invalid_grant!("the session that refresh token was issued in has ended") if outlived?(token)
+          member!(req, token)
 
           held = token.bound? ? token.jkt : jkt
           scopes = req.scope.present? ? Scopes.granted(req.scope, token.scopes) : token.scope_list
@@ -141,6 +143,14 @@ module Masks
             "refresh_token" => rotated.secret,
             "delegations" => delegated(token.actor, client, scopes)
           ).compact)
+        end
+
+        def member!(req, grant)
+          held = grant.organization
+
+          return if held.nil? || held.membership_for(grant.actor)
+
+          req.invalid_grant!("#{grant.actor&.identifier || 'that account'} is no longer a member of #{held.name}")
         end
 
         def outlived?(token)
@@ -250,7 +260,8 @@ module Masks
               authenticated_at: grant.authenticated_at,
               amr: grant.held("amr"),
               access_token: access.jwt,
-              sid: grant.session&.uuid
+              sid: grant.session&.uuid,
+              organization: access.organization
             )
           end
 

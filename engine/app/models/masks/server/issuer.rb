@@ -92,7 +92,7 @@ module Masks
       end
 
       def id_token(actor:, client:, nonce: nil, issued_at: Time.current,
-                   authenticated_at: nil, access_token: nil, code: nil, amr: nil, sid: nil)
+                   authenticated_at: nil, access_token: nil, code: nil, amr: nil, sid: nil, organization: nil)
         subject = subject_for(actor, client)
 
         sign({
@@ -106,6 +106,7 @@ module Masks
           "amr" => Array(amr).presence,
           "nonce" => nonce,
           "sid" => sid,
+          "org" => organization&.claim_for(actor),
           "at_hash" => half_hash(access_token),
           "c_hash" => half_hash(code),
           "tenant" => tenant.to_identity,
@@ -170,7 +171,7 @@ module Masks
           "dpop_signing_alg_values_supported" => Proof::ALGORITHMS,
           "claims_supported" => %w[
             iss sub aud exp iat auth_time nonce sid
-            preferred_username name picture email email_verified tenant act identities
+            preferred_username name picture email email_verified tenant act identities org
           ] + [ Actor::AVATARS_CLAIM ],
           "authorization_response_iss_parameter_supported" => true,
           "resource_indicators_supported" => true,

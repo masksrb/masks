@@ -90,7 +90,8 @@ module Masks
             device: current_device,
             session: current_session,
             authenticated_at: login.authenticated_at || current_session&.authenticated_at,
-            amr: login.amr.presence || current_session&.amr
+            amr: login.amr.presence || current_session&.amr,
+            organization: login.state("organization-choice").selected
           )
 
           render_rack(attempt.approve!(code.secret))

@@ -8,7 +8,7 @@ module Masks
       SUBJECT = "that request object".freeze
       CARRIED = %w[
         response_type redirect_uri scope state nonce code_challenge code_challenge_method
-        prompt max_age acr_values resource claims dpop_jkt
+        prompt max_age acr_values organization resource claims dpop_jkt
       ].freeze
 
       def self.unpack!(authorization, issuer:)

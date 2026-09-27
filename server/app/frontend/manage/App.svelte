@@ -10,6 +10,8 @@
   import DevicePage from "./DevicePage.svelte";
   import ClientsPage from "./ClientsPage.svelte";
   import ClientPage from "./ClientPage.svelte";
+  import OrganizationsPage from "./OrganizationsPage.svelte";
+  import OrganizationPage from "./OrganizationPage.svelte";
   import SettingsPage from "./SettingsPage.svelte";
   import ActivityPage from "./ActivityPage.svelte";
   import ProvidersPage from "./ProvidersPage.svelte";
@@ -50,6 +52,7 @@
   const NAV = [
     ["", "Overview", '<path d="M3.5 10.5 10 4l6.5 6.5"/><path d="M5.5 9v7h9V9"/>'],
     ["/actors", "Actors", '<circle cx="10" cy="7" r="3"/><path d="M4 17c.8-3 3.2-4.5 6-4.5s5.2 1.5 6 4.5"/>'],
+    ["/organizations", "Organizations", '<rect x="3.5" y="7" width="13" height="9.5" rx="1.5"/><path d="M7.5 7V4.5h5V7"/><path d="M3.5 11h13"/>'],
     ["/clients", "Clients", '<rect x="3" y="3" width="6" height="6" rx="1.5"/><rect x="11" y="3" width="6" height="6" rx="1.5"/><rect x="3" y="11" width="6" height="6" rx="1.5"/><rect x="11" y="11" width="6" height="6" rx="1.5"/>'],
   ];
 
@@ -201,6 +204,12 @@
           <ActorPage {api} uuid={router.segments[1]} />
         {:else}
           <ActorsPage {api} />
+        {/if}
+      {:else if current === "organizations"}
+        {#if router.segments[1]}
+          <OrganizationPage {api} organizationKey={router.segments[1]} />
+        {:else}
+          <OrganizationsPage {api} />
         {/if}
       {:else if current === "clients"}
         {#if router.segments[1]}

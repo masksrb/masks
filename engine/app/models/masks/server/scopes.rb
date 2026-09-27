@@ -6,6 +6,7 @@ module Masks
       EMAIL = "email".freeze
       OFFLINE = "offline_access".freeze
       IDENTITIES = "identities".freeze
+      ORGANIZATION = "organization".freeze
       MANAGE = "masks:manage".freeze
       MANAGE_SECURITY = "masks:manage:security".freeze
       MANAGE_SUPPORT = "masks:manage:support".freeze
@@ -20,6 +21,7 @@ module Masks
         EMAIL => "email",
         OFFLINE => "offline_access",
         IDENTITIES => "identities",
+        ORGANIZATION => "organization",
         MANAGE => "manage",
         MANAGE_SECURITY => "manage_security",
         MANAGE_SUPPORT => "manage_support",
@@ -28,7 +30,7 @@ module Masks
         SCIM => "scim"
       }.freeze
 
-      STANDARD = [ OPENID, PROFILE, EMAIL, OFFLINE, IDENTITIES ].freeze
+      STANDARD = [ OPENID, PROFILE, EMAIL, OFFLINE, IDENTITIES, ORGANIZATION ].freeze
       PERSONAL = (STANDARD + [ MANAGE, HANDSHAKE ]).freeze
       NAMESPACE = "masks:".freeze
 
