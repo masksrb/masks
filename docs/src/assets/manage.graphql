@@ -386,6 +386,16 @@ Represents untyped JSON
 """
 scalar JSON
 
+type MailPreview {
+  from: String!
+  html: String
+  key: ID!
+  name: String!
+  subject: String!
+  text: String
+  to: String!
+}
+
 type Mutation {
   activateSigningKey(kid: ID!): ActivateSigningKeyPayload
   approveActor(uuid: ID!): ApproveActorPayload
@@ -554,6 +564,7 @@ type Query {
   devices(actor: ID, agent: String, blocked: Boolean, limit: Int, unattached: Boolean): [Device!]!
   eventActions: [EventAction!]!
   events(action: String, actor: ID, afterId: ID, client: ID, device: ID, grave: Boolean, limit: Int): [Event!]!
+  mailPreviews: [MailPreview!]!
   minimumPassword: Int!
   namespaces: [Namespace!]!
   provider(key: ID!): Provider

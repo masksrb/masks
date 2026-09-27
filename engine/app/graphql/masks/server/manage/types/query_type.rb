@@ -107,6 +107,8 @@ module Masks
 
           field :minimum_password, Integer, null: false
 
+          field :mail_previews, [ MailPreviewType ], null: false
+
           field :tally, TallyType, null: false
 
           field :activity, [ ActivityDayType ], null: false do
@@ -165,6 +167,10 @@ module Masks
 
           def saml_metadata_url
             SamlIdentity.metadata_url(Issuer.new(Current.tenant, Current.origin))
+          end
+
+          def mail_previews
+            MailPreviews.all(Current.tenant, Current.origin)
           end
 
           def scim_base_url

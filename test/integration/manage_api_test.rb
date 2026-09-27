@@ -636,6 +636,21 @@ module Masks
         end
       end
 
+      test "a manager previews every email this tenant sends, and nothing is saved" do
+        held = bearer
+        counts = within { [ Actor.count, Event.count ] }
+
+        body = ask("{ mailPreviews { key subject from to html text } }", held)
+        previews = body.dig("data", "mailPreviews")
+
+        assert_nil body["errors"]
+        assert_includes previews.map { |preview| preview["key"] }, "idle_delete_suspended"
+        assert previews.all? { |preview| preview["subject"].present? && preview["html"].present? && preview["text"].present? }
+        assert_includes previews.find { |preview| preview["key"] == "invitation" }["html"], "#{origin_for(@tenant)}/invite/preview"
+        assert_equal counts, within { [ Actor.count, Event.count ] }
+        assert_not Current.previewing
+      end
+
       test "an admin cannot delete themselves" do
         body = ask(%(mutation { deleteActor(uuid: "#{@actor.uuid}") { uuid } }), bearer)
 

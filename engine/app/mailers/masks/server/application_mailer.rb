@@ -12,6 +12,7 @@ module Masks
         end
 
         def deliverable?
+          return true if Current.previewing
           return Current.tenant.mails? if Current.tenant
 
           from.present?
