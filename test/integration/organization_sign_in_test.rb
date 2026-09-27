@@ -41,6 +41,17 @@ module Masks
         assert_equal "second-factor", auth_data["prompt"]
       end
 
+      test "an app without the organization scope that names an organization refuses a person outside it" do
+        actor = create_actor(email: "ada@probe.example.com")
+        registration = register(scope: "openid profile")
+        within { SignInPolicy.create!(key: "acme-lax", name: "Lax").tap { |policy| @acme.update!(sign_in_policy: policy) } }
+
+        sign_in_as(actor)
+        authorize(client_id: registration["client_id"], scope: "openid profile", organization: "acme")
+
+        assert_equal "access_denied", redirected["error"]
+      end
+
       test "an organization's policy takes over once a person chooses it" do
         actor = create_actor(email: "ada@probe.example.com")
         join(@acme, actor)

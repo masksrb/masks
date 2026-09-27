@@ -73,12 +73,11 @@ module Masks
       end
 
       def organization
-        key = state("organization-choice").chosen_key || request&.try(:organization_key)
+        organization_named(state("organization-choice").chosen_key)
+      end
 
-        return nil if key.blank?
-
-        @organizations ||= {}
-        @organizations.fetch(key) { @organizations[key] = Organization.active.find_by(key: key) }
+      def named_organization
+        organization_named(request&.try(:organization_key))
       end
 
       def first_run?
@@ -361,6 +360,13 @@ module Masks
       end
 
       private
+
+        def organization_named(key)
+          return nil if key.blank?
+
+          @organizations ||= {}
+          @organizations.fetch(key) { @organizations[key] = Organization.active.find_by(key: key) }
+        end
 
         def build_json
           base = {

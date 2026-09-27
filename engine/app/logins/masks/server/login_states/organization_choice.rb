@@ -62,7 +62,7 @@ module Masks
         private
 
           def wanted?
-            request.scopes_for(actor).include?(Scopes::ORGANIZATION)
+            request.organization_key.present? || request.scopes_for(actor).include?(Scopes::ORGANIZATION)
           end
 
           def memberships

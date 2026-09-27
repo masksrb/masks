@@ -66,7 +66,7 @@ module Masks
             @offered ||= if login.policy.first_factor?(:provider)
               Masks::Server::Provider.signing_in.order(:name).select do |provider|
                 provider.id == login.store[DISCOVERED] ||
-                  (login.policy.offers?(provider) && provider.offered_to?(login.organization))
+                  (login.policy.offers?(provider) && provider.offered_to?(login.organization || login.named_organization))
               end
             else
               []
