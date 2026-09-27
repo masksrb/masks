@@ -15,6 +15,10 @@
 
   let hovered = $state(null);
 
+  function share(index) {
+    return ((index + 0.5) / Math.max(points.length, 1)) * 100;
+  }
+
   function bar(value, x) {
     const height = value === 0 ? 2 : Math.max((value / peak) * (PLOT - 8), 3);
     const y = PLOT - height;
@@ -84,7 +88,7 @@
     {#if hovered}
       <div
         class="chart-tip"
-        style="left: {((hovered.index + 0.5) / points.length) * 100}%"
+        style="left: {share(hovered.index)}%; transform: translateX(-{share(hovered.index)}%)"
         aria-hidden="true"
       >
         <strong>{hovered.value}</strong>
@@ -96,7 +100,7 @@
 
   <div class="chart-axis">
     {#each ticks as tick (tick.at)}
-      <span style="left: {((tick.at + 0.5) / points.length) * 100}%">{tick.point.label}</span>
+      <span style="left: {share(tick.at)}%; transform: translateX(-{share(tick.at)}%)">{tick.point.label}</span>
     {/each}
   </div>
 

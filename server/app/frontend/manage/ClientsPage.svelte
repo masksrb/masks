@@ -69,7 +69,7 @@
     { label: "Namespaces", hide: true, right: true },
     { label: "Scopes", hide: true },
     { label: "Approved by", hide: true },
-    "Registered",
+    { label: "Registered", hide: true },
   ];
 
   const feedback = createFeedback();
@@ -395,7 +395,7 @@
       {#snippet rows()}
         {#each clients as client (client.clientId)}
           <Row to={`/clients/${client.clientId}`}>
-            <td class="max-w-[15rem]">
+            <td class="w-full max-w-0 md:w-auto md:max-w-[15rem]">
               <div class="flex items-center gap-2.5">
                 <ClientLogo {client} class="size-8 rounded text-sm" />
                 <div class="min-w-0">
@@ -440,7 +440,7 @@
             <td class="hidden text-xs opacity-85 md:table-cell">
               {client.approvedBy?.identifier ?? NONE}
             </td>
-            <td class="text-xs whitespace-nowrap opacity-85">{day(client.createdAt)}</td>
+            <td class="hidden text-xs whitespace-nowrap opacity-85 md:table-cell">{day(client.createdAt)}</td>
           </Row>
         {/each}
       {/snippet}

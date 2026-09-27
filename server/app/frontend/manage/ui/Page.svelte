@@ -4,7 +4,7 @@
   let { title, lede = null, id = null, back = null, hero = false, actions, children } = $props();
 </script>
 
-<div class="flex flex-col gap-6">
+<div class="console-page">
   {#if back}
     <div>
       <Link to={back.to} class="link link-hover text-sm opacity-85">&larr; {back.label}</Link>

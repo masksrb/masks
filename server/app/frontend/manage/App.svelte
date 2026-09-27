@@ -181,7 +181,7 @@
 {:else}
   <div class="flex min-h-screen flex-col">
     <header class="sticky top-0 z-20 border-b border-base-300 bg-base-100/95 backdrop-blur">
-      <div class="mx-auto flex w-full max-w-6xl items-center gap-x-6 px-4 py-2">
+      <div class="console-bar mx-auto flex w-full max-w-6xl items-center gap-x-6 py-2">
         <Link to="" class="brand"><img src="/masks-public/icon.svg" alt="" class="brand-mark" />{boot.tenant.name}</Link>
 
         <nav class="nav md:flex-1">
@@ -207,7 +207,7 @@
       </div>
     </header>
 
-    <main class="console-main mx-auto w-full max-w-6xl flex-1 p-4 md:p-6">
+    <main class="console-main mx-auto w-full max-w-6xl flex-1 py-5 md:py-6">
       {#if limit}
         <p class="alert alert-info mb-4 text-sm" role="status">{limit}</p>
       {/if}

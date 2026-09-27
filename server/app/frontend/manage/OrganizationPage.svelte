@@ -445,9 +445,9 @@
                     {#if lastOwner(member)}<span class="badge badge-sm badge-ghost">last owner</span>{/if}
                   </span>
                   <span class="hint">{status(member)}</span>
-                  <div class="mt-2 flex items-center gap-2 md:hidden">
-                    <div class="w-36">{@render roleOf(member)}</div>
-                    {@render removeOf(member)}
+                  <div class="mt-2 flex flex-wrap items-center gap-2 md:hidden">
+                    <div class="min-w-28 flex-1 basis-28">{@render roleOf(member)}</div>
+                    <div class="-me-3 flex shrink-0">{@render removeOf(member)}</div>
                   </div>
                 </div>
               </td>
