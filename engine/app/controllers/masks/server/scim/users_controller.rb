@@ -5,23 +5,23 @@ module Masks
         include ScimEndpoint
 
         def index
-          relation = Scim::Filter.apply(provisionable, params[:filter])
+          relation = Scim::Filter.apply(provisionable, params[:filter], columns: directory_columns)
           start, count = scim_page
-          actors = relation.order(:created_at, :id).offset(start - 1).limit(count)
+          actors = relation.order(:created_at, :id).offset(start - 1).limit(count).to_a
+          ids = directory_ids(actors)
 
-          scim(listed(actors.map { |actor| represent(actor) }, total: relation.count, start: start))
+          scim(listed(actors.map { |actor| represent(actor, ids.fetch(actor.id, actor.external_id)) }, total: relation.count, start: start))
         end
 
         def show
           actor = found
 
-          response.headers["ETag"] = Scim::User.new(actor).version
+          response.headers["ETag"] = scim_user(actor).version
           scim(represent(actor))
         end
 
         def create
-          actor = settle!(Scim::User.new(Actor.new).replace(document), Event::ACTOR_PROVISIONED)
-          joined!(actor)
+          actor = settle!(Scim::User.new(Actor.new, external_id: nil).replace(document), Event::ACTOR_PROVISIONED)
 
           response.headers["Location"] = "#{scim_base}/Users/#{actor.uuid}"
           scim(represent(actor), status: :created)
@@ -32,7 +32,7 @@ module Masks
           matched!(actor)
           owned!(actor)
 
-          settle!(Scim::User.new(actor).replace(document), Event::ACTOR_UPDATED)
+          settle!(scim_user(actor).replace(document), Event::ACTOR_UPDATED)
           scim(represent(actor))
         end
 
@@ -42,7 +42,7 @@ module Masks
           owned!(actor)
           patch_document!
 
-          settle!(Scim::User.new(actor).patch(document["Operations"]), Event::ACTOR_UPDATED)
+          settle!(scim_user(actor).patch(document["Operations"]), Event::ACTOR_UPDATED)
           scim(represent(actor))
         end
 
@@ -66,7 +66,23 @@ module Masks
           def provisionable
             held = provisioned_organization
 
-            held ? Actor.where(id: held.memberships.accepted.select(:actor_id)) : Actor.all
+            held ? Actor.joins(:memberships).merge(held.memberships.accepted) : Actor.all
+          end
+
+          def directory_columns
+            provisioned_organization ? { "externalid" => "memberships.external_id" } : {}
+          end
+
+          def directory_ids(actors)
+            held = provisioned_organization
+
+            return {} if held.nil?
+
+            held.memberships.where(actor: actors).pluck(:actor_id, :external_id).to_h
+          end
+
+          def scim_user(actor)
+            Scim::User.new(actor, external_id: directory_ids([ actor ]).fetch(actor.id, actor.external_id))
           end
 
           def found
@@ -83,12 +99,15 @@ module Masks
                                               "elsewhere too, so it can remove them but not change them", scim_type: "mutability")
           end
 
-          def joined!(actor)
+          def directed!(actor, external_id)
             held = provisioned_organization
+            membership = held.memberships.find_by(actor: actor) ||
+                         Members.enroll!(held, actor, role: Organization::MEMBER, by: nil, provisioned: true, via: "scim")
 
-            return if held.nil?
+            return if membership.external_id == external_id
 
-            Members.enroll!(held, actor, role: Organization::MEMBER, by: nil, provisioned: true, via: "scim")
+            membership.update!(external_id: external_id)
+            actor.touch
           end
 
           def leave!(actor)
@@ -105,14 +124,14 @@ module Masks
             head :no_content
           end
 
-          def represent(actor)
-            Scim::User.represent(actor, base: scim_base)
+          def represent(actor, external_id = scim_user(actor).external_id)
+            Scim::User.represent(actor, base: scim_base, external_id: external_id)
           end
 
           def matched!(actor)
             wanted = request.headers["If-Match"].presence
 
-            return if wanted.nil? || wanted == "*" || wanted == Scim::User.new(actor).version
+            return if wanted.nil? || wanted == "*" || wanted == scim_user(actor).version
 
             raise Scim::Error.new(:precondition_failed, "that user has changed since it was read")
           end
@@ -126,26 +145,26 @@ module Masks
 
             actor.email_verified_at = actor.email.present? ? Time.current : nil if actor.email_changed?
 
+            actor.external_id = user.external_id unless provisioned_organization
+
             Actor.transaction do
               actor.save!
               suspend_or_restore!(actor, user.suspending)
+              directed!(actor, user.external_id) if provisioned_organization
             end
 
-            Event.record!(action, actor: actor, by: nil, via: "scim", external_id: actor.external_id)
+            Event.record!(action, actor: actor, by: nil, via: "scim", external_id: user.external_id)
 
             actor
           rescue ActiveRecord::RecordInvalid => e
-            taken = e.record.errors.details.values.flatten.any? { |detail| detail[:error] == :taken }
+            raise taken if e.record.errors.details.values.flatten.any? { |detail| detail[:error] == :taken }
 
-            raise taken_elsewhere if taken && provisioned_organization
-
-            raise Scim::Error.new(taken ? :conflict : :bad_request, e.record.errors.full_messages.join("; "),
-                                  scim_type: taken ? "uniqueness" : "invalidValue")
+            raise Scim::Error.new(:bad_request, e.record.errors.full_messages.join("; "), scim_type: "invalidValue")
           rescue ActiveRecord::RecordNotUnique
-            raise taken_elsewhere
+            raise taken
           end
 
-          def taken_elsewhere
+          def taken
             Scim::Error.new(:conflict, "another user already holds that userName, email or externalId", scim_type: "uniqueness")
           end
 

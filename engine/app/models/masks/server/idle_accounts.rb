@@ -35,6 +35,7 @@ module Masks
             soonest = [ tenant.suspend_after, tenant.delete_after ].compact.min
 
             eligible.where(external_id: nil)
+                    .where.not(id: Membership.where.not(external_id: nil).select(:actor_id))
                     .where.not(activated_at: nil)
                     .where("COALESCE(last_active_at, last_login_at, activated_at) < ?", warn_from(soonest))
           end

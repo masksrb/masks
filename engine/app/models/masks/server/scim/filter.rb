@@ -17,14 +17,15 @@ module Masks
           "meta.lastmodified" => "updated_at"
         }.freeze
 
-        def self.apply(relation, expression)
+        def self.apply(relation, expression, columns: {})
           return relation if expression.blank?
 
-          new(expression).apply(relation)
+          new(expression, columns: columns).apply(relation)
         end
 
-        def initialize(expression)
+        def initialize(expression, columns: {})
           @expression = expression.to_s
+          @columns = ATTRIBUTES.merge(columns)
         end
 
         def apply(relation)
@@ -43,7 +44,7 @@ module Masks
             raise Error.new(:bad_request, "#{clause.strip} is not a filter this server reads", scim_type: "invalidFilter") if match.nil?
 
             path, operator, raw = match.captures
-            column = ATTRIBUTES[normalized(path)]
+            column = @columns[normalized(path)]
             operator = operator.downcase
 
             raise Error.new(:bad_request, "#{path} cannot be filtered on", scim_type: "invalidFilter") if column.nil?
@@ -85,8 +86,7 @@ module Masks
           end
 
           def column_compare(relation, column, operator, value)
-            quoted = relation.connection.quote_column_name(column)
-            table = "actors.#{quoted}"
+            table = column.include?(".") ? column : "actors.#{relation.connection.quote_column_name(column)}"
             text = value.to_s
             like = ActiveRecord::Base.sanitize_sql_like(text.downcase)
 
@@ -96,7 +96,7 @@ module Masks
             when "co" then relation.where("lower(#{table}::text) LIKE ?", "%#{like}%")
             when "sw" then relation.where("lower(#{table}::text) LIKE ?", "#{like}%")
             when "ew" then relation.where("lower(#{table}::text) LIKE ?", "%#{like}")
-            when "pr" then relation.where.not(column => nil)
+            when "pr" then relation.where("#{table} IS NOT NULL")
             when "gt" then relation.where("#{table} > ?", text)
             when "ge" then relation.where("#{table} >= ?", text)
             when "lt" then relation.where("#{table} < ?", text)

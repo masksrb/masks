@@ -59,7 +59,7 @@ module Masks
         def refusal(actor)
           return :manager if actor.last_manager?
 
-          :provisioned if actor.external_id.present?
+          :provisioned if actor.directed?
         end
 
         def refuse(message)

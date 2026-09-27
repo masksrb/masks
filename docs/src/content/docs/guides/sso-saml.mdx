@@ -257,7 +257,7 @@ the base URL as its `resource`.
 | --- | --- |
 | `id` | The actor's `uuid`. |
 | `userName` | The nickname, or the email when it is an address. |
-| `externalId` | Stored, unique in the tenant, filterable. |
+| `externalId` | Stored and filterable. It is unique in the tenant, or in the organization for a [directory for one organization](#a-directory-for-one-organization). |
 | `name`, `displayName` | The name claims. |
 | `emails` | The primary email, treated as confirmed. |
 | `phoneNumbers`, `photos`, `profileUrl`, `locale`, `timezone` | The matching claims. |
@@ -307,6 +307,11 @@ client that may carry `masks:scim`, can come only from an owner, since either re
 | Create a user | A new account that joins as `member`. Its email must be at a domain proven for one of the organization's providers, and is then treated as confirmed. Any other address is refused with `400` before masks looks for an account holding it. A user without an email is allowed. |
 | Replace or patch a user | Allowed only for an account this directory created that belongs to no other organization and manages nothing. Anyone else is refused with `403`, so an owner who adds an existing account cannot then take it over through the directory. |
 | Delete a user | Removes them from the organization and revokes its tokens. The account stays. |
+
+The organization's directory keeps its own `externalId` for each member, so two organizations'
+directories can use the same value. A `userName`, email, or `externalId` that is already taken is
+refused with `409` and the same `uniqueness` detail every time, so the answer does not say who holds
+it or where.
 
 ### Roles as groups
 

@@ -241,6 +241,10 @@ module Masks
         self
       end
 
+      def directed?
+        external_id.present? || memberships.where.not(external_id: nil).exists?
+      end
+
       def last_manager?
         persisted? && owns? && !Actor.holding(Scopes::MANAGE).where(suspended_at: nil).where.not(id: id).exists?
       end

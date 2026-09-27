@@ -84,6 +84,7 @@ module Masks
 
         assert_response :conflict
         assert_equal "uniqueness", body["scimType"]
+        assert_equal "another user already holds that userName, email or externalId", body["detail"]
       end
 
       test "a patch renames a person and switches them off" do
@@ -440,6 +441,70 @@ module Masks
 
         assert_response :success
         assert within { Actor.find_by!(uuid: made["id"]).suspended? }
+      end
+      def directed(secret, user_name, external_id)
+        scim(:post, "/Users", secret: secret, body: {
+          "schemas" => [ Scim::USER ], "userName" => user_name, "externalId" => external_id, "active" => true
+        })
+      end
+
+      test "two organizations' directories use the same externalId without meeting" do
+        acme = within { Organization.create!(key: "acme", name: "Acme") }
+        globex = within { Organization.create!(key: "globex", name: "Globex") }
+        acme_secret = acme_token(acme)
+        globex_secret = within { ProvisioningToken.issue!(label: "Globex Okta", by: @manager, organization: globex).secret }
+
+        ada = directed(acme_secret, "ada", "okta-1")
+
+        assert_response :created
+        assert_equal "okta-1", ada["externalId"]
+
+        grace = directed(globex_secret, "grace", "okta-1")
+
+        assert_response :created
+        assert_equal "okta-1", grace["externalId"]
+
+        found = scim(:get, "/Users?filter=#{CGI.escape('externalId eq "okta-1"')}", secret: acme_secret)
+
+        assert_equal [ ada["id"] ], found["Resources"].map { |user| user["id"] }
+        assert_equal "okta-1", scim(:get, "/Users/#{grace["id"]}", secret: globex_secret)["externalId"]
+        assert_nil within { Actor.find_by!(uuid: ada["id"]).external_id }
+      end
+
+      test "one directory's externalId stays unique within its organization, and the conflict says no more than any other" do
+        acme = within { Organization.create!(key: "acme", name: "Acme") }
+        secret = acme_token(acme)
+
+        directed(secret, "ada", "okta-1")
+        taken = directed(secret, "grace", "okta-1")
+
+        assert_response :conflict
+        assert_equal "uniqueness", taken["scimType"]
+        assert_equal "another user already holds that userName, email or externalId", taken["detail"]
+        refute within { Actor.exists?(nickname: "grace") }
+
+        create_actor(nickname: "outsider")
+        elsewhere = directed(secret, "outsider", "okta-2")
+
+        assert_response :conflict
+        assert_equal taken.except("status"), elsewhere.except("status")
+      end
+
+      test "a directory's externalId is replaced and cleared with the rest of the user" do
+        acme = within { Organization.create!(key: "acme", name: "Acme") }
+        secret = acme_token(acme)
+        made = directed(secret, "ada", "okta-1")
+
+        amended = scim(:patch, "/Users/#{made["id"]}", secret: secret,
+                                                       body: { "schemas" => [ Scim::PATCH ],
+                                                               "Operations" => [ { "op" => "replace", "path" => "externalId", "value" => "okta-9" } ] })
+
+        assert_equal "okta-9", amended["externalId"]
+
+        replaced = scim(:put, "/Users/#{made["id"]}", secret: secret, body: { "schemas" => [ Scim::USER ], "userName" => "ada" })
+
+        assert_nil replaced["externalId"]
+        assert_nil within { acme.memberships.sole.external_id }
       end
     end
   end

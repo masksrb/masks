@@ -685,7 +685,8 @@ CREATE TABLE public.memberships (
     invited_as character varying,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    invited_at timestamp(6) without time zone
+    invited_at timestamp(6) without time zone,
+    external_id character varying
 );
 
 ALTER TABLE ONLY public.memberships FORCE ROW LEVEL SECURITY;
@@ -2099,6 +2100,13 @@ CREATE UNIQUE INDEX index_memberships_on_organization_id_and_actor_id ON public.
 
 
 --
+-- Name: index_memberships_on_organization_id_and_external_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_memberships_on_organization_id_and_external_id ON public.memberships USING btree (organization_id, external_id) WHERE (external_id IS NOT NULL);
+
+
+--
 -- Name: index_memberships_on_tenant_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -3235,6 +3243,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260927180000'),
 ('20260927170000'),
 ('20260927160000'),
 ('20260927140500'),

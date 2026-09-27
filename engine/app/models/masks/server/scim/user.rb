@@ -3,7 +3,6 @@ module Masks
     module Scim
       class User
         SIMPLE = {
-          "externalId" => :external_id,
           "displayName" => :name,
           "profileUrl" => :profile_url,
           "locale" => :locale,
@@ -14,21 +13,22 @@ module Masks
           "name.formatted" => :name
         }.freeze
 
-        attr_reader :actor, :suspending
+        attr_reader :actor, :suspending, :external_id
 
-        def self.represent(actor, base:)
-          new(actor).to_h(base: base)
+        def self.represent(actor, base:, external_id: actor.external_id)
+          new(actor, external_id: external_id).to_h(base: base)
         end
 
-        def initialize(actor)
+        def initialize(actor, external_id: actor.external_id)
           @actor = actor
+          @external_id = external_id
         end
 
         def to_h(base:)
           {
             "schemas" => [ USER ],
             "id" => actor.uuid,
-            "externalId" => actor.external_id,
+            "externalId" => external_id,
             "userName" => actor.nickname || actor.email,
             "name" => {
               "formatted" => actor.name,
@@ -63,6 +63,7 @@ module Masks
 
           SIMPLE.each_value { |column| actor.public_send(:"#{column}=", nil) }
           actor.phone = actor.picture_url = nil
+          @external_id = nil
 
           merge(document)
         end
@@ -105,6 +106,7 @@ module Masks
             case key
             when "userName" then user_name!(value)
             when "active" then active!(value)
+            when "externalId" then @external_id = value&.to_s&.strip.presence
             when "name" then value.is_a?(Hash) ? value.each { |part, held| assign("name.#{part}", held) } : clear_name
             when "password" then actor.password = value.presence
             when /\Aemails(\[.*\])?(\.value)?\z/ then actor.email = first_value(value)

@@ -72,6 +72,18 @@ module Masks
         within { assert Actor.exists?(@actor.id) }
       end
 
+      test "an account an organization's directory provisions is left to that directory" do
+        within do
+          acme = Organization.create!(key: "acme", name: "Acme")
+          acme.memberships.create!(actor: @actor, role: "member", provisioned: true, external_id: "okta-1")
+        end
+
+        sign_in_as(@actor)
+        delete "/account", params: { confirm: "leaving" }
+
+        within { assert Actor.exists?(@actor.id) }
+      end
+
       test "signing out is not somebody else's business to delete" do
         delete "/account", params: { confirm: "leaving" }
 
