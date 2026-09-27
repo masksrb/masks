@@ -13,7 +13,7 @@ today, and how the rest will be built.
 | Audit log | Built | [Audit log](#audit-log) |
 | Event streaming | Built | [Event streaming](#event-streaming) |
 | Single sign-on and provisioning | Built | [Single sign-on and provisioning](#single-sign-on-and-provisioning) |
-| Step-up authentication | Partly built | [Step-up authentication](#step-up-authentication) |
+| Step-up authentication | Built | [Step-up authentication](#step-up-authentication) |
 | Organizations and roles | Planned | [Organizations and roles](#organizations-and-roles) |
 | Custom domains | Planned | [Custom domains](#custom-domains) |
 | Home-realm discovery | Planned | [Home-realm discovery](#home-realm-discovery) |
@@ -53,27 +53,22 @@ providers, acts as a SAML identity provider for applications, and keeps its
 accounts in step with a directory over SCIM. See
 [Features](/guides/features/) and [SSO and SAML](/guides/sso-saml/).
 
-## Partly built
-
 ### Step-up authentication
 
 Some actions need a stronger or fresher sign-in than the session holds, such as
 moving money or reading a record.
 
-Today:
-
 - ID tokens carry `auth_time`, `amr`, and an `acr` of `urn:masks:acr:pwd` or
   `urn:masks:acr:mfa`.
 - A client asks for a fresh sign-in with `max_age` or `prompt=login`.
+- A client asks for a second factor with `acr_values=urn:masks:acr:mfa` or with
+  an essential `acr` in the `claims` parameter. A session that already used a
+  second factor is not asked again. Otherwise masks prompts for a factor the
+  account holds, or asks the account to add one.
+- The ID token reports the `acr` the sign-in reached.
 
-Still to build:
-
-- A client asks for a level with `acr_values`. Masks discovery already lists the
-  two values, and the authorization endpoint does not act on the request yet.
-- When the session falls short, masks asks for one more factor and issues a
-  token that meets the request.
-- A sign-in policy names the level a client requires, so the client does not
-  have to ask on every request.
+A sign-in policy cannot yet require a level for a client, so the client asks on
+each request.
 
 ## Planned
 

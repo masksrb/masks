@@ -76,7 +76,7 @@ module Masks
         def required?
           return false unless login.first_factored? && !actor.second_factor?
 
-          actor.manages? || (login.policy.second_factor_required && held_codes.empty?)
+          actor.manages? || ((login.policy.second_factor_required || login.stepping_up?) && held_codes.empty?)
         end
 
         def offers

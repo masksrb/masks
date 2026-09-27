@@ -185,8 +185,18 @@ module Masks
         touched?(:first_factor) || signed_in?
       end
 
+      def stepping_up?
+        request.respond_to?(:multi_factor?) && request.multi_factor? && !multi_factored?
+      end
+
+      def multi_factored?
+        return true if amr.include?(Issuer::MULTI_FACTOR)
+
+        signed_in? && Array(session.amr).include?(Issuer::MULTI_FACTOR)
+      end
+
       def second_factored?
-        return false if reauthenticating? || stale? || actor.nil?
+        return false if reauthenticating? || stale? || actor.nil? || stepping_up?
 
         touched?(:second_factor) || signed_in? || remembered?(:second_factor)
       end

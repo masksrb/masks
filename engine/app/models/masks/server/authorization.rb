@@ -3,7 +3,7 @@ module Masks
     class Authorization
       attr_reader :client_id, :redirect_uri, :response_type, :state, :nonce,
                   :code_challenge, :code_challenge_method, :prompt, :audience,
-                  :requested_scopes, :max_age, :requested_claims, :request_uri,
+                  :requested_scopes, :max_age, :acr_values, :requested_claims, :request_uri,
                   :user_code, :dpop_jkt, :request_object, :saml
 
       def self.from_request(request)
@@ -22,6 +22,7 @@ module Masks
           code_challenge_method: params["code_challenge_method"],
           prompt: params["prompt"],
           max_age: params["max_age"],
+          acr_values: params["acr_values"],
           resource: repeated["resource"],
           request: params["request"],
           request_uri: params["request_uri"],
@@ -32,7 +33,7 @@ module Masks
 
       def initialize(client_id:, redirect_uri:, response_type:, scope: nil, state: nil,
                      nonce: nil, code_challenge: nil, code_challenge_method: nil,
-                     prompt: nil, max_age: nil, resource: nil, request: nil,
+                     prompt: nil, max_age: nil, acr_values: nil, resource: nil, request: nil,
                      request_uri: nil, claims: nil, user_code: nil, dpop_jkt: nil, signed: false, saml: nil)
         @signed = signed
         @saml = saml.presence
@@ -51,6 +52,7 @@ module Masks
         @code_challenge_method = (code_challenge_method.presence || ("S256" if @code_challenge))
         @prompt = Scopes.list(prompt)
         @max_age = max_age.presence&.to_i
+        @acr_values = Scopes.list(acr_values)
         @audience = Array(resource).map(&:to_s).reject(&:empty?).uniq
       end
 
@@ -106,6 +108,10 @@ module Masks
         prompt.include?("login")
       end
 
+      def multi_factor?
+        (acr_values + claimed_acr_values).include?(Issuer::ACR_MULTI_FACTOR)
+      end
+
       def consent?
         prompt.include?("consent") || device?
       end
@@ -141,6 +147,7 @@ module Masks
           "code_challenge_method" => code_challenge_method,
           "prompt" => prompt.sort.join(" ").presence,
           "max_age" => max_age,
+          "acr_values" => acr_values.join(" ").presence,
           "resource" => audience.sort,
           "claims" => requested_claims&.to_json,
           "dpop_jkt" => dpop_jkt
@@ -149,6 +156,14 @@ module Masks
 
       def device?
         user_code.present?
+      end
+
+      def claimed_acr_values
+        wanted = requested_claims&.dig("id_token", "acr")
+
+        return [] unless wanted.is_a?(Hash)
+
+        Array(wanted["values"]) + Array(wanted["value"])
       end
 
       def fingerprint

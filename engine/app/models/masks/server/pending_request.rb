@@ -23,6 +23,10 @@ module Masks
         authorization.reauthenticate?
       end
 
+      def multi_factor?
+        authorization.multi_factor?
+      end
+
       def consent?
         authorization.consent?
       end
