@@ -2,10 +2,38 @@
   <h2><%= account_text("organizations.heading") %></h2>
 
   <div class="entries">
+    <% invitations.each do |invited| %>
+      <% organization = invited.organization %>
+
+      <details class="entry" id="organization-<%= organization.key %>" open>
+        <summary>
+          <span class="entry-icon"><%= account_icon(:organization) %></span>
+          <span class="entry-label"><%= organization.name %></span>
+          <span class="entry-state"><%= account_text("organizations.waiting") %></span>
+          <span class="entry-mark" aria-hidden="true"></span>
+        </summary>
+
+        <div class="entry-body">
+          <p class="aside">
+            <%= account_text("organizations.asked", organization: organization.name, role: invited.role,
+                                                     by: invited.invited_by&.identifier || account_text("organizations.someone")) %>
+          </p>
+
+          <div class="action-row">
+            <%= button_to account_text("organizations.accept"),
+                  account_organization_acceptance_path(organization.key), method: :post, class: "action action-sm" %>
+            <%= button_to account_text("organizations.decline"),
+                  account_organization_member_path(organization.key, invited.actor.uuid), method: :delete,
+                  class: "action action-quiet action-sm" %>
+          </div>
+        </div>
+      </details>
+    <% end %>
+
     <% memberships.each do |own| %>
       <% organization = own.organization %>
       <% members = organization.memberships.sort_by { |held| [ held.role == "owner" ? 0 : 1, held.actor.identifier.to_s ] } %>
-      <% alone = own.owner? && members.count(&:owner?) == 1 %>
+      <% alone = own.owner? && members.count { |held| held.owner? && !held.pending? } == 1 %>
 
       <details class="entry" id="organization-<%= organization.key %>">
         <summary>
@@ -27,7 +55,7 @@
                     <span><%= person.identifier %></span>
                     <% if person.id == own.actor_id %>
                       <span class="tag"><%= account_text("organizations.you") %></span>
-                    <% elsif !person.activated? %>
+                    <% elsif member.pending? %>
                       <span class="tag"><%= account_text("organizations.invited") %></span>
                     <% end %>
                   </span>

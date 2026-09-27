@@ -128,6 +128,7 @@ module Masks
       MEMBERSHIP_ADDED = "membership.added".freeze
       MEMBERSHIP_ROLE_CHANGED = "membership.role_changed".freeze
       MEMBERSHIP_REMOVED = "membership.removed".freeze
+      MEMBERSHIP_ACCEPTED = "membership.accepted".freeze
 
       DOMAIN_CLAIMED = "domain.claimed".freeze
       DOMAIN_VERIFIED = "domain.verified".freeze

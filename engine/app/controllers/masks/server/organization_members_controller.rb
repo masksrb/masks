@@ -41,6 +41,12 @@ module Masks
         back(alert: e.message)
       end
 
+      def accept
+        @own.accept!
+
+        back(notice: t("organization_members.accepted", organization: @organization.name, role: @own.role))
+      end
+
       def destroy
         membership = member!
         leaving = membership.actor_id == current_actor.id
@@ -50,7 +56,8 @@ module Masks
         Members.remove!(membership, by: current_actor)
 
         if leaving
-          back(notice: t("organization_members.left", organization: @organization.name))
+          back(notice: t(membership.pending? ? "organization_members.declined" : "organization_members.left",
+                         organization: @organization.name))
         else
           back(notice: t("organization_members.removed", identifier: membership.actor.identifier, organization: @organization.name))
         end
@@ -66,13 +73,13 @@ module Masks
 
         def require_membership
           @organization = Organization.active.find_by(key: params[:key])
-          @own = @organization&.membership_for(current_actor)
+          @own = @organization&.memberships&.find_by(actor: current_actor)
 
           back(alert: t("organization_members.unknown")) if @own.nil?
         end
 
         def own!
-          raise NotOwner unless @own.owner?
+          raise NotOwner unless @own.owner? && !@own.pending?
         end
 
         def member!

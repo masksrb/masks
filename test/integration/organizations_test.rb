@@ -186,6 +186,21 @@ module Masks
           assert_nil Event.where(action: Event::SESSION_STARTED).first.organization_id, "the session began before any app asked"
         end
       end
+
+      test "a pending membership grants no organization until it is accepted" do
+        membership = within { @acme.memberships.create!(actor: @actor, role: "member", pending: true) }
+
+        signed_in_to_app
+
+        assert_equal "access_denied", redirected["error"]
+
+        within { membership.accept! }
+        reset!
+        host! host_for(@tenant)
+        signed_in_to_app
+
+        assert_equal "acme", claims_in(tokens["access_token"]).dig("org", "key")
+      end
     end
   end
 end

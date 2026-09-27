@@ -109,6 +109,62 @@ module Masks
 
         assert_equal "owner", within { globex.memberships.find_by!(actor: stranger).role }
       end
+
+      test "an existing account added by an owner is only invited until it accepts" do
+        outsider = create_actor(nickname: "outsider", email: "outsider@example.com")
+
+        sign_in_as(@owner)
+        post "/account/organizations/acme/members", params: { email: "outsider@example.com", role: "member" }
+
+        membership = within { @acme.memberships.find_by!(actor: outsider) }
+
+        assert membership.pending?
+        assert_nil within { @acme.membership_for(outsider) }
+
+        reset!
+        host! host_for(@tenant)
+        sign_in_as(outsider)
+        get "/"
+
+        assert_select "#organization-acme .entry-state", text: /Waiting for you/
+
+        post "/account/organizations/acme/accept"
+
+        refute within { membership.reload.pending? }
+        assert within { Event.where(action: Event::MEMBERSHIP_ACCEPTED, actor: outsider).exists? }
+      end
+
+      test "a person can decline an invitation to an organization" do
+        outsider = create_actor(nickname: "outsider", email: "outsider@example.com")
+        within { @acme.memberships.create!(actor: outsider, role: "member", pending: true) }
+
+        sign_in_as(outsider)
+        delete "/account/organizations/acme/members/#{outsider.uuid}"
+
+        refute within { @acme.memberships.exists?(actor: outsider) }
+      end
+
+      test "an invited owner cannot change anyone before accepting" do
+        outsider = create_actor(nickname: "outsider", email: "outsider@example.com")
+        within { @acme.memberships.create!(actor: outsider, role: "owner", pending: true) }
+
+        sign_in_as(outsider)
+        delete "/account/organizations/acme/members/#{@member.uuid}"
+
+        assert_equal "member", role_of(@member)
+      end
+
+      test "an owner's member list does not reveal whether an address already had an account" do
+        create_actor(nickname: "existing", email: "existing@example.com")
+
+        sign_in_as(@owner)
+        post "/account/organizations/acme/members", params: { email: "existing@example.com", role: "member" }
+        post "/account/organizations/acme/members", params: { email: "brand-new@example.com", role: "member" }
+        get "/"
+
+        assert_select "#organization-acme .item-name", text: /existing@example.com.*invited/m
+        assert_select "#organization-acme .item-name", text: /brand-new@example.com.*invited/m
+      end
     end
   end
 end

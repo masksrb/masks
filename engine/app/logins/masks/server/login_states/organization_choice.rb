@@ -66,7 +66,7 @@ module Masks
           end
 
           def memberships
-            @memberships ||= actor.memberships
+            @memberships ||= actor.memberships.accepted
                                   .joins(:organization)
                                   .merge(Masks::Server::Organization.active)
                                   .includes(:organization)

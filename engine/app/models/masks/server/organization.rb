@@ -35,7 +35,7 @@ module Masks
       def membership_for(actor)
         return nil if actor.nil? || archived?
 
-        memberships.find_by(actor: actor)
+        memberships.accepted.find_by(actor: actor)
       end
 
       def claim_for(actor)

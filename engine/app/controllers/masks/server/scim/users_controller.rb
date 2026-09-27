@@ -78,7 +78,7 @@ module Masks
           def provisionable
             held = provisioned_organization
 
-            held ? Actor.where(id: held.memberships.select(:actor_id)) : Actor.all
+            held ? Actor.where(id: held.memberships.accepted.select(:actor_id)) : Actor.all
           end
 
           def found

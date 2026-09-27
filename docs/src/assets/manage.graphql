@@ -511,6 +511,11 @@ type Membership {
   createdAt: ISO8601DateTime!
   invitedBy: Actor
   organization: Organization!
+
+  """
+  True until the person accepts. A pending membership grants nothing.
+  """
+  pending: Boolean!
   role: String!
 }
 

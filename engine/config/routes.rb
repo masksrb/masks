@@ -58,6 +58,7 @@ Masks::Server::Engine.routes.draw do
     post "/account/organizations/:key/members", to: "organization_members#create", as: :account_organization_members
     patch "/account/organizations/:key/members/:uuid", to: "organization_members#update", as: :account_organization_member
     delete "/account/organizations/:key/members/:uuid", to: "organization_members#destroy"
+    post "/account/organizations/:key/accept", to: "organization_members#accept", as: :account_organization_acceptance
   end
 
   scope constraints: { style: Regexp.union(Masks::Server::Avatars::STYLES), digest: /[0-9a-f]{16}/ } do

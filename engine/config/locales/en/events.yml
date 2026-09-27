@@ -145,6 +145,7 @@ en:
         added: "Added to an organization"
         role_changed: "Organization role changed"
         removed: "Removed from an organization"
+        accepted: "Joined an organization"
       domain:
         claimed: "Domain claimed"
         verified: "Domain proven"

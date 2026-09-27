@@ -22,7 +22,7 @@
         uuid key name roles archivedAt createdAt
         signInPolicy { key }
         providers { key name roleClaim roleMap unmappedRole }
-        members { role createdAt actor { uuid identifier email activated } }
+        members { role pending createdAt actor { uuid identifier email activated } }
         events {
           id action label createdAt ipAddress details
           actor { uuid identifier } by { uuid identifier } client { clientId name } device { id label }
@@ -233,7 +233,7 @@
               {member.actor.identifier}
             </Link>
             <span class="hint">
-              {member.actor.activated ? `since ${day(member.createdAt)}` : "invited, not signed in yet"}
+              {member.pending ? "invited, has not accepted yet" : `since ${day(member.createdAt)}`}
             </span>
           </div>
           <div class="flex flex-wrap items-center gap-2">
@@ -252,7 +252,7 @@
         <Select label="Role" value={adding.role} options={roleOptions} onchange={(role) => (adding.role = role)} />
         <button type="button" class="btn btn-sm" disabled={busy || !adding.email.trim()} onclick={add}>Add</button>
       </div>
-      <p class="hint">Someone without an account gets an invitation.</p>
+      <p class="hint">They join once they accept on their account page. Someone without an account gets an invitation first.</p>
 
       {#if invited}
         <Field label="No mail adapter, so send this invitation link yourself" value={invited} readonly />

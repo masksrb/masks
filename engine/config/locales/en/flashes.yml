@@ -14,6 +14,8 @@ en:
     assigned: "%{identifier} is %{role} now."
     removed: "%{identifier} is no longer a member of %{organization}."
     left: "You have left %{organization}. Anything signed in as a member of it stops working."
+    accepted: "You are %{role} in %{organization} now."
+    declined: "You declined %{organization}."
     slow_down: "That is a lot of people at once. Wait a minute and try again."
 
   apps:

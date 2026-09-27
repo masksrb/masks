@@ -191,8 +191,9 @@ module Masks
           role = provider.role_from(claims)
           membership = organization.memberships.find_or_initialize_by(actor: actor)
           was = membership.role
+          membership.pending = false
 
-          return if was == role
+          return membership.save if was == role
 
           membership.role = role
 

@@ -215,8 +215,10 @@ one **role** there. Every organization has `owner` and `member`, and can name mo
 
 1. In `/manage`, open **Organizations** and choose **Add**. Its key is what apps ask for.
 2. Add the first member as `owner`. An organization always keeps at least one owner.
-3. Add the rest by email. An address with no account gets an invitation, and the membership is ready
-   when they accept it.
+3. Add the rest by email. Each person is invited, and joins when they accept on their account page.
+   An address with no account gets an account invitation first. Until they accept, the membership
+   grants nothing: no `org` claim, no place in the organization choice, and nothing for the
+   organization's directory to change.
 
 Removing a member revokes their tokens for that organization. Archiving the organization revokes
 every token issued for it and stops it being offered.
@@ -253,7 +255,7 @@ An organization can have its own sign-in policy, provider, and directory.
   the person chooses it, the policy applies from the choice on, so the second factor, session
   lifetime, and step-up follow it and the first factor follows the app's.
 - **Provider.** A provider handed to an organization is offered only to a request that names it.
-  Everyone who signs in through it becomes a member, in the role their groups map to. The provider
+  Everyone who signs in through it becomes a member, in the role their groups map to, and an invitation waiting for them counts as accepted. The provider
   reads groups from the `groups` claim, or another one it names. The first mapped group a person
   holds decides the role, anyone in none gets the unmapped role (`member` unless set), and the role
   is set again on every sign-in.
@@ -267,11 +269,12 @@ Set all three on the organization's page in `/manage`.
 An organization's owners manage it from their own account page, with no `/manage` access. Under
 **Organizations** each owner sees the members and can:
 
-- add someone by email in any role, which invites an address with no account,
+- invite someone by email in any role. The member list shows everyone invited the same way,
+  whether or not they already had an account,
 - change a member's role,
 - remove a member, which revokes their tokens for the organization.
 
-Every member can see their role and leave. The only owner cannot leave or step down until someone
+Every member can see their role and leave, and anyone invited can accept or decline. The only owner cannot leave or step down until someone
 else is an owner. Owners reach only their own organization.
 
 ### An organization's activity

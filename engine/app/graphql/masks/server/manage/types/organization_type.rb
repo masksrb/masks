@@ -33,7 +33,7 @@ module Masks
           end
 
           def member_count
-            object.memberships.count
+            object.memberships.accepted.count
           end
         end
       end

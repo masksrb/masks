@@ -11,7 +11,7 @@ module Masks
 
           raise Refused, "#{actor.identifier} is already a member of #{organization.name}" if organization.memberships.exists?(actor: actor)
 
-          membership = organization.memberships.new(actor: actor, role: role, invited_by: by)
+          membership = organization.memberships.new(actor: actor, role: role, invited_by: by, pending: true)
 
           raise Refused, membership.errors.full_messages.to_sentence unless membership.save
 
@@ -19,7 +19,7 @@ module Masks
 
           sent = actor.activated? ? { delivered: false, url: nil } : invite(actor, journey)
 
-          { membership: membership, invited: !actor.activated? }.merge(sent)
+          { membership: membership, invited: true }.merge(sent)
         end
 
         def assign!(membership, role:, by:)
