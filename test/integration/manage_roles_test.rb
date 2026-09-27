@@ -156,9 +156,11 @@ module Masks
       test "security creates an organization, and support fills it with people" do
         security = bearer_for(manager(ManageRoles::SECURITY))
 
-        body = ask(%(mutation { createOrganization(key: "acme", name: "Acme", roles: ["billing"]) { organization { roles } } }), security)
+        body = ask(%(mutation { createOrganization(key: "acme", name: "Acme", roles: ["billing"]) { organization { roles members { role pending actor { identifier } } } } }), security)
 
         assert_equal %w[owner member billing], body.dig("data", "createOrganization", "organization", "roles")
+        assert_equal [ { "role" => "owner", "pending" => false, "actor" => { "identifier" => "security" } } ],
+                     body.dig("data", "createOrganization", "organization", "members")
 
         support = bearer_for(manager(ManageRoles::SUPPORT, nickname: "helper"))
 
