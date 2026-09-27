@@ -402,14 +402,14 @@
                   <Link to={`/clients/${client.clientId}`} class="link link-hover font-medium">
                     {client.name}
                   </Link>
-                  <div class="truncate font-mono text-xs opacity-75" title={client.clientId}>
+                  <div class="max-w-[11rem] truncate font-mono text-xs opacity-75" title={client.clientId}>
                     {client.clientId}
                   </div>
                 </div>
               </div>
             </td>
-            <td class="hidden max-w-[16rem] md:table-cell">
-              <div class="truncate font-mono text-xs opacity-85" title={joined(client.resources)}>
+            <td class="hidden md:table-cell">
+              <div class="max-w-[11rem] truncate font-mono text-xs opacity-85" title={joined(client.resources)}>
                 {joined(client.resources)}
               </div>
             </td>
@@ -423,15 +423,15 @@
             <td class="hidden text-right text-xs opacity-85 md:table-cell">
               {client.namespaces.length || NONE}
             </td>
-            <td class="hidden max-w-64 font-mono text-xs md:table-cell">
+            <td class="hidden font-mono text-xs md:table-cell">
               {#if client.requiredScopes.length}
-                <div class="truncate" title={joined(client.requiredScopes)}>
+                <div class="max-w-[12rem] truncate" title={joined(client.requiredScopes)}>
                   <span class="opacity-75">always</span>
                   {joined(client.requiredScopes)}
                 </div>
               {/if}
               {#if client.allowedScopes.length}
-                <div class="truncate opacity-85" title={joined(client.allowedScopes)}>
+                <div class="max-w-[12rem] truncate opacity-85" title={joined(client.allowedScopes)}>
                   <span class="opacity-85">on request</span>
                   {joined(client.allowedScopes)}
                 </div>

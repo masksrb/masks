@@ -251,78 +251,84 @@
   >
     <Tally {counts} />
 
-    <Section title="Sign-ins">
-      {#snippet actions()}
-        <div class="range" role="group" aria-label="Time range">
-          {#each SPANS as span (span)}
-            <button type="button" aria-pressed={days === span} onclick={() => (days = span)}>
-              {span}d
-            </button>
-          {/each}
-        </div>
-      {/snippet}
+    <div class="dash">
+      <div class="dash-main">
+        <Section title="Sign-ins">
+          {#snippet actions()}
+            <div class="range" role="group" aria-label="Time range">
+              {#each SPANS as span (span)}
+                <button type="button" aria-pressed={days === span} onclick={() => (days = span)}>
+                  {span}d
+                </button>
+              {/each}
+            </div>
+          {/snippet}
 
-      {#key days}
-        <Loader load={() => api.query(ACTIVITY, { days })}>
-          {#snippet children(activity)}
-            <BarChart points={plotted(activity.activity)} label="Sign-ins per day" />
+          {#key days}
+            <Loader load={() => api.query(ACTIVITY, { days })}>
+              {#snippet children(activity)}
+                <BarChart points={plotted(activity.activity)} label="Sign-ins per day" />
+              {/snippet}
+            </Loader>
+          {/key}
+        </Section>
+
+        <Section title="Organizations">
+          {#snippet actions()}
+            <Link to="/organizations" class="btn btn-ghost btn-sm">
+              {data.tally.organizations > ORGANIZATIONS_SHOWN ? `All ${data.tally.organizations}` : "All organizations"}
+            </Link>
+          {/snippet}
+
+          <Loader load={() => api.query(ORGANIZATIONS)}>
+            {#snippet children(held)}
+              <Table
+                columns={["Organization", { label: "Members", right: true }]}
+                count={held.organizations.length}
+                empty="No organizations yet. Add one for each customer whose people sign in together, and apps that ask for the organization scope learn the role each person holds there."
+              >
+                {#snippet rows()}
+                  {#each held.organizations as organization (organization.key)}
+                    <Row to={`/organizations/${organization.key}`}>
+                      <td>
+                        <OrganizationCell {organization} />
+                      </td>
+                      <td class="text-right text-sm">
+                        <OrganizationHeadcount {organization} class="flex flex-col items-end" />
+                      </td>
+                    </Row>
+                  {/each}
+                {/snippet}
+              </Table>
+            {/snippet}
+          </Loader>
+        </Section>
+      </div>
+
+      <div class="dash-side">
+        <Loader load={() => api.query(RECENT)}>
+          {#snippet children(recent)}
+            {#if recent.worrying.length}
+              <Section title="Worth a look">
+                {#snippet actions()}
+                  <Link to="/activity" class="btn btn-sm">All activity</Link>
+                {/snippet}
+
+                <Events events={recent.worrying} />
+              </Section>
+            {/if}
+
+            <Section title="Lately">
+              {#snippet actions()}
+                <Link to="/activity" class="btn btn-ghost btn-sm">All activity</Link>
+              {/snippet}
+
+              <Events events={recent.latest} empty="Nothing yet." />
+            </Section>
           {/snippet}
         </Loader>
-      {/key}
-    </Section>
-
-    <Section title="Organizations">
-      {#snippet actions()}
-        <Link to="/organizations" class="btn btn-ghost btn-sm">
-          {data.tally.organizations > ORGANIZATIONS_SHOWN ? `All ${data.tally.organizations}` : "All organizations"}
-        </Link>
-      {/snippet}
-
-      <Loader load={() => api.query(ORGANIZATIONS)}>
-        {#snippet children(held)}
-          <Table
-            columns={["Organization", { label: "Members", right: true }]}
-            count={held.organizations.length}
-            empty="No organizations yet. Add one for each customer whose people sign in together, and apps that ask for the organization scope learn the role each person holds there."
-          >
-            {#snippet rows()}
-              {#each held.organizations as organization (organization.key)}
-                <Row to={`/organizations/${organization.key}`}>
-                  <td>
-                    <OrganizationCell {organization} />
-                  </td>
-                  <td class="text-right text-sm">
-                    <OrganizationHeadcount {organization} class="flex flex-col items-end" />
-                  </td>
-                </Row>
-              {/each}
-            {/snippet}
-          </Table>
-        {/snippet}
-      </Loader>
-    </Section>
-
-    <Loader load={() => api.query(RECENT)}>
-      {#snippet children(recent)}
-        {#if recent.worrying.length}
-          <Section title="Worth a look">
-            {#snippet actions()}
-              <Link to="/activity" class="btn btn-sm">All activity</Link>
-            {/snippet}
-
-            <Events events={recent.worrying} />
-          </Section>
-        {/if}
-
-        <Section title="Lately">
-          {#snippet actions()}
-            <Link to="/activity" class="btn btn-ghost btn-sm">All activity</Link>
-          {/snippet}
-
-          <Events events={recent.latest} empty="Nothing yet." />
-        </Section>
-      {/snippet}
-    </Loader>
+      </div>
+    </div>
   </Page>
 {:else}
   <Page title="General">

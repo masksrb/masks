@@ -434,7 +434,7 @@
         {#snippet rows()}
           {#each shown as member (member.actor.uuid)}
             <tr>
-              <td class="min-w-0">
+              <td class="w-full min-w-0">
                 <div class="flex min-w-0 flex-col gap-0.5">
                   <span class="flex flex-wrap items-center gap-2">
                     <Link to={`/actors/${member.actor.uuid}`} class="link link-hover font-medium break-all">
@@ -451,10 +451,10 @@
                   </div>
                 </div>
               </td>
-              <td class="hidden w-36 md:table-cell">
+              <td class="hidden w-44 min-w-44 md:table-cell">
                 {@render roleOf(member)}
               </td>
-              <td class="hidden text-right md:table-cell">
+              <td class="hidden text-right whitespace-nowrap md:table-cell">
                 {@render removeOf(member)}
               </td>
             </tr>
@@ -669,7 +669,7 @@
   {/if}
   <button
     type="button"
-    class="btn btn-ghost btn-sm"
+    class="btn btn-ghost btn-sm btn-drop"
     disabled={busy || lastOwner(member)}
     title={lastOwner(member) ? "Make someone else an owner first." : null}
     onclick={() => remove(member)}

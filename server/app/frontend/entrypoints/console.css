@@ -1,7 +1,7 @@
 .console {
-  --text-xs: 0.875rem;
+  --text-xs: 0.8125rem;
   --text-xs--line-height: 1.45;
-  --text-sm: 1rem;
+  --text-sm: 0.875rem;
   --text-sm--line-height: 1.5;
   --edge: color-mix(in oklab, var(--color-base-content) 16%, transparent);
   --dim: color-mix(in oklab, var(--color-base-content) 72%, transparent);
@@ -11,41 +11,40 @@
   --tabbar-clear: calc(5.25rem + env(safe-area-inset-bottom, 0px));
 
   --radius-box: 10px;
-  --radius-field: 8px;
-  --bend: 14px;
+  --radius-field: 7px;
+  --bend: 10px;
 
-  --ground: #ececed;
-  --glow: rgba(179, 56, 15, 0.05);
-  --gold: #9b2f14;
-  --vermilion: #b3380f;
-  --vermilion-field: rgba(179, 56, 15, 0.08);
-  --ring: rgba(179, 56, 15, 0.45);
-  --rule: rgba(20, 20, 24, 0.1);
-  --rule-lit: rgba(255, 255, 255, 0.8);
-  --sheet: linear-gradient(180deg, #ffffff, #f5f5f6);
-  --sheet-lift:
-    inset 0 1px 0 #ffffff, 0 0 0 1px rgba(20, 20, 24, 0.07), 0 1px 1px rgba(20, 20, 24, 0.06),
-    0 10px 20px -12px rgba(20, 20, 24, 0.3);
-  --tray: #e3e3e5;
-  --tray-sink: inset 0 2px 4px rgba(20, 20, 24, 0.13), inset 0 0 0 1px rgba(20, 20, 24, 0.05), 0 1px 0 rgba(255, 255, 255, 0.85);
-  --key: linear-gradient(#ffffff, #eeeef0);
-  --key-lift: inset 0 1px 0 #ffffff, 0 0 0 1px rgba(20, 20, 24, 0.13), 0 1px 2px rgba(20, 20, 24, 0.14);
-  --key-sink: inset 0 2px 3px rgba(20, 20, 24, 0.18), 0 0 0 1px rgba(20, 20, 24, 0.13);
-  --key-hot: linear-gradient(#c94d1f, #a02f0c);
-  --key-hot-lift: inset 0 1px 0 rgba(255, 200, 170, 0.45), 0 0 0 1px #8a280a, 0 1px 2px rgba(20, 20, 24, 0.25);
-  --knob: linear-gradient(#ffffff, #ececee);
-  --bar-top: #e46a36;
-  --bar-foot: #9b2f14;
-  --top: linear-gradient(#f7f7f8, #efeff0);
-  --top-lift: 0 1px 0 rgba(20, 20, 24, 0.08), 0 6px 14px rgba(20, 20, 24, 0.05);
+  --ground: #f4f4f5;
+  --gold: #8a5a1c;
+  --vermilion: #c2410c;
+  --vermilion-field: rgba(194, 65, 12, 0.08);
+  --ring: rgba(194, 65, 12, 0.4);
+  --line: rgba(20, 20, 24, 0.09);
+  --line-firm: rgba(20, 20, 24, 0.14);
+  --rule: var(--line);
+  --sheet: #ffffff;
+  --sheet-lift: 0 0 0 1px var(--line), 0 1px 2px rgba(20, 20, 24, 0.04);
+  --tray: #efeff1;
+  --tray-sink: inset 0 0 0 1px var(--line);
+  --key: #ffffff;
+  --key-hover: #f7f7f8;
+  --key-lift: inset 0 0 0 1px var(--line-firm), 0 1px 1px rgba(20, 20, 24, 0.05);
+  --key-sink: inset 0 0 0 1px var(--line-firm), inset 0 1px 2px rgba(20, 20, 24, 0.1);
+  --key-hot: #c2410c;
+  --key-hot-hover: #d4521c;
+  --key-hot-lift: 0 1px 1px rgba(20, 20, 24, 0.12);
+  --knob: #ffffff;
+  --bar: #c2410c;
+  --top: rgba(244, 244, 245, 0.85);
+  --top-lift: 0 1px 0 var(--line);
   --tray-bar: rgba(255, 255, 255, 0.9);
-  --tray-bar-lift: 0 0 0 1px rgba(20, 20, 24, 0.08), 0 12px 28px rgba(20, 20, 24, 0.16);
+  --tray-bar-lift: 0 0 0 1px var(--line), 0 8px 24px rgba(20, 20, 24, 0.1);
 
   --color-base-100: #ffffff;
   --color-base-200: #f2f2f3;
   --color-base-300: #d6d6d9;
   --color-base-content: #18181b;
-  --color-primary: #b3380f;
+  --color-primary: #c2410c;
   --color-primary-content: #ffffff;
   --color-secondary: #8a5a1c;
   --color-secondary-content: #ffffff;
@@ -60,9 +59,7 @@
   --color-error-content: #ffffff;
 
   color-scheme: light;
-  background:
-    radial-gradient(120% 32rem at 50% -8rem, var(--glow), transparent 70%),
-    var(--ground);
+  background: var(--ground);
   color: var(--color-base-content);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
@@ -71,32 +68,30 @@
 
 .headline {
   margin: 0;
-  font-size: clamp(1.5rem, 1.05rem + 1.7vw, 2.125rem);
+  font-size: 1.5rem;
   font-weight: 600;
   letter-spacing: -0.02em;
-  line-height: 1.1;
+  line-height: 1.15;
   text-wrap: balance;
 }
 
 .headline-hero {
-  font-size: clamp(2rem, 1.2rem + 3.4vw, 3.25rem);
-  font-weight: 700;
-  letter-spacing: -0.035em;
-  line-height: 1;
+  font-size: 1.75rem;
+  letter-spacing: -0.025em;
 }
 
 .deck {
   margin: 0;
-  max-width: 52ch;
-  font-size: 0.9375rem;
+  max-width: 60ch;
+  font-size: 0.875rem;
   line-height: 1.55;
   color: var(--dim);
 }
 
 .deck-sm {
   margin: 0;
-  max-width: 60ch;
-  font-size: 1rem;
+  max-width: 64ch;
+  font-size: 0.875rem;
   line-height: 1.55;
   color: var(--dim);
 }
@@ -108,7 +103,6 @@
   min-width: 0;
   padding-top: var(--rhythm);
   border-top: 1px solid var(--rule);
-  box-shadow: inset 0 1px 0 var(--rule-lit);
 }
 
 .section-head {
@@ -133,36 +127,34 @@
 
 @media (prefers-color-scheme: dark) {
   .console {
-    --ground: #0b0b0c;
-    --glow: rgba(255, 122, 74, 0.06);
-    --gold: #e8c27a;
+    --ground: #0a0a0b;
+    --gold: #e6b95a;
     --vermilion: #ff7a4a;
-    --vermilion-field: rgba(255, 122, 74, 0.12);
-    --ring: rgba(255, 122, 74, 0.55);
-    --rule: rgba(0, 0, 0, 0.5);
-    --rule-lit: rgba(255, 255, 255, 0.05);
-    --sheet: linear-gradient(180deg, #1c1c1f, #151517);
-    --sheet-lift:
-      inset 0 1px 0 rgba(255, 255, 255, 0.08), inset 0 -1px 0 rgba(0, 0, 0, 0.4), 0 1px 0 rgba(0, 0, 0, 0.6),
-      0 10px 20px -10px rgba(0, 0, 0, 0.75);
-    --tray: #070708;
-    --tray-sink: inset 0 2px 5px rgba(0, 0, 0, 0.75), inset 0 0 0 1px rgba(0, 0, 0, 0.4), 0 1px 0 rgba(255, 255, 255, 0.05);
-    --key: linear-gradient(#2e2e32, #232326);
-    --key-lift: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 0 0 1px rgba(0, 0, 0, 0.5), 0 1px 2px rgba(0, 0, 0, 0.6);
-    --key-sink: inset 0 2px 4px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(0, 0, 0, 0.5);
-    --key-hot: linear-gradient(#ff9460, #e0552a);
-    --key-hot-lift: inset 0 1px 0 rgba(255, 225, 200, 0.5), 0 0 0 1px #8c2e12, 0 2px 6px rgba(0, 0, 0, 0.5);
-    --knob: linear-gradient(#b4b4b9, #85858b);
-    --bar-top: #ffb070;
-    --bar-foot: #e0502a;
-    --top: linear-gradient(#161618, #111113);
-    --top-lift: 0 1px 0 rgba(255, 255, 255, 0.05), 0 6px 14px rgba(0, 0, 0, 0.45);
-    --tray-bar: rgba(24, 24, 27, 0.9);
-    --tray-bar-lift: inset 0 1px 0 rgba(255, 255, 255, 0.09), 0 0 0 1px rgba(0, 0, 0, 0.55), 0 12px 28px rgba(0, 0, 0, 0.6);
+    --vermilion-field: rgba(255, 122, 74, 0.1);
+    --ring: rgba(255, 122, 74, 0.5);
+    --line: rgba(255, 255, 255, 0.075);
+    --line-firm: rgba(255, 255, 255, 0.11);
+    --sheet: #131315;
+    --sheet-lift: 0 0 0 1px var(--line), 0 1px 2px rgba(0, 0, 0, 0.3);
+    --tray: #0e0e10;
+    --tray-sink: inset 0 0 0 1px var(--line);
+    --key: #1c1c1f;
+    --key-hover: #232327;
+    --key-lift: inset 0 0 0 1px var(--line-firm), 0 1px 1px rgba(0, 0, 0, 0.3);
+    --key-sink: inset 0 0 0 1px var(--line-firm), inset 0 1px 3px rgba(0, 0, 0, 0.5);
+    --key-hot: #ff7a4a;
+    --key-hot-hover: #ff8d63;
+    --key-hot-lift: 0 1px 1px rgba(0, 0, 0, 0.3);
+    --knob: #e4e4e7;
+    --bar: #ff7a4a;
+    --top: rgba(10, 10, 11, 0.82);
+    --top-lift: 0 1px 0 var(--line);
+    --tray-bar: rgba(22, 22, 24, 0.9);
+    --tray-bar-lift: 0 0 0 1px var(--line-firm), 0 8px 24px rgba(0, 0, 0, 0.5);
 
-    --color-base-100: #151517;
-    --color-base-200: #1c1c1f;
-    --color-base-300: #34343a;
+    --color-base-100: #131315;
+    --color-base-200: #1a1a1d;
+    --color-base-300: #2c2c31;
     --color-base-content: #ededef;
     --color-primary: #ff7a4a;
     --color-primary-content: #1f0c06;
@@ -227,8 +219,12 @@
   color: color-mix(in oklab, var(--color-base-content) 75%, transparent);
 }
 
-.console :is(.input-sm, .select-sm, .textarea-sm, .btn-sm) {
+.console :is(.input-sm, .select-sm, .textarea-sm) {
   font-size: 0.9375rem;
+}
+
+.console .btn-sm {
+  font-size: 0.8125rem;
 }
 
 .console .field-label {
@@ -296,19 +292,16 @@
 
 .subhead {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-  color: color-mix(in oklab, var(--color-base-content) 82%, transparent);
+  letter-spacing: -0.005em;
+  color: var(--color-base-content);
 }
 
 .legend {
   font-size: 0.8125rem;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.16em;
-  color: var(--color-secondary);
+  color: var(--dim);
 }
 
 .stamp {
@@ -323,10 +316,9 @@
   display: flex;
   align-items: center;
   gap: 0.625rem;
-  font-size: 0.875rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   text-decoration: none;
   color: inherit;
   white-space: nowrap;
@@ -341,16 +333,15 @@
 .nav {
   display: flex;
   flex-wrap: wrap;
-  gap: 0 1.25rem;
+  gap: 0 0.25rem;
 }
 
 .nav-item {
   position: relative;
-  padding: 0.5rem 0 0.625rem;
+  padding: 0.375rem 0.625rem;
+  border-radius: var(--radius-field);
   font-size: 0.875rem;
   font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
   white-space: nowrap;
   text-decoration: none;
   color: var(--dimmer);
@@ -361,83 +352,73 @@
   color: var(--color-base-content);
 }
 
-@media (min-width: 48rem) {
-  .nav-item {
-    padding: 1.0625rem 0;
-  }
+.nav-item:hover {
+  background: var(--key-hover);
 }
 
 .nav-item-on {
   color: var(--color-base-content);
+  background: var(--key);
+  box-shadow: var(--key-lift);
 }
 
-.nav-item-on::after {
-  content: "";
-  position: absolute;
-  inset: auto 0 -1px 0;
-  height: 2px;
-  background: var(--color-primary);
+.nav-item-on:hover {
+  background: var(--key);
 }
 
 .tally {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.625rem;
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  gap: 1px;
+  overflow: hidden;
+  border-radius: var(--bend);
+  background: var(--line);
+  box-shadow: 0 0 0 1px var(--line), 0 1px 2px rgba(0, 0, 0, 0.12);
 }
 
 .tally-cell {
-  position: relative;
   display: flex;
-  flex: 1 1 10rem;
+  min-width: 0;
   flex-direction: column;
-  gap: 0.375rem;
-  padding: 1.5rem 1.375rem 1.625rem;
-  border-radius: var(--bend);
+  gap: 0.25rem;
+  padding: 1rem 1.25rem 1.0625rem;
   background: var(--sheet);
-  box-shadow: var(--sheet-lift);
   color: inherit;
   text-decoration: none;
-  transition:
-    transform 0.18s ease,
-    box-shadow 0.18s ease;
-  animation: tally-in 0.5s cubic-bezier(0.2, 0.72, 0.24, 1) both;
-  animation-delay: calc(var(--i, 0) * 0.05s);
+  transition: background-color 0.12s ease;
 }
 
 a.tally-cell:hover {
-  transform: translateY(-1px);
+  background: var(--key-hover);
 }
 
 a.tally-cell:hover .tally-label {
-  color: var(--vermilion);
+  color: var(--color-base-content);
 }
 
 a.tally-cell:active {
-  transform: none;
-  box-shadow: var(--key-sink);
+  background: var(--tray);
 }
 
 .tally-cell:focus-visible {
   outline: 2px solid var(--ring);
-  outline-offset: 2px;
+  outline-offset: -2px;
 }
 
 .tally-figure {
-  font-family: var(--font-mono);
-  font-size: clamp(2.25rem, 1.3rem + 3.4vw, 3.5rem);
-  font-weight: 700;
-  letter-spacing: -0.05em;
-  line-height: 0.95;
+  font-size: 1.75rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
   font-variant-numeric: tabular-nums;
-  color: var(--gold);
 }
 
 .tally-label {
   font-size: 0.8125rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.16em;
+  font-weight: 500;
   color: var(--dim);
+  overflow-wrap: anywhere;
 }
 
 .tally-note {
@@ -474,16 +455,29 @@ a.tally-cell:active {
   font-variant-numeric: tabular-nums;
 }
 
+.console .table {
+  font-size: 0.875rem;
+}
+
 .console .table :where(th, td) {
-  padding-block: 0.8125rem;
+  padding-block: 0.625rem;
+}
+
+.console .table :where(th:first-child, td:first-child) {
+  padding-inline-start: 1rem;
+}
+
+.console .table :where(th:last-child, td:last-child) {
+  padding-inline-end: 1rem;
 }
 
 .console .table thead th {
-  font-size: 0.8125rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
+  padding-block: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
   color: var(--dimmer);
+  background: color-mix(in oklab, var(--color-base-content) 2.5%, transparent);
 }
 
 .console .table tr.bare:hover > td {
@@ -503,7 +497,7 @@ a.tally-cell:active {
 }
 
 .console {
-  --chart-ink: var(--color-primary);
+  --chart-ink: var(--bar);
   --chart-idle: color-mix(in oklab, var(--color-base-content) 14%, transparent);
 }
 
@@ -522,16 +516,8 @@ a.tally-cell:active {
   gap: 0.5rem 1rem;
 }
 
-.chart-label {
-  font-size: 0.8125rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.16em;
-  color: var(--dim);
-}
-
 .chart-peak {
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   color: var(--dimmer);
 }
 
@@ -556,15 +542,7 @@ a.tally-cell:active {
 }
 
 .chart-bar {
-  fill: var(--chart-fill, var(--chart-ink));
-}
-
-.chart-shade-top {
-  stop-color: var(--bar-top);
-}
-
-.chart-shade-foot {
-  stop-color: var(--bar-foot);
+  fill: var(--chart-ink);
 }
 
 .chart-bar-idle {
@@ -576,7 +554,7 @@ a.tally-cell:active {
 }
 
 .chart-bar-on {
-  fill: var(--gold);
+  fill: var(--color-base-content);
 }
 
 .chart-tip {
@@ -588,14 +566,13 @@ a.tally-cell:active {
   border-radius: var(--radius-field);
   background: var(--sheet);
   color: var(--color-base-content);
-  font-family: var(--font-mono);
   font-size: 0.8125rem;
   line-height: 1.3;
-  box-shadow: var(--sheet-lift), 0 12px 24px -10px rgb(0 0 0 / 0.6);
+  box-shadow: var(--sheet-lift), 0 8px 20px -8px rgb(0 0 0 / 0.4);
 }
 
 .chart-tip strong {
-  font-weight: 700;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
@@ -608,8 +585,8 @@ a.tally-cell:active {
   position: relative;
   margin-inline: 0.75rem;
   height: 1rem;
-  font-family: var(--font-mono);
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
   color: var(--dimmer);
 }
 
@@ -632,9 +609,9 @@ a.tally-cell:active {
   border: 0;
   border-radius: calc(var(--radius-field) - 3px);
   background: none;
-  font-family: var(--font-mono);
+  font: inherit;
   font-size: 0.8125rem;
-  font-weight: 600;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
   color: var(--dimmer);
   cursor: pointer;
@@ -651,7 +628,6 @@ a.tally-cell:active {
   background: var(--key);
   box-shadow: var(--key-lift);
   color: var(--color-base-content);
-  font-weight: 700;
 }
 
 .range button:focus-visible {
@@ -687,23 +663,6 @@ a.tally-cell:active {
 .console .prompt-title {
   font-weight: 600;
   letter-spacing: -0.02em;
-}
-
-@keyframes tally-in {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .tally-cell {
-    animation: none;
-  }
 }
 
 .console-cog {
@@ -771,7 +730,7 @@ a.tally-cell:active {
   border-radius: var(--radius-field);
   background: none;
   font: inherit;
-  font-size: 1rem;
+  font-size: 0.875rem;
   text-align: left;
   white-space: nowrap;
   text-decoration: none;
@@ -781,7 +740,7 @@ a.tally-cell:active {
 
 .settings-tab:hover {
   color: var(--color-base-content);
-  background: var(--sunk);
+  background: var(--key-hover);
 }
 
 .settings-tab-on {
@@ -806,7 +765,7 @@ a.tally-cell:active {
   max-width: 14rem;
   padding: 0.25rem 0.625rem 0.25rem 0.25rem;
   border-radius: 999px;
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
   color: var(--dim);
   text-decoration: none;
 }
@@ -962,7 +921,6 @@ a.tally-cell:active {
 .tabbar-item-on {
   color: var(--vermilion);
   background: var(--vermilion-field);
-  box-shadow: inset 0 1px 0 var(--rule-lit);
 }
 
 .tabbar-item:active {
@@ -992,21 +950,16 @@ a.tally-cell:active {
   }
 
   .tally {
-    display: grid;
+    grid-auto-flow: row;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .tally-cell {
-    padding: 1rem 1rem 1.125rem;
+    padding: 0.875rem 1rem;
   }
 
   .tally-cell:first-child:nth-last-child(odd) {
     grid-column: 1 / -1;
-  }
-
-  .tally-label {
-    letter-spacing: 0.12em;
-    overflow-wrap: anywhere;
   }
 
   .section-head .btn-ghost {
@@ -1068,7 +1021,7 @@ a.tally-cell:active {
   border-radius: var(--radius-field);
   background: none;
   font: inherit;
-  font-size: 1rem;
+  font-size: 0.875rem;
   text-align: left;
   color: var(--dim);
   cursor: pointer;
@@ -1153,14 +1106,7 @@ a.tally-cell:active {
 .console-top {
   background: var(--top);
   box-shadow: var(--top-lift);
-  backdrop-filter: blur(12px);
-}
-
-.nav-item-on::after {
-  height: 2px;
-  border-radius: 2px;
-  background: var(--vermilion);
-  box-shadow: 0 0 10px var(--vermilion);
+  backdrop-filter: saturate(1.4) blur(12px);
 }
 
 .sheet {
@@ -1171,17 +1117,17 @@ a.tally-cell:active {
 
 .sheet-press {
   transition:
-    transform 0.15s ease,
-    box-shadow 0.15s ease;
+    background-color 0.12s ease,
+    box-shadow 0.12s ease;
 }
 
 .sheet-press:hover {
-  transform: translateY(-1px);
+  background: var(--key-hover);
+  box-shadow: 0 0 0 1px var(--line-firm);
 }
 
 .sheet-press:active {
-  transform: none;
-  box-shadow: var(--key-sink);
+  background: var(--tray);
 }
 
 .tray {
@@ -1192,9 +1138,28 @@ a.tally-cell:active {
 
 .console .slat {
   border: 0;
-  border-radius: var(--radius-box);
+  border-radius: var(--bend);
   background: var(--sheet);
   box-shadow: var(--sheet-lift);
+}
+
+.console :is(ol, ul):has(> .slat) {
+  gap: 0;
+  overflow: hidden;
+  border-radius: var(--bend);
+  background: var(--sheet);
+  box-shadow: var(--sheet-lift);
+}
+
+.console :is(ol, ul) > .slat {
+  padding: 0.6875rem 0.9375rem;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.console :is(ol, ul) > .slat + .slat {
+  box-shadow: inset 0 1px 0 var(--line);
 }
 
 .console .btn {
@@ -1202,19 +1167,20 @@ a.tally-cell:active {
   border-radius: var(--radius-field);
   background: var(--key);
   box-shadow: var(--key-lift);
+  font-weight: 500;
   transition:
+    background-color 0.12s ease,
     box-shadow 0.12s ease,
-    filter 0.12s ease,
-    transform 0.12s ease;
+    transform 0.08s ease;
 }
 
 .console .btn:hover:not(:disabled) {
-  filter: brightness(1.06);
+  background: var(--key-hover);
 }
 
 .console .btn:active:not(:disabled) {
   box-shadow: var(--key-sink);
-  transform: translateY(1px);
+  transform: translateY(0.5px);
 }
 
 .console .btn:focus-visible {
@@ -1229,42 +1195,50 @@ a.tally-cell:active {
 }
 
 .console .btn-primary:hover:not(:disabled) {
+  background: var(--key-hot-hover);
+}
+
+.console .btn-primary:active:not(:disabled) {
   background: var(--key-hot);
-  filter: brightness(1.08);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .console .btn-error {
-  background: linear-gradient(color-mix(in oklab, var(--color-error) 88%, white), var(--color-error));
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    0 0 0 1px color-mix(in oklab, var(--color-error) 70%, black),
-    0 1px 2px rgba(0, 0, 0, 0.3);
+  background: var(--color-error);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
   color: var(--color-error-content);
 }
 
 .console .btn-error:hover:not(:disabled) {
-  background: linear-gradient(color-mix(in oklab, var(--color-error) 88%, white), var(--color-error));
+  background: color-mix(in oklab, var(--color-error) 90%, white);
 }
 
 .console .btn-ghost {
   background: transparent;
   box-shadow: none;
+  color: var(--dim);
 }
 
 .console .btn-ghost:hover:not(:disabled) {
-  background: var(--key);
-  box-shadow: var(--key-lift);
-  filter: none;
+  background: var(--key-hover);
+  box-shadow: none;
+  color: var(--color-base-content);
 }
 
 .console .btn-outline {
   background: var(--key);
 }
 
-.console .btn-error.btn-outline,
-.console .btn-error.btn-outline:hover:not(:disabled) {
+.console .btn-error.btn-outline {
   background: var(--key);
   box-shadow: var(--key-lift);
+  color: var(--color-base-content);
+}
+
+.console .btn-error.btn-outline:hover:not(:disabled),
+.console .btn-error.btn-outline:focus-visible {
+  background: color-mix(in oklab, var(--color-error) 12%, var(--key));
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--color-error) 45%, transparent);
   color: var(--color-error);
 }
 
@@ -1298,11 +1272,11 @@ a.tally-cell:active {
 
 .console .toggle:checked {
   background: var(--key-hot);
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.35);
+  box-shadow: none;
 }
 
 .console .toggle:checked::after {
-  background: #fffaf6;
+  background: #ffffff;
 }
 
 .console .toggle:focus-visible {
@@ -1314,16 +1288,12 @@ a.tally-cell:active {
   border-bottom-color: var(--rule);
 }
 
-.console .table :where(tbody td) {
-  box-shadow: inset 0 1px 0 var(--rule-lit);
-}
-
-.console .table :where(tbody tr:first-child td) {
-  box-shadow: none;
+.console .table :where(tbody tr:last-child td) {
+  border-bottom: 0;
 }
 
 .console .table tr.hover:hover > td {
-  background: var(--vermilion-field);
+  background: color-mix(in oklab, var(--color-base-content) 3.5%, transparent);
 }
 
 .console .badge:not(.badge-error, .badge-success, .badge-info, .badge-warning) {
@@ -1358,8 +1328,32 @@ a.tally-cell:active {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .console :is(.btn, .sheet-press, a.tally-cell) {
+  .console :is(.btn, .sheet-press) {
     transition: none;
     transform: none !important;
   }
+}
+
+.dash,
+.dash-main,
+.dash-side {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: var(--rhythm);
+}
+
+@media (min-width: 64rem) {
+  .dash {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(18rem, 1fr);
+    gap: 2.5rem;
+    align-items: start;
+  }
+}
+
+.console .btn-ghost.btn-drop:hover:not(:disabled),
+.console .btn-ghost.btn-drop:focus-visible {
+  background: color-mix(in oklab, var(--color-error) 10%, transparent);
+  color: var(--color-error);
 }

@@ -6,15 +6,12 @@
   const FOOT = 22;
   const PLOT = H - FOOT;
   const GAP = 2;
-  const CAP = 4;
+  const CAP = 2;
 
   const peak = $derived(Math.max(1, ...points.map((point) => point.value)));
   const step = $derived(W / Math.max(points.length, 1));
   const width = $derived(Math.max(step - GAP, 1));
   const total = $derived(points.reduce((sum, point) => sum + point.value, 0));
-
-  const uid = $props.id();
-  const shade = `chart-shade-${uid}`;
 
   let hovered = $state(null);
 
@@ -49,7 +46,7 @@
 
 <figure class="chart">
   <figcaption class="chart-head">
-    <span class="chart-label">{label}</span>
+    <span class="sr-only">{label}</span>
     <span class="chart-peak">{peak} on the busiest day</span>
   </figcaption>
 
@@ -59,14 +56,7 @@
       class="chart-svg"
       role="img"
       aria-label="{label}: {total} {unit} across {points.length} days, peaking at {peak}."
-      style="--chart-fill: url(#{shade})"
     >
-      <defs>
-        <linearGradient id={shade} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" class="chart-shade-top" />
-          <stop offset="1" class="chart-shade-foot" />
-        </linearGradient>
-      </defs>
 
       <line class="chart-base" x1="0" y1={PLOT} x2={W} y2={PLOT} />
 
