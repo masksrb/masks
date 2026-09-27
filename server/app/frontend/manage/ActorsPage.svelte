@@ -277,7 +277,7 @@
       </p>
 
       {#if created.url}
-        <p class="rounded bg-base-200 px-2 py-1 font-mono text-xs break-all">{created.url}</p>
+        <p class="tray px-2 py-1 font-mono text-xs break-all">{created.url}</p>
       {/if}
     </Section>
   {/if}

@@ -2,6 +2,7 @@
   import Connections from "./Connections.svelte";
   import { createFeedback } from "./lib/feedback.svelte.js";
   import { day } from "./lib/format.js";
+  import Empty from "./ui/Empty.svelte";
   import Section from "./ui/Section.svelte";
   import Field from "./ui/Field.svelte";
   import Notices from "./ui/Notices.svelte";
@@ -489,7 +490,6 @@
           <button
             type="button"
             class="flex items-baseline justify-between gap-3 sheet sheet-press px-3 py-2.5 text-left"
-            class:border-dashed={preset.custom}
             onclick={() => pick(preset)}
           >
             <span class="text-sm font-medium">{preset.name}</span>
@@ -860,12 +860,10 @@
   {#if loading && active.length === 0 && archived.length === 0}
     <Spinner />
   {:else if active.length === 0 && archived.length === 0 && !picking && !draft}
-    <div class="sheet px-6 py-14 text-center">
-      <p class="mx-auto max-w-sm text-sm opacity-85">
-        No provider is set up. Add one and actors can sign in with Google, GitHub, their company's
-        identity provider, or anything that speaks OpenID Connect, OAuth 2.0 or SAML.
-      </p>
-    </div>
+    <Empty>
+      No provider is set up. Add one and actors can sign in with Google, GitHub, their company's
+      identity provider, or anything that speaks OpenID Connect, OAuth 2.0 or SAML.
+    </Empty>
   {:else}
     {#each active as provider (provider.key)}
       <Section title={provider.name} lede={provider.key}>
@@ -1012,7 +1010,7 @@
 
     {#if archived.length}
       <Section title="Archived">
-        <ul class="flex flex-col gap-1.5">
+        <ul class="slats">
           {#each archived as provider (provider.key)}
             <li class="slat">
               <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">

@@ -134,7 +134,7 @@
           {#if device.actors.length === 0}
             <p class="text-sm opacity-85">Nobody has signed in on it.</p>
           {:else}
-            <ul class="flex flex-col gap-1.5">
+            <ul class="slats">
               {#each device.actors as actor (actor.uuid)}
                 <li class="slat">
                   <Link to={`/actors/${actor.uuid}`} class="link link-hover text-sm font-medium">
@@ -150,7 +150,7 @@
           {#if device.sessions.length === 0}
             <p class="text-sm opacity-85">Nobody is signed in on it right now.</p>
           {:else}
-            <ul class="flex flex-col gap-1.5">
+            <ul class="slats">
               {#each device.sessions as session (session.id)}
                 <li class="slat">
                   <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">

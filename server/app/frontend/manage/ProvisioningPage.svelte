@@ -100,7 +100,7 @@
       >
         <div class="flex flex-col gap-1.5">
           <span class="field-label">SCIM base URL</span>
-          <code class="rounded bg-base-200 px-2 py-1 font-mono text-xs break-all">{data.scimBaseUrl}</code>
+          <code class="tray px-2 py-1 font-mono text-xs break-all">{data.scimBaseUrl}</code>
         </div>
 
         <Field label="Label" bind:value={label} placeholder="Entra ID" />

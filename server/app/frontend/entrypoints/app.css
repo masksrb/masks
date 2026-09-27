@@ -106,14 +106,6 @@
 }
 
 @layer components {
-  .console {
-    --edge: var(--color-base-300);
-    --sunk: color-mix(in oklab, var(--color-base-content) 6%, transparent);
-    color: var(--color-base-content);
-    font-family: var(--font-sans);
-    -webkit-font-smoothing: antialiased;
-  }
-
   .btn {
     display: inline-flex;
     align-items: center;

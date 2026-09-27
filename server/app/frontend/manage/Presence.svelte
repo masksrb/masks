@@ -65,7 +65,7 @@
       {#if actor.sessions.length === 0}
         <p class="text-sm opacity-75">Not signed in anywhere right now.</p>
       {:else}
-        <ul class="flex flex-col gap-1.5">
+        <ul class="slats">
           {#each sessions as session (session.id)}
             <li class="slat">
               <div class="flex items-baseline justify-between gap-3">
@@ -101,7 +101,7 @@
       {#if actor.devices.length === 0}
         <p class="text-sm opacity-75">Nothing has signed in on their behalf yet.</p>
       {:else}
-        <ul class="flex flex-col gap-1.5">
+        <ul class="slats">
           {#each devices as device (device.id)}
             <li class="slat">
               <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">

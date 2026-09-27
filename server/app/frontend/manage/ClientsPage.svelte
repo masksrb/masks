@@ -378,10 +378,10 @@
         Its client_id is below{created.secret ? ", with a secret shown this once. Copy it now" : ""}.
       </p>
 
-      <p class="rounded bg-base-200 px-2 py-1 font-mono text-xs break-all">{created.client.clientId}</p>
+      <p class="tray px-2 py-1 font-mono text-xs break-all">{created.client.clientId}</p>
 
       {#if created.secret}
-        <p class="rounded bg-base-200 px-2 py-1 font-mono text-xs break-all">{created.secret}</p>
+        <p class="tray px-2 py-1 font-mono text-xs break-all">{created.secret}</p>
       {/if}
 
       <Link to={`/clients/${created.client.clientId}`} class="btn btn-sm self-start">Open it</Link>

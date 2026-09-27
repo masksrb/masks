@@ -3,6 +3,7 @@
   import { createApi } from "./lib/api.svelte.js";
   import { createRouter, provideRouter } from "./lib/router.svelte.js";
   import { handshakeUrl, redeem } from "./lib/pairing.js";
+  import Empty from "./ui/Empty.svelte";
   import Link from "./ui/Link.svelte";
   import Spinner from "./ui/Spinner.svelte";
   import ActorsPage from "./ActorsPage.svelte";
@@ -207,7 +208,7 @@
       </div>
     </header>
 
-    <main class="console-main mx-auto w-full max-w-6xl flex-1 py-5 md:py-6">
+    <main class="console-main mx-auto w-full max-w-6xl flex-1">
       {#if limit}
         <p class="alert alert-info mb-4 text-sm" role="status">{limit}</p>
       {/if}
@@ -256,9 +257,7 @@
           {/if}
         </SettingsShell>
       {:else}
-        <div class="sheet px-6 py-14 text-center">
-          <p class="text-sm opacity-85">There is no page at this address.</p>
-        </div>
+        <Empty>There is no page at this address.</Empty>
       {/if}
     </main>
 

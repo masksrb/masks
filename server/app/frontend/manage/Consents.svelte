@@ -33,7 +33,7 @@
 {#if rows.length === 0}
   <p class="text-sm opacity-85">None.</p>
 {:else}
-  <ul class="flex flex-col gap-1.5">
+  <ul class="slats">
     {#each rows as consent (consent.id)}
       <li class="slat">
         <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">

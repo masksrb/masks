@@ -669,7 +669,7 @@
   {/if}
   <button
     type="button"
-    class="btn btn-ghost btn-sm btn-drop"
+    class="btn btn-ghost btn-sm btn-error"
     disabled={busy || lastOwner(member)}
     title={lastOwner(member) ? "Make someone else an owner first." : null}
     onclick={() => remove(member)}

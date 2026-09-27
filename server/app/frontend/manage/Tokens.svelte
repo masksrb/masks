@@ -45,7 +45,7 @@
 {#if rows.length === 0}
   <p class="text-sm opacity-85">Nothing outstanding.</p>
 {:else}
-  <ul class="flex flex-col gap-1.5">
+  <ul class="slats">
     {#each shown as token (token.id)}
       <li class="slat">
         <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">

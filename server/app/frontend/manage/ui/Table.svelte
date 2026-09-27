@@ -1,4 +1,6 @@
 <script>
+  import Empty from "./Empty.svelte";
+
   let { columns, count, empty, rows } = $props();
 
   const heads = $derived(
@@ -7,9 +9,7 @@
 </script>
 
 {#if count === 0}
-  <div class="sheet px-6 py-14 text-center">
-    <p class="mx-auto max-w-sm text-sm opacity-85">{empty}</p>
-  </div>
+  <Empty>{empty}</Empty>
 {:else}
   <div class="sheet overflow-x-auto">
     <table class="table">

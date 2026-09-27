@@ -50,14 +50,13 @@
     <span class="chart-peak">{peak} on the busiest day</span>
   </figcaption>
 
-  <div class="chart-plot">
+  <div class="chart-plot tray">
     <svg
       viewBox="0 0 {W} {H}"
       class="chart-svg"
       role="img"
       aria-label="{label}: {total} {unit} across {points.length} days, peaking at {peak}."
     >
-
       <line class="chart-base" x1="0" y1={PLOT} x2={W} y2={PLOT} />
 
       {#each points as point, index (point.key)}
@@ -89,7 +88,7 @@
     {#if hovered}
       <div
         class="chart-tip"
-        style="left: {share(hovered.index)}%; transform: translateX(-{share(hovered.index)}%)"
+        style="--at: {share(hovered.index)}%"
         aria-hidden="true"
       >
         <strong>{hovered.value}</strong>
@@ -101,7 +100,7 @@
 
   <div class="chart-axis">
     {#each ticks as tick (tick.at)}
-      <span style="left: {share(tick.at)}%; transform: translateX(-{share(tick.at)}%)">{tick.point.label}</span>
+      <span style="--at: {share(tick.at)}%">{tick.point.label}</span>
     {/each}
   </div>
 

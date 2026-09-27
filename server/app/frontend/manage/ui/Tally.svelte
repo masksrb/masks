@@ -5,14 +5,14 @@
 </script>
 
 <div class="tally">
-  {#each counts as count, index (count.label)}
+  {#each counts as count (count.label)}
     {#if count.to}
-      <Link to={count.to} class="tally-cell" style="--i: {index}">
+      <Link to={count.to} class="tally-cell">
         <span class="tally-figure">{count.value}</span>
         <span class="tally-label">{count.label}</span>
       </Link>
     {:else}
-      <div class="tally-cell" style="--i: {index}">
+      <div class="tally-cell">
         <span class="tally-figure">{count.value}</span>
         <span class="tally-label">{count.label}</span>
       </div>

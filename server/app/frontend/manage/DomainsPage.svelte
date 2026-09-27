@@ -183,8 +183,8 @@
         {#if !held.verifiedAt || held.missingSince}
           <div class="flex flex-col gap-1.5">
             <span class="field-label">TXT record</span>
-            <code class="rounded bg-base-200 px-2 py-1 font-mono text-xs break-all">{held.recordName}</code>
-            <code class="rounded bg-base-200 px-2 py-1 font-mono text-xs break-all">{held.recordValue}</code>
+            <code class="tray px-2 py-1 font-mono text-xs break-all">{held.recordName}</code>
+            <code class="tray px-2 py-1 font-mono text-xs break-all">{held.recordValue}</code>
           </div>
         {/if}
 

@@ -13,7 +13,7 @@
 {#if events.length === 0}
   <p class="text-sm opacity-80">{empty}</p>
 {:else}
-  <ol class="flex flex-col gap-1.5">
+  <ol class="slats">
     {#each shown as event (event.id)}
       <li class="slat">
         <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
