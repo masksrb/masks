@@ -21,7 +21,8 @@ module Masks
       attr_reader :secret, :seen_before
 
       class << self
-        def start!(actor:, device: nil, user_agent: nil, ip_address: nil, amr: [], origin: nil, policy: nil)
+        def start!(actor:, device: nil, user_agent: nil, ip_address: nil, amr: [], origin: nil, policy: nil,
+                   first_factor: {})
           secret = SecureRandom.urlsafe_base64(48)
           lifetime = policy&.session_lifetime&.seconds || LIFETIME
           now = Time.current
@@ -37,6 +38,8 @@ module Masks
             authenticated_at: now,
             last_seen_at: now,
             amr: Array(amr),
+            first_factor: first_factor["factor"],
+            provider_id: first_factor["provider_id"],
             expires_at: now + lifetime,
             idle_timeout: policy&.session_idle_timeout,
             bounded: policy.present? && policy.bounds_sessions?
@@ -61,6 +64,16 @@ module Masks
 
           session.seen!
         end
+      end
+
+      def first_factored_by
+        { "factor" => first_factor, "provider_id" => provider_id }.compact
+      end
+
+      def first_factored!(held)
+        return if held["factor"].blank? || held == first_factored_by
+
+        update!(first_factor: held["factor"], provider_id: held["provider_id"])
       end
 
       def bound?

@@ -68,6 +68,7 @@ module Masks
             login.identifier = actor.identifier
             login.actor = actor
             factored! :first_factor, expiry: EXPIRY
+            login.first_factored_by! :password
           end
 
           def password

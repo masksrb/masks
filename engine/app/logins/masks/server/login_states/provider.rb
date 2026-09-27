@@ -121,6 +121,7 @@ module Masks
             login.actor = actor
 
             factored! :first_factor, expiry: EXPIRY
+            login.first_factored_by! :provider, provider: provider
             login.noted! provider.protocol
 
             Event.record!(

@@ -1,6 +1,7 @@
 module Masks
   module Server
     require "test_helper"
+    require_relative "../support/upstream"
 
     class OrganizationSignInTest < ActionDispatch::IntegrationTest
       include Federated
@@ -27,6 +28,103 @@ module Masks
 
       def ask_app(**params)
         authorize(client_id: @registration["client_id"], scope: SCOPE, **params)
+      end
+
+      def governed(organization, **attributes)
+        within do
+          SignInPolicy.create!(key: "#{organization.key}-own", name: "Own", **attributes)
+            .tap { |policy| organization.update!(sign_in_policy: policy) }
+        end
+      end
+
+      def arrived
+        follow_redirect! while response.redirect? && URI.parse(response.location).host.to_s.end_with?(".auth.test")
+        consent! if awaiting_consent?
+        code_from
+      end
+
+      test "a password does not reach an organization whose policy asks for a passkey" do
+        actor = create_actor(email: "ada@probe.example.com")
+        join(@acme, actor)
+        governed(@acme, first_factors: [ "passkey" ])
+
+        sign_in_as(actor)
+        ask_app(organization: "acme")
+
+        assert_equal "first-factor", auth_data["prompt"]
+        assert_includes auth_data["warnings"], "organization-sign-in"
+        assert_equal false, auth_data.dig("password", "offered")
+      end
+
+      test "a password does not reach an organization chosen from several whose policy asks for a passkey" do
+        actor = create_actor(email: "ada@probe.example.com")
+        join(@acme, actor)
+        join(@globex, actor)
+        governed(@acme, first_factors: [ "passkey" ])
+
+        sign_in_as(actor)
+        ask_app
+        advance!("organization", organization: "acme")
+
+        assert_equal "first-factor", auth_data["prompt"]
+      end
+
+      test "a sign-in the organization's policy allows goes straight through" do
+        actor = create_actor(email: "ada@probe.example.com")
+        join(@acme, actor)
+        governed(@acme, first_factors: [ "password" ])
+
+        sign_in_as(actor)
+        ask_app(organization: "acme")
+
+        assert arrived.present?
+      end
+
+      test "an address outside the organization's domains is refused" do
+        actor = create_actor(email: "ada@probe.example.com")
+        join(@acme, actor)
+        governed(@acme, email_domains: [ "acme.test" ])
+
+        sign_in_as(actor)
+        ask_app(organization: "acme")
+
+        assert_equal "access_denied", redirected["error"]
+      end
+
+      test "a provider the organization's policy does not list sends the person back to sign in" do
+        create_provider(role: "delegate", email_domains: "acme.test", organization: @acme)
+        create_actor(nickname: "owner", email: "owner@acme.test")
+        governed(@acme, first_factors: %w[password provider], providers: [ "okta" ])
+
+        ask_app(organization: "acme")
+        finish_sso(sub: "upstream-9", email: "grace@acme.test", handoff: begin_sso(rid: current_rid))
+        follow_redirect! while response.redirect? && URI.parse(response.location).host.to_s.end_with?(".auth.test")
+
+        assert_equal "first-factor", auth_data["prompt"]
+      end
+
+      test "the organization's own provider signs a person in, and a password later does not" do
+        create_provider(role: "delegate", email_domains: "acme.test", organization: @acme)
+        create_actor(nickname: "owner", email: "owner@acme.test")
+        governed(@acme, first_factors: [ "provider" ], providers: [ "acme" ])
+
+        ask_app(organization: "acme")
+        finish_sso(sub: "upstream-9", email: "grace@acme.test", handoff: begin_sso(rid: current_rid))
+
+        assert arrived.present?
+
+        ask_app(organization: "acme", state: "again")
+
+        assert arrived.present?, "the session remembers it came through the organization's provider"
+
+        grace = within { Actor.find_by!(email: "grace@acme.test").tap { |held| held.update!(nickname: "grace", password: "password") } }
+
+        reset!
+        host! host_for(@tenant)
+        sign_in_as(grace)
+        ask_app(organization: "acme")
+
+        assert_equal "first-factor", auth_data["prompt"]
       end
 
       test "an organization's policy governs a request that names it" do

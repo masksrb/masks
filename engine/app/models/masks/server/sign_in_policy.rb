@@ -80,6 +80,12 @@ module Masks
         first_factors.include?(factor.to_s)
       end
 
+      def admits_first_factor?(factor, provider: nil)
+        return false unless first_factor?(factor)
+
+        factor.to_s != "provider" || (provider.present? && offers?(provider))
+      end
+
       def identifies?
         IDENTIFYING.any? { |factor| first_factor?(factor) }
       end

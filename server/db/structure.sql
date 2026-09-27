@@ -936,7 +936,9 @@ CREATE TABLE public.sessions (
     origin character varying,
     last_seen_at timestamp(6) without time zone,
     idle_timeout integer,
-    bounded boolean DEFAULT false NOT NULL
+    bounded boolean DEFAULT false NOT NULL,
+    first_factor character varying,
+    provider_id bigint
 );
 
 ALTER TABLE ONLY public.sessions FORCE ROW LEVEL SECURITY;
@@ -3232,6 +3234,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260927140500'),
 ('20260927120000'),
 ('20260927110000'),
 ('20260927070000'),

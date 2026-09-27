@@ -28,6 +28,7 @@ module Masks
       ].freeze
 
       SETTLED = "settled".freeze
+      FIRST_FACTOR_BY = "first_factor_by".freeze
 
       def self.permitted_updates
         STATES.flat_map { |state| state.declared_updates }.uniq
@@ -132,6 +133,7 @@ module Masks
         store.delete("idled")
         store.delete("factors")
         store.delete("amr")
+        store.delete(FIRST_FACTOR_BY)
       end
 
       def factors
@@ -171,6 +173,36 @@ module Masks
 
       def expire!(key)
         store["factors"]&.delete(key.to_s)
+      end
+
+      def first_factored_by!(factor, provider: nil)
+        store[FIRST_FACTOR_BY] = { "factor" => factor.to_s, "provider_id" => provider&.id }.compact
+      end
+
+      def first_factored_by
+        return store[FIRST_FACTOR_BY] || {} if touched?(:first_factor)
+        return session.first_factored_by if signed_in?
+
+        {}
+      end
+
+      def organization_unsatisfied?
+        governing = organization&.sign_in_policy
+
+        return false if governing.nil? || governing.archived? || actor.nil? || first_run?
+
+        held = first_factored_by
+        provider = held["provider_id"] && Provider.signing_in.find_by(id: held["provider_id"])
+
+        return true if provider && !provider.offered_to?(organization)
+
+        !governing.admits_first_factor?(held["factor"], provider: provider)
+      end
+
+      def organization_refuses?
+        governing = organization&.sign_in_policy
+
+        governing.present? && !governing.archived? && actor.present? && !governing.admits?(actor.email)
       end
 
       def authenticated_at
@@ -213,7 +245,7 @@ module Masks
       end
 
       def first_factored?
-        return false if reauthenticating? || stale? || actor.nil?
+        return false if reauthenticating? || stale? || actor.nil? || organization_unsatisfied?
 
         touched?(:first_factor) || signed_in?
       end

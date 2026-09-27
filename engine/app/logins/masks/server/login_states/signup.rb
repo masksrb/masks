@@ -166,7 +166,7 @@ module Masks
 
             return if actor.nil?
 
-            settle(actor)
+            settle(actor, :password)
             login.noted! "pwd"
           end
 
@@ -206,7 +206,7 @@ module Masks
 
             return if actor.nil?
 
-            settle(actor)
+            settle(actor, :passkey)
             factored! :second_factor, expiry: EXPIRY
             login.noted! "swk", "user", "mfa"
           rescue WebAuthn::Error, JSON::ParserError
@@ -214,7 +214,7 @@ module Masks
             warn! "passkey-unusable"
           end
 
-          def settle(actor)
+          def settle(actor, factor)
             Event.record!(Event::ACCOUNT_CREATED, actor: actor, first_run: @first_run,
                                                   signup: !@first_run, policy: login.policy.key)
 
@@ -226,6 +226,7 @@ module Masks
             login.actor = actor
             login.first_run!
             factored! :first_factor, expiry: EXPIRY
+            login.first_factored_by! factor
             login.store[SIGNED_UP] = { "first_run" => @first_run, "expires_at" => (Time.current + EXPIRY).to_i }
             login.store[Configure::HELD] = true if @first_run
             tenant.set_up! if @first_run

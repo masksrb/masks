@@ -20,11 +20,13 @@ module Masks
         end
 
         def factor!
-          return unless enabled?
+          if enabled?
+            settle_without_asking!
 
-          settle_without_asking!
+            super
+          end
 
-          super
+          hold_to_policy!
         end
 
         def as_json
@@ -72,6 +74,19 @@ module Masks
                                   .includes(:organization)
                                   .order("organizations.name")
                                   .to_a
+          end
+
+          def hold_to_policy!
+            return if login.organization.nil?
+
+            if login.organization_refuses?
+              refuse!("access_denied", "#{login.organization.name} does not admit this account's address")
+            end
+
+            return unless login.organization_unsatisfied?
+
+            warn! "organization-sign-in"
+            prompt! "first-factor"
           end
 
           def settle_without_asking!

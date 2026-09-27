@@ -149,7 +149,7 @@ module Masks
         def settle(login)
           return unless login.actor
 
-          sign_in(login.actor, amr: login.amr, policy: login.policy)
+          sign_in(login.actor, amr: login.amr, policy: login.policy, first_factor: login.first_factored_by)
           forget_login
         end
 

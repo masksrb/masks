@@ -96,6 +96,7 @@ module Masks
 
             login.actor = actor
             factored! :first_factor, expiry: EXPIRY
+            login.first_factored_by! :email_code
             login.noted! "otp"
             login.store.delete(HELD)
 

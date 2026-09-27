@@ -258,4 +258,5 @@ en:
 
     notices:
       reset-sent: "If that account exists, a reset link is on its way."
+      organization-sign-in: "That organization asks you to sign in another way."
       sso-claiming: "An account here already holds that address. Sign in to it once and the two are linked."

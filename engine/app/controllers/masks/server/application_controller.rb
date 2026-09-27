@@ -134,7 +134,7 @@ module Masks
           Current.device = device
         end
 
-        def sign_in(actor, amr: [], policy: nil)
+        def sign_in(actor, amr: [], policy: nil, first_factor: {})
           carried = session.to_hash.slice(REQUESTS, HANDSHAKES, "login", RETURN_TO)
           reset_session
           carried.each { |key, value| session[key] = value }
@@ -147,7 +147,8 @@ module Masks
             user_agent: request.user_agent,
             ip_address: request.remote_ip,
             amr: amr,
-            policy: policy
+            policy: policy,
+            first_factor: first_factor
           )
 
           cookies.encrypted[:masks_session] = {
@@ -283,17 +284,17 @@ module Masks
         end
 
         def settle!(login)
-          hold(login.actor, amr: login.amr, policy: login.policy)
+          hold(login.actor, amr: login.amr, policy: login.policy, first_factor: login.first_factored_by)
           forget_login
         end
 
-        def hold(actor, amr: [], policy: nil)
+        def hold(actor, amr: [], policy: nil, first_factor: {})
           return if actor.nil?
-          return if current_session&.actor_id == actor.id
+          return current_session.first_factored!(first_factor) if current_session&.actor_id == actor.id
 
           sign_out if current_session
 
-          sign_in(actor, amr: amr, policy: policy)
+          sign_in(actor, amr: amr, policy: policy, first_factor: first_factor)
         end
 
         def policy_denied(denial)

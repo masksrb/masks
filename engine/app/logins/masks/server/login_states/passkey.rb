@@ -89,6 +89,7 @@ module Masks
             login.actor = passkey.actor
 
             factored! :first_factor, expiry: FIRST_EXPIRY
+            login.first_factored_by! :passkey
             login.noted! "swk"
 
             second_factored! "user" if verified
