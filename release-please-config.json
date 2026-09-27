@@ -63,6 +63,7 @@
     "web": {
       "release-type": "node",
       "component": "client",
+      "release-as": "2.3.0",
       "changelog-path": "CHANGELOG.md",
       "changelog-sections": [
         {
