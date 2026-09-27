@@ -8,7 +8,15 @@ module Masks
           field :name, String, null: false
           field :roles, [ String ], null: false, description: "Every role a member can hold here, owner and member included."
           field :members, [ "Masks::Server::Manage::Types::MembershipType" ], null: false
-          field :member_count, Integer, null: false
+          field :member_count, Integer, null: false, description: "Members who have accepted."
+          field :owner_count, Integer, null: false, description: "Members who have accepted and hold owner."
+          field :pending_count, Integer, null: false, description: "Invitations nobody has accepted yet."
+          field :live_token_count, Integer, null: false,
+                                       description: "Live tokens issued for this organization. Archiving revokes them."
+          field :domains, [ DomainClaimType ], null: false,
+                          description: "Domains claimed for this organization's providers, proven or not."
+          field :provisioning_tokens, [ ProvisioningTokenType ], null: false,
+                                      description: "Live provisioning tokens that reach only this organization."
           field :sign_in_policy, SignInPolicyType, description: "The policy for signing in as a member, ahead of the app's and the tenant's."
           field :providers, [ ProviderType ], null: false
           field :events, [ EventType ], null: false, description: "The organization's most recent events."
@@ -34,6 +42,26 @@ module Masks
 
           def member_count
             object.memberships.accepted.count
+          end
+
+          def owner_count
+            object.memberships.accepted.where(role: Masks::Server::Organization::OWNER).count
+          end
+
+          def pending_count
+            object.memberships.where(pending: true).count
+          end
+
+          def live_token_count
+            object.tokens.live.count
+          end
+
+          def domains
+            Masks::Server::DomainClaim.where(provider: object.providers.active).includes(:provider).order(:domain)
+          end
+
+          def provisioning_tokens
+            Masks::Server::ProvisioningToken.live.where(organization: object).order(created_at: :desc)
           end
         end
       end

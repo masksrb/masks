@@ -1,12 +1,15 @@
 <script>
   import { createFeedback } from "./lib/feedback.svelte.js";
+  import { day } from "./lib/format.js";
   import { useRouter } from "./lib/router.svelte.js";
   import Section from "./ui/Section.svelte";
   import Field from "./ui/Field.svelte";
   import Link from "./ui/Link.svelte";
   import Notices from "./ui/Notices.svelte";
   import Page from "./ui/Page.svelte";
+  import Row from "./ui/Row.svelte";
   import Spinner from "./ui/Spinner.svelte";
+  import Table from "./ui/Table.svelte";
 
   let { api } = $props();
 
@@ -15,15 +18,27 @@
 
   const QUERY = `
     query Organizations {
-      active: organizations { key name memberCount roles }
-      archived: organizations(archived: true) { key name memberCount }
+      active: organizations {
+        key name roles memberCount ownerCount pendingCount
+        signInPolicy { name }
+        providers { name }
+      }
+      archived: organizations(archived: true) { key name memberCount archivedAt }
     }
   `;
+
+  const COLUMNS = [
+    "Organization",
+    { label: "Members", hide: true },
+    { label: "Roles", hide: true },
+    { label: "Signs in with", hide: true },
+  ];
 
   let data = $state(null);
   let loading = $state(true);
   let busy = $state(false);
   let draft = $state(null);
+  let keyTouched = $state(false);
 
   async function load() {
     loading = true;
@@ -44,7 +59,7 @@
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-+|-+$/g, "");
 
-  let keyTouched = $state(false);
+  const plural = (count, one, many) => `${count} ${count === 1 ? one : many}`;
 
   function add() {
     draft = { key: "", name: "" };
@@ -85,75 +100,123 @@
 
     if (done) await load();
   }
+
+  function members(organization) {
+    const held = plural(organization.memberCount, "member", "members");
+
+    return organization.pendingCount ? `${held}, ${organization.pendingCount} invited` : held;
+  }
+
+  function signsIn(organization) {
+    return [organization.signInPolicy?.name, ...organization.providers.map((provider) => provider.name)]
+      .filter(Boolean)
+      .join(", ");
+  }
 </script>
 
-<Page title="Organizations">
+<Page
+  title="Organizations"
+  lede="The customers inside this tenant. An app that asks for the organization scope signs a person in as a member of one, and their token carries the role they hold there."
+>
+  {#snippet actions()}
+    <button type="button" class="btn btn-primary btn-sm" onclick={add}>Add organization</button>
+  {/snippet}
+
   <Notices feedback={feedback.state} />
+
+  {#if draft}
+    <Section title="Add organization" lede="You become its first owner, and can add members once it exists.">
+      <div class="grid gap-3 sm:grid-cols-2">
+        <Field label="Name" value={draft.name} oninput={(event) => named(event.currentTarget.value)} placeholder="Acme" />
+        <Field
+          label="Key"
+          bind:value={draft.key}
+          oninput={() => (keyTouched = true)}
+          placeholder="acme"
+          autocapitalize="none"
+          autocorrect="off"
+          spellcheck="false"
+        />
+      </div>
+      <p class="hint">
+        An app asks for this organization with <span class="font-mono">organization={draft.key || "key"}</span>. The key
+        cannot change later.
+      </p>
+      <div class="flex gap-2">
+        <button
+          type="button"
+          class="btn btn-primary btn-sm"
+          disabled={busy || !draft.key.trim() || !draft.name.trim()}
+          onclick={save}
+        >
+          {busy ? "Adding..." : "Add organization"}
+        </button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick={() => (draft = null)}>Cancel</button>
+      </div>
+    </Section>
+  {/if}
 
   {#if loading && !data}
     <Spinner />
   {:else if data}
-    {#if draft}
-      <Section title="Add organization">
-        <div class="grid gap-3 sm:grid-cols-2">
-          <Field label="Name" value={draft.name} oninput={(event) => named(event.currentTarget.value)} />
-          <Field
-            label="Key"
-            bind:value={draft.key}
-            oninput={() => (keyTouched = true)}
-            autocapitalize="none"
-            autocorrect="off"
-            spellcheck="false"
-          />
-        </div>
-        <p class="hint">
-          An app asks for this organization with <span class="font-mono">organization={draft.key || "key"}</span>.
-        </p>
-        <div class="flex gap-2">
-          <button
-            type="button"
-            class="btn btn-primary btn-sm"
-            disabled={busy || !draft.key.trim() || !draft.name.trim()}
-            onclick={save}
-          >
-            Add
-          </button>
-          <button type="button" class="btn btn-ghost btn-sm" onclick={() => (draft = null)}>Cancel</button>
-        </div>
-      </Section>
-    {/if}
-
-    <Section
-      title="Organizations"
-      lede={data.active.length
-        ? "The customers inside this tenant. An app that asks for the organization scope signs a person in as a member of one."
-        : "None yet. Add one for each customer whose people sign in together."}
+    <Table
+      columns={COLUMNS}
+      count={data.active.length}
+      empty="No organizations yet. Add one for each customer whose people sign in together."
     >
-      {#snippet actions()}
-        <button type="button" class="btn btn-sm" onclick={add}>Add</button>
+      {#snippet rows()}
+        {#each data.active as organization (organization.key)}
+          <Row to={`/organizations/${organization.key}`}>
+            <td>
+              <div class="flex min-w-0 flex-col gap-0.5">
+                <span class="flex flex-wrap items-center gap-2">
+                  <Link to={`/organizations/${organization.key}`} class="link link-hover font-medium">
+                    {organization.name}
+                  </Link>
+                  {#if organization.ownerCount === 0}
+                    <span class="badge badge-warning badge-xs">no owner</span>
+                  {/if}
+                </span>
+                <span class="font-mono text-xs opacity-75">{organization.key}</span>
+                <span class="text-xs opacity-85 md:hidden">{members(organization)}</span>
+              </div>
+            </td>
+            <td class="hidden text-sm md:table-cell">
+              <div class="flex flex-col">
+                <span>{plural(organization.memberCount, "member", "members")}</span>
+                {#if organization.pendingCount}
+                  <span class="text-xs opacity-75">{organization.pendingCount} invited</span>
+                {/if}
+              </div>
+            </td>
+            <td class="hidden md:table-cell">
+              <div class="flex max-w-64 flex-wrap gap-1">
+                {#each organization.roles as role (role)}
+                  <span class="badge badge-ghost badge-sm">{role}</span>
+                {/each}
+              </div>
+            </td>
+            <td class="hidden text-sm md:table-cell">
+              <span class:opacity-60={!signsIn(organization)}>{signsIn(organization) || "The tenant's policy"}</span>
+            </td>
+          </Row>
+        {/each}
       {/snippet}
-
-      {#each data.active as organization (organization.key)}
-        <div class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-base-300 p-3">
-          <div class="flex min-w-0 flex-col">
-            <Link to={`/organizations/${organization.key}`} class="link link-hover font-medium">
-              {organization.name}
-            </Link>
-            <span class="hint">
-              <span class="font-mono">{organization.key}</span> ·
-              {organization.memberCount}
-              {organization.memberCount === 1 ? "member" : "members"} · {organization.roles.join(", ")}
-            </span>
-          </div>
-        </div>
-      {/each}
-    </Section>
+    </Table>
 
     {#if data.archived.length}
-      <Section title="Archived">
+      <Section title="Archived" lede="Nobody signs in as a member of these. Restoring one puts its members back as they were.">
         {#each data.archived as organization (organization.key)}
           <div class="flex flex-wrap items-center justify-between gap-2">
-            <span class="text-sm">{organization.name} <span class="hint font-mono">{organization.key}</span></span>
+            <div class="flex min-w-0 flex-col">
+              <Link to={`/organizations/${organization.key}`} class="link link-hover text-sm font-medium">
+                {organization.name}
+              </Link>
+              <span class="hint">
+                <span class="font-mono">{organization.key}</span> · archived {day(organization.archivedAt)} ·
+                {plural(organization.memberCount, "member", "members")}
+              </span>
+            </div>
             <button type="button" class="btn btn-ghost btn-sm" onclick={() => restore(organization)}>Restore</button>
           </div>
         {/each}

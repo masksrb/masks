@@ -8,6 +8,8 @@ module Masks
           field :role, String, null: false
           field :pending, Boolean, null: false, description: "True until the person accepts. A pending membership grants nothing."
           field :invited_by, ActorType
+          field :invited_as, String, description: "The address an invitation went to. Only that address can accept it."
+          field :provisioned, Boolean, null: false, description: "True when a directory added this member through SCIM."
           field :created_at, GraphQL::Types::ISO8601DateTime, null: false
         end
       end

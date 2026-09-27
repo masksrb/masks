@@ -508,6 +508,11 @@ type MailPreview {
 type Membership {
   actor: Actor!
   createdAt: ISO8601DateTime!
+
+  """
+  The address an invitation went to. Only that address can accept it.
+  """
+  invitedAs: String
   invitedBy: Actor
   organization: Organization!
 
@@ -515,6 +520,11 @@ type Membership {
   True until the person accepts. A pending membership grants nothing.
   """
   pending: Boolean!
+
+  """
+  True when a directory added this member through SCIM.
+  """
+  provisioned: Boolean!
   role: String!
 }
 
@@ -832,14 +842,43 @@ type Organization {
   createdAt: ISO8601DateTime!
 
   """
+  Domains claimed for this organization's providers, proven or not.
+  """
+  domains: [DomainClaim!]!
+
+  """
   The organization's most recent events.
   """
   events: [Event!]!
   key: ID!
+
+  """
+  Live tokens issued for this organization. Archiving revokes them.
+  """
+  liveTokenCount: Int!
+
+  """
+  Members who have accepted.
+  """
   memberCount: Int!
   members: [Membership!]!
   name: String!
+
+  """
+  Members who have accepted and hold owner.
+  """
+  ownerCount: Int!
+
+  """
+  Invitations nobody has accepted yet.
+  """
+  pendingCount: Int!
   providers: [Provider!]!
+
+  """
+  Live provisioning tokens that reach only this organization.
+  """
+  provisioningTokens: [ProvisioningToken!]!
 
   """
   Every role a member can hold here, owner and member included.
