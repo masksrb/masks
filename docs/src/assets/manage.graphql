@@ -24,6 +24,10 @@ type Actor {
   emailCodesEnabled: Boolean!
   emailVerified: Boolean!
   events(limit: Int): [Event!]!
+
+  """
+  The id a tenant-wide directory knows this actor by. An organization's directory keeps its own on the membership.
+  """
   externalId: String
   familyName: String
   gender: String
@@ -518,6 +522,11 @@ type Membership {
   When a pending invitation stops being accepted. Sending it again starts it over.
   """
   expiresAt: ISO8601DateTime
+
+  """
+  The id the organization's directory knows this member by.
+  """
+  externalId: String
 
   """
   The address an invitation went to. Only that address can accept it.
@@ -1402,7 +1411,6 @@ type Tally {
   Organizations that are not archived.
   """
   organizations: Int!
-  sessions: Int!
 }
 
 type Tenant {

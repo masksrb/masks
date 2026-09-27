@@ -372,7 +372,6 @@ module Masks
             {
               actors: Actor.count,
               clients: Client.active.count,
-              sessions: Session.live.count,
               devices: Masks::Server::Device.allowed.count,
               organizations: Masks::Server::Organization.active.count
             }

@@ -1293,7 +1293,7 @@ module Masks
         within(@tenant) { crowd.times { |at| create_actor(@tenant, nickname: "extra#{at}") } }
 
         token = bearer
-        answer = ask("query { actors { uuid } tally { actors clients sessions devices } }", token)
+        answer = ask("query { actors { uuid } tally { actors clients devices } }", token)
 
         listed = answer["data"]["actors"].length
         counted = answer["data"]["tally"]["actors"]

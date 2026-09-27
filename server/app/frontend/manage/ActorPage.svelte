@@ -45,6 +45,7 @@
       actor(uuid: $uuid) {
         uuid identifier nickname email emailVerified phone phoneVerified signedUpAt pendingApproval
         suspendedAt externalId
+        memberships { externalId organization { key name } }
         scopes otpEnabled emailCodesEnabled textCodesEnabled backupCodesRemaining
         backupCodesGeneratedAt lastLoginAt createdAt activated invitedAt
         passkeys { id label aaguid certification compromise userVerified lastUsedAt }
@@ -437,6 +438,12 @@
               suspend this actor too.
             </p>
           {/if}
+          {#each actor.memberships.filter((membership) => membership.externalId) as membership (membership.organization.key)}
+            <p class="hint">
+              {membership.organization.name}'s directory provisioned them as
+              <span class="font-mono">{membership.externalId}</span>, and may change them too.
+            </p>
+          {/each}
           {#if actor.activated}
             <button type="button" class="btn btn-sm self-start" onclick={reset}>
               Reset password

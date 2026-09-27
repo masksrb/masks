@@ -13,7 +13,8 @@ module Masks
           field :signed_up_at, GraphQL::Types::ISO8601DateTime
           field :pending_approval, Boolean, null: false
           field :suspended_at, GraphQL::Types::ISO8601DateTime
-          field :external_id, String
+          field :external_id, String, description: "The id a tenant-wide directory knows this actor by. " \
+                                                   "An organization's directory keeps its own on the membership."
           field :activated, Boolean, null: false
           field :invited_at, GraphQL::Types::ISO8601DateTime
           field :scopes, [ String ], null: false
