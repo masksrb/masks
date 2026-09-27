@@ -3,14 +3,22 @@ module Masks
     module Members
       class Refused < StandardError; end
 
+      DAILY_INVITATIONS = 50
+
       class << self
-        def add!(organization:, role:, by:, journey:, actor: nil, email: nil)
+        def add!(organization:, role:, by:, journey:, actor: nil, email: nil, manager: false)
           raise Refused, "#{organization.name} is archived" if organization.archived?
 
           address = email.to_s.strip.downcase.presence
-          actor ||= (address && Actor.find_by(email: address)) || invitee(address, by: by)
+          policy = SignInPolicy.for(organization: organization)
 
-          raise Refused, "#{actor.identifier} is already a member of #{organization.name}" if organization.memberships.exists?(actor: actor)
+          invitable!(organization, address, by: by, policy: policy) unless manager
+
+          actor ||= (address && Actor.find_by(email: address)) || invitee(address, by: by, policy: policy)
+
+          if organization.memberships.exists?(actor: actor)
+            raise Refused, "#{address || actor.identifier} is already a member of #{organization.name}"
+          end
 
           membership = organization.memberships.new(actor: actor, role: role, invited_by: by, pending: true, invited_as: address)
 
@@ -23,39 +31,70 @@ module Masks
           { membership: membership }.merge(sent)
         end
 
-        def assign!(membership, role:, by:)
-          was = membership.role
+        def assign!(membership, role:, by:, **details)
+          organization = membership.organization
+          was = nil
 
-          return membership if was == role
+          organization.with_lock do
+            membership.reload
+            was = membership.role
 
-          membership.role = role
+            next if was == role
 
-          raise Refused, membership.errors.full_messages.to_sentence unless membership.save
+            membership.role = role
 
-          Event.record!(Event::MEMBERSHIP_ROLE_CHANGED, actor: membership.actor, by: by,
-                                                        organization: membership.organization, was: was, now: role)
+            raise Refused, membership.errors.full_messages.to_sentence unless membership.save
+
+            AccessToken.live.where(organization: organization, actor: membership.actor).find_each(&:revoke!)
+            Event.record!(Event::MEMBERSHIP_ROLE_CHANGED, actor: membership.actor, by: by,
+                                                          organization: organization, was: was, now: role, **details)
+          end
 
           membership
         end
 
         def remove!(membership, by:)
-          raise Refused, membership.errors.full_messages.to_sentence unless membership.destroy
-
           organization = membership.organization
 
-          Token.live.where(organization: organization, actor: membership.actor).find_each(&:revoke!)
-          Event.record!(Event::MEMBERSHIP_REMOVED, actor: membership.actor, by: by,
-                                                   organization: organization, role: membership.role)
+          organization.with_lock do
+            raise Refused, membership.errors.full_messages.to_sentence unless membership.destroy
+
+            Token.live.where(organization: organization, actor: membership.actor).find_each(&:revoke!)
+            Event.record!(Event::MEMBERSHIP_REMOVED, actor: membership.actor, by: by,
+                                                     organization: organization, role: membership.role)
+          end
 
           membership
         end
 
+        def label(membership)
+          membership.pending? ? membership.invited_as : membership.actor.identifier
+        end
+
         private
 
-          def invitee(email, by:)
+          def invitable!(organization, address, by:, policy:)
+            raise Refused, "an email address is required" if address.nil?
+
+            if Event.where(action: Event::MEMBERSHIP_ADDED, by: by, created_at: 1.day.ago..).count >= DAILY_INVITATIONS
+              raise Refused, "you have added #{DAILY_INVITATIONS} people today; a manager can add more"
+            end
+
+            return if proven?(organization, address)
+            return if policy.signup && policy.admits?(address)
+
+            raise Refused, "#{organization.name} can add people at a domain it has proven, or anyone while sign-up is open; " \
+                           "ask a manager to add #{address}"
+          end
+
+          def proven?(organization, address)
+            DomainClaim.for_email(address)&.provider&.organization_id == organization.id
+          end
+
+          def invitee(email, by:, policy:)
             raise Refused, "an email address is required" if email.blank?
 
-            actor = Actor.new(email: email, scopes: Scopes.join(Scopes::STANDARD))
+            actor = Actor.new(email: email, scopes: Scopes.join(policy.signup_scope_list))
 
             raise Refused, actor.errors.full_messages.to_sentence unless actor.save
 

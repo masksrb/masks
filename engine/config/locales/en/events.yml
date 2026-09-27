@@ -147,11 +147,14 @@ en:
         created: "Organization added"
         updated: "Organization changed"
         archived: "Organization archived"
+        ownerless: "Organization left without an owner"
       membership:
         added: "Added to an organization"
         role_changed: "Organization role changed"
         removed: "Removed from an organization"
         accepted: "Joined an organization"
+        role_kept: "Organization role kept against the provider"
+        suspended: "Organization archived while a member"
       domain:
         claimed: "Domain claimed"
         verified: "Domain proven"

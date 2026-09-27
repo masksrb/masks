@@ -133,6 +133,63 @@ module Masks
         assert_equal "owner", JSON.parse(response.body).dig("org", "role")
       end
 
+      def introspected(access)
+        post "/introspect", params: { token: access, client_id: @registration["client_id"],
+                                      client_secret: @registration["client_secret"] }
+
+        JSON.parse(response.body)
+      end
+
+      test "a role change ends the access tokens minted under the old role, and a refresh carries the new one" do
+        membership = join(@acme)
+
+        signed_in_to_app
+        held = tokens
+
+        within { Members.assign!(membership, role: "owner", by: nil) }
+
+        refute introspected(held["access_token"])["active"]
+
+        body = token(grant_type: "refresh_token", refresh_token: held["refresh_token"], client_id: @registration["client_id"],
+                     client_secret: @registration["client_secret"])
+
+        assert_equal "owner", claims_in(body["access_token"]).dig("org", "role")
+        assert within { Event.where(action: Event::MEMBERSHIP_ROLE_CHANGED, actor: @actor, organization: @acme).exists? }
+      end
+
+      test "archiving an organization records each person who lost access to it" do
+        join(@acme)
+
+        signed_in_to_app
+        tokens
+
+        within { @acme.archive! }
+
+        assert within { Event.where(action: Event::MEMBERSHIP_SUSPENDED, actor: @actor, organization: @acme).exists? }
+      end
+
+      test "deleting the account of an organization's last owner is recorded against the organization" do
+        join(@acme, "owner")
+
+        within { @actor.destroy! }
+
+        assert within { Event.where(action: Event::ORGANIZATION_OWNERLESS, organization: @acme).exists? }
+      end
+
+      test "the last owner stays while two owners remove each other" do
+        other = create_actor(nickname: "other")
+        mine = join(@acme, "owner")
+        theirs = join(@acme, "owner", actor: other)
+
+        within do
+          Members.remove!(mine, by: other)
+
+          assert_raises(Members::Refused) { Members.remove!(Membership.find(theirs.id), by: other) }
+        end
+
+        assert_equal 1, within { @acme.memberships.where(role: "owner").count }
+      end
+
       test "a refresh carries the current role, and stops once the person is removed" do
         membership = join(@acme)
 

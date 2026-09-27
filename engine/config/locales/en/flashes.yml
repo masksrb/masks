@@ -9,6 +9,7 @@ en:
   organization_members:
     unknown: "You are not a member of that organization."
     not_a_member: "That person is not a member of this organization."
+    invitee: "Someone invited"
     owners_only: "Only an owner of %{organization} can change its members."
     added: "%{identifier} is a member of %{organization}."
     assigned: "%{identifier} is %{role} now."
@@ -16,6 +17,8 @@ en:
     left: "You have left %{organization}. Anything signed in as a member of it stops working."
     accepted: "You are %{role} in %{organization} now."
     declined: "You declined %{organization}."
+    confirm_first: "Confirm %{address} before joining %{organization}: send it a confirmation from your email settings on this page, then accept."
+    elsewhere: "%{organization} invited %{address}, which is not the address on this account. Change your email to it and confirm it to join."
     slow_down: "That is a lot of people at once. Wait a minute and try again."
 
   apps:

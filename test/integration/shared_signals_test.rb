@@ -128,6 +128,53 @@ module Masks
         assert_equal "user", claims["events"][PASSWORD_CHANGE]["initiating_entity"]
       end
 
+      def organized(client = @receiver)
+        acme = within { Organization.create!(key: "acme", name: "Acme") }
+        keeper = create_actor(nickname: "keeper")
+
+        within do
+          acme.memberships.create!(actor: keeper, role: "owner")
+          AccessToken.create!(actor: @actor, client: client, organization: acme, scopes: "openid", audience: [],
+                              digest: SecureRandom.uuid, expires_at: 1.hour.from_now)
+        end
+
+        [ acme, within { acme.memberships.create!(actor: @actor, role: "member") } ]
+      end
+
+      test "a role change reaches the apps signed in to that organization as a change to the org claim" do
+        open_stream([ Signals::TOKEN_CLAIMS_CHANGE ])
+        acme, membership = organized
+
+        seen = delivered { within { Members.assign!(membership, role: "owner", by: nil) } }
+
+        assert_equal 1, seen.size
+
+        change = claims_in(seen.first.body)["events"][Signals::TOKEN_CLAIMS_CHANGE]
+
+        assert_equal({ "id" => acme.uuid, "key" => "acme", "name" => "Acme", "role" => "owner" }, change.dig("claims", "org"))
+        assert_equal "system", change["initiating_entity"]
+      end
+
+      test "removal from an organization revokes the session of the apps signed in to it" do
+        open_stream([ Signals::SESSION_REVOKED ])
+        _, membership = organized
+
+        seen = delivered { within { Members.remove!(membership, by: nil) } }
+
+        assert_equal 1, seen.size
+        assert claims_in(seen.first.body)["events"].key?(Signals::SESSION_REVOKED)
+      end
+
+      test "an app the person uses outside the organization hears nothing of it" do
+        open_stream([ Signals::TOKEN_CLAIMS_CHANGE, Signals::SESSION_REVOKED ])
+        follow
+        _, membership = organized(receiver(name: "Elsewhere"))
+
+        seen = delivered { within { Members.assign!(membership, role: "owner", by: nil) } }
+
+        assert_empty seen
+      end
+
       test "a receiver hears nothing about people who never used it" do
         open_stream
 

@@ -134,6 +134,9 @@ module Masks
       MEMBERSHIP_ROLE_CHANGED = "membership.role_changed".freeze
       MEMBERSHIP_REMOVED = "membership.removed".freeze
       MEMBERSHIP_ACCEPTED = "membership.accepted".freeze
+      MEMBERSHIP_ROLE_KEPT = "membership.role_kept".freeze
+      MEMBERSHIP_SUSPENDED = "membership.suspended".freeze
+      ORGANIZATION_OWNERLESS = "organization.ownerless".freeze
 
       DOMAIN_CLAIMED = "domain.claimed".freeze
       DOMAIN_VERIFIED = "domain.verified".freeze
@@ -144,7 +147,7 @@ module Masks
       GRAVE = [
         LOGIN_REFUSED, LOGIN_THROTTLED, LOGOUT_UNDELIVERED, REFRESH_REUSED, STREAM_FAILED,
         DEVICE_BLOCKED, ACTOR_DELETED, AUTHENTICATOR_DISABLED, CONNECTION_REFUSED, DELEGATION_REFUSED,
-        EXCHANGE_REFUSED, SIGN_IN_RISKY, SIGNAL_UNDELIVERED
+        EXCHANGE_REFUSED, SIGN_IN_RISKY, SIGNAL_UNDELIVERED, MEMBERSHIP_ROLE_KEPT, ORGANIZATION_OWNERLESS
       ].freeze
 
       ACTIONS = constants(false).filter_map do |name|

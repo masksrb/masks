@@ -67,8 +67,8 @@ Masks::Server::Engine.routes.draw do
 
   scope constraints: { key: /[a-z0-9][a-z0-9-]*/ } do
     post "/account/organizations/:key/members", to: "organization_members#create", as: :account_organization_members
-    patch "/account/organizations/:key/members/:uuid", to: "organization_members#update", as: :account_organization_member
-    delete "/account/organizations/:key/members/:uuid", to: "organization_members#destroy"
+    patch "/account/organizations/:key/members/:id", to: "organization_members#update", as: :account_organization_member
+    delete "/account/organizations/:key/members/:id", to: "organization_members#destroy"
     post "/account/organizations/:key/accept", to: "organization_members#accept", as: :account_organization_acceptance
   end
 

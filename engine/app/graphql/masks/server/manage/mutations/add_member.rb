@@ -25,7 +25,7 @@ module Masks
             actor = uuid ? actor!(uuid) : Actor.locate(email)&.then { |found| managed!(found) }
 
             Masks::Server::Members.add!(organization: held, role: role, by: viewer, actor: actor, email: email,
-                                        journey: Masks::Server::Journey.manage(viewer))
+                                        journey: Masks::Server::Journey.manage(viewer), manager: true)
           rescue Masks::Server::Members::Refused => e
             refuse!(e.message)
           end

@@ -32,7 +32,7 @@ module Masks
           return if signal.nil? || event.actor.nil?
 
           where(status: ENABLED).includes(:client).find_each do |stream|
-            next unless stream.delivers?(signal.type) && stream.follows?(event.actor)
+            next unless stream.delivers?(signal.type) && stream.follows?(event.actor, organization: Signals.organization_of(event))
 
             SignalJob.perform_later(stream.id, event_id: event.id)
           end
@@ -51,7 +51,9 @@ module Masks
         !client.archived? && client.unattended_scopes.include?(Scopes::SIGNALS)
       end
 
-      def follows?(actor)
+      def follows?(actor, organization: nil)
+        return client.tokens.exists?(actor: actor, organization: organization) if organization
+
         client.consents.live.exists?(actor: actor) || client.tokens.exists?(actor: actor)
       end
 

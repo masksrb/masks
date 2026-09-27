@@ -1,6 +1,8 @@
 module Masks
   module Server
     class Membership < ApplicationRecord
+      class Unconfirmed < StandardError; end
+
       include TenantScoped
 
       belongs_to :organization
@@ -19,8 +21,16 @@ module Masks
         role == Organization::OWNER && !pending?
       end
 
-      def accept!
+      def acceptable?
+        return true if invited_as.blank?
+
+        actor.email.to_s.casecmp?(invited_as) && actor.email_verified_at.present?
+      end
+
+      def accept!(vouched: false)
         return self unless pending?
+
+        raise Unconfirmed, "confirm #{invited_as} before accepting" unless vouched || acceptable?
 
         update!(pending: false)
         Event.record!(Event::MEMBERSHIP_ACCEPTED, actor: actor, organization: organization, role: role)
@@ -42,10 +52,17 @@ module Masks
         end
 
         def keep_an_owner
-          return if role_in_database != Organization::OWNER || pending_in_database || destroyed_by_association || others_own?
+          return if role_in_database != Organization::OWNER || pending_in_database || others_own?
+          return ownerless! if destroyed_by_association
 
           errors.add(:base, "#{organization.name} needs an owner")
           throw :abort
+        end
+
+        def ownerless!
+          return unless destroyed_by_association.active_record <= Actor
+
+          Event.record!(Event::ORGANIZATION_OWNERLESS, actor: nil, by: nil, organization: organization)
         end
 
         def others_own?

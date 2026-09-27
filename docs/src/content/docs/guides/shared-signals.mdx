@@ -77,13 +77,15 @@ is paused are not sent later.
 
 | Event type | Sent when |
 | --- | --- |
-| CAEP `session-revoked` | A manager revokes a session or signs a person out everywhere. |
+| CAEP `session-revoked` | A manager revokes a session or signs a person out everywhere, a person leaves or is removed from an organization, or their organization is archived. |
 | CAEP `credential-change` | A password changes or is reset, or a passkey or authenticator app is added or removed. |
+| CAEP `token-claims-change` | A person's role in an organization changes. The event's `claims` carry the new `org` claim. |
 | RISC `account-disabled` | An account is suspended. |
 | RISC `account-enabled` | A suspended account is restored. |
 
 A stream receives events only about people who have signed in to its client
-or consented to it. The subject is `{"format": "iss_sub", "iss": ..., "sub": ...}`,
+or consented to it. An organization's events go only to a client that has held
+a token for that organization. The subject is `{"format": "iss_sub", "iss": ..., "sub": ...}`,
 where `sub` is the same subject the client sees in ID tokens, including a
 pairwise one.
 

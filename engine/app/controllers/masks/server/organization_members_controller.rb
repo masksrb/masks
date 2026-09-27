@@ -36,7 +36,7 @@ module Masks
 
         Members.assign!(membership, role: params[:role].to_s, by: current_actor)
 
-        back(notice: t("organization_members.assigned", identifier: membership.actor.identifier, role: membership.role))
+        back(notice: t("organization_members.assigned", identifier: labelled(membership), role: membership.role))
       rescue Members::Refused => e
         back(alert: e.message)
       end
@@ -45,6 +45,9 @@ module Masks
         @own.accept!
 
         back(notice: t("organization_members.accepted", organization: @organization.name, role: @own.role))
+      rescue Membership::Unconfirmed
+        back(alert: t(current_actor.email.to_s.casecmp?(@own.invited_as.to_s) ? "organization_members.confirm_first" : "organization_members.elsewhere",
+                      address: @own.invited_as, organization: @organization.name))
       end
 
       def destroy
@@ -59,7 +62,7 @@ module Masks
           back(notice: t(membership.pending? ? "organization_members.declined" : "organization_members.left",
                          organization: @organization.name))
         else
-          back(notice: t("organization_members.removed", identifier: membership.actor.identifier, organization: @organization.name))
+          back(notice: t("organization_members.removed", identifier: labelled(membership), organization: @organization.name))
         end
       rescue Members::Refused => e
         back(alert: e.message)
@@ -83,8 +86,12 @@ module Masks
         end
 
         def member!
-          @organization.memberships.includes(:actor).joins(:actor).find_by(actors: { uuid: params[:uuid].to_s }) ||
+          @organization.memberships.includes(:actor).find_by(id: params[:id].to_s) ||
             raise(Members::Refused, t("organization_members.not_a_member"))
+        end
+
+        def labelled(membership)
+          Members.label(membership) || t("organization_members.invitee")
         end
 
         def back(**flash)

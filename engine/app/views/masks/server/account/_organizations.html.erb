@@ -23,7 +23,7 @@
             <%= button_to account_text("organizations.accept"),
                   account_organization_acceptance_path(organization.key), method: :post, class: "action action-sm" %>
             <%= button_to account_text("organizations.decline"),
-                  account_organization_member_path(organization.key, invited.actor.uuid), method: :delete,
+                  account_organization_member_path(organization.key, invited.id), method: :delete,
                   class: "action action-quiet action-sm" %>
           </div>
         </div>
@@ -32,7 +32,7 @@
 
     <% memberships.each do |own| %>
       <% organization = own.organization %>
-      <% members = organization.memberships.sort_by { |held| [ held.role == "owner" ? 0 : 1, held.actor.identifier.to_s ] } %>
+      <% members = organization.memberships.sort_by { |held| [ held.role == "owner" ? 0 : 1, Masks::Server::Members.label(held).to_s ] } %>
       <% alone = own.owner? && members.count(&:owner?) == 1 %>
 
       <details class="entry" id="organization-<%= organization.key %>">
@@ -52,7 +52,7 @@
                 <% person = member.actor %>
                 <div class="item">
                   <span class="item-name">
-                    <span><%= member.pending? ? (member.invited_as || account_text("organizations.invited_by_manager")) : person.identifier %></span>
+                    <span><%= Masks::Server::Members.label(member) || account_text("organizations.invited_by_manager") %></span>
                     <% if person.id == own.actor_id %>
                       <span class="tag"><%= account_text("organizations.you") %></span>
                     <% elsif member.pending? %>
@@ -61,20 +61,22 @@
                   </span>
 
                   <div class="item-act item-acts">
-                    <%= form_with url: account_organization_member_path(organization.key, person.uuid), method: :patch,
+                    <%= form_with url: account_organization_member_path(organization.key, member.id), method: :patch,
                                   class: "item-acts" do |form| %>
                       <%= form.select :role, organization.role_list, { selected: member.role },
-                                      class: "control control-sm", id: "role-#{organization.key}-#{person.uuid}",
+                                      class: "control control-sm", id: "role-#{organization.key}-#{member.id}",
                                       aria: { label: account_text("organizations.set_role") } %>
                       <button type="submit" class="action action-quiet action-sm"><%= account_text("organizations.set_role") %></button>
                     <% end %>
 
                     <% unless person.id == own.actor_id %>
                       <%= button_to account_text("organizations.remove"),
-                            account_organization_member_path(organization.key, person.uuid), method: :delete,
+                            account_organization_member_path(organization.key, member.id), method: :delete,
                             class: "action action-quiet action-sm",
                             form: { data: { turbo_confirm: account_text("organizations.confirm_remove",
-                                                              identifier: person.identifier, organization: organization.name) } } %>
+                                                              identifier: Masks::Server::Members.label(member) ||
+                                                                          account_text("organizations.invited_by_manager"),
+                                                              organization: organization.name) } } %>
                     <% end %>
                   </div>
                 </div>
@@ -105,7 +107,7 @@
           <% else %>
             <div class="action-row">
               <%= button_to account_text("organizations.leave", organization: organization.name),
-                    account_organization_member_path(organization.key, own.actor.uuid), method: :delete,
+                    account_organization_member_path(organization.key, own.id), method: :delete,
                     class: "action action-quiet action-sm",
                     form: { data: { turbo_confirm: account_text("organizations.confirm_leave", organization: organization.name) } } %>
             </div>

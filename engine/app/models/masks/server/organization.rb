@@ -44,10 +44,15 @@ module Masks
         membership && { "id" => uuid, "key" => key, "name" => name, "role" => membership.role }
       end
 
-      def archive!
+      def archive!(by: nil)
         transaction do
           update!(archived_at: Time.current)
+          held = tokens.live.where.not(actor_id: nil).distinct.pluck(:actor_id)
           tokens.live.find_each(&:revoke!)
+
+          Actor.where(id: held).find_each do |actor|
+            Event.record!(Event::MEMBERSHIP_SUSPENDED, actor: actor, by: by, organization: self)
+          end
         end
       end
 

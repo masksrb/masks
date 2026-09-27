@@ -14,7 +14,7 @@ module Masks
 
             refuse!("#{organization.name} is already archived") if organization.archived?
 
-            organization.archive!
+            organization.archive!(by: viewer)
 
             audit!(Masks::Server::Event::ORGANIZATION_ARCHIVED, organization: organization.key)
 

@@ -189,22 +189,21 @@ module Masks
           return if organization.nil? || organization.archived?
 
           role = provider.role_from(claims)
-          membership = organization.memberships.find_or_initialize_by(actor: actor)
-          membership.accept! if membership.persisted?
-          was = membership.role
+          membership = organization.memberships.find_by(actor: actor)
 
-          return if was == role
+          return join!(organization, actor, role) if membership.nil?
 
-          membership.role = role
+          membership.accept!(vouched: true)
+          Members.assign!(membership, role: role, by: nil, provider: provider.key)
+        rescue Members::Refused => e
+          Event.record!(Event::MEMBERSHIP_ROLE_KEPT, actor: actor, by: nil, organization: organization,
+                                                     role: membership.role_in_database, wanted: role, provider: provider.key, reason: e.message)
+        end
 
-          return unless membership.save
+        def join!(organization, actor, role)
+          return unless organization.memberships.create(actor: actor, role: role).persisted?
 
-          if was.nil?
-            Event.record!(Event::MEMBERSHIP_ADDED, actor: actor, by: nil, organization: organization.key, role: role, provider: provider.key)
-          else
-            Event.record!(Event::MEMBERSHIP_ROLE_CHANGED, actor: actor, by: nil, organization: organization.key,
-                                                          was: was, now: role, provider: provider.key)
-          end
+          Event.record!(Event::MEMBERSHIP_ADDED, actor: actor, by: nil, organization: organization, role: role, provider: provider.key)
         end
 
         def domains
