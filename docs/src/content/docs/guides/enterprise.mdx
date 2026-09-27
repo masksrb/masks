@@ -14,12 +14,16 @@ today, and how the rest will be built.
 | Event streaming | Built | [Event streaming](#event-streaming) |
 | Single sign-on and provisioning | Built | [Single sign-on and provisioning](#single-sign-on-and-provisioning) |
 | Step-up authentication | Built | [Step-up authentication](#step-up-authentication) |
+| Token exchange | Partly built | [Token exchange](#token-exchange) |
+| Manage roles | Planned | [Manage roles](#manage-roles) |
 | Organizations and roles | Planned | [Organizations and roles](#organizations-and-roles) |
-| Custom domains | Planned | [Custom domains](#custom-domains) |
 | Home-realm discovery | Planned | [Home-realm discovery](#home-realm-discovery) |
+| Session policies | Planned | [Session policies](#session-policies) |
+| Audit export and retention | Planned | [Audit export and retention](#audit-export-and-retention) |
 | Adaptive risk | Planned | [Adaptive risk](#adaptive-risk) |
+| Passwordless email | Planned | [Passwordless email](#passwordless-email) |
+| Custom domains | Planned | [Custom domains](#custom-domains) |
 | Shared signals | Planned | [Shared signals](#shared-signals) |
-| Token exchange | Planned | [Token exchange](#token-exchange) |
 | Migration | Planned | [Migration](#migration) |
 
 Each planned capability reuses what is already built. Event streaming supplies
@@ -70,7 +74,41 @@ moving money or reading a record.
 A sign-in policy cannot yet require a level for a client, so the client asks on
 each request.
 
+## Partly built
+
+### Token exchange
+
+A service acting for a person, including an AI agent, trades the token it holds
+for a narrower one for a downstream service.
+
+Today:
+
+- Masks implements RFC 8693 token exchange. The subject is an access token or an
+  ID token, an actor token adds to a nested `act` chain, and a provider's access
+  token is released through a per-client
+  [delegation](/guides/connecting-via-sdk/#delegation). See
+  [exchanging a token](/guides/connecting-via-sdk/#exchanging-a-token).
+
+Still to build:
+
+- Each exchange is recorded as an event, granted or refused.
+- Rich authorization requests (RFC 9396) say what the narrower token may do.
+
 ## Planned
+
+### Manage roles
+
+Anyone who holds `masks:manage` can do everything manage does. An auditor needs
+to read without changing anything, and a support team needs to reset a factor
+without touching signing keys.
+
+- `masks:manage:read` reads everything and changes nothing.
+- `masks:manage:support` resets passwords and factors, resends invitations, and
+  signs people out.
+- `masks:manage:security` changes keys, policies, providers, streams, and
+  adapters.
+- `masks:manage` keeps every permission, including granting these scopes. Nobody
+  can grant a scope they do not hold.
 
 ### Organizations and roles
 
@@ -84,15 +122,6 @@ different roles.
 - Events record the organization, so one customer's log can be streamed to that
   customer.
 
-### Custom domains
-
-A tenant serves sign-in from its own domain, such as `login.example.com`.
-
-- A tenant claims a domain and proves it with a DNS record.
-- Masks issues a certificate for the domain and renews it.
-- The issuer, links, and emails use the domain, and mail is sent from it once
-  its DNS records are in place.
-
 ### Home-realm discovery
 
 Someone types an email address, and masks sends them to their company's
@@ -103,6 +132,19 @@ provider.
   flow. An address with no claimed domain gets the normal form.
 - Claiming a domain needs the same proof as a custom domain, so one tenant
   cannot capture another company's people.
+
+### Session policies
+
+A bank wants sessions that end after 15 minutes idle, and a consumer app wants
+them to last a month.
+
+- A sign-in policy sets a session lifetime and an idle timeout.
+- A session idle past the timeout ends, and its refresh tokens stop working.
+
+### Audit export and retention
+
+- A tenant keeps events for between 30 days and seven years.
+- Manage exports a date range of events as a file, and each export is an event.
 
 ### Adaptive risk
 
@@ -115,6 +157,22 @@ riskier than one from a remembered device.
   factor, or refusing it.
 - The score and the decision are recorded on the event.
 
+### Passwordless email
+
+- A sign-in policy offers an emailed code or link as a first factor.
+- A link finishes signing in only in the browser that asked for it. Opened on
+  another device, it asks the first browser to approve.
+- A code used to sign in never also counts as a second factor.
+
+### Custom domains
+
+A tenant serves sign-in from its own domain, such as `login.example.com`.
+
+- A tenant claims a domain and proves it with a DNS record.
+- Masks issues a certificate for the domain and renews it.
+- The issuer, links, and emails use the domain, and mail is sent from it once
+  its DNS records are in place.
+
 ### Shared signals
 
 Other systems need to hear that a session ended or a credential was
@@ -124,21 +182,14 @@ compromised without waiting for a token to expire.
   a stream, reusing the delivery and signing of event streams.
 - Masks accepts the same events from a provider and ends the matching sessions.
 
-### Token exchange
-
-A service acting for a person, including an AI agent, trades the token it holds
-for a narrower one for a downstream service.
-
-- Masks implements RFC 8693 token exchange, limited by the per-client
-  [delegations](/guides/connecting-via-sdk/#delegation) it already records.
-- Rich authorization requests (RFC 9396) say what the narrower token may do.
-- Each exchange is an event.
-
 ### Migration
 
 Moving off another provider must not force everyone to reset a password.
 
-- An import reads exports from Auth0, Okta, Cognito, and Firebase.
-- Each password hash is kept in its original format and rewritten with the masks
-  hash the first time the person signs in.
+- An import reads a file of accounts exported from Auth0 or Firebase, or a
+  generic JSON file. Each password hash is kept in its original format, and
+  masks replaces it with its own the first time the person signs in.
+- Okta and Cognito do not export password hashes. For those, masks checks a
+  password against the old provider the first time the person signs in, stores
+  its own hash, and stops asking the old provider after that.
 - Accounts arrive with their emails verified only when the export says so.
