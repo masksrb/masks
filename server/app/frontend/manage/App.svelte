@@ -14,6 +14,7 @@
   import ActivityPage from "./ActivityPage.svelte";
   import ProvidersPage from "./ProvidersPage.svelte";
   import AdaptersPage from "./AdaptersPage.svelte";
+  import StreamsPage from "./StreamsPage.svelte";
   import EmailsPage from "./EmailsPage.svelte";
   import PoliciesPage from "./PoliciesPage.svelte";
   import ProvisioningPage from "./ProvisioningPage.svelte";
@@ -36,7 +37,7 @@
     ["/clients", "Clients", '<rect x="3" y="3" width="6" height="6" rx="1.5"/><rect x="11" y="3" width="6" height="6" rx="1.5"/><rect x="3" y="11" width="6" height="6" rx="1.5"/><rect x="11" y="11" width="6" height="6" rx="1.5"/>'],
   ];
 
-  const SETTINGS = ["settings", "policies", "providers", "provisioning", "adapters", "email", "activity"];
+  const SETTINGS = ["settings", "policies", "providers", "provisioning", "adapters", "streams", "email", "activity"];
 
   function register() {
     location.replace(handshakeUrl(boot));
@@ -197,6 +198,8 @@
             <ProvisioningPage {api} />
           {:else if current === "adapters"}
             <AdaptersPage {api} />
+          {:else if current === "streams"}
+            <StreamsPage {api} />
           {:else if current === "email"}
             <EmailsPage {api} />
           {:else if current === "activity"}

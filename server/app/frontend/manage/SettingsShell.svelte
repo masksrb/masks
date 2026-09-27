@@ -9,6 +9,7 @@
     ["/providers", "Providers"],
     ["/provisioning", "Provisioning"],
     ["/adapters", "Adapters"],
+    ["/streams", "Streams"],
     ["/email", "Email"],
     ["/activity", "Activity"],
   ];
