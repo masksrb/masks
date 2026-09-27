@@ -6,6 +6,16 @@ en:
     renamed: "Device renamed."
     signed_out: "That device has been signed out."
 
+  organization_members:
+    unknown: "You are not a member of that organization."
+    not_a_member: "That person is not a member of this organization."
+    owners_only: "Only an owner of %{organization} can change its members."
+    added: "%{identifier} is a member of %{organization}."
+    assigned: "%{identifier} is %{role} now."
+    removed: "%{identifier} is no longer a member of %{organization}."
+    left: "You have left %{organization}. Anything signed in as a member of it stops working."
+    slow_down: "That is a lot of people at once. Wait a minute and try again."
+
   apps:
     unknown: "There is no such app on this account."
     revoked: "Access for %{client} has been revoked. Anything it was holding stops working, and it has to ask again."

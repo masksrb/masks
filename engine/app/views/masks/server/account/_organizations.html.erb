@@ -1,0 +1,89 @@
+<section class="group" id="organizations">
+  <h2><%= account_text("organizations.heading") %></h2>
+
+  <div class="entries">
+    <% memberships.each do |own| %>
+      <% organization = own.organization %>
+      <% members = organization.memberships.sort_by { |held| [ held.role == "owner" ? 0 : 1, held.actor.identifier.to_s ] } %>
+      <% alone = own.owner? && members.count(&:owner?) == 1 %>
+
+      <details class="entry" id="organization-<%= organization.key %>">
+        <summary>
+          <span class="entry-icon"><%= account_icon(:organization) %></span>
+          <span class="entry-label"><%= organization.name %></span>
+          <span class="entry-state"><%= account_text("organizations.role", role: own.role) %></span>
+          <span class="entry-mark" aria-hidden="true"></span>
+        </summary>
+
+        <div class="entry-body">
+          <p class="aside"><%= account_text(own.owner? ? "organizations.lede_owner" : "organizations.lede_member") %></p>
+
+          <% if own.owner? %>
+            <div class="items">
+              <% members.each do |member| %>
+                <% person = member.actor %>
+                <div class="item">
+                  <span class="item-name">
+                    <span><%= person.identifier %></span>
+                    <% if person.id == own.actor_id %>
+                      <span class="tag"><%= account_text("organizations.you") %></span>
+                    <% elsif !person.activated? %>
+                      <span class="tag"><%= account_text("organizations.invited") %></span>
+                    <% end %>
+                  </span>
+
+                  <div class="item-act item-acts">
+                    <%= form_with url: account_organization_member_path(organization.key, person.uuid), method: :patch,
+                                  class: "item-acts" do |form| %>
+                      <%= form.select :role, organization.role_list, { selected: member.role },
+                                      class: "control control-sm", id: "role-#{organization.key}-#{person.uuid}",
+                                      aria: { label: account_text("organizations.set_role") } %>
+                      <button type="submit" class="action action-quiet action-sm"><%= account_text("organizations.set_role") %></button>
+                    <% end %>
+
+                    <% unless person.id == own.actor_id %>
+                      <%= button_to account_text("organizations.remove"),
+                            account_organization_member_path(organization.key, person.uuid), method: :delete,
+                            class: "action action-quiet action-sm",
+                            form: { data: { turbo_confirm: account_text("organizations.confirm_remove",
+                                                              identifier: person.identifier, organization: organization.name) } } %>
+                    <% end %>
+                  </div>
+                </div>
+              <% end %>
+            </div>
+
+            <%= form_with url: account_organization_members_path(organization.key), method: :post, class: "flow-tight" do |form| %>
+              <label class="field">
+                <span class="field-label"><%= account_text("organizations.add_email") %></span>
+                <%= form.email_field :email, required: true, autocomplete: "off", class: "control", id: "add-email-#{organization.key}" %>
+                <span class="field-hint"><%= account_text("organizations.add_hint") %></span>
+              </label>
+
+              <label class="field">
+                <span class="field-label"><%= account_text("organizations.add_role") %></span>
+                <%= form.select :role, organization.role_list, { selected: Masks::Server::Organization::MEMBER }, class: "control",
+                                id: "add-role-#{organization.key}" %>
+              </label>
+
+              <div class="action-row">
+                <button type="submit" class="action action-sm"><%= account_text("organizations.add") %></button>
+              </div>
+            <% end %>
+          <% end %>
+
+          <% if alone %>
+            <p class="aside"><%= account_text("organizations.last_owner") %></p>
+          <% else %>
+            <div class="action-row">
+              <%= button_to account_text("organizations.leave", organization: organization.name),
+                    account_organization_member_path(organization.key, own.actor.uuid), method: :delete,
+                    class: "action action-quiet action-sm",
+                    form: { data: { turbo_confirm: account_text("organizations.confirm_leave", organization: organization.name) } } %>
+            </div>
+          <% end %>
+        </div>
+      </details>
+    <% end %>
+  </div>
+</section>

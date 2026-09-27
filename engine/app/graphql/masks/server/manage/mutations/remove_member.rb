@@ -13,15 +13,11 @@ module Masks
           def resolve(organization:, uuid:)
             held = organization!(organization)
             actor = actor!(uuid)
-            membership = member!(held, actor)
-
-            refuse!(membership.errors.full_messages.join("; ")) unless membership.destroy
-
-            Masks::Server::Token.live.where(organization: held, actor: actor).find_each(&:revoke!)
-
-            audit!(Masks::Server::Event::MEMBERSHIP_REMOVED, actor: actor, organization: held.key, role: membership.role)
+            Masks::Server::Members.remove!(member!(held, actor), by: viewer)
 
             { organization: held }
+          rescue Masks::Server::Members::Refused => e
+            refuse!(e.message)
           end
         end
       end

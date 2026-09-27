@@ -1408,6 +1408,18 @@
     white-space: nowrap;
   }
 
+  .item-acts {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+
+  .item-acts .control {
+    width: auto;
+  }
+
   .switches {
     display: flex;
     flex-direction: column;

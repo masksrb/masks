@@ -23,36 +23,13 @@ module Masks
             refuse!("name the person by uuid or by email") if uuid.nil? && email.blank?
 
             held = live!(organization!(organization))
-            actor = uuid ? actor!(uuid) : managed!(Actor.locate(email) || invitee(email))
+            actor = uuid ? actor!(uuid) : Actor.locate(email)&.then { |found| managed!(found) }
 
-            refuse!("#{actor.identifier} is already a member of #{held.name}") if held.memberships.exists?(actor: actor)
-
-            membership = save!(held.memberships.new(actor: actor, role: role, invited_by: viewer))
-
-            audit!(Masks::Server::Event::MEMBERSHIP_ADDED, actor: actor, organization: held.key, role: role)
-
-            sent = actor.activated? ? { delivered: false, url: nil } : invite(actor)
-
-            { membership: membership, invited: !actor.activated? }.merge(sent)
+            Masks::Server::Members.add!(organization: held, role: role, by: viewer, actor: actor, email: email,
+                                        journey: Masks::Server::Journey.manage(viewer))
+          rescue Masks::Server::Members::Refused => e
+            refuse!(e.message)
           end
-
-          private
-
-            def invitee(email)
-              actor = save!(Actor.new(email: email, scopes: Scopes.join(Scopes::STANDARD)))
-
-              audit!(Masks::Server::Event::ACTOR_CREATED, actor: actor, scopes: actor.scope_list, invited: true)
-
-              actor
-            end
-
-            def invite(actor)
-              return { delivered: false, url: nil } if actor.email.blank?
-
-              Invitations.open(actor: actor, journey: Masks::Server::Journey.manage(viewer)).slice(:delivered, :url)
-            rescue Masks::Server::Invitation::Refused
-              { delivered: false, url: nil }
-            end
         end
       end
     end

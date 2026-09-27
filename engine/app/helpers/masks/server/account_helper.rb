@@ -13,6 +13,7 @@ module Masks
         activity: '<circle cx="10" cy="10" r="7"/><path d="M10 6v4.2l2.6 1.8"/>',
         close: '<path d="M6.5 6.5l7 7M13.5 6.5l-7 7"/>',
         check: '<path d="m5.5 10.5 3 3 6-7"/>',
+        organization: '<rect x="3.5" y="7" width="13" height="9.5" rx="1.5"/><path d="M7.5 7V4.5h5V7"/><path d="M3.5 11h13"/>',
         manage: '<path d="M10 2.5 3.5 5v5c0 3.4 2.7 6.2 6.5 7.5 3.8-1.3 6.5-4.1 6.5-7.5V5L10 2.5Z"/>'
       }.freeze
 

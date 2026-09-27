@@ -8,23 +8,23 @@ the work.
 
 ## State
 
-| Capability                      | State        | Commit or next step                                                                     |
-| ------------------------------- | ------------ | --------------------------------------------------------------------------------------- |
-| Audit log                       | Built        | `Event`, about 100 actions, 180-day retention                                           |
-| Event streaming                 | Built        | `03b525c`, `bbe2ea1`, guide at `guides/event-streams`                                   |
-| Single sign-on and provisioning | Built        | OIDC, OAuth, SAML in and out, SCIM                                                      |
-| Step-up authentication          | Built        | `a6fd2fe`, and `apps_require_second_factor` on sign-in policies                         |
-| Token exchange                  | Built        | RFC 8693, with `exchange.granted` and `exchange.refused` events. RFC 9396 is item 11    |
-| Manage roles                    | Built        | `ManageRoles`, a declared level on every mutation, and the limits in the security guide |
-| Organizations and roles         | Partly built | Steps 1 to 3 of 4. The organization admin view is left                                  |
-| Home-realm discovery            | Not started  |                                                                                         |
-| Session policies                | Built        | `sign_in_policies.session_lifetime` and `session_idle_timeout`                          |
-| Audit export and retention      | Not started  |                                                                                         |
-| Adaptive risk                   | Not started  |                                                                                         |
-| Passwordless email              | Not started  |                                                                                         |
-| Custom domains                  | Not started  |                                                                                         |
-| Shared signals                  | Not started  |                                                                                         |
-| Migration                       | Not started  |                                                                                         |
+| Capability                      | State       | Commit or next step                                                                     |
+| ------------------------------- | ----------- | --------------------------------------------------------------------------------------- |
+| Audit log                       | Built       | `Event`, about 100 actions, 180-day retention                                           |
+| Event streaming                 | Built       | `03b525c`, `bbe2ea1`, guide at `guides/event-streams`                                   |
+| Single sign-on and provisioning | Built       | OIDC, OAuth, SAML in and out, SCIM                                                      |
+| Step-up authentication          | Built       | `a6fd2fe`, and `apps_require_second_factor` on sign-in policies                         |
+| Token exchange                  | Built       | RFC 8693, with `exchange.granted` and `exchange.refused` events. RFC 9396 is item 11    |
+| Manage roles                    | Built       | `ManageRoles`, a declared level on every mutation, and the limits in the security guide |
+| Organizations and roles         | Built       | All four steps                                                                          |
+| Home-realm discovery            | Not started |                                                                                         |
+| Session policies                | Built       | `sign_in_policies.session_lifetime` and `session_idle_timeout`                          |
+| Audit export and retention      | Not started |                                                                                         |
+| Adaptive risk                   | Not started |                                                                                         |
+| Passwordless email              | Not started |                                                                                         |
+| Custom domains                  | Not started |                                                                                         |
+| Shared signals                  | Not started |                                                                                         |
+| Migration                       | Not started |                                                                                         |
 
 ## What the code already has
 
@@ -169,7 +169,12 @@ before and after events run and the token endpoint and `Exchange` set from the g
 organization skip everyone else's events, and deliveries carry `organization`. The organization page
 lists its events.
 
-**Step 4.** A self-service admin view for an organization's owners, without any `masks:manage` scope.
+**Step 4 (done).** Owners manage their organization from the account page, which is
+session-authenticated and CSRF-protected, rather than from a restricted `/manage`, where any
+tenant-wide query missed in review would leak. `OrganizationMembersController` adds by email, sets
+roles, and removes members for owners, and lets any member leave. It rate-limits adds and reaches only
+organizations the viewer belongs to. `Members` holds the add, assign, and remove logic that manage's
+mutations share. Only `owner` administers; per-organization admin roles can come later.
 
 ### Home-realm discovery
 

@@ -14,15 +14,10 @@ module Masks
           def resolve(organization:, uuid:, role:)
             held = live!(organization!(organization))
             membership = member!(held, actor!(uuid))
-            was = membership.role
 
-            membership.role = role
-            save!(membership)
-
-            audit!(Masks::Server::Event::MEMBERSHIP_ROLE_CHANGED, actor: membership.actor,
-                                                                 organization: held.key, was: was, now: role)
-
-            { membership: membership }
+            { membership: Masks::Server::Members.assign!(membership, role: role, by: viewer) }
+          rescue Masks::Server::Members::Refused => e
+            refuse!(e.message)
           end
         end
       end

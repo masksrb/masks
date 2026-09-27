@@ -54,6 +54,12 @@ Masks::Server::Engine.routes.draw do
   delete "/account/connections/:id", to: "connections#detach", as: :account_connection
   delete "/account/delegations/:id", to: "delegations#destroy", as: :account_delegation
 
+  scope constraints: { key: /[a-z0-9][a-z0-9-]*/ } do
+    post "/account/organizations/:key/members", to: "organization_members#create", as: :account_organization_members
+    patch "/account/organizations/:key/members/:uuid", to: "organization_members#update", as: :account_organization_member
+    delete "/account/organizations/:key/members/:uuid", to: "organization_members#destroy"
+  end
+
   scope constraints: { style: Regexp.union(Masks::Server::Avatars::STYLES), digest: /[0-9a-f]{16}/ } do
     get "/avatars/:uuid", to: "avatars#show", as: :avatar
     get "/avatars/:uuid/:style", to: "avatars#show", as: :styled_avatar

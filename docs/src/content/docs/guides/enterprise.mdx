@@ -16,7 +16,7 @@ today, and how the rest will be built.
 | Step-up authentication | Built | [Step-up authentication](#step-up-authentication) |
 | Token exchange | Built | [Token exchange](#token-exchange) |
 | Manage roles | Built | [Manage roles](#manage-roles) |
-| Organizations and roles | Partly built | [Organizations and roles](#organizations-and-roles) |
+| Organizations and roles | Built | [Organizations and roles](#organizations-and-roles) |
 | Home-realm discovery | Planned | [Home-realm discovery](#home-realm-discovery) |
 | Session policies | Built | [Session policies](#session-policies) |
 | Audit export and retention | Planned | [Audit export and retention](#audit-export-and-retention) |
@@ -108,29 +108,15 @@ touching people. `masks:manage:read`, `masks:manage:support`, and
 `masks:manage:security` sit beside `masks:manage`, and no role can grant a
 role it does not hold. See [manage roles](/guides/security/#manage-roles).
 
-## Partly built
-
 ### Organizations and roles
 
-A business application has customers, and each customer has people in
-different roles.
-
-Today:
-
-- An organization has members, and each member holds a role there. Apps ask for
-  the `organization` scope, and tokens carry the organization and the role in an
-  `org` claim. A person in several organizations chooses one when signing in.
-- An organization can have its own sign-in policy, its own provider that maps
-  groups to roles, and its own SCIM directory. See
-  [an organization's own sign-in](/guides/features/#an-organizations-own-sign-in).
-- Removing a member or archiving an organization revokes the tokens issued for
-  it.
-- Events record the organization, and an event stream can send one
-  organization's events to that customer.
-
-Still to build:
-
-- An admin view for each organization's own owners.
+A business application has customers, and each customer has people in different
+roles. An organization holds members in roles, and apps that ask for the
+`organization` scope get the organization and the role in an `org` claim. Each
+organization can have its own sign-in policy, its own provider that maps groups
+to roles, its own SCIM directory, and its own event stream, and its owners
+manage its members from their account page. See
+[organizations](/guides/features/#organizations).
 
 ## Planned
 
