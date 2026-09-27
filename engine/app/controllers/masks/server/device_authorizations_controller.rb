@@ -31,7 +31,8 @@ module Masks
             redirect_uri: nil,
             response_type: nil,
             scope: params[:scope],
-            resource: repeated("resource")
+            resource: repeated("resource"),
+            organization: params[:organization]
           )
         end
 

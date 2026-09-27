@@ -54,11 +54,12 @@ module Masks
         approved? || denied?
       end
 
-      def approve!(actor:, session: nil, device: nil, authenticated_at: nil, amr: nil)
+      def approve!(actor:, session: nil, device: nil, authenticated_at: nil, amr: nil, organization: nil)
         update!(
           actor: actor,
           session: session,
           device: device,
+          organization: organization,
           authenticated_at: authenticated_at,
           payload: payload.merge("amr" => Array(amr))
         )

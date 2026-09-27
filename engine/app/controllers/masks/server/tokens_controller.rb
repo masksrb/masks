@@ -200,6 +200,9 @@ module Masks
 
           req.invalid_grant!("that device code has already been used") if claimed.nil?
 
+          member!(req, claimed)
+          Current.organization = claimed.organization
+
           res.access_token = Payload.new(issued(claimed.issue!(issuer: issuer, jkt: jkt), claimed, client))
         end
 

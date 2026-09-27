@@ -284,6 +284,64 @@ module Masks
         assert_equal "invalid_scope", JSON.parse(response.body)["error"]
       end
 
+      test "a device signed in to an organization carries it, and so does every refresh" do
+        organized!
+        acme = within { Organization.create!(key: "acme", name: "Acme") }
+        within { acme.memberships.create!(actor: @actor, role: "owner") }
+
+        held = ask(scope: "openid offline_access organization")
+
+        approve!(held["user_code"])
+        travel DeviceGrant::INTERVAL.seconds + 1.second
+
+        answer = poll(held["device_code"])
+
+        assert_equal({ "id" => acme.uuid, "key" => "acme", "name" => "Acme", "role" => "owner" }, claims_in(answer["access_token"])["org"])
+        assert_equal "acme", claims_in(answer["id_token"]).dig("org", "key")
+
+        refreshed = token(grant_type: "refresh_token", refresh_token: answer["refresh_token"],
+                          client_id: @registration["client_id"], client_secret: @registration["client_secret"])
+
+        assert_equal "acme", claims_in(refreshed["access_token"]).dig("org", "key")
+      end
+
+      test "a device that names an organization is signed in to that one" do
+        organized!
+        within do
+          Organization.create!(key: "acme", name: "Acme").memberships.create!(actor: @actor, role: "member")
+          Organization.create!(key: "globex", name: "Globex").memberships.create!(actor: @actor, role: "owner")
+        end
+
+        held = ask(scope: "openid organization", organization: "Globex")
+
+        approve!(held["user_code"])
+        travel DeviceGrant::INTERVAL.seconds + 1.second
+
+        assert_equal({ "key" => "globex", "role" => "owner" }, claims_in(poll(held["device_code"])["access_token"])["org"].slice("key", "role"))
+      end
+
+      test "a device approved for an organization is refused once the person has left it" do
+        organized!
+        acme = within { Organization.create!(key: "acme", name: "Acme") }
+        membership = within { acme.memberships.create!(actor: @actor, role: "member") }
+
+        held = ask(scope: "openid organization")
+
+        approve!(held["user_code"])
+
+        within do
+          acme.memberships.create!(actor: create_actor(nickname: "other"), role: "owner")
+          membership.destroy!
+        end
+
+        travel DeviceGrant::INTERVAL.seconds + 1.second
+
+        answer = poll(held["device_code"])
+
+        assert_equal "invalid_grant", answer["error"]
+        assert_nil answer["access_token"]
+      end
+
       test "signing a device in is written down" do
         held = ask
 
@@ -297,17 +355,26 @@ module Masks
 
       private
 
-        def ask(scope: "openid profile email offline_access")
+        def ask(scope: "openid profile email offline_access", organization: nil)
           post "/device_authorization",
                params: {
                  client_id: @registration["client_id"],
                  client_secret: @registration["client_secret"],
-                 scope: scope
-               }
+                 scope: scope,
+                 organization: organization
+               }.compact
 
           assert_response :success
 
           JSON.parse(response.body)
+        end
+
+        def organized!
+          @registration = register(
+            @tenant,
+            grant_types: [ "authorization_code", "refresh_token", GRANT ],
+            scope: "openid profile email offline_access organization"
+          )
         end
 
         def poll(device_code)

@@ -60,7 +60,8 @@ module Masks
             session: current_session,
             device: current_device,
             authenticated_at: login.authenticated_at || current_session&.authenticated_at,
-            amr: login.amr.presence || current_session&.amr
+            amr: login.amr.presence || current_session&.amr,
+            organization: login.state("organization-choice").selected
           )
 
           Event.record!(
