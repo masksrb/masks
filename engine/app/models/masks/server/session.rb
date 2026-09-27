@@ -4,6 +4,7 @@ module Masks
       include TenantScoped
 
       LIFETIME = 14.days
+      FRESHNESS = 15.minutes
 
       belongs_to :actor
       belongs_to :device, optional: true
@@ -30,6 +31,7 @@ module Masks
           )
 
           session.instance_variable_set(:@secret, secret)
+          actor.active!
           session
         end
 
@@ -51,6 +53,10 @@ module Masks
           .where(id: Token.where(session_id: id).select(:client_id))
           .where.not(backchannel_logout_uri: [ nil, "" ])
           .distinct
+      end
+
+      def fresh?
+        authenticated_at.present? && authenticated_at > FRESHNESS.ago
       end
 
       def revoke!

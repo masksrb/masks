@@ -141,8 +141,6 @@ en:
         heading: "Delete your account"
         state: "Permanent"
         lede: "Deleting your account signs you out of every app and device, and removes your passkeys, connected accounts, and photo. It cannot be undone."
-        manager: "You are the last person who manages this server, so this account cannot be deleted. Give another account the masks:manage scope first."
-        provisioned: "Your organization manages this account, so only it can delete the account."
         again: "You signed in a while ago, so you will be asked to sign in again first."
         confirm_html: "Type <b>%{identifier}</b> to confirm"
         submit: "Delete my account"

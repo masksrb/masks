@@ -17,7 +17,7 @@ module Masks
 
             held = { uuid: actor.uuid, identifier: actor.identifier }
 
-            actor.erase!
+            actor.destroy!
             audit!(Masks::Server::Event::ACTOR_DELETED, **held)
 
             held

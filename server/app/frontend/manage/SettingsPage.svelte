@@ -67,6 +67,12 @@
     [730, "After two years"],
   ];
 
+  const idleChoices = $derived(
+    !data?.tenant.idleAfter || IDLE.some(([days]) => days === data.tenant.idleAfter)
+      ? IDLE
+      : [...IDLE, [data.tenant.idleAfter, `After ${data.tenant.idleAfter} days`]],
+  );
+
   function idleAction(value) {
     if (value === "delete" && !confirm("Delete idle accounts instead of suspending them? A deleted account cannot be restored."))
       return load();
@@ -342,7 +348,7 @@
             onchange={(event) =>
               update({ idleAfter: Number(event.currentTarget.value) }, "Idle accounts updated.")}
           >
-            {#each IDLE as [days, label] (days)}
+            {#each idleChoices as [days, label] (days)}
               <option value={days}>{label}</option>
             {/each}
           </select>

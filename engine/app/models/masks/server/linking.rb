@@ -5,7 +5,6 @@ module Masks
 
       HELD = "provider_linking".freeze
       WINDOW = 15.minutes
-      FRESHNESS = 15.minutes
 
       class << self
         def offered(actor)
@@ -19,7 +18,7 @@ module Masks
 
         def start!(session:, provider:, actor:, authenticated_at:)
           raise Refused, I18n.t("connections.unavailable") if provider.nil? || !offered(actor).include?(provider)
-          raise Refused, I18n.t("connections.stale") if authenticated_at.nil? || authenticated_at < FRESHNESS.ago
+          raise Refused, I18n.t("connections.stale") if authenticated_at.nil? || authenticated_at < Session::FRESHNESS.ago
 
           location, handoff = provider.federation.start(callback: provider.callback_url)
 

@@ -4,7 +4,6 @@ module Masks
       class Delegation < LoginState
         HELD = "delegation_handoff".freeze
         WINDOW = 15.minutes
-        FRESHNESS = 15.minutes
 
         accepts :provider, :code, :state, :error, :error_description, :user
 
@@ -153,7 +152,7 @@ module Masks
               raise Masks::Server::Delegation::Refused, "that is not the #{provider.name} account connected to you here"
             end
 
-            if taken.nil? && provider.signs_in? && (login.authenticated_at.nil? || login.authenticated_at < FRESHNESS.ago)
+            if taken.nil? && provider.signs_in? && (login.authenticated_at.nil? || login.authenticated_at < Session::FRESHNESS.ago)
               Event.record!(Event::DELEGATION_REFUSED, actor: actor, by: nil, client: client, provider: provider.key, reason: "stale sign-in")
 
               refuse!("login_required", "sign in again before connecting a #{provider.name} account for the first time")

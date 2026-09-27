@@ -148,7 +148,7 @@ module Masks
             secure: request.ssl?
           }
 
-          actor.update!(last_login_at: Time.current, last_active_at: Time.current, idle_warned_at: nil)
+          actor.update!(last_login_at: Time.current)
 
           Event.record!(Event::SESSION_STARTED, actor: actor, device: device, amr: amr.presence)
 

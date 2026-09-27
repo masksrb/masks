@@ -22,6 +22,8 @@ module Masks
       has_many :approvals, class_name: "Client", foreign_key: :approved_by_id, dependent: :nullify
       has_one :avatar, dependent: :destroy
 
+      before_destroy :sign_out_everywhere!, prepend: true
+
       validates :nickname,
                 uniqueness: { scope: :tenant_id, case_sensitive: false },
                 format: { with: /\A[a-z0-9][a-z0-9._-]*\z/i },
@@ -222,15 +224,11 @@ module Masks
       end
 
       def restore!
-        update!(suspended_at: nil, last_active_at: Time.current, idle_warned_at: nil) if suspended?
-        self
-      end
+        return self unless suspended?
 
-      def erase!
-        transaction do
-          sign_out_everywhere!
-          destroy!
-        end
+        update!(suspended_at: nil)
+        active!
+        self
       end
 
       def active!

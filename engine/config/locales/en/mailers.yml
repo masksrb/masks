@@ -77,8 +77,8 @@ en:
     idle:
       subject: "Sign in to keep your %{tenant} account"
       lede:
-        suspended: "Nobody has signed in to your %{tenant} account for a while. Unless you sign in by %{due}, it will be suspended, and only a manager can restore it."
-        deleted: "Nobody has signed in to your %{tenant} account for a while. Unless you sign in by %{due}, it will be deleted, along with everything it holds."
+        suspend: "Nobody has signed in to your %{tenant} account for a while. Unless you sign in by %{due}, it will be suspended, and only a manager can restore it."
+        delete: "Nobody has signed in to your %{tenant} account for a while. Unless you sign in by %{due}, it will be deleted, along with everything it holds."
       keep: "Signing in once keeps it."
       action: "Sign in"
 

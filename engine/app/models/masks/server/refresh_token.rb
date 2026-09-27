@@ -5,6 +5,10 @@ module Masks
         30.days
       end
 
+      def self.mint!(**attributes)
+        super.tap { |token| token.actor&.active! }
+      end
+
       def revoke!
         transaction do
           super + root.lineage.select { |token| token.is_a?(AccessToken) }.sum(&:revoke!)

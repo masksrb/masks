@@ -75,25 +75,10 @@ module Masks
               end
             end
 
-            unless idle_after.nil?
-              unless idle_after.zero? || Masks::Server::Tenant::IDLE_DAYS.cover?(idle_after)
-                refuse!("an account is idle after #{Masks::Server::Tenant::IDLE_DAYS.min} to #{Masks::Server::Tenant::IDLE_DAYS.max} days, or never")
-              end
-
-              tenant.idle_after = idle_after.zero? ? nil : idle_after
-            end
-
-            unless idle_action.nil?
-              refuse!("an idle account is suspended or deleted") unless Masks::Server::Tenant::IDLE_ACTIONS.include?(idle_action)
-
-              tenant.idle_action = idle_action
-            end
-
-            idling = tenant.idle_after_changed? || tenant.idle_action_changed?
+            tenant.idle_after = idle_after.nonzero? unless idle_after.nil?
+            tenant.idle_action = idle_action unless idle_action.nil?
 
             save!(tenant)
-
-            Masks::Server::Actor.where.not(idle_warned_at: nil).update_all(idle_warned_at: nil) if idling
 
             audit!(Masks::Server::Event::TENANT_UPDATED, name: tenant.name)
 

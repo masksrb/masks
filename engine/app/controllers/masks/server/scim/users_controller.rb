@@ -61,7 +61,7 @@ module Masks
 
           held = { uuid: actor.uuid, identifier: actor.identifier, via: "scim" }
 
-          actor.erase!
+          actor.destroy!
           Event.record!(Event::ACTOR_DELETED, by: nil, **held)
 
           head :no_content

@@ -2,7 +2,6 @@ module Masks
   module Server
     class AccountController < ApplicationController
       RECENT = 20
-      FRESHNESS = Linking::FRESHNESS
 
       def index
         @actor = current_actor
@@ -22,17 +21,19 @@ module Masks
         @approver = DeviceFactor.satisfied?(device: current_device, actor: @actor)
         @approving = @approver && SignInApproval.waiting.find_by(id: session[SignInApprovalsController::HELD], actor_id: @actor.id)
         @events = Event.where(actor: @actor).newest_first.includes(:device).limit(RECENT)
-        @fresh = fresh?
+        @fresh = current_session.fresh?
+        @refusal = refusal(@actor)
       end
 
       def destroy
         actor = current_actor
 
         return redirect_to login_path if actor.nil?
-        return refuse(t("account_deletion.manager")) if actor.last_manager?
-        return refuse(t("account_deletion.provisioned")) if actor.external_id.present?
 
-        unless fresh?
+        refused = refusal(actor)
+        return refuse(t("account_deletion.#{refused}")) if refused
+
+        unless current_session.fresh?
           sign_out
           return redirect_to login_path(return_to: root_path(anchor: "delete")), notice: t("account_deletion.again")
         end
@@ -41,9 +42,8 @@ module Masks
 
         held = { uuid: actor.uuid, identifier: actor.identifier, reason: "account" }
 
-        actor.erase!
-        cookies.delete(:masks_session)
-        @current_session = nil
+        sign_out
+        actor.destroy!
 
         Event.record!(Event::ACTOR_DELETED, by: nil, **held)
 
@@ -52,10 +52,10 @@ module Masks
 
       private
 
-        def fresh?
-          at = current_session&.authenticated_at
+        def refusal(actor)
+          return :manager if actor.last_manager?
 
-          at.present? && at > FRESHNESS.ago
+          :provisioned if actor.external_id.present?
         end
 
         def refuse(message)

@@ -66,7 +66,10 @@ module Masks
 
       test "a tenant set to delete deletes the account and signs it out everywhere" do
         @tenant.update!(idle_action: Tenant::IDLE_DELETE)
-        within { Session.start!(actor: @idle) }
+        within do
+          Session.start!(actor: @idle)
+          @idle.update_columns(last_active_at: 400.days.ago)
+        end
 
         with_mailer { sweep }
         assert_includes ActionMailer::Base.deliveries.last.text_part.body.to_s, "it will be deleted"
@@ -139,7 +142,22 @@ module Masks
         end
       end
 
-      test "a tenant with the setting off sweeps nothing" do
+      test "changing the setting gives every warned account a fresh thirty days" do
+        sweep
+
+        travel 31.days do
+          @tenant.update!(idle_after: 730)
+          @tenant.update!(idle_after: 365)
+          sweep
+
+          within do
+            assert_not @idle.suspended?
+            assert_operator @idle.idle_warned_at, :>, 1.minute.ago
+          end
+        end
+      end
+
+            test "a tenant with the setting off sweeps nothing" do
         @tenant.update!(idle_after: nil)
 
         sweep

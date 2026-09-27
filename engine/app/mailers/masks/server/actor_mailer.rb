@@ -94,13 +94,13 @@ module Masks
         )
       end
 
-      def idle(actor, tenant_name:, due:, deleting:, origin: nil)
+      def idle(actor, tenant_name:, due:, action:, origin: nil)
         return message unless deliverable?
 
         @actor = actor
         @tenant_name = tenant_name
         @due = I18n.l(due.to_date, format: :long)
-        @then = deleting ? "deleted" : "suspended"
+        @action = action
         @url = origin.presence && "#{origin}/"
 
         mail(

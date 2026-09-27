@@ -51,6 +51,8 @@ module Masks
       validates :dynamic_registration, inclusion: { in: REGISTRATIONS }, allow_nil: true
       validates :idle_after, numericality: { only_integer: true, in: IDLE_DAYS }, allow_nil: true
       validates :idle_action, inclusion: { in: IDLE_ACTIONS }, allow_nil: true
+
+      after_update_commit :forget_idle_warnings, if: -> { saved_change_to_idle_after? || saved_change_to_idle_action? }
       validates :subdomain, presence: true, uniqueness: true,
                             format: { with: /\A[a-z0-9][a-z0-9-]*\z/ }
       validates :name, presence: true
@@ -305,6 +307,10 @@ module Masks
       end
 
       private
+
+        def forget_idle_warnings
+          Tenant.switch(self) { Actor.where.not(idle_warned_at: nil).update_all(idle_warned_at: nil) }
+        end
 
         def minted_setup_token
           return setup_token if setup_token.present?
