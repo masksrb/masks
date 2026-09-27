@@ -638,7 +638,8 @@ type Mutation {
     label: String!
 
     """
-    An organization's key. The token then sees and adds only that organization's members.
+    An organization's key. The token then sees and adds only that organization's
+    members. Only an owner can issue a token without one.
     """
     organization: ID
   ): IssueProvisioningTokenPayload

@@ -129,7 +129,7 @@ module Masks
 
         body = ask(%(mutation($id: ID!) { updateClient(clientId: $id, name: "Mine") { client { name } } }), held, id: @client.client_id)
 
-        assert_equal "only an owner can change a client that can carry a manage scope", refusal(body)
+        assert_equal "only an owner can change a client that can carry a manage or provisioning scope", refusal(body)
       end
 
       test "an owner does everything" do
@@ -288,6 +288,23 @@ module Masks
           refute Event.exists?(old.id)
           assert Event.exists?(recent.id)
         end
+      end
+
+      test "only an owner issues a provisioning token for every account, or a client that provisions" do
+        within { Organization.create!(key: "acme", name: "Acme") }
+        held = bearer_for(manager(ManageRoles::SECURITY))
+
+        body = ask(%(mutation { issueProvisioningToken(label: "everyone") { secret } }), held)
+
+        assert_match "only an owner can issue a token for every account", refusal(body)
+
+        body = ask(%(mutation { issueProvisioningToken(label: "acme", organization: "acme") { secret } }), held)
+
+        assert body.dig("data", "issueProvisioningToken", "secret").present?
+
+        body = ask(%(mutation { createClient(name: "Sync", allowedScopes: ["masks:scim"]) { client { clientId } } }), held)
+
+        assert_match "only an owner can hand out masks:scim", refusal(body)
       end
 
       test "every mutation in the schema declares the least role it needs" do

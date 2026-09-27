@@ -290,6 +290,42 @@ module Masks
           assert globex.memberships.exists?(actor: shared)
         end
       end
+
+      test "an organization's token cannot change an account its directory did not create" do
+        acme = within { Organization.create!(key: "acme", name: "Acme") }
+        victim = create_actor(nickname: "victim", email: "victim@example.com")
+        within { acme.memberships.create!(actor: victim, role: "member") }
+        secret = within { ProvisioningToken.issue!(label: "Acme Entra", by: @manager, organization: acme).secret }
+
+        scim(:patch, "/Users/#{victim.uuid}", secret: secret,
+                                               body: { "schemas" => [ Scim::PATCH ],
+                                                       "Operations" => [ { "op" => "replace", "path" => "password", "value" => "taken-over-1" } ] })
+
+        assert_response :forbidden
+        refute within { victim.reload.authenticate("taken-over-1") }
+
+        scim(:delete, "/Users/#{victim.uuid}", secret: secret)
+
+        assert_response :no_content
+        assert within { Actor.exists?(victim.id) }
+      end
+
+      test "an organization's token changes the accounts its directory created" do
+        acme = within { Organization.create!(key: "acme", name: "Acme") }
+        secret = within { ProvisioningToken.issue!(label: "Acme Entra", by: @manager, organization: acme).secret }
+
+        made = scim(:post, "/Users", secret: secret, body: {
+          "schemas" => [ Scim::USER ], "userName" => "grace@acme.example",
+          "emails" => [ { "value" => "grace@acme.example", "primary" => true } ], "active" => true
+        })
+
+        scim(:patch, "/Users/#{made["id"]}", secret: secret,
+                                               body: { "schemas" => [ Scim::PATCH ],
+                                                       "Operations" => [ { "op" => "replace", "path" => "active", "value" => false } ] })
+
+        assert_response :success
+        assert within { Actor.find_by!(uuid: made["id"]).suspended? }
+      end
     end
   end
 end

@@ -297,11 +297,12 @@ Every change is recorded in the person's activity, marked as SCIM.
 ### A directory for one organization
 
 A provisioning token can belong to one [organization](/guides/features/#organizations), so a
-customer's directory manages that customer's people and nobody else.
+customer's directory manages that customer's people and nobody else. A token for every account, and a
+client that may carry `masks:scim`, can come only from an owner, since either reaches managers too.
 
 | Request | What happens |
 | --- | --- |
 | List or read users | Only the organization's members. Anyone else is not found. |
 | Create a user | A new account that joins as `member`. An address another account holds is a conflict. |
-| Replace or patch a user | Allowed for a member of this organization only. A member of another organization too is refused with `403`. |
+| Replace or patch a user | Allowed only for an account this directory created that belongs to no other organization and manages nothing. Anyone else is refused with `403`, so an owner who adds an existing account cannot then take it over through the directory. |
 | Delete a user | Removes them from the organization and revokes its tokens. The account stays. |

@@ -39,7 +39,7 @@ module Masks
         def replace
           actor = found
           matched!(actor)
-          exclusive!(actor)
+          owned!(actor)
 
           settle!(Scim::User.new(actor).replace(document), Event::ACTOR_UPDATED)
           scim(represent(actor))
@@ -48,7 +48,7 @@ module Masks
         def update
           actor = found
           matched!(actor)
-          exclusive!(actor)
+          owned!(actor)
 
           unless Array(document["schemas"]).include?(Scim::PATCH)
             raise Scim::Error.new(:bad_request, "a PATCH names #{Scim::PATCH}", scim_type: "invalidSyntax")
@@ -86,13 +86,15 @@ module Masks
               raise(Scim::Error.new(:not_found, "no user has that id"))
           end
 
-          def exclusive!(actor)
+          def owned!(actor)
             held = provisioned_organization
 
-            return if held.nil? || actor.memberships.where.not(organization: held).none?
+            return if held.nil?
+            return if held.memberships.exists?(actor: actor, provisioned: true) &&
+                      actor.memberships.where.not(organization: held).none? && !actor.manages?
 
-            raise Scim::Error.new(:forbidden, "#{actor.identifier} belongs to other organizations too, so #{held.name} " \
-                                              "can remove them but not change them", scim_type: "mutability")
+            raise Scim::Error.new(:forbidden, "#{held.name}'s directory did not create #{actor.identifier}, or they belong " \
+                                              "elsewhere too, so it can remove them but not change them", scim_type: "mutability")
           end
 
           def joined!(actor)
@@ -100,7 +102,7 @@ module Masks
 
             return if held.nil?
 
-            held.memberships.create!(actor: actor, role: Organization::MEMBER)
+            held.memberships.create!(actor: actor, role: Organization::MEMBER, provisioned: true)
             Event.record!(Event::MEMBERSHIP_ADDED, actor: actor, by: nil, organization: held.key,
                                                    role: Organization::MEMBER, via: "scim")
           end

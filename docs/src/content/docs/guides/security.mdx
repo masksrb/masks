@@ -64,7 +64,7 @@ holds and the console asked for, and masks checks the person still holds them on
 | --- | --- |
 | `masks:manage:read` | Read everything manage shows, and change nothing. |
 | `masks:manage:support` | Read, and help people: sign them out, suspend and restore them, reset passwords and factors, resend invitations, and revoke their sessions, consents, and tokens. |
-| `masks:manage:security` | Read, and change signing keys, clients, providers, sign-in policies, adapters, event streams, and provisioning tokens. |
+| `masks:manage:security` | Read, and change signing keys, clients, providers, sign-in policies, adapters, event streams, and provisioning tokens for one organization. |
 | `masks:manage` | Everything, including tenant settings, deleting people, and granting any scope. |
 
 Every mutation declares the least scope it needs, and one that declares none needs `masks:manage`.
@@ -74,7 +74,8 @@ These limits apply to every role below `masks:manage`:
 
 - It cannot change another manager, or a session, token, consent, connection, or device that belongs
   to one. Support cannot change an owner's email and then reset their password.
-- It cannot give a person or a client any manage scope.
+- It cannot give a person or a client any manage scope, or `masks:scim`, and it cannot issue a
+  provisioning token for every account. Either would reach managers through SCIM.
 - It cannot change a client that can carry a manage scope, so it cannot redirect the manage console
   to another address.
 - It can open manage in a new browser once an owner has connected the console, and it cannot connect

@@ -8,7 +8,8 @@ module Masks
           argument :label, String
           argument :expires_in, Integer, required: false
           argument :organization, ID, required: false,
-                                      description: "An organization's key. The token then sees and adds only that organization's members."
+                                      description: "An organization's key. The token then sees and adds only that organization's members. " \
+                                                   "Only an owner can issue a token without one."
 
           field :provisioning_token, Types::ProvisioningTokenType, null: false
           field :secret, String, null: false
@@ -17,6 +18,7 @@ module Masks
             refuse!("a provisioning token lives for a positive number of seconds") if expires_in && !expires_in.positive?
 
             held = organization && (Masks::Server::Organization.active.find_by(key: organization) || refuse!("no organization keyed #{organization}"))
+            refuse!("only an owner can issue a token for every account; name an organization") if held.nil? && !owner?
             token = Masks::Server::ProvisioningToken.issue!(label: label, by: viewer, expires_in: expires_in, organization: held)
 
             audit!(Masks::Server::Event::PROVISIONING_TOKEN_ISSUED, label: token.label, expires_at: token.expires_at.iso8601,
