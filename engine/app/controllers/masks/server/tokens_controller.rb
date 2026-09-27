@@ -121,6 +121,8 @@ module Masks
 
           req.invalid_grant!("that refresh token was issued to another client") if token.client_id != client.id
 
+          token.actor&.active!
+
           held = token.bound? ? token.jkt : jkt
           scopes = req.scope.present? ? Scopes.granted(req.scope, token.scopes) : token.scope_list
           audience = narrow(req, token.audience, client)

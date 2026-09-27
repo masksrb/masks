@@ -21,7 +21,7 @@
     query Tenant {
       tenant {
         uuid subdomain name namedBy dynamicRegistration dynamicClientScopes createdAt
-        browsersOnly blockedAgents
+        browsersOnly blockedAgents idleAfter idleAction
         signInPolicy { key name }
         signingKeys { kid algorithm activatedAt retiredAt state }
       }
@@ -58,6 +58,21 @@
   `;
 
   const SPANS = [7, 30, 90];
+
+  const IDLE = [
+    [0, "Never"],
+    [90, "After 90 days"],
+    [180, "After 180 days"],
+    [365, "After a year"],
+    [730, "After two years"],
+  ];
+
+  function idleAction(value) {
+    if (value === "delete" && !confirm("Delete idle accounts instead of suspending them? A deleted account cannot be restored."))
+      return load();
+
+    return update({ idleAction: value }, "Idle accounts updated.");
+  }
 
   const BADGE = {
     staged: "badge-warning",
@@ -116,7 +131,8 @@
         api.query(
           `mutation Update(
             $name: String, $dynamicClientScopes: [String!], $dynamicRegistration: String,
-            $namedBy: String, $browsersOnly: Boolean, $blockedAgents: String, $signInPolicy: ID
+            $namedBy: String, $browsersOnly: Boolean, $blockedAgents: String, $signInPolicy: ID,
+            $idleAfter: Int, $idleAction: String
           ) {
             updateTenant(
               name: $name
@@ -126,6 +142,8 @@
               browsersOnly: $browsersOnly
               blockedAgents: $blockedAgents
               signInPolicy: $signInPolicy
+              idleAfter: $idleAfter
+              idleAction: $idleAction
             ) { tenant { name } }
           }`,
           changes,
@@ -310,6 +328,36 @@
           placeholder="curl, python-requests"
           onsave={() => update({ blockedAgents: agents }, "Sign-in rules updated.")}
         />
+      </Section>
+
+      <Section
+        title="Idle accounts"
+        lede="An account nobody has signed in to or used through an app for this long is warned by email, then suspended or deleted at least 30 days later. Signing in keeps it. The last manager and accounts a provider provisions over SCIM are left alone."
+      >
+        <div class="grid gap-3 sm:grid-cols-2">
+          <select
+            class="select select-sm w-full"
+            aria-label="When an account is idle"
+            value={data.tenant.idleAfter ?? 0}
+            onchange={(event) =>
+              update({ idleAfter: Number(event.currentTarget.value) }, "Idle accounts updated.")}
+          >
+            {#each IDLE as [days, label] (days)}
+              <option value={days}>{label}</option>
+            {/each}
+          </select>
+
+          <select
+            class="select select-sm w-full"
+            aria-label="What happens to an idle account"
+            value={data.tenant.idleAction}
+            disabled={!data.tenant.idleAfter}
+            onchange={(event) => idleAction(event.currentTarget.value)}
+          >
+            <option value="suspend">Suspend it</option>
+            <option value="delete">Delete it</option>
+          </select>
+        </div>
       </Section>
 
       <Section

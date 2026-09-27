@@ -10,11 +10,14 @@ module Masks
           argument :browsers_only, Boolean, required: false
           argument :blocked_agents, String, required: false
           argument :sign_in_policy, ID, required: false
+          argument :idle_after, Integer, required: false
+          argument :idle_action, String, required: false
 
           field :tenant, Types::TenantType, null: false
 
           def resolve(name: nil, dynamic_client_scopes: nil, dynamic_registration: nil,
-                      named_by: nil, browsers_only: nil, blocked_agents: nil, sign_in_policy: nil)
+                      named_by: nil, browsers_only: nil, blocked_agents: nil, sign_in_policy: nil,
+                      idle_after: nil, idle_action: nil)
             tenant = Current.tenant
 
             tenant.name = name unless name.nil?
@@ -72,7 +75,25 @@ module Masks
               end
             end
 
+            unless idle_after.nil?
+              unless idle_after.zero? || Masks::Server::Tenant::IDLE_DAYS.cover?(idle_after)
+                refuse!("an account is idle after #{Masks::Server::Tenant::IDLE_DAYS.min} to #{Masks::Server::Tenant::IDLE_DAYS.max} days, or never")
+              end
+
+              tenant.idle_after = idle_after.zero? ? nil : idle_after
+            end
+
+            unless idle_action.nil?
+              refuse!("an idle account is suspended or deleted") unless Masks::Server::Tenant::IDLE_ACTIONS.include?(idle_action)
+
+              tenant.idle_action = idle_action
+            end
+
+            idling = tenant.idle_after_changed? || tenant.idle_action_changed?
+
             save!(tenant)
+
+            Masks::Server::Actor.where.not(idle_warned_at: nil).update_all(idle_warned_at: nil) if idling
 
             audit!(Masks::Server::Event::TENANT_UPDATED, name: tenant.name)
 

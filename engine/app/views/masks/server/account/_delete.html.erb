@@ -1,0 +1,42 @@
+<section class="group" id="delete">
+  <div class="entries">
+    <details class="entry">
+      <summary>
+        <span class="entry-icon"><%= account_icon(:close) %></span>
+        <span class="entry-label"><%= account_text("delete.heading") %></span>
+        <span class="entry-state"><%= account_text("delete.state") %></span>
+        <span class="entry-mark" aria-hidden="true"></span>
+      </summary>
+
+      <div class="entry-body">
+        <p class="aside"><%= account_text("delete.lede") %></p>
+
+        <% if actor.last_manager? %>
+          <p class="aside aside-bad"><%= account_text("delete.manager") %></p>
+        <% elsif actor.external_id.present? %>
+          <p class="aside aside-bad"><%= account_text("delete.provisioned") %></p>
+        <% elsif fresh %>
+          <%= form_with url: account_path, method: :delete, id: "delete-account", class: "flow-tight" do |form| %>
+            <label class="field">
+              <span class="field-label"><%= account_text("delete.confirm_html", identifier: actor.identifier) %></span>
+              <%= form.text_field :confirm, autocomplete: "off", spellcheck: false, required: true,
+                    class: "control" %>
+            </label>
+
+            <div class="action-row">
+              <button type="submit" class="action action-sm"><%= account_text("delete.submit") %></button>
+            </div>
+          <% end %>
+        <% else %>
+          <p class="aside"><%= account_text("delete.again") %></p>
+
+          <%= form_with url: account_path, method: :delete, id: "delete-account", class: "flow-tight" do %>
+            <div class="action-row">
+              <button type="submit" class="action action-sm"><%= account_text("delete.submit_again") %></button>
+            </div>
+          <% end %>
+        <% end %>
+      </div>
+    </details>
+  </div>
+</section>

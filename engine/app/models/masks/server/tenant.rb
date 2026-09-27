@@ -42,8 +42,15 @@ module Masks
       REGISTRATION_BOUNDED = "bounded".freeze
       REGISTRATIONS = [ REGISTRATION_OFF, REGISTRATION_ANYTHING, REGISTRATION_BOUNDED ].freeze
 
+      IDLE_SUSPEND = "suspend".freeze
+      IDLE_DELETE = "delete".freeze
+      IDLE_ACTIONS = [ IDLE_SUSPEND, IDLE_DELETE ].freeze
+      IDLE_DAYS = (60..3650)
+
       validates :named_by, inclusion: { in: NAMES }, allow_nil: true
       validates :dynamic_registration, inclusion: { in: REGISTRATIONS }, allow_nil: true
+      validates :idle_after, numericality: { only_integer: true, in: IDLE_DAYS }, allow_nil: true
+      validates :idle_action, inclusion: { in: IDLE_ACTIONS }, allow_nil: true
       validates :subdomain, presence: true, uniqueness: true,
                             format: { with: /\A[a-z0-9][a-z0-9-]*\z/ }
       validates :name, presence: true
@@ -60,6 +67,10 @@ module Masks
 
       def named_by
         self.class.pinned_names.presence || super.presence || EITHER
+      end
+
+      def idle_action
+        super.presence || IDLE_SUSPEND
       end
 
       def names_pinned?

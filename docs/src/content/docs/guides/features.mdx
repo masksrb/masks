@@ -1,6 +1,6 @@
 ---
 title: Features
-description: Clients, signing in, and signing out.
+description: Clients, signing in, signing out, and accounts.
 ---
 
 A [client](/guides/core-concepts/#clients) is an application that signs people in or signs in as
@@ -169,3 +169,33 @@ lasts 400 days.
 | Block a device | Every request from it, before any password is checked. |
 
 `/manage` lists devices that never finished signing in too, so they can still be blocked.
+
+## Accounts
+
+### Suspending and deleting
+
+A manager suspends, restores, or deletes an actor in `/manage`, and an identity provider does the same
+over [SCIM](/guides/sso-saml/#provisioning). Suspending signs the actor out everywhere and refuses
+every sign-in until a manager restores them. Deleting signs them out everywhere, tells apps that
+registered for back-channel logout, and removes their passkeys, consents, connected accounts, and photo. Nobody can
+suspend or delete the last manager.
+
+### Idle accounts
+
+A tenant can suspend or delete accounts nobody uses. Under **Idle accounts** in `/manage`, pick how
+long an account may go unused, from 90 days to two years, and whether it is suspended or deleted.
+
+- Signing in, and an app refreshing a token for the person, both count as using the account.
+- masks emails a warning 30 days before the account reaches that length, and acts no sooner than
+  30 days after the warning. Turning the setting on or changing it gives every account a fresh 30
+  days.
+- An account with no confirmed email address cannot be warned, and follows the same schedule.
+- The last manager and accounts provisioned over SCIM are never touched. The identity provider
+  decides when those end.
+- A daily job does the work. Each warning, suspension, and deletion is recorded as an event.
+
+### Deleting your own account
+
+A person deletes their own account at the bottom of their account page, by typing its nickname or
+email. A sign-in older than 15 minutes is asked to sign in again first. The last manager and an
+account provisioned over SCIM cannot delete themselves.

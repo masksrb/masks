@@ -75,6 +75,7 @@ module Masks
       ACTOR_SIGNED_OUT = "actor.signed_out".freeze
       ACTOR_SUSPENDED = "actor.suspended".freeze
       ACTOR_RESTORED = "actor.restored".freeze
+      ACTOR_IDLE_WARNED = "actor.idle_warned".freeze
       PROVISIONING_TOKEN_ISSUED = "provisioning_token.issued".freeze
       PROVISIONING_TOKEN_REVOKED = "provisioning_token.revoked".freeze
 

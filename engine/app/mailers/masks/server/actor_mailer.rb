@@ -94,6 +94,22 @@ module Masks
         )
       end
 
+      def idle(actor, tenant_name:, due:, deleting:, origin: nil)
+        return message unless deliverable?
+
+        @actor = actor
+        @tenant_name = tenant_name
+        @due = I18n.l(due.to_date, format: :long)
+        @then = deleting ? "deleted" : "suspended"
+        @url = origin.presence && "#{origin}/"
+
+        mail(
+          from: self.class.from,
+          to: actor.email,
+          subject: t("actor_mailer.idle.subject", tenant: tenant_name)
+        )
+      end
+
       def approved(actor, tenant_name:, origin: nil)
         return message unless deliverable?
 

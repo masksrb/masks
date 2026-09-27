@@ -76,3 +76,10 @@ en:
     already_connected: "%{resource} is already connected; a manager must reconnect it"
     beyond_account: "%{scopes} is more than this account holds"
     too_soon: "Nothing was registered. Read what it asks for, then approve once the countdown ends."
+
+  account_deletion:
+    again: "Sign in again to delete your account. It has been a while since you did."
+    mismatch: "Type your account's name exactly as it is shown to delete it."
+    manager: "You are the last person who manages this server, so your account cannot be deleted."
+    provisioned: "Your organization manages this account, so only it can delete the account."
+    deleted: "Your account was deleted."

@@ -14,6 +14,11 @@ default: &default
     queue: maintenance
     schedule: every day at 2am
 
+  idle_accounts:
+    class: Masks::Server::IdleAccountsJob
+    queue: maintenance
+    schedule: every day at 5am
+
 development:
   <<: *default
 

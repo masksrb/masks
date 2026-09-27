@@ -5,6 +5,7 @@ module Masks
       include Paged
 
       MINIMUM_PASSWORD = 8
+      ACTIVITY_GRAIN = 1.day
 
       has_secure_password validations: false
 
@@ -221,8 +222,25 @@ module Masks
       end
 
       def restore!
-        update!(suspended_at: nil) if suspended?
+        update!(suspended_at: nil, last_active_at: Time.current, idle_warned_at: nil) if suspended?
         self
+      end
+
+      def erase!
+        transaction do
+          sign_out_everywhere!
+          destroy!
+        end
+      end
+
+      def active!
+        return if last_active_at && last_active_at > ACTIVITY_GRAIN.ago
+
+        update_columns(last_active_at: Time.current, idle_warned_at: nil)
+      end
+
+      def idle_since
+        last_active_at || last_login_at || activated_at
       end
 
       def sign_out_everywhere!(keeping: nil)

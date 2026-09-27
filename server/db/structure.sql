@@ -71,6 +71,8 @@ CREATE TABLE public.actors (
     suspended_at timestamp(6) without time zone,
     email_factor_at timestamp(6) without time zone,
     phone_factor_at timestamp(6) without time zone,
+    last_active_at timestamp(6) without time zone,
+    idle_warned_at timestamp(6) without time zone,
     CONSTRAINT actors_are_named CHECK (((nickname IS NOT NULL) OR (email IS NOT NULL)))
 );
 
@@ -938,7 +940,9 @@ CREATE TABLE public.tenants (
     browsers_only boolean DEFAULT false NOT NULL,
     blocked_agents text,
     sign_in_policy_id bigint,
-    setup_token text
+    setup_token text,
+    idle_after integer,
+    idle_action character varying
 );
 
 
@@ -2584,6 +2588,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260926010000'),
 ('20260926000000'),
 ('20260921010000'),
 ('20260921000000'),

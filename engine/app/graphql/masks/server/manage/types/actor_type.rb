@@ -33,6 +33,8 @@ module Masks
           end
           field :backup_codes_generated_at, GraphQL::Types::ISO8601DateTime
           field :last_login_at, GraphQL::Types::ISO8601DateTime
+          field :last_active_at, GraphQL::Types::ISO8601DateTime
+          field :idle_warned_at, GraphQL::Types::ISO8601DateTime
           field :created_at, GraphQL::Types::ISO8601DateTime, null: false
           field :updated_at, GraphQL::Types::ISO8601DateTime, null: false
 
