@@ -253,6 +253,7 @@ module Masks
 
         assert_equal "admin", within { @acme.memberships.find_by!(actor: actor).role }
       end
+
       test "an organization's provider never signs in as an existing account by its address alone" do
         create_provider(role: "delegate", trusts_email: true, organization: @acme)
         ada = create_actor(nickname: "ada", email: "ada@elsewhere.test", email_verified_at: Time.current)
@@ -271,8 +272,8 @@ module Masks
       test "an organization's provider takes up a waiting invitation only at a domain it answers for" do
         create_provider(role: "delegate", email_domains: "acme.test", organization: @acme)
         create_actor(nickname: "owner", email: "owner@acme.test")
-        invited = within { Actor.create!(nickname: "ada", email: "ada@acme.test") }
-        stranger = within { Actor.create!(nickname: "bob", email: "bob@elsewhere.test") }
+        invited = create_actor(nickname: "ada", email: "ada@acme.test", password: nil)
+        stranger = create_actor(nickname: "bob", email: "bob@elsewhere.test", password: nil)
 
         within do
           @acme.memberships.create!(actor: invited, role: "admin", pending: true, invited_as: "ada@acme.test")

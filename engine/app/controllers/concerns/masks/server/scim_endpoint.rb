@@ -40,14 +40,8 @@ module Masks
           token if token && !token.bound? && token.scope_list.include?(Scopes::SCIM) && token.audience.include?(scim_base)
         end
 
-        def provisioned_organization
-          @provisioner&.organization
-        end
-
-        def directory_owns?(actor)
-          held = provisioned_organization
-
-          held.nil? || (actor.memberships.accepted.pluck(:organization_id, :provisioned) == [ [ held.id, true ] ] && !actor.manages?)
+        def directory
+          @directory ||= Scim::Directory.for(@provisioner&.organization)
         end
 
         def scim_base

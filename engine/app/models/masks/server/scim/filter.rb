@@ -4,18 +4,19 @@ module Masks
       class Filter
         COMPARISON = /\A\s*([A-Za-z][\w.:\[\]" -]*?)\s+(eq|ne|co|sw|ew|pr|gt|ge|lt|le)(?:\s+("(?:[^"\\]|\\.)*"|true|false|null|[\d.]+))?\s*\z/i
         ATTRIBUTES = {
-          "id" => "uuid",
+          "id" => "actors.uuid",
           "username" => :user_name,
-          "externalid" => "external_id",
-          "emails" => "email",
-          "emails.value" => "email",
-          "displayname" => "name",
-          "name.givenname" => "given_name",
-          "name.familyname" => "family_name",
+          "externalid" => "actors.external_id",
+          "emails" => "actors.email",
+          "emails.value" => "actors.email",
+          "displayname" => "actors.name",
+          "name.givenname" => "actors.given_name",
+          "name.familyname" => "actors.family_name",
           "active" => :active,
-          "meta.created" => "created_at",
-          "meta.lastmodified" => "updated_at"
+          "meta.created" => "actors.created_at",
+          "meta.lastmodified" => "actors.updated_at"
         }.freeze
+        CASE_EXACT = %w[externalid].freeze
 
         def self.apply(relation, expression, columns: {})
           return relation if expression.blank?
@@ -44,7 +45,8 @@ module Masks
             raise Error.new(:bad_request, "#{clause.strip} is not a filter this server reads", scim_type: "invalidFilter") if match.nil?
 
             path, operator, raw = match.captures
-            column = @columns[normalized(path)]
+            key = normalized(path)
+            column = @columns[key]
             operator = operator.downcase
 
             raise Error.new(:bad_request, "#{path} cannot be filtered on", scim_type: "invalidFilter") if column.nil?
@@ -54,7 +56,7 @@ module Masks
             case column
             when :user_name then user_name(relation, operator, value)
             when :active then active(relation, operator, value)
-            else column_compare(relation, column, operator, value)
+            else column_compare(relation, column, operator, value, exact: CASE_EXACT.include?(key))
             end
           end
 
@@ -85,22 +87,23 @@ module Masks
             value ? relation.where(suspended_at: nil) : relation.where.not(suspended_at: nil)
           end
 
-          def column_compare(relation, column, operator, value)
-            table = column.include?(".") ? column : "actors.#{relation.connection.quote_column_name(column)}"
+          def column_compare(relation, column, operator, value, exact:)
             text = value.to_s
-            like = ActiveRecord::Base.sanitize_sql_like(text.downcase)
+            held = exact ? column : "lower(#{column}::text)"
+            wanted = exact ? text : text.downcase
+            like = ActiveRecord::Base.sanitize_sql_like(wanted)
 
             case operator
-            when "eq" then relation.where("lower(#{table}::text) = ?", text.downcase)
-            when "ne" then relation.where("#{table} IS NULL OR lower(#{table}::text) <> ?", text.downcase)
-            when "co" then relation.where("lower(#{table}::text) LIKE ?", "%#{like}%")
-            when "sw" then relation.where("lower(#{table}::text) LIKE ?", "#{like}%")
-            when "ew" then relation.where("lower(#{table}::text) LIKE ?", "%#{like}")
-            when "pr" then relation.where("#{table} IS NOT NULL")
-            when "gt" then relation.where("#{table} > ?", text)
-            when "ge" then relation.where("#{table} >= ?", text)
-            when "lt" then relation.where("#{table} < ?", text)
-            when "le" then relation.where("#{table} <= ?", text)
+            when "eq" then relation.where("#{held} = ?", wanted)
+            when "ne" then relation.where("#{column} IS NULL OR #{held} <> ?", wanted)
+            when "co" then relation.where("#{held} LIKE ?", "%#{like}%")
+            when "sw" then relation.where("#{held} LIKE ?", "#{like}%")
+            when "ew" then relation.where("#{held} LIKE ?", "%#{like}")
+            when "pr" then relation.where("#{column} IS NOT NULL")
+            when "gt" then relation.where("#{column} > ?", text)
+            when "ge" then relation.where("#{column} >= ?", text)
+            when "lt" then relation.where("#{column} < ?", text)
+            when "le" then relation.where("#{column} <= ?", text)
             end
           end
       end

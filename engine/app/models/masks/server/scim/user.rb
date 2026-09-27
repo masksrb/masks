@@ -15,11 +15,7 @@ module Masks
 
         attr_reader :actor, :suspending, :external_id
 
-        def self.represent(actor, base:, external_id: actor.external_id)
-          new(actor, external_id: external_id).to_h(base: base)
-        end
-
-        def initialize(actor, external_id: actor.external_id)
+        def initialize(actor, external_id:)
           @actor = actor
           @external_id = external_id
         end
@@ -106,7 +102,7 @@ module Masks
             case key
             when "userName" then user_name!(value)
             when "active" then active!(value)
-            when "externalId" then @external_id = value&.to_s&.strip.presence
+            when "externalId" then @external_id = Actor.normalize_value_for(:external_id, value)
             when "name" then value.is_a?(Hash) ? value.each { |part, held| assign("name.#{part}", held) } : clear_name
             when "password" then actor.password = value.presence
             when /\Aemails(\[.*\])?(\.value)?\z/ then actor.email = first_value(value)

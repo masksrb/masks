@@ -11,6 +11,7 @@ module Masks
       MANAGER = "manager".freeze
       SCIM = "scim".freeze
       SUSPENSIONS = [ IDLE, MANAGER, SCIM ].freeze
+      EXTERNAL_ID = ->(value) { value.to_s.strip.presence }
 
       has_secure_password validations: false
 
@@ -56,7 +57,7 @@ module Masks
 
       normalizes :nickname, with: ->(value) { value.to_s.strip.presence }
       normalizes :email, with: ->(value) { value.to_s.strip.downcase.presence }
-      normalizes :external_id, with: ->(value) { value.to_s.strip.presence }
+      normalizes :external_id, with: EXTERNAL_ID
       normalizes :phone, with: ->(value) { value.to_s.gsub(/[\s().-]/, "").presence }
 
       normalizes :name, :given_name, :family_name, :middle_name, :profile_url, :picture_url,
@@ -79,6 +80,7 @@ module Masks
         OR (btrim(actors.scopes) = '' AND :held = ANY(ARRAY[:standard]))
       SQL
 
+      scope :directed, -> { where.not(external_id: nil).or(where(id: Membership.where.not(external_id: nil).select(:actor_id))) }
       scope :holding, ->(held) { where(HOLDING, held: held.to_s.strip, standard: Scopes::STANDARD) }
 
       class << self
@@ -242,7 +244,7 @@ module Masks
       end
 
       def directed?
-        external_id.present? || memberships.where.not(external_id: nil).exists?
+        Actor.directed.exists?(id)
       end
 
       def last_manager?

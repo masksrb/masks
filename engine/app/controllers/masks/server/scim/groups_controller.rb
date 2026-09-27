@@ -71,7 +71,7 @@ module Masks
         private
 
           def held
-            provisioned_organization
+            directory.organization
           end
 
           def organization!
@@ -108,7 +108,7 @@ module Masks
 
             unless group.role == Organization::MEMBER
               holders = group.memberships.reject { |membership| wanted.include?(membership.actor.uuid) }
-              owned = directory_owned(holders.map(&:actor_id))
+              owned = directory.owned(holders.map(&:actor_id))
 
               holders.each { |membership| assign!(membership, Organization::MEMBER) if owned.include?(membership.actor_id) }
             end
@@ -123,7 +123,7 @@ module Masks
 
             return if membership.nil?
 
-            unless directory_owned([ membership.actor_id ]).any?
+            unless directory.owned([ membership.actor_id ]).any?
               raise Scim::Error.new(:forbidden, "#{held.name}'s directory did not create #{membership.actor.identifier}, " \
                                                 "so it does not change their role", scim_type: "mutability")
             end
@@ -135,7 +135,7 @@ module Masks
             uuids = uuids.to_a.uniq
             actors = Actor.where(uuid: uuids.grep(Subjects::UUID)).index_by(&:uuid)
             memberships = held.memberships.accepted.where(actor_id: actors.values.map(&:id)).index_by(&:actor_id)
-            owned = directory_owned(memberships.keys)
+            owned = directory.owned(memberships.keys)
 
             uuids.map do |uuid|
               membership = actors[uuid] && memberships[actors[uuid].id]
@@ -144,16 +144,6 @@ module Masks
 
               raise Scim::Error.new(:bad_request, "a group takes only people #{held.name}'s directory provisioned", scim_type: "invalidValue")
             end
-          end
-
-          def directory_owned(actor_ids)
-            return Set.new if actor_ids.empty?
-
-            elsewhere = Membership.accepted.where(actor_id: actor_ids)
-                                  .where("organization_id <> ? OR NOT provisioned", held.id).distinct.pluck(:actor_id)
-            managers = Actor.where(id: actor_ids - elsewhere).select(&:manages?).map(&:id)
-
-            (actor_ids - elsewhere - managers).to_set
           end
 
           def assign!(membership, role)

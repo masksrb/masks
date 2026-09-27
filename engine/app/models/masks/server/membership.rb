@@ -22,10 +22,9 @@ module Masks
         ::Rails.configuration.masks.organization_invitation_lifetime
       end
 
-      normalizes :external_id, with: ->(value) { value.to_s.strip.presence }
+      normalizes :external_id, with: Actor::EXTERNAL_ID
 
       validates :actor_id, uniqueness: { scope: :organization_id }
-      validates :external_id, uniqueness: { scope: :organization_id }, allow_nil: true
       validate :role_is_offered
       validate :an_owner_remains, on: :update
 

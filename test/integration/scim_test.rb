@@ -19,8 +19,8 @@ module Masks
         response.body.present? ? JSON.parse(response.body) : nil
       end
 
-      def provision(**attributes)
-        scim(:post, "/Users", body: {
+      def provision(secret: @secret, **attributes)
+        scim(:post, "/Users", secret: secret, body: {
           "schemas" => [ Scim::USER ],
           "userName" => "ada@example.com",
           "externalId" => "entra-1",
@@ -31,8 +31,8 @@ module Masks
         }.merge(attributes.transform_keys(&:to_s)))
       end
 
-      def amend(id, *operations)
-        scim(:patch, "/Users/#{id}", body: { "schemas" => [ Scim::PATCH ], "Operations" => operations })
+      def amend(id, *operations, secret: @secret)
+        scim(:patch, "/Users/#{id}", secret: secret, body: { "schemas" => [ Scim::PATCH ], "Operations" => operations })
       end
 
       test "a provisioning system adds a person, and they come back as a SCIM user" do
@@ -58,6 +58,7 @@ module Masks
         assert_equal 1, scim(:get, "/Users?filter=#{CGI.escape('userName eq "ADA@example.com"')}")["totalResults"]
         assert_equal 1, scim(:get, "/Users?filter=#{CGI.escape('externalId eq "entra-1"')}")["totalResults"]
         assert_equal 0, scim(:get, "/Users?filter=#{CGI.escape('externalId eq "entra-2"')}")["totalResults"]
+        assert_equal 0, scim(:get, "/Users?filter=#{CGI.escape('externalId eq "ENTRA-1"')}")["totalResults"], "externalId is case-exact"
       end
 
       test "a filter this server does not read is refused as one" do
@@ -330,8 +331,8 @@ module Masks
         assert within { Actor.find_by!(uuid: made["id"]).suspended? }
       end
 
-      def acme_token(acme)
-        within { ProvisioningToken.issue!(label: "Acme Entra", by: @manager, organization: acme).secret }
+      def org_token(organization)
+        within { ProvisioningToken.issue!(label: "#{organization.name} directory", by: @manager, organization: organization).secret }
       end
 
       def proven(acme, domain)
@@ -353,7 +354,7 @@ module Masks
       test "an organization's token without a proven domain sets no address, whether or not someone holds it" do
         acme = within { Organization.create!(key: "acme", name: "Acme") }
         create_actor(nickname: "ceo", email: "ceo@othercorp.example")
-        secret = acme_token(acme)
+        secret = org_token(acme)
 
         held = join_acme(secret, "ceo@othercorp.example")
         held_status = response.status
@@ -375,7 +376,7 @@ module Masks
         acme = within { Organization.create!(key: "acme", name: "Acme") }
         proven(acme, "acme.example")
         create_actor(nickname: "ceo", email: "ceo@othercorp.example")
-        secret = acme_token(acme)
+        secret = org_token(acme)
         made = join_acme(secret, "ada@acme.example")
 
         answers = %w[ceo@othercorp.example cfo@othercorp.example].map do |email|
@@ -393,7 +394,7 @@ module Masks
       test "an organization's token verifies addresses at its proven domains and refuses any other" do
         acme = within { Organization.create!(key: "acme", name: "Acme") }
         proven(acme, "acme.example")
-        secret = acme_token(acme)
+        secret = org_token(acme)
 
         made = join_acme(secret, "ada@acme.example")
 
@@ -420,7 +421,7 @@ module Masks
         proven(acme, "acme.example")
         create_actor(nickname: "ceo", email: "ceo@acme.example")
 
-        taken = join_acme(acme_token(acme), "ceo@acme.example")
+        taken = join_acme(org_token(acme), "ceo@acme.example")
 
         assert_response :conflict
         assert_equal "uniqueness", taken["scimType"]
@@ -431,7 +432,7 @@ module Masks
         acme = within { Organization.create!(key: "acme", name: "Acme") }
         proven(acme, "acme.example")
         globex = within { Organization.create!(key: "globex", name: "Globex") }
-        secret = acme_token(acme)
+        secret = org_token(acme)
         made = join_acme(secret, "grace@acme.example")
         within { globex.memberships.create!(actor: Actor.find_by!(uuid: made["id"]), role: "member", pending: true) }
 
@@ -442,17 +443,16 @@ module Masks
         assert_response :success
         assert within { Actor.find_by!(uuid: made["id"]).suspended? }
       end
+
       def directed(secret, user_name, external_id)
-        scim(:post, "/Users", secret: secret, body: {
-          "schemas" => [ Scim::USER ], "userName" => user_name, "externalId" => external_id, "active" => true
-        })
+        provision(secret: secret, userName: user_name, externalId: external_id, emails: nil)
       end
 
       test "two organizations' directories use the same externalId without meeting" do
         acme = within { Organization.create!(key: "acme", name: "Acme") }
         globex = within { Organization.create!(key: "globex", name: "Globex") }
-        acme_secret = acme_token(acme)
-        globex_secret = within { ProvisioningToken.issue!(label: "Globex Okta", by: @manager, organization: globex).secret }
+        acme_secret = org_token(acme)
+        globex_secret = org_token(globex)
 
         ada = directed(acme_secret, "ada", "okta-1")
 
@@ -473,7 +473,7 @@ module Masks
 
       test "one directory's externalId stays unique within its organization, and the conflict says no more than any other" do
         acme = within { Organization.create!(key: "acme", name: "Acme") }
-        secret = acme_token(acme)
+        secret = org_token(acme)
 
         directed(secret, "ada", "okta-1")
         taken = directed(secret, "grace", "okta-1")
@@ -492,12 +492,10 @@ module Masks
 
       test "a directory's externalId is replaced and cleared with the rest of the user" do
         acme = within { Organization.create!(key: "acme", name: "Acme") }
-        secret = acme_token(acme)
+        secret = org_token(acme)
         made = directed(secret, "ada", "okta-1")
 
-        amended = scim(:patch, "/Users/#{made["id"]}", secret: secret,
-                                                       body: { "schemas" => [ Scim::PATCH ],
-                                                               "Operations" => [ { "op" => "replace", "path" => "externalId", "value" => "okta-9" } ] })
+        amended = amend(made["id"], { "op" => "replace", "path" => "externalId", "value" => "okta-9" }, secret: secret)
 
         assert_equal "okta-9", amended["externalId"]
 
