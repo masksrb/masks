@@ -1,7 +1,7 @@
 .console {
-  --text-xs: 0.8125rem;
+  --text-xs: 0.875rem;
   --text-xs--line-height: 1.45;
-  --text-sm: 0.9375rem;
+  --text-sm: 1rem;
   --text-sm--line-height: 1.5;
   --edge: color-mix(in oklab, var(--color-base-content) 10%, transparent);
   --dim: color-mix(in oklab, var(--color-base-content) 55%, transparent);
@@ -38,8 +38,8 @@
 
 .deck-sm {
   margin: 0;
-  max-width: 56ch;
-  font-size: 0.9375rem;
+  max-width: 60ch;
+  font-size: 1rem;
   line-height: 1.55;
   color: var(--dim);
 }
@@ -85,7 +85,7 @@
 
 .hint,
 .term {
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   line-height: 1.5;
   color: var(--dim);
 }
@@ -94,12 +94,12 @@
   color: color-mix(in oklab, var(--color-base-content) 75%, transparent);
 }
 
-.console :is(.input-sm, .select-sm, .textarea-sm) {
-  --font-size-min: 0.875rem;
+.console :is(.input-sm, .select-sm, .textarea-sm, .btn-sm) {
+  font-size: 0.9375rem;
 }
 
-.console .btn-sm {
-  --fontsize: 0.875rem;
+.console .field-label {
+  font-size: 0.9375rem;
 }
 
 .tip {
@@ -144,7 +144,7 @@
   border-radius: var(--radius-box);
   background: var(--color-base-200);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
   font-weight: 400;
   line-height: 1.5;
   letter-spacing: normal;
@@ -164,7 +164,7 @@
 
 .subhead {
   margin: 0;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.14em;
@@ -172,7 +172,7 @@
 }
 
 .legend {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.16em;
@@ -215,7 +215,7 @@
 .nav-item {
   position: relative;
   padding: 0.5rem 0 0.625rem;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.12em;
@@ -321,7 +321,7 @@
 }
 
 .tally-label {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.16em;
@@ -367,7 +367,7 @@
 }
 
 .console .table thead th {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.14em;
@@ -379,7 +379,7 @@
 }
 
 .console .badge {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   letter-spacing: 0.02em;
   height: auto;
@@ -411,7 +411,7 @@
 }
 
 .chart-label {
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.16em;
@@ -486,7 +486,7 @@
   position: relative;
   height: 1rem;
   font-family: var(--font-mono);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   color: var(--dimmer);
 }
 
@@ -629,7 +629,7 @@
   border-radius: var(--radius-field);
   background: none;
   font: inherit;
-  font-size: 0.875rem;
+  font-size: 1rem;
   text-align: left;
   white-space: nowrap;
   text-decoration: none;
@@ -663,7 +663,7 @@
   max-width: 14rem;
   padding: 0.25rem 0.625rem 0.25rem 0.25rem;
   border-radius: 999px;
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
   color: var(--dim);
   text-decoration: none;
 }
@@ -796,7 +796,7 @@
   align-items: center;
   gap: 0.25rem;
   padding: 0.5rem 0 0.625rem;
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   letter-spacing: 0.02em;
   text-decoration: none;
@@ -880,7 +880,7 @@
   border-radius: var(--radius-field);
   background: none;
   font: inherit;
-  font-size: 0.9375rem;
+  font-size: 1rem;
   text-align: left;
   color: var(--dim);
   cursor: pointer;
