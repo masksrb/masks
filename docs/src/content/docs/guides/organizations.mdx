@@ -1,0 +1,286 @@
+---
+title: Organizations
+description: Customers inside a tenant, the members of each and the roles they hold, invitations, an organization's own sign-in, and what apps read.
+---
+
+An **organization** is a customer inside a tenant. Its **members** are accounts, and each member holds
+one **role** there. Every organization has `owner` and `member`, and can offer more, such as
+`billing`. An account can belong to several organizations, or to none.
+
+| Who | Where | Can |
+| --- | --- | --- |
+| A manager | `/manage`, under **Organizations** | Add and archive organizations, set their sign-in, and add, promote, and remove anyone. |
+| An owner | Their own account page, under **Organizations** | Invite, promote, and remove the members of their own organization. |
+| A member | Their own account page | See their role, accept or decline an invitation, and leave. |
+
+## Adding an organization
+
+1. In `/manage`, open **Organizations** and choose **Add organization**.
+2. Enter a name. The key is filled in from it, and apps ask for the organization by its key, such as
+   `organization=acme`. A key is lowercase letters, digits, and dashes.
+3. Choose **Add organization** again to save it. You become its first owner.
+4. Add the customer's own owner as a member in the `owner` role. Once they accept, you can remove
+   yourself.
+
+Adding an organization needs `masks:manage:security`. See [manage roles](/guides/security/#manage-roles).
+
+### Roles
+
+A role is a word the member's tokens carry. Under **Roles** on the organization's page, **Offer
+another role** adds one. A role is lowercase letters, digits, dashes, and underscores, up to 40
+characters. `owner` and `member` are always offered. A role someone holds cannot be removed until
+nobody holds it.
+
+## Inviting members
+
+Adding someone to an organization invites them. Until they accept, the invitation gives no `org`
+claim, no place in the organization choice, and nothing for the organization's directory to change.
+
+1. Open the organization, on its page in `/manage` or on the account page of one of its owners.
+2. Enter the person's email address and choose a role.
+3. Choose **Add member** in `/manage`, or **Add** on the account page.
+
+masks emails the person, naming the organization, the role, and who invited them.
+
+| The address belongs to | The email |
+| --- | --- |
+| An account with a confirmed address | Links to the invitation on their account page, where they accept or decline it. |
+| No account | An account invitation to choose a password. The organization is waiting on the account page once they have one. |
+| An account with no confirmed address | Nothing is sent. The invitation waits on their account page. |
+
+When the tenant has no mail adapter and the deployment has no SMTP server, `/manage` shows the
+account invitation's link so the manager can send it. It works once.
+
+### Who an owner can invite
+
+A manager can invite any address. An owner can invite an address:
+
+- at a domain proven for one of the organization's providers, or
+- that the organization's sign-in policy admits, while that policy allows sign-up.
+
+The organization's sign-in policy is its own when it has one, and the tenant's otherwise. The rule
+is the same whether or not an account holds the address, so the answer does not reveal who has an
+account. An owner sends at most 50 invitations a day, counting invitations sent again. A new
+account made by an invitation gets the policy's sign-up scopes.
+
+### Accepting
+
+An invitation sent to an address is accepted only by an account holding that address, confirmed.
+
+- An account whose address is unconfirmed is asked to confirm it under **Email address** first.
+- An invitation sent to another address says where it went. The person signs in with that address,
+  or asks an owner to invite the address on this account.
+- Signing in through the organization's own [provider](#provider) accepts a waiting invitation
+  without these checks, because the provider vouches for the membership.
+
+Declining removes the invitation, and an owner has to invite the person again.
+
+## Sending an invitation again
+
+An organization invitation expires two weeks after it was last sent. `MASKS_ORGANIZATION_INVITATION_LIFETIME`
+changes this. See [ENV vars](/reference/environment/).
+
+1. Open the organization's members, in `/manage` or on an owner's account page.
+2. Find the person. An open invitation is marked **invited**, and an expired one **expired**.
+3. Choose **Send again**.
+
+Sending again emails the person, starts the lifetime over, and records *Organization invitation
+sent again*. An invitation is sent again at most once an hour. In `/manage`, sending again needs
+`masks:manage:support`.
+
+An expired invitation cannot be accepted. The nightly sweep removes it once it has been expired for
+as long again as it was open, which is four weeks after it was last sent by default, and records
+*Organization invitation expired*.
+
+## Changing roles and removing members
+
+| Change | What happens |
+| --- | --- |
+| A member's role changes | Their access tokens for the organization are revoked, so the app's next refresh carries the new role. |
+| A member is removed | Every token issued for them in the organization is revoked, refresh tokens included. |
+| An invitation is withdrawn | It is removed. Nothing had been granted. |
+| A member leaves | The same as being removed. An owner has to invite them again. |
+
+An organization always keeps an owner. The only owner cannot leave, step down, or be removed until
+someone else is an owner, and two owners cannot remove each other at the same time. When the last
+owner's account is deleted, masks records *Organization left without an owner*, and only managers can
+change its members until they make someone an owner.
+
+Apps that receive [shared signals](/guides/shared-signals/) and have held a token for the
+organization hear about role changes and removals as they happen.
+
+### What members are told
+
+masks emails a member when someone else changes their place in an organization:
+
+| Email | Sent when |
+| --- | --- |
+| Role changed | Their role changes, naming the old role and the new one. |
+| Removed | They are removed from the organization. |
+| Archived | The organization is archived while they are signed in to an app for it. |
+
+A member who makes the change themselves, such as by leaving, gets no email. These emails go only to
+a confirmed address, and each person turns them off under **Emails we send you** on the account page,
+in the **Organizations** group. See [security emails](/guides/security/#security-emails).
+
+## Running an organization from the account page
+
+An owner manages the organization from their own account page, with no `/manage` access. Under
+**Organizations**, each organization they own shows how many members, owners, and open invitations it
+has, and one row for each member or invitation. From a member's row, the owner can:
+
+- choose another role and **Set role**,
+- **Send again** an invitation,
+- **Withdraw** an invitation, or **Remove** a member.
+
+The form under the rows adds someone by email. The result of each change appears inside the
+organization it changed. Owners reach only their own organizations.
+
+Every member sees their role and can leave. An invitation appears under **Waiting for you** with
+who sent it, the role, when it expires, and the address it went to.
+
+## Signing in as a member
+
+An app asks for the `organization` scope. Its tokens then carry an `org` claim for one organization:
+
+```json
+{ "org": { "id": "5f0c…", "key": "acme", "name": "Acme", "role": "billing" } }
+```
+
+| The person | What happens |
+| --- | --- |
+| Belongs to one organization | That one, without a question. |
+| Belongs to several | masks asks which, after they sign in. |
+| Belongs to none | The app gets `access_denied`. |
+
+An app that already knows the organization passes `organization=acme` on `/authorize`, which skips the
+question. A person who is not a member of it gets `access_denied`. Naming an organization without
+asking for the scope holds the sign-in to its members and its sign-in policy too.
+
+To switch organizations, the app sends the person through `/authorize` again with another key. The
+session carries over, so a person already signed in the way the organization requires is not asked
+for a password.
+
+A refresh reads the member's role again. A refresh for someone no longer a member is refused with
+`invalid_grant`.
+
+A [device sign-in](/guides/features/#device-sign-in) names the organization with `organization` on
+`/device_authorization`, or the person chooses one when they approve it. Its tokens carry that
+organization, and redeeming the device code is refused once the membership has ended.
+
+## An organization's own sign-in
+
+An organization can have its own sign-in policy, provider, and directory. Set all three under
+**Signing in** on the organization's page in `/manage`.
+
+### Policy
+
+A member signs in under the organization's policy ahead of the app's and the tenant's. When the app
+names the organization on `/authorize`, the policy applies from the first step. When the person
+chooses the organization, the policy applies from the choice on:
+
+- A person who signed in with a first factor the policy does not list, or through a provider it does
+  not offer, sees **That organization asks you to sign in another way.** and signs in again with a
+  first factor the policy accepts.
+- A person whose address is outside the policy's `email_domains` is refused with `access_denied`.
+- The second factor, session lifetime, and step-up follow the policy.
+
+### Provider
+
+A provider handed to an organization is offered only to a request that names it. Everyone who signs
+in through it becomes a member, in the role their groups map to.
+
+- The provider reads groups from the `groups` claim, or another one it names. The first mapped group
+  a person holds decides the role, anyone in none gets the unmapped role (`member` unless set), and
+  the role is set again on every sign-in.
+- A provider that would take the last owner's role records *Organization role kept against the
+  provider*, and the role stays.
+- It accepts a waiting invitation only for an address at one of its email domains, or one it reports
+  as confirmed when `trusts_email` is on. Any other invitation is refused, and stays waiting.
+- An existing account with the same address is linked only after that account signs in another way
+  once, as with any [provider](/guides/sso-saml/#provider-roles).
+
+### Directory
+
+A provisioning token for one organization reaches only its members, and manages their roles through
+SCIM groups. See [a directory for one organization](/guides/sso-saml/#a-directory-for-one-organization).
+
+## What apps read
+
+| Where | `org` | `orgs` |
+| --- | --- | --- |
+| ID token | The organization signed in to, with the role held when it was issued. | |
+| Access token | The organization signed in to, with the role held when it was issued. | |
+| Userinfo | The organization the token was issued for, with the role held now. | Every organization the person has joined, each with the role held there. |
+| Introspection | The organization the token was issued for, with the role held now. | |
+
+`org` appears when the token names an organization, and `orgs` when the token holds the
+`organization` scope. Each entry in `orgs` has the same `id`, `key`, `name`, and `role` as `org`.
+Only joined organizations are listed, so an open invitation and an archived organization are left
+out. Discovery lists both in `claims_supported`.
+
+```json
+{
+  "sub": "8f4c…",
+  "org": { "id": "5f0c…", "key": "acme", "name": "Acme", "role": "billing" },
+  "orgs": [
+    { "id": "5f0c…", "key": "acme", "name": "Acme", "role": "billing" },
+    { "id": "a21e…", "key": "globex", "name": "Globex", "role": "owner" }
+  ]
+}
+```
+
+### In a Rails app
+
+`Masks::Rails` reads both claims and keeps pages and APIs to members in a role. See
+[organizations in a Rails app](/guides/rails/#organizations).
+
+### In a single-page app
+
+In session mode, `@masks/client` reads the organization from your backend's `/auth/session`:
+
+```js
+import { createSession, holdsRole } from "@masks/client";
+
+const auth = createSession();
+const account = await auth.require({ organization: "acme" });
+
+account.organization;
+account.organizations;
+holdsRole(account, "owner", "billing");
+
+auth.switchOrganization("globex");
+```
+
+`switchOrganization` sends the person through sign-in again, naming the other organization. The
+`Person` components for React and Svelte list the others and switch to one when given
+`onSwitchOrganization`. In browser mode, `organization()` reads `org` from the ID token, and
+`switchOrganization` starts a new authorization naming the key. See
+[@masks/client](/reference/browser/).
+
+## Organizations in /manage
+
+The overview counts actors, clients, organizations, and devices, and lists the first five
+organizations with their members and open invitations. An organization with no owner is marked
+**no owner** there and under **Organizations**.
+
+An organization's page counts its members, owners, open invitations, and live tokens. Below that:
+
+| Section | Holds |
+| --- | --- |
+| **Members** | Everyone, owners, or open invitations, with each person's role, **Send again**, and removal. |
+| **Signing in** | The sign-in policy, the organization's providers and their group mapping, its proven domains, and any provisioning token for it. |
+| **Roles** | The roles it offers, and how many members hold each. |
+| **Details** | Its name, key, and ID, and the `organization=` value apps ask for it with. |
+| **Activity** | Changes to the organization, and what happened while someone signed in as a member. |
+| **Archive** | Archives it, naming how many live tokens that revokes. |
+
+Archiving an organization revokes every token issued for it and stops it being offered. Members
+keep their roles, so **Restore** puts everything back. Archiving needs `masks:manage:security`.
+
+## An organization's activity
+
+An event belongs to an organization when it is about the organization or its members, or when it
+happens while someone signs in to an app as a member, such as consent or a refused sign-in. Tokens
+issued for the organization carry it to refreshes and exchanges too. The organization's page lists
+its recent events, and an [event stream](/guides/event-streams/) can send only them.

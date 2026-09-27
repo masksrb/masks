@@ -70,11 +70,57 @@ end
 | --- | --- |
 | `authenticate_masks!` | Sends a signed-out visitor to `masks_login_url` and stops the request. |
 | `masks_account`, `masks_claims` | Read the signed-in session. |
-| `masks_identity` | `sub`, `name`, `preferred_username`, `email`, `email_verified`, `tenant`, `picture`, and avatar claims. |
+| `masks_identity` | `sub`, `name`, `preferred_username`, `email`, `email_verified`, `tenant`, `picture`, avatar claims, `org`, and `orgs`. |
 | `masks_access_token` | The token to spend against a resource server. |
 | `masks_disconnect!` | Removes the connection and `config/masks.json`. |
 
 See [Masks::Rails](/reference/rails/) for the full list.
+
+### Organizations
+
+An app signs a person in as a member of one [organization](/guides/organizations/) when it asks for
+the `organization` scope. Name one for every sign-in with `config.organization`, or for one sign-in
+with `/auth?organization=acme`:
+
+```ruby
+Masks::Rails.configure do |config|
+  config.scope = %w[openid profile email offline_access organization]
+  config.organization = ->(request) { request.subdomain }
+end
+```
+
+| Method | |
+| --- | --- |
+| `masks_organization` | The organization signed in to, with its `id`, `key`, `name`, and `role`, or `nil`. |
+| `masks_role?("owner", "billing")` | Whether the person holds one of those roles in it. |
+| `masks_organizations` | Every organization the person has joined, each with the role held there. |
+| `masks_login_url(organization: "globex")` | Signs the person in again, naming another organization. |
+
+`/auth/session` answers the same as `organization` and `organizations`. The engine reads the
+organizations from userinfo at sign-in and at every refresh, so a changed role reaches the app within
+an access token's lifetime.
+
+To let a person switch, link each organization to sign-in again. A person who already belongs to it
+is not asked for anything more:
+
+```erb
+<% masks_organizations.each do |held| %>
+  <%= link_to held.name, masks_login_url(organization: held.key, return_to: request.path) %>
+<% end %>
+```
+
+`masks_members_only!` keeps a controller to members, and optionally to a role or one organization:
+
+```ruby
+class BillingController < ApplicationController
+  include Masks::Rails::Authentication
+
+  masks_members_only! role: %w[owner billing]
+end
+```
+
+A person who signed in to no organization is refused with `403` and `insufficient_organization`, and
+one in another role with `insufficient_role`.
 
 ### Accepting tokens
 
@@ -86,6 +132,12 @@ An app that is also a resource server checks bearers with `Masks::Rails::Protect
 class ApiController < ActionController::Base
   include Masks::Rails::ProtectedResource
 end
+```
+
+`masks_protect!` asks the same of a token. It reads the `org` claim the token carries:
+
+```ruby
+masks_protect! scope: "uris:catalog:write", role: "owner", organization: "acme"
 ```
 
 Outside Rails, `Masks::Client` does discovery, PKCE, token exchange, and verification without the

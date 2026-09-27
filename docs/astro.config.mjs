@@ -75,6 +75,7 @@ export default defineConfig({
         items: [
           { label: "Core concepts", slug: "guides/core-concepts" },
           { label: "Features", slug: "guides/features" },
+          { label: "Organizations", slug: "guides/organizations" },
           { label: "Themes", slug: "guides/themes" },
           { label: "SSO / SAML", slug: "guides/sso-saml" },
           { label: "Connecting via SDK", slug: "guides/connecting-via-sdk" },

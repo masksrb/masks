@@ -207,82 +207,10 @@ lifetime.
 
 ## Organizations
 
-An **organization** is a customer inside a tenant. Its **members** are accounts, and each member holds
-one **role** there. Every organization has `owner` and `member`, and can name more, such as
-`billing`. An account can belong to several organizations, or to none.
-
-### Adding one
-
-1. In `/manage`, open **Organizations** and choose **Add**. Its key is what apps ask for.
-2. Add the first member as `owner`. An organization always keeps at least one owner.
-3. Add the rest by email. Each person is invited, and joins when they accept on their account page.
-   An address with no account gets an account invitation first. Until they accept, the membership
-   grants nothing: no `org` claim, no place in the organization choice, and nothing for the
-   organization's directory to change.
-
-Removing a member revokes their tokens for that organization. Archiving the organization revokes
-every token issued for it and stops it being offered.
-
-### Signing in as a member
-
-An app asks for the `organization` scope. Its tokens then carry an `org` claim for one organization:
-
-```json
-{ "org": { "id": "5f0c…", "key": "acme", "name": "Acme", "role": "billing" } }
-```
-
-| The person | What happens |
-| --- | --- |
-| Belongs to one organization | That one, without a question. |
-| Belongs to several | masks asks which, after they sign in. |
-| Belongs to none | The app gets `access_denied`. |
-
-An app that already knows the organization passes `organization=acme` on `/authorize`, which skips the
-question. A person who is not a member of it gets `access_denied`. To switch organizations, the app
-sends the person through `/authorize` again with another key. The session carries over, so they are
-not asked for a password.
-
-A refresh reads the member's role again, so a changed role reaches the app within one access token
-lifetime. A refresh for someone no longer a member is refused with `invalid_grant`. An app that does
-not ask for the scope gets no claim and no question.
-
-### An organization's own sign-in
-
-An organization can have its own sign-in policy, provider, and directory.
-
-- **Policy.** A member signs in under the organization's policy ahead of the app's and the tenant's.
-  When the app names the organization on `/authorize`, the policy applies from the first step. When
-  the person chooses it, the policy applies from the choice on, so the second factor, session
-  lifetime, and step-up follow it and the first factor follows the app's.
-- **Provider.** A provider handed to an organization is offered only to a request that names it.
-  Everyone who signs in through it becomes a member, in the role their groups map to, and an invitation waiting for them counts as accepted. The provider
-  reads groups from the `groups` claim, or another one it names. The first mapped group a person
-  holds decides the role, anyone in none gets the unmapped role (`member` unless set), and the role
-  is set again on every sign-in.
-- **Directory.** A provisioning token for one organization reaches only its members. See
-  [a directory for one organization](/guides/sso-saml/#a-directory-for-one-organization).
-
-Set all three on the organization's page in `/manage`.
-
-### Running an organization yourself
-
-An organization's owners manage it from their own account page, with no `/manage` access. Under
-**Organizations** each owner sees the members and can:
-
-- invite someone by email in any role. The member list shows everyone invited the same way,
-  whether or not they already had an account,
-- change a member's role,
-- remove a member, which revokes their tokens for the organization.
-
-Every member can see their role and leave, and anyone invited can accept or decline. The only owner cannot leave or step down until someone
-else is an owner. Owners reach only their own organization.
-
-### An organization's activity
-
-An event belongs to an organization when it is about the organization or its members, or when it
-happens while someone signs in to an app as a member, such as consent or a refused sign-in. Tokens
-issued for the organization carry it to refreshes and exchanges too. The organization's page lists
-its recent events, and an [event stream](/guides/event-streams/) can send only them.
+An **organization** is a customer inside a tenant, whose members each hold a role there. An app that
+asks for the `organization` scope signs a person in as a member of one. See
+[organizations](/guides/organizations/) for adding them, inviting members, their own sign-in, and
+what apps read.
 
 ## Accounts
 

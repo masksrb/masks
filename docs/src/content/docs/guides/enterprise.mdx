@@ -115,8 +115,10 @@ roles. An organization holds members in roles, and apps that ask for the
 `organization` scope get the organization and the role in an `org` claim. Each
 organization can have its own sign-in policy, its own provider that maps groups
 to roles, its own SCIM directory, and its own event stream, and its owners
-manage its members from their account page. See
-[organizations](/guides/features/#organizations).
+manage its members from their account page. People join by an emailed
+invitation that expires after two weeks, and apps read every organization a
+person belongs to from userinfo. See
+[organizations](/guides/organizations/).
 
 ### Home-realm discovery
 

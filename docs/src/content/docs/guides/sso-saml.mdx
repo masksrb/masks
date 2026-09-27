@@ -273,6 +273,7 @@ in through a [provider](#providers) that trusts the same email, or by accepting 
 | Joins | Up to four comparisons with `and`. |
 | Attributes | `userName`, `externalId`, `emails.value`, `displayName`, `name.givenName`, `name.familyName`, `active`, the `meta` dates |
 | `eq` only | `userName`, `active` |
+| Case | `externalId` compares exactly. The other attributes ignore case. |
 
 Every response has a weak `ETag`, and an `If-Match` naming an older version is refused.
 `/ServiceProviderConfig`, `/ResourceTypes`, and `/Schemas` describe the rest. `/Groups` answers
@@ -297,7 +298,7 @@ Every change is recorded in the person's activity, marked as SCIM.
 
 ### A directory for one organization
 
-A provisioning token can belong to one [organization](/guides/features/#organizations), so a
+A provisioning token can belong to one [organization](/guides/organizations/), so a
 customer's directory manages that customer's people and nobody else. A token for every account, and a
 client that may carry `masks:scim`, can come only from an owner, since either reaches managers too.
 
@@ -311,7 +312,8 @@ client that may carry `masks:scim`, can come only from an owner, since either re
 The organization's directory keeps its own `externalId` for each member, so two organizations'
 directories can use the same value. A `userName`, email, or `externalId` that is already taken is
 refused with `409` and the same `uniqueness` detail every time, so the answer does not say who holds
-it or where.
+it or where. An actor's page in `/manage` shows the `externalId` each organization's directory holds for
+them.
 
 ### Roles as groups
 
