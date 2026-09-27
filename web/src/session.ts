@@ -2,6 +2,7 @@ import {
   type Account,
   type AvatarStyle,
   MasksError,
+  type Organization,
   type Refusal,
   type Status,
 } from "./types.js";
@@ -12,12 +13,17 @@ export interface SessionOptions {
   csrfToken?: () => string | null;
 }
 
+export interface LoginOptions {
+  returnTo?: string;
+  organization?: string;
+}
+
 export interface SessionClient {
   session(): Promise<Account | null>;
   status(): Promise<Status>;
-  require(options?: { returnTo?: string }): Promise<Account>;
-  login(options?: { returnTo?: string }): void;
-  loginUrl(options?: { returnTo?: string }): string;
+  require(options?: LoginOptions): Promise<Account>;
+  login(options?: LoginOptions): void;
+  loginUrl(options?: LoginOptions): string;
   handshake(): void;
   handshakeUrl(): string;
   avatarUrl(
@@ -54,10 +60,12 @@ export function createSession(options: SessionOptions = {}): SessionClient {
 
   const url = (path: string) => `${base}${path}`;
 
-  const loginUrl = ({ returnTo }: { returnTo?: string } = {}) => {
-    const target = returnTo ?? here();
+  const loginUrl = ({ returnTo, organization }: LoginOptions = {}) => {
+    const query = new URLSearchParams({ return_to: returnTo ?? here() });
 
-    return `${url("")}?return_to=${encodeURIComponent(target)}`;
+    if (organization) query.set("organization", organization);
+
+    return `${url("")}?${query.toString()}`;
   };
 
   const handshakeUrl = () => url("/handshake");
@@ -136,7 +144,14 @@ export function createSession(options: SessionOptions = {}): SessionClient {
     async require(opts = {}) {
       const held = await status();
 
-      if (held.state === "signed_in") return held.account;
+      if (
+        held.state === "signed_in" &&
+        (!opts.organization ||
+          !held.account.organization ||
+          held.account.organization.key === opts.organization)
+      ) {
+        return held.account;
+      }
 
       window.location.assign(
         held.state === "handshake_required"
@@ -176,4 +191,4 @@ export function createSession(options: SessionOptions = {}): SessionClient {
   };
 }
 
-export type { Account, Refusal, Status };
+export type { Account, Organization, Refusal, Status };

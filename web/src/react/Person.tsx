@@ -59,6 +59,13 @@ export function Person({
           </span>
         )}
 
+        {info.organization && (
+          <span className="masks-person-org">
+            {info.organization.name}
+            <span className="masks-person-org-role">{info.role}</span>
+          </span>
+        )}
+
         {info.manager && <span className="masks-person-role">Manager</span>}
       </div>
 

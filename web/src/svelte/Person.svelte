@@ -47,6 +47,13 @@ const showsAvatar = $derived(avatarUrl && broken !== avatarUrl);
       </span>
     {/if}
 
+    {#if info.organization}
+      <span class="masks-person-org">
+        {info.organization.name}
+        <span class="masks-person-org-role">{info.role}</span>
+      </span>
+    {/if}
+
     {#if info.manager}
       <span class="masks-person-role">Manager</span>
     {/if}

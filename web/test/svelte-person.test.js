@@ -62,3 +62,27 @@ test("with no avatar it falls back to initials, and a sign-out button appears on
   assert.match(withSignOut, /masks-person-signout/);
   assert.match(withSignOut, />\s*Leave\s*</);
 });
+
+test("the svelte Person names the organization and the role held in it", () => {
+  const { body } = render(Person, {
+    props: {
+      account: {
+        ...ACCOUNT,
+        organization: {
+          id: "org-1",
+          key: "acme",
+          name: "Acme",
+          role: "billing",
+        },
+      },
+    },
+  });
+
+  assert.match(body, /masks-person-org/);
+  assert.match(body, /Acme/);
+  assert.match(body, /billing/);
+  assert.doesNotMatch(
+    render(Person, { props: { account: ACCOUNT } }).body,
+    /masks-person-org/,
+  );
+});

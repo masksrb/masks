@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { initials, personFrom } from "../dist/person.js";
+import { holdsRole, initials, personFrom } from "../dist/person.js";
 
 test("a name wins, then a handle, then an email, and nothing repeats", () => {
   const full = personFrom({
@@ -74,4 +74,30 @@ test("initials falls back gracefully", () => {
   assert.equal(initials("ada"), "AD");
   assert.equal(initials("ada@example.com"), "AE");
   assert.equal(initials(""), "?");
+});
+
+test("an organization brings its name and the person's role", () => {
+  const account = {
+    signed_in: true,
+    nickname: "ada",
+    scopes: ["openid", "organization"],
+    organization: { id: "org-1", key: "acme", name: "Acme", role: "owner" },
+  };
+  const info = personFrom(account);
+
+  assert.equal(info.organization.name, "Acme");
+  assert.equal(info.role, "owner");
+  assert.equal(info.owner, true);
+  assert.equal(holdsRole(account, "billing", "owner"), true);
+  assert.equal(holdsRole(account, "billing"), false);
+});
+
+test("with no organization there is no role to hold", () => {
+  const account = { signed_in: true, nickname: "ada", scopes: [] };
+  const info = personFrom(account);
+
+  assert.equal(info.organization, null);
+  assert.equal(info.role, null);
+  assert.equal(info.owner, false);
+  assert.equal(holdsRole(account, "owner"), false);
 });

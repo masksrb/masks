@@ -12,6 +12,13 @@ export interface Avatars {
   initials: string;
 }
 
+export interface Organization {
+  id: string;
+  key: string;
+  name: string;
+  role: string;
+}
+
 export interface Account {
   signed_in: boolean;
   subject?: string;
@@ -22,6 +29,7 @@ export interface Account {
   picture?: string;
   avatars?: Avatars;
   tenant?: Tenant;
+  organization?: Organization;
   scopes: string[];
   expires_at?: number;
   account_url?: string;
@@ -40,6 +48,7 @@ export type Status =
   | { state: "handshake_required"; handshakeUrl: string };
 
 export interface Claims {
+  org?: Organization;
   [claim: string]: unknown;
 }
 

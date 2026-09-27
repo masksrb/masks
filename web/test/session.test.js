@@ -220,3 +220,52 @@ test("an ordinary sign out does not leave the app", async () => {
 
   globalThis.window = held;
 });
+
+const ACME = { id: "org-1", key: "acme", name: "Acme", role: "owner" };
+
+test("the login url names the organization to sign in to", () => {
+  const { subject } = client([{ status: 200, body: ACCOUNT }]);
+
+  assert.equal(
+    subject.loginUrl({ returnTo: "/", organization: "acme" }),
+    "/auth?return_to=%2F&organization=acme",
+  );
+});
+
+test("the account carries the organization the person signed in to", async () => {
+  const { subject } = client([
+    { status: 200, body: { ...ACCOUNT, organization: ACME } },
+  ]);
+
+  assert.deepEqual((await subject.session()).organization, ACME);
+});
+
+test("require signs in again when the person is in another organization", async () => {
+  const assigned = [];
+  const held = globalThis.window;
+  globalThis.window = { location: { assign: (url) => assigned.push(url) } };
+
+  const { subject } = client([
+    { status: 200, body: { ...ACCOUNT, organization: ACME } },
+  ]);
+
+  assert.deepEqual(
+    (await subject.require({ organization: "acme" })).organization,
+    ACME,
+  );
+
+  subject.require({ returnTo: "/", organization: "globex" });
+  await new Promise((resolve) => setTimeout(resolve, 10));
+
+  assert.deepEqual(assigned, ["/auth?return_to=%2F&organization=globex"]);
+
+  const { subject: unscoped } = client([{ status: 200, body: ACCOUNT }]);
+
+  assert.equal(
+    (await unscoped.require({ organization: "acme" })).subject,
+    "actor-1",
+  );
+  assert.equal(assigned.length, 1);
+
+  globalThis.window = held;
+});

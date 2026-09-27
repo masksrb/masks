@@ -1,10 +1,13 @@
-import type { Account } from "./types.js";
+import type { Account, Organization } from "./types.js";
 
 export interface PersonInfo {
   name: string;
   details: string[];
   unconfirmed: boolean;
   manager: boolean;
+  organization: Organization | null;
+  role: string | null;
+  owner: boolean;
 }
 
 export function personFrom(account: Account): PersonInfo {
@@ -13,6 +16,8 @@ export function personFrom(account: Account): PersonInfo {
   const details = [handle, account.email ?? null].filter(
     (value): value is string => Boolean(value) && value !== name,
   );
+
+  const organization = account.organization ?? null;
 
   return {
     name,
@@ -23,7 +28,16 @@ export function personFrom(account: Account): PersonInfo {
         (scope) =>
           scope === "masks:manage" || scope.startsWith("masks:manage:"),
       ) ?? false,
+    organization,
+    role: organization?.role ?? null,
+    owner: organization?.role === "owner",
   };
+}
+
+export function holdsRole(account: Account, ...roles: string[]): boolean {
+  const role = account.organization?.role;
+
+  return role !== undefined && roles.includes(role);
 }
 
 export function initials(name: string): string {

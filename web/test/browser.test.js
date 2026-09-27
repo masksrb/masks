@@ -561,3 +561,95 @@ test("a client that asks for no id token sends no nonce and checks none", async 
   assert.equal(identity, null);
   assert.equal(subject.accessToken(), "at-1");
 });
+
+const ACME = { id: "org-1", key: "acme", name: "Acme", role: "owner" };
+
+test("naming an organization sends it and leaves the scope as the app set it", async () => {
+  const { subject } = client({ client: { organization: "acme" } });
+
+  const url = new URL(await subject.authorizeUrl({ returnTo: "/" }));
+
+  assert.equal(url.searchParams.get("organization"), "acme");
+  assert.equal(
+    url.searchParams.get("scope"),
+    "openid profile uris:catalog:read",
+  );
+
+  const other = new URL(
+    await subject.authorizeUrl({ returnTo: "/", organization: "globex" }),
+  );
+
+  assert.equal(other.searchParams.get("organization"), "globex");
+});
+
+test("with no organization named, no parameter is sent", async () => {
+  const { subject } = client();
+
+  const url = new URL(await subject.authorizeUrl({ returnTo: "/" }));
+
+  assert.equal(url.searchParams.get("organization"), null);
+  assert.equal(
+    url.searchParams.get("scope"),
+    "openid profile uris:catalog:read",
+  );
+});
+
+test("the organization comes from the id token", async () => {
+  const upstream = server();
+  const { subject, store } = client({ server: upstream });
+
+  await subject.authorizeUrl({ returnTo: "/", organization: "acme" });
+  const waiting = JSON.parse(store.getItem("masks:pending"));
+  upstream.held.token = {
+    ...GRANTED,
+    id_token: mint({ nonce: waiting.nonce, org: ACME }),
+  };
+
+  const { identity } = await subject.callback(
+    `https://app.test/callback?code=abc&state=${waiting.state}`,
+  );
+
+  assert.deepEqual(identity.org, ACME);
+  assert.deepEqual(subject.organization(), ACME);
+});
+
+test("an id token naming another organization than the one asked for is refused", async () => {
+  const upstream = server();
+  const { subject, store } = client({ server: upstream });
+
+  await subject.authorizeUrl({ returnTo: "/", organization: "globex" });
+  const waiting = JSON.parse(store.getItem("masks:pending"));
+  upstream.held.token = {
+    ...GRANTED,
+    id_token: mint({ nonce: waiting.nonce, org: ACME }),
+  };
+
+  await assert.rejects(
+    () =>
+      subject.callback(
+        `https://app.test/callback?code=abc&state=${waiting.state}`,
+      ),
+    (error) => error.code === "invalid_token",
+  );
+  assert.equal(subject.organization(), null);
+  assert.equal(subject.accessToken(), null);
+});
+
+test("an id token with no organization claim is fine when the app did not ask for the scope", async () => {
+  const upstream = server();
+  const { subject, store } = client({ server: upstream });
+
+  await subject.authorizeUrl({ returnTo: "/", organization: "acme" });
+  const waiting = JSON.parse(store.getItem("masks:pending"));
+  upstream.held.token = {
+    ...GRANTED,
+    id_token: mint({ nonce: waiting.nonce }),
+  };
+
+  await subject.callback(
+    `https://app.test/callback?code=abc&state=${waiting.state}`,
+  );
+
+  assert.equal(subject.organization(), null);
+  assert.equal(subject.accessToken(), "at-1");
+});

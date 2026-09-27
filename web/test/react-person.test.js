@@ -47,3 +47,28 @@ test("with no avatar it falls back to initials, and a sign-out button appears on
   assert.match(withSignOut, /masks-person-signout/);
   assert.match(withSignOut, />Leave</);
 });
+
+test("the react Person names the organization and the role held in it", () => {
+  const html = renderToStaticMarkup(
+    createElement(Person, {
+      account: {
+        ...ACCOUNT,
+        organization: {
+          id: "org-1",
+          key: "acme",
+          name: "Acme",
+          role: "billing",
+        },
+      },
+    }),
+  );
+
+  assert.match(
+    html,
+    /class="masks-person-org">Acme<span class="masks-person-org-role">billing<\/span>/,
+  );
+  assert.doesNotMatch(
+    renderToStaticMarkup(createElement(Person, { account: ACCOUNT })),
+    /masks-person-org/,
+  );
+});

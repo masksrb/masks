@@ -6,6 +6,7 @@ import {
   type Claims,
   type Discovery,
   MasksError,
+  type Organization,
   type Tokens,
 } from "./types.js";
 
@@ -17,6 +18,7 @@ export interface BrowserOptions {
   redirectUri: string;
   scope?: string | string[];
   resource?: string | string[];
+  organization?: string;
   fetch?: typeof globalThis.fetch;
   storage?: Storage;
 }
@@ -26,20 +28,25 @@ interface Pending {
   nonce: string;
   verifier: string;
   returnTo: string;
+  organization?: string;
+}
+
+export interface AuthorizeOptions {
+  returnTo?: string;
+  prompt?: string;
+  organization?: string;
 }
 
 export interface BrowserClient {
   discover(): Promise<Discovery>;
-  authorize(options?: { returnTo?: string; prompt?: string }): Promise<void>;
-  authorizeUrl(options?: {
-    returnTo?: string;
-    prompt?: string;
-  }): Promise<string>;
+  authorize(options?: AuthorizeOptions): Promise<void>;
+  authorizeUrl(options?: AuthorizeOptions): Promise<string>;
   pending(): boolean;
   callback(
     url?: string,
   ): Promise<{ tokens: Tokens; identity: Claims | null; returnTo: string }>;
   identity(): Claims | null;
+  organization(): Organization | null;
   avatars(): Avatars | null;
   avatarUrl(
     subject: string,
@@ -187,10 +194,8 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
   const authorizeUrl = async ({
     returnTo,
     prompt,
-  }: {
-    returnTo?: string;
-    prompt?: string;
-  } = {}): Promise<string> => {
+    organization = options.organization,
+  }: AuthorizeOptions = {}): Promise<string> => {
     const { authorization_endpoint } = await discover();
     const verifier = random();
 
@@ -199,6 +204,7 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
       nonce: scope.includes("openid") ? random(24) : "",
       verifier,
       returnTo: returnTo ?? `${location.pathname}${location.search}`,
+      ...(organization ? { organization } : {}),
     };
 
     store.setItem(PENDING, JSON.stringify(waiting));
@@ -217,6 +223,7 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
 
     for (const value of resources) query.append("resource", value);
     if (prompt) query.append("prompt", prompt);
+    if (organization) query.append("organization", organization);
 
     return `${authorization_endpoint}?${query.toString()}`;
   };
@@ -328,6 +335,18 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
 
           throw failure;
         }
+
+        const named = claims?.org?.key;
+
+        if (waiting.organization && named && named !== waiting.organization) {
+          held = null;
+          claims = null;
+
+          throw new MasksError(
+            "invalid_token",
+            `the id token does not name the organization ${waiting.organization}`,
+          );
+        }
       }
 
       return { tokens, identity: claims, returnTo: waiting.returnTo };
@@ -335,6 +354,10 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
 
     identity() {
       return claims;
+    },
+
+    organization() {
+      return claims?.org ?? null;
     },
 
     avatars() {
