@@ -90,7 +90,7 @@ module Masks
             held = provisioned_organization
 
             return if held.nil?
-            return if actor.memberships.pluck(:organization_id, :provisioned) == [ [ held.id, true ] ] && !actor.manages?
+            return if actor.memberships.accepted.pluck(:organization_id, :provisioned) == [ [ held.id, true ] ] && !actor.manages?
 
             raise Scim::Error.new(:forbidden, "#{held.name}'s directory did not create #{actor.identifier}, or they belong " \
                                               "elsewhere too, so it can remove them but not change them", scim_type: "mutability")
@@ -138,7 +138,7 @@ module Masks
             guarded!(actor)
             last_manager!(actor) if user.suspending && !actor.suspended?
 
-            actor.email_verified_at = actor.email.present? ? Time.current : nil if actor.email_changed?
+            actor.email_verified_at = vouched?(actor.email) ? Time.current : nil if actor.email_changed?
 
             Actor.transaction do
               actor.save!
@@ -151,10 +151,37 @@ module Masks
           rescue ActiveRecord::RecordInvalid => e
             taken = e.record.errors.details.values.flatten.any? { |detail| detail[:error] == :taken }
 
+            raise taken_elsewhere if taken && provisioned_organization
+
             raise Scim::Error.new(taken ? :conflict : :bad_request, e.record.errors.full_messages.join("; "),
                                   scim_type: taken ? "uniqueness" : "invalidValue")
           rescue ActiveRecord::RecordNotUnique
-            raise Scim::Error.new(:conflict, "another user already holds that userName, email or externalId", scim_type: "uniqueness")
+            raise taken_elsewhere
+          end
+
+          def taken_elsewhere
+            Scim::Error.new(:conflict, "another user already holds that userName, email or externalId", scim_type: "uniqueness")
+          end
+
+          def vouched?(email)
+            return false if email.blank?
+
+            held = provisioned_organization
+
+            return true if held.nil?
+
+            domain = email.to_s.downcase.split("@", 2).last.to_s
+
+            if proven_domains(held).any? && !proven_domains(held).include?(domain)
+              raise Scim::Error.new(:bad_request, "#{held.name}'s directory provisions addresses at #{proven_domains(held).join(', ')}",
+                                    scim_type: "invalidValue")
+            end
+
+            proven_domains(held).include?(domain)
+          end
+
+          def proven_domains(organization)
+            @proven_domains ||= DomainClaim.verified.where(provider: organization.providers.active).order(:domain).pluck(:domain)
           end
 
           def suspend_or_restore!(actor, suspending)

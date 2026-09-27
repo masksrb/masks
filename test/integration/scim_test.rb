@@ -326,6 +326,86 @@ module Masks
         assert_response :success
         assert within { Actor.find_by!(uuid: made["id"]).suspended? }
       end
+
+      def acme_token(acme)
+        within { ProvisioningToken.issue!(label: "Acme Entra", by: @manager, organization: acme).secret }
+      end
+
+      def proven(acme, domain)
+        within do
+          provider = Provider.create!(key: "acme-idp", name: "Acme IdP", organization: acme, issuer: "https://idp.acme.example",
+                                      authorization_url: "https://idp.acme.example/authorize", token_url: "https://idp.acme.example/token",
+                                      jwks_uri: "https://idp.acme.example/jwks", client_id: "c", client_secret: "s")
+          DomainClaim.create!(domain: domain, provider: provider).update_columns(verified_at: Time.current)
+        end
+      end
+
+      def join_acme(secret, email)
+        scim(:post, "/Users", secret: secret, body: {
+          "schemas" => [ Scim::USER ], "userName" => email,
+          "emails" => [ { "value" => email, "primary" => true } ], "active" => true
+        })
+      end
+
+      test "an organization's token without a proven domain provisions addresses unverified" do
+        acme = within { Organization.create!(key: "acme", name: "Acme") }
+
+        made = join_acme(acme_token(acme), "ceo@othercorp.example")
+
+        assert_response :created
+        assert_nil within { Actor.find_by!(uuid: made["id"]).email_verified_at }
+      end
+
+      test "an organization's token verifies addresses at its proven domains and refuses any other" do
+        acme = within { Organization.create!(key: "acme", name: "Acme") }
+        proven(acme, "acme.example")
+        secret = acme_token(acme)
+
+        made = join_acme(secret, "ada@acme.example")
+
+        assert_response :created
+        assert within { Actor.find_by!(uuid: made["id"]).email_verified_at.present? }
+
+        refused = join_acme(secret, "ceo@othercorp.example")
+
+        assert_response :bad_request
+        assert_equal "invalidValue", refused["scimType"]
+        refute within { Actor.exists?(email: "ceo@othercorp.example") }
+
+        scim(:patch, "/Users/#{made["id"]}", secret: secret,
+                                               body: { "schemas" => [ Scim::PATCH ],
+                                                       "Operations" => [ { "op" => "replace", "path" => "emails",
+                                                                           "value" => [ { "value" => "ceo@othercorp.example", "primary" => true } ] } ] })
+
+        assert_response :bad_request
+        assert_equal "ada@acme.example", within { Actor.find_by!(uuid: made["id"]).email }
+      end
+
+      test "an organization's token learns nothing about who else holds an address" do
+        acme = within { Organization.create!(key: "acme", name: "Acme") }
+        create_actor(nickname: "ceo", email: "ceo@acme.example")
+
+        taken = join_acme(acme_token(acme), "ceo@acme.example")
+
+        assert_response :conflict
+        assert_equal "uniqueness", taken["scimType"]
+        assert_equal "another user already holds that userName, email or externalId", taken["detail"]
+      end
+
+      test "an invitation another organization has not had accepted does not block deprovisioning" do
+        acme = within { Organization.create!(key: "acme", name: "Acme") }
+        globex = within { Organization.create!(key: "globex", name: "Globex") }
+        secret = acme_token(acme)
+        made = join_acme(secret, "grace@acme.example")
+        within { globex.memberships.create!(actor: Actor.find_by!(uuid: made["id"]), role: "member", pending: true) }
+
+        scim(:patch, "/Users/#{made["id"]}", secret: secret,
+                                               body: { "schemas" => [ Scim::PATCH ],
+                                                       "Operations" => [ { "op" => "replace", "path" => "active", "value" => false } ] })
+
+        assert_response :success
+        assert within { Actor.find_by!(uuid: made["id"]).suspended? }
+      end
     end
   end
 end
