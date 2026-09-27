@@ -19,6 +19,11 @@ default: &default
     queue: maintenance
     schedule: every day at 5am
 
+  domain_claims:
+    class: Masks::Server::CheckDomainClaimsJob
+    queue: maintenance
+    schedule: every hour
+
 development:
   <<: *default
 

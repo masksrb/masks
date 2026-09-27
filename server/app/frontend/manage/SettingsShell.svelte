@@ -7,6 +7,7 @@
     ["/settings", "General"],
     ["/policies", "Policies"],
     ["/providers", "Providers"],
+    ["/domains", "Domains"],
     ["/provisioning", "Provisioning"],
     ["/adapters", "Adapters"],
     ["/streams", "Streams"],

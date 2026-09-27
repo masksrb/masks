@@ -17,7 +17,7 @@ the work.
 | Token exchange                  | Built       | RFC 8693, with `exchange.granted` and `exchange.refused` events. RFC 9396 is item 11    |
 | Manage roles                    | Built       | `ManageRoles`, a declared level on every mutation, and the limits in the security guide |
 | Organizations and roles         | Built       | All four steps                                                                          |
-| Home-realm discovery            | Not started |                                                                                         |
+| Home-realm discovery            | Built       | `DomainClaim`, an hourly check, and discovery in the identifier step                    |
 | Session policies                | Built       | `sign_in_policies.session_lifetime` and `session_idle_timeout`                          |
 | Audit export and retention      | Not started |                                                                                         |
 | Adaptive risk                   | Not started |                                                                                         |
@@ -176,22 +176,21 @@ roles, and removes members for owners, and lets any member leave. It rate-limits
 organizations the viewer belongs to. `Members` holds the add, assign, and remove logic that manage's
 mutations share. Only `owner` administers; per-organization admin roles can come later.
 
-### Home-realm discovery
+### Home-realm discovery (done)
 
-- Domain proof, shared with custom domains: a `domain_claims` table (tenant, domain, token, verified_at,
-  checked_at), with row-level security and a unique index on `domain` across tenants for verified rows.
-  A tenant adds a TXT record `_masks-challenge.<domain>` holding the token. A recurring job checks
-  unverified claims and rechecks verified ones daily, and a claim whose record disappears for seven days
-  is released.
-- DNS lookups go through `Resolv::DNS` with a timeout. They are not HTTP, so `Outbound` does not apply,
-  and the job never follows a CNAME to a private address because it only reads TXT records.
-- `providers.discovers`, a boolean. A provider that discovers and lists `email_domains` that are all
-  verified claims receives people whose address is in those domains.
-- The identifier step looks up the domain. A match skips the password prompt and starts the provider
-  flow with `login_hint`. No match shows the normal form, and the response takes the same time either
-  way so the form does not reveal which domains are claimed.
-- A policy can require discovery for a domain, so a company's people cannot fall back to a password.
-- Events: `domain.claimed`, `domain.verified`, `domain.released`.
+- `domain_claims` (domain, token, provider, verified_at, checked_at, missing_since) under row-level
+  security, with a unique index on verified domains across all tenants, so a second tenant's proof
+  fails at the database even though row-level security hides the first claim.
+- The TXT record is `_masks-challenge.<domain>` with `masks-verification=<token>`, compared in constant
+  time. `CheckDomainClaimsJob` runs hourly across tenants; a record missing for seven days releases the
+  claim. DNS goes through `Resolv::DNS` with a five-second timeout and reads TXT records only.
+- `Identifier` looks up the address's domain after `identify`. A proven claim with a provider that
+  signs in starts that provider through `Provider#discover!`, which also makes the provider finishable
+  even when it belongs to an organization the request did not name.
+- Manage: `domainClaims`, `claimDomain`, `checkDomain`, `updateDomainClaim`, `releaseDomain`
+  (security), and a Domains settings tab.
+- Left for later: sending `login_hint` to the provider, a policy that forbids falling back to a
+  password for a proven domain, and reusing claims for custom domains.
 
 ### Session policies (done)
 

@@ -104,6 +104,8 @@ module Masks
 
           field :adapter_services, [ AdapterServiceType ], null: false
 
+          field :domain_claims, [ DomainClaimType ], null: false
+
           field :organizations, [ OrganizationType ], null: false do
             argument :archived, Boolean, required: false
           end
@@ -319,6 +321,10 @@ module Masks
             scope = scope.where(kind: kind) if kind
 
             scope.order(:kind, primary: :desc, name: :asc)
+          end
+
+          def domain_claims
+            Masks::Server::DomainClaim.includes(:provider).order(:domain)
           end
 
           def organizations(archived: false)

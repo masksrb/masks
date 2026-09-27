@@ -127,6 +127,10 @@ module Masks
       MEMBERSHIP_ROLE_CHANGED = "membership.role_changed".freeze
       MEMBERSHIP_REMOVED = "membership.removed".freeze
 
+      DOMAIN_CLAIMED = "domain.claimed".freeze
+      DOMAIN_VERIFIED = "domain.verified".freeze
+      DOMAIN_RELEASED = "domain.released".freeze
+
       GRAVE = [
         LOGIN_REFUSED, LOGIN_THROTTLED, LOGOUT_UNDELIVERED, REFRESH_REUSED, STREAM_FAILED,
         DEVICE_BLOCKED, ACTOR_DELETED, AUTHENTICATOR_DISABLED, CONNECTION_REFUSED, DELEGATION_REFUSED,

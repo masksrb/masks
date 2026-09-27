@@ -53,6 +53,25 @@ A signed-in person can connect any offered provider from their account page. It 
 within the last fifteen minutes, and masks refuses an upstream account already connected to someone
 else.
 
+### Sending a domain to its provider
+
+Someone who types an address at a company's domain can go straight to that company's provider,
+without a password prompt. masks does this only for a domain the tenant has proven it controls.
+
+1. In `/manage`, open **Settings**, then **Domains**, enter the domain, and choose the provider.
+2. Publish the TXT record masks shows, such as `_masks-challenge.acme.example` with the value
+   `masks-verification=…`.
+3. Choose **Check now**, or wait for the hourly check.
+
+Once the domain is proven, an address there skips the password and starts the provider's sign-in.
+The provider is used even when it belongs to an organization the app did not name. An address at
+any other domain, and a nickname, sign in the usual way.
+
+- A domain can be proven by one tenant at a time. Another tenant's claim to it is refused.
+- A proven record that stops answering is released after seven days, and people sign in the usual
+  way again.
+- A sign-in policy without the provider factor sends nobody to a provider.
+
 ### Presets
 
 A preset fills in every setting except the credentials.

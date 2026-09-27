@@ -548,6 +548,45 @@ ALTER SEQUENCE public.devices_id_seq OWNED BY public.devices.id;
 
 
 --
+-- Name: domain_claims; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.domain_claims (
+    id bigint NOT NULL,
+    tenant_id bigint NOT NULL,
+    provider_id bigint,
+    domain character varying NOT NULL,
+    token character varying NOT NULL,
+    verified_at timestamp(6) without time zone,
+    checked_at timestamp(6) without time zone,
+    missing_since timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+ALTER TABLE ONLY public.domain_claims FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: domain_claims_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.domain_claims_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: domain_claims_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.domain_claims_id_seq OWNED BY public.domain_claims.id;
+
+
+--
 -- Name: event_streams; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1227,6 +1266,13 @@ ALTER TABLE ONLY public.devices ALTER COLUMN id SET DEFAULT nextval('public.devi
 
 
 --
+-- Name: domain_claims id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.domain_claims ALTER COLUMN id SET DEFAULT nextval('public.domain_claims_id_seq'::regclass);
+
+
+--
 -- Name: event_streams id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1411,6 +1457,14 @@ ALTER TABLE ONLY public.device_factors
 
 ALTER TABLE ONLY public.devices
     ADD CONSTRAINT devices_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: domain_claims domain_claims_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.domain_claims
+    ADD CONSTRAINT domain_claims_pkey PRIMARY KEY (id);
 
 
 --
@@ -1831,6 +1885,34 @@ CREATE INDEX index_devices_on_tenant_id_and_last_seen_at ON public.devices USING
 --
 
 CREATE UNIQUE INDEX index_devices_on_tenant_id_and_public_id ON public.devices USING btree (tenant_id, public_id);
+
+
+--
+-- Name: index_domain_claims_on_provider_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_domain_claims_on_provider_id ON public.domain_claims USING btree (provider_id);
+
+
+--
+-- Name: index_domain_claims_on_tenant_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_domain_claims_on_tenant_id ON public.domain_claims USING btree (tenant_id);
+
+
+--
+-- Name: index_domain_claims_on_tenant_id_and_domain; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_domain_claims_on_tenant_id_and_domain ON public.domain_claims USING btree (tenant_id, domain);
+
+
+--
+-- Name: index_domain_claims_verified_once; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_domain_claims_verified_once ON public.domain_claims USING btree (domain) WHERE (verified_at IS NOT NULL);
 
 
 --
@@ -2504,6 +2586,14 @@ ALTER TABLE ONLY public.passkeys
 
 
 --
+-- Name: domain_claims fk_rails_8235dc7eee; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.domain_claims
+    ADD CONSTRAINT fk_rails_8235dc7eee FOREIGN KEY (provider_id) REFERENCES public.providers(id) ON DELETE SET NULL;
+
+
+--
 -- Name: delegations fk_rails_82d8dbeda6; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2613,6 +2703,14 @@ ALTER TABLE ONLY public.passkeys
 
 ALTER TABLE ONLY public.avatars
     ADD CONSTRAINT fk_rails_c4fab594a7 FOREIGN KEY (actor_id) REFERENCES public.actors(id);
+
+
+--
+-- Name: domain_claims fk_rails_d56f552d49; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.domain_claims
+    ADD CONSTRAINT fk_rails_d56f552d49 FOREIGN KEY (tenant_id) REFERENCES public.tenants(id);
 
 
 --
@@ -2764,6 +2862,12 @@ ALTER TABLE public.device_factors ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.devices ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: domain_claims; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.domain_claims ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: event_streams; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -2900,6 +3004,13 @@ CREATE POLICY tenant_isolation ON public.devices USING ((tenant_id = (NULLIF(cur
 
 
 --
+-- Name: domain_claims tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.domain_claims USING ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint)) WITH CHECK ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint));
+
+
+--
 -- Name: event_streams tenant_isolation; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -2996,6 +3107,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260927050000'),
 ('20260927040000'),
 ('20260927030000'),
 ('20260927020000'),

@@ -71,6 +71,10 @@ module Masks
           field :set_member_role, mutation: Mutations::SetMemberRole
           field :remove_member, mutation: Mutations::RemoveMember
           field :set_provider_organization, mutation: Mutations::SetProviderOrganization
+          field :claim_domain, mutation: Mutations::ClaimDomain
+          field :check_domain, mutation: Mutations::CheckDomain
+          field :update_domain_claim, mutation: Mutations::UpdateDomainClaim
+          field :release_domain, mutation: Mutations::ReleaseDomain
           field :stage_signing_key, mutation: Mutations::StageSigningKey
           field :activate_signing_key, mutation: Mutations::ActivateSigningKey
           field :discard_signing_key, mutation: Mutations::DiscardSigningKey

@@ -5,6 +5,7 @@ module Masks
         EXPIRY = 12.hours
         WINDOW = 15.minutes
         HELD = "provider_handoff".freeze
+        DISCOVERED = "provider_discovered".freeze
         CLAIM = "provider_claim".freeze
 
         accepts :provider, :code, :state, :error, :error_description, :user
@@ -30,6 +31,17 @@ module Masks
         def start_over!
           login.store.delete(HELD)
           login.store.delete(CLAIM)
+          login.store.delete(DISCOVERED)
+        end
+
+        def discover!(provider)
+          return false unless login.policy.first_factor?(:provider)
+
+          login.store[DISCOVERED] = provider.id
+          @offered = nil
+
+          begin!(provider)
+          true
         end
 
         def factor!
@@ -53,7 +65,8 @@ module Masks
           def offered
             @offered ||= if login.policy.first_factor?(:provider)
               Masks::Server::Provider.signing_in.order(:name).select do |provider|
-                login.policy.offers?(provider) && provider.offered_to?(login.organization)
+                provider.id == login.store[DISCOVERED] ||
+                  (login.policy.offers?(provider) && provider.offered_to?(login.organization))
               end
             else
               []
@@ -65,6 +78,10 @@ module Masks
 
             return warn!("sso-unavailable") if provider.nil?
 
+            begin!(provider)
+          end
+
+          def begin!(provider)
             location, handoff = provider.federation.start(callback: provider.callback_url)
 
             login.store[HELD] = handoff.merge(

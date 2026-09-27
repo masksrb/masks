@@ -12,6 +12,8 @@ module Masks
           login.identifier = update(:identifier)
 
           warn! "missing-identifier" if login.identifier.blank?
+
+          discover
         end
 
         handles "start-over" do
@@ -32,6 +34,14 @@ module Masks
         def start_over!
           login.identifier = nil
         end
+
+        private
+
+          def discover
+            provider = Masks::Server::DomainClaim.for_email(login.identifier)&.discovers
+
+            login.state("provider").discover!(provider) if provider
+          end
       end
     end
   end

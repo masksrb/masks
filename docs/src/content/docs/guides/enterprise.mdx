@@ -17,7 +17,7 @@ today, and how the rest will be built.
 | Token exchange | Built | [Token exchange](#token-exchange) |
 | Manage roles | Built | [Manage roles](#manage-roles) |
 | Organizations and roles | Built | [Organizations and roles](#organizations-and-roles) |
-| Home-realm discovery | Planned | [Home-realm discovery](#home-realm-discovery) |
+| Home-realm discovery | Built | [Home-realm discovery](#home-realm-discovery) |
 | Session policies | Built | [Session policies](#session-policies) |
 | Audit export and retention | Planned | [Audit export and retention](#audit-export-and-retention) |
 | Adaptive risk | Planned | [Adaptive risk](#adaptive-risk) |
@@ -118,18 +118,14 @@ to roles, its own SCIM directory, and its own event stream, and its owners
 manage its members from their account page. See
 [organizations](/guides/features/#organizations).
 
-## Planned
-
 ### Home-realm discovery
 
 Someone types an email address, and masks sends them to their company's
-provider.
+provider. The tenant proves it controls the domain with a DNS record, and one
+tenant cannot capture another company's domain. See
+[sending a domain to its provider](/guides/sso-saml/#sending-a-domain-to-its-provider).
 
-- A provider claims one or more email domains.
-- The sign-in form looks up the domain of the address and starts that provider's
-  flow. An address with no claimed domain gets the normal form.
-- Claiming a domain needs the same proof as a custom domain, so one tenant
-  cannot capture another company's people.
+## Planned
 
 ### Audit export and retention
 

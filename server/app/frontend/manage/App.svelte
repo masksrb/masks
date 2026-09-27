@@ -15,6 +15,7 @@
   import SettingsPage from "./SettingsPage.svelte";
   import ActivityPage from "./ActivityPage.svelte";
   import ProvidersPage from "./ProvidersPage.svelte";
+  import DomainsPage from "./DomainsPage.svelte";
   import AdaptersPage from "./AdaptersPage.svelte";
   import StreamsPage from "./StreamsPage.svelte";
   import EmailsPage from "./EmailsPage.svelte";
@@ -56,7 +57,7 @@
     ["/clients", "Clients", '<rect x="3" y="3" width="6" height="6" rx="1.5"/><rect x="11" y="3" width="6" height="6" rx="1.5"/><rect x="3" y="11" width="6" height="6" rx="1.5"/><rect x="11" y="11" width="6" height="6" rx="1.5"/>'],
   ];
 
-  const SETTINGS = ["settings", "policies", "providers", "provisioning", "adapters", "streams", "email", "activity"];
+  const SETTINGS = ["settings", "policies", "providers", "domains", "provisioning", "adapters", "streams", "email", "activity"];
 
   function register() {
     location.replace(handshakeUrl(boot));
@@ -221,6 +222,8 @@
         <SettingsShell {current} {viewer} identifier={signedInAs} account={boot.account} onsignout={signOut} onunpair={forget}>
           {#if current === "providers"}
             <ProvidersPage {api} />
+          {:else if current === "domains"}
+            <DomainsPage {api} />
           {:else if current === "policies"}
             <PoliciesPage {api} />
           {:else if current === "provisioning"}
