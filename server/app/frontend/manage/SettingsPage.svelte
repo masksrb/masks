@@ -14,7 +14,9 @@
   import Notices from "./ui/Notices.svelte";
   import Switch from "./ui/Switch.svelte";
   import Page from "./ui/Page.svelte";
+  import Row from "./ui/Row.svelte";
   import Spinner from "./ui/Spinner.svelte";
+  import Table from "./ui/Table.svelte";
 
   let { api, boot, overview = false } = $props();
 
@@ -27,7 +29,7 @@
         signingKeys { kid algorithm activatedAt retiredAt state }
       }
       viewer { identifier scopes }
-      tally { actors clients sessions devices }
+      tally { actors clients sessions devices organizations }
       namespaces {
         name resource claimedAt releasable
         client { clientId name }
@@ -57,6 +59,16 @@
       latest: events(limit: 8) { ${EVENT_FIELDS} }
     }
   `;
+
+  const ORGANIZATIONS_SHOWN = 5;
+
+  const ORGANIZATIONS = `
+    query Organizations {
+      organizations(limit: ${ORGANIZATIONS_SHOWN}) { key name memberCount ownerCount pendingCount }
+    }
+  `;
+
+  const members = (count) => `${count} ${count === 1 ? "member" : "members"}`;
 
   const SPANS = [7, 30, 90];
 
@@ -118,6 +130,7 @@
       ? [
           { to: "/actors", label: "Actors", value: data.tally.actors },
           { to: "/clients", label: "Clients", value: data.tally.clients },
+          { to: "/organizations", label: "Organizations", value: data.tally.organizations },
           { to: "/actors", label: "Live sessions", value: data.tally.sessions },
           { to: "/actors#devices", label: "Devices", value: data.tally.devices },
         ]
@@ -262,6 +275,50 @@
           {/snippet}
         </Loader>
       {/key}
+    </Section>
+
+    <Section title="Organizations">
+      {#snippet actions()}
+        <Link to="/organizations" class="btn btn-ghost btn-sm">
+          {data.tally.organizations > ORGANIZATIONS_SHOWN ? `All ${data.tally.organizations}` : "All organizations"}
+        </Link>
+      {/snippet}
+
+      <Loader load={() => api.query(ORGANIZATIONS)}>
+        {#snippet children(held)}
+          <Table
+            columns={["Organization", { label: "Members", right: true }]}
+            count={held.organizations.length}
+            empty="No organizations yet. Add one for each customer whose people sign in together, and apps that ask for the organization scope learn the role each person holds there."
+          >
+            {#snippet rows()}
+              {#each held.organizations as organization (organization.key)}
+                <Row to={`/organizations/${organization.key}`}>
+                  <td>
+                    <span class="flex flex-wrap items-center gap-2">
+                      <Link to={`/organizations/${organization.key}`} class="link link-hover font-medium">
+                        {organization.name}
+                      </Link>
+                      {#if organization.ownerCount === 0}
+                        <span class="badge badge-warning badge-xs">no owner</span>
+                      {/if}
+                    </span>
+                    <span class="font-mono text-xs opacity-75">{organization.key}</span>
+                  </td>
+                  <td class="text-right text-sm">
+                    <span class="flex flex-col items-end">
+                      <span>{members(organization.memberCount)}</span>
+                      {#if organization.pendingCount}
+                        <span class="text-xs opacity-75">{organization.pendingCount} invited</span>
+                      {/if}
+                    </span>
+                  </td>
+                </Row>
+              {/each}
+            {/snippet}
+          </Table>
+        {/snippet}
+      </Loader>
     </Section>
 
     <Loader load={() => api.query(RECENT)}>

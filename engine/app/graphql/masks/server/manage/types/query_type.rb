@@ -108,6 +108,7 @@ module Masks
 
           field :organizations, [ OrganizationType ], null: false do
             argument :archived, Boolean, required: false
+            argument :limit, Integer, required: false, description: "At most this many, by name."
           end
 
           field :organization, OrganizationType do
@@ -327,8 +328,8 @@ module Masks
             Masks::Server::DomainClaim.includes(:provider).order(:domain)
           end
 
-          def organizations(archived: false)
-            Masks::Server::Organization.listed(archived).order(:name)
+          def organizations(archived: false, limit: nil)
+            Masks::Server::Organization.listed(archived).order(:name).limit(limit&.clamp(1, 100))
           end
 
           def organization(key:)
@@ -372,7 +373,8 @@ module Masks
               actors: Actor.count,
               clients: Client.active.count,
               sessions: Session.live.count,
-              devices: Masks::Server::Device.allowed.count
+              devices: Masks::Server::Device.allowed.count,
+              organizations: Masks::Server::Organization.active.count
             }
           end
 

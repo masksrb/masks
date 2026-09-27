@@ -7,6 +7,7 @@ module Masks
           field :clients, Integer, null: false
           field :sessions, Integer, null: false
           field :devices, Integer, null: false
+          field :organizations, Integer, null: false, description: "Organizations that are not archived."
         end
       end
     end

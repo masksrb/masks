@@ -1049,7 +1049,14 @@ type Query {
   minimumPassword: Int!
   namespaces: [Namespace!]!
   organization(key: ID!): Organization
-  organizations(archived: Boolean): [Organization!]!
+  organizations(
+    archived: Boolean
+
+    """
+    At most this many, by name.
+    """
+    limit: Int
+  ): [Organization!]!
   provider(key: ID!): Provider
   providerPresets: [ProviderPreset!]!
   providers(archived: Boolean): [Provider!]!
@@ -1390,6 +1397,11 @@ type Tally {
   actors: Int!
   clients: Int!
   devices: Int!
+
+  """
+  Organizations that are not archived.
+  """
+  organizations: Int!
   sessions: Int!
 }
 
