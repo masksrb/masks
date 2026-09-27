@@ -35,6 +35,20 @@ class ResourceTest < ClientTest
     refute organization.role?("admin")
   end
 
+  def test_every_organization_listed_arrives_and_anything_malformed_is_dropped
+    token = issuer.access_token("orgs" => [
+      { "id" => "o-1", "key" => "acme", "name" => "Acme", "role" => "owner" },
+      { "key" => "broken" },
+      { "id" => "o-2", "key" => "globex", "name" => "Globex", "role" => "member" }
+    ])
+
+    organizations = resource.authenticate("Bearer #{token}").organizations
+
+    assert_equal %w[acme globex], organizations.map(&:key)
+    assert organizations.first.owner?
+    assert_empty resource.authenticate("Bearer #{issuer.access_token}").organizations
+  end
+
   def test_a_token_naming_no_organization_holds_no_role
     organization = resource.authenticate("Bearer #{issuer.access_token}").organization
 

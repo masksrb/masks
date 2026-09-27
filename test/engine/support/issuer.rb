@@ -321,7 +321,8 @@ class TestIssuer
         "preferred_username" => "owner",
         "email" => "owner@example.invalid",
         "email_verified" => true,
-        "org" => organization_claim
+        "org" => organization_claim,
+        "orgs" => @organization && [ organization_claim, { "id" => "org-initech", "key" => "initech", "name" => "Initech", "role" => "member" } ]
       }.compact
     end
 

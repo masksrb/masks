@@ -47,10 +47,28 @@ class OrganizationTest < EngineIntegrationTest
     assert_equal({ "id" => "org-acme", "key" => "acme", "name" => "Acme", "role" => "owner" }, account["organization"])
   end
 
+  test "the account lists every organization the person belongs to" do
+    signed_in_to("acme")
+
+    assert_equal %w[acme initech], account["organizations"].map { |held| held["key"] }
+    assert_equal "member", account["organizations"].last["role"]
+  end
+
+  test "switching organizations signs in again naming the other one" do
+    signed_in_to("acme")
+
+    get "/auth?organization=initech&return_to=%2Fdashboard", headers: host
+
+    query = URI.decode_www_form(URI.parse(response.location).query).to_h
+
+    assert_equal "initech", query["organization"]
+  end
+
   test "an account signed in without an organization names none" do
     signed_in_to
 
     assert_nil account["organization"]
+    assert_nil account["organizations"]
   end
 
   test "a page for owners lets an owner in" do

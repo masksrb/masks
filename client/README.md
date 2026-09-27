@@ -132,6 +132,16 @@ end
 profile again, so a promotion or demotion reaches the app within an access token's lifetime.
 `/auth/session` answers the same thing as `organization`.
 
+`masks_organizations` lists every organization the person has joined, each with the role held in
+it, and `/auth/session` answers it as `organizations`. Switching sends the person through sign-in
+again naming the other one, which asks nothing more when they are already a member:
+
+```erb
+<% masks_organizations.each do |held| %>
+  <%= link_to held.name, masks_login_url(organization: held.key, return_to: request.path) %>
+<% end %>
+```
+
 `masks_members_only!` refuses with 403, as `insufficient_organization` when the person signed
 in to none and `insufficient_role` when they hold another role. A resource server asks the same of a
 token:

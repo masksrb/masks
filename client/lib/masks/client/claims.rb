@@ -104,6 +104,7 @@ module Masks
 
       AVATARS = "masks:avatars".freeze
       ORGANIZATION = "org".freeze
+      ORGANIZATIONS = "orgs".freeze
 
       attr_reader :to_h
 
@@ -149,6 +150,10 @@ module Masks
 
       def organization
         @organization ||= Organization.new(self[ORGANIZATION])
+      end
+
+      def organizations
+        @organizations ||= Array(self[ORGANIZATIONS]).map { |held| Organization.new(held) }.select(&:present?).freeze
       end
 
       def member!(*roles, organization: nil)

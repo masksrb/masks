@@ -7,7 +7,8 @@ module Masks
       included do
         if respond_to?(:helper_method)
           helper_method :masks_signed_in?, :masks_identity, :masks_tenant, :masks_scopes,
-                        :masks_claims, :masks_organization, :masks_role?
+                        :masks_claims, :masks_organization, :masks_organizations, :masks_role?,
+                        :masks_login_url
         end
       end
 
@@ -59,7 +60,8 @@ module Masks
 
       IDENTITY = [
         "sub", "name", "preferred_username", "email", "email_verified", "tenant",
-        "picture", Masks::Client::Claims::AVATARS, Masks::Client::Claims::ORGANIZATION
+        "picture", Masks::Client::Claims::AVATARS, Masks::Client::Claims::ORGANIZATION,
+        Masks::Client::Claims::ORGANIZATIONS
       ].freeze
 
       def masks_identity_from(tokens)
@@ -135,6 +137,10 @@ module Masks
         held = masks_claims.organization
 
         held.present? ? held : nil
+      end
+
+      def masks_organizations
+        masks_claims.organizations
       end
 
       def masks_role?(*roles)
@@ -221,6 +227,7 @@ module Masks
           "avatars" => masks_claims.avatars.to_h.presence,
           "tenant" => masks_tenant,
           "organization" => masks_organization&.to_h,
+          "organizations" => masks_organizations.map(&:to_h).presence,
           "scopes" => masks_scopes,
           "expires_at" => masks_tokens&.expires_at,
           "account_url" => masks_account_url
