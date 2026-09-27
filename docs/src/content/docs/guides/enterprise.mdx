@@ -1,0 +1,149 @@
+---
+title: Enterprise
+description: What masks offers a company that must audit, control, and prove how people sign in, and the plan for each capability that is not built yet.
+---
+
+Companies that buy an identity provider ask the same questions: who did what,
+can we stop a risky sign-in, can our own domain and directory sit in front of
+it, and can we prove it to an auditor. This page lists each capability, what
+masks does today, and how the missing ones will be built.
+
+| Capability | Status | Section |
+| --- | --- | --- |
+| Audit log | Built | [Audit log](#audit-log) |
+| Event streaming | In progress | [Event streaming](#event-streaming) |
+| Single sign-on and provisioning | Built | [Single sign-on and provisioning](#single-sign-on-and-provisioning) |
+| Step-up authentication | Planned | [Step-up authentication](#step-up-authentication) |
+| Organizations and roles | Planned | [Organizations and roles](#organizations-and-roles) |
+| Custom domains | Planned | [Custom domains](#custom-domains) |
+| Home-realm discovery | Planned | [Home-realm discovery](#home-realm-discovery) |
+| Adaptive risk | Planned | [Adaptive risk](#adaptive-risk) |
+| Shared signals | Planned | [Shared signals](#shared-signals) |
+| Token exchange | Planned | [Token exchange](#token-exchange) |
+| Migration from other providers | Planned | [Migration](#migration) |
+
+## Audit log
+
+Every sign-in, consent, administrative change, token revocation, and key
+rotation is recorded as an event. An event names the action, the account it
+happened to, the account that did it, the client, the device, the IP address,
+and the user agent. Events are read-only, belong to one tenant, and are kept
+for 180 days. Manage lists them with filters for the account, the action, and
+the client.
+
+## Event streaming
+
+Reading the log in manage does not satisfy a security team that already
+collects events in a SIEM. Event streaming sends each event to an HTTPS
+endpoint as it happens.
+
+The plan:
+
+- A stream belongs to a tenant and has a key, a name, an HTTPS URL, a signing
+  secret, and an optional list of actions. An empty list streams every action.
+- Each matching event is posted as JSON. The request carries a timestamp and an
+  HMAC-SHA256 signature of the timestamp and the body, so the receiver can
+  reject forgeries and replays.
+- A delivery that fails is retried with growing delays. After the last attempt
+  masks records a `stream.failed` event, which is never streamed itself.
+- The URL must resolve to a public address. Masks checks this when the stream
+  is saved and again on every delivery.
+- Manage creates, changes, archives, restores, and tests streams, and each
+  change is an event.
+
+## Single sign-on and provisioning
+
+Masks signs people in through OpenID Connect, OAuth 2.0, and SAML 2.0
+providers, and acts as a SAML identity provider for applications. A directory
+provisions and suspends accounts over SCIM. See [Features](/guides/features/)
+for the steps.
+
+## Step-up authentication
+
+Some actions need a stronger or fresher sign-in than the session holds: moving
+money, changing a payout address, reading a record.
+
+The plan:
+
+- Tokens carry `acr` and `amr` claims that say how the person signed in and how
+  recently.
+- A client asks for a level with `acr_values` and a maximum age with `max_age`.
+- When the session falls short, masks asks for one more factor and issues a
+  token that meets the request.
+- A sign-in policy names the level a client requires.
+
+## Organizations and roles
+
+A business application has customers, and each customer has people with
+different roles.
+
+The plan:
+
+- An organization has members, invitations, and a role for each member.
+- A token can be scoped to one organization, and carries the member's role
+  there.
+- A sign-in policy can apply to one organization, so a customer can require a
+  passkey without changing another customer's sign-in.
+
+## Custom domains
+
+A tenant serves sign-in from its own domain, such as `login.example.com`.
+
+The plan:
+
+- A tenant claims a domain and proves it with a DNS record.
+- Masks issues a certificate for the domain and renews it.
+- Issuer, links, and emails use the domain, and mail is sent from it once its
+  DNS records are in place.
+
+## Home-realm discovery
+
+Someone types an email address, and masks sends them to their company's
+provider.
+
+The plan:
+
+- A provider claims one or more email domains.
+- The sign-in form looks up the domain of the address and starts that provider's
+  flow. An address with no claimed domain gets the normal form.
+- Claiming a domain needs the same proof as a custom domain, so one tenant
+  cannot capture another company's people.
+
+## Adaptive risk
+
+A sign-in from a new country, a known-bad address, or a breached password is
+riskier than one from a remembered device.
+
+The plan:
+
+- Each sign-in is scored from the device, the address, the time since the last
+  sign-in, and a check of the password against known breaches.
+- A sign-in policy maps a score to allowing the sign-in, asking for another
+  factor, or refusing it.
+- The score and the decision are recorded on the event.
+
+## Shared signals
+
+Other systems need to hear that a session ended or a credential was
+compromised without waiting for a token to expire.
+
+The plan is to send and receive Shared Signals events (CAEP and RISC) over a
+stream that a receiver registers, reusing the delivery and signing of event
+streaming.
+
+## Token exchange
+
+A service acting for a person, including an AI agent, trades the token it holds
+for a narrower one for a downstream service.
+
+The plan is RFC 8693 token exchange, limited by the per-client delegations masks
+already records, with rich authorization requests (RFC 9396) to say what the
+narrower token may do. Each exchange is an event.
+
+## Migration
+
+Moving off another provider must not force everyone to reset a password.
+
+The plan is an import that reads exports from Auth0, Okta, Cognito, and
+Firebase, keeps each password hash in its original format, and rewrites it with
+the masks hash the first time the person signs in.

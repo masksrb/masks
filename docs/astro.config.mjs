@@ -79,6 +79,7 @@ export default defineConfig({
           { label: "SSO / SAML", slug: "guides/sso-saml" },
           { label: "Connecting via SDK", slug: "guides/connecting-via-sdk" },
           { label: "Security", slug: "guides/security" },
+          { label: "Enterprise", slug: "guides/enterprise" },
         ],
       },
       {
