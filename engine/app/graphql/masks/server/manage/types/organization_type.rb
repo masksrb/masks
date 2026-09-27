@@ -10,7 +10,7 @@ module Masks
           field :members, [ "Masks::Server::Manage::Types::MembershipType" ], null: false
           field :member_count, Integer, null: false, description: "Members who have accepted."
           field :owner_count, Integer, null: false, description: "Members who have accepted and hold owner."
-          field :pending_count, Integer, null: false, description: "Invitations nobody has accepted yet."
+          field :pending_count, Integer, null: false, description: "Invitations still open, neither accepted nor expired."
           field :live_token_count, Integer, null: false,
                                        description: "Live tokens issued for this organization. Archiving revokes them."
           field :domains, [ DomainClaimType ], null: false,
@@ -28,7 +28,7 @@ module Masks
           end
 
           def members
-            object.memberships.includes(:actor).joins(:actor).order("actors.nickname", "actors.email")
+            object.memberships.includes(:actor, :invited_by).joins(:actor).order("actors.nickname", "actors.email")
           end
 
           def providers
@@ -41,15 +41,15 @@ module Masks
           end
 
           def member_count
-            object.memberships.accepted.count
+            dataloader.with(Sources::MembershipCounts, :members).load(object.id)
           end
 
           def owner_count
-            object.memberships.accepted.where(role: Masks::Server::Organization::OWNER).count
+            dataloader.with(Sources::MembershipCounts, :owners).load(object.id)
           end
 
           def pending_count
-            object.memberships.where(pending: true).count
+            dataloader.with(Sources::MembershipCounts, :pending).load(object.id)
           end
 
           def live_token_count

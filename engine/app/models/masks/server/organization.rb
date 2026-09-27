@@ -40,10 +40,8 @@ module Masks
         memberships.accepted.find_by(actor: actor)
       end
 
-      def claim_for(held)
-        membership = held.is_a?(Membership) ? held : membership_for(held)
-
-        membership && { "id" => uuid, "key" => key, "name" => name, "role" => membership.role }
+      def claim_for(actor)
+        membership_for(actor)&.claim
       end
 
       def archive!(by: nil)

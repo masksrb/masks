@@ -890,7 +890,7 @@ type Organization {
   ownerCount: Int!
 
   """
-  Invitations nobody has accepted yet.
+  Invitations still open, neither accepted nor expired.
   """
   pendingCount: Int!
   providers: [Provider!]!

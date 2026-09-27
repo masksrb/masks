@@ -1,8 +1,6 @@
 module Masks
   module Server
     class OrganizationMembersController < ApplicationController
-      ANCHOR = "organizations".freeze
-
       class NotOwner < StandardError; end
 
       rescue_from NotOwner do
@@ -61,7 +59,7 @@ module Masks
       rescue Membership::Expired
         back(alert: t("organization_members.expired", organization: @organization.name))
       rescue Membership::Unconfirmed
-        back(alert: t(current_actor.email.to_s.casecmp?(@own.invited_as.to_s) ? "organization_members.confirm_first" : "organization_members.elsewhere",
+        back(alert: t(@own.addressed_to?(current_actor) ? "organization_members.confirm_first" : "organization_members.elsewhere",
                       address: @own.invited_as, organization: @organization.name))
       end
 
@@ -110,9 +108,9 @@ module Masks
         end
 
         def back(**flash)
-          return redirect_to(root_path(anchor: ANCHOR), **flash) if @organization.nil?
+          return redirect_to(root_path(anchor: "organizations"), **flash) if @organization.nil?
 
-          redirect_to root_path(anchor: "#{ANCHOR.singularize}-#{@organization.key}"),
+          redirect_to root_path(anchor: "organization-#{@organization.key}"),
                       flash: flash.merge(organization: @organization.key)
         end
     end

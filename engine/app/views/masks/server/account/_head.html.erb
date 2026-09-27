@@ -8,7 +8,7 @@
 
   <h1 class="plaque-title"><%= account_text("title") %></h1>
 
-  <% if flash[:alert].present? || flash[:notice].present? %>
+  <% if flashed? %>
     <div class="plaque-notes"><%= render "masks/server/application/flashes" %></div>
   <% end %>
 

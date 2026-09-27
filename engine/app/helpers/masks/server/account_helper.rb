@@ -21,6 +21,19 @@ module Masks
         t("account.index.#{key}", **options)
       end
 
+      def account_roster(organization)
+        organization.memberships.sort_by do |member|
+          [ member.pending? ? 1 : 0, member.owner? ? 0 : 1, Members.label(member).to_s.downcase ]
+        end
+      end
+
+      def account_member_since(member)
+        return [ "organizations.expired_ago", member.expires_at ] if member.expired?
+        return [ "organizations.invited_ago", member.invited_at ] if member.pending?
+
+        [ "organizations.joined_ago", member.created_at ]
+      end
+
       def account_icon(name)
         tag.svg(
           ICONS.fetch(name).html_safe,

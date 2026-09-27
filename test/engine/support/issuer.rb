@@ -84,8 +84,12 @@ class TestIssuer
     { code: code, state: query.dig("state", 0), query: query }
   end
 
-  def organization_claim
-    @organization && { "id" => "org-#{@organization}", "key" => @organization, "name" => @organization.capitalize, "role" => role }
+  def organization_claim(key = @organization)
+    key && { "id" => "org-#{key}", "key" => key, "name" => key.capitalize, "role" => key == @organization ? role : "member" }
+  end
+
+  def organizations_claim
+    @organization && [ @organization, "initech" ].uniq.map { |key| organization_claim(key) }
   end
 
   def last_registration
@@ -322,7 +326,7 @@ class TestIssuer
         "email" => "owner@example.invalid",
         "email_verified" => true,
         "org" => organization_claim,
-        "orgs" => @organization && [ organization_claim, { "id" => "org-initech", "key" => "initech", "name" => "Initech", "role" => "member" } ]
+        "orgs" => organizations_claim
       }.compact
     end
 

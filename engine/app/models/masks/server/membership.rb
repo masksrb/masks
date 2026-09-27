@@ -12,7 +12,9 @@ module Masks
 
       scope :accepted, -> { where(pending: false) }
       scope :invitations, -> { where(pending: true) }
-      scope :lapsed, ->(by = Time.current) { invitations.where("COALESCE(invited_at, created_at) < ?", by - lifetime) }
+      scope :lapsed, -> { invitations.where(invited_at: ...(lifetime * 2).ago) }
+      scope :outstanding, -> { invitations.where(invited_at: lifetime.ago..) }
+      scope :live, -> { accepted.joins(:organization).merge(Organization.active).includes(:organization).order("organizations.name") }
 
       before_create { self.invited_at ||= Time.current if pending? }
 
@@ -31,31 +33,35 @@ module Masks
       end
 
       def expires_at
-        pending? ? (invited_at || created_at) + self.class.lifetime : nil
+        invited_at + self.class.lifetime if pending?
       end
 
       def expired?
         expires_at.present? && expires_at <= Time.current
       end
 
+      def addressed_to?(someone)
+        invited_as.blank? || someone.email.to_s.casecmp?(invited_as)
+      end
+
       def acceptable?
         return true if invited_as.blank?
 
-        actor.email.to_s.casecmp?(invited_as) && actor.email_verified_at.present?
+        addressed_to?(actor) && actor.email_verified_at.present?
+      end
+
+      def claim
+        { "id" => organization.uuid, "key" => organization.key, "name" => organization.name, "role" => role }
       end
 
       def accept!(vouched: false)
         return self unless pending?
 
-        return accept_vouched! if vouched
+        unless vouched
+          raise Expired, "this invitation to #{organization.name} has expired" if expired?
+          raise Unconfirmed, "confirm #{invited_as} before accepting" unless acceptable?
+        end
 
-        raise Expired, "this invitation to #{organization.name} has expired" if expired?
-        raise Unconfirmed, "confirm #{invited_as} before accepting" unless acceptable?
-
-        accept_vouched!
-      end
-
-      def accept_vouched!
         update!(pending: false)
         Event.record!(Event::MEMBERSHIP_ACCEPTED, actor: actor, organization: organization, role: role)
 

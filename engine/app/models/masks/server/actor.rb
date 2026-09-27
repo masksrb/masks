@@ -416,8 +416,7 @@ module Masks
       end
 
       def organizations_held
-        memberships.accepted.joins(:organization).merge(Organization.active).includes(:organization)
-                   .order("organizations.name").map { |membership| membership.organization.claim_for(membership) }
+        memberships.live.map(&:claim)
       end
 
       def identities

@@ -4,6 +4,8 @@ module Masks
       query Manage::Types::QueryType
       mutation Manage::Types::MutationType
 
+      use GraphQL::Dataloader
+
       max_depth 12
       max_complexity 300
       max_query_string_tokens 5000

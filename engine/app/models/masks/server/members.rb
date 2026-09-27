@@ -25,9 +25,7 @@ module Masks
 
           membership = enroll!(organization, actor, role: role, by: by, pending: true, invited_as: address)
 
-          sent = actor.activated? ? tell(membership, journey) : invite(actor, journey, membership)
-
-          { membership: membership }.merge(sent)
+          { membership: membership }.merge(deliver(membership, journey))
         end
 
         def enroll!(organization, actor, role:, by:, pending: false, invited_as: nil, provisioned: false, **details)
@@ -92,13 +90,11 @@ module Masks
           Event.record!(Event::MEMBERSHIP_RESENT, actor: membership.actor, by: by, organization: organization,
                                                   role: membership.role)
 
-          sent = membership.actor.activated? ? tell(membership, journey) : invite(membership.actor, journey, membership)
-
-          { membership: membership }.merge(sent)
+          { membership: membership }.merge(deliver(membership, journey))
         end
 
         def purge_lapsed!
-          Membership.lapsed(Membership.lifetime.ago).includes(:organization, :actor).find_each do |membership|
+          Membership.lapsed.includes(:organization, :actor).find_each do |membership|
             membership.destroy!
             Event.record!(Event::MEMBERSHIP_EXPIRED, actor: membership.actor, by: nil, organization: membership.organization,
                                                      role: membership.role, invited_as: membership.invited_as)
@@ -145,10 +141,14 @@ module Masks
             actor
           end
 
-          def invite(actor, journey, membership)
-            return NOT_SENT if actor.email.blank?
+          def deliver(membership, journey)
+            membership.actor.activated? ? tell(membership, journey) : invite(membership, journey)
+          end
 
-            Invitations.open(actor: actor, journey: journey, membership: membership).slice(:delivered, :url)
+          def invite(membership, journey)
+            return NOT_SENT if membership.actor.email.blank?
+
+            Invitations.open(actor: membership.actor, journey: journey, membership: membership).slice(:delivered, :url)
           rescue Invitation::Refused
             NOT_SENT
           end

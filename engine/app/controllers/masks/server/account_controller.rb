@@ -9,11 +9,10 @@ module Masks
         return redirect_to login_path if @actor.nil?
 
         @apps = Apps.held_by(@actor)
-        held = @actor.memberships.joins(:organization).merge(Organization.active)
-                     .includes(:organization, :invited_by).order("organizations.name").to_a
-        @invitations, @memberships = held.partition(&:pending?)
-        @invitations.reject!(&:expired?)
-        ActiveRecord::Associations::Preloader.new(records: @memberships.map(&:organization), associations: { memberships: :actor }).call
+        @invitations = @actor.memberships.outstanding.joins(:organization).merge(Organization.active)
+                             .includes(:organization, :invited_by).order("organizations.name").to_a
+        @memberships = @actor.memberships.live.to_a
+        ActiveRecord::Associations::Preloader.new(records: @memberships.map(&:organization), associations: { memberships: [ :actor, :invited_by ] }).call
         @connections = Connection.live.where(actor: @actor).includes(:provider, live_delegations: :client).order(:created_at)
         @linkable = Linking.offered(@actor)
         @code_factors = CodeFactors::FACTORS.select do |factor|

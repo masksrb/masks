@@ -1,4 +1,4 @@
-<% unless flash[:organization].present? %>
+<% if flashed?(local_assigns[:organization]) %>
   <% if flash[:alert].present? %>
     <div class="note note-bad" role="alert"><%= flash[:alert] %></div>
   <% end %>

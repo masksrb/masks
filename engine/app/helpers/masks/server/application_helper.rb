@@ -5,6 +5,10 @@ module Masks
         Server.engine? ? Server.vite_ruby.manifest : super
       end
 
+      def flashed?(organization = nil)
+        flash[:organization] == organization&.key && (flash[:alert].present? || flash[:notice].present?)
+      end
+
       private
 
         def scope_key_by_partial(key)
