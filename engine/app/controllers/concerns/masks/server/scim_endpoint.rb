@@ -44,6 +44,12 @@ module Masks
           @provisioner&.organization
         end
 
+        def directory_owns?(actor)
+          held = provisioned_organization
+
+          held.nil? || (actor.memberships.accepted.pluck(:organization_id, :provisioned) == [ [ held.id, true ] ] && !actor.manages?)
+        end
+
         def scim_base
           Scim.base(issuer)
         end

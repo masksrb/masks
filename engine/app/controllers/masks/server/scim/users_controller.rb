@@ -89,8 +89,7 @@ module Masks
           def owned!(actor)
             held = provisioned_organization
 
-            return if held.nil?
-            return if actor.memberships.accepted.pluck(:organization_id, :provisioned) == [ [ held.id, true ] ] && !actor.manages?
+            return if directory_owns?(actor)
 
             raise Scim::Error.new(:forbidden, "#{held.name}'s directory did not create #{actor.identifier}, or they belong " \
                                               "elsewhere too, so it can remove them but not change them", scim_type: "mutability")

@@ -275,8 +275,9 @@ in through a [provider](#providers) that trusts the same email, or by accepting 
 | `eq` only | `userName`, `active` |
 
 Every response has a weak `ETag`, and an `If-Match` naming an older version is refused.
-`/ServiceProviderConfig`, `/ResourceTypes`, and `/Schemas` describe the rest. Groups, bulk
-operations, and sorting are not supported.
+`/ServiceProviderConfig`, `/ResourceTypes`, and `/Schemas` describe the rest. `/Groups` answers
+only a [directory for one organization](#roles-as-groups). Bulk operations and sorting are not
+supported.
 
 ### Suspending
 
@@ -303,6 +304,29 @@ client that may carry `masks:scim`, can come only from an owner, since either re
 | Request | What happens |
 | --- | --- |
 | List or read users | Only the organization's members. Anyone else is not found. |
-| Create a user | A new account that joins as `member`. An address another account holds is a conflict. |
+| Create a user | A new account that joins as `member`. Its email must be at a domain proven for one of the organization's providers, and is then treated as confirmed. Any other address is refused with `400` before masks looks for an account holding it. A user without an email is allowed. |
 | Replace or patch a user | Allowed only for an account this directory created that belongs to no other organization and manages nothing. Anyone else is refused with `403`, so an owner who adds an existing account cannot then take it over through the directory. |
 | Delete a user | Removes them from the organization and revokes its tokens. The account stays. |
+
+### Roles as groups
+
+A directory for one organization manages roles through `/Groups`. Each of the organization's roles
+is one group. Its `displayName` is the role, its `id` is the organization's uuid and the role
+joined by a dot, and its members are the people who have accepted that role.
+
+| Request | What happens |
+| --- | --- |
+| List or read groups | Every role, `owner` and `member` included. Filter with `displayName eq` or `id eq`. `excludedAttributes=members` leaves members out. |
+| Add a member | Gives them that role in place of the one they held. |
+| Remove a member | Moves them back to `member`. Removing from `member` changes nothing. They stay in the organization. |
+| Replace members with `PUT` or a `replace` operation | Adds everyone named and moves everyone else back to `member`. People this directory did not create keep their role. For `member`, it only adds. |
+| Create a group | Adds a role with that name. An existing role is a conflict. |
+| Delete a group | Removes the role once nobody holds it. `owner` and `member` cannot be deleted. |
+| Rename a group | Refused. |
+
+A group takes only people this directory created who belong to no other organization and manage
+nothing. Naming anyone else is refused with `400`, and the answer is the same whether or not the
+account exists. Removing the last owner is refused with `409`. A role change revokes the person's
+access tokens for the organization and is recorded in its activity, marked as SCIM.
+
+A token for every account lists no groups and cannot change them.

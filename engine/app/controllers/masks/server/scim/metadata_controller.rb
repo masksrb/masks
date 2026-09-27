@@ -27,23 +27,27 @@ module Masks
         end
 
         def resource_types
-          scim(listed([ user_type ]))
+          scim(listed([ user_type, group_type ]))
         end
 
         def resource_type
-          raise Scim::Error.new(:not_found, "only User is provisioned here") unless params[:id] == "User"
+          found = { "User" => user_type, "Group" => group_type }[params[:id]]
 
-          scim(user_type)
+          raise Scim::Error.new(:not_found, "only User and Group are provisioned here") if found.nil?
+
+          scim(found)
         end
 
         def schemas
-          scim(listed([ user_schema ]))
+          scim(listed([ user_schema, group_schema ]))
         end
 
         def schema
-          raise Scim::Error.new(:not_found, "that schema is not one this server speaks") unless params[:id] == Scim::USER
+          found = { Scim::USER => user_schema, Scim::GROUP => group_schema }[params[:id]]
 
-          scim(user_schema)
+          raise Scim::Error.new(:not_found, "that schema is not one this server speaks") if found.nil?
+
+          scim(found)
         end
 
         private
@@ -58,6 +62,33 @@ module Masks
               "schemas" => [ Scim::RESOURCE_TYPE ], "id" => "User", "name" => "User", "endpoint" => "/Users",
               "schema" => Scim::USER,
               "meta" => { "resourceType" => "ResourceType", "location" => "#{scim_base}/ResourceTypes/User" }
+            }
+          end
+
+          def group_type
+            {
+              "schemas" => [ Scim::RESOURCE_TYPE ], "id" => "Group", "name" => "Group", "endpoint" => "/Groups",
+              "description" => "One role in the organization the token provisions for",
+              "schema" => Scim::GROUP,
+              "meta" => { "resourceType" => "ResourceType", "location" => "#{scim_base}/ResourceTypes/Group" }
+            }
+          end
+
+          def group_schema
+            {
+              "schemas" => [ Scim::SCHEMA ], "id" => Scim::GROUP, "name" => "Group",
+              "attributes" => [
+                attribute("displayName", required: true, uniqueness: "server", mutability: "immutable"),
+                { "name" => "members", "type" => "complex", "multiValued" => true, "required" => false,
+                  "mutability" => "readWrite", "returned" => "default",
+                  "subAttributes" => [
+                    attribute("value", mutability: "immutable"),
+                    attribute("display", mutability: "readOnly"),
+                    { "name" => "$ref", "type" => "reference", "referenceTypes" => [ "User" ], "mutability" => "immutable" },
+                    attribute("type", mutability: "immutable")
+                  ] }
+              ],
+              "meta" => { "resourceType" => "Schema", "location" => "#{scim_base}/Schemas/#{Scim::GROUP}" }
             }
           end
 

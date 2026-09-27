@@ -228,7 +228,7 @@ module Masks
 
         assert config.dig("patch", "supported")
         refute config.dig("bulk", "supported")
-        assert_equal "User", scim(:get, "/ResourceTypes")["Resources"].first["id"]
+        assert_equal %w[User Group], scim(:get, "/ResourceTypes")["Resources"].map { |type| type["id"] }
         assert_equal Scim::USER, scim(:get, "/Schemas/#{Scim::USER}")["id"]
       end
 

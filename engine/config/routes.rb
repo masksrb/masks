@@ -114,6 +114,13 @@ Masks::Server::Engine.routes.draw do
     delete "Users/:id", to: "users#destroy"
   end
 
+
+    get "Groups", to: "groups#index"
+    post "Groups", to: "groups#create"
+    get "Groups/:id", to: "groups#show", constraints: { id: %r{[^/]+} }
+    put "Groups/:id", to: "groups#replace", constraints: { id: %r{[^/]+} }
+    patch "Groups/:id", to: "groups#update", constraints: { id: %r{[^/]+} }
+    delete "Groups/:id", to: "groups#destroy", constraints: { id: %r{[^/]+} }
   post "/manage/graphql", to: "manage/graphql#execute", as: :manage_graphql
   get "/manage/exports/:token", to: "manage/exports#show", as: :manage_export, constraints: { token: %r{[^/]+} }
   get "/manage(/*path)", to: "manage#index", as: :manage
