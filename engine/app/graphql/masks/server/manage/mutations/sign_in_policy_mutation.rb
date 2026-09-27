@@ -16,6 +16,10 @@ module Masks
           argument :second_factors, [ String ], required: false
           argument :second_factor_required, Boolean, required: false
           argument :apps_require_second_factor, Boolean, required: false
+          argument :session_lifetime, Integer, required: false,
+                                               description: "Seconds a session lasts after signing in. Null keeps the 14-day default."
+          argument :session_idle_timeout, Integer, required: false,
+                                                   description: "Seconds of inactivity that end a session. Null never ends one for being idle."
           argument :email_domains, [ String ], required: false
           argument :providers, [ String ], required: false
           argument :every_provider, Boolean, required: false
@@ -27,8 +31,11 @@ module Masks
 
           private
 
+            NULLABLE = %i[session_lifetime session_idle_timeout].freeze
+
             def apply(policy, signup_scopes: nil, every_provider: nil, providers: nil, **attributes)
-              policy.assign_attributes(attributes.compact)
+              policy.assign_attributes(attributes.slice(*NULLABLE))
+              policy.assign_attributes(attributes.except(*NULLABLE).compact)
               policy.signup_scopes = Scopes.join(signup_scopes).presence unless signup_scopes.nil?
               policy.providers = providers unless providers.nil?
               policy.providers = nil if every_provider

@@ -18,7 +18,7 @@ today, and how the rest will be built.
 | Manage roles | Planned | [Manage roles](#manage-roles) |
 | Organizations and roles | Planned | [Organizations and roles](#organizations-and-roles) |
 | Home-realm discovery | Planned | [Home-realm discovery](#home-realm-discovery) |
-| Session policies | Planned | [Session policies](#session-policies) |
+| Session policies | Built | [Session policies](#session-policies) |
 | Audit export and retention | Planned | [Audit export and retention](#audit-export-and-retention) |
 | Adaptive risk | Planned | [Adaptive risk](#adaptive-risk) |
 | Passwordless email | Planned | [Passwordless email](#passwordless-email) |
@@ -92,6 +92,14 @@ for a narrower one for a downstream service.
 Rich authorization requests (RFC 9396), which say in detail what the narrower
 token may do, are planned.
 
+### Session policies
+
+A bank wants sessions that end after 15 minutes idle, and a consumer app wants
+them to last a month. A sign-in policy sets a session lifetime and an idle
+timeout. A session that runs past either ends, its refresh tokens stop working,
+and an app covered by a stricter policy asks for the password again. See
+[how long a session lasts](/guides/features/#how-long-a-session-lasts).
+
 ## Planned
 
 ### Manage roles
@@ -130,14 +138,6 @@ provider.
   flow. An address with no claimed domain gets the normal form.
 - Claiming a domain needs the same proof as a custom domain, so one tenant
   cannot capture another company's people.
-
-### Session policies
-
-A bank wants sessions that end after 15 minutes idle, and a consumer app wants
-them to last a month.
-
-- A sign-in policy sets a session lifetime and an idle timeout.
-- A session idle past the timeout ends, and its refresh tokens stop working.
 
 ### Audit export and retention
 

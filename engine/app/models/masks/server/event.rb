@@ -11,6 +11,7 @@ module Masks
       SESSION_STARTED = "session.started".freeze
       SESSION_ENDED = "session.ended".freeze
       SESSION_REVOKED = "session.revoked".freeze
+      SESSION_EXPIRED = "session.expired".freeze
       LOGOUT_UNDELIVERED = "logout.undelivered".freeze
       LOGIN_REFUSED = "login.refused".freeze
       LOGIN_THROTTLED = "login.throttled".freeze

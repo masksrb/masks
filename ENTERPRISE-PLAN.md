@@ -18,7 +18,7 @@ the work.
 | Manage roles                    | Not started |                                                                                      |
 | Organizations and roles         | Not started |                                                                                      |
 | Home-realm discovery            | Not started |                                                                                      |
-| Session policies                | Not started |                                                                                      |
+| Session policies                | Built       | `sign_in_policies.session_lifetime` and `session_idle_timeout`                       |
 | Audit export and retention      | Not started |                                                                                      |
 | Adaptive risk                   | Not started |                                                                                      |
 | Passwordless email              | Not started |                                                                                      |
@@ -60,7 +60,7 @@ Sizes: S is a day, M is two to four days, L is a week or more.
 | 2   | Manage roles                                      | M    |               | Enterprise buyers ask for least privilege in the admin console before anything else |
 | 3   | Organizations and roles                           | L    | 2             | Everything per-customer builds on it                                                |
 | 4   | Home-realm discovery                              | M    | Domain proof  | Makes SSO usable without a per-customer sign-in link                                |
-| 5   | Session policies                                  | S    |               | Common compliance ask, small change                                                 |
+| 5   | Session policies                                  | S    |               | Done                                                                                |
 | 6   | Audit export and retention                        | S    |               | SOC 2 evidence and regulated retention periods                                      |
 | 7   | Adaptive risk                                     | M    | 1             | Reuses step-up                                                                      |
 | 8   | Passwordless email                                | M    |               | Consumer and low-friction B2B markets                                               |
@@ -159,13 +159,22 @@ a factor, and an owner who can change keys.
 - A policy can require discovery for a domain, so a company's people cannot fall back to a password.
 - Events: `domain.claimed`, `domain.verified`, `domain.released`.
 
-### Session policies
+### Session policies (done)
 
-- `sign_in_policies.session_lifetime` and `session_idle_timeout`, in seconds, null for the defaults.
-- `Session.start!` takes the lifetime from the policy. Each request that touches a session updates
-  `last_seen_at` at most once a minute. A session idle past the timeout is ended with
-  `session.ended` and reason `idle`.
-- Refresh tokens issued under the session expire with it.
+- `sign_in_policies.session_lifetime` and `session_idle_timeout`, in seconds, from 5 minutes to 400
+  days, idle shorter than lifetime. Null keeps 14 days and no idle timeout.
+- `sessions.last_seen_at`, `idle_timeout`, and `bounded`, copied from the policy the login ran under.
+  `Session.resume` touches `last_seen_at` at most once a minute and ends an idle session with
+  `session.expired`, which also announces a backchannel logout. `Session.live` leaves idle sessions
+  out.
+- A stricter app policy applies to a session started under another one: `Login#stale?` is true when
+  the session is older than the app's lifetime or sat idle longer than its timeout, so the app asks for
+  the first factor again. The idle check is remembered in the login so the follow-up requests do not
+  forget it.
+- A refresh token whose session is bounded is refused once the session is no longer live, including
+  after signing out. Unbounded sessions leave refresh tokens alone, so `offline_access` keeps working
+  as before.
+- Manage's policy form has a **Sessions** row with preset lifetimes and idle timeouts.
 
 ### Audit export and retention
 

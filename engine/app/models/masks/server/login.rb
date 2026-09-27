@@ -115,6 +115,7 @@ module Masks
       end
 
       def disown!
+        store.delete("idled")
         store.delete("factors")
         store.delete("amr")
       end
@@ -173,10 +174,28 @@ module Masks
       end
 
       def stale?
+        return true if outlived? || idled?
+
         age = request&.max_age
         return false if age.nil?
 
         authenticated_at.nil? || authenticated_at < age.to_i.seconds.ago
+      end
+
+      def outlived?
+        lifetime = policy.session_lifetime
+
+        lifetime.present? && authenticated_at.present? && authenticated_at < lifetime.seconds.ago
+      end
+
+      def idled?
+        timeout = policy.session_idle_timeout
+
+        return false if timeout.nil? || !signed_in? || touched?(:first_factor)
+
+        store["idled"] = true if session.idle_for > timeout
+
+        store["idled"] == true
       end
 
       def first_factored?

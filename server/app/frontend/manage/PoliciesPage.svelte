@@ -8,12 +8,14 @@
   import Page from "./ui/Page.svelte";
   import Spinner from "./ui/Spinner.svelte";
   import Switch from "./ui/Switch.svelte";
+  import { duration } from "./lib/policies.js";
 
   let { api } = $props();
 
   const FIELDS = `
     key name signup nickname email emailVerified phone phoneVerified
     passwordMinimum refuseCommonPasswords firstFactors secondFactors secondFactorRequired appsRequireSecondFactor
+    sessionLifetime sessionIdleTimeout
     emailDomains providers confirmation hidden signupScopes default archivedAt
     clients { clientId name }
   `;
@@ -32,7 +34,8 @@
     $key: ID!, $name: String, $signup: Boolean, $nickname: String, $email: String,
     $emailVerified: Boolean, $phone: String, $phoneVerified: Boolean, $passwordMinimum: Int,
     $refuseCommonPasswords: Boolean, $firstFactors: [String!], $secondFactors: [String!],
-    $secondFactorRequired: Boolean, $appsRequireSecondFactor: Boolean, $emailDomains: [String!], $providers: [String!],
+    $secondFactorRequired: Boolean, $appsRequireSecondFactor: Boolean,
+    $sessionLifetime: Int, $sessionIdleTimeout: Int, $emailDomains: [String!], $providers: [String!],
     $everyProvider: Boolean, $confirmation: String, $hidden: Boolean, $signupScopes: [String!]
   `;
 
@@ -41,10 +44,37 @@
     emailVerified: $emailVerified, phone: $phone, phoneVerified: $phoneVerified,
     passwordMinimum: $passwordMinimum, refuseCommonPasswords: $refuseCommonPasswords,
     firstFactors: $firstFactors, secondFactors: $secondFactors,
-    secondFactorRequired: $secondFactorRequired, appsRequireSecondFactor: $appsRequireSecondFactor, emailDomains: $emailDomains,
+    secondFactorRequired: $secondFactorRequired, appsRequireSecondFactor: $appsRequireSecondFactor,
+    sessionLifetime: $sessionLifetime, sessionIdleTimeout: $sessionIdleTimeout, emailDomains: $emailDomains,
     providers: $providers, everyProvider: $everyProvider, confirmation: $confirmation,
     hidden: $hidden, signupScopes: $signupScopes
   `;
+
+  const HOUR = 3600;
+  const DAY = 24 * HOUR;
+
+  const LIFETIMES = [
+    [null, "14 days"],
+    [HOUR, "1 hour"],
+    [8 * HOUR, "8 hours"],
+    [12 * HOUR, "12 hours"],
+    [DAY, "1 day"],
+    [7 * DAY, "7 days"],
+    [30 * DAY, "30 days"],
+    [90 * DAY, "90 days"],
+  ];
+
+  const IDLE = [
+    [null, "Never"],
+    [15 * 60, "15 minutes"],
+    [30 * 60, "30 minutes"],
+    [HOUR, "1 hour"],
+    [4 * HOUR, "4 hours"],
+    [DAY, "1 day"],
+  ];
+
+  const offered = (choices, value) =>
+    value === null || choices.some(([held]) => held === value) ? choices : [...choices, [value, `${value} seconds`]];
 
   const PRESENCE = [
     ["off", "Off"],
@@ -89,6 +119,8 @@
     secondFactors: ["otp", "passkey", "backup_codes"],
     secondFactorRequired: false,
     appsRequireSecondFactor: false,
+    sessionLifetime: null,
+    sessionIdleTimeout: null,
     emailDomains: "",
     providers: null,
     confirmation: "none",
@@ -170,6 +202,8 @@
       secondFactors: draft.secondFactors,
       secondFactorRequired: draft.secondFactorRequired,
       appsRequireSecondFactor: draft.appsRequireSecondFactor,
+      sessionLifetime: draft.sessionLifetime,
+      sessionIdleTimeout: draft.sessionIdleTimeout,
       emailDomains: draft.emailDomains.split(/[\s,]+/).filter(Boolean),
       providers: draft.providers ?? [],
       everyProvider: draft.providers === null,
@@ -221,6 +255,8 @@
       policy.signup ? "signup open" : "invitation only",
       policy.secondFactorRequired ? "second factor required" : null,
       policy.appsRequireSecondFactor ? "second factor at every app sign-in" : null,
+      policy.sessionLifetime ? `sessions last ${duration(policy.sessionLifetime)}` : null,
+      policy.sessionIdleTimeout ? `idle after ${duration(policy.sessionIdleTimeout)}` : null,
       policy.confirmation !== "none" ? `confirmed by ${policy.confirmation}` : null,
       policy.phone === "required" ? "phone required" : null,
       policy.hidden ? "hidden accounts" : null,
@@ -413,6 +449,37 @@
                 label="Asked again at an app sign-in when the session did not use one"
                 bind:checked={draft.appsRequireSecondFactor}
               />
+            </div>
+          </div>
+
+          <div class="policy-row">
+            <span class="legend">Sessions</span>
+            <div class="policy-controls">
+              <div class="flex flex-wrap items-center gap-x-5 gap-y-2">
+                <label class="flex items-center gap-2 text-sm">
+                  Last
+                  <select class="select select-sm w-auto" bind:value={draft.sessionLifetime}>
+                    {#each offered(LIFETIMES, draft.sessionLifetime) as [value, label] (value)}
+                      <option {value}>{label}</option>
+                    {/each}
+                  </select>
+                  after signing in
+                </label>
+                <label class="flex items-center gap-2 text-sm">
+                  End after
+                  <select class="select select-sm w-auto" bind:value={draft.sessionIdleTimeout}>
+                    {#each offered(IDLE, draft.sessionIdleTimeout) as [value, label] (value)}
+                      <option {value}>{label}</option>
+                    {/each}
+                  </select>
+                  idle
+                </label>
+              </div>
+              <p class="hint">
+                Apps covered by this policy ask again once a session is older or has been idle longer, even
+                one that started under another policy. A shorter session also ends the refresh tokens issued in
+                it.
+              </p>
             </div>
           </div>
         </div>

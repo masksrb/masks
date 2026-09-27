@@ -809,7 +809,10 @@ CREATE TABLE public.sessions (
     device_id bigint,
     device_version character varying,
     uuid uuid DEFAULT gen_random_uuid() NOT NULL,
-    origin character varying
+    origin character varying,
+    last_seen_at timestamp(6) without time zone,
+    idle_timeout integer,
+    bounded boolean DEFAULT false NOT NULL
 );
 
 ALTER TABLE ONLY public.sessions FORCE ROW LEVEL SECURITY;
@@ -862,7 +865,9 @@ CREATE TABLE public.sign_in_policies (
     archived_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
     updated_at timestamp(6) without time zone NOT NULL,
-    apps_require_second_factor boolean DEFAULT false NOT NULL
+    apps_require_second_factor boolean DEFAULT false NOT NULL,
+    session_lifetime integer,
+    session_idle_timeout integer
 );
 
 ALTER TABLE ONLY public.sign_in_policies FORCE ROW LEVEL SECURITY;
@@ -2681,6 +2686,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260927010000'),
 ('20260927000000'),
 ('20260926020000'),
 ('20260926010000'),

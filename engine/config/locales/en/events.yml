@@ -5,6 +5,7 @@ en:
         started: "Signed in"
         ended: "Signed out"
         revoked: "Session revoked"
+        expired: "Session timed out"
       logout:
         undelivered: "Sign-out not delivered to an app"
       login:

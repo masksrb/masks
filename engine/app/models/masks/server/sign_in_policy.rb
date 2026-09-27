@@ -18,6 +18,9 @@ module Masks
       APPROVAL = "approval".freeze
       CONFIRMATIONS = [ NONE, CODE, LINK, APPROVAL ].freeze
 
+      SHORTEST_SESSION = 5.minutes
+      LONGEST_SESSION = 400.days
+
       has_many :clients, dependent: :nullify
 
       validates :key, presence: true,
@@ -27,6 +30,10 @@ module Masks
       validates :nickname, :email, :phone, inclusion: { in: PRESENCE }
       validates :confirmation, inclusion: { in: CONFIRMATIONS }
       validates :password_minimum, numericality: { only_integer: true, in: Actor::MINIMUM_PASSWORD..256 }
+      validates :session_lifetime, :session_idle_timeout,
+                numericality: { only_integer: true, in: SHORTEST_SESSION.to_i..LONGEST_SESSION.to_i },
+                allow_nil: true
+      validate :idle_fits_the_lifetime
       validate :factors_are_known
       validate :something_names_an_account
       validate :confirmation_has_somewhere_to_go
@@ -50,6 +57,10 @@ module Masks
         def for(client: nil, tenant: Current.tenant)
           [ client&.sign_in_policy, tenant&.sign_in_policy ].compact.find { |policy| !policy.archived? } || default
         end
+      end
+
+      def bounds_sessions?
+        session_lifetime.present? || session_idle_timeout.present?
       end
 
       def asks?(field)
@@ -103,6 +114,12 @@ module Masks
              (Array(second_factors) - %w[backup_codes trusted_device]).empty?
             errors.add(:second_factors, "must offer more than backup codes when one is required")
           end
+        end
+
+        def idle_fits_the_lifetime
+          return unless session_lifetime && session_idle_timeout
+
+          errors.add(:session_idle_timeout, "must be shorter than the session lifetime") if session_idle_timeout >= session_lifetime
         end
 
         def something_names_an_account

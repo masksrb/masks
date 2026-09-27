@@ -1,6 +1,6 @@
 export const POLICY_FIELDS = `
   key name signup nickname email emailVerified phone phoneVerified
-  passwordMinimum refuseCommonPasswords firstFactors secondFactors secondFactorRequired appsRequireSecondFactor
+  passwordMinimum refuseCommonPasswords firstFactors secondFactors secondFactorRequired appsRequireSecondFactor sessionLifetime sessionIdleTimeout
   emailDomains providers confirmation hidden signupScopes archivedAt
 `;
 
@@ -26,6 +26,22 @@ const listed = (values, empty) =>
 
 const yes = (value) => (value ? "yes" : "no");
 
+const UNITS = [
+  [86400, "day"],
+  [3600, "hour"],
+  [60, "minute"],
+];
+
+export function duration(seconds) {
+  const [size, unit] = UNITS.find(([held]) => seconds % held === 0) ?? [
+    1,
+    "second",
+  ];
+  const count = seconds / size;
+
+  return `${count} ${unit}${count === 1 ? "" : "s"}`;
+}
+
 export function describePolicy(policy) {
   return [
     ["Sign up", policy.signup ? "open" : "invitation only"],
@@ -50,6 +66,14 @@ export function describePolicy(policy) {
     ["Second factors", listed(policy.secondFactors, "none")],
     ["Second factor required", yes(policy.secondFactorRequired)],
     ["Second factor at every app sign-in", yes(policy.appsRequireSecondFactor)],
+    [
+      "Session lifetime",
+      policy.sessionLifetime ? duration(policy.sessionLifetime) : "14 days",
+    ],
+    [
+      "Idle timeout",
+      policy.sessionIdleTimeout ? duration(policy.sessionIdleTimeout) : "never",
+    ],
     ["Confirmation", CONFIRMATIONS[policy.confirmation] ?? policy.confirmation],
     ["Signup scopes", listed(policy.signupScopes, "none")],
   ];

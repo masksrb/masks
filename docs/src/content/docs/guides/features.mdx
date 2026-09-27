@@ -170,6 +170,20 @@ lasts 400 days.
 
 `/manage` lists devices that never finished signing in too, so they can still be blocked.
 
+#### How long a session lasts
+
+A session lasts 14 days by default. A sign-in policy changes this under **Sessions**.
+
+| Setting | Effect |
+| --- | --- |
+| Lifetime | A session started under the policy expires this long after signing in. An app covered by the policy asks for the password again in any older session. |
+| Idle timeout | A session started under the policy ends after this long with no request, and masks records `session.expired`. An app covered by the policy asks for the password again after a gap this long. |
+
+Both run from 5 minutes to 400 days, and the idle timeout is shorter than the lifetime. A refresh
+token issued in a session that either setting bounds stops working when the session ends, including
+when the person signs out. A session with neither setting leaves refresh tokens to their own
+lifetime.
+
 ## Accounts
 
 ### Suspending and deleting

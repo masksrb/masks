@@ -120,6 +120,7 @@ module Masks
           end
 
           req.invalid_grant!("that refresh token was issued to another client") if token.client_id != client.id
+          req.invalid_grant!("the session that refresh token was issued in has ended") if outlived?(token)
 
           held = token.bound? ? token.jkt : jkt
           scopes = req.scope.present? ? Scopes.granted(req.scope, token.scopes) : token.scope_list
@@ -140,6 +141,12 @@ module Masks
             "refresh_token" => rotated.secret,
             "delegations" => delegated(token.actor, client, scopes)
           ).compact)
+        end
+
+        def outlived?(token)
+          held = token.session
+
+          held.present? && held.bounded? && !held.live?
         end
 
         def replayed!(spent, client)
