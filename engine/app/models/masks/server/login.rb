@@ -186,7 +186,11 @@ module Masks
       end
 
       def stepping_up?
-        request.respond_to?(:multi_factor?) && request.multi_factor? && !multi_factored?
+        return false if multi_factored?
+
+        wanted = request.respond_to?(:multi_factor?) && request.multi_factor?
+
+        wanted || (request.present? && policy.apps_require_second_factor)
       end
 
       def multi_factored?

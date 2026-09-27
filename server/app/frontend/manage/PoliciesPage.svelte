@@ -13,7 +13,7 @@
 
   const FIELDS = `
     key name signup nickname email emailVerified phone phoneVerified
-    passwordMinimum refuseCommonPasswords firstFactors secondFactors secondFactorRequired
+    passwordMinimum refuseCommonPasswords firstFactors secondFactors secondFactorRequired appsRequireSecondFactor
     emailDomains providers confirmation hidden signupScopes default archivedAt
     clients { clientId name }
   `;
@@ -32,7 +32,7 @@
     $key: ID!, $name: String, $signup: Boolean, $nickname: String, $email: String,
     $emailVerified: Boolean, $phone: String, $phoneVerified: Boolean, $passwordMinimum: Int,
     $refuseCommonPasswords: Boolean, $firstFactors: [String!], $secondFactors: [String!],
-    $secondFactorRequired: Boolean, $emailDomains: [String!], $providers: [String!],
+    $secondFactorRequired: Boolean, $appsRequireSecondFactor: Boolean, $emailDomains: [String!], $providers: [String!],
     $everyProvider: Boolean, $confirmation: String, $hidden: Boolean, $signupScopes: [String!]
   `;
 
@@ -41,7 +41,7 @@
     emailVerified: $emailVerified, phone: $phone, phoneVerified: $phoneVerified,
     passwordMinimum: $passwordMinimum, refuseCommonPasswords: $refuseCommonPasswords,
     firstFactors: $firstFactors, secondFactors: $secondFactors,
-    secondFactorRequired: $secondFactorRequired, emailDomains: $emailDomains,
+    secondFactorRequired: $secondFactorRequired, appsRequireSecondFactor: $appsRequireSecondFactor, emailDomains: $emailDomains,
     providers: $providers, everyProvider: $everyProvider, confirmation: $confirmation,
     hidden: $hidden, signupScopes: $signupScopes
   `;
@@ -88,6 +88,7 @@
     firstFactors: ["password", "passkey", "provider"],
     secondFactors: ["otp", "passkey", "backup_codes"],
     secondFactorRequired: false,
+    appsRequireSecondFactor: false,
     emailDomains: "",
     providers: null,
     confirmation: "none",
@@ -168,6 +169,7 @@
       firstFactors: draft.firstFactors,
       secondFactors: draft.secondFactors,
       secondFactorRequired: draft.secondFactorRequired,
+      appsRequireSecondFactor: draft.appsRequireSecondFactor,
       emailDomains: draft.emailDomains.split(/[\s,]+/).filter(Boolean),
       providers: draft.providers ?? [],
       everyProvider: draft.providers === null,
@@ -218,6 +220,7 @@
     [
       policy.signup ? "signup open" : "invitation only",
       policy.secondFactorRequired ? "second factor required" : null,
+      policy.appsRequireSecondFactor ? "second factor at every app sign-in" : null,
       policy.confirmation !== "none" ? `confirmed by ${policy.confirmation}` : null,
       policy.phone === "required" ? "phone required" : null,
       policy.hidden ? "hidden accounts" : null,
@@ -406,6 +409,10 @@
               </div>
 
               <Switch label="Required for everyone, not just managers" bind:checked={draft.secondFactorRequired} />
+              <Switch
+                label="Asked again at an app sign-in when the session did not use one"
+                bind:checked={draft.appsRequireSecondFactor}
+              />
             </div>
           </div>
         </div>

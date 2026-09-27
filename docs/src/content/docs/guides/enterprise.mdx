@@ -14,7 +14,7 @@ today, and how the rest will be built.
 | Event streaming | Built | [Event streaming](#event-streaming) |
 | Single sign-on and provisioning | Built | [Single sign-on and provisioning](#single-sign-on-and-provisioning) |
 | Step-up authentication | Built | [Step-up authentication](#step-up-authentication) |
-| Token exchange | Partly built | [Token exchange](#token-exchange) |
+| Token exchange | Built | [Token exchange](#token-exchange) |
 | Manage roles | Planned | [Manage roles](#manage-roles) |
 | Organizations and roles | Planned | [Organizations and roles](#organizations-and-roles) |
 | Home-realm discovery | Planned | [Home-realm discovery](#home-realm-discovery) |
@@ -70,29 +70,27 @@ moving money or reading a record.
   second factor is not asked again. Otherwise masks prompts for a factor the
   account holds, or asks the account to add one.
 - The ID token reports the `acr` the sign-in reached.
-
-A sign-in policy cannot yet require a level for a client, so the client asks on
-each request.
-
-## Partly built
+- A sign-in policy can ask for a second factor at every app sign-in it covers.
+  A session that started with a password alone is asked for one before the app
+  receives a code. Requiring a second factor makes every account hold one, and
+  lets a session that skipped it reach apps.
 
 ### Token exchange
 
 A service acting for a person, including an AI agent, trades the token it holds
 for a narrower one for a downstream service.
 
-Today:
-
 - Masks implements RFC 8693 token exchange. The subject is an access token or an
   ID token, an actor token adds to a nested `act` chain, and a provider's access
   token is released through a per-client
   [delegation](/guides/connecting-via-sdk/#delegation). See
   [exchanging a token](/guides/connecting-via-sdk/#exchanging-a-token).
+- Each exchange is an event. A granted exchange records the scopes, the
+  audience, and how many parties are in the `act` chain. A refused one records
+  the error. Neither records the token.
 
-Still to build:
-
-- Each exchange is recorded as an event, granted or refused.
-- Rich authorization requests (RFC 9396) say what the narrower token may do.
+Rich authorization requests (RFC 9396), which say in detail what the narrower
+token may do, are planned.
 
 ## Planned
 

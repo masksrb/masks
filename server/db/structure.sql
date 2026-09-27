@@ -861,7 +861,8 @@ CREATE TABLE public.sign_in_policies (
     signup_scopes text,
     archived_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    apps_require_second_factor boolean DEFAULT false NOT NULL
 );
 
 ALTER TABLE ONLY public.sign_in_policies FORCE ROW LEVEL SECURITY;
@@ -2680,6 +2681,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260927000000'),
 ('20260926020000'),
 ('20260926010000'),
 ('20260926000000'),

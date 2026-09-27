@@ -1,6 +1,6 @@
 export const POLICY_FIELDS = `
   key name signup nickname email emailVerified phone phoneVerified
-  passwordMinimum refuseCommonPasswords firstFactors secondFactors secondFactorRequired
+  passwordMinimum refuseCommonPasswords firstFactors secondFactors secondFactorRequired appsRequireSecondFactor
   emailDomains providers confirmation hidden signupScopes archivedAt
 `;
 
@@ -49,6 +49,7 @@ export function describePolicy(policy) {
     ],
     ["Second factors", listed(policy.secondFactors, "none")],
     ["Second factor required", yes(policy.secondFactorRequired)],
+    ["Second factor at every app sign-in", yes(policy.appsRequireSecondFactor)],
     ["Confirmation", CONFIRMATIONS[policy.confirmation] ?? policy.confirmation],
     ["Signup scopes", listed(policy.signupScopes, "none")],
   ];

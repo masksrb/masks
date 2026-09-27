@@ -99,7 +99,8 @@ module Masks
           unknown = Array(second_factors) - SECOND_FACTORS
           errors.add(:second_factors, "does not know #{unknown.join(', ')}") if unknown.any?
 
-          if second_factor_required && (Array(second_factors) - %w[backup_codes trusted_device]).empty?
+          if (second_factor_required || apps_require_second_factor) &&
+             (Array(second_factors) - %w[backup_codes trusted_device]).empty?
             errors.add(:second_factors, "must offer more than backup codes when one is required")
           end
         end

@@ -15,6 +15,7 @@ module Masks
           argument :first_factors, [ String ], required: false
           argument :second_factors, [ String ], required: false
           argument :second_factor_required, Boolean, required: false
+          argument :apps_require_second_factor, Boolean, required: false
           argument :email_domains, [ String ], required: false
           argument :providers, [ String ], required: false
           argument :every_provider, Boolean, required: false

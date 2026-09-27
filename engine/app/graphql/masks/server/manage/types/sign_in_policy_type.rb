@@ -16,6 +16,7 @@ module Masks
           field :first_factors, [ String ], null: false
           field :second_factors, [ String ], null: false
           field :second_factor_required, Boolean, null: false
+          field :apps_require_second_factor, Boolean, null: false
           field :email_domains, [ String ], null: false
           field :providers, [ String ]
           field :confirmation, String, null: false

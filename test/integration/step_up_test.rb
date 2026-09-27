@@ -74,6 +74,48 @@ module Masks
         assert_equal "enrol", auth_data["prompt"]
       end
 
+      test "a policy that asks at every app sign-in steps up a session that used only a password" do
+        actor = create_actor(email: "owner@probe.example.com")
+
+        sign_in_as(actor)
+        enable_otp(actor)
+
+        within do
+          policy = SignInPolicy.create!(key: "apps", name: "Apps", apps_require_second_factor: true)
+          Client.find_by!(client_id: @registration["client_id"]).update!(sign_in_policy: policy)
+        end
+
+        authorize(client_id: @registration["client_id"])
+
+        assert awaiting_login?
+        assert_equal "second-factor", auth_data["prompt"]
+      end
+
+      test "a policy that asks at every app sign-in lets a session that used a second factor through" do
+        actor = create_actor(email: "owner@probe.example.com")
+        enable_otp(actor)
+
+        within do
+          policy = SignInPolicy.create!(key: "apps", name: "Apps", apps_require_second_factor: true)
+          Client.find_by!(client_id: @registration["client_id"]).update!(sign_in_policy: policy)
+        end
+
+        sign_in_as(actor)
+        authorize(client_id: @registration["client_id"])
+        consent! if awaiting_consent?
+
+        assert code_from.present?
+      end
+
+      test "a policy cannot ask at every app sign-in when it offers only backup codes" do
+        policy = within do
+          SignInPolicy.new(key: "apps", name: "Apps", apps_require_second_factor: true, second_factors: [ "backup_codes" ])
+        end
+
+        refute within { policy.valid? }
+        assert_includes policy.errors[:second_factors], "must offer more than backup codes when one is required"
+      end
+
       test "an unrelated acr value asks for nothing more" do
         actor = create_actor(email: "owner@probe.example.com")
 

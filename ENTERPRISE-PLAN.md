@@ -8,31 +8,31 @@ the work.
 
 ## State
 
-| Capability | State | Commit or next step |
-| --- | --- | --- |
-| Audit log | Built | `Event`, about 100 actions, 180-day retention |
-| Event streaming | Built | `03b525c`, `bbe2ea1`, guide at `guides/event-streams` |
-| Single sign-on and provisioning | Built | OIDC, OAuth, SAML in and out, SCIM |
-| Step-up authentication | Built | `a6fd2fe`. A policy cannot require a level yet (see [Policy-required step-up](#policy-required-step-up)) |
-| Token exchange | Partly built | RFC 8693 is built. Exchanges are not audited, and RFC 9396 is missing |
-| Manage roles | Not started | |
-| Organizations and roles | Not started | |
-| Home-realm discovery | Not started | |
-| Session policies | Not started | |
-| Audit export and retention | Not started | |
-| Adaptive risk | Not started | |
-| Passwordless email | Not started | |
-| Custom domains | Not started | |
-| Shared signals | Not started | |
-| Migration | Not started | |
+| Capability                      | State       | Commit or next step                                                                  |
+| ------------------------------- | ----------- | ------------------------------------------------------------------------------------ |
+| Audit log                       | Built       | `Event`, about 100 actions, 180-day retention                                        |
+| Event streaming                 | Built       | `03b525c`, `bbe2ea1`, guide at `guides/event-streams`                                |
+| Single sign-on and provisioning | Built       | OIDC, OAuth, SAML in and out, SCIM                                                   |
+| Step-up authentication          | Built       | `a6fd2fe`, and `apps_require_second_factor` on sign-in policies                      |
+| Token exchange                  | Built       | RFC 8693, with `exchange.granted` and `exchange.refused` events. RFC 9396 is item 11 |
+| Manage roles                    | Not started |                                                                                      |
+| Organizations and roles         | Not started |                                                                                      |
+| Home-realm discovery            | Not started |                                                                                      |
+| Session policies                | Not started |                                                                                      |
+| Audit export and retention      | Not started |                                                                                      |
+| Adaptive risk                   | Not started |                                                                                      |
+| Passwordless email              | Not started |                                                                                      |
+| Custom domains                  | Not started |                                                                                      |
+| Shared signals                  | Not started |                                                                                      |
+| Migration                       | Not started |                                                                                      |
 
 ## What the code already has
 
 Checked against the code on 2026-09-27. Each planned item starts from these.
 
 - **Token exchange.** `Exchange` implements RFC 8693: access and ID tokens as the subject, actor tokens,
-  a nested `act` chain, and upstream tokens released through `Delegation`. `TokensController` issues
-  the token and records no event.
+  a nested `act` chain, and upstream tokens released through `Delegation`. `Exchange#perform!` records
+  each grant and refusal.
 - **Provider domains.** `Provider#email_domains` and `#welcomes?` restrict who a provider admits.
   `ProviderDomains.join` normalizes the list. Nothing routes an address to a provider by its domain,
   and nothing proves a tenant owns a domain.
@@ -54,20 +54,20 @@ Checked against the code on 2026-09-27. Each planned item starts from these.
 
 Sizes: S is a day, M is two to four days, L is a week or more.
 
-| # | Capability | Size | Depends on | Why here |
-| --- | --- | --- | --- | --- |
-| 1 | Token exchange events and policy-required step-up | S | | Finishes two partly built items |
-| 2 | Manage roles | M | | Enterprise buyers ask for least privilege in the admin console before anything else |
-| 3 | Organizations and roles | L | 2 | Everything per-customer builds on it |
-| 4 | Home-realm discovery | M | Domain proof | Makes SSO usable without a per-customer sign-in link |
-| 5 | Session policies | S | | Common compliance ask, small change |
-| 6 | Audit export and retention | S | | SOC 2 evidence and regulated retention periods |
-| 7 | Adaptive risk | M | 1 | Reuses step-up |
-| 8 | Passwordless email | M | | Consumer and low-friction B2B markets |
-| 9 | Custom domains | L | Domain proof | Needs certificates and a second tenant lookup |
-| 10 | Shared signals | M | Event streams | Reuses delivery and signing |
-| 11 | Rich authorization requests | M | 1 | Finishes token exchange |
-| 12 | Migration | L | | Adoption, and Okta and Cognito need a live check against the old provider |
+| #   | Capability                                        | Size | Depends on    | Why here                                                                            |
+| --- | ------------------------------------------------- | ---- | ------------- | ----------------------------------------------------------------------------------- |
+| 1   | Token exchange events and policy-required step-up | S    |               | Done                                                                                |
+| 2   | Manage roles                                      | M    |               | Enterprise buyers ask for least privilege in the admin console before anything else |
+| 3   | Organizations and roles                           | L    | 2             | Everything per-customer builds on it                                                |
+| 4   | Home-realm discovery                              | M    | Domain proof  | Makes SSO usable without a per-customer sign-in link                                |
+| 5   | Session policies                                  | S    |               | Common compliance ask, small change                                                 |
+| 6   | Audit export and retention                        | S    |               | SOC 2 evidence and regulated retention periods                                      |
+| 7   | Adaptive risk                                     | M    | 1             | Reuses step-up                                                                      |
+| 8   | Passwordless email                                | M    |               | Consumer and low-friction B2B markets                                               |
+| 9   | Custom domains                                    | L    | Domain proof  | Needs certificates and a second tenant lookup                                       |
+| 10  | Shared signals                                    | M    | Event streams | Reuses delivery and signing                                                         |
+| 11  | Rich authorization requests                       | M    | 1             | Finishes token exchange                                                             |
+| 12  | Migration                                         | L    |               | Adoption, and Okta and Cognito need a live check against the old provider           |
 
 Domain proof is shared by 4 and 9, so it is built once with 4.
 
@@ -76,24 +76,26 @@ Each capability is its own commit or series of commits, with tests, docs, a rege
 
 ## Implementation
 
-### Token exchange events
+### Token exchange events (done)
 
-- Add `Event::EXCHANGE_GRANTED` and `Event::EXCHANGE_REFUSED`, with labels in `events.yml`.
-- `TokensController` records a grant after `Exchange#issue!`, with the client, the actor, the granted
-  scopes and audience, the requested token type, and the depth of the `act` chain.
-- A refusal from `ExchangePolicy` records the error code and the client. It never records the
-  presented token.
-- Streams pick both up with no further change.
+- `Exchange#perform!` validates, issues or releases, and records `exchange.granted` with the scopes,
+  audience, token types, the acting party, and the depth of the `act` chain. A `Policy::Denied`
+  records `exchange.refused` with the error and description, then re-raises. The presented token is
+  never recorded.
+- `exchange.refused` is in `Event::GRAVE`. Delegation events gained the labels they were missing.
 
-### Policy-required step-up
+### Policy-required step-up (done)
 
-- `sign_in_policies.required_acr`, a string that is null or `urn:masks:acr:mfa`.
-- `Login#stepping_up?` is true when either the request or the policy wants `mfa` and the login has not
+- `sign_in_policies.apps_require_second_factor`, a boolean. A plain switch fits better than an `acr`
+  string while masks has only two levels.
+- `Login#stepping_up?` is true when the request or the policy wants a second factor, the login has an
+  authorization request, and neither the login nor the session has used one. Signing in to masks
+  itself, with no request, is not stepped up.
+- Validation refuses it when the policy offers only backup codes or trusted devices, matching
+  `second_factor_required`.
+- `second_factor_required` makes every account hold a second factor, and a session that skipped it
+  still reaches apps. `apps_require_second_factor` asks for it again at each app sign-in that has not
   used one.
-- The manage policy form gets a switch. The policy validation refuses `required_acr` when the policy
-  offers no second factor other than backup codes, matching `second_factor_required`.
-- `second_factor_required` asks at every sign-in. `required_acr` asks only for the clients the policy
-  covers. The docs explain the difference in one table.
 
 ### Manage roles
 

@@ -152,7 +152,7 @@
     await load();
   }
 
-  const complete = $derived(draft && draft.key.trim() && draft.name.trim() && draft.url.trim());
+  const complete = $derived(draft?.key.trim() && draft.name.trim() && draft.url.trim());
 </script>
 
 <Page title="Event streams">
