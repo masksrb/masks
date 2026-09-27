@@ -91,11 +91,28 @@ authenticator app or a passkey.
 | Password | Stored as a bcrypt hash, and checked against the policy's minimum and a list of about 47,000 common passwords. |
 | Passkey | WebAuthn. It counts as a second factor too when the authenticator verified the person. |
 | Provider | An account at Google, Okta, a SAML identity provider, and others. See [SSO / SAML](/guides/sso-saml/). |
+| Emailed code | A six-digit code sent to the account's address, with no password. See [signing in with an emailed code](#signing-in-with-an-emailed-code). |
 
 masks names each passkey after its authenticator from the
 [FIDO Metadata Service](https://fidoalliance.org/metadata/), and marks one the service reports as
 compromised. A passkey whose signature counter fails to advance is treated as copied, and its
 sign-in is refused.
+
+### Signing in with an emailed code
+
+A policy that offers **Emailed code** shows **Email me a code** after the person identifies, or only
+that button when it offers no password.
+
+- The code has six digits, lasts ten minutes, and allows five attempts. Another can be sent after 30
+  seconds, within the account's rate limit.
+- An address or nickname with no account gets the same screen and no mail, so the form does not reveal
+  who has an account. An account that has not accepted its invitation gets no code.
+- Signing in with a code confirms the address if it was not confirmed.
+- The code proves the inbox, so it records `otp` and never counts as a second factor. The email second
+  factor is not offered after it, because both would come from the same inbox.
+
+A tenant's default policy still needs a password or a passkey, so managers are never locked out. Offer
+a code alone on a policy for the apps that want it.
 
 ### Second factors
 

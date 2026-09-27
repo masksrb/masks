@@ -96,6 +96,7 @@
     ["password", "Password"],
     ["passkey", "Passkey"],
     ["provider", "Provider"],
+    ["email_code", "Emailed code"],
   ];
 
   const SECOND = [

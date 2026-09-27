@@ -62,7 +62,16 @@ en:
 
     first_factor:
       title: "Enter your password"
+      title_code: "Sign in with a code"
       forgot: "Forgot it?"
+      email_me: "Email me a code instead"
+      email_only: "Email me a code"
+
+    email_code:
+      title: "Check your email"
+      lede: "If %{identifier} has an account here, a six-digit code is on its way. It works for ten minutes."
+      send_again: "Send another code"
+      sent_again: "Sent"
 
     second_factor:
       title: "Enter your code"

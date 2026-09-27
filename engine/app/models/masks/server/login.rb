@@ -10,6 +10,7 @@ module Masks
         LoginStates::Inbox,
         LoginStates::Signup,
         LoginStates::Password,
+        LoginStates::EmailCode,
         LoginStates::FirstFactor,
         LoginStates::RiskCheck,
         LoginStates::Suspension,

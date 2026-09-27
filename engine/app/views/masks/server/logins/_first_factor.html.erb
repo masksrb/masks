@@ -1,6 +1,12 @@
-<%= render "masks/server/logins/head", title: t(".title") %>
+<% auth = login.as_json %>
+<% password = auth["passwordOffered"] != false %>
+<% emailing = auth.dig("emailCode", "offered") %>
+
+<%= render "masks/server/logins/head", title: password ? t(".title") : t(".title_code") %>
 
 <%= render "masks/server/logins/identified", login: login %>
+
+<% if password %>
 
 <%= form_with url: login_path, method: :post, id: "first-factor", class: "flow" do |form| %>
   <%= hidden_field_tag :rid, login.rid %>
@@ -22,6 +28,15 @@
 <%= form_with url: login_path, method: :post, id: "forgot-password" do |form| %>
   <%= hidden_field_tag :rid, login.rid %>
   <%= form.hidden_field :event, value: "forgot-password" %>
+<% end %>
+<% end %>
+
+<% if emailing %>
+  <%= form_with url: login_path, method: :post, id: "email-code", class: "flow" do |form| %>
+    <%= hidden_field_tag :rid, login.rid %>
+    <%= form.hidden_field :event, value: "email-code:send" %>
+    <button type="submit" class="action<%= " action-quiet" if password %>"><%= t(password ? ".email_me" : ".email_only") %></button>
+  <% end %>
 <% end %>
 
 <%= render "masks/server/logins/providers", login: login %>

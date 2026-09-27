@@ -8,6 +8,7 @@ const FACTORS = {
   password: "password",
   passkey: "passkey",
   provider: "provider",
+  email_code: "emailed code",
   otp: "authenticator app",
   backup_codes: "backup codes",
 };

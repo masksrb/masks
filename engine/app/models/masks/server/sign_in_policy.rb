@@ -9,7 +9,7 @@ module Masks
       REQUIRED = "required".freeze
       PRESENCE = [ OFF, OPTIONAL, REQUIRED ].freeze
 
-      FIRST_FACTORS = %w[password passkey provider].freeze
+      FIRST_FACTORS = %w[password passkey provider email_code].freeze
       SECOND_FACTORS = %w[otp passkey backup_codes email sms trusted_device].freeze
 
       NONE = "none".freeze

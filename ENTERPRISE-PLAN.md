@@ -21,7 +21,7 @@ the work.
 | Session policies                | Built       | `sign_in_policies.session_lifetime` and `session_idle_timeout`                          |
 | Audit export and retention      | Built       | `tenants.event_retention_days`, `exportEvents`, and a signed ten-minute download        |
 | Adaptive risk                   | Built       | `Risk`, `RiskCheck`, breach checks, and policy thresholds                               |
-| Passwordless email              | Not started |                                                                                         |
+| Passwordless email              | Built       | `email_code` first factor; links left out                                               |
 | Custom domains                  | Not started |                                                                                         |
 | Shared signals                  | Not started |                                                                                         |
 | Migration                       | Not started |                                                                                         |
@@ -234,15 +234,18 @@ mutations share. Only `owner` administers; per-organization admin roles can come
   ceiling and fails open. `refuse_breached_passwords` refuses breached new passwords everywhere
   `Passwords.refusal` runs and adds the signal at sign-in.
 
-### Passwordless email
+### Passwordless email (done)
 
-- Add `email_code` and `email_link` to `FIRST_FACTORS`. They reuse `CodeFactors`, `ConfirmationCode`,
-  and `MailedLink`.
-- A code used as a first factor never also counts as a second factor, so `amr` is `otp` and `acr` stays
-  `pwd` unless a second factor follows.
-- Rate limits reuse the existing per-address and per-account limits.
-- A link only completes the sign-in in the browser that asked for it. Opened elsewhere, it asks that
-  browser to approve, using the existing sign-in approval.
+- `email_code` joins `SignInPolicy::FIRST_FACTORS`. `LoginStates::EmailCode` sits between `Password`
+  and `FirstFactor`: `email-code:send` mints a `ConfirmationCode` on channel `email_sign_in` for an
+  activated account with an address, and stores the same "sent" state when there is none, so the
+  response never reveals an account. `email-code:verify` signs in, records `otp`, and confirms the
+  address. Both handlers use the existing `sending` and `verifying` rate limits, plus the account's
+  recovery limit per 15 minutes.
+- `otp` is outside `CodeFactors::INDEPENDENT_OF_THE_INBOX`, so the email second factor is withheld
+  after a code sign-in and `acr` stays `pwd` until a real second factor follows.
+- Magic links were left out: a mail scanner that prefetches links would spend them, and a code needs
+  no cross-device approval flow. They can come later on top of `SignInApproval`.
 
 ### Custom domains
 

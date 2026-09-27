@@ -9,6 +9,7 @@ import Enrol from "./prompts/enrol.svelte";
 import BackupCode from "./prompts/backup-code.svelte";
 import ChooseOrganization from "./prompts/choose-organization.svelte";
 import Consent from "./prompts/consent.svelte";
+import EmailCode from "./prompts/email-code.svelte";
 import FirstFactor from "./prompts/first-factor.svelte";
 import Identify from "./prompts/identify.svelte";
 import ProveEmail from "./prompts/prove-email.svelte";
@@ -32,6 +33,7 @@ const prompts = {
   "prove-email": ProveEmail,
   "reset-password": ResetPassword,
   "first-factor": FirstFactor,
+  "email-code": EmailCode,
   "second-factor": SecondFactor,
   "backup-code": BackupCode,
   enrol: Enrol,

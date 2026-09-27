@@ -21,7 +21,7 @@ today, and how the rest will be built.
 | Session policies | Built | [Session policies](#session-policies) |
 | Audit export and retention | Built | [Audit export and retention](#audit-export-and-retention) |
 | Adaptive risk | Built | [Adaptive risk](#adaptive-risk) |
-| Passwordless email | Planned | [Passwordless email](#passwordless-email) |
+| Passwordless email | Built | [Passwordless email](#passwordless-email) |
 | Custom domains | Planned | [Custom domains](#custom-domains) |
 | Shared signals | Planned | [Shared signals](#shared-signals) |
 | Migration | Planned | [Migration](#migration) |
@@ -138,14 +138,14 @@ breached password is riskier than one from a familiar device. masks scores
 each sign-in, and a sign-in policy asks for a second factor or refuses from a
 score it names. See [risky sign-ins](/guides/security/#risky-sign-ins).
 
-## Planned
-
 ### Passwordless email
 
-- A sign-in policy offers an emailed code or link as a first factor.
-- A link finishes signing in only in the browser that asked for it. Opened on
-  another device, it asks the first browser to approve.
-- A code used to sign in never also counts as a second factor.
+A sign-in policy offers a six-digit code sent to the person's address as a
+first factor, with or without a password. The form looks the same whether or
+not the address has an account. See
+[signing in with an emailed code](/guides/features/#signing-in-with-an-emailed-code).
+
+## Planned
 
 ### Custom domains
 
