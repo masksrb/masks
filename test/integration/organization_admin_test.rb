@@ -162,8 +162,10 @@ module Masks
         post "/account/organizations/acme/members", params: { email: "brand-new@example.com", role: "member" }
         get "/"
 
-        assert_select "#organization-acme .item-name", text: /existing@example.com.*invited/m
-        assert_select "#organization-acme .item-name", text: /brand-new@example.com.*invited/m
+        names = css_select("#organization-acme .item-name").map { |held| held.text.squish }
+
+        assert_includes names, "existing@example.com invited"
+        assert_includes names, "brand-new@example.com invited"
       end
     end
   end

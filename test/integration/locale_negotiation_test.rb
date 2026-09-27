@@ -79,14 +79,17 @@ module Masks
                      issuer_for(@tenant).discovery["ui_locales_supported"]
       end
 
-      test "the manage scope is published in every language masks speaks" do
+      def described(locale)
+        ManageRoles::SCOPES.index_with { |scope| Scopes.description_for(scope, locale: locale) }
+      end
+
+      test "the manage scopes are published in every language masks speaks" do
         published = issuer_for(@tenant).protected_resource
 
-        assert_equal({ Scopes::MANAGE => I18n.t("scopes.manage") }, published["scope_descriptions"])
+        assert_equal described(I18n.default_locale), published["scope_descriptions"]
 
         I18n.available_locales.each do |locale|
-          assert_equal({ Scopes::MANAGE => I18n.t("scopes.manage", locale: locale) },
-                       published["scope_descriptions##{Locales.tag(locale)}"])
+          assert_equal described(locale), published["scope_descriptions##{Locales.tag(locale)}"]
         end
       end
     end

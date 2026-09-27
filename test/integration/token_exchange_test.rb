@@ -89,7 +89,7 @@ module Masks
       test "a granted exchange is recorded with what it granted and never the token" do
         exchange(scope: "openid", resource: RESOURCES.first)
 
-        event = within { Event.where(action: Event::EXCHANGE_GRANTED).sole }
+        event = within { Event.includes(:client).where(action: Event::EXCHANGE_GRANTED).sole }
 
         assert_equal @actor.id, event.actor_id
         assert_equal @registration["client_id"], event.client.client_id

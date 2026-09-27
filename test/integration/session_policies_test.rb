@@ -24,7 +24,7 @@ module Masks
       end
 
       def reaches_the_app?
-        authorize(client_id: @registration["client_id"])
+        authorize(client_id: @registration["client_id"], state: SecureRandom.hex(4))
         consent! if awaiting_consent?
 
         response.redirect? && code_from.present?

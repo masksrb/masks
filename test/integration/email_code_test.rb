@@ -6,6 +6,8 @@ module Masks
       include ActiveJob::TestHelper
 
       setup do
+        @mail_from = ::Rails.configuration.masks.mail_from
+        ::Rails.configuration.masks.mail_from = "masks@example.com"
         host! host_for(@tenant)
         create_actor(nickname: "owner", email: "owner@example.com")
         @actor = create_actor(nickname: "ada", email: "ada@example.com")
@@ -14,6 +16,8 @@ module Masks
 
         ActionMailer::Base.deliveries.clear
       end
+
+      teardown { ::Rails.configuration.masks.mail_from = @mail_from }
 
       def policy!(first_factors: %w[password email_code])
         within do

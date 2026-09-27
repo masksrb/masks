@@ -46,7 +46,7 @@ module Masks
         end
 
         def chosen_key
-          held = login.factors[FACTOR]
+          held = login.store.dig("factors", FACTOR)
 
           held["key"] if held.is_a?(Hash) && held["rid"] == login.rid.to_s && touched?(FACTOR)
         end

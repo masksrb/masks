@@ -52,7 +52,7 @@
                 <% person = member.actor %>
                 <div class="item">
                   <span class="item-name">
-                    <span><%= person.identifier %></span>
+                    <span><%= member.pending? ? person.email : person.identifier %></span>
                     <% if person.id == own.actor_id %>
                       <span class="tag"><%= account_text("organizations.you") %></span>
                     <% elsif member.pending? %>

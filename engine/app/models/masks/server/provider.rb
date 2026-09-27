@@ -208,13 +208,18 @@ module Masks
       end
 
       DEFAULT_ROLE_CLAIM = "groups".freeze
+      GROUPS = "groups".freeze
 
       def offered_to?(organization)
         organization_id.nil? || organization_id == organization&.id
       end
 
+      def group_claim
+        role_claim.presence || DEFAULT_ROLE_CLAIM
+      end
+
       def role_from(claims)
-        held = Array(claims[role_claim.presence || DEFAULT_ROLE_CLAIM]).map(&:to_s)
+        held = Array(claims[GROUPS]).map(&:to_s)
 
         role_map.each { |group, role| return role if held.include?(group) }
 

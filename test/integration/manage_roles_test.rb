@@ -96,7 +96,7 @@ module Masks
                    held, uuid: @owner.uuid)
 
         assert_equal "only an owner can change another manager", refusal(body)
-        refute_equal "mine@example.com", @owner.reload.email
+        refute_equal "mine@example.com", within { @owner.reload.email }
 
         session = within { Session.start!(actor: @owner) }
 

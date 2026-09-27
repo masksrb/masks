@@ -104,6 +104,7 @@ module Masks
 
             held["sub"] = map["sub"] == NAME_ID ? response.name_id.to_s.presence : attribute(attributes, map["sub"])&.to_s.presence
             held["email"] = held["email"].to_s.strip.downcase.presence
+            held[Provider::GROUPS] = Array(attributes.multi(provider.group_claim)).map(&:to_s).presence if provider.organization_id
 
             held.compact
           end

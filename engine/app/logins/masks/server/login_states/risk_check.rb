@@ -71,6 +71,7 @@ module Masks
             Event.record!(Event::LOGIN_REFUSED, actor: actor, by: nil, factor: "risk", score: score)
 
             warn! "risky-sign-in"
+            prompt! "first-factor"
           end
       end
     end

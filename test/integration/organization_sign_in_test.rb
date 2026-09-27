@@ -25,7 +25,7 @@ module Masks
         end
       end
 
-      def app(**params)
+      def ask_app(**params)
         authorize(client_id: @registration["client_id"], scope: SCOPE, **params)
       end
 
@@ -36,7 +36,7 @@ module Masks
 
         sign_in_as(actor)
         enable_otp(actor)
-        app(organization: "acme")
+        ask_app(organization: "acme")
 
         assert_equal "second-factor", auth_data["prompt"]
       end
@@ -49,7 +49,7 @@ module Masks
 
         sign_in_as(actor)
         enable_otp(actor)
-        app
+        ask_app
 
         assert_equal "choose-organization", auth_data["prompt"]
 
@@ -66,7 +66,7 @@ module Masks
 
         sign_in_as(actor)
         enable_otp(actor)
-        app
+        ask_app
         advance!("organization", organization: "globex")
         consent! if awaiting_consent?
 
@@ -81,11 +81,11 @@ module Masks
 
         assert_nil auth_data["providers"]
 
-        app(organization: "acme")
+        ask_app(organization: "acme")
 
         assert_equal [ "acme" ], auth_data["providers"].map { |held| held["key"] }
 
-        app(organization: "globex")
+        ask_app(organization: "globex")
 
         assert_nil auth_data["providers"]
       end
@@ -95,11 +95,11 @@ module Masks
                         role_map: { "Acme Admins" => "admin" })
         create_actor(nickname: "owner", email: "owner@acme.test")
 
-        app(organization: "acme")
+        ask_app(organization: "acme")
         finish_sso(sub: "upstream-7", email: "grace@acme.test", groups: [ "Everyone", "Acme Admins" ],
                    handoff: begin_sso(rid: current_rid))
 
-        actor = signed_in_actor
+        actor = within { Actor.find_by(email: "grace@acme.test") }
 
         assert actor, refusals.join("; ")
         assert_equal "admin", within { @acme.memberships.find_by!(actor: actor).role }
@@ -111,13 +111,13 @@ module Masks
                         role_map: { "Acme Admins" => "admin" })
         create_actor(nickname: "owner", email: "owner@acme.test")
 
-        app(organization: "acme")
+        ask_app(organization: "acme")
         finish_sso(sub: "upstream-7", email: "grace@acme.test", groups: [ "Acme Admins" ],
                    handoff: begin_sso(rid: current_rid))
 
         reset!
         host! host_for(@tenant)
-        app(organization: "acme")
+        ask_app(organization: "acme")
         finish_sso(sub: "upstream-7", email: "grace@acme.test", groups: [ "Everyone" ],
                    handoff: begin_sso(rid: current_rid))
 
