@@ -46,6 +46,8 @@ Inherits `Masks::Client::Error`.
 | Constant | Value |
 | --- | --- |
 | `AVATARS` | `"masks:avatars".freeze` |
+| `ORGANIZATION` | `"org".freeze` |
+| `ORGANIZATIONS` | `"orgs".freeze` |
 
 | Attribute | Access |
 | --- | --- |
@@ -115,6 +117,24 @@ Inherits `Masks::Client::Error`.
 
 ```ruby
 #jti()
+```
+
+### #member!
+
+```ruby
+#member!(*roles, organization: nil)
+```
+
+### #organization
+
+```ruby
+#organization()
+```
+
+### #organizations
+
+```ruby
+#organizations()
 ```
 
 ### #permit!
@@ -192,6 +212,70 @@ Inherits `Masks::Client::Error`.
 
 ```ruby
 #present?()
+```
+
+## Masks::Client::Claims::Organization
+
+| Constant | Value |
+| --- | --- |
+| `OWNER` | `"owner".freeze` |
+
+| Attribute | Access |
+| --- | --- |
+| `to_h` | R |
+
+### ::new
+
+```ruby
+::new(hash)
+```
+
+### #==
+
+```ruby
+#==(other)
+```
+
+### #id
+
+```ruby
+#id()
+```
+
+### #key
+
+```ruby
+#key()
+```
+
+### #name
+
+```ruby
+#name()
+```
+
+### #owner?
+
+```ruby
+#owner?()
+```
+
+### #present?
+
+```ruby
+#present?()
+```
+
+### #role
+
+```ruby
+#role()
+```
+
+### #role?
+
+```ruby
+#role?(*roles)
 ```
 
 ## Masks::Client::Claims::Tenant
@@ -515,6 +599,12 @@ Inherits `Masks::Client::Claims`.
 
 ```ruby
 #active?()
+```
+
+### #member!
+
+```ruby
+#member!(*roles, organization: nil)
 ```
 
 ### #nickname
@@ -891,7 +981,7 @@ Inherits `Masks::Client::Error`.
 ### #authenticate
 
 ```ruby
-#authenticate(authorization, scope: nil)
+#authenticate(authorization, scope: nil, role: nil, organization: nil)
 ```
 
 ### #challenge
@@ -923,6 +1013,8 @@ Inherits `Masks::Client::Error`.
 | Constant | Value |
 | --- | --- |
 | `DEFAULT_SCOPE` | `%w[openid profile email].freeze` |
+| `ORGANIZATION` | `"organization".freeze` |
+| `ORGANIZATION_KEY` | `/\A[a-z0-9][a-z0-9-]*\z/` |
 | `ASSERTION_TYPE` | `"urn:ietf:params:oauth:client-assertion-type:jwt-bearer".freeze` |
 | `ASSERTION_LIFETIME` | `60` |
 
@@ -940,6 +1032,12 @@ Inherits `Masks::Client::Error`.
 
 ```ruby
 ::new(issuer:, client_id:, redirect_uri: nil, client_secret: nil, private_key: nil, key_id: nil, scope: DEFAULT_SCOPE)
+```
+
+### ::organization_key
+
+```ruby
+::organization_key(value)
 ```
 
 ### #client_credentials
@@ -1005,7 +1103,7 @@ Inherits `Masks::Client::Error`.
 ### #start
 
 ```ruby
-#start(resource: nil, prompt: nil, scope: nil, state: SecureRandom.urlsafe_base64(24), nonce: SecureRandom.urlsafe_base64(24), max_age: nil)
+#start(resource: nil, prompt: nil, scope: nil, state: SecureRandom.urlsafe_base64(24), nonce: SecureRandom.urlsafe_base64(24), max_age: nil, organization: nil)
 ```
 
 ### #userinfo

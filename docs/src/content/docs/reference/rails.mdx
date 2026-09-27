@@ -35,12 +35,24 @@ prose is the RDoc in the source.
 | --- | --- |
 | `REQUESTS` | `"masks_requests".freeze` |
 | `HANDSHAKES` | `"masks_handshakes".freeze` |
-| `IDENTITY` | `[ "sub", "name", "preferred_username", "email", "email_verified", "tenant", "picture", Masks::Client::Claims::AVATARS ].freeze` |
+| `IDENTITY` | `[ "sub", "name", "preferred_username", "email", "email_verified", "tenant", "picture", Masks::Client::Claims::AVATARS, Masks::Client::Claims::ORGANIZATION, Masks::Client::Claims::ORGANIZATIONS ].freeze` |
+
+### ::masks_members_only!
+
+```ruby
+::masks_members_only!(role: nil, organization: nil, **options)
+```
 
 ### #authenticate_masks!
 
 ```ruby
 #authenticate_masks!()
+```
+
+### #authorize_masks_member!
+
+```ruby
+#authorize_masks_member!(*roles, organization: nil)
 ```
 
 ### #masks_access_token
@@ -118,13 +130,25 @@ prose is the RDoc in the source.
 ### #masks_login_url
 
 ```ruby
-#masks_login_url(return_to: nil)
+#masks_login_url(return_to: nil, organization: nil)
 ```
 
 ### #masks_logout_url
 
 ```ruby
 #masks_logout_url(return_to: nil)
+```
+
+### #masks_organization
+
+```ruby
+#masks_organization()
+```
+
+### #masks_organizations
+
+```ruby
+#masks_organizations()
 ```
 
 ### #masks_permits?
@@ -151,6 +175,12 @@ prose is the RDoc in the source.
 #masks_refresh!()
 ```
 
+### #masks_refreshed_identity
+
+```ruby
+#masks_refreshed_identity(tokens)
+```
+
 ### #masks_registered?
 
 ```ruby
@@ -167,6 +197,12 @@ prose is the RDoc in the source.
 
 ```ruby
 #masks_requests()
+```
+
+### #masks_role?
+
+```ruby
+#masks_role?(*roles)
 ```
 
 ### #masks_scopes
@@ -239,6 +275,7 @@ prose is the RDoc in the source.
 | `logged_out` | W |
 | `name` | W |
 | `namespace` | RW |
+| `organization` | W |
 | `parent_controller` | RW |
 | `redirect_uri` | W |
 | `resource` | RW |
@@ -344,6 +381,12 @@ prose is the RDoc in the source.
 #name_for(request)
 ```
 
+### #organization_for
+
+```ruby
+#organization_for(request)
+```
+
 ### #redirect_uri_for
 
 ```ruby
@@ -439,13 +482,13 @@ Inherits `Rails::Engine`.
 ### #masks_authenticate
 
 ```ruby
-#masks_authenticate(scope: nil)
+#masks_authenticate(scope: nil, role: nil, organization: nil)
 ```
 
 ### #masks_authenticate!
 
 ```ruby
-#masks_authenticate!(scope: nil, **)
+#masks_authenticate!(scope: nil, role: nil, organization: nil, **)
 ```
 
 ### #masks_challenge
