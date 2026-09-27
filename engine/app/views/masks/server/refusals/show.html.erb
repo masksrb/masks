@@ -1,0 +1,16 @@
+<% content_for :title, t(".#{@refusal}.page_title") %>
+<% content_for :surface, "terminus" %>
+
+<div id="refused" class="flow" data-refusal="<%= @refusal %>">
+  <span class="state state-bad"><%= t(".#{@refusal}.state") %></span>
+
+  <h1 class="prompt-title"><%= t(".#{@refusal}.heading") %></h1>
+
+  <p class="prompt-lede"><%= t(".#{@refusal}.lede", tenant: current_tenant&.name) %></p>
+
+  <% if @device_label %>
+    <p class="said"><%= t(".browser", label: @device_label) %></p>
+  <% end %>
+
+  <p class="prompt-lede"><%= t(".#{@refusal}.next", tenant: current_tenant&.name) %></p>
+</div>

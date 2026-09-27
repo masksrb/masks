@@ -2,6 +2,7 @@ en:
   devices:
     unknown: "There is no such device on this account."
     refused_agent: "This browser cannot sign in here."
+    blocked: "This device is blocked."
     renamed: "Device renamed."
     signed_out: "That device has been signed out."
 

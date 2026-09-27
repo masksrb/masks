@@ -98,13 +98,22 @@ module Masks
         def refuse_blocked_agent
           return unless blocked_agent?
 
-          render plain: t("devices.refused_agent"), status: :forbidden
+          refuse_request(:agent, t("devices.refused_agent"))
         end
 
         def refuse_blocked_device
           return unless current_device&.blocked?
 
-          render plain: "this device has been blocked", status: :forbidden
+          refuse_request(:device, t("devices.blocked"), device: current_device)
+        end
+
+        def refuse_request(refusal, said, device: nil)
+          return render plain: said, status: :forbidden unless request.format.html?
+
+          @refusal = refusal
+          @device_label = device&.label
+
+          render "masks/server/refusals/show", status: :forbidden
         end
 
         def recognise(public_id)

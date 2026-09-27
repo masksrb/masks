@@ -205,8 +205,12 @@ module Masks
         get "/", headers: browser
 
         assert_response :forbidden
+        assert_select "#refused[data-refusal=device] h1", "This device is blocked"
 
-        assert_equal "this device has been blocked", response.body
+        get "/", headers: browser.merge("Accept" => "application/json")
+
+        assert_response :forbidden
+        assert_equal "This device is blocked.", response.body
       end
 
       test "a token carries the device that authorized it" do

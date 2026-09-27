@@ -1,0 +1,16 @@
+en:
+  refusals:
+    show:
+      browser: "This browser: %{label}"
+      device:
+        page_title: "This device is blocked"
+        state: "Blocked"
+        heading: "This device is blocked"
+        lede: "%{tenant} refuses every request from this browser, including signing in, because it was blocked from an account page or by a manager."
+        next: "If this is your device, ask a manager of %{tenant} to unblock it. Signing in from another device is not affected."
+      agent:
+        page_title: "This browser cannot sign in here"
+        state: "Refused"
+        heading: "This browser cannot sign in here"
+        lede: "%{tenant} only accepts sign-ins from browsers it allows, and this one is not among them."
+        next: "Open this page in an ordinary web browser, or ask a manager of %{tenant} which browsers are allowed."
