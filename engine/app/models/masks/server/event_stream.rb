@@ -10,6 +10,8 @@ module Masks
       ATTEMPTS = 8
       UNSTREAMED = [ Event::STREAM_FAILED ].freeze
 
+      belongs_to :organization, optional: true
+
       encrypts :secret
 
       validates :key, presence: true,
@@ -26,7 +28,7 @@ module Masks
         def raised(event)
           return false if UNSTREAMED.include?(event.action)
 
-          streams = active.select { |stream| stream.streams?(event.action) }
+          streams = active.select { |stream| stream.streams?(event) }
 
           streams.each { |stream| EventStreamJob.perform_later(stream.id, event.id) }
 
@@ -48,8 +50,10 @@ module Masks
         end
       end
 
-      def streams?(action)
-        actions.empty? || actions.include?(action)
+      def streams?(event)
+        return false if organization_id && event.organization_id != organization_id
+
+        actions.empty? || actions.include?(event.action)
       end
 
       def rotate_secret!
@@ -82,6 +86,7 @@ module Masks
           actor: event.actor&.uuid,
           by: event.by&.uuid,
           client: event.client&.client_id,
+          organization: event.organization&.key,
           ip_address: event.ip_address,
           user_agent: event.user_agent,
           details: event.details

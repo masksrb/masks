@@ -174,6 +174,18 @@ module Masks
 
         assert join(billing, "billing").persisted?
       end
+
+      test "what happens while signing in as a member is recorded against the organization" do
+        join(@acme)
+
+        signed_in_to_app
+        tokens
+
+        within do
+          assert Event.where(action: Event::CONSENT_GRANTED, organization: @acme).exists?
+          assert_nil Event.where(action: Event::SESSION_STARTED).first.organization_id, "the session began before any app asked"
+        end
+      end
     end
   end
 end

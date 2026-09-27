@@ -387,6 +387,7 @@ type Event {
   id: ID!
   ipAddress: String
   label: String!
+  organization: Organization
   userAgent: String
 }
 
@@ -403,6 +404,11 @@ type EventStream {
   lastDeliveredAt: ISO8601DateTime
   lastFailure: String
   name: String!
+
+  """
+  When set, only this organization's events are sent.
+  """
+  organization: Organization
   updatedAt: ISO8601DateTime!
   url: String!
 }
@@ -478,7 +484,17 @@ type Mutation {
   createActor(email: String, nickname: String, password: String, scopes: [String!]): CreateActorPayload
   createAdapter(config: JSON, key: ID!, name: String!, primary: Boolean, service: String!): CreateAdapterPayload
   createClient(allowedScopes: [String!], dpopBoundAccessTokens: Boolean, grantTypes: [String!], jwks: JSON, jwksUri: String, name: String!, postLogoutRedirectUris: [String!], redirectUris: [String!], requireSignedRequestObject: Boolean, requiredScopes: [String!], resources: [String!], tokenEndpointAuthMethod: String): CreateClientPayload
-  createEventStream(actions: [String!], key: ID!, name: String!, url: String!): CreateEventStreamPayload
+  createEventStream(
+    actions: [String!]
+    key: ID!
+    name: String!
+
+    """
+    An organization's key, to send only its events. An empty string sends every event.
+    """
+    organization: ID
+    url: String!
+  ): CreateEventStreamPayload
   createOrganization(
     key: ID!
     name: String!
@@ -591,7 +607,17 @@ type Mutation {
   updateActor(birthdate: String, email: String, familyName: String, gender: String, givenName: String, locale: String, middleName: String, name: String, nickname: String, phone: String, pictureUrl: String, profileUrl: String, uuid: ID!, websiteUrl: String, zoneinfo: String): UpdateActorPayload
   updateAdapter(config: JSON, key: ID!, name: String, primary: Boolean): UpdateAdapterPayload
   updateClient(allowedScopes: [String!], backchannelLogoutSessionRequired: Boolean, backchannelLogoutUri: String, clientId: ID!, clientUri: String, consentRequired: Boolean, dpopBoundAccessTokens: Boolean, grantTypes: [String!], jwks: JSON, jwksUri: String, logoUri: String, name: String, policyUri: String, postLogoutRedirectUris: [String!], redirectUris: [String!], requirePushedAuthorizationRequests: Boolean, requireSignedRequestObject: Boolean, requiredScopes: [String!], resources: [String!], samlAttributes: JSON, samlCertificate: String, samlEntityId: String, samlIdpInitiated: Boolean, samlNameIdFormat: String, samlRequestsSigned: Boolean, sectorIdentifierUri: String, signInPolicy: ID, subjectType: String, tokenEndpointAuthMethod: String, tosUri: String): UpdateClientPayload
-  updateEventStream(actions: [String!], key: ID!, name: String, url: String): UpdateEventStreamPayload
+  updateEventStream(
+    actions: [String!]
+    key: ID!
+    name: String
+
+    """
+    An organization's key, to send only its events. An empty string sends every event.
+    """
+    organization: ID
+    url: String
+  ): UpdateEventStreamPayload
   updateOrganization(
     key: ID!
     name: String
@@ -656,6 +682,11 @@ type Namespace {
 type Organization {
   archivedAt: ISO8601DateTime
   createdAt: ISO8601DateTime!
+
+  """
+  The organization's most recent events.
+  """
+  events: [Event!]!
   key: ID!
   memberCount: Int!
   members: [Membership!]!
@@ -798,9 +829,9 @@ type Query {
   device(id: ID!): Device
   devices(actor: ID, agent: String, blocked: Boolean, limit: Int, unattached: Boolean): [Device!]!
   eventActions: [EventAction!]!
-  eventCount(action: String, actor: ID, client: ID, device: ID, grave: Boolean): Int!
+  eventCount(action: String, actor: ID, client: ID, device: ID, grave: Boolean, organization: ID): Int!
   eventStreams(archived: Boolean): [EventStream!]!
-  events(action: String, actor: ID, afterId: ID, client: ID, device: ID, grave: Boolean, limit: Int): [Event!]!
+  events(action: String, actor: ID, afterId: ID, client: ID, device: ID, grave: Boolean, limit: Int, organization: ID): [Event!]!
   mailPreviews(client: ID): [MailPreview!]!
 
   """

@@ -150,6 +150,22 @@ module Masks
         assert_equal "siem", failed.details["stream"]
         assert_equal event.action, failed.details["delivering"]
       end
+
+      test "a stream for one organization hears only that organization's events" do
+        acme = within { Organization.create!(key: "acme", name: "Acme") }
+        stream(organization: acme)
+
+        assert_no_enqueued_jobs(only: EventStreamJob) { record }
+        assert_enqueued_with(job: EventStreamJob) { within { Event.record!(Event::ORGANIZATION_UPDATED, organization: acme) } }
+      end
+
+      test "a delivery names the organization an event belongs to" do
+        acme = within { Organization.create!(key: "acme", name: "Acme") }
+        held = stream
+        event = within { Event.record!(Event::ORGANIZATION_UPDATED, organization: acme) }
+
+        assert_equal "acme", within { held.payload(event)[:organization] }
+      end
     end
   end
 end

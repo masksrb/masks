@@ -147,6 +147,8 @@ module Masks
       end
 
       def perform!(jkt: nil)
+        Current.organization = subject_access_token&.organization
+
         validate!
 
         answer = upstream? ? release! : yield(issue!(jkt: jkt)).merge("issued_token_type" => ACCESS_TOKEN)

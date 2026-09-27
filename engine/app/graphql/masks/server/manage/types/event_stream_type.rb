@@ -7,6 +7,8 @@ module Masks
           field :name, String, null: false
           field :url, String, null: false
           field :actions, [ String ], null: false
+          field :organization, "Masks::Server::Manage::Types::OrganizationType",
+                description: "When set, only this organization's events are sent."
           field :last_delivered_at, GraphQL::Types::ISO8601DateTime
           field :last_failure, String
           field :archived_at, GraphQL::Types::ISO8601DateTime

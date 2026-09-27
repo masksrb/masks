@@ -282,7 +282,9 @@ module Masks
         @as_json = nil
         forget_vanished_actor!
         states.each(&:reload!)
+        Current.organization = organization
         states.each { |state| state.event!(event) } if event
+        Current.organization = organization
         @prompting = nil
 
         states.each do |state|

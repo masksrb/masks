@@ -9,8 +9,10 @@ tab under settings. The same steps are available through the manage API.
 
 ## Create a stream
 
-A stream has a key, a name, an address, a signing secret, and an optional list
-of actions. An empty list streams every action. The secret is returned once, by
+A stream has a key, a name, an address, a signing secret, an optional list of
+actions, and an optional organization. An empty list streams every action. A
+stream for one organization sends only the events recorded against it, so a
+customer's log can go to that customer's SIEM. The secret is returned once, by
 `createEventStream` and by `rotateEventStreamSecret`, and is never readable
 afterward.
 
@@ -37,6 +39,7 @@ Each event is a `POST` with a JSON body.
 | `actor` | The uuid of the account it happened to, or null. |
 | `by` | The uuid of the account that did it, or null. |
 | `client` | The `client_id` involved, or null. |
+| `organization` | The key of the organization the event belongs to, or null. |
 | `ip_address`, `user_agent` | Where it came from. |
 | `details` | Fields specific to the action. |
 

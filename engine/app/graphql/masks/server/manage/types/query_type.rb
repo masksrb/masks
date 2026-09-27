@@ -150,6 +150,7 @@ module Masks
             argument :device, ID, required: false
             argument :action, String, required: false
             argument :grave, Boolean, required: false
+            argument :organization, ID, required: false
             argument :after_id, ID, required: false
             argument :limit, Integer, required: false
           end
@@ -160,6 +161,7 @@ module Masks
             argument :device, ID, required: false
             argument :action, String, required: false
             argument :grave, Boolean, required: false
+            argument :organization, ID, required: false
           end
 
           field :event_actions, [ EventActionType ], null: false
@@ -383,7 +385,7 @@ module Masks
           end
 
           def events(after_id: nil, limit: nil, **filters)
-            scope = event_scope(**filters).newest_first.includes(:actor, :by, :client, :device)
+            scope = event_scope(**filters).newest_first.includes(:actor, :by, :client, :device, :organization)
             scope = scope.after(after_id) if after_id.present?
 
             scope.limit(Masks::Server::Event.bounded(limit))
@@ -424,8 +426,12 @@ module Masks
               scope.where("name ILIKE :term OR client_id = :exact", term: term, exact: search.strip)
             end
 
-            def event_scope(actor: nil, client: nil, device: nil, action: nil, grave: false)
+            def event_scope(actor: nil, client: nil, device: nil, action: nil, grave: false, organization: nil)
               subject = actor.present? ? Actor.find_by(uuid: actor) : nil
+              group = organization.present? ? Masks::Server::Organization.find_by(key: organization) : nil
+
+              return Masks::Server::Event.none if organization.present? && group.nil?
+
               held = client.present? ? Client.find_by(client_id: client) : nil
               seen = device.present? ? Masks::Server::Device.find_by(id: device) : nil
 
@@ -437,6 +443,7 @@ module Masks
               scope = scope.where(actor: subject) if subject
               scope = scope.where(client: held) if held
               scope = scope.where(device: seen) if seen
+              scope = scope.where(organization: group) if group
               scope = scope.where(action: action) if action.present?
               scope = scope.where(action: Masks::Server::Event::GRAVE) if grave
 

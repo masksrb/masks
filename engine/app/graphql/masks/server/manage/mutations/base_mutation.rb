@@ -94,6 +94,12 @@ module Masks
               Masks::Server::EventStream.find_by(key: key) || refuse!("no event stream keyed #{key}")
             end
 
+            def organization_named(key)
+              return nil if key.blank?
+
+              Masks::Server::Organization.find_by(key: key) || refuse!("no organization keyed #{key}")
+            end
+
             def signing_key!(kid)
               Masks::Server::SigningKey.find_by(kid: kid) || refuse!("no signing key with that kid")
             end

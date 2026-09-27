@@ -5,16 +5,18 @@
   import Field from "./ui/Field.svelte";
   import Notices from "./ui/Notices.svelte";
   import Page from "./ui/Page.svelte";
+  import Select from "./ui/Select.svelte";
   import Spinner from "./ui/Spinner.svelte";
 
   let { api } = $props();
 
-  const FIELDS = `key name url actions lastDeliveredAt lastFailure archivedAt createdAt`;
+  const FIELDS = `key name url actions lastDeliveredAt lastFailure archivedAt createdAt organization { key name }`;
 
   const QUERY = `
     query Streams {
       active: eventStreams { ${FIELDS} }
       archived: eventStreams(archived: true) { ${FIELDS} }
+      organizations { key name }
     }
   `;
 
@@ -47,14 +49,20 @@
 
   function add() {
     editing = "";
-    draft = { key: "", name: "", url: "", actions: "" };
+    draft = { key: "", name: "", url: "", actions: "", organization: "" };
     secret = null;
     feedback.clear();
   }
 
   function edit(stream) {
     editing = stream.key;
-    draft = { key: stream.key, name: stream.name, url: stream.url, actions: stream.actions.join("\n") };
+    draft = {
+      key: stream.key,
+      name: stream.name,
+      url: stream.url,
+      actions: stream.actions.join("\n"),
+      organization: stream.organization?.key ?? "",
+    };
     secret = null;
     feedback.clear();
   }
@@ -74,20 +82,23 @@
       name: draft.name.trim(),
       url: draft.url.trim(),
       actions: listed(draft.actions),
+      organization: draft.organization,
     };
 
     const answer = await feedback.attempt(
       () =>
         fresh
           ? api.query(
-              `mutation Create($key: ID!, $name: String!, $url: String!, $actions: [String!]) {
-                createEventStream(key: $key, name: $name, url: $url, actions: $actions) { secret }
+              `mutation Create($key: ID!, $name: String!, $url: String!, $actions: [String!], $organization: ID) {
+                createEventStream(key: $key, name: $name, url: $url, actions: $actions, organization: $organization) { secret }
               }`,
               variables,
             )
           : api.query(
-              `mutation Update($key: ID!, $name: String, $url: String, $actions: [String!]) {
-                updateEventStream(key: $key, name: $name, url: $url, actions: $actions) { eventStream { key } }
+              `mutation Update($key: ID!, $name: String, $url: String, $actions: [String!], $organization: ID) {
+                updateEventStream(key: $key, name: $name, url: $url, actions: $actions, organization: $organization) {
+                  eventStream { key }
+                }
               }`,
               variables,
             ),
@@ -207,6 +218,15 @@
           <p class="hint">One action per line. Leave it empty to stream every action.</p>
         </label>
 
+        {#if data.organizations.length}
+          <Select
+            label="Events from"
+            value={draft.organization}
+            options={[["", "Every organization and none"], ...data.organizations.map((held) => [held.key, `Only ${held.name}`])]}
+            onchange={(key) => (draft.organization = key)}
+          />
+        {/if}
+
         <div class="flex gap-2">
           <button type="button" class="btn btn-primary btn-sm" disabled={busy || !complete} onclick={save}>
             {editing === "" ? "Add" : "Save"}
@@ -235,7 +255,9 @@
                 <span class="font-mono">{stream.key}</span> · {stream.url} · added {day(stream.createdAt)}
               </span>
               <span class="hint">
-                {stream.actions.length ? stream.actions.join(", ") : "Every action"}
+                {stream.actions.length ? stream.actions.join(", ") : "Every action"}{stream.organization
+                  ? `, only ${stream.organization.name}`
+                  : ""}
               </span>
               {#if stream.lastFailure}
                 <span class="text-sm text-error">{stream.lastFailure}</span>

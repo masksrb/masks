@@ -142,6 +142,7 @@ module Masks
       belongs_to :by, class_name: "Actor", optional: true
       belongs_to :client, optional: true
       belongs_to :device, optional: true
+      belongs_to :organization, optional: true
 
       validates :action, inclusion: { in: ACTIONS }
 
@@ -151,17 +152,26 @@ module Masks
 
       class << self
         def record!(action, actor: nil, by: :subject, client: nil, device: :ambient,
-                    ip_address: :ambient, user_agent: :ambient, **details)
+                    ip_address: :ambient, user_agent: :ambient, organization: :ambient, **details)
           create!(
             action: action,
             actor: actor,
             by: by == :subject ? actor : by,
             client: client,
+            organization: organization_for(organization),
             device: device == :ambient ? Current.device : device,
             ip_address: ip_address == :ambient ? Current.ip_address : ip_address,
             user_agent: clip(user_agent == :ambient ? Current.user_agent : user_agent),
             details: details.compact.deep_stringify_keys
           )
+        end
+
+        def organization_for(held)
+          case held
+          when :ambient then Current.organization
+          when Organization, nil then held
+          else Organization.find_by(key: held.to_s)
+          end
         end
 
         def clip(value)

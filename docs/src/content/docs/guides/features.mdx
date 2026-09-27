@@ -241,6 +241,13 @@ An organization can have its own sign-in policy, provider, and directory.
 
 Set all three on the organization's page in `/manage`.
 
+### An organization's activity
+
+An event belongs to an organization when it is about the organization or its members, or when it
+happens while someone signs in to an app as a member, such as consent or a refused sign-in. Tokens
+issued for the organization carry it to refreshes and exchanges too. The organization's page lists
+its recent events, and an [event stream](/guides/event-streams/) can send only them.
+
 ## Accounts
 
 ### Suspending and deleting

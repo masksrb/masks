@@ -15,6 +15,7 @@ module Masks
           field :by, ActorType
           field :client, ClientType
           field :device, DeviceType
+          field :organization, "Masks::Server::Manage::Types::OrganizationType"
 
           def label
             I18n.t("events.actions.#{object.action}", default: object.action)

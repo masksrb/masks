@@ -99,6 +99,7 @@ module Masks
 
           held!(req, code)
           member!(req, code)
+          Current.organization = code.organization
 
           audience = narrow(req, code.audience, client)
           access = AccessToken.issue!(
@@ -123,6 +124,7 @@ module Masks
           req.invalid_grant!("that refresh token was issued to another client") if token.client_id != client.id
           req.invalid_grant!("the session that refresh token was issued in has ended") if outlived?(token)
           member!(req, token)
+          Current.organization = token.organization
 
           held = token.bound? ? token.jkt : jkt
           scopes = req.scope.present? ? Scopes.granted(req.scope, token.scopes) : token.scope_list

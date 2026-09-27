@@ -11,6 +11,7 @@ module Masks
           field :member_count, Integer, null: false
           field :sign_in_policy, SignInPolicyType, description: "The policy for signing in as a member, ahead of the app's and the tenant's."
           field :providers, [ ProviderType ], null: false
+          field :events, [ EventType ], null: false, description: "The organization's most recent events."
           field :archived_at, GraphQL::Types::ISO8601DateTime
           field :created_at, GraphQL::Types::ISO8601DateTime, null: false
 
@@ -24,6 +25,11 @@ module Masks
 
           def providers
             object.providers.active.order(:name)
+          end
+
+          def events
+            Masks::Server::Event.where(organization: object).newest_first.includes(:actor, :by, :client, :device)
+                                .limit(Masks::Server::Event::LIMIT)
           end
 
           def member_count

@@ -563,7 +563,8 @@ CREATE TABLE public.event_streams (
     last_failure character varying,
     archived_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    organization_id bigint
 );
 
 ALTER TABLE ONLY public.event_streams FORCE ROW LEVEL SECURITY;
@@ -603,7 +604,8 @@ CREATE TABLE public.events (
     ip_address character varying,
     user_agent character varying,
     details jsonb DEFAULT '{}'::jsonb NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL
+    created_at timestamp(6) without time zone NOT NULL,
+    organization_id bigint
 );
 
 ALTER TABLE ONLY public.events FORCE ROW LEVEL SECURITY;
@@ -1832,6 +1834,13 @@ CREATE UNIQUE INDEX index_devices_on_tenant_id_and_public_id ON public.devices U
 
 
 --
+-- Name: index_event_streams_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_event_streams_on_organization_id ON public.event_streams USING btree (organization_id);
+
+
+--
 -- Name: index_event_streams_on_tenant_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1899,6 +1908,13 @@ CREATE INDEX index_events_on_tenant_id_and_actor_id_and_created_at ON public.eve
 --
 
 CREATE INDEX index_events_on_tenant_id_and_created_at ON public.events USING btree (tenant_id, created_at);
+
+
+--
+-- Name: index_events_on_tenant_id_and_organization_id_and_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_events_on_tenant_id_and_organization_id_and_created_at ON public.events USING btree (tenant_id, organization_id, created_at);
 
 
 --
@@ -2253,6 +2269,14 @@ ALTER TABLE ONLY public.consents
 
 ALTER TABLE ONLY public.tenants
     ADD CONSTRAINT fk_rails_15dcd25064 FOREIGN KEY (sign_in_policy_id) REFERENCES public.sign_in_policies(id) ON DELETE SET NULL;
+
+
+--
+-- Name: events fk_rails_163b5130b5; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.events
+    ADD CONSTRAINT fk_rails_163b5130b5 FOREIGN KEY (organization_id) REFERENCES public.organizations(id) ON DELETE SET NULL;
 
 
 --
@@ -2624,6 +2648,14 @@ ALTER TABLE ONLY public.events
 
 
 --
+-- Name: event_streams fk_rails_e915ff476d; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.event_streams
+    ADD CONSTRAINT fk_rails_e915ff476d FOREIGN KEY (organization_id) REFERENCES public.organizations(id) ON DELETE CASCADE;
+
+
+--
 -- Name: consents fk_rails_eb0bd2c006; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2964,6 +2996,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260927040000'),
 ('20260927030000'),
 ('20260927020000'),
 ('20260927010000'),
