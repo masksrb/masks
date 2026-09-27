@@ -137,6 +137,12 @@ en:
         secret_rotated: "Event stream secret rotated"
         tested: "Event stream tested"
         failed: "Event stream gave up"
+      signal_stream:
+        created: "Shared signals stream added"
+        updated: "Shared signals stream changed"
+        deleted: "Shared signals stream removed"
+      signal:
+        undelivered: "Shared signal not delivered"
       organization:
         created: "Organization added"
         updated: "Organization changed"

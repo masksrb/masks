@@ -12,6 +12,7 @@ en:
     manage_read: "See masks' settings and activity"
     handshake: "Connect apps"
     scim: "Add, change and remove people"
+    signals: "Hear when someone's session or credentials change"
     namespace: "Everything %{namespace} asks for"
     generic: "%{name}"
     delegate: "Use your %{provider} account while you are away"

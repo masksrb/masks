@@ -122,6 +122,11 @@ module Masks
       STREAM_TESTED = "stream.tested".freeze
       STREAM_FAILED = "stream.failed".freeze
 
+      SIGNAL_STREAM_CREATED = "signal_stream.created".freeze
+      SIGNAL_STREAM_UPDATED = "signal_stream.updated".freeze
+      SIGNAL_STREAM_DELETED = "signal_stream.deleted".freeze
+      SIGNAL_UNDELIVERED = "signal.undelivered".freeze
+
       ORGANIZATION_CREATED = "organization.created".freeze
       ORGANIZATION_UPDATED = "organization.updated".freeze
       ORGANIZATION_ARCHIVED = "organization.archived".freeze
@@ -137,7 +142,7 @@ module Masks
       GRAVE = [
         LOGIN_REFUSED, LOGIN_THROTTLED, LOGOUT_UNDELIVERED, REFRESH_REUSED, STREAM_FAILED,
         DEVICE_BLOCKED, ACTOR_DELETED, AUTHENTICATOR_DISABLED, CONNECTION_REFUSED, DELEGATION_REFUSED,
-        EXCHANGE_REFUSED, SIGN_IN_RISKY
+        EXCHANGE_REFUSED, SIGN_IN_RISKY, SIGNAL_UNDELIVERED
       ].freeze
 
       ACTIONS = constants(false).filter_map do |name|
@@ -215,6 +220,7 @@ module Masks
         def raise_notification
           Notifications.raised(self)
           EventStream.raised(self)
+          SignalStream.raised(self)
         end
     end
   end

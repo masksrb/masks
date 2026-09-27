@@ -13,6 +13,7 @@ module Masks
       MANAGE_READ = "masks:manage:read".freeze
       HANDSHAKE = "masks:handshake".freeze
       SCIM = "masks:scim".freeze
+      SIGNALS = "masks:signals".freeze
       DELEGATE = "masks:delegate:".freeze
 
       DESCRIBED = {
@@ -27,7 +28,8 @@ module Masks
         MANAGE_SUPPORT => "manage_support",
         MANAGE_READ => "manage_read",
         HANDSHAKE => "handshake",
-        SCIM => "scim"
+        SCIM => "scim",
+        SIGNALS => "signals"
       }.freeze
 
       STANDARD = [ OPENID, PROFILE, EMAIL, OFFLINE, IDENTITIES, ORGANIZATION ].freeze

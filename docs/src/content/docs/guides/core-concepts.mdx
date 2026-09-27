@@ -113,6 +113,7 @@ A scope is a string. Five are standard: `openid`, `profile`, `email`, `offline_a
 | `masks:manage` | `/manage` and the GraphQL API behind it. |
 | `masks:handshake` | Connect an application to this tenant. |
 | `masks:scim` | [Provision people over SCIM](/guides/sso-saml/#provisioning). |
+| `masks:signals` | [Receive shared signals](/guides/shared-signals/). |
 | `masks:delegate:<provider>` | [Use a person's account at a provider](/guides/connecting-via-sdk/#delegation). |
 
 Only an approved client may hold a `masks:` scope. Dynamic registration never offers one. Every

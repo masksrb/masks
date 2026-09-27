@@ -3,6 +3,17 @@ Masks::Server::Engine.routes.draw do
   get "/.well-known/oauth-authorization-server", to: "discovery#openid"
   get "/.well-known/jwks.json", to: "discovery#jwks"
   get "/.well-known/oauth-protected-resource(/*resource)", to: "discovery#resource"
+  get "/.well-known/ssf-configuration", to: "signal_streams#configuration"
+
+  scope "/ssf", controller: :signal_streams, defaults: { format: :json } do
+    get "/streams", action: :show
+    post "/streams", action: :create
+    match "/streams", action: :update, via: %i[patch put]
+    delete "/streams", action: :destroy
+    get "/status", action: :status
+    post "/status", action: :update_status
+    post "/verify", action: :verify
+  end
 
   match "/authorize", to: "authorize#show", via: %i[get post], as: :authorize
   post "/par", to: "pushed_authorizations#create", as: :pushed_authorization

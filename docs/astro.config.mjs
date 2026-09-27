@@ -81,6 +81,7 @@ export default defineConfig({
           { label: "Security", slug: "guides/security" },
           { label: "Enterprise", slug: "guides/enterprise" },
           { label: "Event streams", slug: "guides/event-streams" },
+          { label: "Shared signals", slug: "guides/shared-signals" },
         ],
       },
       {

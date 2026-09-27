@@ -23,7 +23,7 @@ the work.
 | Adaptive risk                   | Built       | `Risk`, `RiskCheck`, breach checks, and policy thresholds                               |
 | Passwordless email              | Built       | `email_code` first factor; links left out                                               |
 | Custom domains                  | Not started |                                                                                         |
-| Shared signals                  | Not started |                                                                                         |
+| Shared signals                  | Built       | Transmitter: `SignalStream`, `Signals`, `/ssf/*`; the receiver is still planned         |
 | Migration                       | Not started |                                                                                         |
 
 ## What the code already has
@@ -65,7 +65,7 @@ Sizes: S is a day, M is two to four days, L is a week or more.
 | 7   | Adaptive risk                                     | M    | 1             | Reuses step-up                                                            |
 | 8   | Passwordless email                                | M    |               | Consumer and low-friction B2B markets                                     |
 | 9   | Custom domains                                    | L    | Domain proof  | Needs certificates and a second tenant lookup                             |
-| 10  | Shared signals                                    | M    | Event streams | Reuses delivery and signing                                               |
+| 10  | Shared signals                                    | M    | Event streams | Transmitter done; the receiver is next                                    |
 | 11  | Rich authorization requests                       | M    | 1             | Finishes token exchange                                                   |
 | 12  | Migration                                         | L    |               | Adoption, and Okta and Cognito need a live check against the old provider |
 
@@ -258,15 +258,23 @@ mutations share. Only `owner` administers; per-organization admin roles can come
   issuer, and the old origin keeps answering discovery for 30 days.
 - Mail: manage shows the SPF and DKIM records for the domain and checks them before mail is sent from it.
 
-### Shared signals
+### Shared signals (transmitter done)
 
-- Transmitter: a receiver registers an SSF stream with its own bearer token. Masks maps events to CAEP
-  and RISC types (`session-revoked`, `credential-change`, `account-disabled`, `account-purged`) and
-  sends security event tokens signed with the tenant's key, using the event stream delivery and
-  retry code.
+- A receiver is a confidential client holding `masks:signals`, authenticated by its own
+  `client_credentials` token. It holds one `SignalStream`, managed through `/ssf/streams`, `/ssf/status`,
+  and `/ssf/verify`, and `/.well-known/ssf-configuration` publishes them. Push delivery only.
+- `Signals` maps events to CAEP `session-revoked` and `credential-change`, and RISC `account-disabled`
+  and `account-enabled`. `SignalStream.raised` enqueues a `SignalJob` for each enabled stream that asked
+  for the type, when the person holds a live consent or a token for the client. The subject is
+  `iss_sub` with the client's own `sub`, so pairwise clients stay pairwise.
+- Tokens are signed with the tenant's key as `secevent+jwt`, with the stream's issuer. A failed delivery
+  retries eight times and then records `signal.undelivered`. Losing the scope or archiving the client
+  stops delivery.
+- Not yet: `account-purged` (the subject is gone by the time the event is recorded, so it has to be
+  captured before the account is destroyed), add and remove subject endpoints, poll delivery, and a
+  manage view of each client's stream.
 - Receiver: `/ssf/events` accepts security event tokens from a provider, verifies them against the
   provider's JWKS, and ends the sessions of the matching connection's account.
-- Publish `/.well-known/ssf-configuration`.
 
 ### Rich authorization requests
 

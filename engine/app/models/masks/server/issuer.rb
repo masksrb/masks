@@ -131,6 +131,20 @@ module Masks
         Array(amr).include?(MULTI_FACTOR) ? ACR_MULTI_FACTOR : ACR_PASSWORD
       end
 
+      def signals_configuration
+        {
+          "spec_version" => "1_0",
+          "issuer" => url,
+          "jwks_uri" => "#{url}/.well-known/jwks.json",
+          "delivery_methods_supported" => [ SignalStream::PUSH ],
+          "configuration_endpoint" => "#{url}/ssf/streams",
+          "status_endpoint" => "#{url}/ssf/status",
+          "verification_endpoint" => "#{url}/ssf/verify",
+          "authorization_schemes" => [ { "spec_urn" => "urn:ietf:rfc:6749" } ],
+          "default_subjects" => "ALL"
+        }
+      end
+
       def discovery
         {
           "issuer" => url,

@@ -1020,6 +1020,50 @@ ALTER SEQUENCE public.sign_in_policies_id_seq OWNED BY public.sign_in_policies.i
 
 
 --
+-- Name: signal_streams; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.signal_streams (
+    id bigint NOT NULL,
+    tenant_id bigint NOT NULL,
+    client_id bigint NOT NULL,
+    uuid uuid DEFAULT gen_random_uuid() NOT NULL,
+    issuer character varying NOT NULL,
+    endpoint_url character varying NOT NULL,
+    authorization_header text,
+    events_requested jsonb DEFAULT '[]'::jsonb NOT NULL,
+    status character varying DEFAULT 'enabled'::character varying NOT NULL,
+    status_reason character varying,
+    description character varying,
+    last_delivered_at timestamp(6) without time zone,
+    last_failure character varying,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+ALTER TABLE ONLY public.signal_streams FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: signal_streams_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.signal_streams_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: signal_streams_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.signal_streams_id_seq OWNED BY public.signal_streams.id;
+
+
+--
 -- Name: signing_keys; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1344,6 +1388,13 @@ ALTER TABLE ONLY public.sign_in_policies ALTER COLUMN id SET DEFAULT nextval('pu
 
 
 --
+-- Name: signal_streams id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.signal_streams ALTER COLUMN id SET DEFAULT nextval('public.signal_streams_id_seq'::regclass);
+
+
+--
 -- Name: signing_keys id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1553,6 +1604,14 @@ ALTER TABLE ONLY public.sessions
 
 ALTER TABLE ONLY public.sign_in_policies
     ADD CONSTRAINT sign_in_policies_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: signal_streams signal_streams_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.signal_streams
+    ADD CONSTRAINT signal_streams_pkey PRIMARY KEY (id);
 
 
 --
@@ -2190,6 +2249,27 @@ CREATE UNIQUE INDEX index_sign_in_policies_on_tenant_id_and_key ON public.sign_i
 
 
 --
+-- Name: index_signal_streams_on_client_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_signal_streams_on_client_id ON public.signal_streams USING btree (client_id);
+
+
+--
+-- Name: index_signal_streams_on_tenant_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_signal_streams_on_tenant_id ON public.signal_streams USING btree (tenant_id);
+
+
+--
+-- Name: index_signal_streams_on_tenant_id_and_uuid; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_signal_streams_on_tenant_id_and_uuid ON public.signal_streams USING btree (tenant_id, uuid);
+
+
+--
 -- Name: index_signing_keys_on_tenant_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2410,6 +2490,14 @@ ALTER TABLE ONLY public.client_logos
 
 
 --
+-- Name: signal_streams fk_rails_2933f6a583; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.signal_streams
+    ADD CONSTRAINT fk_rails_2933f6a583 FOREIGN KEY (tenant_id) REFERENCES public.tenants(id);
+
+
+--
 -- Name: events fk_rails_2c515e778f; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2615,6 +2703,14 @@ ALTER TABLE ONLY public.delegations
 
 ALTER TABLE ONLY public.tokens
     ADD CONSTRAINT fk_rails_86c4a10c3c FOREIGN KEY (client_id) REFERENCES public.clients(id);
+
+
+--
+-- Name: signal_streams fk_rails_941ca3d422; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.signal_streams
+    ADD CONSTRAINT fk_rails_941ca3d422 FOREIGN KEY (client_id) REFERENCES public.clients(id) ON DELETE CASCADE;
 
 
 --
@@ -2930,6 +3026,12 @@ ALTER TABLE public.sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.sign_in_policies ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: signal_streams; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.signal_streams ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: signing_keys; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -3082,6 +3184,13 @@ CREATE POLICY tenant_isolation ON public.sign_in_policies USING ((tenant_id = (N
 
 
 --
+-- Name: signal_streams tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.signal_streams USING ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint)) WITH CHECK ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint));
+
+
+--
 -- Name: signing_keys tenant_isolation; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -3115,6 +3224,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260927110000'),
 ('20260927070000'),
 ('20260927060000'),
 ('20260927050000'),

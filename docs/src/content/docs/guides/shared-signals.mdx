@@ -1,0 +1,104 @@
+---
+title: Shared signals
+description: Tell another system when a session ends or a credential changes, using the OpenID Shared Signals Framework.
+---
+
+Masks is a Shared Signals Framework (SSF) transmitter. A receiver registers a
+stream, and masks pushes it a signed security event token when a session is
+revoked, a credential changes, or an account is disabled. The receiver can act
+at once instead of waiting for a token to expire.
+
+## Register a receiver
+
+A receiver is a confidential client that signs in as itself.
+
+1. In manage, create a client with the `client_credentials` grant.
+2. Add `masks:signals` to its allowed scopes.
+3. The receiver requests a token with `grant_type=client_credentials` and
+   `scope=masks:signals`, and sends it as a bearer token to every endpoint
+   below.
+
+A token issued to a person cannot manage a stream.
+
+## Find the endpoints
+
+`/.well-known/ssf-configuration` lists the endpoints and the delivery methods.
+
+| Field | Value |
+| --- | --- |
+| `issuer` | The tenant's issuer. |
+| `jwks_uri` | The keys that verify each security event token. |
+| `delivery_methods_supported` | `urn:ietf:rfc:8935`, push delivery. |
+| `configuration_endpoint` | `/ssf/streams` |
+| `status_endpoint` | `/ssf/status` |
+| `verification_endpoint` | `/ssf/verify` |
+| `default_subjects` | `ALL` |
+
+## Create a stream
+
+A receiver holds one stream. `POST /ssf/streams` creates it.
+
+```sh
+curl -s "$MASKS/ssf/streams" -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "delivery": {
+      "method": "urn:ietf:rfc:8935",
+      "endpoint_url": "https://receiver.example.com/events",
+      "authorization_header": "Bearer inbound-secret"
+    },
+    "events_requested": [
+      "https://schemas.openid.net/secevent/caep/event-type/session-revoked",
+      "https://schemas.openid.net/secevent/caep/event-type/credential-change"
+    ]
+  }'
+```
+
+The answer holds `stream_id`, `iss`, `aud`, `events_supported`,
+`events_requested`, and `events_delivered`. The endpoint must be an HTTPS
+address that resolves to a public network. Masks sends `authorization_header`
+as the `Authorization` header of each delivery, keeps it encrypted, and never
+returns it.
+
+| Request | Effect |
+| --- | --- |
+| `GET /ssf/streams` | Lists the receiver's stream, or returns it when `stream_id` is given. |
+| `PATCH /ssf/streams` | Changes the fields in the body. |
+| `PUT /ssf/streams` | Replaces the delivery, events, and description. |
+| `DELETE /ssf/streams?stream_id=` | Removes the stream. |
+| `GET /ssf/status?stream_id=` | Returns `enabled`, `paused`, or `disabled`. |
+| `POST /ssf/status` | Sets the status, with an optional `reason`. |
+| `POST /ssf/verify` | Sends a verification event carrying the `state` in the body. |
+
+A paused or disabled stream does not deliver events, and events raised while it
+is paused are not sent later.
+
+## What is sent
+
+| Event type | Sent when |
+| --- | --- |
+| CAEP `session-revoked` | A manager revokes a session or signs a person out everywhere. |
+| CAEP `credential-change` | A password changes or is reset, or a passkey or authenticator app is added or removed. |
+| RISC `account-disabled` | An account is suspended. |
+| RISC `account-enabled` | A suspended account is restored. |
+
+A stream receives events only about people who have signed in to its client
+or consented to it. The subject is `{"format": "iss_sub", "iss": ..., "sub": ...}`,
+where `sub` is the same subject the client sees in ID tokens, including a
+pairwise one.
+
+## Verify a delivery
+
+Each delivery is a `POST` with the content type `application/secevent+jwt` and
+a JWT as the body. Its header has `typ` set to `secevent+jwt`, and it is signed
+with the tenant's key from `jwks_uri`. Check that `iss` is the issuer and `aud`
+is the receiver's `client_id`, and use `jti` to discard a repeat.
+
+A CAEP event carries `event_timestamp` and `initiating_entity`, which is `user`
+when the person acted, `admin` when a manager did, and `system` otherwise.
+
+## Failures
+
+A delivery that gets no 2xx answer is retried eight times with growing delays.
+After the last attempt masks records a `signal.undelivered` event. Removing
+`masks:signals` from the client or archiving it stops delivery.

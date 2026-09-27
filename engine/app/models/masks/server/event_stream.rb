@@ -116,18 +116,9 @@ module Masks
         end
 
         def url_is_callable
-          uri = URI.parse(url.to_s)
-          secure = uri.is_a?(URI::HTTPS) || (::Rails.env.local? && uri.is_a?(URI::HTTP))
+          problem = Outbound.problem_with(url)
 
-          if !secure || uri.host.blank?
-            errors.add(:url, "must be an https address")
-          elsif uri.userinfo.present?
-            errors.add(:url, "must not carry a username or password")
-          elsif !::Rails.env.local? && !Outbound.routable?(uri)
-            errors.add(:url, "must resolve to a public address")
-          end
-        rescue URI::InvalidURIError
-          errors.add(:url, "is not an address")
+          errors.add(:url, problem) if problem
         end
 
         def actions_are_known

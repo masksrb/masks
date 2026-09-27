@@ -22,14 +22,14 @@ today, and how the rest will be built.
 | Audit export and retention | Built | [Audit export and retention](#audit-export-and-retention) |
 | Adaptive risk | Built | [Adaptive risk](#adaptive-risk) |
 | Passwordless email | Built | [Passwordless email](#passwordless-email) |
+| Shared signals | Built | [Shared signals](#shared-signals) |
 | Custom domains | Planned | [Custom domains](#custom-domains) |
-| Shared signals | Planned | [Shared signals](#shared-signals) |
 | Migration | Planned | [Migration](#migration) |
 
-Each planned capability reuses what is already built. Event streaming supplies
-delivery and signing to shared signals. Sign-in policies supply the decision
-point for step-up and adaptive risk. Tenants supply the isolation that
-organizations and custom domains build on.
+Each capability reuses what is already built. Event streaming supplies retried
+delivery to shared signals. Sign-in policies supply the decision point for
+step-up and adaptive risk. Tenants supply the isolation that organizations and
+custom domains build on.
 
 ## Built
 
@@ -145,6 +145,17 @@ first factor, with or without a password. The form looks the same whether or
 not the address has an account. See
 [signing in with an emailed code](/guides/features/#signing-in-with-an-emailed-code).
 
+### Shared signals
+
+Other systems need to hear that a session ended or a credential changed without
+waiting for a token to expire. Masks is an OpenID Shared Signals transmitter. A
+receiver registers a stream, and masks pushes it signed CAEP and RISC events
+about the people who use that receiver. See
+[Shared signals](/guides/shared-signals/).
+
+Accepting the same events from a provider, and ending the matching sessions, is
+planned.
+
 ## Planned
 
 ### Custom domains
@@ -155,15 +166,6 @@ A tenant serves sign-in from its own domain, such as `login.example.com`.
 - Masks issues a certificate for the domain and renews it.
 - The issuer, links, and emails use the domain, and mail is sent from it once
   its DNS records are in place.
-
-### Shared signals
-
-Other systems need to hear that a session ended or a credential was
-compromised without waiting for a token to expire.
-
-- Masks sends Shared Signals events (CAEP and RISC) to a receiver that registers
-  a stream, reusing the delivery and signing of event streams.
-- Masks accepts the same events from a provider and ends the matching sessions.
 
 ### Migration
 

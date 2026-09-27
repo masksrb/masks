@@ -22,6 +22,21 @@ module Masks
       ].freeze
 
       class << self
+        def problem_with(url)
+          uri = URI.parse(url.to_s)
+          secure = uri.is_a?(URI::HTTPS) || (::Rails.env.local? && uri.is_a?(URI::HTTP))
+
+          if !secure || uri.host.blank?
+            "must be an https address"
+          elsif uri.userinfo.present?
+            "must not carry a username or password"
+          elsif !::Rails.env.local? && !routable?(uri)
+            "must resolve to a public address"
+          end
+        rescue URI::InvalidURIError
+          "is not an address"
+        end
+
         def routable?(uri)
           vetted(uri).present?
         end
