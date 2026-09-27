@@ -115,6 +115,24 @@ module Masks
         assert_equal "acme", claims_in(tokens["access_token"]).dig("org", "key")
       end
 
+      test "userinfo and introspection name the organization, and introspection answers the role held now" do
+        membership = join(@acme)
+
+        signed_in_to_app
+        access = tokens["access_token"]
+
+        get "/userinfo", headers: { "Authorization" => "Bearer #{access}" }
+
+        assert_equal({ "id" => @acme.uuid, "key" => "acme", "name" => "Acme", "role" => "member" }, JSON.parse(response.body)["org"])
+
+        within { membership.update!(role: "owner") }
+
+        post "/introspect", params: { token: access, client_id: @registration["client_id"],
+                                      client_secret: @registration["client_secret"] }
+
+        assert_equal "owner", JSON.parse(response.body).dig("org", "role")
+      end
+
       test "a refresh carries the current role, and stops once the person is removed" do
         membership = join(@acme)
 
