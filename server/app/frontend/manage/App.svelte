@@ -158,22 +158,14 @@
 
         <Link
           to="/settings"
-          class="console-me ms-auto {inSettings ? 'console-me-on' : ''}"
-          aria-label="Settings, signed in as {signedInAs}"
-          title={signedInAs}
+          class="console-cog ms-auto {inSettings ? 'console-cog-on' : ''}"
+          aria-label="Settings"
+          title="Settings"
         >
-          {#if viewer}
-            <img
-              src={`${viewer.avatars.photo ?? viewer.avatars.identicon}?size=64`}
-              width="32"
-              height="32"
-              alt=""
-              class:drawn={!viewer.avatars.photo}
-              onerror={(event) => (event.currentTarget.src = `${viewer.avatars.identicon}?size=64`)}
-            />
-          {:else}
-            <span>{signedInAs.slice(0, 1).toUpperCase()}</span>
-          {/if}
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M17.03 8.46 L19.13 8.85 L19.13 11.15 L17.03 11.54 L16.06 13.88 L17.27 15.64 L15.64 17.27 L13.88 16.06 L11.54 17.03 L11.15 19.13 L8.85 19.13 L8.46 17.03 L6.12 16.06 L4.36 17.27 L2.73 15.64 L3.94 13.88 L2.97 11.54 L0.87 11.15 L0.87 8.85 L2.97 8.46 L3.94 6.12 L2.73 4.36 L4.36 2.73 L6.12 3.94 L8.46 2.97 L8.85 0.87 L11.15 0.87 L11.54 2.97 L13.88 3.94 L15.64 2.73 L17.27 4.36 L16.06 6.12 Z" />
+            <circle cx="10" cy="10" r="2.75" />
+          </svg>
         </Link>
       </div>
     </header>
@@ -196,7 +188,7 @@
           <ClientsPage {api} />
         {/if}
       {:else if inSettings}
-        <SettingsShell {current} identifier={signedInAs} onsignout={signOut} onunpair={forget}>
+        <SettingsShell {current} {viewer} identifier={signedInAs} account={boot.account} onsignout={signOut} onunpair={forget}>
           {#if current === "providers"}
             <ProvidersPage {api} />
           {:else if current === "policies"}

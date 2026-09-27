@@ -574,37 +574,32 @@
   }
 }
 
-.console-me {
+.console-cog {
   display: grid;
   place-items: center;
   flex: none;
   width: 2rem;
   height: 2rem;
   border-radius: 50%;
-  overflow: hidden;
-  background: var(--sunk);
-  box-shadow: 0 0 0 1px var(--edge);
-  font-size: 0.875rem;
-  font-weight: 600;
+  color: var(--dim);
   text-decoration: none;
-  color: inherit;
-  transition: box-shadow 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease;
 }
 
-.console-me img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.console-cog svg {
+  width: 1.375rem;
+  height: 1.375rem;
 }
 
-.console-me:hover,
-.console-me:focus-visible {
-  box-shadow: 0 0 0 2px var(--dim);
+.console-cog:hover,
+.console-cog:focus-visible {
+  color: var(--color-base-content);
+  background: var(--sunk);
   outline: none;
 }
 
-.console-me-on {
-  box-shadow: 0 0 0 2px var(--color-primary);
+.console-cog-on {
+  color: var(--color-primary);
 }
 
 .settings {
@@ -662,10 +657,31 @@
 }
 
 .settings-who {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
   max-width: 14rem;
-  padding: 0 0.625rem;
-  font-size: 0.8125rem;
-  color: var(--dimmer);
+  padding: 0.25rem 0.625rem 0.25rem 0.25rem;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  color: var(--dim);
+  text-decoration: none;
+}
+
+.settings-who:hover {
+  color: var(--color-base-content);
+  background: var(--sunk);
+}
+
+.settings-who img {
+  flex: none;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.settings-who span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

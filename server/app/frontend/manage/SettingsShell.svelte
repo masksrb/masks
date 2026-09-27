@@ -1,7 +1,7 @@
 <script>
   import Link from "./ui/Link.svelte";
 
-  let { current, identifier, onsignout, onunpair, children } = $props();
+  let { current, viewer, identifier, account, onsignout, onunpair, children } = $props();
 
   const TABS = [
     ["/settings", "General"],
@@ -30,7 +30,19 @@
     </nav>
 
     <div class="settings-me">
-      <span class="settings-who" title={identifier}>{identifier}</span>
+      <a class="settings-who" href={account} title="Your account">
+        {#if viewer}
+          <img
+            src={`${viewer.avatars.photo ?? viewer.avatars.identicon}?size=64`}
+            width="24"
+            height="24"
+            alt=""
+            class:drawn={!viewer.avatars.photo}
+            onerror={(event) => (event.currentTarget.src = `${viewer.avatars.identicon}?size=64`)}
+          />
+        {/if}
+        <span>{identifier}</span>
+      </a>
       <button type="button" class="settings-tab" onclick={onsignout}>Sign out</button>
       <button type="button" class="settings-tab settings-quiet" onclick={unpair}>Forget client</button>
     </div>
