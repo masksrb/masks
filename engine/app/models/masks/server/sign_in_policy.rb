@@ -10,6 +10,7 @@ module Masks
       PRESENCE = [ OFF, OPTIONAL, REQUIRED ].freeze
 
       FIRST_FACTORS = %w[password passkey provider email_code].freeze
+      IDENTIFYING = %w[password passkey email_code].freeze
       SECOND_FACTORS = %w[otp passkey backup_codes email sms trusted_device].freeze
 
       NONE = "none".freeze
@@ -77,6 +78,10 @@ module Masks
 
       def first_factor?(factor)
         first_factors.include?(factor.to_s)
+      end
+
+      def identifies?
+        IDENTIFYING.any? { |factor| first_factor?(factor) }
       end
 
       def local?

@@ -27,7 +27,7 @@ module Masks
         def as_json
           {
             "signupOpen" => login.policy.signup && login.policy.local?,
-            "identifies" => %i[password passkey email_code].any? { |factor| login.policy.first_factor?(factor) }
+            "identifies" => login.policy.identifies?
           }
         end
 

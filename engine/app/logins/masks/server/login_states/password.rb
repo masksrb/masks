@@ -10,6 +10,10 @@ module Masks
           verify
         end
 
+        def as_json
+          { "password" => { "offered" => login.policy.first_factor?(:password) } }
+        end
+
         def verify
           return warn!("missing-identifier") if login.identifier.blank?
           return warn!("factor-not-offered") unless login.policy.first_factor?(:password)

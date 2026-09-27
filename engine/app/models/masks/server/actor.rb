@@ -168,6 +168,15 @@ module Masks
         email.present? && email_verified_at.nil?
       end
 
+      def verify_email!(address)
+        return false if email_verified_at.present? || !email.to_s.casecmp?(address.to_s)
+
+        update!(email_verified_at: Time.current)
+        Event.record!(Event::EMAIL_VERIFIED, actor: self)
+
+        true
+      end
+
       def manages?
         ManageRoles.any?(scope_list)
       end

@@ -51,12 +51,9 @@ module Masks
           proven = login.store.dig(HELD, "proven")
           owner = login.actor
 
-          return if proven.blank? || owner.nil? || owner.email_verified_at.present? || !login.first_factored?
-          return unless owner.email.to_s.casecmp?(proven)
+          return if proven.blank? || owner.nil? || !login.first_factored?
 
-          owner.update!(email_verified_at: Time.current)
-
-          Event.record!(Event::EMAIL_VERIFIED, actor: owner)
+          owner.verify_email!(proven)
         end
 
         def self.address(identifier)

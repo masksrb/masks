@@ -37,6 +37,12 @@ module Masks
             (ip.present? && recent.where("payload->>'ip' = ?", ip).count >= limit * INBOX_PER_IP)
         end
 
+        def crowded?(actor:, channel:)
+          where(actor_id: actor.id, created_at: INBOX_WINDOW.ago..)
+            .where("payload->>'channel' = ?", channel)
+            .count >= ::Rails.configuration.masks.recovery_limit
+        end
+
         def inbox
           where(actor_id: nil).where("payload->>'channel' = ?", INBOX)
         end

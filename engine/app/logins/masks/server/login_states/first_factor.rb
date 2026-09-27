@@ -6,10 +6,6 @@ module Masks
           !login.first_factored?
         end
 
-        def as_json
-          { "passwordOffered" => login.policy.first_factor?(:password) }
-        end
-
         def start_over!
           expire! :first_factor
         end

@@ -9,8 +9,8 @@ let { login } = $props();
 let password = $state("");
 
 const valid = $derived(password.length > 0);
-const offersPassword = $derived(login.auth.passwordOffered !== false);
-const emailing = $derived(Boolean(login.auth.emailCode?.offered));
+const offersPassword = $derived(Boolean(login.auth.password?.offered));
+const emailing = $derived(Boolean(login.auth.emailCode));
 
 function onsubmit(event) {
   event.preventDefault();
