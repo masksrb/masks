@@ -1,4 +1,6 @@
 <script>
+  import { createPages } from "./lib/pages.svelte.js";
+  import Pager from "./ui/Pager.svelte";
   import { NONE, day, joined } from "./lib/format.js";
   import { createFeedback } from "./lib/feedback.svelte.js";
   import ScopesEditor from "./ScopesEditor.svelte";
@@ -16,7 +18,7 @@
 
   let { api } = $props();
 
-  const PAGE = 50;
+  const pages = createPages();
 
   const QUERY = `
     query Clients($search: String, $archived: Boolean, $afterId: ID, $limit: Int) {
@@ -26,6 +28,7 @@
         approvedBy { identifier }
         namespaces { name }
       }
+      clientCount(search: $search, archived: $archived)
     }
   `;
 
@@ -180,35 +183,37 @@
   let archived = $state(false);
   let clients = $state([]);
   let loading = $state(true);
-  let more = $state(false);
-  let exhausted = $state(false);
-
-  async function load(afterId = null) {
-    if (afterId) more = true;
-    else loading = true;
+  async function load() {
+    loading = true;
 
     const data = await feedback.attempt(() =>
       api.query(QUERY, {
         search: query || null,
         archived,
-        afterId,
-        limit: PAGE,
+        afterId: pages.cursor,
+        limit: pages.size,
       }),
     );
 
     loading = false;
-    more = false;
 
     if (!data) return;
 
-    clients = afterId ? [...clients, ...data.clients] : data.clients;
-    exhausted = data.clients.length < PAGE;
+    clients = data.clients;
+    pages.counted(data.clientCount);
+  }
+
+  function turn(direction) {
+    if (direction === "forward") pages.forward(clients.at(-1)?.clientId);
+    else pages.back();
+
+    load();
   }
 
   load();
 
   function again() {
-    exhausted = false;
+    pages.reset();
     load();
   }
 
@@ -222,7 +227,6 @@
     again();
   }
 
-  const oldest = $derived(clients.at(-1)?.clientId ?? null);
 
   const nothing = $derived(
     query
@@ -442,17 +446,6 @@
       {/snippet}
     </Table>
 
-    {#if !exhausted && clients.length}
-      <div>
-        <button
-          type="button"
-          class="btn btn-ghost btn-sm"
-          disabled={more}
-          onclick={() => load(oldest)}
-        >
-          {more ? "Loading..." : "Show more"}
-        </button>
-      </div>
-    {/if}
+    <Pager {pages} shown={clients.length} busy={loading} onpage={turn} />
   {/if}
 </Page>

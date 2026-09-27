@@ -16,6 +16,14 @@ module Masks
             argument :limit, Integer, required: false
           end
 
+          field :actor_count, Integer, null: false do
+            argument :search, String, required: false
+            argument :activated, Boolean, required: false
+            argument :holds, String, required: false
+            argument :pending_approval, Boolean, required: false
+            argument :suspended, Boolean, required: false
+          end
+
           field :actor, ActorType do
             argument :uuid, ID
           end
@@ -25,6 +33,11 @@ module Masks
             argument :archived, Boolean, required: false
             argument :after_id, ID, required: false
             argument :limit, Integer, required: false
+          end
+
+          field :client_count, Integer, null: false do
+            argument :search, String, required: false
+            argument :archived, Boolean, required: false
           end
 
           field :client, ClientType do
@@ -127,6 +140,14 @@ module Masks
             argument :limit, Integer, required: false
           end
 
+          field :event_count, Integer, null: false do
+            argument :actor, ID, required: false
+            argument :client, ID, required: false
+            argument :device, ID, required: false
+            argument :action, String, required: false
+            argument :grave, Boolean, required: false
+          end
+
           field :event_actions, [ EventActionType ], null: false
 
           LIMIT = 50
@@ -142,21 +163,15 @@ module Masks
             Current.tenant
           end
 
-          def actors(search: nil, activated: nil, holds: nil, pending_approval: nil, suspended: nil, after_id: nil, limit: nil)
-            scope = Actor.newest_first
-
-            if search.present?
-              term = "%#{Actor.sanitize_sql_like(search.strip)}%"
-              scope = scope.where("nickname ILIKE :term OR email ILIKE :term OR name ILIKE :term", term: term)
-            end
-
-            scope = activated ? scope.where.not(activated_at: nil) : scope.where(activated_at: nil) unless activated.nil?
-            scope = holding(scope, holds) if holds.present?
-            scope = pending_approval ? scope.where.not(pending_approval_at: nil) : scope.where(pending_approval_at: nil) unless pending_approval.nil?
-            scope = suspended ? scope.where.not(suspended_at: nil) : scope.where(suspended_at: nil) unless suspended.nil?
+          def actors(after_id: nil, limit: nil, **filters)
+            scope = actor_scope(**filters).newest_first
             scope = scope.after(Actor.find_by(uuid: after_id)&.id) if after_id.present?
 
             scope.limit(bounded(limit))
+          end
+
+          def actor_count(**filters)
+            actor_scope(**filters).count
           end
 
           def actor(uuid:)
@@ -179,18 +194,15 @@ module Masks
             Scim.base(Issuer.new(Current.tenant, Current.origin))
           end
 
-          def clients(search: nil, archived: false, after_id: nil, limit: nil)
-            scope = Client.listed(archived)
-            scope = scope.includes(:approved_by, :namespaces, :sign_in_policy).newest_first
-
-            if search.present?
-              term = "%#{Client.sanitize_sql_like(search.strip)}%"
-              scope = scope.where("name ILIKE :term OR client_id = :exact", term: term, exact: search.strip)
-            end
-
+          def clients(after_id: nil, limit: nil, **filters)
+            scope = client_scope(**filters).includes(:approved_by, :namespaces, :sign_in_policy).newest_first
             scope = scope.after(Client.find_by(client_id: after_id)&.id) if after_id.present?
 
             scope.limit(bounded(limit))
+          end
+
+          def client_count(**filters)
+            client_scope(**filters).count
           end
 
           def client(client_id:)
@@ -340,24 +352,15 @@ module Masks
             end
           end
 
-          def events(actor: nil, client: nil, device: nil, action: nil, grave: false, after_id: nil, limit: nil)
-            subject = actor.present? ? Actor.find_by(uuid: actor) : nil
-            held = client.present? ? Client.find_by(client_id: client) : nil
-            seen = device.present? ? Masks::Server::Device.find_by(id: device) : nil
-
-            return Masks::Server::Event.none if actor.present? && subject.nil?
-            return Masks::Server::Event.none if client.present? && held.nil?
-            return Masks::Server::Event.none if device.present? && seen.nil?
-
-            scope = Masks::Server::Event.newest_first.includes(:actor, :by, :client, :device)
-            scope = scope.where(actor: subject) if subject
-            scope = scope.where(client: held) if held
-            scope = scope.where(device: seen) if seen
-            scope = scope.where(action: action) if action.present?
-            scope = scope.where(action: Masks::Server::Event::GRAVE) if grave
+          def events(after_id: nil, limit: nil, **filters)
+            scope = event_scope(**filters).newest_first.includes(:actor, :by, :client, :device)
             scope = scope.after(after_id) if after_id.present?
 
             scope.limit(Masks::Server::Event.bounded(limit))
+          end
+
+          def event_count(**filters)
+            event_scope(**filters).count
           end
 
           def event_actions
@@ -365,6 +368,50 @@ module Masks
           end
 
           private
+
+            def actor_scope(search: nil, activated: nil, holds: nil, pending_approval: nil, suspended: nil)
+              scope = Actor.all
+
+              if search.present?
+                term = "%#{Actor.sanitize_sql_like(search.strip)}%"
+                scope = scope.where("nickname ILIKE :term OR email ILIKE :term OR name ILIKE :term", term: term)
+              end
+
+              scope = activated ? scope.where.not(activated_at: nil) : scope.where(activated_at: nil) unless activated.nil?
+              scope = holding(scope, holds) if holds.present?
+              scope = pending_approval ? scope.where.not(pending_approval_at: nil) : scope.where(pending_approval_at: nil) unless pending_approval.nil?
+              scope = suspended ? scope.where.not(suspended_at: nil) : scope.where(suspended_at: nil) unless suspended.nil?
+
+              scope
+            end
+
+            def client_scope(search: nil, archived: false)
+              scope = Client.listed(archived)
+
+              return scope if search.blank?
+
+              term = "%#{Client.sanitize_sql_like(search.strip)}%"
+              scope.where("name ILIKE :term OR client_id = :exact", term: term, exact: search.strip)
+            end
+
+            def event_scope(actor: nil, client: nil, device: nil, action: nil, grave: false)
+              subject = actor.present? ? Actor.find_by(uuid: actor) : nil
+              held = client.present? ? Client.find_by(client_id: client) : nil
+              seen = device.present? ? Masks::Server::Device.find_by(id: device) : nil
+
+              return Masks::Server::Event.none if actor.present? && subject.nil?
+              return Masks::Server::Event.none if client.present? && held.nil?
+              return Masks::Server::Event.none if device.present? && seen.nil?
+
+              scope = Masks::Server::Event.all
+              scope = scope.where(actor: subject) if subject
+              scope = scope.where(client: held) if held
+              scope = scope.where(device: seen) if seen
+              scope = scope.where(action: action) if action.present?
+              scope = scope.where(action: Masks::Server::Event::GRAVE) if grave
+
+              scope
+            end
 
             def holding(scope, held)
               scope.holding(held)

@@ -1,4 +1,6 @@
 <script>
+  import { createPages } from "./lib/pages.svelte.js";
+  import Pager from "./ui/Pager.svelte";
   import { untrack } from "svelte";
   import Events from "./Events.svelte";
   import { createFeedback } from "./lib/feedback.svelte.js";
@@ -11,7 +13,7 @@
 
   let { api } = $props();
 
-  const PAGE = 50;
+  const pages = createPages();
 
   const FIELDS = `
     id action label createdAt ipAddress userAgent details
@@ -30,6 +32,7 @@
         action: $action, grave: $grave, afterId: $afterId, limit: $limit,
         actor: $actor, client: $client
       ) { ${FIELDS} }
+      eventCount(action: $action, grave: $grave, actor: $actor, client: $client)
       eventActions { action label }
     }
   `;
@@ -45,37 +48,40 @@
   let action = $state("");
   let grave = $state(false);
   let loading = $state(true);
-  let more = $state(false);
-  let exhausted = $state(false);
   let about = $state(null);
 
   const actorId = $derived(router.query.get("actor"));
   const clientId = $derived(router.query.get("client"));
   const narrowed = $derived(Boolean(actorId || clientId));
 
-  async function load(afterId = null) {
-    if (afterId) more = true;
-    else loading = true;
+  async function load() {
+    loading = true;
 
     const data = await feedback.attempt(() =>
       api.query(QUERY, {
         action: action || null,
         grave,
-        afterId,
-        limit: PAGE,
+        afterId: pages.cursor,
+        limit: pages.size,
         actor: actorId,
         client: clientId,
       }),
     );
 
     loading = false;
-    more = false;
 
     if (!data) return;
 
     actions = data.eventActions;
-    events = afterId ? [...events, ...data.events] : data.events;
-    exhausted = data.events.length < PAGE;
+    events = data.events;
+    pages.counted(data.eventCount);
+  }
+
+  function turn(direction) {
+    if (direction === "forward") pages.forward(events.at(-1)?.id);
+    else pages.back();
+
+    load();
   }
 
   async function describe() {
@@ -105,7 +111,7 @@
     clientId;
 
     untrack(() => {
-      exhausted = false;
+      pages.reset();
       load();
       describe();
     });
@@ -113,18 +119,17 @@
 
   function filter(chosen) {
     action = chosen;
-    exhausted = false;
+    pages.reset();
     load();
   }
 
   function only(worrying) {
     grave = worrying;
     if (worrying) action = "";
-    exhausted = false;
+    pages.reset();
     load();
   }
 
-  const oldest = $derived(events.at(-1)?.id ?? null);
 </script>
 
 <Page
@@ -189,18 +194,7 @@
             : "Nothing yet."}
       />
 
-      {#if !exhausted && events.length}
-        <div>
-          <button
-            type="button"
-            class="btn btn-ghost btn-sm"
-            disabled={more}
-            onclick={() => load(oldest)}
-          >
-            {more ? "Loading..." : "Show older"}
-          </button>
-        </div>
-      {/if}
+      <Pager {pages} shown={events.length} busy={loading} onpage={turn} />
     </Section>
   {/if}
 </Page>

@@ -1,4 +1,6 @@
 <script>
+  import { createPages } from "./lib/pages.svelte.js";
+  import Pager from "./ui/Pager.svelte";
   import { createFeedback } from "./lib/feedback.svelte.js";
   import { day, joined } from "./lib/format.js";
   import Devices from "./Devices.svelte";
@@ -20,7 +22,7 @@
     devices { id blockedAt }
   `;
 
-  const PAGE = 50;
+  const pages = createPages();
 
   const LENSES = [
     ["everyone", "Everyone", {}],
@@ -44,6 +46,10 @@
         avatars { photo identicon }
         ${PRESENCE}
       }
+      actorCount(
+        search: $search, activated: $activated, holds: $holds, pendingApproval: $pendingApproval,
+        suspended: $suspended
+      )
     }
   `;
 
@@ -70,8 +76,6 @@
   let search = $state("");
   let actors = $state([]);
   let loading = $state(true);
-  let more = $state(false);
-  let exhausted = $state(false);
   let lens = $state("everyone");
 
   const narrowing = $derived(LENSES.find(([key]) => key === lens)?.[2] ?? {});
@@ -86,9 +90,8 @@
   let busy = $state(false);
   let created = $state(null);
 
-  async function load(afterId = null) {
-    if (afterId) more = true;
-    else loading = true;
+  async function load() {
+    loading = true;
 
     try {
       const data = await api.query(QUERY, {
@@ -97,22 +100,28 @@
         holds: narrowing.holds ?? null,
         pendingApproval: narrowing.pendingApproval ?? null,
         suspended: narrowing.suspended ?? null,
-        afterId,
-        limit: PAGE,
+        afterId: pages.cursor,
+        limit: pages.size,
       });
 
-      actors = afterId ? [...actors, ...data.actors] : data.actors;
-      exhausted = data.actors.length < PAGE;
+      actors = data.actors;
+      pages.counted(data.actorCount);
     } catch (thrown) {
       feedback.blame(thrown);
     } finally {
       loading = false;
-      more = false;
     }
   }
 
   function again() {
-    exhausted = false;
+    pages.reset();
+    load();
+  }
+
+  function turn(direction) {
+    if (direction === "forward") pages.forward(actors.at(-1)?.uuid);
+    else pages.back();
+
     load();
   }
 
@@ -123,7 +132,6 @@
 
   load();
 
-  const oldest = $derived(actors.at(-1)?.uuid ?? null);
 
   async function open() {
     nickname = "";
@@ -170,6 +178,7 @@
     created = data.createActor;
     adding = false;
 
+    pages.reset();
     await load();
   }
 
@@ -378,18 +387,7 @@
       {/snippet}
     </Table>
 
-    {#if !exhausted && actors.length}
-      <div>
-        <button
-          type="button"
-          class="btn btn-ghost btn-sm"
-          disabled={more}
-          onclick={() => load(oldest)}
-        >
-          {more ? "Loading..." : "Show more"}
-        </button>
-      </div>
-    {/if}
+    <Pager {pages} shown={actors.length} busy={loading} onpage={turn} />
   {/if}
 
   <Devices {api} {feedback} />

@@ -18,8 +18,10 @@ schema disagree.
 | `viewer` | [`Actor!`](#actor) |
 | `tenant` | [`Tenant!`](#tenant) |
 | `actors`<br />`search: String`<br />`activated: Boolean`<br />`holds: String`<br />`pendingApproval: Boolean`<br />`suspended: Boolean`<br />`afterId: ID`<br />`limit: Int` | [`[Actor!]!`](#actor) |
+| `actorCount`<br />`search: String`<br />`activated: Boolean`<br />`holds: String`<br />`pendingApproval: Boolean`<br />`suspended: Boolean` | `Int!` |
 | `actor`<br />`uuid: ID!` | [`Actor`](#actor) |
 | `clients`<br />`search: String`<br />`archived: Boolean`<br />`afterId: ID`<br />`limit: Int` | [`[Client!]!`](#client) |
+| `clientCount`<br />`search: String`<br />`archived: Boolean` | `Int!` |
 | `client`<br />`clientId: ID!` | [`Client`](#client) |
 | `sessions`<br />`actor: ID`<br />`limit: Int` | [`[Session!]!`](#session) |
 | `devices`<br />`actor: ID`<br />`blocked: Boolean`<br />`unattached: Boolean`<br />`agent: String`<br />`limit: Int` | [`[Device!]!`](#device) |
@@ -45,6 +47,7 @@ schema disagree.
 | `tally` | [`Tally!`](#tally) |
 | `activity`<br />`days: Int` | [`[ActivityDay!]!`](#activityday) |
 | `events`<br />`actor: ID`<br />`client: ID`<br />`device: ID`<br />`action: String`<br />`grave: Boolean`<br />`afterId: ID`<br />`limit: Int` | [`[Event!]!`](#event) |
+| `eventCount`<br />`actor: ID`<br />`client: ID`<br />`device: ID`<br />`action: String`<br />`grave: Boolean` | `Int!` |
 | `eventActions` | [`[EventAction!]!`](#eventaction) |
 
 ## Mutations

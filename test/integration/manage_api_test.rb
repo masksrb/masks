@@ -662,6 +662,35 @@ module Masks
         assert_equal [ "system", "Demo" ], previews["idle_suspend"].values_at("journey", "heading")
       end
 
+      test "actors page through twenty-five at a time, and the count follows the same filters" do
+        held = bearer
+        within(@tenant) { 60.times { |i| Actor.create!(nickname: "invited#{i}", email: "invited#{i}@example.com") } }
+
+        seen = []
+        cursor = nil
+
+        3.times do
+          after = cursor ? %(, afterId: "#{cursor}") : ""
+          body = ask(%({ actors(activated: false, limit: 25#{after}) { uuid } actorCount(activated: false) }), held)
+
+          assert_equal 60, body.dig("data", "actorCount")
+          page = body.dig("data", "actors").map { |actor| actor["uuid"] }
+          seen.concat(page)
+          cursor = page.last
+        end
+
+        assert_equal 60, seen.uniq.size
+        assert_equal 0, ask(%({ actorCount(search: "nobody-by-this-name") }), held).dig("data", "actorCount")
+      end
+
+      test "clients and events are counted by the filters their lists take" do
+        held = bearer
+        create_client(@tenant, name: "Findable")
+
+        assert_equal 1, ask(%({ clientCount(search: "Findable") }), held).dig("data", "clientCount")
+        assert_operator ask(%({ eventCount }), held).dig("data", "eventCount"), :>=, 0
+      end
+
       test "an admin cannot delete themselves" do
         body = ask(%(mutation { deleteActor(uuid: "#{@actor.uuid}") { uuid } }), bearer)
 
