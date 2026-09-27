@@ -57,6 +57,10 @@ module Masks
         authorization.device?
       end
 
+      def organization_key
+        authorization.organization
+      end
+
       def saml?
         authorization.saml?
       end

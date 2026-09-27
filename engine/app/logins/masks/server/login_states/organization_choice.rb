@@ -77,7 +77,7 @@ module Masks
           def settle_without_asking!
             return if selected
 
-            named = request.organization
+            named = request.organization_key
 
             return choose!(named) if named
             return refuse!("access_denied", "#{actor.identifier} belongs to no organization") if memberships.empty?

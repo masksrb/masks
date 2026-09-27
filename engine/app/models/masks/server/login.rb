@@ -73,7 +73,7 @@ module Masks
       end
 
       def organization
-        key = state("organization-choice").chosen_key || request&.try(:organization)
+        key = state("organization-choice").chosen_key || request&.try(:organization_key)
 
         return nil if key.blank?
 
