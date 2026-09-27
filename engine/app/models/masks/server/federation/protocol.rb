@@ -86,8 +86,14 @@ module Masks
             end
 
             held["sub"] = dig(raw, map["sub"])&.to_s.presence
-            held[Provider::GROUPS] = Array(dig(raw, provider.group_claim)).map(&:to_s).presence if provider.organization_id
+            held[Provider::GROUPS] = Array(groups(raw)).map(&:to_s).presence if provider.organization_id
             held.compact
+          end
+
+          def groups(raw)
+            claim = provider.group_claim
+
+            raw.key?(claim) ? raw[claim] : dig(raw, claim)
           end
 
           def dig(raw, path)

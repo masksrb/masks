@@ -7,11 +7,12 @@ module Masks
         def add!(organization:, role:, by:, journey:, actor: nil, email: nil)
           raise Refused, "#{organization.name} is archived" if organization.archived?
 
-          actor ||= Actor.find_by(email: email.to_s.strip.downcase.presence) || invitee(email, by: by)
+          address = email.to_s.strip.downcase.presence
+          actor ||= (address && Actor.find_by(email: address)) || invitee(address, by: by)
 
           raise Refused, "#{actor.identifier} is already a member of #{organization.name}" if organization.memberships.exists?(actor: actor)
 
-          membership = organization.memberships.new(actor: actor, role: role, invited_by: by, pending: true)
+          membership = organization.memberships.new(actor: actor, role: role, invited_by: by, pending: true, invited_as: address)
 
           raise Refused, membership.errors.full_messages.to_sentence unless membership.save
 

@@ -130,6 +130,20 @@ module Masks
         refute within { provider.valid? }
         assert_match "does not offer: admin", provider.errors[:role_map].to_sentence
       end
+
+      test "a groups claim named by a URL maps roles too" do
+        create_provider(role: "delegate", email_domains: "acme.test", organization: @acme,
+                        role_claim: "https://acme.test/groups", role_map: { "Acme Admins" => "admin" })
+        create_actor(nickname: "owner", email: "owner@acme.test")
+
+        ask_app(organization: "acme")
+        finish_sso(sub: "upstream-8", email: "grace@acme.test", "https://acme.test/groups": [ "Acme Admins" ],
+                   handoff: begin_sso(rid: current_rid))
+
+        actor = within { Actor.find_by(email: "grace@acme.test") }
+
+        assert_equal "admin", within { @acme.memberships.find_by!(actor: actor).role }
+      end
     end
   end
 end

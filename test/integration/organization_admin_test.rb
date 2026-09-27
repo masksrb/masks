@@ -167,6 +167,16 @@ module Masks
         assert_includes names, "existing@example.com invited"
         assert_includes names, "brand-new@example.com invited"
       end
+
+      test "an empty invitation is refused rather than matching an account with no address" do
+        nameless = within { Actor.create!(nickname: "nameless", password: "password1234") }
+
+        sign_in_as(@owner)
+        post "/account/organizations/acme/members", params: { email: " ", role: "member" }
+
+        assert_equal "an email address is required", flash[:alert]
+        refute within { @acme.memberships.exists?(actor: nameless) }
+      end
     end
   end
 end

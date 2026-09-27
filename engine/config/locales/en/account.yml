@@ -71,6 +71,7 @@ en:
         state:
           ready: "Ready"
           waiting: "Waiting for you"
+        invited_by_manager: "Someone a manager invited"
         explained: "This device is trusted, so it can confirm a sign-in happening somewhere else. Enter the code the other screen shows. Only enter a code you are looking at yourself."
         code: "Code on the other screen"
         submit: "Continue"
