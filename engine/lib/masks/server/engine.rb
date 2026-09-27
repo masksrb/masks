@@ -21,6 +21,14 @@ module Masks
         middleware.insert_before Tenancy::Middleware, Isolation if app.config.masks.mode == :engine
       end
 
+      initializer "masks_server.journeys" do
+        ActiveSupport.on_load(:active_job) do
+          require_relative "journey_serializer"
+
+          ActiveJob::Serializers.add_serializers(JourneySerializer)
+        end
+      end
+
       initializer "masks_server.static" do |app|
         app.middleware.use Rack::Static,
                            urls: %w[/masks-public /masks-assets],

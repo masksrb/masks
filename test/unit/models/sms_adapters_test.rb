@@ -141,9 +141,9 @@ module Masks
       test "a test message needs a number in international form" do
         held = adapter(Adapters::SmsLog)
 
-        assert_raises(Adapter::Failed) { within { held.deliver_test("555") } }
+        assert_raises(Adapter::Failed) { within { held.deliver_test("555", journey: Journey.system) } }
 
-        within { held.deliver_test("+15557654321") }
+        within { held.deliver_test("+15557654321", journey: Journey.system) }
 
         assert_equal "+15557654321", Adapters::SmsLog.deliveries.last[:to]
       end

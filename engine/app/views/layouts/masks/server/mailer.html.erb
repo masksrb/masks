@@ -47,7 +47,17 @@
         font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
       }
 
-      .tenant {
+      .mark-logo {
+        padding: 0;
+        overflow: hidden;
+      }
+
+      .mark-logo img {
+        display: block;
+        border-radius: 5px;
+      }
+
+      .heading {
         padding-top: 12px;
         font-size: 12px;
         font-weight: 700;
@@ -150,7 +160,7 @@
           color: #ff8f53 !important;
         }
 
-        .tenant {
+        .heading {
           color: #b58a41 !important;
         }
 
@@ -159,7 +169,7 @@
           border-color: #292421 !important;
         }
 
-        .lede, .strong {
+        .lede, .strong, .code {
           color: #e9e5e2 !important;
         }
 
@@ -196,13 +206,17 @@
               <td align="center">
                 <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                   <tr>
-                    <td class="mark" width="44" height="44" align="center"><%= @tenant_name.to_s.first.to_s.upcase %></td>
+                    <% if (logo = @journey&.logo_url) %>
+                      <td class="mark mark-logo" width="44" height="44" align="center"><img src="<%= logo %>" width="44" height="44" alt=""></td>
+                    <% else %>
+                      <td class="mark" width="44" height="44" align="center"><%= @heading.to_s.first.to_s.upcase %></td>
+                    <% end %>
                   </tr>
                 </table>
               </td>
             </tr>
             <tr>
-              <td class="tenant"><%= @tenant_name %></td>
+              <td class="heading"><%= @heading %></td>
             </tr>
             <tr>
               <td height="24" style="height: 24px; line-height: 24px; font-size: 0;">&nbsp;</td>

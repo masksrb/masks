@@ -651,6 +651,17 @@ module Masks
         assert_not Current.previewing
       end
 
+      test "previews of emails sent while signing in carry the chosen app" do
+        held = bearer
+        approved = create_client(@tenant, name: "Acme Notes", approved_at: Time.current)
+
+        body = ask(%({ mailPreviews(client: "#{approved.client_id}") { key journey heading } }), held)
+        previews = body.dig("data", "mailPreviews").index_by { |preview| preview["key"] }
+
+        assert_equal [ "sign_in", "Acme Notes" ], previews["confirmation_code"].values_at("journey", "heading")
+        assert_equal [ "system", "Demo" ], previews["idle_suspend"].values_at("journey", "heading")
+      end
+
       test "an admin cannot delete themselves" do
         body = ask(%(mutation { deleteActor(uuid: "#{@actor.uuid}") { uuid } }), bearer)
 

@@ -126,7 +126,7 @@ module Masks
         invited = within(@tenant) { Actor.invite!(nickname: "sam", email: "sam@example.com") }
 
         with_mailer do
-          assert_not within(@tenant) { Recoveries.request(identifier: "sam") }
+          assert_not within(@tenant) { Recoveries.request(identifier: "sam", journey: Journey.system) }
           assert_equal 0, enqueued_jobs.count
           assert_not within(@tenant) { invited.reload }.activated?
         end

@@ -76,7 +76,7 @@ module Masks
 
         within(@tenant) do
           ActorMailer.email_verification(
-            actor, "http://auth.example.test/verify/token", tenant_name: @tenant.name
+            actor, "http://auth.example.test/verify/token", journey: Journey.system
           ).deliver_later
         end
 
@@ -92,11 +92,11 @@ module Masks
         theirs = create_actor(other_tenant, nickname: "theirs", email: "theirs@example.invalid")
 
         within(@tenant) do
-          ActorMailer.email_verification(mine, "http://auth.example.test/a", tenant_name: @tenant.name).deliver_later
+          ActorMailer.email_verification(mine, "http://auth.example.test/a", journey: Journey.system).deliver_later
         end
 
         within(other_tenant) do
-          ActorMailer.email_verification(theirs, "http://auth.example.test/b", tenant_name: other_tenant.name).deliver_later
+          ActorMailer.email_verification(theirs, "http://auth.example.test/b", journey: Journey.system).deliver_later
         end
 
         perform_enqueued_jobs
@@ -109,7 +109,7 @@ module Masks
         actor = create_actor(@tenant, nickname: "invitee", email: "invitee@example.invalid")
 
         within(@tenant) do
-          ActorMailer.email_verification(actor, "http://auth.example.test/a", tenant_name: @tenant.name).deliver_later
+          ActorMailer.email_verification(actor, "http://auth.example.test/a", journey: Journey.system).deliver_later
         end
 
         Tenant.switch(@tenant) { @tenant.update!(archived_at: Time.current) }

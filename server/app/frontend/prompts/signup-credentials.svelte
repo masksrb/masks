@@ -8,7 +8,7 @@ let { login } = $props();
 
 const signup = $derived(login.auth.signup ?? {});
 const credentials = $derived(signup.credentials ?? { password: true, passkey: false });
-const firstRun = $derived(Boolean(login.auth.journey?.firstRun));
+const firstRun = $derived(Boolean(login.auth.signingUp?.firstRun));
 const minimum = $derived(signup.minimum ?? 8);
 const docs = $derived(login.auth.docs);
 const passkeyable = $derived(Boolean(credentials.passkey) && available());

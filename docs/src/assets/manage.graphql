@@ -388,7 +388,9 @@ scalar JSON
 
 type MailPreview {
   from: String!
+  heading: String!
   html: String
+  journey: String!
   key: ID!
   name: String!
   subject: String!
@@ -564,7 +566,7 @@ type Query {
   devices(actor: ID, agent: String, blocked: Boolean, limit: Int, unattached: Boolean): [Device!]!
   eventActions: [EventAction!]!
   events(action: String, actor: ID, afterId: ID, client: ID, device: ID, grave: Boolean, limit: Int): [Event!]!
-  mailPreviews: [MailPreview!]!
+  mailPreviews(client: ID): [MailPreview!]!
   minimumPassword: Int!
   namespaces: [Namespace!]!
   provider(key: ID!): Provider

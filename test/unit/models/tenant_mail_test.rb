@@ -123,7 +123,7 @@ module Masks
         actor = create_actor(@tenant, nickname: "ada", email: "ada@example.invalid")
 
         message = within do
-          held = ActorMailer.invitation(actor, "https://masks.example.invalid/a", tenant_name: @tenant.name)
+          held = ActorMailer.invitation(actor, "https://masks.example.invalid/a", journey: Journey.system)
           held.message
           held
         end
@@ -138,7 +138,7 @@ module Masks
           actor = create_actor(@tenant, nickname: "ada", email: "ada@example.invalid")
 
           message = within do
-            held = ActorMailer.invitation(actor, "https://masks.example.invalid/a", tenant_name: @tenant.name)
+            held = ActorMailer.invitation(actor, "https://masks.example.invalid/a", journey: Journey.system)
             held.message
             held
           end

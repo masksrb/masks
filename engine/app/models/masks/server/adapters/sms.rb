@@ -16,12 +16,12 @@ module Masks
           raise NotImplementedError
         end
 
-        def deliver_test(to)
+        def deliver_test(to, journey:)
           number = self.class.number(to)
 
           raise Failed, "that is not a phone number in international form, like +15551234567" if number.nil?
 
-          deliver(to: number, body: I18n.t("adapters.test.sms", tenant: tenant.name))
+          deliver(to: number, body: I18n.t("adapters.test.sms", tenant: journey.heading))
         end
 
         private

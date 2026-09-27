@@ -125,7 +125,7 @@ module Masks
         self.class.fields.reject(&:secret).to_h { |field| [ field.key, self[field.key] ] }
       end
 
-      def deliver_test(to)
+      def deliver_test(to, journey:)
         raise NotImplementedError
       end
 

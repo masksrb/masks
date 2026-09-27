@@ -56,7 +56,7 @@ module Masks
             return warn!("missing-identifier") if login.identifier.blank?
             return warn!("no-mailer") unless ActorMailer.deliverable?
 
-            Recoveries.request(identifier: login.identifier)
+            Recoveries.request(identifier: login.identifier, journey: Masks::Server::Journey.sign_in(login))
 
             warn! SENT
           end

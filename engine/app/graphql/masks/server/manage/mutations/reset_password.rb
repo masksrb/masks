@@ -14,7 +14,7 @@ module Masks
 
             refuse!("#{actor.identifier} has not accepted an invitation yet") unless actor.activated?
 
-            Recoveries.open(actor: actor, by: viewer).merge(actor: actor)
+            Recoveries.open(actor: actor, journey: Masks::Server::Journey.manage(viewer)).merge(actor: actor)
           end
         end
       end

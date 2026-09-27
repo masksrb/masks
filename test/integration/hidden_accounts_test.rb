@@ -57,8 +57,8 @@ module Masks
           assert_equal "prove-email", known["prompt"]
           assert_equal known["prompt"], unknown["prompt"]
           assert_equal known.keys.sort, unknown.keys.sort
-          assert_nil known["journey"]
-          assert_nil unknown["journey"]
+          assert_nil known["signingUp"]
+          assert_nil unknown["signingUp"]
           assert mailed_code("owner@example.com")
           assert mailed_code("ada@example.com")
         end

@@ -12,7 +12,7 @@ module Masks
           def resolve(key:, to:)
             adapter = adapter!(key)
 
-            adapter.deliver_test(to)
+            adapter.deliver_test(to, journey: Masks::Server::Journey.manage(viewer))
 
             audit!(Masks::Server::Event::ADAPTER_TESTED, adapter: adapter.key, service: adapter.service, delivered: true)
 

@@ -77,7 +77,7 @@ module Masks
         remove_instance_variable(:@policy) if defined?(@policy)
       end
 
-      def journey
+      def signing_up
         signed_up = store[LoginStates::Signup::SIGNED_UP]
         first = signed_up ? signed_up["first_run"] : first_run?
 
@@ -87,7 +87,7 @@ module Masks
       end
 
       def surface
-        prompt == "consent" || (journey && !settled?) ? "grant" : "challenge"
+        prompt == "consent" || (signing_up && !settled?) ? "grant" : "challenge"
       end
 
       def identifier
@@ -286,7 +286,7 @@ module Masks
       def copy
         key = prompt.to_s.tr("-", "_")
         shared = I18n.t("logins.shared", default: {})
-        shared = shared.merge(I18n.t("logins.signing_up", default: {})) if journey
+        shared = shared.merge(I18n.t("logins.signing_up", default: {})) if signing_up
         named = key.present? ? I18n.t("logins.#{key}", default: {}) : {}
 
         shared.merge(named.is_a?(Hash) ? named : {}).transform_keys(&:to_s)
@@ -327,7 +327,7 @@ module Masks
             "person" => person_json,
             "client" => client_json,
             "tenant" => tenant && { "name" => tenant.name },
-            "journey" => journey,
+            "signingUp" => signing_up,
             "surface" => surface
           }
 

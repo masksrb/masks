@@ -6,7 +6,7 @@ import SignupHead from "./SignupHead.svelte";
 let { login, title, lede = null, tone = null } = $props();
 </script>
 
-{#if login.auth.journey}
+{#if login.auth.signingUp}
   <SignupHead {login} mark={login.actor?.identifier ?? ""} />
 
   <div class="prompt-head">

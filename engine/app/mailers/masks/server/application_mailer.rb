@@ -36,6 +36,16 @@ module Masks
         def deliverable?
           self.class.deliverable?
         end
+
+        def journey!(journey)
+          @journey = journey
+          @tenant_name = journey.tenant_name
+          @heading = journey.heading
+        end
+
+        def home
+          @journey.origin.presence && "#{@journey.origin}/"
+        end
     end
   end
 end

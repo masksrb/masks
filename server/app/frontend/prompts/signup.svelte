@@ -9,7 +9,7 @@ let { login } = $props();
 const signup = $derived(login.auth.signup ?? {});
 const asks = $derived(signup.asks ?? {});
 const fixed = $derived(new Set(signup.fixed ?? []));
-const firstRun = $derived(Boolean(login.auth.journey?.firstRun));
+const firstRun = $derived(Boolean(login.auth.signingUp?.firstRun));
 const docs = $derived(login.auth.docs);
 const origin = typeof location === "undefined" ? "" : location.origin;
 

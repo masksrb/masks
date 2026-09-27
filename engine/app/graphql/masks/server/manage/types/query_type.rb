@@ -107,7 +107,9 @@ module Masks
 
           field :minimum_password, Integer, null: false
 
-          field :mail_previews, [ MailPreviewType ], null: false
+          field :mail_previews, [ MailPreviewType ], null: false do
+            argument :client, ID, required: false
+          end
 
           field :tally, TallyType, null: false
 
@@ -169,8 +171,8 @@ module Masks
             SamlIdentity.metadata_url(Issuer.new(Current.tenant, Current.origin))
           end
 
-          def mail_previews
-            MailPreviews.all(Current.tenant, Current.origin)
+          def mail_previews(client: nil)
+            MailPreviews.all(client: client && Client.find_by(client_id: client))
           end
 
           def scim_base_url

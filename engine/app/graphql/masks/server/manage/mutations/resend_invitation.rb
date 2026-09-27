@@ -14,7 +14,7 @@ module Masks
 
             refuse!("#{actor.identifier} has already accepted an invitation") if actor.activated?
 
-            Invitations.open(actor: actor, by: viewer).merge(actor: actor)
+            Invitations.open(actor: actor, journey: Masks::Server::Journey.manage(viewer)).merge(actor: actor)
           end
         end
       end

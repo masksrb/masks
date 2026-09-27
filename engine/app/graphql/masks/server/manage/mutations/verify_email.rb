@@ -15,7 +15,7 @@ module Masks
             refuse!("#{actor.identifier} has no email address") if actor.email.blank?
             refuse!("#{actor.email} is already confirmed") if actor.email_verified_at.present?
 
-            Verifications.open(actor: actor, by: viewer).merge(actor: actor)
+            Verifications.open(actor: actor, journey: Masks::Server::Journey.manage(viewer)).merge(actor: actor)
           end
         end
       end

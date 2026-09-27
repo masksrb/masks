@@ -126,7 +126,7 @@ module Masks
 
             opened, code = Masks::Server::ConfirmationCode.open_inbox!(address: address, ip: Current.ip_address)
 
-            ActorMailer.confirmation_code(address, code, tenant_name: tenant&.name).deliver_later
+            ActorMailer.confirmation_code(address, code, journey: Masks::Server::Journey.sign_in(login)).deliver_later
 
             login.store[HELD] = { "address" => address, "token_id" => opened.id, "sent" => Time.current.to_i }
           end

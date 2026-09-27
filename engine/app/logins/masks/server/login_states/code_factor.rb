@@ -72,7 +72,7 @@ module Masks
             return warn!("factor-not-offered") unless usable_factors.include?(factor)
             return if held["factor"] == factor && token && !token.resendable?
 
-            sent = CodeFactors.send!(actor, factor)
+            sent = CodeFactors.send!(actor, factor, journey: Masks::Server::Journey.sign_in(login))
 
             remove_instance_variable(:@token) if defined?(@token)
             login.store[HELD] = { "actor_id" => actor.id, "factor" => factor, "token_id" => sent.id }

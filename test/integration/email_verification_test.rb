@@ -102,7 +102,7 @@ module Masks
 
         with_mailer do
           within(@tenant) do
-            assert_equal({ delivered: false, url: nil }, Verifications.open(actor: @actor))
+            assert_equal({ delivered: false, url: nil }, Verifications.open(actor: @actor, journey: Journey.system))
             assert_equal 0, EmailVerification.where(actor_id: @actor.id).count
           end
         end
@@ -113,7 +113,7 @@ module Masks
 
         with_mailer do
           within(@tenant) do
-            assert_equal({ delivered: false, url: nil }, Verifications.open(actor: plain))
+            assert_equal({ delivered: false, url: nil }, Verifications.open(actor: plain, journey: Journey.system))
             assert_equal 0, EmailVerification.where(actor_id: plain.id).count
           end
         end

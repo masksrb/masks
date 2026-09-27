@@ -63,12 +63,12 @@ module Masks
           spec(factor)[:icon]
         end
 
-        def send!(actor, factor)
+        def send!(actor, factor, journey:)
           held = spec(factor)
           to = address(actor, factor)
           token, code = ConfirmationCode.open!(actor: actor, channel: held[:sent_on], address: to)
 
-          Confirmations.deliver(held[:channel], to, code)
+          Confirmations.deliver(held[:channel], to, code, journey: journey)
 
           token
         end

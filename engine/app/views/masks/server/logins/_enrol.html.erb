@@ -2,7 +2,7 @@
 <% otp = enrolment["otp"] %>
 <% issued = enrolment.dig("backupCodes", "issued") || [] %>
 <% remaining = enrolment.dig("backupCodes", "remaining").to_i %>
-<% signing_up = login.journey %>
+<% signing_up = login.signing_up %>
 <% offers = enrolment["offers"] %>
 
 <div class="flow<%= " setup" if signing_up %>">

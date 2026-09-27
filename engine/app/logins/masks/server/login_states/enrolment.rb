@@ -208,7 +208,7 @@ module Masks
             factor = update(:factor).to_s
             return unless open? && offers[factor] && !CodeFactors.held?(actor, factor)
 
-            sent = CodeFactors.send!(actor, factor)
+            sent = CodeFactors.send!(actor, factor, journey: Masks::Server::Journey.sign_in(login))
 
             hold(code: { "factor" => factor, "token_id" => sent.id })
           end

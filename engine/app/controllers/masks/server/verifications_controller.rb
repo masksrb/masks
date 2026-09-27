@@ -13,7 +13,7 @@ module Masks
         return refuse(t("verifications.already_confirmed")) if current_actor.email_verified_at.present?
         return refuse(t("verifications.no_mailer")) unless ActorMailer.deliverable?
 
-        Verifications.open(actor: current_actor, by: current_actor)
+        Verifications.open(actor: current_actor, journey: Journey.account(current_actor))
 
         redirect_to root_path, notice: t("verifications.sent", email: current_actor.email)
       end

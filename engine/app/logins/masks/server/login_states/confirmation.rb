@@ -129,7 +129,7 @@ module Masks
           end
 
           def send_code(channel)
-            token = Confirmations.send_code(actor, channel)
+            token = Confirmations.send_code(actor, channel, journey: Masks::Server::Journey.sign_in(login))
 
             @tokens&.delete(channel)
             login.store[HELD] = held.merge(channel => token.id, "#{channel}_sent" => Time.current.to_i)
@@ -161,7 +161,7 @@ module Masks
           def resend
             if unconfirmed?(ConfirmationCode::EMAIL)
               if email_mode == "link"
-                Verifications.open(actor: actor)
+                Verifications.open(actor: actor, journey: Masks::Server::Journey.sign_in(login))
               elsif resendable?(ConfirmationCode::EMAIL)
                 send_code(ConfirmationCode::EMAIL)
               end

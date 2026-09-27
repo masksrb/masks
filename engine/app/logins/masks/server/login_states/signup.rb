@@ -218,8 +218,8 @@ module Masks
             Event.record!(Event::ACCOUNT_CREATED, actor: actor, first_run: @first_run,
                                                   signup: !@first_run, policy: login.policy.key)
 
-            Verifications.open(actor: actor) unless !@first_run && login.policy.confirmation == SignInPolicy::CODE
-            Confirmations.request_approval(actor) if actor.pending_approval_at.present?
+            Verifications.open(actor: actor, journey: Masks::Server::Journey.sign_in(login)) unless !@first_run && login.policy.confirmation == SignInPolicy::CODE
+            Confirmations.request_approval(actor, journey: Masks::Server::Journey.sign_in(login)) if actor.pending_approval_at.present?
 
             login.store.delete(HELD)
             login.identifier = actor.identifier

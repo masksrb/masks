@@ -6,7 +6,7 @@ import Steps from "./Steps.svelte";
 let { login, at, mark = "" } = $props();
 
 const tenant = $derived(login.auth.tenant?.name ?? "");
-const journey = $derived(login.auth.journey ?? { steps: [] });
+const signingUp = $derived(login.auth.signingUp ?? { steps: [] });
 
 </script>
 
@@ -14,17 +14,17 @@ const journey = $derived(login.auth.journey ?? { steps: [] });
   <span class="auth-mark auth-mark-client" class:auth-mark-pending={!mark.trim()} aria-hidden="true"
     >{initial(mark)}</span>
   <span class="auth-wire"></span>
-  {#if journey.firstRun}
+  {#if signingUp.firstRun}
     <img src="/masks-public/icon.svg" alt="" class="auth-mark auth-mark-rose" />
   {:else}
     <span class="auth-mark" aria-hidden="true">{initial(tenant)}</span>
   {/if}
 </div>
 
-{#if journey.firstRun}
+{#if signingUp.firstRun}
   <Head {login} title={login.t("setup_title")} name={tenant} cap={login.t("setup_cap")} />
 {:else}
   <Head {login} title={login.t("signup_title")} name={tenant} />
 {/if}
 
-<Steps {login} steps={journey.steps} at={at ?? journey.steps.length} />
+<Steps {login} steps={signingUp.steps} at={at ?? signingUp.steps.length} />

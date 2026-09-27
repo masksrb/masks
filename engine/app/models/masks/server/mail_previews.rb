@@ -5,57 +5,60 @@ module Masks
         def delivery_method = [ :test ]
       end
 
-      Preview = Data.define(:key, :name, :subject, :from, :to, :html, :text)
+      Preview = Data.define(:key, :name, :journey, :heading, :subject, :from, :to, :html, :text)
 
       class << self
-        def all(tenant, origin)
+        def all(client: nil)
           Current.set(previewing: true) do
-            entries(tenant, origin.presence || tenant.public_origin.to_s).map do |key, name, delivery|
-              render(key, name, delivery.message)
-            end
+            entries(client).map { |key, name, journey, delivery| render(key, name, journey, delivery.message) }
           end
         end
 
         private
 
-          def entries(tenant, origin)
-            named = tenant.name
+          def entries(client)
             person = Actor.new(uuid: "preview", nickname: "sam", email: "sam@example.com", name: "Sam Rivera")
             manager = Actor.new(uuid: "manager", nickname: "ada", email: "ada@example.com", name: "Ada Park")
+            signing_in = Journey.new(kind: Journey::SIGN_IN, via: Journey::AUTHORIZATION, client: client)
+            managing = Journey.manage(manager)
+            system = Journey.system
+            origin = signing_in.origin
             due = IdleAccounts::WARNING.from_now
             changed = Event.new(action: Event::PASSWORD_CHANGED, actor: person, created_at: Time.current,
                                 ip_address: "203.0.113.7")
 
             [
-              [ "invitation", "Invitation",
-                ActorMailer.invitation(person, "#{origin}/invite/preview", tenant_name: named, invited_by: manager) ],
-              [ "password_reset", "Password reset",
-                ActorMailer.password_reset(person, "#{origin}/reset/preview", tenant_name: named) ],
-              [ "email_verification", "Email confirmation",
-                ActorMailer.email_verification(person, "#{origin}/verify/preview", tenant_name: named) ],
-              [ "confirmation_code", "Confirmation code",
-                ActorMailer.confirmation_code(person.email, "482913", tenant_name: named) ],
-              [ "notification", "Security notice",
-                ActorMailer.notification(person, changed, tenant_name: named, origin: origin) ],
-              [ "approval_requested", "Approval requested",
-                ActorMailer.approval_requested(manager, person, tenant_name: named, origin: origin) ],
-              [ "approved", "Account approved",
-                ActorMailer.approved(person, tenant_name: named, origin: origin) ],
-              [ "idle_suspend", "Idle, before suspension",
-                ActorMailer.idle(person, tenant_name: named, due: due, notice: IdleAccounts::SUSPEND, origin: origin) ],
-              [ "idle_delete", "Idle, before deletion",
-                ActorMailer.idle(person, tenant_name: named, due: due, notice: IdleAccounts::DELETE, origin: origin) ],
-              [ "idle_delete_suspended", "Idle and suspended, before deletion",
-                ActorMailer.idle(person, tenant_name: named, due: due, notice: IdleAccounts::DELETE_SUSPENDED, origin: origin) ],
-              [ "adapter_trial", "Mail adapter test",
-                AdapterMailer.trial(manager.email, adapter: Adapter.new(from: ApplicationMailer.from)) ]
+              [ "confirmation_code", "Confirmation code", signing_in,
+                ActorMailer.confirmation_code(person.email, "482913", journey: signing_in) ],
+              [ "email_verification", "Email confirmation", signing_in,
+                ActorMailer.email_verification(person, "#{origin}/verify/preview", journey: signing_in) ],
+              [ "password_reset", "Password reset", signing_in,
+                ActorMailer.password_reset(person, "#{origin}/reset/preview", journey: signing_in) ],
+              [ "approval_requested", "Approval requested", signing_in,
+                ActorMailer.approval_requested(manager, person, journey: signing_in) ],
+              [ "invitation", "Invitation", managing,
+                ActorMailer.invitation(person, "#{origin}/invite/preview", journey: managing) ],
+              [ "approved", "Account approved", managing,
+                ActorMailer.approved(person, journey: managing) ],
+              [ "notification", "Security notice", system,
+                ActorMailer.notification(person, changed, journey: system) ],
+              [ "idle_suspend", "Idle, before suspension", system,
+                ActorMailer.idle(person, due: due, notice: IdleAccounts::SUSPEND, journey: system) ],
+              [ "idle_delete", "Idle, before deletion", system,
+                ActorMailer.idle(person, due: due, notice: IdleAccounts::DELETE, journey: system) ],
+              [ "idle_delete_suspended", "Idle and suspended, before deletion", system,
+                ActorMailer.idle(person, due: due, notice: IdleAccounts::DELETE_SUSPENDED, journey: system) ],
+              [ "adapter_trial", "Mail adapter test", managing,
+                AdapterMailer.trial(manager.email, adapter: Adapter.new(from: ApplicationMailer.from), journey: managing) ]
             ]
           end
 
-          def render(key, name, message)
+          def render(key, name, journey, message)
             Preview.new(
               key: key,
               name: name,
+              journey: journey.kind,
+              heading: journey.heading.to_s,
               subject: message.subject.to_s,
               from: Array(message.from).join(", "),
               to: Array(message.to).join(", "),

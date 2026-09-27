@@ -12,7 +12,7 @@ module Masks
 
             refuse!("#{actor.identifier} is not waiting for approval") if actor.pending_approval_at.nil?
 
-            Masks::Server::Confirmations.approve!(actor, by: viewer)
+            Masks::Server::Confirmations.approve!(actor, journey: Masks::Server::Journey.manage(viewer))
 
             { actor: actor }
           end

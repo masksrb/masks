@@ -92,6 +92,11 @@ masks emails a person when something changes on their account:
 Every email masks sends, these and the rest, can be read under **Email** in `/manage`, rendered from
 its templates with sample people and the tenant's own name and links.
 
+Each email carries its journey: a sign-in to an app, the account page, a manager, or masks on its
+own. An email sent while someone signs in to an approved app is headed by that app's logo and name,
+and the rest by the tenant. An app nobody approved never heads an email, so a self-registered app
+cannot borrow the tenant's mail to look like someone else.
+
 ## Rotating signing keys
 
 A key is staged before it signs anything, so clients caching JWKS fetch it first. See

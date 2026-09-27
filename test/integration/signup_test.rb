@@ -64,7 +64,7 @@ module Masks
 
         assert_equal "signup", body["prompt"]
         assert_equal "ada@example.com", body.dig("signup", "email")
-        assert_equal %w[identification credentials], body.dig("journey", "steps")
+        assert_equal %w[identification credentials], body.dig("signingUp", "steps")
 
         body = event("signup", nickname: "ada", email: "ada@example.com", name: "Ada Lovelace")
 
@@ -176,7 +176,7 @@ module Masks
           body = sign_up
 
           assert_equal "confirm-email", body["prompt"]
-          assert_equal %w[identification credentials confirmation], body.dig("journey", "steps")
+          assert_equal %w[identification credentials confirmation], body.dig("signingUp", "steps")
           assert_equal "grant", body["surface"]
           assert_nil created.email_verified_at
 
@@ -250,7 +250,7 @@ module Masks
           assert created.pending_approval_at
           assert(ActionMailer::Base.deliveries.any? { |mail| mail.to == [ @owner.email ] })
 
-          within(@tenant) { Confirmations.approve!(created, by: @owner) }
+          within(@tenant) { Confirmations.approve!(created, journey: Journey.manage(@owner)) }
 
           assert event("confirm:check")["settled"]
           assert(ActionMailer::Base.deliveries.any? { |mail| mail.to == [ "ada@example.com" ] })

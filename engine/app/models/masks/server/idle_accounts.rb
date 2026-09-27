@@ -72,13 +72,7 @@ module Masks
 
             return unless mailed
 
-            ActorMailer.idle(
-              actor,
-              tenant_name: tenant.name,
-              origin: Current.origin.presence || tenant.public_origin,
-              due: due,
-              notice: notice
-            ).deliver_later
+            ActorMailer.idle(actor, due: due, notice: notice, journey: Journey.system).deliver_later
           end
 
           def suspend!(actor)

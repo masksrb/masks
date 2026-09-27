@@ -29,7 +29,7 @@ module Masks
             save!(actor)
             created!(actor, invited: false)
 
-            Verifications.open(actor: actor, by: viewer).merge(actor: actor)
+            Verifications.open(actor: actor, journey: Masks::Server::Journey.manage(viewer)).merge(actor: actor)
           end
 
           private
@@ -38,7 +38,7 @@ module Masks
               save!(actor)
               created!(actor, invited: true)
 
-              Invitations.open(actor: actor, by: viewer).merge(actor: actor)
+              Invitations.open(actor: actor, journey: Masks::Server::Journey.manage(viewer)).merge(actor: actor)
             end
 
             def created!(actor, invited:)

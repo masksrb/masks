@@ -1,23 +1,23 @@
 module Masks
   module Server
     module Recoveries
-      def self.request(identifier:)
+      def self.request(identifier:, journey:)
         actor = Actor.locate(identifier)
 
         return false unless mailable?(actor)
 
-        deliver(PasswordReset.open!(actor: actor), actor)
+        deliver(PasswordReset.open!(actor: actor), actor, journey)
         noted(actor, nil)
         true
       end
 
-      def self.open(actor:, by: nil)
-        reset = PasswordReset.open!(actor: actor, by: by)
-        noted(actor, by)
+      def self.open(actor:, journey:)
+        reset = PasswordReset.open!(actor: actor, by: journey.by)
+        noted(actor, journey.by)
 
         return { delivered: false, url: reset.url(Current.origin) } unless mailable?(actor)
 
-        deliver(reset, actor, by)
+        deliver(reset, actor, journey)
 
         { delivered: true, url: nil }
       end
@@ -30,12 +30,8 @@ module Masks
         ActorMailer.deliverable? && actor.present? && actor.activated? && actor.email.present?
       end
 
-      def self.deliver(reset, actor, by = nil)
-        ActorMailer.password_reset(
-          actor, reset.url(Current.origin),
-          tenant_name: Current.tenant&.name,
-          opened_by: by
-        ).deliver_later
+      def self.deliver(reset, actor, journey)
+        ActorMailer.password_reset(actor, reset.url(Current.origin), journey: journey).deliver_later
 
         reset.delivered!
       end

@@ -33,7 +33,7 @@ module Masks
 
             audit!(Masks::Server::Event::ACTOR_UPDATED, actor: actor, changed: attributes.keys.map(&:to_s))
 
-            Verifications.open(actor: actor, by: viewer) if changing_email
+            Verifications.open(actor: actor, journey: Masks::Server::Journey.manage(viewer)) if changing_email
 
             { actor: actor }
           end

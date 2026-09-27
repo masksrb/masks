@@ -16,10 +16,10 @@ module Masks
           raise NotImplementedError
         end
 
-        def deliver_test(to)
+        def deliver_test(to, journey:)
           raise Failed, "that is not an email address" unless to.to_s.match?(URI::MailTo::EMAIL_REGEXP)
 
-          AdapterMailer.trial(to, adapter: self).deliver_now
+          AdapterMailer.trial(to, adapter: self, journey: journey).deliver_now
         rescue Net::SMTPError, IOError, SystemCallError, SocketError, Timeout::Error, OpenSSL::SSL::SSLError => error
           raise Failed, error.message
         end

@@ -52,7 +52,7 @@
         </label>
       <% end %>
 
-      <% if login.journey["firstRun"] %>
+      <% if login.signing_up["firstRun"] %>
         <div class="ledger-row">
           <span class="ledger-label"><%= t("logins.signing_up.origin") %></span>
           <span class="ledger-value aside-mono"><%= Masks::Server::Current.origin %></span>
@@ -65,7 +65,7 @@
     </button>
   <% end %>
 
-  <% if login.journey["firstRun"] %>
+  <% if login.signing_up["firstRun"] %>
     <p class="aside">
       <%= t("logins.signing_up.once") %>
       <%= link_to t("logins.signing_up.docs"), Rails.configuration.masks.docs_url,

@@ -5,6 +5,8 @@ module Masks
         class MailPreviewType < BaseObject
           field :key, ID, null: false
           field :name, String, null: false
+          field :journey, String, null: false
+          field :heading, String, null: false
           field :subject, String, null: false
           field :from, String, null: false
           field :to, String, null: false
