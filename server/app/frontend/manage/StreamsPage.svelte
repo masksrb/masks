@@ -247,7 +247,7 @@
       {/snippet}
 
       {#each data.active as stream (stream.key)}
-        <div class="flex flex-col gap-3 rounded-lg border border-base-300 p-3">
+        <div class="flex flex-col gap-3 sheet p-3">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div class="flex min-w-0 flex-col">
               <span class="font-medium">{stream.name}</span>

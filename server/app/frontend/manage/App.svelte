@@ -180,7 +180,7 @@
   </div>
 {:else}
   <div class="flex min-h-screen flex-col">
-    <header class="sticky top-0 z-20 border-b border-base-300 bg-base-100/95 backdrop-blur">
+    <header class="console-top sticky top-0 z-20">
       <div class="console-bar mx-auto flex w-full max-w-6xl items-center gap-x-6 py-2">
         <Link to="" class="brand"><img src="/masks-public/icon.svg" alt="" class="brand-mark" />{boot.tenant.name}</Link>
 
@@ -256,7 +256,7 @@
           {/if}
         </SettingsShell>
       {:else}
-        <div class="rounded-box border border-base-300 bg-base-100 px-6 py-14 text-center">
+        <div class="sheet px-6 py-14 text-center">
           <p class="text-sm opacity-85">There is no page at this address.</p>
         </div>
       {/if}

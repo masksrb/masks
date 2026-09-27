@@ -548,69 +548,69 @@
   }
 
   .auth-page {
-    --ground: #fcf9f7;
-    --surface: #f5f1ee;
-    --line: #e5ded9;
-    --line-firm: #d1c9c3;
-    --ink: #211c18;
-    --ink-soft: #58514c;
+    --ground: #ececed;
+    --surface: #f7f7f8;
+    --line: #d9d9dc;
+    --line-firm: #c4c4c8;
+    --ink: #18181b;
+    --ink-soft: #5c5c63;
 
-    --came: #77531b;
-    --brass: #77531b;
-    --brass-lit: #87611e;
-    --signal: #b04000;
+    --came: #8a5a1c;
+    --brass: #8a5a1c;
+    --brass-lit: #9b6a26;
+    --signal: #b3380f;
     --signal-ink: #ffffff;
-    --ring: rgba(33, 28, 24, 0.22);
+    --ring: rgba(179, 56, 15, 0.3);
 
-    --bad: #b53530;
-    --bad-field: #fbf0ef;
+    --bad: #b0183f;
+    --bad-field: #fbeef1;
     --warn: #8b6200;
     --warn-field: #fbf5e8;
     --info: #0077b2;
     --info-field: #edf5fa;
 
-    --glow: rgba(33, 28, 24, 0.05);
+    --glow: rgba(179, 56, 15, 0.05);
     --window: url("/masks-public/icon.svg");
     --window-strength: 0.2;
     --pane: color-mix(in oklab, var(--surface) 58%, transparent);
     --pane-rim: color-mix(in oklab, var(--brass) 30%, var(--line));
     --pane-shine: rgba(255, 255, 255, 0.7);
     --pane-sheen: rgba(255, 255, 255, 0.45);
-    --pane-shadow: 0 18px 44px -30px rgba(33, 28, 24, 0.35);
-    --bend: 5px;
+    --pane-shadow: 0 1px 1px rgba(20, 20, 24, 0.07), 0 18px 40px -24px rgba(20, 20, 24, 0.4);
+    --bend: 8px;
 
     --swing: cubic-bezier(0.2, 0.8, 0.2, 1);
   }
 
   @media (prefers-color-scheme: dark) {
     .auth-page {
-      --ground: #15120f;
-      --surface: #1f1b18;
-      --line: #342f2b;
-      --line-firm: #48423d;
-      --ink: #ede8e4;
-      --ink-soft: #b3aca6;
+      --ground: #0b0b0c;
+      --surface: #1c1c1f;
+      --line: #2a2a2e;
+      --line-firm: #3e3e44;
+      --ink: #ededef;
+      --ink-soft: #9a9a9f;
 
-      --came: #b58a41;
-      --brass: #b58a41;
-      --brass-lit: #deaf56;
-      --signal: #ff8f53;
-      --signal-ink: #15120f;
-      --ring: rgba(237, 232, 228, 0.28);
+      --came: #c9a14a;
+      --brass: #c9a14a;
+      --brass-lit: #e8c27a;
+      --signal: #ff7a4a;
+      --signal-ink: #1f0c06;
+      --ring: rgba(255, 122, 74, 0.4);
 
-      --bad: #ff867a;
-      --bad-field: rgba(255, 134, 122, 0.1);
+      --bad: #ff7396;
+      --bad-field: rgba(255, 115, 150, 0.1);
       --warn: #d4ad03;
       --warn-field: rgba(212, 173, 3, 0.1);
       --info: #00c2fe;
       --info-field: rgba(0, 194, 254, 0.1);
 
-      --glow: rgba(237, 232, 228, 0.07);
+      --glow: rgba(255, 122, 74, 0.06);
       --window-strength: 0.36;
       --pane: color-mix(in oklab, var(--surface) 52%, transparent);
-      --pane-shine: rgba(255, 255, 255, 0.08);
+      --pane-shine: rgba(255, 255, 255, 0.1);
       --pane-sheen: rgba(255, 255, 255, 0.045);
-      --pane-shadow: 0 22px 50px -28px rgba(0, 0, 0, 0.7);
+      --pane-shadow: 0 1px 0 rgba(0, 0, 0, 0.6), 0 22px 50px -24px rgba(0, 0, 0, 0.8);
     }
   }
 

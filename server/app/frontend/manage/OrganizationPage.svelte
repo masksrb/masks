@@ -481,7 +481,7 @@
             <span class="legend">Providers</span>
 
             {#each organization.providers as provider (provider.key)}
-              <div class="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-base-300 p-3">
+              <div class="flex flex-wrap items-center justify-between gap-2 sheet p-3">
                 <div class="flex min-w-0 flex-col">
                   <span class="font-medium">{provider.name}</span>
                   <span class="hint">
@@ -520,7 +520,7 @@
           </div>
 
           {#if handing.provider}
-            <div class="flex flex-col gap-3 rounded-lg border border-base-300 p-3">
+            <div class="flex flex-col gap-3 sheet p-3">
               <span class="font-medium">
                 {providers.find((provider) => provider.key === handing.provider)?.name ?? handing.provider}
               </span>

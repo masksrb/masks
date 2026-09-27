@@ -464,7 +464,7 @@
           {:else}
             <ul class="flex flex-col gap-2">
               {#each actor.passkeys as passkey (passkey.id)}
-                <li class="flex flex-col gap-1 rounded-lg bg-base-200 px-3 py-2">
+                <li class="flex flex-col gap-1 tray px-3 py-2">
                   <div class="flex items-baseline justify-between gap-3">
                     <span class="text-sm font-medium">{passkey.label}</span>
                     <span class="flex items-baseline gap-2">

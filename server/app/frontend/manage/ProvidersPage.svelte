@@ -488,7 +488,7 @@
         {#each presets as preset (preset.key)}
           <button
             type="button"
-            class="flex items-baseline justify-between gap-3 rounded-lg border border-base-300 px-3 py-2.5 text-left hover:border-primary"
+            class="flex items-baseline justify-between gap-3 sheet sheet-press px-3 py-2.5 text-left"
             class:border-dashed={preset.custom}
             onclick={() => pick(preset)}
           >
@@ -512,7 +512,7 @@
         </p>
       {/if}
 
-      <div class="flex flex-col gap-2 rounded-lg bg-base-200 p-3">
+      <div class="flex flex-col gap-2 tray p-3">
         <span class="legend">Give {draft.name.trim() || "the provider"} these</span>
 
         {#each saml ? [["Assertion consumer service URL", callbackUrl], ["Service provider entity ID", spEntityId]] : [["Redirect URI", callbackUrl]] as [label, value] (label)}
@@ -746,7 +746,7 @@
       {/if}
 
       {#if !saml}
-        <div class="flex flex-col gap-3 rounded-lg bg-base-200 p-3">
+        <div class="flex flex-col gap-3 tray p-3">
           <span class="legend">Applications</span>
 
           {#if !mcp}
@@ -791,7 +791,7 @@
       {/if}
 
       {#if !mcp}
-      <div class="flex flex-col gap-3 rounded-lg bg-base-200 p-3">
+      <div class="flex flex-col gap-3 tray p-3">
         <span class="legend">Signing in</span>
 
         <label class="flex items-start gap-3 text-sm">
@@ -860,7 +860,7 @@
   {#if loading && active.length === 0 && archived.length === 0}
     <Spinner />
   {:else if active.length === 0 && archived.length === 0 && !picking && !draft}
-    <div class="rounded-box border border-base-300 bg-base-100 px-6 py-14 text-center">
+    <div class="sheet px-6 py-14 text-center">
       <p class="mx-auto max-w-sm text-sm opacity-85">
         No provider is set up. Add one and actors can sign in with Google, GitHub, their company's
         identity provider, or anything that speaks OpenID Connect, OAuth 2.0 or SAML.
