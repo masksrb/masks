@@ -12,7 +12,7 @@ module Masks
 
       scope :accepted, -> { where(pending: false) }
       scope :invitations, -> { where(pending: true) }
-      scope :lapsed, ->(by = Time.current) { invitations.where(invited_at: ...(by - lifetime)) }
+      scope :lapsed, ->(by = Time.current) { invitations.where("COALESCE(invited_at, created_at) < ?", by - lifetime) }
 
       before_create { self.invited_at ||= Time.current if pending? }
 
@@ -31,7 +31,7 @@ module Masks
       end
 
       def expires_at
-        pending? && invited_at ? invited_at + self.class.lifetime : nil
+        pending? ? (invited_at || created_at) + self.class.lifetime : nil
       end
 
       def expired?
