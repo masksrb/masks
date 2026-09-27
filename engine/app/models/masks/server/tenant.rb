@@ -59,6 +59,11 @@ module Masks
       validates :subdomain, presence: true, uniqueness: true,
                             format: { with: /\A[a-z0-9][a-z0-9-]*\z/ }
       validates :name, presence: true
+      validates :custom_host, uniqueness: true, allow_nil: true,
+                              format: { with: DomainClaim::HOSTNAME, message: "is not a host name" }
+      validate :custom_host_is_proven, if: -> { custom_host.present? && will_save_change_to_custom_host? }
+
+      normalizes :custom_host, with: ->(value) { value.to_s.strip.downcase.delete_suffix(".").presence }
 
       scope :active, -> { where(archived_at: nil) }
       scope :idling, -> { where.not(suspend_after: nil).or(where.not(delete_after: nil)) }
@@ -70,9 +75,31 @@ module Masks
       end
 
       def public_origin
+        custom_origin || templated_origin
+      end
+
+      def templated_origin
         template = ::Rails.configuration.masks.public_origin_template
 
         template && format(template, subdomain: subdomain).chomp("/")
+      end
+
+      def custom_origin
+        "https://#{custom_host}" if custom_host
+      end
+
+      def unserve_uncovered!(reason)
+        return if custom_host.blank? || covering_claim
+
+        host = custom_host
+        update_columns(custom_host: nil)
+        Event.record!(Event::CUSTOM_DOMAIN_STOPPED, by: nil, host: host, reason: reason)
+      end
+
+      def covering_claim
+        return nil if custom_host.blank?
+
+        domain_claims.verified.find { |claim| custom_host == claim.domain || custom_host.end_with?(".#{claim.domain}") }
       end
 
       def named_by
@@ -180,6 +207,26 @@ module Masks
         end
 
         def resolve(host)
+          serving(host) || named(host)
+        end
+
+        def served_domain
+          template = ::Rails.configuration.masks.public_origin_template
+
+          return nil if template.nil?
+
+          host = URI.parse(format(template, subdomain: "tenant")).host.to_s
+
+          template.include?("%{subdomain}") ? host.split(".", 2).last : host
+        end
+
+        def serving(host)
+          held = host.to_s.downcase
+
+          active.find_by(custom_host: held) if held.present?
+        end
+
+        def named(host)
           return active.find_by(subdomain: pinned) if pinned
 
           active.find_by(subdomain: host.to_s.split(".").first)
@@ -311,6 +358,16 @@ module Masks
       end
 
       private
+
+        def custom_host_is_proven
+          served = self.class.served_domain
+
+          if served.present? && (custom_host == served || custom_host.end_with?(".#{served}"))
+            errors.add(:custom_host, "is part of this server's own domain")
+          elsif covering_claim.nil?
+            errors.add(:custom_host, "must be within a domain this tenant has proven")
+          end
+        end
 
         def forget_idle_warnings
           Tenant.switch(self) do

@@ -5,6 +5,12 @@ module Masks
         class TenantType < BaseObject
           field :uuid, ID, null: false
           field :subdomain, String, null: false
+          field :custom_host, String, description: "The host sign-in is also served from, within a proven domain."
+          field :origins, [ String ], null: false, description: "Every origin this tenant answers on, each its own issuer."
+
+          def origins
+            [ object.templated_origin, object.custom_origin ].compact
+          end
           field :name, String, null: false
           field :named_by, String, null: false
           field :browsers_only, Boolean, null: false

@@ -138,6 +138,8 @@ module Masks
       DOMAIN_CLAIMED = "domain.claimed".freeze
       DOMAIN_VERIFIED = "domain.verified".freeze
       DOMAIN_RELEASED = "domain.released".freeze
+      CUSTOM_DOMAIN_SERVED = "custom_domain.served".freeze
+      CUSTOM_DOMAIN_STOPPED = "custom_domain.stopped".freeze
 
       GRAVE = [
         LOGIN_REFUSED, LOGIN_THROTTLED, LOGOUT_UNDELIVERED, REFRESH_REUSED, STREAM_FAILED,

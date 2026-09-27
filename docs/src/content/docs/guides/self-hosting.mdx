@@ -131,6 +131,42 @@ See [Declaring tenants](/guides/core-concepts/#declaring-tenants) for how each m
 `MASKS_SETUP_TOKEN` sets one setup token for every tenant. See
 [Setting a tenant up](/guides/core-concepts/#setting-a-tenant-up).
 
+## Custom domains
+
+A tenant can also serve sign-in from a host of its own, such as `login.example.com`.
+
+1. In manage, open **Domains**, claim `example.com`, and publish the TXT record it shows. masks
+   checks the record every hour.
+2. Point `login.example.com` at the server with a CNAME or an address record.
+3. Under **Serve sign-in from your domain**, enter the host and choose **Serve**. Only an owner
+   can, and the host must be within a domain the tenant has proven.
+
+The host answers beside the tenant's usual address, and each is its own issuer, so an app names
+the one it uses. A passkey works only on the address it was made on. When the proof lapses or
+the domain is released, masks stops serving the host.
+
+Caddy issues each host a certificate on demand. `/tls/allowed?domain=` answers 200 only for a
+host a tenant serves, so Caddy asks it before issuing one.
+
+```
+{
+  on_demand_tls {
+    ask http://masks:3000/tls/allowed
+  }
+}
+
+*.auth.example.com {
+  reverse_proxy masks:3000
+}
+
+https:// {
+  tls {
+    on_demand
+  }
+  reverse_proxy masks:3000
+}
+```
+
 ## System requirements
 
 masks is a small Rails app with no fixed CPU or memory floor. Two variables size it:

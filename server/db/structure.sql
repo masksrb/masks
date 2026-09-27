@@ -1163,7 +1163,8 @@ CREATE TABLE public.tenants (
     suspend_after integer,
     delete_after integer,
     event_retention_days integer,
-    risky_networks text
+    risky_networks text,
+    custom_host character varying
 );
 
 
@@ -2319,6 +2320,13 @@ CREATE UNIQUE INDEX index_subjects_on_tenant_id_and_sub ON public.subjects USING
 
 
 --
+-- Name: index_tenants_on_custom_host; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_tenants_on_custom_host ON public.tenants USING btree (custom_host) WHERE (custom_host IS NOT NULL);
+
+
+--
 -- Name: index_tenants_on_sign_in_policy_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -3224,6 +3232,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260927120000'),
 ('20260927110000'),
 ('20260927070000'),
 ('20260927060000'),

@@ -22,7 +22,7 @@ the work.
 | Audit export and retention      | Built       | `tenants.event_retention_days`, `exportEvents`, and a signed ten-minute download        |
 | Adaptive risk                   | Built       | `Risk`, `RiskCheck`, breach checks, and policy thresholds                               |
 | Passwordless email              | Built       | `email_code` first factor; links left out                                               |
-| Custom domains                  | Not started |                                                                                         |
+| Custom domains                  | Built       | `tenants.custom_host`, `serveDomain`, `/tls/allowed`; mail from the domain is planned   |
 | Shared signals                  | Built       | Transmitter: `SignalStream`, `Signals`, `/ssf/*`; the receiver is still planned         |
 | Migration                       | Not started |                                                                                         |
 
@@ -247,16 +247,17 @@ mutations share. Only `owner` administers; per-organization admin roles can come
 - Magic links were left out: a mail scanner that prefetches links would spend them, and a code needs
   no cross-device approval flow. They can come later on top of `SignInApproval`.
 
-### Custom domains
+### Custom domains (done)
 
-- Reuses domain proof. `custom_domains` (tenant, host, claim, certificate state, last error).
-- Certificates: masks does not terminate TLS today. The first cut documents a proxy (Caddy's on-demand
-  TLS) with an `ask` endpoint, `/domains/allowed?domain=`, that answers 200 only for verified hosts.
-  Masks-managed ACME comes later if it is needed.
-- `Tenant.resolve` looks up a verified custom host before the subdomain. `Tenant#public_origin` prefers
-  it. The issuer changes with it, so the switch is a manage action that warns clients will need the new
-  issuer, and the old origin keeps answering discovery for 30 days.
-- Mail: manage shows the SPF and DKIM records for the domain and checks them before mail is sent from it.
+- `tenants.custom_host`, unique, set by the owner-only `serveDomain` mutation. It must fall within a
+  verified `DomainClaim` of the same tenant and outside the server's own domain.
+- `Tenant.serving(host)` runs before the subdomain lookup, in the tenancy middleware and in host
+  authorization. The origin is `https://<host>` under a template, and the request's own origin without
+  one. The usual address keeps answering, and each is its own issuer.
+- `/tls/allowed?domain=` answers 200 only for a served host, for Caddy's on-demand TLS.
+- Releasing the covering claim, or the hourly check finding it lapsed, clears the host and records
+  `custom_domain.stopped`.
+- Not yet: sending mail from the domain once its SPF and DKIM records are in place.
 
 ### Shared signals (transmitter done)
 

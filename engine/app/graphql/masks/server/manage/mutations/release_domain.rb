@@ -14,6 +14,7 @@ module Masks
             claim.destroy!
 
             audit!(Masks::Server::Event::DOMAIN_RELEASED, domain: claim.domain, reason: "released")
+            Current.tenant.unserve_uncovered!("released")
 
             { domain: claim.domain }
           end

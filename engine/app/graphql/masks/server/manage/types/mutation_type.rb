@@ -75,6 +75,7 @@ module Masks
           field :check_domain, mutation: Mutations::CheckDomain
           field :update_domain_claim, mutation: Mutations::UpdateDomainClaim
           field :release_domain, mutation: Mutations::ReleaseDomain
+          field :serve_domain, mutation: Mutations::ServeDomain
           field :export_events, mutation: Mutations::ExportEvents
           field :stage_signing_key, mutation: Mutations::StageSigningKey
           field :activate_signing_key, mutation: Mutations::ActivateSigningKey

@@ -156,3 +156,6 @@ en:
         claimed: "Domain claimed"
         verified: "Domain proven"
         released: "Domain released"
+      custom_domain:
+        served: "Sign-in served from a custom domain"
+        stopped: "Custom domain no longer served"

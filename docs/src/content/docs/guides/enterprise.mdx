@@ -23,7 +23,7 @@ today, and how the rest will be built.
 | Adaptive risk | Built | [Adaptive risk](#adaptive-risk) |
 | Passwordless email | Built | [Passwordless email](#passwordless-email) |
 | Shared signals | Built | [Shared signals](#shared-signals) |
-| Custom domains | Planned | [Custom domains](#custom-domains) |
+| Custom domains | Built | [Custom domains](#custom-domains) |
 | Migration | Planned | [Migration](#migration) |
 
 Each capability reuses what is already built. Event streaming supplies retried
@@ -156,16 +156,16 @@ about the people who use that receiver. See
 Accepting the same events from a provider, and ending the matching sessions, is
 planned.
 
-## Planned
-
 ### Custom domains
 
-A tenant serves sign-in from its own domain, such as `login.example.com`.
+A tenant serves sign-in from its own host, such as `login.example.com`, within a
+domain it has proven with a DNS record. The host is a second issuer beside the
+usual address, and a proxy such as Caddy issues its certificate on demand. See
+[custom domains](/guides/self-hosting/#custom-domains).
 
-- A tenant claims a domain and proves it with a DNS record.
-- Masks issues a certificate for the domain and renews it.
-- The issuer, links, and emails use the domain, and mail is sent from it once
-  its DNS records are in place.
+Sending mail from the tenant's domain is planned.
+
+## Planned
 
 ### Migration
 

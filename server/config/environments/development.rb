@@ -50,4 +50,5 @@ Rails.application.configure do
 
   config.hosts << ".#{ENV.fetch('MASKS_HOST_SUFFIX', 'auth.test')}"
   config.hosts << ".auth.localhost"
+  config.host_authorization = { exclude: ->(request) { Masks::Server::Tenant.serving(request.host).present? } }
 end

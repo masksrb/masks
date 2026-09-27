@@ -23,6 +23,8 @@ module Masks
           rescue DomainClaim::Taken => e
             ::Rails.logger.warn(e.message)
           end
+
+          Current.tenant.unserve_uncovered!("record gone")
         end
     end
   end

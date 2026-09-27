@@ -14,6 +14,7 @@
     query Domains {
       domainClaims { domain recordName recordValue verifiedAt checkedAt missingSince provider { key name } }
       providers { key name }
+      tenant { customHost origins }
     }
   `;
 
@@ -23,6 +24,7 @@
   let loading = $state(true);
   let busy = $state(false);
   let draft = $state({ domain: "", provider: "" });
+  let host = $state("");
 
   async function load() {
     loading = true;
@@ -31,7 +33,10 @@
 
     loading = false;
 
-    if (answer) data = answer;
+    if (answer) {
+      data = answer;
+      host = answer.tenant.customHost ?? "";
+    }
   }
 
   load();
@@ -98,6 +103,22 @@
     );
   }
 
+  const proven = $derived((data?.domainClaims ?? []).filter((held) => held.verifiedAt));
+
+  function serve(value) {
+    run(
+      `mutation Serve($host: String) { serveDomain(host: $host) { tenant { customHost } } }`,
+      { host: value },
+      value ? `Sign-in is served from ${value} too.` : "Sign-in is no longer served from a custom domain.",
+    );
+  }
+
+  function stop() {
+    if (!confirm(`Stop serving ${data.tenant.customHost}? Apps that use it as their issuer stop working.`)) return;
+
+    serve(null);
+  }
+
   function release(held) {
     if (!confirm(`Release ${held.domain}? People with an address there sign in the usual way again.`)) return;
 
@@ -115,6 +136,27 @@
   {#if loading && !data}
     <Spinner />
   {:else if data}
+    <Section
+      title="Serve sign-in from your domain"
+      lede="A host within a proven domain, such as login.example.com, serves sign-in beside the usual address. Each address is its own issuer, and a passkey works only on the address it was made on."
+    >
+      {#if proven.length === 0 && !data.tenant.customHost}
+        <p class="hint">Prove a domain below first.</p>
+      {:else}
+        <div class="grid gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-end">
+          <Field label="Host" bind:value={host} placeholder="login.{proven[0]?.domain ?? 'acme.example'}" autocapitalize="none" spellcheck="false" />
+          <button type="button" class="btn btn-primary btn-sm" disabled={busy || !host.trim() || host.trim() === data.tenant.customHost} onclick={() => serve(host.trim())}>Serve</button>
+          {#if data.tenant.customHost}
+            <button type="button" class="btn btn-ghost btn-sm" disabled={busy} onclick={stop}>Stop</button>
+          {/if}
+        </div>
+        <p class="hint">
+          Point the host's DNS at this server, and give it a certificate. The addresses this tenant answers on:
+          {data.tenant.origins.join(", ")}.
+        </p>
+      {/if}
+    </Section>
+
     <Section
       title="Claim a domain"
       lede="Someone who types an address at a proven domain goes straight to its provider, without a password. Prove the domain with a DNS record first."

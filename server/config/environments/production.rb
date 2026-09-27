@@ -51,5 +51,7 @@ Rails.application.configure do
     config.hosts << (template.include?("%{subdomain}") ? ".#{served.split('.', 2).last}" : served)
   end
 
-  config.host_authorization = { exclude: ->(request) { request.path == "/up" } }
+  config.host_authorization = {
+    exclude: ->(request) { request.path == "/up" || Masks::Server::Tenant.serving(request.host).present? }
+  }
 end
