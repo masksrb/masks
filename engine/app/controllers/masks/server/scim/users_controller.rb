@@ -101,9 +101,7 @@ module Masks
 
             return if held.nil?
 
-            held.memberships.create!(actor: actor, role: Organization::MEMBER, provisioned: true)
-            Event.record!(Event::MEMBERSHIP_ADDED, actor: actor, by: nil, organization: held.key,
-                                                   role: Organization::MEMBER, via: "scim")
+            Members.enroll!(held, actor, role: Organization::MEMBER, by: nil, provisioned: true, via: "scim")
           end
 
           def leave!(actor)

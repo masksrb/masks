@@ -21,15 +21,24 @@ module Masks
             raise Refused, "#{address || actor.identifier} is already a member of #{organization.name}"
           end
 
-          membership = organization.memberships.new(actor: actor, role: role, invited_by: by, pending: true, invited_as: address)
-
-          raise Refused, membership.errors.full_messages.to_sentence unless membership.save
-
-          Event.record!(Event::MEMBERSHIP_ADDED, actor: actor, by: by, organization: organization, role: role)
+          membership = enroll!(organization, actor, role: role, by: by, pending: true, invited_as: address)
 
           sent = actor.activated? ? tell(membership, journey) : invite(actor, journey, membership)
 
           { membership: membership }.merge(sent)
+        end
+
+        def enroll!(organization, actor, role:, by:, pending: false, invited_as: nil, provisioned: false, **details)
+          membership = organization.memberships.new(actor: actor, role: role, invited_by: by, pending: pending,
+                                                    invited_as: invited_as, provisioned: provisioned)
+
+          Membership.transaction do
+            raise Refused, membership.errors.full_messages.to_sentence unless membership.save
+
+            Event.record!(Event::MEMBERSHIP_ADDED, actor: actor, by: by, organization: organization, role: role, **details)
+          end
+
+          membership
         end
 
         def assign!(membership, role:, by:, **details)

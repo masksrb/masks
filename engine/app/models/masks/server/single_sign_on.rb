@@ -201,9 +201,9 @@ module Masks
         end
 
         def join!(organization, actor, role)
-          return unless organization.memberships.create(actor: actor, role: role).persisted?
-
-          Event.record!(Event::MEMBERSHIP_ADDED, actor: actor, by: nil, organization: organization, role: role, provider: provider.key)
+          Members.enroll!(organization, actor, role: role, by: nil, provider: provider.key)
+        rescue Members::Refused
+          nil
         end
 
         def domains
