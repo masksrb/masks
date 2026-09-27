@@ -22,7 +22,7 @@
     query Tenant {
       tenant {
         uuid subdomain name namedBy dynamicRegistration dynamicClientScopes createdAt
-        browsersOnly blockedAgents suspendAfter deleteAfter
+        browsersOnly blockedAgents suspendAfter deleteAfter eventRetentionDays
         signInPolicy { key name }
         signingKeys { kid algorithm activatedAt retiredAt state }
       }
@@ -59,6 +59,15 @@
   `;
 
   const SPANS = [7, 30, 90];
+
+  const RETENTION = [
+    [30, "30 days"],
+    [90, "90 days"],
+    [180, "180 days"],
+    [365, "A year"],
+    [1095, "Three years"],
+    [2555, "Seven years"],
+  ];
 
   const SUSPEND_AFTER = [
     [0, "Never"],
@@ -144,7 +153,7 @@
           `mutation Update(
             $name: String, $dynamicClientScopes: [String!], $dynamicRegistration: String,
             $namedBy: String, $browsersOnly: Boolean, $blockedAgents: String, $signInPolicy: ID,
-            $suspendAfter: Int, $deleteAfter: Int
+            $suspendAfter: Int, $deleteAfter: Int, $eventRetentionDays: Int
           ) {
             updateTenant(
               name: $name
@@ -156,6 +165,7 @@
               signInPolicy: $signInPolicy
               suspendAfter: $suspendAfter
               deleteAfter: $deleteAfter
+              eventRetentionDays: $eventRetentionDays
             ) { tenant { name } }
           }`,
           changes,
@@ -363,6 +373,18 @@
             onchange={(days) => deleteAfter(Number(days))}
           />
         </div>
+      </Section>
+
+      <Section
+        row
+        title="Activity"
+        help="How long masks keeps events. Older ones are deleted each night, and a shorter period takes effect at the next sweep. Export a range from Activity before shortening it."
+      >
+        <Select
+          value={data.tenant.eventRetentionDays}
+          options={choices(RETENTION, data.tenant.eventRetentionDays)}
+          onchange={(days) => update({ eventRetentionDays: Number(days) }, "Activity is kept for the new period.")}
+        />
       </Section>
 
       <Section

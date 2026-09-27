@@ -1111,7 +1111,8 @@ CREATE TABLE public.tenants (
     sign_in_policy_id bigint,
     setup_token text,
     suspend_after integer,
-    delete_after integer
+    delete_after integer,
+    event_retention_days integer
 );
 
 
@@ -3107,6 +3108,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260927060000'),
 ('20260927050000'),
 ('20260927040000'),
 ('20260927030000'),

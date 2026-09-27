@@ -213,6 +213,83 @@ module Masks
         assert_nil body.dig("data", "updateOrganization", "organization", "signInPolicy")
       end
 
+      def export(held, from: 1.day.ago, to: 1.minute.from_now, **filters)
+        ask(%(mutation($from: ISO8601DateTime!, $to: ISO8601DateTime!, $action: String) {
+              exportEvents(from: $from, to: $to, action: $action) { url count }
+            }), held, from: from.iso8601, to: to.iso8601, **filters)
+      end
+
+      test "a reader exports a range of events and downloads it in the browser they asked from" do
+        reader = manager(ManageRoles::READ)
+        held = bearer_for(reader)
+        within { Event.record!(Event::TENANT_UPDATED, actor: @owner, name: "x") }
+
+        body = export(held, action: Event::TENANT_UPDATED)
+        url = body.dig("data", "exportEvents", "url")
+
+        assert_equal 1, body.dig("data", "exportEvents", "count")
+
+        get URI.parse(url).path
+
+        assert_response :success
+        assert_equal "application/x-ndjson", response.media_type
+        assert_equal "no-store", response.headers["Cache-Control"]
+
+        lines = response.body.lines.map { |line| JSON.parse(line) }
+
+        assert_equal [ Event::TENANT_UPDATED ], lines.map { |line| line["action"] }
+        assert_equal @owner.uuid, lines.first["actor"]
+        assert within { Event.where(action: Event::EVENTS_EXPORTED, by: reader).exists? }
+      end
+
+      test "an export link is useless without the manager's own session, and useless once altered" do
+        held = bearer_for(manager(ManageRoles::READ))
+        path = URI.parse(export(held).dig("data", "exportEvents", "url")).path
+
+        get "#{path}x"
+        assert_response :not_found
+
+        bearer_for(@owner)
+        get path
+        assert_response :forbidden
+
+        reset!
+        host! host_for(@tenant)
+        get path
+        assert_response :forbidden
+      end
+
+      test "an export link stops working after ten minutes" do
+        held = bearer_for(manager(ManageRoles::READ))
+        path = URI.parse(export(held).dig("data", "exportEvents", "url")).path
+
+        travel(EventExport::LIFETIME + 1.second) { get path }
+
+        assert_response :not_found
+      end
+
+      test "an export covers at most a year" do
+        body = export(bearer_for(@owner), from: 400.days.ago)
+
+        assert_match "at most 366 days", refusal(body)
+      end
+
+      test "the owner sets how long events are kept, and the nightly sweep follows it" do
+        body = ask(%(mutation { updateTenant(eventRetentionDays: 30) { tenant { eventRetentionDays } } }), bearer_for(@owner))
+
+        assert_equal 30, body.dig("data", "updateTenant", "tenant", "eventRetentionDays")
+
+        within do
+          old = travel_to(40.days.ago) { Event.record!(Event::TENANT_UPDATED, name: "old") }
+          recent = travel_to(20.days.ago) { Event.record!(Event::TENANT_UPDATED, name: "recent") }
+
+          CleanupJob.perform_now
+
+          refute Event.exists?(old.id)
+          assert Event.exists?(recent.id)
+        end
+      end
+
       test "every mutation in the schema declares the least role it needs" do
         undeclared = ManageSchema.mutation.fields.values.reject { |field| field.resolver.level_declared }
 

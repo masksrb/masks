@@ -12,6 +12,7 @@ description: Tenant isolation, rate limits, security emails, signing-key rotatio
 | Request parameters leaking from the address bar | Pushed authorization requests | [Pushed requests](#pushed-requests) |
 | A forged or altered authorization request | Signed request objects | [Signed requests](#signed-requests) |
 | A stolen token being replayed | Tokens bound to the client's key with DPoP | [Binding a token with DPoP](#binding-a-token-with-dpop) |
+| Losing the record an auditor asks for | A retention period of up to seven years, and exports | [Keeping and exporting activity](#keeping-and-exporting-activity) |
 | A manager doing more than their job needs | Four manage roles, checked on every mutation | [Manage roles](#manage-roles) |
 
 Encryption of secrets at rest is covered in
@@ -80,6 +81,21 @@ These limits apply to every role below `masks:manage`:
 
 Taking a role away ends it on the person's next request. Their token is refused, and manage asks
 them to sign in again.
+
+## Keeping and exporting activity
+
+masks keeps each event for 180 days by default. The owner changes this under **Settings**, then
+**Activity**, from 30 days to seven years. The nightly sweep deletes older events, so a shorter period
+takes effect the next night.
+
+To keep a copy, open **Activity**, choose a range of up to 366 days, and choose **Download**. The file
+has one event per line as JSON, in the shape [event streams](/guides/event-streams/#what-is-sent) send,
+and follows the filter on the page. Any manage role may export, and each export is recorded as
+`events.exported`.
+
+The download link lasts ten minutes and works only in a browser signed in as the manager who asked for
+it. A range with more than 250,000 events is refused; narrow it. For a continuous copy, use an
+[event stream](/guides/event-streams/) instead.
 
 ## Rate limits
 

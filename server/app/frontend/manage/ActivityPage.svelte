@@ -45,6 +45,12 @@
 
   let events = $state([]);
   let actions = $state([]);
+  let exporting = $state(false);
+
+  const today = () => new Date().toISOString().slice(0, 10);
+  const daysAgo = (days) => new Date(Date.now() - days * 86400000).toISOString().slice(0, 10);
+
+  let range = $state({ from: daysAgo(30), to: today() });
   let action = $state("");
   let grave = $state(false);
   let loading = $state(true);
@@ -130,6 +136,30 @@
     load();
   }
 
+  async function download() {
+    exporting = true;
+
+    const answer = await feedback.attempt(() =>
+      api.query(
+        `mutation Export($from: ISO8601DateTime!, $to: ISO8601DateTime!, $action: String, $actor: ID) {
+          exportEvents(from: $from, to: $to, action: $action, actor: $actor) { url count }
+        }`,
+        {
+          from: new Date(`${range.from}T00:00:00`).toISOString(),
+          to: new Date(new Date(`${range.to}T00:00:00`).getTime() + 86400000).toISOString(),
+          action: action || null,
+          actor: actorId || null,
+        },
+      ),
+    );
+
+    exporting = false;
+
+    if (!answer) return;
+
+    feedback.say(`Downloading ${answer.exportEvents.count} events.`);
+    location.assign(answer.exportEvents.url);
+  }
 </script>
 
 <Page
@@ -178,6 +208,25 @@
         />
         Only what is worth a look
       </label>
+    </div>
+  </Section>
+
+  <Section
+    title="Export"
+    lede="Every event in a range as newline-delimited JSON, in the shape event streams send. It follows the filter above."
+  >
+    <div class="flex flex-wrap items-end gap-3">
+      <label class="flex flex-col gap-1.5">
+        <span class="field-label">From</span>
+        <input class="input input-sm" type="date" bind:value={range.from} max={range.to} />
+      </label>
+      <label class="flex flex-col gap-1.5">
+        <span class="field-label">Through</span>
+        <input class="input input-sm" type="date" bind:value={range.to} min={range.from} max={today()} />
+      </label>
+      <button type="button" class="btn btn-sm" disabled={exporting || !range.from || !range.to} onclick={download}>
+        Download
+      </button>
     </div>
   </Section>
 

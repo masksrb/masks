@@ -19,7 +19,7 @@ today, and how the rest will be built.
 | Organizations and roles | Built | [Organizations and roles](#organizations-and-roles) |
 | Home-realm discovery | Built | [Home-realm discovery](#home-realm-discovery) |
 | Session policies | Built | [Session policies](#session-policies) |
-| Audit export and retention | Planned | [Audit export and retention](#audit-export-and-retention) |
+| Audit export and retention | Built | [Audit export and retention](#audit-export-and-retention) |
 | Adaptive risk | Planned | [Adaptive risk](#adaptive-risk) |
 | Passwordless email | Planned | [Passwordless email](#passwordless-email) |
 | Custom domains | Planned | [Custom domains](#custom-domains) |
@@ -39,7 +39,7 @@ Every sign-in, consent, administrative change, token revocation, and key
 rotation is an event. An event names the action, the account it happened to,
 the account that did it, the client, the device, the IP address, and the user
 agent. Events are read-only, belong to one tenant, and are deleted after 180
-days. Manage lists them and filters by account, action, and client, and marks
+days by default. Manage lists them and filters by account, action, and client, and marks
 the actions that call for attention, such as a refused sign-in or a replayed
 refresh token.
 
@@ -125,12 +125,13 @@ provider. The tenant proves it controls the domain with a DNS record, and one
 tenant cannot capture another company's domain. See
 [sending a domain to its provider](/guides/sso-saml/#sending-a-domain-to-its-provider).
 
-## Planned
-
 ### Audit export and retention
 
-- A tenant keeps events for between 30 days and seven years.
-- Manage exports a date range of events as a file, and each export is an event.
+A tenant keeps events for between 30 days and seven years, and any manager,
+auditors included, downloads a range as a file. See
+[keeping and exporting activity](/guides/security/#keeping-and-exporting-activity).
+
+## Planned
 
 ### Adaptive risk
 

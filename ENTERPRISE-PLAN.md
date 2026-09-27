@@ -19,7 +19,7 @@ the work.
 | Organizations and roles         | Built       | All four steps                                                                          |
 | Home-realm discovery            | Built       | `DomainClaim`, an hourly check, and discovery in the identifier step                    |
 | Session policies                | Built       | `sign_in_policies.session_lifetime` and `session_idle_timeout`                          |
-| Audit export and retention      | Not started |                                                                                         |
+| Audit export and retention      | Built       | `tenants.event_retention_days`, `exportEvents`, and a signed ten-minute download        |
 | Adaptive risk                   | Not started |                                                                                         |
 | Passwordless email              | Not started |                                                                                         |
 | Custom domains                  | Not started |                                                                                         |
@@ -209,13 +209,16 @@ mutations share. Only `owner` administers; per-organization admin roles can come
   as before.
 - Manage's policy form has a **Sessions** row with preset lifetimes and idle timeouts.
 
-### Audit export and retention
+### Audit export and retention (done)
 
-- `tenants.event_retention_days`, from 30 to 2555 (seven years), defaulting to 180. `CleanupJob`
-  deletes per tenant.
-- `exportEvents(from:, to:, action:)` in manage starts an `EventExportJob` that writes NDJSON to
-  Active Storage and emails the manager a signed link that expires in a day. Exports are events.
-- A large tenant's cleanup deletes in batches so it does not hold a long lock.
+- `tenants.event_retention_days` (30 to 2555, null for 180). `CleanupJob` deletes per tenant in batches
+  of 10,000.
+- `exportEvents(from, to, action, organization, actor)` is `read` level, so auditors can use it. It
+  refuses a range over 366 days or 250,000 events, records `events.exported`, and returns a link that a
+  signed `EventExport` token backs for ten minutes, bound to the tenant. The download also requires
+  the browser's session to be the exporting manager's, so a leaked link alone is useless.
+- The file is NDJSON in the event stream shape (`Event#exported`), built eagerly within the ceiling
+  rather than streamed, which keeps row-level security simple.
 
 ### Adaptive risk
 

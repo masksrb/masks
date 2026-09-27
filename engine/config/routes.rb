@@ -103,6 +103,7 @@ Masks::Server::Engine.routes.draw do
   end
 
   post "/manage/graphql", to: "manage/graphql#execute", as: :manage_graphql
+  get "/manage/exports/:token", to: "manage/exports#show", as: :manage_export, constraints: { token: %r{[^/]+} }
   get "/manage(/*path)", to: "manage#index", as: :manage
 
   root "account#index"

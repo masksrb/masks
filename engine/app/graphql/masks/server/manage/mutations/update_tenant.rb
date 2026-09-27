@@ -14,12 +14,14 @@ module Masks
           argument :sign_in_policy, ID, required: false
           argument :suspend_after, Integer, required: false
           argument :delete_after, Integer, required: false
+          argument :event_retention_days, Integer, required: false,
+                                                   description: "Days to keep events, from 30 to 2555. Zero keeps the default of 180."
 
           field :tenant, Types::TenantType, null: false
 
           def resolve(name: nil, dynamic_client_scopes: nil, dynamic_registration: nil,
                       named_by: nil, browsers_only: nil, blocked_agents: nil, sign_in_policy: nil,
-                      suspend_after: nil, delete_after: nil)
+                      suspend_after: nil, delete_after: nil, event_retention_days: nil)
             tenant = Current.tenant
 
             tenant.name = name unless name.nil?
@@ -79,6 +81,7 @@ module Masks
 
             tenant.suspend_after = suspend_after.nonzero? unless suspend_after.nil?
             tenant.delete_after = delete_after.nonzero? unless delete_after.nil?
+            tenant.event_retention_days = event_retention_days.nonzero? unless event_retention_days.nil?
 
             save!(tenant)
 

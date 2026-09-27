@@ -46,10 +46,12 @@ module Masks
       REGISTRATIONS = [ REGISTRATION_OFF, REGISTRATION_ANYTHING, REGISTRATION_BOUNDED ].freeze
 
       IDLE_DAYS = (60..3650)
+      RETENTION_DAYS = (30..2555)
 
       validates :named_by, inclusion: { in: NAMES }, allow_nil: true
       validates :dynamic_registration, inclusion: { in: REGISTRATIONS }, allow_nil: true
       validates :suspend_after, :delete_after, numericality: { only_integer: true, in: IDLE_DAYS }, allow_nil: true
+      validates :event_retention_days, numericality: { only_integer: true, in: RETENTION_DAYS }, allow_nil: true
       validates :delete_after, comparison: { greater_than: :suspend_after, message: "must be longer than suspend after" },
                                if: -> { suspend_after && delete_after }
 
@@ -62,6 +64,10 @@ module Masks
       scope :idling, -> { where.not(suspend_after: nil).or(where.not(delete_after: nil)) }
 
       after_create_commit :ensure_signing_key!, :setup_token!
+
+      def event_retention
+        event_retention_days&.days || Event::RETENTION
+      end
 
       def public_origin
         template = ::Rails.configuration.masks.public_origin_template

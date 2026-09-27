@@ -127,6 +127,8 @@ en:
         updated: "Adapter changed"
         archived: "Adapter archived"
         tested: "Adapter tested"
+      events:
+        exported: "Activity exported"
       stream:
         created: "Event stream added"
         updated: "Event stream changed"

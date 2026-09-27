@@ -78,19 +78,7 @@ module Masks
       end
 
       def payload(event)
-        {
-          id: event.id,
-          tenant: tenant.subdomain,
-          action: event.action,
-          created_at: event.created_at.utc.iso8601(3),
-          actor: event.actor&.uuid,
-          by: event.by&.uuid,
-          client: event.client&.client_id,
-          organization: event.organization&.key,
-          ip_address: event.ip_address,
-          user_agent: event.user_agent,
-          details: event.details
-        }
+        event.exported(tenant)
       end
 
       private

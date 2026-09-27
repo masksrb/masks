@@ -16,6 +16,11 @@ module Masks
           field :dynamic_client_scopes, [ String ]
           field :suspend_after, Integer
           field :delete_after, Integer
+          field :event_retention_days, Integer, null: false, description: "Days events are kept before they are deleted."
+
+          def event_retention_days
+            object.event_retention.in_days.round
+          end
           field :created_at, GraphQL::Types::ISO8601DateTime, null: false
           field :signing_keys, [ SigningKeyType ], null: false
 

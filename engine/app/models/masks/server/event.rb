@@ -112,6 +112,7 @@ module Masks
       ADAPTER_UPDATED = "adapter.updated".freeze
       ADAPTER_ARCHIVED = "adapter.archived".freeze
       ADAPTER_TESTED = "adapter.tested".freeze
+      EVENTS_EXPORTED = "events.exported".freeze
 
       STREAM_CREATED = "stream.created".freeze
       STREAM_UPDATED = "stream.updated".freeze
@@ -185,6 +186,22 @@ module Masks
         def bounded(limit)
           [ limit.presence&.to_i || LIMIT, CEILING ].min
         end
+      end
+
+      def exported(tenant = self.tenant)
+        {
+          id: id,
+          tenant: tenant.subdomain,
+          action: action,
+          created_at: created_at.utc.iso8601(3),
+          actor: actor&.uuid,
+          by: by&.uuid,
+          client: client&.client_id,
+          organization: organization&.key,
+          ip_address: ip_address,
+          user_agent: user_agent,
+          details: details
+        }
       end
 
       def readonly?
