@@ -1,6 +1,8 @@
 <script>
   import { createFeedback } from "./lib/feedback.svelte.js";
-  import { day } from "./lib/format.js";
+  import { day, plural } from "./lib/format.js";
+  import OrganizationCell from "./OrganizationCell.svelte";
+  import OrganizationHeadcount from "./OrganizationHeadcount.svelte";
   import { useRouter } from "./lib/router.svelte.js";
   import Section from "./ui/Section.svelte";
   import Field from "./ui/Field.svelte";
@@ -59,8 +61,6 @@
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-+|-+$/g, "");
 
-  const plural = (count, one, many) => `${count} ${count === 1 ? one : many}`;
-
   function add() {
     draft = { key: "", name: "" };
     keyTouched = false;
@@ -102,7 +102,7 @@
   }
 
   function members(organization) {
-    const held = plural(organization.memberCount, "member", "members");
+    const held = plural(organization.memberCount, "member");
 
     return organization.pendingCount ? `${held}, ${organization.pendingCount} invited` : held;
   }
@@ -169,25 +169,13 @@
           <Row to={`/organizations/${organization.key}`}>
             <td>
               <div class="flex min-w-0 flex-col gap-0.5">
-                <span class="flex flex-wrap items-center gap-2">
-                  <Link to={`/organizations/${organization.key}`} class="link link-hover font-medium">
-                    {organization.name}
-                  </Link>
-                  {#if organization.ownerCount === 0}
-                    <span class="badge badge-warning badge-xs">no owner</span>
-                  {/if}
-                </span>
-                <span class="font-mono text-xs opacity-75">{organization.key}</span>
-                <span class="text-xs opacity-85 md:hidden">{members(organization)}</span>
+                <OrganizationCell {organization}>
+                  <span class="text-xs opacity-85 md:hidden">{members(organization)}</span>
+                </OrganizationCell>
               </div>
             </td>
             <td class="hidden text-sm md:table-cell">
-              <div class="flex flex-col">
-                <span>{plural(organization.memberCount, "member", "members")}</span>
-                {#if organization.pendingCount}
-                  <span class="text-xs opacity-75">{organization.pendingCount} invited</span>
-                {/if}
-              </div>
+              <OrganizationHeadcount {organization} />
             </td>
             <td class="hidden md:table-cell">
               <div class="flex max-w-64 flex-wrap gap-1">
@@ -214,7 +202,7 @@
               </Link>
               <span class="hint">
                 <span class="font-mono">{organization.key}</span> · archived {day(organization.archivedAt)} ·
-                {plural(organization.memberCount, "member", "members")}
+                {plural(organization.memberCount, "member")}
               </span>
             </div>
             <button type="button" class="btn btn-ghost btn-sm" onclick={() => restore(organization)}>Restore</button>

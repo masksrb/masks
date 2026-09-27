@@ -1,4 +1,5 @@
 <script>
+import { initials } from "../lib/initial.js";
 import Head from "../shared/Head.svelte";
 import Person from "../shared/Person.svelte";
 
@@ -8,15 +9,6 @@ let chosen = $state(null);
 
 const organizations = $derived(login.auth.organizations ?? []);
 const client = $derived(login.client?.name ?? "");
-
-const initials = (name) =>
-  name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((word) => word[0])
-    .join("")
-    .toUpperCase();
 
 async function choose(organization) {
   chosen = organization.key;

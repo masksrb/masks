@@ -2,7 +2,7 @@
   import { createPages } from "./lib/pages.svelte.js";
   import Pager from "./ui/Pager.svelte";
   import { createFeedback } from "./lib/feedback.svelte.js";
-  import { day, joined } from "./lib/format.js";
+  import { day, joined, plural } from "./lib/format.js";
   import Devices from "./Devices.svelte";
   import ScopesEditor from "./ScopesEditor.svelte";
   import Section from "./ui/Section.svelte";
@@ -186,8 +186,8 @@
 
   const presence = (actor) => {
     const parts = [
-      `${actor.sessions.length} session${actor.sessions.length === 1 ? "" : "s"}`,
-      `${actor.devices.length} device${actor.devices.length === 1 ? "" : "s"}`,
+      plural(actor.sessions.length, "session"),
+      plural(actor.devices.length, "device"),
     ];
 
     return parts.join(" · ");

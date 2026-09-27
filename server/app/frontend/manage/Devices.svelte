@@ -1,5 +1,5 @@
 <script>
-  import { moment, since } from "./lib/format.js";
+  import { moment, plural, since } from "./lib/format.js";
   import Section from "./ui/Section.svelte";
   import Link from "./ui/Link.svelte";
   import Row from "./ui/Row.svelte";
@@ -101,10 +101,9 @@
   }
 
   const blocking = $derived(lens !== "blocked");
-  const plural = (count) => `${count} device${count === 1 ? "" : "s"}`;
 
   function outcome(count, spared) {
-    const done = `${blocking ? "Blocked" : "Unblocked"} ${plural(count)}.`;
+    const done = `${blocking ? "Blocked" : "Unblocked"} ${plural(count, "device")}.`;
 
     return spared ? `${done} The device you are using was left alone.` : done;
   }
@@ -140,8 +139,8 @@
     bulk(
       { ids: [...chosen] },
       blocking
-        ? `Block ${plural(chosen.size)}? Each is signed out and refused before any password is checked.`
-        : `Unblock ${plural(chosen.size)}?`,
+        ? `Block ${plural(chosen.size, "device")}? Each is signed out and refused before any password is checked.`
+        : `Unblock ${plural(chosen.size, "device")}?`,
     );
 
   const blockMatching = () =>
@@ -213,7 +212,7 @@
             indeterminate={chosen.size > 0 && !all}
             onchange={toggleAll}
           />
-          {chosen.size ? `${chosen.size} chosen` : `Choose all ${plural(devices.length)} shown`}
+          {chosen.size ? `${chosen.size} chosen` : `Choose all ${plural(devices.length, "device")} shown`}
         </label>
         {#if chosen.size}
           <button
@@ -222,7 +221,7 @@
             disabled={busy}
             onclick={blockChosen}
           >
-            {blocking ? "Block" : "Unblock"} {plural(chosen.size)}
+            {blocking ? "Block" : "Unblock"} {plural(chosen.size, "device")}
           </button>
         {/if}
         {#if devices.length === LIMIT}

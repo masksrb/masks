@@ -1,5 +1,5 @@
 <script>
-  import { joined, moment, since } from "./lib/format.js";
+  import { joined, moment, plural, since } from "./lib/format.js";
   import Link from "./ui/Link.svelte";
 
   let { api, feedback, rows, onchange, showActor = false, limit = 5 } = $props();
@@ -36,7 +36,7 @@
 
     const count = data.revokeToken.revoked;
 
-    feedback.say(`${count} token${count === 1 ? "" : "s"} revoked.`);
+    feedback.say(`${plural(count, "token")} revoked.`);
 
     await onchange();
   }

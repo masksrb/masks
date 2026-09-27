@@ -10,9 +10,12 @@
   import Facts from "./ui/Facts.svelte";
   import Field from "./ui/Field.svelte";
   import Link from "./ui/Link.svelte";
+  import OrganizationCell from "./OrganizationCell.svelte";
+  import OrganizationHeadcount from "./OrganizationHeadcount.svelte";
   import Loader from "./ui/Loader.svelte";
   import Notices from "./ui/Notices.svelte";
   import Switch from "./ui/Switch.svelte";
+  import Tally from "./ui/Tally.svelte";
   import Page from "./ui/Page.svelte";
   import Row from "./ui/Row.svelte";
   import Spinner from "./ui/Spinner.svelte";
@@ -67,8 +70,6 @@
       organizations(limit: ${ORGANIZATIONS_SHOWN}) { key name memberCount ownerCount pendingCount }
     }
   `;
-
-  const members = (count) => `${count} ${count === 1 ? "member" : "members"}`;
 
   const SPANS = [7, 30, 90];
 
@@ -248,14 +249,7 @@
     id={boot.issuer}
     hero
   >
-    <div class="tally">
-      {#each counts as count (count.label)}
-        <Link to={count.to} class="tally-cell">
-          <span class="tally-figure">{count.value}</span>
-          <span class="tally-label">{count.label}</span>
-        </Link>
-      {/each}
-    </div>
+    <Tally {counts} />
 
     <Section title="Sign-ins">
       {#snippet actions()}
@@ -295,23 +289,10 @@
               {#each held.organizations as organization (organization.key)}
                 <Row to={`/organizations/${organization.key}`}>
                   <td>
-                    <span class="flex flex-wrap items-center gap-2">
-                      <Link to={`/organizations/${organization.key}`} class="link link-hover font-medium">
-                        {organization.name}
-                      </Link>
-                      {#if organization.ownerCount === 0}
-                        <span class="badge badge-warning badge-xs">no owner</span>
-                      {/if}
-                    </span>
-                    <span class="font-mono text-xs opacity-75">{organization.key}</span>
+                    <OrganizationCell {organization} />
                   </td>
                   <td class="text-right text-sm">
-                    <span class="flex flex-col items-end">
-                      <span>{members(organization.memberCount)}</span>
-                      {#if organization.pendingCount}
-                        <span class="text-xs opacity-75">{organization.pendingCount} invited</span>
-                      {/if}
-                    </span>
+                    <OrganizationHeadcount {organization} class="flex flex-col items-end" />
                   </td>
                 </Row>
               {/each}

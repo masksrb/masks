@@ -1,3 +1,5 @@
+import { plural } from "./format.js";
+
 export const POLICY_FIELDS = `
   key name signup nickname email emailVerified phone phoneVerified
   passwordMinimum refuseCommonPasswords firstFactors secondFactors secondFactorRequired appsRequireSecondFactor sessionLifetime sessionIdleTimeout refuseBreachedPasswords riskStepUpAt riskRefuseAt
@@ -40,7 +42,7 @@ export function duration(seconds) {
   ];
   const count = seconds / size;
 
-  return `${count} ${unit}${count === 1 ? "" : "s"}`;
+  return plural(count, unit);
 }
 
 export function describePolicy(policy) {

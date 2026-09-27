@@ -1,6 +1,6 @@
 <script>
   import { createFeedback } from "./lib/feedback.svelte.js";
-  import { day, since } from "./lib/format.js";
+  import { day, plural, since } from "./lib/format.js";
   import { useRouter } from "./lib/router.svelte.js";
   import Section from "./ui/Section.svelte";
   import Facts from "./ui/Facts.svelte";
@@ -12,6 +12,7 @@
   import Select from "./ui/Select.svelte";
   import Spinner from "./ui/Spinner.svelte";
   import Table from "./ui/Table.svelte";
+  import Tally from "./ui/Tally.svelte";
 
   let { api, organizationKey } = $props();
 
@@ -25,14 +26,14 @@
       organization(key: $key) {
         uuid key name roles archivedAt createdAt
         memberCount ownerCount pendingCount liveTokenCount
-        signInPolicy { key name }
+        signInPolicy { key }
         providers { key name roleClaim roleMap unmappedRole }
-        domains { domain verifiedAt provider { key name } }
-        provisioningTokens { id label expiresAt usedAt }
+        domains { domain verifiedAt provider { name } }
+        provisioningTokens { id }
         members {
           role pending provisioned invitedAs invitedAt expiresAt expired createdAt
-          invitedBy { uuid identifier }
-          actor { uuid identifier email activated }
+          invitedBy { identifier }
+          actor { uuid identifier }
         }
         events {
           id action label createdAt ipAddress details
@@ -53,7 +54,9 @@
   let organization = $state(null);
   let policies = $state([]);
   let providers = $state([]);
-  let handing = $state({ provider: "", roleClaim: "", roleMap: "", unmappedRole: "" });
+  const idle = () => ({ provider: "", roleClaim: "", roleMap: "", unmappedRole: "" });
+
+  let handing = $state(idle());
   let loading = $state(true);
   let busy = $state(false);
   let adding = $state(null);
@@ -104,6 +107,10 @@
       ),
   );
 
+  const revoking = $derived(
+    organization?.liveTokenCount ? ` and revokes its ${plural(organization.liveTokenCount, "live token")}` : "",
+  );
+
   const counts = $derived(
     organization
       ? [
@@ -140,7 +147,7 @@
     if (member.pending) {
       const by = member.invitedBy ? ` by ${member.invitedBy.identifier}` : "";
 
-      return `Invited ${since(member.invitedAt ?? member.createdAt)}${by}`;
+      return `Invited ${since(member.invitedAt)}${by}`;
     }
 
     return `${member.provisioned ? "From the directory, since" : "Since"} ${day(member.createdAt)}`;
@@ -272,7 +279,7 @@
     );
 
   const handable = $derived(
-    providers.filter((provider) => !provider.organization || provider.organization.key === organization?.key),
+    providers.filter((provider) => !provider.organization),
   );
 
   function pickProvider(key) {
@@ -302,7 +309,7 @@
       },
       "Saved. People who sign in through it join this organization.",
     ).then((answer) => {
-      if (answer) handing = { provider: "", roleClaim: "", roleMap: "", unmappedRole: "" };
+      if (answer) handing = idle();
     });
   }
 
@@ -327,10 +334,7 @@
   }
 
   async function archive() {
-    const tokens = organization.liveTokenCount;
-    const revoked = tokens ? ` Its ${tokens} live ${tokens === 1 ? "token stops" : "tokens stop"} working.` : "";
-
-    if (!confirm(`Archive ${organization.name}? Nobody signs in as a member of it.${revoked}`)) return;
+    if (!confirm(`Archive ${organization.name}? This stops anyone signing in as a member${revoking}.`)) return;
 
     await run(
       `mutation Archive($key: ID!) { archiveOrganization(key: $key) { organization { key } } }`,
@@ -378,14 +382,7 @@
       </div>
     {/if}
 
-    <div class="tally">
-      {#each counts as count (count.label)}
-        <div class="tally-cell">
-          <span class="tally-figure">{count.value}</span>
-          <span class="tally-label">{count.label}</span>
-        </div>
-      {/each}
-    </div>
+    <Tally {counts} />
 
     {#if invited}
       <div class="alert alert-info alert-soft flex-col items-start gap-2" role="status">
@@ -515,9 +512,7 @@
                 name="Give a provider to this organization"
                 options={[
                   ["", "Give a provider to this organization"],
-                  ...handable
-                    .filter((provider) => !organization.providers.some((held) => held.key === provider.key))
-                    .map((provider) => [provider.key, provider.name]),
+                  ...handable.map((provider) => [provider.key, provider.name]),
                 ]}
                 onchange={pickProvider}
               />
@@ -553,7 +548,7 @@
                 <button
                   type="button"
                   class="btn btn-ghost btn-sm"
-                  onclick={() => (handing = { provider: "", roleClaim: "", roleMap: "", unmappedRole: "" })}
+                  onclick={() => (handing = idle())}
                 >
                   Cancel
                 </button>
@@ -573,8 +568,8 @@
               </div>
             {:else}
               <p class="hint">
-                None proven. Owners can invite only while sign-up admits the address, and a provisioning token cannot set
-                email addresses, until a domain is proven for one of its providers.
+                None proven. Until one of its providers proves a domain, owners can invite only the addresses sign-up
+                admits, and a provisioning token cannot set email addresses.
                 <Link to="/domains" class="link">Domains</Link>
               </p>
             {/each}
@@ -584,7 +579,7 @@
             <span class="legend">Provisioning</span>
             <p class="hint">
               {organization.provisioningTokens.length
-                ? `${organization.provisioningTokens.length} live ${organization.provisioningTokens.length === 1 ? "token reaches" : "tokens reach"} only this organization.`
+                ? `${plural(organization.provisioningTokens.length, "live token reaches", "live tokens reach")} only this organization.`
                 : "No provisioning token reaches only this organization."}
               <Link to="/provisioning" class="link">Provisioning</Link>
             </p>
@@ -641,11 +636,7 @@
     {#if !organization.archivedAt}
       <Section
         title="Archive"
-        lede={`Archiving stops anyone signing in as a member of ${organization.name}${
-          organization.liveTokenCount
-            ? ` and revokes its ${organization.liveTokenCount} live ${organization.liveTokenCount === 1 ? "token" : "tokens"}`
-            : ""
-        }. Members keep their roles, so restoring it puts everything back.`}
+        lede={`Archiving stops anyone signing in as a member of ${organization.name}${revoking}. Members keep their roles, so restoring it puts everything back.`}
       >
         <button type="button" class="btn btn-sm btn-error btn-outline self-start" disabled={busy} onclick={archive}>
           Archive {organization.name}
