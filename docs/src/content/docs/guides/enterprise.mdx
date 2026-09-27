@@ -1,150 +1,107 @@
 ---
 title: Enterprise
-description: What masks offers a company that must audit, control, and prove how people sign in, and the plan for each capability that is not built yet.
+description: What masks offers a company that must audit, control, and prove how people sign in, what is built today, and the plan for each capability that is not.
 ---
 
-Companies that buy an identity provider ask the same questions: who did what,
-can we stop a risky sign-in, can our own domain and directory sit in front of
-it, and can we prove it to an auditor. This page lists each capability, what
-masks does today, and how the missing ones will be built.
+Companies that buy an identity provider ask the same questions. Who did what?
+Can a risky sign-in be stopped? Can our domain and our directory sit in front of
+it? Can we show an auditor? This page lists each capability, what masks does
+today, and how the rest will be built.
 
 | Capability | Status | Section |
 | --- | --- | --- |
 | Audit log | Built | [Audit log](#audit-log) |
 | Event streaming | Built | [Event streaming](#event-streaming) |
 | Single sign-on and provisioning | Built | [Single sign-on and provisioning](#single-sign-on-and-provisioning) |
-| Step-up authentication | Planned | [Step-up authentication](#step-up-authentication) |
+| Step-up authentication | Partly built | [Step-up authentication](#step-up-authentication) |
 | Organizations and roles | Planned | [Organizations and roles](#organizations-and-roles) |
 | Custom domains | Planned | [Custom domains](#custom-domains) |
 | Home-realm discovery | Planned | [Home-realm discovery](#home-realm-discovery) |
 | Adaptive risk | Planned | [Adaptive risk](#adaptive-risk) |
 | Shared signals | Planned | [Shared signals](#shared-signals) |
 | Token exchange | Planned | [Token exchange](#token-exchange) |
-| Migration from other providers | Planned | [Migration](#migration) |
+| Migration | Planned | [Migration](#migration) |
 
-## Audit log
+Each planned capability reuses what is already built. Event streaming supplies
+delivery and signing to shared signals. Sign-in policies supply the decision
+point for step-up and adaptive risk. Tenants supply the isolation that
+organizations and custom domains build on.
+
+## Built
+
+### Audit log
 
 Every sign-in, consent, administrative change, token revocation, and key
-rotation is recorded as an event. An event names the action, the account it
-happened to, the account that did it, the client, the device, the IP address,
-and the user agent. Events are read-only, belong to one tenant, and are kept
-for 180 days. Manage lists them with filters for the account, the action, and
-the client.
+rotation is an event. An event names the action, the account it happened to,
+the account that did it, the client, the device, the IP address, and the user
+agent. Events are read-only, belong to one tenant, and are deleted after 180
+days. Manage lists them and filters by account, action, and client, and marks
+the actions that call for attention, such as a refused sign-in or a replayed
+refresh token.
 
-## Event streaming
+### Event streaming
 
-Reading the log in manage does not satisfy a security team that already
-collects events in a SIEM. An event stream posts each event to an HTTPS endpoint
-as it happens.
+An event stream posts each event to an HTTPS endpoint as it happens, signed with
+a secret that only the tenant and the receiver hold. Failed deliveries are
+retried, and an address that resolves to a private network is refused. See
+[Event streams](/guides/event-streams/) for the steps and the signature format.
 
-A stream has a key, a name, an address, a signing secret, and an optional list
-of actions. An empty list streams every action. Create one with the
-`createEventStream` mutation. The secret is returned once, by that mutation and
-by `rotateEventStreamSecret`, and is never readable afterward.
-
-```sh
-curl -s "$MASKS/manage/graphql" -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"query":"mutation { createEventStream(key: \"siem\", name: \"SIEM\", url: \"https://siem.example.com/masks\", actions: [\"session.started\", \"actor.deleted\"]) { secret } }"}'
-```
-
-`testEventStream` sends a `stream.tested` event and reports what the receiver
-answered. `archiveEventStream` stops delivery and `restoreEventStream` resumes
-it.
-
-### What is sent
-
-Each event is a `POST` with a JSON body.
-
-| Field | Meaning |
-| --- | --- |
-| `id` | The event's id, also sent as the `Masks-Delivery` header. |
-| `tenant` | The tenant's subdomain. |
-| `action` | The action, such as `session.started`, also sent as the `Masks-Event` header. |
-| `created_at` | When it happened, in UTC. |
-| `actor` | The uuid of the account it happened to, or null. |
-| `by` | The uuid of the account that did it, or null. |
-| `client` | The `client_id` involved, or null. |
-| `ip_address`, `user_agent` | Where it came from. |
-| `details` | Fields specific to the action. |
-
-The receiver answers with any 2xx status.
-
-### Verifying a delivery
-
-The `Masks-Signature` header reads `t=<unix time>,v1=<hex>`. The value is the
-HMAC-SHA256, keyed with the stream's secret, of the timestamp, a period, and the
-raw request body. Recompute it, compare in constant time, and reject a request
-whose timestamp is more than five minutes from the current time.
-
-### Failures
-
-A delivery that gets no 2xx answer is retried eight times with growing delays.
-After the last attempt masks records a `stream.failed` event, which is never
-streamed. The stream's `lastFailure` shows the latest error and `lastDeliveredAt`
-the latest success.
-
-### What masks refuses
-
-- An address that is not HTTPS, or that carries a username or password.
-- An address that resolves to a private, loopback, or link-local address. Masks
-  checks when the stream is saved and again on every delivery.
-- An action masks does not record.
-
-Events are delivered at least once and may arrive out of order. Use `id` to
-discard a repeat.
-
-## Single sign-on and provisioning
+### Single sign-on and provisioning
 
 Masks signs people in through OpenID Connect, OAuth 2.0, and SAML 2.0
-providers, and acts as a SAML identity provider for applications. A directory
-provisions and suspends accounts over SCIM. See [Features](/guides/features/)
-for the steps.
+providers, acts as a SAML identity provider for applications, and keeps its
+accounts in step with a directory over SCIM. See
+[Features](/guides/features/) and [SSO and SAML](/guides/sso-saml/).
 
-## Step-up authentication
+## Partly built
 
-Some actions need a stronger or fresher sign-in than the session holds: moving
-money, changing a payout address, reading a record.
+### Step-up authentication
 
-The plan:
+Some actions need a stronger or fresher sign-in than the session holds, such as
+moving money or reading a record.
 
-- Tokens carry `acr` and `amr` claims that say how the person signed in and how
-  recently.
-- A client asks for a level with `acr_values` and a maximum age with `max_age`.
+Today:
+
+- ID tokens carry `auth_time`, `amr`, and an `acr` of `urn:masks:acr:pwd` or
+  `urn:masks:acr:mfa`.
+- A client asks for a fresh sign-in with `max_age` or `prompt=login`.
+
+Still to build:
+
+- A client asks for a level with `acr_values`. Masks discovery already lists the
+  two values, and the authorization endpoint does not act on the request yet.
 - When the session falls short, masks asks for one more factor and issues a
   token that meets the request.
-- A sign-in policy names the level a client requires.
+- A sign-in policy names the level a client requires, so the client does not
+  have to ask on every request.
 
-## Organizations and roles
+## Planned
 
-A business application has customers, and each customer has people with
+### Organizations and roles
+
+A business application has customers, and each customer has people in
 different roles.
 
-The plan:
-
 - An organization has members, invitations, and a role for each member.
-- A token can be scoped to one organization, and carries the member's role
-  there.
+- A token can be scoped to one organization and carries the member's role there.
 - A sign-in policy can apply to one organization, so a customer can require a
   passkey without changing another customer's sign-in.
+- Events record the organization, so one customer's log can be streamed to that
+  customer.
 
-## Custom domains
+### Custom domains
 
 A tenant serves sign-in from its own domain, such as `login.example.com`.
 
-The plan:
-
 - A tenant claims a domain and proves it with a DNS record.
 - Masks issues a certificate for the domain and renews it.
-- Issuer, links, and emails use the domain, and mail is sent from it once its
-  DNS records are in place.
+- The issuer, links, and emails use the domain, and mail is sent from it once
+  its DNS records are in place.
 
-## Home-realm discovery
+### Home-realm discovery
 
 Someone types an email address, and masks sends them to their company's
 provider.
-
-The plan:
 
 - A provider claims one or more email domains.
 - The sign-in form looks up the domain of the address and starts that provider's
@@ -152,12 +109,10 @@ The plan:
 - Claiming a domain needs the same proof as a custom domain, so one tenant
   cannot capture another company's people.
 
-## Adaptive risk
+### Adaptive risk
 
 A sign-in from a new country, a known-bad address, or a breached password is
 riskier than one from a remembered device.
-
-The plan:
 
 - Each sign-in is scored from the device, the address, the time since the last
   sign-in, and a check of the password against known breaches.
@@ -165,28 +120,30 @@ The plan:
   factor, or refusing it.
 - The score and the decision are recorded on the event.
 
-## Shared signals
+### Shared signals
 
 Other systems need to hear that a session ended or a credential was
 compromised without waiting for a token to expire.
 
-The plan is to send and receive Shared Signals events (CAEP and RISC) over a
-stream that a receiver registers, reusing the delivery and signing of event
-streaming.
+- Masks sends Shared Signals events (CAEP and RISC) to a receiver that registers
+  a stream, reusing the delivery and signing of event streams.
+- Masks accepts the same events from a provider and ends the matching sessions.
 
-## Token exchange
+### Token exchange
 
 A service acting for a person, including an AI agent, trades the token it holds
 for a narrower one for a downstream service.
 
-The plan is RFC 8693 token exchange, limited by the per-client delegations masks
-already records, with rich authorization requests (RFC 9396) to say what the
-narrower token may do. Each exchange is an event.
+- Masks implements RFC 8693 token exchange, limited by the per-client
+  [delegations](/guides/connecting-via-sdk/#delegation) it already records.
+- Rich authorization requests (RFC 9396) say what the narrower token may do.
+- Each exchange is an event.
 
-## Migration
+### Migration
 
 Moving off another provider must not force everyone to reset a password.
 
-The plan is an import that reads exports from Auth0, Okta, Cognito, and
-Firebase, keeps each password hash in its original format, and rewrites it with
-the masks hash the first time the person signs in.
+- An import reads exports from Auth0, Okta, Cognito, and Firebase.
+- Each password hash is kept in its original format and rewritten with the masks
+  hash the first time the person signs in.
+- Accounts arrive with their emails verified only when the export says so.

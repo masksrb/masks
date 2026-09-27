@@ -80,6 +80,7 @@ export default defineConfig({
           { label: "Connecting via SDK", slug: "guides/connecting-via-sdk" },
           { label: "Security", slug: "guides/security" },
           { label: "Enterprise", slug: "guides/enterprise" },
+          { label: "Event streams", slug: "guides/event-streams" },
         ],
       },
       {
