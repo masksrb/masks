@@ -4,6 +4,8 @@ module Masks
       class Refused < StandardError; end
 
       DAILY_INVITATIONS = 50
+      RESEND_AFTER = 1.hour
+      INVITED = [ Event::MEMBERSHIP_ADDED, Event::MEMBERSHIP_RESENT ].freeze
       NOT_SENT = { delivered: false, url: nil }.freeze
 
       class << self
@@ -77,6 +79,32 @@ module Masks
           membership
         end
 
+        def resend!(membership, by:, journey:, manager: false)
+          organization = membership.organization
+
+          raise Refused, "#{label(membership) || 'that person'} has already joined #{organization.name}" unless membership.pending?
+          raise Refused, "#{organization.name} is archived" if organization.archived?
+          raise Refused, "that invitation was sent less than an hour ago" if membership.invited_at&.after?(RESEND_AFTER.ago)
+
+          capped!(by) unless manager
+
+          membership.update!(invited_at: Time.current)
+          Event.record!(Event::MEMBERSHIP_RESENT, actor: membership.actor, by: by, organization: organization,
+                                                  role: membership.role)
+
+          sent = membership.actor.activated? ? tell(membership, journey) : invite(membership.actor, journey, membership)
+
+          { membership: membership }.merge(sent)
+        end
+
+        def purge_lapsed!
+          Membership.lapsed(Membership.lifetime.ago).includes(:organization, :actor).find_each do |membership|
+            membership.destroy!
+            Event.record!(Event::MEMBERSHIP_EXPIRED, actor: membership.actor, by: nil, organization: membership.organization,
+                                                     role: membership.role, invited_as: membership.invited_as)
+          end
+        end
+
         def label(membership)
           membership.pending? ? membership.invited_as : membership.actor.identifier
         end
@@ -86,15 +114,19 @@ module Masks
           def invitable!(organization, address, by:, policy:)
             raise Refused, "an email address is required" if address.nil?
 
-            if Event.where(action: Event::MEMBERSHIP_ADDED, by: by, created_at: 1.day.ago..).count >= DAILY_INVITATIONS
-              raise Refused, "you have added #{DAILY_INVITATIONS} people today; a manager can add more"
-            end
+            capped!(by)
 
             return if proven?(organization, address)
             return if policy.signup && policy.admits?(address)
 
             raise Refused, "#{organization.name} can add people at a domain it has proven, or anyone while sign-up is open; " \
                            "ask a manager to add #{address}"
+          end
+
+          def capped!(by)
+            return if Event.where(action: INVITED, by: by, created_at: 1.day.ago..).count < DAILY_INVITATIONS
+
+            raise Refused, "you have sent #{DAILY_INVITATIONS} invitations today; a manager can add more"
           end
 
           def proven?(organization, address)

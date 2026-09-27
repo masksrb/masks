@@ -59,12 +59,14 @@
           </div>
         {/if}
 
-        <div class="flex flex-wrap gap-x-4 text-xs opacity-75">
-          <span class="font-mono">{event.ipAddress ?? "—"}</span>
-          {#if event.device}
-            <span class="truncate">{event.device.label}</span>
-          {/if}
-        </div>
+        {#if event.ipAddress || event.device}
+          <div class="flex flex-wrap gap-x-4 text-xs opacity-75">
+            {#if event.ipAddress}<span class="font-mono">{event.ipAddress}</span>{/if}
+            {#if event.device}
+              <span class="truncate">{event.device.label}</span>
+            {/if}
+          </div>
+        {/if}
       </li>
     {/each}
   </ol>

@@ -137,6 +137,8 @@ module Masks
       MEMBERSHIP_ROLE_KEPT = "membership.role_kept".freeze
       MEMBERSHIP_SUSPENDED = "membership.suspended".freeze
       ORGANIZATION_OWNERLESS = "organization.ownerless".freeze
+      MEMBERSHIP_RESENT = "membership.resent".freeze
+      MEMBERSHIP_EXPIRED = "membership.expired".freeze
 
       DOMAIN_CLAIMED = "domain.claimed".freeze
       DOMAIN_VERIFIED = "domain.verified".freeze

@@ -23,9 +23,10 @@
           </p>
 
           <p class="item-meta">
-            <span title="<%= l(invited.created_at, format: :long) %>">
-              <%= account_text("organizations.invited_ago", age: time_ago_in_words(invited.created_at)) %>
+            <span title="<%= l(invited.invited_at, format: :long) %>">
+              <%= account_text("organizations.invited_ago", age: time_ago_in_words(invited.invited_at)) %>
             </span>
+            · <%= account_text("organizations.expires_in", age: distance_of_time_in_words_to_now(invited.expires_at)) %>
             <% if invited.invited_as.present? %>
               · <%= account_text("organizations.sent_to", address: invited.invited_as) %>
             <% end %>
@@ -88,15 +89,21 @@
                     <span><%= label %></span>
                     <% if yourself %>
                       <span class="tag"><%= account_text("organizations.you") %></span>
+                    <% elsif member.expired? %>
+                      <span class="tag tag-bad"><%= account_text("organizations.expired") %></span>
                     <% elsif member.pending? %>
                       <span class="tag"><%= account_text("organizations.invited") %></span>
                     <% end %>
                   </span>
 
                   <span class="item-meta">
-                    <% if member.pending? %>
-                      <span title="<%= l(member.created_at, format: :long) %>">
-                        <%= account_text("organizations.invited_ago", age: time_ago_in_words(member.created_at)) %>
+                    <% if member.expired? %>
+                      <span title="<%= l(member.expires_at, format: :long) %>">
+                        <%= account_text("organizations.expired_ago", age: time_ago_in_words(member.expires_at)) %>
+                      </span>
+                    <% elsif member.pending? %>
+                      <span title="<%= l(member.invited_at, format: :long) %>">
+                        <%= account_text("organizations.invited_ago", age: time_ago_in_words(member.invited_at)) %>
                       </span>
                       <% if member.invited_by %>
                         <%= account_text("organizations.by", by: member.invited_by.identifier) %>
@@ -119,6 +126,12 @@
                       <button type="submit" class="action action-quiet action-sm" data-autosubmitted <%= "disabled" if yourself && alone %>>
                         <%= account_text("organizations.set_role") %>
                       </button>
+                    <% end %>
+
+                    <% if member.pending? %>
+                      <%= button_to account_text("organizations.resend"),
+                            account_organization_member_resend_path(organization.key, member.id), method: :post,
+                            class: "action action-quiet action-sm" %>
                     <% end %>
 
                     <% unless yourself %>

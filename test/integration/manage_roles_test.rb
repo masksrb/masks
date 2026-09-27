@@ -153,6 +153,26 @@ module Masks
         assert_response :unauthorized
       end
 
+      test "support sends an invitation again, and a reader cannot" do
+        person = create_actor(@tenant, nickname: "person", email: "person@example.com")
+        membership = within do
+          Organization.create!(key: "acme", name: "Acme").memberships.create!(actor: person, role: "member", pending: true)
+        end
+        within { membership.update_columns(invited_at: 2.hours.ago) }
+
+        reader = bearer_for(manager(ManageRoles::READ))
+        body = ask(%(mutation($uuid: ID!) { resendOrganizationInvitation(organization: "acme", uuid: $uuid) { membership { expired } } }), reader, uuid: person.uuid)
+
+        assert_match "needs masks:manage or masks:manage:support", refusal(body)
+
+        support = bearer_for(manager(ManageRoles::SUPPORT, nickname: "helper"))
+        body = ask(%(mutation($uuid: ID!) { resendOrganizationInvitation(organization: "acme", uuid: $uuid) { membership { expired expiresAt } } }), support, uuid: person.uuid)
+
+        assert_nil body["errors"]
+        refute body.dig("data", "resendOrganizationInvitation", "membership", "expired")
+        assert_in_delta Membership.lifetime.from_now, Time.zone.parse(body.dig("data", "resendOrganizationInvitation", "membership", "expiresAt")), 5
+      end
+
       test "security creates an organization, and support fills it with people" do
         security = bearer_for(manager(ManageRoles::SECURITY))
 

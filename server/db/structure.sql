@@ -684,7 +684,8 @@ CREATE TABLE public.memberships (
     pending boolean DEFAULT false NOT NULL,
     invited_as character varying,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    invited_at timestamp(6) without time zone
 );
 
 ALTER TABLE ONLY public.memberships FORCE ROW LEVEL SECURITY;
@@ -3234,6 +3235,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260927160000'),
 ('20260927140500'),
 ('20260927120000'),
 ('20260927110000'),

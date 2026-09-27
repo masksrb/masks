@@ -69,6 +69,8 @@ Masks::Server::Engine.routes.draw do
     post "/account/organizations/:key/members", to: "organization_members#create", as: :account_organization_members
     patch "/account/organizations/:key/members/:id", to: "organization_members#update", as: :account_organization_member
     delete "/account/organizations/:key/members/:id", to: "organization_members#destroy"
+    post "/account/organizations/:key/members/:id/resend", to: "organization_members#resend",
+                                                           as: :account_organization_member_resend
     post "/account/organizations/:key/accept", to: "organization_members#accept", as: :account_organization_acceptance
   end
 
@@ -112,8 +114,6 @@ Masks::Server::Engine.routes.draw do
     put "Users/:id", to: "users#replace"
     patch "Users/:id", to: "users#update"
     delete "Users/:id", to: "users#destroy"
-  end
-
 
     get "Groups", to: "groups#index"
     post "Groups", to: "groups#create"
@@ -121,6 +121,8 @@ Masks::Server::Engine.routes.draw do
     put "Groups/:id", to: "groups#replace", constraints: { id: %r{[^/]+} }
     patch "Groups/:id", to: "groups#update", constraints: { id: %r{[^/]+} }
     delete "Groups/:id", to: "groups#destroy", constraints: { id: %r{[^/]+} }
+  end
+
   post "/manage/graphql", to: "manage/graphql#execute", as: :manage_graphql
   get "/manage/exports/:token", to: "manage/exports#show", as: :manage_export, constraints: { token: %r{[^/]+} }
   get "/manage(/*path)", to: "manage#index", as: :manage

@@ -70,6 +70,7 @@ module Masks
           field :add_member, mutation: Mutations::AddMember
           field :set_member_role, mutation: Mutations::SetMemberRole
           field :remove_member, mutation: Mutations::RemoveMember
+          field :resend_organization_invitation, mutation: Mutations::ResendOrganizationInvitation
           field :set_provider_organization, mutation: Mutations::SetProviderOrganization
           field :claim_domain, mutation: Mutations::ClaimDomain
           field :check_domain, mutation: Mutations::CheckDomain

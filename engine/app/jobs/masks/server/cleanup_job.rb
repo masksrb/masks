@@ -24,6 +24,7 @@ module Masks
           Session.where.not(revoked_at: nil).where(revoked_at: ...cutoff).delete_all
           SigningKey.where.not(retired_at: nil).where(retired_at: ...cutoff).delete_all
           Event.where(created_at: ...tenant.event_retention.ago).in_batches(of: BATCH).delete_all
+          Members.purge_lapsed!
         end
     end
   end

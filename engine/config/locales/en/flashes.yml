@@ -20,6 +20,8 @@ en:
     confirm_first: "Confirm %{address} before joining %{organization}: send it a confirmation from your email settings on this page, then accept."
     elsewhere: "%{organization} invited %{address}, which is not the address on this account. Change your email to it and confirm it to join."
     slow_down: "That is a lot of people at once. Wait a minute and try again."
+    resent: "The invitation to %{identifier} was sent again. It expires in %{age}."
+    expired: "The invitation to %{organization} has expired. Ask an owner to send it again."
 
   apps:
     unknown: "There is no such app on this account."

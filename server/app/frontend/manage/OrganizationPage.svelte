@@ -30,7 +30,7 @@
         domains { domain verifiedAt provider { key name } }
         provisioningTokens { id label expiresAt usedAt }
         members {
-          role pending provisioned invitedAs createdAt
+          role pending provisioned invitedAs invitedAt expiresAt expired createdAt
           invitedBy { uuid identifier }
           actor { uuid identifier email activated }
         }
@@ -135,10 +135,12 @@
   }
 
   function status(member) {
+    if (member.expired) return `Expired ${since(member.expiresAt)}. Send it again to renew it.`;
+
     if (member.pending) {
       const by = member.invitedBy ? ` by ${member.invitedBy.identifier}` : "";
 
-      return `Invited ${since(member.createdAt)}${by}`;
+      return `Invited ${since(member.invitedAt ?? member.createdAt)}${by}`;
     }
 
     return `${member.provisioned ? "From the directory, since" : "Since"} ${day(member.createdAt)}`;
@@ -205,6 +207,16 @@
       }`,
       { organization: organization.key, uuid: member.actor.uuid },
       member.pending ? `The invitation to ${named(member)} is withdrawn.` : `${named(member)} is out of ${organization.name}.`,
+    );
+  }
+
+  function resend(member) {
+    run(
+      `mutation Resend($organization: ID!, $uuid: ID!) {
+        resendOrganizationInvitation(organization: $organization, uuid: $uuid) { delivered }
+      }`,
+      { organization: organization.key, uuid: member.actor.uuid },
+      `The invitation to ${named(member)} was sent again.`,
     );
   }
 
@@ -431,7 +443,8 @@
                     <Link to={`/actors/${member.actor.uuid}`} class="link link-hover font-medium break-all">
                       {named(member)}
                     </Link>
-                    {#if member.pending}<span class="badge badge-sm badge-warning badge-soft">invited</span>{/if}
+                    {#if member.expired}<span class="badge badge-sm badge-error badge-soft">expired</span>
+                    {:else if member.pending}<span class="badge badge-sm badge-warning badge-soft">invited</span>{/if}
                     {#if lastOwner(member)}<span class="badge badge-sm badge-ghost">last owner</span>{/if}
                   </span>
                   <span class="hint">{status(member)}</span>
@@ -653,6 +666,16 @@
 {/snippet}
 
 {#snippet removeOf(member)}
+  {#if member.pending}
+    <button
+      type="button"
+      class="btn btn-ghost btn-sm"
+      disabled={busy || Boolean(organization.archivedAt)}
+      onclick={() => resend(member)}
+    >
+      Send again
+    </button>
+  {/if}
   <button
     type="button"
     class="btn btn-ghost btn-sm"

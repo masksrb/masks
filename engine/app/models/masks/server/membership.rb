@@ -2,6 +2,7 @@ module Masks
   module Server
     class Membership < ApplicationRecord
       class Unconfirmed < StandardError; end
+      class Expired < StandardError; end
 
       include TenantScoped
 
@@ -10,6 +11,14 @@ module Masks
       belongs_to :invited_by, class_name: "Actor", optional: true
 
       scope :accepted, -> { where(pending: false) }
+      scope :invitations, -> { where(pending: true) }
+      scope :lapsed, ->(by = Time.current) { invitations.where(invited_at: ...(by - lifetime)) }
+
+      before_create { self.invited_at ||= Time.current if pending? }
+
+      def self.lifetime
+        ::Rails.configuration.masks.organization_invitation_lifetime
+      end
 
       validates :actor_id, uniqueness: { scope: :organization_id }
       validate :role_is_offered
@@ -21,6 +30,14 @@ module Masks
         role == Organization::OWNER && !pending?
       end
 
+      def expires_at
+        pending? && invited_at ? invited_at + self.class.lifetime : nil
+      end
+
+      def expired?
+        expires_at.present? && expires_at <= Time.current
+      end
+
       def acceptable?
         return true if invited_as.blank?
 
@@ -30,8 +47,15 @@ module Masks
       def accept!(vouched: false)
         return self unless pending?
 
-        raise Unconfirmed, "confirm #{invited_as} before accepting" unless vouched || acceptable?
+        return accept_vouched! if vouched
 
+        raise Expired, "this invitation to #{organization.name} has expired" if expired?
+        raise Unconfirmed, "confirm #{invited_as} before accepting" unless acceptable?
+
+        accept_vouched!
+      end
+
+      def accept_vouched!
         update!(pending: false)
         Event.record!(Event::MEMBERSHIP_ACCEPTED, actor: actor, organization: organization, role: role)
 
