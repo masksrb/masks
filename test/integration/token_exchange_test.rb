@@ -86,6 +86,38 @@ module Masks
         assert_equal first["client_id"], claims.dig("act", "act", "sub")
       end
 
+      test "a granted exchange is recorded with what it granted and never the token" do
+        exchange(scope: "openid", resource: RESOURCES.first)
+
+        event = within { Event.where(action: Event::EXCHANGE_GRANTED).sole }
+
+        assert_equal @actor.id, event.actor_id
+        assert_equal @registration["client_id"], event.client.client_id
+        assert_equal "openid", event.details["scopes"]
+        assert_equal [ RESOURCES.first ], event.details["audience"]
+        assert_equal 1, event.details["depth"]
+        refute_includes event.details.to_json, @subject
+      end
+
+      test "a refused exchange is recorded with the error it answered" do
+        exchange(scope: "openid profile email admin")
+
+        event = within { Event.where(action: Event::EXCHANGE_REFUSED).sole }
+
+        assert_equal "invalid_scope", event.details["error"]
+        assert_equal @actor.id, event.actor_id
+        refute within { Event.where(action: Event::EXCHANGE_GRANTED).exists? }
+      end
+
+      test "an unreadable subject token is recorded as refused without an account" do
+        exchange("not.a.jwt")
+
+        event = within { Event.where(action: Event::EXCHANGE_REFUSED).sole }
+
+        assert_equal "invalid_grant", event.details["error"]
+        assert_nil event.actor_id
+      end
+
       test "a client not registered for the exchange grant cannot exchange" do
         plain = register(client_name: "Plain", grant_types: [ "authorization_code" ])
 

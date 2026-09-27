@@ -185,7 +185,7 @@ module Masks
         end
 
         def exchange_token(req, res, client)
-          exchange = Exchange.new(
+          Exchange.new(
             client: client,
             issuer: issuer,
             subject_token: req.subject_token,
@@ -197,13 +197,7 @@ module Masks
             resource: repeated("resource"),
             lifetime: req.requested_lifetime,
             audience: repeated("audience")
-          ).validate!
-
-          return res.access_token = Payload.new(exchange.release!) if exchange.upstream?
-
-          access = exchange.issue!(jkt: jkt)
-
-          res.access_token = Payload.new(bearer(access).merge("issued_token_type" => Exchange::ACCESS_TOKEN))
+          ).then { |exchange| res.access_token = Payload.new(exchange.perform!(jkt: jkt) { |access| bearer(access) }) }
         end
 
         def client_credentials(req, res, client)

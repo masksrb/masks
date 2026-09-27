@@ -66,6 +66,8 @@ module Masks
       DELEGATION_RELEASED = "delegation.released".freeze
       DELEGATION_REFUSED = "delegation.refused".freeze
       DELEGATION_REVOKED = "delegation.revoked".freeze
+      EXCHANGE_GRANTED = "exchange.granted".freeze
+      EXCHANGE_REFUSED = "exchange.refused".freeze
 
       ACTOR_CREATED = "actor.created".freeze
       ACTOR_PROVISIONED = "actor.provisioned".freeze
@@ -119,7 +121,8 @@ module Masks
 
       GRAVE = [
         LOGIN_REFUSED, LOGIN_THROTTLED, LOGOUT_UNDELIVERED, REFRESH_REUSED, STREAM_FAILED,
-        DEVICE_BLOCKED, ACTOR_DELETED, AUTHENTICATOR_DISABLED, CONNECTION_REFUSED, DELEGATION_REFUSED
+        DEVICE_BLOCKED, ACTOR_DELETED, AUTHENTICATOR_DISABLED, CONNECTION_REFUSED, DELEGATION_REFUSED,
+        EXCHANGE_REFUSED
       ].freeze
 
       ACTIONS = constants(false).filter_map do |name|

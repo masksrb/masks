@@ -146,6 +146,57 @@ module Masks
         self
       end
 
+      def perform!(jkt: nil)
+        validate!
+
+        answer = upstream? ? release! : yield(issue!(jkt: jkt)).merge("issued_token_type" => ACCESS_TOKEN)
+
+        granted!
+
+        answer
+      rescue Policy::Denied => denial
+        refused!(denial)
+
+        raise
+      end
+
+      def granted!
+        Event.record!(
+          Event::EXCHANGE_GRANTED,
+          actor: actor, by: nil, client: client,
+          subject_token_type: subject_token_type,
+          requested_token_type: requested_token_type,
+          scopes: (Scopes.join(granted_scopes) unless upstream?),
+          audience: (granted_audience.presence unless upstream?),
+          connection: (connection&.uuid if upstream?),
+          acting: actor_claim&.fetch("sub", nil),
+          depth: depth
+        )
+      end
+
+      def refused!(denial)
+        Event.record!(
+          Event::EXCHANGE_REFUSED,
+          actor: actor, by: nil, client: client,
+          subject_token_type: subject_token_type.presence,
+          requested_token_type: requested_token_type,
+          error: denial.error,
+          said: denial.description
+        )
+      end
+
+      def depth
+        chain = actor_claim
+        count = 0
+
+        while chain.is_a?(Hash)
+          count += 1
+          chain = chain["act"]
+        end
+
+        count
+      end
+
       def issue!(jkt: nil)
         AccessToken.issue!(
           issuer: issuer,

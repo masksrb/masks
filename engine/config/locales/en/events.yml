@@ -67,6 +67,14 @@ en:
         unlinked: "Account disconnected"
         signed_in: "Signed in with a connected account"
         refused: "Connected account sign-in refused"
+      delegation:
+        granted: "Delegation granted"
+        released: "Delegated token released"
+        refused: "Delegated token refused"
+        revoked: "Delegation revoked"
+      exchange:
+        granted: "Token exchanged"
+        refused: "Token exchange refused"
       actor:
         approved: "Account approved"
         created: "Person added"
