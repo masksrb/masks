@@ -108,6 +108,41 @@ end
 `resource_metadata`, so a client handed nothing but a URL can find its way to the issuer
 and back.
 
+### Organizations
+
+A person signs in to an app as a member of one organization when the app asks for the
+`organization` scope. Someone in several organizations picks one, and an app can pick for them by
+naming it: `/auth?organization=acme`, or `config.organization` for every sign-in.
+
+```ruby
+Masks::Rails.configure do |config|
+  config.scope = %w[openid profile email offline_access organization]
+  config.organization = ->(request) { request.subdomain }
+end
+
+class BillingController < ApplicationController
+  include Masks::Rails::Authentication
+
+  masks_members_only! role: %w[owner billing]
+end
+```
+
+`masks_organization` is the one signed in to — `id`, `key`, `name`, and `role` — or `nil`, and
+`masks_role?("owner")` asks about the role held in it. A refresh reads the role again, so a
+promotion or demotion reaches the app within an access token's lifetime rather than at the
+next sign-in. `/auth/session` answers the same thing as `organization`.
+
+`masks_members_only!` refuses with 403, as `insufficient_organization` when the person signed
+in to none and `insufficient_role` when they hold another role. A resource server asks the same of a
+token:
+
+```ruby
+masks_protect! scope: "uris:catalog:write", role: "owner", organization: "acme"
+```
+
+Naming an organization without asking for the scope still holds the sign-in to its members and its
+sign-in policy; the app just learns nothing about the role.
+
 ### Avatars
 
 Every actor has three faces at once — an uploaded `photo`, an `identicon`, and two-letter
@@ -146,6 +181,7 @@ a subdomain-per-tenant host needs.
 | `resource` | this app's own identifier, when it also accepts tokens |
 | `resource_scopes` | what it accepts, published in its RFC 9728 metadata |
 | `scope` | what to ask the issuer for; defaults to `openid profile email` |
+| `organization` | the organization every sign-in names, by key |
 | `credentials` / `store` | where the handshake's result lives |
 | `credentials_path` | where the default store writes; `config/masks.json` |
 | `after_sign_in` / `after_sign_out` | paths on this host |

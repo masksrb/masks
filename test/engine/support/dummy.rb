@@ -69,6 +69,16 @@ class PagesController < ActionController::Base
   end
 end
 
+class OwnersController < ActionController::Base
+  include Masks::Rails::Authentication
+
+  masks_members_only! role: "owner"
+
+  def show
+    render plain: "owners of #{masks_organization.key}"
+  end
+end
+
 class CatalogController < ActionController::Base
   include Masks::Rails::Authentication
   include Masks::Rails::ProtectedResource
@@ -120,5 +130,6 @@ Rails.application.routes.draw do
   get "/bare", to: "bare#show"
   get "/asked", to: "asked#show"
   get "/dashboard", to: "pages#dashboard"
+  get "/owners", to: "owners#show"
   root to: "pages#home"
 end

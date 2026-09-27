@@ -18,10 +18,11 @@ module Masks
         @verifier = verifier || Verifier.new(@issuer, audience: @url, algorithms: algorithms)
       end
 
-      def authenticate(authorization, scope: nil)
+      def authenticate(authorization, scope: nil, role: nil, organization: nil)
         claims = Claims.new(@verifier.verify(token!(authorization), required: @required, typ: Verifier::ACCESS_TOKEN))
 
         Array(scope).each { |name| claims.permit!(name) }
+        claims.member!(*Array(role), organization: organization) if role || organization
 
         claims
       rescue InvalidToken => e

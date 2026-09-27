@@ -7,9 +7,18 @@ module Masks
       included do
         if respond_to?(:helper_method)
           helper_method :masks_signed_in?, :masks_identity, :masks_tenant, :masks_scopes,
-                        :masks_claims
+                        :masks_claims, :masks_organization, :masks_role?
         end
       end
+
+      class_methods do
+        def masks_members_only!(role: nil, organization: nil, **options)
+          before_action(-> { authorize_masks_member!(*Array(role), organization: organization) },
+                        **options.slice(:only, :except, :if, :unless))
+        end
+      end
+
+      ORGANIZATION_KEY = /\A[a-z0-9][a-z0-9-]*\z/
 
       REQUESTS = "masks_requests".freeze
       HANDSHAKES = "masks_handshakes".freeze
@@ -43,6 +52,7 @@ module Masks
         session[masks_config.session_key] = held.compact
         @masks_tokens = tokens
         @masks_identity = held["identity"]
+        @masks_claims = nil
       end
 
       def masks_held
@@ -51,7 +61,7 @@ module Masks
 
       IDENTITY = [
         "sub", "name", "preferred_username", "email", "email_verified", "tenant",
-        "picture", Masks::Client::Claims::AVATARS
+        "picture", Masks::Client::Claims::AVATARS, Masks::Client::Claims::ORGANIZATION
       ].freeze
 
       def masks_identity_from(tokens)
@@ -64,6 +74,7 @@ module Masks
         session.delete(masks_config.session_key)
         @masks_tokens = nil
         @masks_identity = nil
+        @masks_claims = nil
       end
 
       def masks_signed_in?
@@ -122,6 +133,22 @@ module Masks
         @masks_claims ||= Masks::Client::Claims.new(masks_identity || {})
       end
 
+      def masks_organization
+        held = masks_claims.organization
+
+        held.present? ? held : nil
+      end
+
+      def masks_role?(*roles)
+        masks_organization&.role?(*roles) || false
+      end
+
+      def masks_organization_key(value)
+        key = value.to_s.strip.downcase
+
+        key.match?(ORGANIZATION_KEY) ? key : nil
+      end
+
       def masks_scopes
         masks_tokens&.scopes || []
       end
@@ -138,12 +165,12 @@ module Masks
         return false unless masks_configured?
         return false if masks_tokens&.refresh_token.nil?
 
-        masks_store(
-          masks_session.refresh(
-            masks_tokens.refresh_token,
-            resource: masks_config.resource_for(request)
-          )
+        refreshed = masks_session.refresh(
+          masks_tokens.refresh_token,
+          resource: masks_config.resource_for(request)
         )
+
+        masks_store(refreshed, identity: masks_reorganized(refreshed))
         true
       rescue Masks::Client::Unregistered
         masks_disconnect!
@@ -151,6 +178,18 @@ module Masks
       rescue Masks::Client::Rejected
         masks_forget
         false
+      end
+
+      def masks_reorganized(tokens)
+        held = masks_held["identity"]
+
+        return nil unless held.is_a?(Hash) && held.key?(Masks::Client::Claims::ORGANIZATION)
+
+        profile = masks_session.profile(tokens)
+
+        return nil if profile.empty?
+
+        held.merge(Masks::Client::Claims::ORGANIZATION => profile[Masks::Client::Claims::ORGANIZATION]).compact
       end
 
       def masks_logout_url(return_to: nil)
@@ -168,11 +207,14 @@ module Masks
         "#{request.base_url}#{masks_local_path(masks_config.after_sign_out) || '/'}"
       end
 
-      def masks_login_url(return_to: nil)
+      def masks_login_url(return_to: nil, organization: nil)
         path = Masks::Rails::Engine.routes.url_helpers.start_path
-        target = masks_local_path(return_to)
+        query = {
+          "return_to" => masks_local_path(return_to),
+          "organization" => masks_organization_key(organization)
+        }.compact
 
-        target ? "#{path}?return_to=#{CGI.escape(target)}" : path
+        query.empty? ? path : "#{path}?#{URI.encode_www_form(query)}"
       end
 
       def masks_account
@@ -188,6 +230,7 @@ module Masks
           "picture" => masks_claims.picture,
           "avatars" => masks_claims.avatars.to_h.presence,
           "tenant" => masks_tenant,
+          "organization" => masks_organization&.to_h&.slice("id", "key", "name", "role"),
           "scopes" => masks_scopes,
           "expires_at" => masks_tokens&.expires_at,
           "account_url" => masks_account_url
@@ -207,7 +250,27 @@ module Masks
         false
       end
 
+      def authorize_masks_member!(*roles, organization: nil)
+        return false unless authenticate_masks!
+
+        masks_claims.member!(*roles, organization: organization)
+        true
+      rescue Masks::Client::Forbidden => e
+        masks_forbid(e)
+        false
+      end
+
       private
+
+        def masks_forbid(error)
+          response.headers["Cache-Control"] = "no-store"
+
+          if masks_wants_json?
+            render json: { "error" => error.code, "error_description" => error.description }, status: :forbidden
+          else
+            render plain: error.description, status: :forbidden
+          end
+        end
 
         def masks_refuse
           return masks_refuse_json if masks_wants_json?

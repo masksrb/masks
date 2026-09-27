@@ -19,6 +19,15 @@ class SessionTest < ClientTest
     refute_includes started[:url], started[:verifier]
   end
 
+  def test_an_organization_named_travels_to_authorize_without_widening_the_scope
+    query = URI.decode_www_form(URI.parse(session.start(organization: " acme ")[:url]).query)
+
+    assert_equal "acme", query.assoc("organization").last
+    assert_equal "openid uris:catalog:read", query.assoc("scope").last
+
+    assert_nil URI.decode_www_form(URI.parse(session.start(organization: "")[:url]).query).assoc("organization")
+  end
+
   def test_a_nonce_travels_only_when_an_id_token_was_asked_for
     started = session.start
     query = URI.decode_www_form(URI.parse(started[:url]).query)
@@ -130,6 +139,18 @@ class SessionTest < ClientTest
     assert_equal [ "uris:catalog:read" ], found.scopes
     assert found.permits?("uris:catalog:read")
     assert_equal "access_token", issuer.last("/introspect")[:body]["token_type_hint"]
+  end
+
+  def test_introspection_answers_the_organization_and_refuses_it_once_inactive
+    organization = { "id" => "o-1", "key" => "acme", "name" => "Acme", "role" => "owner" }
+
+    issuer.override("/introspect", { "active" => true, "sub" => "actor-1", "org" => organization })
+
+    assert_equal "acme", session.introspect("live").member!("owner").key
+
+    issuer.override("/introspect", { "active" => false, "org" => organization })
+
+    assert_raises(Masks::Client::Unauthorized) { session.introspect("revoked").member!("owner") }
   end
 
   def test_an_inactive_token_permits_nothing_however_wide_its_scope_reads

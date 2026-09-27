@@ -31,7 +31,7 @@ class TestIssuer
   end
 
   attr_reader :port, :registrations, :deletions
-  attr_accessor :id_tokens, :forgotten
+  attr_accessor :id_tokens, :forgotten, :role
 
   def initialize
     @keys = {}
@@ -41,6 +41,8 @@ class TestIssuer
     @deletions = []
     @id_tokens = :normal
     @forgotten = false
+    @role = "member"
+    @organization = nil
     @lock = Mutex.new
     @server = TCPServer.new("127.0.0.1", 0)
     @port = @server.addr[1]
@@ -74,11 +76,16 @@ class TestIssuer
         nonce: query.dig("nonce", 0),
         client_id: query.dig("client_id", 0),
         resource: query.dig("resource", 0),
+        organization: query.dig("organization", 0),
         scopes: Array(scopes)
       }
     end
 
     { code: code, state: query.dig("state", 0), query: query }
+  end
+
+  def organization_claim(key = @organization)
+    key && { "id" => "org-#{key}", "key" => key, "name" => key.capitalize, "role" => role }
   end
 
   def last_registration
@@ -243,6 +250,7 @@ class TestIssuer
 
     def granted(subdomain, pending)
       audience = pending[:resource] || "#{url_for(subdomain)}/mcp"
+      @organization = pending[:organization]
 
       {
         "access_token" => mint(subdomain: subdomain, scopes: pending[:scopes], audience: audience),
@@ -266,7 +274,7 @@ class TestIssuer
       mint(subdomain: subdomain, audience: pending[:client_id], scopes: [], typ: "JWT",
            nonce: nonce, name: "Test Owner",
            preferred_username: "owner", email: "owner@example.invalid",
-           email_verified: true, "masks:avatars" => avatars(subdomain))
+           email_verified: true, "masks:avatars" => avatars(subdomain), "org" => organization_claim)
     end
 
     def refreshed(subdomain, form)
@@ -312,8 +320,9 @@ class TestIssuer
         "name" => "Test Owner",
         "preferred_username" => "owner",
         "email" => "owner@example.invalid",
-        "email_verified" => true
-      }
+        "email_verified" => true,
+        "org" => organization_claim
+      }.compact
     end
 
     def photo(bearer)

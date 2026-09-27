@@ -2,6 +2,7 @@ module Masks
   module Client
     class Session
       DEFAULT_SCOPE = %w[openid profile email].freeze
+      ORGANIZATION = "organization".freeze
       ASSERTION_TYPE = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer".freeze
       ASSERTION_LIFETIME = 60
 
@@ -21,9 +22,11 @@ module Masks
       end
 
       def start(resource: nil, prompt: nil, scope: nil, state: SecureRandom.urlsafe_base64(24),
-                nonce: SecureRandom.urlsafe_base64(24), max_age: nil)
+                nonce: SecureRandom.urlsafe_base64(24), max_age: nil, organization: nil)
         pkce = Pkce.generate
         scopes = Array(scope || self.scope)
+        organization = organization.to_s.strip
+        organization = nil if organization.empty?
         nonce = nil unless scopes.include?("openid")
 
         pairs = [
@@ -41,6 +44,7 @@ module Masks
         Array(resource).each { |value| pairs << [ "resource", value ] }
         pairs << [ "prompt", prompt ] if prompt
         pairs << [ "max_age", max_age.to_i ] if max_age
+        pairs << [ "organization", organization ] if organization
 
         {
           url: "#{issuer.endpoint('authorization_endpoint')}?#{URI.encode_www_form(pairs)}",

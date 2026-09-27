@@ -7,7 +7,7 @@ module Masks
                     :after_sign_out, :session_key, :sign_out_of_issuer, :parent_controller,
                     :credentials_path, :authenticate_everything, :delegates
       attr_writer :issuer, :redirect_uri, :name, :credentials, :store, :forget, :logged_out,
-                  :delegation_redirect_uri
+                  :delegation_redirect_uri, :organization
 
       def initialize
         @scope = Masks::Client::Session::DEFAULT_SCOPE
@@ -49,6 +49,10 @@ module Masks
 
       def resource_for(request)
         resolve(@resource, request)
+      end
+
+      def organization_for(request)
+        resolve(@organization, request)
       end
 
       def credentials_for(request)

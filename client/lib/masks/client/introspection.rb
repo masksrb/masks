@@ -24,6 +24,12 @@ module Masks
 
         super
       end
+
+      def member!(*roles, organization: nil)
+        raise Unauthorized.new("the issuer reports this token is not active") unless active?
+
+        super
+      end
     end
   end
 end

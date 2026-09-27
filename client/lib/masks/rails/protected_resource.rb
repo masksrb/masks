@@ -18,15 +18,16 @@ module Masks
         @masks_claims if defined?(@masks_claims)
       end
 
-      def masks_authenticate!(scope: nil, **)
-        @masks_claims = masks_resource.authenticate(request.authorization, scope: scope)
+      def masks_authenticate!(scope: nil, role: nil, organization: nil, **)
+        @masks_claims = masks_resource.authenticate(request.authorization, scope: scope, role: role,
+                                                                           organization: organization)
       rescue Masks::Client::Challenge => e
         masks_challenge(e)
         false
       end
 
-      def masks_authenticate(scope: nil)
-        masks_resource.authenticate(request.authorization, scope: scope)
+      def masks_authenticate(scope: nil, role: nil, organization: nil)
+        masks_resource.authenticate(request.authorization, scope: scope, role: role, organization: organization)
       rescue Masks::Client::Unauthenticated
         nil
       end

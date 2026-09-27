@@ -20,6 +20,54 @@ class ResourceTest < ClientTest
     assert tenant.present?
   end
 
+  def organized(role: "member", key: "acme")
+    issuer.access_token("org" => { "id" => "o-1", "key" => key, "name" => key.capitalize, "role" => role })
+  end
+
+  def test_the_organization_claim_arrives_with_the_role_held_in_it
+    organization = resource.authenticate("Bearer #{organized(role: 'owner')}").organization
+
+    assert_equal "o-1", organization.id
+    assert_equal "acme", organization.key
+    assert_equal "Acme", organization.name
+    assert organization.owner?
+    assert organization.role?("admin", "owner")
+    refute organization.role?("admin")
+  end
+
+  def test_a_token_naming_no_organization_holds_no_role
+    organization = resource.authenticate("Bearer #{issuer.access_token}").organization
+
+    refute organization.present?
+    refute organization.role?("owner")
+    refute organization.owner?
+  end
+
+  def test_a_role_asked_for_is_held_or_the_token_is_forbidden
+    assert_equal "acme", resource.authenticate("Bearer #{organized(role: 'owner')}", role: %w[admin owner]).organization.key
+
+    error = assert_raises(Masks::Client::Forbidden) { resource.authenticate("Bearer #{organized}", role: "owner") }
+
+    assert_equal 403, error.status
+    assert_equal "insufficient_role", error.code
+  end
+
+  def test_an_organization_asked_for_is_the_one_the_token_names
+    assert resource.authenticate("Bearer #{organized}", organization: "acme")
+    assert resource.authenticate("Bearer #{organized}", organization: "o-1")
+
+    error = assert_raises(Masks::Client::Forbidden) { resource.authenticate("Bearer #{organized}", organization: "globex") }
+
+    assert_equal "insufficient_organization", error.code
+  end
+
+  def test_a_token_without_an_organization_is_forbidden_where_one_is_required
+    error = assert_raises(Masks::Client::Forbidden) { resource.authenticate("Bearer #{issuer.access_token}", role: "member") }
+
+    assert_equal "insufficient_organization", error.code
+    assert_includes resource.challenge(error), %(scope="organization")
+  end
+
   def test_a_missing_header_is_401_without_an_error_code
     error = assert_raises(Masks::Client::Unauthenticated) { resource.authenticate(nil) }
 

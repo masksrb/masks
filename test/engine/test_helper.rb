@@ -18,6 +18,7 @@ class EngineTest < ActiveSupport::TestCase
     Masks::Client.registry.clear!
     CREDENTIALS.clear!
     issuer.forgotten = false
+    issuer.role = "member"
     configure!
   end
 
@@ -39,6 +40,7 @@ class EngineTest < ActiveSupport::TestCase
       config.after_sign_in = overrides.fetch(:after_sign_in, "/")
       config.after_sign_out = overrides.fetch(:after_sign_out, "/")
       config.session_key = "masks"
+      config.organization = overrides[:organization]
     end
   end
 
@@ -58,6 +60,7 @@ class EngineIntegrationTest < ActionDispatch::IntegrationTest
     CREDENTIALS.clear!
     issuer.id_tokens = :normal
     issuer.forgotten = false
+    issuer.role = "member"
     configure!
   end
 
@@ -95,6 +98,7 @@ class EngineIntegrationTest < ActionDispatch::IntegrationTest
       config.after_sign_in = overrides.fetch(:after_sign_in, "/")
       config.after_sign_out = overrides.fetch(:after_sign_out, "/")
       config.session_key = "masks"
+      config.organization = overrides[:organization]
     end
   end
 

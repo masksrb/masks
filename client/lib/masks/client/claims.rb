@@ -60,7 +60,50 @@ module Masks
         end
       end
 
+      class Organization
+        OWNER = "owner".freeze
+
+        attr_reader :to_h
+
+        def initialize(hash)
+          @to_h = hash.is_a?(Hash) ? hash.transform_keys(&:to_s) : {}
+        end
+
+        def id
+          to_h["id"]
+        end
+
+        def key
+          to_h["key"]
+        end
+
+        def name
+          to_h["name"]
+        end
+
+        def role
+          to_h["role"]
+        end
+
+        def role?(*roles)
+          present? && roles.flatten.map(&:to_s).include?(role)
+        end
+
+        def owner?
+          role?(OWNER)
+        end
+
+        def present?
+          !id.nil? && !key.nil? && !role.nil?
+        end
+
+        def ==(other)
+          other.is_a?(Organization) ? to_h == other.to_h : false
+        end
+      end
+
       AVATARS = "masks:avatars".freeze
+      ORGANIZATION = "org".freeze
 
       attr_reader :to_h
 
@@ -102,6 +145,27 @@ module Masks
 
       def avatars
         @avatars ||= Avatars.new(self[AVATARS])
+      end
+
+      def organization
+        @organization ||= Organization.new(self[ORGANIZATION])
+      end
+
+      def member!(*roles, organization: nil)
+        held = self.organization
+
+        unless held.present?
+          raise Forbidden.new("insufficient_organization", "this token names no organization",
+                              scope: Session::ORGANIZATION)
+        end
+
+        if organization && held.key != organization.to_s && held.id != organization.to_s
+          raise Forbidden.new("insufficient_organization", "this token was issued for #{held.key}, not #{organization}")
+        end
+
+        return held if roles.flatten.empty? || held.role?(*roles)
+
+        raise Forbidden.new("insufficient_role", "#{held.role} in #{held.key} is not #{roles.flatten.join(' or ')}")
       end
 
       def picture
