@@ -442,7 +442,7 @@
               Reset password
             </button>
           {:else}
-            <p class="text-sm opacity-70">
+            <p class="text-sm opacity-85">
               Invited{actor.invitedAt ? ` ${day(actor.invitedAt)}` : ""}, not accepted.
             </p>
             <button type="button" class="btn btn-sm self-start" onclick={resend}>
@@ -451,7 +451,7 @@
           {/if}
 
           {#if actor.email && !actor.emailVerified}
-            <p class="text-sm opacity-70">{actor.email} is unconfirmed.</p>
+            <p class="text-sm opacity-85">{actor.email} is unconfirmed.</p>
             <button type="button" class="btn btn-sm self-start" onclick={confirmEmail}>
               Send a confirmation link
             </button>
@@ -460,7 +460,7 @@
 
         <Section title="Passkeys">
           {#if actor.passkeys.length === 0}
-            <p class="text-sm opacity-70">None enrolled.</p>
+            <p class="text-sm opacity-85">None enrolled.</p>
           {:else}
             <ul class="flex flex-col gap-2">
               {#each actor.passkeys as passkey (passkey.id)}
@@ -492,7 +492,7 @@
                     </span>
                   {/if}
 
-                  <div class="flex flex-wrap gap-x-4 text-xs opacity-60">
+                  <div class="flex flex-wrap gap-x-4 text-xs opacity-80">
                     <span class="font-mono">{passkey.aaguid ?? "no aaguid"}</span>
                     <span>Last used {since(passkey.lastUsedAt, "never")}</span>
                   </div>
@@ -540,7 +540,7 @@
               </button>
             </div>
           {:else if !actor.emailCodesEnabled && !actor.textCodesEnabled}
-            <p class="text-sm opacity-70">Password only — nothing enrolled.</p>
+            <p class="text-sm opacity-85">Password only — nothing enrolled.</p>
           {/if}
 
           {#each CODE_FACTORS.filter(([, field]) => actor[field]) as [factor, , name] (factor)}
@@ -567,7 +567,7 @@
 
         <Section title="Suspend or delete">
           {#if yourself}
-            <p class="text-sm opacity-70">This is you — another manager has to do it.</p>
+            <p class="text-sm opacity-85">This is you — another manager has to do it.</p>
           {:else}
             {#if !actor.suspendedAt}
               <button type="button" class="btn btn-sm btn-warning btn-outline self-start" onclick={suspend}>

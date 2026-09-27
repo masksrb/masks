@@ -3,9 +3,9 @@
   --text-xs--line-height: 1.45;
   --text-sm: 1rem;
   --text-sm--line-height: 1.5;
-  --edge: color-mix(in oklab, var(--color-base-content) 10%, transparent);
-  --dim: color-mix(in oklab, var(--color-base-content) 55%, transparent);
-  --dimmer: color-mix(in oklab, var(--color-base-content) 40%, transparent);
+  --edge: color-mix(in oklab, var(--color-base-content) 16%, transparent);
+  --dim: color-mix(in oklab, var(--color-base-content) 72%, transparent);
+  --dimmer: color-mix(in oklab, var(--color-base-content) 58%, transparent);
 
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;

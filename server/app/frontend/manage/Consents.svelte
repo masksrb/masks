@@ -31,7 +31,7 @@
 </script>
 
 {#if rows.length === 0}
-  <p class="text-sm opacity-70">None.</p>
+  <p class="text-sm opacity-85">None.</p>
 {:else}
   <ul class="flex flex-col gap-1.5">
     {#each rows as consent (consent.id)}
@@ -61,7 +61,7 @@
           {/each}
         </div>
 
-        <div class="flex flex-wrap gap-x-4 text-xs opacity-60">
+        <div class="flex flex-wrap gap-x-4 text-xs opacity-80">
           {#if consent.audience.length}
             <span class="truncate font-mono" title={joined(consent.audience)}>
               {joined(consent.audience)}

@@ -30,7 +30,7 @@
             ? privileged
               ? 'badge-error'
               : 'badge-neutral'
-            : 'badge-ghost opacity-45'} disabled:opacity-40"
+            : 'badge-ghost opacity-75'} disabled:opacity-75"
           aria-pressed={held}
           {disabled}
           onclick={() => toggle(scope)}

@@ -451,7 +451,7 @@
                   <td class="font-mono text-xs">{key.kid.slice(0, 8)}</td>
                   <td class="hidden text-xs sm:table-cell">{key.algorithm}</td>
                   <td><span class="badge badge-sm {BADGE[key.state]}">{key.state}</span></td>
-                  <td class="hidden text-xs opacity-70 sm:table-cell">
+                  <td class="hidden text-xs opacity-85 sm:table-cell">
                     {#if key.state === "retiring"}
                       until {day(key.retiredAt)}
                     {:else}

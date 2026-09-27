@@ -493,7 +493,7 @@
             onclick={() => pick(preset)}
           >
             <span class="text-sm font-medium">{preset.name}</span>
-            <span class="font-mono text-xs opacity-50">{preset.protocol}</span>
+            <span class="font-mono text-xs opacity-75">{preset.protocol}</span>
           </button>
         {/each}
       </div>
@@ -506,7 +506,7 @@
       lede={chosen?.guide ? null : PROTOCOLS[draft.protocol]}
     >
       {#if chosen?.guide && fresh}
-        <p class="text-sm opacity-70">
+        <p class="text-sm opacity-85">
           Register masks with {chosen.name} first:
           <a class="link" href={chosen.guide} target="_blank" rel="noreferrer noopener">{chosen.name}'s console</a>.
         </p>
@@ -621,7 +621,7 @@
               placeholder="https://mcp.acme.test/mcp"
             />
           {:else}
-            <span class="font-mono text-xs break-all opacity-70">{draft.resourceUrl}</span>
+            <span class="font-mono text-xs break-all opacity-85">{draft.resourceUrl}</span>
           {/if}
           <p class="hint">
             masks finds the server's own authorization server from its protected resource metadata and
@@ -721,7 +721,7 @@
 
       {#if custom && !mcp}
         <details class="text-sm" open={oauth2 || saml}>
-          <summary class="cursor-pointer opacity-70">Where each claim comes from</summary>
+          <summary class="cursor-pointer opacity-85">Where each claim comes from</summary>
 
           <div class="grid gap-3 pt-3 sm:grid-cols-2">
             <Field
@@ -861,7 +861,7 @@
     <Spinner />
   {:else if active.length === 0 && archived.length === 0 && !picking && !draft}
     <div class="rounded-box border border-base-300 bg-base-100 px-6 py-14 text-center">
-      <p class="mx-auto max-w-sm text-sm opacity-70">
+      <p class="mx-auto max-w-sm text-sm opacity-85">
         No provider is set up. Add one and actors can sign in with Google, GitHub, their company's
         identity provider, or anything that speaks OpenID Connect, OAuth 2.0 or SAML.
       </p>
@@ -1000,7 +1000,7 @@
 
         {#if connectionsFor(provider).length}
           <details class="text-sm">
-            <summary class="cursor-pointer opacity-70">Who is connected ({connectionsFor(provider).length})</summary>
+            <summary class="cursor-pointer opacity-85">Who is connected ({connectionsFor(provider).length})</summary>
 
             <div class="pt-3">
               <Connections {api} {feedback} rows={connectionsFor(provider)} onchange={load} showActor />
@@ -1018,11 +1018,11 @@
               <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                 <span class="flex flex-wrap items-baseline gap-2">
                   <span class="text-sm font-medium">{provider.name}</span>
-                  <span class="font-mono text-xs opacity-50">{provider.key}</span>
+                  <span class="font-mono text-xs opacity-75">{provider.key}</span>
                 </span>
 
                 <span class="flex items-baseline gap-3 text-xs">
-                  <span class="opacity-60">archived {day(provider.archivedAt)}</span>
+                  <span class="opacity-80">archived {day(provider.archivedAt)}</span>
                   <button type="button" class="link" onclick={() => restore(provider)}>Restore</button>
                 </span>
               </div>

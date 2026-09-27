@@ -59,16 +59,16 @@
                     {row.client.name}
                   </Link>
                 {:else}
-                  <span class="opacity-60">nothing</span>
+                  <span class="opacity-80">nothing</span>
                 {/if}
               </td>
             {/if}
 
-            <td class="hidden max-w-[18rem] font-mono text-xs opacity-70 sm:table-cell">
+            <td class="hidden max-w-[18rem] font-mono text-xs opacity-85 sm:table-cell">
               <div class="truncate" title={row.resource}>{row.resource}</div>
             </td>
 
-            <td class="hidden text-xs opacity-70 sm:table-cell">{day(row.claimedAt)}</td>
+            <td class="hidden text-xs opacity-85 sm:table-cell">{day(row.claimedAt)}</td>
 
             <td class="text-right whitespace-nowrap">
               {#if row.releasable}

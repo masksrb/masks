@@ -591,8 +591,8 @@
                 <span class="field-label">Where it differs from {fallbackPolicy?.name}</span>
                 <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
                   {#each differences as { term, value, instead } (term)}
-                    <dt class="opacity-60">{term}</dt>
-                    <dd>{value} <span class="opacity-50 line-through">{instead}</span></dd>
+                    <dt class="opacity-80">{term}</dt>
+                    <dd>{value} <span class="opacity-75 line-through">{instead}</span></dd>
                   {/each}
                 </dl>
               </div>

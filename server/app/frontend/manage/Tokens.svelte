@@ -43,7 +43,7 @@
 </script>
 
 {#if rows.length === 0}
-  <p class="text-sm opacity-70">Nothing outstanding.</p>
+  <p class="text-sm opacity-85">Nothing outstanding.</p>
 {:else}
   <ul class="flex flex-col gap-1.5">
     {#each shown as token (token.id)}
@@ -66,7 +66,7 @@
             {/if}
 
             {#if token.parentId}
-              <span class="text-xs opacity-50">rotated</span>
+              <span class="text-xs opacity-75">rotated</span>
             {/if}
           </span>
 
@@ -92,7 +92,7 @@
           {/each}
         </div>
 
-        <div class="flex flex-wrap gap-x-4 text-xs opacity-60">
+        <div class="flex flex-wrap gap-x-4 text-xs opacity-80">
           {#if token.audience.length}
             <span class="truncate font-mono" title={joined(token.audience)}>
               {joined(token.audience)}

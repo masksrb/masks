@@ -132,7 +132,7 @@
       <div class="flex flex-col gap-4">
         <Section title="Who signs in on it">
           {#if device.actors.length === 0}
-            <p class="text-sm opacity-70">Nobody has signed in on it.</p>
+            <p class="text-sm opacity-85">Nobody has signed in on it.</p>
           {:else}
             <ul class="flex flex-col gap-1.5">
               {#each device.actors as actor (actor.uuid)}
@@ -148,7 +148,7 @@
 
         <Section title="Live sessions">
           {#if device.sessions.length === 0}
-            <p class="text-sm opacity-70">Nobody is signed in on it right now.</p>
+            <p class="text-sm opacity-85">Nobody is signed in on it right now.</p>
           {:else}
             <ul class="flex flex-col gap-1.5">
               {#each device.sessions as session (session.id)}
@@ -160,10 +160,10 @@
                     >
                       {session.actor.identifier}
                     </Link>
-                    <span class="font-mono text-xs opacity-60">{session.ipAddress ?? "—"}</span>
+                    <span class="font-mono text-xs opacity-80">{session.ipAddress ?? "—"}</span>
                   </div>
 
-                  <div class="flex flex-wrap gap-x-4 text-xs opacity-60">
+                  <div class="flex flex-wrap gap-x-4 text-xs opacity-80">
                     <span title={moment(session.authenticatedAt)}>
                       Signed in {since(session.authenticatedAt)}
                     </span>

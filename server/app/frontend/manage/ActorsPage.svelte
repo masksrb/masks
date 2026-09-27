@@ -264,7 +264,7 @@
 
   {#if created}
     <Section title={created.actor.activated ? "Account created" : "Invitation sent"}>
-      <p class="text-sm opacity-70">
+      <p class="text-sm opacity-85">
         {#if created.actor.activated}
           {created.actor.identifier} can sign in now.{created.url
             ? " This link confirms their address:"
@@ -317,7 +317,7 @@
                   <Link to={`/actors/${actor.uuid}`} class="link link-hover font-medium">
                     {actor.identifier}
                   </Link>
-                  <div class="flex flex-wrap items-center gap-1.5 text-xs opacity-50">
+                  <div class="flex flex-wrap items-center gap-1.5 text-xs opacity-75">
                     <span class="min-w-0 break-all">
                       {actor.name ? `${actor.name} · ` : ""}{actor.email ?? "no email"}
                     </span>
@@ -326,7 +326,7 @@
                     {/if}
                   </div>
 
-                  <div class="mt-1 flex flex-wrap items-center gap-1 text-xs opacity-70 md:hidden">
+                  <div class="mt-1 flex flex-wrap items-center gap-1 text-xs opacity-85 md:hidden">
                     {#if !actor.activated}
                       <span class="badge badge-info badge-xs">invited</span>
                     {:else}
@@ -360,7 +360,7 @@
             <td class="hidden md:table-cell">
               {#if actor.otpEnabled}
                 <span class="badge badge-success badge-sm">authenticator</span>
-                <div class="mt-1 text-xs whitespace-nowrap opacity-60">
+                <div class="mt-1 text-xs whitespace-nowrap opacity-80">
                   {actor.backupCodesRemaining} backup codes
                 </div>
               {:else}
@@ -368,14 +368,14 @@
               {/if}
             </td>
 
-            <td class="hidden text-xs whitespace-nowrap opacity-70 md:table-cell">
+            <td class="hidden text-xs whitespace-nowrap opacity-85 md:table-cell">
               {presence(actor)}
               {#if blocked(actor)}
                 <span class="badge badge-error badge-xs ml-1">blocked</span>
               {/if}
             </td>
 
-            <td class="hidden text-xs whitespace-nowrap opacity-70 md:table-cell">
+            <td class="hidden text-xs whitespace-nowrap opacity-85 md:table-cell">
               {#if !actor.activated}
                 <span class="badge badge-info badge-sm">invited</span>
               {:else}

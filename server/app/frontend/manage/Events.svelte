@@ -11,7 +11,7 @@
 </script>
 
 {#if events.length === 0}
-  <p class="text-sm opacity-60">{empty}</p>
+  <p class="text-sm opacity-80">{empty}</p>
 {:else}
   <ol class="flex flex-col gap-1.5">
     {#each shown as event (event.id)}
@@ -46,20 +46,20 @@
             {/if}
           </span>
 
-          <span class="text-xs whitespace-nowrap opacity-60" title={moment(event.createdAt)}>
+          <span class="text-xs whitespace-nowrap opacity-80" title={moment(event.createdAt)}>
             {since(event.createdAt)}
           </span>
         </div>
 
         {#if detailed(event.details).length}
-          <div class="flex flex-wrap gap-x-4 text-xs opacity-60">
+          <div class="flex flex-wrap gap-x-4 text-xs opacity-80">
             {#each detailed(event.details) as [key, value] (key)}
-              <span><span class="opacity-70">{key}</span> {value}</span>
+              <span><span class="opacity-85">{key}</span> {value}</span>
             {/each}
           </div>
         {/if}
 
-        <div class="flex flex-wrap gap-x-4 text-xs opacity-45">
+        <div class="flex flex-wrap gap-x-4 text-xs opacity-75">
           <span class="font-mono">{event.ipAddress ?? "—"}</span>
           {#if event.device}
             <span class="truncate">{event.device.label}</span>

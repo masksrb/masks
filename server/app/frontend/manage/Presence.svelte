@@ -63,7 +63,7 @@
       <h3 class="legend">Sessions</h3>
 
       {#if actor.sessions.length === 0}
-        <p class="text-sm opacity-55">Not signed in anywhere right now.</p>
+        <p class="text-sm opacity-75">Not signed in anywhere right now.</p>
       {:else}
         <ul class="flex flex-col gap-1.5">
           {#each sessions as session (session.id)}
@@ -75,9 +75,9 @@
                 </button>
               </div>
 
-              <span class="truncate text-xs opacity-45">{session.userAgent ?? ""}</span>
+              <span class="truncate text-xs opacity-75">{session.userAgent ?? ""}</span>
 
-              <div class="flex flex-wrap gap-x-4 text-xs opacity-60">
+              <div class="flex flex-wrap gap-x-4 text-xs opacity-80">
                 <span title={moment(session.authenticatedAt)}>
                   Signed in {since(session.authenticatedAt)}
                 </span>
@@ -99,7 +99,7 @@
       <h3 class="legend">Devices</h3>
 
       {#if actor.devices.length === 0}
-        <p class="text-sm opacity-55">Nothing has signed in on their behalf yet.</p>
+        <p class="text-sm opacity-75">Nothing has signed in on their behalf yet.</p>
       {:else}
         <ul class="flex flex-col gap-1.5">
           {#each devices as device (device.id)}
@@ -141,9 +141,9 @@
                 </span>
               </div>
 
-              <span class="truncate text-xs opacity-45">{device.userAgent ?? device.category}</span>
+              <span class="truncate text-xs opacity-75">{device.userAgent ?? device.category}</span>
 
-              <div class="flex flex-wrap gap-x-4 text-xs opacity-60">
+              <div class="flex flex-wrap gap-x-4 text-xs opacity-80">
                 <span class="font-mono">{device.ipAddress ?? "—"}</span>
                 <span title={moment(device.lastSeenAt)}>Last seen {since(device.lastSeenAt)}</span>
               </div>

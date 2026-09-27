@@ -7,7 +7,7 @@
 <div class="flex flex-col gap-6">
   {#if back}
     <div>
-      <Link to={back.to} class="link link-hover text-sm opacity-70">&larr; {back.label}</Link>
+      <Link to={back.to} class="link link-hover text-sm opacity-85">&larr; {back.label}</Link>
     </div>
   {/if}
 

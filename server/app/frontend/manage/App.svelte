@@ -257,7 +257,7 @@
         </SettingsShell>
       {:else}
         <div class="rounded-box border border-base-300 bg-base-100 px-6 py-14 text-center">
-          <p class="text-sm opacity-70">There is no page at this address.</p>
+          <p class="text-sm opacity-85">There is no page at this address.</p>
         </div>
       {/if}
     </main>

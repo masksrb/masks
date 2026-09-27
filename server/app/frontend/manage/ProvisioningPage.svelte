@@ -134,7 +134,7 @@
 
       <Section row title="Tokens">
         {#if data.provisioningTokens.length === 0}
-          <p class="text-sm opacity-70">None issued.</p>
+          <p class="text-sm opacity-85">None issued.</p>
         {:else}
           <ul class="flex flex-col divide-y divide-base-200">
             {#each data.provisioningTokens as token (token.id)}
@@ -143,7 +143,7 @@
                   <div class="text-sm font-medium">
                     {token.label}{#if token.organization}<span class="hint"> · {token.organization.name}</span>{/if}
                   </div>
-                  <div class="text-xs opacity-60">
+                  <div class="text-xs opacity-80">
                     {token.issuedBy ? `by ${token.issuedBy.identifier}, ` : ""}used {since(token.usedAt, "never")},
                     expires {day(token.expiresAt)}
                   </div>

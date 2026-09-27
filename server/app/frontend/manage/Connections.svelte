@@ -47,7 +47,7 @@
 </script>
 
 {#if rows.length === 0}
-  <p class="text-sm opacity-70">Nothing connected.</p>
+  <p class="text-sm opacity-85">Nothing connected.</p>
 {:else}
   <ul class="flex flex-col gap-1.5">
     {#each rows as connection (connection.id)}
@@ -78,11 +78,11 @@
           </button>
         </div>
 
-        <span class="truncate text-xs opacity-45">
+        <span class="truncate text-xs opacity-75">
           {connection.label ?? connection.email ?? connection.subject}
         </span>
 
-        <div class="flex flex-wrap gap-x-4 text-xs opacity-60">
+        <div class="flex flex-wrap gap-x-4 text-xs opacity-80">
           <span title={moment(connection.connectedAt)}>
             Connected {since(connection.connectedAt)}
           </span>
@@ -97,7 +97,7 @@
           <div class="flex flex-wrap items-baseline justify-between gap-x-3 border-l-2 border-base-300 pl-2 text-xs">
             <span>
               <Link to={`/clients/${delegation.client.clientId}`} class="link link-hover">{delegation.client.name}</Link>
-              <span class="opacity-60">
+              <span class="opacity-80">
                 can use it{delegation.releasedAt ? ` · last used ${since(delegation.releasedAt)}` : ""}
               </span>
             </span>

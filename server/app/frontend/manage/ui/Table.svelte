@@ -8,7 +8,7 @@
 
 {#if count === 0}
   <div class="rounded-box border border-base-300 bg-base-100 px-6 py-14 text-center">
-    <p class="mx-auto max-w-sm text-sm opacity-70">{empty}</p>
+    <p class="mx-auto max-w-sm text-sm opacity-85">{empty}</p>
   </div>
 {:else}
   <div class="overflow-x-auto rounded-box border border-base-300 bg-base-100">

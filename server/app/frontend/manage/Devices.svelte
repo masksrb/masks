@@ -197,7 +197,7 @@
         </button>
       </div>
     {:else if agent}
-      <p class="text-sm opacity-70">
+      <p class="text-sm opacity-85">
         Showing blocked devices whose user agent contains <code class="font-mono">{agent}</code>.
         <button type="button" class="link" onclick={clearFilter}>Clear</button>
       </p>
@@ -252,7 +252,7 @@
                   {device.label}
                 </Link>
                 <div class="flex flex-wrap items-center gap-1.5">
-                  <span class="truncate text-xs opacity-50">{device.category}</span>
+                  <span class="truncate text-xs opacity-75">{device.category}</span>
                   {#if device.blockedAt}
                     <span class="badge badge-error badge-xs">blocked</span>
                   {:else if !device.known}
@@ -263,7 +263,7 @@
                   {/if}
                 </div>
                 {#if agent && device.userAgent}
-                  <div class="truncate font-mono text-xs opacity-60" title={device.userAgent}>
+                  <div class="truncate font-mono text-xs opacity-80" title={device.userAgent}>
                     {device.userAgent}
                   </div>
                 {/if}
@@ -278,15 +278,15 @@
                       >{/each}
                   </div>
                 {:else}
-                  <span class="opacity-60">nobody yet</span>
+                  <span class="opacity-80">nobody yet</span>
                 {/if}
               </td>
 
-              <td class="hidden font-mono text-xs opacity-70 md:table-cell">
+              <td class="hidden font-mono text-xs opacity-85 md:table-cell">
                 {device.ipAddress ?? "—"}
               </td>
 
-              <td class="text-xs whitespace-nowrap opacity-70" title={moment(device.lastSeenAt)}>
+              <td class="text-xs whitespace-nowrap opacity-85" title={moment(device.lastSeenAt)}>
                 {since(device.lastSeenAt)}
               </td>
             </Row>

@@ -374,7 +374,7 @@
 
   {#if created}
     <Section title={`${created.client.name} is ready`}>
-      <p class="text-sm opacity-70">
+      <p class="text-sm opacity-85">
         Its client_id is below{created.secret ? ", with a secret shown this once. Copy it now" : ""}.
       </p>
 
@@ -402,14 +402,14 @@
                   <Link to={`/clients/${client.clientId}`} class="link link-hover font-medium">
                     {client.name}
                   </Link>
-                  <div class="truncate font-mono text-xs opacity-50" title={client.clientId}>
+                  <div class="truncate font-mono text-xs opacity-75" title={client.clientId}>
                     {client.clientId}
                   </div>
                 </div>
               </div>
             </td>
             <td class="hidden max-w-[16rem] md:table-cell">
-              <div class="truncate font-mono text-xs opacity-70" title={joined(client.resources)}>
+              <div class="truncate font-mono text-xs opacity-85" title={joined(client.resources)}>
                 {joined(client.resources)}
               </div>
             </td>
@@ -420,27 +420,27 @@
                 <span class="badge badge-success badge-sm">approved</span>
               {/if}
             </td>
-            <td class="hidden text-right text-xs opacity-70 md:table-cell">
+            <td class="hidden text-right text-xs opacity-85 md:table-cell">
               {client.namespaces.length || NONE}
             </td>
             <td class="hidden max-w-64 font-mono text-xs md:table-cell">
               {#if client.requiredScopes.length}
                 <div class="truncate" title={joined(client.requiredScopes)}>
-                  <span class="opacity-50">always</span>
+                  <span class="opacity-75">always</span>
                   {joined(client.requiredScopes)}
                 </div>
               {/if}
               {#if client.allowedScopes.length}
-                <div class="truncate opacity-70" title={joined(client.allowedScopes)}>
-                  <span class="opacity-70">on request</span>
+                <div class="truncate opacity-85" title={joined(client.allowedScopes)}>
+                  <span class="opacity-85">on request</span>
                   {joined(client.allowedScopes)}
                 </div>
               {/if}
             </td>
-            <td class="hidden text-xs opacity-70 md:table-cell">
+            <td class="hidden text-xs opacity-85 md:table-cell">
               {client.approvedBy?.identifier ?? NONE}
             </td>
-            <td class="text-xs whitespace-nowrap opacity-70">{day(client.createdAt)}</td>
+            <td class="text-xs whitespace-nowrap opacity-85">{day(client.createdAt)}</td>
           </Row>
         {/each}
       {/snippet}

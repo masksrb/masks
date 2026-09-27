@@ -33,10 +33,10 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-base-100: #0f0b09;
-    --color-base-200: #000000;
-    --color-base-300: #292421;
-    --color-base-content: #e9e5e2;
+    --color-base-100: #15110e;
+    --color-base-200: #1e1915;
+    --color-base-300: #3d352f;
+    --color-base-content: #f3efec;
 
     --color-primary: #ff8f53;
     --color-primary-content: #1a1614;

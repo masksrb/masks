@@ -357,7 +357,7 @@
               <Switch label="Hide who has an account" bind:checked={draft.hidden} />
 
               {#if draft.hidden}
-                <p class="text-xs opacity-70">
+                <p class="text-xs opacity-85">
                   An email address is sent a code before anything else, whether it has an account or not, and a
                   device that account has used before skips it. Nicknames sign in as they always have.
                 </p>
@@ -547,7 +547,7 @@
 
     <Section>
       {#if data.active.length === 0}
-        <p class="text-sm opacity-70">None yet. Clients use the built-in default.</p>
+        <p class="text-sm opacity-85">None yet. Clients use the built-in default.</p>
       {/if}
 
       {#each data.active as policy (policy.key)}
