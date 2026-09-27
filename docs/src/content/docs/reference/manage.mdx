@@ -124,7 +124,7 @@ schema disagree.
 | `restoreEventStream`<br />`key: ID!` | [`RestoreEventStreamPayload`](#restoreeventstreampayload) |  |
 | `rotateEventStreamSecret`<br />`key: ID!` | [`RotateEventStreamSecretPayload`](#rotateeventstreamsecretpayload) |  |
 | `testEventStream`<br />`key: ID!` | [`TestEventStreamPayload`](#testeventstreampayload) |  |
-| `createOrganization`<br />`key: ID!`<br />`name: String!`<br />`roles: [String!]` | [`CreateOrganizationPayload`](#createorganizationpayload) |  |
+| `createOrganization`<br />`key: ID!`<br />`name: String!`<br />`roles: [String!]` | [`CreateOrganizationPayload`](#createorganizationpayload) | Creates an organization, owned by the person who creates it. |
 | `updateOrganization`<br />`key: ID!`<br />`name: String`<br />`roles: [String!]`<br />`signInPolicy: ID` | [`UpdateOrganizationPayload`](#updateorganizationpayload) |  |
 | `archiveOrganization`<br />`key: ID!` | [`ArchiveOrganizationPayload`](#archiveorganizationpayload) |  |
 | `restoreOrganization`<br />`key: ID!` | [`RestoreOrganizationPayload`](#restoreorganizationpayload) |  |

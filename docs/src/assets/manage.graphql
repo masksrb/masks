@@ -566,6 +566,10 @@ type Mutation {
     organization: ID
     url: String!
   ): CreateEventStreamPayload
+
+  """
+  Creates an organization, owned by the person who creates it.
+  """
   createOrganization(
     key: ID!
     name: String!
