@@ -15,7 +15,7 @@
   const FIELDS = `
     key name signup nickname email emailVerified phone phoneVerified
     passwordMinimum refuseCommonPasswords firstFactors secondFactors secondFactorRequired appsRequireSecondFactor
-    sessionLifetime sessionIdleTimeout
+    sessionLifetime sessionIdleTimeout refuseBreachedPasswords riskStepUpAt riskRefuseAt
     emailDomains providers confirmation hidden signupScopes default archivedAt
     clients { clientId name }
   `;
@@ -35,7 +35,8 @@
     $emailVerified: Boolean, $phone: String, $phoneVerified: Boolean, $passwordMinimum: Int,
     $refuseCommonPasswords: Boolean, $firstFactors: [String!], $secondFactors: [String!],
     $secondFactorRequired: Boolean, $appsRequireSecondFactor: Boolean,
-    $sessionLifetime: Int, $sessionIdleTimeout: Int, $emailDomains: [String!], $providers: [String!],
+    $sessionLifetime: Int, $sessionIdleTimeout: Int,
+    $refuseBreachedPasswords: Boolean, $riskStepUpAt: Int, $riskRefuseAt: Int, $emailDomains: [String!], $providers: [String!],
     $everyProvider: Boolean, $confirmation: String, $hidden: Boolean, $signupScopes: [String!]
   `;
 
@@ -45,7 +46,8 @@
     passwordMinimum: $passwordMinimum, refuseCommonPasswords: $refuseCommonPasswords,
     firstFactors: $firstFactors, secondFactors: $secondFactors,
     secondFactorRequired: $secondFactorRequired, appsRequireSecondFactor: $appsRequireSecondFactor,
-    sessionLifetime: $sessionLifetime, sessionIdleTimeout: $sessionIdleTimeout, emailDomains: $emailDomains,
+    sessionLifetime: $sessionLifetime, sessionIdleTimeout: $sessionIdleTimeout,
+    refuseBreachedPasswords: $refuseBreachedPasswords, riskStepUpAt: $riskStepUpAt, riskRefuseAt: $riskRefuseAt, emailDomains: $emailDomains,
     providers: $providers, everyProvider: $everyProvider, confirmation: $confirmation,
     hidden: $hidden, signupScopes: $signupScopes
   `;
@@ -71,6 +73,14 @@
     [HOUR, "1 hour"],
     [4 * HOUR, "4 hours"],
     [DAY, "1 day"],
+  ];
+
+  const SCORES = [
+    [null, "Never"],
+    [30, "30 or more"],
+    [50, "50 or more"],
+    [70, "70 or more"],
+    [90, "90 or more"],
   ];
 
   const offered = (choices, value) =>
@@ -121,6 +131,9 @@
     appsRequireSecondFactor: false,
     sessionLifetime: null,
     sessionIdleTimeout: null,
+    refuseBreachedPasswords: false,
+    riskStepUpAt: null,
+    riskRefuseAt: null,
     emailDomains: "",
     providers: null,
     confirmation: "none",
@@ -204,6 +217,9 @@
       appsRequireSecondFactor: draft.appsRequireSecondFactor,
       sessionLifetime: draft.sessionLifetime,
       sessionIdleTimeout: draft.sessionIdleTimeout,
+      refuseBreachedPasswords: draft.refuseBreachedPasswords,
+      riskStepUpAt: draft.riskStepUpAt,
+      riskRefuseAt: draft.riskRefuseAt,
       emailDomains: draft.emailDomains.split(/[\s,]+/).filter(Boolean),
       providers: draft.providers ?? [],
       everyProvider: draft.providers === null,
@@ -449,6 +465,36 @@
                 label="Asked again at an app sign-in when the session did not use one"
                 bind:checked={draft.appsRequireSecondFactor}
               />
+            </div>
+          </div>
+
+          <div class="policy-row">
+            <span class="legend">Risk</span>
+            <div class="policy-controls">
+              <div class="flex flex-wrap items-center gap-x-5 gap-y-2">
+                <label class="flex items-center gap-2 text-sm">
+                  Ask for a second factor at a score of
+                  <select class="select select-sm w-auto" bind:value={draft.riskStepUpAt}>
+                    {#each offered(SCORES, draft.riskStepUpAt) as [value, label] (value)}
+                      <option {value}>{label}</option>
+                    {/each}
+                  </select>
+                </label>
+                <label class="flex items-center gap-2 text-sm">
+                  Refuse at
+                  <select class="select select-sm w-auto" bind:value={draft.riskRefuseAt}>
+                    {#each offered(SCORES, draft.riskRefuseAt) as [value, label] (value)}
+                      <option {value}>{label}</option>
+                    {/each}
+                  </select>
+                </label>
+              </div>
+              <Switch label="Refuse passwords found in known breaches" bind:checked={draft.refuseBreachedPasswords} />
+              <p class="hint">
+                A sign-in scores up to 100: a new device 30, a new network 25, a risky network 50, repeated failures
+                20 or 40, an account dormant for six months 10, and a breached password 40. Breach checks send the
+                first five characters of the password's SHA-1 hash, never the password.
+              </p>
             </div>
           </div>
 

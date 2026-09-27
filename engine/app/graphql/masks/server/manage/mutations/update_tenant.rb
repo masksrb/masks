@@ -14,6 +14,8 @@ module Masks
           argument :sign_in_policy, ID, required: false
           argument :suspend_after, Integer, required: false
           argument :delete_after, Integer, required: false
+          argument :risky_networks, String, required: false,
+                                            description: "Address ranges, one per line in CIDR form, that add to a sign-in's risk score."
           argument :event_retention_days, Integer, required: false,
                                                    description: "Days to keep events, from 30 to 2555. Zero keeps the default of 180."
 
@@ -21,7 +23,7 @@ module Masks
 
           def resolve(name: nil, dynamic_client_scopes: nil, dynamic_registration: nil,
                       named_by: nil, browsers_only: nil, blocked_agents: nil, sign_in_policy: nil,
-                      suspend_after: nil, delete_after: nil, event_retention_days: nil)
+                      suspend_after: nil, delete_after: nil, event_retention_days: nil, risky_networks: nil)
             tenant = Current.tenant
 
             tenant.name = name unless name.nil?
@@ -82,6 +84,14 @@ module Masks
             tenant.suspend_after = suspend_after.nonzero? unless suspend_after.nil?
             tenant.delete_after = delete_after.nonzero? unless delete_after.nil?
             tenant.event_retention_days = event_retention_days.nonzero? unless event_retention_days.nil?
+
+            unless risky_networks.nil?
+              listed = risky_networks.split(/[\s,]+/).compact_blank
+              unreadable = listed.size - Masks::Server::Risk.networks(listed.join(" ")).size
+              refuse!("#{unreadable} of those address ranges could not be read") if unreadable.positive?
+
+              tenant.risky_networks = listed.join("\n").presence
+            end
 
             save!(tenant)
 

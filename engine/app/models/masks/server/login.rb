@@ -11,6 +11,7 @@ module Masks
         LoginStates::Signup,
         LoginStates::Password,
         LoginStates::FirstFactor,
+        LoginStates::RiskCheck,
         LoginStates::Suspension,
         LoginStates::OrganizationChoice,
         LoginStates::OneTimePassword,
@@ -222,7 +223,7 @@ module Masks
 
         wanted = request.respond_to?(:multi_factor?) && request.multi_factor?
 
-        wanted || (request.present? && policy.apps_require_second_factor)
+        wanted || (request.present? && policy.apps_require_second_factor) || state("risk-check").stepping_up?
       end
 
       def multi_factored?

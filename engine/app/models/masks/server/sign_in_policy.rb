@@ -35,6 +35,8 @@ module Masks
                 numericality: { only_integer: true, in: SHORTEST_SESSION.to_i..LONGEST_SESSION.to_i },
                 allow_nil: true
       validate :idle_fits_the_lifetime
+      validates :risk_step_up_at, :risk_refuse_at, numericality: { only_integer: true, in: 1..Risk::MOST }, allow_nil: true
+      validate :refusing_is_stricter
       validate :factors_are_known
       validate :something_names_an_account
       validate :confirmation_has_somewhere_to_go
@@ -116,6 +118,12 @@ module Masks
              (Array(second_factors) - %w[backup_codes trusted_device]).empty?
             errors.add(:second_factors, "must offer more than backup codes when one is required")
           end
+        end
+
+        def refusing_is_stricter
+          return unless risk_step_up_at && risk_refuse_at
+
+          errors.add(:risk_refuse_at, "must be higher than the score that asks for a second factor") if risk_refuse_at <= risk_step_up_at
         end
 
         def idle_fits_the_lifetime

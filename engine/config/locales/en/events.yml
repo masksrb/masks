@@ -51,6 +51,7 @@ en:
       sign_in:
         approved: "Sign-in approved from a trusted device"
         denied: "Sign-in denied from a trusted device"
+        risky: "Unusual sign-in"
       device:
         trusted: "Device trusted"
         named: "Device renamed"

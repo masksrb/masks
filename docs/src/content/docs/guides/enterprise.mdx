@@ -20,7 +20,7 @@ today, and how the rest will be built.
 | Home-realm discovery | Built | [Home-realm discovery](#home-realm-discovery) |
 | Session policies | Built | [Session policies](#session-policies) |
 | Audit export and retention | Built | [Audit export and retention](#audit-export-and-retention) |
-| Adaptive risk | Planned | [Adaptive risk](#adaptive-risk) |
+| Adaptive risk | Built | [Adaptive risk](#adaptive-risk) |
 | Passwordless email | Planned | [Passwordless email](#passwordless-email) |
 | Custom domains | Planned | [Custom domains](#custom-domains) |
 | Shared signals | Planned | [Shared signals](#shared-signals) |
@@ -131,18 +131,14 @@ A tenant keeps events for between 30 days and seven years, and any manager,
 auditors included, downloads a range as a file. See
 [keeping and exporting activity](/guides/security/#keeping-and-exporting-activity).
 
-## Planned
-
 ### Adaptive risk
 
-A sign-in from a new country, a known-bad address, or a breached password is
-riskier than one from a remembered device.
+A sign-in from a new device and network, a risky address range, or with a
+breached password is riskier than one from a familiar device. masks scores
+each sign-in, and a sign-in policy asks for a second factor or refuses from a
+score it names. See [risky sign-ins](/guides/security/#risky-sign-ins).
 
-- Each sign-in is scored from the device, the address, the time since the last
-  sign-in, and a check of the password against known breaches.
-- A sign-in policy maps a score to allowing the sign-in, asking for another
-  factor, or refusing it.
-- The score and the decision are recorded on the event.
+## Planned
 
 ### Passwordless email
 

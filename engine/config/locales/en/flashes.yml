@@ -66,6 +66,7 @@ en:
     too_many_attempts: "Too many attempts. Wait a few minutes and try again."
     short_password: "A password here needs at least %{minimum} characters."
     common_password: "That password is one of the most common. Choose another."
+    breached_password: "That password has appeared in a data breach. Choose another."
     wrong_current: "That is not your current password."
     changed: "Your password has been changed, and every other session signed out."
 

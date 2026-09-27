@@ -17,6 +17,9 @@ module Masks
           field :second_factors, [ String ], null: false
           field :second_factor_required, Boolean, null: false
           field :apps_require_second_factor, Boolean, null: false
+          field :refuse_breached_passwords, Boolean, null: false
+          field :risk_step_up_at, Integer
+          field :risk_refuse_at, Integer
           field :session_lifetime, Integer, description: "Seconds a session lasts after signing in, or null for 14 days."
           field :session_idle_timeout, Integer, description: "Seconds of inactivity that end a session, or null."
           field :email_domains, [ String ], null: false

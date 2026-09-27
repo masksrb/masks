@@ -1,6 +1,6 @@
 export const POLICY_FIELDS = `
   key name signup nickname email emailVerified phone phoneVerified
-  passwordMinimum refuseCommonPasswords firstFactors secondFactors secondFactorRequired appsRequireSecondFactor sessionLifetime sessionIdleTimeout
+  passwordMinimum refuseCommonPasswords firstFactors secondFactors secondFactorRequired appsRequireSecondFactor sessionLifetime sessionIdleTimeout refuseBreachedPasswords riskStepUpAt riskRefuseAt
   emailDomains providers confirmation hidden signupScopes archivedAt
 `;
 
@@ -69,6 +69,15 @@ export function describePolicy(policy) {
     [
       "Session lifetime",
       policy.sessionLifetime ? duration(policy.sessionLifetime) : "14 days",
+    ],
+    ["Refuses breached passwords", yes(policy.refuseBreachedPasswords)],
+    [
+      "Second factor from risk",
+      policy.riskStepUpAt ? `at ${policy.riskStepUpAt}` : "never",
+    ],
+    [
+      "Refused from risk",
+      policy.riskRefuseAt ? `at ${policy.riskRefuseAt}` : "never",
     ],
     [
       "Idle timeout",

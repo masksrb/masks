@@ -21,6 +21,7 @@ module Masks
         "sessions" => [
           Event::SESSION_STARTED,
           Event::SESSION_REVOKED,
+          Event::SIGN_IN_RISKY,
           Event::DEVICE_BLOCKED
         ],
         "applications" => [

@@ -589,7 +589,22 @@ type Mutation {
     phone: String
     phoneVerified: Boolean
     providers: [String!]
+
+    """
+    Checks new passwords, and each one used to sign in, against known breaches without sending the password.
+    """
+    refuseBreachedPasswords: Boolean
     refuseCommonPasswords: Boolean
+
+    """
+    A risk score, 1 to 100, from which a sign-in is refused. Null never refuses.
+    """
+    riskRefuseAt: Int
+
+    """
+    A risk score, 1 to 100, from which a sign-in is asked for a second factor. Null never asks.
+    """
+    riskStepUpAt: Int
     secondFactorRequired: Boolean
     secondFactors: [String!]
 
@@ -732,7 +747,22 @@ type Mutation {
     phone: String
     phoneVerified: Boolean
     providers: [String!]
+
+    """
+    Checks new passwords, and each one used to sign in, against known breaches without sending the password.
+    """
+    refuseBreachedPasswords: Boolean
     refuseCommonPasswords: Boolean
+
+    """
+    A risk score, 1 to 100, from which a sign-in is refused. Null never refuses.
+    """
+    riskRefuseAt: Int
+
+    """
+    A risk score, 1 to 100, from which a sign-in is asked for a second factor. Null never asks.
+    """
+    riskStepUpAt: Int
     secondFactorRequired: Boolean
     secondFactors: [String!]
 
@@ -761,6 +791,11 @@ type Mutation {
     eventRetentionDays: Int
     name: String
     namedBy: String
+
+    """
+    Address ranges, one per line in CIDR form, that add to a sign-in's risk score.
+    """
+    riskyNetworks: String
     signInPolicy: ID
     suspendAfter: Int
   ): UpdateTenantPayload
@@ -1204,7 +1239,10 @@ type SignInPolicy {
   phone: String!
   phoneVerified: Boolean!
   providers: [String!]
+  refuseBreachedPasswords: Boolean!
   refuseCommonPasswords: Boolean!
+  riskRefuseAt: Int
+  riskStepUpAt: Int
   secondFactorRequired: Boolean!
   secondFactors: [String!]!
 
@@ -1280,6 +1318,11 @@ type Tenant {
   mails: Boolean!
   name: String!
   namedBy: String!
+
+  """
+  Address ranges that add to a sign-in's risk score, one per line.
+  """
+  riskyNetworks: String
   signInPolicy: SignInPolicy
   signingKeys: [SigningKey!]!
   subdomain: String!

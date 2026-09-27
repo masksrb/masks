@@ -7,6 +7,7 @@ description: Tenant isolation, rate limits, security emails, signing-key rotatio
 | --- | --- | --- |
 | One tenant reading another's data | Three isolation layers, one enforced by Postgres | [Tenant isolation](#tenant-isolation) |
 | Guessing a password or a code | Limits per address and per account | [Rate limits](#rate-limits) |
+| A stolen password used from somewhere new | A risk score that asks for more or refuses | [Risky sign-ins](#risky-sign-ins) |
 | A change to an account going unnoticed | An email to the person for each security change | [Security emails](#security-emails) |
 | A leaked or aging signing key | Staged rotation with a 24-hour overlap | [Rotating signing keys](#rotating-signing-keys) |
 | Request parameters leaking from the address bar | Pushed authorization requests | [Pushed requests](#pushed-requests) |
@@ -114,6 +115,39 @@ set by an environment variable, listed in [ENV vars](/reference/environment/#rat
   one tenant.
 - Other endpoints have fixed limits per IP address each minute: 60 for the token, pushed request,
   device authorization, and SAML sign-in endpoints, 120 for introspection, and 600 for SCIM.
+
+## Risky sign-ins
+
+masks scores each sign-in right after the first factor, from 0 to 100, when the sign-in policy sets a
+line to act on.
+
+| Signal | Adds |
+| --- | --- |
+| A device the account has not signed in from in 90 days, or no device at all | 30 |
+| A network (a /24, or a /48 for IPv6) the account has not signed in from in 90 days | 25 |
+| An address in one of the tenant's **Risky networks** | 50 |
+| Three or more refused attempts on the account in the last hour, or ten or more | 20, or 40 |
+| No sign-in for six months | 10 |
+| A password found in a known breach | 40 |
+
+An account's first sign-in has no history to compare, so the device and network add nothing. Under
+**Risk** in a sign-in policy:
+
+- **Ask for a second factor** asks for one from that score on. An account without one is asked to add
+  one, the same way [step-up](/guides/enterprise/#step-up-authentication) works.
+- **Refuse** stops the sign-in from that score on and asks for the first factor again.
+
+Any score above zero is recorded as `sign_in.risky` with the signals, and the person gets a security
+email. The tenant's risky networks are under **Settings**, **Who may sign in**.
+
+### Breached passwords
+
+**Refuse passwords found in known breaches** checks a new password, and each one used to sign in,
+against the [Pwned Passwords](https://haveibeenpwned.com/API/v3#PwnedPasswords) range API. masks
+sends the first five characters of the password's SHA-1 hash and compares the rest itself, so the
+password and its full hash never leave the server. A new breached password is refused. One used to
+sign in adds to the risk score. When the service cannot be reached within three seconds, the password
+is allowed.
 
 ## Security emails
 

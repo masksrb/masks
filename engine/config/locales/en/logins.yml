@@ -232,6 +232,8 @@ en:
       missing-phone: "Enter a phone number."
       invalid-phone: "Enter the phone number in international form, like +15551234567."
       common-password: "That password is one of the most common. Choose another."
+      breached-password: "That password has appeared in a data breach. Choose another."
+      risky-sign-in: "This sign-in looks unusual, so it cannot continue from here. Try from a device you have used before, or ask a manager."
       confirmation-expired: "That code expired. Send another."
       signup-domain-refused: "Accounts here cannot be made with that address."
       invitation-expired: "That invitation is no longer valid. Ask for another."

@@ -988,7 +988,10 @@ CREATE TABLE public.sign_in_policies (
     updated_at timestamp(6) without time zone NOT NULL,
     apps_require_second_factor boolean DEFAULT false NOT NULL,
     session_lifetime integer,
-    session_idle_timeout integer
+    session_idle_timeout integer,
+    refuse_breached_passwords boolean DEFAULT false NOT NULL,
+    risk_step_up_at integer,
+    risk_refuse_at integer
 );
 
 ALTER TABLE ONLY public.sign_in_policies FORCE ROW LEVEL SECURITY;
@@ -1112,7 +1115,8 @@ CREATE TABLE public.tenants (
     setup_token text,
     suspend_after integer,
     delete_after integer,
-    event_retention_days integer
+    event_retention_days integer,
+    risky_networks text
 );
 
 
@@ -3108,6 +3112,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260927070000'),
 ('20260927060000'),
 ('20260927050000'),
 ('20260927040000'),

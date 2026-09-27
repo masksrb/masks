@@ -21,6 +21,7 @@ module Masks
             login.actor = authenticated
             factored! :first_factor, expiry: EXPIRY
             login.noted! "pwd"
+            login.store[RiskCheck::BREACHED] = BreachedPasswords.breached?(update(:password)) if login.policy.refuse_breached_passwords
           else
             refused! "password"
             warn! "invalid-credentials"

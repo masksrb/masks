@@ -20,7 +20,7 @@ the work.
 | Home-realm discovery            | Built       | `DomainClaim`, an hourly check, and discovery in the identifier step                    |
 | Session policies                | Built       | `sign_in_policies.session_lifetime` and `session_idle_timeout`                          |
 | Audit export and retention      | Built       | `tenants.event_retention_days`, `exportEvents`, and a signed ten-minute download        |
-| Adaptive risk                   | Not started |                                                                                         |
+| Adaptive risk                   | Built       | `Risk`, `RiskCheck`, breach checks, and policy thresholds                               |
 | Passwordless email              | Not started |                                                                                         |
 | Custom domains                  | Not started |                                                                                         |
 | Shared signals                  | Not started |                                                                                         |
@@ -220,18 +220,19 @@ mutations share. Only `owner` administers; per-organization admin roles can come
 - The file is NDJSON in the event stream shape (`Event#exported`), built eagerly within the ceiling
   rather than streamed, which keeps row-level security simple.
 
-### Adaptive risk
+### Adaptive risk (done)
 
-- `RiskSignals` scores a sign-in from a new device, a new country (from a configurable GeoIP database
-  path, off when absent), a configurable list of address ranges, the time since the last sign-in, and
-  failed attempts in the last hour.
-- Breached passwords: a k-anonymity range query to a configurable endpoint (the Pwned Passwords API by
-  default), through `Outbound`. It sends the first five characters of the SHA-1 and never the password.
-  It is off unless the tenant enables it. A breached password at sign-up is refused. At sign-in it adds
-  to the score and records `password.breached`.
-- `sign_in_policies.risk_rules`: thresholds mapped to `allow`, `step_up`, `notify`, or `deny`.
-  `step_up` reuses `stepping_up?`. `notify` sends the security email. `deny` records `login.refused`.
-- The score and each signal go in the sign-in event's details, so a stream can alert on them.
+- `Risk` scores from local signals only: new device and new network against 90 days of the account's
+  sessions (an account with no history scores neither), `tenants.risky_networks`, refused attempts in
+  the last hour, six months dormant, and a breached password. GeoIP and impossible travel need a
+  location database and are left out.
+- `LoginStates::RiskCheck` runs right after the first factor, once per first factor. The policy's
+  `risk_step_up_at` feeds `Login#stepping_up?`, so second factor and enrolment follow as they do for
+  `acr_values`. `risk_refuse_at` expires the first factor, records `login.refused`, and warns
+  `risky-sign-in`. Any positive score records `sign_in.risky`, which is grave and mailed.
+- `BreachedPasswords` queries the Pwned Passwords range API through `Outbound` with a three-second
+  ceiling and fails open. `refuse_breached_passwords` refuses breached new passwords everywhere
+  `Passwords.refusal` runs and adds the signal at sign-in.
 
 ### Passwordless email
 

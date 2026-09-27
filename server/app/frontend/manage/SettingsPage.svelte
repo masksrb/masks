@@ -22,7 +22,7 @@
     query Tenant {
       tenant {
         uuid subdomain name namedBy dynamicRegistration dynamicClientScopes createdAt
-        browsersOnly blockedAgents suspendAfter deleteAfter eventRetentionDays
+        browsersOnly blockedAgents suspendAfter deleteAfter eventRetentionDays riskyNetworks
         signInPolicy { key name }
         signingKeys { kid algorithm activatedAt retiredAt state }
       }
@@ -109,6 +109,7 @@
   let data = $state(null);
   let name = $state("");
   let agents = $state("");
+  let networks = $state("");
   let loading = $state(true);
   let days = $state(30);
 
@@ -137,6 +138,7 @@
       data = await api.query(QUERY);
       name = data.tenant.name;
       agents = data.tenant.blockedAgents ?? "";
+      networks = data.tenant.riskyNetworks ?? "";
     } catch (thrown) {
       feedback.blame(thrown);
     } finally {
@@ -152,7 +154,7 @@
         api.query(
           `mutation Update(
             $name: String, $dynamicClientScopes: [String!], $dynamicRegistration: String,
-            $namedBy: String, $browsersOnly: Boolean, $blockedAgents: String, $signInPolicy: ID,
+            $namedBy: String, $browsersOnly: Boolean, $blockedAgents: String, $signInPolicy: ID, $riskyNetworks: String,
             $suspendAfter: Int, $deleteAfter: Int, $eventRetentionDays: Int
           ) {
             updateTenant(
@@ -162,6 +164,7 @@
               namedBy: $namedBy
               browsersOnly: $browsersOnly
               blockedAgents: $blockedAgents
+              riskyNetworks: $riskyNetworks
               signInPolicy: $signInPolicy
               suspendAfter: $suspendAfter
               deleteAfter: $deleteAfter
@@ -347,6 +350,19 @@
           placeholder="curl, python-requests"
           onsave={() => update({ blockedAgents: agents }, "Sign-in rules updated.")}
         />
+
+        <label class="flex flex-col gap-1.5">
+          <span class="field-label">Risky networks</span>
+          <textarea class="textarea w-full font-mono" rows="3" bind:value={networks} placeholder="203.0.113.0/24"></textarea>
+          <span class="hint">
+            Address ranges, one per line, that add to a sign-in's risk score. A sign-in policy decides what a score does.
+          </span>
+        </label>
+        <div>
+          <button type="button" class="btn btn-sm" onclick={() => update({ riskyNetworks: networks }, "Risky networks saved.")}>
+            Save networks
+          </button>
+        </div>
       </Section>
 
       <Section

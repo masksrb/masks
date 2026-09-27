@@ -52,6 +52,8 @@ en:
         session:
           started: "Somebody signed in to your %{tenant} account on a device that had not been seen before."
           revoked: "A session on your %{tenant} account was ended for you."
+        sign_in:
+          risky: "A sign-in to your %{tenant} account looked unusual, so it was asked for more or refused. If it was not you, change your password."
         device:
           blocked: "A device was blocked from your %{tenant} account. It cannot sign in until somebody unblocks it."
         consent:

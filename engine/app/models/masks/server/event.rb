@@ -49,6 +49,7 @@ module Masks
       DEVICE_TRUSTED = "device.trusted".freeze
       SIGN_IN_APPROVED = "sign_in.approved".freeze
       SIGN_IN_DENIED = "sign_in.denied".freeze
+      SIGN_IN_RISKY = "sign_in.risky".freeze
       DEVICE_NAMED = "device.named".freeze
       DEVICE_FORGOTTEN = "device.forgotten".freeze
       DEVICE_BLOCKED = "device.blocked".freeze
@@ -135,7 +136,7 @@ module Masks
       GRAVE = [
         LOGIN_REFUSED, LOGIN_THROTTLED, LOGOUT_UNDELIVERED, REFRESH_REUSED, STREAM_FAILED,
         DEVICE_BLOCKED, ACTOR_DELETED, AUTHENTICATOR_DISABLED, CONNECTION_REFUSED, DELEGATION_REFUSED,
-        EXCHANGE_REFUSED
+        EXCHANGE_REFUSED, SIGN_IN_RISKY
       ].freeze
 
       ACTIONS = constants(false).filter_map do |name|

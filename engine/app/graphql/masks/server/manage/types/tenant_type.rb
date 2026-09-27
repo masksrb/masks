@@ -16,6 +16,7 @@ module Masks
           field :dynamic_client_scopes, [ String ]
           field :suspend_after, Integer
           field :delete_after, Integer
+          field :risky_networks, String, description: "Address ranges that add to a sign-in's risk score, one per line."
           field :event_retention_days, Integer, null: false, description: "Days events are kept before they are deleted."
 
           def event_retention_days
