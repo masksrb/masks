@@ -12,7 +12,8 @@ module Masks
       rescue Outbound::Refused, Pictures::Unreadable, URI::InvalidURIError => e
         ClientLogo.forget(client)
 
-        Event.record!(Event::CLIENT_LOGO_REFUSED, actor: nil, by: nil, client: client, said: e.message)
+        Event.record!(Event::CLIENT_LOGO_REFUSED, actor: nil, by: nil, client: client, device: nil,
+                                                 ip_address: nil, user_agent: nil, said: e.message)
       end
     end
   end

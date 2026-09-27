@@ -36,11 +36,17 @@ module Masks
         def load(held)
           new(
             kind: held["kind"], via: held["via"], origin: held["origin"],
-            client: GlobalID::Locator.locate(held["client"]), by: GlobalID::Locator.locate(held["by"])
+            client: located(held["client"]), by: located(held["by"])
           )
         end
 
         private
+
+          def located(gid)
+            GlobalID::Locator.locate(gid)
+          rescue ActiveRecord::RecordNotFound
+            nil
+          end
 
           def via_for(request)
             return DEVICE if request.device?

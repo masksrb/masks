@@ -384,7 +384,7 @@ module Masks
       test "a public origin template with no subdomain placeholder claims only the first host" do
         with_nothing_deployed do
           with_public_origin_template("http://auth.test") do
-            host! "fresh.auth.test"
+            host! "auth.test"
             get "/login"
             assert_response :success
 

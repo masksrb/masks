@@ -58,7 +58,7 @@ module Masks
         end
       end
 
-      test "the issuer follows the hostname unless an origin is pinned too" do
+      test "the issuer follows the hostname until an origin is set, and then only that host is served" do
         with_pinned(@tenant.subdomain) do
           host! "auth.example.test"
           assert_equal "http://auth.example.test", discovery["issuer"]
@@ -67,10 +67,38 @@ module Masks
           assert_equal "http://elsewhere.example.test", discovery["issuer"]
 
           with_origin("https://auth.example.test") do
-            assert_equal "https://auth.example.test", discovery["issuer"]
+            get "/.well-known/openid-configuration"
+            assert_response :not_found
 
             host! "auth.example.test"
             assert_equal "https://auth.example.test", discovery["issuer"]
+          end
+        end
+      end
+
+      test "with an origin template, a pinned tenant answers only at its own host" do
+        with_pinned(@tenant.subdomain) do
+          with_origin("https://%{subdomain}.auth.example.test") do
+            host! "#{@tenant.subdomain}.auth.example.test"
+            assert_equal "https://#{@tenant.subdomain}.auth.example.test", discovery["issuer"]
+
+            [ "elsewhere.auth.example.test", "1572395042/.auth.example.test" ].each do |host|
+              host! host
+              get "/.well-known/openid-configuration"
+
+              assert_response :not_found, "#{host} was served"
+            end
+          end
+        end
+      end
+
+      test "a forwarded host cannot move the issuer or the links masks sends" do
+        with_pinned(@tenant.subdomain) do
+          with_origin("https://%{subdomain}.auth.example.test") do
+            host! "#{@tenant.subdomain}.auth.example.test"
+            get "/.well-known/openid-configuration", headers: { "X-Forwarded-Host" => "evil.auth.example.test" }
+
+            assert_response :not_found
           end
         end
       end

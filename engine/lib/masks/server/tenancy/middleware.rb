@@ -13,12 +13,17 @@ module Masks
           request = ActionDispatch::Request.new(env)
 
           return @app.call(env) if TENANTLESS.include?(request.path)
+          return unserved unless templated?(request)
 
           tenant = Tenant.resolve(request.host) || Tenant.claim(request.host)
 
           return unserved if tenant.nil?
 
-          Current.origin = origin_for(request)
+          origin = origin_for(request, tenant)
+
+          return unserved if origin.nil?
+
+          Current.origin = origin
           Current.ip_address = request.remote_ip
           Current.user_agent = request.user_agent
 
@@ -27,12 +32,26 @@ module Masks
 
         private
 
-          def origin_for(request)
+          def templated?(request)
             template = ::Rails.configuration.masks.public_origin_template
 
-            return "#{request.base_url}#{request.script_name}" if template.nil?
+            return true if template.nil?
 
-            format(template, subdomain: request.host.split(".").first)
+            host_of(format(template, subdomain: request.host.to_s.split(".").first))&.casecmp?(request.host.to_s)
+          end
+
+          def host_of(origin)
+            URI.parse(origin).host
+          rescue URI::InvalidURIError
+            nil
+          end
+
+          def origin_for(request, tenant)
+            return "#{request.base_url}#{request.script_name}" if ::Rails.configuration.masks.public_origin_template.nil?
+
+            canonical = tenant.public_origin
+
+            canonical if host_of(canonical)&.casecmp?(request.host.to_s)
           end
 
           def unserved

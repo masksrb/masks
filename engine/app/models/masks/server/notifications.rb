@@ -58,7 +58,7 @@ module Masks
           return false unless actor.notified?(event.action)
           return false unless worth_saying?(event)
 
-          ActorMailer.notification(actor, event, journey: Journey.system).deliver_now
+          ActorMailer.notification(actor, event, journey: Journey.new(kind: Journey::SYSTEM, client: event.client)).deliver_now
 
           true
         end

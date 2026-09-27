@@ -21,6 +21,8 @@ module Masks
 
         included do
           class_attribute :across_tenants, instance_accessor: false, default: false
+
+          self.enqueue_after_transaction_commit = true
         end
 
         class_methods do

@@ -38,7 +38,23 @@ module Masks
         end
       end
 
-      test "a journey survives the queue with its app" do
+      test "a journey whose app was deleted before the mail went out still sends, headed by the tenant" do
+        client = create_client(@tenant, name: "Acme Notes", approved_at: Time.current)
+
+        with_mailer do
+          within do
+            journey = Journey.new(kind: Journey::SIGN_IN, client: client, origin: "https://acme.auth.example")
+            ActorMailer.confirmation_code("sam@example.com", "482913", journey: journey).deliver_later
+            client.destroy!
+          end
+
+          within { perform_enqueued_jobs }
+
+          assert_not_includes ActionMailer::Base.deliveries.sole.html_part.decoded, "Acme Notes"
+        end
+      end
+
+            test "a journey survives the queue with its app" do
         client = create_client(@tenant, name: "Acme Notes", approved_at: Time.current)
 
         with_mailer do
