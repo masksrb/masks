@@ -1,7 +1,7 @@
-<p class="lede"><%= t(".lede.#{@action}", tenant: @tenant_name, due: @due) %></p>
-
-<p><%= t(".keep") %></p>
+<p class="lede"><%= t(".lede.#{@lede}", tenant: @tenant_name, due: @due) %></p>
 
 <% if @url %>
+  <p><%= t(".keep") %></p>
+
   <%= render "action", url: @url, label: t(".action") %>
 <% end %>

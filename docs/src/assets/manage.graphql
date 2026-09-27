@@ -442,7 +442,7 @@ type Mutation {
   updateClient(allowedScopes: [String!], backchannelLogoutSessionRequired: Boolean, backchannelLogoutUri: String, clientId: ID!, clientUri: String, consentRequired: Boolean, dpopBoundAccessTokens: Boolean, grantTypes: [String!], jwks: JSON, jwksUri: String, logoUri: String, name: String, policyUri: String, postLogoutRedirectUris: [String!], redirectUris: [String!], requirePushedAuthorizationRequests: Boolean, requireSignedRequestObject: Boolean, requiredScopes: [String!], resources: [String!], samlAttributes: JSON, samlCertificate: String, samlEntityId: String, samlIdpInitiated: Boolean, samlNameIdFormat: String, samlRequestsSigned: Boolean, sectorIdentifierUri: String, signInPolicy: ID, subjectType: String, tokenEndpointAuthMethod: String, tosUri: String): UpdateClientPayload
   updateProvider(authorizationUrl: String, authorizeParams: JSON, claims: JSON, clientId: String, clientSecret: String, delegatedScopes: [String!], delegates: Boolean, delegationParams: JSON, emailDomains: [String!], emailsUrl: String, idpCertificates: String, idpEntityId: String, idpSsoUrl: String, issuer: String, jwksUri: String, key: ID!, keyId: String, metadataUrl: String, name: String, nameIdFormat: String, privateKey: String, protocol: String, resourceUrl: String, responseMode: String, role: String, scopes: [String!], signupScopes: [String!], subjectClaim: String, teamId: String, tokenAuthMethod: String, tokenUrl: String, trustsEmail: Boolean, userinfoUrl: String): UpdateProviderPayload
   updateSignInPolicy(confirmation: String, email: String, emailDomains: [String!], emailVerified: Boolean, everyProvider: Boolean, firstFactors: [String!], hidden: Boolean, key: ID!, name: String, nickname: String, passwordMinimum: Int, phone: String, phoneVerified: Boolean, providers: [String!], refuseCommonPasswords: Boolean, secondFactorRequired: Boolean, secondFactors: [String!], signup: Boolean, signupScopes: [String!]): UpdateSignInPolicyPayload
-  updateTenant(blockedAgents: String, browsersOnly: Boolean, dynamicClientScopes: [String!], dynamicRegistration: String, idleAction: String, idleAfter: Int, name: String, namedBy: String, signInPolicy: ID): UpdateTenantPayload
+  updateTenant(blockedAgents: String, browsersOnly: Boolean, deleteAfter: Int, dynamicClientScopes: [String!], dynamicRegistration: String, name: String, namedBy: String, signInPolicy: ID, suspendAfter: Int): UpdateTenantPayload
   uploadAvatar(photo: Upload!, uuid: ID!): UploadAvatarPayload
   verifyEmail(uuid: ID!): VerifyEmailPayload
 }
@@ -823,16 +823,16 @@ type Tenant {
   blockedAgents: String
   browsersOnly: Boolean!
   createdAt: ISO8601DateTime!
+  deleteAfter: Int
   dynamicClientScopes: [String!]
   dynamicRegistration: String!
-  idleAction: String!
-  idleAfter: Int
   mails: Boolean!
   name: String!
   namedBy: String!
   signInPolicy: SignInPolicy
   signingKeys: [SigningKey!]!
   subdomain: String!
+  suspendAfter: Int
   texts: Boolean!
   uuid: ID!
 }

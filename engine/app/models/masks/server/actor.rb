@@ -207,11 +207,11 @@ module Masks
         suspended_at.present?
       end
 
-      def suspend!
+      def suspend!(idle: false)
         return self if suspended?
 
         transaction do
-          update!(suspended_at: Time.current)
+          update!(suspended_at: Time.current, idle_suspended: idle)
           sign_out_everywhere!
           Token.where(actor_id: id).live.update_all(consumed_at: Time.current, updated_at: Time.current)
         end
@@ -226,7 +226,7 @@ module Masks
       def restore!
         return self unless suspended?
 
-        update!(suspended_at: nil)
+        update!(suspended_at: nil, idle_suspended: false)
         active!
         self
       end
@@ -234,7 +234,7 @@ module Masks
       def active!
         return if last_active_at && last_active_at > ACTIVITY_GRAIN.ago
 
-        update_columns(last_active_at: Time.current, idle_warned_at: nil)
+        update_columns(last_active_at: Time.current, idle_warned_at: nil, idle_warning: nil)
       end
 
       def idle_since

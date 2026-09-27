@@ -14,8 +14,8 @@ module Masks
           field :sign_in_policy, SignInPolicyType
           field :dynamic_registration, String, null: false
           field :dynamic_client_scopes, [ String ]
-          field :idle_after, Integer
-          field :idle_action, String, null: false
+          field :suspend_after, Integer
+          field :delete_after, Integer
           field :created_at, GraphQL::Types::ISO8601DateTime, null: false
           field :signing_keys, [ SigningKeyType ], null: false
 

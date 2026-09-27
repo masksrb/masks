@@ -100,13 +100,13 @@ module Masks
         @actor = actor
         @tenant_name = tenant_name
         @due = I18n.l(due.to_date, format: :long)
-        @action = action
-        @url = origin.presence && "#{origin}/"
+        @lede = actor.suspended? ? "delete_suspended" : action
+        @url = origin.presence && !actor.suspended? && "#{origin}/"
 
         mail(
           from: self.class.from,
           to: actor.email,
-          subject: t("actor_mailer.idle.subject", tenant: tenant_name)
+          subject: t("actor_mailer.idle.subject.#{actor.suspended? ? 'suspended' : 'active'}", tenant: tenant_name)
         )
       end
 

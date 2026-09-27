@@ -10,14 +10,14 @@ module Masks
           argument :browsers_only, Boolean, required: false
           argument :blocked_agents, String, required: false
           argument :sign_in_policy, ID, required: false
-          argument :idle_after, Integer, required: false
-          argument :idle_action, String, required: false
+          argument :suspend_after, Integer, required: false
+          argument :delete_after, Integer, required: false
 
           field :tenant, Types::TenantType, null: false
 
           def resolve(name: nil, dynamic_client_scopes: nil, dynamic_registration: nil,
                       named_by: nil, browsers_only: nil, blocked_agents: nil, sign_in_policy: nil,
-                      idle_after: nil, idle_action: nil)
+                      suspend_after: nil, delete_after: nil)
             tenant = Current.tenant
 
             tenant.name = name unless name.nil?
@@ -75,8 +75,8 @@ module Masks
               end
             end
 
-            tenant.idle_after = idle_after.nonzero? unless idle_after.nil?
-            tenant.idle_action = idle_action unless idle_action.nil?
+            tenant.suspend_after = suspend_after.nonzero? unless suspend_after.nil?
+            tenant.delete_after = delete_after.nonzero? unless delete_after.nil?
 
             save!(tenant)
 

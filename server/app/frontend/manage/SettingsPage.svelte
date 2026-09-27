@@ -21,7 +21,7 @@
     query Tenant {
       tenant {
         uuid subdomain name namedBy dynamicRegistration dynamicClientScopes createdAt
-        browsersOnly blockedAgents idleAfter idleAction
+        browsersOnly blockedAgents suspendAfter deleteAfter
         signInPolicy { key name }
         signingKeys { kid algorithm activatedAt retiredAt state }
       }
@@ -59,7 +59,7 @@
 
   const SPANS = [7, 30, 90];
 
-  const IDLE = [
+  const SUSPEND_AFTER = [
     [0, "Never"],
     [90, "After 90 days"],
     [180, "After 180 days"],
@@ -67,17 +67,22 @@
     [730, "After two years"],
   ];
 
-  const idleChoices = $derived(
-    !data?.tenant.idleAfter || IDLE.some(([days]) => days === data.tenant.idleAfter)
-      ? IDLE
-      : [...IDLE, [data.tenant.idleAfter, `After ${data.tenant.idleAfter} days`]],
-  );
+  const DELETE_AFTER = [
+    [0, "Never"],
+    [180, "After 180 days"],
+    [365, "After a year"],
+    [730, "After two years"],
+    [1095, "After three years"],
+  ];
 
-  function idleAction(value) {
-    if (value === "delete" && !confirm("Delete idle accounts instead of suspending them? A deleted account cannot be restored."))
+  const choices = (listed, held) =>
+    !held || listed.some(([days]) => days === held) ? listed : [...listed, [held, `After ${held} days`]];
+
+  function deleteAfter(days) {
+    if (days && !confirm("Delete idle accounts? A deleted account cannot be restored."))
       return load();
 
-    return update({ idleAction: value }, "Idle accounts updated.");
+    return update({ deleteAfter: days }, "Idle accounts updated.");
   }
 
   const BADGE = {
@@ -138,7 +143,7 @@
           `mutation Update(
             $name: String, $dynamicClientScopes: [String!], $dynamicRegistration: String,
             $namedBy: String, $browsersOnly: Boolean, $blockedAgents: String, $signInPolicy: ID,
-            $idleAfter: Int, $idleAction: String
+            $suspendAfter: Int, $deleteAfter: Int
           ) {
             updateTenant(
               name: $name
@@ -148,8 +153,8 @@
               browsersOnly: $browsersOnly
               blockedAgents: $blockedAgents
               signInPolicy: $signInPolicy
-              idleAfter: $idleAfter
-              idleAction: $idleAction
+              suspendAfter: $suspendAfter
+              deleteAfter: $deleteAfter
             ) { tenant { name } }
           }`,
           changes,
@@ -338,31 +343,35 @@
 
       <Section
         title="Idle accounts"
-        lede="An account nobody has signed in to or used through an app for this long is warned by email, then suspended or deleted at least 30 days later. Signing in keeps it. The last manager and accounts a provider provisions over SCIM are left alone."
+        lede="An account nobody has signed in to or used through an app is suspended, then deleted, after the periods below. Each step is warned by email at least 30 days ahead, and signing in keeps the account. Only accounts suspended for being idle are deleted. The last manager and accounts a provider provisions over SCIM are left alone."
       >
         <div class="grid gap-3 sm:grid-cols-2">
-          <select
-            class="select select-sm w-full"
-            aria-label="When an account is idle"
-            value={data.tenant.idleAfter ?? 0}
-            onchange={(event) =>
-              update({ idleAfter: Number(event.currentTarget.value) }, "Idle accounts updated.")}
-          >
-            {#each idleChoices as [days, label] (days)}
-              <option value={days}>{label}</option>
-            {/each}
-          </select>
+          <label class="flex flex-col gap-1.5">
+            <span class="text-xs font-medium opacity-70">Suspend</span>
+            <select
+              class="select select-sm w-full"
+              value={data.tenant.suspendAfter ?? 0}
+              onchange={(event) =>
+                update({ suspendAfter: Number(event.currentTarget.value) }, "Idle accounts updated.")}
+            >
+              {#each choices(SUSPEND_AFTER, data.tenant.suspendAfter) as [days, label] (days)}
+                <option value={days}>{label}</option>
+              {/each}
+            </select>
+          </label>
 
-          <select
-            class="select select-sm w-full"
-            aria-label="What happens to an idle account"
-            value={data.tenant.idleAction}
-            disabled={!data.tenant.idleAfter}
-            onchange={(event) => idleAction(event.currentTarget.value)}
-          >
-            <option value="suspend">Suspend it</option>
-            <option value="delete">Delete it</option>
-          </select>
+          <label class="flex flex-col gap-1.5">
+            <span class="text-xs font-medium opacity-70">Delete</span>
+            <select
+              class="select select-sm w-full"
+              value={data.tenant.deleteAfter ?? 0}
+              onchange={(event) => deleteAfter(Number(event.currentTarget.value))}
+            >
+              {#each choices(DELETE_AFTER, data.tenant.deleteAfter) as [days, label] (days)}
+                <option value={days} disabled={days > 0 && days <= (data.tenant.suspendAfter ?? 0)}>{label}</option>
+              {/each}
+            </select>
+          </label>
         </div>
       </Section>
 

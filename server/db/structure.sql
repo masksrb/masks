@@ -73,6 +73,8 @@ CREATE TABLE public.actors (
     phone_factor_at timestamp(6) without time zone,
     last_active_at timestamp(6) without time zone,
     idle_warned_at timestamp(6) without time zone,
+    idle_warning character varying,
+    idle_suspended boolean DEFAULT false NOT NULL,
     CONSTRAINT actors_are_named CHECK (((nickname IS NOT NULL) OR (email IS NOT NULL)))
 );
 
@@ -941,8 +943,8 @@ CREATE TABLE public.tenants (
     blocked_agents text,
     sign_in_policy_id bigint,
     setup_token text,
-    idle_after integer,
-    idle_action character varying
+    suspend_after integer,
+    delete_after integer
 );
 
 

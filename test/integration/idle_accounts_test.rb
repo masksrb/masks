@@ -8,11 +8,15 @@ module Masks
       setup do
         host! host_for(@tenant)
 
-        @tenant.update!(idle_after: 365)
+        @tenant.update!(suspend_after: 365)
         @idle = create_actor(@tenant, nickname: "idle", email: "idle@example.com", email_verified_at: Time.current)
-        within { @idle.update_columns(last_active_at: 400.days.ago) }
+        idle_for(400.days)
 
         ActionMailer::Base.deliveries.clear
+      end
+
+      def idle_for(span, actor = @idle)
+        within { actor.update_columns(last_active_at: span.ago) }
       end
 
       def sweep
@@ -20,18 +24,21 @@ module Masks
         within { @idle.reload if Actor.exists?(@idle.id) }
       end
 
-      test "an idle account is warned by email before anything happens to it" do
+      def mailed
+        ActionMailer::Base.deliveries.select { |sent| sent.to == [ "idle@example.com" ] }
+      end
+
+      test "an idle account is warned by email before it is suspended" do
         with_mailer { sweep }
 
         within do
           assert_not @idle.suspended?
-          assert @idle.idle_warned_at.present?
+          assert_equal IdleAccounts::SUSPEND, @idle.idle_warning
           assert Event.exists?(action: Event::ACTOR_IDLE_WARNED, actor_id: @idle.id)
         end
 
-        mail = ActionMailer::Base.deliveries.find { |sent| sent.to == [ "idle@example.com" ] }
+        mail = mailed.sole
 
-        assert mail, "no warning was mailed"
         assert_includes mail.subject, "Sign in to keep your Demo account"
         assert_includes mail.text_part.body.to_s, "it will be suspended"
       end
@@ -49,6 +56,7 @@ module Masks
 
           within do
             assert @idle.suspended?
+            assert @idle.idle_suspended?
             event = Event.where(action: Event::ACTOR_SUSPENDED, actor_id: @idle.id).sole
             assert_nil event.by_id
             assert_equal "idle", event.details["reason"]
@@ -57,32 +65,79 @@ module Masks
       end
 
       test "turning the setting on gives an account that went idle long ago its thirty days" do
-        within { @idle.update_columns(last_active_at: 5.years.ago) }
+        idle_for(5.years)
 
         sweep
 
         within { assert_not @idle.suspended? }
       end
 
-      test "a tenant set to delete deletes the account and signs it out everywhere" do
-        @tenant.update!(idle_action: Tenant::IDLE_DELETE)
-        within do
-          Session.start!(actor: @idle)
-          @idle.update_columns(last_active_at: 400.days.ago)
+      test "a suspended idle account is warned again, then deleted" do
+        @tenant.update!(delete_after: 730)
+        within { Session.start!(actor: @idle) }
+        idle_for(800.days)
+
+        with_mailer do
+          sweep
+          travel(31.days) { sweep }
+
+          within { assert @idle.suspended? }
+
+          travel 32.days do
+            sweep
+
+            within { assert_equal IdleAccounts::DELETE, @idle.idle_warning }
+
+            warning = mailed.last
+            assert_includes warning.subject, "will be deleted"
+            assert_includes warning.text_part.body.to_s, "unless a manager restores it"
+            assert_not_includes warning.text_part.body.to_s, "Signing in once keeps it"
+          end
+
+          travel 63.days do
+            sweep
+
+            within do
+              assert_not Actor.exists?(@idle.id)
+              assert_empty Session.where(actor_id: @idle.id).to_a
+              assert Event.exists?(action: Event::ACTOR_DELETED, by_id: nil)
+            end
+          end
         end
+      end
+
+      test "a tenant that only deletes warns and deletes an active account" do
+        @tenant.update!(suspend_after: nil, delete_after: 365)
 
         with_mailer { sweep }
-        assert_includes ActionMailer::Base.deliveries.last.text_part.body.to_s, "it will be deleted"
+        assert_includes mailed.last.text_part.body.to_s, "it will be deleted"
 
         travel 31.days do
           sweep
-
-          within do
-            assert_not Actor.exists?(@idle.id)
-            assert_empty Session.where(actor_id: @idle.id).to_a
-            assert Event.exists?(action: Event::ACTOR_DELETED, by_id: nil)
-          end
+          within { assert_not Actor.exists?(@idle.id) }
         end
+      end
+
+      test "an account a manager suspended is never deleted for being idle" do
+        @tenant.update!(suspend_after: nil, delete_after: 365)
+        within { @idle.suspend! }
+        idle_for(900.days)
+
+        sweep
+        travel(31.days) { sweep }
+
+        within do
+          assert Actor.exists?(@idle.id)
+          assert_nil @idle.idle_warned_at
+        end
+      end
+
+      test "deleting has to come after suspending" do
+        @tenant.suspend_after = 365
+        @tenant.delete_after = 365
+
+        assert_not @tenant.valid?
+        assert_includes @tenant.errors[:delete_after], "must be longer than suspend after"
       end
 
       test "signing in after the warning keeps the account" do
@@ -106,7 +161,7 @@ module Masks
         registration = register
         issued = access_token_for(actor: @idle, registration: registration)
 
-        within { @idle.update_columns(last_active_at: 400.days.ago, idle_warned_at: 1.day.ago) }
+        within { @idle.update_columns(last_active_at: 400.days.ago, idle_warned_at: 1.day.ago, idle_warning: "suspend") }
 
         token(
           grant_type: "refresh_token", refresh_token: issued["refresh_token"],
@@ -146,8 +201,8 @@ module Masks
         sweep
 
         travel 31.days do
-          @tenant.update!(idle_after: 730)
-          @tenant.update!(idle_after: 365)
+          @tenant.update!(suspend_after: 730)
+          @tenant.update!(suspend_after: 365)
           sweep
 
           within do
@@ -157,8 +212,8 @@ module Masks
         end
       end
 
-            test "a tenant with the setting off sweeps nothing" do
-        @tenant.update!(idle_after: nil)
+      test "a tenant with the setting off sweeps nothing" do
+        @tenant.update!(suspend_after: nil)
 
         sweep
 
@@ -175,6 +230,7 @@ module Masks
 
           within do
             assert_not @idle.suspended?
+            assert_not @idle.idle_suspended?
             assert_nil @idle.idle_warned_at
           end
         end

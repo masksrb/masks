@@ -42,17 +42,14 @@ module Masks
       REGISTRATION_BOUNDED = "bounded".freeze
       REGISTRATIONS = [ REGISTRATION_OFF, REGISTRATION_ANYTHING, REGISTRATION_BOUNDED ].freeze
 
-      IDLE_SUSPEND = "suspend".freeze
-      IDLE_DELETE = "delete".freeze
-      IDLE_ACTIONS = [ IDLE_SUSPEND, IDLE_DELETE ].freeze
       IDLE_DAYS = (60..3650)
 
       validates :named_by, inclusion: { in: NAMES }, allow_nil: true
       validates :dynamic_registration, inclusion: { in: REGISTRATIONS }, allow_nil: true
-      validates :idle_after, numericality: { only_integer: true, in: IDLE_DAYS }, allow_nil: true
-      validates :idle_action, inclusion: { in: IDLE_ACTIONS }, allow_nil: true
+      validates :suspend_after, :delete_after, numericality: { only_integer: true, in: IDLE_DAYS }, allow_nil: true
+      validate :deleting_follows_suspending
 
-      after_update_commit :forget_idle_warnings, if: -> { saved_change_to_idle_after? || saved_change_to_idle_action? }
+      after_update_commit :forget_idle_warnings, if: -> { saved_change_to_suspend_after? || saved_change_to_delete_after? }
       validates :subdomain, presence: true, uniqueness: true,
                             format: { with: /\A[a-z0-9][a-z0-9-]*\z/ }
       validates :name, presence: true
@@ -71,8 +68,8 @@ module Masks
         self.class.pinned_names.presence || super.presence || EITHER
       end
 
-      def idle_action
-        super.presence || IDLE_SUSPEND
+      def idles?
+        suspend_after.present? || delete_after.present?
       end
 
       def names_pinned?
@@ -309,7 +306,15 @@ module Masks
       private
 
         def forget_idle_warnings
-          Tenant.switch(self) { Actor.where.not(idle_warned_at: nil).update_all(idle_warned_at: nil) }
+          Tenant.switch(self) do
+            Actor.where.not(idle_warned_at: nil).update_all(idle_warned_at: nil, idle_warning: nil)
+          end
+        end
+
+        def deleting_follows_suspending
+          return unless suspend_after && delete_after && delete_after <= suspend_after
+
+          errors.add(:delete_after, "must be longer than suspend after")
         end
 
         def minted_setup_token

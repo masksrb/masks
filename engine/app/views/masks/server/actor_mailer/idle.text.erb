@@ -1,7 +1,7 @@
-<%= t(".lede.#{@action}", tenant: @tenant_name, due: @due) %>
+<%= t(".lede.#{@lede}", tenant: @tenant_name, due: @due) %>
+<% if @url %>
 
 <%= t(".keep") %>
-<% if @url %>
 
 <%= @url %>
 <% end %>
