@@ -102,6 +102,10 @@ module Masks
 
           field :adapter_services, [ AdapterServiceType ], null: false
 
+          field :event_streams, [ EventStreamType ], null: false do
+            argument :archived, Boolean, required: false
+          end
+
           field :sign_in_policies, [ SignInPolicyType ], null: false do
             argument :archived, Boolean, required: false
           end
@@ -299,6 +303,10 @@ module Masks
             scope = scope.where(kind: kind) if kind
 
             scope.order(:kind, primary: :desc, name: :asc)
+          end
+
+          def event_streams(archived: false)
+            Masks::Server::EventStream.listed(archived).order(:name)
           end
 
           def sign_in_policies(archived: false)

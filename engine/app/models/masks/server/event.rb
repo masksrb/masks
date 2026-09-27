@@ -110,8 +110,15 @@ module Masks
       ADAPTER_ARCHIVED = "adapter.archived".freeze
       ADAPTER_TESTED = "adapter.tested".freeze
 
+      STREAM_CREATED = "stream.created".freeze
+      STREAM_UPDATED = "stream.updated".freeze
+      STREAM_ARCHIVED = "stream.archived".freeze
+      STREAM_SECRET_ROTATED = "stream.secret_rotated".freeze
+      STREAM_TESTED = "stream.tested".freeze
+      STREAM_FAILED = "stream.failed".freeze
+
       GRAVE = [
-        LOGIN_REFUSED, LOGIN_THROTTLED, LOGOUT_UNDELIVERED, REFRESH_REUSED,
+        LOGIN_REFUSED, LOGIN_THROTTLED, LOGOUT_UNDELIVERED, REFRESH_REUSED, STREAM_FAILED,
         DEVICE_BLOCKED, ACTOR_DELETED, AUTHENTICATOR_DISABLED, CONNECTION_REFUSED, DELEGATION_REFUSED
       ].freeze
 
@@ -163,6 +170,7 @@ module Masks
 
         def raise_notification
           Notifications.raised(self)
+          EventStream.raised(self)
         end
     end
   end

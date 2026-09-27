@@ -79,6 +79,13 @@ module Masks
           call(uri, request, open: open, read: read, address: address)
         end
 
+        def post_json(uri, body, headers: {}, open: OPEN_TIMEOUT, read: READ_TIMEOUT, address: nil)
+          request = Net::HTTP::Post.new(uri, { "Content-Type" => "application/json" }.merge(headers))
+          request.body = body
+
+          call(uri, request, open: open, read: read, address: address)
+        end
+
         def call(uri, request, open:, read:, address: nil, ceiling: CEILING, within: nil)
           kept = +""
           answered = nil

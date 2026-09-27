@@ -440,6 +440,70 @@ module Masks
         assert within(@tenant) { Event.where(action: Event::ADAPTER_TESTED).exists? }
       end
 
+      test "an event stream is created with a secret shown once, and only its owner-set fields come back" do
+        held = bearer
+
+        body = ask(<<~GQL, held)
+          mutation {
+            createEventStream(key: "siem", name: "SIEM", url: "https://siem.example.com/hooks",
+                              actions: ["session.started", "actor.deleted"]) {
+              eventStream { key url actions }
+              secret
+            }
+          }
+        GQL
+
+        made = body.dig("data", "createEventStream")
+
+        assert_equal 64, made["secret"].length
+        assert_equal [ "actor.deleted", "session.started" ], made.dig("eventStream", "actions")
+
+        listed = ask(%(query { eventStreams { key lastFailure } }), held)
+
+        assert_equal [ "siem" ], listed.dig("data", "eventStreams").map { |stream| stream["key"] }
+        assert within(@tenant) { Event.where(action: Event::STREAM_CREATED).exists? }
+      end
+
+      test "an event stream for an address that is not https is refused" do
+        body = ask(%(mutation { createEventStream(key: "siem", name: "SIEM", url: "ftp://siem.example.com/x") { secret } }), bearer)
+
+        assert_match "https", body["errors"].first["message"]
+      end
+
+      test "rotating an event stream's secret returns the new one and audits it" do
+        held = bearer
+        first = ask(%(mutation { createEventStream(key: "siem", name: "SIEM", url: "https://siem.example.com/x") { secret } }), held)
+        second = ask(%(mutation { rotateEventStreamSecret(key: "siem") { secret } }), held)
+
+        refute_equal first.dig("data", "createEventStream", "secret"), second.dig("data", "rotateEventStreamSecret", "secret")
+        assert within(@tenant) { Event.where(action: Event::STREAM_SECRET_ROTATED).exists? }
+      end
+
+      test "a test delivery reports what the receiver said rather than failing the request" do
+        held = bearer
+        ask(%(mutation { createEventStream(key: "siem", name: "SIEM", url: "https://siem.example.com/x") { secret } }), held)
+
+        stub_request(:post, "https://siem.example.com/x").to_return(status: 401)
+
+        body = ask(%(mutation { testEventStream(key: "siem") { delivered failure } }), held)
+
+        refute body.dig("data", "testEventStream", "delivered")
+        assert_match "401", body.dig("data", "testEventStream", "failure")
+        assert within(@tenant) { Event.where(action: Event::STREAM_TESTED).exists? }
+      end
+
+      test "an archived event stream leaves the list and comes back when restored" do
+        held = bearer
+        ask(%(mutation { createEventStream(key: "siem", name: "SIEM", url: "https://siem.example.com/x") { secret } }), held)
+        ask(%(mutation { archiveEventStream(key: "siem") { eventStream { key } } }), held)
+
+        assert_empty ask(%(query { eventStreams { key } }), held).dig("data", "eventStreams")
+
+        ask(%(mutation { restoreEventStream(key: "siem") { eventStream { key } } }), held)
+
+        assert_equal 1, ask(%(query { eventStreams { key } }), held).dig("data", "eventStreams").length
+      end
+
       test "an adapter for a service masks does not have is refused" do
         body = ask(%(mutation { createAdapter(key: "x", service: "carrier-pigeon", name: "x") { adapter { key } } }), bearer)
 

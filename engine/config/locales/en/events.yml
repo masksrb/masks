@@ -118,3 +118,10 @@ en:
         updated: "Adapter changed"
         archived: "Adapter archived"
         tested: "Adapter tested"
+      stream:
+        created: "Event stream added"
+        updated: "Event stream changed"
+        archived: "Event stream archived"
+        secret_rotated: "Event stream secret rotated"
+        tested: "Event stream tested"
+        failed: "Event stream gave up"

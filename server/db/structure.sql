@@ -548,6 +548,47 @@ ALTER SEQUENCE public.devices_id_seq OWNED BY public.devices.id;
 
 
 --
+-- Name: event_streams; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.event_streams (
+    id bigint NOT NULL,
+    tenant_id bigint NOT NULL,
+    key character varying NOT NULL,
+    name character varying NOT NULL,
+    url character varying NOT NULL,
+    secret text NOT NULL,
+    actions jsonb DEFAULT '[]'::jsonb NOT NULL,
+    last_delivered_at timestamp(6) without time zone,
+    last_failure character varying,
+    archived_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+ALTER TABLE ONLY public.event_streams FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: event_streams_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.event_streams_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: event_streams_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.event_streams_id_seq OWNED BY public.event_streams.id;
+
+
+--
 -- Name: events; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1097,6 +1138,13 @@ ALTER TABLE ONLY public.devices ALTER COLUMN id SET DEFAULT nextval('public.devi
 
 
 --
+-- Name: event_streams id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.event_streams ALTER COLUMN id SET DEFAULT nextval('public.event_streams_id_seq'::regclass);
+
+
+--
 -- Name: events id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1260,6 +1308,14 @@ ALTER TABLE ONLY public.device_factors
 
 ALTER TABLE ONLY public.devices
     ADD CONSTRAINT devices_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: event_streams event_streams_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.event_streams
+    ADD CONSTRAINT event_streams_pkey PRIMARY KEY (id);
 
 
 --
@@ -1659,6 +1715,20 @@ CREATE UNIQUE INDEX index_devices_on_tenant_id_and_public_id ON public.devices U
 
 
 --
+-- Name: index_event_streams_on_tenant_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_event_streams_on_tenant_id ON public.event_streams USING btree (tenant_id);
+
+
+--
+-- Name: index_event_streams_on_tenant_id_and_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_event_streams_on_tenant_id_and_key ON public.event_streams USING btree (tenant_id, key);
+
+
+--
 -- Name: index_events_on_actor_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2032,6 +2102,14 @@ ALTER TABLE ONLY public.events
 
 
 --
+-- Name: event_streams fk_rails_31dc8c70b4; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.event_streams
+    ADD CONSTRAINT fk_rails_31dc8c70b4 FOREIGN KEY (tenant_id) REFERENCES public.tenants(id);
+
+
+--
 -- Name: tokens fk_rails_3bbe3ff1e4; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2396,6 +2474,12 @@ ALTER TABLE public.device_factors ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.devices ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: event_streams; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.event_streams ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: events; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -2514,6 +2598,13 @@ CREATE POLICY tenant_isolation ON public.devices USING ((tenant_id = (NULLIF(cur
 
 
 --
+-- Name: event_streams tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.event_streams USING ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint)) WITH CHECK ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint));
+
+
+--
 -- Name: events tenant_isolation; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -2589,6 +2680,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260926020000'),
 ('20260926010000'),
 ('20260926000000'),
 ('20260921010000'),

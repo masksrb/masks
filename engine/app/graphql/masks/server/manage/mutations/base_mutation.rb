@@ -41,6 +41,10 @@ module Masks
               Masks::Server::Adapter.find_by(key: key) || refuse!("no adapter keyed #{key}")
             end
 
+            def event_stream!(key)
+              Masks::Server::EventStream.find_by(key: key) || refuse!("no event stream keyed #{key}")
+            end
+
             def signing_key!(kid)
               Masks::Server::SigningKey.find_by(kid: kid) || refuse!("no signing key with that kid")
             end

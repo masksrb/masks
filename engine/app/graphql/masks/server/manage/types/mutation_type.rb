@@ -57,6 +57,12 @@ module Masks
           field :archive_adapter, mutation: Mutations::ArchiveAdapter
           field :restore_adapter, mutation: Mutations::RestoreAdapter
           field :test_adapter, mutation: Mutations::TestAdapter
+          field :create_event_stream, mutation: Mutations::CreateEventStream
+          field :update_event_stream, mutation: Mutations::UpdateEventStream
+          field :archive_event_stream, mutation: Mutations::ArchiveEventStream
+          field :restore_event_stream, mutation: Mutations::RestoreEventStream
+          field :rotate_event_stream_secret, mutation: Mutations::RotateEventStreamSecret
+          field :test_event_stream, mutation: Mutations::TestEventStream
           field :stage_signing_key, mutation: Mutations::StageSigningKey
           field :activate_signing_key, mutation: Mutations::ActivateSigningKey
           field :discard_signing_key, mutation: Mutations::DiscardSigningKey

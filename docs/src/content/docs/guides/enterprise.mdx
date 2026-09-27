@@ -11,7 +11,7 @@ masks does today, and how the missing ones will be built.
 | Capability | Status | Section |
 | --- | --- | --- |
 | Audit log | Built | [Audit log](#audit-log) |
-| Event streaming | In progress | [Event streaming](#event-streaming) |
+| Event streaming | Built | [Event streaming](#event-streaming) |
 | Single sign-on and provisioning | Built | [Single sign-on and provisioning](#single-sign-on-and-provisioning) |
 | Step-up authentication | Planned | [Step-up authentication](#step-up-authentication) |
 | Organizations and roles | Planned | [Organizations and roles](#organizations-and-roles) |
@@ -34,22 +34,65 @@ the client.
 ## Event streaming
 
 Reading the log in manage does not satisfy a security team that already
-collects events in a SIEM. Event streaming sends each event to an HTTPS
-endpoint as it happens.
+collects events in a SIEM. An event stream posts each event to an HTTPS endpoint
+as it happens.
 
-The plan:
+A stream has a key, a name, an address, a signing secret, and an optional list
+of actions. An empty list streams every action. Create one with the
+`createEventStream` mutation. The secret is returned once, by that mutation and
+by `rotateEventStreamSecret`, and is never readable afterward.
 
-- A stream belongs to a tenant and has a key, a name, an HTTPS URL, a signing
-  secret, and an optional list of actions. An empty list streams every action.
-- Each matching event is posted as JSON. The request carries a timestamp and an
-  HMAC-SHA256 signature of the timestamp and the body, so the receiver can
-  reject forgeries and replays.
-- A delivery that fails is retried with growing delays. After the last attempt
-  masks records a `stream.failed` event, which is never streamed itself.
-- The URL must resolve to a public address. Masks checks this when the stream
-  is saved and again on every delivery.
-- Manage creates, changes, archives, restores, and tests streams, and each
-  change is an event.
+```sh
+curl -s "$MASKS/manage/graphql" -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"mutation { createEventStream(key: \"siem\", name: \"SIEM\", url: \"https://siem.example.com/masks\", actions: [\"session.started\", \"actor.deleted\"]) { secret } }"}'
+```
+
+`testEventStream` sends a `stream.tested` event and reports what the receiver
+answered. `archiveEventStream` stops delivery and `restoreEventStream` resumes
+it.
+
+### What is sent
+
+Each event is a `POST` with a JSON body.
+
+| Field | Meaning |
+| --- | --- |
+| `id` | The event's id, also sent as the `Masks-Delivery` header. |
+| `tenant` | The tenant's subdomain. |
+| `action` | The action, such as `session.started`, also sent as the `Masks-Event` header. |
+| `created_at` | When it happened, in UTC. |
+| `actor` | The uuid of the account it happened to, or null. |
+| `by` | The uuid of the account that did it, or null. |
+| `client` | The `client_id` involved, or null. |
+| `ip_address`, `user_agent` | Where it came from. |
+| `details` | Fields specific to the action. |
+
+The receiver answers with any 2xx status.
+
+### Verifying a delivery
+
+The `Masks-Signature` header reads `t=<unix time>,v1=<hex>`. The value is the
+HMAC-SHA256, keyed with the stream's secret, of the timestamp, a period, and the
+raw request body. Recompute it, compare in constant time, and reject a request
+whose timestamp is more than five minutes from the current time.
+
+### Failures
+
+A delivery that gets no 2xx answer is retried eight times with growing delays.
+After the last attempt masks records a `stream.failed` event, which is never
+streamed. The stream's `lastFailure` shows the latest error and `lastDeliveredAt`
+the latest success.
+
+### What masks refuses
+
+- An address that is not HTTPS, or that carries a username or password.
+- An address that resolves to a private, loopback, or link-local address. Masks
+  checks when the stream is saved and again on every delivery.
+- An action masks does not record.
+
+Events are delivered at least once and may arrive out of order. Use `id` to
+discard a repeat.
 
 ## Single sign-on and provisioning
 
