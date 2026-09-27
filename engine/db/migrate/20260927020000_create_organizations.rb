@@ -22,6 +22,9 @@ class CreateOrganizations < ActiveRecord::Migration[8.1]
       t.references :actor, null: false, foreign_key: { on_delete: :cascade }
       t.references :invited_by, foreign_key: { to_table: :actors, on_delete: :nullify }
       t.string :role, null: false
+      t.boolean :provisioned, null: false, default: false
+      t.boolean :pending, null: false, default: false
+      t.string :invited_as
 
       t.timestamps
 

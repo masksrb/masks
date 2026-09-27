@@ -16,7 +16,7 @@ module Masks
       before_destroy :keep_an_owner
 
       def owner?
-        role == Organization::OWNER
+        role == Organization::OWNER && !pending?
       end
 
       def accept!

@@ -79,7 +79,7 @@ module Masks
         end
 
         def own!
-          raise NotOwner unless @own.owner? && !@own.pending?
+          raise NotOwner unless @own.owner?
         end
 
         def member!

@@ -207,7 +207,6 @@ module Masks
         email_domains.to_s.downcase.split(/[\s,]+/).reject(&:empty?)
       end
 
-      DEFAULT_ROLE_CLAIM = "groups".freeze
       GROUPS = "groups".freeze
 
       def offered_to?(organization)
@@ -215,7 +214,7 @@ module Masks
       end
 
       def group_claim
-        role_claim.presence || DEFAULT_ROLE_CLAIM
+        role_claim.presence || GROUPS
       end
 
       def role_from(claims)

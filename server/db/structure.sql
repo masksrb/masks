@@ -680,11 +680,11 @@ CREATE TABLE public.memberships (
     actor_id bigint NOT NULL,
     invited_by_id bigint,
     role character varying NOT NULL,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL,
     provisioned boolean DEFAULT false NOT NULL,
     pending boolean DEFAULT false NOT NULL,
-    invited_as character varying
+    invited_as character varying,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
 );
 
 ALTER TABLE ONLY public.memberships FORCE ROW LEVEL SECURITY;
@@ -3115,9 +3115,6 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
-('20260927100000'),
-('20260927090000'),
-('20260927080000'),
 ('20260927070000'),
 ('20260927060000'),
 ('20260927050000'),

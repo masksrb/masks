@@ -14,7 +14,6 @@ module Masks
           argument :email, String, required: false
 
           field :membership, Types::MembershipType, null: false
-          field :invited, Boolean, null: false
           field :delivered, Boolean, null: false
           field :url, String
 

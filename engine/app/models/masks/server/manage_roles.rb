@@ -7,6 +7,7 @@ module Masks
       READ = Scopes::MANAGE_READ
 
       SCOPES = [ OWNER, SECURITY, SUPPORT, READ ].freeze
+      OWNER_ONLY = [ *SCOPES, Scopes::SCIM ].freeze
 
       LEVELS = {
         read: SCOPES,
@@ -22,6 +23,10 @@ module Masks
 
         def any?(scopes)
           held(scopes).any?
+        end
+
+        def owner_only(scopes)
+          Scopes.list(scopes) & OWNER_ONLY
         end
 
         def permits?(scopes, level)

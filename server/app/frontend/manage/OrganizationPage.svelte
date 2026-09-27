@@ -87,7 +87,7 @@
 
     const answer = await run(
       `mutation Add($organization: ID!, $email: String!, $role: String!) {
-        addMember(organization: $organization, email: $email, role: $role) { invited delivered url }
+        addMember(organization: $organization, email: $email, role: $role) { delivered url }
       }`,
       { organization: organization.key, email, role: adding.role },
       `${email} is a member now.`,
@@ -97,7 +97,7 @@
 
     adding = { email: "", role: "member" };
 
-    if (answer.addMember.invited && !answer.addMember.delivered) invited = answer.addMember.url;
+    if (!answer.addMember.delivered) invited = answer.addMember.url;
   }
 
   function setRole(member, role) {

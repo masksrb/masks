@@ -9,7 +9,7 @@ module Masks
       PHONE = "phone".freeze
       INBOX = "inbox".freeze
 
-      INBOX_WINDOW = 15.minutes
+      WINDOW = 15.minutes
       INBOX_PER_IP = 4
 
       class << self
@@ -30,7 +30,7 @@ module Masks
         end
 
         def inbox_crowded?(address:, ip: nil)
-          recent = inbox.where(created_at: INBOX_WINDOW.ago..)
+          recent = inbox.where(created_at: WINDOW.ago..)
           limit = ::Rails.configuration.masks.recovery_limit
 
           recent.where("payload->>'address' = ?", address).count >= limit ||
@@ -38,7 +38,7 @@ module Masks
         end
 
         def crowded?(actor:, channel:)
-          where(actor_id: actor.id, created_at: INBOX_WINDOW.ago..)
+          where(actor_id: actor.id, created_at: WINDOW.ago..)
             .where("payload->>'channel' = ?", channel)
             .count >= ::Rails.configuration.masks.recovery_limit
         end

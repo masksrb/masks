@@ -10,8 +10,9 @@ module Masks
 
         @apps = Apps.held_by(@actor)
         held = @actor.memberships.joins(:organization).merge(Organization.active)
-                     .includes(organization: { memberships: :actor }).order("organizations.name").to_a
+                     .includes(:organization, :invited_by).order("organizations.name").to_a
         @invitations, @memberships = held.partition(&:pending?)
+        ActiveRecord::Associations::Preloader.new(records: @memberships.map(&:organization), associations: { memberships: :actor }).call
         @connections = Connection.live.where(actor: @actor).includes(:provider, live_delegations: :client).order(:created_at)
         @linkable = Linking.offered(@actor)
         @code_factors = CodeFactors::FACTORS.select do |factor|

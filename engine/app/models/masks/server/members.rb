@@ -20,7 +20,7 @@ module Masks
 
           sent = actor.activated? ? { delivered: false, url: nil } : invite(actor, journey)
 
-          { membership: membership, invited: true }.merge(sent)
+          { membership: membership }.merge(sent)
         end
 
         def assign!(membership, role:, by:)

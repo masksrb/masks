@@ -10,7 +10,7 @@ module Masks
       ROLE = /\A[a-z0-9][a-z0-9_-]{0,39}\z/
 
       has_many :memberships, dependent: :destroy
-      has_many :actors, through: :memberships
+      has_many :actors, -> { merge(Membership.accepted) }, through: :memberships
       has_many :tokens, dependent: :destroy
       has_many :providers, dependent: :destroy
 

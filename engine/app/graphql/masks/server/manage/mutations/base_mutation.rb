@@ -38,7 +38,7 @@ module Masks
             def granting!(scopes)
               return if owner?
 
-              held = ManageRoles.held(scopes) | (Scopes.list(scopes) & [ Scopes::SCIM ])
+              held = ManageRoles.owner_only(scopes)
 
               refuse!("only an owner can hand out #{Scopes.join(held)}") if held.any?
             end
@@ -62,9 +62,7 @@ module Masks
             def client!(client_id)
               client = Client.find_by(client_id: client_id) || refuse!("no client with that client_id")
 
-              carried = Scopes.union(client.allowed_scopes, client.required_scopes)
-
-              if !owner? && (ManageRoles.any?(carried) || carried.include?(Scopes::SCIM))
+              if !owner? && ManageRoles.owner_only(Scopes.union(client.allowed_scopes, client.required_scopes)).any?
                 refuse!("only an owner can change a client that can carry a manage or provisioning scope")
               end
 

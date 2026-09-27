@@ -71,7 +71,6 @@ en:
         state:
           ready: "Ready"
           waiting: "Waiting for you"
-        invited_by_manager: "Someone a manager invited"
         explained: "This device is trusted, so it can confirm a sign-in happening somewhere else. Enter the code the other screen shows. Only enter a code you are looking at yourself."
         code: "Code on the other screen"
         submit: "Continue"
@@ -97,6 +96,7 @@ en:
 
       organizations:
         heading: "Organizations"
+        invited_by_manager: "Someone a manager invited"
         role: "You are %{role}"
         lede_owner: "As an owner, you decide who belongs here and what role each person holds. Apps that ask for your organization see the role."
         lede_member: "Apps that ask for your organization see that you belong here, and your role."

@@ -33,7 +33,7 @@
     <% memberships.each do |own| %>
       <% organization = own.organization %>
       <% members = organization.memberships.sort_by { |held| [ held.role == "owner" ? 0 : 1, held.actor.identifier.to_s ] } %>
-      <% alone = own.owner? && members.count { |held| held.owner? && !held.pending? } == 1 %>
+      <% alone = own.owner? && members.count(&:owner?) == 1 %>
 
       <details class="entry" id="organization-<%= organization.key %>">
         <summary>

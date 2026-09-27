@@ -166,13 +166,13 @@ module Masks
 
         assert_match "needs masks:manage or masks:manage:security", refusal(body)
 
-        body = ask(%(mutation { addMember(organization: "acme", email: "new@acme.example", role: "owner") { invited membership { role actor { email activated } } } }), support)
+        body = ask(%(mutation { addMember(organization: "acme", email: "new@acme.example", role: "owner") { membership { pending role actor { email activated } } } }), support)
 
-        assert body.dig("data", "addMember", "invited"), body
+        assert body.dig("data", "addMember", "membership", "pending"), body
         assert_equal "owner", body.dig("data", "addMember", "membership", "role")
         refute body.dig("data", "addMember", "membership", "actor", "activated")
 
-        body = ask(%(mutation { addMember(organization: "acme", email: "owner@example.invalid", role: "member") { invited } }), support)
+        body = ask(%(mutation { addMember(organization: "acme", email: "owner@example.invalid", role: "member") { membership { pending } } }), support)
 
         assert_equal "only an owner can change another manager", refusal(body)
       end

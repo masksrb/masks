@@ -90,8 +90,7 @@ module Masks
             held = provisioned_organization
 
             return if held.nil?
-            return if held.memberships.exists?(actor: actor, provisioned: true) &&
-                      actor.memberships.where.not(organization: held).none? && !actor.manages?
+            return if actor.memberships.pluck(:organization_id, :provisioned) == [ [ held.id, true ] ] && !actor.manages?
 
             raise Scim::Error.new(:forbidden, "#{held.name}'s directory did not create #{actor.identifier}, or they belong " \
                                               "elsewhere too, so it can remove them but not change them", scim_type: "mutability")
