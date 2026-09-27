@@ -32,7 +32,7 @@
         signingKeys { kid algorithm activatedAt retiredAt state }
       }
       viewer { identifier scopes }
-      tally { actors clients sessions devices organizations }
+      tally { actors clients devices organizations }
       namespaces {
         name resource claimedAt releasable
         client { clientId name }
@@ -132,7 +132,6 @@
           { to: "/actors", label: "Actors", value: data.tally.actors },
           { to: "/clients", label: "Clients", value: data.tally.clients },
           { to: "/organizations", label: "Organizations", value: data.tally.organizations },
-          { to: "/actors", label: "Live sessions", value: data.tally.sessions },
           { to: "/actors#devices", label: "Devices", value: data.tally.devices },
         ]
       : [],
