@@ -8,6 +8,7 @@ module Masks
       MEMBER = "member".freeze
       BUILT_IN = [ OWNER, MEMBER ].freeze
       ROLE = /\A[a-z0-9][a-z0-9_-]{0,39}\z/
+      CLAIM = "org".freeze
 
       has_many :memberships, dependent: :destroy
       has_many :actors, -> { merge(Membership.accepted) }, through: :memberships

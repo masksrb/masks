@@ -4,6 +4,7 @@ module Masks
       class Refused < StandardError; end
 
       DAILY_INVITATIONS = 50
+      NOT_SENT = { delivered: false, url: nil }.freeze
 
       class << self
         def add!(organization:, role:, by:, journey:, actor: nil, email: nil, manager: false)
@@ -104,20 +105,15 @@ module Masks
           end
 
           def invite(actor, journey, membership)
-            return { delivered: false, url: nil } if actor.email.blank?
+            return NOT_SENT if actor.email.blank?
 
             Invitations.open(actor: actor, journey: journey, membership: membership).slice(:delivered, :url)
           rescue Invitation::Refused
-            { delivered: false, url: nil }
+            NOT_SENT
           end
 
           def tell(membership, journey)
-            actor = membership.actor
-            address = membership.invited_as.presence || actor.email
-
-            unless ActorMailer.deliverable? && address.present? && actor.email_verified_at.present? && address == actor.email
-              return { delivered: false, url: nil }
-            end
+            return NOT_SENT unless Notifications.mailable?(membership.actor) && membership.acceptable?
 
             ActorMailer.organization_invitation(membership, journey: journey).deliver_later
 

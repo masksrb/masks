@@ -106,7 +106,7 @@ module Masks
           "amr" => Array(amr).presence,
           "nonce" => nonce,
           "sid" => sid,
-          "org" => organization&.claim_for(actor),
+          Organization::CLAIM => organization&.claim_for(actor),
           "at_hash" => half_hash(access_token),
           "c_hash" => half_hash(code),
           "tenant" => tenant.to_identity,

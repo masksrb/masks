@@ -16,16 +16,13 @@ module Masks
           def resolve(key:, name:, roles: [])
             refuse!("an organization is already keyed #{key}") if Masks::Server::Organization.exists?(key: key)
 
-            organization = Masks::Server::Organization.transaction do
-              save!(Masks::Server::Organization.new(key: key, name: name, roles: roles)).tap do |created|
-                created.memberships.create!(actor: viewer, role: Masks::Server::Organization::OWNER, invited_by: viewer, pending: false)
-              end
-            end
+            organization = Masks::Server::Organization.new(key: key, name: name, roles: roles)
+            organization.memberships.build(actor: viewer, role: Masks::Server::Organization::OWNER, invited_by: viewer)
+            save!(organization)
 
             audit!(Masks::Server::Event::ORGANIZATION_CREATED, organization: organization.key)
-            Masks::Server::Event.record!(Masks::Server::Event::MEMBERSHIP_ADDED, actor: viewer, by: viewer,
-                                                                                 organization: organization,
-                                                                                 role: Masks::Server::Organization::OWNER)
+            audit!(Masks::Server::Event::MEMBERSHIP_ADDED, actor: viewer, organization: organization,
+                                                           role: Masks::Server::Organization::OWNER)
 
             { organization: organization }
           end

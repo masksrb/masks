@@ -7,11 +7,8 @@ en:
 
     invitation:
       subject: "You have been invited to %{tenant}"
-      subject_organization: "Join %{organization}"
       invited_by: "%{nickname} invited you to %{tenant}."
       invited: "You have been invited to %{tenant}."
-      organization_by: "%{nickname} invited you to join %{organization} as %{role}."
-      organization: "You have been invited to join %{organization} as %{role}."
       organization_after: "Once you have a password, %{organization} is waiting on your account page to be accepted."
       nickname_html: "Your nickname is %{nickname}. Open the link to choose a password."
       nickname: "Your nickname is %{nickname}. Open the link to choose a password."

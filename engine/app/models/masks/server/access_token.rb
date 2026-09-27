@@ -52,7 +52,7 @@ module Masks
           "client_id" => client&.client_id,
           "scope" => Scopes.join(scopes),
           "act" => act,
-          "org" => organization&.claim_for(actor),
+          Organization::CLAIM => organization_claim,
           "cnf" => confirmation,
           "tenant" => tenant.to_identity
         }.compact

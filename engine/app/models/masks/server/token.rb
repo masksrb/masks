@@ -115,6 +115,10 @@ module Masks
         actor ? issuer.subject_for(actor, client) : root.client&.client_id
       end
 
+      def organization_claim
+        organization&.claim_for(actor)
+      end
+
       def root
         held = self
         held = held.parent while held.parent

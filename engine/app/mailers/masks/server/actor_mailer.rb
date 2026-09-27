@@ -7,15 +7,13 @@ module Masks
         journey!(journey)
         @actor = actor
         @url = url
-        @invited_by = membership&.invited_by || journey.manager
         @organization = membership&.organization
-        @role = membership&.role
+        @lede = membership ? organization_lede(membership) : tenant_lede(journey.manager)
 
         mail(
           from: self.class.from,
           to: actor.email,
-          subject: @organization ? t("actor_mailer.invitation.subject_organization", organization: @organization.name) :
-                                   t("actor_mailer.invitation.subject", tenant: @tenant_name)
+          subject: membership ? organization_subject(membership) : t("actor_mailer.invitation.subject", tenant: @tenant_name)
         )
       end
 
@@ -26,14 +24,10 @@ module Masks
         @actor = membership.actor
         @organization = membership.organization
         @role = membership.role
-        @invited_by = membership.invited_by
+        @lede = organization_lede(membership)
         @url = home && "#{home}#organization-#{@organization.key}"
 
-        mail(
-          from: self.class.from,
-          to: membership.invited_as.presence || @actor.email,
-          subject: t("actor_mailer.organization_invitation.subject", organization: @organization.name)
-        )
+        mail(from: self.class.from, to: @actor.email, subject: organization_subject(membership))
       end
 
       def password_reset(actor, url, journey:)
@@ -145,6 +139,26 @@ module Masks
           subject: t("actor_mailer.approved.subject", tenant: @tenant_name)
         )
       end
+
+      private
+
+        def tenant_lede(manager)
+          return t("actor_mailer.invitation.invited", tenant: @tenant_name) if manager.nil?
+
+          t("actor_mailer.invitation.invited_by", nickname: manager.identifier, tenant: @tenant_name)
+        end
+
+        def organization_lede(membership)
+          named = { organization: membership.organization.name, role: membership.role }
+
+          return t("actor_mailer.organization_invitation.invited", **named) if membership.invited_by.nil?
+
+          t("actor_mailer.organization_invitation.invited_by", nickname: membership.invited_by.identifier, **named)
+        end
+
+        def organization_subject(membership)
+          t("actor_mailer.organization_invitation.subject", organization: membership.organization.name)
+        end
     end
   end
 end

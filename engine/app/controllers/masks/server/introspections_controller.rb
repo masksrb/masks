@@ -41,7 +41,7 @@ module Masks
             "aud" => token.audience.presence,
             "iss" => issuer.url,
             "jti" => token.digest,
-            "org" => token.organization&.claim_for(token.actor),
+            Organization::CLAIM => token.organization_claim,
             "tenant" => current_tenant.to_identity
           }.compact
         end

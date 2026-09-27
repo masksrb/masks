@@ -40,7 +40,7 @@ module Masks
         ]
       }.freeze
 
-      OWN_DOING = [ Event::MEMBERSHIP_REMOVED ].freeze
+      SELF_EVIDENT = GROUPS["organizations"]
 
       MAILED = GROUPS.values.flatten.freeze
 
@@ -80,7 +80,7 @@ module Masks
         end
 
         def worth_saying?(event)
-          return false if OWN_DOING.include?(event.action) && event.by_id == event.actor_id
+          return false if SELF_EVIDENT.include?(event.action) && event.by_id == event.actor_id
           return true unless ONCE_PER_DEVICE.include?(event.action)
           return true if event.device_id.nil?
 
