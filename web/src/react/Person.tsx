@@ -8,6 +8,7 @@ export interface PersonProps {
   size?: number;
   onSignOut?: () => void;
   signOutLabel?: string;
+  onSwitchOrganization?: (key: string) => void;
   className?: string;
 }
 
@@ -17,6 +18,7 @@ export function Person({
   size = 44,
   onSignOut,
   signOutLabel = "Sign out",
+  onSwitchOrganization,
   className,
 }: PersonProps) {
   const info = personFrom(account);
@@ -67,6 +69,21 @@ export function Person({
         )}
 
         {info.manager && <span className="masks-person-role">Manager</span>}
+
+        {onSwitchOrganization && info.others.length > 0 && (
+          <span className="masks-person-orgs">
+            {info.others.map((other) => (
+              <button
+                key={other.key}
+                type="button"
+                className="masks-person-switch"
+                onClick={() => onSwitchOrganization(other.key)}
+              >
+                {other.name}
+              </button>
+            ))}
+          </span>
+        )}
       </div>
 
       {onSignOut && (

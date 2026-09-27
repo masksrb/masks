@@ -30,6 +30,7 @@ export interface Account {
   avatars?: Avatars;
   tenant?: Tenant;
   organization?: Organization;
+  organizations?: Organization[];
   scopes: string[];
   expires_at?: number;
   account_url?: string;
@@ -49,6 +50,7 @@ export type Status =
 
 export interface Claims {
   org?: Organization;
+  orgs?: Organization[];
   [claim: string]: unknown;
 }
 

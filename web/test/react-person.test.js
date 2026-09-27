@@ -72,3 +72,27 @@ test("the react Person names the organization and the role held in it", () => {
     /masks-person-org/,
   );
 });
+
+test("the react Person offers the other organizations only when it can switch", () => {
+  const acme = { id: "org-1", key: "acme", name: "Acme", role: "owner" };
+  const globex = { id: "org-2", key: "globex", name: "Globex", role: "member" };
+  const account = {
+    ...ACCOUNT,
+    organization: acme,
+    organizations: [acme, globex],
+  };
+
+  const html = renderToStaticMarkup(
+    createElement(Person, { account, onSwitchOrganization: () => {} }),
+  );
+
+  assert.match(
+    html,
+    /class="masks-person-orgs"><button type="button" class="masks-person-switch">Globex<\/button>/,
+  );
+  assert.doesNotMatch(html, /masks-person-switch">Acme/);
+  assert.doesNotMatch(
+    renderToStaticMarkup(createElement(Person, { account })),
+    /masks-person-orgs/,
+  );
+});

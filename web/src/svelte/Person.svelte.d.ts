@@ -7,6 +7,7 @@ export interface PersonProps {
   size?: number;
   onSignOut?: (() => void) | null;
   signOutLabel?: string;
+  onSwitchOrganization?: ((key: string) => void) | null;
   class?: string;
 }
 

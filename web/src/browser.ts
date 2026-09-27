@@ -47,6 +47,11 @@ export interface BrowserClient {
   ): Promise<{ tokens: Tokens; identity: Claims | null; returnTo: string }>;
   identity(): Claims | null;
   organization(): Organization | null;
+  organizations(): Organization[];
+  switchOrganization(
+    key: string,
+    options?: Omit<AuthorizeOptions, "organization">,
+  ): Promise<void>;
   avatars(): Avatars | null;
   avatarUrl(
     subject: string,
@@ -358,6 +363,16 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
 
     organization() {
       return claims?.org ?? null;
+    },
+
+    organizations() {
+      return claims?.orgs ?? [];
+    },
+
+    async switchOrganization(key, opts = {}) {
+      window.location.assign(
+        await authorizeUrl({ ...opts, organization: key }),
+      );
     },
 
     avatars() {

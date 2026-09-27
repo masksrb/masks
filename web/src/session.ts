@@ -23,6 +23,10 @@ export interface SessionClient {
   status(): Promise<Status>;
   require(options?: LoginOptions): Promise<Account>;
   login(options?: LoginOptions): void;
+  switchOrganization(
+    key: string,
+    options?: Omit<LoginOptions, "organization">,
+  ): void;
   loginUrl(options?: LoginOptions): string;
   handshake(): void;
   handshakeUrl(): string;
@@ -135,6 +139,10 @@ export function createSession(options: SessionOptions = {}): SessionClient {
 
     login(opts = {}) {
       window.location.assign(loginUrl(opts));
+    },
+
+    switchOrganization(key, opts = {}) {
+      window.location.assign(loginUrl({ ...opts, organization: key }));
     },
 
     handshake() {

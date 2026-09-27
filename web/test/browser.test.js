@@ -653,3 +653,40 @@ test("an id token with no organization claim is fine when the app did not ask fo
   assert.equal(subject.organization(), null);
   assert.equal(subject.accessToken(), "at-1");
 });
+
+test("switching organization sends the browser to authorize naming the other one", async () => {
+  const { subject } = client({ client: { organization: "acme" } });
+  const assigned = [];
+  const held = globalThis.window;
+  globalThis.window = { location: { assign: (url) => assigned.push(url) } };
+
+  await subject.switchOrganization("globex", { returnTo: "/" });
+
+  globalThis.window = held;
+
+  const url = new URL(assigned[0]);
+
+  assert.equal(url.searchParams.get("organization"), "globex");
+});
+
+test("the organizations a token lists are known until signing out", async () => {
+  const upstream = server();
+  const { subject, store } = client({ server: upstream });
+
+  await subject.authorizeUrl({ returnTo: "/" });
+  const waiting = JSON.parse(store.getItem("masks:pending"));
+  upstream.held.token = {
+    ...GRANTED,
+    id_token: mint({ nonce: waiting.nonce, org: ACME, orgs: [ACME] }),
+  };
+
+  await subject.callback(
+    `https://app.test/callback?code=abc&state=${waiting.state}`,
+  );
+
+  assert.deepEqual(subject.organizations(), [ACME]);
+
+  subject.logout();
+
+  assert.deepEqual(subject.organizations(), []);
+});

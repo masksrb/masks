@@ -269,3 +269,27 @@ test("require signs in again when the person is in another organization", async 
 
   globalThis.window = held;
 });
+
+test("switching organization signs in again naming the other one", async () => {
+  const assigned = [];
+  const held = globalThis.window;
+  globalThis.window = { location: { assign: (url) => assigned.push(url) } };
+
+  const globex = { id: "org-2", key: "globex", name: "Globex", role: "member" };
+  const { subject } = client([
+    {
+      status: 200,
+      body: { ...ACCOUNT, organization: ACME, organizations: [ACME, globex] },
+    },
+  ]);
+
+  assert.deepEqual((await subject.session()).organizations, [ACME, globex]);
+
+  subject.switchOrganization("globex", { returnTo: "/reports" });
+
+  assert.deepEqual(assigned, [
+    "/auth?return_to=%2Freports&organization=globex",
+  ]);
+
+  globalThis.window = held;
+});

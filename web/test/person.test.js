@@ -101,3 +101,19 @@ test("with no organization there is no role to hold", () => {
   assert.equal(info.owner, false);
   assert.equal(holdsRole(account, "owner"), false);
 });
+
+test("the other organizations are the ones a person can switch to", () => {
+  const acme = { id: "org-1", key: "acme", name: "Acme", role: "owner" };
+  const globex = { id: "org-2", key: "globex", name: "Globex", role: "member" };
+  const info = personFrom({
+    signed_in: true,
+    name: "Ada",
+    scopes: ["openid", "organization"],
+    organization: acme,
+    organizations: [acme, globex],
+  });
+
+  assert.deepEqual(info.organizations, [acme, globex]);
+  assert.deepEqual(info.others, [globex]);
+  assert.deepEqual(personFrom({ signed_in: true, scopes: [] }).others, []);
+});

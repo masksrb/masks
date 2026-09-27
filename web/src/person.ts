@@ -6,6 +6,8 @@ export interface PersonInfo {
   unconfirmed: boolean;
   manager: boolean;
   organization: Organization | null;
+  organizations: Organization[];
+  others: Organization[];
   role: string | null;
   owner: boolean;
 }
@@ -18,6 +20,7 @@ export function personFrom(account: Account): PersonInfo {
   );
 
   const organization = account.organization ?? null;
+  const organizations = account.organizations ?? [];
 
   return {
     name,
@@ -29,6 +32,8 @@ export function personFrom(account: Account): PersonInfo {
           scope === "masks:manage" || scope.startsWith("masks:manage:"),
       ) ?? false,
     organization,
+    organizations,
+    others: organizations.filter((held) => held.key !== organization?.key),
     role: organization?.role ?? null,
     owner: organization?.role === "owner",
   };

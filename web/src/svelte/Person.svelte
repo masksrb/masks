@@ -7,6 +7,7 @@ let {
   size = 44,
   onSignOut = null,
   signOutLabel = "Sign out",
+  onSwitchOrganization = null,
   class: className = "",
 } = $props();
 
@@ -56,6 +57,20 @@ const showsAvatar = $derived(avatarUrl && broken !== avatarUrl);
 
     {#if info.manager}
       <span class="masks-person-role">Manager</span>
+    {/if}
+
+    {#if onSwitchOrganization && info.others.length}
+      <span class="masks-person-orgs">
+        {#each info.others as other (other.key)}
+          <button
+            type="button"
+            class="masks-person-switch"
+            onclick={() => onSwitchOrganization(other.key)}
+          >
+            {other.name}
+          </button>
+        {/each}
+      </span>
     {/if}
   </div>
 

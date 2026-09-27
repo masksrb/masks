@@ -86,3 +86,25 @@ test("the svelte Person names the organization and the role held in it", () => {
     /masks-person-org/,
   );
 });
+
+test("the svelte Person offers the other organizations only when it can switch", () => {
+  const acme = { id: "org-1", key: "acme", name: "Acme", role: "owner" };
+  const globex = { id: "org-2", key: "globex", name: "Globex", role: "member" };
+  const account = {
+    ...ACCOUNT,
+    organization: acme,
+    organizations: [acme, globex],
+  };
+
+  const { body } = render(Person, {
+    props: { account, onSwitchOrganization: () => {} },
+  });
+
+  assert.match(body, /masks-person-orgs/);
+  assert.match(body, /masks-person-switch[^>]*>\s*Globex/);
+  assert.doesNotMatch(body, /masks-person-switch[^>]*>\s*Acme/);
+  assert.doesNotMatch(
+    render(Person, { props: { account } }).body,
+    /masks-person-orgs/,
+  );
+});
