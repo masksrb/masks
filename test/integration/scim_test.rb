@@ -234,6 +234,7 @@ module Masks
 
       test "a token for one organization sees, adds, and removes only that organization's members" do
         acme = within { Organization.create!(key: "acme", name: "Acme") }
+        proven(acme, "acme.example")
         outsider = create_actor(nickname: "outsider", email: "outsider@example.com")
         secret = within { ProvisioningToken.issue!(label: "Acme Entra", by: @manager, organization: acme).secret }
 
@@ -312,6 +313,7 @@ module Masks
 
       test "an organization's token changes the accounts its directory created" do
         acme = within { Organization.create!(key: "acme", name: "Acme") }
+        proven(acme, "acme.example")
         secret = within { ProvisioningToken.issue!(label: "Acme Entra", by: @manager, organization: acme).secret }
 
         made = scim(:post, "/Users", secret: secret, body: {
@@ -347,13 +349,44 @@ module Masks
         })
       end
 
-      test "an organization's token without a proven domain provisions addresses unverified" do
+      test "an organization's token without a proven domain sets no address, whether or not someone holds it" do
         acme = within { Organization.create!(key: "acme", name: "Acme") }
+        create_actor(nickname: "ceo", email: "ceo@othercorp.example")
+        secret = acme_token(acme)
 
-        made = join_acme(acme_token(acme), "ceo@othercorp.example")
+        held = join_acme(secret, "ceo@othercorp.example")
+        held_status = response.status
+        free = join_acme(secret, "cfo@othercorp.example")
+
+        assert_equal 400, held_status
+        assert_response :bad_request
+        assert_equal held, free
+        assert_equal "invalidValue", free["scimType"]
+        refute within { Actor.exists?(email: "cfo@othercorp.example") }
+
+        made = scim(:post, "/Users", secret: secret, body: { "schemas" => [ Scim::USER ], "userName" => "grace", "active" => true })
 
         assert_response :created
-        assert_nil within { Actor.find_by!(uuid: made["id"]).email_verified_at }
+        assert_nil within { Actor.find_by!(uuid: made["id"]).email }
+      end
+
+      test "a foreign address someone holds and one nobody holds are refused alike, before anything is looked up" do
+        acme = within { Organization.create!(key: "acme", name: "Acme") }
+        proven(acme, "acme.example")
+        create_actor(nickname: "ceo", email: "ceo@othercorp.example")
+        secret = acme_token(acme)
+        made = join_acme(secret, "ada@acme.example")
+
+        answers = %w[ceo@othercorp.example cfo@othercorp.example].map do |email|
+          body = scim(:patch, "/Users/#{made["id"]}", secret: secret,
+                                                      body: { "schemas" => [ Scim::PATCH ],
+                                                              "Operations" => [ { "op" => "replace", "path" => "userName", "value" => email } ] })
+
+          [ response.status, body ]
+        end
+
+        assert_equal 400, answers.first.first
+        assert_equal answers.first, answers.last
       end
 
       test "an organization's token verifies addresses at its proven domains and refuses any other" do
@@ -383,6 +416,7 @@ module Masks
 
       test "an organization's token learns nothing about who else holds an address" do
         acme = within { Organization.create!(key: "acme", name: "Acme") }
+        proven(acme, "acme.example")
         create_actor(nickname: "ceo", email: "ceo@acme.example")
 
         taken = join_acme(acme_token(acme), "ceo@acme.example")
@@ -394,6 +428,7 @@ module Masks
 
       test "an invitation another organization has not had accepted does not block deprovisioning" do
         acme = within { Organization.create!(key: "acme", name: "Acme") }
+        proven(acme, "acme.example")
         globex = within { Organization.create!(key: "globex", name: "Globex") }
         secret = acme_token(acme)
         made = join_acme(secret, "grace@acme.example")

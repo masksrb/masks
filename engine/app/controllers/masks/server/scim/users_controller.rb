@@ -135,10 +135,11 @@ module Masks
           def settle!(user, action)
             actor = user.actor
 
+            proven!(actor) if actor.email_changed?
             guarded!(actor)
             last_manager!(actor) if user.suspending && !actor.suspended?
 
-            actor.email_verified_at = vouched?(actor.email) ? Time.current : nil if actor.email_changed?
+            actor.email_verified_at = actor.email.present? ? Time.current : nil if actor.email_changed?
 
             Actor.transaction do
               actor.save!
@@ -163,21 +164,14 @@ module Masks
             Scim::Error.new(:conflict, "another user already holds that userName, email or externalId", scim_type: "uniqueness")
           end
 
-          def vouched?(email)
-            return false if email.blank?
-
+          def proven!(actor)
             held = provisioned_organization
 
-            return true if held.nil?
+            return if held.nil? || actor.email.blank?
+            return if proven_domains(held).include?(actor.email.split("@", 2).last)
 
-            domain = email.to_s.downcase.split("@", 2).last.to_s
-
-            if proven_domains(held).any? && !proven_domains(held).include?(domain)
-              raise Scim::Error.new(:bad_request, "#{held.name}'s directory provisions addresses at #{proven_domains(held).join(', ')}",
-                                    scim_type: "invalidValue")
-            end
-
-            proven_domains(held).include?(domain)
+            raise Scim::Error.new(:bad_request, "#{held.name}'s directory sets only addresses at domains proven for #{held.name}",
+                                  scim_type: "invalidValue")
           end
 
           def proven_domains(organization)
