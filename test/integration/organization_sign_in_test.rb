@@ -253,6 +253,48 @@ module Masks
 
         assert_equal "admin", within { @acme.memberships.find_by!(actor: actor).role }
       end
+      test "an organization's provider never signs in as an existing account by its address alone" do
+        create_provider(role: "delegate", trusts_email: true, organization: @acme)
+        ada = create_actor(nickname: "ada", email: "ada@elsewhere.test", email_verified_at: Time.current)
+
+        ask_app(organization: "acme")
+        finish_sso(sub: "upstream-20", email: "ada@elsewhere.test", handoff: begin_sso(rid: current_rid))
+        follow_redirect! while response.redirect? && URI.parse(response.location).host.to_s.end_with?(".auth.test")
+        get "/login"
+
+        assert_equal "first-factor", auth_data["prompt"]
+        assert_nil signed_in_actor
+        assert_nil within { Connection.find_by(subject: "upstream-20") }
+        refute within { @acme.memberships.exists?(actor: ada) }
+      end
+
+      test "an organization's provider takes up a waiting invitation only at a domain it answers for" do
+        create_provider(role: "delegate", email_domains: "acme.test", organization: @acme)
+        create_actor(nickname: "owner", email: "owner@acme.test")
+        invited = within { Actor.create!(nickname: "ada", email: "ada@acme.test") }
+        stranger = within { Actor.create!(nickname: "bob", email: "bob@elsewhere.test") }
+
+        within do
+          @acme.memberships.create!(actor: invited, role: "admin", pending: true, invited_as: "ada@acme.test")
+          @acme.memberships.create!(actor: stranger, role: "member", pending: true, invited_as: "bob@elsewhere.test")
+        end
+
+        ask_app(organization: "acme")
+        finish_sso(sub: "upstream-21", email: "bob@elsewhere.test", handoff: begin_sso(rid: current_rid))
+
+        assert_match "outside acme.test", refusals.join("; ")
+        assert_nil within { Connection.find_by(subject: "upstream-21") }
+        assert within { @acme.memberships.find_by!(actor: stranger).pending? }
+
+        reset!
+        host! host_for(@tenant)
+        ask_app(organization: "acme")
+        finish_sso(sub: "upstream-22", email: "ada@acme.test", handoff: begin_sso(rid: current_rid))
+
+        assert arrived.present?
+        assert_equal invited.id, signed_in_actor&.id
+        refute within { @acme.memberships.find_by!(actor: invited).pending? }
+      end
     end
   end
 end
