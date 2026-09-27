@@ -3,6 +3,13 @@ module Masks
     class Session
       DEFAULT_SCOPE = %w[openid profile email].freeze
       ORGANIZATION = "organization".freeze
+      ORGANIZATION_KEY = /\A[a-z0-9][a-z0-9-]*\z/
+
+      def self.organization_key(value)
+        key = value.to_s.strip.downcase
+
+        key.match?(ORGANIZATION_KEY) ? key : nil
+      end
       ASSERTION_TYPE = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer".freeze
       ASSERTION_LIFETIME = 60
 
@@ -25,8 +32,7 @@ module Masks
                 nonce: SecureRandom.urlsafe_base64(24), max_age: nil, organization: nil)
         pkce = Pkce.generate
         scopes = Array(scope || self.scope)
-        organization = organization.to_s.strip
-        organization = nil if organization.empty?
+        organization = Session.organization_key(organization)
         nonce = nil unless scopes.include?("openid")
 
         pairs = [

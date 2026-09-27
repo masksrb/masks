@@ -86,7 +86,7 @@ module Masks
         end
 
         def role?(*roles)
-          present? && roles.flatten.map(&:to_s).include?(role)
+          roles.flatten.map(&:to_s).include?(role)
         end
 
         def owner?

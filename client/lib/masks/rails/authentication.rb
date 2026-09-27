@@ -14,11 +14,9 @@ module Masks
       class_methods do
         def masks_members_only!(role: nil, organization: nil, **options)
           before_action(-> { authorize_masks_member!(*Array(role), organization: organization) },
-                        **options.slice(:only, :except, :if, :unless))
+                        **options.slice(:only, :except))
         end
       end
-
-      ORGANIZATION_KEY = /\A[a-z0-9][a-z0-9-]*\z/
 
       REQUESTS = "masks_requests".freeze
       HANDSHAKES = "masks_handshakes".freeze
@@ -143,12 +141,6 @@ module Masks
         masks_organization&.role?(*roles) || false
       end
 
-      def masks_organization_key(value)
-        key = value.to_s.strip.downcase
-
-        key.match?(ORGANIZATION_KEY) ? key : nil
-      end
-
       def masks_scopes
         masks_tokens&.scopes || []
       end
@@ -170,7 +162,7 @@ module Masks
           resource: masks_config.resource_for(request)
         )
 
-        masks_store(refreshed, identity: masks_reorganized(refreshed))
+        masks_store(refreshed, identity: masks_refreshed_identity(refreshed))
         true
       rescue Masks::Client::Unregistered
         masks_disconnect!
@@ -180,16 +172,14 @@ module Masks
         false
       end
 
-      def masks_reorganized(tokens)
+      def masks_refreshed_identity(tokens)
         held = masks_held["identity"]
 
-        return nil unless held.is_a?(Hash) && held.key?(Masks::Client::Claims::ORGANIZATION)
+        return nil unless held.is_a?(Hash)
 
         profile = masks_session.profile(tokens)
 
-        return nil if profile.empty?
-
-        held.merge(Masks::Client::Claims::ORGANIZATION => profile[Masks::Client::Claims::ORGANIZATION]).compact
+        profile.empty? ? nil : held.merge(profile.slice(*IDENTITY))
       end
 
       def masks_logout_url(return_to: nil)
@@ -211,7 +201,7 @@ module Masks
         path = Masks::Rails::Engine.routes.url_helpers.start_path
         query = {
           "return_to" => masks_local_path(return_to),
-          "organization" => masks_organization_key(organization)
+          "organization" => Masks::Client::Session.organization_key(organization)
         }.compact
 
         query.empty? ? path : "#{path}?#{URI.encode_www_form(query)}"
@@ -230,7 +220,7 @@ module Masks
           "picture" => masks_claims.picture,
           "avatars" => masks_claims.avatars.to_h.presence,
           "tenant" => masks_tenant,
-          "organization" => masks_organization&.to_h&.slice("id", "key", "name", "role"),
+          "organization" => masks_organization&.to_h,
           "scopes" => masks_scopes,
           "expires_at" => masks_tokens&.expires_at,
           "account_url" => masks_account_url

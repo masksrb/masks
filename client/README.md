@@ -127,10 +127,10 @@ class BillingController < ApplicationController
 end
 ```
 
-`masks_organization` is the one signed in to — `id`, `key`, `name`, and `role` — or `nil`, and
-`masks_role?("owner")` asks about the role held in it. A refresh reads the role again, so a
-promotion or demotion reaches the app within an access token's lifetime rather than at the
-next sign-in. `/auth/session` answers the same thing as `organization`.
+`masks_organization` is the organization signed in to (its `id`, `key`, `name`, and `role`), or
+`nil`, and `masks_role?("owner")` asks about the role held in it. A refresh reads the person's
+profile again, so a promotion or demotion reaches the app within an access token's lifetime.
+`/auth/session` answers the same thing as `organization`.
 
 `masks_members_only!` refuses with 403, as `insufficient_organization` when the person signed
 in to none and `insufficient_role` when they hold another role. A resource server asks the same of a

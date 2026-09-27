@@ -84,8 +84,8 @@ class TestIssuer
     { code: code, state: query.dig("state", 0), query: query }
   end
 
-  def organization_claim(key = @organization)
-    key && { "id" => "org-#{key}", "key" => key, "name" => key.capitalize, "role" => role }
+  def organization_claim
+    @organization && { "id" => "org-#{@organization}", "key" => @organization, "name" => @organization.capitalize, "role" => role }
   end
 
   def last_registration
