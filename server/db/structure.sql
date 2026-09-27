@@ -3235,6 +3235,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260927170000'),
 ('20260927160000'),
 ('20260927140500'),
 ('20260927120000'),
