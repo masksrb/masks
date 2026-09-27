@@ -6,6 +6,7 @@
   import ScopesEditor from "./ScopesEditor.svelte";
   import BarChart from "./ui/BarChart.svelte";
   import Section from "./ui/Section.svelte";
+  import Select from "./ui/Select.svelte";
   import Facts from "./ui/Facts.svelte";
   import Field from "./ui/Field.svelte";
   import Link from "./ui/Link.svelte";
@@ -277,7 +278,11 @@
     <Notices feedback={feedback.state} />
 
     <div class="grid gap-4">
-      <Section title="Tenant">
+      <Section
+        row
+        title="Tenant"
+        help="The name heads every screen and email masks sends. Apps discover this tenant at its issuer, and the manage API answers at its resource."
+      >
         <Field label="Name" bind:value={name} onsave={() => update({ name }, "Renamed.")} />
 
         <Facts
@@ -291,40 +296,33 @@
       </Section>
 
       <Section
+        row
         title="Accounts are named by"
+        help="What a person types to sign in. Every policy has to require whichever this names."
       >
-        <select
-          class="select select-sm w-full"
+        <Select
           value={data.tenant.namedBy}
-          onchange={(event) =>
-            update({ namedBy: event.currentTarget.value }, "Naming updated.")}
-        >
-          <option value="nickname">Nickname</option>
-          <option value="email">Email</option>
-          <option value="either">Either</option>
-        </select>
+          options={[["nickname", "Nickname"], ["email", "Email"], ["either", "Either"]]}
+          onchange={(namedBy) => update({ namedBy }, "Naming updated.")}
+        />
       </Section>
 
       <Section
+        row
         title="Default policy"
+        help="The sign-in policy for every client that has none of its own. Built-in offers passwords, passkeys, and providers, with an optional second factor."
       >
-        <select
-          class="select select-sm w-full"
+        <Select
           value={data.tenant.signInPolicy?.key ?? ""}
-          onchange={(event) =>
-            update({ signInPolicy: event.currentTarget.value }, "Default policy updated.")}
-        >
-          <option value="">Built-in</option>
-          {#each data.signInPolicies as policy (policy.key)}
-            <option value={policy.key}>{policy.name}</option>
-          {/each}
-        </select>
-
-
+          options={[["", "Built-in"], ...data.signInPolicies.map((policy) => [policy.key, policy.name])]}
+          onchange={(signInPolicy) => update({ signInPolicy }, "Default policy updated.")}
+        />
       </Section>
 
       <Section
+        row
         title="Who may sign in"
+        help="Browsers only refuses any sign-in from something that does not present itself as a browser. Refused user agents takes fragments, separated by commas, and refuses every user agent that contains one."
       >
         <Switch
           label="Browsers only"
@@ -342,55 +340,42 @@
       </Section>
 
       <Section
+        row
         title="Idle accounts"
-        lede="An account nobody signs in to or uses through an app is suspended, then deleted, after the periods below. Each step is warned by email at least 30 days ahead, and signing in before a suspension keeps the account. With Suspend set, only accounts suspended for being idle are deleted. With Suspend at Never, idle accounts are deleted directly. The last manager and accounts a provider provisions over SCIM are left alone."
+        help="An account nobody signs in to or uses through an app is suspended, then deleted, after these periods. Each step is warned by email at least 30 days ahead, and signing in before a suspension keeps the account. With Suspend set, only accounts suspended for being idle are deleted. With Suspend at Never, idle accounts are deleted directly. The last manager and accounts a provider provisions over SCIM are left alone."
       >
         <div class="grid gap-3 sm:grid-cols-2">
-          <label class="flex flex-col gap-1.5">
-            <span class="text-xs font-medium opacity-70">Suspend</span>
-            <select
-              class="select select-sm w-full"
-              value={data.tenant.suspendAfter ?? 0}
-              onchange={(event) =>
-                update({ suspendAfter: Number(event.currentTarget.value) }, "Idle accounts updated.")}
-            >
-              {#each choices(SUSPEND_AFTER, data.tenant.suspendAfter) as [days, label] (days)}
-                <option value={days}>{label}</option>
-              {/each}
-            </select>
-          </label>
+          <Select
+            label="Suspend"
+            value={data.tenant.suspendAfter ?? 0}
+            options={choices(SUSPEND_AFTER, data.tenant.suspendAfter)}
+            onchange={(days) => update({ suspendAfter: Number(days) }, "Idle accounts updated.")}
+          />
 
-          <label class="flex flex-col gap-1.5">
-            <span class="text-xs font-medium opacity-70">Delete</span>
-            <select
-              class="select select-sm w-full"
-              value={data.tenant.deleteAfter ?? 0}
-              onchange={(event) => deleteAfter(Number(event.currentTarget.value))}
-            >
-              {#each choices(DELETE_AFTER, data.tenant.deleteAfter) as [days, label] (days)}
-                <option value={days} disabled={days > 0 && days <= (data.tenant.suspendAfter ?? 0)}>{label}</option>
-              {/each}
-            </select>
-          </label>
+          <Select
+            label="Delete"
+            value={data.tenant.deleteAfter ?? 0}
+            options={choices(DELETE_AFTER, data.tenant.deleteAfter).map(([days, label]) => [
+              days,
+              label,
+              days > 0 && days <= (data.tenant.suspendAfter ?? 0),
+            ])}
+            onchange={(days) => deleteAfter(Number(days))}
+          />
         </div>
       </Section>
 
       <Section
+        row
         title="Dynamic registration"
+        help="Whether apps may register themselves over RFC 7591. A self-registered app is never approved, and with the limit on it may ask only for the scopes chosen here."
       >
-        <select
-          class="select select-sm w-full"
+        <Select
           value={data.tenant.dynamicRegistration}
-          onchange={(event) =>
-            update(
-              { dynamicRegistration: event.currentTarget.value },
-              "Dynamic registration updated.",
-            )}
-        >
-          <option value="off">Off</option>
-          <option value="anything">On</option>
-          <option value="bounded">On, limited to these scopes</option>
-        </select>
+          options={[["off", "Off"], ["anything", "On"], ["bounded", "On, limited to these scopes"]]}
+          onchange={(dynamicRegistration) =>
+            update({ dynamicRegistration }, "Dynamic registration updated.")}
+        />
 
         <ScopesEditor
           value={data.tenant.dynamicClientScopes ?? []}

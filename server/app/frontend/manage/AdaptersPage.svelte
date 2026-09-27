@@ -263,7 +263,7 @@
       <Section title={editing === "" ? "Add adapter" : `Edit ${draft.name}`}>
         {#if editing === ""}
           <label class="flex flex-col gap-1.5">
-            <span class="text-xs font-medium opacity-70">Service</span>
+            <span class="field-label">Service</span>
             <select
               class="select select-sm w-full"
               value={draft.service}
@@ -293,11 +293,11 @@
             {#if field.type === "boolean"}
               <div class="flex flex-col gap-1 sm:col-span-2">
                 <Switch label={field.label} bind:checked={draft.config[field.key]} />
-                {#if field.hint}<p class="text-xs opacity-60">{field.hint}</p>{/if}
+                {#if field.hint}<p class="hint">{field.hint}</p>{/if}
               </div>
             {:else if field.options}
               <label class="flex flex-col gap-1.5">
-                <span class="text-xs font-medium opacity-70">{field.label}</span>
+                <span class="field-label">{field.label}</span>
                 <select class="select select-sm w-full" bind:value={draft.config[field.key]}>
                   {#each field.options as option (option)}
                     <option value={option}>{option}</option>
@@ -315,7 +315,7 @@
                   spellcheck="false"
                   placeholder={field.secret && draft.secretsHeld?.includes(field.key) ? "unchanged" : ""}
                 />
-                {#if field.hint}<p class="text-xs opacity-60">{field.hint}</p>{/if}
+                {#if field.hint}<p class="hint">{field.hint}</p>{/if}
               </div>
             {/if}
           {/each}
@@ -348,7 +348,7 @@
                   {adapter.name}
                   {#if adapter.primary}<span class="badge badge-success badge-sm">Primary</span>{/if}
                 </span>
-                <span class="text-xs opacity-60">
+                <span class="hint">
                   {adapter.label} · <span class="font-mono">{adapter.key}</span> · added {day(adapter.createdAt)}
                 </span>
               </div>
@@ -393,7 +393,7 @@
         {#each data.archived as adapter (adapter.key)}
           <div class="flex flex-wrap items-center justify-between gap-2">
             <span class="text-sm">
-              {adapter.name} <span class="text-xs opacity-60">{adapter.label} · {adapter.kind}</span>
+              {adapter.name} <span class="hint">{adapter.label} · {adapter.kind}</span>
             </span>
             <button
               type="button"

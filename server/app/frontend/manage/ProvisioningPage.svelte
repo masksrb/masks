@@ -90,17 +90,15 @@
     <Spinner />
   {:else if data}
     <div class="grid gap-4">
-      <Section title="Connect a provider">
+      <Section
+        row
+        title="Connect a provider"
+        help="Give the provider this URL and a token. A provisioned actor is known by their email, which masks takes as confirmed, and signs in through a provider or an invitation. Nobody who holds a masks: scope has their password or email changed this way, and the last manager is never suspended or removed."
+      >
         <div class="flex flex-col gap-1.5">
-          <span class="text-xs font-medium opacity-70">SCIM base URL</span>
+          <span class="field-label">SCIM base URL</span>
           <code class="rounded bg-base-200 px-2 py-1 font-mono text-xs break-all">{data.scimBaseUrl}</code>
         </div>
-
-        <p class="text-xs opacity-60">
-          Give it this URL and a token. A provisioned actor is known by their email, which masks takes as
-          confirmed, and signs in through a provider or an invitation. Nobody who holds a masks: scope has
-          their password or email changed this way, and the last manager is never suspended or removed.
-        </p>
 
         <Field label="Label" bind:value={label} placeholder="Entra ID" />
 
@@ -122,7 +120,7 @@
         {/if}
       </Section>
 
-      <Section title="Tokens">
+      <Section row title="Tokens">
         {#if data.provisioningTokens.length === 0}
           <p class="text-sm opacity-70">None issued.</p>
         {:else}

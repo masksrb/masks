@@ -226,7 +226,7 @@
           </button>
         {/if}
         {#if devices.length === LIMIT}
-          <span class="text-xs opacity-60">Only the newest {LIMIT} are shown.</span>
+          <span class="hint">Only the newest {LIMIT} are shown.</span>
         {/if}
       </div>
     {/if}

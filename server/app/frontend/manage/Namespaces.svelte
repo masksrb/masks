@@ -80,7 +80,7 @@
                   Release
                 </button>
               {:else}
-                <span class="text-xs opacity-60">archive to release</span>
+                <span class="hint">archive to release</span>
               {/if}
             </td>
           </tr>

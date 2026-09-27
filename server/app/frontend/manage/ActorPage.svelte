@@ -390,7 +390,7 @@
                 {:else}
                   <div class="size-16 rounded border border-dashed border-base-300"></div>
                 {/if}
-                <span class="text-xs opacity-60">{style}</span>
+                <span class="hint">{style}</span>
               </div>
             {/each}
           </div>
@@ -415,7 +415,7 @@
           </div>
 
           {#if uploading}
-            <span class="text-xs opacity-60">Uploading...</span>
+            <span class="hint">Uploading...</span>
           {/if}
         </Section>
 
@@ -432,7 +432,7 @@
           {/if}
 
           {#if actor.externalId}
-            <p class="text-xs opacity-60">
+            <p class="hint">
               Provisioned as <span class="font-mono">{actor.externalId}</span>. The identity provider may change or
               suspend this actor too.
             </p>

@@ -380,12 +380,12 @@
           <Facts rows={facts} />
 
           {#if saml}
-            <p class="text-xs opacity-60">A SAML application. It is signed into with an assertion, not a token.</p>
+            <p class="hint">A SAML application. It is signed into with an assertion, not a token.</p>
           {:else if client.tokenEndpointAuthMethod === "none"}
-            <p class="text-xs opacity-60">A public client. It authenticates with nothing, and proves itself with PKCE.</p>
+            <p class="hint">A public client. It authenticates with nothing, and proves itself with PKCE.</p>
           {:else}
             <label class="flex flex-col gap-1.5">
-              <span class="text-xs font-medium opacity-70">Authenticates with</span>
+              <span class="field-label">Authenticates with</span>
               <select
                 class="select select-sm w-full"
                 value={method}
@@ -404,7 +404,7 @@
 
           {#if !saml}
             <label class="flex flex-col gap-1.5">
-              <span class="text-xs font-medium opacity-70">Knows actors as</span>
+              <span class="field-label">Knows actors as</span>
               <select
                 class="select select-sm w-full"
                 value={client.subjectType}
@@ -477,7 +477,7 @@
             />
 
             <label class="flex flex-col gap-1.5">
-              <span class="text-xs font-medium opacity-70">Names actors by</span>
+              <span class="field-label">Names actors by</span>
               <select
                 class="select select-sm w-full"
                 value={client.samlNameIdFormat ?? NAME_IDS[0][0]}
@@ -490,7 +490,7 @@
             </label>
 
             <label class="flex flex-col gap-1.5">
-              <span class="text-xs font-medium opacity-70">Its signing certificate</span>
+              <span class="field-label">Its signing certificate</span>
               <textarea
                 class="textarea textarea-sm w-full font-mono text-xs"
                 rows="3"
@@ -507,7 +507,7 @@
             </label>
 
             <label class="flex flex-col gap-1.5">
-              <span class="text-xs font-medium opacity-70">Attributes it is sent, one attribute = claim a line</span>
+              <span class="field-label">Attributes it is sent, one attribute = claim a line</span>
               <textarea
                 class="textarea textarea-sm w-full font-mono text-xs"
                 rows="5"
@@ -515,7 +515,7 @@
                 placeholder={SAML_DEFAULTS}
                 bind:value={attributes}
               ></textarea>
-              <span class="text-xs opacity-60">Left empty, it is sent the ones shown. An email is sent only once confirmed.</span>
+              <span class="hint">Left empty, it is sent the ones shown. An email is sent only once confirmed.</span>
               <button type="button" class="btn btn-sm self-start" onclick={saveAttributes}>Save</button>
             </label>
 
@@ -543,7 +543,7 @@
         <Section title="Shown to actors">
           <div class="flex items-center gap-3">
             <ClientLogo {client} class="size-14 rounded-lg border border-base-300 text-xl" />
-            <p class="text-xs opacity-60">
+            <p class="hint">
               {#if !client.approvedAt}
                 Nobody sees its logo until it is approved: a client that registered itself could borrow anybody's.
               {:else}
@@ -567,7 +567,7 @@
 
         <Section title="Sign-in">
           <label class="flex flex-col gap-1.5">
-            <span class="text-xs font-medium opacity-70">Policy</span>
+            <span class="field-label">Policy</span>
             <select
               class="select select-sm w-full"
               value={client.signInPolicy?.key ?? ""}
@@ -588,7 +588,7 @@
           {:else if client.signInPolicy}
             {#if differences.length}
               <div class="flex flex-col gap-1.5">
-                <span class="text-xs font-medium opacity-70">Where it differs from {fallbackPolicy?.name}</span>
+                <span class="field-label">Where it differs from {fallbackPolicy?.name}</span>
                 <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
                   {#each differences as { term, value, instead } (term)}
                     <dt class="opacity-60">{term}</dt>
@@ -597,7 +597,7 @@
                 </dl>
               </div>
             {:else}
-              <p class="text-xs opacity-60">The same as {fallbackPolicy?.name} in every way.</p>
+              <p class="hint">The same as {fallbackPolicy?.name} in every way.</p>
             {/if}
           {/if}
 
@@ -659,7 +659,7 @@
 
         {#if !saml}
           <Section title="Keys">
-            <p class="text-xs opacity-60">
+            <p class="hint">
               What masks checks its signed assertions (private_key_jwt) and signed requests (JAR) against. A URL or the
               key set itself, not both.
             </p>
@@ -675,7 +675,7 @@
             />
 
             <label class="flex flex-col gap-1.5">
-              <span class="text-xs font-medium opacity-70">Or the key set (JWKS)</span>
+              <span class="field-label">Or the key set (JWKS)</span>
               <textarea
                 class="textarea textarea-sm w-full font-mono text-xs"
                 rows="4"
@@ -704,7 +704,7 @@
 
         <Section title="Scopes">
           <div class="flex flex-col gap-1.5">
-            <span class="text-xs font-medium opacity-70">Always granted</span>
+            <span class="field-label">Always granted</span>
             <ScopesEditor
               value={client.requiredScopes}
               available={supported}
@@ -713,7 +713,7 @@
           </div>
 
           <div class="flex flex-col gap-1.5">
-            <span class="text-xs font-medium opacity-70">On request</span>
+            <span class="field-label">On request</span>
             <ScopesEditor
               value={client.allowedScopes}
               available={supported}

@@ -10,7 +10,7 @@
 </script>
 
 <label class="flex flex-col gap-1.5">
-  <span class="text-xs font-medium opacity-70">{label}</span>
+  <span class="field-label">{label}</span>
 
   {#if onsave}
     <div class="join">

@@ -227,7 +227,7 @@
       />
 
       {#if password}
-        <p class="text-xs opacity-60">At least {minimum} characters, and you will know it.</p>
+        <p class="hint">At least {minimum} characters, and you will know it.</p>
       {/if}
 
       <div class="flex flex-col gap-2">

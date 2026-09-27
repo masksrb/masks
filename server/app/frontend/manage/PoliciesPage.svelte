@@ -273,7 +273,7 @@
                   />
 
                   <label class="flex flex-col gap-1.5">
-                    <span class="text-xs font-medium opacity-70">Confirmation</span>
+                    <span class="field-label">Confirmation</span>
                     <select class="select select-sm w-full" bind:value={draft.confirmation}>
                       {#each CONFIRMATIONS as [value, label] (value)}
                         <option {value}>{label}</option>
@@ -289,7 +289,7 @@
                 {/if}
 
                 <div class="flex flex-col gap-1.5">
-                  <span class="text-xs font-medium opacity-70">Signup scopes</span>
+                  <span class="field-label">Signup scopes</span>
                   <ScopesEditor
                     value={draft.signupScopes}
                     available={data.scopesSupported.filter((scope) => !scope.startsWith("masks:"))}
@@ -324,7 +324,7 @@
               <div class="grid gap-3 sm:grid-cols-3">
                 {#each [["nickname", "Nickname"], ["email", "Email"], ["phone", "Phone"]] as [field, label] (field)}
                   <label class="flex flex-col gap-1.5">
-                    <span class="text-xs font-medium opacity-70">{label}</span>
+                    <span class="field-label">{label}</span>
                     <select class="select select-sm w-full" bind:value={draft[field]}>
                       {#each PRESENCE as [value, text] (value)}
                         <option {value}>{text}</option>
@@ -436,9 +436,9 @@
               {policy.name}
               {#if policy.default}<span class="badge badge-success badge-sm">Default</span>{/if}
             </span>
-            <span class="text-xs opacity-60">{summary(policy)}</span>
+            <span class="hint">{summary(policy)}</span>
             {#if policy.clients.length}
-              <span class="text-xs opacity-60">
+              <span class="hint">
                 Used by
                 {#each policy.clients as client, index (client.clientId)}
                   {index ? ", " : ""}<Link to={`/clients/${client.clientId}`} class="link">{client.name}</Link>

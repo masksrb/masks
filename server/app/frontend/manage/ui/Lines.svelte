@@ -25,7 +25,7 @@
 </script>
 
 <label class="flex flex-col gap-1.5">
-  <span class="text-xs font-medium opacity-70">{label}</span>
+  <span class="field-label">{label}</span>
 
   <textarea
     class="textarea textarea-sm w-full font-mono text-xs"
@@ -37,7 +37,7 @@
   ></textarea>
 
   {#if hint}
-    <span class="text-xs opacity-60">{hint}</span>
+    <span class="hint">{hint}</span>
   {/if}
 
   <button

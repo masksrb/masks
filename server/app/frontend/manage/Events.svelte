@@ -32,7 +32,7 @@
             {/if}
 
             {#if event.by && event.by.uuid !== event.actor?.uuid}
-              <span class="text-xs opacity-60">
+              <span class="hint">
                 by <Link to={`/actors/${event.by.uuid}`} class="link link-hover">
                   {event.by.identifier}
                 </Link>

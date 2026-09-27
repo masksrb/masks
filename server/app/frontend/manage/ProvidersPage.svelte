@@ -479,7 +479,7 @@
   <Notices feedback={feedback.state} />
 
   {#if picking}
-    <Section title="Add provider" lede="Pick who actors will sign in with. Anything not listed speaks one of the three at the end.">
+    <Section title="Add provider" help="Pick who actors will sign in with. Anything not listed speaks one of the three at the end.">
       {#snippet actions()}
         <button type="button" class="btn btn-ghost btn-sm" onclick={close}>Cancel</button>
       {/snippet}
@@ -517,7 +517,7 @@
 
         {#each saml ? [["Assertion consumer service URL", callbackUrl], ["Service provider entity ID", spEntityId]] : [["Redirect URI", callbackUrl]] as [label, value] (label)}
           <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-            <span class="text-xs opacity-60">{label}</span>
+            <span class="hint">{label}</span>
             <button type="button" class="link font-mono text-xs break-all" onclick={() => copy(value)}>
               {value}
             </button>
@@ -579,11 +579,11 @@
           </div>
 
           <label class="flex flex-col gap-1.5">
-            <span class="text-xs font-medium opacity-70">Or paste the metadata</span>
+            <span class="field-label">Or paste the metadata</span>
             <textarea class="textarea textarea-sm w-full font-mono text-xs" rows="3" bind:value={draft.metadataXml}></textarea>
           </label>
 
-          <p class="text-xs opacity-60">
+          <p class="hint">
             A metadata URL is read again every night, so a certificate the identity provider rotates is
             picked up without anybody noticing.
           </p>
@@ -594,12 +594,12 @@
           </div>
 
           <label class="flex flex-col gap-1.5">
-            <span class="text-xs font-medium opacity-70">Signing certificates</span>
+            <span class="field-label">Signing certificates</span>
             <textarea class="textarea textarea-sm w-full font-mono text-xs" rows="4" bind:value={draft.idpCertificates}></textarea>
           </label>
 
           <label class="flex flex-col gap-1.5">
-            <span class="text-xs font-medium opacity-70">Name ID format</span>
+            <span class="field-label">Name ID format</span>
             <select class="select select-sm w-full" bind:value={draft.nameIdFormat}>
               {#each NAME_ID_FORMATS as [value, label] (value)}
                 <option {value}>{label}</option>
@@ -623,7 +623,7 @@
           {:else}
             <span class="font-mono text-xs break-all opacity-70">{draft.resourceUrl}</span>
           {/if}
-          <p class="text-xs opacity-60">
+          <p class="hint">
             masks finds the server's own authorization server from its protected resource metadata and
             registers itself there, so there is no client ID to copy. An MCP server never signs anybody in;
             it is only something applications can be let use.
@@ -686,7 +686,7 @@
             </div>
 
             <label class="flex flex-col gap-1.5">
-              <span class="text-xs font-medium opacity-70">Private key (.p8)</span>
+              <span class="field-label">Private key (.p8)</span>
               <textarea
                 class="textarea textarea-sm w-full font-mono text-xs"
                 rows="4"
@@ -699,7 +699,7 @@
           {#if custom}
             <div class="grid gap-3 sm:grid-cols-2">
               <label class="flex flex-col gap-1.5">
-                <span class="text-xs font-medium opacity-70">Sends the secret</span>
+                <span class="field-label">Sends the secret</span>
                 <select class="select select-sm w-full" bind:value={draft.tokenAuthMethod}>
                   <option value="client_secret_post">in the request body</option>
                   <option value="client_secret_basic">as basic auth</option>
@@ -754,7 +754,7 @@
               <input type="checkbox" class="toggle toggle-sm" bind:checked={draft.delegates} />
               <span>
                 Let applications use somebody's {draft.name.trim() || "provider"} account
-                <span class="block text-xs opacity-60">
+                <span class="hint block">
                   An approved application can ask an actor to let it act as them at
                   {draft.name.trim() || "the provider"} while they are away. masks keeps the tokens, refreshes
                   them, and hands each one only to the application that actor said yes to.
@@ -782,7 +782,7 @@
                 placeholder="access_type=offline prompt=consent"
               />
             </div>
-            <p class="text-xs opacity-60">
+            <p class="hint">
               An application asks for <span class="font-mono">masks:delegate:{draft.key.trim() || "key"}</span>.
               Changing what applications may do asks everybody to connect again.
             </p>
@@ -803,7 +803,7 @@
           />
           <span>
             {draft.name.trim() || "This provider"} owns the account
-            <span class="block text-xs opacity-60">
+            <span class="hint block">
               On, somebody new gets an account here, and their name, photo and address follow
               {draft.name.trim() || "the provider"} each time they sign in. Off, it is only another way into
               an account that already exists. Either way it stands in for a password, never for a second
@@ -817,7 +817,7 @@
             <input type="checkbox" class="toggle toggle-sm" bind:checked={draft.trustsEmail} />
             <span>
               Trust the addresses it confirms
-              <span class="block text-xs opacity-60">
+              <span class="hint block">
                 Only for a provider that really checks an actor holds the mailbox, as Google, Apple and
                 GitHub do. Off, only addresses in the domains below are taken at its word.
               </span>
@@ -901,7 +901,7 @@
 
         <dl class="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
           <div class="sm:col-span-2">
-            <dt class="text-xs opacity-60">{provider.protocol === "saml" ? "Assertion consumer service URL" : "Redirect URI"}</dt>
+            <dt class="term">{provider.protocol === "saml" ? "Assertion consumer service URL" : "Redirect URI"}</dt>
             <dd>
               <button type="button" class="link font-mono text-xs break-all" onclick={() => copy(provider.callbackUrl)}>
                 {provider.callbackUrl}
@@ -911,7 +911,7 @@
 
           {#if provider.protocol === "saml"}
             <div class="sm:col-span-2">
-              <dt class="text-xs opacity-60">Service provider entity ID</dt>
+              <dt class="term">Service provider entity ID</dt>
               <dd>
                 <a class="link font-mono text-xs break-all" href={provider.spEntityId} target="_blank" rel="noreferrer">
                   {provider.spEntityId}
@@ -919,11 +919,11 @@
               </dd>
             </div>
             <div>
-              <dt class="text-xs opacity-60">Identity provider</dt>
+              <dt class="term">Identity provider</dt>
               <dd class="font-mono text-xs break-all">{provider.idpEntityId}</dd>
             </div>
             <div>
-              <dt class="text-xs opacity-60">Metadata</dt>
+              <dt class="term">Metadata</dt>
               <dd class="text-xs">
                 {#if provider.metadataUrl}
                   read {provider.metadataFetchedAt ? day(provider.metadataFetchedAt) : "never"}
@@ -934,11 +934,11 @@
             </div>
           {:else if provider.protocol !== "mcp"}
             <div>
-              <dt class="text-xs opacity-60">Client ID</dt>
+              <dt class="term">Client ID</dt>
               <dd class="font-mono break-all">{provider.clientId}</dd>
             </div>
             <div>
-              <dt class="text-xs opacity-60">{provider.tokenAuthMethod === "signed_secret" ? "Signing key" : "Secret"}</dt>
+              <dt class="term">{provider.tokenAuthMethod === "signed_secret" ? "Signing key" : "Secret"}</dt>
               <dd>
                 {#if provider.tokenAuthMethod === "signed_secret" ? provider.privateKeyHeld : provider.secretHeld}
                   held
@@ -949,50 +949,50 @@
             </div>
             {#if provider.issuer}
               <div>
-                <dt class="text-xs opacity-60">Issuer</dt>
+                <dt class="term">Issuer</dt>
                 <dd class="font-mono text-xs break-all">{provider.issuer}</dd>
               </div>
             {/if}
             <div>
-              <dt class="text-xs opacity-60">Scopes asked upstream</dt>
+              <dt class="term">Scopes asked upstream</dt>
               <dd class="font-mono text-xs break-all">{provider.scopes.join(" ") || "—"}</dd>
             </div>
           {/if}
 
           {#if provider.protocol === "mcp"}
             <div class="sm:col-span-2">
-              <dt class="text-xs opacity-60">MCP server</dt>
+              <dt class="term">MCP server</dt>
               <dd class="font-mono text-xs break-all">{provider.resourceUrl}</dd>
             </div>
             <div>
-              <dt class="text-xs opacity-60">Registered</dt>
+              <dt class="term">Registered</dt>
               <dd class="text-xs">{provider.registeredAt ? day(provider.registeredAt) : "never"}</dd>
             </div>
           {/if}
 
           {#if provider.delegates}
             <div>
-              <dt class="text-xs opacity-60">Applications ask for</dt>
+              <dt class="term">Applications ask for</dt>
               <dd class="font-mono text-xs break-all">{provider.delegationScope}</dd>
             </div>
             <div>
-              <dt class="text-xs opacity-60">Applications using it</dt>
+              <dt class="term">Applications using it</dt>
               <dd>{provider.delegations}</dd>
             </div>
             {#if provider.delegatedScopes.length}
               <div class="sm:col-span-2">
-                <dt class="text-xs opacity-60">What applications may do</dt>
+                <dt class="term">What applications may do</dt>
                 <dd class="font-mono text-xs break-all">{provider.delegatedScopes.join(" ")}</dd>
               </div>
             {/if}
           {/if}
 
           <div>
-            <dt class="text-xs opacity-60">Connected accounts</dt>
+            <dt class="term">Connected accounts</dt>
             <dd>
               {provider.connections}
               {#if provider.signedIn}
-                <span class="text-xs opacity-60">· {provider.signedIn} sign in with it</span>
+                <span class="hint">· {provider.signedIn} sign in with it</span>
               {/if}
             </dd>
           </div>

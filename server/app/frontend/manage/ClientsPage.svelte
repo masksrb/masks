@@ -259,7 +259,7 @@
         {/each}
       </div>
 
-      <p class="text-xs opacity-60">
+      <p class="hint">
         {draft.kind === "service"
           ? "It asks the token endpoint for its own token with client_credentials. No actor is behind it, so it never holds openid, profile, email or masks:manage."
           : draft.kind === "saml"
@@ -269,7 +269,7 @@
 
       {#if draft.kind === "saml"}
         <label class="flex flex-col gap-1.5">
-          <span class="text-xs font-medium opacity-70">Its metadata</span>
+          <span class="field-label">Its metadata</span>
           <textarea
             class="textarea textarea-sm w-full font-mono text-xs"
             rows="3"
@@ -290,7 +290,7 @@
         <Field label="Entity ID" bind:value={draft.entityId} placeholder="https://wiki.example.com/saml" />
 
         <label class="flex flex-col gap-1.5">
-          <span class="text-xs font-medium opacity-70">Assertion consumer services</span>
+          <span class="field-label">Assertion consumer services</span>
           <textarea
             class="textarea textarea-sm w-full font-mono text-xs"
             rows="2"
@@ -301,7 +301,7 @@
         </label>
 
         <label class="flex flex-col gap-1.5">
-          <span class="text-xs font-medium opacity-70">Signing certificate, if it signs its requests</span>
+          <span class="field-label">Signing certificate, if it signs its requests</span>
           <textarea
             class="textarea textarea-sm w-full font-mono text-xs"
             rows="2"
@@ -315,7 +315,7 @@
 
       {#if draft.kind === "app"}
         <label class="flex flex-col gap-1.5">
-          <span class="text-xs font-medium opacity-70">Redirect URIs</span>
+          <span class="field-label">Redirect URIs</span>
           <textarea
             class="textarea textarea-sm w-full font-mono text-xs"
             rows="2"
@@ -330,7 +330,7 @@
 
       {#if draft.kind !== "saml"}
       <label class="flex flex-col gap-1.5">
-        <span class="text-xs font-medium opacity-70">Resources</span>
+        <span class="field-label">Resources</span>
         <textarea
           class="textarea textarea-sm w-full font-mono text-xs"
           rows="2"
