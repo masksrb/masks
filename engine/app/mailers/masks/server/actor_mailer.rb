@@ -94,19 +94,20 @@ module Masks
         )
       end
 
-      def idle(actor, tenant_name:, due:, action:, origin: nil)
+      def idle(actor, tenant_name:, due:, notice:, origin: nil)
         return message unless deliverable?
 
         @actor = actor
         @tenant_name = tenant_name
         @due = I18n.l(due.to_date, format: :long)
-        @lede = actor.suspended? ? "delete_suspended" : action
-        @url = origin.presence && !actor.suspended? && "#{origin}/"
+        @notice = notice
+        @keeps = notice != IdleAccounts::DELETE_SUSPENDED
+        @url = @keeps && origin.presence && "#{origin}/"
 
         mail(
           from: self.class.from,
           to: actor.email,
-          subject: t("actor_mailer.idle.subject.#{actor.suspended? ? 'suspended' : 'active'}", tenant: tenant_name)
+          subject: t("actor_mailer.idle.subject.#{@keeps ? 'active' : 'suspended'}", tenant: tenant_name)
         )
       end
 

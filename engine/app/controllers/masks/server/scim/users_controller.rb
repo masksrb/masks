@@ -115,7 +115,7 @@ module Masks
             return if suspending.nil?
 
             if suspending && !actor.suspended?
-              actor.suspend!
+              actor.suspend!(reason: Actor::SCIM)
               Event.record!(Event::ACTOR_SUSPENDED, actor: actor, by: nil, via: "scim")
             elsif !suspending && actor.suspended?
               actor.restore!

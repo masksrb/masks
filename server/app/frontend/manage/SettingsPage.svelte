@@ -343,7 +343,7 @@
 
       <Section
         title="Idle accounts"
-        lede="An account nobody has signed in to or used through an app is suspended, then deleted, after the periods below. Each step is warned by email at least 30 days ahead, and signing in keeps the account. Only accounts suspended for being idle are deleted. The last manager and accounts a provider provisions over SCIM are left alone."
+        lede="An account nobody signs in to or uses through an app is suspended, then deleted, after the periods below. Each step is warned by email at least 30 days ahead, and signing in before a suspension keeps the account. With Suspend set, only accounts suspended for being idle are deleted. With Suspend at Never, idle accounts are deleted directly. The last manager and accounts a provider provisions over SCIM are left alone."
       >
         <div class="grid gap-3 sm:grid-cols-2">
           <label class="flex flex-col gap-1.5">

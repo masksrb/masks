@@ -13,7 +13,7 @@ module Masks
             refuse!("that is you, and suspending yourself would lock you out") if actor.id == viewer.id
             refuse!("#{actor.identifier} is already suspended") if actor.suspended?
 
-            actor.suspend!
+            actor.suspend!(reason: Masks::Server::Actor::MANAGER)
             audit!(Masks::Server::Event::ACTOR_SUSPENDED, actor: actor)
 
             { actor: actor }

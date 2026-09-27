@@ -33,8 +33,8 @@ module Masks
 
         within do
           assert_not @idle.suspended?
-          assert_equal IdleAccounts::SUSPEND, @idle.idle_warning
-          assert Event.exists?(action: Event::ACTOR_IDLE_WARNED, actor_id: @idle.id)
+          assert @idle.idle_warned_at.present?
+          assert_equal IdleAccounts::SUSPEND, Event.where(action: Event::ACTOR_IDLE_WARNED, actor_id: @idle.id).sole.details["then"]
         end
 
         mail = mailed.sole
@@ -56,7 +56,7 @@ module Masks
 
           within do
             assert @idle.suspended?
-            assert @idle.idle_suspended?
+            assert_equal Actor::IDLE, @idle.suspension_reason
             event = Event.where(action: Event::ACTOR_SUSPENDED, actor_id: @idle.id).sole
             assert_nil event.by_id
             assert_equal "idle", event.details["reason"]
@@ -86,7 +86,7 @@ module Masks
           travel 32.days do
             sweep
 
-            within { assert_equal IdleAccounts::DELETE, @idle.idle_warning }
+            within { assert @idle.idle_warned_at.present? }
 
             warning = mailed.last
             assert_includes warning.subject, "will be deleted"
@@ -120,7 +120,7 @@ module Masks
 
       test "an account a manager suspended is never deleted for being idle" do
         @tenant.update!(suspend_after: nil, delete_after: 365)
-        within { @idle.suspend! }
+        within { @idle.suspend!(reason: Actor::MANAGER) }
         idle_for(900.days)
 
         sweep
@@ -161,7 +161,7 @@ module Masks
         registration = register
         issued = access_token_for(actor: @idle, registration: registration)
 
-        within { @idle.update_columns(last_active_at: 400.days.ago, idle_warned_at: 1.day.ago, idle_warning: "suspend") }
+        within { @idle.update_columns(last_active_at: 400.days.ago, idle_warned_at: 1.day.ago) }
 
         token(
           grant_type: "refresh_token", refresh_token: issued["refresh_token"],
@@ -230,7 +230,7 @@ module Masks
 
           within do
             assert_not @idle.suspended?
-            assert_not @idle.idle_suspended?
+            assert_nil @idle.suspension_reason
             assert_nil @idle.idle_warned_at
           end
         end

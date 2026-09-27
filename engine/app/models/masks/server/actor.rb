@@ -7,6 +7,11 @@ module Masks
       MINIMUM_PASSWORD = 8
       ACTIVITY_GRAIN = 1.day
 
+      IDLE = "idle".freeze
+      MANAGER = "manager".freeze
+      SCIM = "scim".freeze
+      SUSPENSIONS = [ IDLE, MANAGER, SCIM ].freeze
+
       has_secure_password validations: false
 
       encrypts :otp_secret
@@ -34,6 +39,7 @@ module Masks
                 allow_blank: true
 
       validates :external_id, uniqueness: { scope: :tenant_id }, allow_nil: true
+      validates :suspension_reason, inclusion: { in: SUSPENSIONS }, allow_nil: true
 
       validates :phone,
                 format: { with: Adapters::Sms::NUMBER },
@@ -207,11 +213,11 @@ module Masks
         suspended_at.present?
       end
 
-      def suspend!(idle: false)
+      def suspend!(reason:)
         return self if suspended?
 
         transaction do
-          update!(suspended_at: Time.current, idle_suspended: idle)
+          update!(suspended_at: Time.current, suspension_reason: reason, idle_warned_at: nil)
           sign_out_everywhere!
           Token.where(actor_id: id).live.update_all(consumed_at: Time.current, updated_at: Time.current)
         end
@@ -226,15 +232,14 @@ module Masks
       def restore!
         return self unless suspended?
 
-        update!(suspended_at: nil, idle_suspended: false)
-        active!
+        update!(suspended_at: nil, suspension_reason: nil, idle_warned_at: nil, last_active_at: Time.current)
         self
       end
 
       def active!
         return if last_active_at && last_active_at > ACTIVITY_GRAIN.ago
 
-        update_columns(last_active_at: Time.current, idle_warned_at: nil, idle_warning: nil)
+        update_columns(last_active_at: Time.current, idle_warned_at: nil)
       end
 
       def idle_since

@@ -252,7 +252,7 @@ module Masks
 
       test "a suspended person is refused, and the application is told so" do
         sign_in_as(@actor)
-        within { @actor.suspend! }
+        within { @actor.suspend!(reason: Actor::MANAGER) }
         request = start
 
         advance!("identify", identifier: "ada")

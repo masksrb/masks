@@ -47,7 +47,8 @@ module Masks
       validates :named_by, inclusion: { in: NAMES }, allow_nil: true
       validates :dynamic_registration, inclusion: { in: REGISTRATIONS }, allow_nil: true
       validates :suspend_after, :delete_after, numericality: { only_integer: true, in: IDLE_DAYS }, allow_nil: true
-      validate :deleting_follows_suspending
+      validates :delete_after, comparison: { greater_than: :suspend_after, message: "must be longer than suspend after" },
+                               if: -> { suspend_after && delete_after }
 
       after_update_commit :forget_idle_warnings, if: -> { saved_change_to_suspend_after? || saved_change_to_delete_after? }
       validates :subdomain, presence: true, uniqueness: true,
@@ -55,6 +56,7 @@ module Masks
       validates :name, presence: true
 
       scope :active, -> { where(archived_at: nil) }
+      scope :idling, -> { where.not(suspend_after: nil).or(where.not(delete_after: nil)) }
 
       after_create_commit :ensure_signing_key!, :setup_token!
 
@@ -66,10 +68,6 @@ module Masks
 
       def named_by
         self.class.pinned_names.presence || super.presence || EITHER
-      end
-
-      def idles?
-        suspend_after.present? || delete_after.present?
       end
 
       def names_pinned?
@@ -307,14 +305,8 @@ module Masks
 
         def forget_idle_warnings
           Tenant.switch(self) do
-            Actor.where.not(idle_warned_at: nil).update_all(idle_warned_at: nil, idle_warning: nil)
+            Actor.where.not(idle_warned_at: nil).update_all(idle_warned_at: nil)
           end
-        end
-
-        def deleting_follows_suspending
-          return unless suspend_after && delete_after && delete_after <= suspend_after
-
-          errors.add(:delete_after, "must be longer than suspend after")
         end
 
         def minted_setup_token

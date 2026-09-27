@@ -8,8 +8,7 @@ class AddIdleAccounts < ActiveRecord::Migration[8.1]
     change_table :actors do |t|
       t.datetime :last_active_at
       t.datetime :idle_warned_at
-      t.string :idle_warning
-      t.boolean :idle_suspended, default: false, null: false
+      t.string :suspension_reason
     end
   end
 end

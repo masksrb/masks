@@ -191,8 +191,9 @@ both are set, deleting has to come later than suspending.
   its warning. Turning the settings on or changing them gives every account a fresh 30 days.
 - Signing in before a suspension keeps the account. Once suspended, only a manager can restore it,
   and the warning before deletion says so.
-- Only accounts suspended for being idle are deleted. An account a manager suspended stays until a
-  manager decides.
+- With **Suspend** set, only accounts suspended for being idle are deleted. With **Suspend** at
+  **Never**, an idle account is deleted directly. An account a manager or an identity provider
+  suspended stays until they decide.
 - An account with no confirmed email address cannot be warned, and follows the same schedule.
 - The last manager and accounts provisioned over SCIM are never touched. The identity provider
   decides when those end.
