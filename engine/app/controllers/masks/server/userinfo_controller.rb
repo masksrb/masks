@@ -20,7 +20,7 @@ module Masks
           )
           standard = OpenIDConnect::ResponseObject::UserInfo.new(claims.symbolize_keys).as_json
 
-          render json: standard.merge(claims.slice(Actor::AVATARS_CLAIM, Actor::IDENTITIES_CLAIM))
+          render json: standard.merge(claims.slice(Actor::AVATARS_CLAIM, Actor::IDENTITIES_CLAIM, Actor::ORGANIZATIONS_CLAIM))
                                .merge({ Organization::CLAIM => token.organization_claim }.compact)
         end
       end

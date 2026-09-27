@@ -389,6 +389,7 @@ module Masks
 
       AVATARS_CLAIM = "masks:avatars".freeze
       IDENTITIES_CLAIM = "identities".freeze
+      ORGANIZATIONS_CLAIM = "orgs".freeze
 
       def claims(scopes, subject:, requested: nil, origin: Current.origin)
         granted = Scopes.list(scopes)
@@ -405,12 +406,18 @@ module Masks
         end
 
         claims[IDENTITIES_CLAIM] = identities if granted.include?(Scopes::IDENTITIES) && subject == uuid
+        claims[ORGANIZATIONS_CLAIM] = organizations_held if granted.include?(Scopes::ORGANIZATION)
 
         asked(requested).each do |claim|
           claims[claim] = claim_value(claim, origin, subject) if PROFILE_CLAIMS.key?(claim)
         end
 
         claims.compact
+      end
+
+      def organizations_held
+        memberships.accepted.joins(:organization).merge(Organization.active).includes(:organization)
+                   .order("organizations.name").map { |membership| membership.organization.claim_for(membership) }
       end
 
       def identities

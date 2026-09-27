@@ -115,6 +115,36 @@ module Masks
         assert_equal "acme", claims_in(tokens["access_token"]).dig("org", "key")
       end
 
+      test "userinfo lists every organization the person has joined, with the role held in each" do
+        join(@acme, "owner")
+        join(@globex)
+        initech = organization("initech", "Initech")
+        join(initech)
+        within { initech.archive! }
+        umbrella = organization("umbrella", "Umbrella")
+        within { umbrella.memberships.create!(actor: @actor, role: "member", pending: true) }
+
+        signed_in_to_app(organization: "acme")
+
+        get "/userinfo", headers: { "Authorization" => "Bearer #{tokens['access_token']}" }
+
+        assert_equal [ { "id" => @acme.uuid, "key" => "acme", "name" => "Acme", "role" => "owner" },
+                       { "id" => @globex.uuid, "key" => "globex", "name" => "Globex", "role" => "member" } ],
+                     JSON.parse(response.body)["orgs"]
+      end
+
+      test "an app without the organization scope is not told which organizations a person joined" do
+        join(@acme)
+
+        sign_in_as(@actor)
+        authorize(client_id: @registration["client_id"], scope: "openid profile")
+        consent! if awaiting_consent?
+
+        get "/userinfo", headers: { "Authorization" => "Bearer #{tokens['access_token']}" }
+
+        assert_nil JSON.parse(response.body)["orgs"]
+      end
+
       test "userinfo and introspection name the organization, and introspection answers the role held now" do
         membership = join(@acme)
 
