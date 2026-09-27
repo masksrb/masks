@@ -44,6 +44,8 @@ module Masks
       has_many :connections, dependent: :destroy
       has_many :delegations, through: :connections
 
+      belongs_to :organization, optional: true
+
       validates :key, presence: true,
                       uniqueness: { scope: :tenant_id },
                       format: { with: /\A[a-z0-9][a-z0-9-]*\z/ }
@@ -71,6 +73,7 @@ module Masks
       validate :certificates_are_usable, if: :saml?
       validate :signup_scopes_stay_ordinary
       validate :delegation_is_possible
+      validate :roles_map_to_the_organization
       validate { params_stay_out_of_the_way(:delegation_params) }
 
       normalizes :issuer, with: ->(value) { value.to_s.strip.chomp("/").presence }
@@ -202,6 +205,20 @@ module Masks
 
       def email_domain_list
         email_domains.to_s.downcase.split(/[\s,]+/).reject(&:empty?)
+      end
+
+      DEFAULT_ROLE_CLAIM = "groups".freeze
+
+      def offered_to?(organization)
+        organization_id.nil? || organization_id == organization&.id
+      end
+
+      def role_from(claims)
+        held = Array(claims[role_claim.presence || DEFAULT_ROLE_CLAIM]).map(&:to_s)
+
+        role_map.each { |group, role| return role if held.include?(group) }
+
+        unmapped_role.presence || Organization::MEMBER
       end
 
       def welcomes?(email)
@@ -345,6 +362,15 @@ module Masks
       end
 
       private
+
+        def roles_map_to_the_organization
+          return if role_map.blank? && unmapped_role.blank?
+          return errors.add(:role_map, "needs an organization") if organization.nil?
+
+          unknown = (role_map.values + [ unmapped_role ].compact_blank) - organization.role_list
+
+          errors.add(:role_map, "names roles #{organization.name} does not offer: #{unknown.uniq.join(', ')}") if unknown.any?
+        end
 
         def protected_resource_metadata
           uri = usable_uri(resource_url)

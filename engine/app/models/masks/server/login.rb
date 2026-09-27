@@ -12,6 +12,7 @@ module Masks
         LoginStates::Password,
         LoginStates::FirstFactor,
         LoginStates::Suspension,
+        LoginStates::OrganizationChoice,
         LoginStates::OneTimePassword,
         LoginStates::BackupCode,
         LoginStates::CodeFactor,
@@ -21,7 +22,6 @@ module Masks
         LoginStates::Confirmation,
         LoginStates::Configure,
         LoginStates::Delegation,
-        LoginStates::OrganizationChoice,
         LoginStates::Consent
       ].freeze
 
@@ -64,7 +64,19 @@ module Masks
       end
 
       def policy
-        @policy ||= first_run? ? SignInPolicy.first_run : SignInPolicy.for(client: client, tenant: tenant)
+        return SignInPolicy.first_run if first_run?
+
+        @policies ||= {}
+        @policies[organization&.id] ||= SignInPolicy.for(client: client, tenant: tenant, organization: organization)
+      end
+
+      def organization
+        key = state("organization-choice").chosen_key || request&.try(:organization)
+
+        return nil if key.blank?
+
+        @organizations ||= {}
+        @organizations.fetch(key) { @organizations[key] = Organization.active.find_by(key: key) }
       end
 
       def first_run?
@@ -75,7 +87,7 @@ module Masks
 
       def first_run!
         remove_instance_variable(:@first_run) if defined?(@first_run)
-        remove_instance_variable(:@policy) if defined?(@policy)
+        remove_instance_variable(:@policies) if defined?(@policies)
       end
 
       def signing_up

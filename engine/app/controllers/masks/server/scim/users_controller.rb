@@ -7,7 +7,7 @@ module Masks
         DEFAULT_COUNT = 100
 
         def index
-          relation = Scim::Filter.apply(Actor.all, params[:filter])
+          relation = Scim::Filter.apply(provisionable, params[:filter])
           start = [ params[:startIndex].to_i, 1 ].max
           count = params[:count].present? ? params[:count].to_i.clamp(0, Scim::MAX_RESULTS) : DEFAULT_COUNT
           actors = relation.order(:created_at, :id).offset(start - 1).limit(count).to_a
@@ -30,6 +30,7 @@ module Masks
 
         def create
           actor = settle!(Scim::User.new(Actor.new).replace(document), Event::ACTOR_PROVISIONED)
+          joined!(actor)
 
           response.headers["Location"] = "#{scim_base}/Users/#{actor.uuid}"
           scim(represent(actor), status: :created)
@@ -38,6 +39,7 @@ module Masks
         def replace
           actor = found
           matched!(actor)
+          exclusive!(actor)
 
           settle!(Scim::User.new(actor).replace(document), Event::ACTOR_UPDATED)
           scim(represent(actor))
@@ -46,6 +48,7 @@ module Masks
         def update
           actor = found
           matched!(actor)
+          exclusive!(actor)
 
           unless Array(document["schemas"]).include?(Scim::PATCH)
             raise Scim::Error.new(:bad_request, "a PATCH names #{Scim::PATCH}", scim_type: "invalidSyntax")
@@ -57,6 +60,9 @@ module Masks
 
         def destroy
           actor = found
+
+          return leave!(actor) if provisioned_organization
+
           last_manager!(actor)
 
           held = { uuid: actor.uuid, identifier: actor.identifier, via: "scim" }
@@ -69,9 +75,48 @@ module Masks
 
         private
 
+          def provisionable
+            held = provisioned_organization
+
+            held ? Actor.where(id: held.memberships.select(:actor_id)) : Actor.all
+          end
+
           def found
-            Actor.find_by(uuid: params[:id].to_s.match?(Subjects::UUID) ? params[:id] : nil) ||
+            provisionable.find_by(uuid: params[:id].to_s.match?(Subjects::UUID) ? params[:id] : nil) ||
               raise(Scim::Error.new(:not_found, "no user has that id"))
+          end
+
+          def exclusive!(actor)
+            held = provisioned_organization
+
+            return if held.nil? || actor.memberships.where.not(organization: held).none?
+
+            raise Scim::Error.new(:forbidden, "#{actor.identifier} belongs to other organizations too, so #{held.name} " \
+                                              "can remove them but not change them", scim_type: "mutability")
+          end
+
+          def joined!(actor)
+            held = provisioned_organization
+
+            return if held.nil?
+
+            held.memberships.create!(actor: actor, role: Organization::MEMBER)
+            Event.record!(Event::MEMBERSHIP_ADDED, actor: actor, by: nil, organization: held.key,
+                                                   role: Organization::MEMBER, via: "scim")
+          end
+
+          def leave!(actor)
+            held = provisioned_organization
+            membership = held.memberships.find_by!(actor: actor)
+
+            unless membership.destroy
+              raise Scim::Error.new(:conflict, membership.errors.full_messages.to_sentence, scim_type: "mutability")
+            end
+
+            Token.live.where(organization: held, actor: actor).find_each(&:revoke!)
+            Event.record!(Event::MEMBERSHIP_REMOVED, actor: actor, by: nil, organization: held.key, via: "scim")
+
+            head :no_content
           end
 
           def represent(actor)

@@ -23,7 +23,9 @@ module Masks
 
           raise Scim::Error.new(:unauthorized, "a bearer token is required") unless scheme.to_s.casecmp?("Bearer") && secret.present?
 
-          return if provisioning_token(secret) || scim_access_token(secret)
+          @provisioner = provisioning_token(secret) || scim_access_token(secret)
+
+          return if @provisioner
 
           raise Scim::Error.new(:unauthorized, "that token is not one this tenant provisions with")
         end
@@ -36,6 +38,10 @@ module Masks
           token = held_token(secret)
 
           token if token && !token.bound? && token.scope_list.include?(Scopes::SCIM) && token.audience.include?(scim_base)
+        end
+
+        def provisioned_organization
+          @provisioner&.organization
         end
 
         def scim_base

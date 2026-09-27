@@ -70,6 +70,7 @@ module Masks
           field :add_member, mutation: Mutations::AddMember
           field :set_member_role, mutation: Mutations::SetMemberRole
           field :remove_member, mutation: Mutations::RemoveMember
+          field :set_provider_organization, mutation: Mutations::SetProviderOrganization
           field :stage_signing_key, mutation: Mutations::StageSigningKey
           field :activate_signing_key, mutation: Mutations::ActivateSigningKey
           field :discard_signing_key, mutation: Mutations::DiscardSigningKey

@@ -715,7 +715,8 @@ CREATE TABLE public.organizations (
     roles jsonb DEFAULT '[]'::jsonb NOT NULL,
     archived_at timestamp(6) without time zone,
     created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
+    updated_at timestamp(6) without time zone NOT NULL,
+    sign_in_policy_id bigint
 );
 
 ALTER TABLE ONLY public.organizations FORCE ROW LEVEL SECURITY;
@@ -830,7 +831,11 @@ CREATE TABLE public.providers (
     delegation_params jsonb DEFAULT '{}'::jsonb NOT NULL,
     resource_url character varying,
     registration_url character varying,
-    registered_at timestamp(6) without time zone
+    registered_at timestamp(6) without time zone,
+    organization_id bigint,
+    role_claim character varying,
+    role_map jsonb DEFAULT '{}'::jsonb NOT NULL,
+    unmapped_role character varying
 );
 
 ALTER TABLE ONLY public.providers FORCE ROW LEVEL SECURITY;
@@ -1960,6 +1965,13 @@ CREATE INDEX index_namespaces_on_tenant_id_and_resource ON public.namespaces USI
 
 
 --
+-- Name: index_organizations_on_sign_in_policy_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_organizations_on_sign_in_policy_id ON public.organizations USING btree (sign_in_policy_id);
+
+
+--
 -- Name: index_organizations_on_tenant_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -1999,6 +2011,13 @@ CREATE INDEX index_passkeys_on_tenant_id ON public.passkeys USING btree (tenant_
 --
 
 CREATE UNIQUE INDEX index_passkeys_on_tenant_id_and_external_id ON public.passkeys USING btree (tenant_id, external_id);
+
+
+--
+-- Name: index_providers_on_organization_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_providers_on_organization_id ON public.providers USING btree (organization_id);
 
 
 --
@@ -2413,6 +2432,14 @@ ALTER TABLE ONLY public.events
 
 
 --
+-- Name: organizations fk_rails_6d6848ad54; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.organizations
+    ADD CONSTRAINT fk_rails_6d6848ad54 FOREIGN KEY (sign_in_policy_id) REFERENCES public.sign_in_policies(id) ON DELETE SET NULL;
+
+
+--
 -- Name: delegations fk_rails_72cabb0bd2; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2570,6 +2597,14 @@ ALTER TABLE ONLY public.avatars
 
 ALTER TABLE ONLY public.devices
     ADD CONSTRAINT fk_rails_d5b7012cbc FOREIGN KEY (tenant_id) REFERENCES public.tenants(id);
+
+
+--
+-- Name: providers fk_rails_da84f78e1b; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.providers
+    ADD CONSTRAINT fk_rails_da84f78e1b FOREIGN KEY (organization_id) REFERENCES public.organizations(id) ON DELETE CASCADE;
 
 
 --
@@ -2929,6 +2964,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20260927030000'),
 ('20260927020000'),
 ('20260927010000'),
 ('20260927000000'),

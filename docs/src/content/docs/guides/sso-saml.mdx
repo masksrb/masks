@@ -274,3 +274,15 @@ A provisioning token changes many accounts, so it can do less than a manager:
 - change anyone's scopes.
 
 Every change is recorded in the person's activity, marked as SCIM.
+
+### A directory for one organization
+
+A provisioning token can belong to one [organization](/guides/features/#organizations), so a
+customer's directory manages that customer's people and nobody else.
+
+| Request | What happens |
+| --- | --- |
+| List or read users | Only the organization's members. Anyone else is not found. |
+| Create a user | A new account that joins as `member`. An address another account holds is a conflict. |
+| Replace or patch a user | Allowed for a member of this organization only. A member of another organization too is refused with `403`. |
+| Delete a user | Removes them from the organization and revokes its tokens. The account stays. |

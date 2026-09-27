@@ -12,6 +12,9 @@ module Masks
       has_many :memberships, dependent: :destroy
       has_many :actors, through: :memberships
       has_many :tokens, dependent: :destroy
+      has_many :providers, dependent: :destroy
+
+      belongs_to :sign_in_policy, optional: true
 
       validates :key, presence: true,
                       uniqueness: { scope: :tenant_id },

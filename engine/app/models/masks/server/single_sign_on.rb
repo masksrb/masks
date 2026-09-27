@@ -176,10 +176,34 @@ module Masks
           )
 
           connection.signed_in!
+          enroll!(actor)
 
           Event.record!(Event::CONNECTION_LINKED, actor: actor, by: nil, provider: provider.key) if fresh || connection.previously_new_record?
 
           { actor: actor, connection: connection }
+        end
+
+        def enroll!(actor)
+          organization = provider.organization
+
+          return if organization.nil? || organization.archived?
+
+          role = provider.role_from(claims)
+          membership = organization.memberships.find_or_initialize_by(actor: actor)
+          was = membership.role
+
+          return if was == role
+
+          membership.role = role
+
+          return unless membership.save
+
+          if was.nil?
+            Event.record!(Event::MEMBERSHIP_ADDED, actor: actor, by: nil, organization: organization.key, role: role, provider: provider.key)
+          else
+            Event.record!(Event::MEMBERSHIP_ROLE_CHANGED, actor: actor, by: nil, organization: organization.key,
+                                                          was: was, now: role, provider: provider.key)
+          end
         end
 
         def domains

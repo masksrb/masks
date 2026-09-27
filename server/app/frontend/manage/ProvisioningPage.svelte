@@ -5,6 +5,7 @@
   import Field from "./ui/Field.svelte";
   import Notices from "./ui/Notices.svelte";
   import Page from "./ui/Page.svelte";
+  import Select from "./ui/Select.svelte";
   import Spinner from "./ui/Spinner.svelte";
 
   let { api } = $props();
@@ -12,7 +13,8 @@
   const QUERY = `
     query Provisioning {
       scimBaseUrl
-      provisioningTokens { id label usedAt expiresAt createdAt issuedBy { identifier } }
+      provisioningTokens { id label usedAt expiresAt createdAt issuedBy { identifier } organization { name } }
+      organizations { key name }
     }
   `;
 
@@ -29,6 +31,7 @@
   let data = $state(null);
   let loading = $state(true);
   let label = $state("");
+  let organization = $state("");
   let lifetime = $state(90);
   let issued = $state(null);
 
@@ -49,10 +52,10 @@
   async function issue() {
     const done = await feedback.attempt(() =>
       api.query(
-        `mutation Issue($label: String!, $expiresIn: Int) {
-          issueProvisioningToken(label: $label, expiresIn: $expiresIn) { secret }
+        `mutation Issue($label: String!, $expiresIn: Int, $organization: ID) {
+          issueProvisioningToken(label: $label, expiresIn: $expiresIn, organization: $organization) { secret }
         }`,
-        { label: label.trim() || "Provisioning", expiresIn: lifetime * DAY },
+        { label: label.trim() || "Provisioning", expiresIn: lifetime * DAY, organization: organization || null },
       ),
     );
 
@@ -102,6 +105,15 @@
 
         <Field label="Label" bind:value={label} placeholder="Entra ID" />
 
+        {#if data.organizations.length}
+          <Select
+            label="Provisions"
+            value={organization}
+            options={[["", "Every account"], ...data.organizations.map((held) => [held.key, `Only members of ${held.name}`])]}
+            onchange={(key) => (organization = key)}
+          />
+        {/if}
+
         <div class="range" role="group" aria-label="How long the token lives">
           {#each LIFETIMES as [days, name] (days)}
             <button type="button" aria-pressed={lifetime === days} onclick={() => (lifetime = days)}>
@@ -128,7 +140,9 @@
             {#each data.provisioningTokens as token (token.id)}
               <li class="flex flex-wrap items-center justify-between gap-2 py-2">
                 <div class="min-w-0">
-                  <div class="text-sm font-medium">{token.label}</div>
+                  <div class="text-sm font-medium">
+                    {token.label}{#if token.organization}<span class="hint"> · {token.organization.name}</span>{/if}
+                  </div>
                   <div class="text-xs opacity-60">
                     {token.issuedBy ? `by ${token.issuedBy.identifier}, ` : ""}used {since(token.usedAt, "never")},
                     expires {day(token.expiresAt)}

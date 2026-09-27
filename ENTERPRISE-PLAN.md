@@ -8,23 +8,23 @@ the work.
 
 ## State
 
-| Capability                      | State        | Commit or next step                                                                     |
-| ------------------------------- | ------------ | --------------------------------------------------------------------------------------- |
-| Audit log                       | Built        | `Event`, about 100 actions, 180-day retention                                           |
-| Event streaming                 | Built        | `03b525c`, `bbe2ea1`, guide at `guides/event-streams`                                   |
-| Single sign-on and provisioning | Built        | OIDC, OAuth, SAML in and out, SCIM                                                      |
-| Step-up authentication          | Built        | `a6fd2fe`, and `apps_require_second_factor` on sign-in policies                         |
-| Token exchange                  | Built        | RFC 8693, with `exchange.granted` and `exchange.refused` events. RFC 9396 is item 11    |
-| Manage roles                    | Built        | `ManageRoles`, a declared level on every mutation, and the limits in the security guide |
-| Organizations and roles         | Partly built | Step 1 of 4: tables, memberships, the `org` claim, and the picker                       |
-| Home-realm discovery            | Not started  |                                                                                         |
-| Session policies                | Built        | `sign_in_policies.session_lifetime` and `session_idle_timeout`                          |
-| Audit export and retention      | Not started  |                                                                                         |
-| Adaptive risk                   | Not started  |                                                                                         |
-| Passwordless email              | Not started  |                                                                                         |
-| Custom domains                  | Not started  |                                                                                         |
-| Shared signals                  | Not started  |                                                                                         |
-| Migration                       | Not started  |                                                                                         |
+| Capability                      | State        | Commit or next step                                                                                    |
+| ------------------------------- | ------------ | ------------------------------------------------------------------------------------------------------ |
+| Audit log                       | Built        | `Event`, about 100 actions, 180-day retention                                                          |
+| Event streaming                 | Built        | `03b525c`, `bbe2ea1`, guide at `guides/event-streams`                                                  |
+| Single sign-on and provisioning | Built        | OIDC, OAuth, SAML in and out, SCIM                                                                     |
+| Step-up authentication          | Built        | `a6fd2fe`, and `apps_require_second_factor` on sign-in policies                                        |
+| Token exchange                  | Built        | RFC 8693, with `exchange.granted` and `exchange.refused` events. RFC 9396 is item 11                   |
+| Manage roles                    | Built        | `ManageRoles`, a declared level on every mutation, and the limits in the security guide                |
+| Organizations and roles         | Partly built | Steps 1 and 2 of 4: the `org` claim and picker, then organization policies, providers, and directories |
+| Home-realm discovery            | Not started  |                                                                                                        |
+| Session policies                | Built        | `sign_in_policies.session_lifetime` and `session_idle_timeout`                                         |
+| Audit export and retention      | Not started  |                                                                                                        |
+| Adaptive risk                   | Not started  |                                                                                                        |
+| Passwordless email              | Not started  |                                                                                                        |
+| Custom domains                  | Not started  |                                                                                                        |
+| Shared signals                  | Not started  |                                                                                                        |
+| Migration                       | Not started  |                                                                                                        |
 
 ## What the code already has
 
@@ -143,11 +143,25 @@ the first cut. Apps stay tenant-wide and ask for an organization.
   an account that does not exist. Organizations has its own page in the main nav, and actors list
   their memberships.
 
-**Step 2.** `sign_in_policies.organization_id`, with `SignInPolicy.for` checking the chosen
-organization's policy first. The policy has to be known before sign-in finishes, so a named
-`organization` on the request selects it up front and a chosen one applies from the choice onward.
-`providers.organization_id` with a group-claim-to-role map, and provisioning tokens scoped to one
-organization.
+**Step 2 (done).**
+
+- `organizations.sign_in_policy_id`. `SignInPolicy.for` checks the organization, then the client, then
+  the tenant. `Login#organization` is the chosen organization, or the one the request names, and
+  `Login#policy` is memoized per organization so a choice mid-flow switches it.
+- `OrganizationChoice` moved to right after the first factor, so a chosen organization's policy decides
+  the second factor, enrolment, session limits, and step-up. The first factor follows the request's
+  named organization, or the app's policy when none is named.
+- `providers.organization_id`, `role_claim` (default `groups`), `role_map`, and `unmapped_role`
+  (default `member`; `default_role` collides with Active Record). An organization's provider is offered
+  only when `Login#organization` is that organization. `SingleSignOn#link` sets the membership and
+  role on every sign-in. A sign-in that claims an existing account by proving its password links the
+  connection without a membership until the next sign-in through the provider.
+- `issueProvisioningToken(organization:)` stores it on `tokens.organization_id`, and SCIM reads it from
+  the provisioner. Such a token lists and reads only members, creates accounts that join as `member`,
+  changes only members of no other organization, and turns `DELETE` into leaving the organization.
+  It never suspends or deletes the account.
+- Manage: `updateOrganization(signInPolicy:)`, `setProviderOrganization`, and the organization picker
+  on Provisioning. The organization page sets the policy and hands providers over with a group map.
 
 **Step 3.** `events.organization_id`, and an optional organization filter on event streams.
 

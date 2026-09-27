@@ -52,7 +52,9 @@ module Masks
 
           def offered
             @offered ||= if login.policy.first_factor?(:provider)
-              Masks::Server::Provider.signing_in.order(:name).select { |provider| login.policy.offers?(provider) }
+              Masks::Server::Provider.signing_in.order(:name).select do |provider|
+                login.policy.offers?(provider) && provider.offered_to?(login.organization)
+              end
             else
               []
             end

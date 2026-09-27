@@ -8,7 +8,7 @@ module Masks
         accepts :organization
 
         def enabled?
-          request.present? && actor.present? && wanted?
+          request.present? && actor.present? && login.first_factored? && wanted?
         end
 
         handles "organization" do
@@ -40,11 +40,15 @@ module Masks
         def selected
           return nil unless enabled?
 
+          key = chosen_key
+
+          key && memberships.find { |membership| membership.organization.key == key }&.organization
+        end
+
+        def chosen_key
           held = login.factors[FACTOR]
 
-          return nil unless held.is_a?(Hash) && held["rid"] == login.rid.to_s && touched?(FACTOR)
-
-          memberships.find { |membership| membership.organization.key == held["key"] }&.organization
+          held["key"] if held.is_a?(Hash) && held["rid"] == login.rid.to_s && touched?(FACTOR)
         end
 
         def start_over!

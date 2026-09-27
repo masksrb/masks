@@ -3,10 +3,11 @@ module Masks
     class ProvisioningToken < Token
       LONGEST = 1.year
 
-      def self.issue!(label:, by:, expires_in: nil)
+      def self.issue!(label:, by:, expires_in: nil, organization: nil)
         lifetime = [ expires_in&.seconds || LONGEST, LONGEST ].min
 
         mint!(
+          organization: organization,
           payload: { "label" => label.to_s.strip.presence || "Provisioning", "issued_by" => by&.uuid }.compact,
           expires_at: lifetime.from_now
         )

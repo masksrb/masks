@@ -192,6 +192,27 @@ module Masks
         assert_match "needs an owner", refusal(body)
       end
 
+      test "security gives an organization its own sign-in policy and a provisioning token" do
+        within do
+          Organization.create!(key: "acme", name: "Acme")
+          SignInPolicy.create!(key: "strict", name: "Strict", second_factor_required: true)
+        end
+
+        held = bearer_for(manager(ManageRoles::SECURITY))
+
+        body = ask(%(mutation { updateOrganization(key: "acme", signInPolicy: "strict") { organization { signInPolicy { key } } } }), held)
+
+        assert_equal "strict", body.dig("data", "updateOrganization", "organization", "signInPolicy", "key")
+
+        body = ask(%(mutation { issueProvisioningToken(label: "Acme Entra", organization: "acme") { secret provisioningToken { organization { key } } } }), held)
+
+        assert_equal "acme", body.dig("data", "issueProvisioningToken", "provisioningToken", "organization", "key")
+
+        body = ask(%(mutation { updateOrganization(key: "acme", signInPolicy: "") { organization { signInPolicy { key } } } }), held)
+
+        assert_nil body.dig("data", "updateOrganization", "organization", "signInPolicy")
+      end
+
       test "every mutation in the schema declares the least role it needs" do
         undeclared = ManageSchema.mutation.fields.values.reject { |field| field.resolver.level_declared }
 

@@ -33,6 +33,11 @@ module Masks
           field :connections, Integer, null: false
           field :signed_in, Integer, null: false
           field :archived_at, GraphQL::Types::ISO8601DateTime
+          field :organization, "Masks::Server::Manage::Types::OrganizationType",
+                description: "The organization whose people sign in through this provider, or null for the whole tenant."
+          field :role_claim, String, description: "The claim that lists a person's groups. groups when null."
+          field :role_map, GraphQL::Types::JSON, null: false, description: "Groups mapped to organization roles. The first group a person holds wins."
+          field :unmapped_role, String, description: "The role for someone in none of the mapped groups. member when null."
           field :created_at, GraphQL::Types::ISO8601DateTime, null: false
 
           field :issuer, String

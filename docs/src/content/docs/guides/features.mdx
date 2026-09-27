@@ -223,6 +223,24 @@ A refresh reads the member's role again, so a changed role reaches the app withi
 lifetime. A refresh for someone no longer a member is refused with `invalid_grant`. An app that does
 not ask for the scope gets no claim and no question.
 
+### An organization's own sign-in
+
+An organization can have its own sign-in policy, provider, and directory.
+
+- **Policy.** A member signs in under the organization's policy ahead of the app's and the tenant's.
+  When the app names the organization on `/authorize`, the policy applies from the first step. When
+  the person chooses it, the policy applies from the choice on, so the second factor, session
+  lifetime, and step-up follow it and the first factor follows the app's.
+- **Provider.** A provider handed to an organization is offered only to a request that names it.
+  Everyone who signs in through it becomes a member, in the role their groups map to. The provider
+  reads groups from the `groups` claim, or another one it names. The first mapped group a person
+  holds decides the role, anyone in none gets the unmapped role (`member` unless set), and the role
+  is set again on every sign-in.
+- **Directory.** A provisioning token for one organization reaches only its members. See
+  [a directory for one organization](/guides/sso-saml/#a-directory-for-one-organization).
+
+Set all three on the organization's page in `/manage`.
+
 ## Accounts
 
 ### Suspending and deleting

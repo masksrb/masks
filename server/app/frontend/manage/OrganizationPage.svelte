@@ -19,12 +19,19 @@
     query Organization($key: ID!) {
       organization(key: $key) {
         uuid key name roles archivedAt createdAt
+        signInPolicy { key }
+        providers { key name roleClaim roleMap unmappedRole }
         members { role createdAt actor { uuid identifier email activated } }
       }
+      signInPolicies { key name }
+      providers { key name organization { key } }
     }
   `;
 
   let organization = $state(null);
+  let policies = $state([]);
+  let providers = $state([]);
+  let handing = $state({ provider: "", roleClaim: "", roleMap: "", unmappedRole: "" });
   let loading = $state(true);
   let busy = $state(false);
   let adding = $state({ email: "", role: "member" });
@@ -41,6 +48,8 @@
     if (!answer) return;
 
     organization = answer.organization;
+    policies = answer.signInPolicies;
+    providers = answer.providers;
 
     if (organization) {
       naming = {
@@ -122,6 +131,71 @@
     );
   }
 
+  const lines = (map) =>
+    Object.entries(map ?? {})
+      .map(([group, role]) => `${group} = ${role}`)
+      .join("\n");
+
+  const parsed = (text) =>
+    Object.fromEntries(
+      text
+        .split("\n")
+        .map((line) => line.split("="))
+        .filter((parts) => parts.length === 2 && parts[0].trim() && parts[1].trim())
+        .map(([group, role]) => [group.trim(), role.trim()]),
+    );
+
+  const handable = $derived(
+    providers.filter((provider) => !provider.organization || provider.organization.key === organization?.key),
+  );
+
+  function pickProvider(key) {
+    const held = organization.providers.find((provider) => provider.key === key);
+
+    handing = {
+      provider: key,
+      roleClaim: held?.roleClaim ?? "",
+      roleMap: lines(held?.roleMap),
+      unmappedRole: held?.unmappedRole ?? "",
+    };
+  }
+
+  function handOver() {
+    run(
+      `mutation Hand($key: ID!, $organization: ID, $roleClaim: String, $roleMap: JSON, $unmappedRole: String) {
+        setProviderOrganization(key: $key, organization: $organization, roleClaim: $roleClaim, roleMap: $roleMap, unmappedRole: $unmappedRole) {
+          provider { key }
+        }
+      }`,
+      {
+        key: handing.provider,
+        organization: organization.key,
+        roleClaim: handing.roleClaim.trim() || null,
+        roleMap: parsed(handing.roleMap),
+        unmappedRole: handing.unmappedRole || null,
+      },
+      "Saved. People who sign in through it join this organization.",
+    );
+  }
+
+  function handBack(provider) {
+    run(
+      `mutation Back($key: ID!) { setProviderOrganization(key: $key, organization: null) { provider { key } } }`,
+      { key: provider.key },
+      `${provider.name} serves the whole tenant again.`,
+    );
+  }
+
+  function setPolicy(key) {
+    run(
+      `mutation Policy($key: ID!, $policy: ID!) {
+        updateOrganization(key: $key, signInPolicy: $policy) { organization { key } }
+      }`,
+      { key: organization.key, policy: key },
+      "Saved.",
+    );
+  }
+
   async function archive() {
     if (!confirm(`Archive ${organization.name}? Nobody signs in as a member of it, and its tokens stop working.`)) return;
 
@@ -177,6 +251,68 @@
 
       {#if invited}
         <Field label="No mail adapter, so send this invitation link yourself" value={invited} readonly />
+      {/if}
+    </Section>
+
+    <Section
+      title="Signing in"
+      lede="A member signs in under this policy, ahead of the app's and the tenant's. Name the organization on the request so its policy applies from the first step."
+    >
+      <Select
+        label="Sign-in policy"
+        value={organization.signInPolicy?.key ?? ""}
+        options={[["", "The app's or the tenant's"], ...policies.map((policy) => [policy.key, policy.name])]}
+        disabled={busy}
+        onchange={setPolicy}
+      />
+
+      {#each organization.providers as provider (provider.key)}
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="flex min-w-0 flex-col">
+            <span class="font-medium">{provider.name}</span>
+            <span class="hint">
+              {Object.keys(provider.roleMap).length
+                ? Object.entries(provider.roleMap).map(([group, role]) => `${group} → ${role}`).join(", ")
+                : "no groups mapped"}, otherwise {provider.unmappedRole ?? "member"}
+            </span>
+          </div>
+          <div class="flex gap-2">
+            <button type="button" class="btn btn-sm" disabled={busy} onclick={() => pickProvider(provider.key)}>Edit</button>
+            <button type="button" class="btn btn-ghost btn-sm" disabled={busy} onclick={() => handBack(provider)}>Hand back</button>
+          </div>
+        </div>
+      {/each}
+
+      {#if handable.length}
+        <Select
+          label="Provider for this organization"
+          value={handing.provider}
+          options={[["", "Choose a provider"], ...handable.map((provider) => [provider.key, provider.name])]}
+          onchange={pickProvider}
+        />
+      {/if}
+
+      {#if handing.provider}
+        <div class="grid gap-3 sm:grid-cols-2">
+          <Field label="Groups claim" bind:value={handing.roleClaim} placeholder="groups" />
+          <Select
+            label="Role for anyone else"
+            value={handing.unmappedRole}
+            options={[["", "member"], ...roleOptions.filter(([role]) => role !== "member")]}
+            onchange={(role) => (handing.unmappedRole = role)}
+          />
+        </div>
+        <label class="flex flex-col gap-1.5">
+          <span class="field-label">Groups to roles</span>
+          <textarea class="textarea w-full font-mono" rows="3" bind:value={handing.roleMap} placeholder="Acme Admins = owner"></textarea>
+          <p class="hint">One group per line. The first group a person holds decides their role, on every sign-in.</p>
+        </label>
+        <div class="flex gap-2">
+          <button type="button" class="btn btn-sm" disabled={busy} onclick={handOver}>Save</button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick={() => (handing = { provider: "", roleClaim: "", roleMap: "", unmappedRole: "" })}>
+            Cancel
+          </button>
+        </div>
       {/if}
     </Section>
 

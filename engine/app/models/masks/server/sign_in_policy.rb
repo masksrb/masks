@@ -22,6 +22,7 @@ module Masks
       LONGEST_SESSION = 400.days
 
       has_many :clients, dependent: :nullify
+      has_many :organizations, dependent: :nullify
 
       validates :key, presence: true,
                       uniqueness: { scope: :tenant_id },
@@ -54,8 +55,9 @@ module Masks
           new(key: "first-run", name: "First run", signup: true, nickname: REQUIRED, email: REQUIRED, phone: OFF)
         end
 
-        def for(client: nil, tenant: Current.tenant)
-          [ client&.sign_in_policy, tenant&.sign_in_policy ].compact.find { |policy| !policy.archived? } || default
+        def for(client: nil, tenant: Current.tenant, organization: nil)
+          [ organization&.sign_in_policy, client&.sign_in_policy, tenant&.sign_in_policy ]
+            .compact.find { |policy| !policy.archived? } || default
         end
       end
 

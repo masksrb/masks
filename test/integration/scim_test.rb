@@ -231,6 +231,65 @@ module Masks
         assert_equal "User", scim(:get, "/ResourceTypes")["Resources"].first["id"]
         assert_equal Scim::USER, scim(:get, "/Schemas/#{Scim::USER}")["id"]
       end
+
+      test "a token for one organization sees, adds, and removes only that organization's members" do
+        acme = within { Organization.create!(key: "acme", name: "Acme") }
+        outsider = create_actor(nickname: "outsider", email: "outsider@example.com")
+        secret = within { ProvisioningToken.issue!(label: "Acme Entra", by: @manager, organization: acme).secret }
+
+        listed = scim(:get, "/Users", secret: secret)
+
+        assert_equal 0, listed["totalResults"]
+
+        scim(:get, "/Users/#{outsider.uuid}", secret: secret)
+
+        assert_response :not_found
+
+        made = scim(:post, "/Users", secret: secret, body: {
+          "schemas" => [ Scim::USER ], "userName" => "ada@acme.example",
+          "emails" => [ { "value" => "ada@acme.example", "primary" => true } ], "active" => true
+        })
+
+        assert_response :created
+        ada = within { Actor.find_by!(uuid: made["id"]) }
+        assert_equal "member", within { acme.memberships.find_by!(actor: ada).role }
+        assert_equal [ made["id"] ], scim(:get, "/Users", secret: secret)["Resources"].map { |user| user["id"] }
+
+        scim(:delete, "/Users/#{made["id"]}", secret: secret)
+
+        assert_response :no_content
+        within do
+          assert Actor.exists?(id: ada.id)
+          refute acme.memberships.exists?(actor: ada)
+          refute ada.reload.suspended?
+        end
+      end
+
+      test "an organization's token cannot change someone who belongs to another organization too" do
+        acme = within { Organization.create!(key: "acme", name: "Acme") }
+        globex = within { Organization.create!(key: "globex", name: "Globex") }
+        shared = create_actor(nickname: "shared", email: "shared@example.com")
+        within do
+          acme.memberships.create!(actor: shared, role: "member")
+          globex.memberships.create!(actor: shared, role: "owner")
+        end
+        secret = within { ProvisioningToken.issue!(label: "Acme Entra", by: @manager, organization: acme).secret }
+
+        scim(:patch, "/Users/#{shared.uuid}", secret: secret,
+                                               body: { "schemas" => [ Scim::PATCH ],
+                                                       "Operations" => [ { "op" => "replace", "path" => "active", "value" => false } ] })
+
+        assert_response :forbidden
+        refute within { shared.reload.suspended? }
+
+        scim(:delete, "/Users/#{shared.uuid}", secret: secret)
+
+        assert_response :no_content
+        within do
+          refute acme.memberships.exists?(actor: shared)
+          assert globex.memberships.exists?(actor: shared)
+        end
+      end
     end
   end
 end
