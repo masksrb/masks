@@ -66,6 +66,24 @@ module Masks
           end
         end
 
+        def scim_page
+          start = [ params[:startIndex].to_i, 1 ].max
+          count = params[:count].present? ? params[:count].to_i.clamp(0, Scim::MAX_RESULTS) : Scim::DEFAULT_COUNT
+
+          [ start, count ]
+        end
+
+        def listed(resources, total: resources.size, start: 1)
+          { "schemas" => [ Scim::LIST ], "totalResults" => total, "startIndex" => start,
+            "itemsPerPage" => resources.size, "Resources" => resources }
+        end
+
+        def patch_document!
+          return if Array(document["schemas"]).include?(Scim::PATCH)
+
+          raise Scim::Error.new(:bad_request, "a PATCH names #{Scim::PATCH}", scim_type: "invalidSyntax")
+        end
+
         def scim(body, status: :ok)
           render json: body, status: status, content_type: Scim::MEDIA_TYPE
         end

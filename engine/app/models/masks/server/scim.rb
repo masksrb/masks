@@ -11,6 +11,7 @@ module Masks
       SCHEMA = "urn:ietf:params:scim:schemas:core:2.0:Schema".freeze
       MEDIA_TYPE = "application/scim+json".freeze
       MAX_RESULTS = 200
+      DEFAULT_COUNT = 100
 
       class Error < StandardError
         attr_reader :status, :scim_type

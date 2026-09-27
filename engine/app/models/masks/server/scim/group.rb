@@ -8,8 +8,10 @@ module Masks
         attr_reader :organization, :role
 
         class << self
-          def all(organization)
-            organization.role_list.map { |role| new(organization, role) }
+          def all(organization, holders: nil)
+            held = holders.includes(:actor).order(:created_at, :id).group_by(&:role) if holders
+
+            organization.role_list.map { |role| new(organization, role, held && held.fetch(role, [])) }
           end
 
           def find(organization, id)
@@ -30,9 +32,10 @@ module Masks
           end
         end
 
-        def initialize(organization, role)
+        def initialize(organization, role, holders = nil)
           @organization = organization
           @role = role
+          @holders = holders
         end
 
         def id
@@ -45,6 +48,12 @@ module Masks
 
         def memberships
           organization.memberships.accepted.where(role: role).includes(:actor).order(:created_at, :id)
+        end
+
+        def rename!(value)
+          return if value.to_s == role
+
+          raise Error.new(:bad_request, "a group is a role, and a role's name does not change", scim_type: "mutability")
         end
 
         def to_h(base:, members: true)
@@ -65,7 +74,7 @@ module Masks
         def changes(operations)
           raise Error.new(:bad_request, "a PATCH carries Operations", scim_type: "invalidSyntax") unless operations.is_a?(Array)
 
-          operations.each_with_object({ add: [], remove: [], replace: nil, remove_all: false }) do |operation, held|
+          operations.each_with_object({ add: [], remove: [], replace: nil }) do |operation, held|
             op = operation["op"].to_s.downcase
             path = operation["path"].to_s.strip.presence
             value = operation["value"]
@@ -77,7 +86,7 @@ module Masks
             elsif (match = MEMBER_PATH.match(path))
               pathed!(op, match[1], value, held)
             elsif path.casecmp?("displayName")
-              renamed!(value)
+              rename!(value)
             else
               raise Error.new(:bad_request, "#{path} is not a Group attribute that changes here", scim_type: "noTarget")
             end
@@ -85,7 +94,7 @@ module Masks
         end
 
         def member_ids(value)
-          Array(value.is_a?(Hash) ? [ value ] : value).map do |member|
+          (value.is_a?(Hash) ? [ value ] : Array(value)).map do |member|
             uuid = member.is_a?(Hash) ? member["value"] : member
 
             raise Error.new(:bad_request, "each member names a user by value", scim_type: "invalidValue") if uuid.blank?
@@ -97,7 +106,7 @@ module Masks
         private
 
           def listed(base)
-            memberships.map do |membership|
+            (@holders || memberships).map do |membership|
               { "value" => membership.actor.uuid, "display" => membership.actor.identifier,
                 "$ref" => "#{base}/Users/#{membership.actor.uuid}", "type" => "User" }
             end
@@ -106,7 +115,7 @@ module Masks
           def unpathed!(op, value, held)
             raise Error.new(:bad_request, "an operation without a path carries an object", scim_type: "invalidValue") unless value.is_a?(Hash)
 
-            renamed!(value["displayName"]) if value.key?("displayName")
+            rename!(value["displayName"]) if value.key?("displayName")
 
             return unless value.key?("members")
 
@@ -121,17 +130,11 @@ module Masks
               if filtered
                 held[:remove] << filtered
               elsif value.nil?
-                held[:remove_all] = true
+                held[:replace] = []
               else
                 held[:remove].concat(member_ids(value))
               end
             end
-          end
-
-          def renamed!(value)
-            return if value.to_s == role
-
-            raise Error.new(:bad_request, "a group is a role, and a role's name does not change", scim_type: "mutability")
           end
       end
     end

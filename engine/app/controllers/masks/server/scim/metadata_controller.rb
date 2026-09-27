@@ -52,11 +52,6 @@ module Masks
 
         private
 
-          def listed(resources)
-            { "schemas" => [ Scim::LIST ], "totalResults" => resources.size, "startIndex" => 1,
-              "itemsPerPage" => resources.size, "Resources" => resources }
-          end
-
           def user_type
             {
               "schemas" => [ Scim::RESOURCE_TYPE ], "id" => "User", "name" => "User", "endpoint" => "/Users",

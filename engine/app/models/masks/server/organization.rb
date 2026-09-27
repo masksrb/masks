@@ -22,6 +22,7 @@ module Masks
                       format: { with: /\A[a-z0-9][a-z0-9-]*\z/ }
       validates :name, presence: true
       validate :roles_are_named
+      validate :roles_still_held, on: :update, if: :roles_changed?
 
       normalizes :roles, with: ->(held) { Array(held).map { |role| role.to_s.strip.downcase }.reject(&:empty?).uniq - BUILT_IN }
 
@@ -63,6 +64,12 @@ module Masks
           unnamed = roles.reject { |role| role.match?(ROLE) }
 
           errors.add(:roles, "must be lowercase letters, digits, dashes, and underscores: #{unnamed.join(', ')}") if unnamed.any?
+        end
+
+        def roles_still_held
+          held = memberships.where.not(role: role_list).distinct.pluck(:role)
+
+          errors.add(:base, :held, message: "members still hold #{held.join(', ')}") if held.any?
         end
     end
   end

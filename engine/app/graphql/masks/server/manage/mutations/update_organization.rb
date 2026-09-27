@@ -18,11 +18,7 @@ module Masks
             organization.name = name unless name.nil?
             organization.sign_in_policy = sign_in_policy.empty? ? nil : sign_in_policy!(sign_in_policy) unless sign_in_policy.nil?
 
-            unless roles.nil?
-              organization.roles = roles
-              held = organization.memberships.where.not(role: organization.role_list).distinct.pluck(:role)
-              refuse!("members still hold #{held.join(', ')}") if held.any?
-            end
+            organization.roles = roles unless roles.nil?
 
             save!(organization)
 

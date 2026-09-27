@@ -4,21 +4,12 @@ module Masks
       class UsersController < ApplicationController
         include ScimEndpoint
 
-        DEFAULT_COUNT = 100
-
         def index
           relation = Scim::Filter.apply(provisionable, params[:filter])
-          start = [ params[:startIndex].to_i, 1 ].max
-          count = params[:count].present? ? params[:count].to_i.clamp(0, Scim::MAX_RESULTS) : DEFAULT_COUNT
-          actors = relation.order(:created_at, :id).offset(start - 1).limit(count).to_a
+          start, count = scim_page
+          actors = relation.order(:created_at, :id).offset(start - 1).limit(count)
 
-          scim({
-            "schemas" => [ Scim::LIST ],
-            "totalResults" => relation.count,
-            "startIndex" => start,
-            "itemsPerPage" => actors.length,
-            "Resources" => actors.map { |actor| represent(actor) }
-          })
+          scim(listed(actors.map { |actor| represent(actor) }, total: relation.count, start: start))
         end
 
         def show
@@ -49,10 +40,7 @@ module Masks
           actor = found
           matched!(actor)
           owned!(actor)
-
-          unless Array(document["schemas"]).include?(Scim::PATCH)
-            raise Scim::Error.new(:bad_request, "a PATCH names #{Scim::PATCH}", scim_type: "invalidSyntax")
-          end
+          patch_document!
 
           settle!(Scim::User.new(actor).patch(document["Operations"]), Event::ACTOR_UPDATED)
           scim(represent(actor))

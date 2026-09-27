@@ -214,6 +214,18 @@ module Masks
         assert_match "needs an owner", refusal(body)
       end
 
+      test "a role someone still holds stays in the organization" do
+        person = create_actor(@tenant, nickname: "person", scopes: "openid")
+        within { Organization.create!(key: "acme", name: "Acme", roles: [ "billing" ]).memberships.create!(actor: person, role: "billing") }
+
+        held = bearer_for(manager(ManageRoles::SECURITY))
+
+        body = ask(%(mutation { updateOrganization(key: "acme", roles: []) { organization { roles } } }), held)
+
+        assert_equal "members still hold billing", refusal(body)
+        assert_equal [ "billing" ], within { Organization.find_by!(key: "acme").roles }
+      end
+
       test "security gives an organization its own sign-in policy and a provisioning token" do
         within do
           Organization.create!(key: "acme", name: "Acme")

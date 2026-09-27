@@ -7,18 +7,10 @@ module Masks
         before_action :organization!, except: %i[index show]
 
         def index
-          groups = Scim::Group.filter(provisioned_organization ? Scim::Group.all(provisioned_organization) : [], params[:filter])
-          start = [ params[:startIndex].to_i, 1 ].max
-          count = params[:count].present? ? params[:count].to_i.clamp(0, Scim::MAX_RESULTS) : Scim::MAX_RESULTS
-          page = groups.drop(start - 1).first(count)
+          groups = Scim::Group.filter(held ? Scim::Group.all(held, holders: (held.memberships.accepted if members?)) : [], params[:filter])
+          start, count = scim_page
 
-          scim({
-            "schemas" => [ Scim::LIST ],
-            "totalResults" => groups.size,
-            "startIndex" => start,
-            "itemsPerPage" => page.size,
-            "Resources" => page.map { |group| represent(group) }
-          })
+          scim(listed(groups.drop(start - 1).first(count).map { |group| represent(group) }, total: groups.size, start: start))
         end
 
         def show
@@ -30,10 +22,6 @@ module Masks
 
           raise Scim::Error.new(:bad_request, "a group is named by its displayName", scim_type: "invalidValue") if role.empty?
           raise Scim::Error.new(:conflict, "#{held.name} already has the role #{role}", scim_type: "uniqueness") if held.role?(role)
-
-          unless role.match?(Organization::ROLE)
-            raise Scim::Error.new(:bad_request, "a role is lowercase letters, digits, dashes, and underscores", scim_type: "invalidValue")
-          end
 
           group = Scim::Group.new(held, role)
 
@@ -48,7 +36,7 @@ module Masks
 
         def replace
           group = found
-          group.changes([ { "op" => "replace", "value" => document.slice("displayName") } ]) if document.key?("displayName")
+          group.rename!(document["displayName"]) if document.key?("displayName")
 
           Organization.transaction { replace!(group, group.member_ids(document["members"] || [])) }
 
@@ -57,17 +45,13 @@ module Masks
 
         def update
           group = found
-
-          unless Array(document["schemas"]).include?(Scim::PATCH)
-            raise Scim::Error.new(:bad_request, "a PATCH names #{Scim::PATCH}", scim_type: "invalidSyntax")
-          end
+          patch_document!
 
           changes = group.changes(document["Operations"])
 
           Organization.transaction do
             replace!(group, changes[:replace]) if changes[:replace]
-            replace!(group, []) if changes[:remove_all]
-            changes[:add].each { |uuid| assign!(eligible!(uuid), group.role) }
+            eligible!(changes[:add]).each { |membership| assign!(membership, group.role) }
             changes[:remove].each { |uuid| leave!(group, uuid) }
           end
 
@@ -78,10 +62,6 @@ module Masks
           group = found
 
           raise Scim::Error.new(:bad_request, "#{group.role} is built in to every organization", scim_type: "mutability") if group.built_in?
-
-          if held.memberships.exists?(role: group.role)
-            raise Scim::Error.new(:conflict, "people still hold #{group.role}; move them to another role first", scim_type: "mutability")
-          end
 
           roles!(held.roles - [ group.role ])
 
@@ -104,40 +84,46 @@ module Masks
             (held && Scim::Group.find(held, params[:id])) || raise(Scim::Error.new(:not_found, "no group has that id"))
           end
 
+          def members?
+            !params[:excludedAttributes].to_s.split(",").map(&:strip).include?("members")
+          end
+
           def represent(group)
-            group.to_h(base: scim_base, members: !params[:excludedAttributes].to_s.split(",").map(&:strip).include?("members"))
+            group.to_h(base: scim_base, members: members?)
           end
 
           def roles!(roles)
             held.roles = roles
 
-            raise Scim::Error.new(:bad_request, held.errors.full_messages.to_sentence, scim_type: "invalidValue") unless held.save
+            unless held.save
+              raise Scim::Error.new(:conflict, held.errors.full_messages.to_sentence, scim_type: "mutability") if held.errors.of_kind?(:base, :held)
+              raise Scim::Error.new(:bad_request, held.errors.full_messages.to_sentence, scim_type: "invalidValue")
+            end
 
             Event.record!(Event::ORGANIZATION_UPDATED, by: nil, organization: held, changed: [ "roles" ], via: "scim")
           end
 
           def replace!(group, uuids)
-            wanted = uuids.uniq
+            wanted = uuids.to_set
 
             unless group.role == Organization::MEMBER
-              group.memberships.each do |membership|
-                next if wanted.include?(membership.actor.uuid) || !directory_owns?(membership.actor)
+              holders = group.memberships.reject { |membership| wanted.include?(membership.actor.uuid) }
+              owned = directory_owned(holders.map(&:actor_id))
 
-                assign!(membership, Organization::MEMBER)
-              end
+              holders.each { |membership| assign!(membership, Organization::MEMBER) if owned.include?(membership.actor_id) }
             end
 
-            wanted.each { |uuid| assign!(eligible!(uuid), group.role) }
+            eligible!(wanted).each { |membership| assign!(membership, group.role) }
           end
 
           def leave!(group, uuid)
             return if group.role == Organization::MEMBER
 
-            membership = group.memberships.detect { |holder| holder.actor.uuid == uuid }
+            membership = group.memberships.find_by(actors: { uuid: uuid })
 
             return if membership.nil?
 
-            unless directory_owns?(membership.actor)
+            unless directory_owned([ membership.actor_id ]).any?
               raise Scim::Error.new(:forbidden, "#{held.name}'s directory did not create #{membership.actor.identifier}, " \
                                                 "so it does not change their role", scim_type: "mutability")
             end
@@ -145,13 +131,29 @@ module Masks
             assign!(membership, Organization::MEMBER)
           end
 
-          def eligible!(uuid)
-            actor = Actor.find_by(uuid: uuid) if uuid.match?(Subjects::UUID)
-            membership = actor && held.memberships.accepted.find_by(actor: actor)
+          def eligible!(uuids)
+            uuids = uuids.to_a.uniq
+            actors = Actor.where(uuid: uuids.grep(Subjects::UUID)).index_by(&:uuid)
+            memberships = held.memberships.accepted.where(actor_id: actors.values.map(&:id)).index_by(&:actor_id)
+            owned = directory_owned(memberships.keys)
 
-            return membership if membership && directory_owns?(actor)
+            uuids.map do |uuid|
+              membership = actors[uuid] && memberships[actors[uuid].id]
 
-            raise Scim::Error.new(:bad_request, "a group takes only people #{held.name}'s directory provisioned", scim_type: "invalidValue")
+              next membership if membership && owned.include?(membership.actor_id)
+
+              raise Scim::Error.new(:bad_request, "a group takes only people #{held.name}'s directory provisioned", scim_type: "invalidValue")
+            end
+          end
+
+          def directory_owned(actor_ids)
+            return Set.new if actor_ids.empty?
+
+            elsewhere = Membership.accepted.where(actor_id: actor_ids)
+                                  .where("organization_id <> ? OR NOT provisioned", held.id).distinct.pluck(:actor_id)
+            managers = Actor.where(id: actor_ids - elsewhere).select(&:manages?).map(&:id)
+
+            (actor_ids - elsewhere - managers).to_set
           end
 
           def assign!(membership, role)
