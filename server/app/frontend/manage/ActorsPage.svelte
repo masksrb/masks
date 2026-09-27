@@ -317,8 +317,8 @@
                   <Link to={`/actors/${actor.uuid}`} class="link link-hover font-medium">
                     {actor.identifier}
                   </Link>
-                  <div class="flex items-center gap-1.5 text-xs opacity-50">
-                    <span class="truncate">
+                  <div class="flex flex-wrap items-center gap-1.5 text-xs opacity-50">
+                    <span class="min-w-0 break-all">
                       {actor.name ? `${actor.name} · ` : ""}{actor.email ?? "no email"}
                     </span>
                     {#if actor.email && !actor.emailVerified}
