@@ -118,8 +118,6 @@ Each capability is its own commit or series of commits, with tests, docs, a rege
   which, and it shows a line saying what the viewer can do. Hiding each action the viewer cannot take
   is a follow-up. The server check is the real one.
 - Approval requests now email support managers as well as owners.
-- An upgrade note: the console's client was approved for `masks:manage` alone, so an owner opens
-  manage once after upgrading to approve the wider scope list before other managers can join.
 
 ### Organizations and roles
 
