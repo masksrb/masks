@@ -23,7 +23,7 @@ function onsubmit(event) {
 }
 </script>
 
-<Head {login} title={offersPassword ? login.t("title") : login.t("title_code")} />
+<Head {login} title={offersPassword || !emailing ? login.t("title") : login.t("title_code")} />
 
 <Identified {login} />
 

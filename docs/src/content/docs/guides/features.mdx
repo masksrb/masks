@@ -106,8 +106,12 @@ that button when it offers no password.
 - The code has six digits, lasts ten minutes, and allows five attempts. Another can be sent after 30
   seconds, within the account's rate limit.
 - An address or nickname with no account gets the same screen and no mail, so the form does not reveal
-  who has an account. An account that has not accepted its invitation gets no code.
-- Signing in with a code confirms the address if it was not confirmed.
+  who has an account. Neither does an account that has reached its limit of codes.
+- An account that has not accepted its invitation gets no code, and neither does one with a password
+  and an unconfirmed address. Otherwise someone could sign up with another person's address, set a
+  password, and wait for that person to confirm the address by signing in with a code.
+- Signing in with a code confirms the address of an account with no password.
+- Under a policy that hides who has an account, the address is proven first.
 - The code proves the inbox, so it records `otp` and never counts as a second factor. The email second
   factor is not offered after it, because both would come from the same inbox.
 

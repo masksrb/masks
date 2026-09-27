@@ -53,7 +53,7 @@ module Masks
           def candidate
             found = Masks::Server::Actor.locate(login.identifier)
 
-            found if found&.email.present? && found.activated?
+            found if found&.email.present? && found.activated? && (found.email_verified_at.present? || !found.password?)
           end
 
           def token
@@ -67,14 +67,13 @@ module Masks
 
           def send_code
             return warn!("missing-identifier") if login.identifier.blank?
+            return warn!("prove-email-first") if login.state("inbox").pending?
             return if sent? && !resendable?
 
             actor = candidate
             stored = { "identifier" => login.identifier, "sent" => Time.current.to_i }
 
-            if actor
-              return warn!("too-many-codes") if Masks::Server::ConfirmationCode.crowded?(actor: actor, channel: CHANNEL)
-
+            if actor && !Masks::Server::ConfirmationCode.crowded?(actor: actor, channel: CHANNEL)
               opened, code = Masks::Server::ConfirmationCode.open!(actor: actor, channel: CHANNEL, address: actor.email)
               Masks::Server::Confirmations.deliver(ConfirmationCode::EMAIL, actor.email, code,
                                                    journey: Masks::Server::Journey.sign_in(login))
@@ -85,6 +84,7 @@ module Masks
           end
 
           def verify
+            return warn!("prove-email-first") if login.state("inbox").pending?
             return warn!("confirmation-expired") unless sent?
 
             unless token&.verify(update(:code))

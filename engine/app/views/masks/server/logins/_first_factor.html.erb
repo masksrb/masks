@@ -2,7 +2,7 @@
 <% password = auth.dig("password", "offered") %>
 <% emailing = auth.key?("emailCode") %>
 
-<%= render "masks/server/logins/head", title: password ? t(".title") : t(".title_code") %>
+<%= render "masks/server/logins/head", title: password || !emailing ? t(".title") : t(".title_code") %>
 
 <%= render "masks/server/logins/identified", login: login %>
 

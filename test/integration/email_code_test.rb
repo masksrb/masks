@@ -9,6 +9,7 @@ module Masks
         host! host_for(@tenant)
         create_actor(nickname: "owner", email: "owner@example.com")
         @actor = create_actor(nickname: "ada", email: "ada@example.com")
+        within { @actor.update!(email_verified_at: Time.current) }
         policy!
 
         ActionMailer::Base.deliveries.clear
@@ -16,7 +17,9 @@ module Masks
 
       def policy!(first_factors: %w[password email_code])
         within do
-          SignInPolicy.create!(key: "codes", name: "Codes", first_factors: first_factors)
+          SignInPolicy.find_or_initialize_by(key: "codes").tap do |held|
+            held.update!(name: "Codes", first_factors: first_factors)
+          end
         end.tap { |held| @tenant.update!(sign_in_policy: held) }
       end
 
@@ -44,14 +47,14 @@ module Masks
         assert_includes within { Session.sole.amr }, "otp"
       end
 
-      test "the code confirms an address that was not confirmed yet" do
-        refute @actor.email_verified_at
+      test "the code confirms the address of an account with no password" do
+        grace = within { Actor.create!(nickname: "grace", email: "grace@example.com", activated_at: Time.current) }
 
-        event("identify", identifier: "ada")
+        event("identify", identifier: "grace")
         event("email-code:send")
         event("email-code:verify", code: mailed_code)
 
-        assert within { @actor.reload.email_verified_at }
+        assert within { grace.reload.email_verified_at }
       end
 
       test "an address with no account looks the same and gets no mail" do
@@ -112,16 +115,39 @@ module Masks
       end
 
       test "a code used to sign in cannot also be the email second factor" do
-        within do
-          @actor.update!(email_verified_at: Time.current)
-          CodeFactors.enable!(@actor, "email")
-        end
+        within { CodeFactors.enable!(@actor, "email") }
 
         event("identify", identifier: "ada@example.com")
         event("email-code:send")
         body = event("email-code:verify", code: mailed_code)
 
         refute_includes body.fetch("codeFactors", {}).keys, "email"
+      end
+
+      test "an account with a password and an unconfirmed address gets no code, so a code cannot confirm someone else's sign-up" do
+        within { @actor.update!(email_verified_at: nil) }
+        assert @actor.password?
+
+        event("identify", identifier: "ada@example.com")
+        event("email-code:send")
+
+        assert_empty ActionMailer::Base.deliveries
+      end
+
+      test "too many codes for one account looks the same as an address with no account" do
+        ::Rails.configuration.masks.recovery_limit.times do |sent|
+          travel((ConfirmationCode::RESEND_AFTER + 1.second) * sent) do
+            event("identify", identifier: "ada@example.com")
+            event("email-code:send")
+          end
+        end
+
+        travel((ConfirmationCode::RESEND_AFTER + 1.second) * ::Rails.configuration.masks.recovery_limit) do
+          body = event("email-code:send")
+
+          assert_equal "email-code", body["prompt"]
+          refute_includes Array(body["warnings"]), "too-many-codes"
+        end
       end
     end
   end
