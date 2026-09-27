@@ -32,8 +32,15 @@ module Masks
         ],
         "account" => [
           Event::ACTOR_SCOPES_CHANGED
+        ],
+        "organizations" => [
+          Event::MEMBERSHIP_ROLE_CHANGED,
+          Event::MEMBERSHIP_REMOVED,
+          Event::MEMBERSHIP_SUSPENDED
         ]
       }.freeze
+
+      OWN_DOING = [ Event::MEMBERSHIP_REMOVED ].freeze
 
       MAILED = GROUPS.values.flatten.freeze
 
@@ -73,6 +80,7 @@ module Masks
         end
 
         def worth_saying?(event)
+          return false if OWN_DOING.include?(event.action) && event.by_id == event.actor_id
           return true unless ONCE_PER_DEVICE.include?(event.action)
           return true if event.device_id.nil?
 
@@ -94,7 +102,10 @@ module Masks
             by: event.by&.identifier,
             provider: provider_name(event),
             remaining: detail(event, "remaining"),
-            passkey: detail(event, "passkey")
+            passkey: detail(event, "passkey"),
+            organization: event.organization&.name,
+            role: detail(event, "now") || detail(event, "role"),
+            was: detail(event, "was")
           }
         end
 

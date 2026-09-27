@@ -13,7 +13,7 @@
   <% if @where.present? %>
     <br><span class="strong"><%= @where %></span>
   <% end %>
-  <br><%= t(".wrong") %>
+  <br><%= @wrong %>
   <% if @settings %>
     <br><%= link_to t(".manage"), @settings %>
   <% end %>

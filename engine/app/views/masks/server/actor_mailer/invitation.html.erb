@@ -1,6 +1,11 @@
 <p class="lede">
-  <%= @invited_by ? t(".invited_by", nickname: @invited_by.identifier, tenant: @tenant_name) :
-        t(".invited", tenant: @tenant_name) %>
+  <% if @organization %>
+    <%= @invited_by ? t(".organization_by", nickname: @invited_by.identifier, organization: @organization.name, role: @role) :
+          t(".organization", organization: @organization.name, role: @role) %>
+  <% else %>
+    <%= @invited_by ? t(".invited_by", nickname: @invited_by.identifier, tenant: @tenant_name) :
+          t(".invited", tenant: @tenant_name) %>
+  <% end %>
 </p>
 
 <% if @actor.nickname.present? %>
@@ -10,6 +15,10 @@
 <% end %>
 
 <%= render "action", url: @url, label: t(".action") %>
+
+<% if @organization %>
+  <p class="meta"><%= t(".organization_after", organization: @organization.name) %></p>
+<% end %>
 
 <p class="meta">
   <%= t(".expiry", duration: ActiveSupport::Duration.build(Masks::Server::Invitation.lifetime.to_i).inspect) %>

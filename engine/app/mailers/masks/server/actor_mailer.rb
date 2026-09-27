@@ -1,18 +1,38 @@
 module Masks
   module Server
     class ActorMailer < ApplicationMailer
-      def invitation(actor, url, journey:)
+      def invitation(actor, url, journey:, membership: nil)
         return message unless deliverable?
 
         journey!(journey)
         @actor = actor
         @url = url
-        @invited_by = journey.manager
+        @invited_by = membership&.invited_by || journey.manager
+        @organization = membership&.organization
+        @role = membership&.role
 
         mail(
           from: self.class.from,
           to: actor.email,
-          subject: t("actor_mailer.invitation.subject", tenant: @tenant_name)
+          subject: @organization ? t("actor_mailer.invitation.subject_organization", organization: @organization.name) :
+                                   t("actor_mailer.invitation.subject", tenant: @tenant_name)
+        )
+      end
+
+      def organization_invitation(membership, journey:)
+        return message unless deliverable?
+
+        journey!(journey)
+        @actor = membership.actor
+        @organization = membership.organization
+        @role = membership.role
+        @invited_by = membership.invited_by
+        @url = home && "#{home}#organization-#{@organization.key}"
+
+        mail(
+          from: self.class.from,
+          to: membership.invited_as.presence || @actor.email,
+          subject: t("actor_mailer.organization_invitation.subject", organization: @organization.name)
         )
       end
 
@@ -40,6 +60,7 @@ module Masks
         @actor = actor
         @event = event
         @said = t("actor_mailer.notification.said.#{event.action}", **told, default: Notifications.said(event))
+        @wrong = t("actor_mailer.notification.wrong_for.#{event.action}", **told, default: t("actor_mailer.notification.wrong"))
         @where = Notifications.where(event)
         @at = Notifications.at(event, actor)
         @by = event.by if event.by && event.by_id != actor.id

@@ -7,12 +7,24 @@ en:
 
     invitation:
       subject: "You have been invited to %{tenant}"
+      subject_organization: "Join %{organization}"
       invited_by: "%{nickname} invited you to %{tenant}."
       invited: "You have been invited to %{tenant}."
+      organization_by: "%{nickname} invited you to join %{organization} as %{role}."
+      organization: "You have been invited to join %{organization} as %{role}."
+      organization_after: "Once you have a password, %{organization} is waiting on your account page to be accepted."
       nickname_html: "Your nickname is %{nickname}. Open the link to choose a password."
       nickname: "Your nickname is %{nickname}. Open the link to choose a password."
       action: "Choose a password"
       expiry: "Works once, expires in %{duration}. Nothing happens until somebody opens it."
+
+    organization_invitation:
+      subject: "Join %{organization}"
+      invited_by: "%{nickname} invited you to join %{organization} as %{role}."
+      invited: "You have been invited to join %{organization} as %{role}."
+      grants: "Nothing changes until you accept. Once you do, apps that ask which organization you are signing in for can sign you in as %{role} of %{organization}."
+      action: "Accept or decline"
+      unexpected: "If you do not know %{organization}, decline it. An invitation you never accept grants nothing."
 
     password_reset:
       subject: "Reset your %{tenant} password"
@@ -65,6 +77,16 @@ en:
           approved: "%{client} was signed in to your %{tenant} account from a device that showed you a code."
         actor:
           scopes_changed: "What your %{tenant} account is allowed to do was changed."
+        membership:
+          role_changed: "Your role in %{organization} changed from %{was} to %{role}. Apps you are signed in to for %{organization} will pick it up the next time they check."
+          removed: "You were removed from %{organization}. Apps signed in for %{organization} were signed out."
+          suspended: "%{organization} was archived. Apps signed in for it were signed out, and it is no longer offered when you sign in."
+
+      wrong_for:
+        membership:
+          role_changed: "If this looks wrong, ask an owner of %{organization}."
+          removed: "If this looks wrong, ask an owner of %{organization} to add you again."
+          suspended: "If this looks wrong, ask a manager to restore %{organization}."
 
     confirmation_code:
       subject: "%{code} is your %{tenant} confirmation code"

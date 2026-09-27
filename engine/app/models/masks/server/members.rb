@@ -26,7 +26,7 @@ module Masks
 
           Event.record!(Event::MEMBERSHIP_ADDED, actor: actor, by: by, organization: organization, role: role)
 
-          sent = actor.activated? ? { delivered: false, url: nil } : invite(actor, journey)
+          sent = actor.activated? ? tell(membership, journey) : invite(actor, journey, membership)
 
           { membership: membership }.merge(sent)
         end
@@ -103,12 +103,25 @@ module Masks
             actor
           end
 
-          def invite(actor, journey)
+          def invite(actor, journey, membership)
             return { delivered: false, url: nil } if actor.email.blank?
 
-            Invitations.open(actor: actor, journey: journey).slice(:delivered, :url)
+            Invitations.open(actor: actor, journey: journey, membership: membership).slice(:delivered, :url)
           rescue Invitation::Refused
             { delivered: false, url: nil }
+          end
+
+          def tell(membership, journey)
+            actor = membership.actor
+            address = membership.invited_as.presence || actor.email
+
+            unless ActorMailer.deliverable? && address.present? && actor.email_verified_at.present? && address == actor.email
+              return { delivered: false, url: nil }
+            end
+
+            ActorMailer.organization_invitation(membership, journey: journey).deliver_later
+
+            { delivered: true, url: nil }
           end
       end
     end

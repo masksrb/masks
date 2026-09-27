@@ -26,6 +26,11 @@ module Masks
             due = IdleAccounts::WARNING.from_now
             changed = Event.new(action: Event::PASSWORD_CHANGED, actor: person, created_at: Time.current,
                                 ip_address: "203.0.113.7")
+            acme = Organization.new(key: "acme", name: "Acme", roles: [ "billing" ])
+            joining = Membership.new(organization: acme, actor: person, role: "billing", invited_by: manager,
+                                     invited_as: person.email, pending: true)
+            promoted = Event.new(action: Event::MEMBERSHIP_ROLE_CHANGED, actor: person, by: manager, organization: acme,
+                                 created_at: Time.current, details: { "was" => "member", "now" => "owner" })
 
             [
               [ "confirmation_code", "Confirmation code", signing_in,
@@ -38,10 +43,16 @@ module Masks
                 ActorMailer.approval_requested(manager, person, journey: signing_in) ],
               [ "invitation", "Invitation", managing,
                 ActorMailer.invitation(person, "#{origin}/invite/preview", journey: managing) ],
+              [ "invitation_organization", "Invitation to an organization", managing,
+                ActorMailer.invitation(person, "#{origin}/invite/preview", journey: managing, membership: joining) ],
+              [ "organization_invitation", "Added to an organization", managing,
+                ActorMailer.organization_invitation(joining, journey: managing) ],
               [ "approved", "Account approved", managing,
                 ActorMailer.approved(person, journey: managing) ],
               [ "notification", "Security notice", system,
                 ActorMailer.notification(person, changed, journey: system) ],
+              [ "notification_organization", "Organization role changed", system,
+                ActorMailer.notification(person, promoted, journey: system) ],
               [ "idle_suspend", "Idle, before suspension", system,
                 ActorMailer.idle(person, due: due, notice: IdleAccounts::SUSPEND, journey: system) ],
               [ "idle_delete", "Idle, before deletion", system,

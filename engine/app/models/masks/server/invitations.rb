@@ -1,7 +1,7 @@
 module Masks
   module Server
     module Invitations
-      def self.open(actor:, journey:)
+      def self.open(actor:, journey:, membership: nil)
         by = journey.by
         invitation = Invitation.open!(actor: actor, by: by)
 
@@ -9,7 +9,7 @@ module Masks
 
         return { delivered: false, url: invitation.url(Current.origin) } unless mailable?(actor)
 
-        ActorMailer.invitation(actor, invitation.url(Current.origin), journey: journey).deliver_later
+        ActorMailer.invitation(actor, invitation.url(Current.origin), journey: journey, membership: membership).deliver_later
 
         invitation.delivered!
 

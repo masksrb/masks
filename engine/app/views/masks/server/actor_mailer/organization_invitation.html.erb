@@ -1,0 +1,12 @@
+<p class="lede">
+  <%= @invited_by ? t(".invited_by", nickname: @invited_by.identifier, organization: @organization.name, role: @role) :
+        t(".invited", organization: @organization.name, role: @role) %>
+</p>
+
+<p class="lede"><%= t(".grants", organization: @organization.name, role: @role) %></p>
+
+<% if @url %>
+  <%= render "action", url: @url, label: t(".action") %>
+<% end %>
+
+<p class="meta"><%= t(".unexpected", organization: @organization.name) %></p>

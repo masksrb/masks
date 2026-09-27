@@ -1,0 +1,9 @@
+<%= @invited_by ? t(".invited_by", nickname: @invited_by.identifier, organization: @organization.name, role: @role) : t(".invited", organization: @organization.name, role: @role) %>
+
+<%= t(".grants", organization: @organization.name, role: @role) %>
+<% if @url %>
+
+<%= t(".action") %>: <%= @url %>
+<% end %>
+
+<%= t(".unexpected", organization: @organization.name) %>
