@@ -21,7 +21,7 @@ module Masks
         claimed = claim(secret)
         return nil if claimed.nil?
 
-        claimed.actor.activate!(password, verifying_email: claimed.delivered?)
+        claimed.actor.activate!(password, verifying_email: claimed.delivered? && claimed.addressed?)
         claimed.actor
       end
     end

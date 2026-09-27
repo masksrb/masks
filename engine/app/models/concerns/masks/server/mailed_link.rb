@@ -13,8 +13,16 @@ module Masks
         def open!(actor:, by: nil, **held)
           where(actor_id: actor.id).live.find_each(&:consume!)
 
-          mint!(actor: actor, payload: held.stringify_keys.merge({ "by" => by&.uuid }.compact))
+          mint!(actor: actor, payload: { "email" => actor.email }.merge(held.stringify_keys, { "by" => by&.uuid }.compact))
         end
+      end
+
+      def address
+        (payload || {})["email"]
+      end
+
+      def addressed?
+        address.present? && actor.email.present? && actor.email == address
       end
 
       def opened_by

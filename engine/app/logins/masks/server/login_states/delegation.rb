@@ -27,7 +27,7 @@ module Masks
           missing = wanted.select { |_, provider| provider.nil? }.map(&:first)
           refuse!("invalid_scope", "#{missing.join(', ')} names no provider that lets applications use it") if missing.any?
 
-          return unless touched?(:consent)
+          return unless login.state("consent").consented_here?
 
           grant!
 

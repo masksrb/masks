@@ -372,6 +372,24 @@ module Masks
         assert_equal "interaction_required", redirected["error"]
       end
 
+      test "consent given to one application does not let another use somebody's account elsewhere" do
+        delegated!
+        delegating!(key: "globex", name: "Globex")
+        other = create_client(
+          name: "Notes", approved_at: Time.current, consent_required: false,
+          allowed_scopes: "openid offline_access masks:delegate:", grant_types: [ "authorization_code", "refresh_token" ]
+        )
+
+        authorize(client_id: @client.client_id, scope: "openid masks:delegate:globex", state: "globex")
+        consent! if awaiting_consent?
+
+        assert response.location.start_with?(@upstream.url("/o/authorize")), response.location
+
+        authorize(client_id: other.client_id, scope: SCOPE, prompt: "none", state: "borrowed")
+
+        assert_equal 0, within(@tenant) { Delegation.where(client: other).count }
+      end
+
       test "a provider that does not delegate cannot be asked for" do
         create_provider
         sign_in_as(@actor)

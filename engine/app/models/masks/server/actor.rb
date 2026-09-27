@@ -50,6 +50,7 @@ module Masks
 
       before_save :activate_once_a_password_exists
       before_save :forget_code_factors_for_new_addresses
+      after_update :forget_mailed_links, if: :saved_change_to_email?
 
       normalizes :nickname, with: ->(value) { value.to_s.strip.presence }
       normalizes :email, with: ->(value) { value.to_s.strip.downcase.presence }
@@ -411,6 +412,12 @@ module Masks
       end
 
       private
+
+        def forget_mailed_links
+          [ PasswordReset, Invitation, EmailVerification ].each do |kind|
+            kind.where(actor_id: id).live.find_each(&:consume!)
+          end
+        end
 
         def otp_step(secret, code)
           totp = ROTP::TOTP.new(secret)

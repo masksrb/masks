@@ -16,7 +16,7 @@ module Masks
         actor = claimed.actor
 
         transaction do
-          actor.reset_password!(password, verifying_email: claimed.delivered?)
+          actor.reset_password!(password, verifying_email: claimed.delivered? && claimed.addressed?)
           CodeFactors.disable!(actor, "email", by: nil) if claimed.delivered?
         end
 
