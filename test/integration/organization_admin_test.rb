@@ -52,7 +52,12 @@ module Masks
         sign_in_as(@owner)
         post "/account/organizations/acme/members", params: { email: "new@acme.example", role: "admin" }
 
-        assert_redirected_to "/#organizations"
+        assert_redirected_to "/#organization-acme"
+
+        follow_redirect!
+
+        assert_select "#organization-acme[open] .note", text: /new@acme.example/
+        assert_select ".note", count: 1
 
         invited = within { Actor.find_by!(email: "new@acme.example") }
 

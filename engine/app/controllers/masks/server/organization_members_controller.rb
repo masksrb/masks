@@ -95,7 +95,10 @@ module Masks
         end
 
         def back(**flash)
-          redirect_to root_path(anchor: ANCHOR), **flash
+          return redirect_to(root_path(anchor: ANCHOR), **flash) if @organization.nil?
+
+          redirect_to root_path(anchor: "#{ANCHOR.singularize}-#{@organization.key}"),
+                      flash: flash.merge(organization: @organization.key)
         end
     end
   end

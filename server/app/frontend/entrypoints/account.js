@@ -53,3 +53,10 @@ const picture = document.getElementById("picture-file");
 picture?.addEventListener("change", () => {
   if (picture.files?.length) picture.form?.requestSubmit();
 });
+
+for (const field of document.querySelectorAll("[data-autosubmit]")) {
+  const button = field.form?.querySelector("[data-autosubmitted]");
+
+  if (button) button.hidden = true;
+  field.addEventListener("change", () => field.form?.requestSubmit());
+}

@@ -1,0 +1,7 @@
+<% if flash[:organization] == organization.key %>
+  <% if flash[:alert].present? %>
+    <p class="note note-bad" role="alert"><%= flash[:alert] %></p>
+  <% elsif flash[:notice].present? %>
+    <p class="note note-plain" role="status"><%= flash[:notice] %></p>
+  <% end %>
+<% end %>

@@ -1420,6 +1420,70 @@
     width: auto;
   }
 
+  .item-member .item-act {
+    grid-row: 1 / span 2;
+    align-self: center;
+  }
+
+  @media (max-width: 34rem) {
+    .item-member {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .item-member .item-act {
+      grid-column: 1;
+      grid-row: auto;
+      justify-self: start;
+    }
+
+    .item-member .item-acts {
+      justify-content: flex-start;
+    }
+  }
+
+  .entry-invited {
+    border-color: color-mix(in oklab, var(--warn) 55%, var(--line-firm));
+  }
+
+  .member-add {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(7rem, auto) auto;
+    align-items: end;
+    gap: 0.625rem 0.75rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--line);
+  }
+
+  .member-add-hint {
+    grid-column: 1 / -1;
+  }
+
+  .member-add .control {
+    height: 3.25rem;
+    padding-block: 0;
+  }
+
+  .member-add .member-add-go {
+    align-self: end;
+    height: 3.25rem;
+  }
+
+  @media (max-width: 34rem) {
+    .member-add {
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .member-add-email {
+      grid-column: 1 / -1;
+    }
+  }
+
+  .member-leave {
+    display: flex;
+    padding-top: 1rem;
+    border-top: 1px solid var(--line);
+  }
+
   .switches {
     display: flex;
     flex-direction: column;
@@ -2010,6 +2074,81 @@
 
   .providers > form {
     display: contents;
+  }
+
+  .org-picks {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .org-pick {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.875rem;
+    width: 100%;
+    padding: 0.75rem 1rem 0.75rem 0.75rem;
+    border: 1px solid var(--line);
+    border-radius: var(--bend);
+    background: var(--surface);
+    color: var(--ink);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+    transition:
+      border-color 0.15s ease,
+      background-color 0.15s ease;
+  }
+
+  .org-pick:hover:not(:disabled) {
+    border-color: color-mix(in oklab, var(--signal) 60%, var(--line-firm));
+  }
+
+  .org-pick:focus-visible {
+    outline: 2px solid var(--brass-lit);
+    outline-offset: 2px;
+  }
+
+  .org-pick:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  .org-pick[aria-busy="true"] {
+    opacity: 1;
+    cursor: progress;
+    border-color: var(--signal);
+  }
+
+  .org-pick-mark {
+    display: grid;
+    place-items: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: calc(var(--bend) * 0.75);
+    border: 1px solid var(--line-firm);
+    background: var(--ground);
+    color: var(--signal);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+
+  .org-pick-name {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: -0.014em;
+  }
+
+  .org-pick-role {
+    font-size: 0.8125rem;
+    color: var(--ink-soft);
   }
 
   .providers-rule {
