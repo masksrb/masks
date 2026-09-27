@@ -59,6 +59,21 @@
 
   const SETTINGS = ["settings", "policies", "providers", "domains", "provisioning", "adapters", "streams", "email", "activity"];
 
+  const REPAIRED = "masks:manage:repaired";
+
+  function stale(error) {
+    if (error === "invalid_client") return true;
+    if (error !== "invalid_scope") return false;
+
+    try {
+      if (sessionStorage.getItem(REPAIRED)) return false;
+      sessionStorage.setItem(REPAIRED, "1");
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   function register() {
     location.replace(handshakeUrl(boot));
   }
@@ -67,7 +82,7 @@
     const query = new URLSearchParams(location.search);
 
     try {
-      if (query.get("error") === "invalid_client") {
+      if (stale(query.get("error"))) {
         api.unpair();
         register();
         return;
