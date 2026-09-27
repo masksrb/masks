@@ -3,6 +3,8 @@ module Masks
     module Manage
       module Mutations
         class DiscoverProvider < BaseMutation
+          requires :security
+
           argument :issuer, String
 
           field :issuer, String, null: false

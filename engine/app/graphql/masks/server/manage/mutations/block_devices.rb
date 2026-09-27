@@ -3,6 +3,8 @@ module Masks
     module Manage
       module Mutations
         class BlockDevices < BaseMutation
+          requires :security
+
           MOST = 500
 
           argument :ids, [ ID ], required: false

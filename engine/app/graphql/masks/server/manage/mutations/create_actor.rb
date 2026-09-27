@@ -3,6 +3,8 @@ module Masks
     module Manage
       module Mutations
         class CreateActor < BaseMutation
+          requires :support
+
           argument :nickname, String, required: false
           argument :email, String, required: false
           argument :password, String, required: false
@@ -13,6 +15,8 @@ module Masks
           field :url, String
 
           def resolve(nickname: nil, email: nil, password: nil, scopes: nil)
+            granting!(scopes)
+
             actor = Actor.new(
               nickname: nickname,
               email: email,

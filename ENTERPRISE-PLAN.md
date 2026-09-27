@@ -8,23 +8,23 @@ the work.
 
 ## State
 
-| Capability                      | State       | Commit or next step                                                                  |
-| ------------------------------- | ----------- | ------------------------------------------------------------------------------------ |
-| Audit log                       | Built       | `Event`, about 100 actions, 180-day retention                                        |
-| Event streaming                 | Built       | `03b525c`, `bbe2ea1`, guide at `guides/event-streams`                                |
-| Single sign-on and provisioning | Built       | OIDC, OAuth, SAML in and out, SCIM                                                   |
-| Step-up authentication          | Built       | `a6fd2fe`, and `apps_require_second_factor` on sign-in policies                      |
-| Token exchange                  | Built       | RFC 8693, with `exchange.granted` and `exchange.refused` events. RFC 9396 is item 11 |
-| Manage roles                    | Not started |                                                                                      |
-| Organizations and roles         | Not started |                                                                                      |
-| Home-realm discovery            | Not started |                                                                                      |
-| Session policies                | Built       | `sign_in_policies.session_lifetime` and `session_idle_timeout`                       |
-| Audit export and retention      | Not started |                                                                                      |
-| Adaptive risk                   | Not started |                                                                                      |
-| Passwordless email              | Not started |                                                                                      |
-| Custom domains                  | Not started |                                                                                      |
-| Shared signals                  | Not started |                                                                                      |
-| Migration                       | Not started |                                                                                      |
+| Capability                      | State       | Commit or next step                                                                     |
+| ------------------------------- | ----------- | --------------------------------------------------------------------------------------- |
+| Audit log                       | Built       | `Event`, about 100 actions, 180-day retention                                           |
+| Event streaming                 | Built       | `03b525c`, `bbe2ea1`, guide at `guides/event-streams`                                   |
+| Single sign-on and provisioning | Built       | OIDC, OAuth, SAML in and out, SCIM                                                      |
+| Step-up authentication          | Built       | `a6fd2fe`, and `apps_require_second_factor` on sign-in policies                         |
+| Token exchange                  | Built       | RFC 8693, with `exchange.granted` and `exchange.refused` events. RFC 9396 is item 11    |
+| Manage roles                    | Built       | `ManageRoles`, a declared level on every mutation, and the limits in the security guide |
+| Organizations and roles         | Not started |                                                                                         |
+| Home-realm discovery            | Not started |                                                                                         |
+| Session policies                | Built       | `sign_in_policies.session_lifetime` and `session_idle_timeout`                          |
+| Audit export and retention      | Not started |                                                                                         |
+| Adaptive risk                   | Not started |                                                                                         |
+| Passwordless email              | Not started |                                                                                         |
+| Custom domains                  | Not started |                                                                                         |
+| Shared signals                  | Not started |                                                                                         |
+| Migration                       | Not started |                                                                                         |
 
 ## What the code already has
 
@@ -54,20 +54,20 @@ Checked against the code on 2026-09-27. Each planned item starts from these.
 
 Sizes: S is a day, M is two to four days, L is a week or more.
 
-| #   | Capability                                        | Size | Depends on    | Why here                                                                            |
-| --- | ------------------------------------------------- | ---- | ------------- | ----------------------------------------------------------------------------------- |
-| 1   | Token exchange events and policy-required step-up | S    |               | Done                                                                                |
-| 2   | Manage roles                                      | M    |               | Enterprise buyers ask for least privilege in the admin console before anything else |
-| 3   | Organizations and roles                           | L    | 2             | Everything per-customer builds on it                                                |
-| 4   | Home-realm discovery                              | M    | Domain proof  | Makes SSO usable without a per-customer sign-in link                                |
-| 5   | Session policies                                  | S    |               | Done                                                                                |
-| 6   | Audit export and retention                        | S    |               | SOC 2 evidence and regulated retention periods                                      |
-| 7   | Adaptive risk                                     | M    | 1             | Reuses step-up                                                                      |
-| 8   | Passwordless email                                | M    |               | Consumer and low-friction B2B markets                                               |
-| 9   | Custom domains                                    | L    | Domain proof  | Needs certificates and a second tenant lookup                                       |
-| 10  | Shared signals                                    | M    | Event streams | Reuses delivery and signing                                                         |
-| 11  | Rich authorization requests                       | M    | 1             | Finishes token exchange                                                             |
-| 12  | Migration                                         | L    |               | Adoption, and Okta and Cognito need a live check against the old provider           |
+| #   | Capability                                        | Size | Depends on    | Why here                                                                  |
+| --- | ------------------------------------------------- | ---- | ------------- | ------------------------------------------------------------------------- |
+| 1   | Token exchange events and policy-required step-up | S    |               | Done                                                                      |
+| 2   | Manage roles                                      | M    |               | Done                                                                      |
+| 3   | Organizations and roles                           | L    | 2             | Everything per-customer builds on it                                      |
+| 4   | Home-realm discovery                              | M    | Domain proof  | Makes SSO usable without a per-customer sign-in link                      |
+| 5   | Session policies                                  | S    |               | Done                                                                      |
+| 6   | Audit export and retention                        | S    |               | SOC 2 evidence and regulated retention periods                            |
+| 7   | Adaptive risk                                     | M    | 1             | Reuses step-up                                                            |
+| 8   | Passwordless email                                | M    |               | Consumer and low-friction B2B markets                                     |
+| 9   | Custom domains                                    | L    | Domain proof  | Needs certificates and a second tenant lookup                             |
+| 10  | Shared signals                                    | M    | Event streams | Reuses delivery and signing                                               |
+| 11  | Rich authorization requests                       | M    | 1             | Finishes token exchange                                                   |
+| 12  | Migration                                         | L    |               | Adoption, and Okta and Cognito need a live check against the old provider |
 
 Domain proof is shared by 4 and 9, so it is built once with 4.
 
@@ -97,24 +97,29 @@ Each capability is its own commit or series of commits, with tests, docs, a rege
   still reaches apps. `apps_require_second_factor` asks for it again at each app sign-in that has not
   used one.
 
-### Manage roles
+### Manage roles (done)
 
-The console is all or nothing today. Buyers want an auditor who can read, a support role that can reset
-a factor, and an owner who can change keys.
-
-- Scopes: `masks:manage` stays the owner. Add `masks:manage:read`, `masks:manage:support`, and
-  `masks:manage:security`.
-- Each manage query and mutation declares the least scope it needs, with one `requires` line in the
-  resolver's class. `BaseMutation` refuses when the token lacks it. Queries default to `read`, and
-  mutations default to owner, so a forgotten declaration fails closed.
-- `support` covers resetting passwords, removing factors, resending invitations, signing out sessions,
-  and unblocking devices. `security` covers keys, policies, providers, streams, and adapters. Owner
-  covers everything, including granting these scopes.
-- An actor cannot grant a scope it lacks. `SetActorScopes` checks this.
-- The Svelte app reads the granted scopes from the token and hides actions the viewer cannot take. The
-  server check is the real one.
-- Tests walk every mutation in the schema and assert it declares a scope, so a new mutation cannot ship
-  without one.
+- `ManageRoles` names four scopes and four levels. `read` is any of them, `support` is
+  `masks:manage:support` or owner, `security` is `masks:manage:security` or owner, and `owner` is
+  `masks:manage`.
+- `ManageEndpoint` accepts a token that carries any of them, and the roles in force are the ones both
+  the token and the actor hold, so taking a role away ends it on the next request.
+- `BaseMutation.requires` declares a level, and `authorized?` refuses with the scopes the mutation
+  needs. The default is owner. A test walks the schema and fails on any mutation that did not declare
+  one. Today: 24 support, 37 security, 3 owner (`setActorScopes`, `updateTenant`, `deleteActor`).
+- Below owner: `actor!` and the lookups behind sessions, tokens, consents, connections, and
+  delegations refuse another manager's records. `device!` refuses a device another manager has a live
+  session on. `granting!` refuses handing out a manage scope to a person or a client. `client!`
+  refuses a client that can carry a manage scope, which keeps the console's redirect in an owner's
+  hands.
+- Handshakes: only an owner connects the manage console. Another manager joins the connected console
+  from a new browser, and only when the handshake matches it exactly.
+- The console asks for all four scopes and gets the ones the person holds. `manageLevels` tells it
+  which, and it shows a line saying what the viewer can do. Hiding each action the viewer cannot take
+  is a follow-up. The server check is the real one.
+- Approval requests now email support managers as well as owners.
+- An upgrade note: the console's client was approved for `masks:manage` alone, so an owner opens
+  manage once after upgrading to approve the wider scope list before other managers can join.
 
 ### Organizations and roles
 

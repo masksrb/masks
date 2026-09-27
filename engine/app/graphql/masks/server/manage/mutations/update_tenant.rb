@@ -3,6 +3,8 @@ module Masks
     module Manage
       module Mutations
         class UpdateTenant < BaseMutation
+          requires :owner
+
           argument :name, String, required: false
           argument :dynamic_client_scopes, [ String ], required: false
           argument :dynamic_registration, String, required: false

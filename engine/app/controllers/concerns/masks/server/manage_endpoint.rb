@@ -13,20 +13,20 @@ module Masks
       private
 
         def with_manage_token
-          with_access_token(scope: Scopes::MANAGE) do |token|
+          with_access_token(scope: ManageRoles::SCOPES) do |token|
             actor = token.actor
 
             next refuse_token("that token has no subject") if actor.nil?
 
-            unless actor.scope_list.include?(Scopes::MANAGE)
-              next refuse_token("that actor no longer holds #{Scopes::MANAGE}")
-            end
+            roles = ManageRoles.held(token.scope_list) & ManageRoles.held(actor.scope_list)
+
+            next refuse_token("that actor no longer holds a manage role") if roles.empty?
 
             unless token.audience.include?(issuer.manage_resource)
               next refuse_token("that token was not issued for #{issuer.manage_resource}")
             end
 
-            yield token, actor
+            yield token, actor, roles
           end
         end
     end

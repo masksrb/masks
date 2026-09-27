@@ -12,6 +12,7 @@ description: Tenant isolation, rate limits, security emails, signing-key rotatio
 | Request parameters leaking from the address bar | Pushed authorization requests | [Pushed requests](#pushed-requests) |
 | A forged or altered authorization request | Signed request objects | [Signed requests](#signed-requests) |
 | A stolen token being replayed | Tokens bound to the client's key with DPoP | [Binding a token with DPoP](#binding-a-token-with-dpop) |
+| A manager doing more than their job needs | Four manage roles, checked on every mutation | [Manage roles](#manage-roles) |
 
 Encryption of secrets at rest is covered in
 [self-hosting](/guides/self-hosting/#encryption--secrets). Blocking a device before it can try a
@@ -51,6 +52,34 @@ end
 - Cross-tenant code uses `Tenant.switch(tenant) { ... }`.
 - It sets a session-scoped Postgres setting and opens no transaction.
 - Outside a tenant, every query returns zero rows, including `Model.unscoped`.
+
+## Manage roles
+
+Each manager holds one or more of four scopes. A token for `/manage` carries the ones the person
+holds and the console asked for, and masks checks the person still holds them on every request.
+
+| Scope | Can |
+| --- | --- |
+| `masks:manage:read` | Read everything manage shows, and change nothing. |
+| `masks:manage:support` | Read, and help people: sign them out, suspend and restore them, reset passwords and factors, resend invitations, and revoke their sessions, consents, and tokens. |
+| `masks:manage:security` | Read, and change signing keys, clients, providers, sign-in policies, adapters, event streams, and provisioning tokens. |
+| `masks:manage` | Everything, including tenant settings, deleting people, and granting any scope. |
+
+Every mutation declares the least scope it needs, and one that declares none needs `masks:manage`.
+Manage shows a line at the top of each page saying what a viewer below `masks:manage` can do.
+
+These limits apply to every role below `masks:manage`:
+
+- It cannot change another manager, or a session, token, consent, connection, or device that belongs
+  to one. Support cannot change an owner's email and then reset their password.
+- It cannot give a person or a client any manage scope.
+- It cannot change a client that can carry a manage scope, so it cannot redirect the manage console
+  to another address.
+- It can open manage in a new browser once an owner has connected the console, and it cannot connect
+  one itself.
+
+Taking a role away ends it on the person's next request. Their token is refused, and manage asks
+them to sign in again.
 
 ## Rate limits
 

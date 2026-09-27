@@ -3,6 +3,8 @@ module Masks
     module Manage
       module Mutations
         class RevokePasskey < BaseMutation
+          requires :support
+
           argument :uuid, ID
           argument :id, ID
 

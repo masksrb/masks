@@ -29,7 +29,9 @@ module Masks
 
           return unless ActorMailer.deliverable?
 
-          Actor.holding(Scopes::MANAGE).where.not(email_verified_at: nil).find_each do |manager|
+          approvers = Actor.holding(Scopes::MANAGE).or(Actor.holding(Scopes::MANAGE_SUPPORT))
+
+          approvers.where.not(email_verified_at: nil).find_each do |manager|
             ActorMailer.approval_requested(manager, actor, journey: journey).deliver_later
           end
         end

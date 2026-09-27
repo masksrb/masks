@@ -4,7 +4,10 @@ description: The GraphQL schema served at /manage/graphql.
 ---
 
 Everything `/manage` can ask for and everything it can change. `/manage/graphql` accepts a
-bearer carrying `masks:manage`, issued for this tenant's manage resource and no other.
+bearer carrying `masks:manage` or one of the narrower
+[manage roles](/guides/security/#manage-roles), issued for this tenant's manage resource and
+no other. A mutation the bearer's roles do not cover answers with an error naming the scopes
+it needs.
 
 Generated from `ManageSchema` by `./dev reference`. CI fails when this page and the
 schema disagree.
@@ -13,43 +16,44 @@ schema disagree.
 
 ### Query
 
-| Field | Type |
-| --- | --- |
-| `viewer` | [`Actor!`](#actor) |
-| `tenant` | [`Tenant!`](#tenant) |
-| `actors`<br />`search: String`<br />`activated: Boolean`<br />`holds: String`<br />`pendingApproval: Boolean`<br />`suspended: Boolean`<br />`afterId: ID`<br />`limit: Int` | [`[Actor!]!`](#actor) |
-| `actorCount`<br />`search: String`<br />`activated: Boolean`<br />`holds: String`<br />`pendingApproval: Boolean`<br />`suspended: Boolean` | `Int!` |
-| `actor`<br />`uuid: ID!` | [`Actor`](#actor) |
-| `clients`<br />`search: String`<br />`archived: Boolean`<br />`afterId: ID`<br />`limit: Int` | [`[Client!]!`](#client) |
-| `clientCount`<br />`search: String`<br />`archived: Boolean` | `Int!` |
-| `client`<br />`clientId: ID!` | [`Client`](#client) |
-| `sessions`<br />`actor: ID`<br />`limit: Int` | [`[Session!]!`](#session) |
-| `devices`<br />`actor: ID`<br />`blocked: Boolean`<br />`unattached: Boolean`<br />`agent: String`<br />`limit: Int` | [`[Device!]!`](#device) |
-| `device`<br />`id: ID!` | [`Device`](#device) |
-| `tokens`<br />`actor: ID`<br />`client: ID`<br />`kind: String`<br />`live: Boolean`<br />`limit: Int` | [`[Token!]!`](#token) |
-| `connections`<br />`actor: ID`<br />`provider: ID`<br />`revoked: Boolean`<br />`limit: Int` | [`[Connection!]!`](#connection) |
-| `consents`<br />`actor: ID`<br />`client: ID`<br />`revoked: Boolean`<br />`limit: Int` | [`[Consent!]!`](#consent) |
-| `namespaces` | [`[Namespace!]!`](#namespace) |
-| `providers`<br />`archived: Boolean` | [`[Provider!]!`](#provider) |
-| `provider`<br />`key: ID!` | [`Provider`](#provider) |
-| `providerPresets` | [`[ProviderPreset!]!`](#providerpreset) |
-| `adapters`<br />`kind: String`<br />`archived: Boolean` | [`[Adapter!]!`](#adapter) |
-| `adapterServices` | [`[AdapterService!]!`](#adapterservice) |
-| `eventStreams`<br />`archived: Boolean` | [`[EventStream!]!`](#eventstream) |
-| `signInPolicies`<br />`archived: Boolean` | [`[SignInPolicy!]!`](#signinpolicy) |
-| `signInPolicy`<br />`key: ID!` | [`SignInPolicy`](#signinpolicy) |
-| `defaultSignInPolicy` | [`SignInPolicy!`](#signinpolicy) |
-| `scopesSupported` | `[String!]!` |
-| `provisioningTokens` | [`[ProvisioningToken!]!`](#provisioningtoken) |
-| `scimBaseUrl` | `String!` |
-| `samlMetadataUrl` | `String!` |
-| `minimumPassword` | `Int!` |
-| `mailPreviews`<br />`client: ID` | [`[MailPreview!]!`](#mailpreview) |
-| `tally` | [`Tally!`](#tally) |
-| `activity`<br />`days: Int` | [`[ActivityDay!]!`](#activityday) |
-| `events`<br />`actor: ID`<br />`client: ID`<br />`device: ID`<br />`action: String`<br />`grave: Boolean`<br />`afterId: ID`<br />`limit: Int` | [`[Event!]!`](#event) |
-| `eventCount`<br />`actor: ID`<br />`client: ID`<br />`device: ID`<br />`action: String`<br />`grave: Boolean` | `Int!` |
-| `eventActions` | [`[EventAction!]!`](#eventaction) |
+| Field | Type | Description |
+| --- | --- | --- |
+| `viewer` | [`Actor!`](#actor) |  |
+| `manageLevels` | `[String!]!` | What the viewer's token may do here: read, support, security, and owner. |
+| `tenant` | [`Tenant!`](#tenant) |  |
+| `actors`<br />`search: String`<br />`activated: Boolean`<br />`holds: String`<br />`pendingApproval: Boolean`<br />`suspended: Boolean`<br />`afterId: ID`<br />`limit: Int` | [`[Actor!]!`](#actor) |  |
+| `actorCount`<br />`search: String`<br />`activated: Boolean`<br />`holds: String`<br />`pendingApproval: Boolean`<br />`suspended: Boolean` | `Int!` |  |
+| `actor`<br />`uuid: ID!` | [`Actor`](#actor) |  |
+| `clients`<br />`search: String`<br />`archived: Boolean`<br />`afterId: ID`<br />`limit: Int` | [`[Client!]!`](#client) |  |
+| `clientCount`<br />`search: String`<br />`archived: Boolean` | `Int!` |  |
+| `client`<br />`clientId: ID!` | [`Client`](#client) |  |
+| `sessions`<br />`actor: ID`<br />`limit: Int` | [`[Session!]!`](#session) |  |
+| `devices`<br />`actor: ID`<br />`blocked: Boolean`<br />`unattached: Boolean`<br />`agent: String`<br />`limit: Int` | [`[Device!]!`](#device) |  |
+| `device`<br />`id: ID!` | [`Device`](#device) |  |
+| `tokens`<br />`actor: ID`<br />`client: ID`<br />`kind: String`<br />`live: Boolean`<br />`limit: Int` | [`[Token!]!`](#token) |  |
+| `connections`<br />`actor: ID`<br />`provider: ID`<br />`revoked: Boolean`<br />`limit: Int` | [`[Connection!]!`](#connection) |  |
+| `consents`<br />`actor: ID`<br />`client: ID`<br />`revoked: Boolean`<br />`limit: Int` | [`[Consent!]!`](#consent) |  |
+| `namespaces` | [`[Namespace!]!`](#namespace) |  |
+| `providers`<br />`archived: Boolean` | [`[Provider!]!`](#provider) |  |
+| `provider`<br />`key: ID!` | [`Provider`](#provider) |  |
+| `providerPresets` | [`[ProviderPreset!]!`](#providerpreset) |  |
+| `adapters`<br />`kind: String`<br />`archived: Boolean` | [`[Adapter!]!`](#adapter) |  |
+| `adapterServices` | [`[AdapterService!]!`](#adapterservice) |  |
+| `eventStreams`<br />`archived: Boolean` | [`[EventStream!]!`](#eventstream) |  |
+| `signInPolicies`<br />`archived: Boolean` | [`[SignInPolicy!]!`](#signinpolicy) |  |
+| `signInPolicy`<br />`key: ID!` | [`SignInPolicy`](#signinpolicy) |  |
+| `defaultSignInPolicy` | [`SignInPolicy!`](#signinpolicy) |  |
+| `scopesSupported` | `[String!]!` |  |
+| `provisioningTokens` | [`[ProvisioningToken!]!`](#provisioningtoken) |  |
+| `scimBaseUrl` | `String!` |  |
+| `samlMetadataUrl` | `String!` |  |
+| `minimumPassword` | `Int!` |  |
+| `mailPreviews`<br />`client: ID` | [`[MailPreview!]!`](#mailpreview) |  |
+| `tally` | [`Tally!`](#tally) |  |
+| `activity`<br />`days: Int` | [`[ActivityDay!]!`](#activityday) |  |
+| `events`<br />`actor: ID`<br />`client: ID`<br />`device: ID`<br />`action: String`<br />`grave: Boolean`<br />`afterId: ID`<br />`limit: Int` | [`[Event!]!`](#event) |  |
+| `eventCount`<br />`actor: ID`<br />`client: ID`<br />`device: ID`<br />`action: String`<br />`grave: Boolean` | `Int!` |  |
+| `eventActions` | [`[EventAction!]!`](#eventaction) |  |
 
 ## Mutations
 

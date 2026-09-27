@@ -7,6 +7,9 @@ module Masks
       OFFLINE = "offline_access".freeze
       IDENTITIES = "identities".freeze
       MANAGE = "masks:manage".freeze
+      MANAGE_SECURITY = "masks:manage:security".freeze
+      MANAGE_SUPPORT = "masks:manage:support".freeze
+      MANAGE_READ = "masks:manage:read".freeze
       HANDSHAKE = "masks:handshake".freeze
       SCIM = "masks:scim".freeze
       DELEGATE = "masks:delegate:".freeze
@@ -18,6 +21,9 @@ module Masks
         OFFLINE => "offline_access",
         IDENTITIES => "identities",
         MANAGE => "manage",
+        MANAGE_SECURITY => "manage_security",
+        MANAGE_SUPPORT => "manage_support",
+        MANAGE_READ => "manage_read",
         HANDSHAKE => "handshake",
         SCIM => "scim"
       }.freeze

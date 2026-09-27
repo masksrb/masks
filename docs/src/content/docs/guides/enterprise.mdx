@@ -15,7 +15,7 @@ today, and how the rest will be built.
 | Single sign-on and provisioning | Built | [Single sign-on and provisioning](#single-sign-on-and-provisioning) |
 | Step-up authentication | Built | [Step-up authentication](#step-up-authentication) |
 | Token exchange | Built | [Token exchange](#token-exchange) |
-| Manage roles | Planned | [Manage roles](#manage-roles) |
+| Manage roles | Built | [Manage roles](#manage-roles) |
 | Organizations and roles | Planned | [Organizations and roles](#organizations-and-roles) |
 | Home-realm discovery | Planned | [Home-realm discovery](#home-realm-discovery) |
 | Session policies | Built | [Session policies](#session-policies) |
@@ -100,21 +100,15 @@ timeout. A session that runs past either ends, its refresh tokens stop working,
 and an app covered by a stricter policy asks for the password again. See
 [how long a session lasts](/guides/features/#how-long-a-session-lasts).
 
-## Planned
-
 ### Manage roles
 
-Anyone who holds `masks:manage` can do everything manage does. An auditor needs
-to read without changing anything, and a support team needs to reset a factor
-without touching signing keys.
+An auditor reads without changing anything, a support team resets a factor
+without touching signing keys, and a security team changes keys without
+touching people. `masks:manage:read`, `masks:manage:support`, and
+`masks:manage:security` sit beside `masks:manage`, and no role can grant a
+role it does not hold. See [manage roles](/guides/security/#manage-roles).
 
-- `masks:manage:read` reads everything and changes nothing.
-- `masks:manage:support` resets passwords and factors, resends invitations, and
-  signs people out.
-- `masks:manage:security` changes keys, policies, providers, streams, and
-  adapters.
-- `masks:manage` keeps every permission, including granting these scopes. Nobody
-  can grant a scope they do not hold.
+## Planned
 
 ### Organizations and roles
 

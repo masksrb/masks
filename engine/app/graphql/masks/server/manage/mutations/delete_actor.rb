@@ -3,6 +3,8 @@ module Masks
     module Manage
       module Mutations
         class DeleteActor < BaseMutation
+          requires :owner
+
           argument :uuid, ID
 
           field :uuid, ID, null: false

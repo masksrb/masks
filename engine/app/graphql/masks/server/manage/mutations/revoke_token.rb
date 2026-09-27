@@ -3,6 +3,8 @@ module Masks
     module Manage
       module Mutations
         class RevokeToken < BaseMutation
+          requires :support
+
           argument :id, ID
           argument :family, Boolean, required: false
 
@@ -12,6 +14,8 @@ module Masks
           def resolve(id:, family: false)
             token = Masks::Server::Token.where(kind: Types::TokenType::GRANTS).find_by(id: id) ||
               refuse!("no token with that id")
+
+            managed!(token.actor) if token.actor
 
             revoked = family ? token.revoke_family! : token.revoke!
 

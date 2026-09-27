@@ -3,6 +3,8 @@ module Masks
     module Manage
       module Mutations
         class DisableCodeFactor < BaseMutation
+          requires :support
+
           argument :uuid, ID
           argument :factor, String
 

@@ -3,6 +3,8 @@ module Masks
     module Manage
       module Mutations
         class UpdateEventStream < BaseMutation
+          requires :security
+
           argument :key, ID
           argument :name, String, required: false
           argument :url, String, required: false

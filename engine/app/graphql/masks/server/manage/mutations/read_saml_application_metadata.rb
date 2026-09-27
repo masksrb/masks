@@ -3,6 +3,8 @@ module Masks
     module Manage
       module Mutations
         class ReadSamlApplicationMetadata < BaseMutation
+          requires :security
+
           NAMES = { "md" => SamlIdentity::METADATA_NS, "ds" => SamlIdentity::DSIG_NS }.freeze
 
           argument :xml, String

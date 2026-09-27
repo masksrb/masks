@@ -3,6 +3,8 @@ module Masks
     module Manage
       module Mutations
         class CreateClient < BaseMutation
+          requires :security
+
           argument :name, String
           argument :grant_types, [ String ], required: false
           argument :redirect_uris, [ String ], required: false
@@ -21,6 +23,8 @@ module Masks
 
           def resolve(name:, grant_types: [ Masks::Server::Client::CLIENT_CREDENTIALS ], required_scopes: [], allowed_scopes: [],
                       token_endpoint_auth_method: Masks::Server::Client::DEFAULT_AUTH_METHOD, **attributes)
+            granting!(Scopes.union(required_scopes, allowed_scopes))
+
             client = Masks::Server::Client.new(
               client_id: SecureRandom.uuid,
               name: name,

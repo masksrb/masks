@@ -3,6 +3,8 @@ module Masks
     module Manage
       module Mutations
         class IssueProvisioningToken < BaseMutation
+          requires :security
+
           argument :label, String
           argument :expires_in, Integer, required: false
 

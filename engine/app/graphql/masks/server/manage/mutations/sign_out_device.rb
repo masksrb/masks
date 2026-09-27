@@ -3,6 +3,8 @@ module Masks
     module Manage
       module Mutations
         class SignOutDevice < BaseMutation
+          requires :support
+
           argument :id, ID
 
           field :device, Types::DeviceType, null: false

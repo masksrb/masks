@@ -3,6 +3,8 @@ module Masks
     module Manage
       module Mutations
         class UpdateActor < BaseMutation
+          requires :support
+
           argument :uuid, ID
           argument :nickname, String, required: false
           argument :email, String, required: false

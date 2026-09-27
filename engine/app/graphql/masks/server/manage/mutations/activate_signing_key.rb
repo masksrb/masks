@@ -3,6 +3,8 @@ module Masks
     module Manage
       module Mutations
         class ActivateSigningKey < BaseMutation
+          requires :security
+
           argument :kid, ID
 
           field :signing_key, Types::SigningKeyType, null: false

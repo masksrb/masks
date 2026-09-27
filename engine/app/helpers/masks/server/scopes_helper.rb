@@ -1,7 +1,7 @@
 module Masks
   module Server
     module ScopesHelper
-      CONSEQUENTIAL = /(:write|:command|:exec|:delete|:admin)\z|\Aoffline_access\z|\Amasks:manage\z|\Amasks:delegate:./
+      CONSEQUENTIAL = /(:write|:command|:exec|:delete|:admin)\z|\Aoffline_access\z|\Amasks:manage(:[a-z]+)?\z|\Amasks:delegate:./
 
       def consequential_scope?(scope)
         scope.to_s.match?(CONSEQUENTIAL)

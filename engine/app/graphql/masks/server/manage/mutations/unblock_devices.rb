@@ -3,6 +3,8 @@ module Masks
     module Manage
       module Mutations
         class UnblockDevices < BaseMutation
+          requires :support
+
           argument :ids, [ ID ]
 
           field :count, Integer, null: false

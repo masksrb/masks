@@ -3,6 +3,8 @@ module Masks
     module Manage
       module Mutations
         class ResendInvitation < BaseMutation
+          requires :support
+
           argument :uuid, ID
 
           field :actor, Types::ActorType, null: false

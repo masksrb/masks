@@ -3,6 +3,8 @@ module Masks
     module Manage
       module Mutations
         class UpdateClient < BaseMutation
+          requires :security
+
           argument :client_id, ID
           argument :name, String, required: false
           argument :grant_types, [ String ], required: false
@@ -39,6 +41,7 @@ module Masks
           def resolve(client_id:, required_scopes: nil, allowed_scopes: nil, sign_in_policy: nil,
                       token_endpoint_auth_method: nil, **attributes)
             client = client!(client_id)
+            granting!(Scopes.union(required_scopes, allowed_scopes))
 
             authenticates!(client, token_endpoint_auth_method) if token_endpoint_auth_method
 

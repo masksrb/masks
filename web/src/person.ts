@@ -18,7 +18,11 @@ export function personFrom(account: Account): PersonInfo {
     name,
     details,
     unconfirmed: Boolean(account.email) && account.email_verified === false,
-    manager: account.scopes?.includes("masks:manage") ?? false,
+    manager:
+      account.scopes?.some(
+        (scope) =>
+          scope === "masks:manage" || scope.startsWith("masks:manage:"),
+      ) ?? false,
   };
 }
 

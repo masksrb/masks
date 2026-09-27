@@ -3,6 +3,8 @@ module Masks
     module Manage
       module Mutations
         class RegisterProvider < BaseMutation
+          requires :security
+
           argument :key, ID
 
           field :provider, Types::ProviderType, null: false

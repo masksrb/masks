@@ -3,6 +3,8 @@ module Masks
     module Manage
       module Mutations
         class RestoreClient < BaseMutation
+          requires :security
+
           argument :client_id, ID
 
           field :client, Types::ClientType, null: false

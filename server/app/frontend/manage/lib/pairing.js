@@ -1,6 +1,14 @@
 const KEY = "masks:manage:client";
 
-export const SCOPE = ["openid", "profile", "email", "masks:manage"];
+export const SCOPE = [
+  "openid",
+  "profile",
+  "email",
+  "masks:manage",
+  "masks:manage:security",
+  "masks:manage:support",
+  "masks:manage:read",
+];
 
 function held(issuer) {
   try {

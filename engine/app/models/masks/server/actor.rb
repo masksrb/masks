@@ -167,6 +167,10 @@ module Masks
       end
 
       def manages?
+        ManageRoles.any?(scope_list)
+      end
+
+      def owns?
         holds?(Scopes::MANAGE)
       end
 
@@ -227,7 +231,7 @@ module Masks
       end
 
       def last_manager?
-        persisted? && manages? && !Actor.holding(Scopes::MANAGE).where(suspended_at: nil).where.not(id: id).exists?
+        persisted? && owns? && !Actor.holding(Scopes::MANAGE).where(suspended_at: nil).where.not(id: id).exists?
       end
 
       def restore!

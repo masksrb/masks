@@ -3,6 +3,8 @@ module Masks
     module Manage
       module Mutations
         class ArchiveSignInPolicy < BaseMutation
+          requires :security
+
           argument :key, ID
 
           field :sign_in_policy, Types::SignInPolicyType, null: false

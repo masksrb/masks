@@ -3,6 +3,8 @@ module Masks
     module Manage
       module Mutations
         class RotateEventStreamSecret < BaseMutation
+          requires :security
+
           argument :key, ID
 
           field :event_stream, Types::EventStreamType, null: false

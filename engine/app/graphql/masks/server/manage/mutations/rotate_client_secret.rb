@@ -3,6 +3,8 @@ module Masks
     module Manage
       module Mutations
         class RotateClientSecret < BaseMutation
+          requires :security
+
           argument :client_id, ID
           argument :expires_in, Integer, required: false
 

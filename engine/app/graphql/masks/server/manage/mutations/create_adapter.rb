@@ -3,6 +3,8 @@ module Masks
     module Manage
       module Mutations
         class CreateAdapter < BaseMutation
+          requires :security
+
           argument :key, ID
           argument :service, String
           argument :name, String

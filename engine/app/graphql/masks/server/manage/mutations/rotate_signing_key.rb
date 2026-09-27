@@ -3,6 +3,8 @@ module Masks
     module Manage
       module Mutations
         class RotateSigningKey < BaseMutation
+          requires :security
+
           field :signing_key, Types::SigningKeyType, null: false
 
           def resolve

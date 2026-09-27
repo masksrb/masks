@@ -94,9 +94,9 @@ module Masks
 
         def may_see_photo?(actor)
           return true if current_actor&.id == actor.id
-          return true if current_actor&.holds?(Scopes::MANAGE)
+          return true if current_actor&.manages?
           return false if bearer.nil?
-          return true if bearer.scope_list.include?(Scopes::MANAGE)
+          return true if ManageRoles.any?(bearer.scope_list) && ManageRoles.any?(bearer.actor&.scope_list)
 
           bearer.actor_id == actor.id && bearer.scope_list.include?(Scopes::PROFILE)
         end

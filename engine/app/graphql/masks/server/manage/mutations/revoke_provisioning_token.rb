@@ -3,6 +3,8 @@ module Masks
     module Manage
       module Mutations
         class RevokeProvisioningToken < BaseMutation
+          requires :security
+
           argument :id, ID
 
           field :provisioning_token, Types::ProvisioningTokenType, null: false

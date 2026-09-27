@@ -3,6 +3,8 @@ module Masks
     module Manage
       module Mutations
         class CreateProvider < BaseMutation
+          requires :security
+
           argument :key, ID
           argument :name, String
           argument :preset, ID, required: false

@@ -3,6 +3,8 @@ module Masks
     module Manage
       module Mutations
         class TestAdapter < BaseMutation
+          requires :security
+
           argument :key, ID
           argument :to, String
 

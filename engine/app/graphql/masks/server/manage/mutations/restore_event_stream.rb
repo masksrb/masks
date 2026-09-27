@@ -3,6 +3,8 @@ module Masks
     module Manage
       module Mutations
         class RestoreEventStream < BaseMutation
+          requires :security
+
           argument :key, ID
 
           field :event_stream, Types::EventStreamType, null: false

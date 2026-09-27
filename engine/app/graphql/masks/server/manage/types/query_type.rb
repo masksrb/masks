@@ -4,6 +4,8 @@ module Masks
       module Types
         class QueryType < BaseObject
           field :viewer, ActorType, null: false
+          field :manage_levels, [ String ], null: false,
+                                            description: "What the viewer's token may do here: read, support, security, and owner."
           field :tenant, TenantType, null: false
 
           field :actors, [ ActorType ], null: false do
@@ -161,6 +163,10 @@ module Masks
 
           def viewer
             context[:actor]
+          end
+
+          def manage_levels
+            ManageRoles.levels(context[:roles]).map(&:to_s)
           end
 
           def tenant

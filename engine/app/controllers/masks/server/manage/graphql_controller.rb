@@ -5,12 +5,12 @@ module Masks
         include ManageEndpoint
 
         def execute
-          with_manage_token do |token, actor|
+          with_manage_token do |token, actor, roles|
             render json: ManageSchema.execute(
               document["query"],
               variables: document["variables"],
               operation_name: document["operationName"],
-              context: { actor: actor, client: token.client, token: token }
+              context: { actor: actor, client: token.client, token: token, roles: roles }
             )
           end
         end

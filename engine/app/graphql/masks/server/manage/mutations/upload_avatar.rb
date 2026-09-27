@@ -3,6 +3,8 @@ module Masks
     module Manage
       module Mutations
         class UploadAvatar < BaseMutation
+          requires :support
+
           argument :uuid, ID
           argument :photo, Types::UploadType
 

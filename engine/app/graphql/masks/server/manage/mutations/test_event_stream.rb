@@ -3,6 +3,8 @@ module Masks
     module Manage
       module Mutations
         class TestEventStream < BaseMutation
+          requires :security
+
           argument :key, ID
 
           field :delivered, Boolean, null: false

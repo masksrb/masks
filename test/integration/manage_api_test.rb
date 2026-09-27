@@ -55,8 +55,9 @@ module Masks
         assert_response :success
         assert_equal resource, body["resource"]
         assert_equal [ origin_for(@tenant) ], body["authorization_servers"]
-        assert_equal [ "masks:manage" ], body["scopes_supported"]
+        assert_equal ManageRoles::SCOPES, body["scopes_supported"]
         assert_equal "Manage masks", body.dig("scope_descriptions", "masks:manage")
+        assert_equal "See masks' settings and activity", body.dig("scope_descriptions", "masks:manage:read")
       end
 
       test "the document is also served under the resource path, as RFC 9728 asks" do
@@ -81,14 +82,14 @@ module Masks
         assert_response :unauthorized
       end
 
-      test "a token without masks:manage is refused with insufficient_scope, naming the scope" do
+      test "a token without a manage scope is refused with insufficient_scope, naming the scopes" do
         held = bearer(scope: "openid profile")
 
         body = ask("{ viewer { nickname } }", held)
 
         assert_response :forbidden
         assert_equal "insufficient_scope", body["error"]
-        assert_equal "masks:manage", body["scope"]
+        assert_equal Scopes.join(ManageRoles::SCOPES), body["scope"]
       end
 
       test "a token issued for another resource is refused" do

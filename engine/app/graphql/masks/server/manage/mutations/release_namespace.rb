@@ -3,6 +3,8 @@ module Masks
     module Manage
       module Mutations
         class ReleaseNamespace < BaseMutation
+          requires :security
+
           argument :name, String
 
           field :released, String, null: false

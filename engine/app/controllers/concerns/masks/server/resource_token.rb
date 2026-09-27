@@ -33,11 +33,19 @@ module Masks
             bearer.invalid_token!("that token is bound to a key, and needs the proof that holds it")
           end
 
-          if scope.present? && !token.scope_list.include?(scope.to_s)
-            bearer.insufficient_scope!("this token does not carry #{scope}", scope: scope)
+          unless carries?(token, scope)
+            bearer.insufficient_scope!("this token does not carry #{wanted(scope)}", scope: Scopes.join(scope))
           end
 
           token
+        end
+
+        def carries?(token, scope)
+          Scopes.list(scope).empty? || Scopes.list(scope).intersect?(token.scope_list)
+        end
+
+        def wanted(scope)
+          Scopes.list(scope).to_sentence(two_words_connector: " or ", last_word_connector: ", or ")
         end
 
         def decode(bearer)
@@ -61,8 +69,8 @@ module Masks
         def with_bound_token(scope: nil)
           token = bound_token!(credentials[1].to_s)
 
-          if scope.present? && !token.scope_list.include?(scope.to_s)
-            return refuse_proof("this token does not carry #{scope}", error: "insufficient_scope", scope: scope)
+          unless carries?(token, scope)
+            return refuse_proof("this token does not carry #{wanted(scope)}", error: "insufficient_scope", scope: Scopes.join(scope))
           end
 
           yield token

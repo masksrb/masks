@@ -3,6 +3,8 @@ module Masks
     module Manage
       module Mutations
         class SetActorScopes < BaseMutation
+          requires :owner
+
           argument :uuid, ID
           argument :scopes, [ String ]
 

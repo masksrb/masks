@@ -666,6 +666,11 @@ type Query {
   eventStreams(archived: Boolean): [EventStream!]!
   events(action: String, actor: ID, afterId: ID, client: ID, device: ID, grave: Boolean, limit: Int): [Event!]!
   mailPreviews(client: ID): [MailPreview!]!
+
+  """
+  What the viewer's token may do here: read, support, security, and owner.
+  """
+  manageLevels: [String!]!
   minimumPassword: Int!
   namespaces: [Namespace!]!
   provider(key: ID!): Provider

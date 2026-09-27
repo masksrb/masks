@@ -32,7 +32,7 @@ module Masks
         {
           "resource" => manage_resource,
           "authorization_servers" => [ url ],
-          "scopes_supported" => [ Scopes::MANAGE ],
+          "scopes_supported" => ManageRoles::SCOPES,
           "bearer_methods_supported" => [ "header" ],
           "tenant" => tenant.to_identity
         }.merge(manage_descriptions)
@@ -47,7 +47,7 @@ module Masks
       end
 
       def described_manage(locale)
-        { Scopes::MANAGE => Scopes.description_for(Scopes::MANAGE, locale: locale) }
+        ManageRoles::SCOPES.index_with { |scope| Scopes.description_for(scope, locale: locale) }
       end
 
       def sign(claims, typ: "JWT")

@@ -30,7 +30,10 @@ module Masks
             ---
 
             Everything `/manage` can ask for and everything it can change. `/manage/graphql` accepts a
-            bearer carrying `masks:manage`, issued for this tenant's manage resource and no other.
+            bearer carrying `masks:manage` or one of the narrower
+            [manage roles](/guides/security/#manage-roles), issued for this tenant's manage resource and
+            no other. A mutation the bearer's roles do not cover answers with an error naming the scopes
+            it needs.
 
             Generated from `ManageSchema` by `./dev reference`. CI fails when this page and the
             schema disagree.

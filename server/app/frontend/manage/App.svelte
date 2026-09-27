@@ -30,6 +30,22 @@
   let phase = $state("starting");
   let failure = $state(null);
   let viewer = $state(null);
+  let levels = $state(null);
+
+  const LIMITED = {
+    read: "You can read everything here and change nothing.",
+    support: "You can help people with their accounts. Settings, keys, and other managers need an owner.",
+    security: "You can change keys, apps, providers, and policies. People's accounts need support or an owner.",
+  };
+
+  const limit = $derived.by(() => {
+    if (!levels || levels.includes("owner")) return null;
+    if (levels.includes("security") && levels.includes("support"))
+      return "You can change settings and help people. Other managers and tenant settings need an owner.";
+    if (levels.includes("security")) return LIMITED.security;
+    if (levels.includes("support")) return LIMITED.support;
+    return LIMITED.read;
+  });
 
   const NAV = [
     ["", "Overview", '<path d="M3.5 10.5 10 4l6.5 6.5"/><path d="M5.5 9v7h9V9"/>'],
@@ -95,9 +111,10 @@
     phase = "ready";
 
     api
-      .query("query Viewer { viewer { identifier avatars { photo identicon } } }")
+      .query("query Viewer { viewer { identifier avatars { photo identicon } } manageLevels }")
       .then((data) => {
         viewer = data.viewer;
+        levels = data.manageLevels;
       })
       .catch(() => {});
   }
@@ -172,6 +189,9 @@
     </header>
 
     <main class="console-main mx-auto w-full max-w-6xl flex-1 p-4 md:p-6">
+      {#if limit}
+        <p class="alert alert-info mb-4 text-sm" role="status">{limit}</p>
+      {/if}
       {#if current === ""}
         <SettingsPage {api} {boot} overview />
       {:else if current === "actors"}

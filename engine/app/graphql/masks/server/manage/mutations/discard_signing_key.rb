@@ -3,6 +3,8 @@ module Masks
     module Manage
       module Mutations
         class DiscardSigningKey < BaseMutation
+          requires :security
+
           argument :kid, ID
 
           field :kid, ID, null: false

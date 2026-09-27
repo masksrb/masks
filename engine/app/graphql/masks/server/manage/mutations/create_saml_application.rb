@@ -3,6 +3,8 @@ module Masks
     module Manage
       module Mutations
         class CreateSamlApplication < BaseMutation
+          requires :security
+
           argument :name, String
           argument :entity_id, String
           argument :acs_urls, [ String ]

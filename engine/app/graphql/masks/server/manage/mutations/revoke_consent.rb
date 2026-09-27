@@ -3,12 +3,15 @@ module Masks
     module Manage
       module Mutations
         class RevokeConsent < BaseMutation
+          requires :support
+
           argument :id, ID
 
           field :consent, Types::ConsentType, null: false
 
           def resolve(id:)
             consent = Masks::Server::Consent.find_by(id: id) || refuse!("no consent with that id")
+            managed!(consent.actor)
 
             consent.revoke!
             tokens_for(consent).find_each(&:revoke!)

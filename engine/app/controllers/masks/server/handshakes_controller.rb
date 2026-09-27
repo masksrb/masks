@@ -55,6 +55,11 @@ module Masks
 
       private
 
+        def joining_manage?
+          @existing.present? && @existing.public? && @existing.approved_as?(@handshake) &&
+            @handshake.resource == issuer.manage_resource && current_actor.manages?
+        end
+
         def repeat?
           @existing.present? && @existing.public? && @existing.approved_as?(@handshake) &&
             (Namespace.prefixes(@handshake.scopes) - current_actor.scope_list).empty? &&
@@ -127,7 +132,8 @@ module Masks
         end
 
         def require_pairing
-          return if current_actor.holds?(Scopes::MANAGE)
+          return if current_actor.owns?
+          return repair if joining_manage?
 
           unless current_actor.holds?(Scopes::HANDSHAKE)
             return refuse(t("handshakes.not_permitted"))

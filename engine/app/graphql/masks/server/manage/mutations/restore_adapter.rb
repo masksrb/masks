@@ -3,6 +3,8 @@ module Masks
     module Manage
       module Mutations
         class RestoreAdapter < BaseMutation
+          requires :security
+
           argument :key, ID
 
           field :adapter, Types::AdapterType, null: false

@@ -3,6 +3,8 @@ module Masks
     module Manage
       module Mutations
         class ReadSamlMetadata < BaseMutation
+          requires :security
+
           argument :metadata_url, String, required: false
           argument :metadata_xml, String, required: false
 

@@ -3,6 +3,8 @@ module Masks
     module Manage
       module Mutations
         class UpdateSignInPolicy < SignInPolicyMutation
+          requires :security
+
           argument :key, ID
 
           def resolve(key:, **attributes)

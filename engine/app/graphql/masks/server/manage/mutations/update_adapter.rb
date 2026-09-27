@@ -3,6 +3,8 @@ module Masks
     module Manage
       module Mutations
         class UpdateAdapter < BaseMutation
+          requires :security
+
           argument :key, ID
           argument :name, String, required: false
           argument :config, GraphQL::Types::JSON, required: false
