@@ -186,7 +186,9 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           context: server
-          build-contexts: web=web
+          build-contexts: |
+            web=web
+            engine=engine
           platforms: linux/amd64
           push: false
           cache-from: type=gha
