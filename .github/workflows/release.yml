@@ -42,32 +42,25 @@ jobs:
 
       - uses: actions/checkout@v7
         if: steps.release.outputs.prs_created == 'true'
-        with:
-          fetch-depth: 0
 
-      - name: Find the gem's release pull request
-        id: gem_pr
+      - name: The release pull requests name their path gems' new versions in the lockfiles
         if: steps.release.outputs.prs_created == 'true'
-        env:
-          BRANCH: release-please--branches--main--components--gem
         run: |
-          if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null; then
-            git checkout "$BRANCH"
-            echo "open=true" >> "$GITHUB_OUTPUT"
-          fi
-
-      - uses: ruby/setup-ruby@v1
-        if: steps.gem_pr.outputs.open == 'true'
-
-      - name: The gem's release pull request names its version in the workspace lockfile
-        if: steps.gem_pr.outputs.open == 'true'
-        run: |
-          bundle lock
-          git diff --quiet -- Gemfile.lock && exit 0
+          relock() {
+            branch=$1 gem=$2 version_file=$3 lockfile=$4
+            git ls-remote --exit-code --heads origin "$branch" >/dev/null || return 0
+            git fetch --quiet origin "$branch"
+            git checkout --quiet -B "$branch" FETCH_HEAD
+            version=$(grep -oE '[0-9]+\.[0-9]+\.[0-9]+[^"]*' "$version_file" | head -1 | tr -d "'\" ")
+            sed -i -E "s/^(    $gem) \([^)]*\)$/\1 ($version)/; s/^(  $gem) \([^)]*\)$/\1 ($version)/" "$lockfile"
+            git diff --quiet -- "$lockfile" && return 0
+            git commit --quiet -m "chore: $lockfile names $gem $version" -- "$lockfile"
+            git push --quiet origin "HEAD:$branch"
+          }
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "chore: the workspace lockfile names the gem as released" -- Gemfile.lock
-          git push origin HEAD
+          relock release-please--branches--main--components--gem masks client/lib/masks/version.rb Gemfile.lock
+          relock release-please--branches--main--groups--server masks-server engine/version.txt server/Gemfile.lock
 
   gem:
     needs: release-please

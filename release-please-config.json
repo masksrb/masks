@@ -3,6 +3,7 @@
   "bump-minor-pre-major": true,
   "separate-pull-requests": true,
   "include-component-in-tag": true,
+  "group-pull-request-title-pattern": "chore${scope}: release server libraries",
   "packages": {
     "server": {
       "release-type": "simple",
