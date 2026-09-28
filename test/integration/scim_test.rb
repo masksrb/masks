@@ -61,6 +61,23 @@ module Masks
         assert_equal 0, scim(:get, "/Users?filter=#{CGI.escape('externalId eq "ENTRA-1"')}")["totalResults"], "externalId is case-exact"
       end
 
+      test "a person is found by every comparison a filter reads" do
+        provision
+        provision(userName: "grace@example.com", externalId: "entra-2", displayName: "Grace Hopper",
+                  name: { "givenName" => "Grace", "familyName" => "Hopper" }, emails: [ { "value" => "grace@example.com" } ])
+
+        found = ->(filter) { scim(:get, "/Users?filter=#{CGI.escape(filter)}")["totalResults"] }
+
+        assert_equal 1, found.('displayName co "LOVE"')
+        assert_equal 1, found.('name.familyName sw "hop"')
+        assert_equal 2, found.('externalId pr and emails.value ew "@EXAMPLE.COM"')
+        assert_equal 1, found.('externalId ne "entra-1" and displayName co "grace"')
+        assert_equal 2, found.('externalId pr and meta.created gt "2000-01-01T00:00:00Z"')
+        assert_equal 0, found.('meta.created lt "2000-01-01T00:00:00Z"')
+        assert_equal 0, found.(%q(displayName co "%' OR 1=1 --"))
+        assert_equal 0, found.('displayName sw "_"')
+      end
+
       test "a filter this server does not read is refused as one" do
         body = scim(:get, "/Users?filter=#{CGI.escape('title eq "x" or 1=1')}")
 

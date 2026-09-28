@@ -88,23 +88,35 @@ module Masks
           end
 
           def column_compare(relation, column, operator, value, exact:)
+            node = attribute(column)
             text = value.to_s
-            held = exact ? column : "lower(#{column}::text)"
+            held = exact ? node : lowered(node)
             wanted = exact ? text : text.downcase
             like = ActiveRecord::Base.sanitize_sql_like(wanted)
 
-            case operator
-            when "eq" then relation.where("#{held} = ?", wanted)
-            when "ne" then relation.where("#{column} IS NULL OR #{held} <> ?", wanted)
-            when "co" then relation.where("#{held} LIKE ?", "%#{like}%")
-            when "sw" then relation.where("#{held} LIKE ?", "#{like}%")
-            when "ew" then relation.where("#{held} LIKE ?", "%#{like}")
-            when "pr" then relation.where("#{column} IS NOT NULL")
-            when "gt" then relation.where("#{column} > ?", text)
-            when "ge" then relation.where("#{column} >= ?", text)
-            when "lt" then relation.where("#{column} < ?", text)
-            when "le" then relation.where("#{column} <= ?", text)
-            end
+            relation.where(
+              case operator
+              when "eq" then held.eq(wanted)
+              when "ne" then node.eq(nil).or(held.not_eq(wanted))
+              when "co" then held.matches("%#{like}%", nil, true)
+              when "sw" then held.matches("#{like}%", nil, true)
+              when "ew" then held.matches("%#{like}", nil, true)
+              when "pr" then node.not_eq(nil)
+              when "gt" then node.gt(text)
+              when "ge" then node.gteq(text)
+              when "lt" then node.lt(text)
+              when "le" then node.lteq(text)
+              end
+            )
+          end
+
+          def attribute(column)
+            table, name = column.split(".")
+            Arel::Table.new(table)[name]
+          end
+
+          def lowered(node)
+            Arel::Nodes::NamedFunction.new("lower", [ Arel::Nodes::NamedFunction.new("CAST", [ node.as("text") ]) ])
           end
       end
     end
