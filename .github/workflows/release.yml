@@ -40,6 +40,35 @@ jobs:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
 
+      - uses: actions/checkout@v7
+        if: steps.release.outputs.prs_created == 'true'
+        with:
+          fetch-depth: 0
+
+      - name: Find the gem's release pull request
+        id: gem_pr
+        if: steps.release.outputs.prs_created == 'true'
+        env:
+          BRANCH: release-please--branches--main--components--gem
+        run: |
+          if git ls-remote --exit-code --heads origin "$BRANCH" >/dev/null; then
+            git checkout "$BRANCH"
+            echo "open=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: ruby/setup-ruby@v1
+        if: steps.gem_pr.outputs.open == 'true'
+
+      - name: The gem's release pull request names its version in the workspace lockfile
+        if: steps.gem_pr.outputs.open == 'true'
+        run: |
+          bundle lock
+          git diff --quiet -- Gemfile.lock && exit 0
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore: the workspace lockfile names the gem as released" -- Gemfile.lock
+          git push origin HEAD
+
   gem:
     needs: release-please
     if: >-
