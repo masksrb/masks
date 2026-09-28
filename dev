@@ -161,6 +161,9 @@ def reference
   run("sh", "-c", "bundle check >/dev/null 2>&1 || bundle install --quiet", chdir: client)
   run!("bundle", "exec", "rake", "reference:mdx", chdir: client)
 
+  web = File.join(ROOT, "web")
+  run!("npm", "ci", chdir: web) unless File.directory?(File.join(web, "node_modules"))
+
   docs = File.join(ROOT, "docs")
   run!("npm", "ci", chdir: docs) unless File.directory?(File.join(docs, "node_modules"))
   run!("npm", "run", "reference", chdir: docs)
