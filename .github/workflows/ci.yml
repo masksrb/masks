@@ -103,6 +103,7 @@ jobs:
         env:
           RAILS_ENV: production
           POSTGRES_DATABASE: masks_boot
+          POSTGRES_PORT: "5435"
           MASKS_PUBLIC_ORIGIN_TEMPLATE: https://%{subdomain}.auth.invalid
           SECRET_KEY_BASE: boot_check_secret_key_base_not_for_real_deployments
           ENCRYPTION_PRIMARY_KEY: boot_check_primary_key_not_for_credentials
