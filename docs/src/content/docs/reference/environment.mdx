@@ -126,7 +126,7 @@ that is not a superuser. Tenant isolation depends on row-level security, which a
 | Variable | Default | |
 | --- | --- | --- |
 | `POSTGRES_HOST` | `127.0.0.1` | |
-| `POSTGRES_PORT` | `5435` | |
+| `POSTGRES_PORT` | `5432` in production, `5435` otherwise | Development and test default to the port the dev stack publishes. |
 | `POSTGRES_USER` | `masks` | |
 | `POSTGRES_PASSWORD` | `masks` | |
 | `POSTGRES_DATABASE` | `masks_production` | The primary database's name in production. The cache and queue databases add `_cache` and `_queue` to it. Development and test use fixed names. |

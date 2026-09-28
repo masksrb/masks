@@ -36,12 +36,15 @@ test:
 production:
   primary:
     <<: *default
+    port: <%= ENV.fetch("POSTGRES_PORT", 5432) %>
     database: <%= ENV.fetch("POSTGRES_DATABASE", "masks_production") %>
   cache:
     <<: *default
+    port: <%= ENV.fetch("POSTGRES_PORT", 5432) %>
     database: <%= ENV.fetch("POSTGRES_DATABASE", "masks_production") %>_cache
     migrations_paths: db/cache_migrate
   queue:
     <<: *default
+    port: <%= ENV.fetch("POSTGRES_PORT", 5432) %>
     database: <%= ENV.fetch("POSTGRES_DATABASE", "masks_production") %>_queue
     migrations_paths: db/queue_migrate
