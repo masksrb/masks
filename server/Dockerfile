@@ -46,7 +46,6 @@ RUN npm ci
 COPY . .
 
 RUN SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile && \
-    SECRET_KEY_BASE_DUMMY=1 RAILS_ENV=test ./bin/vite build && \
     rm -rf node_modules
 
 FROM build AS test
@@ -54,7 +53,10 @@ FROM build AS test
 ENV RAILS_ENV="test" \
     BUNDLE_WITHOUT="development"
 
-RUN bundle install
+RUN bundle install && \
+    npm ci && \
+    SECRET_KEY_BASE_DUMMY=1 ./bin/vite build && \
+    rm -rf node_modules
 
 FROM base
 
