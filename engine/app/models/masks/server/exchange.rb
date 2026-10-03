@@ -13,8 +13,10 @@ module Masks
                   :requested_lifetime, :named_audience
 
       def initialize(client:, issuer:, subject_token:, subject_token_type: nil, actor_token: nil, actor_token_type: nil,
-                     requested_token_type: nil, scope: nil, resource: nil, lifetime: nil, audience: nil)
+                     requested_token_type: nil, scope: nil, resource: nil, lifetime: nil, audience: nil,
+                     authorization_details: nil)
         @client = client
+        @authorization_details_value = authorization_details.presence
         @issuer = issuer
         @subject_token = subject_token
         @subject_token_type = subject_token_type.to_s
@@ -118,6 +120,20 @@ module Masks
         Scopes.concrete(available_scopes)
       end
 
+      def requested_authorization_details
+        return @requested_authorization_details if defined?(@requested_authorization_details)
+
+        @requested_authorization_details = AuthorizationDetails.parse(@authorization_details_value)
+      end
+
+      def available_authorization_details
+        subject.access_token? ? subject_access_token&.authorization_details : nil
+      end
+
+      def granted_authorization_details
+        requested_authorization_details&.as_json || available_authorization_details
+      end
+
       def granted_audience
         return requested_audience if requested_audience.any?
         return subject.audience if subject.access_token?
@@ -170,6 +186,7 @@ module Masks
           requested_token_type: requested_token_type,
           scopes: (Scopes.join(granted_scopes) unless upstream?),
           audience: (granted_audience.presence unless upstream?),
+          authorization_details: (granted_authorization_details&.map { |entry| entry["type"] } unless upstream?),
           connection: (connection&.uuid if upstream?),
           acting: actor_claim&.fetch("sub", nil),
           depth: depth
@@ -209,7 +226,8 @@ module Masks
           parent: subject_access_token,
           expires_at: expires_at,
           act: actor_claim,
-          jkt: jkt
+          jkt: jkt,
+          authorization_details: granted_authorization_details
         )
       end
     end

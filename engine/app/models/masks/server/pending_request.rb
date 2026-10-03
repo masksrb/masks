@@ -54,6 +54,7 @@ module Masks
           audience: audience,
           redirect_uri: redirect_uri,
           requested_claims: requested_claims,
+          authorization_details: authorization_details,
           nonce: nonce,
           code_challenge: code_challenge,
           code_challenge_method: code_challenge_method

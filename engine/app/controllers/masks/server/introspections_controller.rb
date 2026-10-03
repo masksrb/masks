@@ -31,6 +31,7 @@ module Masks
           {
             "active" => true,
             "scope" => Scopes.join(token.scopes),
+            "authorization_details" => token.authorization_details.presence,
             "client_id" => token.client&.client_id,
             "username" => token.actor&.identifier,
             "token_type" => (token.token_type if token.is_a?(AccessToken)),

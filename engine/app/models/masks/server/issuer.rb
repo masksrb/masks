@@ -194,7 +194,8 @@ module Masks
           "request_parameter_supported" => true,
           "request_object_signing_alg_values_supported" => ClientKeys::ALGORITHMS,
           "request_uri_parameter_supported" => false,
-          "claims_parameter_supported" => true
+          "claims_parameter_supported" => true,
+          "authorization_details_types_supported" => AuthorizationDetails.supported_types
         }.compact
       end
     end

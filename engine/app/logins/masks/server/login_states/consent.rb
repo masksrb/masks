@@ -28,8 +28,9 @@ module Masks
           {
             "consent" => {
               "scopes" => ResourceMetadata.describe(audience, scopes),
-              "audience" => audience
-            }
+              "audience" => audience,
+              "details" => details&.described
+            }.compact
           }
         end
 
@@ -56,6 +57,12 @@ module Masks
           request.audience
         end
 
+        def details
+          return @details if defined?(@details)
+
+          @details = request.respond_to?(:authorization_details) ? AuthorizationDetails.parse(request.authorization_details) : nil
+        end
+
         def consented_here?
           touched?(:consent) && login.factors.dig("consent", "rid") == login.rid.to_s
         end
@@ -71,7 +78,8 @@ module Masks
 
             Event.record!(
               Event::CONSENT_GRANTED,
-              actor: actor, client: client, scopes: scopes, audience: audience.presence
+              actor: actor, client: client, scopes: scopes, audience: audience.presence,
+              authorization_details: details&.types
             )
 
             factored!(:consent, expiry: EXPIRY)["rid"] = login.rid.to_s

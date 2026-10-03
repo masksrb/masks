@@ -14,6 +14,7 @@ module Masks
             code_challenge: authorization.code_challenge,
             code_challenge_method: authorization.code_challenge_method,
             requested_claims: authorization.requested_claims,
+            authorization_details: authorization.authorization_details&.as_json,
             jkt: authorization.dpop_jkt,
             payload: {
               "response_type" => authorization.response_type,
@@ -46,6 +47,7 @@ module Masks
           organization: held("organization"),
           resource: audience,
           claims: requested_claims,
+          authorization_details: authorization_details,
           user_code: held("user_code"),
           dpop_jkt: jkt,
           signed: held("signed") == true,

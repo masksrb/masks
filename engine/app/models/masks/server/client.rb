@@ -51,6 +51,7 @@ module Masks
       validate :consent_is_skipped_only_when_approved
       validate :sector_identifier_uri_is_owned, if: :sector_declared?
       validate :metadata_uris_are_usable
+      validate :authorization_details_are_declared
 
       normalizes :saml_entity_id, with: ->(value) { value.to_s.strip.presence }
       normalizes(*METADATA_URIS, with: ->(value) { value.to_s.strip.presence })
@@ -136,6 +137,7 @@ module Masks
             jwks_uri: attributes[:jwks_uri],
             require_signed_request_object:
               ActiveModel::Type::Boolean.new.cast(attributes[:require_signed_request_object]) || false,
+            authorization_details_types: attributes[:authorization_details_types] || [],
             dynamic: true
           )
 
@@ -347,6 +349,7 @@ module Masks
           "require_signed_request_object" => require_signed_request_object,
           "jwks" => jwks.presence,
           "jwks_uri" => jwks_uri.presence,
+          "authorization_details_types" => authorization_details_types.presence,
           "client_id_issued_at" => created_at&.to_i
         }.compact
       end
@@ -482,6 +485,21 @@ module Masks
           return "must not point at a loopback address" if loopback?(uri)
 
           "must use https" unless uri.scheme == "https"
+        end
+
+        def authorization_details_are_declared
+          types = authorization_details_types
+
+          unless types.is_a?(Array) && types.size <= 20 && types.all? { |type| type.is_a?(String) && type.match?(AuthorizationDetails::TYPE_FORMAT) }
+            errors.add(:authorization_details_types, "must be a list of at most 20 type names")
+          end
+
+          return if authorization_details_schemas.blank? || !will_save_change_to_authorization_details_schemas?
+          return errors.add(:authorization_details_schemas, "may only be declared by an approved client") unless approved?
+
+          AuthorizationDetails.check_declaration!(authorization_details_schemas)
+        rescue AuthorizationDetails::Invalid => e
+          errors.add(:authorization_details_schemas, e.message)
         end
 
         def sector_is_derivable

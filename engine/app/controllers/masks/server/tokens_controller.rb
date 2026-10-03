@@ -105,7 +105,8 @@ module Masks
           access = AccessToken.issue!(
             issuer: issuer, actor: code.actor, client: client,
             scopes: code.scopes, audience: audience, parent: code,
-            requested_claims: code.requested_claims, jkt: jkt
+            requested_claims: code.requested_claims, jkt: jkt,
+            authorization_details: detailed(req, code.authorization_details)
           )
 
           res.access_token = Payload.new(issued(access, code, client))
@@ -132,12 +133,14 @@ module Masks
 
           access = AccessToken.issue!(
             issuer: issuer, actor: token.actor, client: client,
-            scopes: scopes, audience: audience, parent: token, jkt: held
+            scopes: scopes, audience: audience, parent: token, jkt: held,
+            authorization_details: detailed(req, token.authorization_details)
           )
 
           rotated = RefreshToken.mint!(
             actor: token.actor, client: client, parent: token,
             scopes: Scopes.join(scopes), audience: audience, jkt: held,
+            authorization_details: token.authorization_details,
             expires_at: RefreshToken.lifetime.from_now
           )
 
@@ -218,13 +221,18 @@ module Masks
             scope: req.scope,
             resource: repeated("resource"),
             lifetime: req.requested_lifetime,
-            audience: repeated("audience")
+            audience: repeated("audience"),
+            authorization_details: params[:authorization_details]
           ).then { |exchange| res.access_token = Payload.new(exchange.perform!(jkt: jkt) { |access| bearer(access) }) }
         end
 
         def client_credentials(req, res, client)
           unless client.grants?(Client::CLIENT_CREDENTIALS) && client.approved? && !client.public?
             req.bad_request!(:unauthorized_client, "this client is not registered for client_credentials")
+          end
+
+          if params[:authorization_details].present?
+            req.bad_request!(:invalid_authorization_details, "authorization_details is not offered for client_credentials")
           end
 
           available = client.unattended_scopes
@@ -252,8 +260,9 @@ module Masks
             "access_token" => access.jwt,
             "token_type" => access.token_type,
             "expires_in" => access.expires_in,
-            "scope" => Scopes.join(access.scopes)
-          }
+            "scope" => Scopes.join(access.scopes),
+            "authorization_details" => access.authorization_details.presence
+          }.compact
         end
 
         def issued(access, grant, client)
@@ -274,6 +283,7 @@ module Masks
             body["refresh_token"] = RefreshToken.mint!(
               actor: grant.actor, client: client, parent: grant,
               scopes: access.scopes, audience: access.audience, jkt: access.jkt,
+              authorization_details: grant.authorization_details,
               expires_at: RefreshToken.lifetime.from_now
             ).secret
           end
@@ -299,6 +309,20 @@ module Masks
                 "subject" => issuer.subject_for(actor, client)
               }.compact
             end
+        end
+
+        def detailed(req, granted)
+          return granted if params[:authorization_details].blank?
+
+          requested = AuthorizationDetails.parse(params[:authorization_details])
+
+          unless granted.present? && requested.covered_by?(granted)
+            req.bad_request!(:invalid_authorization_details, "authorization_details asks for more than was granted")
+          end
+
+          requested.as_json
+        rescue AuthorizationDetails::Invalid => e
+          req.bad_request!(:invalid_authorization_details, e.message)
         end
 
         def narrow(req, granted, client)

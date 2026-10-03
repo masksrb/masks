@@ -9,10 +9,11 @@ module Masks
              :pkce_is_present_when_required,
              :challenge_method_is_supported,
              :scopes_are_permitted,
-             :resources_are_absolute
+             :resources_are_absolute,
+             :authorization_details_are_permitted
 
       delegate :client, :response_type, :requested_scopes, :granted_scopes,
-               :code_challenge, :code_challenge_method, :audience, to: :subject
+               :code_challenge, :code_challenge_method, :audience, :authorization_details, to: :subject
 
       private
 

@@ -35,6 +35,10 @@ module Masks
           argument :logo_uri, String, required: false
           argument :tos_uri, String, required: false
           argument :policy_uri, String, required: false
+          argument :authorization_details_types, [ String ], required: false,
+                   description: "The types of authorization detail this client may ask for."
+          argument :authorization_details_schemas, GraphQL::Types::JSON, required: false,
+                   description: "The types of authorization detail this client accepts as a resource, each mapped to a `label` shown at consent and a `schema` its entries are checked against. Only an approved client may declare types."
 
           field :client, Types::ClientType, null: false
 

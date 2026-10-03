@@ -30,6 +30,7 @@
         requiredScopes allowedScopes
         backchannelLogoutUri backchannelLogoutSessionRequired
         requirePushedAuthorizationRequests requireSignedRequestObject consentRequired jwks jwksUri
+        authorizationDetailsTypes authorizationDetailsSchemas
         protocol samlEntityId samlCertificate samlNameIdFormat samlRequestsSigned samlIdpInitiated samlAttributes
         signInPolicy { ${POLICY_FIELDS} }
         events(limit: 25) {
@@ -67,6 +68,7 @@
   let logoutUri = $state("");
   let jwksUri = $state("");
   let jwks = $state("");
+  let declared = $state("");
   let method = $state("");
   let sector = $state("");
   let metadataUrl = $state("");
@@ -152,6 +154,9 @@
       logoutUri = data.client?.backchannelLogoutUri ?? "";
       jwksUri = data.client?.jwksUri ?? "";
       jwks = data.client?.jwks ? JSON.stringify(data.client.jwks, null, 2) : "";
+      declared = Object.keys(data.client?.authorizationDetailsSchemas ?? {}).length
+        ? JSON.stringify(data.client.authorizationDetailsSchemas, null, 2)
+        : "";
       method = data.client?.tokenEndpointAuthMethod ?? "";
       sector = data.client?.sectorIdentifierUri ?? "";
       metadataUrl = data.samlMetadataUrl;
@@ -189,7 +194,8 @@
         $samlNameIdFormat: String, $samlEntityId: String, $samlAttributes: JSON, $jwks: JSON,
         $subjectType: String, $sectorIdentifierUri: String, $dpopBoundAccessTokens: Boolean,
         $backchannelLogoutSessionRequired: Boolean, $clientUri: String, $logoUri: String,
-        $tosUri: String, $policyUri: String
+        $tosUri: String, $policyUri: String, $authorizationDetailsTypes: [String!],
+        $authorizationDetailsSchemas: JSON
       ) {
         updateClient(
           clientId: $clientId, name: $name, requiredScopes: $requiredScopes,
@@ -217,7 +223,9 @@
           clientUri: $clientUri,
           logoUri: $logoUri,
           tosUri: $tosUri,
-          policyUri: $policyUri
+          policyUri: $policyUri,
+          authorizationDetailsTypes: $authorizationDetailsTypes,
+          authorizationDetailsSchemas: $authorizationDetailsSchemas
         ) {
           client { clientId }
         }
@@ -271,6 +279,16 @@
       saveKeys({ jwks: JSON.parse(text), jwksUri: null });
     } catch {
       feedback.blame(new Error("That key set is not JSON."));
+    }
+  }
+
+  function saveDeclared() {
+    const text = declared.trim();
+
+    try {
+      update({ authorizationDetailsSchemas: text ? JSON.parse(text) : {} }, "Declared types saved.");
+    } catch {
+      feedback.blame(new Error("Those declarations are not JSON."));
     }
   }
 
@@ -744,6 +762,35 @@
             onsave={(resources) => update({ resources }, "Resources saved.")}
           />
         </Section>
+
+        {#if !saml}
+          <Section title="Authorization details">
+            <p class="hint">
+              Rich authorization requests (RFC 9396). A client asks for the types it lists here, and an approved client
+              declares the types it accepts as a resource, each with a label shown at consent and a schema.
+            </p>
+
+            <Lines
+              label="Types it may ask for"
+              value={client.authorizationDetailsTypes}
+              onsave={(authorizationDetailsTypes) => update({ authorizationDetailsTypes }, "Types saved.")}
+            />
+
+            {#if client.approvedAt}
+              <label class="flex flex-col gap-1.5">
+                <span class="field-label">Types it accepts</span>
+                <textarea
+                  class="textarea textarea-sm w-full font-mono text-xs"
+                  rows="6"
+                  spellcheck="false"
+                  placeholder={'{ "payment_initiation": { "label": "Send a payment", "schema": { "type": "object" } } }'}
+                  bind:value={declared}
+                ></textarea>
+                <button type="button" class="btn btn-sm self-start" onclick={saveDeclared}>Save</button>
+              </label>
+            {/if}
+          </Section>
+        {/if}
 
         <Section title="Consents">
           <Consents {api} {feedback} rows={client.consents} onchange={load} showActor />

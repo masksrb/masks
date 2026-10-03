@@ -21,6 +21,12 @@ module Masks
           end
         end
 
+        def authorization_details_are_permitted
+          authorization_details&.check!(client)
+        rescue AuthorizationDetails::Invalid => e
+          deny!("invalid_authorization_details", e.message, redirectable: true)
+        end
+
         def resources_are_absolute
           audience.each do |value|
             uri = URI.parse(value)

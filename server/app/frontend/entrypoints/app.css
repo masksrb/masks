@@ -1698,6 +1698,25 @@
     list-style: none;
   }
 
+  .grant-fields {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0.125rem 0.75rem;
+    flex-basis: 100%;
+    margin: 0.25rem 0 0;
+    font-size: 0.8125rem;
+    color: var(--ink-soft);
+  }
+
+  .grant-fields dt {
+    font-weight: 600;
+  }
+
+  .grant-fields dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+
   .grant-scope {
     display: flex;
     flex-wrap: wrap;

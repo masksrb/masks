@@ -84,6 +84,7 @@ module Masks
           audience: audience.presence || [ client.client_id ],
           parent: self,
           requested_claims: requested_claims,
+          authorization_details: authorization_details,
           jkt: jkt
         )
       end

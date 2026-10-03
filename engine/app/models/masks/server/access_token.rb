@@ -11,7 +11,8 @@ module Masks
         issuer.verify(secret, typ: TYPE, required: required, verify_expiration: verify_expiration)
       end
 
-      def self.issue!(issuer:, actor:, client:, scopes:, audience:, parent: nil, expires_at: nil, act: nil, requested_claims: nil, jkt: nil)
+      def self.issue!(issuer:, actor:, client:, scopes:, audience:, parent: nil, expires_at: nil, act: nil, requested_claims: nil,
+                      jkt: nil, authorization_details: nil)
         ceiling = [ expires_at, lifetime.from_now ].compact.min
 
         token = create!(
@@ -24,6 +25,7 @@ module Masks
           scopes: Scopes.join(scopes),
           audience: Array(audience),
           requested_claims: requested_claims,
+          authorization_details: authorization_details.presence,
           digest: SecureRandom.uuid,
           jkt: jkt,
           expires_at: ceiling
@@ -51,6 +53,7 @@ module Masks
           "jti" => jti,
           "client_id" => client&.client_id,
           "scope" => Scopes.join(scopes),
+          "authorization_details" => authorization_details.presence,
           "act" => act,
           Organization::CLAIM => organization_claim,
           "cnf" => confirmation,

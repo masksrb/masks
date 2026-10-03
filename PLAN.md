@@ -6,13 +6,6 @@ when a capability lands.
 
 ## To build
 
-### Rich authorization requests
-
-- `authorization_details` (RFC 9396) on `/authorize`, pushed requests, and token exchange. Each
-  client declares the `type` values it accepts and a JSON schema for each.
-- The consent screen lists each detail with a label from the client's declaration.
-- Granted details go in the access token and in the introspection response.
-
 ### Migration
 
 - A `masks:import` runner reads a file and creates accounts in batches of 500 inside

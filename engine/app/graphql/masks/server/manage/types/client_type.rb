@@ -30,6 +30,10 @@ module Masks
           field :require_pushed_authorization_requests, Boolean, null: false
           field :jwks, GraphQL::Types::JSON
           field :jwks_uri, String
+          field :authorization_details_types, [ String ], null: false,
+                description: "The types of authorization detail this client may ask for."
+          field :authorization_details_schemas, GraphQL::Types::JSON, null: false,
+                description: "The types of authorization detail this client accepts as a resource, with the label and schema of each."
           field :protocol, String, null: false
           field :saml_entity_id, String
           field :saml_certificate, String

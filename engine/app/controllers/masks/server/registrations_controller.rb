@@ -99,13 +99,15 @@ module Masks
             require_pushed_authorization_requests: body[:require_pushed_authorization_requests],
             jwks: body[:jwks],
             jwks_uri: body[:jwks_uri],
-            require_signed_request_object: body[:require_signed_request_object]
+            require_signed_request_object: body[:require_signed_request_object],
+            authorization_details_types: body[:authorization_details_types]
           }.compact
         end
 
         APPROVED = %i[
           redirect_uris post_logout_redirect_uris token_endpoint_auth_method resources
           subject_type sector_identifier_uri dpop_bound_access_tokens grant_types response_types
+          authorization_details_types
         ].freeze
 
         def described

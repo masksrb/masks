@@ -386,3 +386,59 @@ A client registered with `dpop_bound_access_tokens: true` is refused a token wit
 ```json
 { "client_name": "...", "dpop_bound_access_tokens": true }
 ```
+
+## Rich authorization requests
+
+A scope says what kind of thing an app may do. `authorization_details` (RFC 9396) says exactly what,
+such as one payment of 123.50 EUR to one payee.
+
+An approved client that serves those requests declares each type it accepts under **Authorization
+details** on its page in `/manage`, with a label the consent screen shows and a schema:
+
+```json
+{
+  "payment_initiation": {
+    "label": "Send a payment",
+    "schema": {
+      "type": "object",
+      "required": ["instructedAmount"],
+      "properties": {
+        "instructedAmount": {
+          "type": "object",
+          "required": ["currency", "amount"],
+          "properties": {
+            "currency": { "type": "string", "enum": ["EUR", "USD"] },
+            "amount": { "type": "string", "maxLength": 20 }
+          }
+        },
+        "creditorName": { "type": "string", "maxLength": 140 }
+      }
+    }
+  }
+}
+```
+
+A schema uses `type`, `properties`, `required`, `additionalProperties`, `items`, `enum`, `maxLength`,
+`maxItems`, `minimum`, and `maximum`, and a field the schema does not list is refused unless
+`additionalProperties` is `true`. Discovery lists every declared type in
+`authorization_details_types_supported`.
+
+The app that asks registers the types it uses in `authorization_details_types`, and sends the details
+as a JSON array:
+
+```
+GET /authorize?response_type=code&client_id=…&scope=openid
+  &authorization_details=[{"type":"payment_initiation","instructedAmount":{"currency":"EUR","amount":"123.50"},"creditorName":"Merchant A"}]
+```
+
+- masks refuses with `invalid_authorization_details` a type nobody declared, a type the app did not
+  register, an entry its schema does not allow, more than ten entries, or more than 8KB.
+- The consent screen lists each entry with its label and fields, and asks every time, even when the
+  person allowed the app before.
+- The granted details are in the token response, in the access token's `authorization_details` claim,
+  and in introspection.
+- At the token endpoint the app can send `authorization_details` to narrow what an access token holds
+  to some of the granted entries. A refresh token keeps every granted entry, and a token exchange
+  passes them on or narrows them. Nothing can add an entry that was not granted.
+- `/par` and signed request objects carry `authorization_details` too. `client_credentials` does not
+  accept them.

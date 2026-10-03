@@ -54,6 +54,28 @@
     </div>
   <% end %>
 
+  <% if (details = state.details&.described).present? %>
+    <div class="ledger-row">
+      <span class="ledger-label"><%= t(".details") %></span>
+      <ul class="grant-scopes">
+        <% details.each do |detail| %>
+          <li class="grant-scope grant-scope-hot grant-detail">
+            <span><%= detail["label"] %></span>
+            <span class="chip-key"><%= detail["type"] %></span>
+            <% if detail["fields"].any? %>
+              <dl class="grant-fields">
+                <% detail["fields"].each do |name, value| %>
+                  <dt><%= name %></dt>
+                  <dd class="aside-mono"><%= value %></dd>
+                <% end %>
+              </dl>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
   <% if client["returnsTo"] %>
     <div class="ledger-row">
       <span class="ledger-label"><%= t(".returns_to") %></span>

@@ -28,6 +28,7 @@ module Masks
           request: params["request"],
           request_uri: params["request_uri"],
           claims: params["claims"],
+          authorization_details: params["authorization_details"],
           dpop_jkt: params["dpop_jkt"]
         )
       end
@@ -35,8 +36,10 @@ module Masks
       def initialize(client_id:, redirect_uri:, response_type:, scope: nil, state: nil,
                      nonce: nil, code_challenge: nil, code_challenge_method: nil,
                      prompt: nil, max_age: nil, acr_values: nil, organization: nil, resource: nil, request: nil,
-                     request_uri: nil, claims: nil, user_code: nil, dpop_jkt: nil, signed: false, saml: nil)
+                     request_uri: nil, claims: nil, authorization_details: nil, user_code: nil, dpop_jkt: nil,
+                     signed: false, saml: nil)
         @signed = signed
+        @authorization_details_value = authorization_details.presence
         @saml = saml.presence
         @dpop_jkt = dpop_jkt.presence
         @user_code = user_code.presence
@@ -64,6 +67,24 @@ module Masks
 
       def saml?
         @saml.present?
+      end
+
+      def authorization_details
+        return @authorization_details if defined?(@authorization_details)
+
+        @authorization_details = AuthorizationDetails.parse(@authorization_details_value)
+      end
+
+      def authorization_details?
+        @authorization_details_value.present?
+      end
+
+      def authorization_details_json
+        authorization_details&.canonical
+      rescue AuthorizationDetails::Invalid
+        value = @authorization_details_value
+
+        value.is_a?(String) ? value : value.to_json
       end
 
       def granted_scopes
@@ -109,7 +130,7 @@ module Masks
       end
 
       def consent?
-        prompt.include?("consent") || device?
+        prompt.include?("consent") || device? || authorization_details?
       end
 
       def silent?
@@ -147,6 +168,7 @@ module Masks
           "organization" => organization,
           "resource" => audience.sort,
           "claims" => requested_claims&.to_json,
+          "authorization_details" => authorization_details_json,
           "dpop_jkt" => dpop_jkt
         }.compact
       end

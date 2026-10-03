@@ -17,7 +17,7 @@ module Masks
       FORBIDDEN = %w[client_secret client_secret_expires_at registration_access_token registration_client_uri].freeze
       STRINGS = %w[client_name client_uri logo_uri tos_uri policy_uri jwks_uri backchannel_logout_uri
                    token_endpoint_auth_method application_type subject_type scope].freeze
-      LISTS = %w[redirect_uris post_logout_redirect_uris grant_types response_types].freeze
+      LISTS = %w[redirect_uris post_logout_redirect_uris grant_types response_types authorization_details_types].freeze
       FLAGS = %w[backchannel_logout_session_required dpop_bound_access_tokens require_pushed_authorization_requests].freeze
       DESCRIPTIVE = %i[name client_uri logo_uri tos_uri policy_uri metadata_expires_at].freeze
 
@@ -180,7 +180,8 @@ module Masks
             backchannel_logout_uri: document["backchannel_logout_uri"],
             backchannel_logout_session_required: document["backchannel_logout_session_required"] || false,
             dpop_bound_access_tokens: document["dpop_bound_access_tokens"] || false,
-            require_pushed_authorization_requests: document["require_pushed_authorization_requests"] || false
+            require_pushed_authorization_requests: document["require_pushed_authorization_requests"] || false,
+            authorization_details_types: Array(document["authorization_details_types"])
           )
         end
     end

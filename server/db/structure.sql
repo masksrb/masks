@@ -316,7 +316,9 @@ CREATE TABLE public.clients (
     saml_idp_initiated boolean DEFAULT false NOT NULL,
     saml_attributes jsonb DEFAULT '{}'::jsonb NOT NULL,
     logo_digest character varying,
-    metadata_expires_at timestamp(6) without time zone
+    metadata_expires_at timestamp(6) without time zone,
+    authorization_details_types jsonb DEFAULT '[]'::jsonb NOT NULL,
+    authorization_details_schemas jsonb DEFAULT '{}'::jsonb NOT NULL
 );
 
 ALTER TABLE ONLY public.clients FORCE ROW LEVEL SECURITY;
@@ -1257,7 +1259,8 @@ CREATE TABLE public.tokens (
     session_id bigint,
     user_code_digest character varying,
     jkt character varying,
-    organization_id bigint
+    organization_id bigint,
+    authorization_details jsonb
 );
 
 ALTER TABLE ONLY public.tokens FORCE ROW LEVEL SECURITY;
@@ -3323,6 +3326,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261003140000'),
 ('20261003130000'),
 ('20261003120000'),
 ('20260927180000'),

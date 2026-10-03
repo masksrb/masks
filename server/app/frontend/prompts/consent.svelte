@@ -10,6 +10,7 @@ let { login } = $props();
 
 const scopes = $derived(ranked(login.consent?.scopes ?? []));
 const audience = $derived(login.consent?.audience ?? []);
+const details = $derived(login.consent?.details ?? []);
 const client = $derived(login.client?.name ?? "");
 const tenant = $derived(login.auth.tenant?.name ?? "");
 const links = $derived(
@@ -69,6 +70,28 @@ const links = $derived(
       {#each audience as resource (resource)}
         <span class="ledger-value aside-mono">{resource}</span>
       {/each}
+    </div>
+  {/if}
+
+  {#if details.length}
+    <div class="ledger-row">
+      <span class="ledger-label">{login.t("details")}</span>
+      <ul class="grant-scopes">
+        {#each details as detail, index (index)}
+          <li class="grant-scope grant-scope-hot grant-detail">
+            <span>{detail.label}</span>
+            <span class="chip-key">{detail.type}</span>
+            {#if detail.fields.length}
+              <dl class="grant-fields">
+                {#each detail.fields as [name, value] (name)}
+                  <dt>{name}</dt>
+                  <dd class="aside-mono">{value}</dd>
+                {/each}
+              </dl>
+            {/if}
+          </li>
+        {/each}
+      </ul>
     </div>
   {/if}
 

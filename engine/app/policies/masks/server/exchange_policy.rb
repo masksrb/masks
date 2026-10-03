@@ -8,12 +8,14 @@ module Masks
              :actor_token_is_held,
              :scopes_only_narrow,
              :audience_only_narrows,
+             :authorization_details_only_narrow,
              :lifetime_only_shortens,
              :upstream_is_releasable
 
       delegate :client, :subject, :acting, :actor, :subject_token_type, :actor_token, :actor_token_type,
                :requested_token_type, :requested_scopes, :requested_audience, :available_scopes, :available_audience,
-               :requested_lifetime, :named_audience, :upstream?, :connection, :delegation, to: :exchange
+               :requested_lifetime, :named_audience, :upstream?, :connection, :delegation,
+               :requested_authorization_details, :available_authorization_details, to: :exchange
 
       private
 
@@ -86,6 +88,20 @@ module Masks
             deny!("invalid_target",
                   "an exchange cannot widen audience: #{widened.join(', ')} is not carried by the subject token")
           end
+        end
+
+        def authorization_details_only_narrow
+          requested = requested_authorization_details
+          return if requested.nil?
+
+          deny!("invalid_request", "an upstream token is released without authorization_details") if upstream?
+
+          unless requested.covered_by?(available_authorization_details)
+            deny!("invalid_authorization_details",
+                  "an exchange cannot widen authorization_details beyond what the subject token carries")
+          end
+        rescue AuthorizationDetails::Invalid => e
+          deny!("invalid_authorization_details", e.message)
         end
 
         def lifetime_only_shortens
