@@ -1,4 +1,6 @@
 <script>
+import { onMount } from "svelte";
+import { autofill, autofillable, settle } from "../lib/passkey.js";
 import Action from "../shared/Action.svelte";
 import Otherwise from "../shared/Otherwise.svelte";
 import ProviderButtons from "../shared/ProviderButtons.svelte";
@@ -9,6 +11,26 @@ let { login } = $props();
 let identifier = $state("");
 
 const valid = $derived(identifier.trim().length > 0);
+
+onMount(() => {
+  let live = true;
+
+  (async () => {
+    if (!login.auth.passkey?.offered || !(await autofillable()) || !live) return;
+
+    const offer = await login.poll("passkey:challenge");
+    const options = offer.passkey?.options;
+    if (!options || !live) return;
+
+    const passkey = await autofill(options);
+    if (live) await login.submit("passkey:verify", { passkey });
+  })().catch(() => {});
+
+  return () => {
+    live = false;
+    settle();
+  };
+});
 
 function onsubmit(event) {
   event.preventDefault();
@@ -30,7 +52,7 @@ function onsubmit(event) {
         type="text"
         name="identifier"
         class="control"
-        autocomplete="username"
+        autocomplete="username webauthn"
         autocapitalize="none"
         autocorrect="off"
         spellcheck="false"
