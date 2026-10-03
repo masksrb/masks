@@ -62,21 +62,29 @@ module Masks
         end
 
         def unroutable?(address)
-          UNROUTABLE.any? { |range| range.include?(address) }
+          UNROUTABLE.any? { |range| range.include?(address) } && allowed.none? { |range| range.include?(address) }
         end
 
-        def fetch!(uri, open: OPEN_TIMEOUT, read: READ_TIMEOUT, ceiling: CEILING, within: nil)
+        def allowed
+          Server.config.outbound_allowed || []
+        end
+
+        def fetch!(uri, **options)
+          get!(uri, **options).body
+        end
+
+        def get!(uri, open: OPEN_TIMEOUT, read: READ_TIMEOUT, ceiling: CEILING, within: nil, headers: {})
           address = ::Rails.env.local? ? nil : vetted(uri)
 
           raise Refused, "resolves to an address this server will not call" unless ::Rails.env.local? || address
 
-          response = call(uri, Net::HTTP::Get.new(uri), open: open, read: read, address: address,
-                                                         ceiling: ceiling + 1, within: within)
+          response = call(uri, Net::HTTP::Get.new(uri, headers), open: open, read: read, address: address,
+                                                                  ceiling: ceiling + 1, within: within)
 
           raise Refused, "answered #{response.code}" unless response.is_a?(Net::HTTPSuccess)
           raise Refused, "answered with more than #{ceiling / 1.kilobyte}KB" if response.body.bytesize > ceiling
 
-          response.body
+          response
         rescue Slow
           raise Refused, "took longer than #{within} seconds to answer"
         rescue *UNREADABLE => e

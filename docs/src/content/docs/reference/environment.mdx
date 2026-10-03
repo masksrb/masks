@@ -155,6 +155,16 @@ default, or in a separate `bin/jobs` process with `MASKS_JOBS_IN_WEB_SERVER=fals
 | `RAILS_FORCE_SSL` | `true` | Redirects HTTP to HTTPS and sends `Strict-Transport-Security`. Production only. |
 | `SECRET_KEY_BASE_DUMMY` | unset | Boots with a throwaway secret and skips the production checks above. For build steps only. A server running with it set is not secure. |
 
+### Outbound calls
+
+masks refuses to call an address on a private, loopback, or reserved network when it fetches a
+client's keys, logo, sector identifier, or metadata document, or delivers a back-channel logout, a
+security event, an event stream, or a text message through an SMS adapter.
+
+| Variable | Default | |
+| --- | --- | --- |
+| `MASKS_OUTBOUND_ALLOWED` | none | Address ranges masks may call anyway, such as `100.64.0.0/10` for apps on a private network, separated by commas. Every client that can register itself can then make masks call them, so list only the ranges you mean. |
+
 ### Themes
 
 | Variable | Default | |

@@ -1,3 +1,5 @@
+require "ipaddr"
+
 module Masks
   module Server
     module Configuration
@@ -34,7 +36,17 @@ module Masks
           ENV.fetch("MASKS_ORGANIZATION_INVITATION_LIFETIME", 14 * 24 * 60 * 60).to_i.seconds
         config.password_reset_lifetime = ENV.fetch("MASKS_PASSWORD_RESET_LIFETIME", 30 * 60).to_i.seconds
         config.email_verification_lifetime = ENV.fetch("MASKS_EMAIL_VERIFICATION_LIFETIME", 2 * 24 * 60 * 60).to_i.seconds
+        config.outbound_allowed = outbound_allowed(ENV["MASKS_OUTBOUND_ALLOWED"])
         config
+      end
+
+      def outbound_allowed(value)
+        value.to_s.split(/[\s,]+/).reject(&:empty?).map do |range|
+          IPAddr.new(range)
+        rescue IPAddr::InvalidAddressError
+          raise "MASKS_OUTBOUND_ALLOWED holds #{range.inspect}, which is not an address or a range " \
+                "such as 10.20.0.0/16. List the private ranges masks may call, separated by commas."
+        end
       end
 
       def smtp_settings(address)

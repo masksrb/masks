@@ -55,6 +55,25 @@ module Masks
         assert_nil Outbound.vetted(URI("http://169.254.169.254/"))
         assert_nil Outbound.vetted(URI("ftp://example.com/"))
       end
+
+      test "a range the operator allowed is called, and every other private address is still refused" do
+        held = Server.config.outbound_allowed
+        Server.config.outbound_allowed = Configuration.outbound_allowed("100.64.0.0/10, 10.20.0.0/16")
+
+        assert_not Outbound.unroutable?(IPAddr.new("100.100.1.2"))
+        assert_not Outbound.unroutable?(IPAddr.new("10.20.3.4"))
+        assert Outbound.unroutable?(IPAddr.new("10.21.0.1"))
+        assert Outbound.unroutable?(IPAddr.new("127.0.0.1"))
+        assert_not Outbound.unroutable?(IPAddr.new("93.184.216.34"))
+      ensure
+        Server.config.outbound_allowed = held
+      end
+
+      test "an allowed range that is not one stops the server from booting" do
+        error = assert_raises(RuntimeError) { Configuration.outbound_allowed("10.0.0.0/8,tailnet") }
+
+        assert_match "MASKS_OUTBOUND_ALLOWED", error.message
+      end
     end
   end
 end
