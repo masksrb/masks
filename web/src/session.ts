@@ -198,5 +198,3 @@ export function createSession(options: SessionOptions = {}): SessionClient {
     },
   };
 }
-
-export type { Account, Organization, Refusal, Status };
