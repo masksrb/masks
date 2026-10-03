@@ -2,17 +2,17 @@
 
 # @masks/client
 
-An OIDC client for masks, in the browser. Two modes, because a single-page app has two ways to hold
-a token and they have different threat models.
+Signs a single-page app in against masks. It has two modes: a backend holds the tokens, or the page
+runs the code flow and holds them itself.
 
 ```sh
 npm install @masks/client
 ```
 
-## Session mode — a backend-for-frontend holds the tokens
+## Session mode
 
-The browser holds a cookie; your server holds the tokens and never hands them down. Nothing sensitive
-reaches JavaScript. Use this mode whenever you have a backend.
+The browser holds a cookie, and a backend running the `masks` gem's Rails engine holds the tokens, so
+no token reaches JavaScript. Use this mode whenever the app has a backend.
 
 ```js
 import { createSession } from "@masks/client";
@@ -29,9 +29,9 @@ await auth.logout({ everywhere: true });
 throwing, and `handshake()` starts the connect flow. CSRF tokens are read from a
 `meta[name="csrf-token"]` tag unless you pass `csrfToken`.
 
-## Browser mode — the code flow with PKCE, in the page
+## Browser mode
 
-No backend, so the page runs the flow itself and holds the tokens.
+With no backend, the page runs the authorization code flow with PKCE and holds the tokens.
 
 ```js
 import { createBrowserClient } from "@masks/client";
@@ -51,14 +51,14 @@ if (auth.pending()) {
 await auth.authorize({ returnTo: "/dashboard" });
 ```
 
-Discovery, the PKCE challenge, state and nonce, the callback exchange and refresh are all handled.
-`accessToken()` and `authorization()` give you something to attach to a request; `expired(leeway)`
-tells you when to refresh first.
+The client handles discovery, the PKCE challenge, state and nonce, the callback exchange, and
+`refresh()`. `accessToken()` and `authorization()` return what to attach to a request, and
+`expired(leeway)` says when to refresh first.
 
 ## Avatars
 
-Every actor has three faces at once — an uploaded `photo`, an `identicon`, and two-letter
-`initials` — and the token carries all three. A photo needs a token, so the two modes differ.
+Every account has three avatars: an uploaded `photo`, an `identicon`, and two-letter `initials`, and
+the ID token carries all three. A photo needs a token, so the two modes fetch it differently.
 
 ```js
 const account = await auth.session();
@@ -78,13 +78,13 @@ img.src = blob
   : await auth.avatarUrl(subject, { style: "identicon" });
 ```
 
-`avatars()` reads the three URLs straight off the id token. Sizes are 32, 64, 128, 256 or 512.
+`avatars()` reads the three URLs from the ID token. Sizes are 32, 64, 128, 256 or 512.
 
 ## Who's signed in
 
-`Person` renders an account as a name, a handle or email underneath it, an unconfirmed-email note,
-a manager badge, and an avatar that falls back to initials when there is none. It takes plain data
-as props, so it renders identically wherever the framework renders: in a browser, or on a server.
+`Person` renders an account as a name, a handle or email under it, an unconfirmed-email note, a
+manager badge, and an avatar that falls back to initials. It takes plain data as props, so it
+renders the same in a browser or on a server.
 
 ```jsx
 import { Person } from "@masks/client/react";
@@ -104,15 +104,14 @@ import { Person } from "@masks/client/react";
 <Person account={account} avatarUrl={auth.avatarUrl(account, { size: 88 })} onSignOut={() => auth.logout()} />
 ```
 
-`onSignOut` is optional. Without it, no sign-out button renders. Both read the account through
-`personFrom`, exported from the package root for any other framework to use directly. The class
-names are `masks-person` and its children; the package ships no CSS.
+Without `onSignOut`, no sign-out button renders. Both components read the account through
+`personFrom`, which the package root exports for other frameworks. The class names start with
+`masks-person`, and the package ships no CSS.
 
 ## Audiences
 
-Pass `resource` to name the API the token is for. Every token names the API it was issued for and is
-rejected elsewhere, so one leaked token does not open everything. Pass an array when a page talks to
-more than one.
+Pass `resource` to name the API a token is for. Each token is accepted only by the API it names.
+Pass an array when a page talks to more than one.
 
 ## Verifying an id token
 
@@ -120,20 +119,14 @@ more than one.
 import { verifyIdToken } from "@masks/client";
 ```
 
-Signature, issuer, audience, expiry and nonce, against the issuer's JWKS.
+It checks the signature against the issuer's JWKS, and the issuer, audience, expiry, and nonce.
 
-Errors are `MasksError`. Types — `Account`, `Claims`, `Discovery`, `Refusal`, `Status`, `Tenant`,
-`Tokens` — are exported alongside the functions.
-
-## The other half
-
-A Ruby or Rails app signs in against the same issuer with the [`masks`](https://rubygems.org/gems/masks)
-gem, which carries the Rails engine that mounts the consumer side of the code flow. This package
-exists because an SPA is a consumer the engine cannot serve: the engine redirects.
+Errors are `MasksError`, and the types are exported beside the functions.
 
 ## Documentation
 
-This README is the reference for the package. [masks.pages.dev](https://masks.pages.dev) carries what
-is generated from the server's own code — the `/manage` GraphQL schema, and the design system.
+The full reference is generated from this package at
+[masks.pages.dev/reference/browser](https://masks.pages.dev/reference/browser/). A Ruby or Rails
+app uses the [`masks`](https://rubygems.org/gems/masks) gem.
 
 MIT.
