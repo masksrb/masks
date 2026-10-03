@@ -20,6 +20,22 @@ module Masks
         assert_response :success
       end
 
+      test "the health check fails while a database it needs cannot be reached" do
+        host! "localhost"
+        gone = Object.new
+        gone.define_singleton_method(:connection_pool) { raise ActiveRecord::NoDatabaseError, "masks_queue does not exist" }
+
+        held = HealthController.method(:databases)
+        HealthController.define_singleton_method(:databases) { [ ActiveRecord::Base, gone ] }
+
+        get "/up"
+
+        assert_response :service_unavailable
+        assert_equal "down", response.body
+      ensure
+        HealthController.define_singleton_method(:databases, held)
+      end
+
       test "a request leaves no tenant behind on the connection it borrowed" do
         create_actor(@tenant, nickname: "owner")
 
