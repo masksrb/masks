@@ -48,7 +48,7 @@ proxy.
 
 ```sh
 ./dev       # http://masks.localhost:12345, docs on :12346
-./dev test  # all five suites, in containers
+./dev test  # all seven suites, in containers
 ```
 
 `./dev` needs docker and nothing else — no ruby, no node, no postgres on the host. It runs the whole
@@ -61,9 +61,9 @@ declares `demo` and `acme` instead and serves them at `demo.masks.localhost:1234
 its own issuer and signs with a key of its own.
 
 `./dev test` also needs only docker. Each suite is named for what it proves rather than for the tree
-it lives in: `unit` and `integration` are the provider, `engine` and `client` are the two halves of
-the gem, and `conformance` is the OpenID Foundation suite. Those five sit under `test/`, one
-directory each. `web` stays with the package it tests. `./dev test client web` runs a subset; it
+it lives in: `unit` and `integration` are the provider, `provider` installs it into a fresh app
+through the generator, `engine` and `client` are the two halves of the gem, and `conformance` is
+the OpenID Foundation suite. Those six sit under `test/`, one directory each. `web` stays with the package it tests. `./dev test client web` runs a subset; it
 keeps going after a failure and names what failed.
 
 Both OpenID Foundation certification plans pass — `oidcc-config` and `oidcc-basic`, 2213 conditions,

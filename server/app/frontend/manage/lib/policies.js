@@ -45,7 +45,7 @@ export function duration(seconds) {
   return plural(count, unit);
 }
 
-export function describePolicy(policy) {
+function describePolicy(policy) {
   return [
     ["Sign up", policy.signup ? "open" : "invitation only"],
     ["Email domains", listed(policy.emailDomains, "any")],

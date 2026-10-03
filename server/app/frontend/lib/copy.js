@@ -1,6 +1,6 @@
 const PLACEHOLDER = /%\{(\w+)\}/g;
 
-export function interpolate(text, values) {
+function interpolate(text, values) {
   if (!values) return text;
 
   return text.replace(PLACEHOLDER, (whole, name) =>
