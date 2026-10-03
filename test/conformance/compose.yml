@@ -1,7 +1,14 @@
 name: masks-conformance
 
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: "3"
+
 services:
   postgres:
+    logging: *logging
     image: postgres:17-alpine
     environment:
       POSTGRES_USER: postgres
@@ -14,8 +21,11 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    networks:
+      - inner
 
   masks:
+    logging: *logging
     build:
       context: ../../server
       additional_contexts:
@@ -40,6 +50,12 @@ services:
       RAILS_ASSUME_SSL: "true"
       RAILS_FORCE_SSL: "false"
       MASKS_JOBS_IN_WEB_SERVER: "true"
+      MASKS_OUTBOUND_ALLOWED: "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16"
+      SSL_CERT_FILE: /certs/ca.crt
+    volumes:
+      - ./certs:/certs:ro
+    networks:
+      - inner
     depends_on:
       postgres:
         condition: service_healthy
@@ -51,25 +67,32 @@ services:
       start_period: 30s
 
   proxy:
+    logging: *logging
     image: caddy:2-alpine
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./certs:/certs:ro
     environment:
       MASKS_CONFORMANCE_HOST: demo.masks.test
     networks:
       default:
         aliases:
           - demo.masks.test
+      inner:
+        aliases:
+          - localhost.emobix.co.uk
     depends_on:
       masks:
         condition: service_healthy
 
   mongodb:
+    logging: *logging
     image: ${MONGODB_IMAGE:-mongo:6.0.13}
     volumes:
       - mongo:/data/db
 
   server:
+    logging: *logging
     image: registry.gitlab.com/openid/conformance-suite:${SUITE_REF:?set SUITE_REF}
     environment:
       BASE_URL: https://localhost.emobix.co.uk:8443
@@ -85,6 +108,7 @@ services:
       - proxy
 
   nginx:
+    logging: *logging
     image: registry.gitlab.com/openid/conformance-suite/nginx:${SUITE_REF:?set SUITE_REF}
     ports:
       - "${SUITE_PORT:-8443}:8443"
@@ -96,6 +120,7 @@ services:
       - server
 
   runner:
+    logging: *logging
     profiles: ["runner"]
     image: python:3.13-alpine
     environment:
@@ -111,6 +136,10 @@ services:
     depends_on:
       - nginx
     entrypoint: ["/bin/sh", "-c"]
+
+networks:
+  default:
+  inner:
 
 volumes:
   mongo:

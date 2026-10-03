@@ -6,3 +6,12 @@ https://{$MASKS_CONFORMANCE_HOST} {
 	tls internal
 	reverse_proxy masks:3000
 }
+
+https://localhost.emobix.co.uk:8443 {
+	tls /certs/suite.crt /certs/suite.key
+	reverse_proxy https://nginx:8443 {
+		transport http {
+			tls_insecure_skip_verify
+		}
+	}
+}

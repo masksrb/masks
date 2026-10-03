@@ -18,6 +18,7 @@ docs/dist
 docs/.astro
 test/conformance/.suite
 test/conformance/results
+test/conformance/certs
 
 web/node_modules/
 web/dist/
