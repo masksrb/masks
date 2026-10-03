@@ -10,10 +10,7 @@ module Masks
 
         return redirect_to login_path if actor.nil?
 
-        unless current_session.fresh?
-          sign_out
-          return redirect_to login_path(return_to: root_path(anchor: "export")), notice: t("account_export.again")
-        end
+        return unless reauthenticated!("export", t("account_export.again"))
 
         export = AccountExport.new(actor)
         body = export.to_json

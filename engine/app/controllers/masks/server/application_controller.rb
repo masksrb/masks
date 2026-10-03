@@ -176,6 +176,14 @@ module Masks
           Event.record!(Event::SESSION_ENDED, actor: ended.actor) if ended
         end
 
+        def reauthenticated!(anchor, notice)
+          return true if current_session.fresh?
+
+          sign_out
+          redirect_to login_path(return_to: root_path(anchor: anchor)), notice: notice
+          false
+        end
+
         def tracked(key)
           session[key] ||= {}
         end

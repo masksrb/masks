@@ -37,10 +37,7 @@ module Masks
         refused = refusal(actor)
         return refuse(t("account_deletion.#{refused}")) if refused
 
-        unless current_session.fresh?
-          sign_out
-          return redirect_to login_path(return_to: root_path(anchor: "delete")), notice: t("account_deletion.again")
-        end
+        return unless reauthenticated!("delete", t("account_deletion.again"))
 
         return refuse(t("account_deletion.mismatch")) unless params[:confirm].to_s.strip.casecmp?(actor.identifier.to_s)
 
