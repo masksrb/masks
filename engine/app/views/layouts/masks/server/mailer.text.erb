@@ -1,3 +1,7 @@
 <%= yield %>
+<% if @signature %>
+
+<%= @signature.join("\n\n") %>
+<% end %>
 --
 <%= t("actor_mailer.shared.sent_by", tenant: @tenant_name) %>

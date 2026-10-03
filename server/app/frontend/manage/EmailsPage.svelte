@@ -1,4 +1,5 @@
 <script>
+  import MailWording from "./MailWording.svelte";
   import Loader from "./ui/Loader.svelte";
   import Page from "./ui/Page.svelte";
   import Tip from "./ui/Tip.svelte";
@@ -9,6 +10,7 @@
     query MailPreviews($client: ID) {
       mailPreviews(client: $client) { key name journey heading subject from to html text }
       clients { clientId name approvedAt }
+      mailTemplates { kind subject message placeholders }
     }
   `;
 
@@ -19,7 +21,19 @@
     ["system", "On its own", "Sent by masks without anyone acting, such as security notices and idle warnings. The tenant heads these."],
   ];
 
+  const WORDED = {
+    confirmation_code: "confirmation_code",
+    email_verification: "email_verification",
+    password_reset: "password_reset",
+    approval_requested: "approval_requested",
+    invitation: "invitation",
+    invitation_organization: "invitation",
+    organization_invitation: "organization_invitation",
+    approved: "approved",
+  };
+
   let client = $state("");
+  let version = $state(0);
   let chosen = $state(null);
   let showing = $state("html");
 
@@ -31,11 +45,13 @@
 </script>
 
 <Page title="Email">
-  {#key client}
+  {#key `${client}:${version}`}
     <Loader load={() => api.query(PREVIEWS, { client: client || null })}>
       {#snippet children(data)}
         {@const previews = data.mailPreviews}
         {@const shown = previews.find((preview) => preview.key === chosen) ?? previews[0]}
+        {@const templates = Object.fromEntries(data.mailTemplates.map((template) => [template.kind, template]))}
+        {@const worded = templates[WORDED[shown.key]]}
 
         <div class="mail">
           <nav class="mail-list" aria-label="Emails">
@@ -90,6 +106,16 @@
                 <button type="button" aria-pressed={showing === "text"} onclick={() => (showing = "text")}>Text</button>
               </div>
             </header>
+
+            <div class="mail-words">
+              {#if worded}
+                {#key worded.kind}
+                  <MailWording {api} template={worded} title={shown.name} onsaved={() => version++} />
+                {/key}
+              {/if}
+
+              <MailWording {api} template={templates.signature} title="The signature" onsaved={() => version++} />
+            </div>
 
             {#if showing === "html" && shown.html}
               <iframe

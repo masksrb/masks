@@ -1,4 +1,8 @@
+<% if @message %>
+<%= render "message" %>
+<% else %>
 <%= @lede %>
+<% end %>
 
 <%= t(".grants", organization: @organization.name, role: @role) %>
 <% if @url %>

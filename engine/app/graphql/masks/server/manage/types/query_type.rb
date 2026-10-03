@@ -141,6 +141,9 @@ module Masks
             argument :client, ID, required: false
           end
 
+          field :mail_templates, [ MailTemplateType ], null: false,
+                description: "One entry for each email the tenant can reword, and the signature."
+
           field :tally, TallyType, null: false
 
           field :activity, [ ActivityDayType ], null: false do
@@ -211,6 +214,10 @@ module Masks
 
           def mail_previews(client: nil)
             MailPreviews.all(client: client && Client.find_by(client_id: client))
+          end
+
+          def mail_templates
+            MailTemplate.each_kind
           end
 
           def scim_base_url

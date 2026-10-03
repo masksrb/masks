@@ -131,6 +131,8 @@ en:
         tested: "Adapter tested"
       events:
         exported: "Activity exported"
+      mail_template:
+        updated: "Email wording changed"
       stream:
         created: "Event stream added"
         updated: "Event stream changed"

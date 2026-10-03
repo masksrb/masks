@@ -118,6 +118,7 @@ module Masks
 
       STREAM_CREATED = "stream.created".freeze
       STREAM_UPDATED = "stream.updated".freeze
+      MAIL_TEMPLATE_UPDATED = "mail_template.updated".freeze
       STREAM_ARCHIVED = "stream.archived".freeze
       STREAM_SECRET_ROTATED = "stream.secret_rotated".freeze
       STREAM_TESTED = "stream.tested".freeze

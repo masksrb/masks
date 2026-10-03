@@ -1,6 +1,10 @@
+<% if @message %>
+<%= render "message" %>
+<% else %>
 <p class="lede">
   <%= t(".confirm_html", nickname: tag.span(@actor.identifier, class: "strong"), tenant: @tenant_name) %>
 </p>
+<% end %>
 
 <%= render "action", url: @url, label: t(".action") %>
 

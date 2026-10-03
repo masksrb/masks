@@ -178,6 +178,23 @@ own. An email sent while someone signs in to an approved app is headed by that a
 and the rest by the tenant. An app nobody approved never heads an email, so a self-registered app
 cannot borrow the tenant's mail to look like someone else.
 
+### Rewording an email
+
+An owner rewords the invitation, password reset, email confirmation, confirmation code, approval, and
+approval request emails under **Email** in `/manage`, and adds a signature that closes every email.
+
+- The subject and the opening text each replace the ones masks writes. Leaving either blank keeps
+  masks' own.
+- Both are plain text, so markup shows as written and no link can be added. A blank line starts a new
+  paragraph.
+- `{{tenant}}`, `{{name}}`, `{{nickname}}`, `{{organization}}`, `{{role}}`, and `{{code}}` fill in where
+  the email has them, and the page lists which each one offers. A placeholder an email does not offer
+  is refused.
+- masks still adds the button or the code, how long it lasts, and the lines that tell a person what to
+  do if it was not them. A password reset a manager started still names the manager.
+- The wording applies in every language the tenant serves.
+- Each change is recorded as `mail_template.updated`.
+
 ## Rotating signing keys
 
 A key is staged before it signs anything, so clients caching JWKS fetch it first. See

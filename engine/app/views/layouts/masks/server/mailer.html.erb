@@ -141,6 +141,18 @@
         color: #58514c;
       }
 
+      .signature {
+        padding-top: 20px;
+        font-size: 14px;
+        line-height: 1.5;
+        color: #58514c;
+        text-align: center;
+      }
+
+      .signature p {
+        margin: 0 0 8px;
+      }
+
       .foot {
         padding-top: 20px;
         font-size: 12px;
@@ -181,7 +193,7 @@
           color: #1a1614 !important;
         }
 
-        .fallback, .meta, .foot {
+        .fallback, .meta, .foot, .signature {
           color: #aca6a2 !important;
         }
 
@@ -230,6 +242,15 @@
                 </table>
               </td>
             </tr>
+            <% if @signature %>
+              <tr>
+                <td class="signature">
+                  <% @signature.each do |paragraph| %>
+                    <p><%= paragraph %></p>
+                  <% end %>
+                </td>
+              </tr>
+            <% end %>
             <tr>
               <td class="foot"><%= t("actor_mailer.shared.sent_by_html", tenant: @tenant_name) %></td>
             </tr>

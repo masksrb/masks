@@ -1,4 +1,8 @@
+<% if @message %>
+<%= render "message" %>
+<% else %>
 <p class="lede"><%= @lede %></p>
+<% end %>
 
 <p class="lede"><%= t(".grants", organization: @organization.name, role: @role) %></p>
 

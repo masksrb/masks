@@ -1,4 +1,8 @@
+<% if @message %>
+<%= render "message" %>
+<% else %>
 <%= t(".lede", tenant: @heading) %>
+<% end %>
 
 <%= @code %>
 

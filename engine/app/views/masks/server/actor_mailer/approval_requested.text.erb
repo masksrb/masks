@@ -1,4 +1,8 @@
+<% if @message %>
+<%= render "message" %>
+<% else %>
 <%= t(".lede", nickname: @actor.identifier, tenant: @tenant_name) %>
+<% end %>
 <% if @url %>
 
 <%= @url %>

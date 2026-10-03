@@ -1,4 +1,8 @@
+<% if @message %>
+<%= render "message" %>
+<% else %>
 <%= @lede %>
+<% end %>
 
 <% if @actor.nickname.present? %><%= t(".nickname", nickname: @actor.nickname) %><% end %>
 

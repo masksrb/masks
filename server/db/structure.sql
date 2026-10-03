@@ -671,6 +671,42 @@ ALTER SEQUENCE public.events_id_seq OWNED BY public.events.id;
 
 
 --
+-- Name: mail_templates; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.mail_templates (
+    id bigint NOT NULL,
+    tenant_id bigint NOT NULL,
+    kind character varying NOT NULL,
+    subject character varying,
+    message text,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+ALTER TABLE ONLY public.mail_templates FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: mail_templates_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.mail_templates_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: mail_templates_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.mail_templates_id_seq OWNED BY public.mail_templates.id;
+
+
+--
 -- Name: memberships; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1345,6 +1381,13 @@ ALTER TABLE ONLY public.events ALTER COLUMN id SET DEFAULT nextval('public.event
 
 
 --
+-- Name: mail_templates id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.mail_templates ALTER COLUMN id SET DEFAULT nextval('public.mail_templates_id_seq'::regclass);
+
+
+--
 -- Name: memberships id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1546,6 +1589,14 @@ ALTER TABLE ONLY public.event_streams
 
 ALTER TABLE ONLY public.events
     ADD CONSTRAINT events_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: mail_templates mail_templates_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.mail_templates
+    ADD CONSTRAINT mail_templates_pkey PRIMARY KEY (id);
 
 
 --
@@ -2070,6 +2121,13 @@ CREATE INDEX index_events_on_tenant_id_and_created_at ON public.events USING btr
 --
 
 CREATE INDEX index_events_on_tenant_id_and_organization_id_and_created_at ON public.events USING btree (tenant_id, organization_id, created_at);
+
+
+--
+-- Name: index_mail_templates_on_tenant_id_and_kind; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_mail_templates_on_tenant_id_and_kind ON public.mail_templates USING btree (tenant_id, kind);
 
 
 --
@@ -2630,6 +2688,14 @@ ALTER TABLE ONLY public.sessions
 
 
 --
+-- Name: mail_templates fk_rails_653f1a86d5; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.mail_templates
+    ADD CONSTRAINT fk_rails_653f1a86d5 FOREIGN KEY (tenant_id) REFERENCES public.tenants(id);
+
+
+--
 -- Name: consents fk_rails_657cd4331e; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3004,6 +3070,12 @@ ALTER TABLE public.event_streams ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: mail_templates; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.mail_templates ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: memberships; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -3155,6 +3227,13 @@ CREATE POLICY tenant_isolation ON public.events USING ((tenant_id = (NULLIF(curr
 
 
 --
+-- Name: mail_templates tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.mail_templates USING ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint)) WITH CHECK ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint));
+
+
+--
 -- Name: memberships tenant_isolation; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -3244,6 +3323,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261003130000'),
 ('20261003120000'),
 ('20260927180000'),
 ('20260927170000'),

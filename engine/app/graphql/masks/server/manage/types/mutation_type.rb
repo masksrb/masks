@@ -59,6 +59,7 @@ module Masks
           field :test_adapter, mutation: Mutations::TestAdapter
           field :create_event_stream, mutation: Mutations::CreateEventStream
           field :update_event_stream, mutation: Mutations::UpdateEventStream
+          field :update_mail_template, mutation: Mutations::UpdateMailTemplate
           field :archive_event_stream, mutation: Mutations::ArchiveEventStream
           field :restore_event_stream, mutation: Mutations::RestoreEventStream
           field :rotate_event_stream_secret, mutation: Mutations::RotateEventStreamSecret
