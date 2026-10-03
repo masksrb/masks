@@ -1,5 +1,11 @@
 name: masks
 
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: "3"
+
 x-app: &app
   build:
     context: ./server
@@ -42,6 +48,7 @@ x-env: &env
 
 services:
   postgres:
+    logging: *logging
     image: postgres:17-alpine
     environment:
       POSTGRES_USER: postgres
@@ -59,6 +66,7 @@ services:
       retries: 10
 
   masks:
+    logging: *logging
     <<: *app
     environment:
       <<: *env
@@ -76,6 +84,7 @@ services:
       start_period: 180s
 
   masks-vite:
+    logging: *logging
     <<: *app
     command: ["./bin/dev-assets"]
     environment:
@@ -91,6 +100,7 @@ services:
       start_period: 180s
 
   masks-worker:
+    logging: *logging
     <<: *app
     command: ["./bin/jobs"]
     environment: *env
@@ -99,6 +109,7 @@ services:
         condition: service_healthy
 
   masks-image:
+    logging: *logging
     profiles: ["image"]
     build:
       context: ./server
@@ -128,6 +139,7 @@ services:
       start_period: 30s
 
   masks-docs:
+    logging: *logging
     image: node:22-alpine
     working_dir: /docs
     command:

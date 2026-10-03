@@ -55,6 +55,10 @@ services:
       - masks-storage:/rails/storage
     depends_on:
       - postgres
+    logging:
+      options:
+        max-size: 10m
+        max-file: "3"
 
   postgres:
     image: postgres:17-alpine
@@ -89,6 +93,10 @@ volumes:
 ```
 
 Every variable the server reads is in [ENV vars](/reference/environment/).
+
+`/up` answers `up` while the server can reach its database, its job queue, and its cache, and `down`
+with a 503 when it cannot reach any one of them, so a health check notices background jobs that have
+stopped. Each container's log is capped, as above, so a fault that repeats cannot fill the disk.
 
 ## Encryption & secrets
 
