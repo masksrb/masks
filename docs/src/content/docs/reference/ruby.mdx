@@ -800,6 +800,61 @@ Inherits `Masks::Client::Error`.
 #method()
 ```
 
+## Masks::Client::Proof
+
+| Constant | Value |
+| --- | --- |
+| `SCHEME` | `"DPoP".freeze` |
+| `TYPE` | `"dpop+jwt".freeze` |
+| `ALGORITHMS` | `%w[ES256 ES384 ES512 PS256 PS384 PS512 RS256].freeze` |
+| `SECRET` | `%w[d p q dp dq qi k].freeze` |
+| `THUMBED` | `{ "EC" => %w[crv kty x y], "RSA" => %w[e kty n] }.freeze` |
+| `LEEWAY` | `30` |
+| `WINDOW` | `60` |
+| `MEMORY` | `WINDOW + (LEEWAY * 2)` |
+
+### ::digest
+
+```ruby
+::digest(value)
+```
+
+### ::new
+
+```ruby
+::new(proof, method:, url:, replay: nil)
+```
+
+### ::thumbprint
+
+```ruby
+::thumbprint(jwk)
+```
+
+### #check!
+
+```ruby
+#check!(access_token:, jkt:)
+```
+
+## Masks::Client::Proof::Invalid
+
+Inherits `Masks::Client::Error`.
+
+## Masks::Client::Proof::Memory
+
+### ::new
+
+```ruby
+::new()
+```
+
+### #first?
+
+```ruby
+#first?(key, expires_in:)
+```
+
 ## Masks::Client::Rack
 
 | Constant | Value |
@@ -956,7 +1011,7 @@ Inherits `Masks::Client::Error`.
 
 | Constant | Value |
 | --- | --- |
-| `BEARER` | `/\ABearer[ \t]+([^\s,]+)[ \t]*\z/i.freeze` |
+| `PRESENTED` | `/\A(Bearer|DPoP)[ \t]+([^\s,]+)[ \t]*\z/i.freeze` |
 | `METADATA_PATH` | `"/.well-known/oauth-protected-resource".freeze` |
 | `REQUIRED` | `%w[iss sub exp].freeze` |
 
@@ -969,13 +1024,13 @@ Inherits `Masks::Client::Error`.
 ### ::new
 
 ```ruby
-::new(issuer:, url:, scopes: [], metadata_url: nil, algorithms: Verifier::ALGORITHMS, required: REQUIRED, verifier: nil)
+::new(issuer:, url:, scopes: [], metadata_url: nil, algorithms: Verifier::ALGORITHMS, required: REQUIRED, verifier: nil, replay: Proof::Memory.new)
 ```
 
 ### #authenticate
 
 ```ruby
-#authenticate(authorization, scope: nil, role: nil, organization: nil)
+#authenticate(authorization, scope: nil, role: nil, organization: nil, proof: nil, method: nil, url: nil)
 ```
 
 ### #challenge

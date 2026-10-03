@@ -1,14 +1,14 @@
 module Masks
   module Client
     class Resource
-      BEARER = /\ABearer[ \t]+([^\s,]+)[ \t]*\z/i.freeze
+      PRESENTED = /\A(Bearer|DPoP)[ \t]+([^\s,]+)[ \t]*\z/i.freeze
       METADATA_PATH = "/.well-known/oauth-protected-resource".freeze
       REQUIRED = %w[iss sub exp].freeze
 
       attr_reader :issuer, :url, :scopes
 
       def initialize(issuer:, url:, scopes: [], metadata_url: nil,
-                     algorithms: Verifier::ALGORITHMS, required: REQUIRED, verifier: nil)
+                     algorithms: Verifier::ALGORITHMS, required: REQUIRED, verifier: nil, replay: Proof::Memory.new)
         @issuer = Issuer.resolve(issuer)
         @url = url.to_s
         @descriptions = describe(scopes)
@@ -16,10 +16,14 @@ module Masks
         @metadata_url = metadata_url
         @required = Array(required)
         @verifier = verifier || Verifier.new(@issuer, audience: @url, algorithms: algorithms)
+        @replay = replay
       end
 
-      def authenticate(authorization, scope: nil, role: nil, organization: nil)
-        claims = Claims.new(@verifier.verify(token!(authorization), required: @required, typ: Verifier::ACCESS_TOKEN))
+      def authenticate(authorization, scope: nil, role: nil, organization: nil, proof: nil, method: nil, url: nil)
+        scheme, token = presented!(authorization)
+        held = @verifier.verify(token, required: @required, typ: Verifier::ACCESS_TOKEN)
+        bound!(held, scheme, token, proof: proof, method: method, url: url)
+        claims = Claims.new(held)
 
         Array(scope).each { |name| claims.permit!(name) }
         claims.member!(*Array(role), organization: organization) if role || organization
@@ -30,7 +34,7 @@ module Masks
       end
 
       def token(authorization)
-        authorization.to_s[BEARER, 1]
+        authorization.to_s[PRESENTED, 2]
       end
 
       def metadata_url
@@ -43,7 +47,8 @@ module Masks
           "authorization_servers" => [ issuer.url ],
           "scopes_supported" => scopes,
           "scope_descriptions" => @descriptions,
-          "bearer_methods_supported" => [ "header" ]
+          "bearer_methods_supported" => [ "header" ],
+          "dpop_signing_alg_values_supported" => Proof::ALGORITHMS
         }.reject { |_, value| value.respond_to?(:empty?) && value.empty? }
       end
 
@@ -72,8 +77,26 @@ module Masks
           end.freeze
         end
 
-        def token!(authorization)
-          token(authorization) || raise(Unauthenticated.new)
+        def presented!(authorization)
+          match = authorization.to_s.match(PRESENTED) || raise(Unauthenticated.new)
+
+          [ match[1].casecmp?(Proof::SCHEME) ? :dpop : :bearer, match[2] ]
+        end
+
+        def bound!(claims, scheme, token, proof:, method:, url:)
+          jkt = claims.dig("cnf", "jkt")
+
+          if jkt.nil?
+            raise Unauthorized.new("that token is not bound to a key, so it is presented as Bearer") if scheme == :dpop
+
+            return
+          end
+
+          raise Unauthorized.new("that token is bound to a key, so it is presented as DPoP with a proof") unless scheme == :dpop
+
+          Proof.new(proof, method: method, url: url || self.url, replay: @replay).check!(access_token: token, jkt: jkt)
+        rescue Proof::Invalid => e
+          raise Unauthorized.new(e.message, code: "invalid_dpop_proof")
         end
 
         def origin

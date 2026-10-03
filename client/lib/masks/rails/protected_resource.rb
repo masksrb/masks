@@ -20,16 +20,21 @@ module Masks
 
       def masks_authenticate!(scope: nil, role: nil, organization: nil, **)
         @masks_claims = masks_resource.authenticate(request.authorization, scope: scope, role: role,
-                                                                           organization: organization)
+                                                                           organization: organization, **masks_proof)
       rescue Masks::Client::Challenge => e
         masks_challenge(e)
         false
       end
 
       def masks_authenticate(scope: nil, role: nil, organization: nil)
-        masks_resource.authenticate(request.authorization, scope: scope, role: role, organization: organization)
+        masks_resource.authenticate(request.authorization, scope: scope, role: role, organization: organization,
+                                                           **masks_proof)
       rescue Masks::Client::Unauthenticated
         nil
+      end
+
+      def masks_proof
+        { proof: request.headers["DPoP"], method: request.request_method, url: "#{request.base_url}#{request.path}" }
       end
 
       def masks_challenge(error)

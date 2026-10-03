@@ -140,6 +140,13 @@ end
 masks_protect! scope: "uris:catalog:write", role: "owner", organization: "acme"
 ```
 
+A token bound to a key with DPoP has a `cnf.jkt` claim. It is accepted only as `Authorization: DPoP`
+with a `DPoP` proof signed by that key for this request's method and URL, made within the last
+minute, naming the token, and never seen before. Presented as `Bearer`, it is refused, so a stolen
+bound token is useless without the key. `Masks::Client::Rack` checks the same. Each process remembers
+the proofs it has seen, so a deployment with several processes passes a shared `replay:` store to
+`Masks::Client::Resource`, any object whose `first?(key, expires_in:)` answers true only once.
+
 Outside Rails, `Masks::Client` does discovery, PKCE, token exchange, and verification without the
 engine. See [Masks::Client](/reference/ruby/).
 

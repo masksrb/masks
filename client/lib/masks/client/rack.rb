@@ -15,7 +15,10 @@ module Masks
       def call(env)
         return @app.call(env) unless guards?(env)
 
-        env[CLAIMS] = resource(env).authenticate(env["HTTP_AUTHORIZATION"], scope: @scope)
+        env[CLAIMS] = resource(env).authenticate(
+          env["HTTP_AUTHORIZATION"], scope: @scope,
+          proof: env["HTTP_DPOP"], method: env["REQUEST_METHOD"], url: url(env)
+        )
 
         @app.call(env)
       rescue Challenge => e
@@ -30,6 +33,17 @@ module Masks
           return true if @only.nil?
 
           @only.call(env)
+        end
+
+        def url(env)
+          if defined?(::Rack::Request)
+            request = ::Rack::Request.new(env)
+            return "#{request.base_url}#{request.path}"
+          end
+
+          host = env["HTTP_HOST"] || "#{env['SERVER_NAME']}:#{env['SERVER_PORT']}"
+
+          "#{env['rack.url_scheme'] || 'http'}://#{host}#{env['SCRIPT_NAME']}#{env['PATH_INFO']}"
         end
 
         def passthrough(env, error)

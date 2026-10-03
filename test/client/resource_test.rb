@@ -187,7 +187,8 @@ class ResourceTest < ClientTest
         "resource" => "https://app.test/mcp",
         "authorization_servers" => [ issuer.url ],
         "scopes_supported" => %w[uris:catalog:read uris:catalog:write resources:command],
-        "bearer_methods_supported" => [ "header" ]
+        "bearer_methods_supported" => [ "header" ],
+        "dpop_signing_alg_values_supported" => Masks::Client::Proof::ALGORITHMS
       },
       resource.metadata
     )
