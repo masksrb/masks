@@ -127,8 +127,11 @@ adds it directly when the namespace is claimed.
 
 ### The ceiling
 
-A token holds the requested scopes that are in both the client's `allowed_scopes` and the actor's
-list. A refresh keeps the refresh token's scopes or fewer. The manage API checks the actor's list
+A token holds the requested scopes that are in the actor's list. A request that names a scope
+outside the client's `allowed_scopes` is refused whole with `invalid_scope`, and masks issues
+nothing. A self-registered client is allowed what the tenant's dynamic registration ceiling holds,
+so a resource server that offers a scope beyond the ceiling leads every client that asks for its
+whole list into that refusal. A refresh keeps the refresh token's scopes or fewer. The manage API checks the actor's list
 on every request, so losing `masks:manage` takes effect at once.
 
 ## Namespaces
