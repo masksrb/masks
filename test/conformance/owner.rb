@@ -1,12 +1,12 @@
-Tenant.all.each do |tenant|
-  Tenant.switch(tenant) do
-    actor = Actor.find_or_initialize_by(nickname: ENV.fetch("OWNER", "owner"))
+Masks::Server::Tenant.all.each do |tenant|
+  Masks::Server::Tenant.switch(tenant) do
+    actor = Masks::Server::Actor.find_or_initialize_by(nickname: ENV.fetch("OWNER", "owner"))
 
     actor.assign_attributes(
       name: "Conformance Owner",
       email: "owner@#{tenant.subdomain}.invalid",
       password: ENV.fetch("OWNER_PASSWORD", "password"),
-      scopes: Scopes.join(Scopes::STANDARD),
+      scopes: Masks::Server::Scopes.join(Masks::Server::Scopes::STANDARD),
       email_verified_at: Time.current,
       given_name: "Conformance",
       family_name: "Owner",

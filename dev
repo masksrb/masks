@@ -123,7 +123,9 @@ def conformance(args)
   case args.first
   when "logs" then return run("docker", "compose", "logs", "-f", args[1] || "server", chdir: here)
   when "down" then return run("docker", "compose", "down", "-v", "--remove-orphans", chdir: here)
-  when "plans" then return puts(PLANS)
+  when "plans"
+    puts PLANS
+    return true
   end
 
   if File.directory?(File.join(suite, ".git"))
@@ -143,7 +145,7 @@ def conformance(args)
 
   plan = PLANS.flat_map { |name| [ "'#{name}'", "/conformance/masks.json" ] }.join(" ")
 
-  run("sh", "-c", <<~SH, chdir: here)
+  run("bash", "-o", "pipefail", "-c", <<~SH, chdir: here)
     docker compose run --rm runner \
       "pip install --quiet -r /suite/scripts/requirements.txt && \
        exec python /suite/scripts/run-test-plan.py \
@@ -259,7 +261,7 @@ when "psql" then run!(*compose("exec", "postgres", "psql", "-U", "postgres", mul
 when "console" then run!(*compose("exec", "masks", "bin/rails", "console", multi: multi))
 when "image" then image(ARGV)
 when "test" then test(ARGV)
-when "conformance" then conformance(ARGV)
+when "conformance" then conformance(ARGV) || exit(1)
 when "reference" then reference
 when "fmt" then fmt(ARGV)
 else usage
