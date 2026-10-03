@@ -344,12 +344,6 @@ fake.revoke(held.connection)
 fake.unavailable(held.connection)
 ```
 
-## Which issuers this speaks to
-
-masks publishes `masks_protocol_version` in its discovery document, and this gem needs at
-least version 1 — the one that serves `handshake_endpoint` and the approval flow behind
-it. An older issuer is refused at configuration time, with a sentence saying so.
-
 ## Documentation
 
 This README is the reference for the gem. [masks.pages.dev](https://masks.pages.dev) carries what is

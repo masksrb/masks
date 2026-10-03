@@ -32,10 +32,6 @@ module Masks
         raise InvalidToken, e.message
       end
 
-      def tenant(token)
-        verify(token)["tenant"]
-      end
-
       private
 
         def typed!(held, accepted)

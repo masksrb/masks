@@ -16,10 +16,6 @@ module Masks
         @lock.synchronize { @issuers.clear }
         self
       end
-
-      def urls
-        @lock.synchronize { @issuers.keys }
-      end
     end
   end
 end

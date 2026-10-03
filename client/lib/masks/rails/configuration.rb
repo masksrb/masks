@@ -106,19 +106,6 @@ module Masks
         @store.call(request, registration)
       end
 
-      MINIMUM_ISSUER = 1
-
-      def issuer_speaks!(request)
-        spoken = Masks::Client::Issuer.resolve(issuer_for(request))
-                                     .discovery["masks_protocol_version"].to_i
-
-        return true if spoken >= MINIMUM_ISSUER
-
-        raise Unconfigured,
-              "#{issuer_for(request)} speaks masks protocol #{spoken}, and masks " \
-              "#{Masks::VERSION} needs at least #{MINIMUM_ISSUER}"
-      end
-
       def session_for(request)
         raise Unconfigured, "this app has not shaken hands with #{issuer_for(request)}" unless configured?(request)
 
