@@ -34,7 +34,7 @@ Each commit on main is published as `:main` and by its sha. A release publishes 
 
 ```sh
 ./dev            # http://masks.localhost:12345, docs on :12346
-./dev up --multi # demo and acme, at http://demo.masks.localhost:12345
+./dev --multi    # demo and acme, at http://demo.masks.localhost:12345
 ./dev test       # every suite, in containers
 ./dev test unit  # one suite
 ./dev image      # run the production image and check each tenant's issuer and keys

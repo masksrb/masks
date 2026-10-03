@@ -246,7 +246,7 @@ def test(names)
   puts "\npassed: #{names.join(' ')}"
 end
 
-command = ARGV.shift || "up"
+command = ARGV.first == "--multi" ? "up" : ARGV.shift || "up"
 multi = !ARGV.delete("--multi").nil?
 
 case command
