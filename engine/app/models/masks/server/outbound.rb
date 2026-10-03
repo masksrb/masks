@@ -65,10 +65,6 @@ module Masks
           UNROUTABLE.any? { |range| range.include?(address) }
         end
 
-        def get(uri, open: OPEN_TIMEOUT, read: READ_TIMEOUT, address: nil)
-          call(uri, Net::HTTP::Get.new(uri), open: open, read: read, address: address)
-        end
-
         def fetch!(uri, open: OPEN_TIMEOUT, read: READ_TIMEOUT, ceiling: CEILING, within: nil)
           address = ::Rails.env.local? ? nil : vetted(uri)
 

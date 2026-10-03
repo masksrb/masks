@@ -102,10 +102,6 @@ module Masks
           list(value).select { |scope| scope.start_with?(NAMESPACE) }
         end
 
-        def describe(value)
-          list(value).map { |scope| [ scope, description_for(scope) ] }
-        end
-
         def description_for(scope, locale: I18n.locale)
           return I18n.t("scopes.delegates", locale: locale) if scope == DELEGATE
 

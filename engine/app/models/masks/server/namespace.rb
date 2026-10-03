@@ -21,10 +21,6 @@ module Masks
           where(name: prefixes(scopes))
         end
 
-        def held_by(resource)
-          where(resource: resource.to_s)
-        end
-
         def taken(handshake)
           named(handshake.scopes).where.not(resource: handshake.resource.to_s)
         end

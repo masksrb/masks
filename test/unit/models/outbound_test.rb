@@ -31,7 +31,10 @@ module Masks
       test "a request goes to the address that was checked, not to whatever the name resolves to later" do
         port = serve("held")
 
-        response = Outbound.get(URI("http://outbound.invalid:#{port}/"), address: IPAddr.new("127.0.0.1"))
+        uri = URI("http://outbound.invalid:#{port}/")
+        response = Outbound.call(uri, Net::HTTP::Get.new(uri), open: Outbound::OPEN_TIMEOUT,
+                                                              read: Outbound::READ_TIMEOUT,
+                                                              address: IPAddr.new("127.0.0.1"))
 
         assert_equal "held", Outbound.body(response)
       end
@@ -39,7 +42,10 @@ module Masks
       test "a body larger than the ceiling is abandoned rather than read in full" do
         port = serve("x" * (Outbound::CEILING * 8))
 
-        response = Outbound.get(URI("http://outbound.invalid:#{port}/"), address: IPAddr.new("127.0.0.1"))
+        uri = URI("http://outbound.invalid:#{port}/")
+        response = Outbound.call(uri, Net::HTTP::Get.new(uri), open: Outbound::OPEN_TIMEOUT,
+                                                              read: Outbound::READ_TIMEOUT,
+                                                              address: IPAddr.new("127.0.0.1"))
 
         assert_equal Outbound::CEILING, response.body.bytesize
       end

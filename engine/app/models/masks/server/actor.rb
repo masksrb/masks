@@ -203,10 +203,6 @@ module Masks
         activated_at.present?
       end
 
-      def invited?
-        !activated?
-      end
-
       def activate!(password, verifying_email: false)
         self.password = password
         self.email_verified_at = Time.current if verifying_email && email.present?

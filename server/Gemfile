@@ -27,7 +27,6 @@ gem "tzinfo-data", platforms: %i[ windows jruby ]
 gem "solid_cache"
 gem "solid_queue"
 
-gem "thruster", require: false
 gem "vite_rails"
 
 group :development, :test do
@@ -44,6 +43,5 @@ group :development do
 end
 
 group :test do
-  gem "capybara"
   gem "webmock"
 end

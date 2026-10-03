@@ -4,14 +4,6 @@ module Masks
       SUFFIX = "#".freeze
 
       class << self
-        def field(document, name, locale: I18n.locale)
-          return nil unless document.is_a?(Hash)
-
-          tagged = tags(document, name)
-
-          preferred(locale).lazy.filter_map { |tag| tagged[tag] }.first || tagged[nil]
-        end
-
         def fields(document, name, locale: I18n.locale)
           return {} unless document.is_a?(Hash)
 

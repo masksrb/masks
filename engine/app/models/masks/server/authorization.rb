@@ -76,14 +76,6 @@ module Masks
         actor.permitted_scopes(granted_scopes)
       end
 
-      def openid?
-        granted_scopes.include?(Scopes::OPENID)
-      end
-
-      def offline?
-        granted_scopes.include?(Scopes::OFFLINE)
-      end
-
       def self.parse_claims(value)
         return value if value.is_a?(Hash)
         return nil if value.blank?

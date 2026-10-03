@@ -14,7 +14,7 @@ docker pull ghcr.io/masksrb/masks:latest
 masks is an OpenID Connect and OAuth 2.0 provider. It authenticates people, issues and verifies
 tokens, and publishes each tenant's signing keys. It stores nothing about your application's data.
 
-It runs as one container: Puma in front of Rails, with optional Thruster in front of Puma. It needs
+It runs as one container: Puma in front of Rails. It needs
 one Postgres server, holding a primary database, a cache, and a job queue, named from
 `POSTGRES_DATABASE`. The only local disk it uses is the master key.
 
