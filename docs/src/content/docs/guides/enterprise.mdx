@@ -68,7 +68,9 @@ moving money or reading a record.
 - A client asks for a second factor with `acr_values=urn:masks:acr:mfa` or with
   an essential `acr` in the `claims` parameter. A session that already used a
   second factor is not asked again. Otherwise masks prompts for a factor the
-  account holds, or asks the account to add one.
+  account holds, or asks the account to add one. A request that also accepts
+  `urn:masks:acr:pwd` is satisfied by a password, as OpenID Connect reads
+  `acr_values` as a list of acceptable values.
 - The ID token reports the `acr` the sign-in reached.
 - A sign-in policy can ask for a second factor at every app sign-in it covers.
   A session that started with a password alone is asked for one before the app

@@ -116,6 +116,37 @@ module Masks
         assert_includes policy.errors[:second_factors], "must offer more than backup codes when one is required"
       end
 
+      test "a request that accepts a password as readily as a second factor is not stepped up" do
+        actor = create_actor(email: "owner@probe.example.com")
+
+        sign_in_as(actor)
+        authorize(client_id: @registration["client_id"], acr_values: "#{MFA} #{Issuer::ACR_PASSWORD}")
+        consent! if awaiting_consent?
+
+        assert code_from.present?
+      end
+
+      test "the claims parameter accepting a password as well asks for nothing more" do
+        actor = create_actor(email: "owner@probe.example.com")
+
+        sign_in_as(actor)
+        authorize(client_id: @registration["client_id"],
+                  claims: { id_token: { acr: { essential: true, values: [ MFA, Issuer::ACR_PASSWORD ] } } }.to_json)
+        consent! if awaiting_consent?
+
+        assert code_from.present?
+      end
+
+      test "an acr value masks does not know beside a second factor still asks for one" do
+        actor = create_actor(email: "owner@probe.example.com")
+
+        sign_in_as(actor)
+        authorize(client_id: @registration["client_id"], acr_values: "urn:example:acr:gold #{MFA}")
+
+        assert awaiting_login?
+        assert_equal "enrol", auth_data["prompt"]
+      end
+
       test "an unrelated acr value asks for nothing more" do
         actor = create_actor(email: "owner@probe.example.com")
 

@@ -111,7 +111,9 @@ module Masks
       end
 
       def multi_factor?
-        (acr_values + claimed_acr_values).include?(Issuer::ACR_MULTI_FACTOR)
+        [ acr_values, claimed_acr_values ].any? do |accepted|
+          (accepted & Issuer::ACR_VALUES) == [ Issuer::ACR_MULTI_FACTOR ]
+        end
       end
 
       def consent?
