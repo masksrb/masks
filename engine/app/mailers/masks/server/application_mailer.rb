@@ -41,21 +41,21 @@ module Masks
           @journey = journey
           @tenant_name = journey.tenant_name
           @heading = journey.heading
-          @signature = template(MailTemplate::SIGNATURE)&.paragraphs_for(tenant: @tenant_name)
+          @signature = templates[MailTemplate::SIGNATURE]&.paragraphs_for(tenant: @tenant_name)
         end
 
-        def customize!(kind, actor: nil, **values)
-          held = template(kind)
-          return nil if held.nil?
+        def customize!(kind, default:, actor: nil, **values)
+          held = templates[kind.to_s]
+          return default if held.nil?
 
           values = { tenant: @tenant_name, name: actor&.display_name, nickname: actor&.identifier }.merge(values)
           @message = held.paragraphs_for(values)
 
-          held.subject_for(values)
+          held.subject_for(values) || default
         end
 
-        def template(kind)
-          Current.tenant && MailTemplate.for(kind)
+        def templates
+          @templates ||= Current.tenant ? MailTemplate.all.index_by(&:kind) : {}
         end
 
         def home

@@ -91,15 +91,11 @@ module Masks
         end
 
         def authorization_details_only_narrow
-          requested = requested_authorization_details
-          return if requested.nil?
+          return if requested_authorization_details.nil?
 
           deny!("invalid_request", "an upstream token is released without authorization_details") if upstream?
 
-          unless requested.covered_by?(available_authorization_details)
-            deny!("invalid_authorization_details",
-                  "an exchange cannot widen authorization_details beyond what the subject token carries")
-          end
+          AuthorizationDetails.narrow!(requested_authorization_details.as_json, available_authorization_details)
         rescue AuthorizationDetails::Invalid => e
           deny!("invalid_authorization_details", e.message)
         end

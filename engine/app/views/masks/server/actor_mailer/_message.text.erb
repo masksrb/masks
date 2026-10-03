@@ -1,1 +1,1 @@
-<%= @message.join("\n\n") %>
+<% if @message %><%= @message.join("\n\n") %><% else %><%= yield.strip %><% end %>

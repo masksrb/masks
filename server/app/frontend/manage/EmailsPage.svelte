@@ -21,16 +21,7 @@
     ["system", "On its own", "Sent by masks without anyone acting, such as security notices and idle warnings. The tenant heads these."],
   ];
 
-  const WORDED = {
-    confirmation_code: "confirmation_code",
-    email_verification: "email_verification",
-    password_reset: "password_reset",
-    approval_requested: "approval_requested",
-    invitation: "invitation",
-    invitation_organization: "invitation",
-    organization_invitation: "organization_invitation",
-    approved: "approved",
-  };
+  const worded = (key) => (key === "invitation_organization" ? "invitation" : key);
 
   let client = $state("");
   let version = $state(0);
@@ -51,7 +42,7 @@
         {@const previews = data.mailPreviews}
         {@const shown = previews.find((preview) => preview.key === chosen) ?? previews[0]}
         {@const templates = Object.fromEntries(data.mailTemplates.map((template) => [template.kind, template]))}
-        {@const worded = templates[WORDED[shown.key]]}
+        {@const wording = templates[worded(shown.key)]}
 
         <div class="mail">
           <nav class="mail-list" aria-label="Emails">
@@ -108,9 +99,9 @@
             </header>
 
             <div class="mail-words">
-              {#if worded}
-                {#key worded.kind}
-                  <MailWording {api} template={worded} title={shown.name} onsaved={() => version++} />
+              {#if wording}
+                {#key wording.kind}
+                  <MailWording {api} template={wording} title={shown.name} onsaved={() => version++} />
                 {/key}
               {/if}
 

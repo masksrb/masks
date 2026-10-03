@@ -9,12 +9,14 @@ module Masks
         @url = url
         @organization = membership&.organization
         @lede = membership ? organization_lede(membership) : tenant_lede(journey.manager)
-        custom = customize!(:invitation, actor: actor, organization: @organization&.name)
 
         mail(
           from: self.class.from,
           to: actor.email,
-          subject: custom || (membership ? organization_subject(membership) : t("actor_mailer.invitation.subject", tenant: @tenant_name))
+          subject: customize!(
+            :invitation, actor: actor, organization: @organization&.name,
+            default: membership ? organization_subject(membership) : t("actor_mailer.invitation.subject", tenant: @tenant_name)
+          )
         )
       end
 
@@ -27,9 +29,11 @@ module Masks
         @role = membership.role
         @lede = organization_lede(membership)
         @url = home && "#{home}#organization-#{@organization.key}"
-        custom = customize!(:organization_invitation, actor: @actor, organization: @organization.name, role: @role)
 
-        mail(from: self.class.from, to: @actor.email, subject: custom || organization_subject(membership))
+        subject = customize!(:organization_invitation, actor: @actor, organization: @organization.name, role: @role,
+                                                       default: organization_subject(membership))
+
+        mail(from: self.class.from, to: @actor.email, subject: subject)
       end
 
       def password_reset(actor, url, journey:)
@@ -39,12 +43,11 @@ module Masks
         @actor = actor
         @url = url
         @opened_by = journey.manager
-        custom = customize!(:password_reset, actor: actor)
 
         mail(
           from: self.class.from,
           to: actor.email,
-          subject: custom || t("actor_mailer.password_reset.subject", tenant: @tenant_name)
+          subject: customize!(:password_reset, actor: actor, default: t("actor_mailer.password_reset.subject", tenant: @tenant_name))
         )
       end
 
@@ -77,12 +80,11 @@ module Masks
         journey!(journey)
         @actor = actor
         @url = url
-        custom = customize!(:email_verification, actor: actor)
 
         mail(
           from: self.class.from,
           to: actor.email,
-          subject: custom || t("actor_mailer.email_verification.subject", tenant: @tenant_name)
+          subject: customize!(:email_verification, actor: actor, default: t("actor_mailer.email_verification.subject", tenant: @tenant_name))
         )
       end
 
@@ -91,12 +93,11 @@ module Masks
 
         journey!(journey)
         @code = code
-        custom = customize!(:confirmation_code, code: code)
 
         mail(
           from: self.class.from,
           to: email,
-          subject: custom || t("actor_mailer.confirmation_code.subject", code: code, tenant: @heading)
+          subject: customize!(:confirmation_code, code: code, default: t("actor_mailer.confirmation_code.subject", code: code, tenant: @heading))
         )
       end
 
@@ -106,12 +107,11 @@ module Masks
         journey!(journey)
         @actor = actor
         @url = journey.origin.presence && "#{journey.origin}/manage/actors/#{actor.uuid}"
-        custom = customize!(:approval_requested, nickname: actor.identifier)
 
         mail(
           from: self.class.from,
           to: manager.email,
-          subject: custom || t("actor_mailer.approval_requested.subject", nickname: actor.identifier, tenant: @tenant_name)
+          subject: customize!(:approval_requested, nickname: actor.identifier, default: t("actor_mailer.approval_requested.subject", nickname: actor.identifier, tenant: @tenant_name))
         )
       end
 
@@ -138,12 +138,11 @@ module Masks
         journey!(journey)
         @actor = actor
         @url = home
-        custom = customize!(:approved, actor: actor)
 
         mail(
           from: self.class.from,
           to: actor.email,
-          subject: custom || t("actor_mailer.approved.subject", tenant: @tenant_name)
+          subject: customize!(:approved, actor: actor, default: t("actor_mailer.approved.subject", tenant: @tenant_name))
         )
       end
 

@@ -312,15 +312,7 @@ module Masks
         end
 
         def detailed(req, granted)
-          return granted if params[:authorization_details].blank?
-
-          requested = AuthorizationDetails.parse(params[:authorization_details])
-
-          unless granted.present? && requested.covered_by?(granted)
-            req.bad_request!(:invalid_authorization_details, "authorization_details asks for more than was granted")
-          end
-
-          requested.as_json
+          AuthorizationDetails.narrow!(params[:authorization_details], granted)&.as_json || granted
         rescue AuthorizationDetails::Invalid => e
           req.bad_request!(:invalid_authorization_details, e.message)
         end

@@ -1,3 +1,7 @@
+<% if @message %>
 <% @message.each do |paragraph| %>
   <p class="lede"><%= paragraph %></p>
+<% end %>
+<% else %>
+<%= yield %>
 <% end %>

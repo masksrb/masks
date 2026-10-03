@@ -88,13 +88,9 @@ module Masks
         def bound!(claims, scheme, token, proof:, method:, url:)
           jkt = claims.dig("cnf", "jkt")
 
-          if jkt.nil?
-            raise Unauthorized.new("that token is not bound to a key, so it is presented as Bearer") if scheme == :dpop
-
-            return
-          end
-
-          raise Unauthorized.new("that token is bound to a key, so it is presented as DPoP with a proof", dpop: true) unless scheme == :dpop
+          raise Unauthorized.new("that token is not bound to a key, so it is presented as Bearer") if jkt.nil? && scheme == :dpop
+          raise Unauthorized.new("that token is bound to a key, so it is presented as DPoP with a proof", dpop: true) if jkt && scheme != :dpop
+          return if jkt.nil?
 
           Proof.new(proof, method: method, url: url || self.url, replay: @replay).check!(access_token: token, jkt: jkt)
         rescue Proof::Invalid => e

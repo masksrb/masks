@@ -11,8 +11,6 @@ module Masks
       SCHEMA_TYPES = %w[object array string number integer boolean].freeze
       LABEL_LIMIT = 100
 
-      include Enumerable
-
       attr_reader :entries
 
       class << self
@@ -33,10 +31,20 @@ module Masks
         end
 
         def declared
-          Client.active.approved.where.not(authorization_details_schemas: {})
-                .each_with_object({}) do |client, held|
-                  client.authorization_details_schemas.each { |type, declaration| held[type] ||= declaration }
-                end
+          held = Current.authorization_details_declared ||= {}
+
+          held[Current.tenant&.id] ||=
+            Client.active.approved.where.not(authorization_details_schemas: {}).order(:id)
+                  .pluck(:authorization_details_schemas)
+                  .each_with_object({}) { |schemas, held| schemas.each { |type, declaration| held[type] ||= declaration } }
+        end
+
+        def narrow!(requested, granted)
+          held = parse(requested)
+
+          raise Invalid, "authorization_details asks for more than was granted" unless held.nil? || held.covered_by?(granted)
+
+          held
         end
 
         def supported_types
@@ -89,10 +97,6 @@ module Masks
         @entries = entries
       end
 
-      def each(&)
-        entries.each(&)
-      end
-
       def types
         entries.map { |entry| entry["type"] }.uniq
       end
@@ -106,7 +110,7 @@ module Masks
       end
 
       def covered_by?(granted)
-        held = Array(granted&.entries || granted).map { |entry| normalized(entry) }
+        held = Array(granted.is_a?(self.class) ? granted.entries : granted).map { |entry| normalized(entry) }
 
         entries.all? { |entry| held.include?(normalized(entry)) }
       end
@@ -142,16 +146,12 @@ module Masks
 
       private
 
-        def normalized(entry)
-          sort = ->(value) do
-            case value
-            when Hash then value.stringify_keys.sort.to_h.transform_values(&sort)
-            when Array then value.map(&sort)
-            else value
-            end
+        def normalized(value)
+          case value
+          when Hash then value.stringify_keys.sort.to_h.transform_values { |child| normalized(child) }
+          when Array then value.map { |child| normalized(child) }
+          else value
           end
-
-          sort.call(entry)
         end
 
       class Schema

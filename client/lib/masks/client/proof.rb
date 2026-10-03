@@ -16,19 +16,27 @@ module Masks
         def initialize
           @held = {}
           @lock = Mutex.new
+          @swept = 0.0
         end
 
         def first?(key, expires_in:)
           now = Time.now.to_f
 
           @lock.synchronize do
-            @held.delete_if { |_, until_at| until_at < now }
-            return false if @held.key?(key)
+            sweep(now) if now - @swept > 1
+            return false if @held.key?(key) && @held[key] >= now
 
             @held[key] = now + expires_in
             true
           end
         end
+
+        private
+
+          def sweep(now)
+            @held.delete_if { |_, until_at| until_at < now }
+            @swept = now
+          end
       end
 
       MEMORY_LOCK = Mutex.new

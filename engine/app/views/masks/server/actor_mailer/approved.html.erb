@@ -1,6 +1,4 @@
-<% if @message %>
-<%= render "message" %>
-<% else %>
+<%= render layout: "message" do %>
 <p class="lede"><%= t(".lede", tenant: @tenant_name) %></p>
 <% end %>
 

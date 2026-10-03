@@ -60,7 +60,7 @@ module Masks
         def details
           return @details if defined?(@details)
 
-          @details = request.respond_to?(:authorization_details) ? AuthorizationDetails.parse(request.authorization_details) : nil
+          @details = AuthorizationDetails.parse(request.authorization_details)
         end
 
         def consented_here?

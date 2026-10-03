@@ -19,7 +19,6 @@ module Masks
                    token_endpoint_auth_method application_type subject_type scope].freeze
       LISTS = %w[redirect_uris post_logout_redirect_uris grant_types response_types authorization_details_types].freeze
       FLAGS = %w[backchannel_logout_session_required dpop_bound_access_tokens require_pushed_authorization_requests].freeze
-      DESCRIPTIVE = %i[name client_uri logo_uri tos_uri policy_uri metadata_expires_at].freeze
 
       class << self
         def url?(client_id)
@@ -70,7 +69,8 @@ module Masks
       end
 
       def save!(held)
-        raise Refused, ::Rails.cache.read(refusal_key) if ::Rails.cache.exist?(refusal_key)
+        refused = ::Rails.cache.read(refusal_key)
+        raise Refused, refused if refused
 
         document, expires_at = fetch
         client = held || Client.new(client_id: client_id, dynamic: true)
