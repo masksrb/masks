@@ -29,13 +29,18 @@ module Masks
     class Challenge < Error
       attr_reader :code, :description, :status, :scope
 
-      def initialize(code, description, status:, scope: nil)
+      def initialize(code, description, status:, scope: nil, dpop: false)
         super([ code, description ].compact.join(": "))
 
         @code = code
         @description = description
         @status = status
         @scope = scope
+        @dpop = dpop
+      end
+
+      def dpop?
+        @dpop
       end
     end
 
@@ -46,8 +51,8 @@ module Masks
     end
 
     class Unauthorized < Challenge
-      def initialize(description, code: "invalid_token")
-        super(code, description, status: 401)
+      def initialize(description, code: "invalid_token", dpop: false)
+        super(code, description, status: 401, dpop: dpop)
       end
     end
 

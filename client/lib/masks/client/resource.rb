@@ -8,7 +8,7 @@ module Masks
       attr_reader :issuer, :url, :scopes
 
       def initialize(issuer:, url:, scopes: [], metadata_url: nil,
-                     algorithms: Verifier::ALGORITHMS, required: REQUIRED, verifier: nil, replay: Proof::Memory.new)
+                     algorithms: Verifier::ALGORITHMS, required: REQUIRED, verifier: nil, replay: Proof.memory)
         @issuer = Issuer.resolve(issuer)
         @url = url.to_s
         @descriptions = describe(scopes)
@@ -62,7 +62,9 @@ module Masks
           [ "resource_metadata", metadata_url ]
         ]
 
-        "Bearer " + parameters.filter_map { |name, value|
+        scheme = error.dpop? ? "#{Proof::SCHEME} algs=\"#{Proof::ALGORITHMS.join(' ')}\", " : "Bearer "
+
+        scheme + parameters.filter_map { |name, value|
           %(#{name}="#{quote(value)}") if value && !value.to_s.empty?
         }.join(", ")
       end
@@ -92,11 +94,11 @@ module Masks
             return
           end
 
-          raise Unauthorized.new("that token is bound to a key, so it is presented as DPoP with a proof") unless scheme == :dpop
+          raise Unauthorized.new("that token is bound to a key, so it is presented as DPoP with a proof", dpop: true) unless scheme == :dpop
 
           Proof.new(proof, method: method, url: url || self.url, replay: @replay).check!(access_token: token, jkt: jkt)
         rescue Proof::Invalid => e
-          raise Unauthorized.new(e.message, code: "invalid_dpop_proof")
+          raise Unauthorized.new(e.message, code: "invalid_dpop_proof", dpop: true)
         end
 
         def origin

@@ -31,6 +31,12 @@ module Masks
         end
       end
 
+      MEMORY_LOCK = Mutex.new
+
+      def self.memory
+        MEMORY_LOCK.synchronize { @memory ||= Memory.new }
+      end
+
       def self.thumbprint(jwk)
         named = THUMBED[jwk["kty"]] || raise(Invalid, "the proof key is of a kind this resource does not read")
         held = named.to_h { |field| [ field, jwk[field] ] }

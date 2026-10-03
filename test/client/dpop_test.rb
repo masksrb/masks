@@ -98,6 +98,25 @@ class DpopTest < ClientTest
     assert_match "not bound", refused { presented(token) }.description
   end
 
+  def test_a_proof_is_used_once_even_when_each_request_builds_its_own_resource
+    token = bound
+    held = proof(token)
+
+    resource.authenticate("DPoP #{token}", proof: held, method: "GET", url: URL)
+
+    assert_raises(Masks::Client::Unauthorized) do
+      resource.authenticate("DPoP #{token}", proof: held, method: "GET", url: URL)
+    end
+  end
+
+  def test_a_refused_proof_is_challenged_with_the_dpop_scheme
+    token = bound
+    error = refused { presented(token, nil) }
+
+    assert guarded.challenge(error).start_with?(%(DPoP algs="ES256))
+    assert guarded.challenge(Masks::Client::Unauthorized.new("expired")).start_with?("Bearer ")
+  end
+
   def test_the_metadata_names_the_proof_algorithms
     assert_includes resource.metadata["dpop_signing_alg_values_supported"], "ES256"
   end
