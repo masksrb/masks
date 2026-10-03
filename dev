@@ -111,7 +111,8 @@ SUITE_REPO = ENV.fetch("SUITE_REPO", "https://gitlab.com/openid/conformance-suit
 
 PLANS = [
   "oidcc-config-certification-test-plan",
-  "oidcc-basic-certification-test-plan[server_metadata=discovery][client_registration=dynamic_client]"
+  "oidcc-basic-certification-test-plan[server_metadata=discovery][client_registration=dynamic_client]",
+  "oidcc-rp-initiated-logout-certification-test-plan[response_type=code][client_registration=dynamic_client]"
 ].freeze
 
 def conformance(args)

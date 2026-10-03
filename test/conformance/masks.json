@@ -41,6 +41,32 @@
           "commands": [["wait", "id", "submission_complete", 10]]
         }
       ]
+    },
+    {
+      "match": "https://demo.masks.test/logout*",
+      "tasks": [
+        {
+          "task": "Read the sign-out page, and confirm it when masks asks",
+          "optional": true,
+          "match": "https://demo.masks.test/*",
+          "commands": [
+            [
+              "wait",
+              "css",
+              "#logout-confirm, #authorize-error, #login",
+              10,
+              ".",
+              "update-image-placeholder-optional"
+            ],
+            ["click", "css", "#logout-confirm button[type=submit]", "optional"]
+          ]
+        },
+        {
+          "task": "Verify Complete",
+          "optional": true,
+          "match": "*/test/*/post_logout_redirect*"
+        }
+      ]
     }
   ]
 }

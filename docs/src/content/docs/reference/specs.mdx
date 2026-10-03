@@ -6,9 +6,10 @@ description: The specifications masks implements, and how far each one goes.
 masks is an OpenID Connect provider. This page lists every specification it
 implements, the parts it implements, and the parts it leaves out.
 
-Both OpenID Foundation certification plans, `oidcc-config` and `oidcc-basic`,
-pass with 2,213 conditions and no failures. `./dev conformance` runs them
-against a local server.
+The OpenID Foundation certification plans `oidcc-config` and `oidcc-basic` pass
+with 2,213 conditions and no failures, and `oidcc-rp-initiated-logout` passes
+with 642 conditions and no failures. `./dev conformance` runs all three against
+a local server.
 
 In the tables below, ✅ means the specification is implemented and covered by the
 test suite, and that its conformance plan passes where one exists. ◐ means masks
@@ -65,7 +66,7 @@ The only response type is `code`, and the only response mode is `query`.
 | Specification | Status | Coverage |
 | --- | --- | --- |
 | [Back-channel logout 1.0](https://openid.net/specs/openid-connect-backchannel-1_0.html) | ✅ | Signed logout tokens. Delivery is attempted up to five times, and a delivery that still fails is recorded as an event. |
-| [RP-initiated logout 1.0](https://openid.net/specs/openid-connect-rpinitiated-1_0.html) | ✅ | `end_session_endpoint`. |
+| [RP-initiated logout 1.0](https://openid.net/specs/openid-connect-rpinitiated-1_0.html) | ✅ | `end_session_endpoint`, with `id_token_hint`, `client_id`, `post_logout_redirect_uri`, and `state`. A request with no hint for the signed-in person asks before signing out. The `oidcc-rp-initiated-logout` plan passes. |
 | [Front-channel logout 1.0](https://openid.net/specs/openid-connect-frontchannel-1_0.html) | ✗ | Discovery sets `frontchannel_logout_supported` to `false`. |
 | [Session management 1.0](https://openid.net/specs/openid-connect-session-1_0.html) | ✗ | Not planned. The iframe it depends on no longer works in current browsers. Discovery has no `check_session_iframe`. |
 
