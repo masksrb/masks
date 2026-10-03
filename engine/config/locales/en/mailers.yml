@@ -74,6 +74,8 @@ en:
           approved: "%{client} was signed in to your %{tenant} account from a device that showed you a code."
         actor:
           scopes_changed: "What your %{tenant} account is allowed to do was changed."
+        account:
+          exported: "Everything your %{tenant} account holds was downloaded as a file."
         membership:
           role_changed: "Your role in %{organization} changed from %{was} to %{role}. Apps you are signed in to for %{organization} will pick it up the next time they check."
           removed: "You were removed from %{organization}. Apps signed in for %{organization} were signed out."

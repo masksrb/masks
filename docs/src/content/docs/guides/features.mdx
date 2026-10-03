@@ -271,6 +271,19 @@ both are set, deleting has to come later than suspending.
   decides when those end.
 - A daily job does the work. Each warning, suspension, and deletion is recorded as an event.
 
+### Downloading your own account
+
+A person downloads everything masks holds about them as a JSON file from **Download your account** on
+their account page. A sign-in older than 15 minutes is asked to sign in again first.
+
+The file holds their profile, which factors they use and when each was added, their passkeys,
+organizations and roles, connected accounts and what each app was allowed to do with them, the apps
+they consented to, their devices, and every event about them that the tenant still keeps. It holds no
+password hash, authenticator secret, backup code, token, or key.
+
+Each download is recorded as `account.exported`, and the person is emailed unless they turned off
+**Account** notifications. A person can download their account five times an hour.
+
 ### Deleting your own account
 
 A person deletes their own account at the bottom of their account page, by typing its nickname or

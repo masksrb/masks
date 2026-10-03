@@ -38,6 +38,7 @@ Masks::Server::Engine.routes.draw do
   get "/verify/:token", to: "links#verify", as: :email_verification
 
   delete "/account", to: "account#destroy", as: :account
+  post "/account/export", to: "account_exports#create", as: :account_export
   patch "/account/notifications", to: "notifications#update", as: :account_notifications
   patch "/account/password", to: "passwords#update", as: :account_password
   post "/account/verify", to: "verifications#create", as: :account_verification

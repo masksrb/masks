@@ -13,6 +13,7 @@ en:
         throttled: "Sign-ins throttled"
       account:
         created: "Signed up"
+        exported: "Account data downloaded"
       invitation:
         sent: "Invitation sent"
         accepted: "Invitation accepted"

@@ -11,6 +11,7 @@ module Masks
         picture: '<rect x="3" y="4" width="14" height="12" rx="2"/><circle cx="7.5" cy="8.5" r="1.5"/><path d="m4 14 4-3.5 3 2.5 2.5-2 2.5 3"/>',
         bell: '<path d="M6 9a4 4 0 0 1 8 0c0 3 .8 4.2 1.5 5h-11C5.2 13.2 6 12 6 9Z"/><path d="M8.5 14.5a1.5 1.5 0 0 0 3 0"/>',
         activity: '<circle cx="10" cy="10" r="7"/><path d="M10 6v4.2l2.6 1.8"/>',
+        download: '<path d="M10 3.5v9"/><path d="m6.5 9 3.5 3.5L13.5 9"/><path d="M4 15.5h12"/>',
         close: '<path d="M6.5 6.5l7 7M13.5 6.5l-7 7"/>',
         check: '<path d="m5.5 10.5 3 3 6-7"/>',
         organization: '<rect x="3.5" y="7" width="13" height="9.5" rx="1.5"/><path d="M7.5 7V4.5h5V7"/><path d="M3.5 11h13"/>',

@@ -26,5 +26,7 @@
 
   <%= render "masks/server/account/activity", events: @events %>
 
+  <%= render "masks/server/account/export", fresh: @fresh %>
+
   <%= render "masks/server/account/delete", actor: @actor, fresh: @fresh, refusal: @refusal %>
 </div>

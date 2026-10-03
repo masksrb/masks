@@ -17,6 +17,7 @@ module Masks
       LOGIN_THROTTLED = "login.throttled".freeze
 
       ACCOUNT_CREATED = "account.created".freeze
+      ACCOUNT_EXPORTED = "account.exported".freeze
       INVITATION_SENT = "invitation.sent".freeze
       INVITATION_ACCEPTED = "invitation.accepted".freeze
 

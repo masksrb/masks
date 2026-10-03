@@ -96,6 +96,9 @@ en:
     beyond_account: "%{scopes} is more than this account holds"
     too_soon: "Nothing was registered. Read what it asks for, then approve once the countdown ends."
 
+  account_export:
+    again: "Sign in again to download your account. It has been a while since you did."
+    throttled: "Your account was downloaded several times in the last hour. Try again later."
   account_deletion:
     again: "Sign in again to delete your account. It has been a while since you did."
     mismatch: "Type your account's name exactly as it is shown to delete it."

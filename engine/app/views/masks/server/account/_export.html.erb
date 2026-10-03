@@ -1,0 +1,29 @@
+<section class="group" id="export">
+  <div class="entries">
+    <details class="entry">
+      <summary>
+        <span class="entry-icon"><%= account_icon(:download) %></span>
+        <span class="entry-label"><%= account_text("export.heading") %></span>
+        <span class="entry-state"><%= account_text("export.state") %></span>
+        <span class="entry-mark" aria-hidden="true"></span>
+      </summary>
+
+      <div class="entry-body">
+        <p class="aside"><%= account_text("export.lede") %></p>
+
+        <% unless fresh %>
+          <p class="aside"><%= account_text("export.again") %></p>
+        <% end %>
+
+        <%= form_with url: account_export_path, method: :post, id: "export-account", class: "flow-tight",
+                      data: { turbo: false } do %>
+          <div class="action-row">
+            <button type="submit" class="action action-sm">
+              <%= account_text(fresh ? "export.submit" : "export.submit_again") %>
+            </button>
+          </div>
+        <% end %>
+      </div>
+    </details>
+  </div>
+</section>

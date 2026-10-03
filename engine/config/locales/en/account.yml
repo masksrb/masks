@@ -186,6 +186,14 @@ en:
         silent: "Nothing is being sent, because these only go to a confirmed email address."
         submit: "Save"
 
+      export:
+        heading: "Download your account"
+        state: "JSON"
+        lede: "A file with your profile, how you sign in, your organizations, apps, connected accounts, and devices, and the activity masks has kept. It holds no passwords, codes, or keys."
+        again: "You signed in a while ago, so you will be asked to sign in again first."
+        submit: "Download"
+        submit_again: "Sign in again"
+
       delete:
         heading: "Delete your account"
         state: "Permanent"

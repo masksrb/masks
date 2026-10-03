@@ -31,7 +31,8 @@ module Masks
           Event::DEVICE_CODE_APPROVED
         ],
         "account" => [
-          Event::ACTOR_SCOPES_CHANGED
+          Event::ACTOR_SCOPES_CHANGED,
+          Event::ACCOUNT_EXPORTED
         ],
         "organizations" => [
           Event::MEMBERSHIP_ROLE_CHANGED,
