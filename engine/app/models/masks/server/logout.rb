@@ -32,9 +32,11 @@ module Masks
 
       def redirect_to
         return nil if redirect_uri.nil?
+        return redirect_uri if state.nil?
 
-        pairs = state ? [ [ "state", state ] ] : []
-        pairs.any? ? "#{redirect_uri}?#{URI.encode_www_form(pairs)}" : redirect_uri
+        uri = URI.parse(redirect_uri)
+        uri.query = URI.encode_www_form(URI.decode_www_form(uri.query.to_s) << [ "state", state ])
+        uri.to_s
       end
 
       def subject

@@ -55,6 +55,16 @@ module Masks
         assert_not signed_in?
       end
 
+      test "state joins a query the registered post_logout_redirect_uri already carries" do
+        back = "#{BACK}?from=masks"
+        within { @client.update!(post_logout_redirect_uris: [ back ]) }
+        signed_in
+
+        get "/logout", params: { id_token_hint: hint, post_logout_redirect_uri: back, state: "xyz" }
+
+        assert_redirected_to "#{BACK}?from=masks&state=xyz"
+      end
+
       test "an expired id_token_hint is still a valid hint" do
         signed_in
 
