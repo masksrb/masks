@@ -35,6 +35,8 @@ module Masks
           argument :logo_uri, String, required: false
           argument :tos_uri, String, required: false
           argument :policy_uri, String, required: false
+          argument :consent_lifetime, Integer, required: false,
+                   description: "Seconds a person's consent to this client lasts before they are asked again, from 300 to 400 days. Zero lets it last until revoked."
           argument :authorization_details_types, [ String ], required: false,
                    description: "The types of authorization detail this client may ask for."
           argument :authorization_details_schemas, GraphQL::Types::JSON, required: false,
@@ -55,6 +57,7 @@ module Masks
               refuse!("#{client.sign_in_policy.name} is archived") if client.sign_in_policy&.archived?
             end
 
+            attributes[:consent_lifetime] = nil if attributes[:consent_lifetime]&.zero?
             client.assign_attributes(attributes)
             client.response_types = client.default_response_types if attributes.key?(:grant_types)
             client.required_scopes = Scopes.join(required_scopes) unless required_scopes.nil?

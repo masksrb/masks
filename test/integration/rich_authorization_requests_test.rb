@@ -85,7 +85,7 @@ module Masks
         within { assert_equal [ TYPE ], Event.where(action: Event::CONSENT_GRANTED).last.details["authorization_details"] }
       end
 
-      test "a person is asked every time details are requested, even after allowing the client before" do
+      test "a type that is not remembered is asked about every time, even after allowing the client before" do
         granted
         asked
 
@@ -179,6 +179,55 @@ module Masks
         get "/authorize", params: { client_id: @registration["client_id"], request_uri: pushed.call([ PAYMENT ])["request_uri"] }
 
         assert_equal "Send a payment", auth_data.dig("consent", "details", 0, "label")
+      end
+
+      def remembering(seconds)
+        within { Client.find_by(name: "Bank").update!(authorization_details_schemas: { TYPE => { "label" => "Send a payment", "schema" => SCHEMA, "remember" => seconds } }) }
+      end
+
+      test "a type declared to be remembered is not asked about again until it expires" do
+        remembering(1.day.to_i)
+        granted
+
+        asked
+        assert_not awaiting_consent?, "the same details were allowed a moment ago"
+
+        asked([ PAYMENT.merge("creditorName" => "Merchant B") ])
+        assert awaiting_consent?, "different details are asked about"
+
+        travel 25.hours do
+          asked
+          assert awaiting_consent?, "a remembered detail expires"
+        end
+      end
+
+      test "remembered details are listed on the consent, and revoking the app forgets them" do
+        remembering(1.day.to_i)
+        granted
+
+        consent = within { Consent.live.find_by(client: Client.find_by(client_id: @registration["client_id"])) }
+        assert_equal [ PAYMENT ], consent.remembered
+
+        get "/"
+        assert_match "Send a payment, without asking until", response.body
+
+        within { consent.revoke! }
+        asked
+        assert awaiting_consent?
+      end
+
+      test "a client that skips consent still asks about details nobody remembered" do
+        within { Client.find_by(client_id: @registration["client_id"]).update!(approved_at: Time.current, consent_required: false) }
+
+        asked
+
+        assert awaiting_consent?
+      end
+
+      test "a declaration remembers for at most 400 days" do
+        assert_raises(AuthorizationDetails::Invalid) do
+          AuthorizationDetails.check_declaration!(TYPE => { "label" => "Pay", "schema" => SCHEMA, "remember" => 401.days.to_i })
+        end
       end
 
       test "only an approved client may declare a type" do

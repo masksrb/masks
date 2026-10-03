@@ -30,7 +30,7 @@
         requiredScopes allowedScopes
         backchannelLogoutUri backchannelLogoutSessionRequired
         requirePushedAuthorizationRequests requireSignedRequestObject consentRequired jwks jwksUri
-        authorizationDetailsTypes authorizationDetailsSchemas
+        authorizationDetailsTypes authorizationDetailsSchemas consentLifetime
         protocol samlEntityId samlCertificate samlNameIdFormat samlRequestsSigned samlIdpInitiated samlAttributes
         signInPolicy { ${POLICY_FIELDS} }
         events(limit: 25) {
@@ -42,7 +42,7 @@
         approvedBy { identifier }
         namespaces { name resource claimedAt releasable }
         consents(limit: 25) {
-          id scopes audience updatedAt
+          id scopes audience updatedAt expiresAt authorizationDetails
           actor { uuid identifier }
         }
         tokens(limit: 25) {
@@ -69,6 +69,7 @@
   let jwksUri = $state("");
   let jwks = $state("");
   let declared = $state("");
+  let lasts = $state("");
   let method = $state("");
   let sector = $state("");
   let metadataUrl = $state("");
@@ -154,6 +155,7 @@
       logoutUri = data.client?.backchannelLogoutUri ?? "";
       jwksUri = data.client?.jwksUri ?? "";
       jwks = data.client?.jwks ? JSON.stringify(data.client.jwks, null, 2) : "";
+      lasts = data.client?.consentLifetime ? String(Math.round(data.client.consentLifetime / 86400)) : "";
       declared = Object.keys(data.client?.authorizationDetailsSchemas ?? {}).length
         ? JSON.stringify(data.client.authorizationDetailsSchemas, null, 2)
         : "";
@@ -195,7 +197,7 @@
         $subjectType: String, $sectorIdentifierUri: String, $dpopBoundAccessTokens: Boolean,
         $backchannelLogoutSessionRequired: Boolean, $clientUri: String, $logoUri: String,
         $tosUri: String, $policyUri: String, $authorizationDetailsTypes: [String!],
-        $authorizationDetailsSchemas: JSON
+        $authorizationDetailsSchemas: JSON, $consentLifetime: Int
       ) {
         updateClient(
           clientId: $clientId, name: $name, requiredScopes: $requiredScopes,
@@ -225,7 +227,8 @@
           tosUri: $tosUri,
           policyUri: $policyUri,
           authorizationDetailsTypes: $authorizationDetailsTypes,
-          authorizationDetailsSchemas: $authorizationDetailsSchemas
+          authorizationDetailsSchemas: $authorizationDetailsSchemas,
+          consentLifetime: $consentLifetime
         ) {
           client { clientId }
         }
@@ -654,6 +657,19 @@
                 )}
             />
           {/if}
+
+          <Field
+            label="Consent lasts (days, blank until revoked)"
+            type="number"
+            min="1"
+            max="400"
+            bind:value={lasts}
+            onsave={() =>
+              update(
+                { consentLifetime: lasts ? Number(lasts) * 86400 : 0 },
+                lasts ? `Each consent lasts ${lasts} days, then the person is asked again.` : "Consent lasts until revoked.",
+              )}
+          />
 
           <Field
             label="Back-channel logout URI"

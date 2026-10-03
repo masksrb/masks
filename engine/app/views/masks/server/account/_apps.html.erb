@@ -35,6 +35,14 @@
                       <%= account_text("applications.more", count: told.size - 3) %>
                     </li>
                   <% end %>
+
+                  <% Array(app.consent&.held_details).each do |held| %>
+                    <li>
+                      <%= account_text("applications.remembered",
+                            label: Masks::Server::AuthorizationDetails.declared.dig(held["entry"]["type"], "label") || held["entry"]["type"],
+                            date: l(Time.zone.parse(held["expires_at"]).to_date, format: :long)) %>
+                    </li>
+                  <% end %>
                 </ul>
 
                 <%= button_to account_text("applications.revoke"),

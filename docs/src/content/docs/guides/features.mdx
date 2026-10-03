@@ -59,6 +59,8 @@ for more scopes or passes `prompt=consent`.
 - Approving a handshake is the approver's consent, and nobody else's.
 - A manager can turn `consent_required` off for an approved client, such as a first-party app. A
   self-registered client always asks.
+- A manager can give a client a consent lifetime, from five minutes to 400 days. A consent older than
+  that has ended, and the person is asked again. Without one, a consent lasts until it is revoked.
 
 ### Subject identifiers
 

@@ -30,6 +30,8 @@ module Masks
           field :require_pushed_authorization_requests, Boolean, null: false
           field :jwks, GraphQL::Types::JSON
           field :jwks_uri, String
+          field :consent_lifetime, Integer,
+                description: "Seconds a person's consent lasts before they are asked again. Null lasts until revoked."
           field :authorization_details_types, [ String ], null: false,
                 description: "The types of authorization detail this client may ask for."
           field :authorization_details_schemas, GraphQL::Types::JSON, null: false,

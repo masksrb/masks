@@ -208,6 +208,11 @@ type Client {
   backchannelLogoutUri: String
   clientId: ID!
   clientUri: String
+
+  """
+  Seconds a person's consent lasts before they are asked again. Null lasts until revoked.
+  """
+  consentLifetime: Int
   consentRequired: Boolean!
   consents(limit: Int): [Consent!]!
   createdAt: ISO8601DateTime!
@@ -267,8 +272,19 @@ type Connection {
 type Consent {
   actor: Actor!
   audience: [String!]!
+
+  """
+  The authorization details the person allowed this client to ask for again
+  without asking them, each with the time it expires.
+  """
+  authorizationDetails: JSON!
   client: Client!
   createdAt: ISO8601DateTime!
+
+  """
+  When this consent ends and the person is asked again. Null lasts until revoked.
+  """
+  expiresAt: ISO8601DateTime
   id: ID!
   revokedAt: ISO8601DateTime
   scopes: [String!]!
@@ -805,6 +821,12 @@ type Mutation {
     backchannelLogoutUri: String
     clientId: ID!
     clientUri: String
+
+    """
+    Seconds a person's consent to this client lasts before they are asked again,
+    from 300 to 400 days. Zero lets it last until revoked.
+    """
+    consentLifetime: Int
     consentRequired: Boolean
     dpopBoundAccessTokens: Boolean
     grantTypes: [String!]

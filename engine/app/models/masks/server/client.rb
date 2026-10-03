@@ -52,6 +52,8 @@ module Masks
       validate :sector_identifier_uri_is_owned, if: :sector_declared?
       validate :metadata_uris_are_usable
       validate :authorization_details_are_declared
+      validates :consent_lifetime, numericality: { only_integer: true, greater_than_or_equal_to: 300,
+                                                   less_than_or_equal_to: Consent::LONGEST.to_i }, allow_nil: true
 
       normalizes :saml_entity_id, with: ->(value) { value.to_s.strip.presence }
       normalizes(*METADATA_URIS, with: ->(value) { value.to_s.strip.presence })

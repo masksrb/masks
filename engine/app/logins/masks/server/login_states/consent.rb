@@ -42,10 +42,10 @@ module Masks
           return false if consented_here?
           return true if request.consent?
           return true if login.state("delegation").undelegated.any?
-          return false if client && !client.consent_required?
+          return false if details.nil? && client && !client.consent_required?
 
           !Masks::Server::Consent.covers?(
-            actor: actor, client: client, scopes: scopes, audience: audience
+            actor: actor, client: client, scopes: scopes, audience: audience, details: details
           )
         end
 
@@ -73,7 +73,7 @@ module Masks
             return refuse!("access_denied", "the person signing in declined") if update(:approve).blank?
 
             Masks::Server::Consent.record!(
-              actor: actor, client: client, scopes: scopes, audience: audience
+              actor: actor, client: client, scopes: scopes, audience: audience, details: details
             )
 
             Event.record!(

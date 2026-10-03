@@ -75,10 +75,6 @@ module Masks
         @authorization_details = AuthorizationDetails.parse(@authorization_details_value)
       end
 
-      def authorization_details?
-        @authorization_details_value.present?
-      end
-
       def authorization_details_json
         authorization_details&.canonical
       rescue AuthorizationDetails::Invalid
@@ -130,7 +126,7 @@ module Masks
       end
 
       def consent?
-        prompt.include?("consent") || device? || authorization_details?
+        prompt.include?("consent") || device?
       end
 
       def silent?

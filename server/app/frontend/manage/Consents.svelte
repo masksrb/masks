@@ -68,7 +68,22 @@
             </span>
           {/if}
           <span title={moment(consent.updatedAt)}>Last asked {since(consent.updatedAt)}</span>
+          {#if consent.expiresAt}
+            <span title={moment(consent.expiresAt)}>Asks again {moment(consent.expiresAt)}</span>
+          {/if}
         </div>
+
+        {#if consent.authorizationDetails?.length}
+          <ul class="flex flex-col gap-0.5 text-xs">
+            {#each consent.authorizationDetails as held, index (index)}
+              <li class="flex flex-wrap gap-x-2">
+                <span class="scope">{held.entry.type}</span>
+                <span class="truncate font-mono opacity-80">{JSON.stringify(held.entry)}</span>
+                <span class="opacity-80">until {moment(held.expires_at)}</span>
+              </li>
+            {/each}
+          </ul>
+        {/if}
       </li>
     {/each}
   </ul>

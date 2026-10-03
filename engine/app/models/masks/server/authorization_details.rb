@@ -61,6 +61,11 @@ module Masks
             label = declaration["label"]
             raise Invalid, "#{type} needs a label of at most #{LABEL_LIMIT} characters" unless label.is_a?(String) && label.present? && label.length <= LABEL_LIMIT
 
+            remember = declaration["remember"]
+            unless remember.nil? || (remember.is_a?(Integer) && remember.positive? && remember <= Consent::LONGEST.to_i)
+              raise Invalid, "#{type} remember must be a number of seconds up to #{Consent::LONGEST.in_days.to_i} days"
+            end
+
             schema = declaration["schema"]
             raise Invalid, "#{type} needs a schema that describes an object" unless schema.is_a?(Hash) && schema["type"] == "object"
 

@@ -60,7 +60,7 @@
           delegations { id releasedAt client { clientId name } }
         }
         consents {
-          id scopes audience updatedAt
+          id scopes audience updatedAt expiresAt authorizationDetails
           client { clientId name }
         }
         tokens {

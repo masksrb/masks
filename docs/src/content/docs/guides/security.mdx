@@ -433,8 +433,15 @@ GET /authorize?response_type=code&client_id=…&scope=openid
 
 - masks refuses with `invalid_authorization_details` a type nobody declared, a type the app did not
   register, an entry its schema does not allow, more than ten entries, or more than 8KB.
-- The consent screen lists each entry with its label and fields, and asks every time, even when the
-  person allowed the app before.
+- The consent screen lists each entry with its label and fields. A type is asked about every time,
+  even when the person allowed the app before, unless its declaration sets `remember` to a number of
+  seconds, up to 400 days. Then an entry the person allowed is remembered on their consent for that
+  long, and the same entry or fewer of them are not asked about again until it expires. A request with
+  any entry that is not remembered asks about all of them. An app that skips consent still asks about
+  details nobody remembered.
+- The person sees what is remembered, and until when, under **Apps you have let in** on their account
+  page, and a manager sees it on the person's and the app's consents in `/manage`. Revoking the app
+  forgets it.
 - The granted details are in the token response, in the access token's `authorization_details` claim,
   and in introspection.
 - At the token endpoint the app can send `authorization_details` to narrow what an access token holds

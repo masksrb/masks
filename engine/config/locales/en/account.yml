@@ -149,6 +149,7 @@ en:
           none: "None"
 
       applications:
+        remembered: "%{label}, without asking until %{date}"
         heading: "Apps you have let in"
         none_yet: "Nothing has asked yet. An app appears here once you sign in to it, with what you agreed it may see."
         revoke: "Revoke access"
