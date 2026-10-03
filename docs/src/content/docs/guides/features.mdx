@@ -16,10 +16,40 @@ their session everywhere they used it.
 | Added | A manager, in `/manage`, which shows the secret once. | Yes |
 | Handshake | A person completes `/handshake`, and masks returns the credentials to the app server to server. | Yes |
 | Self-registered | The app, over dynamic registration, within the tenant's [ceiling](/guides/core-concepts/#the-ceiling). | No |
+| Metadata document | The app, by using the URL of a document that describes it as its `client_id`. | No |
 
 Only an approved client may hold a `masks:` scope, sign in as itself, or receive a
 [delegation](/guides/connecting-via-sdk/#delegation). A client grants `required_scopes` always and
 `allowed_scopes` when asked. Archiving a client stops it signing anyone in and keeps its record.
+
+### A client named by its metadata document
+
+An app that has never registered can use the URL of a JSON document it publishes as its `client_id`,
+as MCP clients do. masks reads the document the first time the URL arrives at `/authorize`, and
+treats the client as self-registered.
+
+```json
+{
+  "client_id": "https://app.example.com/oauth/client.json",
+  "client_name": "Example App",
+  "redirect_uris": ["https://app.example.com/callback"],
+  "scope": "openid profile"
+}
+```
+
+- The URL is https, has a path, and carries no fragment, credentials, or `.` and `..` segments.
+- The document names its own URL as `client_id`, is at most 5KB, and is fetched under the same rules
+  as every other address masks calls, so a private address is refused.
+- The client authenticates with PKCE alone or with `private_key_jwt`, and the document holds no
+  `client_secret`.
+- masks keeps the document for as long as its `Cache-Control` allows, between five minutes and a day,
+  then reads it again. A document that cannot be read or is refused is not fetched again for five
+  minutes, and the client cannot sign anyone in until it can be.
+- A manager can archive the client to refuse it, or approve it, which stops later versions of the
+  document from changing its redirect URIs, scopes, and keys.
+
+Discovery sets `client_id_metadata_document_supported` to `true` whenever the tenant allows dynamic
+registration, and turning registration off stops masks from reading documents.
 
 ### Consent
 

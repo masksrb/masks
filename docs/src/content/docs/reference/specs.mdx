@@ -59,6 +59,7 @@ The only response type is `code`, and the only response mode is `query`.
 | [JWT access tokens (RFC 9068)](https://www.rfc-editor.org/rfc/rfc9068) | ✅ | Typed `at+jwt`, with `jti`, `client_id`, `scope`, `aud`, and `cnf`. An endpoint that expects an access token refuses a token of any other type. |
 | [Dynamic registration (RFC 7591)](https://www.rfc-editor.org/rfc/rfc7591) | ✅ | |
 | [Registration management (RFC 7592)](https://www.rfc-editor.org/rfc/rfc7592) | ✅ | Read, update, and delete with a registration access token. |
+| [Client ID metadata documents](https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document/) | ✅ | A `client_id` that is an https URL is read as the client's metadata, within the tenant's ceiling. See [a client named by its metadata document](/guides/features/#a-client-named-by-its-metadata-document). |
 | [Protected resource metadata (RFC 9728)](https://www.rfc-editor.org/rfc/rfc9728) | ✅ | `/.well-known/oauth-protected-resource`. |
 
 ## Sessions

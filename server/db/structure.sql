@@ -315,7 +315,8 @@ CREATE TABLE public.clients (
     saml_requests_signed boolean DEFAULT false NOT NULL,
     saml_idp_initiated boolean DEFAULT false NOT NULL,
     saml_attributes jsonb DEFAULT '{}'::jsonb NOT NULL,
-    logo_digest character varying
+    logo_digest character varying,
+    metadata_expires_at timestamp(6) without time zone
 );
 
 ALTER TABLE ONLY public.clients FORCE ROW LEVEL SECURITY;
@@ -3243,6 +3244,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261003120000'),
 ('20260927180000'),
 ('20260927170000'),
 ('20260927160000'),

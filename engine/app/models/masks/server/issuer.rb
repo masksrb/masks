@@ -157,6 +157,7 @@ module Masks
           "avatar_sizes_supported" => Avatars::SIZES,
           "jwks_uri" => "#{url}/.well-known/jwks.json",
           "registration_endpoint" => (("#{url}/register") if tenant.registers?),
+          "client_id_metadata_document_supported" => tenant.registers?,
           "pushed_authorization_request_endpoint" => "#{url}/par",
           "device_authorization_endpoint" => "#{url}/device_authorization",
           "handshake_endpoint" => "#{url}/handshake",

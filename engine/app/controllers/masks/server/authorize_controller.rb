@@ -60,7 +60,7 @@ module Masks
             req.unsupported_response_type! unless req.response_type == :code
 
             client = Client.authenticating(req.client_id)
-            req.bad_request!(:invalid_client, "no client is registered with that client_id") if client.nil?
+            req.bad_request!(:invalid_client, unknown_client(req.client_id)) if client.nil?
             req.invalid_request!("redirect_uri is required") if req.redirect_uri.blank?
 
             req.verify_redirect_uri!(client.redirect_uris)
@@ -68,6 +68,14 @@ module Masks
             res.redirect_uri = req.verified_redirect_uri
 
             permit(req) { authorization.validate! }
+          end
+        end
+
+        def unknown_client(client_id)
+          if ClientMetadataDocument.url?(client_id)
+            "the client metadata document at that client_id could not be fetched or is not one masks accepts"
+          else
+            "no client is registered with that client_id"
           end
         end
 

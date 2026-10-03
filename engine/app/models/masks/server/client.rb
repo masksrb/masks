@@ -166,6 +166,8 @@ module Masks
         end
 
         def authenticating(client_id, protocol: OIDC)
+          return ClientMetadataDocument.resolve(client_id.to_s) if protocol == OIDC && ClientMetadataDocument.url?(client_id)
+
           speaking(protocol).find_by(client_id: client_id.to_s)
         end
 
@@ -215,6 +217,14 @@ module Masks
 
       def approved?
         approved_at.present?
+      end
+
+      def document?
+        metadata_expires_at.present?
+      end
+
+      def metadata_stale?
+        document? && metadata_expires_at.past?
       end
 
       def logo_shown_to?(viewer)
