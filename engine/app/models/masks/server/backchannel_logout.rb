@@ -32,7 +32,6 @@ module Masks
       end
 
       def self.routable!(client, uri)
-        return unless client.dynamic?
         return if ::Rails.env.local?
 
         raise Refused, "#{client.name} is not reachable over http" unless uri.is_a?(URI::HTTP)

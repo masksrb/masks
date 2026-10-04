@@ -186,25 +186,6 @@ module Masks
         within(@tenant) { Client.find_by(client_id: @registration["client_id"]) }
       end
 
-      def deployed
-        ::Rails.env.define_singleton_method(:local?) { false }
-
-        yield
-      ensure
-        ::Rails.env.singleton_class.remove_method(:local?)
-      end
-
-      def resolving(address)
-        held = [ Addrinfo.tcp(address, 443) ]
-        original = Addrinfo.method(:getaddrinfo)
-
-        Addrinfo.define_singleton_method(:getaddrinfo) { |*| held }
-
-        yield
-      ensure
-        Addrinfo.define_singleton_method(:getaddrinfo, original)
-      end
-
       test "a self-registered client may not aim the back channel at loopback" do
         deployed do
           client = registered_client
@@ -228,6 +209,20 @@ module Masks
       test "a self-registered client is not called at an address inside the network" do
         deployed do
           resolving("10.1.2.3") do
+            error = assert_raises(BackchannelLogout::Refused) do
+              BackchannelLogout.deliver!(registered_client, "a-logout-token")
+            end
+
+            assert_match(/will not call/, error.message)
+          end
+        end
+      end
+
+      test "a client a manager registered is not called at an address inside the network either" do
+        within(@tenant) { registered_client.update_columns(dynamic: false) }
+
+        deployed do
+          resolving("127.0.0.1") do
             error = assert_raises(BackchannelLogout::Refused) do
               BackchannelLogout.deliver!(registered_client, "a-logout-token")
             end

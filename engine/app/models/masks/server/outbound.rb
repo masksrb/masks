@@ -44,15 +44,21 @@ module Masks
         def vetted(uri)
           return nil unless uri.is_a?(URI::HTTP)
 
-          addresses = resolve(uri)
+          public_address(uri.hostname, uri.port)
+        end
+
+        def public_address(host, port)
+          addresses = resolve(host, port)
 
           return nil if addresses.empty? || addresses.any? { |address| unroutable?(address) }
 
           addresses.first
         end
 
-        def resolve(uri)
-          Addrinfo.getaddrinfo(uri.hostname, uri.port, nil, :STREAM).map do |info|
+        def resolve(host, port)
+          return [] if host.blank?
+
+          Addrinfo.getaddrinfo(host.to_s, port, nil, :STREAM).map do |info|
             held = IPAddr.new(info.ip_address.split("%").first)
 
             held.ipv4_mapped? ? held.native : held
@@ -88,25 +94,27 @@ module Masks
         end
 
         def request!(uri, request, open: OPEN_TIMEOUT, read: READ_TIMEOUT, ceiling: CEILING, within: nil)
-          address = ::Rails.env.local? ? nil : vetted(uri)
-
-          raise Refused, "resolves to an address this server will not call" unless ::Rails.env.local? || address
-
-          call(uri, request, open: open, read: read, address: address, ceiling: ceiling, within: within)
+          call(uri, request, open: open, read: read, address: pinned!(uri), ceiling: ceiling, within: within)
         end
 
         def post(uri, form, open: OPEN_TIMEOUT, read: READ_TIMEOUT, address: nil)
           request = Net::HTTP::Post.new(uri, "Content-Type" => "application/x-www-form-urlencoded")
           request.body = URI.encode_www_form(form)
 
-          call(uri, request, open: open, read: read, address: address)
+          call(uri, request, open: open, read: read, address: address || pinned!(uri))
         end
 
         def post_json(uri, body, headers: {}, open: OPEN_TIMEOUT, read: READ_TIMEOUT, address: nil)
           request = Net::HTTP::Post.new(uri, { "Content-Type" => "application/json" }.merge(headers))
           request.body = body
 
-          call(uri, request, open: open, read: read, address: address)
+          call(uri, request, open: open, read: read, address: address || pinned!(uri))
+        end
+
+        def pinned!(uri)
+          return nil if ::Rails.env.local?
+
+          vetted(uri) || raise(Refused, "resolves to an address this server will not call")
         end
 
         def call(uri, request, open:, read:, address: nil, ceiling: CEILING, within: nil)

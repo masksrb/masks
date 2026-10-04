@@ -106,6 +106,44 @@ module Masks
         end
       end
 
+      test "a mail server inside the network is refused when it is saved" do
+        deployed do
+          resolving("10.0.0.5") do
+            within do
+              refused = Adapters::Smtp.new(key: "inside", name: "Inside")
+                                      .configure(from: "masks@example.invalid", address: "redis.internal", port: 6379)
+
+              refute refused.valid?
+              assert_match "will not call", refused.errors.full_messages.join
+            end
+          end
+        end
+      end
+
+      test "a mail server that moves inside the network is not connected to" do
+        adapter = smtp!
+
+        deployed do
+          resolving("169.254.169.254") do
+            error = assert_raises(Adapter::Failed) { within { Adapter.find(adapter.id).delivery_method } }
+
+            assert_match "will not call", error.message
+          end
+        end
+      end
+
+      test "a mail server at a public address is used" do
+        adapter = smtp!
+
+        deployed do
+          resolving("93.184.216.34") do
+            method, = within { Adapter.find(adapter.id).delivery_method }
+
+            assert_equal :smtp, method
+          end
+        end
+      end
+
       test "an archived adapter sends nothing, and another becomes primary" do
         first = smtp!
         within { first.update!(archived_at: Time.current, primary: false) }

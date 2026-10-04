@@ -6,6 +6,7 @@ module Masks
     require "rails/test_help"
     require_relative "support/offline"
     require_relative "support/signing_keys"
+    require_relative "support/deployed"
 
     module TenantSetup
       extend ActiveSupport::Concern
@@ -274,6 +275,7 @@ module Masks
 
     class ActiveSupport::TestCase
       include TenantSetup
+      include Deployed
 
       setup { ::Rails.cache.clear }
       teardown { Tenant.clear! }

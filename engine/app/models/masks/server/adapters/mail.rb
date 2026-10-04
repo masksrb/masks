@@ -21,7 +21,7 @@ module Masks
 
           AdapterMailer.trial(to, adapter: self, journey: journey).deliver_now
         rescue Net::SMTPError, IOError, SystemCallError, SocketError, Timeout::Error, OpenSSL::SSL::SSLError => error
-          raise Failed, error.message
+          raise Failed, "the mail server could not take the message: #{error.class}"
         end
 
         private

@@ -56,6 +56,20 @@ module Masks
         assert_nil Outbound.vetted(URI("ftp://example.com/"))
       end
 
+      test "a post is checked against the network even when the caller names no address" do
+        deployed do
+          resolving("10.1.2.3") do
+            error = assert_raises(Outbound::Refused) do
+              Outbound.post(URI("https://inside.example.com/hook"), { a: 1 })
+            end
+
+            assert_match "will not call", error.message
+
+            assert_raises(Outbound::Refused) { Outbound.post_json(URI("https://inside.example.com/hook"), "{}") }
+          end
+        end
+      end
+
       test "a range the operator allowed is called, and every other private address is still refused" do
         held = Server.config.outbound_allowed
         Server.config.outbound_allowed = Configuration.outbound_allowed("100.64.0.0/10, 10.20.0.0/16")
