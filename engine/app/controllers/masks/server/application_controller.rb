@@ -45,6 +45,11 @@ module Masks
           Current.tenant
         end
 
+        def no_store!
+          response.headers["Cache-Control"] = "no-store"
+          response.headers["Pragma"] = "no-cache"
+        end
+
         def themed_client
           @login&.client
         end

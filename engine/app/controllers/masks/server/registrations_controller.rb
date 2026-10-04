@@ -12,6 +12,7 @@ module Masks
                    }, status: :too_many_requests
                  }
 
+      before_action :no_store!
       before_action :require_registration_token, except: :create
 
       def create

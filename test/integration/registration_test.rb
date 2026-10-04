@@ -27,6 +27,17 @@ module Masks
         assert_equal 0, body["client_secret_expires_at"]
       end
 
+      test "a registration that carries a secret is never cached, when it is made or read back" do
+        body = register
+
+        assert_equal "no-store", response.headers["Cache-Control"]
+
+        manage(:get, body)
+
+        assert_response :success
+        assert_equal "no-store", response.headers["Cache-Control"]
+      end
+
       test "a self-registered client cannot claim a resource, since tokens for it would be trusted there" do
         body = register(resources: [ "https://bank.example.com/api" ])
 
