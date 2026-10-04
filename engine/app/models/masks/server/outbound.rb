@@ -3,13 +3,14 @@ module Masks
     module Outbound
       OPEN_TIMEOUT = 5
       READ_TIMEOUT = 10
+      DEADLINE = 20
       CEILING = 256.kilobytes
 
       UNROUTABLE = %w[
         0.0.0.0/8 10.0.0.0/8 100.64.0.0/10 127.0.0.0/8 169.254.0.0/16
         172.16.0.0/12 192.0.0.0/24 192.0.2.0/24 192.168.0.0/16 198.18.0.0/15
         198.51.100.0/24 203.0.113.0/24 224.0.0.0/4 240.0.0.0/4
-        ::/128 ::1/128 fc00::/7 fe80::/10 ff00::/8
+        ::/96 ::1/128 64:ff9b::/96 64:ff9b:1::/48 100::/64 2002::/16 fc00::/7 fe80::/10 ff00::/8
       ].map { |range| IPAddr.new(range) }.freeze
 
       class Overflow < StandardError; end
@@ -17,7 +18,7 @@ module Masks
       class Slow < StandardError; end
 
       UNREADABLE = [
-        Net::HTTPBadResponse, Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, SocketError, SystemCallError,
+        Slow, Net::HTTPBadResponse, Net::OpenTimeout, Net::ReadTimeout, Net::WriteTimeout, SocketError, SystemCallError,
         OpenSSL::SSL::SSLError, EOFError, IOError, Zlib::Error
       ].freeze
 
@@ -88,7 +89,7 @@ module Masks
 
           response
         rescue Slow
-          raise Refused, "took longer than #{within} seconds to answer"
+          raise Refused, "took longer than #{within || DEADLINE} seconds to answer"
         rescue *UNREADABLE => e
           raise Refused, "could not be read: #{e.class}"
         end
@@ -120,17 +121,17 @@ module Masks
         def call(uri, request, open:, read:, address: nil, ceiling: CEILING, within: nil)
           kept = +""
           answered = nil
-          deadline = within && Process.clock_gettime(Process::CLOCK_MONOTONIC) + within
 
           begin
-            connection(uri, open: open, read: read, address: address).start do |http|
-              http.request(request) do |response|
-                answered = response
+            Timeout.timeout(within || DEADLINE, Slow) do
+              connection(uri, open: open, read: read, address: address).start do |http|
+                http.request(request) do |response|
+                  answered = response
 
-                response.read_body do |chunk|
-                  kept << chunk
-                  raise Overflow if kept.bytesize > ceiling
-                  raise Slow if deadline && Process.clock_gettime(Process::CLOCK_MONOTONIC) > deadline
+                  response.read_body do |chunk|
+                    kept << chunk
+                    raise Overflow if kept.bytesize > ceiling
+                  end
                 end
               end
             end
@@ -154,6 +155,7 @@ module Masks
             http.use_ssl = uri.scheme == "https"
             http.open_timeout = open
             http.read_timeout = read
+            http.max_retries = 0
 
             http
           end

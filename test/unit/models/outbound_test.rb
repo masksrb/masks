@@ -50,6 +50,39 @@ module Masks
         assert_equal Outbound::CEILING, response.body.bytesize
       end
 
+      test "a server that drips its headers one byte at a time is abandoned at the deadline" do
+        @server = TCPServer.new("127.0.0.1", 0)
+        @thread = Thread.new do
+          client = @server.accept
+          nil while client.gets.to_s.strip.present?
+          client.write("HTTP/1.1 200 OK\r\n")
+          loop do
+            client.write("X")
+            sleep 0.2
+          end
+        rescue IOError, SystemCallError
+          nil
+        end
+
+        uri = URI("http://outbound.invalid:#{@server.addr[1]}/")
+        started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+
+        assert_raises(Outbound::Slow) do
+          Outbound.call(uri, Net::HTTP::Get.new(uri), open: 1, read: 1, address: IPAddr.new("127.0.0.1"), within: 1)
+        end
+
+        assert_operator Process.clock_gettime(Process::CLOCK_MONOTONIC) - started, :<, 3
+      end
+
+      test "addresses that translate to a private IPv4 address are unroutable" do
+        assert Outbound.unroutable?(IPAddr.new("64:ff9b::a9fe:a9fe"))
+        assert Outbound.unroutable?(IPAddr.new("64:ff9b:1::a00:1"))
+        assert Outbound.unroutable?(IPAddr.new("2002:a00:1::1"))
+        assert Outbound.unroutable?(IPAddr.new("::a00:1"))
+        assert Outbound.unroutable?(IPAddr.new("100::1"))
+        assert_not Outbound.unroutable?(IPAddr.new("2606:2800:220:1::1"))
+      end
+
       test "a name with any unroutable address is not vetted" do
         assert_nil Outbound.vetted(URI("http://127.0.0.1/"))
         assert_nil Outbound.vetted(URI("http://169.254.169.254/"))
