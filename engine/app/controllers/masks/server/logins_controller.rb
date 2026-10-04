@@ -149,7 +149,12 @@ module Masks
         def settle(login)
           return unless login.actor
 
-          sign_in(login.actor, amr: login.amr, policy: login.policy, first_factor: login.first_factored_by)
+          if login.touched?(:first_factor)
+            sign_in(login.actor, amr: login.amr, policy: login.policy, first_factor: login.first_factored_by)
+          elsif login.signed_in? && login.touched?(:second_factor)
+            current_session.update!(amr: Array(current_session.amr) | login.amr)
+          end
+
           forget_login
         end
 

@@ -82,6 +82,22 @@ module Masks
         end
       end
 
+      test "posting to the login with only a session cookie does not make that sign-in fresh again" do
+        sign_in_as(@actor)
+
+        travel 16.minutes do
+          held = within { Session.where(actor: @actor).pluck(:id, :authenticated_at) }
+
+          post "/login", params: {}
+
+          within { assert_equal held, Session.where(actor: @actor).pluck(:id, :authenticated_at) }
+
+          post "/account/export"
+
+          assert_redirected_to login_path(return_to: "#{root_path}#export")
+        end
+      end
+
       test "nobody signed in is sent to sign in" do
         post "/account/export"
 
