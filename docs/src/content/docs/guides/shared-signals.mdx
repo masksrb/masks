@@ -1,12 +1,13 @@
 ---
 title: Shared signals
-description: Tell another system when a session ends or a credential changes, using the OpenID Shared Signals Framework.
+description: Tell another system when a session ends or a credential changes, and act on the same events from a provider, using the OpenID Shared Signals Framework.
 ---
 
 masks is a Shared Signals Framework (SSF) transmitter. A receiver registers a
 stream, and masks pushes it a signed security event token when a session is
 revoked, a credential changes, or an account is suspended, so the receiver can
-act before the affected tokens expire.
+act before the affected tokens expire. It is also a receiver: a provider people sign in with can
+tell masks to sign someone out. See [receiving signals from a provider](#receiving-signals-from-a-provider).
 
 ## Register a receiver
 
@@ -105,3 +106,39 @@ A delivery that gets no 2xx response is attempted up to eight times, with growin
 delays. After the last attempt, masks records a `signal.undelivered` event.
 Removing `masks:signals` from the client, or archiving the client, stops
 delivery.
+
+## Receiving signals from a provider
+
+masks also receives security events from an OpenID Connect provider people sign in with. Turn on
+**Accept its security events** for the provider in `/manage`, and give the provider this receiver
+endpoint for push delivery (RFC 8935):
+
+```
+https://acme.auth.example.com/ssf/events
+```
+
+The provider posts each event as an `application/secevent+jwt` body. masks accepts it with `202` when:
+
+- `iss` is the provider's issuer, and the provider accepts security events.
+- It is signed by a key in the provider's `jwks_uri` and typed `secevent+jwt`.
+- `aud` is the tenant's issuer or the endpoint above.
+- Its `jti` has not been seen in the last seven days.
+
+Otherwise masks answers `400` with `err` set to `invalid_issuer`, `invalid_key`, `invalid_audience`, or
+`invalid_request`, and a `description`.
+
+These events sign the account out everywhere: every session, every refresh token, and every trusted
+device. Each is recorded as a `signal.received` event on the account.
+
+| Event | |
+| --- | --- |
+| CAEP `session-revoked` | A session ended at the provider. |
+| CAEP `credential-change` | A password or factor changed at the provider. |
+| RISC `sessions-revoked` | Every session ended at the provider. |
+| RISC `account-disabled` | The account was disabled at the provider. |
+| RISC `account-purged` | The account was deleted at the provider. |
+| RISC `account-credential-change-required` | The provider asks for new credentials. |
+
+The account is the one connected to the provider with that subject. masks reads a subject in the
+`iss_sub` format, whose `iss` must be the provider's issuer, or in the `email` format, which matches the
+address the connection holds. Other event types and subjects are accepted and change nothing.

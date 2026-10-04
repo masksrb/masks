@@ -45,6 +45,8 @@ module Masks
           field :jwks_fetched_at, GraphQL::Types::ISO8601DateTime
           field :role, String, null: false
           field :trusts_email, Boolean, null: false
+          field :receives_signals, Boolean, null: false,
+                description: "Whether masks accepts the shared signals this provider sends to /ssf/events."
           field :email_domains, [ String ], null: false
           field :signup_scopes, [ String ], null: false
           field :delegates, Boolean, null: false

@@ -32,6 +32,8 @@ module Masks
           argument :jwks_uri, String, required: false
           argument :role, String, required: false
           argument :trusts_email, Boolean, required: false
+          argument :receives_signals, Boolean, required: false,
+                   description: "Accepts the shared signals this provider sends to /ssf/events, and ends the sessions of the accounts they name."
           argument :email_domains, [ String ], required: false
           argument :signup_scopes, [ String ], required: false
           argument :delegates, Boolean, required: false

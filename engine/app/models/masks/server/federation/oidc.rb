@@ -21,6 +21,16 @@ module Masks
           fetched
         end
 
+        def verify_signed(token)
+            keys = held_keys
+            keys = refresh_keys! if stale_keys?(keys, peek(token)["kid"])
+
+            JWT.decode(token, nil, true, algorithms: ALGORITHMS, jwks: JWT::JWK::Set.new(keys),
+                                         iat_leeway: SKEW, exp_leeway: SKEW, nbf_leeway: SKEW)
+          rescue JWT::DecodeError => e
+            raise Provider::Untrusted, "#{provider.name} signed that token with a key this server could not verify (#{e.class})"
+          end
+
         private
 
           def extra_handoff

@@ -21,11 +21,6 @@ when a capability lands.
   never asks again. Manage shows how many accounts still depend on it.
 - Emails are marked verified only when the export says so.
 
-### Shared signals receiver
-
-`/ssf/events` accepts security event tokens from a provider, verifies them against the provider's
-JWKS, and ends the sessions of the matching connection's account.
-
 ### Follow-ups
 
 - Shared signals transmitter: `account-purged` (captured before the account is destroyed), the add

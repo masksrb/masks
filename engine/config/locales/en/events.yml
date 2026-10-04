@@ -146,6 +146,7 @@ en:
         deleted: "Shared signals stream removed"
       signal:
         undelivered: "Shared signal not delivered"
+        received: "Provider signaled sign-out"
       organization:
         created: "Organization added"
         updated: "Organization changed"

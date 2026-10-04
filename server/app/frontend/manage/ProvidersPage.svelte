@@ -40,7 +40,7 @@
     key name protocol preset authorizationUrl tokenUrl userinfoUrl emailsUrl clientId
     scopes authorizeParams subjectClaim claims tokenAuthMethod responseMode teamId keyId
     secretHeld privateKeyHeld connections signedIn archivedAt createdAt callbackUrl
-    issuer jwksUri role trustsEmail emailDomains signupScopes
+    issuer jwksUri role trustsEmail receivesSignals emailDomains signupScopes
     idpEntityId idpSsoUrl idpCertificates metadataUrl metadataFetchedAt nameIdFormat spEntityId
     delegates delegatedScopes delegationParams delegationScope resourceUrl registeredAt delegations
   `;
@@ -85,6 +85,7 @@
     ["nameIdFormat", "String"],
     ["role", "String"],
     ["trustsEmail", "Boolean"],
+    ["receivesSignals", "Boolean"],
     ["emailDomains", "[String!]"],
     ["signupScopes", "[String!]"],
     ["delegates", "Boolean"],
@@ -160,6 +161,7 @@
     nameIdFormat: "",
     role: "credential",
     trustsEmail: Boolean(preset.trustsEmail),
+    receivesSignals: false,
     emailDomains: "",
     signupScopes: "",
     delegates: Boolean(preset.delegates),
@@ -259,6 +261,7 @@
       nameIdFormat: provider.nameIdFormat ?? "",
       role: provider.role,
       trustsEmail: provider.trustsEmail,
+      receivesSignals: provider.receivesSignals,
       emailDomains: provider.emailDomains.join(" "),
       signupScopes: provider.signupScopes.join(" "),
       delegates: provider.delegates,
@@ -304,6 +307,7 @@
       name: draft.name.trim(),
       role: draft.role,
       trustsEmail: saml ? false : draft.trustsEmail,
+      receivesSignals: oidc ? draft.receivesSignals : false,
       emailDomains: words(draft.emailDomains),
       signupScopes: words(draft.signupScopes),
       clientSecret: trimmed(draft.clientSecret),
@@ -825,6 +829,19 @@
           </label>
         {/if}
 
+        {#if oidc}
+          <label class="flex items-start gap-3 text-sm">
+            <input type="checkbox" class="toggle toggle-sm" bind:checked={draft.receivesSignals} />
+            <span>
+              Accept its security events
+              <span class="hint block">
+                It sends shared signals to <code>{origin}/ssf/events</code>. A session revoked, a credential
+                changed, or an account disabled there signs the account out everywhere here.
+              </span>
+            </span>
+          </label>
+        {/if}
+
         <div class="grid gap-3 sm:grid-cols-2">
           <Field
             label={saml ? "Email domains it answers for" : "Email domains"}
@@ -888,6 +905,9 @@
           {/if}
           {#if provider.trustsEmail}
             <span class="badge badge-ghost badge-sm">trusts confirmed addresses</span>
+          {/if}
+          {#if provider.receivesSignals}
+            <span class="badge badge-ghost badge-sm">accepts security events</span>
           {/if}
           {#if provider.delegates}
             <span class="badge badge-info badge-sm">applications can use it</span>

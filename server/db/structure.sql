@@ -923,7 +923,8 @@ CREATE TABLE public.providers (
     organization_id bigint,
     role_claim character varying,
     role_map jsonb DEFAULT '{}'::jsonb NOT NULL,
-    unmapped_role character varying
+    unmapped_role character varying,
+    receives_signals boolean DEFAULT false NOT NULL
 );
 
 ALTER TABLE ONLY public.providers FORCE ROW LEVEL SECURITY;
@@ -3329,6 +3330,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261004130000'),
 ('20261004120000'),
 ('20261003140000'),
 ('20261003130000'),

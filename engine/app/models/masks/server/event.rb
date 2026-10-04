@@ -128,6 +128,7 @@ module Masks
       SIGNAL_STREAM_UPDATED = "signal_stream.updated".freeze
       SIGNAL_STREAM_DELETED = "signal_stream.deleted".freeze
       SIGNAL_UNDELIVERED = "signal.undelivered".freeze
+      SIGNAL_RECEIVED = "signal.received".freeze
 
       ORGANIZATION_CREATED = "organization.created".freeze
       ORGANIZATION_UPDATED = "organization.updated".freeze
@@ -151,7 +152,7 @@ module Masks
       GRAVE = [
         LOGIN_REFUSED, LOGIN_THROTTLED, LOGOUT_UNDELIVERED, REFRESH_REUSED, STREAM_FAILED,
         DEVICE_BLOCKED, ACTOR_DELETED, AUTHENTICATOR_DISABLED, CONNECTION_REFUSED, DELEGATION_REFUSED,
-        EXCHANGE_REFUSED, SIGN_IN_RISKY, SIGNAL_UNDELIVERED, MEMBERSHIP_ROLE_KEPT, ORGANIZATION_OWNERLESS
+        EXCHANGE_REFUSED, SIGN_IN_RISKY, SIGNAL_UNDELIVERED, SIGNAL_RECEIVED, MEMBERSHIP_ROLE_KEPT, ORGANIZATION_OWNERLESS
       ].freeze
 
       ACTIONS = constants(false).filter_map do |name|
