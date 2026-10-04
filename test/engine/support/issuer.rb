@@ -30,7 +30,7 @@ class TestIssuer
     }
   end
 
-  attr_reader :port, :registrations, :deletions
+  attr_reader :port, :registrations, :deletions, :revocations
   attr_accessor :id_tokens, :forgotten, :role
 
   def initialize
@@ -39,6 +39,7 @@ class TestIssuer
     @approvals = {}
     @registrations = []
     @deletions = []
+    @revocations = []
     @id_tokens = :normal
     @forgotten = false
     @role = "member"
@@ -228,6 +229,7 @@ class TestIssuer
 
     def post_for(path, payload, bearer)
       return registered($1, payload, bearer) if path =~ %r{\A/([^/]+)/register\z}
+      return revoked(payload) if path =~ %r{\A/([^/]+)/revoke\z}
       return nil unless path =~ %r{\A/([^/]+)/token\z}
       return unknown_client if forgotten
 
@@ -242,6 +244,12 @@ class TestIssuer
       return { "error" => "invalid_grant" } unless verifies?(pending, form["code_verifier"])
 
       granted(subdomain, pending)
+    end
+
+    def revoked(payload)
+      @lock.synchronize { @revocations << URI.decode_www_form(payload).to_h }
+
+      {}
     end
 
     def verifies?(pending, verifier)

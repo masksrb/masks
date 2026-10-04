@@ -328,6 +328,19 @@ class SessionTest < EngineIntegrationTest
     assert_redirected_to "/"
   end
 
+  test "a return_to a browser would read as another host is refused" do
+    connect!
+
+    [ "/\t/elsewhere.test/steal", "/\n/elsewhere.test/steal", "/a\\..\\/elsewhere.test", "/ /elsewhere.test" ].each do |sent|
+      get "/auth?return_to=#{CGI.escape(sent)}", headers: host
+      landed = issuer.authorize!(response.location)
+
+      get "/auth/callback?code=#{landed[:code]}&state=#{landed[:state]}", headers: host
+
+      assert_redirected_to "/", "#{sent.inspect} must not survive as a return_to"
+    end
+  end
+
   test "a protocol-relative return_to is refused too" do
     connect!
 
@@ -370,6 +383,20 @@ class SessionTest < EngineIntegrationTest
     assert_equal false, json["signed_in"]
     assert_nil json["logout_url"], "nothing asked to sign out of masks"
     assert_empty session_payload
+  end
+
+  test "signing out revokes the refresh token at the issuer" do
+    sign_in!
+
+    held = session_payload["refresh_token"]
+    refute_nil held
+
+    delete "/auth/logout", headers: host.merge("HTTP_ACCEPT" => "application/json")
+
+    revoked = issuer.revocations.last
+
+    assert_equal held, revoked["token"]
+    assert_equal "refresh_token", revoked["token_type_hint"]
   end
 
   test "signing out everywhere hands back where to end the issuer's session" do

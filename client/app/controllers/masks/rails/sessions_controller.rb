@@ -55,6 +55,7 @@ module Masks
           return refuse("invalid_nonce", "the id token was issued for another request", pending)
         end
 
+        renew_session
         masks_store(tokens, identity: identity)
 
         redirect_to pending[:return_to] || masks_config.after_sign_in
@@ -70,7 +71,9 @@ module Masks
         everywhere = masks_config.sign_out_of_issuer || params[:everywhere].present?
         upstream = everywhere ? masks_logout_url : nil
 
+        revoke_refresh_token
         masks_forget
+        reset_session
 
         if masks_wants_json?
           render json: { "signed_in" => false, "logout_url" => upstream }.compact
@@ -80,6 +83,23 @@ module Masks
       end
 
       private
+
+        def renew_session
+          carried = session.to_hash.slice(REQUESTS, HANDSHAKES)
+
+          reset_session
+          carried.each { |key, value| session[key] = value }
+        end
+
+        def revoke_refresh_token
+          held = masks_tokens&.refresh_token
+
+          return if held.nil? || !masks_configured?
+
+          masks_session.revoke(held, hint: "refresh_token")
+        rescue Masks::Client::Error
+          false
+        end
 
         def requested_return_to
           masks_local_path(params[:return_to])

@@ -164,7 +164,7 @@ no token for. Sizes are 32, 64, 128, 256, or 512.
 
 ### Signing out
 
-`DELETE /auth/logout` ends this app's session. With `?everywhere=1` the response also carries
+`DELETE /auth/logout` ends this app's session and revokes its refresh token at the issuer. With `?everywhere=1` the response also carries
 `logout_url`, the issuer's end-session endpoint. `config.sign_out_of_issuer = true` makes that the
 default for every sign-out.
 

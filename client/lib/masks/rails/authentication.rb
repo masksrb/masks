@@ -318,9 +318,15 @@ module Masks
           path = value.to_s
 
           return nil unless path.start_with?("/")
-          return nil if path.start_with?("//", "/\\")
+          return nil if path.match?(/[\x00-\x20\x7f\\]/)
 
-          path
+          uri = URI.parse(path)
+
+          return nil if uri.scheme || uri.host || uri.userinfo || !uri.path.start_with?("/") || uri.path.start_with?("//")
+
+          [ uri.path, uri.query ].compact.join("?")
+        rescue URI::InvalidURIError
+          nil
         end
     end
   end
