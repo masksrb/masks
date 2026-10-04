@@ -183,6 +183,34 @@ module Masks
         assert_empty seen
       end
 
+      test "a receiver the person turned away hears nothing more, whatever tokens it once held" do
+        open_stream
+        follow
+
+        within do
+          AccessToken.create!(actor: @actor, client: @receiver, scopes: "openid", audience: [],
+                              digest: SecureRandom.uuid, expires_at: 1.hour.from_now, consumed_at: Time.current)
+          Consent.live.find_by!(actor: @actor, client: @receiver).revoke!
+        end
+
+        seen = delivered { within { Event.record!(Event::PASSWORD_CHANGED, actor: @actor) } }
+
+        assert_empty seen
+      end
+
+      test "a receiver whose only token was revoked hears nothing more" do
+        open_stream
+
+        within do
+          AccessToken.create!(actor: @actor, client: @receiver, scopes: "openid", audience: [],
+                              digest: SecureRandom.uuid, expires_at: 1.hour.from_now, consumed_at: Time.current)
+        end
+
+        seen = delivered { within { Event.record!(Event::PASSWORD_CHANGED, actor: @actor) } }
+
+        assert_empty seen
+      end
+
       test "a receiver hears only the events it asked for" do
         open_stream([ Signals::SESSION_REVOKED ])
         follow

@@ -52,9 +52,14 @@ module Masks
       end
 
       def follows?(actor, organization: nil)
-        return client.tokens.exists?(actor: actor, organization: organization) if organization
+        return false if forsaken_by?(actor)
+        return client.tokens.where("expires_at > ?", Time.current).exists?(actor: actor, organization: organization) if organization
 
-        client.consents.live.exists?(actor: actor) || client.tokens.exists?(actor: actor)
+        client.consents.live.exists?(actor: actor) || client.tokens.live.exists?(actor: actor)
+      end
+
+      def forsaken_by?(actor)
+        client.consents.exists?(actor: actor) && !client.consents.live.exists?(actor: actor)
       end
 
       def configuration
