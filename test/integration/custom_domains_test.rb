@@ -147,6 +147,18 @@ module Masks
         assert_nil @tenant.reload.custom_host
       end
 
+      test "a host the server's own domain grew to cover stops being served" do
+        prove
+        within { @tenant.update!(custom_host: HOST) }
+
+        with_origin("https://%{subdomain}.acme.example") do
+          CheckDomainClaimsJob.perform_now
+        end
+
+        assert_nil @tenant.reload.custom_host
+        assert within { Event.exists?(action: Event::CUSTOM_DOMAIN_STOPPED) }
+      end
+
       test "stopping clears the host" do
         prove
         within { @tenant.update!(custom_host: HOST) }

@@ -101,7 +101,13 @@ module Masks
       end
 
       def unserve_uncovered!(reason)
-        return if custom_host.blank? || covering_claim
+        return if custom_host.blank?
+
+        if self.class.own_domain?(custom_host)
+          reason = "inside this server's own domain"
+        elsif covering_claim
+          return
+        end
 
         host = custom_host
         update_columns(custom_host: nil)
@@ -230,6 +236,12 @@ module Masks
           host = URI.parse(format(template, subdomain: "tenant")).host.to_s
 
           template.include?("%{subdomain}") ? host.split(".", 2).last : host
+        end
+
+        def own_domain?(host)
+          served = served_domain
+
+          served.present? && (host == served || host.to_s.end_with?(".#{served}"))
         end
 
         def serving(host)
@@ -381,9 +393,7 @@ module Masks
       private
 
         def custom_host_is_proven
-          served = self.class.served_domain
-
-          if served.present? && (custom_host == served || custom_host.end_with?(".#{served}"))
+          if self.class.own_domain?(custom_host)
             errors.add(:custom_host, "is part of this server's own domain")
           elsif covering_claim.nil?
             errors.add(:custom_host, "must be within a domain this tenant has proven")
