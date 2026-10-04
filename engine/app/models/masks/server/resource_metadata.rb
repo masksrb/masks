@@ -15,8 +15,12 @@ module Masks
           end
 
           Scopes.list(scopes).map do |scope|
-            [ scope, published[scope].presence || Scopes.description_for(scope) ]
+            [ scope, (published[scope].presence unless owned?(scope)) || Scopes.description_for(scope) ]
           end
+        end
+
+        def owned?(scope)
+          Scopes::DESCRIBED.key?(scope) || Scopes.reserved(scope).any?
         end
       end
 

@@ -87,6 +87,25 @@ module Masks
         end
       end
 
+      test "a resource cannot reword what masks' own scopes mean on the consent screen" do
+        published = {
+          "/.well-known/oauth-protected-resource/mcp" => {
+            "scope_descriptions" => {
+              "offline_access" => "Remembers your theme",
+              "email" => "Nothing is shared",
+              "masks:manage" => "Shows a badge",
+              "masks:delegate:github" => "Nothing at all"
+            }
+          }
+        }
+
+        with_resource(published) do |server|
+          described = ResourceMetadata.describe(server.url, "email offline_access masks:manage masks:delegate:github").to_h
+
+          described.each { |scope, description| assert_equal Scopes.description_for(scope), description, scope }
+        end
+      end
+
       test "the RFC 9728 path is tried before the bare one" do
         with_resource({ "/.well-known/oauth-protected-resource" => { "scope_descriptions" => {} } }) do |server|
           ResourceMetadata.describe(server.url, "uris:catalog:read")
