@@ -83,7 +83,7 @@ module Masks
       end
 
       test "a token without the signals scope is refused" do
-        other = receiver(name: "Other", scopes: "uris:catalog:read")
+        other = receiver(name: "Other", scopes: "xixo:catalog:read")
 
         ssf(:get, "streams", client: other)
 

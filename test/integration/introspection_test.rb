@@ -3,11 +3,11 @@ module Masks
     require "test_helper"
 
     class IntrospectionTest < ActionDispatch::IntegrationTest
-      RESOURCE = "https://uris.example.com/mcp".freeze
+      RESOURCE = "https://xixo.example.com/mcp".freeze
 
       setup do
         host! host_for(@tenant)
-        @actor = create_actor(@tenant, scopes: "openid profile email offline_access uris:catalog:read")
+        @actor = create_actor(@tenant, scopes: "openid profile email offline_access xixo:catalog:read")
       end
 
       def introspect(token, client_id:, client_secret:, **params)
@@ -34,7 +34,7 @@ module Masks
         end
       end
 
-      def granted(scope: "openid profile uris:catalog:read", resource: RESOURCE)
+      def granted(scope: "openid profile xixo:catalog:read", resource: RESOURCE)
         registered = register(scope: scope)
 
         sign_in_as(@actor)
@@ -88,7 +88,7 @@ module Masks
         assert_equal "Bearer", body["token_type"]
         assert_equal registered["client_id"], body["client_id"]
         assert_equal @actor.nickname, body["username"]
-        assert_includes body["scope"].split(" "), "uris:catalog:read"
+        assert_includes body["scope"].split(" "), "xixo:catalog:read"
         assert_equal [ RESOURCE ], body["aud"]
         assert_equal origin_for(@tenant), body["iss"]
         assert body["exp"] > Time.current.to_i
@@ -110,7 +110,7 @@ module Masks
       end
 
       test "a refresh token introspects too" do
-        registered, tokens = granted(scope: "openid offline_access uris:catalog:read")
+        registered, tokens = granted(scope: "openid offline_access xixo:catalog:read")
 
         body = introspect(tokens["refresh_token"],
                           client_id: registered["client_id"],

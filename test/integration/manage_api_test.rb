@@ -93,7 +93,7 @@ module Masks
       end
 
       test "a token issued for another resource is refused" do
-        held = bearer(for_resource: "https://uris.example.com/api")
+        held = bearer(for_resource: "https://xixo.example.com/api")
 
         ask("{ viewer { nickname } }", held)
 
@@ -1334,9 +1334,9 @@ module Masks
 
         held = ask("{ namespaces { name resource client { name } } }", token)["data"]["namespaces"]
 
-        assert_equal [ "uris:" ], held.map { |one| one["name"] }
-        assert_equal "https://demo.uris.test/mcp", held.first["resource"]
-        assert_equal "uris", held.first.dig("client", "name")
+        assert_equal [ "xixo:" ], held.map { |one| one["name"] }
+        assert_equal "https://demo.xixo.test/mcp", held.first["resource"]
+        assert_equal "xixo", held.first.dig("client", "name")
       end
 
       test "a namespace says whether it can be released, so the console can offer the button" do
@@ -1351,7 +1351,7 @@ module Masks
         assert_nil held.dig("client", "archivedAt")
         assert held["claimedAt"].present?
 
-        within(@tenant) { Namespace.find_by(name: "uris:").client.update!(archived_at: Time.current) }
+        within(@tenant) { Namespace.find_by(name: "xixo:").client.update!(archived_at: Time.current) }
 
         freed = ask(listing, token)["data"]["namespaces"].first
 
@@ -1363,7 +1363,7 @@ module Masks
         token = bearer
         claim!
 
-        within(@tenant) { Namespace.find_by(name: "uris:").update!(client: nil) }
+        within(@tenant) { Namespace.find_by(name: "xixo:").update!(client: nil) }
 
         held = ask("{ namespaces { name releasable client { name } } }", token)["data"]["namespaces"]
 
@@ -1380,11 +1380,11 @@ module Masks
         client(clientId: $clientId) { name namespaces { name resource claimedAt releasable } }
       }",
           token,
-          clientId: within(@tenant) { Client.find_by(name: "uris").client_id }
+          clientId: within(@tenant) { Client.find_by(name: "xixo").client_id }
         )["data"]["client"]
 
-        assert_equal [ "uris:" ], client["namespaces"].map { |one| one["name"] }
-        assert_equal "https://demo.uris.test/mcp", client["namespaces"].first["resource"]
+        assert_equal [ "xixo:" ], client["namespaces"].map { |one| one["name"] }
+        assert_equal "https://demo.xixo.test/mcp", client["namespaces"].first["resource"]
         assert_equal false, client["namespaces"].first["releasable"]
       end
 
@@ -1395,7 +1395,7 @@ module Masks
         listed = ask("{ clients { name namespaces { name } } }", token)["data"]["clients"]
         counted = listed.to_h { |one| [ one["name"], one["namespaces"].length ] }
 
-        assert_equal 1, counted["uris"]
+        assert_equal 1, counted["xixo"]
         assert_equal 0, counted[@client.name]
       end
 
@@ -1403,22 +1403,22 @@ module Masks
         token = bearer
         claim!
 
-        body = ask('mutation { releaseNamespace(name: "uris:") { released } }', token)
+        body = ask('mutation { releaseNamespace(name: "xixo:") { released } }', token)
 
-        assert_match "is in use by uris", body.dig("errors", 0, "message")
-        assert within(@tenant) { Namespace.exists?(name: "uris:") }
+        assert_match "is in use by xixo", body.dig("errors", 0, "message")
+        assert within(@tenant) { Namespace.exists?(name: "xixo:") }
       end
 
       test "releasing an archived namespace frees the name" do
         token = bearer
         claim!
 
-        within(@tenant) { Namespace.find_by(name: "uris:").client.update!(archived_at: Time.current) }
+        within(@tenant) { Namespace.find_by(name: "xixo:").client.update!(archived_at: Time.current) }
 
-        body = ask('mutation { releaseNamespace(name: "uris:") { released } }', token)
+        body = ask('mutation { releaseNamespace(name: "xixo:") { released } }', token)
 
-        assert_equal "uris:", body.dig("data", "releaseNamespace", "released")
-        assert_not within(@tenant) { Namespace.exists?(name: "uris:") }
+        assert_equal "xixo:", body.dig("data", "releaseNamespace", "released")
+        assert_not within(@tenant) { Namespace.exists?(name: "xixo:") }
       end
 
       test "activity narrows to one device" do
@@ -1513,8 +1513,8 @@ module Masks
           "query { namespaces { name resource client { name } } }", token
         ).dig("data", "namespaces")
 
-        assert_equal [ "uris:" ], held.map { |one| one["name"] }
-        assert_equal "uris", held.first["client"]["name"]
+        assert_equal [ "xixo:" ], held.map { |one| one["name"] }
+        assert_equal "xixo", held.first["client"]["name"]
       end
 
       test "the scopes on offer include what namespaces publish" do
@@ -1524,7 +1524,7 @@ module Masks
 
         held = ask("query { scopesSupported }", token).dig("data", "scopesSupported")
 
-        assert_includes held, "uris:"
+        assert_includes held, "xixo:"
         assert_includes held, Scopes::MANAGE
       end
 
@@ -1611,9 +1611,9 @@ module Masks
 
       private
 
-        def claim!(resource: "https://demo.uris.test/mcp", name: "uris:")
+        def claim!(resource: "https://demo.xixo.test/mcp", name: "xixo:")
           within(@tenant) do
-            holder = create_client(@tenant, name: "uris", allowed_scopes: "openid #{name}",
+            holder = create_client(@tenant, name: "xixo", allowed_scopes: "openid #{name}",
                                    approved_at: Time.current)
 
             Namespace.create!(name: name, resource: resource, client: holder, claimed_at: Time.current)

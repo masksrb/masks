@@ -91,7 +91,7 @@ An app that is also a resource server:
 class ApiController < ApplicationController
   include Masks::Rails::ProtectedResource
 
-  masks_protect! scope: "uris:catalog:read", except: :metadata
+  masks_protect! scope: "xixo:catalog:read", except: :metadata
 
   def metadata
     render json: masks_resource_metadata
@@ -144,7 +144,7 @@ in to none and `insufficient_role` when they hold another role. A resource serve
 token:
 
 ```ruby
-masks_protect! scope: "uris:catalog:write", role: "owner", organization: "acme"
+masks_protect! scope: "xixo:catalog:write", role: "owner", organization: "acme"
 ```
 
 Naming an organization without asking for the scope still holds the sign-in to its members and its
@@ -235,7 +235,7 @@ The flow that connects a first-party app:
 
 ```ruby
 handshake = Masks::Client::Handshake.new(
-  issuer, name: "uris", resource: "https://app.example.com/mcp",
+  issuer, name: "xixo", resource: "https://app.example.com/mcp",
   redirect_uris: [ "https://app.example.com/auth/callback" ],
   return_to: "https://app.example.com/"
 )
@@ -254,11 +254,11 @@ the issuer it asked.
 resource = Masks::Client::Resource.new(
   issuer: "https://demo.auth.example.com",
   url: "https://app.example.com/mcp",
-  scopes: { "uris:catalog:read" => "Search your catalog" }
+  scopes: { "xixo:catalog:read" => "Search your catalog" }
 )
 
 claims = resource.authenticate(
-  request.authorization, scope: "uris:catalog:read",
+  request.authorization, scope: "xixo:catalog:read",
   proof: request.get_header("HTTP_DPOP"), method: request.request_method, url: request.url
 )
 claims.subject
@@ -286,7 +286,7 @@ scope.
 A Rack middleware does the same below the framework, proof included:
 
 ```ruby
-use Masks::Client::Rack, resource: resource, scope: "uris:catalog:read"
+use Masks::Client::Rack, resource: resource, scope: "xixo:catalog:read"
 ```
 
 ### Introspection
@@ -296,7 +296,7 @@ asks the issuer:
 
 ```ruby
 found = session.introspect(token)
-found.active? && found.permits?("uris:catalog:read")
+found.active? && found.permits?("xixo:catalog:read")
 ```
 
 `Introspection` is a `Claims` whose `permit!` also raises when the token is not active.

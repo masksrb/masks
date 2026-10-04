@@ -89,7 +89,7 @@ A service that acts for no person, such as a nightly job, uses the `client_crede
 ```sh
 curl -u "$CLIENT_ID:$CLIENT_SECRET" https://acme.auth.example.com/token \
   -d grant_type=client_credentials \
-  -d scope="uris:catalog:read"
+  -d scope="xixo:catalog:read"
 ```
 
 A manager enables it for an approved client. The token names the client as `sub`, carries no

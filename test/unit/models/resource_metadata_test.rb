@@ -72,17 +72,17 @@ module Masks
       test "a scope the resource server describes reads as a sentence" do
         published = {
           "/.well-known/oauth-protected-resource/mcp" => {
-            "scopes_supported" => [ "uris:catalog:read" ],
-            "scope_descriptions" => { "uris:catalog:read" => "Search and read your catalog" }
+            "scopes_supported" => [ "xixo:catalog:read" ],
+            "scope_descriptions" => { "xixo:catalog:read" => "Search and read your catalog" }
           }
         }
 
         with_resource(published) do |server|
-          described = ResourceMetadata.describe(server.url, "openid uris:catalog:read")
+          described = ResourceMetadata.describe(server.url, "openid xixo:catalog:read")
 
           assert_equal [
             [ "openid", "Who you are" ],
-            [ "uris:catalog:read", "Search and read your catalog" ]
+            [ "xixo:catalog:read", "Search and read your catalog" ]
           ], described
         end
       end
@@ -108,7 +108,7 @@ module Masks
 
       test "the RFC 9728 path is tried before the bare one" do
         with_resource({ "/.well-known/oauth-protected-resource" => { "scope_descriptions" => {} } }) do |server|
-          ResourceMetadata.describe(server.url, "uris:catalog:read")
+          ResourceMetadata.describe(server.url, "xixo:catalog:read")
 
           assert_equal [
             "/.well-known/oauth-protected-resource/mcp",
@@ -119,29 +119,29 @@ module Masks
 
       test "a resource that describes nothing leaves the scope named rather than blank" do
         with_resource({}) do |server|
-          assert_equal [ [ "uris:catalog:read", "uris:catalog:read" ] ],
-                       ResourceMetadata.describe(server.url, "uris:catalog:read")
+          assert_equal [ [ "xixo:catalog:read", "xixo:catalog:read" ] ],
+                       ResourceMetadata.describe(server.url, "xixo:catalog:read")
         end
       end
 
       test "a resource that cannot be reached does not stop the screen rendering" do
-        described = ResourceMetadata.describe("https://127.0.0.1:1/mcp", "openid uris:catalog:read")
+        described = ResourceMetadata.describe("https://127.0.0.1:1/mcp", "openid xixo:catalog:read")
 
         assert_equal [
           [ "openid", "Who you are" ],
-          [ "uris:catalog:read", "uris:catalog:read" ]
+          [ "xixo:catalog:read", "xixo:catalog:read" ]
         ], described
       end
 
       test "a description is not a place to put a paragraph" do
         published = {
           "/.well-known/oauth-protected-resource/mcp" => {
-            "scope_descriptions" => { "uris:catalog:read" => "x" * 500 }
+            "scope_descriptions" => { "xixo:catalog:read" => "x" * 500 }
           }
         }
 
         with_resource(published) do |server|
-          description = ResourceMetadata.describe(server.url, "uris:catalog:read").first.last
+          description = ResourceMetadata.describe(server.url, "xixo:catalog:read").first.last
 
           assert_operator description.length, :<=, ResourceMetadata::LONGEST
         end
@@ -150,12 +150,12 @@ module Masks
       test "a document is fetched once and held, because consent renders on every sign-in" do
         published = {
           "/.well-known/oauth-protected-resource/mcp" => {
-            "scope_descriptions" => { "uris:catalog:read" => "Search and read your catalog" }
+            "scope_descriptions" => { "xixo:catalog:read" => "Search and read your catalog" }
           }
         }
 
         with_resource(published) do |server|
-          2.times { ResourceMetadata.describe(server.url, "uris:catalog:read") }
+          2.times { ResourceMetadata.describe(server.url, "xixo:catalog:read") }
 
           assert_equal 1, server.paths.count
         end
@@ -165,32 +165,32 @@ module Masks
         published = {}
 
         with_resource(published) do |server|
-          ResourceMetadata.describe(server.url, "uris:catalog:read")
+          ResourceMetadata.describe(server.url, "xixo:catalog:read")
 
           published["/.well-known/oauth-protected-resource/mcp"] = {
-            "scope_descriptions" => { "uris:catalog:read" => "Search and read your catalog" }
+            "scope_descriptions" => { "xixo:catalog:read" => "Search and read your catalog" }
           }
 
-          assert_equal [ [ "uris:catalog:read", "Search and read your catalog" ] ],
-                       ResourceMetadata.describe(server.url, "uris:catalog:read")
+          assert_equal [ [ "xixo:catalog:read", "Search and read your catalog" ] ],
+                       ResourceMetadata.describe(server.url, "xixo:catalog:read")
         end
       end
 
       test "several resources are asked, and the first to describe a scope wins" do
         first = { "/.well-known/oauth-protected-resource/mcp" => {
-          "scope_descriptions" => { "uris:catalog:read" => "Read your catalog" }
+          "scope_descriptions" => { "xixo:catalog:read" => "Read your catalog" }
         } }
         second = { "/.well-known/oauth-protected-resource/mcp" => {
-          "scope_descriptions" => { "uris:catalog:read" => "Something else", "jobs:run" => "Run a job" }
+          "scope_descriptions" => { "xixo:catalog:read" => "Something else", "jobs:run" => "Run a job" }
         } }
 
         with_resource(first) do |one|
           with_resource(second) do |two|
-            described = ResourceMetadata.describe([ one.url, two.url ], "uris:catalog:read jobs:run")
+            described = ResourceMetadata.describe([ one.url, two.url ], "xixo:catalog:read jobs:run")
 
             assert_equal [
               [ "jobs:run", "Run a job" ],
-              [ "uris:catalog:read", "Read your catalog" ]
+              [ "xixo:catalog:read", "Read your catalog" ]
             ], described
           end
         end
@@ -198,23 +198,23 @@ module Masks
 
       test "a document that is not a document is simply not one" do
         with_resource({ "/.well-known/oauth-protected-resource/mcp" => "<html>nope</html>" }) do |server|
-          assert_equal [ [ "uris:catalog:read", "uris:catalog:read" ] ],
-                       ResourceMetadata.describe(server.url, "uris:catalog:read")
+          assert_equal [ [ "xixo:catalog:read", "xixo:catalog:read" ] ],
+                       ResourceMetadata.describe(server.url, "xixo:catalog:read")
         end
       end
 
       test "a resource that publishes a language tag is read in that language" do
         published = {
           "/.well-known/oauth-protected-resource/mcp" => {
-            "scope_descriptions" => { "uris:catalog:read" => "Search and read your catalog" },
-            "scope_descriptions#fr" => { "uris:catalog:read" => "Chercher et lire votre catalogue" }
+            "scope_descriptions" => { "xixo:catalog:read" => "Search and read your catalog" },
+            "scope_descriptions#fr" => { "xixo:catalog:read" => "Chercher et lire votre catalogue" }
           }
         }
 
         with_resource(published) do |server|
           I18n.with_locale(:en) do
-            assert_equal [ [ "uris:catalog:read", "Search and read your catalog" ] ],
-                         ResourceMetadata.describe(server.url, "uris:catalog:read")
+            assert_equal [ [ "xixo:catalog:read", "Search and read your catalog" ] ],
+                         ResourceMetadata.describe(server.url, "xixo:catalog:read")
           end
         end
       end
@@ -222,8 +222,8 @@ module Masks
       test "a language masks does not speak falls back to the untagged descriptions" do
         published = {
           "/.well-known/oauth-protected-resource/mcp" => {
-            "scope_descriptions" => { "uris:catalog:read" => "Search and read your catalog" },
-            "scope_descriptions#fr" => { "uris:catalog:read" => "Chercher et lire votre catalogue" }
+            "scope_descriptions" => { "xixo:catalog:read" => "Search and read your catalog" },
+            "scope_descriptions#fr" => { "xixo:catalog:read" => "Chercher et lire votre catalogue" }
           }
         }
 
@@ -232,9 +232,9 @@ module Masks
             JSON.parse(JSON.generate(published.values.first)), "scope_descriptions", locale: :de
           )
 
-          assert_equal({ "uris:catalog:read" => "Search and read your catalog" }, described)
-          assert_equal [ [ "uris:catalog:read", "Search and read your catalog" ] ],
-                       ResourceMetadata.describe(server.url, "uris:catalog:read")
+          assert_equal({ "xixo:catalog:read" => "Search and read your catalog" }, described)
+          assert_equal [ [ "xixo:catalog:read", "Search and read your catalog" ] ],
+                       ResourceMetadata.describe(server.url, "xixo:catalog:read")
         end
       end
 

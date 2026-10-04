@@ -16,7 +16,7 @@ x-app: &app
   image: masks-dev
   pull_policy: never
   extra_hosts:
-    - "uris.localhost:host-gateway"
+    - "xixo.localhost:host-gateway"
     - "mcp.localhost:host-gateway"
   volumes:
     - ./server:/rails

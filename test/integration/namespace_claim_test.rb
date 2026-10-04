@@ -3,13 +3,13 @@ module Masks
     require "test_helper"
 
     class NamespaceClaimTest < ActionDispatch::IntegrationTest
-      APP = "https://demo.uris.test".freeze
+      APP = "https://demo.xixo.test".freeze
       RESOURCE = "#{APP}/mcp".freeze
       RETURN_TO = "#{APP}/auth/handshake/callback".freeze
       REDIRECT_URI = "#{APP}/auth/masks/callback".freeze
-      SCOPE = "openid profile email offline_access uris:".freeze
+      SCOPE = "openid profile email offline_access xixo:".freeze
 
-      OTHER = "https://other.uris.test".freeze
+      OTHER = "https://other.xixo.test".freeze
       OTHER_RESOURCE = "#{OTHER}/mcp".freeze
 
       setup do
@@ -18,7 +18,7 @@ module Masks
         host! host_for(@tenant)
       end
 
-      def connect(resource: RESOURCE, origin: APP, scope: SCOPE, name: "uris")
+      def connect(resource: RESOURCE, origin: APP, scope: SCOPE, name: "xixo")
         query = {
           client_name: name,
           resource: resource,
@@ -36,7 +36,7 @@ module Masks
         approve_handshake
       end
 
-      def claimed(name = "uris:")
+      def claimed(name = "xixo:")
         within(@tenant) { Namespace.find_by(name: name) }
       end
 
@@ -46,10 +46,10 @@ module Masks
         approve!
 
         within(@tenant) do
-          held = Namespace.find_by(name: "uris:")
+          held = Namespace.find_by(name: "xixo:")
 
           assert_equal RESOURCE, held.resource
-          assert_equal "uris", held.client.name
+          assert_equal "xixo", held.client.name
           assert held.claimed_at.present?
         end
       end
@@ -57,12 +57,12 @@ module Masks
       test "claiming grants the namespace to whoever approved it" do
         sign_in_as(@owner)
 
-        assert_not within(@tenant) { Actor.find(@owner.id).holds?("uris:") }
+        assert_not within(@tenant) { Actor.find(@owner.id).holds?("xixo:") }
 
         connect
         approve!
 
-        assert within(@tenant) { Actor.find(@owner.id).holds?("uris:") },
+        assert within(@tenant) { Actor.find(@owner.id).holds?("xixo:") },
                "the approver must be able to use what they connected"
       end
 
@@ -71,7 +71,7 @@ module Masks
         connect
 
         assert_response :success
-        assert_match "uris:", response.body
+        assert_match "xixo:", response.body
         assert_match "you are granted it now", response.body
       end
 
@@ -83,7 +83,7 @@ module Masks
         connect(resource: OTHER_RESOURCE, origin: OTHER, name: "impostor")
 
         assert_response :bad_request
-        assert_match "uris: is claimed by #{RESOURCE}", response.body
+        assert_match "xixo: is claimed by #{RESOURCE}", response.body
         assert_equal RESOURCE, claimed.resource
       end
 
@@ -100,7 +100,7 @@ module Masks
 
       test "a namespace conflict is only ever an admin's to see, because a prefix is more than anybody else holds" do
         connector = create_actor(@tenant, nickname: "connector", password: "password",
-                                 scopes: Scopes.join(Scopes::STANDARD + [ Scopes::HANDSHAKE, "uris:" ]))
+                                 scopes: Scopes.join(Scopes::STANDARD + [ Scopes::HANDSHAKE, "xixo:" ]))
 
         sign_in_as(@owner)
         connect
@@ -113,7 +113,7 @@ module Masks
         connect(resource: OTHER_RESOURCE, origin: OTHER, name: "impostor")
 
         assert_response :bad_request
-        assert_match "uris: is more than this account holds", response.body
+        assert_match "xixo: is more than this account holds", response.body
         assert_select "a[href=?]", manage_path, false
       end
 
@@ -140,7 +140,7 @@ module Masks
         within(@tenant) do
           claimed.client.update!(archived_at: Time.current)
 
-          assert_equal RESOURCE, Namespace.find_by(name: "uris:").resource
+          assert_equal RESOURCE, Namespace.find_by(name: "xixo:").resource
         end
       end
 
@@ -155,7 +155,7 @@ module Masks
 
       test "a namespace must end in a colon" do
         within(@tenant) do
-          held = Namespace.new(name: "uris:catalog:read", resource: RESOURCE, claimed_at: Time.current)
+          held = Namespace.new(name: "xixo:catalog:read", resource: RESOURCE, claimed_at: Time.current)
 
           assert_not held.valid?
           assert_match "must end in a colon", held.errors.full_messages.join
@@ -168,11 +168,11 @@ module Masks
         approve!
 
         granted = within(@tenant) do
-          Actor.find(@owner.id).permitted_scopes(%w[openid uris:catalog:read uris:settings:admin])
+          Actor.find(@owner.id).permitted_scopes(%w[openid xixo:catalog:read xixo:settings:admin])
         end
 
-        assert_includes granted, "uris:catalog:read"
-        assert_includes granted, "uris:settings:admin"
+        assert_includes granted, "xixo:catalog:read"
+        assert_includes granted, "xixo:settings:admin"
       end
     end
   end

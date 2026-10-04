@@ -108,7 +108,7 @@ function client(options = {}) {
       issuer: ISSUER,
       clientId: "app-1",
       redirectUri: "https://app.test/callback",
-      scope: "openid profile uris:catalog:read",
+      scope: "openid profile xixo:catalog:read",
       resource: "https://app.test/mcp",
       fetch: upstream.fetch,
       storage: store,
@@ -121,7 +121,7 @@ const GRANTED = {
   access_token: "at-1",
   refresh_token: "rt-1",
   token_type: "Bearer",
-  scope: "openid profile uris:catalog:read",
+  scope: "openid profile xixo:catalog:read",
   expires_in: 3600,
 };
 
@@ -171,7 +171,7 @@ test("the authorize url carries pkce, the resource, and a stored state", async (
   assert.equal(url.searchParams.get("code_challenge_method"), "S256");
   assert.equal(
     url.searchParams.get("scope"),
-    "openid profile uris:catalog:read",
+    "openid profile xixo:catalog:read",
   );
   assert.deepEqual(url.searchParams.getAll("resource"), [
     "https://app.test/mcp",
@@ -198,7 +198,7 @@ test("a callback exchanges the code and returns where to go back to", async () =
   const upstream = server();
   const { subject, store } = client({ server: upstream });
 
-  await subject.authorizeUrl({ returnTo: "/uris/7" });
+  await subject.authorizeUrl({ returnTo: "/xixo/7" });
   const waiting = JSON.parse(store.getItem("masks:pending"));
   upstream.held.token = {
     ...GRANTED,
@@ -211,7 +211,7 @@ test("a callback exchanges the code and returns where to go back to", async () =
 
   assert.equal(tokens.access_token, "at-1");
   assert.equal(identity.sub, "actor-1");
-  assert.equal(returnTo, "/uris/7");
+  assert.equal(returnTo, "/xixo/7");
   assert.equal(subject.accessToken(), "at-1");
   assert.equal(subject.authorization(), "Bearer at-1");
   assert.equal(subject.expired(), false);
@@ -543,7 +543,7 @@ test("a client that asks for no id token sends no nonce and checks none", async 
   const upstream = server();
   const { subject, store } = client({
     server: upstream,
-    client: { scope: "uris:catalog:read" },
+    client: { scope: "xixo:catalog:read" },
   });
 
   const url = new URL(await subject.authorizeUrl({ returnTo: "/" }));
@@ -552,7 +552,7 @@ test("a client that asks for no id token sends no nonce and checks none", async 
   assert.equal(url.searchParams.get("nonce"), null);
   assert.equal(waiting.nonce, "");
 
-  upstream.held.token = { ...GRANTED, scope: "uris:catalog:read" };
+  upstream.held.token = { ...GRANTED, scope: "xixo:catalog:read" };
 
   const { identity } = await subject.callback(
     `https://app.test/callback?code=a&state=${waiting.state}`,
@@ -572,7 +572,7 @@ test("naming an organization sends it and leaves the scope as the app set it", a
   assert.equal(url.searchParams.get("organization"), "acme");
   assert.equal(
     url.searchParams.get("scope"),
-    "openid profile uris:catalog:read",
+    "openid profile xixo:catalog:read",
   );
 
   const other = new URL(
@@ -590,7 +590,7 @@ test("with no organization named, no parameter is sent", async () => {
   assert.equal(url.searchParams.get("organization"), null);
   assert.equal(
     url.searchParams.get("scope"),
-    "openid profile uris:catalog:read",
+    "openid profile xixo:catalog:read",
   );
 });
 

@@ -3,7 +3,7 @@ require "masks/client/delegations/fake"
 
 class DelegationsTest < ClientTest
   def delegations
-    Masks::Client.delegations(issuer.url, client_id: "uris", client_secret: "shh", redirect_uri: "https://app.test/connect/callback")
+    Masks::Client.delegations(issuer.url, client_id: "xixo", client_secret: "shh", redirect_uri: "https://app.test/connect/callback")
   end
 
   def granted(provider: "google")
@@ -38,7 +38,7 @@ class DelegationsTest < ClientTest
 
     assert_equal "authorization_code", sent["grant_type"]
     assert_equal started["verifier"], sent["code_verifier"]
-    assert_equal "Basic #{Base64.strict_encode64('uris:shh')}", issuer.last("/token")[:headers]["authorization"]
+    assert_equal "Basic #{Base64.strict_encode64('xixo:shh')}", issuer.last("/token")[:headers]["authorization"]
   end
 
   def test_a_state_that_does_not_match_is_refused_before_anything_is_redeemed
@@ -126,7 +126,7 @@ class DelegationsTest < ClientTest
   end
 
   def test_masks_itself_being_unreachable_is_worth_retrying
-    offline = Masks::Client::Delegations.new(issuer: issuer.url, client_id: "uris", client_secret: "shh", redirect_uri: "https://app.test/cb")
+    offline = Masks::Client::Delegations.new(issuer: issuer.url, client_id: "xixo", client_secret: "shh", redirect_uri: "https://app.test/cb")
     offline.issuer.discovery
     issuer.stop
 

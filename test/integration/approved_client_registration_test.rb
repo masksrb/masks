@@ -3,7 +3,7 @@ module Masks
     require "test_helper"
 
     class ApprovedClientRegistrationTest < ActionDispatch::IntegrationTest
-      APP = "https://demo.uris.test".freeze
+      APP = "https://demo.xixo.test".freeze
       RESOURCE = "#{APP}/mcp".freeze
 
       setup do
@@ -16,7 +16,7 @@ module Masks
         sign_in_as(@owner)
 
         query = [
-          [ "client_name", "uris" ],
+          [ "client_name", "xixo" ],
           [ "resource", RESOURCE ],
           [ "scope", "openid profile email" ],
           [ "return_to", "#{APP}/auth/handshake/callback" ],
@@ -82,10 +82,10 @@ module Masks
       test "what a human did not approve is still the client's to describe" do
         registration = paired
 
-        amended = amend(registration, client_name: "uris, renamed", logo_uri: "https://demo.uris.test/logo.png")
+        amended = amend(registration, client_name: "xixo, renamed", logo_uri: "https://demo.xixo.test/logo.png")
 
-        assert_equal "uris, renamed", amended["client_name"]
-        assert_equal "https://demo.uris.test/logo.png", amended["logo_uri"]
+        assert_equal "xixo, renamed", amended["client_name"]
+        assert_equal "https://demo.xixo.test/logo.png", amended["logo_uri"]
       end
 
       test "a dynamic client still describes its own redirect uris" do

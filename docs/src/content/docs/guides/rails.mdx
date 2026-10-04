@@ -140,7 +140,7 @@ accepts.
 class ApiController < ActionController::Base
   include Masks::Rails::ProtectedResource
 
-  masks_protect! scope: "uris:catalog:read", except: :metadata
+  masks_protect! scope: "xixo:catalog:read", except: :metadata
 
   def show
     render json: { subject: masks_claims.subject }
@@ -152,7 +152,7 @@ end
 the `org` claim:
 
 ```ruby
-masks_protect! scope: "uris:catalog:write", role: "owner", organization: "acme"
+masks_protect! scope: "xixo:catalog:write", role: "owner", organization: "acme"
 ```
 
 A refusal carries an RFC 6750 challenge whose `resource_metadata` points at

@@ -8,7 +8,7 @@ const ACCOUNT = {
   name: "Ada",
   email: "user@example.invalid",
   tenant: { uuid: "t-1", subdomain: "demo", name: "Demo" },
-  scopes: ["openid", "uris:catalog:read", "admin"],
+  scopes: ["openid", "xixo:catalog:read", "admin"],
 };
 
 function server(responses) {
@@ -51,7 +51,7 @@ test("a signed-in session comes back as an account", async () => {
 
   assert.equal(account.subject, "actor-1");
   assert.equal(account.tenant.subdomain, "demo");
-  assert.deepEqual(account.scopes, ["openid", "uris:catalog:read", "admin"]);
+  assert.deepEqual(account.scopes, ["openid", "xixo:catalog:read", "admin"]);
   assert.equal(upstream.calls[0].url, "/auth/session");
   assert.equal(upstream.calls[0].init.credentials, "same-origin");
 });
@@ -77,8 +77,8 @@ test("the login url carries where to come back to", () => {
   const { subject } = client([{ status: 200, body: ACCOUNT }]);
 
   assert.equal(
-    subject.loginUrl({ returnTo: "/uris/7?tab=analysis" }),
-    "/auth?return_to=%2Furis%2F7%3Ftab%3Danalysis",
+    subject.loginUrl({ returnTo: "/xixo/7?tab=analysis" }),
+    "/auth?return_to=%2Fxixo%2F7%3Ftab%3Danalysis",
   );
 });
 

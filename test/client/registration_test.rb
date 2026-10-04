@@ -9,7 +9,7 @@ class RegistrationTest < ClientTest
     issuer.override("/register", {
       "client_id" => "client-1",
       "client_secret" => "secret-1",
-      "client_name" => "uris",
+      "client_name" => "xixo",
       "redirect_uris" => [ "#{APP}/auth/callback" ],
       "registration_access_token" => "registration-token",
       "registration_client_uri" => "#{issuer.url}/register/client-1"
@@ -19,7 +19,7 @@ class RegistrationTest < ClientTest
   def create(**attributes)
     Masks::Client::Registration.create(
       issuer.url,
-      **{ name: "uris", redirect_uris: [ "#{APP}/auth/callback" ] }.merge(attributes)
+      **{ name: "xixo", redirect_uris: [ "#{APP}/auth/callback" ] }.merge(attributes)
     )
   end
 
@@ -36,9 +36,9 @@ class RegistrationTest < ClientTest
   end
 
   def test_reading_back_uses_the_registration_access_token
-    issuer.override("/register/client-1", { "client_id" => "client-1", "client_name" => "uris" })
+    issuer.override("/register/client-1", { "client_id" => "client-1", "client_name" => "xixo" })
 
-    assert_equal "uris", create.read["client_name"]
+    assert_equal "xixo", create.read["client_name"]
     assert_equal "Bearer registration-token", issuer.last("/register/client-1")[:headers]["authorization"]
   end
 
@@ -47,11 +47,11 @@ class RegistrationTest < ClientTest
 
     issuer.override("/register/client-1", {
       "client_id" => "client-1",
-      "client_name" => "uris",
+      "client_name" => "xixo",
       "redirect_uris" => [ "#{APP}/auth/callback", "#{APP}/other" ]
     })
 
-    registration.update(name: "uris", redirect_uris: [ "#{APP}/auth/callback", "#{APP}/other" ])
+    registration.update(name: "xixo", redirect_uris: [ "#{APP}/auth/callback", "#{APP}/other" ])
 
     sent = issuer.last("/register/client-1")
 

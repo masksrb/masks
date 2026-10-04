@@ -6,7 +6,7 @@ class ResourceTest < ClientTest
 
     assert_equal "actor-1", claims.subject
     assert_equal issuer.url, claims.issuer
-    assert_equal %w[uris:catalog:read uris:catalog:write], claims.scopes
+    assert_equal %w[xixo:catalog:read xixo:catalog:write], claims.scopes
     assert_equal [ "https://app.test/mcp" ], claims.audience
     refute claims.expired?
   end
@@ -142,7 +142,7 @@ class ResourceTest < ClientTest
   end
 
   def test_a_required_scope_is_enforced
-    token = issuer.access_token(scope: "uris:catalog:read")
+    token = issuer.access_token(scope: "xixo:catalog:read")
 
     error = assert_raises(Masks::Client::Forbidden) do
       resource.authenticate("Bearer #{token}", scope: "resources:command")
@@ -154,9 +154,9 @@ class ResourceTest < ClientTest
   end
 
   def test_a_granted_scope_passes
-    claims = resource.authenticate("Bearer #{issuer.access_token}", scope: "uris:catalog:read")
+    claims = resource.authenticate("Bearer #{issuer.access_token}", scope: "xixo:catalog:read")
 
-    assert claims.permits?("uris:catalog:write")
+    assert claims.permits?("xixo:catalog:write")
     refute claims.permits?("resources:command")
   end
 
@@ -165,7 +165,7 @@ class ResourceTest < ClientTest
 
     assert_includes challenge, 'error="invalid_token"'
     assert_includes challenge, 'error_description="nope"'
-    assert_includes challenge, 'scope="uris:catalog:read uris:catalog:write resources:command"'
+    assert_includes challenge, 'scope="xixo:catalog:read xixo:catalog:write resources:command"'
     assert_includes challenge,
                     'resource_metadata="https://app.test/.well-known/oauth-protected-resource"'
   end
@@ -186,7 +186,7 @@ class ResourceTest < ClientTest
       {
         "resource" => "https://app.test/mcp",
         "authorization_servers" => [ issuer.url ],
-        "scopes_supported" => %w[uris:catalog:read uris:catalog:write resources:command],
+        "scopes_supported" => %w[xixo:catalog:read xixo:catalog:write resources:command],
         "bearer_methods_supported" => [ "header" ],
         "dpop_signing_alg_values_supported" => Masks::Client::Proof::ALGORITHMS
       },
@@ -198,11 +198,11 @@ class ResourceTest < ClientTest
     described = Masks::Client::Resource.new(
       issuer: issuer.url,
       url: "https://app.test/mcp",
-      scopes: { "uris:catalog:read" => "Search and read your catalog" }
+      scopes: { "xixo:catalog:read" => "Search and read your catalog" }
     )
 
-    assert_equal %w[uris:catalog:read], described.scopes
-    assert_equal({ "uris:catalog:read" => "Search and read your catalog" },
+    assert_equal %w[xixo:catalog:read], described.scopes
+    assert_equal({ "xixo:catalog:read" => "Search and read your catalog" },
                  described.metadata["scope_descriptions"])
   end
 

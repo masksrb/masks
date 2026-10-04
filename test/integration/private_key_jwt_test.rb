@@ -22,7 +22,7 @@ module Masks
           Client.create!(
             client_id: SecureRandom.uuid, name: "Indexer",
             grant_types: [ Client::CLIENT_CREDENTIALS ], response_types: [],
-            resources: [ "https://uris.example.com/mcp" ], allowed_scopes: "uris:catalog:read",
+            resources: [ "https://xixo.example.com/mcp" ], allowed_scopes: "xixo:catalog:read",
             token_endpoint_auth_method: Client::PRIVATE_KEY_JWT, jwks: public_jwks,
             approved_at: Time.current, **attributes
           )
@@ -45,7 +45,7 @@ module Masks
       test "a client signs in with an assertion made with its own key" do
         body = grant
 
-        assert_equal "uris:catalog:read", body["scope"], body
+        assert_equal "xixo:catalog:read", body["scope"], body
         assert_equal @service.client_id, claims_in(body["access_token"])["sub"]
       end
 
@@ -110,7 +110,7 @@ module Masks
       test "a client with a secret cannot present an assertion instead" do
         secretive = within do
           Client.new(client_id: SecureRandom.uuid, name: "Secretive", grant_types: [ Client::CLIENT_CREDENTIALS ],
-                     allowed_scopes: "uris:catalog:read", approved_at: Time.current).tap(&:issue_credentials!)
+                     allowed_scopes: "xixo:catalog:read", approved_at: Time.current).tap(&:issue_credentials!)
         end
 
         assert_equal "invalid_client", grant(assertion(secretive))["error"]

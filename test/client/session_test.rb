@@ -4,7 +4,7 @@ class SessionTest < ClientTest
   def session
     Masks::Client::Session.new(
       issuer: issuer.url, client_id: "app",
-      redirect_uri: "https://app.test/callback", scope: %w[openid uris:catalog:read]
+      redirect_uri: "https://app.test/callback", scope: %w[openid xixo:catalog:read]
     )
   end
 
@@ -23,7 +23,7 @@ class SessionTest < ClientTest
     query = URI.decode_www_form(URI.parse(session.start(organization: " acme ")[:url]).query)
 
     assert_equal "acme", query.assoc("organization").last
-    assert_equal "openid uris:catalog:read", query.assoc("scope").last
+    assert_equal "openid xixo:catalog:read", query.assoc("scope").last
 
     assert_nil URI.decode_www_form(URI.parse(session.start(organization: "")[:url]).query).assoc("organization")
   end
@@ -35,7 +35,7 @@ class SessionTest < ClientTest
     assert_equal started[:nonce], query.assoc("nonce").last
     refute_nil started[:nonce]
 
-    started = session.start(scope: %w[uris:catalog:read])
+    started = session.start(scope: %w[xixo:catalog:read])
     query = URI.decode_www_form(URI.parse(started[:url]).query)
 
     assert_nil started[:nonce]
@@ -43,10 +43,10 @@ class SessionTest < ClientTest
   end
 
   def test_a_service_asks_for_its_own_token_with_a_secret
-    issuer.override("/token", { "access_token" => "at", "token_type" => "Bearer", "scope" => "uris:catalog:read", "expires_in" => 60 })
+    issuer.override("/token", { "access_token" => "at", "token_type" => "Bearer", "scope" => "xixo:catalog:read", "expires_in" => 60 })
 
     service = Masks::Client::Session.new(issuer: issuer.url, client_id: "indexer", client_secret: "shh")
-    tokens = service.client_credentials(scope: "uris:catalog:read", resource: "https://app.test/mcp")
+    tokens = service.client_credentials(scope: "xixo:catalog:read", resource: "https://app.test/mcp")
     sent = issuer.last("/token")
 
     assert_equal "at", tokens.access_token
@@ -113,19 +113,19 @@ class SessionTest < ClientTest
 
   def test_a_granted_response_becomes_tokens
     issuer.override("/token", { "access_token" => "at", "token_type" => "Bearer",
-                                "scope" => "openid uris:catalog:read", "expires_in" => 3600 })
+                                "scope" => "openid xixo:catalog:read", "expires_in" => 3600 })
 
     tokens = session.complete(code: "abc", verifier: "v")
 
     assert_equal "at", tokens.access_token
-    assert_equal %w[openid uris:catalog:read], tokens.scopes
+    assert_equal %w[openid xixo:catalog:read], tokens.scopes
     assert_equal "Bearer at", tokens.authorization
     refute tokens.expired?
   end
 
   def test_introspection_answers_a_claims_object_rather_than_a_hash
     issuer.override("/introspect", {
-                      "active" => true, "scope" => "uris:catalog:read", "sub" => "actor-1",
+                      "active" => true, "scope" => "xixo:catalog:read", "sub" => "actor-1",
                       "client_id" => "app", "username" => "owner", "token_type" => "Bearer",
                       "exp" => Time.now.to_i + 60, "aud" => [ "https://app.test/mcp" ]
                     })
@@ -136,8 +136,8 @@ class SessionTest < ClientTest
     assert_equal "actor-1", found.subject
     assert_equal "owner", found.nickname
     assert_equal "Bearer", found.token_type
-    assert_equal [ "uris:catalog:read" ], found.scopes
-    assert found.permits?("uris:catalog:read")
+    assert_equal [ "xixo:catalog:read" ], found.scopes
+    assert found.permits?("xixo:catalog:read")
     assert_equal "access_token", issuer.last("/introspect")[:body]["token_type_hint"]
   end
 
@@ -154,14 +154,14 @@ class SessionTest < ClientTest
   end
 
   def test_an_inactive_token_permits_nothing_however_wide_its_scope_reads
-    issuer.override("/introspect", { "active" => false, "scope" => "uris:catalog:read" })
+    issuer.override("/introspect", { "active" => false, "scope" => "xixo:catalog:read" })
 
     found = session.introspect("revoked")
 
     refute found.active?
-    refute found.permits?("uris:catalog:read")
+    refute found.permits?("xixo:catalog:read")
 
-    error = assert_raises(Masks::Client::Unauthorized) { found.permit!("uris:catalog:read") }
+    error = assert_raises(Masks::Client::Unauthorized) { found.permit!("xixo:catalog:read") }
 
     assert_match(/not active/, error.message)
   end

@@ -9,9 +9,9 @@ module Masks
         @client = Tenant.switch(@tenant) do
           Client.create!(
             client_id: SecureRandom.uuid,
-            name: "uris",
+            name: "xixo",
             redirect_uris: [ OidcFlow::REDIRECT_URI ],
-            allowed_scopes: "openid profile email offline_access uris:",
+            allowed_scopes: "openid profile email offline_access xixo:",
             grant_types: [ "authorization_code" ],
             response_types: [ "code" ],
             token_endpoint_auth_method: "none",
@@ -28,32 +28,32 @@ module Masks
       end
 
       test "a namespace grant covers a scope nobody registered by name" do
-        authorize(client_id: @client.client_id, scope: "openid uris:catalog:read uris:settings:admin")
+        authorize(client_id: @client.client_id, scope: "openid xixo:catalog:read xixo:settings:admin")
 
         assert_nil refusal&.dig("error"),
-                   "a client granted uris: may ask for anything beneath it"
+                   "a client granted xixo: may ask for anything beneath it"
       end
 
       test "a namespace grant does not reach past its own prefix" do
-        authorize(client_id: @client.client_id, scope: "openid uris:catalog:read masks:manage")
+        authorize(client_id: @client.client_id, scope: "openid xixo:catalog:read masks:manage")
 
         assert_equal "invalid_scope", refusal["error"]
         assert_equal "this client may not request masks:manage", refusal["error_description"]
       end
 
       test "the bare namespace is not a scope anyone can ask for" do
-        authorize(client_id: @client.client_id, scope: "openid uris:")
+        authorize(client_id: @client.client_id, scope: "openid xixo:")
 
         assert_equal "invalid_scope", refusal["error"]
-        assert_equal "this client may not request uris:", refusal["error_description"]
+        assert_equal "this client may not request xixo:", refusal["error_description"]
       end
 
       test "what is granted is the scope asked for, never the prefix itself" do
         Tenant.switch(@tenant) do
-          granted = @client.permitted_scopes(%w[uris:catalog:read uris:settings:admin])
+          granted = @client.permitted_scopes(%w[xixo:catalog:read xixo:settings:admin])
 
-          assert_equal %w[uris:catalog:read uris:settings:admin], granted - Scopes::STANDARD
-          assert_not_includes granted, "uris:"
+          assert_equal %w[xixo:catalog:read xixo:settings:admin], granted - Scopes::STANDARD
+          assert_not_includes granted, "xixo:"
         end
       end
     end

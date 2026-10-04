@@ -13,7 +13,7 @@ module Masks
       setup do
         @actor = create_actor(@tenant, nickname: "owner", email: "owner@acme.test")
         @client = create_client(
-          name: "Uris", token_endpoint_auth_method: "client_secret_post", approved_at: Time.current,
+          name: "Xixo", token_endpoint_auth_method: "client_secret_post", approved_at: Time.current,
           allowed_scopes: "openid profile email offline_access masks:delegate:",
           grant_types: [ "authorization_code", "refresh_token", Exchange::GRANT_TYPE ]
         )
@@ -260,7 +260,7 @@ module Masks
 
         get "/"
 
-        assert_includes response.body, "Uris can use it"
+        assert_includes response.body, "Xixo can use it"
 
         delete "/account/delegations/#{delegation.uuid}"
 
@@ -517,7 +517,7 @@ module Masks
       end
 
       test "a handshake that asks for delegation may exchange" do
-        handshake = Handshake.new(name: "Uris", redirect_uris: [ REDIRECT_URI ], resource: "https://uris.test",
+        handshake = Handshake.new(name: "Xixo", redirect_uris: [ REDIRECT_URI ], resource: "https://xixo.test",
                                   scopes: "openid masks:delegate:acme")
 
         assert_includes handshake.grant_types, Exchange::GRANT_TYPE

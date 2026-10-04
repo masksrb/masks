@@ -6,7 +6,7 @@ module Masks
     class ClientCredentialsTest < ActionDispatch::IntegrationTest
       include DpopProofs
 
-      RESOURCE = "https://uris.example.com/mcp".freeze
+      RESOURCE = "https://xixo.example.com/mcp".freeze
       GRANT = Client::CLIENT_CREDENTIALS
 
       setup do
@@ -20,7 +20,7 @@ module Masks
             client_id: SecureRandom.uuid, name: "Indexer",
             grant_types: [ GRANT ], response_types: [],
             resources: [ RESOURCE ],
-            allowed_scopes: "uris:catalog:read uris:catalog:write openid profile masks:manage",
+            allowed_scopes: "xixo:catalog:read xixo:catalog:write openid profile masks:manage",
             approved_at: Time.current,
             **attributes
           )
@@ -39,7 +39,7 @@ module Masks
         body = grant
 
         assert_equal "Bearer", body["token_type"]
-        assert_equal "uris:catalog:read uris:catalog:write", body["scope"]
+        assert_equal "xixo:catalog:read xixo:catalog:write", body["scope"]
         assert_nil body["refresh_token"]
         assert_nil body["id_token"]
 
@@ -51,7 +51,7 @@ module Masks
       end
 
       test "a narrower scope is honoured" do
-        assert_equal "uris:catalog:read", grant(scope: "uris:catalog:read")["scope"]
+        assert_equal "xixo:catalog:read", grant(scope: "xixo:catalog:read")["scope"]
       end
 
       test "a scope that speaks for a person is never held without one" do
@@ -63,7 +63,7 @@ module Masks
       end
 
       test "a scope the client was never allowed is refused" do
-        assert_equal "invalid_scope", grant(scope: "uris:catalog:admin")["error"]
+        assert_equal "invalid_scope", grant(scope: "xixo:catalog:admin")["error"]
       end
 
       test "a resource the client does not speak for is refused" do
@@ -136,7 +136,7 @@ module Masks
 
         body = token(
           grant_type: Exchange::GRANT_TYPE, subject_token: grant["access_token"],
-          subject_token_type: Exchange::ACCESS_TOKEN, scope: "uris:catalog:read",
+          subject_token_type: Exchange::ACCESS_TOKEN, scope: "xixo:catalog:read",
           client_id: downstream.client_id, client_secret: downstream.secret
         )
 
@@ -164,7 +164,7 @@ module Masks
         }
       }",
           bearer: manage_bearer(manager, console),
-          name: "Nightly", resources: [ RESOURCE ], allowedScopes: [ "uris:catalog:read" ]
+          name: "Nightly", resources: [ RESOURCE ], allowedScopes: [ "xixo:catalog:read" ]
         ).dig("data", "createClient")
 
         assert_equal [ GRANT ], created.dig("client", "grantTypes")
@@ -173,7 +173,7 @@ module Masks
 
         body = token(grant_type: GRANT, client_id: created.dig("client", "clientId"), client_secret: created["secret"])
 
-        assert_equal "uris:catalog:read", body["scope"]
+        assert_equal "xixo:catalog:read", body["scope"]
       end
     end
   end

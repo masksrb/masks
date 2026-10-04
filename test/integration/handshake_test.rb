@@ -3,21 +3,21 @@ module Masks
     require "test_helper"
 
     class HandshakeTest < ActionDispatch::IntegrationTest
-      APP = "https://demo.uris.test".freeze
+      APP = "https://demo.xixo.test".freeze
       RESOURCE = "#{APP}/mcp".freeze
       RETURN_TO = "#{APP}/auth/handshake/callback".freeze
       REDIRECT_URI = "#{APP}/auth/masks/callback".freeze
-      SCOPE = "openid profile email offline_access uris:catalog:read".freeze
+      SCOPE = "openid profile email offline_access xixo:catalog:read".freeze
 
       setup do
         @owner = create_actor(@tenant, nickname: "owner", password: "password",
-                              scopes: Scopes.join(Scopes::STANDARD + [ Scopes::HANDSHAKE, "uris:catalog:read" ]))
+                              scopes: Scopes.join(Scopes::STANDARD + [ Scopes::HANDSHAKE, "xixo:catalog:read" ]))
         host! host_for(@tenant)
       end
 
       def connect(redirect_uris: [ REDIRECT_URI ], **overrides)
         params = {
-          client_name: "uris",
+          client_name: "xixo",
           resource: RESOURCE,
           scope: SCOPE,
           return_to: RETURN_TO,
@@ -162,7 +162,7 @@ module Masks
         assert_response :success
         assert_match "Register a new client?", response.body
         assert_match APP, response.body
-        assert_match "uris:catalog:read", response.body
+        assert_match "xixo:catalog:read", response.body
         assert_match REDIRECT_URI, response.body
       end
 
@@ -200,7 +200,7 @@ module Masks
         registration = redeem(approve!)
 
         assert_equal [ REDIRECT_URI ], registration["redirect_uris"]
-        assert_equal "uris", registration["client_name"]
+        assert_equal "xixo", registration["client_name"]
         assert_equal Scopes.list(SCOPE), Scopes.list(registration["scope"])
         assert_equal [ RESOURCE ], approved.resources
       end
@@ -373,7 +373,7 @@ module Masks
       end
 
       test "approving the screen that was rendered connects that app, not the newer one" do
-        other = "https://other.uris.test"
+        other = "https://other.xixo.test"
 
         sign_in_as(@owner)
 
@@ -392,7 +392,7 @@ module Masks
 
         assert response.location.start_with?(RETURN_TO), "connected the wrong app"
 
-        assert_equal [ "uris" ], within(@tenant) { Client.all.map(&:name) }
+        assert_equal [ "xixo" ], within(@tenant) { Client.all.map(&:name) }
       end
 
       test "a hid from another browser connects nothing" do
@@ -468,9 +468,9 @@ module Masks
         connect
         theirs = current_hid
 
-        connect(client_name: "other", resource: "https://other.uris.test/mcp",
-                return_to: "https://other.uris.test/auth/handshake/callback",
-                redirect_uris: [ "https://other.uris.test/auth/masks/callback" ])
+        connect(client_name: "other", resource: "https://other.xixo.test/mcp",
+                return_to: "https://other.xixo.test/auth/handshake/callback",
+                redirect_uris: [ "https://other.xixo.test/auth/masks/callback" ])
 
         travel(HandshakesController::WAIT + 1.second) { post "/handshake", params: { approve: "yes", hid: theirs, shown: current_shown } }
 
@@ -512,7 +512,7 @@ module Masks
         connect
 
         assert_match "Replace an existing client?", response.body
-        assert_match "The uris client you approved on", response.body
+        assert_match "The xixo client you approved on", response.body
       end
 
       test "a token minted for one tenant registers nothing at another" do
@@ -577,7 +577,7 @@ module Masks
         registration = redeem(approve!)
 
         colleague = create_actor(@tenant, nickname: "colleague", password: "password",
-                                 scopes: Scopes.join(Scopes::STANDARD + [ "uris:catalog:read" ]))
+                                 scopes: Scopes.join(Scopes::STANDARD + [ "xixo:catalog:read" ]))
         reset!
         host! host_for(@tenant)
         sign_in_as(colleague)
@@ -594,7 +594,7 @@ module Masks
         within(@tenant) { Client.find_by!(client_id: registration["client_id"]).update!(consent_required: false) }
 
         colleague = create_actor(@tenant, nickname: "colleague", password: "password",
-                                 scopes: Scopes.join(Scopes::STANDARD + [ "uris:catalog:read" ]))
+                                 scopes: Scopes.join(Scopes::STANDARD + [ "xixo:catalog:read" ]))
         reset!
         host! host_for(@tenant)
         sign_in_as(colleague)
@@ -661,7 +661,7 @@ module Masks
         claims = claims_in(granted["access_token"])
 
         assert_equal [ RESOURCE ], Array(claims["aud"])
-        assert_includes Scopes.list(claims["scope"]), "uris:catalog:read"
+        assert_includes Scopes.list(claims["scope"]), "xixo:catalog:read"
       end
 
       test "the endpoint an app sends a person to is the one discovery advertises" do

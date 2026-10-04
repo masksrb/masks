@@ -142,18 +142,18 @@ class ConfigurationTest < EngineTest
 
   test "without a namespace the handshake asks for exactly what a sign-in does" do
     Masks::Rails.config.namespace = nil
-    Masks::Rails.config.scope = %w[openid profile email offline_access uris:catalog:read]
+    Masks::Rails.config.scope = %w[openid profile email offline_access xixo:catalog:read]
 
-    assert_equal %w[openid profile email offline_access uris:catalog:read],
+    assert_equal %w[openid profile email offline_access xixo:catalog:read],
                  config.approved_scope
   end
 
   test "a namespace collapses the scopes beneath it and keeps the rest" do
-    Masks::Rails.config.namespace = "uris:"
+    Masks::Rails.config.namespace = "xixo:"
     Masks::Rails.config.scope =
-      %w[openid profile email offline_access uris:catalog:read uris:settings:write]
+      %w[openid profile email offline_access xixo:catalog:read xixo:settings:write]
 
-    assert_equal %w[openid profile email offline_access uris:], config.approved_scope
+    assert_equal %w[openid profile email offline_access xixo:], config.approved_scope
   end
 
   test "an app that delegates registers where connecting comes back to" do
@@ -169,22 +169,22 @@ class ConfigurationTest < EngineTest
   end
 
   test "an app that delegates asks the handshake for delegation too" do
-    Masks::Rails.config.namespace = "uris:"
+    Masks::Rails.config.namespace = "xixo:"
     Masks::Rails.config.delegates = true
-    Masks::Rails.config.scope = %w[openid offline_access uris:catalog:read]
+    Masks::Rails.config.scope = %w[openid offline_access xixo:catalog:read]
 
-    assert_equal %w[openid offline_access uris: masks:delegate:], config.approved_scope
+    assert_equal %w[openid offline_access xixo: masks:delegate:], config.approved_scope
   ensure
     Masks::Rails.config.delegates = false
   end
 
   test "the handshake carries the namespace, so a new capability needs no approval" do
-    Masks::Rails.config.namespace = "uris:"
-    Masks::Rails.config.scope = %w[openid uris:catalog:read]
+    Masks::Rails.config.namespace = "xixo:"
+    Masks::Rails.config.scope = %w[openid xixo:catalog:read]
 
     handshake = config.handshake_for(request_for(HOST))
 
-    assert_equal %w[openid uris:], handshake.scope
+    assert_equal %w[openid xixo:], handshake.scope
   end
 
   private
