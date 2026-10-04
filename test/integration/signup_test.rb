@@ -285,6 +285,16 @@ module Masks
         assert_equal "+15557654321", within(@tenant) { @owner.reload.phone }
       end
 
+      test "a missing phone is not set from a password alone, before the second factor" do
+        policy!(phone: "required")
+
+        event("identify", identifier: "owner")
+        event("password", password: "password")
+        event("confirm:add-phone", phone: "+15557654321")
+
+        assert_nil within(@tenant) { @owner.reload.phone }
+      end
+
       test "a client's own policy is the one that applies" do
         registration = register(@tenant)
         own = within(@tenant) { SignInPolicy.create!(key: "own", name: "Own", signup: true, second_factors: [ "backup_codes" ]) }

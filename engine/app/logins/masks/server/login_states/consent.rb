@@ -11,7 +11,7 @@ module Masks
         end
 
         handles "consent" do
-          record
+          record if login.first_factored? && !login.second_factor_pending?
         end
 
         handles "decline" do

@@ -54,7 +54,7 @@ module Masks
         end
 
         def enabled?
-          actor.present? && login.first_factored? &&
+          actor.present? && login.first_factored? && !login.second_factor_pending? &&
             (actor.pending_approval_at.present? || phone_missing? || CHANNELS.keys.any? { |channel| unconfirmed?(channel) })
         end
 

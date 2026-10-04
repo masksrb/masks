@@ -270,6 +270,10 @@ module Masks
         touched?(:second_factor) || signed_in? || remembered?(:second_factor)
       end
 
+      def second_factor_pending?
+        state("second-factor").enabled? && !second_factored?
+      end
+
       def remembered?(factor)
         return false if device.nil? || actor.nil?
 

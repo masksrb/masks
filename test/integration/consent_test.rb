@@ -9,6 +9,19 @@ module Masks
         host! host_for(@tenant)
       end
 
+      test "consent is not recorded from a password alone, before the second factor" do
+        enable_otp(@actor)
+        authorize(client_id: @registration["client_id"])
+        rid = current_rid
+
+        post "/login", params: { event: "identify", identifier: @actor.nickname, rid: rid }, as: :json
+        post "/login", params: { event: "password", password: "password", rid: rid }, as: :json
+        post "/login", params: { event: "consent", approve: "yes", rid: rid }, as: :json
+
+        assert_equal "second-factor", JSON.parse(response.body)["prompt"]
+        within { assert_not Consent.exists?(actor_id: @actor.id) }
+      end
+
       test "consent is asked once and remembered after that" do
         authorized_code(actor: @actor, registration: @registration)
 
