@@ -4,6 +4,7 @@ module Masks
       POSTED = %w[code state error error_description user SAMLResponse RelayState].freeze
       POSTED_LIMIT = 256.kilobytes
       POSTED_WINDOW = 5.minutes
+      UNNAVIGABLE = %w[javascript data vbscript file blob].freeze
 
       skip_forgery_protection
 
@@ -159,13 +160,19 @@ module Masks
         end
 
         def serialize(login)
-          login.as_json.merge("redirectTo" => next_location(login))
+          login.as_json.merge("redirectTo" => navigable(next_location(login)))
         end
 
         def attempted_account
           identifier = login_store["identifier"].to_s.strip.downcase
 
           login_store["actor_id"].presence || Actor.locate(identifier)&.id || identifier
+        end
+
+        def navigable(location)
+          scheme = location.to_s.gsub(/[\x00-\x20]/, "")[/\A([a-z][a-z0-9+.-]*):/i, 1]
+
+          location unless scheme && UNNAVIGABLE.include?(scheme.downcase)
         end
 
         def verifying?
@@ -209,9 +216,23 @@ module Masks
         end
 
         def hold_return_to
-          held = params[:return_to].to_s
+          held = local_path(params[:return_to])
 
-          session[RETURN_TO] = held if held.start_with?("/") && !held.start_with?("//", "/\\")
+          session[RETURN_TO] = held if held
+        end
+
+        def local_path(value)
+          held = value.to_s
+
+          return nil if !held.start_with?("/") || held.start_with?("//") || held.match?(/[\x00-\x20\x7f\\]/)
+
+          uri = URI.parse(held)
+
+          return nil if uri.scheme || uri.host || uri.userinfo
+
+          "#{uri.path}#{"?#{uri.query}" if uri.query}#{"##{uri.fragment}" if uri.fragment}"
+        rescue URI::InvalidURIError
+          nil
         end
     end
   end

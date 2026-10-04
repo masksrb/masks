@@ -1,6 +1,13 @@
 import { translator } from "./copy.js";
 import { root } from "./root.js";
 
+const UNNAVIGABLE = /^(javascript|data|vbscript|file|blob):/i;
+
+const navigable = (location) =>
+  typeof location === "string" &&
+  location !== "" &&
+  !UNNAVIGABLE.test(location.replace(/[\u0000-\u0020]/g, ""));
+
 const csrf = () =>
   document.querySelector('meta[name="csrf-token"]')?.content ?? "";
 
@@ -51,7 +58,7 @@ export function createLogin(initial, options = {}) {
 
       auth = held;
 
-      if (auth.redirectTo) {
+      if (navigable(auth.redirectTo)) {
         window.location.assign(auth.redirectTo);
       }
 
