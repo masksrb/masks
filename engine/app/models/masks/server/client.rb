@@ -26,6 +26,21 @@ module Masks
       LINKS = %i[client_uri tos_uri policy_uri].freeze
       METADATA_URIS = (LINKS + [ :logo_uri ]).freeze
       URI_LIMIT = 2048
+      METADATA_STRINGS = %w[
+        token_endpoint_auth_method subject_type sector_identifier_uri application_type client_uri logo_uri tos_uri
+        policy_uri backchannel_logout_uri jwks jwks_uri
+      ].freeze
+      METADATA_LISTS = %w[redirect_uris post_logout_redirect_uris resources authorization_details_types].freeze
+      METADATA_SCOPES = %w[grant_types response_types].freeze
+      METADATA_FLAGS = %w[
+        dpop_bound_access_tokens backchannel_logout_session_required require_pushed_authorization_requests
+        require_signed_request_object
+      ].freeze
+      APPROVED = %i[
+        redirect_uris post_logout_redirect_uris token_endpoint_auth_method resources
+        subject_type sector_identifier_uri dpop_bound_access_tokens grant_types response_types
+        authorization_details_types
+      ].freeze
 
       class ScopesUnavailable < StandardError; end
 
@@ -108,42 +123,36 @@ module Masks
           active.approved.where("resources @> ?", [ resource.to_s ].to_json).first
         end
 
-        def register!(attributes)
-          grant_types = Scopes.list(attributes[:grant_types]).presence || [ "authorization_code" ]
+        def register!(metadata)
+          new(client_id: SecureRandom.uuid, **registered_attributes(metadata, name: "Unnamed client")).issue_credentials!
+        end
 
-          client = new(
-            client_id: SecureRandom.uuid,
-            name: attributes[:name].presence || "Unnamed client",
-            redirect_uris: Array(attributes[:redirect_uris]).map(&:to_s),
-            post_logout_redirect_uris: Array(attributes[:post_logout_redirect_uris]).map(&:to_s),
+        def metadata_attributes(metadata)
+          held = metadata.to_h.stringify_keys.compact_blank
+
+          held.slice(*METADATA_STRINGS)
+              .merge(held.slice(*METADATA_LISTS).transform_values { |value| Array(value).map(&:to_s) })
+              .merge(held.slice(*METADATA_SCOPES).transform_values { |value| Scopes.list(value) })
+              .merge(held.slice(*METADATA_FLAGS).transform_values { |value| ActiveModel::Type::Boolean.new.cast(value) })
+              .merge(held.key?("client_name") ? { "name" => held["client_name"] } : {})
+              .symbolize_keys
+        end
+
+        def registered_attributes(metadata, name:, auth_method: DEFAULT_AUTH_METHOD)
+          held = metadata_attributes(metadata)
+          grant_types = held[:grant_types].presence || [ "authorization_code" ]
+
+          {
+            token_endpoint_auth_method: auth_method,
+            subject_type: Subjects::PUBLIC,
+            application_type: "web"
+          }.merge(held).merge(
+            name: held[:name] || name,
             grant_types: grant_types,
-            response_types: Scopes.list(attributes[:response_types]).presence || response_types_for(grant_types),
-            resources: Array(attributes[:resources]).map(&:to_s),
-            allowed_scopes: Scopes.join(bounded(attributes[:scopes].presence || DEFAULT_SCOPES)),
-            token_endpoint_auth_method: attributes[:token_endpoint_auth_method].presence || DEFAULT_AUTH_METHOD,
-            subject_type: attributes[:subject_type].presence || Subjects::PUBLIC,
-            dpop_bound_access_tokens:
-              ActiveModel::Type::Boolean.new.cast(attributes[:dpop_bound_access_tokens]) || false,
-            sector_identifier_uri: attributes[:sector_identifier_uri],
-            application_type: attributes[:application_type].presence || "web",
-            client_uri: attributes[:client_uri],
-            logo_uri: attributes[:logo_uri],
-            tos_uri: attributes[:tos_uri],
-            policy_uri: attributes[:policy_uri],
-            backchannel_logout_uri: attributes[:backchannel_logout_uri],
-            backchannel_logout_session_required:
-              ActiveModel::Type::Boolean.new.cast(attributes[:backchannel_logout_session_required]) || false,
-            require_pushed_authorization_requests:
-              ActiveModel::Type::Boolean.new.cast(attributes[:require_pushed_authorization_requests]) || false,
-            jwks: attributes[:jwks],
-            jwks_uri: attributes[:jwks_uri],
-            require_signed_request_object:
-              ActiveModel::Type::Boolean.new.cast(attributes[:require_signed_request_object]) || false,
-            authorization_details_types: attributes[:authorization_details_types] || [],
+            response_types: held[:response_types].presence || response_types_for(grant_types),
+            allowed_scopes: Scopes.join(bounded(metadata.to_h.stringify_keys["scope"].presence || DEFAULT_SCOPES)),
             dynamic: true
           )
-
-          client.issue_credentials!
         end
 
         def bounded(requested)

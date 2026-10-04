@@ -16,9 +16,10 @@ module Masks
       DEFAULT_AUTH_METHOD = "none".freeze
       FORBIDDEN = %w[client_secret client_secret_expires_at registration_access_token registration_client_uri].freeze
       STRINGS = %w[client_name client_uri logo_uri tos_uri policy_uri jwks_uri backchannel_logout_uri
-                   token_endpoint_auth_method application_type subject_type scope].freeze
-      LISTS = %w[redirect_uris post_logout_redirect_uris grant_types response_types authorization_details_types].freeze
-      FLAGS = %w[backchannel_logout_session_required dpop_bound_access_tokens require_pushed_authorization_requests].freeze
+                   token_endpoint_auth_method application_type subject_type sector_identifier_uri scope].freeze
+      LISTS = %w[redirect_uris post_logout_redirect_uris grant_types response_types resources authorization_details_types].freeze
+      FLAGS = %w[backchannel_logout_session_required dpop_bound_access_tokens require_pushed_authorization_requests
+                 require_signed_request_object].freeze
 
       class << self
         def url?(client_id)
@@ -153,36 +154,10 @@ module Masks
         end
 
         def attributes(document, expires_at, approved:)
-          grant_types = Scopes.list(document["grant_types"]).presence || [ "authorization_code" ]
+          held = Client.registered_attributes(document, name: URI.parse(client_id).host, auth_method: DEFAULT_AUTH_METHOD)
+          held = held.slice(:name, :client_uri, :logo_uri, :tos_uri, :policy_uri) if approved
 
-          described = {
-            name: (document["client_name"].presence || URI.parse(client_id).host).truncate(NAME_LIMIT),
-            client_uri: document["client_uri"],
-            logo_uri: document["logo_uri"],
-            tos_uri: document["tos_uri"],
-            policy_uri: document["policy_uri"],
-            metadata_expires_at: expires_at
-          }
-
-          return described if approved
-
-          described.merge(
-            redirect_uris: Array(document["redirect_uris"]),
-            post_logout_redirect_uris: Array(document["post_logout_redirect_uris"]),
-            grant_types: grant_types,
-            response_types: Scopes.list(document["response_types"]).presence || Client.response_types_for(grant_types),
-            allowed_scopes: Scopes.join(Client.bounded(document["scope"].presence || Client::DEFAULT_SCOPES)),
-            token_endpoint_auth_method: document["token_endpoint_auth_method"] || DEFAULT_AUTH_METHOD,
-            subject_type: document["subject_type"].presence || Subjects::PUBLIC,
-            application_type: document["application_type"].presence || "web",
-            jwks: document["jwks"],
-            jwks_uri: document["jwks_uri"],
-            backchannel_logout_uri: document["backchannel_logout_uri"],
-            backchannel_logout_session_required: document["backchannel_logout_session_required"] || false,
-            dpop_bound_access_tokens: document["dpop_bound_access_tokens"] || false,
-            require_pushed_authorization_requests: document["require_pushed_authorization_requests"] || false,
-            authorization_details_types: Array(document["authorization_details_types"])
-          )
+          held.merge(name: held[:name].truncate(NAME_LIMIT), metadata_expires_at: expires_at)
         end
     end
   end

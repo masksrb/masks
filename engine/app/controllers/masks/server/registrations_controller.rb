@@ -18,7 +18,7 @@ module Masks
         return redeem if bearer.present?
         return refused unless current_tenant.registers?
 
-        client = Client.register!(attributes)
+        client = Client.register!(body)
 
         Event.record!(Event::CLIENT_REGISTERED, client: client, name: client.name, dynamic: true)
 
@@ -76,44 +76,10 @@ module Masks
           end
         end
 
-        def attributes
-          {
-            name: body[:client_name],
-            redirect_uris: body[:redirect_uris],
-            post_logout_redirect_uris: body[:post_logout_redirect_uris],
-            grant_types: body[:grant_types],
-            response_types: body[:response_types],
-            resources: body[:resources],
-            scopes: body[:scope],
-            token_endpoint_auth_method: body[:token_endpoint_auth_method],
-            subject_type: body[:subject_type],
-            dpop_bound_access_tokens: body[:dpop_bound_access_tokens],
-            sector_identifier_uri: body[:sector_identifier_uri],
-            application_type: body[:application_type],
-            client_uri: body[:client_uri],
-            logo_uri: body[:logo_uri],
-            tos_uri: body[:tos_uri],
-            policy_uri: body[:policy_uri],
-            backchannel_logout_uri: body[:backchannel_logout_uri],
-            backchannel_logout_session_required: body[:backchannel_logout_session_required],
-            require_pushed_authorization_requests: body[:require_pushed_authorization_requests],
-            jwks: body[:jwks],
-            jwks_uri: body[:jwks_uri],
-            require_signed_request_object: body[:require_signed_request_object],
-            authorization_details_types: body[:authorization_details_types]
-          }.compact
-        end
-
-        APPROVED = %i[
-          redirect_uris post_logout_redirect_uris token_endpoint_auth_method resources
-          subject_type sector_identifier_uri dpop_bound_access_tokens grant_types response_types
-          authorization_details_types
-        ].freeze
-
         def described
-          held = attributes.except(:scopes, :dynamic)
+          held = Client.metadata_attributes(body)
 
-          @client.approved? ? held.except(*APPROVED) : held
+          @client.approved? ? held.except(*Client::APPROVED) : held
         end
 
         def scope_updates
