@@ -8,6 +8,7 @@ module Masks
         host! host_for(@tenant)
         @idp = SamlIdp.new
         create_actor(@tenant, nickname: "owner", email: "owner@acme.test")
+        within(@tenant) { DomainClaim.create!(domain: "acme.test", verified_at: Time.current) }
       end
 
       def saml_provider!(**attributes)

@@ -12,6 +12,7 @@ module Masks
         @registration = register(scope: SCOPE)
         host! host_for(@tenant)
         @acme = within { Organization.create!(key: "acme", name: "Acme", roles: [ "admin" ]) }
+        within { DomainClaim.create!(domain: "acme.test", verified_at: Time.current) }
         create_provider(role: "delegate", email_domains: "acme.test", organization: @acme,
                         role_map: { "Acme Owners" => "owner" })
         create_actor(nickname: "owner", email: "owner@acme.test")

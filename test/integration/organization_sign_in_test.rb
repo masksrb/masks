@@ -13,6 +13,7 @@ module Masks
         host! host_for(@tenant)
         @acme = within { Organization.create!(key: "acme", name: "Acme", roles: [ "admin" ]) }
         @globex = within { Organization.create!(key: "globex", name: "Globex") }
+        within { DomainClaim.create!(domain: "acme.test", verified_at: Time.current) }
       end
 
       def join(organization, actor, role = "member")
