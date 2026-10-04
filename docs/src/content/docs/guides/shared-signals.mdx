@@ -3,16 +3,16 @@ title: Shared signals
 description: Tell another system when a session ends or a credential changes, using the OpenID Shared Signals Framework.
 ---
 
-Masks is a Shared Signals Framework (SSF) transmitter. A receiver registers a
+masks is a Shared Signals Framework (SSF) transmitter. A receiver registers a
 stream, and masks pushes it a signed security event token when a session is
-revoked, a credential changes, or an account is disabled. The receiver can act
-at once instead of waiting for a token to expire.
+revoked, a credential changes, or an account is suspended, so the receiver can
+act before the affected tokens expire.
 
 ## Register a receiver
 
 A receiver is a confidential client that signs in as itself.
 
-1. In manage, create a client with the `client_credentials` grant.
+1. In `/manage`, add a client with the `client_credentials` grant.
 2. Add `masks:signals` to its allowed scopes.
 3. The receiver requests a token with `grant_type=client_credentials` and
    `scope=masks:signals`, and sends it as a bearer token to every endpoint
@@ -54,11 +54,11 @@ curl -s "$MASKS/ssf/streams" -H "Authorization: Bearer $TOKEN" \
   }'
 ```
 
-The answer holds `stream_id`, `iss`, `aud`, `events_supported`,
+The response holds `stream_id`, `iss`, `aud`, `events_supported`,
 `events_requested`, and `events_delivered`. The endpoint must be an HTTPS
-address that resolves to a public network. Masks sends `authorization_header`
-as the `Authorization` header of each delivery, keeps it encrypted, and never
-returns it.
+address on a public network. masks sends `authorization_header` as the
+`Authorization` header of each delivery, stores it encrypted, and never returns
+it.
 
 | Request | Effect |
 | --- | --- |
@@ -70,8 +70,8 @@ returns it.
 | `POST /ssf/status` | Sets the status, with an optional `reason`. |
 | `POST /ssf/verify` | Sends a verification event carrying the `state` in the body. |
 
-A paused or disabled stream does not deliver events, and events raised while it
-is paused are not sent later.
+A paused or disabled stream delivers nothing, and events raised while it is
+paused are dropped.
 
 ## What is sent
 
@@ -101,6 +101,7 @@ when the person acted, `admin` when a manager did, and `system` otherwise.
 
 ## Failures
 
-A delivery that gets no 2xx answer is retried eight times with growing delays.
-After the last attempt masks records a `signal.undelivered` event. Removing
-`masks:signals` from the client or archiving it stops delivery.
+A delivery that gets no 2xx response is attempted up to eight times, with growing
+delays. After the last attempt, masks records a `signal.undelivered` event.
+Removing `masks:signals` from the client, or archiving the client, stops
+delivery.

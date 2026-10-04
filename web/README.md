@@ -9,6 +9,10 @@ runs the code flow and holds them itself.
 npm install @masks/client
 ```
 
+It runs in a browser and holds no client secret. Token exchange, delegation, client credentials,
+introspection, and checking access tokens on an API belong to a server, and the
+[`masks`](https://rubygems.org/gems/masks) gem covers them for Ruby.
+
 ## Session mode
 
 The browser holds a cookie, and a backend running the `masks` gem's Rails engine holds the tokens, so
@@ -31,7 +35,9 @@ throwing, and `handshake()` starts the connect flow. CSRF tokens are read from a
 
 ## Browser mode
 
-With no backend, the page runs the authorization code flow with PKCE and holds the tokens.
+With no backend, the page runs the authorization code flow with PKCE and keeps the tokens in
+`sessionStorage`. It needs a public client, one registered with `token_endpoint_auth_method` set to
+`none`.
 
 ```js
 import { createBrowserClient } from "@masks/client";
@@ -55,20 +61,22 @@ The client handles discovery, the PKCE challenge, state and nonce, the callback 
 `refresh()`. `accessToken()` and `authorization()` return what to attach to a request, and
 `expired(leeway)` says when to refresh first.
 
+`resource` names the API a token is for, and each token is accepted only by the API it names. Pass an
+array when a page talks to more than one.
+
 ## Avatars
 
 Every account has three avatars: an uploaded `photo`, an `identicon`, and two-letter `initials`, and
 the ID token carries all three. A photo needs a token, so the two modes fetch it differently.
 
-```js
-const account = await auth.session();
+In session mode, `avatarUrl` returns your backend's proxy path for the photo and the issuer's URL for
+a generated style, so no token reaches the page:
 
+```js
 img.src = auth.avatarUrl(account, { size: 64 });
 ```
 
-In session mode `avatarUrl` returns your backend's proxy path for the photo and the issuer's URL for
-a generated style, so no token reaches the page. In browser mode the page holds the token, so the
-photo comes back as a blob:
+In browser mode the page holds the token, so the photo comes back as a blob:
 
 ```js
 const blob = await auth.photo();
@@ -78,9 +86,29 @@ img.src = blob
   : await auth.avatarUrl(subject, { style: "identicon" });
 ```
 
-`avatars()` reads the three URLs from the ID token. Sizes are 32, 64, 128, 256 or 512.
+`avatars()` reads the three URLs from the ID token. Sizes are 32, 64, 128, 256, or 512.
 
-## Who's signed in
+## Verifying an ID token
+
+```js
+import { verifyIdToken } from "@masks/client";
+```
+
+It checks the signature against the issuer's JWKS, and the issuer, audience, expiry, and nonce.
+
+Errors are `MasksError`, and the types are exported beside the functions.
+
+## Unreleased
+
+These are on `main` and arrive in the release after 2.2.0.
+
+### Organizations
+
+`organization` on `createBrowserClient`, `authorize()`, and `login()` names the organization a person
+signs in to. `switchOrganization(key)` signs them in again naming another, and `holdsRole(account,
+...roles)` asks about the role they hold.
+
+### Who's signed in
 
 `Person` renders an account as a name, a handle or email under it, an unconfirmed-email note, a
 manager badge, and an avatar that falls back to initials. It takes plain data as props, so it
@@ -108,25 +136,9 @@ Without `onSignOut`, no sign-out button renders. Both components read the accoun
 `personFrom`, which the package root exports for other frameworks. The class names start with
 `masks-person`, and the package ships no CSS.
 
-## Audiences
-
-Pass `resource` to name the API a token is for. Each token is accepted only by the API it names.
-Pass an array when a page talks to more than one.
-
-## Verifying an id token
-
-```js
-import { verifyIdToken } from "@masks/client";
-```
-
-It checks the signature against the issuer's JWKS, and the issuer, audience, expiry, and nonce.
-
-Errors are `MasksError`, and the types are exported beside the functions.
-
 ## Documentation
 
 The full reference is generated from this package at
-[masks.pages.dev/reference/browser](https://masks.pages.dev/reference/browser/). A Ruby or Rails
-app uses the [`masks`](https://rubygems.org/gems/masks) gem.
+[masks.pages.dev/reference/browser](https://masks.pages.dev/reference/browser/).
 
 MIT.

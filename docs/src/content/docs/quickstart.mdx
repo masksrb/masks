@@ -3,13 +3,12 @@ title: Quickstart
 description: The ways to use masks, and where to go next for each.
 ---
 
-masks is an OpenID Connect and OAuth 2.0 provider. You can run it as a container, mount it in a
-Rails app, or sign people in against it from the browser. Pick the path that fits, and follow its
-link for the full guide.
+masks is an OpenID Connect and OAuth 2.0 provider. Run it as a container or inside a Rails app, then
+sign people in to your apps against it. Each section links to its full guide.
 
 ## Run it with Docker
 
-masks ships as a container image that needs one Postgres. It migrates itself on boot.
+masks ships as a container image that needs one Postgres database. It migrates itself on boot.
 
 ```yaml
 services:
@@ -42,8 +41,9 @@ volumes:
 ```
 
 Put a TLS proxy in front of port `3000`, open the public origin, and set up the first account with
-the setup token masks prints in its logs. The first account holds `masks:manage` and opens the
-console at `/manage`.
+the setup token masks prints in its logs. The first account holds `masks:manage` and can open
+`/manage`. The `masks-storage` volume holds the generated master key, which every encrypted column
+depends on, so back it up with the database.
 
 See [Self-hosting](/guides/self-hosting/) for TLS, image tags, secrets, and tenants.
 
@@ -56,11 +56,12 @@ gem "masks"
 ```
 
 ```sh
-bin/rails generate masks:install
+bin/rails generate masks:install --resource https://app.example.com
 ```
 
-Set `MASKS_ISSUER` to your masks server, start the app, and open `/auth/handshake` to connect it.
-Then require a signed-in person in any controller:
+`--resource` is a URL on your app's own origin, which the handshake registers the app for. Set
+`MASKS_ISSUER` to your masks server, start the app, and open `/auth/handshake` to connect it. Then
+require a signed-in person in any controller:
 
 ```ruby
 class ApplicationController < ActionController::Base
@@ -84,14 +85,14 @@ See [Rails apps](/guides/rails/) for client, server, and engine mode.
 
 ## Connect client-side
 
-`@masks/client` signs people in from a single-page app:
+`@masks/client` signs people in from a single-page app in the browser:
 
 ```sh
 npm install @masks/client
 ```
 
-An app with a backend keeps the tokens on the server and gives the browser a cookie. Session mode
-talks to that backend, such as one running `Masks::Rails`:
+Session mode talks to a backend running `Masks::Rails`, which keeps the tokens and gives the browser
+a cookie:
 
 ```js
 import { createSession } from "@masks/client";
@@ -102,8 +103,8 @@ const account = await auth.session();
 if (!account) auth.login({ returnTo: "/dashboard" });
 ```
 
-An app with no backend runs the code flow with PKCE in the page. It needs a public client, one
-registered with `token_endpoint_auth_method` set to `none`:
+Browser mode runs the code flow with PKCE in the page, for an app with no backend. It needs a public
+client, one registered with `token_endpoint_auth_method` set to `none`:
 
 ```js
 import { createBrowserClient } from "@masks/client";
@@ -119,12 +120,12 @@ if (auth.pending()) await auth.callback();
 else await auth.authorize({ returnTo: "/dashboard" });
 ```
 
-See [Connecting via SDK](/guides/connecting-via-sdk/) and the
+See [Connecting via SDK](/guides/connecting-via-sdk/) for what each SDK covers, and the
 [@masks/client reference](/reference/browser/).
 
 ## Try it locally
 
-The repository runs a full stack with `./dev`. It needs Docker with Compose, and Ruby.
+The repository runs a full stack with `./dev`, which needs Docker with Compose, and Ruby.
 
 ```sh
 git clone https://github.com/masksrb/masks.git

@@ -8,25 +8,39 @@ From there it can act for a person at another provider, or trade a token for a n
 
 ## Choosing an SDK
 
-| SDK | For | What it does |
-| --- | --- | --- |
-| [`Masks::Rails`](/reference/rails/) | A Rails app | Mounts the sign-in flow, the handshake, and bearer checks as an engine. |
-| [`Masks::Client`](/reference/ruby/) | Any Ruby process | Discovery, PKCE, the code exchange, verification, and the handshake. |
-| [`@masks/client`](/reference/browser/) | A single-page app | Signs in through your backend, or runs the code flow with PKCE in the page. |
+| SDK | For |
+| --- | --- |
+| [`Masks::Rails`](/reference/rails/) | A Rails app. An engine that mounts sign-in, the handshake, and token checks. |
+| [`Masks::Client`](/reference/ruby/) | Any Ruby process. `Masks::Rails` is built on it. |
+| [`@masks/client`](/reference/browser/) | A single-page app, in the browser. |
 
-The `masks` gem holds both Ruby SDKs. `Masks::Rails` loads only when Rails does.
+The `masks` gem holds both Ruby SDKs, and `Masks::Rails` loads only when Rails does.
+
+| | `Masks::Rails` | `Masks::Client` | `@masks/client` |
+| --- | --- | --- | --- |
+| Signing in with the code flow and PKCE | Yes | Yes | Yes, through a backend or in the page |
+| The handshake | Yes | Yes | Starts it through a backend |
+| Refreshing tokens | Yes | Yes | Yes |
+| Token exchange and [delegation](#delegation) | Asks for delegation in its handshake | Yes | No |
+| Client credentials, introspection, and revocation | No | Yes | No |
+| Checking access tokens, including DPoP-bound ones | Yes | Yes | No |
+
+`@masks/client` runs only in a browser and holds no client secret. It verifies ID tokens, and leaves
+access tokens to the API that receives them. Neither SDK sends DPoP proofs as a client.
 
 ## Connecting an app
 
-1. Install the SDK. For Rails, `bin/rails generate masks:install`. See [Rails apps](/guides/rails/)
+1. Install the SDK. For Rails, run `bin/rails generate masks:install`. See [Rails apps](/guides/rails/)
    for the whole walkthrough.
-2. Set the issuer, such as `https://acme.auth.example.com`.
+2. Set the issuer, such as `https://acme.auth.example.com`, and the app's resource identifier, such as
+   `https://app.example.com`. The handshake requires a resource, and the app's redirect URIs must
+   share its origin.
 3. Open the handshake. The browser goes to masks' approval screen.
 4. Approve it as a person holding `masks:manage` or `masks:handshake`. The credentials go to the app
-   server to server, and nobody copies a secret.
+   server to server, so no secret passes through the browser.
 
 The app is then an approved [client](/guides/features/#registering-a-client). Sign people in
-with the SDK's login URL, and check bearers on your API with its verifier.
+with the SDK's login URL, and check access tokens on your API with its verifier.
 
 ## Delegation
 
@@ -34,7 +48,7 @@ A **delegation** lets an app act as one person at a provider while nobody is sig
 syncing their Google Drive at 3 a.m. or calling their Notion MCP server.
 
 - masks stores and refreshes the provider's tokens.
-- The app gets a token for **one** person's account, after that person consented to **that** app.
+- The app gets a token for one person's account, after that person consented to that app.
 - The app calls the provider directly, and returns to masks only when its token expires.
 
 Each person sees every app using each of their accounts on their account page, and can stop any of
@@ -123,10 +137,10 @@ config.delegation_redirect_uri = ->(request) { "#{request.base_url}/connect/call
 `subject` is the same `sub` your sign-in receives, so you can refuse a connection finished by
 someone other than who started it.
 
-| `error` | Do |
+| `error` | Means |
 | --- | --- |
 | `access_denied` | The person declined, or chose a provider account belonging to someone else in masks. |
-| `login_required` | Send them again with `prompt=login`. Connecting needs a sign-in within 15 minutes. |
+| `login_required` | Connecting needs a sign-in within 15 minutes. Send them again with `prompt=login`. |
 | `interaction_required` | You sent `prompt=none`, and masks has to ask something. |
 | `unauthorized_client` | The client is not approved. |
 | `invalid_scope` | No provider with that key allows delegation. |
@@ -135,7 +149,7 @@ someone other than who started it.
 
 When you have no provider token, or it is about to expire:
 
-1. **Refresh** the secret:
+1. Refresh the secret:
 
    ```
    POST https://auth.example.com/token
@@ -149,9 +163,9 @@ When you have no provider token, or it is about to expire:
    { "access_token": "eyJ…", "refresh_token": "NEW_SECRET", "expires_in": 3600 }
    ```
 
-   **Save `NEW_SECRET` first.** The old one is spent.
+   Save `NEW_SECRET` first. The old one is spent.
 
-2. **Exchange** the masks access token for the provider's:
+2. Exchange the masks access token for the provider's:
 
    ```
    POST https://auth.example.com/token
@@ -184,10 +198,10 @@ Call Google with `ya29.…` until `expires_in` runs out. On a 401, discard it an
 
 ### Rules for the secret
 
-1. **Keep every new secret.** Each refresh replaces it, even when the exchange after fails.
-2. **Refresh each secret once at a time.** Spending it twice revokes the chain, and the person has
-   to connect again. Lock around the refresh if more than one worker can reach it.
-3. **Use it within 30 days.** An unused secret expires. Each refresh restarts the clock.
+1. Keep every new secret. Each refresh replaces it, even when the exchange after it fails.
+2. Refresh each secret from one place at a time. Spending it twice revokes the chain, and the person
+   has to connect again. Lock around the refresh if more than one worker can reach it.
+3. Use it within 30 days. An unused secret expires, and each refresh restarts the clock.
 
 ### What masks checks
 
@@ -200,10 +214,9 @@ masks releases a provider token only when:
 - the person's delegation to this client for this connection is live,
 - the exchange sends no `scope`, `resource`, or `requested_lifetime`.
 
-- Every release is recorded as a `delegation.released` event.
-- The provider's token is refreshed within a minute of expiry, one refresh per connection at a time.
-- Provider tokens are encrypted at rest.
-- Changing what a provider allows makes everyone connect it again.
+Every release is recorded as a `delegation.released` event. Provider tokens are encrypted at rest,
+and masks refreshes one within a minute of its expiry, once per connection at a time. Changing what a
+provider allows makes everyone connect it again.
 
 ### MCP servers
 
@@ -237,8 +250,10 @@ save(connection, upstream.secret)
 upstream.access_token
 ```
 
-`token` refreshes and exchanges in one call. See
-[Masks::Client](/reference/ruby/) for its errors and the test fake.
+`token` refreshes and exchanges in one call, and `upstream.secret` replaces the secret passed in.
+`Delegations::Refused` means the person has to connect again, and `Delegations::Unavailable` is worth
+retrying. Both carry `secret` when masks had already rotated it. See [Masks::Client](/reference/ruby/)
+for the test fake.
 
 ## Calling a provider while the person is present
 
@@ -273,13 +288,15 @@ another at `/token`:
 The client must be registered for `urn:ietf:params:oauth:grant-type:token-exchange`.
 
 ```sh
-curl -u "$CLIENT_ID:$CLIENT_SECRET" https://demo.masks.example/token \
+curl -u "$CLIENT_ID:$CLIENT_SECRET" https://auth.example.com/token \
   -d grant_type=urn:ietf:params:oauth:grant-type:token-exchange \
   -d subject_token="$ACCESS_TOKEN" \
   -d subject_token_type=urn:ietf:params:oauth:token-type:access_token \
   -d scope="uris:catalog:read" \
   -d resource=https://uris.example/mcp
 ```
+
+`Masks::Client::Session#exchange` sends the same request from Ruby.
 
 ### What can be exchanged
 
@@ -289,8 +306,8 @@ curl -u "$CLIENT_ID:$CLIENT_SECRET" https://demo.masks.example/token \
 | `…:id_token` | What the person consented to for this client. | The ID token. | Its session ended, or it was issued to another client. |
 | `urn:masks:params:oauth:token-type:upstream_access_token` (requested) | See [delegation](#delegation). | | |
 
-An exchange only narrows. `scope`, `resource`, and `requested_lifetime` can ask for less, never
-more. Revoking the subject token revokes everything exchanged from it.
+An exchange only narrows. `scope`, `resource`, and `requested_lifetime` can only ask for less.
+Revoking the subject token revokes everything exchanged from it.
 
 ### Who is acting
 

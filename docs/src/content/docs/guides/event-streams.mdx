@@ -4,17 +4,16 @@ description: Send each event a tenant records to an HTTPS endpoint, signed so th
 ---
 
 An event stream posts each event a tenant records to an HTTPS endpoint as it
-happens, so a security team can collect them in a SIEM. Manage has a **Streams**
-tab under settings. The same steps are available through the manage API.
+happens, so a security team can collect them in a SIEM. Streams are managed in
+`/manage` under **Settings → Streams**, or through the manage API.
 
 ## Create a stream
 
 A stream has a key, a name, an address, a signing secret, an optional list of
 actions, and an optional organization. An empty list streams every action. A
-stream for one organization sends only the events recorded against it, so a
-customer's log can go to that customer's SIEM. The secret is returned once, by
-`createEventStream` and by `rotateEventStreamSecret`, and is never readable
-afterward.
+stream for one organization sends only that organization's events, so a
+customer's activity can go to that customer's SIEM. `createEventStream` and
+`rotateEventStreamSecret` return the secret once, and it cannot be read again.
 
 ```sh
 curl -s "$MASKS/manage/graphql" -H "Authorization: Bearer $TOKEN" \
@@ -43,7 +42,7 @@ Each event is a `POST` with a JSON body.
 | `ip_address`, `user_agent` | Where it came from. |
 | `details` | Fields specific to the action. |
 
-The receiver answers with any 2xx status. Events are delivered at least once and
+Any 2xx response counts as delivered. Events are delivered at least once and
 may arrive out of order. Use `id` to discard a repeat.
 
 ## Verify a delivery
@@ -55,14 +54,14 @@ whose timestamp is more than five minutes from the current time.
 
 ## Failures
 
-A delivery that gets no 2xx answer is retried eight times with growing delays.
-After the last attempt masks records a `stream.failed` event, which is never
-streamed. The stream's `lastFailure` shows the latest error and
+A delivery that gets no 2xx response is attempted up to eight times, with growing
+delays. After the last attempt, masks records a `stream.failed` event, which is
+never streamed. The stream's `lastFailure` shows the latest error, and
 `lastDeliveredAt` the latest success.
 
 ## What masks refuses
 
 - An address that is not HTTPS, or that carries a username or password.
-- An address that resolves to a private, loopback, or link-local address. Masks
+- An address that resolves to a private, loopback, or link-local address. masks
   checks when the stream is saved and again on every delivery.
 - An action masks does not record.

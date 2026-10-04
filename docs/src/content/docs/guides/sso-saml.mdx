@@ -14,8 +14,9 @@ description: Signing in to masks with another service, signing SAML applications
 A provider is another service people sign in with, over OpenID Connect, OAuth 2.0, or SAML 2.0.
 masks links the account there to an account in masks. That link is a **connected account**.
 
-A provider replaces the password, never the second factor. A person's
-[sign-in policy](/guides/features/#sign-in-policies) still asks for one when it requires it.
+A provider stands in for the password. A person's
+[sign-in policy](/guides/features/#sign-in-policies) still asks for a second factor when it
+requires one.
 
 ### Provider roles
 
@@ -25,7 +26,8 @@ A provider replaces the password, never the second factor. A person's
 | `delegate` | Yes, for a new person. | Name, photo, and address, on every sign-in |
 
 Use `delegate` when the company directory decides who works there. A `credential` provider that
-confirms an existing account's address connects to it only after that account signs in another way.
+confirms an existing account's address connects to that account only after it signs in another
+way.
 
 ### Trusted email addresses
 
@@ -34,8 +36,8 @@ masks tells apps `email_verified: true`, so it trusts a provider's address only 
 - the address is in one of the provider's **email domains**, or
 - the provider has `trusts_email` on and reports the address as confirmed.
 
-Turn on `trusts_email` only for a provider that checks mailboxes. Google, Apple, GitHub, GitLab,
-Slack, LinkedIn, and Discord do, and their presets turn it on.
+Turn on `trusts_email` only for a provider that confirms addresses. The Google, Apple, GitHub,
+GitLab, Slack, LinkedIn, and Discord presets turn it on.
 
 - An address the provider reports as unconfirmed stays unconfirmed, even in a listed domain.
 - SAML has no confirmation field, so a SAML provider is trusted only for its listed domains.
@@ -49,23 +51,23 @@ The client's [sign-in policy](/guides/features/#sign-in-policies) decides:
 - `first_factors` must include `provider`.
 - `providers` lists which ones. Unset means all.
 
-A signed-in person can connect any offered provider from their account page. It needs a sign-in
-within the last fifteen minutes, and masks refuses an upstream account already connected to someone
-else.
+A signed-in person can connect any offered provider from their account page, after signing in
+within the last fifteen minutes. masks refuses an account there that is already connected to
+someone else.
 
 ### Sending a domain to its provider
 
 Someone who types an address at a company's domain can go straight to that company's provider,
-without a password prompt. masks does this only for a domain the tenant has proven it controls.
+with no password prompt. masks does this only for a domain the tenant has proven it controls.
 
 1. In `/manage`, open **Settings**, then **Domains**, enter the domain, and choose the provider.
 2. Publish the TXT record masks shows, such as `_masks-challenge.acme.example` with the value
    `masks-verification=…`.
 3. Choose **Check now**, or wait for the hourly check.
 
-Once the domain is proven, an address there skips the password and starts the provider's sign-in.
-The provider is used even when it belongs to an organization the app did not name. An address at
-any other domain, and a nickname, sign in the usual way.
+Once the domain is proven, an address there starts the provider's sign-in, even when the provider
+belongs to an organization the app did not name. An address at any other domain, and a nickname,
+sign in the usual way.
 
 - A domain can be proven by one tenant at a time. Another tenant's claim to it is refused.
 - A proven record that stops answering is released after seven days, and people sign in the usual
@@ -112,7 +114,8 @@ each claim to a path in the response, such as `data.id` for X or `id` for GitHub
 PKCE, and masks discards the provider's tokens once it has the profile.
 
 An **emails URL** lists confirmed addresses separately from the profile, as GitHub does. masks
-uses the primary confirmed address from it, and never an address only in the public profile.
+uses the primary confirmed address from it, and ignores an address that appears only in the public
+profile.
 
 ### SAML 2.0
 
@@ -135,26 +138,26 @@ masks trusts an assertion only when it:
 - is within its validity window, with one minute of clock drift.
 
 masks refuses unsolicited, identity-provider-initiated responses, and marks each request used, so a
-response cannot be replayed. Ask for a **persistent** name ID. A transient one changes every
-sign-in, so every sign-in looks like a new person.
+response cannot be replayed. Ask for a **persistent** name ID. A transient one changes on every
+sign-in, so each sign-in looks like a new person.
 
 ### Apple
 
-Apple's client secret is a short-lived ES256 token masks signs with Apple's key, so the provider
-stores a team ID, key ID, and `.p8` private key. Apple sends the person's name only on their first
-sign-in, and masks keeps it.
+Apple's client secret is a short-lived ES256 token that masks signs with the provider's `.p8`
+private key, so the provider stores a team ID, a key ID, and that key. Apple sends the person's
+name only on their first sign-in, and masks keeps it.
 
 ### Posted callbacks
 
 Apple and SAML post back across sites, and browsers do not send a `SameSite=Lax` cookie with a
-cross-site POST. masks holds the posted parameters for five minutes under a one-time handle, then
-redirects to the same URL as a GET, which carries the cookie.
+cross-site POST. masks holds the posted parameters for five minutes under a one-time handle and
+redirects to the same URL as a GET, which sends the cookie.
 
 ## SAML applications
 
 masks is the identity provider for apps that sign people in only over SAML 2.0. The app sends an
 `AuthnRequest`, masks signs the person in under their
-[sign-in policy](/guides/features/#sign-in-policies), and posts a signed assertion back.
+[sign-in policy](/guides/features/#sign-in-policies), and masks posts a signed assertion back.
 
 ### What to give the application
 
@@ -166,8 +169,8 @@ masks is the identity provider for apps that sign people in only over SAML 2.0. 
 | Certificate | In the metadata, one per tenant signing key. |
 
 Most apps need only the metadata URL. After a
-[key rotation](/guides/security/#rotating-signing-keys), the app has to read it again. The retiring
-key's certificate stays during the overlap.
+[key rotation](/guides/security/#rotating-signing-keys), the app must read it again. The retiring
+key's certificate stays in the metadata during the overlap.
 
 ### Registering one
 
@@ -214,8 +217,8 @@ app's entity ID, confirmed for its assertion consumer service and the request `I
 minutes, names the session in `SessionIndex`, and names `https://refeds.org/profile/mfa` when a
 second factor was used.
 
-Attributes use claim names: `email`, `name`, `given_name`, `family_name`, `preferred_username`.
-`samlAttributes` maps an app's own names instead. masks releases only what the person's
+Attributes use the claim names `email`, `name`, `given_name`, `family_name`, and
+`preferred_username`. `samlAttributes` maps them to an app's own names. masks releases only what the person's
 `openid profile email` consent covers, and an email only once it is confirmed, as attribute or
 NameID. The posting page's content security policy allows only its own script.
 
@@ -229,7 +232,7 @@ SCIM 2.0 ([RFC 7643](https://www.rfc-editor.org/rfc/rfc7643),
 [RFC 7644](https://www.rfc-editor.org/rfc/rfc7644)). It adds, renames, and suspends people in masks
 as it does in its own directory.
 
-Each tenant's base URL:
+Each tenant's base URL is its issuer followed by `/scim/v2`:
 
 ```
 https://demo.masks.example/scim/v2
@@ -245,9 +248,9 @@ https://demo.masks.example/scim/v2
 
 The token list shows each token's last use. A revoked token is refused.
 
-A client can provision instead of a token. It must be approved and allowed `masks:scim`, request
-its own token with [`client_credentials`](/guides/features/#signing-in-as-itself), and name
-the base URL as its `resource`.
+A client can also provision. It must be approved and allowed `masks:scim`, request its own token
+with [`client_credentials`](/guides/features/#signing-in-as-itself), and name the base URL as its
+`resource`.
 
 ### What is provisioned
 
@@ -288,7 +291,7 @@ name alone does not reveal the suspension. `active: true` restores them. `DELETE
 
 ### What a directory cannot do
 
-A provisioning token changes many accounts, so it can do less than a manager:
+A provisioning token changes many accounts, so it cannot:
 
 - set the password or email of anyone holding a `masks:` scope,
 - suspend or delete the last active holder of `masks:manage`,

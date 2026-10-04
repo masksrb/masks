@@ -10,40 +10,40 @@ gem "masks"
 
 The gem signs people in to an app, and accepts the tokens masks issues when the app is also a
 resource server. Its Rails engine loads only when Rails does, so a Sinatra, Hanami, or plain Rack
-app pulls in `jwt` and nothing else.
+app pulls in `jwt` and nothing else. See
+[Connecting via SDK](https://masks.pages.dev/guides/connecting-via-sdk/) for what it covers beside
+the browser package.
 
 ## Rails
 
 ```sh
-bin/rails generate masks:install
+bin/rails generate masks:install --resource https://app.example.com
 ```
 
 That mounts the engine at `/auth`, writes `config/initializers/masks.rb`, and gitignores
 the file credentials land in. Set `MASKS_ISSUER`, start the app, and open
-`/auth/handshake`.
+`/auth/handshake`. [Rails apps](https://masks.pages.dev/guides/rails/) walks through the rest.
 
 ### The handshake
 
 An app connects to its issuer by somebody approving it. An unconnected app sends the browser to
 the issuer's approval screen, and the server redeems the one-time token that comes back, so the
-client secret never passes through the browser. `/auth/handshake` stops only to say the app is not
-configured enough to connect, or that the issuer refused. A connected app asks before it rotates,
-because reconnecting takes it offline for a moment.
+client secret never passes through the browser. The handshake registers the app for
+`config.resource`, an absolute URL on the app's own origin, and refuses without one. A connected app
+asks before it rotates, because reconnecting takes it offline for a moment.
 
-The engine writes what comes back to `config/masks.json`, mode 600. An app that wants
-somewhere else says so:
+The engine writes what comes back to `config/masks.json`, mode 600. A multi-tenant app keeps it
+somewhere else with two callables:
 
 ```ruby
 config.credentials = ->(request) { Tenant.for(request).masks_credentials }
 config.store = ->(request, registration) { Tenant.for(request).connect!(registration) }
 ```
 
-Those two lambdas are the whole integration for a multi-tenant app.
-
 ### Signing in
 
 ```ruby
-class UrisController < ApplicationController
+class DashboardController < ApplicationController
   include Masks::Rails::Authentication
 
   before_action :authenticate_masks!
@@ -60,10 +60,10 @@ the encrypted Rails session and never reach JavaScript.
 `config.authenticate_everything = true` includes `Authentication` on every controller. Otherwise
 include it where it applies.
 
-### An SPA in front of it
+### A single-page app in front of it
 
 `GET /auth/session` answers identity, tenant, and scopes as JSON, or `401` with where to send the
-browser. [`@masks/client`](https://masks.pages.dev/reference/browser/) speaks it:
+browser. [`@masks/client`](https://masks.pages.dev/reference/browser/) reads it:
 
 ```js
 import { createSession } from "@masks/client"
@@ -83,21 +83,25 @@ An app that is also a resource server:
 class ApiController < ApplicationController
   include Masks::Rails::ProtectedResource
 
-  masks_protect! scope: "uris:catalog:read"
+  masks_protect! scope: "uris:catalog:read", except: :metadata
+
+  def metadata
+    render json: masks_resource_metadata
+  end
 end
 ```
 
-`masks_protect!` is a class method that installs the `before_action` itself, and passes `:only` and
-`:except` through.
-
+`masks_protect!` installs the `before_action` and passes `:only` and `:except` through.
 `masks_claims` is the verified token. A refusal carries the RFC 6750 challenge with
-`resource_metadata`, which tells a client where to find the issuer.
+`resource_metadata`, which points a client at `/.well-known/oauth-protected-resource`. The engine
+does not route that path, so route it to an action like `metadata` above. A DPoP-bound token is
+accepted only with a valid proof, as in [Masks::Client::Resource](#the-resource-server-half).
 
 ### Organizations
 
 A person signs in to an app as a member of one organization when the app asks for the
 `organization` scope. Someone in several organizations picks one, and an app can pick for them by
-naming it: `/auth?organization=acme`, or `config.organization` for every sign-in.
+naming it, with `/auth?organization=acme` or with `config.organization` for every sign-in.
 
 ```ruby
 Masks::Rails.configure do |config|
@@ -136,7 +140,7 @@ masks_protect! scope: "uris:catalog:write", role: "owner", organization: "acme"
 ```
 
 Naming an organization without asking for the scope still holds the sign-in to its members and its
-sign-in policy; the app just learns nothing about the role.
+sign-in policy, and the app learns nothing about the role.
 
 ### Avatars
 
@@ -154,9 +158,9 @@ app holds:
 <img src="/auth/avatar" width="64" height="64" alt="">
 ```
 
-`masks_claims.picture` resolves the standard OIDC claim: an offsite `picture_url` if the account set
-one, then the photo, then the identicon. `issuer.avatar_url(sub, style:, size:)` builds a URL for a
-subject this app holds no token for. Sizes are 32, 64, 128, 256 or 512.
+`masks_claims.picture` is the standard OIDC `picture` claim when the account set one, then the photo,
+then the identicon. `issuer.avatar_url(sub, style:, size:)` builds a URL for a subject this app holds
+no token for. Sizes are 32, 64, 128, 256, or 512.
 
 ### Signing out
 
@@ -172,17 +176,18 @@ a subdomain-per-tenant host needs.
 | | |
 |---|---|
 | `issuer` | the masks issuer this app signs in against |
-| `resource` | this app's own identifier, when it also accepts tokens |
+| `resource` | this app's own identifier, which the handshake registers and tokens name as their audience |
 | `resource_scopes` | what it accepts, published in its RFC 9728 metadata |
-| `scope` | what to ask the issuer for; defaults to `openid profile email` |
+| `scope` | what to ask the issuer for, `openid profile email` by default |
 | `organization` | the organization every sign-in names, by key |
 | `credentials` / `store` | where the handshake's result lives |
-| `credentials_path` | where the default store writes; `config/masks.json` |
+| `credentials_path` | where the default store writes, `config/masks.json` by default |
 | `after_sign_in` / `after_sign_out` | paths on this host |
 | `parent_controller` | what the engine's pages inherit, for your layout |
 | `authenticate_everything` | include `Authentication` on every controller |
 | `sign_out_of_issuer` | make every sign-out an RP-initiated logout |
 | `session_key` | the session key the tokens live under |
+| `delegates` / `delegation_redirect_uri` | ask for delegation in the handshake, and where connecting an account returns |
 
 ## Any Ruby app
 
@@ -198,17 +203,18 @@ session = Masks::Client::Session.new(
 )
 
 started = session.start(resource: "https://app.example.com/mcp")
-# hold started[:state], started[:nonce] and started[:verifier]; send the
-# browser to started[:url]
 
 tokens = session.complete(code: params[:code], verifier: held[:verifier])
 identity = session.identity(tokens)
 ```
 
-`start` sends a nonce only when the scope includes `openid`, and `complete` then requires an ID
-token carrying it.
+Hold `started[:state]`, `started[:nonce]`, and `started[:verifier]` in the session, and send the
+browser to `started[:url]`. `start` sends a nonce only when the scope includes `openid`. Check the
+returned `state` yourself, and compare `identity["nonce"]` with the one you held.
 
-Also: `refresh`, `exchange`, `revoke`, `introspect`, `userinfo`, and `end_session_url`.
+`Session` also has `refresh`, `exchange`, `client_credentials`, `revoke`, `introspect`, `userinfo`,
+and `end_session_url`. It authenticates with `client_secret`, or with `private_key` and `key_id` for
+`private_key_jwt`.
 
 Discovery and JWKS are cached for five minutes and refetched on an unknown `kid`, so a key rotation
 needs no restart. The cache lives on the `Issuer`, so use `Masks::Client::Issuer.resolve` instead
@@ -225,12 +231,13 @@ handshake = Masks::Client::Handshake.new(
   return_to: "https://app.example.com/"
 )
 
-started = handshake.start          # hold started[:state]; send the browser on
+started = handshake.start
 registration = handshake.complete(params, state: held)
 ```
 
-Before it redeems anything, `complete` refuses an `error`, a `state` that does not match this
-browser, and an `iss` other than the issuer it asked.
+Hold `started[:state]` and send the browser to `started[:url]`. Before it redeems anything,
+`complete` refuses an `error`, a `state` that does not match this browser, and an `iss` other than
+the issuer it asked.
 
 ### The resource-server half
 
@@ -241,13 +248,23 @@ resource = Masks::Client::Resource.new(
   scopes: { "uris:catalog:read" => "Search your catalog" }
 )
 
-claims = resource.authenticate(request.authorization, scope: "uris:catalog:read")
+claims = resource.authenticate(
+  request.authorization, scope: "uris:catalog:read",
+  proof: request.get_header("HTTP_DPOP"), method: request.request_method, url: request.url
+)
 claims.subject
 claims.tenant.subdomain
 ```
 
-`authenticate` answers `Claims` or raises. A refusal builds the RFC 6750 challenge
-carrying `resource_metadata` and the scopes it would have accepted:
+`authenticate` answers `Claims` or raises. A token bound to a key with DPoP carries `cnf.jkt`, and is
+accepted only as `Authorization: DPoP` with a proof signed by that key for this method, URL, and
+token, made within the last minute and never seen before. `proof`, `method`, and `url` are what it
+checks the proof against. Seen proofs are kept in the process's memory. A deployment with several
+processes passes `replay:` to `Resource.new`, any object whose `first?(key, expires_in:)` answers true
+only once for each key.
+
+A refusal builds the RFC 6750 challenge carrying `resource_metadata` and the scopes it would have
+accepted:
 
 ```ruby
 response.headers["WWW-Authenticate"] = resource.challenge(error)
@@ -257,7 +274,7 @@ response.headers["WWW-Authenticate"] = resource.challenge(error)
 Its `scope_descriptions` extension gives masks the sentences its consent screen shows for each
 scope.
 
-A Rack middleware does the same below the framework:
+A Rack middleware does the same below the framework, proof included:
 
 ```ruby
 use Masks::Client::Rack, resource: resource, scope: "uris:catalog:read"
@@ -277,9 +294,9 @@ found.active? && found.permits?("uris:catalog:read")
 
 ### Somebody else's account
 
-An app that acts as somebody at Google, Microsoft or an MCP server while they are away asks masks for
+An app that acts as somebody at Google, Microsoft, or an MCP server while they are away asks masks for
 a [delegation](https://masks.pages.dev/guides/connecting-via-sdk/#delegation). masks keeps and refreshes the
-provider's tokens; the app keeps one secret per connection and trades it for a live access token when
+provider's tokens. The app keeps one secret per connection and trades it for a live access token when
 the last one runs out.
 
 ```ruby
@@ -305,9 +322,9 @@ A Rails app sets `config.delegates = true`, so its handshake asks for `masks:del
 exchange with it.
 
 `upstream.secret` replaces the one you passed in, every time. `Delegations::Refused` means somebody
-has to connect again; `Delegations::Unavailable` is worth retrying. Both carry `secret` when masks had
-already rotated it, so keep it. Spend a secret from one place at a time: spending one twice revokes
-it.
+has to connect again, and `Delegations::Unavailable` is worth retrying. Both carry `secret` when masks
+had already rotated it, so keep it. Spend a secret from one place at a time, because spending one
+twice revokes it.
 
 Tests use the fake, which needs no issuer:
 

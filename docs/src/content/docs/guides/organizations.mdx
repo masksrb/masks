@@ -13,6 +13,10 @@ one **role** there. Every organization has `owner` and `member`, and can offer m
 | An owner | Their own account page, under **Organizations** | Invite, promote, and remove the members of their own organization. |
 | A member | Their own account page | See their role, accept or decline an invitation, and leave. |
 
+In `/manage`, adding, archiving, and restoring an organization and changing its roles or sign-in
+need `masks:manage:security`. Adding, inviting again, changing the role of, and removing members need
+`masks:manage:support`. See [manage roles](/guides/security/#manage-roles).
+
 ## Adding an organization
 
 1. In `/manage`, open **Organizations** and choose **Add organization**.
@@ -22,14 +26,11 @@ one **role** there. Every organization has `owner` and `member`, and can offer m
 4. Add the customer's own owner as a member in the `owner` role. Once they accept, you can remove
    yourself.
 
-Adding an organization needs `masks:manage:security`. See [manage roles](/guides/security/#manage-roles).
-
 ### Roles
 
 A role is a word the member's tokens carry. Under **Roles** on the organization's page, **Offer
-another role** adds one. A role is lowercase letters, digits, dashes, and underscores, up to 40
-characters. `owner` and `member` are always offered. A role someone holds cannot be removed until
-nobody holds it.
+another role** adds one: lowercase letters, digits, dashes, and underscores, up to 40 characters.
+`owner` and `member` are always offered. A role cannot be removed while someone holds it.
 
 ## Inviting members
 
@@ -59,7 +60,7 @@ A manager can invite any address. An owner can invite an address:
 - that the organization's sign-in policy admits, while that policy allows sign-up.
 
 The organization's sign-in policy is its own when it has one, and the tenant's otherwise. The rule
-is the same whether or not an account holds the address, so the answer does not reveal who has an
+does not depend on whether an account holds the address, so the answer does not reveal who has an
 account. An owner sends at most 50 invitations a day, counting invitations sent again. A new
 account made by an invitation gets the policy's sign-up scopes.
 
@@ -75,7 +76,7 @@ An invitation sent to an address is accepted only by an account holding that add
 
 Declining removes the invitation, and an owner has to invite the person again.
 
-## Sending an invitation again
+### Sending an invitation again
 
 An organization invitation expires two weeks after it was last sent. `MASKS_ORGANIZATION_INVITATION_LIFETIME`
 changes this. See [ENV vars](/reference/environment/).
@@ -85,8 +86,7 @@ changes this. See [ENV vars](/reference/environment/).
 3. Choose **Send again**.
 
 Sending again emails the person, starts the lifetime over, and records *Organization invitation
-sent again*. An invitation is sent again at most once an hour. In `/manage`, sending again needs
-`masks:manage:support`.
+sent again*. An invitation is sent again at most once an hour.
 
 An expired invitation cannot be accepted. The nightly sweep removes it once it has been expired for
 as long again as it was open, which is four weeks after it was last sent by default, and records
@@ -125,16 +125,11 @@ in the **Organizations** group. See [security emails](/guides/security/#security
 
 ## Running an organization from the account page
 
-An owner manages the organization from their own account page, with no `/manage` access. Under
-**Organizations**, each organization they own shows how many members, owners, and open invitations it
-has, and one row for each member or invitation. From a member's row, the owner can:
-
-- choose another role and **Set role**,
-- **Send again** an invitation,
-- **Withdraw** an invitation, or **Remove** a member.
-
-The form under the rows adds someone by email. The result of each change appears inside the
-organization it changed. Owners reach only their own organizations.
+An owner runs their organizations from their own account page, with no `/manage` access, and reaches
+no other organization. Under **Organizations**, each organization they own shows how many members,
+owners, and open invitations it has, and one row for each member or invitation. From a row, the owner
+can choose another role and **Set role**, **Send again** or **Withdraw** an invitation, or **Remove**
+a member. The form under the rows adds someone by email.
 
 Every member sees their role and can leave. An invitation appears under **Waiting for you** with
 who sent it, the role, when it expires, and the address it went to.
@@ -209,8 +204,7 @@ SCIM groups. See [a directory for one organization](/guides/sso-saml/#a-director
 
 | Where | `org` | `orgs` |
 | --- | --- | --- |
-| ID token | The organization signed in to, with the role held when it was issued. | |
-| Access token | The organization signed in to, with the role held when it was issued. | |
+| ID token, access token | The organization signed in to, with the role held when it was issued. | |
 | Userinfo | The organization the token was issued for, with the role held now. | Every organization the person has joined, each with the role held there. |
 | Introspection | The organization the token was issued for, with the role held now. | |
 
@@ -276,7 +270,7 @@ An organization's page counts its members, owners, open invitations, and live to
 | **Archive** | Archives it, naming how many live tokens that revokes. |
 
 Archiving an organization revokes every token issued for it and stops it being offered. Members
-keep their roles, so **Restore** puts everything back. Archiving needs `masks:manage:security`.
+keep their roles, so **Restore** puts everything back.
 
 ## An organization's activity
 

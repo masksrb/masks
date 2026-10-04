@@ -3,18 +3,19 @@ title: OIDC and OAuth
 description: The specifications masks implements, and how far each one goes.
 ---
 
-masks is an OpenID Connect provider. This page lists every specification it
-implements, the parts it implements, and the parts it leaves out.
+masks is an OpenID Connect provider. This page lists each specification it
+implements and the parts it leaves out.
 
 Four OpenID Foundation certification plans pass with no failures: `oidcc-config`
 and `oidcc-basic` with 2,194 conditions, `oidcc-rp-initiated-logout` with 642,
 and `oidcc-backchannel-rp-initiated-logout` with 104. `./dev conformance` runs
 all four against a local server.
 
-In the tables below, ✅ means the specification is implemented and covered by the
-test suite, and that its conformance plan passes where one exists. ◐ means masks
-implements the parts it needs, and the Coverage column names the parts it leaves
-out. ✗ means masks does not implement it, and the discovery document says so.
+| | |
+| --- | --- |
+| ✅ | Implemented, covered by the test suite, and passing its conformance plan where one exists. |
+| ◐ | Partly implemented. The Coverage column names the parts left out. |
+| ✗ | Not implemented, and the discovery document says so. |
 
 ## Core
 
@@ -41,7 +42,7 @@ The only response type is `code`, and the only response mode is `query`.
 | [Rich authorization requests (RFC 9396)](https://www.rfc-editor.org/rfc/rfc9396) | ✅ | `authorization_details` at `/authorize`, `/par`, in a signed request, and at the token endpoint for the code, refresh, and exchange grants, each checked against the type an approved client declared. See [rich authorization requests](/guides/security/#rich-authorization-requests). |
 | [Resource indicators (RFC 8707)](https://www.rfc-editor.org/rfc/rfc8707) | ✅ | `resource` narrows the audience at both the authorization and token endpoints. |
 | [Request objects, JAR (RFC 9101)](https://www.rfc-editor.org/rfc/rfc9101) | ◐ | A signed `request` at `/authorize` and `/par`, and a client can be required to sign. See [signed requests](/guides/security/#signed-requests). The only `request_uri` accepted is one issued by `/par`. Encrypted request objects are not read. |
-| [FAPI 2.0](https://openid.net/specs/fapi-security-profile-2_0-final.html) | ◐ | PAR, PKCE, `private_key_jwt`, DPoP, `iss` on the response, and signed requests are all implemented, and a client can be required to use each one. The FAPI certification plan has not been run. |
+| [FAPI 2.0](https://openid.net/specs/fapi-security-profile-2_0-final.html) | ◐ | PAR, PKCE, `private_key_jwt`, DPoP, `iss` on the response, and signed requests, each of which a client can be required to use. The FAPI certification plan has not been run. |
 
 ## Grants
 
@@ -67,10 +68,10 @@ The only response type is `code`, and the only response mode is `query`.
 
 | Specification | Status | Coverage |
 | --- | --- | --- |
-| [Back-channel logout 1.0](https://openid.net/specs/openid-connect-backchannel-1_0.html) | ✅ | Signed logout tokens. Delivery is attempted up to five times, and a delivery that still fails is recorded as an event. The `oidcc-backchannel-rp-initiated-logout` plan passes. |
-| [RP-initiated logout 1.0](https://openid.net/specs/openid-connect-rpinitiated-1_0.html) | ✅ | `end_session_endpoint`, with `id_token_hint`, `client_id`, `post_logout_redirect_uri`, and `state`. A request with no hint for the signed-in person asks before signing out. The `oidcc-rp-initiated-logout` plan passes. |
+| [Back-channel logout 1.0](https://openid.net/specs/openid-connect-backchannel-1_0.html) | ✅ | Signed logout tokens. Delivery is attempted up to five times, and a delivery that still fails is recorded as an event. |
+| [RP-initiated logout 1.0](https://openid.net/specs/openid-connect-rpinitiated-1_0.html) | ✅ | `end_session_endpoint`, with `id_token_hint`, `client_id`, `post_logout_redirect_uri`, and `state`. A request with no hint for the signed-in person asks before signing out. |
 | [Front-channel logout 1.0](https://openid.net/specs/openid-connect-frontchannel-1_0.html) | ✗ | Discovery sets `frontchannel_logout_supported` to `false`. |
-| [Session management 1.0](https://openid.net/specs/openid-connect-session-1_0.html) | ✗ | Not planned. The iframe it depends on no longer works in current browsers. Discovery has no `check_session_iframe`. |
+| [Session management 1.0](https://openid.net/specs/openid-connect-session-1_0.html) | ✗ | Not planned, because current browsers block the iframe it depends on. Discovery has no `check_session_iframe`. |
 
 ## Identity
 
@@ -79,16 +80,16 @@ The only response type is `code`, and the only response mode is `query`.
 | Pairwise subject identifiers | ✅ | Includes a verified `sector_identifier_uri`. See [subject identifiers](/guides/features/#subject-identifiers). |
 | [WebAuthn Level 2](https://www.w3.org/TR/webauthn-2/) | ✅ | Passkeys, as a first factor or a second factor. |
 | [TOTP (RFC 6238)](https://www.rfc-editor.org/rfc/rfc6238) | ✅ | With backup codes. |
-| [SCIM 2.0](https://www.rfc-editor.org/rfc/rfc7644) | ◐ | `/Users` with filters, `PATCH`, ETags, and suspension, and the discovery endpoints. See [provisioning](/guides/sso-saml/#provisioning). Groups, bulk operations, and sorting are not implemented. |
+| [SCIM 2.0](https://www.rfc-editor.org/rfc/rfc7644) | ◐ | `/Users` with filters, `PATCH`, ETags, and suspension, `/Groups` as an organization's roles, and the discovery endpoints. See [provisioning](/guides/sso-saml/#provisioning). Bulk operations and sorting are not implemented. |
 | SAML 2.0 | ◐ | Both directions. A SAML identity provider can sign people in to masks (see [providers](/guides/sso-saml/#providers)), and masks signs people in to SAML applications over HTTP-Redirect and HTTP-POST, checking signed requests (see [SAML applications](/guides/sso-saml/#saml-applications)). Single logout and encrypted assertions are not implemented. |
 
 ## Client authentication
 
-masks accepts these token endpoint authentication methods:
+The token endpoint accepts four authentication methods.
 
 |                       |                                                                                                                  |
 | --------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `client_secret_basic` | The secret in an HTTP Basic `Authorization` header. The default for a client added in the console.              |
+| `client_secret_basic` | The secret in an HTTP Basic `Authorization` header. The default for a client added in `/manage`.                  |
 | `client_secret_post`  | The secret in the form body.                                                                                     |
 | `private_key_jwt`     | A JWT assertion ([RFC 7523](https://www.rfc-editor.org/rfc/rfc7523)) signed with RSA, RSA-PSS, or ECDSA, checked against the client's `jwks` or `jwks_uri`. |
 | `none`                | A public client, which must use PKCE.                                                                            |

@@ -18,14 +18,14 @@ a path or on a subdomain, and keeps it apart from the app around it.
 ## Client mode
 
 `Masks::Rails` is a Rails engine inside the `masks` gem. It mounts the code flow into your app, so
-signing in against a masks issuer is configuration, not a controller you write.
+signing in against a masks issuer needs only configuration.
 
 ```ruby
 gem "masks"
 ```
 
 ```sh
-bin/rails generate masks:install
+bin/rails generate masks:install --resource https://app.example.com
 ```
 
 That mounts the engine at `/auth`, writes `config/initializers/masks.rb`, and adds
@@ -34,6 +34,8 @@ That mounts the engine at `/auth`, writes `config/initializers/masks.rb`, and ad
 ```ruby
 Masks::Rails.configure do |config|
   config.issuer = ENV.fetch("MASKS_ISSUER", "https://auth.example.com")
+  config.resource = "https://app.example.com"
+  config.resource_scopes = []
   config.after_sign_in = "/"
   config.after_sign_out = "/"
 end
@@ -45,8 +47,9 @@ start the app, and open `/auth/handshake`.
 ### The handshake
 
 The handshake sends the browser to the masks server's approval screen. Approve it there, and the
-one-time token that comes back is redeemed server to server. The secret never travels through the
-browser.
+engine redeems the one-time token that comes back server to server, so the secret never passes
+through the browser. The handshake registers the app for `config.resource`, which must be an absolute
+URL on the app's own origin. Without it, `/auth/handshake` refuses.
 
 The engine writes the credentials to `config/masks.json`, mode 600. A multi-tenant app keeps a row
 per tenant instead:
@@ -55,6 +58,8 @@ per tenant instead:
 config.credentials = ->(request) { Tenant.for(request).masks_credentials }
 config.store = ->(request, registration) { Tenant.for(request).connect!(registration) }
 ```
+
+Every setting that varies per request accepts a callable taking the request.
 
 ### Signing in
 
@@ -66,6 +71,8 @@ class ApplicationController < ActionController::Base
 end
 ```
 
+`config.authenticate_everything = true` includes `Authentication` in every controller.
+
 | Method | |
 | --- | --- |
 | `authenticate_masks!` | Sends a signed-out visitor to `masks_login_url` and stops the request. |
@@ -74,7 +81,8 @@ end
 | `masks_access_token` | The token to spend against a resource server. |
 | `masks_disconnect!` | Removes the connection and `config/masks.json`. |
 
-See [Masks::Rails](/reference/rails/) for the full list.
+`GET /auth/session` answers `masks_account` as JSON for a single-page app, and
+`DELETE /auth/logout` signs out. See [Masks::Rails](/reference/rails/) for the full list.
 
 ### Organizations
 
@@ -124,31 +132,52 @@ one in another role with `insufficient_role`.
 
 ### Accepting tokens
 
-An app that is also a resource server checks bearers with `Masks::Rails::ProtectedResource`. Set
-`config.resource` (the identifier tokens are minted for, checked against `aud`) and
-`config.resource_scopes` first.
+An app that is also a resource server checks access tokens with `Masks::Rails::ProtectedResource`.
+`config.resource` is the audience tokens must name, and `config.resource_scopes` lists the scopes it
+accepts.
 
 ```ruby
 class ApiController < ActionController::Base
   include Masks::Rails::ProtectedResource
+
+  masks_protect! scope: "uris:catalog:read", except: :metadata
+
+  def show
+    render json: { subject: masks_claims.subject }
+  end
 end
 ```
 
-`masks_protect!` asks the same of a token. It reads the `org` claim the token carries:
+`masks_protect!` installs a `before_action` and passes `:only` and `:except` through. It also checks
+the `org` claim:
 
 ```ruby
 masks_protect! scope: "uris:catalog:write", role: "owner", organization: "acme"
 ```
 
-A token bound to a key with DPoP has a `cnf.jkt` claim. It is accepted only as `Authorization: DPoP`
-with a `DPoP` proof signed by that key for this request's method and URL, made within the last
-minute, naming the token, and never seen before. Presented as `Bearer`, it is refused, so a stolen
-bound token is useless without the key. `Masks::Client::Rack` checks the same. Each process remembers
-the proofs it has seen, so a deployment with several processes passes a shared `replay:` store to
-`Masks::Client::Resource`, any object whose `first?(key, expires_in:)` answers true only once.
+A refusal carries an RFC 6750 challenge whose `resource_metadata` points at
+`/.well-known/oauth-protected-resource`. The engine does not route that path, so serve
+`masks_resource_metadata` there from the controller above:
 
-Outside Rails, `Masks::Client` does discovery, PKCE, token exchange, and verification without the
-engine. See [Masks::Client](/reference/ruby/).
+```ruby
+get "/.well-known/oauth-protected-resource", to: "api#metadata"
+```
+
+```ruby
+def metadata
+  render json: masks_resource_metadata
+end
+```
+
+A token [bound to a key with DPoP](/guides/security/#binding-a-token-with-dpop) has a `cnf.jkt`
+claim. It is accepted only as `Authorization: DPoP` with a `DPoP` proof that is signed by that key,
+names this request's method and URL and the token, was made within the last minute, and has not been
+seen before. Presented as `Bearer`, it is refused. Each process keeps the proofs it has seen in
+memory. To share them across processes, override `masks_resource` to build a
+`Masks::Client::Resource` with a `replay:` store, any object whose `first?(key, expires_in:)` answers
+true only once for each key.
+
+Outside Rails, [Masks::Client](/reference/ruby/) does the same without the engine.
 
 ## Server mode
 

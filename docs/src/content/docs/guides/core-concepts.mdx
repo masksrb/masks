@@ -3,8 +3,8 @@ title: Core concepts
 description: Tenants, actors, clients, scopes, namespaces, and signing keys.
 ---
 
-The rest of the docs assume these six: tenants, actors, clients, scopes, namespaces, and signing
-keys. Each section defines one and links to the guide that covers it in depth.
+The rest of the docs assume six concepts: tenants, actors, clients, scopes, namespaces, and signing
+keys. Each section defines one and links to the guide that covers it.
 
 ## Tenants
 
@@ -32,8 +32,8 @@ A deployment declares its tenants in one of three ways. Setting both `MASKS_TENA
 | Has `%{subdomain}`, such as `https://%{subdomain}.auth.example.com` | Claims a tenant, every time | Rails' host authorization, before `Tenancy::Middleware` runs |
 | Anything else, or unset | Claims a tenant once, on the first request to an empty database | Nothing. The host header is trusted. |
 
-With a wildcard template, one subdomain per signup needs only a matching hostname. Without one, the
-first request names the only tenant, and later unseen hosts get a 404.
+With a wildcard template, a new tenant needs only a matching hostname. Without one, the first
+request names the only tenant, and later unseen hosts get a 404.
 
 ### Setting a tenant up
 
@@ -60,11 +60,12 @@ the manage API. See [ENV vars](/reference/environment/#sign-in-policy) for the v
 | Setting | Controls |
 | --- | --- |
 | `named_by` | Which field every account must have. See [what names an account](#what-names-an-account). |
-| `dynamic_registration` | Whether apps may [register themselves](/guides/features/#registering-a-client). |
-| `dynamic_client_scopes` | The scopes a self-registered app may request. |
+| `dynamic_registration` | Whether apps may [register themselves](/guides/features/#registering-a-client): `off`, `anything`, or `bounded`. |
+| `dynamic_client_scopes` | The scopes a self-registered app may request when registration is `bounded`. |
 | `browsers_only`, `blocked_agents` | Which user agents may sign in. |
 | sign-in policy | The default [sign-in policy](/guides/features/#sign-in-policies). |
 | mail adapter | How the tenant sends invitations, codes, and resets. |
+| idle accounts | When unused accounts are [suspended and deleted](/guides/features/#idle-accounts). |
 
 A tenant with no mail adapter uses the deployment's SMTP server. With neither, invitations and
 password resets are links that a manager sends by hand.
@@ -82,16 +83,14 @@ An actor is an account. It has a nickname, an email address, or both, and a list
 
 ### What names an account
 
-`named_by` controls which field every account must have.
-
 | `named_by` | |
 | --- | --- |
 | `nickname` | Every account needs a nickname. |
 | `email` | Every account needs an address. |
 | `either` | Either one is enough. This is the default. |
 
-Every account has at least one of the two, enforced by the model and a database constraint. **An
-account holding `masks:manage` needs both**, because invitations and resets go to managers.
+The model and a database constraint keep at least one of the two on every account. **An account
+holding `masks:manage` needs both**, because invitations and resets go to managers.
 
 A person signs in with either field. `/manage`, the activity list, and introspection show the
 nickname when there is one, and the address otherwise. See [signing in](/guides/features/#signing-in)
@@ -105,18 +104,20 @@ resources it acts for, and the scopes it may request. See
 
 ## Scopes
 
-A scope is a string. Five are standard: `openid`, `profile`, `email`, `offline_access`, and
-`identities`. masks reserves the `masks:` prefix.
+A scope is a string. Six are standard: `openid`, `profile`, `email`, `offline_access`,
+`identities`, and [`organization`](/guides/organizations/#signing-in-as-a-member). masks reserves the
+`masks:` prefix.
 
 | Scope | |
 | --- | --- |
 | `masks:manage` | `/manage` and the GraphQL API behind it. |
+| `masks:manage:read`, `masks:manage:support`, `masks:manage:security` | Narrower [manage roles](/guides/security/#manage-roles). |
 | `masks:handshake` | Connect an application to this tenant. |
 | `masks:scim` | [Provision people over SCIM](/guides/sso-saml/#provisioning). |
 | `masks:signals` | [Receive shared signals](/guides/shared-signals/). |
 | `masks:delegate:<provider>` | [Use a person's account at a provider](/guides/connecting-via-sdk/#delegation). |
 
-Only an approved client may hold a `masks:` scope. Dynamic registration never offers one. Every
+Only an approved client may hold a `masks:` scope. Every
 person holds `masks:delegate:` for their own accounts, and consents to each application separately.
 
 ### Prefixes
@@ -129,21 +130,25 @@ adds it directly when the namespace is claimed.
 
 A token holds the requested scopes that are in the actor's list. A request that names a scope
 outside the client's `allowed_scopes` is refused whole with `invalid_scope`, and masks issues
-nothing. A self-registered client is allowed what the tenant's dynamic registration ceiling holds,
-so a resource server that offers a scope beyond the ceiling leads every client that asks for its
-whole list into that refusal. A refresh keeps the refresh token's scopes or fewer. The manage API checks the actor's list
-on every request, so losing `masks:manage` takes effect at once.
+nothing. When `dynamic_registration` is `bounded`, a self-registered client is allowed only the
+scopes in `dynamic_client_scopes`, or the standard scopes when that is empty. A resource server that
+offers a scope outside that list causes the refusal for every self-registered client that asks for
+all of its scopes. When it is `anything`, a self-registered client is allowed any scope except a
+`masks:` scope or a [prefix](#prefixes).
+
+A refresh keeps the refresh token's scopes or fewer. The manage API checks the actor's list on every
+request, so losing `masks:manage` takes effect at once.
 
 ## Namespaces
 
 An application that needs its own scopes, such as `things:read`, claims the prefix `things:` once.
-It can then publish any scope beneath it without telling masks.
+It can then publish any scope beneath it without registering each one.
 
 ### Claiming
 
-A namespace is claimed when someone approves a handshake that asks for a prefix. They hold
-`masks:manage`, or `masks:handshake` and every scope the handshake asks for. masks grants the
-prefix to them as well.
+A namespace is claimed when someone approves a handshake that asks for a prefix. The approver holds
+`masks:manage`, or `masks:handshake` and every scope the handshake asks for, and masks grants them
+the prefix as well.
 
 Each name belongs to one resource. A handshake asking for a prefix another resource holds is
 refused before the approval screen, and the refusal names that resource.
