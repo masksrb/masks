@@ -158,6 +158,7 @@ The image runs Puma in front of Rails, on `PORT`. See
 | `RAILS_LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error`, or `fatal`. Production only. |
 | `RAILS_ASSUME_SSL` | `true` | Treats every request as HTTPS, for a server behind a proxy that terminates TLS. Production only. |
 | `RAILS_FORCE_SSL` | `true` | Redirects HTTP to HTTPS and sends `Strict-Transport-Security`. Production only. |
+| `MASKS_TRUSTED_PROXIES` | none | Addresses or ranges of the proxies in front of masks, separated by commas, added to the private ranges Rails already trusts. masks reads `X-Forwarded-For`, `X-Forwarded-Host`, `Client-IP`, and `Forwarded` only on a request that came from one of them and drops them from any other, so a visitor cannot claim another address. Rate limits and risk checks use the address that results. Set it when a proxy on a public address, such as a CDN, forwards requests to masks. Otherwise every visitor shares that proxy's address and its limits. |
 | `SECRET_KEY_BASE_DUMMY` | unset | Boots with a throwaway secret and skips the production checks above. For build steps only. A server running with it set is not secure. |
 
 ### Outbound calls

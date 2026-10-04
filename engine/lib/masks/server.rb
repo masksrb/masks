@@ -97,6 +97,7 @@ end
 require_relative "server/version"
 require_relative "server/configuration"
 require_relative "server/isolation"
+require_relative "server/forwarding"
 require_relative "server/host"
 require_relative "server/tenant_isolation"
 require_relative "server/tenancy/job"

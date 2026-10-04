@@ -27,6 +27,9 @@ module Server
 
     config.active_record.schema_format = :sql
 
+    config.action_dispatch.trusted_proxies = Masks::Server::Configuration.trusted_proxies(ENV["MASKS_TRUSTED_PROXIES"])
+    config.middleware.insert 0, Masks::Server::Forwarding, config.action_dispatch.trusted_proxies
+
     if ENV["PG_BIN_PATH"].present?
       ENV["PATH"] = "#{ENV['PG_BIN_PATH']}:#{ENV['PATH']}"
     end

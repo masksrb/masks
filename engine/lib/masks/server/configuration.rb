@@ -41,11 +41,19 @@ module Masks
       end
 
       def outbound_allowed(value)
+        ranges(value, "MASKS_OUTBOUND_ALLOWED", "List the private ranges masks may call, separated by commas.")
+      end
+
+      def trusted_proxies(value)
+        ActionDispatch::RemoteIp::TRUSTED_PROXIES +
+          ranges(value, "MASKS_TRUSTED_PROXIES", "List the proxies in front of masks, separated by commas.")
+      end
+
+      def ranges(value, variable, advice)
         value.to_s.split(/[\s,]+/).reject(&:empty?).map do |range|
           IPAddr.new(range)
         rescue IPAddr::InvalidAddressError
-          raise "MASKS_OUTBOUND_ALLOWED holds #{range.inspect}, which is not an address or a range " \
-                "such as 10.20.0.0/16. List the private ranges masks may call, separated by commas."
+          raise "#{variable} holds #{range.inspect}, which is not an address or a range such as 10.20.0.0/16. #{advice}"
         end
       end
 
