@@ -149,6 +149,16 @@ module Masks
 
         assert body["access_token"].present?
       end
+
+      test "revocation is rate limited, since every request checks a client secret" do
+        ::Rails.cache.clear
+
+        statuses = Array.new(121) { revoke("anything").status }
+
+        assert_equal 200, statuses.first
+        assert_equal 429, statuses.last
+        assert_equal "slow_down", JSON.parse(response.body)["error"]
+      end
     end
   end
 end
