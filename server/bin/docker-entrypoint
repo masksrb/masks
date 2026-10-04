@@ -13,12 +13,14 @@ if [ "${*: -2:1}" == "./bin/rails" ] && [ "${*: -1:1}" == "server" ]; then
     exit 1
   fi
 
-  if [ "$MASKS_MIGRATION_USER" == "${POSTGRES_USER:-masks}" ]; then
-    echo "masks: MASKS_MIGRATION_USER and POSTGRES_USER are both ${POSTGRES_USER:-masks}. They name two roles." >&2
+  serving="${POSTGRES_USER:-masks}"
+
+  if [ "$MASKS_MIGRATION_USER" == "$serving" ]; then
+    echo "masks: MASKS_MIGRATION_USER and POSTGRES_USER are both $serving. They name two roles." >&2
     exit 1
   fi
 
-  MASKS_SERVING_USER="${POSTGRES_USER:-masks}" \
+  MASKS_SERVING_USER="$serving" \
     POSTGRES_USER="$MASKS_MIGRATION_USER" \
     POSTGRES_PASSWORD="$MASKS_MIGRATION_PASSWORD" \
     sh -c './bin/rails db:prepare && ./bin/rails masks:grants'

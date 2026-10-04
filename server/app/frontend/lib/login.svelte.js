@@ -1,12 +1,23 @@
 import { translator } from "./copy.js";
 import { root } from "./root.js";
 
-const UNNAVIGABLE = /^(javascript|data|vbscript|file|blob):/i;
+const UNNAVIGABLE = new Set([
+  "javascript:",
+  "data:",
+  "vbscript:",
+  "file:",
+  "blob:",
+]);
 
-const navigable = (location) =>
-  typeof location === "string" &&
-  location !== "" &&
-  !UNNAVIGABLE.test(location.replace(/[\u0000-\u0020]/g, ""));
+const navigable = (location) => {
+  if (typeof location !== "string" || location === "") return false;
+
+  try {
+    return !UNNAVIGABLE.has(new URL(location, window.location.href).protocol);
+  } catch {
+    return false;
+  }
+};
 
 const csrf = () =>
   document.querySelector('meta[name="csrf-token"]')?.content ?? "";
