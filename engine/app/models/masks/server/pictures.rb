@@ -17,6 +17,10 @@ module Masks
       RIFF = "RIFF".b
       WEBP = "WEBP".b
 
+      LOADERS = %w[
+        VipsForeignLoadPngBuffer VipsForeignLoadJpegBuffer VipsForeignLoadNsgifBuffer VipsForeignLoadWebpBuffer
+      ].freeze
+
       class << self
         def digest(bytes)
           Digest::SHA256.hexdigest(bytes)[0, 16]
@@ -48,7 +52,18 @@ module Masks
           def images
             require "vips"
 
+            confine_loaders
+
             Vips::Image
+          end
+
+          def confine_loaders
+            return if @confined
+
+            Vips.block("VipsForeignLoad", true)
+            LOADERS.each { |loader| Vips.block(loader, false) }
+
+            @confined = true
           end
 
           def thumbnail(bytes, size)
