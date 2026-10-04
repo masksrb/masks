@@ -39,8 +39,8 @@ module Masks
       def callback
         pending = masks_requests.claim(params[:state])
 
-        return stale if pending.nil?
         return refuse(params[:error], params[:error_description], pending) if params[:error].present?
+        return stale if pending.nil?
 
         tokens = masks_session.complete(
           code: params[:code],

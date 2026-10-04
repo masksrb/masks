@@ -200,11 +200,11 @@ class SessionTest < EngineIntegrationTest
 
     get "/auth/callback?code=x&state=stale-from-somewhere-else", headers: host
 
-    assert_response :bad_request
+    assert_redirected_to "/"
     refute_empty session_payload
   end
 
-  test "a state cannot be replayed once it has been claimed" do
+  test "a state replayed once it has been claimed, as a restored tab does, goes on without redeeming again" do
     connect!
 
     get "/auth", headers: host
@@ -212,9 +212,12 @@ class SessionTest < EngineIntegrationTest
 
     get "/auth/callback?code=#{landed[:code]}&state=#{landed[:state]}", headers: host
     assert_response :redirect
+    held = session_payload
 
     get "/auth/callback?code=#{landed[:code]}&state=#{landed[:state]}", headers: host
-    assert_response :bad_request
+
+    assert_redirected_to "/"
+    assert_equal held, session_payload
   end
 
   test "a forged state is refused and nothing is established" do
@@ -222,6 +225,11 @@ class SessionTest < EngineIntegrationTest
 
     get "/auth", headers: host
     landed = issuer.authorize!(response.location)
+
+    get "/auth/callback?code=#{landed[:code]}&state=forged", headers: host
+
+    assert_redirected_to "/auth/"
+    assert_empty session_payload
 
     get "/auth/callback?code=#{landed[:code]}&state=forged", headers: host
 
@@ -256,11 +264,13 @@ class SessionTest < EngineIntegrationTest
     assert_empty session_payload
   end
 
-  test "a callback with nothing in flight is refused" do
+  test "a callback with nothing in flight starts sign-in again once, then is refused" do
     connect!
 
     get "/auth/callback?code=whatever&state=whatever", headers: host
+    assert_redirected_to "/auth/"
 
+    get "/auth/callback?code=whatever&state=whatever", headers: host
     assert_response :bad_request
   end
 
