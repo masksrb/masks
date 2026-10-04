@@ -8,14 +8,15 @@ module Masks
       TOKEN_TYPES = PresentedToken::TYPES
       REQUESTED_TOKEN_TYPES = [ ACCESS_TOKEN, UPSTREAM_ACCESS_TOKEN ].freeze
 
-      attr_reader :client, :issuer, :subject_token, :subject_token_type, :actor_token, :actor_token_type,
+      attr_reader :client, :issuer, :proof, :subject_token, :subject_token_type, :actor_token, :actor_token_type,
                   :requested_token_type, :requested_scopes, :requested_audience,
                   :requested_lifetime, :named_audience
 
       def initialize(client:, issuer:, subject_token:, subject_token_type: nil, actor_token: nil, actor_token_type: nil,
                      requested_token_type: nil, scope: nil, resource: nil, lifetime: nil, audience: nil,
-                     authorization_details: nil)
+                     authorization_details: nil, proof: nil)
         @client = client
+        @proof = proof
         @authorization_details_value = authorization_details.presence
         @issuer = issuer
         @subject_token = subject_token
@@ -114,10 +115,14 @@ module Masks
       end
 
       def granted_scopes
-        return available_scopes if requested_scopes.empty? && subject.access_token?
+        return Scopes.granted(available_scopes, client.scope_list) if requested_scopes.empty? && subject.access_token?
         return requested_scopes if requested_scopes.any?
 
         Scopes.concrete(available_scopes)
+      end
+
+      def unproven
+        [ subject, acting ].compact.find { |presented| presented.record&.bound? && !presented.record.bound_to?(proof) }
       end
 
       def requested_authorization_details

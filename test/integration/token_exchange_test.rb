@@ -1,8 +1,11 @@
 module Masks
   module Server
     require "test_helper"
+    require_relative "../support/dpop"
 
     class TokenExchangeTest < ActionDispatch::IntegrationTest
+      include DpopProofs
+
       EXCHANGE = Exchange::GRANT_TYPE
       RESOURCES = [ "https://probe.example.com/mcp", "https://probe.example.com/files" ].freeze
 
@@ -218,6 +221,70 @@ module Masks
       test "an actor token without its type is refused" do
         assert_equal "invalid_request", exchange(actor_token: @subject)["error"]
       end
+
+      test "a token held to a key is not exchanged without a proof made with that key" do
+        bound = bound_subject
+        thief = register(client_name: "Thief", token_endpoint_auth_method: "none", grant_types: [ EXCHANGE ])
+
+        body = token(grant_type: EXCHANGE, subject_token: bound, subject_token_type: Exchange::ACCESS_TOKEN,
+                     client_id: thief["client_id"])
+
+        assert_equal "invalid_dpop_proof", body["error"]
+        assert_match "subject_token", body["error_description"]
+
+        stranger = OpenSSL::PKey::EC.generate("prime256v1")
+        body = exchange_with(bound, with_dpop(method: :post, url: "#{origin_for(@tenant)}/token", key: stranger))
+
+        assert_equal "invalid_dpop_proof", body["error"]
+      end
+
+      test "a token held to a key is exchanged with a proof made with it, and the new token is held to it too" do
+        body = exchange_with(bound_subject, with_dpop(method: :post, url: "#{origin_for(@tenant)}/token"))
+
+        assert_equal "DPoP", body["token_type"]
+        assert_equal dpop_jkt, claims_in(body["access_token"]).dig("cnf", "jkt")
+      end
+
+      test "an exchange never leaves a client holding a scope it is not allowed" do
+        narrow = register(client_name: "Narrow", scope: "openid", grant_types: [ "authorization_code", EXCHANGE ])
+
+        assert_equal "openid", exchange(registration: narrow)["scope"]
+
+        body = exchange(registration: narrow, scope: "openid email")
+
+        assert_equal "invalid_scope", body["error"]
+        assert_match "email", body["error_description"]
+      end
+
+      private
+
+        def bound_subject
+          reset!
+          host! host_for(@tenant)
+          code = authorized_code(actor: @actor, registration: @registration, resource: RESOURCES)
+
+          post "/token",
+               params: URI.encode_www_form(
+                 grant_type: "authorization_code", code: code, redirect_uri: OidcFlow::REDIRECT_URI,
+                 code_verifier: verifier, client_id: @registration["client_id"],
+                 client_secret: @registration["client_secret"]
+               ),
+               headers: { "CONTENT_TYPE" => "application/x-www-form-urlencoded" }
+                 .merge(with_dpop(method: :post, url: "#{origin_for(@tenant)}/token"))
+
+          JSON.parse(response.body).fetch("access_token")
+        end
+
+        def exchange_with(subject_token, headers)
+          post "/token",
+               params: URI.encode_www_form(
+                 grant_type: EXCHANGE, subject_token: subject_token, subject_token_type: Exchange::ACCESS_TOKEN,
+                 client_id: @registration["client_id"], client_secret: @registration["client_secret"]
+               ),
+               headers: { "CONTENT_TYPE" => "application/x-www-form-urlencoded" }.merge(headers)
+
+          JSON.parse(response.body)
+        end
     end
   end
 end

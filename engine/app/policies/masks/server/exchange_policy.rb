@@ -6,7 +6,9 @@ module Masks
              :subject_token_is_live,
              :id_token_belongs_to_the_client,
              :actor_token_is_held,
+             :bound_tokens_are_proven,
              :scopes_only_narrow,
+             :scopes_stay_within_the_client,
              :audience_only_narrows,
              :authorization_details_only_narrow,
              :lifetime_only_shortens,
@@ -15,7 +17,7 @@ module Masks
       delegate :client, :subject, :acting, :actor, :subject_token_type, :actor_token, :actor_token_type,
                :requested_token_type, :requested_scopes, :requested_audience, :available_scopes, :available_audience,
                :requested_lifetime, :named_audience, :upstream?, :connection, :delegation,
-               :requested_authorization_details, :available_authorization_details, to: :exchange
+               :requested_authorization_details, :available_authorization_details, :unproven, to: :exchange
 
       private
 
@@ -70,6 +72,21 @@ module Masks
           deny!("invalid_grant", "actor_token could not be verified") if acting.nil?
           deny!("invalid_grant", "actor_token has been revoked or has expired") unless acting.live?
           deny!("invalid_grant", "actor_token has to be one issued to the client presenting it") unless acting.held_by?(client)
+        end
+
+        def bound_tokens_are_proven
+          held = unproven
+          return if held.nil?
+
+          name = held.equal?(acting) ? "actor_token" : "subject_token"
+
+          deny!("invalid_dpop_proof", "#{name} is held to a key, and this request carries no proof made with it")
+        end
+
+        def scopes_stay_within_the_client
+          beyond = Scopes.refused(client.scope_list, requested_scopes)
+
+          deny!("invalid_scope", "this client may not hold #{beyond.join(', ')}") if beyond.any?
         end
 
         def scopes_only_narrow

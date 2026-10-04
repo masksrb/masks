@@ -222,7 +222,8 @@ module Masks
             resource: repeated("resource"),
             lifetime: req.requested_lifetime,
             audience: repeated("audience"),
-            authorization_details: params[:authorization_details]
+            authorization_details: params[:authorization_details],
+            proof: proof
           ).then { |exchange| res.access_token = Payload.new(exchange.perform!(jkt: jkt) { |access| bearer(access) }) }
         end
 
