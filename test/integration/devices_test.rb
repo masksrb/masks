@@ -183,6 +183,39 @@ module Masks
         assert_equal "second-factor", to_second_factor["prompt"]
       end
 
+      test "signing a shared device out leaves the other account's sessions on it alone" do
+        to_second_factor
+        event("otp", code: @totp.now, remember: true)
+
+        device = devices.first
+        other = create_actor(@tenant, nickname: "housemate")
+        theirs = within(@tenant) do
+          DeviceFactor.remember!(device: device, actor: other, factor: DeviceFactor::SECOND_FACTOR)
+          Session.start!(actor: other, device: device)
+        end
+
+        delete "/account/devices/#{device.id}", headers: browser
+
+        within(@tenant) do
+          assert_empty Session.live.where(actor: @actor)
+          assert theirs.reload.revoked_at.nil?
+          assert device.reload.carries?(theirs)
+          assert DeviceFactor.satisfied?(device: device, actor: other, factor: DeviceFactor::SECOND_FACTOR)
+        end
+      end
+
+      test "a shared device cannot be renamed by one of the accounts on it" do
+        to_second_factor
+        event("otp", code: @totp.now)
+
+        device = devices.first
+        within(@tenant) { Session.start!(actor: create_actor(@tenant, nickname: "housemate"), device: device) }
+
+        patch "/account/devices/#{device.id}", params: { name: "Mine now" }, headers: browser
+
+        assert_nil within(@tenant) { device.reload.name }
+      end
+
       test "a device can be named from the account page" do
         to_second_factor
         event("otp", code: @totp.now)

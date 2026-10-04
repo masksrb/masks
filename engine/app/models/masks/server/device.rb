@@ -98,15 +98,21 @@ module Masks
         update!(version: self.class.version)
       end
 
-      def sign_out!
+      def sign_out!(actor: nil)
+        held = ->(scope) { actor ? scope.where(actor: actor) : scope }
+
         transaction do
-          rotate!
-          sessions.live.find_each(&:revoke!)
-          tokens.live.find_each(&:revoke!)
-          device_factors.delete_all
+          rotate! unless actor && shared_beyond?(actor)
+          held.call(sessions.live).find_each(&:revoke!)
+          held.call(tokens.live).find_each(&:revoke!)
+          held.call(device_factors).delete_all
         end
 
         self
+      end
+
+      def shared_beyond?(actor)
+        sessions.where.not(actor: actor).exists?
       end
 
       def carries?(session)

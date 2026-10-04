@@ -5,6 +5,7 @@ module Masks
 
       def update
         return refuse(t("devices.unknown")) if device.nil?
+        return refuse(t("devices.shared")) if device.shared_beyond?(current_actor)
 
         device.update!(name: params[:name].to_s.strip.presence)
 
@@ -19,7 +20,7 @@ module Masks
       def destroy
         return refuse(t("devices.unknown")) if device.nil?
 
-        device.sign_out!
+        device.sign_out!(actor: current_actor)
 
         Event.record!(Event::DEVICE_FORGOTTEN, actor: current_actor, device: device)
 
