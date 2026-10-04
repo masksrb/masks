@@ -124,6 +124,26 @@ module Masks
         assert_match "needs masks:manage", refusal(body)
       end
 
+      test "a scope ending in a colon is every manage scope it covers, so only an owner hands it out" do
+        security = bearer_for(manager(ManageRoles::SECURITY))
+
+        body = ask(%(mutation { createClient(name: "Sly", allowedScopes: ["masks:"]) { client { clientId } } }), security)
+
+        assert_match "only an owner can hand out masks:", refusal(body)
+
+        support = bearer_for(manager(ManageRoles::SUPPORT, nickname: "helper"))
+
+        body = ask(%(mutation { createActor(nickname: "new", scopes: ["openid", "masks:manage:"]) { actor { uuid } } }), support)
+
+        assert_match "only an owner can hand out masks:manage:", refusal(body)
+
+        sneaky = create_client(@tenant, name: "Sneaky", allowed_scopes: "openid masks:")
+
+        body = ask(%(mutation($id: ID!) { updateClient(clientId: $id, name: "Mine") { client { name } } }), security, id: sneaky.client_id)
+
+        assert_equal "only an owner can change a client that can carry a manage or provisioning scope", refusal(body)
+      end
+
       test "security cannot repoint a client that can carry a manage scope" do
         held = bearer_for(manager(ManageRoles::SECURITY))
 

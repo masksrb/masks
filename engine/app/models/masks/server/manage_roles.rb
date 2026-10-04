@@ -26,7 +26,9 @@ module Masks
         end
 
         def owner_only(scopes)
-          Scopes.list(scopes) & OWNER_ONLY
+          Scopes.list(scopes).select do |scope|
+            OWNER_ONLY.any? { |held| held == scope || Scopes.covered?([ scope ], held) }
+          end
         end
 
         def permits?(scopes, level)
