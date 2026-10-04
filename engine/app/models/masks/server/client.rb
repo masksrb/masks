@@ -143,7 +143,8 @@ module Masks
 
         def registered_attributes(metadata, name:, auth_method: DEFAULT_AUTH_METHOD)
           held = metadata_attributes(metadata)
-          grant_types = held[:grant_types].presence || [ "authorization_code" ]
+          asked = held[:grant_types].presence || [ "authorization_code" ]
+          grant_types = (asked & GRANT_TYPES).presence || asked
 
           {
             token_endpoint_auth_method: auth_method,

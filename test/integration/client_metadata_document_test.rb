@@ -93,6 +93,25 @@ module Masks
         assert_in_delta 5.minutes.from_now, held.metadata_expires_at, 5.seconds
       end
 
+      test "a grant type masks does not offer is left off the client, as Claude's document lists jwt-bearer" do
+        publish(grant_types: %w[authorization_code refresh_token urn:ietf:params:oauth:grant-type:jwt-bearer])
+        sign_in_as(@actor)
+
+        authorize(client_id: DOCUMENT_URL)
+
+        assert awaiting_consent?
+        assert_equal %w[authorization_code refresh_token], held.grant_types
+      end
+
+      test "a document that asks only for grant types masks does not offer is refused" do
+        publish(grant_types: %w[urn:ietf:params:oauth:grant-type:jwt-bearer])
+
+        authorize(client_id: DOCUMENT_URL)
+
+        assert_response :bad_request
+        assert_nil held
+      end
+
       test "a document that names another client_id is refused" do
         publish(client_id: "https://elsewhere.example.com/client.json")
 
