@@ -21,6 +21,8 @@ const DEPENDENCIES = new Set([
   "VITE_RUBY_SKIP_PROXY",
   "MASKS_MASTER_KEY",
   "MASKS_MASTER_KEY_FILE",
+  "MASKS_MIGRATION_USER",
+  "MASKS_MIGRATION_PASSWORD",
 ]);
 
 function* walk(path) {

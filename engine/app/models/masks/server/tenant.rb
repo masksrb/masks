@@ -19,6 +19,18 @@ module Masks
         end
       end
 
+      class Owner < StandardError
+        def initialize(role)
+          super(
+            "this server connects to Postgres as #{role}, which owns the tables row-level security " \
+            "protects. An owner can switch that protection off with one ALTER TABLE, so a single SQL " \
+            "injection would read every tenant. Migrate as a separate role named by " \
+            "MASKS_MIGRATION_USER and MASKS_MIGRATION_PASSWORD, and serve as a role that holds only " \
+            "the grants bin/rails masks:grants hands it."
+          )
+        end
+      end
+
       encrypts :pairwise_salt, :setup_token
 
       has_many :signing_keys, dependent: :destroy
@@ -268,15 +280,21 @@ module Masks
           held = role_privileges
 
           raise Exposed, held&.fetch("rolname", nil) unless held && held["bypasses"] == false
+          raise Owner, held["rolname"] if held["owns"] && guards_ownership?
 
           @isolated = true
         end
 
         def role_privileges
           connection.select_one(<<~SQL)
-            SELECT rolname, rolsuper OR rolbypassrls AS bypasses
+            SELECT rolname, rolsuper OR rolbypassrls AS bypasses,
+                   EXISTS (SELECT 1 FROM pg_class WHERE relrowsecurity AND relowner = pg_roles.oid) AS owns
             FROM pg_roles WHERE rolname = current_user
           SQL
+        end
+
+        def guards_ownership?
+          !::Rails.env.local? && !Server.engine?
         end
 
         def switch(tenant)

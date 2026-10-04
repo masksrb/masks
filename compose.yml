@@ -124,6 +124,8 @@ services:
       MASKS_SETUP_TOKEN: ""
       MASKS_PUBLIC_ORIGIN_TEMPLATE: http://%{subdomain}.masks.localhost:${MASKS_IMAGE_PORT:-5556}
       POSTGRES_DATABASE: masks_image
+      MASKS_MIGRATION_USER: masks_owner
+      MASKS_MIGRATION_PASSWORD: masks_owner
       MASKS_JOBS_IN_WEB_SERVER: "true"
       VITE_RUBY_HOST: ""
     ports:

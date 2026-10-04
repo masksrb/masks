@@ -92,24 +92,40 @@ jobs:
         with:
           bundler-cache: true
           working-directory: server
-      - name: Create the non-superuser application role
+      - name: Create the non-superuser application roles
         env:
           PGPASSWORD: postgres
         run: |
           psql -h 127.0.0.1 -p 5435 -U postgres \
             -f server/db/docker-entrypoint-initdb.d/01-app-role.sql
-      - name: Eager load the way production does
+      - name: Migrate as the owner, and grant the serving role what it serves with
         working-directory: server
         env:
           RAILS_ENV: production
           POSTGRES_DATABASE: masks_boot
           POSTGRES_PORT: "5435"
+          POSTGRES_USER: masks_owner
+          POSTGRES_PASSWORD: masks_owner
+          MASKS_SERVING_USER: masks
           MASKS_PUBLIC_ORIGIN_TEMPLATE: https://%{subdomain}.auth.invalid
           SECRET_KEY_BASE: boot_check_secret_key_base_not_for_real_deployments
           ENCRYPTION_PRIMARY_KEY: boot_check_primary_key_not_for_credentials
           ENCRYPTION_DETERMINISTIC_KEY: boot_check_deterministic_key_not_real
           ENCRYPTION_KEY_DERIVATION_SALT: boot_check_key_derivation_salt_fake
-        run: bin/rails db:prepare zeitwerk:check
+        run: bin/rails db:prepare masks:grants
+      - name: Eager load and declare a tenant the way production does, as the serving role
+        working-directory: server
+        env:
+          RAILS_ENV: production
+          POSTGRES_DATABASE: masks_boot
+          POSTGRES_PORT: "5435"
+          MASKS_TENANTS: boot
+          MASKS_PUBLIC_ORIGIN_TEMPLATE: https://%{subdomain}.auth.invalid
+          SECRET_KEY_BASE: boot_check_secret_key_base_not_for_real_deployments
+          ENCRYPTION_PRIMARY_KEY: boot_check_primary_key_not_for_credentials
+          ENCRYPTION_DETERMINISTIC_KEY: boot_check_deterministic_key_not_real
+          ENCRYPTION_KEY_DERIVATION_SALT: boot_check_key_derivation_salt_fake
+        run: bin/rails zeitwerk:check masks:tenants
 
   frontend:
     needs: lint

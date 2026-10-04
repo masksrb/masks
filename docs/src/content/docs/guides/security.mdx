@@ -27,12 +27,14 @@ password is in [sessions and devices](/guides/features/#sessions-and-devices).
 | Layer | What it does | If it fails |
 | --- | --- | --- |
 | `TenantScoped` | Scopes every query in the app. | A forgotten scope would leak rows. |
-| Row-level security | `FORCE ROW LEVEL SECURITY` in Postgres. | masks refuses to run as a role that bypasses it. |
+| Row-level security | `FORCE ROW LEVEL SECURITY` in Postgres. | masks refuses to run as a role that bypasses it, and a production server refuses a role that owns its tables. |
 | Per-tenant signing keys | A token's `kid` exists in one tenant's JWKS only. | Verification refuses the token. |
 
-A `SUPERUSER` or `BYPASSRLS` role skips every policy with no error. `Tenant.switch` checks the role
-once per process and raises if it holds either privilege, so set `POSTGRES_USER` to an ordinary role.
-See [ENV vars](/reference/environment/#database).
+A `SUPERUSER` or `BYPASSRLS` role skips every policy with no error, and the role that owns a table
+can switch its policy off with one `ALTER TABLE`. `Tenant.switch` checks the role once per process.
+It raises if the role holds either privilege, and in a production server it also raises if the role
+owns a table that row-level security protects. The server therefore migrates as one role and serves
+as another. See [database roles](/guides/self-hosting/#database-roles).
 
 ### Entering a tenant
 

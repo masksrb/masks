@@ -49,6 +49,8 @@ services:
       POSTGRES_USER: masks
       POSTGRES_PASSWORD: ...
       POSTGRES_DATABASE: masks
+      MASKS_MIGRATION_USER: masks_owner
+      MASKS_MIGRATION_PASSWORD: ...
       MASKS_TENANTS: acme
       MASKS_PUBLIC_ORIGIN_TEMPLATE: https://%{subdomain}.auth.example.com
     volumes:
@@ -63,11 +65,11 @@ services:
   postgres:
     image: postgres:17-alpine
     environment:
-      POSTGRES_USER: masks
+      POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ...
-      POSTGRES_DB: masks
     volumes:
       - postgres:/var/lib/postgresql/data
+      - ./initdb:/docker-entrypoint-initdb.d:ro
 
   caddy:
     image: caddy:2-alpine
@@ -92,11 +94,49 @@ volumes:
 }
 ```
 
+`initdb/01-roles.sql` creates the two roles masks connects as when the Postgres volume is first
+initialized:
+
+```sql
+CREATE ROLE masks_owner WITH LOGIN PASSWORD '...' CREATEDB;
+CREATE ROLE masks WITH LOGIN PASSWORD '...';
+```
+
 Every variable the server reads is in [ENV vars](/reference/environment/).
 
 `/up` answers `up` while the server can reach its database, job queue, and cache, and `down` with a
 503 when it cannot reach one of them. A health check on `/up` therefore also catches a stopped job
 queue. The `logging` options cap each container's log, so a repeating fault cannot fill the disk.
+
+## Database roles
+
+masks keeps tenants apart with row-level security in Postgres. A superuser bypasses it, and the role
+that owns a table can switch it off with one `ALTER TABLE`, so masks connects as two roles.
+
+| Role | Variable | Holds |
+| --- | --- | --- |
+| `masks_owner` | `MASKS_MIGRATION_USER` | The databases and every table in them. `CREATEDB`, and nothing else. |
+| `masks` | `POSTGRES_USER` | `SELECT`, `INSERT`, `UPDATE`, and `DELETE` on the tables, and the sequences behind them. |
+
+On every boot, the image's entrypoint runs `db:prepare` and `masks:grants` as the migration role,
+then starts the server as the serving role. It refuses to start when `MASKS_MIGRATION_USER` is
+unset or names the serving role, and the server refuses to answer a request while its role owns a
+table that row-level security protects.
+
+### Moving an existing database to two roles
+
+A server that migrated and served as one role owns everything it created. Before you upgrade, run
+this as a Postgres superuser in each of the three databases, such as `masks`, `masks_cache`, and
+`masks_queue`:
+
+```sql
+CREATE ROLE masks_owner WITH LOGIN PASSWORD '...' CREATEDB;
+REASSIGN OWNED BY masks TO masks_owner;
+```
+
+`CREATE ROLE` only needs to run once, because roles belong to the whole server. Then set
+`MASKS_MIGRATION_USER` and `MASKS_MIGRATION_PASSWORD` and start the new image. Its first boot grants
+`masks` the access it serves with.
 
 ## Encryption & secrets
 

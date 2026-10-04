@@ -19,6 +19,8 @@ services:
       POSTGRES_USER: masks
       POSTGRES_PASSWORD: ...
       POSTGRES_DATABASE: masks
+      MASKS_MIGRATION_USER: masks_owner
+      MASKS_MIGRATION_PASSWORD: ...
       MASKS_TENANT: acme
       MASKS_PUBLIC_ORIGIN_TEMPLATE: https://auth.example.com
     volumes:
@@ -29,23 +31,33 @@ services:
   postgres:
     image: postgres:17-alpine
     environment:
-      POSTGRES_USER: masks
+      POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ...
-      POSTGRES_DB: masks
     volumes:
       - postgres:/var/lib/postgresql/data
+      - ./initdb:/docker-entrypoint-initdb.d:ro
 
 volumes:
   postgres:
   masks-storage:
 ```
 
+`initdb/01-roles.sql` creates the role that owns the schema and the role that serves requests:
+
+```sql
+CREATE ROLE masks_owner WITH LOGIN PASSWORD '...' CREATEDB;
+CREATE ROLE masks WITH LOGIN PASSWORD '...';
+```
+
+masks migrates as the first and serves as the second, so the role answering requests cannot switch
+off the row-level security that keeps tenants apart.
+
 Put a TLS proxy in front of port `3000`, open the public origin, and set up the first account with
 the setup token masks prints in its logs. The first account holds `masks:manage` and can open
 `/manage`. The `masks-storage` volume holds the generated master key, which every encrypted column
 depends on, so back it up with the database.
 
-See [Self-hosting](/guides/self-hosting/) for TLS, image tags, secrets, and tenants.
+See [Self-hosting](/guides/self-hosting/) for TLS, image tags, database roles, secrets, and tenants.
 
 ## Add it to a Rails app
 

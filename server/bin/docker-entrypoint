@@ -6,7 +6,23 @@ if [ -z "$SECRET_KEY_BASE_DUMMY" ]; then
 fi
 
 if [ "${*: -2:1}" == "./bin/rails" ] && [ "${*: -1:1}" == "server" ]; then
-  ./bin/rails db:prepare
+  if [ -z "$MASKS_MIGRATION_USER" ]; then
+    echo "masks: MASKS_MIGRATION_USER is not set. masks migrates as one Postgres role and serves as another," >&2
+    echo "masks: so the role that answers requests never owns the tables row-level security protects." >&2
+    echo "masks: Set MASKS_MIGRATION_USER and MASKS_MIGRATION_PASSWORD to the role that owns the schema." >&2
+    exit 1
+  fi
+
+  if [ "$MASKS_MIGRATION_USER" == "${POSTGRES_USER:-masks}" ]; then
+    echo "masks: MASKS_MIGRATION_USER and POSTGRES_USER are both ${POSTGRES_USER:-masks}. They name two roles." >&2
+    exit 1
+  fi
+
+  MASKS_SERVING_USER="${POSTGRES_USER:-masks}" \
+    POSTGRES_USER="$MASKS_MIGRATION_USER" \
+    POSTGRES_PASSWORD="$MASKS_MIGRATION_PASSWORD" \
+    sh -c './bin/rails db:prepare && ./bin/rails masks:grants'
+
   ./bin/rails masks:tenants
   ./bin/rails runner 'Masks::Server::RefreshAuthenticatorsJob.perform_later if Masks::Server::Authenticator.none?'
 fi

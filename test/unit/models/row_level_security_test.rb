@@ -4,11 +4,18 @@ module Masks
 
     module PretendsToBypass
       mattr_accessor :pretending, default: false
+      mattr_accessor :owning, default: false
+      mattr_accessor :guarding, default: nil
 
       def role_privileges
         return { "rolname" => "postgres", "bypasses" => true } if PretendsToBypass.pretending
+        return { "rolname" => "masks", "bypasses" => false, "owns" => true } if PretendsToBypass.owning
 
         super
+      end
+
+      def guards_ownership?
+        PretendsToBypass.guarding.nil? ? super : PretendsToBypass.guarding
       end
     end
 
@@ -92,6 +99,45 @@ module Masks
       ensure
         PretendsToBypass.pretending = false
         forget_isolation
+      end
+
+      test "a role that owns the protected tables is refused in production" do
+        forget_isolation
+        PretendsToBypass.owning = true
+        PretendsToBypass.guarding = true
+
+        refused = assert_raises(Tenant::Owner) do
+          Tenant.switch(@tenant) { flunk "the switch went through on a role that can turn the policies off" }
+        end
+
+        assert_match "MASKS_MIGRATION_USER", refused.message
+      ensure
+        PretendsToBypass.owning = false
+        PretendsToBypass.guarding = nil
+        forget_isolation
+      end
+
+      test "a role that owns the protected tables is allowed where one role migrates and serves" do
+        forget_isolation
+        PretendsToBypass.owning = true
+        PretendsToBypass.guarding = false
+
+        assert_equal @tenant.id, Tenant.switch(@tenant) { Current.tenant.id }
+      ensure
+        PretendsToBypass.owning = false
+        PretendsToBypass.guarding = nil
+        forget_isolation
+      end
+
+      test "ownership goes unguarded in development and test, where one role migrates and serves" do
+        assert_not Tenant.guards_ownership?
+      end
+
+      test "the role privileges report whether this role owns a protected table" do
+        held = Tenant.role_privileges
+
+        assert_includes held.keys, "owns"
+        assert held["owns"], "the suite migrates and serves as one role, so it owns them"
       end
 
       private

@@ -120,16 +120,21 @@ settings.
 
 ### Database
 
-masks uses three PostgreSQL databases: the primary, a cache, and a job queue. Connect as a role
-without superuser, because tenant isolation depends on row-level security, which a superuser
-bypasses.
+masks uses three PostgreSQL databases: the primary, a cache, and a job queue. It connects as two
+roles. One owns the schema and runs migrations, and the other serves requests with only the table
+access `bin/rails masks:grants` hands it. Tenant isolation depends on row-level security, which a
+superuser bypasses and a table owner can switch off, so the production server refuses to serve as a
+role that is either one. See [the database roles](/guides/self-hosting/#database-roles).
 
 | Variable | Default | |
 | --- | --- | --- |
 | `POSTGRES_HOST` | `127.0.0.1` | |
 | `POSTGRES_PORT` | `5432` in production, `5435` otherwise | Development and test default to the port the dev stack publishes. |
-| `POSTGRES_USER` | `masks` | |
+| `POSTGRES_USER` | `masks` | The role that serves requests. |
 | `POSTGRES_PASSWORD` | `masks` | |
+| `MASKS_MIGRATION_USER` | none | The role that owns the schema. The container image's entrypoint runs `db:prepare` and `masks:grants` as this role before it starts the server, and refuses to start without it. Required in production. |
+| `MASKS_MIGRATION_PASSWORD` | none | That role's password. |
+| `MASKS_SERVING_USER` | none | The role `bin/rails masks:grants` grants table access to. The entrypoint sets it to `POSTGRES_USER`. |
 | `POSTGRES_DATABASE` | `masks_production` | The primary database's name in production. The cache and queue databases add `_cache` and `_queue` to it. Development and test use fixed names. |
 
 ### Processes

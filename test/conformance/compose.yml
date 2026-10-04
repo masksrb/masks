@@ -38,6 +38,8 @@ services:
       POSTGRES_USER: masks
       POSTGRES_PASSWORD: masks
       POSTGRES_DATABASE: masks_conformance
+      MASKS_MIGRATION_USER: masks_owner
+      MASKS_MIGRATION_PASSWORD: masks_owner
       MASKS_TENANTS: demo
       SECRET_KEY_BASE: conformance_only_secret_key_base_not_for_real_deployments
       ENCRYPTION_PRIMARY_KEY: conformance_only_primary_key_not_for_credentials
