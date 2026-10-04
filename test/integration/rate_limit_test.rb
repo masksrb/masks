@@ -54,6 +54,18 @@ module Masks
         assert_equal 200, attempt(identifier: other.nickname)
       end
 
+      test "rewording the identifier does not open a fresh budget for the same account" do
+        limit = ::Rails.configuration.masks.account_attempt_limit
+        nickname = @actor.nickname
+        email = "owner@example.com"
+        within(@tenant) { @actor.update!(email: email) }
+        variants = [ nickname, " #{nickname}", "#{nickname} ", email, email.upcase, "\t#{nickname}" ].cycle
+
+        limit.times { attempt(identifier: variants.next) }
+
+        assert_equal 429, attempt(identifier: "  #{nickname}\t")
+      end
+
       test "one tenant cannot exhaust another's budget" do
         limit = ::Rails.configuration.masks.account_attempt_limit
         elsewhere = Tenant.create!(subdomain: "acme-#{SecureRandom.hex(4)}", name: "Acme")

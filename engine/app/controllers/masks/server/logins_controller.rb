@@ -14,7 +14,7 @@ module Masks
 
       rate_limit to: ::Rails.configuration.masks.account_attempt_limit,
                  within: 3.minutes, only: :update, name: "identifier", if: -> { verifying? },
-                 by: -> { [ current_tenant.id, login_store["identifier"].to_s.downcase ].join(":") },
+                 by: -> { [ current_tenant.id, attempted_account ].join(":") },
                  with: -> { too_many("too-many-attempts-for-account") }
 
       rate_limit to: ::Rails.configuration.masks.recovery_limit,
@@ -160,6 +160,12 @@ module Masks
 
         def serialize(login)
           login.as_json.merge("redirectTo" => next_location(login))
+        end
+
+        def attempted_account
+          identifier = login_store["identifier"].to_s.strip.downcase
+
+          login_store["actor_id"].presence || Actor.locate(identifier)&.id || identifier
         end
 
         def verifying?

@@ -110,7 +110,7 @@ module Masks
       end
 
       def identifier=(value)
-        store["identifier"] = value.presence
+        store["identifier"] = value.to_s.strip.presence
       end
 
       def actor
