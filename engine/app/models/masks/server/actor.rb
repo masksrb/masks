@@ -216,6 +216,15 @@ module Masks
         end
       end
 
+      def forget_unproven_ways_in!
+        passkeys.find_each do |passkey|
+          passkey.destroy!
+          Event.record!(Event::PASSKEY_REMOVED, actor: self, passkey: passkey.name)
+        end
+
+        connections.destroy_all
+      end
+
       def change_password!(current, password, keeping: nil)
         return false unless activated? && authenticate(current.to_s)
 

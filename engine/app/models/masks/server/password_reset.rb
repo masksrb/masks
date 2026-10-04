@@ -14,10 +14,13 @@ module Masks
         return nil if claimed.nil?
 
         actor = claimed.actor
+        verifying = claimed.delivered? && claimed.addressed?
+        claiming = verifying && actor.email_unconfirmed?
 
         transaction do
-          actor.reset_password!(password, verifying_email: claimed.delivered? && claimed.addressed?)
+          actor.reset_password!(password, verifying_email: verifying)
           CodeFactors.disable!(actor, "email", by: nil) if claimed.delivered?
+          actor.forget_unproven_ways_in! if claiming
         end
 
         actor

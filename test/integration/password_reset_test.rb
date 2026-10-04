@@ -18,6 +18,15 @@ module Masks
         JSON.parse(response.body)
       end
 
+      def ways_in!
+        Passkey.create!(actor: @actor, external_id: "planted", public_key: "key", sign_count: 0, user_verified: false)
+        provider = Provider.create!(key: "acme", name: "Acme", authorization_url: "https://acme.test/authorize",
+                                    token_url: "https://acme.test/token", issuer: "https://acme.test",
+                                    client_id: "upstream")
+        Connection.create!(provider: provider, actor: @actor, subject: "upstream-1", label: "ada@acme.test",
+                           connected_at: Time.current)
+      end
+
       def open_reset(actor = @actor)
         within(@tenant) { PasswordReset.open!(actor: actor) }
       end
@@ -157,6 +166,34 @@ module Masks
           PasswordReset.settle!(copied.secret, "another-password")
 
           assert_nil @actor.reload.email_verified_at
+        end
+      end
+
+      test "a mailed reset that first proves the address drops passkeys and connections set up before it" do
+        within(@tenant) do
+          @actor.update!(email_verified_at: nil)
+          ways_in!
+
+          mailed = PasswordReset.open!(actor: @actor)
+          mailed.delivered!
+          PasswordReset.settle!(mailed.secret, "a-new-password")
+
+          assert_equal 0, Passkey.where(actor_id: @actor.id).count
+          assert_equal 0, Connection.where(actor_id: @actor.id).count
+        end
+      end
+
+      test "a mailed reset of an address already proven keeps passkeys and connections" do
+        within(@tenant) do
+          @actor.update!(email_verified_at: Time.current)
+          ways_in!
+
+          mailed = PasswordReset.open!(actor: @actor)
+          mailed.delivered!
+          PasswordReset.settle!(mailed.secret, "a-new-password")
+
+          assert_equal 1, Passkey.where(actor_id: @actor.id).count
+          assert_equal 1, Connection.where(actor_id: @actor.id).count
         end
       end
 
