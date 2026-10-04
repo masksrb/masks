@@ -17,8 +17,9 @@ out of it, and what happens to their accounts over time.
 | Self-registered | The app, over dynamic registration, within the tenant's [ceiling](/guides/core-concepts/#the-ceiling). | No |
 | Metadata document | The app, by using the URL of a document that describes it as its `client_id`. | No |
 
-Only an approved client may hold a `masks:` scope, sign in as itself, or receive a
-[delegation](/guides/connecting-via-sdk/#delegation). A client grants `required_scopes` always and
+Only an approved client may hold a `masks:` scope, sign in as itself, receive a
+[delegation](/guides/connecting-via-sdk/#delegation), or name `resources` it serves, since a resource
+trusts the tokens issued for it. A self-registered client that names `resources` is refused. A client grants `required_scopes` always and
 `allowed_scopes` when asked. Archiving a client stops it signing anyone in and keeps its record.
 
 ### A client named by its metadata document

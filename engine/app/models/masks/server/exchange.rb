@@ -102,7 +102,7 @@ module Masks
       end
 
       def consented_audience
-        Scopes.list((consent&.audience || []) + client.resources + [ client.client_id ])
+        Scopes.list((consent&.audience || []) + (client.approved? ? client.resources : []) + [ client.client_id ])
       end
 
       def available_scopes
@@ -138,7 +138,7 @@ module Masks
         return requested_audience if requested_audience.any?
         return subject.audience if subject.access_token?
 
-        client.resources.presence || [ client.client_id ]
+        (client.resources if client.approved?).presence || [ client.client_id ]
       end
 
       def expires_at

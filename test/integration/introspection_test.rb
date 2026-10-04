@@ -35,7 +35,7 @@ module Masks
       end
 
       def granted(scope: "openid profile uris:catalog:read", resource: RESOURCE)
-        registered = register(scope: scope, resources: [ resource ])
+        registered = register(scope: scope)
 
         sign_in_as(@actor)
 
@@ -136,7 +136,10 @@ module Masks
       test "a client that named the audience itself learns nothing until somebody approves it" do
         _issuedto, tokens = granted
 
-        claiming = register(client_name: "self-declared", resources: [ RESOURCE ])
+        assert_equal "invalid_client_metadata", register(client_name: "self-declared", resources: [ RESOURCE ])["error"]
+
+        claiming = register(client_name: "self-declared")
+        within { Client.find_by(client_id: claiming["client_id"]).update_column(:resources, [ RESOURCE ]) }
 
         body = introspect(tokens["access_token"],
                           client_id: claiming["client_id"],
@@ -148,7 +151,7 @@ module Masks
       test "a stranger's client learns nothing, and learns it the same way a revoked token does" do
         _issuedto, tokens = granted
 
-        stranger = register(client_name: "stranger", resources: [ "https://elsewhere.example.com" ])
+        stranger = register(client_name: "stranger")
 
         body = introspect(tokens["access_token"],
                           client_id: stranger["client_id"],

@@ -67,6 +67,7 @@ module Masks
       validate :sector_identifier_uri_is_owned, if: :sector_declared?
       validate :metadata_uris_are_usable
       validate :authorization_details_are_declared
+      validate :resources_are_named_only_when_approved
       validates :consent_lifetime, numericality: { only_integer: true, greater_than_or_equal_to: 300,
                                                    less_than_or_equal_to: Consent::LONGEST.to_i }, allow_nil: true
 
@@ -496,6 +497,12 @@ module Masks
           return "must not point at a loopback address" if loopback?(uri)
 
           "must use https" unless uri.scheme == "https"
+        end
+
+        def resources_are_named_only_when_approved
+          return unless dynamic? && !approved? && resources.any? && will_save_change_to_resources?
+
+          errors.add(:resources, "may only be named by an approved client, since tokens for a resource are trusted by it")
         end
 
         def authorization_details_are_declared

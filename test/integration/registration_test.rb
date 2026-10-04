@@ -27,6 +27,26 @@ module Masks
         assert_equal 0, body["client_secret_expires_at"]
       end
 
+      test "a self-registered client cannot claim a resource, since tokens for it would be trusted there" do
+        body = register(resources: [ "https://bank.example.com/api" ])
+
+        assert_response :bad_request
+        assert_equal "invalid_client_metadata", body["error"]
+        assert_match "approved client", body["error_description"]
+      end
+
+      test "an id token exchanged by an unapproved client is addressed to that client alone" do
+        registration = register(grant_types: [ "authorization_code", Exchange::GRANT_TYPE ])
+        within { Client.find_by(client_id: registration["client_id"]).update_column(:resources, [ "https://bank.example.com/api" ]) }
+        actor = create_actor(email: "owner@probe.example.com")
+        id_token = access_token_for(actor: actor, registration: registration)["id_token"]
+
+        body = token(grant_type: Exchange::GRANT_TYPE, subject_token: id_token, subject_token_type: Exchange::ID_TOKEN,
+                     client_id: registration["client_id"], client_secret: registration["client_secret"])
+
+        assert_equal registration["client_id"], claims_in(body["access_token"])["aud"]
+      end
+
       test "a public client is issued no secret" do
         body = register(token_endpoint_auth_method: "none")
 

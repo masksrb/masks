@@ -125,6 +125,15 @@ module Masks
         assert_requested :get, DOCUMENT_URL, times: 1
       end
 
+      test "a document cannot claim a resource" do
+        publish(resources: [ "https://bank.example.com/api" ])
+
+        authorize(client_id: DOCUMENT_URL)
+
+        assert_response :bad_request
+        assert_nil held
+      end
+
       test "a document larger than five kilobytes is refused" do
         publish(client_name: "x" * 6.kilobytes)
 

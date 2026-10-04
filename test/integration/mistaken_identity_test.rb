@@ -424,7 +424,10 @@ module Masks
         consent! if awaiting_consent?
 
         issued = redeem(code_from)
-        stranger = register(@tenant, client_name: "stranger", resources: [ API ])
+        assert_equal "invalid_client_metadata", register(@tenant, client_name: "stranger", resources: [ API ])["error"]
+
+        stranger = register(@tenant, client_name: "stranger")
+        within { Client.find_by(client_id: stranger["client_id"]).update_column(:resources, [ API ]) }
 
         post "/introspect",
              params: {
