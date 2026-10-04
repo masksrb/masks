@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.1](https://github.com/masksrb/masks/compare/gem/v0.9.0...gem/v0.9.1) (2026-10-04)
+
+
+### Fixes
+
+* **client:** an error the issuer sends back is shown rather than retried, and the engine tests hold the new callback behaviour ([36adb9b](https://github.com/masksrb/masks/commit/36adb9b57a2379b8d7ce1d16f2e04e8c244baa7d))
+
 ## [0.9.0](https://github.com/masksrb/masks/compare/gem/v0.8.0...gem/v0.9.0) (2026-10-04)
 
 
