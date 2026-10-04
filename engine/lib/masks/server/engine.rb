@@ -29,6 +29,12 @@ module Masks
         end
       end
 
+      initializer "masks_server.tenant_setting" do
+        ActiveSupport.on_load(:active_record_postgresqladapter) do
+          set_callback :checkout, :after, -> { TenantIsolation.adopt(self) }
+        end
+      end
+
       initializer "masks_server.static" do |app|
         app.middleware.use Rack::Static,
                            urls: %w[/masks-public /masks-assets],

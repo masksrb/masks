@@ -180,5 +180,48 @@ module Masks
         assert_equal 0, Actor.unscoped.count
       end
     end
+
+    class TenantSettingCheckoutTest < ActiveSupport::TestCase
+      self.use_transactional_tests = false
+
+      teardown do
+        [ @tenant, other_tenant ].each do |tenant|
+          Tenant.switch(tenant) { SigningKey.delete_all }
+          tenant.destroy
+        end
+      end
+
+      def borrowed
+        pool = ActiveRecord::Base.connection_pool
+        connection = pool.checkout
+
+        yield connection
+      ensure
+        pool.checkin(connection) if connection
+      end
+
+      def stale!
+        borrowed do |connection|
+          connection.exec_query("SELECT set_config('masks.tenant_id', $1, false)", "probe", [ other_tenant.id.to_s ])
+        end
+      end
+
+      def setting
+        borrowed { |connection| connection.select_value("SELECT current_setting('masks.tenant_id', true)").to_s }
+      end
+
+      test "a connection handed back still naming a tenant names only the borrower's tenant when it is taken again" do
+        ActiveRecord::Base.connection_pool.release_connection
+
+        stale!
+        assert_equal "", setting
+
+        stale!
+        Current.tenant = @tenant
+        assert_equal @tenant.id.to_s, setting
+      ensure
+        Current.tenant = nil
+      end
+    end
   end
 end

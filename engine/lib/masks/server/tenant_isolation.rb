@@ -3,6 +3,12 @@ module Masks
     module TenantIsolation
       SETTING = "masks.tenant_id".freeze
 
+      def self.adopt(connection)
+        connection.exec_query("SELECT set_config($1, $2, false)", "tenant", [ SETTING, Current.tenant&.id.to_s ])
+      rescue ActiveRecord::NoDatabaseError, ActiveRecord::ConnectionNotEstablished, ActiveRecord::ConnectionFailed
+        nil
+      end
+
       def enable_row_level_security(table)
         execute <<~SQL
           ALTER TABLE #{table} ENABLE ROW LEVEL SECURITY;
