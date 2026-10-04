@@ -51,12 +51,12 @@ module Masks
             held = Net::HTTP::Post.new(uri, headers.merge("Accept" => "application/json"))
             held.body = body
 
-            response = Outbound.call(uri, held, open: Outbound::OPEN_TIMEOUT, read: Outbound::READ_TIMEOUT)
+            response = Outbound.request!(uri, held)
 
             refuse!(response) unless response.is_a?(Net::HTTPSuccess)
 
             response
-          rescue IOError, SystemCallError, Timeout::Error, OpenSSL::SSL::SSLError, SocketError => error
+          rescue Outbound::Refused, IOError, SystemCallError, Timeout::Error, OpenSSL::SSL::SSLError, SocketError => error
             raise Failed, "#{self.class.label} could not be reached: #{error.message}"
           end
 

@@ -53,16 +53,10 @@ module Masks
         def fetch(url)
           uri = URI.parse(url)
 
-          response = Net::HTTP.start(
-            uri.hostname, uri.port,
-            use_ssl: uri.scheme == "https",
-            open_timeout: OPEN_TIMEOUT,
-            read_timeout: READ_TIMEOUT
-          ) { |http| http.request(Net::HTTP::Get.new(uri, "Accept" => "application/json")) }
+          body = Outbound.fetch!(uri, open: OPEN_TIMEOUT, read: READ_TIMEOUT, ceiling: LIMIT,
+                                      headers: { "Accept" => "application/json" })
 
-          return nil unless response.is_a?(Net::HTTPSuccess)
-
-          parsed = JSON.parse(response.body.to_s[0, LIMIT])
+          parsed = JSON.parse(body)
           parsed.is_a?(Hash) ? parsed : nil
         rescue StandardError
           nil

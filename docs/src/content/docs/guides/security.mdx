@@ -200,8 +200,9 @@ and follows the filter on the page. Any manage role may download, and each downl
 ## Calls to other servers
 
 masks calls addresses that apps and managers supply: a client's `jwks_uri`, `sector_identifier_uri`,
-`logo_uri`, metadata document, back-channel logout URI, and shared signals endpoint, and each event
-stream's endpoint. It also calls the Pwned Passwords API. Each of these calls:
+`logo_uri`, metadata document, back-channel logout URI, and shared signals endpoint, a resource's
+protected resource metadata, every provider's endpoints and SAML metadata, each SMS adapter, and each
+event stream's endpoint. It also calls the Pwned Passwords API. Each of these calls:
 
 - Uses `https`, with no username or password in the address.
 - Resolves the hostname, refuses it if any address is private, loopback, link-local, or reserved, and
@@ -210,8 +211,8 @@ stream's endpoint. It also calls the Pwned Passwords API. Each of these calls:
 
 In development and test, masks allows `http` and private addresses.
 
-Apps on a private network, such as a tailnet, need their ranges listed in `MASKS_OUTBOUND_ALLOWED`,
-separated by commas. See [ENV vars](/reference/environment/).
+Apps and providers on a private network, such as a tailnet or an identity provider inside the office,
+need their ranges listed in `MASKS_OUTBOUND_ALLOWED`, separated by commas. See [ENV vars](/reference/environment/).
 
 :::caution
 Every client that can register itself can make masks call a range in `MASKS_OUTBOUND_ALLOWED`. List

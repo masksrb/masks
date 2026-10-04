@@ -74,12 +74,8 @@ module Masks
         end
 
         def get!(uri, open: OPEN_TIMEOUT, read: READ_TIMEOUT, ceiling: CEILING, within: nil, headers: {})
-          address = ::Rails.env.local? ? nil : vetted(uri)
-
-          raise Refused, "resolves to an address this server will not call" unless ::Rails.env.local? || address
-
-          response = call(uri, Net::HTTP::Get.new(uri, headers), open: open, read: read, address: address,
-                                                                  ceiling: ceiling + 1, within: within)
+          response = request!(uri, Net::HTTP::Get.new(uri, headers), open: open, read: read,
+                                                                    ceiling: ceiling + 1, within: within)
 
           raise Refused, "answered #{response.code}" unless response.is_a?(Net::HTTPSuccess)
           raise Refused, "answered with more than #{ceiling / 1.kilobyte}KB" if response.body.bytesize > ceiling
@@ -89,6 +85,14 @@ module Masks
           raise Refused, "took longer than #{within} seconds to answer"
         rescue *UNREADABLE => e
           raise Refused, "could not be read: #{e.class}"
+        end
+
+        def request!(uri, request, open: OPEN_TIMEOUT, read: READ_TIMEOUT, ceiling: CEILING, within: nil)
+          address = ::Rails.env.local? ? nil : vetted(uri)
+
+          raise Refused, "resolves to an address this server will not call" unless ::Rails.env.local? || address
+
+          call(uri, request, open: open, read: read, address: address, ceiling: ceiling, within: within)
         end
 
         def post(uri, form, open: OPEN_TIMEOUT, read: READ_TIMEOUT, address: nil)

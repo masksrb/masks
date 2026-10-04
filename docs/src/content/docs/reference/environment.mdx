@@ -158,9 +158,9 @@ The image runs Puma in front of Rails, on `PORT`. See
 ### Outbound calls
 
 masks refuses to call an address on a private, loopback, or reserved network when it fetches a
-client's keys, logo, sector identifier, or metadata document, or when it delivers a back-channel
-logout, a security event, or an event stream. Providers and SMS adapters, which a manager configures,
-are called at the address they name.
+client's keys, logo, sector identifier, metadata document, or resource metadata, when it calls a
+provider or an SMS adapter, or when it delivers a back-channel logout, a security event, or an event
+stream.
 
 | Variable | Default | |
 | --- | --- | --- |

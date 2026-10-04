@@ -166,15 +166,17 @@ module Masks
       def fetch_text(url, limit)
         uri = URI.parse(url)
 
-        response = Net::HTTP.start(
-          uri.hostname, uri.port,
-          use_ssl: uri.scheme == "https", open_timeout: OPEN_TIMEOUT, read_timeout: READ_TIMEOUT
-        ) { |http| http.request(Net::HTTP::Get.new(uri, "Accept" => "application/samlmetadata+xml, application/xml")) }
+        response = Outbound.request!(
+          uri, Net::HTTP::Get.new(uri, "Accept" => "application/samlmetadata+xml, application/xml"),
+          open: OPEN_TIMEOUT, read: READ_TIMEOUT, ceiling: limit + 1
+        )
 
         raise Refused, "#{name} answered #{response.code}" unless response.is_a?(Net::HTTPSuccess)
         raise Refused, "#{name} published more than #{limit / 1.kilobyte} KB" if response.body.to_s.bytesize > limit
 
         response.body.to_s
+      rescue Outbound::Refused => e
+        raise Unreachable, "#{name} #{e.message}"
       rescue *Outbound::UNREADABLE, URI::InvalidURIError => e
         raise Unreachable, "#{name} did not answer: #{e.class}"
       end
@@ -452,18 +454,15 @@ module Masks
         def request(url, list: false)
           uri = URI.parse(url)
 
-          response = Net::HTTP.start(
-            uri.hostname, uri.port,
-            use_ssl: uri.scheme == "https",
-            open_timeout: OPEN_TIMEOUT,
-            read_timeout: READ_TIMEOUT
-          ) { |http| http.request(yield(uri)) }
+          response = Outbound.request!(uri, yield(uri), open: OPEN_TIMEOUT, read: READ_TIMEOUT, ceiling: LIMIT)
 
           parsed = parse(response.body)
 
           raise Refused, upstream_error(parsed, response) unless response.is_a?(Net::HTTPSuccess)
 
           list ? Array(parsed).grep(Hash) : (parsed.is_a?(Hash) ? parsed : {})
+        rescue Outbound::Refused => e
+          raise Unreachable, "#{name} #{e.message}"
         rescue *Outbound::UNREADABLE, URI::InvalidURIError => e
           raise Unreachable, "#{name} did not answer: #{e.class}"
         end
