@@ -263,9 +263,12 @@ module Masks
           template.present? && template.include?("%{subdomain}")
         end
 
+        def claiming?
+          declared.none? && (wildcard? || !exists?)
+        end
+
         def claim(host)
-          return nil if declared.any?
-          return nil if exists? && !wildcard?
+          return nil unless claiming?
 
           subdomain = host.to_s.split(".").first
 

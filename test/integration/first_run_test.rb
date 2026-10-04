@@ -381,6 +381,26 @@ module Masks
         end
       end
 
+      test "one address claims only a few tenants an hour under a wildcard template" do
+        with_nothing_deployed do
+          with_public_origin_template("http://%{subdomain}.auth.test") do
+            ::Rails.configuration.masks.claim_limit.times do |at|
+              reset!
+              host! "claimed#{at}.auth.test"
+              get "/login"
+              assert_response :success
+            end
+
+            reset!
+            host! "onetoomany.auth.test"
+            get "/login"
+
+            assert_response :too_many_requests
+            assert_equal ::Rails.configuration.masks.claim_limit, Tenant.count
+          end
+        end
+      end
+
       test "a public origin template with no subdomain placeholder claims only the first host" do
         with_nothing_deployed do
           with_public_origin_template("http://auth.test") do

@@ -95,6 +95,8 @@ kept per tenant. The environment variables are listed in
 | `MASKS_RECOVERY_LIMIT` | IP address or account | Codes and links sent by email or text message. |
 | `MASKS_REGISTRATION_LIMIT` | IP address | Dynamic client registration. |
 | `MASKS_DEVICE_CODE_LIMIT` | IP address | User codes entered at `/device`. |
+| `MASKS_CLAIM_LIMIT` | IP address, across tenants | Tenants claimed on first visit under a subdomain template. |
+| `MASKS_CLAIM_CEILING` | The whole server | The same claims from every address together. |
 
 Other limits are fixed:
 

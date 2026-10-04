@@ -89,6 +89,8 @@ Each limit counts requests per tenant within a fixed window. A request over the 
 | `MASKS_RECOVERY_LIMIT` | `5` | Codes and links sent by email or text in 15 minutes, per IP address during sign-in and per account when confirming an address. |
 | `MASKS_REGISTRATION_LIMIT` | `10` | Dynamic client registrations from one IP address in 10 minutes. |
 | `MASKS_DEVICE_CODE_LIMIT` | `30` | Device user codes entered from one IP address in 3 minutes. |
+| `MASKS_CLAIM_LIMIT` | `3` | Tenants claimed from one IP address in an hour, when a subdomain template claims a tenant on first visit. Counted across the server. |
+| `MASKS_CLAIM_CEILING` | `30` | Tenants claimed from any IP address in an hour, under the same template. Counted across the server. |
 
 ### Lifetimes
 

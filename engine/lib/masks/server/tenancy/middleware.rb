@@ -3,6 +3,8 @@ module Masks
     module Tenancy
       class Middleware
         UNSERVED = "no tenant is served at this hostname".freeze
+        CROWDED = "too many tenants were claimed recently; try again later".freeze
+        CLAIM_WINDOW = 1.hour
         TENANTLESS = %w[/up].freeze
         TLS_ASK = "/tls/allowed".freeze
 
@@ -20,7 +22,13 @@ module Masks
 
           return unserved unless tenant || templated?(request)
 
-          tenant ||= Tenant.named(request.host) || Tenant.claim(request.host)
+          tenant ||= Tenant.named(request.host)
+
+          if tenant.nil?
+            return crowded if Tenant.claiming? && crowded?(request)
+
+            tenant = Tenant.claim(request.host)
+          end
 
           return unserved if tenant.nil?
 
@@ -64,6 +72,23 @@ module Masks
             served = Tenant.serving(request.params["domain"])
 
             [ served ? 200 : 404, { "content-type" => "text/plain; charset=utf-8", "cache-control" => "no-store" }, [] ]
+          end
+
+          def crowded?(request)
+            window = Time.current.to_i / CLAIM_WINDOW.to_i
+            from_here = ::Rails.cache.increment("tenant-claims:#{window}:#{request.remote_ip}", 1, expires_in: CLAIM_WINDOW)
+            from_anywhere = ::Rails.cache.increment("tenant-claims:#{window}", 1, expires_in: CLAIM_WINDOW)
+
+            from_here.to_i > ::Rails.configuration.masks.claim_limit ||
+              from_anywhere.to_i > ::Rails.configuration.masks.claim_ceiling
+          end
+
+          def crowded
+            [
+              429,
+              { "content-type" => "text/plain; charset=utf-8", "cache-control" => "no-store", "retry-after" => CLAIM_WINDOW.to_i.to_s },
+              [ CROWDED ]
+            ]
           end
 
           def unserved

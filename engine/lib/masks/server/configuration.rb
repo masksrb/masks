@@ -17,6 +17,8 @@ module Masks
         config.registration_limit = ENV.fetch("MASKS_REGISTRATION_LIMIT", 10).to_i
         config.recovery_limit = ENV.fetch("MASKS_RECOVERY_LIMIT", 5).to_i
         config.device_code_limit = ENV.fetch("MASKS_DEVICE_CODE_LIMIT", 30).to_i
+        config.claim_limit = ENV.fetch("MASKS_CLAIM_LIMIT", 3).to_i
+        config.claim_ceiling = ENV.fetch("MASKS_CLAIM_CEILING", 30).to_i
         config.setup_token = ENV["MASKS_SETUP_TOKEN"].presence
         config.themes_path = ENV["MASKS_THEMES_PATH"].presence
         config.docs_url = ENV.fetch("MASKS_DOCS_URL", "https://masks.pages.dev")
