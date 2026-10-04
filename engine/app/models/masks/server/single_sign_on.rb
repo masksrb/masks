@@ -105,7 +105,16 @@ module Masks
 
           refuse_uninvited! unless vouched?
 
-          link(actor)
+          return link(actor) if awaited?(actor)
+
+          refuse_unclaimed! unless actor.email_verified_at?
+
+          { actor: actor, identity: claims, claiming: true }
+        end
+
+        def awaited?(actor)
+          Invitation.live.exists?(actor: actor) ||
+            (provider.organization.present? && provider.organization.memberships.exists?(actor: actor))
         end
 
         def provisioned

@@ -228,11 +228,34 @@ module Masks
       test "a confirmed address still takes up an invitation that is waiting" do
         create_provider(email_domains: "acme.test")
         create_actor(@tenant, nickname: "owner", email: "owner@acme.test")
-        invited = within(@tenant) { Actor.create!(nickname: "ada", email: "ada@acme.test") }
+        invited = within(@tenant) do
+          Actor.create!(nickname: "ada", email: "ada@acme.test").tap { |actor| Invitation.open!(actor: actor) }
+        end
 
         finish_sso(sub: "upstream-15", email: "ada@acme.test")
 
         assert_equal invited.id, signed_in_actor&.id
+      end
+
+      test "a provisioned account with no invitation waiting is not taken by a provider that trusts addresses" do
+        create_provider(trusts_email: true)
+        create_actor(@tenant, nickname: "owner", email: "owner@acme.test")
+        provisioned = within(@tenant) { Actor.create!(nickname: "alice", email: "alice@acme.test", email_verified_at: Time.current) }
+
+        finish_sso(sub: "stranger-github", email: "alice@acme.test")
+
+        assert_not_equal provisioned.id, signed_in_actor&.id
+        assert_nil within(@tenant) { Connection.find_by(subject: "stranger-github") }
+      end
+
+      test "a domain the tenant never proved is not one a provider answers for" do
+        create_provider(role: "delegate", email_domains: "acme.test", proven: false)
+        create_actor(@tenant, nickname: "owner", email: "owner@acme.test")
+
+        finish_sso(sub: "upstream-24", email: "grace@acme.test", verified: nil)
+
+        assert_nil signed_in_actor
+        assert_equal 1, within(@tenant) { Actor.count }
       end
 
       test "a state from another browser is refused" do

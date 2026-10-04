@@ -240,7 +240,7 @@ module Masks
       def authoritative_for?(email)
         domain = email.to_s.split("@").last.to_s.downcase
 
-        domain.present? && email_domain_list.include?(domain)
+        domain.present? && email_domain_list.include?(domain) && DomainClaim.verified.exists?(domain: domain)
       end
 
       def vouches_for?(email, verified:)
