@@ -38,7 +38,13 @@ Inherits `Masks::Client::Error`.
 ### ::new
 
 ```ruby
-::new(code, description, status:, scope: nil)
+::new(code, description, status:, scope: nil, dpop: false)
+```
+
+### #dpop?
+
+```ruby
+#dpop?()
 ```
 
 ## Masks::Client::Claims
@@ -812,11 +818,18 @@ Inherits `Masks::Client::Error`.
 | `LEEWAY` | `30` |
 | `WINDOW` | `60` |
 | `MEMORY` | `WINDOW + (LEEWAY * 2)` |
+| `MEMORY_LOCK` | `Mutex.new` |
 
 ### ::digest
 
 ```ruby
 ::digest(value)
+```
+
+### ::memory
+
+```ruby
+::memory()
 ```
 
 ### ::new
@@ -1024,7 +1037,7 @@ Inherits `Masks::Client::Error`.
 ### ::new
 
 ```ruby
-::new(issuer:, url:, scopes: [], metadata_url: nil, algorithms: Verifier::ALGORITHMS, required: REQUIRED, verifier: nil, replay: Proof::Memory.new)
+::new(issuer:, url:, scopes: [], metadata_url: nil, algorithms: Verifier::ALGORITHMS, required: REQUIRED, verifier: nil, replay: Proof.memory)
 ```
 
 ### #authenticate
@@ -1379,7 +1392,7 @@ Inherits `Masks::Client::Challenge`.
 ### ::new
 
 ```ruby
-::new(description, code: "invalid_token")
+::new(description, code: "invalid_token", dpop: false)
 ```
 
 ## Masks::Client::Unreachable

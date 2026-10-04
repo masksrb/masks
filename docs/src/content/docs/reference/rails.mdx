@@ -269,6 +269,7 @@ prose is the RDoc in the source.
 | `forget` | W |
 | `issuer` | W |
 | `logged_out` | W |
+| `manages` | W |
 | `name` | W |
 | `namespace` | RW |
 | `organization` | W |
@@ -363,6 +364,12 @@ prose is the RDoc in the source.
 
 ```ruby
 #logged_out!(request, logout)
+```
+
+### #manages?
+
+```ruby
+#manages?(request, identity = nil)
 ```
 
 ### #name_for
