@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.8.1](https://github.com/masksrb/masks/compare/gem/v0.8.0...gem/v0.8.1) (2026-10-04)
+
+
+### Fixes
+
+* **client:** a resource server refuses a DPoP-bound token presented as Bearer, and checks the proof one presented as DPoP ([9a3fe8a](https://github.com/masksrb/masks/commit/9a3fe8adac09fd70a7059674d8c34333c8f3ff92))
+* **client:** every resource in a process shares one store of seen DPoP proofs, and a refused proof is challenged with the DPoP scheme ([f8d1fe2](https://github.com/masksrb/masks/commit/f8d1fe2487e0705c914ea3d3ae7f686152cad6b3))
+
+
+### Documentation
+
+* every guide, the reference prose, and the READMEs are checked against the code, shortened, and corrected ([94782d1](https://github.com/masksrb/masks/commit/94782d1fbfe363e90c40f0c728a241de9738e138))
+* the plan holds only what is left, and the READMEs match the engine layout and the code ([1615722](https://github.com/masksrb/masks/commit/1615722f88ae5f7d19955ff686dcef9f64a6326f))
+
+
+### Refactoring
+
+* **client:** the issuer version check nothing called, Registry#urls and Verifier#tenant go ([6b8cf05](https://github.com/masksrb/masks/commit/6b8cf0550b96f6b1b3b415ff27f655f90614bdfe))
+* **engine:** deleting and downloading an account share one check for a fresh sign-in, and PKCE uses the client's one base64url digest ([6c08fcf](https://github.com/masksrb/masks/commit/6c08fcf709a08dbafd0a551801eaf43a4c325b75))
+* **engine:** one partial carries a tenant's email wording, one query loads it, and authorization_details narrow in one place ([1b2df29](https://github.com/masksrb/masks/commit/1b2df29380b2c2c8dc6b87d45d60b4ef23255b26))
+
 ## [0.8.0](https://github.com/masksrb/masks/compare/gem/v0.7.0...gem/v0.8.0) (2026-09-28)
 
 
