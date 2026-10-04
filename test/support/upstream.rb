@@ -137,14 +137,8 @@ module Masks
         teardown { @upstream&.stop }
       end
 
-      def create_provider(proven: true, **attributes)
+      def create_provider(**attributes)
         within(@tenant) do
-          if proven
-            attributes[:email_domains].to_s.split(/[\s,]+/).reject(&:empty?).each do |domain|
-              DomainClaim.find_or_create_by!(domain: domain) { |claim| claim.verified_at = Time.current }
-            end
-          end
-
           Provider.create!(
             key: "acme",
             name: "Acme",

@@ -6,6 +6,10 @@ module Masks
     class SingleSignOnTest < ActionDispatch::IntegrationTest
       include Federated
 
+      setup do
+        within(@tenant) { DomainClaim.create!(domain: "acme.test", verified_at: Time.current) }
+      end
+
       def client_policy(**attributes)
         registration = register(@tenant)
 
@@ -249,7 +253,8 @@ module Masks
       end
 
       test "a domain the tenant never proved is not one a provider answers for" do
-        create_provider(role: "delegate", email_domains: "acme.test", proven: false)
+        within(@tenant) { DomainClaim.find_by!(domain: "acme.test").destroy! }
+        create_provider(role: "delegate", email_domains: "acme.test")
         create_actor(@tenant, nickname: "owner", email: "owner@acme.test")
 
         finish_sso(sub: "upstream-24", email: "grace@acme.test", verified: nil)
