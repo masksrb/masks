@@ -1,6 +1,9 @@
 module Masks
   module Rails
     class SessionsController < BaseController
+      RESTARTED = "masks_restarted_at".freeze
+      RESTART_WITHIN = 60
+
       def show
         if masks_configured? && (masks_signed_in? || (masks_tokens && masks_refresh!))
           response.headers["Cache-Control"] = "no-store"
@@ -115,11 +118,23 @@ module Masks
         end
 
         def stale
+          return redirect_to(masks_config.after_sign_in) if masks_signed_in? || (masks_tokens && masks_refresh!)
+          return restart unless masks_wants_json? || restarted_lately?
+
           answer(
             "invalid_state",
             "that sign-in request is not one this browser started, or it expired",
             :bad_request
           )
+        end
+
+        def restart
+          session[RESTARTED] = Time.now.to_i
+          redirect_to start_path
+        end
+
+        def restarted_lately?
+          Time.now.to_i - session[RESTARTED].to_i < RESTART_WITHIN
         end
 
         def refuse(code, description, pending = nil)
