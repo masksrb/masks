@@ -12,6 +12,7 @@ module Masks
 
       TYPE = "secevent+jwt".freeze
       MEMORY = 7.days
+      LEEWAY = 60
       SIGNED_OUT = %w[
         https://schemas.openid.net/secevent/caep/event-type/session-revoked
         https://schemas.openid.net/secevent/caep/event-type/credential-change
@@ -33,6 +34,7 @@ module Masks
         @claims = verified
 
         audience!
+        fresh!
         once!
 
         signed_out.each { |type, actors| actors.each { |actor| sign_out!(actor, type) } }
@@ -72,6 +74,15 @@ module Masks
           return if Array(claims["aud"]).intersect?(accepted)
 
           raise Refused.new("invalid_audience", "that security event token is meant for another receiver")
+        end
+
+        def fresh!
+          issued = claims["iat"]
+
+          raise Refused.new("invalid_request", "a security event token carries iat") unless issued.is_a?(Integer)
+          return if issued.between?((Time.current - MEMORY).to_i, (Time.current + LEEWAY).to_i)
+
+          raise Refused.new("invalid_request", "that security event token was not issued within the last #{MEMORY.inspect}")
         end
 
         def once!

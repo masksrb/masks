@@ -15,10 +15,11 @@ module Masks
       end
 
       def event(type: REVOKED, subject: { "format" => "iss_sub", "iss" => @upstream.url, "sub" => "upstream-1" },
-                aud: origin_for(@tenant), jti: SecureRandom.uuid, typ: "secevent+jwt", key: nil, iss: @upstream.url)
+                aud: origin_for(@tenant), jti: SecureRandom.uuid, typ: "secevent+jwt", key: nil, iss: @upstream.url,
+                iat: Time.current.to_i)
         JWT.encode(
-          { "iss" => iss, "aud" => aud, "iat" => Time.current.to_i, "jti" => jti,
-            "events" => { type => { "subject" => subject } } },
+          { "iss" => iss, "aud" => aud, "iat" => iat, "jti" => jti,
+            "events" => { type => { "subject" => subject } } }.compact,
           key || @upstream.instance_variable_get(:@key), "RS256", kid: "upstream-key", typ: typ
         )
       end
@@ -90,6 +91,15 @@ module Masks
         held = event
         assert_response :accepted, deliver(held).body
         assert_match "already been received", JSON.parse(deliver(held).body)["description"]
+      end
+
+      test "a token with no issue time, one older than the replay memory, or one from the future is refused" do
+        assert_match "carries iat", JSON.parse(deliver(event(iat: nil)).body)["description"]
+
+        stale = deliver(event(iat: (ReceivedSignal::MEMORY + 1.hour).ago.to_i))
+
+        assert_match "not issued within", JSON.parse(stale.body)["description"]
+        assert_match "not issued within", JSON.parse(deliver(event(iat: 1.hour.from_now.to_i)).body)["description"]
       end
 
       test "a subject from another issuer matches nobody" do
