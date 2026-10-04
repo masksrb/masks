@@ -16,6 +16,12 @@ async function options() {
     headers: { Accept: "application/json", "X-CSRF-Token": csrf() },
   });
 
+  if (response.status === 401) {
+    const { redirectTo } = await response.json();
+    window.location.assign(redirectTo);
+    throw new Error("signing in again first");
+  }
+
   if (!response.ok)
     throw new Error(`could not start enrolment: ${response.status}`);
 

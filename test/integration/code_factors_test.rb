@@ -313,6 +313,18 @@ module Masks
         end
       end
 
+      test "a sign-in older than fifteen minutes signs in again before codes are turned on or off" do
+        sign_in_as(@actor)
+        post account_code_factor_path("sms")
+
+        travel 16.minutes do
+          delete account_code_factor_path("sms")
+
+          assert_redirected_to login_path(return_to: "#{root_path}#signing-in")
+          within(@tenant) { assert @actor.reload.phone_factor? }
+        end
+      end
+
       test "the account page will not turn on codes for an unconfirmed address" do
         within(@tenant) { @actor.update!(phone_verified_at: nil) }
         sign_in_as(@actor)

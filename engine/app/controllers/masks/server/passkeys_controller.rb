@@ -4,6 +4,7 @@ module Masks
       HELD = "passkey_registration".freeze
 
       before_action :require_actor
+      before_action :require_fresh_sign_in
 
       def create
         held = session.delete(HELD)
@@ -45,6 +46,14 @@ module Masks
 
         def require_actor
           redirect_to login_path unless current_actor
+        end
+
+        def require_fresh_sign_in
+          return if current_session.fresh?
+          return reauthenticated!("passkeys", t("passkeys.again")) unless request.format.json?
+
+          sign_out
+          render json: { "redirectTo" => login_path(return_to: root_path(anchor: "passkeys")) }, status: :unauthorized
         end
 
 

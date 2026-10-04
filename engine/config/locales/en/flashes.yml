@@ -49,8 +49,10 @@ en:
     last_way_in: "That passkey is the only way into this account. Add another before removing it."
     added: "Passkey added."
     removed: "Passkey removed."
+    again: "Sign in again to change your passkeys. It has been a while since you did."
 
   code_factors:
+    again: "Sign in again to change how sign-ins are confirmed. It has been a while since you did."
     unoffered: "This server does not offer that way of confirming a sign-in."
     unconfirmed: "Confirm that address before codes are sent to it."
     undeliverable: "This server cannot send those codes yet."

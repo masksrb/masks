@@ -28,6 +28,10 @@ module Masks
         within(@tenant) { Passkey.where(actor_id: @actor.id).newest_first.first }
       end
 
+      def current_actor_session
+        within(@tenant) { Session.live.find_by(actor_id: @actor.id) }
+      end
+
       def refuse_downloads
         FidoMetadata::Client.class_eval do
           alias_method :download_toc_before_stub, :download_toc
@@ -278,6 +282,29 @@ module Masks
         assert_redirected_to root_path
 
         within(@tenant) { assert_equal 0, Passkey.where(actor_id: @actor.id).count }
+      end
+
+      test "a sign-in older than fifteen minutes signs in again before enrolling a passkey" do
+        sign_in_as(@actor)
+
+        travel 16.minutes do
+          post "/account/passkeys/challenge", as: :json
+
+          assert_response :unauthorized
+          assert_equal login_path(return_to: "#{root_path}#passkeys"), JSON.parse(response.body)["redirectTo"]
+          assert_nil current_actor_session
+        end
+      end
+
+      test "a sign-in older than fifteen minutes signs in again before a passkey is removed" do
+        passkey = enrol
+
+        travel 16.minutes do
+          delete "/account/passkeys/#{passkey.id}"
+          assert_redirected_to login_path(return_to: "#{root_path}#passkeys")
+        end
+
+        within(@tenant) { assert_equal 1, Passkey.where(actor_id: @actor.id).count }
       end
 
       test "one actor cannot remove another's passkey" do

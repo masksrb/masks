@@ -2,6 +2,7 @@ module Masks
   module Server
     class CodeFactorsController < ApplicationController
       before_action :require_actor
+      before_action -> { reauthenticated!("signing-in", t("code_factors.again")) }
 
       def create
         factor = params[:factor].to_s
