@@ -32,6 +32,14 @@ client secret never passes through the browser. The handshake registers the app 
 `config.resource`, an absolute URL on the app's own origin, and refuses without one. A connected app
 asks before it rotates, because reconnecting takes it offline for a moment.
 
+Once an app is connected, only somebody `config.manages` approves can reconnect or disconnect it.
+The callable takes the request, or the request and the signed-in identity, and the engine refuses
+everyone when it is unset:
+
+```ruby
+config.manages = ->(request, identity) { identity["sub"] == ENV["OWNER_SUB"] }
+```
+
 The engine writes what comes back to `config/masks.json`, mode 600. A multi-tenant app keeps it
 somewhere else with two callables:
 
@@ -181,6 +189,7 @@ a subdomain-per-tenant host needs.
 | `scope` | what to ask the issuer for, `openid profile email` by default |
 | `organization` | the organization every sign-in names, by key |
 | `credentials` / `store` | where the handshake's result lives |
+| `manages` | who may reconnect or disconnect a connected app |
 | `credentials_path` | where the default store writes, `config/masks.json` by default |
 | `after_sign_in` / `after_sign_out` | paths on this host |
 | `parent_controller` | what the engine's pages inherit, for your layout |

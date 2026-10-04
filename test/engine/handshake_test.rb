@@ -237,4 +237,38 @@ class HandshakeTest < EngineIntegrationTest
     assert_includes response.body, "Reconnect it"
     assert_not_includes response.body, "Disconnect it"
   end
+
+  test "a connected app refuses reconnecting to somebody it does not let manage it" do
+    configure!(manages: ->(request, identity) { identity["sub"] == "somebody-else" })
+    sign_in!
+
+    before = CREDENTIALS[HOST][:client_id]
+
+    get "/auth/handshake", headers: host
+    assert_response :forbidden
+
+    post "/auth/handshake", headers: host
+    assert_response :forbidden
+    assert_equal before, CREDENTIALS[HOST][:client_id]
+  end
+
+  test "a connected app refuses disconnecting to somebody it does not let manage it" do
+    configure!(manages: nil)
+    sign_in!
+
+    delete "/auth/handshake", headers: host
+
+    assert_response :forbidden
+    assert CREDENTIALS[HOST].present?
+    assert_empty issuer.deletions.select { |deleted| deleted[:client_id] == CREDENTIALS[HOST][:client_id] }
+  end
+
+  test "an app nobody has connected still starts the handshake with nobody allowed to manage it" do
+    configure!(manages: nil)
+
+    get "/auth/handshake", headers: host
+
+    assert_response :redirect
+    assert response.location.start_with?("#{issuer.url_for(SUBDOMAIN)}/handshake")
+  end
 end

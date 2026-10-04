@@ -7,7 +7,7 @@ module Masks
                     :after_sign_out, :session_key, :sign_out_of_issuer, :parent_controller,
                     :credentials_path, :authenticate_everything, :delegates
       attr_writer :issuer, :redirect_uri, :name, :credentials, :store, :forget, :logged_out,
-                  :delegation_redirect_uri, :organization
+                  :delegation_redirect_uri, :organization, :manages
 
       def initialize
         @scope = Masks::Client::Session::DEFAULT_SCOPE
@@ -87,6 +87,14 @@ module Masks
         @logged_out.arity == 1 ? @logged_out.call(logout) : @logged_out.call(request, logout)
 
         true
+      end
+
+      def manages?(request, identity = nil)
+        return false unless @manages.respond_to?(:call)
+
+        held = @manages.arity == 1 ? @manages.call(request) : @manages.call(request, identity)
+
+        held ? true : false
       end
 
       def can_forget?

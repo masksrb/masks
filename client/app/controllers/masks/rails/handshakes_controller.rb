@@ -2,6 +2,7 @@ module Masks
   module Rails
     class HandshakesController < BaseController
       before_action :require_unconfigured_or_signed_in
+      before_action :require_unconfigured_or_manager
 
       def show
         return begin! unless masks_config.configured?(request)
@@ -67,6 +68,16 @@ module Masks
           return if masks_signed_in?
 
           redirect_to masks_config.after_sign_out
+        end
+
+        def require_unconfigured_or_manager
+          return unless masks_config.configured?(request)
+          return if masks_config.manages?(request, masks_identity)
+
+          @code = "forbidden"
+          @description = "only somebody this app lets manage its connection can reconnect or disconnect it"
+
+          render :refused, status: :forbidden
         end
 
         def stale
