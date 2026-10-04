@@ -26,6 +26,7 @@ module Masks
       LINKS = %i[client_uri tos_uri policy_uri].freeze
       METADATA_URIS = (LINKS + [ :logo_uri ]).freeze
       URI_LIMIT = 2048
+      SCRIPTED_SCHEMES = %w[javascript data vbscript file blob about].freeze
       METADATA_STRINGS = %w[
         token_endpoint_auth_method subject_type sector_identifier_uri application_type client_uri logo_uri tos_uri
         policy_uri backchannel_logout_uri jwks jwks_uri
@@ -57,6 +58,7 @@ module Masks
       validates :saml_entity_id, uniqueness: { scope: :tenant_id }, allow_nil: true
       validates :subject_type, inclusion: { in: Subjects::TYPES }
       validate :redirect_uris_are_usable
+      validate :post_logout_redirect_uris_are_usable
       validate :grant_types_are_known
       validate :client_credentials_are_confidential
       validate :keys_are_usable
@@ -391,19 +393,27 @@ module Masks
             return
           end
 
-          redirect_uris.each do |value|
-            uri = URI.parse(value.to_s)
+          redirect_uris.each { |value| redirect_refusal(:redirect_uris, value) }
+        end
 
-            if uri.fragment.present?
-              errors.add(:redirect_uris, "must not contain a fragment: #{value}")
-            elsif uri.scheme.blank?
-              errors.add(:redirect_uris, "must be absolute: #{value}")
-            elsif uri.scheme == "http" && !loopback?(uri) && !::Rails.env.local?
-              errors.add(:redirect_uris, "must use https unless it is loopback: #{value}")
-            end
-          rescue URI::InvalidURIError
-            errors.add(:redirect_uris, "is not a URI: #{value}")
+        def post_logout_redirect_uris_are_usable
+          Array(post_logout_redirect_uris).each { |value| redirect_refusal(:post_logout_redirect_uris, value) }
+        end
+
+        def redirect_refusal(attribute, value)
+          uri = URI.parse(value.to_s)
+
+          if uri.fragment.present?
+            errors.add(attribute, "must not contain a fragment: #{value}")
+          elsif uri.scheme.blank?
+            errors.add(attribute, "must be absolute: #{value}")
+          elsif SCRIPTED_SCHEMES.include?(uri.scheme.downcase)
+            errors.add(attribute, "must not use the #{uri.scheme.downcase} scheme: #{value}")
+          elsif uri.scheme.casecmp?("http") && !loopback?(uri) && !::Rails.env.local?
+            errors.add(attribute, "must use https unless it is loopback: #{value}")
           end
+        rescue URI::InvalidURIError
+          errors.add(attribute, "is not a URI: #{value}")
         end
 
         def loopback?(uri)

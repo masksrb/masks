@@ -127,6 +127,27 @@ module Masks
         assert_match "fragment", body["error_description"]
       end
 
+      test "a redirect_uri or post_logout_redirect_uri that would run a script is refused" do
+        body = register(redirect_uris: [ "javascript://x/%0Aalert(document.domain)//" ])
+
+        assert_response :bad_request
+        assert_match "javascript scheme", body["error_description"]
+
+        body = register(post_logout_redirect_uris: [ "data:text/html;base64,PHNjcmlwdD4=" ])
+
+        assert_response :bad_request
+        assert_match "data scheme", body["error_description"]
+
+        body = register(post_logout_redirect_uris: [ "/relative" ])
+
+        assert_response :bad_request
+        assert_match "absolute", body["error_description"]
+
+        register(redirect_uris: [ "com.example.app:/cb" ], post_logout_redirect_uris: [ "https://probe.example.com/bye" ])
+
+        assert_response :created
+      end
+
       test "a relative redirect_uri is refused" do
         body = register(redirect_uris: [ "/cb" ])
 
