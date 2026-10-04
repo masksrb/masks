@@ -1,5 +1,35 @@
 # Changelog
 
+## [0.4.0](https://github.com/masksrb/masks/compare/masks-server-v0.3.0...masks-server-v0.4.0) (2026-10-04)
+
+
+### Features
+
+* **engine:** a client_id that is the https URL of a client metadata document signs people in without registering first, as MCP clients do ([86dd5b6](https://github.com/masksrb/masks/commit/86dd5b61adf51f2dc0c294777eb2ed4af6fec5f7))
+* **engine:** a consent remembers the authorization details a declared type allows, and a client's consents can expire ([bdfc149](https://github.com/masksrb/masks/commit/bdfc1496fe9f0a8df2aec8becb4b9637f23b200c))
+* **engine:** a person downloads everything masks holds about them as a JSON file from their account page ([bc1b729](https://github.com/masksrb/masks/commit/bc1b72995a07ba43d518a10fbac2ae71fcba6c26))
+* **engine:** an owner rewords the subject and opening of the invitation, reset, confirmation, code, and approval emails, and adds a signature to every email ([eb74a02](https://github.com/masksrb/masks/commit/eb74a023994628f1a19cce6e12d822e17ef1181e))
+* **engine:** masks receives shared signals at /ssf/events, and a provider that revokes a session or disables an account signs that person out here ([7e627fe](https://github.com/masksrb/masks/commit/7e627fe62734c1356f56c1913f7ff45988044848))
+* **engine:** MASKS_OUTBOUND_ALLOWED names private ranges masks may call, for apps on a private network such as a tailnet ([ed1a829](https://github.com/masksrb/masks/commit/ed1a82919ac7f74b9c43cee7381b04b6aae239a3))
+* **engine:** rich authorization requests (RFC 9396) carry authorization_details from /authorize to the token, checked against types an approved client declares ([18dc29a](https://github.com/masksrb/masks/commit/18dc29a985b67b95e2e682b87a8a29829607a735))
+
+
+### Fixes
+
+* **engine:** a self-registered client cannot name resources, so it cannot have tokens addressed to another service ([39e186d](https://github.com/masksrb/masks/commit/39e186d38abc2c9a2b56483ef6c993d74d2c0905))
+* **engine:** providers, SMS adapters, and resource metadata are called through Outbound, so a private address is refused there too ([20f8d2d](https://github.com/masksrb/masks/commit/20f8d2d9b2a18490128abfefa2cb76c74825a996))
+* **engine:** state joins a query the registered post_logout_redirect_uri already carries, instead of a second question mark breaking the address ([c639a6b](https://github.com/masksrb/masks/commit/c639a6b94379a775f035a09268dc5bb3bdc2cc20))
+* **server:** acr_values is read as a list of acceptable values, so a request that also accepts a password is not stepped up to a second factor ([ecaba6a](https://github.com/masksrb/masks/commit/ecaba6a97bc50f93c4ccbe89ab4df8681f21c04b))
+
+
+### Refactoring
+
+* **engine:** deleting and downloading an account share one check for a fresh sign-in, and PKCE uses the client's one base64url digest ([6c08fcf](https://github.com/masksrb/masks/commit/6c08fcf709a08dbafd0a551801eaf43a4c325b75))
+* **engine:** dynamic registration, registration updates, and client metadata documents read client metadata through one Client mapping ([cf0785d](https://github.com/masksrb/masks/commit/cf0785d86e16fdd7ca5dd51493695e01654d47d0))
+* **engine:** methods nothing calls, the scaffold PWA views and Current.session go ([9d126ec](https://github.com/masksrb/masks/commit/9d126ec1c550950e8b4eec0ce58a0f0b474d4ffa))
+* **engine:** one partial carries a tenant's email wording, one query loads it, and authorization_details narrow in one place ([1b2df29](https://github.com/masksrb/masks/commit/1b2df29380b2c2c8dc6b87d45d60b4ef23255b26))
+* **server:** Thruster, capybara and the stale schema dumps go ([292b179](https://github.com/masksrb/masks/commit/292b1791e43ad4624fa743603206b8d178ebae36))
+
 ## [0.3.0](https://github.com/masksrb/masks/compare/masks-server-v0.2.0...masks-server-v0.3.0) (2026-09-28)
 
 
