@@ -112,6 +112,17 @@ module Masks
         assert_nil held
       end
 
+      test "a document that declares no scope, as Claude's does, may ask for anything inside the ceiling" do
+        @tenant.update!(dynamic_client_scopes: "openid profile email offline_access xixo:catalog:read")
+        publish(scope: nil)
+        sign_in_as(@actor)
+
+        authorize(client_id: DOCUMENT_URL, scope: "openid xixo:catalog:read")
+
+        assert awaiting_consent?
+        assert_includes held.scope_list, "xixo:catalog:read"
+      end
+
       test "a document that names another client_id is refused" do
         publish(client_id: "https://elsewhere.example.com/client.json")
 

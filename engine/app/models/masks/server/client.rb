@@ -154,7 +154,8 @@ module Masks
             name: held[:name] || name,
             grant_types: grant_types,
             response_types: held[:response_types].presence || response_types_for(grant_types),
-            allowed_scopes: Scopes.join(bounded(metadata.to_h.stringify_keys["scope"].presence || DEFAULT_SCOPES)),
+            allowed_scopes: Scopes.join(bounded(metadata.to_h.stringify_keys["scope"].presence ||
+                                                Current.tenant&.dynamic_client_ceiling || DEFAULT_SCOPES)),
             dynamic: true
           )
         end

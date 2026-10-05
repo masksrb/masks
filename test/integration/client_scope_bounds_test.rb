@@ -64,6 +64,22 @@ module Masks
         assert_equal "openid profile xixo:catalog:read", body["scope"]
       end
 
+      test "a registration that declares no scope may ask for the whole ceiling" do
+        ceiling "openid profile email offline_access xixo:catalog:read"
+
+        body = register(scope: nil)
+
+        assert_response :created
+        assert_equal "email offline_access openid profile xixo:catalog:read", body["scope"]
+      end
+
+      test "with no ceiling declared a registration that declares no scope gets the standard scopes" do
+        body = register(scope: nil)
+
+        assert_response :created
+        assert_equal Scopes.join(Scopes::STANDARD), body["scope"]
+      end
+
       test "a registration asking for nothing inside the ceiling is refused" do
         ceiling "openid profile"
 
