@@ -175,6 +175,18 @@ module Masks
         assert_equal "invalid_grant", body["error"]
       end
 
+      test "a public client cannot turn an id token into an access token" do
+        public = register(client_name: "Public", token_endpoint_auth_method: "none",
+                          grant_types: [ "authorization_code", "refresh_token", EXCHANGE ])
+        granted = access_token_for(actor: @actor, registration: public)
+
+        assert granted["id_token"].present?
+
+        body = exchange(granted["id_token"], registration: public, subject_token_type: Exchange::ID_TOKEN, scope: "openid")
+
+        assert_equal "unauthorized_client", body["error"]
+      end
+
       test "an id token from a session that has ended is not exchangeable" do
         within { Session.where(actor: @actor).find_each(&:revoke!) }
 

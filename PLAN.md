@@ -6,14 +6,6 @@ says what a person can do once it lands.
 
 ## Security
 
-- **An app named by a metadata document is rate limited.** Each new document
-  address at `/authorize` creates a client, records an event, and makes masks
-  fetch the address. `/authorize`, `/logout`, and `/userinfo` have no limit,
-  and `/logout` follows a post-logout redirect that only the document
-  approves.
-- **A public client cannot exchange an ID token for an access token.** The
-  exchange policy checks the grant type but never whether the client
-  authenticated.
 - **Decide what support may do to an account.** Support can change a person's
   email, receive the reset link when masks cannot mail them, and generate
   their backup codes. The old address is now mailed when the email changes.

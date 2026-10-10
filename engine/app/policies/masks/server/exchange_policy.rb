@@ -63,6 +63,7 @@ module Masks
         def id_token_belongs_to_the_client
           return unless subject.id_token?
 
+          deny!("unauthorized_client", "a client that cannot authenticate does not exchange id tokens") if client.public?
           deny!("invalid_grant", "an id token is exchanged only by the client it was issued to") unless subject.held_by?(client)
         end
 
