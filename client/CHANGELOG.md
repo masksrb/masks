@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.10.0](https://github.com/masksrb/masks/compare/gem/v0.9.2...gem/v0.10.0) (2026-10-10)
+
+
+### Features
+
+* **client:** a sign-in can ask for a step-up scope the app offers, and masks grants it only to people whose scopes cover it ([84b43d8](https://github.com/masksrb/masks/commit/84b43d8c091440a5a9b75721b56f9ced27c9f82f))
+* **client:** masks_require_scope! guards an action with a step-up scope, sending its holder through masks once and refusing everyone else ([fce327e](https://github.com/masksrb/masks/commit/fce327edae9d6166e8bc163d85c4ca8e6548e1eb))
+
 ## [0.9.2](https://github.com/masksrb/masks/compare/gem/v0.9.1...gem/v0.9.2) (2026-10-10)
 
 
