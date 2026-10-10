@@ -248,6 +248,29 @@ module Masks
         false
       end
 
+      STEPPED_UP = "masks_stepped_up".freeze
+      STEP_UP_WITHIN = 300
+
+      def masks_require_scope!(*scopes)
+        return false unless authenticate_masks!
+
+        missing = scopes.flatten.map(&:to_s) - masks_scopes
+        return true if missing.empty?
+
+        asked = session[STEPPED_UP]
+        session.delete(STEPPED_UP)
+
+        if (missing - Array(masks_config.step_up_scope).map(&:to_s)).any? || masks_asked_already?(asked, missing)
+          masks_forbid(Masks::Client::Forbidden.new(
+            "insufficient_scope", "this account does not hold #{missing.join(' ')}", scope: missing.join(" ")
+          ))
+          return false
+        end
+
+        masks_step_up(missing)
+        false
+      end
+
       def authorize_masks_member!(*roles, organization: nil)
         return false unless authenticate_masks!
 
@@ -259,6 +282,26 @@ module Masks
       end
 
       private
+
+        def masks_asked_already?(asked, missing)
+          asked.is_a?(Hash) && (missing - Array(asked["scopes"])).empty? &&
+            asked["at"].to_i > Time.now.to_i - STEP_UP_WITHIN
+        end
+
+        def masks_step_up(missing)
+          return_to = request.get? ? request.fullpath : masks_referring_path
+          url = masks_login_url(return_to: return_to, scope: missing)
+
+          session[STEPPED_UP] = { "scopes" => missing, "at" => Time.now.to_i }
+
+          if masks_wants_json?
+            response.headers["Cache-Control"] = "no-store"
+            render json: { "error" => "insufficient_scope", "scope" => missing.join(" "), "login_url" => url },
+                   status: :forbidden
+          else
+            redirect_to url
+          end
+        end
 
         def masks_forbid(error)
           response.headers["Cache-Control"] = "no-store"

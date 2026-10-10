@@ -89,7 +89,7 @@ module Masks
       private
 
         def renew_session
-          carried = session.to_hash.slice(REQUESTS, HANDSHAKES)
+          carried = session.to_hash.slice(REQUESTS, HANDSHAKES, Masks::Rails::Authentication::STEPPED_UP)
 
           reset_session
           carried.each { |key, value| session[key] = value }

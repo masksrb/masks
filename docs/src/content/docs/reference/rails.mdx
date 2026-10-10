@@ -36,6 +36,8 @@ prose is the RDoc in the source.
 | `REQUESTS` | `"masks_requests".freeze` |
 | `HANDSHAKES` | `"masks_handshakes".freeze` |
 | `IDENTITY` | `[ "sub", "name", "preferred_username", "email", "email_verified", "tenant", "picture", Masks::Client::Claims::AVATARS, Masks::Client::Claims::ORGANIZATION, Masks::Client::Claims::ORGANIZATIONS ].freeze` |
+| `STEPPED_UP` | `"masks_stepped_up".freeze` |
+| `STEP_UP_WITHIN` | `300` |
 
 ### ::masks_members_only!
 
@@ -197,6 +199,12 @@ prose is the RDoc in the source.
 
 ```ruby
 #masks_requests()
+```
+
+### #masks_require_scope!
+
+```ruby
+#masks_require_scope!(*scopes)
 ```
 
 ### #masks_role?

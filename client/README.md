@@ -65,6 +65,11 @@ end
 `masks_identity`, `masks_tenant`, and `masks_scopes` describe the signed-in request. Tokens live in
 the encrypted Rails session and never reach JavaScript.
 
+An action that needs a scope nobody is asked for at sign-in, such as an administrator's, calls
+`masks_require_scope!("catalog:admin")` after listing it in `config.step_up_scope`. The browser goes
+through masks once to ask for it, and the action answers `403` when masks does not grant it. See
+[asking for more on one sign-in](https://masks.pages.dev/guides/rails/#asking-for-more-on-one-sign-in).
+
 `config.authenticate_everything = true` includes `Authentication` on every controller. Otherwise
 include it where it applies.
 

@@ -147,6 +147,24 @@ asking for `config.scope` and that scope. The engine drops any requested scope t
 `config.step_up_scope`. masks grants the scope only to a person whose own scopes cover it, and asks
 for consent the first time, so a person without it signs in with the usual scopes and nothing more.
 
+Most apps need only one line. `masks_require_scope!` guards the actions that need the scope:
+
+```ruby
+class SettingsController < ApplicationController
+  before_action -> { masks_require_scope!("catalog:admin") }, only: %i[create update destroy]
+end
+```
+
+| | |
+| --- | --- |
+| The sign-in holds the scope | The action runs. |
+| It does not, and the scope is in `config.step_up_scope` | The browser goes through masks once, asking for the scope, and comes back to the page it was on. A person already signed in to masks sees a consent screen at most. A JSON request gets `403` with `error`, `scope`, and the `login_url` to send the browser to. |
+| masks did not grant it on that trip | `403 insufficient_scope`. The person does not hold the scope, so the app does not send them around again for five minutes. |
+| The scope is not in `config.step_up_scope` | `403 insufficient_scope` at once. |
+
+Asking never widens anyone's access. masks only puts a scope in the token for a person who already
+holds it, and a manager grants scopes to people in `/manage`.
+
 ### Accepting tokens
 
 An app that is also a resource server checks access tokens with `Masks::Rails::ProtectedResource`.

@@ -64,6 +64,59 @@ class SessionTest < EngineIntegrationTest
     assert_equal "#{origin}/mcp", query["resource"]
   end
 
+  def step_up!(granted)
+    get "/settings", headers: host
+    assert_redirected_to %r{/auth/\?return_to=%2Fsettings}
+
+    get URI.parse(response.location).request_uri, headers: host
+    assert_includes URI.decode_www_form(URI.parse(response.location).query).to_h["scope"].split(" "), "catalog:admin"
+
+    landed = issuer.authorize!(response.location, scopes: granted)
+    get "/auth/callback?code=#{landed[:code]}&state=#{landed[:state]}", headers: host
+    assert_redirected_to "/settings"
+
+    get "/settings", headers: host
+  end
+
+  test "a page that needs a step-up scope sends its holder through masks once and back" do
+    configure!(step_up_scope: %w[catalog:admin])
+    sign_in!
+
+    step_up!(%w[openid profile email catalog:read catalog:admin])
+
+    assert_response :ok
+    assert_equal "settings", response.body
+  end
+
+  test "someone masks will not grant the scope is refused after one try, not sent around again" do
+    configure!(step_up_scope: %w[catalog:admin])
+    sign_in!
+
+    step_up!(%w[openid profile email catalog:read])
+
+    assert_response :forbidden
+    assert_match "catalog:admin", response.body
+  end
+
+  test "a scope the app does not offer as a step-up is refused without asking masks" do
+    sign_in!
+
+    get "/settings", headers: host
+
+    assert_response :forbidden
+  end
+
+  test "a JSON request that needs a step-up is told where to sign in" do
+    configure!(step_up_scope: %w[catalog:admin])
+    sign_in!
+
+    get "/settings", headers: host.merge("HTTP_ACCEPT" => "application/json")
+
+    assert_response :forbidden
+    assert_equal "insufficient_scope", json["error"]
+    assert_match "scope=catalog%3Aadmin", json["login_url"]
+  end
+
   test "a sign-in asks for a step-up scope the app offers, on top of its usual scope" do
     configure!(step_up_scope: %w[catalog:admin])
     connect!

@@ -69,6 +69,16 @@ class PagesController < ActionController::Base
   end
 end
 
+class SettingsController < ActionController::Base
+  include Masks::Rails::Authentication
+
+  before_action -> { masks_require_scope!("catalog:admin") }
+
+  def show
+    render plain: "settings"
+  end
+end
+
 class OwnersController < ActionController::Base
   include Masks::Rails::Authentication
 
@@ -131,5 +141,6 @@ Rails.application.routes.draw do
   get "/asked", to: "asked#show"
   get "/dashboard", to: "pages#dashboard"
   get "/owners", to: "owners#show"
+  get "/settings", to: "settings#show"
   root to: "pages#home"
 end
