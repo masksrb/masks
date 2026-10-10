@@ -108,6 +108,10 @@ Every variable the server reads is in [ENV vars](/reference/environment/).
 503 when it cannot reach one of them. A health check on `/up` therefore also catches a stopped job
 queue. The `logging` options cap each container's log, so a repeating fault cannot fill the disk.
 
+`/up/jobs` answers `up` while every background job has succeeded for a day, and a 503 naming the
+job classes that failed otherwise. Point a monitor at it, and leave it out of the container's health
+check, since restarting the server does not fix a failing job. The errors themselves are in the logs.
+
 ## Database roles
 
 masks keeps tenants apart with row-level security in Postgres. A superuser bypasses it, and the role
@@ -180,6 +184,36 @@ a server whose database was restored with a different key.
 4. Remove `MASKS_PREVIOUS_MASTER_KEY` and restart again.
 
 A new `SECRET_KEY_BASE` comes with the new key, so everyone signs in again after the restart.
+
+## Backups, restores, and upgrades
+
+Back up the primary database and the master key together. The primary holds every tenant's
+accounts, clients, signing keys, and activity. The cache and queue databases hold rate limits,
+replay records, and pending jobs, and can be recreated empty.
+
+```sh
+pg_dump --format=custom --file=masks.dump masks_production
+```
+
+Keep `master.key`, or the value of `MASKS_MASTER_KEY`, beside the dump. A dump restored without its
+key cannot be read, and the server refuses to start.
+
+To restore, stop the server, create the database as the migration role, and load the dump as it, so
+the migration role owns every table again:
+
+```sh
+createdb --username=masks_owner masks_production
+pg_restore --username=masks_owner --dbname=masks_production --no-owner masks.dump
+```
+
+Start the server with the same master key. Its first boot creates the cache and queue databases and
+grants the serving role what it needs. Everyone keeps their passkeys and second factors, and sessions
+that were live at the time of the dump work again.
+
+To upgrade, pull the new image and restart. Each boot runs the migrations that have not run yet, so
+skipping versions is fine. Read the release notes for anything that needs a step of your own, and take
+a backup first, since migrations do not run backwards. With more than one replica, start one on the
+new image, wait for `/up`, and then replace the rest.
 
 ## Multi-tenancy
 

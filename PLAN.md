@@ -26,8 +26,6 @@ says what a person can do once it lands.
 
 ## Running masks
 
-- **Backup, restore, and upgrade.** The self-hosting guide covers all three
-  databases, and `/up` reports failed recurring jobs.
 - **A checklist after setup.** The overview lists mail, the first app,
   inviting people, and a domain, and ticks each off.
 
