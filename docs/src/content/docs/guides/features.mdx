@@ -282,6 +282,23 @@ both are set, deleting comes later than suspending.
   touched.
 - A daily job does the work, and records each warning, suspension, and deletion as an event.
 
+### Changing your own details
+
+A person changes their name and nickname under **Name** on their account page.
+
+A new email address or phone number takes effect once the person enters the six-digit code masks sends
+to it. Whether another account already uses the address shows only after the code is entered. The
+change asks for a sign-in within the last 15 minutes, and turns off sign-in codes sent to the old
+address. When the old email address was confirmed, masks mails it about the change. A person can also
+remove their phone number, unless the sign-in policy requires one.
+
+An account that signs in only with a passkey or another account can set a password from **Password**,
+after a recent sign-in. Setting it signs out every other session.
+
+Accounts a directory provisions over SCIM keep the name and addresses the directory gives them.
+
+When a manager changes someone's email address in `/manage`, the old address is mailed as well.
+
 ### Downloading your own account
 
 A person downloads everything masks holds about them as a JSON file from **Download your account** on

@@ -43,6 +43,7 @@ Masks::Server::Engine.routes.draw do
   post "/account/export", to: "account_exports#create", as: :account_export
   patch "/account/notifications", to: "notifications#update", as: :account_notifications
   patch "/account/password", to: "passwords#update", as: :account_password
+  patch "/account/profile", to: "profiles#update", as: :account_profile
   post "/account/verify", to: "verifications#create", as: :account_verification
 
   post "/account/passkeys/challenge", to: "passkeys#challenge", as: :passkey_challenge
@@ -52,6 +53,12 @@ Masks::Server::Engine.routes.draw do
   post "/account/authenticator", to: "authenticator_apps#create", as: :account_authenticator
   delete "/account/authenticator", to: "authenticator_apps#destroy"
   post "/account/backup_codes", to: "backup_codes#create", as: :account_backup_codes
+
+  scope constraints: { channel: Regexp.union(Masks::Server::Addresses::CHANNELS.keys) } do
+    post "/account/addresses/:channel", to: "addresses#create", as: :account_address
+    patch "/account/addresses/:channel", to: "addresses#update"
+  end
+  delete "/account/addresses/:channel", to: "addresses#destroy", constraints: { channel: "phone" }
 
   scope constraints: { factor: Regexp.union(Masks::Server::CodeFactors::FACTORS) } do
     post "/account/codes/:factor", to: "code_factors#create", as: :account_code_factor

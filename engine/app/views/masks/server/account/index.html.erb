@@ -13,7 +13,9 @@
                                                 code_factors: @code_factors, fresh: @fresh,
                                                 authenticator: @authenticator,
                                                 authenticator_secret: @authenticator_secret,
-                                                backup_codes: @backup_codes %>
+                                                backup_codes: @backup_codes,
+                                                pending_addresses: @pending_addresses,
+                                                directed: @directed %>
 
   <%= render "masks/server/account/approve", approver: @approver, approving: @approving %>
 
@@ -25,7 +27,7 @@
 
   <%= render "masks/server/account/apps", apps: @apps, connections: @connections, linkable: @linkable %>
 
-  <%= render "masks/server/account/info", actor: @actor %>
+  <%= render "masks/server/account/info", actor: @actor, directed: @directed %>
 
   <%= render "masks/server/account/activity", events: @events %>
 

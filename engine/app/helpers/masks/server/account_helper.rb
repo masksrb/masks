@@ -15,6 +15,7 @@ module Masks
         close: '<path d="M6.5 6.5l7 7M13.5 6.5l-7 7"/>',
         check: '<path d="m5.5 10.5 3 3 6-7"/>',
         organization: '<rect x="3.5" y="7" width="13" height="9.5" rx="1.5"/><path d="M7.5 7V4.5h5V7"/><path d="M3.5 11h13"/>',
+        person: '<circle cx="10" cy="7" r="3.25"/><path d="M4 16.5c.8-3 3.2-4.5 6-4.5s5.2 1.5 6 4.5"/>',
         authenticator: '<rect x="3" y="5.5" width="14" height="9" rx="2"/><path d="M6.5 10h.01M10 10h.01M13.5 10h.01"/>',
         backup_codes: '<path d="M5.5 3.5h9v13h-9z"/><path d="M8 7h4M8 10h4M8 13h4"/>',
         manage: '<path d="M10 2.5 3.5 5v5c0 3.4 2.7 6.2 6.5 7.5 3.8-1.3 6.5-4.1 6.5-7.5V5L10 2.5Z"/>'

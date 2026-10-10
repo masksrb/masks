@@ -29,6 +29,9 @@ module Masks
       EMAIL_VERIFIED = "email.verified".freeze
       PHONE_VERIFICATION_SENT = "phone.verification_sent".freeze
       PHONE_VERIFIED = "phone.verified".freeze
+      EMAIL_CHANGED = "email.changed".freeze
+      PHONE_CHANGED = "phone.changed".freeze
+      PHONE_REMOVED = "phone.removed".freeze
       APPROVAL_REQUESTED = "approval.requested".freeze
       ACTOR_APPROVED = "actor.approved".freeze
 

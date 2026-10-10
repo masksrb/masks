@@ -15,15 +15,41 @@ en:
         state:
           none: "None"
           unconfirmed: "Not confirmed"
-        none_set: "This account has no email address. Nothing can be sent to it, and you cannot reset your own password. Ask a manager to add one."
+        none_set: "This account has no email address. Nothing can be sent to it, and you cannot reset your own password."
         body: "Password resets and confirmations go to %{email}."
         send_link: "Send confirmation link"
+
+      phone:
+        heading: "Phone number"
+        state:
+          none: "None"
+          unconfirmed: "Not confirmed"
+        none: "This account has no phone number."
+        body: "Text message codes go to %{phone}."
+        remove: "Remove"
+        confirm_remove: "Remove this phone number?"
+
+      addresses:
+        email: "New email address"
+        phone: "New phone number"
+        phone_hint: "Include the country code, as in +1 555 123 4567."
+        send: "Send a code"
+        again: "Sign in again to change this"
+        sent: "Enter the code sent to %{to}."
+        code: "Code"
+        confirm: "Confirm"
+        directed: "Your organization's directory manages this address."
+        undeliverable:
+          email: "This server cannot send email yet, so the address cannot be changed here."
+          phone: "This server cannot send text messages yet, so the number cannot be changed here."
 
       password:
         heading: "Password"
         state: "Change it"
         state_none: "Not set"
-        none: "This account has no password. It signs in with a passkey or another account instead."
+        none: "This account has no password. It signs in with a passkey or another account instead. Setting one signs you out everywhere else."
+        set: "Set a password"
+        set_again: "Sign in again to set a password"
         current: "Your current password"
         new: "Your new password"
         hint: "At least %{minimum} characters. Changing it signs you out everywhere else."
@@ -198,6 +224,14 @@ en:
 
       info:
         heading: "Details"
+
+      profile:
+        heading: "Name"
+        name: "Your name"
+        nickname: "Nickname"
+        nickname_hint: "Letters, numbers, dots, dashes, and underscores. You can sign in with it."
+        submit: "Save"
+        directed: "Your organization's directory manages your name."
 
       picture:
         change: "Change your photo"

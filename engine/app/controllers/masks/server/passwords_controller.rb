@@ -9,6 +9,8 @@ module Masks
       before_action :require_actor
 
       def update
+        return set_password unless current_actor.password?
+
         refusal = Passwords.refusal(replacement, policy)
 
         return refuse(t("passwords.#{refusal.underscore}", minimum: policy.password_minimum), field: :password) if refusal
@@ -23,6 +25,20 @@ module Masks
       end
 
       private
+
+        def set_password
+          return unless reauthenticated!("password", t("passwords.again"))
+
+          refusal = Passwords.refusal(replacement, policy)
+
+          return refuse(t("passwords.#{refusal.underscore}", minimum: policy.password_minimum), field: :password) if refusal
+
+          current_actor.reset_password!(replacement, keeping: current_session)
+
+          Event.record!(Event::PASSWORD_CHANGED, actor: current_actor)
+
+          redirect_to root_path, notice: t("passwords.set")
+        end
 
         def require_actor
           redirect_to login_path unless current_actor

@@ -2,7 +2,7 @@
   <h2><%= account_text("signing_in.heading") %></h2>
 
   <div class="entries">
-    <details class="entry" id="email">
+    <details class="entry" id="email"<%= " open" if pending_addresses["email"] %>>
       <summary>
         <span class="entry-icon"><%= account_icon(:email) %></span>
         <span class="entry-label"><%= account_text("email.heading") %></span>
@@ -31,8 +31,49 @@
             </div>
           <% end %>
         <% end %>
+
+        <%= render "masks/server/account/address", channel: "email", pending: pending_addresses["email"],
+                                                   fresh: fresh, directed: directed %>
       </div>
     </details>
+
+    <% if actor.phone.present? || Masks::Server::Addresses.deliverable?("phone") %>
+      <details class="entry" id="phone"<%= " open" if pending_addresses["phone"] %>>
+        <summary>
+          <span class="entry-icon"><%= account_icon(:device) %></span>
+          <span class="entry-label"><%= account_text("phone.heading") %></span>
+          <span class="entry-state <%= "entry-state-warn" if actor.phone.present? && actor.phone_verified_at.nil? %>">
+            <% if actor.phone.blank? %>
+              <%= account_text("phone.state.none") %>
+            <% elsif actor.phone_verified_at.present? %>
+              <%= actor.phone %>
+            <% else %>
+              <%= account_text("phone.state.unconfirmed") %>
+            <% end %>
+          </span>
+          <span class="entry-mark" aria-hidden="true"></span>
+        </summary>
+
+        <div class="entry-body">
+          <% if actor.phone.blank? %>
+            <p class="aside"><%= account_text("phone.none") %></p>
+          <% else %>
+            <p class="aside"><%= account_text("phone.body", phone: actor.phone) %></p>
+          <% end %>
+
+          <%= render "masks/server/account/address", channel: "phone", pending: pending_addresses["phone"],
+                                                     fresh: fresh, directed: directed %>
+
+          <% if actor.phone.present? && fresh && !directed %>
+            <div class="action-row">
+              <%= button_to account_text("phone.remove"), account_address_path("phone"), method: :delete,
+                    class: "action action-quiet action-sm",
+                    form: { data: { turbo_confirm: account_text("phone.confirm_remove") } } %>
+            </div>
+          <% end %>
+        </div>
+      </details>
+    <% end %>
 
     <% refused = flash[:password_field] || {} %>
     <details class="entry" id="password"<%= " open" if refused.any? %>>
@@ -46,6 +87,26 @@
       <div class="entry-body">
         <% if !actor.password? %>
           <p class="aside"><%= account_text("password.none") %></p>
+
+          <%= form_with url: account_password_path, method: :patch, id: "set-password", class: "flow-tight" do |form| %>
+            <% if fresh %>
+              <label class="field">
+                <span class="field-label"><%= account_text("password.new") %></span>
+                <%= form.password_field :password, autocomplete: "new-password", required: true, class: "control" %>
+                <% if refused["password"] %>
+                  <span class="field-hint field-hint-bad" role="alert"><%= refused["password"] %></span>
+                <% end %>
+              </label>
+            <% else %>
+              <%= form.hidden_field :password, value: "" %>
+            <% end %>
+
+            <div class="action-row">
+              <button type="submit" class="action action-sm">
+                <%= account_text(fresh ? "password.set" : "password.set_again") %>
+              </button>
+            </div>
+          <% end %>
         <% else %>
           <%= form_with url: account_password_path, method: :patch, id: "change-password",
                 class: "flow-tight" do |form| %>

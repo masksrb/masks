@@ -26,6 +26,7 @@ module Masks
           def resolve(uuid:, **attributes)
             actor = actor!(uuid)
             changing_email = attributes.key?(:email) && attributes[:email] != actor.email
+            previous = actor.email if changing_email && actor.email_verified_at.present?
 
             actor.assign_attributes(attributes)
             actor.email_verified_at = nil if changing_email
@@ -34,6 +35,7 @@ module Masks
             save!(actor)
 
             audit!(Masks::Server::Event::ACTOR_UPDATED, actor: actor, changed: attributes.keys.map(&:to_s))
+            audit!(Masks::Server::Event::EMAIL_CHANGED, actor: actor, previous: previous) if changing_email
 
             Verifications.open(actor: actor, journey: Masks::Server::Journey.manage(viewer)) if changing_email
 

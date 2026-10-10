@@ -29,6 +29,8 @@ module Masks
         @authenticator = AuthenticatorApp.offered?(@actor)
         @authenticator_secret = AuthenticatorApp.setup_secret(session, @actor) if @authenticator && @fresh && !@actor.otp?
         @backup_codes = flash[:backup_codes]
+        @pending_addresses = Addresses.pending(session, @actor)
+        @directed = @actor.directed?
         @refusal = refusal(@actor)
       end
 

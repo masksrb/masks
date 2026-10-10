@@ -31,6 +31,8 @@ module Masks
           Event::DEVICE_CODE_APPROVED
         ],
         "account" => [
+          Event::PHONE_CHANGED,
+          Event::PHONE_REMOVED,
           Event::ACTOR_SCOPES_CHANGED,
           Event::ACCOUNT_EXPORTED
         ],
@@ -43,6 +45,8 @@ module Masks
 
       SELF_EVIDENT = GROUPS["organizations"]
 
+      WARNS_PREVIOUS = [ Event::EMAIL_CHANGED ].freeze
+
       MAILED = GROUPS.values.flatten.freeze
 
       ONCE_PER_DEVICE = [ Event::SESSION_STARTED ].freeze
@@ -53,7 +57,7 @@ module Masks
         end
 
         def raised(event)
-          return false unless mailed?(event.action)
+          return false unless mailed?(event.action) || WARNS_PREVIOUS.include?(event.action)
           return false unless event.actor_id && ActorMailer.deliverable?
 
           NotificationJob.perform_later(event.id, origin: Current.origin)
@@ -61,6 +65,8 @@ module Masks
         end
 
         def deliver(event)
+          return warn_previous(event) if WARNS_PREVIOUS.include?(event.action)
+
           actor = event.actor
 
           return false unless mailable?(actor)
@@ -121,6 +127,17 @@ module Masks
         end
 
         private
+
+          def warn_previous(event)
+            previous = detail(event, "previous")
+
+            return false if previous.blank? || event.actor.nil? || !ActorMailer.deliverable?
+
+            journey = Journey.new(kind: Journey::SYSTEM, client: event.client)
+            ActorMailer.notification(event.actor, event, journey: journey, to: previous).deliver_now
+
+            true
+          end
 
           def detail(event, key)
             (event.details || {})[key]

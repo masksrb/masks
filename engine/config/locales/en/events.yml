@@ -24,9 +24,12 @@ en:
       email:
         verification_sent: "Email confirmation sent"
         verified: "Email confirmed"
+        changed: "Email address changed"
       phone:
         verification_sent: "Phone confirmation sent"
         verified: "Phone confirmed"
+        changed: "Phone number changed"
+        removed: "Phone number removed"
       approval:
         requested: "Approval requested"
       passkey:

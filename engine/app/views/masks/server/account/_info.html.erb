@@ -2,6 +2,39 @@
   <h2><%= account_text("info.heading") %></h2>
 
   <div class="entries">
+    <details class="entry" id="profile">
+      <summary>
+        <span class="entry-icon"><%= account_icon(:person) %></span>
+        <span class="entry-label"><%= account_text("profile.heading") %></span>
+        <span class="entry-state"><%= actor.name.presence || actor.nickname %></span>
+        <span class="entry-mark" aria-hidden="true"></span>
+      </summary>
+
+      <div class="entry-body">
+        <% if directed %>
+          <p class="aside"><%= account_text("profile.directed") %></p>
+        <% else %>
+          <%= form_with url: account_profile_path, method: :patch, id: "profile-form", class: "flow-tight" do |form| %>
+            <label class="field">
+              <span class="field-label"><%= account_text("profile.name") %></span>
+              <%= form.text_field :name, value: actor.name, autocomplete: "name", class: "control" %>
+            </label>
+
+            <label class="field">
+              <span class="field-label"><%= account_text("profile.nickname") %></span>
+              <%= form.text_field :nickname, value: actor.nickname, autocomplete: "username",
+                    autocapitalize: "none", spellcheck: false, class: "control" %>
+              <span class="field-hint"><%= account_text("profile.nickname_hint") %></span>
+            </label>
+
+            <div class="action-row">
+              <button type="submit" class="action action-sm"><%= account_text("profile.submit") %></button>
+            </div>
+          <% end %>
+        <% end %>
+      </div>
+    </details>
+
     <details class="entry" id="notifications">
       <summary>
         <span class="entry-icon"><%= account_icon(:bell) %></span>

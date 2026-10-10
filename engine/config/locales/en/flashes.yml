@@ -62,6 +62,31 @@ en:
     added: "Authenticator app added. Signing in now asks for its code."
     removed: "Authenticator app removed."
 
+  addresses:
+    again: "Sign in again to change your email address or phone number. It has been a while since you did."
+    directed: "Your organization's directory manages this account's addresses."
+    too_many_requests: "Too many codes were sent. Wait a few minutes and try again."
+    too_many_attempts: "Too many codes were tried. Wait a few minutes and try again."
+    expired: "That code expired. Send a new one."
+    invalid_code: "That code did not match."
+    email:
+      invalid: "That is not an email address."
+      same: "That is already your email address."
+      undeliverable: "This server cannot send email yet."
+      sent: "A code is on its way to %{to}."
+      taken: "Another account uses that email address."
+      changed: "Email address changed."
+    phone:
+      invalid: "That is not a phone number. Include the country code, as in +1 555 123 4567."
+      same: "That is already your phone number."
+      undeliverable: "This server cannot send text messages yet."
+      sent: "A code is on its way to %{to}."
+      taken: "Another account uses that phone number."
+      changed: "Phone number changed."
+      none: "This account has no phone number."
+      required: "This server requires a phone number, so it cannot be removed. Change it instead."
+      removed: "Phone number removed."
+
   backup_codes:
     again: "Sign in again to make new backup codes. It has been a while since you did."
     unoffered: "This server does not offer backup codes."
@@ -95,6 +120,13 @@ en:
     breached_password: "That password has appeared in a data breach. Choose another."
     wrong_current: "That is not your current password."
     changed: "Your password has been changed, and every other session signed out."
+    set: "Your account has a password now, and every other session signed out."
+    again: "Sign in again to set a password. It has been a while since you did."
+
+  profiles:
+    directed: "Your organization's directory manages your name."
+    invalid: "%{errors}"
+    updated: "Your details have been saved."
 
   verifications:
     too_many_requests: "Too many requests. Wait a few minutes."

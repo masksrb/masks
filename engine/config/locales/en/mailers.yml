@@ -49,6 +49,11 @@ en:
           generated: "A fresh set of backup codes was generated for your %{tenant} account. The codes printed before this no longer work."
         backup_code:
           spent: "A backup code was used to sign in to your %{tenant} account. %{remaining} are left."
+        email:
+          changed: "The email address on your %{tenant} account was changed to another address. Password resets and notices about the account no longer come here."
+        phone:
+          changed: "The phone number on your %{tenant} account was changed. Text message codes go to the new number."
+          removed: "The phone number was removed from your %{tenant} account."
         authenticator:
           enabled: "An authenticator app was added to your %{tenant} account. Signing in now asks for its code."
           disabled: "The authenticator app on your %{tenant} account was removed. It is no longer asked for at sign-in."

@@ -1,0 +1,42 @@
+<% if directed %>
+  <p class="aside"><%= account_text("addresses.directed") %></p>
+<% elsif !Masks::Server::Addresses.deliverable?(channel) %>
+  <p class="aside"><%= account_text("addresses.undeliverable.#{channel}") %></p>
+<% elsif !fresh %>
+  <div class="action-row">
+    <%= button_to account_text("addresses.again"), account_address_path(channel),
+          params: { address: "" }, class: "action action-quiet action-sm" %>
+  </div>
+<% else %>
+  <% if pending %>
+    <%= form_with url: account_address_path(channel), method: :patch, id: "confirm-#{channel}",
+          class: "flow-tight" do |form| %>
+      <label class="field">
+        <span class="field-label"><%= account_text("addresses.sent", to: pending.address) %></span>
+        <%= form.text_field :code, autocomplete: "one-time-code", inputmode: "numeric",
+              pattern: "[0-9 ]*", required: true, class: "control" %>
+      </label>
+
+      <div class="action-row">
+        <button type="submit" class="action action-sm"><%= account_text("addresses.confirm") %></button>
+      </div>
+    <% end %>
+  <% end %>
+
+  <%= form_with url: account_address_path(channel), method: :post, id: "change-#{channel}",
+        class: "flow-tight" do |form| %>
+    <label class="field">
+      <span class="field-label"><%= account_text("addresses.#{channel}") %></span>
+      <% if channel == "phone" %>
+        <%= form.telephone_field :address, autocomplete: "tel", required: true, class: "control" %>
+        <span class="field-hint"><%= account_text("addresses.phone_hint") %></span>
+      <% else %>
+        <%= form.email_field :address, autocomplete: "email", required: true, class: "control" %>
+      <% end %>
+    </label>
+
+    <div class="action-row">
+      <button type="submit" class="action action-quiet action-sm"><%= account_text("addresses.send") %></button>
+    </div>
+  <% end %>
+<% end %>

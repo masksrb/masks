@@ -51,7 +51,7 @@ module Masks
         )
       end
 
-      def notification(actor, event, journey:)
+      def notification(actor, event, journey:, to: actor.email)
         return message unless deliverable?
 
         journey!(journey)
@@ -69,7 +69,7 @@ module Masks
 
         mail(
           from: self.class.from,
-          to: actor.email,
+          to: to,
           subject: t("actor_mailer.notification.subject", said: Notifications.said(event), tenant: @tenant_name)
         )
       end
