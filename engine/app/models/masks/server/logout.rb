@@ -80,6 +80,13 @@ module Masks
             )
           end
 
+          if claims.nil? && client.dynamic? && !client.approved?
+            raise Refused.new(
+              "invalid_request",
+              "a client nobody approved sends people back only with an id_token_hint"
+            )
+          end
+
           return if client.post_logout_redirect_uris.include?(redirect_uri)
 
           raise Refused.new(

@@ -28,6 +28,28 @@ module Masks
         within { Client.find_by(client_id: DOCUMENT_URL) }
       end
 
+      test "an address that names too many new documents is turned away before masks fetches them" do
+        limit = ::Rails.configuration.masks.registration_limit
+        stub_request(:get, %r{\Ahttps://app\.example\.com/client/}).to_return(
+          status: 200, headers: { "Content-Type" => "application/json" },
+          body: ->(request) { { client_id: "https://app.example.com#{request.uri.path}", redirect_uris: [ OidcFlow::REDIRECT_URI ] }.to_json }
+        )
+
+        (limit + 2).times { |n| within { ClientMetadataDocument.resolve("https://app.example.com/client/#{n}.json") } }
+
+        assert_equal limit, within { Client.where("client_id LIKE ?", "https://app.example.com/client/%").count }
+        assert_requested :get, %r{\Ahttps://app\.example\.com/client/}, times: limit
+      end
+
+      test "a document client nobody approved sends people back after sign-out only with an id_token_hint" do
+        publish(post_logout_redirect_uris: [ "https://app.example.com/bye" ])
+        within { ClientMetadataDocument.resolve(DOCUMENT_URL) }
+
+        get "/logout", params: { client_id: DOCUMENT_URL, post_logout_redirect_uri: "https://app.example.com/bye" }
+
+        refute_equal "https://app.example.com/bye", response.location
+      end
+
       test "discovery says a client_id may be the URL of a metadata document" do
         get "/.well-known/openid-configuration"
 

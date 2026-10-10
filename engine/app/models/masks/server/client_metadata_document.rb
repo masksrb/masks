@@ -12,6 +12,8 @@ module Masks
       LONGEST = 24.hours
       REFUSAL_LIFETIME = 5.minutes
       NAME_LIMIT = 100
+      WINDOW = 10.minutes
+      TENANT_FACTOR = 10
       AUTH_METHODS = %w[none private_key_jwt].freeze
       DEFAULT_AUTH_METHOD = "none".freeze
       FORBIDDEN = %w[client_secret client_secret_expires_at registration_access_token registration_client_uri].freeze
@@ -51,11 +53,23 @@ module Masks
           return nil if held&.archived? || held&.protocol == SamlIdentity::PROTOCOL
           return held if held && !held.metadata_stale?
           return nil unless Current.tenant&.registers?
+          return nil if held.nil? && crowded?
 
           new(client_id).save!(held)
         rescue Refused => e
           ::Rails.logger.info("masks: client metadata document #{client_id} refused: #{e.message}")
           nil
+        end
+
+        def crowded?
+          limit = ::Rails.configuration.masks.registration_limit
+          key = "masks:client-metadata-documents:#{Current.tenant&.id}:#{Time.current.to_i / WINDOW.to_i}"
+          here = ::Rails.cache.increment("#{key}:#{Current.ip_address}", 1, expires_in: WINDOW)
+          anywhere = ::Rails.cache.increment(key, 1, expires_in: WINDOW)
+
+          (here.to_i > limit || anywhere.to_i > limit * TENANT_FACTOR).tap do |crowded|
+            ::Rails.logger.info("masks: too many new client metadata documents") if crowded
+          end
         end
 
         def refusal_key(client_id)
