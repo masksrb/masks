@@ -45,6 +45,8 @@
       actor(uuid: $uuid) {
         uuid identifier nickname email emailVerified phone phoneVerified signedUpAt pendingApproval
         recoveryRequestedAt
+        groups { key }
+        groupLabels
         suspendedAt externalId
         memberships { externalId organization { key name } }
         scopes otpEnabled emailCodesEnabled textCodesEnabled backupCodesRemaining
@@ -76,6 +78,7 @@
           device { id label }
         }
       }
+      groups { key name }
       viewer { uuid }
       scopesSupported
     }
@@ -85,6 +88,7 @@
 
   let actor = $state(null);
   let viewer = $state(null);
+  let groups = $state([]);
   let supported = $state([]);
   let draft = $state({});
   let loading = $state(true);
@@ -102,6 +106,7 @@
 
       actor = data.actor;
       viewer = data.viewer;
+      groups = data.groups;
       supported = data.scopesSupported;
       draft = Object.fromEntries(PROFILE.map(([key]) => [key, data.actor?.[key] ?? ""]));
     } catch (thrown) {
@@ -120,6 +125,17 @@
 
     return data;
   }
+
+  const belongs = (group) => actor.groups.some((held) => held.key === group.key);
+
+  const toggleGroup = (group) =>
+    act(
+      belongs(group)
+        ? `mutation Leave($key: String!, $uuid: ID!) { removeGroupMember(key: $key, uuid: $uuid) { group { key } } }`
+        : `mutation Join($key: String!, $uuid: ID!) { addGroupMember(key: $key, uuid: $uuid) { group { key } } }`,
+      { key: group.key, uuid },
+      belongs(group) ? `Out of ${group.name}.` : `In ${group.name}.`,
+    );
 
   const saveProfile = () =>
     act(
@@ -571,6 +587,25 @@
             </div>
           </Section>
         {/if}
+
+        <Section title="Groups">
+          {#if groups.length}
+            <div class="flex flex-col gap-1">
+              {#each groups as group (group.key)}
+                <label class="flex items-center gap-2 text-sm">
+                  <input type="checkbox" class="checkbox checkbox-sm" checked={belongs(group)} onchange={() => toggleGroup(group)} />
+                  {group.name} <code class="hint font-mono">{group.key}</code>
+                </label>
+              {/each}
+            </div>
+          {:else}
+            <p class="text-sm opacity-85">No groups yet. <Link to="/groups">Add one</Link>.</p>
+          {/if}
+
+          {#if actor.groupLabels.length}
+            <p class="hint">Apps that ask for groups see {actor.groupLabels.join(", ")}.</p>
+          {/if}
+        </Section>
 
         <Section title="Second factor">
           {#if actor.otpEnabled}

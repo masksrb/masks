@@ -30,6 +30,8 @@ module Masks
           argument :saml_idp_initiated, Boolean, required: false
           argument :saml_attributes, GraphQL::Types::JSON, required: false
           argument :consent_required, Boolean, required: false
+          argument :allowed_groups, [ String ], required: false,
+                   description: "Group keys, or organization roles as key:role, whose people may sign in to this client. Empty lets everyone in."
           argument :sign_in_policy, ID, required: false
           argument :client_uri, String, required: false
           argument :logo_uri, String, required: false

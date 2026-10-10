@@ -261,6 +261,35 @@ An **organization** is a customer inside a tenant, whose members each hold a rol
 asks for the `organization` scope signs a person in as a member of one. See
 [organizations](/guides/organizations/).
 
+## Groups
+
+A **group** is a named set of people in a tenant, such as `admins` or `family`. A person can be in
+any number of groups. Managers with the security role add groups under **Settings → Groups**, and put
+people in them from each person's page.
+
+An app that asks for the `groups` scope receives a `groups` claim in the ID token and from userinfo.
+It lists the key of each group the person is in, and each organization role they hold as `key:role`:
+
+```json
+{ "groups": ["acme:owner", "admins", "family"] }
+```
+
+Every person may grant the `groups` scope, whatever their own scopes are. Apps that map roles from a
+claim read this one. In Grafana, for example:
+
+```ini
+[auth.generic_oauth]
+scopes = openid profile email groups
+role_attribute_path = contains(groups[*], 'admins') && 'Admin' || 'Viewer'
+```
+
+### Who may sign in to an app
+
+On a client's page, **Who may sign in** limits it to people in some groups, or with some organization
+roles written as `key:role`. Anyone else who signs in to it is sent back to the app with
+`access_denied`, and the refusal appears in their activity. Taking someone out of the group ends their
+next refresh with `invalid_grant`. A client with nothing ticked lets everyone in.
+
 ## Accounts
 
 ### Suspending and deleting

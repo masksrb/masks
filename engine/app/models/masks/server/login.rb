@@ -14,6 +14,7 @@ module Masks
         LoginStates::FirstFactor,
         LoginStates::RiskCheck,
         LoginStates::Suspension,
+        LoginStates::AppAccess,
         LoginStates::OrganizationChoice,
         LoginStates::OneTimePassword,
         LoginStates::BackupCode,

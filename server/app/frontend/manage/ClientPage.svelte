@@ -27,7 +27,7 @@
         tokenEndpointAuthMethod applicationType clientUri logoUri tosUri policyUri logoUrl(size: 128)
         subjectType sectorIdentifierUri
         redirectUris postLogoutRedirectUris grantTypes responseTypes resources
-        requiredScopes allowedScopes
+        requiredScopes allowedScopes allowedGroups
         backchannelLogoutUri backchannelLogoutSessionRequired
         requirePushedAuthorizationRequests requireSignedRequestObject consentRequired jwks jwksUri
         authorizationDetailsTypes authorizationDetailsSchemas consentLifetime
@@ -52,6 +52,7 @@
         }
       }
       scopesSupported
+      groups { key name }
       samlMetadataUrl
       signInPolicies { key name }
       defaultSignInPolicy { ${POLICY_FIELDS} }
@@ -62,6 +63,8 @@
 
   let client = $state(null);
   let supported = $state([]);
+  let groups = $state([]);
+  let roles = $state("");
   let policies = $state([]);
   let fallbackPolicy = $state(null);
   let name = $state("");
@@ -149,6 +152,8 @@
 
       client = data.client;
       supported = data.scopesSupported;
+      groups = data.groups;
+      roles = (data.client?.allowedGroups ?? []).filter((held) => held.includes(":")).join(", ");
       policies = data.signInPolicies;
       fallbackPolicy = data.defaultSignInPolicy;
       name = data.client?.name ?? "";
@@ -197,7 +202,7 @@
         $subjectType: String, $sectorIdentifierUri: String, $dpopBoundAccessTokens: Boolean,
         $backchannelLogoutSessionRequired: Boolean, $clientUri: String, $logoUri: String,
         $tosUri: String, $policyUri: String, $authorizationDetailsTypes: [String!],
-        $authorizationDetailsSchemas: JSON, $consentLifetime: Int
+        $authorizationDetailsSchemas: JSON, $consentLifetime: Int, $allowedGroups: [String!]
       ) {
         updateClient(
           clientId: $clientId, name: $name, requiredScopes: $requiredScopes,
@@ -229,6 +234,7 @@
           authorizationDetailsTypes: $authorizationDetailsTypes,
           authorizationDetailsSchemas: $authorizationDetailsSchemas,
           consentLifetime: $consentLifetime
+          allowedGroups: $allowedGroups
         ) {
           client { clientId }
         }
@@ -236,6 +242,24 @@
       { clientId, ...changes },
       notice,
     );
+
+  const roleList = (value) =>
+    value
+      .split(/[\s,]+/)
+      .map((held) => held.trim())
+      .filter((held) => held.includes(":"));
+
+  function admit(key, on) {
+    const held = client.allowedGroups.filter((group) => group !== key);
+
+    update({ allowedGroups: on ? [...held, key] : held }, "Who may sign in is updated.");
+  }
+
+  function saveRoles() {
+    const kept = client.allowedGroups.filter((group) => !group.includes(":"));
+
+    update({ allowedGroups: [...kept, ...roleList(roles)] }, "Who may sign in is updated.");
+  }
 
   const unattended = $derived(client?.grantTypes.includes("client_credentials") ?? false);
 
@@ -735,6 +759,42 @@
             {/if}
           </Section>
         {/if}
+
+        <Section
+          title="Who may sign in"
+          lede="Everyone, or only people in the groups ticked here. An organization role written as key:role counts as a group."
+        >
+          {#if groups.length}
+            <div class="flex flex-col gap-1">
+              {#each groups as group (group.key)}
+                <label class="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    class="checkbox checkbox-sm"
+                    checked={client.allowedGroups.includes(group.key)}
+                    onchange={(event) => admit(group.key, event.currentTarget.checked)}
+                  />
+                  {group.name} <code class="hint font-mono">{group.key}</code>
+                </label>
+              {/each}
+            </div>
+          {:else}
+            <p class="text-sm opacity-85">
+              No groups yet. <Link to="/groups">Add one</Link> to limit who may sign in.
+            </p>
+          {/if}
+
+          <Field
+            label="Organization roles"
+            bind:value={roles}
+            placeholder="acme:owner, acme:billing"
+            onsave={saveRoles}
+          />
+
+          <p class="hint">
+            {client.allowedGroups.length ? `Only ${client.allowedGroups.join(", ")} may sign in.` : "Everyone may sign in."}
+          </p>
+        </Section>
 
         <Section title="Scopes">
           <div class="flex flex-col gap-1.5">

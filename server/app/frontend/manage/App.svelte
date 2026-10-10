@@ -22,6 +22,7 @@
   import EmailsPage from "./EmailsPage.svelte";
   import PoliciesPage from "./PoliciesPage.svelte";
   import ProvisioningPage from "./ProvisioningPage.svelte";
+  import GroupsPage from "./GroupsPage.svelte";
   import SettingsShell from "./SettingsShell.svelte";
 
   let { boot } = $props();
@@ -58,7 +59,7 @@
     ["/clients", "Clients", '<rect x="3" y="3" width="6" height="6" rx="1.5"/><rect x="11" y="3" width="6" height="6" rx="1.5"/><rect x="3" y="11" width="6" height="6" rx="1.5"/><rect x="11" y="11" width="6" height="6" rx="1.5"/>'],
   ];
 
-  const SETTINGS = ["settings", "policies", "providers", "domains", "provisioning", "adapters", "streams", "email", "activity"];
+  const SETTINGS = ["settings", "groups", "policies", "providers", "domains", "provisioning", "adapters", "streams", "email", "activity"];
 
   const REPAIRED = "masks:manage:repaired";
 
@@ -236,7 +237,9 @@
         {/if}
       {:else if inSettings}
         <SettingsShell {current} {viewer} identifier={signedInAs} account={boot.account} onsignout={signOut} onunpair={forget}>
-          {#if current === "providers"}
+          {#if current === "groups"}
+            <GroupsPage {api} />
+          {:else if current === "providers"}
             <ProvidersPage {api} />
           {:else if current === "domains"}
             <DomainsPage {api} />

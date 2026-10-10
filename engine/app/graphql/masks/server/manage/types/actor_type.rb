@@ -31,6 +31,9 @@ module Masks
           field :consents, [ "Masks::Server::Manage::Types::ConsentType" ], null: false
           field :tokens, [ "Masks::Server::Manage::Types::TokenType" ], null: false
           field :memberships, [ "Masks::Server::Manage::Types::MembershipType" ], null: false
+          field :groups, [ "Masks::Server::Manage::Types::GroupType" ], null: false
+          field :group_labels, [ String ], null: false,
+                description: "What the groups claim carries: each group's key, and each organization role as key:role."
 
           field :events, [ "Masks::Server::Manage::Types::EventType" ], null: false do
             argument :limit, Integer, required: false

@@ -29,6 +29,8 @@ module Masks
       has_many :organizations, -> { merge(Membership.accepted) }, through: :memberships
       has_many :approvals, class_name: "Client", foreign_key: :approved_by_id, dependent: :nullify
       has_one :avatar, dependent: :destroy
+      has_many :group_members, dependent: :delete_all
+      has_many :groups, through: :group_members
 
       before_destroy :sign_out_everywhere!, prepend: true
 
@@ -130,7 +132,8 @@ module Masks
       end
 
       def permitted_scopes(requested)
-        Scopes.union(Scopes.granted(Scopes.list(requested), scope_list), Scopes.delegable(requested))
+        Scopes.union(Scopes.granted(Scopes.list(requested), scope_list), Scopes.delegable(requested),
+                     Scopes.list(requested) & Scopes::EVERYONE)
       end
 
       def holds?(scope)
@@ -401,6 +404,7 @@ module Masks
       AVATARS_CLAIM = "masks:avatars".freeze
       IDENTITIES_CLAIM = "identities".freeze
       ORGANIZATIONS_CLAIM = "orgs".freeze
+      GROUPS_CLAIM = "groups".freeze
 
       def claims(scopes, subject:, requested: nil, origin: Current.origin)
         granted = Scopes.list(scopes)
@@ -418,6 +422,7 @@ module Masks
 
         claims[IDENTITIES_CLAIM] = identities if granted.include?(Scopes::IDENTITIES) && subject == uuid
         claims[ORGANIZATIONS_CLAIM] = organizations_held if granted.include?(Scopes::ORGANIZATION)
+        claims[GROUPS_CLAIM] = group_labels if granted.include?(Scopes::GROUPS)
 
         asked(requested).each do |claim|
           claims[claim] = claim_value(claim, origin, subject) if PROFILE_CLAIMS.key?(claim)
@@ -428,6 +433,13 @@ module Masks
 
       def organizations_held
         memberships.live.map(&:claim)
+      end
+
+      def group_labels
+        held = groups.pluck(:key)
+        roles = memberships.live.joins(:organization).pluck("organizations.key", :role).map { |key, role| "#{key}:#{role}" }
+
+        (held + roles).uniq.sort
       end
 
       def identities

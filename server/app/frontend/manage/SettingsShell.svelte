@@ -5,6 +5,7 @@
 
   const TABS = [
     ["/settings", "General"],
+    ["/groups", "Groups"],
     ["/policies", "Policies"],
     ["/providers", "Providers"],
     ["/domains", "Domains"],

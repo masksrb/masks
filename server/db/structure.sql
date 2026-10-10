@@ -320,7 +320,8 @@ CREATE TABLE public.clients (
     metadata_expires_at timestamp(6) without time zone,
     authorization_details_types jsonb DEFAULT '[]'::jsonb NOT NULL,
     authorization_details_schemas jsonb DEFAULT '{}'::jsonb NOT NULL,
-    consent_lifetime integer
+    consent_lifetime integer,
+    allowed_groups character varying[] DEFAULT '{}'::character varying[] NOT NULL
 );
 
 ALTER TABLE ONLY public.clients FORCE ROW LEVEL SECURITY;
@@ -674,6 +675,76 @@ CREATE SEQUENCE public.events_id_seq
 --
 
 ALTER SEQUENCE public.events_id_seq OWNED BY public.events.id;
+
+
+--
+-- Name: group_members; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.group_members (
+    id bigint NOT NULL,
+    tenant_id bigint NOT NULL,
+    group_id bigint NOT NULL,
+    actor_id bigint NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+ALTER TABLE ONLY public.group_members FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: group_members_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.group_members_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: group_members_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.group_members_id_seq OWNED BY public.group_members.id;
+
+
+--
+-- Name: groups; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.groups (
+    id bigint NOT NULL,
+    tenant_id bigint NOT NULL,
+    key character varying NOT NULL,
+    name character varying NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+ALTER TABLE ONLY public.groups FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: groups_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.groups_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: groups_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.groups_id_seq OWNED BY public.groups.id;
 
 
 --
@@ -1390,6 +1461,20 @@ ALTER TABLE ONLY public.events ALTER COLUMN id SET DEFAULT nextval('public.event
 
 
 --
+-- Name: group_members id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.group_members ALTER COLUMN id SET DEFAULT nextval('public.group_members_id_seq'::regclass);
+
+
+--
+-- Name: groups id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.groups ALTER COLUMN id SET DEFAULT nextval('public.groups_id_seq'::regclass);
+
+
+--
 -- Name: mail_templates id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1598,6 +1683,22 @@ ALTER TABLE ONLY public.event_streams
 
 ALTER TABLE ONLY public.events
     ADD CONSTRAINT events_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: group_members group_members_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.group_members
+    ADD CONSTRAINT group_members_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: groups groups_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.groups
+    ADD CONSTRAINT groups_pkey PRIMARY KEY (id);
 
 
 --
@@ -2140,6 +2241,27 @@ CREATE INDEX index_events_on_tenant_id_and_organization_id_and_created_at ON pub
 
 
 --
+-- Name: index_group_members_on_actor_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_group_members_on_actor_id ON public.group_members USING btree (actor_id);
+
+
+--
+-- Name: index_group_members_on_group_id_and_actor_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_group_members_on_group_id_and_actor_id ON public.group_members USING btree (group_id, actor_id);
+
+
+--
+-- Name: index_groups_on_tenant_id_and_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_groups_on_tenant_id_and_key ON public.groups USING btree (tenant_id, key);
+
+
+--
 -- Name: index_mail_templates_on_tenant_id_and_kind; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2535,6 +2657,14 @@ ALTER TABLE ONLY public.consents
 
 
 --
+-- Name: groups fk_rails_13822f50e5; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.groups
+    ADD CONSTRAINT fk_rails_13822f50e5 FOREIGN KEY (tenant_id) REFERENCES public.tenants(id);
+
+
+--
 -- Name: tenants fk_rails_15dcd25064; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2919,6 +3049,14 @@ ALTER TABLE ONLY public.avatars
 
 
 --
+-- Name: group_members fk_rails_cb9b886ffb; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.group_members
+    ADD CONSTRAINT fk_rails_cb9b886ffb FOREIGN KEY (actor_id) REFERENCES public.actors(id) ON DELETE CASCADE;
+
+
+--
 -- Name: domain_claims fk_rails_d56f552d49; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2967,6 +3105,14 @@ ALTER TABLE ONLY public.event_streams
 
 
 --
+-- Name: group_members fk_rails_e9fdb70ec5; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.group_members
+    ADD CONSTRAINT fk_rails_e9fdb70ec5 FOREIGN KEY (group_id) REFERENCES public.groups(id) ON DELETE CASCADE;
+
+
+--
 -- Name: consents fk_rails_eb0bd2c006; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2996,6 +3142,14 @@ ALTER TABLE ONLY public.subjects
 
 ALTER TABLE ONLY public.tokens
     ADD CONSTRAINT fk_rails_f1cbd27024 FOREIGN KEY (root_id) REFERENCES public.tokens(id) ON DELETE SET NULL;
+
+
+--
+-- Name: group_members fk_rails_f45936ea8a; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.group_members
+    ADD CONSTRAINT fk_rails_f45936ea8a FOREIGN KEY (tenant_id) REFERENCES public.tenants(id);
 
 
 --
@@ -3099,6 +3253,18 @@ ALTER TABLE public.event_streams ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: group_members; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.group_members ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: groups; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.groups ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: mail_templates; Type: ROW SECURITY; Schema: public; Owner: -
@@ -3258,6 +3424,20 @@ CREATE POLICY tenant_isolation ON public.events USING ((tenant_id = (NULLIF(curr
 
 
 --
+-- Name: group_members tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.group_members USING ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint)) WITH CHECK ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint));
+
+
+--
+-- Name: groups tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.groups USING ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint)) WITH CHECK ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint));
+
+
+--
 -- Name: mail_templates tenant_isolation; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -3354,6 +3534,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261010140000'),
 ('20261010130000'),
 ('20261010120000'),
 ('20261004130000'),

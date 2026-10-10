@@ -54,6 +54,8 @@ schema disagree.
 | `mailPreviews`<br />`client: ID` | [`[MailPreview!]!`](#mailpreview) |  |
 | `mailTemplates` | [`[MailTemplate!]!`](#mailtemplate) | One entry for each email the tenant can reword, and the signature. |
 | `tally` | [`Tally!`](#tally) |  |
+| `groups` | [`[Group!]!`](#group) |  |
+| `group`<br />`key: String!` | [`Group`](#group) |  |
 | `activity`<br />`days: Int` | [`[ActivityDay!]!`](#activityday) |  |
 | `events`<br />`actor: ID`<br />`client: ID`<br />`device: ID`<br />`action: String`<br />`grave: Boolean`<br />`organization: ID`<br />`afterId: ID`<br />`limit: Int` | [`[Event!]!`](#event) |  |
 | `eventCount`<br />`actor: ID`<br />`client: ID`<br />`device: ID`<br />`action: String`<br />`grave: Boolean`<br />`organization: ID` | `Int!` |  |
@@ -82,6 +84,11 @@ schema disagree.
 | `disableAuthenticator`<br />`uuid: ID!` | [`DisableAuthenticatorPayload`](#disableauthenticatorpayload) |  |
 | `resetSecondFactors`<br />`uuid: ID!` | [`ResetSecondFactorsPayload`](#resetsecondfactorspayload) |  |
 | `dismissRecovery`<br />`uuid: ID!` | [`DismissRecoveryPayload`](#dismissrecoverypayload) |  |
+| `createGroup`<br />`key: String!`<br />`name: String!` | [`CreateGroupPayload`](#creategrouppayload) |  |
+| `updateGroup`<br />`key: String!`<br />`name: String!` | [`UpdateGroupPayload`](#updategrouppayload) |  |
+| `deleteGroup`<br />`key: String!` | [`DeleteGroupPayload`](#deletegrouppayload) |  |
+| `addGroupMember`<br />`key: String!`<br />`uuid: ID!` | [`AddGroupMemberPayload`](#addgroupmemberpayload) |  |
+| `removeGroupMember`<br />`key: String!`<br />`uuid: ID!` | [`RemoveGroupMemberPayload`](#removegroupmemberpayload) |  |
 | `disableCodeFactor`<br />`uuid: ID!`<br />`factor: String!` | [`DisableCodeFactorPayload`](#disablecodefactorpayload) |  |
 | `revokePasskey`<br />`uuid: ID!`<br />`id: ID!` | [`RevokePasskeyPayload`](#revokepasskeypayload) |  |
 | `uploadAvatar`<br />`uuid: ID!`<br />`photo: Upload!` | [`UploadAvatarPayload`](#uploadavatarpayload) |  |
@@ -89,7 +96,7 @@ schema disagree.
 | `createClient`<br />`name: String!`<br />`grantTypes: [String!]`<br />`redirectUris: [String!]`<br />`postLogoutRedirectUris: [String!]`<br />`resources: [String!]`<br />`requiredScopes: [String!]`<br />`allowedScopes: [String!]`<br />`tokenEndpointAuthMethod: String`<br />`dpopBoundAccessTokens: Boolean`<br />`jwks: JSON`<br />`jwksUri: String`<br />`requireSignedRequestObject: Boolean` | [`CreateClientPayload`](#createclientpayload) |  |
 | `createSamlApplication`<br />`name: String!`<br />`entityId: String!`<br />`acsUrls: [String!]!`<br />`certificate: String`<br />`nameIdFormat: String`<br />`requestsSigned: Boolean`<br />`idpInitiated: Boolean`<br />`attributes: JSON` | [`CreateSamlApplicationPayload`](#createsamlapplicationpayload) |  |
 | `readSamlApplicationMetadata`<br />`xml: String!` | [`ReadSamlApplicationMetadataPayload`](#readsamlapplicationmetadatapayload) |  |
-| `updateClient`<br />`clientId: ID!`<br />`name: String`<br />`grantTypes: [String!]`<br />`redirectUris: [String!]`<br />`postLogoutRedirectUris: [String!]`<br />`resources: [String!]`<br />`requiredScopes: [String!]`<br />`allowedScopes: [String!]`<br />`subjectType: String`<br />`dpopBoundAccessTokens: Boolean`<br />`sectorIdentifierUri: String`<br />`backchannelLogoutUri: String`<br />`backchannelLogoutSessionRequired: Boolean`<br />`requirePushedAuthorizationRequests: Boolean`<br />`jwks: JSON`<br />`jwksUri: String`<br />`requireSignedRequestObject: Boolean`<br />`tokenEndpointAuthMethod: String`<br />`samlEntityId: String`<br />`samlCertificate: String`<br />`samlNameIdFormat: String`<br />`samlRequestsSigned: Boolean`<br />`samlIdpInitiated: Boolean`<br />`samlAttributes: JSON`<br />`consentRequired: Boolean`<br />`signInPolicy: ID`<br />`clientUri: String`<br />`logoUri: String`<br />`tosUri: String`<br />`policyUri: String`<br />`consentLifetime: Int`<br />`authorizationDetailsTypes: [String!]`<br />`authorizationDetailsSchemas: JSON` | [`UpdateClientPayload`](#updateclientpayload) |  |
+| `updateClient`<br />`clientId: ID!`<br />`name: String`<br />`grantTypes: [String!]`<br />`redirectUris: [String!]`<br />`postLogoutRedirectUris: [String!]`<br />`resources: [String!]`<br />`requiredScopes: [String!]`<br />`allowedScopes: [String!]`<br />`subjectType: String`<br />`dpopBoundAccessTokens: Boolean`<br />`sectorIdentifierUri: String`<br />`backchannelLogoutUri: String`<br />`backchannelLogoutSessionRequired: Boolean`<br />`requirePushedAuthorizationRequests: Boolean`<br />`jwks: JSON`<br />`jwksUri: String`<br />`requireSignedRequestObject: Boolean`<br />`tokenEndpointAuthMethod: String`<br />`samlEntityId: String`<br />`samlCertificate: String`<br />`samlNameIdFormat: String`<br />`samlRequestsSigned: Boolean`<br />`samlIdpInitiated: Boolean`<br />`samlAttributes: JSON`<br />`consentRequired: Boolean`<br />`allowedGroups: [String!]`<br />`signInPolicy: ID`<br />`clientUri: String`<br />`logoUri: String`<br />`tosUri: String`<br />`policyUri: String`<br />`consentLifetime: Int`<br />`authorizationDetailsTypes: [String!]`<br />`authorizationDetailsSchemas: JSON` | [`UpdateClientPayload`](#updateclientpayload) |  |
 | `rotateClientSecret`<br />`clientId: ID!`<br />`expiresIn: Int` | [`RotateClientSecretPayload`](#rotateclientsecretpayload) |  |
 | `archiveClient`<br />`clientId: ID!` | [`ArchiveClientPayload`](#archiveclientpayload) |  |
 | `restoreClient`<br />`clientId: ID!` | [`RestoreClientPayload`](#restoreclientpayload) |  |
@@ -195,6 +202,8 @@ Autogenerated return type of ActivateSigningKey.
 | `consents` | [`[Consent!]!`](#consent) |  |
 | `tokens` | [`[Token!]!`](#token) |  |
 | `memberships` | [`[Membership!]!`](#membership) |  |
+| `groups` | [`[Group!]!`](#group) |  |
+| `groupLabels` | `[String!]!` | What the groups claim carries: each group's key, and each organization role as key:role. |
 | `events`<br />`limit: Int` | [`[Event!]!`](#event) |  |
 | `backupCodesGeneratedAt` | `ISO8601DateTime` |  |
 | `lastLoginAt` | `ISO8601DateTime` |  |
@@ -253,6 +262,14 @@ Autogenerated return type of ActivateSigningKey.
 | `kind` | `String!` |
 | `label` | `String!` |
 | `fields` | [`[AdapterField!]!`](#adapterfield) |
+
+### AddGroupMemberPayload
+
+Autogenerated return type of AddGroupMember.
+
+| Field | Type |
+| --- | --- |
+| `group` | [`Group!`](#group) |
 
 ### AddMemberPayload
 
@@ -375,6 +392,7 @@ Autogenerated return type of ClaimDomain.
 | `resources` | `[String!]!` |  |
 | `requiredScopes` | `[String!]!` |  |
 | `allowedScopes` | `[String!]!` |  |
+| `allowedGroups` | `[String!]!` | Group keys, or organization roles as key:role, whose people may sign in. Empty lets everyone in. |
 | `namespaces` | [`[Namespace!]!`](#namespace) |  |
 | `tokenEndpointAuthMethod` | `String!` |  |
 | `subjectType` | `String!` |  |
@@ -486,6 +504,14 @@ Autogenerated return type of CreateEventStream.
 | `eventStream` | [`EventStream!`](#eventstream) |
 | `secret` | `String!` |
 
+### CreateGroupPayload
+
+Autogenerated return type of CreateGroup.
+
+| Field | Type |
+| --- | --- |
+| `group` | [`Group!`](#group) |
+
 ### CreateOrganizationPayload
 
 Autogenerated return type of CreateOrganization.
@@ -541,6 +567,14 @@ Autogenerated return type of DeleteActor.
 | --- | --- |
 | `uuid` | `ID!` |
 | `identifier` | `String!` |
+
+### DeleteGroupPayload
+
+Autogenerated return type of DeleteGroup.
+
+| Field | Type |
+| --- | --- |
+| `key` | `String!` |
 
 ### Device
 
@@ -673,6 +707,18 @@ Autogenerated return type of GenerateBackupCodes.
 | --- | --- |
 | `actor` | [`Actor!`](#actor) |
 | `codes` | `[String!]!` |
+
+### Group
+
+A named set of people in the tenant. The groups claim lists the key of each group a person is in.
+
+| Field | Type |
+| --- | --- |
+| `key` | `String!` |
+| `name` | `String!` |
+| `memberCount` | `Int!` |
+| `members` | [`[Actor!]!`](#actor) |
+| `createdAt` | `ISO8601DateTime!` |
 
 ### IssueProvisioningTokenPayload
 
@@ -908,6 +954,14 @@ Autogenerated return type of RemoveAvatar.
 | Field | Type |
 | --- | --- |
 | `actor` | [`Actor!`](#actor) |
+
+### RemoveGroupMemberPayload
+
+Autogenerated return type of RemoveGroupMember.
+
+| Field | Type |
+| --- | --- |
+| `group` | [`Group!`](#group) |
 
 ### RemoveMemberPayload
 
@@ -1341,6 +1395,14 @@ Autogenerated return type of UpdateEventStream.
 | Field | Type |
 | --- | --- |
 | `eventStream` | [`EventStream!`](#eventstream) |
+
+### UpdateGroupPayload
+
+Autogenerated return type of UpdateGroup.
+
+| Field | Type |
+| --- | --- |
+| `group` | [`Group!`](#group) |
 
 ### UpdateMailTemplatePayload
 

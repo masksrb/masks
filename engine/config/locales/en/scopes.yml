@@ -6,6 +6,7 @@ en:
     offline_access: "Stay signed in"
     identities: "The accounts elsewhere you sign in with"
     organization: "Which organization you sign in as, and your role there"
+    groups: "The groups you belong to, and your roles in your organizations"
     manage: "Manage masks"
     manage_security: "Change masks' keys, apps, providers, and policies"
     manage_support: "Help people with their accounts"

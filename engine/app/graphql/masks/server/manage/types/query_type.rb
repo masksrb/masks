@@ -148,6 +148,11 @@ module Masks
 
           field :tally, TallyType, null: false
 
+          field :groups, [ GroupType ], null: false
+          field :group, GroupType do
+            argument :key, String
+          end
+
           field :activity, [ ActivityDayType ], null: false do
             argument :days, Integer, required: false
           end
@@ -375,6 +380,14 @@ module Masks
 
           def minimum_password
             Actor::MINIMUM_PASSWORD
+          end
+
+          def groups
+            Masks::Server::Group.order(:name)
+          end
+
+          def group(key:)
+            Masks::Server::Group.find_by(key: key)
           end
 
           def tally

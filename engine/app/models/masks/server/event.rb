@@ -48,6 +48,10 @@ module Masks
       RECOVERY_REQUESTED = "recovery.requested".freeze
       RECOVERY_DISMISSED = "recovery.dismissed".freeze
       SECOND_FACTORS_RESET = "second_factors.reset".freeze
+      GROUP_CREATED = "group.created".freeze
+      GROUP_DELETED = "group.deleted".freeze
+      GROUP_JOINED = "group.member_added".freeze
+      GROUP_LEFT = "group.member_removed".freeze
 
       DEVICE_CODE_ISSUED = "device_code.issued".freeze
       DEVICE_CODE_APPROVED = "device_code.approved".freeze

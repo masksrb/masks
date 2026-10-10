@@ -20,6 +20,11 @@ module Masks
           field :disable_authenticator, mutation: Mutations::DisableAuthenticator
           field :reset_second_factors, mutation: Mutations::ResetSecondFactors
           field :dismiss_recovery, mutation: Mutations::DismissRecovery
+          field :create_group, mutation: Mutations::CreateGroup
+          field :update_group, mutation: Mutations::UpdateGroup
+          field :delete_group, mutation: Mutations::DeleteGroup
+          field :add_group_member, mutation: Mutations::AddGroupMember
+          field :remove_group_member, mutation: Mutations::RemoveGroupMember
           field :disable_code_factor, mutation: Mutations::DisableCodeFactor
           field :revoke_passkey, mutation: Mutations::RevokePasskey
           field :upload_avatar, mutation: Mutations::UploadAvatar

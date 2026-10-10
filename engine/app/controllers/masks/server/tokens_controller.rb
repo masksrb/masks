@@ -157,6 +157,7 @@ module Masks
           consent = Consent.find_by(actor: token.actor, client: client)
 
           req.invalid_grant!("consent for #{client.name} has lapsed or was withdrawn") if consent && !consent.live?
+          req.invalid_grant!("#{token.actor.identifier} may no longer use #{client.name}") unless client.admits?(token.actor)
         end
 
         def still_held(token, client, scopes)
@@ -291,7 +292,8 @@ module Masks
               amr: grant.held("amr"),
               access_token: access.jwt,
               sid: grant.session&.uuid,
-              organization: access.organization
+              organization: access.organization,
+              groups: (grant.actor.group_labels if access.scope_list.include?(Scopes::GROUPS))
             )
           end
 

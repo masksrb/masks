@@ -9,6 +9,7 @@ module Masks
       PRIVATE_KEY_JWT = "private_key_jwt".freeze
       SECRET_AUTH_METHODS = %w[client_secret_basic client_secret_post].freeze
       AUTH_METHODS = (SECRET_AUTH_METHODS + [ PRIVATE_KEY_JWT, "none" ]).freeze
+      ALLOWED_GROUP = /\A[a-z0-9][a-z0-9._-]*(:[a-z0-9._-]+)?\z/
       DEFAULT_AUTH_METHOD = "client_secret_basic".freeze
       CLIENT_CREDENTIALS = "client_credentials".freeze
       REDIRECTED_GRANT_TYPES = %w[authorization_code].freeze
@@ -51,6 +52,7 @@ module Masks
       has_many :namespaces, -> { order(:name) }, dependent: :nullify
       has_one :logo, class_name: "ClientLogo", dependent: :delete
 
+      validate :allowed_groups_are_named
       validates :client_id, presence: true, uniqueness: { scope: :tenant_id }
       validates :name, presence: true
       validates :token_endpoint_auth_method, inclusion: { in: AUTH_METHODS }
@@ -73,6 +75,7 @@ module Masks
       validates :consent_lifetime, numericality: { only_integer: true, greater_than_or_equal_to: 300,
                                                    less_than_or_equal_to: Consent::LONGEST.to_i }, allow_nil: true
 
+      normalizes :allowed_groups, with: ->(value) { Array(value).map { |group| group.to_s.strip.downcase }.compact_blank.uniq.sort }
       normalizes :saml_entity_id, with: ->(value) { value.to_s.strip.presence }
       normalizes(*METADATA_URIS, with: ->(value) { value.to_s.strip.presence })
 
@@ -334,6 +337,10 @@ module Masks
         Scopes.union(required_scopes, allowed_scopes)
       end
 
+      def admits?(actor)
+        allowed_groups.empty? || actor.group_labels.intersect?(allowed_groups)
+      end
+
       def permitted_scopes(requested)
         return scope_list if Scopes.list(requested).empty?
 
@@ -375,6 +382,12 @@ module Masks
       end
 
       private
+
+        def allowed_groups_are_named
+          unknown = allowed_groups.grep_v(ALLOWED_GROUP)
+
+          errors.add(:allowed_groups, "names #{unknown.join(', ')}, which is not a group key or key:role") if unknown.any?
+        end
 
         def consent_is_skipped_only_when_approved
           return if consent_required? || approved?

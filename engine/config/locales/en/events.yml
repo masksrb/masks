@@ -44,6 +44,11 @@ en:
         dismissed: "Request for help dismissed"
       second_factors:
         reset: "Second factors reset"
+      group:
+        created: "Group created"
+        deleted: "Group deleted"
+        member_added: "Added to a group"
+        member_removed: "Removed from a group"
       authenticator:
         enabled: "Authenticator app added"
         disabled: "Authenticator app removed"

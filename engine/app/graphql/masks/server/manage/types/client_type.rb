@@ -12,6 +12,8 @@ module Masks
           field :resources, [ String ], null: false
           field :required_scopes, [ String ], null: false
           field :allowed_scopes, [ String ], null: false
+          field :allowed_groups, [ String ], null: false,
+                description: "Group keys, or organization roles as key:role, whose people may sign in. Empty lets everyone in."
           field :namespaces, [ "Masks::Server::Manage::Types::NamespaceType" ], null: false
           field :token_endpoint_auth_method, String, null: false
           field :subject_type, String, null: false
