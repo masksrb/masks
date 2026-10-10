@@ -1,5 +1,73 @@
 # Changelog
 
+## [0.4.0](https://github.com/masksrb/masks/compare/masks-server-v0.3.0...masks-server-v0.4.0) (2026-10-10)
+
+
+### ⚠ BREAKING CHANGES
+
+* **server:** the container image refuses to start without MASKS_MIGRATION_USER and MASKS_MIGRATION_PASSWORD, naming a role other than POSTGRES_USER that owns the schema. To move an existing database, run as a Postgres superuser, once, CREATE ROLE masks_owner WITH LOGIN PASSWORD '...' CREATEDB; and then in each of the primary, cache, and queue databases REASSIGN OWNED BY masks TO masks_owner; before starting the new image, which grants masks what it serves with.
+
+### Features
+
+* **engine:** a client_id that is the https URL of a client metadata document signs people in without registering first, as MCP clients do ([86dd5b6](https://github.com/masksrb/masks/commit/86dd5b61adf51f2dc0c294777eb2ed4af6fec5f7))
+* **engine:** a consent remembers the authorization details a declared type allows, and a client's consents can expire ([bdfc149](https://github.com/masksrb/masks/commit/bdfc1496fe9f0a8df2aec8becb4b9637f23b200c))
+* **engine:** a person adds or removes an authenticator app and makes new backup codes from their account page ([e5d0623](https://github.com/masksrb/masks/commit/e5d0623c76623fa732974dd3aaa41754af4cbad4))
+* **engine:** a person changes their own name, email address, and phone number, and sets a password, from their account page ([bc0d760](https://github.com/masksrb/masks/commit/bc0d76088e3b97f92b78a8156e6550c2f81a27d4))
+* **engine:** a person downloads everything masks holds about them as a JSON file from their account page ([bc1b729](https://github.com/masksrb/masks/commit/bc1b72995a07ba43d518a10fbac2ae71fcba6c26))
+* **engine:** an owner rewords the subject and opening of the invitation, reset, confirmation, code, and approval emails, and adds a signature to every email ([eb74a02](https://github.com/masksrb/masks/commit/eb74a023994628f1a19cce6e12d822e17ef1181e))
+* **engine:** masks receives shared signals at /ssf/events, and a provider that revokes a session or disables an account signs that person out here ([7e627fe](https://github.com/masksrb/masks/commit/7e627fe62734c1356f56c1913f7ff45988044848))
+* **engine:** MASKS_OUTBOUND_ALLOWED names private ranges masks may call, for apps on a private network such as a tailnet ([ed1a829](https://github.com/masksrb/masks/commit/ed1a82919ac7f74b9c43cee7381b04b6aae239a3))
+* **engine:** rich authorization requests (RFC 9396) carry authorization_details from /authorize to the token, checked against types an approved client declares ([18dc29a](https://github.com/masksrb/masks/commit/18dc29a985b67b95e2e682b87a8a29829607a735))
+* **engine:** someone who cannot use any second factor asks a manager for help, and a manager resets their second factors from /manage ([fb76944](https://github.com/masksrb/masks/commit/fb76944efd33b874229be91e52b6968a29c49249))
+* **server:** the server migrates as one Postgres role and serves as another, so the role answering requests cannot switch off row-level security ([e68df9c](https://github.com/masksrb/masks/commit/e68df9c3192f72be03070c99c241957c5d31ecb6))
+
+
+### Fixes
+
+* **engine:** a client that lists a grant type masks does not offer registers with the ones it does, so Claude connects again ([b85a2da](https://github.com/masksrb/masks/commit/b85a2da29bcde50c6f187e1d1557f8b15987e529))
+* **engine:** a client that registers without naming scopes may ask for anything inside the tenant's ceiling ([e1ce171](https://github.com/masksrb/masks/commit/e1ce1715b09241cc29c7c2887ae63d97a386ed30))
+* **engine:** a database connection takes up the borrower's tenant setting each time it leaves the pool ([e708efc](https://github.com/masksrb/masks/commit/e708efc58725e03e3a0666cf04c62fb7fefadbf6))
+* **engine:** a mailed reset that first proves an account's address drops the passkeys and connections set up before it ([3a12071](https://github.com/masksrb/masks/commit/3a12071b8820b926a7b182437db76fa967b11e7b))
+* **engine:** a manager who joins the console through the handshake gets its client id without new registration credentials ([c601377](https://github.com/masksrb/masks/commit/c6013770ac5c89f4634a1068e8e37ebd8a2063dd))
+* **engine:** a phone number and an app's consent wait for the second factor ([e7710ed](https://github.com/masksrb/masks/commit/e7710ed0cda8db37d1022cbc656322d461ef6ae7))
+* **engine:** a provider links an unactivated account only when an invitation waits for it, and answers only for domains the tenant proved ([5700d9b](https://github.com/masksrb/masks/commit/5700d9bafa4cb2c3255c7e3808179749ddeb9f63))
+* **engine:** a public client cannot exchange an id token for an access token ([b363992](https://github.com/masksrb/masks/commit/b363992627af232fa2d1e3313a8c329ae0234e24))
+* **engine:** a received security event token carries an issue time inside the replay memory ([f9fedd7](https://github.com/masksrb/masks/commit/f9fedd73ad900dc3d0d562e72c0df8a884e02b9d))
+* **engine:** a redirect or post-logout redirect URI cannot use a scheme that runs a script, and post-logout URIs are checked at all ([f149eb4](https://github.com/masksrb/masks/commit/f149eb476445a7ca6600e5b9b07e5af9c5127ee9))
+* **engine:** a refresh hands out only the scopes the person and the client still hold, and ends once their consent lapses ([b44a17b](https://github.com/masksrb/masks/commit/b44a17b283fa3fbcb6f35d7799273dab9022b13d))
+* **engine:** a registration response, which carries a client secret and a registration token, is never cached ([39b6934](https://github.com/masksrb/masks/commit/39b6934e345aa0488a8aff607b843986411d8285))
+* **engine:** a resource server describes only its own scopes on the consent screen, never masks' scopes ([9866b9d](https://github.com/masksrb/masks/commit/9866b9d13aed8bd6fd5a4759f97ce5c3fdc53689))
+* **engine:** a scope ending in a colon counts as every manage scope it covers, so only an owner can hand it out ([cc957b1](https://github.com/masksrb/masks/commit/cc957b16e8a32f9b9896ce17c9b2375fc4dccb10))
+* **engine:** a self-registered client cannot name resources, so it cannot have tokens addressed to another service ([39e186d](https://github.com/masksrb/masks/commit/39e186d38abc2c9a2b56483ef6c993d74d2c0905))
+* **engine:** a signal stream stops following a person once they revoke the app or its tokens are spent ([8e27293](https://github.com/masksrb/masks/commit/8e27293309fc875d471365aecdea0c135824364f))
+* **engine:** a token held to a key is exchanged only with a proof made with that key, and never for a scope the exchanging client may not hold ([df2f60c](https://github.com/masksrb/masks/commit/df2f60cadd93c107695b34c58dbbc6a8650563bd))
+* **engine:** adding or removing a passkey, or turning sign-in codes on or off, asks for a sign-in within the last fifteen minutes ([e1dde90](https://github.com/masksrb/masks/commit/e1dde90a80c6030c0c1f6e4d6cacc1419f600962))
+* **engine:** an outbound call has one deadline for connecting, headers, and body, and NAT64 and 6to4 addresses count as private ([b7e8168](https://github.com/masksrb/masks/commit/b7e81684d626495400766324ed28376423900ad4))
+* **engine:** back-channel logout, every outbound post, and a tenant's SMTP server are held to the public-address check ([263d573](https://github.com/masksrb/masks/commit/263d573eb0244d02228b87a5402fb923470a7bf7))
+* **engine:** claiming a tenant on first visit is limited per address and across the server ([34e8809](https://github.com/masksrb/masks/commit/34e8809abf93487c4adc3d6f24443ffdcfc1aea1))
+* **engine:** images are decoded only by the PNG, JPEG, GIF, and WebP loaders ([2fc5461](https://github.com/masksrb/masks/commit/2fc54610be49c963c161c7457cba71557d41782d))
+* **engine:** new apps named by a metadata document are limited per address and per tenant, and one nobody approved sends people back after sign-out only with an id_token_hint ([3e0bccb](https://github.com/masksrb/masks/commit/3e0bccb68242dd6462bd2ae12608bdd189809cdd))
+* **engine:** posting to /login with only a session cookie keeps that session instead of minting a fresh one ([6b7f4a2](https://github.com/masksrb/masks/commit/6b7f4a260962b3e1d32c0d3a1f744c348e6fcbcc))
+* **engine:** providers, SMS adapters, and resource metadata are called through Outbound, so a private address is refused there too ([20f8d2d](https://github.com/masksrb/masks/commit/20f8d2d9b2a18490128abfefa2cb76c74825a996))
+* **engine:** revocation is rate limited per address, since every request checks a client secret ([17f808e](https://github.com/masksrb/masks/commit/17f808ee3ebfe8136f396d2c000617ce58bba16c))
+* **engine:** signing out a device from the account page signs out only the account that asked ([6c86eaf](https://github.com/masksrb/masks/commit/6c86eaf76f82f7855f3d438d974bb104219c7019))
+* **engine:** state joins a query the registered post_logout_redirect_uri already carries, instead of a second question mark breaking the address ([c639a6b](https://github.com/masksrb/masks/commit/c639a6b94379a775f035a09268dc5bb3bdc2cc20))
+* **engine:** the daily cleanup deletes a chain of tokens only once nothing in it is live, so a live refresh token no longer stops the sweep for every tenant ([95c4f76](https://github.com/masksrb/masks/commit/95c4f7623d6848d9386434b3cb94f45e5a268f50))
+* **engine:** the hourly domain check stops serving a custom host that falls inside the server's own domain ([71ae110](https://github.com/masksrb/masks/commit/71ae110218d8e00b7e77ecf448c8f12722deedee))
+* **engine:** the login sends the browser only to a path on this server or an address it can safely follow ([82de7cb](https://github.com/masksrb/masks/commit/82de7cbf3741f7d9e9ded88cfe183222fc0ffeac))
+* **engine:** the per-account sign-in limit counts the account, however its identifier is spelled ([c007079](https://github.com/masksrb/masks/commit/c007079a0fe4a6eb28665b570b436fb2ba4b3aae))
+* **server:** acr_values is read as a list of acceptable values, so a request that also accepts a password is not stepped up to a second factor ([ecaba6a](https://github.com/masksrb/masks/commit/ecaba6a97bc50f93c4ccbe89ab4df8681f21c04b))
+* **server:** forwarding headers count only when a trusted proxy sent them, and MASKS_TRUSTED_PROXIES names the proxies to trust ([296e5dc](https://github.com/masksrb/masks/commit/296e5dce85c293362733a698ab557d31491a141d))
+
+
+### Refactoring
+
+* **engine:** deleting and downloading an account share one check for a fresh sign-in, and PKCE uses the client's one base64url digest ([6c08fcf](https://github.com/masksrb/masks/commit/6c08fcf709a08dbafd0a551801eaf43a4c325b75))
+* **engine:** dynamic registration, registration updates, and client metadata documents read client metadata through one Client mapping ([cf0785d](https://github.com/masksrb/masks/commit/cf0785d86e16fdd7ca5dd51493695e01654d47d0))
+* **engine:** methods nothing calls, the scaffold PWA views and Current.session go ([9d126ec](https://github.com/masksrb/masks/commit/9d126ec1c550950e8b4eec0ce58a0f0b474d4ffa))
+* **engine:** one partial carries a tenant's email wording, one query loads it, and authorization_details narrow in one place ([1b2df29](https://github.com/masksrb/masks/commit/1b2df29380b2c2c8dc6b87d45d60b4ef23255b26))
+* **server:** Thruster, capybara and the stale schema dumps go ([292b179](https://github.com/masksrb/masks/commit/292b1791e43ad4624fa743603206b8d178ebae36))
+
 ## [0.3.0](https://github.com/masksrb/masks/compare/masks-server-v0.2.0...masks-server-v0.3.0) (2026-09-28)
 
 
