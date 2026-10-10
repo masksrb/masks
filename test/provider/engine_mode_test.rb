@@ -52,6 +52,22 @@ class EngineModeTest
     assert_equal "/dashboard", body["redirectTo"]
   end
 
+  test "the provider's own forms refuse a post without the form's token, whatever the host's defaults" do
+    actor = create_actor
+
+    get "/auth/login"
+    sign_in(actor)
+
+    held = ActionController::Base.allow_forgery_protection
+    ActionController::Base.allow_forgery_protection = true
+
+    assert_raises(ActionController::InvalidAuthenticityToken) do
+      patch "/auth/account/password", params: { current_password: "password", password: "another long one" }
+    end
+  ensure
+    ActionController::Base.allow_forgery_protection = held
+  end
+
   test "a return address on another site is ignored" do
     actor = create_actor
 

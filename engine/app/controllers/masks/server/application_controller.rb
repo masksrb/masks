@@ -3,6 +3,8 @@ module Masks
     class ApplicationController < ActionController::Base
       include HoldsLogin
 
+      protect_from_forgery with: :exception
+
       REQUESTS = "requests".freeze
       HANDSHAKES = "handshakes".freeze
       RETURN_TO = "masks_return_to".freeze
