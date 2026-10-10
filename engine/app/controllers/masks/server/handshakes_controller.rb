@@ -69,22 +69,23 @@ module Masks
             )
         end
 
-        def repair
+        def repair(keeping: false)
           claimed = PendingHandshake.claim(hid_for(@pending))
 
           return refuse(t("handshakes.answered")) if claimed.nil?
 
-          hand_back(@existing, claimed)
+          hand_back(@existing, claimed, keeping: keeping)
         end
 
-        def hand_back(client, claimed)
+        def hand_back(client, claimed, keeping: false)
           token = InitialAccessToken.mint!(
             actor: current_actor,
             client: client,
             parent: claimed,
             scopes: Scopes.join(@handshake.scopes),
             audience: [ @handshake.resource ],
-            redirect_uri: @handshake.return_to
+            redirect_uri: @handshake.return_to,
+            payload: ({ "keeping" => true } if keeping)
           )
 
           redirect_to @handshake.approved(token.secret, issuer: issuer.url), allow_other_host: true
@@ -133,7 +134,7 @@ module Masks
 
         def require_pairing
           return if current_actor.owns?
-          return repair if joining_manage?
+          return repair(keeping: true) if joining_manage?
 
           unless current_actor.holds?(Scopes::HANDSHAKE)
             return refuse(t("handshakes.not_permitted"))

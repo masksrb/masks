@@ -6,15 +6,6 @@ says what a person can do once it lands.
 
 ## Security
 
-- **Taking away a permission takes effect.** Renewing a token copies the
-  scopes the old one held. It does not check what the person or the app may
-  hold today, or whether consent has lapsed, and each renewal pushes the expiry
-  out another 30 days. An owner who removes `masks:scim` from someone leaves
-  them with directory access for as long as their app keeps renewing.
-- **A read-only manager cannot take over the console's registration.** The
-  handshake lets anyone who holds any manage role rejoin the console client,
-  and the registration token it hands back can turn on PAR or point logout
-  notices elsewhere.
 - **An app named by a metadata document is rate limited.** Each new document
   address at `/authorize` creates a client, records an event, and makes masks
   fetch the address. `/authorize`, `/logout`, and `/userinfo` have no limit,

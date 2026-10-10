@@ -313,6 +313,32 @@ module Masks
         assert_includes within(@tenant) { Client.approved.sole.scope_list }, Scopes::MANAGE
       end
 
+      test "a read-only manager joins the console without taking over its registration" do
+        owner = create_actor(@tenant, nickname: "admin", password: "password",
+                             scopes: Scopes.join(Scopes::STANDARD + [ Scopes::MANAGE ]))
+        reader = create_actor(@tenant, nickname: "reader", password: "password",
+                              scopes: Scopes.join(Scopes::STANDARD + [ "masks:manage:read" ]))
+        https!
+        origin = "https://#{host_for(@tenant)}"
+        console = { resource: "#{origin}/manage", scope: "openid masks:manage", token_endpoint_auth_method: "none",
+                    return_to: "#{origin}/manage/handshake", redirect_uris: [ "#{origin}/manage/callback" ] }
+
+        sign_in_as(owner)
+        connect(**console)
+        held = redeem(approve!)["registration_access_token"]
+
+        assert held.present?
+
+        delete "/login"
+        sign_in_as(reader)
+        connect(**console)
+        joined = redeem(redirected["initial_access_token"])
+
+        assert_equal approved.client_id, joined["client_id"]
+        assert_nil joined["registration_access_token"]
+        assert_equal approved.client_id, within(@tenant) { Client.by_registration_token(held)&.client_id }
+      end
+
       test "a manager approves a scope they do not hold, because they may grant it to themselves" do
         admin = create_actor(@tenant, nickname: "admin", password: "password",
                              scopes: Scopes.join(Scopes::STANDARD + [ Scopes::MANAGE ]))

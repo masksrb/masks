@@ -6,7 +6,7 @@ module Masks
       end
 
       def issue!
-        client.issue_credentials!
+        client.issue_credentials! unless held("keeping")
         client
       end
     end
