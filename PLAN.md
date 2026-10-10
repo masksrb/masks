@@ -24,11 +24,6 @@ says what a person can do once it lands.
 - **Forward authentication.** An endpoint Caddy, Traefik, and nginx ask before
   serving an app that has no sign-in of its own.
 
-## Running masks
-
-- **A checklist after setup.** The overview lists mail, the first app,
-  inviting people, and a domain, and ticks each off.
-
 ## Later
 
 - Translations, starting with the manage console, which hard-codes English.

@@ -26,7 +26,7 @@
   const QUERY = `
     query Tenant {
       tenant {
-        uuid subdomain name namedBy dynamicRegistration dynamicClientScopes createdAt
+        uuid subdomain name namedBy dynamicRegistration dynamicClientScopes createdAt mails
         browsersOnly blockedAgents suspendAfter deleteAfter eventRetentionDays riskyNetworks
         signInPolicy { key name }
         signingKeys { kid algorithm activatedAt retiredAt state }
@@ -133,6 +133,50 @@
           { to: "/clients", label: "Clients", value: data.tally.clients },
           { to: "/organizations", label: "Organizations", value: data.tally.organizations },
           { to: "/actors#devices", label: "Devices", value: data.tally.devices },
+        ]
+      : [],
+  );
+
+  const STARTED = "masks:manage:started";
+
+  let hidden = $state(false);
+
+  try {
+    hidden = localStorage.getItem(STARTED) === "1";
+  } catch {}
+
+  function hideStarting() {
+    hidden = true;
+
+    try {
+      localStorage.setItem(STARTED, "1");
+    } catch {}
+  }
+
+  const starting = $derived(
+    data
+      ? [
+          {
+            done: data.tenant.mails,
+            title: "Let masks send email",
+            detail: "Invitations, password resets, and sign-in codes go out by email. Until then, a manager passes each invitation link along by hand.",
+            to: "/adapters",
+            action: "Add a mail adapter",
+          },
+          {
+            done: data.tally.clients > 0,
+            title: "Connect your first app",
+            detail: "Register an app by hand, or let one connect itself through the handshake.",
+            to: "/clients",
+            action: "Add an app",
+          },
+          {
+            done: data.tally.actors > 1,
+            title: "Invite someone",
+            detail: "Each person gets an invitation to set up their own sign-in.",
+            to: "/actors",
+            action: "Invite people",
+          },
         ]
       : [],
   );
@@ -248,6 +292,32 @@
     id={boot.issuer}
     hero
   >
+    {#if !hidden && starting.some((step) => !step.done)}
+      <Section title="Getting started">
+        {#snippet actions()}
+          <button type="button" class="btn btn-ghost btn-sm" onclick={hideStarting}>Hide</button>
+        {/snippet}
+
+        <ol class="flex flex-col gap-3">
+          {#each starting as step (step.title)}
+            <li class="flex flex-wrap items-start justify-between gap-3">
+              <div class="flex min-w-0 flex-1 flex-col gap-0.5">
+                <span class="text-sm font-semibold" class:line-through={step.done} class:opacity-60={step.done}>
+                  {step.done ? "✓ " : ""}{step.title}
+                </span>
+                {#if !step.done}
+                  <span class="text-sm opacity-80">{step.detail}</span>
+                {/if}
+              </div>
+              {#if !step.done}
+                <Link to={step.to} class="btn btn-sm">{step.action}</Link>
+              {/if}
+            </li>
+          {/each}
+        </ol>
+      </Section>
+    {/if}
+
     <Tally {counts} />
 
     <div class="dash">
