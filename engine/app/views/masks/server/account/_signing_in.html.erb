@@ -146,6 +146,94 @@
       </div>
     </details>
 
+    <% if authenticator || actor.otp? %>
+      <details class="entry" id="authenticator"<%= " open" if authenticator_secret && flash[:alert] %>>
+        <summary>
+          <span class="entry-icon"><%= account_icon(:authenticator) %></span>
+          <span class="entry-label"><%= account_text("authenticator.heading") %></span>
+          <span class="entry-state"><%= account_text(actor.otp? ? "authenticator.state.on" : "authenticator.state.off") %></span>
+          <span class="entry-mark" aria-hidden="true"></span>
+        </summary>
+
+        <div class="entry-body">
+          <p class="aside"><%= account_text("authenticator.explained") %></p>
+
+          <% if actor.otp? %>
+            <p class="aside"><%= account_text("authenticator.enabled") %></p>
+
+            <div class="action-row">
+              <%= button_to account_text("authenticator.remove"), account_authenticator_path, method: :delete,
+                    class: "action action-quiet action-sm",
+                    form: { data: { turbo_confirm: account_text("authenticator.confirm_remove") } } %>
+            </div>
+          <% elsif authenticator_secret %>
+            <% uri = Masks::Server::AuthenticatorApp.uri(authenticator_secret, actor: actor) %>
+            <p class="aside"><%= account_text("authenticator.scan") %></p>
+
+            <div class="enrol">
+              <a class="enrol-qr" href="<%= uri %>"><%= Masks::Server::AuthenticatorApp.qr(uri).html_safe %></a>
+
+              <div class="enrol-key">
+                <span class="field-label"><%= account_text("authenticator.key") %></span>
+                <code class="enrol-secret"><%= Masks::Server::AuthenticatorApp.grouped(authenticator_secret) %></code>
+              </div>
+            </div>
+
+            <%= form_with url: account_authenticator_path, method: :post, id: "add-authenticator",
+                  class: "flow-tight" do |form| %>
+              <label class="field">
+                <span class="field-label"><%= account_text("authenticator.code") %></span>
+                <%= form.text_field :code, autocomplete: "one-time-code", inputmode: "numeric",
+                      pattern: "[0-9 ]*", required: true, class: "control" %>
+              </label>
+
+              <div class="action-row">
+                <button type="submit" class="action action-sm"><%= account_text("authenticator.submit") %></button>
+              </div>
+            <% end %>
+          <% else %>
+            <p class="aside"><%= account_text("authenticator.again") %></p>
+
+            <div class="action-row">
+              <%= button_to account_text("authenticator.submit_again"), account_authenticator_path,
+                    class: "action action-sm" %>
+            </div>
+          <% end %>
+        </div>
+      </details>
+    <% end %>
+
+    <% if actor.second_factor? && Masks::Server::AuthenticatorApp.backup_codes_offered?(actor) %>
+      <details class="entry" id="backup-codes"<%= " open" if backup_codes.present? %>>
+        <summary>
+          <span class="entry-icon"><%= account_icon(:backup_codes) %></span>
+          <span class="entry-label"><%= account_text("backup_codes.heading") %></span>
+          <span class="entry-state"><%= account_text("backup_codes.state", count: actor.backup_codes_remaining) %></span>
+          <span class="entry-mark" aria-hidden="true"></span>
+        </summary>
+
+        <div class="entry-body">
+          <p class="aside"><%= account_text("backup_codes.explained") %></p>
+
+          <% if backup_codes.present? %>
+            <p class="aside aside-bad" role="alert"><%= account_text("backup_codes.fresh") %></p>
+
+            <ol class="codes">
+              <% backup_codes.each do |code| %>
+                <li><code><%= code %></code></li>
+              <% end %>
+            </ol>
+          <% end %>
+
+          <div class="action-row">
+            <%= button_to account_text(fresh ? "backup_codes.make" : "backup_codes.make_again"), account_backup_codes_path,
+                  class: "action action-quiet action-sm",
+                  form: { data: { turbo_confirm: account_text("backup_codes.confirm_make") } } %>
+          </div>
+        </div>
+      </details>
+    <% end %>
+
     <% code_factors.each do |factor| %>
       <% on = Masks::Server::CodeFactors.held?(actor, factor) %>
       <details class="entry" id="<%= factor %>-codes">

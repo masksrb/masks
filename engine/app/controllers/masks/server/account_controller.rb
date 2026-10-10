@@ -26,6 +26,9 @@ module Masks
         @approving = @approver && SignInApproval.waiting.find_by(id: session[SignInApprovalsController::HELD], actor_id: @actor.id)
         @events = Event.where(actor: @actor).newest_first.includes(:device).limit(RECENT)
         @fresh = current_session.fresh?
+        @authenticator = AuthenticatorApp.offered?(@actor)
+        @authenticator_secret = AuthenticatorApp.setup_secret(session, @actor) if @authenticator && @fresh && !@actor.otp?
+        @backup_codes = flash[:backup_codes]
         @refusal = refusal(@actor)
       end
 

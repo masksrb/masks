@@ -49,6 +49,10 @@ Masks::Server::Engine.routes.draw do
   post "/account/passkeys", to: "passkeys#create", as: :passkeys
   delete "/account/passkeys/:id", to: "passkeys#destroy", as: :passkey
 
+  post "/account/authenticator", to: "authenticator_apps#create", as: :account_authenticator
+  delete "/account/authenticator", to: "authenticator_apps#destroy"
+  post "/account/backup_codes", to: "backup_codes#create", as: :account_backup_codes
+
   scope constraints: { factor: Regexp.union(Masks::Server::CodeFactors::FACTORS) } do
     post "/account/codes/:factor", to: "code_factors#create", as: :account_code_factor
     delete "/account/codes/:factor", to: "code_factors#destroy"

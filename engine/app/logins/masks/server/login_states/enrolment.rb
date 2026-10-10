@@ -5,7 +5,6 @@ module Masks
         HELD = "enrolment".freeze
         OFFERED = "enrolment_offered".freeze
         WINDOW = 15.minutes
-        GROUP = 4
 
         accepts :code, :passkey, :kept, :factor
 
@@ -127,12 +126,13 @@ module Masks
             return { "enabled" => true } if actor.otp?
 
             secret = otp_secret
+            uri = AuthenticatorApp.uri(secret, actor: actor, tenant: tenant)
 
             {
               "enabled" => false,
-              "secret" => secret.scan(/.{1,#{GROUP}}/).join(" "),
-              "uri" => uri(secret),
-              "qr" => qr(secret)
+              "secret" => AuthenticatorApp.grouped(secret),
+              "uri" => uri,
+              "qr" => AuthenticatorApp.qr(uri)
             }
           end
 
@@ -257,19 +257,6 @@ module Masks
 
           def kept?
             ActiveModel::Type::Boolean.new.cast(update(:kept))
-          end
-
-          def uri(secret)
-            ROTP::TOTP.new(secret, issuer: tenant&.name.presence || "masks")
-                      .provisioning_uri(actor.identifier)
-          end
-
-          def qr(secret)
-            RQRCode::QRCode.new(uri(secret)).as_svg(
-              module_size: 4, use_path: true, viewbox: true, standalone: true,
-              color: "000", fill: "fff", offset: 16,
-              svg_attributes: { "aria-hidden": "true" }
-            ).sub(/\A<\?xml[^>]*>/, "")
           end
 
           def relying_party

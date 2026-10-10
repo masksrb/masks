@@ -46,6 +46,33 @@ en:
         name_placeholder: "My laptop"
         add: "Set this up"
 
+      authenticator:
+        heading: "Authenticator app"
+        state:
+          "on": "On"
+          "off": "Not set up"
+        explained: "After your password, a sign-in can be confirmed with a six-digit code from an app on your phone. The code changes every 30 seconds and works without a signal."
+        scan: "Scan this with your authenticator app, or type the key into it."
+        key: "Key"
+        code: "The code the app shows"
+        submit: "Turn on"
+        again: "Sign in again before you set this up. It has been a while since you did."
+        submit_again: "Sign in again"
+        remove: "Remove"
+        confirm_remove: "Stop asking for codes from this app?"
+        enabled: "Sign-ins ask for a code from your authenticator app."
+
+      backup_codes:
+        heading: "Backup codes"
+        state:
+          one: "1 left"
+          other: "%{count} left"
+        explained: "Each code signs in once, when your phone or passkey is not to hand. Keep them somewhere safe, away from this device."
+        fresh: "Write these down now. They are not shown again."
+        make: "Make new codes"
+        confirm_make: "The codes you have now will stop working."
+        make_again: "Sign in again to make new codes"
+
       codes:
         state:
           "on": "On"

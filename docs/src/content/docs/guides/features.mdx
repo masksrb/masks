@@ -172,6 +172,12 @@ confirmed. Once on, a code is asked for at every sign-in, under any policy, as a
 is. Changing the address turns its codes off, and so does a password reset through an emailed link.
 An email code does not confirm a sign-in whose first factor was a provider.
 
+A person adds or removes an authenticator app from the account page, and makes a new set of backup
+codes there once they have an authenticator app or a passkey. Each of these asks for a sign-in within
+the last 15 minutes. Adding the first authenticator app also makes backup codes when the account has
+none. New backup codes replace the old set, and removing the authenticator app drops the backup
+codes unless a passkey remains.
+
 After a second factor from an authenticator app, a passkey, or a sent code, the person can ask masks
 to trust the device. The second factor is then skipped on that device for 30 days, or until the
 device is signed out.

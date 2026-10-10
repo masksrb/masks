@@ -52,6 +52,22 @@ en:
     removed: "Passkey removed."
     again: "Sign in again to change your passkeys. It has been a while since you did."
 
+  authenticator_apps:
+    again: "Sign in again to change your authenticator app. It has been a while since you did."
+    already: "This account already has an authenticator app. Remove it before adding another."
+    unoffered: "This server does not offer authenticator apps."
+    invalid_code: "That code did not match. Check the time on your phone and try the next code."
+    too_many_attempts: "Too many codes were tried. Wait a few minutes and try again."
+    none: "This account has no authenticator app."
+    added: "Authenticator app added. Signing in now asks for its code."
+    removed: "Authenticator app removed."
+
+  backup_codes:
+    again: "Sign in again to make new backup codes. It has been a while since you did."
+    unoffered: "This server does not offer backup codes."
+    no_second_factor: "Backup codes stand in for a second factor. Add an authenticator app or a passkey first."
+    generated: "New backup codes made. The old ones no longer work."
+
   code_factors:
     again: "Sign in again to change how sign-ins are confirmed. It has been a while since you did."
     unoffered: "This server does not offer that way of confirming a sign-in."
