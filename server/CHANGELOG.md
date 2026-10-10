@@ -1,5 +1,50 @@
 # Changelog
 
+## [0.4.0](https://github.com/masksrb/masks/compare/server-v0.3.0...server-v0.4.0) (2026-10-10)
+
+
+### ⚠ BREAKING CHANGES
+
+* **server:** the container image refuses to start without MASKS_MIGRATION_USER and MASKS_MIGRATION_PASSWORD, naming a role other than POSTGRES_USER that owns the schema. To move an existing database, run as a Postgres superuser, once, CREATE ROLE masks_owner WITH LOGIN PASSWORD '...' CREATEDB; and then in each of the primary, cache, and queue databases REASSIGN OWNED BY masks TO masks_owner; before starting the new image, which grants masks what it serves with.
+
+### Features
+
+* **engine:** a client_id that is the https URL of a client metadata document signs people in without registering first, as MCP clients do ([86dd5b6](https://github.com/masksrb/masks/commit/86dd5b61adf51f2dc0c294777eb2ed4af6fec5f7))
+* **engine:** a consent remembers the authorization details a declared type allows, and a client's consents can expire ([bdfc149](https://github.com/masksrb/masks/commit/bdfc1496fe9f0a8df2aec8becb4b9637f23b200c))
+* **engine:** an owner rewords the subject and opening of the invitation, reset, confirmation, code, and approval emails, and adds a signature to every email ([eb74a02](https://github.com/masksrb/masks/commit/eb74a023994628f1a19cce6e12d822e17ef1181e))
+* **engine:** masks receives shared signals at /ssf/events, and a provider that revokes a session or disables an account signs that person out here ([7e627fe](https://github.com/masksrb/masks/commit/7e627fe62734c1356f56c1913f7ff45988044848))
+* **engine:** rich authorization requests (RFC 9396) carry authorization_details from /authorize to the token, checked against types an approved client declares ([18dc29a](https://github.com/masksrb/masks/commit/18dc29a985b67b95e2e682b87a8a29829607a735))
+* **engine:** someone who cannot use any second factor asks a manager for help, and a manager resets their second factors from /manage ([fb76944](https://github.com/masksrb/masks/commit/fb76944efd33b874229be91e52b6968a29c49249))
+* **server:** /up answers down with a 503 while the database, the job queue, or the cache cannot be reached ([6016276](https://github.com/masksrb/masks/commit/6016276a735a00ca34c5079b0ba5ae40dba8c83f))
+* **server:** a saved passkey is offered in the identifier field's autofill, through a conditional WebAuthn request ([398e6e0](https://github.com/masksrb/masks/commit/398e6e0066b44f45b437fd3de67452384175cc08))
+* **server:** the server migrates as one Postgres role and serves as another, so the role answering requests cannot switch off row-level security ([e68df9c](https://github.com/masksrb/masks/commit/e68df9c3192f72be03070c99c241957c5d31ecb6))
+
+
+### Fixes
+
+* devalue 5.9.4 and brace-expansion 5.0.12 close the open Dependabot advisories that have a fix ([891e302](https://github.com/masksrb/masks/commit/891e302351d278e2f7ed462566624bd2690e37c6))
+* **engine:** adding or removing a passkey, or turning sign-in codes on or off, asks for a sign-in within the last fifteen minutes ([e1dde90](https://github.com/masksrb/masks/commit/e1dde90a80c6030c0c1f6e4d6cacc1419f600962))
+* **engine:** the daily cleanup deletes a chain of tokens only once nothing in it is live, so a live refresh token no longer stops the sweep for every tenant ([95c4f76](https://github.com/masksrb/masks/commit/95c4f7623d6848d9386434b3cb94f45e5a268f50))
+* **engine:** the login sends the browser only to a path on this server or an address it can safely follow ([82de7cb](https://github.com/masksrb/masks/commit/82de7cbf3741f7d9e9ded88cfe183222fc0ffeac))
+* **server:** client assertions, SAML messages, relay state, and request objects are filtered from the logs ([15782d3](https://github.com/masksrb/masks/commit/15782d3ee420c2aff01baef07a38850e06f05116))
+* **server:** forwarding headers count only when a trusted proxy sent them, and MASKS_TRUSTED_PROXIES names the proxies to trust ([296e5dc](https://github.com/masksrb/masks/commit/296e5dce85c293362733a698ab557d31491a141d))
+* **server:** the image builds from a cold cache again, with the test assets built in the test stage that has the test gems ([f41ce6d](https://github.com/masksrb/masks/commit/f41ce6dfcb1fc77b873a3b3d38c4afb2efdcae99))
+* **server:** the login reads a redirect's scheme the way the browser will, and the entrypoint names the serving role before it switches users ([49bfe6a](https://github.com/masksrb/masks/commit/49bfe6a8fc86201d734312749e15bf4e44514f0e))
+
+
+### Documentation
+
+* every guide, the reference prose, and the READMEs are checked against the code, shortened, and corrected ([94782d1](https://github.com/masksrb/masks/commit/94782d1fbfe363e90c40f0c728a241de9738e138))
+* the plan holds only what is left, and the READMEs match the engine layout and the code ([1615722](https://github.com/masksrb/masks/commit/1615722f88ae5f7d19955ff686dcef9f64a6326f))
+
+
+### Refactoring
+
+* **engine:** methods nothing calls, the scaffold PWA views and Current.session go ([9d126ec](https://github.com/masksrb/masks/commit/9d126ec1c550950e8b4eec0ce58a0f0b474d4ffa))
+* **engine:** one partial carries a tenant's email wording, one query loads it, and authorization_details narrow in one place ([1b2df29](https://github.com/masksrb/masks/commit/1b2df29380b2c2c8dc6b87d45d60b4ef23255b26))
+* **server:** stylesheet rules no page uses, and dev settings from the auth.test layout, go ([01e3d3f](https://github.com/masksrb/masks/commit/01e3d3fc095f33422194c4d6fd8f94fef6f22429))
+* **server:** Thruster, capybara and the stale schema dumps go ([292b179](https://github.com/masksrb/masks/commit/292b1791e43ad4624fa743603206b8d178ebae36))
+
 ## [0.3.0](https://github.com/masksrb/masks/compare/server-v0.2.0...server-v0.3.0) (2026-09-28)
 
 
