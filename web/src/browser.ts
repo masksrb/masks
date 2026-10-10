@@ -31,6 +31,11 @@ interface Pending {
   organization?: string;
 }
 
+export interface LogoutOptions {
+  everywhere?: boolean;
+  postLogoutRedirectUri?: string;
+}
+
 export interface AuthorizeOptions {
   returnTo?: string;
   prompt?: string;
@@ -59,11 +64,12 @@ export interface BrowserClient {
   ): Promise<string>;
   photo(subject?: string): Promise<Blob | null>;
   refresh(): Promise<Tokens>;
+  freshAccessToken(leeway?: number): Promise<string | null>;
   accessToken(): string | null;
   tokens(): Tokens | null;
   authorization(): string | null;
   expired(leeway?: number): boolean;
-  logout(): void;
+  logout(options?: LogoutOptions): Promise<void>;
 }
 
 function list(value: string | string[] | undefined): string[] {
@@ -83,6 +89,8 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
   let held: Tokens | null = null;
   let claims: Claims | null = null;
   let keys: Record<string, Jwk> | null = null;
+  let refreshing: Promise<Tokens> | null = null;
+  let generation = 0;
 
   const discover = async (): Promise<Discovery> => {
     if (document) return document;
@@ -159,6 +167,7 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
   };
 
   const post = async (body: string[][]): Promise<Tokens> => {
+    const started = generation;
     const { token_endpoint } = await discover();
 
     const response = await call(token_endpoint, {
@@ -180,6 +189,13 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
         payload.error ?? `http_${response.status}`,
         payload.error_description,
         response.status,
+      );
+    }
+
+    if (started !== generation) {
+      throw new MasksError(
+        "invalid_grant",
+        "the client signed out while this request was in flight",
       );
     }
 
@@ -256,6 +272,56 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
     const base = `${avatar_endpoint}/${encodeURIComponent(subject)}/${style}`;
 
     return size ? `${base}?size=${size}` : base;
+  };
+
+  const expired = (leeway = 30): boolean => {
+    if (!held) return true;
+
+    return Date.now() / 1000 + leeway >= held.obtained_at + held.expires_in;
+  };
+
+  const renew = async (): Promise<Tokens> => {
+    if (!held?.refresh_token) {
+      throw new MasksError("invalid_grant", "no refresh token is held");
+    }
+
+    const previous = held.refresh_token;
+    const body = [
+      ["grant_type", "refresh_token"],
+      ["refresh_token", previous],
+      ["client_id", options.clientId],
+    ];
+
+    for (const value of resources) body.push(["resource", value]);
+
+    const tokens = await post(body);
+    tokens.refresh_token ??= previous;
+
+    return tokens;
+  };
+
+  const refresh = async (): Promise<Tokens> => {
+    refreshing ??= renew().finally(() => {
+      refreshing = null;
+    });
+
+    return await refreshing;
+  };
+
+  const revoke = async (token: string): Promise<void> => {
+    const { revocation_endpoint } = await discover();
+
+    if (!revocation_endpoint) return;
+
+    await call(revocation_endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams([
+        ["token", token],
+        ["token_type_hint", "refresh_token"],
+        ["client_id", options.clientId],
+      ]).toString(),
+    });
   };
 
   return {
@@ -395,20 +461,12 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
       return response.ok ? await response.blob() : null;
     },
 
-    async refresh() {
-      if (!held?.refresh_token) {
-        throw new MasksError("invalid_grant", "no refresh token is held");
-      }
+    refresh,
 
-      const body = [
-        ["grant_type", "refresh_token"],
-        ["refresh_token", held.refresh_token],
-        ["client_id", options.clientId],
-      ];
+    async freshAccessToken(leeway = 30) {
+      if (held?.refresh_token && expired(leeway)) await refresh();
 
-      for (const value of resources) body.push(["resource", value]);
-
-      return await post(body);
+      return held?.access_token ?? null;
     },
 
     accessToken() {
@@ -423,16 +481,40 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
       return held ? `${held.token_type} ${held.access_token}` : null;
     },
 
-    expired(leeway = 30) {
-      if (!held) return true;
+    expired,
 
-      return Date.now() / 1000 + leeway >= held.obtained_at + held.expires_in;
-    },
+    async logout({ everywhere = false, postLogoutRedirectUri } = {}) {
+      const leaving = held;
 
-    logout() {
+      generation += 1;
       held = null;
       claims = null;
+      refreshing = null;
       store.removeItem(PENDING);
+
+      if (leaving?.refresh_token) {
+        await revoke(leaving.refresh_token).catch(() => undefined);
+      }
+
+      if (!everywhere) return;
+
+      const { end_session_endpoint } = await discover();
+
+      if (!end_session_endpoint) {
+        throw new MasksError(
+          "invalid_issuer",
+          `${issuer} publishes no end_session_endpoint`,
+        );
+      }
+
+      const query = new URLSearchParams([["client_id", options.clientId]]);
+
+      if (leaving?.id_token) query.append("id_token_hint", leaving.id_token);
+      if (postLogoutRedirectUri) {
+        query.append("post_logout_redirect_uri", postLogoutRedirectUri);
+      }
+
+      window.location.assign(`${end_session_endpoint}?${query.toString()}`);
     },
   };
 }

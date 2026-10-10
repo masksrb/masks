@@ -2,6 +2,7 @@ export type {
   AuthorizeOptions,
   BrowserClient,
   BrowserOptions,
+  LogoutOptions,
 } from "./browser.js";
 export { createBrowserClient } from "./browser.js";
 export type { Jwk, VerifyOptions } from "./jwt.js";

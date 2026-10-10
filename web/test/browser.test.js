@@ -90,6 +90,7 @@ function server({
 
     if (target.includes("openid-configuration")) return answer(document);
     if (target.includes("jwks")) return answer(held.jwks);
+    if (target.includes("/revoke")) return new Response(null, { status: 200 });
 
     return answer(held.token, held.status);
   };
@@ -340,6 +341,131 @@ test("refresh without a token held is refused rather than sent", async () => {
     (error) => error.code === "invalid_grant",
   );
   assert.equal(upstream.calls.length, 0);
+});
+
+test("two refreshes at once send the refresh token once", async () => {
+  const upstream = server();
+  const { subject, store } = client({ server: upstream });
+
+  const { state } = await landing(subject, store, upstream);
+  await subject.callback(`https://app.test/callback?code=a&state=${state}`);
+  upstream.held.token = {
+    ...GRANTED,
+    access_token: "at-2",
+    refresh_token: "rt-2",
+  };
+  const before = upstream.calls.length;
+
+  const [first, second] = await Promise.all([
+    subject.refresh(),
+    subject.refresh(),
+  ]);
+
+  assert.equal(upstream.calls.length - before, 1);
+  assert.equal(first, second);
+  assert.equal(subject.tokens().refresh_token, "rt-2");
+});
+
+test("a refresh that returns no refresh token keeps the one held", async () => {
+  const upstream = server();
+  const { subject, store } = client({ server: upstream });
+
+  const { state } = await landing(subject, store, upstream);
+  await subject.callback(`https://app.test/callback?code=a&state=${state}`);
+  upstream.held.token = {
+    ...GRANTED,
+    access_token: "at-2",
+    refresh_token: undefined,
+  };
+
+  await subject.refresh();
+
+  assert.equal(subject.tokens().refresh_token, "rt-1");
+});
+
+test("freshAccessToken refreshes only once the token is close to expiring", async () => {
+  const upstream = server();
+  const { subject, store } = client({ server: upstream });
+
+  const { state } = await landing(subject, store, upstream);
+  await subject.callback(`https://app.test/callback?code=a&state=${state}`);
+  upstream.held.token = {
+    ...GRANTED,
+    access_token: "at-2",
+    refresh_token: "rt-2",
+  };
+  const before = upstream.calls.length;
+
+  assert.equal(await subject.freshAccessToken(), "at-1");
+  assert.equal(upstream.calls.length, before);
+
+  assert.equal(await subject.freshAccessToken(3600), "at-2");
+  assert.equal(upstream.calls.length, before + 1);
+});
+
+test("logout revokes the refresh token", async () => {
+  const upstream = server({
+    document: discovery({ revocation_endpoint: `${ISSUER}/revoke` }),
+  });
+  const { subject, store } = client({ server: upstream });
+
+  const { state } = await landing(subject, store, upstream);
+  await subject.callback(`https://app.test/callback?code=a&state=${state}`);
+
+  await subject.logout();
+
+  const revoked = upstream.calls.at(-1);
+  assert.equal(revoked.url, `${ISSUER}/revoke`);
+  const posted = new URLSearchParams(revoked.init.body);
+  assert.equal(posted.get("token"), "rt-1");
+  assert.equal(posted.get("token_type_hint"), "refresh_token");
+  assert.equal(posted.get("client_id"), "app-1");
+});
+
+test("a refresh answered after logout does not sign the client back in", async () => {
+  const upstream = server();
+  const { subject, store } = client({ server: upstream });
+
+  const { state } = await landing(subject, store, upstream);
+  await subject.callback(`https://app.test/callback?code=a&state=${state}`);
+
+  const pending = subject.refresh();
+  await subject.logout();
+
+  await assert.rejects(pending, (error) => error.code === "invalid_grant");
+  assert.equal(subject.accessToken(), null);
+});
+
+test("logout everywhere sends the browser to the issuer's end session endpoint", async () => {
+  const upstream = server({
+    document: discovery({ end_session_endpoint: `${ISSUER}/logout` }),
+  });
+  const { subject, store } = client({ server: upstream });
+
+  const { state } = await landing(subject, store, upstream);
+  await subject.callback(`https://app.test/callback?code=a&state=${state}`);
+  const idToken = subject.tokens().id_token;
+
+  const assigned = [];
+  globalThis.window = { location: { assign: (url) => assigned.push(url) } };
+
+  try {
+    await subject.logout({
+      everywhere: true,
+      postLogoutRedirectUri: "https://app.test/",
+    });
+  } finally {
+    delete globalThis.window;
+  }
+
+  const target = new URL(assigned[0]);
+  assert.equal(target.origin + target.pathname, `${ISSUER}/logout`);
+  assert.equal(target.searchParams.get("client_id"), "app-1");
+  assert.equal(target.searchParams.get("id_token_hint"), idToken);
+  assert.equal(
+    target.searchParams.get("post_logout_redirect_uri"),
+    "https://app.test/",
+  );
 });
 
 test("logout drops the token and anything in flight", async () => {

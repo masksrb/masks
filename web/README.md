@@ -59,7 +59,13 @@ await auth.authorize({ returnTo: "/dashboard" });
 
 The client handles discovery, the PKCE challenge, state and nonce, the callback exchange, and
 `refresh()`. `accessToken()` and `authorization()` return what to attach to a request, and
-`expired(leeway)` says when to refresh first.
+`expired(leeway)` says when to refresh first. `freshAccessToken(leeway)` refreshes when the token is
+that close to expiring and returns the access token. Calls to `refresh()` made while one is in flight
+share it, since masks revokes every token from a sign-in when a refresh token is presented twice.
+
+`logout()` drops the tokens and revokes the refresh token. `logout({ everywhere: true })` also sends
+the browser to the issuer's end session endpoint, and `postLogoutRedirectUri` names where masks sends
+it afterwards. That URI must be registered for the client.
 
 `resource` names the API a token is for, and each token is accepted only by the API it names. Pass an
 array when a page talks to more than one.
