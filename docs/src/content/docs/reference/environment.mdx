@@ -41,6 +41,9 @@ The container image's entrypoint derives the first four from a master key. See
 | `ENCRYPTION_KEY_DERIVATION_SALT` | derived | Derives the per-column keys from the two above. |
 | `MASKS_MASTER_KEY` | generated | The key the four above are derived from, when they aren't set directly. Takes precedence over `MASKS_MASTER_KEY_FILE`. |
 | `MASKS_MASTER_KEY_FILE` | `/rails/storage/master.key` | Where the entrypoint reads and writes the generated master key. |
+| `MASKS_PREVIOUS_MASTER_KEY` | none | The master key in use before a rotation. Columns encrypted with it stay readable, and the next boot re-encrypts them with the current key. Takes precedence over `MASKS_PREVIOUS_MASTER_KEY_FILE`. |
+| `MASKS_PREVIOUS_MASTER_KEY_FILE` | none | A file holding the previous master key. |
+| `ENCRYPTION_PREVIOUS_PRIMARY_KEY` | derived | The primary key derived from the previous master key, when it is not set directly. |
 | `MASKS_PUBLIC_ORIGIN_TEMPLATE` | none | The public origin of each tenant, with `%{subdomain}` standing in for the tenant, such as `https://%{subdomain}.auth.example.com`. A template without `%{subdomain}` serves every tenant from one host. The issuer, the registration endpoint, and every emailed link are built from it, and the server answers only hosts that match it. |
 
 :::caution

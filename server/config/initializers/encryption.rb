@@ -15,8 +15,10 @@ Rails.application.configure do
     end
   end
 
-  config.active_record.encryption.primary_key =
-    held["ENCRYPTION_PRIMARY_KEY"] || "development_primary_key_thirty_two_"
+  current = held["ENCRYPTION_PRIMARY_KEY"] || "development_primary_key_thirty_two_"
+  previous = ENV["ENCRYPTION_PREVIOUS_PRIMARY_KEY"].presence
+
+  config.active_record.encryption.primary_key = previous ? [ previous, current ] : current
   config.active_record.encryption.deterministic_key =
     held["ENCRYPTION_DETERMINISTIC_KEY"] || "development_deterministic_key_32_"
   config.active_record.encryption.key_derivation_salt =

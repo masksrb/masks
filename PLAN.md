@@ -26,11 +26,6 @@ says what a person can do once it lands.
 
 ## Running masks
 
-- **More than one replica shares its secrets.** A replica started without the
-  master key refuses to boot in production, and the self-hosting guide covers
-  running several.
-- **The master key can be rotated.** The previous key still decrypts, and a
-  task re-encrypts every column with the new one.
 - **Backup, restore, and upgrade.** The self-hosting guide covers all three
   databases, and `/up` reports failed recurring jobs.
 - **A checklist after setup.** The overview lists mail, the first app,

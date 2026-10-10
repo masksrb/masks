@@ -165,6 +165,22 @@ Keep the master key with your database backups. Losing it makes every encrypted 
 permanently.
 :::
 
+### Running more than one replica
+
+Every replica needs the same master key. Set `MASKS_MASTER_KEY` on each, or mount one file at
+`MASKS_MASTER_KEY_FILE` on all of them. A replica that generates its own key cannot read the
+database's encrypted columns, and refuses to start with an error that says so. The same check stops
+a server whose database was restored with a different key.
+
+### Rotating the master key
+
+1. Set `MASKS_PREVIOUS_MASTER_KEY` to the key in use now.
+2. Put the new key in `MASKS_MASTER_KEY` or its file, and restart.
+3. At boot, masks re-encrypts every encrypted column with the new key and prints that it is done.
+4. Remove `MASKS_PREVIOUS_MASTER_KEY` and restart again.
+
+A new `SECRET_KEY_BASE` comes with the new key, so everyone signs in again after the restart.
+
 ## Multi-tenancy
 
 A tenant is a separate set of accounts, clients, and signing keys at its own subdomain. The
