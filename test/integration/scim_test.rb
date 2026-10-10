@@ -233,6 +233,22 @@ module Masks
         assert other
       end
 
+      test "a client that no longer holds masks:scim is refused with the token it already has" do
+        client = within do
+          Client.new(client_id: SecureRandom.uuid, name: "Provisioner", grant_types: [ Client::CLIENT_CREDENTIALS ],
+                     allowed_scopes: Scopes::SCIM, resources: [ "#{origin_for(@tenant)}#{BASE}" ],
+                     approved_at: Time.current).tap(&:issue_credentials!)
+        end
+
+        access = token(grant_type: Client::CLIENT_CREDENTIALS, client_id: client.client_id,
+                       client_secret: client.secret)["access_token"]
+
+        within { client.update!(allowed_scopes: "openid") }
+
+        scim(:get, "/Users", secret: access)
+        assert_response :unauthorized
+      end
+
       test "an access token without masks:scim is refused" do
         registration = register
         access = access_token_for(actor: @manager, registration: registration)["access_token"]

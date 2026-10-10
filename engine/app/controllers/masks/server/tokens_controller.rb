@@ -125,10 +125,11 @@ module Masks
           req.invalid_grant!("that refresh token was issued to another client") if token.client_id != client.id
           req.invalid_grant!("the session that refresh token was issued in has ended") if outlived?(token)
           member!(req, token)
+          consented!(req, token, client)
           Current.organization = token.organization
 
           held = token.bound? ? token.jkt : jkt
-          scopes = req.scope.present? ? Scopes.granted(req.scope, token.scopes) : token.scope_list
+          scopes = still_held(token, client, req.scope.present? ? Scopes.granted(req.scope, token.scopes) : token.scope_list)
           audience = narrow(req, token.audience, client)
 
           access = AccessToken.issue!(
@@ -148,6 +149,20 @@ module Masks
             "refresh_token" => rotated.secret,
             "delegations" => delegated(token.actor, client, scopes)
           ).compact)
+        end
+
+        def consented!(req, token, client)
+          return if token.actor.nil?
+
+          consent = Consent.find_by(actor: token.actor, client: client)
+
+          req.invalid_grant!("consent for #{client.name} has lapsed or was withdrawn") if consent && !consent.live?
+        end
+
+        def still_held(token, client, scopes)
+          held = Scopes.list(scopes) & client.permitted_scopes(scopes)
+
+          token.actor ? held & token.actor.permitted_scopes(held) : held
         end
 
         def member!(req, grant)

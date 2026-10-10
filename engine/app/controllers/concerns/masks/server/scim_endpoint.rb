@@ -37,7 +37,15 @@ module Masks
         def scim_access_token(secret)
           token = held_token(secret)
 
-          token if token && !token.bound? && token.scope_list.include?(Scopes::SCIM) && token.audience.include?(scim_base)
+          return nil unless token && !token.bound? && token.scope_list.include?(Scopes::SCIM) && token.audience.include?(scim_base)
+
+          token if provisions?(token.actor || token.client)
+        end
+
+        def provisions?(holder)
+          return false if holder.nil? || (holder.respond_to?(:suspended?) && holder.suspended?)
+
+          holder.permitted_scopes(Scopes::SCIM).include?(Scopes::SCIM)
         end
 
         def directory
