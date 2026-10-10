@@ -6,21 +6,6 @@ when a capability lands.
 
 ## To build
 
-### Migration
-
-- A `masks:import` runner reads a file and creates accounts in batches of 500 inside
-  `Tenant.switch`, recording one `account.imported` event per batch.
-- Formats: Auth0's bulk export (bcrypt hashes, which masks verifies directly), Firebase's
-  `auth:export` (modified scrypt with the project's hash parameters), and a generic JSON with
-  `algorithm`, `hash`, and `salt`.
-- `actors.legacy_password`, encrypted, holds the algorithm and parameters. `Actor.authenticate`
-  tries it when `password_digest` is blank, then writes a bcrypt digest and clears it.
-- Okta and Cognito do not export hashes. A `legacy_providers` record holds a verification endpoint
-  (Okta's authentication API, or a Cognito user migration Lambda URL). On a first sign-in with no
-  digest, masks checks the password there through `Outbound`, stores its own digest on success, and
-  never asks again. Manage shows how many accounts still depend on it.
-- Emails are marked verified only when the export says so.
-
 ### Follow-ups
 
 - Shared signals transmitter: `account-purged` (captured before the account is destroyed), the add

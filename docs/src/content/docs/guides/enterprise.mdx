@@ -1,6 +1,6 @@
 ---
 title: Enterprise
-description: The capabilities a company needs to audit, control, and prove how people sign in, with a link to each guide, and the plan for migration.
+description: The capabilities a company needs to audit, control, and prove how people sign in, with a link to each guide.
 ---
 
 Each capability below links to the guide that documents it.
@@ -101,18 +101,3 @@ for a downstream service (RFC 8693). Each exchange is recorded as an event witho
 [exchanging a token](/guides/connecting-via-sdk/#exchanging-a-token). A
 [rich authorization request](/guides/security/#rich-authorization-requests) says what a token may do,
 such as one payment to one payee, and an exchange passes those details on or narrows them.
-
-## Migration
-
-Migration is planned. It moves accounts off another provider without asking anyone to reset a
-password.
-
-- An import reads a file of accounts in batches of 500: Auth0's bulk export (bcrypt hashes), Firebase's
-  `auth:export` (modified scrypt with the project's hash parameters), or a generic JSON file with
-  `algorithm`, `hash`, and `salt`. Each batch is recorded as an `account.imported` event.
-- masks keeps each imported hash in its original format and replaces it with its own the first time
-  the person signs in.
-- Okta and Cognito do not export password hashes. For those, masks checks a password against the old
-  provider the first time the person signs in, stores its own hash, and does not ask the old provider
-  again. Manage shows how many accounts still depend on it.
-- An imported email is marked verified only when the export says so.
