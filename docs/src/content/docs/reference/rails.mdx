@@ -35,26 +35,14 @@ prose is the RDoc in the source.
 | --- | --- |
 | `REQUESTS` | `"masks_requests".freeze` |
 | `HANDSHAKES` | `"masks_handshakes".freeze` |
-| `IDENTITY` | `[ "sub", "name", "preferred_username", "email", "email_verified", "tenant", "picture", Masks::Client::Claims::AVATARS, Masks::Client::Claims::ORGANIZATION, Masks::Client::Claims::ORGANIZATIONS ].freeze` |
 | `STEPPED_UP` | `"masks_stepped_up".freeze` |
 | `STEP_UP_WITHIN` | `300` |
-
-### ::masks_members_only!
-
-```ruby
-::masks_members_only!(role: nil, organization: nil, **options)
-```
+| `IDENTITY` | `[ "sub", "name", "preferred_username", "email", "email_verified", "tenant", "picture", Masks::Client::Claims::AVATARS, Masks::Client::Claims::ORGANIZATION, Masks::Client::Claims::ORGANIZATIONS ].freeze` |
 
 ### #authenticate_masks!
 
 ```ruby
 #authenticate_masks!()
-```
-
-### #authorize_masks_member!
-
-```ruby
-#authorize_masks_member!(*roles, organization: nil)
 ```
 
 ### #masks_access_token
@@ -132,7 +120,7 @@ prose is the RDoc in the source.
 ### #masks_login_url
 
 ```ruby
-#masks_login_url(return_to: nil, organization: nil, scope: nil)
+#masks_login_url(return_to: nil, organization: nil, privilege: nil)
 ```
 
 ### #masks_logout_url
@@ -163,6 +151,18 @@ prose is the RDoc in the source.
 
 ```ruby
 #masks_post_logout_redirect_uri()
+```
+
+### #masks_privilege?
+
+```ruby
+#masks_privilege?(*names)
+```
+
+### #masks_privileges
+
+```ruby
+#masks_privileges()
 ```
 
 ### #masks_reconnect!
@@ -199,12 +199,6 @@ prose is the RDoc in the source.
 
 ```ruby
 #masks_requests()
-```
-
-### #masks_require_scope!
-
-```ruby
-#masks_require_scope!(*scopes)
 ```
 
 ### #masks_role?
@@ -265,6 +259,11 @@ prose is the RDoc in the source.
 
 ## Masks::Rails::Configuration
 
+| Constant | Value |
+| --- | --- |
+| `Privilege` | `Struct.new(:name, :scopes, :roles, :organization, keyword_init: true)` |
+| `PRIVILEGE_KEYS` | `%w[scope role organization].freeze` |
+
 | Attribute | Access |
 | --- | --- |
 | `after_sign_in` | RW |
@@ -282,13 +281,13 @@ prose is the RDoc in the source.
 | `namespace` | RW |
 | `organization` | W |
 | `parent_controller` | RW |
+| `privileges` | R |
 | `redirect_uri` | W |
 | `resource` | RW |
 | `resource_scopes` | RW |
 | `scope` | RW |
 | `session_key` | RW |
 | `sign_out_of_issuer` | RW |
-| `step_up_scope` | RW |
 | `store` | W |
 
 ### ::new
@@ -393,6 +392,18 @@ prose is the RDoc in the source.
 #organization_for(request)
 ```
 
+### #privilege
+
+```ruby
+#privilege(name)
+```
+
+### #privileges=
+
+```ruby
+#privileges=(value)
+```
+
 ### #redirect_uri_for
 
 ```ruby
@@ -483,24 +494,26 @@ Inherits `Masks::Client::Error`.
 
 Inherits `Rails::Engine`.
 
-## Masks::Rails::ProtectedResource
+## Masks::Rails::Privileged
 
-### ::masks_protect!
+### ::masked!
 
 ```ruby
-::masks_protect!(**options)
+::masked!(*privileges, **options)
 ```
+
+### #authorize_masks!
+
+```ruby
+#authorize_masks!(*names)
+```
+
+## Masks::Rails::ProtectedResource
 
 ### #masks_authenticate
 
 ```ruby
 #masks_authenticate(scope: nil, role: nil, organization: nil)
-```
-
-### #masks_authenticate!
-
-```ruby
-#masks_authenticate!(scope: nil, role: nil, organization: nil, **)
 ```
 
 ### #masks_challenge

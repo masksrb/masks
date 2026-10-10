@@ -3,24 +3,20 @@ module Masks
     module Authentication
       extend ActiveSupport::Concern
       include Masks::Rails::Configurable
+      include Masks::Rails::Privileged
 
       included do
         if respond_to?(:helper_method)
           helper_method :masks_signed_in?, :masks_identity, :masks_tenant, :masks_scopes,
                         :masks_claims, :masks_organization, :masks_organizations, :masks_role?,
-                        :masks_login_url
-        end
-      end
-
-      class_methods do
-        def masks_members_only!(role: nil, organization: nil, **options)
-          before_action(-> { authorize_masks_member!(*Array(role), organization: organization) },
-                        **options.slice(:only, :except))
+                        :masks_privileges, :masks_privilege?, :masks_login_url
         end
       end
 
       REQUESTS = "masks_requests".freeze
       HANDSHAKES = "masks_handshakes".freeze
+      STEPPED_UP = "masks_stepped_up".freeze
+      STEP_UP_WITHIN = 300
 
       def masks_session
         @masks_session ||= masks_config.session_for(request)
@@ -147,6 +143,18 @@ module Masks
         masks_organization&.role?(*roles) || false
       end
 
+      def masks_privileges
+        return [] unless masks_tokens
+
+        masks_config.privileges.values.select { |privilege| masks_holds?(privilege) }.map(&:name)
+      end
+
+      def masks_privilege?(*names)
+        wanted = names.flatten.map { |name| masks_config.privilege(name) }
+
+        masks_tokens.present? && wanted.all? { |privilege| masks_holds?(privilege) }
+      end
+
       def masks_scopes
         masks_tokens&.scopes || []
       end
@@ -203,12 +211,12 @@ module Masks
         "#{request.base_url}#{masks_local_path(masks_config.after_sign_out) || '/'}"
       end
 
-      def masks_login_url(return_to: nil, organization: nil, scope: nil)
+      def masks_login_url(return_to: nil, organization: nil, privilege: nil)
         path = Masks::Rails::Engine.routes.url_helpers.start_path
         query = {
           "return_to" => masks_local_path(return_to),
           "organization" => Masks::Client::Session.organization_key(organization),
-          "scope" => Array(scope).join(" ").presence
+          "privilege" => Array(privilege).join(" ").presence
         }.compact
 
         query.empty? ? path : "#{path}?#{URI.encode_www_form(query)}"
@@ -230,6 +238,7 @@ module Masks
           "organization" => masks_organization&.to_h,
           "organizations" => masks_organizations.map(&:to_h).presence,
           "scopes" => masks_scopes,
+          "privileges" => masks_privileges,
           "expires_at" => masks_tokens&.expires_at,
           "account_url" => masks_account_url
         }.compact
@@ -248,55 +257,59 @@ module Masks
         false
       end
 
-      STEPPED_UP = "masks_stepped_up".freeze
-      STEP_UP_WITHIN = 300
-
-      def masks_require_scope!(*scopes)
-        return false unless authenticate_masks!
-
-        missing = scopes.flatten.map(&:to_s) - masks_scopes
-        return true if missing.empty?
-
-        asked = session[STEPPED_UP]
-        session.delete(STEPPED_UP)
-
-        if (missing - Array(masks_config.step_up_scope).map(&:to_s)).any? || masks_asked_already?(asked, missing)
-          masks_forbid(Masks::Client::Forbidden.new(
-            "insufficient_scope", "this account does not hold #{missing.join(' ')}", scope: missing.join(" ")
-          ))
-          return false
-        end
-
-        masks_step_up(missing)
-        false
-      end
-
-      def authorize_masks_member!(*roles, organization: nil)
-        return false unless authenticate_masks!
-
-        masks_claims.member!(*roles, organization: organization)
-        true
-      rescue Masks::Client::Forbidden => e
-        masks_forbid(e)
-        false
-      end
-
       private
 
+        def masks_authorize_session!(wanted)
+          return false unless authenticate_masks!
+
+          wanted.each { |privilege| masks_member!(privilege) }
+
+          missing = wanted.reject { |privilege| (privilege.scopes - masks_scopes).empty? }.map(&:name)
+          return true if missing.empty?
+
+          if masks_asked_already?(session.delete(STEPPED_UP), missing)
+            raise Masks::Client::Forbidden.new(
+              "insufficient_scope", "this account does not hold the #{missing.join(' and ')} privilege",
+              scope: missing.flat_map { |name| masks_config.privilege(name).scopes }.join(" ")
+            )
+          end
+
+          masks_ask_again(missing)
+          false
+        rescue Masks::Client::Forbidden => e
+          masks_forbid(e)
+          false
+        end
+
+        def masks_holds?(privilege)
+          return false unless (privilege.scopes - masks_scopes).empty?
+
+          masks_member!(privilege)
+          true
+        rescue Masks::Client::Forbidden
+          false
+        end
+
+        def masks_member!(privilege)
+          return if privilege.roles.empty? && privilege.organization.nil?
+
+          masks_claims.member!(*privilege.roles, organization: privilege.organization)
+        end
+
         def masks_asked_already?(asked, missing)
-          asked.is_a?(Hash) && (missing - Array(asked["scopes"])).empty? &&
+          asked.is_a?(Hash) && (missing - Array(asked["privileges"])).empty? &&
             asked["at"].to_i > Time.now.to_i - STEP_UP_WITHIN
         end
 
-        def masks_step_up(missing)
+        def masks_ask_again(missing)
           return_to = request.get? ? request.fullpath : masks_referring_path
-          url = masks_login_url(return_to: return_to, scope: missing)
+          url = masks_login_url(return_to: return_to, privilege: missing)
 
-          session[STEPPED_UP] = { "scopes" => missing, "at" => Time.now.to_i }
+          session[STEPPED_UP] = { "privileges" => missing, "at" => Time.now.to_i }
 
           if masks_wants_json?
             response.headers["Cache-Control"] = "no-store"
-            render json: { "error" => "insufficient_scope", "scope" => missing.join(" "), "login_url" => url },
+            render json: { "error" => "privilege_required", "privileges" => missing, "login_url" => url },
                    status: :forbidden
           else
             redirect_to url

@@ -67,7 +67,7 @@ Every setting that varies per request accepts a callable taking the request.
 class ApplicationController < ActionController::Base
   include Masks::Rails::Authentication
 
-  before_action :authenticate_masks!
+  masked!
 end
 ```
 
@@ -75,7 +75,7 @@ end
 
 | Method | |
 | --- | --- |
-| `authenticate_masks!` | Sends a signed-out visitor to `masks_login_url` and stops the request. |
+| `masked!` | Sends a signed-out visitor to `masks_login_url` and stops the request. See [privileges](#privileges) for more. |
 | `masks_account`, `masks_claims` | Read the signed-in session. |
 | `masks_identity` | `sub`, `name`, `preferred_username`, `email`, `email_verified`, `tenant`, `picture`, avatar claims, `org`, and `orgs`. |
 | `masks_access_token` | The token to spend against a resource server. |
@@ -117,53 +117,58 @@ is not asked for anything more:
 <% end %>
 ```
 
-`masks_members_only!` keeps a controller to members, and optionally to a role or one organization:
-
-```ruby
-class BillingController < ApplicationController
-  include Masks::Rails::Authentication
-
-  masks_members_only! role: %w[owner billing]
-end
-```
-
 A person who signed in to no organization is refused with `403` and `insufficient_organization`, and
-one in another role with `insufficient_role`.
+one in another role with `insufficient_role`, by a privilege that names a role. See the next section.
 
-### Asking for more on one sign-in
+### Privileges
 
-Some scopes belong in a token only when a person asks for them, such as one that changes what
-everyone shares. List them in `config.step_up_scope`, and leave them out of `config.scope`:
+A privilege is a name for what an action needs. It can ask for scopes the person holds in masks, a
+role in the organization they signed in to, or both:
 
 ```ruby
 Masks::Rails.configure do |config|
-  config.scope = %w[openid profile email offline_access catalog:read]
-  config.step_up_scope = %w[catalog:admin]
+  config.scope = %w[openid profile email offline_access organization catalog:read]
+  config.privileges = {
+    admin: %w[catalog:admin],
+    billing: { role: %w[owner billing] },
+    acme_admin: { scope: %w[catalog:admin], role: "owner", organization: "acme" }
+  }
 end
 ```
 
-`masks_login_url(scope: "catalog:admin")`, or `/auth?scope=catalog:admin`, signs the person in again
-asking for `config.scope` and that scope. The engine drops any requested scope that is not in
-`config.step_up_scope`. masks grants the scope only to a person whose own scopes cover it, and asks
-for consent the first time, so a person without it signs in with the usual scopes and nothing more.
+A list is shorthand for `{ scope: [...] }`. `role` takes one role or several, any of which will do,
+and `organization` holds the privilege to one organization by key or id.
 
-Most apps need only one line. `masks_require_scope!` guards the actions that need the scope:
+`masked!` guards a controller. With no privilege it needs only a sign-in:
 
 ```ruby
 class SettingsController < ApplicationController
-  before_action -> { masks_require_scope!("catalog:admin") }, only: %i[create update destroy]
+  masked!
+  masked! :admin, only: %i[create update destroy]
 end
 ```
 
 | | |
 | --- | --- |
-| The sign-in holds the scope | The action runs. |
-| It does not, and the scope is in `config.step_up_scope` | The browser goes through masks once, asking for the scope, and comes back to the page it was on. A person already signed in to masks sees a consent screen at most. A JSON request gets `403` with `error`, `scope`, and the `login_url` to send the browser to. |
-| masks did not grant it on that trip | `403 insufficient_scope`. The person does not hold the scope, so the app does not send them around again for five minutes. |
-| The scope is not in `config.step_up_scope` | `403 insufficient_scope` at once. |
+| The sign-in holds the privilege | The action runs. |
+| A scope is missing | The browser goes through masks once, asking for the usual scopes and the privilege's, and comes back to the page it was on. A person already signed in to masks sees a consent screen at most. A JSON request gets `403` with `privilege_required`, the `privileges`, and the `login_url` to send the browser to. |
+| masks did not grant the scope on that trip | `403 insufficient_scope`. The person does not hold it, so the app does not send them around again for five minutes. |
+| A role or organization does not match | `403 insufficient_role` or `insufficient_organization`, without a trip to masks. |
 
-Asking never widens anyone's access. masks only puts a scope in the token for a person who already
-holds it, and a manager grants scopes to people in `/manage`.
+Privilege scopes stay out of every ordinary sign-in. masks puts a scope in the token only for a person
+who already holds it, and a manager grants scopes in `/manage`, so asking never widens anyone's
+access. The handshake registers every privilege's scopes, so the issuer lets the app ask for them.
+
+| Method | |
+| --- | --- |
+| `masked!(*privileges, only:, except:)` | Guards a controller. |
+| `authorize_masks!(*privileges)` | The same check inside an action. |
+| `masks_privilege?(:admin)` | Whether the sign-in holds a privilege, for showing or hiding a control. |
+| `masks_privileges` | Every privilege the sign-in holds. `/auth/session` answers it as `privileges`. |
+| `masks_login_url(privilege: :admin)` | Signs the person in again asking for a privilege, as `/auth?privilege=admin` does. |
+
+A name that `config.privileges` does not define raises `ArgumentError` in the app. In a URL, the
+engine ignores it.
 
 ### Accepting tokens
 
@@ -172,10 +177,14 @@ An app that is also a resource server checks access tokens with `Masks::Rails::P
 accepts.
 
 ```ruby
+Masks::Rails.configure do |config|
+  config.privileges = { read: %w[xixo:catalog:read], write: %w[xixo:catalog:write] }
+end
+
 class ApiController < ActionController::Base
   include Masks::Rails::ProtectedResource
 
-  masks_protect! scope: "xixo:catalog:read", except: :metadata
+  masked! :read, except: :metadata
 
   def show
     render json: { subject: masks_claims.subject }
@@ -183,12 +192,14 @@ class ApiController < ActionController::Base
 end
 ```
 
-`masks_protect!` installs a `before_action` and passes `:only` and `:except` through. It also checks
-the `org` claim:
+`masked!` takes the same [privileges](#privileges) as a controller that signs browsers in, roles and
+organizations included, and checks them against the bearer token. A token that lacks one is refused
+with `403` and `insufficient_scope`, `insufficient_role`, or `insufficient_organization`. A token
+cannot go through masks again, so there is no second trip.
 
-```ruby
-masks_protect! scope: "xixo:catalog:write", role: "owner", organization: "acme"
-```
+A controller that includes both `Authentication` and `ProtectedResource` accepts either. A request
+with an `Authorization` header, or with no masks session in the browser, is checked as a token. A
+request from a signed-in browser is checked against its session, and `masks_claims` reads the session.
 
 A refusal carries an RFC 6750 challenge whose `resource_metadata` points at
 `/.well-known/oauth-protected-resource`. The engine does not route that path, so serve

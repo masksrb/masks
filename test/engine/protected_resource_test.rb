@@ -42,6 +42,15 @@ class ProtectedResourceTest < EngineIntegrationTest
     assert_includes challenge, "catalog:read"
   end
 
+  test "a resource that also signs browsers in lets a signed-in browser through without a token" do
+    sign_in!
+
+    get "/catalog", headers: host
+
+    assert_response :ok
+    assert_equal "actor-1", json["subject"]
+  end
+
   test "a refusal is never cacheable" do
     get "/catalog", headers: host
 

@@ -79,7 +79,7 @@ require a signed-in person in any controller:
 class ApplicationController < ActionController::Base
   include Masks::Rails::Authentication
 
-  before_action :authenticate_masks!
+  masked!
 end
 ```
 

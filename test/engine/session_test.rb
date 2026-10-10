@@ -64,9 +64,11 @@ class SessionTest < EngineIntegrationTest
     assert_equal "#{origin}/mcp", query["resource"]
   end
 
-  def step_up!(granted)
+  ADMIN = { admin: %w[catalog:admin], owner: { role: "owner" }, read: %w[catalog:read] }.freeze
+
+  def privileged!(granted)
     get "/settings", headers: host
-    assert_redirected_to %r{/auth/\?return_to=%2Fsettings}
+    assert_redirected_to %r{/auth/\?return_to=%2Fsettings&privilege=admin}
 
     get URI.parse(response.location).request_uri, headers: host
     assert_includes URI.decode_www_form(URI.parse(response.location).query).to_h["scope"].split(" "), "catalog:admin"
@@ -78,50 +80,67 @@ class SessionTest < EngineIntegrationTest
     get "/settings", headers: host
   end
 
-  test "a page that needs a step-up scope sends its holder through masks once and back" do
-    configure!(step_up_scope: %w[catalog:admin])
+  test "a page that needs a privilege sends someone who holds it through masks once and back" do
+    configure!(privileges: ADMIN)
     sign_in!
 
-    step_up!(%w[openid profile email catalog:read catalog:admin])
+    privileged!(%w[openid profile email catalog:read catalog:admin])
 
     assert_response :ok
     assert_equal "settings", response.body
   end
 
-  test "someone masks will not grant the scope is refused after one try, not sent around again" do
-    configure!(step_up_scope: %w[catalog:admin])
+  test "someone masks will not grant the privilege is refused after one try, not sent around again" do
+    configure!(privileges: ADMIN)
     sign_in!
 
-    step_up!(%w[openid profile email catalog:read])
+    privileged!(%w[openid profile email catalog:read])
 
     assert_response :forbidden
-    assert_match "catalog:admin", response.body
+    assert_match "admin privilege", response.body
   end
 
-  test "a scope the app does not offer as a step-up is refused without asking masks" do
-    sign_in!
-
-    get "/settings", headers: host
-
-    assert_response :forbidden
-  end
-
-  test "a JSON request that needs a step-up is told where to sign in" do
-    configure!(step_up_scope: %w[catalog:admin])
+  test "a JSON request that needs a privilege is told where to sign in" do
+    configure!(privileges: ADMIN)
     sign_in!
 
     get "/settings", headers: host.merge("HTTP_ACCEPT" => "application/json")
 
     assert_response :forbidden
-    assert_equal "insufficient_scope", json["error"]
-    assert_match "scope=catalog%3Aadmin", json["login_url"]
+    assert_equal "privilege_required", json["error"]
+    assert_equal %w[admin], json["privileges"]
+    assert_match "privilege=admin", json["login_url"]
   end
 
-  test "a sign-in asks for a step-up scope the app offers, on top of its usual scope" do
-    configure!(step_up_scope: %w[catalog:admin])
+  test "the session says which privileges the sign-in holds" do
+    configure!(privileges: ADMIN)
+    sign_in!
+
+    get "/auth/session", headers: host
+
+    assert_equal %w[read], json["privileges"]
+  end
+
+  test "a privilege the app never defined is a mistake in the app" do
+    configure!(privileges: {})
+
+    assert_raises(ArgumentError) { Masks::Rails.config.privilege(:admin) }
+  end
+
+  test "a privilege is a list of scopes, or names scopes, roles, and an organization" do
+    configure!(privileges: { admin: %w[catalog:admin], billing: { role: %w[owner billing], organization: "acme" } })
+
+    assert_equal %w[catalog:admin], Masks::Rails.config.privilege(:admin).scopes
+    assert_equal %w[owner billing], Masks::Rails.config.privilege(:billing).roles
+    assert_equal "acme", Masks::Rails.config.privilege(:billing).organization
+    assert_raises(ArgumentError) { configure!(privileges: { admin: { scopes: %w[catalog:admin] } }) }
+  end
+
+  test "a sign-in asks for a privilege's scopes on top of the usual scope" do
+    configure!(privileges: ADMIN)
     connect!
 
-    get "/auth?scope=catalog:admin", headers: host
+    get "/auth?privilege=admin", headers: host
 
     scopes = URI.decode_www_form(URI.parse(response.location).query).to_h["scope"].split(" ")
 
@@ -129,28 +148,17 @@ class SessionTest < EngineIntegrationTest
     assert_includes scopes, "catalog:read"
   end
 
-  test "the handshake registers the step-up scope, so the issuer lets the app ask for it" do
-    configure!(step_up_scope: %w[catalog:admin])
+  test "the handshake registers every privilege's scopes, so the issuer lets the app ask for them" do
+    configure!(privileges: ADMIN)
 
     assert_includes Masks::Rails.config.approved_scope, "catalog:admin"
   end
 
-  test "a sign-in ignores a scope the app does not offer as a step-up" do
-    configure!(step_up_scope: %w[catalog:admin])
+  test "a sign-in asks for nothing beyond the usual scope for a privilege the app does not define" do
+    configure!(privileges: ADMIN)
     connect!
 
-    get "/auth?scope=catalog:admin+masks:manage", headers: host
-
-    scopes = URI.decode_www_form(URI.parse(response.location).query).to_h["scope"].split(" ")
-
-    assert_includes scopes, "catalog:admin"
-    assert_not_includes scopes, "masks:manage"
-  end
-
-  test "a sign-in with no step-up offered asks for the usual scope whatever the request says" do
-    connect!
-
-    get "/auth?scope=catalog:admin", headers: host
+    get "/auth?privilege=root", headers: host
 
     scopes = URI.decode_www_form(URI.parse(response.location).query).to_h["scope"].split(" ")
 

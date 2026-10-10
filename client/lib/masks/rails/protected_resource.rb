@@ -3,27 +3,16 @@ module Masks
     module ProtectedResource
       extend ActiveSupport::Concern
       include Masks::Rails::Configurable
-
-      class_methods do
-        def masks_protect!(**options)
-          before_action(-> { masks_authenticate!(**options) }, **options.slice(:only, :except))
-        end
-      end
+      include Masks::Rails::Privileged
 
       def masks_resource
         @masks_resource ||= masks_config.resource_server_for(request)
       end
 
       def masks_claims
-        @masks_claims if defined?(@masks_claims)
-      end
+        return @masks_claims if defined?(@masks_claims)
 
-      def masks_authenticate!(scope: nil, role: nil, organization: nil, **)
-        @masks_claims = masks_resource.authenticate(request.authorization, scope: scope, role: role,
-                                                                           organization: organization, **masks_proof)
-      rescue Masks::Client::Challenge => e
-        masks_challenge(e)
-        false
+        super if defined?(super)
       end
 
       def masks_authenticate(scope: nil, role: nil, organization: nil)
@@ -52,6 +41,25 @@ module Masks
       def masks_resource_metadata
         masks_resource.metadata
       end
+
+      private
+
+        def masks_authorize_token!(privileges)
+          claims = masks_resource.authenticate(request.authorization, scope: privileges.flat_map(&:scopes).uniq,
+                                                                      **masks_proof)
+
+          privileges.each do |privilege|
+            next if privilege.roles.empty? && privilege.organization.nil?
+
+            claims.member!(*privilege.roles, organization: privilege.organization)
+          end
+
+          @masks_claims = claims
+          true
+        rescue Masks::Client::Challenge => e
+          masks_challenge(e)
+          false
+        end
     end
   end
 end

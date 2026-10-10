@@ -141,6 +141,7 @@ class ConfigurationTest < EngineTest
   end
 
   test "without a namespace the handshake asks for exactly what a sign-in does" do
+    Masks::Rails.config.privileges = {}
     Masks::Rails.config.namespace = nil
     Masks::Rails.config.scope = %w[openid profile email offline_access xixo:catalog:read]
 
@@ -149,6 +150,7 @@ class ConfigurationTest < EngineTest
   end
 
   test "a namespace collapses the scopes beneath it and keeps the rest" do
+    Masks::Rails.config.privileges = {}
     Masks::Rails.config.namespace = "xixo:"
     Masks::Rails.config.scope =
       %w[openid profile email offline_access xixo:catalog:read xixo:settings:write]
@@ -169,6 +171,7 @@ class ConfigurationTest < EngineTest
   end
 
   test "an app that delegates asks the handshake for delegation too" do
+    Masks::Rails.config.privileges = {}
     Masks::Rails.config.namespace = "xixo:"
     Masks::Rails.config.delegates = true
     Masks::Rails.config.scope = %w[openid offline_access xixo:catalog:read]
@@ -179,6 +182,7 @@ class ConfigurationTest < EngineTest
   end
 
   test "the handshake carries the namespace, so a new capability needs no approval" do
+    Masks::Rails.config.privileges = {}
     Masks::Rails.config.namespace = "xixo:"
     Masks::Rails.config.scope = %w[openid xixo:catalog:read]
 

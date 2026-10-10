@@ -3,7 +3,11 @@ module Masks
     class Configuration
       class Unconfigured < Masks::Client::Error; end
 
-      attr_accessor :scope, :step_up_scope, :namespace, :resource, :resource_scopes, :after_sign_in,
+      Privilege = Struct.new(:name, :scopes, :roles, :organization, keyword_init: true)
+      PRIVILEGE_KEYS = %w[scope role organization].freeze
+
+      attr_reader :privileges
+      attr_accessor :scope, :namespace, :resource, :resource_scopes, :after_sign_in,
                     :after_sign_out, :session_key, :sign_out_of_issuer, :parent_controller,
                     :credentials_path, :authenticate_everything, :delegates
       attr_writer :issuer, :redirect_uri, :name, :credentials, :store, :forget, :logged_out,
@@ -11,7 +15,7 @@ module Masks
 
       def initialize
         @scope = Masks::Client::Session::DEFAULT_SCOPE
-        @step_up_scope = []
+        @privileges = {}
         @resource_scopes = []
         @after_sign_in = "/"
         @after_sign_out = "/"
@@ -152,15 +156,31 @@ module Masks
         )
       end
 
+      def privileges=(value)
+        @privileges = value.to_h.to_h do |name, spec|
+          held = spec.is_a?(Hash) ? spec.transform_keys(&:to_s) : { "scope" => spec }
+          unknown = held.keys - PRIVILEGE_KEYS
+
+          raise ArgumentError, "the #{name} privilege names #{unknown.join(', ')}, which is not #{PRIVILEGE_KEYS.join(', ')}" if unknown.any?
+
+          [ name.to_s, Privilege.new(name: name.to_s, scopes: Array(held["scope"]).map(&:to_s),
+                                     roles: Array(held["role"]).map(&:to_s), organization: held["organization"]&.to_s) ]
+        end
+      end
+
+      def privilege(name)
+        privileges.fetch(name.to_s) { raise ArgumentError, "Masks::Rails.config.privileges has no #{name}" }
+      end
+
       def scope_for(requested)
-        extra = requested.to_s.split & Array(step_up_scope).map(&:to_s)
-        extra.empty? ? nil : (Array(scope) + extra).uniq
+        wanted = (requested.to_s.split & privileges.keys).flat_map { |name| privileges[name].scopes }
+        wanted.empty? ? nil : (Array(scope) + wanted).uniq
       end
 
       def approved_scope
         delegated = delegates ? [ Masks::Client::Delegations::SCOPE ] : []
 
-        asked = (Array(scope) + Array(step_up_scope)).uniq
+        asked = (Array(scope) + privileges.values.flat_map(&:scopes)).uniq
         return asked + delegated if namespace.blank?
 
         outside = asked.reject { |name| name.to_s.start_with?(namespace) }

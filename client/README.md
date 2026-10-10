@@ -54,7 +54,7 @@ config.store = ->(request, registration) { Tenant.for(request).connect!(registra
 class DashboardController < ApplicationController
   include Masks::Rails::Authentication
 
-  before_action :authenticate_masks!
+  masked!
 
   def index
     @who = masks_identity
@@ -65,10 +65,32 @@ end
 `masks_identity`, `masks_tenant`, and `masks_scopes` describe the signed-in request. Tokens live in
 the encrypted Rails session and never reach JavaScript.
 
-An action that needs a scope nobody is asked for at sign-in, such as an administrator's, calls
-`masks_require_scope!("catalog:admin")` after listing it in `config.step_up_scope`. The browser goes
-through masks once to ask for it, and the action answers `403` when masks does not grant it. See
-[asking for more on one sign-in](https://masks.pages.dev/guides/rails/#asking-for-more-on-one-sign-in).
+### Privileges
+
+A privilege names what an action needs: scopes the person holds in masks, a role in the organization
+they signed in to, or both. A list is shorthand for `{ scope: [...] }`.
+
+```ruby
+Masks::Rails.configure do |config|
+  config.privileges = {
+    admin: %w[catalog:admin],
+    billing: { role: %w[owner billing] },
+    acme_admin: { scope: %w[catalog:admin], role: "owner", organization: "acme" }
+  }
+end
+
+class SettingsController < ApplicationController
+  masked!
+  masked! :admin, only: %i[create update destroy]
+end
+```
+
+`masked!` with no privilege needs only a sign-in. A privilege's scopes stay out of every ordinary
+sign-in. When a signed-in person lacks one, the browser goes through masks once to ask for it and
+comes back, and the action answers `403` when masks does not grant it. A missing role or organization
+answers `403` at once. `masks_privilege?(:admin)` and `masks_privileges` tell a view what the sign-in
+holds, and `/auth/session` answers `privileges`. See
+[privileges](https://masks.pages.dev/guides/rails/#privileges).
 
 `config.authenticate_everything = true` includes `Authentication` on every controller. Otherwise
 include it where it applies.
@@ -96,7 +118,7 @@ An app that is also a resource server:
 class ApiController < ApplicationController
   include Masks::Rails::ProtectedResource
 
-  masks_protect! scope: "xixo:catalog:read", except: :metadata
+  masked! :read, except: :metadata
 
   def metadata
     render json: masks_resource_metadata
@@ -104,8 +126,8 @@ class ApiController < ApplicationController
 end
 ```
 
-`masks_protect!` installs the `before_action` and passes `:only` and `:except` through.
-`masks_claims` is the verified token. A refusal carries the RFC 6750 challenge with
+`masked!` checks a [privilege](#privileges) against the bearer token, here
+`config.privileges = { read: %w[xixo:catalog:read] }`. `masks_claims` is the verified token. A refusal carries the RFC 6750 challenge with
 `resource_metadata`, which points a client at `/.well-known/oauth-protected-resource`. The engine
 does not route that path, so route it to an action like `metadata` above. A DPoP-bound token is
 accepted only with a valid proof, as in [Masks::Client::Resource](#the-resource-server-half).
@@ -125,7 +147,7 @@ end
 class BillingController < ApplicationController
   include Masks::Rails::Authentication
 
-  masks_members_only! role: %w[owner billing]
+  masked! :billing
 end
 ```
 
@@ -144,13 +166,9 @@ again naming the other one, which asks nothing more when they are already a memb
 <% end %>
 ```
 
-`masks_members_only!` refuses with 403, as `insufficient_organization` when the person signed
-in to none and `insufficient_role` when they hold another role. A resource server asks the same of a
-token:
-
-```ruby
-masks_protect! scope: "xixo:catalog:write", role: "owner", organization: "acme"
-```
+A privilege with a role refuses with 403, as `insufficient_organization` when the person signed in
+to none and `insufficient_role` when they hold another role. A resource server asks the same of a
+token with `masked!`.
 
 Naming an organization without asking for the scope still holds the sign-in to its members and its
 sign-in policy, and the app learns nothing about the role.
@@ -192,7 +210,7 @@ a subdomain-per-tenant host needs.
 | `resource` | this app's own identifier, which the handshake registers and tokens name as their audience |
 | `resource_scopes` | what it accepts, published in its RFC 9728 metadata |
 | `scope` | what to ask the issuer for, `openid profile email` by default |
-| `step_up_scope` | scopes a sign-in may also ask for with `/auth?scope=`, none by default |
+| `privileges` | named scopes, roles, and organizations that `masked!` checks, none by default |
 | `organization` | the organization every sign-in names, by key |
 | `credentials` / `store` | where the handshake's result lives |
 | `manages` | who may reconnect or disconnect a connected app |

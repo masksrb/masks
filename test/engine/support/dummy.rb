@@ -58,7 +58,7 @@ CREDENTIALS = CredentialStore.new
 class PagesController < ActionController::Base
   include Masks::Rails::Authentication
 
-  before_action :authenticate_masks!, only: :dashboard
+  masked! only: :dashboard
 
   def home
     render plain: "home"
@@ -72,7 +72,7 @@ end
 class SettingsController < ActionController::Base
   include Masks::Rails::Authentication
 
-  before_action -> { masks_require_scope!("catalog:admin") }
+  masked! :admin
 
   def show
     render plain: "settings"
@@ -82,7 +82,7 @@ end
 class OwnersController < ActionController::Base
   include Masks::Rails::Authentication
 
-  masks_members_only! role: "owner"
+  masked! :owner
 
   def show
     render plain: "owners of #{masks_organization.key}"
@@ -93,7 +93,7 @@ class CatalogController < ActionController::Base
   include Masks::Rails::Authentication
   include Masks::Rails::ProtectedResource
 
-  masks_protect! scope: "catalog:read"
+  masked! :read
 
   def show
     render json: { "subject" => masks_claims.subject, "scopes" => masks_claims.scopes }
@@ -103,7 +103,7 @@ end
 class ApiController < ActionController::Base
   include Masks::Rails::ProtectedResource
 
-  masks_protect! scope: "catalog:read"
+  masked! :read
 
   def show
     render json: { "subject" => masks_claims.subject }
