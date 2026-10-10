@@ -1,5 +1,39 @@
 # Changelog
 
+## [2.3.0](https://github.com/masksrb/masks/compare/client-v2.2.0...client-v2.3.0) (2026-10-10)
+
+
+### ⚠ BREAKING CHANGES
+
+* a resource server on an older gem still accepts the new tokens, but this gem refuses access tokens from a server that does not type them.
+
+### Features
+
+* an access token is typed at+jwt, and nothing takes a token of another type in its place ([d0b4cfd](https://github.com/masksrb/masks/commit/d0b4cfdf802053359695495d417225e3a1578302))
+* **client:** the session says where the person manages their account, as account_url ([1d36e1d](https://github.com/masksrb/masks/commit/1d36e1d4daa8c5acfc9133a1896aa9384771dbd6))
+* **server:** managers can hold read, support, or security roles instead of every permission, and each mutation names the least it needs ([9757385](https://github.com/masksrb/masks/commit/9757385c1ca2860a0680f98f4bc80ac646dbd1ae))
+* **web:** a Person component renders who is signed in, for React and Svelte ([2fab015](https://github.com/masksrb/masks/commit/2fab015632044f8b14a0bb799b73e23a21500605))
+* **web:** an app lists every organization a person belongs to and switches them to another ([b80f9ea](https://github.com/masksrb/masks/commit/b80f9eaae30b996acce7a46dbd2f16c7d8089b05))
+* **web:** an app names the organization a person signs in to, and reads their role from the account ([7a1da42](https://github.com/masksrb/masks/commit/7a1da427ca99063be39ec95708a94308654150b0))
+
+
+### Fixes
+
+* **web:** refreshes made at the same time share one request, so the browser client no longer signs a person out by presenting a refresh token twice ([1879feb](https://github.com/masksrb/masks/commit/1879feb72a2268fd8793a123917bb46b36ca0a29))
+
+
+### Documentation
+
+* every guide, the reference prose, and the READMEs are checked against the code, shortened, and corrected ([94782d1](https://github.com/masksrb/masks/commit/94782d1fbfe363e90c40f0c728a241de9738e138))
+* Rails apps covers client, server, and engine mode ([41454a2](https://github.com/masksrb/masks/commit/41454a242438e4df246dcbc4dce94b6d8a022239))
+* the examples name xixo, the resource server once called uris ([ca80f20](https://github.com/masksrb/masks/commit/ca80f20c9aea4ee6a3e7cd6c76c69425e4c800e3))
+* the plan holds only what is left, and the READMEs match the engine layout and the code ([1615722](https://github.com/masksrb/masks/commit/1615722f88ae5f7d19955ff686dcef9f64a6326f))
+
+
+### Refactoring
+
+* **web:** session.ts stops re-exporting types index.ts takes from types.ts ([a5cb37c](https://github.com/masksrb/masks/commit/a5cb37c98f0da132f7d423197f937e755ed85a4e))
+
 ## [2.2.0](https://github.com/masksrb/masks/compare/client-v2.1.0...client-v2.2.0) (2026-09-13)
 
 
