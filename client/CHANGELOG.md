@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.2](https://github.com/masksrb/masks/compare/gem/v0.9.1...gem/v0.9.2) (2026-10-10)
+
+
+### Documentation
+
+* the examples name xixo, the resource server once called uris ([ca80f20](https://github.com/masksrb/masks/commit/ca80f20c9aea4ee6a3e7cd6c76c69425e4c800e3))
+
 ## [0.9.1](https://github.com/masksrb/masks/compare/gem/v0.9.0...gem/v0.9.1) (2026-10-04)
 
 
