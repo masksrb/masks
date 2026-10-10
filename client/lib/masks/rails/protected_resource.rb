@@ -9,10 +9,13 @@ module Masks
         @masks_resource ||= masks_config.resource_server_for(request)
       end
 
-      def masks_claims
-        return @masks_claims if defined?(@masks_claims)
+      def masked
+        return (defined?(super) ? super : Masked.nobody(masks_config)) unless defined?(@masks_token_claims)
 
-        super if defined?(super)
+        @masked_by_token ||= Masked.new(
+          claims: @masks_token_claims, scopes: @masks_token_claims.scopes, config: masks_config, signed_in: true,
+          access_token: masks_resource.token(request.authorization), expires_at: @masks_token_claims.expires_at
+        )
       end
 
       def masks_authenticate(scope: nil, role: nil, organization: nil)
@@ -54,7 +57,7 @@ module Masks
             claims.member!(*privilege.roles, organization: privilege.organization)
           end
 
-          @masks_claims = claims
+          @masks_token_claims = claims
           true
         rescue Masks::Client::Challenge => e
           masks_challenge(e)

@@ -33,11 +33,12 @@ client secret never passes through the browser. The handshake registers the app 
 asks before it rotates, because reconnecting takes it offline for a moment.
 
 Once an app is connected, only somebody `config.manages` approves can reconnect or disconnect it.
-The callable takes the request, or the request and the signed-in identity, and the engine refuses
-everyone when it is unset:
+It names a [privilege](#privileges), or is a callable taking the request, or the request and
+`masked`. The engine refuses everyone when it is unset:
 
 ```ruby
-config.manages = ->(request, identity) { identity["sub"] == ENV["OWNER_SUB"] }
+config.manages = :admin
+config.manages = ->(request, masked) { masked.subject == ENV["OWNER_SUB"] }
 ```
 
 The engine writes what comes back to `config/masks.json`, mode 600. A multi-tenant app keeps it
@@ -57,13 +58,16 @@ class DashboardController < ApplicationController
   masked!
 
   def index
-    @who = masks_identity
+    @who = masked.name
   end
 end
 ```
 
-`masks_identity`, `masks_tenant`, and `masks_scopes` describe the signed-in request. Tokens live in
-the encrypted Rails session and never reach JavaScript.
+`masked` is everything about the signed-in request in one object: `subject`, `name`, `nickname`,
+`email`, `picture`, `avatars`, `tenant`, `organization`, `organizations`, `role?`, `scopes`,
+`privileges`, `privilege?`, `access_token`, and `signed_in?`, with `masked["claim"]` for any other
+claim. In a view it is the same helper. Tokens live in the encrypted Rails session and never reach
+JavaScript.
 
 ### Privileges
 
@@ -88,7 +92,7 @@ end
 `masked!` with no privilege needs only a sign-in. A privilege's scopes stay out of every ordinary
 sign-in. When a signed-in person lacks one, the browser goes through masks once to ask for it and
 comes back, and the action answers `403` when masks does not grant it. A missing role or organization
-answers `403` at once. `masks_privilege?(:admin)` and `masks_privileges` tell a view what the sign-in
+answers `403` at once. `masked.privilege?(:admin)` and `masked.privileges` tell a view what the sign-in
 holds, and `/auth/session` answers `privileges`. See
 [privileges](https://masks.pages.dev/guides/rails/#privileges).
 
@@ -127,7 +131,7 @@ end
 ```
 
 `masked!` checks a [privilege](#privileges) against the bearer token, here
-`config.privileges = { read: %w[xixo:catalog:read] }`. `masks_claims` is the verified token. A refusal carries the RFC 6750 challenge with
+`config.privileges = { read: %w[xixo:catalog:read] }`. `masked` reads the verified token. A refusal carries the RFC 6750 challenge with
 `resource_metadata`, which points a client at `/.well-known/oauth-protected-resource`. The engine
 does not route that path, so route it to an action like `metadata` above. A DPoP-bound token is
 accepted only with a valid proof, as in [Masks::Client::Resource](#the-resource-server-half).
@@ -151,17 +155,17 @@ class BillingController < ApplicationController
 end
 ```
 
-`masks_organization` is the organization signed in to (its `id`, `key`, `name`, and `role`), or
-`nil`, and `masks_role?("owner")` asks about the role held in it. A refresh reads the person's
+`masked.organization` is the organization signed in to (its `id`, `key`, `name`, and `role`), or
+`nil`, and `masked.role?("owner")` asks about the role held in it. A refresh reads the person's
 profile again, so a promotion or demotion reaches the app within an access token's lifetime.
 `/auth/session` answers the same thing as `organization`.
 
-`masks_organizations` lists every organization the person has joined, each with the role held in
+`masked.organizations` lists every organization the person has joined, each with the role held in
 it, and `/auth/session` answers it as `organizations`. Switching sends the person through sign-in
 again naming the other one, which asks nothing more when they are already a member:
 
 ```erb
-<% masks_organizations.each do |held| %>
+<% masked.organizations.each do |held| %>
   <%= link_to held.name, masks_login_url(organization: held.key, return_to: request.path) %>
 <% end %>
 ```
@@ -179,7 +183,7 @@ Every account has three avatars: an uploaded `photo`, an `identicon`, and two-le
 All three arrive on the ID token.
 
 ```erb
-<img src="<%= masks_claims.avatars.identicon %>?size=64" width="64" height="64" alt="">
+<img src="<%= masked.avatars.identicon %>?size=64" width="64" height="64" alt="">
 ```
 
 A photo needs a token, which an `<img>` cannot carry, so the engine proxies it with the token the
@@ -189,7 +193,7 @@ app holds:
 <img src="/auth/avatar" width="64" height="64" alt="">
 ```
 
-`masks_claims.picture` is the standard OIDC `picture` claim when the account set one, then the photo,
+`masked.picture` is the standard OIDC `picture` claim when the account set one, then the photo,
 then the identicon. `issuer.avatar_url(sub, style:, size:)` builds a URL for a subject this app holds
 no token for. Sizes are 32, 64, 128, 256, or 512.
 

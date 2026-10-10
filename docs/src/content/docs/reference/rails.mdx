@@ -45,28 +45,16 @@ prose is the RDoc in the source.
 #authenticate_masks!()
 ```
 
-### #masks_access_token
+### #masked
 
 ```ruby
-#masks_access_token()
-```
-
-### #masks_account
-
-```ruby
-#masks_account()
+#masked()
 ```
 
 ### #masks_account_url
 
 ```ruby
 #masks_account_url()
-```
-
-### #masks_claims
-
-```ruby
-#masks_claims()
 ```
 
 ### #masks_configured?
@@ -105,12 +93,6 @@ prose is the RDoc in the source.
 #masks_held()
 ```
 
-### #masks_identity
-
-```ruby
-#masks_identity()
-```
-
 ### #masks_identity_from
 
 ```ruby
@@ -129,40 +111,10 @@ prose is the RDoc in the source.
 #masks_logout_url(return_to: nil)
 ```
 
-### #masks_organization
-
-```ruby
-#masks_organization()
-```
-
-### #masks_organizations
-
-```ruby
-#masks_organizations()
-```
-
-### #masks_permits?
-
-```ruby
-#masks_permits?(scope)
-```
-
 ### #masks_post_logout_redirect_uri
 
 ```ruby
 #masks_post_logout_redirect_uri()
-```
-
-### #masks_privilege?
-
-```ruby
-#masks_privilege?(*names)
-```
-
-### #masks_privileges
-
-```ruby
-#masks_privileges()
 ```
 
 ### #masks_reconnect!
@@ -201,18 +153,6 @@ prose is the RDoc in the source.
 #masks_requests()
 ```
 
-### #masks_role?
-
-```ruby
-#masks_role?(*roles)
-```
-
-### #masks_scopes
-
-```ruby
-#masks_scopes()
-```
-
 ### #masks_session
 
 ```ruby
@@ -229,12 +169,6 @@ prose is the RDoc in the source.
 
 ```ruby
 #masks_store(tokens, identity: nil)
-```
-
-### #masks_tenant
-
-```ruby
-#masks_tenant()
 ```
 
 ### #masks_tokens
@@ -377,7 +311,7 @@ prose is the RDoc in the source.
 ### #manages?
 
 ```ruby
-#manages?(request, identity = nil)
+#manages?(request, masked = nil)
 ```
 
 ### #name_for
@@ -494,6 +428,142 @@ Inherits `Masks::Client::Error`.
 
 Inherits `Rails::Engine`.
 
+## Masks::Rails::Masked
+
+| Attribute | Access |
+| --- | --- |
+| `access_token` | R |
+| `account_url` | R |
+| `claims` | R |
+| `expires_at` | R |
+| `scopes` | R |
+
+### ::new
+
+```ruby
+::new(claims:, scopes:, config:, signed_in:, access_token: nil, expires_at: nil, account_url: nil)
+```
+
+### ::nobody
+
+```ruby
+::nobody(config)
+```
+
+### #[]
+
+```ruby
+#[](claim)
+```
+
+### #avatars
+
+```ruby
+#avatars()
+```
+
+### #email
+
+```ruby
+#email()
+```
+
+### #email_verified?
+
+```ruby
+#email_verified?()
+```
+
+### #holds?
+
+```ruby
+#holds?(privilege)
+```
+
+### #member!
+
+```ruby
+#member!(privilege)
+```
+
+### #name
+
+```ruby
+#name()
+```
+
+### #nickname
+
+```ruby
+#nickname()
+```
+
+### #organization
+
+```ruby
+#organization()
+```
+
+### #organizations
+
+```ruby
+#organizations()
+```
+
+### #permits?
+
+```ruby
+#permits?(scope)
+```
+
+### #picture
+
+```ruby
+#picture()
+```
+
+### #privilege?
+
+```ruby
+#privilege?(*names)
+```
+
+### #privileges
+
+```ruby
+#privileges()
+```
+
+### #role?
+
+```ruby
+#role?(*roles)
+```
+
+### #signed_in?
+
+```ruby
+#signed_in?()
+```
+
+### #subject
+
+```ruby
+#subject()
+```
+
+### #tenant
+
+```ruby
+#tenant()
+```
+
+### #to_h
+
+```ruby
+#to_h()
+```
+
 ## Masks::Rails::Privileged
 
 ### ::masked!
@@ -510,6 +580,12 @@ Inherits `Rails::Engine`.
 
 ## Masks::Rails::ProtectedResource
 
+### #masked
+
+```ruby
+#masked()
+```
+
 ### #masks_authenticate
 
 ```ruby
@@ -520,12 +596,6 @@ Inherits `Rails::Engine`.
 
 ```ruby
 #masks_challenge(error)
-```
-
-### #masks_claims
-
-```ruby
-#masks_claims()
 ```
 
 ### #masks_proof

@@ -65,7 +65,7 @@ class PagesController < ActionController::Base
   end
 
   def dashboard
-    render plain: "dashboard for #{masks_identity&.fetch('sub', nil)}"
+    render plain: "dashboard for #{masked.subject}"
   end
 end
 
@@ -85,7 +85,7 @@ class OwnersController < ActionController::Base
   masked! :owner
 
   def show
-    render plain: "owners of #{masks_organization.key}"
+    render plain: "owners of #{masked.organization.key}"
   end
 end
 
@@ -96,7 +96,7 @@ class CatalogController < ActionController::Base
   masked! :read
 
   def show
-    render json: { "subject" => masks_claims.subject, "scopes" => masks_claims.scopes }
+    render json: { "subject" => masked.subject, "scopes" => masked.scopes }
   end
 end
 
@@ -106,14 +106,14 @@ class ApiController < ActionController::Base
   masked! :read
 
   def show
-    render json: { "subject" => masks_claims.subject }
+    render json: { "subject" => masked.subject }
   end
 end
 
 class BareController < ActionController::Base
   def show
     render json: {
-      "authentication" => respond_to?(:masks_signed_in?, true),
+      "authentication" => respond_to?(:masked, true),
       "config" => respond_to?(:masks_config, true)
     }
   end
@@ -124,7 +124,7 @@ class AskedController < ActionController::Base
 
   def show
     render json: {
-      "authentication" => respond_to?(:masks_signed_in?, true),
+      "authentication" => respond_to?(:masked, true),
       "config" => respond_to?(:masks_config, true)
     }
   end

@@ -8,7 +8,7 @@ module Masks
         if masks_configured? && (masks_signed_in? || (masks_tokens && masks_refresh!))
           response.headers["Cache-Control"] = "no-store"
 
-          render json: masks_account
+          render json: masked.to_h
         else
           masks_forget
           masks_refuse_json

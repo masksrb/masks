@@ -12,10 +12,6 @@ says what a person can do once it lands.
 
 ## Plugging in self-hosted apps
 
-- **Groups.** A `groups` claim in the ID token and userinfo, so Grafana,
-  Nextcloud, Gitea, and Immich can map people to roles.
-- **Who may sign in to each app.** A list of people or groups on a client,
-  checked at sign-in.
 - **A page of my apps.** The account page links to each app a person may
   use, including apps that start a SAML sign-in.
 - **Presets for common apps.** Adding Grafana or Nextcloud fills in the

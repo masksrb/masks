@@ -238,8 +238,17 @@ class HandshakeTest < EngineIntegrationTest
     assert_not_includes response.body, "Disconnect it"
   end
 
+  test "a privilege name says who manages the connection" do
+    configure!(manages: :owner)
+    sign_in!
+
+    get "/auth/handshake", headers: host
+
+    assert_response :forbidden
+  end
+
   test "a connected app refuses reconnecting to somebody it does not let manage it" do
-    configure!(manages: ->(request, identity) { identity["sub"] == "somebody-else" })
+    configure!(manages: ->(request, masked) { masked.subject == "somebody-else" })
     sign_in!
 
     before = CREDENTIALS[HOST][:client_id]

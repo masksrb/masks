@@ -94,12 +94,12 @@ module Masks
         true
       end
 
-      def manages?(request, identity = nil)
-        return false unless @manages.respond_to?(:call)
-
-        held = @manages.arity == 1 ? @manages.call(request) : @manages.call(request, identity)
-
-        held ? true : false
+      def manages?(request, masked = nil)
+        case @manages
+        when Symbol, String then masked&.privilege?(@manages) || false
+        when nil then false
+        else (@manages.arity == 1 ? @manages.call(request) : @manages.call(request, masked)) ? true : false
+        end
       end
 
       def can_forget?

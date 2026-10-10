@@ -22,7 +22,7 @@ module Masks
       private
 
         def photo_url
-          held = masks_claims.avatars.photo
+          held = masked.avatars.photo
 
           return nil if held.nil?
           return nil unless held.start_with?("#{masks_config.issuer_for(request)}/")

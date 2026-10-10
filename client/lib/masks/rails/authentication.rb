@@ -7,9 +7,7 @@ module Masks
 
       included do
         if respond_to?(:helper_method)
-          helper_method :masks_signed_in?, :masks_identity, :masks_tenant, :masks_scopes,
-                        :masks_claims, :masks_organization, :masks_organizations, :masks_role?,
-                        :masks_privileges, :masks_privilege?, :masks_login_url
+          helper_method :masked, :masks_login_url, :masks_logout_url
         end
       end
 
@@ -46,8 +44,7 @@ module Masks
 
         session[masks_config.session_key] = held.compact
         @masks_tokens = tokens
-        @masks_identity = held["identity"]
-        @masks_claims = nil
+        @masked = nil
       end
 
       def masks_held
@@ -69,8 +66,19 @@ module Masks
       def masks_forget
         session.delete(masks_config.session_key)
         @masks_tokens = nil
-        @masks_identity = nil
-        @masks_claims = nil
+        @masked = nil
+      end
+
+      def masked
+        @masked ||= if masks_tokens
+          Masked.new(
+            claims: Masks::Client::Claims.new(masks_held["identity"] || {}), scopes: masks_tokens.scopes,
+            config: masks_config, signed_in: masks_signed_in?, access_token: masks_tokens.access_token,
+            expires_at: masks_tokens.expires_at, account_url: masks_account_url
+          )
+        else
+          Masked.nobody(masks_config)
+        end
       end
 
       def masks_signed_in?
@@ -113,58 +121,6 @@ module Masks
 
       def masks_handshake_path
         Masks::Rails::Engine.routes.url_helpers.handshake_path
-      end
-
-      def masks_identity
-        return @masks_identity if defined?(@masks_identity)
-
-        @masks_identity = masks_held["identity"]
-      end
-
-      def masks_tenant
-        masks_identity&.dig("tenant")
-      end
-
-      def masks_claims
-        @masks_claims ||= Masks::Client::Claims.new(masks_identity || {})
-      end
-
-      def masks_organization
-        held = masks_claims.organization
-
-        held.present? ? held : nil
-      end
-
-      def masks_organizations
-        masks_claims.organizations
-      end
-
-      def masks_role?(*roles)
-        masks_organization&.role?(*roles) || false
-      end
-
-      def masks_privileges
-        return [] unless masks_tokens
-
-        masks_config.privileges.values.select { |privilege| masks_holds?(privilege) }.map(&:name)
-      end
-
-      def masks_privilege?(*names)
-        wanted = names.flatten.map { |name| masks_config.privilege(name) }
-
-        masks_tokens.present? && wanted.all? { |privilege| masks_holds?(privilege) }
-      end
-
-      def masks_scopes
-        masks_tokens&.scopes || []
-      end
-
-      def masks_permits?(scope)
-        masks_scopes.include?(scope.to_s)
-      end
-
-      def masks_access_token
-        masks_tokens&.access_token
       end
 
       def masks_refresh!
@@ -222,28 +178,6 @@ module Masks
         query.empty? ? path : "#{path}?#{URI.encode_www_form(query)}"
       end
 
-      def masks_account
-        identity = masks_identity || {}
-
-        {
-          "signed_in" => masks_signed_in?,
-          "subject" => identity["sub"],
-          "name" => identity["name"],
-          "nickname" => identity["preferred_username"],
-          "email" => identity["email"],
-          "email_verified" => identity["email_verified"],
-          "picture" => masks_claims.picture,
-          "avatars" => masks_claims.avatars.to_h.presence,
-          "tenant" => masks_tenant,
-          "organization" => masks_organization&.to_h,
-          "organizations" => masks_organizations.map(&:to_h).presence,
-          "scopes" => masks_scopes,
-          "privileges" => masks_privileges,
-          "expires_at" => masks_tokens&.expires_at,
-          "account_url" => masks_account_url
-        }.compact
-      end
-
       def masks_account_url
         "#{masks_config.issuer_for(request).to_s.chomp('/')}/"
       rescue Masks::Rails::Configuration::Unconfigured
@@ -262,9 +196,9 @@ module Masks
         def masks_authorize_session!(wanted)
           return false unless authenticate_masks!
 
-          wanted.each { |privilege| masks_member!(privilege) }
+          wanted.each { |privilege| masked.member!(privilege) }
 
-          missing = wanted.reject { |privilege| (privilege.scopes - masks_scopes).empty? }.map(&:name)
+          missing = wanted.reject { |privilege| (privilege.scopes - masked.scopes).empty? }.map(&:name)
           return true if missing.empty?
 
           if masks_asked_already?(session.delete(STEPPED_UP), missing)
@@ -279,21 +213,6 @@ module Masks
         rescue Masks::Client::Forbidden => e
           masks_forbid(e)
           false
-        end
-
-        def masks_holds?(privilege)
-          return false unless (privilege.scopes - masks_scopes).empty?
-
-          masks_member!(privilege)
-          true
-        rescue Masks::Client::Forbidden
-          false
-        end
-
-        def masks_member!(privilege)
-          return if privilege.roles.empty? && privilege.organization.nil?
-
-          masks_claims.member!(*privilege.roles, organization: privilege.organization)
         end
 
         def masks_asked_already?(asked, missing)

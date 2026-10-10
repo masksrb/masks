@@ -76,12 +76,24 @@ end
 | Method | |
 | --- | --- |
 | `masked!` | Sends a signed-out visitor to `masks_login_url` and stops the request. See [privileges](#privileges) for more. |
-| `masks_account`, `masks_claims` | Read the signed-in session. |
-| `masks_identity` | `sub`, `name`, `preferred_username`, `email`, `email_verified`, `tenant`, `picture`, avatar claims, `org`, and `orgs`. |
-| `masks_access_token` | The token to spend against a resource server. |
+| `masked` | The signed-in person and what they hold, described below. Also a view helper. |
 | `masks_disconnect!` | Removes the connection and `config/masks.json`. |
 
-`GET /auth/session` answers `masks_account` as JSON for a single-page app, and
+`masked` answers everything about the sign-in:
+
+| | |
+| --- | --- |
+| `signed_in?` | Whether a sign-in is held and its token has not expired. |
+| `subject`, `name`, `nickname`, `email`, `email_verified?` | Who signed in. |
+| `picture`, `avatars` | The `picture` claim, then the photo, then the identicon, and each avatar URL. |
+| `tenant` | The tenant's `uuid`, `subdomain`, and `name`. |
+| `organization`, `organizations`, `role?("owner")` | See [organizations](#organizations). |
+| `scopes`, `permits?("catalog:read")` | What the token carries. |
+| `privileges`, `privilege?(:admin)` | See [privileges](#privileges). |
+| `access_token` | The token to spend against a resource server. |
+| `masked["groups"]` | Any other claim. |
+| `to_h` | What `GET /auth/session` answers as JSON for a single-page app. |
+
 `DELETE /auth/logout` signs out. See [Masks::Rails](/reference/rails/) for the full list.
 
 ### Organizations
@@ -99,9 +111,9 @@ end
 
 | Method | |
 | --- | --- |
-| `masks_organization` | The organization signed in to, with its `id`, `key`, `name`, and `role`, or `nil`. |
-| `masks_role?("owner", "billing")` | Whether the person holds one of those roles in it. |
-| `masks_organizations` | Every organization the person has joined, each with the role held there. |
+| `masked.organization` | The organization signed in to, with its `id`, `key`, `name`, and `role`, or `nil`. |
+| `masked.role?("owner", "billing")` | Whether the person holds one of those roles in it. |
+| `masked.organizations` | Every organization the person has joined, each with the role held there. |
 | `masks_login_url(organization: "globex")` | Signs the person in again, naming another organization. |
 
 `/auth/session` answers the same as `organization` and `organizations`. The engine reads the
@@ -112,7 +124,7 @@ To let a person switch, link each organization to sign-in again. A person who al
 is not asked for anything more:
 
 ```erb
-<% masks_organizations.each do |held| %>
+<% masked.organizations.each do |held| %>
   <%= link_to held.name, masks_login_url(organization: held.key, return_to: request.path) %>
 <% end %>
 ```
@@ -163,8 +175,8 @@ access. The handshake registers every privilege's scopes, so the issuer lets the
 | --- | --- |
 | `masked!(*privileges, only:, except:)` | Guards a controller. |
 | `authorize_masks!(*privileges)` | The same check inside an action. |
-| `masks_privilege?(:admin)` | Whether the sign-in holds a privilege, for showing or hiding a control. |
-| `masks_privileges` | Every privilege the sign-in holds. `/auth/session` answers it as `privileges`. |
+| `masked.privilege?(:admin)` | Whether the sign-in holds a privilege, for showing or hiding a control. |
+| `masked.privileges` | Every privilege the sign-in holds. `/auth/session` answers it as `privileges`. |
 | `masks_login_url(privilege: :admin)` | Signs the person in again asking for a privilege, as `/auth?privilege=admin` does. |
 
 A name that `config.privileges` does not define raises `ArgumentError` in the app. In a URL, the
@@ -187,7 +199,7 @@ class ApiController < ActionController::Base
   masked! :read, except: :metadata
 
   def show
-    render json: { subject: masks_claims.subject }
+    render json: { subject: masked.subject }
   end
 end
 ```
@@ -199,7 +211,8 @@ cannot go through masks again, so there is no second trip.
 
 A controller that includes both `Authentication` and `ProtectedResource` accepts either. A request
 with an `Authorization` header, or with no masks session in the browser, is checked as a token. A
-request from a signed-in browser is checked against its session, and `masks_claims` reads the session.
+request from a signed-in browser is checked against its session. Either way, `masked` describes whoever
+the request came from.
 
 A refusal carries an RFC 6750 challenge whose `resource_metadata` points at
 `/.well-known/oauth-protected-resource`. The engine does not route that path, so serve

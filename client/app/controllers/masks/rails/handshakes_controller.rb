@@ -72,7 +72,7 @@ module Masks
 
         def require_unconfigured_or_manager
           return unless masks_config.configured?(request)
-          return if masks_config.manages?(request, masks_identity)
+          return if masks_config.manages?(request, masked)
 
           @code = "forbidden"
           @description = "only somebody this app lets manage its connection can reconnect or disconnect it"
