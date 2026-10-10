@@ -3,7 +3,7 @@ module Masks
     class Configuration
       class Unconfigured < Masks::Client::Error; end
 
-      attr_accessor :scope, :namespace, :resource, :resource_scopes, :after_sign_in,
+      attr_accessor :scope, :step_up_scope, :namespace, :resource, :resource_scopes, :after_sign_in,
                     :after_sign_out, :session_key, :sign_out_of_issuer, :parent_controller,
                     :credentials_path, :authenticate_everything, :delegates
       attr_writer :issuer, :redirect_uri, :name, :credentials, :store, :forget, :logged_out,
@@ -11,6 +11,7 @@ module Masks
 
       def initialize
         @scope = Masks::Client::Session::DEFAULT_SCOPE
+        @step_up_scope = []
         @resource_scopes = []
         @after_sign_in = "/"
         @after_sign_out = "/"
@@ -151,12 +152,18 @@ module Masks
         )
       end
 
+      def scope_for(requested)
+        extra = requested.to_s.split & Array(step_up_scope).map(&:to_s)
+        extra.empty? ? nil : (Array(scope) + extra).uniq
+      end
+
       def approved_scope
         delegated = delegates ? [ Masks::Client::Delegations::SCOPE ] : []
 
-        return Array(scope) + delegated if namespace.blank?
+        asked = (Array(scope) + Array(step_up_scope)).uniq
+        return asked + delegated if namespace.blank?
 
-        outside = Array(scope).reject { |name| name.to_s.start_with?(namespace) }
+        outside = asked.reject { |name| name.to_s.start_with?(namespace) }
 
         outside + [ namespace ] + delegated
       end

@@ -130,6 +130,23 @@ end
 A person who signed in to no organization is refused with `403` and `insufficient_organization`, and
 one in another role with `insufficient_role`.
 
+### Asking for more on one sign-in
+
+Some scopes belong in a token only when a person asks for them, such as one that changes what
+everyone shares. List them in `config.step_up_scope`, and leave them out of `config.scope`:
+
+```ruby
+Masks::Rails.configure do |config|
+  config.scope = %w[openid profile email offline_access catalog:read]
+  config.step_up_scope = %w[catalog:admin]
+end
+```
+
+`masks_login_url(scope: "catalog:admin")`, or `/auth?scope=catalog:admin`, signs the person in again
+asking for `config.scope` and that scope. The engine drops any requested scope that is not in
+`config.step_up_scope`. masks grants the scope only to a person whose own scopes cover it, and asks
+for consent the first time, so a person without it signs in with the usual scopes and nothing more.
+
 ### Accepting tokens
 
 An app that is also a resource server checks access tokens with `Masks::Rails::ProtectedResource`.

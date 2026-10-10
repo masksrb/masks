@@ -25,6 +25,7 @@ module Masks
         started = masks_session.start(
           state: pending.id,
           resource: masks_config.resource_for(request),
+          scope: masks_config.scope_for(params[:scope]),
           organization: Masks::Client::Session.organization_key(params[:organization]) ||
             masks_config.organization_for(request)
         )

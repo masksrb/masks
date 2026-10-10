@@ -64,6 +64,46 @@ class SessionTest < EngineIntegrationTest
     assert_equal "#{origin}/mcp", query["resource"]
   end
 
+  test "a sign-in asks for a step-up scope the app offers, on top of its usual scope" do
+    configure!(step_up_scope: %w[catalog:admin])
+    connect!
+
+    get "/auth?scope=catalog:admin", headers: host
+
+    scopes = URI.decode_www_form(URI.parse(response.location).query).to_h["scope"].split(" ")
+
+    assert_includes scopes, "catalog:admin"
+    assert_includes scopes, "catalog:read"
+  end
+
+  test "the handshake registers the step-up scope, so the issuer lets the app ask for it" do
+    configure!(step_up_scope: %w[catalog:admin])
+
+    assert_includes Masks::Rails.config.approved_scope, "catalog:admin"
+  end
+
+  test "a sign-in ignores a scope the app does not offer as a step-up" do
+    configure!(step_up_scope: %w[catalog:admin])
+    connect!
+
+    get "/auth?scope=catalog:admin+masks:manage", headers: host
+
+    scopes = URI.decode_www_form(URI.parse(response.location).query).to_h["scope"].split(" ")
+
+    assert_includes scopes, "catalog:admin"
+    assert_not_includes scopes, "masks:manage"
+  end
+
+  test "a sign-in with no step-up offered asks for the usual scope whatever the request says" do
+    connect!
+
+    get "/auth?scope=catalog:admin", headers: host
+
+    scopes = URI.decode_www_form(URI.parse(response.location).query).to_h["scope"].split(" ")
+
+    assert_equal %w[openid profile email offline_access catalog:read], scopes
+  end
+
   test "an issuer that has forgotten the client asks for a reconnect rather than an authorize it will refuse" do
     shake_hands!
 

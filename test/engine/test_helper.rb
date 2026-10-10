@@ -38,6 +38,7 @@ class EngineTest < ActiveSupport::TestCase
       config.manages = overrides.fetch(:manages, ->(request) { true })
       config.resource_scopes = overrides.fetch(:resource_scopes, %w[catalog:read])
       config.scope = overrides.fetch(:scope, %w[openid profile email offline_access catalog:read])
+      config.step_up_scope = overrides.fetch(:step_up_scope, [])
       config.after_sign_in = overrides.fetch(:after_sign_in, "/")
       config.after_sign_out = overrides.fetch(:after_sign_out, "/")
       config.session_key = "masks"
@@ -97,6 +98,7 @@ class EngineIntegrationTest < ActionDispatch::IntegrationTest
       config.manages = overrides.fetch(:manages, ->(request) { true })
       config.resource_scopes = overrides.fetch(:resource_scopes, %w[catalog:read])
       config.scope = overrides.fetch(:scope, %w[openid profile email offline_access catalog:read])
+      config.step_up_scope = overrides.fetch(:step_up_scope, [])
       config.after_sign_in = overrides.fetch(:after_sign_in, "/")
       config.after_sign_out = overrides.fetch(:after_sign_out, "/")
       config.session_key = "masks"

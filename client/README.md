@@ -187,6 +187,7 @@ a subdomain-per-tenant host needs.
 | `resource` | this app's own identifier, which the handshake registers and tokens name as their audience |
 | `resource_scopes` | what it accepts, published in its RFC 9728 metadata |
 | `scope` | what to ask the issuer for, `openid profile email` by default |
+| `step_up_scope` | scopes a sign-in may also ask for with `/auth?scope=`, none by default |
 | `organization` | the organization every sign-in names, by key |
 | `credentials` / `store` | where the handshake's result lives |
 | `manages` | who may reconnect or disconnect a connected app |

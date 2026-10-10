@@ -130,7 +130,7 @@ prose is the RDoc in the source.
 ### #masks_login_url
 
 ```ruby
-#masks_login_url(return_to: nil, organization: nil)
+#masks_login_url(return_to: nil, organization: nil, scope: nil)
 ```
 
 ### #masks_logout_url
@@ -280,6 +280,7 @@ prose is the RDoc in the source.
 | `scope` | RW |
 | `session_key` | RW |
 | `sign_out_of_issuer` | RW |
+| `step_up_scope` | RW |
 | `store` | W |
 
 ### ::new
@@ -406,6 +407,12 @@ prose is the RDoc in the source.
 
 ```ruby
 #return_to_for(request)
+```
+
+### #scope_for
+
+```ruby
+#scope_for(requested)
 ```
 
 ### #session_for

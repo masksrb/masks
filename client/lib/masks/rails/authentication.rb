@@ -203,11 +203,12 @@ module Masks
         "#{request.base_url}#{masks_local_path(masks_config.after_sign_out) || '/'}"
       end
 
-      def masks_login_url(return_to: nil, organization: nil)
+      def masks_login_url(return_to: nil, organization: nil, scope: nil)
         path = Masks::Rails::Engine.routes.url_helpers.start_path
         query = {
           "return_to" => masks_local_path(return_to),
-          "organization" => Masks::Client::Session.organization_key(organization)
+          "organization" => Masks::Client::Session.organization_key(organization),
+          "scope" => Array(scope).join(" ").presence
         }.compact
 
         query.empty? ? path : "#{path}?#{URI.encode_www_form(query)}"
