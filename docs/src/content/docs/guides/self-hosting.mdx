@@ -216,6 +216,28 @@ https:// {
 }
 ```
 
+## Getting back into a locked account
+
+When nobody can sign in to reset an account, such as the only manager after losing their phone and
+backup codes, name the account in `MASKS_RECOVER` and restart the server:
+
+```yaml
+    environment:
+      MASKS_RECOVER: acme/owner
+```
+
+At boot, masks removes that account's authenticator app, backup codes, passkeys, and sign-in codes,
+signs it out everywhere, and prints a link to the logs:
+
+```
+masks: acme: owner has no second factors now and every session is signed out. This link sets a new password once: https://acme.auth.example.com/reset/...
+```
+
+Open the link to choose a password, then sign in and set up a new second factor. A manager is asked
+for one at that sign-in. Both steps appear in the account's activity. Remove `MASKS_RECOVER` and
+restart again, since every boot repeats it. Without a tenant prefix, the account is found in every
+tenant that has one by that nickname or email.
+
 ## System requirements
 
 masks is a small Rails app with no fixed CPU or memory minimum. Two variables size it.

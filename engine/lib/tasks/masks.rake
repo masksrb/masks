@@ -4,5 +4,7 @@ namespace :masks do
     Masks::Server::Tenant.declare!.each { |tenant| puts "#{tenant.subdomain}: #{tenant.signing_key.kid}" }
 
     Masks::Server::Tenant.active.reject(&:set_up?).each { |tenant| puts "masks: #{tenant.setup_announcement}" }
+
+    Masks::Server::LockedOut.recover!.each { |recovered| puts "masks: #{recovered}" }
   end
 end

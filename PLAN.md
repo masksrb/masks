@@ -26,9 +26,6 @@ says what a person can do once it lands.
 
 ## Running masks
 
-- **The only manager can get back in.** A task prints a one-time reset link
-  for an account and records an event, and the self-hosting guide says how to
-  run it.
 - **More than one replica shares its secrets.** A replica started without the
   master key refuses to boot in production, and the self-hosting guide covers
   running several.
