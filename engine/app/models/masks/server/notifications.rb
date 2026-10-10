@@ -16,7 +16,9 @@ module Masks
           Event::EMAIL_CODES_ENABLED,
           Event::EMAIL_CODES_DISABLED,
           Event::TEXT_CODES_ENABLED,
-          Event::TEXT_CODES_DISABLED
+          Event::TEXT_CODES_DISABLED,
+          Event::RECOVERY_REQUESTED,
+          Event::SECOND_FACTORS_RESET
         ],
         "sessions" => [
           Event::SESSION_STARTED,

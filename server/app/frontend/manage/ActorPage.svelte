@@ -44,6 +44,7 @@
     query Actor($uuid: ID!) {
       actor(uuid: $uuid) {
         uuid identifier nickname email emailVerified phone phoneVerified signedUpAt pendingApproval
+        recoveryRequestedAt
         suspendedAt externalId
         memberships { externalId organization { key name } }
         scopes otpEnabled emailCodesEnabled textCodesEnabled backupCodesRemaining
@@ -526,6 +527,46 @@
                   )}
               >
                 Approve
+              </button>
+            </div>
+          </Section>
+        {/if}
+
+        {#if actor.recoveryRequestedAt}
+          <Section
+            title="Asking for help"
+            lede={`They got past their first factor ${since(actor.recoveryRequestedAt)} and cannot finish with a second one. Make sure it is really them, by a call or in person, before you reset.`}
+          >
+            <p class="text-sm opacity-85">
+              Resetting removes their authenticator app, backup codes, passkeys, and sign-in codes, and signs
+              them out everywhere. Their next sign-in asks them to set up a new second factor.
+            </p>
+
+            <div class="flex flex-wrap gap-2">
+              <button
+                type="button"
+                class="btn btn-primary btn-sm"
+                onclick={() =>
+                  confirm(`Reset every second factor ${actor.identifier} has?`) &&
+                  act(
+                    `mutation Reset($uuid: ID!) { resetSecondFactors(uuid: $uuid) { actor { uuid } } }`,
+                    { uuid },
+                    "Second factors reset. They have been told, and can set up a new one at their next sign-in.",
+                  )}
+              >
+                Reset second factors
+              </button>
+              <button
+                type="button"
+                class="btn btn-ghost btn-sm"
+                onclick={() =>
+                  act(
+                    `mutation Dismiss($uuid: ID!) { dismissRecovery(uuid: $uuid) { actor { uuid } } }`,
+                    { uuid },
+                    "Dismissed.",
+                  )}
+              >
+                Dismiss
               </button>
             </div>
           </Section>

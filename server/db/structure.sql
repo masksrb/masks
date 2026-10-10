@@ -74,6 +74,7 @@ CREATE TABLE public.actors (
     last_active_at timestamp(6) without time zone,
     idle_warned_at timestamp(6) without time zone,
     suspension_reason character varying,
+    recovery_requested_at timestamp(6) without time zone,
     CONSTRAINT actors_are_named CHECK (((nickname IS NOT NULL) OR (email IS NOT NULL)))
 );
 
@@ -1747,6 +1748,13 @@ CREATE UNIQUE INDEX index_actors_on_tenant_id_and_phone ON public.actors USING b
 
 
 --
+-- Name: index_actors_on_tenant_id_and_recovery_requested_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_actors_on_tenant_id_and_recovery_requested_at ON public.actors USING btree (tenant_id, recovery_requested_at) WHERE (recovery_requested_at IS NOT NULL);
+
+
+--
 -- Name: index_actors_on_uuid; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -3346,6 +3354,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261010130000'),
 ('20261010120000'),
 ('20261004130000'),
 ('20261004120000'),

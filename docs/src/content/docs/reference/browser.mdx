@@ -93,15 +93,15 @@ Defined in: [types.ts:22](https://github.com/masksrb/masks/blob/main/web/src/typ
 
 ### AuthorizeOptions
 
-Defined in: [browser.ts:34](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L34)
+Defined in: [browser.ts:39](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L39)
 
 #### Properties
 
 | Property | Type | Defined in |
 | ------ | ------ | ------ |
-| <a id="organization-1"></a> `organization?` | `string` | [browser.ts:37](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L37) |
-| <a id="prompt"></a> `prompt?` | `string` | [browser.ts:36](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L36) |
-| <a id="returnto"></a> `returnTo?` | `string` | [browser.ts:35](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L35) |
+| <a id="organization-1"></a> `organization?` | `string` | [browser.ts:42](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L42) |
+| <a id="prompt"></a> `prompt?` | `string` | [browser.ts:41](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L41) |
+| <a id="returnto"></a> `returnTo?` | `string` | [browser.ts:40](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L40) |
 
 ***
 
@@ -125,7 +125,7 @@ Defined in: [types.ts:9](https://github.com/masksrb/masks/blob/main/web/src/type
 
 ### BrowserClient
 
-Defined in: [browser.ts:40](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L40)
+Defined in: [browser.ts:45](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L45)
 
 #### Methods
 
@@ -137,7 +137,7 @@ Defined in: [browser.ts:40](https://github.com/masksrb/masks/blob/main/web/src/b
 accessToken(): string | null;
 ```
 
-Defined in: [browser.ts:62](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L62)
+Defined in: [browser.ts:68](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L68)
 
 ###### Returns
 
@@ -151,7 +151,7 @@ Defined in: [browser.ts:62](https://github.com/masksrb/masks/blob/main/web/src/b
 authorization(): string | null;
 ```
 
-Defined in: [browser.ts:64](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L64)
+Defined in: [browser.ts:70](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L70)
 
 ###### Returns
 
@@ -165,7 +165,7 @@ Defined in: [browser.ts:64](https://github.com/masksrb/masks/blob/main/web/src/b
 authorize(options?): Promise<void>;
 ```
 
-Defined in: [browser.ts:42](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L42)
+Defined in: [browser.ts:47](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L47)
 
 ###### Parameters
 
@@ -185,7 +185,7 @@ Defined in: [browser.ts:42](https://github.com/masksrb/masks/blob/main/web/src/b
 authorizeUrl(options?): Promise<string>;
 ```
 
-Defined in: [browser.ts:43](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L43)
+Defined in: [browser.ts:48](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L48)
 
 ###### Parameters
 
@@ -205,7 +205,7 @@ Defined in: [browser.ts:43](https://github.com/masksrb/masks/blob/main/web/src/b
 avatars(): Avatars | null;
 ```
 
-Defined in: [browser.ts:55](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L55)
+Defined in: [browser.ts:60](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L60)
 
 ###### Returns
 
@@ -219,7 +219,7 @@ Defined in: [browser.ts:55](https://github.com/masksrb/masks/blob/main/web/src/b
 avatarUrl(subject, options?): Promise<string>;
 ```
 
-Defined in: [browser.ts:56](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L56)
+Defined in: [browser.ts:61](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L61)
 
 ###### Parameters
 
@@ -246,7 +246,7 @@ callback(url?): Promise<{
 }>;
 ```
 
-Defined in: [browser.ts:45](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L45)
+Defined in: [browser.ts:50](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L50)
 
 ###### Parameters
 
@@ -270,7 +270,7 @@ Defined in: [browser.ts:45](https://github.com/masksrb/masks/blob/main/web/src/b
 discover(): Promise<Discovery>;
 ```
 
-Defined in: [browser.ts:41](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L41)
+Defined in: [browser.ts:46](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L46)
 
 ###### Returns
 
@@ -284,7 +284,7 @@ Defined in: [browser.ts:41](https://github.com/masksrb/masks/blob/main/web/src/b
 expired(leeway?): boolean;
 ```
 
-Defined in: [browser.ts:65](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L65)
+Defined in: [browser.ts:71](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L71)
 
 ###### Parameters
 
@@ -296,6 +296,26 @@ Defined in: [browser.ts:65](https://github.com/masksrb/masks/blob/main/web/src/b
 
 `boolean`
 
+<a id="freshaccesstoken"></a>
+
+##### freshAccessToken()
+
+```ts
+freshAccessToken(leeway?): Promise<string | null>;
+```
+
+Defined in: [browser.ts:67](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L67)
+
+###### Parameters
+
+| Parameter | Type |
+| ------ | ------ |
+| `leeway?` | `number` |
+
+###### Returns
+
+`Promise`\<`string` \| `null`\>
+
 <a id="identity"></a>
 
 ##### identity()
@@ -304,7 +324,7 @@ Defined in: [browser.ts:65](https://github.com/masksrb/masks/blob/main/web/src/b
 identity(): Claims | null;
 ```
 
-Defined in: [browser.ts:48](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L48)
+Defined in: [browser.ts:53](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L53)
 
 ###### Returns
 
@@ -315,14 +335,20 @@ Defined in: [browser.ts:48](https://github.com/masksrb/masks/blob/main/web/src/b
 ##### logout()
 
 ```ts
-logout(): void;
+logout(options?): Promise<void>;
 ```
 
-Defined in: [browser.ts:66](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L66)
+Defined in: [browser.ts:72](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L72)
+
+###### Parameters
+
+| Parameter | Type |
+| ------ | ------ |
+| `options?` | [`LogoutOptions`](#logoutoptions) |
 
 ###### Returns
 
-`void`
+`Promise`\<`void`\>
 
 <a id="organization-2"></a>
 
@@ -332,7 +358,7 @@ Defined in: [browser.ts:66](https://github.com/masksrb/masks/blob/main/web/src/b
 organization(): Organization | null;
 ```
 
-Defined in: [browser.ts:49](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L49)
+Defined in: [browser.ts:54](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L54)
 
 ###### Returns
 
@@ -346,7 +372,7 @@ Defined in: [browser.ts:49](https://github.com/masksrb/masks/blob/main/web/src/b
 organizations(): Organization[];
 ```
 
-Defined in: [browser.ts:50](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L50)
+Defined in: [browser.ts:55](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L55)
 
 ###### Returns
 
@@ -360,7 +386,7 @@ Defined in: [browser.ts:50](https://github.com/masksrb/masks/blob/main/web/src/b
 pending(): boolean;
 ```
 
-Defined in: [browser.ts:44](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L44)
+Defined in: [browser.ts:49](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L49)
 
 ###### Returns
 
@@ -374,7 +400,7 @@ Defined in: [browser.ts:44](https://github.com/masksrb/masks/blob/main/web/src/b
 photo(subject?): Promise<Blob | null>;
 ```
 
-Defined in: [browser.ts:60](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L60)
+Defined in: [browser.ts:65](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L65)
 
 ###### Parameters
 
@@ -394,7 +420,7 @@ Defined in: [browser.ts:60](https://github.com/masksrb/masks/blob/main/web/src/b
 refresh(): Promise<Tokens>;
 ```
 
-Defined in: [browser.ts:61](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L61)
+Defined in: [browser.ts:66](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L66)
 
 ###### Returns
 
@@ -408,7 +434,7 @@ Defined in: [browser.ts:61](https://github.com/masksrb/masks/blob/main/web/src/b
 switchOrganization(key, options?): Promise<void>;
 ```
 
-Defined in: [browser.ts:51](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L51)
+Defined in: [browser.ts:56](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L56)
 
 ###### Parameters
 
@@ -429,7 +455,7 @@ Defined in: [browser.ts:51](https://github.com/masksrb/masks/blob/main/web/src/b
 tokens(): Tokens | null;
 ```
 
-Defined in: [browser.ts:63](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L63)
+Defined in: [browser.ts:69](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L69)
 
 ###### Returns
 
@@ -539,6 +565,21 @@ Defined in: [session.ts:16](https://github.com/masksrb/masks/blob/main/web/src/s
 | ------ | ------ | ------ |
 | <a id="organization-4"></a> `organization?` | `string` | [session.ts:18](https://github.com/masksrb/masks/blob/main/web/src/session.ts#L18) |
 | <a id="returnto-1"></a> `returnTo?` | `string` | [session.ts:17](https://github.com/masksrb/masks/blob/main/web/src/session.ts#L17) |
+
+***
+
+<a id="logoutoptions"></a>
+
+### LogoutOptions
+
+Defined in: [browser.ts:34](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L34)
+
+#### Properties
+
+| Property | Type | Defined in |
+| ------ | ------ | ------ |
+| <a id="everywhere"></a> `everywhere?` | `boolean` | [browser.ts:35](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L35) |
+| <a id="postlogoutredirecturi"></a> `postLogoutRedirectUri?` | `string` | [browser.ts:36](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L36) |
 
 ***
 
@@ -903,7 +944,7 @@ Defined in: [types.ts:46](https://github.com/masksrb/masks/blob/main/web/src/typ
 function createBrowserClient(options): BrowserClient;
 ```
 
-Defined in: [browser.ts:75](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L75)
+Defined in: [browser.ts:81](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L81)
 
 #### Parameters
 

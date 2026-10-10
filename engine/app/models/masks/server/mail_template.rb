@@ -11,6 +11,7 @@ module Masks
         "email_verification" => %w[tenant name nickname],
         "confirmation_code" => %w[tenant code],
         "approval_requested" => %w[tenant nickname],
+        "recovery_requested" => %w[tenant nickname],
         "approved" => %w[tenant name nickname],
         SIGNATURE => %w[tenant]
       }.freeze

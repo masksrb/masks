@@ -45,6 +45,9 @@ module Masks
       EMAIL_CODES_DISABLED = "email_codes.disabled".freeze
       TEXT_CODES_ENABLED = "text_codes.enabled".freeze
       TEXT_CODES_DISABLED = "text_codes.disabled".freeze
+      RECOVERY_REQUESTED = "recovery.requested".freeze
+      RECOVERY_DISMISSED = "recovery.dismissed".freeze
+      SECOND_FACTORS_RESET = "second_factors.reset".freeze
 
       DEVICE_CODE_ISSUED = "device_code.issued".freeze
       DEVICE_CODE_APPROVED = "device_code.approved".freeze

@@ -115,6 +115,20 @@ module Masks
         )
       end
 
+      def recovery_requested(manager, actor, journey:)
+        return message unless deliverable?
+
+        journey!(journey)
+        @actor = actor
+        @url = journey.origin.presence && "#{journey.origin}/manage/actors/#{actor.uuid}"
+
+        mail(
+          from: self.class.from,
+          to: manager.email,
+          subject: customize!(:recovery_requested, nickname: actor.identifier, default: t("actor_mailer.recovery_requested.subject", nickname: actor.identifier, tenant: @tenant_name))
+        )
+      end
+
       def idle(actor, due:, notice:, journey:)
         return message unless deliverable?
 

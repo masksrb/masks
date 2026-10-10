@@ -41,6 +41,8 @@ module Masks
                 ActorMailer.password_reset(person, "#{origin}/reset/preview", journey: signing_in) ],
               [ "approval_requested", "Approval requested", signing_in,
                 ActorMailer.approval_requested(manager, person, journey: signing_in) ],
+              [ "recovery_requested", "Help signing in requested", signing_in,
+                ActorMailer.recovery_requested(manager, person, journey: signing_in) ],
               [ "invitation", "Invitation", managing,
                 ActorMailer.invitation(person, "#{origin}/invite/preview", journey: managing) ],
               [ "invitation_organization", "Invitation to an organization", managing,

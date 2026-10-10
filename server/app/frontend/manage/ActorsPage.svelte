@@ -28,6 +28,7 @@
     ["everyone", "Everyone", {}],
     ["invited", "Invited", { activated: false }],
     ["waiting", "Awaiting approval", { pendingApproval: true }],
+    ["help", "Asking for help", { recoveryRequested: true }],
     ["managers", "Managers", { holds: "masks:manage" }],
     ["suspended", "Suspended", { suspended: true }],
   ];
@@ -35,11 +36,11 @@
   const QUERY = `
     query Actors(
       $search: String, $activated: Boolean, $holds: String, $pendingApproval: Boolean,
-      $suspended: Boolean, $afterId: ID, $limit: Int
+      $recoveryRequested: Boolean, $suspended: Boolean, $afterId: ID, $limit: Int
     ) {
       actors(
         search: $search, activated: $activated, holds: $holds, pendingApproval: $pendingApproval,
-        suspended: $suspended, afterId: $afterId, limit: $limit
+        recoveryRequested: $recoveryRequested, suspended: $suspended, afterId: $afterId, limit: $limit
       ) {
         uuid identifier nickname name email emailVerified otpEnabled backupCodesRemaining
         lastLoginAt scopes activated invitedAt
@@ -48,7 +49,7 @@
       }
       actorCount(
         search: $search, activated: $activated, holds: $holds, pendingApproval: $pendingApproval,
-        suspended: $suspended
+        recoveryRequested: $recoveryRequested, suspended: $suspended
       )
     }
   `;
@@ -99,6 +100,7 @@
         activated: narrowing.activated ?? null,
         holds: narrowing.holds ?? null,
         pendingApproval: narrowing.pendingApproval ?? null,
+        recoveryRequested: narrowing.recoveryRequested ?? null,
         suspended: narrowing.suspended ?? null,
         afterId: pages.cursor,
         limit: pages.size,
@@ -292,6 +294,8 @@
         ? `No actor matches "${search.trim()}".`
         : lens === "waiting"
           ? "Nobody is awaiting approval."
+          : lens === "help"
+            ? "Nobody has asked for help signing in."
           : lens === "invited"
           ? "Nobody is waiting on an invitation."
           : lens === "managers"

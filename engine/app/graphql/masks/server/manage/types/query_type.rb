@@ -13,6 +13,7 @@ module Masks
             argument :activated, Boolean, required: false
             argument :holds, String, required: false
             argument :pending_approval, Boolean, required: false
+            argument :recovery_requested, Boolean, required: false
             argument :suspended, Boolean, required: false
             argument :after_id, ID, required: false
             argument :limit, Integer, required: false
@@ -23,6 +24,7 @@ module Masks
             argument :activated, Boolean, required: false
             argument :holds, String, required: false
             argument :pending_approval, Boolean, required: false
+            argument :recovery_requested, Boolean, required: false
             argument :suspended, Boolean, required: false
           end
 
@@ -415,7 +417,8 @@ module Masks
 
           private
 
-            def actor_scope(search: nil, activated: nil, holds: nil, pending_approval: nil, suspended: nil)
+            def actor_scope(search: nil, activated: nil, holds: nil, pending_approval: nil, recovery_requested: nil,
+                            suspended: nil)
               scope = Actor.all
 
               if search.present?
@@ -427,6 +430,9 @@ module Masks
               scope = holding(scope, holds) if holds.present?
               scope = pending_approval ? scope.where.not(pending_approval_at: nil) : scope.where(pending_approval_at: nil) unless pending_approval.nil?
               scope = suspended ? scope.where.not(suspended_at: nil) : scope.where(suspended_at: nil) unless suspended.nil?
+              unless recovery_requested.nil?
+                scope = recovery_requested ? scope.where.not(recovery_requested_at: nil) : scope.where(recovery_requested_at: nil)
+              end
 
               scope
             end

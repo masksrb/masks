@@ -6,6 +6,10 @@ module Masks
           actor.present? && (actor.second_factor? || codes.enabled?)
         end
 
+        handles "recovery:request", limit: :sending do
+          request_recovery
+        end
+
         prompts "second-factor" do
           login.first_factored? && !login.second_factored?
         end
@@ -24,6 +28,7 @@ module Masks
               "trustedDevice" => login.state("trusted-device").offered?
             },
             "rememberable" => device.present?,
+            "recovery" => { "requested" => actor.recovery_requested_at.present? },
             "trustFor" => ActionController::Base.helpers.distance_of_time_in_words(DeviceFactor::LIFETIME)
           }
         end
@@ -33,6 +38,13 @@ module Masks
         end
 
         private
+
+          def request_recovery
+            return warn!("missing-first-factor") unless login.first_factored? && !login.second_factored?
+
+            HelpRequests.request!(actor, journey: Masks::Server::Journey.sign_in(login))
+            false
+          end
 
           def codes
             login.state("code-factor")

@@ -12,6 +12,8 @@ module Masks
           field :phone_verified, Boolean, null: false
           field :signed_up_at, GraphQL::Types::ISO8601DateTime
           field :pending_approval, Boolean, null: false
+          field :recovery_requested_at, GraphQL::Types::ISO8601DateTime,
+                description: "When this actor, past their first factor, asked a manager to reset their second factors."
           field :suspended_at, GraphQL::Types::ISO8601DateTime
           field :external_id, String, description: "The id a tenant-wide directory knows this actor by. " \
                                                    "An organization's directory keeps its own on the membership."

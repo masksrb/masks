@@ -178,6 +178,14 @@ the last 15 minutes. Adding the first authenticator app also makes backup codes 
 none. New backup codes replace the old set, and removing the authenticator app drops the backup
 codes unless a passkey remains.
 
+A person who gets past their first factor and cannot use any second factor chooses **I cannot use
+any of these** to ask a manager for help. masks records `recovery.requested`, mails every manager
+and support manager with a confirmed address, and mails the person, so someone who stole only a
+password is noticed. Asking again within a day mails nobody. The request appears under **Asking for
+help** in `/manage`, where a manager either dismisses it or resets the person's second factors.
+Resetting removes the authenticator app, backup codes, passkeys, and sign-in codes, and signs the
+person out everywhere. Their next sign-in asks for a new second factor when the policy requires one.
+
 After a second factor from an authenticator app, a passkey, or a sent code, the person can ask masks
 to trust the device. The second factor is then skipped on that device for 30 days, or until the
 device is signed out.

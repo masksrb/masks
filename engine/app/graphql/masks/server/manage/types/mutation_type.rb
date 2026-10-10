@@ -18,6 +18,8 @@ module Masks
           field :revoke_provisioning_token, mutation: Mutations::RevokeProvisioningToken
           field :generate_backup_codes, mutation: Mutations::GenerateBackupCodes
           field :disable_authenticator, mutation: Mutations::DisableAuthenticator
+          field :reset_second_factors, mutation: Mutations::ResetSecondFactors
+          field :dismiss_recovery, mutation: Mutations::DismissRecovery
           field :disable_code_factor, mutation: Mutations::DisableCodeFactor
           field :revoke_passkey, mutation: Mutations::RevokePasskey
           field :upload_avatar, mutation: Mutations::UploadAvatar

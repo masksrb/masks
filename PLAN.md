@@ -25,7 +25,7 @@ says what a person can do once it lands.
   authenticated.
 - **Decide what support may do to an account.** Support can change a person's
   email, receive the reset link when masks cannot mail them, and generate
-  their backup codes.
+  their backup codes. The old address is now mailed when the email changes.
 - **The engine protects its own forms.** Account actions rely on the host
   app's `protect_from_forgery` default.
 

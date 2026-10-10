@@ -29,6 +29,7 @@ const stuck = $derived(
     !methods.trustedDevice &&
     !sendable,
 );
+const recovery = $derived(login.auth.recovery ?? {});
 const why = $derived.by(() => {
   if (login.auth.codesWithheld?.includes("email")) return "stuck_inbox";
   if (!methods.passkey) return "stuck_nothing";
@@ -80,6 +81,19 @@ $effect(() => {
 });
 </script>
 
+{#snippet help()}
+  {#if recovery.requested}
+    <p class="aside" role="status">{login.t("recovery_requested")}</p>
+  {:else}
+    <Action
+      {login}
+      plain
+      label={login.t(stuck ? "recovery_ask" : "recovery_request")}
+      onclick={() => login.submit("recovery:request", {})}
+    />
+  {/if}
+{/snippet}
+
 {#snippet trust()}
   {#if login.rememberable}
     <label class="check">
@@ -93,6 +107,8 @@ $effect(() => {
   <Head {login} tone="bad" title={login.t("halted")} lede={login.t(why)} />
 
   <Identified {login} />
+
+  {@render help()}
 
   <Action
     {login}
@@ -201,4 +217,6 @@ $effect(() => {
       onclick={() => login.submit("use-backup-code", {})}
     />
   {/if}
+
+  {@render help()}
 {/if}

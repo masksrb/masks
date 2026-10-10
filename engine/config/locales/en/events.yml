@@ -39,6 +39,11 @@ en:
         generated: "Backup codes generated"
       backup_code:
         spent: "Backup code used"
+      recovery:
+        requested: "Asked for help signing in"
+        dismissed: "Request for help dismissed"
+      second_factors:
+        reset: "Second factors reset"
       authenticator:
         enabled: "Authenticator app added"
         disabled: "Authenticator app removed"
