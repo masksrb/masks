@@ -1264,7 +1264,8 @@ CREATE TABLE public.tokens (
     user_code_digest character varying,
     jkt character varying,
     organization_id bigint,
-    authorization_details jsonb
+    authorization_details jsonb,
+    root_id bigint
 );
 
 ALTER TABLE ONLY public.tokens FORCE ROW LEVEL SECURITY;
@@ -2488,6 +2489,13 @@ CREATE INDEX index_tokens_on_tenant_id_and_kind_and_expires_at ON public.tokens 
 
 
 --
+-- Name: index_tokens_on_tenant_id_and_root_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_tokens_on_tenant_id_and_root_id ON public.tokens USING btree (tenant_id, root_id);
+
+
+--
 -- Name: index_tokens_on_tenant_id_and_user_code_digest; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2975,6 +2983,14 @@ ALTER TABLE ONLY public.subjects
 
 
 --
+-- Name: tokens fk_rails_f1cbd27024; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tokens
+    ADD CONSTRAINT fk_rails_f1cbd27024 FOREIGN KEY (root_id) REFERENCES public.tokens(id) ON DELETE SET NULL;
+
+
+--
 -- Name: client_logos fk_rails_f515ce1174; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3330,6 +3346,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261010120000'),
 ('20261004130000'),
 ('20261004120000'),
 ('20261003140000'),

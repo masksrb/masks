@@ -32,7 +32,10 @@ module Masks
 
       has_many :children, class_name: "Token", foreign_key: :parent_id, dependent: :nullify
 
+      before_create { self.root_id ||= parent && (parent.root_id || parent.id) }
+
       scope :live, -> { where(consumed_at: nil).where("expires_at > ?", Time.current) }
+      scope :ended_before, ->(cutoff) { where("LEAST(consumed_at, expires_at) < ?", cutoff) }
 
       attr_reader :secret
 
@@ -79,6 +82,10 @@ module Masks
           find_by(digest: Digest::SHA256.hexdigest(secret.to_s))
         end
 
+        def families(roots)
+          where(id: roots).or(where(root_id: roots))
+        end
+
         def claim(secret)
           return nil if secret.blank?
 
@@ -120,32 +127,18 @@ module Masks
       end
 
       def root
-        held = self
-        held = held.parent while held.parent
-
-        held
+        root_id ? Token.find(root_id) : self
       end
 
-      def lineage
-        held = []
-        frontier = [ self ]
-
-        while (token = frontier.shift)
-          held << token
-          frontier.concat(token.children.to_a)
-        end
-
-        held
+      def family
+        Token.families(root_id || id)
       end
 
       def revoke_family!
         transaction do
-          revoked = 0
-
-          root.lineage.each do |token|
-            revoked += 1 if token.live?
-            token.update!(consumed_at: Time.current) unless token.consumed?
-          end
+          revoked = family.live.count
+          now = Time.current
+          family.where(consumed_at: nil).update_all(consumed_at: now, updated_at: now)
 
           revoked
         end

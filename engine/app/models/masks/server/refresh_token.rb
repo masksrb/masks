@@ -11,7 +11,7 @@ module Masks
 
       def revoke!
         transaction do
-          super + root.lineage.select { |token| token.is_a?(AccessToken) }.sum(&:revoke!)
+          super + family.where(kind: AccessToken.sti_name).live.update_all(consumed_at: Time.current, updated_at: Time.current)
         end
       end
     end
