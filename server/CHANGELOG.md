@@ -1,5 +1,43 @@
 # Changelog
 
+## [0.5.0](https://github.com/masksrb/masks/compare/server-v0.4.0...server-v0.5.0) (2026-10-11)
+
+
+### Features
+
+* **engine:** a manager invites many people at once by pasting their addresses, and can put them all in groups ([2176a33](https://github.com/masksrb/masks/commit/2176a3332c0f8b2b3ccce650a9efe7ecc554859f))
+* **engine:** an owner can have signing keys rotate on a schedule, each new key published a day before it signs ([82ab614](https://github.com/masksrb/masks/commit/82ab6146722dabacc25f2bb30d5924d986a683a1))
+* **engine:** an owner issues and revokes LDAP credentials and allows password-only binds from the console ([fb57bbd](https://github.com/masksrb/masks/commit/fb57bbdf07d262305a6762681f8fee925d2de443))
+* **engine:** masks speaks French, Spanish, and German, chosen by the browser or by an app's ui_locales ([0109880](https://github.com/masksrb/masks/commit/0109880d65ce0273085320af7d04f02255471421))
+* **engine:** older apps check passwords and read groups over a read-only LDAP directory that bin/ldap serves ([4ed1963](https://github.com/masksrb/masks/commit/4ed1963672ea66ec1d4b8a4232910b964d90a49c))
+* **engine:** open signup asks the browser for a proof of work, so accounts cannot be made in bulk without paying for each one ([f881b86](https://github.com/masksrb/masks/commit/f881b8636e8ba10df8daff2a47a3e58c972c0f34))
+* **engine:** SAML applications take part in single logout, both when they sign a person out and when the person signs out of masks ([b1ae96a](https://github.com/masksrb/masks/commit/b1ae96a4e8fe27f3b50ef0549ff2778f409e9238))
+* **engine:** someone signing up chooses a passkey instead of a password, and the account needs nothing more ([f881b86](https://github.com/masksrb/masks/commit/f881b8636e8ba10df8daff2a47a3e58c972c0f34))
+* **engine:** the web server serves LDAP, and an owner turns the directory on for their tenant in the console ([4a08277](https://github.com/masksrb/masks/commit/4a0827787f5dc594305b43a74b4c91ac03429de1))
+* **server:** /metrics reports each tenant's accounts, sessions, and recent sign-ins to Prometheus, and invitations and group joins share one path ([f99ba58](https://github.com/masksrb/masks/commit/f99ba581e29734a22fe4f4f8d085e89499181c6d))
+* **server:** a manager sets a SAML application's single logout URL in the console, or has it read from the application's metadata ([0fbc25b](https://github.com/masksrb/masks/commit/0fbc25b868d7f9417b0af3632f792249a679a248))
+* **server:** every word the manage console shows comes from locale files, so the console can be translated ([de2446f](https://github.com/masksrb/masks/commit/de2446fa8e106819fe9660ad46914495913aafef))
+* **server:** General holds groups and domains, and the console says templates, SMS, primary identifier, and auto-deletion ([315feba](https://github.com/masksrb/masks/commit/315febacff21195b0e270960cba7e276b86eb9c0))
+* **server:** one Messages tab holds both the services that send mail and texts and what each email says ([8e85928](https://github.com/masksrb/masks/commit/8e85928aa4c5e7a6a7045d5b57d47465ac0ebb27))
+* **server:** settings fit in six tabs, sign-in rules sit with the policies, and Provisioning and LDAP share a Directory page ([e38037f](https://github.com/masksrb/masks/commit/e38037f42150e2a725c33e64327ec62fbc1a0e71))
+* **server:** the console shows how many people wait on a manager, and each page names itself and takes focus ([4b38e4d](https://github.com/masksrb/masks/commit/4b38e4d3a35f28de278c7a7e0234fc13065ed0b0))
+
+
+### Fixes
+
+* **server:** the console builds against source-map-js 1.2.2 ([8fd6b4c](https://github.com/masksrb/masks/commit/8fd6b4c67a5f08d69d9871cd457007eccc15efea))
+* **server:** the tenant's logo shows in the console after it is uploaded ([c9a8868](https://github.com/masksrb/masks/commit/c9a88683900c61e2ea60a0ae6546ca97a12412e6))
+
+
+### Performance
+
+* **engine:** boot re-encrypts only the tenants not yet under their own key ([0176687](https://github.com/masksrb/masks/commit/01766875db87132955d1ab4b392c94eb73ea93e4))
+
+
+### Refactoring
+
+* **engine:** the services that send mail and texts are senders throughout, in the API, the events, and the database ([2f79202](https://github.com/masksrb/masks/commit/2f79202bbd0931df084e4dadc7c89d7a7e723cad))
+
 ## [0.4.0](https://github.com/masksrb/masks/compare/server-v0.3.0...server-v0.4.0) (2026-10-11)
 
 
