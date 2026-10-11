@@ -26,7 +26,7 @@
   const QUERY = `
     query Tenant {
       tenant {
-        uuid subdomain name namedBy dynamicRegistration dynamicClientScopes createdAt mails
+        uuid subdomain name namedBy dynamicRegistration dynamicClientScopes createdAt mails accentColor logoUrl
         browsersOnly blockedAgents suspendAfter deleteAfter eventRetentionDays riskyNetworks
         signInPolicy { key name }
         signingKeys { kid algorithm activatedAt retiredAt state }
@@ -212,7 +212,7 @@
           `mutation Update(
             $name: String, $dynamicClientScopes: [String!], $dynamicRegistration: String,
             $namedBy: String, $browsersOnly: Boolean, $blockedAgents: String, $signInPolicy: ID, $riskyNetworks: String,
-            $suspendAfter: Int, $deleteAfter: Int, $eventRetentionDays: Int
+            $suspendAfter: Int, $deleteAfter: Int, $eventRetentionDays: Int, $accentColor: String
           ) {
             updateTenant(
               name: $name
@@ -226,6 +226,7 @@
               suspendAfter: $suspendAfter
               deleteAfter: $deleteAfter
               eventRetentionDays: $eventRetentionDays
+              accentColor: $accentColor
             ) { tenant { name } }
           }`,
           changes,
@@ -234,6 +235,21 @@
     );
 
     if (done) await load();
+  }
+
+  async function chooseLogo(event) {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+
+    if (!file) return;
+
+    await keys(
+      `mutation Logo($logo: Upload!) { uploadTenantLogo(logo: $logo) { tenant { logoUrl } } }`,
+      { logo: file },
+      "Logo updated.",
+    );
+
+    input.value = "";
   }
 
   async function keys(query, variables, notice) {
@@ -419,6 +435,50 @@
             { term: "Serving since", value: day(data.tenant.createdAt) },
           ]}
         />
+      </Section>
+
+      <Section
+        row
+        title="Branding"
+        help="The logo replaces the initial at the top of sign-in and account pages. The color tints their buttons and headings. A theme stylesheet still overrides both."
+      >
+        <div class="flex flex-wrap items-center gap-3">
+          {#if data.tenant.logoUrl}
+            <img src={`${boot.issuer}${data.tenant.logoUrl}`} alt="" width="48" height="48" class="rounded-lg" />
+          {/if}
+
+          <label class="btn btn-sm">
+            {data.tenant.logoUrl ? "Change logo" : "Upload a logo"}
+            <input type="file" class="hidden" accept="image/png,image/jpeg,image/webp,image/gif" onchange={chooseLogo} />
+          </label>
+
+          {#if data.tenant.logoUrl}
+            <button
+              type="button"
+              class="btn btn-ghost btn-sm"
+              onclick={() => keys(`mutation { removeTenantLogo { tenant { logoUrl } } }`, {}, "Logo removed.")}
+            >
+              Remove
+            </button>
+          {/if}
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3">
+          <label class="flex items-center gap-2 text-sm">
+            <input
+              type="color"
+              value={data.tenant.accentColor ?? "#b3380f"}
+              onchange={(event) => update({ accentColor: event.currentTarget.value }, "Color updated.")}
+            />
+            Accent color
+          </label>
+
+          {#if data.tenant.accentColor}
+            <button type="button" class="btn btn-ghost btn-sm" onclick={() => update({ accentColor: "" }, "Color reset.")}>
+              Use masks' own
+            </button>
+          {/if}
+        </div>
       </Section>
 
       <Section

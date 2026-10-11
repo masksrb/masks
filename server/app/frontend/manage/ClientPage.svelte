@@ -31,6 +31,7 @@
         backchannelLogoutUri backchannelLogoutSessionRequired
         requirePushedAuthorizationRequests requireSignedRequestObject consentRequired jwks jwksUri
         authorizationDetailsTypes authorizationDetailsSchemas consentLifetime
+        accessTokenLifetime refreshTokenLifetime
         protocol samlEntityId samlCertificate samlNameIdFormat samlRequestsSigned samlIdpInitiated samlAttributes
         signInPolicy { ${POLICY_FIELDS} }
         events(limit: 25) {
@@ -73,6 +74,8 @@
   let jwks = $state("");
   let declared = $state("");
   let lasts = $state("");
+  let accessMinutes = $state("");
+  let refreshDays = $state("");
   let method = $state("");
   let sector = $state("");
   let metadataUrl = $state("");
@@ -161,6 +164,8 @@
       jwksUri = data.client?.jwksUri ?? "";
       jwks = data.client?.jwks ? JSON.stringify(data.client.jwks, null, 2) : "";
       lasts = data.client?.consentLifetime ? String(Math.round(data.client.consentLifetime / 86400)) : "";
+      accessMinutes = data.client?.accessTokenLifetime ? String(Math.round(data.client.accessTokenLifetime / 60)) : "";
+      refreshDays = data.client?.refreshTokenLifetime ? String(Math.round(data.client.refreshTokenLifetime / 86400)) : "";
       declared = Object.keys(data.client?.authorizationDetailsSchemas ?? {}).length
         ? JSON.stringify(data.client.authorizationDetailsSchemas, null, 2)
         : "";
@@ -202,7 +207,8 @@
         $subjectType: String, $sectorIdentifierUri: String, $dpopBoundAccessTokens: Boolean,
         $backchannelLogoutSessionRequired: Boolean, $clientUri: String, $logoUri: String,
         $tosUri: String, $policyUri: String, $authorizationDetailsTypes: [String!],
-        $authorizationDetailsSchemas: JSON, $consentLifetime: Int, $allowedGroups: [String!]
+        $authorizationDetailsSchemas: JSON, $consentLifetime: Int, $allowedGroups: [String!],
+        $accessTokenLifetime: Int, $refreshTokenLifetime: Int
       ) {
         updateClient(
           clientId: $clientId, name: $name, requiredScopes: $requiredScopes,
@@ -234,6 +240,8 @@
           authorizationDetailsTypes: $authorizationDetailsTypes,
           authorizationDetailsSchemas: $authorizationDetailsSchemas,
           consentLifetime: $consentLifetime
+          accessTokenLifetime: $accessTokenLifetime
+          refreshTokenLifetime: $refreshTokenLifetime
           allowedGroups: $allowedGroups
         ) {
           client { clientId }
@@ -681,6 +689,32 @@
                 )}
             />
           {/if}
+
+          <Field
+            label="Access tokens last (minutes, blank for an hour)"
+            type="number"
+            min="1"
+            max="1440"
+            bind:value={accessMinutes}
+            onsave={() =>
+              update(
+                { accessTokenLifetime: accessMinutes ? Number(accessMinutes) * 60 : 0 },
+                accessMinutes ? `Access tokens last ${accessMinutes} minutes.` : "Access tokens last an hour.",
+              )}
+          />
+
+          <Field
+            label="Refresh tokens last unused (days, blank for 30)"
+            type="number"
+            min="1"
+            max="400"
+            bind:value={refreshDays}
+            onsave={() =>
+              update(
+                { refreshTokenLifetime: refreshDays ? Number(refreshDays) * 86400 : 0 },
+                refreshDays ? `Refresh tokens last ${refreshDays} days unused.` : "Refresh tokens last 30 days unused.",
+              )}
+          />
 
           <Field
             label="Consent lasts (days, blank until revoked)"

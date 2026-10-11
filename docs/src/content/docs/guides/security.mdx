@@ -72,6 +72,10 @@ A role below `masks:manage`:
 
 - Cannot change another manager, or a session, token, consent, connection, or device that belongs
   to one. Support cannot change an owner's email and then reset their password.
+- Cannot take over anyone's account. Changing a person's email address, generating their backup
+  codes, and receiving a password reset link when masks cannot mail the person each need both
+  `masks:manage:support` and `masks:manage:security`, or `masks:manage`. Support still sends a reset
+  to the person's own confirmed address, and resets second factors when the person asks for help.
 - Cannot give a person or a client any manage scope or `masks:scim`, or issue a provisioning token for
   every account. Either would reach managers through SCIM.
 - Cannot change a client that can carry a manage scope, so it cannot point the manage console at

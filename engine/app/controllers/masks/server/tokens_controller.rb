@@ -142,7 +142,7 @@ module Masks
             actor: token.actor, client: client, parent: token,
             scopes: Scopes.join(scopes), audience: audience, jkt: held,
             authorization_details: token.authorization_details,
-            expires_at: RefreshToken.lifetime.from_now
+            expires_at: client.refresh_lifetime.from_now
           )
 
           res.access_token = Payload.new(bearer(access).merge(
@@ -302,7 +302,7 @@ module Masks
               actor: grant.actor, client: client, parent: grant,
               scopes: access.scopes, audience: access.audience, jkt: access.jkt,
               authorization_details: grant.authorization_details,
-              expires_at: RefreshToken.lifetime.from_now
+              expires_at: client.refresh_lifetime.from_now
             ).secret
           end
 

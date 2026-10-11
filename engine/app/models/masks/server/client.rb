@@ -9,6 +9,8 @@ module Masks
       PRIVATE_KEY_JWT = "private_key_jwt".freeze
       SECRET_AUTH_METHODS = %w[client_secret_basic client_secret_post].freeze
       AUTH_METHODS = (SECRET_AUTH_METHODS + [ PRIVATE_KEY_JWT, "none" ]).freeze
+      FORWARD = "forward".freeze
+      FORWARD_CALLBACK = "/masks-auth/callback".freeze
       ALLOWED_GROUP = /\A[a-z0-9][a-z0-9._-]*(:[a-z0-9._-]+)?\z/
       DEFAULT_AUTH_METHOD = "client_secret_basic".freeze
       CLIENT_CREDENTIALS = "client_credentials".freeze
@@ -56,7 +58,7 @@ module Masks
       validates :client_id, presence: true, uniqueness: { scope: :tenant_id }
       validates :name, presence: true
       validates :token_endpoint_auth_method, inclusion: { in: AUTH_METHODS }
-      validates :protocol, inclusion: { in: [ OIDC, SamlIdentity::PROTOCOL ] }
+      validates :protocol, inclusion: { in: [ OIDC, SamlIdentity::PROTOCOL, FORWARD ] }
       validates :saml_entity_id, uniqueness: { scope: :tenant_id }, allow_nil: true
       validates :subject_type, inclusion: { in: Subjects::TYPES }
       validate :redirect_uris_are_usable
@@ -65,6 +67,7 @@ module Masks
       validate :client_credentials_are_confidential
       validate :keys_are_usable
       validate :saml_is_described, if: :saml?
+      validate :forward_is_described, if: :forward?
       validate :backchannel_logout_uri_is_usable
       validate :sector_is_derivable
       validate :consent_is_skipped_only_when_approved
@@ -72,6 +75,8 @@ module Masks
       validate :metadata_uris_are_usable
       validate :authorization_details_are_declared
       validate :resources_are_named_only_when_approved
+      validates :access_token_lifetime, numericality: { only_integer: true, in: 60..1.day.to_i }, allow_nil: true
+      validates :refresh_token_lifetime, numericality: { only_integer: true, in: 5.minutes.to_i..400.days.to_i }, allow_nil: true
       validates :consent_lifetime, numericality: { only_integer: true, greater_than_or_equal_to: 300,
                                                    less_than_or_equal_to: Consent::LONGEST.to_i }, allow_nil: true
 
@@ -190,6 +195,13 @@ module Masks
           return ClientMetadataDocument.resolve(client_id.to_s) if protocol == OIDC && ClientMetadataDocument.url?(client_id)
 
           speaking(protocol).find_by(client_id: client_id.to_s)
+        end
+
+        def forwarding_to(uri)
+          origin = Forwarded.origin(uri)
+          return nil if origin.nil?
+
+          speaking(FORWARD).approved.where("redirect_uris @> ?", [ "#{origin}#{FORWARD_CALLBACK}" ].to_json).first
         end
 
         def saml_for(entity_id)
@@ -313,6 +325,14 @@ module Masks
         protocol == SamlIdentity::PROTOCOL
       end
 
+      def forward?
+        protocol == FORWARD
+      end
+
+      def forward_origin
+        Forwarded.origin(redirect_uris.first) if forward?
+      end
+
       def keys?
         jwks.present? || jwks_uri.present?
       end
@@ -335,6 +355,14 @@ module Masks
 
       def scope_list
         Scopes.union(required_scopes, allowed_scopes)
+      end
+
+      def access_lifetime
+        access_token_lifetime&.seconds || AccessToken.lifetime
+      end
+
+      def refresh_lifetime
+        refresh_token_lifetime&.seconds || RefreshToken.lifetime
       end
 
       def admits?(actor)
@@ -438,6 +466,15 @@ module Masks
         def grant_types_are_known
           unknown = grant_types - GRANT_TYPES
           errors.add(:grant_types, "not supported: #{unknown.join(', ')}") if unknown.any?
+        end
+
+        def forward_is_described
+          errors.add(:grant_types, "are not used by an app behind a proxy") if grant_types.any?
+          errors.add(:token_endpoint_auth_method, "is none for an app behind a proxy") unless public?
+
+          unless redirect_uris.one? && redirect_uris.first.to_s.end_with?(FORWARD_CALLBACK) && forward_origin
+            errors.add(:redirect_uris, "hold the app's own #{FORWARD_CALLBACK}, and nothing else")
+          end
         end
 
         def saml_is_described

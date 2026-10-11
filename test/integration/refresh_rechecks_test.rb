@@ -54,6 +54,24 @@ module Masks
 
         assert refresh(issued["refresh_token"])["access_token"].present?
       end
+
+      test "a client's own lifetimes set how long its tokens last" do
+        within { client.update!(access_token_lifetime: 300, refresh_token_lifetime: 2.days.to_i) }
+
+        issued = access_token_for(actor: @actor, registration: @registration)
+
+        assert_operator issued["expires_in"], :<=, 300
+        assert_operator claims_in(issued["access_token"])["exp"], :<=, 5.minutes.from_now.to_i + 1
+
+        travel 3.days do
+          assert_equal "invalid_grant", refresh(issued["refresh_token"])["error"]
+        end
+      end
+
+      test "a lifetime outside what masks allows is refused" do
+        assert_raises(ActiveRecord::RecordInvalid) { within { client.update!(access_token_lifetime: 10) } }
+        assert_raises(ActiveRecord::RecordInvalid) { within { client.update!(refresh_token_lifetime: 500.days.to_i) } }
+      end
     end
   end
 end

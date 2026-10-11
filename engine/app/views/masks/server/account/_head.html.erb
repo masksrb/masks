@@ -1,7 +1,7 @@
 <div class="plaque">
   <div class="plaque-top">
     <% if Masks::Server::Current.tenant&.name.present? %>
-      <span class="auth-mark" aria-hidden="true"><%= Masks::Server::Current.tenant.name.first.upcase %></span>
+      <%= tenant_mark(Masks::Server::Current.tenant) %>
       <span class="auth-tenant"><%= Masks::Server::Current.tenant.name %></span>
     <% end %>
   </div>

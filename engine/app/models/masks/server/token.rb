@@ -18,7 +18,9 @@ module Masks
         "request" => "PendingRequest",
         "login" => "PendingLogin",
         "pushed" => "PushedRequest",
-        "approval" => "SignInApproval"
+        "approval" => "SignInApproval",
+        "forward_code" => "ForwardCode",
+        "forward_session" => "ForwardSession"
       }.freeze
 
       self.inheritance_column = "kind"

@@ -55,6 +55,7 @@ schema disagree.
 | `mailTemplates` | [`[MailTemplate!]!`](#mailtemplate) | One entry for each email the tenant can reword, and the signature. |
 | `tally` | [`Tally!`](#tally) |  |
 | `groups` | [`[Group!]!`](#group) |  |
+| `appPresets` | [`[AppPreset!]!`](#apppreset) |  |
 | `group`<br />`key: String!` | [`Group`](#group) |  |
 | `activity`<br />`days: Int` | [`[ActivityDay!]!`](#activityday) |  |
 | `events`<br />`actor: ID`<br />`client: ID`<br />`device: ID`<br />`action: String`<br />`grave: Boolean`<br />`organization: ID`<br />`afterId: ID`<br />`limit: Int` | [`[Event!]!`](#event) |  |
@@ -93,10 +94,13 @@ schema disagree.
 | `revokePasskey`<br />`uuid: ID!`<br />`id: ID!` | [`RevokePasskeyPayload`](#revokepasskeypayload) |  |
 | `uploadAvatar`<br />`uuid: ID!`<br />`photo: Upload!` | [`UploadAvatarPayload`](#uploadavatarpayload) |  |
 | `removeAvatar`<br />`uuid: ID!` | [`RemoveAvatarPayload`](#removeavatarpayload) |  |
+| `uploadTenantLogo`<br />`logo: Upload!` | [`UploadTenantLogoPayload`](#uploadtenantlogopayload) |  |
+| `removeTenantLogo` | [`RemoveTenantLogoPayload`](#removetenantlogopayload) |  |
 | `createClient`<br />`name: String!`<br />`grantTypes: [String!]`<br />`redirectUris: [String!]`<br />`postLogoutRedirectUris: [String!]`<br />`resources: [String!]`<br />`requiredScopes: [String!]`<br />`allowedScopes: [String!]`<br />`tokenEndpointAuthMethod: String`<br />`dpopBoundAccessTokens: Boolean`<br />`jwks: JSON`<br />`jwksUri: String`<br />`requireSignedRequestObject: Boolean` | [`CreateClientPayload`](#createclientpayload) |  |
+| `addApp`<br />`preset: ID!`<br />`baseUrl: String!`<br />`name: String`<br />`slug: String` | [`AddAppPayload`](#addapppayload) |  |
 | `createSamlApplication`<br />`name: String!`<br />`entityId: String!`<br />`acsUrls: [String!]!`<br />`certificate: String`<br />`nameIdFormat: String`<br />`requestsSigned: Boolean`<br />`idpInitiated: Boolean`<br />`attributes: JSON` | [`CreateSamlApplicationPayload`](#createsamlapplicationpayload) |  |
 | `readSamlApplicationMetadata`<br />`xml: String!` | [`ReadSamlApplicationMetadataPayload`](#readsamlapplicationmetadatapayload) |  |
-| `updateClient`<br />`clientId: ID!`<br />`name: String`<br />`grantTypes: [String!]`<br />`redirectUris: [String!]`<br />`postLogoutRedirectUris: [String!]`<br />`resources: [String!]`<br />`requiredScopes: [String!]`<br />`allowedScopes: [String!]`<br />`subjectType: String`<br />`dpopBoundAccessTokens: Boolean`<br />`sectorIdentifierUri: String`<br />`backchannelLogoutUri: String`<br />`backchannelLogoutSessionRequired: Boolean`<br />`requirePushedAuthorizationRequests: Boolean`<br />`jwks: JSON`<br />`jwksUri: String`<br />`requireSignedRequestObject: Boolean`<br />`tokenEndpointAuthMethod: String`<br />`samlEntityId: String`<br />`samlCertificate: String`<br />`samlNameIdFormat: String`<br />`samlRequestsSigned: Boolean`<br />`samlIdpInitiated: Boolean`<br />`samlAttributes: JSON`<br />`consentRequired: Boolean`<br />`allowedGroups: [String!]`<br />`signInPolicy: ID`<br />`clientUri: String`<br />`logoUri: String`<br />`tosUri: String`<br />`policyUri: String`<br />`consentLifetime: Int`<br />`authorizationDetailsTypes: [String!]`<br />`authorizationDetailsSchemas: JSON` | [`UpdateClientPayload`](#updateclientpayload) |  |
+| `updateClient`<br />`clientId: ID!`<br />`name: String`<br />`grantTypes: [String!]`<br />`redirectUris: [String!]`<br />`postLogoutRedirectUris: [String!]`<br />`resources: [String!]`<br />`requiredScopes: [String!]`<br />`allowedScopes: [String!]`<br />`subjectType: String`<br />`dpopBoundAccessTokens: Boolean`<br />`sectorIdentifierUri: String`<br />`backchannelLogoutUri: String`<br />`backchannelLogoutSessionRequired: Boolean`<br />`requirePushedAuthorizationRequests: Boolean`<br />`jwks: JSON`<br />`jwksUri: String`<br />`requireSignedRequestObject: Boolean`<br />`tokenEndpointAuthMethod: String`<br />`samlEntityId: String`<br />`samlCertificate: String`<br />`samlNameIdFormat: String`<br />`samlRequestsSigned: Boolean`<br />`samlIdpInitiated: Boolean`<br />`samlAttributes: JSON`<br />`consentRequired: Boolean`<br />`accessTokenLifetime: Int`<br />`refreshTokenLifetime: Int`<br />`allowedGroups: [String!]`<br />`signInPolicy: ID`<br />`clientUri: String`<br />`logoUri: String`<br />`tosUri: String`<br />`policyUri: String`<br />`consentLifetime: Int`<br />`authorizationDetailsTypes: [String!]`<br />`authorizationDetailsSchemas: JSON` | [`UpdateClientPayload`](#updateclientpayload) |  |
 | `rotateClientSecret`<br />`clientId: ID!`<br />`expiresIn: Int` | [`RotateClientSecretPayload`](#rotateclientsecretpayload) |  |
 | `archiveClient`<br />`clientId: ID!` | [`ArchiveClientPayload`](#archiveclientpayload) |  |
 | `restoreClient`<br />`clientId: ID!` | [`RestoreClientPayload`](#restoreclientpayload) |  |
@@ -118,7 +122,7 @@ schema disagree.
 | `blockDevices`<br />`ids: [ID!]`<br />`agent: String`<br />`refuse: Boolean` | [`BlockDevicesPayload`](#blockdevicespayload) |  |
 | `unblockDevices`<br />`ids: [ID!]!` | [`UnblockDevicesPayload`](#unblockdevicespayload) |  |
 | `signOutDevice`<br />`id: ID!` | [`SignOutDevicePayload`](#signoutdevicepayload) |  |
-| `updateTenant`<br />`name: String`<br />`dynamicClientScopes: [String!]`<br />`dynamicRegistration: String`<br />`namedBy: String`<br />`browsersOnly: Boolean`<br />`blockedAgents: String`<br />`signInPolicy: ID`<br />`suspendAfter: Int`<br />`deleteAfter: Int`<br />`riskyNetworks: String`<br />`eventRetentionDays: Int` | [`UpdateTenantPayload`](#updatetenantpayload) |  |
+| `updateTenant`<br />`name: String`<br />`dynamicClientScopes: [String!]`<br />`dynamicRegistration: String`<br />`namedBy: String`<br />`browsersOnly: Boolean`<br />`blockedAgents: String`<br />`signInPolicy: ID`<br />`suspendAfter: Int`<br />`deleteAfter: Int`<br />`riskyNetworks: String`<br />`eventRetentionDays: Int`<br />`accentColor: String` | [`UpdateTenantPayload`](#updatetenantpayload) |  |
 | `createSignInPolicy`<br />`name: String`<br />`signup: Boolean`<br />`nickname: String`<br />`email: String`<br />`emailVerified: Boolean`<br />`phone: String`<br />`phoneVerified: Boolean`<br />`passwordMinimum: Int`<br />`refuseCommonPasswords: Boolean`<br />`firstFactors: [String!]`<br />`secondFactors: [String!]`<br />`secondFactorRequired: Boolean`<br />`appsRequireSecondFactor: Boolean`<br />`refuseBreachedPasswords: Boolean`<br />`riskStepUpAt: Int`<br />`riskRefuseAt: Int`<br />`sessionLifetime: Int`<br />`sessionIdleTimeout: Int`<br />`emailDomains: [String!]`<br />`providers: [String!]`<br />`everyProvider: Boolean`<br />`confirmation: String`<br />`hidden: Boolean`<br />`signupScopes: [String!]`<br />`key: ID!` | [`CreateSignInPolicyPayload`](#createsigninpolicypayload) |  |
 | `updateSignInPolicy`<br />`name: String`<br />`signup: Boolean`<br />`nickname: String`<br />`email: String`<br />`emailVerified: Boolean`<br />`phone: String`<br />`phoneVerified: Boolean`<br />`passwordMinimum: Int`<br />`refuseCommonPasswords: Boolean`<br />`firstFactors: [String!]`<br />`secondFactors: [String!]`<br />`secondFactorRequired: Boolean`<br />`appsRequireSecondFactor: Boolean`<br />`refuseBreachedPasswords: Boolean`<br />`riskStepUpAt: Int`<br />`riskRefuseAt: Int`<br />`sessionLifetime: Int`<br />`sessionIdleTimeout: Int`<br />`emailDomains: [String!]`<br />`providers: [String!]`<br />`everyProvider: Boolean`<br />`confirmation: String`<br />`hidden: Boolean`<br />`signupScopes: [String!]`<br />`key: ID!` | [`UpdateSignInPolicyPayload`](#updatesigninpolicypayload) |  |
 | `archiveSignInPolicy`<br />`key: ID!` | [`ArchiveSignInPolicyPayload`](#archivesigninpolicypayload) |  |
@@ -263,6 +267,17 @@ Autogenerated return type of ActivateSigningKey.
 | `label` | `String!` |
 | `fields` | [`[AdapterField!]!`](#adapterfield) |
 
+### AddAppPayload
+
+Autogenerated return type of AddApp.
+
+| Field | Type |
+| --- | --- |
+| `client` | [`Client!`](#client) |
+| `secret` | `String` |
+| `settings` | [`[AppSetting!]!`](#appsetting) |
+| `guide` | `String` |
+
 ### AddGroupMemberPayload
 
 Autogenerated return type of AddGroupMember.
@@ -280,6 +295,27 @@ Autogenerated return type of AddMember.
 | `membership` | [`Membership!`](#membership) |
 | `delivered` | `Boolean!` |
 | `url` | `String` |
+
+### AppPreset
+
+A self-hosted app masks knows how to register.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `key` | `ID!` |  |
+| `name` | `String!` |  |
+| `asks` | `JSON!` | Values the app's redirect URIs need beyond its address, with their usual defaults. |
+| `scopes` | `[String!]!` |  |
+| `guide` | `String` |  |
+
+### AppSetting
+
+One value to enter in the app, under the label the app uses for it.
+
+| Field | Type |
+| --- | --- |
+| `label` | `String!` |
+| `value` | `String!` |
 
 ### ApproveActorPayload
 
@@ -392,6 +428,8 @@ Autogenerated return type of ClaimDomain.
 | `resources` | `[String!]!` |  |
 | `requiredScopes` | `[String!]!` |  |
 | `allowedScopes` | `[String!]!` |  |
+| `accessTokenLifetime` | `Int` | Seconds an access token lasts. Null is an hour. |
+| `refreshTokenLifetime` | `Int` | Seconds a refresh token lasts unused. Each refresh starts it over. Null is 30 days. |
 | `allowedGroups` | `[String!]!` | Group keys, or organization roles as key:role, whose people may sign in. Empty lets everyone in. |
 | `namespaces` | [`[Namespace!]!`](#namespace) |  |
 | `tokenEndpointAuthMethod` | `String!` |  |
@@ -971,6 +1009,14 @@ Autogenerated return type of RemoveMember.
 | --- | --- |
 | `organization` | [`Organization!`](#organization) |
 
+### RemoveTenantLogoPayload
+
+Autogenerated return type of RemoveTenantLogo.
+
+| Field | Type |
+| --- | --- |
+| `tenant` | [`Tenant!`](#tenant) |
+
 ### ResendInvitationPayload
 
 Autogenerated return type of ResendInvitation.
@@ -1292,6 +1338,8 @@ Autogenerated return type of SuspendActor.
 | `browsersOnly` | `Boolean!` |  |
 | `blockedAgents` | `String` |  |
 | `mails` | `Boolean!` |  |
+| `accentColor` | `String` |  |
+| `logoUrl` | `String` | The tenant's logo, 128 pixels square, or null for its initial. |
 | `texts` | `Boolean!` |  |
 | `signInPolicy` | [`SignInPolicy`](#signinpolicy) |  |
 | `dynamicRegistration` | `String!` |  |
@@ -1451,6 +1499,14 @@ Autogenerated return type of UploadAvatar.
 | Field | Type |
 | --- | --- |
 | `actor` | [`Actor!`](#actor) |
+
+### UploadTenantLogoPayload
+
+Autogenerated return type of UploadTenantLogo.
+
+| Field | Type |
+| --- | --- |
+| `tenant` | [`Tenant!`](#tenant) |
 
 ### VerifyEmailPayload
 

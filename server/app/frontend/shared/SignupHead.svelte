@@ -1,4 +1,5 @@
 <script>
+import TenantMark from "./TenantMark.svelte";
 import { initial } from "../lib/initial.js";
 import Head from "./Head.svelte";
 import Steps from "./Steps.svelte";
@@ -17,7 +18,7 @@ const signingUp = $derived(login.auth.signingUp ?? { steps: [] });
   {#if signingUp.firstRun}
     <img src="/masks-public/icon.svg" alt="" class="auth-mark auth-mark-rose" />
   {:else}
-    <span class="auth-mark" aria-hidden="true">{initial(tenant)}</span>
+    <TenantMark tenant={login.auth.tenant} />
   {/if}
 </div>
 

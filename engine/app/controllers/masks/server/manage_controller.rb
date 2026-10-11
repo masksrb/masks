@@ -10,7 +10,8 @@ module Masks
           graphql: manage_graphql_path,
           root: manage_path,
           account: root_path,
-          tenant: current_tenant.to_identity
+          tenant: current_tenant.to_identity,
+          copy: I18n.t("manage", default: {})
         }
       end
     end

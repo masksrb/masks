@@ -7,6 +7,8 @@ namespace :masks do
 
     Masks::Server::Tenant.active.reject(&:set_up?).each { |tenant| puts "masks: #{tenant.setup_announcement}" }
 
+    Masks::Server::Declared.apply!.each { |said| puts "masks: #{said}" }
+
     Masks::Server::LockedOut.recover!.each { |recovered| puts "masks: #{recovered}" }
 
     if ENV["ENCRYPTION_PREVIOUS_PRIMARY_KEY"].present?

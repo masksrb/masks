@@ -419,7 +419,9 @@ module Masks
                                   "identifier" => actor.identifier },
             "person" => person_json,
             "client" => client_json,
-            "tenant" => tenant && { "name" => tenant.name },
+            "tenant" => tenant && {
+              "name" => tenant.name, "logo" => tenant.logo_url
+            }.compact,
             "signingUp" => signing_up,
             "surface" => surface
           }

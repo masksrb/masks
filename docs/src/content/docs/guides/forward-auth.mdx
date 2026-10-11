@@ -1,0 +1,102 @@
+---
+title: Forward authentication
+description: Put masks in front of an app that has no sign-in of its own, with Caddy, Traefik, or nginx.
+---
+
+An app with no sign-in of its own, such as a dashboard or an admin page, can sit behind a reverse
+proxy that asks masks about each request first. The proxy lets a request through only for someone
+signed in to masks who may use the app, and passes their name along in headers.
+
+## Adding the app
+
+Under **Clients → Add client → A known app**, pick **Any app behind Caddy, Traefik, or nginx** and
+enter the app's address, such as `https://dash.example.com`. masks registers it, shows it under
+**Your apps**, and lists the proxy settings below for that address. **Who may sign in** on its page
+limits it to some [groups](/guides/features/#groups), as for any other app.
+
+## What happens
+
+1. The proxy asks masks' `/forward-auth` about each request. With the app's cookie, masks answers
+   200 and these headers, which the proxy hands to the app:
+
+   | Header | |
+   | --- | --- |
+   | `Remote-User` | The person's nickname. |
+   | `Remote-Email` | Their email address, when it is confirmed. |
+   | `Remote-Name` | Their name. |
+   | `Remote-Groups` | The [groups claim](/guides/features/#groups), separated by commas. |
+
+2. Without the cookie, masks sends the browser to sign in on masks' own address, unless the person
+   already has.
+3. masks sends the browser back to `/masks-auth/callback` on the app's address with a code that
+   works once, for that app only, for two minutes. The proxy hands that path to masks, which sets
+   a cookie for the app's host alone and returns the browser to the page it asked for.
+
+The cookie lasts as long as the person's masks session. Signing out of masks, ending the session
+from the account page, or being suspended ends access to every app behind the proxy on the next
+request. Each app's cookie is its own, so one app never sees another's.
+
+## Caddy
+
+```
+dash.example.com {
+  forward_auth https://auth.example.com {
+    uri /forward-auth
+    header_up Host auth.example.com
+    copy_headers Remote-User Remote-Email Remote-Name Remote-Groups
+  }
+  reverse_proxy dash:8080
+}
+```
+
+`header_up Host` is needed, since Caddy otherwise sends the app's host to masks.
+
+## Traefik
+
+```yaml
+http:
+  middlewares:
+    masks:
+      forwardAuth:
+        address: https://auth.example.com/forward-auth
+        authResponseHeaders: [Remote-User, Remote-Email, Remote-Name, Remote-Groups]
+```
+
+Add the `masks` middleware to the app's router.
+
+## nginx
+
+nginx's `auth_request` cannot follow a redirect, so it asks for a 401 and sends the browser to sign
+in itself, and it hands the callback to masks with a location of its own:
+
+```nginx
+location = /masks-check {
+  internal;
+  proxy_pass https://auth.example.com/forward-auth?status=401;
+  proxy_pass_request_body off;
+  proxy_set_header Content-Length "";
+  proxy_set_header X-Original-URL $scheme://$http_host$request_uri;
+  proxy_ssl_server_name on;
+}
+
+location /masks-auth/ {
+  proxy_pass https://auth.example.com/forward-auth/;
+  proxy_set_header X-Forwarded-Host $host;
+  proxy_set_header X-Forwarded-Proto $scheme;
+  proxy_ssl_server_name on;
+}
+
+location / {
+  auth_request /masks-check;
+  auth_request_set $remote_user $upstream_http_remote_user;
+  proxy_set_header Remote-User $remote_user;
+  error_page 401 =302 https://auth.example.com/forward-auth/start?rd=$scheme://$http_host$request_uri;
+  proxy_pass http://dash:8080;
+}
+```
+
+## Headers the app can trust
+
+The app trusts `Remote-User` only because the proxy sets it. Make sure nothing reaches the app except
+through the proxy, and that the proxy drops any `Remote-` header a browser sends before it adds the
+ones masks answered with.

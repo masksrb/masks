@@ -12,6 +12,10 @@ module Masks
           field :resources, [ String ], null: false
           field :required_scopes, [ String ], null: false
           field :allowed_scopes, [ String ], null: false
+          field :access_token_lifetime, Integer,
+                description: "Seconds an access token lasts. Null is an hour."
+          field :refresh_token_lifetime, Integer,
+                description: "Seconds a refresh token lasts unused. Each refresh starts it over. Null is 30 days."
           field :allowed_groups, [ String ], null: false,
                 description: "Group keys, or organization roles as key:role, whose people may sign in. Empty lets everyone in."
           field :namespaces, [ "Masks::Server::Manage::Types::NamespaceType" ], null: false

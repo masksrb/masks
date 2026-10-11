@@ -9,7 +9,7 @@
     <span class="auth-mark auth-mark-client" aria-hidden="true"><%= client["name"].to_s.strip.first&.upcase %></span>
   <% end %>
   <span class="auth-wire"></span>
-  <span class="auth-mark" aria-hidden="true"><%= Masks::Server::Current.tenant&.name.to_s.first&.upcase %></span>
+  <%= tenant_mark(Masks::Server::Current.tenant) %>
 </div>
 
 <%= render "masks/server/logins/head", title: t(".title", client: login.client&.name) %>

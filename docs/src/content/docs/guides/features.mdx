@@ -22,6 +22,27 @@ Only an approved client may hold a `masks:` scope, sign in as itself, receive a
 trusts the tokens issued for it. A self-registered client that names `resources` is refused. A client grants `required_scopes` always and
 `allowed_scopes` when asked. Archiving a client stops it signing anyone in and keeps its record.
 
+An access token lasts an hour, and a refresh token lasts 30 days unused, with each refresh starting
+it over. A client's page sets its own: access tokens from a minute to a day, and refresh tokens from
+5 minutes to 400 days.
+
+### Adding a known app
+
+Under **Clients → Add client → A known app**, a manager picks an app and enters its address. masks
+registers it with the redirect URIs and scopes that app expects, sets its address as the **Client URI**
+so it appears under **Your apps**, and lists each value to enter in the app under the app's own name
+for it, the client secret included.
+
+| App | Needs beyond its address |
+| --- | --- |
+| Grafana, Nextcloud, Immich, Outline, Audiobookshelf, Portainer, Vaultwarden, Mealie, Open WebUI | Nothing |
+| Gitea, Forgejo, Paperless-ngx, Proxmox VE, Jellyfin (SSO plugin) | The name the app gives masks, `masks` unless you change it |
+
+Grafana, Nextcloud, Gitea, Forgejo, Paperless-ngx, Proxmox VE, Jellyfin, Mealie, and Open WebUI read the
+[groups claim](#groups), and the settings map a group called `admins` to each app's administrators
+where the app allows it. Immich and Audiobookshelf read roles from claims of their own, so their
+administrators are chosen in the app.
+
 ### A client named by its metadata document
 
 An app that has never registered can use the URL of a JSON document it publishes as its `client_id`,
@@ -318,6 +339,13 @@ both are set, deleting comes later than suspending.
 - The last manager, accounts provisioned over SCIM, and invitations nobody has accepted are never
   touched.
 - A daily job does the work, and records each warning, suspension, and deletion as an event.
+
+### Your apps
+
+The top of a person's account page shows **Your apps**: every approved client that names a home page
+in **Client URI**, and every SAML application that can start a sign-in itself, that the person may
+sign in to. Each opens the app, or starts the SAML sign-in through masks. A client nobody approved
+never appears, since it chose its own home page.
 
 ### Changing your own details
 

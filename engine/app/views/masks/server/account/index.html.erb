@@ -9,6 +9,10 @@
 <div id="account" class="place">
   <%= render "masks/server/account/head", actor: @actor %>
 
+  <% if @launchable.any? %>
+    <%= render "masks/server/account/launcher", clients: @launchable %>
+  <% end %>
+
   <%= render "masks/server/account/signing_in", actor: @actor, passkeys: @passkeys,
                                                 code_factors: @code_factors, fresh: @fresh,
                                                 authenticator: @authenticator,

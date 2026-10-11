@@ -26,6 +26,7 @@ module Masks
           def resolve(uuid:, **attributes)
             actor = actor!(uuid)
             changing_email = attributes.key?(:email) && attributes[:email] != actor.email
+            needs!(:security, "changing someone's email address") if changing_email
             previous = actor.email if changing_email && actor.email_verified_at.present?
 
             actor.assign_attributes(attributes)

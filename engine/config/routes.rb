@@ -94,6 +94,7 @@ Masks::Server::Engine.routes.draw do
     get "/avatars/:uuid/:style/:digest", to: "avatars#show", as: :stamped_avatar
   end
 
+  get "/logo", to: "tenant_logos#show", as: :tenant_logo
   get "/clients/:client_id/logo", to: "client_logos#show", as: :client_logo, constraints: { client_id: %r{[^/]+} }
 
   get "/handshake", to: "handshakes#show", as: :handshake
@@ -114,6 +115,10 @@ Masks::Server::Engine.routes.draw do
   get "/saml/resume", to: "saml#resume", as: :saml_resume
   get "/saml/refused", to: "saml#refused", as: :saml_refused
   get "/saml/initiate/:client_id", to: "saml#initiate", as: :saml_initiate
+
+  get "/forward-auth", to: "forward_auth#check", as: :forward_auth
+  get "/forward-auth/start", to: "forward_auth#start", as: :forward_auth_start
+  get "/forward-auth/callback", to: "forward_auth#callback", as: :forward_auth_callback
 
   scope "/scim/v2", module: :scim, defaults: { format: :json } do
     get "ServiceProviderConfig", to: "metadata#service_provider_config"

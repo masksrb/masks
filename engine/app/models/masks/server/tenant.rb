@@ -50,6 +50,7 @@ module Masks
       NICKNAME = "nickname".freeze
       EMAIL = "email".freeze
       EITHER = "either".freeze
+      ACCENT = /\A#\h{6}\z/
       NAMES = [ NICKNAME, EMAIL, EITHER ].freeze
 
       REGISTRATION_OFF = "off".freeze
@@ -61,6 +62,7 @@ module Masks
       RETENTION_DAYS = (30..2555)
 
       validates :named_by, inclusion: { in: NAMES }, allow_nil: true
+      validates :accent_color, format: { with: ACCENT }, allow_nil: true
       validates :dynamic_registration, inclusion: { in: REGISTRATIONS }, allow_nil: true
       validates :suspend_after, :delete_after, numericality: { only_integer: true, in: IDLE_DAYS }, allow_nil: true
       validates :event_retention_days, numericality: { only_integer: true, in: RETENTION_DAYS }, allow_nil: true
@@ -75,6 +77,7 @@ module Masks
                               format: { with: DomainClaim::HOSTNAME, message: "is not a host name" }
       validate :custom_host_is_proven, if: -> { custom_host.present? && will_save_change_to_custom_host? }
 
+      normalizes :accent_color, with: ->(value) { value.to_s.strip.downcase.presence }
       normalizes :custom_host, with: ->(value) { value.to_s.strip.downcase.delete_suffix(".").presence }
 
       scope :active, -> { where(archived_at: nil) }
@@ -388,6 +391,24 @@ module Masks
 
       def to_identity
         { "uuid" => uuid, "subdomain" => subdomain, "name" => name }
+      end
+
+      def logo_url(size: 64)
+        "#{Current.origin}#{Engine.routes.url_helpers.tenant_logo_path(v: logo_digest, size: size)}" if logo_digest.present?
+      end
+
+      def accent
+        accent_color if accent_color.to_s.match?(ACCENT)
+      end
+
+      def accent_ink
+        return nil if accent.nil?
+
+        red, green, blue = accent_color.delete("#").scan(/../).map { |pair| pair.to_i(16) / 255.0 }
+        light = [ red, green, blue ].map { |part| part <= 0.03928 ? part / 12.92 : ((part + 0.055) / 1.055)**2.4 }
+        luminance = (0.2126 * light[0]) + (0.7152 * light[1]) + (0.0722 * light[2])
+
+        luminance > 0.179 ? "#000000" : "#ffffff"
       end
 
       private
