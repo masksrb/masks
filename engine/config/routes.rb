@@ -113,6 +113,7 @@ Masks::Server::Engine.routes.draw do
 
   get "/saml/metadata", to: "saml#metadata", as: :saml_metadata
   match "/saml/sso", to: "saml#sso", via: %i[get post], as: :saml_sso
+  match "/saml/slo", to: "saml#slo", via: %i[get post], as: :saml_slo
   get "/saml/resume", to: "saml#resume", as: :saml_resume
   get "/saml/refused", to: "saml#refused", as: :saml_refused
   get "/saml/initiate/:client_id", to: "saml#initiate", as: :saml_initiate

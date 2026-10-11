@@ -62,6 +62,8 @@ module Masks
               <md:KeyDescriptor use="signing">
                 <ds:KeyInfo xmlns:ds="http://www.w3.org/2000/09/xmldsig#"><ds:X509Data><ds:X509Certificate>#{certificate}</ds:X509Certificate></ds:X509Data></ds:KeyInfo>
               </md:KeyDescriptor>
+              <md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="https://wiki.example.com/wrong-slo"/>
+              <md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://wiki.example.com/saml/slo"/>
               <md:NameIDFormat>urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress</md:NameIDFormat>
               <md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="https://wiki.example.com/wrong" index="0"/>
               <md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://wiki.example.com/saml/acs" index="1"/>
@@ -69,25 +71,28 @@ module Masks
           </md:EntityDescriptor>
         XML
 
-        read = ask("mutation($xml: String!) { readSamlApplicationMetadata(xml: $xml) { entityId acsUrls certificate nameIdFormat requestsSigned } }",
+        read = ask("mutation($xml: String!) { readSamlApplicationMetadata(xml: $xml) { entityId acsUrls certificate nameIdFormat requestsSigned sloUrl } }",
                    xml: xml).dig("data", "readSamlApplicationMetadata")
 
         assert_equal "https://wiki.example.com/saml", read["entityId"]
         assert_equal [ "https://wiki.example.com/saml/acs" ], read["acsUrls"]
         assert_equal certificate, read["certificate"]
         assert read["requestsSigned"]
+        assert_equal "https://wiki.example.com/saml/slo", read["sloUrl"]
 
         created = ask(<<~GRAPHQL, **read.transform_keys(&:to_sym)).dig("data", "createSamlApplication", "client")
-          mutation($entityId: String!, $acsUrls: [String!]!, $certificate: String, $nameIdFormat: String, $requestsSigned: Boolean) {
+          mutation($entityId: String!, $acsUrls: [String!]!, $certificate: String, $nameIdFormat: String, $requestsSigned: Boolean,
+                   $sloUrl: String) {
             createSamlApplication(name: "Wiki", entityId: $entityId, acsUrls: $acsUrls, certificate: $certificate,
-                                  nameIdFormat: $nameIdFormat, requestsSigned: $requestsSigned) {
-              client { clientId protocol samlEntityId samlRequestsSigned redirectUris grantTypes approvedBy { identifier } }
+                                  nameIdFormat: $nameIdFormat, requestsSigned: $requestsSigned, sloUrl: $sloUrl) {
+              client { clientId protocol samlEntityId samlRequestsSigned samlSloUrl redirectUris grantTypes approvedBy { identifier } }
             }
           }
         GRAPHQL
 
         assert_equal "saml", created["protocol"]
         assert created["samlRequestsSigned"]
+        assert_equal "https://wiki.example.com/saml/slo", created["samlSloUrl"]
         assert_empty created["grantTypes"]
         assert_equal "manager", created.dig("approvedBy", "identifier")
 

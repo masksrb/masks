@@ -9,6 +9,7 @@ module Masks
 
       belongs_to :actor
       belongs_to :device, optional: true
+      has_many :saml_participations
 
       scope :unexpired, -> { where(revoked_at: nil).where("expires_at > ?", Time.current) }
       scope :live, -> {

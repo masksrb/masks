@@ -18,6 +18,8 @@ module Masks
       RESPONDER = "urn:oasis:names:tc:SAML:2.0:status:Responder".freeze
       REQUEST_DENIED = "urn:oasis:names:tc:SAML:2.0:status:RequestDenied".freeze
       NO_PASSIVE = "urn:oasis:names:tc:SAML:2.0:status:NoPassive".freeze
+      REQUESTER = "urn:oasis:names:tc:SAML:2.0:status:Requester".freeze
+      UNKNOWN_PRINCIPAL = "urn:oasis:names:tc:SAML:2.0:status:UnknownPrincipal".freeze
 
       PASSWORD_CONTEXT = "urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport".freeze
       MFA_CONTEXT = "https://refeds.org/profile/mfa".freeze
@@ -50,12 +52,35 @@ module Masks
         "#{issuer.url}/saml/sso"
       end
 
+      def self.slo_url(issuer)
+        "#{issuer.url}/saml/slo"
+      end
+
       def self.metadata_url(issuer)
         "#{issuer.url}/saml/metadata"
       end
 
       def self.entity_id(issuer)
         metadata_url(issuer)
+      end
+
+      def self.session_index(session)
+        "_#{session.uuid}"
+      end
+
+      def self.sign(issuer, xml)
+        key = issuer.key
+        document = XMLSecurity::Document.new(xml)
+        document.sign_document(key.private_key, key.certificate, XMLSecurity::Document::RSA_SHA256, XMLSecurity::Document::SHA256)
+        document.to_s
+      end
+
+      def self.identifier
+        "_#{SecureRandom.hex(20)}"
+      end
+
+      def self.instant(time)
+        time.utc.iso8601
       end
     end
   end

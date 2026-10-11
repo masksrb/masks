@@ -3,4 +3,6 @@ es:
     post:
       page_title: "Iniciando sesión"
       heading: "Iniciando sesión en %{name}"
+      leaving_title: "Cerrando sesión"
+      leaving: "Cerrando sesión en %{name}"
       continue: "Continuar"

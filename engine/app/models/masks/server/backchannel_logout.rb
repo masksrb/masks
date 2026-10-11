@@ -17,6 +17,17 @@ module Masks
             origin: origin
           )
         end
+
+        SamlParticipation.claim!(session.saml_participations).each do |participation|
+          SamlLogoutJob.perform_later(
+            client_id: participation.client.client_id,
+            name_id: participation.name_id,
+            name_id_format: participation.name_id_format,
+            session_index: participation.session_index,
+            actor: session.actor.uuid,
+            origin: origin
+          )
+        end
       end
 
       def self.deliver!(client, token)
@@ -25,6 +36,19 @@ module Masks
         response = Outbound.post(uri, { logout_token: token }, address: routable!(client, uri))
 
         return true if response.is_a?(Net::HTTPSuccess)
+
+        raise Refused, "#{client.name} answered #{response.code}"
+      rescue *Outbound::UNREADABLE, URI::InvalidURIError => e
+        raise Refused, "#{client.name} could not be reached: #{e.class}"
+      end
+
+      def self.deliver_saml!(sign_off)
+        client = sign_off.client
+        uri = URI.parse(sign_off.destination)
+
+        response = Outbound.post(uri, { SAMLRequest: sign_off.encoded }, address: routable!(client, uri))
+
+        return true if response.is_a?(Net::HTTPSuccess) || response.is_a?(Net::HTTPRedirection)
 
         raise Refused, "#{client.name} answered #{response.code}"
       rescue *Outbound::UNREADABLE, URI::InvalidURIError => e

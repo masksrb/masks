@@ -18,6 +18,9 @@ module Masks
                   end
                 end
 
+                xml["md"].SingleLogoutService(Binding: REDIRECT_BINDING, Location: SamlIdentity.slo_url(issuer))
+                xml["md"].SingleLogoutService(Binding: POST_BINDING, Location: SamlIdentity.slo_url(issuer))
+
                 NAME_ID_FORMATS.each { |format| xml["md"].NameIDFormat(format) }
 
                 xml["md"].SingleSignOnService(Binding: REDIRECT_BINDING, Location: SamlIdentity.sso_url(issuer))

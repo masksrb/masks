@@ -2,7 +2,7 @@ module Masks
   module Server
     module SamlIdentity
       class Response
-        attr_reader :issuer, :client, :destination, :in_response_to
+        attr_reader :issuer, :client, :destination, :in_response_to, :name_id
 
         def initialize(issuer:, client:, destination:, in_response_to: nil)
           @issuer = issuer
@@ -22,21 +22,21 @@ module Masks
           encode(sign(response_xml(status, second, message)))
         end
 
+        def logout(status = SUCCESS, second = nil, message = nil)
+          encode(sign(response_xml(status, second, message, element: "LogoutResponse")))
+        end
+
         private
 
           attr_reader :now
-
-          def key
-            @key ||= issuer.key
-          end
 
           def entity
             SamlIdentity.entity_id(issuer)
           end
 
-          def response_xml(status, second = nil, message = nil)
+          def response_xml(status, second = nil, message = nil, element: "Response")
             Nokogiri::XML::Builder.new(encoding: "UTF-8") do |xml|
-              xml["samlp"].Response(
+              xml["samlp"].public_send(element,
                 { "xmlns:samlp" => PROTOCOL_NS, "xmlns:saml" => ASSERTION_NS, "ID" => identifier, "Version" => "2.0",
                   "IssueInstant" => instant(now), "Destination" => destination, "InResponseTo" => in_response_to }.compact
               ) do
@@ -55,13 +55,14 @@ module Masks
           def assertion_xml(actor, session, name_id_format, scopes, authenticated_at, amr)
             claims = actor.claims(scopes, origin: issuer.url, subject: issuer.subject_for(actor, client))
             expires = now + LIFETIME
+            @name_id = name_for(actor, name_id_format)
 
             Nokogiri::XML::Builder.new(encoding: "UTF-8") do |xml|
               xml["saml"].Assertion("xmlns:saml" => ASSERTION_NS, "ID" => identifier, "Version" => "2.0",
                                     "IssueInstant" => instant(now)) do
                 xml["saml"].Issuer(entity)
                 xml["saml"].Subject do
-                  xml["saml"].NameID(name_id(actor, name_id_format), Format: name_id_format)
+                  xml["saml"].NameID(name_id, Format: name_id_format)
                   xml["saml"].SubjectConfirmation(Method: "urn:oasis:names:tc:SAML:2.0:cm:bearer") do
                     xml["saml"].SubjectConfirmationData(
                       { "NotOnOrAfter" => instant(expires), "Recipient" => destination, "InResponseTo" => in_response_to }.compact
@@ -72,7 +73,7 @@ module Masks
                   xml["saml"].AudienceRestriction { xml["saml"].Audience(client.saml_entity_id) }
                 end
                 xml["saml"].AuthnStatement({ "AuthnInstant" => instant(authenticated_at || now),
-                                             "SessionIndex" => session&.uuid && "_#{session.uuid}" }.compact) do
+                                             "SessionIndex" => session && SamlIdentity.session_index(session) }.compact) do
                   xml["saml"].AuthnContext do
                     xml["saml"].AuthnContextClassRef(Array(amr).include?(Issuer::MULTI_FACTOR) ? MFA_CONTEXT : PASSWORD_CONTEXT)
                   end
@@ -93,7 +94,7 @@ module Masks
             end.doc.root.to_xml(save_with: Nokogiri::XML::Node::SaveOptions::AS_XML)
           end
 
-          def name_id(actor, format)
+          def name_for(actor, format)
             case format
             when EMAIL
               raise Refused, "#{actor.identifier} has no confirmed email to be named by" unless actor.email.present? && actor.email_verified_at
@@ -116,9 +117,7 @@ module Masks
           end
 
           def sign(xml)
-            document = XMLSecurity::Document.new(xml)
-            document.sign_document(key.private_key, key.certificate, XMLSecurity::Document::RSA_SHA256, XMLSecurity::Document::SHA256)
-            document.to_s
+            SamlIdentity.sign(issuer, xml)
           end
 
           def encode(xml)
@@ -126,11 +125,11 @@ module Masks
           end
 
           def identifier
-            "_#{SecureRandom.hex(20)}"
+            SamlIdentity.identifier
           end
 
           def instant(time)
-            time.utc.iso8601
+            SamlIdentity.instant(time)
           end
       end
     end

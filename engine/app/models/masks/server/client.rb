@@ -51,6 +51,7 @@ module Masks
       has_many :tokens, dependent: :destroy
       has_many :consents, dependent: :destroy
       has_many :delegations, dependent: :destroy
+      has_many :saml_participations, dependent: :delete_all
       has_many :namespaces, -> { order(:name) }, dependent: :nullify
       has_one :logo, class_name: "ClientLogo", dependent: :delete
 
@@ -81,7 +82,7 @@ module Masks
                                                    less_than_or_equal_to: Consent::LONGEST.to_i }, allow_nil: true
 
       normalizes :allowed_groups, with: ->(value) { Array(value).map { |group| group.to_s.strip.downcase }.compact_blank.uniq.sort }
-      normalizes :saml_entity_id, with: ->(value) { value.to_s.strip.presence }
+      normalizes :saml_entity_id, :saml_slo_url, with: ->(value) { value.to_s.strip.presence }
       normalizes(*METADATA_URIS, with: ->(value) { value.to_s.strip.presence })
 
       after_commit :refresh_logo!, on: %i[create update], if: :saved_change_to_logo_uri?
@@ -483,6 +484,7 @@ module Masks
           errors.add(:token_endpoint_auth_method, "is none for a SAML application") unless public?
           errors.add(:saml_certificate, "is not a certificate masks can read") if saml_certificate.present? && saml_x509_certificate.nil?
           errors.add(:saml_certificate, "is required to check signed requests") if saml_requests_signed? && saml_certificate.blank?
+          saml_slo_url&.then { |url| web_uri_refusal(url, fetched: true) }&.then { |refusal| errors.add(:saml_slo_url, refusal) }
 
           if saml_name_id_format.present? && !SamlIdentity::NAME_ID_FORMATS.include?(saml_name_id_format)
             errors.add(:saml_name_id_format, "is not one masks issues")

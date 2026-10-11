@@ -1,6 +1,8 @@
 module Masks
   module Server
     class SessionsController < ApplicationController
+      include SamlFarewells
+
       skip_forgery_protection only: :destroy, if: -> { request.get? }
 
       def destroy
@@ -40,9 +42,11 @@ module Masks
         end
 
         def end_session(logout)
+          departing = current_session ? SamlParticipation.claim!(current_session.saml_participations) : []
+
           sign_out
 
-          redirect_to(logout.redirect_to || login_path, allow_other_host: true)
+          farewell(departing, finish: { "redirect" => logout.redirect_to || login_path })
         end
 
         def render_refusal(refusal)

@@ -13,11 +13,13 @@ module Masks
           argument :requests_signed, Boolean, required: false
           argument :idp_initiated, Boolean, required: false
           argument :attributes, GraphQL::Types::JSON, required: false
+          argument :slo_url, String, required: false,
+                   description: "The application's single logout URL, which receives masks' logout messages over HTTP-POST."
 
           field :client, Types::ClientType, null: false
 
           def resolve(name:, entity_id:, acs_urls:, certificate: nil, name_id_format: nil, requests_signed: false,
-                      idp_initiated: false, attributes: nil)
+                      idp_initiated: false, attributes: nil, slo_url: nil)
             client = Masks::Server::Client.new(
               client_id: SecureRandom.uuid,
               name: name,
@@ -29,6 +31,7 @@ module Masks
               saml_requests_signed: requests_signed,
               saml_idp_initiated: idp_initiated,
               saml_attributes: attributes.presence || {},
+              saml_slo_url: slo_url.presence,
               grant_types: [],
               response_types: [],
               token_endpoint_auth_method: "none",

@@ -3,4 +3,6 @@ de:
     post:
       page_title: "Sie werden angemeldet"
       heading: "Sie werden bei %{name} angemeldet"
+      leaving_title: "Sie werden abgemeldet"
+      leaving: "Sie werden bei %{name} abgemeldet"
       continue: "Weiter"

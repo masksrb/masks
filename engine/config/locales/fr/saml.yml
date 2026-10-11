@@ -3,4 +3,6 @@ fr:
     post:
       page_title: "Connexion en cours"
       heading: "Connexion à %{name} en cours"
+      leaving_title: "Déconnexion en cours"
+      leaving: "Déconnexion de %{name} en cours"
       continue: "Continuer"

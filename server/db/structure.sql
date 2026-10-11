@@ -323,7 +323,8 @@ CREATE TABLE public.clients (
     consent_lifetime integer,
     allowed_groups character varying[] DEFAULT '{}'::character varying[] NOT NULL,
     access_token_lifetime integer,
-    refresh_token_lifetime integer
+    refresh_token_lifetime integer,
+    saml_slo_url character varying
 );
 
 ALTER TABLE ONLY public.clients FORCE ROW LEVEL SECURITY;
@@ -1024,6 +1025,45 @@ ALTER SEQUENCE public.providers_id_seq OWNED BY public.providers.id;
 
 
 --
+-- Name: saml_participations; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.saml_participations (
+    id bigint NOT NULL,
+    tenant_id bigint NOT NULL,
+    session_id bigint NOT NULL,
+    client_id bigint NOT NULL,
+    name_id character varying NOT NULL,
+    name_id_format character varying NOT NULL,
+    session_index character varying NOT NULL,
+    notified_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+ALTER TABLE ONLY public.saml_participations FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: saml_participations_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.saml_participations_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: saml_participations_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.saml_participations_id_seq OWNED BY public.saml_participations.id;
+
+
+--
 -- Name: schema_migrations; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1562,6 +1602,13 @@ ALTER TABLE ONLY public.providers ALTER COLUMN id SET DEFAULT nextval('public.pr
 
 
 --
+-- Name: saml_participations id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.saml_participations ALTER COLUMN id SET DEFAULT nextval('public.saml_participations_id_seq'::regclass);
+
+
+--
 -- Name: sessions id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1799,6 +1846,14 @@ ALTER TABLE ONLY public.passkeys
 
 ALTER TABLE ONLY public.providers
     ADD CONSTRAINT providers_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: saml_participations saml_participations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.saml_participations
+    ADD CONSTRAINT saml_participations_pkey PRIMARY KEY (id);
 
 
 --
@@ -2476,6 +2531,27 @@ CREATE UNIQUE INDEX index_providers_on_tenant_id_and_key ON public.providers USI
 
 
 --
+-- Name: index_saml_participations_on_client_id_and_name_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_saml_participations_on_client_id_and_name_id ON public.saml_participations USING btree (client_id, name_id);
+
+
+--
+-- Name: index_saml_participations_on_session_id_and_client_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_saml_participations_on_session_id_and_client_id ON public.saml_participations USING btree (session_id, client_id);
+
+
+--
+-- Name: index_saml_participations_on_tenant_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_saml_participations_on_tenant_id ON public.saml_participations USING btree (tenant_id);
+
+
+--
 -- Name: index_sessions_on_actor_id; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2731,6 +2807,14 @@ ALTER TABLE ONLY public.consents
 
 
 --
+-- Name: saml_participations fk_rails_1150dad782; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.saml_participations
+    ADD CONSTRAINT fk_rails_1150dad782 FOREIGN KEY (client_id) REFERENCES public.clients(id) ON DELETE CASCADE;
+
+
+--
 -- Name: groups fk_rails_13822f50e5; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -2856,6 +2940,14 @@ ALTER TABLE ONLY public.connections
 
 ALTER TABLE ONLY public.memberships
     ADD CONSTRAINT fk_rails_42a6d48371 FOREIGN KEY (invited_by_id) REFERENCES public.actors(id) ON DELETE SET NULL;
+
+
+--
+-- Name: saml_participations fk_rails_44298aee09; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.saml_participations
+    ADD CONSTRAINT fk_rails_44298aee09 FOREIGN KEY (tenant_id) REFERENCES public.tenants(id);
 
 
 --
@@ -3211,6 +3303,14 @@ ALTER TABLE ONLY public.tokens
 
 
 --
+-- Name: saml_participations fk_rails_f0ae1db9b5; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.saml_participations
+    ADD CONSTRAINT fk_rails_f0ae1db9b5 FOREIGN KEY (session_id) REFERENCES public.sessions(id) ON DELETE CASCADE;
+
+
+--
 -- Name: subjects fk_rails_f1afff3115; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3383,6 +3483,12 @@ ALTER TABLE public.passkeys ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.providers ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: saml_participations; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.saml_participations ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: sessions; Type: ROW SECURITY; Schema: public; Owner: -
@@ -3562,6 +3668,13 @@ CREATE POLICY tenant_isolation ON public.providers USING ((tenant_id = (NULLIF(c
 
 
 --
+-- Name: saml_participations tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.saml_participations USING ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint)) WITH CHECK ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint));
+
+
+--
 -- Name: sessions tenant_isolation; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -3629,6 +3742,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261011170000'),
 ('20261011160000'),
 ('20261011150000'),
 ('20261011140000'),

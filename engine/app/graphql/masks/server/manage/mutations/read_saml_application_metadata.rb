@@ -14,6 +14,7 @@ module Masks
           field :certificate, String
           field :name_id_format, String
           field :requests_signed, Boolean, null: false
+          field :slo_url, String, description: "The location of its HTTP-POST SingleLogoutService."
 
           def resolve(xml:)
             document = SamlIdentity.parse!(xml, what: "that metadata")
@@ -25,7 +26,8 @@ module Masks
                                   .sort_by { |service| service["isDefault"] == "true" ? 0 : 1 }.filter_map { |service| service["Location"] },
               certificate: descriptor.at_xpath("md:KeyDescriptor[not(@use) or @use='signing']//ds:X509Certificate", NAMES)&.text&.gsub(/\s+/, ""),
               name_id_format: descriptor.xpath("md:NameIDFormat", NAMES).map(&:text).map(&:strip).find { |one| SamlIdentity::NAME_ID_FORMATS.include?(one) },
-              requests_signed: descriptor["AuthnRequestsSigned"] == "true"
+              requests_signed: descriptor["AuthnRequestsSigned"] == "true",
+              slo_url: descriptor.at_xpath("md:SingleLogoutService[@Binding='#{SamlIdentity::POST_BINDING}']", NAMES)&.[]("Location")
             }
           rescue SamlIdentity::Refused => e
             refuse!(e.message)

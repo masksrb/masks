@@ -54,7 +54,7 @@ module Masks
       end
 
       def posted
-        form = Nokogiri::HTML(response.body).at_css("form#saml-response")
+        form = Nokogiri::HTML(response.body).at_css("form#saml-message")
 
         assert form, "no SAML response was posted: #{response.body[0, 400]}"
         assert_equal ACS, form["action"]

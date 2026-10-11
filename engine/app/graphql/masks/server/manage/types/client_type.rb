@@ -49,6 +49,8 @@ module Masks
           field :saml_requests_signed, Boolean, null: false
           field :saml_idp_initiated, Boolean, null: false
           field :saml_attributes, GraphQL::Types::JSON, null: false
+          field :saml_slo_url, String,
+                description: "Where masks posts a signed LogoutRequest when a person who signed in to this SAML application signs out, and its LogoutResponse when the application asks."
           field :require_signed_request_object, Boolean, null: false
           field :consent_required, Boolean, null: false
           field :sign_in_policy, SignInPolicyType

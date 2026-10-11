@@ -1,9 +1,11 @@
 module Masks
   module Server
     class SamlController < ApplicationController
-      skip_forgery_protection only: :sso
+      include SamlFarewells
 
-      rate_limit to: 60, within: 1.minute, only: %i[sso initiate],
+      skip_forgery_protection only: %i[sso slo]
+
+      rate_limit to: 60, within: 1.minute, only: %i[sso initiate slo],
                  by: -> { [ current_tenant.id, request.remote_ip ].join(":") },
                  with: -> { refuse("too many sign-in requests from this address", status: :too_many_requests) }
 
@@ -23,6 +25,12 @@ module Masks
         prompt = [ ("login" if asked.force_authn), ("none" if asked.passive) ]
 
         answer(track_request!(authorization_for(asked.client, asked.acs_url, saml, prompt: prompt)))
+      end
+
+      def slo
+        carried = request.get? ? request.query_parameters : request.request_parameters
+
+        carried.key?("SAMLResponse") ? farewell_answered : logout_requested
       end
 
       def initiate
@@ -58,6 +66,42 @@ module Masks
 
       private
 
+        def logout_requested
+          asked = SamlIdentity::LogoutRequest.read!(request, issuer: issuer)
+
+          found = SamlParticipation.where(client: asked.client, name_id: asked.name_id)
+          found = found.where(session_index: asked.session_indexes) if asked.session_indexes.any?
+          found = found.includes(:session).to_a
+
+          finish = { "client_id" => asked.client.client_id, "in_response_to" => asked.id, "relay_state" => asked.relay_state,
+                     "known" => found.any? }
+
+          found.each(&:claimed?)
+
+          ending = found.map(&:session).uniq.select { |held| held.revoked_at.nil? }
+          browser = ending.find { |held| held.id == current_session&.id }
+          departing = browser ? SamlParticipation.claim!(browser.saml_participations) : []
+
+          ending.each { |held| held == browser ? sign_out : end_elsewhere(held, asked.client) }
+
+          farewell(departing, finish: finish)
+        end
+
+        def farewell_answered
+          reply = SamlIdentity::LogoutReply.read!(request, issuer: issuer)
+          farewells = SamlIdentity::Farewells.resume(reply.in_response_to, client: reply.client)
+
+          raise SamlIdentity::Refused, "that LogoutResponse answers nothing masks is waiting on" if farewells.nil?
+
+          proceed(farewells)
+        end
+
+        def end_elsewhere(session, client)
+          session.revoke!
+
+          Event.record!(Event::SESSION_ENDED, actor: session.actor, by: nil, device: session.device, client: client)
+        end
+
         def authorization_for(client, acs_url, saml, prompt: [])
           Authorization.new(
             client_id: client.client_id,
@@ -92,7 +136,8 @@ module Masks
           saml = pending.held("saml")
           scopes = pending.scopes_for(current_actor)
 
-          encoded = response_for(pending).success(
+          assertion = response_for(pending)
+          encoded = assertion.success(
             actor: current_actor, session: current_session, name_id_format: saml["name_id_format"], scopes: scopes,
             authenticated_at: login.authenticated_at || current_session&.authenticated_at,
             amr: login.amr.presence || current_session&.amr
@@ -101,7 +146,15 @@ module Masks
           Event.record!(Event::SAML_ASSERTED, actor: current_actor, client: pending.client, scopes: scopes,
                                               initiated: saml["request_id"] ? "service provider" : "masks")
 
+          participated!(pending.client, assertion, saml["name_id_format"])
+
           post(pending, encoded)
+        end
+
+        def participated!(client, assertion, name_id_format)
+          return if current_session.nil?
+
+          SamlParticipation.record!(session: current_session, client: client, name_id: assertion.name_id, name_id_format: name_id_format)
         end
 
         def denied(pending, description, second: SamlIdentity::REQUEST_DENIED)
@@ -128,17 +181,7 @@ module Masks
         end
 
         def post(pending, encoded)
-          @client = pending.client
-          @destination = pending.redirect_uri
-          @saml_response = encoded
-          @relay_state = pending.held("saml")["relay_state"]
-          @script_nonce = SecureRandom.base64(16)
-
-          response.headers["Content-Security-Policy"] =
-            "default-src 'self'; script-src 'nonce-#{@script_nonce}'; frame-ancestors 'none'"
-          response.headers["Cache-Control"] = "no-store"
-
-          render :post
+          post_saml(pending.client, pending.redirect_uri, "SAMLResponse", encoded, relay_state: pending.held("saml")["relay_state"])
         end
 
         def refuse(description, status: :bad_request)

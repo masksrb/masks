@@ -29,6 +29,8 @@ module Masks
           argument :saml_requests_signed, Boolean, required: false
           argument :saml_idp_initiated, Boolean, required: false
           argument :saml_attributes, GraphQL::Types::JSON, required: false
+          argument :saml_slo_url, String, required: false,
+                   description: "The application's single logout URL, which receives masks' logout messages over HTTP-POST. Empty stops single logout."
           argument :consent_required, Boolean, required: false
           argument :access_token_lifetime, Integer, required: false,
                    description: "Seconds an access token lasts, from 60 to a day. Zero goes back to an hour."
