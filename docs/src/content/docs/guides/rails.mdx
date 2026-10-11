@@ -329,7 +329,7 @@ On a subdomain, masks has an origin of its own and its cookies stay there. Sign 
 | Tables | Its own database, through `config.masks.database`. |
 | Session | Its own cookie, `_masks_session`. Signing in to masks never resets your app's session. |
 | Secrets | Its own, from `config.masks.secret`, or derived from your app's key under a label of its own. Your app's cookie jar cannot read masks' cookies. |
-| Encrypted columns | Its own key, derived the same way. |
+| Encrypted columns | Its own key, derived the same way, and from it a key for each tenant. |
 | Jobs | Its own job and mail classes carry a tenant. Your app's jobs are left alone. |
 | Routes | Only the paths it is mounted at. |
 

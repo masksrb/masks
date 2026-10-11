@@ -5,7 +5,7 @@ description: Tenant isolation, manage roles, rate limits, risky sign-ins, securi
 
 | Threat | Defense | Section |
 | --- | --- | --- |
-| One tenant reading another's data | Three isolation layers, one enforced by Postgres | [Tenant isolation](#tenant-isolation) |
+| One tenant reading another's data | Four isolation layers, one enforced by Postgres | [Tenant isolation](#tenant-isolation) |
 | A manager doing more than their job needs | Four manage roles, checked on every request | [Manage roles](#manage-roles) |
 | Guessing a password or a code | Limits per address and per account | [Rate limits](#rate-limits) |
 | A stolen password used from somewhere new | A risk score that asks for more or refuses | [Risky sign-ins](#risky-sign-ins) |
@@ -29,6 +29,7 @@ password is in [sessions and devices](/guides/features/#sessions-and-devices).
 | `TenantScoped` | Scopes every query in the app. | A forgotten scope would leak rows. |
 | Row-level security | `FORCE ROW LEVEL SECURITY` in Postgres. | masks refuses to run as a role that bypasses it, and a production server refuses a role that owns its tables. |
 | Per-tenant signing keys | A token's `kid` exists in one tenant's JWKS only. | Verification refuses the token. |
+| Per-tenant encryption keys | Each tenant's encrypted columns use a key derived from the primary key and the tenant's UUID. | A ciphertext moved into another tenant fails to decrypt. |
 
 A `SUPERUSER` or `BYPASSRLS` role skips every policy with no error, and the role that owns a table
 can switch its policy off with one `ALTER TABLE`. `Tenant.switch` checks the role once per process.
