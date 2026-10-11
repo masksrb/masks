@@ -22,6 +22,10 @@ Only an approved client may hold a `masks:` scope, sign in as itself, receive a
 trusts the tokens issued for it. A self-registered client that names `resources` is refused. A client grants `required_scopes` always and
 `allowed_scopes` when asked. Archiving a client stops it signing anyone in and keeps its record.
 
+An access token lasts an hour, and a refresh token lasts 30 days unused, with each refresh starting
+it over. A client's page sets its own: access tokens from a minute to a day, and refresh tokens from
+5 minutes to 400 days.
+
 ### Adding a known app
 
 Under **Clients → Add client → A known app**, a manager picks an app and enters its address. masks

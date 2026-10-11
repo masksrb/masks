@@ -240,6 +240,11 @@ type ClaimDomainPayload {
 
 type Client {
   """
+  Seconds an access token lasts. Null is an hour.
+  """
+  accessTokenLifetime: Int
+
+  """
   Group keys, or organization roles as key:role, whose people may sign in. Empty lets everyone in.
   """
   allowedGroups: [String!]!
@@ -285,6 +290,11 @@ type Client {
   postLogoutRedirectUris: [String!]!
   protocol: String!
   redirectUris: [String!]!
+
+  """
+  Seconds a refresh token lasts unused. Each refresh starts it over. Null is 30 days.
+  """
+  refreshTokenLifetime: Int
   requirePushedAuthorizationRequests: Boolean!
   requireSignedRequestObject: Boolean!
   requiredScopes: [String!]!
@@ -961,6 +971,11 @@ type Mutation {
   updateAdapter(config: JSON, key: ID!, name: String, primary: Boolean): UpdateAdapterPayload
   updateClient(
     """
+    Seconds an access token lasts, from 60 to a day. Zero goes back to an hour.
+    """
+    accessTokenLifetime: Int
+
+    """
     Group keys, or organization roles as key:role, whose people may sign in to this client. Empty lets everyone in.
     """
     allowedGroups: [String!]
@@ -997,6 +1012,11 @@ type Mutation {
     policyUri: String
     postLogoutRedirectUris: [String!]
     redirectUris: [String!]
+
+    """
+    Seconds a refresh token lasts unused, from 300 to 400 days. Zero goes back to 30 days.
+    """
+    refreshTokenLifetime: Int
     requirePushedAuthorizationRequests: Boolean
     requireSignedRequestObject: Boolean
     requiredScopes: [String!]

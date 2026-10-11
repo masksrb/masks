@@ -13,7 +13,7 @@ module Masks
 
       def self.issue!(issuer:, actor:, client:, scopes:, audience:, parent: nil, expires_at: nil, act: nil, requested_claims: nil,
                       jkt: nil, authorization_details: nil)
-        ceiling = [ expires_at, lifetime.from_now ].compact.min
+        ceiling = [ expires_at, (client&.access_lifetime || lifetime).from_now ].compact.min
 
         token = create!(
           actor: actor,
