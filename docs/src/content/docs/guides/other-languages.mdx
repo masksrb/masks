@@ -21,25 +21,34 @@ With [openid-client](https://github.com/panva/openid-client):
 ```js
 import * as client from "openid-client";
 
-const config = await client.discovery(new URL("https://auth.example.com"), process.env.MASKS_CLIENT_ID,
-  process.env.MASKS_CLIENT_SECRET);
+const config = await client.discovery(
+  new URL("https://auth.example.com"),
+  process.env.MASKS_CLIENT_ID,
+  process.env.MASKS_CLIENT_SECRET,
+);
 
 app.get("/login", async (req, res) => {
   const verifier = client.randomPKCECodeVerifier();
   req.session.verifier = verifier;
 
-  res.redirect(client.buildAuthorizationUrl(config, {
-    redirect_uri: "https://app.example.com/callback",
-    scope: "openid profile email",
-    code_challenge: await client.calculatePKCECodeChallenge(verifier),
-    code_challenge_method: "S256",
-  }).href);
+  res.redirect(
+    client.buildAuthorizationUrl(config, {
+      redirect_uri: "https://app.example.com/callback",
+      scope: "openid profile email",
+      code_challenge: await client.calculatePKCECodeChallenge(verifier),
+      code_challenge_method: "S256",
+    }).href,
+  );
 });
 
 app.get("/callback", async (req, res) => {
-  const tokens = await client.authorizationCodeGrant(config, new URL(req.url, "https://app.example.com"), {
-    pkceCodeVerifier: req.session.verifier,
-  });
+  const tokens = await client.authorizationCodeGrant(
+    config,
+    new URL(req.url, "https://app.example.com"),
+    {
+      pkceCodeVerifier: req.session.verifier,
+    },
+  );
 
   req.session.person = tokens.claims();
   res.redirect("/");
@@ -139,7 +148,9 @@ An access token from masks is a JWT of type `at+jwt`, signed with a key publishe
 ```js
 import { createRemoteJWKSet, jwtVerify } from "jose";
 
-const keys = createRemoteJWKSet(new URL("https://auth.example.com/.well-known/jwks.json"));
+const keys = createRemoteJWKSet(
+  new URL("https://auth.example.com/.well-known/jwks.json"),
+);
 
 const { payload } = await jwtVerify(token, keys, {
   issuer: "https://auth.example.com",
