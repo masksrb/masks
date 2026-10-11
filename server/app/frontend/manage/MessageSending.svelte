@@ -5,7 +5,6 @@
   import Section from "./ui/Section.svelte";
   import Field from "./ui/Field.svelte";
   import Notices from "./ui/Notices.svelte";
-  import Page from "./ui/Page.svelte";
   import Spinner from "./ui/Spinner.svelte";
   import Switch from "./ui/Switch.svelte";
 
@@ -252,7 +251,7 @@
   });
 </script>
 
-<Page title={t("adapters.title")}>
+<div class="console-page">
   <Notices feedback={feedback.state} />
 
   {#if loading && !data}
@@ -406,4 +405,4 @@
       </Section>
     {/if}
   {/if}
-</Page>
+</div>

@@ -14,7 +14,7 @@ fr:
         mail:
           title: "Permettre à masks d’envoyer des e-mails"
           detail: "Les invitations, les réinitialisations de mot de passe et les codes de connexion sont envoyés par e-mail. En attendant, un gestionnaire transmet chaque lien d’invitation à la main."
-          action: "Ajouter un adaptateur de messagerie"
+          action: "Ajouter un service d’e-mail"
         client:
           title: "Connectez votre première application"
           detail: "Enregistrez une application à la main, ou laissez-la se connecter elle-même par la poignée de main."

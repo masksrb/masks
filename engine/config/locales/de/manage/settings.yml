@@ -14,7 +14,7 @@ de:
         mail:
           title: "masks E-Mails senden lassen"
           detail: "Einladungen, Passwort-Zurücksetzungen und Anmeldecodes werden per E-Mail verschickt. Bis dahin gibt ein Verwalter jeden Einladungslink von Hand weiter."
-          action: "E-Mail-Adapter hinzufügen"
+          action: "E-Mail-Dienst hinzufügen"
         client:
           title: "Ihre erste App verbinden"
           detail: "Registrieren Sie eine App von Hand, oder lassen Sie sie sich über den Handshake selbst verbinden."

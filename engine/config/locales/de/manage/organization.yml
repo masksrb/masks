@@ -55,7 +55,7 @@ de:
       archived_alert: "Archiviert am %{day}. Mitglieder behalten ihre Rollen, und nach dem Wiederherstellen können sie sich wieder anmelden."
       restore: "Wiederherstellen"
       ownerless: "%{organization} hat keinen Eigentümer, daher können nur Verwalter die Mitglieder ändern. Machen Sie ein Mitglied zum Eigentümer."
-      invitation_link: "Es ist kein E-Mail-Adapter eingerichtet. Senden Sie diesen Einladungslink also selbst. Er funktioniert einmal."
+      invitation_link: "Es ist kein E-Mail-Dienst eingerichtet. Senden Sie diesen Einladungslink also selbst. Er funktioniert einmal."
       members:
         title: "Mitglieder"
         lede: "Eigentümer verwalten Mitglieder auch über ihre eigene Kontoseite. Eine Einladung gewährt nichts, bis sie angenommen wird."

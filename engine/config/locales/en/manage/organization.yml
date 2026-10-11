@@ -55,7 +55,7 @@ en:
       archived_alert: "Archived %{day}. Members keep their roles, and restoring lets them sign in again."
       restore: "Restore"
       ownerless: "Nobody owns %{organization}, so only managers can change its members. Make a member an owner."
-      invitation_link: "No mail adapter is set up, so send this invitation link yourself. It works once."
+      invitation_link: "No mail service is set up, so send this invitation link yourself. It works once."
       members:
         title: "Members"
         lede: "Owners manage members from their own account page too. An invitation grants nothing until it is accepted."

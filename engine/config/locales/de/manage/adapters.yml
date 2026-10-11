@@ -1,7 +1,6 @@
 de:
   manage:
     adapters:
-      title: "Adapter"
       added: "%{name} hinzugefügt."
       saved: "%{name} gespeichert."
       archived_notice: "%{name} ist archiviert."
@@ -12,14 +11,14 @@ de:
       kinds:
         mail:
           title: "E-Mail"
-          lede: "Einladungen, Zurücksetzungen, Bestätigungen und Codes. Der primäre Adapter sendet alles."
-          idle: "Über die eigenen Adapter dieses Mandanten wird nichts per E-Mail gesendet. E-Mails fallen auf das zurück, was die Installation konfiguriert hat, falls überhaupt etwas."
+          lede: "Einladungen, Zurücksetzungen, Bestätigungen und Codes. Der primäre Dienst sendet alles."
+          idle: "Über einen eigenen Dienst dieses Mandanten wird nichts per E-Mail gesendet. E-Mails fallen auf das zurück, was der Server konfiguriert hat, falls überhaupt etwas."
         sms:
           title: "SMS"
-          lede: "Telefonbestätigungen und Anmeldecodes. Der primäre Adapter sendet alles."
-          idle: "Es können keine SMS gesendet werden, bis ein Adapter hinzugefügt ist."
+          lede: "Telefonbestätigungen und Anmeldecodes. Der primäre Dienst sendet alles."
+          idle: "Es können keine SMS gesendet werden, bis ein Dienst hinzugefügt ist."
       form:
-        add: "Adapter hinzufügen"
+        add: "Dienst hinzufügen"
         edit: "%{name} bearbeiten"
         service: "Dienst"
         key: "Schlüssel"

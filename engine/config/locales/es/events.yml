@@ -144,10 +144,10 @@ es:
         updated: "Política cambiada"
         archived: "Política archivada"
       adapter:
-        created: "Adaptador añadido"
-        updated: "Adaptador cambiado"
-        archived: "Adaptador archivado"
-        tested: "Adaptador probado"
+        created: "Servicio de envío añadido"
+        updated: "Servicio de envío cambiado"
+        archived: "Servicio de envío archivado"
+        tested: "Servicio de envío probado"
       events:
         exported: "Actividad exportada"
       mail_template:

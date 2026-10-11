@@ -55,7 +55,7 @@ fr:
       archived_alert: "Archivée le %{day}. Les membres conservent leurs rôles, et la restaurer leur permet de se connecter de nouveau."
       restore: "Restaurer"
       ownerless: "%{organization} n’a aucun propriétaire : seuls les gestionnaires peuvent donc modifier ses membres. Faites d’un membre un propriétaire."
-      invitation_link: "Aucun adaptateur de messagerie n’est configuré : envoyez donc ce lien d’invitation vous-même. Il ne fonctionne qu’une fois."
+      invitation_link: "Aucun service d’e-mail n’est configuré : envoyez donc ce lien d’invitation vous-même. Il ne fonctionne qu’une fois."
       members:
         title: "Membres"
         lede: "Les propriétaires gèrent aussi les membres depuis leur propre page de compte. Une invitation n’accorde rien tant qu’elle n’est pas acceptée."

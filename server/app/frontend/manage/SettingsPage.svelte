@@ -160,7 +160,7 @@
             done: data.tenant.mails,
             title: t("settings.starting.mail.title"),
             detail: t("settings.starting.mail.detail"),
-            to: "/adapters",
+            to: "/messages",
             action: t("settings.starting.mail.action"),
           },
           {

@@ -2,7 +2,6 @@
   import { t } from "./lib/copy.js";
   import MailWording from "./MailWording.svelte";
   import Loader from "./ui/Loader.svelte";
-  import Page from "./ui/Page.svelte";
   import Tip from "./ui/Tip.svelte";
 
   let { api } = $props();
@@ -31,7 +30,7 @@
   }
 </script>
 
-<Page title={t("emails.title")}>
+<div class="console-page">
   {#key `${client}:${version}`}
     <Loader load={() => api.query(PREVIEWS, { client: client || null })}>
       {#snippet children(data)}
@@ -126,4 +125,4 @@
       {/snippet}
     </Loader>
   {/key}
-</Page>
+</div>

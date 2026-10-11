@@ -340,7 +340,7 @@
 
                 {#if (draft.confirmation === "code" || draft.confirmation === "link") && !data.tenant.mails}
                   <p class="text-xs text-warning">
-                    {t("policies.form.signup.no_mail")} <Link to="/adapters" class="link">{t("policies.form.add_one")}</Link>
+                    {t("policies.form.signup.no_mail")} <Link to="/messages" class="link">{t("policies.form.add_one")}</Link>
                   </p>
                 {/if}
 
@@ -363,7 +363,7 @@
                 {#if !data.tenant.mails}
                   <p class="text-xs text-warning">
                     {t("policies.form.signup.hidden_no_mail")}
-                    <Link to="/adapters" class="link">{t("policies.form.add_one")}</Link>
+                    <Link to="/messages" class="link">{t("policies.form.add_one")}</Link>
                   </p>
                 {/if}
               {:else if draft.signup}
@@ -397,7 +397,7 @@
 
               {#if draft.phone !== "off" && draft.phoneVerified && !data.tenant.texts}
                 <p class="text-xs text-warning">
-                  {t("policies.form.account.no_sms")} <Link to="/adapters" class="link">{t("policies.form.add_one")}</Link>
+                  {t("policies.form.account.no_sms")} <Link to="/messages" class="link">{t("policies.form.add_one")}</Link>
                 </p>
               {/if}
             </div>

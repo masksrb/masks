@@ -4,7 +4,7 @@
 
   let { current, viewer, identifier, account, onsignout, onunpair, children } = $props();
 
-  const TABS = ["settings", "groups", "policies", "providers", "domains", "provisioning", "ldap", "adapters", "streams", "email", "activity"];
+  const TABS = ["settings", "groups", "policies", "providers", "domains", "provisioning", "ldap", "messages", "streams", "activity"];
 
   function unpair() {
     if (confirm(t("settings_shell.forget_confirm"))) onunpair();

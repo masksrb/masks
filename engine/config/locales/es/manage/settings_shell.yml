@@ -14,7 +14,6 @@ es:
         domains: "Dominios"
         provisioning: "Aprovisionamiento"
         ldap: "LDAP"
-        adapters: "Adaptadores"
+        messages: "Mensajes"
         streams: "Flujos"
-        email: "Correo"
         activity: "Actividad"

@@ -1,7 +1,6 @@
 en:
   manage:
     emails:
-      title: "Email"
       list: "Emails"
       app: "The app being signed in to"
       no_app: "No app"

@@ -63,7 +63,7 @@ holds and the console asked for, and masks checks that the person still holds th
 | --- | --- |
 | `masks:manage:read` | Read everything manage shows, and change nothing. |
 | `masks:manage:support` | Read, and help people: sign them out, suspend and restore them, reset passwords and factors, resend invitations, and revoke their sessions, consents, and tokens. |
-| `masks:manage:security` | Read, and change signing keys, clients, providers, sign-in policies, adapters, event streams, and provisioning tokens for one organization. |
+| `masks:manage:security` | Read, and change signing keys, clients, providers, sign-in policies, sending services, event streams, and provisioning tokens for one organization. |
 | `masks:manage` | Everything, including tenant settings, email wording, deleting people, and granting any scope. |
 
 Every mutation declares the least scope it needs, and one that declares none needs `masks:manage`.
@@ -166,7 +166,7 @@ masks emails a person when something changes on their account:
 - Each person can turn any group off under **Emails we send you** on the account page.
 - The email names the device and address the change came from, in the person's time zone.
 
-Every email masks sends can be previewed under **Email** in `/manage`, rendered with sample people and
+Every email masks sends can be previewed under **Messages**, **Wording** in `/manage`, rendered with sample people and
 the tenant's own name and links.
 
 An email sent while someone signs in to an approved app is headed by that app's logo and name, and
@@ -175,7 +175,7 @@ app cannot use the tenant's mail to pass as someone else.
 
 ### Rewording an email
 
-Under **Email** in `/manage`, an owner rewords the invitation, organization invitation, password
+Under **Messages**, **Wording** in `/manage`, an owner rewords the invitation, organization invitation, password
 reset, email confirmation, confirmation code, approval request, and approval emails, and adds a
 signature that closes every email.
 
@@ -210,7 +210,7 @@ and follows the filter on the page. Any manage role may download, and each downl
 
 masks calls addresses that apps and managers supply: a client's `jwks_uri`, `sector_identifier_uri`,
 `logo_uri`, metadata document, back-channel logout URI, and shared signals endpoint, a resource's
-protected resource metadata, every provider's endpoints and SAML metadata, each SMS adapter, and each
+protected resource metadata, every provider's endpoints and SAML metadata, each text message service, and each
 event stream's endpoint. It also calls the Pwned Passwords API. Each of these calls:
 
 - Uses `https`, with no username or password in the address.

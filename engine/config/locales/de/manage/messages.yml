@@ -1,0 +1,11 @@
+de:
+  manage:
+    messages:
+      title: "Nachrichten"
+      parts: "Nachrichten"
+      sending:
+        title: "Versand"
+        lede: "Die Dienste, die E-Mails und SMS dieses Mandanten zustellen. Jede Art wird über ihren primären Dienst gesendet."
+      wording:
+        title: "Wortlaut"
+        lede: "Was jede E-Mail sagt, die masks sendet, in einer Vorschau, wie sie ankommt."

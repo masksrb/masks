@@ -14,7 +14,7 @@ en:
         mail:
           title: "Let masks send email"
           detail: "Invitations, password resets, and sign-in codes go out by email. Until then, a manager passes each invitation link along by hand."
-          action: "Add a mail adapter"
+          action: "Add a mail service"
         client:
           title: "Connect your first app"
           detail: "Register an app by hand, or let one connect itself through the handshake."

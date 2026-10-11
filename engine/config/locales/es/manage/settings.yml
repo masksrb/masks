@@ -14,7 +14,7 @@ es:
         mail:
           title: "Permite que masks envíe correo"
           detail: "Las invitaciones, los restablecimientos de contraseña y los códigos de inicio de sesión se envían por correo. Hasta entonces, un administrador pasa cada enlace de invitación a mano."
-          action: "Añadir un adaptador de correo"
+          action: "Añadir un servicio de correo"
         client:
           title: "Conecta tu primera aplicación"
           detail: "Registra una aplicación a mano o deja que se conecte sola mediante el handshake."

@@ -144,10 +144,10 @@ en:
         updated: "Policy changed"
         archived: "Policy archived"
       adapter:
-        created: "Adapter added"
-        updated: "Adapter changed"
-        archived: "Adapter archived"
-        tested: "Adapter tested"
+        created: "Sending service added"
+        updated: "Sending service changed"
+        archived: "Sending service archived"
+        tested: "Sending service tested"
       events:
         exported: "Activity exported"
       mail_template:

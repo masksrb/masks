@@ -1,7 +1,6 @@
 es:
   manage:
     adapters:
-      title: "Adaptadores"
       added: "%{name} añadido."
       saved: "%{name} guardado."
       archived_notice: "%{name} está archivado."
@@ -13,13 +12,13 @@ es:
         mail:
           title: "Correo"
           lede: "Invitaciones, restablecimientos, confirmaciones y códigos. El principal lo envía todo."
-          idle: "No se envía ningún correo desde los adaptadores propios de este inquilino. El correo recurre a lo que haya configurado el despliegue, si hay algo."
+          idle: "No se envía ningún correo desde un servicio propio de este inquilino. El correo recurre a lo que haya configurado el servidor, si hay algo."
         sms:
           title: "SMS"
           lede: "Confirmaciones de teléfono y códigos de inicio de sesión. El principal lo envía todo."
-          idle: "No se pueden enviar SMS hasta que se añada un adaptador."
+          idle: "No se pueden enviar SMS hasta que se añada un servicio."
       form:
-        add: "Añadir adaptador"
+        add: "Añadir un servicio"
         edit: "Editar %{name}"
         service: "Servicio"
         key: "Clave"

@@ -14,7 +14,6 @@ en:
         domains: "Domains"
         provisioning: "Provisioning"
         ldap: "LDAP"
-        adapters: "Adapters"
+        messages: "Messages"
         streams: "Streams"
-        email: "Email"
         activity: "Activity"

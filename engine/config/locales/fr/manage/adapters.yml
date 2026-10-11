@@ -1,7 +1,6 @@
 fr:
   manage:
     adapters:
-      title: "Adaptateurs"
       added: "%{name} ajouté."
       saved: "%{name} enregistré."
       archived_notice: "%{name} est archivé."
@@ -12,14 +11,14 @@ fr:
       kinds:
         mail:
           title: "E-mail"
-          lede: "Invitations, réinitialisations, confirmations et codes. L’adaptateur principal envoie tout."
-          idle: "Aucun e-mail n’est envoyé par les adaptateurs propres à cet espace. L’e-mail se rabat sur ce que le déploiement a configuré, le cas échéant."
+          lede: "Invitations, réinitialisations, confirmations et codes. Le service principal envoie tout."
+          idle: "Aucun e-mail n’est envoyé par un service propre à cet espace. L’e-mail se rabat sur ce que le serveur a configuré, le cas échéant."
         sms:
           title: "SMS"
-          lede: "Confirmations de téléphone et codes de connexion. L’adaptateur principal envoie tout."
-          idle: "Aucun SMS ne peut être envoyé tant qu’un adaptateur n’est pas ajouté."
+          lede: "Confirmations de téléphone et codes de connexion. Le service principal envoie tout."
+          idle: "Aucun SMS ne peut être envoyé tant qu’un service n’est pas ajouté."
       form:
-        add: "Ajouter un adaptateur"
+        add: "Ajouter un service"
         edit: "Modifier %{name}"
         service: "Service"
         key: "Clé"

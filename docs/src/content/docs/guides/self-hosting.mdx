@@ -149,7 +149,7 @@ REASSIGN OWNED BY masks TO masks_owner;
 
 For each tenant, the database holds accounts, sign-in factors, clients, tokens, signing keys, and
 activity. Columns that hold secrets, such as signing keys, authenticator app secrets, provider and
-adapter credentials, and connected accounts' tokens, are also encrypted with Active Record
+sending service credentials, and connected accounts' tokens, are also encrypted with Active Record
 Encryption (AES-256-GCM). Reading them requires the encryption keys as well as the database.
 
 Four secrets protect this data. None of them appears in the compose file.

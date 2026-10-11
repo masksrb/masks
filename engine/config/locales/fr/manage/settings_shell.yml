@@ -14,7 +14,6 @@ fr:
         domains: "Domaines"
         provisioning: "Provisionnement"
         ldap: "LDAP"
-        adapters: "Adaptateurs"
+        messages: "Messages"
         streams: "Flux"
-        email: "E-mail"
         activity: "Activité"

@@ -1,0 +1,11 @@
+en:
+  manage:
+    messages:
+      title: "Messages"
+      parts: "Messages"
+      sending:
+        title: "Sending"
+        lede: "The services that deliver this tenant's email and text messages. Each kind sends through its primary service."
+      wording:
+        title: "Wording"
+        lede: "What each email masks sends says, previewed as people receive it."

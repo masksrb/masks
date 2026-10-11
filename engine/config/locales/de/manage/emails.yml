@@ -1,7 +1,6 @@
 de:
   manage:
     emails:
-      title: "E-Mail"
       list: "E-Mails"
       app: "Die App, bei der die Anmeldung erfolgt"
       no_app: "Keine App"

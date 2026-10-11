@@ -1,7 +1,6 @@
 en:
   manage:
     adapters:
-      title: "Adapters"
       added: "%{name} added."
       saved: "%{name} saved."
       archived_notice: "%{name} is archived."
@@ -13,13 +12,13 @@ en:
         mail:
           title: "Mail"
           lede: "Invitations, resets, confirmations and codes. The primary one sends everything."
-          idle: "Nothing is emailed from this tenant's own adapters. Mail falls back to whatever the deployment configured, if anything."
+          idle: "Nothing is emailed through a service of this tenant's own. Mail falls back to whatever the server was set up with, if anything."
         sms:
           title: "Text messages"
           lede: "Phone confirmations and sign-in codes. The primary one sends everything."
-          idle: "No texts can be sent until an adapter is added."
+          idle: "No texts can be sent until a service is added."
       form:
-        add: "Add adapter"
+        add: "Add a service"
         edit: "Edit %{name}"
         service: "Service"
         key: "Key"

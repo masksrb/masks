@@ -144,10 +144,10 @@ de:
         updated: "Richtlinie geändert"
         archived: "Richtlinie archiviert"
       adapter:
-        created: "Adapter hinzugefügt"
-        updated: "Adapter geändert"
-        archived: "Adapter archiviert"
-        tested: "Adapter getestet"
+        created: "Versanddienst hinzugefügt"
+        updated: "Versanddienst geändert"
+        archived: "Versanddienst archiviert"
+        tested: "Versanddienst getestet"
       events:
         exported: "Aktivität exportiert"
       mail_template:

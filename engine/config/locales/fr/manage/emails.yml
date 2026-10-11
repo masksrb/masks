@@ -1,7 +1,6 @@
 fr:
   manage:
     emails:
-      title: "E-mail"
       list: "E-mails"
       app: "L’application à laquelle on se connecte"
       no_app: "Aucune application"
