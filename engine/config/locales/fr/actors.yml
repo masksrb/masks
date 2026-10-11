@@ -1,0 +1,8 @@
+fr:
+  activerecord:
+    errors:
+      models:
+        actor:
+          attributes:
+            base:
+              unnamed: "Un compte doit avoir un pseudo ou une adresse e-mail."

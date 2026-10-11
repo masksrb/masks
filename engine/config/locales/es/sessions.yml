@@ -1,0 +1,10 @@
+es:
+  sessions:
+    confirm:
+      page_title: "¿Cerrar sesión?"
+      title: "¿Cerrar sesión?"
+      asked_by_html: "%{client} quiere cerrar tu sesión."
+      asked_html: "Un enlace te trajo aquí para cerrar sesión."
+      scope: "Esto cierra tu sesión en este navegador. Tus otros dispositivos siguen con la sesión iniciada."
+      sign_out: "Cerrar sesión"
+      stay: "Mantener la sesión iniciada"

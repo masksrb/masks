@@ -1,0 +1,15 @@
+de:
+  device_verifications:
+    show:
+      page_title: "Ein Gerät anmelden"
+      title: "Ein Gerät anmelden"
+      lede: "Geben Sie den Code ein, den das Gerät Ihnen anzeigt."
+      code: "Code"
+      unknown: "Auf diesen Code wartet dieser Server nicht. Er ist vielleicht abgelaufen oder wurde bereits beantwortet – lassen Sie sich vom Gerät einen neuen geben."
+      declined: "Es wurde nichts angemeldet. Das Gerät wartet noch und gibt von selbst auf."
+
+    approved:
+      page_title: "Das Gerät ist angemeldet"
+      signed_in: "Angemeldet"
+      title: "%{name} ist angemeldet"
+      lede: "Sie können dies beiseitelegen und zu %{name} zurückkehren."

@@ -1,0 +1,38 @@
+fr:
+  manage:
+    domains:
+      title: "Domaines"
+      nowhere: "Nulle part pour l’instant"
+      claimed: "Publiez l’enregistrement TXT ci-dessous, puis vérifiez %{domain}."
+      proven: "%{domain} est vérifié."
+      unanswered: "Aucun enregistrement TXT correspondant sur %{name} pour l’instant. La propagation DNS peut prendre un moment."
+      routed_away: "Les personnes de %{domain} vont désormais vers leur fournisseur."
+      routed_here: "Les personnes de %{domain} se connectent désormais ici."
+      served: "La connexion est aussi servie depuis %{host}."
+      unserved: "La connexion n’est plus servie depuis un domaine personnalisé."
+      stop_confirm: "Arrêter de servir %{host} ? Les applications qui l’utilisent comme émetteur cessent de fonctionner."
+      release_confirm: "Libérer %{domain} ? Les personnes qui y ont une adresse se connectent de nouveau de la façon habituelle."
+      released: "%{domain} est libéré."
+      serve:
+        title: "Servir la connexion depuis votre domaine"
+        lede: "Un hôte d’un domaine vérifié, comme login.example.com, sert la connexion en plus de l’adresse habituelle. Chaque adresse est son propre émetteur, et une clé d’accès ne fonctionne que sur l’adresse où elle a été créée."
+        prove_first: "Vérifiez d’abord un domaine ci-dessous."
+        host: "Hôte"
+        serve: "Servir"
+        stop: "Arrêter"
+        hint: "Faites pointer le DNS de l’hôte vers ce serveur et donnez-lui un certificat. Les adresses auxquelles répond cet espace : %{origins}."
+      claim:
+        title: "Revendiquer un domaine"
+        lede: "Une personne qui saisit une adresse d’un domaine vérifié est envoyée directement à son fournisseur, sans mot de passe. Vérifiez d’abord le domaine avec un enregistrement DNS."
+        domain: "Domaine"
+        send_to: "Envoyer les personnes vers"
+        claim: "Revendiquer"
+      held:
+        proven: "Vérifié le %{day}"
+        unproven: "Non vérifié"
+        record: "Enregistrement TXT"
+        missing: "L’enregistrement ne répond plus depuis %{since}. La revendication est libérée une semaine plus tard."
+        check: "Vérifier maintenant"
+        release: "Libérer"
+        checked: "Vérifié %{since}. masks vérifie toutes les heures."
+        never: "jamais"

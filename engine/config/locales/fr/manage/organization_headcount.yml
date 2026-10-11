@@ -1,0 +1,9 @@
+fr:
+  manage:
+    organization_headcount:
+      members:
+        one: "%{count} membre"
+        other: "%{count} membres"
+      invited:
+        one: "%{count} invité"
+        other: "%{count} invités"

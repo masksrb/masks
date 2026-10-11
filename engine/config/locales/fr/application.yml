@@ -1,0 +1,6 @@
+fr:
+  application:
+    person:
+      manager: "Gestionnaire"
+      unconfirmed: "non confirmé"
+      sign_out: "Se déconnecter"

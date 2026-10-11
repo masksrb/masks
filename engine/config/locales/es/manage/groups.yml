@@ -1,0 +1,23 @@
+es:
+  manage:
+    groups:
+      title: "Grupos"
+      lede: "Conjuntos de personas con nombre, como administradores o familia. Las aplicaciones que piden el alcance groups ven cada grupo al que pertenece una persona, y una aplicación se puede limitar a algunos grupos."
+      added: "%{name} está listo. Añade personas desde sus propias páginas."
+      delete_confirm: "¿Eliminar %{name}? Las aplicaciones limitadas a él rechazarán a sus personas."
+      deleted: "%{name} se eliminó."
+      left: "%{identifier} ya no está en %{name}."
+      add:
+        title: "Añadir un grupo"
+        help: "La clave es lo que ven las aplicaciones en el claim groups, así que elige la que espera la asignación de roles de la aplicación, como admins. No se puede cambiar después."
+        key: "Clave"
+        name: "Nombre"
+        submit: "Añadir grupo"
+      list:
+        title: "Grupos"
+        empty: "Todavía no hay grupos."
+        people:
+          one: "· %{count} persona"
+          other: "· %{count} personas"
+        delete: "Eliminar"
+        take_out: "Sacar a %{identifier} de %{name}"

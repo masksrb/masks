@@ -1,0 +1,276 @@
+de:
+  account:
+    index:
+      none_yet: "Noch nichts."
+      sign_out: "Abmelden"
+      title: "Ihr Konto"
+      manage: "Diesen Server verwalten"
+      lede: "Hier ändern Sie, wie Sie sich anmelden, sehen die Geräte, auf denen Sie angemeldet sind, und prüfen, was mit Ihrem Konto geschehen ist."
+
+      signing_in:
+        heading: "Anmeldung"
+
+      email:
+        heading: "E-Mail-Adresse"
+        state:
+          none: "Keine"
+          unconfirmed: "Nicht bestätigt"
+        none_set: "Dieses Konto hat keine E-Mail-Adresse. Es kann nichts dorthin gesendet werden, und Sie können Ihr Passwort nicht selbst zurücksetzen."
+        body: "Passwort-Zurücksetzungen und Bestätigungen gehen an %{email}."
+        send_link: "Bestätigungslink senden"
+
+      phone:
+        heading: "Telefonnummer"
+        state:
+          none: "Keine"
+          unconfirmed: "Nicht bestätigt"
+        none: "Dieses Konto hat keine Telefonnummer."
+        body: "SMS-Codes gehen an %{phone}."
+        remove: "Entfernen"
+        confirm_remove: "Diese Telefonnummer entfernen?"
+
+      addresses:
+        email: "Neue E-Mail-Adresse"
+        phone: "Neue Telefonnummer"
+        phone_hint: "Geben Sie die Ländervorwahl mit an, etwa +49 30 1234567."
+        send: "Code senden"
+        again: "Melden Sie sich erneut an, um dies zu ändern"
+        sent: "Geben Sie den an %{to} gesendeten Code ein."
+        code: "Code"
+        confirm: "Bestätigen"
+        directed: "Das Verzeichnis Ihrer Organisation verwaltet diese Adresse."
+        undeliverable:
+          email: "Dieser Server kann noch keine E-Mails senden, daher kann die Adresse hier nicht geändert werden."
+          phone: "Dieser Server kann noch keine SMS senden, daher kann die Nummer hier nicht geändert werden."
+
+      password:
+        heading: "Passwort"
+        state: "Ändern"
+        state_none: "Nicht festgelegt"
+        none: "Dieses Konto hat kein Passwort. Es meldet sich stattdessen mit einem Passkey oder einem anderen Konto an. Wenn Sie eines festlegen, werden Sie überall sonst abgemeldet."
+        set: "Passwort festlegen"
+        set_again: "Melden Sie sich erneut an, um ein Passwort festzulegen"
+        current: "Ihr aktuelles Passwort"
+        new: "Ihr neues Passwort"
+        hint: "Mindestens %{minimum} Zeichen. Eine Änderung meldet Sie überall sonst ab."
+        submit: "Passwort ändern"
+
+      passkeys:
+        heading: "Passkeys"
+        state:
+          none: "Nicht eingerichtet"
+          set:
+            one: "1 eingerichtet"
+            other: "%{count} eingerichtet"
+        explained: "Statt ein Passwort einzugeben, prüft Ihr Gerät auf dieselbe Weise, wie es sich entsperrt, dass Sie es sind. Das zählt als beide Faktoren zugleich, daher müssen Sie auf keinen Code warten."
+        used: "zuletzt verwendet vor %{age}"
+        never_used: "nie verwendet"
+        remove: "Entfernen"
+        confirm_remove: "Entfernen?"
+        compromised: "Die FIDO Alliance meldet ein Problem mit diesem Modell (%{report}). Ersetzen Sie ihn."
+        name: "Wie heißt dieses Gerät?"
+        name_placeholder: "Mein Laptop"
+        add: "Einrichten"
+
+      authenticator:
+        heading: "Authenticator-App"
+        state:
+          "on": "Aktiv"
+          "off": "Nicht eingerichtet"
+        explained: "Nach Ihrem Passwort kann eine Anmeldung mit einem sechsstelligen Code aus einer App auf Ihrem Telefon bestätigt werden. Der Code ändert sich alle 30 Sekunden und funktioniert ohne Netz."
+        scan: "Scannen Sie dies mit Ihrer Authenticator-App, oder geben Sie den Schlüssel dort ein."
+        key: "Schlüssel"
+        code: "Der Code, den die App anzeigt"
+        submit: "Aktivieren"
+        again: "Melden Sie sich erneut an, bevor Sie dies einrichten. Ihre letzte Anmeldung ist eine Weile her."
+        submit_again: "Erneut anmelden"
+        remove: "Entfernen"
+        confirm_remove: "Keine Codes mehr von dieser App abfragen?"
+        enabled: "Bei der Anmeldung wird ein Code aus Ihrer Authenticator-App abgefragt."
+
+      backup_codes:
+        heading: "Backup-Codes"
+        state:
+          one: "1 übrig"
+          other: "%{count} übrig"
+        explained: "Jeder Code meldet einmal an, wenn Ihr Telefon oder Passkey nicht zur Hand ist. Bewahren Sie sie sicher auf, getrennt von diesem Gerät."
+        fresh: "Notieren Sie diese jetzt. Sie werden nicht erneut angezeigt."
+        make: "Neue Codes erstellen"
+        confirm_make: "Ihre aktuellen Codes funktionieren dann nicht mehr."
+        make_again: "Melden Sie sich erneut an, um neue Codes zu erstellen"
+
+      codes:
+        state:
+          "on": "Aktiv"
+          "off": "Aus"
+        sent_to: "Codes gehen an %{to}."
+        turn_on: "Aktivieren"
+        turn_off: "Deaktivieren"
+        confirm_turn_off: "Anmeldungen nicht mehr auf diese Weise bestätigen?"
+        email:
+          heading: "Codes per E-Mail"
+          explained: "Nach Ihrem Passwort kann eine Anmeldung mit einem Code an Ihre E-Mail-Adresse bestätigt werden. Eine Passwort-Zurücksetzung per E-Mail deaktiviert dies, weil der Link zum Zurücksetzen im selben Posteingang landet."
+          unconfirmed: "Bestätigen Sie zuerst Ihre E-Mail-Adresse."
+          undeliverable: "Dieser Server kann noch keine E-Mails senden."
+        sms:
+          heading: "Codes per SMS"
+          explained: "Nach Ihrem Passwort kann eine Anmeldung mit einem per SMS an Ihr Telefon gesendeten Code bestätigt werden. Eine Authenticator-App oder ein Passkey ist schwerer zu stehlen."
+          unconfirmed: "Fügen Sie zuerst eine Telefonnummer hinzu und bestätigen Sie sie."
+          undeliverable: "Dieser Server kann noch keine SMS senden."
+
+      approve:
+        heading: "Anmeldung genehmigen"
+        label: "Ein Code von einem anderen Gerät"
+        state:
+          ready: "Bereit"
+          waiting: "Wartet auf Sie"
+        explained: "Diesem Gerät wird vertraut, daher kann es eine Anmeldung an anderer Stelle bestätigen. Geben Sie den Code ein, den der andere Bildschirm anzeigt. Geben Sie nur einen Code ein, den Sie selbst vor sich sehen."
+        code: "Code auf dem anderen Bildschirm"
+        submit: "Weiter"
+        confirm: "Dieses Gerät möchte sich bei Ihrem Konto anmelden. Genehmigen Sie es nur, wenn es Ihres ist."
+        asked: "angefragt vor %{age}"
+        approve: "Genehmigen"
+        deny: "Ablehnen"
+
+      devices:
+        heading: "Geräte"
+        lede: "Jedes Telefon, Tablet und jeder Computer, der sich bei diesem Konto angemeldet hat."
+        none: "Noch hat sich nichts angemeldet."
+        state:
+          here: "Dieses Gerät"
+          signed_in: "Angemeldet"
+          signed_out: "Abgemeldet"
+          blocked: "Gesperrt"
+        seen: "Zuletzt gesehen vor %{age}."
+        from: "Zuletzt verwendet von %{address}."
+        skips_code: "Dieses Gerät muss keinen Code eingeben."
+        sign_out: "Dieses Gerät abmelden"
+        save_name: "Namen speichern"
+
+      organizations:
+        heading: "Organisationen"
+        invited_by_manager: "Eine von einem Verwalter eingeladene Person"
+        role: "Sie sind %{role}"
+        lede_owner: "Als Eigentümer entscheiden Sie, wer dazugehört und welche Rolle jede Person hat. Apps, die Ihre Organisation anfordern, sehen die Rolle."
+        lede_member: "Apps, die Ihre Organisation anfordern, sehen, dass Sie dazugehören, und Ihre Rolle."
+        members: "Mitglieder"
+        people:
+          one: "1 Mitglied"
+          other: "%{count} Mitglieder"
+        owners:
+          one: "1 Eigentümer"
+          other: "%{count} Eigentümer"
+        waiting_count:
+          one: "1 offene Einladung"
+          other: "%{count} offene Einladungen"
+        you: "Sie"
+        invited: "eingeladen"
+        expired: "abgelaufen"
+        waiting: "Wartet auf Sie"
+        asked: "%{by} hat Sie zu %{organization} als %{role} hinzugefügt. Bis Sie annehmen, ändert sich nichts."
+        invited_ago: "Eingeladen vor %{age}"
+        expired_ago: "Einladung abgelaufen vor %{age}"
+        expires_in: "läuft in %{age} ab"
+        by: "von %{by}"
+        joined_ago: "Beigetreten vor %{age}"
+        sent_to: "gesendet an %{address}"
+        sent_elsewhere: "Diese Einladung ging an %{address}. Melden Sie sich mit dieser Adresse an, um sie anzunehmen, oder bitten Sie einen Eigentümer, die Adresse dieses Kontos einzuladen."
+        confirm_first_html: "Bestätigen Sie %{address} unter <a href=\"#email\">E-Mail-Adresse</a>, bevor Sie annehmen."
+        someone: "Ein Eigentümer"
+        accept: "%{organization} beitreten"
+        decline: "Ablehnen"
+        confirm_decline: "Die Einladung zu %{organization} ablehnen? Ein Eigentümer muss Sie erneut einladen."
+        set_role: "Rolle festlegen"
+        role_of: "Rolle von %{person}"
+        remove: "Entfernen"
+        withdraw: "Zurückziehen"
+        resend: "Erneut senden"
+        confirm_remove: "%{identifier} aus %{organization} entfernen? Alles, wobei die Person als Mitglied angemeldet ist, funktioniert nicht mehr."
+        confirm_withdraw: "Die Einladung an %{identifier} zurückziehen?"
+        add_email: "Jemanden per E-Mail hinzufügen"
+        add_placeholder: "name@example.com"
+        add_role: "Rolle"
+        add: "Hinzufügen"
+        add_hint: "Die Person tritt bei, sobald sie annimmt. Wer hier kein Konto hat, erhält zuerst eine Einladung."
+        leave: "%{organization} verlassen"
+        confirm_leave: "%{organization} verlassen? Alles, wobei Sie als Mitglied angemeldet sind, funktioniert nicht mehr, und ein Eigentümer muss Sie erneut hinzufügen."
+        last_owner: "Sie sind der einzige Eigentümer, daher können Sie weder austreten noch Ihre Rolle ändern, bis Sie jemand anderen zum Eigentümer machen."
+
+      launcher:
+        heading: "Ihre Apps"
+
+      apps:
+        heading: "Apps und Konten"
+        state:
+          none: "Keine"
+
+      applications:
+        remembered: "%{label}, ohne Nachfrage bis %{date}"
+        heading: "Apps, die Sie zugelassen haben"
+        none_yet: "Bisher hat nichts angefragt. Eine App erscheint hier, sobald Sie sich bei ihr anmelden, zusammen mit dem, was sie sehen darf."
+        revoke: "Zugriff widerrufen"
+        more:
+          one: "und eine weitere"
+          other: "und %{count} weitere"
+        confirm_revoke: "%{client} widerrufen? Alles, was die App hält, funktioniert nicht mehr, und sie muss bei Ihrer nächsten Anmeldung erneut fragen."
+
+      connections:
+        heading: "Verbundene Konten"
+        lede: "Ein Konto an anderer Stelle – etwa ein Arbeitskonto –, das mit diesem verknüpft ist. Es kann ein Weg sein, sich hier anzumelden."
+        signs_you_in: "meldet Sie an"
+        link: "%{provider} verbinden"
+        disconnect: "Trennen"
+        confirm_disconnect: "%{provider} trennen? Wenn Sie sich damit anmelden, brauchen Sie einen anderen Zugang. Jede App, die es nutzt, hört auf."
+        delegated: "%{client} kann es nutzen, während Sie nicht da sind"
+        stop: "Beenden"
+        confirm_stop: "Soll %{client} Ihr %{provider}-Konto nicht mehr nutzen? Die App muss Sie erneut fragen."
+
+      info:
+        heading: "Details"
+
+      profile:
+        heading: "Name"
+        name: "Ihr Name"
+        nickname: "Spitzname"
+        nickname_hint: "Buchstaben, Ziffern, Punkte, Bindestriche und Unterstriche. Sie können sich damit anmelden."
+        submit: "Speichern"
+        directed: "Das Verzeichnis Ihrer Organisation verwaltet Ihren Namen."
+
+      picture:
+        change: "Foto ändern"
+        remove: "Foto entfernen"
+        confirm_remove: "Ihr Foto entfernen?"
+
+      notifications:
+        heading: "E-Mails, die wir Ihnen senden"
+        state:
+          zero: "Alle"
+          one: "Eine deaktiviert"
+          other: "%{count} deaktiviert"
+        lede: "Alles hier ist aktiv, bis Sie es deaktivieren. Diese Nachrichten kommen, sobald etwas passiert, und auf keine kann geantwortet werden."
+        silent: "Es wird nichts gesendet, weil diese Nachrichten nur an eine bestätigte E-Mail-Adresse gehen."
+        submit: "Speichern"
+
+      export:
+        heading: "Ihr Konto herunterladen"
+        state: "JSON"
+        lede: "Eine Datei mit Ihrem Profil, Ihren Anmeldemethoden, Organisationen, Apps, verbundenen Konten und Geräten sowie der Aktivität, die masks aufbewahrt hat. Sie enthält keine Passwörter, Codes oder Schlüssel."
+        again: "Ihre Anmeldung ist eine Weile her, daher werden Sie zuerst gebeten, sich erneut anzumelden."
+        submit: "Herunterladen"
+        submit_again: "Erneut anmelden"
+
+      delete:
+        heading: "Ihr Konto löschen"
+        state: "Endgültig"
+        lede: "Das Löschen Ihres Kontos meldet Sie von jeder App und jedem Gerät ab und entfernt Ihre Passkeys, verbundenen Konten und Ihr Foto. Es lässt sich nicht rückgängig machen."
+        again: "Ihre Anmeldung ist eine Weile her, daher werden Sie zuerst gebeten, sich erneut anzumelden."
+        confirm_html: "Geben Sie <b>%{identifier}</b> zur Bestätigung ein"
+        submit: "Mein Konto löschen"
+        submit_again: "Erneut anmelden"
+
+      activity:
+        heading: "Aktivität"
+        entry: "Letzte Aktivität"
+        lede: "Was zuletzt mit Ihrem Konto geschehen ist. Wenn Sie etwas nicht wiedererkennen, sollten Sie Ihr Passwort ändern."
+        ago: "vor %{age}"
+        check_this: "einen Blick wert"

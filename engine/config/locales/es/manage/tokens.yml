@@ -1,0 +1,21 @@
+es:
+  manage:
+    tokens:
+      kinds:
+        access: "de acceso"
+        refresh: "de actualización"
+        code: "de código"
+      revoke_chain_confirm: "¿Revocar todos los tokens de esta cadena? Todo lo que tiene %{held} deja de funcionar al instante."
+      revoke_confirm: "¿Revocar este token %{kind}? Lo que se obtuvo a cambio de él se revoca también."
+      revoked:
+        one: "%{count} token revocado."
+        other: "%{count} tokens revocados."
+      empty: "Nada pendiente."
+      rotated: "rotado"
+      revoke: "Revocar"
+      revoke_chain: "Revocar la cadena"
+      issued: "Emitido %{when}"
+      expires: "Caduca %{when}"
+      more:
+        one: "Mostrar %{count} más"
+        other: "Mostrar %{count} más"

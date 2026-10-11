@@ -1,0 +1,23 @@
+fr:
+  manage:
+    ui:
+      save: "Enregistrer"
+      retry: "Réessayer"
+      search: "Rechercher"
+      loading: "Chargement"
+      more_about: "En savoir plus"
+      about: "À propos de %{title}"
+      pager:
+        label: "Pages"
+        range: "%{first}–%{last}"
+        range_of: "%{first}–%{last} sur %{total}"
+        previous: "Précédent"
+        next: "Suivant"
+      bar_chart:
+        peak: "%{peak} le jour le plus chargé"
+        summary: "%{label} : %{total} connexions sur %{days} jours, avec un pic à %{peak}."
+        unit:
+          one: "connexion"
+          other: "connexions"
+        day: "Jour"
+        units: "connexions"

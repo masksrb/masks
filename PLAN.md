@@ -6,4 +6,3 @@ says what a person can do once it lands.
 
 ## Later
 
-- A first language beyond English, now that every page reads its wording from locale files.

@@ -1,0 +1,16 @@
+de:
+  refusals:
+    show:
+      browser: "Dieser Browser: %{label}"
+      device:
+        page_title: "Dieses Gerät ist gesperrt"
+        state: "Gesperrt"
+        heading: "Dieses Gerät ist gesperrt"
+        lede: "%{tenant} lehnt jede Anfrage von diesem Browser ab, auch die Anmeldung, weil er über eine Kontoseite oder von einem Verwalter gesperrt wurde."
+        next: "Wenn das Ihr Gerät ist, bitten Sie einen Verwalter von %{tenant}, es zu entsperren. Die Anmeldung von einem anderen Gerät ist nicht betroffen."
+      agent:
+        page_title: "Mit diesem Browser ist hier keine Anmeldung möglich"
+        state: "Abgelehnt"
+        heading: "Mit diesem Browser ist hier keine Anmeldung möglich"
+        lede: "%{tenant} akzeptiert Anmeldungen nur von erlaubten Browsern, und dieser gehört nicht dazu."
+        next: "Öffnen Sie diese Seite in einem gewöhnlichen Webbrowser, oder fragen Sie einen Verwalter von %{tenant}, welche Browser erlaubt sind."

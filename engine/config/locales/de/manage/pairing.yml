@@ -1,0 +1,5 @@
+de:
+  manage:
+    pairing:
+      registration_failed: "Registrierung fehlgeschlagen"
+      secret_issued: "masks hat einem Browser ein Geheimnis ausgestellt, was nie passieren darf"

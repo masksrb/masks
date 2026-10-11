@@ -1,0 +1,15 @@
+de:
+  time:
+    formats:
+      notification: "%-d. %B %Y um %H:%M %Z"
+
+  notifications:
+    saved: "Gespeichert."
+
+    groups:
+      password: "Passwort"
+      factors: "Passkeys und zweite Faktoren"
+      sessions: "Anmeldungen und Geräte"
+      applications: "Apps und verbundene Konten"
+      account: "Konto"
+      organizations: "Organisationen"

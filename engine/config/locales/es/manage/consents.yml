@@ -1,0 +1,10 @@
+es:
+  manage:
+    consents:
+      revoke_confirm: "¿Cortar el acceso de %{held}? Se revocan todos sus tokens de actualización y tendrá que volver a pedirlo la próxima vez que alguien inicie sesión."
+      revoked: "Acceso revocado. Tendrá que volver a pedirlo."
+      empty: "Ninguno."
+      revoke: "Revocar acceso"
+      last_asked: "Lo pidió por última vez %{when}"
+      asks_again: "Vuelve a pedirlo %{when}"
+      until: "hasta %{when}"

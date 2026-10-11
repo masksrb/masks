@@ -1,0 +1,31 @@
+fr:
+  manage:
+    emails:
+      title: "E-mail"
+      list: "E-mails"
+      app: "L’application à laquelle on se connecte"
+      no_app: "Aucune application"
+      not_approved: "%{name} (non approuvée)"
+      headed: "En-tête de %{heading}, de %{from} à %{to}"
+      no_sender: "aucun expéditeur configuré"
+      part: "Quelle partie"
+      html: "HTML"
+      text: "Texte"
+      signature: "La signature"
+      groups:
+        sign_in:
+          title: "Pendant la connexion"
+          help: "Envoyés pendant une connexion. Quand une application y a envoyé la personne, une application approuvée place son logo et son nom en tête de l’e-mail. Une connexion directe à la page du compte n’a pas d’application, et c’est l’espace qui figure en tête."
+          about: "À propos des e-mails envoyés pendant la connexion"
+        manage:
+          title: "De la part d’un gestionnaire"
+          help: "Envoyés quand un gestionnaire agit dans /manage. L’espace figure en tête."
+          about: "À propos des e-mails envoyés par un gestionnaire"
+        account:
+          title: "Depuis la page du compte"
+          help: "Envoyés quand une personne modifie son propre compte. L’espace figure en tête."
+          about: "À propos des e-mails envoyés depuis la page du compte"
+        system:
+          title: "Automatiquement"
+          help: "Envoyés par masks sans action de personne, comme les avis de sécurité et les avertissements d’inactivité. L’espace figure en tête."
+          about: "À propos des e-mails envoyés automatiquement"

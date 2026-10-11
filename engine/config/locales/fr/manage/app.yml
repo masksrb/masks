@@ -1,0 +1,21 @@
+fr:
+  manage:
+    app:
+      missing: "Il n’y a pas de page à cette adresse."
+      account: "Compte"
+      starting: "Démarrage"
+      stopped: "Arrêté"
+      failed: "Impossible de se connecter pour gérer %{tenant}"
+      retry: "Réessayer"
+      settings: "Paramètres"
+      sections: "Sections"
+      nav:
+        overview: "Vue d’ensemble"
+        actors: "Utilisateurs"
+        organizations: "Organisations"
+        clients: "Applications"
+      limited:
+        read: "Vous pouvez tout consulter ici, sans rien modifier."
+        support: "Vous pouvez aider les personnes avec leur compte. Les paramètres, les clés et les autres gestionnaires nécessitent un propriétaire."
+        security: "Vous pouvez modifier les clés, les applications, les fournisseurs et les politiques. Les comptes des personnes nécessitent le support ou un propriétaire."
+        both: "Vous pouvez modifier les paramètres et aider les personnes. Les autres gestionnaires et les paramètres de l’espace nécessitent un propriétaire."

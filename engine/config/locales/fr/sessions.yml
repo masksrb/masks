@@ -1,0 +1,10 @@
+fr:
+  sessions:
+    confirm:
+      page_title: "Se déconnecter ?"
+      title: "Se déconnecter ?"
+      asked_by_html: "%{client} souhaite vous déconnecter."
+      asked_html: "Un lien vous a amené ici pour vous déconnecter."
+      scope: "Votre session dans ce navigateur prendra fin. Vos autres appareils restent connectés."
+      sign_out: "Se déconnecter"
+      stay: "Rester connecté"

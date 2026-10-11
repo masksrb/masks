@@ -1,0 +1,18 @@
+fr:
+  manage:
+    mail_wording:
+      reset: "%{title} reprend la formulation de masks."
+      saved: "%{title} enregistré."
+      signature: "Signature"
+      wording: "Formulation"
+      customized: " (personnalisé)"
+      subject: "Objet"
+      subject_placeholder: "L’objet rédigé par masks"
+      closing: "Lignes de fin de chaque e-mail"
+      opening: "Texte d’ouverture"
+      closing_placeholder: "Aucune"
+      opening_placeholder: "L’ouverture rédigée par masks"
+      hint: "Texte brut. Une ligne vide commence un nouveau paragraphe. Remplit %{names}."
+      hint_more: "masks ajoute toujours le bouton ou le code, sa durée de validité et les consignes de sécurité."
+      save: "Enregistrer"
+      use_default: "Utiliser la formulation de masks"

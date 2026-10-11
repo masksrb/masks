@@ -1,0 +1,69 @@
+es:
+  manage:
+    policy_rules:
+      factors:
+        password: "contraseña"
+        passkey: "llave de acceso"
+        provider: "proveedor"
+        email_code: "código por correo"
+        otp: "aplicación de autenticación"
+        backup_codes: "códigos de respaldo"
+      confirmations:
+        none: "ninguna"
+        code: "código por correo"
+        link: "enlace por correo"
+        approval: "aprobación de un administrador"
+      presence:
+        "off": "desactivado"
+        optional: "opcional"
+        required: "obligatorio"
+      answers:
+        "yes": "sí"
+        "no": "no"
+      units:
+        day:
+          one: "%{count} día"
+          other: "%{count} días"
+        hour:
+          one: "%{count} hora"
+          other: "%{count} horas"
+        minute:
+          one: "%{count} minuto"
+          other: "%{count} minutos"
+        second:
+          one: "%{count} segundo"
+          other: "%{count} segundos"
+      terms:
+        signup: "Registro"
+        email_domains: "Dominios de correo"
+        hidden: "Oculta quién tiene cuenta"
+        nickname: "Apodo"
+        email: "Correo"
+        email_verified: "Correo confirmado"
+        phone: "Teléfono"
+        phone_verified: "Teléfono confirmado"
+        first_factors: "Inicia sesión con"
+        providers: "Proveedores"
+        password: "Contraseña"
+        second_factors: "Segundos factores"
+        second_factor_required: "Segundo factor obligatorio"
+        apps_require_second_factor: "Segundo factor en cada inicio de sesión en una aplicación"
+        session_lifetime: "Duración de la sesión"
+        refuse_breached: "Rechaza contraseñas filtradas"
+        risk_step_up: "Segundo factor por riesgo"
+        risk_refuse: "Rechazo por riesgo"
+        idle_timeout: "Tiempo de inactividad"
+        confirmation: "Confirmación"
+        signup_scopes: "Alcances de registro"
+      values:
+        open: "abierto"
+        invitation_only: "solo por invitación"
+        any: "cualquiera"
+        nothing: "nada"
+        every_one: "todos"
+        none: "ninguno"
+        password: "al menos %{minimum} caracteres"
+        not_common: "al menos %{minimum} caracteres, y no una común"
+        default_lifetime: "14 días"
+        never: "nunca"
+        at: "a partir de %{score}"

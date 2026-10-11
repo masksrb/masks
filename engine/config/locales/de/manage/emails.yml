@@ -1,0 +1,31 @@
+de:
+  manage:
+    emails:
+      title: "E-Mail"
+      list: "E-Mails"
+      app: "Die App, bei der die Anmeldung erfolgt"
+      no_app: "Keine App"
+      not_approved: "%{name} (nicht genehmigt)"
+      headed: "Kopfzeile von %{heading}, von %{from} an %{to}"
+      no_sender: "kein Absender konfiguriert"
+      part: "Welcher Teil"
+      html: "HTML"
+      text: "Text"
+      signature: "Die Signatur"
+      groups:
+        sign_in:
+          title: "Während der Anmeldung"
+          help: "Wird während einer Anmeldung gesendet. Hat eine App die Person dorthin geschickt, steht eine genehmigte App mit Logo und Namen im Kopf der E-Mail. Eine Anmeldung direkt zur Kontoseite hat keine App, und der Mandant steht im Kopf."
+          about: "Über E-Mails, die während der Anmeldung gesendet werden"
+        manage:
+          title: "Von einem Verwalter"
+          help: "Wird gesendet, wenn ein Verwalter in /manage handelt. Der Mandant steht im Kopf."
+          about: "Über E-Mails, die von einem Verwalter ausgelöst werden"
+        account:
+          title: "Von der Kontoseite"
+          help: "Wird gesendet, wenn eine Person ihr eigenes Konto ändert. Der Mandant steht im Kopf."
+          about: "Über E-Mails, die von der Kontoseite ausgelöst werden"
+        system:
+          title: "Von selbst"
+          help: "Wird von masks gesendet, ohne dass jemand handelt, etwa Sicherheitshinweise und Inaktivitätswarnungen. Der Mandant steht im Kopf."
+          about: "Über E-Mails, die von selbst gesendet werden"

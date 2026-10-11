@@ -1,0 +1,28 @@
+de:
+  manage:
+    activity:
+      title: "Aktivität"
+      nouns:
+        actor: "Akteur"
+        client: "App"
+      downloading:
+        one: "%{count} Ereignis wird heruntergeladen."
+        other: "%{count} Ereignisse werden heruntergeladen."
+      involves: "Nur Ereignisse für %{noun}"
+      involves_end: "."
+      gone:
+        actor: "Nur, was einen Akteur betrifft, der nicht mehr existiert."
+        client: "Nur, was eine App betrifft, die nicht mehr existiert."
+      everything: "Alles anzeigen"
+      show: "Anzeigen"
+      all: "alles"
+      grave: "Nur, was einen Blick wert ist"
+      export:
+        title: "Export"
+        lede: "Alle Ereignisse eines Zeitraums als zeilengetrenntes JSON, in der Form, die Event-Streams senden. Es gilt der Filter oben."
+        from: "Von"
+        through: "Bis einschließlich"
+        download: "Herunterladen"
+      empty:
+        grave: "Nichts, was einen Blick wert ist."
+        plain: "Noch nichts."

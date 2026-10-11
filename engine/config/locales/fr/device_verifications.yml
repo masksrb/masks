@@ -1,0 +1,15 @@
+fr:
+  device_verifications:
+    show:
+      page_title: "Connecter un appareil"
+      title: "Connecter un appareil"
+      lede: "Saisissez le code affiché par l’appareil."
+      code: "Code"
+      unknown: "Ce serveur n’attend pas ce code. Il a peut-être expiré ou déjà reçu une réponse : demandez-en un nouveau à l’appareil."
+      declined: "Aucune connexion n’a eu lieu. L’appareil attend toujours et finira par abandonner de lui-même."
+
+    approved:
+      page_title: "L’appareil est connecté"
+      signed_in: "Connecté"
+      title: "%{name} est connecté"
+      lede: "Vous pouvez fermer cette page et revenir à %{name}."

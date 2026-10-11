@@ -1,0 +1,69 @@
+fr:
+  manage:
+    policy_rules:
+      factors:
+        password: "mot de passe"
+        passkey: "clé d’accès"
+        provider: "fournisseur"
+        email_code: "code par e-mail"
+        otp: "application d’authentification"
+        backup_codes: "codes de secours"
+      confirmations:
+        none: "aucune"
+        code: "code par e-mail"
+        link: "lien par e-mail"
+        approval: "approbation d’un gestionnaire"
+      presence:
+        "off": "désactivé"
+        optional: "facultatif"
+        required: "obligatoire"
+      answers:
+        "yes": "oui"
+        "no": "non"
+      units:
+        day:
+          one: "%{count} jour"
+          other: "%{count} jours"
+        hour:
+          one: "%{count} heure"
+          other: "%{count} heures"
+        minute:
+          one: "%{count} minute"
+          other: "%{count} minutes"
+        second:
+          one: "%{count} seconde"
+          other: "%{count} secondes"
+      terms:
+        signup: "Inscription"
+        email_domains: "Domaines e-mail"
+        hidden: "Masque qui a un compte"
+        nickname: "Pseudo"
+        email: "E-mail"
+        email_verified: "E-mail confirmé"
+        phone: "Téléphone"
+        phone_verified: "Téléphone confirmé"
+        first_factors: "Se connecte avec"
+        providers: "Fournisseurs"
+        password: "Mot de passe"
+        second_factors: "Seconds facteurs"
+        second_factor_required: "Second facteur obligatoire"
+        apps_require_second_factor: "Second facteur à chaque connexion à une application"
+        session_lifetime: "Durée de session"
+        refuse_breached: "Refuse les mots de passe compromis"
+        risk_step_up: "Second facteur selon le risque"
+        risk_refuse: "Refus selon le risque"
+        idle_timeout: "Délai d’inactivité"
+        confirmation: "Confirmation"
+        signup_scopes: "Portées à l’inscription"
+      values:
+        open: "ouverte"
+        invitation_only: "sur invitation uniquement"
+        any: "tous"
+        nothing: "rien"
+        every_one: "tous"
+        none: "aucun"
+        password: "au moins %{minimum} caractères"
+        not_common: "au moins %{minimum} caractères, pas un mot de passe courant"
+        default_lifetime: "14 jours"
+        never: "jamais"
+        at: "à %{score}"

@@ -1,0 +1,31 @@
+fr:
+  manage:
+    organizations:
+      title: "Organisations"
+      lede: "Les clients de cet espace. Une application qui demande la portée organization connecte une personne en tant que membre de l’une d’elles, et son jeton porte le rôle qu’elle y occupe."
+      columns:
+        organization: "Organisation"
+        members: "Membres"
+        roles: "Rôles"
+        signs_in: "Se connecte avec"
+      restored: "%{name} est de retour."
+      members:
+        one: "%{count} membre"
+        other: "%{count} membres"
+      members_invited: "%{members}, %{count} invités"
+      add: "Ajouter une organisation"
+      add_lede: "Vous en devenez le premier propriétaire, et pourrez ajouter des membres une fois qu’elle existe."
+      name: "Nom"
+      key: "Clé"
+      key_hint: "Une application demande cette organisation avec"
+      key_word: "la clé"
+      key_hint_end: ". La clé ne pourra plus changer."
+      adding: "Ajout..."
+      cancel: "Annuler"
+      empty: "Aucune organisation pour l’instant. Ajoutez-en une pour chaque client dont les membres se connectent ensemble."
+      tenant_policy: "La politique de l’espace"
+      archived:
+        title: "Archivées"
+        lede: "Personne ne se connecte en tant que membre de celles-ci. En restaurer une rétablit ses membres tels qu’ils étaient."
+        detail: "· archivée le %{day} · %{members}"
+      restore: "Restaurer"

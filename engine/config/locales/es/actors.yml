@@ -1,0 +1,8 @@
+es:
+  activerecord:
+    errors:
+      models:
+        actor:
+          attributes:
+            base:
+              unnamed: "Una cuenta necesita un apodo o una dirección de correo."

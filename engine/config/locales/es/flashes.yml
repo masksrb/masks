@@ -1,0 +1,162 @@
+es:
+  devices:
+    unknown: "No hay ningún dispositivo así en esta cuenta."
+    refused_agent: "Este navegador no puede iniciar sesión aquí."
+    blocked: "Este dispositivo está bloqueado."
+    renamed: "Dispositivo renombrado."
+    shared: "Otra persona también ha iniciado sesión en ese dispositivo, así que no se puede renombrar aquí."
+    signed_out: "Se cerró la sesión de ese dispositivo."
+
+  organization_members:
+    unknown: "No eres miembro de esa organización."
+    not_a_member: "Esa persona no es miembro de esta organización."
+    invitee: "Alguien invitado"
+    owners_only: "Solo un propietario de %{organization} puede cambiar sus miembros."
+    added: "%{identifier} es miembro de %{organization}."
+    assigned: "%{identifier} ahora es %{role}."
+    removed: "%{identifier} ya no es miembro de %{organization}."
+    left: "Has salido de %{organization}. Todo lo que tenga la sesión iniciada como miembro deja de funcionar."
+    accepted: "Ahora eres %{role} en %{organization}."
+    declined: "Rechazaste %{organization}."
+    confirm_first: "Confirma %{address} antes de unirte a %{organization}: envía una confirmación desde la configuración de correo de esta página y luego acepta."
+    elsewhere: "%{organization} invitó a %{address}, que no es la dirección de esta cuenta. Cambia tu correo a esa dirección y confírmala para unirte."
+    slow_down: "Son muchas personas a la vez. Espera un minuto y vuelve a intentarlo."
+    resent: "Se volvió a enviar la invitación a %{identifier}. Caduca en %{age}."
+    expired: "La invitación a %{organization} caducó. Pide a un propietario que la vuelva a enviar."
+
+  apps:
+    unknown: "No hay ninguna aplicación así en esta cuenta."
+    revoked: "Se revocó el acceso de %{client}. Todo lo que tenía deja de funcionar y tendrá que volver a pedirlo."
+
+  connections:
+    unknown: "No hay ninguna cuenta conectada así."
+    disconnected: "Se desconectó %{provider}."
+    linked: "%{provider} está conectado. A partir de ahora puedes iniciar sesión con él."
+    unavailable: "Ese proveedor no se puede conectar aquí."
+    stale: "Vuelve a iniciar sesión antes de conectar otra cuenta. Hace tiempo que no lo haces."
+    expired: "Ese intento de conectar una cuenta caducó. Vuelve a intentarlo."
+    failed: "%{provider} no confirmó quién eres, así que no se conectó nada."
+    taken: "Esa cuenta de %{provider} ya está conectada a otra persona aquí."
+
+  delegations:
+    unknown: "No hay ninguna aplicación que use esa cuenta."
+    stopped: "%{client} ya no puede usar tu cuenta de %{provider}."
+
+  passkeys:
+    expired: "Ese registro caducó. Vuelve a intentarlo."
+    crowded: "Ya tienes tantas llaves de acceso como admite este servidor."
+    unusable: "No se pudo añadir esa llave de acceso."
+    unknown: "No hay ninguna llave de acceso así en esta cuenta."
+    last_way_in: "Esa llave de acceso es la única forma de entrar en esta cuenta. Añade otra antes de eliminarla."
+    added: "Llave de acceso añadida."
+    removed: "Llave de acceso eliminada."
+    again: "Vuelve a iniciar sesión para cambiar tus llaves de acceso. Hace tiempo que no lo haces."
+
+  authenticator_apps:
+    again: "Vuelve a iniciar sesión para cambiar tu aplicación de autenticación. Hace tiempo que no lo haces."
+    already: "Esta cuenta ya tiene una aplicación de autenticación. Elimínala antes de añadir otra."
+    unoffered: "Este servidor no ofrece aplicaciones de autenticación."
+    invalid_code: "Ese código no coincide. Comprueba la hora de tu teléfono y prueba el siguiente código."
+    too_many_attempts: "Se probaron demasiados códigos. Espera unos minutos y vuelve a intentarlo."
+    none: "Esta cuenta no tiene aplicación de autenticación."
+    added: "Aplicación de autenticación añadida. Ahora el inicio de sesión pide su código."
+    removed: "Aplicación de autenticación eliminada."
+
+  addresses:
+    again: "Vuelve a iniciar sesión para cambiar tu correo o tu número de teléfono. Hace tiempo que no lo haces."
+    directed: "El directorio de tu organización gestiona las direcciones de esta cuenta."
+    too_many_requests: "Se enviaron demasiados códigos. Espera unos minutos y vuelve a intentarlo."
+    too_many_attempts: "Se probaron demasiados códigos. Espera unos minutos y vuelve a intentarlo."
+    expired: "Ese código caducó. Envía uno nuevo."
+    invalid_code: "Ese código no coincide."
+    email:
+      invalid: "Eso no es una dirección de correo."
+      same: "Esa ya es tu dirección de correo."
+      undeliverable: "Este servidor todavía no puede enviar correo."
+      sent: "Te enviamos un código a %{to}."
+      taken: "Otra cuenta usa esa dirección de correo."
+      changed: "Dirección de correo cambiada."
+    phone:
+      invalid: "Eso no es un número de teléfono. Incluye el código de país, como en +1 555 123 4567."
+      same: "Ese ya es tu número de teléfono."
+      undeliverable: "Este servidor todavía no puede enviar SMS."
+      sent: "Te enviamos un código a %{to}."
+      taken: "Otra cuenta usa ese número de teléfono."
+      changed: "Número de teléfono cambiado."
+      none: "Esta cuenta no tiene número de teléfono."
+      required: "Este servidor exige un número de teléfono, así que no se puede eliminar. Cámbialo en su lugar."
+      removed: "Número de teléfono eliminado."
+
+  backup_codes:
+    again: "Vuelve a iniciar sesión para generar códigos de respaldo nuevos. Hace tiempo que no lo haces."
+    unoffered: "Este servidor no ofrece códigos de respaldo."
+    no_second_factor: "Los códigos de respaldo sustituyen a un segundo factor. Añade antes una aplicación de autenticación o una llave de acceso."
+    generated: "Se generaron códigos de respaldo nuevos. Los anteriores ya no funcionan."
+
+  code_factors:
+    again: "Vuelve a iniciar sesión para cambiar cómo se confirman los inicios de sesión. Hace tiempo que no lo haces."
+    unoffered: "Este servidor no ofrece esa forma de confirmar un inicio de sesión."
+    unconfirmed: "Confirma esa dirección antes de que se le envíen códigos."
+    undeliverable: "Este servidor todavía no puede enviar esos códigos."
+    enabled:
+      email: "Ahora los inicios de sesión se pueden confirmar con un código enviado a tu correo."
+      sms: "Ahora los inicios de sesión se pueden confirmar con un código enviado a tu teléfono."
+    disabled:
+      email: "Los códigos por correo están desactivados."
+      sms: "Los códigos por SMS están desactivados."
+
+  sign_in_approvals:
+    untrusted: "Solo un dispositivo en el que confiaste al iniciar sesión puede aprobar un inicio de sesión."
+    no_match: "Ningún inicio de sesión de esta cuenta está esperando ese código."
+    expired: "Ese inicio de sesión dejó de esperar. Pide un código nuevo en la otra pantalla."
+    too_many_attempts: "Demasiados intentos. Espera unos minutos y vuelve a intentarlo."
+    approved: "Inicio de sesión aprobado."
+    denied: "Inicio de sesión denegado."
+
+  passwords:
+    too_many_attempts: "Demasiados intentos. Espera unos minutos y vuelve a intentarlo."
+    short_password: "Aquí una contraseña necesita al menos %{minimum} caracteres."
+    common_password: "Esa contraseña es de las más comunes. Elige otra."
+    breached_password: "Esa contraseña apareció en una filtración de datos. Elige otra."
+    wrong_current: "Esa no es tu contraseña actual."
+    changed: "Se cambió tu contraseña y se cerraron todas las demás sesiones."
+    set: "Tu cuenta ya tiene contraseña y se cerraron todas las demás sesiones."
+    again: "Vuelve a iniciar sesión para establecer una contraseña. Hace tiempo que no lo haces."
+
+  profiles:
+    directed: "El directorio de tu organización gestiona tu nombre."
+    invalid: "%{errors}"
+    updated: "Se guardaron tus datos."
+
+  verifications:
+    too_many_requests: "Demasiadas solicitudes. Espera unos minutos."
+    no_address: "Esta cuenta no tiene ninguna dirección que confirmar."
+    already_confirmed: "Esa dirección ya está confirmada."
+    no_mailer: "Este servidor no puede enviar correo. Pregunta a un administrador."
+    sent: "Te enviamos un enlace de confirmación a %{email}."
+
+  avatars:
+    updated: "Se actualizó tu foto."
+    removed: "Se eliminó tu foto."
+
+  handshakes:
+    answered: "esa solicitud de conexión ya se respondió"
+    none_in_progress: "no hay ninguna solicitud de conexión en curso"
+    not_permitted: "esta cuenta no puede conectar aplicaciones"
+    already_connected: "%{resource} ya está conectado; un administrador tiene que volver a conectarlo"
+    beyond_account: "%{scopes} es más de lo que tiene esta cuenta"
+    too_soon: "No se registró nada. Lee lo que pide y aprueba cuando termine la cuenta atrás."
+
+  account_export:
+    again: "Vuelve a iniciar sesión para descargar tu cuenta. Hace tiempo que no lo haces."
+    throttled: "Tu cuenta se descargó varias veces en la última hora. Vuelve a intentarlo más tarde."
+  account_deletion:
+    again: "Vuelve a iniciar sesión para eliminar tu cuenta. Hace tiempo que no lo haces."
+    mismatch: "Escribe el nombre de tu cuenta exactamente como aparece para eliminarla."
+    manager: "Eres la última persona que administra este servidor, así que tu cuenta no se puede eliminar."
+    provisioned: "Tu organización gestiona esta cuenta, así que solo ella puede eliminarla."
+    deleted: "Se eliminó tu cuenta."
+
+  forward_auth:
+    unknown: "No hay ninguna aplicación detrás de un proxy registrada en esa dirección."
+    not_admitted: "Tu cuenta no puede usar %{app}."

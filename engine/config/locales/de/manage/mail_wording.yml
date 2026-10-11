@@ -1,0 +1,18 @@
+de:
+  manage:
+    mail_wording:
+      reset: "%{title} verwendet wieder den Wortlaut von masks."
+      saved: "%{title} gespeichert."
+      signature: "Signatur"
+      wording: "Wortlaut"
+      customized: " (angepasst)"
+      subject: "Betreff"
+      subject_placeholder: "Der Betreff, den masks schreibt"
+      closing: "Schlusszeilen in jeder E-Mail"
+      opening: "Einleitungstext"
+      closing_placeholder: "Keine"
+      opening_placeholder: "Die Einleitung, die masks schreibt"
+      hint: "Reiner Text. Eine Leerzeile beginnt einen neuen Absatz. Füllt %{names} aus."
+      hint_more: "masks fügt weiterhin die Schaltfläche oder den Code, die Gültigkeitsdauer und die Sicherheitshinweise hinzu."
+      save: "Speichern"
+      use_default: "Wortlaut von masks verwenden"

@@ -1,0 +1,183 @@
+de:
+  events:
+    actions:
+      session:
+        started: "Angemeldet"
+        ended: "Abgemeldet"
+        revoked: "Sitzung widerrufen"
+        expired: "Sitzung abgelaufen"
+      logout:
+        undelivered: "Abmeldung nicht an eine App zugestellt"
+      login:
+        refused: "Anmeldung abgelehnt"
+        throttled: "Anmeldungen gedrosselt"
+      account:
+        created: "Registriert"
+        exported: "Kontodaten heruntergeladen"
+      invitation:
+        sent: "Einladung gesendet"
+        accepted: "Einladung angenommen"
+      password:
+        changed: "Passwort geändert"
+        reset_requested: "Passwort-Zurücksetzung angefordert"
+        reset_completed: "Passwort zurückgesetzt"
+      email:
+        verification_sent: "E-Mail-Bestätigung gesendet"
+        verified: "E-Mail-Adresse bestätigt"
+        changed: "E-Mail-Adresse geändert"
+      phone:
+        verification_sent: "Telefonbestätigung gesendet"
+        verified: "Telefon bestätigt"
+        changed: "Telefonnummer geändert"
+        removed: "Telefonnummer entfernt"
+      approval:
+        requested: "Genehmigung angefordert"
+      passkey:
+        added: "Passkey hinzugefügt"
+        removed: "Passkey entfernt"
+      backup_codes:
+        generated: "Backup-Codes erstellt"
+      backup_code:
+        spent: "Backup-Code verwendet"
+      recovery:
+        requested: "Um Hilfe bei der Anmeldung gebeten"
+        dismissed: "Bitte um Hilfe verworfen"
+      second_factors:
+        reset: "Zweite Faktoren zurückgesetzt"
+      group:
+        created: "Gruppe erstellt"
+        deleted: "Gruppe gelöscht"
+        member_added: "Zu einer Gruppe hinzugefügt"
+        member_removed: "Aus einer Gruppe entfernt"
+      authenticator:
+        enabled: "Authenticator-App hinzugefügt"
+        disabled: "Authenticator-App entfernt"
+      email_codes:
+        enabled: "Codes per E-Mail aktiviert"
+        disabled: "Codes per E-Mail deaktiviert"
+      text_codes:
+        enabled: "Codes per SMS aktiviert"
+        disabled: "Codes per SMS deaktiviert"
+      device_code:
+        issued: "Geräteanmeldung angefordert"
+        approved: "Gerät angemeldet"
+        refused: "Geräteanmeldung abgelehnt"
+      sign_in:
+        approved: "Anmeldung von einem vertrauenswürdigen Gerät genehmigt"
+        denied: "Anmeldung von einem vertrauenswürdigen Gerät abgelehnt"
+        risky: "Ungewöhnliche Anmeldung"
+      device:
+        trusted: "Gerät als vertrauenswürdig markiert"
+        named: "Gerät umbenannt"
+        forgotten: "Gerät abgemeldet"
+        blocked: "Gerät gesperrt"
+        unblocked: "Gerät entsperrt"
+      avatar:
+        uploaded: "Foto hochgeladen"
+        removed: "Foto entfernt"
+      consent:
+        granted: "App erlaubt"
+        revoked: "App-Zugriff widerrufen"
+      connection:
+        linked: "Konto verbunden"
+        unlinked: "Konto getrennt"
+        signed_in: "Mit einem verbundenen Konto angemeldet"
+        refused: "Anmeldung mit verbundenem Konto abgelehnt"
+      delegation:
+        granted: "Delegation gewährt"
+        released: "Delegiertes Token herausgegeben"
+        refused: "Delegiertes Token verweigert"
+        revoked: "Delegation widerrufen"
+      exchange:
+        granted: "Token getauscht"
+        refused: "Token-Tausch abgelehnt"
+      actor:
+        approved: "Konto genehmigt"
+        created: "Person hinzugefügt"
+        provisioned: "Person von einem Anbieter hinzugefügt"
+        updated: "Profil geändert"
+        deleted: "Person gelöscht"
+        scopes_changed: "Scopes geändert"
+        signed_out: "Überall abgemeldet"
+        suspended: "Person gesperrt"
+        restored: "Person wiederhergestellt"
+        idle_warned: "Inaktives Konto gewarnt"
+      client:
+        created: "App hinzugefügt"
+        registered: "App registriert"
+        approved: "App genehmigt"
+        updated: "App geändert"
+        archived: "App archiviert"
+        restored: "App wiederhergestellt"
+        secret_rotated: "App-Secret rotiert"
+        logo_refused: "App-Logo konnte nicht verwendet werden"
+      token:
+        revoked: "Token widerrufen"
+      saml:
+        asserted: "Bei einer SAML-App angemeldet"
+      provisioning_token:
+        issued: "Provisionierungs-Token ausgestellt"
+        revoked: "Provisionierungs-Token widerrufen"
+      refresh:
+        reused: "Refresh-Token wiederverwendet"
+      signing_key:
+        staged: "Signaturschlüssel vorbereitet"
+        rotated: "Signaturschlüssel rotiert"
+        activated: "Signaturschlüssel aktiviert"
+        discarded: "Signaturschlüssel verworfen"
+      namespace:
+        released: "Namespace freigegeben"
+      provider:
+        created: "Anbieter hinzugefügt"
+        updated: "Anbieter geändert"
+        archived: "Anbieter archiviert"
+      tenant:
+        updated: "Einstellungen geändert"
+      sign_in_policy:
+        created: "Richtlinie hinzugefügt"
+        updated: "Richtlinie geändert"
+        archived: "Richtlinie archiviert"
+      adapter:
+        created: "Adapter hinzugefügt"
+        updated: "Adapter geändert"
+        archived: "Adapter archiviert"
+        tested: "Adapter getestet"
+      events:
+        exported: "Aktivität exportiert"
+      mail_template:
+        updated: "E-Mail-Wortlaut geändert"
+      stream:
+        created: "Event-Stream hinzugefügt"
+        updated: "Event-Stream geändert"
+        archived: "Event-Stream archiviert"
+        secret_rotated: "Secret des Event-Streams rotiert"
+        tested: "Event-Stream getestet"
+        failed: "Event-Stream hat aufgegeben"
+      signal_stream:
+        created: "Shared-Signals-Stream hinzugefügt"
+        updated: "Shared-Signals-Stream geändert"
+        deleted: "Shared-Signals-Stream entfernt"
+      signal:
+        undelivered: "Shared Signal nicht zugestellt"
+        received: "Anbieter hat Abmeldung signalisiert"
+      organization:
+        created: "Organisation hinzugefügt"
+        updated: "Organisation geändert"
+        archived: "Organisation archiviert"
+        ownerless: "Organisation ohne Eigentümer zurückgelassen"
+      membership:
+        added: "Zu einer Organisation hinzugefügt"
+        role_changed: "Organisationsrolle geändert"
+        removed: "Aus einer Organisation entfernt"
+        accepted: "Einer Organisation beigetreten"
+        role_kept: "Organisationsrolle gegen den Anbieter beibehalten"
+        suspended: "Organisation während Mitgliedschaft archiviert"
+        resent: "Organisationseinladung erneut gesendet"
+        expired: "Organisationseinladung abgelaufen"
+      domain:
+        claimed: "Domain beansprucht"
+        verified: "Domain nachgewiesen"
+        released: "Domain freigegeben"
+      custom_domain:
+        served: "Anmeldung unter eigener Domain angeboten"
+        stopped: "Eigene Domain wird nicht mehr angeboten"

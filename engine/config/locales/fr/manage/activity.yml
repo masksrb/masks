@@ -1,0 +1,28 @@
+fr:
+  manage:
+    activity:
+      title: "Activité"
+      nouns:
+        actor: "l’utilisateur"
+        client: "l’application"
+      downloading:
+        one: "Téléchargement de %{count} événement."
+        other: "Téléchargement de %{count} événements."
+      involves: "Seulement ce qui concerne %{noun}"
+      involves_end: "."
+      gone:
+        actor: "Seulement ce qui concerne un utilisateur qui n’existe plus."
+        client: "Seulement ce qui concerne une application qui n’existe plus."
+      everything: "Tout afficher"
+      show: "Afficher"
+      all: "tout"
+      grave: "Seulement ce qui mérite un coup d’œil"
+      export:
+        title: "Exporter"
+        lede: "Tous les événements d’une période en JSON délimité par des retours à la ligne, au format qu’envoient les flux d’événements. Le filtre ci-dessus s’applique."
+        from: "Du"
+        through: "Au"
+        download: "Télécharger"
+      empty:
+        grave: "Rien qui mérite un coup d’œil."
+        plain: "Rien pour l’instant."

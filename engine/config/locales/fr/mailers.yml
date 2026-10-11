@@ -1,0 +1,135 @@
+fr:
+  actor_mailer:
+    shared:
+      fallback: "Ou collez ceci dans votre navigateur :"
+      sent_by: "Envoyé par le service de connexion de %{tenant}."
+      sent_by_html: "Ce message a été envoyé par le service de connexion de %{tenant}."
+
+    invitation:
+      subject: "Vous avez été invité sur %{tenant}"
+      invited_by: "%{nickname} vous a invité sur %{tenant}."
+      invited: "Vous avez été invité sur %{tenant}."
+      organization_after: "Une fois votre mot de passe choisi, %{organization} attend d’être acceptée sur la page de votre compte."
+      nickname_html: "Votre pseudo est %{nickname}. Ouvrez le lien pour choisir un mot de passe."
+      nickname: "Votre pseudo est %{nickname}. Ouvrez le lien pour choisir un mot de passe."
+      action: "Choisir un mot de passe"
+      expiry: "Utilisable une seule fois, expire dans %{duration}. Rien ne se passe tant que personne ne l’ouvre."
+
+    organization_invitation:
+      subject: "Rejoindre %{organization}"
+      invited_by: "%{nickname} vous a invité à rejoindre %{organization} en tant que %{role}."
+      invited: "Vous avez été invité à rejoindre %{organization} en tant que %{role}."
+      grants: "Rien ne change tant que vous n’acceptez pas. Une fois accepté, les applications qui demandent pour quelle organisation vous vous connectez pourront vous connecter en tant que %{role} de %{organization}."
+      action: "Accepter ou décliner"
+      unexpected: "Si vous ne connaissez pas %{organization}, déclinez. Une invitation jamais acceptée n’accorde rien."
+
+    password_reset:
+      subject: "Réinitialiser votre mot de passe %{tenant}"
+      opened_by: "%{nickname} a lancé la réinitialisation du mot de passe de votre compte %{tenant}."
+      opened: "Quelqu’un a demandé à réinitialiser le mot de passe de votre compte %{tenant}."
+      action: "Réinitialiser votre mot de passe"
+      expiry: "Utilisable une seule fois, expire dans %{duration}. Définir un nouveau mot de passe vous déconnecte partout ailleurs. Si ce n’était pas vous, ignorez ce message : rien n’a changé."
+
+    notification:
+      subject: "%{said} — %{tenant}"
+      action: "Vérifier votre compte"
+      by: "C’est %{nickname} qui a fait cela, pas vous."
+      seen: "Enregistré le %{at}."
+      wrong: "Si ce n’était pas vous, changez votre mot de passe et déconnectez-vous partout."
+      manage: "Choisir les notifications à recevoir"
+
+      said:
+        password:
+          changed: "Le mot de passe de votre compte %{tenant} a été modifié."
+          reset_completed: "Votre mot de passe %{tenant} a été réinitialisé via un lien envoyé à cette adresse. Toutes les autres sessions ont été déconnectées."
+        passkey:
+          added: "Une clé d’accès a été ajoutée à votre compte %{tenant}. Elle permet désormais de se connecter sans mot de passe."
+          removed: "Une clé d’accès a été supprimée de votre compte %{tenant}."
+        backup_codes:
+          generated: "Une nouvelle série de codes de secours a été générée pour votre compte %{tenant}. Les codes imprimés auparavant ne fonctionnent plus."
+        backup_code:
+          spent: "Un code de secours a été utilisé pour se connecter à votre compte %{tenant}. Il en reste %{remaining}."
+        email:
+          changed: "L’adresse e-mail de votre compte %{tenant} a été remplacée par une autre adresse. Les réinitialisations de mot de passe et les avis concernant le compte n’arriveront plus ici."
+        phone:
+          changed: "Le numéro de téléphone de votre compte %{tenant} a été modifié. Les codes par SMS sont envoyés au nouveau numéro."
+          removed: "Le numéro de téléphone a été supprimé de votre compte %{tenant}."
+        recovery:
+          requested: "Une personne qui sait se connecter à votre compte %{tenant} a demandé à un gestionnaire de réinitialiser ses seconds facteurs. Si ce n’était pas vous, changez votre mot de passe dès maintenant."
+        second_factors:
+          reset: "Un gestionnaire a réinitialisé les seconds facteurs de votre compte %{tenant}. La prochaine connexion vous demandera d’en configurer un nouveau, et toutes les sessions ont été déconnectées."
+        authenticator:
+          enabled: "Une application d’authentification a été ajoutée à votre compte %{tenant}. La connexion demande désormais son code."
+          disabled: "L’application d’authentification de votre compte %{tenant} a été supprimée. Elle n’est plus demandée à la connexion."
+        email_codes:
+          enabled: "La connexion à votre compte %{tenant} peut désormais être confirmée par un code envoyé à cette adresse."
+          disabled: "La connexion à votre compte %{tenant} ne peut plus être confirmée par un code envoyé à cette adresse."
+        text_codes:
+          enabled: "La connexion à votre compte %{tenant} peut désormais être confirmée par un code envoyé à votre téléphone."
+          disabled: "La connexion à votre compte %{tenant} ne peut plus être confirmée par un code envoyé à votre téléphone."
+        session:
+          started: "Quelqu’un s’est connecté à votre compte %{tenant} sur un appareil jamais vu auparavant."
+          revoked: "Une session de votre compte %{tenant} a été fermée à votre place."
+        sign_in:
+          risky: "Une connexion à votre compte %{tenant} semblait inhabituelle : une vérification supplémentaire a été demandée, ou elle a été refusée. Si ce n’était pas vous, changez votre mot de passe."
+        device:
+          blocked: "Un appareil a été bloqué sur votre compte %{tenant}. Il ne peut plus se connecter tant que personne ne le débloque."
+        consent:
+          granted: "%{client} a été autorisée à accéder à votre compte %{tenant} et peut désormais lire ce que vous avez accepté de partager."
+        connection:
+          linked: "%{provider} a été associé à votre compte %{tenant} et peut désormais servir à vous connecter."
+          unlinked: "%{provider} a été dissocié de votre compte %{tenant}."
+        device_code:
+          approved: "%{client} a été connectée à votre compte %{tenant} depuis un appareil qui vous a affiché un code."
+        actor:
+          scopes_changed: "Ce que votre compte %{tenant} est autorisé à faire a été modifié."
+        account:
+          exported: "Tout le contenu de votre compte %{tenant} a été téléchargé sous forme de fichier."
+        membership:
+          role_changed: "Votre rôle dans %{organization} est passé de %{was} à %{role}. Les applications auxquelles vous êtes connecté pour %{organization} le prendront en compte lors de leur prochaine vérification."
+          removed: "Vous avez été retiré de %{organization}. Les applications connectées pour %{organization} ont été déconnectées."
+          suspended: "%{organization} a été archivée. Les applications connectées pour cette organisation ont été déconnectées, et elle n’est plus proposée lorsque vous vous connectez."
+
+      wrong_for:
+        membership:
+          role_changed: "Si cela vous semble incorrect, demandez à un propriétaire de %{organization}."
+          removed: "Si cela vous semble incorrect, demandez à un propriétaire de %{organization} de vous ajouter à nouveau."
+          suspended: "Si cela vous semble incorrect, demandez à un gestionnaire de rétablir %{organization}."
+
+    confirmation_code:
+      subject: "%{code} est votre code de confirmation %{tenant}"
+      lede: "Saisissez ce code là où vous vous connectez à %{tenant}."
+      expiry: "Il n’est utilisable qu’une fois et expire dans %{duration}. Si ce n’était pas vous, ignorez ce message."
+
+    approval_requested:
+      subject: "%{nickname} attend d’être admis sur %{tenant}"
+      lede: "%{nickname} a créé un compte sur %{tenant}. Il ne peut pas se connecter tant qu’un gestionnaire ne l’a pas approuvé."
+      action: "Examiner le compte"
+
+    recovery_requested:
+      subject: "%{nickname} a demandé de l’aide pour se connecter à %{tenant}"
+      lede: "%{nickname} s’est connecté à %{tenant} avec son premier facteur mais ne peut pas terminer avec un second. Assurez-vous qu’il s’agit bien de cette personne, par téléphone ou en personne, avant de réinitialiser ses seconds facteurs."
+      action: "Examiner le compte"
+
+    idle:
+      subject:
+        active: "Connectez-vous pour conserver votre compte %{tenant}"
+        suspended: "Votre compte %{tenant} suspendu va être supprimé"
+      lede:
+        suspend: "Personne ne s’est connecté à votre compte %{tenant} depuis un moment. Si vous ne vous connectez pas avant le %{due}, il sera suspendu, et seul un gestionnaire pourra le rétablir."
+        delete: "Personne ne s’est connecté à votre compte %{tenant} depuis un moment. Si vous ne vous connectez pas avant le %{due}, il sera supprimé avec tout son contenu."
+        delete_suspended: "Votre compte %{tenant} a été suspendu faute d’utilisation. Il sera supprimé le %{due} avec tout son contenu, sauf si un gestionnaire le rétablit d’ici là."
+      keep: "Une seule connexion suffit à le conserver."
+      action: "Se connecter"
+
+    approved:
+      subject: "Votre compte %{tenant} est prêt"
+      lede: "Un gestionnaire a approuvé votre compte sur %{tenant}. Vous pouvez maintenant vous connecter."
+      action: "Se connecter"
+
+    email_verification:
+      subject: "Confirmez votre adresse e-mail pour %{tenant}"
+      confirm_html: "Confirmez cette adresse pour %{nickname} sur %{tenant}."
+      confirm: "Confirmez cette adresse pour %{nickname} sur %{tenant}."
+      action: "Confirmer cette adresse"
+      expiry: "Utilisable une seule fois, expire dans %{duration}. Si ce n’était pas vous, ignorez ce message : rien d’autre ne change."

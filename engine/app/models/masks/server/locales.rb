@@ -10,8 +10,8 @@ module Masks
           I18n.available_locales
         end
 
-        def negotiate(header)
-          requested(header).lazy.filter_map { |tag| match(tag) }.first || I18n.default_locale
+        def negotiate(header, asked: nil)
+          chosen(asked.to_s.split) || chosen(requested(header)) || I18n.default_locale
         end
 
         def tag(locale = I18n.locale)
@@ -19,6 +19,10 @@ module Masks
         end
 
         private
+
+          def chosen(tags)
+            tags.first(10).lazy.filter_map { |tag| tag.to_s.downcase.match?(TAG) && match(tag.to_s.downcase) }.first
+          end
 
           def requested(header)
             header.to_s[0, LONGEST].split(",").filter_map { |entry| weighed(entry) }

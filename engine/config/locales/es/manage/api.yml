@@ -1,0 +1,5 @@
+es:
+  manage:
+    api:
+      unregistered: "este navegador no tiene ninguna aplicación registrada"
+      refused: "rechazado"

@@ -1,0 +1,23 @@
+es:
+  manage:
+    ui:
+      save: "Guardar"
+      retry: "Volver a intentarlo"
+      search: "Buscar"
+      loading: "Cargando"
+      more_about: "Más información"
+      about: "Acerca de %{title}"
+      pager:
+        label: "Páginas"
+        range: "%{first}–%{last}"
+        range_of: "%{first}–%{last} de %{total}"
+        previous: "Anterior"
+        next: "Siguiente"
+      bar_chart:
+        peak: "%{peak} el día de más actividad"
+        summary: "%{label}: %{total} inicios de sesión en %{days} días, con un máximo de %{peak}."
+        unit:
+          one: "inicio de sesión"
+          other: "inicios de sesión"
+        day: "Día"
+        units: "inicios de sesión"

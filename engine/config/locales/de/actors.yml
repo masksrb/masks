@@ -1,0 +1,8 @@
+de:
+  activerecord:
+    errors:
+      models:
+        actor:
+          attributes:
+            base:
+              unnamed: "Ein Konto braucht einen Spitznamen oder eine E-Mail-Adresse."

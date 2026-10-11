@@ -1,0 +1,7 @@
+es:
+  authorize:
+    error:
+      page_title: "Esta solicitud no se puede completar"
+      stopped: "Detenida"
+      heading: "La aplicación pidió algo que este servidor no hará."
+      contact: "No se compartió nada. La aplicación tiene que corregirlo."

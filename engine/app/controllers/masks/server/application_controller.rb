@@ -9,6 +9,7 @@ module Masks
       HANDSHAKES = "handshakes".freeze
       RETURN_TO = "masks_return_to".freeze
       TRACKED = 5
+      UI_LOCALES = "masks_ui_locales".freeze
 
       content_security_policy do |policy|
         policy.default_src :self
@@ -61,7 +62,8 @@ module Masks
         end
 
         def in_locale
-          locale = Locales.negotiate(request.headers["Accept-Language"])
+          session[UI_LOCALES] = params[:ui_locales].to_s[0, 100] if params[:ui_locales].present?
+          locale = Locales.negotiate(request.headers["Accept-Language"], asked: session[UI_LOCALES])
 
           I18n.with_locale(locale) { yield }
 

@@ -1,0 +1,5 @@
+es:
+  manage:
+    scopes_editor:
+      placeholder: "añadir un alcance"
+      add: "Añadir"

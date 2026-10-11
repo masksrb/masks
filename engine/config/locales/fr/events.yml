@@ -1,0 +1,183 @@
+fr:
+  events:
+    actions:
+      session:
+        started: "Connexion"
+        ended: "Déconnexion"
+        revoked: "Session révoquée"
+        expired: "Session expirée"
+      logout:
+        undelivered: "Déconnexion non transmise à une application"
+      login:
+        refused: "Connexion refusée"
+        throttled: "Connexions limitées"
+      account:
+        created: "Inscription"
+        exported: "Données du compte téléchargées"
+      invitation:
+        sent: "Invitation envoyée"
+        accepted: "Invitation acceptée"
+      password:
+        changed: "Mot de passe modifié"
+        reset_requested: "Réinitialisation du mot de passe demandée"
+        reset_completed: "Mot de passe réinitialisé"
+      email:
+        verification_sent: "Confirmation de l’adresse e-mail envoyée"
+        verified: "Adresse e-mail confirmée"
+        changed: "Adresse e-mail modifiée"
+      phone:
+        verification_sent: "Confirmation du téléphone envoyée"
+        verified: "Téléphone confirmé"
+        changed: "Numéro de téléphone modifié"
+        removed: "Numéro de téléphone supprimé"
+      approval:
+        requested: "Approbation demandée"
+      passkey:
+        added: "Clé d’accès ajoutée"
+        removed: "Clé d’accès supprimée"
+      backup_codes:
+        generated: "Codes de secours générés"
+      backup_code:
+        spent: "Code de secours utilisé"
+      recovery:
+        requested: "Aide à la connexion demandée"
+        dismissed: "Demande d’aide écartée"
+      second_factors:
+        reset: "Seconds facteurs réinitialisés"
+      group:
+        created: "Groupe créé"
+        deleted: "Groupe supprimé"
+        member_added: "Ajouté à un groupe"
+        member_removed: "Retiré d’un groupe"
+      authenticator:
+        enabled: "Application d’authentification ajoutée"
+        disabled: "Application d’authentification supprimée"
+      email_codes:
+        enabled: "Codes par e-mail activés"
+        disabled: "Codes par e-mail désactivés"
+      text_codes:
+        enabled: "Codes par SMS activés"
+        disabled: "Codes par SMS désactivés"
+      device_code:
+        issued: "Connexion d’un appareil demandée"
+        approved: "Appareil connecté"
+        refused: "Connexion d’un appareil refusée"
+      sign_in:
+        approved: "Connexion approuvée depuis un appareil de confiance"
+        denied: "Connexion refusée depuis un appareil de confiance"
+        risky: "Connexion inhabituelle"
+      device:
+        trusted: "Appareil approuvé"
+        named: "Appareil renommé"
+        forgotten: "Appareil déconnecté"
+        blocked: "Appareil bloqué"
+        unblocked: "Appareil débloqué"
+      avatar:
+        uploaded: "Photo envoyée"
+        removed: "Photo supprimée"
+      consent:
+        granted: "Application autorisée"
+        revoked: "Accès de l’application révoqué"
+      connection:
+        linked: "Compte associé"
+        unlinked: "Compte dissocié"
+        signed_in: "Connexion avec un compte associé"
+        refused: "Connexion avec un compte associé refusée"
+      delegation:
+        granted: "Délégation accordée"
+        released: "Jeton délégué remis"
+        refused: "Jeton délégué refusé"
+        revoked: "Délégation révoquée"
+      exchange:
+        granted: "Jeton échangé"
+        refused: "Échange de jeton refusé"
+      actor:
+        approved: "Compte approuvé"
+        created: "Personne ajoutée"
+        provisioned: "Personne ajoutée par un fournisseur"
+        updated: "Profil modifié"
+        deleted: "Personne supprimée"
+        scopes_changed: "Portées modifiées"
+        signed_out: "Déconnecté partout"
+        suspended: "Personne suspendue"
+        restored: "Personne rétablie"
+        idle_warned: "Compte inactif averti"
+      client:
+        created: "Application ajoutée"
+        registered: "Application enregistrée"
+        approved: "Application approuvée"
+        updated: "Application modifiée"
+        archived: "Application archivée"
+        restored: "Application rétablie"
+        secret_rotated: "Secret de l’application renouvelé"
+        logo_refused: "Le logo de l’application n’a pas pu être utilisé"
+      token:
+        revoked: "Jeton révoqué"
+      saml:
+        asserted: "Connexion à une application SAML"
+      provisioning_token:
+        issued: "Jeton de provisionnement émis"
+        revoked: "Jeton de provisionnement révoqué"
+      refresh:
+        reused: "Jeton d’actualisation rejoué"
+      signing_key:
+        staged: "Clé de signature préparée"
+        rotated: "Clé de signature renouvelée"
+        activated: "Clé de signature activée"
+        discarded: "Clé de signature abandonnée"
+      namespace:
+        released: "Espace de noms libéré"
+      provider:
+        created: "Fournisseur ajouté"
+        updated: "Fournisseur modifié"
+        archived: "Fournisseur archivé"
+      tenant:
+        updated: "Paramètres modifiés"
+      sign_in_policy:
+        created: "Politique ajoutée"
+        updated: "Politique modifiée"
+        archived: "Politique archivée"
+      adapter:
+        created: "Adaptateur ajouté"
+        updated: "Adaptateur modifié"
+        archived: "Adaptateur archivé"
+        tested: "Adaptateur testé"
+      events:
+        exported: "Activité exportée"
+      mail_template:
+        updated: "Texte des e-mails modifié"
+      stream:
+        created: "Flux d’événements ajouté"
+        updated: "Flux d’événements modifié"
+        archived: "Flux d’événements archivé"
+        secret_rotated: "Secret du flux d’événements renouvelé"
+        tested: "Flux d’événements testé"
+        failed: "Flux d’événements abandonné"
+      signal_stream:
+        created: "Flux de signaux partagés ajouté"
+        updated: "Flux de signaux partagés modifié"
+        deleted: "Flux de signaux partagés supprimé"
+      signal:
+        undelivered: "Signal partagé non transmis"
+        received: "Déconnexion signalée par un fournisseur"
+      organization:
+        created: "Organisation ajoutée"
+        updated: "Organisation modifiée"
+        archived: "Organisation archivée"
+        ownerless: "Organisation laissée sans propriétaire"
+      membership:
+        added: "Ajouté à une organisation"
+        role_changed: "Rôle dans l’organisation modifié"
+        removed: "Retiré d’une organisation"
+        accepted: "A rejoint une organisation"
+        role_kept: "Rôle dans l’organisation maintenu malgré le fournisseur"
+        suspended: "Organisation archivée pendant l’adhésion"
+        resent: "Invitation à l’organisation renvoyée"
+        expired: "Invitation à l’organisation expirée"
+      domain:
+        claimed: "Domaine revendiqué"
+        verified: "Domaine vérifié"
+        released: "Domaine libéré"
+      custom_domain:
+        served: "Connexion servie depuis un domaine personnalisé"
+        stopped: "Domaine personnalisé plus servi"

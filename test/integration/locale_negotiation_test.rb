@@ -17,7 +17,7 @@ module Masks
       test "the header is negotiated, not trusted" do
         host! host_for(@tenant)
 
-        get "/login", headers: { "Accept-Language" => "de-DE,de;q=0.9,tr;q=0.8" }
+        get "/login", headers: { "Accept-Language" => "it-IT,it;q=0.9,tr;q=0.8" }
 
         assert_response :success
         assert_equal "en", response.headers["Content-Language"]

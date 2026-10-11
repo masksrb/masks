@@ -22,6 +22,7 @@ Gem::Specification.new do |spec|
   spec.require_paths = [ "lib" ]
 
   spec.add_dependency "rails", "~> 8.1"
+  spec.add_dependency "rails-i18n", "~> 8.0"
   spec.add_dependency "pg", "~> 1.1"
   spec.add_dependency "bcrypt", "~> 3.1.7"
   spec.add_dependency "jwt", "~> 3.1"

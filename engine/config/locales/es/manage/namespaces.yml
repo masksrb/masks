@@ -1,0 +1,14 @@
+es:
+  manage:
+    namespaces:
+      title: "Espacios de nombres"
+      release_confirm: "¿Liberar %{name}? La próxima aplicación que lo pida se lo quedará, y los alcances que contiene dejarán de significar lo que significan ahora."
+      released: "%{name} se puede volver a reclamar."
+      columns:
+        name: "Nombre"
+        claimed_by: "Reclamado por"
+        resource: "Recurso"
+        claimed: "Reclamado"
+      nothing: "nada"
+      release: "Liberar"
+      archive_to_release: "archivar para liberar"

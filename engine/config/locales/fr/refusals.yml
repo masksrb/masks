@@ -1,0 +1,16 @@
+fr:
+  refusals:
+    show:
+      browser: "Ce navigateur : %{label}"
+      device:
+        page_title: "Cet appareil est bloqué"
+        state: "Bloqué"
+        heading: "Cet appareil est bloqué"
+        lede: "%{tenant} refuse toutes les demandes de ce navigateur, y compris la connexion, car il a été bloqué depuis une page de compte ou par un gestionnaire."
+        next: "S’il s’agit de votre appareil, demandez à un gestionnaire de %{tenant} de le débloquer. La connexion depuis un autre appareil n’est pas concernée."
+      agent:
+        page_title: "Ce navigateur ne peut pas se connecter ici"
+        state: "Refusé"
+        heading: "Ce navigateur ne peut pas se connecter ici"
+        lede: "%{tenant} n’accepte que les connexions provenant des navigateurs qu’il autorise, et celui-ci n’en fait pas partie."
+        next: "Ouvrez cette page dans un navigateur web ordinaire, ou demandez à un gestionnaire de %{tenant} quels navigateurs sont autorisés."

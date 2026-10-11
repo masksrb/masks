@@ -1,0 +1,14 @@
+fr:
+  manage:
+    namespaces:
+      title: "Espaces de noms"
+      release_confirm: "Libérer %{name} ? La prochaine application qui le demande l’obtient, et les portées qui en dépendent changent de sens."
+      released: "%{name} peut de nouveau être réservé."
+      columns:
+        name: "Nom"
+        claimed_by: "Réservé par"
+        resource: "Ressource"
+        claimed: "Réservé"
+      nothing: "rien"
+      release: "Libérer"
+      archive_to_release: "archiver pour libérer"

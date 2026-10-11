@@ -1,3 +1,4 @@
+require "rails-i18n"
 require "bcrypt"
 require "jwt"
 require "ruby-saml"

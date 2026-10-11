@@ -1,0 +1,23 @@
+de:
+  manage:
+    groups:
+      title: "Gruppen"
+      lede: "Benannte Gruppen von Personen, etwa Admins oder Familie. Apps, die den Scope groups anfordern, sehen jede Gruppe, in der eine Person ist, und eine App kann auf bestimmte Gruppen beschränkt werden."
+      added: "%{name} ist bereit. Fügen Sie Personen auf deren eigenen Seiten hinzu."
+      delete_confirm: "%{name} löschen? Apps, die darauf beschränkt sind, weisen deren Personen ab."
+      deleted: "%{name} ist gelöscht."
+      left: "%{identifier} ist nicht mehr in %{name}."
+      add:
+        title: "Gruppe hinzufügen"
+        help: "Den Schlüssel sehen Apps im Claim groups. Wählen Sie also den, den die Rollenzuordnung einer App erwartet, etwa admins. Er lässt sich später nicht ändern."
+        key: "Schlüssel"
+        name: "Name"
+        submit: "Gruppe hinzufügen"
+      list:
+        title: "Gruppen"
+        empty: "Noch keine Gruppen."
+        people:
+          one: "· %{count} Person"
+          other: "· %{count} Personen"
+        delete: "Löschen"
+        take_out: "%{identifier} aus %{name} entfernen"

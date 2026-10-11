@@ -1,9 +1,9 @@
-<% content_for :title, t(".page_title", noun: @noun) %>
+<% content_for :title, t(".titles.#{@kind}") %>
 <% content_for :surface, "terminus" %>
 
 <span class="state"><%= t(".state") %></span>
 
-<h1 class="prompt-title"><%= t(".title", noun: @noun) %></h1>
+<h1 class="prompt-title"><%= t(".titles.#{@kind}") %>.</h1>
 
 <p class="prompt-lede"><%= t(".lede") %></p>
 

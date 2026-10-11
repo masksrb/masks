@@ -1,0 +1,6 @@
+fr:
+  saml:
+    post:
+      page_title: "Connexion en cours"
+      heading: "Connexion à %{name} en cours"
+      continue: "Continuer"

@@ -1,0 +1,7 @@
+de:
+  authorize:
+    error:
+      page_title: "Diese Anfrage kann nicht abgeschlossen werden"
+      stopped: "Angehalten"
+      heading: "Die App hat etwas angefordert, das dieser Server nicht tut."
+      contact: "Es wurde nichts geteilt. Die App muss das beheben."

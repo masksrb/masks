@@ -226,6 +226,12 @@ until the person approves on another device.
 
 A user code is eight letters with no vowels, such as `BCDF-GHJK`. Case and dashes are ignored.
 
+### Languages
+
+Sign-in, consent, account pages, mail, and `/manage` speak English, French, Spanish, and German. masks
+picks the first of those the browser's `Accept-Language` asks for, or the one an app names in
+`ui_locales`, and answers in English otherwise. Dates and times follow the same language.
+
 ## Signing out
 
 ### Signing out from an app

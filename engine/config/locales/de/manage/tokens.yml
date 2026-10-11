@@ -1,0 +1,21 @@
+de:
+  manage:
+    tokens:
+      kinds:
+        access: "Access"
+        refresh: "Refresh"
+        code: "Code"
+      revoke_chain_confirm: "Jedes Token in dieser Kette widerrufen? Alles, was %{held} hält, funktioniert sofort nicht mehr."
+      revoke_confirm: "Dieses %{kind}-Token widerrufen? Alles, wofür es eingetauscht wurde, wird mit widerrufen."
+      revoked:
+        one: "%{count} Token widerrufen."
+        other: "%{count} Tokens widerrufen."
+      empty: "Nichts ausstehend."
+      rotated: "rotiert"
+      revoke: "Widerrufen"
+      revoke_chain: "Kette widerrufen"
+      issued: "Ausgestellt %{when}"
+      expires: "Läuft ab %{when}"
+      more:
+        one: "%{count} weiteres anzeigen"
+        other: "%{count} weitere anzeigen"

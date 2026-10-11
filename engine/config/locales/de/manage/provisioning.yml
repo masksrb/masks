@@ -1,0 +1,29 @@
+de:
+  manage:
+    provisioning:
+      title: "Provisionierung"
+      lede: "Ein Identitätsanbieter fügt hier Akteure über SCIM 2.0 hinzu, ändert, sperrt und entfernt sie."
+      revoke_confirm: "%{label} widerrufen? Alles, was damit provisioniert, wird ab jetzt abgelehnt."
+      revoked: "%{label} ist widerrufen."
+      lifetimes:
+        month: "30 Tage"
+        quarter: "90 Tage"
+        year: "Ein Jahr"
+      connect:
+        title: "Anbieter verbinden"
+        help: "Geben Sie dem Anbieter diese URL und ein Token. Ein provisionierter Akteur wird über seine E-Mail-Adresse erkannt, die masks als bestätigt übernimmt, und meldet sich über einen Anbieter oder eine Einladung an. Bei niemandem mit einer masks:-Berechtigung werden Passwort oder E-Mail-Adresse auf diesem Weg geändert, und der letzte Verwalter wird nie gesperrt oder entfernt."
+        base_url: "SCIM-Basis-URL"
+        label: "Bezeichnung"
+        provisions: "Provisioniert"
+        every_account: "Jedes Konto"
+        only_members: "Nur Mitglieder von %{name}"
+        lifetime: "Gültigkeitsdauer des Tokens"
+        issue: "Token ausstellen"
+        shown_once: "Dieses Token wird nur einmal angezeigt. Kopieren Sie es jetzt."
+      tokens:
+        title: "Tokens"
+        none: "Keine ausgestellt."
+        never: "nie"
+        issued_by: "von %{identifier}, genutzt %{used}, läuft ab %{expires}"
+        detail: "genutzt %{used}, läuft ab %{expires}"
+        revoke: "Widerrufen"

@@ -1,0 +1,135 @@
+de:
+  actor_mailer:
+    shared:
+      fallback: "Oder fügen Sie dies in Ihren Browser ein:"
+      sent_by: "Gesendet vom Anmeldedienst von %{tenant}."
+      sent_by_html: "Diese Nachricht wurde vom Anmeldedienst von %{tenant} gesendet."
+
+    invitation:
+      subject: "Sie wurden zu %{tenant} eingeladen"
+      invited_by: "%{nickname} hat Sie zu %{tenant} eingeladen."
+      invited: "Sie wurden zu %{tenant} eingeladen."
+      organization_after: "Sobald Sie ein Passwort haben, wartet %{organization} auf Ihrer Kontoseite darauf, angenommen zu werden."
+      nickname_html: "Ihr Spitzname ist %{nickname}. Öffnen Sie den Link, um ein Passwort zu wählen."
+      nickname: "Ihr Spitzname ist %{nickname}. Öffnen Sie den Link, um ein Passwort zu wählen."
+      action: "Passwort wählen"
+      expiry: "Funktioniert einmal und läuft in %{duration} ab. Es passiert nichts, bis jemand ihn öffnet."
+
+    organization_invitation:
+      subject: "%{organization} beitreten"
+      invited_by: "%{nickname} hat Sie eingeladen, %{organization} als %{role} beizutreten."
+      invited: "Sie wurden eingeladen, %{organization} als %{role} beizutreten."
+      grants: "Bis Sie annehmen, ändert sich nichts. Danach können Apps, die fragen, für welche Organisation Sie sich anmelden, Sie als %{role} von %{organization} anmelden."
+      action: "Annehmen oder ablehnen"
+      unexpected: "Wenn Sie %{organization} nicht kennen, lehnen Sie ab. Eine Einladung, die Sie nie annehmen, gewährt nichts."
+
+    password_reset:
+      subject: "Setzen Sie Ihr Passwort für %{tenant} zurück"
+      opened_by: "%{nickname} hat eine Passwort-Zurücksetzung für Ihr Konto bei %{tenant} gestartet."
+      opened: "Jemand hat angefordert, das Passwort für Ihr Konto bei %{tenant} zurückzusetzen."
+      action: "Passwort zurücksetzen"
+      expiry: "Funktioniert einmal und läuft in %{duration} ab. Ein neues Passwort meldet Sie überall sonst ab. Wenn Sie das nicht waren, ignorieren Sie diese Nachricht – es hat sich nichts geändert."
+
+    notification:
+      subject: "%{said} – %{tenant}"
+      action: "Konto überprüfen"
+      by: "Das hat %{nickname} getan, nicht Sie."
+      seen: "Erfasst %{at}."
+      wrong: "Wenn Sie das nicht waren, ändern Sie Ihr Passwort und melden Sie sich überall ab."
+      manage: "Wählen Sie, welche dieser Nachrichten Sie erhalten"
+
+      said:
+        password:
+          changed: "Das Passwort Ihres Kontos bei %{tenant} wurde geändert."
+          reset_completed: "Ihr Passwort für %{tenant} wurde über einen Link zurückgesetzt, der an diese Adresse gesendet wurde. Alle anderen Sitzungen wurden abgemeldet."
+        passkey:
+          added: "Ihrem Konto bei %{tenant} wurde ein Passkey hinzugefügt. Damit ist jetzt eine Anmeldung ohne Passwort möglich."
+          removed: "Aus Ihrem Konto bei %{tenant} wurde ein Passkey entfernt."
+        backup_codes:
+          generated: "Für Ihr Konto bei %{tenant} wurden neue Backup-Codes erstellt. Die zuvor ausgedruckten Codes funktionieren nicht mehr."
+        backup_code:
+          spent: "Für eine Anmeldung bei Ihrem Konto bei %{tenant} wurde ein Backup-Code verwendet. Es sind noch %{remaining} übrig."
+        email:
+          changed: "Die E-Mail-Adresse Ihres Kontos bei %{tenant} wurde in eine andere Adresse geändert. Passwort-Zurücksetzungen und Hinweise zum Konto kommen nicht mehr hierher."
+        phone:
+          changed: "Die Telefonnummer Ihres Kontos bei %{tenant} wurde geändert. SMS-Codes gehen an die neue Nummer."
+          removed: "Die Telefonnummer wurde aus Ihrem Konto bei %{tenant} entfernt."
+        recovery:
+          requested: "Jemand, der weiß, wie man sich bei Ihrem Konto bei %{tenant} anmeldet, hat einen Verwalter gebeten, die zweiten Faktoren zurückzusetzen. Wenn Sie das nicht waren, ändern Sie jetzt Ihr Passwort."
+        second_factors:
+          reset: "Ein Verwalter hat die zweiten Faktoren Ihres Kontos bei %{tenant} zurückgesetzt. Bei der nächsten Anmeldung werden Sie gebeten, einen neuen einzurichten, und alle Sitzungen wurden abgemeldet."
+        authenticator:
+          enabled: "Ihrem Konto bei %{tenant} wurde eine Authenticator-App hinzugefügt. Bei der Anmeldung wird jetzt nach ihrem Code gefragt."
+          disabled: "Die Authenticator-App Ihres Kontos bei %{tenant} wurde entfernt. Bei der Anmeldung wird nicht mehr danach gefragt."
+        email_codes:
+          enabled: "Anmeldungen bei Ihrem Konto bei %{tenant} können jetzt mit einem Code an diese Adresse bestätigt werden."
+          disabled: "Anmeldungen bei Ihrem Konto bei %{tenant} können nicht mehr mit einem Code an diese Adresse bestätigt werden."
+        text_codes:
+          enabled: "Anmeldungen bei Ihrem Konto bei %{tenant} können jetzt mit einem Code an Ihr Telefon bestätigt werden."
+          disabled: "Anmeldungen bei Ihrem Konto bei %{tenant} können nicht mehr mit einem Code an Ihr Telefon bestätigt werden."
+        session:
+          started: "Jemand hat sich bei Ihrem Konto bei %{tenant} auf einem Gerät angemeldet, das bisher nicht bekannt war."
+          revoked: "Eine Sitzung Ihres Kontos bei %{tenant} wurde für Sie beendet."
+        sign_in:
+          risky: "Eine Anmeldung bei Ihrem Konto bei %{tenant} wirkte ungewöhnlich, daher wurde mehr verlangt oder sie wurde abgelehnt. Wenn Sie das nicht waren, ändern Sie Ihr Passwort."
+        device:
+          blocked: "Ein Gerät wurde für Ihr Konto bei %{tenant} gesperrt. Es kann sich nicht anmelden, bis jemand es entsperrt."
+        consent:
+          granted: "%{client} wurde Zugriff auf Ihr Konto bei %{tenant} erlaubt und kann jetzt lesen, was Sie zu teilen zugestimmt haben."
+        connection:
+          linked: "%{provider} wurde mit Ihrem Konto bei %{tenant} verbunden und kann jetzt zur Anmeldung verwendet werden."
+          unlinked: "%{provider} wurde von Ihrem Konto bei %{tenant} getrennt."
+        device_code:
+          approved: "%{client} wurde bei Ihrem Konto bei %{tenant} angemeldet, von einem Gerät, das Ihnen einen Code angezeigt hat."
+        actor:
+          scopes_changed: "Was Ihr Konto bei %{tenant} tun darf, wurde geändert."
+        account:
+          exported: "Alles, was Ihr Konto bei %{tenant} enthält, wurde als Datei heruntergeladen."
+        membership:
+          role_changed: "Ihre Rolle in %{organization} wurde von %{was} in %{role} geändert. Apps, bei denen Sie für %{organization} angemeldet sind, übernehmen das bei ihrer nächsten Prüfung."
+          removed: "Sie wurden aus %{organization} entfernt. Apps, die für %{organization} angemeldet waren, wurden abgemeldet."
+          suspended: "%{organization} wurde archiviert. Apps, die dafür angemeldet waren, wurden abgemeldet, und die Organisation wird bei der Anmeldung nicht mehr angeboten."
+
+      wrong_for:
+        membership:
+          role_changed: "Wenn das falsch aussieht, wenden Sie sich an einen Eigentümer von %{organization}."
+          removed: "Wenn das falsch aussieht, bitten Sie einen Eigentümer von %{organization}, Sie wieder hinzuzufügen."
+          suspended: "Wenn das falsch aussieht, bitten Sie einen Verwalter, %{organization} wiederherzustellen."
+
+    confirmation_code:
+      subject: "%{code} ist Ihr Bestätigungscode für %{tenant}"
+      lede: "Geben Sie diesen Code dort ein, wo Sie sich bei %{tenant} anmelden."
+      expiry: "Er funktioniert einmal und läuft in %{duration} ab. Wenn Sie das nicht waren, ignorieren Sie diese Nachricht."
+
+    approval_requested:
+      subject: "%{nickname} wartet auf Zugang zu %{tenant}"
+      lede: "%{nickname} hat ein Konto bei %{tenant} erstellt. Es kann sich erst anmelden, wenn ein Verwalter es genehmigt."
+      action: "Konto prüfen"
+
+    recovery_requested:
+      subject: "%{nickname} bittet um Hilfe bei der Anmeldung bei %{tenant}"
+      lede: "%{nickname} hat sich bei %{tenant} mit dem ersten Faktor angemeldet und kann die Anmeldung nicht mit einem zweiten abschließen. Stellen Sie per Anruf oder persönlich sicher, dass es wirklich die Person ist, bevor Sie ihre zweiten Faktoren zurücksetzen."
+      action: "Konto prüfen"
+
+    idle:
+      subject:
+        active: "Melden Sie sich an, um Ihr Konto bei %{tenant} zu behalten"
+        suspended: "Ihr gesperrtes Konto bei %{tenant} wird gelöscht"
+      lede:
+        suspend: "Bei Ihrem Konto bei %{tenant} hat sich eine Weile niemand angemeldet. Wenn Sie sich nicht bis %{due} anmelden, wird es gesperrt, und nur ein Verwalter kann es wiederherstellen."
+        delete: "Bei Ihrem Konto bei %{tenant} hat sich eine Weile niemand angemeldet. Wenn Sie sich nicht bis %{due} anmelden, wird es mit allem, was es enthält, gelöscht."
+        delete_suspended: "Ihr Konto bei %{tenant} wurde gesperrt, weil es niemand genutzt hat. Es wird am %{due} mit allem, was es enthält, gelöscht, sofern ein Verwalter es nicht vorher wiederherstellt."
+      keep: "Eine einzige Anmeldung erhält es."
+      action: "Anmelden"
+
+    approved:
+      subject: "Ihr Konto bei %{tenant} ist bereit"
+      lede: "Ein Verwalter hat Ihr Konto bei %{tenant} genehmigt. Sie können sich jetzt anmelden."
+      action: "Anmelden"
+
+    email_verification:
+      subject: "Bestätigen Sie Ihre E-Mail-Adresse für %{tenant}"
+      confirm_html: "Bestätigen Sie diese Adresse für %{nickname} bei %{tenant}."
+      confirm: "Bestätigen Sie diese Adresse für %{nickname} bei %{tenant}."
+      action: "Diese Adresse bestätigen"
+      expiry: "Funktioniert einmal und läuft in %{duration} ab. Wenn Sie das nicht waren, ignorieren Sie diese Nachricht – sonst ändert sich nichts."

@@ -1,0 +1,21 @@
+fr:
+  manage:
+    tokens:
+      kinds:
+        access: "d’accès"
+        refresh: "d’actualisation"
+        code: "code"
+      revoke_chain_confirm: "Révoquer tous les jetons de cette chaîne ? Tout ce que détient %{held} cesse aussitôt de fonctionner."
+      revoke_confirm: "Révoquer ce jeton %{kind} ? Tout ce contre quoi il a été échangé est révoqué avec lui."
+      revoked:
+        one: "%{count} jeton révoqué."
+        other: "%{count} jetons révoqués."
+      empty: "Rien en cours."
+      rotated: "renouvelé"
+      revoke: "Révoquer"
+      revoke_chain: "Révoquer la chaîne"
+      issued: "Émis %{when}"
+      expires: "Expire %{when}"
+      more:
+        one: "Afficher %{count} de plus"
+        other: "Afficher %{count} de plus"

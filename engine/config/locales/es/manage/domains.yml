@@ -1,0 +1,38 @@
+es:
+  manage:
+    domains:
+      title: "Dominios"
+      nowhere: "Ninguno todavía"
+      claimed: "Publica el registro TXT de abajo y luego comprueba %{domain}."
+      proven: "%{domain} está verificado."
+      unanswered: "Todavía no hay ningún registro TXT coincidente en %{name}. El DNS puede tardar en propagarse."
+      routed_away: "Las personas de %{domain} van ahora a su proveedor."
+      routed_here: "Las personas de %{domain} inician sesión aquí ahora."
+      served: "El inicio de sesión también se sirve desde %{host}."
+      unserved: "El inicio de sesión ya no se sirve desde un dominio personalizado."
+      stop_confirm: "¿Dejar de servir %{host}? Las aplicaciones que lo usan como emisor dejan de funcionar."
+      release_confirm: "¿Liberar %{domain}? Las personas con una dirección allí vuelven a iniciar sesión de la forma habitual."
+      released: "%{domain} está liberado."
+      serve:
+        title: "Servir el inicio de sesión desde tu dominio"
+        lede: "Un host dentro de un dominio verificado, como login.example.com, sirve el inicio de sesión junto a la dirección habitual. Cada dirección es su propio emisor, y una llave de acceso solo funciona en la dirección en la que se creó."
+        prove_first: "Primero verifica un dominio abajo."
+        host: "Host"
+        serve: "Servir"
+        stop: "Detener"
+        hint: "Apunta el DNS del host a este servidor y dale un certificado. Las direcciones en las que responde este inquilino: %{origins}."
+      claim:
+        title: "Reclamar un dominio"
+        lede: "Quien escribe una dirección de un dominio verificado va directamente a su proveedor, sin contraseña. Primero verifica el dominio con un registro DNS."
+        domain: "Dominio"
+        send_to: "Enviar a las personas a"
+        claim: "Reclamar"
+      held:
+        proven: "Verificado el %{day}"
+        unproven: "Sin verificar"
+        record: "Registro TXT"
+        missing: "El registro dejó de responder %{since}. La reclamación se libera una semana después."
+        check: "Comprobar ahora"
+        release: "Liberar"
+        checked: "Comprobado %{since}. masks lo comprueba cada hora."
+        never: "nunca"

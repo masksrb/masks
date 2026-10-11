@@ -1,0 +1,6 @@
+es:
+  saml:
+    post:
+      page_title: "Iniciando sesión"
+      heading: "Iniciando sesión en %{name}"
+      continue: "Continuar"

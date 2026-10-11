@@ -1,0 +1,59 @@
+es:
+  manage:
+    devices:
+      title: "Dispositivos"
+      lenses:
+        allowed: "Permitidos"
+        blocked: "Bloqueados"
+        unattached: "Nunca iniciaron sesión"
+      columns:
+        device: "Dispositivo"
+        who: "Quién inicia sesión en él"
+        ip_address: "Dirección IP"
+        last_seen: "Visto por última vez"
+      count:
+        one: "%{count} dispositivo"
+        other: "%{count} dispositivos"
+      blocked_count:
+        one: "Se bloqueó %{count} dispositivo."
+        other: "Se bloquearon %{count} dispositivos."
+      unblocked_count:
+        one: "Se desbloqueó %{count} dispositivo."
+        other: "Se desbloquearon %{count} dispositivos."
+      spared: "%{done} No se tocó el dispositivo que estás usando."
+      refused: "%{done} \"%{agent}\" se rechaza a partir de ahora."
+      block_chosen_question:
+        one: "¿Bloquear %{count} dispositivo? Se cierra su sesión y se rechaza antes de comprobar ninguna contraseña."
+        other: "¿Bloquear %{count} dispositivos? Se cierra la sesión de cada uno y se rechaza antes de comprobar ninguna contraseña."
+      unblock_chosen_question:
+        one: "¿Desbloquear %{count} dispositivo?"
+        other: "¿Desbloquear %{count} dispositivos?"
+      block_matching_question: "¿Bloquear todos los dispositivos cuyo user agent contiene \"%{agent}\", incluidos los que no aparecen aquí?"
+      block_matching_refuse: "%{question} Los dispositivos nuevos que lo envíen también se rechazan."
+      empty:
+        blocked: "No hay nada bloqueado."
+        unattached: "Todos los dispositivos de aquí han iniciado la sesión de alguien."
+        allowed: "Ningún dispositivo ha llegado todavía a este servidor."
+      filter_label: "Filtrar por user agent"
+      which: "Qué dispositivos"
+      showing: "Mostrando los dispositivos cuyo user agent contiene"
+      showing_blocked: "Mostrando los dispositivos bloqueados cuyo user agent contiene"
+      clear: "Borrar"
+      refuse_agent: "Rechazar también este user agent a partir de ahora"
+      block_matching: "Bloquear todos los dispositivos coincidentes"
+      chosen: "%{count} elegidos"
+      choose_all:
+        one: "Elegir el %{count} dispositivo mostrado"
+        other: "Elegir los %{count} dispositivos mostrados"
+      block_count:
+        one: "Bloquear %{count} dispositivo"
+        other: "Bloquear %{count} dispositivos"
+      unblock_count:
+        one: "Desbloquear %{count} dispositivo"
+        other: "Desbloquear %{count} dispositivos"
+      newest: "Solo se muestran los %{count} más recientes."
+      choose: "Elegir %{label}"
+      blocked: "bloqueado"
+      unrecognised: "no reconocido"
+      signed_in: "sesión iniciada"
+      nobody_yet: "nadie todavía"

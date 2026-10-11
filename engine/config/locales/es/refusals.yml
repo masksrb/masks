@@ -1,0 +1,16 @@
+es:
+  refusals:
+    show:
+      browser: "Este navegador: %{label}"
+      device:
+        page_title: "Este dispositivo está bloqueado"
+        state: "Bloqueado"
+        heading: "Este dispositivo está bloqueado"
+        lede: "%{tenant} rechaza todas las solicitudes de este navegador, incluido el inicio de sesión, porque se bloqueó desde una página de cuenta o lo bloqueó un administrador."
+        next: "Si este es tu dispositivo, pide a un administrador de %{tenant} que lo desbloquee. Iniciar sesión desde otro dispositivo no se ve afectado."
+      agent:
+        page_title: "Este navegador no puede iniciar sesión aquí"
+        state: "Rechazado"
+        heading: "Este navegador no puede iniciar sesión aquí"
+        lede: "%{tenant} solo acepta inicios de sesión desde los navegadores que permite, y este no es uno de ellos."
+        next: "Abre esta página en un navegador web normal o pregunta a un administrador de %{tenant} qué navegadores se permiten."

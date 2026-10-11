@@ -6,14 +6,14 @@ module Masks
       end
 
       def reset
-        hand_over(PasswordReset, LoginStates::PasswordReset::HELD, "reset link")
+        hand_over(PasswordReset, LoginStates::PasswordReset::HELD, "reset")
       end
 
       def verify
         @actor = EmailVerification.settle!(params[:token])
 
         if @actor.nil?
-          @noun = "confirmation link"
+          @kind = "confirmation"
           return render :expired, status: :gone
         end
 
@@ -24,9 +24,9 @@ module Masks
 
       private
 
-        def hand_over(kind, slot, noun)
-          if kind.redeem(params[:token]).nil?
-            @noun = noun
+        def hand_over(token, slot, kind)
+          if token.redeem(params[:token]).nil?
+            @kind = kind
             return render :expired, status: :gone
           end
 

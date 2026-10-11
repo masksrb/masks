@@ -1,0 +1,5 @@
+de:
+  manage:
+    scopes_editor:
+      placeholder: "Scope hinzufügen"
+      add: "Hinzufügen"

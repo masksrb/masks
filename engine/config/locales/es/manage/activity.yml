@@ -1,0 +1,28 @@
+es:
+  manage:
+    activity:
+      title: "Actividad"
+      nouns:
+        actor: "actor"
+        client: "aplicación"
+      downloading:
+        one: "Descargando %{count} evento."
+        other: "Descargando %{count} eventos."
+      involves: "Solo lo que afecta a: %{noun}"
+      involves_end: "."
+      gone:
+        actor: "Solo lo que afecta a un actor que ya no existe."
+        client: "Solo lo que afecta a una aplicación que ya no existe."
+      everything: "Mostrar todo"
+      show: "Mostrar"
+      all: "todo"
+      grave: "Solo lo que conviene revisar"
+      export:
+        title: "Exportar"
+        lede: "Todos los eventos de un intervalo como JSON delimitado por saltos de línea, con la forma que envían los flujos de eventos. Sigue el filtro de arriba."
+        from: "Desde"
+        through: "Hasta"
+        download: "Descargar"
+      empty:
+        grave: "Nada que convenga revisar."
+        plain: "Nada todavía."

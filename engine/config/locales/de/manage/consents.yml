@@ -1,0 +1,10 @@
+de:
+  manage:
+    consents:
+      revoke_confirm: "%{held} den Zugriff entziehen? Alle Refresh-Tokens, die sie hält, werden widerrufen, und sie muss bei der nächsten Anmeldung erneut fragen."
+      revoked: "Zugriff widerrufen. Sie muss erneut fragen."
+      empty: "Keine."
+      revoke: "Zugriff widerrufen"
+      last_asked: "Zuletzt gefragt %{when}"
+      asks_again: "Fragt erneut %{when}"
+      until: "bis %{when}"

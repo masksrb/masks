@@ -1,0 +1,21 @@
+es:
+  manage:
+    app:
+      missing: "No hay ninguna página en esta dirección."
+      account: "Cuenta"
+      starting: "Iniciando"
+      stopped: "Detenido"
+      failed: "No se pudo iniciar sesión para administrar %{tenant}"
+      retry: "Volver a intentarlo"
+      settings: "Configuración"
+      sections: "Secciones"
+      nav:
+        overview: "Resumen"
+        actors: "Actores"
+        organizations: "Organizaciones"
+        clients: "Aplicaciones"
+      limited:
+        read: "Puedes leerlo todo aquí y no cambiar nada."
+        support: "Puedes ayudar a las personas con sus cuentas. La configuración, las claves y otros administradores necesitan un propietario."
+        security: "Puedes cambiar claves, aplicaciones, proveedores y políticas. Las cuentas de las personas necesitan soporte o un propietario."
+        both: "Puedes cambiar la configuración y ayudar a las personas. Otros administradores y la configuración del inquilino necesitan un propietario."

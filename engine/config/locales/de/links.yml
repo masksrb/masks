@@ -1,0 +1,16 @@
+de:
+  links:
+    expired:
+      state: "Abgelaufen"
+      titles:
+        invitation: "Diese Einladung ist nicht mehr gültig"
+        reset: "Dieser Link zum Zurücksetzen ist nicht mehr gültig"
+        confirmation: "Dieser Bestätigungslink ist nicht mehr gültig"
+      lede: "Am Konto hat sich nichts geändert."
+      sign_in: "Anmelden"
+
+    verified:
+      page_title: "Adresse bestätigt"
+      state: "Bestätigt"
+      title: "%{email} ist bestätigt."
+      account: "Ihr Konto"

@@ -1,0 +1,31 @@
+es:
+  manage:
+    organizations:
+      title: "Organizaciones"
+      lede: "Los clientes dentro de este inquilino. Una aplicación que pide el alcance organization inicia la sesión de una persona como miembro de una de ellas, y su token lleva el rol que tiene allí."
+      columns:
+        organization: "Organización"
+        members: "Miembros"
+        roles: "Roles"
+        signs_in: "Inicia sesión con"
+      restored: "%{name} ha vuelto."
+      members:
+        one: "%{count} miembro"
+        other: "%{count} miembros"
+      members_invited: "%{members}, %{count} invitados"
+      add: "Añadir organización"
+      add_lede: "Pasas a ser su primer propietario y puedes añadir miembros cuando exista."
+      name: "Nombre"
+      key: "Clave"
+      key_hint: "Una aplicación pide esta organización con la"
+      key_word: "clave"
+      key_hint_end: ". La clave no se puede cambiar después."
+      adding: "Añadiendo..."
+      cancel: "Cancelar"
+      empty: "Todavía no hay organizaciones. Añade una por cada cliente cuyas personas inician sesión juntas."
+      tenant_policy: "La política del inquilino"
+      archived:
+        title: "Archivadas"
+        lede: "Nadie inicia sesión como miembro de estas. Restaurar una devuelve a sus miembros tal como estaban."
+        detail: "· archivada el %{day} · %{members}"
+      restore: "Restaurar"

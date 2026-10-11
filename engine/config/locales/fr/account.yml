@@ -1,0 +1,276 @@
+fr:
+  account:
+    index:
+      none_yet: "Rien pour l’instant."
+      sign_out: "Se déconnecter"
+      title: "Votre compte"
+      manage: "Gérer ce serveur"
+      lede: "C’est ici que vous modifiez votre façon de vous connecter, que vous voyez les appareils sur lesquels vous êtes connecté et que vous suivez ce qui se passe sur votre compte."
+
+      signing_in:
+        heading: "Connexion"
+
+      email:
+        heading: "Adresse e-mail"
+        state:
+          none: "Aucune"
+          unconfirmed: "Non confirmée"
+        none_set: "Ce compte n’a pas d’adresse e-mail. Rien ne peut lui être envoyé, et vous ne pouvez pas réinitialiser vous-même votre mot de passe."
+        body: "Les réinitialisations de mot de passe et les confirmations sont envoyées à %{email}."
+        send_link: "Envoyer un lien de confirmation"
+
+      phone:
+        heading: "Numéro de téléphone"
+        state:
+          none: "Aucun"
+          unconfirmed: "Non confirmé"
+        none: "Ce compte n’a pas de numéro de téléphone."
+        body: "Les codes par SMS sont envoyés au %{phone}."
+        remove: "Supprimer"
+        confirm_remove: "Supprimer ce numéro de téléphone ?"
+
+      addresses:
+        email: "Nouvelle adresse e-mail"
+        phone: "Nouveau numéro de téléphone"
+        phone_hint: "Indiquez l’indicatif du pays, par exemple +1 555 123 4567."
+        send: "Envoyer un code"
+        again: "Reconnectez-vous pour modifier ceci"
+        sent: "Saisissez le code envoyé à %{to}."
+        code: "Code"
+        confirm: "Confirmer"
+        directed: "L’annuaire de votre organisation gère cette adresse."
+        undeliverable:
+          email: "Ce serveur ne peut pas encore envoyer d’e-mails, donc l’adresse ne peut pas être modifiée ici."
+          phone: "Ce serveur ne peut pas encore envoyer de SMS, donc le numéro ne peut pas être modifié ici."
+
+      password:
+        heading: "Mot de passe"
+        state: "Le modifier"
+        state_none: "Non défini"
+        none: "Ce compte n’a pas de mot de passe. Il se connecte avec une clé d’accès ou un autre compte. En définir un vous déconnecte partout ailleurs."
+        set: "Définir un mot de passe"
+        set_again: "Reconnectez-vous pour définir un mot de passe"
+        current: "Votre mot de passe actuel"
+        new: "Votre nouveau mot de passe"
+        hint: "Au moins %{minimum} caractères. Le modifier vous déconnecte partout ailleurs."
+        submit: "Modifier le mot de passe"
+
+      passkeys:
+        heading: "Clés d’accès"
+        state:
+          none: "Non configurées"
+          set:
+            one: "1 configurée"
+            other: "%{count} configurées"
+        explained: "Au lieu de saisir un mot de passe, votre appareil vérifie que c’est bien vous, de la même façon qu’il se déverrouille déjà. Une clé d’accès compte pour les deux facteurs à la fois, donc il n’y a aucun code à attendre."
+        used: "utilisée il y a %{age}"
+        never_used: "jamais utilisée"
+        remove: "Supprimer"
+        confirm_remove: "Supprimer cette clé ?"
+        compromised: "La FIDO Alliance signale un problème avec ce modèle (%{report}). Remplacez-la."
+        name: "Comment s’appelle cet appareil ?"
+        name_placeholder: "Mon ordinateur portable"
+        add: "Configurer"
+
+      authenticator:
+        heading: "Application d’authentification"
+        state:
+          "on": "Activée"
+          "off": "Non configurée"
+        explained: "Après votre mot de passe, une connexion peut être confirmée avec un code à six chiffres fourni par une application sur votre téléphone. Le code change toutes les 30 secondes et fonctionne sans réseau."
+        scan: "Scannez ceci avec votre application d’authentification, ou saisissez-y la clé."
+        key: "Clé"
+        code: "Le code affiché par l’application"
+        submit: "Activer"
+        again: "Reconnectez-vous avant de configurer ceci. Votre dernière connexion date d’un moment."
+        submit_again: "Se reconnecter"
+        remove: "Supprimer"
+        confirm_remove: "Ne plus demander de codes à cette application ?"
+        enabled: "Les connexions demandent un code de votre application d’authentification."
+
+      backup_codes:
+        heading: "Codes de secours"
+        state:
+          one: "1 restant"
+          other: "%{count} restants"
+        explained: "Chaque code permet une seule connexion, quand vous n’avez ni votre téléphone ni votre clé d’accès sous la main. Conservez-les en lieu sûr, loin de cet appareil."
+        fresh: "Notez-les maintenant. Ils ne seront plus affichés."
+        make: "Générer de nouveaux codes"
+        confirm_make: "Les codes que vous avez actuellement ne fonctionneront plus."
+        make_again: "Reconnectez-vous pour générer de nouveaux codes"
+
+      codes:
+        state:
+          "on": "Activés"
+          "off": "Désactivés"
+        sent_to: "Les codes sont envoyés à %{to}."
+        turn_on: "Activer"
+        turn_off: "Désactiver"
+        confirm_turn_off: "Ne plus confirmer les connexions de cette façon ?"
+        email:
+          heading: "Codes par e-mail"
+          explained: "Après votre mot de passe, une connexion peut être confirmée avec un code envoyé à votre adresse e-mail. Une réinitialisation du mot de passe par e-mail désactive cette option, car le lien de réinitialisation arrive dans la même boîte de réception."
+          unconfirmed: "Confirmez d’abord votre adresse e-mail."
+          undeliverable: "Ce serveur ne peut pas encore envoyer d’e-mails."
+        sms:
+          heading: "Codes par SMS"
+          explained: "Après votre mot de passe, une connexion peut être confirmée avec un code envoyé par SMS sur votre téléphone. Une application d’authentification ou une clé d’accès est plus difficile à dérober."
+          unconfirmed: "Ajoutez et confirmez d’abord un numéro de téléphone."
+          undeliverable: "Ce serveur ne peut pas encore envoyer de SMS."
+
+      approve:
+        heading: "Approuver une connexion"
+        label: "Un code venant d’un autre appareil"
+        state:
+          ready: "Prêt"
+          waiting: "En attente de votre réponse"
+        explained: "Cet appareil est de confiance, il peut donc confirmer une connexion en cours ailleurs. Saisissez le code affiché sur l’autre écran. Ne saisissez qu’un code que vous avez vous-même sous les yeux."
+        code: "Code affiché sur l’autre écran"
+        submit: "Continuer"
+        confirm: "Cet appareil demande à se connecter à votre compte. Ne l’approuvez que s’il vous appartient."
+        asked: "demandé il y a %{age}"
+        approve: "Approuver"
+        deny: "Refuser"
+
+      devices:
+        heading: "Appareils"
+        lede: "Chaque téléphone, tablette et ordinateur qui s’est connecté à ce compte."
+        none: "Aucun appareil ne s’est encore connecté."
+        state:
+          here: "Cet appareil"
+          signed_in: "Connecté"
+          signed_out: "Déconnecté"
+          blocked: "Bloqué"
+        seen: "Vu pour la dernière fois il y a %{age}."
+        from: "Dernière utilisation depuis %{address}."
+        skips_code: "Cet appareil n’a pas besoin de saisir de code."
+        sign_out: "Déconnecter cet appareil"
+        save_name: "Enregistrer le nom"
+
+      organizations:
+        heading: "Organisations"
+        invited_by_manager: "Une personne invitée par un gestionnaire"
+        role: "Vous êtes %{role}"
+        lede_owner: "En tant que propriétaire, vous décidez qui fait partie de l’organisation et quel rôle chaque personne occupe. Les applications qui demandent votre organisation voient ce rôle."
+        lede_member: "Les applications qui demandent votre organisation voient que vous en faites partie, ainsi que votre rôle."
+        members: "Membres"
+        people:
+          one: "1 membre"
+          other: "%{count} membres"
+        owners:
+          one: "1 propriétaire"
+          other: "%{count} propriétaires"
+        waiting_count:
+          one: "1 invitation en attente"
+          other: "%{count} invitations en attente"
+        you: "vous"
+        invited: "invité"
+        expired: "expirée"
+        waiting: "En attente de votre réponse"
+        asked: "%{by} vous a ajouté à %{organization} en tant que %{role}. Rien ne change tant que vous n’avez pas accepté."
+        invited_ago: "Invité il y a %{age}"
+        expired_ago: "Invitation expirée il y a %{age}"
+        expires_in: "expire dans %{age}"
+        by: "par %{by}"
+        joined_ago: "Membre depuis %{age}"
+        sent_to: "envoyée à %{address}"
+        sent_elsewhere: "Cette invitation a été envoyée à %{address}. Connectez-vous avec cette adresse pour l’accepter, ou demandez à un propriétaire d’inviter l’adresse de ce compte."
+        confirm_first_html: "Confirmez %{address} sous <a href=\"#email\">Adresse e-mail</a> avant d’accepter."
+        someone: "Un propriétaire"
+        accept: "Rejoindre %{organization}"
+        decline: "Refuser"
+        confirm_decline: "Refuser l’invitation à %{organization} ? Un propriétaire devra vous inviter à nouveau."
+        set_role: "Définir le rôle"
+        role_of: "Rôle de %{person}"
+        remove: "Retirer"
+        withdraw: "Annuler"
+        resend: "Renvoyer"
+        confirm_remove: "Retirer %{identifier} de %{organization} ? Tout ce à quoi cette personne s’est connectée en tant que membre cesse de fonctionner."
+        confirm_withdraw: "Annuler l’invitation envoyée à %{identifier} ?"
+        add_email: "Ajouter une personne par e-mail"
+        add_placeholder: "name@example.com"
+        add_role: "Rôle"
+        add: "Ajouter"
+        add_hint: "La personne rejoint l’organisation dès qu’elle accepte. Une personne sans compte ici reçoit d’abord une invitation."
+        leave: "Quitter %{organization}"
+        confirm_leave: "Quitter %{organization} ? Tout ce à quoi vous vous êtes connecté en tant que membre cesse de fonctionner, et un propriétaire devra vous ajouter à nouveau."
+        last_owner: "Vous en êtes le seul propriétaire. Vous ne pouvez donc ni la quitter ni changer de rôle tant que vous n’avez pas désigné un autre propriétaire."
+
+      launcher:
+        heading: "Vos applications"
+
+      apps:
+        heading: "Applications et comptes"
+        state:
+          none: "Aucune"
+
+      applications:
+        remembered: "%{label}, sans demander jusqu’au %{date}"
+        heading: "Applications que vous avez autorisées"
+        none_yet: "Aucune demande pour l’instant. Une application apparaît ici dès que vous vous y connectez, avec ce que vous avez accepté qu’elle voie."
+        revoke: "Révoquer l’accès"
+        more:
+          one: "et une autre"
+          other: "et %{count} autres"
+        confirm_revoke: "Révoquer %{client} ? Tout ce qu’elle détient cesse de fonctionner, et elle devra redemander l’accès lors de votre prochaine connexion."
+
+      connections:
+        heading: "Comptes associés"
+        lede: "Un compte ailleurs, par exemple un compte professionnel, associé à celui-ci. Il peut servir à vous connecter ici."
+        signs_you_in: "vous connecte"
+        link: "Connecter %{provider}"
+        disconnect: "Déconnecter"
+        confirm_disconnect: "Déconnecter %{provider} ? Si vous vous connectez avec ce compte, il vous faudra un autre moyen d’accès. Toutes les applications qui l’utilisent s’arrêtent."
+        delegated: "%{client} peut l’utiliser en votre absence"
+        stop: "Arrêter"
+        confirm_stop: "Empêcher %{client} d’utiliser votre compte %{provider} ? L’application devra vous redemander l’accès."
+
+      info:
+        heading: "Informations"
+
+      profile:
+        heading: "Nom"
+        name: "Votre nom"
+        nickname: "Pseudo"
+        nickname_hint: "Lettres, chiffres, points, tirets et tirets bas. Vous pouvez l’utiliser pour vous connecter."
+        submit: "Enregistrer"
+        directed: "L’annuaire de votre organisation gère votre nom."
+
+      picture:
+        change: "Changer votre photo"
+        remove: "Supprimer la photo"
+        confirm_remove: "Supprimer votre photo ?"
+
+      notifications:
+        heading: "E-mails que nous vous envoyons"
+        state:
+          zero: "Tous"
+          one: "Un désactivé"
+          other: "%{count} désactivés"
+        lede: "Tout ce qui figure ici est activé jusqu’à ce que vous le désactiviez. Ces e-mails arrivent au fil des événements, et il n’est pas possible d’y répondre."
+        silent: "Rien n’est envoyé, car ces e-mails ne partent que vers une adresse e-mail confirmée."
+        submit: "Enregistrer"
+
+      export:
+        heading: "Télécharger votre compte"
+        state: "JSON"
+        lede: "Un fichier contenant votre profil, vos modes de connexion, vos organisations, applications, comptes associés et appareils, ainsi que l’activité conservée par masks. Il ne contient aucun mot de passe, code ni clé."
+        again: "Votre connexion date d’un moment, il vous sera donc d’abord demandé de vous reconnecter."
+        submit: "Télécharger"
+        submit_again: "Se reconnecter"
+
+      delete:
+        heading: "Supprimer votre compte"
+        state: "Définitif"
+        lede: "Supprimer votre compte vous déconnecte de toutes les applications et de tous les appareils, et supprime vos clés d’accès, vos comptes associés et votre photo. Cette action est irréversible."
+        again: "Votre connexion date d’un moment, il vous sera donc d’abord demandé de vous reconnecter."
+        confirm_html: "Saisissez <b>%{identifier}</b> pour confirmer"
+        submit: "Supprimer mon compte"
+        submit_again: "Se reconnecter"
+
+      activity:
+        heading: "Activité"
+        entry: "Activité récente"
+        lede: "Ce qui s’est passé récemment sur votre compte. Si quelque chose ne vous dit rien, changez votre mot de passe."
+        ago: "il y a %{age}"
+        check_this: "à vérifier"

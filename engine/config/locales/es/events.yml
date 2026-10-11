@@ -1,0 +1,183 @@
+es:
+  events:
+    actions:
+      session:
+        started: "Inició sesión"
+        ended: "Cerró sesión"
+        revoked: "Sesión revocada"
+        expired: "Sesión caducada"
+      logout:
+        undelivered: "Cierre de sesión no entregado a una aplicación"
+      login:
+        refused: "Inicio de sesión rechazado"
+        throttled: "Inicios de sesión limitados"
+      account:
+        created: "Se registró"
+        exported: "Datos de la cuenta descargados"
+      invitation:
+        sent: "Invitación enviada"
+        accepted: "Invitación aceptada"
+      password:
+        changed: "Contraseña cambiada"
+        reset_requested: "Restablecimiento de contraseña solicitado"
+        reset_completed: "Contraseña restablecida"
+      email:
+        verification_sent: "Confirmación de correo enviada"
+        verified: "Correo confirmado"
+        changed: "Dirección de correo cambiada"
+      phone:
+        verification_sent: "Confirmación de teléfono enviada"
+        verified: "Teléfono confirmado"
+        changed: "Número de teléfono cambiado"
+        removed: "Número de teléfono eliminado"
+      approval:
+        requested: "Aprobación solicitada"
+      passkey:
+        added: "Llave de acceso añadida"
+        removed: "Llave de acceso eliminada"
+      backup_codes:
+        generated: "Códigos de respaldo generados"
+      backup_code:
+        spent: "Código de respaldo usado"
+      recovery:
+        requested: "Pidió ayuda para iniciar sesión"
+        dismissed: "Solicitud de ayuda descartada"
+      second_factors:
+        reset: "Segundos factores restablecidos"
+      group:
+        created: "Grupo creado"
+        deleted: "Grupo eliminado"
+        member_added: "Añadido a un grupo"
+        member_removed: "Eliminado de un grupo"
+      authenticator:
+        enabled: "Aplicación de autenticación añadida"
+        disabled: "Aplicación de autenticación eliminada"
+      email_codes:
+        enabled: "Códigos por correo activados"
+        disabled: "Códigos por correo desactivados"
+      text_codes:
+        enabled: "Códigos por SMS activados"
+        disabled: "Códigos por SMS desactivados"
+      device_code:
+        issued: "Inicio de sesión de dispositivo solicitado"
+        approved: "Dispositivo con sesión iniciada"
+        refused: "Inicio de sesión de dispositivo rechazado"
+      sign_in:
+        approved: "Inicio de sesión aprobado desde un dispositivo de confianza"
+        denied: "Inicio de sesión denegado desde un dispositivo de confianza"
+        risky: "Inicio de sesión inusual"
+      device:
+        trusted: "Dispositivo de confianza"
+        named: "Dispositivo renombrado"
+        forgotten: "Sesión del dispositivo cerrada"
+        blocked: "Dispositivo bloqueado"
+        unblocked: "Dispositivo desbloqueado"
+      avatar:
+        uploaded: "Foto subida"
+        removed: "Foto eliminada"
+      consent:
+        granted: "Aplicación permitida"
+        revoked: "Acceso de la aplicación revocado"
+      connection:
+        linked: "Cuenta conectada"
+        unlinked: "Cuenta desconectada"
+        signed_in: "Inició sesión con una cuenta conectada"
+        refused: "Inicio de sesión con cuenta conectada rechazado"
+      delegation:
+        granted: "Delegación concedida"
+        released: "Token delegado entregado"
+        refused: "Token delegado rechazado"
+        revoked: "Delegación revocada"
+      exchange:
+        granted: "Token intercambiado"
+        refused: "Intercambio de token rechazado"
+      actor:
+        approved: "Cuenta aprobada"
+        created: "Persona añadida"
+        provisioned: "Persona añadida por un proveedor"
+        updated: "Perfil cambiado"
+        deleted: "Persona eliminada"
+        scopes_changed: "Alcances cambiados"
+        signed_out: "Sesión cerrada en todas partes"
+        suspended: "Persona suspendida"
+        restored: "Persona restaurada"
+        idle_warned: "Aviso de cuenta inactiva"
+      client:
+        created: "Aplicación añadida"
+        registered: "Aplicación registrada"
+        approved: "Aplicación aprobada"
+        updated: "Aplicación cambiada"
+        archived: "Aplicación archivada"
+        restored: "Aplicación restaurada"
+        secret_rotated: "Secreto de la aplicación rotado"
+        logo_refused: "No se pudo usar el logotipo de la aplicación"
+      token:
+        revoked: "Token revocado"
+      saml:
+        asserted: "Inició sesión en una aplicación SAML"
+      provisioning_token:
+        issued: "Token de aprovisionamiento emitido"
+        revoked: "Token de aprovisionamiento revocado"
+      refresh:
+        reused: "Token de actualización reutilizado"
+      signing_key:
+        staged: "Clave de firma preparada"
+        rotated: "Clave de firma rotada"
+        activated: "Clave de firma activada"
+        discarded: "Clave de firma descartada"
+      namespace:
+        released: "Espacio de nombres liberado"
+      provider:
+        created: "Proveedor añadido"
+        updated: "Proveedor cambiado"
+        archived: "Proveedor archivado"
+      tenant:
+        updated: "Configuración cambiada"
+      sign_in_policy:
+        created: "Política añadida"
+        updated: "Política cambiada"
+        archived: "Política archivada"
+      adapter:
+        created: "Adaptador añadido"
+        updated: "Adaptador cambiado"
+        archived: "Adaptador archivado"
+        tested: "Adaptador probado"
+      events:
+        exported: "Actividad exportada"
+      mail_template:
+        updated: "Texto del correo cambiado"
+      stream:
+        created: "Flujo de eventos añadido"
+        updated: "Flujo de eventos cambiado"
+        archived: "Flujo de eventos archivado"
+        secret_rotated: "Secreto del flujo de eventos rotado"
+        tested: "Flujo de eventos probado"
+        failed: "El flujo de eventos se rindió"
+      signal_stream:
+        created: "Flujo de señales compartidas añadido"
+        updated: "Flujo de señales compartidas cambiado"
+        deleted: "Flujo de señales compartidas eliminado"
+      signal:
+        undelivered: "Señal compartida no entregada"
+        received: "El proveedor señaló un cierre de sesión"
+      organization:
+        created: "Organización añadida"
+        updated: "Organización cambiada"
+        archived: "Organización archivada"
+        ownerless: "Organización sin propietario"
+      membership:
+        added: "Añadido a una organización"
+        role_changed: "Rol en la organización cambiado"
+        removed: "Eliminado de una organización"
+        accepted: "Se unió a una organización"
+        role_kept: "Rol en la organización mantenido frente al proveedor"
+        suspended: "Organización archivada siendo miembro"
+        resent: "Invitación a la organización reenviada"
+        expired: "Invitación a la organización caducada"
+      domain:
+        claimed: "Dominio reclamado"
+        verified: "Dominio verificado"
+        released: "Dominio liberado"
+      custom_domain:
+        served: "Inicio de sesión servido desde un dominio personalizado"
+        stopped: "El dominio personalizado ya no se sirve"

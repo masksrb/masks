@@ -1,0 +1,15 @@
+fr:
+  time:
+    formats:
+      notification: "%-d %B %Y à %H:%M %Z"
+
+  notifications:
+    saved: "Enregistré."
+
+    groups:
+      password: "Mot de passe"
+      factors: "Clés d’accès et seconds facteurs"
+      sessions: "Connexions et appareils"
+      applications: "Applications et comptes associés"
+      account: "Compte"
+      organizations: "Organisations"

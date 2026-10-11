@@ -1,0 +1,59 @@
+fr:
+  manage:
+    devices:
+      title: "Appareils"
+      lenses:
+        allowed: "Autorisés"
+        blocked: "Bloqués"
+        unattached: "Jamais connectés"
+      columns:
+        device: "Appareil"
+        who: "Qui s’y connecte"
+        ip_address: "Adresse IP"
+        last_seen: "Vu pour la dernière fois"
+      count:
+        one: "%{count} appareil"
+        other: "%{count} appareils"
+      blocked_count:
+        one: "%{count} appareil bloqué."
+        other: "%{count} appareils bloqués."
+      unblocked_count:
+        one: "%{count} appareil débloqué."
+        other: "%{count} appareils débloqués."
+      spared: "%{done} L’appareil que vous utilisez n’a pas été touché."
+      refused: "%{done} « %{agent} » est désormais refusé."
+      block_chosen_question:
+        one: "Bloquer %{count} appareil ? Il est déconnecté et refusé avant même la vérification du mot de passe."
+        other: "Bloquer %{count} appareils ? Chacun est déconnecté et refusé avant même la vérification du mot de passe."
+      unblock_chosen_question:
+        one: "Débloquer %{count} appareil ?"
+        other: "Débloquer %{count} appareils ?"
+      block_matching_question: "Bloquer tous les appareils dont le user agent contient « %{agent} », y compris ceux qui ne figurent pas ici ?"
+      block_matching_refuse: "%{question} Les nouveaux appareils qui l’envoient sont aussi refusés."
+      empty:
+        blocked: "Rien n’est bloqué."
+        unattached: "Chaque appareil ici a déjà connecté quelqu’un."
+        allowed: "Aucun appareil n’a encore atteint ce serveur."
+      filter_label: "Filtrer par user agent"
+      which: "Quels appareils"
+      showing: "Appareils dont le user agent contient"
+      showing_blocked: "Appareils bloqués dont le user agent contient"
+      clear: "Effacer"
+      refuse_agent: "Refuser aussi ce user agent à partir de maintenant"
+      block_matching: "Bloquer tous les appareils correspondants"
+      chosen: "%{count} sélectionnés"
+      choose_all:
+        one: "Sélectionner l’appareil affiché (%{count})"
+        other: "Sélectionner les %{count} appareils affichés"
+      block_count:
+        one: "Bloquer %{count} appareil"
+        other: "Bloquer %{count} appareils"
+      unblock_count:
+        one: "Débloquer %{count} appareil"
+        other: "Débloquer %{count} appareils"
+      newest: "Seuls les %{count} plus récents sont affichés."
+      choose: "Sélectionner %{label}"
+      blocked: "bloqué"
+      unrecognised: "non reconnu"
+      signed_in: "connecté"
+      nobody_yet: "personne pour l’instant"

@@ -1,0 +1,31 @@
+es:
+  manage:
+    emails:
+      title: "Correo"
+      list: "Correos"
+      app: "La aplicación en la que se inicia sesión"
+      no_app: "Sin aplicación"
+      not_approved: "%{name} (sin aprobar)"
+      headed: "Encabezado por %{heading}, de %{from} a %{to}"
+      no_sender: "no hay remitente configurado"
+      part: "Qué parte"
+      html: "HTML"
+      text: "Texto"
+      signature: "La firma"
+      groups:
+        sign_in:
+          title: "Al iniciar sesión"
+          help: "Se envían durante un inicio de sesión. Cuando una aplicación envió a la persona allí, una aplicación aprobada encabeza el correo con su logotipo y su nombre. Un inicio de sesión directo en la página de la cuenta no tiene aplicación, y lo encabeza el inquilino."
+          about: "Acerca de los correos enviados al iniciar sesión"
+        manage:
+          title: "De un administrador"
+          help: "Se envían cuando un administrador actúa en /manage. Los encabeza el inquilino."
+          about: "Acerca de los correos enviados por un administrador"
+        account:
+          title: "Desde la página de la cuenta"
+          help: "Se envían cuando una persona cambia su propia cuenta. Los encabeza el inquilino."
+          about: "Acerca de los correos enviados desde la página de la cuenta"
+        system:
+          title: "Por sí solo"
+          help: "Los envía masks sin que nadie actúe, como los avisos de seguridad y de inactividad. Los encabeza el inquilino."
+          about: "Acerca de los correos que se envían solos"

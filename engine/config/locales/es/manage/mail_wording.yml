@@ -1,0 +1,18 @@
+es:
+  manage:
+    mail_wording:
+      reset: "%{title} vuelve a usar el texto de masks."
+      saved: "%{title} guardado."
+      signature: "Firma"
+      wording: "Texto"
+      customized: " (personalizado)"
+      subject: "Asunto"
+      subject_placeholder: "El asunto que escribe masks"
+      closing: "Líneas de cierre de todos los correos"
+      opening: "Texto de apertura"
+      closing_placeholder: "Ninguna"
+      opening_placeholder: "La apertura que escribe masks"
+      hint: "Texto sin formato. Una línea en blanco empieza un párrafo nuevo. Rellena %{names}."
+      hint_more: "masks sigue añadiendo el botón o el código, cuánto dura y las líneas de seguridad."
+      save: "Guardar"
+      use_default: "Usar el texto de masks"

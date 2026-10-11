@@ -9,7 +9,7 @@ module Masks
       end
 
       test "a language masks does not speak falls back rather than raising" do
-        assert_equal I18n.default_locale, Locales.negotiate("de-AT,de;q=0.9")
+        assert_equal I18n.default_locale, Locales.negotiate("it-CH,it;q=0.9")
       end
 
       test "quality decides the order, not the order in the header" do

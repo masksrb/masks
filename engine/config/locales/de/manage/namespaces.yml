@@ -1,0 +1,14 @@
+de:
+  manage:
+    namespaces:
+      title: "Namespaces"
+      release_confirm: "%{name} freigeben? Die nächste App, die ihn anfordert, erhält ihn, und die Scopes darunter bedeuten nicht mehr, was sie jetzt bedeuten."
+      released: "%{name} kann wieder beansprucht werden."
+      columns:
+        name: "Name"
+        claimed_by: "Beansprucht von"
+        resource: "Ressource"
+        claimed: "Beansprucht"
+      nothing: "nichts"
+      release: "Freigeben"
+      archive_to_release: "zum Freigeben archivieren"

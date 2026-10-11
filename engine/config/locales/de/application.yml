@@ -1,0 +1,6 @@
+de:
+  application:
+    person:
+      manager: "Verwalter"
+      unconfirmed: "unbestätigt"
+      sign_out: "Abmelden"

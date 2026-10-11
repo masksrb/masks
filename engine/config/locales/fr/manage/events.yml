@@ -1,0 +1,8 @@
+fr:
+  manage:
+    events:
+      empty: "Rien pour l’instant."
+      by: "par"
+      more:
+        one: "Afficher %{count} de plus"
+        other: "Afficher %{count} de plus"

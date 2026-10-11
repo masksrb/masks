@@ -1,0 +1,18 @@
+es:
+  manage:
+    connections:
+      stop_confirm: "¿Impedir que %{client} use esta cuenta de %{provider}? Tendrá que volver a pedirlo."
+      stopped: "%{client} ya no puede usarla."
+      disconnect_confirm: "¿Desconectar %{held}? Deja de iniciar la sesión de nadie hasta que se vuelva a vincular, y todas las aplicaciones que la usan se detienen."
+      disconnected: "Desconectada."
+      empty: "Nada conectado."
+      badges:
+        signs_in: "inicia sesión"
+        unconfirmed: "sin confirmar"
+        delegable: "tokens guardados"
+      disconnect: "Desconectar"
+      connected: "Conectada %{when}"
+      signed_in: "Inició sesión %{when}"
+      can_use: "puede usarla"
+      can_use_last: "puede usarla · usada por última vez %{when}"
+      stop: "Detener"

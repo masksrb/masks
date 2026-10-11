@@ -1,0 +1,15 @@
+es:
+  device_verifications:
+    show:
+      page_title: "Iniciar sesión en un dispositivo"
+      title: "Iniciar sesión en un dispositivo"
+      lede: "Escribe el código que muestra el dispositivo."
+      code: "Código"
+      unknown: "Este servidor no está esperando ese código. Puede que haya caducado o que ya se haya respondido; pide uno nuevo al dispositivo."
+      declined: "No se inició ninguna sesión. El dispositivo sigue esperando y dejará de hacerlo por sí solo."
+
+    approved:
+      page_title: "El dispositivo tiene la sesión iniciada"
+      signed_in: "Sesión iniciada"
+      title: "%{name} tiene la sesión iniciada"
+      lede: "Puedes dejar esto y volver a %{name}."

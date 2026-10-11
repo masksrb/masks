@@ -1,0 +1,23 @@
+de:
+  manage:
+    ui:
+      save: "Speichern"
+      retry: "Erneut versuchen"
+      search: "Suchen"
+      loading: "Wird geladen"
+      more_about: "Mehr dazu"
+      about: "Über %{title}"
+      pager:
+        label: "Seiten"
+        range: "%{first}–%{last}"
+        range_of: "%{first}–%{last} von %{total}"
+        previous: "Zurück"
+        next: "Weiter"
+      bar_chart:
+        peak: "%{peak} am aktivsten Tag"
+        summary: "%{label}: %{total} Anmeldungen über %{days} Tage, Spitze bei %{peak}."
+        unit:
+          one: "Anmeldung"
+          other: "Anmeldungen"
+        day: "Tag"
+        units: "Anmeldungen"

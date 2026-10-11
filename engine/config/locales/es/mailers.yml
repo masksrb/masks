@@ -1,0 +1,135 @@
+es:
+  actor_mailer:
+    shared:
+      fallback: "O pega esto en tu navegador:"
+      sent_by: "Enviado por el servicio de inicio de sesión de %{tenant}."
+      sent_by_html: "Este mensaje lo envió el servicio de inicio de sesión de %{tenant}."
+
+    invitation:
+      subject: "Te invitaron a %{tenant}"
+      invited_by: "%{nickname} te invitó a %{tenant}."
+      invited: "Te invitaron a %{tenant}."
+      organization_after: "Cuando tengas contraseña, %{organization} te esperará en la página de tu cuenta para que la aceptes."
+      nickname_html: "Tu apodo es %{nickname}. Abre el enlace para elegir una contraseña."
+      nickname: "Tu apodo es %{nickname}. Abre el enlace para elegir una contraseña."
+      action: "Elegir una contraseña"
+      expiry: "Funciona una vez y caduca en %{duration}. No pasa nada hasta que alguien lo abre."
+
+    organization_invitation:
+      subject: "Únete a %{organization}"
+      invited_by: "%{nickname} te invitó a unirte a %{organization} como %{role}."
+      invited: "Te invitaron a unirte a %{organization} como %{role}."
+      grants: "No cambia nada hasta que aceptes. Cuando lo hagas, las aplicaciones que pregunten con qué organización inicias sesión podrán iniciar tu sesión como %{role} de %{organization}."
+      action: "Aceptar o rechazar"
+      unexpected: "Si no conoces %{organization}, rechaza la invitación. Una invitación que nunca aceptas no concede nada."
+
+    password_reset:
+      subject: "Restablece tu contraseña de %{tenant}"
+      opened_by: "%{nickname} inició el restablecimiento de la contraseña de tu cuenta de %{tenant}."
+      opened: "Alguien pidió restablecer la contraseña de tu cuenta de %{tenant}."
+      action: "Restablecer tu contraseña"
+      expiry: "Funciona una vez y caduca en %{duration}. Establecer una contraseña nueva cierra tu sesión en todos los demás sitios. Si no fuiste tú, ignóralo: no cambió nada."
+
+    notification:
+      subject: "%{said} — %{tenant}"
+      action: "Revisar tu cuenta"
+      by: "Esto lo hizo %{nickname}, no tú."
+      seen: "Registrado %{at}."
+      wrong: "Si no fuiste tú, cambia tu contraseña y cierra sesión en todas partes."
+      manage: "Elegir cuáles de estos recibes"
+
+      said:
+        password:
+          changed: "Se cambió la contraseña de tu cuenta de %{tenant}."
+          reset_completed: "Se restableció tu contraseña de %{tenant} con un enlace enviado a esta dirección. Se cerraron todas las demás sesiones."
+        passkey:
+          added: "Se añadió una llave de acceso a tu cuenta de %{tenant}. Ahora puede iniciar sesión sin contraseña."
+          removed: "Se eliminó una llave de acceso de tu cuenta de %{tenant}."
+        backup_codes:
+          generated: "Se generó un conjunto nuevo de códigos de respaldo para tu cuenta de %{tenant}. Los códigos impresos antes ya no funcionan."
+        backup_code:
+          spent: "Se usó un código de respaldo para iniciar sesión en tu cuenta de %{tenant}. Quedan %{remaining}."
+        email:
+          changed: "La dirección de correo de tu cuenta de %{tenant} se cambió a otra. Los restablecimientos de contraseña y los avisos sobre la cuenta ya no llegan aquí."
+        phone:
+          changed: "Se cambió el número de teléfono de tu cuenta de %{tenant}. Los códigos por SMS van al número nuevo."
+          removed: "Se eliminó el número de teléfono de tu cuenta de %{tenant}."
+        recovery:
+          requested: "Alguien que sabe iniciar sesión en tu cuenta de %{tenant} pidió a un administrador que restablezca sus segundos factores. Si no fuiste tú, cambia tu contraseña ahora."
+        second_factors:
+          reset: "Un administrador restableció los segundos factores de tu cuenta de %{tenant}. El próximo inicio de sesión te pedirá configurar uno nuevo, y se cerraron todas las sesiones."
+        authenticator:
+          enabled: "Se añadió una aplicación de autenticación a tu cuenta de %{tenant}. Ahora el inicio de sesión pide su código."
+          disabled: "Se eliminó la aplicación de autenticación de tu cuenta de %{tenant}. Ya no se pide al iniciar sesión."
+        email_codes:
+          enabled: "Ahora el inicio de sesión en tu cuenta de %{tenant} se puede confirmar con un código enviado a esta dirección."
+          disabled: "El inicio de sesión en tu cuenta de %{tenant} ya no se puede confirmar con un código enviado a esta dirección."
+        text_codes:
+          enabled: "Ahora el inicio de sesión en tu cuenta de %{tenant} se puede confirmar con un código enviado a tu teléfono."
+          disabled: "El inicio de sesión en tu cuenta de %{tenant} ya no se puede confirmar con un código enviado a tu teléfono."
+        session:
+          started: "Alguien inició sesión en tu cuenta de %{tenant} desde un dispositivo que no se había visto antes."
+          revoked: "Se cerró una sesión de tu cuenta de %{tenant} por ti."
+        sign_in:
+          risky: "Un inicio de sesión en tu cuenta de %{tenant} parecía inusual, así que se pidió más verificación o se rechazó. Si no fuiste tú, cambia tu contraseña."
+        device:
+          blocked: "Se bloqueó un dispositivo en tu cuenta de %{tenant}. No puede iniciar sesión hasta que alguien lo desbloquee."
+        consent:
+          granted: "%{client} obtuvo acceso a tu cuenta de %{tenant} y ahora puede leer lo que aceptaste compartir."
+        connection:
+          linked: "Se conectó %{provider} a tu cuenta de %{tenant} y ahora se puede usar para iniciar sesión."
+          unlinked: "Se desconectó %{provider} de tu cuenta de %{tenant}."
+        device_code:
+          approved: "%{client} inició sesión en tu cuenta de %{tenant} desde un dispositivo que te mostró un código."
+        actor:
+          scopes_changed: "Se cambió lo que tu cuenta de %{tenant} tiene permitido hacer."
+        account:
+          exported: "Todo lo que contiene tu cuenta de %{tenant} se descargó como archivo."
+        membership:
+          role_changed: "Tu rol en %{organization} cambió de %{was} a %{role}. Las aplicaciones en las que tienes la sesión iniciada para %{organization} lo verán la próxima vez que comprueben."
+          removed: "Te eliminaron de %{organization}. Se cerró la sesión de las aplicaciones iniciadas para %{organization}."
+          suspended: "Se archivó %{organization}. Se cerró la sesión de las aplicaciones iniciadas para ella y ya no se ofrece al iniciar sesión."
+
+      wrong_for:
+        membership:
+          role_changed: "Si esto parece un error, pregunta a un propietario de %{organization}."
+          removed: "Si esto parece un error, pide a un propietario de %{organization} que te vuelva a añadir."
+          suspended: "Si esto parece un error, pide a un administrador que restaure %{organization}."
+
+    confirmation_code:
+      subject: "%{code} es tu código de confirmación de %{tenant}"
+      lede: "Escribe este código donde estás iniciando sesión en %{tenant}."
+      expiry: "Funciona una vez y caduca en %{duration}. Si no fuiste tú, ignóralo."
+
+    approval_requested:
+      subject: "%{nickname} espera que le dejen entrar en %{tenant}"
+      lede: "%{nickname} creó una cuenta en %{tenant}. No puede iniciar sesión hasta que un administrador la apruebe."
+      action: "Revisar la cuenta"
+
+    recovery_requested:
+      subject: "%{nickname} pidió ayuda para iniciar sesión en %{tenant}"
+      lede: "%{nickname} inició sesión en %{tenant} con su primer factor y no puede terminar con el segundo. Asegúrate de que es realmente esa persona, por teléfono o en persona, antes de restablecer sus segundos factores."
+      action: "Revisar la cuenta"
+
+    idle:
+      subject:
+        active: "Inicia sesión para conservar tu cuenta de %{tenant}"
+        suspended: "Tu cuenta suspendida de %{tenant} se eliminará"
+      lede:
+        suspend: "Hace tiempo que nadie inicia sesión en tu cuenta de %{tenant}. Si no inicias sesión antes del %{due}, se suspenderá y solo un administrador podrá restaurarla."
+        delete: "Hace tiempo que nadie inicia sesión en tu cuenta de %{tenant}. Si no inicias sesión antes del %{due}, se eliminará junto con todo lo que contiene."
+        delete_suspended: "Tu cuenta de %{tenant} se suspendió porque nadie la usaba. Se eliminará el %{due}, junto con todo lo que contiene, salvo que un administrador la restaure antes."
+      keep: "Con iniciar sesión una vez, se conserva."
+      action: "Iniciar sesión"
+
+    approved:
+      subject: "Tu cuenta de %{tenant} está lista"
+      lede: "Un administrador aprobó tu cuenta en %{tenant}. Ya puedes iniciar sesión."
+      action: "Iniciar sesión"
+
+    email_verification:
+      subject: "Confirma tu dirección de correo para %{tenant}"
+      confirm_html: "Confirma esta dirección para %{nickname} en %{tenant}."
+      confirm: "Confirma esta dirección para %{nickname} en %{tenant}."
+      action: "Confirmar esta dirección"
+      expiry: "Funciona una vez y caduca en %{duration}. Si no fuiste tú, ignóralo: no cambia nada más."

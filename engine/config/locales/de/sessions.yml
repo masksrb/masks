@@ -1,0 +1,10 @@
+de:
+  sessions:
+    confirm:
+      page_title: "Abmelden?"
+      title: "Abmelden?"
+      asked_by_html: "%{client} möchte Sie abmelden."
+      asked_html: "Ein Link hat Sie zum Abmelden hierher geführt."
+      scope: "Damit endet Ihre Sitzung in diesem Browser. Ihre anderen Geräte bleiben angemeldet."
+      sign_out: "Abmelden"
+      stay: "Angemeldet bleiben"

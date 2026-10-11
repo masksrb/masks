@@ -1,0 +1,21 @@
+de:
+  manage:
+    app:
+      missing: "Unter dieser Adresse gibt es keine Seite."
+      account: "Konto"
+      starting: "Wird gestartet"
+      stopped: "Angehalten"
+      failed: "Anmeldung zur Verwaltung von %{tenant} nicht möglich"
+      retry: "Erneut versuchen"
+      settings: "Einstellungen"
+      sections: "Bereiche"
+      nav:
+        overview: "Übersicht"
+        actors: "Akteure"
+        organizations: "Organisationen"
+        clients: "Apps"
+      limited:
+        read: "Sie können hier alles lesen und nichts ändern."
+        support: "Sie können Personen bei ihren Konten helfen. Einstellungen, Schlüssel und andere Verwalter erfordern einen Eigentümer."
+        security: "Sie können Schlüssel, Apps, Anbieter und Richtlinien ändern. Konten von Personen erfordern Support oder einen Eigentümer."
+        both: "Sie können Einstellungen ändern und Personen helfen. Andere Verwalter und Mandanteneinstellungen erfordern einen Eigentümer."

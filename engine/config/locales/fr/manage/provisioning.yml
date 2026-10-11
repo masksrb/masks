@@ -1,0 +1,29 @@
+fr:
+  manage:
+    provisioning:
+      title: "Provisionnement"
+      lede: "Un fournisseur d’identité ajoute, modifie, suspend et supprime ici des utilisateurs via SCIM 2.0."
+      revoke_confirm: "Révoquer %{label} ? Tout provisionnement qui l’utilise est désormais refusé."
+      revoked: "%{label} est révoqué."
+      lifetimes:
+        month: "30 jours"
+        quarter: "90 jours"
+        year: "Un an"
+      connect:
+        title: "Connecter un fournisseur"
+        help: "Donnez au fournisseur cette URL et un jeton. Un utilisateur provisionné est identifié par son adresse e-mail, que masks considère comme confirmée, et se connecte via un fournisseur ou une invitation. Le mot de passe et l’adresse e-mail de quiconque détient une portée masks: ne sont jamais modifiés de cette façon, et le dernier gestionnaire n’est jamais suspendu ni supprimé."
+        base_url: "URL de base SCIM"
+        label: "Libellé"
+        provisions: "Provisionne"
+        every_account: "Tous les comptes"
+        only_members: "Seulement les membres de %{name}"
+        lifetime: "Durée de vie du jeton"
+        issue: "Émettre un jeton"
+        shown_once: "Ce jeton n’est affiché qu’une fois. Copiez-le maintenant."
+      tokens:
+        title: "Jetons"
+        none: "Aucun émis."
+        never: "jamais"
+        issued_by: "par %{identifier}, utilisé %{used}, expire %{expires}"
+        detail: "utilisé %{used}, expire %{expires}"
+        revoke: "Révoquer"

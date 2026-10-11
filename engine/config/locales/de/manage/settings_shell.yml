@@ -1,0 +1,19 @@
+de:
+  manage:
+    settings_shell:
+      label: "Einstellungen"
+      account: "Ihr Konto"
+      sign_out: "Abmelden"
+      forget: "App vergessen"
+      forget_confirm: "Diese Verwaltungs-App vergessen? masks bittet Sie sofort, eine neue zu genehmigen. Die alte App bleibt unter Apps, bis sie archiviert wird."
+      tabs:
+        settings: "Allgemein"
+        groups: "Gruppen"
+        policies: "Richtlinien"
+        providers: "Anbieter"
+        domains: "Domains"
+        provisioning: "Provisionierung"
+        adapters: "Adapter"
+        streams: "Streams"
+        email: "E-Mail"
+        activity: "Aktivität"

@@ -1,0 +1,16 @@
+es:
+  links:
+    expired:
+      state: "Caducado"
+      titles:
+        invitation: "Esta invitación ya no es válida"
+        reset: "Este enlace de restablecimiento ya no es válido"
+        confirmation: "Este enlace de confirmación ya no es válido"
+      lede: "No cambió nada en la cuenta."
+      sign_in: "Iniciar sesión"
+
+    verified:
+      page_title: "Dirección confirmada"
+      state: "Confirmada"
+      title: "%{email} está confirmada."
+      account: "Tu cuenta"

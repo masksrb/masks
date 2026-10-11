@@ -1,0 +1,162 @@
+de:
+  devices:
+    unknown: "Dieses Gerät gibt es in diesem Konto nicht."
+    refused_agent: "Mit diesem Browser ist hier keine Anmeldung möglich."
+    blocked: "Dieses Gerät ist gesperrt."
+    renamed: "Gerät umbenannt."
+    shared: "Auf diesem Gerät hat sich auch jemand anderes angemeldet, daher kann es hier nicht umbenannt werden."
+    signed_out: "Dieses Gerät wurde abgemeldet."
+
+  organization_members:
+    unknown: "Sie sind kein Mitglied dieser Organisation."
+    not_a_member: "Diese Person ist kein Mitglied dieser Organisation."
+    invitee: "Eine eingeladene Person"
+    owners_only: "Nur ein Eigentümer von %{organization} kann die Mitglieder ändern."
+    added: "%{identifier} ist Mitglied von %{organization}."
+    assigned: "%{identifier} ist jetzt %{role}."
+    removed: "%{identifier} ist kein Mitglied von %{organization} mehr."
+    left: "Sie haben %{organization} verlassen. Alles, was als Mitglied angemeldet ist, funktioniert nicht mehr."
+    accepted: "Sie sind jetzt %{role} in %{organization}."
+    declined: "Sie haben %{organization} abgelehnt."
+    confirm_first: "Bestätigen Sie %{address}, bevor Sie %{organization} beitreten: Senden Sie über Ihre E-Mail-Einstellungen auf dieser Seite eine Bestätigung an die Adresse und nehmen Sie dann an."
+    elsewhere: "%{organization} hat %{address} eingeladen, aber das ist nicht die Adresse dieses Kontos. Ändern Sie Ihre E-Mail-Adresse in diese und bestätigen Sie sie, um beizutreten."
+    slow_down: "Das sind sehr viele Personen auf einmal. Warten Sie eine Minute und versuchen Sie es erneut."
+    resent: "Die Einladung an %{identifier} wurde erneut gesendet. Sie läuft in %{age} ab."
+    expired: "Die Einladung zu %{organization} ist abgelaufen. Bitten Sie einen Eigentümer, sie erneut zu senden."
+
+  apps:
+    unknown: "Diese App gibt es in diesem Konto nicht."
+    revoked: "Der Zugriff für %{client} wurde widerrufen. Alles, was sie hielt, funktioniert nicht mehr, und sie muss erneut fragen."
+
+  connections:
+    unknown: "Dieses verbundene Konto gibt es nicht."
+    disconnected: "%{provider} wurde getrennt."
+    linked: "%{provider} ist verbunden. Sie können sich ab jetzt damit anmelden."
+    unavailable: "Dieser Anbieter kann hier nicht verbunden werden."
+    stale: "Melden Sie sich erneut an, bevor Sie ein weiteres Konto verbinden. Ihre letzte Anmeldung ist eine Weile her."
+    expired: "Dieser Versuch, ein Konto zu verbinden, ist abgelaufen. Versuchen Sie es erneut."
+    failed: "%{provider} hat nicht bestätigt, wer Sie sind, daher wurde nichts verbunden."
+    taken: "Dieses %{provider}-Konto ist hier bereits mit jemand anderem verbunden."
+
+  delegations:
+    unknown: "Keine solche App nutzt dieses Konto."
+    stopped: "%{client} kann Ihr %{provider}-Konto nicht mehr nutzen."
+
+  passkeys:
+    expired: "Diese Einrichtung ist abgelaufen. Versuchen Sie es erneut."
+    crowded: "Sie haben bereits so viele Passkeys, wie dieser Server speichert."
+    unusable: "Dieser Passkey konnte nicht hinzugefügt werden."
+    unknown: "Diesen Passkey gibt es in diesem Konto nicht."
+    last_way_in: "Dieser Passkey ist der einzige Zugang zu diesem Konto. Fügen Sie einen weiteren hinzu, bevor Sie ihn entfernen."
+    added: "Passkey hinzugefügt."
+    removed: "Passkey entfernt."
+    again: "Melden Sie sich erneut an, um Ihre Passkeys zu ändern. Ihre letzte Anmeldung ist eine Weile her."
+
+  authenticator_apps:
+    again: "Melden Sie sich erneut an, um Ihre Authenticator-App zu ändern. Ihre letzte Anmeldung ist eine Weile her."
+    already: "Dieses Konto hat bereits eine Authenticator-App. Entfernen Sie sie, bevor Sie eine weitere hinzufügen."
+    unoffered: "Dieser Server bietet keine Authenticator-Apps an."
+    invalid_code: "Dieser Code stimmt nicht. Prüfen Sie die Uhrzeit auf Ihrem Telefon und versuchen Sie den nächsten Code."
+    too_many_attempts: "Es wurden zu viele Codes versucht. Warten Sie einige Minuten und versuchen Sie es erneut."
+    none: "Dieses Konto hat keine Authenticator-App."
+    added: "Authenticator-App hinzugefügt. Bei der Anmeldung wird jetzt nach ihrem Code gefragt."
+    removed: "Authenticator-App entfernt."
+
+  addresses:
+    again: "Melden Sie sich erneut an, um Ihre E-Mail-Adresse oder Telefonnummer zu ändern. Ihre letzte Anmeldung ist eine Weile her."
+    directed: "Das Verzeichnis Ihrer Organisation verwaltet die Adressen dieses Kontos."
+    too_many_requests: "Es wurden zu viele Codes gesendet. Warten Sie einige Minuten und versuchen Sie es erneut."
+    too_many_attempts: "Es wurden zu viele Codes versucht. Warten Sie einige Minuten und versuchen Sie es erneut."
+    expired: "Dieser Code ist abgelaufen. Senden Sie einen neuen."
+    invalid_code: "Dieser Code stimmt nicht."
+    email:
+      invalid: "Das ist keine E-Mail-Adresse."
+      same: "Das ist bereits Ihre E-Mail-Adresse."
+      undeliverable: "Dieser Server kann noch keine E-Mails senden."
+      sent: "Ein Code ist unterwegs an %{to}."
+      taken: "Ein anderes Konto verwendet diese E-Mail-Adresse."
+      changed: "E-Mail-Adresse geändert."
+    phone:
+      invalid: "Das ist keine Telefonnummer. Geben Sie die Ländervorwahl mit an, etwa +49 30 1234567."
+      same: "Das ist bereits Ihre Telefonnummer."
+      undeliverable: "Dieser Server kann noch keine SMS senden."
+      sent: "Ein Code ist unterwegs an %{to}."
+      taken: "Ein anderes Konto verwendet diese Telefonnummer."
+      changed: "Telefonnummer geändert."
+      none: "Dieses Konto hat keine Telefonnummer."
+      required: "Dieser Server verlangt eine Telefonnummer, daher kann sie nicht entfernt werden. Ändern Sie sie stattdessen."
+      removed: "Telefonnummer entfernt."
+
+  backup_codes:
+    again: "Melden Sie sich erneut an, um neue Backup-Codes zu erstellen. Ihre letzte Anmeldung ist eine Weile her."
+    unoffered: "Dieser Server bietet keine Backup-Codes an."
+    no_second_factor: "Backup-Codes ersetzen einen zweiten Faktor. Fügen Sie zuerst eine Authenticator-App oder einen Passkey hinzu."
+    generated: "Neue Backup-Codes erstellt. Die alten funktionieren nicht mehr."
+
+  code_factors:
+    again: "Melden Sie sich erneut an, um zu ändern, wie Anmeldungen bestätigt werden. Ihre letzte Anmeldung ist eine Weile her."
+    unoffered: "Dieser Server bietet diese Art der Anmeldebestätigung nicht an."
+    unconfirmed: "Bestätigen Sie diese Adresse, bevor Codes an sie gesendet werden."
+    undeliverable: "Dieser Server kann diese Codes noch nicht senden."
+    enabled:
+      email: "Anmeldungen können jetzt mit einem Code an Ihre E-Mail-Adresse bestätigt werden."
+      sms: "Anmeldungen können jetzt mit einem Code an Ihr Telefon bestätigt werden."
+    disabled:
+      email: "Codes per E-Mail sind deaktiviert."
+      sms: "Codes per SMS sind deaktiviert."
+
+  sign_in_approvals:
+    untrusted: "Nur ein Gerät, dem Sie bei der Anmeldung vertraut haben, kann eine Anmeldung genehmigen."
+    no_match: "Keine Anmeldung in diesem Konto wartet auf diesen Code."
+    expired: "Diese Anmeldung wartet nicht mehr. Fordern Sie auf dem anderen Bildschirm einen neuen Code an."
+    too_many_attempts: "Zu viele Versuche. Warten Sie einige Minuten und versuchen Sie es erneut."
+    approved: "Anmeldung genehmigt."
+    denied: "Anmeldung abgelehnt."
+
+  passwords:
+    too_many_attempts: "Zu viele Versuche. Warten Sie einige Minuten und versuchen Sie es erneut."
+    short_password: "Ein Passwort braucht hier mindestens %{minimum} Zeichen."
+    common_password: "Dieses Passwort gehört zu den häufigsten. Wählen Sie ein anderes."
+    breached_password: "Dieses Passwort ist in einem Datenleck aufgetaucht. Wählen Sie ein anderes."
+    wrong_current: "Das ist nicht Ihr aktuelles Passwort."
+    changed: "Ihr Passwort wurde geändert, und alle anderen Sitzungen wurden abgemeldet."
+    set: "Ihr Konto hat jetzt ein Passwort, und alle anderen Sitzungen wurden abgemeldet."
+    again: "Melden Sie sich erneut an, um ein Passwort festzulegen. Ihre letzte Anmeldung ist eine Weile her."
+
+  profiles:
+    directed: "Das Verzeichnis Ihrer Organisation verwaltet Ihren Namen."
+    invalid: "%{errors}"
+    updated: "Ihre Angaben wurden gespeichert."
+
+  verifications:
+    too_many_requests: "Zu viele Anfragen. Warten Sie einige Minuten."
+    no_address: "In diesem Konto gibt es keine Adresse zum Bestätigen."
+    already_confirmed: "Diese Adresse ist bereits bestätigt."
+    no_mailer: "Dieser Server kann keine E-Mails senden. Wenden Sie sich an einen Verwalter."
+    sent: "Ein Bestätigungslink ist unterwegs an %{email}."
+
+  avatars:
+    updated: "Ihr Foto wurde aktualisiert."
+    removed: "Ihr Foto wurde entfernt."
+
+  handshakes:
+    answered: "diese Verbindungsanfrage wurde bereits beantwortet"
+    none_in_progress: "es läuft keine Verbindungsanfrage"
+    not_permitted: "dieses Konto darf keine App verbinden"
+    already_connected: "%{resource} ist bereits verbunden; ein Verwalter muss es neu verbinden"
+    beyond_account: "%{scopes} ist mehr, als dieses Konto hat"
+    too_soon: "Es wurde nichts registriert. Lesen Sie, was angefordert wird, und stimmen Sie zu, sobald der Countdown abgelaufen ist."
+
+  account_export:
+    again: "Melden Sie sich erneut an, um Ihr Konto herunterzuladen. Ihre letzte Anmeldung ist eine Weile her."
+    throttled: "Ihr Konto wurde in der letzten Stunde mehrmals heruntergeladen. Versuchen Sie es später erneut."
+  account_deletion:
+    again: "Melden Sie sich erneut an, um Ihr Konto zu löschen. Ihre letzte Anmeldung ist eine Weile her."
+    mismatch: "Geben Sie den Namen Ihres Kontos genau so ein, wie er angezeigt wird, um es zu löschen."
+    manager: "Sie sind die letzte Person, die diesen Server verwaltet, daher kann Ihr Konto nicht gelöscht werden."
+    provisioned: "Ihre Organisation verwaltet dieses Konto, daher kann nur sie das Konto löschen."
+    deleted: "Ihr Konto wurde gelöscht."
+
+  forward_auth:
+    unknown: "Unter dieser Adresse ist keine App hinter einem Proxy registriert."
+    not_admitted: "Ihr Konto darf %{app} nicht verwenden."

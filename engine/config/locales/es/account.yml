@@ -1,0 +1,276 @@
+es:
+  account:
+    index:
+      none_yet: "Nada todavía."
+      sign_out: "Cerrar sesión"
+      title: "Tu cuenta"
+      manage: "Administrar este servidor"
+      lede: "Aquí cambias cómo inicias sesión, ves los dispositivos en los que tienes la sesión iniciada y compruebas lo que ha pasado en tu cuenta."
+
+      signing_in:
+        heading: "Inicio de sesión"
+
+      email:
+        heading: "Dirección de correo"
+        state:
+          none: "Ninguna"
+          unconfirmed: "Sin confirmar"
+        none_set: "Esta cuenta no tiene dirección de correo. No se le puede enviar nada y no puedes restablecer tu propia contraseña."
+        body: "Los restablecimientos de contraseña y las confirmaciones van a %{email}."
+        send_link: "Enviar enlace de confirmación"
+
+      phone:
+        heading: "Número de teléfono"
+        state:
+          none: "Ninguno"
+          unconfirmed: "Sin confirmar"
+        none: "Esta cuenta no tiene número de teléfono."
+        body: "Los códigos por SMS van a %{phone}."
+        remove: "Eliminar"
+        confirm_remove: "¿Eliminar este número de teléfono?"
+
+      addresses:
+        email: "Nueva dirección de correo"
+        phone: "Nuevo número de teléfono"
+        phone_hint: "Incluye el código de país, como en +1 555 123 4567."
+        send: "Enviar un código"
+        again: "Vuelve a iniciar sesión para cambiarlo"
+        sent: "Escribe el código enviado a %{to}."
+        code: "Código"
+        confirm: "Confirmar"
+        directed: "El directorio de tu organización gestiona esta dirección."
+        undeliverable:
+          email: "Este servidor todavía no puede enviar correo, así que la dirección no se puede cambiar aquí."
+          phone: "Este servidor todavía no puede enviar SMS, así que el número no se puede cambiar aquí."
+
+      password:
+        heading: "Contraseña"
+        state: "Cambiarla"
+        state_none: "Sin establecer"
+        none: "Esta cuenta no tiene contraseña. Inicia sesión con una llave de acceso o con otra cuenta. Establecer una cierra tu sesión en todos los demás sitios."
+        set: "Establecer una contraseña"
+        set_again: "Vuelve a iniciar sesión para establecer una contraseña"
+        current: "Tu contraseña actual"
+        new: "Tu contraseña nueva"
+        hint: "Al menos %{minimum} caracteres. Cambiarla cierra tu sesión en todos los demás sitios."
+        submit: "Cambiar contraseña"
+
+      passkeys:
+        heading: "Llaves de acceso"
+        state:
+          none: "Sin configurar"
+          set:
+            one: "1 configurada"
+            other: "%{count} configuradas"
+        explained: "En lugar de escribir una contraseña, tu dispositivo comprueba que eres tú de la misma forma en que ya se desbloquea. Cuenta como los dos factores a la vez, así que no hay que esperar ningún código."
+        used: "usada por última vez hace %{age}"
+        never_used: "nunca usada"
+        remove: "Eliminar"
+        confirm_remove: "¿Eliminar esto?"
+        compromised: "La FIDO Alliance informa de un problema con este modelo (%{report}). Reemplázala."
+        name: "¿Cómo se llama este dispositivo?"
+        name_placeholder: "Mi portátil"
+        add: "Configurarla"
+
+      authenticator:
+        heading: "Aplicación de autenticación"
+        state:
+          "on": "Activada"
+          "off": "Sin configurar"
+        explained: "Después de tu contraseña, un inicio de sesión se puede confirmar con un código de seis dígitos de una aplicación de tu teléfono. El código cambia cada 30 segundos y funciona sin cobertura."
+        scan: "Escanéalo con tu aplicación de autenticación o escribe la clave en ella."
+        key: "Clave"
+        code: "El código que muestra la aplicación"
+        submit: "Activar"
+        again: "Vuelve a iniciar sesión antes de configurarla. Hace tiempo que no lo haces."
+        submit_again: "Volver a iniciar sesión"
+        remove: "Eliminar"
+        confirm_remove: "¿Dejar de pedir códigos de esta aplicación?"
+        enabled: "Los inicios de sesión piden un código de tu aplicación de autenticación."
+
+      backup_codes:
+        heading: "Códigos de respaldo"
+        state:
+          one: "Queda 1"
+          other: "Quedan %{count}"
+        explained: "Cada código sirve para iniciar sesión una vez, cuando no tienes a mano tu teléfono ni tu llave de acceso. Guárdalos en un lugar seguro, lejos de este dispositivo."
+        fresh: "Anótalos ahora. No se vuelven a mostrar."
+        make: "Generar códigos nuevos"
+        confirm_make: "Los códigos que tienes ahora dejarán de funcionar."
+        make_again: "Vuelve a iniciar sesión para generar códigos nuevos"
+
+      codes:
+        state:
+          "on": "Activados"
+          "off": "Desactivados"
+        sent_to: "Los códigos van a %{to}."
+        turn_on: "Activar"
+        turn_off: "Desactivar"
+        confirm_turn_off: "¿Dejar de confirmar los inicios de sesión de esta forma?"
+        email:
+          heading: "Códigos por correo"
+          explained: "Después de tu contraseña, un inicio de sesión se puede confirmar con un código enviado a tu dirección de correo. Restablecer la contraseña por correo lo desactiva, porque el enlace de restablecimiento va a la misma bandeja de entrada."
+          unconfirmed: "Primero confirma tu dirección de correo."
+          undeliverable: "Este servidor todavía no puede enviar correo."
+        sms:
+          heading: "Códigos por SMS"
+          explained: "Después de tu contraseña, un inicio de sesión se puede confirmar con un código enviado a tu teléfono por SMS. Una aplicación de autenticación o una llave de acceso son más difíciles de robar."
+          unconfirmed: "Primero añade y confirma un número de teléfono."
+          undeliverable: "Este servidor todavía no puede enviar SMS."
+
+      approve:
+        heading: "Aprobar un inicio de sesión"
+        label: "Un código de otro dispositivo"
+        state:
+          ready: "Listo"
+          waiting: "Esperándote"
+        explained: "Este dispositivo es de confianza, así que puede confirmar un inicio de sesión que se está haciendo en otro lugar. Escribe el código que muestra la otra pantalla. Escribe solo un código que estés viendo tú."
+        code: "Código de la otra pantalla"
+        submit: "Continuar"
+        confirm: "Este dispositivo pide iniciar sesión en tu cuenta. Apruébalo solo si es tuyo."
+        asked: "lo pidió hace %{age}"
+        approve: "Aprobar"
+        deny: "Denegar"
+
+      devices:
+        heading: "Dispositivos"
+        lede: "Todos los teléfonos, tabletas y ordenadores que han iniciado sesión en esta cuenta."
+        none: "Nada ha iniciado sesión todavía."
+        state:
+          here: "Este dispositivo"
+          signed_in: "Sesión iniciada"
+          signed_out: "Sesión cerrada"
+          blocked: "Bloqueado"
+        seen: "Visto por última vez hace %{age}."
+        from: "Usado por última vez desde %{address}."
+        skips_code: "Este dispositivo no tiene que escribir un código."
+        sign_out: "Cerrar la sesión de este dispositivo"
+        save_name: "Guardar nombre"
+
+      organizations:
+        heading: "Organizaciones"
+        invited_by_manager: "Alguien invitado por un administrador"
+        role: "Eres %{role}"
+        lede_owner: "Como propietario, decides quién pertenece aquí y qué rol tiene cada persona. Las aplicaciones que piden tu organización ven el rol."
+        lede_member: "Las aplicaciones que piden tu organización ven que perteneces a ella y tu rol."
+        members: "Miembros"
+        people:
+          one: "1 miembro"
+          other: "%{count} miembros"
+        owners:
+          one: "1 propietario"
+          other: "%{count} propietarios"
+        waiting_count:
+          one: "1 invitación abierta"
+          other: "%{count} invitaciones abiertas"
+        you: "tú"
+        invited: "invitado"
+        expired: "caducada"
+        waiting: "Esperándote"
+        asked: "%{by} te añadió a %{organization} como %{role}. No cambia nada hasta que aceptes."
+        invited_ago: "Invitado hace %{age}"
+        expired_ago: "La invitación caducó hace %{age}"
+        expires_in: "caduca en %{age}"
+        by: "por %{by}"
+        joined_ago: "Se unió hace %{age}"
+        sent_to: "enviada a %{address}"
+        sent_elsewhere: "Esta invitación se envió a %{address}. Inicia sesión con esa dirección para aceptarla o pide a un propietario que invite a la dirección de esta cuenta."
+        confirm_first_html: "Confirma %{address} en <a href=\"#email\">Dirección de correo</a> antes de aceptar."
+        someone: "Un propietario"
+        accept: "Unirme a %{organization}"
+        decline: "Rechazar"
+        confirm_decline: "¿Rechazar la invitación a %{organization}? Un propietario tendrá que volver a invitarte."
+        set_role: "Establecer rol"
+        role_of: "Rol de %{person}"
+        remove: "Eliminar"
+        withdraw: "Retirar"
+        resend: "Volver a enviar"
+        confirm_remove: "¿Eliminar a %{identifier} de %{organization}? Todo aquello en lo que inició sesión como miembro deja de funcionar."
+        confirm_withdraw: "¿Retirar la invitación a %{identifier}?"
+        add_email: "Añadir a alguien por correo"
+        add_placeholder: "name@example.com"
+        add_role: "Rol"
+        add: "Añadir"
+        add_hint: "Se une cuando acepta. Quien no tiene cuenta aquí recibe primero una invitación."
+        leave: "Salir de %{organization}"
+        confirm_leave: "¿Salir de %{organization}? Todo aquello en lo que iniciaste sesión como miembro deja de funcionar, y un propietario tendrá que volver a añadirte."
+        last_owner: "Eres su único propietario, así que no puedes salir ni cambiar tu rol hasta que hagas propietario a otra persona."
+
+      launcher:
+        heading: "Tus aplicaciones"
+
+      apps:
+        heading: "Aplicaciones y cuentas"
+        state:
+          none: "Ninguna"
+
+      applications:
+        remembered: "%{label}, sin preguntar hasta el %{date}"
+        heading: "Aplicaciones a las que diste acceso"
+        none_yet: "Nada ha pedido acceso todavía. Una aplicación aparece aquí cuando inicias sesión en ella, con lo que aceptaste que pueda ver."
+        revoke: "Revocar acceso"
+        more:
+          one: "y una más"
+          other: "y %{count} más"
+        confirm_revoke: "¿Revocar %{client}? Todo lo que tiene deja de funcionar y tendrá que volver a pedirlo la próxima vez que inicies sesión."
+
+      connections:
+        heading: "Cuentas conectadas"
+        lede: "Una cuenta de otro sitio, por ejemplo una cuenta del trabajo, vinculada a esta. Puede servir para iniciar sesión aquí."
+        signs_you_in: "inicia tu sesión"
+        link: "Conectar %{provider}"
+        disconnect: "Desconectar"
+        confirm_disconnect: "¿Desconectar %{provider}? Si inicias sesión con ella, necesitarás otra forma de entrar. Todas las aplicaciones que la usan se detienen."
+        delegated: "%{client} puede usarla mientras no estás"
+        stop: "Detener"
+        confirm_stop: "¿Impedir que %{client} use tu cuenta de %{provider}? Tendrá que volver a pedírtelo."
+
+      info:
+        heading: "Datos"
+
+      profile:
+        heading: "Nombre"
+        name: "Tu nombre"
+        nickname: "Apodo"
+        nickname_hint: "Letras, números, puntos, guiones y guiones bajos. Puedes iniciar sesión con él."
+        submit: "Guardar"
+        directed: "El directorio de tu organización gestiona tu nombre."
+
+      picture:
+        change: "Cambiar tu foto"
+        remove: "Eliminar foto"
+        confirm_remove: "¿Eliminar tu foto?"
+
+      notifications:
+        heading: "Correos que te enviamos"
+        state:
+          zero: "Todos"
+          one: "Uno desactivado"
+          other: "%{count} desactivados"
+        lede: "Todo lo de aquí está activado hasta que lo desactives. Llegan en el momento en que ocurre y no se puede responder a ninguno."
+        silent: "No se envía nada, porque solo van a una dirección de correo confirmada."
+        submit: "Guardar"
+
+      export:
+        heading: "Descargar tu cuenta"
+        state: "JSON"
+        lede: "Un archivo con tu perfil, cómo inicias sesión, tus organizaciones, aplicaciones, cuentas conectadas y dispositivos, y la actividad que masks ha guardado. No contiene contraseñas, códigos ni claves."
+        again: "Iniciaste sesión hace tiempo, así que primero se te pedirá que vuelvas a iniciarla."
+        submit: "Descargar"
+        submit_again: "Volver a iniciar sesión"
+
+      delete:
+        heading: "Eliminar tu cuenta"
+        state: "Permanente"
+        lede: "Eliminar tu cuenta cierra tu sesión en todas las aplicaciones y dispositivos, y elimina tus llaves de acceso, cuentas conectadas y foto. No se puede deshacer."
+        again: "Iniciaste sesión hace tiempo, así que primero se te pedirá que vuelvas a iniciarla."
+        confirm_html: "Escribe <b>%{identifier}</b> para confirmar"
+        submit: "Eliminar mi cuenta"
+        submit_again: "Volver a iniciar sesión"
+
+      activity:
+        heading: "Actividad"
+        entry: "Actividad reciente"
+        lede: "Lo que ha pasado en tu cuenta últimamente. Si no reconoces algo, conviene cambiar tu contraseña."
+        ago: "hace %{age}"
+        check_this: "conviene revisarlo"

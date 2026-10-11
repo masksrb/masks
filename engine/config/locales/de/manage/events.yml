@@ -1,0 +1,8 @@
+de:
+  manage:
+    events:
+      empty: "Noch nichts."
+      by: "von"
+      more:
+        one: "%{count} weiteres anzeigen"
+        other: "%{count} weitere anzeigen"

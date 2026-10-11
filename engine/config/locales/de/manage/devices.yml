@@ -1,0 +1,59 @@
+de:
+  manage:
+    devices:
+      title: "Geräte"
+      lenses:
+        allowed: "Erlaubt"
+        blocked: "Gesperrt"
+        unattached: "Nie angemeldet"
+      columns:
+        device: "Gerät"
+        who: "Wer sich darauf anmeldet"
+        ip_address: "IP-Adresse"
+        last_seen: "Zuletzt gesehen"
+      count:
+        one: "%{count} Gerät"
+        other: "%{count} Geräte"
+      blocked_count:
+        one: "%{count} Gerät gesperrt."
+        other: "%{count} Geräte gesperrt."
+      unblocked_count:
+        one: "%{count} Gerät entsperrt."
+        other: "%{count} Geräte entsperrt."
+      spared: "%{done} Das Gerät, das Sie gerade verwenden, wurde nicht angetastet."
+      refused: "%{done} \"%{agent}\" wird ab jetzt abgelehnt."
+      block_chosen_question:
+        one: "%{count} Gerät sperren? Es wird abgemeldet und abgelehnt, bevor ein Passwort geprüft wird."
+        other: "%{count} Geräte sperren? Jedes wird abgemeldet und abgelehnt, bevor ein Passwort geprüft wird."
+      unblock_chosen_question:
+        one: "%{count} Gerät entsperren?"
+        other: "%{count} Geräte entsperren?"
+      block_matching_question: "Jedes Gerät sperren, dessen User-Agent \"%{agent}\" enthält, auch solche, die hier nicht aufgeführt sind?"
+      block_matching_refuse: "%{question} Neue Geräte, die ihn senden, werden ebenfalls abgelehnt."
+      empty:
+        blocked: "Nichts ist gesperrt."
+        unattached: "Auf jedem Gerät hier hat sich schon jemand angemeldet."
+        allowed: "Noch kein Gerät hat diesen Server erreicht."
+      filter_label: "Nach User-Agent filtern"
+      which: "Welche Geräte"
+      showing: "Angezeigt werden Geräte, deren User-Agent Folgendes enthält:"
+      showing_blocked: "Angezeigt werden gesperrte Geräte, deren User-Agent Folgendes enthält:"
+      clear: "Zurücksetzen"
+      refuse_agent: "Diesen User-Agent ab jetzt ebenfalls ablehnen"
+      block_matching: "Jedes passende Gerät sperren"
+      chosen: "%{count} ausgewählt"
+      choose_all:
+        one: "Das angezeigte Gerät auswählen (%{count})"
+        other: "Alle %{count} angezeigten Geräte auswählen"
+      block_count:
+        one: "%{count} Gerät sperren"
+        other: "%{count} Geräte sperren"
+      unblock_count:
+        one: "%{count} Gerät entsperren"
+        other: "%{count} Geräte entsperren"
+      newest: "Nur die neuesten %{count} werden angezeigt."
+      choose: "%{label} auswählen"
+      blocked: "gesperrt"
+      unrecognised: "unbekannt"
+      signed_in: "angemeldet"
+      nobody_yet: "noch niemand"

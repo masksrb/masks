@@ -1,0 +1,6 @@
+de:
+  saml:
+    post:
+      page_title: "Sie werden angemeldet"
+      heading: "Sie werden bei %{name} angemeldet"
+      continue: "Weiter"

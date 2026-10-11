@@ -1,0 +1,38 @@
+de:
+  manage:
+    domains:
+      title: "Domains"
+      nowhere: "Noch nirgends"
+      claimed: "Veröffentlichen Sie den TXT-Eintrag unten und prüfen Sie dann %{domain}."
+      proven: "%{domain} ist nachgewiesen."
+      unanswered: "Bei %{name} gibt es noch keinen passenden TXT-Eintrag. Es kann eine Weile dauern, bis sich DNS-Änderungen verbreiten."
+      routed_away: "Personen bei %{domain} werden jetzt zu ihrem Anbieter geleitet."
+      routed_here: "Personen bei %{domain} melden sich jetzt hier an."
+      served: "Die Anmeldung wird jetzt auch unter %{host} angeboten."
+      unserved: "Die Anmeldung wird nicht mehr unter einer eigenen Domain angeboten."
+      stop_confirm: "%{host} nicht mehr anbieten? Apps, die ihn als Issuer verwenden, funktionieren nicht mehr."
+      release_confirm: "%{domain} freigeben? Personen mit einer Adresse dort melden sich wieder auf dem üblichen Weg an."
+      released: "%{domain} ist freigegeben."
+      serve:
+        title: "Anmeldung unter Ihrer Domain anbieten"
+        lede: "Ein Host innerhalb einer nachgewiesenen Domain, etwa login.example.com, bietet die Anmeldung neben der üblichen Adresse an. Jede Adresse ist ein eigener Issuer, und ein Passkey funktioniert nur unter der Adresse, unter der er erstellt wurde."
+        prove_first: "Weisen Sie zuerst unten eine Domain nach."
+        host: "Host"
+        serve: "Anbieten"
+        stop: "Beenden"
+        hint: "Richten Sie den DNS-Eintrag des Hosts auf diesen Server und geben Sie ihm ein Zertifikat. Die Adressen, unter denen dieser Mandant antwortet: %{origins}."
+      claim:
+        title: "Domain beanspruchen"
+        lede: "Wer eine Adresse unter einer nachgewiesenen Domain eingibt, wird ohne Passwort direkt zu deren Anbieter geleitet. Weisen Sie die Domain zuerst mit einem DNS-Eintrag nach."
+        domain: "Domain"
+        send_to: "Personen weiterleiten an"
+        claim: "Beanspruchen"
+      held:
+        proven: "Nachgewiesen %{day}"
+        unproven: "Nicht nachgewiesen"
+        record: "TXT-Eintrag"
+        missing: "Der Eintrag antwortet seit %{since} nicht mehr. Der Anspruch wird eine Woche danach freigegeben."
+        check: "Jetzt prüfen"
+        release: "Freigeben"
+        checked: "Geprüft %{since}. masks prüft stündlich."
+        never: "nie"

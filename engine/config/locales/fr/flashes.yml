@@ -1,0 +1,162 @@
+fr:
+  devices:
+    unknown: "Cet appareil n’existe pas sur ce compte."
+    refused_agent: "Ce navigateur ne peut pas se connecter ici."
+    blocked: "Cet appareil est bloqué."
+    renamed: "Appareil renommé."
+    shared: "Quelqu’un d’autre s’est aussi connecté sur cet appareil, il ne peut donc pas être renommé ici."
+    signed_out: "Cet appareil a été déconnecté."
+
+  organization_members:
+    unknown: "Vous n’êtes pas membre de cette organisation."
+    not_a_member: "Cette personne n’est pas membre de cette organisation."
+    invitee: "Une personne invitée"
+    owners_only: "Seul un propriétaire de %{organization} peut modifier ses membres."
+    added: "%{identifier} est membre de %{organization}."
+    assigned: "%{identifier} est désormais %{role}."
+    removed: "%{identifier} n’est plus membre de %{organization}."
+    left: "Vous avez quitté %{organization}. Tout ce qui est connecté en tant que membre de cette organisation cesse de fonctionner."
+    accepted: "Vous êtes désormais %{role} dans %{organization}."
+    declined: "Vous avez décliné %{organization}."
+    confirm_first: "Confirmez %{address} avant de rejoindre %{organization} : envoyez-lui une confirmation depuis vos paramètres d’e-mail sur cette page, puis acceptez."
+    elsewhere: "%{organization} a invité %{address}, qui n’est pas l’adresse de ce compte. Remplacez votre adresse e-mail par celle-ci et confirmez-la pour rejoindre l’organisation."
+    slow_down: "Cela fait beaucoup de personnes d’un coup. Attendez une minute et réessayez."
+    resent: "L’invitation à %{identifier} a été renvoyée. Elle expire dans %{age}."
+    expired: "L’invitation à %{organization} a expiré. Demandez à un propriétaire de la renvoyer."
+
+  apps:
+    unknown: "Cette application n’existe pas sur ce compte."
+    revoked: "L’accès de %{client} a été révoqué. Tout ce qu’elle détenait cesse de fonctionner, et elle devra redemander l’accès."
+
+  connections:
+    unknown: "Ce compte associé n’existe pas."
+    disconnected: "%{provider} a été dissocié."
+    linked: "%{provider} est associé. Vous pouvez désormais vous connecter avec."
+    unavailable: "Ce fournisseur ne peut pas être associé ici."
+    stale: "Reconnectez-vous avant d’associer un autre compte. Votre dernière connexion remonte à un moment."
+    expired: "Cette tentative d’association de compte a expiré. Réessayez."
+    failed: "%{provider} n’a pas confirmé votre identité, aucun compte n’a donc été associé."
+    taken: "Ce compte %{provider} est déjà associé à une autre personne ici."
+
+  delegations:
+    unknown: "Aucune application de ce type n’utilise ce compte."
+    stopped: "%{client} ne peut plus utiliser votre compte %{provider}."
+
+  passkeys:
+    expired: "Cet enregistrement a expiré. Réessayez."
+    crowded: "Vous avez déjà le nombre maximal de clés d’accès que ce serveur conserve."
+    unusable: "Cette clé d’accès n’a pas pu être ajoutée."
+    unknown: "Cette clé d’accès n’existe pas sur ce compte."
+    last_way_in: "Cette clé d’accès est le seul moyen d’accéder à ce compte. Ajoutez-en une autre avant de la supprimer."
+    added: "Clé d’accès ajoutée."
+    removed: "Clé d’accès supprimée."
+    again: "Reconnectez-vous pour modifier vos clés d’accès. Votre dernière connexion remonte à un moment."
+
+  authenticator_apps:
+    again: "Reconnectez-vous pour modifier votre application d’authentification. Votre dernière connexion remonte à un moment."
+    already: "Ce compte a déjà une application d’authentification. Supprimez-la avant d’en ajouter une autre."
+    unoffered: "Ce serveur ne propose pas d’application d’authentification."
+    invalid_code: "Ce code ne correspond pas. Vérifiez l’heure de votre téléphone et essayez le code suivant."
+    too_many_attempts: "Trop de codes ont été essayés. Attendez quelques minutes et réessayez."
+    none: "Ce compte n’a pas d’application d’authentification."
+    added: "Application d’authentification ajoutée. La connexion demande désormais son code."
+    removed: "Application d’authentification supprimée."
+
+  addresses:
+    again: "Reconnectez-vous pour modifier votre adresse e-mail ou votre numéro de téléphone. Votre dernière connexion remonte à un moment."
+    directed: "L’annuaire de votre organisation gère les adresses de ce compte."
+    too_many_requests: "Trop de codes ont été envoyés. Attendez quelques minutes et réessayez."
+    too_many_attempts: "Trop de codes ont été essayés. Attendez quelques minutes et réessayez."
+    expired: "Ce code a expiré. Demandez-en un nouveau."
+    invalid_code: "Ce code ne correspond pas."
+    email:
+      invalid: "Ce n’est pas une adresse e-mail."
+      same: "C’est déjà votre adresse e-mail."
+      undeliverable: "Ce serveur ne peut pas encore envoyer d’e-mails."
+      sent: "Un code est en route vers %{to}."
+      taken: "Un autre compte utilise cette adresse e-mail."
+      changed: "Adresse e-mail modifiée."
+    phone:
+      invalid: "Ce n’est pas un numéro de téléphone. Incluez l’indicatif du pays, par exemple +1 555 123 4567."
+      same: "C’est déjà votre numéro de téléphone."
+      undeliverable: "Ce serveur ne peut pas encore envoyer de SMS."
+      sent: "Un code est en route vers %{to}."
+      taken: "Un autre compte utilise ce numéro de téléphone."
+      changed: "Numéro de téléphone modifié."
+      none: "Ce compte n’a pas de numéro de téléphone."
+      required: "Ce serveur exige un numéro de téléphone, il ne peut donc pas être supprimé. Modifiez-le plutôt."
+      removed: "Numéro de téléphone supprimé."
+
+  backup_codes:
+    again: "Reconnectez-vous pour créer de nouveaux codes de secours. Votre dernière connexion remonte à un moment."
+    unoffered: "Ce serveur ne propose pas de codes de secours."
+    no_second_factor: "Les codes de secours remplacent un second facteur. Ajoutez d’abord une application d’authentification ou une clé d’accès."
+    generated: "Nouveaux codes de secours créés. Les anciens ne fonctionnent plus."
+
+  code_factors:
+    again: "Reconnectez-vous pour modifier la manière dont les connexions sont confirmées. Votre dernière connexion remonte à un moment."
+    unoffered: "Ce serveur ne propose pas ce moyen de confirmer une connexion."
+    unconfirmed: "Confirmez cette adresse avant que des codes y soient envoyés."
+    undeliverable: "Ce serveur ne peut pas encore envoyer ces codes."
+    enabled:
+      email: "Les connexions peuvent désormais être confirmées par un code envoyé à votre adresse e-mail."
+      sms: "Les connexions peuvent désormais être confirmées par un code envoyé à votre téléphone."
+    disabled:
+      email: "Les codes par e-mail sont désactivés."
+      sms: "Les codes par SMS sont désactivés."
+
+  sign_in_approvals:
+    untrusted: "Seul un appareil approuvé lors de la connexion peut approuver une connexion."
+    no_match: "Aucune connexion sur ce compte n’attend ce code."
+    expired: "Cette connexion n’attend plus. Demandez un nouveau code sur l’autre écran."
+    too_many_attempts: "Trop de tentatives. Attendez quelques minutes et réessayez."
+    approved: "Connexion approuvée."
+    denied: "Connexion refusée."
+
+  passwords:
+    too_many_attempts: "Trop de tentatives. Attendez quelques minutes et réessayez."
+    short_password: "Un mot de passe doit comporter au moins %{minimum} caractères ici."
+    common_password: "Ce mot de passe fait partie des plus courants. Choisissez-en un autre."
+    breached_password: "Ce mot de passe est apparu dans une fuite de données. Choisissez-en un autre."
+    wrong_current: "Ce n’est pas votre mot de passe actuel."
+    changed: "Votre mot de passe a été modifié et toutes les autres sessions ont été déconnectées."
+    set: "Votre compte a désormais un mot de passe et toutes les autres sessions ont été déconnectées."
+    again: "Reconnectez-vous pour définir un mot de passe. Votre dernière connexion remonte à un moment."
+
+  profiles:
+    directed: "L’annuaire de votre organisation gère votre nom."
+    invalid: "%{errors}"
+    updated: "Vos informations ont été enregistrées."
+
+  verifications:
+    too_many_requests: "Trop de demandes. Attendez quelques minutes."
+    no_address: "Ce compte n’a aucune adresse à confirmer."
+    already_confirmed: "Cette adresse est déjà confirmée."
+    no_mailer: "Ce serveur ne peut pas envoyer d’e-mails. Demandez à un gestionnaire."
+    sent: "Un lien de confirmation est en route vers %{email}."
+
+  avatars:
+    updated: "Votre photo a été mise à jour."
+    removed: "Votre photo a été supprimée."
+
+  handshakes:
+    answered: "cette demande de connexion a déjà reçu une réponse"
+    none_in_progress: "aucune demande de connexion n’est en cours"
+    not_permitted: "ce compte n’est pas autorisé à associer une application"
+    already_connected: "%{resource} est déjà associé ; un gestionnaire doit l’associer à nouveau"
+    beyond_account: "%{scopes} dépasse ce que détient ce compte"
+    too_soon: "Rien n’a été enregistré. Lisez ce qui est demandé, puis approuvez une fois le compte à rebours terminé."
+
+  account_export:
+    again: "Reconnectez-vous pour télécharger votre compte. Votre dernière connexion remonte à un moment."
+    throttled: "Votre compte a été téléchargé plusieurs fois au cours de la dernière heure. Réessayez plus tard."
+  account_deletion:
+    again: "Reconnectez-vous pour supprimer votre compte. Votre dernière connexion remonte à un moment."
+    mismatch: "Saisissez le nom de votre compte exactement tel qu’il est affiché pour le supprimer."
+    manager: "Vous êtes la dernière personne à gérer ce serveur, votre compte ne peut donc pas être supprimé."
+    provisioned: "Votre organisation gère ce compte, elle seule peut donc le supprimer."
+    deleted: "Votre compte a été supprimé."
+
+  forward_auth:
+    unknown: "Aucune application derrière un proxy n’est enregistrée à cette adresse."
+    not_admitted: "Votre compte ne peut pas utiliser %{app}."

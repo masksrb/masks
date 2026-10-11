@@ -1,0 +1,16 @@
+fr:
+  links:
+    expired:
+      state: "Expiré"
+      titles:
+        invitation: "Cette invitation n’est plus valide"
+        reset: "Ce lien de réinitialisation n’est plus valide"
+        confirmation: "Ce lien de confirmation n’est plus valide"
+      lede: "Rien n’a changé sur le compte."
+      sign_in: "Se connecter"
+
+    verified:
+      page_title: "Adresse confirmée"
+      state: "Confirmée"
+      title: "%{email} est confirmée."
+      account: "Votre compte"
