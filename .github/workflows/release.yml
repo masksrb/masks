@@ -7,16 +7,16 @@ on:
   workflow_dispatch:
     inputs:
       package:
-        description: Publish a package without cutting a release
+        description: Publish a package without cutting a release, or refresh the release pull requests
         required: true
         type: choice
-        options: [gem, server-gem, client, node, python, image]
+        options: [release-please, gem, server-gem, client, node, python, image]
 
 permissions: {}
 
 jobs:
   release-please:
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || inputs.package == 'release-please'
     runs-on: ubuntu-latest
     permissions:
       contents: write
