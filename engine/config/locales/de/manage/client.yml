@@ -1,6 +1,12 @@
 de:
   manage:
     client:
+      parts:
+        label: "Client"
+        general: "Allgemein"
+        access: "Zugriff"
+        endpoints: "Endpunkte"
+        usage: "Nutzung"
       missing: "Es gibt keine App mit dieser ID."
       back: "Apps"
       name_ids:

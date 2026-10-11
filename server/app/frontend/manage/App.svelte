@@ -246,7 +246,7 @@
         {/if}
       {:else if current === "clients"}
         {#if router.segments[1]}
-          <ClientPage {api} clientId={router.segments[1]} />
+          <ClientPage {api} clientId={router.segments[1]} part={router.segments[2]} />
         {:else}
           <ClientsPage {api} />
         {/if}

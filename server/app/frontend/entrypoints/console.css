@@ -443,7 +443,7 @@ a.tally-cell:active {
   color: var(--color-error);
 }
 
-.section-row .section-body :is(.select, .input:not([type="date"]), .textarea, .join) {
+.section-row .section-body :is(.select, .input:not([type="date"]), .join) {
   max-width: 24rem;
 }
 

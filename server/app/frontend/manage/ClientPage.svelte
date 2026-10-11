@@ -1,4 +1,5 @@
 <script>
+  import ClientParts from "./ClientParts.svelte";
   import { createFeedback } from "./lib/feedback.svelte.js";
   import { day, joined } from "./lib/format.js";
   import { POLICY_FIELDS, policyDifferences } from "./lib/policies.js";
@@ -19,7 +20,7 @@
   import Spinner from "./ui/Spinner.svelte";
   import { t } from "./lib/copy.js";
 
-  let { api, clientId } = $props();
+  let { api, clientId, part = null } = $props();
 
   const QUERY = `
     query Client($clientId: ID!) {
@@ -126,19 +127,26 @@
     ["clientUri", "client_uri", "https://app.example.com"],
     ["tosUri", "tos_uri", "https://app.example.com/terms"],
     ["policyUri", "policy_uri", "https://app.example.com/privacy"],
-  ].map(([key, copy, placeholder]) => [
-    key,
-    t(`client.links.${copy}.label`),
-    placeholder,
-    t(`client.links.${copy}.saved`),
-  ]);
+  ].map(([key, copy, placeholder]) => [key, t(`client.links.${copy}.label`), placeholder]);
 
-  async function saveLink(key, notice) {
-    const value = links[key].trim();
+  async function saveLinks() {
+    const changes = Object.fromEntries(LINKS.map(([key]) => [key, links[key].trim() || null]));
+    const logoChanged = changes.logoUri && changes.logoUri !== client.logoUri;
 
-    await update({ [key]: value || null }, value ? notice : t("client.notices.cleared"));
+    await update(changes, t("client.notices.saved"));
 
-    if (key === "logoUri" && value) setTimeout(load, 3000);
+    if (logoChanged) setTimeout(load, 3000);
+  }
+
+  function saveLifetimes() {
+    return update(
+      {
+        accessTokenLifetime: accessMinutes ? Number(accessMinutes) * 60 : 0,
+        refreshTokenLifetime: refreshDays ? Number(refreshDays) * 86400 : 0,
+        consentLifetime: lasts ? Number(lasts) * 86400 : 0,
+      },
+      t("client.notices.saved"),
+    );
   }
 
   const SAML_DEFAULTS = "email = email\nname = name\ngiven_name = given_name\nfamily_name = family_name\npreferred_username = preferred_username";
@@ -433,9 +441,183 @@
       </div>
     {/if}
 
-    <div class="grid items-start gap-4 md:grid-cols-2">
-      <div class="flex flex-col gap-4">
-        <Section title={t("client.registration.title")}>
+    <ClientParts {clientId} {part} />
+
+    <div class="grid gap-4">
+      {#if part === "access"}
+        <Section
+          row
+          title={t("client.groups.title")}
+          lede={t("client.groups.lede")}
+        >
+          {#if groups.length}
+            <div class="flex flex-col gap-1">
+              {#each groups as group (group.key)}
+                <label class="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    class="checkbox checkbox-sm"
+                    checked={client.allowedGroups.includes(group.key)}
+                    onchange={(event) => admit(group.key, event.currentTarget.checked)}
+                  />
+                  {group.name} <code class="hint font-mono">{group.key}</code>
+                </label>
+              {/each}
+            </div>
+          {:else}
+            <p class="text-sm opacity-85">
+              {t("client.groups.none")} <Link to="/settings">{t("client.groups.add")}</Link> {t("client.groups.limit")}
+            </p>
+          {/if}
+
+          <Field
+            label={t("client.groups.roles")}
+            bind:value={roles}
+            placeholder="acme:owner, acme:billing"
+            onsave={saveRoles}
+          />
+
+          <p class="hint">
+            {client.allowedGroups.length
+              ? t("client.groups.only", { groups: client.allowedGroups.join(", ") })
+              : t("client.groups.everyone")}
+          </p>
+        </Section>
+
+        <Section row title={t("client.scopes.title")}>
+          <div class="flex flex-col gap-1.5">
+            <span class="field-label">{t("client.scopes.always")}</span>
+            <ScopesEditor
+              value={client.requiredScopes}
+              available={supported}
+              onchange={(requiredScopes) => update({ requiredScopes }, t("client.notices.scopes"))}
+            />
+          </div>
+
+          <div class="flex flex-col gap-1.5">
+            <span class="field-label">{t("client.scopes.on_request")}</span>
+            <ScopesEditor
+              value={client.allowedScopes}
+              available={supported}
+              onchange={(allowedScopes) => update({ allowedScopes }, t("client.notices.scopes"))}
+            />
+          </div>
+        </Section>
+      {:else if part === "endpoints"}
+        <Section row title={t("client.uris.title")}>
+          <Lines
+            label={saml ? t("client.uris.acs") : t("client.uris.redirect")}
+            value={client.redirectUris}
+            onsave={(redirectUris) => update({ redirectUris }, t("client.notices.redirects"))}
+          />
+
+          <Lines
+            label={t("client.uris.post_logout")}
+            value={client.postLogoutRedirectUris}
+            onsave={(postLogoutRedirectUris) =>
+              update({ postLogoutRedirectUris }, t("client.notices.post_logout"))}
+          />
+
+          <Lines
+            label={t("client.uris.resources")}
+            value={client.resources}
+            onsave={(resources) => update({ resources }, t("client.notices.resources"))}
+          />
+        </Section>
+
+        {#if !saml}
+          <Section row title={t("client.keys.title")}>
+            <p class="hint">
+              {t("client.keys.hint")}
+            </p>
+
+            <Field
+              label={t("client.keys.jwks_uri")}
+              bind:value={jwksUri}
+              placeholder="https://app.example.com/.well-known/jwks.json"
+              autocapitalize="none"
+              autocorrect="off"
+              spellcheck="false"
+              onsave={() => saveKeys(jwksUri.trim() ? { jwksUri: jwksUri.trim(), jwks: null } : { jwksUri: null })}
+            />
+
+            <label class="flex flex-col gap-1.5">
+              <span class="field-label">{t("client.keys.jwks")}</span>
+              <textarea
+                class="textarea textarea-sm w-full font-mono text-xs"
+                rows="4"
+                spellcheck="false"
+                placeholder={'{ "keys": [ ... ] }'}
+                bind:value={jwks}
+              ></textarea>
+              <button type="button" class="btn btn-sm self-start" onclick={saveKeySet}>{t("client.save")}</button>
+            </label>
+
+            {#if keyed}
+              <Switch
+                checked={client.requireSignedRequestObject}
+                label={t("client.keys.jar")}
+                onchange={(on) =>
+                  update(
+                    { requireSignedRequestObject: on },
+                    on
+                      ? t("client.notices.jar_on")
+                      : t("client.notices.jar_off"),
+                  )}
+              />
+            {/if}
+          </Section>
+        {/if}
+
+        {#if !saml}
+          <Section row title={t("client.details.title")}>
+            <p class="hint">
+              {t("client.details.hint")}
+            </p>
+
+            <Lines
+              label={t("client.details.types")}
+              value={client.authorizationDetailsTypes}
+              onsave={(authorizationDetailsTypes) => update({ authorizationDetailsTypes }, t("client.notices.types"))}
+            />
+
+            {#if client.approvedAt}
+              <label class="flex flex-col gap-1.5">
+                <span class="field-label">{t("client.details.accepts")}</span>
+                <textarea
+                  class="textarea textarea-sm w-full font-mono text-xs"
+                  rows="6"
+                  spellcheck="false"
+                  placeholder={'{ "payment_initiation": { "label": "Send a payment", "schema": { "type": "object" } } }'}
+                  bind:value={declared}
+                ></textarea>
+                <button type="button" class="btn btn-sm self-start" onclick={saveDeclared}>{t("client.save")}</button>
+              </label>
+            {/if}
+          </Section>
+        {/if}
+      {:else if part === "usage"}
+        <Section title={t("client.consents")}>
+          <Consents {api} {feedback} rows={client.consents} onchange={load} showActor />
+        </Section>
+
+        <Section title={t("client.tokens")}>
+          <Tokens {api} {feedback} rows={client.tokens} onchange={load} showActor />
+        </Section>
+
+        <Section title={t("client.activity.title")}>
+          {#snippet actions()}
+            <Link to={`/activity?client=${client.clientId}`} class="btn btn-ghost btn-sm">{t("client.activity.all")}</Link>
+          {/snippet}
+
+          <Events events={client.events} empty={t("client.activity.empty")} />
+        </Section>
+
+        {#if client.namespaces.length}
+          <Namespaces {api} rows={client.namespaces} onreleased={load} />
+        {/if}
+      {:else}
+        <Section row title={t("client.registration.title")}>
           <Field label={t("client.registration.name")} bind:value={name} onsave={() => update({ name }, t("client.notices.renamed"))} />
 
           <Facts rows={facts} />
@@ -523,7 +705,7 @@
         </Section>
 
         {#if saml}
-          <Section title={t("client.saml.title")}>
+          <Section row title={t("client.saml.title")}>
             <Field
               label={t("client.saml.entity_id")}
               bind:value={entityId}
@@ -628,7 +810,7 @@
           </Section>
         {/if}
 
-        <Section title={t("client.shown.title")}>
+        <Section row title={t("client.shown.title")}>
           <div class="flex items-center gap-3">
             <ClientLogo {client} class="size-14 rounded-lg border border-base-300 text-xl" />
             <p class="hint">
@@ -640,20 +822,22 @@
             </p>
           </div>
 
-          {#each LINKS as [key, label, placeholder, notice] (key)}
-            <Field
-              {label}
-              bind:value={links[key]}
-              {placeholder}
-              autocapitalize="none"
-              autocorrect="off"
-              spellcheck="false"
-              onsave={() => saveLink(key, notice)}
-            />
-          {/each}
+          <form
+            class="flex flex-col gap-3"
+            onsubmit={(event) => {
+              event.preventDefault();
+              saveLinks();
+            }}
+          >
+            {#each LINKS as [key, label, placeholder] (key)}
+              <Field {label} bind:value={links[key]} {placeholder} autocapitalize="none" autocorrect="off" spellcheck="false" />
+            {/each}
+
+            <button type="submit" class="btn btn-sm self-start">{t("client.save")}</button>
+          </form>
         </Section>
 
-        <Section title={t("client.sign_in.title")}>
+        <Section row title={t("client.sign_in.title")}>
           <label class="flex flex-col gap-1.5">
             <span class="field-label">{t("client.sign_in.policy")}</span>
             <select
@@ -727,48 +911,21 @@
             />
           {/if}
 
-          <Field
-            label={t("client.sign_in.access")}
-            type="number"
-            min="1"
-            max="1440"
-            bind:value={accessMinutes}
-            onsave={() =>
-              update(
-                { accessTokenLifetime: accessMinutes ? Number(accessMinutes) * 60 : 0 },
-                accessMinutes
-                  ? t("client.notices.access_minutes", { minutes: accessMinutes })
-                  : t("client.notices.access_default"),
-              )}
-          />
+          <form
+            class="flex flex-col gap-3"
+            onsubmit={(event) => {
+              event.preventDefault();
+              saveLifetimes();
+            }}
+          >
+            <div class="grid gap-3 sm:grid-cols-3">
+              <Field label={t("client.sign_in.access")} type="number" min="1" max="1440" bind:value={accessMinutes} />
+              <Field label={t("client.sign_in.refresh")} type="number" min="1" max="400" bind:value={refreshDays} />
+              <Field label={t("client.sign_in.consent_lifetime")} type="number" min="1" max="400" bind:value={lasts} />
+            </div>
 
-          <Field
-            label={t("client.sign_in.refresh")}
-            type="number"
-            min="1"
-            max="400"
-            bind:value={refreshDays}
-            onsave={() =>
-              update(
-                { refreshTokenLifetime: refreshDays ? Number(refreshDays) * 86400 : 0 },
-                refreshDays
-                  ? t("client.notices.refresh_days", { days: refreshDays })
-                  : t("client.notices.refresh_default"),
-              )}
-          />
-
-          <Field
-            label={t("client.sign_in.consent_lifetime")}
-            type="number"
-            min="1"
-            max="400"
-            bind:value={lasts}
-            onsave={() =>
-              update(
-                { consentLifetime: lasts ? Number(lasts) * 86400 : 0 },
-                lasts ? t("client.notices.consent_days", { days: lasts }) : t("client.notices.consent_default"),
-              )}
-          />
+            <button type="submit" class="btn btn-sm self-start">{t("client.save")}</button>
+          </form>
 
           <Field
             label={t("client.sign_in.logout")}
@@ -792,180 +949,7 @@
             />
           {/if}
         </Section>
-
-        {#if !saml}
-          <Section title={t("client.keys.title")}>
-            <p class="hint">
-              {t("client.keys.hint")}
-            </p>
-
-            <Field
-              label={t("client.keys.jwks_uri")}
-              bind:value={jwksUri}
-              placeholder="https://app.example.com/.well-known/jwks.json"
-              autocapitalize="none"
-              autocorrect="off"
-              spellcheck="false"
-              onsave={() => saveKeys(jwksUri.trim() ? { jwksUri: jwksUri.trim(), jwks: null } : { jwksUri: null })}
-            />
-
-            <label class="flex flex-col gap-1.5">
-              <span class="field-label">{t("client.keys.jwks")}</span>
-              <textarea
-                class="textarea textarea-sm w-full font-mono text-xs"
-                rows="4"
-                spellcheck="false"
-                placeholder={'{ "keys": [ ... ] }'}
-                bind:value={jwks}
-              ></textarea>
-              <button type="button" class="btn btn-sm self-start" onclick={saveKeySet}>{t("client.save")}</button>
-            </label>
-
-            {#if keyed}
-              <Switch
-                checked={client.requireSignedRequestObject}
-                label={t("client.keys.jar")}
-                onchange={(on) =>
-                  update(
-                    { requireSignedRequestObject: on },
-                    on
-                      ? t("client.notices.jar_on")
-                      : t("client.notices.jar_off"),
-                  )}
-              />
-            {/if}
-          </Section>
-        {/if}
-
-        <Section
-          title={t("client.groups.title")}
-          lede={t("client.groups.lede")}
-        >
-          {#if groups.length}
-            <div class="flex flex-col gap-1">
-              {#each groups as group (group.key)}
-                <label class="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    class="checkbox checkbox-sm"
-                    checked={client.allowedGroups.includes(group.key)}
-                    onchange={(event) => admit(group.key, event.currentTarget.checked)}
-                  />
-                  {group.name} <code class="hint font-mono">{group.key}</code>
-                </label>
-              {/each}
-            </div>
-          {:else}
-            <p class="text-sm opacity-85">
-              {t("client.groups.none")} <Link to="/settings">{t("client.groups.add")}</Link> {t("client.groups.limit")}
-            </p>
-          {/if}
-
-          <Field
-            label={t("client.groups.roles")}
-            bind:value={roles}
-            placeholder="acme:owner, acme:billing"
-            onsave={saveRoles}
-          />
-
-          <p class="hint">
-            {client.allowedGroups.length
-              ? t("client.groups.only", { groups: client.allowedGroups.join(", ") })
-              : t("client.groups.everyone")}
-          </p>
-        </Section>
-
-        <Section title={t("client.scopes.title")}>
-          <div class="flex flex-col gap-1.5">
-            <span class="field-label">{t("client.scopes.always")}</span>
-            <ScopesEditor
-              value={client.requiredScopes}
-              available={supported}
-              onchange={(requiredScopes) => update({ requiredScopes }, t("client.notices.scopes"))}
-            />
-          </div>
-
-          <div class="flex flex-col gap-1.5">
-            <span class="field-label">{t("client.scopes.on_request")}</span>
-            <ScopesEditor
-              value={client.allowedScopes}
-              available={supported}
-              onchange={(allowedScopes) => update({ allowedScopes }, t("client.notices.scopes"))}
-            />
-          </div>
-        </Section>
-      </div>
-
-      <div class="flex flex-col gap-4">
-        <Section title={t("client.uris.title")}>
-          <Lines
-            label={saml ? t("client.uris.acs") : t("client.uris.redirect")}
-            value={client.redirectUris}
-            onsave={(redirectUris) => update({ redirectUris }, t("client.notices.redirects"))}
-          />
-
-          <Lines
-            label={t("client.uris.post_logout")}
-            value={client.postLogoutRedirectUris}
-            onsave={(postLogoutRedirectUris) =>
-              update({ postLogoutRedirectUris }, t("client.notices.post_logout"))}
-          />
-
-          <Lines
-            label={t("client.uris.resources")}
-            value={client.resources}
-            onsave={(resources) => update({ resources }, t("client.notices.resources"))}
-          />
-        </Section>
-
-        {#if !saml}
-          <Section title={t("client.details.title")}>
-            <p class="hint">
-              {t("client.details.hint")}
-            </p>
-
-            <Lines
-              label={t("client.details.types")}
-              value={client.authorizationDetailsTypes}
-              onsave={(authorizationDetailsTypes) => update({ authorizationDetailsTypes }, t("client.notices.types"))}
-            />
-
-            {#if client.approvedAt}
-              <label class="flex flex-col gap-1.5">
-                <span class="field-label">{t("client.details.accepts")}</span>
-                <textarea
-                  class="textarea textarea-sm w-full font-mono text-xs"
-                  rows="6"
-                  spellcheck="false"
-                  placeholder={'{ "payment_initiation": { "label": "Send a payment", "schema": { "type": "object" } } }'}
-                  bind:value={declared}
-                ></textarea>
-                <button type="button" class="btn btn-sm self-start" onclick={saveDeclared}>{t("client.save")}</button>
-              </label>
-            {/if}
-          </Section>
-        {/if}
-
-        <Section title={t("client.consents")}>
-          <Consents {api} {feedback} rows={client.consents} onchange={load} showActor />
-        </Section>
-
-        <Section title={t("client.tokens")}>
-          <Tokens {api} {feedback} rows={client.tokens} onchange={load} showActor />
-        </Section>
-
-        <Section title={t("client.activity.title")}>
-          {#snippet actions()}
-            <Link to={`/activity?client=${client.clientId}`} class="btn btn-ghost btn-sm">{t("client.activity.all")}</Link>
-          {/snippet}
-
-          <Events events={client.events} empty={t("client.activity.empty")} />
-        </Section>
-
-        {#if client.namespaces.length}
-          <Namespaces {api} rows={client.namespaces} onreleased={load} />
-        {/if}
-      </div>
+      {/if}
     </div>
   </Page>
 {/if}

@@ -1,6 +1,12 @@
 fr:
   manage:
     client:
+      parts:
+        label: "Client"
+        general: "Général"
+        access: "Accès"
+        endpoints: "Points de terminaison"
+        usage: "Utilisation"
       missing: "Aucune application ne porte cet identifiant."
       back: "Applications"
       name_ids:

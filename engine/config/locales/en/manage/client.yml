@@ -1,6 +1,12 @@
 en:
   manage:
     client:
+      parts:
+        label: "Client"
+        general: "General"
+        access: "Access"
+        endpoints: "Endpoints"
+        usage: "Usage"
       missing: "There is no client with that id."
       back: "Clients"
       name_ids:
