@@ -1,6 +1,10 @@
 de:
   manage:
     clients:
+      marks:
+        archived: "Archiviert"
+        dynamic: "Selbst registriert, nicht freigegeben"
+        dynamic_approved: "Selbst registriert, dann freigegeben"
       title: "Apps"
       archived: "Archiviert"
       search: "Apps durchsuchen"
@@ -46,15 +50,7 @@ de:
       columns:
         name: "Name"
         resources: "Ressourcen"
-        source: "Herkunft"
-        namespaces: "Namespaces"
-        scopes: "Scopes"
-        approved_by: "Genehmigt von"
         registered: "Registriert"
-      self_registered: "selbst registriert"
-      approved: "genehmigt"
-      always: "immer"
-      on_request: "auf Anfrage"
       empty:
         matches: "Keine App passt zu „%{query}“."
         archived_matches: "Keine archivierte App passt zu „%{query}“."

@@ -1,4 +1,5 @@
 <script>
+  import Marks from "./ui/Marks.svelte";
   import { createPages } from "./lib/pages.svelte.js";
   import Pager from "./ui/Pager.svelte";
   import { NONE, day, joined } from "./lib/format.js";
@@ -26,9 +27,7 @@
     query Clients($search: String, $archived: Boolean, $afterId: ID, $limit: Int) {
       clients(search: $search, archived: $archived, afterId: $afterId, limit: $limit) {
         clientId name dynamic approvedAt archivedAt logoUrl(size: 64)
-        requiredScopes allowedScopes resources createdAt
-        approvedBy { identifier }
-        namespaces { name }
+        resources createdAt
       }
       clientCount(search: $search, archived: $archived)
     }
@@ -80,10 +79,6 @@
   const COLUMNS = [
     t("clients.columns.name"),
     { label: t("clients.columns.resources"), hide: true },
-    t("clients.columns.source"),
-    { label: t("clients.columns.namespaces"), hide: true, right: true },
-    { label: t("clients.columns.scopes"), hide: true },
-    { label: t("clients.columns.approved_by"), hide: true },
     { label: t("clients.columns.registered"), hide: true },
   ];
 
@@ -476,50 +471,30 @@
       {#snippet rows()}
         {#each clients as client (client.clientId)}
           <Row to={`/clients/${client.clientId}`}>
-            <td class="w-full max-w-0 md:w-auto md:max-w-[15rem]">
-              <div class="flex items-center gap-2.5">
-                <ClientLogo {client} class="size-8 rounded text-sm" />
+            <td class="w-full max-w-0 md:w-auto md:max-w-none">
+              <div class="flex items-center gap-3">
+                <ClientLogo {client} class="size-8 shrink-0 rounded text-sm" />
                 <div class="min-w-0">
-                  <Link to={`/clients/${client.clientId}`} class="link link-hover font-medium">
-                    {client.name}
-                  </Link>
-                  <div class="max-w-[11rem] truncate font-mono text-xs opacity-75" title={client.clientId}>
-                    {client.clientId}
+                  <div class="flex min-w-0 items-center gap-2">
+                    <Link to={`/clients/${client.clientId}`} class="link link-hover truncate font-medium">
+                      {client.name}
+                    </Link>
+                    <Marks
+                      marks={[
+                        client.archivedAt && ["archived", t("clients.marks.archived"), "quiet"],
+                        client.dynamic && !client.approvedAt && ["dynamic", t("clients.marks.dynamic"), "warn"],
+                        client.dynamic && client.approvedAt && ["dynamic", t("clients.marks.dynamic_approved"), "quiet"],
+                      ].filter(Boolean)}
+                    />
                   </div>
+                  <div class="hint truncate font-mono text-xs" title={client.clientId}>{client.clientId}</div>
                 </div>
               </div>
             </td>
             <td class="hidden md:table-cell">
-              <div class="max-w-[11rem] truncate font-mono text-xs opacity-85" title={joined(client.resources)}>
-                {joined(client.resources)}
+              <div class="hint max-w-[18rem] truncate font-mono text-xs" title={joined(client.resources)}>
+                {joined(client.resources) || NONE}
               </div>
-            </td>
-            <td>
-              {#if client.dynamic}
-                <span class="badge badge-ghost badge-sm">{t("clients.self_registered")}</span>
-              {:else}
-                <span class="badge badge-success badge-sm">{t("clients.approved")}</span>
-              {/if}
-            </td>
-            <td class="hidden text-right text-xs opacity-85 md:table-cell">
-              {client.namespaces.length || NONE}
-            </td>
-            <td class="hidden font-mono text-xs md:table-cell">
-              {#if client.requiredScopes.length}
-                <div class="max-w-[12rem] truncate" title={joined(client.requiredScopes)}>
-                  <span class="opacity-75">{t("clients.always")}</span>
-                  {joined(client.requiredScopes)}
-                </div>
-              {/if}
-              {#if client.allowedScopes.length}
-                <div class="max-w-[12rem] truncate opacity-85" title={joined(client.allowedScopes)}>
-                  <span class="opacity-85">{t("clients.on_request")}</span>
-                  {joined(client.allowedScopes)}
-                </div>
-              {/if}
-            </td>
-            <td class="hidden text-xs opacity-85 md:table-cell">
-              {client.approvedBy?.identifier ?? NONE}
             </td>
             <td class="hidden text-xs whitespace-nowrap opacity-85 md:table-cell">{day(client.createdAt)}</td>
           </Row>

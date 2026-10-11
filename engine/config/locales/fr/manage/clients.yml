@@ -1,6 +1,10 @@
 fr:
   manage:
     clients:
+      marks:
+        archived: "Archivé"
+        dynamic: "Inscrit de lui-même, non approuvé"
+        dynamic_approved: "Inscrit de lui-même, puis approuvé"
       title: "Applications"
       archived: "Archivées"
       search: "Rechercher des applications"
@@ -46,15 +50,7 @@ fr:
       columns:
         name: "Nom"
         resources: "Ressources"
-        source: "Origine"
-        namespaces: "Espaces de noms"
-        scopes: "Portées"
-        approved_by: "Approuvée par"
         registered: "Enregistrée"
-      self_registered: "auto-enregistrée"
-      approved: "approuvée"
-      always: "toujours"
-      on_request: "sur demande"
       empty:
         matches: "Aucune application ne correspond à « %{query} »."
         archived_matches: "Aucune application archivée ne correspond à « %{query} »."

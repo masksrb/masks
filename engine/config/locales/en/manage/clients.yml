@@ -1,6 +1,10 @@
 en:
   manage:
     clients:
+      marks:
+        archived: "Archived"
+        dynamic: "Registered itself, not approved"
+        dynamic_approved: "Registered itself, then approved"
       title: "Clients"
       archived: "Archived"
       search: "Search clients"
@@ -46,15 +50,7 @@ en:
       columns:
         name: "Name"
         resources: "Resources"
-        source: "Source"
-        namespaces: "Namespaces"
-        scopes: "Scopes"
-        approved_by: "Approved by"
         registered: "Registered"
-      self_registered: "self-registered"
-      approved: "approved"
-      always: "always"
-      on_request: "on request"
       empty:
         matches: "No client matches “%{query}”."
         archived_matches: "No archived client matches “%{query}”."

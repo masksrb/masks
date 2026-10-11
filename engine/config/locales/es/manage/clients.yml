@@ -1,6 +1,10 @@
 es:
   manage:
     clients:
+      marks:
+        archived: "Archivado"
+        dynamic: "Se registró solo, sin aprobar"
+        dynamic_approved: "Se registró solo y luego fue aprobado"
       title: "Aplicaciones"
       archived: "Archivadas"
       search: "Buscar aplicaciones"
@@ -46,15 +50,7 @@ es:
       columns:
         name: "Nombre"
         resources: "Recursos"
-        source: "Origen"
-        namespaces: "Espacios de nombres"
-        scopes: "Alcances"
-        approved_by: "Aprobada por"
         registered: "Registrada"
-      self_registered: "autorregistrada"
-      approved: "aprobada"
-      always: "siempre"
-      on_request: "bajo petición"
       empty:
         matches: "Ninguna aplicación coincide con “%{query}”."
         archived_matches: "Ninguna aplicación archivada coincide con “%{query}”."

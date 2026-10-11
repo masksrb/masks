@@ -1,6 +1,17 @@
 en:
   manage:
     actors:
+      marks:
+        manager: "Holds a manage scope"
+        second_factor:
+          one: "Uses an authenticator app, %{count} backup code left"
+          other: "Uses an authenticator app, %{count} backup codes left"
+        invited: "Invited, has not signed in yet"
+        unconfirmed: "Email not confirmed"
+        waiting: "Waiting for a manager's approval"
+        help: "Asked for help signing in"
+        suspended: "Suspended"
+        blocked: "A device is blocked"
       invite_many: "Invite many"
       invites:
         title: "Invite many people"
@@ -25,8 +36,6 @@ en:
         suspended: "Suspended"
       columns:
         actor: "Actor"
-        scopes: "Scopes"
-        second_factor: "Second factor"
         signed_in_on: "Signed in on"
         last_seen: "Last seen"
       sessions:
@@ -66,13 +75,5 @@ en:
         suspended: "Nobody is suspended."
         everyone: "Nobody can sign in yet. Add the first actor."
       no_email: "no email"
-      unconfirmed: "unconfirmed"
-      invited: "invited"
       last_seen: "Last seen %{when}"
       never: "never"
-      authenticator: "authenticator"
-      blocked: "blocked"
-      backup_codes:
-        one: "%{count} backup code"
-        other: "%{count} backup codes"
-      password: "password"

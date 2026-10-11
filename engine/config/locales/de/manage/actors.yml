@@ -1,6 +1,17 @@
 de:
   manage:
     actors:
+      marks:
+        manager: "Hat einen Verwaltungs-Scope"
+        second_factor:
+          one: "Nutzt eine Authenticator-App, %{count} Backup-Code übrig"
+          other: "Nutzt eine Authenticator-App, %{count} Backup-Codes übrig"
+        invited: "Eingeladen, noch nicht angemeldet"
+        unconfirmed: "E-Mail-Adresse nicht bestätigt"
+        waiting: "Wartet auf Freigabe"
+        help: "Hat um Hilfe bei der Anmeldung gebeten"
+        suspended: "Gesperrt"
+        blocked: "Ein Gerät ist blockiert"
       invite_many: "Mehrere einladen"
       invites:
         title: "Mehrere Personen einladen"
@@ -25,8 +36,6 @@ de:
         suspended: "Gesperrt"
       columns:
         actor: "Akteur"
-        scopes: "Scopes"
-        second_factor: "Zweiter Faktor"
         signed_in_on: "Angemeldet auf"
         last_seen: "Zuletzt gesehen"
       sessions:
@@ -66,13 +75,5 @@ de:
         suspended: "Niemand ist gesperrt."
         everyone: "Noch kann sich niemand anmelden. Fügen Sie den ersten Akteur hinzu."
       no_email: "keine E-Mail-Adresse"
-      unconfirmed: "unbestätigt"
-      invited: "eingeladen"
       last_seen: "Zuletzt gesehen %{when}"
       never: "nie"
-      authenticator: "Authenticator"
-      blocked: "gesperrt"
-      backup_codes:
-        one: "%{count} Backup-Code"
-        other: "%{count} Backup-Codes"
-      password: "Passwort"

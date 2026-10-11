@@ -1,6 +1,17 @@
 fr:
   manage:
     actors:
+      marks:
+        manager: "Détient une portée de gestion"
+        second_factor:
+          one: "Utilise une application d’authentification, %{count} code de secours restant"
+          other: "Utilise une application d’authentification, %{count} codes de secours restants"
+        invited: "Invité, ne s’est pas encore connecté"
+        unconfirmed: "E-mail non confirmé"
+        waiting: "En attente d’approbation"
+        help: "A demandé de l’aide pour se connecter"
+        suspended: "Suspendu"
+        blocked: "Un appareil est bloqué"
       invite_many: "Inviter plusieurs"
       invites:
         title: "Inviter plusieurs personnes"
@@ -25,8 +36,6 @@ fr:
         suspended: "Suspendus"
       columns:
         actor: "Utilisateur"
-        scopes: "Portées"
-        second_factor: "Second facteur"
         signed_in_on: "Connecté sur"
         last_seen: "Vu pour la dernière fois"
       sessions:
@@ -66,13 +75,5 @@ fr:
         suspended: "Personne n’est suspendu."
         everyone: "Personne ne peut encore se connecter. Ajoutez le premier utilisateur."
       no_email: "pas d’e-mail"
-      unconfirmed: "non confirmé"
-      invited: "invité"
       last_seen: "Vu pour la dernière fois %{when}"
       never: "jamais"
-      authenticator: "application d’authentification"
-      blocked: "bloqué"
-      backup_codes:
-        one: "%{count} code de secours"
-        other: "%{count} codes de secours"
-      password: "mot de passe"

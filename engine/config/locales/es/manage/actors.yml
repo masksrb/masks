@@ -1,6 +1,17 @@
 es:
   manage:
     actors:
+      marks:
+        manager: "Tiene un alcance de gestión"
+        second_factor:
+          one: "Usa una app de autenticación, le queda %{count} código de respaldo"
+          other: "Usa una app de autenticación, le quedan %{count} códigos de respaldo"
+        invited: "Invitado, aún no ha iniciado sesión"
+        unconfirmed: "Correo sin confirmar"
+        waiting: "Esperando la aprobación de un gestor"
+        help: "Pidió ayuda para iniciar sesión"
+        suspended: "Suspendido"
+        blocked: "Un dispositivo está bloqueado"
       invite_many: "Invitar a varios"
       invites:
         title: "Invitar a varias personas"
@@ -25,8 +36,6 @@ es:
         suspended: "Suspendidos"
       columns:
         actor: "Actor"
-        scopes: "Alcances"
-        second_factor: "Segundo factor"
         signed_in_on: "Sesión iniciada en"
         last_seen: "Visto por última vez"
       sessions:
@@ -66,13 +75,5 @@ es:
         suspended: "No hay nadie suspendido."
         everyone: "Nadie puede iniciar sesión todavía. Añade el primer actor."
       no_email: "sin correo"
-      unconfirmed: "sin confirmar"
-      invited: "invitado"
       last_seen: "Visto por última vez %{when}"
       never: "nunca"
-      authenticator: "autenticación"
-      blocked: "bloqueado"
-      backup_codes:
-        one: "%{count} código de respaldo"
-        other: "%{count} códigos de respaldo"
-      password: "contraseña"

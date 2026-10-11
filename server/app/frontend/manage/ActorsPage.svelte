@@ -1,9 +1,10 @@
 <script>
+  import Marks from "./ui/Marks.svelte";
   import { t } from "./lib/copy.js";
   import { createPages } from "./lib/pages.svelte.js";
   import Pager from "./ui/Pager.svelte";
   import { createFeedback } from "./lib/feedback.svelte.js";
-  import { day, joined } from "./lib/format.js";
+  import { day } from "./lib/format.js";
   import Devices from "./Devices.svelte";
   import ScopesEditor from "./ScopesEditor.svelte";
   import Section from "./ui/Section.svelte";
@@ -44,7 +45,7 @@
         recoveryRequested: $recoveryRequested, suspended: $suspended, afterId: $afterId, limit: $limit
       ) {
         uuid identifier nickname name email emailVerified otpEnabled backupCodesRemaining
-        lastLoginAt scopes activated invitedAt
+        lastLoginAt scopes activated invitedAt pendingApproval recoveryRequestedAt suspendedAt
         avatars { photo identicon }
         ${PRESENCE}
       }
@@ -67,8 +68,6 @@
 
   const COLUMNS = [
     t("actors.columns.actor"),
-    { label: t("actors.columns.scopes"), hide: true },
-    { label: t("actors.columns.second_factor"), hide: true },
     { label: t("actors.columns.signed_in_on"), hide: true },
     { label: t("actors.columns.last_seen"), hide: true },
   ];
@@ -232,6 +231,18 @@
 
   const blocked = (actor) => actor.devices.some((device) => device.blockedAt);
 
+  const marks = (actor) =>
+    [
+      actor.scopes.some((scope) => scope.startsWith("masks:")) && ["manager", t("actors.marks.manager"), "primary"],
+      actor.otpEnabled && ["key", t("actors.marks.second_factor", { count: actor.backupCodesRemaining }), "good"],
+      !actor.activated && ["invited", t("actors.marks.invited"), "info"],
+      actor.email && !actor.emailVerified && ["unconfirmed", t("actors.marks.unconfirmed"), "warn"],
+      actor.pendingApproval && ["waiting", t("actors.marks.waiting"), "warn"],
+      actor.recoveryRequestedAt && ["help", t("actors.marks.help"), "warn"],
+      actor.suspendedAt && ["suspended", t("actors.marks.suspended"), "bad"],
+      blocked(actor) && ["blocked", t("actors.marks.blocked"), "bad"],
+    ].filter(Boolean);
+
   const presence = (actor) => {
     const parts = [
       t("actors.sessions", { count: actor.sessions.length }),
@@ -390,7 +401,7 @@
       {#snippet rows()}
         {#each actors as actor (actor.uuid)}
           <Row to={`/actors/${actor.uuid}`}>
-            <td>
+            <td class="w-full max-w-0 md:w-auto md:max-w-none">
               <div class="flex items-center gap-3">
                 <img
                   src={`${actor.avatars.photo ?? actor.avatars.identicon}?size=32`}
@@ -401,73 +412,25 @@
                   class:drawn={!actor.avatars.photo}
                 />
                 <div class="min-w-0">
-                  <Link to={`/actors/${actor.uuid}`} class="link link-hover font-medium">
-                    {actor.identifier}
-                  </Link>
-                  <div class="flex flex-wrap items-center gap-1.5 text-xs opacity-75">
-                    <span class="min-w-0 break-all">
-                      {actor.name ? `${actor.name} · ` : ""}{actor.email ?? t("actors.no_email")}
-                    </span>
-                    {#if actor.email && !actor.emailVerified}
-                      <span class="badge badge-warning badge-xs shrink-0">{t("actors.unconfirmed")}</span>
-                    {/if}
+                  <div class="flex min-w-0 items-center gap-2">
+                    <Link to={`/actors/${actor.uuid}`} class="link link-hover truncate font-medium">
+                      {actor.identifier}
+                    </Link>
+                    <Marks marks={marks(actor)} />
                   </div>
-
-                  <div class="mt-1 flex flex-wrap items-center gap-1 text-xs opacity-85 md:hidden">
-                    {#if !actor.activated}
-                      <span class="badge badge-info badge-xs">{t("actors.invited")}</span>
-                    {:else}
-                      <span>{t("actors.last_seen", { when: day(actor.lastLoginAt, t("actors.never")) })}</span>
-                    {/if}
+                  <div class="hint truncate text-xs">
+                    {actor.name ? `${actor.name} · ` : ""}{actor.email ?? t("actors.no_email")}<span class="md:hidden">
+                      {" · "}{actor.activated ? day(actor.lastLoginAt, t("actors.never")) : t("actors.never")}</span
+                    >
                   </div>
-
-                  {#if actor.otpEnabled || blocked(actor)}
-                    <div class="mt-1 flex flex-wrap gap-1 md:hidden">
-                      {#if actor.otpEnabled}
-                        <span class="badge badge-success badge-xs">{t("actors.authenticator")}</span>
-                      {/if}
-                      {#if blocked(actor)}
-                        <span class="badge badge-error badge-xs">{t("actors.blocked")}</span>
-                      {/if}
-                    </div>
-                  {/if}
                 </div>
               </div>
             </td>
 
-            <td class="hidden text-xs md:table-cell">
-              <div class="max-w-64 truncate font-mono" title={joined(actor.scopes)}>
-                {#each actor.scopes as scope (scope)}<span
-                    class="scope"
-                    class:scope-privileged={scope.startsWith("masks:")}>{scope}</span
-                  >{" "}{/each}
-              </div>
-            </td>
-
-            <td class="hidden md:table-cell">
-              {#if actor.otpEnabled}
-                <span class="badge badge-success badge-sm">{t("actors.authenticator")}</span>
-                <div class="mt-1 text-xs whitespace-nowrap opacity-80">
-                  {t("actors.backup_codes", { count: actor.backupCodesRemaining })}
-                </div>
-              {:else}
-                <span class="badge badge-ghost badge-sm">{t("actors.password")}</span>
-              {/if}
-            </td>
+            <td class="hidden text-xs whitespace-nowrap opacity-85 md:table-cell">{presence(actor)}</td>
 
             <td class="hidden text-xs whitespace-nowrap opacity-85 md:table-cell">
-              {presence(actor)}
-              {#if blocked(actor)}
-                <span class="badge badge-error badge-xs ml-1">{t("actors.blocked")}</span>
-              {/if}
-            </td>
-
-            <td class="hidden text-xs whitespace-nowrap opacity-85 md:table-cell">
-              {#if !actor.activated}
-                <span class="badge badge-info badge-sm">{t("actors.invited")}</span>
-              {:else}
-                {day(actor.lastLoginAt, t("actors.never"))}
-              {/if}
+              {actor.activated ? day(actor.lastLoginAt, t("actors.never")) : t("actors.never")}
             </td>
           </Row>
         {/each}
