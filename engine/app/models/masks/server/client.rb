@@ -47,12 +47,15 @@ module Masks
       ].freeze
 
       class ScopesUnavailable < StandardError; end
+      class EnrollmentRefused < StandardError; end
 
       has_many :tokens, dependent: :destroy
       has_many :consents, dependent: :destroy
       has_many :delegations, dependent: :destroy
       has_many :saml_participations, dependent: :delete_all
       has_many :namespaces, -> { order(:name) }, dependent: :nullify
+      has_many :enrolled, class_name: "Client", foreign_key: :enrolled_by_id, inverse_of: :enrolled_by,
+                          dependent: :nullify
       has_one :logo, class_name: "ClientLogo", dependent: :delete
 
       validate :allowed_groups_are_named
@@ -86,8 +89,10 @@ module Masks
       normalizes(*METADATA_URIS, with: ->(value) { value.to_s.strip.presence })
 
       after_commit :refresh_logo!, on: %i[create update], if: :saved_change_to_logo_uri?
+      after_update :archive_enrolled!, if: -> { saved_change_to_archived_at? && archived? }
 
       belongs_to :approved_by, class_name: "Actor", optional: true
+      belongs_to :enrolled_by, class_name: "Client", optional: true, inverse_of: :enrolled
       belongs_to :sign_in_policy, optional: true
 
       scope :approved, -> { where.not(approved_at: nil) }
@@ -169,6 +174,35 @@ module Masks
           )
         end
 
+        def enroll!(token, metadata)
+          app = token.client
+          refusal = app&.enrollment_refusal(token.scope_list)
+
+          raise EnrollmentRefused, refusal || "the app that issued this enrollment token is gone" if app.nil? || refusal
+
+          held = metadata.to_h.stringify_keys
+
+          raise EnrollmentRefused, "jwks_uri is not accepted here; register the public keys as jwks" if held["jwks_uri"].present?
+          raise EnrollmentRefused, "jwks is required: the machine signs in with its own key" if held["jwks"].blank?
+
+          new(
+            client_id: SecureRandom.uuid,
+            name: held["client_name"].to_s.strip.presence || token.held("name") || "A machine",
+            jwks: held["jwks"],
+            token_endpoint_auth_method: PRIVATE_KEY_JWT,
+            grant_types: [ CLIENT_CREDENTIALS ],
+            response_types: [],
+            dpop_bound_access_tokens: true,
+            resources: app.resources,
+            allowed_scopes: Scopes.join(token.scope_list),
+            application_type: "native",
+            subject_type: Subjects::PUBLIC,
+            enrolled_by: app,
+            approved_at: Time.current,
+            dynamic: false
+          ).issue_credentials!
+        end
+
         def bounded(requested)
           reserved = Scopes.reserved(requested) + Scopes.list(requested).select { |s| Scopes.prefix?(s) }
 
@@ -214,6 +248,24 @@ module Masks
 
           active.find_by(registration_token_digest: Digest::SHA256.hexdigest(token.to_s))
         end
+      end
+
+      def enrollment_refusal(scopes)
+        return "an archived client enrolls nothing" if archived?
+        return "only an approved client enrolls machines" unless approved?
+        return "a client enrolls machines only after it claims a namespace" if namespaces.empty?
+        return "a scope is required" if Scopes.list(scopes).empty?
+
+        held = namespaces.map(&:name)
+        outside = Scopes.list(scopes).select do |scope|
+          Scopes.prefix?(scope) || scope.start_with?(Scopes::NAMESPACE) || !Scopes.covered?(held, scope)
+        end
+
+        "#{Scopes.join(outside)} is outside #{Scopes.join(held)}" if outside.any?
+      end
+
+      def enrolled?
+        enrolled_by_id.present?
       end
 
       def public?
@@ -411,6 +463,10 @@ module Masks
       end
 
       private
+
+        def archive_enrolled!
+          enrolled.active.update_all(archived_at: archived_at, updated_at: Time.current)
+        end
 
         def allowed_groups_are_named
           unknown = allowed_groups.grep_v(ALLOWED_GROUP)

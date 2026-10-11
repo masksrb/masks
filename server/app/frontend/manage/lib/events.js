@@ -23,6 +23,7 @@ const NOTABLE = new Set([
   "ldap_credential.revoked",
   "client.secret_rotated",
   "client.logo_refused",
+  "client.enrolled",
   "signing_key.rotated",
   "signing_key.activated",
   "backup_code.spent",

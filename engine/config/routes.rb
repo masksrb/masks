@@ -107,6 +107,7 @@ Masks::Server::Engine.routes.draw do
   match "/userinfo", to: "userinfo#show", via: %i[get post]
 
   post "/register", to: "registrations#create"
+  post "/enrollments", to: "enrollments#create", as: :enrollments
   get "/register/:client_id", to: "registrations#show", as: :registration
   put "/register/:client_id", to: "registrations#update"
   delete "/register/:client_id", to: "registrations#destroy"

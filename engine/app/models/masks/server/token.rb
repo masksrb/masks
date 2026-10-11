@@ -16,6 +16,7 @@ module Masks
         "password_reset" => "PasswordReset",
         "confirmation" => "ConfirmationCode",
         "initial_access" => "InitialAccessToken",
+        "enrollment" => "EnrollmentToken",
         "request" => "PendingRequest",
         "login" => "PendingLogin",
         "pushed" => "PushedRequest",

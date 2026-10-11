@@ -26,7 +26,7 @@ module Masks
         render json: issued(client), status: :created
       rescue ActiveRecord::RecordInvalid => e
         invalid_metadata(e.record.errors.full_messages.join("; "))
-      rescue Client::ScopesUnavailable => e
+      rescue Client::ScopesUnavailable, Client::EnrollmentRefused => e
         invalid_metadata(e.message)
       end
 
@@ -57,11 +57,20 @@ module Masks
       private
 
         def redeem
+          return enrolled(@enrolled) if (@enrolled = EnrollmentToken.redeem!(bearer, body))
+
           token = InitialAccessToken.claim(bearer)
 
           return unauthorized("that initial access token is not valid or has expired") if token&.client.nil?
 
           render json: issued(token.issue!), status: :created
+        end
+
+        def enrolled(client)
+          Event.record!(Event::CLIENT_ENROLLED, client: client, name: client.name,
+                                                enrolled_by: client.enrolled_by.client_id)
+
+          render json: issued(client), status: :created
         end
 
         def bearer

@@ -163,6 +163,7 @@ module Masks
           "pushed_authorization_request_endpoint" => "#{url}/par",
           "device_authorization_endpoint" => "#{url}/device_authorization",
           "handshake_endpoint" => "#{url}/handshake",
+          "enrollment_endpoint" => "#{url}/enrollments",
           "masks_protocol_version" => Masks::PROTOCOL_VERSION,
           "revocation_endpoint" => "#{url}/revoke",
           "introspection_endpoint" => "#{url}/introspect",

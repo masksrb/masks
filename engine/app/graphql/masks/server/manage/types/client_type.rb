@@ -57,6 +57,10 @@ module Masks
           field :dynamic, Boolean, null: false
           field :approved_at, GraphQL::Types::ISO8601DateTime
           field :approved_by, ActorType
+          field :enrolled_by, ClientType,
+                description: "The app that enrolled this client as one of its machines. Archiving that app archives this client."
+          field :enrolled, [ ClientType ], null: false,
+                description: "The machines this app enrolled that are not archived."
           field :archived_at, GraphQL::Types::ISO8601DateTime
           field :secret_expires_at, GraphQL::Types::ISO8601DateTime
           field :created_at, GraphQL::Types::ISO8601DateTime, null: false
@@ -73,6 +77,10 @@ module Masks
 
           field :events, [ "Masks::Server::Manage::Types::EventType" ], null: false do
             argument :limit, Integer, required: false
+          end
+
+          def enrolled
+            object.enrolled.active.order(:name)
           end
 
           def tokens(limit: nil)

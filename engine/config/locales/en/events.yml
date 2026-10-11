@@ -112,6 +112,8 @@ en:
         restored: "Client restored"
         secret_rotated: "Client secret rotated"
         logo_refused: "Client logo could not be used"
+        enrollment_issued: "An app asked to enroll a machine"
+        enrolled: "Machine enrolled"
       token:
         revoked: "Token revoked"
       saml:

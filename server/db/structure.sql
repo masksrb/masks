@@ -283,7 +283,8 @@ CREATE TABLE public.clients (
     allowed_groups character varying[] DEFAULT '{}'::character varying[] NOT NULL,
     access_token_lifetime integer,
     refresh_token_lifetime integer,
-    saml_slo_url character varying
+    saml_slo_url character varying,
+    enrolled_by_id bigint
 );
 
 ALTER TABLE ONLY public.clients FORCE ROW LEVEL SECURITY;
@@ -2041,6 +2042,13 @@ CREATE INDEX index_clients_on_approved_by_id ON public.clients USING btree (appr
 
 
 --
+-- Name: index_clients_on_enrolled_by_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_clients_on_enrolled_by_id ON public.clients USING btree (enrolled_by_id);
+
+
+--
 -- Name: index_clients_on_registration_token_digest; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2796,6 +2804,14 @@ ALTER TABLE ONLY public.memberships
 
 ALTER TABLE ONLY public.actors
     ADD CONSTRAINT fk_rails_06ef63a7f5 FOREIGN KEY (tenant_id) REFERENCES public.tenants(id);
+
+
+--
+-- Name: clients fk_rails_090b323511; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.clients
+    ADD CONSTRAINT fk_rails_090b323511 FOREIGN KEY (enrolled_by_id) REFERENCES public.clients(id) ON DELETE SET NULL;
 
 
 --
@@ -3742,6 +3758,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261011190000'),
 ('20261011180000'),
 ('20261011170000'),
 ('20261011160000'),

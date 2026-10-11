@@ -246,6 +246,16 @@ type Client {
   delegations: [Delegation!]!
   dpopBoundAccessTokens: Boolean!
   dynamic: Boolean!
+
+  """
+  The machines this app enrolled that are not archived.
+  """
+  enrolled: [Client!]!
+
+  """
+  The app that enrolled this client as one of its machines. Archiving that app archives this client.
+  """
+  enrolledBy: Client
   events(limit: Int): [Event!]!
   grantTypes: [String!]!
   jwks: JSON

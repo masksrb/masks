@@ -116,6 +116,48 @@ curl -u "$CLIENT_ID:$CLIENT_SECRET" https://acme.auth.example.com/token \
 A manager enables it for an approved client. The token names the client as `sub`, carries no
 refresh token, and never holds a scope that acts for a person, such as `openid` or `masks:manage`.
 
+### Enrolling a machine
+
+An approved app that has claimed a [namespace](/guides/core-concepts/#namespaces) can enroll machines
+of its own, such as an agent it installs on each computer in a home. Nobody approves each machine in
+a browser. The app asks `/enrollments` for an initial access token, authenticating the way it does at
+the token endpoint:
+
+```sh
+curl -u "$CLIENT_ID:$CLIENT_SECRET" https://acme.auth.example.com/enrollments \
+  -d scope="xixo:agent" \
+  -d client_name="nas" \
+  -d expires_in=900
+```
+
+```json
+{ "initial_access_token": "…", "expires_in": 900, "scope": "xixo:agent" }
+```
+
+Every scope must fall under one of the app's namespaces. A prefix and any `masks:` scope are refused.
+The token lasts from a minute to an hour, 15 minutes by default, and is spent the first time it
+registers a machine. Discovery publishes the endpoint as `enrollment_endpoint`.
+
+The machine makes its own keys and registers the public half with the token as its bearer:
+
+```sh
+curl https://acme.auth.example.com/register \
+  -H "Authorization: Bearer $INITIAL_ACCESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"client_name": "nas", "jwks": {"keys": [ … ]}}'
+```
+
+masks answers with a new client that is approved for the token's scopes and the app's resources. It
+authenticates only with `private_key_jwt` against those keys, uses only the `client_credentials`
+grant, and holds every access token to a DPoP key. The answer carries a registration access token
+and no secret, so the private key never leaves the machine. The machine can replace its keys through
+[registration management](/reference/specs/#tokens). Its scopes, grants, resources, and way of
+authenticating stay as enrolled. A registration without `jwks`, or with a `jwks_uri`, is refused and
+leaves the token unspent.
+
+The new client names the app as `enrolledBy` in the manage API. Archiving the app archives every
+machine it enrolled. Each request and each machine is recorded as an event.
+
 ## Signing in
 
 ### Sign-in policies

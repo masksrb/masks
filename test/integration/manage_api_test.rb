@@ -1416,6 +1416,28 @@ module Masks
         assert_equal false, client["namespaces"].first["releasable"]
       end
 
+      test "a machine names the app that enrolled it, and the app lists its machines" do
+        token = bearer
+        holder = claim!.client
+
+        machine = within(@tenant) do
+          EnrollmentToken.issue!(holder, scope: "xixo:agent", name: "nas").then do |issued|
+            EnrollmentToken.redeem!(issued.secret, {
+              "jwks" => { "keys" => [ JWT::JWK.new(OpenSSL::PKey::EC.generate("prime256v1")).export ] }
+            })
+          end
+        end
+
+        query = "query Held($clientId: ID!) { client(clientId: $clientId) { name enrolledBy { name } enrolled { name } } }"
+
+        held = ask(query, token, clientId: machine.client_id)["data"]["client"]
+
+        assert_equal "nas", held["name"]
+        assert_equal "xixo", held.dig("enrolledBy", "name")
+
+        assert_equal [ "nas" ], ask(query, token, clientId: holder.client_id)["data"]["client"]["enrolled"].map { |one| one["name"] }
+      end
+
       test "the clients list carries each holding, so the page counts them without asking again" do
         token = bearer
         claim!
