@@ -41,6 +41,9 @@ module Masks
         config.password_reset_lifetime = ENV.fetch("MASKS_PASSWORD_RESET_LIFETIME", 30 * 60).to_i.seconds
         config.email_verification_lifetime = ENV.fetch("MASKS_EMAIL_VERIFICATION_LIFETIME", 2 * 24 * 60 * 60).to_i.seconds
         config.outbound_allowed = outbound_allowed(ENV["MASKS_OUTBOUND_ALLOWED"])
+        config.ldap_port = ENV.fetch("MASKS_LDAP_PORT", 3389).to_i
+        config.ldap_cert = ENV["MASKS_LDAP_CERT"].presence
+        config.ldap_key = ENV["MASKS_LDAP_KEY"].presence
         config
       end
 

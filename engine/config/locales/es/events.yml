@@ -119,6 +119,11 @@ es:
       provisioning_token:
         issued: "Token de aprovisionamiento emitido"
         revoked: "Token de aprovisionamiento revocado"
+      ldap_credential:
+        issued: "Credencial LDAP emitida"
+        revoked: "Credencial LDAP revocada"
+      ldap:
+        bound: "Sesión iniciada por LDAP"
       refresh:
         reused: "Token de actualización reutilizado"
       signing_key:

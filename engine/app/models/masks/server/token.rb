@@ -10,6 +10,7 @@ module Masks
         "device" => "DeviceGrant",
         "invitation" => "Invitation",
         "provisioning" => "ProvisioningToken",
+        "ldap" => "LdapCredential",
         "handshake" => "PendingHandshake",
         "email_verification" => "EmailVerification",
         "password_reset" => "PasswordReset",

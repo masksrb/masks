@@ -119,6 +119,11 @@ fr:
       provisioning_token:
         issued: "Jeton de provisionnement émis"
         revoked: "Jeton de provisionnement révoqué"
+      ldap_credential:
+        issued: "Identifiant LDAP émis"
+        revoked: "Identifiant LDAP révoqué"
+      ldap:
+        bound: "Connecté par LDAP"
       refresh:
         reused: "Jeton d’actualisation rejoué"
       signing_key:

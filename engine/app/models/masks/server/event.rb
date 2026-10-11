@@ -94,6 +94,9 @@ module Masks
       ACTOR_IDLE_WARNED = "actor.idle_warned".freeze
       PROVISIONING_TOKEN_ISSUED = "provisioning_token.issued".freeze
       PROVISIONING_TOKEN_REVOKED = "provisioning_token.revoked".freeze
+      LDAP_CREDENTIAL_ISSUED = "ldap_credential.issued".freeze
+      LDAP_CREDENTIAL_REVOKED = "ldap_credential.revoked".freeze
+      LDAP_BOUND = "ldap.bound".freeze
 
       CLIENT_CREATED = "client.created".freeze
       CLIENT_REGISTERED = "client.registered".freeze

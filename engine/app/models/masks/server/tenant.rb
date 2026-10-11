@@ -35,6 +35,8 @@ module Masks
 
       attribute :uuid, default: -> { SecureRandom.uuid }
 
+      store_accessor :settings, :ldap_password_only
+
       has_many :signing_keys, dependent: :destroy
       has_many :actors, dependent: :destroy
       has_many :clients, dependent: :destroy
@@ -88,6 +90,10 @@ module Masks
 
       before_create { self.keys_derived_at ||= Time.current }
       after_create_commit :ensure_signing_key!, :setup_token!
+
+      def ldap_password_only?
+        ActiveModel::Type::Boolean.new.cast(ldap_password_only) || false
+      end
 
       def event_retention
         event_retention_days&.days || Event::RETENTION

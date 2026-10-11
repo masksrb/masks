@@ -119,6 +119,11 @@ de:
       provisioning_token:
         issued: "Provisionierungs-Token ausgestellt"
         revoked: "Provisionierungs-Token widerrufen"
+      ldap_credential:
+        issued: "LDAP-Zugang ausgestellt"
+        revoked: "LDAP-Zugang widerrufen"
+      ldap:
+        bound: "Über LDAP angemeldet"
       refresh:
         reused: "Refresh-Token wiederverwendet"
       signing_key:

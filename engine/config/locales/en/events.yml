@@ -119,6 +119,11 @@ en:
       provisioning_token:
         issued: "Provisioning token issued"
         revoked: "Provisioning token revoked"
+      ldap_credential:
+        issued: "LDAP credential issued"
+        revoked: "LDAP credential revoked"
+      ldap:
+        bound: "Signed in over LDAP"
       refresh:
         reused: "Refresh token replayed"
       signing_key:
