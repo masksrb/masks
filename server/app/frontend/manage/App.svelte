@@ -203,10 +203,7 @@
             <Link
               {to}
               class="nav-item {current === to.replace('/', '') ? 'nav-item-on' : ''}"
-            >{t(`app.nav.${label}`)}{#if label === "actors" && waiting > 0}<span
-                  class="badge badge-warning badge-sm ms-1.5"
-                  title={waitingLabel}>{waiting}</span
-                >{/if}</Link>
+            >{t(`app.nav.${label}`)}{#if label === "actors" && waiting > 0}<span class="nav-count" title={waitingLabel}>{waiting}</span>{/if}</Link>
           {/each}
         </nav>
 
