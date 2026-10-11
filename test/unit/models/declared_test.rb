@@ -28,15 +28,16 @@ module Masks
       end
 
       test "a secret named by an environment variable is the one the app can use" do
-        ENV["DECLARED_TEST_SECRET"] = "a-secret-the-app-already-has"
+        named = "DECLARED_TEST_SECRET"
+        ENV[named] = "a-secret-the-app-already-has"
 
         said = apply(single("apps" => { "wiki" => { "redirect_uris" => [ "https://wiki.example.com/cb" ],
-                                                    "client_secret_env" => "DECLARED_TEST_SECRET" } }))
+                                                    "client_secret_env" => named } }))
 
         assert_empty said
         assert within { Client.find_by!(client_id: "wiki").authenticate_secret("a-secret-the-app-already-has") }
       ensure
-        ENV.delete("DECLARED_TEST_SECRET")
+        ENV.delete(named)
       end
 
       test "groups are made, people put in them, and an app limited to one" do
