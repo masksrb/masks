@@ -166,6 +166,7 @@ masks is the identity provider for apps that sign people in only over SAML 2.0. 
 | Metadata | `https://demo.masks.example/saml/metadata` |
 | Entity ID | The same URL. |
 | Single sign-on | `https://demo.masks.example/saml/sso`, HTTP-Redirect or HTTP-POST. |
+| Single logout | `https://demo.masks.example/saml/slo`, HTTP-Redirect or HTTP-POST. |
 | Certificate | In the metadata, one per tenant signing key. |
 
 Most apps need only the metadata URL. After a
@@ -176,8 +177,8 @@ key's certificate stays in the metadata during the overlap.
 
 1. In `/manage`, open **Clients → Add client → SAML app**.
 2. Paste the app's metadata.
-3. Click **Read it**. masks fills in its entity ID, HTTP-POST assertion consumer services, and
-   request-signing certificate.
+3. Click **Read it**. masks fills in its entity ID, HTTP-POST assertion consumer services,
+   request-signing certificate, and HTTP-POST single logout URL.
 
 A SAML app is an approved client with no grants and no secret. It cannot use `/authorize` or
 `/token`.
@@ -189,6 +190,7 @@ A SAML app is an approved client with no grants and no secret. It cannot use `/a
 | Names people by | A persistent identifier (pairwise if the client is), or their email. |
 | Refuse unsigned requests | Check every request against the app's certificate. |
 | Let people start from masks | Answer `/saml/initiate/<client_id>` without a request. |
+| Single logout URL | Where masks posts its logout messages. Without one, the app takes no part in [single logout](#single-logout). |
 
 ### What is checked
 
@@ -222,8 +224,51 @@ Attributes use the claim names `email`, `name`, `given_name`, `family_name`, and
 `openid profile email` consent covers, and an email only once it is confirmed, as attribute or
 NameID. The posting page's content security policy allows only its own script.
 
-Single logout, encrypted assertions, the artifact binding, and choosing an assertion consumer
-service by index are not supported.
+### Single logout
+
+An app with a single logout URL takes part in single logout. masks posts every logout message to
+that URL over HTTP-POST, signed with RSA-SHA256. masks records each app a session signed in to,
+with the NameID the app was given, and every assertion names the session in `SessionIndex`.
+
+#### When the app signs a person out
+
+The app sends a `LogoutRequest` to `/saml/slo` over HTTP-Redirect or HTTP-POST. The SAML profiles
+require it to be signed on both bindings, so masks shows an error and ends nothing when:
+
+- the app has no single logout URL or no certificate,
+- the request is unsigned, or its signature does not verify against the app's certificate with
+  SHA-256 or stronger,
+- the request fails the age, `Destination`, replay, size, or document type checks an
+  `AuthnRequest` gets, or its `NotOnOrAfter` has passed,
+- the request names no `NameID`.
+
+masks then ends every session in which the app was given that NameID. A request that carries a
+`SessionIndex` ends only the sessions it names. When no session matches, masks ends nothing and
+answers `Requester` with `UnknownPrincipal`. Otherwise it answers `Success`. Either answer is a
+signed `LogoutResponse` posted to the single logout URL with the request's `RelayState`.
+
+An ended session ends as it does at `/logout`. OpenID Connect clients get their
+[back-channel logout](/guides/features/#telling-other-apps) tokens, and the session's other SAML apps are signed out
+as below.
+
+#### When a person signs out of masks
+
+Each app with a single logout URL that the session signed in to gets one `LogoutRequest`, naming
+the NameID and `SessionIndex` from its assertion.
+
+| How the session ends | How the apps hear |
+| --- | --- |
+| `/logout`, which **Sign out** uses | The browser carries a `LogoutRequest` to each app in turn and brings back its `LogoutResponse`. After the last app, it goes where the logout was going. |
+| An app's `LogoutRequest`, sent from the browser holding the session | The browser visits the other apps the same way, then carries masks' answer to the app that asked. |
+| Every other way: a manager signing the person out, signing out a device, suspension, a session timing out, or an app's `LogoutRequest` sent without the session's cookie | masks posts the `LogoutRequest` to each app from the server, as a `SAMLRequest` form field. A `2xx` or `3xx` answer counts as delivered. Delivery is attempted up to five times, and a delivery that still fails is recorded as an event. |
+
+A `LogoutResponse` from an app is read only when it answers a request masks sent it in the last ten
+minutes, and is checked against the app's certificate when it has one. A delivery from the server
+reaches an app without the person's browser, so it ends only sessions the app can find by NameID
+or `SessionIndex`.
+
+Encrypted assertions, the artifact and SOAP bindings, and choosing an assertion consumer service by
+index are not supported.
 
 ## Provisioning
 

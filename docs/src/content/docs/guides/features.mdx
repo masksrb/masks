@@ -274,7 +274,8 @@ someone out.
 
 When a session ends, masks posts a signed `logout+jwt` to the `backchannel_logout_uri` of every app
 the person used in it. masks tries each delivery five times, and records one that still fails on the
-person's activity. masks never posts to a private address for a self-registered app.
+person's activity. masks never posts to a private address for a self-registered app. SAML
+applications hear through [single logout](/guides/sso-saml/#single-logout).
 
 ### Sessions and devices
 

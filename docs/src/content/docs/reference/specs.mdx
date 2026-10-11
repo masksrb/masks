@@ -81,7 +81,7 @@ The only response type is `code`, and the only response mode is `query`.
 | [WebAuthn Level 2](https://www.w3.org/TR/webauthn-2/) | ✅ | Passkeys, as a first factor or a second factor. |
 | [TOTP (RFC 6238)](https://www.rfc-editor.org/rfc/rfc6238) | ✅ | With backup codes. |
 | [SCIM 2.0](https://www.rfc-editor.org/rfc/rfc7644) | ◐ | `/Users` with filters, `PATCH`, ETags, and suspension, `/Groups` as an organization's roles, and the discovery endpoints. See [provisioning](/guides/sso-saml/#provisioning). Bulk operations and sorting are not implemented. |
-| SAML 2.0 | ◐ | Both directions. A SAML identity provider can sign people in to masks (see [providers](/guides/sso-saml/#providers)), and masks signs people in to SAML applications over HTTP-Redirect and HTTP-POST, checking signed requests (see [SAML applications](/guides/sso-saml/#saml-applications)). Single logout and encrypted assertions are not implemented. |
+| SAML 2.0 | ◐ | Both directions. A SAML identity provider can sign people in to masks (see [providers](/guides/sso-saml/#providers)), and masks signs people in to SAML applications over HTTP-Redirect and HTTP-POST, checking signed requests (see [SAML applications](/guides/sso-saml/#saml-applications)). Single logout works in both directions for SAML applications, over HTTP-Redirect and HTTP-POST from the app and HTTP-POST from masks, through the browser on `/logout` and from the server otherwise (see [single logout](/guides/sso-saml/#single-logout)). Encrypted assertions and the SOAP binding are not implemented. |
 
 ## Client authentication
 
