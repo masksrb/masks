@@ -196,6 +196,9 @@ en:
         confirm_leave: "Leave %{organization}? Anything you signed in to as a member stops working, and an owner has to add you again."
         last_owner: "You are its only owner, so you cannot leave or change your role until you make someone else an owner."
 
+      launcher:
+        heading: "Your apps"
+
       apps:
         heading: "Apps and accounts"
         state:

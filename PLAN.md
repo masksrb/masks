@@ -12,8 +12,6 @@ says what a person can do once it lands.
 
 ## Plugging in self-hosted apps
 
-- **A page of my apps.** The account page links to each app a person may
-  use, including apps that start a SAML sign-in.
 - **Presets for common apps.** Adding Grafana or Nextcloud fills in the
   redirect URIs, scopes, and claims.
 - **Forward authentication.** An endpoint Caddy, Traefik, and nginx ask before

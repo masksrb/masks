@@ -37,6 +37,12 @@ module Masks
         end.sort_by { |app| app.name.to_s.downcase }
       end
 
+      def self.launchable(actor)
+        Client.active.approved.includes(:logo)
+              .where("clients.client_uri IS NOT NULL OR clients.saml_idp_initiated")
+              .order(:name).select { |client| client.admits?(actor) }
+      end
+
       def self.token_scopes(actor)
         Token.live.where(actor: actor, kind: [ AccessToken.sti_name, RefreshToken.sti_name ])
              .where.not(client_id: nil)

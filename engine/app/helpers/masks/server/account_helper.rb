@@ -21,6 +21,10 @@ module Masks
         manage: '<path d="M10 2.5 3.5 5v5c0 3.4 2.7 6.2 6.5 7.5 3.8-1.3 6.5-4.1 6.5-7.5V5L10 2.5Z"/>'
       }.freeze
 
+      def launch_url(client)
+        client.saml? && client.saml_idp_initiated? ? saml_initiate_path(client.client_id) : client.client_uri
+      end
+
       def account_text(key, **options)
         t("account.index.#{key}", **options)
       end

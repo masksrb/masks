@@ -436,10 +436,12 @@ module Masks
       end
 
       def group_labels
-        held = groups.pluck(:key)
-        roles = memberships.live.joins(:organization).pluck("organizations.key", :role).map { |key, role| "#{key}:#{role}" }
+        @group_labels ||= begin
+          held = groups.pluck(:key)
+          roles = memberships.live.joins(:organization).pluck("organizations.key", :role).map { |key, role| "#{key}:#{role}" }
 
-        (held + roles).uniq.sort
+          (held + roles).uniq.sort
+        end
       end
 
       def identities

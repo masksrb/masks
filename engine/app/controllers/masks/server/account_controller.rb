@@ -9,6 +9,7 @@ module Masks
         return redirect_to login_path if @actor.nil?
 
         @apps = Apps.held_by(@actor)
+        @launchable = Apps.launchable(@actor)
         @invitations = @actor.memberships.outstanding.joins(:organization).merge(Organization.active)
                              .includes(:organization, :invited_by).order("organizations.name").to_a
         @memberships = @actor.memberships.live.to_a

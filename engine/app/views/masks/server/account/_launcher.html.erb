@@ -1,0 +1,18 @@
+<section class="group" id="launcher">
+  <h2><%= account_text("launcher.heading") %></h2>
+
+  <ul class="app-tiles">
+    <% clients.each do |client| %>
+      <li>
+        <a class="app-tile" href="<%= launch_url(client) %>">
+          <% if (logo = client.logo_url(current_actor, size: 64)) %>
+            <img src="<%= logo %>" alt="" width="32" height="32" class="app-tile-logo" referrerpolicy="no-referrer" />
+          <% else %>
+            <span class="app-tile-logo app-tile-initial" aria-hidden="true"><%= client.name.to_s.first.upcase %></span>
+          <% end %>
+          <span class="app-tile-name"><%= client.name %></span>
+        </a>
+      </li>
+    <% end %>
+  </ul>
+</section>
