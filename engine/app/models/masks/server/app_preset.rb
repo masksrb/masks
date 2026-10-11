@@ -7,6 +7,28 @@ module Masks
 
       ALL = [
         {
+          key: "proxy", name: "Any app behind Caddy, Traefik, or nginx", forward: true,
+          redirects: [ "{base}/masks-auth/callback" ],
+          scopes: %w[openid],
+          guide: "https://masks.pages.dev/guides/forward-auth/",
+          settings: [
+            [ "Caddy", "{host} {\n  forward_auth {masks_origin} {\n    uri /forward-auth\n    header_up Host {masks_host}\n" \
+                       "    copy_headers Remote-User Remote-Email Remote-Name Remote-Groups\n  }\n  reverse_proxy your-app:8080\n}" ],
+            [ "Traefik", "http:\n  middlewares:\n    masks:\n      forwardAuth:\n        address: {forward_auth}\n" \
+                         "        authResponseHeaders: [Remote-User, Remote-Email, Remote-Name, Remote-Groups]" ],
+            [ "nginx", "location = /masks-check {\n  internal;\n  proxy_pass {forward_auth}?status=401;\n" \
+                       "  proxy_pass_request_body off;\n  proxy_set_header Content-Length \"\";\n" \
+                       "  proxy_set_header X-Original-URL $scheme://$http_host$request_uri;\n  proxy_ssl_server_name on;\n}\n" \
+                       "location /masks-auth/ {\n  proxy_pass {masks_origin}/forward-auth/;\n" \
+                       "  proxy_set_header X-Forwarded-Host $host;\n  proxy_set_header X-Forwarded-Proto $scheme;\n" \
+                       "  proxy_ssl_server_name on;\n}\n" \
+                       "location / {\n  auth_request /masks-check;\n  auth_request_set $remote_user $upstream_http_remote_user;\n" \
+                       "  proxy_set_header Remote-User $remote_user;\n" \
+                       "  error_page 401 =302 {masks_origin}/forward-auth/start?rd=$scheme://$http_host$request_uri;\n" \
+                       "  proxy_pass http://your-app:8080;\n}" ]
+          ]
+        },
+        {
           key: "grafana", name: "Grafana",
           redirects: [ "{base}/login/generic_oauth" ],
           scopes: %w[openid profile email groups offline_access],
@@ -186,6 +208,7 @@ module Masks
       def asks = definition.fetch(:asks, {})
       def scopes = definition[:scopes]
       def guide = definition[:guide]
+      def forward? = definition.fetch(:forward, false)
 
       def redirect_uris(base:, name: nil)
         definition[:redirects].map { |template| fill(template, values(base: base, name: name)) }.uniq
@@ -196,13 +219,19 @@ module Masks
           "issuer" => issuer.url, "discovery" => "#{issuer.url}/.well-known/openid-configuration",
           "authorize" => issuer.discovery["authorization_endpoint"], "token" => issuer.discovery["token_endpoint"],
           "userinfo" => issuer.discovery["userinfo_endpoint"], "logout" => issuer.discovery["end_session_endpoint"],
-          "client_id" => client.client_id, "client_secret" => secret.to_s, "tenant" => issuer.tenant.name
+          "client_id" => client.client_id, "client_secret" => secret.to_s, "tenant" => issuer.tenant.name,
+          "forward_auth" => "#{issuer.url}/forward-auth", "masks_origin" => Forwarded.origin(issuer.url).to_s,
+          "masks_host" => URI.parse(issuer.url).host, "host" => URI.parse(known_base(base)).host
         )
 
         definition[:settings].map { |label, template| { "label" => label, "value" => fill(template, known) } }
       end
 
       private
+
+        def known_base(base)
+          base.to_s.strip.delete_suffix("/")
+        end
 
         def values(base:, name:)
           trimmed = base.to_s.strip.delete_suffix("/")

@@ -9,6 +9,10 @@ module Masks
 
       middleware.use Tenancy::Middleware
 
+      initializer "masks_server.forwarded_app" do |app|
+        app.middleware.insert 0, ForwardedApp
+      end
+
       config.after_initialize do |app|
         app.config.masks.themes_path ||= app.root.join("themes").to_s
 

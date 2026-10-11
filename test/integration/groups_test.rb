@@ -166,6 +166,26 @@ module Masks
         assert_equal app.dig("client", "clientId"), held["client_id"]
         assert_equal app["secret"], held["client_secret"]
       end
+
+      test "an owner puts an app behind their proxy and gets the proxy's settings" do
+        owner = create_actor(@tenant, nickname: "boss", scopes: "openid profile email masks:manage")
+
+        added = ask(<<~GQL, manage_token(owner))
+          mutation { addApp(preset: "proxy", baseUrl: "https://dash.example.com") {
+            client { clientId name redirectUris } secret settings { label value } } }
+        GQL
+
+        assert_nil added["errors"]
+        app = added.dig("data", "addApp")
+        assert_equal "dash.example.com", app.dig("client", "name")
+        assert_equal [ "https://dash.example.com/masks-auth/callback" ], app.dig("client", "redirectUris")
+        assert_nil app["secret"]
+
+        held = app["settings"].to_h { |setting| [ setting["label"], setting["value"] ] }
+        assert_match "#{issuer_for(@tenant).url}/forward-auth", held["Traefik"]
+        assert_match "header_up Host #{host_for(@tenant)}", held["Caddy"]
+        assert within { Client.forwarding_to(URI("https://dash.example.com/x")) }
+      end
     end
   end
 end

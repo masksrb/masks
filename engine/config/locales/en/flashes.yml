@@ -156,3 +156,7 @@ en:
     manager: "You are the last person who manages this server, so your account cannot be deleted."
     provisioned: "Your organization manages this account, so only it can delete the account."
     deleted: "Your account was deleted."
+
+  forward_auth:
+    unknown: "No app behind a proxy is registered at that address."
+    not_admitted: "Your account may not use %{app}."

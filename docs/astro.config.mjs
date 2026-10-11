@@ -78,6 +78,7 @@ export default defineConfig({
           { label: "Organizations", slug: "guides/organizations" },
           { label: "Themes", slug: "guides/themes" },
           { label: "SSO / SAML", slug: "guides/sso-saml" },
+          { label: "Forward authentication", slug: "guides/forward-auth" },
           { label: "Connecting via SDK", slug: "guides/connecting-via-sdk" },
           { label: "Security", slug: "guides/security" },
           { label: "Enterprise", slug: "guides/enterprise" },

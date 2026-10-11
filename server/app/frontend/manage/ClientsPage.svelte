@@ -450,7 +450,7 @@
         <dl class="grid gap-x-4 gap-y-2 text-sm md:grid-cols-[auto_1fr]">
           {#each created.settings as setting (setting.label)}
             <dt class="font-mono text-xs opacity-80">{setting.label}</dt>
-            <dd class="tray m-0 px-2 py-1 font-mono text-xs break-all">{setting.value}</dd>
+            <dd class="tray m-0 px-2 py-1 font-mono text-xs break-all whitespace-pre-wrap">{setting.value}</dd>
           {/each}
         </dl>
       {/if}
