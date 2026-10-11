@@ -1325,7 +1325,8 @@ CREATE TABLE public.tenants (
     custom_host character varying,
     logo_digest character varying,
     accent_color character varying,
-    key_rotation_days integer
+    key_rotation_days integer,
+    keys_derived_at timestamp(6) without time zone
 );
 
 
@@ -3626,6 +3627,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261011140000'),
 ('20261011130000'),
 ('20261011120000'),
 ('20261010160000'),

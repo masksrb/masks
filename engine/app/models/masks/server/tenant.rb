@@ -86,6 +86,7 @@ module Masks
       scope :active, -> { where(archived_at: nil) }
       scope :idling, -> { where.not(suspend_after: nil).or(where.not(delete_after: nil)) }
 
+      before_create { self.keys_derived_at ||= Time.current }
       after_create_commit :ensure_signing_key!, :setup_token!
 
       def event_retention

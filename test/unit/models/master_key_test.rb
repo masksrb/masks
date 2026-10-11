@@ -37,7 +37,7 @@ module Masks
         keyed(NEW) do
           MasterKey.check!
 
-          assert_not MasterKey.shared?
+          assert_empty MasterKey.underived
 
           assert_equal "a salt", Tenant.find(@tenant.id).pairwise_salt
           assert_equal "JBSWY3DPEHPK3PXP", within { Actor.find(@actor.id).otp_secret }

@@ -72,15 +72,15 @@ module Masks
       test "a row encrypted under the shared key still reads, and re-encrypting moves it to the tenant's key" do
         legacy = ActiveRecord::Encryption.encryptor.encrypt(SECRET, key_provider: ActiveRecord::Encryption.key_provider)
         within { Actor.where(id: @actor.id).update_all([ "otp_secret = ?", legacy ]) }
-        Tenant.where(id: @tenant.id).update_all([ "pairwise_salt = ?", legacy ])
+        Tenant.where(id: @tenant.id).update_all([ "pairwise_salt = ?, keys_derived_at = NULL", legacy ])
 
         assert_equal SECRET, within { Actor.find(@actor.id).otp_secret }
         assert_equal SECRET, Tenant.find(@tenant.id).pairwise_salt
-        assert MasterKey.shared?
+        assert_equal [ @tenant.id ], MasterKey.underived.ids
 
-        MasterKey.reencrypt!
+        MasterKey.reencrypt!(MasterKey.underived)
 
-        assert_not MasterKey.shared?
+        assert_empty MasterKey.underived
         assert_equal SECRET, within { Actor.find(@actor.id).otp_secret }
         assert_equal SECRET, Tenant.find(@tenant.id).pairwise_salt
         assert_raises(ActiveRecord::Encryption::Errors::Decryption) { shared_only(stored) }
@@ -89,8 +89,8 @@ module Masks
         end
       end
 
-      test "a database already under tenant keys has nothing shared to re-encrypt" do
-        assert_not MasterKey.shared?
+      test "a tenant created under tenant keys has nothing to re-encrypt" do
+        assert_empty MasterKey.underived
       end
     end
   end
