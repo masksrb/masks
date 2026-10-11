@@ -12,7 +12,7 @@ module Masks
         return if accent.nil?
 
         tag.style(<<~CSS.html_safe)
-          :root {
+          .auth-page {
             --signal: #{accent};
             --signal-ink: #{tenant.accent_ink};
             --came: #{accent};

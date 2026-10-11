@@ -22,7 +22,7 @@ module Masks
         get "/login"
 
         assert_match %(class="auth-mark auth-mark-logo"), response.body
-        assert_match "--signal: #ffdd00", response.body
+        assert_match(/\.auth-page \{\s*--signal: #ffdd00;/, response.body, "the accent outranks the page's own --signal")
         assert_match "--signal-ink: #000000", response.body, "a light color gets dark text"
 
         get "/logo", params: { v: @tenant.reload.logo_digest, size: 64 }
