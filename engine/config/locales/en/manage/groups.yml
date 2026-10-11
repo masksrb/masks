@@ -1,0 +1,23 @@
+en:
+  manage:
+    groups:
+      title: "Groups"
+      lede: "Named sets of people, such as admins or family. Apps that ask for the groups scope see each group a person is in, and an app can be limited to some groups."
+      added: "%{name} is ready. Add people from their own pages."
+      delete_confirm: "Delete %{name}? Apps limited to it turn its people away."
+      deleted: "%{name} is deleted."
+      left: "%{identifier} is out of %{name}."
+      add:
+        title: "Add a group"
+        help: "The key is what apps see in the groups claim, so pick the one an app's role mapping expects, such as admins. It cannot change later."
+        key: "Key"
+        name: "Name"
+        submit: "Add group"
+      list:
+        title: "Groups"
+        empty: "No groups yet."
+        people:
+          one: "· %{count} person"
+          other: "· %{count} people"
+        delete: "Delete"
+        take_out: "Take %{identifier} out of %{name}"

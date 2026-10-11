@@ -1,4 +1,5 @@
 <script>
+  import { t } from "./lib/copy.js";
   import { createFeedback } from "./lib/feedback.svelte.js";
   import { day } from "./lib/format.js";
   import Section from "./ui/Section.svelte";
@@ -17,33 +18,30 @@
 
   async function release(row) {
     if (
-      !confirm(
-        `Release ${row.name}? The next application to ask for it gets it, and the scopes beneath ` +
-          `it stop meaning what they mean now.`,
-      )
+      !confirm(t("namespaces.release_confirm", { name: row.name }))
     )
       return;
 
     const done = await feedback.attempt(
       () => api.query(RELEASE, { name: row.name }),
-      `${row.name} is free to be claimed again.`,
+      t("namespaces.released", { name: row.name }),
     );
 
     if (done) await onreleased();
   }
 </script>
 
-<Section title="Namespaces">
+<Section title={t("namespaces.title")}>
   <Notices feedback={feedback.state} />
 
   <div class="overflow-x-auto">
     <table class="table table-sm">
       <thead>
         <tr>
-          <th>Name</th>
-          {#if showClient}<th>Claimed by</th>{/if}
-          <th class="hidden sm:table-cell">Resource</th>
-          <th class="hidden sm:table-cell">Claimed</th>
+          <th>{t("namespaces.columns.name")}</th>
+          {#if showClient}<th>{t("namespaces.columns.claimed_by")}</th>{/if}
+          <th class="hidden sm:table-cell">{t("namespaces.columns.resource")}</th>
+          <th class="hidden sm:table-cell">{t("namespaces.columns.claimed")}</th>
           <th></th>
         </tr>
       </thead>
@@ -59,7 +57,7 @@
                     {row.client.name}
                   </Link>
                 {:else}
-                  <span class="opacity-80">nothing</span>
+                  <span class="opacity-80">{t("namespaces.nothing")}</span>
                 {/if}
               </td>
             {/if}
@@ -77,10 +75,10 @@
                   class="btn btn-xs btn-error btn-outline"
                   onclick={() => release(row)}
                 >
-                  Release
+                  {t("namespaces.release")}
                 </button>
               {:else}
-                <span class="hint">archive to release</span>
+                <span class="hint">{t("namespaces.archive_to_release")}</span>
               {/if}
             </td>
           </tr>

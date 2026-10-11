@@ -1,4 +1,5 @@
 <script>
+  import { t } from "./lib/copy.js";
   import { day, moment, since } from "./lib/format.js";
   import Link from "./ui/Link.svelte";
 
@@ -16,8 +17,8 @@
     act(
       `mutation Revoke($id: ID!) { revokeSession(id: $id) { session { revokedAt } } }`,
       { id: session.id },
-      "Session revoked.",
-      "Revoke this session? That browser is signed out at once.",
+      t("presence.session_revoked"),
+      t("presence.revoke_question"),
     );
 
   const onDevice = (mutation, device, notice, question = null) =>
@@ -29,24 +30,24 @@
     );
 
   const signOutDevice = (device) =>
-    onDevice("signOutDevice", device, `Signed ${device.label} out everywhere.`);
+    onDevice("signOutDevice", device, t("presence.device_signed_out", { label: device.label }));
 
   const block = (device) =>
     onDevice(
       "blockDevice",
       device,
-      `${device.label} is blocked.`,
-      `Block ${device.label}? Nobody will be able to sign in on it until it is unblocked.`,
+      t("presence.device_blocked", { label: device.label }),
+      t("presence.block_question", { label: device.label }),
     );
 
-  const unblock = (device) => onDevice("unblockDevice", device, `${device.label} is unblocked.`);
+  const unblock = (device) => onDevice("unblockDevice", device, t("presence.device_unblocked", { label: device.label }));
 
   const signOutEverywhere = () =>
     act(
       `mutation SignOut($uuid: ID!) { signOutActor(uuid: $uuid) { actor { uuid } } }`,
       { uuid: actor.uuid },
-      "Signed out everywhere.",
-      `Sign ${actor.identifier} out everywhere? Every session and refresh token ends, and no device counts as a second factor any more.`,
+      t("presence.signed_out_everywhere"),
+      t("presence.sign_out_everywhere_question", { identifier: actor.identifier }),
     );
   const LIMIT = 4;
 
@@ -60,10 +61,10 @@
 <div class="flex flex-col gap-5">
   <div class="grid items-start gap-5 {columns ? 'lg:grid-cols-2' : ''}">
     <section class="flex min-w-0 flex-col gap-2.5">
-      <h3 class="legend">Sessions</h3>
+      <h3 class="legend">{t("presence.sessions")}</h3>
 
       {#if actor.sessions.length === 0}
-        <p class="text-sm opacity-75">Not signed in anywhere right now.</p>
+        <p class="text-sm opacity-75">{t("presence.no_sessions")}</p>
       {:else}
         <ul class="slats">
           {#each sessions as session (session.id)}
@@ -71,7 +72,7 @@
               <div class="flex items-baseline justify-between gap-3">
                 <span class="font-mono text-sm">{session.ipAddress ?? "—"}</span>
                 <button type="button" class="link text-xs text-error" onclick={() => revoke(session)}>
-                  Revoke
+                  {t("presence.revoke")}
                 </button>
               </div>
 
@@ -79,9 +80,9 @@
 
               <div class="flex flex-wrap gap-x-4 text-xs opacity-80">
                 <span title={moment(session.authenticatedAt)}>
-                  Signed in {since(session.authenticatedAt)}
+                  {t("presence.signed_in", { when: since(session.authenticatedAt) })}
                 </span>
-                <span>Expires {day(session.expiresAt)}</span>
+                <span>{t("presence.expires", { when: day(session.expiresAt) })}</span>
               </div>
             </li>
           {/each}
@@ -89,17 +90,17 @@
 
         {#if !allSessions && actor.sessions.length > LIMIT}
           <button type="button" class="btn btn-ghost btn-sm self-start" onclick={() => (allSessions = true)}>
-            Show {actor.sessions.length - LIMIT} more
+            {t("presence.show_more", { count: actor.sessions.length - LIMIT })}
           </button>
         {/if}
       {/if}
     </section>
 
     <section class="flex min-w-0 flex-col gap-2.5">
-      <h3 class="legend">Devices</h3>
+      <h3 class="legend">{t("presence.devices")}</h3>
 
       {#if actor.devices.length === 0}
-        <p class="text-sm opacity-75">Nothing has signed in on their behalf yet.</p>
+        <p class="text-sm opacity-75">{t("presence.no_devices")}</p>
       {:else}
         <ul class="slats">
           {#each devices as device (device.id)}
@@ -110,9 +111,9 @@
                     {device.label}
                   </Link>
                   {#if device.blockedAt}
-                    <span class="badge badge-error badge-xs">blocked</span>
+                    <span class="badge badge-error badge-xs">{t("presence.blocked")}</span>
                   {:else if !device.known}
-                    <span class="badge badge-warning badge-xs">unrecognised</span>
+                    <span class="badge badge-warning badge-xs">{t("presence.unrecognised")}</span>
                   {/if}
                 </span>
 
@@ -122,12 +123,12 @@
                     class="link text-xs"
                     onclick={() => signOutDevice(device)}
                   >
-                    Sign out
+                    {t("presence.sign_out")}
                   </button>
 
                   {#if device.blockedAt}
                     <button type="button" class="link text-xs" onclick={() => unblock(device)}>
-                      Unblock
+                      {t("presence.unblock")}
                     </button>
                   {:else}
                     <button
@@ -135,7 +136,7 @@
                       class="link text-xs text-error"
                       onclick={() => block(device)}
                     >
-                      Block
+                      {t("presence.block")}
                     </button>
                   {/if}
                 </span>
@@ -145,7 +146,7 @@
 
               <div class="flex flex-wrap gap-x-4 text-xs opacity-80">
                 <span class="font-mono">{device.ipAddress ?? "—"}</span>
-                <span title={moment(device.lastSeenAt)}>Last seen {since(device.lastSeenAt)}</span>
+                <span title={moment(device.lastSeenAt)}>{t("presence.last_seen", { when: since(device.lastSeenAt) })}</span>
               </div>
             </li>
           {/each}
@@ -153,7 +154,7 @@
 
         {#if !allDevices && actor.devices.length > LIMIT}
           <button type="button" class="btn btn-ghost btn-sm self-start" onclick={() => (allDevices = true)}>
-            Show {actor.devices.length - LIMIT} more
+            {t("presence.show_more", { count: actor.devices.length - LIMIT })}
           </button>
         {/if}
       {/if}
@@ -161,6 +162,6 @@
   </div>
 
   <button type="button" class="btn btn-sm btn-error btn-outline self-start" onclick={signOutEverywhere}>
-    Sign out everywhere
+    {t("presence.sign_out_everywhere")}
   </button>
 </div>

@@ -1,4 +1,5 @@
 <script>
+  import { t } from "../lib/copy.js";
   let { pages, shown, busy = false, onpage } = $props();
 
   const first = $derived(pages.first);
@@ -9,9 +10,15 @@
 </script>
 
 {#if shown && (earlier || later)}
-  <nav class="pager" aria-label="Pages">
+  <nav class="pager" aria-label={t("ui.pager.label")}>
     <span class="hint">
-      {first.toLocaleString()}–{last.toLocaleString()}{total === null ? "" : ` of ${total.toLocaleString()}`}
+      {total === null
+        ? t("ui.pager.range", { first: first.toLocaleString(), last: last.toLocaleString() })
+        : t("ui.pager.range_of", {
+            first: first.toLocaleString(),
+            last: last.toLocaleString(),
+            total: total.toLocaleString(),
+          })}
     </span>
 
     <div class="join">
@@ -20,13 +27,13 @@
         class="btn btn-sm join-item"
         disabled={busy || !earlier}
         onclick={() => onpage("back")}
-      >Previous</button>
+      >{t("ui.pager.previous")}</button>
       <button
         type="button"
         class="btn btn-sm join-item"
         disabled={busy || !later}
         onclick={() => onpage("forward")}
-      >Next</button>
+      >{t("ui.pager.next")}</button>
     </div>
   </nav>
 {/if}

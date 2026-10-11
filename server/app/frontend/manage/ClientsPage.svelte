@@ -16,6 +16,7 @@
   import Spinner from "./ui/Spinner.svelte";
   import Switch from "./ui/Switch.svelte";
   import Table from "./ui/Table.svelte";
+  import { t } from "./lib/copy.js";
 
   let { api } = $props();
 
@@ -58,10 +59,10 @@
   `;
 
   const KINDS = [
-    ["service", "Signs in as itself", ["client_credentials"]],
-    ["app", "Signs actors in", ["authorization_code", "refresh_token"]],
-    ["saml", "SAML app", []],
-    ["preset", "A known app", []],
+    ["service", ["client_credentials"]],
+    ["app", ["authorization_code", "refresh_token"]],
+    ["saml", []],
+    ["preset", []],
   ];
 
   const ADD_APP = `
@@ -73,13 +74,13 @@
   `;
 
   const COLUMNS = [
-    "Name",
-    { label: "Resources", hide: true },
-    "Source",
-    { label: "Namespaces", hide: true, right: true },
-    { label: "Scopes", hide: true },
-    { label: "Approved by", hide: true },
-    { label: "Registered", hide: true },
+    t("clients.columns.name"),
+    { label: t("clients.columns.resources"), hide: true },
+    t("clients.columns.source"),
+    { label: t("clients.columns.namespaces"), hide: true, right: true },
+    { label: t("clients.columns.scopes"), hide: true },
+    { label: t("clients.columns.approved_by"), hide: true },
+    { label: t("clients.columns.registered"), hide: true },
   ];
 
   const feedback = createFeedback();
@@ -186,7 +187,7 @@
       CREATE,
       {
         name: draft.name.trim(),
-        grantTypes: KINDS.find(([key]) => key === draft.kind)[2],
+        grantTypes: KINDS.find(([key]) => key === draft.kind)[1],
         redirectUris: draft.kind === "app" ? lines(draft.redirects) : [],
         resources: lines(draft.resources),
         allowedScopes: draft.scopes,
@@ -264,70 +265,70 @@
 
   const nothing = $derived(
     query
-      ? `No ${archived ? "archived " : ""}client matches “${query}”.`
+      ? t(archived ? "clients.empty.archived_matches" : "clients.empty.matches", { query })
       : archived
-        ? "Nothing has been archived."
-        : "No clients registered yet.",
+        ? t("clients.empty.archived")
+        : t("clients.empty.none"),
   );
 </script>
 
-<Page title="Clients">
+<Page title={t("clients.title")}>
   {#snippet actions()}
-    <Switch bind:checked={archived} label="Archived" onchange={toggle} />
+    <Switch bind:checked={archived} label={t("clients.archived")} onchange={toggle} />
     <Search
       bind:value={search}
-      label="Search clients"
-      placeholder="name or client_id"
+      label={t("clients.search")}
+      placeholder={t("clients.search_placeholder")}
       onsearch={look}
     />
-    <button type="button" class="btn btn-primary btn-sm" onclick={open}>Add client</button>
+    <button type="button" class="btn btn-primary btn-sm" onclick={open}>{t("clients.add")}</button>
   {/snippet}
 
   <Notices feedback={feedback.state} />
 
   {#if adding}
-    <Section title="Add client">
-      <Field label="Name" bind:value={draft.name} placeholder="Nightly indexer" />
+    <Section title={t("clients.add")}>
+      <Field label={t("clients.name")} bind:value={draft.name} placeholder={t("clients.name_placeholder")} />
 
-      <div class="range" role="group" aria-label="What kind of client">
-        {#each KINDS as [key, label] (key)}
+      <div class="range" role="group" aria-label={t("clients.kind")}>
+        {#each KINDS as [key] (key)}
           <button type="button" aria-pressed={draft.kind === key} onclick={() => (draft.kind = key)}>
-            {label}
+            {t(`clients.kinds.${key}`)}
           </button>
         {/each}
       </div>
 
       {#if draft.kind === "preset"}
         <Select
-          label="App"
+          label={t("clients.app")}
           value={draft.preset}
-          options={[["", "Choose one"], ...presets.map((preset) => [preset.key, preset.name])]}
+          options={[["", t("clients.choose")], ...presets.map((preset) => [preset.key, preset.name])]}
           onchange={(key) => {
             draft.preset = key;
             draft.slug = presets.find((preset) => preset.key === key)?.asks?.name ?? "";
           }}
         />
 
-        <Field label="Its address" bind:value={draft.baseUrl} placeholder="https://grafana.example.com" />
+        <Field label={t("clients.address")} bind:value={draft.baseUrl} placeholder="https://grafana.example.com" />
 
         {#if chosen?.asks?.name}
-          <Field label="Name it uses for masks" bind:value={draft.slug} placeholder={chosen.asks.name} />
+          <Field label={t("clients.slug")} bind:value={draft.slug} placeholder={chosen.asks.name} />
         {/if}
       {/if}
 
       <p class="hint">
         {draft.kind === "preset"
-          ? "masks fills in its redirect URIs and scopes, and shows what to enter in the app. Name is optional here."
+          ? t("clients.hints.preset")
           : draft.kind === "service"
-          ? "It asks the token endpoint for its own token with client_credentials. No actor is behind it, so it never holds openid, profile, email or masks:manage."
+          ? t("clients.hints.service")
           : draft.kind === "saml"
-            ? "It sends actors here with a SAML AuthnRequest, and masks posts a signed assertion back. Paste its metadata to fill the rest in."
-            : "It sends actors to sign in and is handed a token on their behalf."}
+            ? t("clients.hints.saml")
+            : t("clients.hints.app")}
       </p>
 
       {#if draft.kind === "saml"}
         <label class="flex flex-col gap-1.5">
-          <span class="field-label">Its metadata</span>
+          <span class="field-label">{t("clients.metadata")}</span>
           <textarea
             class="textarea textarea-sm w-full font-mono text-xs"
             rows="3"
@@ -342,13 +343,13 @@
           disabled={!draft.metadata.trim()}
           onclick={readMetadata}
         >
-          Read it
+          {t("clients.read")}
         </button>
 
-        <Field label="Entity ID" bind:value={draft.entityId} placeholder="https://wiki.example.com/saml" />
+        <Field label={t("clients.entity_id")} bind:value={draft.entityId} placeholder="https://wiki.example.com/saml" />
 
         <label class="flex flex-col gap-1.5">
-          <span class="field-label">Assertion consumer services</span>
+          <span class="field-label">{t("clients.acs")}</span>
           <textarea
             class="textarea textarea-sm w-full font-mono text-xs"
             rows="2"
@@ -359,7 +360,7 @@
         </label>
 
         <label class="flex flex-col gap-1.5">
-          <span class="field-label">Signing certificate, if it signs its requests</span>
+          <span class="field-label">{t("clients.certificate")}</span>
           <textarea
             class="textarea textarea-sm w-full font-mono text-xs"
             rows="2"
@@ -368,12 +369,12 @@
           ></textarea>
         </label>
 
-        <Switch bind:checked={draft.requestsSigned} label="Refuse requests it did not sign" />
+        <Switch bind:checked={draft.requestsSigned} label={t("clients.requests_signed")} />
       {/if}
 
       {#if draft.kind === "app"}
         <label class="flex flex-col gap-1.5">
-          <span class="field-label">Redirect URIs</span>
+          <span class="field-label">{t("clients.redirect_uris")}</span>
           <textarea
             class="textarea textarea-sm w-full font-mono text-xs"
             rows="2"
@@ -388,7 +389,7 @@
 
       {#if draft.kind !== "saml"}
       <label class="flex flex-col gap-1.5">
-        <span class="field-label">Resources</span>
+        <span class="field-label">{t("clients.resources")}</span>
         <textarea
           class="textarea textarea-sm w-full font-mono text-xs"
           rows="2"
@@ -401,7 +402,7 @@
       </label>
 
       <div class="flex flex-col gap-2">
-        <span class="legend">Scopes</span>
+        <span class="legend">{t("clients.scopes")}</span>
         <ScopesEditor
           value={draft.scopes}
           available={supported}
@@ -420,19 +421,19 @@
               : !draft.name.trim() || (draft.kind === "saml" && !draft.entityId.trim()))}
           onclick={send}
         >
-          {busy ? "Adding..." : "Add the client"}
+          {busy ? t("clients.adding") : t("clients.submit")}
         </button>
         <button type="button" class="btn btn-ghost btn-sm" onclick={() => (adding = false)}>
-          Cancel
+          {t("clients.cancel")}
         </button>
       </div>
     </Section>
   {/if}
 
   {#if created}
-    <Section title={`${created.client.name} is ready`}>
+    <Section title={t("clients.created.title", { name: created.client.name })}>
       <p class="text-sm opacity-85">
-        Its client_id is below{created.secret ? ", with a secret shown this once. Copy it now" : ""}.
+        {t(created.secret ? "clients.created.client_id_and_secret" : "clients.created.client_id")}
       </p>
 
       <p class="tray px-2 py-1 font-mono text-xs break-all">{created.client.clientId}</p>
@@ -443,8 +444,8 @@
 
       {#if created.settings}
         <p class="text-sm opacity-85">
-          Enter these in {created.client.name}. The secret appears in them too, and is not shown again.
-          {#if created.guide}<a class="link" href={created.guide} target="_blank" rel="noreferrer">Its guide</a>.{/if}
+          {t("clients.created.settings", { name: created.client.name })}
+          {#if created.guide}<a class="link" href={created.guide} target="_blank" rel="noreferrer">{t("clients.created.guide")}</a>.{/if}
         </p>
 
         <dl class="grid gap-x-4 gap-y-2 text-sm md:grid-cols-[auto_1fr]">
@@ -455,7 +456,7 @@
         </dl>
       {/if}
 
-      <Link to={`/clients/${created.client.clientId}`} class="btn btn-sm self-start">Open it</Link>
+      <Link to={`/clients/${created.client.clientId}`} class="btn btn-sm self-start">{t("clients.created.open")}</Link>
     </Section>
   {/if}
 
@@ -486,9 +487,9 @@
             </td>
             <td>
               {#if client.dynamic}
-                <span class="badge badge-ghost badge-sm">self-registered</span>
+                <span class="badge badge-ghost badge-sm">{t("clients.self_registered")}</span>
               {:else}
-                <span class="badge badge-success badge-sm">approved</span>
+                <span class="badge badge-success badge-sm">{t("clients.approved")}</span>
               {/if}
             </td>
             <td class="hidden text-right text-xs opacity-85 md:table-cell">
@@ -497,13 +498,13 @@
             <td class="hidden font-mono text-xs md:table-cell">
               {#if client.requiredScopes.length}
                 <div class="max-w-[12rem] truncate" title={joined(client.requiredScopes)}>
-                  <span class="opacity-75">always</span>
+                  <span class="opacity-75">{t("clients.always")}</span>
                   {joined(client.requiredScopes)}
                 </div>
               {/if}
               {#if client.allowedScopes.length}
                 <div class="max-w-[12rem] truncate opacity-85" title={joined(client.allowedScopes)}>
-                  <span class="opacity-85">on request</span>
+                  <span class="opacity-85">{t("clients.on_request")}</span>
                   {joined(client.allowedScopes)}
                 </div>
               {/if}

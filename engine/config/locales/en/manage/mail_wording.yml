@@ -1,0 +1,18 @@
+en:
+  manage:
+    mail_wording:
+      reset: "%{title} uses masks' wording again."
+      saved: "%{title} saved."
+      signature: "Signature"
+      wording: "Wording"
+      customized: " (customized)"
+      subject: "Subject"
+      subject_placeholder: "The subject masks writes"
+      closing: "Closing lines on every email"
+      opening: "Opening text"
+      closing_placeholder: "None"
+      opening_placeholder: "The opening masks writes"
+      hint: "Plain text. A blank line starts a new paragraph. Fills in %{names}."
+      hint_more: "masks still adds the button or code, how long it lasts, and the safety lines."
+      save: "Save"
+      use_default: "Use masks' wording"

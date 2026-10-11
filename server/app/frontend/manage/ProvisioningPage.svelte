@@ -1,4 +1,5 @@
 <script>
+  import { t } from "./lib/copy.js";
   import { createFeedback } from "./lib/feedback.svelte.js";
   import { day, since } from "./lib/format.js";
   import Section from "./ui/Section.svelte";
@@ -19,9 +20,9 @@
   `;
 
   const LIFETIMES = [
-    [30, "30 days"],
-    [90, "90 days"],
-    [365, "A year"],
+    [30, "month"],
+    [90, "quarter"],
+    [365, "year"],
   ];
 
   const DAY = 86400;
@@ -68,7 +69,7 @@
   }
 
   async function revoke(token) {
-    if (!confirm(`Revoke ${token.label}? Whatever provisions with it is refused from now on.`)) return;
+    if (!confirm(t("provisioning.revoke_confirm", { label: token.label }))) return;
 
     const done = await feedback.attempt(
       () =>
@@ -76,7 +77,7 @@
           `mutation Revoke($id: ID!) { revokeProvisioningToken(id: $id) { provisioningToken { id } } }`,
           { id: token.id },
         ),
-      `${token.label} is revoked.`,
+      t("provisioning.revoked", { label: token.label }),
     );
 
     if (done) await load();
@@ -84,8 +85,8 @@
 </script>
 
 <Page
-  title="Provisioning"
-  lede="An identity provider adds, changes, suspends and removes actors here over SCIM 2.0."
+  title={t("provisioning.title")}
+  lede={t("provisioning.lede")}
 >
   <Notices feedback={feedback.state} />
 
@@ -95,46 +96,49 @@
     <div class="grid gap-4">
       <Section
         row
-        title="Connect a provider"
-        help="Give the provider this URL and a token. A provisioned actor is known by their email, which masks takes as confirmed, and signs in through a provider or an invitation. Nobody who holds a masks: scope has their password or email changed this way, and the last manager is never suspended or removed."
+        title={t("provisioning.connect.title")}
+        help={t("provisioning.connect.help")}
       >
         <div class="flex flex-col gap-1.5">
-          <span class="field-label">SCIM base URL</span>
+          <span class="field-label">{t("provisioning.connect.base_url")}</span>
           <code class="tray px-2 py-1 font-mono text-xs break-all">{data.scimBaseUrl}</code>
         </div>
 
-        <Field label="Label" bind:value={label} placeholder="Entra ID" />
+        <Field label={t("provisioning.connect.label")} bind:value={label} placeholder="Entra ID" />
 
         {#if data.organizations.length}
           <Select
-            label="Provisions"
+            label={t("provisioning.connect.provisions")}
             value={organization}
-            options={[["", "Every account"], ...data.organizations.map((held) => [held.key, `Only members of ${held.name}`])]}
+            options={[
+              ["", t("provisioning.connect.every_account")],
+              ...data.organizations.map((held) => [held.key, t("provisioning.connect.only_members", { name: held.name })]),
+            ]}
             onchange={(key) => (organization = key)}
           />
         {/if}
 
-        <div class="range" role="group" aria-label="How long the token lives">
+        <div class="range" role="group" aria-label={t("provisioning.connect.lifetime")}>
           {#each LIFETIMES as [days, name] (days)}
             <button type="button" aria-pressed={lifetime === days} onclick={() => (lifetime = days)}>
-              {name}
+              {t(`provisioning.lifetimes.${name}`)}
             </button>
           {/each}
         </div>
 
-        <button type="button" class="btn btn-primary btn-sm self-start" onclick={issue}>Issue a token</button>
+        <button type="button" class="btn btn-primary btn-sm self-start" onclick={issue}>{t("provisioning.connect.issue")}</button>
 
         {#if issued}
           <div class="alert alert-warning alert-soft flex-col items-start gap-2" role="status">
-            <span class="font-medium">This token is shown once. Copy it now.</span>
+            <span class="font-medium">{t("provisioning.connect.shown_once")}</span>
             <code class="font-mono text-xs break-all">{issued.secret}</code>
           </div>
         {/if}
       </Section>
 
-      <Section row title="Tokens">
+      <Section row title={t("provisioning.tokens.title")}>
         {#if data.provisioningTokens.length === 0}
-          <p class="text-sm opacity-85">None issued.</p>
+          <p class="text-sm opacity-85">{t("provisioning.tokens.none")}</p>
         {:else}
           <ul class="flex flex-col divide-y divide-base-200">
             {#each data.provisioningTokens as token (token.id)}
@@ -144,11 +148,19 @@
                     {token.label}{#if token.organization}<span class="hint"> · {token.organization.name}</span>{/if}
                   </div>
                   <div class="text-xs opacity-80">
-                    {token.issuedBy ? `by ${token.issuedBy.identifier}, ` : ""}used {since(token.usedAt, "never")},
-                    expires {day(token.expiresAt)}
+                    {token.issuedBy
+                      ? t("provisioning.tokens.issued_by", {
+                          identifier: token.issuedBy.identifier,
+                          used: since(token.usedAt, t("provisioning.tokens.never")),
+                          expires: day(token.expiresAt),
+                        })
+                      : t("provisioning.tokens.detail", {
+                          used: since(token.usedAt, t("provisioning.tokens.never")),
+                          expires: day(token.expiresAt),
+                        })}
                   </div>
                 </div>
-                <button type="button" class="btn btn-ghost btn-sm" onclick={() => revoke(token)}>Revoke</button>
+                <button type="button" class="btn btn-ghost btn-sm" onclick={() => revoke(token)}>{t("provisioning.tokens.revoke")}</button>
               </li>
             {/each}
           </ul>

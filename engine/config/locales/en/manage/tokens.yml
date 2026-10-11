@@ -1,0 +1,21 @@
+en:
+  manage:
+    tokens:
+      kinds:
+        access: "access"
+        refresh: "refresh"
+        code: "code"
+      revoke_chain_confirm: "Revoke every token in this chain? Anything %{held} is holding stops working at once."
+      revoke_confirm: "Revoke this %{kind} token? Whatever it was exchanged for goes with it."
+      revoked:
+        one: "%{count} token revoked."
+        other: "%{count} tokens revoked."
+      empty: "Nothing outstanding."
+      rotated: "rotated"
+      revoke: "Revoke"
+      revoke_chain: "Revoke the chain"
+      issued: "Issued %{when}"
+      expires: "Expires %{when}"
+      more:
+        one: "Show %{count} more"
+        other: "Show %{count} more"

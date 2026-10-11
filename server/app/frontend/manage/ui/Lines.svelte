@@ -1,7 +1,8 @@
 <script>
+  import { t } from "../lib/copy.js";
   import { untrack } from "svelte";
 
-  let { label, hint = null, value = [], onsave, save = "Save", rows = 3 } = $props();
+  let { label, hint = null, value = [], onsave, save = t("ui.save"), rows = 3 } = $props();
 
   let draft = $state(untrack(() => value.join("\n")));
   let held = $state(untrack(() => value.join("\n")));

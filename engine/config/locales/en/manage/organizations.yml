@@ -1,0 +1,31 @@
+en:
+  manage:
+    organizations:
+      title: "Organizations"
+      lede: "The customers inside this tenant. An app that asks for the organization scope signs a person in as a member of one, and their token carries the role they hold there."
+      columns:
+        organization: "Organization"
+        members: "Members"
+        roles: "Roles"
+        signs_in: "Signs in with"
+      restored: "%{name} is back."
+      members:
+        one: "%{count} member"
+        other: "%{count} members"
+      members_invited: "%{members}, %{count} invited"
+      add: "Add organization"
+      add_lede: "You become its first owner, and can add members once it exists."
+      name: "Name"
+      key: "Key"
+      key_hint: "An app asks for this organization with"
+      key_word: "key"
+      key_hint_end: ". The key cannot change later."
+      adding: "Adding..."
+      cancel: "Cancel"
+      empty: "No organizations yet. Add one for each customer whose people sign in together."
+      tenant_policy: "The tenant's policy"
+      archived:
+        title: "Archived"
+        lede: "Nobody signs in as a member of these. Restoring one puts its members back as they were."
+        detail: "· archived %{day} · %{members}"
+      restore: "Restore"

@@ -1,3 +1,5 @@
+import { t } from "./copy.js";
+
 const KEY = "masks:manage:client";
 
 export const SCOPE = [
@@ -72,14 +74,12 @@ export async function redeem(boot, token) {
 
   if (!response.ok) {
     throw new Error(
-      body.error_description || body.error || "registration failed",
+      body.error_description || body.error || t("pairing.registration_failed"),
     );
   }
 
   if (body.client_secret) {
-    throw new Error(
-      "masks issued a secret to a browser, which must never happen",
-    );
+    throw new Error(t("pairing.secret_issued"));
   }
 
   keep(boot.issuer, body.client_id);

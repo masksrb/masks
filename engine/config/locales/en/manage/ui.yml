@@ -1,0 +1,23 @@
+en:
+  manage:
+    ui:
+      save: "Save"
+      retry: "Try again"
+      search: "Search"
+      loading: "Loading"
+      more_about: "More about this"
+      about: "About %{title}"
+      pager:
+        label: "Pages"
+        range: "%{first}–%{last}"
+        range_of: "%{first}–%{last} of %{total}"
+        previous: "Previous"
+        next: "Next"
+      bar_chart:
+        peak: "%{peak} on the busiest day"
+        summary: "%{label}: %{total} sign-ins across %{days} days, peaking at %{peak}."
+        unit:
+          one: "sign-in"
+          other: "sign-ins"
+        day: "Day"
+        units: "sign-ins"

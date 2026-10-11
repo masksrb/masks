@@ -2,3 +2,20 @@ en:
   manage:
     app:
       missing: "There is no page at this address."
+      account: "Account"
+      starting: "Starting"
+      stopped: "Stopped"
+      failed: "Could not sign in to manage %{tenant}"
+      retry: "Try again"
+      settings: "Settings"
+      sections: "Sections"
+      nav:
+        overview: "Overview"
+        actors: "Actors"
+        organizations: "Organizations"
+        clients: "Clients"
+      limited:
+        read: "You can read everything here and change nothing."
+        support: "You can help people with their accounts. Settings, keys, and other managers need an owner."
+        security: "You can change keys, apps, providers, and policies. People's accounts need support or an owner."
+        both: "You can change settings and help people. Other managers and tenant settings need an owner."

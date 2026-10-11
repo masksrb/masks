@@ -1,6 +1,7 @@
 <script>
+  import { t } from "./lib/copy.js";
   import { createFeedback } from "./lib/feedback.svelte.js";
-  import { day, plural, since } from "./lib/format.js";
+  import { day, since } from "./lib/format.js";
   import { useRouter } from "./lib/router.svelte.js";
   import Section from "./ui/Section.svelte";
   import Facts from "./ui/Facts.svelte";
@@ -46,9 +47,9 @@
   `;
 
   const LENSES = [
-    ["all", "Everyone"],
-    ["owners", "Owners"],
-    ["invited", "Invited"],
+    ["all", t("organization.lenses.all")],
+    ["owners", t("organization.lenses.owners")],
+    ["invited", t("organization.lenses.invited")],
   ];
 
   let organization = $state(null);
@@ -107,17 +108,24 @@
       ),
   );
 
-  const revoking = $derived(
-    organization?.liveTokenCount ? ` and revokes its ${plural(organization.liveTokenCount, "live token")}` : "",
-  );
+  const revoking = (plain, tokens) =>
+    organization.liveTokenCount
+      ? t(tokens, { organization: organization.name, count: organization.liveTokenCount })
+      : t(plain, { organization: organization.name });
 
   const counts = $derived(
     organization
       ? [
-          { label: organization.memberCount === 1 ? "Member" : "Members", value: organization.memberCount },
-          { label: organization.ownerCount === 1 ? "Owner" : "Owners", value: organization.ownerCount },
-          { label: "Invitations open", value: organization.pendingCount },
-          { label: "Live tokens", value: organization.liveTokenCount },
+          {
+            label: t("organization.counts.members", { count: organization.memberCount }),
+            value: organization.memberCount,
+          },
+          {
+            label: t("organization.counts.owners", { count: organization.ownerCount }),
+            value: organization.ownerCount,
+          },
+          { label: t("organization.counts.invitations"), value: organization.pendingCount },
+          { label: t("organization.counts.live_tokens"), value: organization.liveTokenCount },
         ]
       : [],
   );
@@ -125,10 +133,10 @@
   const facts = $derived(
     organization
       ? [
-          { term: "Key", value: organization.key, mono: true },
-          { term: "ID", value: organization.uuid, mono: true },
-          { term: "Asked for with", value: `organization=${organization.key}`, mono: true },
-          { term: "Created", value: day(organization.createdAt) },
+          { term: t("organization.facts.key"), value: organization.key, mono: true },
+          { term: t("organization.facts.id"), value: organization.uuid, mono: true },
+          { term: t("organization.facts.asked_for_with"), value: `organization=${organization.key}`, mono: true },
+          { term: t("organization.facts.created"), value: day(organization.createdAt) },
         ]
       : [],
   );
@@ -142,15 +150,20 @@
   }
 
   function status(member) {
-    if (member.expired) return `Expired ${since(member.expiresAt)}. Send it again to renew it.`;
+    if (member.expired) return t("organization.status.expired", { when: since(member.expiresAt) });
 
     if (member.pending) {
-      const by = member.invitedBy ? ` by ${member.invitedBy.identifier}` : "";
-
-      return `Invited ${since(member.invitedAt)}${by}`;
+      return member.invitedBy
+        ? t("organization.status.invited_by", {
+            when: since(member.invitedAt),
+            by: member.invitedBy.identifier,
+          })
+        : t("organization.status.invited", { when: since(member.invitedAt) });
     }
 
-    return `${member.provisioned ? "From the directory, since" : "Since"} ${day(member.createdAt)}`;
+    return t(member.provisioned ? "organization.status.from_directory" : "organization.status.since", {
+      day: day(member.createdAt),
+    });
   }
 
   async function run(query, variables, notice) {
@@ -181,7 +194,7 @@
         addMember(organization: $organization, email: $email, role: $role) { delivered url }
       }`,
       { organization: organization.key, email, role: adding.role },
-      `${email} is invited as ${adding.role}. Nothing is granted until they accept.`,
+      t("organization.notices.invited", { email, role: adding.role }),
     );
 
     if (!answer) return;
@@ -197,14 +210,14 @@
         setMemberRole(organization: $organization, uuid: $uuid, role: $role) { membership { role } }
       }`,
       { organization: organization.key, uuid: member.actor.uuid, role: chosen },
-      `${named(member)} is ${chosen} now. Their tokens under the old role stop working.`,
+      t("organization.notices.role_set", { name: named(member), role: chosen }),
     );
   }
 
   function remove(member) {
     const question = member.pending
-      ? `Withdraw the invitation to ${named(member)}?`
-      : `Remove ${named(member)} from ${organization.name}? Their tokens for it stop working.`;
+      ? t("organization.questions.withdraw", { name: named(member) })
+      : t("organization.questions.remove", { name: named(member), organization: organization.name });
 
     if (!confirm(question)) return;
 
@@ -213,7 +226,9 @@
         removeMember(organization: $organization, uuid: $uuid) { organization { key } }
       }`,
       { organization: organization.key, uuid: member.actor.uuid },
-      member.pending ? `The invitation to ${named(member)} is withdrawn.` : `${named(member)} is out of ${organization.name}.`,
+      member.pending
+        ? t("organization.notices.withdrawn", { name: named(member) })
+        : t("organization.notices.removed", { name: named(member), organization: organization.name }),
     );
   }
 
@@ -223,7 +238,7 @@
         resendOrganizationInvitation(organization: $organization, uuid: $uuid) { delivered }
       }`,
       { organization: organization.key, uuid: member.actor.uuid },
-      `The invitation to ${named(member)} was sent again.`,
+      t("organization.notices.resent", { name: named(member) }),
     );
   }
 
@@ -244,13 +259,19 @@
 
     if (!chosen) return;
 
-    if (await saveRoles([...custom, chosen], `${organization.name} offers ${chosen} now.`)) role = "";
+    if (
+      await saveRoles(
+        [...custom, chosen],
+        t("organization.notices.role_added", { organization: organization.name, role: chosen }),
+      )
+    )
+      role = "";
   }
 
   function dropRole(held) {
     saveRoles(
       custom.filter((kept) => kept !== held),
-      `${organization.name} no longer offers ${held}.`,
+      t("organization.notices.role_dropped", { organization: organization.name, role: held }),
     );
   }
 
@@ -260,7 +281,7 @@
         updateOrganization(key: $key, name: $name) { organization { key } }
       }`,
       { key: organization.key, name: naming.trim() },
-      "Saved.",
+      t("organization.notices.saved"),
     );
   }
 
@@ -307,19 +328,24 @@
         roleMap: parsed(handing.roleMap),
         unmappedRole: handing.unmappedRole || null,
       },
-      "Saved. People who sign in through it join this organization.",
+      t("organization.notices.provider_saved"),
     ).then((answer) => {
       if (answer) handing = idle();
     });
   }
 
   function handBack(provider) {
-    if (!confirm(`Hand ${provider.name} back to the whole tenant? People who sign in through it stop joining ${organization.name}.`)) return;
+    if (
+      !confirm(
+        t("organization.questions.hand_back", { provider: provider.name, organization: organization.name }),
+      )
+    )
+      return;
 
     run(
       `mutation Back($key: ID!) { setProviderOrganization(key: $key, organization: null) { provider { key } } }`,
       { key: provider.key },
-      `${provider.name} serves the whole tenant again.`,
+      t("organization.notices.provider_back", { provider: provider.name }),
     );
   }
 
@@ -329,17 +355,17 @@
         updateOrganization(key: $key, signInPolicy: $policy) { organization { key } }
       }`,
       { key: organization.key, policy: key },
-      "Saved.",
+      t("organization.notices.saved"),
     );
   }
 
   async function archive() {
-    if (!confirm(`Archive ${organization.name}? This stops anyone signing in as a member${revoking}.`)) return;
+    if (!confirm(revoking("organization.questions.archive", "organization.questions.archive_tokens"))) return;
 
     await run(
       `mutation Archive($key: ID!) { archiveOrganization(key: $key) { organization { key } } }`,
       { key: organization.key },
-      `${organization.name} is archived.`,
+      t("organization.notices.archived", { organization: organization.name }),
     );
   }
 
@@ -347,19 +373,19 @@
     run(
       `mutation Restore($key: ID!) { restoreOrganization(key: $key) { organization { key } } }`,
       { key: organization.key },
-      `${organization.name} is back.`,
+      t("organization.notices.restored", { organization: organization.name }),
     );
   }
 </script>
 
 <Page
-  title={organization?.name ?? "Organization"}
+  title={organization?.name ?? t("organization.title")}
   id={organization?.key}
-  back={{ to: "/organizations", label: "Organizations" }}
+  back={{ to: "/organizations", label: t("organization.back") }}
   lede={organization
     ? organization.archivedAt
-      ? `Archived ${since(organization.archivedAt)}. Nobody signs in as a member of it.`
-      : `Apps name it with organization=${organization.key}, and tokens carry the member's role.`
+      ? t("organization.archived_lede", { when: since(organization.archivedAt) })
+      : t("organization.lede", { key: organization.key })
     : null}
 >
   <Notices feedback={feedback.state} />
@@ -367,18 +393,19 @@
   {#if loading && !organization}
     <Spinner />
   {:else if !organization}
-    <p class="hint">No organization is keyed {organizationKey}. <Link to="/organizations">All organizations</Link></p>
+    <p class="hint">{t("organization.missing", { key: organizationKey })}
+      <Link to="/organizations">{t("organization.all")}</Link></p>
   {:else}
     {#if organization.archivedAt}
       <div class="alert alert-warning alert-soft flex flex-wrap items-center justify-between gap-3" role="status">
-        <span>Archived {day(organization.archivedAt)}. Members keep their roles, and restoring lets them sign in again.</span>
-        <button type="button" class="btn btn-sm" disabled={busy} onclick={restore}>Restore</button>
+        <span>{t("organization.archived_alert", { day: day(organization.archivedAt) })}</span>
+        <button type="button" class="btn btn-sm" disabled={busy} onclick={restore}>{t("organization.restore")}</button>
       </div>
     {/if}
 
     {#if !organization.archivedAt && organization.ownerCount === 0}
       <div class="alert alert-warning alert-soft" role="status">
-        Nobody owns {organization.name}, so only managers can change its members. Make a member an owner.
+        {t("organization.ownerless", { organization: organization.name })}
       </div>
     {/if}
 
@@ -386,50 +413,50 @@
 
     {#if invited}
       <div class="alert alert-info alert-soft flex-col items-start gap-2" role="status">
-        <span class="font-medium">No mail adapter is set up, so send this invitation link yourself. It works once.</span>
+        <span class="font-medium">{t("organization.invitation_link")}</span>
         <code class="font-mono text-xs break-all">{invited}</code>
       </div>
     {/if}
 
     <Section
-      title="Members"
-      lede="Owners manage members from their own account page too. An invitation grants nothing until it is accepted."
+      title={t("organization.members.title")}
+      lede={t("organization.members.lede")}
     >
       {#snippet actions()}
-        <div class="range" role="group" aria-label="Who to show">
+        <div class="range" role="group" aria-label={t("organization.members.who")}>
           {#each LENSES as [key, label] (key)}
             <button type="button" aria-pressed={lens === key} onclick={() => (lens = key)}>{label}</button>
           {/each}
         </div>
         {#if !organization.archivedAt}
-          <button type="button" class="btn btn-primary btn-sm" onclick={openAdding}>Add member</button>
+          <button type="button" class="btn btn-primary btn-sm" onclick={openAdding}>{t("organization.members.add")}</button>
         {/if}
       {/snippet}
 
       {#if adding}
         <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_10rem_auto] sm:items-end">
-          <Field label="Email" type="email" bind:value={adding.email} placeholder="person@example.com" />
-          <Select label="Role" value={adding.role} options={roleOptions} onchange={(chosen) => (adding.role = chosen)} />
+          <Field label={t("organization.members.email")} type="email" bind:value={adding.email} placeholder="person@example.com" />
+          <Select label={t("organization.members.role")} value={adding.role} options={roleOptions} onchange={(chosen) => (adding.role = chosen)} />
           <div class="flex gap-2">
             <button type="button" class="btn btn-primary btn-sm" disabled={busy || !adding.email.trim()} onclick={add}>
-              Invite
+              {t("organization.members.invite")}
             </button>
-            <button type="button" class="btn btn-ghost btn-sm" onclick={() => (adding = null)}>Cancel</button>
+            <button type="button" class="btn btn-ghost btn-sm" onclick={() => (adding = null)}>{t("organization.members.cancel")}</button>
           </div>
         </div>
         <p class="hint">
-          They join once they accept, from the address you invite. Someone without an account gets an invitation to make one.
+          {t("organization.members.hint")}
         </p>
       {/if}
 
       <Table
-        columns={["Person", { label: "Role", hide: true }, { label: "", right: true, hide: true }]}
+        columns={[
+          t("organization.members.person"),
+          { label: t("organization.members.role"), hide: true },
+          { label: "", right: true, hide: true },
+        ]}
         count={shown.length}
-        empty={lens === "invited"
-          ? "No invitations are open."
-          : lens === "owners"
-            ? "Nobody owns this organization. Make a member an owner so someone can manage it."
-            : "Nobody belongs here yet. Add the first member as owner."}
+        empty={t(`organization.members.empty.${lens}`)}
       >
         {#snippet rows()}
           {#each shown as member (member.actor.uuid)}
@@ -440,9 +467,9 @@
                     <Link to={`/actors/${member.actor.uuid}`} class="link link-hover font-medium break-all">
                       {named(member)}
                     </Link>
-                    {#if member.expired}<span class="badge badge-sm badge-error badge-soft">expired</span>
-                    {:else if member.pending}<span class="badge badge-sm badge-warning badge-soft">invited</span>{/if}
-                    {#if lastOwner(member)}<span class="badge badge-sm badge-ghost">last owner</span>{/if}
+                    {#if member.expired}<span class="badge badge-sm badge-error badge-soft">{t("organization.members.expired")}</span>
+                    {:else if member.pending}<span class="badge badge-sm badge-warning badge-soft">{t("organization.members.invited")}</span>{/if}
+                    {#if lastOwner(member)}<span class="badge badge-sm badge-ghost">{t("organization.members.last_owner")}</span>{/if}
                   </span>
                   <span class="hint">{status(member)}</span>
                   <div class="mt-2 flex flex-wrap items-center gap-2 md:hidden">
@@ -466,52 +493,54 @@
     <div class="grid items-start gap-4 lg:grid-cols-2">
       <div class="flex flex-col gap-4">
         <Section
-          title="Signing in"
-          lede="A member signs in under this policy, ahead of the app's and the tenant's. It applies from the first step when the app names the organization."
+          title={t("organization.signing_in.title")}
+          lede={t("organization.signing_in.lede")}
         >
           <Select
-            label="Sign-in policy"
+            label={t("organization.signing_in.policy")}
             value={organization.signInPolicy?.key ?? ""}
-            options={[["", "The app's or the tenant's"], ...policies.map((policy) => [policy.key, policy.name])]}
+            options={[["", t("organization.signing_in.inherited")], ...policies.map((policy) => [policy.key, policy.name])]}
             disabled={busy}
             onchange={setPolicy}
           />
 
           <div class="flex flex-col gap-2">
-            <span class="legend">Providers</span>
+            <span class="legend">{t("organization.signing_in.providers")}</span>
 
             {#each organization.providers as provider (provider.key)}
               <div class="flex flex-wrap items-center justify-between gap-2 sheet p-3">
                 <div class="flex min-w-0 flex-col">
                   <span class="font-medium">{provider.name}</span>
                   <span class="hint">
-                    {Object.keys(provider.roleMap).length
-                      ? Object.entries(provider.roleMap)
-                          .map(([group, held]) => `${group} → ${held}`)
-                          .join(", ")
-                      : "No groups mapped"}. Anyone else joins as {provider.unmappedRole ?? "member"}.
+                    {t("organization.signing_in.joins_as", {
+                      mapping: Object.keys(provider.roleMap).length
+                        ? Object.entries(provider.roleMap)
+                            .map(([group, held]) => `${group} → ${held}`)
+                            .join(", ")
+                        : t("organization.signing_in.no_groups_mapped"),
+                      role: provider.unmappedRole ?? "member",
+                    })}
                   </span>
                 </div>
                 <div class="flex gap-2">
-                  <button type="button" class="btn btn-sm" disabled={busy} onclick={() => pickProvider(provider.key)}>Edit</button>
+                  <button type="button" class="btn btn-sm" disabled={busy} onclick={() => pickProvider(provider.key)}>{t("organization.signing_in.edit")}</button>
                   <button type="button" class="btn btn-ghost btn-sm" disabled={busy} onclick={() => handBack(provider)}>
-                    Hand back
+                    {t("organization.signing_in.hand_back")}
                   </button>
                 </div>
               </div>
             {:else}
               <p class="hint">
-                None. Give the organization its own provider, and everyone who signs in through it joins here in the role
-                their groups map to.
+                {t("organization.signing_in.no_providers")}
               </p>
             {/each}
 
             {#if handable.length && !handing.provider}
               <Select
                 value=""
-                name="Give a provider to this organization"
+                name={t("organization.signing_in.give_provider")}
                 options={[
-                  ["", "Give a provider to this organization"],
+                  ["", t("organization.signing_in.give_provider")],
                   ...handable.map((provider) => [provider.key, provider.name]),
                 ]}
                 onchange={pickProvider}
@@ -525,70 +554,71 @@
                 {providers.find((provider) => provider.key === handing.provider)?.name ?? handing.provider}
               </span>
               <div class="grid gap-3 sm:grid-cols-2">
-                <Field label="Groups claim" bind:value={handing.roleClaim} placeholder="groups" />
+                <Field label={t("organization.signing_in.groups_claim")} bind:value={handing.roleClaim} placeholder="groups" />
                 <Select
-                  label="Role for anyone else"
+                  label={t("organization.signing_in.unmapped_role")}
                   value={handing.unmappedRole}
                   options={[["", "member"], ...roleOptions.filter(([held]) => held !== "member")]}
                   onchange={(chosen) => (handing.unmappedRole = chosen)}
                 />
               </div>
               <label class="flex flex-col gap-1.5">
-                <span class="field-label">Groups to roles</span>
+                <span class="field-label">{t("organization.signing_in.role_map")}</span>
                 <textarea
                   class="textarea w-full font-mono"
                   rows="3"
                   bind:value={handing.roleMap}
                   placeholder="Acme Admins = owner"
                 ></textarea>
-                <p class="hint">One group per line. The first group a person holds decides their role, on every sign-in.</p>
+                <p class="hint">{t("organization.signing_in.role_map_hint")}</p>
               </label>
               <div class="flex gap-2">
-                <button type="button" class="btn btn-primary btn-sm" disabled={busy} onclick={handOver}>Save</button>
+                <button type="button" class="btn btn-primary btn-sm" disabled={busy} onclick={handOver}>{t("organization.signing_in.save")}</button>
                 <button
                   type="button"
                   class="btn btn-ghost btn-sm"
                   onclick={() => (handing = idle())}
                 >
-                  Cancel
+                  {t("organization.signing_in.cancel")}
                 </button>
               </div>
             </div>
           {/if}
 
           <div class="flex flex-col gap-2">
-            <span class="legend">Domains</span>
+            <span class="legend">{t("organization.signing_in.domains")}</span>
 
             {#each organization.domains as claim (claim.domain)}
               <div class="flex flex-wrap items-center justify-between gap-2">
                 <span class="font-mono text-sm break-all">{claim.domain}</span>
                 <span class="hint">
-                  {claim.verifiedAt ? `Proven ${day(claim.verifiedAt)}` : "Waiting for its DNS record"} · {claim.provider?.name}
+                  {claim.verifiedAt
+                    ? t("organization.signing_in.proven", { day: day(claim.verifiedAt) })
+                    : t("organization.signing_in.waiting")} · {claim.provider?.name}
                 </span>
               </div>
             {:else}
               <p class="hint">
-                None proven. Until one of its providers proves a domain, owners can invite only the addresses sign-up
-                admits, and a provisioning token cannot set email addresses.
-                <Link to="/domains" class="link">Domains</Link>
+                {t("organization.signing_in.no_domains")}
+                <Link to="/domains" class="link">{t("organization.signing_in.domains_link")}</Link>
               </p>
             {/each}
           </div>
 
           <div class="flex flex-col gap-2">
-            <span class="legend">Provisioning</span>
+            <span class="legend">{t("organization.signing_in.provisioning")}</span>
             <p class="hint">
               {organization.provisioningTokens.length
-                ? `${plural(organization.provisioningTokens.length, "live token reaches", "live tokens reach")} only this organization.`
-                : "No provisioning token reaches only this organization."}
-              <Link to="/provisioning" class="link">Provisioning</Link>
+                ? t("organization.signing_in.tokens_reach", { count: organization.provisioningTokens.length })
+                : t("organization.signing_in.no_tokens")}
+              <Link to="/provisioning" class="link">{t("organization.signing_in.provisioning_link")}</Link>
             </p>
           </div>
         </Section>
       </div>
 
       <div class="flex flex-col gap-4">
-        <Section title="Roles" lede="A role is a word the member's tokens carry. Every organization offers owner and member.">
+        <Section title={t("organization.roles.title")} lede={t("organization.roles.lede")}>
           <div class="flex flex-wrap gap-2">
             {#each organization.roles as held (held)}
               <span class="badge badge-lg gap-1.5 {BUILT_IN.includes(held) ? 'badge-ghost' : 'badge-outline'}">
@@ -598,8 +628,10 @@
                   <button
                     type="button"
                     class="-mr-1 cursor-pointer px-1 opacity-70 hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-30"
-                    aria-label={`Stop offering ${held}`}
-                    title={holding[held] ? `${holding[held]} held, so it stays` : `Stop offering ${held}`}
+                    aria-label={t("organization.roles.stop_offering", { role: held })}
+                    title={holding[held]
+                      ? t("organization.roles.held", { count: holding[held] })
+                      : t("organization.roles.stop_offering", { role: held })}
                     disabled={busy || holding[held] > 0}
                     onclick={() => dropRole(held)}
                   >
@@ -610,36 +642,36 @@
             {/each}
           </div>
           <Field
-            label="Offer another role"
+            label={t("organization.roles.offer")}
             bind:value={role}
             placeholder="support"
             autocapitalize="none"
             autocorrect="off"
             spellcheck="false"
             onsave={addRole}
-            save="Add"
+            save={t("organization.roles.add")}
           />
-          <p class="hint">Lowercase letters, digits, dashes, and underscores. A role someone holds stays until nobody does.</p>
+          <p class="hint">{t("organization.roles.hint")}</p>
         </Section>
 
-        <Section title="Details">
-          <Field label="Name" bind:value={naming} onsave={rename} />
+        <Section title={t("organization.details.title")}>
+          <Field label={t("organization.details.name")} bind:value={naming} onsave={rename} />
           <Facts rows={facts} />
         </Section>
       </div>
     </div>
 
-    <Section title="Activity" lede="Changes to the organization, and what happened while someone signed in as a member.">
-      <Events events={organization.events} empty="Nothing yet." />
+    <Section title={t("organization.activity.title")} lede={t("organization.activity.lede")}>
+      <Events events={organization.events} empty={t("organization.activity.empty")} />
     </Section>
 
     {#if !organization.archivedAt}
       <Section
-        title="Archive"
-        lede={`Archiving stops anyone signing in as a member of ${organization.name}${revoking}. Members keep their roles, so restoring it puts everything back.`}
+        title={t("organization.archive.title")}
+        lede={revoking("organization.archive.lede", "organization.archive.lede_tokens")}
       >
         <button type="button" class="btn btn-sm btn-error btn-outline self-start" disabled={busy} onclick={archive}>
-          Archive {organization.name}
+          {t("organization.archive.button", { organization: organization.name })}
         </button>
       </Section>
     {/if}
@@ -650,7 +682,7 @@
   <Select
     value={member.role}
     options={roleOptions}
-    name={`Role of ${named(member)}`}
+    name={t("organization.members.role_of", { name: named(member) })}
     disabled={busy || lastOwner(member) || Boolean(organization.archivedAt)}
     onchange={(chosen) => setRole(member, chosen)}
   />
@@ -664,16 +696,16 @@
       disabled={busy || Boolean(organization.archivedAt)}
       onclick={() => resend(member)}
     >
-      Send again
+      {t("organization.members.send_again")}
     </button>
   {/if}
   <button
     type="button"
     class="btn btn-ghost btn-sm btn-error"
     disabled={busy || lastOwner(member)}
-    title={lastOwner(member) ? "Make someone else an owner first." : null}
+    title={lastOwner(member) ? t("organization.members.owner_first") : null}
     onclick={() => remove(member)}
   >
-    {member.pending ? "Withdraw" : "Remove"}
+    {member.pending ? t("organization.members.withdraw") : t("organization.members.remove")}
   </button>
 {/snippet}

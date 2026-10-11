@@ -1,0 +1,18 @@
+en:
+  manage:
+    connections:
+      stop_confirm: "Stop %{client} using this %{provider} account? It has to ask again."
+      stopped: "%{client} can no longer use it."
+      disconnect_confirm: "Disconnect %{held}? It stops signing anybody in until it is linked again, and every application using it stops."
+      disconnected: "Disconnected."
+      empty: "Nothing connected."
+      badges:
+        signs_in: "signs in"
+        unconfirmed: "unconfirmed"
+        delegable: "tokens held"
+      disconnect: "Disconnect"
+      connected: "Connected %{when}"
+      signed_in: "Signed in %{when}"
+      can_use: "can use it"
+      can_use_last: "can use it · last used %{when}"
+      stop: "Stop"

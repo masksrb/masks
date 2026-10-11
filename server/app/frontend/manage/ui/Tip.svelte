@@ -1,5 +1,6 @@
 <script>
-  let { text, label = "More about this" } = $props();
+  import { t } from "../lib/copy.js";
+  let { text, label = t("ui.more_about") } = $props();
 
   const id = $props.id();
 </script>

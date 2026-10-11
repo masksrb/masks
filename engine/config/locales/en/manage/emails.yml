@@ -1,0 +1,31 @@
+en:
+  manage:
+    emails:
+      title: "Email"
+      list: "Emails"
+      app: "The app being signed in to"
+      no_app: "No app"
+      not_approved: "%{name} (not approved)"
+      headed: "Headed by %{heading}, from %{from} to %{to}"
+      no_sender: "no sender configured"
+      part: "Which part"
+      html: "HTML"
+      text: "Text"
+      signature: "The signature"
+      groups:
+        sign_in:
+          title: "While signing in"
+          help: "Sent during a sign-in. When an app sent the person there, an approved app heads the email with its logo and name. A sign-in straight to the account page has no app, and the tenant heads it."
+          about: "About emails sent while signing in"
+        manage:
+          title: "From a manager"
+          help: "Sent when a manager acts in /manage. The tenant heads these."
+          about: "About emails sent from a manager"
+        account:
+          title: "From the account page"
+          help: "Sent when a person changes their own account. The tenant heads these."
+          about: "About emails sent from the account page"
+        system:
+          title: "On its own"
+          help: "Sent by masks without anyone acting, such as security notices and idle warnings. The tenant heads these."
+          about: "About emails sent on its own"

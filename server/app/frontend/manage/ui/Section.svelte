@@ -1,4 +1,5 @@
 <script>
+  import { t } from "../lib/copy.js";
   import Tip from "./Tip.svelte";
 
   let { title = null, lede = null, help = null, row = false, actions, children } = $props();
@@ -11,7 +12,7 @@
         {#if title}
           <div class="flex items-center gap-2">
             <h2 class="subhead">{title}</h2>
-            {#if help}<Tip text={help} label="About {title.toLowerCase()}" />{/if}
+            {#if help}<Tip text={help} label={t("ui.about", { title: title.toLowerCase() })} />{/if}
           </div>
         {/if}
         {#if lede}<p class="deck-sm">{lede}</p>{/if}

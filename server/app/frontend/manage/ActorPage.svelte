@@ -1,4 +1,5 @@
 <script>
+  import { t } from "./lib/copy.js";
   import { createFeedback } from "./lib/feedback.svelte.js";
   import { day, since } from "./lib/format.js";
   import { useRouter } from "./lib/router.svelte.js";
@@ -20,22 +21,22 @@
   const router = useRouter();
 
   const FIELDS = [
-    ["nickname", "Nickname"],
-    ["name", "Name"],
-    ["email", "Email"],
+    ["nickname", t("actor.fields.nickname")],
+    ["name", t("actor.fields.name")],
+    ["email", t("actor.fields.email")],
   ];
 
   const MORE = [
-    ["givenName", "Given name"],
-    ["familyName", "Family name"],
-    ["middleName", "Middle name"],
-    ["profileUrl", "Profile URL"],
-    ["pictureUrl", "Picture URL"],
-    ["websiteUrl", "Website"],
-    ["gender", "Gender"],
-    ["birthdate", "Birthdate"],
-    ["zoneinfo", "Time zone"],
-    ["locale", "Locale"],
+    ["givenName", t("actor.fields.given_name")],
+    ["familyName", t("actor.fields.family_name")],
+    ["middleName", t("actor.fields.middle_name")],
+    ["profileUrl", t("actor.fields.profile_url")],
+    ["pictureUrl", t("actor.fields.picture_url")],
+    ["websiteUrl", t("actor.fields.website_url")],
+    ["gender", t("actor.fields.gender")],
+    ["birthdate", t("actor.fields.birthdate")],
+    ["zoneinfo", t("actor.fields.zoneinfo")],
+    ["locale", t("actor.fields.locale")],
   ];
 
   const PROFILE = [...FIELDS, ...MORE];
@@ -134,7 +135,9 @@
         ? `mutation Leave($key: String!, $uuid: ID!) { removeGroupMember(key: $key, uuid: $uuid) { group { key } } }`
         : `mutation Join($key: String!, $uuid: ID!) { addGroupMember(key: $key, uuid: $uuid) { group { key } } }`,
       { key: group.key, uuid },
-      belongs(group) ? `Out of ${group.name}.` : `In ${group.name}.`,
+      belongs(group)
+        ? t("actor.left_group", { group: group.name })
+        : t("actor.joined_group", { group: group.name }),
     );
 
   const saveProfile = () =>
@@ -148,7 +151,7 @@
           Object.entries(draft).map(([key, value]) => [key, value === "" ? null : value]),
         ),
       },
-      "Profile saved.",
+      t("actor.profile_saved"),
     );
 
   const saveScopes = (scopes) =>
@@ -157,7 +160,7 @@
         setActorScopes(uuid: $uuid, scopes: $scopes) { actor { scopes } }
       }`,
       { uuid, scopes },
-      "Scopes updated.",
+      t("actor.scopes_updated"),
     );
 
   async function generate() {
@@ -166,7 +169,7 @@
     const data = await act(
       `mutation Codes($uuid: ID!) { generateBackupCodes(uuid: $uuid) { codes } }`,
       { uuid },
-      "Backup codes generated. They are shown once and never again.",
+      t("actor.codes_generated"),
     );
 
     if (data) codes = data.generateBackupCodes.codes;
@@ -184,9 +187,9 @@
     const result = Object.values(data)[0];
 
     if (result.delivered) {
-      feedback.say("Emailed. The link is not shown here, so that using it proves the address.");
+      feedback.say(t("actor.emailed"));
     } else {
-      feedback.say("No mailer is configured, so pass this link along yourself. It works once.");
+      feedback.say(t("actor.no_mailer"));
       link = result.url;
     }
   }
@@ -194,28 +197,28 @@
   const reset = () =>
     recover(
       `mutation Reset($uuid: ID!) { resetPassword(uuid: $uuid) { delivered url } }`,
-      "Start a password reset? Every session and refresh token ends when the link is used.",
+      t("actor.reset_question"),
     );
 
   const resend = () =>
     recover(
       `mutation Resend($uuid: ID!) { resendInvitation(uuid: $uuid) { delivered url } }`,
-      "Send a fresh invitation? The previous one stops working.",
+      t("actor.resend_question"),
     );
 
   const confirmEmail = () =>
     recover(
       `mutation Verify($uuid: ID!) { verifyEmail(uuid: $uuid) { delivered url } }`,
-      "Send a confirmation link for this address? Any earlier one stops working.",
+      t("actor.confirm_question"),
     );
 
   function revokePasskey(passkey) {
-    if (!confirm(`Remove the passkey “${passkey.label}”?`)) return;
+    if (!confirm(t("actor.remove_passkey_question", { label: passkey.label }))) return;
 
     act(
       `mutation Revoke($uuid: ID!, $id: ID!) { revokePasskey(uuid: $uuid, id: $id) { actor { uuid } } }`,
       { uuid, id: passkey.id },
-      "Passkey removed.",
+      t("actor.passkey_removed"),
     );
   }
 
@@ -232,7 +235,7 @@
         uploadAvatar(uuid: $uuid, photo: $photo) { actor { uuid } }
       }`,
       { uuid, photo: file },
-      "Photo updated.",
+      t("actor.photo_updated"),
     );
 
     uploading = false;
@@ -240,53 +243,49 @@
   }
 
   function removePhoto() {
-    if (!confirm("Remove this actor's photo?")) return;
+    if (!confirm(t("actor.remove_photo_question"))) return;
 
     act(
       `mutation Remove($uuid: ID!) { removeAvatar(uuid: $uuid) { actor { uuid } } }`,
       { uuid },
-      "Photo removed.",
+      t("actor.photo_removed"),
     );
   }
 
   function disable() {
-    if (!confirm("Remove this actor's authenticator app and every backup code?")) return;
+    if (!confirm(t("actor.disable_question"))) return;
 
     act(
       `mutation Disable($uuid: ID!) { disableAuthenticator(uuid: $uuid) { actor { otpEnabled } } }`,
       { uuid },
-      "Authenticator removed.",
+      t("actor.authenticator_removed"),
     );
   }
 
   const CODE_FACTORS = [
-    ["email", "emailCodesEnabled", "Email codes"],
-    ["sms", "textCodesEnabled", "Text message codes"],
+    ["email", "emailCodesEnabled", t("actor.factors.email.name"), t("actor.factors.email.lower")],
+    ["sms", "textCodesEnabled", t("actor.factors.sms.name"), t("actor.factors.sms.lower")],
   ];
 
-  function turnOff(factor, name) {
-    if (!confirm(`Turn off ${name.toLowerCase()} for this actor?`)) return;
+  function turnOff(factor, name, lower) {
+    if (!confirm(t("actor.turn_off_question", { name: lower }))) return;
 
     act(
       `mutation TurnOff($uuid: ID!, $factor: String!) {
         disableCodeFactor(uuid: $uuid, factor: $factor) { actor { uuid } }
       }`,
       { uuid, factor },
-      `${name} turned off.`,
+      t("actor.turned_off", { name }),
     );
   }
 
   function suspend() {
-    const question =
-      `Suspend ${actor.identifier}? They are signed out everywhere, every token they hold stops working, ` +
-      "and they cannot sign in until they are restored.";
-
-    if (!confirm(question)) return;
+    if (!confirm(t("actor.suspend_question", { identifier: actor.identifier }))) return;
 
     act(
       `mutation Suspend($uuid: ID!) { suspendActor(uuid: $uuid) { actor { suspendedAt } } }`,
       { uuid },
-      "Suspended.",
+      t("actor.suspended"),
     );
   }
 
@@ -294,16 +293,12 @@
     act(
       `mutation Restore($uuid: ID!) { restoreActor(uuid: $uuid) { actor { suspendedAt } } }`,
       { uuid },
-      "Restored. They can sign in again.",
+      t("actor.restored"),
     );
   }
 
   async function remove() {
-    const question =
-      `Delete ${actor.identifier}? Their sessions, tokens, passkeys, consents and avatar go with them. ` +
-      "There is no undo, and nothing is kept.";
-
-    if (!confirm(question)) return;
+    if (!confirm(t("actor.delete_question", { identifier: actor.identifier }))) return;
 
     const data = await feedback.attempt(() =>
       api.query(`mutation Delete($uuid: ID!) { deleteActor(uuid: $uuid) { identifier } }`, { uuid }),
@@ -317,29 +312,29 @@
   <Spinner />
 {:else if !actor}
   <div class="alert alert-error alert-soft text-sm" role="alert">
-    {feedback.state.failure ?? "There is no such actor."}
+    {feedback.state.failure ?? t("actor.missing")}
   </div>
 {:else}
   <Page
     title={actor.identifier}
     id={actor.uuid}
-    back={{ to: "/actors", label: "Actors" }}
+    back={{ to: "/actors", label: t("actor.back") }}
     lede={actor.activated
-      ? `Signed in ${since(actor.lastLoginAt, "never")}.`
-      : "Invited, and has not accepted yet."}
+      ? t("actor.signed_in_lede", { when: since(actor.lastLoginAt, t("actor.never")) })
+      : t("actor.invited_lede")}
   >
     <Notices feedback={feedback.state} />
 
     {#if link}
       <div class="alert alert-info alert-soft flex-col items-start gap-2" role="status">
-        <span class="font-medium">This link works once.</span>
+        <span class="font-medium">{t("actor.link_once")}</span>
         <code class="font-mono text-xs break-all">{link}</code>
       </div>
     {/if}
 
     {#if codes}
       <div class="alert alert-warning alert-soft flex-col items-start gap-2" role="status">
-        <span class="font-medium">Write these down. They are not recoverable.</span>
+        <span class="font-medium">{t("actor.write_down")}</span>
         <div class="grid grid-cols-2 gap-2 font-mono text-sm md:grid-cols-5">
           {#each codes as code (code)}<span>{code}</span>{/each}
         </div>
@@ -348,7 +343,7 @@
 
     <div class="grid items-start gap-4 md:grid-cols-2">
       <div class="flex flex-col gap-4">
-        <Section title="Profile">
+        <Section title={t("actor.profile")}>
           <div class="grid gap-3 sm:grid-cols-3">
             {#each FIELDS as [key, label] (key)}
               <Field {label} bind:value={draft[key]} />
@@ -356,7 +351,7 @@
           </div>
 
           <details class="more" open={MORE.some(([key]) => draft[key])}>
-            <summary>More fields</summary>
+            <summary>{t("actor.more_fields")}</summary>
             <div class="grid gap-3 pt-3 sm:grid-cols-2">
               {#each MORE as [key, label] (key)}
                 <Field {label} bind:value={draft[key]} />
@@ -365,34 +360,34 @@
           </details>
 
           <button type="button" class="btn btn-primary btn-sm self-start" onclick={saveProfile}>
-            Save profile
+            {t("actor.save_profile")}
           </button>
         </Section>
 
         <Section
-          title="Signed in"
-          lede={yourself ? "Signing out everywhere signs you out here too." : null}
+          title={t("actor.signed_in")}
+          lede={yourself ? t("actor.signed_in_yourself") : null}
         >
           <Presence {api} {feedback} {actor} onchange={load} />
         </Section>
 
-        <Section title="Consents">
+        <Section title={t("actor.consents")}>
           <Consents {api} {feedback} rows={actor.consents} onchange={load} />
         </Section>
 
-        <Section title="Connected accounts">
+        <Section title={t("actor.connections")}>
           <Connections {api} {feedback} rows={actor.connections} onchange={load} />
         </Section>
 
         <Section
-          title="Tokens"
+          title={t("actor.tokens")}
         >
           <Tokens {api} {feedback} rows={actor.tokens} onchange={load} />
         </Section>
       </div>
 
       <div class="flex flex-col gap-4">
-        <Section title="Photo">
+        <Section title={t("actor.photo")}>
           <div class="flex flex-wrap gap-5">
             {#each ["photo", "identicon", "initials"] as style (style)}
               <div class="flex flex-col items-start gap-2">
@@ -408,14 +403,14 @@
                 {:else}
                   <div class="size-16 rounded border border-dashed border-base-300"></div>
                 {/if}
-                <span class="hint">{style}</span>
+                <span class="hint">{t(`actor.styles.${style}`)}</span>
               </div>
             {/each}
           </div>
 
           <div class="flex flex-wrap items-center gap-2">
             <label class="btn btn-sm" class:btn-disabled={uploading}>
-              Upload photo
+              {t("actor.upload_photo")}
               <input
                 type="file"
                 class="sr-only"
@@ -427,64 +422,66 @@
 
             {#if actor.photoUploaded}
               <button type="button" class="btn btn-ghost btn-sm" onclick={removePhoto}>
-                Remove photo
+                {t("actor.remove_photo")}
               </button>
             {/if}
           </div>
 
           {#if uploading}
-            <span class="hint">Uploading...</span>
+            <span class="hint">{t("actor.uploading")}</span>
           {/if}
         </Section>
 
-        <Section title="Scopes">
+        <Section title={t("actor.scopes")}>
           <ScopesEditor value={actor.scopes} available={supported} onchange={saveScopes} />
         </Section>
 
-        <Section title="Access">
+        <Section title={t("actor.access")}>
           {#if actor.suspendedAt}
             <div class="alert alert-warning alert-soft flex-wrap items-center gap-3 text-sm" role="status">
-              <span>Suspended {day(actor.suspendedAt)}. They cannot sign in.</span>
-              <button type="button" class="btn btn-sm" onclick={restore}>Restore</button>
+              <span>{t("actor.suspended_on", { day: day(actor.suspendedAt) })}</span>
+              <button type="button" class="btn btn-sm" onclick={restore}>{t("actor.restore")}</button>
             </div>
           {/if}
 
           {#if actor.externalId}
             <p class="hint">
-              Provisioned as <span class="font-mono">{actor.externalId}</span>. The identity provider may change or
-              suspend this actor too.
+              {t("actor.provisioned_as")} <span class="font-mono">{actor.externalId}</span>.
+              {t("actor.provider_may_change")}
             </p>
           {/if}
           {#each actor.memberships.filter((membership) => membership.externalId) as membership (membership.organization.key)}
             <p class="hint">
-              {membership.organization.name}'s directory provisioned them as
-              <span class="font-mono">{membership.externalId}</span>, and may change them too.
+              {t("actor.directory_provisioned", { organization: membership.organization.name })}
+              <span class="font-mono">{membership.externalId}</span>, {t("actor.directory_may_change")}
             </p>
           {/each}
           {#if actor.activated}
             <button type="button" class="btn btn-sm self-start" onclick={reset}>
-              Reset password
+              {t("actor.reset_password")}
             </button>
           {:else}
             <p class="text-sm opacity-85">
-              Invited{actor.invitedAt ? ` ${day(actor.invitedAt)}` : ""}, not accepted.
+              {actor.invitedAt
+                ? t("actor.invited_on", { day: day(actor.invitedAt) })
+                : t("actor.invited")}
             </p>
             <button type="button" class="btn btn-sm self-start" onclick={resend}>
-              Resend invitation
+              {t("actor.resend")}
             </button>
           {/if}
 
           {#if actor.email && !actor.emailVerified}
-            <p class="text-sm opacity-85">{actor.email} is unconfirmed.</p>
+            <p class="text-sm opacity-85">{t("actor.unconfirmed", { email: actor.email })}</p>
             <button type="button" class="btn btn-sm self-start" onclick={confirmEmail}>
-              Send a confirmation link
+              {t("actor.send_confirmation")}
             </button>
           {/if}
         </Section>
 
-        <Section title="Passkeys">
+        <Section title={t("actor.passkeys")}>
           {#if actor.passkeys.length === 0}
-            <p class="text-sm opacity-85">None enrolled.</p>
+            <p class="text-sm opacity-85">{t("actor.no_passkeys")}</p>
           {:else}
             <ul class="flex flex-col gap-2">
               {#each actor.passkeys as passkey (passkey.id)}
@@ -493,7 +490,7 @@
                     <span class="text-sm font-medium">{passkey.label}</span>
                     <span class="flex items-baseline gap-2">
                       {#if passkey.userVerified}
-                        <span class="badge badge-success badge-xs">verifying</span>
+                        <span class="badge badge-success badge-xs">{t("actor.verifying")}</span>
                       {/if}
                       {#if passkey.certification}
                         <span class="badge badge-ghost badge-xs">{passkey.certification}</span>
@@ -503,22 +500,22 @@
                         class="link text-xs text-error"
                         onclick={() => revokePasskey(passkey)}
                       >
-                        Remove
+                        {t("actor.remove")}
                       </button>
                     </span>
                   </div>
 
                   {#if passkey.compromise}
                     <span class="text-xs text-error">
-                      Compromise reported for this model: {passkey.compromise
-                        .toLowerCase()
-                        .replaceAll("_", " ")}.
+                      {t("actor.compromise", {
+                        compromise: passkey.compromise.toLowerCase().replaceAll("_", " "),
+                      })}
                     </span>
                   {/if}
 
                   <div class="flex flex-wrap gap-x-4 text-xs opacity-80">
-                    <span class="font-mono">{passkey.aaguid ?? "no aaguid"}</span>
-                    <span>Last used {since(passkey.lastUsedAt, "never")}</span>
+                    <span class="font-mono">{passkey.aaguid ?? t("actor.no_aaguid")}</span>
+                    <span>{t("actor.last_used", { when: since(passkey.lastUsedAt, t("actor.never")) })}</span>
                   </div>
                 </li>
               {/each}
@@ -528,8 +525,8 @@
 
         {#if actor.pendingApproval}
           <Section
-            title="Awaiting approval"
-            lede="They cannot sign in until a manager approves them."
+            title={t("actor.approval.title")}
+            lede={t("actor.approval.lede")}
           >
             <div class="flex flex-wrap gap-2">
               <button
@@ -539,10 +536,10 @@
                   act(
                     `mutation Approve($uuid: ID!) { approveActor(uuid: $uuid) { actor { uuid } } }`,
                     { uuid },
-                    "Approved. They can sign in now, and they have been told.",
+                    t("actor.approval.approved"),
                   )}
               >
-                Approve
+                {t("actor.approval.approve")}
               </button>
             </div>
           </Section>
@@ -550,12 +547,11 @@
 
         {#if actor.recoveryRequestedAt}
           <Section
-            title="Asking for help"
-            lede={`They got past their first factor ${since(actor.recoveryRequestedAt)} and cannot finish with a second one. Make sure it is really them, by a call or in person, before you reset.`}
+            title={t("actor.recovery.title")}
+            lede={t("actor.recovery.lede", { when: since(actor.recoveryRequestedAt) })}
           >
             <p class="text-sm opacity-85">
-              Resetting removes their authenticator app, backup codes, passkeys, and sign-in codes, and signs
-              them out everywhere. Their next sign-in asks them to set up a new second factor.
+              {t("actor.recovery.explain")}
             </p>
 
             <div class="flex flex-wrap gap-2">
@@ -563,14 +559,14 @@
                 type="button"
                 class="btn btn-primary btn-sm"
                 onclick={() =>
-                  confirm(`Reset every second factor ${actor.identifier} has?`) &&
+                  confirm(t("actor.recovery.question", { identifier: actor.identifier })) &&
                   act(
                     `mutation Reset($uuid: ID!) { resetSecondFactors(uuid: $uuid) { actor { uuid } } }`,
                     { uuid },
-                    "Second factors reset. They have been told, and can set up a new one at their next sign-in.",
+                    t("actor.recovery.done"),
                   )}
               >
-                Reset second factors
+                {t("actor.recovery.reset")}
               </button>
               <button
                 type="button"
@@ -579,16 +575,16 @@
                   act(
                     `mutation Dismiss($uuid: ID!) { dismissRecovery(uuid: $uuid) { actor { uuid } } }`,
                     { uuid },
-                    "Dismissed.",
+                    t("actor.recovery.dismissed"),
                   )}
               >
-                Dismiss
+                {t("actor.recovery.dismiss")}
               </button>
             </div>
           </Section>
         {/if}
 
-        <Section title="Groups">
+        <Section title={t("actor.groups")}>
           {#if groups.length}
             <div class="flex flex-col gap-1">
               {#each groups as group (group.key)}
@@ -599,62 +595,61 @@
               {/each}
             </div>
           {:else}
-            <p class="text-sm opacity-85">No groups yet. <Link to="/groups">Add one</Link>.</p>
+            <p class="text-sm opacity-85">{t("actor.no_groups")} <Link to="/groups">{t("actor.add_group")}</Link>.</p>
           {/if}
 
           {#if actor.groupLabels.length}
-            <p class="hint">Apps that ask for groups see {actor.groupLabels.join(", ")}.</p>
+            <p class="hint">{t("actor.group_labels", { labels: actor.groupLabels.join(", ") })}</p>
           {/if}
         </Section>
 
-        <Section title="Second factor">
+        <Section title={t("actor.second_factor")}>
           {#if actor.otpEnabled}
             <p class="text-sm">
-              Authenticator enabled. {actor.backupCodesRemaining} backup
-              code{actor.backupCodesRemaining === 1 ? "" : "s"} remaining.
+              {t("actor.authenticator_enabled", { count: actor.backupCodesRemaining })}
             </p>
 
             <div class="flex flex-wrap gap-2">
               <button type="button" class="btn btn-sm" onclick={generate}>
-                Generate backup codes
+                {t("actor.generate")}
               </button>
               <button type="button" class="btn btn-sm btn-error btn-outline" onclick={disable}>
-                Remove authenticator app
+                {t("actor.remove_authenticator")}
               </button>
             </div>
           {:else if !actor.emailCodesEnabled && !actor.textCodesEnabled}
-            <p class="text-sm opacity-85">Password only — nothing enrolled.</p>
+            <p class="text-sm opacity-85">{t("actor.password_only")}</p>
           {/if}
 
-          {#each CODE_FACTORS.filter(([, field]) => actor[field]) as [factor, , name] (factor)}
+          {#each CODE_FACTORS.filter(([, field]) => actor[field]) as [factor, , name, lower] (factor)}
             <div class="flex flex-wrap items-center gap-2">
-              <span class="text-sm">{name} on.</span>
+              <span class="text-sm">{t("actor.factor_on", { name })}</span>
               <button
                 type="button"
                 class="btn btn-sm btn-error btn-outline"
-                onclick={() => turnOff(factor, name)}
+                onclick={() => turnOff(factor, name, lower)}
               >
-                Turn off {name.toLowerCase()}
+                {t("actor.turn_off", { name: lower })}
               </button>
             </div>
           {/each}
         </Section>
 
-        <Section title="Activity">
+        <Section title={t("actor.activity")}>
           {#snippet actions()}
-            <Link to={`/activity?actor=${actor.uuid}`} class="btn btn-ghost btn-sm">All activity</Link>
+            <Link to={`/activity?actor=${actor.uuid}`} class="btn btn-ghost btn-sm">{t("actor.all_activity")}</Link>
           {/snippet}
 
-          <Events events={actor.events} showActor={false} empty="Nothing yet." />
+          <Events events={actor.events} showActor={false} empty={t("actor.no_activity")} />
         </Section>
 
-        <Section title="Suspend or delete">
+        <Section title={t("actor.danger")}>
           {#if yourself}
-            <p class="text-sm opacity-85">This is you — another manager has to do it.</p>
+            <p class="text-sm opacity-85">{t("actor.yourself")}</p>
           {:else}
             {#if !actor.suspendedAt}
               <button type="button" class="btn btn-sm btn-warning btn-outline self-start" onclick={suspend}>
-                Suspend {actor.identifier}
+                {t("actor.suspend", { identifier: actor.identifier })}
               </button>
             {/if}
             <button
@@ -662,7 +657,7 @@
               class="btn btn-sm btn-error btn-outline self-start"
               onclick={remove}
             >
-              Delete {actor.identifier}
+              {t("actor.delete", { identifier: actor.identifier })}
             </button>
           {/if}
         </Section>

@@ -1,0 +1,59 @@
+en:
+  manage:
+    devices:
+      title: "Devices"
+      lenses:
+        allowed: "Allowed"
+        blocked: "Blocked"
+        unattached: "Never signed in"
+      columns:
+        device: "Device"
+        who: "Who signs in on it"
+        ip_address: "IP address"
+        last_seen: "Last seen"
+      count:
+        one: "%{count} device"
+        other: "%{count} devices"
+      blocked_count:
+        one: "Blocked %{count} device."
+        other: "Blocked %{count} devices."
+      unblocked_count:
+        one: "Unblocked %{count} device."
+        other: "Unblocked %{count} devices."
+      spared: "%{done} The device you are using was left alone."
+      refused: "%{done} \"%{agent}\" is refused from now on."
+      block_chosen_question:
+        one: "Block %{count} device? Each is signed out and refused before any password is checked."
+        other: "Block %{count} devices? Each is signed out and refused before any password is checked."
+      unblock_chosen_question:
+        one: "Unblock %{count} device?"
+        other: "Unblock %{count} devices?"
+      block_matching_question: "Block every device whose user agent contains \"%{agent}\", including any not listed here?"
+      block_matching_refuse: "%{question} New devices sending it are refused too."
+      empty:
+        blocked: "Nothing is blocked."
+        unattached: "Every device here has signed somebody in."
+        allowed: "No device has reached this server yet."
+      filter_label: "Filter by user agent"
+      which: "Which devices"
+      showing: "Showing devices whose user agent contains"
+      showing_blocked: "Showing blocked devices whose user agent contains"
+      clear: "Clear"
+      refuse_agent: "Also refuse this user agent from now on"
+      block_matching: "Block every matching device"
+      chosen: "%{count} chosen"
+      choose_all:
+        one: "Choose all %{count} device shown"
+        other: "Choose all %{count} devices shown"
+      block_count:
+        one: "Block %{count} device"
+        other: "Block %{count} devices"
+      unblock_count:
+        one: "Unblock %{count} device"
+        other: "Unblock %{count} devices"
+      newest: "Only the newest %{count} are shown."
+      choose: "Choose %{label}"
+      blocked: "blocked"
+      unrecognised: "unrecognised"
+      signed_in: "signed in"
+      nobody_yet: "nobody yet"

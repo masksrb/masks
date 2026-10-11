@@ -8,32 +8,29 @@
   import Notices from "./ui/Notices.svelte";
   import Page from "./ui/Page.svelte";
   import Spinner from "./ui/Spinner.svelte";
+  import { t } from "./lib/copy.js";
 
   let { api } = $props();
 
-  const PROTOCOLS = { oidc: "OpenID Connect", oauth2: "OAuth 2.0", saml: "SAML 2.0", mcp: "MCP server" };
+  const PROTOCOLS = Object.fromEntries(
+    ["oidc", "oauth2", "saml", "mcp"].map((protocol) => [protocol, t(`providers.protocols.${protocol}`)]),
+  );
 
-  const MAPPED = [
-    ["email", "Email"],
-    ["email_verified", "Email confirmed"],
-    ["name", "Name"],
-    ["given_name", "Given name"],
-    ["family_name", "Family name"],
-    ["preferred_username", "Username"],
-    ["picture", "Picture"],
-  ];
+  const MAPPED = ["email", "email_verified", "name", "given_name", "family_name", "preferred_username", "picture"].map(
+    (claim) => [claim, t(`providers.claims.${claim}`)],
+  );
 
   const NAME_ID_FORMATS = [
-    ["", "Whatever the identity provider sends"],
-    ["urn:oasis:names:tc:SAML:2.0:nameid-format:persistent", "Persistent"],
-    ["urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress", "Email address"],
-    ["urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified", "Unspecified"],
+    ["", t("providers.name_id_formats.any")],
+    ["urn:oasis:names:tc:SAML:2.0:nameid-format:persistent", t("providers.name_id_formats.persistent")],
+    ["urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress", t("providers.name_id_formats.email")],
+    ["urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified", t("providers.name_id_formats.unspecified")],
   ];
 
   const ASKED = {
-    domain: ["Domain", "acme.okta.com"],
-    tenant: ["Directory (tenant) ID", "00000000-0000-0000-0000-000000000000"],
-    realm: ["Realm", "staff"],
+    domain: [t("providers.asked.domain"), "acme.okta.com"],
+    tenant: [t("providers.asked.tenant"), "00000000-0000-0000-0000-000000000000"],
+    realm: [t("providers.asked.realm"), "staff"],
   };
 
   const FIELDS = `
@@ -367,7 +364,7 @@
 
     const data = await feedback.attempt(
       () => api.query(DISCOVER, { issuer: draft.issuer.trim() }),
-      "Endpoints filled in from the discovery document.",
+      t("providers.notices.discovered"),
     );
 
     busy = false;
@@ -392,7 +389,7 @@
           metadataUrl: trimmed(draft.metadataUrl),
           metadataXml: trimmed(draft.metadataXml),
         }),
-      "Read the identity provider's entity, sign-in URL and certificates.",
+      t("providers.notices.metadata_read"),
     );
 
     busy = false;
@@ -411,9 +408,9 @@
       () => api.query(adding ? CREATE : UPDATE, variables()),
       adding
         ? mcp
-          ? `${draft.name} is registered, and applications can be let use it.`
-          : `${draft.name} can sign actors in now.`
-        : `${draft.name} saved.`,
+          ? t("providers.notices.registered", { name: draft.name })
+          : t("providers.notices.added", { name: draft.name })
+        : t("providers.notices.saved", { name: draft.name }),
     );
 
     busy = false;
@@ -443,18 +440,18 @@
     act(
       "archiveProvider",
       provider,
-      `${provider.name} is archived.`,
-      `Archive ${provider.name}? Nobody can sign in with it until it is restored.`,
+      t("providers.notices.archived", { name: provider.name }),
+      t("providers.confirm.archive", { name: provider.name }),
     );
 
-  const restore = (provider) => act("restoreProvider", provider, `${provider.name} is back.`);
+  const restore = (provider) => act("restoreProvider", provider, t("providers.notices.restored", { name: provider.name }));
 
   const register = (provider) =>
     act(
       "registerProvider",
       provider,
-      `masks registered itself with ${provider.name} again.`,
-      `Register with ${provider.name} again? Everybody connected to it has to connect again.`,
+      t("providers.notices.reregistered", { name: provider.name }),
+      t("providers.confirm.register", { name: provider.name }),
     );
 
   function copy(value) {
@@ -476,17 +473,17 @@
   });
 </script>
 
-<Page title="Providers">
+<Page title={t("providers.title")}>
   {#snippet actions()}
-    <button type="button" class="btn btn-primary btn-sm" onclick={add}>Add provider</button>
+    <button type="button" class="btn btn-primary btn-sm" onclick={add}>{t("providers.add")}</button>
   {/snippet}
 
   <Notices feedback={feedback.state} />
 
   {#if picking}
-    <Section title="Add provider" help="Pick who actors will sign in with. Anything not listed speaks one of the three at the end.">
+    <Section title={t("providers.add")} help={t("providers.picker.help")}>
       {#snippet actions()}
-        <button type="button" class="btn btn-ghost btn-sm" onclick={close}>Cancel</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick={close}>{t("providers.cancel")}</button>
       {/snippet}
 
       <div class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -506,20 +503,22 @@
 
   {#if draft}
     <Section
-      title={fresh ? `Add ${chosen?.custom ? PROTOCOLS[draft.protocol] : chosen?.name}` : `Edit ${draft.name}`}
+      title={fresh
+        ? t("providers.form.add_title", { name: chosen?.custom ? PROTOCOLS[draft.protocol] : chosen?.name })
+        : t("providers.form.edit_title", { name: draft.name })}
       lede={chosen?.guide ? null : PROTOCOLS[draft.protocol]}
     >
       {#if chosen?.guide && fresh}
         <p class="text-sm opacity-85">
-          Register masks with {chosen.name} first:
-          <a class="link" href={chosen.guide} target="_blank" rel="noreferrer noopener">{chosen.name}'s console</a>.
+          {t("providers.form.guide_lead", { name: chosen.name })}
+          <a class="link" href={chosen.guide} target="_blank" rel="noreferrer noopener">{t("providers.form.guide_link", { name: chosen.name })}</a>.
         </p>
       {/if}
 
       <div class="flex flex-col gap-2 tray p-3">
-        <span class="legend">Give {draft.name.trim() || "the provider"} these</span>
+        <span class="legend">{t("providers.form.give", { name: draft.name.trim() || t("providers.form.the_provider") })}</span>
 
-        {#each saml ? [["Assertion consumer service URL", callbackUrl], ["Service provider entity ID", spEntityId]] : [["Redirect URI", callbackUrl]] as [label, value] (label)}
+        {#each saml ? [[t("providers.form.acs_url"), callbackUrl], [t("providers.form.sp_entity_id"), spEntityId]] : [[t("providers.form.redirect_uri"), callbackUrl]] as [label, value] (label)}
           <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
             <span class="hint">{label}</span>
             <button type="button" class="link font-mono text-xs break-all" onclick={() => copy(value)}>
@@ -530,9 +529,9 @@
       </div>
 
       <div class="grid gap-3 sm:grid-cols-2">
-        <Field label="Name" bind:value={draft.name} placeholder="Acme" />
+        <Field label={t("providers.form.name")} bind:value={draft.name} placeholder="Acme" />
         <Field
-          label="Key"
+          label={t("providers.form.key")}
           bind:value={draft.key}
           disabled={!fresh}
           autocapitalize="none"
@@ -559,12 +558,12 @@
 
       {#if saml}
         <div class="flex flex-col gap-3">
-          <span class="legend">Identity provider</span>
+          <span class="legend">{t("providers.form.identity_provider")}</span>
 
           <div class="flex flex-wrap items-end gap-3">
             <div class="min-w-64 flex-1">
               <Field
-                label="Metadata URL"
+                label={t("providers.form.metadata_url")}
                 bind:value={draft.metadataUrl}
                 placeholder="https://idp.acme.test/metadata"
                 autocapitalize="none"
@@ -578,32 +577,31 @@
               disabled={busy || !(draft.metadataUrl.trim() || draft.metadataXml.trim())}
               onclick={readMetadata}
             >
-              Read
+              {t("providers.form.read")}
             </button>
           </div>
 
           <label class="flex flex-col gap-1.5">
-            <span class="field-label">Or paste the metadata</span>
+            <span class="field-label">{t("providers.form.paste_metadata")}</span>
             <textarea class="textarea textarea-sm w-full font-mono text-xs" rows="3" bind:value={draft.metadataXml}></textarea>
           </label>
 
           <p class="hint">
-            A metadata URL is read again every night, so a certificate the identity provider rotates is
-            picked up without anybody noticing.
+            {t("providers.form.metadata_hint")}
           </p>
 
           <div class="grid gap-3 sm:grid-cols-2">
-            <Field label="Entity ID" bind:value={draft.idpEntityId} />
-            <Field label="Sign-in URL" bind:value={draft.idpSsoUrl} />
+            <Field label={t("providers.form.entity_id")} bind:value={draft.idpEntityId} />
+            <Field label={t("providers.form.sign_in_url")} bind:value={draft.idpSsoUrl} />
           </div>
 
           <label class="flex flex-col gap-1.5">
-            <span class="field-label">Signing certificates</span>
+            <span class="field-label">{t("providers.form.certificates")}</span>
             <textarea class="textarea textarea-sm w-full font-mono text-xs" rows="4" bind:value={draft.idpCertificates}></textarea>
           </label>
 
           <label class="flex flex-col gap-1.5">
-            <span class="field-label">Name ID format</span>
+            <span class="field-label">{t("providers.form.name_id_format")}</span>
             <select class="select select-sm w-full" bind:value={draft.nameIdFormat}>
               {#each NAME_ID_FORMATS as [value, label] (value)}
                 <option {value}>{label}</option>
@@ -617,7 +615,7 @@
         <div class="flex flex-col gap-2">
           {#if fresh && custom}
             <Field
-              label="MCP server URL"
+              label={t("providers.form.mcp_url")}
               bind:value={draft.resourceUrl}
               autocapitalize="none"
               autocorrect="off"
@@ -628,9 +626,7 @@
             <span class="font-mono text-xs break-all opacity-85">{draft.resourceUrl}</span>
           {/if}
           <p class="hint">
-            masks finds the server's own authorization server from its protected resource metadata and
-            registers itself there, so there is no client ID to copy. An MCP server never signs anybody in;
-            it is only something applications can be let use.
+            {t("providers.form.mcp_hint")}
           </p>
         </div>
       {/if}
@@ -639,7 +635,7 @@
         <div class="flex flex-wrap items-end gap-3">
           <div class="min-w-64 flex-1">
             <Field
-              label="Issuer"
+              label={t("providers.form.issuer")}
               bind:value={draft.issuer}
               autocapitalize="none"
               autocorrect="off"
@@ -648,54 +644,66 @@
             />
           </div>
           <button type="button" class="btn btn-sm" disabled={busy || !draft.issuer.trim()} onclick={discover}>
-            Discover
+            {t("providers.form.discover")}
           </button>
         </div>
       {/if}
 
       {#if custom && !saml && !mcp}
         <div class="grid gap-3 sm:grid-cols-2">
-          <Field label="Authorization URL" bind:value={draft.authorizationUrl} />
-          <Field label="Token URL" bind:value={draft.tokenUrl} />
-          <Field label="Userinfo URL" bind:value={draft.userinfoUrl} placeholder={oauth2 ? "" : "optional"} />
+          <Field label={t("providers.form.authorization_url")} bind:value={draft.authorizationUrl} />
+          <Field label={t("providers.form.token_url")} bind:value={draft.tokenUrl} />
+          <Field
+            label={t("providers.form.userinfo_url")}
+            bind:value={draft.userinfoUrl}
+            placeholder={oauth2 ? "" : t("providers.form.optional")}
+          />
           {#if oauth2}
-            <Field label="Verified emails URL" bind:value={draft.emailsUrl} placeholder="optional" />
+            <Field label={t("providers.form.emails_url")} bind:value={draft.emailsUrl} placeholder={t("providers.form.optional")} />
           {:else}
-            <Field label="JWKS URI" bind:value={draft.jwksUri} placeholder="discovered if left empty" />
+            <Field
+              label={t("providers.form.jwks_uri")}
+              bind:value={draft.jwksUri}
+              placeholder={t("providers.form.discovered_if_empty")}
+            />
           {/if}
         </div>
       {/if}
 
       {#if !saml && !mcp}
         <div class="flex flex-col gap-3">
-          <span class="legend">Credentials</span>
+          <span class="legend">{t("providers.form.credentials")}</span>
 
           <div class="grid gap-3 sm:grid-cols-2">
-            <Field label={signsSecret ? "Services ID" : "Client ID"} bind:value={draft.clientId} autocomplete="off" />
+            <Field
+              label={signsSecret ? t("providers.form.services_id") : t("providers.form.client_id")}
+              bind:value={draft.clientId}
+              autocomplete="off"
+            />
             {#if needsSecret}
               <Field
-                label="Client secret"
+                label={t("providers.form.client_secret")}
                 type="password"
                 bind:value={draft.clientSecret}
                 autocomplete="off"
-                placeholder={fresh ? "" : "unchanged"}
+                placeholder={fresh ? "" : t("providers.form.unchanged")}
               />
             {/if}
           </div>
 
           {#if signsSecret}
             <div class="grid gap-3 sm:grid-cols-2">
-              <Field label="Team ID" bind:value={draft.teamId} autocomplete="off" />
-              <Field label="Key ID" bind:value={draft.keyId} autocomplete="off" />
+              <Field label={t("providers.form.team_id")} bind:value={draft.teamId} autocomplete="off" />
+              <Field label={t("providers.form.key_id")} bind:value={draft.keyId} autocomplete="off" />
             </div>
 
             <label class="flex flex-col gap-1.5">
-              <span class="field-label">Private key (.p8)</span>
+              <span class="field-label">{t("providers.form.private_key")}</span>
               <textarea
                 class="textarea textarea-sm w-full font-mono text-xs"
                 rows="4"
                 bind:value={draft.privateKey}
-                placeholder={fresh ? "-----BEGIN PRIVATE KEY-----" : "unchanged"}
+                placeholder={fresh ? "-----BEGIN PRIVATE KEY-----" : t("providers.form.unchanged")}
               ></textarea>
             </label>
           {/if}
@@ -703,20 +711,20 @@
           {#if custom}
             <div class="grid gap-3 sm:grid-cols-2">
               <label class="flex flex-col gap-1.5">
-                <span class="field-label">Sends the secret</span>
+                <span class="field-label">{t("providers.form.sends_secret")}</span>
                 <select class="select select-sm w-full" bind:value={draft.tokenAuthMethod}>
-                  <option value="client_secret_post">in the request body</option>
-                  <option value="client_secret_basic">as basic auth</option>
-                  <option value="signed_secret">as a token it signs (Apple)</option>
+                  <option value="client_secret_post">{t("providers.form.secret_post")}</option>
+                  <option value="client_secret_basic">{t("providers.form.secret_basic")}</option>
+                  <option value="signed_secret">{t("providers.form.secret_signed")}</option>
                 </select>
               </label>
               <Field
-                label="Extra scopes"
+                label={t("providers.form.extra_scopes")}
                 bind:value={draft.scopes}
                 autocapitalize="none"
                 autocorrect="off"
                 spellcheck="false"
-                placeholder={oidc ? "openid email profile are always asked" : "read:user"}
+                placeholder={oidc ? t("providers.form.oidc_scopes") : "read:user"}
               />
             </div>
           {/if}
@@ -725,11 +733,15 @@
 
       {#if custom && !mcp}
         <details class="text-sm" open={oauth2 || saml}>
-          <summary class="cursor-pointer opacity-85">Where each claim comes from</summary>
+          <summary class="cursor-pointer opacity-85">{t("providers.form.claims")}</summary>
 
           <div class="grid gap-3 pt-3 sm:grid-cols-2">
             <Field
-              label={saml ? "Subject (name_id, or an attribute)" : oidc ? "Subject (sub or oid)" : "Subject path"}
+              label={saml
+                ? t("providers.form.subject_saml")
+                : oidc
+                  ? t("providers.form.subject_oidc")
+                  : t("providers.form.subject_path")}
               bind:value={draft.subjectClaim}
               autocapitalize="none"
               autocorrect="off"
@@ -739,7 +751,7 @@
               <Field
                 {label}
                 bind:value={draft.claims[claim]}
-                placeholder={saml ? "attribute name" : claim}
+                placeholder={saml ? t("providers.form.attribute_name") : claim}
                 autocapitalize="none"
                 autocorrect="off"
                 spellcheck="false"
@@ -751,17 +763,15 @@
 
       {#if !saml}
         <div class="flex flex-col gap-3 tray p-3">
-          <span class="legend">Applications</span>
+          <span class="legend">{t("providers.form.applications")}</span>
 
           {#if !mcp}
             <label class="flex items-start gap-3 text-sm">
               <input type="checkbox" class="toggle toggle-sm" bind:checked={draft.delegates} />
               <span>
-                Let applications use somebody's {draft.name.trim() || "provider"} account
+                {t("providers.form.delegates", { name: draft.name.trim() || t("providers.form.provider") })}
                 <span class="hint block">
-                  An approved application can ask an actor to let it act as them at
-                  {draft.name.trim() || "the provider"} while they are away. masks keeps the tokens, refreshes
-                  them, and hands each one only to the application that actor said yes to.
+                  {t("providers.form.delegates_hint", { name: draft.name.trim() || t("providers.form.the_provider") })}
                 </span>
               </span>
             </label>
@@ -770,15 +780,15 @@
           {#if draft.delegates || mcp}
             <div class="grid gap-3 sm:grid-cols-2">
               <Field
-                label="What applications may do"
+                label={t("providers.form.delegated_scopes")}
                 bind:value={draft.delegatedScopes}
                 autocapitalize="none"
                 autocorrect="off"
                 spellcheck="false"
-                placeholder={mcp ? "whatever the server grants" : "https://www.googleapis.com/auth/drive.readonly"}
+                placeholder={mcp ? t("providers.form.server_grants") : "https://www.googleapis.com/auth/drive.readonly"}
               />
               <Field
-                label="Extra parameters when connecting"
+                label={t("providers.form.delegation_params")}
                 bind:value={draft.delegationParams}
                 autocapitalize="none"
                 autocorrect="off"
@@ -787,8 +797,9 @@
               />
             </div>
             <p class="hint">
-              An application asks for <span class="font-mono">masks:delegate:{draft.key.trim() || "key"}</span>.
-              Changing what applications may do asks everybody to connect again.
+              {t("providers.form.delegation_asks")}
+              <span class="font-mono">masks:delegate:{draft.key.trim() || "key"}</span>.
+              {t("providers.form.delegation_reconnect")}
             </p>
           {/if}
         </div>
@@ -796,7 +807,7 @@
 
       {#if !mcp}
       <div class="flex flex-col gap-3 tray p-3">
-        <span class="legend">Signing in</span>
+        <span class="legend">{t("providers.form.signing_in")}</span>
 
         <label class="flex items-start gap-3 text-sm">
           <input
@@ -806,12 +817,9 @@
             onchange={(event) => (draft.role = event.currentTarget.checked ? "delegate" : "credential")}
           />
           <span>
-            {draft.name.trim() || "This provider"} owns the account
+            {t("providers.form.owns", { name: draft.name.trim() || t("providers.form.this_provider") })}
             <span class="hint block">
-              On, somebody new gets an account here, and their name, photo and address follow
-              {draft.name.trim() || "the provider"} each time they sign in. Off, it is only another way into
-              an account that already exists. Either way it stands in for a password, never for a second
-              factor.
+              {t("providers.form.owns_hint", { name: draft.name.trim() || t("providers.form.the_provider") })}
             </span>
           </span>
         </label>
@@ -820,10 +828,9 @@
           <label class="flex items-start gap-3 text-sm">
             <input type="checkbox" class="toggle toggle-sm" bind:checked={draft.trustsEmail} />
             <span>
-              Trust the addresses it confirms
+              {t("providers.form.trusts_email")}
               <span class="hint block">
-                Only for a provider that really checks an actor holds the mailbox, as Google, Apple and
-                GitHub do. Off, only addresses in the domains below are taken at its word.
+                {t("providers.form.trusts_email_hint")}
               </span>
             </span>
           </label>
@@ -833,10 +840,10 @@
           <label class="flex items-start gap-3 text-sm">
             <input type="checkbox" class="toggle toggle-sm" bind:checked={draft.receivesSignals} />
             <span>
-              Accept its security events
+              {t("providers.form.signals")}
               <span class="hint block">
-                It sends shared signals to <code>{origin}/ssf/events</code>. A session revoked, a credential
-                changed, or an account disabled there signs the account out everywhere here.
+                {t("providers.form.signals_lead")} <code>{origin}/ssf/events</code>.
+                {t("providers.form.signals_rest")}
               </span>
             </span>
           </label>
@@ -844,16 +851,16 @@
 
         <div class="grid gap-3 sm:grid-cols-2">
           <Field
-            label={saml ? "Email domains it answers for" : "Email domains"}
+            label={saml ? t("providers.form.saml_domains") : t("providers.form.domains")}
             bind:value={draft.emailDomains}
             autocapitalize="none"
             autocorrect="off"
             spellcheck="false"
-            placeholder="any domain"
+            placeholder={t("providers.form.any_domain")}
           />
           {#if draft.role === "delegate"}
             <Field
-              label="Scopes a new account holds"
+              label={t("providers.form.signup_scopes")}
               bind:value={draft.signupScopes}
               autocapitalize="none"
               autocorrect="off"
@@ -867,9 +874,9 @@
 
       <div class="flex gap-2">
         <button type="button" class="btn btn-primary btn-sm" disabled={busy || !complete} onclick={save}>
-          {busy ? "Saving..." : fresh ? "Add" : "Save"}
+          {busy ? t("providers.form.saving") : fresh ? t("providers.form.add") : t("providers.form.save")}
         </button>
-        <button type="button" class="btn btn-ghost btn-sm" onclick={close}>Cancel</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick={close}>{t("providers.cancel")}</button>
       </div>
     </Section>
   {/if}
@@ -878,39 +885,38 @@
     <Spinner />
   {:else if active.length === 0 && archived.length === 0 && !picking && !draft}
     <Empty>
-      No provider is set up. Add one and actors can sign in with Google, GitHub, their company's
-      identity provider, or anything that speaks OpenID Connect, OAuth 2.0 or SAML.
+      {t("providers.empty")}
     </Empty>
   {:else}
     {#each active as provider (provider.key)}
       <Section title={provider.name} lede={provider.key}>
         {#snippet actions()}
-          <button type="button" class="btn btn-sm" onclick={() => edit(provider)}>Edit</button>
+          <button type="button" class="btn btn-sm" onclick={() => edit(provider)}>{t("providers.edit")}</button>
           {#if provider.protocol === "mcp"}
-            <button type="button" class="btn btn-sm" onclick={() => register(provider)}>Register again</button>
+            <button type="button" class="btn btn-sm" onclick={() => register(provider)}>{t("providers.register")}</button>
           {/if}
           <button type="button" class="btn btn-sm btn-error btn-outline" onclick={() => archive(provider)}>
-            Archive
+            {t("providers.archive")}
           </button>
         {/snippet}
 
         <div class="flex flex-wrap gap-2">
           <span class="badge badge-ghost badge-sm">{PROTOCOLS[provider.protocol]}</span>
           {#if provider.protocol === "mcp"}
-            <span class="badge badge-ghost badge-sm">never signs in</span>
+            <span class="badge badge-ghost badge-sm">{t("providers.badges.never_signs_in")}</span>
           {:else if provider.role === "delegate"}
-            <span class="badge badge-warning badge-sm">owns accounts</span>
+            <span class="badge badge-warning badge-sm">{t("providers.badges.owns_accounts")}</span>
           {:else}
-            <span class="badge badge-ghost badge-sm">existing accounts only</span>
+            <span class="badge badge-ghost badge-sm">{t("providers.badges.existing_only")}</span>
           {/if}
           {#if provider.trustsEmail}
-            <span class="badge badge-ghost badge-sm">trusts confirmed addresses</span>
+            <span class="badge badge-ghost badge-sm">{t("providers.badges.trusts_email")}</span>
           {/if}
           {#if provider.receivesSignals}
-            <span class="badge badge-ghost badge-sm">accepts security events</span>
+            <span class="badge badge-ghost badge-sm">{t("providers.badges.signals")}</span>
           {/if}
           {#if provider.delegates}
-            <span class="badge badge-info badge-sm">applications can use it</span>
+            <span class="badge badge-info badge-sm">{t("providers.badges.delegates")}</span>
           {/if}
           {#each provider.emailDomains as domain (domain)}
             <span class="badge badge-ghost badge-sm font-mono">@{domain}</span>
@@ -919,7 +925,9 @@
 
         <dl class="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
           <div class="sm:col-span-2">
-            <dt class="term">{provider.protocol === "saml" ? "Assertion consumer service URL" : "Redirect URI"}</dt>
+            <dt class="term">
+              {provider.protocol === "saml" ? t("providers.facts.acs_url") : t("providers.facts.redirect_uri")}
+            </dt>
             <dd>
               <button type="button" class="link font-mono text-xs break-all" onclick={() => copy(provider.callbackUrl)}>
                 {provider.callbackUrl}
@@ -929,7 +937,7 @@
 
           {#if provider.protocol === "saml"}
             <div class="sm:col-span-2">
-              <dt class="term">Service provider entity ID</dt>
+              <dt class="term">{t("providers.facts.sp_entity_id")}</dt>
               <dd>
                 <a class="link font-mono text-xs break-all" href={provider.spEntityId} target="_blank" rel="noreferrer">
                   {provider.spEntityId}
@@ -937,80 +945,84 @@
               </dd>
             </div>
             <div>
-              <dt class="term">Identity provider</dt>
+              <dt class="term">{t("providers.facts.identity_provider")}</dt>
               <dd class="font-mono text-xs break-all">{provider.idpEntityId}</dd>
             </div>
             <div>
-              <dt class="term">Metadata</dt>
+              <dt class="term">{t("providers.facts.metadata")}</dt>
               <dd class="text-xs">
                 {#if provider.metadataUrl}
-                  read {provider.metadataFetchedAt ? day(provider.metadataFetchedAt) : "never"}
+                  {t("providers.facts.metadata_read", {
+                    day: provider.metadataFetchedAt ? day(provider.metadataFetchedAt) : t("providers.facts.never"),
+                  })}
                 {:else}
-                  pasted, not refreshed
+                  {t("providers.facts.pasted")}
                 {/if}
               </dd>
             </div>
           {:else if provider.protocol !== "mcp"}
             <div>
-              <dt class="term">Client ID</dt>
+              <dt class="term">{t("providers.facts.client_id")}</dt>
               <dd class="font-mono break-all">{provider.clientId}</dd>
             </div>
             <div>
-              <dt class="term">{provider.tokenAuthMethod === "signed_secret" ? "Signing key" : "Secret"}</dt>
+              <dt class="term">
+                {provider.tokenAuthMethod === "signed_secret" ? t("providers.facts.signing_key") : t("providers.facts.secret")}
+              </dt>
               <dd>
                 {#if provider.tokenAuthMethod === "signed_secret" ? provider.privateKeyHeld : provider.secretHeld}
-                  held
+                  {t("providers.facts.held")}
                 {:else}
-                  <span class="text-warning">none set</span>
+                  <span class="text-warning">{t("providers.facts.none_set")}</span>
                 {/if}
               </dd>
             </div>
             {#if provider.issuer}
               <div>
-                <dt class="term">Issuer</dt>
+                <dt class="term">{t("providers.facts.issuer")}</dt>
                 <dd class="font-mono text-xs break-all">{provider.issuer}</dd>
               </div>
             {/if}
             <div>
-              <dt class="term">Scopes asked upstream</dt>
+              <dt class="term">{t("providers.facts.scopes")}</dt>
               <dd class="font-mono text-xs break-all">{provider.scopes.join(" ") || "—"}</dd>
             </div>
           {/if}
 
           {#if provider.protocol === "mcp"}
             <div class="sm:col-span-2">
-              <dt class="term">MCP server</dt>
+              <dt class="term">{t("providers.facts.mcp_server")}</dt>
               <dd class="font-mono text-xs break-all">{provider.resourceUrl}</dd>
             </div>
             <div>
-              <dt class="term">Registered</dt>
-              <dd class="text-xs">{provider.registeredAt ? day(provider.registeredAt) : "never"}</dd>
+              <dt class="term">{t("providers.facts.registered")}</dt>
+              <dd class="text-xs">{provider.registeredAt ? day(provider.registeredAt) : t("providers.facts.never")}</dd>
             </div>
           {/if}
 
           {#if provider.delegates}
             <div>
-              <dt class="term">Applications ask for</dt>
+              <dt class="term">{t("providers.facts.delegation_scope")}</dt>
               <dd class="font-mono text-xs break-all">{provider.delegationScope}</dd>
             </div>
             <div>
-              <dt class="term">Applications using it</dt>
+              <dt class="term">{t("providers.facts.delegations")}</dt>
               <dd>{provider.delegations}</dd>
             </div>
             {#if provider.delegatedScopes.length}
               <div class="sm:col-span-2">
-                <dt class="term">What applications may do</dt>
+                <dt class="term">{t("providers.facts.delegated_scopes")}</dt>
                 <dd class="font-mono text-xs break-all">{provider.delegatedScopes.join(" ")}</dd>
               </div>
             {/if}
           {/if}
 
           <div>
-            <dt class="term">Connected accounts</dt>
+            <dt class="term">{t("providers.facts.connections")}</dt>
             <dd>
               {provider.connections}
               {#if provider.signedIn}
-                <span class="hint">· {provider.signedIn} sign in with it</span>
+                <span class="hint">· {t("providers.facts.signed_in", { count: provider.signedIn })}</span>
               {/if}
             </dd>
           </div>
@@ -1018,7 +1030,9 @@
 
         {#if connectionsFor(provider).length}
           <details class="text-sm">
-            <summary class="cursor-pointer opacity-85">Who is connected ({connectionsFor(provider).length})</summary>
+            <summary class="cursor-pointer opacity-85">
+              {t("providers.connected", { count: connectionsFor(provider).length })}
+            </summary>
 
             <div class="pt-3">
               <Connections {api} {feedback} rows={connectionsFor(provider)} onchange={load} showActor />
@@ -1029,7 +1043,7 @@
     {/each}
 
     {#if archived.length}
-      <Section title="Archived">
+      <Section title={t("providers.archived")}>
         <ul class="slats">
           {#each archived as provider (provider.key)}
             <li class="slat">
@@ -1040,8 +1054,8 @@
                 </span>
 
                 <span class="flex items-baseline gap-3 text-xs">
-                  <span class="opacity-80">archived {day(provider.archivedAt)}</span>
-                  <button type="button" class="link" onclick={() => restore(provider)}>Restore</button>
+                  <span class="opacity-80">{t("providers.archived_on", { day: day(provider.archivedAt) })}</span>
+                  <button type="button" class="link" onclick={() => restore(provider)}>{t("providers.restore")}</button>
                 </span>
               </div>
             </li>

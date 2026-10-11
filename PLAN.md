@@ -6,4 +6,4 @@ says what a person can do once it lands.
 
 ## Later
 
-- Translations, starting with the manage console, which hard-codes English.
+- A first language beyond English, now that every page reads its wording from locale files.

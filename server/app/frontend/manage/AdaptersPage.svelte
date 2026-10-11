@@ -1,5 +1,6 @@
 <script>
   import { createFeedback } from "./lib/feedback.svelte.js";
+  import { t } from "./lib/copy.js";
   import { day } from "./lib/format.js";
   import Section from "./ui/Section.svelte";
   import Field from "./ui/Field.svelte";
@@ -27,16 +28,16 @@
   const KINDS = [
     {
       kind: "mail",
-      title: "Mail",
-      lede: "Invitations, resets, confirmations and codes. The primary one sends everything.",
-      idle: "Nothing is emailed from this tenant's own adapters. Mail falls back to whatever the deployment configured, if anything.",
+      title: t("adapters.kinds.mail.title"),
+      lede: t("adapters.kinds.mail.lede"),
+      idle: t("adapters.kinds.mail.idle"),
       to: "you@example.com",
     },
     {
       kind: "sms",
-      title: "Text messages",
-      lede: "Phone confirmations and sign-in codes. The primary one sends everything.",
-      idle: "No texts can be sent until an adapter is added.",
+      title: t("adapters.kinds.sms.title"),
+      lede: t("adapters.kinds.sms.lede"),
+      idle: t("adapters.kinds.sms.idle"),
       to: "+15551234567",
     },
   ];
@@ -169,7 +170,7 @@
               }`,
               { key: draft.key, name: draft.name.trim(), config: config(), primary: draft.primary },
             ),
-      fresh ? `${draft.name} added.` : `${draft.name} saved.`,
+      fresh ? t("adapters.added", { name: draft.name }) : t("adapters.saved", { name: draft.name }),
     );
 
     busy = false;
@@ -201,7 +202,7 @@
           `mutation Primary($key: ID!) { updateAdapter(key: $key, primary: true) { adapter { key } } }`,
           { key: adapter.key },
         ),
-      `${adapter.name} sends everything now.`,
+      t("adapters.primary_notice", { name: adapter.name }),
     );
 
     if (done) await load();
@@ -226,7 +227,7 @@
     if (!answer) return;
 
     if (answer.testAdapter.delivered) {
-      feedback.say(`${adapter.name} handed a test message to ${to}.`);
+      feedback.say(t("adapters.tested", { name: adapter.name, to }));
     } else {
       feedback.blame(answer.testAdapter.failure);
     }
@@ -251,19 +252,17 @@
   });
 </script>
 
-<Page
-  title="Adapters"
->
+<Page title={t("adapters.title")}>
   <Notices feedback={feedback.state} />
 
   {#if loading && !data}
     <Spinner />
   {:else if data}
     {#if draft}
-      <Section title={editing === "" ? "Add adapter" : `Edit ${draft.name}`}>
+      <Section title={editing === "" ? t("adapters.form.add") : t("adapters.form.edit", { name: draft.name })}>
         {#if editing === ""}
           <label class="flex flex-col gap-1.5">
-            <span class="field-label">Service</span>
+            <span class="field-label">{t("adapters.form.service")}</span>
             <select
               class="select select-sm w-full"
               value={draft.service}
@@ -278,14 +277,14 @@
 
         <div class="grid gap-3 sm:grid-cols-2">
           <Field
-            label="Key"
+            label={t("adapters.form.key")}
             bind:value={draft.key}
             disabled={editing !== ""}
             autocapitalize="none"
             autocorrect="off"
             spellcheck="false"
           />
-          <Field label="Name" bind:value={draft.name} />
+          <Field label={t("adapters.form.name")} bind:value={draft.name} />
         </div>
 
         <div class="grid gap-3 sm:grid-cols-2">
@@ -307,13 +306,13 @@
             {:else}
               <div class="flex flex-col gap-1">
                 <Field
-                  label={field.required ? field.label : `${field.label} (optional)`}
+                  label={field.required ? field.label : t("adapters.form.optional", { label: field.label })}
                   type={field.secret ? "password" : field.type === "integer" ? "number" : "text"}
                   bind:value={draft.config[field.key]}
                   autocomplete="off"
                   autocapitalize="none"
                   spellcheck="false"
-                  placeholder={field.secret && draft.secretsHeld?.includes(field.key) ? "unchanged" : ""}
+                  placeholder={field.secret && draft.secretsHeld?.includes(field.key) ? t("adapters.form.unchanged") : ""}
                 />
                 {#if field.hint}<p class="hint">{field.hint}</p>{/if}
               </div>
@@ -321,13 +320,13 @@
           {/each}
         </div>
 
-        <Switch label="Primary — send everything of this kind through it" bind:checked={draft.primary} />
+        <Switch label={t("adapters.form.primary")} bind:checked={draft.primary} />
 
         <div class="flex gap-2">
           <button type="button" class="btn btn-primary btn-sm" disabled={busy || !complete} onclick={save}>
-            {editing === "" ? "Add" : "Save"}
+            {editing === "" ? t("adapters.form.create") : t("adapters.form.save")}
           </button>
-          <button type="button" class="btn btn-ghost btn-sm" onclick={close}>Cancel</button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick={close}>{t("adapters.form.cancel")}</button>
         </div>
       </Section>
     {/if}
@@ -337,7 +336,7 @@
 
       <Section title={group.title} lede={held.length ? group.lede : group.idle}>
         {#snippet actions()}
-          <button type="button" class="btn btn-sm" onclick={() => add(group.kind)}>Add</button>
+          <button type="button" class="btn btn-sm" onclick={() => add(group.kind)}>{t("adapters.list.add")}</button>
         {/snippet}
 
         {#each held as adapter (adapter.key)}
@@ -346,20 +345,20 @@
               <div class="flex min-w-0 flex-col">
                 <span class="font-medium">
                   {adapter.name}
-                  {#if adapter.primary}<span class="badge badge-success badge-sm">Primary</span>{/if}
+                  {#if adapter.primary}<span class="badge badge-success badge-sm">{t("adapters.list.primary")}</span>{/if}
                 </span>
                 <span class="hint">
-                  {adapter.label} · <span class="font-mono">{adapter.key}</span> · added {day(adapter.createdAt)}
+                  {adapter.label} · <span class="font-mono">{adapter.key}</span> · {t("adapters.list.added", { day: day(adapter.createdAt) })}
                 </span>
               </div>
 
               <div class="flex flex-wrap gap-2">
                 {#if !adapter.primary}
                   <button type="button" class="btn btn-ghost btn-sm" onclick={() => makePrimary(adapter)}>
-                    Make primary
+                    {t("adapters.list.make_primary")}
                   </button>
                 {/if}
-                <button type="button" class="btn btn-sm" onclick={() => edit(adapter)}>Edit</button>
+                <button type="button" class="btn btn-sm" onclick={() => edit(adapter)}>{t("adapters.list.edit")}</button>
                 <button
                   type="button"
                   class="btn btn-ghost btn-sm"
@@ -367,20 +366,20 @@
                     act(
                       "archiveAdapter",
                       adapter,
-                      `${adapter.name} is archived.`,
-                      `Archive ${adapter.name}? Nothing is sent through it until it is restored.`,
+                      t("adapters.archived_notice", { name: adapter.name }),
+                      t("adapters.archive_confirm", { name: adapter.name }),
                     )}
                 >
-                  Archive
+                  {t("adapters.list.archive")}
                 </button>
               </div>
             </div>
 
             <Field
-              label="Send a test to"
+              label={t("adapters.list.test_to")}
               bind:value={testing[adapter.key]}
               placeholder={group.to}
-              save="Send a test"
+              save={t("adapters.list.test")}
               onsave={() => test(adapter)}
             />
           </div>
@@ -389,7 +388,7 @@
     {/each}
 
     {#if data.archived.length}
-      <Section title="Archived">
+      <Section title={t("adapters.archived.title")}>
         {#each data.archived as adapter (adapter.key)}
           <div class="flex flex-wrap items-center justify-between gap-2">
             <span class="text-sm">
@@ -398,9 +397,9 @@
             <button
               type="button"
               class="btn btn-ghost btn-sm"
-              onclick={() => act("restoreAdapter", adapter, `${adapter.name} is back.`)}
+              onclick={() => act("restoreAdapter", adapter, t("adapters.restored", { name: adapter.name }))}
             >
-              Restore
+              {t("adapters.archived.restore")}
             </button>
           </div>
         {/each}

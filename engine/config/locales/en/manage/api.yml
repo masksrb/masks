@@ -1,0 +1,5 @@
+en:
+  manage:
+    api:
+      unregistered: "this browser has no client registered"
+      refused: "refused"

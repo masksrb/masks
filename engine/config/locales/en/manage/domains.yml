@@ -1,0 +1,38 @@
+en:
+  manage:
+    domains:
+      title: "Domains"
+      nowhere: "Nowhere yet"
+      claimed: "Publish the TXT record below, then check %{domain}."
+      proven: "%{domain} is proven."
+      unanswered: "No matching TXT record at %{name} yet. DNS can take a while to spread."
+      routed_away: "People at %{domain} go to their provider now."
+      routed_here: "People at %{domain} sign in here now."
+      served: "Sign-in is served from %{host} too."
+      unserved: "Sign-in is no longer served from a custom domain."
+      stop_confirm: "Stop serving %{host}? Apps that use it as their issuer stop working."
+      release_confirm: "Release %{domain}? People with an address there sign in the usual way again."
+      released: "%{domain} is released."
+      serve:
+        title: "Serve sign-in from your domain"
+        lede: "A host within a proven domain, such as login.example.com, serves sign-in beside the usual address. Each address is its own issuer, and a passkey works only on the address it was made on."
+        prove_first: "Prove a domain below first."
+        host: "Host"
+        serve: "Serve"
+        stop: "Stop"
+        hint: "Point the host's DNS at this server, and give it a certificate. The addresses this tenant answers on: %{origins}."
+      claim:
+        title: "Claim a domain"
+        lede: "Someone who types an address at a proven domain goes straight to its provider, without a password. Prove the domain with a DNS record first."
+        domain: "Domain"
+        send_to: "Send people to"
+        claim: "Claim"
+      held:
+        proven: "Proven %{day}"
+        unproven: "Not proven"
+        record: "TXT record"
+        missing: "The record stopped answering %{since}. The claim is released a week after that."
+        check: "Check now"
+        release: "Release"
+        checked: "Checked %{since}. masks checks every hour."
+        never: "never"

@@ -1,4 +1,5 @@
 <script>
+  import { t } from "./lib/copy.js";
   import { createPages } from "./lib/pages.svelte.js";
   import Pager from "./ui/Pager.svelte";
   import { untrack } from "svelte";
@@ -97,7 +98,7 @@
       const data = await api.query(ABOUT_ACTOR, { uuid: actorId }).catch(() => null);
 
       if (data?.actor) {
-        about = { label: data.actor.identifier, to: `/actors/${data.actor.uuid}`, noun: "actor" };
+        about = { label: data.actor.identifier, to: `/actors/${data.actor.uuid}`, noun: t("activity.nouns.actor") };
       }
 
       return;
@@ -108,7 +109,7 @@
     const data = await api.query(ABOUT_CLIENT, { clientId }).catch(() => null);
 
     if (data?.client) {
-      about = { label: data.client.name, to: `/clients/${data.client.clientId}`, noun: "client" };
+      about = { label: data.client.name, to: `/clients/${data.client.clientId}`, noun: t("activity.nouns.client") };
     }
   }
 
@@ -157,42 +158,40 @@
 
     if (!answer) return;
 
-    feedback.say(`Downloading ${answer.exportEvents.count} events.`);
+    feedback.say(t("activity.downloading", { count: answer.exportEvents.count }));
     location.assign(answer.exportEvents.url);
   }
 </script>
 
-<Page
-  title="Activity"
->
+<Page title={t("activity.title")}>
   <Notices feedback={feedback.state} />
 
   {#if narrowed}
     <div class="alert alert-info alert-soft flex-wrap items-center gap-3 text-sm" role="status">
       {#if about}
         <span>
-          Only what involves the {about.noun}
-          <Link to={about.to} class="link font-medium">{about.label}</Link>.
+          {t("activity.involves", { noun: about.noun })}
+          <Link to={about.to} class="link font-medium">{about.label}</Link>{t("activity.involves_end")}
         </span>
       {:else}
-        <span>Only what involves one {actorId ? "actor" : "client"}, which no longer exists.</span>
+        <span>{t(actorId ? "activity.gone.actor" : "activity.gone.client")}</span>
       {/if}
 
-      <Link to="/activity" class="btn btn-sm">Show everything</Link>
+      <Link to="/activity" class="btn btn-sm">{t("activity.everything")}</Link>
     </div>
   {/if}
 
   <Section>
     <div class="flex flex-wrap items-end gap-4">
       <label class="flex flex-col gap-1.5">
-        <span class="legend">Show</span>
+        <span class="legend">{t("activity.show")}</span>
         <select
           class="select select-sm w-full max-w-xs"
           value={action}
           disabled={grave}
           onchange={(event) => filter(event.currentTarget.value)}
         >
-          <option value="">everything</option>
+          <option value="">{t("activity.all")}</option>
           {#each actions as one (one.action)}
             <option value={one.action}>{one.label}</option>
           {/each}
@@ -206,26 +205,26 @@
           checked={grave}
           onchange={(event) => only(event.currentTarget.checked)}
         />
-        Only what is worth a look
+        {t("activity.grave")}
       </label>
     </div>
   </Section>
 
   <Section
-    title="Export"
-    lede="Every event in a range as newline-delimited JSON, in the shape event streams send. It follows the filter above."
+    title={t("activity.export.title")}
+    lede={t("activity.export.lede")}
   >
     <div class="flex flex-wrap items-end gap-3">
       <label class="flex flex-col gap-1.5">
-        <span class="field-label">From</span>
+        <span class="field-label">{t("activity.export.from")}</span>
         <input class="input input-sm" type="date" bind:value={range.from} max={range.to} />
       </label>
       <label class="flex flex-col gap-1.5">
-        <span class="field-label">Through</span>
+        <span class="field-label">{t("activity.export.through")}</span>
         <input class="input input-sm" type="date" bind:value={range.to} min={range.from} max={today()} />
       </label>
       <button type="button" class="btn btn-sm" disabled={exporting || !range.from || !range.to} onclick={download}>
-        Download
+        {t("activity.export.download")}
       </button>
     </div>
   </Section>
@@ -236,11 +235,7 @@
     <Section>
       <Events
         {events}
-        empty={grave
-          ? "Nothing worth a look."
-          : action
-            ? "Nothing yet."
-            : "Nothing yet."}
+        empty={grave ? t("activity.empty.grave") : t("activity.empty.plain")}
       />
 
       <Pager {pages} shown={events.length} busy={loading} onpage={turn} />

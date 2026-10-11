@@ -1,0 +1,19 @@
+en:
+  manage:
+    settings_shell:
+      label: "Settings"
+      account: "Your account"
+      sign_out: "Sign out"
+      forget: "Forget client"
+      forget_confirm: "Forget this manage client? masks asks you to approve a new one right away. The old client stays under Clients until it is archived."
+      tabs:
+        settings: "General"
+        groups: "Groups"
+        policies: "Policies"
+        providers: "Providers"
+        domains: "Domains"
+        provisioning: "Provisioning"
+        adapters: "Adapters"
+        streams: "Streams"
+        email: "Email"
+        activity: "Activity"

@@ -1,5 +1,6 @@
 <script>
   import { createFeedback } from "./lib/feedback.svelte.js";
+  import { t } from "./lib/copy.js";
   import { day } from "./lib/format.js";
   import Events from "./Events.svelte";
   import Namespaces from "./Namespaces.svelte";
@@ -74,38 +75,37 @@
   const SPANS = [7, 30, 90];
 
   const RETENTION = [
-    [30, "30 days"],
-    [90, "90 days"],
-    [180, "180 days"],
-    [365, "A year"],
-    [1095, "Three years"],
-    [2555, "Seven years"],
+    [30, t("settings.retention.days_30")],
+    [90, t("settings.retention.days_90")],
+    [180, t("settings.retention.days_180")],
+    [365, t("settings.retention.a_year")],
+    [1095, t("settings.retention.three_years")],
+    [2555, t("settings.retention.seven_years")],
   ];
 
   const SUSPEND_AFTER = [
-    [0, "Never"],
-    [90, "After 90 days"],
-    [180, "After 180 days"],
-    [365, "After a year"],
-    [730, "After two years"],
+    [0, t("settings.idle.never")],
+    [90, t("settings.idle.after_90_days")],
+    [180, t("settings.idle.after_180_days")],
+    [365, t("settings.idle.after_a_year")],
+    [730, t("settings.idle.after_two_years")],
   ];
 
   const DELETE_AFTER = [
-    [0, "Never"],
-    [180, "After 180 days"],
-    [365, "After a year"],
-    [730, "After two years"],
-    [1095, "After three years"],
+    [0, t("settings.idle.never")],
+    [180, t("settings.idle.after_180_days")],
+    [365, t("settings.idle.after_a_year")],
+    [730, t("settings.idle.after_two_years")],
+    [1095, t("settings.idle.after_three_years")],
   ];
 
   const choices = (listed, held) =>
-    !held || listed.some(([days]) => days === held) ? listed : [...listed, [held, `After ${held} days`]];
+    !held || listed.some(([days]) => days === held) ? listed : [...listed, [held, t("settings.after_days", { days: held })]];
 
   function deleteAfter(days) {
-    if (days && !confirm("Delete idle accounts? A deleted account cannot be restored."))
-      return load();
+    if (days && !confirm(t("settings.idle.delete_confirm"))) return load();
 
-    return update({ deleteAfter: days }, "Idle accounts updated.");
+    return update({ deleteAfter: days }, t("settings.idle.updated"));
   }
 
   const BADGE = {
@@ -129,10 +129,10 @@
   const counts = $derived(
     data
       ? [
-          { to: "/actors", label: "Actors", value: data.tally.actors },
-          { to: "/clients", label: "Clients", value: data.tally.clients },
-          { to: "/organizations", label: "Organizations", value: data.tally.organizations },
-          { to: "/actors#devices", label: "Devices", value: data.tally.devices },
+          { to: "/actors", label: t("settings.counts.actors"), value: data.tally.actors },
+          { to: "/clients", label: t("settings.counts.clients"), value: data.tally.clients },
+          { to: "/organizations", label: t("settings.counts.organizations"), value: data.tally.organizations },
+          { to: "/actors#devices", label: t("settings.counts.devices"), value: data.tally.devices },
         ]
       : [],
   );
@@ -158,24 +158,24 @@
       ? [
           {
             done: data.tenant.mails,
-            title: "Let masks send email",
-            detail: "Invitations, password resets, and sign-in codes go out by email. Until then, a manager passes each invitation link along by hand.",
+            title: t("settings.starting.mail.title"),
+            detail: t("settings.starting.mail.detail"),
             to: "/adapters",
-            action: "Add a mail adapter",
+            action: t("settings.starting.mail.action"),
           },
           {
             done: data.tally.clients > 0,
-            title: "Connect your first app",
-            detail: "Register an app by hand, or let one connect itself through the handshake.",
+            title: t("settings.starting.client.title"),
+            detail: t("settings.starting.client.detail"),
             to: "/clients",
-            action: "Add an app",
+            action: t("settings.starting.client.action"),
           },
           {
             done: data.tally.actors > 1,
-            title: "Invite someone",
-            detail: "Each person gets an invitation to set up their own sign-in.",
+            title: t("settings.starting.invite.title"),
+            detail: t("settings.starting.invite.detail"),
             to: "/actors",
-            action: "Invite people",
+            action: t("settings.starting.invite.action"),
           },
         ]
       : [],
@@ -246,7 +246,7 @@
     await keys(
       `mutation Logo($logo: Upload!) { uploadTenantLogo(logo: $logo) { tenant { logoUrl } } }`,
       { logo: file },
-      "Logo updated.",
+      t("settings.branding.logo_updated"),
     );
 
     input.value = "";
@@ -262,38 +262,36 @@
     keys(
       `mutation Stage { stageSigningKey { signingKey { kid } } }`,
       {},
-      "Staged. Clients see it at the JWKS endpoint before it signs anything.",
+      t("settings.keys.staged_notice"),
     );
 
   function activate(kid) {
-    if (!confirm("Sign every new token with this key? The current one keeps verifying for 24 hours."))
-      return;
+    if (!confirm(t("settings.keys.activate_confirm"))) return;
 
     return keys(
       `mutation Activate($kid: ID!) { activateSigningKey(kid: $kid) { signingKey { kid } } }`,
       { kid },
-      "Activated.",
+      t("settings.keys.activated_notice"),
     );
   }
 
   function discard(kid) {
-    if (!confirm("Discard this staged key? Nothing has been signed with it.")) return;
+    if (!confirm(t("settings.keys.discard_confirm"))) return;
 
     return keys(
       `mutation Discard($kid: ID!) { discardSigningKey(kid: $kid) { kid } }`,
       { kid },
-      "Discarded.",
+      t("settings.keys.discarded"),
     );
   }
 
   function rotate() {
-    if (!confirm("Mint a key and sign with it immediately? The outgoing key keeps verifying for 24 hours."))
-      return;
+    if (!confirm(t("settings.keys.rotate_confirm"))) return;
 
     return keys(
       `mutation Rotate { rotateSigningKey { signingKey { kid } } }`,
       {},
-      "Rotated.",
+      t("settings.keys.rotated"),
     );
   }
 </script>
@@ -309,9 +307,9 @@
     hero
   >
     {#if !hidden && starting.some((step) => !step.done)}
-      <Section title="Getting started">
+      <Section title={t("settings.starting.title")}>
         {#snippet actions()}
-          <button type="button" class="btn btn-ghost btn-sm" onclick={hideStarting}>Hide</button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick={hideStarting}>{t("settings.starting.hide")}</button>
         {/snippet}
 
         <ol class="flex flex-col gap-3">
@@ -338,12 +336,12 @@
 
     <div class="dash">
       <div class="dash-main">
-        <Section title="Sign-ins">
+        <Section title={t("settings.sign_ins.title")}>
           {#snippet actions()}
-            <div class="range" role="group" aria-label="Time range">
+            <div class="range" role="group" aria-label={t("settings.sign_ins.range")}>
               {#each SPANS as span (span)}
                 <button type="button" aria-pressed={days === span} onclick={() => (days = span)}>
-                  {span}d
+                  {t("settings.sign_ins.span", { days: span })}
                 </button>
               {/each}
             </div>
@@ -352,25 +350,27 @@
           {#key days}
             <Loader load={() => api.query(ACTIVITY, { days })}>
               {#snippet children(activity)}
-                <BarChart points={plotted(activity.activity)} label="Sign-ins per day" />
+                <BarChart points={plotted(activity.activity)} label={t("settings.sign_ins.chart")} />
               {/snippet}
             </Loader>
           {/key}
         </Section>
 
-        <Section title="Organizations">
+        <Section title={t("settings.organizations.title")}>
           {#snippet actions()}
             <Link to="/organizations" class="btn btn-ghost btn-sm">
-              {data.tally.organizations > ORGANIZATIONS_SHOWN ? `All ${data.tally.organizations}` : "All organizations"}
+              {data.tally.organizations > ORGANIZATIONS_SHOWN
+                ? t("settings.organizations.all_count", { count: data.tally.organizations })
+                : t("settings.organizations.all")}
             </Link>
           {/snippet}
 
           <Loader load={() => api.query(ORGANIZATIONS)}>
             {#snippet children(held)}
               <Table
-                columns={["Organization", { label: "Members", right: true }]}
+                columns={[t("settings.organizations.organization"), { label: t("settings.organizations.members"), right: true }]}
                 count={held.organizations.length}
-                empty="No organizations yet. Add one for each customer whose people sign in together, and apps that ask for the organization scope learn the role each person holds there."
+                empty={t("settings.organizations.empty")}
               >
                 {#snippet rows()}
                   {#each held.organizations as organization (organization.key)}
@@ -394,21 +394,21 @@
         <Loader load={() => api.query(RECENT)}>
           {#snippet children(recent)}
             {#if recent.worrying.length}
-              <Section title="Worth a look">
+              <Section title={t("settings.recent.worrying")}>
                 {#snippet actions()}
-                  <Link to="/activity" class="btn btn-sm">All activity</Link>
+                  <Link to="/activity" class="btn btn-sm">{t("settings.recent.all")}</Link>
                 {/snippet}
 
                 <Events events={recent.worrying} />
               </Section>
             {/if}
 
-            <Section title="Lately">
+            <Section title={t("settings.recent.lately")}>
               {#snippet actions()}
-                <Link to="/activity" class="btn btn-ghost btn-sm">All activity</Link>
+                <Link to="/activity" class="btn btn-ghost btn-sm">{t("settings.recent.all")}</Link>
               {/snippet}
 
-              <Events events={recent.latest} empty="Nothing yet." />
+              <Events events={recent.latest} empty={t("settings.recent.empty")} />
             </Section>
           {/snippet}
         </Loader>
@@ -416,31 +416,31 @@
     </div>
   </Page>
 {:else}
-  <Page title="General">
+  <Page title={t("settings.title")}>
     <Notices feedback={feedback.state} />
 
     <div class="grid gap-4">
       <Section
         row
-        title="Tenant"
-        help="The name heads every screen and email masks sends. Apps discover this tenant at its issuer, and the manage API answers at its resource."
+        title={t("settings.tenant.title")}
+        help={t("settings.tenant.help")}
       >
-        <Field label="Name" bind:value={name} onsave={() => update({ name }, "Renamed.")} />
+        <Field label={t("settings.tenant.name")} bind:value={name} onsave={() => update({ name }, t("settings.tenant.renamed"))} />
 
         <Facts
           rows={[
-            { term: "Subdomain", value: data.tenant.subdomain, mono: true },
-            { term: "Issuer", value: boot.issuer, mono: true },
-            { term: "Resource", value: boot.resource, mono: true },
-            { term: "Serving since", value: day(data.tenant.createdAt) },
+            { term: t("settings.tenant.subdomain"), value: data.tenant.subdomain, mono: true },
+            { term: t("settings.tenant.issuer"), value: boot.issuer, mono: true },
+            { term: t("settings.tenant.resource"), value: boot.resource, mono: true },
+            { term: t("settings.tenant.since"), value: day(data.tenant.createdAt) },
           ]}
         />
       </Section>
 
       <Section
         row
-        title="Branding"
-        help="The logo replaces the initial at the top of sign-in and account pages. The color tints their buttons and headings. A theme stylesheet still overrides both."
+        title={t("settings.branding.title")}
+        help={t("settings.branding.help")}
       >
         <div class="flex flex-wrap items-center gap-3">
           {#if data.tenant.logoUrl}
@@ -448,7 +448,7 @@
           {/if}
 
           <label class="btn btn-sm">
-            {data.tenant.logoUrl ? "Change logo" : "Upload a logo"}
+            {data.tenant.logoUrl ? t("settings.branding.change_logo") : t("settings.branding.upload_logo")}
             <input type="file" class="hidden" accept="image/png,image/jpeg,image/webp,image/gif" onchange={chooseLogo} />
           </label>
 
@@ -456,9 +456,9 @@
             <button
               type="button"
               class="btn btn-ghost btn-sm"
-              onclick={() => keys(`mutation { removeTenantLogo { tenant { logoUrl } } }`, {}, "Logo removed.")}
+              onclick={() => keys(`mutation { removeTenantLogo { tenant { logoUrl } } }`, {}, t("settings.branding.logo_removed"))}
             >
-              Remove
+              {t("settings.branding.remove")}
             </button>
           {/if}
         </div>
@@ -468,14 +468,14 @@
             <input
               type="color"
               value={data.tenant.accentColor ?? "#b3380f"}
-              onchange={(event) => update({ accentColor: event.currentTarget.value }, "Color updated.")}
+              onchange={(event) => update({ accentColor: event.currentTarget.value }, t("settings.branding.color_updated"))}
             />
-            Accent color
+            {t("settings.branding.accent")}
           </label>
 
           {#if data.tenant.accentColor}
-            <button type="button" class="btn btn-ghost btn-sm" onclick={() => update({ accentColor: "" }, "Color reset.")}>
-              Use masks' own
+            <button type="button" class="btn btn-ghost btn-sm" onclick={() => update({ accentColor: "" }, t("settings.branding.color_reset"))}>
+              {t("settings.branding.own")}
             </button>
           {/if}
         </div>
@@ -483,76 +483,80 @@
 
       <Section
         row
-        title="Accounts are named by"
-        help="What a person types to sign in. Every policy has to require whichever this names."
+        title={t("settings.naming.title")}
+        help={t("settings.naming.help")}
       >
         <Select
           value={data.tenant.namedBy}
-          options={[["nickname", "Nickname"], ["email", "Email"], ["either", "Either"]]}
-          onchange={(namedBy) => update({ namedBy }, "Naming updated.")}
+          options={[
+            ["nickname", t("settings.naming.nickname")],
+            ["email", t("settings.naming.email")],
+            ["either", t("settings.naming.either")],
+          ]}
+          onchange={(namedBy) => update({ namedBy }, t("settings.naming.updated"))}
         />
       </Section>
 
       <Section
         row
-        title="Default policy"
-        help="The sign-in policy for every client that has none of its own. Built-in offers passwords, passkeys, and providers, with an optional second factor."
+        title={t("settings.policy.title")}
+        help={t("settings.policy.help")}
       >
         <Select
           value={data.tenant.signInPolicy?.key ?? ""}
-          options={[["", "Built-in"], ...data.signInPolicies.map((policy) => [policy.key, policy.name])]}
-          onchange={(signInPolicy) => update({ signInPolicy }, "Default policy updated.")}
+          options={[["", t("settings.policy.built_in")], ...data.signInPolicies.map((policy) => [policy.key, policy.name])]}
+          onchange={(signInPolicy) => update({ signInPolicy }, t("settings.policy.updated"))}
         />
       </Section>
 
       <Section
         row
-        title="Who may sign in"
-        help="Browsers only refuses any sign-in from something that does not present itself as a browser. Refused user agents takes fragments, separated by commas, and refuses every user agent that contains one."
+        title={t("settings.access.title")}
+        help={t("settings.access.help")}
       >
         <Switch
-          label="Browsers only"
+          label={t("settings.access.browsers_only")}
           checked={data.tenant.browsersOnly}
           onchange={(browsersOnly) =>
-            update({ browsersOnly }, "Sign-in rules updated.")}
+            update({ browsersOnly }, t("settings.access.updated"))}
         />
 
         <Field
-          label="Refused user agents"
+          label={t("settings.access.refused_agents")}
           bind:value={agents}
           placeholder="curl, python-requests"
-          onsave={() => update({ blockedAgents: agents }, "Sign-in rules updated.")}
+          onsave={() => update({ blockedAgents: agents }, t("settings.access.updated"))}
         />
 
         <label class="flex flex-col gap-1.5">
-          <span class="field-label">Risky networks</span>
+          <span class="field-label">{t("settings.access.risky_networks")}</span>
           <textarea class="textarea w-full font-mono" rows="3" bind:value={networks} placeholder="203.0.113.0/24"></textarea>
           <span class="hint">
-            Address ranges, one per line, that add to a sign-in's risk score. A sign-in policy decides what a score does.
+            {t("settings.access.risky_hint")}
           </span>
         </label>
         <div>
-          <button type="button" class="btn btn-sm" onclick={() => update({ riskyNetworks: networks }, "Risky networks saved.")}>
-            Save networks
+          <button type="button" class="btn btn-sm" onclick={() => update({ riskyNetworks: networks }, t("settings.access.networks_saved"))}>
+            {t("settings.access.save_networks")}
           </button>
         </div>
       </Section>
 
       <Section
         row
-        title="Idle accounts"
-        help="An account nobody signs in to or uses through an app is suspended, then deleted, after these periods. Each step is warned by email at least 30 days ahead, and signing in before a suspension keeps the account. With Suspend set, only accounts suspended for being idle are deleted. With Suspend at Never, idle accounts are deleted directly. The last manager and accounts a provider provisions over SCIM are left alone."
+        title={t("settings.idle.title")}
+        help={t("settings.idle.help")}
       >
         <div class="grid gap-3 sm:grid-cols-2">
           <Select
-            label="Suspend"
+            label={t("settings.idle.suspend")}
             value={data.tenant.suspendAfter ?? 0}
             options={choices(SUSPEND_AFTER, data.tenant.suspendAfter)}
-            onchange={(days) => update({ suspendAfter: Number(days) }, "Idle accounts updated.")}
+            onchange={(days) => update({ suspendAfter: Number(days) }, t("settings.idle.updated"))}
           />
 
           <Select
-            label="Delete"
+            label={t("settings.idle.delete")}
             value={data.tenant.deleteAfter ?? 0}
             options={choices(DELETE_AFTER, data.tenant.deleteAfter).map(([days, label]) => [
               days,
@@ -566,32 +570,36 @@
 
       <Section
         row
-        title="Activity"
-        help="How long masks keeps events. Older ones are deleted each night, and a shorter period takes effect at the next sweep. Export a range from Activity before shortening it."
+        title={t("settings.retention.title")}
+        help={t("settings.retention.help")}
       >
         <Select
           value={data.tenant.eventRetentionDays}
           options={choices(RETENTION, data.tenant.eventRetentionDays)}
-          onchange={(days) => update({ eventRetentionDays: Number(days) }, "Activity is kept for the new period.")}
+          onchange={(days) => update({ eventRetentionDays: Number(days) }, t("settings.retention.updated"))}
         />
       </Section>
 
       <Section
         row
-        title="Dynamic registration"
-        help="Whether apps may register themselves over RFC 7591. A self-registered app is never approved, and with the limit on it may ask only for the scopes chosen here."
+        title={t("settings.registration.title")}
+        help={t("settings.registration.help")}
       >
         <Select
           value={data.tenant.dynamicRegistration}
-          options={[["off", "Off"], ["anything", "On"], ["bounded", "On, limited to these scopes"]]}
+          options={[
+            ["off", t("settings.registration.off")],
+            ["anything", t("settings.registration.on")],
+            ["bounded", t("settings.registration.bounded")],
+          ]}
           onchange={(dynamicRegistration) =>
-            update({ dynamicRegistration }, "Dynamic registration updated.")}
+            update({ dynamicRegistration }, t("settings.registration.updated"))}
         />
 
         <ScopesEditor
           value={data.tenant.dynamicClientScopes ?? []}
           available={data.scopesSupported}
-          onchange={(dynamicClientScopes) => update({ dynamicClientScopes }, "Ceiling updated.")}
+          onchange={(dynamicClientScopes) => update({ dynamicClientScopes }, t("settings.registration.ceiling_updated"))}
         />
       </Section>
 
@@ -599,22 +607,20 @@
         <Namespaces {api} rows={data.namespaces} onreleased={load} showClient />
       {/if}
 
-      <Section
-        title="Signing keys"
-      >
+      <Section title={t("settings.keys.title")}>
         {#snippet actions()}
-          <button type="button" class="btn btn-sm" onclick={stage}>Stage</button>
-          <button type="button" class="btn btn-sm btn-outline" onclick={rotate}>Rotate now</button>
+          <button type="button" class="btn btn-sm" onclick={stage}>{t("settings.keys.stage")}</button>
+          <button type="button" class="btn btn-sm btn-outline" onclick={rotate}>{t("settings.keys.rotate")}</button>
         {/snippet}
 
         <div class="overflow-x-auto">
           <table class="table table-sm">
             <thead>
               <tr>
-                <th>Key</th>
-                <th class="hidden sm:table-cell">Algorithm</th>
-                <th>State</th>
-                <th class="hidden sm:table-cell">Activated</th>
+                <th>{t("settings.keys.key")}</th>
+                <th class="hidden sm:table-cell">{t("settings.keys.algorithm")}</th>
+                <th>{t("settings.keys.state")}</th>
+                <th class="hidden sm:table-cell">{t("settings.keys.activated")}</th>
                 <th></th>
               </tr>
             </thead>
@@ -623,25 +629,25 @@
                 <tr>
                   <td class="font-mono text-xs">{key.kid.slice(0, 8)}</td>
                   <td class="hidden text-xs sm:table-cell">{key.algorithm}</td>
-                  <td><span class="badge badge-sm {BADGE[key.state]}">{key.state}</span></td>
+                  <td><span class="badge badge-sm {BADGE[key.state]}">{BADGE[key.state] ? t(`settings.keys.states.${key.state}`) : key.state}</span></td>
                   <td class="hidden text-xs opacity-85 sm:table-cell">
                     {#if key.state === "retiring"}
-                      until {day(key.retiredAt)}
+                      {t("settings.keys.until", { day: day(key.retiredAt) })}
                     {:else}
-                      {day(key.activatedAt, "not yet")}
+                      {day(key.activatedAt, t("settings.keys.not_yet"))}
                     {/if}
                   </td>
                   <td class="text-right whitespace-nowrap">
                     {#if key.state === "staged"}
                       <button type="button" class="btn btn-xs" onclick={() => activate(key.kid)}>
-                        Activate
+                        {t("settings.keys.activate")}
                       </button>
                       <button
                         type="button"
                         class="btn btn-xs btn-ghost"
                         onclick={() => discard(key.kid)}
                       >
-                        Discard
+                        {t("settings.keys.discard")}
                       </button>
                     {/if}
                   </td>

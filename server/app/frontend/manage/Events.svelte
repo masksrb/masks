@@ -1,9 +1,10 @@
 <script>
+  import { t } from "./lib/copy.js";
   import { detailed, tone } from "./lib/events.js";
   import { moment, since } from "./lib/format.js";
   import Link from "./ui/Link.svelte";
 
-  let { events, showActor = true, empty = "Nothing yet.", limit = 5 } = $props();
+  let { events, showActor = true, empty = t("events.empty"), limit = 5 } = $props();
 
   let all = $state(false);
 
@@ -33,7 +34,8 @@
 
             {#if event.by && event.by.uuid !== event.actor?.uuid}
               <span class="hint">
-                by <Link to={`/actors/${event.by.uuid}`} class="link link-hover">
+                {t("events.by")}
+                <Link to={`/actors/${event.by.uuid}`} class="link link-hover">
                   {event.by.identifier}
                 </Link>
               </span>
@@ -73,7 +75,7 @@
 
   {#if !all && events.length > limit}
     <button type="button" class="btn btn-ghost btn-sm self-start" onclick={() => (all = true)}>
-      Show {events.length - limit} more
+      {t("events.more", { count: events.length - limit })}
     </button>
   {/if}
 {/if}

@@ -1,4 +1,5 @@
 <script>
+  import { t } from "./lib/copy.js";
   import MailWording from "./MailWording.svelte";
   import Loader from "./ui/Loader.svelte";
   import Page from "./ui/Page.svelte";
@@ -14,12 +15,7 @@
     }
   `;
 
-  const GROUPS = [
-    ["sign_in", "While signing in", "Sent during a sign-in. When an app sent the person there, an approved app heads the email with its logo and name. A sign-in straight to the account page has no app, and the tenant heads it."],
-    ["manage", "From a manager", "Sent when a manager acts in /manage. The tenant heads these."],
-    ["account", "From the account page", "Sent when a person changes their own account. The tenant heads these."],
-    ["system", "On its own", "Sent by masks without anyone acting, such as security notices and idle warnings. The tenant heads these."],
-  ];
+  const GROUPS = ["sign_in", "manage", "account", "system"];
 
   const worded = (key) => (key === "invitation_organization" ? "invitation" : key);
 
@@ -35,7 +31,7 @@
   }
 </script>
 
-<Page title="Email">
+<Page title={t("emails.title")}>
   {#key `${client}:${version}`}
     <Loader load={() => api.query(PREVIEWS, { client: client || null })}>
       {#snippet children(data)}
@@ -45,27 +41,27 @@
         {@const wording = templates[worded(shown.key)]}
 
         <div class="mail">
-          <nav class="mail-list" aria-label="Emails">
-            {#each GROUPS as [journey, title, help] (journey)}
+          <nav class="mail-list" aria-label={t("emails.list")}>
+            {#each GROUPS as journey (journey)}
               {@const members = previews.filter((preview) => preview.journey === journey)}
 
               {#if members.length}
                 <div class="mail-group">
                   <div class="flex items-center gap-2">
-                    <span class="term">{title}</span>
-                    <Tip text={help} label="About emails sent {title.toLowerCase()}" />
+                    <span class="term">{t(`emails.groups.${journey}.title`)}</span>
+                    <Tip text={t(`emails.groups.${journey}.help`)} label={t(`emails.groups.${journey}.about`)} />
                   </div>
 
                   {#if journey === "sign_in"}
                     <select
                       class="select select-sm w-full"
-                      aria-label="The app being signed in to"
+                      aria-label={t("emails.app")}
                       value={client}
                       onchange={(event) => (client = event.currentTarget.value)}
                     >
-                      <option value="">No app</option>
+                      <option value="">{t("emails.no_app")}</option>
                       {#each data.clients as each (each.clientId)}
-                        <option value={each.clientId}>{each.approvedAt ? each.name : `${each.name} (not approved)`}</option>
+                        <option value={each.clientId}>{each.approvedAt ? each.name : t("emails.not_approved", { name: each.name })}</option>
                       {/each}
                     </select>
                   {/if}
@@ -89,12 +85,18 @@
             <header class="mail-head">
               <div class="flex min-w-0 flex-col gap-0.5">
                 <h2 class="mail-subject">{shown.subject}</h2>
-                <p class="hint">Headed by {shown.heading}, from {shown.from || "no sender configured"} to {shown.to}</p>
+                <p class="hint">
+                  {t("emails.headed", {
+                    heading: shown.heading,
+                    from: shown.from || t("emails.no_sender"),
+                    to: shown.to,
+                  })}
+                </p>
               </div>
 
-              <div class="range" role="group" aria-label="Which part">
-                <button type="button" aria-pressed={showing === "html"} onclick={() => (showing = "html")}>HTML</button>
-                <button type="button" aria-pressed={showing === "text"} onclick={() => (showing = "text")}>Text</button>
+              <div class="range" role="group" aria-label={t("emails.part")}>
+                <button type="button" aria-pressed={showing === "html"} onclick={() => (showing = "html")}>{t("emails.html")}</button>
+                <button type="button" aria-pressed={showing === "text"} onclick={() => (showing = "text")}>{t("emails.text")}</button>
               </div>
             </header>
 
@@ -105,7 +107,7 @@
                 {/key}
               {/if}
 
-              <MailWording {api} template={templates.signature} title="The signature" onsaved={() => version++} />
+              <MailWording {api} template={templates.signature} title={t("emails.signature")} onsaved={() => version++} />
             </div>
 
             {#if showing === "html" && shown.html}

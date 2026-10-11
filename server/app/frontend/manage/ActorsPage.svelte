@@ -1,8 +1,9 @@
 <script>
+  import { t } from "./lib/copy.js";
   import { createPages } from "./lib/pages.svelte.js";
   import Pager from "./ui/Pager.svelte";
   import { createFeedback } from "./lib/feedback.svelte.js";
-  import { day, joined, plural } from "./lib/format.js";
+  import { day, joined } from "./lib/format.js";
   import Devices from "./Devices.svelte";
   import ScopesEditor from "./ScopesEditor.svelte";
   import Section from "./ui/Section.svelte";
@@ -25,12 +26,12 @@
   const pages = createPages();
 
   const LENSES = [
-    ["everyone", "Everyone", {}],
-    ["invited", "Invited", { activated: false }],
-    ["waiting", "Awaiting approval", { pendingApproval: true }],
-    ["help", "Asking for help", { recoveryRequested: true }],
-    ["managers", "Managers", { holds: "masks:manage" }],
-    ["suspended", "Suspended", { suspended: true }],
+    ["everyone", t("actors.lenses.everyone"), {}],
+    ["invited", t("actors.lenses.invited"), { activated: false }],
+    ["waiting", t("actors.lenses.waiting"), { pendingApproval: true }],
+    ["help", t("actors.lenses.help"), { recoveryRequested: true }],
+    ["managers", t("actors.lenses.managers"), { holds: "masks:manage" }],
+    ["suspended", t("actors.lenses.suspended"), { suspended: true }],
   ];
 
   const QUERY = `
@@ -65,11 +66,11 @@
   const STANDARD = ["openid", "profile", "email", "offline_access", "identities"];
 
   const COLUMNS = [
-    "Actor",
-    { label: "Scopes", hide: true },
-    { label: "Second factor", hide: true },
-    { label: "Signed in on", hide: true },
-    { label: "Last seen", hide: true },
+    t("actors.columns.actor"),
+    { label: t("actors.columns.scopes"), hide: true },
+    { label: t("actors.columns.second_factor"), hide: true },
+    { label: t("actors.columns.signed_in_on"), hide: true },
+    { label: t("actors.columns.last_seen"), hide: true },
   ];
 
   const feedback = createFeedback();
@@ -188,17 +189,17 @@
 
   const presence = (actor) => {
     const parts = [
-      plural(actor.sessions.length, "session"),
-      plural(actor.devices.length, "device"),
+      t("actors.sessions", { count: actor.sessions.length }),
+      t("actors.devices", { count: actor.devices.length }),
     ];
 
     return parts.join(" · ");
   };
 </script>
 
-<Page title="Actors">
+<Page title={t("actors.title")}>
   {#snippet actions()}
-    <div class="range" role="group" aria-label="Who to show">
+    <div class="range" role="group" aria-label={t("actors.who")}>
       {#each LENSES as [key, label] (key)}
         <button type="button" aria-pressed={lens === key} onclick={() => look(key)}>{label}</button>
       {/each}
@@ -206,43 +207,43 @@
 
     <Search
       bind:value={search}
-      label="Search actors"
-      placeholder="nickname, email or name"
+      label={t("actors.search")}
+      placeholder={t("actors.search_placeholder")}
       onsearch={again}
     />
-    <button type="button" class="btn btn-primary btn-sm" onclick={open}>Add actor</button>
+    <button type="button" class="btn btn-primary btn-sm" onclick={open}>{t("actors.add")}</button>
   {/snippet}
 
   <Notices feedback={feedback.state} />
 
   {#if adding}
-    <Section title="Add actor">
+    <Section title={t("actors.add")}>
       <div class="grid gap-3 sm:grid-cols-2">
         <Field
-          label="Nickname"
+          label={t("actors.form.nickname")}
           bind:value={nickname}
           autocapitalize="none"
           autocorrect="off"
           spellcheck="false"
           placeholder="ada"
         />
-        <Field label="Email" type="email" bind:value={email} placeholder="ada@example.com" />
+        <Field label={t("actors.form.email")} type="email" bind:value={email} placeholder="ada@example.com" />
       </div>
 
       <Field
-        label="Password"
+        label={t("actors.form.password")}
         type="password"
         bind:value={password}
         autocomplete="new-password"
-        placeholder="blank sends a one-time link"
+        placeholder={t("actors.form.password_placeholder")}
       />
 
       {#if password}
-        <p class="hint">At least {minimum} characters, and you will know it.</p>
+        <p class="hint">{t("actors.form.minimum", { count: minimum })}</p>
       {/if}
 
       <div class="flex flex-col gap-2">
-        <span class="legend">Scopes</span>
+        <span class="legend">{t("actors.form.scopes")}</span>
         <ScopesEditor
           value={scopes}
           available={supported}
@@ -257,24 +258,28 @@
           disabled={busy || !(nickname.trim() || email.trim())}
           onclick={send}
         >
-          {busy ? "Adding..." : password ? "Create the account" : "Send the invitation"}
+          {busy
+            ? t("actors.form.adding")
+            : password
+              ? t("actors.form.create")
+              : t("actors.form.invite")}
         </button>
-        <button type="button" class="btn btn-ghost btn-sm" onclick={close}>Cancel</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick={close}>{t("actors.form.cancel")}</button>
       </div>
     </Section>
   {/if}
 
   {#if created}
-    <Section title={created.actor.activated ? "Account created" : "Invitation sent"}>
+    <Section title={created.actor.activated ? t("actors.created.account") : t("actors.created.invitation")}>
       <p class="text-sm opacity-85">
         {#if created.actor.activated}
-          {created.actor.identifier} can sign in now.{created.url
-            ? " This link confirms their address:"
+          {t("actors.created.can_sign_in", { identifier: created.actor.identifier })}{created.url
+            ? ` ${t("actors.created.confirm_link")}`
             : ""}
         {:else if created.delivered}
-          Emailed — accepting it proves the address.
+          {t("actors.created.emailed")}
         {:else}
-          Pass this link along yourself. It works once.
+          {t("actors.created.pass_along")}
         {/if}
       </p>
 
@@ -291,18 +296,8 @@
       columns={COLUMNS}
       count={actors.length}
       empty={search.trim()
-        ? `No actor matches "${search.trim()}".`
-        : lens === "waiting"
-          ? "Nobody is awaiting approval."
-          : lens === "help"
-            ? "Nobody has asked for help signing in."
-          : lens === "invited"
-          ? "Nobody is waiting on an invitation."
-          : lens === "managers"
-            ? "Nobody else holds masks:manage."
-            : lens === "suspended"
-            ? "Nobody is suspended."
-            : "Nobody can sign in yet. Add the first actor."}
+        ? t("actors.empty.search", { search: search.trim() })
+        : t(`actors.empty.${lens}`)}
     >
       {#snippet rows()}
         {#each actors as actor (actor.uuid)}
@@ -323,28 +318,28 @@
                   </Link>
                   <div class="flex flex-wrap items-center gap-1.5 text-xs opacity-75">
                     <span class="min-w-0 break-all">
-                      {actor.name ? `${actor.name} · ` : ""}{actor.email ?? "no email"}
+                      {actor.name ? `${actor.name} · ` : ""}{actor.email ?? t("actors.no_email")}
                     </span>
                     {#if actor.email && !actor.emailVerified}
-                      <span class="badge badge-warning badge-xs shrink-0">unconfirmed</span>
+                      <span class="badge badge-warning badge-xs shrink-0">{t("actors.unconfirmed")}</span>
                     {/if}
                   </div>
 
                   <div class="mt-1 flex flex-wrap items-center gap-1 text-xs opacity-85 md:hidden">
                     {#if !actor.activated}
-                      <span class="badge badge-info badge-xs">invited</span>
+                      <span class="badge badge-info badge-xs">{t("actors.invited")}</span>
                     {:else}
-                      <span>Last seen {day(actor.lastLoginAt, "never")}</span>
+                      <span>{t("actors.last_seen", { when: day(actor.lastLoginAt, t("actors.never")) })}</span>
                     {/if}
                   </div>
 
                   {#if actor.otpEnabled || blocked(actor)}
                     <div class="mt-1 flex flex-wrap gap-1 md:hidden">
                       {#if actor.otpEnabled}
-                        <span class="badge badge-success badge-xs">authenticator</span>
+                        <span class="badge badge-success badge-xs">{t("actors.authenticator")}</span>
                       {/if}
                       {#if blocked(actor)}
-                        <span class="badge badge-error badge-xs">blocked</span>
+                        <span class="badge badge-error badge-xs">{t("actors.blocked")}</span>
                       {/if}
                     </div>
                   {/if}
@@ -363,27 +358,27 @@
 
             <td class="hidden md:table-cell">
               {#if actor.otpEnabled}
-                <span class="badge badge-success badge-sm">authenticator</span>
+                <span class="badge badge-success badge-sm">{t("actors.authenticator")}</span>
                 <div class="mt-1 text-xs whitespace-nowrap opacity-80">
-                  {actor.backupCodesRemaining} backup codes
+                  {t("actors.backup_codes", { count: actor.backupCodesRemaining })}
                 </div>
               {:else}
-                <span class="badge badge-ghost badge-sm">password</span>
+                <span class="badge badge-ghost badge-sm">{t("actors.password")}</span>
               {/if}
             </td>
 
             <td class="hidden text-xs whitespace-nowrap opacity-85 md:table-cell">
               {presence(actor)}
               {#if blocked(actor)}
-                <span class="badge badge-error badge-xs ml-1">blocked</span>
+                <span class="badge badge-error badge-xs ml-1">{t("actors.blocked")}</span>
               {/if}
             </td>
 
             <td class="hidden text-xs whitespace-nowrap opacity-85 md:table-cell">
               {#if !actor.activated}
-                <span class="badge badge-info badge-sm">invited</span>
+                <span class="badge badge-info badge-sm">{t("actors.invited")}</span>
               {:else}
-                {day(actor.lastLoginAt, "never")}
+                {day(actor.lastLoginAt, t("actors.never"))}
               {/if}
             </td>
           </Row>

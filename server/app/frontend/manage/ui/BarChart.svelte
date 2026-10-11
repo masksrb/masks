@@ -1,5 +1,6 @@
 <script>
-  let { points, label, unit = "sign-ins" } = $props();
+  import { t } from "../lib/copy.js";
+  let { points, label } = $props();
 
   const W = 720;
   const H = 168;
@@ -47,7 +48,7 @@
 <figure class="chart">
   <figcaption class="chart-head">
     <span class="sr-only">{label}</span>
-    <span class="chart-peak">{peak} on the busiest day</span>
+    <span class="chart-peak">{t("ui.bar_chart.peak", { peak })}</span>
   </figcaption>
 
   <div class="chart-plot tray">
@@ -55,7 +56,7 @@
       viewBox="0 0 {W} {H}"
       class="chart-svg"
       role="img"
-      aria-label="{label}: {total} {unit} across {points.length} days, peaking at {peak}."
+      aria-label={t("ui.bar_chart.summary", { label, total, days: points.length, peak })}
     >
       <line class="chart-base" x1="0" y1={PLOT} x2={W} y2={PLOT} />
 
@@ -92,7 +93,7 @@
         aria-hidden="true"
       >
         <strong>{hovered.value}</strong>
-        {hovered.value === 1 ? unit.replace(/s$/, "") : unit}
+        {t("ui.bar_chart.unit", { count: hovered.value })}
         <span>{hovered.label}</span>
       </div>
     {/if}
@@ -106,7 +107,7 @@
 
   <table class="sr-only">
     <caption>{label}</caption>
-    <thead><tr><th>Day</th><th>{unit}</th></tr></thead>
+    <thead><tr><th>{t("ui.bar_chart.day")}</th><th>{t("ui.bar_chart.units")}</th></tr></thead>
     <tbody>
       {#each points as point (point.key)}
         <tr><td>{point.label}</td><td>{point.value}</td></tr>

@@ -1,6 +1,7 @@
 <script>
+  import { t } from "./lib/copy.js";
   import { createFeedback } from "./lib/feedback.svelte.js";
-  import { day, plural } from "./lib/format.js";
+  import { day } from "./lib/format.js";
   import OrganizationCell from "./OrganizationCell.svelte";
   import OrganizationHeadcount from "./OrganizationHeadcount.svelte";
   import { useRouter } from "./lib/router.svelte.js";
@@ -30,10 +31,10 @@
   `;
 
   const COLUMNS = [
-    "Organization",
-    { label: "Members", hide: true },
-    { label: "Roles", hide: true },
-    { label: "Signs in with", hide: true },
+    t("organizations.columns.organization"),
+    { label: t("organizations.columns.members"), hide: true },
+    { label: t("organizations.columns.roles"), hide: true },
+    { label: t("organizations.columns.signs_in"), hide: true },
   ];
 
   let data = $state(null);
@@ -95,16 +96,18 @@
         api.query(`mutation Restore($key: ID!) { restoreOrganization(key: $key) { organization { key } } }`, {
           key: organization.key,
         }),
-      `${organization.name} is back.`,
+      t("organizations.restored", { name: organization.name }),
     );
 
     if (done) await load();
   }
 
   function members(organization) {
-    const held = plural(organization.memberCount, "member");
+    const held = t("organizations.members", { count: organization.memberCount });
 
-    return organization.pendingCount ? `${held}, ${organization.pendingCount} invited` : held;
+    return organization.pendingCount
+      ? t("organizations.members_invited", { members: held, count: organization.pendingCount })
+      : held;
   }
 
   function signsIn(organization) {
@@ -115,21 +118,21 @@
 </script>
 
 <Page
-  title="Organizations"
-  lede="The customers inside this tenant. An app that asks for the organization scope signs a person in as a member of one, and their token carries the role they hold there."
+  title={t("organizations.title")}
+  lede={t("organizations.lede")}
 >
   {#snippet actions()}
-    <button type="button" class="btn btn-primary btn-sm" onclick={add}>Add organization</button>
+    <button type="button" class="btn btn-primary btn-sm" onclick={add}>{t("organizations.add")}</button>
   {/snippet}
 
   <Notices feedback={feedback.state} />
 
   {#if draft}
-    <Section title="Add organization" lede="You become its first owner, and can add members once it exists.">
+    <Section title={t("organizations.add")} lede={t("organizations.add_lede")}>
       <div class="grid gap-3 sm:grid-cols-2">
-        <Field label="Name" value={draft.name} oninput={(event) => named(event.currentTarget.value)} placeholder="Acme" />
+        <Field label={t("organizations.name")} value={draft.name} oninput={(event) => named(event.currentTarget.value)} placeholder="Acme" />
         <Field
-          label="Key"
+          label={t("organizations.key")}
           bind:value={draft.key}
           oninput={() => (keyTouched = true)}
           placeholder="acme"
@@ -139,8 +142,8 @@
         />
       </div>
       <p class="hint">
-        An app asks for this organization with <span class="font-mono">organization={draft.key || "key"}</span>. The key
-        cannot change later.
+        {t("organizations.key_hint")}
+        <span class="font-mono">organization={draft.key || t("organizations.key_word")}</span>{t("organizations.key_hint_end")}
       </p>
       <div class="flex gap-2">
         <button
@@ -149,9 +152,9 @@
           disabled={busy || !draft.key.trim() || !draft.name.trim()}
           onclick={save}
         >
-          {busy ? "Adding..." : "Add organization"}
+          {busy ? t("organizations.adding") : t("organizations.add")}
         </button>
-        <button type="button" class="btn btn-ghost btn-sm" onclick={() => (draft = null)}>Cancel</button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick={() => (draft = null)}>{t("organizations.cancel")}</button>
       </div>
     </Section>
   {/if}
@@ -162,7 +165,7 @@
     <Table
       columns={COLUMNS}
       count={data.active.length}
-      empty="No organizations yet. Add one for each customer whose people sign in together."
+      empty={t("organizations.empty")}
     >
       {#snippet rows()}
         {#each data.active as organization (organization.key)}
@@ -185,7 +188,7 @@
               </div>
             </td>
             <td class="hidden text-sm md:table-cell">
-              <span class:opacity-60={!signsIn(organization)}>{signsIn(organization) || "The tenant's policy"}</span>
+              <span class:opacity-60={!signsIn(organization)}>{signsIn(organization) || t("organizations.tenant_policy")}</span>
             </td>
           </Row>
         {/each}
@@ -193,7 +196,7 @@
     </Table>
 
     {#if data.archived.length}
-      <Section title="Archived" lede="Nobody signs in as a member of these. Restoring one puts its members back as they were.">
+      <Section title={t("organizations.archived.title")} lede={t("organizations.archived.lede")}>
         {#each data.archived as organization (organization.key)}
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div class="flex min-w-0 flex-col">
@@ -201,11 +204,14 @@
                 {organization.name}
               </Link>
               <span class="hint">
-                <span class="font-mono">{organization.key}</span> · archived {day(organization.archivedAt)} ·
-                {plural(organization.memberCount, "member")}
+                <span class="font-mono">{organization.key}</span>
+                {t("organizations.archived.detail", {
+                  day: day(organization.archivedAt),
+                  members: t("organizations.members", { count: organization.memberCount }),
+                })}
               </span>
             </div>
-            <button type="button" class="btn btn-ghost btn-sm" onclick={() => restore(organization)}>Restore</button>
+            <button type="button" class="btn btn-ghost btn-sm" onclick={() => restore(organization)}>{t("organizations.restore")}</button>
           </div>
         {/each}
       </Section>

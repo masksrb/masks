@@ -1,0 +1,69 @@
+en:
+  manage:
+    policy_rules:
+      factors:
+        password: "password"
+        passkey: "passkey"
+        provider: "provider"
+        email_code: "emailed code"
+        otp: "authenticator app"
+        backup_codes: "backup codes"
+      confirmations:
+        none: "none"
+        code: "emailed code"
+        link: "emailed link"
+        approval: "manager approval"
+      presence:
+        "off": "off"
+        optional: "optional"
+        required: "required"
+      answers:
+        "yes": "yes"
+        "no": "no"
+      units:
+        day:
+          one: "%{count} day"
+          other: "%{count} days"
+        hour:
+          one: "%{count} hour"
+          other: "%{count} hours"
+        minute:
+          one: "%{count} minute"
+          other: "%{count} minutes"
+        second:
+          one: "%{count} second"
+          other: "%{count} seconds"
+      terms:
+        signup: "Sign up"
+        email_domains: "Email domains"
+        hidden: "Hides who has an account"
+        nickname: "Nickname"
+        email: "Email"
+        email_verified: "Confirmed email"
+        phone: "Phone"
+        phone_verified: "Confirmed phone"
+        first_factors: "Signs in with"
+        providers: "Providers"
+        password: "Password"
+        second_factors: "Second factors"
+        second_factor_required: "Second factor required"
+        apps_require_second_factor: "Second factor at every app sign-in"
+        session_lifetime: "Session lifetime"
+        refuse_breached: "Refuses breached passwords"
+        risk_step_up: "Second factor from risk"
+        risk_refuse: "Refused from risk"
+        idle_timeout: "Idle timeout"
+        confirmation: "Confirmation"
+        signup_scopes: "Signup scopes"
+      values:
+        open: "open"
+        invitation_only: "invitation only"
+        any: "any"
+        nothing: "nothing"
+        every_one: "every one"
+        none: "none"
+        password: "at least %{minimum} characters"
+        not_common: "at least %{minimum} characters, not a common one"
+        default_lifetime: "14 days"
+        never: "never"
+        at: "at %{score}"

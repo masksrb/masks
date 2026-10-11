@@ -1,10 +1,11 @@
 <script>
+  import { t } from "../lib/copy.js";
   let {
     label,
     value = $bindable(""),
     type = "text",
     onsave = null,
-    save = "Save",
+    save = t("ui.save"),
     ...rest
   } = $props();
 </script>

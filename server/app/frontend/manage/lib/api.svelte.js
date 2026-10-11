@@ -1,4 +1,5 @@
 import { createBrowserClient } from "@masks/client";
+import { t } from "./copy.js";
 import { callbackUri, clientId, forget, SCOPE } from "./pairing.js";
 
 function detach(variables) {
@@ -56,7 +57,7 @@ export function createApi(boot) {
   const authorization = async () => {
     const held = build();
 
-    if (!held) throw new Error("this browser has no client registered");
+    if (!held) throw new Error(t("api.unregistered"));
 
     if (held.expired(30)) await held.refresh();
 
@@ -158,7 +159,9 @@ export function createApi(boot) {
       const body = await response.json().catch(() => ({}));
 
       if (response.status === 401 || response.status === 403) {
-        throw new Error(body.error_description || body.error || "refused");
+        throw new Error(
+          body.error_description || body.error || t("api.refused"),
+        );
       }
 
       if (body.errors?.length) {

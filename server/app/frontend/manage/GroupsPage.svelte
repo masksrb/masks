@@ -1,4 +1,5 @@
 <script>
+  import { t } from "./lib/copy.js";
   import { createFeedback } from "./lib/feedback.svelte.js";
   import Section from "./ui/Section.svelte";
   import Field from "./ui/Field.svelte";
@@ -43,7 +44,7 @@
           `mutation Create($key: String!, $name: String!) { createGroup(key: $key, name: $name) { group { key } } }`,
           { key: key.trim(), name: name.trim() || key.trim() },
         ),
-      `${name.trim() || key.trim()} is ready. Add people from their own pages.`,
+      t("groups.added", { name: name.trim() || key.trim() }),
     );
 
     if (!done) return;
@@ -54,11 +55,11 @@
   }
 
   async function remove(group) {
-    if (!confirm(`Delete ${group.name}? Apps limited to it turn its people away.`)) return;
+    if (!confirm(t("groups.delete_confirm", { name: group.name }))) return;
 
     const done = await feedback.attempt(
       () => api.query(`mutation Delete($key: String!) { deleteGroup(key: $key) { key } }`, { key: group.key }),
-      `${group.name} is deleted.`,
+      t("groups.deleted", { name: group.name }),
     );
 
     if (done) await load();
@@ -71,7 +72,7 @@
           `mutation Leave($key: String!, $uuid: ID!) { removeGroupMember(key: $key, uuid: $uuid) { group { key } } }`,
           { key: group.key, uuid: actor.uuid },
         ),
-      `${actor.identifier} is out of ${group.name}.`,
+      t("groups.left", { identifier: actor.identifier, name: group.name }),
     );
 
     if (done) await load();
@@ -79,8 +80,8 @@
 </script>
 
 <Page
-  title="Groups"
-  lede="Named sets of people, such as admins or family. Apps that ask for the groups scope see each group a person is in, and an app can be limited to some groups."
+  title={t("groups.title")}
+  lede={t("groups.lede")}
 >
   <Notices feedback={feedback.state} />
 
@@ -90,20 +91,20 @@
     <div class="grid gap-4">
       <Section
         row
-        title="Add a group"
-        help="The key is what apps see in the groups claim, so pick the one an app's role mapping expects, such as admins. It cannot change later."
+        title={t("groups.add.title")}
+        help={t("groups.add.help")}
       >
-        <Field label="Key" bind:value={key} placeholder="admins" />
-        <Field label="Name" bind:value={name} placeholder="Admins" />
+        <Field label={t("groups.add.key")} bind:value={key} placeholder="admins" />
+        <Field label={t("groups.add.name")} bind:value={name} placeholder="Admins" />
 
         <button type="button" class="btn btn-primary btn-sm self-start" disabled={!key.trim()} onclick={create}>
-          Add group
+          {t("groups.add.submit")}
         </button>
       </Section>
 
-      <Section row title="Groups">
+      <Section row title={t("groups.list.title")}>
         {#if data.groups.length === 0}
-          <p class="text-sm opacity-85">No groups yet.</p>
+          <p class="text-sm opacity-85">{t("groups.list.empty")}</p>
         {:else}
           <ul class="flex flex-col divide-y divide-base-200">
             {#each data.groups as group (group.key)}
@@ -112,9 +113,9 @@
                   <div class="min-w-0">
                     <span class="text-sm font-medium">{group.name}</span>
                     <code class="hint ml-1 font-mono">{group.key}</code>
-                    <span class="hint">· {group.memberCount} {group.memberCount === 1 ? "person" : "people"}</span>
+                    <span class="hint">{t("groups.list.people", { count: group.memberCount })}</span>
                   </div>
-                  <button type="button" class="btn btn-ghost btn-sm" onclick={() => remove(group)}>Delete</button>
+                  <button type="button" class="btn btn-ghost btn-sm" onclick={() => remove(group)}>{t("groups.list.delete")}</button>
                 </div>
 
                 {#if group.members.length}
@@ -125,7 +126,7 @@
                         <button
                           type="button"
                           class="opacity-70 hover:opacity-100"
-                          aria-label={`Take ${actor.identifier} out of ${group.name}`}
+                          aria-label={t("groups.list.take_out", { identifier: actor.identifier, name: group.name })}
                           onclick={() => leave(group, actor)}
                         >×</button>
                       </li>

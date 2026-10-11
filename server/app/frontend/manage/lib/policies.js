@@ -1,4 +1,4 @@
-import { plural } from "./format.js";
+import { t } from "./copy.js";
 
 export const POLICY_FIELDS = `
   key name signup nickname email emailVerified phone phoneVerified
@@ -6,28 +6,31 @@ export const POLICY_FIELDS = `
   emailDomains providers confirmation hidden signupScopes archivedAt
 `;
 
-const FACTORS = {
-  password: "password",
-  passkey: "passkey",
-  provider: "provider",
-  email_code: "emailed code",
-  otp: "authenticator app",
-  backup_codes: "backup codes",
-};
+const FACTORS = [
+  "password",
+  "passkey",
+  "provider",
+  "email_code",
+  "otp",
+  "backup_codes",
+];
 
-const CONFIRMATIONS = {
-  none: "none",
-  code: "emailed code",
-  link: "emailed link",
-  approval: "manager approval",
-};
+const CONFIRMATIONS = ["none", "code", "link", "approval"];
+
+const PRESENCE = ["off", "optional", "required"];
+
+const known = (list, group, value) =>
+  list.includes(value) ? t(`policy_rules.${group}.${value}`) : value;
 
 const listed = (values, empty) =>
   values?.length
-    ? values.map((value) => FACTORS[value] ?? value).join(", ")
-    : empty;
+    ? values.map((value) => known(FACTORS, "factors", value)).join(", ")
+    : t(`policy_rules.values.${empty}`);
 
-const yes = (value) => (value ? "yes" : "no");
+const yes = (value) =>
+  t(value ? "policy_rules.answers.yes" : "policy_rules.answers.no");
+
+const value = (name) => t(`policy_rules.values.${name}`);
 
 const UNITS = [
   [86400, "day"],
@@ -40,54 +43,73 @@ export function duration(seconds) {
     1,
     "second",
   ];
-  const count = seconds / size;
 
-  return plural(count, unit);
+  return t(`policy_rules.units.${unit}`, { count: seconds / size });
 }
+
+const term = (name) => t(`policy_rules.terms.${name}`);
 
 function describePolicy(policy) {
   return [
-    ["Sign up", policy.signup ? "open" : "invitation only"],
-    ["Email domains", listed(policy.emailDomains, "any")],
-    ["Hides who has an account", yes(policy.hidden)],
-    ["Nickname", policy.nickname],
-    ["Email", policy.email],
-    ["Confirmed email", yes(policy.emailVerified)],
-    ["Phone", policy.phone],
-    ["Confirmed phone", yes(policy.phoneVerified)],
-    ["Signs in with", listed(policy.firstFactors, "nothing")],
+    [term("signup"), policy.signup ? value("open") : value("invitation_only")],
+    [term("email_domains"), listed(policy.emailDomains, "any")],
+    [term("hidden"), yes(policy.hidden)],
+    [term("nickname"), known(PRESENCE, "presence", policy.nickname)],
+    [term("email"), known(PRESENCE, "presence", policy.email)],
+    [term("email_verified"), yes(policy.emailVerified)],
+    [term("phone"), known(PRESENCE, "presence", policy.phone)],
+    [term("phone_verified"), yes(policy.phoneVerified)],
+    [term("first_factors"), listed(policy.firstFactors, "nothing")],
     [
-      "Providers",
+      term("providers"),
       policy.providers === null
-        ? "every one"
+        ? value("every_one")
         : listed(policy.providers, "none"),
     ],
     [
-      "Password",
-      `at least ${policy.passwordMinimum} characters${policy.refuseCommonPasswords ? ", not a common one" : ""}`,
+      term("password"),
+      t(
+        policy.refuseCommonPasswords
+          ? "policy_rules.values.not_common"
+          : "policy_rules.values.password",
+        {
+          minimum: policy.passwordMinimum,
+        },
+      ),
     ],
-    ["Second factors", listed(policy.secondFactors, "none")],
-    ["Second factor required", yes(policy.secondFactorRequired)],
-    ["Second factor at every app sign-in", yes(policy.appsRequireSecondFactor)],
+    [term("second_factors"), listed(policy.secondFactors, "none")],
+    [term("second_factor_required"), yes(policy.secondFactorRequired)],
+    [term("apps_require_second_factor"), yes(policy.appsRequireSecondFactor)],
     [
-      "Session lifetime",
-      policy.sessionLifetime ? duration(policy.sessionLifetime) : "14 days",
+      term("session_lifetime"),
+      policy.sessionLifetime
+        ? duration(policy.sessionLifetime)
+        : value("default_lifetime"),
     ],
-    ["Refuses breached passwords", yes(policy.refuseBreachedPasswords)],
+    [term("refuse_breached"), yes(policy.refuseBreachedPasswords)],
     [
-      "Second factor from risk",
-      policy.riskStepUpAt ? `at ${policy.riskStepUpAt}` : "never",
+      term("risk_step_up"),
+      policy.riskStepUpAt
+        ? t("policy_rules.values.at", { score: policy.riskStepUpAt })
+        : value("never"),
     ],
     [
-      "Refused from risk",
-      policy.riskRefuseAt ? `at ${policy.riskRefuseAt}` : "never",
+      term("risk_refuse"),
+      policy.riskRefuseAt
+        ? t("policy_rules.values.at", { score: policy.riskRefuseAt })
+        : value("never"),
     ],
     [
-      "Idle timeout",
-      policy.sessionIdleTimeout ? duration(policy.sessionIdleTimeout) : "never",
+      term("idle_timeout"),
+      policy.sessionIdleTimeout
+        ? duration(policy.sessionIdleTimeout)
+        : value("never"),
     ],
-    ["Confirmation", CONFIRMATIONS[policy.confirmation] ?? policy.confirmation],
-    ["Signup scopes", listed(policy.signupScopes, "none")],
+    [
+      term("confirmation"),
+      known(CONFIRMATIONS, "confirmations", policy.confirmation),
+    ],
+    [term("signup_scopes"), listed(policy.signupScopes, "none")],
   ];
 }
 

@@ -1,4 +1,5 @@
 <script>
+  import { t } from "./lib/copy.js";
   import { untrack } from "svelte";
   import { createFeedback } from "./lib/feedback.svelte.js";
   import Field from "./ui/Field.svelte";
@@ -32,7 +33,7 @@
           subject: blank || signature ? "" : subject,
           message: blank ? "" : message,
         }),
-      blank ? `${title} uses masks' wording again.` : `${title} saved.`,
+      blank ? t("mail_wording.reset", { title }) : t("mail_wording.saved", { title }),
     );
 
     busy = false;
@@ -42,7 +43,9 @@
 </script>
 
 <details class="mail-wording" open={custom || undefined}>
-  <summary class="term">{signature ? "Signature" : "Wording"}{custom ? " (customized)" : ""}</summary>
+  <summary class="term">
+    {t(signature ? "mail_wording.signature" : "mail_wording.wording")}{custom ? t("mail_wording.customized") : ""}
+  </summary>
 
   <form
     class="flex flex-col gap-3 pt-3"
@@ -54,29 +57,34 @@
     <Notices feedback={feedback.state} />
 
     {#if !signature}
-      <Field label="Subject" bind:value={subject} maxlength="150" placeholder="The subject masks writes" />
+      <Field
+        label={t("mail_wording.subject")}
+        bind:value={subject}
+        maxlength="150"
+        placeholder={t("mail_wording.subject_placeholder")}
+      />
     {/if}
 
     <label class="flex flex-col gap-1.5">
-      <span class="field-label">{signature ? "Closing lines on every email" : "Opening text"}</span>
+      <span class="field-label">{t(signature ? "mail_wording.closing" : "mail_wording.opening")}</span>
       <textarea
         class="textarea textarea-sm w-full"
         rows="4"
         maxlength="2000"
-        placeholder={signature ? "None" : "The opening masks writes"}
+        placeholder={t(signature ? "mail_wording.closing_placeholder" : "mail_wording.opening_placeholder")}
         bind:value={message}
       ></textarea>
       <span class="hint">
-        Plain text. A blank line starts a new paragraph. Fills in {names}.
-        {#if !signature}masks still adds the button or code, how long it lasts, and the safety lines.{/if}
+        {t("mail_wording.hint", { names })}
+        {#if !signature}{t("mail_wording.hint_more")}{/if}
       </span>
     </label>
 
     <div class="flex gap-2">
-      <button type="submit" class="btn btn-sm btn-primary" disabled={busy}>Save</button>
+      <button type="submit" class="btn btn-sm btn-primary" disabled={busy}>{t("mail_wording.save")}</button>
       {#if custom}
         <button type="button" class="btn btn-sm btn-ghost" disabled={busy} onclick={() => save(true)}>
-          Use masks' wording
+          {t("mail_wording.use_default")}
         </button>
       {/if}
     </div>

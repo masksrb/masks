@@ -1,5 +1,6 @@
 <script>
-  import { joined, moment, plural, since } from "./lib/format.js";
+  import { t } from "./lib/copy.js";
+  import { joined, moment, since } from "./lib/format.js";
   import Link from "./ui/Link.svelte";
 
   let { api, feedback, rows, onchange, showActor = false, limit = 5 } = $props();
@@ -20,11 +21,18 @@
     code: "badge-warning",
   };
 
+  function kind(name) {
+    const key = `tokens.kinds.${name}`;
+    const said = t(key);
+
+    return said === key ? name : said;
+  }
+
   async function revoke(token, family) {
     const held = showActor ? token.actor?.identifier : token.client?.name;
     const question = family
-      ? `Revoke every token in this chain? Anything ${held} is holding stops working at once.`
-      : `Revoke this ${token.kind} token? Whatever it was exchanged for goes with it.`;
+      ? t("tokens.revoke_chain_confirm", { held })
+      : t("tokens.revoke_confirm", { kind: kind(token.kind) });
 
     if (!confirm(question)) return;
 
@@ -36,21 +44,21 @@
 
     const count = data.revokeToken.revoked;
 
-    feedback.say(`${plural(count, "token")} revoked.`);
+    feedback.say(t("tokens.revoked", { count }));
 
     await onchange();
   }
 </script>
 
 {#if rows.length === 0}
-  <p class="text-sm opacity-85">Nothing outstanding.</p>
+  <p class="text-sm opacity-85">{t("tokens.empty")}</p>
 {:else}
   <ul class="slats">
     {#each shown as token (token.id)}
       <li class="slat">
         <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
           <span class="flex flex-wrap items-baseline gap-2">
-            <span class="badge badge-sm {KIND[token.kind] ?? 'badge-ghost'}">{token.kind}</span>
+            <span class="badge badge-sm {KIND[token.kind] ?? 'badge-ghost'}">{kind(token.kind)}</span>
 
             {#if showActor && token.actor}
               <Link to={`/actors/${token.actor.uuid}`} class="link link-hover text-sm font-medium">
@@ -66,13 +74,13 @@
             {/if}
 
             {#if token.parentId}
-              <span class="text-xs opacity-75">rotated</span>
+              <span class="text-xs opacity-75">{t("tokens.rotated")}</span>
             {/if}
           </span>
 
           <span class="flex items-baseline gap-3">
             <button type="button" class="link text-xs text-error" onclick={() => revoke(token, false)}>
-              Revoke
+              {t("tokens.revoke")}
             </button>
             {#if token.kind === "refresh"}
               <button
@@ -80,7 +88,7 @@
                 class="link text-xs text-error"
                 onclick={() => revoke(token, true)}
               >
-                Revoke the chain
+                {t("tokens.revoke_chain")}
               </button>
             {/if}
           </span>
@@ -101,8 +109,8 @@
           {#if token.device}
             <span class="truncate">{token.device.label}</span>
           {/if}
-          <span title={moment(token.createdAt)}>Issued {since(token.createdAt)}</span>
-          <span title={moment(token.expiresAt)}>Expires {since(token.expiresAt)}</span>
+          <span title={moment(token.createdAt)}>{t("tokens.issued", { when: since(token.createdAt) })}</span>
+          <span title={moment(token.expiresAt)}>{t("tokens.expires", { when: since(token.expiresAt) })}</span>
         </div>
       </li>
     {/each}
@@ -110,7 +118,7 @@
 
   {#if !all && rows.length > limit}
     <button type="button" class="btn btn-ghost btn-sm self-start" onclick={() => (all = true)}>
-      Show {rows.length - limit} more
+      {t("tokens.more", { count: rows.length - limit })}
     </button>
   {/if}
 {/if}

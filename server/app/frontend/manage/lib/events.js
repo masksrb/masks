@@ -1,3 +1,5 @@
+import { t } from "./copy.js";
+
 const GRAVE = new Set([
   "logout.undelivered",
   "login.refused",
@@ -48,7 +50,8 @@ export function detailed(details) {
 
 function phrase(value) {
   if (Array.isArray(value)) return value.join(" ");
-  if (typeof value === "boolean") return value ? "yes" : "no";
+  if (typeof value === "boolean")
+    return t(value ? "event_labels.yes" : "event_labels.no");
 
   return String(value);
 }

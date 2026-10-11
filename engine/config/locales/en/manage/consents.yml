@@ -1,0 +1,10 @@
+en:
+  manage:
+    consents:
+      revoke_confirm: "Cut %{held} off? Every refresh token it holds is revoked, and it has to ask again the next time somebody signs in."
+      revoked: "Access revoked. It will have to ask again."
+      empty: "None."
+      revoke: "Revoke access"
+      last_asked: "Last asked %{when}"
+      asks_again: "Asks again %{when}"
+      until: "until %{when}"

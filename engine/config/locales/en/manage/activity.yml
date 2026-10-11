@@ -1,0 +1,28 @@
+en:
+  manage:
+    activity:
+      title: "Activity"
+      nouns:
+        actor: "actor"
+        client: "client"
+      downloading:
+        one: "Downloading %{count} event."
+        other: "Downloading %{count} events."
+      involves: "Only what involves the %{noun}"
+      involves_end: "."
+      gone:
+        actor: "Only what involves one actor, which no longer exists."
+        client: "Only what involves one client, which no longer exists."
+      everything: "Show everything"
+      show: "Show"
+      all: "everything"
+      grave: "Only what is worth a look"
+      export:
+        title: "Export"
+        lede: "Every event in a range as newline-delimited JSON, in the shape event streams send. It follows the filter above."
+        from: "From"
+        through: "Through"
+        download: "Download"
+      empty:
+        grave: "Nothing worth a look."
+        plain: "Nothing yet."

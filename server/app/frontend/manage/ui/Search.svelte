@@ -1,4 +1,5 @@
 <script>
+  import { t } from "../lib/copy.js";
   let { value = $bindable(""), placeholder, label, onsearch } = $props();
 </script>
 
@@ -11,5 +12,5 @@
     bind:value
     onkeydown={(event) => event.key === "Enter" && onsearch()}
   />
-  <button type="button" class="btn btn-sm join-item" onclick={onsearch}>Search</button>
+  <button type="button" class="btn btn-sm join-item" onclick={onsearch}>{t("ui.search")}</button>
 </div>

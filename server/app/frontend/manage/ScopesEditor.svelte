@@ -1,4 +1,5 @@
 <script>
+  import { t } from "./lib/copy.js";
   let { value = [], available = [], onchange, disabled = false } = $props();
 
   let adding = $state("");
@@ -43,14 +44,14 @@
     <div class="join">
       <input
         class="input input-sm join-item font-mono"
-        placeholder="add a scope"
+        placeholder={t("scopes_editor.placeholder")}
         autocapitalize="none"
         autocorrect="off"
         spellcheck="false"
         bind:value={adding}
         onkeydown={(event) => event.key === "Enter" && add()}
       />
-      <button type="button" class="btn btn-sm join-item" onclick={add}>Add</button>
+      <button type="button" class="btn btn-sm join-item" onclick={add}>{t("scopes_editor.add")}</button>
     </div>
   {/if}
 </div>

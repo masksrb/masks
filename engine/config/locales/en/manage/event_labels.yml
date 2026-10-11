@@ -1,0 +1,5 @@
+en:
+  manage:
+    event_labels:
+      "yes": "yes"
+      "no": "no"

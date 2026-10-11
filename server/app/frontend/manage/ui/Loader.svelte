@@ -1,4 +1,5 @@
 <script>
+  import { t } from "../lib/copy.js";
   import Spinner from "./Spinner.svelte";
 
   let { load, children } = $props();
@@ -26,7 +27,7 @@
 {:else if state.failure}
   <div class="alert alert-error alert-soft text-sm" role="alert">
     <span>{state.failure}</span>
-    <button type="button" class="btn btn-sm" onclick={run}>Try again</button>
+    <button type="button" class="btn btn-sm" onclick={run}>{t("ui.retry")}</button>
   </div>
 {:else}
   {@render children(state.data, run)}

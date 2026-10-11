@@ -8,6 +8,7 @@
   import Page from "./ui/Page.svelte";
   import Spinner from "./ui/Spinner.svelte";
   import Switch from "./ui/Switch.svelte";
+  import { t } from "./lib/copy.js";
   import { duration } from "./lib/policies.js";
 
   let { api } = $props();
@@ -56,64 +57,33 @@
   const DAY = 24 * HOUR;
 
   const LIFETIMES = [
-    [null, "14 days"],
-    [HOUR, "1 hour"],
-    [8 * HOUR, "8 hours"],
-    [12 * HOUR, "12 hours"],
-    [DAY, "1 day"],
-    [7 * DAY, "7 days"],
-    [30 * DAY, "30 days"],
-    [90 * DAY, "90 days"],
+    [null, t("policy_rules.values.default_lifetime")],
+    ...[HOUR, 8 * HOUR, 12 * HOUR, DAY, 7 * DAY, 30 * DAY, 90 * DAY].map((seconds) => [seconds, duration(seconds)]),
   ];
 
   const IDLE = [
-    [null, "Never"],
-    [15 * 60, "15 minutes"],
-    [30 * 60, "30 minutes"],
-    [HOUR, "1 hour"],
-    [4 * HOUR, "4 hours"],
-    [DAY, "1 day"],
+    [null, t("policies.never")],
+    ...[15 * 60, 30 * 60, HOUR, 4 * HOUR, DAY].map((seconds) => [seconds, duration(seconds)]),
   ];
 
-  const SCORES = [
-    [null, "Never"],
-    [30, "30 or more"],
-    [50, "50 or more"],
-    [70, "70 or more"],
-    [90, "90 or more"],
-  ];
+  const SCORES = [[null, t("policies.never")], ...[30, 50, 70, 90].map((score) => [score, t("policies.score", { score })])];
 
   const offered = (choices, value) =>
-    value === null || choices.some(([held]) => held === value) ? choices : [...choices, [value, `${value} seconds`]];
+    value === null || choices.some(([held]) => held === value)
+      ? choices
+      : [...choices, [value, t("policy_rules.units.second", { count: value })]];
 
-  const PRESENCE = [
-    ["off", "Off"],
-    ["optional", "Optional"],
-    ["required", "Required"],
-  ];
+  const labelled = (group, values) => values.map((value) => [value, t(`policies.${group}.${value}`)]);
 
-  const FIRST = [
-    ["password", "Password"],
-    ["passkey", "Passkey"],
-    ["provider", "Provider"],
-    ["email_code", "Emailed code"],
-  ];
+  const PRESENCE = labelled("presence", ["off", "optional", "required"]);
 
-  const SECOND = [
-    ["otp", "Authenticator app"],
-    ["passkey", "Passkey"],
-    ["backup_codes", "Backup codes"],
-    ["email", "Email codes"],
-    ["sms", "Text message codes"],
-    ["trusted_device", "Approval from a trusted device"],
-  ];
+  const FIRST = labelled("first", ["password", "passkey", "provider", "email_code"]);
 
-  const CONFIRMATIONS = [
-    ["none", "None"],
-    ["code", "Emailed code"],
-    ["link", "Emailed link"],
-    ["approval", "Manager approval"],
-  ];
+  const SECOND = labelled("second", ["otp", "passkey", "backup_codes", "email", "sms", "trusted_device"]);
+
+  const CONFIRMATIONS = labelled("confirmations", ["none", "code", "link", "approval"]);
+
+  const ACCOUNT_FIELDS = ["nickname", "email", "phone"].map((field) => [field, t(`policies.form.account.${field}`)]);
 
   const BLANK = {
     key: "",
@@ -242,7 +212,7 @@
             : `mutation Update(${ARGS}) { updateSignInPolicy(${PASS}) { signInPolicy { key } } }`,
           variables(),
         ),
-      fresh ? `${draft.name} added.` : `${draft.name} saved.`,
+      fresh ? t("policies.added", { name: draft.name }) : t("policies.saved", { name: draft.name }),
     );
 
     busy = false;
@@ -269,14 +239,14 @@
 
   const summary = (policy) =>
     [
-      policy.signup ? "signup open" : "invitation only",
-      policy.secondFactorRequired ? "second factor required" : null,
-      policy.appsRequireSecondFactor ? "second factor at every app sign-in" : null,
-      policy.sessionLifetime ? `sessions last ${duration(policy.sessionLifetime)}` : null,
-      policy.sessionIdleTimeout ? `idle after ${duration(policy.sessionIdleTimeout)}` : null,
-      policy.confirmation !== "none" ? `confirmed by ${policy.confirmation}` : null,
-      policy.phone === "required" ? "phone required" : null,
-      policy.hidden ? "hidden accounts" : null,
+      policy.signup ? t("policies.summary.signup_open") : t("policies.summary.invitation_only"),
+      policy.secondFactorRequired ? t("policies.summary.second_factor_required") : null,
+      policy.appsRequireSecondFactor ? t("policies.summary.apps_require_second_factor") : null,
+      policy.sessionLifetime ? t("policies.summary.lifetime", { duration: duration(policy.sessionLifetime) }) : null,
+      policy.sessionIdleTimeout ? t("policies.summary.idle", { duration: duration(policy.sessionIdleTimeout) }) : null,
+      policy.confirmation !== "none" ? t("policies.summary.confirmed_by", { confirmation: policy.confirmation }) : null,
+      policy.phone === "required" ? t("policies.summary.phone_required") : null,
+      policy.hidden ? t("policies.summary.hidden") : null,
     ]
       .filter(Boolean)
       .join(" · ");
@@ -284,10 +254,10 @@
   const signingProviders = $derived(data?.providers ?? []);
 </script>
 
-<Page title="Policies">
+<Page title={t("policies.title")}>
   {#snippet actions()}
     {#if editing === null}
-      <button type="button" class="btn btn-primary btn-sm" onclick={add}>Add policy</button>
+      <button type="button" class="btn btn-primary btn-sm" onclick={add}>{t("policies.add")}</button>
     {/if}
   {/snippet}
 
@@ -297,11 +267,16 @@
     <Spinner />
   {:else if data}
     {#if editing !== null}
-      <Section title={editing === "" ? "New policy" : draft.name}>
+      <Section title={editing === "" ? t("policies.form.new") : draft.name}>
         <div class="grid gap-3 sm:grid-cols-[2fr_1fr]">
-          <Field label="Name" value={draft.name} oninput={(event) => named(event.currentTarget.value)} placeholder="Customers" />
           <Field
-            label="Key"
+            label={t("policies.form.name")}
+            value={draft.name}
+            oninput={(event) => named(event.currentTarget.value)}
+            placeholder={t("policies.form.name_placeholder")}
+          />
+          <Field
+            label={t("policies.form.key")}
             bind:value={draft.key}
             oninput={() => (keyTouched = true)}
             disabled={editing !== ""}
@@ -314,22 +289,22 @@
 
         <div class="policy-rows">
           <div class="policy-row">
-            <span class="legend">Sign up</span>
+            <span class="legend">{t("policies.form.signup.legend")}</span>
             <div class="policy-controls">
-              <Switch label="Open" bind:checked={draft.signup} />
+              <Switch label={t("policies.form.signup.open")} bind:checked={draft.signup} />
 
               {#if draft.signup}
                 <div class="grid gap-3 sm:grid-cols-2">
                   <Field
-                    label="Email domains"
+                    label={t("policies.form.signup.email_domains")}
                     bind:value={draft.emailDomains}
                     autocapitalize="none"
                     spellcheck="false"
-                    placeholder="any"
+                    placeholder={t("policies.form.signup.email_domains_placeholder")}
                   />
 
                   <label class="flex flex-col gap-1.5">
-                    <span class="field-label">Confirmation</span>
+                    <span class="field-label">{t("policies.form.signup.confirmation")}</span>
                     <select class="select select-sm w-full" bind:value={draft.confirmation}>
                       {#each CONFIRMATIONS as [value, label] (value)}
                         <option {value}>{label}</option>
@@ -340,12 +315,12 @@
 
                 {#if (draft.confirmation === "code" || draft.confirmation === "link") && !data.tenant.mails}
                   <p class="text-xs text-warning">
-                    No mail adapter. <Link to="/adapters" class="link">Add one</Link>
+                    {t("policies.form.signup.no_mail")} <Link to="/adapters" class="link">{t("policies.form.add_one")}</Link>
                   </p>
                 {/if}
 
                 <div class="flex flex-col gap-1.5">
-                  <span class="field-label">Signup scopes</span>
+                  <span class="field-label">{t("policies.form.signup.scopes")}</span>
                   <ScopesEditor
                     value={draft.signupScopes}
                     available={data.scopesSupported.filter((scope) => !scope.startsWith("masks:"))}
@@ -354,31 +329,31 @@
                 </div>
               {/if}
 
-              <Switch label="Hide who has an account" bind:checked={draft.hidden} />
+              <Switch label={t("policies.form.signup.hidden")} bind:checked={draft.hidden} />
 
               {#if draft.hidden}
                 <p class="text-xs opacity-85">
-                  An email address is sent a code before anything else, whether it has an account or not, and a
-                  device that account has used before skips it. Nicknames sign in as they always have.
+                  {t("policies.form.signup.hidden_hint")}
                 </p>
                 {#if !data.tenant.mails}
                   <p class="text-xs text-warning">
-                    No mail adapter, so nobody can sign in with an email address. <Link to="/adapters" class="link">Add one</Link>
+                    {t("policies.form.signup.hidden_no_mail")}
+                    <Link to="/adapters" class="link">{t("policies.form.add_one")}</Link>
                   </p>
                 {/if}
               {:else if draft.signup}
                 <p class="text-xs text-warning">
-                  An unknown address goes straight to signup, which tells anybody which addresses have accounts here.
+                  {t("policies.form.signup.open_warning")}
                 </p>
               {/if}
             </div>
           </div>
 
           <div class="policy-row">
-            <span class="legend">Account</span>
+            <span class="legend">{t("policies.form.account.legend")}</span>
             <div class="policy-controls">
               <div class="grid gap-3 sm:grid-cols-3">
-                {#each [["nickname", "Nickname"], ["email", "Email"], ["phone", "Phone"]] as [field, label] (field)}
+                {#each ACCOUNT_FIELDS as [field, label] (field)}
                   <label class="flex flex-col gap-1.5">
                     <span class="field-label">{label}</span>
                     <select class="select select-sm w-full" bind:value={draft[field]}>
@@ -391,20 +366,20 @@
               </div>
 
               <div class="flex flex-wrap gap-x-5 gap-y-2">
-                <Switch label="Confirmed email" bind:checked={draft.emailVerified} />
-                <Switch label="Confirmed phone" bind:checked={draft.phoneVerified} />
+                <Switch label={t("policies.form.account.email_verified")} bind:checked={draft.emailVerified} />
+                <Switch label={t("policies.form.account.phone_verified")} bind:checked={draft.phoneVerified} />
               </div>
 
               {#if draft.phone !== "off" && draft.phoneVerified && !data.tenant.texts}
                 <p class="text-xs text-warning">
-                  No SMS adapter. <Link to="/adapters" class="link">Add one</Link>
+                  {t("policies.form.account.no_sms")} <Link to="/adapters" class="link">{t("policies.form.add_one")}</Link>
                 </p>
               {/if}
             </div>
           </div>
 
           <div class="policy-row">
-            <span class="legend">Sign in</span>
+            <span class="legend">{t("policies.form.sign_in.legend")}</span>
             <div class="policy-controls">
               <div class="flex flex-wrap gap-x-5 gap-y-2">
                 {#each FIRST as [value, label] (value)}
@@ -420,16 +395,16 @@
                 <div class="flex flex-wrap items-center gap-x-5 gap-y-2">
                   <label class="flex items-center gap-2 text-sm">
                     <input class="input input-sm w-16" type="number" min="8" bind:value={draft.passwordMinimum} />
-                    characters minimum
+                    {t("policies.form.sign_in.characters")}
                   </label>
-                  <Switch label="Refuse common passwords" bind:checked={draft.refuseCommonPasswords} />
+                  <Switch label={t("policies.form.sign_in.refuse_common")} bind:checked={draft.refuseCommonPasswords} />
                 </div>
               {/if}
 
               {#if draft.firstFactors.includes("provider") && signingProviders.length}
                 <div class="flex flex-wrap gap-x-5 gap-y-2">
                   <Switch
-                    label="All providers"
+                    label={t("policies.form.sign_in.all_providers")}
                     checked={draft.providers === null}
                     onchange={(on) => (draft.providers = on ? null : signingProviders.map((held) => held.key))}
                   />
@@ -449,7 +424,7 @@
           </div>
 
           <div class="policy-row">
-            <span class="legend">Second factor</span>
+            <span class="legend">{t("policies.form.second_factor.legend")}</span>
             <div class="policy-controls">
               <div class="flex flex-wrap gap-x-5 gap-y-2">
                 {#each SECOND as [value, label] (value)}
@@ -461,20 +436,20 @@
                 {/each}
               </div>
 
-              <Switch label="Required for everyone, not just managers" bind:checked={draft.secondFactorRequired} />
+              <Switch label={t("policies.form.second_factor.required")} bind:checked={draft.secondFactorRequired} />
               <Switch
-                label="Asked again at an app sign-in when the session did not use one"
+                label={t("policies.form.second_factor.apps")}
                 bind:checked={draft.appsRequireSecondFactor}
               />
             </div>
           </div>
 
           <div class="policy-row">
-            <span class="legend">Risk</span>
+            <span class="legend">{t("policies.form.risk.legend")}</span>
             <div class="policy-controls">
               <div class="flex flex-wrap items-center gap-x-5 gap-y-2">
                 <label class="flex items-center gap-2 text-sm">
-                  Ask for a second factor at a score of
+                  {t("policies.form.risk.step_up")}
                   <select class="select select-sm w-auto" bind:value={draft.riskStepUpAt}>
                     {#each offered(SCORES, draft.riskStepUpAt) as [value, label] (value)}
                       <option {value}>{label}</option>
@@ -482,7 +457,7 @@
                   </select>
                 </label>
                 <label class="flex items-center gap-2 text-sm">
-                  Refuse at
+                  {t("policies.form.risk.refuse")}
                   <select class="select select-sm w-auto" bind:value={draft.riskRefuseAt}>
                     {#each offered(SCORES, draft.riskRefuseAt) as [value, label] (value)}
                       <option {value}>{label}</option>
@@ -490,42 +465,38 @@
                   </select>
                 </label>
               </div>
-              <Switch label="Refuse passwords found in known breaches" bind:checked={draft.refuseBreachedPasswords} />
+              <Switch label={t("policies.form.risk.refuse_breached")} bind:checked={draft.refuseBreachedPasswords} />
               <p class="hint">
-                A sign-in scores up to 100: a new device 30, a new network 25, a risky network 50, repeated failures
-                20 or 40, an account dormant for six months 10, and a breached password 40. Breach checks send the
-                first five characters of the password's SHA-1 hash, never the password.
+                {t("policies.form.risk.hint")}
               </p>
             </div>
           </div>
 
           <div class="policy-row">
-            <span class="legend">Sessions</span>
+            <span class="legend">{t("policies.form.sessions.legend")}</span>
             <div class="policy-controls">
               <div class="flex flex-wrap items-center gap-x-5 gap-y-2">
                 <label class="flex items-center gap-2 text-sm">
-                  Last
+                  {t("policies.form.sessions.last")}
                   <select class="select select-sm w-auto" bind:value={draft.sessionLifetime}>
                     {#each offered(LIFETIMES, draft.sessionLifetime) as [value, label] (value)}
                       <option {value}>{label}</option>
                     {/each}
                   </select>
-                  after signing in
+                  {t("policies.form.sessions.after_sign_in")}
                 </label>
                 <label class="flex items-center gap-2 text-sm">
-                  End after
+                  {t("policies.form.sessions.end_after")}
                   <select class="select select-sm w-auto" bind:value={draft.sessionIdleTimeout}>
                     {#each offered(IDLE, draft.sessionIdleTimeout) as [value, label] (value)}
                       <option {value}>{label}</option>
                     {/each}
                   </select>
-                  idle
+                  {t("policies.form.sessions.idle")}
                 </label>
               </div>
               <p class="hint">
-                Apps covered by this policy ask again once a session is older or has been idle longer, even
-                one that started under another policy. A shorter session also ends the refresh tokens issued in
-                it.
+                {t("policies.form.sessions.hint")}
               </p>
             </div>
           </div>
@@ -538,16 +509,16 @@
             disabled={busy || !draft.key.trim() || !draft.name.trim()}
             onclick={save}
           >
-            {editing === "" ? "Add" : "Save"}
+            {editing === "" ? t("policies.form.create") : t("policies.form.save")}
           </button>
-          <button type="button" class="btn btn-ghost btn-sm" onclick={close}>Cancel</button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick={close}>{t("policies.form.cancel")}</button>
         </div>
       </Section>
     {/if}
 
     <Section>
       {#if data.active.length === 0}
-        <p class="text-sm opacity-85">None yet. Clients use the built-in default.</p>
+        <p class="text-sm opacity-85">{t("policies.list.empty")}</p>
       {/if}
 
       {#each data.active as policy (policy.key)}
@@ -555,12 +526,12 @@
           <div class="flex min-w-0 flex-col gap-1">
             <span class="font-medium">
               {policy.name}
-              {#if policy.default}<span class="badge badge-success badge-sm">Default</span>{/if}
+              {#if policy.default}<span class="badge badge-success badge-sm">{t("policies.list.default")}</span>{/if}
             </span>
             <span class="hint">{summary(policy)}</span>
             {#if policy.clients.length}
               <span class="hint">
-                Used by
+                {t("policies.list.used_by")}
                 {#each policy.clients as client, index (client.clientId)}
                   {index ? ", " : ""}<Link to={`/clients/${client.clientId}`} class="link">{client.name}</Link>
                 {/each}
@@ -569,7 +540,7 @@
           </div>
 
           <div class="flex gap-2">
-            <button type="button" class="btn btn-sm" onclick={() => edit(policy)}>Edit</button>
+            <button type="button" class="btn btn-sm" onclick={() => edit(policy)}>{t("policies.list.edit")}</button>
             {#if !policy.default}
               <button
                 type="button"
@@ -578,11 +549,11 @@
                   act(
                     "archiveSignInPolicy",
                     policy,
-                    `${policy.name} is archived.`,
-                    `Archive ${policy.name}? Its clients go back to the default.`,
+                    t("policies.archived_notice", { name: policy.name }),
+                    t("policies.archive_confirm", { name: policy.name }),
                   )}
               >
-                Archive
+                {t("policies.list.archive")}
               </button>
             {/if}
           </div>
@@ -591,16 +562,16 @@
     </Section>
 
     {#if data.archived.length}
-      <Section title="Archived">
+      <Section title={t("policies.archived.title")}>
         {#each data.archived as policy (policy.key)}
           <div class="flex items-center justify-between gap-2">
             <span class="text-sm">{policy.name}</span>
             <button
               type="button"
               class="btn btn-ghost btn-sm"
-              onclick={() => act("restoreSignInPolicy", policy, `${policy.name} is back.`)}
+              onclick={() => act("restoreSignInPolicy", policy, t("policies.restored", { name: policy.name }))}
             >
-              Restore
+              {t("policies.archived.restore")}
             </button>
           </div>
         {/each}

@@ -1,5 +1,6 @@
 <script>
   import { createFeedback } from "./lib/feedback.svelte.js";
+  import { t } from "./lib/copy.js";
   import { day } from "./lib/format.js";
   import Section from "./ui/Section.svelte";
   import Field from "./ui/Field.svelte";
@@ -102,7 +103,7 @@
               }`,
               variables,
             ),
-      fresh ? `${draft.name} added.` : `${draft.name} saved.`,
+      fresh ? t("streams.added", { name: draft.name }) : t("streams.saved", { name: draft.name }),
     );
 
     busy = false;
@@ -130,7 +131,7 @@
   }
 
   async function rotate(stream) {
-    if (!confirm(`Rotate the secret for ${stream.name}? Deliveries signed with the old secret stop verifying.`)) return;
+    if (!confirm(t("streams.rotate_confirm", { name: stream.name }))) return;
 
     const answer = await feedback.attempt(() =>
       api.query(`mutation Rotate($key: ID!) { rotateEventStreamSecret(key: $key) { secret } }`, {
@@ -155,7 +156,7 @@
     if (!answer) return;
 
     if (answer.testEventStream.delivered) {
-      feedback.say(`${stream.name} accepted a test event.`);
+      feedback.say(t("streams.tested", { name: stream.name }));
     } else {
       feedback.blame(answer.testEventStream.failure);
     }
@@ -166,7 +167,7 @@
   const complete = $derived(draft?.key.trim() && draft.name.trim() && draft.url.trim());
 </script>
 
-<Page title="Event streams">
+<Page title={t("streams.title")}>
   <Notices feedback={feedback.state} />
 
   {#if loading && !data}
@@ -174,32 +175,32 @@
   {:else if data}
     {#if secret}
       <Section
-        title="Signing secret"
-        lede="Verify the Masks-Signature header of each delivery with this secret. It is shown once."
+        title={t("streams.secret.title")}
+        lede={t("streams.secret.lede")}
       >
         <input class="input input-sm w-full font-mono" readonly value={secret} onfocus={(event) => event.currentTarget.select()} />
         <div>
-          <button type="button" class="btn btn-ghost btn-sm" onclick={() => (secret = null)}>I have saved it</button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick={() => (secret = null)}>{t("streams.secret.saved")}</button>
         </div>
       </Section>
     {/if}
 
     {#if draft}
-      <Section title={editing === "" ? "Add event stream" : `Edit ${draft.name}`}>
+      <Section title={editing === "" ? t("streams.form.add") : t("streams.form.edit", { name: draft.name })}>
         <div class="grid gap-3 sm:grid-cols-2">
           <Field
-            label="Key"
+            label={t("streams.form.key")}
             bind:value={draft.key}
             disabled={editing !== ""}
             autocapitalize="none"
             autocorrect="off"
             spellcheck="false"
           />
-          <Field label="Name" bind:value={draft.name} />
+          <Field label={t("streams.form.name")} bind:value={draft.name} />
         </div>
 
         <Field
-          label="Address"
+          label={t("streams.form.address")}
           type="url"
           bind:value={draft.url}
           placeholder="https://siem.example.com/masks"
@@ -208,42 +209,40 @@
         />
 
         <label class="flex flex-col gap-1.5">
-          <span class="field-label">Actions (optional)</span>
+          <span class="field-label">{t("streams.form.actions")}</span>
           <textarea
             class="textarea w-full font-mono"
             rows="4"
             bind:value={draft.actions}
             placeholder="session.started&#10;actor.deleted"
           ></textarea>
-          <p class="hint">One action per line. Leave it empty to stream every action.</p>
+          <p class="hint">{t("streams.form.actions_hint")}</p>
         </label>
 
         {#if data.organizations.length}
           <Select
-            label="Events from"
+            label={t("streams.form.events_from")}
             value={draft.organization}
-            options={[["", "Every organization and none"], ...data.organizations.map((held) => [held.key, `Only ${held.name}`])]}
+            options={[["", t("streams.form.every_organization")], ...data.organizations.map((held) => [held.key, t("streams.form.only", { name: held.name })])]}
             onchange={(key) => (draft.organization = key)}
           />
         {/if}
 
         <div class="flex gap-2">
           <button type="button" class="btn btn-primary btn-sm" disabled={busy || !complete} onclick={save}>
-            {editing === "" ? "Add" : "Save"}
+            {editing === "" ? t("streams.form.create") : t("streams.form.save")}
           </button>
-          <button type="button" class="btn btn-ghost btn-sm" onclick={close}>Cancel</button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick={close}>{t("streams.form.cancel")}</button>
         </div>
       </Section>
     {/if}
 
     <Section
-      title="Streams"
-      lede={data.active.length
-        ? "Each event a tenant records is posted, signed, to every stream that wants it."
-        : "Nothing leaves masks until a stream is added."}
+      title={t("streams.list.title")}
+      lede={data.active.length ? t("streams.list.lede") : t("streams.list.empty")}
     >
       {#snippet actions()}
-        <button type="button" class="btn btn-sm" onclick={add}>Add</button>
+        <button type="button" class="btn btn-sm" onclick={add}>{t("streams.list.add")}</button>
       {/snippet}
 
       {#each data.active as stream (stream.key)}
@@ -252,24 +251,24 @@
             <div class="flex min-w-0 flex-col">
               <span class="font-medium">{stream.name}</span>
               <span class="hint break-all">
-                <span class="font-mono">{stream.key}</span> · {stream.url} · added {day(stream.createdAt)}
+                <span class="font-mono">{stream.key}</span> · {stream.url} · {t("streams.list.added", { day: day(stream.createdAt) })}
               </span>
               <span class="hint">
-                {stream.actions.length ? stream.actions.join(", ") : "Every action"}{stream.organization
-                  ? `, only ${stream.organization.name}`
+                {stream.actions.length ? stream.actions.join(", ") : t("streams.list.every_action")}{stream.organization
+                  ? t("streams.list.only", { name: stream.organization.name })
                   : ""}
               </span>
               {#if stream.lastFailure}
                 <span class="text-sm text-error">{stream.lastFailure}</span>
               {:else if stream.lastDeliveredAt}
-                <span class="hint">Last delivered {day(stream.lastDeliveredAt)}</span>
+                <span class="hint">{t("streams.list.last_delivered", { day: day(stream.lastDeliveredAt) })}</span>
               {/if}
             </div>
 
             <div class="flex flex-wrap gap-2">
-              <button type="button" class="btn btn-sm" disabled={busy} onclick={() => test(stream)}>Send a test</button>
-              <button type="button" class="btn btn-sm" onclick={() => edit(stream)}>Edit</button>
-              <button type="button" class="btn btn-ghost btn-sm" onclick={() => rotate(stream)}>Rotate secret</button>
+              <button type="button" class="btn btn-sm" disabled={busy} onclick={() => test(stream)}>{t("streams.list.test")}</button>
+              <button type="button" class="btn btn-sm" onclick={() => edit(stream)}>{t("streams.list.edit")}</button>
+              <button type="button" class="btn btn-ghost btn-sm" onclick={() => rotate(stream)}>{t("streams.list.rotate")}</button>
               <button
                 type="button"
                 class="btn btn-ghost btn-sm"
@@ -277,11 +276,11 @@
                   act(
                     "archiveEventStream",
                     stream,
-                    `${stream.name} is archived.`,
-                    `Archive ${stream.name}? Nothing is delivered to it until it is restored.`,
+                    t("streams.archived_notice", { name: stream.name }),
+                    t("streams.archive_confirm", { name: stream.name }),
                   )}
               >
-                Archive
+                {t("streams.list.archive")}
               </button>
             </div>
           </div>
@@ -290,16 +289,16 @@
     </Section>
 
     {#if data.archived.length}
-      <Section title="Archived">
+      <Section title={t("streams.archived.title")}>
         {#each data.archived as stream (stream.key)}
           <div class="flex flex-wrap items-center justify-between gap-2">
             <span class="text-sm">{stream.name} <span class="hint">{stream.url}</span></span>
             <button
               type="button"
               class="btn btn-ghost btn-sm"
-              onclick={() => act("restoreEventStream", stream, `${stream.name} is back.`)}
+              onclick={() => act("restoreEventStream", stream, t("streams.restored", { name: stream.name }))}
             >
-              Restore
+              {t("streams.archived.restore")}
             </button>
           </div>
         {/each}

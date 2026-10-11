@@ -1,5 +1,6 @@
 <script>
-  let { label = "Loading" } = $props();
+  import { t } from "../lib/copy.js";
+  let { label = t("ui.loading") } = $props();
 </script>
 
 <div class="grid place-items-center py-16" role="status">

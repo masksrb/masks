@@ -1,4 +1,5 @@
 <script>
+  import { t } from "./lib/copy.js";
   import { joined, moment, since } from "./lib/format.js";
   import Link from "./ui/Link.svelte";
 
@@ -14,16 +15,13 @@
     const held = showActor ? consent.actor.identifier : consent.client.name;
 
     if (
-      !confirm(
-        `Cut ${held} off? Every refresh token it holds is revoked, and it has to ask ` +
-          `again the next time somebody signs in.`,
-      )
+      !confirm(t("consents.revoke_confirm", { held }))
     )
       return;
 
     const done = await feedback.attempt(
       () => api.query(REVOKE, { id: consent.id }),
-      "Access revoked. It will have to ask again.",
+      t("consents.revoked"),
     );
 
     if (done) await onchange();
@@ -31,7 +29,7 @@
 </script>
 
 {#if rows.length === 0}
-  <p class="text-sm opacity-85">None.</p>
+  <p class="text-sm opacity-85">{t("consents.empty")}</p>
 {:else}
   <ul class="slats">
     {#each rows as consent (consent.id)}
@@ -51,7 +49,7 @@
           {/if}
 
           <button type="button" class="link text-xs text-error" onclick={() => revoke(consent)}>
-            Revoke access
+            {t("consents.revoke")}
           </button>
         </div>
 
@@ -67,9 +65,9 @@
               {joined(consent.audience)}
             </span>
           {/if}
-          <span title={moment(consent.updatedAt)}>Last asked {since(consent.updatedAt)}</span>
+          <span title={moment(consent.updatedAt)}>{t("consents.last_asked", { when: since(consent.updatedAt) })}</span>
           {#if consent.expiresAt}
-            <span title={moment(consent.expiresAt)}>Asks again {moment(consent.expiresAt)}</span>
+            <span title={moment(consent.expiresAt)}>{t("consents.asks_again", { when: moment(consent.expiresAt) })}</span>
           {/if}
         </div>
 
@@ -79,7 +77,7 @@
               <li class="flex flex-wrap gap-x-2">
                 <span class="scope">{held.entry.type}</span>
                 <span class="truncate font-mono opacity-80">{JSON.stringify(held.entry)}</span>
-                <span class="opacity-80">until {moment(held.expires_at)}</span>
+                <span class="opacity-80">{t("consents.until", { when: moment(held.expires_at) })}</span>
               </li>
             {/each}
           </ul>

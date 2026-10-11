@@ -1,5 +1,6 @@
 <script>
-  import { moment, plural, since } from "./lib/format.js";
+  import { t } from "./lib/copy.js";
+  import { moment, since } from "./lib/format.js";
   import Section from "./ui/Section.svelte";
   import Link from "./ui/Link.svelte";
   import Row from "./ui/Row.svelte";
@@ -10,9 +11,9 @@
   let { api, feedback } = $props();
 
   const LENSES = [
-    ["allowed", "Allowed", { blocked: false }],
-    ["blocked", "Blocked", { blocked: true }],
-    ["unattached", "Never signed in", { unattached: true }],
+    ["allowed", t("devices.lenses.allowed"), { blocked: false }],
+    ["blocked", t("devices.lenses.blocked"), { blocked: true }],
+    ["unattached", t("devices.lenses.unattached"), { unattached: true }],
   ];
 
   const QUERY = `
@@ -29,10 +30,10 @@
 
   const COLUMNS = [
     "",
-    "Device",
-    { label: "Who signs in on it", hide: true },
-    { label: "IP address", hide: true },
-    "Last seen",
+    t("devices.columns.device"),
+    { label: t("devices.columns.who"), hide: true },
+    { label: t("devices.columns.ip_address"), hide: true },
+    t("devices.columns.last_seen"),
   ];
 
   let devices = $state([]);
@@ -103,9 +104,9 @@
   const blocking = $derived(lens !== "blocked");
 
   function outcome(count, spared) {
-    const done = `${blocking ? "Blocked" : "Unblocked"} ${plural(count, "device")}.`;
+    const done = t(blocking ? "devices.blocked_count" : "devices.unblocked_count", { count });
 
-    return spared ? `${done} The device you are using was left alone.` : done;
+    return spared ? t("devices.spared", { done }) : done;
   }
 
   async function bulk(variables, question) {
@@ -130,7 +131,7 @@
     await load();
     feedback.say(
       refuse && variables.agent
-        ? `${outcome(answer.count, answer.spared)} "${variables.agent}" is refused from now on.`
+        ? t("devices.refused", { done: outcome(answer.count, answer.spared), agent: variables.agent })
         : outcome(answer.count, answer.spared),
     );
   }
@@ -139,37 +140,35 @@
     bulk(
       { ids: [...chosen] },
       blocking
-        ? `Block ${plural(chosen.size, "device")}? Each is signed out and refused before any password is checked.`
-        : `Unblock ${plural(chosen.size, "device")}?`,
+        ? t("devices.block_chosen_question", { count: chosen.size })
+        : t("devices.unblock_chosen_question", { count: chosen.size }),
     );
 
-  const blockMatching = () =>
-    bulk(
-      { agent, refuse },
-      `Block every device whose user agent contains "${agent}", including any not listed here?${
-        refuse ? ` New devices sending it are refused too.` : ""
-      }`,
-    );
+  const blockMatching = () => {
+    const question = t("devices.block_matching_question", { agent });
+
+    return bulk({ agent, refuse }, refuse ? t("devices.block_matching_refuse", { question }) : question);
+  };
 
   const nothing = $derived(
     lens === "blocked"
-      ? "Nothing is blocked."
+      ? t("devices.empty.blocked")
       : lens === "unattached"
-        ? "Every device here has signed somebody in."
-        : "No device has reached this server yet.",
+        ? t("devices.empty.unattached")
+        : t("devices.empty.allowed"),
   );
 </script>
 
 <div id="devices" bind:this={section} class="scroll-mt-20">
-  <Section title="Devices">
+  <Section title={t("devices.title")}>
     {#snippet actions()}
       <Search
         bind:value={search}
-        label="Filter by user agent"
+        label={t("devices.filter_label")}
         placeholder="curl, python-requests"
         onsearch={filter}
       />
-      <div class="range" role="group" aria-label="Which devices">
+      <div class="range" role="group" aria-label={t("devices.which")}>
         {#each LENSES as [key, label] (key)}
           <button type="button" aria-pressed={lens === key} onclick={() => look(key)}>{label}</button>
         {/each}
@@ -179,12 +178,12 @@
     {#if agent && blocking}
       <div class="alert alert-warning alert-soft flex-col items-start gap-2">
         <p class="text-sm">
-          Showing devices whose user agent contains <code class="font-mono">{agent}</code>.
-          <button type="button" class="link" onclick={clearFilter}>Clear</button>
+          {t("devices.showing")} <code class="font-mono">{agent}</code>.
+          <button type="button" class="link" onclick={clearFilter}>{t("devices.clear")}</button>
         </p>
         <label class="flex items-center gap-2 text-sm">
           <input type="checkbox" class="checkbox" bind:checked={refuse} />
-          Also refuse this user agent from now on
+          {t("devices.refuse_agent")}
         </label>
         <button
           type="button"
@@ -192,13 +191,13 @@
           disabled={busy}
           onclick={blockMatching}
         >
-          Block every matching device
+          {t("devices.block_matching")}
         </button>
       </div>
     {:else if agent}
       <p class="text-sm opacity-85">
-        Showing blocked devices whose user agent contains <code class="font-mono">{agent}</code>.
-        <button type="button" class="link" onclick={clearFilter}>Clear</button>
+        {t("devices.showing_blocked")} <code class="font-mono">{agent}</code>.
+        <button type="button" class="link" onclick={clearFilter}>{t("devices.clear")}</button>
       </p>
     {/if}
 
@@ -212,7 +211,9 @@
             indeterminate={chosen.size > 0 && !all}
             onchange={toggleAll}
           />
-          {chosen.size ? `${chosen.size} chosen` : `Choose all ${plural(devices.length, "device")} shown`}
+          {chosen.size
+            ? t("devices.chosen", { count: chosen.size })
+            : t("devices.choose_all", { count: devices.length })}
         </label>
         {#if chosen.size}
           <button
@@ -221,11 +222,11 @@
             disabled={busy}
             onclick={blockChosen}
           >
-            {blocking ? "Block" : "Unblock"} {plural(chosen.size, "device")}
+            {t(blocking ? "devices.block_count" : "devices.unblock_count", { count: chosen.size })}
           </button>
         {/if}
         {#if devices.length === LIMIT}
-          <span class="hint">Only the newest {LIMIT} are shown.</span>
+          <span class="hint">{t("devices.newest", { count: LIMIT })}</span>
         {/if}
       </div>
     {/if}
@@ -241,7 +242,7 @@
                 <input
                   type="checkbox"
                   class="checkbox"
-                  aria-label={`Choose ${device.label}`}
+                  aria-label={t("devices.choose", { label: device.label })}
                   checked={chosen.has(device.id)}
                   onchange={() => toggle(device.id)}
                 />
@@ -253,12 +254,12 @@
                 <div class="flex flex-wrap items-center gap-1.5">
                   <span class="truncate text-xs opacity-75">{device.category}</span>
                   {#if device.blockedAt}
-                    <span class="badge badge-error badge-xs">blocked</span>
+                    <span class="badge badge-error badge-xs">{t("devices.blocked")}</span>
                   {:else if !device.known}
-                    <span class="badge badge-warning badge-xs">unrecognised</span>
+                    <span class="badge badge-warning badge-xs">{t("devices.unrecognised")}</span>
                   {/if}
                   {#if device.sessions.length}
-                    <span class="badge badge-success badge-xs">signed in</span>
+                    <span class="badge badge-success badge-xs">{t("devices.signed_in")}</span>
                   {/if}
                 </div>
                 {#if agent && device.userAgent}
@@ -277,7 +278,7 @@
                       >{/each}
                   </div>
                 {:else}
-                  <span class="opacity-80">nobody yet</span>
+                  <span class="opacity-80">{t("devices.nobody_yet")}</span>
                 {/if}
               </td>
 
