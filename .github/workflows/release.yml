@@ -63,8 +63,8 @@ jobs:
           }
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          relock release-please--branches--main--components--gem masks client/lib/masks/version.rb Gemfile.lock
-          relock release-please--branches--main--groups--server masks-server engine/version.txt server/Gemfile.lock
+          relock release-please--branches--main masks client/lib/masks/version.rb Gemfile.lock
+          relock release-please--branches--main masks-server engine/version.txt server/Gemfile.lock
 
   gem:
     needs: release-please
