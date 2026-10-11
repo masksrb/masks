@@ -29,6 +29,7 @@ en:
       acs: "Assertion consumer services"
       certificate: "Signing certificate, if it signs its requests"
       requests_signed: "Refuse requests it did not sign"
+      slo_url: "Single logout URL, if it has one"
       redirect_uris: "Redirect URIs"
       resources: "Resources"
       scopes: "Scopes"

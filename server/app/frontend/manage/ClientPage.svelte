@@ -33,7 +33,7 @@
         requirePushedAuthorizationRequests requireSignedRequestObject consentRequired jwks jwksUri
         authorizationDetailsTypes authorizationDetailsSchemas consentLifetime
         accessTokenLifetime refreshTokenLifetime
-        protocol samlEntityId samlCertificate samlNameIdFormat samlRequestsSigned samlIdpInitiated samlAttributes
+        protocol samlEntityId samlCertificate samlNameIdFormat samlRequestsSigned samlIdpInitiated samlAttributes samlSloUrl
         signInPolicy { ${POLICY_FIELDS} }
         events(limit: 25) {
           id action label createdAt ipAddress details
@@ -82,6 +82,7 @@
   let metadataUrl = $state("");
   let certificate = $state("");
   let entityId = $state("");
+  let sloUrl = $state("");
   let links = $state({});
   let attributes = $state("");
   let loading = $state(true);
@@ -180,6 +181,7 @@
       metadataUrl = data.samlMetadataUrl;
       certificate = data.client?.samlCertificate ?? "";
       entityId = data.client?.samlEntityId ?? "";
+      sloUrl = data.client?.samlSloUrl ?? "";
       links = Object.fromEntries(LINKS.map(([key]) => [key, data.client?.[key] ?? ""]));
       attributes = mapped(data.client?.samlAttributes);
     } catch (thrown) {
@@ -209,7 +211,7 @@
         $signInPolicy: ID, $grantTypes: [String!], $jwksUri: String,
         $tokenEndpointAuthMethod: String, $requireSignedRequestObject: Boolean,
         $samlCertificate: String, $samlRequestsSigned: Boolean, $samlIdpInitiated: Boolean,
-        $samlNameIdFormat: String, $samlEntityId: String, $samlAttributes: JSON, $jwks: JSON,
+        $samlNameIdFormat: String, $samlEntityId: String, $samlAttributes: JSON, $samlSloUrl: String, $jwks: JSON,
         $subjectType: String, $sectorIdentifierUri: String, $dpopBoundAccessTokens: Boolean,
         $backchannelLogoutSessionRequired: Boolean, $clientUri: String, $logoUri: String,
         $tosUri: String, $policyUri: String, $authorizationDetailsTypes: [String!],
@@ -234,6 +236,7 @@
           samlNameIdFormat: $samlNameIdFormat,
           samlEntityId: $samlEntityId,
           samlAttributes: $samlAttributes,
+          samlSloUrl: $samlSloUrl,
           jwks: $jwks,
           subjectType: $subjectType,
           sectorIdentifierUri: $sectorIdentifierUri,
@@ -529,6 +532,23 @@
               spellcheck="false"
               onsave={() => update({ samlEntityId: entityId.trim() }, t("client.notices.entity_id"))}
             />
+
+            <div class="flex flex-col gap-1.5">
+              <Field
+                label={t("client.saml.slo_url")}
+                bind:value={sloUrl}
+                placeholder="https://wiki.example.com/saml/slo"
+                autocapitalize="none"
+                autocorrect="off"
+                spellcheck="false"
+                onsave={() =>
+                  update(
+                    { samlSloUrl: sloUrl.trim() || null },
+                    sloUrl.trim() ? t("client.notices.saved") : t("client.notices.cleared"),
+                  )}
+              />
+              <span class="hint">{t("client.saml.slo_url_hint")}</span>
+            </div>
 
             <Facts
               rows={[

@@ -121,6 +121,8 @@ en:
         attributes_hint: "Left empty, it is sent the ones shown. An email is sent only once confirmed."
         requests_signed: "Refuse requests it did not sign"
         idp_initiated: "Let actors start from masks"
+        slo_url: "Single logout URL"
+        slo_url_hint: "When an actor who signed in to it signs out of masks, masks posts a signed LogoutRequest here. The app's own LogoutRequests are answered here too, and must be signed with its certificate."
       shown:
         title: "Shown to actors"
         unapproved: "Nobody sees its logo until it is approved: a client that registered itself could borrow anybody's."

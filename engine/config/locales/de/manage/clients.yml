@@ -29,6 +29,7 @@ de:
       acs: "Assertion Consumer Services"
       certificate: "Signaturzertifikat, falls sie ihre Anfragen signiert"
       requests_signed: "Nicht signierte Anfragen ablehnen"
+      slo_url: "Single-Logout-URL, falls sie eine hat"
       redirect_uris: "Redirect-URIs"
       resources: "Ressourcen"
       scopes: "Scopes"

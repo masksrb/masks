@@ -121,6 +121,8 @@ es:
         attributes_hint: "Si se deja vacío, se le envían los que se muestran. Un correo solo se envía una vez confirmado."
         requests_signed: "Rechazar las solicitudes que no haya firmado"
         idp_initiated: "Permitir que los actores empiecen desde masks"
+        slo_url: "URL de cierre de sesión único"
+        slo_url_hint: "Cuando un actor que inició sesión en ella cierra sesión en masks, masks envía aquí una LogoutRequest firmada. Las LogoutRequest de la aplicación también se responden aquí, y deben ir firmadas con su certificado."
       shown:
         title: "Lo que ven los actores"
         unapproved: "Nadie ve su logotipo hasta que se aprueba: una aplicación que se registró sola podría usar el de cualquiera."

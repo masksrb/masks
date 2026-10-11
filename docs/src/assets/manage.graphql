@@ -306,6 +306,12 @@ type Client {
   samlIdpInitiated: Boolean!
   samlNameIdFormat: String
   samlRequestsSigned: Boolean!
+
+  """
+  Where masks posts a signed LogoutRequest when a person who signed in to this
+  SAML application signs out, and its LogoutResponse when the application asks.
+  """
+  samlSloUrl: String
   secretExpiresAt: ISO8601DateTime
   sectorIdentifierUri: String
   signInPolicy: SignInPolicy
@@ -855,7 +861,21 @@ type Mutation {
     trustsEmail: Boolean
     userinfoUrl: String
   ): CreateProviderPayload
-  createSamlApplication(acsUrls: [String!]!, attributes: JSON, certificate: String, entityId: String!, idpInitiated: Boolean, name: String!, nameIdFormat: String, requestsSigned: Boolean): CreateSamlApplicationPayload
+  createSamlApplication(
+    acsUrls: [String!]!
+    attributes: JSON
+    certificate: String
+    entityId: String!
+    idpInitiated: Boolean
+    name: String!
+    nameIdFormat: String
+    requestsSigned: Boolean
+
+    """
+    The application's single logout URL, which receives masks' logout messages over HTTP-POST.
+    """
+    sloUrl: String
+  ): CreateSamlApplicationPayload
   createSignInPolicy(
     appsRequireSecondFactor: Boolean
     confirmation: String
@@ -1077,6 +1097,11 @@ type Mutation {
     samlIdpInitiated: Boolean
     samlNameIdFormat: String
     samlRequestsSigned: Boolean
+
+    """
+    The application's single logout URL, which receives masks' logout messages over HTTP-POST. Empty stops single logout.
+    """
+    samlSloUrl: String
     sectorIdentifierUri: String
     signInPolicy: ID
     subjectType: String
@@ -1504,6 +1529,11 @@ type ReadSamlApplicationMetadataPayload {
   entityId: String
   nameIdFormat: String
   requestsSigned: Boolean!
+
+  """
+  The location of its HTTP-POST SingleLogoutService.
+  """
+  sloUrl: String
 }
 
 """

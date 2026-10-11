@@ -121,6 +121,8 @@ de:
         attributes_hint: "Leer gelassen, erhält sie die angezeigten. Eine E-Mail-Adresse wird erst nach der Bestätigung gesendet."
         requests_signed: "Nicht signierte Anfragen ablehnen"
         idp_initiated: "Akteure von masks aus starten lassen"
+        slo_url: "Single-Logout-URL"
+        slo_url_hint: "Wenn sich ein Akteur, der bei ihr angemeldet war, von masks abmeldet, sendet masks hierher eine signierte LogoutRequest. Die LogoutRequests der App werden ebenfalls hier beantwortet und müssen mit ihrem Zertifikat signiert sein."
       shown:
         title: "Für Akteure sichtbar"
         unapproved: "Niemand sieht ihr Logo, bis sie genehmigt ist: Eine selbst registrierte App könnte sonst jedes beliebige Logo verwenden."

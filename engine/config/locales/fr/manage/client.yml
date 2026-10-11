@@ -121,6 +121,8 @@ fr:
         attributes_hint: "Si vide, elle reçoit ceux affichés. Un e-mail n’est envoyé qu’une fois confirmé."
         requests_signed: "Refuser les requêtes qu’elle n’a pas signées"
         idp_initiated: "Permettre aux utilisateurs de démarrer depuis masks"
+        slo_url: "URL de déconnexion unique"
+        slo_url_hint: "Quand un utilisateur qui s’y est connecté se déconnecte de masks, masks envoie ici une LogoutRequest signée. Les LogoutRequest de l’application reçoivent aussi leur réponse ici, et doivent être signées avec son certificat."
       shown:
         title: "Affiché aux utilisateurs"
         unapproved: "Personne ne voit son logo tant qu’elle n’est pas approuvée : une application auto-enregistrée pourrait emprunter celui de n’importe qui."

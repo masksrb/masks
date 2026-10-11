@@ -49,9 +49,13 @@
   `;
 
   const SAML = `
-    mutation Saml($name: String!, $entityId: String!, $acsUrls: [String!]!, $certificate: String, $requestsSigned: Boolean) {
+    mutation Saml(
+      $name: String!, $entityId: String!, $acsUrls: [String!]!, $certificate: String, $requestsSigned: Boolean,
+      $sloUrl: String
+    ) {
       createSamlApplication(
-        name: $name, entityId: $entityId, acsUrls: $acsUrls, certificate: $certificate, requestsSigned: $requestsSigned
+        name: $name, entityId: $entityId, acsUrls: $acsUrls, certificate: $certificate, requestsSigned: $requestsSigned,
+        sloUrl: $sloUrl
       ) {
         client { clientId name }
       }
@@ -102,6 +106,7 @@
       metadata: "",
       entityId: "",
       certificate: "",
+      sloUrl: "",
       requestsSigned: false,
       preset: "",
       baseUrl: "",
@@ -139,7 +144,7 @@
     const data = await feedback.attempt(() =>
       api.query(
         `mutation Read($xml: String!) {
-          readSamlApplicationMetadata(xml: $xml) { entityId acsUrls certificate requestsSigned }
+          readSamlApplicationMetadata(xml: $xml) { entityId acsUrls certificate requestsSigned sloUrl }
         }`,
         { xml: draft.metadata },
       ),
@@ -152,6 +157,7 @@
     draft.entityId = read.entityId ?? draft.entityId;
     draft.redirects = read.acsUrls.join("\n") || draft.redirects;
     draft.certificate = read.certificate ?? draft.certificate;
+    draft.sloUrl = read.sloUrl ?? draft.sloUrl;
     draft.requestsSigned = read.requestsSigned;
   }
 
@@ -178,6 +184,7 @@
           acsUrls: lines(draft.redirects),
           certificate: draft.certificate.trim() || null,
           requestsSigned: draft.requestsSigned,
+          sloUrl: draft.sloUrl.trim() || null,
         },
         "createSamlApplication",
       ];
@@ -368,6 +375,8 @@
             bind:value={draft.certificate}
           ></textarea>
         </label>
+
+        <Field label={t("clients.slo_url")} bind:value={draft.sloUrl} placeholder="https://wiki.example.com/saml/slo" />
 
         <Switch bind:checked={draft.requestsSigned} label={t("clients.requests_signed")} />
       {/if}

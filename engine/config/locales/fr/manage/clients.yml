@@ -29,6 +29,7 @@ fr:
       acs: "Assertion consumer services"
       certificate: "Certificat de signature, si elle signe ses requêtes"
       requests_signed: "Refuser les requêtes qu’elle n’a pas signées"
+      slo_url: "URL de déconnexion unique, si elle en a une"
       redirect_uris: "URI de redirection"
       resources: "Ressources"
       scopes: "Portées"

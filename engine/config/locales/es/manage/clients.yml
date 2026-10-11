@@ -29,6 +29,7 @@ es:
       acs: "Servicios de consumo de aserciones"
       certificate: "Certificado de firma, si firma sus solicitudes"
       requests_signed: "Rechazar las solicitudes que no haya firmado"
+      slo_url: "URL de cierre de sesión único, si tiene una"
       redirect_uris: "URI de redirección"
       resources: "Recursos"
       scopes: "Alcances"
