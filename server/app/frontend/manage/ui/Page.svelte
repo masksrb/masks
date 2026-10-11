@@ -2,6 +2,16 @@
   import Link from "./Link.svelte";
 
   let { title, lede = null, id = null, back = null, hero = false, actions, children } = $props();
+
+  let heading;
+
+  $effect(() => {
+    document.title = title;
+  });
+
+  $effect(() => {
+    heading?.focus({ preventScroll: true });
+  });
 </script>
 
 <div class="console-page">
@@ -13,7 +23,7 @@
 
   <header class="flex flex-wrap items-end justify-between gap-x-6 gap-y-4">
     <div class="flex min-w-0 flex-col gap-2">
-      <h1 class="headline" class:headline-hero={hero}>{title}</h1>
+      <h1 class="headline outline-none" class:headline-hero={hero} tabindex="-1" bind:this={heading}>{title}</h1>
 
       {#if id}
         <p class="stamp">{id}</p>

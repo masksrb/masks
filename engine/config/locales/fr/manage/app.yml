@@ -1,6 +1,9 @@
 fr:
   manage:
     app:
+      waiting:
+        one: "%{count} personne attend votre action"
+        other: "%{count} personnes attendent votre action"
       missing: "Il n’y a pas de page à cette adresse."
       account: "Compte"
       starting: "Démarrage"

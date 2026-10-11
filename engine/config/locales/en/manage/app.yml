@@ -1,6 +1,9 @@
 en:
   manage:
     app:
+      waiting:
+        one: "%{count} person is waiting on you"
+        other: "%{count} people are waiting on you"
       missing: "There is no page at this address."
       account: "Account"
       starting: "Starting"

@@ -122,6 +122,24 @@
     }
   }
 
+  let waiting = $state(0);
+
+  async function countWaiting() {
+    try {
+      const data = await api.query(
+        "query Waiting { approvals: actorCount(pendingApproval: true) help: actorCount(recoveryRequested: true) }",
+      );
+
+      waiting = data.approvals + data.help;
+    } catch {
+      waiting = 0;
+    }
+  }
+
+  $effect(() => {
+    if (phase === "ready" && router.state.path) countWaiting();
+  });
+
   function ready() {
     phase = "ready";
 
@@ -185,7 +203,11 @@
             <Link
               {to}
               class="nav-item {current === to.replace('/', '') ? 'nav-item-on' : ''}"
-            >{t(`app.nav.${label}`)}</Link>
+            >{t(`app.nav.${label}`)}{#if label === "actors" && waiting > 0}<span
+                  class="badge badge-warning badge-sm ms-1.5"
+                  title={t("app.waiting", { count: waiting })}
+                  aria-label={t("app.waiting", { count: waiting })}>{waiting}</span
+                >{/if}</Link>
           {/each}
         </nav>
 

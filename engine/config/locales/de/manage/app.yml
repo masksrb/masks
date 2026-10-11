@@ -1,6 +1,9 @@
 de:
   manage:
     app:
+      waiting:
+        one: "%{count} Person wartet auf Sie"
+        other: "%{count} Personen warten auf Sie"
       missing: "Unter dieser Adresse gibt es keine Seite."
       account: "Konto"
       starting: "Wird gestartet"
