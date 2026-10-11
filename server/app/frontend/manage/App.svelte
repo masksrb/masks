@@ -1,6 +1,7 @@
 <script>
   import { untrack } from "svelte";
   import { createApi } from "./lib/api.svelte.js";
+  import { t } from "./lib/copy.js";
   import { createRouter, provideRouter } from "./lib/router.svelte.js";
   import { handshakeUrl, redeem } from "./lib/pairing.js";
   import Empty from "./ui/Empty.svelte";
@@ -260,7 +261,7 @@
           {/if}
         </SettingsShell>
       {:else}
-        <Empty>There is no page at this address.</Empty>
+        <Empty>{t("app.missing")}</Empty>
       {/if}
     </main>
 

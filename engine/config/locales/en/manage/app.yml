@@ -1,0 +1,4 @@
+en:
+  manage:
+    app:
+      missing: "There is no page at this address."
