@@ -1213,6 +1213,11 @@ type Mutation {
     Days to keep events, from 30 to 2555. Zero keeps the default of 180.
     """
     eventRetentionDays: Int
+
+    """
+    Days between scheduled signing key rotations, from 7 to 365. Zero leaves rotation to a manager.
+    """
+    keyRotationDays: Int
     name: String
     namedBy: String
 
@@ -1836,6 +1841,11 @@ type Tenant {
   Days events are kept before they are deleted.
   """
   eventRetentionDays: Int!
+
+  """
+  Days between scheduled signing key rotations, or null when a manager rotates by hand.
+  """
+  keyRotationDays: Int
 
   """
   The tenant's logo, 128 pixels square, or null for its initial.

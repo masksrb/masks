@@ -1324,7 +1324,8 @@ CREATE TABLE public.tenants (
     risky_networks text,
     custom_host character varying,
     logo_digest character varying,
-    accent_color character varying
+    accent_color character varying,
+    key_rotation_days integer
 );
 
 
@@ -3625,6 +3626,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261011130000'),
 ('20261011120000'),
 ('20261010160000'),
 ('20261010150000'),

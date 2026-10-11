@@ -115,6 +115,12 @@ de:
         updated: "Dynamische Registrierung aktualisiert."
         ceiling_updated: "Obergrenze aktualisiert."
       keys:
+        schedule: "Rotation"
+        by_hand: "Von Hand"
+        every:
+          one: "Alle %{count} Tage"
+          other: "Alle %{count} Tage"
+        scheduled: "Zeitplan gespeichert. Ein neuer Schlüssel wird einen Tag vor dem Signieren veröffentlicht."
         title: "Signaturschlüssel"
         stage: "Vorbereiten"
         rotate: "Jetzt rotieren"

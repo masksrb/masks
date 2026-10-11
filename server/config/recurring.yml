@@ -19,6 +19,11 @@ default: &default
     queue: maintenance
     schedule: every day at 5am
 
+  signing_keys:
+    class: Masks::Server::RotateSigningKeysJob
+    queue: maintenance
+    schedule: every day at 1am
+
   domain_claims:
     class: Masks::Server::CheckDomainClaimsJob
     queue: maintenance

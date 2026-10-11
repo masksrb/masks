@@ -63,6 +63,7 @@ module Masks
 
       validates :named_by, inclusion: { in: NAMES }, allow_nil: true
       validates :accent_color, format: { with: ACCENT }, allow_nil: true
+      validates :key_rotation_days, numericality: { only_integer: true, in: 7..365 }, allow_nil: true
       validates :dynamic_registration, inclusion: { in: REGISTRATIONS }, allow_nil: true
       validates :suspend_after, :delete_after, numericality: { only_integer: true, in: IDLE_DAYS }, allow_nil: true
       validates :event_retention_days, numericality: { only_integer: true, in: RETENTION_DAYS }, allow_nil: true

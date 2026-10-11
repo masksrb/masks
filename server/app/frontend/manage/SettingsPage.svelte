@@ -27,7 +27,7 @@
   const QUERY = `
     query Tenant {
       tenant {
-        uuid subdomain name namedBy dynamicRegistration dynamicClientScopes createdAt mails accentColor logoUrl
+        uuid subdomain name namedBy dynamicRegistration dynamicClientScopes createdAt mails accentColor logoUrl keyRotationDays
         browsersOnly blockedAgents suspendAfter deleteAfter eventRetentionDays riskyNetworks
         signInPolicy { key name }
         signingKeys { kid algorithm activatedAt retiredAt state }
@@ -212,7 +212,7 @@
           `mutation Update(
             $name: String, $dynamicClientScopes: [String!], $dynamicRegistration: String,
             $namedBy: String, $browsersOnly: Boolean, $blockedAgents: String, $signInPolicy: ID, $riskyNetworks: String,
-            $suspendAfter: Int, $deleteAfter: Int, $eventRetentionDays: Int, $accentColor: String
+            $suspendAfter: Int, $deleteAfter: Int, $eventRetentionDays: Int, $accentColor: String, $keyRotationDays: Int
           ) {
             updateTenant(
               name: $name
@@ -227,6 +227,7 @@
               deleteAfter: $deleteAfter
               eventRetentionDays: $eventRetentionDays
               accentColor: $accentColor
+              keyRotationDays: $keyRotationDays
             ) { tenant { name } }
           }`,
           changes,
@@ -611,6 +612,15 @@
         {#snippet actions()}
           <button type="button" class="btn btn-sm" onclick={stage}>{t("settings.keys.stage")}</button>
           <button type="button" class="btn btn-sm btn-outline" onclick={rotate}>{t("settings.keys.rotate")}</button>
+          <Select
+            name={t("settings.keys.schedule")}
+            value={String(data.tenant.keyRotationDays ?? 0)}
+            options={[0, 30, 90, 180, 365].map((days) => [
+              String(days),
+              days ? t("settings.keys.every", { count: days }) : t("settings.keys.by_hand"),
+            ])}
+            onchange={(days) => update({ keyRotationDays: Number(days) }, t("settings.keys.scheduled"))}
+          />
         {/snippet}
 
         <div class="overflow-x-auto">

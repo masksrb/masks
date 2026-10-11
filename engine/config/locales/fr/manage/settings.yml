@@ -115,6 +115,12 @@ fr:
         updated: "Enregistrement dynamique mis à jour."
         ceiling_updated: "Plafond mis à jour."
       keys:
+        schedule: "Renouvellement"
+        by_hand: "Manuel"
+        every:
+          one: "Tous les %{count} jour"
+          other: "Tous les %{count} jours"
+        scheduled: "Calendrier enregistré. Une nouvelle clé est publiée un jour avant de signer."
         title: "Clés de signature"
         stage: "Préparer"
         rotate: "Renouveler maintenant"

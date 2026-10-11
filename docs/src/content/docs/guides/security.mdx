@@ -242,6 +242,12 @@ A key is staged before it signs anything, so clients that cache JWKS fetch it fi
 Only a staged key can be activated or discarded. SAML applications must re-read masks' metadata
 after a rotation.
 
+Rotation is by hand until an owner picks a schedule under **Settings → General → Signing keys**:
+every 30, 90, 180, or 365 days. A daily job then stages the next key a day before the active key
+reaches that age, and activates it a day after staging, so clients that cache JWKS see it before it
+signs. A key staged by hand is activated on the same schedule. The job records each step in the
+activity log.
+
 ## Pushed requests
 
 A normal authorization request puts every parameter in the address bar, where history, logs, and

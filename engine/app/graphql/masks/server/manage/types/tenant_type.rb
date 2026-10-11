@@ -17,6 +17,7 @@ module Masks
           field :blocked_agents, String
           field :mails, Boolean, null: false
           field :accent_color, String
+          field :key_rotation_days, Integer, description: "Days between scheduled signing key rotations, or null when a manager rotates by hand."
           field :logo_url, String, description: "The tenant's logo, 128 pixels square, or null for its initial."
           field :texts, Boolean, null: false
           field :sign_in_policy, SignInPolicyType
