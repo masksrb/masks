@@ -93,3 +93,33 @@ export class MasksError extends Error {
     this.status = status;
   }
 }
+
+export class LoginRequired extends MasksError {}
+export class ConsentRequired extends MasksError {}
+export class AccessDenied extends MasksError {}
+export class InvalidGrant extends MasksError {}
+export class InvalidToken extends MasksError {}
+export class InvalidIssuer extends MasksError {}
+
+const KINDS: Record<string, typeof MasksError> = {
+  login_required: LoginRequired,
+  interaction_required: LoginRequired,
+  consent_required: ConsentRequired,
+  access_denied: AccessDenied,
+  invalid_grant: InvalidGrant,
+  invalid_token: InvalidToken,
+  invalid_issuer: InvalidIssuer,
+};
+
+export function masksError(
+  code: string,
+  description?: string,
+  status?: number,
+): MasksError {
+  const Kind = KINDS[code] ?? MasksError;
+  const error = new Kind(code, description, status);
+
+  error.name = Kind.name;
+
+  return error;
+}

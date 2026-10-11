@@ -27,4 +27,13 @@ export type {
   Tenant,
   Tokens,
 } from "./types.js";
-export { MasksError } from "./types.js";
+export {
+  AccessDenied,
+  ConsentRequired,
+  InvalidGrant,
+  InvalidIssuer,
+  InvalidToken,
+  LoginRequired,
+  MasksError,
+  masksError,
+} from "./types.js";

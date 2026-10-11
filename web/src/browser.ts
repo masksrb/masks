@@ -1,3 +1,4 @@
+import { createDpopKey, type DpopKey, dpopProof } from "./dpop.js";
 import { type Jwk, verifyIdToken } from "./jwt.js";
 import { challenge, method, random } from "./pkce.js";
 import {
@@ -5,7 +6,7 @@ import {
   type Avatars,
   type Claims,
   type Discovery,
-  MasksError,
+  masksError,
   type Organization,
   type Tokens,
 } from "./types.js";
@@ -21,6 +22,7 @@ export interface BrowserOptions {
   organization?: string;
   fetch?: typeof globalThis.fetch;
   storage?: Storage;
+  dpop?: boolean;
 }
 
 interface Pending {
@@ -65,6 +67,8 @@ export interface BrowserClient {
   photo(subject?: string): Promise<Blob | null>;
   refresh(): Promise<Tokens>;
   freshAccessToken(leeway?: number): Promise<string | null>;
+  fetch(url: string, init?: RequestInit): Promise<Response>;
+  proof(method: string, url: string): Promise<string | null>;
   accessToken(): string | null;
   tokens(): Tokens | null;
   authorization(): string | null;
@@ -90,6 +94,19 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
   let claims: Claims | null = null;
   let keys: Record<string, Jwk> | null = null;
   let refreshing: Promise<Tokens> | null = null;
+  let dpopKey: Promise<DpopKey> | null = null;
+
+  const proved = async (
+    method: string,
+    url: string,
+    accessToken?: string,
+  ): Promise<Record<string, string>> => {
+    if (!options.dpop) return {};
+
+    dpopKey ??= createDpopKey();
+
+    return { DPoP: await dpopProof(await dpopKey, method, url, accessToken) };
+  };
   let generation = 0;
 
   const discover = async (): Promise<Discovery> => {
@@ -100,7 +117,7 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
     });
 
     if (!response.ok) {
-      throw new MasksError(
+      throw masksError(
         "invalid_issuer",
         `${issuer} answered ${response.status}`,
         response.status,
@@ -110,7 +127,7 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
     const found = (await response.json()) as Discovery;
 
     if (found.issuer?.replace(/\/$/, "") !== issuer) {
-      throw new MasksError(
+      throw masksError(
         "invalid_issuer",
         `${issuer} publishes a document naming ${found.issuer}`,
       );
@@ -127,7 +144,7 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
     const { jwks_uri } = await discover();
 
     if (!jwks_uri) {
-      throw new MasksError(
+      throw masksError(
         "invalid_issuer",
         `${issuer} publishes no jwks_uri, so an id token cannot be verified`,
       );
@@ -139,7 +156,7 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
     });
 
     if (!response.ok) {
-      throw new MasksError(
+      throw masksError(
         "invalid_issuer",
         `${jwks_uri} answered ${response.status}`,
         response.status,
@@ -163,7 +180,7 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
     if (found) return found;
     if (!refresh) return keyFor(kid, true);
 
-    throw new MasksError("invalid_token", `${issuer} publishes no key ${kid}`);
+    throw masksError("invalid_token", `${issuer} publishes no key ${kid}`);
   };
 
   const post = async (body: string[][]): Promise<Tokens> => {
@@ -175,6 +192,7 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
         Accept: "application/json",
+        ...(await proved("POST", token_endpoint)),
       },
       body: new URLSearchParams(body).toString(),
     });
@@ -185,7 +203,7 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
     >;
 
     if (!response.ok) {
-      throw new MasksError(
+      throw masksError(
         payload.error ?? `http_${response.status}`,
         payload.error_description,
         response.status,
@@ -193,7 +211,7 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
     }
 
     if (started !== generation) {
-      throw new MasksError(
+      throw masksError(
         "invalid_grant",
         "the client signed out while this request was in flight",
       );
@@ -256,14 +274,14 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
     const { avatar_endpoint, avatar_styles_supported } = await discover();
 
     if (!avatar_endpoint) {
-      throw new MasksError(
+      throw masksError(
         "invalid_issuer",
         `${issuer} publishes no avatar_endpoint`,
       );
     }
 
     if (avatar_styles_supported && !avatar_styles_supported.includes(style)) {
-      throw new MasksError(
+      throw masksError(
         "invalid_style",
         `${issuer} does not serve ${style} avatars`,
       );
@@ -282,7 +300,7 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
 
   const renew = async (): Promise<Tokens> => {
     if (!held?.refresh_token) {
-      throw new MasksError("invalid_grant", "no refresh token is held");
+      throw masksError("invalid_grant", "no refresh token is held");
     }
 
     const previous = held.refresh_token;
@@ -343,14 +361,14 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
       store.removeItem(PENDING);
 
       if (query.get("error")) {
-        throw new MasksError(
+        throw masksError(
           query.get("error") as string,
           query.get("error_description") ?? undefined,
         );
       }
 
       if (!raw) {
-        throw new MasksError(
+        throw masksError(
           "invalid_state",
           "this browser has no authorization in flight",
         );
@@ -359,7 +377,7 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
       const waiting = JSON.parse(raw) as Pending;
 
       if (query.get("state") !== waiting.state) {
-        throw new MasksError(
+        throw masksError(
           "invalid_state",
           "the callback did not match this browser",
         );
@@ -368,7 +386,7 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
       const code = query.get("code");
 
       if (!code) {
-        throw new MasksError("invalid_request", "the callback carried no code");
+        throw masksError("invalid_request", "the callback carried no code");
       }
 
       const body = [
@@ -387,7 +405,7 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
         if (!tokens.id_token) {
           held = null;
 
-          throw new MasksError(
+          throw masksError(
             "invalid_token",
             "an id token was asked for and the issuer returned none",
           );
@@ -413,7 +431,7 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
           held = null;
           claims = null;
 
-          throw new MasksError(
+          throw masksError(
             "invalid_token",
             `the id token does not name the organization ${waiting.organization}`,
           );
@@ -463,6 +481,29 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
 
     refresh,
 
+    async fetch(url, init = {}) {
+      if (held?.refresh_token && expired()) await refresh();
+
+      const access = held?.access_token;
+      const headers = new Headers(init.headers);
+
+      if (access && held) {
+        headers.set("Authorization", `${held.token_type} ${access}`);
+
+        for (const [name, value] of Object.entries(
+          await proved(init.method ?? "GET", url, access),
+        )) {
+          headers.set(name, value);
+        }
+      }
+
+      return await call(url, { ...init, headers });
+    },
+
+    async proof(method, url) {
+      return (await proved(method, url, held?.access_token)).DPoP ?? null;
+    },
+
     async freshAccessToken(leeway = 30) {
       if (held?.refresh_token && expired(leeway)) await refresh();
 
@@ -501,7 +542,7 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
       const { end_session_endpoint } = await discover();
 
       if (!end_session_endpoint) {
-        throw new MasksError(
+        throw masksError(
           "invalid_issuer",
           `${issuer} publishes no end_session_endpoint`,
         );

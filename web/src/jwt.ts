@@ -1,4 +1,4 @@
-import { type Claims, MasksError } from "./types.js";
+import { type Claims, masksError } from "./types.js";
 
 const HASHES: Record<string, string> = {
   RS256: "SHA-256",
@@ -38,7 +38,7 @@ function json(part: string): Record<string, unknown> {
   try {
     return JSON.parse(new TextDecoder().decode(bytes(part)));
   } catch {
-    throw new MasksError("invalid_token", "the id token is not a JWT");
+    throw masksError("invalid_token", "the id token is not a JWT");
   }
 }
 
@@ -55,13 +55,13 @@ export async function verifyIdToken(
   const [rawHeader, rawPayload, rawSignature, ...rest] = token.split(".");
 
   if (!rawHeader || !rawPayload || !rawSignature || rest.length > 0) {
-    throw new MasksError("invalid_token", "the id token is not a JWT");
+    throw masksError("invalid_token", "the id token is not a JWT");
   }
 
   const header = json(rawHeader);
 
   if (header.typ !== undefined && String(header.typ).toUpperCase() !== "JWT") {
-    throw new MasksError(
+    throw masksError(
       "invalid_token",
       `the id token is typed ${header.typ}, which is not an id token`,
     );
@@ -70,7 +70,7 @@ export async function verifyIdToken(
   const hash = HASHES[String(header.alg)];
 
   if (!hash) {
-    throw new MasksError(
+    throw masksError(
       "invalid_token",
       `the id token is signed with ${header.alg}, which this client cannot verify`,
     );
@@ -92,42 +92,36 @@ export async function verifyIdToken(
   );
 
   if (!signed) {
-    throw new MasksError(
-      "invalid_token",
-      "the id token signature does not verify",
-    );
+    throw masksError("invalid_token", "the id token signature does not verify");
   }
 
   const claims = json(rawPayload) as Claims;
   const now = Math.floor(Date.now() / 1000);
 
   if (String(claims.iss ?? "").replace(/\/$/, "") !== issuer) {
-    throw new MasksError(
+    throw masksError(
       "invalid_token",
       `the id token was issued by ${claims.iss}`,
     );
   }
 
   if (!audiences(claims.aud).includes(audience)) {
-    throw new MasksError(
+    throw masksError(
       "invalid_token",
       "the id token was issued for another client",
     );
   }
 
   if (typeof claims.exp === "number" && now - leeway >= claims.exp) {
-    throw new MasksError("invalid_token", "the id token has expired");
+    throw masksError("invalid_token", "the id token has expired");
   }
 
   if (typeof claims.iat === "number" && claims.iat - leeway > now) {
-    throw new MasksError(
-      "invalid_token",
-      "the id token was issued in the future",
-    );
+    throw masksError("invalid_token", "the id token was issued in the future");
   }
 
   if (claims.nonce !== nonce) {
-    throw new MasksError(
+    throw masksError(
       "invalid_nonce",
       "the id token was issued for another request",
     );

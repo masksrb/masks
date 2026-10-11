@@ -63,6 +63,15 @@ The client handles discovery, the PKCE challenge, state and nonce, the callback 
 that close to expiring and returns the access token. Calls to `refresh()` made while one is in flight
 share it, since masks revokes every token from a sign-in when a refresh token is presented twice.
 
+`fetch(url, init)` calls an API with the access token, refreshing it first when it is close to
+expiring. With `dpop: true`, the client makes a key the page cannot export, binds its tokens to it,
+and signs a DPoP proof for each token request and each `fetch`. `proof(method, url)` returns one for
+a request made another way.
+
+Errors are `MasksError`s with a `code`, and the common ones have a class of their own:
+`LoginRequired`, `ConsentRequired`, `AccessDenied`, `InvalidGrant`, `InvalidToken`, and
+`InvalidIssuer`.
+
 `logout()` drops the tokens and revokes the refresh token. `logout({ everywhere: true })` also sends
 the browser to the issuer's end session endpoint, and `postLogoutRedirectUri` names where masks sends
 it afterwards. That URI must be registered for the client.

@@ -1,7 +1,7 @@
 import {
   type Account,
   type AvatarStyle,
-  MasksError,
+  masksError,
   type Organization,
   type Refusal,
   type Status,
@@ -104,7 +104,7 @@ export function createSession(options: SessionOptions = {}): SessionClient {
       };
     }
 
-    throw new MasksError(
+    throw masksError(
       "session_failed",
       `the session endpoint answered ${response.status}`,
       response.status,

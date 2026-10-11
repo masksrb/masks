@@ -3,6 +3,7 @@ import { createHash, createSign, generateKeyPairSync } from "node:crypto";
 import { test } from "node:test";
 import { createBrowserClient } from "../dist/browser.js";
 import { challenge, encode, random } from "../dist/pkce.js";
+import { InvalidGrant, LoginRequired, MasksError } from "../dist/types.js";
 
 const ISSUER = "https://demo.auth.test";
 const KID = "test-key";
@@ -815,4 +816,135 @@ test("the organizations a token lists are known until signing out", async () => 
   subject.logout();
 
   assert.deepEqual(subject.organizations(), []);
+});
+
+function decoded(jwt) {
+  const [header, payload] = jwt
+    .split(".")
+    .slice(0, 2)
+    .map((part) => JSON.parse(Buffer.from(part, "base64url").toString()));
+
+  return { header, payload };
+}
+
+async function verified(jwt) {
+  const { header } = decoded(jwt);
+  const [h, p, signature] = jwt.split(".");
+  const key = await crypto.subtle.importKey(
+    "jwk",
+    header.jwk,
+    { name: "ECDSA", namedCurve: "P-256" },
+    false,
+    ["verify"],
+  );
+
+  return crypto.subtle.verify(
+    { name: "ECDSA", hash: "SHA-256" },
+    key,
+    Buffer.from(signature, "base64url"),
+    new TextEncoder().encode(`${h}.${p}`),
+  );
+}
+
+test("an error from the issuer arrives as its own kind", async () => {
+  const upstream = server();
+  const { subject, store } = client({ server: upstream });
+
+  await subject.authorizeUrl({ returnTo: "/" });
+
+  await assert.rejects(
+    () =>
+      subject.callback(
+        "https://app.test/callback?error=login_required&state=x",
+      ),
+    (error) =>
+      error instanceof LoginRequired &&
+      error instanceof MasksError &&
+      error.code === "login_required",
+  );
+
+  const { state } = await landing(subject, store, upstream);
+  upstream.held.token = {
+    error: "invalid_grant",
+    error_description: "that code expired",
+  };
+  upstream.held.status = 400;
+
+  await assert.rejects(
+    () => subject.callback(`https://app.test/callback?code=a&state=${state}`),
+    (error) => error instanceof InvalidGrant && error.name === "InvalidGrant",
+  );
+});
+
+test("with dpop on, every token request carries a proof made with one key", async () => {
+  const upstream = server();
+  const { subject, store } = client({
+    server: upstream,
+    client: { dpop: true },
+  });
+
+  const { state } = await landing(subject, store, upstream);
+  await subject.callback(`https://app.test/callback?code=a&state=${state}`);
+  await subject.refresh();
+
+  const proofs = upstream.calls
+    .filter((call) => call.url.endsWith("/token"))
+    .map((call) => new Headers(call.init.headers).get("DPoP"));
+
+  assert.equal(proofs.length, 2);
+  for (const proof of proofs) {
+    const { header, payload } = decoded(proof);
+    assert.equal(header.typ, "dpop+jwt");
+    assert.equal(header.alg, "ES256");
+    assert.equal(header.jwk.d, undefined);
+    assert.equal(payload.htm, "POST");
+    assert.equal(payload.htu, `${ISSUER}/token`);
+    assert.ok(await verified(proof));
+  }
+  assert.deepEqual(
+    decoded(proofs[0]).header.jwk,
+    decoded(proofs[1]).header.jwk,
+  );
+});
+
+test("fetch sends the token and a proof bound to it", async () => {
+  const upstream = server();
+  const { subject, store } = client({
+    server: upstream,
+    client: { dpop: true },
+  });
+
+  const { state } = await landing(subject, store, upstream, {
+    granted: { token_type: "DPoP" },
+  });
+  await subject.callback(`https://app.test/callback?code=a&state=${state}`);
+
+  await subject.fetch("https://api.test/things?page=2", { method: "POST" });
+
+  const sent = new Headers(upstream.calls.at(-1).init.headers);
+  assert.equal(sent.get("Authorization"), "DPoP at-1");
+  const { payload } = decoded(sent.get("DPoP"));
+  assert.equal(payload.htm, "POST");
+  assert.equal(payload.htu, "https://api.test/things");
+  assert.equal(
+    payload.ath,
+    Buffer.from(
+      await crypto.subtle.digest("SHA-256", new TextEncoder().encode("at-1")),
+    ).toString("base64url"),
+  );
+});
+
+test("without dpop, fetch sends a bearer token and no proof", async () => {
+  const upstream = server();
+  const { subject, store } = client({ server: upstream });
+
+  const { state } = await landing(subject, store, upstream);
+  await subject.callback(`https://app.test/callback?code=a&state=${state}`);
+
+  await subject.fetch("https://api.test/things");
+
+  const sent = new Headers(upstream.calls.at(-1).init.headers);
+  assert.equal(sent.get("Authorization"), "Bearer at-1");
+  assert.equal(sent.get("DPoP"), null);
+  assert.equal(await subject.proof("GET", "https://api.test/things"), null);
 });
