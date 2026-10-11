@@ -10,6 +10,7 @@ module Masks
       belongs_to :authenticator, primary_key: :aaguid, foreign_key: :aaguid, optional: true
 
       validates :external_id, :public_key, presence: true
+      validates :name, length: { maximum: 64 }
       validates :external_id, uniqueness: { scope: :tenant_id }
       validates :sign_count, numericality: {
         only_integer: true, greater_than_or_equal_to: 0, less_than_or_equal_to: SIGN_COUNT_CEILING

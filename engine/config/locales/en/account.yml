@@ -70,6 +70,7 @@ en:
         compromised: "The FIDO Alliance reports a problem with this model (%{report}). Replace it."
         name: "What is this device called?"
         name_placeholder: "My laptop"
+        save_name: "Save name"
         add: "Set this up"
 
       authenticator:

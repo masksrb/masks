@@ -43,6 +43,8 @@ fr:
     stopped: "%{client} ne peut plus utiliser votre compte %{provider}."
 
   passkeys:
+    renamed: "Clé d’accès renommée."
+    unnamed: "Le nom d’une clé d’accès compte au plus 64 caractères."
     expired: "Cet enregistrement a expiré. Réessayez."
     crowded: "Vous avez déjà le nombre maximal de clés d’accès que ce serveur conserve."
     unusable: "Cette clé d’accès n’a pas pu être ajoutée."

@@ -4,7 +4,7 @@ module Masks
       HELD = "passkey_registration".freeze
 
       before_action :require_actor
-      before_action :require_fresh_sign_in
+      before_action :require_fresh_sign_in, except: :update
 
       def create
         held = session.delete(HELD)
@@ -27,6 +27,15 @@ module Masks
         session[HELD] = held.challenge
 
         render json: held.as_json
+      end
+
+      def update
+        passkey = Passkey.find_by(id: params[:id], actor_id: current_actor.id)
+
+        return refuse(t("passkeys.unknown")) if passkey.nil?
+        return refuse(t("passkeys.unnamed")) unless passkey.update(name: params[:name].to_s.strip.presence)
+
+        redirect_to root_path(anchor: "passkeys"), notice: t("passkeys.renamed")
       end
 
       def destroy

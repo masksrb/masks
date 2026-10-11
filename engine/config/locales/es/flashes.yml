@@ -43,6 +43,8 @@ es:
     stopped: "%{client} ya no puede usar tu cuenta de %{provider}."
 
   passkeys:
+    renamed: "Llave de acceso renombrada."
+    unnamed: "El nombre de una llave de acceso tiene como máximo 64 caracteres."
     expired: "Ese registro caducó. Vuelve a intentarlo."
     crowded: "Ya tienes tantas llaves de acceso como admite este servidor."
     unusable: "No se pudo añadir esa llave de acceso."

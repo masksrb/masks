@@ -176,6 +176,12 @@
                   <% end %>
                 </span>
 
+                <%= form_with url: passkey_path(passkey), method: :patch, class: "action-row item-rename" do |form| %>
+                  <%= form.text_field :name, value: passkey.name, placeholder: passkey.label, maxlength: 64,
+                        "aria-label": account_text("passkeys.name"), class: "control control-sm action-grow" %>
+                  <button type="submit" class="action action-quiet action-sm"><%= account_text("passkeys.save_name") %></button>
+                <% end %>
+
                 <%= button_to account_text("passkeys.remove"), passkey_path(passkey),
                       method: :delete, class: "action action-quiet action-sm",
                       form_class: "item-act",

@@ -49,6 +49,7 @@ Masks::Server::Engine.routes.draw do
   post "/account/passkeys/challenge", to: "passkeys#challenge", as: :passkey_challenge
   post "/account/passkeys", to: "passkeys#create", as: :passkeys
   delete "/account/passkeys/:id", to: "passkeys#destroy", as: :passkey
+  patch "/account/passkeys/:id", to: "passkeys#update"
 
   post "/account/authenticator", to: "authenticator_apps#create", as: :account_authenticator
   delete "/account/authenticator", to: "authenticator_apps#destroy"
