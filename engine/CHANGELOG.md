@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.1](https://github.com/masksrb/masks/compare/masks-server-v0.6.0...masks-server-v0.6.1) (2026-10-11)
+
+
+### chore
+
+* **masks-server:** Synchronize server versions
+
 ## [0.6.0](https://github.com/masksrb/masks/compare/masks-server-v0.5.0...masks-server-v0.6.0) (2026-10-11)
 
 
