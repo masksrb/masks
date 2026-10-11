@@ -15,6 +15,7 @@ module Masks
             actor = actor!(uuid)
 
             refuse!("#{actor.identifier} has not accepted an invitation yet") unless actor.activated?
+            needs!(:security, "handing over a reset link masks cannot mail") unless Recoveries.mailable?(actor)
 
             Recoveries.open(actor: actor, journey: Masks::Server::Journey.manage(viewer)).merge(actor: actor)
           end

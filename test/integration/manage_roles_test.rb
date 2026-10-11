@@ -76,6 +76,47 @@ module Masks
         assert_match "needs masks:manage or masks:manage:security", refusal(body)
       end
 
+      test "support cannot do what would hand them someone else's account" do
+        person = create_actor(@tenant, nickname: "person", scopes: "openid", email: "person@example.com")
+        enable_otp(person)
+        held = bearer_for(manager(ManageRoles::SUPPORT))
+
+        body = ask(%(mutation($uuid: ID!) { updateActor(uuid: $uuid, email: "mine@example.com") { actor { email } } }),
+                   held, uuid: person.uuid)
+        assert_match "changing someone's email address needs", refusal(body)
+
+        body = ask(%(mutation($uuid: ID!) { generateBackupCodes(uuid: $uuid) { codes } }), held, uuid: person.uuid)
+        assert_match "backup codes needs", refusal(body)
+
+        body = ask(%(mutation($uuid: ID!) { resetPassword(uuid: $uuid) { url } }), held, uuid: person.uuid)
+        assert_match "reset link masks cannot mail needs", refusal(body)
+
+        assert_equal "person@example.com", within { person.reload.email }
+      end
+
+      test "support still sends a reset to the person's own inbox" do
+        person = create_actor(@tenant, nickname: "person", scopes: "openid", email: "person@example.com")
+        held = bearer_for(manager(ManageRoles::SUPPORT))
+
+        with_mailer do
+          body = ask(%(mutation($uuid: ID!) { resetPassword(uuid: $uuid) { delivered url } }), held, uuid: person.uuid)
+
+          assert_nil body["errors"], body
+          assert body.dig("data", "resetPassword", "delivered")
+          assert_nil body.dig("data", "resetPassword", "url")
+        end
+      end
+
+      test "an owner can still change someone's email address" do
+        person = create_actor(@tenant, nickname: "person", scopes: "openid", email: "person@example.com")
+        held = bearer_for(@owner)
+
+        body = ask(%(mutation($uuid: ID!) { updateActor(uuid: $uuid, email: "new@example.com") { actor { email } } }),
+                   held, uuid: person.uuid)
+
+        assert_nil body["errors"], body
+      end
+
       test "security changes keys and policies and cannot touch people" do
         person = create_actor(@tenant, nickname: "person", scopes: "openid")
         held = bearer_for(manager(ManageRoles::SECURITY))

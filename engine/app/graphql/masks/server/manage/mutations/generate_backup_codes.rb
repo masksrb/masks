@@ -12,6 +12,7 @@ module Masks
 
           def resolve(uuid:)
             actor = actor!(uuid)
+            needs!(:security, "generating someone's backup codes")
 
             unless actor.second_factor?
               refuse!("a backup code is a way past a second factor, and this actor has none")

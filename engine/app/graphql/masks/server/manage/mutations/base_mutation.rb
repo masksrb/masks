@@ -29,6 +29,12 @@ module Masks
               ManageRoles.owner?(roles)
             end
 
+            def needs!(level, doing)
+              return if ManageRoles.permits?(roles, level)
+
+              refuse!("#{doing} needs #{ManageRoles::LEVELS.fetch(level).join(' or ')}")
+            end
+
             def managed!(actor)
               return actor if owner? || actor.id == viewer.id || !actor.manages?
 
