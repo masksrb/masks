@@ -656,7 +656,7 @@ type MailPreview {
 }
 
 """
-The tenant's own wording for one kind of email. masks still adds the button or
+The tenant's own template for one kind of email. masks still adds the button or
 code, how long it lasts, and the lines that keep a person safe.
 """
 type MailTemplate {
@@ -1136,8 +1136,8 @@ type Mutation {
   updateGroup(key: String!, name: String!): UpdateGroupPayload
 
   """
-  Sets the tenant's wording for one kind of email. Leaving both the subject and
-  the message blank goes back to the wording masks writes.
+  Sets the tenant's template for one kind of email. Leaving both the subject and
+  the message blank goes back to masks' default.
   """
   updateMailTemplate(kind: ID!, message: String, subject: String): UpdateMailTemplatePayload
   updateOrganization(
