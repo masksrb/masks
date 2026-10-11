@@ -180,6 +180,20 @@ module Masks
         assert_equal "127.0.0.1", bound.ip_address
       end
 
+      test "who am I names the bound DN" do
+        client = connect
+        who = -> { client.raw(Ldap::Ber.sequence([ Ldap::Ber.octets(Ldap::Protocol::WHO_AM_I, 0x80) ], 0x77)) }
+
+        assert_equal "", who.call.child(3).string
+
+        client.bind(person_dn("alice"), "password")
+        response = who.call
+
+        assert_equal 0x78, response.tag
+        assert_equal 0, response.child(0).integer
+        assert_equal "dn:#{person_dn('alice')}", response.child(3).string
+      end
+
       test "a person bound connection cannot search" do
         client = connect
         client.bind(person_dn("alice"), "password")
@@ -270,6 +284,39 @@ module Masks
         assert_equal 0x78, notice.child(1).tag
         assert_equal 2, notice.child(1).child(0).integer
         assert client.closed?
+      end
+
+      test "with a certificate and key the listener speaks LDAPS" do
+        key = OpenSSL::PKey::EC.generate("prime256v1")
+        certificate = OpenSSL::X509::Certificate.new
+        certificate.version = 2
+        certificate.serial = 1
+        certificate.subject = certificate.issuer = OpenSSL::X509::Name.parse("/CN=ldap.example.test")
+        certificate.public_key = key
+        certificate.not_before = 1.minute.ago
+        certificate.not_after = 1.day.from_now
+        certificate.sign(key, OpenSSL::Digest.new("SHA256"))
+
+        Dir.mktmpdir do |dir|
+          File.write("#{dir}/cert.pem", certificate.to_pem)
+          File.write("#{dir}/key.pem", key.to_pem)
+
+          secure = Ldap::Listener.new(host: "127.0.0.1", port: 0, logger: Logger.new(nil),
+                                      tls: Ldap::Listener.tls("#{dir}/cert.pem", "#{dir}/key.pem")).start
+
+          begin
+            client = LdapClient.new(secure.port, tls: true)
+            @clients << client
+
+            assert_equal 0, client.bind(person_dn("alice"), "password").code
+          ensure
+            secure.stop
+          end
+        end
+      end
+
+      test "a certificate without a key is refused at start" do
+        assert_raises(RuntimeError) { Ldap::Listener.tls("/tmp/cert.pem", nil) }
       end
 
       test "an unbind closes the connection" do

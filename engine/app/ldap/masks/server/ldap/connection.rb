@@ -35,6 +35,7 @@ module Masks
             when Protocol::Abandon then nil
             when Protocol::Bind then within { bind(message) }
             when Protocol::Search then within { search(message) }
+            when Protocol::WhoAmI then write(Protocol.who_am_i(message.id, @bound ? "dn:#{@bound.dn}" : ""))
             when Protocol::Unsupported then unsupported(message)
             end
           end

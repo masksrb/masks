@@ -7,9 +7,10 @@ module Masks
       Result = Data.define(:code, :message, :matched)
       Found = Data.define(:dn, :attributes)
 
-      def initialize(port)
-        @socket = TCPSocket.new("127.0.0.1", port)
-        @socket.timeout = 10
+      def initialize(port, tls: false)
+        tcp = TCPSocket.new("127.0.0.1", port)
+        tcp.timeout = 10
+        @socket = tls ? secured(tcp) : tcp
         @next = 0
       end
 
@@ -67,6 +68,15 @@ module Masks
       end
 
       private
+
+        def secured(tcp)
+          context = OpenSSL::SSL::SSLContext.new
+          context.verify_mode = OpenSSL::SSL::VERIFY_NONE
+          socket = OpenSSL::SSL::SSLSocket.new(tcp, context)
+          socket.sync_close = true
+          socket.connect
+          socket
+        end
 
         def encode(filter)
           case filter

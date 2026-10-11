@@ -33,6 +33,9 @@ module Masks
         }.freeze
 
         DISCONNECTION = "1.3.6.1.4.1.1466.20036".freeze
+        WHO_AM_I = "1.3.6.1.4.1.4203.1.11.3".freeze
+        REQUEST_NAME = 0x80
+        RESPONSE_VALUE = 0x8b
 
         SUCCESS = 0
         OPERATIONS_ERROR = 1
@@ -53,6 +56,7 @@ module Masks
         Search = Data.define(:base, :scope, :size_limit, :types_only, :filter, :attributes)
         Unbind = Data.define
         Abandon = Data.define
+        WhoAmI = Data.define
         Unsupported = Data.define(:tag)
 
         module_function
@@ -74,8 +78,19 @@ module Masks
           when SEARCH_REQUEST then search(element)
           when UNBIND_REQUEST then Unbind.new
           when ABANDON_REQUEST then Abandon.new
+          when EXTENDED_REQUEST then extended(element)
           else Unsupported.new(tag: element.tag)
           end
+        end
+
+        def extended(element)
+          name = element.children.find { |part| part.tag == REQUEST_NAME }&.string
+
+          name == WHO_AM_I ? WhoAmI.new : Unsupported.new(tag: EXTENDED_REQUEST)
+        end
+
+        def who_am_i(id, identity)
+          envelope(id, result(EXTENDED_RESPONSE, SUCCESS, extra: [ Ber.octets(identity, RESPONSE_VALUE) ]))
         end
 
         def bind(element)
