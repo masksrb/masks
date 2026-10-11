@@ -9,7 +9,9 @@ export function useCopy(copy, locale = "en") {
 }
 
 function lookup(key) {
-  return key.split(".").reduce((found, part) => (found == null ? undefined : found[part]), held);
+  return key
+    .split(".")
+    .reduce((found, part) => (found == null ? undefined : found[part]), held);
 }
 
 function fill(text, values) {
