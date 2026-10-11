@@ -6,6 +6,6 @@ es:
       sending:
         title: "Envío"
         lede: "Los servicios que entregan el correo y los SMS de este inquilino. Cada tipo se envía por su servicio principal."
-      wording:
-        title: "Redacción"
+      templates:
+        title: "Plantillas"
         lede: "Lo que dice cada correo que envía masks, en una vista previa tal como se recibe."

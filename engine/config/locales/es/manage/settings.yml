@@ -62,12 +62,12 @@ es:
         color_reset: "Color restablecido."
         own: "Usar el de masks"
       naming:
-        title: "Las cuentas se identifican por"
+        title: "Identificador principal"
         help: "Lo que una persona escribe para iniciar sesión. Todas las políticas tienen que exigir lo que se elija aquí."
         nickname: "Apodo"
         email: "Correo"
         either: "Cualquiera de los dos"
-        updated: "Identificación actualizada."
+        updated: "Identificador principal actualizado."
       policy:
         title: "Política predeterminada"
         help: "La política de inicio de sesión de toda aplicación que no tenga una propia. La integrada ofrece contraseñas, llaves de acceso y proveedores, con un segundo factor opcional."
@@ -84,11 +84,11 @@ es:
         save_networks: "Guardar redes"
         networks_saved: "Redes de riesgo guardadas."
       idle:
-        title: "Cuentas inactivas"
+        title: "Eliminación automática"
         help: "Una cuenta en la que nadie inicia sesión ni se usa a través de una aplicación se suspende y luego se elimina tras estos periodos. Cada paso se avisa por correo con al menos 30 días de antelación, e iniciar sesión antes de una suspensión conserva la cuenta. Con Suspender establecido, solo se eliminan las cuentas suspendidas por inactividad. Con Suspender en Nunca, las cuentas inactivas se eliminan directamente. El último administrador y las cuentas que un proveedor aprovisiona mediante SCIM no se tocan."
         suspend: "Suspender"
         delete: "Eliminar"
-        updated: "Cuentas inactivas actualizadas."
+        updated: "Eliminación automática actualizada."
         delete_confirm: "¿Eliminar las cuentas inactivas? Una cuenta eliminada no se puede restaurar."
         never: "Nunca"
         after_90_days: "Después de 90 días"

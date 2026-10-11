@@ -1,10 +1,10 @@
 fr:
   manage:
-    mail_wording:
-      reset: "%{title} reprend la formulation de masks."
+    mail_template:
+      reset: "%{title} reprend le modèle par défaut de masks."
       saved: "%{title} enregistré."
       signature: "Signature"
-      wording: "Formulation"
+      template: "Modèle"
       customized: " (personnalisé)"
       subject: "Objet"
       subject_placeholder: "L’objet rédigé par masks"
@@ -15,4 +15,4 @@ fr:
       hint: "Texte brut. Une ligne vide commence un nouveau paragraphe. Remplit %{names}."
       hint_more: "masks ajoute toujours le bouton ou le code, sa durée de validité et les consignes de sécurité."
       save: "Enregistrer"
-      use_default: "Utiliser la formulation de masks"
+      use_default: "Utiliser le modèle par défaut de masks"

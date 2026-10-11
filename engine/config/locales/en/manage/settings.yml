@@ -62,12 +62,12 @@ en:
         color_reset: "Color reset."
         own: "Use masks' own"
       naming:
-        title: "Accounts are named by"
+        title: "Primary identifier"
         help: "What a person types to sign in. Every policy has to require whichever this names."
         nickname: "Nickname"
         email: "Email"
         either: "Either"
-        updated: "Naming updated."
+        updated: "Primary identifier updated."
       policy:
         title: "Default policy"
         help: "The sign-in policy for every client that has none of its own. Built-in offers passwords, passkeys, and providers, with an optional second factor."
@@ -84,11 +84,11 @@ en:
         save_networks: "Save networks"
         networks_saved: "Risky networks saved."
       idle:
-        title: "Idle accounts"
+        title: "Auto-deletion"
         help: "An account nobody signs in to or uses through an app is suspended, then deleted, after these periods. Each step is warned by email at least 30 days ahead, and signing in before a suspension keeps the account. With Suspend set, only accounts suspended for being idle are deleted. With Suspend at Never, idle accounts are deleted directly. The last manager and accounts a provider provisions over SCIM are left alone."
         suspend: "Suspend"
         delete: "Delete"
-        updated: "Idle accounts updated."
+        updated: "Auto-deletion updated."
         delete_confirm: "Delete idle accounts? A deleted account cannot be restored."
         never: "Never"
         after_90_days: "After 90 days"

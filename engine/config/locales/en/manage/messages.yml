@@ -5,7 +5,7 @@ en:
       parts: "Messages"
       sending:
         title: "Sending"
-        lede: "The services that deliver this tenant's email and text messages. Each kind sends through its primary service."
-      wording:
-        title: "Wording"
+        lede: "The services that deliver this tenant's email and SMS. Each kind sends through its primary service."
+      templates:
+        title: "Templates"
         lede: "What each email masks sends says, previewed as people receive it."

@@ -1,6 +1,6 @@
 <script>
   import { t } from "./lib/copy.js";
-  import MailWording from "./MailWording.svelte";
+  import MailTemplate from "./MailTemplate.svelte";
   import Loader from "./ui/Loader.svelte";
   import Tip from "./ui/Tip.svelte";
 
@@ -16,7 +16,7 @@
 
   const GROUPS = ["sign_in", "manage", "account", "system"];
 
-  const worded = (key) => (key === "invitation_organization" ? "invitation" : key);
+  const templated = (key) => (key === "invitation_organization" ? "invitation" : key);
 
   let client = $state("");
   let version = $state(0);
@@ -37,7 +37,7 @@
         {@const previews = data.mailPreviews}
         {@const shown = previews.find((preview) => preview.key === chosen) ?? previews[0]}
         {@const templates = Object.fromEntries(data.mailTemplates.map((template) => [template.kind, template]))}
-        {@const wording = templates[worded(shown.key)]}
+        {@const template = templates[templated(shown.key)]}
 
         <div class="mail">
           <nav class="mail-list" aria-label={t("emails.list")}>
@@ -100,13 +100,13 @@
             </header>
 
             <div class="mail-words">
-              {#if wording}
-                {#key wording.kind}
-                  <MailWording {api} template={wording} title={shown.name} onsaved={() => version++} />
+              {#if template}
+                {#key template.kind}
+                  <MailTemplate {api} template={template} title={shown.name} onsaved={() => version++} />
                 {/key}
               {/if}
 
-              <MailWording {api} template={templates.signature} title={t("emails.signature")} onsaved={() => version++} />
+              <MailTemplate {api} template={templates.signature} title={t("emails.signature")} onsaved={() => version++} />
             </div>
 
             {#if showing === "html" && shown.html}

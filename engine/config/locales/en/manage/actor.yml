@@ -37,8 +37,8 @@ en:
           name: "Email codes"
           lower: "email codes"
         sms:
-          name: "Text message codes"
-          lower: "text message codes"
+          name: "SMS codes"
+          lower: "SMS codes"
       turn_off_question: "Turn off %{name} for this actor?"
       turned_off: "%{name} turned off."
       suspend_question: "Suspend %{identifier}? They are signed out everywhere, every token they hold stops working, and they cannot sign in until they are restored."

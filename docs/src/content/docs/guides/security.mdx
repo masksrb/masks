@@ -64,7 +64,7 @@ holds and the console asked for, and masks checks that the person still holds th
 | `masks:manage:read` | Read everything manage shows, and change nothing. |
 | `masks:manage:support` | Read, and help people: sign them out, suspend and restore them, reset passwords and factors, resend invitations, and revoke their sessions, consents, and tokens. |
 | `masks:manage:security` | Read, and change signing keys, clients, providers, sign-in policies, sending services, event streams, and provisioning tokens for one organization. |
-| `masks:manage` | Everything, including tenant settings, email wording, deleting people, and granting any scope. |
+| `masks:manage` | Everything, including tenant settings, email templates, deleting people, and granting any scope. |
 
 Every mutation declares the least scope it needs, and one that declares none needs `masks:manage`.
 Manage shows a line at the top of each page saying what a viewer below `masks:manage` can do.
@@ -97,7 +97,7 @@ kept per tenant. The environment variables are listed in
 | --- | --- | --- |
 | `MASKS_ATTEMPT_LIMIT` | IP address | Passwords, codes, and passkeys at sign-in, and sign-in through a provider. |
 | `MASKS_ACCOUNT_ATTEMPT_LIMIT` | Account | The same attempts against one account from any address, password changes, and sign-in approvals. |
-| `MASKS_RECOVERY_LIMIT` | IP address or account | Codes and links sent by email or text message. |
+| `MASKS_RECOVERY_LIMIT` | IP address or account | Codes and links sent by email or SMS. |
 | `MASKS_REGISTRATION_LIMIT` | IP address | Dynamic client registration. |
 | `MASKS_DEVICE_CODE_LIMIT` | IP address | User codes entered at `/device`. |
 | `MASKS_CLAIM_LIMIT` | IP address, across tenants | Tenants claimed on first visit under a subdomain template. |
@@ -154,7 +154,7 @@ masks emails a person when something changes on their account:
 | Group | Sent when |
 | --- | --- |
 | Password | The password is changed or reset. |
-| Factors | A passkey, an authenticator app, backup codes, or email or text message codes are added or removed, or a backup code is spent. |
+| Factors | A passkey, an authenticator app, backup codes, or email or SMS codes are added or removed, or a backup code is spent. |
 | Sessions | A new device signs in, a sign-in looks unusual and is asked for more or refused, a session is signed out, or a device is blocked. |
 | Applications | An application is allowed in, an account elsewhere is linked or unlinked, or a device sign-in is approved. |
 | Account | A manager changes the person's scopes, or the person downloads their account. |
@@ -166,16 +166,16 @@ masks emails a person when something changes on their account:
 - Each person can turn any group off under **Emails we send you** on the account page.
 - The email names the device and address the change came from, in the person's time zone.
 
-Every email masks sends can be previewed under **Messages**, **Wording** in `/manage`, rendered with sample people and
+Every email masks sends can be previewed under **Messages**, **Templates** in `/manage`, rendered with sample people and
 the tenant's own name and links.
 
 An email sent while someone signs in to an approved app is headed by that app's logo and name, and
 every other email by the tenant. An app nobody approved never heads an email, so a self-registered
 app cannot use the tenant's mail to pass as someone else.
 
-### Rewording an email
+### Editing an email template
 
-Under **Messages**, **Wording** in `/manage`, an owner rewords the invitation, organization invitation, password
+Under **Messages**, **Templates** in `/manage`, an owner edits the templates for the invitation, organization invitation, password
 reset, email confirmation, confirmation code, approval request, and approval emails, and adds a
 signature that closes every email.
 
@@ -188,7 +188,7 @@ signature that closes every email.
   is refused.
 - masks still adds the button or the code, how long it lasts, and the lines that tell a person what to
   do if it was not them. A password reset a manager started still names the manager.
-- The wording applies in every language the tenant serves.
+- A template applies in every language the tenant serves.
 - Each change is recorded as `mail_template.updated`.
 
 ## Keeping and exporting activity
@@ -210,7 +210,7 @@ and follows the filter on the page. Any manage role may download, and each downl
 
 masks calls addresses that apps and managers supply: a client's `jwks_uri`, `sector_identifier_uri`,
 `logo_uri`, metadata document, back-channel logout URI, and shared signals endpoint, a resource's
-protected resource metadata, every provider's endpoints and SAML metadata, each text message service, and each
+protected resource metadata, every provider's endpoints and SAML metadata, each SMS service, and each
 event stream's endpoint. It also calls the Pwned Passwords API. Each of these calls:
 
 - Uses `https`, with no username or password in the address.

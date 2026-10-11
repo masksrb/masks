@@ -1,5 +1,21 @@
 en:
   manage:
     scopes_editor:
-      placeholder: "add a scope"
-      add: "Add"
+      label: "Add a scope"
+      placeholder:
+        one: "Add a scope from %{count} known, or type a new one"
+        other: "Add a scope from %{count} known, or type a new one"
+      offered: "Scopes to add"
+      add_new: "Add new"
+      more:
+        one: "%{count} more. Keep typing to narrow the list."
+        other: "%{count} more. Keep typing to narrow the list."
+      held:
+        one: "%{count} scope chosen"
+        other: "%{count} scopes chosen"
+      remove: "Remove %{scope}"
+      all:
+        one: "Show %{count} scope"
+        other: "Show all %{count}"
+      fewer: "Show fewer"
+      none: "No scopes chosen."

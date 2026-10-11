@@ -1,10 +1,10 @@
 en:
   manage:
-    mail_wording:
-      reset: "%{title} uses masks' wording again."
+    mail_template:
+      reset: "%{title} uses masks' default again."
       saved: "%{title} saved."
       signature: "Signature"
-      wording: "Wording"
+      template: "Template"
       customized: " (customized)"
       subject: "Subject"
       subject_placeholder: "The subject masks writes"
@@ -15,4 +15,4 @@ en:
       hint: "Plain text. A blank line starts a new paragraph. Fills in %{names}."
       hint_more: "masks still adds the button or code, how long it lasts, and the safety lines."
       save: "Save"
-      use_default: "Use masks' wording"
+      use_default: "Use masks' default"

@@ -193,6 +193,7 @@
 
   .section-row > .section-head {
     flex-direction: column;
+    align-items: flex-start;
     justify-content: flex-start;
     padding-top: 0.375rem;
   }
@@ -440,6 +441,96 @@ a.tally-cell:active {
 
 .scope-privileged {
   color: var(--color-error);
+}
+
+.compact-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.compact-list > li {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem 0.75rem;
+  min-width: 0;
+  padding-block: 0.5rem;
+}
+
+.compact-list > li + li {
+  box-shadow: inset 0 1px 0 var(--line);
+}
+
+.scope-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.scope-picker-field {
+  position: relative;
+  max-width: 28rem;
+}
+
+.scope-picker-list {
+  position: absolute;
+  inset-inline: 0;
+  top: calc(100% + 0.25rem);
+  z-index: 20;
+  max-height: 16rem;
+  overflow-y: auto;
+  padding: 0.25rem;
+  border-radius: var(--radius-field);
+  background: var(--sheet);
+  box-shadow: var(--tray-bar-lift);
+}
+
+.scope-picker-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.5rem;
+  border-radius: calc(var(--radius-field) - 2px);
+  font-size: var(--text-xs);
+  cursor: pointer;
+}
+
+.scope-picker-active {
+  background: var(--sunk);
+}
+
+.scope-picker-new {
+  color: var(--dimmer);
+}
+
+.scope-picker-more {
+  padding: 0.375rem 0.5rem;
+  font-size: var(--text-xs);
+  color: var(--dimmer);
+}
+
+.scope-picker-held {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.scope-picker-remove {
+  margin-inline: 0.125rem -0.25rem;
+  padding-inline: 0.25rem;
+  border-radius: 999px;
+  line-height: 1;
+  opacity: 0.6;
+  cursor: pointer;
+}
+
+.scope-picker-remove:hover {
+  opacity: 1;
+}
+
+.scope-picker-remove:focus-visible {
+  outline: var(--focus);
 }
 
 .drawn {
@@ -1036,7 +1127,7 @@ a.tally-cell:active {
   border-block: 1px solid var(--color-base-300);
 }
 
-.mail-wording summary {
+.mail-template summary {
   cursor: pointer;
 }
 

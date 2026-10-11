@@ -24,7 +24,7 @@ en:
         passkey: "Passkey"
         backup_codes: "Backup codes"
         email: "Email codes"
-        sms: "Text message codes"
+        sms: "SMS codes"
         trusted_device: "Approval from a trusted device"
       confirmations:
         none: "None"
@@ -76,7 +76,7 @@ en:
           phone: "Phone"
           email_verified: "Confirmed email"
           phone_verified: "Confirmed phone"
-          no_sms: "No text message service."
+          no_sms: "No SMS service."
         sign_in:
           legend: "Sign in"
           characters: "characters minimum"

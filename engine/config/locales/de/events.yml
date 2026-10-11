@@ -151,7 +151,7 @@ de:
       events:
         exported: "Aktivität exportiert"
       mail_template:
-        updated: "E-Mail-Wortlaut geändert"
+        updated: "E-Mail-Vorlage geändert"
       stream:
         created: "Event-Stream hinzugefügt"
         updated: "Event-Stream geändert"

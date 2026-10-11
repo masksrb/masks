@@ -3,7 +3,7 @@ module Masks
     module Manage
       module Types
         class MailTemplateType < BaseObject
-          description "The tenant's own wording for one kind of email. masks still adds the button or code, how long it lasts, and the lines that keep a person safe."
+          description "The tenant's own template for one kind of email. masks still adds the button or code, how long it lasts, and the lines that keep a person safe."
 
           field :kind, ID, null: false,
                 description: "Which email this changes, or `signature` for the closing lines every email ends with."

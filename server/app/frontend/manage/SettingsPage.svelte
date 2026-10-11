@@ -3,6 +3,8 @@
   import { t } from "./lib/copy.js";
   import { day } from "./lib/format.js";
   import Events from "./Events.svelte";
+  import DomainsSection from "./DomainsSection.svelte";
+  import GroupsSection from "./GroupsSection.svelte";
   import Namespaces from "./Namespaces.svelte";
   import ScopesEditor from "./ScopesEditor.svelte";
   import BarChart from "./ui/BarChart.svelte";
@@ -597,11 +599,13 @@
             update({ dynamicRegistration }, t("settings.registration.updated"))}
         />
 
-        <ScopesEditor
-          value={data.tenant.dynamicClientScopes ?? []}
-          available={data.scopesSupported}
-          onchange={(dynamicClientScopes) => update({ dynamicClientScopes }, t("settings.registration.ceiling_updated"))}
-        />
+        {#if data.tenant.dynamicRegistration === "bounded"}
+          <ScopesEditor
+            value={data.tenant.dynamicClientScopes ?? []}
+            available={data.scopesSupported}
+            onchange={(dynamicClientScopes) => update({ dynamicClientScopes }, t("settings.registration.ceiling_updated"))}
+          />
+        {/if}
       </Section>
 
       {#if data.namespaces.length}
@@ -667,6 +671,10 @@
           </table>
         </div>
       </Section>
+
+      <GroupsSection {api} />
+
+      <DomainsSection {api} />
     </div>
   </Page>
 {/if}

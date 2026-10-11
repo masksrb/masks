@@ -1,10 +1,10 @@
 es:
   manage:
-    mail_wording:
-      reset: "%{title} vuelve a usar el texto de masks."
+    mail_template:
+      reset: "%{title} vuelve a usar la plantilla predeterminada de masks."
       saved: "%{title} guardado."
       signature: "Firma"
-      wording: "Texto"
+      template: "Plantilla"
       customized: " (personalizado)"
       subject: "Asunto"
       subject_placeholder: "El asunto que escribe masks"
@@ -15,4 +15,4 @@ es:
       hint: "Texto sin formato. Una línea en blanco empieza un párrafo nuevo. Rellena %{names}."
       hint_more: "masks sigue añadiendo el botón o el código, cuánto dura y las líneas de seguridad."
       save: "Guardar"
-      use_default: "Usar el texto de masks"
+      use_default: "Usar la plantilla predeterminada de masks"

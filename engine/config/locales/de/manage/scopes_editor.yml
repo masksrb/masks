@@ -1,5 +1,21 @@
 de:
   manage:
     scopes_editor:
-      placeholder: "Scope hinzufügen"
-      add: "Hinzufügen"
+      label: "Scope hinzufügen"
+      placeholder:
+        one: "Einen von %{count} bekannten Scopes hinzufügen oder einen neuen eingeben"
+        other: "Einen von %{count} bekannten Scopes hinzufügen oder einen neuen eingeben"
+      offered: "Scopes zum Hinzufügen"
+      add_new: "Neu hinzufügen"
+      more:
+        one: "%{count} weiterer. Weiter tippen, um die Liste einzugrenzen."
+        other: "%{count} weitere. Weiter tippen, um die Liste einzugrenzen."
+      held:
+        one: "%{count} Scope gewählt"
+        other: "%{count} Scopes gewählt"
+      remove: "%{scope} entfernen"
+      all:
+        one: "%{count} Scope anzeigen"
+        other: "Alle %{count} anzeigen"
+      fewer: "Weniger anzeigen"
+      none: "Keine Scopes gewählt."

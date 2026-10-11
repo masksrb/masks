@@ -6,6 +6,6 @@ de:
       sending:
         title: "Versand"
         lede: "Die Dienste, die E-Mails und SMS dieses Mandanten zustellen. Jede Art wird über ihren primären Dienst gesendet."
-      wording:
-        title: "Wortlaut"
+      templates:
+        title: "Vorlagen"
         lede: "Was jede E-Mail sagt, die masks sendet, in einer Vorschau, wie sie ankommt."

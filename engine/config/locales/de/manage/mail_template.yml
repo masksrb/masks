@@ -1,10 +1,10 @@
 de:
   manage:
-    mail_wording:
-      reset: "%{title} verwendet wieder den Wortlaut von masks."
+    mail_template:
+      reset: "%{title} verwendet wieder die Standardvorlage von masks."
       saved: "%{title} gespeichert."
       signature: "Signatur"
-      wording: "Wortlaut"
+      template: "Vorlage"
       customized: " (angepasst)"
       subject: "Betreff"
       subject_placeholder: "Der Betreff, den masks schreibt"
@@ -15,4 +15,4 @@ de:
       hint: "Reiner Text. Eine Leerzeile beginnt einen neuen Absatz. Füllt %{names} aus."
       hint_more: "masks fügt weiterhin die Schaltfläche oder den Code, die Gültigkeitsdauer und die Sicherheitshinweise hinzu."
       save: "Speichern"
-      use_default: "Wortlaut von masks verwenden"
+      use_default: "Standardvorlage von masks verwenden"

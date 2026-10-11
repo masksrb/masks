@@ -52,7 +52,7 @@ en:
         email:
           changed: "The email address on your %{tenant} account was changed to another address. Password resets and notices about the account no longer come here."
         phone:
-          changed: "The phone number on your %{tenant} account was changed. Text message codes go to the new number."
+          changed: "The phone number on your %{tenant} account was changed. SMS codes go to the new number."
           removed: "The phone number was removed from your %{tenant} account."
         recovery:
           requested: "Someone who knows how to sign in to your %{tenant} account asked a manager to reset its second factors. If it was not you, change your password now."

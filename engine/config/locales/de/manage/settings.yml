@@ -62,12 +62,12 @@ de:
         color_reset: "Farbe zurückgesetzt."
         own: "Die von masks verwenden"
       naming:
-        title: "Konten werden benannt nach"
+        title: "Primäre Kennung"
         help: "Was eine Person zur Anmeldung eingibt. Jede Richtlinie muss das hier Gewählte verlangen."
         nickname: "Spitzname"
         email: "E-Mail-Adresse"
         either: "Beides möglich"
-        updated: "Benennung aktualisiert."
+        updated: "Primäre Kennung aktualisiert."
       policy:
         title: "Standardrichtlinie"
         help: "Die Anmelderichtlinie für jede App ohne eigene Richtlinie. Die eingebaute bietet Passwörter, Passkeys und Anbieter, mit optionalem zweitem Faktor."
@@ -84,11 +84,11 @@ de:
         save_networks: "Netzwerke speichern"
         networks_saved: "Riskante Netzwerke gespeichert."
       idle:
-        title: "Inaktive Konten"
+        title: "Automatisches Löschen"
         help: "Ein Konto, bei dem sich niemand anmeldet und das niemand über eine App nutzt, wird nach diesen Zeiträumen gesperrt und dann gelöscht. Vor jedem Schritt wird mindestens 30 Tage vorher per E-Mail gewarnt, und eine Anmeldung vor der Sperrung erhält das Konto. Ist „Sperren“ gesetzt, werden nur Konten gelöscht, die wegen Inaktivität gesperrt wurden. Steht „Sperren“ auf „Nie“, werden inaktive Konten direkt gelöscht. Der letzte Verwalter und Konten, die ein Anbieter über SCIM provisioniert, bleiben unberührt."
         suspend: "Sperren"
         delete: "Löschen"
-        updated: "Inaktive Konten aktualisiert."
+        updated: "Automatisches Löschen aktualisiert."
         delete_confirm: "Inaktive Konten löschen? Ein gelöschtes Konto lässt sich nicht wiederherstellen."
         never: "Nie"
         after_90_days: "Nach 90 Tagen"

@@ -6,6 +6,6 @@ fr:
       sending:
         title: "Envoi"
         lede: "Les services qui distribuent les e-mails et les SMS de cet espace. Chaque type passe par son service principal."
-      wording:
-        title: "Formulation"
+      templates:
+        title: "Modèles"
         lede: "Ce que dit chaque e-mail envoyé par masks, prévisualisé tel qu’il est reçu."

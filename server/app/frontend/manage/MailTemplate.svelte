@@ -33,7 +33,7 @@
           subject: blank || signature ? "" : subject,
           message: blank ? "" : message,
         }),
-      blank ? t("mail_wording.reset", { title }) : t("mail_wording.saved", { title }),
+      blank ? t("mail_template.reset", { title }) : t("mail_template.saved", { title }),
     );
 
     busy = false;
@@ -42,9 +42,9 @@
   }
 </script>
 
-<details class="mail-wording" open={custom || undefined}>
+<details class="mail-template" open={custom || undefined}>
   <summary class="term">
-    {t(signature ? "mail_wording.signature" : "mail_wording.wording")}{custom ? t("mail_wording.customized") : ""}
+    {t(signature ? "mail_template.signature" : "mail_template.template")}{custom ? t("mail_template.customized") : ""}
   </summary>
 
   <form
@@ -58,33 +58,33 @@
 
     {#if !signature}
       <Field
-        label={t("mail_wording.subject")}
+        label={t("mail_template.subject")}
         bind:value={subject}
         maxlength="150"
-        placeholder={t("mail_wording.subject_placeholder")}
+        placeholder={t("mail_template.subject_placeholder")}
       />
     {/if}
 
     <label class="flex flex-col gap-1.5">
-      <span class="field-label">{t(signature ? "mail_wording.closing" : "mail_wording.opening")}</span>
+      <span class="field-label">{t(signature ? "mail_template.closing" : "mail_template.opening")}</span>
       <textarea
         class="textarea textarea-sm w-full"
         rows="4"
         maxlength="2000"
-        placeholder={t(signature ? "mail_wording.closing_placeholder" : "mail_wording.opening_placeholder")}
+        placeholder={t(signature ? "mail_template.closing_placeholder" : "mail_template.opening_placeholder")}
         bind:value={message}
       ></textarea>
       <span class="hint">
-        {t("mail_wording.hint", { names })}
-        {#if !signature}{t("mail_wording.hint_more")}{/if}
+        {t("mail_template.hint", { names })}
+        {#if !signature}{t("mail_template.hint_more")}{/if}
       </span>
     </label>
 
     <div class="flex gap-2">
-      <button type="submit" class="btn btn-sm btn-primary" disabled={busy}>{t("mail_wording.save")}</button>
+      <button type="submit" class="btn btn-sm btn-primary" disabled={busy}>{t("mail_template.save")}</button>
       {#if custom}
         <button type="button" class="btn btn-sm btn-ghost" disabled={busy} onclick={() => save(true)}>
-          {t("mail_wording.use_default")}
+          {t("mail_template.use_default")}
         </button>
       {/if}
     </div>

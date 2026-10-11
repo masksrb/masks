@@ -857,7 +857,7 @@
             </div>
           {:else}
             <p class="text-sm opacity-85">
-              {t("client.groups.none")} <Link to="/groups">{t("client.groups.add")}</Link> {t("client.groups.limit")}
+              {t("client.groups.none")} <Link to="/settings">{t("client.groups.add")}</Link> {t("client.groups.limit")}
             </p>
           {/if}
 

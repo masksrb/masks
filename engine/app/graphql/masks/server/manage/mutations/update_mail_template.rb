@@ -5,7 +5,7 @@ module Masks
         class UpdateMailTemplate < BaseMutation
           requires :owner
 
-          description "Sets the tenant's wording for one kind of email. Leaving both the subject and the message blank goes back to the wording masks writes."
+          description "Sets the tenant's template for one kind of email. Leaving both the subject and the message blank goes back to masks' default."
 
           argument :kind, ID
           argument :subject, String, required: false

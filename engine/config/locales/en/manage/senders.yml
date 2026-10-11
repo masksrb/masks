@@ -14,9 +14,9 @@ en:
           lede: "Invitations, resets, confirmations and codes. The primary one sends everything."
           idle: "Nothing is emailed through a service of this tenant's own. Mail falls back to whatever the server was set up with, if anything."
         sms:
-          title: "Text messages"
+          title: "SMS"
           lede: "Phone confirmations and sign-in codes. The primary one sends everything."
-          idle: "No texts can be sent until a service is added."
+          idle: "No SMS can be sent until a service is added."
       form:
         add: "Add a service"
         edit: "Edit %{name}"

@@ -600,7 +600,7 @@
             {:else}
               <p class="hint">
                 {t("organization.signing_in.no_domains")}
-                <Link to="/domains" class="link">{t("organization.signing_in.domains_link")}</Link>
+                <Link to="/settings" class="link">{t("organization.signing_in.domains_link")}</Link>
               </p>
             {/each}
           </div>

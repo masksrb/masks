@@ -25,7 +25,7 @@ en:
           none: "None"
           unconfirmed: "Not confirmed"
         none: "This account has no phone number."
-        body: "Text message codes go to %{phone}."
+        body: "SMS codes go to %{phone}."
         remove: "Remove"
         confirm_remove: "Remove this phone number?"
 
@@ -41,7 +41,7 @@ en:
         directed: "Your organization's directory manages this address."
         undeliverable:
           email: "This server cannot send email yet, so the address cannot be changed here."
-          phone: "This server cannot send text messages yet, so the number cannot be changed here."
+          phone: "This server cannot send SMS yet, so the number cannot be changed here."
 
       password:
         heading: "Password"
@@ -114,10 +114,10 @@ en:
           unconfirmed: "Confirm your email address first."
           undeliverable: "This server cannot send email yet."
         sms:
-          heading: "Text message codes"
-          explained: "After your password, a sign-in can be confirmed with a code sent to your phone by text message. An authenticator app or a passkey is harder to steal."
+          heading: "SMS codes"
+          explained: "After your password, a sign-in can be confirmed with a code sent to your phone by SMS. An authenticator app or a passkey is harder to steal."
           unconfirmed: "Add and confirm a phone number first."
-          undeliverable: "This server cannot send text messages yet."
+          undeliverable: "This server cannot send SMS yet."
 
       approve:
         heading: "Approve a sign-in"

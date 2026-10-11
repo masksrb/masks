@@ -62,12 +62,12 @@ fr:
         color_reset: "Couleur réinitialisée."
         own: "Utiliser celle de masks"
       naming:
-        title: "Les comptes sont identifiés par"
+        title: "Identifiant principal"
         help: "Ce qu’une personne saisit pour se connecter. Chaque politique doit exiger ce qui est choisi ici."
         nickname: "Pseudo"
         email: "E-mail"
         either: "L’un ou l’autre"
-        updated: "Identification mise à jour."
+        updated: "Identifiant principal mis à jour."
       policy:
         title: "Politique par défaut"
         help: "La politique de connexion de chaque application qui n’en a pas. La politique intégrée propose les mots de passe, les clés d’accès et les fournisseurs, avec un second facteur facultatif."
@@ -84,11 +84,11 @@ fr:
         save_networks: "Enregistrer les réseaux"
         networks_saved: "Réseaux à risque enregistrés."
       idle:
-        title: "Comptes inactifs"
+        title: "Suppression automatique"
         help: "Un compte auquel personne ne se connecte et qui n’est utilisé par aucune application est suspendu, puis supprimé, après ces durées. Chaque étape est annoncée par e-mail au moins 30 jours à l’avance, et se connecter avant une suspension conserve le compte. Si Suspendre est défini, seuls les comptes suspendus pour inactivité sont supprimés. Si Suspendre est sur Jamais, les comptes inactifs sont supprimés directement. Le dernier gestionnaire et les comptes provisionnés par un fournisseur via SCIM ne sont pas concernés."
         suspend: "Suspendre"
         delete: "Supprimer"
-        updated: "Comptes inactifs mis à jour."
+        updated: "Suppression automatique mise à jour."
         delete_confirm: "Supprimer les comptes inactifs ? Un compte supprimé ne peut pas être restauré."
         never: "Jamais"
         after_90_days: "Après 90 jours"

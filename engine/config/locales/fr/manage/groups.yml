@@ -2,22 +2,14 @@ fr:
   manage:
     groups:
       title: "Groupes"
-      lede: "Des ensembles nommés de personnes, comme admins ou famille. Les applications qui demandent la portée groups voient chaque groupe dont une personne fait partie, et une application peut être limitée à certains groupes."
+      lede: "Des ensembles nommés de personnes, comme admins ou famille. Les applications qui demandent la portée groups voient chaque groupe dont une personne fait partie, et une application peut être limitée à certains groupes. Les applications voient la clé d’un groupe, et elle ne pourra plus changer. Une personne rejoint un groupe depuis sa propre page."
       added: "%{name} est prêt. Ajoutez des personnes depuis leur propre page."
       delete_confirm: "Supprimer %{name} ? Les applications limitées à ce groupe refusent ses membres."
       deleted: "%{name} est supprimé."
-      left: "%{identifier} ne fait plus partie de %{name}."
-      add:
-        title: "Ajouter un groupe"
-        help: "La clé est ce que les applications voient dans la claim groups ; choisissez donc celle qu’attend la correspondance de rôles de l’application, comme admins. Elle ne pourra plus changer."
-        key: "Clé"
-        name: "Nom"
-        submit: "Ajouter le groupe"
-      list:
-        title: "Groupes"
-        empty: "Aucun groupe pour l’instant."
-        people:
-          one: "· %{count} personne"
-          other: "· %{count} personnes"
-        delete: "Supprimer"
-        take_out: "Retirer %{identifier} de %{name}"
+      people:
+        one: "%{count} personne"
+        other: "%{count} personnes"
+      delete: "Supprimer %{name}"
+      new: "Nom du nouveau groupe"
+      add: "Ajouter"
+      key: "Les applications le voient comme %{key}."

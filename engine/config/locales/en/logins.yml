@@ -116,8 +116,8 @@ en:
       add_another_passkey: "Add another"
       codes_email: "Email codes"
       codes_email_hint: "A code sent to %{to} confirms each sign-in."
-      codes_sms: "Text message codes"
-      codes_sms_hint: "A code sent to %{to} by text message confirms each sign-in."
+      codes_sms: "SMS codes"
+      codes_sms_hint: "A code sent to %{to} by SMS confirms each sign-in."
       send_code: "Send a code to turn it on"
       sent_to: "Sent to %{to}."
       backup_codes: "Backup codes"
@@ -182,7 +182,7 @@ en:
       title: "Check your phone"
       lede: "A six-digit code is on its way to %{phone}."
       change_phone: "Use a different number"
-      no_texts: "This server cannot send text messages yet, so the number cannot be confirmed. Ask a manager."
+      no_texts: "This server cannot send SMS yet, so the number cannot be confirmed. Ask a manager."
 
     add_phone:
       title: "Add a phone number"

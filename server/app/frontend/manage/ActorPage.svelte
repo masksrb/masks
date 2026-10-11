@@ -595,7 +595,7 @@
               {/each}
             </div>
           {:else}
-            <p class="text-sm opacity-85">{t("actor.no_groups")} <Link to="/groups">{t("actor.add_group")}</Link>.</p>
+            <p class="text-sm opacity-85">{t("actor.no_groups")} <Link to="/settings">{t("actor.add_group")}</Link>.</p>
           {/if}
 
           {#if actor.groupLabels.length}

@@ -81,7 +81,7 @@ en:
     phone:
       invalid: "That is not a phone number. Include the country code, as in +1 555 123 4567."
       same: "That is already your phone number."
-      undeliverable: "This server cannot send text messages yet."
+      undeliverable: "This server cannot send SMS yet."
       sent: "A code is on its way to %{to}."
       taken: "Another account uses that phone number."
       changed: "Phone number changed."
@@ -105,7 +105,7 @@ en:
       sms: "Sign-ins can now be confirmed with a code sent to your phone."
     disabled:
       email: "Email codes are off."
-      sms: "Text message codes are off."
+      sms: "SMS codes are off."
 
   sign_in_approvals:
     untrusted: "Only a device you trusted when signing in can approve a sign-in."
