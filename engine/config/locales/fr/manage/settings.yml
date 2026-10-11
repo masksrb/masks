@@ -16,13 +16,13 @@ fr:
           detail: "Les invitations, les réinitialisations de mot de passe et les codes de connexion sont envoyés par e-mail. En attendant, un gestionnaire transmet chaque lien d’invitation à la main."
           action: "Ajouter un service d’e-mail"
         client:
-          title: "Connectez votre première application"
-          detail: "Enregistrez une application à la main, ou laissez-la se connecter elle-même par la poignée de main."
-          action: "Ajouter une application"
+          title: "Enregistrez votre premier client"
+          detail: "Enregistrez un client à la main, ou laissez-le se connecter lui-même par la poignée de main."
+          action: "Ajouter un client"
         invite:
           title: "Invitez quelqu’un"
-          detail: "Chaque personne reçoit une invitation pour configurer sa propre connexion."
-          action: "Inviter des personnes"
+          detail: "Chaque acteur reçoit une invitation pour configurer sa propre connexion."
+          action: "Inviter des acteurs"
       sign_ins:
         title: "Connexions"
         range: "Période"
@@ -36,10 +36,9 @@ fr:
         members: "Membres"
         empty: "Aucune organisation pour l’instant. Ajoutez-en une pour chaque client dont les membres se connectent ensemble, et les applications qui demandent la portée organization apprennent le rôle de chaque personne."
       recent:
-        worrying: "À examiner"
-        lately: "Récemment"
         all: "Toute l’activité"
         empty: "Rien pour l’instant."
+        title: "Activité"
       tenant:
         title: "Espace"
         help: "Le nom figure en tête de chaque écran et de chaque e-mail envoyé par masks. Les applications découvrent cet espace à son émetteur, et l’API de gestion répond à sa ressource."
@@ -145,3 +144,15 @@ fr:
           active: "active"
           retiring: "en retrait"
           retired: "retirée"
+      needs:
+        waiting:
+          one: "%{count} acteur attend une approbation"
+          other: "%{count} acteurs attendent une approbation"
+        help:
+          one: "%{count} acteur a demandé de l’aide pour se connecter"
+          other: "%{count} acteurs ont demandé de l’aide pour se connecter"
+        worrying:
+          one: "%{count} événement du dernier jour mérite un coup d’œil"
+          other: "%{count} événements du dernier jour méritent un coup d’œil"
+        latest: "Le dernier est %{label}, %{when}."
+        review: "Examiner"

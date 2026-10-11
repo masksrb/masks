@@ -1502,9 +1502,35 @@ type Query {
   devices(actor: ID, agent: String, blocked: Boolean, limit: Int, unattached: Boolean): [Device!]!
   domainClaims: [DomainClaim!]!
   eventActions: [EventAction!]!
-  eventCount(action: String, actor: ID, client: ID, device: ID, grave: Boolean, organization: ID): Int!
+  eventCount(
+    action: String
+    actor: ID
+    client: ID
+    device: ID
+    grave: Boolean
+    organization: ID
+
+    """
+    Only events recorded at or after this time.
+    """
+    since: ISO8601DateTime
+  ): Int!
   eventStreams(archived: Boolean): [EventStream!]!
-  events(action: String, actor: ID, afterId: ID, client: ID, device: ID, grave: Boolean, limit: Int, organization: ID): [Event!]!
+  events(
+    action: String
+    actor: ID
+    afterId: ID
+    client: ID
+    device: ID
+    grave: Boolean
+    limit: Int
+    organization: ID
+
+    """
+    Only events recorded at or after this time.
+    """
+    since: ISO8601DateTime
+  ): [Event!]!
   group(key: String!): Group
   groups: [Group!]!
 

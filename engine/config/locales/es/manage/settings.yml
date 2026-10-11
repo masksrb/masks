@@ -16,13 +16,13 @@ es:
           detail: "Las invitaciones, los restablecimientos de contraseña y los códigos de inicio de sesión se envían por correo. Hasta entonces, un administrador pasa cada enlace de invitación a mano."
           action: "Añadir un servicio de correo"
         client:
-          title: "Conecta tu primera aplicación"
-          detail: "Registra una aplicación a mano o deja que se conecte sola mediante el handshake."
-          action: "Añadir una aplicación"
+          title: "Registra tu primer cliente"
+          detail: "Registra un cliente a mano o deja que se conecte solo mediante el handshake."
+          action: "Añadir cliente"
         invite:
           title: "Invita a alguien"
-          detail: "Cada persona recibe una invitación para configurar su propio inicio de sesión."
-          action: "Invitar a personas"
+          detail: "Cada actor recibe una invitación para configurar su propio inicio de sesión."
+          action: "Invitar actores"
       sign_ins:
         title: "Inicios de sesión"
         range: "Intervalo de tiempo"
@@ -36,10 +36,9 @@ es:
         members: "Miembros"
         empty: "Todavía no hay organizaciones. Añade una por cada cliente cuyas personas inician sesión juntas, y las aplicaciones que piden el alcance organization sabrán el rol que tiene cada persona allí."
       recent:
-        worrying: "Conviene revisarlo"
-        lately: "Últimamente"
         all: "Toda la actividad"
         empty: "Nada todavía."
+        title: "Actividad"
       tenant:
         title: "Inquilino"
         help: "El nombre encabeza cada pantalla y cada correo que envía masks. Las aplicaciones descubren este inquilino en su emisor, y la API de administración responde en su recurso."
@@ -145,3 +144,15 @@ es:
           active: "activa"
           retiring: "retirándose"
           retired: "retirada"
+      needs:
+        waiting:
+          one: "%{count} actor espera aprobación"
+          other: "%{count} actores esperan aprobación"
+        help:
+          one: "%{count} actor pidió ayuda para iniciar sesión"
+          other: "%{count} actores pidieron ayuda para iniciar sesión"
+        worrying:
+          one: "%{count} evento del último día conviene revisarlo"
+          other: "%{count} eventos del último día conviene revisarlos"
+        latest: "El último es %{label}, %{when}."
+        review: "Revisar"

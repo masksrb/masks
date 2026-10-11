@@ -169,6 +169,8 @@ module Masks
             argument :action, String, required: false
             argument :grave, Boolean, required: false
             argument :organization, ID, required: false
+            argument :since, GraphQL::Types::ISO8601DateTime, required: false,
+                                                               description: "Only events recorded at or after this time."
             argument :after_id, ID, required: false
             argument :limit, Integer, required: false
           end
@@ -180,6 +182,8 @@ module Masks
             argument :action, String, required: false
             argument :grave, Boolean, required: false
             argument :organization, ID, required: false
+            argument :since, GraphQL::Types::ISO8601DateTime, required: false,
+                                                               description: "Only events recorded at or after this time."
           end
 
           field :event_actions, [ EventActionType ], null: false
@@ -484,7 +488,7 @@ module Masks
               scope.where("name ILIKE :term OR client_id = :exact", term: term, exact: search.strip)
             end
 
-            def event_scope(actor: nil, client: nil, device: nil, action: nil, grave: false, organization: nil)
+            def event_scope(actor: nil, client: nil, device: nil, action: nil, grave: false, organization: nil, since: nil)
               subject = actor.present? ? Actor.find_by(uuid: actor) : nil
               group = organization.present? ? Masks::Server::Organization.find_by(key: organization) : nil
 
@@ -504,6 +508,7 @@ module Masks
               scope = scope.where(organization: group) if group
               scope = scope.where(action: action) if action.present?
               scope = scope.where(action: Masks::Server::Event::GRAVE) if grave
+              scope = scope.where(created_at: since..) if since
 
               scope
             end

@@ -53,7 +53,7 @@
           </button>
         </div>
 
-        <div class="flex flex-wrap gap-1">
+        <div class="flex flex-wrap gap-x-2 font-mono text-xs">
           {#each consent.scopes as scope (scope)}
             <span class="scope" class:scope-privileged={scope.startsWith("masks:")}>{scope}</span>
           {/each}

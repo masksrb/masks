@@ -6,3 +6,6 @@ en:
       more:
         one: "Show %{count} more"
         other: "Show %{count} more"
+      repeated:
+        one: "once"
+        other: "%{count} times"

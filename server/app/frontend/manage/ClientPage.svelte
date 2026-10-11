@@ -1,5 +1,5 @@
 <script>
-  import ClientParts from "./ClientParts.svelte";
+  import Parts from "./ui/Parts.svelte";
   import { createFeedback } from "./lib/feedback.svelte.js";
   import { day, joined } from "./lib/format.js";
   import { POLICY_FIELDS, policyDifferences } from "./lib/policies.js";
@@ -441,7 +441,17 @@
       </div>
     {/if}
 
-    <ClientParts {clientId} {part} />
+    <Parts
+      base={`/clients/${clientId}`}
+      {part}
+      label={t("client.parts.label")}
+      parts={[
+        [null, "", t("client.parts.general")],
+        ["access", "/access", t("client.parts.access")],
+        ["endpoints", "/endpoints", t("client.parts.endpoints")],
+        ["usage", "/usage", t("client.parts.usage")],
+      ]}
+    />
 
     <div class="grid gap-4">
       {#if part === "access"}

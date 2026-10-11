@@ -6,3 +6,6 @@ de:
       more:
         one: "%{count} weiteres anzeigen"
         other: "%{count} weitere anzeigen"
+      repeated:
+        one: "einmal"
+        other: "%{count}-mal"

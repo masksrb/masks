@@ -10,13 +10,16 @@
   import Tokens from "./Tokens.svelte";
   import ScopesEditor from "./ScopesEditor.svelte";
   import Section from "./ui/Section.svelte";
+  import Marks from "./ui/Marks.svelte";
+  import Parts from "./ui/Parts.svelte";
+  import { actorMarks } from "./lib/marks.js";
   import Field from "./ui/Field.svelte";
   import Link from "./ui/Link.svelte";
   import Notices from "./ui/Notices.svelte";
   import Page from "./ui/Page.svelte";
   import Spinner from "./ui/Spinner.svelte";
 
-  let { api, uuid } = $props();
+  let { api, uuid, part = null } = $props();
 
   const router = useRouter();
 
@@ -74,6 +77,7 @@
         }
         events(limit: 25) {
           id action label createdAt ipAddress details
+          actor { uuid identifier }
           by { uuid identifier }
           client { clientId name }
           device { id label }
@@ -98,6 +102,49 @@
   let uploading = $state(false);
 
   const yourself = $derived(Boolean(actor && viewer && actor.uuid === viewer.uuid));
+
+  const PARTS = [
+    [null, "", t("actor.parts.profile")],
+    ["access", "/access", t("actor.parts.access")],
+    ["sign-in", "/sign-in", t("actor.parts.sign_in")],
+    ["activity", "/activity", t("actor.parts.activity")],
+  ];
+
+  const identity = $derived(
+    actor
+      ? [
+          actor.name,
+          actor.email ?? t("actors.no_email"),
+          actor.activated
+            ? t("actor.signed_in_lede", { when: since(actor.lastLoginAt, t("actor.never")) })
+            : t("actor.invited_lede"),
+        ]
+          .filter(Boolean)
+          .join(" · ")
+      : "",
+  );
+
+  const approve = () =>
+    act(
+      `mutation Approve($uuid: ID!) { approveActor(uuid: $uuid) { actor { uuid } } }`,
+      { uuid },
+      t("actor.approval.approved"),
+    );
+
+  const resetFactors = () =>
+    confirm(t("actor.recovery.question", { identifier: actor.identifier })) &&
+    act(
+      `mutation Reset($uuid: ID!) { resetSecondFactors(uuid: $uuid) { actor { uuid } } }`,
+      { uuid },
+      t("actor.recovery.done"),
+    );
+
+  const dismiss = () =>
+    act(
+      `mutation Dismiss($uuid: ID!) { dismissRecovery(uuid: $uuid) { actor { uuid } } }`,
+      { uuid },
+      t("actor.recovery.dismissed"),
+    );
 
   async function load() {
     loading = true;
@@ -315,14 +362,22 @@
     {feedback.state.failure ?? t("actor.missing")}
   </div>
 {:else}
-  <Page
-    title={actor.identifier}
-    id={actor.uuid}
-    back={{ to: "/actors", label: t("actor.back") }}
-    lede={actor.activated
-      ? t("actor.signed_in_lede", { when: since(actor.lastLoginAt, t("actor.never")) })
-      : t("actor.invited_lede")}
-  >
+  <Page title={actor.identifier} id={actor.uuid} back={{ to: "/actors", label: t("actor.back") }} lede={identity}>
+    {#snippet lead()}
+      <img
+        src={`${actor.avatars.photo ?? actor.avatars.identicon}?size=128`}
+        width="64"
+        height="64"
+        alt=""
+        class="size-14 shrink-0 rounded-lg object-cover sm:size-16"
+        class:drawn={!actor.avatars.photo}
+      />
+    {/snippet}
+
+    {#snippet after()}
+      <Marks marks={actorMarks(actor)} />
+    {/snippet}
+
     <Notices feedback={feedback.state} />
 
     {#if link}
@@ -341,10 +396,209 @@
       </div>
     {/if}
 
-    <div class="grid items-start gap-4 md:grid-cols-2">
-      <div class="flex flex-col gap-4">
-        <Section title={t("actor.profile")}>
-          <div class="grid gap-3 sm:grid-cols-3">
+    {#if actor.pendingApproval}
+      <div class="callout callout-warn" role="status">
+        <div class="callout-words">
+          <strong>{t("actor.approval.title")}</strong>
+          <span>{t("actor.approval.lede")}</span>
+        </div>
+        <div class="callout-actions">
+          <button type="button" class="btn btn-primary btn-sm" onclick={approve}>{t("actor.approval.approve")}</button>
+        </div>
+      </div>
+    {/if}
+
+    {#if actor.recoveryRequestedAt}
+      <div class="callout callout-warn" role="status">
+        <div class="callout-words">
+          <strong>{t("actor.recovery.title")}</strong>
+          <span>{t("actor.recovery.lede", { when: since(actor.recoveryRequestedAt) })}</span>
+          <span class="hint">{t("actor.recovery.explain")}</span>
+        </div>
+        <div class="callout-actions">
+          <button type="button" class="btn btn-primary btn-sm" onclick={resetFactors}>{t("actor.recovery.reset")}</button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick={dismiss}>{t("actor.recovery.dismiss")}</button>
+        </div>
+      </div>
+    {/if}
+
+    {#if actor.suspendedAt}
+      <div class="callout callout-bad" role="status">
+        <div class="callout-words">
+          <strong>{t("actor.suspended_on", { day: day(actor.suspendedAt) })}</strong>
+        </div>
+        <div class="callout-actions">
+          <button type="button" class="btn btn-sm" onclick={restore}>{t("actor.restore")}</button>
+        </div>
+      </div>
+    {/if}
+
+    {#if !actor.activated}
+      <div class="callout callout-info" role="status">
+        <div class="callout-words">
+          <strong>{actor.invitedAt ? t("actor.invited_on", { day: day(actor.invitedAt) }) : t("actor.invited")}</strong>
+        </div>
+        <div class="callout-actions">
+          <button type="button" class="btn btn-sm" onclick={resend}>{t("actor.resend")}</button>
+        </div>
+      </div>
+    {/if}
+
+    {#if actor.email && !actor.emailVerified}
+      <div class="callout callout-warn" role="status">
+        <div class="callout-words">
+          <strong>{t("actor.unconfirmed", { email: actor.email })}</strong>
+        </div>
+        <div class="callout-actions">
+          <button type="button" class="btn btn-sm" onclick={confirmEmail}>{t("actor.send_confirmation")}</button>
+        </div>
+      </div>
+    {/if}
+
+    <Parts base={`/actors/${actor.uuid}`} {part} parts={PARTS} label={t("actor.parts.label")} />
+
+    <div class="grid gap-4">
+      {#if part === "access"}
+        <Section row title={t("actor.scopes")} lede={t("actor.scopes_lede")}>
+          <ScopesEditor value={actor.scopes} available={supported} onchange={saveScopes} />
+        </Section>
+
+        <Section row title={t("actor.groups")} lede={t("actor.groups_lede")}>
+          {#if groups.length}
+            <div class="flex flex-col gap-1">
+              {#each groups as group (group.key)}
+                <label class="flex items-center gap-2 text-sm">
+                  <input type="checkbox" class="checkbox checkbox-sm" checked={belongs(group)} onchange={() => toggleGroup(group)} />
+                  {group.name} <code class="hint font-mono">{group.key}</code>
+                </label>
+              {/each}
+            </div>
+          {:else}
+            <p class="text-sm opacity-85">{t("actor.no_groups")} <Link to="/settings">{t("actor.add_group")}</Link>.</p>
+          {/if}
+
+          {#if actor.groupLabels.length}
+            <p class="hint">{t("actor.group_labels", { labels: actor.groupLabels.join(", ") })}</p>
+          {/if}
+        </Section>
+
+        {#if actor.externalId || actor.memberships.some((membership) => membership.externalId)}
+          <Section row title={t("actor.provisioned")}>
+            {#if actor.externalId}
+              <p class="text-sm">
+                {t("actor.provisioned_as")} <span class="font-mono">{actor.externalId}</span>.
+                {t("actor.provider_may_change")}
+              </p>
+            {/if}
+            {#each actor.memberships.filter((membership) => membership.externalId) as membership (membership.organization.key)}
+              <p class="text-sm">
+                {t("actor.directory_provisioned", { organization: membership.organization.name })}
+                <span class="font-mono">{membership.externalId}</span>, {t("actor.directory_may_change")}
+              </p>
+            {/each}
+          </Section>
+        {/if}
+
+        <Section row title={t("actor.consents")} lede={t("actor.consents_lede")}>
+          <Consents {api} {feedback} rows={actor.consents} onchange={load} />
+        </Section>
+
+        <Section row title={t("actor.connections")} lede={t("actor.connections_lede")}>
+          <Connections {api} {feedback} rows={actor.connections} onchange={load} />
+        </Section>
+      {:else if part === "sign-in"}
+        <Section row title={t("actor.password")} lede={actor.activated ? t("actor.password_lede") : t("actor.password_invited")}>
+          {#if actor.activated}
+            <button type="button" class="btn btn-sm self-start" onclick={reset}>{t("actor.reset_password")}</button>
+          {:else}
+            <button type="button" class="btn btn-sm self-start" onclick={resend}>{t("actor.resend")}</button>
+          {/if}
+        </Section>
+
+        <Section row title={t("actor.second_factor")}>
+          {#if actor.otpEnabled}
+            <div class="sheet flex flex-col gap-1 px-4 py-3">
+              <span class="text-sm font-medium">{t("actor.authenticator")}</span>
+              <span class="hint">{t("actor.backup_codes", { count: actor.backupCodesRemaining })}</span>
+              <div class="flex flex-wrap gap-2 pt-2">
+                <button type="button" class="btn btn-sm" onclick={generate}>{t("actor.generate")}</button>
+                <button type="button" class="btn btn-sm btn-error btn-outline" onclick={disable}>
+                  {t("actor.remove_authenticator")}
+                </button>
+              </div>
+            </div>
+          {/if}
+
+          {#each CODE_FACTORS.filter(([, field]) => actor[field]) as [factor, , name, lower] (factor)}
+            <div class="sheet flex flex-wrap items-center justify-between gap-2 px-4 py-3">
+              <span class="text-sm font-medium">{name}</span>
+              <button type="button" class="btn btn-sm btn-error btn-outline" onclick={() => turnOff(factor, name, lower)}>
+                {t("actor.turn_off", { name: lower })}
+              </button>
+            </div>
+          {/each}
+
+          {#if !actor.otpEnabled && !actor.emailCodesEnabled && !actor.textCodesEnabled}
+            <p class="text-sm opacity-85">{t("actor.password_only")}</p>
+          {/if}
+        </Section>
+
+        <Section row title={t("actor.passkeys")}>
+          {#if actor.passkeys.length === 0}
+            <p class="text-sm opacity-85">{t("actor.no_passkeys")}</p>
+          {:else}
+            <ul class="flex flex-col gap-2">
+              {#each actor.passkeys as passkey (passkey.id)}
+                <li class="sheet flex flex-col gap-1 px-4 py-3">
+                  <div class="flex items-baseline justify-between gap-3">
+                    <span class="text-sm font-medium">{passkey.label}</span>
+                    <span class="flex items-baseline gap-2">
+                      {#if passkey.userVerified}
+                        <span class="badge badge-success badge-xs">{t("actor.verifying")}</span>
+                      {/if}
+                      {#if passkey.certification}
+                        <span class="badge badge-ghost badge-xs">{passkey.certification}</span>
+                      {/if}
+                      <button type="button" class="link text-xs text-error" onclick={() => revokePasskey(passkey)}>
+                        {t("actor.remove")}
+                      </button>
+                    </span>
+                  </div>
+
+                  {#if passkey.compromise}
+                    <span class="text-xs text-error">
+                      {t("actor.compromise", { compromise: passkey.compromise.toLowerCase().replaceAll("_", " ") })}
+                    </span>
+                  {/if}
+
+                  <div class="flex flex-wrap gap-x-4 text-xs opacity-80">
+                    <span class="font-mono">{passkey.aaguid ?? t("actor.no_aaguid")}</span>
+                    <span>{t("actor.last_used", { when: since(passkey.lastUsedAt, t("actor.never")) })}</span>
+                  </div>
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        </Section>
+
+        <Section row title={t("actor.signed_in")} lede={yourself ? t("actor.signed_in_yourself") : null}>
+          <Presence {api} {feedback} {actor} onchange={load} />
+        </Section>
+
+        <Section row title={t("actor.tokens")} lede={t("actor.tokens_lede")}>
+          <Tokens {api} {feedback} rows={actor.tokens} onchange={load} />
+        </Section>
+      {:else if part === "activity"}
+        <Section>
+          {#snippet actions()}
+            <Link to={`/activity?actor=${actor.uuid}`} class="btn btn-ghost btn-sm">{t("actor.all_activity")}</Link>
+          {/snippet}
+
+          <Events events={actor.events} showActor={false} empty={t("actor.no_activity")} limit={25} collapse />
+        </Section>
+      {:else}
+        <Section row title={t("actor.profile")}>
+          <div class="grid gap-3">
             {#each FIELDS as [key, label] (key)}
               <Field {label} bind:value={draft[key]} />
             {/each}
@@ -364,45 +618,18 @@
           </button>
         </Section>
 
-        <Section
-          title={t("actor.signed_in")}
-          lede={yourself ? t("actor.signed_in_yourself") : null}
-        >
-          <Presence {api} {feedback} {actor} onchange={load} />
-        </Section>
-
-        <Section title={t("actor.consents")}>
-          <Consents {api} {feedback} rows={actor.consents} onchange={load} />
-        </Section>
-
-        <Section title={t("actor.connections")}>
-          <Connections {api} {feedback} rows={actor.connections} onchange={load} />
-        </Section>
-
-        <Section
-          title={t("actor.tokens")}
-        >
-          <Tokens {api} {feedback} rows={actor.tokens} onchange={load} />
-        </Section>
-      </div>
-
-      <div class="flex flex-col gap-4">
-        <Section title={t("actor.photo")}>
+        <Section row title={t("actor.photo")} lede={t("actor.photo_lede")}>
           <div class="flex flex-wrap gap-5">
-            {#each ["photo", "identicon", "initials"] as style (style)}
+            {#each ["photo", "identicon", "initials"].filter((style) => actor.avatars[style]) as style (style)}
               <div class="flex flex-col items-start gap-2">
-                {#if actor.avatars[style]}
-                  <img
-                    src={`${actor.avatars[style]}?size=64`}
-                    width="64"
-                    height="64"
-                    alt=""
-                    class="size-16 rounded object-cover"
-                    class:drawn={style !== "photo"}
-                  />
-                {:else}
-                  <div class="size-16 rounded border border-dashed border-base-300"></div>
-                {/if}
+                <img
+                  src={`${actor.avatars[style]}?size=128`}
+                  width="64"
+                  height="64"
+                  alt=""
+                  class="size-16 rounded-lg object-cover"
+                  class:drawn={style !== "photo"}
+                />
                 <span class="hint">{t(`actor.styles.${style}`)}</span>
               </div>
             {/each}
@@ -410,7 +637,7 @@
 
           <div class="flex flex-wrap items-center gap-2">
             <label class="btn btn-sm" class:btn-disabled={uploading}>
-              {t("actor.upload_photo")}
+              {actor.photoUploaded ? t("actor.change_photo") : t("actor.upload_photo")}
               <input
                 type="file"
                 class="sr-only"
@@ -421,247 +648,30 @@
             </label>
 
             {#if actor.photoUploaded}
-              <button type="button" class="btn btn-ghost btn-sm" onclick={removePhoto}>
-                {t("actor.remove_photo")}
-              </button>
+              <button type="button" class="btn btn-ghost btn-sm" onclick={removePhoto}>{t("actor.remove_photo")}</button>
+            {/if}
+
+            {#if uploading}
+              <span class="hint">{t("actor.uploading")}</span>
             {/if}
           </div>
-
-          {#if uploading}
-            <span class="hint">{t("actor.uploading")}</span>
-          {/if}
         </Section>
 
-        <Section title={t("actor.scopes")}>
-          <ScopesEditor value={actor.scopes} available={supported} onchange={saveScopes} />
-        </Section>
-
-        <Section title={t("actor.access")}>
-          {#if actor.suspendedAt}
-            <div class="alert alert-warning alert-soft flex-wrap items-center gap-3 text-sm" role="status">
-              <span>{t("actor.suspended_on", { day: day(actor.suspendedAt) })}</span>
-              <button type="button" class="btn btn-sm" onclick={restore}>{t("actor.restore")}</button>
-            </div>
-          {/if}
-
-          {#if actor.externalId}
-            <p class="hint">
-              {t("actor.provisioned_as")} <span class="font-mono">{actor.externalId}</span>.
-              {t("actor.provider_may_change")}
-            </p>
-          {/if}
-          {#each actor.memberships.filter((membership) => membership.externalId) as membership (membership.organization.key)}
-            <p class="hint">
-              {t("actor.directory_provisioned", { organization: membership.organization.name })}
-              <span class="font-mono">{membership.externalId}</span>, {t("actor.directory_may_change")}
-            </p>
-          {/each}
-          {#if actor.activated}
-            <button type="button" class="btn btn-sm self-start" onclick={reset}>
-              {t("actor.reset_password")}
-            </button>
-          {:else}
-            <p class="text-sm opacity-85">
-              {actor.invitedAt
-                ? t("actor.invited_on", { day: day(actor.invitedAt) })
-                : t("actor.invited")}
-            </p>
-            <button type="button" class="btn btn-sm self-start" onclick={resend}>
-              {t("actor.resend")}
-            </button>
-          {/if}
-
-          {#if actor.email && !actor.emailVerified}
-            <p class="text-sm opacity-85">{t("actor.unconfirmed", { email: actor.email })}</p>
-            <button type="button" class="btn btn-sm self-start" onclick={confirmEmail}>
-              {t("actor.send_confirmation")}
-            </button>
-          {/if}
-        </Section>
-
-        <Section title={t("actor.passkeys")}>
-          {#if actor.passkeys.length === 0}
-            <p class="text-sm opacity-85">{t("actor.no_passkeys")}</p>
-          {:else}
-            <ul class="flex flex-col gap-2">
-              {#each actor.passkeys as passkey (passkey.id)}
-                <li class="flex flex-col gap-1 tray px-3 py-2">
-                  <div class="flex items-baseline justify-between gap-3">
-                    <span class="text-sm font-medium">{passkey.label}</span>
-                    <span class="flex items-baseline gap-2">
-                      {#if passkey.userVerified}
-                        <span class="badge badge-success badge-xs">{t("actor.verifying")}</span>
-                      {/if}
-                      {#if passkey.certification}
-                        <span class="badge badge-ghost badge-xs">{passkey.certification}</span>
-                      {/if}
-                      <button
-                        type="button"
-                        class="link text-xs text-error"
-                        onclick={() => revokePasskey(passkey)}
-                      >
-                        {t("actor.remove")}
-                      </button>
-                    </span>
-                  </div>
-
-                  {#if passkey.compromise}
-                    <span class="text-xs text-error">
-                      {t("actor.compromise", {
-                        compromise: passkey.compromise.toLowerCase().replaceAll("_", " "),
-                      })}
-                    </span>
-                  {/if}
-
-                  <div class="flex flex-wrap gap-x-4 text-xs opacity-80">
-                    <span class="font-mono">{passkey.aaguid ?? t("actor.no_aaguid")}</span>
-                    <span>{t("actor.last_used", { when: since(passkey.lastUsedAt, t("actor.never")) })}</span>
-                  </div>
-                </li>
-              {/each}
-            </ul>
-          {/if}
-        </Section>
-
-        {#if actor.pendingApproval}
-          <Section
-            title={t("actor.approval.title")}
-            lede={t("actor.approval.lede")}
-          >
+        <Section row title={t("actor.danger")} lede={yourself ? t("actor.yourself") : t("actor.danger_lede")}>
+          {#if !yourself}
             <div class="flex flex-wrap gap-2">
-              <button
-                type="button"
-                class="btn btn-primary btn-sm"
-                onclick={() =>
-                  act(
-                    `mutation Approve($uuid: ID!) { approveActor(uuid: $uuid) { actor { uuid } } }`,
-                    { uuid },
-                    t("actor.approval.approved"),
-                  )}
-              >
-                {t("actor.approval.approve")}
+              {#if !actor.suspendedAt}
+                <button type="button" class="btn btn-sm btn-warning btn-outline" onclick={suspend}>
+                  {t("actor.suspend", { identifier: actor.identifier })}
+                </button>
+              {/if}
+              <button type="button" class="btn btn-sm btn-error btn-outline" onclick={remove}>
+                {t("actor.delete", { identifier: actor.identifier })}
               </button>
             </div>
-          </Section>
-        {/if}
-
-        {#if actor.recoveryRequestedAt}
-          <Section
-            title={t("actor.recovery.title")}
-            lede={t("actor.recovery.lede", { when: since(actor.recoveryRequestedAt) })}
-          >
-            <p class="text-sm opacity-85">
-              {t("actor.recovery.explain")}
-            </p>
-
-            <div class="flex flex-wrap gap-2">
-              <button
-                type="button"
-                class="btn btn-primary btn-sm"
-                onclick={() =>
-                  confirm(t("actor.recovery.question", { identifier: actor.identifier })) &&
-                  act(
-                    `mutation Reset($uuid: ID!) { resetSecondFactors(uuid: $uuid) { actor { uuid } } }`,
-                    { uuid },
-                    t("actor.recovery.done"),
-                  )}
-              >
-                {t("actor.recovery.reset")}
-              </button>
-              <button
-                type="button"
-                class="btn btn-ghost btn-sm"
-                onclick={() =>
-                  act(
-                    `mutation Dismiss($uuid: ID!) { dismissRecovery(uuid: $uuid) { actor { uuid } } }`,
-                    { uuid },
-                    t("actor.recovery.dismissed"),
-                  )}
-              >
-                {t("actor.recovery.dismiss")}
-              </button>
-            </div>
-          </Section>
-        {/if}
-
-        <Section title={t("actor.groups")}>
-          {#if groups.length}
-            <div class="flex flex-col gap-1">
-              {#each groups as group (group.key)}
-                <label class="flex items-center gap-2 text-sm">
-                  <input type="checkbox" class="checkbox checkbox-sm" checked={belongs(group)} onchange={() => toggleGroup(group)} />
-                  {group.name} <code class="hint font-mono">{group.key}</code>
-                </label>
-              {/each}
-            </div>
-          {:else}
-            <p class="text-sm opacity-85">{t("actor.no_groups")} <Link to="/settings">{t("actor.add_group")}</Link>.</p>
-          {/if}
-
-          {#if actor.groupLabels.length}
-            <p class="hint">{t("actor.group_labels", { labels: actor.groupLabels.join(", ") })}</p>
           {/if}
         </Section>
-
-        <Section title={t("actor.second_factor")}>
-          {#if actor.otpEnabled}
-            <p class="text-sm">
-              {t("actor.authenticator_enabled", { count: actor.backupCodesRemaining })}
-            </p>
-
-            <div class="flex flex-wrap gap-2">
-              <button type="button" class="btn btn-sm" onclick={generate}>
-                {t("actor.generate")}
-              </button>
-              <button type="button" class="btn btn-sm btn-error btn-outline" onclick={disable}>
-                {t("actor.remove_authenticator")}
-              </button>
-            </div>
-          {:else if !actor.emailCodesEnabled && !actor.textCodesEnabled}
-            <p class="text-sm opacity-85">{t("actor.password_only")}</p>
-          {/if}
-
-          {#each CODE_FACTORS.filter(([, field]) => actor[field]) as [factor, , name, lower] (factor)}
-            <div class="flex flex-wrap items-center gap-2">
-              <span class="text-sm">{t("actor.factor_on", { name })}</span>
-              <button
-                type="button"
-                class="btn btn-sm btn-error btn-outline"
-                onclick={() => turnOff(factor, name, lower)}
-              >
-                {t("actor.turn_off", { name: lower })}
-              </button>
-            </div>
-          {/each}
-        </Section>
-
-        <Section title={t("actor.activity")}>
-          {#snippet actions()}
-            <Link to={`/activity?actor=${actor.uuid}`} class="btn btn-ghost btn-sm">{t("actor.all_activity")}</Link>
-          {/snippet}
-
-          <Events events={actor.events} showActor={false} empty={t("actor.no_activity")} />
-        </Section>
-
-        <Section title={t("actor.danger")}>
-          {#if yourself}
-            <p class="text-sm opacity-85">{t("actor.yourself")}</p>
-          {:else}
-            {#if !actor.suspendedAt}
-              <button type="button" class="btn btn-sm btn-warning btn-outline self-start" onclick={suspend}>
-                {t("actor.suspend", { identifier: actor.identifier })}
-              </button>
-            {/if}
-            <button
-              type="button"
-              class="btn btn-sm btn-error btn-outline self-start"
-              onclick={remove}
-            >
-              {t("actor.delete", { identifier: actor.identifier })}
-            </button>
-          {/if}
-        </Section>
-      </div>
+      {/if}
     </div>
   </Page>
 {/if}

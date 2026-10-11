@@ -16,13 +16,13 @@ de:
           detail: "Einladungen, Passwort-Zurücksetzungen und Anmeldecodes werden per E-Mail verschickt. Bis dahin gibt ein Verwalter jeden Einladungslink von Hand weiter."
           action: "E-Mail-Dienst hinzufügen"
         client:
-          title: "Ihre erste App verbinden"
-          detail: "Registrieren Sie eine App von Hand, oder lassen Sie sie sich über den Handshake selbst verbinden."
-          action: "App hinzufügen"
+          title: "Ihren ersten Client registrieren"
+          detail: "Registrieren Sie einen Client von Hand, oder lassen Sie ihn sich über den Handshake selbst verbinden."
+          action: "Client hinzufügen"
         invite:
           title: "Jemanden einladen"
-          detail: "Jede Person erhält eine Einladung, ihre eigene Anmeldung einzurichten."
-          action: "Personen einladen"
+          detail: "Jeder Akteur erhält eine Einladung, seine eigene Anmeldung einzurichten."
+          action: "Akteure einladen"
       sign_ins:
         title: "Anmeldungen"
         range: "Zeitraum"
@@ -36,10 +36,9 @@ de:
         members: "Mitglieder"
         empty: "Noch keine Organisationen. Fügen Sie eine für jeden Kunden hinzu, dessen Personen sich gemeinsam anmelden. Apps, die den Scope organization anfordern, erfahren dann die Rolle jeder Person dort."
       recent:
-        worrying: "Einen Blick wert"
-        lately: "Zuletzt"
         all: "Alle Aktivitäten"
         empty: "Noch nichts."
+        title: "Aktivität"
       tenant:
         title: "Mandant"
         help: "Der Name steht über jedem Bildschirm und jeder E-Mail, die masks sendet. Apps finden diesen Mandanten über seinen Issuer, und die Verwaltungs-API antwortet unter seiner Ressource."
@@ -145,3 +144,15 @@ de:
           active: "aktiv"
           retiring: "wird ausgemustert"
           retired: "ausgemustert"
+      needs:
+        waiting:
+          one: "%{count} Akteur wartet auf Freigabe"
+          other: "%{count} Akteure warten auf Freigabe"
+        help:
+          one: "%{count} Akteur hat um Hilfe bei der Anmeldung gebeten"
+          other: "%{count} Akteure haben um Hilfe bei der Anmeldung gebeten"
+        worrying:
+          one: "%{count} Ereignis des letzten Tages ist einen Blick wert"
+          other: "%{count} Ereignisse des letzten Tages sind einen Blick wert"
+        latest: "Das letzte ist %{label}, %{when}."
+        review: "Ansehen"

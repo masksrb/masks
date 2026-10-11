@@ -784,6 +784,21 @@ module Masks
         assert_operator ask(%({ eventCount }), held).dig("data", "eventCount"), :>=, 0
       end
 
+      test "events and their count can start at a moment, so a day's worth is counted exactly" do
+        held = bearer
+
+        within(@tenant) do
+          travel_to(3.days.ago) { Event.record!(Event::LOGIN_REFUSED, actor: @actor, by: nil, device: nil) }
+          2.times { Event.record!(Event::LOGIN_REFUSED, actor: @actor, by: nil, device: nil) }
+        end
+
+        since = 1.day.ago.iso8601
+        body = ask(%({ eventCount(grave: true, since: "#{since}") events(grave: true, since: "#{since}") { id } }), held)
+
+        assert_equal 2, body.dig("data", "eventCount")
+        assert_equal 2, body.dig("data", "events").size
+      end
+
       test "an admin cannot delete themselves" do
         body = ask(%(mutation { deleteActor(uuid: "#{@actor.uuid}") { uuid } }), bearer)
 

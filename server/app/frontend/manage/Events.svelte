@@ -4,78 +4,84 @@
   import { moment, since } from "./lib/format.js";
   import Link from "./ui/Link.svelte";
 
-  let { events, showActor = true, empty = t("events.empty"), limit = 5 } = $props();
+  let { events, showActor = true, empty = t("events.empty"), limit = 5, collapse = false } = $props();
 
   let all = $state(false);
 
-  const shown = $derived(all ? events : events.slice(0, limit));
+  const same = (one, other) =>
+    one.action === other.action &&
+    one.actor?.uuid === other.actor?.uuid &&
+    one.client?.clientId === other.client?.clientId;
+
+  const runs = $derived(
+    events.reduce((held, event) => {
+      const last = held.at(-1);
+
+      if (collapse && last && same(last.event, event)) last.count += 1;
+      else held.push({ event, count: 1 });
+
+      return held;
+    }, []),
+  );
+
+  const shown = $derived(all ? runs : runs.slice(0, limit));
+
+  const trail = (event) =>
+    [
+      ...detailed(event.details).map(([key, value]) => `${key} ${value}`),
+      event.ipAddress,
+      event.device?.label,
+    ].filter(Boolean);
 </script>
 
 {#if events.length === 0}
   <p class="text-sm opacity-80">{empty}</p>
 {:else}
   <ol class="slats">
-    {#each shown as event (event.id)}
-      <li class="slat">
-        <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-          <span class="flex flex-wrap items-baseline gap-2">
-            <span
-              class="text-sm font-medium"
-              class:text-error={tone(event.action) === "bad"}
-              class:text-warning={tone(event.action) === "watch"}
-              title={event.action}
-            >{event.label}</span>
+    {#each shown as { event, count } (event.id)}
+      <li class="event">
+        <span class="event-what">
+          <span
+            class="event-label"
+            class:text-error={tone(event.action) === "bad"}
+            class:text-warning={tone(event.action) === "watch"}
+            title={event.action}
+          >{event.label}</span>
 
-            {#if showActor && event.actor}
-              <Link to={`/actors/${event.actor.uuid}`} class="link link-hover text-xs">
-                {event.actor.identifier}
-              </Link>
-            {/if}
+          {#if count > 1}
+            <span class="event-count">{t("events.repeated", { count })}</span>
+          {/if}
 
-            {#if event.by && event.by.uuid !== event.actor?.uuid}
-              <span class="hint">
-                {t("events.by")}
-                <Link to={`/actors/${event.by.uuid}`} class="link link-hover">
-                  {event.by.identifier}
-                </Link>
-              </span>
-            {/if}
+          {#if showActor && event.actor}
+            <Link to={`/actors/${event.actor.uuid}`} class="link link-hover">{event.actor.identifier}</Link>
+          {/if}
 
-            {#if event.client}
-              <Link to={`/clients/${event.client.clientId}`} class="badge badge-ghost badge-xs">
-                {event.client.name}
-              </Link>
-            {/if}
-          </span>
+          {#if event.by && event.by.uuid !== event.actor?.uuid}
+            <span class="hint">
+              {t("events.by")}
+              <Link to={`/actors/${event.by.uuid}`} class="link link-hover">{event.by.identifier}</Link>
+            </span>
+          {/if}
 
-          <span class="text-xs whitespace-nowrap opacity-80" title={moment(event.createdAt)}>
-            {since(event.createdAt)}
-          </span>
-        </div>
+          {#if event.client}
+            <Link to={`/clients/${event.client.clientId}`} class="badge badge-ghost badge-xs">{event.client.name}</Link>
+          {/if}
+        </span>
 
-        {#if detailed(event.details).length}
-          <div class="flex flex-wrap gap-x-4 text-xs opacity-80">
-            {#each detailed(event.details) as [key, value] (key)}
-              <span><span class="opacity-85">{key}</span> {value}</span>
-            {/each}
-          </div>
-        {/if}
+        <time class="event-when" datetime={event.createdAt} title={moment(event.createdAt)}>
+          {since(event.createdAt)}
+        </time>
 
-        {#if event.ipAddress || event.device}
-          <div class="flex flex-wrap gap-x-4 text-xs opacity-75">
-            {#if event.ipAddress}<span class="font-mono">{event.ipAddress}</span>{/if}
-            {#if event.device}
-              <span class="truncate">{event.device.label}</span>
-            {/if}
-          </div>
+        {#if trail(event).length}
+          <span class="event-trail" title={trail(event).join(" · ")}>{trail(event).join(" · ")}</span>
         {/if}
       </li>
     {/each}
   </ol>
 
-  {#if !all && events.length > limit}
+  {#if !all && runs.length > limit}
     <button type="button" class="btn btn-ghost btn-sm self-start" onclick={() => (all = true)}>
-      {t("events.more", { count: events.length - limit })}
+      {t("events.more", { count: runs.length - limit })}
     </button>
   {/if}
 {/if}

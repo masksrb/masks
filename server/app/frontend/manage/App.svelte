@@ -15,6 +15,7 @@
   import OrganizationsPage from "./OrganizationsPage.svelte";
   import OrganizationPage from "./OrganizationPage.svelte";
   import SettingsPage from "./SettingsPage.svelte";
+  import OverviewPage from "./OverviewPage.svelte";
   import ActivityPage from "./ActivityPage.svelte";
   import ProvidersPage from "./ProvidersPage.svelte";
   import MessagesPage from "./MessagesPage.svelte";
@@ -108,7 +109,7 @@
       }
 
       if (!api.signedIn()) {
-        await api.authorize(router.state.path.slice(boot.root.length));
+        await api.authorize(router.state.path.slice(boot.root.length) + router.state.search + location.hash);
         return;
       }
 
@@ -226,12 +227,12 @@
         <p class="alert alert-info mb-4 text-sm" role="status">{limit}</p>
       {/if}
       {#if current === ""}
-        <SettingsPage {api} {boot} overview />
+        <OverviewPage {api} {boot} />
       {:else if current === "actors"}
         {#if router.segments[1] === "devices" && router.segments[2]}
           <DevicePage {api} id={router.segments[2]} />
         {:else if router.segments[1]}
-          <ActorPage {api} uuid={router.segments[1]} />
+          <ActorPage {api} uuid={router.segments[1]} part={router.segments[2]} />
         {:else}
           <ActorsPage {api} />
         {/if}

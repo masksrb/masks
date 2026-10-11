@@ -2,28 +2,20 @@
   import { createFeedback } from "./lib/feedback.svelte.js";
   import { t } from "./lib/copy.js";
   import { day } from "./lib/format.js";
-  import Events from "./Events.svelte";
   import DomainsSection from "./DomainsSection.svelte";
   import GroupsSection from "./GroupsSection.svelte";
   import Namespaces from "./Namespaces.svelte";
   import ScopesEditor from "./ScopesEditor.svelte";
-  import BarChart from "./ui/BarChart.svelte";
   import Section from "./ui/Section.svelte";
   import Select from "./ui/Select.svelte";
   import Facts from "./ui/Facts.svelte";
   import Field from "./ui/Field.svelte";
   import Link from "./ui/Link.svelte";
-  import OrganizationCell from "./OrganizationCell.svelte";
-  import OrganizationHeadcount from "./OrganizationHeadcount.svelte";
-  import Loader from "./ui/Loader.svelte";
   import Notices from "./ui/Notices.svelte";
-  import Tally from "./ui/Tally.svelte";
   import Page from "./ui/Page.svelte";
-  import Row from "./ui/Row.svelte";
   import Spinner from "./ui/Spinner.svelte";
-  import Table from "./ui/Table.svelte";
 
-  let { api, boot, overview = false } = $props();
+  let { api, boot } = $props();
 
   const QUERY = `
     query Tenant {
@@ -33,7 +25,6 @@
         signingKeys { kid algorithm activatedAt retiredAt state }
       }
       viewer { identifier scopes }
-      tally { actors clients devices organizations }
       namespaces {
         name resource claimedAt releasable
         client { clientId name }
@@ -41,37 +32,6 @@
       scopesSupported
     }
   `;
-
-  const EVENT_FIELDS = `
-    id action label createdAt ipAddress details
-    actor { uuid identifier }
-    by { uuid identifier }
-    client { clientId name }
-    device { id label }
-  `;
-
-  const ACTIVITY = `
-    query Activity($days: Int) {
-      activity(days: $days) { date signIns }
-    }
-  `;
-
-  const RECENT = `
-    query Recent {
-      worrying: events(grave: true, limit: 8) { ${EVENT_FIELDS} }
-      latest: events(limit: 8) { ${EVENT_FIELDS} }
-    }
-  `;
-
-  const ORGANIZATIONS_SHOWN = 5;
-
-  const ORGANIZATIONS = `
-    query Organizations {
-      organizations(limit: ${ORGANIZATIONS_SHOWN}) { key name memberCount ownerCount pendingCount }
-    }
-  `;
-
-  const SPANS = [7, 30, 90];
 
   const RETENTION = [
     [30, t("settings.retention.days_30")],
@@ -92,76 +52,11 @@
     retired: "badge-ghost",
   };
 
-  const MARK = new Intl.DateTimeFormat(undefined, { day: "numeric", month: "short" });
-
   const feedback = createFeedback();
 
   let data = $state(null);
   let name = $state("");
   let loading = $state(true);
-  let days = $state(30);
-
-  const counts = $derived(
-    data
-      ? [
-          { to: "/actors", label: t("settings.counts.actors"), value: data.tally.actors },
-          { to: "/clients", label: t("settings.counts.clients"), value: data.tally.clients },
-          { to: "/organizations", label: t("settings.counts.organizations"), value: data.tally.organizations },
-          { to: "/actors#devices", label: t("settings.counts.devices"), value: data.tally.devices },
-        ]
-      : [],
-  );
-
-  const STARTED = "masks:manage:started";
-
-  let hidden = $state(false);
-
-  try {
-    hidden = localStorage.getItem(STARTED) === "1";
-  } catch {}
-
-  function hideStarting() {
-    hidden = true;
-
-    try {
-      localStorage.setItem(STARTED, "1");
-    } catch {}
-  }
-
-  const starting = $derived(
-    data
-      ? [
-          {
-            done: data.tenant.mails,
-            title: t("settings.starting.mail.title"),
-            detail: t("settings.starting.mail.detail"),
-            to: "/messages",
-            action: t("settings.starting.mail.action"),
-          },
-          {
-            done: data.tally.clients > 0,
-            title: t("settings.starting.client.title"),
-            detail: t("settings.starting.client.detail"),
-            to: "/clients",
-            action: t("settings.starting.client.action"),
-          },
-          {
-            done: data.tally.actors > 1,
-            title: t("settings.starting.invite.title"),
-            detail: t("settings.starting.invite.detail"),
-            to: "/actors",
-            action: t("settings.starting.invite.action"),
-          },
-        ]
-      : [],
-  );
-
-  const plotted = (rows) =>
-    rows.map((row) => ({
-      key: row.date,
-      value: row.signIns,
-      label: MARK.format(new Date(`${row.date}T00:00:00`)),
-    }));
 
   async function load() {
     loading = true;
@@ -266,121 +161,6 @@
   <Spinner />
 {:else if !data}
   <div class="alert alert-error alert-soft text-sm" role="alert">{feedback.state.failure}</div>
-{:else if overview}
-  <Page
-    title={data.tenant.name}
-    id={boot.issuer}
-    hero
-  >
-    {#if !hidden && starting.some((step) => !step.done)}
-      <Section title={t("settings.starting.title")}>
-        {#snippet actions()}
-          <button type="button" class="btn btn-ghost btn-sm" onclick={hideStarting}>{t("settings.starting.hide")}</button>
-        {/snippet}
-
-        <ol class="flex flex-col gap-3">
-          {#each starting as step (step.title)}
-            <li class="flex flex-wrap items-start justify-between gap-3">
-              <div class="flex min-w-0 flex-1 flex-col gap-0.5">
-                <span class="text-sm font-semibold" class:line-through={step.done} class:opacity-60={step.done}>
-                  {step.done ? "✓ " : ""}{step.title}
-                </span>
-                {#if !step.done}
-                  <span class="text-sm opacity-80">{step.detail}</span>
-                {/if}
-              </div>
-              {#if !step.done}
-                <Link to={step.to} class="btn btn-sm">{step.action}</Link>
-              {/if}
-            </li>
-          {/each}
-        </ol>
-      </Section>
-    {/if}
-
-    <Tally {counts} />
-
-    <div class="dash">
-      <div class="dash-main">
-        <Section title={t("settings.sign_ins.title")}>
-          {#snippet actions()}
-            <div class="range" role="group" aria-label={t("settings.sign_ins.range")}>
-              {#each SPANS as span (span)}
-                <button type="button" aria-pressed={days === span} onclick={() => (days = span)}>
-                  {t("settings.sign_ins.span", { days: span })}
-                </button>
-              {/each}
-            </div>
-          {/snippet}
-
-          {#key days}
-            <Loader load={() => api.query(ACTIVITY, { days })}>
-              {#snippet children(activity)}
-                <BarChart points={plotted(activity.activity)} label={t("settings.sign_ins.chart")} />
-              {/snippet}
-            </Loader>
-          {/key}
-        </Section>
-
-        <Section title={t("settings.organizations.title")}>
-          {#snippet actions()}
-            <Link to="/organizations" class="btn btn-ghost btn-sm">
-              {data.tally.organizations > ORGANIZATIONS_SHOWN
-                ? t("settings.organizations.all_count", { count: data.tally.organizations })
-                : t("settings.organizations.all")}
-            </Link>
-          {/snippet}
-
-          <Loader load={() => api.query(ORGANIZATIONS)}>
-            {#snippet children(held)}
-              <Table
-                columns={[t("settings.organizations.organization"), { label: t("settings.organizations.members"), right: true }]}
-                count={held.organizations.length}
-                empty={t("settings.organizations.empty")}
-              >
-                {#snippet rows()}
-                  {#each held.organizations as organization (organization.key)}
-                    <Row to={`/organizations/${organization.key}`}>
-                      <td>
-                        <OrganizationCell {organization} />
-                      </td>
-                      <td class="text-right text-sm">
-                        <OrganizationHeadcount {organization} class="flex flex-col items-end" />
-                      </td>
-                    </Row>
-                  {/each}
-                {/snippet}
-              </Table>
-            {/snippet}
-          </Loader>
-        </Section>
-      </div>
-
-      <div class="dash-side">
-        <Loader load={() => api.query(RECENT)}>
-          {#snippet children(recent)}
-            {#if recent.worrying.length}
-              <Section title={t("settings.recent.worrying")}>
-                {#snippet actions()}
-                  <Link to="/activity" class="btn btn-sm">{t("settings.recent.all")}</Link>
-                {/snippet}
-
-                <Events events={recent.worrying} />
-              </Section>
-            {/if}
-
-            <Section title={t("settings.recent.lately")}>
-              {#snippet actions()}
-                <Link to="/activity" class="btn btn-ghost btn-sm">{t("settings.recent.all")}</Link>
-              {/snippet}
-
-              <Events events={recent.latest} empty={t("settings.recent.empty")} />
-            </Section>
-          {/snippet}
-        </Loader>
-      </div>
-    </div>
-  </Page>
 {:else}
   <Page title={t("settings.title")}>
     <Notices feedback={feedback.state} />

@@ -16,13 +16,13 @@ en:
           detail: "Invitations, password resets, and sign-in codes go out by email. Until then, a manager passes each invitation link along by hand."
           action: "Add a mail service"
         client:
-          title: "Connect your first app"
-          detail: "Register an app by hand, or let one connect itself through the handshake."
-          action: "Add an app"
+          title: "Register your first client"
+          detail: "Register a client by hand, or let one connect itself through the handshake."
+          action: "Add client"
         invite:
           title: "Invite someone"
-          detail: "Each person gets an invitation to set up their own sign-in."
-          action: "Invite people"
+          detail: "Each actor gets an invitation to set up their own sign-in."
+          action: "Invite actors"
       sign_ins:
         title: "Sign-ins"
         range: "Time range"
@@ -36,10 +36,9 @@ en:
         members: "Members"
         empty: "No organizations yet. Add one for each customer whose people sign in together, and apps that ask for the organization scope learn the role each person holds there."
       recent:
-        worrying: "Worth a look"
-        lately: "Lately"
         all: "All activity"
         empty: "Nothing yet."
+        title: "Activity"
       tenant:
         title: "Tenant"
         help: "The name heads every screen and email masks sends. Apps discover this tenant at its issuer, and the manage API answers at its resource."
@@ -145,3 +144,15 @@ en:
           active: "active"
           retiring: "retiring"
           retired: "retired"
+      needs:
+        waiting:
+          one: "%{count} actor is waiting for approval"
+          other: "%{count} actors are waiting for approval"
+        help:
+          one: "%{count} actor asked for help signing in"
+          other: "%{count} actors asked for help signing in"
+        worrying:
+          one: "%{count} event in the last day is worth a look"
+          other: "%{count} events in the last day are worth a look"
+        latest: "The latest is %{label}, %{when}."
+        review: "Review"

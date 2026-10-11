@@ -1,6 +1,8 @@
 <script>
   import Marks from "./ui/Marks.svelte";
+  import { actorMarks } from "./lib/marks.js";
   import { t } from "./lib/copy.js";
+  import { useRouter } from "./lib/router.svelte.js";
   import { createPages } from "./lib/pages.svelte.js";
   import Pager from "./ui/Pager.svelte";
   import { createFeedback } from "./lib/feedback.svelte.js";
@@ -77,7 +79,9 @@
   let search = $state("");
   let actors = $state([]);
   let loading = $state(true);
-  let lens = $state("everyone");
+  const router = useRouter();
+
+  let lens = $state(LENSES.find(([key]) => key === router.query.get("lens"))?.[0] ?? "everyone");
 
   const narrowing = $derived(LENSES.find(([key]) => key === lens)?.[2] ?? {});
 
@@ -174,6 +178,7 @@
 
   function look(chosen) {
     lens = chosen;
+    router.replace(chosen === "everyone" ? "/actors" : `/actors?lens=${chosen}`);
     again();
   }
 
@@ -228,20 +233,6 @@
     pages.reset();
     await load();
   }
-
-  const blocked = (actor) => actor.devices.some((device) => device.blockedAt);
-
-  const marks = (actor) =>
-    [
-      actor.scopes.some((scope) => scope.startsWith("masks:")) && ["manager", t("actors.marks.manager"), "primary"],
-      actor.otpEnabled && ["key", t("actors.marks.second_factor", { count: actor.backupCodesRemaining }), "good"],
-      !actor.activated && ["invited", t("actors.marks.invited"), "info"],
-      actor.email && !actor.emailVerified && ["unconfirmed", t("actors.marks.unconfirmed"), "warn"],
-      actor.pendingApproval && ["waiting", t("actors.marks.waiting"), "warn"],
-      actor.recoveryRequestedAt && ["help", t("actors.marks.help"), "warn"],
-      actor.suspendedAt && ["suspended", t("actors.marks.suspended"), "bad"],
-      blocked(actor) && ["blocked", t("actors.marks.blocked"), "bad"],
-    ].filter(Boolean);
 
   const presence = (actor) => {
     const parts = [
@@ -416,7 +407,7 @@
                     <Link to={`/actors/${actor.uuid}`} class="link link-hover truncate font-medium">
                       {actor.identifier}
                     </Link>
-                    <Marks marks={marks(actor)} />
+                    <Marks marks={actorMarks(actor)} />
                   </div>
                   <div class="hint truncate text-xs">
                     {actor.name ? `${actor.name} · ` : ""}{actor.email ?? t("actors.no_email")}<span class="md:hidden">

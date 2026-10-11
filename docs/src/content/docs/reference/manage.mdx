@@ -62,8 +62,8 @@ schema disagree.
 | `appPresets` | [`[AppPreset!]!`](#apppreset) |  |
 | `group`<br />`key: String!` | [`Group`](#group) |  |
 | `activity`<br />`days: Int` | [`[ActivityDay!]!`](#activityday) |  |
-| `events`<br />`actor: ID`<br />`client: ID`<br />`device: ID`<br />`action: String`<br />`grave: Boolean`<br />`organization: ID`<br />`afterId: ID`<br />`limit: Int` | [`[Event!]!`](#event) |  |
-| `eventCount`<br />`actor: ID`<br />`client: ID`<br />`device: ID`<br />`action: String`<br />`grave: Boolean`<br />`organization: ID` | `Int!` |  |
+| `events`<br />`actor: ID`<br />`client: ID`<br />`device: ID`<br />`action: String`<br />`grave: Boolean`<br />`organization: ID`<br />`since: ISO8601DateTime`<br />`afterId: ID`<br />`limit: Int` | [`[Event!]!`](#event) |  |
+| `eventCount`<br />`actor: ID`<br />`client: ID`<br />`device: ID`<br />`action: String`<br />`grave: Boolean`<br />`organization: ID`<br />`since: ISO8601DateTime` | `Int!` |  |
 | `eventActions` | [`[EventAction!]!`](#eventaction) |  |
 
 ## Mutations

@@ -55,7 +55,7 @@
 
   let range = $state({ from: daysAgo(30), to: today() });
   let action = $state("");
-  let grave = $state(false);
+  let grave = $state(router.query.get("grave") === "1");
   let loading = $state(true);
   let about = $state(null);
 
