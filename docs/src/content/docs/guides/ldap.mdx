@@ -1,0 +1,217 @@
+---
+title: LDAP
+description: Let NAS boxes, media servers, hypervisors, and other apps without OpenID Connect check passwords and read groups over LDAP.
+---
+
+Some apps sign people in only over LDAP. NAS boxes, Jellyfin, Proxmox, Gitea, and Wi-Fi gear that
+checks passwords through RADIUS are common examples. masks serves each tenant's people and groups
+as a read-only LDAP directory, so these apps check passwords against masks and read who belongs to
+which group.
+
+The directory is read-only. An app cannot add, change, or remove anything through it, and masks
+answers every write and compare with `unwillingToPerform`.
+
+## Running the listener
+
+The LDAP listener is its own process, `bin/ldap`, started the same way as `bin/jobs`. It speaks
+LDAPv3 on `MASKS_LDAP_PORT`, which is `3389` by default. Run it as a second container from the same
+image, with the same environment and the same master key as the web container:
+
+```yaml
+services:
+  masks-ldap:
+    image: ghcr.io/masksrb/masks:latest
+    command: ["./bin/ldap"]
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: masks
+      POSTGRES_PASSWORD: ...
+      POSTGRES_DATABASE: masks
+      MASKS_PUBLIC_ORIGIN_TEMPLATE: https://%{subdomain}.auth.example.com
+      MASKS_LDAP_CERT: /certs/ldap.example.com.crt
+      MASKS_LDAP_KEY: /certs/ldap.example.com.key
+    ports:
+      - "636:3389"
+    volumes:
+      - masks-storage:/rails/storage
+      - ./certs:/certs:ro
+    depends_on:
+      - masks
+```
+
+The `masks` container migrates the database, so `masks-ldap` starts after it. Outside a container,
+run `bin/ldap` from `server/` next to `bin/rails server`.
+
+With `MASKS_LDAP_CERT` and `MASKS_LDAP_KEY` set, the listener speaks LDAPS on the same port.
+`MASKS_LDAP_CERT` is a PEM file that holds the certificate followed by any intermediates.
+Without them it speaks plain LDAP, and passwords cross the network as they were typed. Use plain
+LDAP only on a network you trust, such as a private bridge between containers. StartTLS is not
+supported.
+
+The listener closes a connection after five minutes without a request, and holds at most 256
+connections at once.
+
+## The directory
+
+Each tenant is its own tree, named after its subdomain. A tenant called `acme` looks like this:
+
+```
+dc=acme,dc=masks
+├── ou=people
+│   ├── uid=alice,ou=people,dc=acme,dc=masks
+│   └── uid=bob,ou=people,dc=acme,dc=masks
+└── ou=groups
+    └── cn=staff,ou=groups,dc=acme,dc=masks
+```
+
+A person is listed once their account is active. Suspended people and people waiting for approval
+are left out. Each person has these attributes:
+
+| Attribute | |
+| --- | --- |
+| `objectClass` | `top`, `person`, `organizationalPerson`, and `inetOrgPerson`. |
+| `uid` | Their nickname, or their email address when they have no nickname. |
+| `cn`, `displayName` | Their name, or their `uid` when they have no name. |
+| `sn` | Their family name, or `cn` when they have none. |
+| `givenName` | Their given name, when they have one. |
+| `mail` | Their email address, only once it is confirmed. |
+| `memberOf` | The DN of each group they belong to. |
+| `entryUUID` | Their account's UUID, which never changes. |
+
+Each [group](/guides/features/#groups) is a `groupOfNames` with these attributes:
+
+| Attribute | |
+| --- | --- |
+| `cn` | The group's key. |
+| `description` | The group's name. |
+| `member` | The DN of each listed person in the group. |
+
+Password digests, second factors, and secrets are never part of an entry.
+
+## Connecting an app
+
+An app binds with an LDAP credential to search, then binds as the person signing in to check their
+password.
+
+1. Under **Settings → LDAP**, enter a label such as `jellyfin` and choose **Issue a credential**.
+   Only an owner can issue one.
+2. Copy the bind DN and the secret. The secret is shown once, and masks keeps only a digest of it.
+   The bind DN is `cn=<label>,ou=services,dc=<subdomain>,dc=masks`.
+3. Give the app the base DN from the same page, the bind DN, and the secret.
+
+A credential searches only its own tenant. The list on the same page shows when each credential
+last bound, and **Revoke** refuses it from then on, including on connections that are already
+open. The manage API offers the same through `issueLdapCredential`, `revokeLdapCredential`, and
+`ldapCredentials`. See the [GraphQL reference](/reference/manage/).
+
+Anonymous binds succeed but read only the root DSE. A connection bound as a person cannot search.
+
+## Password binds
+
+A person binds with their DN, such as `uid=alice,ou=people,dc=acme,dc=masks`, and their masks
+password. When the server serves a single tenant, the `uid` alone also works.
+
+LDAP cannot ask for a second factor, so masks refuses a password bind when:
+
+- the account is suspended or waiting for approval,
+- the tenant's default sign-in policy does not offer a password,
+- that policy requires a second factor, either always or for apps, or
+- the person has a second factor of their own, such as an authenticator app, a passkey, or codes
+  by email or text.
+
+**Allow a password alone over LDAP** under **Settings → LDAP** lifts the last two rules for the
+tenant. It is off by default. Turn it on only when every app that checks passwords over LDAP is
+worth less than the second factor it skips.
+
+Every refusal answers `invalidCredentials`, whatever the reason, and records a **Sign-in refused**
+event whose `factor` names the reason and whose `via` is `ldap`. A successful bind records
+**Signed in over LDAP** and counts as activity for [idle accounts](/guides/features/#idle-accounts).
+
+Failed binds count against the same limits as the sign-in page. After `MASKS_ATTEMPT_LIMIT`
+failures from one address, or `MASKS_ACCOUNT_ATTEMPT_LIMIT` failures for one account, within three
+minutes, masks answers `unwillingToPerform` without checking the password. Only failures count, so
+an app that checks many people's passwords from one address is not throttled by their successes.
+
+## Searching
+
+Searches support base, one-level, and subtree scopes, and filters built from equality, presence,
+substrings, `&`, `|`, and `!`. Attribute names and values compare without regard to case. A search
+returns at most its size limit, and never more than 10,000 entries.
+
+Check a credential with `ldapsearch`:
+
+```sh
+ldapsearch -H ldaps://ldap.example.com -x \
+  -D "cn=jellyfin,ou=services,dc=acme,dc=masks" -w "$SECRET" \
+  -b "dc=acme,dc=masks" "(&(objectClass=inetOrgPerson)(memberOf=cn=staff,ou=groups,dc=acme,dc=masks))" \
+  uid cn mail
+```
+
+Check a person's password with `ldapwhoami`, which prints their DN or
+`Invalid credentials (49)`:
+
+```sh
+ldapwhoami -H ldaps://ldap.example.com -x -D "uid=alice,ou=people,dc=acme,dc=masks" -W
+```
+
+Other extended operations, StartTLS among them, are answered with `unwillingToPerform`.
+
+## Jellyfin
+
+Install the LDAP Authentication plugin, then fill in its settings:
+
+| Setting | Value |
+| --- | --- |
+| LDAP Server | `ldap.example.com` |
+| LDAP Port | The published port, such as `636` |
+| Secure LDAP | On, when the listener has a certificate |
+| Use StartTLS | Off |
+| LDAP Bind User | `cn=jellyfin,ou=services,dc=acme,dc=masks` |
+| LDAP Bind User Password | The credential's secret |
+| LDAP Base DN for searches | `ou=people,dc=acme,dc=masks` |
+| LDAP Search Filter | `(memberOf=cn=jellyfin,ou=groups,dc=acme,dc=masks)` |
+| LDAP Admin Filter | `(memberOf=cn=admins,ou=groups,dc=acme,dc=masks)` |
+| LDAP Search Attributes | `uid, mail` |
+| LDAP Uid Attribute | `uid` |
+| LDAP Username Attribute | `uid` |
+
+People in the `jellyfin` group can then sign in with their masks nickname and password, and people
+in `admins` become Jellyfin administrators.
+
+## Proxmox
+
+Add an LDAP realm on any node:
+
+```sh
+pveum realm add masks --type ldap \
+  --server1 ldap.example.com --port 636 --mode ldaps \
+  --base-dn ou=people,dc=acme,dc=masks --user-attr uid \
+  --bind-dn cn=proxmox,ou=services,dc=acme,dc=masks --password "$SECRET" \
+  --group-dn ou=groups,dc=acme,dc=masks --group-classes groupOfNames --group-name-attr cn \
+  --filter "(memberOf=cn=proxmox,ou=groups,dc=acme,dc=masks)"
+pveum realm sync masks --scope both
+```
+
+The sync copies people and groups into Proxmox. Grant permissions to the synced groups, and people
+sign in as `alice@masks` with their masks password.
+
+## Other apps
+
+Most apps that speak LDAP ask for the same few things:
+
+| Asked for | Value |
+| --- | --- |
+| Server and port | The listener's host and published port |
+| Encryption | LDAPS, when the listener has a certificate |
+| Bind DN and password | The credential's bind DN and secret |
+| User search base | `ou=people,dc=<subdomain>,dc=masks` |
+| User filter | `(&(objectClass=inetOrgPerson)(uid=%s))`, with the app's placeholder for the name typed |
+| Username attribute | `uid` |
+| Email attribute | `mail` |
+| Group search base | `ou=groups,dc=<subdomain>,dc=masks` |
+| Group filter | `(objectClass=groupOfNames)` |
+| Group membership | `member` on the group, or `memberOf` on the person |
+
+For Gitea, add an authentication source of type **LDAP (via BindDN)** with these values. Wi-Fi and
+VPN gear usually checks passwords through a RADIUS server such as FreeRADIUS, whose `ldap` module
+takes the same values.

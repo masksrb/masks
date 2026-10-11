@@ -158,6 +158,16 @@ The image runs Puma in front of Rails, on `PORT`. See
 | `PORT` | `3000` | The port Puma listens on. |
 | `PIDFILE` | none | Where Puma writes its process ID. |
 
+### LDAP
+
+`bin/ldap` reads these. The web server does not. See [LDAP](/guides/ldap/).
+
+| Variable | Default | |
+| --- | --- | --- |
+| `MASKS_LDAP_PORT` | `3389` | The port `bin/ldap` listens on, on every address. |
+| `MASKS_LDAP_CERT` | none | A PEM file holding the certificate, followed by any intermediates. With `MASKS_LDAP_KEY`, the listener speaks LDAPS. |
+| `MASKS_LDAP_KEY` | none | A PEM file holding the certificate's private key. Set it together with `MASKS_LDAP_CERT`. |
+
 ### Rails
 
 | Variable | Default | |
