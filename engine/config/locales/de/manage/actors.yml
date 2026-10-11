@@ -1,6 +1,20 @@
 de:
   manage:
     actors:
+      invite_many: "Mehrere einladen"
+      invites:
+        title: "Mehrere Personen einladen"
+        lede: "Fügen Sie Adressen ein, getrennt durch Zeilen, Leerzeichen oder Kommas. Jede neue Adresse erhält eine Einladung."
+        addresses: "E-Mail-Adressen"
+        groups: "Hinzufügen zu"
+        send: "Einladungen senden"
+        done:
+          one: "%{count} eingeladen"
+          other: "%{count} eingeladen"
+        outcomes:
+          invited: "eingeladen"
+          exists: "hat bereits ein Konto"
+          invalid: "ist keine Adresse, die masks einladen kann"
       title: "Akteure"
       lenses:
         everyone: "Alle"

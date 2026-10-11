@@ -1,6 +1,20 @@
 es:
   manage:
     actors:
+      invite_many: "Invitar a varios"
+      invites:
+        title: "Invitar a varias personas"
+        lede: "Pega direcciones separadas por líneas, espacios o comas. Cada dirección nueva recibe una invitación."
+        addresses: "Direcciones de correo"
+        groups: "Añadirlas a"
+        send: "Enviar invitaciones"
+        done:
+          one: "%{count} invitada"
+          other: "%{count} invitadas"
+        outcomes:
+          invited: "invitada"
+          exists: "ya tiene una cuenta"
+          invalid: "no es una dirección que masks pueda invitar"
       title: "Actores"
       lenses:
         everyone: "Todos"

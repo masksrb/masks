@@ -83,6 +83,42 @@
   const narrowing = $derived(LENSES.find(([key]) => key === lens)?.[2] ?? {});
 
   let adding = $state(false);
+  let inviting = $state(false);
+  let addresses = $state("");
+  let joining = $state([]);
+  let groups = $state([]);
+  let invited = $state(null);
+
+  async function openInvites() {
+    inviting = true;
+    invited = null;
+
+    const data = await feedback.attempt(() => api.query("query Groups { groups { key name } }"));
+
+    if (data) groups = data.groups;
+  }
+
+  async function inviteMany() {
+    busy = true;
+
+    const data = await feedback.attempt(() =>
+      api.query(
+        `mutation Invite($emails: [String!]!, $groups: [String!]) {
+          inviteActors(emails: $emails, groups: $groups) { outcomes { email outcome delivered url } }
+        }`,
+        { emails: addresses.split(/[\s,;]+/).filter(Boolean), groups: joining },
+      ),
+    );
+
+    busy = false;
+
+    if (!data) return;
+
+    invited = data.inviteActors.outcomes;
+    inviting = false;
+    addresses = "";
+    again();
+  }
   let nickname = $state("");
   let email = $state("");
   let password = $state("");
@@ -211,10 +247,53 @@
       placeholder={t("actors.search_placeholder")}
       onsearch={again}
     />
+    <button type="button" class="btn btn-sm" onclick={openInvites}>{t("actors.invite_many")}</button>
     <button type="button" class="btn btn-primary btn-sm" onclick={open}>{t("actors.add")}</button>
   {/snippet}
 
   <Notices feedback={feedback.state} />
+
+  {#if inviting}
+    <Section title={t("actors.invites.title")} lede={t("actors.invites.lede")}>
+      <label class="flex flex-col gap-1.5">
+        <span class="field-label">{t("actors.invites.addresses")}</span>
+        <textarea class="textarea w-full font-mono text-sm" rows="6" bind:value={addresses}></textarea>
+      </label>
+
+      {#if groups.length}
+        <fieldset class="flex flex-col gap-1">
+          <legend class="field-label">{t("actors.invites.groups")}</legend>
+          {#each groups as group (group.key)}
+            <label class="flex items-center gap-2 text-sm">
+              <input type="checkbox" class="checkbox checkbox-sm" value={group.key} bind:group={joining} />
+              {group.name}
+            </label>
+          {/each}
+        </fieldset>
+      {/if}
+
+      <div class="flex flex-wrap gap-2">
+        <button type="button" class="btn btn-primary btn-sm" disabled={busy || !addresses.trim()} onclick={inviteMany}>
+          {busy ? t("actors.form.adding") : t("actors.invites.send")}
+        </button>
+        <button type="button" class="btn btn-ghost btn-sm" onclick={() => (inviting = false)}>{t("actors.form.cancel")}</button>
+      </div>
+    </Section>
+  {/if}
+
+  {#if invited}
+    <Section title={t("actors.invites.done", { count: invited.filter((one) => one.outcome === "invited").length })}>
+      <ul class="flex flex-col gap-1 text-sm">
+        {#each invited as one (one.email)}
+          <li class="flex flex-wrap items-baseline gap-x-2">
+            <span class="font-mono">{one.email}</span>
+            <span class="opacity-80">{t(`actors.invites.outcomes.${one.outcome}`)}</span>
+            {#if one.url}<code class="tray px-1 text-xs break-all">{one.url}</code>{/if}
+          </li>
+        {/each}
+      </ul>
+    </Section>
+  {/if}
 
   {#if adding}
     <Section title={t("actors.add")}>

@@ -117,6 +117,31 @@ module Masks
         assert_nil body["errors"], body
       end
 
+      test "support invites many people at once, and each address says what happened" do
+        create_actor(@tenant, nickname: "known", scopes: "openid", email: "known@example.com")
+        held = bearer_for(manager(ManageRoles::SUPPORT))
+
+        body = with_mailer do
+          ask(%(mutation($emails: [String!]!) { inviteActors(emails: $emails) { outcomes { email outcome delivered } } }),
+              held, emails: [ "New@Example.com", "known@example.com", "not an address", "", "new@example.com" ])
+        end
+
+        outcomes = body.dig("data", "inviteActors", "outcomes").to_h { |one| [ one["email"], one["outcome"] ] }
+
+        assert_equal({ "new@example.com" => "invited", "known@example.com" => "exists", "not an address" => "invalid" }, outcomes)
+        assert within { Actor.exists?(email: "new@example.com", activated_at: nil) }
+      end
+
+      test "putting the invited in groups takes the security role as well" do
+        within { Group.create!(key: "family", name: "Family") }
+        held = bearer_for(manager(ManageRoles::SUPPORT))
+
+        body = ask(%(mutation { inviteActors(emails: ["kid@example.com"], groups: ["family"]) { outcomes { outcome } } }), held)
+
+        assert_match "putting people in groups needs", refusal(body)
+        refute within { Actor.exists?(email: "kid@example.com") }
+      end
+
       test "security changes keys and policies and cannot touch people" do
         person = create_actor(@tenant, nickname: "person", scopes: "openid")
         held = bearer_for(manager(ManageRoles::SECURITY))

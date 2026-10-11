@@ -4,6 +4,7 @@ module Masks
       module Types
         class MutationType < BaseObject
           field :create_actor, mutation: Mutations::CreateActor
+          field :invite_actors, mutation: Mutations::InviteActors
           field :resend_invitation, mutation: Mutations::ResendInvitation
           field :reset_password, mutation: Mutations::ResetPassword
           field :verify_email, mutation: Mutations::VerifyEmail

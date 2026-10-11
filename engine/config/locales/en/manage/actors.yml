@@ -1,6 +1,20 @@
 en:
   manage:
     actors:
+      invite_many: "Invite many"
+      invites:
+        title: "Invite many people"
+        lede: "Paste addresses separated by lines, spaces, or commas. Each new address gets an invitation."
+        addresses: "Email addresses"
+        groups: "Put them in"
+        send: "Send invitations"
+        done:
+          one: "%{count} invited"
+          other: "%{count} invited"
+        outcomes:
+          invited: "invited"
+          exists: "already has an account"
+          invalid: "is not an address masks can invite"
       title: "Actors"
       lenses:
         everyone: "Everyone"

@@ -1,6 +1,20 @@
 fr:
   manage:
     actors:
+      invite_many: "Inviter plusieurs"
+      invites:
+        title: "Inviter plusieurs personnes"
+        lede: "Collez des adresses séparées par des retours à la ligne, des espaces ou des virgules. Chaque nouvelle adresse reçoit une invitation."
+        addresses: "Adresses e-mail"
+        groups: "Les ajouter à"
+        send: "Envoyer les invitations"
+        done:
+          one: "%{count} invitée"
+          other: "%{count} invitées"
+        outcomes:
+          invited: "invitée"
+          exists: "a déjà un compte"
+          invalid: "n’est pas une adresse que masks peut inviter"
       title: "Utilisateurs"
       lenses:
         everyone: "Tout le monde"
