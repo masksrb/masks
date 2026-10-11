@@ -21,7 +21,7 @@ file it keeps on local disk is the master key.
 Background jobs, such as mail and retries, run in the web process by default.
 `MASKS_JOBS_IN_WEB_SERVER=false` moves them to a second container running `bin/jobs`.
 
-Apps that sign people in only over LDAP need one more container running `bin/ldap`. See
+The web process also serves LDAP for apps that sign people in only over LDAP. See
 [LDAP](/guides/ldap/).
 
 ## Image tags

@@ -2,13 +2,21 @@ fr:
   manage:
     ldap:
       title: "LDAP"
-      lede: "Les applications plus anciennes, comme les NAS, les serveurs multimédia et les hyperviseurs, vérifient les mots de passe et lisent les groupes par LDAP. bin/ldap expose en lecture seule les personnes et les groupes de ce tenant."
+      lede: "Les applications plus anciennes, comme les NAS, les serveurs multimédia et les hyperviseurs, vérifient les mots de passe et lisent les groupes par LDAP. masks leur expose en lecture seule les personnes et les groupes de ce tenant."
       revoke_confirm: "Révoquer %{label} ? Les applications qui s'en servent sont refusées dès maintenant."
       revoked: "%{label} est révoqué."
+      serve:
+        title: "Annuaire"
+        help: "Tant que ceci est désactivé, aucune application ne peut se lier à l'annuaire de ce tenant ni y chercher."
+        "on": "Servir ce tenant par LDAP"
+        updated: "L'annuaire est mis à jour."
       connect:
         title: "Connecter une application"
         help: "Donnez à l'application ce DN de base, un DN de liaison et son secret. L'application cherche dans ou=people et ou=groups, puis se lie en tant que personne pour vérifier son mot de passe."
         base_dn: "DN de base"
+        address: "Adresse"
+        port: "Port %{port}"
+        ldaps: "Port %{port}, LDAPS"
         label: "Libellé"
         issue: "Émettre un identifiant"
         shown_once: "Ce secret n'est affiché qu'une fois. Copiez-le maintenant."

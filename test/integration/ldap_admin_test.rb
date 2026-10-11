@@ -66,6 +66,17 @@ module Masks
         assert_match "lowercase letters", body["errors"].first["message"]
       end
 
+      test "an owner turns the LDAP directory on and off" do
+        assert_equal false, ask("{ tenant { ldapEnabled } ldapPort ldapTls }").dig("data", "tenant", "ldapEnabled")
+
+        ask("mutation { updateTenant(ldapEnabled: true) { tenant { ldapEnabled } } }")
+        assert @tenant.reload.ldap?
+        assert_equal [ @tenant ], Tenant.ldap.to_a
+
+        ask("mutation { updateTenant(ldapEnabled: false) { tenant { ldapEnabled } } }")
+        assert_not @tenant.reload.ldap?
+      end
+
       test "an owner allows a password alone over LDAP" do
         assert_equal false, ask("{ tenant { ldapPasswordOnly } }").dig("data", "tenant", "ldapPasswordOnly")
 

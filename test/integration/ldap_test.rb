@@ -6,6 +6,7 @@ module Masks
     class LdapTest < ActiveSupport::TestCase
       setup do
         ::Rails.cache.clear
+        @tenant.update!(ldap_enabled: true)
 
         @alice = create_actor(@tenant, nickname: "alice", name: "Alice Liddell", email: "alice@example.invalid",
                                        email_verified_at: Time.current, given_name: "Alice", family_name: "Liddell")
@@ -56,6 +57,33 @@ module Masks
         assert_nil found.first.attributes["namingContexts"]
 
         result, found = client.search(base)
+        assert_equal 50, result.code
+        assert_empty found
+      end
+
+      test "with no tenant serving LDAP, a connection is closed before anything is read" do
+        @tenant.update!(ldap_enabled: false)
+        socket = TCPSocket.new("127.0.0.1", @listener.port)
+        socket.timeout = 5
+
+        assert_equal "", socket.read
+      ensure
+        socket&.close
+      end
+
+      test "a tenant that has not turned LDAP on refuses binds like an unknown one" do
+        other_tenant.update!(ldap_enabled: false)
+        theirs = Tenant.switch(other_tenant) { LdapCredential.issue!(label: "nas", by: nil) }
+
+        assert_equal 49, connect.bind("cn=nas,ou=services,#{base(other_tenant)}", theirs.secret).code
+      end
+
+      test "turning LDAP off stops searches on a connection already bound" do
+        client = service
+        @tenant.update!(ldap_enabled: false)
+
+        result, found = client.search(base)
+
         assert_equal 50, result.code
         assert_empty found
       end
@@ -153,6 +181,7 @@ module Masks
       end
 
       test "another tenant's credential does not bind here" do
+        other_tenant.update!(ldap_enabled: true)
         other = Tenant.switch(other_tenant) { LdapCredential.issue!(label: "jellyfin", by: nil) }
 
         assert_equal 49, connect.bind("cn=jellyfin,ou=services,#{base}", other.secret).code

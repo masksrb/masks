@@ -29,7 +29,7 @@ module Masks
             named, suffix = dn.rdns.last(2).map { |rdn| rdn.size == 1 && rdn.first.first == "dc" ? rdn.first.last.downcase : nil }
             return nil unless suffix == SUFFIX && named.present?
 
-            Tenant.active.find_by(subdomain: named)
+            Tenant.ldap.find_by(subdomain: named)
           end
 
           def uid_for(actor)

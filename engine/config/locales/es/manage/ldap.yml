@@ -2,13 +2,21 @@ es:
   manage:
     ldap:
       title: "LDAP"
-      lede: "Las aplicaciones más antiguas, como los NAS, los servidores multimedia y los hipervisores, comprueban contraseñas y leen grupos por LDAP. bin/ldap sirve en solo lectura las personas y los grupos de este inquilino."
+      lede: "Las aplicaciones más antiguas, como los NAS, los servidores multimedia y los hipervisores, comprueban contraseñas y leen grupos por LDAP. masks les sirve en solo lectura las personas y los grupos de este inquilino."
       revoke_confirm: "¿Revocar %{label}? Las aplicaciones que la usan quedan rechazadas desde ahora."
       revoked: "%{label} está revocada."
+      serve:
+        title: "Directorio"
+        help: "Mientras esto está desactivado, ninguna aplicación puede enlazarse al directorio de este inquilino ni buscar en él."
+        "on": "Servir este inquilino por LDAP"
+        updated: "El directorio está actualizado."
       connect:
         title: "Conecta una aplicación"
         help: "Dale a la aplicación este DN base, un DN de enlace y su secreto. La aplicación busca en ou=people y ou=groups, y luego se enlaza como una persona para comprobar su contraseña."
         base_dn: "DN base"
+        address: "Dirección"
+        port: "Puerto %{port}"
+        ldaps: "Puerto %{port}, LDAPS"
         label: "Etiqueta"
         issue: "Emitir una credencial"
         shown_once: "Este secreto se muestra una sola vez. Cópialo ahora."

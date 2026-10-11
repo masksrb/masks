@@ -19,6 +19,8 @@ module Masks
           argument :event_retention_days, Integer, required: false,
                                                    description: "Days to keep events, from 30 to 2555. Zero keeps the default of 180."
 
+          argument :ldap_enabled, Boolean, required: false,
+                                         description: "Whether the LDAP directory answers for this tenant."
           argument :ldap_password_only, Boolean, required: false,
                                                  description: "Lets a password alone bind to LDAP for accounts that would otherwise need a second factor."
 
@@ -33,12 +35,13 @@ module Masks
           def resolve(name: nil, dynamic_client_scopes: nil, dynamic_registration: nil,
                       named_by: nil, browsers_only: nil, blocked_agents: nil, sign_in_policy: nil,
                       suspend_after: nil, delete_after: nil, event_retention_days: nil, risky_networks: nil,
-                      accent_color: nil, key_rotation_days: nil, ldap_password_only: nil)
+                      accent_color: nil, key_rotation_days: nil, ldap_enabled: nil, ldap_password_only: nil)
             tenant = Current.tenant
 
             tenant.name = name unless name.nil?
             tenant.accent_color = accent_color unless accent_color.nil?
             tenant.key_rotation_days = key_rotation_days.zero? ? nil : key_rotation_days unless key_rotation_days.nil?
+            tenant.ldap_enabled = ldap_enabled unless ldap_enabled.nil?
             tenant.ldap_password_only = ldap_password_only unless ldap_password_only.nil?
 
             unless named_by.nil?

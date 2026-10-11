@@ -4,6 +4,7 @@ threads threads_count, threads_count
 port ENV.fetch("PORT", 3000)
 
 plugin :tmp_restart
+plugin :masks_ldap
 
 plugin :solid_queue if Masks.to_bool(ENV["MASKS_JOBS_IN_WEB_SERVER"], default: true)
 

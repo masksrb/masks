@@ -1,9 +1,0 @@
-#!/usr/bin/env ruby
-
-require_relative "../config/environment"
-
-listener = Masks::Server::Ldap::Listener.from_configuration
-
-%w[INT TERM].each { |signal| trap(signal) { Thread.new { listener.stop } } }
-
-listener.run

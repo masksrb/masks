@@ -14,8 +14,10 @@
   const QUERY = `
     query Ldap {
       ldapBaseDn
+      ldapPort
+      ldapTls
       ldapCredentials { id label bindDn usedAt createdAt issuedBy { identifier } }
-      tenant { ldapPasswordOnly }
+      tenant { ldapEnabled ldapPasswordOnly }
     }
   `;
 
@@ -72,6 +74,21 @@
     if (done) await load();
   }
 
+  async function serve(ldapEnabled) {
+    const done = await feedback.attempt(
+      () =>
+        api.query(
+          `mutation Serve($ldapEnabled: Boolean) {
+            updateTenant(ldapEnabled: $ldapEnabled) { tenant { ldapEnabled } }
+          }`,
+          { ldapEnabled },
+        ),
+      t("ldap.serve.updated"),
+    );
+
+    if (done) await load();
+  }
+
   async function passwordOnly(ldapPasswordOnly) {
     const done = await feedback.attempt(
       () =>
@@ -95,7 +112,18 @@
     <Spinner />
   {:else if data}
     <div class="grid gap-4">
+      <Section row title={t("ldap.serve.title")} help={t("ldap.serve.help")}>
+        <Switch label={t("ldap.serve.on")} checked={data.tenant.ldapEnabled} onchange={serve} />
+      </Section>
+
       <Section row title={t("ldap.connect.title")} help={t("ldap.connect.help")}>
+        <div class="flex flex-col gap-1.5">
+          <span class="field-label">{t("ldap.connect.address")}</span>
+          <code class="tray px-2 py-1 font-mono text-xs break-all">
+            {t(data.ldapTls ? "ldap.connect.ldaps" : "ldap.connect.port", { port: data.ldapPort })}
+          </code>
+        </div>
+
         <div class="flex flex-col gap-1.5">
           <span class="field-label">{t("ldap.connect.base_dn")}</span>
           <code class="tray px-2 py-1 font-mono text-xs break-all">{data.ldapBaseDn}</code>

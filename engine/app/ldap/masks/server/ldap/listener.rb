@@ -45,11 +45,6 @@ module Masks
           self
         end
 
-        def run
-          start
-          @acceptor.join
-        end
-
         def stop
           @server&.close
           @acceptor&.join(1)
@@ -83,6 +78,8 @@ module Masks
 
           def serve(socket)
             socket.timeout = @idle
+            return unless offered?
+
             ip_address = socket.remote_address.ip_address
             stream = @tls ? secured(socket) : socket
 
@@ -94,6 +91,10 @@ module Masks
             socket.close unless socket.closed?
             @open.decrement
             @threads.delete(Thread.current)
+          end
+
+          def offered?
+            ::Rails.application.executor.wrap { Tenant.ldap.exists? }
           end
 
           def secured(socket)

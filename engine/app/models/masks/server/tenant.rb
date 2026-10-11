@@ -35,7 +35,7 @@ module Masks
 
       attribute :uuid, default: -> { SecureRandom.uuid }
 
-      store_accessor :settings, :ldap_password_only
+      store_accessor :settings, :ldap_enabled, :ldap_password_only
 
       has_many :signing_keys, dependent: :destroy
       has_many :actors, dependent: :destroy
@@ -86,10 +86,15 @@ module Masks
       normalizes :custom_host, with: ->(value) { value.to_s.strip.downcase.delete_suffix(".").presence }
 
       scope :active, -> { where(archived_at: nil) }
+      scope :ldap, -> { active.where("settings->>'ldap_enabled' = 'true'") }
       scope :idling, -> { where.not(suspend_after: nil).or(where.not(delete_after: nil)) }
 
       before_create { self.keys_derived_at ||= Time.current }
       after_create_commit :ensure_signing_key!, :setup_token!
+
+      def ldap?
+        ActiveModel::Type::Boolean.new.cast(ldap_enabled) || false
+      end
 
       def ldap_password_only?
         ActiveModel::Type::Boolean.new.cast(ldap_password_only) || false

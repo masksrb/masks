@@ -1308,6 +1308,11 @@ type Mutation {
     keyRotationDays: Int
 
     """
+    Whether the LDAP directory answers for this tenant.
+    """
+    ldapEnabled: Boolean
+
+    """
     Lets a password alone bind to LDAP for accounts that would otherwise need a second factor.
     """
     ldapPasswordOnly: Boolean
@@ -1532,6 +1537,16 @@ type Query {
   """
   ldapBaseDn: String!
   ldapCredentials: [LdapCredential!]!
+
+  """
+  The port masks serves LDAP on.
+  """
+  ldapPort: Int!
+
+  """
+  Whether that port speaks LDAPS.
+  """
+  ldapTls: Boolean!
   mailPreviews(client: ID): [MailPreview!]!
 
   """
@@ -1967,6 +1982,11 @@ type Tenant {
   Days between scheduled signing key rotations, or null when a manager rotates by hand.
   """
   keyRotationDays: Int
+
+  """
+  Whether the LDAP directory answers for this tenant.
+  """
+  ldapEnabled: Boolean!
 
   """
   Whether a password alone binds to LDAP for an account that would otherwise need a second factor.

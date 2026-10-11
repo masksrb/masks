@@ -87,6 +87,11 @@ module Masks
           end
 
           def search_within(message, request)
+            unless Tenant.ldap.exists?(id: @bound.tenant.id)
+              @bound = nil
+              return write(Protocol.search_done(message.id, Protocol::INSUFFICIENT_ACCESS_RIGHTS, "this tenant's directory is closed"))
+            end
+
             unless LdapCredential.live.exists?(id: @bound.subject)
               @bound = nil
               return write(Protocol.search_done(message.id, Protocol::INSUFFICIENT_ACCESS_RIGHTS, "the LDAP credential was revoked"))

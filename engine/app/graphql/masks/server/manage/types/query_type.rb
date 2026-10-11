@@ -137,6 +137,8 @@ module Masks
           field :scim_base_url, String, null: false
           field :ldap_credentials, [ LdapCredentialType ], null: false
           field :ldap_base_dn, String, null: false, description: "The base DN of this tenant's LDAP directory."
+          field :ldap_port, Integer, null: false, description: "The port masks serves LDAP on."
+          field :ldap_tls, Boolean, null: false, description: "Whether that port speaks LDAPS."
           field :saml_metadata_url, String, null: false
 
           field :minimum_password, Integer, null: false
@@ -220,6 +222,14 @@ module Masks
 
           def ldap_credentials
             LdapCredential.live.order(created_at: :desc)
+          end
+
+          def ldap_port
+            ::Rails.configuration.masks.ldap_port
+          end
+
+          def ldap_tls
+            ::Rails.configuration.masks.ldap_cert.present?
           end
 
           def ldap_base_dn

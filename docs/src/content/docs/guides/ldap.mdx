@@ -11,36 +11,30 @@ which group.
 The directory is read-only. An app cannot add, change, or remove anything through it, and masks
 answers every write and compare with `unwillingToPerform`.
 
-## Running the listener
+## Turning it on
 
-The LDAP listener is its own process, `bin/ldap`, started the same way as `bin/jobs`. It speaks
-LDAPv3 on `MASKS_LDAP_PORT`, which is `3389` by default. Run it as a second container from the same
-image, with the same environment and the same master key as the web container:
+The web server serves LDAP alongside HTTP, on `MASKS_LDAP_PORT`, which is `3389` by default. A
+connection is closed at once until an owner turns the directory on. An owner turns it on for
+their tenant under **Settings**, **LDAP**, **Serve this tenant over LDAP**. Turning it off again
+refuses new binds and stops searches on connections that are already bound.
+
+Publish the port from the web container so that apps can reach it:
 
 ```yaml
 services:
-  masks-ldap:
+  masks:
     image: ghcr.io/masksrb/masks:latest
-    command: ["./bin/ldap"]
     environment:
-      POSTGRES_HOST: postgres
-      POSTGRES_USER: masks
-      POSTGRES_PASSWORD: ...
-      POSTGRES_DATABASE: masks
-      MASKS_PUBLIC_ORIGIN_TEMPLATE: https://%{subdomain}.auth.example.com
       MASKS_LDAP_CERT: /certs/ldap.example.com.crt
       MASKS_LDAP_KEY: /certs/ldap.example.com.key
     ports:
       - "636:3389"
     volumes:
-      - masks-storage:/rails/storage
       - ./certs:/certs:ro
-    depends_on:
-      - masks
 ```
 
-The `masks` container migrates the database, so `masks-ldap` starts after it. Outside a container,
-run `bin/ldap` from `server/` next to `bin/rails server`.
+An app that mounts masks as an engine serves LDAP once `plugin :masks_ldap` is in its
+`config/puma.rb`. `bin/rails generate masks:server:install` adds that line.
 
 With `MASKS_LDAP_CERT` and `MASKS_LDAP_KEY` set, the listener speaks LDAPS on the same port.
 `MASKS_LDAP_CERT` is a PEM file that holds the certificate followed by any intermediates.

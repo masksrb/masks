@@ -2,13 +2,21 @@ de:
   manage:
     ldap:
       title: "LDAP"
-      lede: "Ältere Anwendungen wie NAS-Geräte, Medienserver und Hypervisoren prüfen Passwörter und lesen Gruppen über LDAP. bin/ldap stellt die Personen und Gruppen dieses Mandanten schreibgeschützt bereit."
+      lede: "Ältere Anwendungen wie NAS-Geräte, Medienserver und Hypervisoren prüfen Passwörter und lesen Gruppen über LDAP. masks stellt ihnen die Personen und Gruppen dieses Mandanten schreibgeschützt bereit."
       revoke_confirm: "%{label} widerrufen? Anwendungen, die ihn verwenden, werden ab sofort abgewiesen."
       revoked: "%{label} ist widerrufen."
+      serve:
+        title: "Verzeichnis"
+        help: "Solange dies aus ist, kann keine Anwendung sich an das Verzeichnis dieses Mandanten binden oder darin suchen."
+        "on": "Diesen Mandanten über LDAP anbieten"
+        updated: "Das Verzeichnis ist aktualisiert."
       connect:
         title: "Eine Anwendung verbinden"
         help: "Geben Sie der Anwendung diesen Basis-DN, einen Bind-DN und sein Geheimnis. Die Anwendung sucht in ou=people und ou=groups und bindet sich dann als Person, um deren Passwort zu prüfen."
         base_dn: "Basis-DN"
+        address: "Adresse"
+        port: "Port %{port}"
+        ldaps: "Port %{port}, LDAPS"
         label: "Bezeichnung"
         issue: "Zugang ausstellen"
         shown_once: "Dieses Geheimnis wird nur einmal angezeigt. Kopieren Sie es jetzt."

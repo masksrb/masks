@@ -27,6 +27,12 @@ module Masks
           route mount_line
         end
 
+        def serve_ldap
+          return unless File.exist?(File.join(destination_root, "config/puma.rb"))
+
+          append_to_file "config/puma.rb", "\nplugin :masks_ldap\n"
+        end
+
         def say_what_is_left
           say ""
           say "masks is mounted #{where}.", :green

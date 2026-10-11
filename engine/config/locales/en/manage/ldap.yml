@@ -2,13 +2,21 @@ en:
   manage:
     ldap:
       title: "LDAP"
-      lede: "Older apps such as NAS boxes, media servers, and hypervisors check passwords and read groups over LDAP. bin/ldap serves this tenant's people and groups read-only."
+      lede: "Older apps such as NAS boxes, media servers, and hypervisors check passwords and read groups over LDAP. masks serves this tenant's people and groups to them read-only."
       revoke_confirm: "Revoke %{label}? Apps binding with it are refused from now on."
       revoked: "%{label} is revoked."
+      serve:
+        title: "Directory"
+        help: "While this is off, no app can bind to or search this tenant's directory."
+        "on": "Serve this tenant over LDAP"
+        updated: "The directory is updated."
       connect:
         title: "Connect an app"
         help: "Give the app this base DN, a bind DN, and its secret. The app searches ou=people and ou=groups, then binds as a person to check their password."
         base_dn: "Base DN"
+        address: "Address"
+        port: "Port %{port}"
+        ldaps: "Port %{port}, LDAPS"
         label: "Label"
         issue: "Issue a credential"
         shown_once: "This secret is shown once. Copy it now."
