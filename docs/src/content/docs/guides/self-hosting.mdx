@@ -266,6 +266,48 @@ https:// {
 }
 ```
 
+## Declaring apps in a file
+
+A rebuilt server comes back the same way when its apps and groups live in a file. Mount one and name
+it in `MASKS_CONFIG`, and every boot applies it:
+
+```yaml
+name: Home
+accent_color: "#3355aa"
+
+groups:
+  admins:
+    name: Admins
+    members: [ada]
+
+apps:
+  grafana:
+    preset: grafana
+    url: https://grafana.example.com
+    client_secret_env: GRAFANA_CLIENT_SECRET
+    allowed_groups: [admins]
+  dash:
+    preset: proxy
+    url: https://dash.example.com
+  wiki:
+    redirect_uris: [https://wiki.example.com/oauth/callback]
+    scopes: [openid, profile, email, groups]
+    refresh_token_lifetime: 604800
+```
+
+| | |
+| --- | --- |
+| An app's key | Its `client_id`, unless `client_id` names another, so the app's own settings never change. |
+| `preset`, `url`, `slug` | A [known app](/guides/features/#adding-a-known-app), as **Add client** registers it. |
+| `redirect_uris`, `scopes` | An app no preset covers. |
+| `client_secret_env` | The variable that holds the app's secret. Without it, masks makes a secret the first time and prints it to the logs once. |
+| `allowed_groups`, `access_token_lifetime`, `refresh_token_lifetime` | As on a client's page in `/manage`. |
+| `groups` | Each group's name and the nicknames or emails of its members. A member must already have an account. |
+
+Applying adds and updates, and never removes an app, a group, or a member the file no longer
+names. A server with several tenants nests each one under `tenants:` by subdomain. A mistake stops
+the boot with an error that names the app or group it is in.
+
 ## Getting back into a locked account
 
 When nobody can sign in to reset an account, such as the only manager after losing their phone and

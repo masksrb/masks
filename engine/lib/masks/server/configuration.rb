@@ -21,6 +21,7 @@ module Masks
         config.claim_ceiling = ENV.fetch("MASKS_CLAIM_CEILING", 30).to_i
         config.setup_token = ENV["MASKS_SETUP_TOKEN"].presence
         config.recover = ENV["MASKS_RECOVER"].presence
+        config.config_path = ENV["MASKS_CONFIG"].presence
         config.themes_path = ENV["MASKS_THEMES_PATH"].presence
         config.docs_url = ENV.fetch("MASKS_DOCS_URL", "https://masks.pages.dev")
         config.public_origin_template = ENV["MASKS_PUBLIC_ORIGIN_TEMPLATE"].presence
