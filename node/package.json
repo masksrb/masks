@@ -1,5 +1,5 @@
 {
-  "name": "@masks/node",
+  "name": "@masks/server",
   "version": "0.1.0",
   "description": "A masks client for servers: client credentials, the device flow, DPoP, registration, and checking access tokens.",
   "license": "MIT",

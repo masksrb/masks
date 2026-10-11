@@ -14,11 +14,11 @@ From there it can act for a person at another provider, or trade a token for a n
 | [`Masks::Client`](/reference/ruby/) | Any Ruby process. `Masks::Rails` is built on it. |
 | [`@masks/client`](/reference/browser/) | A single-page app, in the browser. |
 | [`github.com/masksrb/masks/go`](https://github.com/masksrb/masks/tree/main/go) | A Go service or a machine that signs in as itself, and a Go API. |
-| [`@masks/node`](https://github.com/masksrb/masks/tree/main/node) | A JavaScript server that signs in as itself, and a JavaScript API, on Node, Next.js, Bun, or Deno. |
+| [`@masks/server`](https://github.com/masksrb/masks/tree/main/node) | A JavaScript server that signs in as itself, and a JavaScript API, on Node, Next.js, Bun, or Deno. |
 
 The `masks` gem holds both Ruby SDKs, and `Masks::Rails` loads only when Rails does.
 
-| | `Masks::Rails` | `Masks::Client` | `@masks/client` | Go | `@masks/node` |
+| | `Masks::Rails` | `Masks::Client` | `@masks/client` | Go | `@masks/server` |
 | --- | --- | --- | --- | --- | --- |
 | Signing in with the code flow and PKCE | Yes | Yes | Yes, through a backend or in the page | No | No |
 | The handshake | Yes | Yes | Starts it through a backend | No | No |
@@ -36,7 +36,7 @@ The `masks` gem holds both Ruby SDKs, and `Masks::Rails` loads only when Rails d
 access tokens to the API that receives them. A Go app signs people in through
 [golang.org/x/oauth2](/guides/other-languages/#go), and the Go SDK's README covers the rest. A
 JavaScript server signs people in through [openid-client](/guides/other-languages/#node) or
-[Auth.js](/guides/other-languages/#nextjs), and the `@masks/node` README covers the rest.
+[Auth.js](/guides/other-languages/#nextjs), and the `@masks/server` README covers the rest.
 
 ## Connecting an app
 

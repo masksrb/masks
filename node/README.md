@@ -1,12 +1,12 @@
-# @masks/node
+# @masks/server
 
-`@masks/node` connects a server to masks. It gets tokens as a client and checks
+`@masks/server` connects a server to masks. It gets tokens as a client and checks
 them as an API. It runs on Node 20 and later, in Next.js route handlers and
 middleware on the edge runtime, on Bun, and on Deno, since it uses only `fetch`
 and Web Crypto.
 
 ```sh
-npm install @masks/node
+npm install @masks/server
 ```
 
 | Covers | |
@@ -30,7 +30,7 @@ A server keeps two P-256 keys. One signs its client assertions and the other
 holds its tokens, so a token copied off the server is useless without the key.
 
 ```ts
-import { Client, Issuer, Key } from "@masks/node";
+import { Client, Issuer, Key } from "@masks/server";
 
 const key = await Key.generate();
 const dpop = await Key.generate();
@@ -105,7 +105,7 @@ stops when the code expires or the signal aborts.
 ## Checking access tokens
 
 ```ts
-import { hasScope, Verifier } from "@masks/node";
+import { hasScope, Verifier } from "@masks/server";
 
 const verifier = new Verifier(issuer, "https://files.example.com", {
   publicURL: "https://files.example.com",

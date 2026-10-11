@@ -56,7 +56,7 @@ app.get("/callback", async (req, res) => {
 ```
 
 A Node server that signs in as itself, with client credentials or the device flow, uses
-[`@masks/node`](https://github.com/masksrb/masks/tree/main/node).
+[`@masks/server`](https://github.com/masksrb/masks/tree/main/node).
 
 ## Next.js
 
@@ -80,7 +80,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 });
 ```
 
-A route handler checks access tokens, DPoP-bound ones included, with `@masks/node`'s verifier. Its
+A route handler checks access tokens, DPoP-bound ones included, with `@masks/server`'s verifier. Its
 `verifier.authenticate(request)` takes the handler's `Request`.
 
 ## Python

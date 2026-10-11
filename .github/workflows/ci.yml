@@ -87,9 +87,9 @@ jobs:
         run: npm ci
       - name: Build, which is the typecheck that emits
         run: npm run build
-      - name: Test @masks/node on Node ${{ matrix.node }}
+      - name: Test @masks/server on Node ${{ matrix.node }}
         run: npm test
-      - name: Audit the packages @masks/node ships with
+      - name: Audit the packages @masks/server ships with
         run: npm audit --omit=dev
 
   scan:
