@@ -468,3 +468,7 @@ func writeJSON(response http.ResponseWriter, status int, body any) {
 func oauthError(response http.ResponseWriter, status int, code string) {
 	writeJSON(response, status, map[string]string{"error": code, "error_description": code + " from the fake"})
 }
+
+func base64Raw(value string) ([]byte, error) {
+	return base64.RawURLEncoding.DecodeString(value)
+}

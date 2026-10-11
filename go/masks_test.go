@@ -609,3 +609,74 @@ func TestResourceDiscoveryFindsTheIssuer(t *testing.T) {
 		t.Fatalf("unexpected %+v", found)
 	}
 }
+
+func TestATransportSendsABearerTokenWhenTheTokenIsNotHeld(t *testing.T) {
+	held := newFake(t)
+	held.add("app", &fakeClient{secret: "secret", method: ClientSecretBasic, scope: "files:read files:write"})
+
+	client := &Client{Issuer: discovered(t, held), ID: "app", Secret: "secret"}
+	resource := newResource(t, client.Issuer, held.audience)
+
+	response, err := client.HTTPClient(client.CredentialsSource(TokenRequest{}), resource.URL).Get(resource.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	response.Body.Close()
+
+	if response.StatusCode != http.StatusOK || !resource.seen[0].HasScope("files:write") || resource.seen[0].Bound() {
+		t.Fatalf("%d %+v", response.StatusCode, resource.seen)
+	}
+}
+
+func TestATransportAnswersAResourceNonceAndReplaysTheBody(t *testing.T) {
+	held := newFake(t)
+	client, _ := signedClient(t, held)
+
+	var nonces []string
+	var bodies []string
+
+	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		proof := request.Header.Get("DPoP")
+		parts := strings.Split(proof, ".")
+		claims := proofClaims{}
+		decoded, _ := base64Raw(parts[1])
+		_ = json.Unmarshal(decoded, &claims)
+		nonces = append(nonces, claims.Nonce)
+
+		body, _ := io.ReadAll(request.Body)
+		bodies = append(bodies, string(body))
+
+		if claims.Nonce != "server-nonce" {
+			response.Header().Set("DPoP-Nonce", "server-nonce")
+			response.Header().Set("WWW-Authenticate", `DPoP error="use_dpop_nonce"`)
+			response.WriteHeader(http.StatusUnauthorized)
+
+			return
+		}
+
+		response.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	http := client.HTTPClient(client.CredentialsSource(TokenRequest{}), server.URL)
+
+	response, err := http.Post(server.URL, "text/plain", strings.NewReader("payload"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	response.Body.Close()
+
+	if response.StatusCode != 200 || len(nonces) != 2 || nonces[0] != "" || bodies[1] != "payload" {
+		t.Fatalf("%d %q %q", response.StatusCode, nonces, bodies)
+	}
+
+	response, err = http.Post(server.URL, "text/plain", strings.NewReader("later"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	response.Body.Close()
+
+	if len(nonces) != 3 || nonces[2] != "server-nonce" {
+		t.Fatalf("the nonce was not remembered: %q", nonces)
+	}
+}

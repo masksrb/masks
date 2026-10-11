@@ -116,6 +116,36 @@
           "section": "Refactoring"
         }
       ]
+    },
+    "go": {
+      "release-type": "go",
+      "component": "go",
+      "tag-separator": "/",
+      "include-v-in-tag": true,
+      "initial-version": "0.1.0",
+      "changelog-path": "CHANGELOG.md",
+      "changelog-sections": [
+        {
+          "type": "feat",
+          "section": "Features"
+        },
+        {
+          "type": "fix",
+          "section": "Fixes"
+        },
+        {
+          "type": "perf",
+          "section": "Performance"
+        },
+        {
+          "type": "docs",
+          "section": "Documentation"
+        },
+        {
+          "type": "refactor",
+          "section": "Refactoring"
+        }
+      ]
     }
   },
   "plugins": [

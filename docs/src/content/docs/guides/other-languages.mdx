@@ -161,3 +161,7 @@ const { payload } = await jwtVerify(token, keys, {
 
 An app asks for a token for the API by sending `resource=https://api.example.com` when it signs in.
 `payload.scope` holds the granted scopes, separated by spaces.
+
+A Go API checks access tokens, DPoP-bound ones included, with the
+[Go SDK](https://github.com/masksrb/masks/tree/main/go)'s verifier. A Go service or a machine that
+signs in as itself uses the same SDK for client credentials, the device flow, and DPoP.

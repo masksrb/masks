@@ -25,6 +25,11 @@ jobs:
           cache-dependency-path: |
             server/package-lock.json
             web/package-lock.json
+      - uses: actions/setup-go@v6
+        with:
+          go-version: stable
+          check-latest: true
+          cache-dependency-path: go/go.sum
       - name: Install shfmt, which the runner does not ship
         run: |
           curl -fsSL -o /usr/local/bin/shfmt \
@@ -40,6 +45,26 @@ jobs:
         run: ./dev fmt --check
       - name: Lint the workflows
         uses: raven-actions/actionlint@v2
+
+  go:
+    needs: lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: go
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v6
+        with:
+          go-version: stable
+          check-latest: true
+          cache-dependency-path: go/go.sum
+      - name: Vet the Go SDK
+        run: go vet ./...
+      - name: Test the Go SDK under the race detector
+        run: go test -race -count=1 ./...
+      - name: Scan the Go SDK's modules for known vulnerabilities
+        run: go run golang.org/x/vuln/cmd/govulncheck@v1.1.4 ./...
 
   scan:
     needs: lint

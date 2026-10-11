@@ -226,11 +226,21 @@ def shellcheck
   scripts.empty? || run("shellcheck", *scripts)
 end
 
+def gofmt(check)
+  unformatted, = Open3.capture2("gofmt", "-l", ".", chdir: File.join(ROOT, "go"))
+
+  return run("gofmt", "-w", ".", chdir: File.join(ROOT, "go")) unless check
+  return true if unformatted.empty?
+
+  warn("gofmt would change:\n#{unformatted}")
+  false
+end
+
 def fmt(args)
   usage unless args.empty? || args == [ "--check" ]
   check = args.first == "--check"
 
-  %w[shfmt shellcheck].each do |tool|
+  %w[shfmt shellcheck gofmt].each do |tool|
     next if system("command -v #{tool} > /dev/null")
 
     die("#{tool} is not on your PATH, and CI checks with it. brew bundle")
@@ -244,7 +254,8 @@ def fmt(args)
     run("npx", "--yes", "prettier@3.9.6", check ? "--check" : "--write",
         "--no-error-on-unmatched-pattern", *GLOBS),
     run("shfmt", check ? "-d" : "-w", "-i", "2", "-ci", "server/bin"),
-    shellcheck
+    shellcheck,
+    gofmt(check)
   ]
 
   exit(ok.all? ? 0 : 1)
