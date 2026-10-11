@@ -7,6 +7,13 @@ A theme is a CSS file that masks loads after its own stylesheet on the sign-in, 
 account pages. In production, masks reads themes when the server boots, so a new or changed file
 applies after a restart. In development, it reads them on every request.
 
+## A logo and a color
+
+Without a stylesheet, an owner sets both under **Settings → General → Branding** in `/manage`. The
+logo, any image up to 4MB stored at 256 pixels square, replaces the tenant's initial at the top of
+sign-in, consent, and account pages. The color tints their buttons and headings, and masks picks
+black or white text for buttons so it stays readable. A theme loads after both and can override them.
+
 ## Naming a theme
 
 masks reads themes from `/rails/themes`, or from the directory `MASKS_THEMES_PATH` names. A file's

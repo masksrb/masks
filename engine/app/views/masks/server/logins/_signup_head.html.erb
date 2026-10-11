@@ -7,7 +7,7 @@
   <% if signing_up["firstRun"] %>
     <img src="/masks-public/icon.svg" alt="" class="auth-mark auth-mark-rose">
   <% else %>
-    <span class="auth-mark" aria-hidden="true"><%= tenant.first&.upcase %></span>
+    <%= tenant_mark(Masks::Server::Current.tenant) %>
   <% end %>
 </div>
 

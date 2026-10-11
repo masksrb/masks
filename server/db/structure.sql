@@ -1261,6 +1261,43 @@ ALTER SEQUENCE public.subjects_id_seq OWNED BY public.subjects.id;
 
 
 --
+-- Name: tenant_logos; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.tenant_logos (
+    id bigint NOT NULL,
+    tenant_id bigint NOT NULL,
+    content_type character varying NOT NULL,
+    digest character varying NOT NULL,
+    byte_size integer NOT NULL,
+    data bytea NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+ALTER TABLE ONLY public.tenant_logos FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: tenant_logos_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.tenant_logos_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: tenant_logos_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.tenant_logos_id_seq OWNED BY public.tenant_logos.id;
+
+
+--
 -- Name: tenants; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1285,7 +1322,9 @@ CREATE TABLE public.tenants (
     delete_after integer,
     event_retention_days integer,
     risky_networks text,
-    custom_host character varying
+    custom_host character varying,
+    logo_digest character varying,
+    accent_color character varying
 );
 
 
@@ -1554,6 +1593,13 @@ ALTER TABLE ONLY public.subjects ALTER COLUMN id SET DEFAULT nextval('public.sub
 
 
 --
+-- Name: tenant_logos id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tenant_logos ALTER COLUMN id SET DEFAULT nextval('public.tenant_logos_id_seq'::regclass);
+
+
+--
 -- Name: tenants id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1797,6 +1843,14 @@ ALTER TABLE ONLY public.signing_keys
 
 ALTER TABLE ONLY public.subjects
     ADD CONSTRAINT subjects_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: tenant_logos tenant_logos_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tenant_logos
+    ADD CONSTRAINT tenant_logos_pkey PRIMARY KEY (id);
 
 
 --
@@ -2530,6 +2584,13 @@ CREATE UNIQUE INDEX index_subjects_on_tenant_id_and_sub ON public.subjects USING
 
 
 --
+-- Name: index_tenant_logos_on_tenant_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_tenant_logos_on_tenant_id ON public.tenant_logos USING btree (tenant_id);
+
+
+--
 -- Name: index_tenants_on_custom_host; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2744,6 +2805,14 @@ ALTER TABLE ONLY public.events
 
 ALTER TABLE ONLY public.event_streams
     ADD CONSTRAINT fk_rails_31dc8c70b4 FOREIGN KEY (tenant_id) REFERENCES public.tenants(id);
+
+
+--
+-- Name: tenant_logos fk_rails_3a738f53d0; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tenant_logos
+    ADD CONSTRAINT fk_rails_3a738f53d0 FOREIGN KEY (tenant_id) REFERENCES public.tenants(id);
 
 
 --
@@ -3517,11 +3586,24 @@ CREATE POLICY tenant_isolation ON public.subjects USING ((tenant_id = (NULLIF(cu
 
 
 --
+-- Name: tenant_logos tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.tenant_logos USING ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint)) WITH CHECK ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint));
+
+
+--
 -- Name: tokens tenant_isolation; Type: POLICY; Schema: public; Owner: -
 --
 
 CREATE POLICY tenant_isolation ON public.tokens USING ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint)) WITH CHECK ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint));
 
+
+--
+-- Name: tenant_logos; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.tenant_logos ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: tokens; Type: ROW SECURITY; Schema: public; Owner: -
@@ -3536,6 +3618,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261010160000'),
 ('20261010150000'),
 ('20261010140000'),
 ('20261010130000'),

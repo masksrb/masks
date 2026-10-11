@@ -19,14 +19,19 @@ module Masks
           argument :event_retention_days, Integer, required: false,
                                                    description: "Days to keep events, from 30 to 2555. Zero keeps the default of 180."
 
+          argument :accent_color, String, required: false,
+                   description: "A color such as #3355aa for buttons and headings on sign-in and account pages. Empty goes back to masks' own."
+
           field :tenant, Types::TenantType, null: false
 
           def resolve(name: nil, dynamic_client_scopes: nil, dynamic_registration: nil,
                       named_by: nil, browsers_only: nil, blocked_agents: nil, sign_in_policy: nil,
-                      suspend_after: nil, delete_after: nil, event_retention_days: nil, risky_networks: nil)
+                      suspend_after: nil, delete_after: nil, event_retention_days: nil, risky_networks: nil,
+                      accent_color: nil)
             tenant = Current.tenant
 
             tenant.name = name unless name.nil?
+            tenant.accent_color = accent_color unless accent_color.nil?
 
             unless named_by.nil?
               refuse!("MASKS_NAMED_BY pins what names an account here") if tenant.names_pinned?

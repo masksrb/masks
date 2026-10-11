@@ -1,5 +1,5 @@
 <script>
-import { initial } from "../lib/initial.js";
+import TenantMark from "../shared/TenantMark.svelte";
 import Action from "../shared/Action.svelte";
 import ClientMark from "../shared/ClientMark.svelte";
 import Head from "../shared/Head.svelte";
@@ -12,7 +12,6 @@ const scopes = $derived(ranked(login.consent?.scopes ?? []));
 const audience = $derived(login.consent?.audience ?? []);
 const details = $derived(login.consent?.details ?? []);
 const client = $derived(login.client?.name ?? "");
-const tenant = $derived(login.auth.tenant?.name ?? "");
 const links = $derived(
   [
     ["site", login.t("site", { client })],
@@ -26,7 +25,7 @@ const links = $derived(
 <div class="auth-pair">
   <ClientMark client={login.client} />
   <span class="auth-wire"></span>
-  <span class="auth-mark" aria-hidden="true">{initial(tenant)}</span>
+  <TenantMark tenant={login.auth.tenant} />
 </div>
 
 <Head {login} title={login.t("title", { client })} />

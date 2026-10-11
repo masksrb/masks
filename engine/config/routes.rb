@@ -94,6 +94,7 @@ Masks::Server::Engine.routes.draw do
     get "/avatars/:uuid/:style/:digest", to: "avatars#show", as: :stamped_avatar
   end
 
+  get "/logo", to: "tenant_logos#show", as: :tenant_logo
   get "/clients/:client_id/logo", to: "client_logos#show", as: :client_logo, constraints: { client_id: %r{[^/]+} }
 
   get "/handshake", to: "handshakes#show", as: :handshake

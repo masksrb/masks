@@ -12,6 +12,7 @@
     <%= csp_meta_tag %>
     <%= vite_client_tag %>
     <%= vite_stylesheet_tag "app" %>
+    <%= tenant_accent(Masks::Server::Current.tenant) %>
     <% Masks::Server::Themes.for(tenant: Masks::Server::Current.tenant, client: themed_client).each do |theme| %>
       <%= tag.link rel: "stylesheet", href: theme_path(theme.digest) %>
     <% end %>
@@ -24,7 +25,7 @@
     <main class="auth-col surface-<%= surface %>">
       <% if surface == "challenge" && Masks::Server::Current.tenant&.name.present? %>
         <div class="auth-id">
-          <span class="auth-mark" aria-hidden="true"><%= Masks::Server::Current.tenant.name.first.upcase %></span>
+          <%= tenant_mark(Masks::Server::Current.tenant) %>
           <span class="auth-tenant"><%= Masks::Server::Current.tenant.name %></span>
         </div>
       <% end %>

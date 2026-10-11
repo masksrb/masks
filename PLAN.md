@@ -7,6 +7,4 @@ says what a person can do once it lands.
 ## Later
 
 - Translations, starting with the manage console, which hard-codes English.
-- A logo and colors set from the console.
 - Clients and settings declared in a file and applied at boot.
-- Token lifetimes set per client.

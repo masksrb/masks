@@ -16,6 +16,8 @@ module Masks
           field :browsers_only, Boolean, null: false
           field :blocked_agents, String
           field :mails, Boolean, null: false
+          field :accent_color, String
+          field :logo_url, String, description: "The tenant's logo, 128 pixels square, or null for its initial."
           field :texts, Boolean, null: false
           field :sign_in_policy, SignInPolicyType
           field :dynamic_registration, String, null: false
@@ -30,6 +32,10 @@ module Masks
           end
           field :created_at, GraphQL::Types::ISO8601DateTime, null: false
           field :signing_keys, [ SigningKeyType ], null: false
+
+          def logo_url
+            object.logo_url(size: 128)
+          end
 
           def mails
             object.mails?

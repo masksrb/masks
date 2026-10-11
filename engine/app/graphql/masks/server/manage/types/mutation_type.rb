@@ -29,6 +29,8 @@ module Masks
           field :revoke_passkey, mutation: Mutations::RevokePasskey
           field :upload_avatar, mutation: Mutations::UploadAvatar
           field :remove_avatar, mutation: Mutations::RemoveAvatar
+          field :upload_tenant_logo, mutation: Mutations::UploadTenantLogo
+          field :remove_tenant_logo, mutation: Mutations::RemoveTenantLogo
           field :create_client, mutation: Mutations::CreateClient
           field :add_app, mutation: Mutations::AddApp
           field :create_saml_application, mutation: Mutations::CreateSamlApplication
