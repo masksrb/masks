@@ -89,13 +89,22 @@
   let groups = $state([]);
   let invited = $state(null);
 
+  let groupsLoaded = false;
+
+  const invitedCount = $derived(invited?.filter((one) => one.outcome === "invited").length ?? 0);
+
   async function openInvites() {
     inviting = true;
     invited = null;
 
+    if (groupsLoaded) return;
+
     const data = await feedback.attempt(() => api.query("query Groups { groups { key name } }"));
 
-    if (data) groups = data.groups;
+    if (!data) return;
+
+    groups = data.groups;
+    groupsLoaded = true;
   }
 
   async function inviteMany() {
@@ -104,7 +113,7 @@
     const data = await feedback.attempt(() =>
       api.query(
         `mutation Invite($emails: [String!]!, $groups: [String!]) {
-          inviteActors(emails: $emails, groups: $groups) { outcomes { email outcome delivered url } }
+          inviteActors(emails: $emails, groups: $groups) { outcomes { email outcome url } }
         }`,
         { emails: addresses.split(/[\s,;]+/).filter(Boolean), groups: joining },
       ),
@@ -282,7 +291,7 @@
   {/if}
 
   {#if invited}
-    <Section title={t("actors.invites.done", { count: invited.filter((one) => one.outcome === "invited").length })}>
+    <Section title={t("actors.invites.done", { count: invitedCount })}>
       <ul class="flex flex-col gap-1 text-sm">
         {#each invited as one (one.email)}
           <li class="flex flex-wrap items-baseline gap-x-2">

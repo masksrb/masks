@@ -5,7 +5,7 @@ module Masks
         UNSERVED = "no tenant is served at this hostname".freeze
         CROWDED = "too many tenants were claimed recently; try again later".freeze
         CLAIM_WINDOW = 1.hour
-        TENANTLESS = %w[/up].freeze
+        TENANTLESS = %w[/up /metrics].freeze
         TLS_ASK = "/tls/allowed".freeze
 
         def initialize(app)

@@ -44,7 +44,7 @@ es:
 
   passkeys:
     renamed: "Llave de acceso renombrada."
-    unnamed: "El nombre de una llave de acceso tiene como máximo 64 caracteres."
+    unnamed: "El nombre de una llave de acceso tiene como máximo %{limit} caracteres."
     expired: "Ese registro caducó. Vuelve a intentarlo."
     crowded: "Ya tienes tantas llaves de acceso como admite este servidor."
     unusable: "No se pudo añadir esa llave de acceso."

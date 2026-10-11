@@ -3,6 +3,7 @@ Rails.application.routes.draw do
 
   get "up" => "health#show", as: :health
   get "up/jobs" => "health#jobs", as: :health_jobs
+  get "metrics" => "metrics#show", as: :metrics
 
   mount Masks::Server::Engine, at: "/"
 end

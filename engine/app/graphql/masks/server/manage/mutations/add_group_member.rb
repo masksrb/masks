@@ -11,11 +11,10 @@ module Masks
           field :group, Types::GroupType, null: false
 
           def resolve(key:, uuid:)
-            group = Masks::Server::Group.find_by(key: key) || refuse!("no group with that key")
+            group = group!(key)
             actor = actor!(uuid)
 
-            group.add!(actor)
-            audit!(Masks::Server::Event::GROUP_JOINED, actor: actor, group: group.key)
+            group.add!(actor, by: viewer)
 
             { group: group }
           end

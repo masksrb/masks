@@ -34,6 +34,7 @@ de:
         requested: "Genehmigung angefordert"
       passkey:
         added: "Passkey hinzugefügt"
+        renamed: "Passkey umbenannt"
         removed: "Passkey entfernt"
       backup_codes:
         generated: "Backup-Codes erstellt"

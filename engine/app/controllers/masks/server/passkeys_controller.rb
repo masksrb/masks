@@ -30,17 +30,15 @@ module Masks
       end
 
       def update
-        passkey = Passkey.find_by(id: params[:id], actor_id: current_actor.id)
-
         return refuse(t("passkeys.unknown")) if passkey.nil?
-        return refuse(t("passkeys.unnamed")) unless passkey.update(name: params[:name].to_s.strip.presence)
+        return refuse(t("passkeys.unnamed", limit: Passkey::NAME_LIMIT)) unless passkey.update(name: params[:name])
+
+        Event.record!(Event::PASSKEY_RENAMED, actor: current_actor, passkey: passkey.name)
 
         redirect_to root_path(anchor: "passkeys"), notice: t("passkeys.renamed")
       end
 
       def destroy
-        passkey = Passkey.find_by(id: params[:id], actor_id: current_actor.id)
-
         return refuse(t("passkeys.unknown")) if passkey.nil?
         return refuse(t("passkeys.last_way_in")) if current_actor.last_way_in?(passkey)
 
@@ -52,6 +50,10 @@ module Masks
       end
 
       private
+
+        def passkey
+          @passkey ||= Passkey.find_by(id: params[:id], actor_id: current_actor.id)
+        end
 
         def require_actor
           redirect_to login_path unless current_actor

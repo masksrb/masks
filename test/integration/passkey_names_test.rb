@@ -41,7 +41,7 @@ module Masks
 
         patch "/account/passkeys/#{@passkey.id}", params: { name: "x" * 65 }
 
-        assert_equal I18n.t("passkeys.unnamed"), flash[:alert]
+        assert_equal I18n.t("passkeys.unnamed", limit: Passkey::NAME_LIMIT), flash[:alert]
       end
     end
   end

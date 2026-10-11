@@ -37,6 +37,7 @@ module Masks
 
       PASSKEY_ADDED = "passkey.added".freeze
       PASSKEY_REMOVED = "passkey.removed".freeze
+      PASSKEY_RENAMED = "passkey.renamed".freeze
       BACKUP_CODES_GENERATED = "backup_codes.generated".freeze
       BACKUP_CODE_SPENT = "backup_code.spent".freeze
       AUTHENTICATOR_ENABLED = "authenticator.enabled".freeze

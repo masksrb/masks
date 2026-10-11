@@ -98,6 +98,21 @@ module Masks
               Masks::Server::Adapter.find_by(key: key) || refuse!("no adapter keyed #{key}")
             end
 
+            def group!(key)
+              Masks::Server::Group.find_by(key: key) || refuse!("no group keyed #{key}")
+            end
+
+            def invited!(actor)
+              actor_created!(actor, invited: true)
+
+              Masks::Server::Invitations.open(actor: actor, journey: Masks::Server::Journey.manage(viewer))
+            end
+
+            def actor_created!(actor, invited:)
+              audit!(Masks::Server::Event::ACTOR_CREATED, actor: actor, nickname: actor.nickname,
+                                                          scopes: actor.scope_list, invited: invited)
+            end
+
             def event_stream!(key)
               Masks::Server::EventStream.find_by(key: key) || refuse!("no event stream keyed #{key}")
             end

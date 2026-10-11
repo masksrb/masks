@@ -44,7 +44,7 @@ en:
 
   passkeys:
     renamed: "Passkey renamed."
-    unnamed: "A passkey name is at most 64 characters."
+    unnamed: "A passkey name is at most %{limit} characters."
     expired: "That enrolment expired. Try again."
     crowded: "You already have as many passkeys as this server keeps."
     unusable: "That passkey could not be added."

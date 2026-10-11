@@ -11,7 +11,7 @@ module Masks
           field :group, Types::GroupType, null: false
 
           def resolve(key:, name:)
-            group = Masks::Server::Group.find_by(key: key) || refuse!("no group with that key")
+            group = group!(key)
             group.name = name
             save!(group)
 

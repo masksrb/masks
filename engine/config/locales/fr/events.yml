@@ -34,6 +34,7 @@ fr:
         requested: "Approbation demandée"
       passkey:
         added: "Clé d’accès ajoutée"
+        renamed: "Clé d’accès renommée"
         removed: "Clé d’accès supprimée"
       backup_codes:
         generated: "Codes de secours générés"

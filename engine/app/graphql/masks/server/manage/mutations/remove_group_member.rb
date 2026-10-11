@@ -11,10 +11,10 @@ module Masks
           field :group, Types::GroupType, null: false
 
           def resolve(key:, uuid:)
-            group = Masks::Server::Group.find_by(key: key) || refuse!("no group with that key")
+            group = group!(key)
             actor = actor!(uuid)
 
-            audit!(Masks::Server::Event::GROUP_LEFT, actor: actor, group: group.key) if group.remove!(actor)
+            group.remove!(actor, by: viewer)
 
             { group: group }
           end

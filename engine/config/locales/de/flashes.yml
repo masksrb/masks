@@ -44,7 +44,7 @@ de:
 
   passkeys:
     renamed: "Passkey umbenannt."
-    unnamed: "Ein Passkey-Name hat höchstens 64 Zeichen."
+    unnamed: "Ein Passkey-Name hat höchstens %{limit} Zeichen."
     expired: "Diese Einrichtung ist abgelaufen. Versuchen Sie es erneut."
     crowded: "Sie haben bereits so viele Passkeys, wie dieser Server speichert."
     unusable: "Dieser Passkey konnte nicht hinzugefügt werden."

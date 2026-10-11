@@ -185,6 +185,24 @@ a server whose database was restored with a different key.
 
 A new `SECRET_KEY_BASE` comes with the new key, so everyone signs in again after the restart.
 
+## Metrics
+
+Set `MASKS_METRICS_TOKEN` and point Prometheus at `/metrics` with that token as a bearer token:
+
+```yaml
+scrape_configs:
+  - job_name: masks
+    authorization:
+      credentials: the-value-of-MASKS_METRICS_TOKEN
+    static_configs:
+      - targets: [masks:3000]
+```
+
+Each scrape counts from the database, so the figures agree across replicas. Every tenant reports its
+accounts, live sessions, and the sign-ins, refused sign-ins, and access tokens of the last hour, under
+a `tenant` label. The server also reports its tenants, the kinds of job that failed in the last day,
+and the jobs waiting to run. Without the variable, `/metrics` answers 404.
+
 ## Backups, restores, and upgrades
 
 Back up the primary database and the master key together. The primary holds every tenant's

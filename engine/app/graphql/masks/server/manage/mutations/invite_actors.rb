@@ -7,16 +7,16 @@ module Masks
 
           LIMIT = 200
 
-          argument :emails, [ String ], description: "Up to 200 addresses. Blank lines and repeats are skipped."
+          argument :emails, [ String ], description: "Up to #{LIMIT} addresses. Blank lines and repeats are skipped."
           argument :groups, [ String ], required: false, description: "Keys of groups to put everyone invited in."
 
           field :outcomes, [ Types::InvitationOutcomeType ], null: false
 
           def resolve(emails:, groups: [])
-            wanted = emails.map { |email| email.to_s.strip.downcase }.compact_blank.uniq
+            wanted = emails.filter_map { |email| Actor.normalize_value_for(:email, email) }.uniq
             refuse!("invite at most #{LIMIT} addresses at once") if wanted.size > LIMIT
 
-            joining = groups.map { |key| Masks::Server::Group.find_by(key: key) || refuse!("no group called #{key}") }
+            joining = groups.map { |key| group!(key) }
             needs!(:security, "putting people in groups") if joining.any?
 
             { outcomes: wanted.map { |email| invite(email, joining) } }
@@ -25,17 +25,15 @@ module Masks
           private
 
             def invite(email, joining)
-              return outcome(email, "invalid") unless email.match?(URI::MailTo::EMAIL_REGEXP)
-              return outcome(email, "exists") if Actor.exists?(email: email)
+              actor = Actor.new(email: email, scopes: Scopes.join(Scopes::STANDARD))
 
-              actor = Actor.create!(email: email, scopes: Scopes.join(Scopes::STANDARD))
-              audit!(Masks::Server::Event::ACTOR_CREATED, actor: actor, scopes: actor.scope_list, invited: true)
-              joining.each { |group| group.add!(actor) }
+              unless actor.save
+                return outcome(email, actor.errors.of_kind?(:email, :taken) ? "exists" : "invalid")
+              end
 
-              sent = Invitations.open(actor: actor, journey: Masks::Server::Journey.manage(viewer))
-              outcome(email, "invited", actor: actor, **sent.slice(:delivered, :url))
-            rescue ActiveRecord::RecordInvalid
-              outcome(email, "invalid")
+              joining.each { |group| group.add!(actor, by: viewer) }
+
+              outcome(email, "invited", actor: actor, **invited!(actor))
             end
 
             def outcome(email, kind, actor: nil, delivered: false, url: nil)

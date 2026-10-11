@@ -34,6 +34,7 @@ en:
         requested: "Approval requested"
       passkey:
         added: "Passkey added"
+        renamed: "Passkey renamed"
         removed: "Passkey removed"
       backup_codes:
         generated: "Backup codes generated"

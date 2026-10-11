@@ -34,6 +34,7 @@ es:
         requested: "Aprobación solicitada"
       passkey:
         added: "Llave de acceso añadida"
+        renamed: "Llave de acceso renombrada"
         removed: "Llave de acceso eliminada"
       backup_codes:
         generated: "Códigos de respaldo generados"

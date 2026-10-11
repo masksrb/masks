@@ -31,7 +31,7 @@ module Masks
 
             actor.password = password
             save!(actor)
-            created!(actor, invited: false)
+            actor_created!(actor, invited: false)
 
             Verifications.open(actor: actor, journey: Masks::Server::Journey.manage(viewer)).merge(actor: actor)
           end
@@ -40,17 +40,8 @@ module Masks
 
             def invite(actor)
               save!(actor)
-              created!(actor, invited: true)
 
-              Invitations.open(actor: actor, journey: Masks::Server::Journey.manage(viewer)).merge(actor: actor)
-            end
-
-            def created!(actor, invited:)
-              audit!(
-                Masks::Server::Event::ACTOR_CREATED,
-                actor: actor, nickname: actor.nickname,
-                scopes: actor.scope_list, invited: invited
-              )
+              invited!(actor).merge(actor: actor)
             end
         end
       end

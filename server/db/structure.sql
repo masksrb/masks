@@ -1898,6 +1898,13 @@ CREATE UNIQUE INDEX index_actors_on_tenant_id_and_nickname ON public.actors USIN
 
 
 --
+-- Name: index_actors_on_tenant_id_and_pending_approval_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_actors_on_tenant_id_and_pending_approval_at ON public.actors USING btree (tenant_id, pending_approval_at) WHERE (pending_approval_at IS NOT NULL);
+
+
+--
 -- Name: index_actors_on_tenant_id_and_phone; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -3618,6 +3625,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261011120000'),
 ('20261010160000'),
 ('20261010150000'),
 ('20261010140000'),

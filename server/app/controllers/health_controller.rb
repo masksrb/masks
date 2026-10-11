@@ -7,6 +7,10 @@ class HealthController < ActionController::Base
     ].compact
   end
 
+  def self.jobs_run?
+    Rails.application.config.active_job.queue_adapter == :solid_queue
+  end
+
   def self.failing_jobs
     SolidQueue::FailedExecution.where(created_at: 1.day.ago..).joins(:job)
                                .distinct.pluck("solid_queue_jobs.class_name").sort
@@ -21,7 +25,7 @@ class HealthController < ActionController::Base
   end
 
   def jobs
-    return render(plain: "no jobs run here") unless Rails.application.config.active_job.queue_adapter == :solid_queue
+    return render(plain: "no jobs run here") unless self.class.jobs_run?
 
     failing = self.class.failing_jobs
 

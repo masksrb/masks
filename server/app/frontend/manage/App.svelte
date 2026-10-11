@@ -136,8 +136,11 @@
     }
   }
 
+  const section = $derived(router.segments[0] ?? "");
+  const waitingLabel = $derived(t("app.waiting", { count: waiting }));
+
   $effect(() => {
-    if (phase === "ready" && router.state.path) countWaiting();
+    if (phase === "ready" && section !== undefined) countWaiting();
   });
 
   function ready() {
@@ -205,8 +208,7 @@
               class="nav-item {current === to.replace('/', '') ? 'nav-item-on' : ''}"
             >{t(`app.nav.${label}`)}{#if label === "actors" && waiting > 0}<span
                   class="badge badge-warning badge-sm ms-1.5"
-                  title={t("app.waiting", { count: waiting })}
-                  aria-label={t("app.waiting", { count: waiting })}>{waiting}</span
+                  title={waitingLabel}>{waiting}</span
                 >{/if}</Link>
           {/each}
         </nav>

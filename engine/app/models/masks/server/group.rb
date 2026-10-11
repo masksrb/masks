@@ -15,12 +15,16 @@ module Masks
                       uniqueness: { scope: :tenant_id }
       validates :name, presence: true, length: { maximum: 100 }
 
-      def add!(actor)
-        members.find_or_create_by!(actor: actor)
+      def add!(actor, by: nil)
+        member = members.find_or_create_by!(actor: actor)
+        Event.record!(Event::GROUP_JOINED, actor: actor, by: by, group: key) if member.previously_new_record?
+        member
       end
 
-      def remove!(actor)
-        members.where(actor: actor).delete_all.positive?
+      def remove!(actor, by: nil)
+        removed = members.where(actor: actor).delete_all.positive?
+        Event.record!(Event::GROUP_LEFT, actor: actor, by: by, group: key) if removed
+        removed
       end
     end
   end

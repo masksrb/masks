@@ -10,7 +10,7 @@ module Masks
           field :key, String, null: false
 
           def resolve(key:)
-            group = Masks::Server::Group.find_by(key: key) || refuse!("no group with that key")
+            group = group!(key)
             group.destroy!
 
             audit!(Masks::Server::Event::GROUP_DELETED, group: key)
