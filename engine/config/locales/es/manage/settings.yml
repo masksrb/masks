@@ -122,6 +122,7 @@ es:
           other: "Cada %{count} días"
         scheduled: "Calendario guardado. Una clave nueva se publica un día antes de firmar."
         title: "Claves de firma"
+        help: "Cada token se firma con la clave activa, y las aplicaciones lo comprueban con las claves publicadas en el endpoint JWKS. Prepara una clave para publicarla un día antes de que firme, o rota para cambiar de inmediato. La clave saliente sigue verificando durante 24 horas."
         stage: "Preparar"
         rotate: "Rotar ahora"
         key: "Clave"

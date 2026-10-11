@@ -122,6 +122,7 @@ en:
           other: "Every %{count} days"
         scheduled: "Rotation schedule saved. A new key is published a day before it signs."
         title: "Signing keys"
+        help: "Every token is signed with the active key, and apps check it against the keys published at the JWKS endpoint. Stage a key to publish it a day before it signs, or rotate to switch at once. The outgoing key keeps verifying for 24 hours."
         stage: "Stage"
         rotate: "Rotate now"
         key: "Key"

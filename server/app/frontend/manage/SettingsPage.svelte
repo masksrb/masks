@@ -485,13 +485,35 @@
       </Section>
 
       {#if data.namespaces.length}
-        <Namespaces {api} rows={data.namespaces} onreleased={load} showClient />
+        <Namespaces {api} rows={data.namespaces} onreleased={load} showClient row />
       {/if}
 
-      <Section title={t("settings.keys.title")}>
-        {#snippet actions()}
-          <button type="button" class="btn btn-sm" onclick={stage}>{t("settings.keys.stage")}</button>
-          <button type="button" class="btn btn-sm btn-outline" onclick={rotate}>{t("settings.keys.rotate")}</button>
+      <Section row title={t("settings.keys.title")} help={t("settings.keys.help")}>
+        <ul class="compact-list">
+          {#each data.tenant.signingKeys as key (key.kid)}
+            <li class="flex-wrap">
+              <code class="font-mono text-sm">{key.kid.slice(0, 8)}</code>
+              <span class="badge badge-sm {BADGE[key.state]}">{BADGE[key.state] ? t(`settings.keys.states.${key.state}`) : key.state}</span>
+              <span class="hint text-xs">
+                {key.algorithm} ·
+                {#if key.state === "retiring"}
+                  {t("settings.keys.until", { day: day(key.retiredAt) })}
+                {:else}
+                  {day(key.activatedAt, t("settings.keys.not_yet"))}
+                {/if}
+              </span>
+
+              {#if key.state === "staged"}
+                <div class="ml-auto flex gap-1">
+                  <button type="button" class="btn btn-xs" onclick={() => activate(key.kid)}>{t("settings.keys.activate")}</button>
+                  <button type="button" class="btn btn-xs btn-ghost" onclick={() => discard(key.kid)}>{t("settings.keys.discard")}</button>
+                </div>
+              {/if}
+            </li>
+          {/each}
+        </ul>
+
+        <div class="flex flex-wrap items-center gap-2">
           <Select
             name={t("settings.keys.schedule")}
             value={String(data.tenant.keyRotationDays ?? 0)}
@@ -501,50 +523,8 @@
             ])}
             onchange={(days) => update({ keyRotationDays: Number(days) }, t("settings.keys.scheduled"))}
           />
-        {/snippet}
-
-        <div class="overflow-x-auto">
-          <table class="table table-sm">
-            <thead>
-              <tr>
-                <th>{t("settings.keys.key")}</th>
-                <th class="hidden sm:table-cell">{t("settings.keys.algorithm")}</th>
-                <th>{t("settings.keys.state")}</th>
-                <th class="hidden sm:table-cell">{t("settings.keys.activated")}</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {#each data.tenant.signingKeys as key (key.kid)}
-                <tr>
-                  <td class="font-mono text-xs">{key.kid.slice(0, 8)}</td>
-                  <td class="hidden text-xs sm:table-cell">{key.algorithm}</td>
-                  <td><span class="badge badge-sm {BADGE[key.state]}">{BADGE[key.state] ? t(`settings.keys.states.${key.state}`) : key.state}</span></td>
-                  <td class="hidden text-xs opacity-85 sm:table-cell">
-                    {#if key.state === "retiring"}
-                      {t("settings.keys.until", { day: day(key.retiredAt) })}
-                    {:else}
-                      {day(key.activatedAt, t("settings.keys.not_yet"))}
-                    {/if}
-                  </td>
-                  <td class="text-right whitespace-nowrap">
-                    {#if key.state === "staged"}
-                      <button type="button" class="btn btn-xs" onclick={() => activate(key.kid)}>
-                        {t("settings.keys.activate")}
-                      </button>
-                      <button
-                        type="button"
-                        class="btn btn-xs btn-ghost"
-                        onclick={() => discard(key.kid)}
-                      >
-                        {t("settings.keys.discard")}
-                      </button>
-                    {/if}
-                  </td>
-                </tr>
-              {/each}
-            </tbody>
-          </table>
+          <button type="button" class="btn btn-sm" onclick={stage}>{t("settings.keys.stage")}</button>
+          <button type="button" class="btn btn-sm btn-ghost" onclick={rotate}>{t("settings.keys.rotate")}</button>
         </div>
       </Section>
 

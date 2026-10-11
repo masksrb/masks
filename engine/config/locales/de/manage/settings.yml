@@ -122,6 +122,7 @@ de:
           other: "Alle %{count} Tage"
         scheduled: "Zeitplan gespeichert. Ein neuer Schlüssel wird einen Tag vor dem Signieren veröffentlicht."
         title: "Signaturschlüssel"
+        help: "Jedes Token wird mit dem aktiven Schlüssel signiert, und Apps prüfen es gegen die am JWKS-Endpunkt veröffentlichten Schlüssel. Bereiten Sie einen Schlüssel vor, um ihn einen Tag vor dem Signieren zu veröffentlichen, oder wechseln Sie sofort. Der bisherige Schlüssel bleibt 24 Stunden lang gültig."
         stage: "Vorbereiten"
         rotate: "Jetzt rotieren"
         key: "Schlüssel"

@@ -122,6 +122,7 @@ fr:
           other: "Tous les %{count} jours"
         scheduled: "Calendrier enregistré. Une nouvelle clé est publiée un jour avant de signer."
         title: "Clés de signature"
+        help: "Chaque jeton est signé avec la clé active, et les applications le vérifient avec les clés publiées sur le point JWKS. Préparez une clé pour la publier un jour avant qu’elle signe, ou faites une rotation pour changer tout de suite. L’ancienne clé continue de vérifier pendant 24 heures."
         stage: "Préparer"
         rotate: "Renouveler maintenant"
         key: "Clé"
