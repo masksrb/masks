@@ -1,6 +1,9 @@
 fr:
   manage:
     activity:
+      parts:
+        log: "Journal"
+        streams: "Flux"
       title: "Activité"
       nouns:
         actor: "l’utilisateur"

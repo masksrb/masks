@@ -20,8 +20,7 @@
   import MessagesPage from "./MessagesPage.svelte";
   import StreamsPage from "./StreamsPage.svelte";
   import PoliciesPage from "./PoliciesPage.svelte";
-  import ProvisioningPage from "./ProvisioningPage.svelte";
-  import LdapPage from "./LdapPage.svelte";
+  import DirectoryPage from "./DirectoryPage.svelte";
   import SettingsShell from "./SettingsShell.svelte";
 
   let { boot } = $props();
@@ -51,7 +50,7 @@
     ["/clients", "clients", '<rect x="3" y="3" width="6" height="6" rx="1.5"/><rect x="11" y="3" width="6" height="6" rx="1.5"/><rect x="3" y="11" width="6" height="6" rx="1.5"/><rect x="11" y="11" width="6" height="6" rx="1.5"/>'],
   ];
 
-  const SETTINGS = ["settings", "policies", "providers", "provisioning", "ldap", "messages", "streams", "activity"];
+  const SETTINGS = ["settings", "policies", "providers", "directory", "messages", "activity"];
 
   const REPAIRED = "masks:manage:repaired";
 
@@ -257,13 +256,11 @@
             <ProvidersPage {api} />
           {:else if current === "policies"}
             <PoliciesPage {api} />
-          {:else if current === "provisioning"}
-            <ProvisioningPage {api} />
-          {:else if current === "ldap"}
-            <LdapPage {api} />
+          {:else if current === "directory"}
+            <DirectoryPage {api} />
           {:else if current === "messages"}
             <MessagesPage {api} part={router.segments[1]} />
-          {:else if current === "streams"}
+          {:else if current === "activity" && router.segments[1] === "streams"}
             <StreamsPage {api} />
           {:else if current === "activity"}
             <ActivityPage {api} />

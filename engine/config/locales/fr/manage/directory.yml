@@ -1,0 +1,5 @@
+fr:
+  manage:
+    directory:
+      title: "Annuaire"
+      lede: "Les autres systèmes qui tiennent les personnes de cet espace : un fournisseur d’identité qui les provisionne par SCIM, et les applications plus anciennes qui les lisent par LDAP."

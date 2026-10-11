@@ -443,6 +443,21 @@ a.tally-cell:active {
   color: var(--color-error);
 }
 
+.section-row .section-body :is(.select, .input:not([type="date"]), .textarea, .join) {
+  max-width: 24rem;
+}
+
+.section-row .section-body .join .input {
+  max-width: none;
+}
+
+.ldap-facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.375rem 1rem;
+  align-items: baseline;
+}
+
 .compact-list {
   display: flex;
   flex-direction: column;

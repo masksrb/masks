@@ -8,12 +8,8 @@ es:
       forget_confirm: "¿Olvidar esta aplicación de administración? masks te pedirá que apruebes una nueva enseguida. La aplicación anterior sigue en Aplicaciones hasta que se archive."
       tabs:
         settings: "General"
-        groups: "Grupos"
         policies: "Políticas"
         providers: "Proveedores"
-        domains: "Dominios"
-        provisioning: "Aprovisionamiento"
-        ldap: "LDAP"
+        directory: "Directorio"
         messages: "Mensajes"
-        streams: "Flujos"
         activity: "Actividad"

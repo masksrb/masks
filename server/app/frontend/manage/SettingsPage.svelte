@@ -17,7 +17,6 @@
   import OrganizationHeadcount from "./OrganizationHeadcount.svelte";
   import Loader from "./ui/Loader.svelte";
   import Notices from "./ui/Notices.svelte";
-  import Switch from "./ui/Switch.svelte";
   import Tally from "./ui/Tally.svelte";
   import Page from "./ui/Page.svelte";
   import Row from "./ui/Row.svelte";
@@ -29,9 +28,8 @@
   const QUERY = `
     query Tenant {
       tenant {
-        uuid subdomain name namedBy dynamicRegistration dynamicClientScopes createdAt mails accentColor logoUrl keyRotationDays
-        browsersOnly blockedAgents suspendAfter deleteAfter eventRetentionDays riskyNetworks
-        signInPolicy { key name }
+        uuid subdomain name dynamicRegistration dynamicClientScopes createdAt mails accentColor logoUrl keyRotationDays
+        eventRetentionDays
         signingKeys { kid algorithm activatedAt retiredAt state }
       }
       viewer { identifier scopes }
@@ -41,7 +39,6 @@
         client { clientId name }
       }
       scopesSupported
-      signInPolicies { key name }
     }
   `;
 
@@ -85,30 +82,8 @@
     [2555, t("settings.retention.seven_years")],
   ];
 
-  const SUSPEND_AFTER = [
-    [0, t("settings.idle.never")],
-    [90, t("settings.idle.after_90_days")],
-    [180, t("settings.idle.after_180_days")],
-    [365, t("settings.idle.after_a_year")],
-    [730, t("settings.idle.after_two_years")],
-  ];
-
-  const DELETE_AFTER = [
-    [0, t("settings.idle.never")],
-    [180, t("settings.idle.after_180_days")],
-    [365, t("settings.idle.after_a_year")],
-    [730, t("settings.idle.after_two_years")],
-    [1095, t("settings.idle.after_three_years")],
-  ];
-
   const choices = (listed, held) =>
     !held || listed.some(([days]) => days === held) ? listed : [...listed, [held, t("settings.after_days", { days: held })]];
-
-  function deleteAfter(days) {
-    if (days && !confirm(t("settings.idle.delete_confirm"))) return load();
-
-    return update({ deleteAfter: days }, t("settings.idle.updated"));
-  }
 
   const BADGE = {
     staged: "badge-warning",
@@ -123,8 +98,6 @@
 
   let data = $state(null);
   let name = $state("");
-  let agents = $state("");
-  let networks = $state("");
   let loading = $state(true);
   let days = $state(30);
 
@@ -196,8 +169,6 @@
     try {
       data = await api.query(QUERY);
       name = data.tenant.name;
-      agents = data.tenant.blockedAgents ?? "";
-      networks = data.tenant.riskyNetworks ?? "";
     } catch (thrown) {
       feedback.blame(thrown);
     } finally {
@@ -213,20 +184,12 @@
         api.query(
           `mutation Update(
             $name: String, $dynamicClientScopes: [String!], $dynamicRegistration: String,
-            $namedBy: String, $browsersOnly: Boolean, $blockedAgents: String, $signInPolicy: ID, $riskyNetworks: String,
-            $suspendAfter: Int, $deleteAfter: Int, $eventRetentionDays: Int, $accentColor: String, $keyRotationDays: Int
+            $eventRetentionDays: Int, $accentColor: String, $keyRotationDays: Int
           ) {
             updateTenant(
               name: $name
               dynamicClientScopes: $dynamicClientScopes
               dynamicRegistration: $dynamicRegistration
-              namedBy: $namedBy
-              browsersOnly: $browsersOnly
-              blockedAgents: $blockedAgents
-              riskyNetworks: $riskyNetworks
-              signInPolicy: $signInPolicy
-              suspendAfter: $suspendAfter
-              deleteAfter: $deleteAfter
               eventRetentionDays: $eventRetentionDays
               accentColor: $accentColor
               keyRotationDays: $keyRotationDays
@@ -481,93 +444,6 @@
               {t("settings.branding.own")}
             </button>
           {/if}
-        </div>
-      </Section>
-
-      <Section
-        row
-        title={t("settings.naming.title")}
-        help={t("settings.naming.help")}
-      >
-        <Select
-          value={data.tenant.namedBy}
-          options={[
-            ["nickname", t("settings.naming.nickname")],
-            ["email", t("settings.naming.email")],
-            ["either", t("settings.naming.either")],
-          ]}
-          onchange={(namedBy) => update({ namedBy }, t("settings.naming.updated"))}
-        />
-      </Section>
-
-      <Section
-        row
-        title={t("settings.policy.title")}
-        help={t("settings.policy.help")}
-      >
-        <Select
-          value={data.tenant.signInPolicy?.key ?? ""}
-          options={[["", t("settings.policy.built_in")], ...data.signInPolicies.map((policy) => [policy.key, policy.name])]}
-          onchange={(signInPolicy) => update({ signInPolicy }, t("settings.policy.updated"))}
-        />
-      </Section>
-
-      <Section
-        row
-        title={t("settings.access.title")}
-        help={t("settings.access.help")}
-      >
-        <Switch
-          label={t("settings.access.browsers_only")}
-          checked={data.tenant.browsersOnly}
-          onchange={(browsersOnly) =>
-            update({ browsersOnly }, t("settings.access.updated"))}
-        />
-
-        <Field
-          label={t("settings.access.refused_agents")}
-          bind:value={agents}
-          placeholder="curl, python-requests"
-          onsave={() => update({ blockedAgents: agents }, t("settings.access.updated"))}
-        />
-
-        <label class="flex flex-col gap-1.5">
-          <span class="field-label">{t("settings.access.risky_networks")}</span>
-          <textarea class="textarea w-full font-mono" rows="3" bind:value={networks} placeholder="203.0.113.0/24"></textarea>
-          <span class="hint">
-            {t("settings.access.risky_hint")}
-          </span>
-        </label>
-        <div>
-          <button type="button" class="btn btn-sm" onclick={() => update({ riskyNetworks: networks }, t("settings.access.networks_saved"))}>
-            {t("settings.access.save_networks")}
-          </button>
-        </div>
-      </Section>
-
-      <Section
-        row
-        title={t("settings.idle.title")}
-        help={t("settings.idle.help")}
-      >
-        <div class="grid gap-3 sm:grid-cols-2">
-          <Select
-            label={t("settings.idle.suspend")}
-            value={data.tenant.suspendAfter ?? 0}
-            options={choices(SUSPEND_AFTER, data.tenant.suspendAfter)}
-            onchange={(days) => update({ suspendAfter: Number(days) }, t("settings.idle.updated"))}
-          />
-
-          <Select
-            label={t("settings.idle.delete")}
-            value={data.tenant.deleteAfter ?? 0}
-            options={choices(DELETE_AFTER, data.tenant.deleteAfter).map(([days, label]) => [
-              days,
-              label,
-              days > 0 && days <= (data.tenant.suspendAfter ?? 0),
-            ])}
-            onchange={(days) => deleteAfter(Number(days))}
-          />
         </div>
       </Section>
 

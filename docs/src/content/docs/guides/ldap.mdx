@@ -15,7 +15,7 @@ answers every write and compare with `unwillingToPerform`.
 
 The web server serves LDAP alongside HTTP, on `MASKS_LDAP_PORT`, which is `3389` by default. A
 connection is closed at once until an owner turns the directory on. An owner turns it on for
-their tenant under **Settings**, **LDAP**, **Serve this tenant over LDAP**. Turning it off again
+their tenant under **Settings**, **Directory**, **Serve this tenant over LDAP**. Turning it off again
 refuses new binds and stops searches on connections that are already bound.
 
 Publish the port from the web container so that apps can reach it:
@@ -87,7 +87,7 @@ Password digests, second factors, and secrets are never part of an entry.
 An app binds with an LDAP credential to search, then binds as the person signing in to check their
 password.
 
-1. Under **Settings → LDAP**, enter a label such as `jellyfin` and choose **Issue a credential**.
+1. Under **Settings → Directory**, enter a label such as `jellyfin` and choose **Issue a credential**.
    Only an owner can issue one.
 2. Copy the bind DN and the secret. The secret is shown once, and masks keeps only a digest of it.
    The bind DN is `cn=<label>,ou=services,dc=<subdomain>,dc=masks`.
@@ -113,7 +113,7 @@ LDAP cannot ask for a second factor, so masks refuses a password bind when:
 - the person has a second factor of their own, such as an authenticator app, a passkey, or codes
   by email or text.
 
-**Allow a password alone over LDAP** under **Settings → LDAP** lifts the last two rules for the
+**Allow a password alone over LDAP** under **Settings → Directory** lifts the last two rules for the
 tenant. It is off by default. Turn it on only when every app that checks passwords over LDAP is
 worth less than the second factor it skips.
 

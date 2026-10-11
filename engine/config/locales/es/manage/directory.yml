@@ -1,0 +1,5 @@
+es:
+  manage:
+    directory:
+      title: "Directorio"
+      lede: "Otros sistemas que guardan a las personas de este inquilino: un proveedor de identidad que las aprovisiona por SCIM y aplicaciones antiguas que las leen por LDAP."

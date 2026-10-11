@@ -8,12 +8,8 @@ de:
       forget_confirm: "Diese Verwaltungs-App vergessen? masks bittet Sie sofort, eine neue zu genehmigen. Die alte App bleibt unter Apps, bis sie archiviert wird."
       tabs:
         settings: "Allgemein"
-        groups: "Gruppen"
         policies: "Richtlinien"
         providers: "Anbieter"
-        domains: "Domains"
-        provisioning: "Provisionierung"
-        ldap: "LDAP"
+        directory: "Verzeichnis"
         messages: "Nachrichten"
-        streams: "Streams"
         activity: "Aktivität"

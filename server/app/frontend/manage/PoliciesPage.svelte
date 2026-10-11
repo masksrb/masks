@@ -1,4 +1,5 @@
 <script>
+  import SignInRules from "./SignInRules.svelte";
   import { createFeedback } from "./lib/feedback.svelte.js";
   import ScopesEditor from "./ScopesEditor.svelte";
   import Section from "./ui/Section.svelte";
@@ -588,6 +589,12 @@
         </div>
       {/each}
     </Section>
+
+    {#if editing === null}
+      {#key data}
+        <SignInRules {api} />
+      {/key}
+    {/if}
 
     {#if data.archived.length}
       <Section title={t("policies.archived.title")}>

@@ -60,10 +60,12 @@ someone else.
 Someone who types an address at a company's domain can go straight to that company's provider,
 with no password prompt. masks does this only for a domain the tenant has proven it controls.
 
-1. In `/manage`, open **Settings**, **General**, then **Domains**, enter the domain, and choose the provider.
+1. In `/manage`, open **Settings**, **General**, enter the domain under **Domains**, and choose
+   **Claim**.
 2. Publish the TXT record masks shows, such as `_masks-challenge.acme.example` with the value
    `masks-verification=…`.
-3. Choose **Check now**, or wait for the hourly check.
+3. Choose **Check**, or wait for the hourly check.
+4. Once the domain is proven, choose the provider beside it.
 
 Once the domain is proven, an address there starts the provider's sign-in, even when the provider
 belongs to an organization the app did not name. An address at any other domain, and a nickname,
@@ -285,7 +287,7 @@ https://demo.masks.example/scim/v2
 
 ### Connecting a directory
 
-1. In `/manage`, open **Settings → Provisioning** and issue a token.
+1. In `/manage`, open **Settings → Directory** and issue a token under **Provisioning**.
 2. Label it after the directory.
 3. Choose a lifetime, up to one year.
 4. Copy it. masks shows it once.

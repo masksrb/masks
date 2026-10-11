@@ -1,0 +1,5 @@
+de:
+  manage:
+    directory:
+      title: "Verzeichnis"
+      lede: "Andere Systeme, die die Personen dieses Mandanten führen: ein Identitätsanbieter, der sie über SCIM bereitstellt, und ältere Apps, die sie über LDAP lesen."

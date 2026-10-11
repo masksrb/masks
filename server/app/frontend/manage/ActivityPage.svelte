@@ -1,4 +1,6 @@
 <script>
+  import ActivityParts from "./ActivityParts.svelte";
+  import Tip from "./ui/Tip.svelte";
   import { t } from "./lib/copy.js";
   import { createPages } from "./lib/pages.svelte.js";
   import Pager from "./ui/Pager.svelte";
@@ -164,6 +166,8 @@
 </script>
 
 <Page title={t("activity.title")}>
+  <ActivityParts part="log" />
+
   <Notices feedback={feedback.state} />
 
   {#if narrowed}
@@ -207,25 +211,21 @@
         />
         {t("activity.grave")}
       </label>
-    </div>
-  </Section>
 
-  <Section
-    title={t("activity.export.title")}
-    lede={t("activity.export.lede")}
-  >
-    <div class="flex flex-wrap items-end gap-3">
-      <label class="flex flex-col gap-1.5">
-        <span class="field-label">{t("activity.export.from")}</span>
-        <input class="input input-sm" type="date" bind:value={range.from} max={range.to} />
-      </label>
-      <label class="flex flex-col gap-1.5">
-        <span class="field-label">{t("activity.export.through")}</span>
-        <input class="input input-sm" type="date" bind:value={range.to} min={range.from} max={today()} />
-      </label>
-      <button type="button" class="btn btn-sm" disabled={exporting || !range.from || !range.to} onclick={download}>
-        {t("activity.export.download")}
-      </button>
+      <div class="flex flex-col gap-1.5 md:ml-auto">
+        <span class="legend flex items-center gap-2">
+          {t("activity.export.title")}
+          <Tip text={t("activity.export.lede")} label={t("activity.export.title")} />
+        </span>
+        <div class="flex flex-wrap items-center gap-2">
+          <input class="input input-sm w-auto" type="date" aria-label={t("activity.export.from")} bind:value={range.from} max={range.to} />
+          <span class="hint">–</span>
+          <input class="input input-sm w-auto" type="date" aria-label={t("activity.export.through")} bind:value={range.to} min={range.from} max={today()} />
+          <button type="button" class="btn btn-sm" disabled={exporting || !range.from || !range.to} onclick={download}>
+            {t("activity.export.download")}
+          </button>
+        </div>
+      </div>
     </div>
   </Section>
 

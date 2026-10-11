@@ -611,7 +611,7 @@
               {organization.provisioningTokens.length
                 ? t("organization.signing_in.tokens_reach", { count: organization.provisioningTokens.length })
                 : t("organization.signing_in.no_tokens")}
-              <Link to="/provisioning" class="link">{t("organization.signing_in.provisioning_link")}</Link>
+              <Link to="/directory" class="link">{t("organization.signing_in.provisioning_link")}</Link>
             </p>
           </div>
         </Section>

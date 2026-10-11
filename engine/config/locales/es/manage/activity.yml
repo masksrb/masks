@@ -1,6 +1,9 @@
 es:
   manage:
     activity:
+      parts:
+        log: "Registro"
+        streams: "Flujos"
       title: "Actividad"
       nouns:
         actor: "actor"

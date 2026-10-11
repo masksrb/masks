@@ -1,4 +1,5 @@
 <script>
+  import ActivityParts from "./ActivityParts.svelte";
   import { createFeedback } from "./lib/feedback.svelte.js";
   import { t } from "./lib/copy.js";
   import { day } from "./lib/format.js";
@@ -167,7 +168,9 @@
   const complete = $derived(draft?.key.trim() && draft.name.trim() && draft.url.trim());
 </script>
 
-<Page title={t("streams.title")}>
+<Page title={t("activity.title")}>
+  <ActivityParts part="streams" />
+
   <Notices feedback={feedback.state} />
 
   {#if loading && !data}

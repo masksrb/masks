@@ -314,7 +314,7 @@ asks for the `organization` scope signs a person in as a member of one. See
 ## Groups
 
 A **group** is a named set of people in a tenant, such as `admins` or `family`. A person can be in
-any number of groups. Managers with the security role add groups under **Settings → Groups**, and put
+any number of groups. Managers with the security role add groups under **Settings → General → Groups**, and put
 people in them from each person's page.
 
 An app that asks for the `groups` scope receives a `groups` claim in the ID token and from userinfo.
@@ -352,8 +352,8 @@ and photo. Nobody can suspend or delete the last manager.
 
 ### Idle accounts
 
-A tenant can suspend accounts nobody uses, and later delete them. Under **Auto-deletion** in
-`/manage`, **Suspend** and **Delete** each take a period, and either can be left at **Never**. When
+A tenant can suspend accounts nobody uses, and later delete them. Under **Settings**, **Policies**,
+**Auto-deletion** in `/manage`, **Suspend** and **Delete** each take a period, and either can be left at **Never**. When
 both are set, deleting comes later than suspending.
 
 - Signing in, and an app refreshing a token for the person, both count as using the account.

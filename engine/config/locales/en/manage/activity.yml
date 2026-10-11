@@ -1,6 +1,9 @@
 en:
   manage:
     activity:
+      parts:
+        log: "Log"
+        streams: "Streams"
       title: "Activity"
       nouns:
         actor: "actor"

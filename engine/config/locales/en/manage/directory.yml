@@ -1,0 +1,5 @@
+en:
+  manage:
+    directory:
+      title: "Directory"
+      lede: "Other systems that keep this tenant's people: an identity provider that provisions them over SCIM, and older apps that read them over LDAP."

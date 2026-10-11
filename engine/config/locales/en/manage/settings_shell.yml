@@ -8,12 +8,8 @@ en:
       forget_confirm: "Forget this manage client? masks asks you to approve a new one right away. The old client stays under Clients until it is archived."
       tabs:
         settings: "General"
-        groups: "Groups"
         policies: "Policies"
         providers: "Providers"
-        domains: "Domains"
-        provisioning: "Provisioning"
-        ldap: "LDAP"
+        directory: "Directory"
         messages: "Messages"
-        streams: "Streams"
         activity: "Activity"
