@@ -28,7 +28,7 @@ module Masks
       end
 
       def slo
-        carried = request.get? ? request.query_parameters : request.request_parameters
+        carried = request.post? ? request.request_parameters : request.query_parameters
 
         carried.key?("SAMLResponse") ? farewell_answered : logout_requested
       end
