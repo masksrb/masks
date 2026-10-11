@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/masksrb/masks/compare/server-v0.5.0...server-v0.6.0) (2026-10-11)
+
+
+### Features
+
+* **server:** namespaces and signing keys are compact rows on General, with the rotation controls under the keys ([8cd4fdc](https://github.com/masksrb/masks/commit/8cd4fdc71b1aa836986c598000f59f54cc84a3f5))
+
 ## [0.5.0](https://github.com/masksrb/masks/compare/server-v0.4.0...server-v0.5.0) (2026-10-11)
 
 
