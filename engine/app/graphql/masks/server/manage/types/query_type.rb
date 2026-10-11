@@ -135,6 +135,8 @@ module Masks
 
           field :provisioning_tokens, [ ProvisioningTokenType ], null: false
           field :scim_base_url, String, null: false
+          field :ldap_credentials, [ LdapCredentialType ], null: false
+          field :ldap_base_dn, String, null: false, description: "The base DN of this tenant's LDAP directory."
           field :saml_metadata_url, String, null: false
 
           field :minimum_password, Integer, null: false
@@ -214,6 +216,14 @@ module Masks
 
           def provisioning_tokens
             ProvisioningToken.live.order(created_at: :desc)
+          end
+
+          def ldap_credentials
+            LdapCredential.live.order(created_at: :desc)
+          end
+
+          def ldap_base_dn
+            Ldap::Directory.base_for(Current.tenant).to_s
           end
 
           def saml_metadata_url

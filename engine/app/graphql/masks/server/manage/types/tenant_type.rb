@@ -24,6 +24,12 @@ module Masks
           field :dynamic_registration, String, null: false
           field :dynamic_client_scopes, [ String ]
           field :suspend_after, Integer
+          field :ldap_password_only, Boolean, null: false,
+                                              description: "Whether a password alone binds to LDAP for an account that would otherwise need a second factor."
+
+          def ldap_password_only
+            object.ldap_password_only?
+          end
           field :delete_after, Integer
           field :risky_networks, String, description: "Address ranges that add to a sign-in's risk score, one per line."
           field :event_retention_days, Integer, null: false, description: "Days events are kept before they are deleted."

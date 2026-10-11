@@ -1,0 +1,27 @@
+fr:
+  manage:
+    ldap:
+      title: "LDAP"
+      lede: "Les applications plus anciennes, comme les NAS, les serveurs multimédia et les hyperviseurs, vérifient les mots de passe et lisent les groupes par LDAP. bin/ldap expose en lecture seule les personnes et les groupes de ce tenant."
+      revoke_confirm: "Révoquer %{label} ? Les applications qui s'en servent sont refusées dès maintenant."
+      revoked: "%{label} est révoqué."
+      connect:
+        title: "Connecter une application"
+        help: "Donnez à l'application ce DN de base, un DN de liaison et son secret. L'application cherche dans ou=people et ou=groups, puis se lie en tant que personne pour vérifier son mot de passe."
+        base_dn: "DN de base"
+        label: "Libellé"
+        issue: "Émettre un identifiant"
+        shown_once: "Ce secret n'est affiché qu'une fois. Copiez-le maintenant."
+        bind_dn: "DN de liaison"
+        secret: "Secret"
+      credentials:
+        title: "Identifiants"
+        none: "Aucun émis."
+        never: "jamais"
+        used: "dernière liaison %{used}"
+        revoke: "Révoquer"
+      binds:
+        title: "Liaisons par mot de passe"
+        help: "LDAP ne peut pas demander de second facteur. Un compte qui en a un, ou dont la politique de connexion en exige un, est refusé à moins qu'un mot de passe seul soit autorisé ici."
+        password_only: "Autoriser un mot de passe seul par LDAP"
+        updated: "Les liaisons par mot de passe sont mises à jour."

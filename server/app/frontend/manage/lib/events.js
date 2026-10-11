@@ -19,6 +19,8 @@ const NOTABLE = new Set([
   "actor.suspended",
   "provisioning_token.issued",
   "provisioning_token.revoked",
+  "ldap_credential.issued",
+  "ldap_credential.revoked",
   "client.secret_rotated",
   "client.logo_refused",
   "signing_key.rotated",

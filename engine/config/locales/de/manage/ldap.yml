@@ -1,0 +1,27 @@
+de:
+  manage:
+    ldap:
+      title: "LDAP"
+      lede: "Ältere Anwendungen wie NAS-Geräte, Medienserver und Hypervisoren prüfen Passwörter und lesen Gruppen über LDAP. bin/ldap stellt die Personen und Gruppen dieses Mandanten schreibgeschützt bereit."
+      revoke_confirm: "%{label} widerrufen? Anwendungen, die ihn verwenden, werden ab sofort abgewiesen."
+      revoked: "%{label} ist widerrufen."
+      connect:
+        title: "Eine Anwendung verbinden"
+        help: "Geben Sie der Anwendung diesen Basis-DN, einen Bind-DN und sein Geheimnis. Die Anwendung sucht in ou=people und ou=groups und bindet sich dann als Person, um deren Passwort zu prüfen."
+        base_dn: "Basis-DN"
+        label: "Bezeichnung"
+        issue: "Zugang ausstellen"
+        shown_once: "Dieses Geheimnis wird nur einmal angezeigt. Kopieren Sie es jetzt."
+        bind_dn: "Bind-DN"
+        secret: "Geheimnis"
+      credentials:
+        title: "Zugänge"
+        none: "Keine ausgestellt."
+        never: "nie"
+        used: "zuletzt gebunden %{used}"
+        revoke: "Widerrufen"
+      binds:
+        title: "Bindungen mit Passwort"
+        help: "LDAP kann keinen zweiten Faktor abfragen. Ein Konto, das einen hat oder dessen Anmelderichtlinie einen verlangt, wird abgewiesen, außer hier ist ein Passwort allein erlaubt."
+        password_only: "Ein Passwort allein über LDAP erlauben"
+        updated: "Bindungen mit Passwort sind aktualisiert."

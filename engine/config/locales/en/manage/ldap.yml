@@ -1,0 +1,27 @@
+en:
+  manage:
+    ldap:
+      title: "LDAP"
+      lede: "Older apps such as NAS boxes, media servers, and hypervisors check passwords and read groups over LDAP. bin/ldap serves this tenant's people and groups read-only."
+      revoke_confirm: "Revoke %{label}? Apps binding with it are refused from now on."
+      revoked: "%{label} is revoked."
+      connect:
+        title: "Connect an app"
+        help: "Give the app this base DN, a bind DN, and its secret. The app searches ou=people and ou=groups, then binds as a person to check their password."
+        base_dn: "Base DN"
+        label: "Label"
+        issue: "Issue a credential"
+        shown_once: "This secret is shown once. Copy it now."
+        bind_dn: "Bind DN"
+        secret: "Secret"
+      credentials:
+        title: "Credentials"
+        none: "None issued."
+        never: "never"
+        used: "last bound %{used}"
+        revoke: "Revoke"
+      binds:
+        title: "Password binds"
+        help: "LDAP cannot ask for a second factor. An account that has one, or whose sign-in policy requires one, is refused unless a password alone is allowed here."
+        password_only: "Allow a password alone over LDAP"
+        updated: "Password binds are updated."

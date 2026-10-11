@@ -23,6 +23,7 @@
   import EmailsPage from "./EmailsPage.svelte";
   import PoliciesPage from "./PoliciesPage.svelte";
   import ProvisioningPage from "./ProvisioningPage.svelte";
+  import LdapPage from "./LdapPage.svelte";
   import GroupsPage from "./GroupsPage.svelte";
   import SettingsShell from "./SettingsShell.svelte";
 
@@ -53,7 +54,7 @@
     ["/clients", "clients", '<rect x="3" y="3" width="6" height="6" rx="1.5"/><rect x="11" y="3" width="6" height="6" rx="1.5"/><rect x="3" y="11" width="6" height="6" rx="1.5"/><rect x="11" y="11" width="6" height="6" rx="1.5"/>'],
   ];
 
-  const SETTINGS = ["settings", "groups", "policies", "providers", "domains", "provisioning", "adapters", "streams", "email", "activity"];
+  const SETTINGS = ["settings", "groups", "policies", "providers", "domains", "provisioning", "ldap", "adapters", "streams", "email", "activity"];
 
   const REPAIRED = "masks:manage:repaired";
 
@@ -265,6 +266,8 @@
             <PoliciesPage {api} />
           {:else if current === "provisioning"}
             <ProvisioningPage {api} />
+          {:else if current === "ldap"}
+            <LdapPage {api} />
           {:else if current === "adapters"}
             <AdaptersPage {api} />
           {:else if current === "streams"}

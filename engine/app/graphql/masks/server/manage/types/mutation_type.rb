@@ -17,6 +17,8 @@ module Masks
           field :delete_actor, mutation: Mutations::DeleteActor
           field :issue_provisioning_token, mutation: Mutations::IssueProvisioningToken
           field :revoke_provisioning_token, mutation: Mutations::RevokeProvisioningToken
+          field :issue_ldap_credential, mutation: Mutations::IssueLdapCredential
+          field :revoke_ldap_credential, mutation: Mutations::RevokeLdapCredential
           field :generate_backup_codes, mutation: Mutations::GenerateBackupCodes
           field :disable_authenticator, mutation: Mutations::DisableAuthenticator
           field :reset_second_factors, mutation: Mutations::ResetSecondFactors

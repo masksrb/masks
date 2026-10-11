@@ -13,6 +13,7 @@ de:
         providers: "Anbieter"
         domains: "Domains"
         provisioning: "Provisionierung"
+        ldap: "LDAP"
         adapters: "Adapter"
         streams: "Streams"
         email: "E-Mail"
