@@ -57,6 +57,12 @@
       "tag-separator": "/",
       "initial-version": "0.1.0",
       "changelog-path": "CHANGELOG.md"
+    },
+    "node": {
+      "release-type": "node",
+      "component": "node",
+      "initial-version": "0.1.0",
+      "changelog-path": "CHANGELOG.md"
     }
   },
   "plugins": [

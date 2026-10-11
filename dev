@@ -250,7 +250,7 @@ def fmt(args)
 
   ok = [
     run("bundle", "exec", "rubocop", *(check ? [ "--format", ENV.fetch("RUBOCOP_FORMAT", "progress") ] : [ "-a" ])),
-    *%w[server web].map do |dir|
+    *%w[server web node].map do |dir|
       run("npx", "biome", "check", *([ "--write" ] unless check), chdir: File.join(ROOT, dir))
     end,
     run("npx", "--yes", "prettier@3.9.6", check ? "--check" : "--write",

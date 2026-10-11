@@ -1,0 +1,46 @@
+{
+  "name": "@masks/node",
+  "version": "0.1.0",
+  "description": "A masks client for servers: client credentials, the device flow, DPoP, registration, and checking access tokens.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/masksrb/masks.git",
+    "directory": "node"
+  },
+  "homepage": "https://github.com/masksrb/masks/tree/main/node#readme",
+  "bugs": "https://github.com/masksrb/masks/issues",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "biome check",
+    "lint:fix": "biome check --write",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "jose": "6.2.12"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.14",
+    "typescript": "^7.0.2"
+  }
+}

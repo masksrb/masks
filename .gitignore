@@ -26,3 +26,5 @@ client/*.gem
 client/Gemfile.lock
 engine/*.gem
 server/themes
+node/node_modules/
+node/dist/

@@ -3,7 +3,7 @@ title: Connecting via SDK
 description: Choosing an SDK, connecting an app, acting for a person at a provider, and exchanging tokens.
 ---
 
-An app connects to masks with one of four SDKs, registers through a handshake, and signs people in.
+An app connects to masks with one of five SDKs, registers through a handshake, and signs people in.
 From there it can act for a person at another provider, or trade a token for a narrower one.
 
 ## Choosing an SDK
@@ -14,26 +14,29 @@ From there it can act for a person at another provider, or trade a token for a n
 | [`Masks::Client`](/reference/ruby/) | Any Ruby process. `Masks::Rails` is built on it. |
 | [`@masks/client`](/reference/browser/) | A single-page app, in the browser. |
 | [`github.com/masksrb/masks/go`](https://github.com/masksrb/masks/tree/main/go) | A Go service or a machine that signs in as itself, and a Go API. |
+| [`@masks/node`](https://github.com/masksrb/masks/tree/main/node) | A JavaScript server that signs in as itself, and a JavaScript API, on Node, Next.js, Bun, or Deno. |
 
 The `masks` gem holds both Ruby SDKs, and `Masks::Rails` loads only when Rails does.
 
-| | `Masks::Rails` | `Masks::Client` | `@masks/client` | Go |
-| --- | --- | --- | --- | --- |
-| Signing in with the code flow and PKCE | Yes | Yes | Yes, through a backend or in the page | No |
-| The handshake | Yes | Yes | Starts it through a backend | No |
-| Redeeming an initial access token | Yes | Yes | No | Yes |
-| Refreshing tokens | Yes | Yes | Yes | Yes |
-| Token exchange and [delegation](#delegation) | Asks for delegation in its handshake | Yes | No | No |
-| Client credentials and revocation | No | Yes | No | Yes |
-| Introspection | No | Yes | No | No |
-| The device flow | No | No | No | Yes |
-| `private_key_jwt` client authentication | No | No | No | Yes |
-| Sending DPoP proofs as a client | No | No | No | Yes |
-| Checking access tokens, including DPoP-bound ones | Yes | Yes | No | Yes |
+| | `Masks::Rails` | `Masks::Client` | `@masks/client` | Go | `@masks/node` |
+| --- | --- | --- | --- | --- | --- |
+| Signing in with the code flow and PKCE | Yes | Yes | Yes, through a backend or in the page | No | No |
+| The handshake | Yes | Yes | Starts it through a backend | No | No |
+| Redeeming an initial access token | Yes | Yes | No | Yes | Yes |
+| Refreshing tokens | Yes | Yes | Yes | Yes | Yes |
+| Token exchange and [delegation](#delegation) | Asks for delegation in its handshake | Yes | No | No | No |
+| Client credentials and revocation | No | Yes | No | Yes | Yes |
+| Introspection | No | Yes | No | No | No |
+| The device flow | No | No | No | Yes | Yes |
+| `private_key_jwt` client authentication | No | No | No | Yes | Yes |
+| Sending DPoP proofs as a client | No | No | No | Yes | Yes |
+| Checking access tokens, including DPoP-bound ones | Yes | Yes | No | Yes | Yes |
 
 `@masks/client` runs only in a browser and holds no client secret. It verifies ID tokens, and leaves
 access tokens to the API that receives them. A Go app signs people in through
-[golang.org/x/oauth2](/guides/other-languages/#go), and the Go SDK's README covers the rest.
+[golang.org/x/oauth2](/guides/other-languages/#go), and the Go SDK's README covers the rest. A
+JavaScript server signs people in through [openid-client](/guides/other-languages/#node) or
+[Auth.js](/guides/other-languages/#nextjs), and the `@masks/node` README covers the rest.
 
 ## Connecting an app
 
