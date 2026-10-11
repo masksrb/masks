@@ -2,14 +2,17 @@ package masks
 
 import (
 	"context"
-	"encoding/json"
+	"crypto/rand"
+	"encoding/base64"
 	"errors"
 	"fmt"
-	"io"
+	"maps"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/go-jose/go-jose/v4/jwt"
 )
 
 type AuthMethod string
@@ -30,8 +33,6 @@ const (
 	assertionLifetime = time.Minute
 	expiryLeeway      = 30 * time.Second
 )
-
-var devicePause = 5 * time.Second
 
 type Client struct {
 	Issuer *Issuer
@@ -129,7 +130,12 @@ func (c *Client) DeviceAuthorization(ctx context.Context, asked TokenRequest) (*
 }
 
 func (c *Client) AwaitDevice(ctx context.Context, device *DeviceAuthorization) (*Token, error) {
-	interval := max(time.Duration(device.Interval)*time.Second, devicePause)
+	step := c.Issuer.settings.pause
+	interval := time.Duration(device.Interval) * time.Second
+
+	if interval <= 0 {
+		interval = step
+	}
 
 	form := url.Values{}
 	form.Set("grant_type", GrantDeviceCode)
@@ -152,7 +158,7 @@ func (c *Client) AwaitDevice(ctx context.Context, device *DeviceAuthorization) (
 		case HasCode(err, "authorization_pending"):
 			continue
 		case HasCode(err, "slow_down"):
-			interval += devicePause
+			interval += step
 			continue
 		default:
 			return token, err
@@ -218,113 +224,79 @@ func (c *Client) token(ctx context.Context, form url.Values) (*Token, error) {
 }
 
 func (c *Client) post(ctx context.Context, endpoint string, form url.Values, proven bool, into any) error {
+	target, err := url.Parse(endpoint)
+	if err != nil {
+		return err
+	}
+
+	proving := proven && c.DPoP != nil
 	nonce := ""
 
-	for attempt := 0; ; attempt++ {
-		request, err := c.request(ctx, endpoint, form, proven, nonce)
-		if err != nil {
-			return err
-		}
+	if proving {
+		nonce = c.Issuer.nonces.load(target)
+	}
 
-		response, err := c.Issuer.settings.client.Do(request)
-		if err != nil {
-			return err
-		}
+	response, err := c.send(ctx, endpoint, form, proving, nonce)
+	if err != nil {
+		return err
+	}
 
-		if wanted := response.Header.Get("DPoP-Nonce"); proven && c.DPoP != nil && attempt == 0 && wanted != "" &&
-			response.StatusCode >= 400 && asksForNonce(response) {
-			nonce = wanted
-			response.Body.Close()
-
-			continue
-		}
-
+	if !proving {
 		return decoded(response, into)
 	}
-}
 
-func asksForNonce(response *http.Response) bool {
-	if strings.Contains(response.Header.Get("WWW-Authenticate"), "use_dpop_nonce") {
-		return true
+	wanted := c.Issuer.nonces.learn(target, response)
+	err = decoded(response, into)
+
+	if wanted == "" || wanted == nonce || !HasCode(err, "use_dpop_nonce") {
+		return err
 	}
 
-	body, _ := io.ReadAll(io.LimitReader(response.Body, readLimit))
-	response.Body = io.NopCloser(strings.NewReader(string(body)))
-
-	held := &Error{}
-
-	return json.Unmarshal(body, held) == nil && held.Code == "use_dpop_nonce"
-}
-
-func decoded(response *http.Response, into any) error {
-	defer response.Body.Close()
-
-	if response.StatusCode >= 300 {
-		return refused(response)
-	}
-
-	if into == nil {
-		return nil
-	}
-
-	if err := json.NewDecoder(io.LimitReader(response.Body, readLimit)).Decode(into); err != nil {
-		return errors.Join(errors.New("masks: the issuer answered with something other than JSON"), err)
-	}
-
-	return nil
-}
-
-func (c *Client) request(ctx context.Context, endpoint string, form url.Values, proven bool, nonce string) (*http.Request, error) {
-	held := url.Values{}
-
-	for name, values := range form {
-		held[name] = append([]string(nil), values...)
-	}
-
-	request, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, nil)
+	response, err = c.send(ctx, endpoint, form, proving, wanted)
 	if err != nil {
+		return err
+	}
+
+	c.Issuer.nonces.learn(target, response)
+
+	return decoded(response, into)
+}
+
+func (c *Client) send(ctx context.Context, endpoint string, form url.Values, proving bool, nonce string) (*http.Response, error) {
+	header := http.Header{}
+
+	if err := c.authenticate(header, form); err != nil {
 		return nil, err
 	}
 
-	if err := c.authenticate(request, held); err != nil {
-		return nil, err
-	}
-
-	if proven && c.DPoP != nil {
+	if proving {
 		proof, err := c.DPoP.Proof(http.MethodPost, endpoint, "", nonce)
 		if err != nil {
 			return nil, err
 		}
 
-		request.Header.Set("DPoP", proof)
+		header.Set("DPoP", proof)
 	}
 
-	encoded := held.Encode()
-	request.Body = io.NopCloser(strings.NewReader(encoded))
-	request.ContentLength = int64(len(encoded))
+	request, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(form.Encode()))
+	if err != nil {
+		return nil, err
+	}
+
+	maps.Copy(request.Header, header)
 	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	request.Header.Set("Accept", "application/json")
 
-	return request, nil
+	return c.Issuer.settings.do(request)
 }
 
-type assertionClaims struct {
-	Issuer   string `json:"iss"`
-	Subject  string `json:"sub"`
-	Audience string `json:"aud"`
-	ID       string `json:"jti"`
-	IssuedAt int64  `json:"iat"`
-	Expiry   int64  `json:"exp"`
-}
-
-func (c *Client) authenticate(request *http.Request, form url.Values) error {
+func (c *Client) authenticate(header http.Header, form url.Values) error {
 	if c.ID == "" {
 		return errors.New("masks: a client needs its client_id")
 	}
 
 	switch method := c.method(); method {
 	case ClientSecretBasic:
-		request.SetBasicAuth(url.QueryEscape(c.ID), url.QueryEscape(c.Secret))
+		header.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(url.QueryEscape(c.ID)+":"+url.QueryEscape(c.Secret))))
 	case ClientSecretPost:
 		form.Set("client_id", c.ID)
 		form.Set("client_secret", c.Secret)
@@ -334,14 +306,14 @@ func (c *Client) authenticate(request *http.Request, form url.Values) error {
 		}
 
 		now := time.Now()
-		assertion, err := c.Key.sign("JWT", assertionClaims{
+		assertion, err := c.Key.assert(jwt.Claims{
 			Issuer:   c.ID,
 			Subject:  c.ID,
-			Audience: c.Issuer.URL,
-			ID:       random(),
-			IssuedAt: now.Unix(),
-			Expiry:   now.Add(assertionLifetime).Unix(),
-		}, false)
+			Audience: jwt.Audience{c.Issuer.URL},
+			ID:       rand.Text(),
+			IssuedAt: jwt.NewNumericDate(now),
+			Expiry:   jwt.NewNumericDate(now.Add(assertionLifetime)),
+		})
 		if err != nil {
 			return err
 		}

@@ -227,9 +227,11 @@ def shellcheck
 end
 
 def gofmt(check)
-  unformatted, = Open3.capture2("gofmt", "-l", ".", chdir: File.join(ROOT, "go"))
+  dir = File.join(ROOT, "go")
 
-  return run("gofmt", "-w", ".", chdir: File.join(ROOT, "go")) unless check
+  return run("gofmt", "-w", ".", chdir: dir) unless check
+
+  unformatted, = Open3.capture2("gofmt", "-l", ".", chdir: dir)
   return true if unformatted.empty?
 
   warn("gofmt would change:\n#{unformatted}")

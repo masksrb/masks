@@ -1,10 +1,8 @@
 package masks
 
 import (
-	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
-	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -139,7 +137,7 @@ func (f *fake) accessToken(id, scope, jkt string) string {
 		"aud":       f.audience,
 		"exp":       time.Now().Add(time.Hour).Unix(),
 		"iat":       time.Now().Unix(),
-		"jti":       random(),
+		"jti":       rand.Text(),
 		"client_id": id,
 		"scope":     scope,
 	}
@@ -240,12 +238,9 @@ func (f *fake) proof(request *http.Request) (string, bool) {
 		return "", false
 	}
 
-	held, err := parsed.Headers[0].JSONWebKey.Thumbprint(crypto.SHA256)
-	if err != nil {
-		return "", false
-	}
+	held, err := thumbprint(*parsed.Headers[0].JSONWebKey)
 
-	return base64.RawURLEncoding.EncodeToString(held), true
+	return held, err == nil
 }
 
 func (f *fake) token(response http.ResponseWriter, request *http.Request) {
@@ -312,7 +307,7 @@ func (f *fake) token(response http.ResponseWriter, request *http.Request) {
 		scope = client.scope
 	}
 
-	refresh := random()
+	refresh := rand.Text()
 	client.refresh[refresh] = true
 
 	body := map[string]any{
@@ -398,7 +393,7 @@ func (f *fake) register(response http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	token := random()
+	token := rand.Text()
 	f.add(id, &fakeClient{method: metadata.TokenEndpointAuthMethod, jwks: jwks, scope: metadata.Scope})
 
 	f.lock.Lock()
@@ -467,8 +462,4 @@ func writeJSON(response http.ResponseWriter, status int, body any) {
 
 func oauthError(response http.ResponseWriter, status int, code string) {
 	writeJSON(response, status, map[string]string{"error": code, "error_description": code + " from the fake"})
-}
-
-func base64Raw(value string) ([]byte, error) {
-	return base64.RawURLEncoding.DecodeString(value)
 }

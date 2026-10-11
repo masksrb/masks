@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"sync"
 )
@@ -24,11 +25,11 @@ func (f TokenSourceFunc) Token(ctx context.Context) (*Token, error) {
 type reused struct {
 	lock  sync.Mutex
 	held  *Token
-	fetch TokenSourceFunc
+	fetch func(ctx context.Context, held *Token) (*Token, error)
 }
 
 func ReuseTokenSource(held *Token, fetch TokenSourceFunc) TokenSource {
-	return &reused{held: held, fetch: fetch}
+	return &reused{held: held, fetch: func(ctx context.Context, _ *Token) (*Token, error) { return fetch(ctx) }}
 }
 
 func (r *reused) Token(ctx context.Context) (*Token, error) {
@@ -39,7 +40,7 @@ func (r *reused) Token(ctx context.Context) (*Token, error) {
 		return r.held, nil
 	}
 
-	fetched, err := r.fetch(ctx)
+	fetched, err := r.fetch(ctx, r.held)
 	if err != nil {
 		return nil, err
 	}
@@ -56,9 +57,7 @@ func (c *Client) CredentialsSource(asked TokenRequest) TokenSource {
 }
 
 func (c *Client) RefreshSource(held *Token, asked TokenRequest, keep func(*Token) error) TokenSource {
-	current := held
-
-	return ReuseTokenSource(held, func(ctx context.Context) (*Token, error) {
+	return &reused{held: held, fetch: func(ctx context.Context, current *Token) (*Token, error) {
 		if current == nil || current.RefreshToken == "" {
 			return nil, &Error{Code: "invalid_grant", Description: "there is no refresh token to renew this session with"}
 		}
@@ -78,10 +77,8 @@ func (c *Client) RefreshSource(held *Token, asked TokenRequest, keep func(*Token
 			}
 		}
 
-		current = renewed
-
 		return renewed, nil
-	})
+	}}
 }
 
 type Transport struct {
@@ -90,7 +87,9 @@ type Transport struct {
 	Base    http.RoundTripper
 	Origins []string
 
-	nonces sync.Map
+	nonces  nonces
+	once    sync.Once
+	allowed []string
 }
 
 func (c *Client) HTTPClient(source TokenSource, origins ...string) *http.Client {
@@ -98,9 +97,7 @@ func (c *Client) HTTPClient(source TokenSource, origins ...string) *http.Client 
 }
 
 func (t *Transport) RoundTrip(request *http.Request) (*http.Response, error) {
-	origin := strings.ToLower(request.URL.Scheme + "://" + request.URL.Host)
-
-	if !t.allows(origin) {
+	if !t.allows(request.URL) {
 		closeBody(request)
 		return nil, fmt.Errorf("%w: this transport holds tokens only for %s", ErrForeign, strings.Join(t.Origins, ", "))
 	}
@@ -111,11 +108,11 @@ func (t *Transport) RoundTrip(request *http.Request) (*http.Response, error) {
 		return nil, err
 	}
 
-	nonce, _ := t.nonces.Load(origin)
-	held, _ := nonce.(string)
+	nonce := t.nonces.load(request.URL)
 
-	signed, err := t.signed(request, token, held, false)
+	signed, err := t.signed(request, token, nonce)
 	if err != nil {
+		closeBody(request)
 		return nil, err
 	}
 
@@ -124,25 +121,29 @@ func (t *Transport) RoundTrip(request *http.Request) (*http.Response, error) {
 		return response, err
 	}
 
-	wanted := response.Header.Get("DPoP-Nonce")
-	if wanted == "" {
+	wanted := t.nonces.learn(request.URL, response)
+
+	if wanted == "" || wanted == nonce || response.StatusCode != http.StatusUnauthorized ||
+		!strings.Contains(response.Header.Get("WWW-Authenticate"), "use_dpop_nonce") {
 		return response, nil
 	}
 
-	t.nonces.Store(origin, wanted)
+	rewound := request.Clone(request.Context())
 
-	if response.StatusCode != http.StatusUnauthorized || !strings.Contains(response.Header.Get("WWW-Authenticate"), "use_dpop_nonce") {
-		return response, nil
-	}
+	if request.Body != nil && request.Body != http.NoBody {
+		if request.GetBody == nil {
+			return response, nil
+		}
 
-	if request.Body != nil && request.GetBody == nil {
-		return response, nil
+		if rewound.Body, err = request.GetBody(); err != nil {
+			return response, nil
+		}
 	}
 
 	io.Copy(io.Discard, io.LimitReader(response.Body, readLimit))
 	response.Body.Close()
 
-	again, err := t.signed(request, token, wanted, true)
+	again, err := t.signed(rewound, token, wanted)
 	if err != nil {
 		return nil, err
 	}
@@ -150,15 +151,16 @@ func (t *Transport) RoundTrip(request *http.Request) (*http.Response, error) {
 	return t.base().RoundTrip(again)
 }
 
-func (t *Transport) allows(origin string) bool {
-	for _, allowed := range t.Origins {
-		parsed, err := url.Parse(allowed)
-		if err == nil && strings.EqualFold(parsed.Scheme+"://"+parsed.Host, origin) {
-			return true
+func (t *Transport) allows(target *url.URL) bool {
+	t.once.Do(func() {
+		for _, allowed := range t.Origins {
+			if parsed, err := url.Parse(allowed); err == nil {
+				t.allowed = append(t.allowed, origin(parsed))
+			}
 		}
-	}
+	})
 
-	return false
+	return slices.Contains(t.allowed, origin(target))
 }
 
 func closeBody(request *http.Request) {
@@ -167,17 +169,8 @@ func closeBody(request *http.Request) {
 	}
 }
 
-func (t *Transport) signed(request *http.Request, token *Token, nonce string, again bool) (*http.Request, error) {
+func (t *Transport) signed(request *http.Request, token *Token, nonce string) (*http.Request, error) {
 	held := request.Clone(request.Context())
-
-	if again && request.GetBody != nil && request.Body != nil && request.Body != http.NoBody {
-		body, err := request.GetBody()
-		if err != nil {
-			return nil, err
-		}
-
-		held.Body = body
-	}
 
 	if !token.Bound() {
 		held.Header.Set("Authorization", "Bearer "+token.AccessToken)
@@ -188,7 +181,7 @@ func (t *Transport) signed(request *http.Request, token *Token, nonce string, ag
 		return nil, errors.New("masks: a DPoP token needs the key it is held to")
 	}
 
-	proof, err := t.Key.Proof(request.Method, request.URL.String(), token.AccessToken, nonce)
+	proof, err := t.Key.proof(request.Method, request.URL, token.AccessToken, nonce)
 	if err != nil {
 		return nil, err
 	}

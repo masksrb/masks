@@ -2,14 +2,12 @@ package masks
 
 import (
 	"context"
-	"crypto"
 	"crypto/subtle"
-	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
-	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -22,20 +20,25 @@ const (
 	accessTokenType = "at+jwt"
 	proofWindow     = 60 * time.Second
 	verifyLeeway    = 30 * time.Second
+	replayMemory    = proofWindow + 2*verifyLeeway
 )
 
 var (
 	tokenAlgorithms = []jose.SignatureAlgorithm{jose.RS256, jose.ES256}
 	proofAlgorithms = []jose.SignatureAlgorithm{jose.ES256, jose.ES384, jose.ES512, jose.PS256, jose.PS384, jose.PS512, jose.RS256}
+	proofAlgs       = func() string {
+		named := make([]string, len(proofAlgorithms))
+		for index, algorithm := range proofAlgorithms {
+			named[index] = string(algorithm)
+		}
+
+		return strings.Join(named, " ")
+	}()
 )
 
 type Claims struct {
-	Issuer       string          `json:"iss"`
-	Subject      string          `json:"sub"`
-	Audience     jwt.Audience    `json:"aud"`
-	Expiry       int64           `json:"exp"`
-	IssuedAt     int64           `json:"iat"`
-	ID           string          `json:"jti"`
+	jwt.Claims
+
 	ClientID     string          `json:"client_id"`
 	Scope        string          `json:"scope"`
 	Tenant       *Tenant         `json:"tenant,omitempty"`
@@ -50,7 +53,13 @@ func (c *Claims) Scopes() []string {
 }
 
 func (c *Claims) HasScope(scope string) bool {
-	return slices.Contains(c.Scopes(), scope)
+	for held := range strings.FieldsSeq(c.Scope) {
+		if held == scope {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (c *Claims) Bound() bool {
@@ -62,9 +71,37 @@ type Verifier struct {
 	Audience  []string
 	PublicURL string
 
-	replays sync.Map
-	swept   time.Time
-	sweep   sync.Mutex
+	replays replays
+	once    sync.Once
+	public  *url.URL
+}
+
+type replays struct {
+	lock     sync.Mutex
+	current  map[string]struct{}
+	previous map[string]struct{}
+	turned   time.Time
+}
+
+func (r *replays) first(id string) bool {
+	r.lock.Lock()
+	defer r.lock.Unlock()
+
+	if now := time.Now(); r.current == nil || now.Sub(r.turned) > replayMemory {
+		r.previous, r.current, r.turned = r.current, map[string]struct{}{}, now
+	}
+
+	if _, seen := r.current[id]; seen {
+		return false
+	}
+
+	if _, seen := r.previous[id]; seen {
+		return false
+	}
+
+	r.current[id] = struct{}{}
+
+	return true
 }
 
 func NewVerifier(issuer *Issuer, audience ...string) *Verifier {
@@ -93,19 +130,18 @@ func (v *Verifier) Verify(ctx context.Context, token string) (*Claims, error) {
 	}
 
 	claims := &Claims{}
-	standard := jwt.Claims{}
 
-	if err := parsed.Claims(key.Key, claims, &standard); err != nil {
+	if err := parsed.Claims(key.Key, claims); err != nil {
 		return nil, invalid("that token was not signed by %s", v.Issuer.URL)
 	}
 
-	if claims.ID == "" || claims.Expiry == 0 {
+	if claims.ID == "" || claims.Expiry == nil {
 		return nil, invalid("a token carries jti and exp")
 	}
 
 	expected := jwt.Expected{Issuer: v.Issuer.URL, AnyAudience: jwt.Audience(v.Audience), Time: time.Now()}
 
-	if err := standard.ValidateWithLeeway(expected, verifyLeeway); err != nil {
+	if err := claims.ValidateWithLeeway(expected, verifyLeeway); err != nil {
 		return nil, invalid("%v", err)
 	}
 
@@ -139,9 +175,16 @@ func (v *Verifier) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
 		claims, err := v.Authenticate(request)
 		if err != nil {
-			challenge := fmt.Sprintf(`error="invalid_token", error_description=%q`, strings.TrimPrefix(err.Error(), ErrInvalidToken.Error()+": "))
+			description := "the token could not be checked"
+
+			var refused *invalidToken
+			if errors.As(err, &refused) {
+				description = refused.description
+			}
+
+			challenge := fmt.Sprintf(`error="invalid_token", error_description=%q`, description)
 			response.Header().Add("WWW-Authenticate", "Bearer "+challenge)
-			response.Header().Add("WWW-Authenticate", DPoP+" "+challenge+` algs="ES256 ES384 ES512 PS256 PS384 PS512 RS256"`)
+			response.Header().Add("WWW-Authenticate", DPoP+" "+challenge+` algs="`+proofAlgs+`"`)
 			http.Error(response, "unauthorized", http.StatusUnauthorized)
 
 			return
@@ -159,7 +202,7 @@ func ClaimsFrom(ctx context.Context) (*Claims, bool) {
 	return held, ok
 }
 
-func (v *Verifier) proven(request *http.Request, token, thumbprint string) error {
+func (v *Verifier) proven(request *http.Request, token, bound string) error {
 	presented := request.Header.Values(DPoP)
 	if len(presented) != 1 || strings.Contains(presented[0], ",") {
 		return invalid("exactly one DPoP proof is required")
@@ -191,8 +234,8 @@ func (v *Verifier) proven(request *http.Request, token, thumbprint string) error
 		return invalid("that proof was not signed by the key it carries")
 	}
 
-	held, err := carried.Thumbprint(crypto.SHA256)
-	if err != nil || subtle.ConstantTimeCompare([]byte(base64.RawURLEncoding.EncodeToString(held)), []byte(thumbprint)) != 1 {
+	held, err := thumbprint(*carried)
+	if err != nil || subtle.ConstantTimeCompare([]byte(held), []byte(bound)) != 1 {
 		return invalid("that proof was signed by another key than the token is held to")
 	}
 
@@ -200,8 +243,7 @@ func (v *Verifier) proven(request *http.Request, token, thumbprint string) error
 		return invalid("that proof was made for another method")
 	}
 
-	target, err := withoutQuery(v.target(request))
-	if err != nil || !sameTarget(claims.Target, target) {
+	if target, err := tidiedString(claims.Target); err != nil || target != tidied(v.target(request)) {
 		return invalid("that proof was made for another URL")
 	}
 
@@ -215,83 +257,38 @@ func (v *Verifier) proven(request *http.Request, token, thumbprint string) error
 		return invalid("that proof was made for another token")
 	}
 
-	if claims.ID == "" || !v.first(thumbprint+":"+claims.ID) {
+	if claims.ID == "" || !v.replays.first(bound+":"+claims.ID) {
 		return invalid("that proof has already been used")
 	}
 
 	return nil
 }
 
-func (v *Verifier) target(request *http.Request) string {
-	if v.PublicURL != "" {
-		return strings.TrimSuffix(v.PublicURL, "/") + request.URL.RequestURI()
+func (v *Verifier) target(request *http.Request) *url.URL {
+	v.once.Do(func() {
+		if v.PublicURL != "" {
+			v.public, _ = url.Parse(strings.TrimSuffix(v.PublicURL, "/"))
+		}
+	})
+
+	held := *request.URL
+
+	switch {
+	case v.public != nil:
+		held.Scheme, held.Host = v.public.Scheme, v.public.Host
+		held.Path = v.public.Path + request.URL.Path
+		held.RawPath = ""
+	case request.TLS != nil:
+		held.Scheme, held.Host = "https", request.Host
+	default:
+		held.Scheme, held.Host = "http", request.Host
 	}
 
-	scheme := "http"
-	if request.TLS != nil {
-		scheme = "https"
-	}
-
-	return scheme + "://" + request.Host + request.URL.RequestURI()
-}
-
-func sameTarget(left, right string) bool {
-	tidy := func(value string) string {
-		held, err := withoutQuery(value)
-		if err != nil {
-			return ""
-		}
-
-		parsed, err := url.Parse(held)
-		if err != nil {
-			return ""
-		}
-
-		parsed.Scheme = strings.ToLower(parsed.Scheme)
-		parsed.Host = strings.ToLower(parsed.Host)
-
-		if (parsed.Scheme == "https" && parsed.Port() == "443") || (parsed.Scheme == "http" && parsed.Port() == "80") {
-			parsed.Host = parsed.Hostname()
-		}
-
-		if parsed.Path == "/" {
-			parsed.Path = ""
-		}
-
-		return parsed.String()
-	}
-
-	held := tidy(left)
-
-	return held != "" && held == tidy(right)
-}
-
-func (v *Verifier) first(id string) bool {
-	now := time.Now()
-	_, seen := v.replays.LoadOrStore(id, now)
-
-	v.sweep.Lock()
-	if now.Sub(v.swept) > proofWindow {
-		v.swept = now
-		v.replays.Range(func(key, value any) bool {
-			if now.Sub(value.(time.Time)) > proofWindow+2*verifyLeeway {
-				v.replays.Delete(key)
-			}
-
-			return true
-		})
-	}
-	v.sweep.Unlock()
-
-	return !seen
+	return &held
 }
 
 func typed(header jose.Header, want string) bool {
 	held, _ := header.ExtraHeaders[jose.HeaderType].(string)
 
-	return strings.EqualFold(strings.TrimPrefix(strings.ToLower(held), "application/"), want)
-}
-
-func invalid(format string, values ...any) error {
-	return fmt.Errorf("%w: %s", ErrInvalidToken, fmt.Sprintf(format, values...))
+	return strings.TrimPrefix(strings.ToLower(held), "application/") == want
 }

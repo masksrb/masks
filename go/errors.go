@@ -35,6 +35,22 @@ var (
 	ErrForeign      = errors.New("masks: that URL belongs to another origin")
 )
 
+type invalidToken struct {
+	description string
+}
+
+func (e *invalidToken) Error() string {
+	return ErrInvalidToken.Error() + ": " + e.description
+}
+
+func (e *invalidToken) Is(target error) bool {
+	return target == ErrInvalidToken
+}
+
+func invalid(format string, values ...any) error {
+	return &invalidToken{description: fmt.Sprintf(format, values...)}
+}
+
 const readLimit = 1 << 20
 
 func refused(response *http.Response) error {

@@ -48,7 +48,7 @@ func (i *Issuer) Register(ctx context.Context, metadata ClientMetadata, initialA
 
 	held := &Registration{}
 
-	if err := i.send(ctx, http.MethodPost, endpoint, initialAccessToken, metadata, held); err != nil {
+	if err := i.settings.send(ctx, http.MethodPost, endpoint, initialAccessToken, metadata, held); err != nil {
 		return nil, err
 	}
 
@@ -60,39 +60,31 @@ func (i *Issuer) Register(ctx context.Context, metadata ClientMetadata, initialA
 }
 
 func (i *Issuer) ReadRegistration(ctx context.Context, held *Registration) (*Registration, error) {
-	if err := i.owned(held); err != nil {
-		return nil, err
-	}
-
-	read := &Registration{}
-
-	if err := i.get(ctx, held.RegistrationClientURI, held.RegistrationAccessToken, read); err != nil {
-		return nil, err
-	}
-
-	return kept(held, read), nil
+	return i.manage(ctx, http.MethodGet, held, nil)
 }
 
 func (i *Issuer) UpdateRegistration(ctx context.Context, held *Registration, metadata ClientMetadata) (*Registration, error) {
-	if err := i.owned(held); err != nil {
-		return nil, err
-	}
-
-	updated := &Registration{}
-
-	if err := i.send(ctx, http.MethodPut, held.RegistrationClientURI, held.RegistrationAccessToken, metadata, updated); err != nil {
-		return nil, err
-	}
-
-	return kept(held, updated), nil
+	return i.manage(ctx, http.MethodPut, held, metadata)
 }
 
 func (i *Issuer) DeleteRegistration(ctx context.Context, held *Registration) error {
+	_, err := i.manage(ctx, http.MethodDelete, held, nil)
+
+	return err
+}
+
+func (i *Issuer) manage(ctx context.Context, method string, held *Registration, body any) (*Registration, error) {
 	if err := i.owned(held); err != nil {
-		return err
+		return nil, err
 	}
 
-	return i.send(ctx, http.MethodDelete, held.RegistrationClientURI, held.RegistrationAccessToken, nil, nil)
+	fresh := &Registration{}
+
+	if err := i.settings.send(ctx, method, held.RegistrationClientURI, held.RegistrationAccessToken, body, fresh); err != nil {
+		return nil, err
+	}
+
+	return kept(held, fresh), nil
 }
 
 func (i *Issuer) owned(held *Registration) error {

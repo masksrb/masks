@@ -16,6 +16,8 @@ import (
 type Key struct {
 	private *ecdsa.PrivateKey
 	public  jose.JSONWebKey
+	prover  jose.Signer
+	asserts jose.Signer
 }
 
 func GenerateKey() (*Key, error) {
@@ -45,14 +47,34 @@ func ParseKey(data []byte) (*Key, error) {
 func keyFor(private *ecdsa.PrivateKey) (*Key, error) {
 	public := jose.JSONWebKey{Key: &private.PublicKey, Algorithm: string(jose.ES256), Use: "sig"}
 
-	thumbprint, err := public.Thumbprint(crypto.SHA256)
+	kid, err := thumbprint(public)
 	if err != nil {
 		return nil, err
 	}
 
-	public.KeyID = base64.RawURLEncoding.EncodeToString(thumbprint)
+	public.KeyID = kid
+	signing := jose.SigningKey{Algorithm: jose.ES256, Key: private}
 
-	return &Key{private: private, public: public}, nil
+	prover, err := jose.NewSigner(signing, (&jose.SignerOptions{EmbedJWK: true}).WithType(proofType))
+	if err != nil {
+		return nil, err
+	}
+
+	asserts, err := jose.NewSigner(signing, (&jose.SignerOptions{}).WithType("JWT").WithHeader("kid", kid))
+	if err != nil {
+		return nil, err
+	}
+
+	return &Key{private: private, public: public, prover: prover, asserts: asserts}, nil
+}
+
+func thumbprint(key jose.JSONWebKey) (string, error) {
+	held, err := key.Thumbprint(crypto.SHA256)
+	if err != nil {
+		return "", err
+	}
+
+	return base64.RawURLEncoding.EncodeToString(held), nil
 }
 
 func (k *Key) MarshalJSON() ([]byte, error) {
@@ -86,24 +108,6 @@ func (k *Key) JWKS() json.RawMessage {
 	return held
 }
 
-func (k *Key) sign(typ string, claims any, embed bool) (string, error) {
-	options := (&jose.SignerOptions{EmbedJWK: embed}).WithType(jose.ContentType(typ))
-
-	if !embed {
-		options = options.WithHeader(jose.HeaderKey("kid"), k.public.KeyID)
-	}
-
-	signer, err := jose.NewSigner(jose.SigningKey{Algorithm: jose.ES256, Key: k.private}, options)
-	if err != nil {
-		return "", err
-	}
-
-	return jwt.Signed(signer).Claims(claims).Serialize()
-}
-
-func random() string {
-	held := make([]byte, 24)
-	_, _ = rand.Read(held)
-
-	return base64.RawURLEncoding.EncodeToString(held)
+func (k *Key) assert(claims jwt.Claims) (string, error) {
+	return jwt.Signed(k.asserts).Claims(claims).Serialize()
 }

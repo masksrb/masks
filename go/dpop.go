@@ -1,11 +1,14 @@
 package masks
 
 import (
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/go-jose/go-jose/v4/jwt"
 )
 
 const (
@@ -23,15 +26,19 @@ type proofClaims struct {
 }
 
 func (k *Key) Proof(method, target, accessToken, nonce string) (string, error) {
-	plain, err := withoutQuery(target)
+	held, err := url.Parse(target)
 	if err != nil {
 		return "", err
 	}
 
+	return k.proof(method, held, accessToken, nonce)
+}
+
+func (k *Key) proof(method string, target *url.URL, accessToken, nonce string) (string, error) {
 	claims := proofClaims{
-		ID:       random(),
+		ID:       rand.Text(),
 		Method:   strings.ToUpper(method),
-		Target:   plain,
+		Target:   htu(target),
 		IssuedAt: time.Now().Unix(),
 		Nonce:    nonce,
 	}
@@ -40,25 +47,11 @@ func (k *Key) Proof(method, target, accessToken, nonce string) (string, error) {
 		claims.Hash = tokenHash(accessToken)
 	}
 
-	return k.sign(proofType, claims, true)
+	return jwt.Signed(k.prover).Claims(claims).Serialize()
 }
 
 func tokenHash(accessToken string) string {
 	sum := sha256.Sum256([]byte(accessToken))
 
 	return base64.RawURLEncoding.EncodeToString(sum[:])
-}
-
-func withoutQuery(target string) (string, error) {
-	held, err := url.Parse(target)
-	if err != nil {
-		return "", err
-	}
-
-	held.RawQuery = ""
-	held.ForceQuery = false
-	held.Fragment = ""
-	held.RawFragment = ""
-
-	return held.String(), nil
 }

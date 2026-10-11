@@ -5,22 +5,37 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/go-jose/go-jose/v4/jwt"
 )
 
 func discovered(t *testing.T, held *fake) *Issuer {
 	t.Helper()
 
-	issuer, err := Discover(context.Background(), held.url())
+	issuer, err := Discover(context.Background(), held.url(), quick)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	return issuer
+}
+
+func quick(held *settings) {
+	held.pause = 10 * time.Millisecond
+}
+
+func secretClient(t *testing.T, held *fake, scope string) *Client {
+	t.Helper()
+
+	held.add("app", &fakeClient{secret: "secret", method: ClientSecretBasic, scope: scope})
+
+	return &Client{Issuer: discovered(t, held), ID: "app", Secret: "secret"}
 }
 
 func TestDiscoveryRefusesADocumentNamingAnotherIssuer(t *testing.T) {
@@ -92,7 +107,7 @@ func TestAWrongSecretIsAnInvalidClient(t *testing.T) {
 	}
 }
 
-func signedClient(t *testing.T, held *fake) (*Client, *Key) {
+func signedClient(t *testing.T, held *fake) *Client {
 	t.Helper()
 
 	key, err := GenerateKey()
@@ -112,12 +127,13 @@ func signedClient(t *testing.T, held *fake) (*Client, *Key) {
 
 	held.add("signed", &jwks)
 
-	return &Client{Issuer: discovered(t, held), ID: "signed", Key: key, DPoP: dpop}, dpop
+	return &Client{Issuer: discovered(t, held), ID: "signed", Key: key, DPoP: dpop}
 }
 
 func TestAPrivateKeyJWTClientGetsATokenHeldToItsKey(t *testing.T) {
 	held := newFake(t)
-	client, dpop := signedClient(t, held)
+	client := signedClient(t, held)
+	dpop := client.DPoP
 
 	token, err := client.ClientCredentials(context.Background(), TokenRequest{Scope: []string{"files:read"}, Resource: []string{held.audience}})
 	if err != nil {
@@ -140,7 +156,7 @@ func TestAPrivateKeyJWTClientGetsATokenHeldToItsKey(t *testing.T) {
 
 func TestEachAssertionIsUsedOnce(t *testing.T) {
 	held := newFake(t)
-	client, _ := signedClient(t, held)
+	client := signedClient(t, held)
 
 	for range 3 {
 		if _, err := client.ClientCredentials(context.Background(), TokenRequest{}); err != nil {
@@ -152,7 +168,7 @@ func TestEachAssertionIsUsedOnce(t *testing.T) {
 func TestATokenEndpointNonceIsAnsweredOnce(t *testing.T) {
 	held := newFake(t)
 	held.nonce = "fresh-nonce"
-	client, _ := signedClient(t, held)
+	client := signedClient(t, held)
 
 	if _, err := client.ClientCredentials(context.Background(), TokenRequest{}); err != nil {
 		t.Fatal(err)
@@ -186,9 +202,6 @@ func TestABearerAnswerToADPoPClientIsRefused(t *testing.T) {
 }
 
 func TestTheDeviceFlowWaitsForApproval(t *testing.T) {
-	devicePause = 10 * time.Millisecond
-	t.Cleanup(func() { devicePause = 5 * time.Second })
-
 	held := newFake(t)
 	held.pending = 3
 	held.add("tv", &fakeClient{method: NoAuth, scope: "openid"})
@@ -215,9 +228,6 @@ func TestTheDeviceFlowWaitsForApproval(t *testing.T) {
 }
 
 func TestTheDeviceFlowStopsWithItsContext(t *testing.T) {
-	devicePause = 10 * time.Millisecond
-	t.Cleanup(func() { devicePause = 5 * time.Second })
-
 	held := newFake(t)
 	held.pending = 1000
 	held.add("tv", &fakeClient{method: NoAuth})
@@ -239,9 +249,7 @@ func TestTheDeviceFlowStopsWithItsContext(t *testing.T) {
 
 func TestARefreshSourceKeepsEachRotatedToken(t *testing.T) {
 	held := newFake(t)
-	held.add("app", &fakeClient{secret: "secret", method: ClientSecretBasic})
-
-	client := &Client{Issuer: discovered(t, held), ID: "app", Secret: "secret"}
+	client := secretClient(t, held, "")
 
 	first, err := client.ClientCredentials(context.Background(), TokenRequest{})
 	if err != nil {
@@ -277,9 +285,7 @@ func TestARefreshSourceKeepsEachRotatedToken(t *testing.T) {
 
 func TestRevocationSendsTheToken(t *testing.T) {
 	held := newFake(t)
-	held.add("app", &fakeClient{secret: "secret", method: ClientSecretBasic})
-
-	client := &Client{Issuer: discovered(t, held), ID: "app", Secret: "secret"}
+	client := secretClient(t, held, "")
 
 	if err := client.Revoke(context.Background(), "a-token", "refresh_token"); err != nil {
 		t.Fatal(err)
@@ -411,7 +417,7 @@ func newResource(t *testing.T, issuer *Issuer, audience string) *resourceServer 
 
 func TestATransportSignsEachRequestForItsResource(t *testing.T) {
 	held := newFake(t)
-	client, _ := signedClient(t, held)
+	client := signedClient(t, held)
 	resource := newResource(t, client.Issuer, held.audience)
 
 	http := client.HTTPClient(client.CredentialsSource(TokenRequest{Resource: []string{held.audience}}), resource.URL)
@@ -437,7 +443,7 @@ func TestATransportSignsEachRequestForItsResource(t *testing.T) {
 
 func TestATransportRefusesAnOriginItWasNotGiven(t *testing.T) {
 	held := newFake(t)
-	client, _ := signedClient(t, held)
+	client := signedClient(t, held)
 
 	http := client.HTTPClient(client.CredentialsSource(TokenRequest{}), "https://files.example")
 
@@ -468,7 +474,8 @@ func boundRequest(t *testing.T, client *Client, dpop *Key, method, target string
 
 func TestAVerifierRefusesMisusedProofs(t *testing.T) {
 	held := newFake(t)
-	client, dpop := signedClient(t, held)
+	client := signedClient(t, held)
+	dpop := client.DPoP
 	verifier := NewVerifier(client.Issuer, held.audience)
 	target := "http://files.example/files"
 
@@ -533,10 +540,7 @@ func TestAVerifierChecksTheTokenItself(t *testing.T) {
 	}
 
 	changed := func(name string, value any) map[string]any {
-		held := map[string]any{}
-		for key, value := range good {
-			held[key] = value
-		}
+		held := maps.Clone(good)
 
 		if value == nil {
 			delete(held, name)
@@ -564,10 +568,7 @@ func TestAVerifierChecksTheTokenItself(t *testing.T) {
 		})
 	}
 
-	forged, _ := GenerateKey()
-	signed, _ := forged.sign(accessTokenType, good, false)
-
-	if _, err := verifier.Verify(context.Background(), signed); err == nil {
+	if _, err := verifier.Verify(context.Background(), newFake(t).issue(good, accessTokenType)); err == nil {
 		t.Fatal("a token signed by another key was accepted")
 	}
 }
@@ -612,9 +613,7 @@ func TestResourceDiscoveryFindsTheIssuer(t *testing.T) {
 
 func TestATransportSendsABearerTokenWhenTheTokenIsNotHeld(t *testing.T) {
 	held := newFake(t)
-	held.add("app", &fakeClient{secret: "secret", method: ClientSecretBasic, scope: "files:read files:write"})
-
-	client := &Client{Issuer: discovered(t, held), ID: "app", Secret: "secret"}
+	client := secretClient(t, held, "files:read files:write")
 	resource := newResource(t, client.Issuer, held.audience)
 
 	response, err := client.HTTPClient(client.CredentialsSource(TokenRequest{}), resource.URL).Get(resource.URL)
@@ -630,17 +629,16 @@ func TestATransportSendsABearerTokenWhenTheTokenIsNotHeld(t *testing.T) {
 
 func TestATransportAnswersAResourceNonceAndReplaysTheBody(t *testing.T) {
 	held := newFake(t)
-	client, _ := signedClient(t, held)
+	client := signedClient(t, held)
 
 	var nonces []string
 	var bodies []string
 
 	server := httptest.NewServer(http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
-		proof := request.Header.Get("DPoP")
-		parts := strings.Split(proof, ".")
 		claims := proofClaims{}
-		decoded, _ := base64Raw(parts[1])
-		_ = json.Unmarshal(decoded, &claims)
+		if parsed, err := jwt.ParseSigned(request.Header.Get("DPoP"), proofAlgorithms); err == nil {
+			_ = parsed.UnsafeClaimsWithoutVerification(&claims)
+		}
 		nonces = append(nonces, claims.Nonce)
 
 		body, _ := io.ReadAll(request.Body)

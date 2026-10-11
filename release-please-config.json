@@ -4,148 +4,59 @@
   "separate-pull-requests": true,
   "include-component-in-tag": true,
   "group-pull-request-title-pattern": "chore${scope}: release server libraries",
+  "changelog-sections": [
+    {
+      "type": "feat",
+      "section": "Features"
+    },
+    {
+      "type": "fix",
+      "section": "Fixes"
+    },
+    {
+      "type": "perf",
+      "section": "Performance"
+    },
+    {
+      "type": "docs",
+      "section": "Documentation"
+    },
+    {
+      "type": "refactor",
+      "section": "Refactoring"
+    }
+  ],
   "packages": {
     "server": {
       "release-type": "simple",
       "component": "server",
       "initial-version": "0.2.0",
-      "changelog-path": "CHANGELOG.md",
-      "changelog-sections": [
-        {
-          "type": "feat",
-          "section": "Features"
-        },
-        {
-          "type": "fix",
-          "section": "Fixes"
-        },
-        {
-          "type": "perf",
-          "section": "Performance"
-        },
-        {
-          "type": "docs",
-          "section": "Documentation"
-        },
-        {
-          "type": "refactor",
-          "section": "Refactoring"
-        }
-      ]
+      "changelog-path": "CHANGELOG.md"
     },
     "client": {
       "release-type": "ruby",
       "component": "gem",
       "version-file": "lib/masks/version.rb",
-      "changelog-path": "CHANGELOG.md",
-      "changelog-sections": [
-        {
-          "type": "feat",
-          "section": "Features"
-        },
-        {
-          "type": "fix",
-          "section": "Fixes"
-        },
-        {
-          "type": "perf",
-          "section": "Performance"
-        },
-        {
-          "type": "docs",
-          "section": "Documentation"
-        },
-        {
-          "type": "refactor",
-          "section": "Refactoring"
-        }
-      ]
+      "changelog-path": "CHANGELOG.md"
     },
     "web": {
       "release-type": "node",
       "component": "client",
       "release-as": "2.3.0",
-      "changelog-path": "CHANGELOG.md",
-      "changelog-sections": [
-        {
-          "type": "feat",
-          "section": "Features"
-        },
-        {
-          "type": "fix",
-          "section": "Fixes"
-        },
-        {
-          "type": "perf",
-          "section": "Performance"
-        },
-        {
-          "type": "docs",
-          "section": "Documentation"
-        },
-        {
-          "type": "refactor",
-          "section": "Refactoring"
-        }
-      ]
+      "changelog-path": "CHANGELOG.md"
     },
     "engine": {
       "release-type": "simple",
       "component": "masks-server",
       "initial-version": "0.2.0",
-      "changelog-path": "CHANGELOG.md",
-      "changelog-sections": [
-        {
-          "type": "feat",
-          "section": "Features"
-        },
-        {
-          "type": "fix",
-          "section": "Fixes"
-        },
-        {
-          "type": "perf",
-          "section": "Performance"
-        },
-        {
-          "type": "docs",
-          "section": "Documentation"
-        },
-        {
-          "type": "refactor",
-          "section": "Refactoring"
-        }
-      ]
+      "changelog-path": "CHANGELOG.md"
     },
     "go": {
       "release-type": "go",
       "component": "go",
       "tag-separator": "/",
-      "include-v-in-tag": true,
       "initial-version": "0.1.0",
-      "changelog-path": "CHANGELOG.md",
-      "changelog-sections": [
-        {
-          "type": "feat",
-          "section": "Features"
-        },
-        {
-          "type": "fix",
-          "section": "Fixes"
-        },
-        {
-          "type": "perf",
-          "section": "Performance"
-        },
-        {
-          "type": "docs",
-          "section": "Documentation"
-        },
-        {
-          "type": "refactor",
-          "section": "Refactoring"
-        }
-      ]
+      "changelog-path": "CHANGELOG.md"
     }
   },
   "plugins": [

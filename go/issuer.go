@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/go-jose/go-jose/v4"
@@ -62,6 +63,7 @@ type Option func(*settings)
 type settings struct {
 	client    *http.Client
 	plainHTTP bool
+	pause     time.Duration
 }
 
 func WithHTTPClient(client *http.Client) Option {
@@ -77,22 +79,49 @@ type Issuer struct {
 	Metadata Metadata
 
 	settings settings
-	keysLock sync.Mutex
-	keys     jose.JSONWebKeySet
-	keysAt   time.Time
+	nonces   nonces
+	keys     keyring
+}
+
+type keyring struct {
+	lock       sync.RWMutex
+	fetching   sync.Mutex
+	refreshing atomic.Bool
+	set        jose.JSONWebKeySet
+	at         time.Time
+}
+
+type nonces struct {
+	held sync.Map
+}
+
+func (n *nonces) load(target *url.URL) string {
+	held, _ := n.held.Load(origin(target))
+	nonce, _ := held.(string)
+
+	return nonce
+}
+
+func (n *nonces) learn(target *url.URL, response *http.Response) string {
+	wanted := response.Header.Get("DPoP-Nonce")
+	if wanted != "" {
+		n.held.Store(origin(target), wanted)
+	}
+
+	return wanted
 }
 
 func Discover(ctx context.Context, issuer string, options ...Option) (*Issuer, error) {
 	held := settled(options)
-	named := strings.TrimSuffix(issuer, "/")
 
-	if err := held.check(named); err != nil {
+	named, err := held.named(issuer)
+	if err != nil {
 		return nil, err
 	}
 
 	found := &Issuer{URL: named, settings: held}
 
-	if err := found.get(ctx, named+discoveryPath, "", &found.Metadata); err != nil {
+	if err := held.send(ctx, http.MethodGet, named+discoveryPath, "", nil, &found.Metadata); err != nil {
 		return nil, err
 	}
 
@@ -100,8 +129,18 @@ func Discover(ctx context.Context, issuer string, options ...Option) (*Issuer, e
 		return nil, fmt.Errorf("masks: %s publishes a document naming %q", named, found.Metadata.Issuer)
 	}
 
-	for _, endpoint := range found.endpoints() {
-		if err := found.settings.check(endpoint); err != nil {
+	metadata := found.Metadata
+
+	for _, endpoint := range []string{
+		metadata.AuthorizationEndpoint, metadata.TokenEndpoint, metadata.UserinfoEndpoint, metadata.JWKSURI,
+		metadata.RegistrationEndpoint, metadata.DeviceAuthorizationEndpoint, metadata.HandshakeEndpoint,
+		metadata.RevocationEndpoint, metadata.IntrospectionEndpoint, metadata.EndSessionEndpoint,
+	} {
+		if endpoint == "" {
+			continue
+		}
+
+		if err := held.check(endpoint); err != nil {
 			return nil, err
 		}
 	}
@@ -111,24 +150,22 @@ func Discover(ctx context.Context, issuer string, options ...Option) (*Issuer, e
 
 func DiscoverResource(ctx context.Context, resource string, options ...Option) (*ResourceMetadata, error) {
 	held := settled(options)
-	named := strings.TrimSuffix(resource, "/")
 
-	if err := held.check(named); err != nil {
-		return nil, err
-	}
-
-	parsed, err := url.Parse(named)
+	named, err := held.named(resource)
 	if err != nil {
 		return nil, err
 	}
 
-	document := *parsed
-	document.Path = resourcePath + parsed.Path
+	document, err := url.Parse(named)
+	if err != nil {
+		return nil, err
+	}
+
+	document.Path = resourcePath + document.Path
 
 	found := &ResourceMetadata{}
-	asker := &Issuer{settings: held}
 
-	if err := asker.get(ctx, document.String(), "", found); err != nil {
+	if err := held.send(ctx, http.MethodGet, document.String(), "", nil, found); err != nil {
 		return nil, err
 	}
 
@@ -140,13 +177,19 @@ func DiscoverResource(ctx context.Context, resource string, options ...Option) (
 }
 
 func settled(options []Option) settings {
-	held := settings{client: &http.Client{Timeout: 30 * time.Second}}
+	held := settings{client: &http.Client{Timeout: 30 * time.Second}, pause: 5 * time.Second}
 
 	for _, option := range options {
 		option(&held)
 	}
 
 	return held
+}
+
+func (s settings) named(raw string) (string, error) {
+	named := strings.TrimSuffix(raw, "/")
+
+	return named, s.check(named)
 }
 
 func (s settings) check(target string) error {
@@ -177,28 +220,6 @@ func loopback(host string) bool {
 	return ip != nil && ip.IsLoopback()
 }
 
-func (i *Issuer) endpoints() []string {
-	held := i.Metadata
-
-	return nonEmpty(
-		held.AuthorizationEndpoint, held.TokenEndpoint, held.UserinfoEndpoint, held.JWKSURI,
-		held.RegistrationEndpoint, held.DeviceAuthorizationEndpoint, held.HandshakeEndpoint,
-		held.RevocationEndpoint, held.IntrospectionEndpoint, held.EndSessionEndpoint,
-	)
-}
-
-func nonEmpty(values ...string) []string {
-	held := values[:0]
-
-	for _, value := range values {
-		if value != "" {
-			held = append(held, value)
-		}
-	}
-
-	return held
-}
-
 func (i *Issuer) endpoint(named, value string) (string, error) {
 	if value == "" {
 		return "", fmt.Errorf("masks: %s publishes no %s", i.URL, named)
@@ -218,7 +239,7 @@ func (i *Issuer) sameOrigin(target string) error {
 		return err
 	}
 
-	if !strings.EqualFold(held.Scheme, want.Scheme) || !strings.EqualFold(held.Host, want.Host) {
+	if origin(held) != origin(want) {
 		return fmt.Errorf("%w: %s", ErrForeign, held.Redacted())
 	}
 
@@ -226,38 +247,68 @@ func (i *Issuer) sameOrigin(target string) error {
 }
 
 func (i *Issuer) key(ctx context.Context, kid string) (*jose.JSONWebKey, error) {
-	i.keysLock.Lock()
-	defer i.keysLock.Unlock()
+	ring := &i.keys
 
-	age := time.Since(i.keysAt)
+	ring.lock.RLock()
+	found := ring.set.Key(kid)
+	age := time.Since(ring.at)
+	ring.lock.RUnlock()
 
-	if found := i.keys.Key(kid); len(found) > 0 && age < keysLifetime {
-		return &found[0], nil
-	}
-
-	if age >= keysPatience {
-		var fetched jose.JSONWebKeySet
-
-		if err := i.get(ctx, i.Metadata.JWKSURI, "", &fetched); err != nil {
-			return nil, err
+	if len(found) > 0 {
+		if age >= keysLifetime && ring.refreshing.CompareAndSwap(false, true) {
+			go func() {
+				defer ring.refreshing.Store(false)
+				_ = i.refreshKeys(context.WithoutCancel(ctx))
+			}()
 		}
 
-		i.keys = fetched
-		i.keysAt = time.Now()
-	}
-
-	if found := i.keys.Key(kid); len(found) > 0 {
 		return &found[0], nil
 	}
 
-	return nil, fmt.Errorf("%w: %s publishes no key %q", ErrInvalidToken, i.URL, kid)
+	if err := i.refreshKeys(ctx); err != nil {
+		return nil, err
+	}
+
+	ring.lock.RLock()
+	found = ring.set.Key(kid)
+	ring.lock.RUnlock()
+
+	if len(found) > 0 {
+		return &found[0], nil
+	}
+
+	return nil, invalid("%s publishes no key %q", i.URL, kid)
 }
 
-func (i *Issuer) get(ctx context.Context, target, bearer string, into any) error {
-	return i.send(ctx, http.MethodGet, target, bearer, nil, into)
+func (i *Issuer) refreshKeys(ctx context.Context) error {
+	ring := &i.keys
+
+	ring.fetching.Lock()
+	defer ring.fetching.Unlock()
+
+	ring.lock.RLock()
+	recent := time.Since(ring.at) < keysPatience
+	ring.lock.RUnlock()
+
+	if recent {
+		return nil
+	}
+
+	var fetched jose.JSONWebKeySet
+
+	if err := i.settings.send(ctx, http.MethodGet, i.Metadata.JWKSURI, "", nil, &fetched); err != nil {
+		return err
+	}
+
+	ring.lock.Lock()
+	ring.set = fetched
+	ring.at = time.Now()
+	ring.lock.Unlock()
+
+	return nil
 }
 
-func (i *Issuer) send(ctx context.Context, method, target, bearer string, body any, into any) error {
+func (s settings) send(ctx context.Context, method, target, bearer string, body any, into any) error {
 	var reader io.Reader
 
 	if body != nil {
@@ -274,8 +325,6 @@ func (i *Issuer) send(ctx context.Context, method, target, bearer string, body a
 		return err
 	}
 
-	request.Header.Set("Accept", "application/json")
-
 	if body != nil {
 		request.Header.Set("Content-Type", "application/json")
 	}
@@ -284,14 +333,21 @@ func (i *Issuer) send(ctx context.Context, method, target, bearer string, body a
 		request.Header.Set("Authorization", "Bearer "+bearer)
 	}
 
-	return i.do(request, into)
-}
-
-func (i *Issuer) do(request *http.Request, into any) error {
-	response, err := i.settings.client.Do(request)
+	response, err := s.do(request)
 	if err != nil {
 		return err
 	}
+
+	return decoded(response, into)
+}
+
+func (s settings) do(request *http.Request) (*http.Response, error) {
+	request.Header.Set("Accept", "application/json")
+
+	return s.client.Do(request)
+}
+
+func decoded(response *http.Response, into any) error {
 	defer response.Body.Close()
 
 	if response.StatusCode >= 300 {
@@ -303,7 +359,7 @@ func (i *Issuer) do(request *http.Request, into any) error {
 	}
 
 	if err := json.NewDecoder(io.LimitReader(response.Body, readLimit)).Decode(into); err != nil {
-		return errors.Join(fmt.Errorf("masks: %s answered with something other than JSON", request.URL.Redacted()), err)
+		return errors.Join(fmt.Errorf("masks: %s answered with something other than JSON", response.Request.URL.Redacted()), err)
 	}
 
 	return nil
