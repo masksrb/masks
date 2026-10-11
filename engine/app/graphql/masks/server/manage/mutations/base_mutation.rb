@@ -94,8 +94,8 @@ module Masks
               Masks::Server::SignInPolicy.find_by(key: key) || refuse!("no sign-in policy keyed #{key}")
             end
 
-            def adapter!(key)
-              Masks::Server::Adapter.find_by(key: key) || refuse!("no adapter keyed #{key}")
+            def sender!(key)
+              Masks::Server::Sender.find_by(key: key) || refuse!("no sender keyed #{key}")
             end
 
             def group!(key)

@@ -58,7 +58,7 @@ module Masks
       test "every model with an encrypted column is re-encrypted" do
         names = MasterKey.encrypted_models.map(&:name)
 
-        %w[Actor SigningKey Connection Provider Adapter EventStream SignalStream].each do |name|
+        %w[Actor SigningKey Connection Provider Sender EventStream SignalStream].each do |name|
           assert_includes names, "Masks::Server::#{name}"
         end
       end

@@ -237,36 +237,36 @@ module Masks
         assert_equal "access_denied", JSON.parse(response.body)["error"]
       end
 
-      test "mail is configured at runtime through an adapter, and its password never comes back out" do
+      test "mail is configured at runtime through an sender, and its password never comes back out" do
         held = bearer
         body = ask(<<~GQL, held)
           mutation {
-            createAdapter(
+            createSender(
               key: "relay"
               service: "smtp"
               name: "Relay"
               config: { from: "masks@example.invalid", address: "smtp.example.invalid", port: 2525,
                         username: "postmaster", password: "hunter2", tls: true }
             ) {
-              adapter { key kind service primary settings secretsHeld }
+              sender { key kind service primary settings secretsHeld }
             }
           }
         GQL
 
         assert_nil body["errors"]
 
-        adapter = body.dig("data", "createAdapter", "adapter")
+        sender = body.dig("data", "createSender", "sender")
 
-        assert adapter["primary"], "the first adapter of its kind is primary"
-        assert_equal "mail", adapter["kind"]
-        assert_equal 2525, adapter.dig("settings", "port")
-        assert adapter.dig("settings", "tls")
-        refute adapter["settings"].key?("password")
-        assert_equal [ "password" ], adapter["secretsHeld"]
+        assert sender["primary"], "the first sender of its kind is primary"
+        assert_equal "mail", sender["kind"]
+        assert_equal 2525, sender.dig("settings", "port")
+        assert sender.dig("settings", "tls")
+        refute sender["settings"].key?("password")
+        assert_equal [ "password" ], sender["secretsHeld"]
         assert ask(%(query { tenant { mails } }), held).dig("data", "tenant", "mails")
-        assert_equal "hunter2", within(@tenant) { Adapter.sole[:password] }
+        assert_equal "hunter2", within(@tenant) { Sender.sole[:password] }
 
-        asked = ask(%(query { adapters { secrets } }), held)
+        asked = ask(%(query { senders { secrets } }), held)
 
         assert_match(/secrets/, asked["errors"].first["message"])
       end
@@ -416,9 +416,9 @@ module Masks
         assert_equal 0, within(@tenant) { SignInPolicy.count }
       end
 
-      test "adapters of every kind are offered, with the fields each one needs" do
-        body = ask(%(query { adapterServices { service kind label fields { key secret required } } }), bearer)
-        services = body.dig("data", "adapterServices").index_by { |held| held["service"] }
+      test "senders of every kind are offered, with the fields each one needs" do
+        body = ask(%(query { senderServices { service kind label fields { key secret required } } }), bearer)
+        services = body.dig("data", "senderServices").index_by { |held| held["service"] }
 
         assert_equal "mail", services.dig("smtp", "kind")
         %w[twilio vonage plivo telnyx sinch message_bird infobip sns click_send].each do |name|
@@ -427,46 +427,46 @@ module Masks
         assert services.dig("twilio", "fields").any? { |field| field["key"] == "auth_token" && field["secret"] }
       end
 
-      test "making another adapter primary demotes the one before it, and archiving takes it out of use" do
+      test "making another sender primary demotes the one before it, and archiving takes it out of use" do
         held = bearer
 
         %w[first second].each do |key|
           ask(<<~GQL, held)
             mutation {
-              createAdapter(key: "#{key}", service: "twilio", name: "#{key}",
-                            config: { account_sid: "AC1", auth_token: "t", from: "+15551234567" }) { adapter { key } }
+              createSender(key: "#{key}", service: "twilio", name: "#{key}",
+                            config: { account_sid: "AC1", auth_token: "t", from: "+15551234567" }) { sender { key } }
             }
           GQL
         end
 
-        assert_equal "first", within(@tenant) { @tenant.sms_adapter.key }
+        assert_equal "first", within(@tenant) { @tenant.sms_sender.key }
 
-        ask(%(mutation { updateAdapter(key: "second", primary: true) { adapter { key } } }), held)
+        ask(%(mutation { updateSender(key: "second", primary: true) { sender { key } } }), held)
 
-        assert_equal "second", within(@tenant) { @tenant.sms_adapter.key }
-        refute within(@tenant) { Adapter.find_by(key: "first").primary }
+        assert_equal "second", within(@tenant) { @tenant.sms_sender.key }
+        refute within(@tenant) { Sender.find_by(key: "first").primary }
 
-        ask(%(mutation { archiveAdapter(key: "second") { adapter { key } } }), held)
+        ask(%(mutation { archiveSender(key: "second") { sender { key } } }), held)
 
-        assert_nil within(@tenant) { @tenant.sms_adapter }
+        assert_nil within(@tenant) { @tenant.sms_sender }
       end
 
       test "a test message reports what the service said rather than failing the request" do
         held = bearer
         ask(<<~GQL, held)
           mutation {
-            createAdapter(key: "sms", service: "twilio", name: "Twilio",
-                          config: { account_sid: "AC1", auth_token: "wrong", from: "+15551234567" }) { adapter { key } }
+            createSender(key: "sms", service: "twilio", name: "Twilio",
+                          config: { account_sid: "AC1", auth_token: "wrong", from: "+15551234567" }) { sender { key } }
           }
         GQL
 
         stub_request(:post, %r{api.twilio.com}).to_return(status: 401, body: %({"message":"Authenticate"}))
 
-        body = ask(%(mutation { testAdapter(key: "sms", to: "+15557654321") { delivered failure } }), held)
+        body = ask(%(mutation { testSender(key: "sms", to: "+15557654321") { delivered failure } }), held)
 
-        refute body.dig("data", "testAdapter", "delivered")
-        assert_match "Authenticate", body.dig("data", "testAdapter", "failure")
-        assert within(@tenant) { Event.where(action: Event::ADAPTER_TESTED).exists? }
+        refute body.dig("data", "testSender", "delivered")
+        assert_match "Authenticate", body.dig("data", "testSender", "failure")
+        assert within(@tenant) { Event.where(action: Event::SENDER_TESTED).exists? }
       end
 
       test "an event stream is created with a secret shown once, and only its owner-set fields come back" do
@@ -533,10 +533,10 @@ module Masks
         assert_equal 1, ask(%(query { eventStreams { key } }), held).dig("data", "eventStreams").length
       end
 
-      test "an adapter for a service masks does not have is refused" do
-        body = ask(%(mutation { createAdapter(key: "x", service: "carrier-pigeon", name: "x") { adapter { key } } }), bearer)
+      test "an sender for a service masks does not have is refused" do
+        body = ask(%(mutation { createSender(key: "x", service: "carrier-pigeon", name: "x") { sender { key } } }), bearer)
 
-        assert_match "no adapter for carrier-pigeon", body["errors"].first["message"]
+        assert_match "no sender for carrier-pigeon", body["errors"].first["message"]
       end
 
       test "a mode masks does not know is refused" do

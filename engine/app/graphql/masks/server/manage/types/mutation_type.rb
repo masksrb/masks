@@ -65,11 +65,11 @@ module Masks
           field :update_sign_in_policy, mutation: Mutations::UpdateSignInPolicy
           field :archive_sign_in_policy, mutation: Mutations::ArchiveSignInPolicy
           field :restore_sign_in_policy, mutation: Mutations::RestoreSignInPolicy
-          field :create_adapter, mutation: Mutations::CreateAdapter
-          field :update_adapter, mutation: Mutations::UpdateAdapter
-          field :archive_adapter, mutation: Mutations::ArchiveAdapter
-          field :restore_adapter, mutation: Mutations::RestoreAdapter
-          field :test_adapter, mutation: Mutations::TestAdapter
+          field :create_sender, mutation: Mutations::CreateSender
+          field :update_sender, mutation: Mutations::UpdateSender
+          field :archive_sender, mutation: Mutations::ArchiveSender
+          field :restore_sender, mutation: Mutations::RestoreSender
+          field :test_sender, mutation: Mutations::TestSender
           field :create_event_stream, mutation: Mutations::CreateEventStream
           field :update_event_stream, mutation: Mutations::UpdateEventStream
           field :update_mail_template, mutation: Mutations::UpdateMailTemplate

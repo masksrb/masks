@@ -4,11 +4,11 @@ module Masks
 
     class HealthTest < ActionDispatch::IntegrationTest
       setup do
-        @adapter = ::Rails.application.config.active_job.queue_adapter
+        @sender = ::Rails.application.config.active_job.queue_adapter
         ::Rails.application.config.active_job.queue_adapter = :solid_queue
       end
 
-      teardown { ::Rails.application.config.active_job.queue_adapter = @adapter }
+      teardown { ::Rails.application.config.active_job.queue_adapter = @sender }
 
       def failing(names)
         held = HealthController.method(:failing_jobs)

@@ -1,7 +1,7 @@
 module Masks
   module Server
     module MailPreviews
-      Adapter = Data.define(:from) do
+      Sender = Data.define(:from) do
         def delivery_method = [ :test ]
       end
 
@@ -61,8 +61,8 @@ module Masks
                 ActorMailer.idle(person, due: due, notice: IdleAccounts::DELETE, journey: system) ],
               [ "idle_delete_suspended", "Idle and suspended, before deletion", system,
                 ActorMailer.idle(person, due: due, notice: IdleAccounts::DELETE_SUSPENDED, journey: system) ],
-              [ "adapter_trial", "Mail adapter test", managing,
-                AdapterMailer.trial(manager.email, adapter: Adapter.new(from: ApplicationMailer.from), journey: managing) ]
+              [ "sender_trial", "Mail sender test", managing,
+                SenderMailer.trial(manager.email, sender: Sender.new(from: ApplicationMailer.from), journey: managing) ]
             ]
           end
 

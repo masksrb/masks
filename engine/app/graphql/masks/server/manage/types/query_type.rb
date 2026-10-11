@@ -99,12 +99,12 @@ module Masks
 
           field :provider_presets, [ ProviderPresetType ], null: false
 
-          field :adapters, [ AdapterType ], null: false do
+          field :senders, [ SenderType ], null: false do
             argument :kind, String, required: false
             argument :archived, Boolean, required: false
           end
 
-          field :adapter_services, [ AdapterServiceType ], null: false
+          field :sender_services, [ SenderServiceType ], null: false
 
           field :domain_claims, [ DomainClaimType ], null: false
 
@@ -352,8 +352,8 @@ module Masks
             Masks::Server::ProviderPreset.all
           end
 
-          def adapters(kind: nil, archived: false)
-            scope = Masks::Server::Adapter.listed(archived)
+          def senders(kind: nil, archived: false)
+            scope = Masks::Server::Sender.listed(archived)
             scope = scope.where(kind: kind) if kind
 
             scope.order(:kind, primary: :desc, name: :asc)
@@ -389,8 +389,8 @@ module Masks
             Masks::Server::SignInPolicy.for(tenant: Current.tenant)
           end
 
-          def adapter_services
-            Masks::Server::Adapter.services.map do |klass|
+          def sender_services
+            Masks::Server::Sender.services.map do |klass|
               { service: klass.service, kind: klass.kind, label: klass.label, fields: klass.fields.map(&:to_h) }
             end
           end

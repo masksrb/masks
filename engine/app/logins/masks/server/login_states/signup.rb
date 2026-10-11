@@ -170,7 +170,7 @@ module Masks
               end
 
               warn! "missing-identifier" if values["nickname"].blank? && values["email"].blank?
-              warn! "invalid-phone", field: "phone" if values["phone"].present? && Adapters::Sms.number(values["phone"]).nil?
+              warn! "invalid-phone", field: "phone" if values["phone"].present? && Senders::Sms.number(values["phone"]).nil?
               warn! "signup-domain-refused", field: "email" if values["email"].present? && !policy.admits?(values["email"])
             end
           end

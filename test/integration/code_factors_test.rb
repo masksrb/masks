@@ -11,14 +11,14 @@ module Masks
       setup do
         host! host_for(@tenant)
 
-        within(@tenant) { Adapters::SmsLog.create!(key: "log", name: "Log", primary: true) }
+        within(@tenant) { Senders::SmsLog.create!(key: "log", name: "Log", primary: true) }
         policy!
 
         @actor = create_actor(@tenant, email: "ada@example.com", phone: "+15551234567")
         within(@tenant) { @actor.update!(email_verified_at: Time.current, phone_verified_at: Time.current) }
 
         ActionMailer::Base.deliveries.clear
-        Adapters::SmsLog.deliveries.clear
+        Senders::SmsLog.deliveries.clear
       end
 
       def policy!(**attributes)
@@ -50,7 +50,7 @@ module Masks
       end
 
       def texted_code
-        Adapters::SmsLog.deliveries.last[:body][/\b\d{6}\b/]
+        Senders::SmsLog.deliveries.last[:body][/\b\d{6}\b/]
       end
 
       def signed_out
@@ -73,7 +73,7 @@ module Masks
         body = event("code:send", factor: "sms")
 
         assert_equal "sms", body.dig("codeSent", "factor")
-        assert_equal "+15551234567", Adapters::SmsLog.deliveries.last[:to]
+        assert_equal "+15551234567", Senders::SmsLog.deliveries.last[:to]
 
         assert event("code:verify", code: texted_code)["settled"]
         assert_includes amr, "sms"

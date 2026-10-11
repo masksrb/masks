@@ -1,0 +1,12 @@
+es:
+  senders:
+    test:
+      sms: "Este es un mensaje de prueba de %{tenant}. Los SMS de masks llegarán así."
+
+  texts:
+    code: "%{code} es tu código de confirmación de %{tenant}. Caduca en 10 minutos."
+
+  sender_mailer:
+    test:
+      subject: "Un mensaje de prueba de %{tenant}"
+      body: "Este es un mensaje de prueba de %{tenant}. El correo de masks llegará así."

@@ -47,7 +47,7 @@ module Masks
       validates :suspension_reason, inclusion: { in: SUSPENSIONS }, allow_nil: true
 
       validates :phone,
-                format: { with: Adapters::Sms::NUMBER },
+                format: { with: Senders::Sms::NUMBER },
                 uniqueness: { scope: :tenant_id },
                 allow_blank: true
 

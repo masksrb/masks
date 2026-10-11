@@ -143,7 +143,7 @@ es:
         created: "Política añadida"
         updated: "Política cambiada"
         archived: "Política archivada"
-      adapter:
+      sender:
         created: "Servicio de envío añadido"
         updated: "Servicio de envío cambiado"
         archived: "Servicio de envío archivado"

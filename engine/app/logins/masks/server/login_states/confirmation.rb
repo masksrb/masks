@@ -180,7 +180,7 @@ module Masks
           def add_phone
             return unless phone_missing? || unconfirmed?(ConfirmationCode::PHONE)
 
-            number = Adapters::Sms.number(update(:phone))
+            number = Senders::Sms.number(update(:phone))
 
             return warn!("invalid-phone", field: "phone") if number.nil?
             return warn!("invalid-account", field: "phone") unless actor.update(phone: number, phone_verified_at: nil)

@@ -143,7 +143,7 @@ en:
         created: "Policy added"
         updated: "Policy changed"
         archived: "Policy archived"
-      adapter:
+      sender:
         created: "Sending service added"
         updated: "Sending service changed"
         archived: "Sending service archived"

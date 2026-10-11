@@ -124,10 +124,10 @@ module Masks
       SIGN_IN_POLICY_CREATED = "sign_in_policy.created".freeze
       SIGN_IN_POLICY_UPDATED = "sign_in_policy.updated".freeze
       SIGN_IN_POLICY_ARCHIVED = "sign_in_policy.archived".freeze
-      ADAPTER_CREATED = "adapter.created".freeze
-      ADAPTER_UPDATED = "adapter.updated".freeze
-      ADAPTER_ARCHIVED = "adapter.archived".freeze
-      ADAPTER_TESTED = "adapter.tested".freeze
+      SENDER_CREATED = "sender.created".freeze
+      SENDER_UPDATED = "sender.updated".freeze
+      SENDER_ARCHIVED = "sender.archived".freeze
+      SENDER_TESTED = "sender.tested".freeze
       EVENTS_EXPORTED = "events.exported".freeze
 
       STREAM_CREATED = "stream.created".freeze

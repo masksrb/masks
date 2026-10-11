@@ -101,47 +101,6 @@ ALTER SEQUENCE public.actors_id_seq OWNED BY public.actors.id;
 
 
 --
--- Name: adapters; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.adapters (
-    id bigint NOT NULL,
-    tenant_id bigint NOT NULL,
-    service character varying NOT NULL,
-    kind character varying NOT NULL,
-    key character varying NOT NULL,
-    name character varying NOT NULL,
-    settings jsonb DEFAULT '{}'::jsonb NOT NULL,
-    secrets text,
-    "primary" boolean DEFAULT false NOT NULL,
-    archived_at timestamp(6) without time zone,
-    created_at timestamp(6) without time zone NOT NULL,
-    updated_at timestamp(6) without time zone NOT NULL
-);
-
-ALTER TABLE ONLY public.adapters FORCE ROW LEVEL SECURITY;
-
-
---
--- Name: adapters_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-CREATE SEQUENCE public.adapters_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
---
--- Name: adapters_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
---
-
-ALTER SEQUENCE public.adapters_id_seq OWNED BY public.adapters.id;
-
-
---
 -- Name: ar_internal_metadata; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1073,6 +1032,47 @@ CREATE TABLE public.schema_migrations (
 
 
 --
+-- Name: senders; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.senders (
+    id bigint NOT NULL,
+    tenant_id bigint NOT NULL,
+    service character varying NOT NULL,
+    kind character varying NOT NULL,
+    key character varying NOT NULL,
+    name character varying NOT NULL,
+    settings jsonb DEFAULT '{}'::jsonb NOT NULL,
+    secrets text,
+    "primary" boolean DEFAULT false NOT NULL,
+    archived_at timestamp(6) without time zone,
+    created_at timestamp(6) without time zone NOT NULL,
+    updated_at timestamp(6) without time zone NOT NULL
+);
+
+ALTER TABLE ONLY public.senders FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: senders_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.senders_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: senders_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.senders_id_seq OWNED BY public.senders.id;
+
+
+--
 -- Name: sessions; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1455,13 +1455,6 @@ ALTER TABLE ONLY public.actors ALTER COLUMN id SET DEFAULT nextval('public.actor
 
 
 --
--- Name: adapters id; Type: DEFAULT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.adapters ALTER COLUMN id SET DEFAULT nextval('public.adapters_id_seq'::regclass);
-
-
---
 -- Name: authenticators id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1609,6 +1602,13 @@ ALTER TABLE ONLY public.saml_participations ALTER COLUMN id SET DEFAULT nextval(
 
 
 --
+-- Name: senders id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.senders ALTER COLUMN id SET DEFAULT nextval('public.senders_id_seq'::regclass);
+
+
+--
 -- Name: sessions id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1670,14 +1670,6 @@ ALTER TABLE ONLY public.tokens ALTER COLUMN id SET DEFAULT nextval('public.token
 
 ALTER TABLE ONLY public.actors
     ADD CONSTRAINT actors_pkey PRIMARY KEY (id);
-
-
---
--- Name: adapters adapters_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.adapters
-    ADD CONSTRAINT adapters_pkey PRIMARY KEY (id);
 
 
 --
@@ -1865,6 +1857,14 @@ ALTER TABLE ONLY public.schema_migrations
 
 
 --
+-- Name: senders senders_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.senders
+    ADD CONSTRAINT senders_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: sessions sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -1982,27 +1982,6 @@ CREATE INDEX index_actors_on_tenant_id_and_recovery_requested_at ON public.actor
 --
 
 CREATE UNIQUE INDEX index_actors_on_uuid ON public.actors USING btree (uuid);
-
-
---
--- Name: index_adapters_on_tenant_id; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX index_adapters_on_tenant_id ON public.adapters USING btree (tenant_id);
-
-
---
--- Name: index_adapters_on_tenant_id_and_key; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX index_adapters_on_tenant_id_and_key ON public.adapters USING btree (tenant_id, key);
-
-
---
--- Name: index_adapters_one_primary_per_kind; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX index_adapters_one_primary_per_kind ON public.adapters USING btree (tenant_id, kind) WHERE ("primary" AND (archived_at IS NULL));
 
 
 --
@@ -2549,6 +2528,27 @@ CREATE UNIQUE INDEX index_saml_participations_on_session_id_and_client_id ON pub
 --
 
 CREATE INDEX index_saml_participations_on_tenant_id ON public.saml_participations USING btree (tenant_id);
+
+
+--
+-- Name: index_senders_on_tenant_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_senders_on_tenant_id ON public.senders USING btree (tenant_id);
+
+
+--
+-- Name: index_senders_on_tenant_id_and_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_senders_on_tenant_id_and_key ON public.senders USING btree (tenant_id, key);
+
+
+--
+-- Name: index_senders_one_primary_per_kind; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_senders_one_primary_per_kind ON public.senders USING btree (tenant_id, kind) WHERE ("primary" AND (archived_at IS NULL));
 
 
 --
@@ -3143,10 +3143,10 @@ ALTER TABLE ONLY public.connections
 
 
 --
--- Name: adapters fk_rails_a63d408d03; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: senders fk_rails_a63d408d03; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.adapters
+ALTER TABLE ONLY public.senders
     ADD CONSTRAINT fk_rails_a63d408d03 FOREIGN KEY (tenant_id) REFERENCES public.tenants(id);
 
 
@@ -3365,12 +3365,6 @@ ALTER TABLE ONLY public.tokens
 ALTER TABLE public.actors ENABLE ROW LEVEL SECURITY;
 
 --
--- Name: adapters; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.adapters ENABLE ROW LEVEL SECURITY;
-
---
 -- Name: avatars; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -3491,6 +3485,12 @@ ALTER TABLE public.providers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.saml_participations ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: senders; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.senders ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: sessions; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -3525,13 +3525,6 @@ ALTER TABLE public.subjects ENABLE ROW LEVEL SECURITY;
 --
 
 CREATE POLICY tenant_isolation ON public.actors USING ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint)) WITH CHECK ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint));
-
-
---
--- Name: adapters tenant_isolation; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY tenant_isolation ON public.adapters USING ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint)) WITH CHECK ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint));
 
 
 --
@@ -3675,6 +3668,13 @@ CREATE POLICY tenant_isolation ON public.saml_participations USING ((tenant_id =
 
 
 --
+-- Name: senders tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.senders USING ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint)) WITH CHECK ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint));
+
+
+--
 -- Name: sessions tenant_isolation; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -3742,6 +3742,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261011180000'),
 ('20261011170000'),
 ('20261011160000'),
 ('20261011150000'),

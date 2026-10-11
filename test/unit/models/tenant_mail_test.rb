@@ -17,32 +17,32 @@ module Masks
 
       def smtp!(key: "relay", primary: true, **config)
         within do
-          Adapters::Smtp.new(key: key, name: "Relay", primary: primary)
+          Senders::Smtp.new(key: key, name: "Relay", primary: primary)
                         .configure({ from: "masks@example.invalid", address: "smtp.example.invalid" }.merge(config))
                         .tap(&:save!)
         end
       end
 
-      test "a tenant with no adapter mails on whatever the deployment configured" do
+      test "a tenant with no sender mails on whatever the deployment configured" do
         with_deployment(from: "deploy@example.invalid", settings: { address: "relay.example.invalid" }) do
           assert @tenant.mails?
           assert_equal "deploy@example.invalid", @tenant.mail_from
-          assert_nil @tenant.mail_adapter
+          assert_nil @tenant.mail_sender
         end
       end
 
-      test "a deployment with no mailer and a tenant with no adapter mails nowhere" do
+      test "a deployment with no mailer and a tenant with no sender mails nowhere" do
         with_deployment do
           refute @tenant.mails?
         end
       end
 
-      test "the primary mail adapter answers with its own settings" do
+      test "the primary mail sender answers with its own settings" do
         with_deployment(from: "deploy@example.invalid", settings: { address: "relay.example.invalid" }) do
           smtp!(port: 2525, username: "postmaster", password: "hunter2",
                 authentication: "login", domain: "example.invalid", tls: true)
 
-          method, settings = within { @tenant.mail_adapter.delivery_method }
+          method, settings = within { @tenant.mail_sender.delivery_method }
 
           assert @tenant.mails?
           assert_equal :smtp, method
@@ -62,7 +62,7 @@ module Masks
       test "a server with no port of its own is reached on the submission port, over STARTTLS" do
         smtp!
 
-        _, settings = within { @tenant.mail_adapter.delivery_method }
+        _, settings = within { @tenant.mail_sender.delivery_method }
 
         assert_equal 587, settings[:port]
         assert_equal :plain, settings[:authentication]
@@ -71,31 +71,31 @@ module Masks
       end
 
       test "secrets are encrypted at rest and never part of the settings" do
-        adapter = smtp!(password: "hunter2")
+        sender = smtp!(password: "hunter2")
 
-        held = Adapter.connection.select_value(
-          Adapter.sanitize_sql([ "SELECT secrets FROM adapters WHERE id = ?", adapter.id ])
+        held = Sender.connection.select_value(
+          Sender.sanitize_sql([ "SELECT secrets FROM senders WHERE id = ?", sender.id ])
         )
 
         refute_includes held.to_s, "hunter2"
-        refute_includes adapter.settings.to_json, "hunter2"
-        refute adapter.public_settings.key?("password")
-        assert_equal [ "password" ], within { adapter.secrets_held }
-        assert_equal "hunter2", within { Adapter.find(adapter.id)[:password] }
+        refute_includes sender.settings.to_json, "hunter2"
+        refute sender.public_settings.key?("password")
+        assert_equal [ "password" ], within { sender.secrets_held }
+        assert_equal "hunter2", within { Sender.find(sender.id)[:password] }
       end
 
       test "a secret left blank on a later save keeps the one already held" do
-        adapter = smtp!(password: "hunter2")
+        sender = smtp!(password: "hunter2")
 
-        within { adapter.configure(password: "", address: "other.example.invalid").save! }
+        within { sender.configure(password: "", address: "other.example.invalid").save! }
 
-        assert_equal "hunter2", within { Adapter.find(adapter.id)[:password] }
-        assert_equal "other.example.invalid", within { Adapter.find(adapter.id)[:address] }
+        assert_equal "hunter2", within { Sender.find(sender.id)[:password] }
+        assert_equal "other.example.invalid", within { Sender.find(sender.id)[:address] }
       end
 
       test "a port outside the range, an authentication masks cannot speak, and a bad from are refused" do
         within do
-          refused = Adapters::Smtp.new(key: "bad", name: "Bad")
+          refused = Senders::Smtp.new(key: "bad", name: "Bad")
                                   .configure(from: "not-an-address", address: "smtp.example.invalid",
                                              port: 0, authentication: "telepathy")
 
@@ -110,7 +110,7 @@ module Masks
         deployed do
           resolving("10.0.0.5") do
             within do
-              refused = Adapters::Smtp.new(key: "inside", name: "Inside")
+              refused = Senders::Smtp.new(key: "inside", name: "Inside")
                                       .configure(from: "masks@example.invalid", address: "redis.internal", port: 6379)
 
               refute refused.valid?
@@ -121,11 +121,11 @@ module Masks
       end
 
       test "a mail server that moves inside the network is not connected to" do
-        adapter = smtp!
+        sender = smtp!
 
         deployed do
           resolving("169.254.169.254") do
-            error = assert_raises(Adapter::Failed) { within { Adapter.find(adapter.id).delivery_method } }
+            error = assert_raises(Sender::Failed) { within { Sender.find(sender.id).delivery_method } }
 
             assert_match "will not call", error.message
           end
@@ -133,29 +133,29 @@ module Masks
       end
 
       test "a mail server at a public address is used" do
-        adapter = smtp!
+        sender = smtp!
 
         deployed do
           resolving("93.184.216.34") do
-            method, = within { Adapter.find(adapter.id).delivery_method }
+            method, = within { Sender.find(sender.id).delivery_method }
 
             assert_equal :smtp, method
           end
         end
       end
 
-      test "an archived adapter sends nothing, and another becomes primary" do
+      test "an archived sender sends nothing, and another becomes primary" do
         first = smtp!
         within { first.update!(archived_at: Time.current, primary: false) }
 
-        refute within { @tenant.mail_adapter }
+        refute within { @tenant.mail_sender }
 
         smtp!(key: "second")
 
-        assert_equal "second", within { @tenant.mail_adapter.key }
+        assert_equal "second", within { @tenant.mail_sender.key }
       end
 
-      test "a message built for a tenant carries its primary adapter's server" do
+      test "a message built for a tenant carries its primary sender's server" do
         smtp!(port: 2525, username: "postmaster", password: "hunter2")
 
         actor = create_actor(@tenant, nickname: "ada", email: "ada@example.invalid")
@@ -171,7 +171,7 @@ module Masks
         assert_equal 2525, message.delivery_method.settings[:port]
       end
 
-      test "a tenant without an adapter leaves delivery where the deployment put it" do
+      test "a tenant without an sender leaves delivery where the deployment put it" do
         with_deployment(from: "deploy@example.invalid", settings: { address: "relay.example.invalid" }) do
           actor = create_actor(@tenant, nickname: "ada", email: "ada@example.invalid")
 
@@ -186,11 +186,11 @@ module Masks
         end
       end
 
-      test "one tenant's adapter is invisible to another" do
+      test "one tenant's sender is invisible to another" do
         smtp!
 
-        assert within(other_tenant) { Adapter.count }.zero?
-        assert_nil other_tenant.mail_adapter
+        assert within(other_tenant) { Sender.count }.zero?
+        assert_nil other_tenant.mail_sender
       end
     end
   end

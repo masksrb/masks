@@ -8,13 +8,13 @@ module Masks
       setup do
         host! host_for(@tenant)
 
-        within(@tenant) { Adapters::SmsLog.create!(key: "log", name: "Log", primary: true) }
+        within(@tenant) { Senders::SmsLog.create!(key: "log", name: "Log", primary: true) }
 
         @actor = create_actor(@tenant, nickname: "ada", email: "ada@example.com")
         within(@tenant) { @actor.update!(email_verified_at: Time.current) }
 
         ActionMailer::Base.deliveries.clear
-        Adapters::SmsLog.deliveries.clear
+        Senders::SmsLog.deliveries.clear
       end
 
       def reloaded
@@ -26,7 +26,7 @@ module Masks
       end
 
       def texted_code
-        Adapters::SmsLog.deliveries.last[:body][/\b\d{6}\b/]
+        Senders::SmsLog.deliveries.last[:body][/\b\d{6}\b/]
       end
 
       def bearer(actor)
@@ -127,7 +127,7 @@ module Masks
         perform_enqueued_jobs { post "/account/addresses/phone", params: { address: "+1 555 123 4567" } }
 
         assert_redirected_to "/#phone"
-        assert_equal "+15551234567", Adapters::SmsLog.deliveries.last[:to]
+        assert_equal "+15551234567", Senders::SmsLog.deliveries.last[:to]
 
         patch "/account/addresses/phone", params: { code: texted_code }
 

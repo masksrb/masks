@@ -12,7 +12,7 @@ module Masks
 
         @owner = create_actor(@tenant, nickname: "owner", scopes: "openid masks:manage")
         ActionMailer::Base.deliveries.clear
-        Adapters::SmsLog.deliveries.clear
+        Senders::SmsLog.deliveries.clear
       end
 
       def policy!(**attributes)
@@ -40,7 +40,7 @@ module Masks
       end
 
       def texted_code
-        Adapters::SmsLog.deliveries.last[:body][/\b\d{6}\b/]
+        Senders::SmsLog.deliveries.last[:body][/\b\d{6}\b/]
       end
 
       def created
@@ -257,14 +257,14 @@ module Masks
         end
       end
 
-      test "a policy requiring a confirmed phone texts a code through the primary adapter" do
-        within(@tenant) { Adapters::SmsLog.create!(key: "log", name: "Log", primary: true) }
+      test "a policy requiring a confirmed phone texts a code through the primary sender" do
+        within(@tenant) { Senders::SmsLog.create!(key: "log", name: "Log", primary: true) }
         policy!(phone: "required", phone_verified: true)
 
         body = sign_up(phone: "+15551234567")
 
         assert_equal "confirm-phone", body["prompt"]
-        assert_equal "+15551234567", Adapters::SmsLog.deliveries.last[:to]
+        assert_equal "+15551234567", Senders::SmsLog.deliveries.last[:to]
 
         body = event("confirm:phone", code: texted_code)
 

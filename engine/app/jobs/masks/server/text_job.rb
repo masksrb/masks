@@ -3,14 +3,14 @@ module Masks
     class TextJob < ApplicationJob
       queue_as :mailers
 
-      retry_on Adapter::Failed, wait: :polynomially_longer, attempts: 3
+      retry_on Sender::Failed, wait: :polynomially_longer, attempts: 3
 
       def perform(to, body)
-        adapter = Current.tenant&.sms_adapter
+        sender = Current.tenant&.sms_sender
 
-        return if adapter.nil?
+        return if sender.nil?
 
-        adapter.deliver(to: to, body: body)
+        sender.deliver(to: to, body: body)
       end
     end
   end

@@ -21,10 +21,10 @@ module Masks
 
       def mail(headers = {}, &block)
         super.tap do |message|
-          adapter = Current.tenant&.mail_adapter
+          sender = Current.tenant&.mail_sender
 
-          if adapter
-            message.delivery_method(*adapter.delivery_method)
+          if sender
+            message.delivery_method(*sender.delivery_method)
           elsif Server.config.smtp_settings && delivery_method != :test
             message.delivery_method(:smtp, Server.config.smtp_settings)
           end

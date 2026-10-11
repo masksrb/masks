@@ -13,10 +13,10 @@
   const FIELDS = `key name kind service label primary settings secretsHeld archivedAt createdAt`;
 
   const QUERY = `
-    query Adapters {
-      active: adapters { ${FIELDS} }
-      archived: adapters(archived: true) { ${FIELDS} }
-      adapterServices {
+    query Senders {
+      active: senders { ${FIELDS} }
+      archived: senders(archived: true) { ${FIELDS} }
+      senderServices {
         service kind label
         fields { key label type secret required options default hint }
       }
@@ -27,16 +27,16 @@
   const KINDS = [
     {
       kind: "mail",
-      title: t("adapters.kinds.mail.title"),
-      lede: t("adapters.kinds.mail.lede"),
-      idle: t("adapters.kinds.mail.idle"),
+      title: t("senders.kinds.mail.title"),
+      lede: t("senders.kinds.mail.lede"),
+      idle: t("senders.kinds.mail.idle"),
       to: "you@example.com",
     },
     {
       kind: "sms",
-      title: t("adapters.kinds.sms.title"),
-      lede: t("adapters.kinds.sms.lede"),
-      idle: t("adapters.kinds.sms.idle"),
+      title: t("senders.kinds.sms.title"),
+      lede: t("senders.kinds.sms.lede"),
+      idle: t("senders.kinds.sms.idle"),
       to: "+15551234567",
     },
   ];
@@ -50,7 +50,7 @@
   let draft = $state(null);
   let testing = $state({});
 
-  const services = $derived(data?.adapterServices ?? []);
+  const services = $derived(data?.senderServices ?? []);
   const serviceOf = (name) => services.find((held) => held.service === name);
   const forKind = (list, kind) => (list ?? []).filter((held) => held.kind === kind);
 
@@ -100,21 +100,21 @@
     if (!draft.name) draft.name = service.label;
   }
 
-  function edit(adapter) {
-    const service = serviceOf(adapter.service);
+  function edit(sender) {
+    const service = serviceOf(sender.service);
 
-    editing = adapter.key;
+    editing = sender.key;
     draft = {
-      kind: adapter.kind,
-      service: adapter.service,
-      key: adapter.key,
-      name: adapter.name,
-      primary: adapter.primary,
-      secretsHeld: adapter.secretsHeld,
+      kind: sender.kind,
+      service: sender.service,
+      key: sender.key,
+      name: sender.name,
+      primary: sender.primary,
+      secretsHeld: sender.secretsHeld,
       config: Object.fromEntries(
         service.fields.map((field) => [
           field.key,
-          field.secret ? "" : (adapter.settings[field.key] ?? field.default ?? ""),
+          field.secret ? "" : (sender.settings[field.key] ?? field.default ?? ""),
         ]),
       ),
     };
@@ -149,8 +149,8 @@
         fresh
           ? api.query(
               `mutation Create($key: ID!, $service: String!, $name: String!, $config: JSON, $primary: Boolean) {
-                createAdapter(key: $key, service: $service, name: $name, config: $config, primary: $primary) {
-                  adapter { key }
+                createSender(key: $key, service: $service, name: $name, config: $config, primary: $primary) {
+                  sender { key }
                 }
               }`,
               {
@@ -163,13 +163,13 @@
             )
           : api.query(
               `mutation Update($key: ID!, $name: String, $config: JSON, $primary: Boolean) {
-                updateAdapter(key: $key, name: $name, config: $config, primary: $primary) {
-                  adapter { key }
+                updateSender(key: $key, name: $name, config: $config, primary: $primary) {
+                  sender { key }
                 }
               }`,
               { key: draft.key, name: draft.name.trim(), config: config(), primary: draft.primary },
             ),
-      fresh ? t("adapters.added", { name: draft.name }) : t("adapters.saved", { name: draft.name }),
+      fresh ? t("senders.added", { name: draft.name }) : t("senders.saved", { name: draft.name }),
     );
 
     busy = false;
@@ -180,13 +180,13 @@
     await load();
   }
 
-  async function act(mutation, adapter, notice, question = null) {
+  async function act(mutation, sender, notice, question = null) {
     if (question && !confirm(question)) return;
 
     const done = await feedback.attempt(
       () =>
-        api.query(`mutation Act($key: ID!) { ${mutation}(key: $key) { adapter { key } } }`, {
-          key: adapter.key,
+        api.query(`mutation Act($key: ID!) { ${mutation}(key: $key) { sender { key } } }`, {
+          key: sender.key,
         }),
       notice,
     );
@@ -194,21 +194,21 @@
     if (done) await load();
   }
 
-  async function makePrimary(adapter) {
+  async function makePrimary(sender) {
     const done = await feedback.attempt(
       () =>
         api.query(
-          `mutation Primary($key: ID!) { updateAdapter(key: $key, primary: true) { adapter { key } } }`,
-          { key: adapter.key },
+          `mutation Primary($key: ID!) { updateSender(key: $key, primary: true) { sender { key } } }`,
+          { key: sender.key },
         ),
-      t("adapters.primary_notice", { name: adapter.name }),
+      t("senders.primary_notice", { name: sender.name }),
     );
 
     if (done) await load();
   }
 
-  async function test(adapter) {
-    const to = (testing[adapter.key] ?? "").trim();
+  async function test(sender) {
+    const to = (testing[sender.key] ?? "").trim();
 
     if (!to) return;
 
@@ -216,8 +216,8 @@
 
     const answer = await feedback.attempt(() =>
       api.query(
-        `mutation Test($key: ID!, $to: String!) { testAdapter(key: $key, to: $to) { delivered failure } }`,
-        { key: adapter.key, to },
+        `mutation Test($key: ID!, $to: String!) { testSender(key: $key, to: $to) { delivered failure } }`,
+        { key: sender.key, to },
       ),
     );
 
@@ -225,10 +225,10 @@
 
     if (!answer) return;
 
-    if (answer.testAdapter.delivered) {
-      feedback.say(t("adapters.tested", { name: adapter.name, to }));
+    if (answer.testSender.delivered) {
+      feedback.say(t("senders.tested", { name: sender.name, to }));
     } else {
-      feedback.blame(answer.testAdapter.failure);
+      feedback.blame(answer.testSender.failure);
     }
   }
 
@@ -258,10 +258,10 @@
     <Spinner />
   {:else if data}
     {#if draft}
-      <Section title={editing === "" ? t("adapters.form.add") : t("adapters.form.edit", { name: draft.name })}>
+      <Section title={editing === "" ? t("senders.form.add") : t("senders.form.edit", { name: draft.name })}>
         {#if editing === ""}
           <label class="flex flex-col gap-1.5">
-            <span class="field-label">{t("adapters.form.service")}</span>
+            <span class="field-label">{t("senders.form.service")}</span>
             <select
               class="select select-sm w-full"
               value={draft.service}
@@ -276,14 +276,14 @@
 
         <div class="grid gap-3 sm:grid-cols-2">
           <Field
-            label={t("adapters.form.key")}
+            label={t("senders.form.key")}
             bind:value={draft.key}
             disabled={editing !== ""}
             autocapitalize="none"
             autocorrect="off"
             spellcheck="false"
           />
-          <Field label={t("adapters.form.name")} bind:value={draft.name} />
+          <Field label={t("senders.form.name")} bind:value={draft.name} />
         </div>
 
         <div class="grid gap-3 sm:grid-cols-2">
@@ -305,13 +305,13 @@
             {:else}
               <div class="flex flex-col gap-1">
                 <Field
-                  label={field.required ? field.label : t("adapters.form.optional", { label: field.label })}
+                  label={field.required ? field.label : t("senders.form.optional", { label: field.label })}
                   type={field.secret ? "password" : field.type === "integer" ? "number" : "text"}
                   bind:value={draft.config[field.key]}
                   autocomplete="off"
                   autocapitalize="none"
                   spellcheck="false"
-                  placeholder={field.secret && draft.secretsHeld?.includes(field.key) ? t("adapters.form.unchanged") : ""}
+                  placeholder={field.secret && draft.secretsHeld?.includes(field.key) ? t("senders.form.unchanged") : ""}
                 />
                 {#if field.hint}<p class="hint">{field.hint}</p>{/if}
               </div>
@@ -319,13 +319,13 @@
           {/each}
         </div>
 
-        <Switch label={t("adapters.form.primary")} bind:checked={draft.primary} />
+        <Switch label={t("senders.form.primary")} bind:checked={draft.primary} />
 
         <div class="flex gap-2">
           <button type="button" class="btn btn-primary btn-sm" disabled={busy || !complete} onclick={save}>
-            {editing === "" ? t("adapters.form.create") : t("adapters.form.save")}
+            {editing === "" ? t("senders.form.create") : t("senders.form.save")}
           </button>
-          <button type="button" class="btn btn-ghost btn-sm" onclick={close}>{t("adapters.form.cancel")}</button>
+          <button type="button" class="btn btn-ghost btn-sm" onclick={close}>{t("senders.form.cancel")}</button>
         </div>
       </Section>
     {/if}
@@ -335,51 +335,51 @@
 
       <Section title={group.title} lede={held.length ? group.lede : group.idle}>
         {#snippet actions()}
-          <button type="button" class="btn btn-sm" onclick={() => add(group.kind)}>{t("adapters.list.add")}</button>
+          <button type="button" class="btn btn-sm" onclick={() => add(group.kind)}>{t("senders.list.add")}</button>
         {/snippet}
 
-        {#each held as adapter (adapter.key)}
+        {#each held as sender (sender.key)}
           <div class="flex flex-col gap-3 sheet p-3">
             <div class="flex flex-wrap items-center justify-between gap-2">
               <div class="flex min-w-0 flex-col">
                 <span class="font-medium">
-                  {adapter.name}
-                  {#if adapter.primary}<span class="badge badge-success badge-sm">{t("adapters.list.primary")}</span>{/if}
+                  {sender.name}
+                  {#if sender.primary}<span class="badge badge-success badge-sm">{t("senders.list.primary")}</span>{/if}
                 </span>
                 <span class="hint">
-                  {adapter.label} · <span class="font-mono">{adapter.key}</span> · {t("adapters.list.added", { day: day(adapter.createdAt) })}
+                  {sender.label} · <span class="font-mono">{sender.key}</span> · {t("senders.list.added", { day: day(sender.createdAt) })}
                 </span>
               </div>
 
               <div class="flex flex-wrap gap-2">
-                {#if !adapter.primary}
-                  <button type="button" class="btn btn-ghost btn-sm" onclick={() => makePrimary(adapter)}>
-                    {t("adapters.list.make_primary")}
+                {#if !sender.primary}
+                  <button type="button" class="btn btn-ghost btn-sm" onclick={() => makePrimary(sender)}>
+                    {t("senders.list.make_primary")}
                   </button>
                 {/if}
-                <button type="button" class="btn btn-sm" onclick={() => edit(adapter)}>{t("adapters.list.edit")}</button>
+                <button type="button" class="btn btn-sm" onclick={() => edit(sender)}>{t("senders.list.edit")}</button>
                 <button
                   type="button"
                   class="btn btn-ghost btn-sm"
                   onclick={() =>
                     act(
-                      "archiveAdapter",
-                      adapter,
-                      t("adapters.archived_notice", { name: adapter.name }),
-                      t("adapters.archive_confirm", { name: adapter.name }),
+                      "archiveSender",
+                      sender,
+                      t("senders.archived_notice", { name: sender.name }),
+                      t("senders.archive_confirm", { name: sender.name }),
                     )}
                 >
-                  {t("adapters.list.archive")}
+                  {t("senders.list.archive")}
                 </button>
               </div>
             </div>
 
             <Field
-              label={t("adapters.list.test_to")}
-              bind:value={testing[adapter.key]}
+              label={t("senders.list.test_to")}
+              bind:value={testing[sender.key]}
               placeholder={group.to}
-              save={t("adapters.list.test")}
-              onsave={() => test(adapter)}
+              save={t("senders.list.test")}
+              onsave={() => test(sender)}
             />
           </div>
         {/each}
@@ -387,18 +387,18 @@
     {/each}
 
     {#if data.archived.length}
-      <Section title={t("adapters.archived.title")}>
-        {#each data.archived as adapter (adapter.key)}
+      <Section title={t("senders.archived.title")}>
+        {#each data.archived as sender (sender.key)}
           <div class="flex flex-wrap items-center justify-between gap-2">
             <span class="text-sm">
-              {adapter.name} <span class="hint">{adapter.label} · {adapter.kind}</span>
+              {sender.name} <span class="hint">{sender.label} · {sender.kind}</span>
             </span>
             <button
               type="button"
               class="btn btn-ghost btn-sm"
-              onclick={() => act("restoreAdapter", adapter, t("adapters.restored", { name: adapter.name }))}
+              onclick={() => act("restoreSender", sender, t("senders.restored", { name: sender.name }))}
             >
-              {t("adapters.archived.restore")}
+              {t("senders.archived.restore")}
             </button>
           </div>
         {/each}

@@ -14,7 +14,7 @@ module Masks
         end
 
         def normalize(channel, value)
-          return Adapters::Sms.number(value) if channel == ConfirmationCode::PHONE
+          return Senders::Sms.number(value) if channel == ConfirmationCode::PHONE
 
           email = value.to_s.strip
           email if email.match?(URI::MailTo::EMAIL_REGEXP)

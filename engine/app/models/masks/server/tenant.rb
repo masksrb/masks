@@ -44,7 +44,7 @@ module Masks
       has_many :sessions, dependent: :destroy
       has_many :consents, dependent: :destroy
       has_many :events, dependent: :delete_all
-      has_many :adapters, dependent: :destroy
+      has_many :senders, dependent: :destroy
       has_many :event_streams, dependent: :destroy
       has_many :organizations, dependent: :destroy
       has_many :domain_claims, dependent: :destroy
@@ -176,30 +176,30 @@ module Masks
         held.present? && agent_list.any? { |pattern| held.include?(pattern) }
       end
 
-      def adapter(kind)
-        Tenant.switch(self) { Adapter.primary(kind) }
+      def sender(kind)
+        Tenant.switch(self) { Sender.primary(kind) }
       end
 
-      def mail_adapter
-        adapter(Adapter::MAIL)
+      def mail_sender
+        sender(Sender::MAIL)
       end
 
-      def sms_adapter
-        adapter(Adapter::SMS)
+      def sms_sender
+        sender(Sender::SMS)
       end
 
       def mail_from
-        mail_adapter&.from || ::Rails.configuration.masks.mail_from
+        mail_sender&.from || ::Rails.configuration.masks.mail_from
       end
 
       def mails?
-        return true if mail_adapter
+        return true if mail_sender
 
         ::Rails.configuration.masks.mail_from.present? && ActionMailer::Base.smtp_settings.present?
       end
 
       def texts?
-        sms_adapter.present?
+        sms_sender.present?
       end
 
       def dynamic_registration
