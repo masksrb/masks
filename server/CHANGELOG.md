@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.7.0](https://github.com/masksrb/masks/compare/server-v0.6.0...server-v0.7.0) (2026-10-11)
+
+
+### Features
+
+* **server:** a client's page splits into General, Access, Endpoints, and Usage, with one save for its links and one for its lifetimes ([ff16bc9](https://github.com/masksrb/masks/commit/ff16bc9b4de421b470ceefb6fb4abd7251633fa9))
+
+
+### Fixes
+
+* **server:** the console fits a phone: tabs and filters wrap, badges stay on one line, and email templates are chosen from a menu ([9ff03f6](https://github.com/masksrb/masks/commit/9ff03f6bf3a9c23051d2187bec0f2d0c26e391df))
+
 ## [0.6.0](https://github.com/masksrb/masks/compare/server-v0.5.0...server-v0.6.0) (2026-10-11)
 
 

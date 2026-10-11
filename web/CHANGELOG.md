@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.4.0](https://github.com/masksrb/masks/compare/client-v2.3.0...client-v2.4.0) (2026-10-11)
+
+
+### Features
+
+* **web:** the browser client binds tokens to a DPoP key it cannot export, calls APIs through fetch(), and raises errors with a class per kind ([4d03eca](https://github.com/masksrb/masks/commit/4d03eca3c1eae3a01f88c929cb289f1a55ec6275))
+
 ## [2.3.0](https://github.com/masksrb/masks/compare/client-v2.2.0...client-v2.3.0) (2026-10-11)
 
 

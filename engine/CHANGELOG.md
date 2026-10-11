@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/masksrb/masks/compare/masks-server-v0.6.0...masks-server-v0.7.0) (2026-10-11)
+
+
+### Features
+
+* **server:** a client's page splits into General, Access, Endpoints, and Usage, with one save for its links and one for its lifetimes ([ff16bc9](https://github.com/masksrb/masks/commit/ff16bc9b4de421b470ceefb6fb4abd7251633fa9))
+
 ## [0.6.0](https://github.com/masksrb/masks/compare/masks-server-v0.5.0...masks-server-v0.6.0) (2026-10-11)
 
 
