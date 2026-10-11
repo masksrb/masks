@@ -53,6 +53,8 @@ es:
       submit_signup: "Crear mi cuenta"
       have_account: "¿Ya tienes una cuenta?"
       sign_in_instead: "Iniciar sesión"
+      needs_script: "Registrarte aquí necesita JavaScript, que este navegador tiene desactivado. Actívalo o usa otro navegador."
+      proving: "Comprobando este navegador"
 
     identify:
       heading: "Inicia sesión para continuar"
@@ -151,9 +153,12 @@ es:
     signup_credentials:
       working: "Creando"
       create_passkey: "Crear una llave de acceso"
-      with_passkey: "Usar una llave de acceso"
       passkey_lede: "Tu dispositivo guarda la llave de acceso y comprueba que eres tú de la misma forma en que ya se desbloquea. No hay contraseña que recordar."
       no_passkeys: "Este navegador no puede crear una llave de acceso. Prueba con otro navegador o dispositivo."
+      way: "Iniciar sesión con"
+      way_passkey: "Una llave de acceso"
+      way_password: "Una contraseña"
+      passkey_later: "Cuenta como los dos factores a la vez. Puedes añadir una contraseña más tarde desde tu cuenta."
 
     prove_email:
       title: "Revisa tu correo"
@@ -249,6 +254,7 @@ es:
       risky-sign-in: "Este inicio de sesión parece inusual, así que no puede continuar desde aquí. Prueba desde un dispositivo que hayas usado antes o pregunta a un administrador."
       confirmation-expired: "Ese código caducó. Envía otro."
       signup-domain-refused: "Aquí no se pueden crear cuentas con esa dirección."
+      work-unsolved: "Este navegador no terminó la comprobación que frena los registros automáticos. Inténtalo de nuevo."
       invitation-expired: "Esa invitación ya no es válida. Pide otra."
       reset-expired: "Ese enlace de restablecimiento ya no es válido. Pide otro."
       no-mailer: "Este servidor no puede enviar correo. Pregunta a un administrador."

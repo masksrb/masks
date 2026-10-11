@@ -36,6 +36,7 @@ module Masks
                 numericality: { only_integer: true, in: SHORTEST_SESSION.to_i..LONGEST_SESSION.to_i },
                 allow_nil: true
       validate :idle_fits_the_lifetime
+      validates :proof_of_work, numericality: { only_integer: true, in: 0..ProofOfWork::HARDEST }
       validates :risk_step_up_at, :risk_refuse_at, numericality: { only_integer: true, in: 1..Risk::MOST }, allow_nil: true
       validate :refusing_is_stricter
       validate :factors_are_known
@@ -44,6 +45,7 @@ module Masks
       validate :hiding_needs_a_code
       validate :signup_scopes_stay_ordinary
       validate :a_default_keeps_a_local_way_in
+      validate :a_required_password_is_offered
 
       normalizes :email_domains, with: ->(held) {
         Array(held).map { |one| one.to_s.strip.downcase.delete_prefix("@") }.reject(&:empty?).uniq
@@ -55,7 +57,8 @@ module Masks
         end
 
         def first_run
-          new(key: "first-run", name: "First run", signup: true, nickname: REQUIRED, email: REQUIRED, phone: OFF)
+          new(key: "first-run", name: "First run", signup: true, nickname: REQUIRED, email: REQUIRED, phone: OFF,
+              proof_of_work: 0)
         end
 
         def for(client: nil, tenant: Current.tenant, organization: nil)
@@ -108,6 +111,14 @@ module Masks
 
       def offers?(provider)
         providers.nil? || providers.include?(provider.key)
+      end
+
+      def passkey_signup?
+        first_factor?(:passkey) && !password_required
+      end
+
+      def proves_work?
+        signup && proof_of_work.to_i.positive?
       end
 
       def signup_scope_list
@@ -173,6 +184,12 @@ module Masks
           return unless Tenant.exists?(sign_in_policy_id: id)
 
           errors.add(:first_factors, "must keep a password or a passkey while this is the tenant's default, so managers are never locked out")
+        end
+
+        def a_required_password_is_offered
+          return unless password_required && !first_factor?(:password)
+
+          errors.add(:password_required, "needs passwords among the ways to sign in")
         end
 
         def signup_scopes_stay_ordinary

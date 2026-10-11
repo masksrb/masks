@@ -1115,7 +1115,9 @@ CREATE TABLE public.sign_in_policies (
     session_idle_timeout integer,
     refuse_breached_passwords boolean DEFAULT false NOT NULL,
     risk_step_up_at integer,
-    risk_refuse_at integer
+    risk_refuse_at integer,
+    proof_of_work integer DEFAULT 17 NOT NULL,
+    password_required boolean DEFAULT false NOT NULL
 );
 
 ALTER TABLE ONLY public.sign_in_policies FORCE ROW LEVEL SECURITY;
@@ -3627,6 +3629,8 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261011160000'),
+('20261011150000'),
 ('20261011140000'),
 ('20261011130000'),
 ('20261011120000'),

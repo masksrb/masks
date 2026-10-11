@@ -62,6 +62,13 @@ de:
           hidden_hint: "An eine E-Mail-Adresse wird zuerst ein Code gesendet, ob sie ein Konto hat oder nicht, und ein Gerät, das dieses Konto schon benutzt hat, überspringt das. Spitznamen melden sich an wie bisher."
           hidden_no_mail: "Kein E-Mail-Adapter, daher kann sich niemand mit einer E-Mail-Adresse anmelden."
           open_warning: "Eine unbekannte Adresse führt direkt zur Registrierung, wodurch jeder erfährt, welche Adressen hier Konten haben."
+          work: "Browserprüfung"
+          work_off: "Aus"
+          work_light: "Leicht, Bruchteile einer Sekunde"
+          work_standard: "Standard, etwa eine Sekunde"
+          work_strong: "Stark, mehrere Sekunden"
+          work_bits: "%{bits} Bit"
+          work_hint: "Bevor ein Konto entsteht, löst der Browser eine Hash-Aufgabe, die Registrierungen in großer Zahl teuer macht. Nichts wird an einen anderen Dienst gesendet. Die Registrierung erfordert dann JavaScript."
         account:
           legend: "Konto"
           nickname: "Spitzname"
@@ -74,6 +81,7 @@ de:
           legend: "Anmeldung"
           characters: "Zeichen mindestens"
           refuse_common: "Gängige Passwörter ablehnen"
+          password_required: "Bei der Registrierung ein Passwort verlangen"
           all_providers: "Alle Anbieter"
         second_factor:
           legend: "Zweiter Faktor"

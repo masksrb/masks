@@ -2,7 +2,7 @@ import { t } from "./copy.js";
 
 export const POLICY_FIELDS = `
   key name signup nickname email emailVerified phone phoneVerified
-  passwordMinimum refuseCommonPasswords firstFactors secondFactors secondFactorRequired appsRequireSecondFactor sessionLifetime sessionIdleTimeout refuseBreachedPasswords riskStepUpAt riskRefuseAt
+  passwordMinimum refuseCommonPasswords passwordRequired firstFactors secondFactors secondFactorRequired appsRequireSecondFactor sessionLifetime sessionIdleTimeout refuseBreachedPasswords riskStepUpAt riskRefuseAt proofOfWork
   emailDomains providers confirmation hidden signupScopes archivedAt
 `;
 
@@ -53,6 +53,12 @@ function describePolicy(policy) {
   return [
     [term("signup"), policy.signup ? value("open") : value("invitation_only")],
     [term("email_domains"), listed(policy.emailDomains, "any")],
+    [
+      term("proof_of_work"),
+      policy.proofOfWork
+        ? t("policy_rules.values.bits", { bits: policy.proofOfWork })
+        : value("off"),
+    ],
     [term("hidden"), yes(policy.hidden)],
     [term("nickname"), known(PRESENCE, "presence", policy.nickname)],
     [term("email"), known(PRESENCE, "presence", policy.email)],
@@ -77,6 +83,7 @@ function describePolicy(policy) {
         },
       ),
     ],
+    [term("password_required"), yes(policy.passwordRequired)],
     [term("second_factors"), listed(policy.secondFactors, "none")],
     [term("second_factor_required"), yes(policy.secondFactorRequired)],
     [term("apps_require_second_factor"), yes(policy.appsRequireSecondFactor)],

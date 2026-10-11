@@ -5,11 +5,13 @@ module Masks
         EXPIRY = 12.hours
         WINDOW = 30.minutes
         HELD = "signup".freeze
+        WORK = "signup_work".freeze
         SIGNED_UP = "signed_up".freeze
         FIRST_RUN_STEPS = %w[identification credentials configuration].freeze
         STEPS = %w[identification credentials].freeze
 
-        accepts :nickname, :email, :name, :phone, :password, :password_confirmation, :token, :passkey
+        accepts :nickname, :email, :name, :phone, :password, :password_confirmation, :token, :passkey,
+                :work, :work_counter
 
         class << self
           def steps(first_run, policy = nil)
@@ -61,18 +63,20 @@ module Masks
               "minimum" => policy.password_minimum,
               "asks" => { "nickname" => policy.nickname, "email" => policy.email, "phone" => policy.phone },
               "fixed" => proven_email ? [ "email" ] : [],
-              "credentials" => { "password" => policy.first_factor?(:password), "passkey" => policy.first_factor?(:passkey) },
+              "credentials" => { "password" => policy.first_factor?(:password), "passkey" => policy.passkey_signup? },
               "nickname" => held.fetch("nickname") { suggested("nickname") },
               "email" => proven_email || held.fetch("email") { suggested("email") },
               "name" => held["name"],
               "phone" => held["phone"],
-              "passkeyOptions" => @passkey_options
+              "passkeyOptions" => @passkey_options,
+              "work" => work_challenge
             }.compact
           }
         end
 
         def start_over!
           login.store.delete(HELD)
+          login.store.delete(WORK)
         end
 
         def cleanup!
@@ -124,9 +128,37 @@ module Masks
 
             values["email"] = proven_email if proven_email
 
-            return unless described?(values)
+            return unless described?(values) && worked?
 
-            login.store[HELD] = values.merge("vouched" => login.first_run?, "expires_at" => (Time.current + WINDOW).to_i)
+            login.store[HELD] = values.merge("vouched" => login.first_run?, "worked" => true,
+                                              "expires_at" => (Time.current + WINDOW).to_i)
+          end
+
+          def proving_work?
+            !login.first_run? && login.policy.proves_work? && !held["worked"]
+          end
+
+          def work_challenge
+            return nil unless proving_work?
+
+            ProofOfWork.issue(bits: login.policy.proof_of_work, bound_to: work_binding)
+          end
+
+          def worked?
+            return true unless proving_work?
+
+            solved = ProofOfWork.verify(update(:work), update(:work_counter),
+                                        bits: login.policy.proof_of_work, bound_to: work_binding)
+
+            return true if solved
+
+            refused! "signup_work" if update(:work).present?
+            warn! "work-unsolved"
+            false
+          end
+
+          def work_binding
+            login.store[WORK] ||= SecureRandom.hex(16)
           end
 
           def described?(values)
@@ -172,7 +204,7 @@ module Masks
 
           def offer_passkey
             return if held.blank? || held["editing"]
-            return warn!("factor-not-offered") unless login.policy.first_factor?(:passkey)
+            return warn!("factor-not-offered") unless login.policy.passkey_signup?
 
             handle = held["webauthn_id"] || WebAuthn.generate_user_id
             options = relying_party.registration_options(
@@ -186,7 +218,7 @@ module Masks
 
           def claim_with_passkey
             return if held.blank? || held["editing"]
-            return warn!("factor-not-offered") unless login.policy.first_factor?(:passkey)
+            return warn!("factor-not-offered") unless login.policy.passkey_signup?
 
             challenge = held["passkey_challenge"]
             login.store[HELD] = held.except("passkey_challenge")

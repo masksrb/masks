@@ -12,12 +12,16 @@ module Masks
           argument :phone_verified, Boolean, required: false
           argument :password_minimum, Integer, required: false
           argument :refuse_common_passwords, Boolean, required: false
+          argument :password_required, Boolean, required: false,
+                                                description: "Every account made at signup sets a password, and a passkey alone is not offered. Needs password among the first factors."
           argument :first_factors, [ String ], required: false
           argument :second_factors, [ String ], required: false
           argument :second_factor_required, Boolean, required: false
           argument :apps_require_second_factor, Boolean, required: false
           argument :refuse_breached_passwords, Boolean, required: false,
                                                     description: "Checks new passwords, and each one used to sign in, against known breaches without sending the password."
+          argument :proof_of_work, Integer, required: false,
+                                            description: "Leading zero bits, 0 to 28, a browser finds by hashing before it signs up. Each bit doubles the work, and 0 turns the check off."
           argument :risk_step_up_at, Integer, required: false, description: "A risk score, 1 to 100, from which a sign-in is asked for a second factor. Null never asks."
           argument :risk_refuse_at, Integer, required: false, description: "A risk score, 1 to 100, from which a sign-in is refused. Null never refuses."
           argument :session_lifetime, Integer, required: false,

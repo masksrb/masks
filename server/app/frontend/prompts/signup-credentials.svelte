@@ -23,6 +23,13 @@ const rows = $derived(
   ].filter(([, value]) => value),
 );
 
+let way = $state(null);
+
+const chosen = $derived(way ?? (passkeyable ? "passkey" : "password"));
+const choosing = $derived(Boolean(credentials.password) && passkeyable);
+const typing = $derived(Boolean(credentials.password) && (!passkeyable || chosen === "password"));
+const passkeying = $derived(passkeyable && (!credentials.password || chosen === "passkey"));
+
 let password = $state("");
 let confirmation = $state("");
 let creating = $state(false);
@@ -63,7 +70,7 @@ async function createPasskey() {
 }
 </script>
 
-<div class="setup flow" class:setup-ready={matched}>
+<div class="setup flow" class:setup-ready={typing ? matched : passkeying}>
   <SignupHead {login} at={2} mark={signup.nickname || signup.email || ""} />
 
   <form {onsubmit} class="flow" aria-busy={login.loading || undefined}>
@@ -80,7 +87,25 @@ async function createPasskey() {
         </div>
       {/each}
 
-      {#if credentials.password}
+      {#if choosing}
+        <div class="ledger-row">
+          <span class="ledger-label" id="credential-way">{login.t("way")}</span>
+          <div class="credential-ways" role="radiogroup" aria-labelledby="credential-way">
+            {#each [["passkey", login.t("way_passkey")], ["password", login.t("way_password")]] as [value, label] (value)}
+              <button
+                type="button"
+                role="radio"
+                class="credential-way"
+                aria-checked={chosen === value}
+                disabled={login.loading || creating}
+                onclick={() => (way = value)}>{label}</button
+              >
+            {/each}
+          </div>
+        </div>
+      {/if}
+
+      {#if typing}
         <label class="ledger-row ledger-step" class:ledger-step-done={long}>
           <span class="ledger-label">{login.t("password")}</span>
           <!-- svelte-ignore a11y_autofocus -->
@@ -89,7 +114,7 @@ async function createPasskey() {
             name="password"
             class="control"
             autocomplete="new-password"
-            autofocus
+            autofocus={!choosing}
             bind:value={password}
           />
           <Hint {login} field="password" hint={login.t("password_hint", { minimum })} />
@@ -109,7 +134,7 @@ async function createPasskey() {
       {/if}
     </div>
 
-    {#if credentials.password}
+    {#if typing}
       <Action
         {login}
         type="submit"
@@ -121,19 +146,14 @@ async function createPasskey() {
     {/if}
   </form>
 
-  {#if passkeyable}
+  {#if passkeying}
     <div class="flow-tight">
-      {#if credentials.password}
-        <span class="providers-rule">{login.t("or")}</span>
-      {:else}
-        <p class="aside">{login.t("passkey_lede")}</p>
-      {/if}
+      <p class="aside">{login.t("passkey_lede")} {login.t("passkey_later")}</p>
 
       <Action
         {login}
-        quiet={credentials.password}
         busy={creating}
-        label={credentials.password ? login.t("with_passkey") : login.t("create_passkey")}
+        label={login.t("create_passkey")}
         working={login.t("waiting_for_passkey")}
         onclick={createPasskey}
       />

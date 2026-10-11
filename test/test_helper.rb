@@ -8,6 +8,8 @@ module Masks
     require_relative "support/signing_keys"
     require_relative "support/deployed"
 
+    SignInPolicy.attribute :proof_of_work, default: 0
+
     module TenantSetup
       extend ActiveSupport::Concern
 

@@ -53,6 +53,8 @@ en:
       submit_signup: "Create my account"
       have_account: "Already have an account?"
       sign_in_instead: "Sign in instead"
+      needs_script: "Signing up here needs JavaScript, which this browser has turned off. Turn it on, or use another browser."
+      proving: "Checking this browser"
 
     identify:
       heading: "Sign in to continue"
@@ -151,9 +153,12 @@ en:
     signup_credentials:
       working: "Creating"
       create_passkey: "Create a passkey"
-      with_passkey: "Use a passkey instead"
       passkey_lede: "Your device keeps the passkey and checks it is you the way it already unlocks. There is no password to remember."
       no_passkeys: "This browser cannot make a passkey. Try another browser or device."
+      way: "Sign in with"
+      way_passkey: "A passkey"
+      way_password: "A password"
+      passkey_later: "It counts as both factors at once. A password can be added later from your account."
 
     prove_email:
       title: "Check your email"
@@ -249,6 +254,7 @@ en:
       risky-sign-in: "This sign-in looks unusual, so it cannot continue from here. Try from a device you have used before, or ask a manager."
       confirmation-expired: "That code expired. Send another."
       signup-domain-refused: "Accounts here cannot be made with that address."
+      work-unsolved: "This browser did not finish the check that keeps out automated signups. Try again."
       invitation-expired: "That invitation is no longer valid. Ask for another."
       reset-expired: "That reset link is no longer valid. Ask for another."
       no-mailer: "This server cannot send email. Ask a manager."

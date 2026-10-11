@@ -15,8 +15,8 @@
 
   const FIELDS = `
     key name signup nickname email emailVerified phone phoneVerified
-    passwordMinimum refuseCommonPasswords firstFactors secondFactors secondFactorRequired appsRequireSecondFactor
-    sessionLifetime sessionIdleTimeout refuseBreachedPasswords riskStepUpAt riskRefuseAt
+    passwordMinimum refuseCommonPasswords passwordRequired firstFactors secondFactors secondFactorRequired appsRequireSecondFactor
+    sessionLifetime sessionIdleTimeout refuseBreachedPasswords riskStepUpAt riskRefuseAt proofOfWork
     emailDomains providers confirmation hidden signupScopes default archivedAt
     clients { clientId name }
   `;
@@ -34,21 +34,21 @@
   const ARGS = `
     $key: ID!, $name: String, $signup: Boolean, $nickname: String, $email: String,
     $emailVerified: Boolean, $phone: String, $phoneVerified: Boolean, $passwordMinimum: Int,
-    $refuseCommonPasswords: Boolean, $firstFactors: [String!], $secondFactors: [String!],
+    $refuseCommonPasswords: Boolean, $passwordRequired: Boolean, $firstFactors: [String!], $secondFactors: [String!],
     $secondFactorRequired: Boolean, $appsRequireSecondFactor: Boolean,
     $sessionLifetime: Int, $sessionIdleTimeout: Int,
-    $refuseBreachedPasswords: Boolean, $riskStepUpAt: Int, $riskRefuseAt: Int, $emailDomains: [String!], $providers: [String!],
+    $refuseBreachedPasswords: Boolean, $riskStepUpAt: Int, $riskRefuseAt: Int, $proofOfWork: Int, $emailDomains: [String!], $providers: [String!],
     $everyProvider: Boolean, $confirmation: String, $hidden: Boolean, $signupScopes: [String!]
   `;
 
   const PASS = `
     key: $key, name: $name, signup: $signup, nickname: $nickname, email: $email,
     emailVerified: $emailVerified, phone: $phone, phoneVerified: $phoneVerified,
-    passwordMinimum: $passwordMinimum, refuseCommonPasswords: $refuseCommonPasswords,
+    passwordMinimum: $passwordMinimum, refuseCommonPasswords: $refuseCommonPasswords, passwordRequired: $passwordRequired,
     firstFactors: $firstFactors, secondFactors: $secondFactors,
     secondFactorRequired: $secondFactorRequired, appsRequireSecondFactor: $appsRequireSecondFactor,
     sessionLifetime: $sessionLifetime, sessionIdleTimeout: $sessionIdleTimeout,
-    refuseBreachedPasswords: $refuseBreachedPasswords, riskStepUpAt: $riskStepUpAt, riskRefuseAt: $riskRefuseAt, emailDomains: $emailDomains,
+    refuseBreachedPasswords: $refuseBreachedPasswords, riskStepUpAt: $riskStepUpAt, riskRefuseAt: $riskRefuseAt, proofOfWork: $proofOfWork, emailDomains: $emailDomains,
     providers: $providers, everyProvider: $everyProvider, confirmation: $confirmation,
     hidden: $hidden, signupScopes: $signupScopes
   `;
@@ -67,6 +67,16 @@
   ];
 
   const SCORES = [[null, t("policies.never")], ...[30, 50, 70, 90].map((score) => [score, t("policies.score", { score })])];
+
+  const WORK = [
+    [0, t("policies.form.signup.work_off")],
+    [14, t("policies.form.signup.work_light")],
+    [17, t("policies.form.signup.work_standard")],
+    [20, t("policies.form.signup.work_strong")],
+  ];
+
+  const offeredWork = (value) =>
+    WORK.some(([held]) => held === value) ? WORK : [...WORK, [value, t("policies.form.signup.work_bits", { bits: value })]];
 
   const offered = (choices, value) =>
     value === null || choices.some(([held]) => held === value)
@@ -96,6 +106,7 @@
     phoneVerified: false,
     passwordMinimum: 8,
     refuseCommonPasswords: true,
+    passwordRequired: false,
     firstFactors: ["password", "passkey", "provider"],
     secondFactors: ["otp", "passkey", "backup_codes"],
     secondFactorRequired: false,
@@ -105,6 +116,7 @@
     refuseBreachedPasswords: false,
     riskStepUpAt: null,
     riskRefuseAt: null,
+    proofOfWork: 17,
     emailDomains: "",
     providers: null,
     confirmation: "none",
@@ -182,6 +194,7 @@
       phoneVerified: draft.phoneVerified,
       passwordMinimum: Number(draft.passwordMinimum) || 8,
       refuseCommonPasswords: draft.refuseCommonPasswords,
+      passwordRequired: draft.passwordRequired && draft.firstFactors.includes("password"),
       firstFactors: draft.firstFactors,
       secondFactors: draft.secondFactors,
       secondFactorRequired: draft.secondFactorRequired,
@@ -191,6 +204,7 @@
       refuseBreachedPasswords: draft.refuseBreachedPasswords,
       riskStepUpAt: draft.riskStepUpAt,
       riskRefuseAt: draft.riskRefuseAt,
+      proofOfWork: Number(draft.proofOfWork) || 0,
       emailDomains: draft.emailDomains.split(/[\s,]+/).filter(Boolean),
       providers: draft.providers ?? [],
       everyProvider: draft.providers === null,
@@ -311,7 +325,18 @@
                       {/each}
                     </select>
                   </label>
+
+                  <label class="flex flex-col gap-1.5">
+                    <span class="field-label">{t("policies.form.signup.work")}</span>
+                    <select class="select select-sm w-full" bind:value={draft.proofOfWork}>
+                      {#each offeredWork(draft.proofOfWork) as [value, label] (value)}
+                        <option {value}>{label}</option>
+                      {/each}
+                    </select>
+                  </label>
                 </div>
+
+                <p class="hint">{t("policies.form.signup.work_hint")}</p>
 
                 {#if (draft.confirmation === "code" || draft.confirmation === "link") && !data.tenant.mails}
                   <p class="text-xs text-warning">
@@ -398,6 +423,9 @@
                     {t("policies.form.sign_in.characters")}
                   </label>
                   <Switch label={t("policies.form.sign_in.refuse_common")} bind:checked={draft.refuseCommonPasswords} />
+                  {#if draft.firstFactors.includes("passkey")}
+                    <Switch label={t("policies.form.sign_in.password_required")} bind:checked={draft.passwordRequired} />
+                  {/if}
                 </div>
               {/if}
 

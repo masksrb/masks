@@ -3,6 +3,7 @@ import { untrack } from "svelte";
 import Action from "../shared/Action.svelte";
 import Hint from "../shared/Hint.svelte";
 import SignupHead from "../shared/SignupHead.svelte";
+import { solve } from "../lib/work.js";
 
 let { login } = $props();
 
@@ -20,6 +21,7 @@ let nickname = $state(held.nickname ?? "");
 let email = $state(held.email ?? "");
 let person = $state(held.name ?? "");
 let phone = $state(held.phone ?? "");
+let proving = $state(false);
 
 const filled = (value) => value.trim().length > 0;
 const needs = (field, value) => asks[field] !== "required" || filled(value);
@@ -32,11 +34,29 @@ const valid = $derived(
     (filled(nickname) || filled(email)),
 );
 
-function onsubmit(event) {
+$effect(() => {
+  solve(signup.work).catch(() => null);
+});
+
+async function proof() {
+  proving = true;
+
+  try {
+    return (await solve(signup.work)) ?? {};
+  } catch {
+    return {};
+  } finally {
+    proving = false;
+  }
+}
+
+async function onsubmit(event) {
   event.preventDefault();
 
-  if (valid && !login.loading) {
-    login.submit("signup", { token, nickname, email, name: person, phone });
+  if (valid && !login.loading && !proving) {
+    const work = await proof();
+
+    login.submit("signup", { token, nickname, email, name: person, phone, ...work });
   }
 }
 </script>
@@ -120,9 +140,9 @@ function onsubmit(event) {
       {login}
       type="submit"
       ready={valid}
-      busy={login.loading}
+      busy={login.loading || proving}
       label={login.t("continue")}
-      working={login.t("working")}
+      working={proving ? login.t("proving") : login.t("working")}
     />
   </form>
 

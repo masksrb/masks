@@ -62,6 +62,13 @@ fr:
           hidden_hint: "Une adresse e-mail reçoit un code avant toute autre chose, qu’elle ait un compte ou non, et un appareil déjà utilisé par ce compte s’en dispense. Les pseudos se connectent comme d’habitude."
           hidden_no_mail: "Aucun adaptateur e-mail : personne ne peut donc se connecter avec une adresse e-mail."
           open_warning: "Une adresse inconnue mène directement à l’inscription, ce qui révèle à n’importe qui quelles adresses ont un compte ici."
+          work: "Vérification du navigateur"
+          work_off: "Désactivée"
+          work_light: "Légère, une fraction de seconde"
+          work_standard: "Standard, environ une seconde"
+          work_strong: "Forte, plusieurs secondes"
+          work_bits: "%{bits} bits"
+          work_hint: "Avant la création d’un compte, le navigateur résout un calcul de hachage qui rend coûteuses les inscriptions en masse. Rien n’est envoyé à un autre service. L’inscription nécessite alors JavaScript."
         account:
           legend: "Compte"
           nickname: "Pseudo"
@@ -74,6 +81,7 @@ fr:
           legend: "Connexion"
           characters: "caractères minimum"
           refuse_common: "Refuser les mots de passe courants"
+          password_required: "Exiger un mot de passe à l’inscription"
           all_providers: "Tous les fournisseurs"
         second_factor:
           legend: "Second facteur"

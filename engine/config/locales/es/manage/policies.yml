@@ -62,6 +62,13 @@ es:
           hidden_hint: "A una dirección de correo se le envía un código antes que nada, tenga cuenta o no, y un dispositivo que esa cuenta ya usó se lo salta. Los apodos inician sesión como siempre."
           hidden_no_mail: "No hay adaptador de correo, así que nadie puede iniciar sesión con una dirección de correo."
           open_warning: "Una dirección desconocida va directamente al registro, lo que revela a cualquiera qué direcciones tienen cuenta aquí."
+          work: "Comprobación del navegador"
+          work_off: "Desactivada"
+          work_light: "Ligera, una fracción de segundo"
+          work_standard: "Estándar, alrededor de un segundo"
+          work_strong: "Fuerte, varios segundos"
+          work_bits: "%{bits} bits"
+          work_hint: "Antes de crear una cuenta, el navegador resuelve un cálculo de hash que encarece los registros en masa. No se envía nada a otro servicio. Registrarse necesita entonces JavaScript."
         account:
           legend: "Cuenta"
           nickname: "Apodo"
@@ -74,6 +81,7 @@ es:
           legend: "Inicio de sesión"
           characters: "caracteres como mínimo"
           refuse_common: "Rechazar contraseñas comunes"
+          password_required: "Exigir una contraseña al registrarse"
           all_providers: "Todos los proveedores"
         second_factor:
           legend: "Segundo factor"

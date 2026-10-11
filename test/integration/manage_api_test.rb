@@ -310,6 +310,34 @@ module Masks
         assert_match "default", refused["errors"].first["message"]
       end
 
+      test "a sign-in policy sets how much work a browser does before it signs up" do
+        held = bearer
+
+        body = ask(%(mutation { createSignInPolicy(key: "open", name: "Open", signup: true, proofOfWork: 20) { signInPolicy { proofOfWork } } }), held)
+
+        assert_equal 20, body.dig("data", "createSignInPolicy", "signInPolicy", "proofOfWork")
+
+        body = ask(%(mutation { updateSignInPolicy(key: "open", proofOfWork: 0) { signInPolicy { proofOfWork } } }), held)
+
+        assert_equal 0, body.dig("data", "updateSignInPolicy", "signInPolicy", "proofOfWork")
+
+        refused = ask(%(mutation { updateSignInPolicy(key: "open", proofOfWork: 64) { signInPolicy { proofOfWork } } }), held)
+
+        assert refused["errors"].present?
+      end
+
+      test "a sign-in policy can require a password at signup, but only while it offers passwords" do
+        held = bearer
+
+        body = ask(%(mutation { createSignInPolicy(key: "open", name: "Open", signup: true, passwordRequired: true) { signInPolicy { passwordRequired } } }), held)
+
+        assert body.dig("data", "createSignInPolicy", "signInPolicy", "passwordRequired")
+
+        refused = ask(%(mutation { updateSignInPolicy(key: "open", firstFactors: ["passkey"]) { signInPolicy { key } } }), held)
+
+        assert refused["errors"].present?
+      end
+
       test "a manager sets the links and logo people are shown, and a link that is not a URL is refused" do
         held = bearer
         stub_request(:get, "https://probe.example.com/logo.png")

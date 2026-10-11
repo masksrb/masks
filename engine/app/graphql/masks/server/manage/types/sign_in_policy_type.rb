@@ -13,11 +13,15 @@ module Masks
           field :phone_verified, Boolean, null: false
           field :password_minimum, Integer, null: false
           field :refuse_common_passwords, Boolean, null: false
+          field :password_required, Boolean, null: false,
+                                             description: "Every account made at signup sets a password, and a passkey alone is not offered."
           field :first_factors, [ String ], null: false
           field :second_factors, [ String ], null: false
           field :second_factor_required, Boolean, null: false
           field :apps_require_second_factor, Boolean, null: false
           field :refuse_breached_passwords, Boolean, null: false
+          field :proof_of_work, Integer, null: false,
+                                         description: "Leading zero bits a browser finds by hashing before it signs up. 0 turns the check off."
           field :risk_step_up_at, Integer
           field :risk_refuse_at, Integer
           field :session_lifetime, Integer, description: "Seconds a session lasts after signing in, or null for 14 days."

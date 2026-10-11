@@ -53,6 +53,8 @@ de:
       submit_signup: "Mein Konto erstellen"
       have_account: "Sie haben bereits ein Konto?"
       sign_in_instead: "Stattdessen anmelden"
+      needs_script: "Die Registrierung hier erfordert JavaScript, das in diesem Browser ausgeschaltet ist. Schalten Sie es ein, oder verwenden Sie einen anderen Browser."
+      proving: "Browser wird geprüft"
 
     identify:
       heading: "Melden Sie sich an, um fortzufahren"
@@ -151,9 +153,12 @@ de:
     signup_credentials:
       working: "Wird erstellt"
       create_passkey: "Passkey erstellen"
-      with_passkey: "Stattdessen einen Passkey verwenden"
       passkey_lede: "Ihr Gerät verwahrt den Passkey und prüft auf dieselbe Weise, wie es sich entsperrt, dass Sie es sind. Sie müssen sich kein Passwort merken."
       no_passkeys: "Dieser Browser kann keinen Passkey erstellen. Versuchen Sie es mit einem anderen Browser oder Gerät."
+      way: "Anmelden mit"
+      way_passkey: "Einem Passkey"
+      way_password: "Einem Passwort"
+      passkey_later: "Er zählt als beide Faktoren zugleich. Ein Passwort können Sie später in Ihrem Konto hinzufügen."
 
     prove_email:
       title: "Prüfen Sie Ihre E-Mails"
@@ -249,6 +254,7 @@ de:
       risky-sign-in: "Diese Anmeldung wirkt ungewöhnlich und kann von hier aus nicht fortgesetzt werden. Versuchen Sie es von einem Gerät, das Sie schon verwendet haben, oder wenden Sie sich an einen Verwalter."
       confirmation-expired: "Dieser Code ist abgelaufen. Senden Sie einen neuen."
       signup-domain-refused: "Mit dieser Adresse können hier keine Konten erstellt werden."
+      work-unsolved: "Dieser Browser hat die Prüfung gegen automatisierte Registrierungen nicht abgeschlossen. Versuchen Sie es erneut."
       invitation-expired: "Diese Einladung ist nicht mehr gültig. Fordern Sie eine neue an."
       reset-expired: "Dieser Link zum Zurücksetzen ist nicht mehr gültig. Fordern Sie einen neuen an."
       no-mailer: "Dieser Server kann keine E-Mails senden. Wenden Sie sich an einen Verwalter."

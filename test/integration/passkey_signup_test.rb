@@ -160,6 +160,100 @@ module Masks
         assert within(@tenant) { Passkey.exists?(passkey.id) }
       end
 
+      test "with passwords and passkeys both offered, a passkey alone makes an account that needs nothing more" do
+        policy!(first_factors: %w[password passkey], second_factors: %w[otp passkey], second_factor_required: true)
+
+        assert_equal({ "password" => true, "passkey" => true }, detailed.dig("signup", "credentials"))
+
+        body = create_passkey
+
+        assert body["settled"], body["prompt"]
+        refute created.password?
+        assert within(@tenant) { created.second_factor? }
+        assert_includes within(@tenant) { Session.live.where(actor: created).sole.amr }, "mfa"
+      end
+
+      test "a policy that requires a password offers no passkey at signup, and still takes a password" do
+        policy!(first_factors: %w[password passkey], password_required: true)
+
+        assert_equal({ "password" => true, "passkey" => false }, detailed.dig("signup", "credentials"))
+
+        body = event("signup:passkey-challenge")
+
+        assert_includes body["warnings"], "factor-not-offered"
+        assert_nil body.dig("signup", "passkeyOptions")
+
+        body = event("signup", password: "a-long-enough-password", password_confirmation: "a-long-enough-password")
+
+        assert_equal "enrol", body["prompt"]
+        assert created.password?
+      end
+
+      test "a passkey answered before a password became required cannot open an account" do
+        policy = policy!(first_factors: %w[password passkey])
+        detailed
+
+        options = event("signup:passkey-challenge").dig("signup", "passkeyOptions")
+        within(@tenant) { policy.update!(password_required: true) }
+
+        body = event("signup:passkey", passkey: JSON.generate(@device.enrol(options)))
+
+        assert_includes body["warnings"], "factor-not-offered"
+        assert_nil created
+      end
+
+      test "a policy can only require a password it offers" do
+        held = within(@tenant) do
+          SignInPolicy.new(key: "keys", name: "Keys", first_factors: [ "passkey" ], password_required: true)
+        end
+
+        refute within(@tenant) { held.valid? }
+        assert_includes held.errors.attribute_names, :password_required
+      end
+
+      test "the first account can be made with a passkey alone, and its passkey is the manager's second factor" do
+        host! host_for(other_tenant)
+        device = FakeAuthenticator.new(origin_for(other_tenant))
+
+        event("signup", token: other_tenant.setup_token!, nickname: "first", email: "first@example.com")
+        options = event("signup:passkey-challenge").dig("signup", "passkeyOptions")
+        body = event("signup:passkey", passkey: JSON.generate(device.enrol(options)))
+
+        assert_equal "setup-configure", body["prompt"]
+
+        within(other_tenant) do
+          owner = Actor.find_by(nickname: "first")
+
+          assert owner.manages?
+          refute owner.password?
+          assert owner.second_factor?
+        end
+      end
+
+      test "an account without a password can ask for a reset link, and the link sets one but still asks for the passkey" do
+        policy!(first_factors: %w[password passkey])
+        detailed
+        create_passkey
+
+        reset!
+        host! host_for(@tenant)
+
+        with_mailer do
+          event("identify", identifier: "ada")
+
+          assert_includes event("forgot-password")["warnings"], "reset-sent"
+        end
+
+        reset = within(@tenant) { PasswordReset.open!(actor: created) }
+
+        get "/reset/#{reset.secret}"
+        body = event("reset-password", password: "a-new-long-password")
+
+        assert_equal "second-factor", body["prompt"]
+        assert body.dig("secondFactors", "passkey")
+        assert within(@tenant) { Actor.authenticate("ada", "a-new-long-password") }
+      end
+
       test "the account page has no password form for an account without one" do
         policy!
         detailed

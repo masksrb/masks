@@ -60,9 +60,13 @@
       <% end %>
     </div>
 
-    <button type="submit" name="event" value="signup" class="action">
-      <%= t("logins.shared.continue") %>
-    </button>
+    <% if signup["work"] %>
+      <p class="note note-warn" role="alert"><%= t("logins.signing_up.needs_script") %></p>
+    <% else %>
+      <button type="submit" name="event" value="signup" class="action">
+        <%= t("logins.shared.continue") %>
+      </button>
+    <% end %>
   <% end %>
 
   <% if login.signing_up["firstRun"] %>

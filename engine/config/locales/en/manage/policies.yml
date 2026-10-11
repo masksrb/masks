@@ -62,6 +62,13 @@ en:
           hidden_hint: "An email address is sent a code before anything else, whether it has an account or not, and a device that account has used before skips it. Nicknames sign in as they always have."
           hidden_no_mail: "No mail adapter, so nobody can sign in with an email address."
           open_warning: "An unknown address goes straight to signup, which tells anybody which addresses have accounts here."
+          work: "Browser check"
+          work_off: "Off"
+          work_light: "Light, a fraction of a second"
+          work_standard: "Standard, about a second"
+          work_strong: "Strong, several seconds"
+          work_bits: "%{bits} bits"
+          work_hint: "Before an account is made, the browser solves a hashing puzzle that makes signing up in bulk expensive. Nothing is sent to another service. Signing up then needs JavaScript."
         account:
           legend: "Account"
           nickname: "Nickname"
@@ -74,6 +81,7 @@ en:
           legend: "Sign in"
           characters: "characters minimum"
           refuse_common: "Refuse common passwords"
+          password_required: "Require a password at signup"
           all_providers: "All providers"
         second_factor:
           legend: "Second factor"

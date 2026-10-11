@@ -869,8 +869,20 @@ type Mutation {
     name: String
     nickname: String
     passwordMinimum: Int
+
+    """
+    Every account made at signup sets a password, and a passkey alone is not
+    offered. Needs password among the first factors.
+    """
+    passwordRequired: Boolean
     phone: String
     phoneVerified: Boolean
+
+    """
+    Leading zero bits, 0 to 28, a browser finds by hashing before it signs up.
+    Each bit doubles the work, and 0 turns the check off.
+    """
+    proofOfWork: Int
     providers: [String!]
 
     """
@@ -1164,8 +1176,20 @@ type Mutation {
     name: String
     nickname: String
     passwordMinimum: Int
+
+    """
+    Every account made at signup sets a password, and a passkey alone is not
+    offered. Needs password among the first factors.
+    """
+    passwordRequired: Boolean
     phone: String
     phoneVerified: Boolean
+
+    """
+    Leading zero bits, 0 to 28, a browser finds by hashing before it signs up.
+    Each bit doubles the work, and 0 turns the check off.
+    """
+    proofOfWork: Int
     providers: [String!]
 
     """
@@ -1752,8 +1776,18 @@ type SignInPolicy {
   name: String!
   nickname: String!
   passwordMinimum: Int!
+
+  """
+  Every account made at signup sets a password, and a passkey alone is not offered.
+  """
+  passwordRequired: Boolean!
   phone: String!
   phoneVerified: Boolean!
+
+  """
+  Leading zero bits a browser finds by hashing before it signs up. 0 turns the check off.
+  """
+  proofOfWork: Int!
   providers: [String!]
   refuseBreachedPasswords: Boolean!
   refuseCommonPasswords: Boolean!

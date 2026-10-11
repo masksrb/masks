@@ -130,16 +130,31 @@ tenant's default, or the built-in one, in that order. `/manage` edits them.
 | `second_factor_required` | off | Ask for a second factor at every sign-in. |
 | `password_minimum` | `8` | Minimum password length. |
 | `refuse_common_passwords` | on | Refuse passwords on a list of about 47,000 common ones. |
+| `password_required` | off | Every account made at signup sets a password, and a passkey alone is not offered. |
 | `providers` | every provider | Which [providers](/guides/sso-saml/#providers) to offer. |
 | `signup` | off | Let people create their own accounts. |
 | `confirmation` | `none` | How a new account is confirmed: `none`, `code`, `link`, or `approval`. |
 | `email_domains` | any | The address domains signup and provider sign-in accept. |
+| `proof_of_work` | `17` | Leading zero bits a browser finds before it signs up. `0` turns the check off. |
 
 A policy also refuses [breached passwords](/guides/security/#breached-passwords) and steps up
 [risky sign-ins](/guides/security/#risky-sign-ins). A factor the policy does not list is hidden and
 refused. The tenant's default always keeps a password or a passkey, so managers are never locked out.
 Whatever the policy says, a manager must set up an authenticator app or a passkey as a second
 factor.
+
+### Signup proof of work
+
+When signup is open, the details step carries a challenge masks signs with its secret key: a random
+nonce, the policy's `proof_of_work` difficulty, and the sign-in it belongs to. The browser hashes the
+nonce with a rising counter using SHA-256 until the digest starts with that many zero bits, then sends
+the counter with the details. Each extra bit doubles the work. The default of 17 takes about a second
+on a laptop, and makes creating accounts in bulk slow and costly.
+
+masks checks the answer with one hash. A challenge lasts ten minutes, is accepted once, and only for
+the sign-in it was issued to. Nothing goes to a third-party service. Without JavaScript the browser
+cannot answer, so signup says it needs JavaScript. The first account on a tenant and invitations
+skip the check.
 
 ### First factors
 
@@ -149,6 +164,13 @@ factor.
 | Passkey | WebAuthn. It counts as a second factor too when the authenticator verified the person. |
 | Provider | An account at Google, Okta, a SAML identity provider, and others. See [SSO / SAML](/guides/sso-saml/). |
 | Emailed code | A six-digit code sent to the account's address, with no password. See [signing in with an emailed code](#signing-in-with-an-emailed-code). |
+
+When the policy offers passkeys at signup and the browser can make one, the credentials step offers
+**A passkey** beside **A password**, and starts on the passkey. An account made with a passkey has no
+password. Its passkey checked who the person is, so it counts as both factors, including the second
+factor a manager or a policy requires. The person can set a password later from **Password**, or
+through a reset link sent to their email address. A policy with `password_required` offers only the
+password at signup.
 
 When the policy offers passkeys and the browser supports passkey autofill, the sign-in field lists
 the person's passkeys among its suggestions. Choosing one signs in without typing a nickname or

@@ -53,6 +53,8 @@ fr:
       submit_signup: "Créer mon compte"
       have_account: "Vous avez déjà un compte ?"
       sign_in_instead: "Se connecter"
+      needs_script: "L'inscription ici nécessite JavaScript, désactivé dans ce navigateur. Activez-le, ou utilisez un autre navigateur."
+      proving: "Vérification du navigateur"
 
     identify:
       heading: "Connectez-vous pour continuer"
@@ -151,9 +153,12 @@ fr:
     signup_credentials:
       working: "Création"
       create_passkey: "Créer une clé d’accès"
-      with_passkey: "Utiliser plutôt une clé d’accès"
       passkey_lede: "Votre appareil conserve la clé d’accès et vérifie que c’est bien vous, de la même façon qu’il se déverrouille déjà. Il n’y a aucun mot de passe à retenir."
       no_passkeys: "Ce navigateur ne peut pas créer de clé d’accès. Essayez un autre navigateur ou un autre appareil."
+      way: "Se connecter avec"
+      way_passkey: "Une clé d’accès"
+      way_password: "Un mot de passe"
+      passkey_later: "Elle compte pour les deux facteurs à la fois. Vous pourrez ajouter un mot de passe plus tard depuis votre compte."
 
     prove_email:
       title: "Consultez vos e-mails"
@@ -249,6 +254,7 @@ fr:
       risky-sign-in: "Cette connexion semble inhabituelle, elle ne peut donc pas continuer d’ici. Essayez depuis un appareil que vous avez déjà utilisé, ou adressez-vous à un gestionnaire."
       confirmation-expired: "Ce code a expiré. Demandez-en un autre."
       signup-domain-refused: "Les comptes ne peuvent pas être créés ici avec cette adresse."
+      work-unsolved: "Ce navigateur n'a pas terminé la vérification qui écarte les inscriptions automatisées. Réessayez."
       invitation-expired: "Cette invitation n’est plus valide. Demandez-en une autre."
       reset-expired: "Ce lien de réinitialisation n’est plus valide. Demandez-en un autre."
       no-mailer: "Ce serveur ne peut pas envoyer d’e-mails. Adressez-vous à un gestionnaire."
