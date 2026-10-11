@@ -445,7 +445,7 @@
       >
         <div class="flex flex-wrap items-center gap-3">
           {#if data.tenant.logoUrl}
-            <img src={`${boot.issuer}${data.tenant.logoUrl}`} alt="" width="48" height="48" class="rounded-lg" />
+            <img src={data.tenant.logoUrl} alt="" width="48" height="48" class="rounded-lg" />
           {/if}
 
           <label class="btn btn-sm">
