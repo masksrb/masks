@@ -43,7 +43,7 @@ module Masks
         end
 
         assert_redirected_to "/#authenticator"
-        assert reloaded.otp?
+        assert within { reloaded.otp? }
 
         follow_redirect!
 
@@ -59,7 +59,7 @@ module Masks
         post "/account/authenticator", params: { code: "000000" }
 
         assert_equal flash[:alert], I18n.t("authenticator_apps.invalid_code")
-        refute reloaded.otp?
+        refute within { reloaded.otp? }
         assert_equal secret, shown_secret
       end
 
@@ -82,7 +82,7 @@ module Masks
           post "/account/authenticator", params: { code: ROTP::TOTP.new(secret).now }
 
           assert_redirected_to %r{/login}
-          refute reloaded.otp?
+          refute within { reloaded.otp? }
         end
       end
 
@@ -107,7 +107,7 @@ module Masks
         delete "/account/authenticator"
 
         assert_redirected_to "/#authenticator"
-        refute reloaded.otp?
+        refute within { reloaded.otp? }
         refute reloaded.backup_codes?
         assert within(@tenant) { Event.where(action: Event::AUTHENTICATOR_DISABLED, actor: @actor).exists? }
       end

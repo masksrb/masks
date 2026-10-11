@@ -22,7 +22,7 @@ module Masks
       test "a stream is created with a secret the receiver can verify with" do
         held = stream
 
-        assert_equal 64, held.secret.length
+        assert_equal 64, within { held.secret.length }
         assert_empty held.actions
       end
 

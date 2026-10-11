@@ -85,9 +85,17 @@ module Masks
       end
 
       def key_provider
+        @key_provider ||= TenantKeyProvider.new(shared_key_provider)
+      end
+
+      def tenant_key_provider
+        @tenant_key_provider ||= TenantKeyProvider.new(shared_key_provider, keyed: true)
+      end
+
+      def shared_key_provider
         return nil unless engine?
 
-        @key_provider ||= ActiveRecord::Encryption::KeyProvider.new(
+        @shared_key_provider ||= ActiveRecord::Encryption::KeyProvider.new(
           ActiveRecord::Encryption::Key.new(key_generator.generate_key("masks/server encryption", 32))
         )
       end
@@ -98,6 +106,7 @@ end
 require_relative "server/version"
 require_relative "server/configuration"
 require_relative "server/isolation"
+require_relative "server/tenant_key_provider"
 require_relative "server/forwarding"
 require_relative "server/forwarded_app"
 require_relative "server/host"

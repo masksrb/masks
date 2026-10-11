@@ -110,6 +110,18 @@ class EngineModeTest
     scheme = Masks::Server::Actor.type_for_attribute(:otp_secret).scheme
 
     assert_same Masks::Server.key_provider, scheme.key_provider
+    assert_kind_of Masks::Server::TenantKeyProvider, scheme.key_provider
+    assert_kind_of ActiveRecord::Encryption::KeyProvider, scheme.key_provider.shared
+  end
+
+  test "the provider encrypts each tenant's columns under that tenant's key in engine mode too" do
+    scheme = Masks::Server::Actor.type_for_attribute(:otp_secret)
+    ciphertext = Masks::Server::Tenant.switch(tenant) { scheme.serialize("JBSWY3DPEHPK3PXP") }
+
+    assert_equal "JBSWY3DPEHPK3PXP", Masks::Server::Tenant.switch(tenant) { scheme.deserialize(ciphertext) }
+    assert_raises(ActiveRecord::Encryption::Errors::Decryption) do
+      ActiveRecord::Encryption.encryptor.decrypt(ciphertext, key_provider: Masks::Server.key_provider.shared)
+    end
   end
 
   test "the provider runs on a database of its own" do

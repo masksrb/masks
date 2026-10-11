@@ -80,7 +80,7 @@ module Masks
         refute_includes held.to_s, "hunter2"
         refute_includes adapter.settings.to_json, "hunter2"
         refute adapter.public_settings.key?("password")
-        assert_equal [ "password" ], adapter.secrets_held
+        assert_equal [ "password" ], within { adapter.secrets_held }
         assert_equal "hunter2", within { Adapter.find(adapter.id)[:password] }
       end
 

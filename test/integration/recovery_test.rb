@@ -131,7 +131,7 @@ module Masks
 
         assert_nil answer["errors"]
         assert_nil reloaded.recovery_requested_at
-        assert reloaded.otp?
+        assert within { reloaded.otp? }
       end
     end
   end

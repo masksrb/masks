@@ -10,9 +10,7 @@ module Masks
       end
 
       def self.encrypts(*names, **options)
-        provider = Server.key_provider
-
-        super(*names, **(provider ? { key_provider: provider } : {}), **options)
+        super(*names, **options.reverse_merge(key_provider: Server.key_provider))
       end
     end
   end

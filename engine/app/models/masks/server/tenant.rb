@@ -31,7 +31,9 @@ module Masks
         end
       end
 
-      encrypts :pairwise_salt, :setup_token
+      encrypts :pairwise_salt, :setup_token, key_provider: Server.tenant_key_provider
+
+      attribute :uuid, default: -> { SecureRandom.uuid }
 
       has_many :signing_keys, dependent: :destroy
       has_many :actors, dependent: :destroy
@@ -358,6 +360,20 @@ module Masks
         Tenant.switch(self) { signing_keys.active.first } || ensure_signing_key!
       end
 
+      def save(**options, &block) = keyed { super }
+
+      def save!(**options, &block) = keyed { super }
+
+      def update_columns(attributes) = keyed { super }
+
+      def encrypt = keyed { super }
+
+      def decrypt = keyed { super }
+
+      def attributes = keyed { super }
+
+      def _read_attribute(name, &block) = keyed { super }
+
       def pairwise_salt!
         return pairwise_salt if pairwise_salt.present?
 
@@ -413,6 +429,8 @@ module Masks
       end
 
       private
+
+        def keyed(&) = TenantKeyProvider.keyed(self, &)
 
         def custom_host_is_proven
           if self.class.own_domain?(custom_host)

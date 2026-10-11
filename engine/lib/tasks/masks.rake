@@ -14,6 +14,9 @@ namespace :masks do
     if ENV["ENCRYPTION_PREVIOUS_PRIMARY_KEY"].present?
       Masks::Server::MasterKey.reencrypt!
       puts "masks: every encrypted column now uses the current master key. Remove MASKS_PREVIOUS_MASTER_KEY."
+    elsif Masks::Server::MasterKey.shared?
+      Masks::Server::MasterKey.reencrypt!
+      puts "masks: every tenant's encrypted columns now use a key of that tenant's own."
     end
   end
 end

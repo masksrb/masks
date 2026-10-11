@@ -52,7 +52,7 @@ module Masks
         body = event("enrol:otp", code: "000000")
 
         assert_includes body["warnings"], "invalid-code"
-        refute factored.otp?
+        refute within { factored.otp? }
       end
 
       test "an authenticator app, then backup codes that must be kept, then signed in" do
@@ -61,7 +61,7 @@ module Masks
 
         body = event("enrol:otp", code: ROTP::TOTP.new(secret).now)
 
-        assert factored.otp?
+        assert within { factored.otp? }
         assert_equal "enrol", body["prompt"], "the screen stays open for more factors"
         assert_equal Actor::BACKUP_CODES, body.dig("enrolment", "backupCodes", "issued").length
 
@@ -94,11 +94,11 @@ module Masks
         body = sign_in_as(@manager)
         secret = body.dig("enrolment", "otp", "secret").delete(" ")
         event("enrol:otp", code: ROTP::TOTP.new(secret).now)
-        held = factored.otp_secret
+        held = within { factored.otp_secret }
 
         event("enrol:otp", code: ROTP::TOTP.new(ROTP::Base32.random).now)
 
-        assert_equal held, factored.otp_secret
+        assert_equal held, within { factored.otp_secret }
       end
 
       test "a passkey counts, and as many can be added as are wanted" do
