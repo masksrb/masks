@@ -110,6 +110,11 @@ def callback():
     return redirect("/")
 ```
 
+A Python service or a machine that signs in as itself uses the
+[Python SDK](https://github.com/masksrb/masks/tree/main/python), `masks-client`, for client
+credentials, the device flow, and DPoP. A Python API checks access tokens, DPoP-bound ones included,
+with its verifier or its ASGI middleware.
+
 ## Go
 
 With [go-oidc](https://github.com/coreos/go-oidc) and `golang.org/x/oauth2`:

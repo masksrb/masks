@@ -238,11 +238,19 @@ def gofmt(check)
   false
 end
 
+def ruff(check)
+  python = File.join(ROOT, "python")
+  formatted = run("uv", "run", "--frozen", "ruff", "format", *([ "--check" ] if check), chdir: python)
+  linted = run("uv", "run", "--frozen", "ruff", "check", *([ "--fix" ] unless check), chdir: python)
+
+  formatted && linted
+end
+
 def fmt(args)
   usage unless args.empty? || args == [ "--check" ]
   check = args.first == "--check"
 
-  %w[shfmt shellcheck gofmt].each do |tool|
+  %w[shfmt shellcheck gofmt uv].each do |tool|
     next if system("command -v #{tool} > /dev/null")
 
     die("#{tool} is not on your PATH, and CI checks with it. brew bundle")
@@ -257,7 +265,8 @@ def fmt(args)
         "--no-error-on-unmatched-pattern", *GLOBS),
     run("shfmt", check ? "-d" : "-w", "-i", "2", "-ci", "server/bin"),
     shellcheck,
-    gofmt(check)
+    gofmt(check),
+    ruff(check)
   ]
 
   exit(ok.all? ? 0 : 1)

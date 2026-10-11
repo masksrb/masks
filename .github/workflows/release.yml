@@ -10,7 +10,7 @@ on:
         description: Publish a package without cutting a release
         required: true
         type: choice
-        options: [gem, server-gem, client, node, image]
+        options: [gem, server-gem, client, node, python, image]
 
 permissions: {}
 
@@ -33,6 +33,8 @@ jobs:
       server_version: ${{ steps.release.outputs['server--version'] }}
       engine: ${{ steps.release.outputs['engine--release_created'] }}
       engine_tag: ${{ steps.release.outputs['engine--tag_name'] }}
+      python: ${{ steps.release.outputs['python--release_created'] }}
+      python_tag: ${{ steps.release.outputs['python--tag_name'] }}
 
     steps:
       - name: Maintain the release pull requests
@@ -243,6 +245,40 @@ jobs:
       - name: Publish
         working-directory: node
         run: npm publish --access public
+
+  python:
+    needs: release-please
+    if: >-
+      !cancelled() &&
+      needs.release-please.result != 'failure' &&
+      (needs.release-please.outputs.python == 'true' || inputs.package == 'python')
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.release-please.outputs.python_tag }}
+
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          cache-dependency-glob: python/uv.lock
+
+      - name: Test
+        working-directory: python
+        run: uv run --frozen pytest -q
+
+      - name: Build
+        working-directory: python
+        run: uv build
+
+      - name: Publish
+        uses: pypa/gh-action-pypi-publish@v1.14.2
+        with:
+          packages-dir: python/dist
 
   image:
     needs: release-please

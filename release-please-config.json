@@ -63,6 +63,13 @@
       "component": "node",
       "initial-version": "0.1.0",
       "changelog-path": "CHANGELOG.md"
+    },
+    "python": {
+      "release-type": "python",
+      "component": "python",
+      "package-name": "masks-client",
+      "initial-version": "0.1.0",
+      "changelog-path": "CHANGELOG.md"
     }
   },
   "plugins": [

@@ -30,6 +30,9 @@ jobs:
         with:
           go-version-file: go/go.mod
           cache-dependency-path: go/go.sum
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          cache-dependency-glob: python/uv.lock
       - name: Install shfmt, which the runner does not ship
         run: |
           curl -fsSL -o /usr/local/bin/shfmt \
@@ -91,6 +94,35 @@ jobs:
         run: npm test
       - name: Audit the packages @masks/server ships with
         run: npm audit --omit=dev
+
+  python:
+    needs: lint
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.14"]
+    defaults:
+      run:
+        working-directory: python
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          python-version: ${{ matrix.python }}
+          cache-dependency-glob: python/uv.lock
+      - name: Install the Python SDK from its lockfile
+        run: uv sync --frozen
+      - name: Check the Python SDK's types
+        run: uv run --frozen mypy --strict src
+      - name: Test the Python SDK on Python ${{ matrix.python }}
+        run: uv run --frozen pytest -q
+      - name: Scan the Python SDK's dependencies for known vulnerabilities
+        run: |
+          uv export --frozen --no-dev --no-emit-project --format requirements-txt > "$RUNNER_TEMP/requirements.txt"
+          uvx pip-audit@2.10.1 --disable-pip --require-hashes -r "$RUNNER_TEMP/requirements.txt"
+      - name: Build the Python SDK
+        run: uv build
 
   scan:
     needs: lint
