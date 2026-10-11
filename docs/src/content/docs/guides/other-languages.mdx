@@ -1,0 +1,152 @@
+---
+title: Other languages
+description: Sign an app in against masks from Node, Next.js, Python, or Go with the usual OpenID Connect library.
+---
+
+masks is a standard OpenID Connect provider, so an app in any language signs in with its usual
+library. Each recipe below uses the authorization code flow with PKCE.
+
+## Registering the app
+
+In `/manage`, under **Clients → Add client**, choose **Signs actors in**, name the app, and enter its
+redirect URI. masks shows the `client_id` and the client secret once. The issuer is the address masks
+answers at, such as `https://auth.example.com`, and discovery is at
+`/.well-known/openid-configuration` under it. Ask for `groups` as well to receive the
+[groups claim](/guides/features/#groups).
+
+## Node
+
+With [openid-client](https://github.com/panva/openid-client):
+
+```js
+import * as client from "openid-client";
+
+const config = await client.discovery(new URL("https://auth.example.com"), process.env.MASKS_CLIENT_ID,
+  process.env.MASKS_CLIENT_SECRET);
+
+app.get("/login", async (req, res) => {
+  const verifier = client.randomPKCECodeVerifier();
+  req.session.verifier = verifier;
+
+  res.redirect(client.buildAuthorizationUrl(config, {
+    redirect_uri: "https://app.example.com/callback",
+    scope: "openid profile email",
+    code_challenge: await client.calculatePKCECodeChallenge(verifier),
+    code_challenge_method: "S256",
+  }).href);
+});
+
+app.get("/callback", async (req, res) => {
+  const tokens = await client.authorizationCodeGrant(config, new URL(req.url, "https://app.example.com"), {
+    pkceCodeVerifier: req.session.verifier,
+  });
+
+  req.session.person = tokens.claims();
+  res.redirect("/");
+});
+```
+
+## Next.js
+
+With [Auth.js](https://authjs.dev), masks is an OpenID Connect provider. Register
+`https://app.example.com/api/auth/callback/masks` as the redirect URI.
+
+```ts
+import NextAuth from "next-auth";
+
+export const { handlers, auth, signIn, signOut } = NextAuth({
+  providers: [
+    {
+      id: "masks",
+      name: "masks",
+      type: "oidc",
+      issuer: "https://auth.example.com",
+      clientId: process.env.AUTH_MASKS_ID,
+      clientSecret: process.env.AUTH_MASKS_SECRET,
+    },
+  ],
+});
+```
+
+## Python
+
+With [Authlib](https://docs.authlib.org) in Flask:
+
+```python
+from authlib.integrations.flask_client import OAuth
+
+oauth = OAuth(app)
+oauth.register(
+    "masks",
+    server_metadata_url="https://auth.example.com/.well-known/openid-configuration",
+    client_id=os.environ["MASKS_CLIENT_ID"],
+    client_secret=os.environ["MASKS_CLIENT_SECRET"],
+    client_kwargs={"scope": "openid profile email", "code_challenge_method": "S256"},
+)
+
+@app.route("/login")
+def login():
+    return oauth.masks.authorize_redirect(url_for("callback", _external=True))
+
+@app.route("/callback")
+def callback():
+    token = oauth.masks.authorize_access_token()
+    session["person"] = token["userinfo"]
+    return redirect("/")
+```
+
+## Go
+
+With [go-oidc](https://github.com/coreos/go-oidc) and `golang.org/x/oauth2`:
+
+```go
+provider, err := oidc.NewProvider(ctx, "https://auth.example.com")
+config := oauth2.Config{
+	ClientID:     os.Getenv("MASKS_CLIENT_ID"),
+	ClientSecret: os.Getenv("MASKS_CLIENT_SECRET"),
+	RedirectURL:  "https://app.example.com/callback",
+	Endpoint:     provider.Endpoint(),
+	Scopes:       []string{oidc.ScopeOpenID, "profile", "email"},
+}
+verifier := provider.Verifier(&oidc.Config{ClientID: config.ClientID})
+```
+
+On `/login`, keep the state and the PKCE verifier in the session and send the browser on:
+
+```go
+pkce := oauth2.GenerateVerifier()
+http.Redirect(w, r, config.AuthCodeURL(state, oauth2.S256ChallengeOption(pkce)), http.StatusFound)
+```
+
+On `/callback`, exchange the code and check the ID token:
+
+```go
+token, err := config.Exchange(ctx, r.URL.Query().Get("code"), oauth2.VerifierOption(pkce))
+idToken, err := verifier.Verify(ctx, token.Extra("id_token").(string))
+var claims struct {
+	Email  string   `json:"email"`
+	Groups []string `json:"groups"`
+}
+err = idToken.Claims(&claims)
+```
+
+## Checking access tokens in an API
+
+An access token from masks is a JWT of type `at+jwt`, signed with a key published at
+`/.well-known/jwks.json`. An API checks its signature, its issuer, and that `aud` names the API. With
+[jose](https://github.com/panva/jose) in Node:
+
+```js
+import { createRemoteJWKSet, jwtVerify } from "jose";
+
+const keys = createRemoteJWKSet(new URL("https://auth.example.com/.well-known/jwks.json"));
+
+const { payload } = await jwtVerify(token, keys, {
+  issuer: "https://auth.example.com",
+  audience: "https://api.example.com",
+  typ: "at+jwt",
+});
+```
+
+An app asks for a token for the API by sending `resource=https://api.example.com` when it signs in.
+`payload.scope` holds the granted scopes, separated by spaces.
