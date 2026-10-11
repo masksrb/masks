@@ -83,6 +83,15 @@ module Masks
         Tokens.granted(post("token_endpoint", form))
       end
 
+      def enroll(scope:, name: nil, expires_in: nil)
+        form = [ [ "client_id", client_id ], [ "scope", Array(scope).join(" ") ] ]
+
+        form << [ "client_name", name ] if name
+        form << [ "expires_in", expires_in.to_i ] if expires_in
+
+        Enrollment.issued(post("enrollment_endpoint", form))
+      end
+
       def refresh(refresh_token, resource: nil, scope: nil)
         form = [
           [ "grant_type", "refresh_token" ],

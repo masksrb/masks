@@ -55,6 +55,30 @@ class SessionTest < ClientTest
     assert_equal "Basic #{Base64.strict_encode64('indexer:shh')}", sent[:headers]["authorization"]
   end
 
+  def test_an_app_asks_for_an_enrollment_token_for_a_machine
+    issuer.override("/enrollments", { "initial_access_token" => "iat", "expires_in" => 900, "scope" => "xixo:agent" })
+
+    service = Masks::Client::Session.new(issuer: issuer.url, client_id: "xixo", client_secret: "shh")
+    enrollment = service.enroll(scope: "xixo:agent", name: "nas", expires_in: 900)
+    sent = issuer.last("/enrollments")
+
+    assert_equal "iat", enrollment.initial_access_token
+    assert_equal [ "xixo:agent" ], enrollment.scopes
+    assert_equal enrollment.obtained_at + 900, enrollment.expires_at
+    assert_equal({ "client_id" => "xixo", "scope" => "xixo:agent", "client_name" => "nas", "expires_in" => "900" }, sent[:body])
+    assert_equal "Basic #{Base64.strict_encode64('xixo:shh')}", sent[:headers]["authorization"]
+  end
+
+  def test_an_enrollment_answered_without_a_token_is_refused
+    issuer.override("/enrollments", { "error" => "invalid_request", "error_description" => "outside xixo:" })
+
+    error = assert_raises(Masks::Client::Rejected) do
+      Masks::Client::Session.new(issuer: issuer.url, client_id: "xixo", client_secret: "shh").enroll(scope: "other:agent")
+    end
+
+    assert_match(/outside xixo:/, error.message)
+  end
+
   def test_a_client_holding_a_private_key_signs_an_assertion_instead_of_sending_a_secret
     issuer.override("/token", { "access_token" => "at", "token_type" => "Bearer", "expires_in" => 60 })
     key = OpenSSL::PKey::EC.generate("prime256v1")

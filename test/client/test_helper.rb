@@ -63,6 +63,7 @@ class FakeIssuer
       "userinfo_endpoint" => "#{url}/userinfo",
       "jwks_uri" => "#{url}/.well-known/jwks.json",
       "registration_endpoint" => "#{url}/register",
+      "enrollment_endpoint" => "#{url}/enrollments",
       "handshake_endpoint" => "#{url}/handshake",
       "revocation_endpoint" => "#{url}/revoke",
       "introspection_endpoint" => "#{url}/introspect"
