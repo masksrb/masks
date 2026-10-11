@@ -12,8 +12,6 @@ says what a person can do once it lands.
 
 ## Plugging in self-hosted apps
 
-- **Presets for common apps.** Adding Grafana or Nextcloud fills in the
-  redirect URIs, scopes, and claims.
 - **Forward authentication.** An endpoint Caddy, Traefik, and nginx ask before
   serving an app that has no sign-in of its own.
 

@@ -146,6 +146,26 @@ module Masks
         assert_match "security", answer["errors"].to_s
         refute within { Group.exists?(key: "admins") }
       end
+
+      test "an owner adds Grafana from its preset and gets the settings to paste into it" do
+        owner = create_actor(@tenant, nickname: "boss", scopes: "openid profile email masks:manage")
+        bearer = manage_token(owner)
+
+        added = ask(<<~GQL, bearer)
+          mutation { addApp(preset: "grafana", baseUrl: "https://grafana.example.com/") {
+            client { clientId name redirectUris allowedScopes clientUri } secret settings { label value } } }
+        GQL
+
+        assert_nil added["errors"]
+        app = added.dig("data", "addApp")
+        assert_equal [ "https://grafana.example.com/login/generic_oauth" ], app.dig("client", "redirectUris")
+        assert_includes app.dig("client", "allowedScopes"), "groups"
+        assert_equal "https://grafana.example.com", app.dig("client", "clientUri")
+
+        held = app["settings"].to_h { |setting| [ setting["label"], setting["value"] ] }
+        assert_equal app.dig("client", "clientId"), held["client_id"]
+        assert_equal app["secret"], held["client_secret"]
+      end
     end
   end
 end

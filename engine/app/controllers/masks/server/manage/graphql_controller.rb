@@ -10,7 +10,7 @@ module Masks
               document["query"],
               variables: document["variables"],
               operation_name: document["operationName"],
-              context: { actor: actor, client: token.client, token: token, roles: roles }
+              context: { actor: actor, client: token.client, token: token, roles: roles, issuer: issuer }
             )
           end
         end

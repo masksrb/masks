@@ -22,6 +22,23 @@ Only an approved client may hold a `masks:` scope, sign in as itself, receive a
 trusts the tokens issued for it. A self-registered client that names `resources` is refused. A client grants `required_scopes` always and
 `allowed_scopes` when asked. Archiving a client stops it signing anyone in and keeps its record.
 
+### Adding a known app
+
+Under **Clients → Add client → A known app**, a manager picks an app and enters its address. masks
+registers it with the redirect URIs and scopes that app expects, sets its address as the **Client URI**
+so it appears under **Your apps**, and lists each value to enter in the app under the app's own name
+for it, the client secret included.
+
+| App | Needs beyond its address |
+| --- | --- |
+| Grafana, Nextcloud, Immich, Outline, Audiobookshelf, Portainer, Vaultwarden, Mealie, Open WebUI | Nothing |
+| Gitea, Forgejo, Paperless-ngx, Proxmox VE, Jellyfin (SSO plugin) | The name the app gives masks, `masks` unless you change it |
+
+Grafana, Nextcloud, Gitea, Forgejo, Paperless-ngx, Proxmox VE, Jellyfin, Mealie, and Open WebUI read the
+[groups claim](#groups), and the settings map a group called `admins` to each app's administrators
+where the app allows it. Immich and Audiobookshelf read roles from claims of their own, so their
+administrators are chosen in the app.
+
 ### A client named by its metadata document
 
 An app that has never registered can use the URL of a JSON document it publishes as its `client_id`,

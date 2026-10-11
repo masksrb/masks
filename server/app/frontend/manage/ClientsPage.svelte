@@ -12,6 +12,7 @@
   import Page from "./ui/Page.svelte";
   import Row from "./ui/Row.svelte";
   import Search from "./ui/Search.svelte";
+  import Select from "./ui/Select.svelte";
   import Spinner from "./ui/Spinner.svelte";
   import Switch from "./ui/Switch.svelte";
   import Table from "./ui/Table.svelte";
@@ -60,7 +61,16 @@
     ["service", "Signs in as itself", ["client_credentials"]],
     ["app", "Signs actors in", ["authorization_code", "refresh_token"]],
     ["saml", "SAML app", []],
+    ["preset", "A known app", []],
   ];
+
+  const ADD_APP = `
+    mutation AddApp($preset: ID!, $baseUrl: String!, $name: String, $slug: String) {
+      addApp(preset: $preset, baseUrl: $baseUrl, name: $name, slug: $slug) {
+        client { clientId name } secret guide settings { label value }
+      }
+    }
+  `;
 
   const COLUMNS = [
     "Name",
@@ -78,6 +88,7 @@
   let busy = $state(false);
   let created = $state(null);
   let supported = $state([]);
+  let presets = $state([]);
   let draft = $state(blank());
 
   function blank() {
@@ -91,8 +102,13 @@
       entityId: "",
       certificate: "",
       requestsSigned: false,
+      preset: "",
+      baseUrl: "",
+      slug: "",
     };
   }
+
+  const chosen = $derived(presets.find((preset) => preset.key === draft.preset));
 
   const lines = (text) =>
     text
@@ -108,9 +124,14 @@
 
     if (supported.length) return;
 
-    const data = await feedback.attempt(() => api.query("query Scopes { scopesSupported }"));
+    const data = await feedback.attempt(() =>
+      api.query("query Scopes { scopesSupported appPresets { key name asks guide } }"),
+    );
 
-    if (data) supported = data.scopesSupported;
+    if (!data) return;
+
+    supported = data.scopesSupported;
+    presets = data.appPresets;
   }
 
   async function readMetadata() {
@@ -134,6 +155,19 @@
   }
 
   function request() {
+    if (draft.kind === "preset") {
+      return [
+        ADD_APP,
+        {
+          preset: draft.preset,
+          baseUrl: draft.baseUrl.trim(),
+          name: draft.name.trim() || null,
+          slug: draft.slug.trim() || null,
+        },
+        "addApp",
+      ];
+    }
+
     if (draft.kind === "saml") {
       return [
         SAML,
@@ -263,8 +297,28 @@
         {/each}
       </div>
 
+      {#if draft.kind === "preset"}
+        <Select
+          label="App"
+          value={draft.preset}
+          options={[["", "Choose one"], ...presets.map((preset) => [preset.key, preset.name])]}
+          onchange={(key) => {
+            draft.preset = key;
+            draft.slug = presets.find((preset) => preset.key === key)?.asks?.name ?? "";
+          }}
+        />
+
+        <Field label="Its address" bind:value={draft.baseUrl} placeholder="https://grafana.example.com" />
+
+        {#if chosen?.asks?.name}
+          <Field label="Name it uses for masks" bind:value={draft.slug} placeholder={chosen.asks.name} />
+        {/if}
+      {/if}
+
       <p class="hint">
-        {draft.kind === "service"
+        {draft.kind === "preset"
+          ? "masks fills in its redirect URIs and scopes, and shows what to enter in the app. Name is optional here."
+          : draft.kind === "service"
           ? "It asks the token endpoint for its own token with client_credentials. No actor is behind it, so it never holds openid, profile, email or masks:manage."
           : draft.kind === "saml"
             ? "It sends actors here with a SAML AuthnRequest, and masks posts a signed assertion back. Paste its metadata to fill the rest in."
@@ -360,7 +414,10 @@
         <button
           type="button"
           class="btn btn-primary btn-sm"
-          disabled={busy || !draft.name.trim() || (draft.kind === "saml" && !draft.entityId.trim())}
+          disabled={busy ||
+            (draft.kind === "preset"
+              ? !draft.preset || !draft.baseUrl.trim()
+              : !draft.name.trim() || (draft.kind === "saml" && !draft.entityId.trim()))}
           onclick={send}
         >
           {busy ? "Adding..." : "Add the client"}
@@ -382,6 +439,20 @@
 
       {#if created.secret}
         <p class="tray px-2 py-1 font-mono text-xs break-all">{created.secret}</p>
+      {/if}
+
+      {#if created.settings}
+        <p class="text-sm opacity-85">
+          Enter these in {created.client.name}. The secret appears in them too, and is not shown again.
+          {#if created.guide}<a class="link" href={created.guide} target="_blank" rel="noreferrer">Its guide</a>.{/if}
+        </p>
+
+        <dl class="grid gap-x-4 gap-y-2 text-sm md:grid-cols-[auto_1fr]">
+          {#each created.settings as setting (setting.label)}
+            <dt class="font-mono text-xs opacity-80">{setting.label}</dt>
+            <dd class="tray m-0 px-2 py-1 font-mono text-xs break-all">{setting.value}</dd>
+          {/each}
+        </dl>
       {/if}
 
       <Link to={`/clients/${created.client.clientId}`} class="btn btn-sm self-start">Open it</Link>

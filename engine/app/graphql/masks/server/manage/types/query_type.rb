@@ -149,6 +149,7 @@ module Masks
           field :tally, TallyType, null: false
 
           field :groups, [ GroupType ], null: false
+          field :app_presets, [ AppPresetType ], null: false
           field :group, GroupType do
             argument :key, String
           end
@@ -380,6 +381,10 @@ module Masks
 
           def minimum_password
             Actor::MINIMUM_PASSWORD
+          end
+
+          def app_presets
+            Masks::Server::AppPreset.all
           end
 
           def groups

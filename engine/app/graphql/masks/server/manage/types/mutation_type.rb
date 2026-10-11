@@ -30,6 +30,7 @@ module Masks
           field :upload_avatar, mutation: Mutations::UploadAvatar
           field :remove_avatar, mutation: Mutations::RemoveAvatar
           field :create_client, mutation: Mutations::CreateClient
+          field :add_app, mutation: Mutations::AddApp
           field :create_saml_application, mutation: Mutations::CreateSamlApplication
           field :read_saml_application_metadata, mutation: Mutations::ReadSamlApplicationMetadata
           field :update_client, mutation: Mutations::UpdateClient
