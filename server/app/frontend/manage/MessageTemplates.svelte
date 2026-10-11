@@ -40,6 +40,41 @@
         {@const template = templates[templated(shown.key)]}
 
         <div class="mail">
+          <div class="mail-pick">
+            <select
+              class="select select-sm w-full"
+              aria-label={t("emails.list")}
+              value={shown.key}
+              onchange={(event) => (chosen = event.currentTarget.value)}
+            >
+              {#each GROUPS as journey (journey)}
+                {@const members = previews.filter((preview) => preview.journey === journey)}
+
+                {#if members.length}
+                  <optgroup label={t(`emails.groups.${journey}.title`)}>
+                    {#each members as preview (preview.key)}
+                      <option value={preview.key}>{preview.name}</option>
+                    {/each}
+                  </optgroup>
+                {/if}
+              {/each}
+            </select>
+
+            {#if shown.journey === "sign_in"}
+              <select
+                class="select select-sm w-full"
+                aria-label={t("emails.app")}
+                value={client}
+                onchange={(event) => (client = event.currentTarget.value)}
+              >
+                <option value="">{t("emails.no_app")}</option>
+                {#each data.clients as each (each.clientId)}
+                  <option value={each.clientId}>{each.approvedAt ? each.name : t("emails.not_approved", { name: each.name })}</option>
+                {/each}
+              </select>
+            {/if}
+          </div>
+
           <nav class="mail-list" aria-label={t("emails.list")}>
             {#each GROUPS as journey (journey)}
               {@const members = previews.filter((preview) => preview.journey === journey)}

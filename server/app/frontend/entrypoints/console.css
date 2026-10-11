@@ -592,6 +592,7 @@ a.tally-cell:active {
 }
 
 .console .badge {
+  white-space: nowrap;
   font-size: 0.8125rem;
   font-weight: 600;
   letter-spacing: 0.02em;
@@ -1079,10 +1080,26 @@ a.tally-cell:active {
   gap: 1.25rem;
 }
 
-.mail-list {
+.mail-pick {
   display: flex;
   flex-direction: column;
+  gap: 0.5rem;
+}
+
+.mail-list {
+  display: none;
+  flex-direction: column;
   gap: 1.25rem;
+}
+
+@media (min-width: 48rem) {
+  .mail-pick {
+    display: none;
+  }
+
+  .mail-list {
+    display: flex;
+  }
 }
 
 .mail-group {
@@ -1394,4 +1411,16 @@ a.tally-cell:active {
 .console .btn-ghost.btn-error:focus-visible {
   background: color-mix(in oklab, var(--color-error) 10%, transparent);
   color: var(--color-error);
+}
+
+@media (max-width: 47.99rem) {
+  .range,
+  .settings-tabs {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+
+  .range {
+    width: auto;
+  }
 }
