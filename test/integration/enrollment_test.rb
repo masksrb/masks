@@ -222,14 +222,19 @@ module Masks
         assert_equal "invalid_client_metadata", redeem(secret)["error"]
       end
 
-      test "archiving the app archives every machine it enrolled" do
+      test "archiving the app archives every machine it enrolled and ends their tokens" do
         registration = redeem(enroll["initial_access_token"])
+        granted = machine_token(registration["client_id"])
 
         within { @owner.reload.update!(archived_at: Time.current) }
 
         machine = within { Client.find_by!(client_id: registration["client_id"]) }
 
         assert machine.archived?
+        within do
+          assert_empty machine.tokens.live
+          refute AccessToken.find_by(digest: claims_in(granted["access_token"])["jti"]).live?
+        end
         assert_equal "invalid_client", machine_token(machine.client_id)["error"]
       end
 

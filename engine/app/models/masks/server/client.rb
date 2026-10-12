@@ -474,7 +474,12 @@ module Masks
       private
 
         def archive_enrolled!
-          enrolled.active.update_all(archived_at: archived_at, updated_at: Time.current)
+          machines = enrolled.active.pluck(:id)
+          return if machines.empty?
+
+          now = Time.current
+          Client.where(id: machines).update_all(archived_at: archived_at, updated_at: now)
+          Token.where(client_id: machines, consumed_at: nil).update_all(consumed_at: now, updated_at: now)
         end
 
         def allowed_groups_are_named
