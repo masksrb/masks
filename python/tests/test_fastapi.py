@@ -136,10 +136,8 @@ def test_the_session_cookie_is_sealed_and_strict(app: TestClient, fake: Fake) ->
 
 def test_a_tampered_cookie_is_a_signed_out_visitor(app: TestClient, fake: Fake) -> None:
     sign_in(app, fake)
-    held = app.cookies["masks_session"]
-    app.cookies.set(
-        "masks_session", held[:-4] + ("AAAA" if not held.endswith("AAAA") else "BBBB"), domain="app.example"
-    )
+    held = app.cookies["__Host-masks"]
+    app.cookies.set("__Host-masks", held[:-4] + ("AAAA" if not held.endswith("AAAA") else "BBBB"), domain="app.example")
 
     assert app.get("/whoami").json() == {"signed_in": False}
 
@@ -399,7 +397,7 @@ def test_a_handshake_connects_the_app(fake: Fake) -> None:
 
         assert query["redirect_uris"] == [f"{APP}/auth/callback"]
         assert query["return_to"] == [f"{APP}/auth/handshake/callback"]
-        assert "backchannel_logout_uri" not in query
+        assert query["backchannel_logout_uri"] == [f"{APP}/auth/logout/backchannel"]
         assert "catalog:admin" in query["scope"][0]
 
         assert location(client.get(fake.handshake(begun), headers=HTML)) == "/auth"
@@ -464,9 +462,9 @@ def test_back_channel_logout_ends_sessions_on_the_server(fake: Fake) -> None:
         assert parse_qs(urlsplit(begun).query)["backchannel_logout_uri"] == [f"{APP}/auth/logout/backchannel"]
 
         client.get(fake.handshake(begun), headers=HTML)
-        before = client.cookies["masks_session"]
+        before = client.cookies["__Host-masks"]
         sign_in(client, fake)
-        after = client.cookies["masks_session"]
+        after = client.cookies["__Host-masks"]
 
         assert before != after
         assert store.read(masks.web.sessions.hashed(before)) is None
@@ -482,10 +480,32 @@ def test_back_channel_logout_ends_sessions_on_the_server(fake: Fake) -> None:
         assert client.get("/whoami").json() == {"signed_in": False}
 
 
-def test_back_channel_logout_without_a_way_to_end_sessions_is_unsupported(app: TestClient, fake: Fake) -> None:
+def test_back_channel_logout_ends_cookie_sessions_too(app: TestClient, fake: Fake) -> None:
+    sign_in(app, fake)
     answered = app.post("/auth/logout/backchannel", data={"logout_token": fake.logout_token("web", subject="ada")})
 
-    assert answered.status_code == 501
+    assert answered.status_code == 200
+    assert app.get("/whoami").json() == {"signed_in": False}
+
+    sign_in(app, fake)
+
+    assert app.get("/whoami").json() == {"signed_in": True}
+
+
+def test_requests_with_one_expired_session_share_one_refresh(
+    app: TestClient, fake: Fake, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    sign_in(app, fake)
+    stale = app.cookies["__Host-masks"]
+    later = time.time() + 7200
+    monkeypatch.setattr(masks.models.time, "time", lambda: later)
+
+    assert app.get("/whoami").json() == {"signed_in": True}
+
+    app.cookies.set("__Host-masks", stale, domain="app.example")
+
+    assert app.get("/whoami").json() == {"signed_in": True}
+    assert len(fake.grants) == 1
 
 
 def test_back_channel_logout_calls_the_app(fake: Fake) -> None:

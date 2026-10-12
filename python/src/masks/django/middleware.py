@@ -15,7 +15,7 @@ class MasksMiddleware:
 
     def __call__(self, request: HttpRequest) -> HttpResponse:
         held = engine()
-        session = held.load(request.COOKIES.get(held.config.backend.name))
+        session = held.load(request.COOKIES.get(held.cookie_name))
         request.masks_session = session
         request.masked = SimpleLazyObject(lambda: person(request))
         sent = self.get_response(request)

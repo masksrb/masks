@@ -80,9 +80,7 @@ class Masks:
         app.register_error_handler(Refusal, refused)
 
     def _load(self) -> None:
-        g.masks_session = self.engine.load(
-            cookie_named(request.headers.get("Cookie", ""), self.engine.config.backend.name)
-        )
+        g.masks_session = self.engine.load(cookie_named(request.headers.get("Cookie", ""), self.engine.cookie_name))
 
     def _save(self, sent: Response) -> Response:
         session = g.get("masks_session")

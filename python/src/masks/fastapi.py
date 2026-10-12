@@ -44,7 +44,7 @@ class SessionMiddleware:
             await self.app(scope, receive, send)
             return
 
-        session = self.engine.load(cookie_from(scope, self.engine.config.backend.name))
+        session = self.engine.load(cookie_from(scope, self.engine.cookie_name))
         scope[SESSION] = session
         secure = scope.get("scheme") in ("https", "wss")
 

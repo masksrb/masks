@@ -88,7 +88,7 @@ def signs_in_and_out(build: Build, fake: Fake) -> None:
     landed = sign_in(browser, fake)
 
     assert landed.location == "/me"
-    cookie = next(held for held in landed.cookies if held.startswith("masks_session="))
+    cookie = next(held for held in landed.cookies if held.startswith("__Host-masks="))
     assert "HttpOnly" in cookie and "Secure" in cookie and "SameSite=Lax" in cookie
     assert "eyJ" not in cookie
 

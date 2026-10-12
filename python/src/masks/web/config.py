@@ -10,7 +10,7 @@ from ..oidc import DELEGATE_SCOPE, Logout
 from ..replay import AsyncReplayStore, ReplayStore
 from .credentials import Credentials, FileCredentials
 from .person import Person, Privilege, privileges
-from .sessions import LIFETIME, CookieSessions, SessionBackend
+from .sessions import LIFETIME, CookieSessions, Departures, MemoryDepartures, SessionBackend
 
 T = TypeVar("T")
 
@@ -39,6 +39,7 @@ class Config:
     organization: Setting[str] = ""
     credentials: Setting[Credentials] = field(default_factory=FileCredentials)
     sessions: SessionBackend | None = None
+    departures: Departures = field(default_factory=MemoryDepartures)
     session_lifetime: int = LIFETIME
     base_url: Setting[str] = ""
     prefix: str = "/auth"

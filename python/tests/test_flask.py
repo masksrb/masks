@@ -72,4 +72,4 @@ def test_flask_takes_the_secret_from_the_app(fake: Fake) -> None:
     app.secret_key = "k" * 40
     auth = Masks(app, issuer="https://id.example", http=fake.http())
 
-    assert auth.engine.config.backend.name == "masks_session"
+    assert auth.engine.config.backend.name == "__Host-masks"
