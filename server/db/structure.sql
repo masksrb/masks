@@ -985,6 +985,41 @@ ALTER SEQUENCE public.providers_id_seq OWNED BY public.providers.id;
 
 
 --
+-- Name: replays; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.replays (
+    id bigint NOT NULL,
+    tenant_id bigint NOT NULL,
+    kind character varying NOT NULL,
+    digest character varying NOT NULL,
+    expires_at timestamp(6) without time zone NOT NULL,
+    created_at timestamp(6) without time zone NOT NULL
+);
+
+ALTER TABLE ONLY public.replays FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: replays_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.replays_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: replays_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.replays_id_seq OWNED BY public.replays.id;
+
+
+--
 -- Name: saml_participations; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1596,6 +1631,13 @@ ALTER TABLE ONLY public.providers ALTER COLUMN id SET DEFAULT nextval('public.pr
 
 
 --
+-- Name: replays id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.replays ALTER COLUMN id SET DEFAULT nextval('public.replays_id_seq'::regclass);
+
+
+--
 -- Name: saml_participations id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1839,6 +1881,14 @@ ALTER TABLE ONLY public.passkeys
 
 ALTER TABLE ONLY public.providers
     ADD CONSTRAINT providers_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: replays replays_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.replays
+    ADD CONSTRAINT replays_pkey PRIMARY KEY (id);
 
 
 --
@@ -2515,6 +2565,20 @@ CREATE INDEX index_providers_on_tenant_id ON public.providers USING btree (tenan
 --
 
 CREATE UNIQUE INDEX index_providers_on_tenant_id_and_key ON public.providers USING btree (tenant_id, key);
+
+
+--
+-- Name: index_replays_on_expires_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_replays_on_expires_at ON public.replays USING btree (expires_at);
+
+
+--
+-- Name: index_replays_on_tenant_id_and_kind_and_digest; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_replays_on_tenant_id_and_kind_and_digest ON public.replays USING btree (tenant_id, kind, digest);
 
 
 --
@@ -3231,6 +3295,14 @@ ALTER TABLE ONLY public.passkeys
 
 
 --
+-- Name: replays fk_rails_c020c0da4c; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.replays
+    ADD CONSTRAINT fk_rails_c020c0da4c FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
+
+
+--
 -- Name: avatars fk_rails_c4fab594a7; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3495,6 +3567,12 @@ ALTER TABLE public.passkeys ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.providers ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: replays; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.replays ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: saml_participations; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -3677,6 +3755,13 @@ CREATE POLICY tenant_isolation ON public.providers USING ((tenant_id = (NULLIF(c
 
 
 --
+-- Name: replays tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.replays USING ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint)) WITH CHECK ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint));
+
+
+--
 -- Name: saml_participations tenant_isolation; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -3758,6 +3843,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261012100000'),
 ('20261011190000'),
 ('20261011180000'),
 ('20261011170000'),

@@ -13,7 +13,7 @@ module Masks
       end
 
       def verify(work, counter, bits: BITS, bound_to: "login-a")
-        ProofOfWork.verify(work, counter, bits: bits, bound_to: bound_to)
+        within { ProofOfWork.verify(work, counter, bits: bits, bound_to: bound_to) }
       end
 
       test "a counter that gives enough leading zero bits is accepted" do

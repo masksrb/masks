@@ -29,6 +29,11 @@ default: &default
     queue: maintenance
     schedule: every hour
 
+  replays:
+    class: Masks::Server::PruneReplaysJob
+    queue: maintenance
+    schedule: every hour
+
 development:
   <<: *default
 
