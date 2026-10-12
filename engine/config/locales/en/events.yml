@@ -114,6 +114,7 @@ en:
         logo_refused: "Client logo could not be used"
         enrollment_issued: "An app asked to enroll a machine"
         enrolled: "Machine enrolled"
+        unenrolled: "Machine unenrolled"
       token:
         revoked: "Token revoked"
       saml:

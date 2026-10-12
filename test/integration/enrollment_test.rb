@@ -233,6 +233,64 @@ module Masks
         assert_equal "invalid_client", machine_token(machine.client_id)["error"]
       end
 
+      def unenroll(client_id, app = @owner, secret: app.secret)
+        delete "/enrollments/#{client_id}", params: { client_id: app.client_id, client_secret: secret }
+      end
+
+      test "an app unenrolls its machine, which loses its tokens and can sign in no more" do
+        registration = redeem(enroll["initial_access_token"])
+        granted = machine_token(registration["client_id"])
+
+        unenroll(registration["client_id"])
+
+        assert_response :no_content
+
+        within do
+          machine = Client.find_by!(client_id: registration["client_id"])
+
+          assert machine.archived?
+          assert_empty machine.tokens.live
+          assert Event.exists?(action: Event::CLIENT_UNENROLLED, client: machine)
+          refute AccessToken.find_by(digest: claims_in(granted["access_token"])["jti"]).live?
+        end
+
+        assert_equal "invalid_client", machine_token(registration["client_id"])["error"]
+      end
+
+      test "unenrolling twice answers the same" do
+        registration = redeem(enroll["initial_access_token"])
+
+        unenroll(registration["client_id"])
+        unenroll(registration["client_id"])
+
+        assert_response :no_content
+      end
+
+      test "an app cannot unenroll another app's machine" do
+        registration = redeem(enroll["initial_access_token"])
+        other = owner(namespace: "other:")
+
+        unenroll(registration["client_id"], other)
+
+        assert_response :not_found
+        refute within { Client.find_by!(client_id: registration["client_id"]).archived? }
+      end
+
+      test "an app cannot unenroll a client it did not enroll" do
+        unenroll(owner(namespace: nil).client_id)
+
+        assert_response :not_found
+      end
+
+      test "unenrolling needs the app to authenticate" do
+        registration = redeem(enroll["initial_access_token"])
+
+        unenroll(registration["client_id"], secret: "wrong")
+
+        assert_response :unauthorized
+        refute within { Client.find_by!(client_id: registration["client_id"]).archived? }
+      end
+
       test "both steps are recorded" do
         registration = redeem(enroll(client_name: "nas")["initial_access_token"])
 

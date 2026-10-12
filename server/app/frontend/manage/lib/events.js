@@ -24,6 +24,7 @@ const NOTABLE = new Set([
   "client.secret_rotated",
   "client.logo_refused",
   "client.enrolled",
+  "client.unenrolled",
   "signing_key.rotated",
   "signing_key.activated",
   "backup_code.spent",

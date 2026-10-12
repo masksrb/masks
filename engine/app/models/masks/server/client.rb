@@ -268,6 +268,15 @@ module Masks
         enrolled_by_id.present?
       end
 
+      def unenroll!
+        transaction do
+          update!(archived_at: Time.current) unless archived?
+
+          now = Time.current
+          tokens.where(consumed_at: nil).update_all(consumed_at: now, updated_at: now)
+        end
+      end
+
       def public?
         token_endpoint_auth_method == "none"
       end

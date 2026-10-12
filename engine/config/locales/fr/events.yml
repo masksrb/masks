@@ -114,6 +114,7 @@ fr:
         logo_refused: "Le logo de l’application n’a pas pu être utilisé"
         enrollment_issued: "Une application a demandé l’inscription d’une machine"
         enrolled: "Machine inscrite"
+        unenrolled: "Machine désinscrite"
       token:
         revoked: "Jeton révoqué"
       saml:

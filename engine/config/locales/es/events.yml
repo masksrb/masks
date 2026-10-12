@@ -114,6 +114,7 @@ es:
         logo_refused: "No se pudo usar el logotipo de la aplicación"
         enrollment_issued: "Una aplicación pidió inscribir una máquina"
         enrolled: "Máquina inscrita"
+        unenrolled: "Máquina dada de baja"
       token:
         revoked: "Token revocado"
       saml:

@@ -108,6 +108,7 @@ module Masks
       CLIENT_LOGO_REFUSED = "client.logo_refused".freeze
       CLIENT_ENROLLMENT_ISSUED = "client.enrollment_issued".freeze
       CLIENT_ENROLLED = "client.enrolled".freeze
+      CLIENT_UNENROLLED = "client.unenrolled".freeze
 
       TOKEN_REVOKED = "token.revoked".freeze
       SAML_ASSERTED = "saml.asserted".freeze

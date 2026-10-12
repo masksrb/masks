@@ -158,6 +158,17 @@ leaves the token unspent.
 The new client names the app as `enrolledBy` in the manage API. Archiving the app archives every
 machine it enrolled. Each request and each machine is recorded as an event.
 
+The app unenrolls a machine it enrolled with a `DELETE` to the same endpoint, authenticating the same
+way:
+
+```sh
+curl -u "$CLIENT_ID:$CLIENT_SECRET" -X DELETE \
+  https://acme.auth.example.com/enrollments/$MACHINE_CLIENT_ID
+```
+
+masks archives the machine, revokes every token it holds, and answers `204`. Asking again answers the
+same. A client the app did not enroll is refused with `404`.
+
 ## Signing in
 
 ### Sign-in policies

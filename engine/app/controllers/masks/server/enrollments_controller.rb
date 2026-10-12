@@ -30,6 +30,29 @@ module Masks
       rescue Client::EnrollmentRefused => e
         render json: { "error" => "invalid_request", "error_description" => e.message }, status: :bad_request
       end
+
+      def destroy
+        app = authenticate_client!
+        machine = app.enrolled.find_by(client_id: params[:machine].to_s)
+
+        return not_enrolled if machine.nil?
+
+        revoked = machine.unenroll!
+
+        Event.record!(Event::CLIENT_UNENROLLED, client: machine, name: machine.name, enrolled_by: app.client_id,
+                                                  revoked: revoked)
+
+        head :no_content
+      end
+
+      private
+
+        def not_enrolled
+          render json: {
+            "error" => "invalid_request",
+            "error_description" => "that client was not enrolled by this app"
+          }, status: :not_found
+        end
     end
   end
 end

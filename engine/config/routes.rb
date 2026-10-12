@@ -108,6 +108,7 @@ Masks::Server::Engine.routes.draw do
 
   post "/register", to: "registrations#create"
   post "/enrollments", to: "enrollments#create", as: :enrollments
+  delete "/enrollments/:machine", to: "enrollments#destroy", as: :enrollment
   get "/register/:client_id", to: "registrations#show", as: :registration
   put "/register/:client_id", to: "registrations#update"
   delete "/register/:client_id", to: "registrations#destroy"
