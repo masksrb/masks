@@ -286,6 +286,8 @@ export class Masks {
         case "POST /logout":
         case "DELETE /logout":
           return await this.#logout(visit);
+        case "GET /logout/return":
+          return await this.#logoutReturnRoute(visit);
         case "POST /logout/backchannel":
           return await this.#backchannel(visit);
         case "GET /handshake":
@@ -921,7 +923,7 @@ export class Masks {
         await this.#writeFlow(visit, flow);
 
         upstream = client.endSessionURL({
-          postLogoutRedirectURI: this.#handshakeReturn(visit),
+          postLogoutRedirectURI: this.#logoutReturn(visit),
           state,
         });
       } catch {
@@ -942,6 +944,23 @@ export class Masks {
       visit.out,
       303,
     );
+  }
+
+  async #logoutReturnRoute(visit: Visit): Promise<Response> {
+    const flow = await this.#readFlow(visit);
+
+    if (!claim(flow.logouts, visit.url.searchParams.get("state") ?? "")) {
+      return answer(
+        visit,
+        400,
+        "invalid_state",
+        "that sign-out is not one this browser started, or it expired",
+      );
+    }
+
+    await this.#writeFlow(visit, flow);
+
+    return redirect(localPath(this.#options.afterSignOut) ?? "/", visit.out);
   }
 
   async #backchannel(visit: Visit): Promise<Response> {
@@ -1102,12 +1121,6 @@ ${this.#credentials.clear ? `<form method="post" action="${escapeHTML(`${this.ha
     const state = params.get("state") ?? "";
     const flow = await this.#readFlow(visit);
 
-    if (claim(flow.logouts, state)) {
-      await this.#writeFlow(visit, flow);
-
-      return redirect(this.#options.afterSignOut ?? "/", visit.out);
-    }
-
     if (!claim(flow.handshakes, state)) {
       return answer(
         visit,
@@ -1200,10 +1213,8 @@ ${this.#credentials.clear ? `<form method="post" action="${escapeHTML(`${this.ha
       redirectURIs: unique(redirectURIs),
       returnTo: this.#handshakeReturn(visit),
       scope: this.#approvedScope(),
-      backchannelLogoutURI:
-        issuer.metadata.backchannel_logout_supported === true
-          ? `${visit.origin}${this.basePath}/logout/backchannel`
-          : undefined,
+      backchannelLogoutURI: `${visit.origin}${this.basePath}/logout/backchannel`,
+      postLogoutRedirectUri: this.#logoutReturn(visit),
     });
   }
 
@@ -1489,6 +1500,10 @@ ${this.#credentials.clear ? `<form method="post" action="${escapeHTML(`${this.ha
 
   #redirectURI(visit: Visit): string {
     return `${visit.origin}${this.basePath}/callback`;
+  }
+
+  #logoutReturn(visit: Visit): string {
+    return `${visit.origin}${this.basePath}/logout/return`;
   }
 
   #handshakeReturn(visit: Visit): string {

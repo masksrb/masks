@@ -15,6 +15,7 @@ export interface HandshakeOptions {
   returnTo: string;
   scope?: string[];
   backchannelLogoutURI?: string;
+  postLogoutRedirectUri?: string;
 }
 
 export interface HandshakeStart {
@@ -30,6 +31,7 @@ export class Handshake {
   readonly returnTo: string;
   readonly scope: string[];
   readonly backchannelLogoutURI?: string;
+  readonly postLogoutRedirectUri?: string;
 
   constructor(issuer: Issuer, options: HandshakeOptions) {
     this.issuer = issuer;
@@ -40,7 +42,11 @@ export class Handshake {
     this.scope = (options.scope ?? ["openid", "profile", "email"])
       .flatMap((value) => String(value).split(/\s+/))
       .filter(Boolean);
-    this.backchannelLogoutURI = options.backchannelLogoutURI;
+    this.backchannelLogoutURI =
+      issuer.metadata.backchannel_logout_supported === true
+        ? options.backchannelLogoutURI
+        : undefined;
+    this.postLogoutRedirectUri = options.postLogoutRedirectUri;
 
     const origin = originOf(this.resource);
 
@@ -54,6 +60,7 @@ export class Handshake {
       this.returnTo,
       ...this.redirectURIs,
       ...(this.backchannelLogoutURI ? [this.backchannelLogoutURI] : []),
+      ...(this.postLogoutRedirectUri ? [this.postLogoutRedirectUri] : []),
     ].filter((uri) => originOf(uri) !== origin);
 
     if (elsewhere.length > 0) {
@@ -91,6 +98,10 @@ export class Handshake {
 
     if (this.backchannelLogoutURI) {
       query.append("backchannel_logout_uri", this.backchannelLogoutURI);
+    }
+
+    if (this.postLogoutRedirectUri) {
+      query.append("post_logout_redirect_uri", this.postLogoutRedirectUri);
     }
 
     for (const uri of this.redirectURIs) query.append("redirect_uris", uri);

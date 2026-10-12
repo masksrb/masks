@@ -39,6 +39,10 @@ test("an app with no credentials shakes hands, then signs the person in", async 
     `${APP}/auth/logout/backchannel`,
   );
   assert.equal(
+    handshake.searchParams.get("post_logout_redirect_uri"),
+    `${APP}/auth/logout/return`,
+  );
+  assert.equal(
     handshake.searchParams.get("scope"),
     "openid profile email offline_access",
   );
@@ -302,7 +306,7 @@ test("signing out revokes the refresh token and refuses other sites", async () =
   );
 });
 
-test("signing out everywhere comes back through the handshake callback", async () => {
+test("signing out everywhere comes back once through the logout return", async () => {
   const held = await setup({ masks: { afterSignOut: "/bye" } }, closers);
   await signIn(held);
 
@@ -318,13 +322,27 @@ test("signing out everywhere comes back through the handshake callback", async (
   assert.equal(upstream.searchParams.get("client_id"), "app");
   assert.equal(
     upstream.searchParams.get("post_logout_redirect_uri"),
-    `${APP}/auth/handshake/callback`,
+    `${APP}/auth/logout/return`,
   );
 
-  const landed = await held.browser.fetch(
-    `/auth/handshake/callback?state=${upstream.searchParams.get("state")}`,
-  );
+  const path = `/auth/logout/return?state=${upstream.searchParams.get("state")}`;
+  const landed = await held.browser.fetch(path);
   assert.equal(landed.headers.get("location"), "/bye");
+
+  const reused = await held.browser.fetch(path);
+  assert.equal(reused.status, 400);
+  assert.equal(
+    (await held.browser.fetch("/auth/logout/return?state=forged")).status,
+    400,
+  );
+  assert.equal(
+    (
+      await held.browser.fetch(
+        `/auth/handshake/callback?state=${upstream.searchParams.get("state")}`,
+      )
+    ).status,
+    400,
+  );
 });
 
 test("a back-channel logout ends the session it names", async () => {

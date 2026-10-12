@@ -131,8 +131,10 @@ The handshake connects your app to the masks server:
 3. A one-time token comes back. The app redeems it by talking to the masks server directly, so the
    client secret never passes through the browser.
 
-The handshake registers the app for `resource`, with `/auth/callback` as its redirect URI and
-`/auth/handshake/callback` as the address masks sends people back to. It asks for `scope` and the
+The handshake registers the app for `resource`, with `/auth/callback` as its redirect URI,
+`/auth/handshake/callback` as the address masks sends people back to, and `/auth/logout/return` as
+the only address masks returns people to after signing out. When masks advertises back-channel
+logout, it also registers `/auth/logout/backchannel`. It asks for `scope` and the
 scopes of every [privilege](#privileges). Set `namespace`, such as `catalog:`, to register the
 namespace once for every scope under it.
 
@@ -187,7 +189,8 @@ The app answers these routes under `/auth`, or `basePath`:
 | `GET /auth/session` | The signed-in person as JSON, for a single-page app. |
 | `GET /auth/avatar` | The person's photo, fetched from masks with their token. Takes `size`. |
 | `GET`, `POST`, or `DELETE /auth/logout` | Signs out. Takes `everywhere` to sign out of masks as well. |
-| `POST /auth/logout/backchannel` | Takes a back-channel logout token from masks. |
+| `GET /auth/logout/return` | Where masks sends the browser after signing out everywhere. |
+| `POST /auth/logout/backchannel` | Takes a back-channel logout token from masks. Each token works once. |
 | `GET` or `POST /auth/handshake` | Starts the handshake, or shows the connection. |
 | `GET /auth/handshake/callback` | Finishes the handshake. |
 | `POST /auth/handshake/disconnect` or `DELETE /auth/handshake` | Disconnects the app. |
@@ -273,7 +276,8 @@ next request.
 
 A sign-out revokes the refresh token and clears the session. With `signOutOfIssuer`, or
 `everywhere`, the browser goes on to masks to end its session there and comes back through
-`/auth/handshake/callback` to `afterSignOut`. A sign-out from another site is refused with `403`.
+`/auth/logout/return` to `afterSignOut`. That return carries a state the sign-out stored in the
+browser, which works once, so a link to it from anywhere else is refused. A sign-out from another site is refused with `403`.
 
 When masks ends a session itself, it sends a logout token to `/auth/logout/backchannel`. The app
 signs out the session it names, or every session of the person it names, at their next request. It

@@ -221,6 +221,7 @@ test("a handshake asks masks to register this app and redeems the answer", async
     returnTo: "http://app.localhost:3000/auth/handshake/callback",
     scope: ["openid", "profile email", "catalog:read"],
     backchannelLogoutURI: "http://app.localhost:3000/auth/logout/backchannel",
+    postLogoutRedirectUri: "http://app.localhost:3000/auth/logout/return",
   });
 
   const started = handshake.start();
@@ -236,6 +237,10 @@ test("a handshake asks masks to register this app and redeems the answer", async
     "http://app.localhost:3000/auth/logout/backchannel",
   );
   assert.equal(asked.get("state"), started.state);
+  assert.equal(
+    asked.get("post_logout_redirect_uri"),
+    "http://app.localhost:3000/auth/logout/return",
+  );
 
   const registration = await handshake.complete(
     new URL(fake.shake(started.url)),
@@ -280,6 +285,32 @@ test("a handshake refuses another browser, another issuer, and a refusal", async
       (error) => hasCode(error, code),
     );
   }
+
+  assert.throws(
+    () =>
+      new Handshake(issuer, {
+        name: "Catalog",
+        resource: "http://app.localhost:3000",
+        redirectURIs: [redirectURI],
+        returnTo: "http://app.localhost:3000/auth/handshake/callback",
+        postLogoutRedirectUri: "https://elsewhere.example/bye",
+      }),
+    /shares the origin/,
+  );
+
+  fake.backchannel = false;
+  const quiet = new Handshake(await Issuer.discover(fake.url), {
+    name: "Catalog",
+    resource: "http://app.localhost:3000",
+    redirectURIs: [redirectURI],
+    returnTo: "http://app.localhost:3000/auth/handshake/callback",
+    backchannelLogoutURI: "http://app.localhost:3000/auth/logout/backchannel",
+  });
+  assert.equal(quiet.backchannelLogoutURI, undefined);
+  assert.equal(
+    new URL(quiet.start().url).searchParams.get("backchannel_logout_uri"),
+    null,
+  );
 
   assert.throws(
     () =>

@@ -160,7 +160,7 @@ export class Fake {
         userinfo_endpoint: `${this.url}/userinfo`,
         end_session_endpoint: `${this.url}/logout`,
         handshake_endpoint: `${this.url}/handshake`,
-        backchannel_logout_supported: true,
+        backchannel_logout_supported: this.backchannel ?? true,
         authorization_response_iss_parameter_supported: true,
       });
     }
