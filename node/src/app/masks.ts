@@ -94,8 +94,18 @@ interface FlowData {
 }
 
 export type Outcome =
-  | { masked: Masked; cookies: string[]; response?: undefined }
-  | { masked?: undefined; cookies?: undefined; response: Response };
+  | {
+      masked: Masked;
+      cookies: string[];
+      response?: undefined;
+      error?: undefined;
+    }
+  | {
+      masked?: undefined;
+      cookies?: undefined;
+      response: Response;
+      error?: ForbiddenError;
+    };
 
 export interface Connection {
   connected: boolean;
@@ -209,6 +219,14 @@ export class Masks {
     return held ? `${this.basePath}?${held}` : this.basePath;
   }
 
+  owns(pathname: string): boolean {
+    return (
+      pathname === this.basePath ||
+      pathname.startsWith(`${this.basePath}/`) ||
+      pathname.startsWith(RESOURCE_PATH)
+    );
+  }
+
   get logoutPath(): string {
     return `${this.basePath}/logout`;
   }
@@ -298,26 +316,48 @@ export class Masks {
     return { masked: this.#masked(visit, data), cookies: visit.out };
   }
 
-  async require(request: Request, ...names: string[]): Promise<Outcome> {
-    const wanted = names.flat().map((name) => this.privileges.get(name));
+  require(request: Request, ...names: string[]): Promise<Outcome> {
+    return this.check(request, { privileges: names });
+  }
+
+  async check(
+    request: Request,
+    asked: { privileges?: string[]; refresh?: boolean; returnTo?: string } = {},
+  ): Promise<Outcome> {
+    const wanted = (asked.privileges ?? [])
+      .flat()
+      .map((name) => this.privileges.get(name));
     const visit = await this.#visit(request);
 
     if (!(await this.#configured(visit))) {
       return { response: this.#refuse(visit, "handshake_required") };
     }
 
-    const data = await this.#current(visit);
+    const data =
+      asked.refresh === false
+        ? (await this.#readSession(visit))?.data
+        : await this.#current(visit);
     const masked = this.#masked(visit, data);
 
     if (!masked.signedIn) {
-      return { response: this.#refuse(visit, "login_required") };
+      const refreshable =
+        asked.refresh === false && !!data?.tokens?.refresh_token;
+
+      return {
+        response: this.#refuse(
+          visit,
+          "login_required",
+          asked.returnTo,
+          refreshable,
+        ),
+      };
     }
 
     try {
       for (const privilege of wanted) masked.member(privilege);
     } catch (error) {
       if (error instanceof ForbiddenError)
-        return { response: forbid(visit, error) };
+        return { response: forbid(visit, error), error };
       throw error;
     }
 
@@ -331,33 +371,31 @@ export class Masks {
     if (missing.length === 0) return { masked, cookies: visit.out };
 
     const flow = await this.#readFlow(visit);
-    const asked = flow.steppedUp;
+    const stepped = flow.steppedUp;
 
     if (
-      asked &&
-      missing.every((name) => asked.privileges.includes(name)) &&
-      asked.at > now() - STEP_UP_WITHIN
+      stepped &&
+      missing.every((name) => stepped.privileges.includes(name)) &&
+      stepped.at > now() - STEP_UP_WITHIN
     ) {
-      return {
-        response: forbid(
-          visit,
-          new ForbiddenError(
-            "insufficient_scope",
-            `this account does not hold the ${missing.join(" and ")} privilege`,
-            {
-              scope: unique(
-                missing.flatMap((name) => this.privileges.get(name).scopes),
-              ).join(" "),
-            },
-          ),
-        ),
-      };
+      const error = new ForbiddenError(
+        "insufficient_scope",
+        `this account does not hold the ${missing.join(" and ")} privilege`,
+        {
+          scope: unique(
+            missing.flatMap((name) => this.privileges.get(name).scopes),
+          ).join(" "),
+        },
+      );
+
+      return { response: forbid(visit, error), error };
     }
 
     const returnTo =
-      request.method === "GET"
+      asked.returnTo ??
+      (request.method === "GET"
         ? `${visit.url.pathname}${visit.url.search}`
-        : referring(request);
+        : referring(request));
     const url = this.loginURL({ returnTo, privilege: missing });
 
     if (wantsJSON(request)) {
@@ -1187,6 +1225,8 @@ ${this.#credentials.clear ? `<form method="post" action="${escapeHTML(`${this.ha
   #refuse(
     visit: Visit,
     reason: "handshake_required" | "login_required",
+    asked?: string,
+    refreshable = false,
   ): Response {
     if (wantsJSON(visit.request)) return this.#refuseJSON(visit, reason);
 
@@ -1194,9 +1234,18 @@ ${this.#credentials.clear ? `<form method="post" action="${escapeHTML(`${this.ha
       return redirect(this.handshakePath, visit.out);
 
     const returnTo =
-      visit.request.method === "GET"
+      localPath(asked) ??
+      (visit.request.method === "GET"
         ? `${visit.url.pathname}${visit.url.search}`
-        : referring(visit.request);
+        : referring(visit.request));
+
+    if (refreshable) {
+      const query = returnTo
+        ? `?${new URLSearchParams({ return_to: returnTo })}`
+        : "";
+
+      return redirect(`${this.basePath}/refresh${query}`, visit.out);
+    }
 
     return redirect(this.loginURL({ returnTo }), visit.out);
   }
