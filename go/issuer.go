@@ -44,6 +44,7 @@ type Metadata struct {
 	RevocationEndpoint                string   `json:"revocation_endpoint"`
 	IntrospectionEndpoint             string   `json:"introspection_endpoint"`
 	EnrollmentEndpoint                string   `json:"enrollment_endpoint"`
+	BackchannelLogoutSupported        bool     `json:"backchannel_logout_supported"`
 	EndSessionEndpoint                string   `json:"end_session_endpoint"`
 	ScopesSupported                   []string `json:"scopes_supported"`
 	GrantTypesSupported               []string `json:"grant_types_supported"`

@@ -1,0 +1,813 @@
+package web
+
+import (
+	"context"
+	"crypto/rand"
+	"crypto/subtle"
+	"errors"
+	"html/template"
+	"io"
+	"net/http"
+	"net/url"
+	"slices"
+	"strconv"
+	"strings"
+	"time"
+
+	masks "github.com/masksrb/masks/go"
+)
+
+const (
+	avatarLimit = 5 << 20
+)
+
+var avatarSizes = []int{32, 64, 128, 256, 512}
+
+func (a *App) routes() http.Handler {
+	mux := http.NewServeMux()
+	m := a.config.Mount
+
+	mux.HandleFunc("GET "+m, a.start)
+	mux.HandleFunc("GET "+m+"/{$}", a.start)
+	mux.HandleFunc("GET "+m+"/callback", a.callback)
+	mux.HandleFunc("GET "+m+"/session", a.describe)
+	mux.HandleFunc("GET "+m+"/avatar", a.avatar)
+	mux.HandleFunc("GET "+m+"/logout", a.logout)
+	mux.HandleFunc("POST "+m+"/logout", a.guarded(a.logout))
+	mux.HandleFunc("DELETE "+m+"/logout", a.guarded(a.logout))
+	mux.HandleFunc("POST "+m+"/logout/backchannel", a.backchannel)
+	mux.HandleFunc("GET "+m+"/handshake", a.showHandshake)
+	mux.HandleFunc("POST "+m+"/handshake", a.guarded(a.createHandshake))
+	mux.HandleFunc("DELETE "+m+"/handshake", a.guarded(a.disconnect))
+	mux.HandleFunc("POST "+m+"/handshake/disconnect", a.guarded(a.disconnect))
+	mux.HandleFunc("GET "+m+"/handshake/callback", a.handshakeCallback)
+
+	return mux
+}
+
+func (a *App) guarded(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !sameOrigin(r) {
+			a.refuse(w, r, http.StatusForbidden, "invalid_request", "that request came from another site")
+			return
+		}
+
+		next(w, r)
+	}
+}
+
+func (a *App) current(r *http.Request) (*site, *state, *Person, error) {
+	s, err := a.site(r)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	held, err := a.load(r)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	person, err := a.signedIn(r, s, held)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	return s, held, person, nil
+}
+
+func departureKey(issuer, kind, value string) string {
+	return issuer + " " + kind + " " + value
+}
+
+func (a *App) signedIn(r *http.Request, s *site, held *state) (*Person, error) {
+	nobody := PersonFrom(context.Background())
+	data := held.data
+
+	if s.held == nil || data.Token == nil {
+		return nobody, nil
+	}
+
+	if data.Issuer != s.issuer.URL {
+		held.forget()
+		return nobody, nil
+	}
+
+	if data.Identity != nil {
+		for kind, value := range map[string]string{"sub": data.Identity.Subject, "sid": data.Identity.SessionID} {
+			if value == "" {
+				continue
+			}
+
+			departed, err := a.config.Departures.DepartedAt(r.Context(), departureKey(s.issuer.URL, kind, value))
+			if err != nil {
+				return nil, err
+			}
+
+			if !departed.IsZero() && departed.UnixMilli() >= data.SignedInAt {
+				held.forget()
+				return nobody, nil
+			}
+		}
+	}
+
+	if !data.Token.Valid() {
+		if data.Token.RefreshToken == "" {
+			held.forget()
+			return nobody, nil
+		}
+
+		token, identity, err := a.flights.do(data.Token.RefreshToken, func() (*masks.Token, *masks.Identity, error) {
+			ctx, cancel := context.WithTimeout(context.WithoutCancel(r.Context()), 30*time.Second)
+			defer cancel()
+
+			return a.refresh(ctx, s, data)
+		})
+
+		var refused *masks.Error
+
+		switch {
+		case errors.As(err, &refused) && refused.Code == "invalid_client":
+			_ = a.config.Credentials.Forget(r)
+			held.forget()
+			return nobody, nil
+		case errors.As(err, &refused):
+			held.forget()
+			return nobody, nil
+		case err != nil:
+			return nobody, nil
+		}
+
+		changed := held.change()
+		changed.Token, changed.Identity = token, identity
+	}
+
+	return a.personFrom(data.Identity, data.Token, s.issuer.URL+"/"), nil
+}
+
+func (a *App) refresh(ctx context.Context, s *site, data *session) (*masks.Token, *masks.Identity, error) {
+	client := a.signIn(s)
+
+	token, err := client.Refresh(ctx, data.Token.RefreshToken, masks.TokenRequest{Resource: []string{s.resource}})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if token.RefreshToken == "" {
+		token.RefreshToken = data.Token.RefreshToken
+	}
+
+	token.IDToken = ""
+	identity := data.Identity
+
+	if profile, err := client.UserInfo(ctx, token); err == nil && identity != nil && profile.Subject == identity.Subject {
+		if merged, err := identity.Merged(profile, identityClaims...); err == nil {
+			identity = merged
+		}
+	}
+
+	return token, identity, nil
+}
+
+func (a *App) save(w http.ResponseWriter, r *http.Request, held *state) bool {
+	if err := a.commit(w, r, held); err != nil {
+		a.refuse(w, r, http.StatusInternalServerError, "server_error", "the session could not be saved")
+		return false
+	}
+
+	return true
+}
+
+func (a *App) unavailable(w http.ResponseWriter, r *http.Request) {
+	a.refuse(w, r, http.StatusServiceUnavailable, "temporarily_unavailable", "masks could not be reached")
+}
+
+func (a *App) start(w http.ResponseWriter, r *http.Request) {
+	s, err := a.site(r)
+	if err != nil {
+		a.unavailable(w, r)
+		return
+	}
+
+	if s.held == nil {
+		http.Redirect(w, r, a.HandshakePath(), http.StatusFound)
+		return
+	}
+
+	if registered, err := a.Registered(r); err == nil && !registered {
+		_ = a.config.Credentials.Forget(r)
+		http.Redirect(w, r, a.HandshakePath(), http.StatusFound)
+
+		return
+	}
+
+	held, err := a.load(r)
+	if err != nil {
+		a.unavailable(w, r)
+		return
+	}
+
+	query := r.URL.Query()
+	returnTo := localPath(query.Get("return_to"))
+
+	if returnTo == "" {
+		returnTo = held.data.ReturnTo
+	}
+
+	if held.data.ReturnTo != "" {
+		held.change().ReturnTo = ""
+	}
+
+	organization := masks.OrganizationKey(query.Get("organization"))
+	if organization == "" && a.config.Organization != nil {
+		organization = masks.OrganizationKey(a.config.Organization(r))
+	}
+
+	started, err := a.signIn(s).AuthCodeURL(masks.AuthRequest{
+		Scope:        a.scopeFor(query.Get("privilege")),
+		Resource:     []string{s.resource},
+		Organization: organization,
+	})
+	if err != nil {
+		a.failed(w, r, err)
+		return
+	}
+
+	held.open(started, returnTo)
+
+	if !a.save(w, r, held) {
+		return
+	}
+
+	http.Redirect(w, r, started.URL, http.StatusFound)
+}
+
+func (a *App) callback(w http.ResponseWriter, r *http.Request) {
+	s, held, person, err := a.current(r)
+	if err != nil {
+		a.unavailable(w, r)
+		return
+	}
+
+	query := r.URL.Query()
+	pending := held.claim(query.Get("state"))
+
+	if pending == nil || pending.Provider != "" {
+		if code := query.Get("error"); code != "" {
+			a.refuse(w, r, http.StatusBadRequest, code, query.Get("error_description"))
+			return
+		}
+
+		a.stale(w, r, held, person)
+
+		return
+	}
+
+	signed, err := a.signIn(s).Complete(r.Context(), query, &pending.Authorization)
+
+	var refused *masks.Error
+
+	switch {
+	case errors.As(err, &refused) && refused.Code == "invalid_client":
+		_ = a.config.Credentials.Forget(r)
+		held.forget()
+
+		if a.save(w, r, held) {
+			http.Redirect(w, r, a.HandshakePath(), http.StatusFound)
+		}
+
+		return
+	case err != nil:
+		held.forget()
+
+		if a.save(w, r, held) {
+			a.failed(w, r, err)
+		}
+
+		return
+	}
+
+	identity := signed.Identity
+
+	if profile, err := a.signIn(s).UserInfo(r.Context(), signed.Token); err == nil && profile.Subject == identity.Subject {
+		if merged, err := profile.Merged(identity); err == nil {
+			identity = merged
+		}
+	}
+
+	if kept, err := identity.Kept(identityClaims...); err == nil {
+		identity = kept
+	}
+
+	signed.Token.IDToken = ""
+
+	held.renew(func(old *session) *session {
+		return &session{
+			Issuer:     s.issuer.URL,
+			Token:      signed.Token,
+			Identity:   identity,
+			SignedInAt: time.Now().UnixMilli(),
+			Requests:   old.Requests,
+			Handshakes: old.Handshakes,
+			SteppedUp:  old.SteppedUp,
+		}
+	})
+
+	if !a.save(w, r, held) {
+		return
+	}
+
+	target := pending.ReturnTo
+	if target == "" {
+		target = a.config.AfterSignIn
+	}
+
+	http.Redirect(w, r, target, http.StatusFound)
+}
+
+func (a *App) stale(w http.ResponseWriter, r *http.Request, held *state, person *Person) {
+	if person.SignedIn {
+		if a.save(w, r, held) {
+			http.Redirect(w, r, a.config.AfterSignIn, http.StatusFound)
+		}
+
+		return
+	}
+
+	if !wantsJSON(r) && time.Now().Unix()-held.data.RestartedAt >= int64(restartWithin.Seconds()) {
+		held.change().RestartedAt = time.Now().Unix()
+
+		if a.save(w, r, held) {
+			http.Redirect(w, r, a.config.Mount+"/", http.StatusFound)
+		}
+
+		return
+	}
+
+	if a.save(w, r, held) {
+		a.refuse(w, r, http.StatusBadRequest, "invalid_state", "that sign-in request is not one this browser started, or it expired")
+	}
+}
+
+func (a *App) describe(w http.ResponseWriter, r *http.Request) {
+	s, held, person, err := a.current(r)
+	if err != nil {
+		a.unavailable(w, r)
+		return
+	}
+
+	if !person.SignedIn {
+		held.forget()
+
+		if a.save(w, r, held) {
+			writeJSON(w, http.StatusUnauthorized, a.refusal(r, s))
+		}
+
+		return
+	}
+
+	if a.save(w, r, held) {
+		writeJSON(w, http.StatusOK, person)
+	}
+}
+
+func (a *App) refusal(r *http.Request, s *site) map[string]any {
+	if s == nil || s.held == nil {
+		return map[string]any{"signed_in": false, "error": "handshake_required", "handshake_url": a.HandshakePath()}
+	}
+
+	return map[string]any{"signed_in": false, "error": "login_required", "login_url": a.LoginURL(LoginOptions{ReturnTo: referringPath(r)})}
+}
+
+func referringPath(r *http.Request) string {
+	parsed, err := url.Parse(r.Referer())
+	if err != nil || parsed.Host != r.Host {
+		return ""
+	}
+
+	return localPath(parsed.RequestURI())
+}
+
+func (a *App) logout(w http.ResponseWriter, r *http.Request) {
+	s, err := a.site(r)
+	if err != nil {
+		a.unavailable(w, r)
+		return
+	}
+
+	held, err := a.load(r)
+	if err != nil {
+		a.unavailable(w, r)
+		return
+	}
+
+	everywhere := a.config.SignOutOfIssuer || r.FormValue("everywhere") != ""
+	upstream := ""
+	farewell := ""
+
+	if s.held != nil {
+		client := a.signIn(s)
+
+		if token := held.data.Token; token != nil && token.RefreshToken != "" {
+			_ = client.Revoke(r.Context(), token.RefreshToken, masks.GrantRefreshToken)
+		}
+
+		if everywhere {
+			farewell = rand.Text()
+			upstream, _ = client.EndSessionURL(masks.EndSession{PostLogoutRedirectURI: a.returnTo(s), State: farewell})
+		}
+	}
+
+	held.renew(func(*session) *session {
+		if upstream == "" {
+			return &session{}
+		}
+
+		return &session{Farewell: farewell}
+	})
+
+	if !a.save(w, r, held) {
+		return
+	}
+
+	if wantsJSON(r) {
+		answer := map[string]any{"signed_in": false}
+		if upstream != "" {
+			answer["logout_url"] = upstream
+		}
+
+		writeJSON(w, http.StatusOK, answer)
+
+		return
+	}
+
+	target := upstream
+	if target == "" {
+		target = a.config.AfterSignOut
+	}
+
+	http.Redirect(w, r, target, http.StatusFound)
+}
+
+func (a *App) backchannel(w http.ResponseWriter, r *http.Request) {
+	s, err := a.site(r)
+	if err != nil {
+		a.unavailable(w, r)
+		return
+	}
+
+	r.Body = http.MaxBytesReader(w, r.Body, 64<<10)
+	presented := r.PostFormValue("logout_token")
+
+	if presented == "" || s.held == nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid_request", "error_description": "logout_token is required"})
+		return
+	}
+
+	logout, err := a.signIn(s).VerifyLogoutToken(r.Context(), presented)
+	if err != nil {
+		var bad *masks.InvalidTokenError
+		if errors.As(err, &bad) {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid_request", "error_description": bad.Description})
+			return
+		}
+
+		a.unavailable(w, r)
+
+		return
+	}
+
+	now := time.Now()
+
+	for kind, value := range map[string]string{"sub": logout.Subject, "sid": logout.SessionID} {
+		if value == "" || (kind == "sub" && logout.SessionID != "") {
+			continue
+		}
+
+		if err := a.config.Departures.Depart(r.Context(), departureKey(s.issuer.URL, kind, value), now, a.config.SessionLifetime); err != nil {
+			a.unavailable(w, r)
+			return
+		}
+	}
+
+	if a.config.LoggedOut != nil {
+		if err := a.config.LoggedOut(r, logout); err != nil {
+			a.unavailable(w, r)
+			return
+		}
+	}
+
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(http.StatusOK)
+}
+
+func (a *App) avatar(w http.ResponseWriter, r *http.Request) {
+	s, held, person, err := a.current(r)
+	if err != nil {
+		a.unavailable(w, r)
+		return
+	}
+
+	if !a.save(w, r, held) {
+		return
+	}
+
+	photo := person.Avatars[masks.AvatarPhoto]
+
+	if !person.SignedIn || photo == "" || !strings.HasPrefix(photo, s.issuer.URL+"/") {
+		http.NotFound(w, r)
+		return
+	}
+
+	if asked, err := strconv.Atoi(r.URL.Query().Get("size")); err == nil {
+		size := avatarSizes[len(avatarSizes)-1]
+
+		if found := slices.IndexFunc(avatarSizes, func(allowed int) bool { return allowed >= asked }); found >= 0 {
+			size = avatarSizes[found]
+		}
+
+		photo += "?size=" + strconv.Itoa(size)
+	}
+
+	request, err := http.NewRequestWithContext(r.Context(), http.MethodGet, photo, nil)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	request.Header.Set("Authorization", "Bearer "+person.AccessToken)
+	request.Header.Set("Accept", "image/*")
+
+	client := http.Client{Timeout: 30 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	if a.config.HTTPClient != nil {
+		client.Transport = a.config.HTTPClient.Transport
+	}
+
+	response, err := client.Do(request)
+	if err != nil {
+		w.WriteHeader(http.StatusBadGateway)
+		return
+	}
+	defer response.Body.Close()
+
+	kind := response.Header.Get("Content-Type")
+
+	switch {
+	case response.StatusCode >= 300 && response.StatusCode < 400:
+		location, err := response.Location()
+		if err != nil || (location.Scheme != "https" && !strings.HasPrefix(location.String(), s.issuer.URL+"/")) {
+			w.WriteHeader(http.StatusBadGateway)
+			return
+		}
+
+		http.Redirect(w, r, location.String(), http.StatusFound)
+	case response.StatusCode != http.StatusOK || !strings.HasPrefix(kind, "image/") || response.ContentLength > avatarLimit:
+		http.NotFound(w, r)
+	default:
+		w.Header().Set("Content-Type", kind)
+		w.Header().Set("Cache-Control", "private, max-age=300")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; sandbox")
+		w.WriteHeader(http.StatusOK)
+		_, _ = io.Copy(w, io.LimitReader(response.Body, avatarLimit))
+	}
+}
+
+var connectedPage = template.Must(template.New("connected").Parse(`<!doctype html>
+<meta charset="utf-8">
+<title>{{.Name}} and masks</title>
+<p>{{.Name}} is connected to {{.Issuer}} as {{.ClientID}}.</p>
+<form method="post" action="{{.Handshake}}"><button>Connect again</button></form>
+<form method="post" action="{{.Handshake}}/disconnect"><button>Disconnect</button></form>
+`))
+
+func (a *App) manages(r *http.Request, s *site, held *state) (bool, *Person, error) {
+	person, err := a.signedIn(r, s, held)
+	if err != nil {
+		return false, nil, err
+	}
+
+	return a.config.Manages != nil && person.SignedIn && a.config.Manages(r, person), person, nil
+}
+
+func (a *App) showHandshake(w http.ResponseWriter, r *http.Request) {
+	s, err := a.site(r)
+	if err != nil {
+		a.unavailable(w, r)
+		return
+	}
+
+	if s.held == nil {
+		a.createHandshake(w, r)
+		return
+	}
+
+	held, err := a.load(r)
+	if err != nil {
+		a.unavailable(w, r)
+		return
+	}
+
+	allowed, person, err := a.manages(r, s, held)
+	if err != nil {
+		a.unavailable(w, r)
+		return
+	}
+
+	if !a.save(w, r, held) {
+		return
+	}
+
+	if !person.SignedIn {
+		http.Redirect(w, r, a.config.AfterSignOut, http.StatusFound)
+		return
+	}
+
+	if !allowed {
+		a.refuse(w, r, http.StatusForbidden, "forbidden", "only somebody this app lets manage its connection can reconnect or disconnect it")
+		return
+	}
+
+	if wantsJSON(r) {
+		writeJSON(w, http.StatusOK, map[string]any{"connected": true, "issuer": s.issuer.URL, "client_id": s.held.ClientID})
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	_ = connectedPage.Execute(w, map[string]string{
+		"Name": a.handshake(s).Name, "Issuer": s.issuer.URL, "ClientID": s.held.ClientID, "Handshake": a.HandshakePath(),
+	})
+}
+
+func (a *App) createHandshake(w http.ResponseWriter, r *http.Request) {
+	s, err := a.site(r)
+	if err != nil {
+		a.unavailable(w, r)
+		return
+	}
+
+	held, err := a.load(r)
+	if err != nil {
+		a.unavailable(w, r)
+		return
+	}
+
+	if s.held != nil {
+		allowed, _, err := a.manages(r, s, held)
+		if err != nil {
+			a.unavailable(w, r)
+			return
+		}
+
+		if !allowed {
+			a.save(w, r, held)
+			a.refuse(w, r, http.StatusForbidden, "forbidden", "only somebody this app lets manage its connection can reconnect or disconnect it")
+
+			return
+		}
+	}
+
+	target, shaken, err := a.handshake(s).Start()
+	if err != nil {
+		a.failed(w, r, err)
+		return
+	}
+
+	held.shake(shaken)
+
+	if a.save(w, r, held) {
+		http.Redirect(w, r, target, http.StatusFound)
+	}
+}
+
+func (a *App) handshakeCallback(w http.ResponseWriter, r *http.Request) {
+	s, err := a.site(r)
+	if err != nil {
+		a.unavailable(w, r)
+		return
+	}
+
+	held, err := a.load(r)
+	if err != nil {
+		a.unavailable(w, r)
+		return
+	}
+
+	query := r.URL.Query()
+	returned := query.Get("state")
+
+	if farewell := held.data.Farewell; farewell != "" && query.Get("initial_access_token") == "" && query.Get("error") == "" &&
+		subtle.ConstantTimeCompare([]byte(farewell), []byte(returned)) == 1 {
+		held.change().Farewell = ""
+
+		if a.save(w, r, held) {
+			http.Redirect(w, r, a.config.AfterSignOut, http.StatusFound)
+		}
+
+		return
+	}
+
+	if !held.shaken(returned) {
+		if a.save(w, r, held) {
+			a.refuse(w, r, http.StatusBadRequest, "invalid_state", "that connection request is not one this browser started, or it expired")
+		}
+
+		return
+	}
+
+	if s.held != nil {
+		allowed, _, err := a.manages(r, s, held)
+		if err != nil {
+			a.unavailable(w, r)
+			return
+		}
+
+		if !allowed {
+			a.save(w, r, held)
+			a.refuse(w, r, http.StatusForbidden, "forbidden", "only somebody this app lets manage its connection can reconnect or disconnect it")
+
+			return
+		}
+	}
+
+	registration, err := a.handshake(s).Complete(r.Context(), query, returned)
+	if err != nil {
+		if a.save(w, r, held) {
+			a.failed(w, r, err)
+		}
+
+		return
+	}
+
+	if err := a.config.Credentials.Save(r, CredentialsFrom(registration)); err != nil {
+		a.refuse(w, r, http.StatusInternalServerError, "server_error", "the credentials could not be saved")
+		return
+	}
+
+	held.forget()
+
+	if a.save(w, r, held) {
+		http.Redirect(w, r, a.config.Mount+"/", http.StatusFound)
+	}
+}
+
+func (a *App) disconnect(w http.ResponseWriter, r *http.Request) {
+	s, err := a.site(r)
+	if err != nil {
+		a.unavailable(w, r)
+		return
+	}
+
+	held, err := a.load(r)
+	if err != nil {
+		a.unavailable(w, r)
+		return
+	}
+
+	if s.held == nil {
+		http.Redirect(w, r, a.HandshakePath(), http.StatusFound)
+		return
+	}
+
+	allowed, person, err := a.manages(r, s, held)
+	if err != nil {
+		a.unavailable(w, r)
+		return
+	}
+
+	if !person.SignedIn {
+		if a.save(w, r, held) {
+			http.Redirect(w, r, a.config.AfterSignOut, http.StatusFound)
+		}
+
+		return
+	}
+
+	if !allowed {
+		a.save(w, r, held)
+		a.refuse(w, r, http.StatusForbidden, "forbidden", "only somebody this app lets manage its connection can reconnect or disconnect it")
+
+		return
+	}
+
+	if s.held.RegistrationAccessToken != "" && s.held.RegistrationClientURI != "" {
+		err := s.issuer.DeleteRegistration(r.Context(), s.held.Registration())
+
+		var refused *masks.Error
+		if err != nil && !(errors.As(err, &refused) && refused.Status < 500) {
+			a.failed(w, r, err)
+			return
+		}
+	}
+
+	if err := a.config.Credentials.Forget(r); err != nil {
+		a.refuse(w, r, http.StatusInternalServerError, "server_error", "the credentials could not be removed")
+		return
+	}
+
+	held.renew(func(*session) *session { return &session{} })
+
+	if a.save(w, r, held) {
+		http.Redirect(w, r, a.HandshakePath(), http.StatusFound)
+	}
+}
