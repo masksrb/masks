@@ -18,6 +18,7 @@
   import OverviewPage from "./OverviewPage.svelte";
   import ActivityPage from "./ActivityPage.svelte";
   import ProvidersPage from "./ProvidersPage.svelte";
+  import ProviderPage from "./ProviderPage.svelte";
   import MessagesPage from "./MessagesPage.svelte";
   import StreamsPage from "./StreamsPage.svelte";
   import PoliciesPage from "./PoliciesPage.svelte";
@@ -250,7 +251,9 @@
         {/if}
       {:else if inSettings}
         <SettingsShell {current} {viewer} identifier={signedInAs} account={boot.account} onsignout={signOut} onunpair={forget}>
-          {#if current === "providers"}
+          {#if current === "providers" && router.segments[1]}
+            <ProviderPage {api} providerKey={router.segments[1]} part={router.segments[2]} />
+          {:else if current === "providers"}
             <ProvidersPage {api} />
           {:else if current === "policies"}
             <PoliciesPage {api} />

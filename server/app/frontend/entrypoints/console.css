@@ -521,6 +521,27 @@ a.tally-cell:active {
   gap: 0.5rem;
 }
 
+.savebar {
+  position: sticky;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);
+  z-index: 15;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  padding: 0.625rem 0.75rem 0.625rem 1rem;
+  border-radius: var(--radius-box);
+  background: var(--tray-bar);
+  box-shadow: var(--tray-bar-lift);
+}
+
+@media (max-width: 47.99rem) {
+  .savebar {
+    bottom: calc(var(--tabbar-clear) + 0.5rem);
+  }
+}
+
 .event-trail {
   grid-column: 1 / -1;
   overflow: hidden;
