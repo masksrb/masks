@@ -200,6 +200,9 @@ class Masks:
     def logout_url(self) -> str:
         return self.engine.path("/logout")
 
+    def registered(self) -> bool:
+        return self.engine.run(self.engine.registered(incoming()))
+
     def connected(self) -> bool:
         return self.engine.configured(incoming())
 

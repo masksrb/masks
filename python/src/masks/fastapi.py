@@ -216,6 +216,9 @@ class Masks:
     def logout_url(self) -> str:
         return self.engine.path("/logout")
 
+    async def registered(self, request: Request) -> bool:
+        return await self.engine.arun(self.engine.registered(await incoming(request)))
+
     def session(self, request: Request) -> Session:
         return session_of(request)
 

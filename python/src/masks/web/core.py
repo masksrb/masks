@@ -597,8 +597,40 @@ class Masks:
 
         return Answer.redirect(self.path())
 
+    def registered(self, request: Incoming) -> Step[bool]:
+        held = self.credentials(request).read()
+
+        if not held.get("registration_client_uri") or not held.get("registration_access_token"):
+            return bool(held.get("client_id"))
+
+        issuer = yield from self.discover(request)
+
+        try:
+            yield from self.flows(request, issuer)._read_registration(
+                Registration(
+                    client_id=held["client_id"],
+                    registration_client_uri=held["registration_client_uri"],
+                    registration_access_token=held["registration_access_token"],
+                )
+            )
+        except Error as error:
+            if error.status in (401, 403, 404):
+                return False
+
+            raise
+
+        return True
+
     def start(self, request: Incoming, session: Session) -> Step[Answer]:
         if not self.configured(request):
+            return self._handshake_required(request)
+
+        try:
+            known = yield from self.registered(request)
+        except (MasksError, httpx.HTTPError):
+            known = True
+
+        if not known and self._disconnect(request, session):
             return self._handshake_required(request)
 
         issuer = yield from self.discover(request)

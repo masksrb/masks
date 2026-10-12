@@ -409,6 +409,14 @@ def test_a_handshake_connects_the_app(fake: Fake) -> None:
         assert client.get("/me").json()["subject"] == "ada"
 
 
+def test_an_app_masks_no_longer_knows_shakes_hands_again(fake: Fake) -> None:
+    client, credentials = connected(fake)
+    del fake.registrations["app"]
+
+    assert location(client.get("/auth", headers=HTML)) == "/auth/handshake"
+    assert credentials.read() == {}
+
+
 def test_a_handshake_callback_needs_this_browsers_state(fake: Fake) -> None:
     application, _ = build(fake, credentials=MemoryCredentials())
 

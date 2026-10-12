@@ -24,10 +24,12 @@ __all__ = [
     "Config",
     "Person",
     "client",
+    "connected",
     "engine",
     "login_required",
     "login_url",
     "person",
+    "registered",
     "token_required",
 ]
 
@@ -146,6 +148,14 @@ def client(request: HttpRequest) -> Client:
         raise Refusal(Answer.page(503, "masks could not be reached", str(error))) from error
 
     return engine().client(held, issuer)
+
+
+def connected(request: HttpRequest) -> bool:
+    return engine().configured(incoming(request))
+
+
+def registered(request: HttpRequest) -> bool:
+    return engine().run(engine().registered(incoming(request)))
 
 
 def login_url(return_to: str = "", organization: str = "", privilege: Sequence[str] = ()) -> str:
