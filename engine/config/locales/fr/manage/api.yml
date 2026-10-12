@@ -1,5 +1,5 @@
 fr:
   manage:
     api:
-      unregistered: "aucune application n’est enregistrée pour ce navigateur"
+      unregistered: "aucun client n’est enregistré pour ce navigateur"
       refused: "refusé"

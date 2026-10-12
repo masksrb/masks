@@ -9,7 +9,7 @@ es:
       block_question: "¿Bloquear %{label}? Se rechaza antes de comprobar ninguna contraseña."
       unblocked: "%{label} está desbloqueado."
       signed_out: "Se cerró la sesión de %{label} en todas partes."
-      sign_out_question: "¿Cerrar la sesión de todas las cuentas en %{label}?"
+      sign_out_question: "¿Cerrar la sesión de todos los actores en %{label}?"
       facts:
         kind: "Tipo"
         ip_address: "Dirección IP"

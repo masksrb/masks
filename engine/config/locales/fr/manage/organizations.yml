@@ -2,7 +2,7 @@ fr:
   manage:
     organizations:
       title: "Organisations"
-      lede: "Les clients de cet espace. Une application qui demande la portée organization connecte une personne en tant que membre de l’une d’elles, et son jeton porte le rôle qu’elle y occupe."
+      lede: "Les entreprises clientes de cet espace. Un client qui demande la portée organization connecte un acteur en tant que membre de l’une d’elles, et son jeton porte le rôle qu’il y occupe."
       columns:
         organization: "Organisation"
         members: "Membres"
@@ -17,12 +17,12 @@ fr:
       add_lede: "Vous en devenez le premier propriétaire, et pourrez ajouter des membres une fois qu’elle existe."
       name: "Nom"
       key: "Clé"
-      key_hint: "Une application demande cette organisation avec"
+      key_hint: "Un client demande cette organisation avec"
       key_word: "la clé"
       key_hint_end: ". La clé ne pourra plus changer."
       adding: "Ajout..."
       cancel: "Annuler"
-      empty: "Aucune organisation pour l’instant. Ajoutez-en une pour chaque client dont les membres se connectent ensemble."
+      empty: "Aucune organisation pour l’instant. Ajoutez-en une pour chaque entreprise cliente dont les membres se connectent ensemble."
       tenant_policy: "La politique de l’espace"
       archived:
         title: "Archivées"

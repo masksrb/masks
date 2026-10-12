@@ -7,7 +7,7 @@ es:
       title: "Actividad"
       nouns:
         actor: "actor"
-        client: "aplicación"
+        client: "cliente"
       downloading:
         one: "Descargando %{count} evento."
         other: "Descargando %{count} eventos."
@@ -15,7 +15,7 @@ es:
       involves_end: "."
       gone:
         actor: "Solo lo que afecta a un actor que ya no existe."
-        client: "Solo lo que afecta a una aplicación que ya no existe."
+        client: "Solo lo que afecta a un cliente que ya no existe."
       everything: "Mostrar todo"
       show: "Mostrar"
       all: "todo"

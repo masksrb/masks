@@ -2,14 +2,14 @@ en:
   manage:
     groups:
       title: "Groups"
-      lede: "Named sets of people, such as admins or family. Apps that ask for the groups scope see each group a person is in, and an app can be limited to some groups. A group's key is what apps see, and it cannot change later. People join a group from their own page."
-      added: "%{name} is ready. Add people from their own pages."
-      delete_confirm: "Delete %{name}? Apps limited to it turn its people away."
+      lede: "Named sets of actors, such as admins or family. Clients that ask for the groups scope see each group an actor is in, and a client can be limited to some groups. A group's key is what clients see, and it cannot change later. Actors join a group from their own page."
+      added: "%{name} is ready. Add actors from their own pages."
+      delete_confirm: "Delete %{name}? Clients limited to it refuse its actors."
       deleted: "%{name} is deleted."
       people:
-        one: "%{count} person"
-        other: "%{count} people"
+        one: "%{count} actor"
+        other: "%{count} actors"
       delete: "Delete %{name}"
       new: "New group name"
       add: "Add"
-      key: "Apps see it as %{key}."
+      key: "Clients see it as %{key}."

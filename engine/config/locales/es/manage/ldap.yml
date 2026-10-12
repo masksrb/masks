@@ -2,17 +2,17 @@ es:
   manage:
     ldap:
       title: "LDAP"
-      lede: "Las aplicaciones más antiguas, como los NAS, los servidores multimedia y los hipervisores, comprueban contraseñas y leen grupos por LDAP. masks les sirve en solo lectura las personas y los grupos de este inquilino."
-      revoke_confirm: "¿Revocar %{label}? Las aplicaciones que la usan quedan rechazadas desde ahora."
+      lede: "Los servicios más antiguos, como los NAS, los servidores multimedia y los hipervisores, comprueban contraseñas y leen grupos por LDAP. masks les sirve en solo lectura los actores y los grupos de este inquilino."
+      revoke_confirm: "¿Revocar %{label}? Todo lo que se enlace con ella queda rechazado desde ahora."
       revoked: "%{label} está revocada."
       serve:
         title: "Directorio"
-        help: "Mientras esto está desactivado, ninguna aplicación puede enlazarse al directorio de este inquilino ni buscar en él."
+        help: "Mientras esto está desactivado, nada puede enlazarse al directorio de este inquilino ni buscar en él."
         "on": "Servir este inquilino por LDAP"
-        updated: "El directorio está actualizado."
+        updated: "Directorio cambiado."
       connect:
-        title: "Conecta una aplicación"
-        help: "Dale a la aplicación este DN base, un DN de enlace y su secreto. La aplicación busca en ou=people y ou=groups, y luego se enlaza como una persona para comprobar su contraseña."
+        title: "Conecta un servicio"
+        help: "Dale al servicio este DN base, un DN de enlace y su secreto. El servicio busca en ou=people y ou=groups, y luego se enlaza como un actor para comprobar su contraseña."
         base_dn: "DN base"
         address: "Dirección"
         port: "Puerto %{port}"
@@ -30,6 +30,6 @@ es:
         revoke: "Revocar"
       binds:
         title: "Enlaces con contraseña"
-        help: "LDAP no puede pedir un segundo factor. Una cuenta que tiene uno, o cuya política de inicio de sesión lo exige, se rechaza salvo que aquí se permita solo la contraseña."
+        help: "LDAP no puede pedir un segundo factor. Un actor que tiene uno, o cuya política de inicio de sesión lo exige, se rechaza salvo que aquí se permita solo la contraseña."
         password_only: "Permitir solo la contraseña por LDAP"
-        updated: "Los enlaces con contraseña están actualizados."
+        updated: "Enlaces con contraseña cambiados."

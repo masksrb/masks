@@ -54,6 +54,6 @@ en:
       newest: "Only the newest %{count} are shown."
       choose: "Choose %{label}"
       blocked: "blocked"
-      unrecognised: "unrecognised"
+      unrecognised: "unrecognized"
       signed_in: "signed in"
       nobody_yet: "nobody yet"

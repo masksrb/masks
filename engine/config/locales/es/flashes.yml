@@ -113,7 +113,7 @@ es:
     expired: "Ese inicio de sesión dejó de esperar. Pide un código nuevo en la otra pantalla."
     too_many_attempts: "Demasiados intentos. Espera unos minutos y vuelve a intentarlo."
     approved: "Inicio de sesión aprobado."
-    denied: "Inicio de sesión denegado."
+    denied: "Inicio de sesión rechazado."
 
   passwords:
     too_many_attempts: "Demasiados intentos. Espera unos minutos y vuelve a intentarlo."
@@ -138,7 +138,7 @@ es:
     sent: "Te enviamos un enlace de confirmación a %{email}."
 
   avatars:
-    updated: "Se actualizó tu foto."
+    updated: "Se cambió tu foto."
     removed: "Se eliminó tu foto."
 
   handshakes:

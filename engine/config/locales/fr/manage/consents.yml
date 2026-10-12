@@ -1,7 +1,7 @@
 fr:
   manage:
     consents:
-      revoke_confirm: "Couper l’accès de %{held} ? Tous ses jetons d’actualisation sont révoqués, et elle devra redemander l’accès à la prochaine connexion."
+      revoke_confirm: "Révoquer l’accès de %{held} ? Tous ses jetons d’actualisation sont révoqués, et l’accès devra être redemandé à la prochaine connexion."
       revoked: "Accès révoqué. Elle devra le redemander."
       empty: "Aucun."
       revoke: "Révoquer l’accès"

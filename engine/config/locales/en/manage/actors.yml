@@ -14,7 +14,7 @@ en:
         blocked: "A device is blocked"
       invite_many: "Invite many"
       invites:
-        title: "Invite many people"
+        title: "Invite many actors"
         lede: "Paste addresses separated by lines, spaces, or commas. Each new address gets an invitation."
         addresses: "Email addresses"
         groups: "Put them in"
@@ -24,7 +24,7 @@ en:
           other: "%{count} invited"
         outcomes:
           invited: "invited"
-          exists: "already has an account"
+          exists: "is already an actor"
           invalid: "is not an address masks can invite"
       title: "Actors"
       lenses:
@@ -56,15 +56,15 @@ en:
         minimum: "At least %{count} characters, and you will know it."
         scopes: "Scopes"
         adding: "Adding..."
-        create: "Create the account"
+        create: "Add actor"
         invite: "Send the invitation"
         cancel: "Cancel"
       created:
-        account: "Account created"
+        account: "Actor added"
         invitation: "Invitation sent"
         can_sign_in: "%{identifier} can sign in now."
         confirm_link: "This link confirms their address:"
-        emailed: "Emailed — accepting it proves the address."
+        emailed: "Emailed. Accepting it proves the address."
         pass_along: "Pass this link along yourself. It works once."
       empty:
         search: "No actor matches \"%{search}\"."

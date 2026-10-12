@@ -2,17 +2,17 @@ fr:
   manage:
     ldap:
       title: "LDAP"
-      lede: "Les applications plus anciennes, comme les NAS, les serveurs multimédia et les hyperviseurs, vérifient les mots de passe et lisent les groupes par LDAP. masks leur expose en lecture seule les personnes et les groupes de ce tenant."
-      revoke_confirm: "Révoquer %{label} ? Les applications qui s'en servent sont refusées dès maintenant."
+      lede: "Les services plus anciens, comme les NAS, les serveurs multimédia et les hyperviseurs, vérifient les mots de passe et lisent les groupes par LDAP. masks leur expose en lecture seule les acteurs et les groupes de ce tenant."
+      revoke_confirm: "Révoquer %{label} ? Tout ce qui s'en sert est refusé dès maintenant."
       revoked: "%{label} est révoqué."
       serve:
         title: "Annuaire"
-        help: "Tant que ceci est désactivé, aucune application ne peut se lier à l'annuaire de ce tenant ni y chercher."
+        help: "Tant que ceci est désactivé, rien ne peut se lier à l'annuaire de ce tenant ni y chercher."
         "on": "Servir ce tenant par LDAP"
-        updated: "L'annuaire est mis à jour."
+        updated: "Annuaire modifié."
       connect:
-        title: "Connecter une application"
-        help: "Donnez à l'application ce DN de base, un DN de liaison et son secret. L'application cherche dans ou=people et ou=groups, puis se lie en tant que personne pour vérifier son mot de passe."
+        title: "Connecter un service"
+        help: "Donnez au service ce DN de base, un DN de liaison et son secret. Le service cherche dans ou=people et ou=groups, puis se lie en tant qu'acteur pour vérifier son mot de passe."
         base_dn: "DN de base"
         address: "Adresse"
         port: "Port %{port}"
@@ -30,6 +30,6 @@ fr:
         revoke: "Révoquer"
       binds:
         title: "Liaisons par mot de passe"
-        help: "LDAP ne peut pas demander de second facteur. Un compte qui en a un, ou dont la politique de connexion en exige un, est refusé à moins qu'un mot de passe seul soit autorisé ici."
+        help: "LDAP ne peut pas demander de second facteur. Un acteur qui en a un, ou dont la politique de connexion en exige un, est refusé à moins qu'un mot de passe seul soit autorisé ici."
         password_only: "Autoriser un mot de passe seul par LDAP"
-        updated: "Les liaisons par mot de passe sont mises à jour."
+        updated: "Liaisons par mot de passe modifiées."

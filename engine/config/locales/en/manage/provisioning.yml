@@ -2,7 +2,7 @@ en:
   manage:
     provisioning:
       title: "Provisioning"
-      lede: "An identity provider adds, changes, suspends and removes actors here over SCIM 2.0."
+      lede: "A directory adds, changes, suspends, and removes actors here over SCIM 2.0."
       revoke_confirm: "Revoke %{label}? Whatever provisions with it is refused from now on."
       revoked: "%{label} is revoked."
       lifetimes:
@@ -10,12 +10,12 @@ en:
         quarter: "90 days"
         year: "A year"
       connect:
-        title: "Connect a provider"
-        help: "Give the provider this URL and a token. A provisioned actor is known by their email, which masks takes as confirmed, and signs in through a provider or an invitation. Nobody who holds a masks: scope has their password or email changed this way, and the last manager is never suspended or removed."
+        title: "Connect a directory"
+        help: "Give the directory this URL and a token. A provisioned actor is known by their email, which masks takes as confirmed, and signs in through a provider or an invitation. Nobody who holds a masks: scope has their password or email changed this way, and the last manager is never suspended or removed."
         base_url: "SCIM base URL"
         label: "Label"
         provisions: "Provisions"
-        every_account: "Every account"
+        every_account: "Every actor"
         only_members: "Only members of %{name}"
         lifetime: "How long the token lives"
         issue: "Issue a token"

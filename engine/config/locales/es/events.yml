@@ -65,7 +65,7 @@ es:
         refused: "Inicio de sesión de dispositivo rechazado"
       sign_in:
         approved: "Inicio de sesión aprobado desde un dispositivo de confianza"
-        denied: "Inicio de sesión denegado desde un dispositivo de confianza"
+        denied: "Inicio de sesión rechazado desde un dispositivo de confianza"
         risky: "Inicio de sesión inusual"
       device:
         trusted: "Dispositivo de confianza"

@@ -39,7 +39,7 @@ en:
     taken: "That %{provider} account is already connected to somebody else here."
 
   delegations:
-    unknown: "There is no such application using that account."
+    unknown: "There is no such app using that account."
     stopped: "%{client} can no longer use your %{provider} account."
 
   passkeys:
@@ -113,7 +113,7 @@ en:
     expired: "That sign-in stopped waiting. Ask for a new code on the other screen."
     too_many_attempts: "Too many attempts. Wait a few minutes and try again."
     approved: "Sign-in approved."
-    denied: "Sign-in denied."
+    denied: "Sign-in refused."
 
   passwords:
     too_many_attempts: "Too many attempts. Wait a few minutes and try again."
@@ -138,7 +138,7 @@ en:
     sent: "A confirmation link is on its way to %{email}."
 
   avatars:
-    updated: "Your photo has been updated."
+    updated: "Your photo has been changed."
     removed: "Your photo has been removed."
 
   handshakes:

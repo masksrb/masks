@@ -2,8 +2,8 @@ fr:
   manage:
     app:
       waiting:
-        one: "%{count} personne attend votre action"
-        other: "%{count} personnes attendent votre action"
+        one: "%{count} acteur attend votre action"
+        other: "%{count} acteurs attendent votre action"
       missing: "Il n’y a pas de page à cette adresse."
       account: "Compte"
       starting: "Démarrage"
@@ -14,11 +14,11 @@ fr:
       sections: "Sections"
       nav:
         overview: "Vue d’ensemble"
-        actors: "Utilisateurs"
+        actors: "Acteurs"
         organizations: "Organisations"
-        clients: "Applications"
+        clients: "Clients"
       limited:
         read: "Vous pouvez tout consulter ici, sans rien modifier."
-        support: "Vous pouvez aider les personnes avec leur compte. Les paramètres, les clés et les autres gestionnaires nécessitent un propriétaire."
-        security: "Vous pouvez modifier les clés, les applications, les fournisseurs et les politiques. Les comptes des personnes nécessitent le support ou un propriétaire."
-        both: "Vous pouvez modifier les paramètres et aider les personnes. Les autres gestionnaires et les paramètres de l’espace nécessitent un propriétaire."
+        support: "Vous pouvez aider les acteurs. Les paramètres, les clés et les autres gestionnaires nécessitent un propriétaire."
+        security: "Vous pouvez modifier les clés, les clients, les fournisseurs et les politiques. Les acteurs nécessitent le support ou un propriétaire."
+        both: "Vous pouvez modifier les paramètres et aider les acteurs. Les autres gestionnaires et les paramètres de l’espace nécessitent un propriétaire."

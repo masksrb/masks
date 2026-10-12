@@ -9,7 +9,7 @@ fr:
       block_question: "Bloquer %{label} ? Il est refusé avant même la vérification du mot de passe."
       unblocked: "%{label} est débloqué."
       signed_out: "%{label} déconnecté partout."
-      sign_out_question: "Déconnecter tous les comptes de %{label} ?"
+      sign_out_question: "Déconnecter tous les acteurs de %{label} ?"
       facts:
         kind: "Type"
         ip_address: "Adresse IP"

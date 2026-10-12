@@ -2,4 +2,4 @@ de:
   manage:
     directory:
       title: "Verzeichnis"
-      lede: "Andere Systeme, die die Personen dieses Mandanten führen: ein Identitätsanbieter, der sie über SCIM bereitstellt, und ältere Apps, die sie über LDAP lesen."
+      lede: "Andere Systeme, die die Akteure dieses Mandanten führen: ein Verzeichnis, das sie über SCIM bereitstellt, und ältere Dienste, die sie über LDAP lesen."

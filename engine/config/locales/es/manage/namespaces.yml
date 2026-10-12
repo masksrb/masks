@@ -2,7 +2,7 @@ es:
   manage:
     namespaces:
       title: "Espacios de nombres"
-      release_confirm: "¿Liberar %{name}? La próxima aplicación que lo pida se lo quedará, y los alcances que contiene dejarán de significar lo que significan ahora."
+      release_confirm: "¿Liberar %{name}? El próximo cliente que lo pida se lo quedará, y los alcances que contiene dejarán de significar lo que significan ahora."
       released: "%{name} se puede volver a reclamar."
       columns:
         name: "Nombre"

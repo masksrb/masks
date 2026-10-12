@@ -65,7 +65,7 @@ en:
         refused: "Device sign-in refused"
       sign_in:
         approved: "Sign-in approved from a trusted device"
-        denied: "Sign-in denied from a trusted device"
+        denied: "Sign-in refused from a trusted device"
         risky: "Unusual sign-in"
       device:
         trusted: "Device trusted"

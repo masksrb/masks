@@ -2,9 +2,9 @@ fr:
   manage:
     emails:
       list: "E-mails"
-      app: "L’application à laquelle on se connecte"
-      no_app: "Aucune application"
-      not_approved: "%{name} (non approuvée)"
+      app: "Le client auquel on se connecte"
+      no_app: "Aucun client"
+      not_approved: "%{name} (non approuvé)"
       headed: "En-tête de %{heading}, de %{from} à %{to}"
       no_sender: "aucun expéditeur configuré"
       part: "Quelle partie"
@@ -14,7 +14,7 @@ fr:
       groups:
         sign_in:
           title: "Pendant la connexion"
-          help: "Envoyés pendant une connexion. Quand une application y a envoyé la personne, une application approuvée place son logo et son nom en tête de l’e-mail. Une connexion directe à la page du compte n’a pas d’application, et c’est l’espace qui figure en tête."
+          help: "Envoyés pendant une connexion. Quand un client y a envoyé l’acteur, un client approuvé place son logo et son nom en tête de l’e-mail. Une connexion directe à la page du compte n’a pas de client, et c’est l’espace qui figure en tête."
           about: "À propos des e-mails envoyés pendant la connexion"
         manage:
           title: "De la part d’un gestionnaire"
@@ -22,7 +22,7 @@ fr:
           about: "À propos des e-mails envoyés par un gestionnaire"
         account:
           title: "Depuis la page du compte"
-          help: "Envoyés quand une personne modifie son propre compte. L’espace figure en tête."
+          help: "Envoyés quand un acteur modifie quelque chose sur sa page de compte. L’espace figure en tête."
           about: "À propos des e-mails envoyés depuis la page du compte"
         system:
           title: "Automatiquement"

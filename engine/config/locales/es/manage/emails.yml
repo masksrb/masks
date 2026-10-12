@@ -2,8 +2,8 @@ es:
   manage:
     emails:
       list: "Correos"
-      app: "La aplicación en la que se inicia sesión"
-      no_app: "Sin aplicación"
+      app: "El cliente en el que se inicia sesión"
+      no_app: "Sin cliente"
       not_approved: "%{name} (sin aprobar)"
       headed: "Encabezado por %{heading}, de %{from} a %{to}"
       no_sender: "no hay remitente configurado"
@@ -14,7 +14,7 @@ es:
       groups:
         sign_in:
           title: "Al iniciar sesión"
-          help: "Se envían durante un inicio de sesión. Cuando una aplicación envió a la persona allí, una aplicación aprobada encabeza el correo con su logotipo y su nombre. Un inicio de sesión directo en la página de la cuenta no tiene aplicación, y lo encabeza el inquilino."
+          help: "Se envían durante un inicio de sesión. Cuando un cliente envió al actor allí, un cliente aprobado encabeza el correo con su logotipo y su nombre. Un inicio de sesión directo en la página de la cuenta no tiene cliente, y lo encabeza el inquilino."
           about: "Acerca de los correos enviados al iniciar sesión"
         manage:
           title: "De un administrador"
@@ -22,7 +22,7 @@ es:
           about: "Acerca de los correos enviados por un administrador"
         account:
           title: "Desde la página de la cuenta"
-          help: "Se envían cuando una persona cambia su propia cuenta. Los encabeza el inquilino."
+          help: "Se envían cuando un actor cambia algo en la página de su cuenta. Los encabeza el inquilino."
           about: "Acerca de los correos enviados desde la página de la cuenta"
         system:
           title: "Por sí solo"

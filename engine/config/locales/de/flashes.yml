@@ -138,7 +138,7 @@ de:
     sent: "Ein Bestätigungslink ist unterwegs an %{email}."
 
   avatars:
-    updated: "Ihr Foto wurde aktualisiert."
+    updated: "Ihr Foto wurde geändert."
     removed: "Ihr Foto wurde entfernt."
 
   handshakes:

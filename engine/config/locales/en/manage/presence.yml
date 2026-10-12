@@ -11,7 +11,7 @@ en:
       last_seen: "Last seen %{when}"
       show_more: "Show %{count} more"
       blocked: "blocked"
-      unrecognised: "unrecognised"
+      unrecognised: "unrecognized"
       sign_out: "Sign out"
       block: "Block"
       unblock: "Unblock"

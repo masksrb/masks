@@ -1,5 +1,5 @@
 es:
   manage:
     api:
-      unregistered: "este navegador no tiene ninguna aplicación registrada"
+      unregistered: "este navegador no tiene ningún cliente registrado"
       refused: "rechazado"

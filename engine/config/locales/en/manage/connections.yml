@@ -3,7 +3,7 @@ en:
     connections:
       stop_confirm: "Stop %{client} using this %{provider} account? It has to ask again."
       stopped: "%{client} can no longer use it."
-      disconnect_confirm: "Disconnect %{held}? It stops signing anybody in until it is linked again, and every application using it stops."
+      disconnect_confirm: "Disconnect %{held}? It stops signing anybody in until it is connected again, and every client using it stops."
       disconnected: "Disconnected."
       empty: "Nothing connected."
       badges:

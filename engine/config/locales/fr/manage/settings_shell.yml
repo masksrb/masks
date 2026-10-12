@@ -4,8 +4,8 @@ fr:
       label: "Paramètres"
       account: "Votre compte"
       sign_out: "Se déconnecter"
-      forget: "Oublier l’application"
-      forget_confirm: "Oublier cette application de gestion ? masks vous demande aussitôt d’en approuver une nouvelle. L’ancienne reste dans Applications jusqu’à son archivage."
+      forget: "Oublier le client"
+      forget_confirm: "Oublier ce client de gestion ? masks vous demande aussitôt d’en approuver un nouveau. L’ancien reste dans Clients jusqu’à son archivage."
       tabs:
         settings: "Général"
         policies: "Politiques"

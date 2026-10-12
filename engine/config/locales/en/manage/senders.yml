@@ -11,7 +11,7 @@ en:
       kinds:
         mail:
           title: "Mail"
-          lede: "Invitations, resets, confirmations and codes. The primary one sends everything."
+          lede: "Invitations, resets, confirmations, and codes. The primary one sends everything."
           idle: "Nothing is emailed through a service of this tenant's own. Mail falls back to whatever the server was set up with, if anything."
         sms:
           title: "SMS"
@@ -25,7 +25,7 @@ en:
         name: "Name"
         optional: "%{label} (optional)"
         unchanged: "unchanged"
-        primary: "Primary — send everything of this kind through it"
+        primary: "Primary, so everything of this kind sends through it"
         create: "Add"
         save: "Save"
         cancel: "Cancel"

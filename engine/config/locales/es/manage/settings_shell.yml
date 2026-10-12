@@ -4,8 +4,8 @@ es:
       label: "Configuración"
       account: "Tu cuenta"
       sign_out: "Cerrar sesión"
-      forget: "Olvidar aplicación"
-      forget_confirm: "¿Olvidar esta aplicación de administración? masks te pedirá que apruebes una nueva enseguida. La aplicación anterior sigue en Aplicaciones hasta que se archive."
+      forget: "Olvidar cliente"
+      forget_confirm: "¿Olvidar este cliente de administración? masks te pedirá que apruebes uno nuevo enseguida. El cliente anterior sigue en Clientes hasta que se archive."
       tabs:
         settings: "General"
         policies: "Políticas"

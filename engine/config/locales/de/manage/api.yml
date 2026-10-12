@@ -1,5 +1,5 @@
 de:
   manage:
     api:
-      unregistered: "für diesen Browser ist keine App registriert"
+      unregistered: "für diesen Browser ist kein Client registriert"
       refused: "abgelehnt"

@@ -25,7 +25,7 @@ de:
         name: "Name"
         optional: "%{label} (optional)"
         unchanged: "unverändert"
-        primary: "Primär – alles dieser Art darüber senden"
+        primary: "Primär, alles dieser Art geht darüber"
         create: "Hinzufügen"
         save: "Speichern"
         cancel: "Abbrechen"

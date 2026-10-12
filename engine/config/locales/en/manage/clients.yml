@@ -16,14 +16,14 @@ en:
       kinds:
         service: "Signs in as itself"
         app: "Signs actors in"
-        saml: "SAML app"
-        preset: "A known app"
-      app: "App"
+        saml: "Signs actors in over SAML"
+        preset: "A known product"
+      app: "Product"
       choose: "Choose one"
       address: "Its address"
       slug: "Name it uses for masks"
       hints:
-        preset: "masks fills in its redirect URIs and scopes, and shows what to enter in the app. Name is optional here."
+        preset: "masks fills in its redirect URIs and scopes, and shows what to enter in its settings. Name is optional here."
         service: "It asks the token endpoint for its own token with client_credentials. No actor is behind it, so it never holds openid, profile, email or masks:manage."
         saml: "It sends actors here with a SAML AuthnRequest, and masks posts a signed assertion back. Paste its metadata to fill the rest in."
         app: "It sends actors to sign in and is handed a token on their behalf."

@@ -2,8 +2,8 @@ en:
   manage:
     emails:
       list: "Emails"
-      app: "The app being signed in to"
-      no_app: "No app"
+      app: "The client being signed in to"
+      no_app: "No client"
       not_approved: "%{name} (not approved)"
       headed: "Headed by %{heading}, from %{from} to %{to}"
       no_sender: "no sender configured"
@@ -14,7 +14,7 @@ en:
       groups:
         sign_in:
           title: "While signing in"
-          help: "Sent during a sign-in. When an app sent the person there, an approved app heads the email with its logo and name. A sign-in straight to the account page has no app, and the tenant heads it."
+          help: "Sent during a sign-in. When a client sent the actor there, an approved client heads the email with its logo and name. A sign-in straight to the account page has no client, and the tenant heads it."
           about: "About emails sent while signing in"
         manage:
           title: "From a manager"
@@ -22,7 +22,7 @@ en:
           about: "About emails sent from a manager"
         account:
           title: "From the account page"
-          help: "Sent when a person changes their own account. The tenant heads these."
+          help: "Sent when an actor changes something on their account page. The tenant heads these."
           about: "About emails sent from the account page"
         system:
           title: "On its own"

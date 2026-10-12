@@ -2,17 +2,17 @@ en:
   manage:
     ldap:
       title: "LDAP"
-      lede: "Older apps such as NAS boxes, media servers, and hypervisors check passwords and read groups over LDAP. masks serves this tenant's people and groups to them read-only."
-      revoke_confirm: "Revoke %{label}? Apps binding with it are refused from now on."
+      lede: "Older services such as NAS boxes, media servers, and hypervisors check passwords and read groups over LDAP. masks serves this tenant's actors and groups to them read-only."
+      revoke_confirm: "Revoke %{label}? Anything binding with it is refused from now on."
       revoked: "%{label} is revoked."
       serve:
         title: "Directory"
-        help: "While this is off, no app can bind to or search this tenant's directory."
+        help: "While this is off, nothing can bind to or search this tenant's directory."
         "on": "Serve this tenant over LDAP"
-        updated: "The directory is updated."
+        updated: "Directory changed."
       connect:
-        title: "Connect an app"
-        help: "Give the app this base DN, a bind DN, and its secret. The app searches ou=people and ou=groups, then binds as a person to check their password."
+        title: "Connect a service"
+        help: "Give the service this base DN, a bind DN, and its secret. The service searches ou=people and ou=groups, then binds as an actor to check their password."
         base_dn: "Base DN"
         address: "Address"
         port: "Port %{port}"
@@ -30,6 +30,6 @@ en:
         revoke: "Revoke"
       binds:
         title: "Password binds"
-        help: "LDAP cannot ask for a second factor. An account that has one, or whose sign-in policy requires one, is refused unless a password alone is allowed here."
+        help: "LDAP cannot ask for a second factor. An actor who has one, or whose sign-in policy requires one, is refused unless a password alone is allowed here."
         password_only: "Allow a password alone over LDAP"
-        updated: "Password binds are updated."
+        updated: "Password binds changed."

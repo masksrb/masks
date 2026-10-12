@@ -2,8 +2,8 @@ en:
   manage:
     app:
       waiting:
-        one: "%{count} person is waiting on you"
-        other: "%{count} people are waiting on you"
+        one: "%{count} actor is waiting on you"
+        other: "%{count} actors are waiting on you"
       missing: "There is no page at this address."
       account: "Account"
       starting: "Starting"
@@ -19,6 +19,6 @@ en:
         clients: "Clients"
       limited:
         read: "You can read everything here and change nothing."
-        support: "You can help people with their accounts. Settings, keys, and other managers need an owner."
-        security: "You can change keys, apps, providers, and policies. People's accounts need support or an owner."
-        both: "You can change settings and help people. Other managers and tenant settings need an owner."
+        support: "You can help actors. Settings, keys, and other managers need an owner."
+        security: "You can change keys, clients, providers, and policies. Actors need support or an owner."
+        both: "You can change settings and help actors. Other managers and tenant settings need an owner."

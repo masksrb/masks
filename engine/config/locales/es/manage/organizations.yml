@@ -2,7 +2,7 @@ es:
   manage:
     organizations:
       title: "Organizaciones"
-      lede: "Los clientes dentro de este inquilino. Una aplicación que pide el alcance organization inicia la sesión de una persona como miembro de una de ellas, y su token lleva el rol que tiene allí."
+      lede: "Las empresas cliente dentro de este inquilino. Un cliente que pide el alcance organization inicia la sesión de un actor como miembro de una de ellas, y su token lleva el rol que tiene allí."
       columns:
         organization: "Organización"
         members: "Miembros"
@@ -17,12 +17,12 @@ es:
       add_lede: "Pasas a ser su primer propietario y puedes añadir miembros cuando exista."
       name: "Nombre"
       key: "Clave"
-      key_hint: "Una aplicación pide esta organización con la"
+      key_hint: "Un cliente pide esta organización con la"
       key_word: "clave"
       key_hint_end: ". La clave no se puede cambiar después."
       adding: "Añadiendo..."
       cancel: "Cancelar"
-      empty: "Todavía no hay organizaciones. Añade una por cada cliente cuyas personas inician sesión juntas."
+      empty: "Todavía no hay organizaciones. Añade una por cada empresa cliente cuyos miembros inician sesión juntos."
       tenant_policy: "La política del inquilino"
       archived:
         title: "Archivadas"

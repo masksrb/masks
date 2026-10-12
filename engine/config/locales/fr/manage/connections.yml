@@ -1,9 +1,9 @@
 fr:
   manage:
     connections:
-      stop_confirm: "Empêcher %{client} d’utiliser ce compte %{provider} ? Elle devra redemander l’accès."
+      stop_confirm: "Empêcher %{client} d’utiliser ce compte %{provider} ? Il devra redemander l’accès."
       stopped: "%{client} ne peut plus l’utiliser."
-      disconnect_confirm: "Déconnecter %{held} ? Plus personne ne peut se connecter avec jusqu’à ce qu’il soit de nouveau associé, et toutes les applications qui l’utilisent s’arrêtent."
+      disconnect_confirm: "Déconnecter %{held} ? Plus personne ne peut se connecter avec jusqu’à ce qu’il soit de nouveau associé, et tous les clients qui l’utilisent s’arrêtent."
       disconnected: "Déconnecté."
       empty: "Rien de connecté."
       badges:

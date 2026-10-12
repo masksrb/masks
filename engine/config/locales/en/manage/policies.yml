@@ -35,7 +35,7 @@ en:
         signup_open: "signup open"
         invitation_only: "invitation only"
         second_factor_required: "second factor required"
-        apps_require_second_factor: "second factor at every app sign-in"
+        apps_require_second_factor: "second factor at every sign-in to a client"
         lifetime: "sessions last %{duration}"
         idle: "idle after %{duration}"
         confirmed_by: "confirmed by %{confirmation}"
@@ -51,7 +51,7 @@ en:
         save: "Save"
         cancel: "Cancel"
         signup:
-          legend: "Sign up"
+          legend: "Signup"
           open: "Open"
           email_domains: "Email domains"
           email_domains_placeholder: "any"
@@ -78,7 +78,7 @@ en:
           phone_verified: "Confirmed phone"
           no_sms: "No SMS service."
         sign_in:
-          legend: "Sign in"
+          legend: "Sign-in"
           characters: "characters minimum"
           refuse_common: "Refuse common passwords"
           password_required: "Require a password at signup"
@@ -86,20 +86,20 @@ en:
         second_factor:
           legend: "Second factor"
           required: "Required for everyone, not just managers"
-          apps: "Asked again at an app sign-in when the session did not use one"
+          apps: "Asked again at a sign-in to a client when the session did not use one"
         risk:
           legend: "Risk"
           step_up: "Ask for a second factor at a score of"
           refuse: "Refuse at"
           refuse_breached: "Refuse passwords found in known breaches"
-          hint: "A sign-in scores up to 100: a new device 30, a new network 25, a risky network 50, repeated failures 20 or 40, an account dormant for six months 10, and a breached password 40. Breach checks send the first five characters of the password's SHA-1 hash, never the password."
+          hint: "A sign-in scores up to 100: a new device 30, a new network 25, a risky network 50, repeated failures 20 or 40, an actor dormant for six months 10, and a breached password 40. Breach checks send the first five characters of the password's SHA-1 hash, never the password."
         sessions:
           legend: "Sessions"
           last: "Last"
           after_sign_in: "after signing in"
           end_after: "End after"
           idle: "idle"
-          hint: "Apps covered by this policy ask again once a session is older or has been idle longer, even one that started under another policy. A shorter session also ends the refresh tokens issued in it."
+          hint: "Clients covered by this policy ask again once a session is older or has been idle longer, even one that started under another policy. A shorter session also ends the refresh tokens issued in it."
       list:
         empty: "None yet. Clients use the built-in default."
         default: "Default"

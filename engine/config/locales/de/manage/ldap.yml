@@ -2,17 +2,17 @@ de:
   manage:
     ldap:
       title: "LDAP"
-      lede: "Ältere Anwendungen wie NAS-Geräte, Medienserver und Hypervisoren prüfen Passwörter und lesen Gruppen über LDAP. masks stellt ihnen die Personen und Gruppen dieses Mandanten schreibgeschützt bereit."
-      revoke_confirm: "%{label} widerrufen? Anwendungen, die ihn verwenden, werden ab sofort abgewiesen."
+      lede: "Ältere Dienste wie NAS-Geräte, Medienserver und Hypervisoren prüfen Passwörter und lesen Gruppen über LDAP. masks stellt ihnen die Akteure und Gruppen dieses Mandanten schreibgeschützt bereit."
+      revoke_confirm: "%{label} widerrufen? Alles, was sich damit bindet, wird ab sofort abgelehnt."
       revoked: "%{label} ist widerrufen."
       serve:
         title: "Verzeichnis"
-        help: "Solange dies aus ist, kann keine Anwendung sich an das Verzeichnis dieses Mandanten binden oder darin suchen."
+        help: "Solange dies aus ist, kann sich nichts an das Verzeichnis dieses Mandanten binden oder darin suchen."
         "on": "Diesen Mandanten über LDAP anbieten"
-        updated: "Das Verzeichnis ist aktualisiert."
+        updated: "Verzeichnis geändert."
       connect:
-        title: "Eine Anwendung verbinden"
-        help: "Geben Sie der Anwendung diesen Basis-DN, einen Bind-DN und sein Geheimnis. Die Anwendung sucht in ou=people und ou=groups und bindet sich dann als Person, um deren Passwort zu prüfen."
+        title: "Einen Dienst verbinden"
+        help: "Geben Sie dem Dienst diesen Basis-DN, einen Bind-DN und sein Geheimnis. Der Dienst sucht in ou=people und ou=groups und bindet sich dann als Akteur, um dessen Passwort zu prüfen."
         base_dn: "Basis-DN"
         address: "Adresse"
         port: "Port %{port}"
@@ -30,6 +30,6 @@ de:
         revoke: "Widerrufen"
       binds:
         title: "Bindungen mit Passwort"
-        help: "LDAP kann keinen zweiten Faktor abfragen. Ein Konto, das einen hat oder dessen Anmelderichtlinie einen verlangt, wird abgewiesen, außer hier ist ein Passwort allein erlaubt."
+        help: "LDAP kann keinen zweiten Faktor abfragen. Ein Akteur, der einen hat oder dessen Anmelderichtlinie einen verlangt, wird abgelehnt, außer hier ist ein Passwort allein erlaubt."
         password_only: "Ein Passwort allein über LDAP erlauben"
-        updated: "Bindungen mit Passwort sind aktualisiert."
+        updated: "Bindungen mit Passwort geändert."

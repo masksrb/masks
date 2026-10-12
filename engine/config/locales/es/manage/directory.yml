@@ -2,4 +2,4 @@ es:
   manage:
     directory:
       title: "Directorio"
-      lede: "Otros sistemas que guardan a las personas de este inquilino: un proveedor de identidad que las aprovisiona por SCIM y aplicaciones antiguas que las leen por LDAP."
+      lede: "Otros sistemas que guardan a los actores de este inquilino: un directorio que los aprovisiona por SCIM y servicios antiguos que los leen por LDAP."

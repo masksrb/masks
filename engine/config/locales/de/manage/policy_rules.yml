@@ -47,7 +47,7 @@ de:
         password: "Passwort"
         second_factors: "Zweite Faktoren"
         second_factor_required: "Zweiter Faktor erforderlich"
-        apps_require_second_factor: "Zweiter Faktor bei jeder App-Anmeldung"
+        apps_require_second_factor: "Zweiter Faktor bei jeder Anmeldung an einem Client"
         session_lifetime: "Sitzungsdauer"
         refuse_breached: "Lehnt kompromittierte Passwörter ab"
         password_required: "Passwort bei der Registrierung verlangt"

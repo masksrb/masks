@@ -47,7 +47,7 @@ fr:
         password: "Mot de passe"
         second_factors: "Seconds facteurs"
         second_factor_required: "Second facteur obligatoire"
-        apps_require_second_factor: "Second facteur à chaque connexion à une application"
+        apps_require_second_factor: "Second facteur à chaque connexion à un client"
         session_lifetime: "Durée de session"
         refuse_breached: "Refuse les mots de passe compromis"
         password_required: "Mot de passe exigé à l’inscription"

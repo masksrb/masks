@@ -47,7 +47,7 @@ es:
         password: "Contraseña"
         second_factors: "Segundos factores"
         second_factor_required: "Segundo factor obligatorio"
-        apps_require_second_factor: "Segundo factor en cada inicio de sesión en una aplicación"
+        apps_require_second_factor: "Segundo factor en cada inicio de sesión en un cliente"
         session_lifetime: "Duración de la sesión"
         refuse_breached: "Rechaza contraseñas filtradas"
         password_required: "Contraseña obligatoria al registrarse"

@@ -2,7 +2,7 @@ fr:
   manage:
     namespaces:
       title: "Espaces de noms"
-      release_confirm: "Libérer %{name} ? La prochaine application qui le demande l’obtient, et les portées qui en dépendent changent de sens."
+      release_confirm: "Libérer %{name} ? Le prochain client qui le demande l’obtient, et les portées qui en dépendent changent de sens."
       released: "%{name} peut de nouveau être réservé."
       columns:
         name: "Nom"

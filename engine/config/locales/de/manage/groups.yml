@@ -2,14 +2,14 @@ de:
   manage:
     groups:
       title: "Gruppen"
-      lede: "Benannte Gruppen von Personen, etwa Admins oder Familie. Apps, die den Scope groups anfordern, sehen jede Gruppe, in der eine Person ist, und eine App kann auf bestimmte Gruppen beschränkt werden. Den Schlüssel einer Gruppe sehen Apps, und er lässt sich später nicht ändern. Personen treten einer Gruppe auf ihrer eigenen Seite bei."
-      added: "%{name} ist bereit. Fügen Sie Personen auf deren eigenen Seiten hinzu."
-      delete_confirm: "%{name} löschen? Apps, die darauf beschränkt sind, weisen deren Personen ab."
+      lede: "Benannte Gruppen von Akteuren, etwa Admins oder Familie. Clients, die den Scope groups anfordern, sehen jede Gruppe, in der ein Akteur ist, und ein Client kann auf bestimmte Gruppen beschränkt werden. Den Schlüssel einer Gruppe sehen Clients, und er lässt sich später nicht ändern. Akteure treten einer Gruppe auf ihrer eigenen Seite bei."
+      added: "%{name} ist bereit. Fügen Sie Akteure auf deren eigenen Seiten hinzu."
+      delete_confirm: "%{name} löschen? Clients, die darauf beschränkt sind, lehnen ihre Akteure ab."
       deleted: "%{name} ist gelöscht."
       people:
-        one: "%{count} Person"
-        other: "%{count} Personen"
+        one: "%{count} Akteur"
+        other: "%{count} Akteure"
       delete: "%{name} löschen"
       new: "Name der neuen Gruppe"
       add: "Hinzufügen"
-      key: "Apps sehen sie als %{key}."
+      key: "Clients sehen sie als %{key}."

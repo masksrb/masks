@@ -4,8 +4,8 @@ es:
       marks:
         manager: "Tiene un alcance de gestión"
         second_factor:
-          one: "Usa una app de autenticación, le queda %{count} código de respaldo"
-          other: "Usa una app de autenticación, le quedan %{count} códigos de respaldo"
+          one: "Usa una aplicación de autenticación, le queda %{count} código de respaldo"
+          other: "Usa una aplicación de autenticación, le quedan %{count} códigos de respaldo"
         invited: "Invitado, aún no ha iniciado sesión"
         unconfirmed: "Correo sin confirmar"
         waiting: "Esperando la aprobación de un gestor"
@@ -14,7 +14,7 @@ es:
         blocked: "Un dispositivo está bloqueado"
       invite_many: "Invitar a varios"
       invites:
-        title: "Invitar a varias personas"
+        title: "Invitar a varios actores"
         lede: "Pega direcciones separadas por líneas, espacios o comas. Cada dirección nueva recibe una invitación."
         addresses: "Direcciones de correo"
         groups: "Añadirlas a"
@@ -24,7 +24,7 @@ es:
           other: "%{count} invitadas"
         outcomes:
           invited: "invitada"
-          exists: "ya tiene una cuenta"
+          exists: "ya es un actor"
           invalid: "no es una dirección que masks pueda invitar"
       title: "Actores"
       lenses:
@@ -56,15 +56,15 @@ es:
         minimum: "Al menos %{count} caracteres, y tú la conocerás."
         scopes: "Alcances"
         adding: "Añadiendo..."
-        create: "Crear la cuenta"
+        create: "Añadir actor"
         invite: "Enviar la invitación"
         cancel: "Cancelar"
       created:
-        account: "Cuenta creada"
+        account: "Actor añadido"
         invitation: "Invitación enviada"
         can_sign_in: "%{identifier} ya puede iniciar sesión."
         confirm_link: "Este enlace confirma su dirección:"
-        emailed: "Enviado por correo: aceptarlo verifica la dirección."
+        emailed: "Enviado por correo. Aceptarlo confirma la dirección."
         pass_along: "Pásale este enlace tú mismo. Funciona una vez."
       empty:
         search: "Ningún actor coincide con \"%{search}\"."

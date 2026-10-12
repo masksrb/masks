@@ -2,7 +2,7 @@ en:
   manage:
     namespaces:
       title: "Namespaces"
-      release_confirm: "Release %{name}? The next application to ask for it gets it, and the scopes beneath it stop meaning what they mean now."
+      release_confirm: "Release %{name}? The next client to ask for it gets it, and the scopes beneath it stop meaning what they mean now."
       released: "%{name} is free to be claimed again."
       columns:
         name: "Name"

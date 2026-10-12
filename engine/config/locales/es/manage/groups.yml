@@ -2,14 +2,14 @@ es:
   manage:
     groups:
       title: "Grupos"
-      lede: "Conjuntos de personas con nombre, como administradores o familia. Las aplicaciones que piden el alcance groups ven cada grupo al que pertenece una persona, y una aplicación se puede limitar a algunos grupos. Las aplicaciones ven la clave de un grupo, y no se puede cambiar después. Las personas se unen a un grupo desde su propia página."
-      added: "%{name} está listo. Añade personas desde sus propias páginas."
-      delete_confirm: "¿Eliminar %{name}? Las aplicaciones limitadas a él rechazarán a sus personas."
+      lede: "Conjuntos de actores con nombre, como administradores o familia. Los clientes que piden el alcance groups ven cada grupo al que pertenece un actor, y un cliente se puede limitar a algunos grupos. Los clientes ven la clave de un grupo, y no se puede cambiar después. Los actores se unen a un grupo desde su propia página."
+      added: "%{name} está listo. Añade actores desde sus propias páginas."
+      delete_confirm: "¿Eliminar %{name}? Los clientes limitados a él rechazan a sus actores."
       deleted: "%{name} se eliminó."
       people:
-        one: "%{count} persona"
-        other: "%{count} personas"
+        one: "%{count} actor"
+        other: "%{count} actores"
       delete: "Eliminar %{name}"
       new: "Nombre del nuevo grupo"
       add: "Añadir"
-      key: "Las aplicaciones lo ven como %{key}."
+      key: "Los clientes lo ven como %{key}."

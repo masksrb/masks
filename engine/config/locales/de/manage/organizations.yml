@@ -2,7 +2,7 @@ de:
   manage:
     organizations:
       title: "Organisationen"
-      lede: "Die Kunden innerhalb dieses Mandanten. Eine App, die den Scope organization anfordert, meldet eine Person als Mitglied einer Organisation an, und ihr Token enthält die Rolle, die sie dort hat."
+      lede: "Die Kunden innerhalb dieses Mandanten. Ein Client, der den Scope organization anfordert, meldet einen Akteur als Mitglied einer Organisation an, und sein Token enthält die Rolle, die er dort hat."
       columns:
         organization: "Organisation"
         members: "Mitglieder"
@@ -17,12 +17,12 @@ de:
       add_lede: "Sie werden ihr erster Eigentümer und können Mitglieder hinzufügen, sobald sie existiert."
       name: "Name"
       key: "Schlüssel"
-      key_hint: "Eine App fordert diese Organisation an mit"
+      key_hint: "Ein Client fordert diese Organisation an mit"
       key_word: "schlüssel"
       key_hint_end: ". Der Schlüssel lässt sich später nicht ändern."
       adding: "Wird hinzugefügt..."
       cancel: "Abbrechen"
-      empty: "Noch keine Organisationen. Fügen Sie eine für jeden Kunden hinzu, dessen Personen sich gemeinsam anmelden."
+      empty: "Noch keine Organisationen. Fügen Sie eine für jeden Kunden hinzu, dessen Mitglieder sich gemeinsam anmelden."
       tenant_policy: "Die Richtlinie des Mandanten"
       archived:
         title: "Archiviert"

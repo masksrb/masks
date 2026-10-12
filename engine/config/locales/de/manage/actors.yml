@@ -14,7 +14,7 @@ de:
         blocked: "Ein Gerät ist blockiert"
       invite_many: "Mehrere einladen"
       invites:
-        title: "Mehrere Personen einladen"
+        title: "Mehrere Akteure einladen"
         lede: "Fügen Sie Adressen ein, getrennt durch Zeilen, Leerzeichen oder Kommas. Jede neue Adresse erhält eine Einladung."
         addresses: "E-Mail-Adressen"
         groups: "Hinzufügen zu"
@@ -24,7 +24,7 @@ de:
           other: "%{count} eingeladen"
         outcomes:
           invited: "eingeladen"
-          exists: "hat bereits ein Konto"
+          exists: "ist bereits ein Akteur"
           invalid: "ist keine Adresse, die masks einladen kann"
       title: "Akteure"
       lenses:
@@ -56,15 +56,15 @@ de:
         minimum: "Mindestens %{count} Zeichen, und Sie werden es kennen."
         scopes: "Scopes"
         adding: "Wird hinzugefügt..."
-        create: "Konto erstellen"
+        create: "Akteur hinzufügen"
         invite: "Einladung senden"
         cancel: "Abbrechen"
       created:
-        account: "Konto erstellt"
+        account: "Akteur hinzugefügt"
         invitation: "Einladung gesendet"
         can_sign_in: "%{identifier} kann sich jetzt anmelden."
         confirm_link: "Dieser Link bestätigt die Adresse:"
-        emailed: "Per E-Mail gesendet – die Annahme bestätigt die Adresse."
+        emailed: "Per E-Mail gesendet. Die Annahme bestätigt die Adresse."
         pass_along: "Geben Sie diesen Link selbst weiter. Er funktioniert einmal."
       empty:
         search: "Kein Akteur passt zu \"%{search}\"."

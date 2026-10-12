@@ -8,4 +8,4 @@ en:
         lede: "The services that deliver this tenant's email and SMS. Each kind sends through its primary service."
       templates:
         title: "Templates"
-        lede: "What each email masks sends says, previewed as people receive it."
+        lede: "What each email masks sends says, previewed as it arrives."

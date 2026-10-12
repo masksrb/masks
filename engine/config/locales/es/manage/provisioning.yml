@@ -2,7 +2,7 @@ es:
   manage:
     provisioning:
       title: "Aprovisionamiento"
-      lede: "Un proveedor de identidad añade, cambia, suspende y elimina actores aquí mediante SCIM 2.0."
+      lede: "Un directorio añade, cambia, suspende y elimina actores aquí mediante SCIM 2.0."
       revoke_confirm: "¿Revocar %{label}? A partir de ahora se rechaza todo lo que aprovisione con él."
       revoked: "%{label} está revocado."
       lifetimes:
@@ -10,12 +10,12 @@ es:
         quarter: "90 días"
         year: "Un año"
       connect:
-        title: "Conectar un proveedor"
-        help: "Da al proveedor esta URL y un token. Un actor aprovisionado se identifica por su correo, que masks da por confirmado, e inicia sesión a través de un proveedor o una invitación. A nadie que tenga un alcance masks: se le cambia la contraseña o el correo de esta forma, y el último administrador nunca se suspende ni se elimina."
+        title: "Conectar un directorio"
+        help: "Da al directorio esta URL y un token. Un actor aprovisionado se identifica por su correo, que masks da por confirmado, e inicia sesión a través de un proveedor o una invitación. A nadie que tenga un alcance masks: se le cambia la contraseña o el correo de esta forma, y el último administrador nunca se suspende ni se elimina."
         base_url: "URL base de SCIM"
         label: "Etiqueta"
         provisions: "Aprovisiona"
-        every_account: "Todas las cuentas"
+        every_account: "Todos los actores"
         only_members: "Solo miembros de %{name}"
         lifetime: "Cuánto dura el token"
         issue: "Emitir un token"

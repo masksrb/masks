@@ -1,8 +1,8 @@
 de:
   manage:
     consents:
-      revoke_confirm: "%{held} den Zugriff entziehen? Alle Refresh-Tokens, die sie hält, werden widerrufen, und sie muss bei der nächsten Anmeldung erneut fragen."
-      revoked: "Zugriff widerrufen. Sie muss erneut fragen."
+      revoke_confirm: "%{held} den Zugriff entziehen? Alle Refresh-Tokens werden widerrufen, und bei der nächsten Anmeldung wird erneut gefragt."
+      revoked: "Zugriff widerrufen. Es wird erneut gefragt."
       empty: "Keine."
       revoke: "Zugriff widerrufen"
       last_asked: "Zuletzt gefragt %{when}"

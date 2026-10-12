@@ -25,7 +25,7 @@ es:
         name: "Nombre"
         optional: "%{label} (opcional)"
         unchanged: "sin cambios"
-        primary: "Principal: enviar todo lo de este tipo a través de él"
+        primary: "Principal, todo lo de este tipo se envía a través de él"
         create: "Añadir"
         save: "Guardar"
         cancel: "Cancelar"

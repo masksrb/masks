@@ -3,7 +3,7 @@ es:
     connections:
       stop_confirm: "¿Impedir que %{client} use esta cuenta de %{provider}? Tendrá que volver a pedirlo."
       stopped: "%{client} ya no puede usarla."
-      disconnect_confirm: "¿Desconectar %{held}? Deja de iniciar la sesión de nadie hasta que se vuelva a vincular, y todas las aplicaciones que la usan se detienen."
+      disconnect_confirm: "¿Desconectar %{held}? Deja de iniciar la sesión de nadie hasta que se vuelva a conectar, y todos los clientes que la usan se detienen."
       disconnected: "Desconectada."
       empty: "Nada conectado."
       badges:

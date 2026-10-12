@@ -1,7 +1,7 @@
 en:
   manage:
     consents:
-      revoke_confirm: "Cut %{held} off? Every refresh token it holds is revoked, and it has to ask again the next time somebody signs in."
+      revoke_confirm: "Revoke access for %{held}? Every refresh token it holds is revoked, and it has to ask again the next time somebody signs in."
       revoked: "Access revoked. It will have to ask again."
       empty: "None."
       revoke: "Revoke access"

@@ -226,7 +226,7 @@ es:
       invalid-backup-code: "Ese código de respaldo no es válido."
       invalid-passkey: "No se pudo usar esa llave de acceso."
       factor-not-offered: "Esa forma de iniciar sesión no se ofrece aquí."
-      approval-denied: "Ese inicio de sesión se denegó desde un dispositivo de confianza."
+      approval-denied: "Ese inicio de sesión se rechazó desde un dispositivo de confianza."
       passkey-expired: "Ese intento con la llave de acceso caducó. Vuelve a intentarlo."
       passkey-unverified: "Esa llave de acceso no comprobó quién eres. Usa una que compruebe un PIN o una huella."
       passkey-unusable: "No se pudo añadir esa llave de acceso."

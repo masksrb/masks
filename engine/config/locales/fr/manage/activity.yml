@@ -6,16 +6,16 @@ fr:
         streams: "Flux"
       title: "Activité"
       nouns:
-        actor: "l’utilisateur"
-        client: "l’application"
+        actor: "l’acteur"
+        client: "le client"
       downloading:
         one: "Téléchargement de %{count} événement."
         other: "Téléchargement de %{count} événements."
       involves: "Seulement ce qui concerne %{noun}"
       involves_end: "."
       gone:
-        actor: "Seulement ce qui concerne un utilisateur qui n’existe plus."
-        client: "Seulement ce qui concerne une application qui n’existe plus."
+        actor: "Seulement ce qui concerne un acteur qui n’existe plus."
+        client: "Seulement ce qui concerne un client qui n’existe plus."
       everything: "Tout afficher"
       show: "Afficher"
       all: "tout"

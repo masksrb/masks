@@ -25,7 +25,7 @@ fr:
         name: "Nom"
         optional: "%{label} (facultatif)"
         unchanged: "inchangé"
-        primary: "Principal — tout envoyer de ce type par son intermédiaire"
+        primary: "Principal, tout ce type est envoyé par son intermédiaire"
         create: "Ajouter"
         save: "Enregistrer"
         cancel: "Annuler"

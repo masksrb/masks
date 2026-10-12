@@ -34,7 +34,7 @@ en:
           one: "%{count} second"
           other: "%{count} seconds"
       terms:
-        signup: "Sign up"
+        signup: "Signup"
         email_domains: "Email domains"
         hidden: "Hides who has an account"
         nickname: "Nickname"
@@ -47,7 +47,7 @@ en:
         password: "Password"
         second_factors: "Second factors"
         second_factor_required: "Second factor required"
-        apps_require_second_factor: "Second factor at every app sign-in"
+        apps_require_second_factor: "Second factor at every sign-in to a client"
         session_lifetime: "Session lifetime"
         refuse_breached: "Refuses breached passwords"
         password_required: "Password required at signup"

@@ -9,7 +9,7 @@ de:
       block_question: "%{label} sperren? Es wird abgelehnt, bevor ein Passwort geprüft wird."
       unblocked: "%{label} ist entsperrt."
       signed_out: "%{label} überall abgemeldet."
-      sign_out_question: "Alle Konten von %{label} abmelden?"
+      sign_out_question: "Alle Akteure von %{label} abmelden?"
       facts:
         kind: "Art"
         ip_address: "IP-Adresse"

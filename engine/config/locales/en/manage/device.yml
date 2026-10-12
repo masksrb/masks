@@ -9,7 +9,7 @@ en:
       block_question: "Block %{label}? It is refused before any password is checked."
       unblocked: "%{label} is unblocked."
       signed_out: "Signed %{label} out everywhere."
-      sign_out_question: "Sign every account out of %{label}?"
+      sign_out_question: "Sign every actor out of %{label}?"
       facts:
         kind: "Kind"
         ip_address: "IP address"

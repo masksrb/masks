@@ -2,7 +2,7 @@ en:
   manage:
     organizations:
       title: "Organizations"
-      lede: "The customers inside this tenant. An app that asks for the organization scope signs a person in as a member of one, and their token carries the role they hold there."
+      lede: "The customers inside this tenant. A client that asks for the organization scope signs an actor in as a member of one, and their token carries the role they hold there."
       columns:
         organization: "Organization"
         members: "Members"
@@ -17,12 +17,12 @@ en:
       add_lede: "You become its first owner, and can add members once it exists."
       name: "Name"
       key: "Key"
-      key_hint: "An app asks for this organization with"
+      key_hint: "A client asks for this organization with"
       key_word: "key"
       key_hint_end: ". The key cannot change later."
       adding: "Adding..."
       cancel: "Cancel"
-      empty: "No organizations yet. Add one for each customer whose people sign in together."
+      empty: "No organizations yet. Add one for each customer whose members sign in together."
       tenant_policy: "The tenant's policy"
       archived:
         title: "Archived"

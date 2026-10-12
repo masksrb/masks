@@ -1,9 +1,9 @@
 de:
   manage:
     connections:
-      stop_confirm: "Soll %{client} dieses %{provider}-Konto nicht mehr nutzen? Die App muss erneut fragen."
+      stop_confirm: "Soll %{client} dieses %{provider}-Konto nicht mehr nutzen? Der Client muss erneut fragen."
       stopped: "%{client} kann es nicht mehr nutzen."
-      disconnect_confirm: "%{held} trennen? Darüber meldet sich niemand mehr an, bis es wieder verknüpft ist, und jede App, die es nutzt, hört auf."
+      disconnect_confirm: "%{held} trennen? Darüber meldet sich niemand mehr an, bis es wieder verbunden ist, und jeder Client, der es nutzt, hört auf."
       disconnected: "Getrennt."
       empty: "Nichts verbunden."
       badges:
