@@ -611,7 +611,12 @@ export class Masks {
   }
 
   async #start(visit: Visit): Promise<Response> {
-    const client = await this.#client(visit);
+    let client = await this.#client(visit);
+
+    if (client && !(await this.registered(visit.request))) {
+      await this.disconnect(visit.request);
+      client = await this.#client(visit);
+    }
 
     if (!client) return redirect(this.handshakePath, visit.out);
 
@@ -1043,11 +1048,7 @@ ${this.#credentials.clear ? `<form method="post" action="${escapeHTML(`${this.ha
     const masked = this.#masked(visit, await this.#current(visit));
 
     if (!masked.signedIn) {
-      return redirect(
-        this.loginURL({ returnTo: this.handshakePath }),
-        visit.out,
-        303,
-      );
+      return redirect(this.#options.afterSignOut ?? "/", visit.out, 303);
     }
 
     const manages = this.#options.manages;

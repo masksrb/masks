@@ -617,10 +617,7 @@ test("only a manager reconnects or disconnects a connected app", async () => {
 
   const signedOut = await held.browser.fetch("/auth/handshake");
   assert.equal(signedOut.status, 303);
-  assert.match(
-    signedOut.headers.get("location"),
-    /^\/auth\?return_to=%2Fauth%2Fhandshake/,
-  );
+  assert.equal(signedOut.headers.get("location"), "/");
 
   await signIn(held);
   const shown = await held.browser.fetch("/auth/handshake");
@@ -713,4 +710,20 @@ test("a provider connection goes through the app's own client", async () => {
   );
 
   assert.equal(connection.connection, "connection-google");
+});
+
+test("an app masks no longer knows shakes hands again", async () => {
+  const held = await setup({ connected: false }, closers);
+  const first = await held.browser.fetch("/auth/handshake");
+  const back = new URL(held.fake.shake(first.headers.get("location")));
+  await held.browser.fetch(`${back.pathname}${back.search}`);
+
+  const saved = await held.credentials.read();
+  held.fake.registrations.delete(saved.client_id);
+
+  assert.equal(await held.masks.registered(held.browser.request("/")), false);
+
+  const again = await held.browser.fetch("/auth");
+  assert.equal(again.headers.get("location"), "/auth/handshake");
+  assert.equal(await held.credentials.read(), undefined);
 });
