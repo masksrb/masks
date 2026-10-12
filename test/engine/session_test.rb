@@ -522,8 +522,73 @@ class SessionTest < EngineIntegrationTest
 
     assert json["logout_url"].start_with?("#{issuer.url_for(SUBDOMAIN)}/logout")
     assert_equal "test-client", query["client_id"]
-    assert_equal "#{origin}/", query["post_logout_redirect_uri"]
+    assert_equal "#{origin}/auth/handshake/callback", query["post_logout_redirect_uri"],
+                 "masks registers only the handshake callback as somewhere to send people after logout"
     refute_empty query["state"]
+  end
+
+  test "masks sends somebody who signed out everywhere back to where the app sends people after signing out" do
+    configure!(after_sign_out: "/goodbye")
+
+    state = sign_out_everywhere!
+
+    get "/auth/handshake/callback?state=#{state}", headers: host
+
+    assert_redirected_to "/goodbye"
+  end
+
+  test "the return from signing out everywhere is honoured once" do
+    state = sign_out_everywhere!
+
+    get "/auth/handshake/callback?state=#{state}", headers: host
+    assert_redirected_to "/"
+
+    get "/auth/handshake/callback?state=#{state}", headers: host
+    assert_response :bad_request
+    assert_includes response.body, "invalid_state"
+  end
+
+  test "a return from signing out with a state this browser did not send is refused" do
+    sign_out_everywhere!
+
+    get "/auth/handshake/callback?state=forged", headers: host
+
+    assert_response :bad_request
+    assert_includes response.body, "invalid_state"
+  end
+
+  test "a return from signing out that took too long is refused" do
+    state = sign_out_everywhere!
+
+    travel Masks::Client::Tracker::TTL + 1 do
+      get "/auth/handshake/callback?state=#{state}", headers: host
+    end
+
+    assert_response :bad_request
+    assert_includes response.body, "invalid_state"
+  end
+
+  test "a return from signing out goes nowhere but a local path" do
+    configure!(after_sign_out: "https://elsewhere.test/")
+
+    state = sign_out_everywhere!
+
+    get "/auth/handshake/callback?state=#{state}", headers: host
+
+    assert_redirected_to "/"
+  end
+
+  test "a return from signing out is not taken for a handshake" do
+    state = sign_out_everywhere!
+    before = CREDENTIALS[HOST]
+
+    get "/auth/handshake/callback?initial_access_token=whatever&state=#{state}", headers: host
+
+    assert_equal before, CREDENTIALS[HOST]
+
+    get "/auth/handshake/callback?state=#{state}", headers: host
+
+    assert_redirected_to "/"
   end
 
   test "a consumer can make signing out mean signing out of masks" do
@@ -536,6 +601,15 @@ class SessionTest < EngineIntegrationTest
     assert_response :redirect
     assert response.location.start_with?("#{issuer.url_for(SUBDOMAIN)}/logout")
     assert_empty session_payload
+
+    query = URI.decode_www_form(URI.parse(response.location).query).to_h
+
+    assert_equal "test-client", query["client_id"]
+    assert_equal "#{origin}/auth/handshake/callback", query["post_logout_redirect_uri"]
+
+    get "/auth/handshake/callback?state=#{query['state']}", headers: host
+
+    assert_redirected_to "/"
   ensure
     Masks::Rails.config.sign_out_of_issuer = false
   end
@@ -548,6 +622,14 @@ class SessionTest < EngineIntegrationTest
   end
 
   private
+
+    def sign_out_everywhere!
+      sign_in!
+
+      delete "/auth/logout?everywhere=1", headers: host.merge("HTTP_ACCEPT" => "application/json")
+
+      URI.decode_www_form(URI.parse(json["logout_url"]).query).to_h.fetch("state")
+    end
 
     def session_payload
       request.session["masks"] || {}

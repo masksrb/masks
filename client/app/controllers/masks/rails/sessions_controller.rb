@@ -73,11 +73,12 @@ module Masks
 
       def destroy
         everywhere = masks_config.sign_out_of_issuer || params[:everywhere].present?
-        upstream = everywhere ? masks_logout_url : nil
 
         revoke_refresh_token
         masks_forget
         reset_session
+
+        upstream = everywhere ? masks_sign_out_upstream : nil
 
         if masks_wants_json?
           render json: { "signed_in" => false, "logout_url" => upstream }.compact

@@ -1,6 +1,7 @@
 module Masks
   module Rails
     class HandshakesController < BaseController
+      prepend_before_action :signed_out_upstream, only: :callback
       before_action :require_unconfigured_or_signed_in
       before_action :require_unconfigured_or_manager
 
@@ -43,6 +44,13 @@ module Masks
       end
 
       private
+
+        def signed_out_upstream
+          return if params[:initial_access_token].present? || params[:error].present?
+          return stale if masks_farewells.claim(params[:state].to_s).nil?
+
+          redirect_to masks_after_sign_out_path
+        end
 
         def begin!
           pending = masks_handshakes.open

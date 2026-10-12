@@ -7,12 +7,13 @@ module Masks
 
       included do
         if respond_to?(:helper_method)
-          helper_method :masked, :masks_login_url, :masks_logout_url
+          helper_method :masked, :masks_login_url
         end
       end
 
       REQUESTS = "masks_requests".freeze
       HANDSHAKES = "masks_handshakes".freeze
+      FAREWELLS = "masks_farewells".freeze
       STEPPED_UP = "masks_stepped_up".freeze
       STEP_UP_WITHIN = 300
 
@@ -26,6 +27,10 @@ module Masks
 
       def masks_handshakes
         @masks_handshakes ||= masks_tracker(HANDSHAKES)
+      end
+
+      def masks_farewells
+        masks_tracker(FAREWELLS)
       end
 
       def masks_tracker(key)
@@ -152,19 +157,15 @@ module Masks
         profile.empty? ? nil : held.merge(profile.slice(*IDENTITY))
       end
 
-      def masks_logout_url(return_to: nil)
+      def masks_logout_url(state:)
         return nil unless masks_configured?
 
         masks_session.end_session_url(
-          post_logout_redirect_uri: masks_post_logout_redirect_uri,
-          state: SecureRandom.urlsafe_base64(16)
+          post_logout_redirect_uri: masks_config.return_to_for(request),
+          state: state
         )
       rescue Masks::Client::Error
         nil
-      end
-
-      def masks_post_logout_redirect_uri
-        "#{request.base_url}#{masks_local_path(masks_config.after_sign_out) || '/'}"
       end
 
       def masks_login_url(return_to: nil, organization: nil, privilege: nil)
@@ -192,6 +193,20 @@ module Masks
       end
 
       private
+
+        def masks_sign_out_upstream
+          return nil unless masks_configured?
+
+          farewell = masks_farewells.open
+          url = masks_logout_url(state: farewell.id)
+
+          masks_farewells.clear! if url.nil?
+          url
+        end
+
+        def masks_after_sign_out_path
+          masks_local_path(masks_config.after_sign_out) || "/"
+        end
 
         def masks_authorize_session!(wanted)
           return false unless authenticate_masks!
