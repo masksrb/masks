@@ -16,7 +16,14 @@ from jwt.algorithms import RSAAlgorithm
 from masks.client import ASSERTION_TYPE
 from masks.dpop import PROOF_TYPE
 from masks.keys import thumbprint
-from masks.models import GRANT_CLIENT_CREDENTIALS, GRANT_DEVICE_CODE, GRANT_REFRESH_TOKEN
+from masks.models import (
+    ACCESS_TOKEN_TYPE,
+    GRANT_CLIENT_CREDENTIALS,
+    GRANT_DEVICE_CODE,
+    GRANT_REFRESH_TOKEN,
+    GRANT_TOKEN_EXCHANGE,
+    UPSTREAM_ACCESS_TOKEN_TYPE,
+)
 from masks.verifier import PROOF_ALGORITHMS, typed
 
 ISSUER = "https://id.example"
@@ -30,6 +37,7 @@ class FakeClient:
     jwks: dict[str, Any] = field(default_factory=dict)
     scope: str = ""
     refresh: set[str] = field(default_factory=set)
+    namespace: str = ""
 
 
 def respond(status: int, body: Any = None, headers: dict[str, str] | None = None) -> httpx.Response:
@@ -59,6 +67,11 @@ class Fake:
         self.issuer = ISSUER
         self.jwks_fetches = 0
         self.seen: list[httpx.Request] = []
+        self.enrolled: dict[str, str] = {}
+        self.unenrolled: list[str] = []
+        self.introspected_issuer = ISSUER
+        self.exchanged: list[dict[str, str]] = []
+        self.pairs: list[tuple[str, str]] = []
 
     def transport(self) -> httpx.MockTransport:
         return httpx.MockTransport(self.handle)
@@ -79,6 +92,8 @@ class Fake:
             ("POST", "/device_authorization"): self.device,
             ("POST", "/revoke"): self.revoke,
             ("POST", "/register"): self.register,
+            ("POST", "/introspect"): self.introspect,
+            ("POST", "/enrollments"): self.enroll,
         }
 
         if (request.method, path) in routes:
@@ -86,6 +101,9 @@ class Fake:
 
         if path.startswith("/register/"):
             return self.registration(request, path.removeprefix("/register/"))
+
+        if request.method == "DELETE" and path.startswith("/enrollments/"):
+            return self.unenroll(request, request.url.raw_path.decode().removeprefix("/enrollments/"))
 
         return respond(404, {"error": "not_found"})
 
@@ -99,6 +117,8 @@ class Fake:
                 "device_authorization_endpoint": f"{ISSUER}/device_authorization",
                 "revocation_endpoint": f"{ISSUER}/revoke",
                 "registration_endpoint": f"{ISSUER}/register",
+                "introspection_endpoint": f"{ISSUER}/introspect",
+                "enrollment_endpoint": f"{ISSUER}/enrollments",
                 "tenant": {"uuid": "t-1", "subdomain": "fake", "name": "Fake"},
             },
         )
@@ -112,13 +132,23 @@ class Fake:
     def issue(self, claims: dict[str, Any], typ: str = "at+jwt", kid: str | None = None) -> str:
         return jwt.encode(claims, self.signing, algorithm="RS256", headers={"typ": typ, "kid": kid or self.kid})
 
-    def access_token(self, client_id: str, scope: str, jkt: str) -> str:
+    def access_token(
+        self,
+        client_id: str,
+        scope: str,
+        jkt: str,
+        *,
+        subject: str = "",
+        audience: Any = AUDIENCE,
+        lifetime: int = 3600,
+        act: dict[str, Any] | None = None,
+    ) -> str:
         now = int(time.time())
         claims: dict[str, Any] = {
             "iss": ISSUER,
-            "sub": client_id,
-            "aud": AUDIENCE,
-            "exp": now + 3600,
+            "sub": subject or client_id,
+            "aud": audience,
+            "exp": now + lifetime,
             "iat": now,
             "jti": secrets.token_urlsafe(16),
             "client_id": client_id,
@@ -128,7 +158,21 @@ class Fake:
         if jkt:
             claims["cnf"] = {"jkt": jkt}
 
+        if act:
+            claims["act"] = act
+
         return self.issue(claims)
+
+    def presented(self, token: str) -> dict[str, Any] | None:
+        try:
+            return jwt.decode(
+                token,
+                self.signing.public_key(),
+                algorithms=["RS256"],
+                options={"verify_aud": False, "require": ["iss", "exp", "jti"]},
+            )
+        except jwt.PyJWTError:
+            return None
 
     def add(self, client_id: str, client: FakeClient) -> None:
         self.clients[client_id] = client
@@ -236,7 +280,9 @@ class Fake:
     def form(self, request: httpx.Request) -> dict[str, str]:
         assert request.headers.get("Content-Type") == "application/x-www-form-urlencoded"
 
-        return dict(parse_qsl(request.content.decode(), keep_blank_values=True))
+        self.pairs = parse_qsl(request.content.decode(), keep_blank_values=True)
+
+        return dict(self.pairs)
 
     def token(self, request: httpx.Request) -> httpx.Response:
         form = self.form(request)
@@ -271,6 +317,8 @@ class Fake:
                     return oauth_error(400, "slow_down")
 
                 return oauth_error(400, "authorization_pending")
+        elif grant == GRANT_TOKEN_EXCHANGE:
+            return self.exchange(form, client_id, jkt)
         elif grant != GRANT_CLIENT_CREDENTIALS:
             return oauth_error(400, "unsupported_grant_type")
 
@@ -288,6 +336,121 @@ class Fake:
                 "refresh_token": refresh,
             },
         )
+
+    def exchange(self, form: dict[str, str], client_id: str, jkt: str) -> httpx.Response:
+        self.exchanged.append(form)
+
+        if form.get("subject_token_type") != ACCESS_TOKEN_TYPE:
+            return oauth_error(400, "invalid_request")
+
+        subject = self.presented(form.get("subject_token", ""))
+
+        if subject is None or form.get("subject_token") in self.revoked:
+            return oauth_error(400, "invalid_grant")
+
+        if subject.get("cnf", {}).get("jkt") not in (None, jkt):
+            return oauth_error(400, "invalid_grant")
+
+        if form.get("requested_token_type") == UPSTREAM_ACCESS_TOKEN_TYPE:
+            return respond(
+                200,
+                {
+                    "access_token": "upstream-token",
+                    "issued_token_type": UPSTREAM_ACCESS_TOKEN_TYPE,
+                    "token_type": "Bearer",
+                    "expires_in": 600,
+                    "scope": "repo",
+                },
+            )
+
+        actor = self.presented(form["actor_token"]) if "actor_token" in form else None
+        act = {"sub": actor["sub"], "client_id": actor["client_id"]} if actor else {"sub": client_id}
+        lifetime = min(int(form.get("requested_lifetime") or 3600), 3600)
+        scope = form.get("scope") or subject.get("scope", "")
+        resource = [value for name, value in self.pairs if name == "resource"] or subject["aud"]
+
+        return respond(
+            200,
+            {
+                "access_token": self.access_token(
+                    client_id, scope, jkt, subject=subject["sub"], audience=resource, lifetime=lifetime, act=act
+                ),
+                "issued_token_type": ACCESS_TOKEN_TYPE,
+                "token_type": "DPoP" if jkt else "Bearer",
+                "expires_in": lifetime,
+                "scope": scope,
+            },
+        )
+
+    def introspect(self, request: httpx.Request) -> httpx.Response:
+        form = self.form(request)
+        client_id, _, ok = self.authenticated(request, form)
+
+        if not ok:
+            return oauth_error(401, "invalid_client")
+
+        claims = self.presented(form.get("token", ""))
+
+        if claims is None or form.get("token") in self.revoked:
+            return respond(200, {"active": False})
+
+        return respond(
+            200,
+            {
+                "active": True,
+                "scope": claims.get("scope", ""),
+                "client_id": claims.get("client_id"),
+                "token_type": "DPoP" if "cnf" in claims else "Bearer",
+                "cnf": claims.get("cnf"),
+                "exp": claims["exp"],
+                "iat": claims["iat"],
+                "sub": claims["sub"],
+                "aud": claims["aud"] if isinstance(claims["aud"], list) else [claims["aud"]],
+                "iss": self.introspected_issuer,
+                "jti": claims["jti"],
+                "tenant": {"uuid": "t-1", "subdomain": "fake", "name": "Fake"},
+                "asked_by": client_id,
+            },
+        )
+
+    def enroll(self, request: httpx.Request) -> httpx.Response:
+        form = self.form(request)
+        client_id, client, ok = self.authenticated(request, form)
+
+        if not ok or client is None:
+            return oauth_error(401, "invalid_client")
+
+        scopes = form.get("scope", "").split()
+
+        if not scopes or not client.namespace or any(not scope.startswith(f"{client.namespace}:") for scope in scopes):
+            return oauth_error(400, "invalid_request")
+
+        lifetime = int(form.get("expires_in") or 900)
+
+        if not 60 <= lifetime <= 3600:
+            return oauth_error(400, "invalid_request")
+
+        token = secrets.token_urlsafe(16)
+        machine = f"machine-{len(self.enrolled) + 1}"
+        self.initial[token] = machine
+        self.enrolled[machine] = client_id
+
+        return respond(201, {"initial_access_token": token, "expires_in": lifetime, "scope": " ".join(scopes)})
+
+    def unenroll(self, request: httpx.Request, machine: str) -> httpx.Response:
+        form = self.form(request)
+        client_id, _, ok = self.authenticated(request, form)
+
+        if not ok:
+            return oauth_error(401, "invalid_client")
+
+        if self.enrolled.get(machine) != client_id:
+            return oauth_error(404, "invalid_request")
+
+        self.clients.pop(machine, None)
+        self.unenrolled.append(machine)
+
+        return respond(204)
 
     def device(self, request: httpx.Request) -> httpx.Response:
         form = self.form(request)

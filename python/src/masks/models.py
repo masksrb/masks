@@ -16,6 +16,11 @@ NO_AUTH: AuthMethod = "none"
 GRANT_CLIENT_CREDENTIALS = "client_credentials"
 GRANT_REFRESH_TOKEN = "refresh_token"
 GRANT_DEVICE_CODE = "urn:ietf:params:oauth:grant-type:device_code"
+GRANT_TOKEN_EXCHANGE = "urn:ietf:params:oauth:grant-type:token-exchange"
+
+ACCESS_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:access_token"
+ID_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:id_token"
+UPSTREAM_ACCESS_TOKEN_TYPE = "urn:masks:params:oauth:token-type:upstream_access_token"
 
 EXPIRY_LEEWAY = 30
 
@@ -51,6 +56,7 @@ class Metadata:
     revocation_endpoint: str = ""
     introspection_endpoint: str = ""
     end_session_endpoint: str = ""
+    enrollment_endpoint: str = ""
     scopes_supported: list[str] = field(default_factory=list)
     grant_types_supported: list[str] = field(default_factory=list)
     token_endpoint_auth_methods_supported: list[str] = field(default_factory=list)
@@ -67,6 +73,7 @@ class Metadata:
         "revocation_endpoint",
         "introspection_endpoint",
         "end_session_endpoint",
+        "enrollment_endpoint",
     )
 
     @classmethod
@@ -128,6 +135,7 @@ class Token:
     scope: str = ""
     expires_in: int | None = None
     expires_at: float | None = None
+    issued_token_type: str | None = None
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Token:
@@ -217,3 +225,95 @@ class Registration(ClientMetadata):
         self.registration_client_uri = self.registration_client_uri or held.registration_client_uri
 
         return self
+
+
+def _spaced(value: Any) -> str:
+    if isinstance(value, list):
+        return " ".join(str(item) for item in value)
+
+    return str(value or "")
+
+
+def _number(value: Any) -> int | None:
+    return value if isinstance(value, int) and not isinstance(value, bool) else None
+
+
+@dataclass
+class Enrollment:
+    initial_access_token: str = field(repr=False)
+    scope: str = ""
+    expires_in: int = 0
+    expires_at: float | None = None
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Enrollment:
+        expires_in = _number(data.get("expires_in")) or 0
+
+        return cls(
+            initial_access_token=str(data.get("initial_access_token") or ""),
+            scope=_spaced(data.get("scope")),
+            expires_in=expires_in,
+            expires_at=time.time() + expires_in if expires_in > 0 else None,
+        )
+
+    @property
+    def scopes(self) -> list[str]:
+        return self.scope.split()
+
+
+@dataclass(frozen=True)
+class Introspection:
+    active: bool
+    scope: str = ""
+    client_id: str = ""
+    username: str = ""
+    token_type: str = ""
+    subject: str = ""
+    audience: list[str] = field(default_factory=list)
+    issuer: str = ""
+    id: str = ""
+    expiry: int | None = None
+    issued_at: int | None = None
+    thumbprint: str | None = None
+    tenant: Tenant | None = None
+    raw: dict[str, Any] = field(default_factory=dict, repr=False)
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> Introspection:
+        if data.get("active") is not True:
+            return cls(active=False, raw=data)
+
+        audience = data.get("aud")
+        found = data.get("cnf")
+        confirmation: dict[str, Any] = found if isinstance(found, dict) else {}
+        tenant = data.get("tenant")
+
+        return cls(
+            active=True,
+            scope=_spaced(data.get("scope")),
+            client_id=str(data.get("client_id") or ""),
+            username=str(data.get("username") or ""),
+            token_type=str(data.get("token_type") or ""),
+            subject=str(data.get("sub") or ""),
+            audience=_strings(audience) if isinstance(audience, list) else [str(audience)] if audience else [],
+            issuer=str(data.get("iss") or ""),
+            id=str(data.get("jti") or ""),
+            expiry=_number(data.get("exp")),
+            issued_at=_number(data.get("iat")),
+            thumbprint=str(confirmation["jkt"]) if confirmation.get("jkt") else None,
+            tenant=Tenant(**{key: str(value) for key, value in _known(Tenant, tenant).items()})
+            if isinstance(tenant, dict)
+            else None,
+            raw=data,
+        )
+
+    @property
+    def scopes(self) -> list[str]:
+        return self.scope.split() if self.active else []
+
+    def has_scope(self, scope: str) -> bool:
+        return scope in self.scopes
+
+    @property
+    def bound(self) -> bool:
+        return bool(self.thumbprint)

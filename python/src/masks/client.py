@@ -5,7 +5,7 @@ import time
 from base64 import b64encode
 from collections.abc import Callable, Sequence
 from typing import Any
-from urllib.parse import quote_plus, urlencode
+from urllib.parse import quote, quote_plus, urlencode
 
 import anyio
 import httpx
@@ -25,16 +25,21 @@ from .flows import (
 )
 from .keys import Key, random_id
 from .models import (
+    ACCESS_TOKEN_TYPE,
     CLIENT_SECRET_BASIC,
     CLIENT_SECRET_POST,
     GRANT_CLIENT_CREDENTIALS,
     GRANT_DEVICE_CODE,
     GRANT_REFRESH_TOKEN,
+    GRANT_TOKEN_EXCHANGE,
     NO_AUTH,
     PRIVATE_KEY_JWT,
+    UPSTREAM_ACCESS_TOKEN_TYPE,
     AuthMethod,
     ClientMetadata,
     DeviceAuthorization,
+    Enrollment,
+    Introspection,
     Issuer,
     Registration,
     Token,
@@ -48,15 +53,30 @@ DEVICE_PAUSE = 5.0
 Form = list[tuple[str, str]]
 
 
+def words(value: Sequence[str]) -> list[str]:
+    return value.split() if isinstance(value, str) else [str(item) for item in value]
+
+
 def asked(scope: Sequence[str] = (), resource: Sequence[str] = ()) -> Form:
     form: Form = []
+    named = words(scope)
 
-    if scope:
-        form.append(("scope", " ".join(scope)))
+    if named:
+        form.append(("scope", " ".join(named)))
 
-    form.extend(("resource", value) for value in resource)
+    form.extend(("resource", value) for value in words(resource))
 
     return form
+
+
+def seconds(value: int | None, named: str) -> list[tuple[str, str]]:
+    if value is None:
+        return []
+
+    if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
+        raise ValueError(f"masks: {named} is a whole number of seconds above zero")
+
+    return [(named, str(value))]
 
 
 def asks_for_nonce(response: httpx.Response) -> bool:
@@ -140,21 +160,24 @@ class _Flows:
 
         return held, headers
 
-    def _request(self, endpoint: str, form: Form, proven: bool, nonce: str) -> httpx.Request:
+    def _request(self, method: str, endpoint: str, form: Form, proven: bool, nonce: str) -> httpx.Request:
         held, headers = self._authenticated(form)
         headers["Accept"] = "application/json"
         headers["Content-Type"] = "application/x-www-form-urlencoded"
 
         if proven and self.dpop is not None:
-            headers["DPoP"] = proof(self.dpop, "POST", endpoint, nonce=nonce)
+            headers["DPoP"] = proof(self.dpop, method, endpoint, nonce=nonce)
 
-        return httpx.Request("POST", endpoint, headers=headers, content=urlencode(held).encode())
+        return httpx.Request(method, endpoint, headers=headers, content=urlencode(held).encode())
 
     def _post(self, endpoint: str, form: Form, proven: bool) -> Flow[dict[str, Any] | None]:
+        return self._send("POST", endpoint, form, proven)
+
+    def _send(self, method: str, endpoint: str, form: Form, proven: bool) -> Flow[dict[str, Any] | None]:
         nonce = ""
 
         for attempt in (0, 1):
-            response = yield self._request(endpoint, form, proven, nonce)
+            response = yield self._request(method, endpoint, form, proven, nonce)
             wanted = response.headers.get("DPoP-Nonce", "")
 
             if (
@@ -172,7 +195,7 @@ class _Flows:
 
         raise AssertionError("unreachable")
 
-    def _token(self, form: Form) -> Flow[Token]:
+    def _token(self, form: Form, held: bool = True) -> Flow[Token]:
         body = yield from self._post(self._endpoint("token_endpoint"), form, True)
 
         if not body or not body.get("access_token"):
@@ -180,7 +203,7 @@ class _Flows:
 
         token = Token.from_dict(body)
 
-        if self.dpop is not None and not token.bound:
+        if held and self.dpop is not None and not token.bound:
             raise Error("invalid_dpop_proof", "the token endpoint answered with a token that is not held to this key")
 
         return token
@@ -212,6 +235,88 @@ class _Flows:
             form.append(("token_type_hint", hint))
 
         yield from self._post(self._endpoint("revocation_endpoint"), form, False)
+
+    def _introspect(self, token: str, hint: str) -> Flow[Introspection]:
+        if not token:
+            raise ValueError("masks: introspection needs the token to look up")
+
+        form: Form = [("token", token)]
+
+        if hint:
+            form.append(("token_type_hint", hint))
+
+        body = yield from self._post(self._endpoint("introspection_endpoint"), form, False)
+
+        if not body:
+            raise Error("server_error", "the introspection endpoint answered with nothing")
+
+        found = Introspection.from_dict(body)
+
+        if found.active and found.issuer.rstrip("/") != self.issuer.url:
+            raise Error("invalid_issuer", f"the introspection endpoint describes a token from {found.issuer!r}")
+
+        return found
+
+    def _exchange(
+        self,
+        subject_token: str,
+        subject_token_type: str,
+        actor_token: str,
+        actor_token_type: str,
+        requested_token_type: str,
+        audience: Sequence[str],
+        scope: Sequence[str],
+        requested_lifetime: int | None,
+        resource: Sequence[str],
+    ) -> Flow[Token]:
+        if not subject_token or not subject_token_type:
+            raise ValueError("masks: an exchange needs the subject token and its type")
+
+        form: Form = [
+            ("grant_type", GRANT_TOKEN_EXCHANGE),
+            ("subject_token", subject_token),
+            ("subject_token_type", subject_token_type),
+        ]
+
+        if actor_token:
+            form += [("actor_token", actor_token), ("actor_token_type", actor_token_type or ACCESS_TOKEN_TYPE)]
+
+        if requested_token_type:
+            form.append(("requested_token_type", requested_token_type))
+
+        form.extend(("audience", value) for value in words(audience))
+        form += seconds(requested_lifetime, "requested_lifetime")
+        form += asked(scope, resource)
+
+        return self._token(form, requested_token_type != UPSTREAM_ACCESS_TOKEN_TYPE)
+
+    def _enroll(self, scope: Sequence[str], client_name: str | None, expires_in: int | None) -> Flow[Enrollment]:
+        named = words(scope)
+
+        if not named:
+            raise ValueError("masks: an enrollment names the scopes its machine is approved for")
+
+        form: Form = [("scope", " ".join(named))]
+
+        if client_name:
+            form.append(("client_name", client_name))
+
+        form += seconds(expires_in, "expires_in")
+
+        body = yield from self._post(self._endpoint("enrollment_endpoint"), form, False)
+
+        if not body or not body.get("initial_access_token"):
+            raise Error("server_error", "the enrollment endpoint answered without an initial access token")
+
+        return Enrollment.from_dict(body)
+
+    def _unenroll(self, client_id: str) -> Flow[None]:
+        if not client_id or client_id in (".", ".."):
+            raise ValueError("masks: unenrolling names the machine's client_id")
+
+        target = f"{self._endpoint('enrollment_endpoint').rstrip('/')}/{quote(client_id, safe='')}"
+
+        yield from self._send("DELETE", target, [], False)
 
     def _read_registration(self, held: Registration) -> Flow[Registration]:
         owned(self.issuer, held)
@@ -355,6 +460,45 @@ class Client(_Flows):
     def revoke(self, token: str, hint: str = "") -> None:
         run(self._revoke(token, hint), self.http)
 
+    def introspect(self, token: str, hint: str = "") -> Introspection:
+        return run(self._introspect(token, hint), self.http)
+
+    def exchange(
+        self,
+        subject_token: str,
+        *,
+        subject_token_type: str = ACCESS_TOKEN_TYPE,
+        actor_token: str = "",
+        actor_token_type: str = ACCESS_TOKEN_TYPE,
+        requested_token_type: str = "",
+        audience: Sequence[str] = (),
+        scope: Sequence[str] = (),
+        requested_lifetime: int | None = None,
+        resource: Sequence[str] = (),
+    ) -> Token:
+        return run(
+            self._exchange(
+                subject_token,
+                subject_token_type,
+                actor_token,
+                actor_token_type,
+                requested_token_type,
+                audience,
+                scope,
+                requested_lifetime,
+                resource,
+            ),
+            self.http,
+        )
+
+    def enroll(
+        self, *, scope: Sequence[str], client_name: str | None = None, expires_in: int | None = None
+    ) -> Enrollment:
+        return run(self._enroll(scope, client_name, expires_in), self.http)
+
+    def unenroll(self, client_id: str) -> None:
+        run(self._unenroll(client_id), self.http)
+
     def read_registration(self, held: Registration) -> Registration:
         return run(self._read_registration(held), self.http)
 
@@ -478,6 +622,45 @@ class AsyncClient(_Flows):
 
     async def revoke(self, token: str, hint: str = "") -> None:
         await arun(self._revoke(token, hint), self.http)
+
+    async def introspect(self, token: str, hint: str = "") -> Introspection:
+        return await arun(self._introspect(token, hint), self.http)
+
+    async def exchange(
+        self,
+        subject_token: str,
+        *,
+        subject_token_type: str = ACCESS_TOKEN_TYPE,
+        actor_token: str = "",
+        actor_token_type: str = ACCESS_TOKEN_TYPE,
+        requested_token_type: str = "",
+        audience: Sequence[str] = (),
+        scope: Sequence[str] = (),
+        requested_lifetime: int | None = None,
+        resource: Sequence[str] = (),
+    ) -> Token:
+        return await arun(
+            self._exchange(
+                subject_token,
+                subject_token_type,
+                actor_token,
+                actor_token_type,
+                requested_token_type,
+                audience,
+                scope,
+                requested_lifetime,
+                resource,
+            ),
+            self.http,
+        )
+
+    async def enroll(
+        self, *, scope: Sequence[str], client_name: str | None = None, expires_in: int | None = None
+    ) -> Enrollment:
+        return await arun(self._enroll(scope, client_name, expires_in), self.http)
+
+    async def unenroll(self, client_id: str) -> None:
+        await arun(self._unenroll(client_id), self.http)
 
     async def read_registration(self, held: Registration) -> Registration:
         return await arun(self._read_registration(held), self.http)

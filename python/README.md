@@ -15,10 +15,12 @@ The package installs from its release tag and is not on PyPI yet. It imports as
 | --- | --- |
 | Discovery | The issuer's document, checked against the address it was fetched from. |
 | Registration | Redeeming an initial access token, then reading, updating, and deleting the client. |
+| Enrollment | An app asking for initial access tokens for its own machines, and unenrolling them. |
 | Client authentication | `client_secret_basic`, `client_secret_post`, `private_key_jwt`, and `none`. |
-| Grants | Client credentials, refresh tokens, and the device flow. |
+| Grants | Client credentials, refresh tokens, the device flow, and token exchange. |
 | DPoP | Tokens held to a key, and proofs on every request an `httpx` client sends. |
 | Revocation | Access and refresh tokens. |
+| Introspection | Asking the issuer whether a token is still active. |
 | Checking tokens | `at+jwt` access tokens, including DPoP-bound ones, in any framework or as ASGI middleware. |
 
 Signing people in through a browser is left to an OpenID Connect library such
@@ -69,6 +71,34 @@ client = masks.Client.from_registration(issuer, registration, key=key, dpop=dpop
 the client with its registration access token. They send that token only to the
 issuer's own origin.
 
+## Enrolling machines as an app
+
+An approved app that has claimed a namespace enrolls machines of its own, such
+as an agent it installs on each computer. It asks the issuer's
+`enrollment_endpoint` for an initial access token and hands the token to the
+machine, which registers with it as above.
+
+```python
+app = masks.Client(issuer, app_id, secret=app_secret)
+
+enrollment = app.enroll(scope=["xixo:agent"], client_name="nas", expires_in=900)
+enrollment.initial_access_token
+enrollment.expires_at
+```
+
+The app authenticates the way it does at the token endpoint. Every scope must
+fall under one of the app's namespaces. `expires_in` is between 60 and 3600
+seconds and defaults to 15 minutes. The token is spent the first time a machine
+registers with it.
+
+```python
+app.unenroll(machine_client_id)
+```
+
+`unenroll` archives the machine and revokes every token it holds. Unenrolling
+it again succeeds as well. A client the app did not enroll raises `masks.Error`
+with `status` 404.
+
 ## Calling an API
 
 `client.auth` returns an `httpx.Auth` that fetches and reuses tokens and signs
@@ -87,6 +117,32 @@ with httpx.Client(auth=client.auth(source, "https://files.example.com")) as api:
 A held token goes out as `Authorization: DPoP` with a fresh proof, and a server
 that asks for a DPoP nonce is answered once. `refresh_source` renews a token
 with its refresh token and hands each rotated token to `keep` to be saved.
+
+## Exchanging a token
+
+`exchange` trades a token for a new one under RFC 8693. A service that receives
+a caller's access token exchanges it for a token to another API, acting on the
+caller's behalf.
+
+```python
+token = client.exchange(
+    subject_token,
+    scope=["files:read"],
+    resource=["https://files.example.com"],
+    requested_lifetime=300,
+)
+```
+
+The subject is an access token unless `subject_token_type` says
+`masks.ID_TOKEN_TYPE`. `actor_token` names another party in the token's `act`
+claim. The new token lasts no longer than the subject token. When the client
+has a `dpop` key the new token is held to it, and a subject token held to a key
+is exchanged only with a proof from that same key.
+
+`requested_token_type=masks.UPSTREAM_ACCESS_TOKEN_TYPE` with a connection's id
+in `audience` releases the access token masks holds for that connection through
+a delegation. That token is a Bearer token from the provider, so it comes back
+unbound with `issued_token_type` naming the upstream type.
 
 ## Async
 
@@ -138,6 +194,21 @@ minute, and not seen before. A failed check raises `masks.InvalidToken`.
 
 Set `public_url` when a proxy sits in front of the API, since a proof names the
 address the client used.
+
+### Introspection
+
+A verifier that checks the JWT sees a revoked token as valid until it expires.
+`introspect` asks the issuer.
+
+```python
+found = client.introspect(token, "access_token")
+found.active and found.has_scope("files:read")
+```
+
+The issuer answers `active` only to the client the token was issued to, or to
+an approved client whose resources include one of the token's audiences. A
+token that is not active has no scopes. An answer that names another issuer
+raises `masks.Error`.
 
 ### ASGI and FastAPI
 
