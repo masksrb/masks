@@ -163,13 +163,13 @@ func (v *Verifier) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
 		claims, err := v.Authenticate(request)
 		if err != nil {
-			var refused *invalidToken
+			var refused *InvalidTokenError
 			if !errors.As(err, &refused) {
 				http.Error(response, "the token could not be checked", http.StatusServiceUnavailable)
 				return
 			}
 
-			challenge := fmt.Sprintf(`error="invalid_token", error_description=%q`, refused.description)
+			challenge := fmt.Sprintf(`error="invalid_token", error_description=%q`, refused.Description)
 			response.Header().Add("WWW-Authenticate", "Bearer "+challenge)
 			response.Header().Add("WWW-Authenticate", DPoP+" "+challenge+` algs="`+proofAlgs+`"`)
 			http.Error(response, "unauthorized", http.StatusUnauthorized)

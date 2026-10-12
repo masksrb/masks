@@ -3,11 +3,14 @@ package masks
 import (
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -18,17 +21,37 @@ import (
 )
 
 type fakeClient struct {
-	secret  string
-	method  AuthMethod
-	jwks    jose.JSONWebKeySet
-	scope   string
-	refresh map[string]bool
+	secret    string
+	method    AuthMethod
+	jwks      jose.JSONWebKeySet
+	scope     string
+	refresh   map[string]bool
+	redirects []string
+	returnTo  string
 }
 
 type liveToken struct {
-	client string
-	scope  string
-	jkt    string
+	client  string
+	subject string
+	scope   string
+	jkt     string
+}
+
+type fakeCode struct {
+	client       string
+	redirect     string
+	challenge    string
+	nonce        string
+	scope        string
+	organization string
+	resource     []string
+}
+
+type fakePerson struct {
+	subject string
+	name    string
+	email   string
+	role    string
 }
 
 type fake struct {
@@ -53,6 +76,15 @@ type fake struct {
 	seen          map[string]url.Values
 	staleActive   bool
 	issuedAs      string
+	codes         map[string]fakeCode
+	subjects      map[string]string
+	person        fakePerson
+	declined      bool
+	asked         url.Values
+	handshake     url.Values
+	ended         url.Values
+	userinfoName  string
+	upstreamDown  bool
 }
 
 func newFake(t *testing.T) *fake {
@@ -75,6 +107,9 @@ func newFake(t *testing.T) *fake {
 		live:          map[string]liveToken{},
 		enrolledBy:    map[string]string{},
 		seen:          map[string]url.Values{},
+		codes:         map[string]fakeCode{},
+		subjects:      map[string]string{},
+		person:        fakePerson{subject: "ada", name: "Ada Lovelace", email: "ada@example.com", role: "owner"},
 	}
 
 	mux := http.NewServeMux()
@@ -90,6 +125,10 @@ func newFake(t *testing.T) *fake {
 	mux.HandleFunc("POST /introspect", held.introspect)
 	mux.HandleFunc("POST /enrollments", held.enroll)
 	mux.HandleFunc("DELETE /enrollments/{machine}", held.unenroll)
+	mux.HandleFunc("GET /authorize", held.authorize)
+	mux.HandleFunc("GET /userinfo", held.userinfo)
+	mux.HandleFunc("GET /handshake", held.shake)
+	mux.HandleFunc("GET /logout", held.endSession)
 
 	held.server = httptest.NewServer(mux)
 	t.Cleanup(held.server.Close)
@@ -124,6 +163,10 @@ func (f *fake) discovery(response http.ResponseWriter, _ *http.Request) {
 		"registration_endpoint":         base + "/register",
 		"introspection_endpoint":        base + "/introspect",
 		"enrollment_endpoint":           base + "/enrollments",
+		"authorization_endpoint":        base + "/authorize",
+		"userinfo_endpoint":             base + "/userinfo",
+		"end_session_endpoint":          base + "/logout",
+		"handshake_endpoint":            base + "/handshake",
 	})
 }
 
@@ -151,9 +194,13 @@ func (f *fake) issue(claims map[string]any, typ string) string {
 }
 
 func (f *fake) accessToken(id, scope, jkt string) string {
+	return f.accessTokenFor(id, id, scope, jkt)
+}
+
+func (f *fake) accessTokenFor(subject, id, scope, jkt string) string {
 	claims := map[string]any{
 		"iss":       f.url(),
-		"sub":       id,
+		"sub":       subject,
 		"aud":       f.audience,
 		"exp":       time.Now().Add(time.Hour).Unix(),
 		"iat":       time.Now().Unix(),
@@ -293,12 +340,16 @@ func (f *fake) token(response http.ResponseWriter, request *http.Request) {
 	defer f.lock.Unlock()
 
 	f.seen[request.URL.Path] = request.PostForm
+	subject := id
 
 	switch request.PostForm.Get("grant_type") {
 	case GrantTokenExchange:
 		f.exchange(response, request, id, jkt)
 		return
 	case GrantClientCredentials:
+	case GrantAuthorizationCode:
+		f.redeem(response, request, id, client, jkt)
+		return
 	case GrantRefreshToken:
 		presented := request.PostForm.Get("refresh_token")
 		if !client.refresh[presented] {
@@ -307,6 +358,7 @@ func (f *fake) token(response http.ResponseWriter, request *http.Request) {
 		}
 
 		delete(client.refresh, presented)
+		subject = f.subjects[presented]
 	case GrantDeviceCode:
 		if f.pending > 0 {
 			f.pending--
@@ -332,11 +384,16 @@ func (f *fake) token(response http.ResponseWriter, request *http.Request) {
 		scope = client.scope
 	}
 
+	if subject == "" {
+		subject = id
+	}
+
 	refresh := rand.Text()
 	client.refresh[refresh] = true
+	f.subjects[refresh] = subject
 
-	access := f.accessToken(id, scope, jkt)
-	f.live[access] = liveToken{client: id, scope: scope, jkt: jkt}
+	access := f.accessTokenFor(subject, id, scope, jkt)
+	f.live[access] = liveToken{client: id, subject: subject, scope: scope, jkt: jkt}
 
 	body := map[string]any{
 		"access_token":  access,
@@ -422,7 +479,19 @@ func (f *fake) register(response http.ResponseWriter, request *http.Request) {
 	}
 
 	token := rand.Text()
-	f.add(id, &fakeClient{method: metadata.TokenEndpointAuthMethod, jwks: jwks, scope: metadata.Scope})
+	secret := ""
+	if metadata.TokenEndpointAuthMethod == ClientSecretBasic || metadata.TokenEndpointAuthMethod == ClientSecretPost {
+		secret = rand.Text()
+	}
+
+	f.lock.Lock()
+	returnTo := ""
+	if existing := f.clients[id]; existing != nil {
+		returnTo = existing.returnTo
+	}
+	f.lock.Unlock()
+
+	f.add(id, &fakeClient{method: metadata.TokenEndpointAuthMethod, jwks: jwks, scope: metadata.Scope, secret: secret, redirects: metadata.RedirectURIs, returnTo: returnTo})
 
 	f.lock.Lock()
 	f.registrations[id] = token
@@ -436,6 +505,7 @@ func (f *fake) register(response http.ResponseWriter, request *http.Request) {
 	writeJSON(response, http.StatusCreated, Registration{
 		ClientMetadata:          metadata,
 		ClientID:                id,
+		ClientSecret:            secret,
 		RegistrationAccessToken: token,
 		RegistrationClientURI:   uri,
 	})
@@ -503,6 +573,11 @@ func (f *fake) exchange(response http.ResponseWriter, request *http.Request, id,
 
 	if subject.jkt != "" && subject.jkt != jkt {
 		oauthError(response, http.StatusBadRequest, "invalid_dpop_proof")
+		return
+	}
+
+	if form.Get("requested_token_type") == TokenTypeUpstreamAccessToken && f.upstreamDown {
+		oauthError(response, http.StatusServiceUnavailable, "temporarily_unavailable")
 		return
 	}
 
@@ -661,4 +736,190 @@ func (f *fake) unenroll(response http.ResponseWriter, request *http.Request) {
 	}
 
 	response.WriteHeader(http.StatusNoContent)
+}
+
+func (f *fake) authorize(response http.ResponseWriter, request *http.Request) {
+	query := request.URL.Query()
+
+	f.lock.Lock()
+	defer f.lock.Unlock()
+
+	f.asked = query
+	client := f.clients[query.Get("client_id")]
+	redirect := query.Get("redirect_uri")
+
+	if client == nil || !slices.Contains(client.redirects, redirect) || query.Get("code_challenge_method") != "S256" {
+		oauthError(response, http.StatusBadRequest, "invalid_request")
+		return
+	}
+
+	answer, _ := url.Parse(redirect)
+	back := url.Values{"state": {query.Get("state")}, "iss": {f.url()}}
+
+	if f.declined {
+		back.Set("error", "access_denied")
+		back.Set("error_description", "the person declined")
+	} else {
+		code := rand.Text()
+		back.Set("code", code)
+		f.codes[code] = fakeCode{
+			client: query.Get("client_id"), redirect: redirect, challenge: query.Get("code_challenge"),
+			nonce: query.Get("nonce"), scope: query.Get("scope"), organization: query.Get("organization"),
+			resource: query["resource"],
+		}
+	}
+
+	answer.RawQuery = back.Encode()
+	http.Redirect(response, request, answer.String(), http.StatusFound)
+}
+
+func (f *fake) redeem(response http.ResponseWriter, request *http.Request, id string, client *fakeClient, jkt string) {
+	form := request.PostForm
+	code, known := f.codes[form.Get("code")]
+	delete(f.codes, form.Get("code"))
+
+	sum := sha256.Sum256([]byte(form.Get("code_verifier")))
+
+	if !known || code.client != id || code.redirect != form.Get("redirect_uri") ||
+		base64.RawURLEncoding.EncodeToString(sum[:]) != code.challenge {
+		oauthError(response, http.StatusBadRequest, "invalid_grant")
+		return
+	}
+
+	subject := f.person.subject
+	refresh := rand.Text()
+	client.refresh[refresh] = true
+	f.subjects[refresh] = subject
+
+	access := f.accessTokenFor(subject, id, code.scope, jkt)
+	f.live[access] = liveToken{client: id, subject: subject, scope: code.scope, jkt: jkt}
+
+	body := map[string]any{
+		"access_token":  access,
+		"token_type":    "Bearer",
+		"expires_in":    3600,
+		"scope":         code.scope,
+		"refresh_token": refresh,
+	}
+
+	if jkt != "" {
+		body["token_type"] = DPoP
+	}
+
+	for scope := range strings.FieldsSeq(code.scope) {
+		if provider, found := strings.CutPrefix(scope, ScopeDelegate); found && provider != "" {
+			body["delegations"] = []map[string]string{{
+				"connection": "connection-" + provider, "provider": provider, "provider_name": "Google", "subject": subject,
+			}}
+		}
+	}
+
+	if slices.Contains(strings.Fields(code.scope), ScopeOpenID) {
+		claims := map[string]any{
+			"iss": f.url(), "sub": subject, "aud": id, "nonce": code.nonce, "sid": "sid-" + subject,
+			"exp": time.Now().Add(15 * time.Minute).Unix(), "iat": time.Now().Unix(),
+			"name": f.person.name, "email": f.person.email, "email_verified": true,
+			"at_hash": accessTokenHash(access), "tenant": map[string]string{"uuid": "t-1", "subdomain": "acme", "name": "Acme"},
+			"masks:avatars": map[string]any{"photo": nil, "identicon": f.url() + "/avatars/" + subject + "/identicon"},
+		}
+
+		if code.organization != "" {
+			claims["org"] = map[string]string{"id": "o-" + code.organization, "key": code.organization, "name": "Acme", "role": f.person.role}
+		}
+
+		body["id_token"] = f.issue(claims, "JWT")
+	}
+
+	writeJSON(response, http.StatusOK, body)
+}
+
+func (f *fake) userinfo(response http.ResponseWriter, request *http.Request) {
+	presented := strings.TrimPrefix(request.Header.Get("Authorization"), "Bearer ")
+
+	f.lock.Lock()
+	held, known := f.live[presented]
+	name := f.person.name
+	if f.userinfoName != "" {
+		name = f.userinfoName
+	}
+	role := f.person.role
+	f.lock.Unlock()
+
+	if !known || held.subject == held.client {
+		oauthError(response, http.StatusUnauthorized, "invalid_token")
+		return
+	}
+
+	writeJSON(response, http.StatusOK, map[string]any{
+		"sub":  held.subject,
+		"name": name,
+		"orgs": []map[string]string{
+			{"id": "o-acme", "key": "acme", "name": "Acme", "role": role},
+			{"id": "o-globex", "key": "globex", "name": "Globex", "role": "member"},
+		},
+	})
+}
+
+func (f *fake) shake(response http.ResponseWriter, request *http.Request) {
+	query := request.URL.Query()
+
+	f.lock.Lock()
+	f.handshake = query
+	declined := f.declined
+	f.lock.Unlock()
+
+	answer, err := url.Parse(query.Get("return_to"))
+	if err != nil || query.Get("resource") == "" {
+		oauthError(response, http.StatusBadRequest, "invalid_request")
+		return
+	}
+
+	back := answer.Query()
+	back.Set("state", query.Get("state"))
+
+	if declined {
+		back.Set("error", "access_denied")
+		back.Set("error_description", "the person signing in declined")
+	} else {
+		token := rand.Text()
+		id := "app-" + rand.Text()
+
+		f.lock.Lock()
+		f.initial[token] = id
+		f.clients[id] = &fakeClient{returnTo: query.Get("return_to"), refresh: map[string]bool{}}
+		f.lock.Unlock()
+
+		back.Set("initial_access_token", token)
+		back.Set("iss", f.url())
+	}
+
+	answer.RawQuery = back.Encode()
+	http.Redirect(response, request, answer.String(), http.StatusFound)
+}
+
+func (f *fake) endSession(response http.ResponseWriter, request *http.Request) {
+	query := request.URL.Query()
+
+	f.lock.Lock()
+	f.ended = query
+	client := f.clients[query.Get("client_id")]
+	f.lock.Unlock()
+
+	target := query.Get("post_logout_redirect_uri")
+	if target == "" {
+		writeJSON(response, http.StatusOK, map[string]string{"signed_out": "true"})
+		return
+	}
+
+	if client == nil || client.returnTo != target {
+		oauthError(response, http.StatusBadRequest, "invalid_request")
+		return
+	}
+
+	answer, _ := url.Parse(target)
+	back := answer.Query()
+	back.Set("state", query.Get("state"))
+	answer.RawQuery = back.Encode()
+
+	http.Redirect(response, request, answer.String(), http.StatusFound)
 }

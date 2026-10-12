@@ -35,12 +35,13 @@ const (
 )
 
 type Client struct {
-	Issuer *Issuer
-	ID     string
-	Secret string
-	Method AuthMethod
-	Key    *Key
-	DPoP   *Key
+	Issuer      *Issuer
+	ID          string
+	Secret      string
+	Method      AuthMethod
+	Key         *Key
+	DPoP        *Key
+	RedirectURI string
 }
 
 type TokenRequest struct {
@@ -49,14 +50,15 @@ type TokenRequest struct {
 }
 
 type Token struct {
-	AccessToken     string    `json:"access_token"`
-	TokenType       string    `json:"token_type"`
-	RefreshToken    string    `json:"refresh_token,omitempty"`
-	IssuedTokenType string    `json:"issued_token_type,omitempty"`
-	IDToken         string    `json:"id_token,omitempty"`
-	Scope           string    `json:"scope,omitempty"`
-	ExpiresIn       int64     `json:"expires_in,omitempty"`
-	Expiry          time.Time `json:"expiry,omitzero"`
+	AccessToken     string       `json:"access_token"`
+	TokenType       string       `json:"token_type"`
+	RefreshToken    string       `json:"refresh_token,omitempty"`
+	IssuedTokenType string       `json:"issued_token_type,omitempty"`
+	IDToken         string       `json:"id_token,omitempty"`
+	Delegations     []Delegation `json:"delegations,omitempty"`
+	Scope           string       `json:"scope,omitempty"`
+	ExpiresIn       int64        `json:"expires_in,omitempty"`
+	Expiry          time.Time    `json:"expiry,omitzero"`
 }
 
 func (t *Token) Valid() bool {

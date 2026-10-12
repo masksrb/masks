@@ -36,20 +36,20 @@ var (
 	ErrReplayStore  = errors.New("masks: the replay store could not say whether a proof is new")
 )
 
-type invalidToken struct {
-	description string
+type InvalidTokenError struct {
+	Description string
 }
 
-func (e *invalidToken) Error() string {
-	return ErrInvalidToken.Error() + ": " + e.description
+func (e *InvalidTokenError) Error() string {
+	return ErrInvalidToken.Error() + ": " + e.Description
 }
 
-func (e *invalidToken) Is(target error) bool {
+func (e *InvalidTokenError) Is(target error) bool {
 	return target == ErrInvalidToken
 }
 
 func invalid(format string, values ...any) error {
-	return &invalidToken{description: fmt.Sprintf(format, values...)}
+	return &InvalidTokenError{Description: fmt.Sprintf(format, values...)}
 }
 
 const readLimit = 1 << 20
