@@ -69,6 +69,30 @@ class SessionTest < ClientTest
     assert_equal "Basic #{Base64.strict_encode64('xixo:shh')}", sent[:headers]["authorization"]
   end
 
+  def test_an_app_unenrolls_a_machine_it_enrolled
+    issuer.override("/enrollments/machine-1", {})
+
+    service = Masks::Client::Session.new(issuer: issuer.url, client_id: "xixo", client_secret: "shh")
+
+    assert service.unenroll("machine-1")
+
+    sent = issuer.last("/enrollments/machine-1")
+
+    assert_equal "DELETE", sent[:method]
+    assert_equal({ "client_id" => "xixo" }, sent[:body])
+    assert_equal "Basic #{Base64.strict_encode64('xixo:shh')}", sent[:headers]["authorization"]
+  end
+
+  def test_unenrolling_a_machine_the_app_did_not_enroll_is_refused
+    issuer.override("/enrollments/other", [ 404, { "error" => "invalid_request", "error_description" => "that client was not enrolled by this app" } ])
+
+    error = assert_raises(Masks::Client::Rejected) do
+      Masks::Client::Session.new(issuer: issuer.url, client_id: "xixo", client_secret: "shh").unenroll("other")
+    end
+
+    assert_match(/not enrolled by this app/, error.message)
+  end
+
   def test_an_enrollment_answered_without_a_token_is_refused
     issuer.override("/enrollments", { "error" => "invalid_request", "error_description" => "outside xixo:" })
 

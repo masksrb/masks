@@ -528,6 +528,18 @@ Inherits `Masks::Client::Challenge`.
 #delete(url, headers = {})
 ```
 
+### #delete_form
+
+```ruby
+#delete_form(url, form, headers = {})
+```
+
+### #encoded
+
+```ruby
+#encoded(verb, url, form, headers)
+```
+
 ### #fetch
 
 ```ruby
@@ -1205,6 +1217,12 @@ Inherits `Masks::Client::Error`.
 
 ```ruby
 #start(resource: nil, prompt: nil, scope: nil, state: SecureRandom.urlsafe_base64(24), nonce: SecureRandom.urlsafe_base64(24), max_age: nil, organization: nil)
+```
+
+### #unenroll
+
+```ruby
+#unenroll(machine_id)
 ```
 
 ### #userinfo

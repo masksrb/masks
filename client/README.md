@@ -249,7 +249,7 @@ Hold `started[:state]`, `started[:nonce]`, and `started[:verifier]` in the sessi
 browser to `started[:url]`. `start` sends a nonce only when the scope includes `openid`. Check the
 returned `state` yourself, and compare `identity["nonce"]` with the one you held.
 
-`Session` also has `refresh`, `exchange`, `client_credentials`, `enroll`, `revoke`, `introspect`, `userinfo`,
+`Session` also has `refresh`, `exchange`, `client_credentials`, `enroll`, `unenroll`, `revoke`, `introspect`, `userinfo`,
 and `end_session_url`. It authenticates with `client_secret`, or with `private_key` and `key_id` for
 `private_key_jwt`.
 
@@ -259,6 +259,13 @@ An app that has claimed a namespace enrolls a machine with `enroll`. It returns 
 ```ruby
 enrollment = session.enroll(scope: "xixo:agent", name: "nas", expires_in: 900)
 enrollment.initial_access_token
+```
+
+`unenroll` takes the machine's client ID. masks archives the machine and revokes its tokens, and
+refuses a client the app did not enroll.
+
+```ruby
+session.unenroll(machine_client_id)
 ```
 
 Discovery and JWKS are cached for five minutes and refetched on an unknown `kid`, so a key rotation

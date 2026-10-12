@@ -92,6 +92,13 @@ module Masks
         Enrollment.issued(post("enrollment_endpoint", form))
       end
 
+      def unenroll(machine_id)
+        url = "#{issuer.endpoint('enrollment_endpoint')}/#{URI.encode_www_form_component(machine_id)}"
+
+        HTTP.delete_form(url, [ [ "client_id", client_id ] ] + assertion, authorization)
+        true
+      end
+
       def refresh(refresh_token, resource: nil, scope: nil)
         form = [
           [ "grant_type", "refresh_token" ],

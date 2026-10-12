@@ -11,8 +11,16 @@ module Masks
       end
 
       def post_form(url, form, headers = {})
+        encoded(Net::HTTP::Post, url, form, headers)
+      end
+
+      def delete_form(url, form, headers = {})
+        encoded(Net::HTTP::Delete, url, form, headers)
+      end
+
+      def encoded(verb, url, form, headers)
         uri = URI.parse(url.to_s)
-        request = Net::HTTP::Post.new(uri, default_headers.merge(headers))
+        request = verb.new(uri, default_headers.merge(headers))
         request.body = URI.encode_www_form(form)
         request["Content-Type"] = "application/x-www-form-urlencoded"
 
