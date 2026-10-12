@@ -1,0 +1,138 @@
+---
+title: Style guide
+description: The palette and fonts used by the sign-in pages, /manage, and these docs.
+---
+
+One palette and one type stack for the sign-in and account pages, `/manage`, this site, and the Ruby
+API docs. Light and dark mode follow the system setting.
+
+| Where | File |
+| --- | --- |
+| Sign-in, account pages, and `/manage` colors | `server/app/frontend/entrypoints/app.css` |
+| `/manage` layout | `server/app/frontend/entrypoints/console.css` |
+| This site | `docs/src/styles/global.css` |
+| Ruby API docs | `client/doc/rose.css` |
+
+## Colors
+
+### Grays
+
+`--gray-000` to `--gray-800`.
+
+**Dark**
+
+<div class="plate">
+  <div style="background:#000000;color:#e9e5e2"><b>000</b><span>#000000</span><span>ground</span></div>
+  <div style="background:#0f0b09;color:#e9e5e2"><b>050</b><span>#0f0b09</span><span>surface</span></div>
+  <div style="background:#1a1614;color:#e9e5e2"><b>100</b><span>#1a1614</span><span>raised</span></div>
+  <div style="background:#292421;color:#e9e5e2"><b>200</b><span>#292421</span><span>line</span></div>
+  <div style="background:#3d3834;color:#e9e5e2"><b>300</b><span>#3d3834</span><span>firm</span></div>
+  <div style="background:#605955;color:#ffffff"><b>400</b><span>#605955</span><span>disabled</span></div>
+  <div style="background:#88827d;color:#000000"><b>500</b><span>#88827d</span><span>mute</span></div>
+  <div style="background:#aca6a2;color:#000000"><b>600</b><span>#aca6a2</span><span>dim</span></div>
+  <div style="background:#cfc9c5;color:#000000"><b>700</b><span>#cfc9c5</span><span></span></div>
+  <div style="background:#e9e5e2;color:#000000"><b>800</b><span>#e9e5e2</span><span>body</span></div>
+</div>
+
+**Light**
+
+<div class="plate">
+  <div style="background:#fcf9f7;color:#211c18"><b>000</b><span>#fcf9f7</span><span>ground</span></div>
+  <div style="background:#ffffff;color:#211c18"><b>050</b><span>#ffffff</span><span>surface</span></div>
+  <div style="background:#f5f1ee;color:#211c18"><b>100</b><span>#f5f1ee</span><span>raised</span></div>
+  <div style="background:#e5ded9;color:#211c18"><b>200</b><span>#e5ded9</span><span>line</span></div>
+  <div style="background:#d1c9c3;color:#211c18"><b>300</b><span>#d1c9c3</span><span>firm</span></div>
+  <div style="background:#a49d97;color:#000000"><b>400</b><span>#a49d97</span><span>disabled</span></div>
+  <div style="background:#7a736e;color:#ffffff"><b>500</b><span>#7a736e</span><span>mute</span></div>
+  <div style="background:#58514c;color:#ffffff"><b>600</b><span>#58514c</span><span>dim</span></div>
+  <div style="background:#393430;color:#ffffff"><b>700</b><span>#393430</span><span></span></div>
+  <div style="background:#211c18;color:#ffffff"><b>800</b><span>#211c18</span><span>body</span></div>
+</div>
+
+### Brass and silver
+
+`--brass`, `--brass-lit`, and `--silver`. `--label` matches `--brass`. A [theme](/guides/themes/) can set
+`--brass`, `--brass-lit`, and `--label`.
+
+**Dark**
+
+<div class="plate">
+  <div style="background:#c9a14a;color:#000000"><b>brass</b><span>#c9a14a</span><span>rules, labels</span></div>
+  <div style="background:#e8c27a;color:#000000"><b>brass-lit</b><span>#e8c27a</span><span>focus ring</span></div>
+  <div style="background:#a9b3b4;color:#000000"><b>silver</b><span>#a9b3b4</span><span>hairline, mono</span></div>
+</div>
+
+**Light**
+
+<div class="plate">
+  <div style="background:#8a5a1c;color:#ffffff"><b>brass</b><span>#8a5a1c</span><span>rules, labels</span></div>
+  <div style="background:#9b6a26;color:#ffffff"><b>brass-lit</b><span>#9b6a26</span><span>focus ring</span></div>
+  <div style="background:#636b6b;color:#ffffff"><b>silver</b><span>#636b6b</span><span>hairline, mono</span></div>
+</div>
+
+### Accent colors
+
+`--glass-ruby` to `--glass-violet`.
+
+| Hue | Dark mode | Ratio | Light mode | Ratio | Role |
+| --- | --- | --- | --- | --- | --- |
+| ruby | `#ff867a` | 8.94 | `#b53530` | 5.97 | danger |
+| ember | `#ff8f53` | 9.31 | `#b04000` | 5.87 | primary action |
+| amber | `#f19c29` | 9.53 | `#a44f00` | 5.68 | accent |
+| gold | `#d4ad03` | 9.78 | `#8b6200` | 5.46 | warning |
+| verdant | `#78c966` | 10.35 | `#267e05` | 5.16 | accent |
+| emerald | `#1dcf98` | 10.43 | `#008450` | 4.76 | success |
+| cyan | `#00cecf` | 10.73 | `#008386` | 4.57 | accent |
+| sky | `#00c2fe` | 10.15 | `#0077b2` | 4.90 | info |
+| cobalt | `#70b1ff` | 9.42 | `#2065c5` | 5.63 | note |
+| violet | `#b49dff` | 9.21 | `#6e50be` | 5.91 | accent |
+
+## Type
+
+Text:
+
+```css
+font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+```
+
+Code:
+
+```css
+font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+```
+
+| | Size | Line height |
+| --- | --- | --- |
+| `/manage` small | `0.8125rem` (13px) | 1.45 |
+| `/manage` body | `0.875rem` (14px) | 1.5 |
+
+## Radius
+
+| | Box | Field |
+| --- | --- | --- |
+| Sign-in and account pages | `5px` | `3px` |
+| `/manage` | `10px` | `7px` |
+| This site | `5px` (`--pane`) | `3px` (`--step`) |
+
+## Spacing
+
+| Token | Below 48rem | 48rem and up |
+| --- | --- | --- |
+| `--gutter`, page side padding in `/manage` | `1.25rem` (20px) | `1.5rem` (24px) |
+| `--rhythm`, gap between sections in `/manage` | `1.25rem` (20px) | `1.5rem` (24px) |
+
+## Widths
+
+| | Max width |
+| --- | --- |
+| `/manage` page | `72rem` (1152px, `max-w-6xl`) |
+| `/manage` prose | `60ch` to `64ch` |
+| Sign-in column | `24rem` (384px) |
+| Consent column | `30rem` (480px) |
+
+## Grid and breakpoints
+
+| Breakpoint | What changes |
+| --- | --- |
+| `48rem` (768px) | `/manage` moves its tab bar from the bottom to the top, and each settings section becomes two columns: `minmax(12rem, 1fr) minmax(0, 2fr)`, with a `2.5rem` gap. |
+| `50rem` (800px) | This site lets code in tables wrap below this width. |
