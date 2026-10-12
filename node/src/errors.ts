@@ -19,8 +19,8 @@ export class MasksError extends Error {
 }
 
 export class InvalidTokenError extends Error {
-  constructor(message: string) {
-    super(`masks: invalid token: ${message}`);
+  constructor(message: string, options?: { cause?: unknown }) {
+    super(`masks: invalid token: ${message}`, options);
     this.name = "InvalidTokenError";
   }
 }

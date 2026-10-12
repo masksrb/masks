@@ -42,6 +42,7 @@ export {
 } from "./issuer.js";
 export { Key, type PrivateJWK } from "./key.js";
 export type { ClientMetadata, Registration } from "./registration.js";
+export { MemoryReplayStore, type ReplayStore } from "./replay.js";
 export {
   type Claims,
   hasScope,

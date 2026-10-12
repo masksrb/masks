@@ -15,6 +15,7 @@ import {
   Issuer,
   Key,
   MasksError,
+  MemoryReplayStore,
   proof,
   UPSTREAM_ACCESS_TOKEN_TYPE,
   Verifier,
@@ -857,6 +858,103 @@ test("a verifier refuses misused proofs", async () => {
       name,
     );
   }
+});
+
+test("a verifier asks its replay store once per proof", async () => {
+  const held = await fake();
+  const { client, dpop, issuer } = await signedClient(held);
+  const seen = new Set();
+  const asked = [];
+  const replay = {
+    async first(key, expiresIn) {
+      asked.push([key, expiresIn]);
+      await new Promise((resolve) => setTimeout(resolve, 1));
+
+      if (seen.has(key)) return false;
+
+      seen.add(key);
+      return true;
+    },
+  };
+  const verifier = new Verifier(issuer, held.audience, { replay });
+  const target = "http://files.example/files";
+
+  const good = await boundRequest(client, dpop, "GET", target);
+
+  await verifier.authenticate(good);
+  await assert.rejects(verifier.authenticate(good), /already been used/);
+
+  assert.equal(asked.length, 2);
+  assert.match(asked[0][0], new RegExp(`^${dpop.thumbprint}:.+`));
+  assert.equal(asked[0][1], 120);
+  assert.equal(verifier.replay, replay);
+});
+
+test("a verifier refuses a proof its replay store cannot vouch for", async () => {
+  const held = await fake();
+  const { client, dpop, issuer } = await signedClient(held);
+  const target = "http://files.example/files";
+
+  const stores = {
+    throws: {
+      first() {
+        throw new Error("redis at 10.0.0.4 refused the connection");
+      },
+    },
+    rejects: { first: async () => Promise.reject(new Error("timed out")) },
+    "answers something truthy": { first: async () => "OK" },
+    "answers nothing": { first: async () => undefined },
+  };
+
+  for (const [name, replay] of Object.entries(stores)) {
+    const verifier = new Verifier(issuer, held.audience, { replay });
+    const request = await boundRequest(client, dpop, "GET", target);
+
+    await assert.rejects(
+      verifier.authenticate(request),
+      (error) => {
+        assert.ok(error instanceof InvalidTokenError, name);
+
+        const challenge = verifier.challengeHeaders(error).join(" ");
+        assert.doesNotMatch(challenge, /10\.0\.0\.4|timed out/, name);
+        return true;
+      },
+      name,
+    );
+  }
+});
+
+test("a bearer token never reaches the replay store", async () => {
+  const held = await fake();
+  const issuer = await Issuer.discover(held.url);
+  const replay = {
+    first() {
+      throw new Error("not for bearer tokens");
+    },
+  };
+  const verifier = new Verifier(issuer, held.audience, { replay });
+  const token = await held.accessToken("machine", "files:read");
+
+  const claims = await verifier.authenticate(
+    new Request("http://files.example/files", {
+      headers: { authorization: `Bearer ${token}` },
+    }),
+  );
+
+  assert.equal(claims.sub, "machine");
+});
+
+test("the memory replay store forgets a key once it expires", async () => {
+  const store = new MemoryReplayStore();
+
+  assert.equal(store.first("a", 60), true);
+  assert.equal(store.first("a", 60), false);
+  assert.equal(store.first("b", 0.001), true);
+
+  await new Promise((resolve) => setTimeout(resolve, 5));
+
+  assert.equal(store.first("b", 60), true);
+  assert.equal(store.first("a", 60), false);
 });
 
 test("a verifier checks the token itself", async () => {

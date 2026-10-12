@@ -202,8 +202,34 @@ needs a proof signed by its key, made for this method and URL, made in the last
 minute, and not seen before. A failure is an `InvalidTokenError`.
 
 Set `publicURL` when a proxy sits in front of the API, since a proof names the
-address the client used. The replay cache lives in the process, so each
-instance of a scaled-out API keeps its own.
+address the client used.
+
+### Seen proofs
+
+The verifier remembers each proof it accepts for two minutes and refuses it a
+second time. By default a `MemoryReplayStore` keeps them in the process, so
+each instance of a scaled-out API keeps its own, and a proof replayed to
+another instance passes. An API on more than one instance names a shared store
+as `replay`. The store's `first(key, expiresIn)` returns `true` the first time
+it sees `key` within `expiresIn` seconds and `false` after, and may return a
+promise. With Redis:
+
+```ts
+const verifier = new Verifier(issuer, "https://files.example.com", {
+  replay: {
+    async first(key, expiresIn) {
+      const set = await redis.set(`masks:dpop:${key}`, "1", { NX: true, EX: expiresIn });
+
+      return set === "OK";
+    },
+  },
+});
+```
+
+The verifier accepts a proof only when `first` returns `true`. Any other answer,
+a thrown error, or a rejected promise refuses the request with an
+`InvalidTokenError`, and the store's error stays in its `cause` without
+reaching the challenge sent to the client.
 
 ## Introspection
 

@@ -9,10 +9,12 @@ import {
 import { DPOP, PROOF_TYPE, type ProofClaims, tokenHash } from "./dpop.js";
 import { InvalidTokenError } from "./errors.js";
 import type { Issuer, Tenant } from "./issuer.js";
+import { MemoryReplayStore, type ReplayStore } from "./replay.js";
 
 const ACCESS_TOKEN_TYPE = "at+jwt";
 const PROOF_WINDOW = 60;
 const LEEWAY = 30;
+const REMEMBERED = PROOF_WINDOW + 2 * LEEWAY;
 const TOKEN_ALGORITHMS = ["RS256", "ES256"];
 const PROOF_ALGORITHMS = [
   "ES256",
@@ -47,14 +49,14 @@ export interface NodeRequest {
 
 export interface VerifierOptions {
   publicURL?: string;
+  replay?: ReplayStore;
 }
 
 export class Verifier {
   readonly issuer: Issuer;
   readonly audience: string[];
   readonly publicURL?: string;
-  readonly #replays = new Map<string, number>();
-  #swept = 0;
+  readonly replay: ReplayStore;
 
   constructor(
     issuer: Issuer,
@@ -64,6 +66,7 @@ export class Verifier {
     this.issuer = issuer;
     this.audience = Array.isArray(audience) ? audience : [audience];
     this.publicURL = options.publicURL?.replace(/\/+$/, "");
+    this.replay = options.replay ?? new MemoryReplayStore();
   }
 
   async verify(token: string): Promise<Claims> {
@@ -247,29 +250,24 @@ export class Verifier {
       throw new InvalidTokenError("that proof was made for another token");
     }
 
-    if (!claims.jti || !this.#first(`${thumbprint}:${claims.jti}`)) {
+    if (typeof claims.jti !== "string" || claims.jti === "") {
+      throw new InvalidTokenError("that proof carries no jti");
+    }
+
+    if (!(await this.#first(`${thumbprint}:${claims.jti}`))) {
       throw new InvalidTokenError("that proof has already been used");
     }
   }
 
-  #first(id: string): boolean {
-    const now = Date.now();
-
-    if (now - this.#swept > PROOF_WINDOW * 1000) {
-      this.#swept = now;
-
-      for (const [key, at] of this.#replays) {
-        if (now - at > (PROOF_WINDOW + 2 * LEEWAY) * 1000) {
-          this.#replays.delete(key);
-        }
-      }
+  async #first(key: string): Promise<boolean> {
+    try {
+      return (await this.replay.first(key, REMEMBERED)) === true;
+    } catch (error) {
+      throw new InvalidTokenError(
+        "that proof could not be checked for replay",
+        { cause: error },
+      );
     }
-
-    if (this.#replays.has(id)) return false;
-
-    this.#replays.set(id, now);
-
-    return true;
   }
 }
 
