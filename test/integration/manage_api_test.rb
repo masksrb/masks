@@ -1679,7 +1679,8 @@ module Masks
         def claim!(resource: "https://demo.xixo.test/mcp", name: "xixo:")
           within(@tenant) do
             holder = create_client(@tenant, name: "xixo", allowed_scopes: "openid #{name}",
-                                   approved_at: Time.current)
+                                   approved_at: Time.current, token_endpoint_auth_method: "client_secret_basic",
+                                   secret_digest: BCrypt::Password.create(SecureRandom.hex))
 
             Namespace.create!(name: name, resource: resource, client: holder, claimed_at: Time.current)
           end
