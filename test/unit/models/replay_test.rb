@@ -43,7 +43,6 @@ module Masks
           within(other_tenant) { assert_equal 0, Replay.count }
         end
       end
-
     end
   end
 end
