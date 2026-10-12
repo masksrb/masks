@@ -7,6 +7,7 @@ import {
   type JWTPayload,
   jwtVerify,
 } from "jose";
+import { ForbiddenError } from "./claims.js";
 import { DPOP, PROOF_TYPE, type ProofClaims, tokenHash } from "./dpop.js";
 import { InvalidTokenError, UnavailableError } from "./errors.js";
 import type { Issuer, Tenant } from "./issuer.js";
@@ -138,34 +139,55 @@ export class Verifier {
   }
 
   challengeHeaders(error: unknown): string[] {
-    if (!(error instanceof InvalidTokenError)) return [];
+    let code: string;
+    let description: string;
+    let scope: string | undefined;
 
-    const description = error.message
-      .replace(/^masks: invalid token: /, "")
-      .replace(/["\\]/g, "'");
-    const metadata = this.resourceMetadata
-      ? `, resource_metadata="${this.resourceMetadata.replace(/["\\]/g, "")}"`
-      : "";
-    const challenge = `error="invalid_token", error_description="${description}"${metadata}`;
+    if (error instanceof InvalidTokenError) {
+      code = "invalid_token";
+      description = error.message.replace(/^masks: invalid token: /, "");
+    } else if (error instanceof ForbiddenError) {
+      code = error.code;
+      description = error.description;
+      scope = error.scope;
+    } else {
+      return [];
+    }
+
+    const parameters = [
+      `error="${code}"`,
+      `error_description="${quoted(description)}"`,
+      ...(scope ? [`scope="${quoted(scope)}"`] : []),
+      ...(this.resourceMetadata
+        ? [`resource_metadata="${quoted(this.resourceMetadata)}"`]
+        : []),
+    ].join(", ");
 
     return [
-      `Bearer ${challenge}`,
-      `${DPOP} ${challenge}, algs="${PROOF_ALGORITHMS.join(" ")}"`,
+      `Bearer ${parameters}`,
+      `${DPOP} ${parameters}, algs="${PROOF_ALGORITHMS.join(" ")}"`,
     ];
   }
 
   refusal(error: unknown): {
-    status: 401 | 503;
+    status: 401 | 403 | 503;
     headers: Record<string, string[]>;
   } {
-    if (!(error instanceof InvalidTokenError)) {
-      return { status: 503, headers: {} };
+    if (error instanceof InvalidTokenError) {
+      return {
+        status: 401,
+        headers: { "www-authenticate": this.challengeHeaders(error) },
+      };
     }
 
-    return {
-      status: 401,
-      headers: { "www-authenticate": this.challengeHeaders(error) },
-    };
+    if (error instanceof ForbiddenError) {
+      return {
+        status: 403,
+        headers: { "www-authenticate": this.challengeHeaders(error) },
+      };
+    }
+
+    return { status: 503, headers: {} };
   }
 
   challenge(error: unknown): Response {
@@ -176,10 +198,17 @@ export class Verifier {
       for (const value of values) held.append(name, value);
     }
 
-    return new Response(status === 401 ? "unauthorized" : "unavailable", {
-      status,
-      headers: held,
-    });
+    return new Response(
+      status === 401
+        ? "unauthorized"
+        : status === 403
+          ? "forbidden"
+          : "unavailable",
+      {
+        status,
+        headers: held,
+      },
+    );
   }
 
   async #authenticate(
@@ -349,4 +378,19 @@ function sameTarget(left: string, right: string): boolean {
   const held = tidy(left);
 
   return held !== "" && held === tidy(right);
+}
+
+function quoted(value: string): string {
+  let held = "";
+
+  for (const found of value) {
+    const code = found.charCodeAt(0);
+
+    held +=
+      code < 0x20 || code === 0x7f || found === '"' || found === "\\"
+        ? "'"
+        : found;
+  }
+
+  return held;
 }
