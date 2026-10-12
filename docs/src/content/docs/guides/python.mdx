@@ -1,0 +1,514 @@
+---
+title: Python apps
+description: Sign people in to a FastAPI, Django, or Flask app with masks, guard routes by privilege, accept tokens in an API, and enroll machines.
+---
+
+`masks-client` signs people in to a Python web app against a masks server. It covers what
+[`Masks::Rails`](/guides/rails/#client-mode) covers in a Rails app: the handshake, the sign-in, a
+session, organizations, privileges, and checking access tokens. It works with FastAPI, Django, and
+Flask, and every call in the client also has an `async` form.
+
+The package imports as `masks` and needs Python 3.10 or later. It is not on PyPI yet, so install it
+from the repository with the extra for your framework:
+
+```sh
+pip install "masks-client[fastapi] @ git+https://github.com/masksrb/masks#subdirectory=python"
+```
+
+| Module | |
+| --- | --- |
+| `masks` | The client: discovery, the handshake, the code flow, tokens, DPoP, introspection, token exchange, delegations, enrollment, and checking tokens. |
+| `masks.web` | The parts every framework shares: `Config`, the person, sessions, and credentials. |
+| `masks.fastapi`, `masks.django`, `masks.flask` | One integration for each framework. Install the `fastapi`, `django`, or `flask` extra to use it. |
+
+## Setting up
+
+Every framework takes the same `masks.web.Config`. These are the settings you usually need:
+
+| Setting | |
+| --- | --- |
+| `issuer` | The masks issuer, such as `https://acme.auth.example.com`. The issuer is the masks server, and the tenant on it, that signs people in. |
+| `resource` | The app's own absolute `https` URL. Sign-ins name it as their resource, and tokens for the app's API must name it as their audience. |
+| `secret` | At least 32 random bytes that seal the session, such as the output of `openssl rand -hex 32`. Django and Flask use the app's own secret key when you leave it out. |
+| `name` | The name the handshake gives the app. Defaults to `An app`. |
+| `scope` | What every sign-in asks for. Defaults to `openid profile email offline_access`. `offline_access` lets the app refresh tokens. |
+| `privileges` | See [privileges](#privileges). |
+| `prefix` | Where the routes answer. Defaults to `/auth`. |
+| `after_sign_in`, `after_sign_out` | Where a person goes after signing in or out. Both default to `/`. |
+| `sign_out_of_issuer` | Signs the person out of masks as well when they sign out of the app. |
+| `credentials` | Where the handshake keeps the app's credentials. Defaults to `masks.json` in the working directory. |
+| `manages` | Who may connect the app again or disconnect it, once it is connected. See [the handshake](#the-handshake). |
+| `cookie_secure` | Set it to `False` only in development on plain `http`. It drops the `Secure` flag from the cookie. |
+| `allow_plain_http` | Allows a plain `http` issuer on another machine, for a private network. An issuer on this machine is always allowed. |
+
+After you set up your framework below:
+
+1. Set `MASKS_ISSUER` to the tenant you sign in against.
+2. Start the app.
+3. Open `/auth/handshake`.
+
+### FastAPI
+
+`Masks.install` adds the routes, the session middleware, and the answers for refused requests.
+Each guard is a FastAPI dependency.
+
+```python
+import os
+from typing import Annotated
+
+from fastapi import Depends, FastAPI
+
+from masks.fastapi import Config, Masks, Person
+
+auth = Masks(Config(
+    issuer=os.environ["MASKS_ISSUER"],
+    resource="https://app.example.com",
+    name="Catalog",
+    secret=os.environ["SESSION_SECRET"],
+))
+
+app = FastAPI()
+auth.install(app)
+
+
+@app.get("/settings")
+async def settings(person: Annotated[Person, Depends(auth.require())]):
+    return {"name": person.name}
+```
+
+| | |
+| --- | --- |
+| `auth.person` | A dependency that gives the person, signed in or not. |
+| `auth.require(*privileges)` | Sends a signed-out visitor to sign in and back again, then checks each privilege. |
+| `auth.protect(*privileges)` | Checks an access token instead. See [accepting tokens](#accepting-tokens). |
+| `auth.require(*privileges, tokens=True)` | Checks a token when the request has an `Authorization` header or no session, and the session otherwise. |
+
+`auth.authorize(request, *privileges)` runs the same check inside a route. A Starlette app without
+FastAPI can still add `masks.fastapi.SessionMiddleware` and mount `auth.router.routes`.
+
+### Django
+
+1. Set `MASKS` in your settings to a `Config`, or to a dict of its settings:
+
+   ```python
+   MASKS = {
+       "issuer": os.environ["MASKS_ISSUER"],
+       "resource": "https://app.example.com",
+       "name": "Catalog",
+   }
+   ```
+
+2. Add the middleware after Django's own:
+
+   ```python
+   MIDDLEWARE = [
+       ...,
+       "django.middleware.csrf.CsrfViewMiddleware",
+       "masks.django.middleware.MasksMiddleware",
+   ]
+   ```
+
+3. Include the routes at the root of your URLs. The paths already start with `/auth`:
+
+   ```python
+   urlpatterns = [
+       path("", include("masks.django.urls")),
+       ...
+   ]
+   ```
+
+4. Guard a view with a decorator:
+
+   ```python
+   from masks.django import login_required, token_required
+
+   @login_required()
+   def settings(request):
+       return render(request, "settings.html", {"person": request.masked})
+   ```
+
+`login_required` and `token_required` take privileges like the FastAPI guards, and `login_required`
+takes `tokens=True`. `request.masked` is the person on every request. Django's CSRF check stays on
+for every route except back-channel logout, so a sign-out form needs `{% csrf_token %}`.
+
+### Flask
+
+`Masks` registers a blueprint with the routes. The session secret defaults to `app.secret_key`.
+
+```python
+from flask import Flask
+from masks.flask import Masks, masked
+
+app = Flask(__name__)
+app.secret_key = os.environ["SESSION_SECRET"]
+auth = Masks(app, issuer=os.environ["MASKS_ISSUER"], resource="https://app.example.com")
+
+
+@app.get("/settings")
+@auth.required()
+def settings():
+    return {"name": masked.name}
+```
+
+`auth.required(*privileges)` and `auth.protected(*privileges)` work like the FastAPI guards, and
+`masked` is the person for the current request. You can also pass a `Config` as `Masks(app, config)`.
+
+## The handshake
+
+The handshake connects your app to the masks server:
+
+1. The browser goes to the masks server's approval screen.
+2. You approve the app there.
+3. A one-time token comes back. The app redeems it by talking to masks directly, so the client
+   secret never passes through the browser.
+
+The handshake registers the app for `resource`, with these addresses:
+
+- `/auth/callback` as its redirect URI.
+- `/auth/handshake/callback` as the address masks sends people back to after the handshake.
+- `/auth/logout/return` as the address masks sends people back to after signing out of masks.
+- `/auth/logout/backchannel` for back-channel logout, when the issuer supports it.
+
+All of them must share the resource's origin, or the handshake refuses before the browser leaves.
+A credential store that cannot be written refuses the handshake before masks registers anything.
+
+The app writes its credentials to `masks.json` with file mode 600. Other places to keep them:
+
+| | |
+| --- | --- |
+| `FileCredentials(path)` | A file at another path. |
+| `MemoryCredentials()` | This process's memory, for tests. |
+| `StaticCredentials(client_id, client_secret)` | Credentials from your configuration. The app cannot disconnect with these. |
+| Your own class | Any object with `writable`, `read()`, `write(registration)`, and `clear()`. |
+
+A multi-tenant app sets `credentials` to a function that takes the request and returns the store for
+that tenant. `issuer`, `resource`, `name`, `organization`, and `base_url` take a function of the
+request in the same way. Derive them from something the app trusts, such as a tenant it looked up by
+host. Never use a value the browser sends without checking it.
+
+Once the app is connected, `/auth/handshake` shows the connection to somebody `manages` allows. It
+has buttons to connect again and to disconnect. Disconnecting deletes the registration at masks and
+the credentials.
+
+- A person who is not signed in goes to `after_sign_out`.
+- Anybody else is refused with `403`.
+- If `manages` is not set, everybody is refused.
+
+```python
+Config(..., manages="admin")
+Config(..., manages=lambda person: person.subject == os.environ["OWNER_SUB"])
+```
+
+Before each sign-in, the app checks that masks still knows it. When masks does not, the app forgets
+its credentials and the browser goes to the handshake again.
+
+## Signing in
+
+These routes answer under `prefix`:
+
+| Route | |
+| --- | --- |
+| `GET /auth` | Starts a sign-in. Takes `return_to`, `organization`, and `privilege`. |
+| `GET /auth/callback` | Finishes it. |
+| `GET /auth/session` | The signed-in person as JSON, for a single-page app. |
+| `GET /auth/avatar` | The person's photo, fetched from masks with their token. Takes `size`. |
+| `GET`, `POST`, or `DELETE /auth/logout` | Signs out. Takes `everywhere` to sign out of masks as well. |
+| `GET /auth/logout/return` | Where masks sends the browser back after signing out of masks. |
+| `POST /auth/logout/backchannel` | Takes a back-channel logout token from masks. |
+| `GET /auth/handshake` | Starts the handshake, or shows the connection. |
+| `POST /auth/handshake` | Connects the app again. |
+| `GET /auth/handshake/callback` | Finishes the handshake. |
+| `POST /auth/handshake/disconnect` or `DELETE /auth/handshake` | Disconnects the app. |
+| `GET /.well-known/oauth-protected-resource` | The app's resource metadata. See [accepting tokens](#accepting-tokens). |
+
+A sign-in is protected in these ways:
+
+- It uses PKCE, a `state`, and a `nonce`.
+- It checks the `iss` that masks sends back.
+- It checks the ID token's signature, audience, nonce, and `at_hash`.
+
+Up to five sign-ins can be in progress in one browser, each for an hour. A callback the browser did
+not start sends it to sign in again, at most once a minute. In between, it is refused with
+`invalid_state`. `return_to` is followed only to a path on the app.
+
+A JSON request that needs a sign-in gets `401` with `login_required` or `handshake_required` and the
+URL to send the browser to. A browser is redirected.
+
+The person has these fields and methods:
+
+| | |
+| --- | --- |
+| `signed_in` | Whether there is a sign-in and its token has not expired. |
+| `subject`, `name`, `nickname`, `email`, `email_verified` | Who signed in. |
+| `picture`, `avatars` | `picture` is the `picture` claim, then the photo, then the identicon. `avatars` holds each avatar URL. |
+| `tenant` | The tenant's `uuid`, `subdomain`, and `name`. |
+| `organization`, `organizations`, `has_role("owner")` | See [organizations](#organizations). |
+| `scopes`, `permits("catalog:read")` | The scopes the token holds. |
+| `privileges`, `has_privilege("admin")` | See [privileges](#privileges). |
+| `access_token` | The token to send to a resource server. |
+| `account_url` | The person's account page at masks. |
+| `person["groups"]` | Any other claim the sign-in kept. |
+| `to_dict()` | What `GET /auth/session` returns. It leaves out `access_token`. |
+
+A scope is a named permission that a token holds. A claim is one piece of information inside a
+token, such as the person's email address.
+
+`auth.login_url(return_to="/billing")` builds a link to sign in, and `auth.logout_url()` is the path
+a sign-out form posts to. In Django these are `masks.django.login_url` and the `/auth/logout` path.
+
+### Refreshing
+
+A token that expires within 30 seconds is refreshed with its refresh token. The person's name, photo,
+and organizations are read again from userinfo, the masks endpoint that describes the signed-in
+person.
+
+masks revokes a refresh token that is used twice, along with every token issued from it. So requests
+that arrive together with the same expired session share one refresh. Each process remembers the
+result for a minute and gives it to every request that brings the same refresh token.
+
+- A refresh that masks refuses signs the person out.
+- A refresh that masks does not answer, or answers with a `5xx` or `429` status, leaves the session
+  as it is. The person counts as signed out for that request only.
+
+### Signing out
+
+A sign-out revokes the refresh token and clears the session. With `sign_out_of_issuer`, or
+`everywhere`, the browser goes on to masks to end its session there. masks sends it back to
+`/auth/logout/return`, which sends it on to `after_sign_out`. That return works once, within an hour,
+and only in the browser that signed out.
+
+A sign-out request of any method is refused with `403` when its `Sec-Fetch-Site` or `Origin` header
+names another site. So a page on another site cannot sign anybody out.
+
+When masks ends a session itself, it sends a logout token to `/auth/logout/backchannel`. The app
+checks the token, then signs out the session it names, or every session of the person it names. The
+sign-out takes effect at that session's next request.
+
+- The app remembers each logout in `departures`, which is in memory by default. An app that runs as
+  several processes sets `departures` to a store they share, with `record` and `departed` methods.
+- Sessions kept on the server are also deleted from the store.
+- `logged_out`, a function that takes a `masks.Logout`, hears each logout as well.
+
+## Sessions
+
+The session lives in a cookie named `__Host-masks`, so no other host can set it. The cookie is
+sealed with AES-GCM under a key derived from `secret`. The browser cannot read the tokens inside
+it, and `/auth/session` leaves them out.
+
+- The cookie is `HttpOnly`, `Secure`, and `SameSite=Lax`.
+- The session is replaced at every sign-in.
+- It lasts 14 days, or `session_lifetime` in seconds.
+- To change the secret, pass a list with the new secret first. Sessions sealed with an older secret
+  still open, and are sealed with the new one the next time they change.
+
+A cookie holds about 4 KB. A person in many organizations can outgrow it, and the app then raises
+`ValueError`. To keep sessions on the server instead, set `sessions`:
+
+```python
+from masks.web import MemorySessionStore, ServerSessions
+
+Config(..., sessions=ServerSessions(MemorySessionStore()))
+```
+
+The cookie then holds only a random id. The store keeps each session under a hash of that id, so
+the ids cannot be read back from the store. `MemorySessionStore` keeps sessions in one process. A
+store of your own has these methods:
+
+| Method | |
+| --- | --- |
+| `read(key)` | Returns the session, or `None`. |
+| `write(key, data, expires_in, tags)` | Saves it. `tags` holds the person's `sub` and the session's `sid`. |
+| `delete(key)` | Removes it. |
+| `end(subject=..., sid=...)` | Removes every session with that `sid`, or every session of that `subject`. Back-channel logout calls it. |
+
+## Organizations
+
+When an app asks for the `organization` scope, a person signs in as a member of one
+[organization](/guides/organizations/). You can name the organization in two ways:
+
+- For every sign-in, with `organization`.
+- For one sign-in, with `/auth?organization=acme`.
+
+```python
+Config(
+    ...,
+    scope=["openid", "profile", "email", "offline_access", "organization"],
+    organization=lambda request: request.url.hostname.split(".")[0],
+)
+```
+
+| | |
+| --- | --- |
+| `person.organization` | The organization signed in to, with its `id`, `key`, `name`, and `role`. `None` if there is none. |
+| `person.has_role("owner", "billing")` | Whether the person holds one of those roles in it. |
+| `person.organizations` | Every organization the person has joined. Each one includes the role held there. |
+| `auth.login_url(organization="globex")` | Signs the person in again, naming another organization. |
+
+The app reads the organizations from userinfo at sign-in and at every refresh. So when a person's
+role changes, the app sees the change within the lifetime of one access token.
+
+## Privileges
+
+A privilege is a name for what a route needs. It can ask for:
+
+- scopes the person holds in masks
+- a role in the organization they signed in to
+- both
+
+```python
+Config(
+    ...,
+    privileges={
+        "admin": ["catalog:admin"],
+        "billing": {"role": ["owner", "billing"]},
+        "acme_admin": {"scope": ["catalog:admin"], "role": "owner", "organization": "acme"},
+    },
+)
+```
+
+- A list is a short way to write `{"scope": [...]}`.
+- `role` takes one role or several. Any one of them is enough.
+- `organization` limits the privilege to one organization, named by key or id.
+
+| | |
+| --- | --- |
+| The sign-in holds the privilege | The route runs. |
+| A scope is missing | The browser goes through masks once. It asks for the usual scopes and the privilege's scopes, then comes back to the page it was on. A JSON request gets `403` with `privilege_required`, the `privileges`, and the `login_url` to send the browser to. |
+| masks did not grant the scope on that trip | `403 insufficient_scope`. The person does not hold the scope, so the app does not send them through masks again for five minutes. |
+| A role or organization does not match | `403 insufficient_role` or `insufficient_organization`. The browser does not go through masks. |
+
+An ordinary sign-in never asks for privilege scopes. Asking for them never gives anyone more
+access, since masks puts a scope in the token only for a person who already holds it. The handshake
+registers the scopes of every privilege, so the issuer lets the app ask for them. Set `namespace`,
+such as `catalog:`, to register the namespace in place of each scope under it.
+
+A guard that names a privilege `privileges` does not define raises `ValueError` in the app. In a
+URL, the app ignores it.
+
+## Accepting tokens
+
+A resource server is an app that accepts access tokens from other apps. Guard an API route with
+`protect` in FastAPI, `token_required` in Django, or `protected` in Flask.
+
+- `resource` is the audience that tokens must name. The audience is the app a token is meant for.
+- `resource_scopes` lists the scopes the app accepts. A dict of scope to description also gives
+  masks the sentence its consent screen shows for each scope.
+
+```python
+@app.get("/api/items")
+async def items(person: Annotated[Person, Depends(auth.protect("read"))]):
+    return {"for": person.subject}
+```
+
+The guard takes the same [privileges](#privileges), including roles and organizations, and checks
+them against the token.
+
+| | |
+| --- | --- |
+| No token, or a token that fails a check | `401` with RFC 6750 challenges for `Bearer` and `DPoP`. |
+| A token that lacks a privilege | `403` with `insufficient_scope`, `insufficient_role`, or `insufficient_organization`. |
+| The issuer's keys or the replay store cannot be reached | `503` with no challenge, since the token may still be good. |
+
+Each challenge's `resource_metadata` points at `/.well-known/oauth-protected-resource`, which the
+routes serve.
+
+A token can be [bound to a key with DPoP](/guides/security/#binding-a-token-with-dpop). DPoP lets
+only the holder of a private key use the token. A bound token is accepted only as
+`Authorization: DPoP`, with a `DPoP` proof that:
+
+- is signed by the token's key
+- names this request's method, URL, and token
+- was made within the last minute
+- has not been seen before
+
+The URL is the resource's origin and the request's path, so a proxy in front of the app needs no
+other setting. Each process keeps the proofs it has seen in memory. To share them, set `replay` to an
+object whose `first(key, expires_in)` returns `True` only the first time it sees a key. FastAPI also
+takes a store whose `first` is a coroutine.
+
+The person for a token has `by_token` set, and its claims are the token's claims.
+
+An API with no browser sign-in can use `masks.Verifier` without `masks.web`. See the
+[package README](https://github.com/masksrb/masks/tree/main/python#checking-access-tokens).
+
+## Delegations
+
+A [delegation](/guides/connecting-via-sdk/#delegation) lets the app act as a person at a provider
+while they are away. Set `delegation_redirect_uri` to the address the provider's answer comes back
+to. The handshake then asks for `masks:delegate:` and registers that address.
+
+```python
+Config(..., delegation_redirect_uri="https://app.example.com/connect/callback")
+```
+
+```python
+from fastapi import Request
+from fastapi.responses import RedirectResponse
+
+import masks
+
+
+@app.get("/connect")
+async def connect(request: Request, person: Annotated[Person, Depends(auth.require())]):
+    client = await auth.client(request)
+    started = client.start_delegation("google", "https://app.example.com/connect/callback")
+    auth.session(request)["connecting"] = started.to_dict()
+
+    return RedirectResponse(started.url, status_code=303)
+
+
+@app.get("/connect/callback")
+async def connected(request: Request, person: Annotated[Person, Depends(auth.require())]):
+    client = await auth.client(request)
+    started = masks.AuthorizationRequest.from_dict(auth.session(request).pop("connecting"))
+    held = await client.finish_delegation(started, dict(request.query_params))
+    save(person.subject, held.connection, held.secret)
+```
+
+Keep the `secret` encrypted. To call the provider later, ask for its token:
+
+```python
+upstream = await client.delegated_token(secret, connection=connection)
+save(person.subject, connection, upstream.secret)
+```
+
+Save `upstream.secret` before anything else, since each call replaces the secret.
+
+- `masks.DelegationUnavailable` means masks or the provider did not answer, and nothing was lost.
+- `masks.DelegationRefused` means masks refused the call. `sign_in_again` is true when the person
+  has to sign in again.
+- Both carry the replacement in `secret` when masks had already replaced it.
+
+In Django and Flask, `masks.django.client(request)` and `auth.client()` return the synchronous
+`masks.Client`.
+
+## Machines and enrollment
+
+A Python program on a machine, such as an agent an app installs, signs in as itself with `masks.Client`.
+See the [package README](https://github.com/masksrb/masks/tree/main/python) for keys, client
+credentials, DPoP, and the device flow.
+
+An app that has claimed a [namespace](/guides/core-concepts/#namespaces), through `namespace` in its
+handshake, enrolls each machine without a browser:
+
+1. The app asks masks for an initial access token:
+
+   ```python
+   client = await auth.client(request)
+   enrollment = await client.enroll(scope=["catalog:agent"], client_name="nas")
+   ```
+
+2. The app hands `enrollment.initial_access_token` to the machine.
+3. The machine makes its own keys and registers with the token:
+
+   ```python
+   key = masks.Key.generate()
+   registration = masks.Client.register(
+       issuer,
+       masks.ClientMetadata(client_name="nas", token_endpoint_auth_method=masks.PRIVATE_KEY_JWT, jwks=key.jwks()),
+       enrollment.initial_access_token,
+   )
+   ```
+
+`await client.unenroll(machine_client_id)` archives the machine and revokes its tokens. See
+[enrolling a machine](/guides/features/#enrolling-a-machine).
