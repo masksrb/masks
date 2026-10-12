@@ -70,6 +70,7 @@ export interface Connection {
   label?: string;
   subject?: string;
   secret: string;
+  account?: string;
 }
 
 export interface Upstream {
@@ -144,7 +145,7 @@ export class Delegations {
       );
     }
 
-    const { token } = await answered(() =>
+    const { token, claims } = await answered(() =>
       this.client.complete(params, started),
     );
     const held = (token.delegations ?? []).find(
@@ -172,6 +173,7 @@ export class Delegations {
       label: held.label,
       subject: held.subject,
       secret: token.refresh_token,
+      account: claims?.sub,
     };
   }
 

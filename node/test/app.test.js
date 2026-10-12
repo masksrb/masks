@@ -727,3 +727,54 @@ test("an app masks no longer knows shakes hands again", async () => {
   assert.equal(again.headers.get("location"), "/auth/handshake");
   assert.equal(await held.credentials.read(), undefined);
 });
+
+test("a provider connection is finished only by the person who started it", async () => {
+  const held = await setup(
+    { masks: { delegations: "/connect/callback" } },
+    closers,
+  );
+  await signIn(held);
+
+  const started = await held.masks.startDelegation(
+    held.browser.request("/connect"),
+    "google",
+  );
+  held.browser.keep(started);
+  const back = new URL(held.fake.authorize(started.headers.get("location")));
+  const { connection, cookies } = await held.masks.finishDelegation(
+    held.browser.request(`${back.pathname}${back.search}`),
+  );
+
+  assert.equal(connection.connection, "connection-google");
+  assert.equal(connection.account, "ada");
+  assert.ok(cookies.length > 0);
+
+  const again = await held.masks.startDelegation(
+    held.browser.request("/connect"),
+    "google",
+  );
+  held.browser.keep(again);
+  const someoneElse = new URL(
+    held.fake.authorize(again.headers.get("location"), { sub: "eve" }),
+  );
+  await assert.rejects(
+    held.masks.finishDelegation(
+      held.browser.request(`${someoneElse.pathname}${someoneElse.search}`),
+    ),
+    (error) => error.code === "access_denied",
+  );
+
+  const stranger = new Browser(held.browser.handler);
+  await assert.rejects(
+    held.masks.finishDelegation(
+      stranger.request(`${back.pathname}${back.search}`),
+    ),
+    (error) => error.code === "invalid_state",
+  );
+
+  const signedOut = await held.masks.startDelegation(
+    stranger.request("/connect"),
+    "google",
+  );
+  assert.equal(signedOut.headers.get("location"), "/auth?return_to=%2Fconnect");
+});

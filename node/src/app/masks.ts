@@ -5,7 +5,12 @@ import {
   scopes as scopesOf,
   type Token,
 } from "../client.js";
-import { DELEGATION_SCOPE, Delegations } from "../delegations.js";
+import {
+  DELEGATION_SCOPE,
+  type Connection as DelegatedConnection,
+  DelegationRefused,
+  Delegations,
+} from "../delegations.js";
 import { InvalidTokenError, MasksError, UnavailableError } from "../errors.js";
 import { Handshake } from "../handshake.js";
 import type { IdTokenClaims, LogoutToken } from "../idtoken.js";
@@ -85,10 +90,20 @@ interface Pending {
   until: number;
 }
 
+interface DelegationPending {
+  verifier: string;
+  nonce?: string;
+  provider: string;
+  redirectURI: string;
+  account: string;
+  until: number;
+}
+
 interface FlowData {
   requests?: Record<string, Pending>;
   handshakes?: Record<string, { until: number }>;
   logouts?: Record<string, { until: number }>;
+  delegations?: Record<string, DelegationPending>;
   steppedUp?: { privileges: string[]; at: number };
   restartedAt?: number;
 }
@@ -608,6 +623,78 @@ export class Masks {
       client,
       `${visit.origin}${localPath(this.#options.delegations) ?? "/"}`,
     );
+  }
+
+  async startDelegation(
+    request: Request,
+    provider: string,
+    asked: { prompt?: string; maxAge?: number } = {},
+  ): Promise<Response> {
+    const visit = await this.#visit(request);
+    const masked = this.#masked(visit, await this.#current(visit));
+
+    if (!masked.signedIn || !masked.subject) {
+      return this.#refuse(visit, "login_required");
+    }
+
+    const started = await (await this.delegations(request)).start({
+      provider,
+      ...asked,
+    });
+    const flow = await this.#readFlow(visit);
+
+    flow.delegations = keep(flow.delegations, started.state, {
+      verifier: started.verifier,
+      nonce: started.nonce,
+      provider: started.provider,
+      redirectURI: started.redirectURI,
+      account: masked.subject,
+      until: now() + FLOW_LIFETIME,
+    });
+    await this.#writeFlow(visit, flow);
+
+    return redirect(started.url, visit.out);
+  }
+
+  async finishDelegation(
+    request: Request,
+  ): Promise<{ connection: DelegatedConnection; cookies: string[] }> {
+    const visit = await this.#visit(request);
+    const flow = await this.#readFlow(visit);
+    const state = visit.url.searchParams.get("state") ?? "";
+    const pending = claim(flow.delegations, state);
+
+    if (!pending) {
+      throw new DelegationRefused(
+        "invalid_state",
+        "that connection was not started by this browser, or it expired",
+      );
+    }
+
+    await this.#writeFlow(visit, flow);
+
+    const masked = this.#masked(visit, await this.#current(visit));
+
+    if (!masked.signedIn || masked.subject !== pending.account) {
+      throw new DelegationRefused(
+        "access_denied",
+        "that connection was started by somebody other than the person signed in",
+      );
+    }
+
+    const connection = await (await this.delegations(request)).finish(
+      visit.url.searchParams,
+      { ...pending, state, url: "" },
+    );
+
+    if (connection.account && connection.account !== pending.account) {
+      throw new DelegationRefused(
+        "access_denied",
+        "masks connected that provider for another account",
+      );
+    }
+
+    return { connection, cookies: visit.out };
   }
 
   async #start(visit: Visit): Promise<Response> {
