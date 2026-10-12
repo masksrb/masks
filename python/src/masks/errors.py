@@ -26,6 +26,22 @@ class Unavailable(MasksError):
     pass
 
 
+class DelegationRefused(Error):
+    def __init__(self, code: str, description: str = "", *, status: int | None = None, secret: str = "") -> None:
+        super().__init__(code, description, status=status)
+        self.secret = secret
+
+    @property
+    def sign_in_again(self) -> bool:
+        return self.code in ("login_required", "interaction_required")
+
+
+class DelegationUnavailable(Unavailable):
+    def __init__(self, message: str, *, secret: str = "") -> None:
+        super().__init__(message)
+        self.secret = secret
+
+
 class InsecureURL(MasksError):
     pass
 

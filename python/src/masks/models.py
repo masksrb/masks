@@ -61,6 +61,8 @@ class Metadata:
     grant_types_supported: list[str] = field(default_factory=list)
     token_endpoint_auth_methods_supported: list[str] = field(default_factory=list)
     dpop_signing_alg_values_supported: list[str] = field(default_factory=list)
+    authorization_response_iss_parameter_supported: bool = False
+    backchannel_logout_supported: bool = False
 
     ENDPOINTS = (
         "authorization_endpoint",
@@ -93,6 +95,9 @@ class Metadata:
         return cls(
             issuer=str(data.get("issuer") or ""),
             tenant=Tenant(**{key: str(value) for key, value in _known(Tenant, tenant).items()}),
+            authorization_response_iss_parameter_supported=data.get("authorization_response_iss_parameter_supported")
+            is True,
+            backchannel_logout_supported=data.get("backchannel_logout_supported") is True,
             **held,
         )
 
@@ -136,10 +141,13 @@ class Token:
     expires_in: int | None = None
     expires_at: float | None = None
     issued_token_type: str | None = None
+    delegations: list[dict[str, Any]] | None = None
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Token:
         held = _known(cls, data)
+        found = held.get("delegations")
+        held["delegations"] = [item for item in found if isinstance(item, dict)] if isinstance(found, list) else None
         token = cls(**held)
 
         if token.expires_at is None and isinstance(token.expires_in, int) and token.expires_in > 0:

@@ -1,8 +1,19 @@
 from .auth import Auth
 from .client import AsyncClient, Client
 from .dpop import DPOP, proof
-from .errors import Error, ForeignOrigin, InsecureURL, InvalidToken, MasksError, Unavailable, has_code
+from .errors import (
+    DelegationRefused,
+    DelegationUnavailable,
+    Error,
+    ForeignOrigin,
+    InsecureURL,
+    InvalidToken,
+    MasksError,
+    Unavailable,
+    has_code,
+)
 from .flows import adiscover, adiscover_resource, discover, discover_resource
+from .handshake import Handshake, HandshakeRequest
 from .keys import Key
 from .models import (
     ACCESS_TOKEN_TYPE,
@@ -28,6 +39,15 @@ from .models import (
     Tenant,
     Token,
 )
+from .oidc import (
+    DEFAULT_SCOPE,
+    AuthorizationRequest,
+    HeldConnection,
+    Logout,
+    SignIn,
+    Upstream,
+    organization_key,
+)
 from .replay import AsyncReplayStore, MemoryReplayStore, ReplayStore
 from .sources import AsyncCachedTokenSource, AsyncTokenSource, CachedTokenSource, TokenSource
 from .verifier import AsyncVerifier, Claims, Verifier
@@ -36,6 +56,7 @@ __all__ = [
     "ACCESS_TOKEN_TYPE",
     "CLIENT_SECRET_BASIC",
     "CLIENT_SECRET_POST",
+    "DEFAULT_SCOPE",
     "DPOP",
     "GRANT_CLIENT_CREDENTIALS",
     "GRANT_DEVICE_CODE",
@@ -52,34 +73,44 @@ __all__ = [
     "AsyncVerifier",
     "Auth",
     "AuthMethod",
+    "AuthorizationRequest",
     "CachedTokenSource",
     "Claims",
     "Client",
     "ClientMetadata",
+    "DelegationRefused",
+    "DelegationUnavailable",
     "DeviceAuthorization",
     "Enrollment",
     "Error",
     "ForeignOrigin",
+    "Handshake",
+    "HandshakeRequest",
+    "HeldConnection",
     "InsecureURL",
     "Introspection",
     "InvalidToken",
     "Issuer",
     "Key",
+    "Logout",
     "MasksError",
     "MemoryReplayStore",
     "Metadata",
     "Registration",
     "ReplayStore",
     "ResourceMetadata",
+    "SignIn",
     "Tenant",
     "Token",
     "TokenSource",
     "Unavailable",
+    "Upstream",
     "Verifier",
     "adiscover",
     "adiscover_resource",
     "discover",
     "discover_resource",
     "has_code",
+    "organization_key",
     "proof",
 ]

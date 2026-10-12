@@ -4,6 +4,7 @@ import json
 import time
 from base64 import b64encode
 from collections.abc import Callable, Sequence
+from dataclasses import replace
 from typing import Any
 from urllib.parse import quote, quote_plus, urlencode
 
@@ -11,19 +12,29 @@ import anyio
 import httpx
 
 from .auth import Auth
-from .dpop import proof
-from .errors import Error, has_code
+from .dpop import DPOP, proof
+from .errors import (
+    DelegationRefused,
+    DelegationUnavailable,
+    Error,
+    InvalidToken,
+    MasksError,
+    Unavailable,
+    has_code,
+)
 from .flows import (
     Flow,
     arun,
     decoded,
     default_async_http,
     default_http,
+    required,
     run,
     same_origin,
     send_json,
 )
 from .keys import Key, random_id
+from .keyset import KeySet, half_hash, same
 from .models import (
     ACCESS_TOKEN_TYPE,
     CLIENT_SECRET_BASIC,
@@ -44,11 +55,41 @@ from .models import (
     Registration,
     Token,
 )
+from .oidc import (
+    CHALLENGE_METHOD,
+    DEFAULT_SCOPE,
+    DELEGATE_SCOPE,
+    LOGOUT_EVENT,
+    OPENID,
+    AuthorizationRequest,
+    HeldConnection,
+    Logout,
+    SignIn,
+    Upstream,
+    code_challenge,
+    code_verifier,
+    flattened,
+    organization_key,
+)
 from .sources import AsyncCachedTokenSource, AsyncTokenSource, CachedTokenSource, TokenSource
 
 ASSERTION_TYPE = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer"
 ASSERTION_LIFETIME = 60
 DEVICE_PAUSE = 5.0
+LOGOUT_LEEWAY = 60
+DELEGATION_REFUSALS = frozenset(
+    {
+        "invalid_grant",
+        "insufficient_scope",
+        "invalid_target",
+        "unauthorized_client",
+        "access_denied",
+        "login_required",
+        "interaction_required",
+        "consent_required",
+        "invalid_scope",
+    }
+)
 
 Form = list[tuple[str, str]]
 
@@ -113,6 +154,93 @@ class _Flows:
         self.method: AuthMethod = method or (
             CLIENT_SECRET_BASIC if secret else PRIVATE_KEY_JWT if key is not None else NO_AUTH
         )
+        self.keys = KeySet(issuer)
+
+    def start(
+        self,
+        redirect_uri: str,
+        *,
+        scope: Sequence[str] = DEFAULT_SCOPE,
+        resource: Sequence[str] = (),
+        state: str | None = None,
+        nonce: str | None = None,
+        prompt: str | None = None,
+        max_age: int | None = None,
+        organization: str | None = None,
+    ) -> AuthorizationRequest:
+        if not redirect_uri:
+            raise ValueError("masks: a sign-in needs the redirect_uri masks sends the browser back to")
+
+        scopes = words(scope)
+        resources = words(resource)
+        verifier = code_verifier()
+        state = state or random_id()
+        nonce = (nonce or random_id()) if OPENID in scopes else ""
+        pairs: Form = [
+            ("response_type", "code"),
+            ("client_id", self.client_id),
+            ("redirect_uri", redirect_uri),
+            ("scope", " ".join(scopes)),
+            ("state", state),
+            ("code_challenge", code_challenge(verifier)),
+            ("code_challenge_method", CHALLENGE_METHOD),
+        ]
+
+        if nonce:
+            pairs.append(("nonce", nonce))
+
+        pairs.extend(("resource", value) for value in resources)
+
+        if prompt:
+            pairs.append(("prompt", prompt))
+
+        pairs += seconds(max_age, "max_age") if max_age else []
+        named = organization_key(organization)
+
+        if named:
+            pairs.append(("organization", named))
+
+        if self.dpop is not None:
+            pairs.append(("dpop_jkt", self.dpop.thumbprint))
+
+        return AuthorizationRequest(
+            url=f"{self._endpoint('authorization_endpoint')}?{urlencode(pairs)}",
+            state=state,
+            redirect_uri=redirect_uri,
+            verifier=verifier,
+            nonce=nonce,
+            scope=" ".join(scopes),
+            resource=tuple(resources),
+        )
+
+    def start_delegation(
+        self, provider: str, redirect_uri: str, *, prompt: str | None = None, max_age: int | None = None
+    ) -> AuthorizationRequest:
+        if not provider or any(character.isspace() for character in provider):
+            raise ValueError("masks: a delegation names one provider")
+
+        started = self.start(
+            redirect_uri,
+            scope=[OPENID, "offline_access", f"{DELEGATE_SCOPE}{provider}"],
+            prompt=prompt,
+            max_age=max_age,
+        )
+
+        return replace(started, provider=provider)
+
+    def end_session_url(self, *, post_logout_redirect_uri: str = "", state: str = "", id_token_hint: str = "") -> str:
+        pairs: Form = [("client_id", self.client_id)]
+
+        if id_token_hint:
+            pairs.append(("id_token_hint", id_token_hint))
+
+        if post_logout_redirect_uri:
+            pairs.append(("post_logout_redirect_uri", post_logout_redirect_uri))
+
+        if state:
+            pairs.append(("state", state))
+
+        return f"{self._endpoint('end_session_endpoint')}?{urlencode(pairs)}"
 
     def _endpoint(self, named: str) -> str:
         value = str(getattr(self.issuer.metadata, named))
@@ -235,6 +363,155 @@ class _Flows:
             form.append(("token_type_hint", hint))
 
         yield from self._post(self._endpoint("revocation_endpoint"), form, False)
+
+    def _complete(self, started: AuthorizationRequest, params: Any) -> Flow[SignIn]:
+        held = flattened(params)
+
+        if held.get("error"):
+            raise Error(held["error"], held.get("error_description", ""))
+
+        if not started.state or not same(held.get("state"), started.state):
+            raise Error("invalid_state", "that answer is for a sign-in this browser did not start")
+
+        named = held.get("iss", "")
+
+        if named and named.rstrip("/") != self.issuer.url:
+            raise Error("invalid_issuer", f"that answer came from {named}, not {self.issuer.url}")
+
+        if not named and self.issuer.metadata.authorization_response_iss_parameter_supported:
+            raise Error("invalid_issuer", "that answer does not name the issuer it came from")
+
+        if not held.get("code"):
+            raise Error("invalid_request", "that answer carries no code")
+
+        token = yield from self._token(
+            [
+                ("grant_type", "authorization_code"),
+                ("code", held["code"]),
+                ("redirect_uri", started.redirect_uri),
+                ("code_verifier", started.verifier),
+                *asked((), started.resource),
+            ]
+        )
+        claims: dict[str, Any] = {}
+
+        if OPENID in started.scopes:
+            if not token.id_token:
+                raise InvalidToken("masks: the token endpoint answered without an ID token")
+
+            claims = yield from self._id_token(token.id_token, started.nonce, token.access_token)
+
+        return SignIn(token=token, claims=claims)
+
+    def _id_token(self, id_token: str, nonce: str, access_token: str) -> Flow[dict[str, Any]]:
+        claims, algorithm = yield from self.keys.verify(
+            id_token, accepted=("jwt", ""), audience=self.client_id, require=("iss", "sub", "aud", "exp", "iat")
+        )
+        audience = claims["aud"]
+
+        if isinstance(audience, list) and len(audience) > 1 and claims.get("azp") != self.client_id:
+            raise InvalidToken("masks: that ID token was issued to several clients and names another")
+
+        if nonce and not same(claims.get("nonce"), nonce):
+            raise InvalidToken("masks: that ID token was issued for another sign-in")
+
+        if "at_hash" in claims and not same(claims["at_hash"], half_hash(access_token, algorithm)):
+            raise InvalidToken("masks: that ID token was issued with another access token")
+
+        return claims
+
+    def _userinfo(self, token: Token | str) -> Flow[dict[str, Any]]:
+        held = token if isinstance(token, Token) else Token(access_token=token)
+        endpoint = self._endpoint("userinfo_endpoint")
+        nonce = ""
+
+        for attempt in (0, 1):
+            headers = {"Accept": "application/json"}
+
+            if held.bound:
+                if self.dpop is None:
+                    raise ValueError("masks: a DPoP token needs the key it is held to")
+
+                headers["Authorization"] = f"{DPOP} {held.access_token}"
+                headers["DPoP"] = proof(self.dpop, "GET", endpoint, held.access_token, nonce)
+            else:
+                headers["Authorization"] = f"Bearer {held.access_token}"
+
+            response = yield httpx.Request("GET", endpoint, headers=headers)
+            wanted = response.headers.get("DPoP-Nonce", "")
+
+            if held.bound and attempt == 0 and wanted and response.status_code == 401 and asks_for_nonce(response):
+                nonce = wanted
+                continue
+
+            return required(response)
+
+        raise AssertionError("unreachable")
+
+    def _logout(self, logout_token: str) -> Flow[Logout]:
+        claims, _ = yield from self.keys.verify(
+            logout_token, accepted=("logout+jwt",), audience=self.client_id, require=("iss", "aud", "iat", "jti")
+        )
+        events = claims.get("events")
+
+        if "nonce" in claims:
+            raise InvalidToken("masks: that logout token carries a nonce, so it is an ID token")
+
+        if not claims.get("sub") and not claims.get("sid"):
+            raise InvalidToken("masks: that logout token names neither a subject nor a session")
+
+        if not isinstance(claims["iat"], (int, float)) or claims["iat"] > time.time() + LOGOUT_LEEWAY:
+            raise InvalidToken("masks: that logout token was issued in the future")
+
+        if not isinstance(events, dict) or not isinstance(events.get(LOGOUT_EVENT), dict):
+            raise InvalidToken("masks: that token is not about a logout")
+
+        return Logout(
+            subject=str(claims.get("sub") or ""),
+            sid=str(claims.get("sid") or ""),
+            id=str(claims["jti"]),
+            issued_at=int(claims["iat"]),
+            raw=claims,
+        )
+
+    def _finish_delegation(self, started: AuthorizationRequest, params: Any) -> Flow[HeldConnection]:
+        if not started.provider:
+            raise ValueError("masks: that request did not start a delegation")
+
+        signed = yield from self._complete(started, params)
+        held = next((item for item in signed.token.delegations or [] if item.get("provider") == started.provider), None)
+
+        if held is None:
+            raise DelegationRefused("access_denied", f"masks connected nothing for {started.provider}")
+
+        if not signed.token.refresh_token:
+            raise DelegationRefused("invalid_grant", "masks issued no refresh token to keep the connection with")
+
+        return HeldConnection(
+            connection=str(held.get("connection") or ""),
+            provider=str(held.get("provider") or ""),
+            provider_name=str(held.get("provider_name") or ""),
+            label=str(held.get("label") or ""),
+            subject=str(held.get("subject") or ""),
+            secret=signed.token.refresh_token,
+        )
+
+    def _delegated_token(self, secret: str, connection: str, rotated: list[str]) -> Flow[Upstream]:
+        if not secret or not connection:
+            raise ValueError("masks: an upstream token needs the connection's secret and id")
+
+        refreshed = yield from self._refresh(secret, (), ())
+        rotated[0] = refreshed.refresh_token or secret
+        released = yield from self._exchange(
+            refreshed.access_token, ACCESS_TOKEN_TYPE, "", "", UPSTREAM_ACCESS_TOKEN_TYPE, [connection], (), None, ()
+        )
+
+        return Upstream(
+            access_token=released.access_token,
+            expires_at=released.expires_at,
+            scope=released.scope,
+            secret=rotated[0],
+        )
 
     def _introspect(self, token: str, hint: str) -> Flow[Introspection]:
         if not token:
@@ -377,6 +654,27 @@ def owned(issuer: Issuer, held: Registration) -> None:
     same_origin(issuer, held.registration_client_uri)
 
 
+def delegation_failure(error: Exception, secret: str) -> Exception:
+    if isinstance(error, (DelegationRefused, DelegationUnavailable)):
+        return error
+
+    if isinstance(error, Error):
+        if error.code == "invalid_client":
+            return error
+
+        busy = error.code == "temporarily_unavailable" or (error.status or 0) >= 500 or error.status == 429
+
+        if busy and error.code not in DELEGATION_REFUSALS:
+            return DelegationUnavailable(f"masks answered {error.status}: {error}", secret=secret)
+
+        return DelegationRefused(error.code, error.description, status=error.status, secret=secret)
+
+    if isinstance(error, (httpx.HTTPError, Unavailable)):
+        return DelegationUnavailable(f"masks: {error}", secret=secret)
+
+    return error
+
+
 def expired() -> Error:
     return Error("expired_token", "the code expired before anyone approved it")
 
@@ -462,6 +760,32 @@ class Client(_Flows):
 
     def introspect(self, token: str, hint: str = "") -> Introspection:
         return run(self._introspect(token, hint), self.http)
+
+    def complete(self, started: AuthorizationRequest, params: Any) -> SignIn:
+        return run(self._complete(started, params), self.http)
+
+    def verify_id_token(self, id_token: str, *, nonce: str = "", access_token: str = "") -> dict[str, Any]:
+        return run(self._id_token(id_token, nonce, access_token), self.http)
+
+    def userinfo(self, token: Token | str) -> dict[str, Any]:
+        return run(self._userinfo(token), self.http)
+
+    def verify_logout_token(self, logout_token: str) -> Logout:
+        return run(self._logout(logout_token), self.http)
+
+    def finish_delegation(self, started: AuthorizationRequest, params: Any) -> HeldConnection:
+        try:
+            return run(self._finish_delegation(started, params), self.http)
+        except (MasksError, httpx.HTTPError) as error:
+            raise delegation_failure(error, "") from error
+
+    def delegated_token(self, secret: str, *, connection: str) -> Upstream:
+        rotated = [secret]
+
+        try:
+            return run(self._delegated_token(secret, connection, rotated), self.http)
+        except (MasksError, httpx.HTTPError) as error:
+            raise delegation_failure(error, rotated[0] if rotated[0] != secret else "") from error
 
     def exchange(
         self,
@@ -625,6 +949,32 @@ class AsyncClient(_Flows):
 
     async def introspect(self, token: str, hint: str = "") -> Introspection:
         return await arun(self._introspect(token, hint), self.http)
+
+    async def complete(self, started: AuthorizationRequest, params: Any) -> SignIn:
+        return await arun(self._complete(started, params), self.http)
+
+    async def verify_id_token(self, id_token: str, *, nonce: str = "", access_token: str = "") -> dict[str, Any]:
+        return await arun(self._id_token(id_token, nonce, access_token), self.http)
+
+    async def userinfo(self, token: Token | str) -> dict[str, Any]:
+        return await arun(self._userinfo(token), self.http)
+
+    async def verify_logout_token(self, logout_token: str) -> Logout:
+        return await arun(self._logout(logout_token), self.http)
+
+    async def finish_delegation(self, started: AuthorizationRequest, params: Any) -> HeldConnection:
+        try:
+            return await arun(self._finish_delegation(started, params), self.http)
+        except (MasksError, httpx.HTTPError) as error:
+            raise delegation_failure(error, "") from error
+
+    async def delegated_token(self, secret: str, *, connection: str) -> Upstream:
+        rotated = [secret]
+
+        try:
+            return await arun(self._delegated_token(secret, connection, rotated), self.http)
+        except (MasksError, httpx.HTTPError) as error:
+            raise delegation_failure(error, rotated[0] if rotated[0] != secret else "") from error
 
     async def exchange(
         self,

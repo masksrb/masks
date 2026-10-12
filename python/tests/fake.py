@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
 import secrets
 import time
 from dataclasses import dataclass, field
 from typing import Any
-from urllib.parse import parse_qsl, unquote_plus
+from urllib.parse import parse_qsl, unquote_plus, urlencode, urlsplit
 
 import httpx
 import jwt
@@ -15,7 +16,7 @@ from jwt.algorithms import RSAAlgorithm
 
 from masks.client import ASSERTION_TYPE
 from masks.dpop import PROOF_TYPE
-from masks.keys import thumbprint
+from masks.keys import encode, thumbprint
 from masks.models import (
     ACCESS_TOKEN_TYPE,
     GRANT_CLIENT_CREDENTIALS,
@@ -28,6 +29,35 @@ from masks.verifier import PROOF_ALGORITHMS, typed
 
 ISSUER = "https://id.example"
 AUDIENCE = "https://files.example"
+LOGOUT_EVENT = "http://schemas.openid.net/event/backchannel-logout"
+
+PEOPLE: dict[str, dict[str, Any]] = {
+    "ada": {
+        "sub": "ada",
+        "name": "Ada Lovelace",
+        "preferred_username": "ada",
+        "email": "ada@example.com",
+        "email_verified": True,
+        "masks:avatars": {
+            "photo": f"{ISSUER}/avatars/ada/photo",
+            "identicon": f"{ISSUER}/avatars/ada/identicon",
+        },
+        "orgs": [
+            {"id": "o-1", "key": "acme", "name": "Acme", "role": "owner"},
+            {"id": "o-2", "key": "globex", "name": "Globex", "role": "member"},
+        ],
+        "scopes": {"catalog:read", "catalog:admin"},
+    },
+    "bob": {
+        "sub": "bob",
+        "name": "Bob",
+        "preferred_username": "bob",
+        "email": "bob@example.com",
+        "email_verified": False,
+        "orgs": [{"id": "o-1", "key": "acme", "name": "Acme", "role": "member"}],
+        "scopes": {"catalog:read"},
+    },
+}
 
 
 @dataclass
@@ -71,6 +101,13 @@ class Fake:
         self.unenrolled: list[str] = []
         self.introspected_issuer = ISSUER
         self.exchanged: list[dict[str, str]] = []
+        self.codes: dict[str, dict[str, Any]] = {}
+        self.grants: dict[str, dict[str, Any]] = {}
+        self.handshakes: dict[str, str] = {}
+        self.userinfo_calls = 0
+        self.photo = b"\x89PNG fake photo"
+        self.photo_type = "image/png"
+        self.unavailable_tokens = False
         self.pairs: list[tuple[str, str]] = []
 
     def transport(self) -> httpx.MockTransport:
@@ -94,6 +131,8 @@ class Fake:
             ("POST", "/register"): self.register,
             ("POST", "/introspect"): self.introspect,
             ("POST", "/enrollments"): self.enroll,
+            ("GET", "/userinfo"): self.userinfo,
+            ("GET", "/avatars/ada/photo"): self.avatar,
         }
 
         if (request.method, path) in routes:
@@ -119,6 +158,12 @@ class Fake:
                 "registration_endpoint": f"{ISSUER}/register",
                 "introspection_endpoint": f"{ISSUER}/introspect",
                 "enrollment_endpoint": f"{ISSUER}/enrollments",
+                "authorization_endpoint": f"{ISSUER}/authorize",
+                "userinfo_endpoint": f"{ISSUER}/userinfo",
+                "end_session_endpoint": f"{ISSUER}/logout",
+                "handshake_endpoint": f"{ISSUER}/handshake",
+                "authorization_response_iss_parameter_supported": True,
+                "backchannel_logout_supported": True,
                 "tenant": {"uuid": "t-1", "subdomain": "fake", "name": "Fake"},
             },
         )
@@ -301,6 +346,12 @@ class Fake:
 
         grant = form.get("grant_type")
 
+        if self.unavailable_tokens:
+            return oauth_error(503, "temporarily_unavailable")
+
+        if grant == "authorization_code":
+            return self.redeem(form, client_id, jkt)
+
         if grant == GRANT_REFRESH_TOKEN:
             presented = form.get("refresh_token", "")
 
@@ -308,6 +359,9 @@ class Fake:
                 return oauth_error(400, "invalid_grant")
 
             client.refresh.discard(presented)
+
+            if presented in self.grants:
+                return self.signed_in(self.grants.pop(presented), client_id, jkt, client)
         elif grant == GRANT_DEVICE_CODE:
             if self.pending > 0:
                 self.pending -= 1
@@ -489,16 +543,17 @@ class Fake:
 
         metadata = json.loads(request.content or b"{}")
         token = secrets.token_urlsafe(16)
+        method = metadata.get("token_endpoint_auth_method", "client_secret_basic")
+        secret = secrets.token_urlsafe(16) if method.startswith("client_secret") else ""
 
         self.add(
             client_id,
-            FakeClient(
-                method=metadata.get("token_endpoint_auth_method", "client_secret_basic"),
-                jwks=metadata.get("jwks") or {},
-                scope=metadata.get("scope", ""),
-            ),
+            FakeClient(method=method, secret=secret, jwks=metadata.get("jwks") or {}, scope=metadata.get("scope", "")),
         )
         self.registrations[client_id] = token
+
+        if secret:
+            metadata["client_secret"] = secret
 
         uri = (
             f"https://elsewhere.example/register/{client_id}" if self.foreign_uri else f"{ISSUER}/register/{client_id}"
@@ -531,3 +586,177 @@ class Fake:
         return respond(
             200, {"client_id": client_id, "token_endpoint_auth_method": client.method, "scope": client.scope}
         )
+
+    def authorize(self, url: str, subject: str = "ada", organization: str | None = None) -> str:
+        held = urlsplit(url)
+        assert f"{held.scheme}://{held.netloc}{held.path}" == f"{ISSUER}/authorize"
+        params = dict(parse_qsl(held.query))
+        resources = [value for name, value in parse_qsl(held.query) if name == "resource"]
+        assert params["response_type"] == "code"
+        assert params["code_challenge_method"] == "S256"
+        person = PEOPLE[subject]
+        asked = params["scope"].split()
+        granted = [
+            scope
+            for scope in asked
+            if ":" not in scope or scope in person["scopes"] or scope.startswith("masks:delegate:")
+        ]
+        chosen = organization or params.get("organization")
+        org = (
+            next((held for held in person["orgs"] if held["key"] == chosen), None) if "organization" in asked else None
+        )
+        code = secrets.token_urlsafe(16)
+        self.codes[code] = {
+            "client_id": params["client_id"],
+            "redirect_uri": params["redirect_uri"],
+            "challenge": params["code_challenge"],
+            "nonce": params.get("nonce"),
+            "scope": " ".join(granted),
+            "subject": subject,
+            "org": org,
+            "resource": resources,
+            "dpop_jkt": params.get("dpop_jkt"),
+            "sid": secrets.token_urlsafe(8),
+        }
+        query = urlencode({"code": code, "state": params["state"], "iss": ISSUER})
+
+        return f"{params['redirect_uri']}?{query}"
+
+    def redeem(self, form: dict[str, str], client_id: str, jkt: str) -> httpx.Response:
+        grant = self.codes.pop(form.get("code", ""), None)
+
+        if grant is None or grant["client_id"] != client_id or grant["redirect_uri"] != form.get("redirect_uri"):
+            return oauth_error(400, "invalid_grant")
+
+        if encode(hashlib.sha256(form.get("code_verifier", "").encode()).digest()) != grant["challenge"]:
+            return oauth_error(400, "invalid_grant")
+
+        if grant["dpop_jkt"] and grant["dpop_jkt"] != jkt:
+            return oauth_error(400, "invalid_dpop_proof")
+
+        return self.signed_in(grant, client_id, jkt, self.clients[client_id], id_token=True)
+
+    def signed_in(
+        self, grant: dict[str, Any], client_id: str, jkt: str, client: FakeClient, id_token: bool = False
+    ) -> httpx.Response:
+        scope = grant["scope"]
+        access = self.access_token(
+            client_id, scope, jkt, subject=grant["subject"], audience=grant["resource"] or AUDIENCE
+        )
+        body: dict[str, Any] = {
+            "access_token": access,
+            "token_type": "DPoP" if jkt else "Bearer",
+            "expires_in": 3600,
+            "scope": scope,
+        }
+
+        if id_token and "openid" in scope.split():
+            body["id_token"] = self.id_token(grant, client_id, access)
+
+        if "offline_access" in scope.split():
+            refresh = secrets.token_urlsafe(16)
+            client.refresh.add(refresh)
+            self.grants[refresh] = grant
+            body["refresh_token"] = refresh
+
+        delegated = [
+            scope.removeprefix("masks:delegate:") for scope in scope.split() if scope.startswith("masks:delegate:")
+        ]
+
+        if delegated:
+            body["delegations"] = [
+                {
+                    "connection": "c0ffee00-0000-4000-8000-000000000001",
+                    "provider": name,
+                    "provider_name": "GitHub",
+                    "label": "ada@github",
+                    "subject": "1234",
+                }
+                for name in delegated
+            ]
+
+        return respond(200, body)
+
+    def id_token(self, grant: dict[str, Any], client_id: str, access: str) -> str:
+        person = PEOPLE[grant["subject"]]
+        now = int(time.time())
+        digest = hashlib.sha256(access.encode()).digest()
+        claims = {
+            "iss": ISSUER,
+            "sub": grant["subject"],
+            "aud": client_id,
+            "exp": now + 900,
+            "iat": now,
+            "nonce": grant["nonce"],
+            "sid": grant["sid"],
+            "at_hash": encode(digest[:16]),
+            "tenant": {"uuid": "t-1", "subdomain": "fake", "name": "Fake"},
+            "name": person["name"],
+            "masks:avatars": person.get("masks:avatars"),
+            "org": grant["org"],
+        }
+
+        return self.issue({key: value for key, value in claims.items() if value is not None}, typ="JWT")
+
+    def logout_token(self, client_id: str, subject: str = "", sid: str = "", **changes: Any) -> str:
+        now = int(time.time())
+        claims = {
+            "iss": ISSUER,
+            "aud": client_id,
+            "iat": now,
+            "exp": now + 120,
+            "jti": secrets.token_urlsafe(8),
+            "events": {LOGOUT_EVENT: {}},
+            "sub": subject or None,
+            "sid": sid or None,
+            **changes,
+        }
+
+        return self.issue({key: value for key, value in claims.items() if value is not None}, typ="logout+jwt")
+
+    def userinfo(self, request: httpx.Request) -> httpx.Response:
+        self.userinfo_calls += 1
+        scheme, _, token = request.headers.get("Authorization", "").partition(" ")
+        claims = self.presented(token)
+
+        if claims is None or token in self.revoked:
+            return oauth_error(401, "invalid_token")
+
+        bound = claims.get("cnf", {}).get("jkt")
+
+        if bool(bound) != (scheme == "DPoP"):
+            return oauth_error(401, "invalid_token")
+
+        if bound:
+            presented = request.headers.get("DPoP", "")
+            header = jwt.get_unverified_header(presented)
+            proof = jwt.decode(presented, jwt.PyJWK(header["jwk"]).key, algorithms=[header["alg"]])
+
+            if thumbprint(header["jwk"]) != bound or proof["htm"] != "GET" or proof["htu"] != f"{ISSUER}/userinfo":
+                return oauth_error(401, "invalid_dpop_proof")
+
+        person = PEOPLE.get(claims["sub"])
+
+        if person is None:
+            return respond(200, {"sub": claims["sub"]})
+
+        return respond(200, {key: value for key, value in person.items() if key != "scopes"})
+
+    def avatar(self, request: httpx.Request) -> httpx.Response:
+        if self.presented(request.headers.get("Authorization", "").partition(" ")[2]) is None:
+            return respond(401)
+
+        return httpx.Response(200, content=self.photo, headers={"Content-Type": self.photo_type})
+
+    def handshake(self, url: str, client_id: str = "app") -> str:
+        held = urlsplit(url)
+        assert f"{held.scheme}://{held.netloc}{held.path}" == f"{ISSUER}/handshake"
+        params = dict(parse_qsl(held.query))
+        redirect_uris = [value for name, value in parse_qsl(held.query) if name == "redirect_uris"]
+        assert redirect_uris and params["resource"] and params["scope"]
+        token = secrets.token_urlsafe(16)
+        self.initial[token] = client_id
+        self.handshakes[client_id] = params["scope"]
+        query = urlencode({"initial_access_token": token, "iss": ISSUER, "state": params["state"]})
+
+        return f"{params['return_to']}?{query}"

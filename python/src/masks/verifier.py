@@ -14,8 +14,10 @@ import jwt
 
 from .dpop import DPOP, PROOF_TYPE, tidied, token_hash
 from .errors import Error, InvalidToken, Unavailable
-from .flows import Flow, arun, default_async_http, default_http, get, required, run
+from .flows import Flow, arun, default_async_http, default_http, run
 from .keys import PRIVATE_MEMBERS, thumbprint
+from .keyset import KeySet, unverified_header
+from .keyset import typed as accepts
 from .models import Issuer, Tenant
 from .replay import AsyncReplayStore, MemoryReplayStore, ReplayStore
 
@@ -24,8 +26,6 @@ TOKEN_ALGORITHMS = ("RS256", "ES256")
 PROOF_ALGORITHMS = ("ES256", "ES384", "ES512", "PS256", "PS384", "PS512", "RS256")
 PROOF_WINDOW = 60
 LEEWAY = 30
-KEYS_LIFETIME = 300
-KEYS_PATIENCE = 30
 REPLAY_MEMORY = PROOF_WINDOW + 2 * LEEWAY
 
 Headers = Mapping[str, str] | Sequence[tuple[str, str]] | httpx.Headers
@@ -83,9 +83,7 @@ class Claims:
 
 
 def typed(header: dict[str, Any], want: str) -> bool:
-    held = str(header.get("typ") or "").lower()
-
-    return held.removeprefix("application/") == want
+    return accepts(header, [want])
 
 
 def remembered(answer: object) -> None:
@@ -111,42 +109,12 @@ def fetching() -> Iterator[None]:
         raise Unavailable("masks: the issuer's keys could not be fetched") from error
 
 
-def unverified_header(token: str) -> dict[str, Any]:
-    try:
-        return jwt.get_unverified_header(token)
-    except jwt.PyJWTError as error:
-        raise InvalidToken(f"masks: that is not a signed JWT: {error}") from error
-
-
 class _Verifying:
     def __init__(self, issuer: Issuer, audience: str | Sequence[str], *, public_url: str | None = None) -> None:
         self.issuer = issuer
         self.audience = [audience] if isinstance(audience, str) else list(audience)
         self.public_url = public_url.rstrip("/") if public_url else None
-        self._keys: list[dict[str, Any]] = []
-        self._keys_at = 0.0
-
-    def _key(self, kid: str) -> Flow[dict[str, Any]]:
-        age = time.monotonic() - self._keys_at
-        found = self._find(kid)
-
-        if found is not None and age < KEYS_LIFETIME:
-            return found
-
-        if age >= KEYS_PATIENCE or not self._keys_at:
-            body = required((yield get(self.issuer.metadata.jwks_uri)))
-            keys = body.get("keys")
-            self._keys = [key for key in keys if isinstance(key, dict)] if isinstance(keys, list) else []
-            self._keys_at = time.monotonic()
-            found = self._find(kid)
-
-        if found is None:
-            raise InvalidToken(f"masks: {self.issuer.url} publishes no key {kid!r}")
-
-        return found
-
-    def _find(self, kid: str) -> dict[str, Any] | None:
-        return next((key for key in self._keys if key.get("kid") == kid and key.get("use", "sig") == "sig"), None)
+        self.keys = KeySet(issuer)
 
     def _verify(self, token: str) -> Flow[Claims]:
         header = unverified_header(token)
@@ -158,7 +126,7 @@ class _Verifying:
         if not typed(header, ACCESS_TOKEN_TYPE):
             raise InvalidToken(f"masks: that token is not typed {ACCESS_TOKEN_TYPE}")
 
-        jwk = yield from self._key(str(header.get("kid") or ""))
+        jwk = yield from self.keys.key(str(header.get("kid") or ""))
 
         try:
             key = jwt.PyJWK(jwk, algorithm=algorithm).key
