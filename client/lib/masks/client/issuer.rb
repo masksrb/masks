@@ -14,13 +14,14 @@ module Masks
         Masks::Client.registry[issuer, ttl: ttl]
       end
 
-      attr_reader :url
+      attr_reader :url, :nonces
 
       def initialize(url, ttl: TTL)
         @url = self.class.normalize(url)
         @ttl = ttl
         @cache = {}
         @lock = Mutex.new
+        @nonces = Nonces.new
       end
 
       def discovery

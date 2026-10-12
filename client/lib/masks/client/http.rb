@@ -19,12 +19,14 @@ module Masks
       end
 
       def encoded(verb, url, form, headers)
-        uri = URI.parse(url.to_s)
-        request = verb.new(uri, default_headers.merge(headers))
+        request(form_request(verb, url, form, headers))
+      end
+
+      def form_request(verb, url, form, headers)
+        request = verb.new(URI.parse(url.to_s), default_headers.merge(headers))
         request.body = URI.encode_www_form(form)
         request["Content-Type"] = "application/x-www-form-urlencoded"
-
-        self.request(request)
+        request
       end
 
       def post_json(url, body, headers = {})
@@ -66,16 +68,18 @@ module Masks
       end
 
       def request(request)
+        parse(deliver(request))
+      end
+
+      def deliver(request)
         uri = request.uri
 
-        response = Net::HTTP.start(
+        Net::HTTP.start(
           uri.hostname, uri.port,
           use_ssl: uri.scheme == "https",
           open_timeout: OPEN_TIMEOUT,
           read_timeout: READ_TIMEOUT
         ) { |http| http.request(request) }
-
-        parse(response)
       rescue SystemCallError, SocketError, Net::OpenTimeout, Net::ReadTimeout, OpenSSL::SSL::SSLError => e
         raise Unreachable, "#{uri.host} is unreachable (#{e.class})"
       end

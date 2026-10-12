@@ -6,11 +6,15 @@ module Masks
       def self.create(issuer, token: nil, **attributes)
         issuer = Issuer.resolve(issuer)
         headers = token ? { "Authorization" => "Bearer #{token}" } : {}
-        body = HTTP.post_json(
-          issuer.endpoint("registration_endpoint"), stringify(attributes), headers
-        )
+        body = HTTP.post_json(endpoint(issuer, token), stringify(attributes), headers)
 
         new(issuer, body)
+      end
+
+      def self.endpoint(issuer, token)
+        return issuer.endpoint("registration_endpoint") if token.nil? || issuer.discovery["registration_endpoint"]
+
+        "#{issuer.url}/register"
       end
 
       def self.stringify(attributes)
@@ -24,8 +28,19 @@ module Masks
           "application_type" => attributes[:application_type],
           "client_uri" => attributes[:client_uri],
           "logo_uri" => attributes[:logo_uri],
-          "backchannel_logout_uri" => attributes[:backchannel_logout_uri]
+          "backchannel_logout_uri" => attributes[:backchannel_logout_uri],
+          "jwks" => keyset(attributes[:jwks]),
+          "dpop_bound_access_tokens" => attributes[:dpop_bound_access_tokens]
         }.reject { |_, value| value.nil? || (value.respond_to?(:empty?) && value.empty?) }
+      end
+
+      def self.keyset(value)
+        case value
+        when nil then nil
+        when Key then value.jwks
+        when Array then { "keys" => value.map { |key| key.is_a?(Key) ? key.public_jwk : key } }
+        else value
+        end
       end
 
       def self.fallback(value, default)
@@ -62,18 +77,18 @@ module Masks
       GONE = (REFUSED + [ 404 ]).freeze
 
       def read
-        still_ours(REFUSED) { HTTP.get(uri, authorization) }
+        still_ours(REFUSED) { HTTP.get(owned, authorization) }
       end
 
       def update(**attributes)
         @metadata = metadata.merge(
-          still_ours(REFUSED) { HTTP.put_json(uri, self.class.stringify(attributes), authorization) }
+          still_ours(REFUSED) { HTTP.put_json(owned, self.class.stringify(attributes), authorization) }
         )
         self
       end
 
       def delete
-        still_ours(GONE) { HTTP.delete(uri, authorization) }
+        still_ours(GONE) { HTTP.delete(owned, authorization) }
         true
       end
 
@@ -88,17 +103,24 @@ module Masks
         { "Authorization" => "Bearer #{access_token}" }
       end
 
-      def session(redirect_uri:, scope: Session::DEFAULT_SCOPE)
+      def session(redirect_uri: nil, scope: Session::DEFAULT_SCOPE, **options)
         Session.new(
           issuer: issuer,
           client_id: client_id,
-          client_secret: client_secret,
+          client_secret: (client_secret unless options[:private_key]),
           redirect_uri: redirect_uri,
-          scope: scope
+          scope: scope,
+          **options
         )
       end
 
       private
+
+        def owned
+          return uri if Nonces.origin(uri) == Nonces.origin(issuer.url)
+
+          raise Foreign, "the registration names #{Nonces.origin(uri)}, which is not #{issuer.url}"
+        end
 
         def still_ours(statuses)
           yield

@@ -13,17 +13,21 @@ module Masks
       ASSERTION_TYPE = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer".freeze
       ASSERTION_LIFETIME = 60
 
-      attr_reader :issuer, :client_id, :client_secret, :redirect_uri, :scope, :private_key, :key_id
+      NO_NONCE = "use_dpop_nonce".freeze
+
+      attr_reader :issuer, :client_id, :client_secret, :redirect_uri, :scope, :private_key, :key_id, :dpop
 
       def initialize(issuer:, client_id:, redirect_uri: nil, client_secret: nil, private_key: nil, key_id: nil,
-                     scope: DEFAULT_SCOPE)
+                     dpop: nil, scope: DEFAULT_SCOPE)
         raise ArgumentError, "a client authenticates with a secret or a private key, not both" if client_secret && private_key
 
         @issuer = Issuer.resolve(issuer)
         @client_id = client_id
         @client_secret = client_secret
-        @private_key = private_key.is_a?(String) ? OpenSSL::PKey.read(private_key) : private_key
-        @key_id = key_id
+        @private_key = private_key.is_a?(Key) ? private_key.private_key : private_key
+        @private_key = OpenSSL::PKey.read(@private_key) if @private_key.is_a?(String)
+        @key_id = key_id || (private_key.thumbprint if private_key.is_a?(Key))
+        @dpop = dpop && Key.from(dpop)
         @redirect_uri = redirect_uri
         @scope = Array(scope)
       end
@@ -71,7 +75,7 @@ module Masks
 
         Array(resource).each { |value| form << [ "resource", value ] }
 
-        Tokens.granted(post("token_endpoint", form))
+        token(form)
       end
 
       def client_credentials(scope: nil, resource: nil)
@@ -80,7 +84,7 @@ module Masks
         form << [ "scope", Array(scope).join(" ") ] if scope
         Array(resource).each { |value| form << [ "resource", value ] }
 
-        Tokens.granted(post("token_endpoint", form))
+        token(form)
       end
 
       def enroll(scope:, name: nil, expires_in: nil)
@@ -109,7 +113,7 @@ module Masks
         form << [ "scope", Array(scope).join(" ") ] if scope
         Array(resource).each { |value| form << [ "resource", value ] }
 
-        Tokens.granted(post("token_endpoint", form))
+        token(form)
       end
 
       def exchange(subject_token, scope: nil, resource: nil, lifetime: nil, requested_token_type: nil, audience: nil,
@@ -130,7 +134,16 @@ module Masks
         form << [ "requested_lifetime", lifetime.to_i ] if lifetime
         Array(resource).each { |value| form << [ "resource", value ] }
 
-        Tokens.granted(post("token_endpoint", form))
+        token(form)
+      end
+
+      def transport(*origins, tokens: nil, scope: nil, resource: nil, &keep)
+        Transport.new(*origins, tokens: tokens, key: dpop) do |held|
+          renewed = tokens ? renew(held, scope: scope, resource: resource) : client_credentials(scope: scope, resource: resource)
+
+          keep&.call(renewed)
+          renewed
+        end
       end
 
       def revoke(token, hint: nil)
@@ -185,10 +198,55 @@ module Masks
 
       private
 
+        def renew(held, scope:, resource:)
+          if held&.refresh_token.to_s.empty?
+            raise Rejected.new("invalid_grant", "there is no refresh token to renew these tokens with")
+          end
+
+          renewed = refresh(held.refresh_token, scope: scope, resource: resource)
+
+          return renewed if renewed.refresh_token
+
+          Tokens.from_h(renewed.to_h.merge("refresh_token" => held.refresh_token))
+        end
+
+        def token(form)
+          tokens = Tokens.granted(dpop ? proven(issuer.endpoint("token_endpoint"), form) : post("token_endpoint", form))
+
+          if dpop && !tokens.bound?
+            raise Rejected.new("invalid_dpop_proof", "the token endpoint answered with a token that is not held to this key")
+          end
+
+          tokens
+        end
+
         def post(endpoint, form)
           url = issuer.endpoint(endpoint)
 
           HTTP.post_form(url, form + assertion, authorization)
+        end
+
+        def proven(url, form)
+          nonce = issuer.nonces[url]
+          response = HTTP.deliver(proven_request(url, form, nonce))
+          wanted = issuer.nonces.learn(url, response)
+
+          begin
+            HTTP.parse(response)
+          rescue Rejected => e
+            raise unless e.code == NO_NONCE && wanted && wanted != nonce
+
+            response = HTTP.deliver(proven_request(url, form, wanted))
+            issuer.nonces.learn(url, response)
+
+            HTTP.parse(response)
+          end
+        end
+
+        def proven_request(url, form, nonce)
+          headers = authorization.merge("DPoP" => dpop.proof("POST", url, nonce: nonce))
+
+          HTTP.form_request(Net::HTTP::Post, url, form + assertion, headers)
         end
 
         def assertion

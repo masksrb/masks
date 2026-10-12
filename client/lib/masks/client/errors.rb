@@ -4,6 +4,8 @@ module Masks
 
     class Unreachable < Error; end
 
+    class Foreign < Error; end
+
     class Rejected < Error
       attr_reader :code, :description, :status
 

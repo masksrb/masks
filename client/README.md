@@ -250,9 +250,10 @@ Hold `started[:state]`, `started[:nonce]`, and `started[:verifier]` in the sessi
 browser to `started[:url]`. `start` sends a nonce only when the scope includes `openid`. Check the
 returned `state` yourself, and compare `identity["nonce"]` with the one you held.
 
-`Session` also has `refresh`, `exchange`, `client_credentials`, `enroll`, `unenroll`, `revoke`, `introspect`, `userinfo`,
-and `end_session_url`. It authenticates with `client_secret`, or with `private_key` and `key_id` for
-`private_key_jwt`.
+`Session` also has `refresh`, `exchange`, `client_credentials`, `enroll`, `unenroll`, `revoke`, `introspect`, `userinfo`, `end_session_url`, and
+`transport`. It authenticates with `client_secret`, or with `private_key` and `key_id` for
+`private_key_jwt`. A `Masks::Client::Key` passed as `private_key` names itself by its thumbprint, so
+`key_id` can be left out.
 
 An app that has claimed a namespace enrolls a machine with `enroll`. It returns an
 `Enrollment` whose `initial_access_token` the machine spends once to register its own public key.
@@ -269,9 +270,70 @@ refuses a client the app did not enroll.
 session.unenroll(machine_client_id)
 ```
 
-Discovery and JWKS are cached for five minutes and refetched on an unknown `kid`, so a key rotation
-needs no restart. The cache lives on the `Issuer`, so use `Masks::Client::Issuer.resolve` instead
-of constructing one per request.
+### A machine
+
+A machine enrolled by an app makes two P-256 keys: one to sign its client assertions, and one to
+hold its tokens with DPoP. It registers the public half of the first with the app's initial access
+token, and keeps both private halves to itself.
+
+```ruby
+key = Masks::Client::Key.generate
+dpop = Masks::Client::Key.generate
+
+registration = Masks::Client::Registration.create(
+  "https://demo.auth.example.com", token: initial_access_token,
+  name: "nas", jwks: key, token_endpoint_auth_method: "private_key_jwt",
+  grant_types: [ "client_credentials" ], dpop_bound_access_tokens: true
+)
+
+File.write("machine.json", { "client_id" => registration.client_id, "key" => key.to_h,
+                             "dpop" => dpop.to_h }.to_json, perm: 0o600)
+
+session = registration.session(private_key: key, dpop: dpop)
+tokens = session.client_credentials(scope: "xixo:agent")
+tokens.bound?
+```
+
+`jwks:` takes a `Key`, a list of them, or a JWK Set. `Key#jwks` and `Key#public_jwk` hold only the
+public half, and `Key#to_h` holds the private one. `Key.parse` reads a key back from that hash, its
+JSON, or a PEM. A key on another curve, or a public key, raises `ArgumentError`.
+
+`Registration.create` with a `token:` posts to `/register` even when discovery publishes no
+`registration_endpoint`, because a tenant that turns open registration off still redeems initial
+access tokens there. `read`, `update`, and `delete` raise `Masks::Client::Foreign` when the
+`registration_client_uri` names an origin other than the issuer's, and send nothing.
+
+A `Session` given `dpop:` sends a new DPoP proof with every request to the token endpoint:
+`complete`, `client_credentials`, `refresh`, and `exchange`. A server that answers
+`use_dpop_nonce` with a `DPoP-Nonce` header gets one retry carrying that nonce, and the nonce is
+kept for that origin's next request. A token endpoint that answers a proven request with a `Bearer`
+token is refused with `invalid_dpop_proof`. Revocation, introspection, and enrollment are sent
+without a proof.
+
+`transport` sends requests to a resource with those tokens. It takes the origins it may send them to
+and raises `Masks::Client::Foreign` for any other URL before it fetches a token.
+
+```ruby
+api = session.transport("https://app.example.com", scope: "xixo:agent")
+
+response = api.get("https://app.example.com/mcp/feeds?page=2")
+api.post("https://app.example.com/mcp/feeds", body: { "name" => "notes" })
+```
+
+Each request carries `Authorization: DPoP` and a proof naming the method, the URL without its query,
+and the token's hash in `ath`. A resource that answers `401` with `use_dpop_nonce` in
+`WWW-Authenticate` and a new `DPoP-Nonce` is asked once more. The answer is a `Net::HTTPResponse`,
+which the transport returns whatever its status. A `Bearer` token goes as `Bearer` with no proof.
+
+Without `tokens:`, the transport asks for `client_credentials` with the `scope` and `resource` it was
+given, and again when they expire. With `tokens:`, it renews them with their refresh token, keeps that
+refresh token when the server does not rotate it, and yields the new tokens so they can be stored:
+
+```ruby
+api = session.transport("https://app.example.com", tokens: held) { |tokens| store(tokens.to_h) }
+```
+
+`Masks::Client::Transport.new(*origins, tokens:, key:)` builds one around tokens you already hold.
 
 ### The handshake
 

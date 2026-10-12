@@ -44,6 +44,10 @@ module Masks
         scope.split(/\s+/).reject(&:empty?)
       end
 
+      def bound?
+        token_type.to_s.casecmp?(Proof::SCHEME)
+      end
+
       def authorization
         "#{token_type} #{access_token}"
       end
