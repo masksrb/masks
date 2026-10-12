@@ -1,0 +1,498 @@
+---
+title: JavaScript apps
+description: Sign people in to a Next.js, Express, or Hono app with masks, guard routes by privilege, accept tokens in an API, and enroll machines.
+---
+
+`@masks/server` signs people in to a JavaScript server app against a masks server. It covers what
+[`Masks::Rails`](/guides/rails/#client-mode) covers in a Rails app: the handshake, the sign-in, a
+session, organizations, privileges, and checking access tokens. It uses only `fetch`, `Request`,
+`Response`, and Web Crypto, so it runs on Node 20 and later, Bun, and Deno.
+
+```sh
+npm install @masks/server
+```
+
+| Import | |
+| --- | --- |
+| `@masks/server` | `Masks`, which answers a `Request` with a `Response`, and the client underneath it: discovery, the handshake, the code flow, tokens, DPoP, introspection, token exchange, delegations, enrollment, and checking tokens. |
+| `@masks/server/next` | Route handlers, server component helpers, and a proxy for the Next.js App Router. |
+| `@masks/server/express` | Middleware for Express. |
+| `@masks/server/hono` | Middleware for Hono, which also runs on Bun, Deno, and Cloudflare Workers. |
+
+`next`, `express`, and `hono` are optional peer dependencies. Install only the one your app uses.
+
+## Setting up
+
+Every integration reads the same options. Two are required, and each has an environment variable:
+
+| Option | Variable | |
+| --- | --- | --- |
+| `issuer` | `MASKS_ISSUER` | The tenant you sign in against, such as `https://acme.auth.example.com`. |
+| `resource` | `MASKS_RESOURCE` | Your app's absolute URL, such as `https://app.example.com`. The handshake registers the app for it, and tokens for the app name it as their audience. |
+| `secret` | `MASKS_SECRET` | At least 32 characters that seal the session cookie, such as the output of `openssl rand -base64 32`. |
+
+The app's origin comes from `resource`, so the redirect URIs are right behind a proxy. Plain `http`
+works for `localhost`, a `.localhost` name, or a loopback address.
+
+### Next.js
+
+Create one `Masks` for the app:
+
+```ts
+// lib/masks.ts
+import { masksNext } from "@masks/server/next";
+
+export const { handlers, auth, requireAuth, withMasks, proxy, metadata, masks } = masksNext({
+  name: "Catalog",
+  scope: ["openid", "profile", "email", "offline_access", "organization"],
+  privileges: { admin: ["catalog:admin"] },
+});
+```
+
+Mount every route under `/auth` with an optional catch-all route:
+
+```ts
+// app/auth/[[...masks]]/route.ts
+import { handlers } from "@/lib/masks";
+
+export const { GET, POST, DELETE } = handlers;
+```
+
+Add the proxy, so a session is refreshed before a page renders:
+
+```ts
+// proxy.ts, or middleware.ts before Next.js 16
+import { proxy } from "@/lib/masks";
+
+export default proxy({ protect: ["/dashboard"] });
+
+export const config = { matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"] };
+```
+
+Set the three variables, start the app, and open `/auth`. The first visit starts
+[the handshake](#the-handshake).
+
+### Express
+
+```ts
+import express from "express";
+import { masked, masksExpress } from "@masks/server/express";
+
+const auth = masksExpress({ name: "Catalog", privileges: { admin: ["catalog:admin"] } });
+const app = express();
+
+app.use(auth);
+app.get("/", (req, res) => res.json(req.masked));
+app.get("/settings", masked(auth, "admin"), (req, res) => res.json({ subject: req.masked?.subject }));
+```
+
+`masksExpress` answers the `/auth` routes, and on every other request puts the person on
+`req.masked`, signed in or not. `masked` guards a route.
+
+### Hono
+
+```ts
+import { Hono } from "hono";
+import { masked, masksHono, type MasksEnv } from "@masks/server/hono";
+
+const auth = masksHono({ name: "Catalog", privileges: { admin: ["catalog:admin"] } });
+const app = new Hono<MasksEnv>();
+
+app.use(auth);
+app.get("/", (c) => c.json(c.get("masked")));
+app.get("/settings", masked(auth, "admin"), (c) => c.json({ subject: c.get("masked").subject }));
+```
+
+On Cloudflare Workers, pass `issuer`, `resource`, and `secret` directly, and set `credentials` to a
+store of your own, since there is no file to write. See [the handshake](#the-handshake).
+
+### Any other framework
+
+`masks.handle(request)` answers a `Request` for any masks route and returns `undefined` for every
+other path. The other methods take a `Request` too:
+
+| Method | |
+| --- | --- |
+| `masks.handle(request)` | Answers the `/auth` routes and `/.well-known/oauth-protected-resource`. |
+| `masks.masked(request)` | The person, refreshing the session first, and the `cookies` to set. |
+| `masks.peek(request)` | The person, without refreshing or setting anything. |
+| `masks.require(request, ...privileges)` | The person and `cookies`, or the `response` that sends them to sign in or refuses them. |
+| `masks.protect(request, ...privileges)` | The same, for an access token. See [accepting tokens](#accepting-tokens). |
+| `masks.guard(request, ...privileges)` | `protect` when the request carries an `Authorization` header, or carries no session and wants JSON, and `require` otherwise. |
+
+A `cookies` array holds `Set-Cookie` values. Append each one to the response you send.
+
+## The handshake
+
+The handshake connects your app to the masks server:
+
+1. The app sends the browser to the masks server's approval screen.
+2. You approve the app there.
+3. A one-time token comes back. The app redeems it by talking to the masks server directly, so the
+   client secret never passes through the browser.
+
+The handshake registers the app for `resource`, with `/auth/callback` as its redirect URI and
+`/auth/handshake/callback` as the address masks sends people back to. It asks for `scope` and the
+scopes of every [privilege](#privileges). Set `namespace`, such as `catalog:`, to register the
+namespace once for every scope under it.
+
+By default, the app writes its credentials to `masks.json` in the working directory, with file mode
+600. Add it to `.gitignore`. When `MASKS_CLIENT_ID` is set, the app reads `MASKS_CLIENT_ID` and
+`MASKS_CLIENT_SECRET` instead and writes nothing. A host with no writable disk, or a multi-tenant
+app, sets `credentials` to a store of its own:
+
+```ts
+import type { CredentialStore } from "@masks/server";
+
+const credentials: CredentialStore = {
+  read: (request) => tenantFor(request).masksCredentials(),
+  write: (request, held) => tenantFor(request).connect(held),
+  clear: (request) => tenantFor(request).disconnect(),
+};
+```
+
+`issuer`, `resource`, `name`, and `organization` each accept a function that takes the request, so
+one app can serve several tenants. Derive them from something the app trusts, such as a tenant it
+looked up by host.
+
+Once the app is connected, `/auth/handshake` shows the connection to somebody `manages` allows, with
+buttons to reconnect and to disconnect. Disconnecting deletes the registration at masks and the
+credentials. A person who is not signed in goes to `afterSignOut`, and anybody else is refused with
+`403`. If `manages` is not set, the app refuses everyone.
+
+```ts
+masksNext({ manages: "admin" });
+masksNext({ manages: (request, masked) => masked.subject === process.env.OWNER_SUB });
+```
+
+Each sign-in first reads the app's registration at masks. When masks no longer knows the app, the
+app forgets its credentials and starts the handshake again.
+
+| Method | |
+| --- | --- |
+| `masks.connection(request)` | Whether the app holds credentials, with its `client_id`. |
+| `masks.registered(request)` | Whether masks still knows the app. |
+| `masks.disconnect(request)` | Deletes the registration and the credentials. |
+| `masks.client(request)` | The app's `Client`, for calls of your own. |
+
+## Signing in
+
+The app answers these routes under `/auth`, or `basePath`:
+
+| Route | |
+| --- | --- |
+| `GET /auth` | Starts a sign-in. Takes `return_to`, `organization`, and `privilege`. |
+| `GET /auth/callback` | Finishes it. |
+| `GET /auth/refresh` | Refreshes the session and goes back to `return_to`. |
+| `GET /auth/session` | The signed-in person as JSON, for a single-page app. |
+| `GET /auth/avatar` | The person's photo, fetched from masks with their token. Takes `size`. |
+| `GET`, `POST`, or `DELETE /auth/logout` | Signs out. Takes `everywhere` to sign out of masks as well. |
+| `POST /auth/logout/backchannel` | Takes a back-channel logout token from masks. |
+| `GET` or `POST /auth/handshake` | Starts the handshake, or shows the connection. |
+| `GET /auth/handshake/callback` | Finishes the handshake. |
+| `POST /auth/handshake/disconnect` or `DELETE /auth/handshake` | Disconnects the app. |
+
+A sign-in uses PKCE, a `state`, and a `nonce`. It checks the `iss` that masks sends back, and the ID
+token's signature, audience, and nonce. Up to five sign-ins can be in progress in one browser, each
+for an hour. A callback the browser did not start sends it to sign in again, once a minute, and is
+refused with `invalid_state` in between. `return_to` is followed only to a path on the app.
+
+In Next.js:
+
+| | |
+| --- | --- |
+| `await auth()` | The person, in a server component, a server action, or a route handler. |
+| `await requireAuth(...privileges)` | The same, after sending a signed-out visitor to sign in and checking each privilege. |
+| `withMasks(handler, ...privileges)` | Guards a route handler by session or by token, and passes `{ masked }` to it. |
+| `proxy({ protect })` | Refreshes the session before a page renders. Sends a signed-out visitor to a path under one of `protect` to sign in. |
+
+```tsx
+// app/dashboard/page.tsx
+import { requireAuth } from "@/lib/masks";
+
+export default async function Dashboard() {
+  const masked = await requireAuth();
+
+  return <h1>Hello, {masked.name}</h1>;
+}
+```
+
+```ts
+// app/api/items/route.ts
+import { withMasks } from "@/lib/masks";
+
+export const GET = withMasks(async (request, { masked }) => Response.json({ subject: masked.subject }));
+```
+
+A server component cannot set cookies, and masks revokes a refresh token that is used twice, so
+`auth` and `requireAuth` never refresh. The proxy refreshes the session first and hands the fresh
+cookie to the page. Without the proxy, `requireAuth` sends a person whose token expired through
+`/auth/refresh`. `requireAuth` throws a `ForbiddenError` for a privilege the person does not hold,
+which the nearest `error.tsx` shows. To send people back to the page they were on, `requireAuth`
+reads the path the proxy records.
+
+A JSON request is answered with `401` and `login_required` or `handshake_required` and the URL to
+send the browser to. A request is JSON unless its `Accept` header names `text/html`.
+
+The person is a `Masked`, and never `undefined`:
+
+| Property or method | |
+| --- | --- |
+| `signedIn` | Whether a sign-in is held and its token has not expired. |
+| `subject`, `name`, `nickname`, `email`, `emailVerified` | Who signed in. |
+| `picture`, `avatars` | The `picture` claim, then the photo, then the identicon, and each avatar URL. |
+| `tenant` | The tenant's `uuid`, `subdomain`, and `name`. |
+| `organization`, `organizations`, `role("owner")` | See [organizations](#organizations). |
+| `scopes`, `permits("catalog:read")` | What the token holds. |
+| `privileges`, `privilege("admin")`, `holds("admin")` | See [privileges](#privileges). |
+| `accessToken`, `authorization` | The token to send to a resource server, and the `Authorization` header that carries it. |
+| `claim("groups")` | Any other claim the sign-in kept. |
+| `toJSON()` | What `GET /auth/session` returns. |
+
+`toJSON()` leaves out the access token, so passing a `Masked` to `Response.json` or `res.json` never
+sends it to the browser.
+
+`masks.loginURL({ returnTo: "/billing" })` builds a link to sign in, and `masks.logoutPath` is the
+path a sign-out form posts to:
+
+```tsx
+<form method="post" action="/auth/logout">
+  <button type="submit">Sign out</button>
+</form>
+```
+
+### Refreshing
+
+A token that expires within 30 seconds is refreshed with its refresh token, and the person's name,
+photo, and organizations are read again from userinfo. Requests that arrive together with the same
+expired token share one refresh, since masks revokes a refresh token that is used twice. A refresh
+masks refuses signs the person out. A refresh that does not reach masks keeps the session for the
+next request.
+
+### Signing out
+
+A sign-out revokes the refresh token and clears the session. With `signOutOfIssuer`, or
+`everywhere`, the browser goes on to masks to end its session there and comes back through
+`/auth/handshake/callback` to `afterSignOut`. A sign-out from another site is refused with `403`.
+
+When masks ends a session itself, it sends a logout token to `/auth/logout/backchannel`. The app
+signs out the session it names, or every session of the person it names, at their next request. It
+remembers the logout in `logouts`, which is in memory by default. An app that runs as several
+processes sets `logouts` to a `LogoutStore` they share. `onLogout` hears each logout as well.
+
+## Sessions
+
+The session lives in a cookie, sealed with AES-GCM under a key derived from `secret`. It is
+`HttpOnly` and `SameSite=Lax`. On `https`, it is `Secure` and named `__Host-masks`, so no other host
+can set it. A session too large for one cookie is split across several. It lasts 14 days from the
+sign-in, or `maxAge` seconds.
+
+The browser cannot read the tokens in the sealed cookie, and `/auth/session` leaves them out. The
+session is replaced at every sign-in.
+
+To keep sessions on the server, set `sessions` to a `SessionStore`. The cookie then holds only the
+session's id, sealed, and a sign-in deletes the old id.
+
+```ts
+interface SessionStore {
+  get(id: string): unknown | Promise<unknown>;
+  set(id: string, data: unknown, maxAge: number): void | Promise<void>;
+  delete(id: string): void | Promise<void>;
+}
+```
+
+`memoryStore()` keeps them in one process. To change the secret, list the new one first:
+`secret: [next, previous]`, or `MASKS_SECRET=next,previous`. Sessions sealed with the old one still
+open, and each is sealed with the new one the next time it changes.
+
+## Organizations
+
+An app signs a person in as a member of one [organization](/guides/organizations/) when it asks for
+the `organization` scope. Name one for every sign-in with `organization`, or for one sign-in with
+`/auth?organization=acme`:
+
+```ts
+masksNext({
+  scope: ["openid", "profile", "email", "offline_access", "organization"],
+  organization: (request) => new URL(request.url).hostname.split(".")[0],
+});
+```
+
+| | |
+| --- | --- |
+| `masked.organization` | The organization signed in to, with its `id`, `key`, `name`, and `role`, or `undefined`. |
+| `masked.role("owner", "billing")` | Whether the person holds one of those roles in it. |
+| `masked.organizations` | Every organization the person has joined, each with the role held there. |
+| `masks.loginURL({ organization: "globex" })` | Signs the person in again, naming another organization. |
+
+`/auth/session` returns the same as `organization` and `organizations`. The app reads the
+organizations from userinfo at sign-in and at every refresh, so a changed role reaches the app
+within an access token's lifetime.
+
+To let a person switch, link each organization to a new sign-in. A person who already belongs to it
+is not asked for anything more:
+
+```tsx
+{masked.organizations.map((held) => (
+  <a key={held.id} href={masks.loginURL({ organization: held.key, returnTo: "/" })}>
+    {held.name}
+  </a>
+))}
+```
+
+## Privileges
+
+A privilege is a name for what a route needs. It can ask for scopes the person holds in masks, a
+role in the organization they signed in to, or both:
+
+```ts
+masksNext({
+  scope: ["openid", "profile", "email", "offline_access", "organization", "catalog:read"],
+  privileges: {
+    admin: ["catalog:admin"],
+    billing: { role: ["owner", "billing"] },
+    acme_admin: { scope: ["catalog:admin"], role: "owner", organization: "acme" },
+  },
+});
+```
+
+- A list is a short way to write `{ scope: [...] }`.
+- `role` takes one role or several. Any one of them is enough.
+- `organization` limits the privilege to one organization, named by key or id.
+
+| | |
+| --- | --- |
+| The sign-in holds the privilege | The route runs. |
+| A scope is missing | The browser goes through masks once. It asks for the usual scopes and the privilege's scopes, then comes back to the page it was on. A JSON request gets `403` with `privilege_required`, the `privileges`, and the `login_url` to send the browser to. |
+| masks did not grant the scope on that trip | `403 insufficient_scope`. The person does not hold the scope, so the app does not send them through masks again for five minutes. |
+| A role or organization does not match | `403 insufficient_role` or `insufficient_organization`. The browser does not go through masks. |
+
+An ordinary sign-in never asks for privilege scopes. masks puts a scope in the token only for a
+person who already holds it, so asking never gives anyone more access. The handshake registers the
+scopes of every privilege, so the issuer lets the app ask for them.
+
+`require`, `protect`, `guard`, `requireAuth`, `withMasks`, `masked`, and `loginURL` throw on a name
+that `privileges` does not define. In a URL, the app ignores it.
+
+## Accepting tokens
+
+A resource server is an app that accepts access tokens from other apps. `resource` is the audience
+that tokens must name, and `resourceScopes` lists the scopes your app accepts.
+
+```ts
+// app/api/catalog/route.ts
+import { withMasks } from "@/lib/masks";
+
+export const GET = withMasks(async (request, { masked }) => Response.json({ subject: masked.subject }), "read");
+```
+
+```ts
+// app/.well-known/oauth-protected-resource/route.ts
+export { metadata as GET } from "@/lib/masks";
+```
+
+In Express and Hono, `masked(auth, "read")` checks a token when the request carries one, and the
+middleware serves `/.well-known/oauth-protected-resource` itself.
+
+The check takes the same [privileges](#privileges), roles and organizations included, and checks
+them against the token.
+
+- A token that lacks a privilege is refused with `403` and `insufficient_scope`,
+  `insufficient_role`, or `insufficient_organization`.
+- A missing or invalid token is refused with `401`.
+- A token cannot go through masks again, so there is no second trip.
+
+A refusal carries an RFC 6750 challenge whose `resource_metadata` points at
+`/.well-known/oauth-protected-resource`. When the app cannot check a token, because the issuer's
+keys could not be fetched or the replay store failed, it answers `503` with no challenge, so the
+client keeps a token that may be fine.
+
+A token [bound to a key with DPoP](/guides/security/#binding-a-token-with-dpop) is accepted only as
+`Authorization: DPoP`, with a proof that:
+
+- is signed by that key
+- names this request's method, URL, and token
+- was made within the last minute
+- has not been seen before
+
+The URL is the resource's origin and the request's path, so a proxy in front of the app needs no
+other setting. Each process keeps the proofs it has seen in memory. To share them across processes,
+set `replay` to any object whose `first(key, expiresIn)` returns `true` only once for each key.
+
+An API with no browser sign-in uses `Verifier` from `@masks/server` on its own. See the
+[package README](https://github.com/masksrb/masks/tree/main/node#checking-access-tokens).
+
+## Delegations
+
+A [delegation](/guides/connecting-via-sdk/#delegation) lets the app act as a person at a provider
+while they are away. Set `delegations` to the path the provider's answer comes back to, and the
+handshake asks for `masks:delegate:` and registers that path:
+
+```ts
+export const { masks } = masksNext({ delegations: "/connect/callback" });
+```
+
+```ts
+// app/connect/route.ts
+export const GET = (request: Request) => masks.startDelegation(request, "google");
+
+// app/connect/callback/route.ts
+export async function GET(request: Request) {
+  const { connection, cookies } = await masks.finishDelegation(request);
+
+  await save(connection.connection, connection.secret);
+
+  const headers = new Headers({ location: "/settings" });
+  for (const cookie of cookies) headers.append("set-cookie", cookie);
+
+  return new Response(null, { status: 303, headers });
+}
+```
+
+`finishDelegation` refuses a connection that another browser finished, that somebody other than the
+person signed in finished, or that masks made for another account. Keep the `secret` encrypted. To
+call the provider later, ask for its token:
+
+```ts
+const delegations = await masks.delegations(request);
+const upstream = await delegations.token(secret, connection);
+
+await save(connection, upstream.secret);
+```
+
+Save `upstream.secret` before anything else, since each call replaces the secret. A
+`DelegationRefused` or `DelegationUnavailable` carries the replacement in `secret` even when the
+call fails after the refresh. `DelegationUnavailable` means masks or the provider did not answer and
+nothing was lost. `DelegationRefused` means masks refused the call, and `signedInAgain` reports a
+refusal that asks the person to sign in again.
+
+## Machines and enrollment
+
+A JavaScript program on a machine, such as an agent an app installs, signs in as itself with
+`Client`. See the [package README](https://github.com/masksrb/masks/tree/main/node) for keys,
+client credentials, DPoP, and the device flow.
+
+An app that has claimed a [namespace](/guides/core-concepts/#namespaces), through `namespace` in its
+handshake, enrolls each machine without a browser. It asks masks for an initial access token and
+hands it to the machine:
+
+```ts
+const client = await masks.client(request);
+const enrollment = await client.enroll({ scope: ["catalog:agent"], name: "nas" });
+```
+
+The machine makes its own keys and registers with the token:
+
+```ts
+import { Issuer, Key } from "@masks/server";
+
+const key = await Key.generate();
+const issuer = await Issuer.discover("https://acme.auth.example.com");
+const registration = await issuer.register(
+  { client_name: "nas", token_endpoint_auth_method: "private_key_jwt", jwks: key.jwks() },
+  enrollment.initial_access_token,
+);
+```
+
+`client.unenroll(machineClientId)` archives the machine and revokes its tokens. See
+[enrolling a machine](/guides/features/#enrolling-a-machine).

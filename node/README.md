@@ -1,9 +1,9 @@
 # @masks/server
 
-`@masks/server` connects a server to masks. It gets tokens as a client and checks
-them as an API. It runs on Node 20 and later, in Next.js route handlers and
-middleware on the edge runtime, on Bun, and on Deno, since it uses only `fetch`
-and Web Crypto.
+`@masks/server` connects a JavaScript server to masks. It signs people in to a
+Next.js, Express, or Hono app, gets tokens as a client, and checks them as an
+API. It uses only `fetch`, `Request`, `Response`, and Web Crypto, so it runs on
+Node 20 and later, Bun, and Deno.
 
 ```sh
 npm install @masks/server
@@ -11,20 +11,94 @@ npm install @masks/server
 
 | Covers | |
 | --- | --- |
+| Signing people in | The handshake, the code flow with PKCE, a sealed session cookie, refreshing, signing out, and back-channel logout, for any framework that speaks `Request` and `Response`. |
+| Frameworks | `@masks/server/next`, `@masks/server/express`, and `@masks/server/hono`. |
+| People | Organizations, roles, scopes, and privileges, with a trip through masks to ask for a missing scope. |
 | Discovery | The issuer's document, checked against the address it was fetched from. |
 | Registration | Redeeming an initial access token, then reading, updating, and deleting the client. |
 | Enrollment | An app asking for initial access tokens for its own machines, and unenrolling them. |
 | Client authentication | `client_secret_basic`, `client_secret_post`, `private_key_jwt`, and `none`. |
-| Grants | Client credentials, refresh tokens, the device flow, and token exchange. |
+| Grants | The authorization code, client credentials, refresh tokens, the device flow, and token exchange. |
+| Delegations | Connecting a person's provider and asking for its token later. |
 | DPoP | Tokens held to a key, and proofs on every request a signed `fetch` sends. |
 | Revocation | Access and refresh tokens. |
 | Introspection | Asking the issuer whether a token is active, with RFC 7662. |
-| Checking tokens | `at+jwt` access tokens, including DPoP-bound ones, from a `Request` or a Node request. |
+| Checking tokens | `at+jwt` access tokens, including DPoP-bound ones, from a `Request` or a Node request, with RFC 9728 metadata. |
 
-Signing people in through a browser is left to
-[openid-client](https://github.com/panva/openid-client) or
-[Auth.js](https://authjs.dev). See
-[Other languages](https://masks.pages.dev/guides/other-languages/#node).
+## Signing people in
+
+The [JavaScript apps guide](https://masks.pages.dev/guides/javascript/) covers
+the handshake, sessions, organizations, privileges, and accepting tokens in
+full. In a Next.js App Router app:
+
+```ts
+// lib/masks.ts
+import { masksNext } from "@masks/server/next";
+
+export const { handlers, auth, requireAuth, withMasks, proxy, metadata, masks } = masksNext({
+  name: "Catalog",
+  privileges: { admin: ["catalog:admin"] },
+});
+```
+
+```ts
+// app/auth/[[...masks]]/route.ts
+import { handlers } from "@/lib/masks";
+
+export const { GET, POST, DELETE } = handlers;
+```
+
+```ts
+// proxy.ts, or middleware.ts before Next.js 16
+import { proxy } from "@/lib/masks";
+
+export default proxy({ protect: ["/dashboard"] });
+```
+
+```tsx
+// app/dashboard/page.tsx
+import { requireAuth } from "@/lib/masks";
+
+export default async function Dashboard() {
+  const masked = await requireAuth();
+
+  return <h1>Hello, {masked.name}</h1>;
+}
+```
+
+Set `MASKS_ISSUER` to the tenant, `MASKS_RESOURCE` to the app's own URL, and
+`MASKS_SECRET` to at least 32 random characters, then open `/auth`. The first
+visit runs the handshake, which registers the app with masks and writes its
+credentials to `masks.json`. Keep that file out of version control.
+
+Express and Hono mount the same routes:
+
+```ts
+import { masked, masksExpress } from "@masks/server/express";
+
+const auth = masksExpress({ privileges: { admin: ["catalog:admin"] } });
+
+app.use(auth);
+app.get("/settings", masked(auth, "admin"), (req, res) => res.json(req.masked));
+```
+
+```ts
+import { masked, masksHono, type MasksEnv } from "@masks/server/hono";
+
+const auth = masksHono({ privileges: { admin: ["catalog:admin"] } });
+const app = new Hono<MasksEnv>();
+
+app.use(auth);
+app.get("/settings", masked(auth, "admin"), (c) => c.json(c.get("masked")));
+```
+
+The session cookie is sealed with AES-GCM, `HttpOnly`, `SameSite=Lax`, and
+`__Host-` on `https`. The access token stays on the server, and `req.masked`,
+`auth()`, and `/auth/session` leave it out of their JSON.
+
+Under the frameworks, `Client` runs the code flow on its own with `start` and
+`complete`, and `Handshake` and `Delegations` cover the handshake and provider
+connections.
 
 ## A server signs in as itself
 
