@@ -778,3 +778,39 @@ test("a provider connection is finished only by the person who started it", asyn
   );
   assert.equal(signedOut.headers.get("location"), "/auth?return_to=%2Fconnect");
 });
+
+test("a subject-wide logout in the second of the sign-in still ends it, and a logout token is used once", async () => {
+  const held = await setup({}, closers);
+  await signIn(held, { sid: "s-now" });
+
+  const token = await held.fake.logoutToken({ aud: "app", sub: "ada" });
+  const send = () =>
+    held.browser.fetch("/auth/logout/backchannel", {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ logout_token: token }).toString(),
+    });
+
+  assert.equal((await send()).status, 200);
+  assert.equal(
+    (await held.masks.peek(held.browser.request("/"))).signedIn,
+    false,
+  );
+
+  const again = await send();
+  assert.equal(again.status, 400);
+  assert.match((await again.json()).error_description, /already been used/);
+});
+
+test("a credential store that cannot write refuses the handshake before masks registers anything", async () => {
+  const held = await setup({ credentials: { read: () => undefined } }, closers);
+  const first = await held.browser.fetch("/auth/handshake");
+  const before = held.fake.clients.size;
+  const back = new URL(held.fake.shake(first.headers.get("location")));
+  const answer = await held.browser.fetch(`${back.pathname}${back.search}`);
+
+  assert.equal(answer.status, 500);
+  assert.match(await answer.text(), /handshake_unsaved/);
+  assert.equal(held.fake.clients.size, before);
+  assert.equal(held.fake.initial.size, 1);
+});

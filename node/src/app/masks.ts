@@ -17,7 +17,7 @@ import type { IdTokenClaims, LogoutToken } from "../idtoken.js";
 import { Issuer, RESOURCE_PATH } from "../issuer.js";
 import { random } from "../key.js";
 import type { Registration } from "../registration.js";
-import type { ReplayStore } from "../replay.js";
+import { MemoryReplayStore, type ReplayStore } from "../replay.js";
 import { type Claims, Verifier } from "../verifier.js";
 import { type AvatarsLimit, avatarResponse } from "./avatar.js";
 import { parseCookies, readChunked, writeChunked } from "./cookies.js";
@@ -149,6 +149,7 @@ const STEP_UP_WITHIN = 300;
 const RESTART_WITHIN = 60;
 const REFRESH_LEEWAY = 30;
 const REMEMBER_REFRESH = 60_000;
+const LOGOUT_MEMORY = 3600;
 const DISCOVERY_LIFETIME = 3600_000;
 const SESSION_PURPOSE = "session";
 const FLOW_PURPOSE = "flow";
@@ -181,6 +182,7 @@ export class Masks {
   readonly #options: MasksOptions;
   readonly #credentials: CredentialStore;
   readonly #logouts: LogoutStore;
+  readonly #replay: ReplayStore;
   readonly #issuers = new Map<
     string,
     { at: number; issuer: Promise<Issuer> }
@@ -199,6 +201,7 @@ export class Masks {
       options.credentials ??
       (processEnv().MASKS_CLIENT_ID ? envCredentials() : fileCredentials());
     this.#logouts = options.logouts ?? memoryLogouts();
+    this.#replay = options.replay ?? new MemoryReplayStore();
 
     if (options.secret !== undefined) this.#sealer = new Sealer(options.secret);
   }
@@ -977,6 +980,16 @@ export class Masks {
       throw error;
     }
 
+    if (!(await this.#firstLogout(visit, logout))) {
+      return answer(
+        visit,
+        400,
+        "invalid_request",
+        "that logout token has already been used",
+        true,
+      );
+    }
+
     const at = Math.max(Number(logout.iat) || 0, now());
 
     if (logout.sid)
@@ -1000,6 +1013,21 @@ export class Masks {
       status: 200,
       headers: { "cache-control": "no-store" },
     });
+  }
+
+  async #firstLogout(visit: Visit, logout: LogoutToken): Promise<boolean> {
+    try {
+      return (
+        (await this.#replay.first(
+          `${visit.issuerURL} logout ${logout.jti}`,
+          LOGOUT_MEMORY,
+        )) === true
+      );
+    } catch (error) {
+      throw new UnavailableError("the replay store could not be reached", {
+        cause: error,
+      });
+    }
   }
 
   async #handshakeShow(visit: Visit): Promise<Response> {
@@ -1096,9 +1124,6 @@ ${this.#credentials.clear ? `<form method="post" action="${escapeHTML(`${this.ha
       if (refused) return refused;
     }
 
-    const handshake = await this.#handshake(visit);
-    const registration = await handshake.complete(params, state);
-
     if (!this.#credentials.write) {
       return answer(
         visit,
@@ -1107,6 +1132,9 @@ ${this.#credentials.clear ? `<form method="post" action="${escapeHTML(`${this.ha
         "the credential store cannot save this connection; set credentials to a store that writes",
       );
     }
+
+    const handshake = await this.#handshake(visit);
+    const registration = await handshake.complete(params, state);
 
     await this.#credentials.write(visit.request, {
       client_id: registration.client_id,
@@ -1440,7 +1468,7 @@ ${this.#credentials.clear ? `<form method="post" action="${escapeHTML(`${this.ha
     if (!held) {
       held = new Verifier(await this.#issuer(visit.issuerURL), visit.resource, {
         publicURL: visit.origin,
-        replay: this.#options.replay,
+        replay: this.#replay,
         resourceMetadata: this.#metadataURL(visit),
       });
       this.#verifiers.set(key, held);
@@ -1526,7 +1554,7 @@ ${this.#credentials.clear ? `<form method="post" action="${escapeHTML(`${this.ha
     if (typeof sub === "string" && sub !== "") {
       const at = await this.#logouts.since(`${visit.issuerURL} sub ${sub}`);
 
-      if (at !== undefined && at > since) return true;
+      if (at !== undefined && at >= since) return true;
     }
 
     return false;
