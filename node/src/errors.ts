@@ -25,6 +25,13 @@ export class InvalidTokenError extends Error {
   }
 }
 
+export class UnavailableError extends Error {
+  constructor(message: string, options?: { cause?: unknown }) {
+    super(`masks: unavailable: ${message}`, options);
+    this.name = "UnavailableError";
+  }
+}
+
 export class InsecureError extends Error {
   constructor(target: string) {
     super(`masks: plain http is allowed only on this machine: ${target}`);

@@ -17,6 +17,7 @@ import {
   MasksError,
   MemoryReplayStore,
   proof,
+  UnavailableError,
   UPSTREAM_ACCESS_TOKEN_TYPE,
   Verifier,
   valid,
@@ -890,18 +891,19 @@ test("a verifier asks its replay store once per proof", async () => {
   assert.equal(verifier.replay, replay);
 });
 
-test("a verifier refuses a proof its replay store cannot vouch for", async () => {
+test("a failing replay store is unavailable, and only false is a replay", async () => {
   const held = await fake();
   const { client, dpop, issuer } = await signedClient(held);
   const target = "http://files.example/files";
+  const refused = new Error("redis at 10.0.0.4 refused the connection");
 
   const stores = {
     throws: {
       first() {
-        throw new Error("redis at 10.0.0.4 refused the connection");
+        throw refused;
       },
     },
-    rejects: { first: async () => Promise.reject(new Error("timed out")) },
+    rejects: { first: async () => Promise.reject(refused) },
     "answers something truthy": { first: async () => "OK" },
     "answers nothing": { first: async () => undefined },
   };
@@ -910,17 +912,100 @@ test("a verifier refuses a proof its replay store cannot vouch for", async () =>
     const verifier = new Verifier(issuer, held.audience, { replay });
     const request = await boundRequest(client, dpop, "GET", target);
 
-    await assert.rejects(
-      verifier.authenticate(request),
-      (error) => {
-        assert.ok(error instanceof InvalidTokenError, name);
+    const error = await verifier.authenticate(request).then(
+      () => assert.fail(name),
+      (failed) => failed,
+    );
 
-        const challenge = verifier.challengeHeaders(error).join(" ");
-        assert.doesNotMatch(challenge, /10\.0\.0\.4|timed out/, name);
-        return true;
-      },
+    assert.ok(error instanceof UnavailableError, name);
+    assert.ok(!(error instanceof InvalidTokenError), name);
+    if (name === "throws" || name === "rejects") {
+      assert.equal(error.cause, refused, name);
+    }
+
+    const response = verifier.challenge(error);
+    assert.equal(response.status, 503, name);
+    assert.equal(response.headers.get("www-authenticate"), null, name);
+    assert.doesNotMatch(await response.text(), /10\.0\.0\.4/, name);
+    assert.deepEqual(verifier.challengeHeaders(error), [], name);
+    assert.deepEqual(
+      verifier.refusal(error),
+      { status: 503, headers: {} },
       name,
     );
+  }
+
+  const verifier = new Verifier(issuer, held.audience, {
+    replay: { first: async () => false },
+  });
+  const request = await boundRequest(client, dpop, "GET", target);
+
+  const error = await verifier.authenticate(request).then(
+    () => assert.fail("a replay was accepted"),
+    (failed) => failed,
+  );
+
+  assert.ok(error instanceof InvalidTokenError);
+  assert.match(error.message, /already been used/);
+
+  const { status, headers } = verifier.refusal(error);
+  assert.equal(status, 401);
+  assert.equal(headers["www-authenticate"].length, 2);
+  assert.equal(verifier.challenge(error).status, 401);
+});
+
+test("an issuer whose keys cannot be fetched is unavailable", async () => {
+  let base = "";
+  let keys = 0;
+  const server = await listen((request, response) => {
+    if (request.url === "/.well-known/openid-configuration") {
+      return json(response, 200, {
+        issuer: base,
+        jwks_uri: `${base}/.well-known/jwks.json`,
+      });
+    }
+
+    keys++;
+    response.writeHead(502);
+    response.end();
+  });
+  base = server.url;
+  closers.push(server.close);
+
+  const held = await fake();
+  const token = await held.accessToken("machine", "files:read");
+  const verifier = new Verifier(
+    await Issuer.discover(server.url),
+    held.audience,
+  );
+
+  await assert.rejects(
+    verifier.authenticate(
+      new Request("http://files.example/files", {
+        headers: { authorization: `Bearer ${token}` },
+      }),
+    ),
+    (error) => {
+      assert.ok(error instanceof UnavailableError);
+      assert.ok(error.cause instanceof MasksError);
+      assert.equal(verifier.challenge(error).status, 503);
+      return true;
+    },
+  );
+  assert.equal(keys, 1);
+});
+
+test("any error that is not a token rejection is unavailable", () => {
+  const held = { status: 503, headers: {} };
+
+  for (const error of [
+    new Error("boom"),
+    new MasksError("server_error"),
+    "x",
+  ]) {
+    const verifier = Object.create(Verifier.prototype);
+
+    assert.deepEqual(verifier.refusal(error), held);
   }
 });
 

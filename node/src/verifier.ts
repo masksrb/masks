@@ -1,13 +1,14 @@
 import {
   calculateJwkThumbprint,
   EmbeddedJWK,
+  errors,
   type JWK,
   type JWTHeaderParameters,
   type JWTPayload,
   jwtVerify,
 } from "jose";
 import { DPOP, PROOF_TYPE, type ProofClaims, tokenHash } from "./dpop.js";
-import { InvalidTokenError } from "./errors.js";
+import { InvalidTokenError, UnavailableError } from "./errors.js";
 import type { Issuer, Tenant } from "./issuer.js";
 import { MemoryReplayStore, type ReplayStore } from "./replay.js";
 
@@ -88,8 +89,13 @@ export class Verifier {
     } catch (error) {
       if (error instanceof InvalidTokenError) throw error;
 
-      throw new InvalidTokenError(
-        error instanceof Error ? error.message : "that token is not valid",
+      if (error instanceof errors.JOSEError) {
+        throw new InvalidTokenError(error.message);
+      }
+
+      throw new UnavailableError(
+        "the issuer's keys could not be fetched to check that token",
+        { cause: error },
       );
     }
 
@@ -129,9 +135,9 @@ export class Verifier {
   }
 
   challengeHeaders(error: unknown): string[] {
-    const description = (
-      error instanceof Error ? error.message : "that token is not valid"
-    )
+    if (!(error instanceof InvalidTokenError)) return [];
+
+    const description = error.message
       .replace(/^masks: invalid token: /, "")
       .replace(/["\\]/g, "'");
     const challenge = `error="invalid_token", error_description="${description}"`;
@@ -142,14 +148,32 @@ export class Verifier {
     ];
   }
 
-  challenge(error: unknown): Response {
-    const headers = new Headers();
-
-    for (const value of this.challengeHeaders(error)) {
-      headers.append("www-authenticate", value);
+  refusal(error: unknown): {
+    status: 401 | 503;
+    headers: Record<string, string[]>;
+  } {
+    if (!(error instanceof InvalidTokenError)) {
+      return { status: 503, headers: {} };
     }
 
-    return new Response("unauthorized", { status: 401, headers });
+    return {
+      status: 401,
+      headers: { "www-authenticate": this.challengeHeaders(error) },
+    };
+  }
+
+  challenge(error: unknown): Response {
+    const { status, headers } = this.refusal(error);
+    const held = new Headers();
+
+    for (const [name, values] of Object.entries(headers)) {
+      for (const value of values) held.append(name, value);
+    }
+
+    return new Response(status === 401 ? "unauthorized" : "unavailable", {
+      status,
+      headers: held,
+    });
   }
 
   async #authenticate(
@@ -220,7 +244,15 @@ export class Verifier {
     }
 
     const claims = payload as unknown as ProofClaims;
-    const carried = await calculateJwkThumbprint(header.jwk as JWK, "sha256");
+    let carried: string;
+
+    try {
+      carried = await calculateJwkThumbprint(header.jwk as JWK, "sha256");
+    } catch {
+      throw new InvalidTokenError(
+        "that proof carries a key this API cannot read",
+      );
+    }
 
     if (!same(carried, thumbprint)) {
       throw new InvalidTokenError(
@@ -260,14 +292,23 @@ export class Verifier {
   }
 
   async #first(key: string): Promise<boolean> {
+    let answer: unknown;
+
     try {
-      return (await this.replay.first(key, REMEMBERED)) === true;
+      answer = await this.replay.first(key, REMEMBERED);
     } catch (error) {
-      throw new InvalidTokenError(
-        "that proof could not be checked for replay",
-        { cause: error },
+      throw new UnavailableError("the replay store could not be reached", {
+        cause: error,
+      });
+    }
+
+    if (typeof answer !== "boolean") {
+      throw new UnavailableError(
+        `the replay store answered ${typeof answer} instead of true or false`,
       );
     }
+
+    return answer;
   }
 }
 

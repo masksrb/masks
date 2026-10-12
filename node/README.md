@@ -191,7 +191,9 @@ In a Node `http` server, or Express:
 try {
   const claims = await verifier.authenticateNode(request);
 } catch (error) {
-  response.writeHead(401, { "www-authenticate": verifier.challengeHeaders(error) });
+  const { status, headers } = verifier.refusal(error);
+
+  response.writeHead(status, headers);
   response.end();
 }
 ```
@@ -199,7 +201,15 @@ try {
 The verifier checks the signature against the issuer's published keys, the
 `at+jwt` type, the issuer, the audience, and the expiry. A DPoP-bound token
 needs a proof signed by its key, made for this method and URL, made in the last
-minute, and not seen before. A failure is an `InvalidTokenError`.
+minute, and not seen before. A token that fails a check is an
+`InvalidTokenError`, and `challenge` and `refusal` answer it with `401` and a
+`WWW-Authenticate` challenge for both schemes.
+
+When the verifier cannot check a token at all, because the issuer's keys could
+not be fetched or the replay store failed, it throws an `UnavailableError` with
+the underlying error as its `cause`. `challenge` and `refusal` answer that, and
+any other error, with `503` and no challenge, so a client keeps a token that may
+be fine and tries again later.
 
 Set `publicURL` when a proxy sits in front of the API, since a proof names the
 address the client used.
@@ -226,10 +236,11 @@ const verifier = new Verifier(issuer, "https://files.example.com", {
 });
 ```
 
-The verifier accepts a proof only when `first` returns `true`. Any other answer,
-a thrown error, or a rejected promise refuses the request with an
-`InvalidTokenError`, and the store's error stays in its `cause` without
-reaching the challenge sent to the client.
+The verifier accepts a proof when `first` returns `true` and refuses it as a
+replay, with an `InvalidTokenError`, when it returns `false`. An answer that is
+not a boolean, a thrown error, or a rejected promise is an `UnavailableError`,
+answered with `503`. The store's error stays in its `cause` and never reaches
+the response.
 
 ## Introspection
 

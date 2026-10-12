@@ -31,6 +31,7 @@ export {
   InsecureError,
   InvalidTokenError,
   MasksError,
+  UnavailableError,
 } from "./errors.js";
 export type { Options } from "./http.js";
 export {
