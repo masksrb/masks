@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -36,16 +37,30 @@ var (
 	}()
 )
 
+type Organization struct {
+	ID   string `json:"id"`
+	Key  string `json:"key"`
+	Name string `json:"name"`
+	Role string `json:"role"`
+}
+
+func (o *Organization) HasRole(roles ...string) bool {
+	return o != nil && o.Role != "" && slices.Contains(roles, o.Role)
+}
+
+type Confirmation struct {
+	Thumbprint string `json:"jkt"`
+}
+
 type Claims struct {
 	jwt.Claims
 
 	ClientID     string          `json:"client_id"`
 	Scope        string          `json:"scope"`
 	Tenant       *Tenant         `json:"tenant,omitempty"`
+	Organization *Organization   `json:"org,omitempty"`
 	Act          json.RawMessage `json:"act,omitempty"`
-	Confirmation *struct {
-		Thumbprint string `json:"jkt"`
-	} `json:"cnf,omitempty"`
+	Confirmation *Confirmation   `json:"cnf,omitempty"`
 }
 
 func (c *Claims) Scopes() []string {
@@ -70,38 +85,11 @@ type Verifier struct {
 	Issuer    *Issuer
 	Audience  []string
 	PublicURL string
+	Replay    ReplayStore
 
-	replays replays
-	once    sync.Once
-	public  *url.URL
-}
-
-type replays struct {
-	lock     sync.Mutex
-	current  map[string]struct{}
-	previous map[string]struct{}
-	turned   time.Time
-}
-
-func (r *replays) first(id string) bool {
-	r.lock.Lock()
-	defer r.lock.Unlock()
-
-	if now := time.Now(); r.current == nil || now.Sub(r.turned) > replayMemory {
-		r.previous, r.current, r.turned = r.current, map[string]struct{}{}, now
-	}
-
-	if _, seen := r.current[id]; seen {
-		return false
-	}
-
-	if _, seen := r.previous[id]; seen {
-		return false
-	}
-
-	r.current[id] = struct{}{}
-
-	return true
+	memory MemoryReplayStore
+	once   sync.Once
+	public *url.URL
 }
 
 func NewVerifier(issuer *Issuer, audience ...string) *Verifier {
@@ -175,14 +163,13 @@ func (v *Verifier) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
 		claims, err := v.Authenticate(request)
 		if err != nil {
-			description := "the token could not be checked"
-
 			var refused *invalidToken
-			if errors.As(err, &refused) {
-				description = refused.description
+			if !errors.As(err, &refused) {
+				http.Error(response, "the token could not be checked", http.StatusServiceUnavailable)
+				return
 			}
 
-			challenge := fmt.Sprintf(`error="invalid_token", error_description=%q`, description)
+			challenge := fmt.Sprintf(`error="invalid_token", error_description=%q`, refused.description)
 			response.Header().Add("WWW-Authenticate", "Bearer "+challenge)
 			response.Header().Add("WWW-Authenticate", DPoP+" "+challenge+` algs="`+proofAlgs+`"`)
 			http.Error(response, "unauthorized", http.StatusUnauthorized)
@@ -257,11 +244,28 @@ func (v *Verifier) proven(request *http.Request, token, bound string) error {
 		return invalid("that proof was made for another token")
 	}
 
-	if claims.ID == "" || !v.replays.first(bound+":"+claims.ID) {
+	if claims.ID == "" {
+		return invalid("a proof carries a jti")
+	}
+
+	first, err := v.replay().First(request.Context(), bound+":"+claims.ID, replayMemory)
+	if err != nil {
+		return fmt.Errorf("%w: %w", ErrReplayStore, err)
+	}
+
+	if !first {
 		return invalid("that proof has already been used")
 	}
 
 	return nil
+}
+
+func (v *Verifier) replay() ReplayStore {
+	if v.Replay != nil {
+		return v.Replay
+	}
+
+	return &v.memory
 }
 
 func (v *Verifier) target(request *http.Request) *url.URL {

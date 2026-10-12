@@ -49,13 +49,14 @@ type TokenRequest struct {
 }
 
 type Token struct {
-	AccessToken  string    `json:"access_token"`
-	TokenType    string    `json:"token_type"`
-	RefreshToken string    `json:"refresh_token,omitempty"`
-	IDToken      string    `json:"id_token,omitempty"`
-	Scope        string    `json:"scope,omitempty"`
-	ExpiresIn    int64     `json:"expires_in,omitempty"`
-	Expiry       time.Time `json:"expiry,omitzero"`
+	AccessToken     string    `json:"access_token"`
+	TokenType       string    `json:"token_type"`
+	RefreshToken    string    `json:"refresh_token,omitempty"`
+	IssuedTokenType string    `json:"issued_token_type,omitempty"`
+	IDToken         string    `json:"id_token,omitempty"`
+	Scope           string    `json:"scope,omitempty"`
+	ExpiresIn       int64     `json:"expires_in,omitempty"`
+	Expiry          time.Time `json:"expiry,omitzero"`
 }
 
 func (t *Token) Valid() bool {
@@ -197,33 +198,41 @@ func (asked TokenRequest) form() url.Values {
 }
 
 func (c *Client) token(ctx context.Context, form url.Values) (*Token, error) {
+	return c.grant(ctx, form, c.DPoP != nil)
+}
+
+func (c *Client) grant(ctx context.Context, form url.Values, held bool) (*Token, error) {
 	endpoint, err := c.Issuer.endpoint("token_endpoint", c.Issuer.Metadata.TokenEndpoint)
 	if err != nil {
 		return nil, err
 	}
 
-	held := &Token{}
+	granted := &Token{}
 
-	if err := c.post(ctx, endpoint, form, true, held); err != nil {
+	if err := c.post(ctx, endpoint, form, true, granted); err != nil {
 		return nil, err
 	}
 
-	if held.AccessToken == "" {
+	if granted.AccessToken == "" {
 		return nil, &Error{Code: "server_error", Description: "the token endpoint answered without an access token"}
 	}
 
-	if held.ExpiresIn > 0 {
-		held.Expiry = time.Now().Add(time.Duration(held.ExpiresIn) * time.Second)
+	if granted.ExpiresIn > 0 {
+		granted.Expiry = time.Now().Add(time.Duration(granted.ExpiresIn) * time.Second)
 	}
 
-	if c.DPoP != nil && !held.Bound() {
+	if held && !granted.Bound() {
 		return nil, &Error{Code: "invalid_dpop_proof", Description: "the token endpoint answered with a token that is not held to this key"}
 	}
 
-	return held, nil
+	return granted, nil
 }
 
 func (c *Client) post(ctx context.Context, endpoint string, form url.Values, proven bool, into any) error {
+	return c.call(ctx, http.MethodPost, endpoint, form, proven, into)
+}
+
+func (c *Client) call(ctx context.Context, method, endpoint string, form url.Values, proven bool, into any) error {
 	target, err := url.Parse(endpoint)
 	if err != nil {
 		return err
@@ -236,7 +245,7 @@ func (c *Client) post(ctx context.Context, endpoint string, form url.Values, pro
 		nonce = c.Issuer.nonces.load(target)
 	}
 
-	response, err := c.send(ctx, endpoint, form, proving, nonce)
+	response, err := c.send(ctx, method, endpoint, form, proving, nonce)
 	if err != nil {
 		return err
 	}
@@ -252,7 +261,7 @@ func (c *Client) post(ctx context.Context, endpoint string, form url.Values, pro
 		return err
 	}
 
-	response, err = c.send(ctx, endpoint, form, proving, wanted)
+	response, err = c.send(ctx, method, endpoint, form, proving, wanted)
 	if err != nil {
 		return err
 	}
@@ -262,7 +271,7 @@ func (c *Client) post(ctx context.Context, endpoint string, form url.Values, pro
 	return decoded(response, into)
 }
 
-func (c *Client) send(ctx context.Context, endpoint string, form url.Values, proving bool, nonce string) (*http.Response, error) {
+func (c *Client) send(ctx context.Context, method, endpoint string, form url.Values, proving bool, nonce string) (*http.Response, error) {
 	header := http.Header{}
 
 	if err := c.authenticate(header, form); err != nil {
@@ -270,7 +279,7 @@ func (c *Client) send(ctx context.Context, endpoint string, form url.Values, pro
 	}
 
 	if proving {
-		proof, err := c.DPoP.Proof(http.MethodPost, endpoint, "", nonce)
+		proof, err := c.DPoP.Proof(method, endpoint, "", nonce)
 		if err != nil {
 			return nil, err
 		}
@@ -278,7 +287,7 @@ func (c *Client) send(ctx context.Context, endpoint string, form url.Values, pro
 		header.Set("DPoP", proof)
 	}
 
-	request, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(form.Encode()))
+	request, err := http.NewRequestWithContext(ctx, method, endpoint, strings.NewReader(form.Encode()))
 	if err != nil {
 		return nil, err
 	}

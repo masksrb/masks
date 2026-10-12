@@ -43,6 +43,7 @@ type Metadata struct {
 	HandshakeEndpoint                 string   `json:"handshake_endpoint"`
 	RevocationEndpoint                string   `json:"revocation_endpoint"`
 	IntrospectionEndpoint             string   `json:"introspection_endpoint"`
+	EnrollmentEndpoint                string   `json:"enrollment_endpoint"`
 	EndSessionEndpoint                string   `json:"end_session_endpoint"`
 	ScopesSupported                   []string `json:"scopes_supported"`
 	GrantTypesSupported               []string `json:"grant_types_supported"`
@@ -135,6 +136,7 @@ func Discover(ctx context.Context, issuer string, options ...Option) (*Issuer, e
 		metadata.AuthorizationEndpoint, metadata.TokenEndpoint, metadata.UserinfoEndpoint, metadata.JWKSURI,
 		metadata.RegistrationEndpoint, metadata.DeviceAuthorizationEndpoint, metadata.HandshakeEndpoint,
 		metadata.RevocationEndpoint, metadata.IntrospectionEndpoint, metadata.EndSessionEndpoint,
+		metadata.EnrollmentEndpoint,
 	} {
 		if endpoint == "" {
 			continue

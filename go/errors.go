@@ -33,6 +33,7 @@ var (
 	ErrInvalidToken = errors.New("masks: invalid token")
 	ErrInsecure     = errors.New("masks: plain http is allowed only on this machine")
 	ErrForeign      = errors.New("masks: that URL belongs to another origin")
+	ErrReplayStore  = errors.New("masks: the replay store could not say whether a proof is new")
 )
 
 type invalidToken struct {

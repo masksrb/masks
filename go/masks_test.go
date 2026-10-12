@@ -678,3 +678,349 @@ func TestATransportAnswersAResourceNonceAndReplaysTheBody(t *testing.T) {
 		t.Fatalf("the nonce was not remembered: %q", nonces)
 	}
 }
+
+func TestAnAppEnrollsAMachineAndUnenrollsIt(t *testing.T) {
+	held := newFake(t)
+	app := secretClient(t, held, "")
+
+	enrollment, err := app.Enroll(context.Background(), EnrollmentRequest{Scope: []string{"xixo:agent"}, Name: "nas", Lifetime: 15 * time.Minute})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sent := held.seen["/enrollments"]
+	if sent.Get("scope") != "xixo:agent" || sent.Get("client_name") != "nas" || sent.Get("expires_in") != "900" {
+		t.Fatalf("unexpected form %v", sent)
+	}
+
+	if enrollment.InitialAccessToken == "" || enrollment.Scopes()[0] != "xixo:agent" || time.Until(enrollment.Expiry) < 14*time.Minute {
+		t.Fatalf("unexpected enrollment %+v", enrollment)
+	}
+
+	key, _ := GenerateKey()
+	dpop, _ := GenerateKey()
+
+	registration, err := app.Issuer.Register(context.Background(), ClientMetadata{
+		Name:                    "nas",
+		TokenEndpointAuthMethod: PrivateKeyJWT,
+		JWKS:                    key.JWKS(),
+	}, enrollment.InitialAccessToken)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	machine := app.Issuer.Client(registration, key, dpop)
+	token, err := machine.ClientCredentials(context.Background(), TokenRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := app.Unenroll(context.Background(), registration.ClientID); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := machine.ClientCredentials(context.Background(), TokenRequest{}); !HasCode(err, "invalid_client") {
+		t.Fatalf("expected the unenrolled machine to be refused, got %v", err)
+	}
+
+	introspected, err := app.Introspect(context.Background(), token.AccessToken, "access_token")
+	if err != nil || introspected.Active {
+		t.Fatalf("expected the machine's token to be gone, got %+v %v", introspected, err)
+	}
+}
+
+func TestAnAppUnenrollsOnlyItsOwnMachines(t *testing.T) {
+	held := newFake(t)
+	app := signedClient(t, held)
+	held.add("other", &fakeClient{secret: "secret", method: ClientSecretPost})
+	held.enrolledBy["theirs"] = "other"
+
+	err := app.Unenroll(context.Background(), "theirs")
+
+	var refused *Error
+	if !errors.As(err, &refused) || refused.Status != http.StatusNotFound {
+		t.Fatalf("expected a 404, got %v", err)
+	}
+
+	enrollment, err := app.Enroll(context.Background(), EnrollmentRequest{Scope: []string{"xixo:agent"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	held.lock.Lock()
+	var mine string
+	for machine, by := range held.enrolledBy {
+		if by == "signed" {
+			mine = machine
+		}
+	}
+	held.lock.Unlock()
+
+	if enrollment.InitialAccessToken == "" || held.seen["/enrollments"].Has("expires_in") || held.seen["/enrollments"].Has("client_name") {
+		t.Fatalf("unexpected enrollment %+v %v", enrollment, held.seen["/enrollments"])
+	}
+
+	if err := app.Unenroll(context.Background(), mine); err != nil {
+		t.Fatalf("a signed app could not unenroll its machine: %v", err)
+	}
+
+	for _, refused := range []string{"", ".", ".."} {
+		if err := app.Unenroll(context.Background(), refused); err == nil {
+			t.Errorf("%q was sent", refused)
+		}
+	}
+}
+
+func TestAnEnrollmentWithoutAScopeIsRefused(t *testing.T) {
+	held := newFake(t)
+	app := secretClient(t, held, "")
+
+	if _, err := app.Enroll(context.Background(), EnrollmentRequest{}); !HasCode(err, "invalid_request") {
+		t.Fatalf("expected invalid_request, got %v", err)
+	}
+}
+
+func TestIntrospectionDescribesALiveToken(t *testing.T) {
+	held := newFake(t)
+	client := signedClient(t, held)
+
+	token, err := client.ClientCredentials(context.Background(), TokenRequest{Scope: []string{"files:read"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	introspected, err := client.Introspect(context.Background(), token.AccessToken, "access_token")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if held.seen["/introspect"].Get("token_type_hint") != "access_token" {
+		t.Fatalf("the hint was not sent: %v", held.seen["/introspect"])
+	}
+
+	if !introspected.Active || !introspected.HasScope("files:read") || introspected.HasScope("files:write") || introspected.ClientID != "signed" {
+		t.Fatalf("unexpected %+v", introspected)
+	}
+
+	if !introspected.Bound() || introspected.Confirmation.Thumbprint != client.DPoP.Thumbprint() || introspected.TokenType != DPoP {
+		t.Fatalf("expected the token to be held to the client's key, got %+v", introspected.Confirmation)
+	}
+
+	if !introspected.Organization.HasRole("owner", "admin") || introspected.Audience[0] != held.audience {
+		t.Fatalf("unexpected organization or audience %+v", introspected)
+	}
+}
+
+func TestIntrospectionCallsAnUnknownOrStaleTokenInactive(t *testing.T) {
+	held := newFake(t)
+	client := secretClient(t, held, "files:read")
+
+	unknown, err := client.Introspect(context.Background(), "nonsense", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if unknown.Active || unknown.Scope != "" || unknown.HasScope("leaked") {
+		t.Fatalf("an inactive answer kept %+v", unknown)
+	}
+
+	token, err := client.ClientCredentials(context.Background(), TokenRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	held.staleActive = true
+
+	stale, err := client.Introspect(context.Background(), token.AccessToken, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if stale.Active || stale.HasScope("files:read") {
+		t.Fatalf("an expired token was called active: %+v", stale)
+	}
+}
+
+func TestATokenExchangeKeepsTheKey(t *testing.T) {
+	held := newFake(t)
+	held.nonce = "fresh-nonce"
+	client := signedClient(t, held)
+
+	subject, err := client.ClientCredentials(context.Background(), TokenRequest{Scope: []string{"files:read files:write"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	exchanged, err := client.Exchange(context.Background(), ExchangeRequest{
+		SubjectToken: subject.AccessToken,
+		ActorToken:   "actor",
+		Audience:     []string{"files"},
+		Scope:        []string{"files:read"},
+		Resource:     []string{held.audience},
+		Lifetime:     5 * time.Minute,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	sent := held.seen["/token"]
+	want := map[string]string{
+		"grant_type":         GrantTokenExchange,
+		"subject_token_type": TokenTypeAccessToken,
+		"actor_token":        "actor",
+		"actor_token_type":   TokenTypeAccessToken,
+		"audience":           "files",
+		"scope":              "files:read",
+		"resource":           held.audience,
+		"requested_lifetime": "300",
+	}
+
+	for name, value := range want {
+		if sent.Get(name) != value {
+			t.Errorf("%s was %q, expected %q", name, sent.Get(name), value)
+		}
+	}
+
+	if sent.Has("requested_token_type") {
+		t.Errorf("requested_token_type was sent unasked")
+	}
+
+	if !exchanged.Bound() || exchanged.IssuedTokenType != TokenTypeAccessToken || exchanged.Scope != "files:read" {
+		t.Fatalf("unexpected %+v", exchanged)
+	}
+
+	claims, err := NewVerifier(client.Issuer, held.audience).Verify(context.Background(), exchanged.AccessToken)
+	if err != nil || claims.Confirmation.Thumbprint != client.DPoP.Thumbprint() {
+		t.Fatalf("the exchanged token is not held to the client's key: %v", err)
+	}
+
+	stranger, _ := GenerateKey()
+	thief := *client
+	thief.DPoP = stranger
+
+	if _, err := thief.Exchange(context.Background(), ExchangeRequest{SubjectToken: subject.AccessToken}); !HasCode(err, "invalid_dpop_proof") {
+		t.Fatalf("a bound subject token was exchanged with another key: %v", err)
+	}
+}
+
+func TestATokenExchangeForAnUpstreamTokenIsBearer(t *testing.T) {
+	held := newFake(t)
+	client := signedClient(t, held)
+
+	subject, err := client.ClientCredentials(context.Background(), TokenRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	upstream, err := client.Exchange(context.Background(), ExchangeRequest{
+		SubjectToken:       subject.AccessToken,
+		RequestedTokenType: TokenTypeUpstreamAccessToken,
+		Audience:           []string{"connection-uuid"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if upstream.Bound() || upstream.IssuedTokenType != TokenTypeUpstreamAccessToken || !strings.HasPrefix(upstream.AccessToken, "upstream-") {
+		t.Fatalf("unexpected %+v", upstream)
+	}
+}
+
+func TestATokenExchangeRefusesAnotherIssuedType(t *testing.T) {
+	held := newFake(t)
+	held.issuedAs = TokenTypeIDToken
+	client := secretClient(t, held, "")
+
+	subject, err := client.ClientCredentials(context.Background(), TokenRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := client.Exchange(context.Background(), ExchangeRequest{SubjectToken: subject.AccessToken}); !HasCode(err, "server_error") {
+		t.Fatalf("expected the wrong type to be refused, got %v", err)
+	}
+
+	if _, err := client.Exchange(context.Background(), ExchangeRequest{}); err == nil {
+		t.Fatal("an exchange without a subject token was sent")
+	}
+}
+
+func TestVerifiersSharingAReplayStoreRefuseAProofSeenByEither(t *testing.T) {
+	held := newFake(t)
+	client := signedClient(t, held)
+	target := "http://files.example/files"
+
+	var asked []string
+	shared := &MemoryReplayStore{}
+	store := ReplayStoreFunc(func(ctx context.Context, key string, expiresIn time.Duration) (bool, error) {
+		asked = append(asked, key)
+
+		if expiresIn < proofWindow {
+			t.Errorf("a proof is remembered for only %s", expiresIn)
+		}
+
+		return shared.First(ctx, key, expiresIn)
+	})
+
+	one := NewVerifier(client.Issuer, held.audience)
+	one.Replay = store
+	two := NewVerifier(client.Issuer, held.audience)
+	two.Replay = store
+
+	request, _ := boundRequest(t, client, client.DPoP, http.MethodGet, target)
+
+	if _, err := one.Authenticate(request); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := two.Authenticate(request); !errors.Is(err, ErrInvalidToken) {
+		t.Fatalf("the other verifier accepted a replayed proof: %v", err)
+	}
+
+	if len(asked) != 2 || !strings.HasPrefix(asked[0], client.DPoP.Thumbprint()+":") {
+		t.Fatalf("unexpected keys %q", asked)
+	}
+}
+
+func TestAReplayStoreThatFailsRefusesTheRequest(t *testing.T) {
+	held := newFake(t)
+	client := signedClient(t, held)
+	resource := newResource(t, client.Issuer, held.audience)
+	resource.verifier.Replay = ReplayStoreFunc(func(context.Context, string, time.Duration) (bool, error) {
+		return true, errors.New("redis is down")
+	})
+
+	request, _ := boundRequest(t, client, client.DPoP, http.MethodGet, "http://files.example/files")
+
+	if _, err := resource.verifier.Authenticate(request); !errors.Is(err, ErrReplayStore) || errors.Is(err, ErrInvalidToken) {
+		t.Fatalf("expected ErrReplayStore, got %v", err)
+	}
+
+	api := client.HTTPClient(client.CredentialsSource(TokenRequest{}), resource.URL)
+
+	response, err := api.Get(resource.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	response.Body.Close()
+
+	if response.StatusCode != http.StatusServiceUnavailable || len(resource.seen) != 0 {
+		t.Fatalf("expected 503 before the handler, got %d with %d handled", response.StatusCode, len(resource.seen))
+	}
+}
+
+func TestTheMemoryReplayStoreForgetsAKeyAfterItExpires(t *testing.T) {
+	store := &MemoryReplayStore{}
+
+	for _, want := range []bool{true, false} {
+		if first, err := store.First(context.Background(), "k", 20*time.Millisecond); err != nil || first != want {
+			t.Fatalf("expected %v, got %v %v", want, first, err)
+		}
+	}
+
+	time.Sleep(30 * time.Millisecond)
+
+	if first, _ := store.First(context.Background(), "k", time.Minute); !first {
+		t.Fatal("an expired key was still remembered")
+	}
+}

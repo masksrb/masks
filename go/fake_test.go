@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -24,6 +25,12 @@ type fakeClient struct {
 	refresh map[string]bool
 }
 
+type liveToken struct {
+	client string
+	scope  string
+	jkt    string
+}
+
 type fake struct {
 	t        *testing.T
 	server   *httptest.Server
@@ -41,6 +48,11 @@ type fake struct {
 	assertions    map[string]bool
 	nonce         string
 	foreignURI    bool
+	live          map[string]liveToken
+	enrolledBy    map[string]string
+	seen          map[string]url.Values
+	staleActive   bool
+	issuedAs      string
 }
 
 func newFake(t *testing.T) *fake {
@@ -60,6 +72,9 @@ func newFake(t *testing.T) *fake {
 		registrations: map[string]string{},
 		initial:       map[string]string{},
 		assertions:    map[string]bool{},
+		live:          map[string]liveToken{},
+		enrolledBy:    map[string]string{},
+		seen:          map[string]url.Values{},
 	}
 
 	mux := http.NewServeMux()
@@ -72,6 +87,9 @@ func newFake(t *testing.T) *fake {
 	mux.HandleFunc("GET /register/{id}", held.registration)
 	mux.HandleFunc("PUT /register/{id}", held.registration)
 	mux.HandleFunc("DELETE /register/{id}", held.registration)
+	mux.HandleFunc("POST /introspect", held.introspect)
+	mux.HandleFunc("POST /enrollments", held.enroll)
+	mux.HandleFunc("DELETE /enrollments/{machine}", held.unenroll)
 
 	held.server = httptest.NewServer(mux)
 	t.Cleanup(held.server.Close)
@@ -104,6 +122,8 @@ func (f *fake) discovery(response http.ResponseWriter, _ *http.Request) {
 		"device_authorization_endpoint": base + "/device_authorization",
 		"revocation_endpoint":           base + "/revoke",
 		"registration_endpoint":         base + "/register",
+		"introspection_endpoint":        base + "/introspect",
+		"enrollment_endpoint":           base + "/enrollments",
 	})
 }
 
@@ -230,7 +250,7 @@ func (f *fake) proof(request *http.Request) (string, bool) {
 		return "", false
 	}
 
-	if claims.Method != http.MethodPost || claims.Target != f.url()+request.URL.Path || claims.Hash != "" {
+	if claims.Method != request.Method || claims.Target != f.url()+request.URL.Path || claims.Hash != "" {
 		return "", false
 	}
 
@@ -272,7 +292,12 @@ func (f *fake) token(response http.ResponseWriter, request *http.Request) {
 	f.lock.Lock()
 	defer f.lock.Unlock()
 
+	f.seen[request.URL.Path] = request.PostForm
+
 	switch request.PostForm.Get("grant_type") {
+	case GrantTokenExchange:
+		f.exchange(response, request, id, jkt)
+		return
 	case GrantClientCredentials:
 	case GrantRefreshToken:
 		presented := request.PostForm.Get("refresh_token")
@@ -310,8 +335,11 @@ func (f *fake) token(response http.ResponseWriter, request *http.Request) {
 	refresh := rand.Text()
 	client.refresh[refresh] = true
 
+	access := f.accessToken(id, scope, jkt)
+	f.live[access] = liveToken{client: id, scope: scope, jkt: jkt}
+
 	body := map[string]any{
-		"access_token":  f.accessToken(id, scope, jkt),
+		"access_token":  access,
 		"token_type":    "Bearer",
 		"expires_in":    3600,
 		"scope":         scope,
@@ -462,4 +490,175 @@ func writeJSON(response http.ResponseWriter, status int, body any) {
 
 func oauthError(response http.ResponseWriter, status int, code string) {
 	writeJSON(response, status, map[string]string{"error": code, "error_description": code + " from the fake"})
+}
+
+func (f *fake) exchange(response http.ResponseWriter, request *http.Request, id, jkt string) {
+	form := request.PostForm
+	subject, known := f.live[form.Get("subject_token")]
+
+	if !known || form.Get("subject_token_type") != TokenTypeAccessToken {
+		oauthError(response, http.StatusBadRequest, "invalid_grant")
+		return
+	}
+
+	if subject.jkt != "" && subject.jkt != jkt {
+		oauthError(response, http.StatusBadRequest, "invalid_dpop_proof")
+		return
+	}
+
+	if form.Get("requested_token_type") == TokenTypeUpstreamAccessToken {
+		writeJSON(response, http.StatusOK, map[string]any{
+			"access_token":      "upstream-" + rand.Text(),
+			"issued_token_type": TokenTypeUpstreamAccessToken,
+			"token_type":        "Bearer",
+			"expires_in":        600,
+		})
+
+		return
+	}
+
+	scope := form.Get("scope")
+	if scope == "" {
+		scope = subject.scope
+	}
+
+	access := f.accessToken(id, scope, jkt)
+	f.live[access] = liveToken{client: id, scope: scope, jkt: jkt}
+
+	issued := TokenTypeAccessToken
+	if f.issuedAs != "" {
+		issued = f.issuedAs
+	}
+
+	body := map[string]any{
+		"access_token":      access,
+		"issued_token_type": issued,
+		"token_type":        "Bearer",
+		"expires_in":        300,
+		"scope":             scope,
+	}
+
+	if jkt != "" {
+		body["token_type"] = DPoP
+	}
+
+	writeJSON(response, http.StatusOK, body)
+}
+
+func (f *fake) introspect(response http.ResponseWriter, request *http.Request) {
+	if err := request.ParseForm(); err != nil {
+		oauthError(response, http.StatusBadRequest, "invalid_request")
+		return
+	}
+
+	id, _, ok := f.authenticated(request)
+	if !ok {
+		oauthError(response, http.StatusUnauthorized, "invalid_client")
+		return
+	}
+
+	f.lock.Lock()
+	defer f.lock.Unlock()
+
+	f.seen[request.URL.Path] = request.PostForm
+	held, known := f.live[request.PostForm.Get("token")]
+
+	if !known || held.client != id {
+		writeJSON(response, http.StatusOK, map[string]any{"active": false, "scope": "leaked"})
+		return
+	}
+
+	expiry := time.Now().Add(time.Hour)
+	if f.staleActive {
+		expiry = time.Now().Add(-time.Hour)
+	}
+
+	body := map[string]any{
+		"active":     true,
+		"scope":      held.scope,
+		"client_id":  held.client,
+		"sub":        held.client,
+		"aud":        []string{f.audience},
+		"iss":        f.url(),
+		"exp":        expiry.Unix(),
+		"token_type": "Bearer",
+		"org":        map[string]string{"id": "o-1", "key": "acme", "name": "Acme", "role": "owner"},
+	}
+
+	if held.jkt != "" {
+		body["token_type"] = DPoP
+		body["cnf"] = map[string]string{"jkt": held.jkt}
+	}
+
+	writeJSON(response, http.StatusOK, body)
+}
+
+func (f *fake) enroll(response http.ResponseWriter, request *http.Request) {
+	if err := request.ParseForm(); err != nil {
+		oauthError(response, http.StatusBadRequest, "invalid_request")
+		return
+	}
+
+	app, _, ok := f.authenticated(request)
+	if !ok {
+		oauthError(response, http.StatusUnauthorized, "invalid_client")
+		return
+	}
+
+	scope := request.PostForm.Get("scope")
+	if scope == "" {
+		oauthError(response, http.StatusBadRequest, "invalid_request")
+		return
+	}
+
+	token := rand.Text()
+	machine := "machine-" + rand.Text()
+
+	f.lock.Lock()
+	f.seen[request.URL.Path] = request.PostForm
+	f.initial[token] = machine
+	f.enrolledBy[machine] = app
+	f.lock.Unlock()
+
+	writeJSON(response, http.StatusCreated, map[string]any{"initial_access_token": token, "expires_in": 900, "scope": scope})
+}
+
+func (f *fake) unenroll(response http.ResponseWriter, request *http.Request) {
+	body, err := io.ReadAll(request.Body)
+	if err != nil {
+		oauthError(response, http.StatusBadRequest, "invalid_request")
+		return
+	}
+
+	if request.PostForm, err = url.ParseQuery(string(body)); err != nil {
+		oauthError(response, http.StatusBadRequest, "invalid_request")
+		return
+	}
+
+	app, _, ok := f.authenticated(request)
+	if !ok {
+		oauthError(response, http.StatusUnauthorized, "invalid_client")
+		return
+	}
+
+	machine := request.PathValue("machine")
+
+	f.lock.Lock()
+	defer f.lock.Unlock()
+
+	if f.enrolledBy[machine] != app {
+		oauthError(response, http.StatusNotFound, "invalid_request")
+		return
+	}
+
+	delete(f.clients, machine)
+	delete(f.registrations, machine)
+
+	for token, held := range f.live {
+		if held.client == machine {
+			delete(f.live, token)
+		}
+	}
+
+	response.WriteHeader(http.StatusNoContent)
 }

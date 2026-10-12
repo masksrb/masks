@@ -11,11 +11,13 @@ go get github.com/masksrb/masks/go
 | --- | --- |
 | Discovery | The issuer's document, checked against the address it was fetched from. |
 | Registration | Redeeming an initial access token, then reading, updating, and deleting the client. |
+| Enrollment | An app asking for initial access tokens for its machines, and unenrolling them. |
 | Client authentication | `client_secret_basic`, `client_secret_post`, `private_key_jwt`, and `none`. |
-| Grants | Client credentials, refresh tokens, and the device flow. |
+| Grants | Client credentials, refresh tokens, the device flow, and token exchange. |
 | DPoP | Tokens held to a key, and proofs on every request an `http.Client` sends. |
 | Revocation | Access and refresh tokens. |
-| Checking tokens | `at+jwt` access tokens, including DPoP-bound ones, in an API or as middleware. |
+| Introspection | Asking the issuer whether a token is active and what it grants. |
+| Checking tokens | `at+jwt` access tokens, including DPoP-bound ones, in an API or as middleware, with a shared store of seen proofs. |
 
 Signing people in through a browser is left to
 [golang.org/x/oauth2](https://pkg.go.dev/golang.org/x/oauth2). See
@@ -51,8 +53,9 @@ unbound is refused.
 
 ## Enrolling with an initial access token
 
-A manager approves the client in masks, and masks gives out an initial access
-token for it. The machine redeems the token once and keeps what comes back.
+A manager approves the client in masks, or an app enrolls the machine, and
+masks gives out an initial access token for it. The machine redeems the token
+once and keeps what comes back.
 
 ```go
 registration, err := issuer.Register(ctx, masks.ClientMetadata{}, initialAccessToken)
@@ -62,6 +65,33 @@ client := issuer.Client(registration, key, dpop)
 `ReadRegistration`, `UpdateRegistration`, and `DeleteRegistration` manage the
 client with its registration access token. They send that token only to the
 issuer's own origin.
+
+## Enrolling machines as an app
+
+An approved app that has claimed a namespace asks for an initial access token
+for each machine it installs. It authenticates the same way it does at the
+token endpoint.
+
+```go
+enrollment, err := app.Enroll(ctx, masks.EnrollmentRequest{
+	Scope:    []string{"xixo:agent"},
+	Name:     "nas",
+	Lifetime: 15 * time.Minute,
+})
+```
+
+Each scope falls under one of the app's namespaces. The token lasts from a
+minute to an hour, 15 minutes by default, and is spent the first time a
+machine registers with it. Hand `enrollment.InitialAccessToken` to the machine,
+which passes it to `issuer.Register`.
+
+```go
+err := app.Unenroll(ctx, machineClientID)
+```
+
+`Unenroll` archives the machine and revokes every token it holds. Unenrolling
+a machine twice succeeds both times. A client the app did not enroll answers
+with an `*masks.Error` whose `Status` is `404`.
 
 ## Calling an API
 
@@ -95,6 +125,46 @@ token, err := client.AwaitDevice(ctx, device)
 `AwaitDevice` polls at the interval masks names, slows down when asked, and
 stops when the code expires or `ctx` ends.
 
+## Exchanging a token
+
+`Exchange` trades a token for another one with fewer scopes, another audience,
+or a shorter lifetime.
+
+```go
+narrowed, err := client.Exchange(ctx, masks.ExchangeRequest{
+	SubjectToken: token.AccessToken,
+	Scope:        []string{"files:read"},
+	Resource:     []string{"https://files.example.com"},
+	Lifetime:     5 * time.Minute,
+})
+```
+
+`SubjectTokenType` and `ActorTokenType` default to an access token. An
+`ActorToken` puts the party acting for the subject in the new token's `act`
+claim. When `DPoP` is set, the
+request carries a proof, a subject token held to that key is accepted, and the
+new token comes back held to the same key. An answer whose
+`issued_token_type` differs from the one asked for is refused.
+
+Asking for `masks.TokenTypeUpstreamAccessToken`, with the connection's id in
+`Audience`, returns the upstream provider's own token for a delegation. That
+token is a Bearer token even when the client holds a DPoP key.
+
+## Introspecting a token
+
+```go
+introspected, err := client.Introspect(ctx, token, "access_token")
+
+if introspected.HasScope("files:read") {
+	serve()
+}
+```
+
+masks describes a token to the client it was issued to and to an approved
+client whose resources include one of the token's audiences. Every other token comes back inactive. An inactive
+answer, or one whose `exp` has passed, returns an `Introspection` with every
+field empty, and `HasScope` is false whenever the token is inactive.
+
 ## Checking access tokens
 
 ```go
@@ -112,6 +182,21 @@ the claims, and `claims.HasScope` checks a scope.
 
 Set `PublicURL` when a proxy sits in front of the API, since a proof names the
 address the client used.
+
+A verifier remembers the proofs it has seen in its own process. When an API
+runs as several processes, set `Replay` to a `masks.ReplayStore` they share.
+`First` answers true only the first time it sees a key. A store backed by
+Redis sets the key only when it is absent:
+
+```go
+verifier.Replay = masks.ReplayStoreFunc(func(ctx context.Context, key string, expiresIn time.Duration) (bool, error) {
+	return redis.SetNX(ctx, "dpop:"+key, 1, expiresIn).Result()
+})
+```
+
+An error from the store refuses the request with `masks.ErrReplayStore`, and
+the middleware answers `503`. A token that fails its checks answers `401`
+with a challenge.
 
 ## Plain HTTP
 
