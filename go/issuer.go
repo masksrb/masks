@@ -20,7 +20,6 @@ import (
 
 const (
 	discoveryPath = "/.well-known/openid-configuration"
-	resourcePath  = "/.well-known/oauth-protected-resource"
 	keysLifetime  = 5 * time.Minute
 	keysPatience  = 30 * time.Second
 )
@@ -164,7 +163,7 @@ func DiscoverResource(ctx context.Context, resource string, options ...Option) (
 		return nil, err
 	}
 
-	document.Path = resourcePath + document.Path
+	document.Path = ResourceMetadataPath + document.Path
 
 	found := &ResourceMetadata{}
 

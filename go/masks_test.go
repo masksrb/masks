@@ -593,7 +593,7 @@ func TestResourceDiscoveryFindsTheIssuer(t *testing.T) {
 	defer server.Close()
 
 	server.Config.Handler = http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
-		if request.URL.Path != resourcePath {
+		if request.URL.Path != ResourceMetadataPath {
 			http.NotFound(response, request)
 			return
 		}
@@ -1022,5 +1022,24 @@ func TestTheMemoryReplayStoreForgetsAKeyAfterItExpires(t *testing.T) {
 
 	if first, _ := store.First(context.Background(), "k", time.Minute); !first {
 		t.Fatal("an expired key was still remembered")
+	}
+}
+
+func TestAChallengePointsAtTheResourceMetadata(t *testing.T) {
+	found, err := ResourceMetadataURL("https://files.example:443/api/")
+	if err != nil || found != "https://files.example/.well-known/oauth-protected-resource/api" {
+		t.Fatalf("unexpected %q %v", found, err)
+	}
+
+	verifier := &Verifier{ResourceMetadata: found}
+	held := verifier.Challenge("insufficient_scope", `needs "files:write"`, "files:write")
+
+	if len(held) != 2 || !strings.HasPrefix(held[0], `Bearer error="insufficient_scope", error_description="needs  files:write ", scope="files:write", resource_metadata="`+found+`"`) ||
+		!strings.HasPrefix(held[1], `DPoP algs="ES256 `) {
+		t.Fatalf("unexpected %q", held)
+	}
+
+	if _, err := ResourceMetadataURL("files"); err == nil {
+		t.Fatal("a relative resource was accepted")
 	}
 }

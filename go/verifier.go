@@ -81,11 +81,27 @@ func (c *Claims) Bound() bool {
 	return c.Confirmation != nil && c.Confirmation.Thumbprint != ""
 }
 
+const ResourceMetadataPath = "/.well-known/oauth-protected-resource"
+
+func ProofAlgorithms() []string {
+	return strings.Fields(proofAlgs)
+}
+
+func ResourceMetadataURL(resource string) (string, error) {
+	parsed, err := url.Parse(resource)
+	if err != nil || parsed.Host == "" {
+		return "", fmt.Errorf("masks: %q is not an absolute resource URL", resource)
+	}
+
+	return origin(parsed) + ResourceMetadataPath + strings.TrimSuffix(parsed.EscapedPath(), "/"), nil
+}
+
 type Verifier struct {
-	Issuer    *Issuer
-	Audience  []string
-	PublicURL string
-	Replay    ReplayStore
+	Issuer           *Issuer
+	Audience         []string
+	PublicURL        string
+	Replay           ReplayStore
+	ResourceMetadata string
 
 	memory MemoryReplayStore
 	once   sync.Once
@@ -169,9 +185,10 @@ func (v *Verifier) Middleware(next http.Handler) http.Handler {
 				return
 			}
 
-			challenge := fmt.Sprintf(`error="invalid_token", error_description=%q`, refused.Description)
-			response.Header().Add("WWW-Authenticate", "Bearer "+challenge)
-			response.Header().Add("WWW-Authenticate", DPoP+" "+challenge+` algs="`+proofAlgs+`"`)
+			for _, challenge := range v.Challenge("invalid_token", refused.Description, "") {
+				response.Header().Add("WWW-Authenticate", challenge)
+			}
+
 			http.Error(response, "unauthorized", http.StatusUnauthorized)
 
 			return
@@ -179,6 +196,30 @@ func (v *Verifier) Middleware(next http.Handler) http.Handler {
 
 		next.ServeHTTP(response, request.WithContext(context.WithValue(request.Context(), claimsKey{}, claims)))
 	})
+}
+
+func (v *Verifier) Challenge(code, description, scope string) []string {
+	parameters := `error="` + quoted(code) + `"`
+
+	for _, named := range [][2]string{
+		{"error_description", description}, {"scope", scope}, {"resource_metadata", v.ResourceMetadata},
+	} {
+		if named[1] != "" {
+			parameters += ", " + named[0] + `="` + quoted(named[1]) + `"`
+		}
+	}
+
+	return []string{"Bearer " + parameters, DPoP + ` algs="` + proofAlgs + `", ` + parameters}
+}
+
+func quoted(value string) string {
+	return strings.Map(func(r rune) rune {
+		if r == '"' || r == '\\' || r < 0x20 || r == 0x7f {
+			return ' '
+		}
+
+		return r
+	}, value)
 }
 
 type claimsKey struct{}
