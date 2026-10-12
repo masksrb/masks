@@ -90,8 +90,10 @@ e.GET("/admin", echo.WrapHandler(admin), echo.WrapMiddleware(app.Require("admin"
 
 The handshake sends the browser to the masks server's approval screen. Approve it there, and the app
 redeems the one-time token that comes back server to server, so the client secret never passes
-through the browser. It registers the app for `Resource`, with `/auth/callback` as its redirect URI
-and `/auth/handshake/callback` as the address masks sends people back to.
+through the browser. It registers the app for `Resource`, with `/auth/callback` as its redirect URI,
+`/auth/handshake/callback` as the address masks sends the approval back to, and
+`/auth/logout/return` as the only address masks returns to after signing a person out. When the
+issuer supports back-channel logout, it also registers `/auth/logout/backchannel`.
 
 The app writes its credentials to `masks.json`, mode 600, and then starts a sign-in.
 A multi-tenant app implements `CredentialStore` instead, and its `Load`, `Save`, and `Forget` receive
@@ -136,6 +138,7 @@ Manages: func(r *http.Request, person *web.Person) bool { return person.HasPrivi
 | `GET /auth/session` | The signed-in person as JSON, for a single-page app. |
 | `GET /auth/avatar` | The person's photo, fetched from masks with their token. Takes `size`. |
 | `GET`, `POST`, or `DELETE /auth/logout` | Signs out. Takes `everywhere` to sign out of masks as well. |
+| `GET /auth/logout/return` | Where masks sends the browser back after signing it out. |
 | `POST /auth/logout/backchannel` | Takes a back-channel logout token from masks. |
 | `GET` or `POST /auth/handshake` | Starts the handshake, or shows the connection. |
 | `GET /auth/handshake/callback` | Finishes the handshake. |
@@ -185,8 +188,10 @@ refresh signs the person out.
 ### Signing out
 
 A sign-out revokes the refresh token and clears the session. With `SignOutOfIssuer`, or
-`everywhere`, the browser goes on to masks to end its session there and comes back to
-`AfterSignOut`. A `POST` or `DELETE` from another site is refused with `403`.
+`everywhere`, the browser goes on to masks to end its session there, comes back to
+`/auth/logout/return`, and goes on to `AfterSignOut`. That return is accepted once, within an hour,
+from the browser that signed out, and refused with `invalid_state` otherwise. A sign-out from another
+site is refused with `403`, whatever its method.
 
 When masks ends a session itself, it sends a logout token to `/auth/logout/backchannel`. The app
 signs out the session it names, or every session of the person it names, at their next request. It

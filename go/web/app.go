@@ -257,6 +257,10 @@ func (a *App) signIn(s *site) *masks.Client {
 	return s.client(s.origin + a.config.Mount + "/callback")
 }
 
+func (a *App) farewellURI(s *site) string {
+	return s.origin + a.config.Mount + "/logout/return"
+}
+
 func (a *App) returnTo(s *site) string {
 	return s.origin + a.config.Mount + "/handshake/callback"
 }
@@ -296,20 +300,16 @@ func (a *App) handshake(s *site) *masks.Handshake {
 		redirects = append(redirects, s.origin+localPath(a.config.DelegationPath))
 	}
 
-	held := &masks.Handshake{
-		Issuer:       s.issuer,
-		Name:         name,
-		Resource:     s.resource,
-		RedirectURIs: redirects,
-		ReturnTo:     a.returnTo(s),
-		Scope:        a.approvedScope(),
+	return &masks.Handshake{
+		Issuer:                s.issuer,
+		Name:                  name,
+		Resource:              s.resource,
+		RedirectURIs:          redirects,
+		ReturnTo:              a.returnTo(s),
+		PostLogoutRedirectURI: a.farewellURI(s),
+		BackchannelLogoutURI:  s.origin + a.config.Mount + "/logout/backchannel",
+		Scope:                 a.approvedScope(),
 	}
-
-	if s.issuer.Metadata.BackchannelLogoutSupported {
-		held.BackchannelLogoutURI = s.origin + a.config.Mount + "/logout/backchannel"
-	}
-
-	return held
 }
 
 func (a *App) scopeFor(requested string) []string {

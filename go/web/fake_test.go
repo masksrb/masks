@@ -23,6 +23,7 @@ type issuerClient struct {
 	secret       string
 	redirects    []string
 	returnTo     string
+	postLogout   string
 	registration string
 }
 
@@ -175,7 +176,7 @@ func (f *issuer) shake(w http.ResponseWriter, r *http.Request) {
 	f.lock.Lock()
 	f.handshake = query
 	f.initial[token] = id
-	f.clients[id] = &issuerClient{returnTo: query.Get("return_to"), redirects: query["redirect_uris"]}
+	f.clients[id] = &issuerClient{returnTo: query.Get("return_to"), postLogout: query.Get("post_logout_redirect_uri"), redirects: query["redirect_uris"]}
 	f.lock.Unlock()
 
 	back := answer.Query()
@@ -433,12 +434,12 @@ func (f *issuer) endSession(w http.ResponseWriter, r *http.Request) {
 	client := f.clients[query.Get("client_id")]
 	f.lock.Unlock()
 
-	if client == nil || client.returnTo != query.Get("post_logout_redirect_uri") {
+	if client == nil || client.postLogout != query.Get("post_logout_redirect_uri") {
 		oauthError(w, http.StatusBadRequest, "invalid_request")
 		return
 	}
 
-	answer, _ := url.Parse(client.returnTo)
+	answer, _ := url.Parse(client.postLogout)
 	answer.RawQuery = url.Values{"state": {query.Get("state")}}.Encode()
 
 	http.Redirect(w, r, answer.String(), http.StatusFound)

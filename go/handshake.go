@@ -11,13 +11,14 @@ import (
 var handshakeGrants = []string{GrantAuthorizationCode, GrantRefreshToken}
 
 type Handshake struct {
-	Issuer               *Issuer
-	Name                 string
-	Resource             string
-	RedirectURIs         []string
-	ReturnTo             string
-	Scope                []string
-	BackchannelLogoutURI string
+	Issuer                *Issuer
+	Name                  string
+	Resource              string
+	RedirectURIs          []string
+	ReturnTo              string
+	Scope                 []string
+	PostLogoutRedirectURI string
+	BackchannelLogoutURI  string
 }
 
 func (h *Handshake) Start() (target, state string, err error) {
@@ -46,8 +47,12 @@ func (h *Handshake) Start() (target, state string, err error) {
 	query.Set("token_endpoint_auth_method", string(ClientSecretBasic))
 	query["redirect_uris"] = h.RedirectURIs
 
-	if h.BackchannelLogoutURI != "" {
-		query.Set("backchannel_logout_uri", h.BackchannelLogoutURI)
+	if h.PostLogoutRedirectURI != "" {
+		query.Set("post_logout_redirect_uri", h.PostLogoutRedirectURI)
+	}
+
+	if backchannel := h.backchannel(); backchannel != "" {
+		query.Set("backchannel_logout_uri", backchannel)
 	}
 
 	parsed.RawQuery = query.Encode()
@@ -79,8 +84,16 @@ func (h *Handshake) Complete(ctx context.Context, returned url.Values, state str
 		GrantTypes:              handshakeGrants,
 		Scope:                   strings.Join(h.Scope, " "),
 		TokenEndpointAuthMethod: ClientSecretBasic,
-		BackchannelLogoutURI:    h.BackchannelLogoutURI,
+		BackchannelLogoutURI:    h.backchannel(),
 	}, token)
+}
+
+func (h *Handshake) backchannel() string {
+	if !h.Issuer.Metadata.BackchannelLogoutSupported {
+		return ""
+	}
+
+	return h.BackchannelLogoutURI
 }
 
 func (h *Handshake) check() error {
@@ -101,7 +114,7 @@ func (h *Handshake) check() error {
 		return fmt.Errorf("masks: a handshake needs a scope, a redirect URI, and a return_to")
 	}
 
-	for _, held := range append([]string{h.ReturnTo, h.BackchannelLogoutURI}, h.RedirectURIs...) {
+	for _, held := range append([]string{h.ReturnTo, h.PostLogoutRedirectURI, h.BackchannelLogoutURI}, h.RedirectURIs...) {
 		if held == "" {
 			continue
 		}

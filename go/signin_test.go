@@ -44,6 +44,9 @@ func shookHands(t *testing.T, held *fake) *Client {
 		RedirectURIs: []string{"https://app.example/auth/callback"},
 		ReturnTo:     "https://app.example/auth/handshake/callback",
 		Scope:        []string{"openid", "profile", "email", "offline_access", "organization"},
+
+		PostLogoutRedirectURI: "https://app.example/auth/logout/return",
+		BackchannelLogoutURI:  "https://app.example/auth/logout/backchannel",
 	}
 
 	target, state, err := handshake.Start()
@@ -68,7 +71,8 @@ func TestAHandshakeRegistersTheAppWithASecret(t *testing.T) {
 
 	asked := held.handshake
 	if asked.Get("resource") != "https://app.example" || asked["redirect_uris"][0] != "https://app.example/auth/callback" ||
-		asked.Get("token_endpoint_auth_method") != "client_secret_basic" || !strings.Contains(asked.Get("scope"), "organization") {
+		asked.Get("token_endpoint_auth_method") != "client_secret_basic" || !strings.Contains(asked.Get("scope"), "organization") ||
+		asked.Get("post_logout_redirect_uri") != "https://app.example/auth/logout/return" || asked.Has("backchannel_logout_uri") {
 		t.Fatalf("unexpected handshake %v", asked)
 	}
 
@@ -121,11 +125,24 @@ func TestAHandshakeRefusesWhatItDidNotStart(t *testing.T) {
 		t.Fatalf("expected access_denied, got %v", err)
 	}
 
-	elsewhere := *handshake
-	elsewhere.ReturnTo = "https://elsewhere.example/callback"
+	for _, change := range []func(*Handshake){
+		func(held *Handshake) { held.ReturnTo = "https://elsewhere.example/callback" },
+		func(held *Handshake) { held.PostLogoutRedirectURI = "https://elsewhere.example/bye" },
+	} {
+		elsewhere := *handshake
+		change(&elsewhere)
 
-	if _, _, err := elsewhere.Start(); !errors.Is(err, ErrForeign) {
-		t.Fatalf("expected a return_to on another origin to be refused, got %v", err)
+		if _, _, err := elsewhere.Start(); !errors.Is(err, ErrForeign) {
+			t.Fatalf("expected a URL on another origin to be refused, got %v", err)
+		}
+	}
+
+	issuer.Metadata.BackchannelLogoutSupported = true
+	handshake.BackchannelLogoutURI = "https://app.example/auth/logout/backchannel"
+	target, _, _ = handshake.Start()
+
+	if parsed, _ := url.Parse(target); parsed.Query().Get("backchannel_logout_uri") != handshake.BackchannelLogoutURI {
+		t.Fatalf("an issuer with back-channel logout was not given the URI: %s", target)
 	}
 }
 
@@ -263,7 +280,7 @@ func TestEndingTheSessionAtTheIssuer(t *testing.T) {
 	held := newFake(t)
 	client := shookHands(t, held)
 
-	target, err := client.EndSessionURL(EndSession{PostLogoutRedirectURI: "https://app.example/auth/handshake/callback", State: "bye"})
+	target, err := client.EndSessionURL(EndSession{PostLogoutRedirectURI: "https://app.example/auth/logout/return", State: "bye"})
 	if err != nil {
 		t.Fatal(err)
 	}

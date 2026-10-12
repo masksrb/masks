@@ -194,6 +194,8 @@ type session struct {
 	ReturnTo    string             `json:"return_to,omitempty"`
 	RestartedAt int64              `json:"restarted_at,omitempty"`
 	Farewell    string             `json:"farewell,omitempty"`
+
+	FarewellUntil int64 `json:"farewell_until,omitempty"`
 }
 
 type state struct {

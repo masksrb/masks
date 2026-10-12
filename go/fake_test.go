@@ -21,13 +21,14 @@ import (
 )
 
 type fakeClient struct {
-	secret    string
-	method    AuthMethod
-	jwks      jose.JSONWebKeySet
-	scope     string
-	refresh   map[string]bool
-	redirects []string
-	returnTo  string
+	secret     string
+	method     AuthMethod
+	jwks       jose.JSONWebKeySet
+	scope      string
+	refresh    map[string]bool
+	redirects  []string
+	returnTo   string
+	postLogout string
 }
 
 type liveToken struct {
@@ -485,13 +486,13 @@ func (f *fake) register(response http.ResponseWriter, request *http.Request) {
 	}
 
 	f.lock.Lock()
-	returnTo := ""
+	returnTo, postLogout := "", ""
 	if existing := f.clients[id]; existing != nil {
-		returnTo = existing.returnTo
+		returnTo, postLogout = existing.returnTo, existing.postLogout
 	}
 	f.lock.Unlock()
 
-	f.add(id, &fakeClient{method: metadata.TokenEndpointAuthMethod, jwks: jwks, scope: metadata.Scope, secret: secret, redirects: metadata.RedirectURIs, returnTo: returnTo})
+	f.add(id, &fakeClient{method: metadata.TokenEndpointAuthMethod, jwks: jwks, scope: metadata.Scope, secret: secret, redirects: metadata.RedirectURIs, returnTo: returnTo, postLogout: postLogout})
 
 	f.lock.Lock()
 	f.registrations[id] = token
@@ -886,7 +887,7 @@ func (f *fake) shake(response http.ResponseWriter, request *http.Request) {
 
 		f.lock.Lock()
 		f.initial[token] = id
-		f.clients[id] = &fakeClient{returnTo: query.Get("return_to"), refresh: map[string]bool{}}
+		f.clients[id] = &fakeClient{returnTo: query.Get("return_to"), postLogout: query.Get("post_logout_redirect_uri"), refresh: map[string]bool{}}
 		f.lock.Unlock()
 
 		back.Set("initial_access_token", token)
@@ -911,7 +912,7 @@ func (f *fake) endSession(response http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	if client == nil || client.returnTo != target {
+	if client == nil || client.postLogout != target {
 		oauthError(response, http.StatusBadRequest, "invalid_request")
 		return
 	}

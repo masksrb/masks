@@ -35,6 +35,7 @@ func (a *App) routes() http.Handler {
 	mux.HandleFunc("GET "+m+"/logout", a.guarded(a.logout))
 	mux.HandleFunc("POST "+m+"/logout", a.guarded(a.logout))
 	mux.HandleFunc("DELETE "+m+"/logout", a.guarded(a.logout))
+	mux.HandleFunc("GET "+m+"/logout/return", a.farewell)
 	mux.HandleFunc("POST "+m+"/logout/backchannel", a.backchannel)
 	mux.HandleFunc("GET "+m+"/handshake", a.showHandshake)
 	mux.HandleFunc("POST "+m+"/handshake", a.guarded(a.createHandshake))
@@ -413,7 +414,7 @@ func (a *App) logout(w http.ResponseWriter, r *http.Request) {
 
 		if everywhere {
 			farewell = rand.Text()
-			upstream, _ = client.EndSessionURL(masks.EndSession{PostLogoutRedirectURI: a.returnTo(s), State: farewell})
+			upstream, _ = client.EndSessionURL(masks.EndSession{PostLogoutRedirectURI: a.farewellURI(s), State: farewell})
 		}
 	}
 
@@ -422,7 +423,7 @@ func (a *App) logout(w http.ResponseWriter, r *http.Request) {
 			return &session{}
 		}
 
-		return &session{Farewell: farewell}
+		return &session{Farewell: farewell, FarewellUntil: time.Now().Add(pendingTTL).Unix()}
 	})
 
 	if !a.save(w, r, held) {
@@ -443,6 +444,38 @@ func (a *App) logout(w http.ResponseWriter, r *http.Request) {
 	target := upstream
 	if target == "" {
 		target = a.config.AfterSignOut
+	}
+
+	http.Redirect(w, r, target, http.StatusFound)
+}
+
+func (a *App) farewell(w http.ResponseWriter, r *http.Request) {
+	held, err := a.load(r)
+	if err != nil {
+		a.unavailable(w, r)
+		return
+	}
+
+	expected, until := held.data.Farewell, held.data.FarewellUntil
+	returned := r.URL.Query().Get("state")
+
+	if expected != "" {
+		changed := held.change()
+		changed.Farewell, changed.FarewellUntil = "", 0
+	}
+
+	if !a.save(w, r, held) {
+		return
+	}
+
+	if expected == "" || time.Now().Unix() > until || subtle.ConstantTimeCompare([]byte(expected), []byte(returned)) != 1 {
+		a.refuse(w, r, http.StatusBadRequest, "invalid_state", "that sign-out is not one this browser started, or it expired")
+		return
+	}
+
+	target := localPath(a.config.AfterSignOut)
+	if target == "" {
+		target = "/"
 	}
 
 	http.Redirect(w, r, target, http.StatusFound)
@@ -695,17 +728,6 @@ func (a *App) handshakeCallback(w http.ResponseWriter, r *http.Request) {
 
 	query := r.URL.Query()
 	returned := query.Get("state")
-
-	if farewell := held.data.Farewell; farewell != "" && query.Get("initial_access_token") == "" && query.Get("error") == "" &&
-		subtle.ConstantTimeCompare([]byte(farewell), []byte(returned)) == 1 {
-		held.change().Farewell = ""
-
-		if a.save(w, r, held) {
-			http.Redirect(w, r, a.config.AfterSignOut, http.StatusFound)
-		}
-
-		return
-	}
 
 	if !held.shaken(returned) {
 		if a.save(w, r, held) {

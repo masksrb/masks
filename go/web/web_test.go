@@ -186,6 +186,7 @@ func TestTheHandshakeConnectsTheAppAndSignsTheManagerIn(t *testing.T) {
 	asked := h.issuer.handshake
 	if asked.Get("resource") != h.server.URL || asked.Get("return_to") != h.server.URL+"/auth/handshake/callback" ||
 		asked.Get("backchannel_logout_uri") != h.server.URL+"/auth/logout/backchannel" ||
+		asked.Get("post_logout_redirect_uri") != h.server.URL+"/auth/logout/return" ||
 		!strings.Contains(asked.Get("scope"), "catalog:admin") || !strings.Contains(asked.Get("scope"), "catalog:read") {
 		t.Fatalf("unexpected handshake %v", asked)
 	}
@@ -383,8 +384,12 @@ func TestSigningOutRevokesAndEndsTheIssuerSession(t *testing.T) {
 		t.Fatalf("the sign-out ended at %s with %d", response.Request.URL, response.StatusCode)
 	}
 
-	if len(h.issuer.revoked) != 1 || h.issuer.ended.Get("post_logout_redirect_uri") != h.server.URL+"/auth/handshake/callback" {
+	if len(h.issuer.revoked) != 1 || h.issuer.ended.Get("post_logout_redirect_uri") != h.server.URL+"/auth/logout/return" {
 		t.Fatalf("unexpected %v %v", h.issuer.revoked, h.issuer.ended)
+	}
+
+	if response, _ := h.visit(http.MethodGet, "/auth/logout/return?state="+url.QueryEscape(h.issuer.ended.Get("state"))); response.StatusCode != http.StatusBadRequest {
+		t.Fatalf("a spent farewell was accepted again: %d", response.StatusCode)
 	}
 
 	if person := h.person("/me"); person.SignedIn {
