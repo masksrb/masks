@@ -140,6 +140,16 @@ class ConfigurationTest < EngineTest
     end
   end
 
+  test "a resource server remembers proofs in this process unless a shared store is named" do
+    shared = Object.new
+    built = [ config.resource_server_for(request_for(HOST)) ]
+    configure!(replay: shared)
+    built << config.resource_server_for(request_for(HOST))
+
+    assert_same Masks::Client::Proof.memory, built.first.instance_variable_get(:@replay)
+    assert_same shared, built.last.instance_variable_get(:@replay)
+  end
+
   test "without a namespace the handshake asks for exactly what a sign-in does" do
     Masks::Rails.config.privileges = {}
     Masks::Rails.config.namespace = nil

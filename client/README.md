@@ -225,6 +225,7 @@ a subdomain-per-tenant host needs.
 | `sign_out_of_issuer` | make every sign-out an RP-initiated logout |
 | `session_key` | the session key the tokens live under |
 | `delegates` / `delegation_redirect_uri` | ask for delegation in the handshake, and where connecting an account returns |
+| `replay` | where seen DPoP proofs are remembered, any object with `first?(key, expires_in:)`, this process's memory by default |
 
 ## Any Ruby app
 
@@ -312,8 +313,8 @@ claims.tenant.subdomain
 accepted only as `Authorization: DPoP` with a proof signed by that key for this method, URL, and
 token, made within the last minute and never seen before. `proof`, `method`, and `url` are what it
 checks the proof against. Seen proofs are kept in the process's memory. A deployment with several
-processes passes `replay:` to `Resource.new`, any object whose `first?(key, expires_in:)` answers true
-only once for each key.
+processes passes `replay:` to `Resource.new`, or sets `config.replay` in a Rails app, to any object
+whose `first?(key, expires_in:)` answers true only once for each key across every process.
 
 A refusal builds the RFC 6750 challenge carrying `resource_metadata` and the scopes it would have
 accepted:

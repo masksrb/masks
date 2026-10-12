@@ -43,6 +43,7 @@ class EngineTest < ActiveSupport::TestCase
       config.after_sign_out = overrides.fetch(:after_sign_out, "/")
       config.session_key = "masks"
       config.organization = overrides[:organization]
+      config.replay = overrides[:replay]
     end
   end
 
@@ -103,6 +104,7 @@ class EngineIntegrationTest < ActionDispatch::IntegrationTest
       config.after_sign_out = overrides.fetch(:after_sign_out, "/")
       config.session_key = "masks"
       config.organization = overrides[:organization]
+      config.replay = overrides[:replay]
     end
   end
 

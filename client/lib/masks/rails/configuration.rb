@@ -11,7 +11,7 @@ module Masks
                     :after_sign_out, :session_key, :sign_out_of_issuer, :parent_controller,
                     :credentials_path, :authenticate_everything, :delegates
       attr_writer :issuer, :redirect_uri, :name, :credentials, :store, :forget, :logged_out,
-                  :delegation_redirect_uri, :organization, :manages
+                  :delegation_redirect_uri, :organization, :manages, :replay
 
       def initialize
         @scope = Masks::Client::Session::DEFAULT_SCOPE
@@ -139,8 +139,13 @@ module Masks
         Masks::Client::Resource.new(
           issuer: issuer_for(request),
           url: url,
-          scopes: resource_scopes
+          scopes: resource_scopes,
+          replay: replay
         )
+      end
+
+      def replay
+        @replay || Masks::Client::Proof.memory
       end
 
       def handshake_for(request)
