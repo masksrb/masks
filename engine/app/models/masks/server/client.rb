@@ -26,6 +26,7 @@ module Masks
       CHALLENGE_METHODS = %w[S256].freeze
       LOOPBACK = %w[localhost 127.0.0.1 ::1].freeze
       DEFAULT_SCOPES = Scopes::STANDARD
+      MACHINE_ACCESS_LIFETIME = 10.minutes
       LINKS = %i[client_uri tos_uri policy_uri].freeze
       METADATA_URIS = (LINKS + [ :logo_uri ]).freeze
       URI_LIMIT = 2048
@@ -89,7 +90,7 @@ module Masks
       normalizes(*METADATA_URIS, with: ->(value) { value.to_s.strip.presence })
 
       after_commit :refresh_logo!, on: %i[create update], if: :saved_change_to_logo_uri?
-      after_update :archive_enrolled!, if: -> { saved_change_to_archived_at? && archived? }
+      after_update :archived!, if: -> { saved_change_to_archived_at? && archived? }
 
       belongs_to :approved_by, class_name: "Actor", optional: true
       belongs_to :enrolled_by, class_name: "Client", optional: true, inverse_of: :enrolled
@@ -137,7 +138,7 @@ module Masks
         def approved_for(resource)
           return nil if resource.blank?
 
-          active.approved.where("resources @> ?", [ resource.to_s ].to_json).first
+          active.approved.where(enrolled_by_id: nil).where("resources @> ?", [ resource.to_s ].to_json).first
         end
 
         def register!(metadata)
@@ -176,6 +177,7 @@ module Masks
 
         def enroll!(token, metadata)
           app = token.client
+          app&.lock!
           refusal = app&.enrollment_refusal(token.scope_list)
 
           raise EnrollmentRefused, refusal || "the app that issued this enrollment token is gone" if app.nil? || refusal
@@ -198,6 +200,7 @@ module Masks
             application_type: "native",
             subject_type: Subjects::PUBLIC,
             enrolled_by: app,
+            access_token_lifetime: MACHINE_ACCESS_LIFETIME.to_i,
             approved_at: Time.current,
             dynamic: false
           ).issue_credentials!
@@ -271,11 +274,15 @@ module Masks
 
       def unenroll!
         transaction do
+          revoked = end_tokens!
           update!(archived_at: Time.current) unless archived?
-
-          now = Time.current
-          tokens.where(consumed_at: nil).update_all(consumed_at: now, updated_at: now)
+          revoked
         end
+      end
+
+      def end_tokens!
+        now = Time.current
+        tokens.where(consumed_at: nil).update_all(consumed_at: now, updated_at: now)
       end
 
       def public?
@@ -474,7 +481,9 @@ module Masks
 
       private
 
-        def archive_enrolled!
+        def archived!
+          end_tokens!
+
           machines = enrolled.active.pluck(:id)
           return if machines.empty?
 

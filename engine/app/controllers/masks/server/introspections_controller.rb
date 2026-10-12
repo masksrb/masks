@@ -13,7 +13,7 @@ module Masks
         client = authenticate_client!
         token = presented_token
 
-        return render json: INACTIVE unless token&.live? && entitled?(client, token)
+        return render json: INACTIVE unless token&.live? && !token.client&.archived? && entitled?(client, token)
 
         render json: described(token)
       end
@@ -22,7 +22,7 @@ module Masks
 
         def entitled?(client, token)
           return true if token.client_id == client.id
-          return false unless client.approved?
+          return false if client.enrolled? || !client.approved?
 
           (Array(token.audience) & Array(client.resources)).any?
         end

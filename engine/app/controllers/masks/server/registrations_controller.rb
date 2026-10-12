@@ -14,6 +14,7 @@ module Masks
 
       before_action :no_store!
       before_action :require_registration_token, except: :create
+      before_action :refuse_enrolled, only: :update
 
       def create
         return redeem if bearer.present?
@@ -47,6 +48,8 @@ module Masks
       end
 
       def destroy
+        return unenroll if @client.enrolled?
+
         @client.update!(archived_at: Time.current)
 
         Event.record!(Event::CLIENT_ARCHIVED, client: @client, name: @client.name)
@@ -55,6 +58,24 @@ module Masks
       end
 
       private
+
+        def unenroll
+          revoked = @client.unenroll!
+
+          Event.record!(Event::CLIENT_UNENROLLED, client: @client, name: @client.name,
+                                                  enrolled_by: @client.enrolled_by&.client_id, revoked: revoked)
+
+          head :no_content
+        end
+
+        def refuse_enrolled
+          return unless @client.enrolled?
+
+          render json: {
+            "error" => "access_denied",
+            "error_description" => "an enrolled machine is changed only by the app that enrolled it"
+          }, status: :forbidden
+        end
 
         def redeem
           return enrolled(@enrolled) if (@enrolled = EnrollmentToken.redeem!(bearer, body))

@@ -60,12 +60,12 @@ module Masks
         }, key, "ES256", { kid: "machine" })
       end
 
-      def machine_token(client_id, proven: true)
+      def machine_token(client_id, proven: true, key: @machine_key)
         headers = proven ? with_dpop(method: "POST", url: "#{origin_for(@tenant)}/token") : {}
 
         post "/token",
              params: { grant_type: Client::CLIENT_CREDENTIALS, client_assertion_type: ASSERTION,
-                       client_assertion: assertion(client_id) },
+                       client_assertion: assertion(client_id, key: key) },
              headers: headers
 
         JSON.parse(response.body)
@@ -206,14 +206,20 @@ module Masks
         assert_equal "invalid_client_metadata", redeem(enroll["initial_access_token"], jwks: private_jwks)["error"]
       end
 
+      def reregister(registration, **metadata)
+        put "/register/#{registration['client_id']}",
+            params: metadata.to_json,
+            headers: { "CONTENT_TYPE" => "application/json",
+                       "HTTP_AUTHORIZATION" => "Bearer #{registration['registration_access_token']}" }
+      end
+
       test "a machine cannot widen what it was enrolled with" do
         registration = redeem(enroll["initial_access_token"])
 
-        put "/register/#{registration['client_id']}",
-            params: { scope: "xixo:settings:admin", grant_types: [ "authorization_code" ],
-                      token_endpoint_auth_method: "client_secret_basic", resources: [ "https://elsewhere.example.com" ] }.to_json,
-            headers: { "CONTENT_TYPE" => "application/json",
-                       "HTTP_AUTHORIZATION" => "Bearer #{registration['registration_access_token']}" }
+        reregister(registration, scope: "xixo:settings:admin", grant_types: [ "authorization_code" ],
+                                 token_endpoint_auth_method: "client_secret_basic", resources: [ "https://elsewhere.example.com" ])
+
+        assert_response :forbidden
 
         machine = within { Client.find_by!(client_id: registration["client_id"]) }
 
@@ -221,6 +227,98 @@ module Masks
         assert_equal [ Client::CLIENT_CREDENTIALS ], machine.grant_types
         assert_equal Client::PRIVATE_KEY_JWT, machine.token_endpoint_auth_method
         assert_equal [ RESOURCE ], machine.resources
+      end
+
+      test "a machine cannot swap its keys with its registration access token" do
+        registration = redeem(enroll["initial_access_token"])
+        stolen = OpenSSL::PKey::EC.generate("prime256v1")
+
+        reregister(registration, client_name: "renamed", jwks: machine_jwks(stolen))
+
+        assert_response :forbidden
+        machine = within { Client.find_by!(client_id: registration["client_id"]) }
+        assert_equal "nas", machine.name
+        assert_equal machine_jwks["keys"].first["x"], machine.jwks["keys"].first["x"]
+        assert_equal "invalid_client", machine_token(registration["client_id"], key: stolen)["error"]
+      end
+
+      test "a machine that deletes its own registration is unenrolled" do
+        registration = redeem(enroll["initial_access_token"])
+        machine_token(registration["client_id"])
+
+        delete "/register/#{registration['client_id']}",
+               headers: { "HTTP_AUTHORIZATION" => "Bearer #{registration['registration_access_token']}" }
+
+        assert_response :no_content
+        within do
+          machine = Client.find_by!(client_id: registration["client_id"])
+
+          assert machine.archived?
+          assert_empty machine.tokens.live
+          assert Event.exists?(action: Event::CLIENT_UNENROLLED, client: machine)
+        end
+      end
+
+      test "an enrolled machine's access token lives ten minutes" do
+        registration = redeem(enroll["initial_access_token"])
+
+        assert_in_delta 600, machine_token(registration["client_id"])["expires_in"], 1
+      end
+
+      def introspect(token, client_id: @owner.client_id, **auth)
+        auth = { client_secret: @owner.secret } if auth.empty? && client_id == @owner.client_id
+
+        post "/introspect", params: { token: token, client_id: client_id }.merge(auth)
+
+        JSON.parse(response.body)
+      end
+
+      test "a machine introspects its own token but no other client's" do
+        other_key = OpenSSL::PKey::EC.generate("prime256v1")
+        first = redeem(enroll["initial_access_token"])
+        second = redeem(enroll["initial_access_token"], jwks: machine_jwks(other_key))
+        token = machine_token(first["client_id"])["access_token"]
+
+        assert introspect(token)["active"]
+
+        assert introspect(token, client_id: first["client_id"], client_assertion_type: ASSERTION,
+                                 client_assertion: assertion(first["client_id"]))["active"]
+
+        refute introspect(token, client_id: second["client_id"], client_assertion_type: ASSERTION,
+                                 client_assertion: assertion(second["client_id"], key: other_key))["active"]
+      end
+
+      test "a token whose client is archived is inactive" do
+        registration = redeem(enroll["initial_access_token"])
+        token = machine_token(registration["client_id"])["access_token"]
+
+        within { Client.find_by!(client_id: registration["client_id"]).update_columns(archived_at: Time.current) }
+
+        refute introspect(token)["active"]
+      end
+
+      test "archiving an app ends the tokens it holds itself" do
+        enroll
+
+        within do
+          assert_predicate @owner.tokens.live, :any?
+
+          @owner.reload.update!(archived_at: Time.current)
+
+          assert_empty @owner.tokens.live
+        end
+      end
+
+      test "a machine is never the approved client for its resource" do
+        redeem(enroll["initial_access_token"])
+
+        within do
+          assert_equal @owner, Client.approved_for(RESOURCE)
+
+          @owner.update_columns(archived_at: Time.current)
+
+          assert_nil Client.approved_for(RESOURCE)
+        end
       end
 
       test "a machine holds no namespace and so enrolls nothing itself" do
