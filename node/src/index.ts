@@ -1,3 +1,30 @@
+export { Masked, type MaskedJSON, type MaskedOptions } from "./app/masked.js";
+export {
+  type Connection as MasksConnection,
+  DEFAULT_SCOPE,
+  type HeldTokens,
+  localPath,
+  Masks,
+  type MasksOptions,
+  type Outcome,
+  type SessionData,
+} from "./app/masks.js";
+export {
+  type Privilege,
+  type PrivilegeSpec,
+  Privileges,
+} from "./app/privileges.js";
+export {
+  type CredentialStore,
+  type Credentials,
+  envCredentials,
+  fileCredentials,
+  type LogoutStore,
+  memoryCredentials,
+  memoryLogouts,
+  memoryStore,
+  type SessionStore,
+} from "./app/stores.js";
 export {
   type Avatars,
   avatarsOf,

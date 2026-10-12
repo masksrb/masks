@@ -51,6 +51,7 @@ export interface NodeRequest {
 export interface VerifierOptions {
   publicURL?: string;
   replay?: ReplayStore;
+  resourceMetadata?: string;
 }
 
 export class Verifier {
@@ -58,6 +59,7 @@ export class Verifier {
   readonly audience: string[];
   readonly publicURL?: string;
   readonly replay: ReplayStore;
+  readonly resourceMetadata?: string;
 
   constructor(
     issuer: Issuer,
@@ -68,6 +70,7 @@ export class Verifier {
     this.audience = Array.isArray(audience) ? audience : [audience];
     this.publicURL = options.publicURL?.replace(/\/+$/, "");
     this.replay = options.replay ?? new MemoryReplayStore();
+    this.resourceMetadata = options.resourceMetadata;
   }
 
   async verify(token: string): Promise<Claims> {
@@ -140,7 +143,10 @@ export class Verifier {
     const description = error.message
       .replace(/^masks: invalid token: /, "")
       .replace(/["\\]/g, "'");
-    const challenge = `error="invalid_token", error_description="${description}"`;
+    const metadata = this.resourceMetadata
+      ? `, resource_metadata="${this.resourceMetadata.replace(/["\\]/g, "")}"`
+      : "";
+    const challenge = `error="invalid_token", error_description="${description}"${metadata}`;
 
     return [
       `Bearer ${challenge}`,
