@@ -381,3 +381,134 @@ async def test_the_asgi_middleware(signed: masks.Client, issuer: masks.Issuer, f
 
     assert refused["status"] == 401
     assert len([name for name, _ in refused["headers"] if name == b"www-authenticate"]) == 2
+
+
+class Remembering:
+    def __init__(self, answer: object = True) -> None:
+        self.answer = answer
+        self.asked: list[tuple[str, int]] = []
+
+    def first(self, key: str, expires_in: int) -> Any:
+        self.asked.append((key, expires_in))
+
+        if isinstance(self.answer, Exception):
+            raise self.answer
+
+        return self.answer
+
+
+class AsyncRemembering(Remembering):
+    async def first(self, key: str, expires_in: int) -> Any:
+        return super().first(key, expires_in)
+
+
+def test_a_verifier_asks_its_replay_store_about_each_proof(
+    signed: masks.Client, issuer: masks.Issuer, fake: Fake
+) -> None:
+    store = Remembering()
+    verifier = masks.Verifier(issuer, AUDIENCE, http=fake.http(), replay=store)
+    _, headers = bound_request(signed)
+
+    verifier.authenticate("GET", TARGET, headers)
+
+    jti = proof_claims(httpx.Request("GET", TARGET, headers=headers))["jti"]
+    assert store.asked == [(f"{signed.dpop.thumbprint}:{jti}", 120)]
+
+
+def test_a_bearer_token_never_reaches_the_replay_store(fake: Fake, issuer: masks.Issuer) -> None:
+    store = Remembering()
+    fake.add("app", FakeClient(method="client_secret_basic", secret="secret"))
+    token = masks.Client(issuer, "app", secret="secret", http=fake.http()).client_credentials()
+
+    masks.Verifier(issuer, AUDIENCE, http=fake.http(), replay=store).authenticate(
+        "GET", TARGET, {"Authorization": f"Bearer {token.access_token}"}
+    )
+
+    assert store.asked == []
+
+
+@pytest.mark.parametrize(
+    ("answer", "said"),
+    [
+        (False, "already been used"),
+        (1, "something other than true or false"),
+        (None, "something other than true or false"),
+        (ConnectionError("redis is down"), "could not say"),
+    ],
+)
+def test_a_replay_store_refuses_unless_it_answers_true(
+    signed: masks.Client, issuer: masks.Issuer, fake: Fake, answer: object, said: str
+) -> None:
+    verifier = masks.Verifier(issuer, AUDIENCE, http=fake.http(), replay=Remembering(answer))
+    _, headers = bound_request(signed)
+
+    with pytest.raises(masks.InvalidToken, match=said):
+        verifier.authenticate("GET", TARGET, headers)
+
+
+def test_a_synchronous_verifier_refuses_an_async_store(signed: masks.Client, issuer: masks.Issuer, fake: Fake) -> None:
+    verifier = masks.Verifier(issuer, AUDIENCE, http=fake.http(), replay=AsyncRemembering())
+    _, headers = bound_request(signed)
+
+    with pytest.raises(masks.InvalidToken, match="something other than true or false"):
+        verifier.authenticate("GET", TARGET, headers)
+
+
+def test_verifiers_can_share_a_replay_store(signed: masks.Client, issuer: masks.Issuer, fake: Fake) -> None:
+    store = masks.MemoryReplayStore()
+    _, headers = bound_request(signed)
+
+    masks.Verifier(issuer, AUDIENCE, http=fake.http(), replay=store).authenticate("GET", TARGET, headers)
+
+    with pytest.raises(masks.InvalidToken, match="already been used"):
+        masks.Verifier(issuer, AUDIENCE, http=fake.http(), replay=store).authenticate("GET", TARGET, headers)
+
+
+def test_the_memory_store_forgets_a_proof_once_it_expires(monkeypatch: pytest.MonkeyPatch) -> None:
+    now = [1000.0]
+    monkeypatch.setattr(masks.replay.time, "monotonic", lambda: now[0])
+    store = masks.MemoryReplayStore()
+
+    assert store.first("key", 120)
+    assert not store.first("key", 120)
+
+    now[0] += 119
+    assert not store.first("key", 120)
+
+    now[0] += 2
+    assert store.first("key", 120)
+    assert list(store._held) == ["key"]
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("store", [AsyncRemembering, Remembering])
+async def test_an_async_verifier_awaits_its_replay_store(
+    signed: masks.Client, issuer: masks.Issuer, fake: Fake, store: type[Remembering]
+) -> None:
+    held = store()
+    verifier = masks.AsyncVerifier(issuer, AUDIENCE, http=fake.async_http(), replay=held)
+    _, headers = bound_request(signed)
+
+    claims = await verifier.authenticate("GET", TARGET, headers)
+
+    assert claims.subject == "signed"
+    assert len(held.asked) == 1
+
+
+@pytest.mark.anyio
+async def test_the_asgi_middleware_refuses_when_the_replay_store_fails(
+    signed: masks.Client, issuer: masks.Issuer, fake: Fake
+) -> None:
+    async def app(scope: Any, _: Any, send: Any) -> None:
+        await send({"type": "http.response.start", "status": 200, "headers": []})
+
+    verifier = masks.AsyncVerifier(
+        issuer, AUDIENCE, http=fake.async_http(), replay=AsyncRemembering(TimeoutError("no answer"))
+    )
+    _, headers = bound_request(signed)
+
+    _, refused = await call(
+        Middleware(app, verifier), [(name.lower().encode(), value.encode()) for name, value in headers.items()]
+    )
+
+    assert refused["status"] == 401

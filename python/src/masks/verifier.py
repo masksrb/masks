@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import hmac
-import threading
+import inspect
 import time
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
@@ -16,6 +16,7 @@ from .errors import InvalidToken
 from .flows import Flow, arun, default_async_http, default_http, get, required, run
 from .keys import PRIVATE_MEMBERS, thumbprint
 from .models import Issuer, Tenant
+from .replay import AsyncReplayStore, MemoryReplayStore, ReplayStore
 
 ACCESS_TOKEN_TYPE = "at+jwt"
 TOKEN_ALGORITHMS = ("RS256", "ES256")
@@ -24,6 +25,7 @@ PROOF_WINDOW = 60
 LEEWAY = 30
 KEYS_LIFETIME = 300
 KEYS_PATIENCE = 30
+REPLAY_MEMORY = PROOF_WINDOW + 2 * LEEWAY
 
 Headers = Mapping[str, str] | Sequence[tuple[str, str]] | httpx.Headers
 
@@ -85,6 +87,21 @@ def typed(header: dict[str, Any], want: str) -> bool:
     return held.removeprefix("application/") == want
 
 
+def remembered(answer: object) -> None:
+    if inspect.iscoroutine(answer):
+        answer.close()
+
+    if answer is False:
+        raise InvalidToken("masks: that proof has already been used")
+
+    if answer is not True:
+        raise InvalidToken("masks: the replay store answered with something other than true or false")
+
+
+def unremembered() -> InvalidToken:
+    return InvalidToken("masks: the replay store could not say whether that proof is new")
+
+
 def unverified_header(token: str) -> dict[str, Any]:
     try:
         return jwt.get_unverified_header(token)
@@ -99,9 +116,6 @@ class _Verifying:
         self.public_url = public_url.rstrip("/") if public_url else None
         self._keys: list[dict[str, Any]] = []
         self._keys_at = 0.0
-        self._replays: dict[str, float] = {}
-        self._swept = 0.0
-        self._replay_lock = threading.Lock()
 
     def _key(self, kid: str) -> Flow[dict[str, Any]]:
         age = time.monotonic() - self._keys_at
@@ -153,7 +167,7 @@ class _Verifying:
 
         return Claims.from_dict(claims)
 
-    def _authenticate(self, method: str, url: object, headers: Headers) -> Flow[Claims]:
+    def _authenticate(self, method: str, url: object, headers: Headers) -> Flow[tuple[Claims, str]]:
         held = httpx.Headers(headers)
         scheme, _, token = held.get("Authorization", "").partition(" ")
 
@@ -163,11 +177,11 @@ class _Verifying:
         claims = yield from self._verify(token)
 
         if scheme.lower() == "bearer" and not claims.bound:
-            return claims
+            return claims, ""
 
         if scheme.lower() == DPOP.lower() and claims.bound:
-            self._proven(method, self._target(str(url)), token, str(claims.thumbprint), held.get_list(DPOP))
-            return claims
+            seen = self._proven(method, self._target(str(url)), token, str(claims.thumbprint), held.get_list(DPOP))
+            return claims, seen
 
         if scheme.lower() == "bearer":
             raise InvalidToken("masks: that token is held to a key and is presented with DPoP")
@@ -182,7 +196,7 @@ class _Verifying:
 
         return self.public_url + urlunsplit(("", "", held.path, held.query, ""))
 
-    def _proven(self, method: str, url: str, token: str, bound_to: str, presented: list[str]) -> None:
+    def _proven(self, method: str, url: str, token: str, bound_to: str, presented: list[str]) -> str:
         if len(presented) != 1 or "," in presented[0]:
             raise InvalidToken("masks: exactly one DPoP proof is required")
 
@@ -237,23 +251,12 @@ class _Verifying:
         if not hmac.compare_digest(str(claims.get("ath") or ""), token_hash(token)):
             raise InvalidToken("masks: that proof was made for another token")
 
-        if not self._first(f"{bound_to}:{claims['jti']}"):
-            raise InvalidToken("masks: that proof has already been used")
+        jti = claims["jti"]
 
-    def _first(self, seen: str) -> bool:
-        now = time.monotonic()
+        if not isinstance(jti, str) or not jti:
+            raise InvalidToken("masks: a proof carries a jti")
 
-        with self._replay_lock:
-            if now - self._swept > PROOF_WINDOW:
-                self._swept = now
-                self._replays = {key: at for key, at in self._replays.items() if now - at <= PROOF_WINDOW + 2 * LEEWAY}
-
-            if seen in self._replays:
-                return False
-
-            self._replays[seen] = now
-
-            return True
+        return f"{bound_to}:{jti}"
 
 
 class Verifier(_Verifying):
@@ -264,15 +267,27 @@ class Verifier(_Verifying):
         *,
         public_url: str | None = None,
         http: httpx.Client | None = None,
+        replay: ReplayStore | None = None,
     ) -> None:
         super().__init__(issuer, audience, public_url=public_url)
         self.http = http or default_http()
+        self.replay: ReplayStore = replay if replay is not None else MemoryReplayStore()
 
     def verify(self, token: str) -> Claims:
         return run(self._verify(token), self.http)
 
     def authenticate(self, method: str, url: object, headers: Headers) -> Claims:
-        return run(self._authenticate(method, url, headers), self.http)
+        claims, seen = run(self._authenticate(method, url, headers), self.http)
+
+        if seen:
+            try:
+                answer: object = self.replay.first(seen, REPLAY_MEMORY)
+            except Exception as error:
+                raise unremembered() from error
+
+            remembered(answer)
+
+        return claims
 
 
 class AsyncVerifier(_Verifying):
@@ -283,12 +298,27 @@ class AsyncVerifier(_Verifying):
         *,
         public_url: str | None = None,
         http: httpx.AsyncClient | None = None,
+        replay: ReplayStore | AsyncReplayStore | None = None,
     ) -> None:
         super().__init__(issuer, audience, public_url=public_url)
         self.http = http or default_async_http()
+        self.replay: ReplayStore | AsyncReplayStore = replay if replay is not None else MemoryReplayStore()
 
     async def verify(self, token: str) -> Claims:
         return await arun(self._verify(token), self.http)
 
     async def authenticate(self, method: str, url: object, headers: Headers) -> Claims:
-        return await arun(self._authenticate(method, url, headers), self.http)
+        claims, seen = await arun(self._authenticate(method, url, headers), self.http)
+
+        if seen:
+            try:
+                answer: object = self.replay.first(seen, REPLAY_MEMORY)
+
+                if inspect.isawaitable(answer):
+                    answer = await answer
+            except Exception as error:
+                raise unremembered() from error
+
+            remembered(answer)
+
+        return claims

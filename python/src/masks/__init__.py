@@ -28,6 +28,7 @@ from .models import (
     Tenant,
     Token,
 )
+from .replay import AsyncReplayStore, MemoryReplayStore, ReplayStore
 from .sources import AsyncCachedTokenSource, AsyncTokenSource, CachedTokenSource, TokenSource
 from .verifier import AsyncVerifier, Claims, Verifier
 
@@ -46,6 +47,7 @@ __all__ = [
     "UPSTREAM_ACCESS_TOKEN_TYPE",
     "AsyncCachedTokenSource",
     "AsyncClient",
+    "AsyncReplayStore",
     "AsyncTokenSource",
     "AsyncVerifier",
     "Auth",
@@ -64,8 +66,10 @@ __all__ = [
     "Issuer",
     "Key",
     "MasksError",
+    "MemoryReplayStore",
     "Metadata",
     "Registration",
+    "ReplayStore",
     "ResourceMetadata",
     "Tenant",
     "Token",

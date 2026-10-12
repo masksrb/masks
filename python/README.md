@@ -195,6 +195,30 @@ minute, and not seen before. A failed check raises `masks.InvalidToken`.
 Set `public_url` when a proxy sits in front of the API, since a proof names the
 address the client used.
 
+### Replayed proofs
+
+A verifier keeps the proofs it has seen in the process's memory. An API that
+runs in several processes passes `replay` an object whose `first(key,
+expires_in)` answers `True` only the first time it sees a key across every
+process, and `False` after that, for `expires_in` seconds.
+
+```python
+class RedisReplay:
+    def __init__(self, redis):
+        self.redis = redis
+
+    def first(self, key, expires_in):
+        return bool(self.redis.set(f"dpop:{key}", 1, nx=True, ex=expires_in))
+
+
+verifier = masks.Verifier(issuer, "https://files.example.com", replay=RedisReplay(redis))
+```
+
+`AsyncVerifier` also takes a store whose `first` is a coroutine. When the store
+raises or answers anything other than `True` or `False`, the request is refused
+with `masks.InvalidToken`. `masks.MemoryReplayStore` is the default, and one
+instance can be shared between verifiers in the same process.
+
 ### Introspection
 
 A verifier that checks the JWT sees a revoked token as valid until it expires.
