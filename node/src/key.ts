@@ -96,8 +96,8 @@ export class Key {
   }
 }
 
-export function random(): string {
-  const held = crypto.getRandomValues(new Uint8Array(24));
+export function random(size = 24): string {
+  const held = crypto.getRandomValues(new Uint8Array(size));
 
   return base64url(held);
 }

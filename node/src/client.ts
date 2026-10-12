@@ -1,3 +1,4 @@
+import { organizationKey } from "./claims.js";
 import { DPOP, proof } from "./dpop.js";
 import {
   decoded,
@@ -6,8 +7,14 @@ import {
   MasksError,
   refused,
 } from "./errors.js";
+import {
+  type IdTokenClaims,
+  type LogoutToken,
+  verifyIdToken,
+  verifyLogoutToken,
+} from "./idtoken.js";
 import type { Issuer, Tenant } from "./issuer.js";
-import { type Key, random } from "./key.js";
+import { base64url, type Key, random } from "./key.js";
 
 export type AuthMethod =
   | "client_secret_basic"
@@ -17,6 +24,7 @@ export type AuthMethod =
 
 export const GRANT_CLIENT_CREDENTIALS = "client_credentials";
 export const GRANT_REFRESH_TOKEN = "refresh_token";
+export const GRANT_AUTHORIZATION_CODE = "authorization_code";
 export const GRANT_DEVICE_CODE = "urn:ietf:params:oauth:grant-type:device_code";
 export const GRANT_TOKEN_EXCHANGE =
   "urn:ietf:params:oauth:grant-type:token-exchange";
@@ -46,6 +54,14 @@ export interface ExchangeRequest extends TokenRequest {
   lifetime?: number;
 }
 
+export interface Delegated {
+  connection: string;
+  provider: string;
+  provider_name?: string;
+  label?: string;
+  subject?: string;
+}
+
 export interface Token {
   access_token: string;
   token_type: string;
@@ -55,7 +71,44 @@ export interface Token {
   scope?: string;
   expires_in?: number;
   expires_at?: number;
+  delegations?: Delegated[];
 }
+
+export interface AuthorizationRequest {
+  redirectURI: string;
+  scope?: string[];
+  resource?: string[];
+  prompt?: string;
+  maxAge?: number;
+  organization?: string;
+  state?: string;
+  nonce?: string;
+}
+
+export interface PendingAuthorization {
+  state: string;
+  verifier: string;
+  nonce?: string;
+  redirectURI: string;
+  resource?: string[];
+}
+
+export interface AuthorizationStart extends PendingAuthorization {
+  url: string;
+}
+
+export interface SignIn {
+  token: Token;
+  claims?: IdTokenClaims;
+}
+
+export interface EndSession {
+  postLogoutRedirectURI?: string;
+  state?: string;
+  idTokenHint?: string;
+}
+
+export type Userinfo = Record<string, unknown> & { sub: string };
 
 export interface DeviceAuthorization {
   device_code: string;
@@ -153,6 +206,196 @@ export class Client {
     if (this.key) return "private_key_jwt";
 
     return "none";
+  }
+
+  async start(asked: AuthorizationRequest): Promise<AuthorizationStart> {
+    if (!asked?.redirectURI) {
+      throw new Error("masks: signing in names a redirectURI");
+    }
+
+    const scope = asked.scope ?? ["openid", "profile", "email"];
+    const state = asked.state ?? random(32);
+    const verifier = random(48);
+    const nonce = scope.includes("openid")
+      ? (asked.nonce ?? random(32))
+      : undefined;
+    const query = new URLSearchParams({
+      response_type: "code",
+      client_id: this.id,
+      redirect_uri: asked.redirectURI,
+      scope: scope.join(" "),
+      state,
+      code_challenge: await challenge(verifier),
+      code_challenge_method: "S256",
+    });
+
+    if (nonce) query.set("nonce", nonce);
+    for (const resource of asked.resource ?? []) {
+      query.append("resource", resource);
+    }
+    if (asked.prompt) query.set("prompt", asked.prompt);
+    if (asked.maxAge !== undefined) {
+      query.set("max_age", String(Math.max(0, Math.floor(asked.maxAge))));
+    }
+
+    const organization = organizationKey(asked.organization);
+    if (organization) query.set("organization", organization);
+
+    const endpoint = new URL(this.issuer.endpoint("authorization_endpoint"));
+    for (const [name, value] of query)
+      endpoint.searchParams.append(name, value);
+
+    return {
+      url: endpoint.toString(),
+      state,
+      verifier,
+      nonce,
+      redirectURI: asked.redirectURI,
+      resource: asked.resource,
+    };
+  }
+
+  async complete(
+    returned: URLSearchParams | URL | string,
+    pending: PendingAuthorization,
+  ): Promise<SignIn> {
+    const params = returnedParams(returned);
+    const error = params.get("error");
+
+    if (error) {
+      throw new MasksError(error, params.get("error_description") ?? undefined);
+    }
+
+    if (!constantEqual(params.get("state") ?? "", pending?.state ?? "")) {
+      throw new MasksError(
+        "invalid_state",
+        "that sign-in was not started by this browser",
+      );
+    }
+
+    const named = params.get("iss");
+
+    if (named !== null && named.replace(/\/+$/, "") !== this.issuer.url) {
+      throw new MasksError(
+        "invalid_issuer",
+        `that sign-in came back from ${JSON.stringify(named)}`,
+      );
+    }
+
+    if (
+      named === null &&
+      this.issuer.metadata.authorization_response_iss_parameter_supported ===
+        true
+    ) {
+      throw new MasksError(
+        "invalid_issuer",
+        "that sign-in came back without naming its issuer",
+      );
+    }
+
+    const code = params.get("code");
+
+    if (!code) {
+      throw new MasksError(
+        "invalid_request",
+        "that sign-in came back without a code",
+      );
+    }
+
+    const token = await this.authorizationCode(code, pending);
+
+    if (!token.id_token) {
+      if (pending.nonce) {
+        throw new MasksError(
+          "invalid_nonce",
+          "the token endpoint answered without an id token",
+        );
+      }
+
+      return { token };
+    }
+
+    const claims = await this.identity(token.id_token);
+
+    if (
+      pending.nonce &&
+      !constantEqual(String(claims.nonce ?? ""), pending.nonce)
+    ) {
+      throw new MasksError(
+        "invalid_nonce",
+        "the id token was issued for another sign-in",
+      );
+    }
+
+    return { token, claims };
+  }
+
+  authorizationCode(
+    code: string,
+    pending: Pick<
+      PendingAuthorization,
+      "verifier" | "redirectURI" | "resource"
+    >,
+  ): Promise<Token> {
+    const form = formFor({ resource: pending.resource });
+    form.set("grant_type", GRANT_AUTHORIZATION_CODE);
+    form.set("code", code);
+    form.set("redirect_uri", pending.redirectURI);
+    form.set("code_verifier", pending.verifier);
+
+    return this.#token(form);
+  }
+
+  identity(idToken: string): Promise<IdTokenClaims> {
+    return verifyIdToken(this.issuer, idToken, this.id);
+  }
+
+  logoutToken(token: string): Promise<LogoutToken> {
+    return verifyLogoutToken(this.issuer, token, this.id);
+  }
+
+  async userinfo(token: Token | string): Promise<Userinfo> {
+    const held: Token =
+      typeof token === "string"
+        ? { access_token: token, token_type: "Bearer" }
+        : token;
+    const endpoint = this.issuer.endpoint("userinfo_endpoint");
+    const signed = signedFetch({
+      source: { token: async () => held },
+      key: this.dpop,
+      origins: [endpoint],
+      fetch: this.issuer.fetch,
+    });
+    const answer = await decoded<Userinfo>(
+      await signed(endpoint, { headers: { accept: "application/json" } }),
+    );
+
+    if (!answer || typeof answer.sub !== "string" || answer.sub === "") {
+      throw new MasksError(
+        "server_error",
+        "the userinfo endpoint answered without a subject",
+      );
+    }
+
+    return answer;
+  }
+
+  endSessionURL(asked: EndSession = {}): string {
+    const endpoint = new URL(this.issuer.endpoint("end_session_endpoint"));
+
+    endpoint.searchParams.set("client_id", this.id);
+    if (asked.idTokenHint) {
+      endpoint.searchParams.set("id_token_hint", asked.idTokenHint);
+    }
+    if (asked.postLogoutRedirectURI) {
+      endpoint.searchParams.set(
+        "post_logout_redirect_uri",
+        asked.postLogoutRedirectURI,
+      );
+    }
+    if (asked.state) endpoint.searchParams.set("state", asked.state);
+
+    return endpoint.toString();
   }
 
   clientCredentials(asked: TokenRequest = {}): Promise<Token> {
@@ -576,6 +819,35 @@ function seconds(value: number, name: string): number {
   }
 
   return value;
+}
+
+function returnedParams(
+  returned: URLSearchParams | URL | string,
+): URLSearchParams {
+  if (returned instanceof URLSearchParams) return returned;
+  if (returned instanceof URL) return returned.searchParams;
+
+  return returned.includes("?") || /^https?:/.test(returned)
+    ? new URL(returned, "http://localhost").searchParams
+    : new URLSearchParams(returned);
+}
+
+export async function challenge(verifier: string): Promise<string> {
+  return base64url(
+    await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier)),
+  );
+}
+
+export function constantEqual(left: string, right: string): boolean {
+  const a = new TextEncoder().encode(left);
+  const b = new TextEncoder().encode(right);
+  let differs = a.length ^ b.length;
+
+  for (let index = 0; index < Math.max(a.length, b.length); index++) {
+    differs |= (a[index] ?? 0) ^ (b[index] ?? 0);
+  }
+
+  return differs === 0 && left !== "";
 }
 
 function formEscape(value: string): string {

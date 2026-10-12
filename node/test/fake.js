@@ -67,6 +67,15 @@ export class Fake {
   described = new Map();
   hints = [];
   exchanges = [];
+  codes = new Map();
+  grants = new Map();
+  users = new Map();
+  handshakes = [];
+  lifetime = 3600;
+  nonceOverride = undefined;
+  refreshRefusal = undefined;
+  userinfoCalls = 0;
+  tokenRequests = [];
   upstreamAnswer = "upstream";
   enrollments = [];
   pending = 0;
@@ -111,17 +120,18 @@ export class Fake {
       .sign(this.signing);
   }
 
-  accessToken(id, scope, jkt) {
+  accessToken(id, scope, jkt, extra = {}) {
     const now = Math.floor(Date.now() / 1000);
     const claims = {
       iss: this.url,
       sub: id,
       aud: this.audience,
-      exp: now + 3600,
+      exp: now + this.lifetime,
       iat: now,
       jti: random(),
       client_id: id,
       scope,
+      ...extra,
     };
 
     if (jkt) claims.cnf = { jkt };
@@ -146,6 +156,12 @@ export class Fake {
         introspection_endpoint: `${this.url}/introspect`,
         registration_endpoint: `${this.url}/register`,
         enrollment_endpoint: `${this.url}/enrollments`,
+        authorization_endpoint: `${this.url}/authorize`,
+        userinfo_endpoint: `${this.url}/userinfo`,
+        end_session_endpoint: `${this.url}/logout`,
+        handshake_endpoint: `${this.url}/handshake`,
+        backchannel_logout_supported: true,
+        authorization_response_iss_parameter_supported: true,
       });
     }
 
@@ -182,6 +198,29 @@ export class Fake {
       this.revoked.push(form.get("token"));
       response.writeHead(200);
       return response.end();
+    }
+
+    if (request.method === "GET" && path === "/userinfo") {
+      return this.userinfo(request, response);
+    }
+
+    if (request.method === "GET" && path.startsWith("/avatars/")) {
+      if (request.headers.authorization === undefined) {
+        response.writeHead(401);
+        return response.end();
+      }
+
+      this.avatarAsks = [...(this.avatarAsks ?? []), request.url];
+
+      if (this.avatarRedirect) {
+        response.writeHead(302, { location: this.avatarRedirect });
+        return response.end();
+      }
+
+      response.writeHead(200, {
+        "content-type": this.avatarType ?? "image/png",
+      });
+      return response.end(this.avatarBody ?? Buffer.from("png-bytes"));
     }
 
     if (request.method === "POST" && path === "/introspect") {
@@ -350,11 +389,50 @@ export class Fake {
     } = await this.authenticated(request, form);
     if (!authenticated) return oauthError(response, 401, "invalid_client");
 
+    this.tokenRequests.push(form.get("grant_type"));
+
     switch (form.get("grant_type")) {
       case "client_credentials":
         break;
+      case "authorization_code": {
+        const held = this.codes.get(form.get("code"));
+        this.codes.delete(form.get("code"));
+
+        if (
+          !held ||
+          held.client_id !== id ||
+          held.redirect_uri !== form.get("redirect_uri") ||
+          held.challenge !==
+            Buffer.from(
+              await crypto.subtle.digest(
+                "SHA-256",
+                new TextEncoder().encode(form.get("code_verifier") ?? ""),
+              ),
+            ).toString("base64url")
+        ) {
+          return oauthError(response, 400, "invalid_grant");
+        }
+
+        return this.signIn(response, id, held, jkt);
+      }
       case "refresh_token": {
         const presented = form.get("refresh_token");
+
+        if (this.grants.has(presented)) {
+          if (this.refreshRefusal) {
+            return oauthError(
+              response,
+              this.refreshRefusal.status,
+              this.refreshRefusal.code,
+            );
+          }
+
+          const held = this.grants.get(presented);
+          this.grants.delete(presented);
+
+          return this.signIn(response, id, held, jkt);
+        }
+
         if (!client.refresh.has(presented))
           return oauthError(response, 400, "invalid_grant");
 
@@ -428,6 +506,185 @@ export class Fake {
     });
   }
 
+  authorize(target, options = {}) {
+    const asked = new URL(target).searchParams;
+    const redirect = new URL(asked.get("redirect_uri"));
+
+    this.authorized = asked;
+
+    if (options.error) {
+      redirect.searchParams.set("error", options.error);
+      redirect.searchParams.set("error_description", "declined in the fake");
+      redirect.searchParams.set("state", asked.get("state"));
+      return redirect.toString();
+    }
+
+    const code = random();
+    const sub = options.sub ?? "ada";
+    const scope = options.scope ?? asked.get("scope");
+
+    this.codes.set(code, {
+      client_id: asked.get("client_id"),
+      redirect_uri: asked.get("redirect_uri"),
+      challenge: asked.get("code_challenge"),
+      nonce: asked.get("nonce"),
+      scope,
+      resource: asked.getAll("resource"),
+      organization: asked.get("organization"),
+      sub,
+      sid: options.sid ?? `sid-${random()}`,
+    });
+
+    redirect.searchParams.set("code", code);
+    redirect.searchParams.set("state", options.state ?? asked.get("state"));
+    redirect.searchParams.set("iss", options.iss ?? this.url);
+
+    return redirect.toString();
+  }
+
+  person(sub) {
+    return {
+      name: "Ada Lovelace",
+      preferred_username: "ada",
+      email: "ada@example.com",
+      email_verified: true,
+      tenant: { uuid: "t-1", subdomain: "acme", name: "Acme" },
+      "masks:avatars": {
+        photo: `${this.url}/avatars/${sub}`,
+        identicon: `${this.url}/avatars/${sub}/identicon`,
+      },
+      org: { id: "o-1", key: "acme", name: "Acme", role: "owner" },
+      orgs: [
+        { id: "o-1", key: "acme", name: "Acme", role: "owner" },
+        { id: "o-2", key: "globex", name: "Globex", role: "member" },
+      ],
+      ...(this.users.get(sub) ?? {}),
+    };
+  }
+
+  async signIn(response, id, held, jkt) {
+    const now = Math.floor(Date.now() / 1000);
+    const person = this.person(held.sub);
+    const scopes = (held.scope ?? "").split(" ").filter(Boolean);
+    const audience = held.resource?.length ? held.resource : [this.audience];
+    const refresh = random();
+
+    this.grants.set(refresh, held);
+
+    const answer = {
+      access_token: await this.accessToken(held.sub, held.scope, jkt, {
+        aud: audience.length === 1 ? audience[0] : audience,
+        client_id: id,
+        ...(scopes.includes("organization") || person.org
+          ? { org: person.org }
+          : {}),
+      }),
+      token_type: jkt ? "DPoP" : "Bearer",
+      expires_in: this.lifetime,
+      scope: held.scope,
+      refresh_token: refresh,
+    };
+
+    if (scopes.includes("openid")) {
+      answer.id_token = await this.issue(
+        {
+          iss: this.url,
+          sub: held.sub,
+          aud: id,
+          exp: now + 300,
+          iat: now,
+          sid: held.sid,
+          nonce: this.nonceOverride ?? held.nonce ?? undefined,
+          name: person.name,
+          email: person.email,
+          org: person.org,
+        },
+        "JWT",
+      );
+    }
+
+    const delegated = scopes.find((scope) =>
+      scope.startsWith("masks:delegate:"),
+    );
+
+    if (delegated) {
+      const provider = delegated.slice("masks:delegate:".length);
+      answer.delegations = [
+        {
+          connection: `connection-${provider}`,
+          provider,
+          provider_name: "Google",
+          subject: "ada@gmail.example",
+        },
+      ];
+    }
+
+    return json(response, 200, answer);
+  }
+
+  async userinfo(request, response) {
+    this.userinfoCalls++;
+
+    const header = request.headers.authorization ?? "";
+    const token = header.replace(/^(Bearer|DPoP) /, "");
+
+    try {
+      const { payload } = await jwtVerify(
+        token,
+        await importJWK(this.public, "RS256"),
+      );
+
+      return json(response, 200, {
+        sub: payload.sub,
+        ...this.person(payload.sub),
+      });
+    } catch {
+      return oauthError(response, 401, "invalid_token");
+    }
+  }
+
+  shake(target, options = {}) {
+    const asked = new URL(target).searchParams;
+    const back = new URL(asked.get("return_to"));
+
+    this.handshakes.push(asked);
+
+    if (options.error) {
+      back.searchParams.set("error", options.error);
+      back.searchParams.set("state", asked.get("state"));
+      return back.toString();
+    }
+
+    const token = random();
+    const id = `app-${random()}`;
+
+    this.initial.set(token, id);
+    back.searchParams.set("initial_access_token", token);
+    back.searchParams.set("iss", options.iss ?? this.url);
+    back.searchParams.set("state", options.state ?? asked.get("state"));
+
+    return back.toString();
+  }
+
+  logoutToken(claims = {}, typ = "logout+jwt") {
+    const now = Math.floor(Date.now() / 1000);
+
+    return this.issue(
+      {
+        iss: this.url,
+        aud: claims.aud,
+        iat: now,
+        exp: now + 120,
+        jti: random(),
+        events: {
+          "http://schemas.openid.net/event/backchannel-logout": {},
+        },
+        ...claims,
+      },
+      typ,
+    );
+  }
+
   async enroll(request, response, form) {
     const { id, ok } = await this.authenticated(request, form);
     if (!ok) return oauthError(response, 401, "invalid_client");
@@ -484,10 +741,18 @@ export class Fake {
     const metadata = JSON.parse(text || "{}");
     const token = random();
 
+    const secret =
+      metadata.token_endpoint_auth_method === "client_secret_basic" ||
+      metadata.token_endpoint_auth_method === "client_secret_post"
+        ? random()
+        : undefined;
+
     this.add(id, {
       method: metadata.token_endpoint_auth_method,
       jwks: metadata.jwks ?? { keys: [] },
       scope: metadata.scope,
+      secret,
+      metadata,
     });
     this.registrations.set(id, token);
 
@@ -498,6 +763,7 @@ export class Fake {
     return json(response, 201, {
       ...metadata,
       client_id: id,
+      ...(secret ? { client_secret: secret } : {}),
       registration_access_token: token,
       registration_client_uri: uri,
     });

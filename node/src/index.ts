@@ -1,29 +1,58 @@
 export {
+  type Avatars,
+  avatarsOf,
+  type ForbiddenCode,
+  ForbiddenError,
+  member,
+  type Organization,
+  organizationKey,
+  organizationOf,
+  organizationsOf,
+  pictureOf,
+} from "./claims.js";
+export {
   ACCESS_TOKEN_TYPE,
   type AuthMethod,
+  type AuthorizationRequest,
+  type AuthorizationStart,
   bound,
   Client,
   type ClientOptions,
+  type Delegated,
   type DeviceAuthorization,
+  type EndSession,
   type Enrollment,
   type EnrollmentRequest,
   type ExchangeRequest,
+  GRANT_AUTHORIZATION_CODE,
   GRANT_CLIENT_CREDENTIALS,
   GRANT_DEVICE_CODE,
   GRANT_REFRESH_TOKEN,
   GRANT_TOKEN_EXCHANGE,
   ID_TOKEN_TYPE,
   type Introspection,
+  type PendingAuthorization,
   reuse,
   type SignedFetchOptions,
+  type SignIn,
   scopes,
   signedFetch,
   type Token,
   type TokenRequest,
   type TokenSource,
   UPSTREAM_ACCESS_TOKEN_TYPE,
+  type Userinfo,
   valid,
 } from "./client.js";
+export {
+  type Connection,
+  DELEGATION_SCOPE,
+  DelegationRefused,
+  type DelegationStart,
+  Delegations,
+  DelegationUnavailable,
+  type Upstream,
+} from "./delegations.js";
 export { DPOP, proof } from "./dpop.js";
 export {
   ForeignError,
@@ -33,7 +62,17 @@ export {
   MasksError,
   UnavailableError,
 } from "./errors.js";
+export {
+  Handshake,
+  type HandshakeOptions,
+  type HandshakeStart,
+} from "./handshake.js";
 export type { Options } from "./http.js";
+export {
+  BACKCHANNEL_LOGOUT_EVENT,
+  type IdTokenClaims,
+  type LogoutToken,
+} from "./idtoken.js";
 export {
   discoverResource,
   Issuer,
