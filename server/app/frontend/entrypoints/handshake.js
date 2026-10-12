@@ -30,6 +30,7 @@ for (const form of document.querySelectorAll("form")) {
     }
 
     form.ariaBusy = "true";
-    for (const action of form.querySelectorAll(".action")) action.classList.add("action-busy");
+    for (const action of form.querySelectorAll(".action"))
+      action.classList.add("action-busy");
   });
 }
