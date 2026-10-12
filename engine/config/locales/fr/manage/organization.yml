@@ -130,3 +130,10 @@ fr:
           one: "L’archivage empêche quiconque de se connecter en tant que membre de %{organization} et révoque son %{count} jeton actif. Les membres conservent leurs rôles : la restaurer remet donc tout en place."
           other: "L’archivage empêche quiconque de se connecter en tant que membre de %{organization} et révoque ses %{count} jetons actifs. Les membres conservent leurs rôles : la restaurer remet donc tout en place."
         button: "Archiver %{organization}"
+      parts:
+        label: "Organisation"
+        members: "Membres"
+        sign_in: "Connexion"
+        roles: "Rôles"
+        activity: "Activité"
+        general: "Général"

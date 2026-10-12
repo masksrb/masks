@@ -3,6 +3,7 @@
   import { createFeedback } from "./lib/feedback.svelte.js";
   import { day, since } from "./lib/format.js";
   import { useRouter } from "./lib/router.svelte.js";
+  import Parts from "./ui/Parts.svelte";
   import Section from "./ui/Section.svelte";
   import Facts from "./ui/Facts.svelte";
   import Field from "./ui/Field.svelte";
@@ -15,7 +16,7 @@
   import Table from "./ui/Table.svelte";
   import Tally from "./ui/Tally.svelte";
 
-  let { api, organizationKey } = $props();
+  let { api, organizationKey, part = null } = $props();
 
   const router = useRouter();
   const feedback = createFeedback();
@@ -418,94 +419,33 @@
       </div>
     {/if}
 
-    <Section
-      title={t("organization.members.title")}
-      lede={t("organization.members.lede")}
-    >
-      {#snippet actions()}
-        <div class="range" role="group" aria-label={t("organization.members.who")}>
-          {#each LENSES as [key, label] (key)}
-            <button type="button" aria-pressed={lens === key} onclick={() => (lens = key)}>{label}</button>
-          {/each}
-        </div>
-        {#if !organization.archivedAt}
-          <button type="button" class="btn btn-primary btn-sm" onclick={openAdding}>{t("organization.members.add")}</button>
-        {/if}
-      {/snippet}
+    <Parts
+      base={`/organizations/${organization.key}`}
+      {part}
+      label={t("organization.parts.label")}
+      parts={[
+        [null, "", t("organization.parts.members")],
+        ["sign-in", "/sign-in", t("organization.parts.sign_in")],
+        ["roles", "/roles", t("organization.parts.roles")],
+        ["activity", "/activity", t("organization.parts.activity")],
+        ["general", "/general", t("organization.parts.general")],
+      ]}
+    />
 
-      {#if adding}
-        <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_10rem_auto] sm:items-end">
-          <Field label={t("organization.members.email")} type="email" bind:value={adding.email} placeholder="person@example.com" />
-          <Select label={t("organization.members.role")} value={adding.role} options={roleOptions} onchange={(chosen) => (adding.role = chosen)} />
-          <div class="flex gap-2">
-            <button type="button" class="btn btn-primary btn-sm" disabled={busy || !adding.email.trim()} onclick={add}>
-              {t("organization.members.invite")}
-            </button>
-            <button type="button" class="btn btn-ghost btn-sm" onclick={() => (adding = null)}>{t("organization.members.cancel")}</button>
-          </div>
-        </div>
-        <p class="hint">
-          {t("organization.members.hint")}
-        </p>
-      {/if}
-
-      <Table
-        columns={[
-          t("organization.members.person"),
-          { label: t("organization.members.role"), hide: true },
-          { label: "", right: true, hide: true },
-        ]}
-        count={shown.length}
-        empty={t(`organization.members.empty.${lens}`)}
-      >
-        {#snippet rows()}
-          {#each shown as member (member.actor.uuid)}
-            <tr>
-              <td class="w-full min-w-0">
-                <div class="flex min-w-0 flex-col gap-0.5">
-                  <span class="flex flex-wrap items-center gap-2">
-                    <Link to={`/actors/${member.actor.uuid}`} class="link link-hover font-medium break-all">
-                      {named(member)}
-                    </Link>
-                    {#if member.expired}<span class="badge badge-sm badge-error badge-soft">{t("organization.members.expired")}</span>
-                    {:else if member.pending}<span class="badge badge-sm badge-warning badge-soft">{t("organization.members.invited")}</span>{/if}
-                    {#if lastOwner(member)}<span class="badge badge-sm badge-ghost">{t("organization.members.last_owner")}</span>{/if}
-                  </span>
-                  <span class="hint">{status(member)}</span>
-                  <div class="mt-2 flex flex-wrap items-center gap-2 md:hidden">
-                    <div class="min-w-28 flex-1 basis-28">{@render roleOf(member)}</div>
-                    <div class="-me-3 flex shrink-0">{@render removeOf(member)}</div>
-                  </div>
-                </div>
-              </td>
-              <td class="hidden w-44 min-w-44 md:table-cell">
-                {@render roleOf(member)}
-              </td>
-              <td class="hidden text-right whitespace-nowrap md:table-cell">
-                {@render removeOf(member)}
-              </td>
-            </tr>
-          {/each}
-        {/snippet}
-      </Table>
-    </Section>
-
-    <div class="grid items-start gap-4 lg:grid-cols-2">
-      <div class="flex flex-col gap-4">
-        <Section
-          title={t("organization.signing_in.title")}
-          lede={t("organization.signing_in.lede")}
-        >
+    <div class="grid gap-4">
+      {#if part === "sign-in"}
+        <Section row title={t("organization.signing_in.policy")} lede={t("organization.signing_in.lede")}>
           <Select
-            label={t("organization.signing_in.policy")}
+            name={t("organization.signing_in.policy")}
             value={organization.signInPolicy?.key ?? ""}
             options={[["", t("organization.signing_in.inherited")], ...policies.map((policy) => [policy.key, policy.name])]}
             disabled={busy}
             onchange={setPolicy}
           />
+        </Section>
 
+        <Section row title={t("organization.signing_in.providers")}>
           <div class="flex flex-col gap-2">
-            <span class="legend">{t("organization.signing_in.providers")}</span>
 
             {#each organization.providers as provider (provider.key)}
               <div class="flex flex-wrap items-center justify-between gap-2 sheet p-3">
@@ -584,9 +524,10 @@
               </div>
             </div>
           {/if}
+        </Section>
 
+        <Section row title={t("organization.signing_in.domains")}>
           <div class="flex flex-col gap-2">
-            <span class="legend">{t("organization.signing_in.domains")}</span>
 
             {#each organization.domains as claim (claim.domain)}
               <div class="flex flex-wrap items-center justify-between gap-2">
@@ -604,9 +545,10 @@
               </p>
             {/each}
           </div>
+        </Section>
 
+        <Section row title={t("organization.signing_in.provisioning")}>
           <div class="flex flex-col gap-2">
-            <span class="legend">{t("organization.signing_in.provisioning")}</span>
             <p class="hint">
               {organization.provisioningTokens.length
                 ? t("organization.signing_in.tokens_reach", { count: organization.provisioningTokens.length })
@@ -615,10 +557,8 @@
             </p>
           </div>
         </Section>
-      </div>
-
-      <div class="flex flex-col gap-4">
-        <Section title={t("organization.roles.title")} lede={t("organization.roles.lede")}>
+      {:else if part === "roles"}
+        <Section row title={t("organization.roles.title")} lede={t("organization.roles.lede")}>
           <div class="flex flex-wrap gap-2">
             {#each organization.roles as held (held)}
               <span class="badge badge-lg gap-1.5 {BUILT_IN.includes(held) ? 'badge-ghost' : 'badge-outline'}">
@@ -653,28 +593,101 @@
           />
           <p class="hint">{t("organization.roles.hint")}</p>
         </Section>
-
-        <Section title={t("organization.details.title")}>
+      {:else if part === "activity"}
+        <Section lede={t("organization.activity.lede")}>
+          <Events events={organization.events} empty={t("organization.activity.empty")} limit={25} collapse />
+        </Section>
+      {:else if part === "general"}
+        <Section row title={t("organization.details.title")}>
           <Field label={t("organization.details.name")} bind:value={naming} onsave={rename} />
           <Facts rows={facts} />
         </Section>
-      </div>
+
+        {#if !organization.archivedAt}
+          <Section
+            row
+            title={t("organization.archive.title")}
+            lede={revoking("organization.archive.lede", "organization.archive.lede_tokens")}
+          >
+            <button type="button" class="btn btn-sm btn-error btn-outline self-start" disabled={busy} onclick={archive}>
+              {t("organization.archive.button", { organization: organization.name })}
+            </button>
+          </Section>
+        {/if}
+      {:else}
+        <Section
+          title={t("organization.members.title")}
+          lede={t("organization.members.lede")}
+        >
+          {#snippet actions()}
+            <div class="range" role="group" aria-label={t("organization.members.who")}>
+              {#each LENSES as [key, label] (key)}
+                <button type="button" aria-pressed={lens === key} onclick={() => (lens = key)}>{label}</button>
+              {/each}
+            </div>
+            {#if !organization.archivedAt}
+              <button type="button" class="btn btn-primary btn-sm" onclick={openAdding}>{t("organization.members.add")}</button>
+            {/if}
+          {/snippet}
+
+          {#if adding}
+            <div class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_10rem_auto] sm:items-end">
+              <Field label={t("organization.members.email")} type="email" bind:value={adding.email} placeholder="person@example.com" />
+              <Select label={t("organization.members.role")} value={adding.role} options={roleOptions} onchange={(chosen) => (adding.role = chosen)} />
+              <div class="flex gap-2">
+                <button type="button" class="btn btn-primary btn-sm" disabled={busy || !adding.email.trim()} onclick={add}>
+                  {t("organization.members.invite")}
+                </button>
+                <button type="button" class="btn btn-ghost btn-sm" onclick={() => (adding = null)}>{t("organization.members.cancel")}</button>
+              </div>
+            </div>
+            <p class="hint">
+              {t("organization.members.hint")}
+            </p>
+          {/if}
+
+          <Table
+            columns={[
+              t("organization.members.person"),
+              { label: t("organization.members.role"), hide: true },
+              { label: "", right: true, hide: true },
+            ]}
+            count={shown.length}
+            empty={t(`organization.members.empty.${lens}`)}
+          >
+            {#snippet rows()}
+              {#each shown as member (member.actor.uuid)}
+                <tr>
+                  <td class="w-full min-w-0">
+                    <div class="flex min-w-0 flex-col gap-0.5">
+                      <span class="flex flex-wrap items-center gap-2">
+                        <Link to={`/actors/${member.actor.uuid}`} class="link link-hover font-medium break-all">
+                          {named(member)}
+                        </Link>
+                        {#if member.expired}<span class="badge badge-sm badge-error badge-soft">{t("organization.members.expired")}</span>
+                        {:else if member.pending}<span class="badge badge-sm badge-warning badge-soft">{t("organization.members.invited")}</span>{/if}
+                        {#if lastOwner(member)}<span class="badge badge-sm badge-ghost">{t("organization.members.last_owner")}</span>{/if}
+                      </span>
+                      <span class="hint">{status(member)}</span>
+                      <div class="mt-2 flex flex-wrap items-center gap-2 md:hidden">
+                        <div class="min-w-28 flex-1 basis-28">{@render roleOf(member)}</div>
+                        <div class="-me-3 flex shrink-0">{@render removeOf(member)}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="hidden w-44 min-w-44 md:table-cell">
+                    {@render roleOf(member)}
+                  </td>
+                  <td class="hidden text-right whitespace-nowrap md:table-cell">
+                    {@render removeOf(member)}
+                  </td>
+                </tr>
+              {/each}
+            {/snippet}
+          </Table>
+        </Section>
+      {/if}
     </div>
-
-    <Section title={t("organization.activity.title")} lede={t("organization.activity.lede")}>
-      <Events events={organization.events} empty={t("organization.activity.empty")} />
-    </Section>
-
-    {#if !organization.archivedAt}
-      <Section
-        title={t("organization.archive.title")}
-        lede={revoking("organization.archive.lede", "organization.archive.lede_tokens")}
-      >
-        <button type="button" class="btn btn-sm btn-error btn-outline self-start" disabled={busy} onclick={archive}>
-          {t("organization.archive.button", { organization: organization.name })}
-        </button>
-      </Section>
-    {/if}
   {/if}
 </Page>
 

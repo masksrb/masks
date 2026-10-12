@@ -130,3 +130,10 @@ de:
           one: "Durch das Archivieren kann sich niemand mehr als Mitglied von %{organization} anmelden, und ihr %{count} aktives Token wird widerrufen. Mitglieder behalten ihre Rollen, sodass beim Wiederherstellen alles zurückkommt."
           other: "Durch das Archivieren kann sich niemand mehr als Mitglied von %{organization} anmelden, und ihre %{count} aktiven Tokens werden widerrufen. Mitglieder behalten ihre Rollen, sodass beim Wiederherstellen alles zurückkommt."
         button: "%{organization} archivieren"
+      parts:
+        label: "Organisation"
+        members: "Mitglieder"
+        sign_in: "Anmeldung"
+        roles: "Rollen"
+        activity: "Aktivität"
+        general: "Allgemein"

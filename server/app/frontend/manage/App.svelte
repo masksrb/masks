@@ -239,7 +239,7 @@
         {/if}
       {:else if current === "organizations"}
         {#if router.segments[1]}
-          <OrganizationPage {api} organizationKey={router.segments[1]} />
+          <OrganizationPage {api} organizationKey={router.segments[1]} part={router.segments[2]} />
         {:else}
           <OrganizationsPage {api} />
         {/if}

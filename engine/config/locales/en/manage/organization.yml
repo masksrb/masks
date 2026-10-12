@@ -130,3 +130,10 @@ en:
           one: "Archiving stops anyone signing in as a member of %{organization} and revokes its %{count} live token. Members keep their roles, so restoring it puts everything back."
           other: "Archiving stops anyone signing in as a member of %{organization} and revokes its %{count} live tokens. Members keep their roles, so restoring it puts everything back."
         button: "Archive %{organization}"
+      parts:
+        label: "Organization"
+        members: "Members"
+        sign_in: "Sign-in"
+        roles: "Roles"
+        activity: "Activity"
+        general: "General"

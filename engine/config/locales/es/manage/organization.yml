@@ -130,3 +130,10 @@ es:
           one: "Al archivar, nadie puede iniciar sesión como miembro de %{organization} y se revoca su %{count} token activo. Los miembros conservan sus roles, así que restaurarla lo devuelve todo a su sitio."
           other: "Al archivar, nadie puede iniciar sesión como miembro de %{organization} y se revocan sus %{count} tokens activos. Los miembros conservan sus roles, así que restaurarla lo devuelve todo a su sitio."
         button: "Archivar %{organization}"
+      parts:
+        label: "Organización"
+        members: "Miembros"
+        sign_in: "Inicio de sesión"
+        roles: "Roles"
+        activity: "Actividad"
+        general: "General"
