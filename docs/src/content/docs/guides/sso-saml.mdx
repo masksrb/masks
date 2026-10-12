@@ -121,7 +121,7 @@ profile.
 
 ### SAML 2.0
 
-Give the identity provider two values from the provider's page in `/manage`:
+Give the identity provider two values from the provider's **Setup** tab in `/manage`:
 
 | | |
 | --- | --- |
@@ -362,7 +362,7 @@ client that may carry `masks:scim`, can come only from an owner, since either re
 The organization's directory keeps its own `externalId` for each member, so two organizations'
 directories can use the same value. A `userName`, email, or `externalId` that is already taken is
 refused with `409` and the same `uniqueness` detail every time, so the answer does not say who holds
-it or where. An actor's page in `/manage` shows the `externalId` each organization's directory holds for
+it or where. An actor's **Access** tab in `/manage` shows the `externalId` each organization's directory holds for
 them.
 
 ### Roles as groups

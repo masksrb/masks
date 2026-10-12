@@ -69,13 +69,13 @@ them there.
 
 ### Set up the provider
 
-In `/manage`, on the provider's page:
+In `/manage`, on the provider's **Clients** tab:
 
-1. Switch on **Let applications use somebody's Google account**. The label names the provider.
-2. Fill in **What applications may do** with the provider's scopes beyond sign-in.
+1. Switch on **Let clients use an actor's Google account**. The label names the provider.
+2. Fill in **What clients may do** with the provider's scopes beyond sign-in.
 3. Fill in **Extra parameters when connecting** if the provider needs them for a refresh token.
 
-| Provider | What applications may do | Extra parameters |
+| Provider | What clients may do | Extra parameters |
 | --- | --- | --- |
 | Google | `https://www.googleapis.com/auth/drive.readonly` | `access_type=offline prompt=consent` |
 | Microsoft | `offline_access Files.Read.All` | |

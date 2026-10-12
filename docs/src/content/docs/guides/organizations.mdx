@@ -28,7 +28,7 @@ need `masks:manage:security`. Adding, inviting again, changing the role of, and 
 
 ### Roles
 
-A role is a word the member's tokens carry. Under **Roles** on the organization's page, **Offer
+A role is a word the member's tokens carry. On the organization's **Roles** tab, **Offer
 another role** adds one: lowercase letters, digits, dashes, and underscores, up to 40 characters.
 `owner` and `member` are always offered. A role cannot be removed while someone holds it.
 
@@ -165,8 +165,8 @@ organization, and redeeming the device code is refused once the membership has e
 
 ## An organization's own sign-in
 
-An organization can have its own sign-in policy, provider, and directory. Set all three under
-**Signing in** on the organization's page in `/manage`.
+An organization can have its own sign-in policy, provider, and directory. Set all three on the
+organization's **Sign-in** tab in `/manage`.
 
 ### Policy
 
@@ -258,16 +258,16 @@ The overview counts actors, clients, organizations, and devices, and lists the f
 organizations with their members and open invitations. An organization with no owner is marked
 **no owner** there and under **Organizations**.
 
-An organization's page counts its members, owners, open invitations, and live tokens. Below that:
+An organization's page counts its members, owners, open invitations, and live tokens, and opens on
+**Members**. Its tabs:
 
-| Section | Holds |
+| Tab | Holds |
 | --- | --- |
 | **Members** | Everyone, owners, or open invitations, with each person's role, **Send again**, and removal. |
-| **Signing in** | The sign-in policy, the organization's providers and their group mapping, its proven domains, and any provisioning token for it. |
+| **Sign-in** | The sign-in policy, the organization's providers and their group mapping, its proven domains, and any provisioning token for it. |
 | **Roles** | The roles it offers, and how many members hold each. |
-| **Details** | Its name, key, and ID, and the `organization=` value apps ask for it with. |
 | **Activity** | Changes to the organization, and what happened while someone signed in as a member. |
-| **Archive** | Archives it, naming how many live tokens that revokes. |
+| **General** | Its name, key, and ID, the `organization=` value apps ask for it with, and **Archive**, which names how many live tokens archiving revokes. |
 
 Archiving an organization revokes every token issued for it and stops it being offered. Members
 keep their roles, so **Restore** puts everything back.
@@ -276,5 +276,5 @@ keep their roles, so **Restore** puts everything back.
 
 An event belongs to an organization when it is about the organization or its members, or when it
 happens while someone signs in to an app as a member, such as consent or a refused sign-in. Tokens
-issued for the organization carry it to refreshes and exchanges too. The organization's page lists
-its recent events, and an [event stream](/guides/event-streams/) can send only them.
+issued for the organization carry it to refreshes and exchanges too. The organization's **Activity**
+tab lists its recent events, and an [event stream](/guides/event-streams/) can send only them.

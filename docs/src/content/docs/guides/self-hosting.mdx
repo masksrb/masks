@@ -271,7 +271,7 @@ A tenant can also serve sign-in from a host of its own, such as `login.example.c
 1. In `/manage`, open **Settings → General → Domains**, claim `example.com`, and publish the TXT record it
    shows. masks checks the record every hour.
 2. Point `login.example.com` at the server with a CNAME or an address record.
-3. Under **Serve sign-in from your domain**, enter the host and choose **Serve**. Only an owner
+3. Under **Serve sign-in at**, enter the host and choose **Serve**. Only an owner
    can, and the host must be within a domain the tenant has proven.
 
 The tenant answers at both its usual address and the host. Each is a separate issuer, so an app
@@ -335,7 +335,7 @@ apps:
 | `preset`, `url`, `slug` | A [known app](/guides/features/#adding-a-known-app), as **Add client** registers it. |
 | `redirect_uris`, `scopes` | An app no preset covers. |
 | `client_secret_env` | The variable that holds the app's secret. Without it, masks makes a secret the first time and prints it to the logs once. |
-| `allowed_groups`, `access_token_lifetime`, `refresh_token_lifetime` | As on a client's page in `/manage`. |
+| `allowed_groups`, `access_token_lifetime`, `refresh_token_lifetime` | As on a client's **Access** and **General** tabs in `/manage`. |
 | `groups` | Each group's name and the nicknames or emails of its members. A member must already have an account. |
 
 Applying adds and updates, and never removes an app, a group, or a member the file no longer

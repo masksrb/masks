@@ -232,9 +232,8 @@ A token [bound to a key with DPoP](/guides/security/#binding-a-token-with-dpop) 
 claim. It is accepted only as `Authorization: DPoP` with a `DPoP` proof that is signed by that key,
 names this request's method and URL and the token, was made within the last minute, and has not been
 seen before. Presented as `Bearer`, it is refused. Each process keeps the proofs it has seen in
-memory. To share them across processes, override `masks_resource` to build a
-`Masks::Client::Resource` with a `replay:` store, any object whose `first?(key, expires_in:)` answers
-true only once for each key.
+memory. To share them across processes, set `config.replay` to any object whose
+`first?(key, expires_in:)` answers true only once for each key.
 
 Outside Rails, [Masks::Client](/reference/ruby/) does the same without the engine.
 
