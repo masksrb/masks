@@ -108,6 +108,7 @@ class Fake:
         self.photo = b"\x89PNG fake photo"
         self.photo_type = "image/png"
         self.unavailable_tokens = False
+        self.keys_down = False
         self.pairs: list[tuple[str, str]] = []
 
     def transport(self) -> httpx.MockTransport:
@@ -170,6 +171,9 @@ class Fake:
 
     def keys(self, _: httpx.Request) -> httpx.Response:
         self.jwks_fetches += 1
+
+        if self.keys_down:
+            return respond(500)
         public = json.loads(RSAAlgorithm.to_jwk(self.signing.public_key()))
 
         return respond(200, {"keys": [{**public, "kid": self.kid, "alg": "RS256", "use": "sig"}]})

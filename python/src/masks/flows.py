@@ -154,25 +154,52 @@ def bounded(response: httpx.Response, content: bytes) -> httpx.Response:
     )
 
 
+def fetch(request: httpx.Request, http: httpx.Client) -> httpx.Response:
+    response = http.send(request, stream=True, follow_redirects=False)
+
+    try:
+        content = bytearray()
+
+        for chunk in response.iter_bytes():
+            content += chunk
+
+            if len(content) > READ_LIMIT:
+                raise Error("server_error", f"{request.url} answered with more than {READ_LIMIT} bytes")
+    finally:
+        response.close()
+
+    return bounded(response, bytes(content))
+
+
+async def afetch(request: httpx.Request, http: httpx.AsyncClient) -> httpx.Response:
+    response = await http.send(request, stream=True, follow_redirects=False)
+
+    try:
+        content = bytearray()
+
+        async for chunk in response.aiter_bytes():
+            content += chunk
+
+            if len(content) > READ_LIMIT:
+                raise Error("server_error", f"{request.url} answered with more than {READ_LIMIT} bytes")
+    finally:
+        await response.aclose()
+
+    return bounded(response, bytes(content))
+
+
 def run(flow: Flow[T], http: httpx.Client) -> T:
     try:
         request = next(flow)
 
         while True:
-            response = http.send(request, stream=True, follow_redirects=False)
-
             try:
-                content = bytearray()
+                response = fetch(request, http)
+            except (httpx.HTTPError, Error) as error:
+                request = flow.throw(error)
+                continue
 
-                for chunk in response.iter_bytes():
-                    content += chunk
-
-                    if len(content) > READ_LIMIT:
-                        raise Error("server_error", f"{request.url} answered with more than {READ_LIMIT} bytes")
-            finally:
-                response.close()
-
-            request = flow.send(bounded(response, bytes(content)))
+            request = flow.send(response)
     except StopIteration as done:
         return cast(T, done.value)
 
@@ -182,20 +209,13 @@ async def arun(flow: Flow[T], http: httpx.AsyncClient) -> T:
         request = next(flow)
 
         while True:
-            response = await http.send(request, stream=True, follow_redirects=False)
-
             try:
-                content = bytearray()
+                response = await afetch(request, http)
+            except (httpx.HTTPError, Error) as error:
+                request = flow.throw(error)
+                continue
 
-                async for chunk in response.aiter_bytes():
-                    content += chunk
-
-                    if len(content) > READ_LIMIT:
-                        raise Error("server_error", f"{request.url} answered with more than {READ_LIMIT} bytes")
-            finally:
-                await response.aclose()
-
-            request = flow.send(bounded(response, bytes(content)))
+            request = flow.send(response)
     except StopIteration as done:
         return cast(T, done.value)
 

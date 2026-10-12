@@ -1,0 +1,529 @@
+import time
+from collections.abc import Iterator
+from typing import Annotated, Any
+from urllib.parse import parse_qs, urlsplit
+
+import pytest
+from fastapi import Depends, FastAPI, Request
+from fastapi.testclient import TestClient
+
+import masks
+from masks.fastapi import Masks
+from masks.web import Config, MemoryCredentials, MemorySessionStore, Person, ServerSessions
+
+from .fake import AUDIENCE, ISSUER, Fake, FakeClient
+
+APP = "https://app.example"
+SECRET = "s" * 32
+PRIVILEGES = {
+    "read": ["catalog:read"],
+    "admin": ["catalog:admin"],
+    "billing": {"role": ["owner", "billing"]},
+    "acme_admin": {"scope": ["catalog:admin"], "role": "owner", "organization": "acme"},
+}
+HTML = {"Accept": "text/html"}
+JSON = {"Accept": "application/json"}
+
+
+def build(fake: Fake, credentials: Any = None, **changes: Any) -> tuple[FastAPI, Masks]:
+    fake.add("web", FakeClient(method="client_secret_basic", secret="secret"))
+    options: dict[str, Any] = {
+        "issuer": ISSUER,
+        "secret": SECRET,
+        "resource": APP,
+        "credentials": credentials if credentials is not None else MemoryCredentials("web", "secret"),
+        "scope": ["openid", "profile", "email", "offline_access", "organization"],
+        "privileges": PRIVILEGES,
+        "manages": lambda person: person.subject == "ada",
+        "http": fake.http(),
+        "async_http": fake.async_http(),
+        **changes,
+    }
+    auth = Masks(Config(**options))
+    app = FastAPI()
+    auth.install(app)
+
+    @app.get("/me")
+    async def me(person: Annotated[Person, Depends(auth.require())]) -> dict[str, Any]:
+        return person.to_dict()
+
+    @app.get("/admin")
+    async def admin(person: Annotated[Person, Depends(auth.require("admin"))]) -> dict[str, Any]:
+        return {"privileges": person.privileges}
+
+    @app.get("/billing")
+    async def billing(person: Annotated[Person, Depends(auth.require("billing"))]) -> dict[str, Any]:
+        return {"role": person.organization.role if person.organization else None}
+
+    @app.get("/whoami")
+    async def whoami(person: Annotated[Person, Depends(auth.person)]) -> dict[str, Any]:
+        return {"signed_in": person.signed_in}
+
+    @app.get("/api/catalog")
+    async def catalog(person: Annotated[Person, Depends(auth.protect("read"))]) -> dict[str, Any]:
+        return {"subject": person.subject, "by_token": person.by_token}
+
+    @app.get("/either")
+    async def either(person: Annotated[Person, Depends(auth.require("read", tokens=True))]) -> dict[str, Any]:
+        return {"subject": person.subject, "by_token": person.by_token}
+
+    @app.get("/client")
+    async def client(request: Request) -> dict[str, Any]:
+        held = await auth.client(request)
+        started = held.start_delegation("github", f"{APP}/connected")
+
+        return {"client_id": held.client_id, "provider": started.provider}
+
+    return app, auth
+
+
+@pytest.fixture
+def app(fake: Fake) -> Iterator[TestClient]:
+    application, _ = build(fake)
+
+    with TestClient(application, base_url=APP, follow_redirects=False) as client:
+        yield client
+
+
+def location(response: Any) -> str:
+    assert response.status_code in (302, 303), response.text
+    return str(response.headers["location"])
+
+
+def sign_in(client: TestClient, fake: Fake, subject: str = "ada", path: str = "/auth", **query: str) -> Any:
+    begun = client.get(path, params=query, headers=HTML)
+    callback = fake.authorize(location(begun), subject)
+
+    return client.get(callback, headers=HTML)
+
+
+def test_a_visitor_is_sent_through_masks_and_back(app: TestClient, fake: Fake) -> None:
+    assert location(app.get("/me", headers=HTML)) == "/auth"
+
+    landed = sign_in(app, fake)
+
+    assert location(landed) == "/me"
+    me = app.get("/me").json()
+    assert me["subject"] == "ada"
+    assert me["name"] == "Ada Lovelace"
+    assert me["email"] == "ada@example.com"
+    assert me["account_url"] == f"{ISSUER}/"
+    assert [held["key"] for held in me["organizations"]] == ["acme", "globex"]
+    assert me["picture"] == f"{ISSUER}/avatars/ada/photo"
+
+
+def test_a_json_request_gets_401_with_a_login_url(app: TestClient) -> None:
+    refused = app.get("/me", headers=JSON)
+
+    assert refused.status_code == 401
+    assert refused.json() == {"signed_in": False, "error": "login_required", "login_url": "/auth"}
+    assert app.get("/auth/session").status_code == 401
+
+
+def test_the_session_cookie_is_sealed_and_strict(app: TestClient, fake: Fake) -> None:
+    landed = sign_in(app, fake)
+    cookie = landed.headers["set-cookie"]
+
+    assert "HttpOnly" in cookie and "Secure" in cookie and "SameSite=Lax" in cookie
+    assert "ada" not in cookie and "eyJ" not in cookie
+
+    session = app.get("/auth/session")
+
+    assert session.headers["cache-control"] == "no-store"
+    assert session.json()["signed_in"] is True
+    assert "access_token" not in session.text
+
+
+def test_a_tampered_cookie_is_a_signed_out_visitor(app: TestClient, fake: Fake) -> None:
+    sign_in(app, fake)
+    held = app.cookies["masks_session"]
+    app.cookies.set(
+        "masks_session", held[:-4] + ("AAAA" if not held.endswith("AAAA") else "BBBB"), domain="app.example"
+    )
+
+    assert app.get("/whoami").json() == {"signed_in": False}
+
+
+def test_return_to_stays_on_this_site(app: TestClient, fake: Fake) -> None:
+    for unsafe in ("https://evil.example/", "//evil.example", "/\\evil.example", "/ok\x00"):
+        assert location(sign_in(app, fake, return_to=unsafe)) == "/"
+
+    assert location(sign_in(app, fake, return_to="/reports?page=2")) == "/reports?page=2"
+
+
+def test_several_sign_ins_can_be_in_flight(app: TestClient, fake: Fake) -> None:
+    first = location(app.get("/auth", params={"return_to": "/one"}, headers=HTML))
+    second = location(app.get("/auth", params={"return_to": "/two"}, headers=HTML))
+
+    assert location(app.get(fake.authorize(first), headers=HTML)) == "/one"
+    assert location(app.get(fake.authorize(second), headers=HTML)) == "/two"
+
+
+def test_a_forged_state_restarts_once_and_then_refuses(app: TestClient, fake: Fake) -> None:
+    begun = location(app.get("/auth", headers=HTML))
+    callback = fake.authorize(begun).replace("state=", "state=x")
+
+    assert location(app.get(callback, headers=HTML)) == "/auth"
+    assert app.get(callback, headers=HTML).status_code == 400
+    assert app.get(callback, headers=JSON).json()["error"] == "invalid_state"
+
+
+def test_an_error_from_masks_is_shown(app: TestClient) -> None:
+    refused = app.get("/auth/callback", params={"error": "access_denied", "error_description": "no"}, headers=JSON)
+
+    assert refused.status_code == 400
+    assert refused.json()["error"] == "access_denied"
+
+
+def test_signing_in_to_an_organization(app: TestClient, fake: Fake) -> None:
+    begun = location(app.get("/auth", params={"organization": "Globex"}, headers=HTML))
+
+    assert parse_qs(urlsplit(begun).query)["organization"] == ["globex"]
+
+    app.get(fake.authorize(begun), headers=HTML)
+
+    assert app.get("/me").json()["organization"]["key"] == "globex"
+    assert app.get("/billing", headers=JSON).json()["error"] == "insufficient_role"
+
+
+def test_a_role_in_the_organization_is_a_privilege(app: TestClient, fake: Fake) -> None:
+    sign_in(app, fake, organization="acme")
+
+    assert app.get("/billing").json() == {"role": "owner"}
+
+
+def test_a_role_without_an_organization_is_refused(app: TestClient, fake: Fake) -> None:
+    sign_in(app, fake)
+
+    refused = app.get("/billing", headers=JSON)
+
+    assert refused.status_code == 403
+    assert refused.json()["error"] == "insufficient_organization"
+    assert app.get("/billing", headers=HTML).status_code == 403
+
+
+def test_a_missing_privilege_asks_masks_once(app: TestClient, fake: Fake) -> None:
+    sign_in(app, fake)
+
+    stepped = location(app.get("/admin", headers=HTML))
+    query = parse_qs(urlsplit(stepped).query)
+
+    assert stepped.startswith("/auth?")
+    assert query == {"return_to": ["/admin"], "privilege": ["admin"]}
+
+    begun = location(app.get(stepped, headers=HTML))
+
+    assert "catalog:admin" in parse_qs(urlsplit(begun).query)["scope"][0]
+    assert location(app.get(fake.authorize(begun), headers=HTML)) == "/admin"
+    assert app.get("/admin").json() == {"privileges": ["admin"]}
+
+
+def test_a_privilege_masks_does_not_grant_is_refused_without_a_loop(app: TestClient, fake: Fake) -> None:
+    sign_in(app, fake, subject="bob")
+
+    stepped = location(app.get("/admin", headers=HTML))
+    app.get(fake.authorize(location(app.get(stepped, headers=HTML)), "bob"), headers=HTML)
+
+    refused = app.get("/admin", headers=JSON)
+
+    assert refused.status_code == 403
+    assert refused.json()["error"] == "insufficient_scope"
+
+
+def test_a_json_request_missing_a_privilege_gets_the_login_url(app: TestClient, fake: Fake) -> None:
+    sign_in(app, fake)
+
+    refused = app.get("/admin", headers=JSON)
+
+    assert refused.status_code == 403
+    assert refused.json() == {
+        "error": "privilege_required",
+        "privileges": ["admin"],
+        "login_url": "/auth?return_to=%2Fadmin&privilege=admin",
+    }
+
+
+def test_signing_out_revokes_the_refresh_token(app: TestClient, fake: Fake) -> None:
+    sign_in(app, fake)
+    revoked = len(fake.revoked)
+
+    assert location(app.post("/auth/logout", headers=HTML)) == "/"
+    assert len(fake.revoked) == revoked + 1
+    assert app.get("/whoami").json() == {"signed_in": False}
+
+
+def test_signing_out_everywhere_goes_through_masks(app: TestClient, fake: Fake) -> None:
+    sign_in(app, fake)
+
+    upstream = location(app.get("/auth/logout", params={"everywhere": "1"}, headers=HTML))
+
+    assert upstream.startswith(f"{ISSUER}/logout?")
+    assert parse_qs(urlsplit(upstream).query)["post_logout_redirect_uri"] == [f"{APP}/"]
+    assert app.post("/auth/logout", headers=JSON).json() == {"signed_in": False}
+
+
+def test_signing_out_from_another_site_is_refused(app: TestClient, fake: Fake) -> None:
+    sign_in(app, fake)
+
+    refused = app.post("/auth/logout", headers={**JSON, "Origin": "https://evil.example"})
+
+    assert refused.status_code == 403
+    assert app.get("/whoami").json() == {"signed_in": True}
+
+
+def test_an_expired_token_is_refreshed_with_the_identity(
+    app: TestClient, fake: Fake, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    sign_in(app, fake)
+    calls = fake.userinfo_calls
+    later = time.time() + 7200
+    monkeypatch.setattr(masks.models.time, "time", lambda: later)
+
+    assert app.get("/me").json()["subject"] == "ada"
+    assert fake.userinfo_calls == calls + 1
+    assert app.get("/me").status_code == 200
+    assert fake.userinfo_calls == calls + 1
+
+
+def test_a_refused_refresh_forgets_the_sign_in(app: TestClient, fake: Fake, monkeypatch: pytest.MonkeyPatch) -> None:
+    sign_in(app, fake)
+    fake.clients["web"].refresh.clear()
+    later = time.time() + 7200
+    monkeypatch.setattr(masks.models.time, "time", lambda: later)
+
+    assert app.get("/me", headers=JSON).status_code == 401
+    assert app.get("/auth/session").json()["error"] == "login_required"
+
+
+def test_the_avatar_is_proxied_for_the_signed_in_person(app: TestClient, fake: Fake) -> None:
+    assert app.get("/auth/avatar").status_code == 404
+
+    sign_in(app, fake)
+    photo = app.get("/auth/avatar", params={"size": "100"})
+
+    assert photo.status_code == 200
+    assert photo.content == fake.photo
+    assert photo.headers["content-type"] == "image/png"
+    assert photo.headers["x-content-type-options"] == "nosniff"
+    assert fake.seen[-1].url.params["size"] == "128"
+
+    fake.photo_type = "text/html"
+
+    assert app.get("/auth/avatar").status_code == 404
+
+
+def test_a_token_is_checked_against_the_resource(app: TestClient, fake: Fake) -> None:
+    missing = app.get("/api/catalog")
+
+    assert missing.status_code == 401
+    assert (
+        'resource_metadata="https://app.example/.well-known/oauth-protected-resource"'
+        in missing.headers["www-authenticate"]
+    )
+
+    good = fake.access_token("caller", "catalog:read", "", subject="ada", audience=APP)
+
+    assert app.get("/api/catalog", headers={"Authorization": f"Bearer {good}"}).json() == {
+        "subject": "ada",
+        "by_token": True,
+    }
+
+    narrow = fake.access_token("caller", "profile", "", audience=APP)
+    refused = app.get("/api/catalog", headers={"Authorization": f"Bearer {narrow}"})
+
+    assert refused.status_code == 403
+    assert refused.json()["error"] == "insufficient_scope"
+    assert 'scope="catalog:read"' in refused.headers["www-authenticate"]
+
+    elsewhere = fake.access_token("caller", "catalog:read", "", audience=AUDIENCE)
+
+    assert app.get("/api/catalog", headers={"Authorization": f"Bearer {elsewhere}"}).status_code == 401
+
+
+def test_a_held_token_needs_its_proof_once(app: TestClient, fake: Fake) -> None:
+    dpop = masks.Key.generate()
+    token = fake.access_token("caller", "catalog:read", dpop.thumbprint, audience=APP)
+    headers = {
+        "Authorization": f"DPoP {token}",
+        "DPoP": masks.proof(dpop, "GET", f"{APP}/api/catalog", token),
+    }
+
+    assert app.get("/api/catalog", headers=headers).status_code == 200
+
+    replayed = app.get("/api/catalog", headers=headers)
+
+    assert replayed.status_code == 401
+    assert "already been used" in replayed.json()["error_description"]
+
+
+def test_an_unreachable_issuer_answers_503(app: TestClient, fake: Fake) -> None:
+    fake.keys_down = True
+    token = fake.access_token("caller", "catalog:read", "", audience=APP)
+    answered = app.get("/api/catalog", headers={"Authorization": f"Bearer {token}"})
+
+    assert answered.status_code == 503
+    assert "www-authenticate" not in answered.headers
+
+
+def test_a_route_accepts_a_token_or_a_session(app: TestClient, fake: Fake) -> None:
+    token = fake.access_token("caller", "catalog:read", "", subject="bob", audience=APP)
+
+    assert app.get("/either", headers={"Authorization": f"Bearer {token}"}).json()["by_token"] is True
+
+    sign_in(app, fake, privilege="read")
+
+    assert app.get("/either").json() == {"subject": "ada", "by_token": False}
+
+
+def test_the_resource_metadata(app: TestClient) -> None:
+    found = app.get("/.well-known/oauth-protected-resource").json()
+
+    assert found["resource"] == APP
+    assert found["authorization_servers"] == [ISSUER]
+
+
+def test_the_app_gets_a_client_for_delegations(app: TestClient) -> None:
+    assert app.get("/client").json() == {"client_id": "web", "provider": "github"}
+
+
+def test_a_handshake_connects_the_app(fake: Fake) -> None:
+    credentials = MemoryCredentials()
+    application, _ = build(fake, credentials=credentials)
+
+    with TestClient(application, base_url=APP, follow_redirects=False) as client:
+        assert location(client.get("/me", headers=HTML)) == "/auth/handshake"
+        assert client.get("/me", headers=JSON).json()["error"] == "handshake_required"
+
+        begun = location(client.get("/auth/handshake", headers=HTML))
+        query = parse_qs(urlsplit(begun).query)
+
+        assert query["redirect_uris"] == [f"{APP}/auth/callback"]
+        assert query["return_to"] == [f"{APP}/auth/handshake/callback"]
+        assert "backchannel_logout_uri" not in query
+        assert "catalog:admin" in query["scope"][0]
+
+        assert location(client.get(fake.handshake(begun), headers=HTML)) == "/auth"
+        assert credentials.read()["client_id"] == "app"
+
+        landed = sign_in(client, fake)
+
+        assert location(landed) == "/"
+        assert client.get("/me").json()["subject"] == "ada"
+
+
+def test_a_handshake_callback_needs_this_browsers_state(fake: Fake) -> None:
+    application, _ = build(fake, credentials=MemoryCredentials())
+
+    with TestClient(application, base_url=APP, follow_redirects=False) as client:
+        begun = location(client.get("/auth/handshake", headers=HTML))
+        stolen = fake.handshake(begun)
+
+    with TestClient(application, base_url=APP, follow_redirects=False) as other:
+        assert other.get(stolen, headers=JSON).json()["error"] == "invalid_state"
+
+
+def connected(fake: Fake) -> tuple[TestClient, MemoryCredentials]:
+    credentials = MemoryCredentials()
+    application, _ = build(fake, credentials=credentials)
+    client = TestClient(application, base_url=APP, follow_redirects=False)
+    begun = location(client.get("/auth/handshake", headers=HTML))
+    client.get(fake.handshake(begun), headers=HTML)
+
+    return client, credentials
+
+
+def test_only_a_manager_sees_or_changes_the_connection(fake: Fake) -> None:
+    client, credentials = connected(fake)
+
+    assert location(client.get("/auth/handshake", headers=HTML)) == "/"
+
+    sign_in(client, fake, subject="bob")
+
+    assert client.get("/auth/handshake", headers=JSON).status_code == 403
+    assert client.post("/auth/handshake/disconnect", headers=JSON).status_code == 403
+
+    sign_in(client, fake)
+    shown = client.get("/auth/handshake", headers=JSON).json()
+
+    assert shown == {"connected": True, "issuer": ISSUER, "client_id": "app", "can_disconnect": True}
+
+    gone = client.post("/auth/handshake/disconnect", headers=JSON)
+
+    assert gone.json() == {"connected": False, "handshake_url": "/auth/handshake"}
+    assert credentials.read() == {}
+    assert "app" not in fake.registrations
+
+
+def test_back_channel_logout_ends_sessions_on_the_server(fake: Fake) -> None:
+    store = MemorySessionStore()
+    application, _ = build(fake, credentials=MemoryCredentials(), sessions=ServerSessions(store))
+
+    with TestClient(application, base_url=APP, follow_redirects=False) as client:
+        begun = location(client.get("/auth/handshake", headers=HTML))
+
+        assert parse_qs(urlsplit(begun).query)["backchannel_logout_uri"] == [f"{APP}/auth/logout/backchannel"]
+
+        client.get(fake.handshake(begun), headers=HTML)
+        before = client.cookies["masks_session"]
+        sign_in(client, fake)
+        after = client.cookies["masks_session"]
+
+        assert before != after
+        assert store.read(masks.web.sessions.hashed(before)) is None
+        assert client.get("/whoami").json() == {"signed_in": True}
+
+        refused = client.post("/auth/logout/backchannel", data={"logout_token": "nonsense"})
+
+        assert refused.status_code == 400
+
+        ended = client.post("/auth/logout/backchannel", data={"logout_token": fake.logout_token("app", subject="ada")})
+
+        assert ended.status_code == 200
+        assert client.get("/whoami").json() == {"signed_in": False}
+
+
+def test_back_channel_logout_without_a_way_to_end_sessions_is_unsupported(app: TestClient, fake: Fake) -> None:
+    answered = app.post("/auth/logout/backchannel", data={"logout_token": fake.logout_token("web", subject="ada")})
+
+    assert answered.status_code == 501
+
+
+def test_back_channel_logout_calls_the_app(fake: Fake) -> None:
+    heard: list[masks.Logout] = []
+    application, _ = build(fake, logged_out=heard.append)
+
+    with TestClient(application, base_url=APP) as client:
+        answered = client.post("/auth/logout/backchannel", data={"logout_token": fake.logout_token("web", sid="s-1")})
+
+    assert answered.status_code == 200
+    assert heard[0].sid == "s-1"
+
+
+def test_settings_follow_the_request(fake: Fake) -> None:
+    fake.add("other", FakeClient(method="client_secret_basic", secret="other"))
+    stores = {"a.example": MemoryCredentials("web", "secret"), "b.example": MemoryCredentials("other", "other")}
+    application, _ = build(
+        fake,
+        credentials=lambda request: stores[request.url.hostname],
+        resource=lambda request: f"https://{request.url.hostname}",
+    )
+
+    for host, client_id in (("a.example", "web"), ("b.example", "other")):
+        with TestClient(application, base_url=f"https://{host}", follow_redirects=False) as client:
+            begun = location(client.get("/auth", headers=HTML))
+            query = parse_qs(urlsplit(begun).query)
+
+            assert query["client_id"] == [client_id]
+            assert query["redirect_uri"] == [f"https://{host}/auth/callback"]
+
+
+def test_an_unknown_privilege_is_a_mistake_in_the_app(fake: Fake) -> None:
+    _, auth = build(fake)
+
+    with pytest.raises(ValueError):
+        auth.require("nonsense")
+
+
+def test_cookie_sessions_need_a_long_secret() -> None:
+    with pytest.raises(ValueError):
+        Config(issuer=ISSUER, secret="short")

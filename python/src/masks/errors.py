@@ -26,6 +26,12 @@ class Unavailable(MasksError):
     pass
 
 
+class Forbidden(Error):
+    def __init__(self, code: str, description: str = "", *, scope: str = "") -> None:
+        super().__init__(code, description, status=403)
+        self.scope = scope
+
+
 class DelegationRefused(Error):
     def __init__(self, code: str, description: str = "", *, status: int | None = None, secret: str = "") -> None:
         super().__init__(code, description, status=status)
