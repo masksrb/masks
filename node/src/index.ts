@@ -1,4 +1,5 @@
 export {
+  ACCESS_TOKEN_TYPE,
   type AuthMethod,
   bound,
   Client,
@@ -6,9 +7,12 @@ export {
   type DeviceAuthorization,
   type Enrollment,
   type EnrollmentRequest,
+  type ExchangeRequest,
   GRANT_CLIENT_CREDENTIALS,
   GRANT_DEVICE_CODE,
   GRANT_REFRESH_TOKEN,
+  GRANT_TOKEN_EXCHANGE,
+  ID_TOKEN_TYPE,
   type Introspection,
   reuse,
   type SignedFetchOptions,
@@ -17,6 +21,7 @@ export {
   type Token,
   type TokenRequest,
   type TokenSource,
+  UPSTREAM_ACCESS_TOKEN_TYPE,
   valid,
 } from "./client.js";
 export { DPOP, proof } from "./dpop.js";

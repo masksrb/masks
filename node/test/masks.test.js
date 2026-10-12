@@ -2,17 +2,21 @@ import assert from "node:assert/strict";
 import { after, test } from "node:test";
 import { timing } from "../dist/client.js";
 import {
+  ACCESS_TOKEN_TYPE,
   Client,
   discoverResource,
   ForeignError,
+  GRANT_TOKEN_EXCHANGE,
   hasCode,
   hasScope,
+  ID_TOKEN_TYPE,
   InsecureError,
   InvalidTokenError,
   Issuer,
   Key,
   MasksError,
   proof,
+  UPSTREAM_ACCESS_TOKEN_TYPE,
   Verifier,
   valid,
 } from "../dist/index.js";
@@ -404,6 +408,101 @@ test("introspection authenticates the client", async () => {
 
   await assert.rejects(client.introspect("live"), (error) =>
     hasCode(error, "invalid_client"),
+  );
+});
+
+test("a token exchange sends what it asks for and holds the token to its key", async () => {
+  const held = await fake();
+  held.nonce = "exchange-nonce";
+  const { client, dpop, issuer } = await signedClient(held);
+
+  const token = await client.exchange("subject", {
+    subjectTokenType: ID_TOKEN_TYPE,
+    actorToken: "actor",
+    requestedTokenType: ACCESS_TOKEN_TYPE,
+    audience: ["https://calendar.example"],
+    scope: ["files:read", "files:write"],
+    lifetime: 300,
+    resource: [held.audience, "https://other.example"],
+  });
+
+  assert.equal(token.token_type, "DPoP");
+  assert.equal(token.issued_token_type, ACCESS_TOKEN_TYPE);
+  assert.ok(token.expires_at > Date.now() / 1000);
+  assert.deepEqual(held.exchanges.at(-1), {
+    scope: "files:read files:write",
+    resource: [held.audience, "https://other.example"],
+    grant_type: GRANT_TOKEN_EXCHANGE,
+    subject_token: "subject",
+    subject_token_type: ID_TOKEN_TYPE,
+    actor_token: "actor",
+    actor_token_type: ACCESS_TOKEN_TYPE,
+    requested_token_type: ACCESS_TOKEN_TYPE,
+    audience: "https://calendar.example",
+    requested_lifetime: "300",
+    dpop: dpop.thumbprint,
+  });
+
+  const claims = await new Verifier(issuer, held.audience).verify(
+    token.access_token,
+  );
+  assert.equal(claims.cnf.jkt, dpop.thumbprint);
+});
+
+test("a token exchange names an access token by default and no actor", async () => {
+  const held = await fake();
+  held.add("machine", {
+    secret: "secret",
+    method: "client_secret_basic",
+  });
+
+  const client = new Client({
+    issuer: await Issuer.discover(held.url),
+    id: "machine",
+    secret: "secret",
+  });
+  const token = await client.exchange("subject");
+
+  assert.equal(token.token_type, "Bearer");
+  assert.deepEqual(held.exchanges.at(-1), {
+    grant_type: GRANT_TOKEN_EXCHANGE,
+    subject_token: "subject",
+    subject_token_type: ACCESS_TOKEN_TYPE,
+    dpop: "",
+  });
+
+  await assert.rejects(client.exchange(""), /subject token/);
+  await assert.rejects(
+    client.exchange("subject", { lifetime: 0 }),
+    /whole number/,
+  );
+  assert.equal(held.exchanges.length, 1);
+});
+
+test("an upstream token comes back as a Bearer token to a DPoP client", async () => {
+  const held = await fake();
+  const { client } = await signedClient(held);
+
+  const token = await client.exchange("subject", {
+    requestedTokenType: UPSTREAM_ACCESS_TOKEN_TYPE,
+    audience: ["connection-1"],
+  });
+
+  assert.equal(token.access_token, "from-the-provider");
+  assert.equal(token.token_type, "Bearer");
+  assert.equal(token.issued_token_type, UPSTREAM_ACCESS_TOKEN_TYPE);
+});
+
+test("only an upstream token is excused from being held to the key", async () => {
+  const held = await fake();
+  const { client } = await signedClient(held);
+  held.upstreamAnswer = "access";
+
+  await assert.rejects(
+    client.exchange("subject", {
+      requestedTokenType: UPSTREAM_ACCESS_TOKEN_TYPE,
+    }),
+    /another kind of token/,
   );
 });
 

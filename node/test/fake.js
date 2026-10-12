@@ -10,6 +10,8 @@ import {
 } from "jose";
 
 const ASSERTION_TYPE = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer";
+const ACCESS_TOKEN = "urn:ietf:params:oauth:token-type:access_token";
+const UPSTREAM = "urn:masks:params:oauth:token-type:upstream_access_token";
 
 export function random() {
   return crypto.randomUUID().replaceAll("-", "");
@@ -64,6 +66,8 @@ export class Fake {
   enrolled = new Map();
   described = new Map();
   hints = [];
+  exchanges = [];
+  upstreamAnswer = "upstream";
   enrollments = [];
   pending = 0;
   slowed = false;
@@ -369,6 +373,44 @@ export class Fake {
           return oauthError(response, 400, "authorization_pending");
         }
         break;
+      case "urn:ietf:params:oauth:grant-type:token-exchange": {
+        const asked = {};
+
+        for (const [name, value] of form) {
+          if (name.startsWith("client_")) continue;
+          asked[name] =
+            asked[name] === undefined ? value : [asked[name], value].flat();
+        }
+
+        asked.dpop = jkt;
+        this.exchanges.push(asked);
+
+        if (!form.get("subject_token"))
+          return oauthError(response, 400, "invalid_request");
+
+        if (form.get("requested_token_type") === UPSTREAM) {
+          return json(response, 200, {
+            access_token: "from-the-provider",
+            token_type: "Bearer",
+            issued_token_type:
+              this.upstreamAnswer === "upstream" ? UPSTREAM : ACCESS_TOKEN,
+            expires_in: 60,
+            scope: "calendar.readonly",
+          });
+        }
+
+        return json(response, 200, {
+          access_token: await this.accessToken(
+            id,
+            form.get("scope") ?? "",
+            jkt,
+          ),
+          issued_token_type: ACCESS_TOKEN,
+          token_type: jkt ? "DPoP" : "Bearer",
+          expires_in: 300,
+          scope: form.get("scope") ?? "",
+        });
+      }
       default:
         return oauthError(response, 400, "unsupported_grant_type");
     }

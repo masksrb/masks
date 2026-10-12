@@ -15,7 +15,7 @@ npm install @masks/server
 | Registration | Redeeming an initial access token, then reading, updating, and deleting the client. |
 | Enrollment | An app asking for initial access tokens for its own machines, and unenrolling them. |
 | Client authentication | `client_secret_basic`, `client_secret_post`, `private_key_jwt`, and `none`. |
-| Grants | Client credentials, refresh tokens, and the device flow. |
+| Grants | Client credentials, refresh tokens, the device flow, and token exchange. |
 | DPoP | Tokens held to a key, and proofs on every request a signed `fetch` sends. |
 | Revocation | Access and refresh tokens. |
 | Introspection | Asking the issuer whether a token is active, with RFC 7662. |
@@ -56,6 +56,32 @@ const token = await client.clientCredentials(asked);
 `client.method` is `client_secret_basic` when `secret` is set and
 `private_key_jwt` when `key` is, unless `method` names another. When `dpop` is
 set, a token that comes back unbound is refused.
+
+## Exchanging a token
+
+A client registered for `urn:ietf:params:oauth:grant-type:token-exchange`
+trades one token for another at the token endpoint, with RFC 8693. A gateway
+gives a downstream service a token for that service only:
+
+```ts
+const narrowed = await client.exchange(accessToken, {
+  scope: ["files:read"],
+  resource: ["https://files.example.com"],
+  lifetime: 300,
+});
+```
+
+`subjectTokenType` is `ACCESS_TOKEN_TYPE` unless it names `ID_TOKEN_TYPE`. An
+agent acting for a person sends its own token as `actorToken`, with
+`actorTokenType`, and the person's token as the subject. An exchange only
+narrows, so `scope`, `resource`, and `lifetime` (in seconds) can only ask for
+less than the subject token holds.
+
+When the client has a `dpop` key, the exchanged token is held to it. The one
+exception is a provider's token from a delegation, asked for with
+`requestedTokenType: UPSTREAM_ACCESS_TOKEN_TYPE` and the connection in
+`audience`. It comes back as a Bearer token for the provider's API. An answer
+whose `issued_token_type` names another kind of token is refused.
 
 ## Enrolling with an initial access token
 

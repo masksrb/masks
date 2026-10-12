@@ -18,6 +18,13 @@ export type AuthMethod =
 export const GRANT_CLIENT_CREDENTIALS = "client_credentials";
 export const GRANT_REFRESH_TOKEN = "refresh_token";
 export const GRANT_DEVICE_CODE = "urn:ietf:params:oauth:grant-type:device_code";
+export const GRANT_TOKEN_EXCHANGE =
+  "urn:ietf:params:oauth:grant-type:token-exchange";
+export const ACCESS_TOKEN_TYPE =
+  "urn:ietf:params:oauth:token-type:access_token";
+export const ID_TOKEN_TYPE = "urn:ietf:params:oauth:token-type:id_token";
+export const UPSTREAM_ACCESS_TOKEN_TYPE =
+  "urn:masks:params:oauth:token-type:upstream_access_token";
 
 const ASSERTION_TYPE = "urn:ietf:params:oauth:client-assertion-type:jwt-bearer";
 const ASSERTION_LIFETIME = 60;
@@ -30,9 +37,19 @@ export interface TokenRequest {
   resource?: string[];
 }
 
+export interface ExchangeRequest extends TokenRequest {
+  subjectTokenType?: string;
+  actorToken?: string;
+  actorTokenType?: string;
+  requestedTokenType?: string;
+  audience?: string[];
+  lifetime?: number;
+}
+
 export interface Token {
   access_token: string;
   token_type: string;
+  issued_token_type?: string;
   refresh_token?: string;
   id_token?: string;
   scope?: string;
@@ -210,6 +227,53 @@ export class Client {
     }
   }
 
+  async exchange(
+    subjectToken: string,
+    asked: ExchangeRequest = {},
+  ): Promise<Token> {
+    if (typeof subjectToken !== "string" || subjectToken === "") {
+      throw new Error("masks: an exchange names a subject token");
+    }
+
+    const form = formFor(asked);
+    form.set("grant_type", GRANT_TOKEN_EXCHANGE);
+    form.set("subject_token", subjectToken);
+    form.set("subject_token_type", asked.subjectTokenType ?? ACCESS_TOKEN_TYPE);
+
+    if (asked.actorToken) {
+      form.set("actor_token", asked.actorToken);
+      form.set("actor_token_type", asked.actorTokenType ?? ACCESS_TOKEN_TYPE);
+    }
+
+    if (asked.requestedTokenType) {
+      form.set("requested_token_type", asked.requestedTokenType);
+    }
+
+    for (const audience of asked.audience ?? []) {
+      form.append("audience", audience);
+    }
+
+    if (asked.lifetime !== undefined) {
+      form.set(
+        "requested_lifetime",
+        String(seconds(asked.lifetime, "lifetime")),
+      );
+    }
+
+    const upstream = asked.requestedTokenType === UPSTREAM_ACCESS_TOKEN_TYPE;
+
+    const held = await this.#token(form, undefined, upstream);
+
+    if (upstream && held.issued_token_type !== UPSTREAM_ACCESS_TOKEN_TYPE) {
+      throw new MasksError(
+        "server_error",
+        "the token endpoint answered an upstream exchange with another kind of token",
+      );
+    }
+
+    return held;
+  }
+
   async revoke(token: string, hint?: string): Promise<void> {
     const form = new URLSearchParams({ token });
 
@@ -343,7 +407,11 @@ export class Client {
     });
   }
 
-  async #token(form: URLSearchParams, signal?: AbortSignal): Promise<Token> {
+  async #token(
+    form: URLSearchParams,
+    signal?: AbortSignal,
+    unbound = false,
+  ): Promise<Token> {
     const held = await this.#post<Token>(
       this.issuer.endpoint("token_endpoint"),
       form,
@@ -362,7 +430,7 @@ export class Client {
       held.expires_at = Math.floor(Date.now() / 1000) + held.expires_in;
     }
 
-    if (this.dpop && !bound(held)) {
+    if (this.dpop && !bound(held) && !unbound) {
       throw new MasksError(
         "invalid_dpop_proof",
         "the token endpoint answered with a token that is not held to this key",
