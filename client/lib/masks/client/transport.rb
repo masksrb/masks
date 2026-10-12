@@ -12,7 +12,7 @@ module Masks
         raise ArgumentError, "a transport needs the origins it may send its tokens to" if origins.empty?
         raise ArgumentError, "a transport needs tokens or a way to fetch them" if tokens.nil? && renew.nil?
 
-        @origins = origins.flatten.map { |origin| Nonces.origin(origin) }.uniq.freeze
+        @origins = origins.flatten.map { |origin| Nonces.origin(HTTP.checked(URI.parse(origin.to_s))) }.uniq.freeze
         @tokens = tokens
         @key = key && Key.from(key)
         @renew = renew
@@ -51,7 +51,7 @@ module Masks
         request("PATCH", url, body: body, headers: headers)
       end
 
-      def request(method, url, body: nil, headers: {})
+      def request(method, url, body: nil, headers: {}, limit: nil)
         uri = URI.parse(url.to_s)
         verb = VERBS.fetch(method.to_s.upcase) { raise ArgumentError, "#{method} is not a method a transport sends" }
 
@@ -61,7 +61,7 @@ module Masks
 
         held = tokens
         nonce = @nonces[uri] if held.bound?
-        response = HTTP.deliver(signed(verb, uri, body, headers, held, nonce))
+        response = HTTP.deliver(signed(verb, uri, body, headers, held, nonce), limit: limit)
 
         return response unless held.bound?
 
@@ -69,7 +69,7 @@ module Masks
 
         return response unless wanted && wanted != nonce && nonce_asked?(response)
 
-        HTTP.deliver(signed(verb, uri, body, headers, held, wanted))
+        HTTP.deliver(signed(verb, uri, body, headers, held, wanted), limit: limit)
       end
 
       def inspect

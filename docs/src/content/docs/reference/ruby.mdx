@@ -567,6 +567,19 @@ Inherits `Masks::Client::Error`.
 | --- | --- |
 | `OPEN_TIMEOUT` | `5` |
 | `READ_TIMEOUT` | `10` |
+| `READ_LIMIT` | `1 << 20` |
+
+### #checked
+
+```ruby
+#checked(uri)
+```
+
+### #decoded
+
+```ruby
+#decoded(response)
+```
 
 ### #default_headers
 
@@ -589,7 +602,7 @@ Inherits `Masks::Client::Error`.
 ### #deliver
 
 ```ruby
-#deliver(request)
+#deliver(request, limit: READ_LIMIT)
 ```
 
 ### #encoded
@@ -620,6 +633,24 @@ Inherits `Masks::Client::Error`.
 
 ```ruby
 #json(verb, url, body, headers)
+```
+
+### #limited
+
+```ruby
+#limited(http, request, limit)
+```
+
+### #loopback?
+
+```ruby
+#loopback?(host)
+```
+
+### #origin
+
+```ruby
+#origin(response)
 ```
 
 ### #parse
@@ -705,6 +736,10 @@ Inherits `Masks::Client::Error`.
 ```ruby
 #url(state:)
 ```
+
+## Masks::Client::Insecure
+
+Inherits `Masks::Client::Error`.
 
 ## Masks::Client::Introspection
 
@@ -1150,12 +1185,6 @@ Inherits `Masks::Client::Error`.
 ::endpoint(issuer, token)
 ```
 
-### ::fallback
-
-```ruby
-::fallback(value, default)
-```
-
 ### ::held
 
 ```ruby
@@ -1269,6 +1298,10 @@ Inherits `Masks::Client::Error`.
 ```ruby
 ::new(code, description, status: nil)
 ```
+
+## Masks::Client::ReplayUnavailable
+
+Inherits `Masks::Client::Error`.
 
 ## Masks::Client::Resource
 
@@ -1453,7 +1486,7 @@ Inherits `Masks::Client::Error`.
 ### #userinfo
 
 ```ruby
-#userinfo(access_token)
+#userinfo(tokens)
 ```
 
 ## Masks::Client::Stores
@@ -1725,7 +1758,7 @@ Inherits `Masks::Client::Error`.
 ### #request
 
 ```ruby
-#request(method, url, body: nil, headers: {})
+#request(method, url, body: nil, headers: {}, limit: nil)
 ```
 
 ### #tokens

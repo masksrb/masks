@@ -107,7 +107,42 @@ class ProtectedResourceTest < EngineIntegrationTest
     assert_equal "invalid_token", json["error"]
   end
 
+  test "a replay store that fails answers 503 with no challenge, so the client keeps its token" do
+    failing = Object.new
+    def failing.first?(*, **) = raise(IOError, "connection refused")
+    configure!(replay: failing)
+
+    get "/api", headers: host.merge(proven)
+
+    assert_response :service_unavailable
+    assert_nil response.headers["WWW-Authenticate"]
+    assert_equal "no-store", response.headers["Cache-Control"]
+    assert_equal "temporarily_unavailable", json["error"]
+  end
+
+  test "a proof seen before is still refused with a challenge" do
+    configure!(replay: Masks::Client::Proof::Memory.new)
+    presented = host.merge(proven)
+
+    get "/api", headers: presented
+
+    assert_response :success
+
+    get "/api", headers: presented
+
+    assert_response :unauthorized
+    assert_includes response.headers["WWW-Authenticate"].to_s, "DPoP"
+  end
+
   private
+
+    def proven
+      key = Masks::Client::Key.generate
+      bound = issuer.mint(subdomain: SUBDOMAIN, scopes: %w[catalog:read], audience: "#{origin}/mcp",
+                          "cnf" => { "jkt" => key.thumbprint })
+
+      { "HTTP_AUTHORIZATION" => "DPoP #{bound}", "HTTP_DPOP" => key.proof("GET", "#{origin}/api", access_token: bound) }
+    end
 
     def token(subdomain: SUBDOMAIN, scopes: %w[catalog:read], audience: nil, expires_in: 3600)
       issuer.mint(

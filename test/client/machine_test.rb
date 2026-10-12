@@ -267,4 +267,52 @@ class MachineTest < ClientTest
     assert_raises(Masks::Client::Error) { transport.get("#{issuer.url}/api") }
     assert_equal 0, issuer.count("/api")
   end
+
+  def test_userinfo_presents_a_bound_token_with_a_proof_naming_it
+    issuer.override("/userinfo", { "sub" => "machine-1" })
+    tokens = Masks::Client::Tokens.new(bound)
+
+    assert_equal "machine-1", machine.userinfo(tokens)["sub"]
+
+    request = issuer.last("/userinfo")
+
+    assert_equal "DPoP at", request[:headers]["authorization"]
+    Masks::Client::Proof.new(request[:headers]["dpop"], method: "GET", url: "#{issuer.url}/userinfo")
+                        .check!(access_token: "at", jkt: dpop.thumbprint)
+  end
+
+  def test_userinfo_presents_a_bearer_token_or_a_bare_string_as_a_bearer
+    issuer.override("/userinfo", { "sub" => "actor-1" })
+
+    machine.userinfo(Masks::Client::Tokens.new(bound.merge("token_type" => "Bearer")))
+
+    assert_equal "Bearer at", issuer.last("/userinfo")[:headers]["authorization"]
+    assert_nil issuer.last("/userinfo")[:headers]["dpop"]
+
+    machine.userinfo("plain")
+
+    assert_equal "Bearer plain", issuer.last("/userinfo")[:headers]["authorization"]
+  end
+
+  def test_userinfo_will_not_present_a_bound_token_without_its_key
+    session = Masks::Client::Session.new(issuer: issuer.url, client_id: "app", client_secret: "shh")
+
+    assert_raises(Masks::Client::Error) { session.userinfo(Masks::Client::Tokens.new(bound)) }
+    assert_equal 0, issuer.count("/userinfo")
+  end
+
+  def test_a_transport_refuses_a_plain_http_origin_off_loopback
+    assert_raises(Masks::Client::Insecure) { machine.transport("http://api.example.com") }
+  end
+
+  def test_a_machine_registration_sends_no_grant_or_response_types_it_was_not_given
+    issuer.override("/register", [ 201, { "client_id" => "machine-1" } ])
+
+    Masks::Client::Registration.create(issuer.url, token: "iat", name: "nas", jwks: key)
+    body = issuer.last("/register")[:body]
+
+    refute body.key?("grant_types")
+    refute body.key?("response_types")
+    assert_equal key.jwks, body["jwks"]
+  end
 end

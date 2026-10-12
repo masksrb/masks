@@ -60,4 +60,41 @@ class RackTest < ClientTest
 
     assert_equal 401, guarded.call(env(authorization: "Bearer nonsense")).first
   end
+
+  def test_a_failing_replay_store_answers_503_without_a_challenge
+    failing = Object.new
+    def failing.first?(*, **) = raise(IOError, "connection refused")
+    key = Masks::Client::Key.generate
+    token = issuer.access_token("cnf" => { "jkt" => key.thumbprint })
+    guarded = Masks::Client::Rack.new(->(_) { [ 200, {}, [] ] },
+                                      resource: Masks::Client::Resource.new(issuer: issuer.url, url: "https://app.test/mcp", replay: failing))
+    request = env(authorization: "DPoP #{token}").merge(
+      "HTTP_DPOP" => key.proof("GET", "https://app.test/mcp", access_token: token),
+      "REQUEST_METHOD" => "GET", "rack.url_scheme" => "https", "HTTP_HOST" => "app.test"
+    )
+
+    status, headers, body = guarded.call(request)
+
+    assert_equal 503, status
+    assert_nil headers["www-authenticate"]
+    assert_equal "no-store", headers["cache-control"]
+    assert_equal "temporarily_unavailable", JSON.parse(body.first)["error"]
+  end
+
+  def test_a_proof_seen_before_is_still_401
+    key = Masks::Client::Key.generate
+    token = issuer.access_token("cnf" => { "jkt" => key.thumbprint })
+    guarded = app
+    request = env(authorization: "DPoP #{token}").merge(
+      "HTTP_DPOP" => key.proof("GET", "https://app.test/mcp", access_token: token),
+      "REQUEST_METHOD" => "GET", "rack.url_scheme" => "https", "HTTP_HOST" => "app.test"
+    )
+
+    assert_equal 200, guarded.call(request.dup).first
+
+    status, headers, = guarded.call(request.dup)
+
+    assert_equal 401, status
+    assert_includes headers["www-authenticate"], "DPoP"
+  end
 end

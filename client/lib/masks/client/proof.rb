@@ -139,9 +139,15 @@ module Masks
           jti = claims["jti"].to_s
 
           raise Invalid, "a proof must carry a jti" if jti.empty?
-          return if @replay.nil? || @replay.first?("#{thumbprint}:#{jti}", expires_in: MEMORY)
+          return if @replay.nil? || first?("#{thumbprint}:#{jti}")
 
           raise Invalid, "that proof has already been used"
+        end
+
+        def first?(key)
+          @replay.first?(key, expires_in: MEMORY)
+        rescue StandardError => e
+          raise ReplayUnavailable, "the replay store could not say whether that proof is new (#{e.class})"
         end
 
         def same?(held, expected)

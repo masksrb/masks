@@ -25,6 +25,8 @@ module Masks
         return passthrough(env, e) if @optional && e.is_a?(Unauthenticated)
 
         refuse(resource(env), e)
+      rescue ReplayUnavailable
+        unavailable
       end
 
       private
@@ -54,6 +56,12 @@ module Masks
 
         def resource(env)
           @resource.respond_to?(:call) ? @resource.call(env) : @resource
+        end
+
+        def unavailable
+          body = JSON.generate({ "error" => "temporarily_unavailable", "error_description" => "the token could not be checked" })
+
+          [ 503, { "content-type" => "application/json", "cache-control" => "no-store" }, [ body ] ]
         end
 
         def refuse(resource, error)

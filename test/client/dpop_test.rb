@@ -117,6 +117,20 @@ class DpopTest < ClientTest
     assert guarded.challenge(Masks::Client::Unauthorized.new("expired")).start_with?("Bearer ")
   end
 
+  def test_a_replay_store_that_fails_is_an_outage_rather_than_a_refusal
+    failing = Object.new
+    def failing.first?(*, **) = raise(IOError, "connection refused")
+    token = bound
+    checked = Masks::Client::Resource.new(issuer: issuer.url, url: URL, replay: failing)
+
+    error = assert_raises(Masks::Client::ReplayUnavailable) do
+      checked.authenticate("DPoP #{token}", proof: proof(token), method: "GET", url: URL)
+    end
+
+    refute_kind_of Masks::Client::Challenge, error
+    assert_match "IOError", error.message
+  end
+
   def test_the_metadata_names_the_proof_algorithms
     assert_includes resource.metadata["dpop_signing_alg_values_supported"], "ES256"
   end

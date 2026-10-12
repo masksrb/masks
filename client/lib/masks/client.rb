@@ -1,4 +1,5 @@
 require "base64"
+require "ipaddr"
 require "json"
 require "jwt"
 require "net/http"
@@ -49,6 +50,12 @@ module Masks
   # state of its own beyond the discovery cache in ::registry.
   module Client
     class << self
+      attr_writer :plain_http
+
+      def plain_http?
+        @plain_http == true
+      end
+
       # The process-wide cache of resolved issuers, so discovery is fetched
       # once rather than per request.
       #

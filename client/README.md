@@ -256,6 +256,10 @@ returned `state` yourself, and compare `identity["nonce"]` with the one you held
 `private_key_jwt`. A `Masks::Client::Key` passed as `private_key` names itself by its thumbprint, so
 `key_id` can be left out.
 
+`userinfo` takes `Tokens` or an access token string. A string and a `Bearer` token go as `Bearer`.
+A DPoP-bound token goes as `Authorization: DPoP` with a proof from the session's `dpop:` key, and
+raises `Masks::Client::Error` when the session holds no key.
+
 An app that has claimed a namespace enrolls a machine with `enroll`. It returns an
 `Enrollment` whose `initial_access_token` the machine spends once to register its own public key.
 
@@ -295,7 +299,9 @@ tokens = session.client_credentials(scope: "xixo:agent")
 tokens.bound?
 ```
 
-`jwks:` takes a `Key`, a list of them, or a JWK Set. `Key#jwks` and `Key#public_jwk` hold only the
+`Registration.create` sends `grant_types` and `response_types` only when they are given, and masks
+fills in the rest: an enrolled machine gets `client_credentials`, and an open registration gets
+`authorization_code` and `code`. `jwks:` takes a `Key`, a list of them, or a JWK Set. `Key#jwks` and `Key#public_jwk` hold only the
 public half, and `Key#to_h` holds the private one. `Key.parse` reads a key back from that hash, its
 JSON, or a PEM. A key on another curve, or a public key, raises `ArgumentError`.
 
@@ -312,7 +318,9 @@ token is refused with `invalid_dpop_proof`. Revocation, introspection, enrollmen
 authorization are sent without a proof.
 
 `transport` sends requests to a resource with those tokens. It takes the origins it may send them to
-and raises `Masks::Client::Foreign` for any other URL before it fetches a token.
+and raises `Masks::Client::Foreign` for any other URL before it fetches a token. An origin in plain
+`http` follows the same rule as the issuer, and raises `Masks::Client::Insecure` when the transport
+is built. A resource's answers are not limited to 1 MB.
 
 ```ruby
 api = session.transport("https://app.example.com", scope: "xixo:agent")
@@ -358,6 +366,12 @@ Discovery and JWKS are cached for five minutes and refetched on an unknown `kid`
 needs no restart. The cache lives on the `Issuer`, so use `Masks::Client::Issuer.resolve` instead
 of constructing one per request.
 
+Every request the gem makes goes over `https`, or plain `http` to `localhost`, a `*.localhost`
+name, or a loopback address. Any other `http` URL raises `Masks::Client::Insecure` before anything is
+sent. A deployment that reaches its issuer over a private network in plain `http` sets
+`Masks::Client.plain_http = true`. Answers from the issuer are read up to 1 MB, and an answer that
+is not a JSON object raises `Masks::Client::Rejected` with the code `invalid_response`.
+
 ### The handshake
 
 The flow that connects a first-party app:
@@ -400,6 +414,11 @@ token, made within the last minute and never seen before. `proof`, `method`, and
 checks the proof against. Seen proofs are kept in the process's memory. A deployment with several
 processes passes `replay:` to `Resource.new`, or sets `config.replay` in a Rails app, to any object
 whose `first?(key, expires_in:)` answers true only once for each key across every process.
+
+When that store raises, `authenticate` raises `Masks::Client::ReplayUnavailable`, which is not a
+challenge. The Rack middleware and a Rails controller answer `503` with `temporarily_unavailable`
+and no `WWW-Authenticate` header, so a client keeps a token that is still good. A proof the store
+has already seen is still refused with `401`.
 
 A refusal builds the RFC 6750 challenge carrying `resource_metadata` and the scopes it would have
 accepted:

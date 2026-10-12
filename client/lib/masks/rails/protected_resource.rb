@@ -5,6 +5,10 @@ module Masks
       include Masks::Rails::Configurable
       include Masks::Rails::Privileged
 
+      included do
+        rescue_from Masks::Client::ReplayUnavailable, with: :masks_unavailable if respond_to?(:rescue_from)
+      end
+
       def masks_resource
         @masks_resource ||= masks_config.resource_server_for(request)
       end
@@ -39,6 +43,15 @@ module Masks
           "error" => error.code || "invalid_token",
           "error_description" => error.description
         }, status: error.status
+      end
+
+      def masks_unavailable
+        response.headers["Cache-Control"] = "no-store"
+
+        render json: {
+          "error" => "temporarily_unavailable",
+          "error_description" => "the token could not be checked"
+        }, status: :service_unavailable
       end
 
       def masks_resource_metadata

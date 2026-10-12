@@ -6,6 +6,10 @@ module Masks
 
     class Foreign < Error; end
 
+    class Insecure < Error; end
+
+    class ReplayUnavailable < Error; end
+
     class Rejected < Error
       attr_reader :code, :description, :status
 

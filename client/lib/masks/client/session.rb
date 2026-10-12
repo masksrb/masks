@@ -206,8 +206,13 @@ module Masks
         )
       end
 
-      def userinfo(access_token)
-        HTTP.get(issuer.endpoint("userinfo_endpoint"), "Authorization" => "Bearer #{access_token}")
+      def userinfo(tokens)
+        url = issuer.endpoint("userinfo_endpoint")
+
+        return HTTP.get(url, "Authorization" => "Bearer #{tokens}") unless tokens.is_a?(Tokens)
+        return HTTP.get(url, "Authorization" => "Bearer #{tokens.access_token}") unless tokens.bound?
+
+        HTTP.parse(Transport.new(url, tokens: tokens, key: dpop).request("GET", url, limit: HTTP::READ_LIMIT))
       end
 
       def identity(tokens)
@@ -221,7 +226,7 @@ module Masks
       def profile(tokens)
         return {} if tokens.access_token.nil?
 
-        userinfo(tokens.access_token)
+        userinfo(tokens)
       rescue Masks::Client::Error
         {}
       end

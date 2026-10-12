@@ -21,8 +21,8 @@ module Masks
         {
           "client_name" => attributes[:name] || attributes[:client_name],
           "redirect_uris" => Array(attributes[:redirect_uris]),
-          "grant_types" => fallback(attributes[:grant_types], %w[authorization_code]),
-          "response_types" => fallback(attributes[:response_types], %w[code]),
+          "grant_types" => Array(attributes[:grant_types]),
+          "response_types" => Array(attributes[:response_types]),
           "scope" => Array(attributes[:scope]).join(" "),
           "token_endpoint_auth_method" => attributes[:token_endpoint_auth_method],
           "application_type" => attributes[:application_type],
@@ -41,11 +41,6 @@ module Masks
         when Array then { "keys" => value.map { |key| key.is_a?(Key) ? key.public_jwk : key } }
         else value
         end
-      end
-
-      def self.fallback(value, default)
-        list = Array(value)
-        list.empty? ? default : list
       end
 
       def self.held(issuer, credentials)
