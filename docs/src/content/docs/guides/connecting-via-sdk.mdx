@@ -24,14 +24,17 @@ The `masks` gem holds both Ruby SDKs, and `Masks::Rails` loads only when Rails d
 | Signing in with the code flow and PKCE | Yes | Yes | Yes, through a backend or in the page | No | No | No |
 | The handshake | Yes | Yes | Starts it through a backend | No | No | No |
 | Redeeming an initial access token | Yes | Yes | No | Yes | Yes | Yes |
+| [Enrolling and unenrolling machines](/guides/features/#enrolling-a-machine) | No | Yes | No | Yes | Yes | Yes |
 | Refreshing tokens | Yes | Yes | Yes | Yes | Yes | Yes |
-| Token exchange and [delegation](#delegation) | Asks for delegation in its handshake | Yes | No | No | No | No |
+| Token exchange | No | Yes | No | Yes | Yes | Yes |
+| [Delegation](#delegation) | Asks for it in its handshake | Yes | No | No | No | No |
 | Client credentials and revocation | No | Yes | No | Yes | Yes | Yes |
-| Introspection | No | Yes | No | No | No | No |
-| The device flow | No | No | No | Yes | Yes | Yes |
-| `private_key_jwt` client authentication | No | No | No | Yes | Yes | Yes |
-| Sending DPoP proofs as a client | No | No | No | Yes | Yes | Yes |
+| Introspection | No | Yes | No | Yes | Yes | Yes |
+| The device flow | No | Yes | No | Yes | Yes | Yes |
+| `private_key_jwt` client authentication | No | Yes | No | Yes | Yes | Yes |
+| Sending DPoP proofs as a client | No | Yes | No | Yes | Yes | Yes |
 | Checking access tokens, including DPoP-bound ones | Yes | Yes | No | Yes | Yes | Yes |
+| One store of seen DPoP proofs for every process | Yes | Yes | No | Yes | Yes | Yes |
 
 `@masks/client` runs only in a browser and holds no client secret. It verifies ID tokens, and leaves
 access tokens to the API that receives them. A Go app signs people in through
@@ -309,7 +312,9 @@ curl -u "$CLIENT_ID:$CLIENT_SECRET" https://auth.example.com/token \
   -d resource=https://xixo.example/mcp
 ```
 
-`Masks::Client::Session#exchange` sends the same request from Ruby.
+`Masks::Client::Session#exchange` sends the same request from Ruby, `Client.Exchange` from Go,
+`client.exchange` from `@masks/server`, and `client.exchange` from Python. A client that holds its
+tokens to a DPoP key proves it on the exchange too.
 
 ### What can be exchanged
 
