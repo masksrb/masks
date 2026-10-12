@@ -112,7 +112,7 @@ es:
         restored: "Aplicación restaurada"
         secret_rotated: "Secreto de la aplicación rotado"
         logo_refused: "No se pudo usar el logotipo de la aplicación"
-        enrollment_issued: "Una aplicación pidió inscribir una máquina"
+        enrollment_issued: "Inscripción de máquina solicitada"
         enrolled: "Máquina inscrita"
         unenrolled: "Máquina dada de baja"
       token:

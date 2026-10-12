@@ -26,9 +26,11 @@
 
   const shown = $derived(all ? runs : runs.slice(0, limit));
 
+  const UUID = /\b([0-9a-f]{8})-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/gi;
+
   const trail = (event) =>
     [
-      ...detailed(event.details).map(([key, value]) => `${key} ${value}`),
+      ...detailed(event.details).map(([key, value]) => `${key} ${value.replace(UUID, "$1…")}`),
       event.ipAddress,
       event.device?.label,
     ].filter(Boolean);
@@ -73,7 +75,7 @@
         </time>
 
         {#if trail(event).length}
-          <span class="event-trail" title={trail(event).join(" · ")}>{trail(event).join(" · ")}</span>
+          <span class="event-trail" title={JSON.stringify(event.details)}>{trail(event).join(" · ")}</span>
         {/if}
       </li>
     {/each}

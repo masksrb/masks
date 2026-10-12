@@ -235,6 +235,7 @@
     <Section>
       <Events
         {events}
+        limit={Infinity}
         empty={grave ? t("activity.empty.grave") : t("activity.empty.plain")}
       />
 

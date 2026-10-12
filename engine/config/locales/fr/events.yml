@@ -112,7 +112,7 @@ fr:
         restored: "Application rétablie"
         secret_rotated: "Secret de l’application renouvelé"
         logo_refused: "Le logo de l’application n’a pas pu être utilisé"
-        enrollment_issued: "Une application a demandé l’inscription d’une machine"
+        enrollment_issued: "Inscription de machine demandée"
         enrolled: "Machine inscrite"
         unenrolled: "Machine désinscrite"
       token:

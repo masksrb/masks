@@ -112,7 +112,7 @@ de:
         restored: "App wiederhergestellt"
         secret_rotated: "App-Secret rotiert"
         logo_refused: "App-Logo konnte nicht verwendet werden"
-        enrollment_issued: "Eine App hat die Anmeldung einer Maschine angefordert"
+        enrollment_issued: "Anmeldung einer Maschine angefordert"
         enrolled: "Maschine angemeldet"
         unenrolled: "Maschine abgemeldet"
       token:

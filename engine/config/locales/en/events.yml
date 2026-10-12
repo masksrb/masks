@@ -112,7 +112,7 @@ en:
         restored: "Client restored"
         secret_rotated: "Client secret rotated"
         logo_refused: "Client logo could not be used"
-        enrollment_issued: "An app asked to enroll a machine"
+        enrollment_issued: "Machine enrollment requested"
         enrolled: "Machine enrolled"
         unenrolled: "Machine unenrolled"
       token:
