@@ -565,23 +565,23 @@ table code {
 /* ---- The design reference --------------------------------------------- */
 
 .plate {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(5.5rem, 1fr));
+  display: flex;
+  flex-direction: column;
   border-radius: var(--pane);
   overflow: hidden;
-  margin-block: 1.4rem;
+  margin-block: 1rem 1.75rem;
+  border: 1px solid var(--gray-200);
 }
 
 .plate > div {
-  height: 5rem;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  gap: 0.0625rem;
-  padding: 0.5rem;
+  display: grid;
+  grid-template-columns: 7rem 6rem 1fr;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 0.875rem;
   font-family: var(--sl-font-mono);
-  font-size: 0.625rem;
-  line-height: 1.35;
+  font-size: 0.75rem;
+  line-height: 1.4;
 }
 
 .sl-markdown-content .plate > div {
@@ -590,5 +590,4 @@ table code {
 
 .plate b {
   font-weight: 700;
-  letter-spacing: 0.06em;
 }
