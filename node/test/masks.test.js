@@ -336,6 +336,77 @@ test("a registration URI on another origin never sees the token", async () => {
   await assert.rejects(issuer.register({}, "one-time"), ForeignError);
 });
 
+test("introspection describes an active token", async () => {
+  const held = await fake();
+  const { client } = await signedClient(held);
+  const description = {
+    active: true,
+    scope: "files:read",
+    client_id: "machine",
+    sub: "ada",
+    aud: held.audience,
+    iss: held.url,
+    exp: Math.floor(Date.now() / 1000) + 60,
+    tenant: { subdomain: "acme" },
+  };
+  held.described.set("live", description);
+
+  const found = await client.introspect("live", "access_token");
+
+  assert.deepEqual(found, description);
+  assert.ok(hasScope(found, "files:read"));
+  assert.deepEqual(held.hints, ["access_token"]);
+});
+
+test("introspection reports anything short of active as inactive", async () => {
+  const held = await fake();
+  const { client } = await signedClient(held);
+  held.described.set("stringly", {
+    active: "true",
+    scope: "files:read",
+    sub: "ada",
+  });
+  held.described.set("ended", { active: false, scope: "files:read" });
+
+  for (const token of ["stringly", "ended", "unknown"]) {
+    const found = await client.introspect(token);
+
+    assert.deepEqual(found, { active: false }, token);
+    assert.ok(!hasScope(found, "files:read"), token);
+  }
+
+  assert.deepEqual(held.hints, [null, null, null]);
+  await assert.rejects(client.introspect(""), /names a token/);
+});
+
+test("introspection refuses a description from another issuer", async () => {
+  const held = await fake();
+  const { client } = await signedClient(held);
+  held.described.set("foreign", {
+    active: true,
+    iss: "https://elsewhere.example",
+  });
+
+  await assert.rejects(client.introspect("foreign"), (error) =>
+    hasCode(error, "invalid_issuer"),
+  );
+});
+
+test("introspection authenticates the client", async () => {
+  const held = await fake();
+  held.add("machine", { secret: "right", method: "client_secret_basic" });
+
+  const client = new Client({
+    issuer: await Issuer.discover(held.url),
+    id: "machine",
+    secret: "wrong",
+  });
+
+  await assert.rejects(client.introspect("live"), (error) =>
+    hasCode(error, "invalid_client"),
+  );
+});
+
 test("an app enrolls a machine that registers itself", async () => {
   const held = await fake();
   const { client, issuer } = await signedClient(held);

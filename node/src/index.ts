@@ -9,6 +9,7 @@ export {
   GRANT_CLIENT_CREDENTIALS,
   GRANT_DEVICE_CODE,
   GRANT_REFRESH_TOKEN,
+  type Introspection,
   reuse,
   type SignedFetchOptions,
   scopes,

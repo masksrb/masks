@@ -18,6 +18,7 @@ npm install @masks/server
 | Grants | Client credentials, refresh tokens, and the device flow. |
 | DPoP | Tokens held to a key, and proofs on every request a signed `fetch` sends. |
 | Revocation | Access and refresh tokens. |
+| Introspection | Asking the issuer whether a token is active, with RFC 7662. |
 | Checking tokens | `at+jwt` access tokens, including DPoP-bound ones, from a `Request` or a Node request. |
 
 Signing people in through a browser is left to
@@ -177,6 +178,25 @@ minute, and not seen before. A failure is an `InvalidTokenError`.
 Set `publicURL` when a proxy sits in front of the API, since a proof names the
 address the client used. The replay cache lives in the process, so each
 instance of a scaled-out API keeps its own.
+
+## Introspection
+
+An API that holds a token it cannot verify itself, such as a refresh token,
+asks the issuer about it. The API authenticates as a client.
+
+```ts
+const found = await client.introspect(token, "access_token");
+
+if (!found.active || !hasScope(found, "files:read")) {
+  return new Response(null, { status: 403 });
+}
+```
+
+masks describes a token as active only to the client it was issued to, or to an
+approved client named in its audience. Every other token, and every answer
+whose `active` is anything but `true`, comes back as `{ active: false }` with no
+other fields. A description naming another issuer is refused with
+`invalid_issuer`. The hint is `access_token` or `refresh_token`.
 
 ## Plain HTTP
 

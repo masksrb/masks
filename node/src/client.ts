@@ -6,7 +6,7 @@ import {
   MasksError,
   refused,
 } from "./errors.js";
-import type { Issuer } from "./issuer.js";
+import type { Issuer, Tenant } from "./issuer.js";
 import { type Key, random } from "./key.js";
 
 export type AuthMethod =
@@ -61,6 +61,25 @@ export interface Enrollment {
   scope: string;
   expires_in: number;
   expires_at: number;
+}
+
+export interface Introspection {
+  active: boolean;
+  scope?: string;
+  client_id?: string;
+  username?: string;
+  token_type?: string;
+  exp?: number;
+  iat?: number;
+  sub?: string;
+  aud?: string | string[];
+  iss?: string;
+  jti?: string;
+  cnf?: { jkt?: string };
+  tenant?: Tenant;
+  org?: Record<string, unknown>;
+  authorization_details?: Record<string, unknown>[];
+  [field: string]: unknown;
 }
 
 export interface TokenSource {
@@ -197,6 +216,38 @@ export class Client {
     if (hint) form.set("token_type_hint", hint);
 
     await this.#post(this.issuer.endpoint("revocation_endpoint"), form, false);
+  }
+
+  async introspect(token: string, hint?: string): Promise<Introspection> {
+    if (typeof token !== "string" || token === "") {
+      throw new Error("masks: introspection names a token");
+    }
+
+    const form = new URLSearchParams({ token });
+
+    if (hint) form.set("token_type_hint", hint);
+
+    const held = await this.#post<Record<string, unknown> | undefined>(
+      this.issuer.endpoint("introspection_endpoint"),
+      form,
+      false,
+    );
+
+    if (!held || typeof held !== "object" || held.active !== true) {
+      return { active: false };
+    }
+
+    if (
+      held.iss !== undefined &&
+      String(held.iss).replace(/\/+$/, "") !== this.issuer.url
+    ) {
+      throw new MasksError(
+        "invalid_issuer",
+        `the introspection endpoint described a token from ${JSON.stringify(held.iss)}`,
+      );
+    }
+
+    return held as unknown as Introspection;
   }
 
   async enroll(asked: EnrollmentRequest): Promise<Enrollment> {

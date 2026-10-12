@@ -62,6 +62,8 @@ export class Fake {
   assertions = new Set();
   revoked = [];
   enrolled = new Map();
+  described = new Map();
+  hints = [];
   enrollments = [];
   pending = 0;
   slowed = false;
@@ -137,6 +139,7 @@ export class Fake {
         jwks_uri: `${this.url}/.well-known/jwks.json`,
         device_authorization_endpoint: `${this.url}/device_authorization`,
         revocation_endpoint: `${this.url}/revoke`,
+        introspection_endpoint: `${this.url}/introspect`,
         registration_endpoint: `${this.url}/register`,
         enrollment_endpoint: `${this.url}/enrollments`,
       });
@@ -175,6 +178,19 @@ export class Fake {
       this.revoked.push(form.get("token"));
       response.writeHead(200);
       return response.end();
+    }
+
+    if (request.method === "POST" && path === "/introspect") {
+      const { ok } = await this.authenticated(request, form);
+      if (!ok) return oauthError(response, 401, "invalid_client");
+
+      this.hints.push(form.get("token_type_hint"));
+
+      return json(
+        response,
+        200,
+        this.described.get(form.get("token")) ?? { active: false },
+      );
     }
 
     if (request.method === "POST" && path === "/enrollments") {
