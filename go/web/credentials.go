@@ -48,6 +48,10 @@ type CredentialStore interface {
 	Forget(r *http.Request) error
 }
 
+type WritableStore interface {
+	Writable(r *http.Request) error
+}
+
 type fileCredentials struct {
 	path   string
 	lock   sync.Mutex
@@ -87,6 +91,21 @@ func (f *fileCredentials) Load(*http.Request) (*Credentials, error) {
 	f.held, f.loaded = held, true
 
 	return held, nil
+}
+
+func (f *fileCredentials) Writable(*http.Request) error {
+	if err := os.MkdirAll(filepath.Dir(f.path), 0o700); err != nil {
+		return err
+	}
+
+	probe, err := os.CreateTemp(filepath.Dir(f.path), ".masks-*.json")
+	if err != nil {
+		return err
+	}
+
+	probe.Close()
+
+	return os.Remove(probe.Name())
 }
 
 func (f *fileCredentials) Save(_ *http.Request, held *Credentials) error {

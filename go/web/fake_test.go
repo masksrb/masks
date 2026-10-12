@@ -60,6 +60,7 @@ type issuer struct {
 	avatarType   string
 	backchannel  bool
 	delegateSubs string
+	down         bool
 }
 
 func newIssuer(t *testing.T) *issuer {
@@ -345,6 +346,11 @@ func (f *issuer) token(w http.ResponseWriter, r *http.Request) {
 
 		reply(w, http.StatusOK, body)
 	case "refresh_token":
+		if f.down {
+			oauthError(w, http.StatusServiceUnavailable, "temporarily_unavailable")
+			return
+		}
+
 		held = f.refreshes[form.Get("refresh_token")]
 
 		if held == nil || held.client != id || held.spent {

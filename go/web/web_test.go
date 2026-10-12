@@ -788,3 +788,75 @@ func TestAReplayStoreThatFailsRefusesWith503(t *testing.T) {
 		t.Fatalf("expected 503, got %d", response.StatusCode)
 	}
 }
+
+func TestASessionOutlivesAnIssuerThatIsDown(t *testing.T) {
+	h := newHarness(t, nil)
+	h.issuer.expiresIn = 10
+	h.connect()
+	h.issuer.down = true
+
+	if person := h.person("/me"); person.SignedIn {
+		t.Fatal("a refresh that masks could not answer still signed the person in")
+	}
+
+	h.issuer.down = false
+
+	if person := h.person("/me"); !person.SignedIn || person.Subject != "ada" {
+		t.Fatal("the session was forgotten while masks was down")
+	}
+}
+
+func TestACrossSiteSignOutIsRefusedForEveryMethod(t *testing.T) {
+	h := newHarness(t, nil)
+	h.connect()
+
+	for _, method := range []string{http.MethodGet, http.MethodPost, http.MethodDelete} {
+		if response, _ := h.visit(method, "/auth/logout?everywhere=1", "Sec-Fetch-Site", "cross-site"); response.StatusCode != http.StatusForbidden {
+			t.Fatalf("a cross-site %s answered %d", method, response.StatusCode)
+		}
+	}
+
+	if person := h.person("/me"); !person.SignedIn {
+		t.Fatal("a cross-site request signed the person out")
+	}
+}
+
+func TestARefreshThatPanicsReleasesTheOthersWaiting(t *testing.T) {
+	held := &flights{}
+
+	func() {
+		defer func() { _ = recover() }()
+
+		held.do("token", func() (*masks.Token, *masks.Identity, error) { panic("boom") })
+	}()
+
+	done := make(chan error, 1)
+
+	go func() {
+		_, _, err := held.do("token", func() (*masks.Token, *masks.Identity, error) { return &masks.Token{}, nil, nil })
+		done <- err
+	}()
+
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("the next refresh failed: %v", err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("the next refresh waited forever")
+	}
+}
+
+type readOnly struct{ CredentialStore }
+
+func (readOnly) Writable(*http.Request) error { return errors.New("read-only file system") }
+
+func TestAStoreThatCannotSaveLeavesNoClientBehind(t *testing.T) {
+	h := newHarness(t, func(config *Config) { config.Credentials = readOnly{config.Credentials} })
+
+	response, _ := h.visit(http.MethodGet, "/auth/handshake")
+
+	if response.StatusCode != http.StatusInternalServerError || h.issuer.onlyClient() != "" {
+		t.Fatalf("expected 500 and no client, got %d and %q", response.StatusCode, h.issuer.onlyClient())
+	}
+}

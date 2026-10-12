@@ -32,7 +32,7 @@ func (a *App) routes() http.Handler {
 	mux.HandleFunc("GET "+m+"/callback", a.callback)
 	mux.HandleFunc("GET "+m+"/session", a.describe)
 	mux.HandleFunc("GET "+m+"/avatar", a.avatar)
-	mux.HandleFunc("GET "+m+"/logout", a.logout)
+	mux.HandleFunc("GET "+m+"/logout", a.guarded(a.logout))
 	mux.HandleFunc("POST "+m+"/logout", a.guarded(a.logout))
 	mux.HandleFunc("DELETE "+m+"/logout", a.guarded(a.logout))
 	mux.HandleFunc("POST "+m+"/logout/backchannel", a.backchannel)
@@ -130,7 +130,7 @@ func (a *App) signedIn(r *http.Request, s *site, held *state) (*Person, error) {
 			_ = a.config.Credentials.Forget(r)
 			held.forget()
 			return nobody, nil
-		case errors.As(err, &refused):
+		case errors.As(err, &refused) && refused.Status < http.StatusInternalServerError && refused.Status != http.StatusTooManyRequests:
 			held.forget()
 			return nobody, nil
 		case err != nil:
@@ -730,6 +730,15 @@ func (a *App) handshakeCallback(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if writable, ok := a.config.Credentials.(WritableStore); ok {
+		if err := writable.Writable(r); err != nil {
+			a.save(w, r, held)
+			a.refuse(w, r, http.StatusInternalServerError, "server_error", "the credentials could not be saved, so the app did not connect")
+
+			return
+		}
+	}
+
 	registration, err := a.handshake(s).Complete(r.Context(), query, returned)
 	if err != nil {
 		if a.save(w, r, held) {
@@ -740,7 +749,10 @@ func (a *App) handshakeCallback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := a.config.Credentials.Save(r, CredentialsFrom(registration)); err != nil {
-		a.refuse(w, r, http.StatusInternalServerError, "server_error", "the credentials could not be saved")
+		_ = s.issuer.DeleteRegistration(r.Context(), registration)
+		a.save(w, r, held)
+		a.refuse(w, r, http.StatusInternalServerError, "server_error", "the credentials could not be saved, so the app did not connect")
+
 		return
 	}
 

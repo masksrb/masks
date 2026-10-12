@@ -436,7 +436,10 @@ func (a *App) Registered(r *http.Request) (bool, error) {
 	return err == nil, err
 }
 
-var ErrNotConnected = errors.New("masks/web: this app has not shaken hands with its issuer")
+var (
+	ErrNotConnected = errors.New("masks/web: this app has not shaken hands with its issuer")
+	errFlightFailed = errors.New("masks/web: the refresh stopped before it finished")
+)
 
 type refusal struct {
 	code        string
@@ -547,19 +550,21 @@ func (f *flights) do(key string, run func() (*masks.Token, *masks.Identity, erro
 		return held.token, held.identity, held.err
 	}
 
-	held := &flight{done: make(chan struct{})}
+	held := &flight{done: make(chan struct{}), err: errFlightFailed}
 	f.held[key] = held
 	f.lock.Unlock()
 
-	held.token, held.identity, held.err = run()
+	defer func() {
+		f.lock.Lock()
+		held.at = time.Now()
+		if held.err != nil {
+			delete(f.held, key)
+		}
+		f.lock.Unlock()
+		close(held.done)
+	}()
 
-	f.lock.Lock()
-	held.at = time.Now()
-	if held.err != nil {
-		delete(f.held, key)
-	}
-	f.lock.Unlock()
-	close(held.done)
+	held.token, held.identity, held.err = run()
 
 	return held.token, held.identity, held.err
 }
