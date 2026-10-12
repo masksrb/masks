@@ -4,8 +4,12 @@ description: One name for each thing, across /manage, the sign-in pages, the acc
 ---
 
 Every screen uses one name for each thing. The words live in `engine/config/locales/en/` and
-`server/app/frontend/manage/`. A few words differ between the two audiences: **managers** in
-`/manage`, and **people** on the sign-in pages, their account page, and the mail masks sends.
+`server/app/frontend/manage/`.
+
+A few words change with the reader:
+
+- **Managers** read `/manage`.
+- **People** read the sign-in pages, their account page, and the email masks sends.
 
 ## One name each
 
@@ -41,8 +45,8 @@ Every screen uses one name for each thing. The words live in `engine/config/loca
 | **known product** | preset, template | a client masks already knows how to set up |
 | **journey** | flow, context, trigger | what an email was sent from: a sign-in to an app, the account page, a manager, or masks on its own |
 
-`actor` is the model's name in code, in the GraphQL schema, and in the concept pages, and `/manage`
-uses the same word. Outside `/manage`, a screen says *account*.
+`actor` is the name in the code, the GraphQL schema, the guides, and `/manage`. Everywhere else, a
+screen says *account*.
 
 ## Other languages
 
@@ -71,15 +75,18 @@ open.
 
 ## Events
 
-An event's label is written once, in `events.yml`, and served to `/manage` as `label` on `Event`
-and `EventAction`. The account page reads the same file. A label is a noun and a past participle,
-such as *Passkey added*, *Client archived*, or *Device sign-in refused*. A change is always
-*changed*, and no label says *edited* or *updated*.
+Each event's label is written once, in `events.yml`. `/manage` gets it as `label` on `Event` and
+`EventAction`, and the account page reads the same file.
+
+- A label is a noun and then a verb in the past tense: *Passkey added*, *Client archived*, or
+  *Device sign-in refused*.
+- A change is always *changed*. No label says *edited* or *updated*.
 
 ## Buttons and empty lists
 
 A page's add button names what it adds: *Add actor*, *Add policy*, *Add provider*, *Add a service*.
 The form's own submit is *Add* or *Save*.
 
-A list with nothing in it says *Nothing yet.*, or *None.* where nothing will ever arrive on its own.
-A link to more of a list says *All activity*.
+An empty list says *Nothing yet.* If nothing will ever show up in it on its own, it says *None.*
+
+A link to the rest of a list names the list, such as *All activity*.

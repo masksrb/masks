@@ -3,35 +3,44 @@ title: Themes
 description: Restyle the sign-in and account pages for a tenant or a client with a stylesheet.
 ---
 
-A theme is a CSS file that masks loads after its own stylesheet on the sign-in, consent, and
-account pages. In production, masks reads themes when the server boots, so a new or changed file
-applies after a restart. In development, it reads them on every request.
+A theme is a CSS file that changes how the sign-in, consent, and account pages look. masks loads it
+after its own stylesheet.
+
+- In production, masks reads themes when the server starts. A new or changed file applies after a
+  restart.
+- In development, masks reads themes on every request.
 
 ## A logo and a color
 
-Without a stylesheet, an owner sets both under **Settings → General → Branding** in `/manage`. The
-logo, any image up to 4MB stored at 256 pixels square, replaces the tenant's initial at the top of
-sign-in, consent, and account pages. The color tints their buttons and headings, and masks picks
-black or white text for buttons so it stays readable. A theme loads after both and can override them.
+You can set a logo and a color without a stylesheet. An owner sets both in `/manage`, under
+**Settings**, then **General**, then **Branding**.
+
+- The logo replaces the tenant's initial at the top of the sign-in, consent, and account pages. It
+  can be any image up to 4 megabytes. masks stores it at 256 pixels square.
+- The color tints the buttons and headings on those pages. masks picks black or white text for
+  buttons, so the text stays readable.
+
+A theme loads after both, and can override them.
 
 ## Naming a theme
 
-masks reads themes from `/rails/themes`, or from the directory `MASKS_THEMES_PATH` names. A file's
-name sets where it applies.
+masks reads themes from `/rails/themes`, or from the directory that `MASKS_THEMES_PATH` names. A
+file's name sets where it applies.
 
 | File | Applies to |
 | --- | --- |
 | `acme.css` | Every sign-in and account page of the tenant `acme`. |
 | `acme/<client_id>.css` | The sign-in and consent pages of `acme` while the person signs in to that client. |
 
-A page loads the tenant's file first and the client's file second, so the client's rules take
-precedence. The account page names no client, so it loads only the tenant's file. A file larger
-than 256 KB is skipped, and the server logs a warning.
+- A page loads the tenant's file first and the client's file second. The client's rules win when
+  the two files disagree.
+- The account page names no client, so it loads only the tenant's file.
+- masks skips a file larger than 256 kilobytes, and the server logs a warning.
 
 ## Adding a theme
 
-1. Write the stylesheet. Set the custom properties below on `.auth-page`, once for light and once
-   inside `@media (prefers-color-scheme: dark)`:
+1. Write the stylesheet. Set the custom properties below on `.auth-page`. Set them once for light
+   mode, and once inside `@media (prefers-color-scheme: dark)` for dark mode:
 
    ```css
    .auth-page {
@@ -55,7 +64,7 @@ than 256 KB is skipped, and the server logs a warning.
    }
    ```
 
-   A property left unset keeps masks' default.
+   A property you leave unset keeps masks' default.
 
 2. Mount the directory into the container:
 
@@ -67,10 +76,16 @@ than 256 KB is skipped, and the server logs a warning.
          - ./themes:/rails/themes:ro
    ```
 
-3. Restart the server. masks serves the file from `/themes/<digest>.css`. The digest changes with
-   the file, so browsers can cache each version indefinitely.
+3. Restart the server.
+
+masks serves the file from `/themes/<digest>.css`. The digest is a value computed from the file's
+contents, so it changes whenever the file changes. Browsers can cache each version with no time
+limit.
 
 ## Custom properties
+
+A custom property is a CSS variable, a name that starts with `--`. Each one sets a color or a size
+that masks uses across the pages.
 
 | Property | |
 | --- | --- |
@@ -89,11 +104,11 @@ than 256 KB is skipped, and the server logs a warning.
 | `--warn`, `--warn-field` | Warning text and the background behind it. |
 | `--info`, `--info-field` | Informational text and the background behind it. |
 | `--glow` | The background of pills and plain notes. |
-| `--window` | The image cast as light across the top of the page, `url("/masks-public/icon.svg")` by default. `none` removes it. |
+| `--window` | The image cast as light across the top of the page. `url("/masks-public/icon.svg")` by default. `none` removes it. |
 | `--window-strength` | The opacity of that light, from `0` to `1`. |
-| `--pane` | The translucent fill of panels, which blur what is behind them. |
+| `--pane` | The see-through fill of panels. Panels blur what is behind them. |
 | `--pane-rim` | The border of panels. |
-| `--pane-shine`, `--pane-sheen` | The highlight along a panel's top edge and the gradient across its face. |
+| `--pane-shine`, `--pane-sheen` | The highlight along a panel's top edge, and the gradient across its face. |
 | `--pane-shadow` | The shadow under panels. |
 | `--bend` | The corner radius of panels and controls. |
 
@@ -102,6 +117,13 @@ between releases. Class names can change.
 
 ## What a theme can load
 
-A theme does not change the pages' content security policy. Images and fonts load only from masks
-itself or from `data:` URIs, so a theme embeds each image or font as a `data:` URI or names a font
-installed on the device. The browser refuses an `@import` or `url()` that points at another host.
+A theme does not change the pages' content security policy. This policy tells the browser where a
+page may load files from. Images and fonts load only from masks itself or from `data:` URIs. A
+`data:` URI holds the file's contents inside the stylesheet.
+
+So a theme must do one of these:
+
+- Embed each image or font as a `data:` URI.
+- Name a font installed on the device.
+
+The browser refuses an `@import` or `url()` that points at another host.

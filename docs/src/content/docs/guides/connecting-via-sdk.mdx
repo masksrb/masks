@@ -3,10 +3,17 @@ title: Connecting via SDK
 description: Choosing an SDK, connecting an app, acting for a person at a provider, and exchanging tokens.
 ---
 
-An app connects to masks with one of six SDKs, registers through a handshake, and signs people in.
-From there it can act for a person at another provider, or trade a token for a narrower one.
+An app connects to masks with one of six SDKs. An SDK (software development kit) is a library that
+masks publishes for one language. With an SDK, an app:
+
+- registers itself through a handshake
+- signs people in
+- acts for a person at another provider
+- trades a token for a narrower one
 
 ## Choosing an SDK
+
+Pick the SDK for the place your app runs.
 
 | SDK | For |
 | --- | --- |
@@ -17,7 +24,9 @@ From there it can act for a person at another provider, or trade a token for a n
 | [`@masks/server`](https://github.com/masksrb/masks/tree/main/node) | A JavaScript server that signs in as itself, and a JavaScript API, on Node, Next.js, Bun, or Deno. |
 | [`masks-client`](https://github.com/masksrb/masks/tree/main/python) | A Python service or a machine that signs in as itself, and a Python API. |
 
-The `masks` gem holds both Ruby SDKs, and `Masks::Rails` loads only when Rails does.
+The `masks` gem holds both Ruby SDKs. `Masks::Rails` loads only when Rails does.
+
+### What each SDK covers
 
 | | `Masks::Rails` | `Masks::Client` | `@masks/client` | Go | `@masks/server` | Python |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -36,38 +45,69 @@ The `masks` gem holds both Ruby SDKs, and `Masks::Rails` loads only when Rails d
 | Checking access tokens, including DPoP-bound ones | Yes | Yes | No | Yes | Yes | Yes |
 | One store of seen DPoP proofs for every process | Yes | Yes | No | Yes | Yes | Yes |
 
-`@masks/client` runs only in a browser and holds no client secret. It verifies ID tokens, and leaves
-access tokens to the API that receives them. A Go app signs people in through
-[golang.org/x/oauth2](/guides/other-languages/#go), and the Go SDK's README covers the rest. A
-JavaScript server signs people in through [openid-client](/guides/other-languages/#node) or
-[Auth.js](/guides/other-languages/#nextjs), and the `@masks/server` README covers the rest. A Python
-app signs people in through [Authlib](/guides/other-languages/#python), and the `masks-client` README
-covers the rest.
+The terms in this table mean:
+
+| | |
+| --- | --- |
+| Code flow and PKCE | The browser signs in at masks and comes back to the app with a one-time code. The app trades the code for tokens. PKCE (Proof Key for Code Exchange) makes sure only the app that asked can trade the code. |
+| Handshake | The way an app registers itself with masks. A person holding `masks:manage` or `masks:handshake` approves it in the browser. See [connecting an app](#connecting-an-app). |
+| Initial access token | A one-time token from masks that lets an app or a machine register itself as a client. |
+| Token exchange | Trading one token for another. See [exchanging a token](#exchanging-a-token). |
+| Client credentials | A client asking for a token as itself, with nobody signed in. |
+| Revocation | Telling masks to end a token. |
+| Introspection | Asking masks whether a token is active. |
+| Device flow | A device with no browser shows a code. A person approves it on another device. |
+| `private_key_jwt` | A client proves who it is with a message signed by its private key. It sends no secret. |
+| DPoP | Ties a token to a key. Each request carries a proof signed by that key, so a copied token is useless without the key. |
+| Store of seen DPoP proofs | An API refuses a proof it has seen before. A shared store lets every process of the API refuse it. |
+
+### Notes on each SDK
+
+`@masks/client` runs only in a browser and holds no client secret.
+
+- It verifies ID tokens.
+- It leaves access tokens to the API that receives them.
+
+The Go SDK, `@masks/server`, and `masks-client` do not sign people in. An app signs people in with a
+common library, and the SDK's README covers the rest.
+
+| SDK | Signs people in through |
+| --- | --- |
+| Go | [golang.org/x/oauth2](/guides/other-languages/#go). The Go SDK's README covers the rest. |
+| `@masks/server` | [openid-client](/guides/other-languages/#node) or [Auth.js](/guides/other-languages/#nextjs). The `@masks/server` README covers the rest. |
+| `masks-client` | [Authlib](/guides/other-languages/#python). The `masks-client` README covers the rest. |
+
+The Go SDK, `@masks/server`, and `masks-client` have no delegation helper. Each can still ask for a
+provider token with a token exchange, as in [get a provider token](#get-a-provider-token).
 
 ## Connecting an app
 
-1. Install the SDK. For Rails, run `bin/rails generate masks:install`. See [Rails apps](/guides/rails/)
-   for the whole walkthrough.
-2. Set the issuer, such as `https://acme.auth.example.com`, and the app's resource identifier, such as
-   `https://app.example.com`. The handshake requires a resource, and the app's redirect URIs must
-   share its origin.
-3. Open the handshake. The browser goes to masks' approval screen.
-4. Approve it as a person holding `masks:manage` or `masks:handshake`. The credentials go to the app
-   server to server, so no secret passes through the browser.
+1. Install the SDK. For Rails, run `bin/rails generate masks:install`. See
+   [Rails apps](/guides/rails/) for the whole walkthrough.
+2. Set the issuer. This is the address masks answers at, such as `https://acme.auth.example.com`.
+3. Set the app's resource identifier. This is the app's own address, such as
+   `https://app.example.com`. The handshake requires a resource. The app's redirect URIs (the
+   addresses masks sends the browser back to) must share its origin, the same scheme, host, and
+   port.
+4. Open the handshake. The browser goes to masks' approval screen.
+5. Approve it as a person holding `masks:manage` or `masks:handshake`. masks sends the credentials to
+   the app server to server, so no secret passes through the browser.
 
-The app is then an approved [client](/guides/features/#registering-a-client). Sign people in
-with the SDK's login URL, and check access tokens on your API with its verifier.
+The app is then an approved [client](/guides/features/#registering-a-client). Next:
+
+- Sign people in with the SDK's login URL.
+- Check access tokens on your API with the SDK's verifier.
 
 ## Delegation
 
-A **delegation** lets an app act as one person at a provider while nobody is signed in, such as
-syncing their Google Drive at 3 a.m. or calling their Notion MCP server.
+A **delegation** lets an app act as one person at a provider while nobody is signed in. For example,
+an app can sync a person's Google Drive at 3 a.m., or call their Notion MCP server.
 
 - masks stores and refreshes the provider's tokens.
 - The app gets a token for one person's account, after that person consented to that app.
-- The app calls the provider directly, and returns to masks only when its token expires.
+- The app calls the provider directly. It comes back to masks only when its token expires.
 
-Each person sees every app using each of their accounts on their account page, and can stop any of
+Each person sees every app using each of their accounts on their account page. They can stop any of
 them there.
 
 ### Set up the provider
@@ -84,18 +124,18 @@ In `/manage`, on the provider's **Clients** tab:
 | Microsoft | `offline_access Files.Read.All` | |
 | An MCP server | nothing | |
 
-Presets fill these in. Delegation reuses the redirect URI the provider has for sign-in.
+Presets fill these in. Delegation uses the same redirect URI the provider has for sign-in.
 
 ### Let the app ask
 
-Only an approved client can receive a delegation. It needs:
+Only an approved client can receive a delegation. It needs two settings:
 
 | | |
 | --- | --- |
 | `allowed_scopes` | `masks:delegate:` (every provider) or `masks:delegate:google` (one) |
 | `grant_types` | `refresh_token` and `urn:ietf:params:oauth:grant-type:token-exchange` |
 
-A handshake that asks for `masks:delegate:` sets both. With the Rails engine:
+A handshake that asks for `masks:delegate:` sets both. With the Rails engine, set:
 
 ```ruby
 config.delegates = true
@@ -104,7 +144,7 @@ config.delegation_redirect_uri = ->(request) { "#{request.base_url}/connect/call
 
 ### Connect an account
 
-1. Send the browser to `/authorize`, keeping `state` and the PKCE verifier in the session:
+1. Send the browser to `/authorize`. Keep `state` and the PKCE verifier in the session.
 
    ```
    GET https://auth.example.com/authorize
@@ -117,8 +157,8 @@ config.delegation_redirect_uri = ->(request) { "#{request.base_url}/connect/call
      &code_challenge_method=S256
    ```
 
-2. masks signs the person in, asks for consent, sends them to Google if it holds no usable token,
-   and redirects back:
+2. masks signs the person in and asks for consent. If it holds no usable token, it sends them to
+   Google. Then it redirects back:
 
    ```
    GET https://app.example.com/connect/callback?code=CODE&state=STATE
@@ -150,8 +190,8 @@ config.delegation_redirect_uri = ->(request) { "#{request.base_url}/connect/call
 
 4. Store `delegations[].connection` (the account) and `refresh_token` (the secret), encrypted.
 
-`subject` is the same `sub` your sign-in receives, so you can refuse a connection finished by
-someone other than who started it.
+`subject` is the same `sub` your sign-in receives. Use it to refuse a connection that someone other
+than the person who started it finished.
 
 | `error` | Means |
 | --- | --- |
@@ -163,7 +203,7 @@ someone other than who started it.
 
 ### Get a provider token
 
-When you have no provider token, or it is about to expire:
+Follow these steps when you have no provider token, or when it is about to expire.
 
 1. Refresh the secret:
 
@@ -204,7 +244,8 @@ When you have no provider token, or it is about to expire:
    }
    ```
 
-Call Google with `ya29.…` until `expires_in` runs out. On a 401, discard it and repeat.
+Call Google with `ya29.…` until the time in `expires_in` has passed. On a 401, discard the token and
+repeat these steps.
 
 | Response | Means | Do |
 | --- | --- | --- |
@@ -215,39 +256,49 @@ Call Google with `ya29.…` until `expires_in` runs out. On a 401, discard it an
 ### Rules for the secret
 
 1. Keep every new secret. Each refresh replaces it, even when the exchange after it fails.
-2. Refresh each secret from one place at a time. Spending it twice revokes the chain, and the person
-   has to connect again. Lock around the refresh if more than one worker can reach it.
-3. Use it within 30 days. An unused secret expires, and each refresh restarts the clock.
+2. Refresh each secret from one place at a time. Using a secret twice revokes every secret in its
+   family, the newest one included, and the person has to connect again. Lock around the refresh if more than one
+   worker can reach it.
+3. Use it within 30 days. An unused secret expires, and each refresh starts the 30 days again.
 
 ### What masks checks
 
 masks releases a provider token only when:
 
-- the client is approved and registered for token exchange,
-- the masks token is live, issued to this client, and holds `masks:delegate:<provider>`,
-- the connection is live and belongs to that token's person,
-- the provider still allows delegation,
-- the person's delegation to this client for this connection is live,
-- the exchange sends no `scope`, `resource`, or `requested_lifetime`.
+- the client is approved and registered for token exchange
+- the masks token is live, issued to this client, and holds `masks:delegate:<provider>`
+- the connection is live and belongs to that token's person
+- the provider still allows delegation
+- the person's delegation to this client for this connection is live
+- the exchange sends no `scope`, `resource`, or `requested_lifetime`
 
-Every release is recorded as a `delegation.released` event. Provider tokens are encrypted at rest,
-and masks refreshes one within a minute of its expiry, once per connection at a time. Changing what a
-provider allows makes everyone connect it again.
+masks also:
+
+- records every release as a `delegation.released` event
+- encrypts provider tokens when it stores them
+- refreshes a provider token within a minute of its expiry, and runs one refresh at a time for each
+  connection
+
+Changing what a provider allows makes everyone connect it again.
 
 ### MCP servers
 
-An MCP server that is its own OAuth server, such as `https://mcp.notion.com/mcp`, is a provider
-with the protocol `mcp`. Given its URL, masks:
+An MCP server that is its own OAuth server, such as `https://mcp.notion.com/mcp`, is a provider with
+the protocol `mcp`. Given its URL, masks:
 
 1. reads `/.well-known/oauth-protected-resource` for its authorization server
-   ([RFC 9728](https://www.rfc-editor.org/rfc/rfc9728)),
-2. reads that server's metadata, which must offer PKCE with S256 and dynamic registration,
+   ([RFC 9728](https://www.rfc-editor.org/rfc/rfc9728))
+2. reads that server's metadata, which must offer PKCE with S256 and dynamic registration
 3. registers itself ([RFC 7591](https://www.rfc-editor.org/rfc/rfc7591)), with a secret when the
-   server accepts one.
+   server accepts one
 
 Every request names the server's URL as `resource` ([RFC 8707](https://www.rfc-editor.org/rfc/rfc8707)).
-Connect an account and get a token as above, then send it to the MCP server as
-`Authorization: Bearer`.
+
+To call the MCP server:
+
+1. Connect an account, as in [connect an account](#connect-an-account).
+2. Get a token, as in [get a provider token](#get-a-provider-token).
+3. Send the token to the MCP server as `Authorization: Bearer`.
 
 ### From Ruby
 
@@ -266,15 +317,17 @@ save(connection, upstream.secret)
 upstream.access_token
 ```
 
-`token` refreshes and exchanges in one call, and `upstream.secret` replaces the secret passed in.
-`Delegations::Refused` means the person has to connect again, and `Delegations::Unavailable` is worth
-retrying. Both carry `secret` when masks had already rotated it. See [Masks::Client](/reference/ruby/)
-for the test fake.
+- `token` refreshes and exchanges in one call. `upstream.secret` replaces the secret passed in.
+- `Delegations::Refused` means the person has to connect again.
+- Retry after `Delegations::Unavailable`.
+- Both errors carry `secret` when masks had already rotated it.
+
+See [Masks::Client](/reference/ruby/) for the test fake.
 
 ## Calling a provider while the person is present
 
 An app that calls a provider only while the person uses it can run its own OAuth flow there. The
-`identities` scope names the person's connected accounts, so the flow is a redirect with a hint:
+`identities` scope names the person's connected accounts. The flow is then a redirect with a hint:
 
 ```json
 {
@@ -289,17 +342,18 @@ An app that calls a provider only while the person uses it can run its own OAuth
 https://accounts.google.com/o/oauth2/v2/auth?…&login_hint=ada@gmail.com
 ```
 
-A [pairwise](/guides/features/#subject-identifiers) client never receives `identities`. An
-upstream subject is the same for every client, so it would undo pairwise separation.
+A [pairwise](/guides/features/#subject-identifiers) client never receives `identities`. A pairwise
+client sees a different subject for each person than every other client does. An upstream subject is
+the same for every client, so it would undo pairwise separation.
 
 ## Exchanging a token
 
-A token exchange ([RFC 8693](https://www.rfc-editor.org/rfc/rfc8693)) trades one token for
-another at `/token`:
+A token exchange ([RFC 8693](https://www.rfc-editor.org/rfc/rfc8693)) trades one token for another
+at `/token`. For example:
 
-- a gateway gives a downstream service a token for that service only,
-- an agent holds a token recording that it acts for a person,
-- a backend trades its frontend's ID token for an access token of its own.
+- a gateway gives a downstream service a token for that service only
+- an agent holds a token recording that it acts for a person
+- a backend trades its frontend's ID token for an access token of its own
 
 The client must be registered for `urn:ietf:params:oauth:grant-type:token-exchange`.
 
@@ -312,9 +366,16 @@ curl -u "$CLIENT_ID:$CLIENT_SECRET" https://auth.example.com/token \
   -d resource=https://xixo.example/mcp
 ```
 
-`Masks::Client::Session#exchange` sends the same request from Ruby, `Client.Exchange` from Go,
-`client.exchange` from `@masks/server`, and `client.exchange` from Python. A client that holds its
-tokens to a DPoP key proves it on the exchange too.
+Each SDK sends the same request:
+
+| SDK | Call |
+| --- | --- |
+| Ruby | `Masks::Client::Session#exchange` |
+| Go | `Client.Exchange` |
+| `@masks/server` | `client.exchange` |
+| Python | `client.exchange` |
+
+A client that holds its tokens to a DPoP key proves it on the exchange too.
 
 ### What can be exchanged
 
@@ -324,12 +385,13 @@ tokens to a DPoP key proves it on the exchange too.
 | `…:id_token` | What the person consented to for this client. | The ID token. | Its session ended, or it was issued to another client. |
 | `urn:masks:params:oauth:token-type:upstream_access_token` (requested) | See [delegation](#delegation). | | |
 
-An exchange only narrows. `scope`, `resource`, and `requested_lifetime` can only ask for less.
-Revoking the subject token revokes everything exchanged from it.
+An exchange only narrows a token. `scope`, `resource`, and `requested_lifetime` can only ask for
+less. Revoking the subject token revokes everything exchanged from it.
 
 ### Who is acting
 
-Each exchanged token has an `act` claim naming its holder, nested so the chain is kept:
+Each exchanged token has an `act` claim naming its holder. When a token is exchanged again, the
+earlier `act` is nested inside the new one, so every holder stays listed:
 
 ```json
 {
@@ -340,12 +402,16 @@ Each exchanged token has an `act` claim naming its holder, nested so the chain i
 ```
 
 A client acting as a more specific party sends that party's token as `actor_token`, with
-`actor_token_type`. It must be live and issued to this client. An agent that
-[signs in as itself](/guides/features/#signing-in-as-itself) and acts for a person sends its
-own token as the actor and the person's as the subject.
+`actor_token_type`. The actor token must be live and issued to this client.
 
-A client exchanging its own ID token acts for itself, so the new token has no `act` unless an actor
+An agent that [signs in as itself](/guides/features/#signing-in-as-itself) and acts for a person
+sends:
+
+- its own token as the actor
+- the person's token as the subject
+
+A client exchanging its own ID token acts for itself. The new token has no `act` unless an actor
 token was sent.
 
-masks does not exchange refresh tokens, SAML assertions, or other issuers' tokens, and does not read
+masks does not exchange refresh tokens, SAML assertions, or other issuers' tokens. It does not read
 `may_act`.

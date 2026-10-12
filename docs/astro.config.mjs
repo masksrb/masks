@@ -76,7 +76,7 @@ export default defineConfig({
         items: [
           { label: "Core concepts", slug: "guides/core-concepts" },
           { label: "Features", slug: "guides/features" },
-          { label: "Manage console", slug: "guides/manage" },
+          { label: "Manage", slug: "guides/manage" },
           { label: "Organizations", slug: "guides/organizations" },
           { label: "Themes", slug: "guides/themes" },
           { label: "SSO / SAML", slug: "guides/sso-saml" },

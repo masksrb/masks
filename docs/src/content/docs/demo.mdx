@@ -3,20 +3,24 @@ title: Demo
 description: Run masks with two tenants, demo and acme, and see that each has its own issuer, keys, and accounts.
 ---
 
-The demo is the two tenants `./dev --multi` declares, `demo` and `acme`. In this
-tutorial you run them side by side and see that each one is a separate issuer
-with its own signing keys and its own accounts. masks has no public demo server.
+In this tutorial you run two tenants side by side and see that each one is separate. A tenant is
+its own set of accounts, clients, and signing keys. Each tenant is also its own issuer, the address
+its tokens name as the one that issued them.
 
-The tutorial uses the dev stack from [Try it locally](/quickstart/#try-it-locally),
-which needs Docker with Compose, and Ruby.
+The two tenants are `demo` and `acme`. `./dev --multi` declares them. masks has no public demo
+server.
+
+The tutorial uses the dev stack from [Try it locally](/quickstart/#try-it-locally). You need Docker
+with Compose, and Ruby.
 
 ## Start two tenants
 
-Stop `./dev` if it is running, then start it with `--multi`:
+1. Stop `./dev` if it is running.
+2. Start it with `--multi`:
 
-```sh
-./dev --multi
-```
+   ```sh
+   ./dev --multi
+   ```
 
 The stack serves each tenant at its own name:
 
@@ -26,8 +30,8 @@ The stack serves each tenant at its own name:
   docs    http://masks.localhost:12346
 ```
 
-masks reads the tenant from the `Host` header of each request. A name that no
-tenant uses gets a `404` with the body `no tenant is served at this hostname`:
+masks reads the tenant from the `Host` header of each request. A name that no tenant uses gets a
+`404` with the body `no tenant is served at this hostname`. Try it:
 
 ```sh
 curl http://nothing.masks.localhost:12345/.well-known/openid-configuration
@@ -35,55 +39,58 @@ curl http://nothing.masks.localhost:12345/.well-known/openid-configuration
 
 ## Compare the two issuers
 
-Fetch the discovery document for each tenant:
+1. Fetch the discovery document for each tenant. The discovery document lists a tenant's issuer and
+   endpoints.
 
-```sh
-curl http://demo.masks.localhost:12345/.well-known/openid-configuration
-curl http://acme.masks.localhost:12345/.well-known/openid-configuration
-```
+   ```sh
+   curl http://demo.masks.localhost:12345/.well-known/openid-configuration
+   curl http://acme.masks.localhost:12345/.well-known/openid-configuration
+   ```
 
-The `issuer` of the first is `http://demo.masks.localhost:12345`, and of the
-second `http://acme.masks.localhost:12345`. Every endpoint in each document is
-under the tenant's own origin.
+   The `issuer` of the first is `http://demo.masks.localhost:12345`. The `issuer` of the second is
+   `http://acme.masks.localhost:12345`. Every endpoint in each document is under the tenant's own
+   origin.
 
-Fetch each tenant's signing keys:
+2. Fetch each tenant's signing keys:
 
-```sh
-curl http://demo.masks.localhost:12345/.well-known/jwks.json
-curl http://acme.masks.localhost:12345/.well-known/jwks.json
-```
+   ```sh
+   curl http://demo.masks.localhost:12345/.well-known/jwks.json
+   curl http://acme.masks.localhost:12345/.well-known/jwks.json
+   ```
 
-Each tenant publishes its own key, with its own `kid`. A token that `demo` signs
-carries a `kid` that `acme` does not publish, so a client that trusts `acme`
-refuses it.
+   Each tenant publishes its own key, with its own `kid` (key ID). A token that `demo` signs has a
+   `kid` that `acme` does not publish. A client that trusts `acme` refuses that token.
 
 ## Set up each tenant
 
-Open `http://demo.masks.localhost:12345` in a browser. `demo` has no accounts
-yet, so it shows the **Set up demo** screen. Create its first account with the
-setup token `masks-dev`, and click **Finish setting up**.
+1. Open `http://demo.masks.localhost:12345` in a browser. `demo` has no accounts yet, so it shows
+   the **Set up demo** screen.
+2. Create its first account with the setup token `masks-dev`, and click **Finish setting up**.
+3. Open `http://acme.masks.localhost:12345`. `acme` still shows **Set up acme**, because the account
+   you made belongs to `demo` only.
+4. Set up `acme` too. The same nickname and email work, because no account at `demo` exists at
+   `acme`.
+5. Open **Manage this server** on each tenant.
 
-Open `http://acme.masks.localhost:12345`. `acme` still shows **Set up acme**,
-because the account you made belongs to `demo` only. Each tenant keeps its own
-accounts, clients, and keys, and its first account is set up separately.
-
-Set up `acme` too. The same nickname and email work, because no account at
-`demo` exists at `acme`. Then open **Manage this server** on each tenant. Each
-`/manage` lists only its own tenant's actors and clients.
+Each `/manage` lists only its own tenant's actors and clients. Each tenant keeps its own accounts,
+clients, and keys, and you set up each tenant's first account separately.
 
 ## Run the production image
 
-`./dev image` builds the production image and runs it with the same two tenants
-on port `5556`:
+`./dev image` builds the production image. It runs the image with the same two tenants on port
+`5556`.
 
 ```sh
 ./dev image
 ```
 
-The command fetches each tenant's discovery document and signing keys. It fails
-if a tenant advertises an issuer other than its own origin, publishes no keys,
-or signs with the same key as the other tenant. When every check passes, it
-prints:
+The command fetches each tenant's discovery document and signing keys. It fails if a tenant:
+
+- advertises an issuer other than its own origin
+- publishes no keys
+- signs with the same key as the other tenant
+
+When every check passes, it prints:
 
 ```text
   demo and acme each answer at their own origin, with keys of their own.

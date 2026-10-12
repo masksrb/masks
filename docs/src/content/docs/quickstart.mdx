@@ -3,12 +3,23 @@ title: Quickstart
 description: The ways to use masks, and where to go next for each.
 ---
 
-masks is an OpenID Connect and OAuth 2.0 provider. Run it as a container or inside a Rails app, then
-sign people in to your apps against it. Each section links to its full guide.
+masks signs people in to your apps. It is an OpenID Connect and OAuth 2.0 provider, which means it
+speaks the standard protocols that apps use to sign people in and get tokens.
+
+You can use masks in four ways:
+
+- [Run it with Docker](#run-it-with-docker) as its own server.
+- [Add it to a Rails app](#add-it-to-a-rails-app), to sign people in to that app or to run masks
+  inside it.
+- [Connect client-side](#connect-client-side) from a single-page app in the browser.
+- [Try it locally](#try-it-locally) with the full stack from the repository.
+
+Each section below links to its full guide.
 
 ## Run it with Docker
 
-masks ships as a container image that needs one Postgres database. It migrates itself on boot.
+masks comes as a container image, a packaged copy of the server that Docker runs. It needs one
+Postgres database, and it migrates the database itself each time it starts.
 
 ```yaml
 services:
@@ -42,48 +53,66 @@ volumes:
   masks-storage:
 ```
 
-`initdb/01-roles.sql` creates the role that owns the schema and the role that serves requests:
+`initdb/01-roles.sql` creates two database roles. The first owns the schema. The second serves
+requests.
 
 ```sql
 CREATE ROLE masks_owner WITH LOGIN PASSWORD '...' CREATEDB;
 CREATE ROLE masks WITH LOGIN PASSWORD '...';
 ```
 
-masks migrates as the first and serves as the second, so the role answering requests cannot switch
-off the row-level security that keeps tenants apart.
+masks migrates as the first role and serves as the second. Postgres keeps tenants apart with
+row-level security, a rule on each table that limits which rows a role can see. The role that
+answers requests cannot switch that rule off.
 
-Put a TLS proxy in front of port `3000`, open the public origin, and set up the first account with
-the setup token masks prints in its logs. The first account holds `masks:manage` and can open
-`/manage`. The `masks-storage` volume holds the generated master key, which every encrypted column
-depends on, so back it up with the database.
+To finish setting up:
+
+1. Put a TLS proxy in front of port `3000`. The proxy serves masks over HTTPS.
+2. Open the public origin in a browser.
+3. Set up the first account with the setup token that masks prints in its logs.
+
+The first account holds `masks:manage` and can open `/manage`.
+
+:::caution
+The `masks-storage` volume holds the generated master key. Every encrypted column depends on it.
+Back it up with the database.
+:::
 
 See [Self-hosting](/guides/self-hosting/) for TLS, image tags, database roles, secrets, and tenants.
 
 ## Add it to a Rails app
 
-The `masks` gem signs people in to your app against a masks server that runs somewhere else:
+The `masks` gem signs people in to your app against a masks server that runs somewhere else.
 
-```ruby
-gem "masks"
-```
+1. Add the gem:
 
-```sh
-bin/rails generate masks:install --resource https://app.example.com
-```
+   ```ruby
+   gem "masks"
+   ```
 
-`--resource` is a URL on your app's own origin, which the handshake registers the app for. Set
-`MASKS_ISSUER` to your masks server, start the app, and open `/auth/handshake` to connect it. Then
-require a signed-in person in any controller:
+2. Run the installer:
 
-```ruby
-class ApplicationController < ActionController::Base
-  include Masks::Rails::Authentication
+   ```sh
+   bin/rails generate masks:install --resource https://app.example.com
+   ```
 
-  masked!
-end
-```
+   `--resource` is a URL on your app's own origin. The handshake registers your app for that URL.
 
-To run masks inside your app instead, the `masks-server` gem mounts it as an engine:
+3. Set `MASKS_ISSUER` to your masks server.
+4. Start the app.
+5. Open `/auth/handshake` to connect the app to masks.
+6. Require a signed-in person in any controller:
+
+   ```ruby
+   class ApplicationController < ActionController::Base
+     include Masks::Rails::Authentication
+
+     masked!
+   end
+   ```
+
+To run masks inside your app instead, use the `masks-server` gem. It mounts masks as an engine, a
+part of your app with its own routes.
 
 ```ruby
 gem "masks-server"
@@ -97,14 +126,18 @@ See [Rails apps](/guides/rails/) for client, server, and engine mode.
 
 ## Connect client-side
 
-`@masks/client` signs people in from a single-page app in the browser:
+`@masks/client` signs people in from a single-page app in the browser.
 
 ```sh
 npm install @masks/client
 ```
 
-Session mode talks to a backend running `Masks::Rails`, which keeps the tokens and gives the browser
-a cookie:
+It has two modes.
+
+### Session mode
+
+Session mode talks to a backend that runs `Masks::Rails`. The backend keeps the tokens and gives the
+browser a cookie.
 
 ```js
 import { createSession } from "@masks/client";
@@ -115,8 +148,13 @@ const account = await auth.session();
 if (!account) auth.login({ returnTo: "/dashboard" });
 ```
 
-Browser mode runs the code flow with PKCE in the page, for an app with no backend. It needs a public
-client, one registered with `token_endpoint_auth_method` set to `none`:
+### Browser mode
+
+Browser mode is for an app with no backend. It runs the authorization code flow with PKCE in the
+page. PKCE is a check that proves the page that asked for a code is the same page that uses it.
+
+Browser mode needs a public client. A public client is one registered with
+`token_endpoint_auth_method` set to `none`, because a page in the browser cannot keep a secret.
 
 ```js
 import { createBrowserClient } from "@masks/client";
@@ -137,23 +175,29 @@ See [Connecting via SDK](/guides/connecting-via-sdk/) for what each SDK covers, 
 
 ## Try it locally
 
-The repository runs a full stack with `./dev`, which needs Docker with Compose, and Ruby.
+The repository runs a full stack with `./dev`. You need Docker with Compose, and Ruby.
 
-```sh
-git clone https://github.com/masksrb/masks.git
-cd masks
-./dev
-```
+1. Clone the repository and start the stack:
 
-masks answers at `http://masks.localhost:12345`, and this documentation at
-`http://masks.localhost:12346`. The dev stack's setup token is `masks-dev`. `./dev reset` deletes
-the database and brings back the first-run screen.
+   ```sh
+   git clone https://github.com/masksrb/masks.git
+   cd masks
+   ./dev
+   ```
+
+2. Open masks at `http://masks.localhost:12345`.
+3. Set up the first account with the setup token `masks-dev`.
+
+This documentation runs at `http://masks.localhost:12346`.
+
+To start over, run `./dev reset`. It deletes the database and brings back the first-run screen.
 
 ## Read the docs
 
 - [Core concepts](/guides/core-concepts/) explains tenants, clients, scopes, and namespaces.
 - [Features](/guides/features/) covers clients, signing in, and signing out.
-- [SSO / SAML](/guides/sso-saml/) signs people into SAML applications and provisions them over SCIM.
+- [Single sign-on and SAML](/guides/sso-saml/) signs people in to SAML applications, and lets a
+  directory manage their accounts over SCIM.
 - [Security](/guides/security/) describes what masks protects and how.
-- [OIDC and OAuth](/reference/specs/) lists the specifications masks implements, and the
-  [GraphQL reference](/reference/manage/) documents the manage API.
+- [OIDC and OAuth](/reference/specs/) lists the specifications masks implements.
+- The [GraphQL reference](/reference/manage/) documents the manage API.

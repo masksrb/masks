@@ -3,10 +3,17 @@ title: Other languages
 description: Sign people in from Node, Next.js, Python, Go, or the browser, and connect services and APIs with the masks SDKs.
 ---
 
-masks is a standard OpenID Connect provider, so an app in any language signs people in with its
-usual library, using the authorization code flow with PKCE. Everything past that has a masks SDK: a
-service or a machine that signs in as itself, a call to an API with a DPoP-bound token, the device
-flow, redeeming an initial access token, and an API that checks the tokens it receives.
+masks is a standard OpenID Connect provider. An app in any language signs people in with its usual
+library, using the authorization code flow with PKCE. In that flow, the browser comes back from masks
+with a one-time code, and the app trades the code for tokens.
+
+A masks SDK covers everything past sign-in:
+
+- a service or a machine that signs in as itself
+- a call to an API with a DPoP-bound token, which is a token tied to a key the caller holds
+- the device flow, for a device with no browser
+- redeeming an initial access token, a one-time token that lets an app register itself
+- an API that checks the tokens it receives
 
 | Language | Signing people in | The masks SDK |
 | --- | --- | --- |
@@ -16,24 +23,33 @@ flow, redeeming an initial access token, and an API that checks the tokens it re
 | Go | [go-oidc and x/oauth2](#go) | `go get github.com/masksrb/masks/go` |
 | Ruby | [`Masks::Rails`](/guides/rails/) | the `masks` gem |
 
-[Connecting via SDK](/guides/connecting-via-sdk/#choosing-an-sdk) compares what each SDK covers.
+Compare what each SDK covers in [Connecting via SDK](/guides/connecting-via-sdk/#choosing-an-sdk).
 
 ## Registering the app
 
-In `/manage`, under **Clients → Add client**, choose **Signs actors in**, name the app, and enter its
-redirect URI. masks shows the `client_id` and the client secret once. The issuer is the address masks
-answers at, such as `https://auth.example.com`, and discovery is at
-`/.well-known/openid-configuration` under it. Ask for `groups` as well to receive the
-[groups claim](/guides/features/#groups).
+1. In `/manage`, open **Clients** and choose **Add client**.
+2. Choose **Signs actors in**.
+3. Name the app.
+4. Enter its redirect URI.
+5. Copy the `client_id` and the client secret. masks shows them only once.
 
-A service that signs in as itself is a client that **Signs in as itself**. It holds no redirect URI
-and asks for its own token with client credentials.
+The app also needs:
+
+- the issuer, which is the address masks answers at, such as `https://auth.example.com`
+- discovery, which is at `/.well-known/openid-configuration` under the issuer
+
+Ask for `groups` as well to receive the [groups claim](/guides/features/#groups).
+
+A service that signs in as itself is a client that **Signs in as itself**. It holds no redirect URI.
+It asks for its own token with client credentials, the grant for a client acting as itself.
 
 ## In the browser
 
 A single-page app with no backend runs the code flow in the page with
-[`@masks/client`](/reference/browser/). It needs a public client, one registered with
-`token_endpoint_auth_method` set to `none`, and it keeps its tokens in `sessionStorage`.
+[`@masks/client`](/reference/browser/).
+
+- It needs a public client, one registered with `token_endpoint_auth_method` set to `none`.
+- It keeps its tokens in `sessionStorage`.
 
 ```js
 import { createBrowserClient } from "@masks/client";
@@ -56,15 +72,18 @@ await auth.authorize({ returnTo: "/dashboard" });
 const response = await auth.fetch("https://api.example.com/files");
 ```
 
-`fetch` refreshes the access token when it is close to expiring. With `dpop: true`, the page makes a
-key it cannot export, binds its tokens to it, and signs a proof for each request.
+`fetch` refreshes the access token when it is close to expiring. With `dpop: true`, the page:
 
-An app with a backend keeps the tokens there instead, and the page holds only a cookie. The
+- makes a key it cannot export
+- binds its tokens to that key
+- signs a proof for each request
+
+An app with a backend keeps the tokens on the backend, and the page holds only a cookie. The
 package's session mode talks to a backend running the `masks` gem's Rails engine.
 
 ## Node
 
-With [openid-client](https://github.com/panva/openid-client):
+Sign people in with [openid-client](https://github.com/panva/openid-client):
 
 ```js
 import * as client from "openid-client";
@@ -106,9 +125,17 @@ app.get("/callback", async (req, res) => {
 ### A Node service
 
 [`@masks/server`](https://github.com/masksrb/masks/tree/main/node) signs a server in as itself and
-calls an API with the token. It uses only `fetch` and Web Crypto, so it runs on Node 20 and later,
-Bun, Deno, and the Next.js edge runtime. One key signs the client's assertions and another holds its
-tokens, so a token copied off the server is useless without the key.
+calls an API with the token. It uses only `fetch` and Web Crypto, so it runs on:
+
+- Node 20 and later
+- Bun
+- Deno
+- the Next.js edge runtime
+
+It uses two keys:
+
+- One key signs the client's assertions, the signed messages that prove who the client is.
+- The other key holds its tokens, so a token copied off the server is useless without the key.
 
 ```ts
 import { Client, Issuer, Key } from "@masks/server";
@@ -125,14 +152,15 @@ const api = client.fetch(source, ["https://files.example.com"]);
 const response = await api("https://files.example.com/files");
 ```
 
-`Key.generate()` makes each key, and `key.jwks()` is the public half to register. The `fetch` it
-returns reuses the token, signs a DPoP proof for every request, and sends the token only to the
-origins it is given. A server with no browser uses `client.deviceAuthorization` and
-`client.awaitDevice` for the device flow.
+- `Key.generate()` makes each key. `key.jwks()` is the public half to register.
+- The `fetch` it returns reuses the token and signs a DPoP proof for every request. It sends the
+  token only to the origins it is given.
+- A server with no browser uses `client.deviceAuthorization` and `client.awaitDevice` for the device
+  flow.
 
 ## Next.js
 
-With [Auth.js](https://authjs.dev), masks is an OpenID Connect provider. Register
+Add masks to [Auth.js](https://authjs.dev) as an OpenID Connect provider. Register
 `https://app.example.com/api/auth/callback/masks` as the redirect URI.
 
 ```ts
@@ -152,7 +180,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 });
 ```
 
-A route handler checks access tokens, DPoP-bound ones included, with `@masks/server`'s verifier:
+A route handler checks access tokens with `@masks/server`'s verifier. This includes DPoP-bound
+tokens.
 
 ```ts
 import { hasScope, Issuer, Verifier } from "@masks/server";
@@ -179,7 +208,7 @@ A Node `http` server or Express app calls `verifier.authenticateNode(request)` i
 
 ## Python
 
-With [Authlib](https://docs.authlib.org) in Flask:
+Sign people in with [Authlib](https://docs.authlib.org) in Flask:
 
 ```python
 from authlib.integrations.flask_client import OAuth
@@ -207,14 +236,15 @@ def callback():
 ### A Python service
 
 [`masks-client`](https://github.com/masksrb/masks/tree/main/python) signs a service or a machine in
-as itself, and checks tokens in an API. It is not on PyPI yet, so it installs from its release tag:
+as itself, and checks tokens in an API. It is not on PyPI yet. Install it from its release tag:
 
 ```sh
 pip install "masks-client @ git+https://github.com/masksrb/masks@python-v0.1.0#subdirectory=python"
 ```
 
-It imports as `masks` and needs Python 3.10 or later. Every call has a synchronous form and an
-`async` one.
+- It imports as `masks`.
+- It needs Python 3.10 or later.
+- Every call has a synchronous form and an `async` one.
 
 ```python
 import httpx
@@ -228,8 +258,8 @@ with httpx.Client(auth=client.auth(source, "https://files.example.com")) as api:
     response = api.get("https://files.example.com/files")
 ```
 
-A FastAPI or other ASGI app checks every request with the middleware, and finds the claims at
-`request.state.masks_claims`:
+A FastAPI or other ASGI app checks every request with the middleware. The claims are at
+`request.state.masks_claims`.
 
 ```python
 from masks.asgi import Middleware
@@ -238,12 +268,12 @@ verifier = masks.AsyncVerifier(issuer, "https://files.example.com", public_url="
 app.add_middleware(Middleware, verifier=verifier)
 ```
 
-In Django or Flask, `masks.Verifier.authenticate` takes the request's method, URL, and headers, and
+In Django or Flask, `masks.Verifier.authenticate` takes the request's method, URL, and headers. It
 raises `masks.InvalidToken` when the check fails.
 
 ## Go
 
-With [go-oidc](https://github.com/coreos/go-oidc) and `golang.org/x/oauth2`:
+Sign people in with [go-oidc](https://github.com/coreos/go-oidc) and `golang.org/x/oauth2`:
 
 ```go
 provider, err := oidc.NewProvider(ctx, "https://auth.example.com")
@@ -257,7 +287,7 @@ config := oauth2.Config{
 verifier := provider.Verifier(&oidc.Config{ClientID: config.ClientID})
 ```
 
-On `/login`, keep the state and the PKCE verifier in the session and send the browser on:
+On `/login`, keep the state and the PKCE verifier in the session, and send the browser to masks:
 
 ```go
 pkce := oauth2.GenerateVerifier()
@@ -279,7 +309,7 @@ err = idToken.Claims(&claims)
 ### A Go service
 
 [`github.com/masksrb/masks/go`](https://github.com/masksrb/masks/tree/main/go) signs a service or a
-machine in as itself, and checks tokens in an API. Its releases are `go/vX.Y.Z` tags.
+machine in as itself, and checks tokens in an API. Each release is a `go/vX.Y.Z` tag.
 
 ```go
 issuer, err := masks.Discover(ctx, "https://auth.example.com")
@@ -294,8 +324,8 @@ api := client.HTTPClient(source, "https://files.example.com")
 response, err := api.Get("https://files.example.com/files")
 ```
 
-An API wraps its handlers in the verifier's middleware, and reads the claims with
-`masks.ClaimsFrom(ctx)`:
+An API wraps its handlers in the verifier's middleware. It reads the claims with
+`masks.ClaimsFrom(ctx)`.
 
 ```go
 verifier := masks.NewVerifier(issuer, "https://files.example.com")
@@ -306,18 +336,29 @@ http.Handle("/files", verifier.Middleware(files))
 
 ## Checking access tokens in an API
 
-An access token from masks is a JWT of type `at+jwt`, signed with a key published at
-`/.well-known/jwks.json`. An API checks its signature, its issuer, and that `aud` names the API. An
-app asks for a token for the API by sending `resource=https://api.example.com` when it signs in, and
-the token's `scope` holds the granted scopes, separated by spaces.
+An access token from masks is a JWT (JSON Web Token) of type `at+jwt`. masks signs it with a key
+published at `/.well-known/jwks.json`. An API checks:
 
-Each SDK's verifier does all of that, and also checks the proof that comes with a DPoP-bound token:
-signed by the token's key, made for this method and URL, made in the last minute, and not seen
-before. Set its public URL when a proxy sits in front of the API, since a proof names the address the
+- its signature
+- its issuer
+- that `aud` names the API
+
+An app asks for a token for the API by sending `resource=https://api.example.com` when it signs in.
+The token's `scope` holds the granted scopes, separated by spaces.
+
+Each SDK's verifier makes all of those checks. It also checks the proof that comes with a DPoP-bound
+token. The proof must be:
+
+- signed by the token's key
+- made for this method and URL
+- made in the last minute
+- not seen before
+
+Set the verifier's public URL when a proxy sits in front of the API. A proof names the address the
 client used.
 
-In a language with no SDK, a JWT library checks a plain bearer token. With
-[jose](https://github.com/panva/jose):
+In a language with no SDK, a JWT library checks a plain bearer token, a token that works for anyone
+who holds it. With [jose](https://github.com/panva/jose):
 
 ```js
 import { createRemoteJWKSet, jwtVerify } from "jose";
@@ -333,5 +374,7 @@ const { payload } = await jwtVerify(token, keys, {
 });
 ```
 
-That check alone accepts a DPoP-bound token without its proof, so an API that receives them uses an
-SDK's verifier.
+:::caution
+That check alone accepts a DPoP-bound token without its proof. An API that receives DPoP-bound
+tokens uses an SDK's verifier.
+:::

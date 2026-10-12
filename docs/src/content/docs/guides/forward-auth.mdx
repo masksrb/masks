@@ -3,38 +3,56 @@ title: Forward authentication
 description: Put masks in front of an app that has no sign-in of its own, with Caddy, Traefik, or nginx.
 ---
 
-An app with no sign-in of its own, such as a dashboard or an admin page, can sit behind a reverse
-proxy that asks masks about each request first. The proxy lets a request through only for someone
-signed in to masks who may use the app, and passes their name along in headers.
+Forward authentication lets masks sign actors in to an app that has no sign-in of its own, such as a
+dashboard or an admin page.
+
+- The app sits behind a reverse proxy. A reverse proxy is a server that receives each request first
+  and passes it on to the app.
+- The proxy asks masks about each request.
+- The proxy lets a request through only for an actor who is signed in to masks and may use the app.
+- The proxy passes the actor's name along to the app in headers.
 
 ## Adding the app
 
-Under **Clients → Add client → A known product**, pick **Any app behind Caddy, Traefik, or nginx** and
-enter the app's address, such as `https://dash.example.com`. masks registers it, shows it under
-**Your apps**, and lists the proxy settings below for that address. **Who may sign in** on its **Access** tab
-limits it to some [groups](/guides/features/#groups), as for any other app.
+1. In `/manage`, open **Clients**.
+2. Choose **Add client**.
+3. Choose **A known product**.
+4. Pick **Any app behind Caddy, Traefik, or nginx**.
+5. Enter the app's address, such as `https://dash.example.com`.
+
+masks registers the app and shows it under **Your apps**. It lists the proxy settings for that
+address below.
+
+To limit the app to some [groups](/guides/features/#groups), use **Who may sign in** on its
+**Access** tab, as for any other app.
 
 ## What happens
 
-1. The proxy asks masks' `/forward-auth` about each request. With the app's cookie, masks answers
-   200 and these headers, which the proxy hands to the app:
+1. The proxy asks masks' `/forward-auth` about each request. If the request has the app's cookie,
+   masks answers 200 with these headers, and the proxy hands them to the app:
 
    | Header | |
    | --- | --- |
-   | `Remote-User` | The person's nickname. |
+   | `Remote-User` | The actor's nickname. |
    | `Remote-Email` | Their email address, when it is confirmed. |
    | `Remote-Name` | Their name. |
    | `Remote-Groups` | The [groups claim](/guides/features/#groups), separated by commas. |
 
-2. Without the cookie, masks sends the browser to sign in on masks' own address, unless the person
-   already has.
-3. masks sends the browser back to `/masks-auth/callback` on the app's address with a code that
-   works once, for that app only, for two minutes. The proxy hands that path to masks, which sets
-   a cookie for the app's host alone and returns the browser to the page it asked for.
+2. If the request has no cookie, masks sends the browser to sign in on masks' own address. It skips
+   this if the actor is already signed in to masks.
+3. masks sends the browser back to `/masks-auth/callback` on the app's address, with a code. The
+   code works once, for that app only, for two minutes.
+4. The proxy hands that path to masks. masks sets a cookie for the app's host alone and returns the
+   browser to the page it asked for.
 
-The cookie lasts as long as the person's masks session. Signing out of masks, ending the session
-from the account page, or being suspended ends access to every app behind the proxy on the next
-request. Each app's cookie is its own, so one app never sees another's.
+The cookie lasts as long as the actor's masks session. Access to every app behind the proxy ends on
+the next request when the actor:
+
+- signs out of masks
+- ends the session from the account page
+- is suspended
+
+Each app has its own cookie, so one app never sees another app's cookie.
 
 ## Caddy
 
@@ -49,7 +67,7 @@ dash.example.com {
 }
 ```
 
-`header_up Host` is needed, since Caddy otherwise sends the app's host to masks.
+`header_up Host` is needed. Without it, Caddy sends the app's host to masks.
 
 ## Traefik
 
@@ -66,8 +84,10 @@ Add the `masks` middleware to the app's router.
 
 ## nginx
 
-nginx's `auth_request` cannot follow a redirect, so it asks for a 401 and sends the browser to sign
-in itself, and it hands the callback to masks with a location of its own:
+nginx's `auth_request` cannot follow a redirect. So the nginx setup differs in two ways:
+
+- It asks masks for a 401 and sends the browser to sign in itself.
+- It hands the callback to masks with a location of its own.
 
 ```nginx
 location = /masks-check {
@@ -97,6 +117,8 @@ location / {
 
 ## Headers the app can trust
 
-The app trusts `Remote-User` only because the proxy sets it. Make sure nothing reaches the app except
-through the proxy, and that the proxy drops any `Remote-` header a browser sends before it adds the
-ones masks answered with.
+The app trusts `Remote-User` only because the proxy sets it. Set up two things:
+
+1. Make sure nothing reaches the app except through the proxy.
+2. Make the proxy drop any `Remote-` header a browser sends, before it adds the headers masks
+   answered with.

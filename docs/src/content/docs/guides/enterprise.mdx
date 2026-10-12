@@ -3,100 +3,150 @@ title: Enterprise
 description: The capabilities a company needs to audit, control, and prove how people sign in, with a link to each guide.
 ---
 
-Each capability below links to the guide that documents it.
+This page lists what a company needs to audit, control, and prove how people sign in. Each section
+links to the guide that covers it.
 
 ## Audit log
 
-Every sign-in, consent, administrative change, token revocation, and key rotation is an event that
-names the action, both accounts involved, the client, the device, the IP address, and the user agent.
-Manage filters events by account, action, and client, and marks the ones that call for attention,
-such as a refused sign-in or a replayed refresh token.
+masks records an event for each of these:
+
+- sign-in
+- consent
+- change made by a manager
+- token revocation
+- key rotation
+
+Each event names the action, both accounts involved, the client, the device, the IP address, and the
+user agent (the browser or program that made the request).
+
+In `/manage`, you can filter events by account, action, and client. `/manage` also marks the events
+that need attention, such as a refused sign-in or a replayed refresh token.
 
 ## Audit export and retention
 
-A tenant keeps events for 30 days to seven years, and any manager downloads a range as a file. See
-[keeping and exporting activity](/guides/security/#keeping-and-exporting-activity).
+- A tenant keeps events for anywhere from 30 days to seven years.
+- Any manager can download a range of events as a file.
+
+See [keeping and exporting activity](/guides/security/#keeping-and-exporting-activity).
 
 ## Event streaming
 
-An event stream posts each event, signed, to an HTTPS endpoint as it happens, and retries failed
-deliveries. See [event streams](/guides/event-streams/).
+An event stream posts each event to an HTTPS endpoint as it happens.
+
+- Each delivery is signed.
+- masks tries a failed delivery again.
+
+See [event streams](/guides/event-streams/).
 
 ## Shared signals
 
-masks is an OpenID Shared Signals transmitter. A receiver registers a stream, and masks pushes it
-signed CAEP and RISC events about the people who use that receiver. See
-[shared signals](/guides/shared-signals/). masks also receives them: a provider that revokes a
-session or disables an account signs that person out here. See
-[receiving signals from a provider](/guides/shared-signals/#receiving-signals-from-a-provider).
+masks sends and receives security events through OpenID Shared Signals.
+
+- **Sending.** masks is a Shared Signals transmitter. A receiver registers a stream. masks then
+  pushes it signed CAEP and RISC events about the people who use that receiver. See
+  [shared signals](/guides/shared-signals/).
+- **Receiving.** A provider can revoke a session or disable an account. masks then signs that
+  person out. See
+  [receiving signals from a provider](/guides/shared-signals/#receiving-signals-from-a-provider).
 
 ## Single sign-on and provisioning
 
-masks signs people in through OpenID Connect, OAuth 2.0, and SAML 2.0 providers, acts as a SAML
-identity provider for applications, and keeps accounts in step with a directory over SCIM. See
-[SSO and SAML](/guides/sso-saml/).
+- masks signs people in through OpenID Connect, OAuth 2.0, and SAML 2.0 providers.
+- masks acts as a SAML identity provider for applications.
+- masks keeps accounts matched with a directory over SCIM.
+
+See [SSO and SAML](/guides/sso-saml/).
 
 ## Home-realm discovery
 
-masks sends someone who types an email address to their company's provider, once the tenant proves
-it controls the domain with a DNS record. See
-[sending a domain to its provider](/guides/sso-saml/#sending-a-domain-to-its-provider).
+Home-realm discovery sends someone who types an email address to their company's provider.
+
+1. The tenant proves it controls the domain with a DNS record.
+2. From then on, masks sends people with an address at that domain to the provider.
+
+See [sending a domain to its provider](/guides/sso-saml/#sending-a-domain-to-its-provider).
 
 ## Custom domains
 
-A tenant serves sign-in from its own host, such as `login.example.com`, as a second issuer beside the
-usual address. See [custom domains](/guides/self-hosting/#custom-domains).
+A tenant can serve sign-in from its own host, such as `login.example.com`. The host is a second
+issuer, beside the usual address. See [custom domains](/guides/self-hosting/#custom-domains).
 
 ## Organizations and roles
 
-An organization holds members in roles, and an app that asks for the `organization` scope gets the
-organization and role in an `org` claim. Each organization can have its own sign-in policy, provider,
-SCIM directory, and event stream. See [organizations](/guides/organizations/).
+An organization holds members, and each member holds a role.
+
+- An app that asks for the `organization` scope gets the organization and role in an `org` claim.
+- Each organization can have its own sign-in policy, provider, SCIM directory, and event stream.
+
+See [organizations](/guides/organizations/).
 
 ## Manage roles
 
-`masks:manage:read`, `masks:manage:support`, and `masks:manage:security` let an auditor, a support
-team, and a security team each do their job in `/manage` and nothing more. See
-[manage roles](/guides/security/#manage-roles).
+Three narrower roles let each team do its job in `/manage` and nothing more.
+
+| Role | For |
+| --- | --- |
+| `masks:manage:read` | An auditor. |
+| `masks:manage:support` | A support team. |
+| `masks:manage:security` | A security team. |
+
+See [manage roles](/guides/security/#manage-roles).
 
 ## Session policies
 
-A sign-in policy sets a session lifetime and an idle timeout. A session past either ends, and its
-refresh tokens stop working. See
-[how long a session lasts](/guides/features/#how-long-a-session-lasts).
+A sign-in policy sets a session lifetime and an idle timeout.
+
+- A session past either one ends.
+- Its refresh tokens stop working.
+
+See [how long a session lasts](/guides/features/#how-long-a-session-lasts).
 
 ## Passwordless email
 
-A sign-in policy can offer a six-digit code sent to the person's address as a first factor, with or
-without a password. See
+A sign-in policy can offer a six-digit code sent to the person's email address as a first factor. It
+can offer the code with or without a password. See
 [signing in with an emailed code](/guides/features/#signing-in-with-an-emailed-code).
 
 ## Adaptive risk
 
-masks scores each sign-in from its device, network, recent failures, and whether the password appears
-in a known breach. A sign-in policy asks for a second factor or refuses from a score it names. See
-[risky sign-ins](/guides/security/#risky-sign-ins).
+masks gives each sign-in a risk score. The score is based on:
+
+- the device
+- the network
+- recent failures
+- whether the password appears in a known breach
+
+A sign-in policy names a score. At that score, it asks for a second factor or refuses the sign-in.
+See [risky sign-ins](/guides/security/#risky-sign-ins).
 
 ## Step-up authentication
 
-Some actions need a stronger or fresher sign-in than the session holds, such as moving money.
+Some actions need a stronger or fresher sign-in than the session holds. Moving money is one example.
 
-- ID tokens carry `auth_time`, `amr`, and an `acr` of `urn:masks:acr:pwd` or `urn:masks:acr:mfa`,
-  the level the sign-in reached.
+- ID tokens carry `auth_time`, `amr`, and `acr`. The `acr` is `urn:masks:acr:pwd` or
+  `urn:masks:acr:mfa`, the level the sign-in reached.
 - A client asks for a fresh sign-in with `max_age` or `prompt=login`.
-- A client asks for a second factor with `acr_values=urn:masks:acr:mfa` or an essential `acr` in the
-  `claims` parameter. A session that already used a second factor is not asked again. Otherwise masks
-  asks for a factor the account holds, or asks the account to add one.
-- `acr_values` is a list of acceptable values, so a request that also accepts `urn:masks:acr:pwd` is
+- A client asks for a second factor with `acr_values=urn:masks:acr:mfa`, or with an essential `acr`
+  in the `claims` parameter.
+  - A session that already used a second factor is not asked again.
+  - Otherwise masks asks for a factor the account holds, or asks the account to add one.
+- `acr_values` is a list of acceptable values. A request that also accepts `urn:masks:acr:pwd` is
   satisfied by a password.
-- In a sign-in policy, **Required for everyone** makes every account hold a second factor. **Asked
-  again at an app sign-in when the session did not use one** asks for it before the app receives a
-  code, even when the session started with a password alone.
+
+Two settings in a sign-in policy control the second factor:
+
+- **Required for everyone** makes every account hold a second factor.
+- **Asked again at an app sign-in when the session did not use one** asks for a second factor before
+  the app receives a code. This happens even when the session started with a password alone.
 
 ## Token exchange
 
-A service acting for a person, including an AI agent, trades the token it holds for a narrower one
-for a downstream service (RFC 8693). Each exchange is recorded as an event without the token. See
-[exchanging a token](/guides/connecting-via-sdk/#exchanging-a-token). A
-[rich authorization request](/guides/security/#rich-authorization-requests) says what a token may do,
-such as one payment to one payee, and an exchange passes those details on or narrows them.
+A service acting for a person, including an AI agent, can trade the token it holds for a narrower
+one. It uses the new token with a downstream service (RFC 8693).
+
+- Each exchange is recorded as an event. The event does not include the token.
+- A [rich authorization request](/guides/security/#rich-authorization-requests) says what a token may
+  do, such as one payment to one payee.
+- An exchange passes those details on, or narrows them.
+
+See [exchanging a token](/guides/connecting-via-sdk/#exchanging-a-token).

@@ -3,51 +3,85 @@ title: Features
 description: Clients, signing in, signing out, organizations, and accounts.
 ---
 
-This page covers what a [client](/guides/core-concepts/#clients) can do, how people sign in to it and
-out of it, and what happens to their accounts over time.
+This page covers:
+
+- what a [client](/guides/core-concepts/#clients) can do
+- how actors sign in to a client and sign out of it
+- what happens to their accounts over time
+
+An actor is a person or a machine that signs in. A client is an app that uses masks to sign actors
+in.
 
 ## Clients
 
 ### Registering a client
 
+There are four ways to register a client. Only some of them make an approved client.
+
 | How | Who | Approved |
 | --- | --- | --- |
-| Added | A manager, in `/manage`, which shows the secret once. | Yes |
-| Handshake | A person completes `/handshake`, and masks returns the credentials to the app server to server. | Yes |
+| Added | A manager, in `/manage`. `/manage` shows the secret once. | Yes |
+| Handshake | A person completes `/handshake`. masks then sends the credentials straight to the app's server. | Yes |
 | Self-registered | The app, over dynamic registration, within the tenant's [ceiling](/guides/core-concepts/#the-ceiling). | No |
-| Metadata document | The app, by using the URL of a document that describes it as its `client_id`. | No |
+| Metadata document | The app. It uses the URL of a document that describes it as its `client_id`. | No |
 
-Only an approved client may hold a `masks:` scope, sign in as itself, receive a
-[delegation](/guides/connecting-via-sdk/#delegation), or name `resources` it serves, since a resource
-trusts the tokens issued for it. A self-registered client that names `resources` is refused. A client grants `required_scopes` always and
-`allowed_scopes` when asked. Archiving a client stops it signing anyone in and keeps its record.
+Only an approved client may:
 
-An access token lasts an hour, and a refresh token lasts 30 days unused, with each refresh starting
-it over. A client's **General** tab sets its own: access tokens from a minute to a day, and refresh tokens from
-5 minutes to 400 days.
+- hold a `masks:` scope
+- sign in as itself
+- receive a [delegation](/guides/connecting-via-sdk/#delegation)
+- name `resources` it serves
+
+A resource trusts the tokens issued for it, so it needs an approved client. A self-registered client
+that names `resources` is refused.
+
+A scope is a named permission that a token holds. A client always grants its `required_scopes`. It
+grants its `allowed_scopes` when asked.
+
+Archiving a client stops it from signing anyone in. masks keeps its record.
+
+Tokens last this long by default:
+
+- An access token lasts an hour.
+- A refresh token lasts 30 days unused. A refresh token is what a client uses to get a new access
+  token. Each refresh starts the 30 days over.
+
+A client's **General** tab sets its own lifetimes:
+
+- Access tokens from a minute to a day.
+- Refresh tokens from 5 minutes to 400 days.
 
 ### Adding a known app
 
-Under **Clients → Add client → A known product**, a manager picks an app and enters its address. masks
-registers it with the redirect URIs and scopes that app expects, sets its address as the **Home page**
-so it appears under **Your apps**, and lists each value to enter in the app under the app's own name
-for it, the client secret included.
+masks knows how to set up some apps. To add one:
+
+1. Choose **Clients**, then **Add client**, then **A known product**.
+2. Pick the app.
+3. Enter its address.
+
+masks then:
+
+- registers it with the redirect URIs and scopes that app expects
+- sets its address as the **Home page**, so it appears under **Your apps**
+- lists each value to enter in the app, under the app's own name for it, including the client secret
 
 | App | Needs beyond its address |
 | --- | --- |
 | Grafana, Nextcloud, Immich, Outline, Audiobookshelf, Portainer, Vaultwarden, Mealie, Open WebUI | Nothing |
-| Gitea, Forgejo, Paperless-ngx, Proxmox VE, Jellyfin (SSO plugin) | The name the app gives masks, `masks` unless you change it |
+| Gitea, Forgejo, Paperless-ngx, Proxmox VE, Jellyfin (SSO plugin) | The name the app gives masks. This is `masks` unless you change it. |
 
-Grafana, Nextcloud, Gitea, Forgejo, Paperless-ngx, Proxmox VE, Jellyfin, Mealie, and Open WebUI read the
-[groups claim](#groups), and the settings map a group called `admins` to each app's administrators
-where the app allows it. Immich and Audiobookshelf read roles from claims of their own, so their
-administrators are chosen in the app.
+Grafana, Nextcloud, Gitea, Forgejo, Paperless-ngx, Proxmox VE, Jellyfin, Mealie, and Open WebUI read
+the [groups claim](#groups). Where the app allows it, the settings map a group called `admins` to the
+app's administrators.
+
+Immich and Audiobookshelf read roles from claims of their own. In those apps, you choose the
+administrators in the app.
 
 ### A client named by its metadata document
 
-An app that has never registered can use the URL of a JSON document it publishes as its `client_id`,
-as MCP clients do. masks fetches the document the first time the URL arrives, and registers the
-client as self-registered.
+An app that has never registered can use a URL as its `client_id`. The URL points to a JSON document
+the app publishes about itself. MCP clients work this way. masks fetches the document the first time
+the URL arrives, and registers the client as self-registered.
 
 ```json
 {
@@ -58,50 +92,85 @@ client as self-registered.
 }
 ```
 
-- The URL is https, has a path, and carries no fragment, credentials, or `.` and `..` segments.
-- The document names its own URL as `client_id`, is at most 5KB, and holds no `client_secret`. masks
-  fetches it under the same rules as every other address it calls, so a private address is refused.
-- The client authenticates with PKCE alone or with `private_key_jwt`.
-- masks keeps the document for as long as its `Cache-Control` allows, between five minutes and a day,
-  and for an hour when it gives no `max-age`. Then masks fetches it again.
-- A document that cannot be fetched or is refused is not fetched again for five minutes, and the
-  client cannot sign anyone in until it is accepted.
-- A manager can archive the client to refuse it. Approving it keeps its redirect URIs, scopes, and
-  keys, and later versions of the document change only its name, links, and logo.
+The URL:
 
-Discovery sets `client_id_metadata_document_supported` to `true` while the tenant allows dynamic
+- uses HTTPS
+- has a path
+- has no fragment, no credentials, and no `.` or `..` segments
+
+The document:
+
+- names its own URL as `client_id`
+- is at most 5 kilobytes
+- holds no `client_secret`
+
+masks fetches the document under the same rules as every other address it calls. A private address
+is refused.
+
+The client signs in in one of two ways:
+
+- with PKCE alone. PKCE (Proof Key for Code Exchange) proves that the same client started and
+  finished a sign-in, without a secret.
+- with `private_key_jwt`
+
+masks keeps a copy of the document and fetches it again later:
+
+- It keeps the copy as long as the document's `Cache-Control` header allows, between five minutes and
+  a day.
+- It keeps the copy for an hour when the header gives no `max-age`.
+- When a document cannot be fetched or is refused, masks waits five minutes before it tries again.
+  The client cannot sign anyone in until the document is accepted.
+
+A manager can archive the client to refuse it. Approving it keeps its redirect URIs, scopes, and
+keys. After that, later versions of the document change only its name, links, and logo.
+
+Discovery is the document at `/.well-known/openid-configuration` that tells apps what masks supports.
+It sets `client_id_metadata_document_supported` to `true` while the tenant allows dynamic
 registration. With registration off, masks fetches no documents.
 
 ### Client authentication
+
+A client proves who it is at the token endpoint. Its `token_endpoint_auth_method` says how.
 
 | `token_endpoint_auth_method` | |
 | --- | --- |
 | `client_secret_basic` | The secret in a Basic `Authorization` header. The default. |
 | `client_secret_post` | The secret in the form body. |
-| `private_key_jwt` | An assertion signed with the client's own key, checked against its `jwks` or `jwks_uri`. |
-| `none` | A public client, which proves itself with PKCE. |
+| `private_key_jwt` | An assertion signed with the client's own key. masks checks it against the client's `jwks` or `jwks_uri`. |
+| `none` | A public client. It proves itself with PKCE. |
 
-masks stores only a hash of a secret, and refuses a client that authenticates by a method other than
-the one it registered. A `private_key_jwt` assertion is accepted once and expires within an hour. An
-unknown key makes masks fetch the `jwks_uri` again, so a client can rotate keys without telling it.
+- masks stores only a hash of a secret.
+- masks refuses a client that uses a method other than the one it registered.
+- A `private_key_jwt` assertion is accepted once, and expires within an hour.
+- When an assertion uses a key masks does not know, masks fetches the `jwks_uri` again. A client can
+  rotate its keys without telling masks.
 
 ### Consent
 
-masks asks each person once before a client receives anything. It asks again when the client asks
-for more scopes or resources, passes `prompt=consent`, or sends
-[authorization details](/guides/security/#rich-authorization-requests) the person has not approved.
+masks asks each actor once before a client receives anything. It asks again when the client:
 
-- Approving a handshake is the approver's consent, and nobody else's.
+- asks for more scopes or resources
+- passes `prompt=consent`
+- sends [authorization details](/guides/security/#rich-authorization-requests) the actor has not
+  approved
+
+Some rules change when masks asks:
+
+- Approving a handshake is the consent of the actor who approved it, and of nobody else.
 - A manager can turn `consent_required` off for an approved client, such as a first-party app. A
   self-registered client always asks.
-- A manager can set a client's consent lifetime, from five minutes to 400 days. Once a consent is
-  that old, the person is asked again. Without a lifetime, a consent lasts until it is revoked.
+- A manager can set a client's consent lifetime, from five minutes to 400 days. Once a consent is that
+  old, masks asks the actor again. Without a lifetime, a consent lasts until it is revoked.
 
 ### Subject identifiers
 
-A `public` client sees the person's own identifier as `sub`. A `pairwise` client sees one derived for
-its sector, the host of its redirect URIs, so two sectors cannot match their people. A client with
-redirect URIs on more than one host registers a `sector_identifier_uri` that lists them all.
+The `sub` claim is the identifier a client sees for an actor.
+
+- A `public` client sees the actor's own identifier as `sub`.
+- A `pairwise` client sees an identifier made for its sector. The sector is the host of its redirect
+  URIs. Two sectors cannot match up their actors.
+- A client with redirect URIs on more than one host registers a `sector_identifier_uri` that lists
+  them all.
 
 ### Signing in as itself
 
@@ -113,15 +182,20 @@ curl -u "$CLIENT_ID:$CLIENT_SECRET" https://acme.auth.example.com/token \
   -d scope="xixo:catalog:read"
 ```
 
-A manager enables it for an approved client. The token names the client as `sub`, carries no
-refresh token, and never holds a scope that acts for a person, such as `openid` or `masks:manage`.
+A manager turns this on for an approved client. The token:
+
+- names the client as `sub`
+- comes with no refresh token
+- never holds a scope that acts for a person, such as `openid` or `masks:manage`
 
 ### Enrolling a machine
 
 An approved app that has claimed a [namespace](/guides/core-concepts/#namespaces) can enroll machines
-of its own, such as an agent it installs on each computer in a home. Nobody approves each machine in
-a browser. The app asks `/enrollments` for an initial access token, authenticating the way it does at
-the token endpoint:
+of its own. An example is an agent the app installs on each computer in a home. Nobody approves each
+machine in a browser.
+
+The app asks `/enrollments` for an initial access token. It authenticates the same way it does at the
+token endpoint:
 
 ```sh
 curl -u "$CLIENT_ID:$CLIENT_SECRET" https://acme.auth.example.com/enrollments \
@@ -134,11 +208,13 @@ curl -u "$CLIENT_ID:$CLIENT_SECRET" https://acme.auth.example.com/enrollments \
 { "initial_access_token": "…", "expires_in": 900, "scope": "xixo:agent" }
 ```
 
-Every scope must fall under one of the app's namespaces. A prefix and any `masks:` scope are refused.
-The token lasts from a minute to an hour, 15 minutes by default, and is spent the first time it
-registers a machine. Discovery publishes the endpoint as `enrollment_endpoint`.
+- Every scope must fall under one of the app's namespaces.
+- A prefix is refused, and so is any `masks:` scope.
+- The token lasts from a minute to an hour. The default is 15 minutes.
+- The token is spent the first time it registers a machine.
+- Discovery publishes the endpoint as `enrollment_endpoint`.
 
-The machine makes its own keys and registers the public half with the token as its bearer:
+The machine makes its own keys. It registers the public half, with the token as its bearer:
 
 ```sh
 curl https://acme.auth.example.com/register \
@@ -147,151 +223,215 @@ curl https://acme.auth.example.com/register \
   -d '{"client_name": "nas", "jwks": {"keys": [ … ]}}'
 ```
 
-masks answers with a new client that is approved for the token's scopes and the app's resources. It
-authenticates only with `private_key_jwt` against those keys, uses only the `client_credentials`
-grant, and holds every access token to a DPoP key. The answer carries a registration access token
-and no secret, so the private key never leaves the machine. The machine can replace its keys through
-[registration management](/reference/specs/#tokens). Its scopes, grants, resources, and way of
-authenticating stay as enrolled. A registration without `jwks`, or with a `jwks_uri`, is refused and
-leaves the token unspent.
+masks answers with a new client. It is approved for the token's scopes and the app's resources. The
+new client:
 
-The new client names the app as `enrolledBy` in the manage API. Archiving the app archives every
-machine it enrolled and revokes their tokens, so introspection stops calling them active. Each request and each machine is recorded as an event.
+- authenticates only with `private_key_jwt`, against those keys
+- uses only the `client_credentials` grant
+- binds every access token to a DPoP key. DPoP ties a token to a key, so the token works only for
+  whoever holds that key.
 
-The app unenrolls a machine it enrolled with a `DELETE` to the same endpoint, authenticating the same
-way:
+The answer holds a registration access token and no secret. The private key never leaves the
+machine.
+
+The machine can replace its keys through [registration management](/reference/specs/#tokens). Its
+scopes, grants, resources, and way of authenticating stay as enrolled.
+
+A registration without `jwks`, or with a `jwks_uri`, is refused. The token stays unspent.
+
+In the manage API, the new client names the app as `enrolledBy`. Archiving the app:
+
+- archives every machine it enrolled
+- revokes the machines' tokens, so introspection stops calling them active
+
+masks records each request and each machine as an event.
+
+To unenroll a machine it enrolled, the app sends a `DELETE` to the same endpoint. It authenticates the
+same way:
 
 ```sh
 curl -u "$CLIENT_ID:$CLIENT_SECRET" -X DELETE \
   https://acme.auth.example.com/enrollments/$MACHINE_CLIENT_ID
 ```
 
-masks archives the machine, revokes every token it holds, and answers `204`. Asking again answers the
-same. A client the app did not enroll is refused with `404`.
+masks archives the machine, revokes every token it holds, and answers `204`. Asking again gets the
+same answer. A client the app did not enroll is refused with `404`.
 
 ## Signing in
 
 ### Sign-in policies
 
-A sign-in uses the [organization's](/guides/organizations/#policy) policy, the client's, the
-tenant's default, or the built-in one, in that order. `/manage` edits them.
+A policy sets how actors sign in. A sign-in uses the first of these that exists:
+
+1. The [organization's](/guides/organizations/#policy) policy.
+2. The client's policy.
+3. The tenant's default policy.
+4. The built-in policy.
+
+You edit policies in `/manage`.
 
 | Setting | Default | |
 | --- | --- | --- |
-| `first_factors` | `password`, `passkey`, `provider` | How a person proves who they are. Also accepts `email_code`. |
+| `first_factors` | `password`, `passkey`, `provider` | How an actor proves who they are. Also accepts `email_code`. |
 | `second_factors` | `otp`, `passkey`, `backup_codes` | Also accepts `email`, `sms`, and `trusted_device`. |
 | `second_factor_required` | off | Ask for a second factor at every sign-in. |
 | `password_minimum` | `8` | Minimum password length. |
 | `refuse_common_passwords` | on | Refuse passwords on a list of about 47,000 common ones. |
-| `password_required` | off | Every account made at signup sets a password, and a passkey alone is not offered. |
+| `password_required` | off | Every account made at signup sets a password. A passkey alone is not offered. |
 | `providers` | every provider | Which [providers](/guides/sso-saml/#providers) to offer. |
 | `signup` | off | Let people create their own accounts. |
 | `confirmation` | `none` | How a new account is confirmed: `none`, `code`, `link`, or `approval`. |
-| `email_domains` | any | The address domains signup and provider sign-in accept. |
+| `email_domains` | any | The email domains that signup and provider sign-in accept. |
 | `proof_of_work` | `17` | Leading zero bits a browser finds before it signs up. `0` turns the check off. |
 
-A policy also refuses [breached passwords](/guides/security/#breached-passwords) and steps up
-[risky sign-ins](/guides/security/#risky-sign-ins). A factor the policy does not list is hidden and
-refused. The tenant's default always keeps a password or a passkey, so managers are never locked out.
-Whatever the policy says, a manager must set up an authenticator app or a passkey as a second
-factor.
+A policy also:
+
+- refuses [breached passwords](/guides/security/#breached-passwords)
+- asks for more proof on [risky sign-ins](/guides/security/#risky-sign-ins)
+- hides and refuses any factor it does not list
+
+The tenant's default policy always keeps a password or a passkey, so managers are never locked out.
+Whatever the policy says, a manager must set up an authenticator app or a passkey as a second factor.
 
 ### Signup proof of work
 
-When signup is open, the details step carries a challenge masks signs with its secret key: a random
-nonce, the policy's `proof_of_work` difficulty, and the sign-in it belongs to. The browser hashes the
-nonce with a rising counter using SHA-256 until the digest starts with that many zero bits, then sends
-the counter with the details. Each extra bit doubles the work. The default of 17 takes about a second
-on a laptop, and makes creating accounts in bulk slow and costly.
+Proof of work makes the browser do a small amount of computing before it can sign up. This makes
+creating accounts in bulk slow and costly.
 
-masks checks the answer with one hash. A challenge lasts ten minutes, is accepted once, and only for
-the sign-in it was issued to. Nothing goes to a third-party service. Without JavaScript the browser
-cannot answer, so signup says it needs JavaScript. The first account on a tenant and invitations
-skip the check.
+When signup is open, the details step holds a challenge. masks signs it with its secret key. The
+challenge holds:
+
+- a random nonce, a value used only once
+- the policy's `proof_of_work` difficulty
+- the sign-in it belongs to
+
+The browser then:
+
+1. Hashes the nonce with a rising counter, using SHA-256.
+2. Stops when the result starts with that many zero bits.
+3. Sends the counter with the details.
+
+Each extra bit doubles the work. The default of 17 takes about a second on a laptop.
+
+- masks checks the answer with one hash.
+- A challenge lasts ten minutes. It is accepted once, and only for the sign-in it was issued to.
+- Nothing goes to a third-party service.
+- Without JavaScript the browser cannot answer, so signup says it needs JavaScript.
+- The first account on a tenant skips the check, and so do invitations.
 
 ### First factors
 
+A first factor is how an actor first proves who they are.
+
 | Factor | |
 | --- | --- |
-| Password | Stored as a bcrypt hash, and checked against the policy's minimum and common passwords. |
-| Passkey | WebAuthn. It counts as a second factor too when the authenticator verified the person. |
+| Password | Stored as a bcrypt hash. Checked against the policy's minimum and the common passwords. |
+| Passkey | WebAuthn. It also counts as a second factor when the authenticator verified the person. |
 | Provider | An account at Google, Okta, a SAML identity provider, and others. See [SSO / SAML](/guides/sso-saml/). |
-| Emailed code | A six-digit code sent to the account's address, with no password. See [signing in with an emailed code](#signing-in-with-an-emailed-code). |
+| Emailed code | A six-digit code sent to the account's email address, with no password. See [signing in with an emailed code](#signing-in-with-an-emailed-code). |
 
-When the policy offers passkeys at signup and the browser can make one, the credentials step offers
-**A passkey** beside **A password**, and starts on the passkey. An account made with a passkey has no
-password. Its passkey checked who the person is, so it counts as both factors, including the second
-factor a manager or a policy requires. The person can set a password later from **Password**, or
-through a reset link sent to their email address. A policy with `password_required` offers only the
-password at signup.
+When the policy offers passkeys at signup and the browser can make one:
+
+- The credentials step offers **A passkey** beside **A password**, and starts on the passkey.
+- An account made with a passkey has no password.
+- The passkey checked who the person is, so it counts as both factors. This includes the second
+  factor a manager or a policy requires.
+- The person can set a password later from **Password**, or through a reset link sent to their email
+  address.
+
+A policy with `password_required` offers only the password at signup.
 
 When the policy offers passkeys and the browser supports passkey autofill, the sign-in field lists
-the person's passkeys among its suggestions. Choosing one signs in without typing a nickname or
+the actor's passkeys among its suggestions. Choosing one signs in without typing a nickname or
 address.
 
-masks names each passkey after its authenticator from the
-[FIDO Metadata Service](https://fidoalliance.org/metadata/), and marks one the service reports as
-compromised. A passkey whose signature counter fails to advance is treated as copied, and its sign-in
-is refused.
+masks names each passkey after its authenticator, using the
+[FIDO Metadata Service](https://fidoalliance.org/metadata/). It marks a passkey that the service
+reports as compromised.
+
+When a passkey's signature counter fails to advance, masks treats the passkey as copied and refuses
+its sign-in.
 
 ### Signing in with an emailed code
 
-A policy that offers **Emailed code** shows **Email me a code** after the person identifies, or only
-that button when it offers no password. Since the tenant's default keeps a password or a passkey,
-offer a code alone on a policy for the apps that want it.
+A policy that offers **Emailed code** shows **Email me a code** after the actor enters who they are.
+When the policy offers no password, it shows only that button.
 
-- The code has six digits, lasts ten minutes, and allows five attempts. Another can be sent after 30
-  seconds, within the account's rate limit.
-- An address or nickname with no account gets the same screen and no mail, so the form does not
-  reveal who has an account. Neither does an account that has reached its limit of codes.
-- An account that has not accepted its invitation gets no code, and neither does one with a password
-  and an unconfirmed address. This stops someone from signing up with another person's address,
-  setting a password, and waiting for that person to confirm the address by signing in with a code.
-- Signing in with a code confirms the address of an account with no password.
-- Under a policy that hides who has an account, the address is proven first.
+The tenant's default policy keeps a password or a passkey. To offer a code alone, set it on a policy
+for the apps that want it.
+
+- The code has six digits, lasts ten minutes, and allows five attempts.
+- Another code can be sent after 30 seconds, within the account's rate limit.
+- An email address or nickname with no account gets the same screen and no mail. The form does not
+  show who has an account. An account that has reached its limit of codes gets the same treatment.
+- An account that has not accepted its invitation gets no code.
+- An account with a password and an unconfirmed email address gets no code. This stops someone
+  from signing up with another person's address, setting a password, and waiting for that person to
+  confirm the address by signing in with a code.
+- Signing in with a code confirms the email address of an account with no password.
+- Under a policy that hides who has an account, the actor proves the address first.
 - The code proves the inbox, so it records `otp` and never counts as a second factor. The email
   second factor is not offered after it, because both would come from the same inbox.
 
 ### Second factors
 
+A second factor is a second proof, asked for after the first factor.
+
 | Factor | |
 | --- | --- |
-| Authenticator app | A TOTP code. Recorded as `otp` in `amr`. |
+| Authenticator app | A TOTP code, a time-based code the app shows. Recorded as `otp` in `amr`, the claim that lists how the actor signed in. |
 | Passkey | A registered passkey. |
 | Backup codes | One-time codes, for when the other factors are lost. |
-| Email code | A six-digit code sent to a confirmed address. Recorded as `otp`. |
-| SMS code | A six-digit code sent through the tenant's SMS service. Recorded as `sms`. |
-| Trusted device | The person enters a code shown on the new sign-in into the account page of a device they trusted. |
+| Email code | A six-digit code sent to a confirmed email address. Recorded as `otp`. |
+| SMS code | A six-digit code sent by text message through the tenant's SMS service. Recorded as `sms`. |
+| Trusted device | The actor enters a code shown on the new sign-in into the account page of a device they trusted. |
 
-Each person turns email and SMS codes on from the account page once the address is
-confirmed. Once on, a code is asked for at every sign-in, under any policy, as an authenticator app
-is. Changing the address turns its codes off, and so does a password reset through an emailed link.
-An email code does not confirm a sign-in whose first factor was a provider.
+Email and SMS codes work like this:
 
-A person adds or removes an authenticator app from the account page, and makes a new set of backup
-codes there once they have an authenticator app or a passkey. Each of these asks for a sign-in within
-the last 15 minutes. Adding the first authenticator app also makes backup codes when the account has
-none. New backup codes replace the old set, and removing the authenticator app drops the backup
-codes unless a passkey remains.
+- Each person turns email and SMS codes on from the account page, once the address or phone number is
+  confirmed.
+- Once on, a code is asked for at every sign-in, under any policy, the same as an authenticator app.
+- Changing the address or phone number turns its codes off.
+- A password reset through an emailed link also turns them off.
+- An email code does not confirm a sign-in whose first factor was a provider.
 
-A person who gets past their first factor and cannot use any second factor chooses **I cannot use
-any of these** to ask a manager for help. masks records `recovery.requested`, mails every manager
-and support manager with a confirmed address, and mails the person, so someone who stole only a
-password is noticed. Asking again within a day mails nobody. The overview in `/manage` counts who
-asked, and the **Asking for help** filter on **Actors** lists them. On the person's page, a manager
-either dismisses the request or resets their second factors.
-Resetting removes the authenticator app, backup codes, passkeys, and sign-in codes, and signs the
-person out everywhere. Their next sign-in asks for a new second factor when the policy requires one.
+A person adds or removes an authenticator app from the account page. They make a new set of backup
+codes there once they have an authenticator app or a passkey.
 
-After a second factor from an authenticator app, a passkey, or a sent code, the person can ask masks
-to trust the device. The second factor is then skipped on that device for 30 days, or until the
-device is signed out.
+- Each of these asks for a sign-in within the last 15 minutes.
+- Adding the first authenticator app also makes backup codes when the account has none.
+- New backup codes replace the old set.
+- Removing the authenticator app drops the backup codes, unless a passkey remains.
+
+An actor who gets past the first factor but cannot use any second factor can ask a manager for help.
+
+1. The actor chooses **I cannot use any of these**.
+2. masks records `recovery.requested`.
+3. masks mails every manager and support manager with a confirmed email address.
+4. masks mails the actor too. This way, someone who stole only the password gets noticed.
+
+Asking again within a day mails nobody.
+
+In `/manage`, the overview counts who asked. The **Asking for help** filter on **Actors** lists them.
+On the actor's page, a manager does one of two things:
+
+- Dismisses the request.
+- Resets their second factors. This removes the authenticator app, backup codes, passkeys, and
+  sign-in codes, and signs the actor out everywhere. Their next sign-in asks for a new second factor
+  when the policy requires one.
+
+After a second factor from an authenticator app, a passkey, or a sent code, the actor can ask masks to
+trust the device. masks then skips the second factor on that device for 30 days, or until the device
+is signed out.
 
 ### Device sign-in
 
-A device that cannot run a browser, such as a television or a CLI, uses the device grant. It asks
-`/device_authorization` for a code, shows the person the code and `/device`, and polls `/token`
-until the person approves on another device.
+A device that cannot run a browser, such as a television or a command-line tool, uses the device
+grant:
+
+1. The device asks `/device_authorization` for a code.
+2. It shows the person the code and the `/device` address.
+3. It polls `/token`, asking again and again, until the person approves on another device.
 
 | Poll response | Do |
 | --- | --- |
@@ -300,19 +440,31 @@ until the person approves on another device.
 | `access_denied` | Stop. The person declined. |
 | `expired_token` | Request a new code. Codes last fifteen minutes. |
 
-A user code is eight letters with no vowels, such as `BCDF-GHJK`. Case and dashes are ignored.
+A user code is eight letters with no vowels, such as `BCDF-GHJK`. masks ignores case and dashes.
 
 ### Languages
 
-Sign-in, consent, account pages, mail, and `/manage` speak English, French, Spanish, and German. masks
-picks the first of those the browser's `Accept-Language` asks for, or the one an app names in
-`ui_locales`, and answers in English otherwise. Dates and times follow the same language.
+These pages speak English, French, Spanish, and German:
+
+- sign-in
+- consent
+- account pages
+- mail
+- `/manage`
+
+masks picks the language in this order:
+
+1. The first of the four languages that an app names in `ui_locales`.
+2. The first of the four languages that the browser's `Accept-Language` header asks for.
+3. English, when neither of those matches.
+
+Dates and times follow the same language.
 
 ## Signing out
 
 ### Signing out from an app
 
-An app sends the browser to `/logout`, the `end_session_endpoint` in discovery:
+An app sends the browser to `/logout`. Discovery lists this as the `end_session_endpoint`.
 
 ```
 GET https://acme.auth.example.com/logout
@@ -320,21 +472,25 @@ GET https://acme.auth.example.com/logout
   &post_logout_redirect_uri=https://app.example.com/signed-out
 ```
 
-`post_logout_redirect_uri` must be one the client registered. A `GET` without an `id_token_hint` for
-the signed-in person shows a confirmation screen first, so a link on another site cannot sign
-someone out.
+- `post_logout_redirect_uri` must be one the client registered.
+- A `GET` without an `id_token_hint` for the signed-in actor shows a confirmation screen first. A link
+  on another site cannot sign someone out.
 
 ### Telling other apps
 
-When a session ends, masks posts a signed `logout+jwt` to the `backchannel_logout_uri` of every app
-the person used in it. masks tries each delivery five times, and records one that still fails on the
-person's activity. masks never posts to a private address for a self-registered app. SAML
-applications hear through [single logout](/guides/sso-saml/#single-logout).
+When a session ends, masks tells every app the actor used in that session. This is back-channel
+logout.
+
+- masks posts a signed `logout+jwt` to each app's `backchannel_logout_uri`.
+- masks tries each delivery five times. It records a delivery that still fails in the actor's
+  activity.
+- masks never posts to a private address for a self-registered app.
+- SAML applications hear through [single logout](/guides/sso-saml/#single-logout).
 
 ### Sessions and devices
 
-A **session** is one signed-in browser. A **device** is the browser itself, known by a cookie that
-lasts 400 days.
+- A **session** is one signed-in browser.
+- A **device** is the browser itself. masks knows it by a cookie that lasts 400 days.
 
 | Action | Ends |
 | --- | --- |
@@ -343,7 +499,7 @@ lasts 400 days.
 | Sign an actor out | Every session and refresh token on every device. |
 | Block a device | Every request from it, before any password is checked. |
 
-`/manage` also lists devices that never finished signing in, so they can still be blocked.
+`/manage` also lists devices that never finished signing in, so you can still block them.
 
 ### How long a session lasts
 
@@ -352,33 +508,41 @@ A session lasts 14 days by default. A sign-in policy changes this under **Sessio
 | Setting | Effect |
 | --- | --- |
 | Lifetime | A session started under the policy expires this long after signing in. An app covered by the policy asks for the password again in any older session. |
-| Idle timeout | A session started under the policy ends after this long with no request, and masks records `session.expired`. An app covered by the policy asks for the password again after a gap this long. |
+| Idle timeout | A session started under the policy ends after this long with no request. masks records `session.expired`. An app covered by the policy asks for the password again after a gap this long. |
 
-Both run from 5 minutes to 400 days, and the idle timeout is shorter than the lifetime. A refresh
-token issued in a session that either setting bounds stops working when the session ends, including
-when the person signs out. A session with neither setting leaves refresh tokens to their own
-lifetime.
+- Both settings run from 5 minutes to 400 days.
+- The idle timeout is shorter than the lifetime.
+- A refresh token issued in a session that either setting limits stops working when the session ends.
+  This includes when the actor signs out.
+- In a session with neither setting, refresh tokens follow their own lifetime.
 
 ## Organizations
 
-An **organization** is a customer inside a tenant, whose members each hold a role there. An app that
-asks for the `organization` scope signs a person in as a member of one. See
+An **organization** is a customer inside a tenant. Each member holds a role there. An app that asks
+for the `organization` scope signs an actor in as a member of one organization. See
 [organizations](/guides/organizations/).
 
 ## Groups
 
-A **group** is a named set of people in a tenant, such as `admins` or `family`. A person can be in
-any number of groups. Managers with the security role add groups under **Settings → General → Groups**, and put
-people in them on each person's **Access** tab.
+A **group** is a named set of actors in a tenant, such as `admins` or `family`. An actor can be in any
+number of groups.
 
-An app that asks for the `groups` scope receives a `groups` claim in the ID token and from userinfo.
-It lists the key of each group the person is in, and each organization role they hold as `key:role`:
+To set up groups, a manager with the security role:
+
+1. Adds groups under **Settings**, then **General**, then **Groups**.
+2. Puts actors in them on each actor's **Access** tab.
+
+An app that asks for the `groups` scope receives a `groups` claim. The claim is in the ID token and in
+the userinfo answer. It lists:
+
+- the key of each group the actor is in
+- each organization role they hold, written as `key:role`
 
 ```json
 { "groups": ["acme:owner", "admins", "family"] }
 ```
 
-Every person may grant the `groups` scope, whatever their own scopes are. Apps that map roles from a
+Every actor may grant the `groups` scope, whatever their own scopes are. Apps that map roles from a
 claim read this one. In Grafana, for example:
 
 ```ini
@@ -389,81 +553,112 @@ role_attribute_path = contains(groups[*], 'admins') && 'Admin' || 'Viewer'
 
 ### Who may sign in to an app
 
-On a client's **Access** tab, **Who may sign in** limits it to people in some groups, or with some organization
-roles written as `key:role`. Anyone else who signs in to it is sent back to the app with
-`access_denied`, and the refusal appears in their activity. Taking someone out of the group ends their
-next refresh with `invalid_grant`. A client with nothing ticked lets everyone in.
+On a client's **Access** tab, **Who may sign in** limits the client to some actors. Tick groups, or
+organization roles written as `key:role`.
+
+- Anyone else who signs in to it is sent back to the app with `access_denied`. The refusal appears in
+  their activity.
+- Taking someone out of the group ends their next refresh with `invalid_grant`.
+- A client with nothing ticked lets everyone in.
 
 ## Accounts
 
 ### Suspending and deleting
 
-A manager suspends, restores, or deletes an actor in `/manage`, and an identity provider does the
-same over [SCIM](/guides/sso-saml/#provisioning). Suspending signs the actor out everywhere and
-refuses every sign-in until a manager restores them. Deleting signs them out everywhere, tells apps
-that registered for back-channel logout, and removes their passkeys, consents, connected accounts,
-and photo. Nobody can suspend or delete the last manager.
+A manager suspends, restores, or deletes an actor in `/manage`. An identity provider does the same
+over [SCIM](/guides/sso-saml/#provisioning), a protocol that directories use to manage accounts in
+other systems.
+
+- Suspending signs the actor out everywhere. It refuses every sign-in until a manager restores them.
+- Deleting signs the actor out everywhere, and tells apps that registered for back-channel logout. It
+  removes their passkeys, consents, connected accounts, and photo.
+- Nobody can suspend or delete the last manager.
 
 ### Idle accounts
 
-A tenant can suspend accounts nobody uses, and later delete them. Under **Settings**, **Policies**,
-**Auto-deletion** in `/manage`, **Suspend** and **Delete** each take a period, and either can be left at **Never**. When
-both are set, deleting comes later than suspending.
+A tenant can suspend accounts nobody uses, and later delete them. To set this up in `/manage`:
 
-- Signing in, and an app refreshing a token for the person, both count as using the account.
-- masks emails a warning 30 days before each step, and takes the step no sooner than 30 days after
-  its warning. Turning the settings on or changing them gives every account a fresh 30 days.
-- Signing in before a suspension keeps the account. Once suspended, only a manager can restore it,
-  and the warning before deletion says so.
-- With **Suspend** set, only accounts suspended for being idle are deleted. With **Suspend** at
-  **Never**, an idle account is deleted directly. An account a manager or an identity provider
-  suspended stays until they decide.
-- An account with no confirmed email address cannot be warned, and follows the same schedule.
-- The last manager, accounts provisioned over SCIM, and invitations nobody has accepted are never
-  touched.
-- A daily job does the work, and records each warning, suspension, and deletion as an event.
+1. Open **Settings**, then **Policies**, then **Auto-deletion**.
+2. Set a period for **Suspend**, **Delete**, or both. Leave either at **Never** to turn it off.
+
+When both are set, deleting comes later than suspending.
+
+- Signing in counts as using the account. So does an app refreshing a token for the actor.
+- masks emails a warning 30 days before each step. It takes the step no sooner than 30 days after the
+  warning.
+- Turning the settings on or changing them gives every account a fresh 30 days.
+- Signing in before a suspension keeps the account. Once it is suspended, only a manager can restore
+  it. The warning before deletion says so.
+- With **Suspend** set, masks deletes only accounts suspended for being idle.
+- With **Suspend** at **Never**, masks deletes an idle account directly.
+- An account that a manager or an identity provider suspended stays until they decide.
+- An account with no confirmed email address cannot be warned. It follows the same schedule.
+- masks never touches the last manager, accounts provisioned over SCIM, or invitations nobody has
+  accepted.
+- A daily job does the work. It records each warning, suspension, and deletion as an event.
 
 ### Your apps
 
-The top of a person's account page shows **Your apps**: every approved client that names a home page
-in **Home page**, and every SAML application that can start a sign-in itself, that the person may
-sign in to. Each opens the app, or starts the SAML sign-in through masks. A client nobody approved
-never appears, since it chose its own home page.
+The top of a person's account page shows **Your apps**. It lists the apps the person may sign in to:
+
+- every approved client that names a home page in **Home page**
+- every SAML application that can start a sign-in itself
+
+Each one opens the app, or starts the SAML sign-in through masks. A client nobody approved never
+appears, because it chose its own home page.
 
 ### Changing your own details
 
 A person changes their name and nickname under **Name** on their account page.
 
-A new email address or phone number takes effect once the person enters the six-digit code masks sends
-to it. Whether another account already uses the address shows only after the code is entered. The
-change asks for a sign-in within the last 15 minutes, and turns off sign-in codes sent to the old
-address. When the old email address was confirmed, masks mails it about the change. A person can also
-remove their phone number, unless the sign-in policy requires one.
+To change an email address or phone number:
+
+1. Enter the new email address or phone number.
+2. Enter the six-digit code masks sends to it.
+
+The change takes effect once the code is entered.
+
+- Whether another account already uses the address shows only after the code is entered.
+- The change asks for a sign-in within the last 15 minutes.
+- The change turns off sign-in codes sent to the old address.
+- When the old email address was confirmed, masks mails it about the change.
+- A person can also remove their phone number, unless the sign-in policy requires one.
 
 An account that signs in only with a passkey or another account can set a password from **Password**,
 after a recent sign-in. Setting it signs out every other session.
 
 Accounts a directory provisions over SCIM keep the name and addresses the directory gives them.
 
-When a manager changes someone's email address in `/manage`, the old address is mailed as well.
+When a manager changes someone's email address in `/manage`, masks mails the old address as well.
 
 ### Downloading your own account
 
-A person downloads everything masks holds about them as a JSON file from **Download your account** on
-their account page.
+A person downloads everything masks holds about them as a JSON file. They choose **Download your
+account** on their account page.
 
-The file holds their profile, which factors they use and when each was added, their passkeys,
-organizations and roles, connected accounts and what each app was allowed to do with them, the apps
-they consented to, their devices, and every event about them that the tenant still keeps. It holds
-no password hash, authenticator secret, backup code, token, or key.
+The file holds:
 
-Each download is recorded as `account.exported`, and the person is emailed unless they turned off
-the **Account** group under **Emails we send you**. A person can download their account five times an hour.
+- their profile
+- which factors they use, and when each was added
+- their passkeys
+- their organizations and roles
+- their connected accounts, and what each app was allowed to do with them
+- the apps they consented to
+- their devices
+- every event about them that the tenant still keeps
+
+It holds no password hash, authenticator secret, backup code, token, or key.
+
+- masks records each download as `account.exported`.
+- masks emails the person, unless they turned off the **Account** group under **Emails we send you**.
+- A person can download their account five times an hour.
 
 ### Deleting your own account
 
-A person deletes their own account at the bottom of their account page, by typing its nickname or
-email. The last manager and an account provisioned over SCIM cannot delete themselves.
+A person deletes their own account at the bottom of their account page. They type its nickname or
+email address to confirm.
+
+The last manager cannot delete their own account. Neither can an account provisioned over SCIM.
 
 Downloading and deleting both ask a person who signed in more than 15 minutes ago to sign in again
 first.

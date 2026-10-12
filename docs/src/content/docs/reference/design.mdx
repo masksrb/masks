@@ -1,47 +1,57 @@
 ---
 title: Design
-description: One palette for /manage, the sign-in pages and this site, drawn from the mark.
+description: The colors and type of the sign-in pages, /manage, and this site, and where each one is set.
 ---
 
 import mark from "../../../assets/masks.svg";
 
-`server/app/frontend/entrypoints/app.css` · `docs/src/styles/global.css`
+masks has two looks:
 
-The palette is sampled from a stained-glass rose window. Three material families do three jobs, and
-the rule for which is which is the whole system.
+- The sign-in and account pages, and this site, use the rose window palette, drawn from the masks
+  mark.
+- `/manage` uses its own quieter palette, built for dense tables and forms.
 
-| | |
+Each page follows the reader's system setting for light or dark mode, except this site, which is
+always dark.
+
+| Where | Set in |
 | --- | --- |
-| **Lead** | the ground and the neutrals |
-| **Came** | the brass and silver joining the panes — every rule, border, focus ring and eyebrow |
-| **Glass** | the rainbow — links, badges, status, asides, chart marks |
+| Sign-in and account pages | `server/app/frontend/entrypoints/app.css` |
+| `/manage` | `server/app/frontend/entrypoints/console.css` |
+| This site | `docs/src/styles/global.css` |
 
-Sign-in follows the reader's system setting; `/manage` is pinned dark. Both draw from the same
-tokens, so a token changed in one place changes both.
-
-## What the window contains
+## The mark
 
 <img src={mark.src} class="mark" alt="The masks mark, a stained-glass rose window" />
 
-The mark is that window, traced. A photograph of it is smoothed, snapped to thirteen glass colours
-with anything near black taken as lead, and each colour traced as one vector layer. The same file is
-`engine/public/masks-public/icon.svg`, the favicon everywhere, the brand in `/manage` and this site's logo.
+The mark is a stained-glass rose window, traced. It was made from a photograph in four steps:
 
-The window it came from is 188×188 and indexed, 28 significant colours. Pure black is 49.3% of it.
-Every value lands on `0x2a / 0x55 / 0x7f / 0xaa / 0xff`, so these are dithered index entries rather
-than chosen colours — too saturated to use directly, but they fix the hues everything else is
-derived from.
+1. Smooth the photograph.
+2. Snap it to thirteen glass colors, and treat anything near black as lead.
+3. Trace each color as one vector layer.
+4. Save the layers as one SVG file.
 
-## Lead
+That file is `engine/public/masks-public/icon.svg`. It is the favicon everywhere, the brand in
+`/manage`, and this site's logo.
 
-Black is half the window, so black is the ground of `/manage` — `#000000`, not a charcoal. The ramp
-above it carries a faint warm cast (OKLCH hue 60, chroma 0.008–0.011) so it sits under brass without
-going cold.
+The source image is 188 by 188 pixels, with 28 significant colors. Pure black is 49.3% of it. Every
+value lands on `0x2a`, `0x55`, `0x7f`, `0xaa`, or `0xff`, so these colors are too strong to use as
+they are. They set the hues that every other color comes from.
 
-The sign-in and account pages ground on `#15120f` in dark mode and paper in light mode. The mark is
-cast across the top of the page as blurred light, and panels are frosted panes with a brass rim that
-let that light through. Came and glass keep their jobs there: brass for rules, eyebrows, and focus
-rings, and ember glass for the primary action.
+## The rose window palette
+
+The palette has three families, named after the parts of a stained-glass window:
+
+| Family | In a window | In masks |
+| --- | --- | --- |
+| **Lead** | The dark frame | The background and the grays. |
+| **Came** | The brass and silver strips that join the panes | Rules, borders, focus rings, and small headings above a title. |
+| **Glass** | The colored panes | Links, badges, status, notes, and chart marks. |
+
+### Lead
+
+This site's background is pure black, `#000000`, because black is half the window. The grays above
+it have a slight warm tint so they sit well next to brass.
 
 <div class="plate">
   <div style="background:#000000;color:#e9e5e2"><b>000</b><span>#000000</span><span>ground</span></div>
@@ -52,18 +62,21 @@ rings, and ember glass for the primary action.
   <div style="background:#605955;color:#ffffff"><b>400</b><span>#605955</span><span>disabled</span></div>
   <div style="background:#88827d;color:#000000"><b>500</b><span>#88827d</span><span>mute</span></div>
   <div style="background:#aca6a2;color:#000000"><b>600</b><span>#aca6a2</span><span>dim</span></div>
-  <div style="background:#cfc9c5;color:#000000"><b>700</b><span>#cfc9c5</span><span>—</span></div>
+  <div style="background:#cfc9c5;color:#000000"><b>700</b><span>#cfc9c5</span><span></span></div>
   <div style="background:#e9e5e2;color:#000000"><b>800</b><span>#e9e5e2</span><span>body</span></div>
 </div>
 
-Body text is `lead-800` at 16.8:1 on the ground. The dimmed text every table and caption uses is
-`lead-600` at 8.7:1.
+Body text is `lead-800`, at a contrast of 16.8 to 1 on black. Dimmed text in tables and captions is
+`lead-600`, at 8.7 to 1.
 
-## Came
+The sign-in and account pages use a dark warm brown, `#15110e`, in dark mode, and white in light
+mode. The mark shines across the top of the page as blurred light. Panels are frosted, with a thin
+rim, and let that light through.
 
-In the window, brass and silver are the only things touching every pane. In the interface they do
-the same job. Came is **structure, never state** — a brass border says "this is a seam", never "this
-needs attention".
+### Came
+
+Came marks structure. A brass border shows where one part ends and the next begins. It never means
+"this needs attention".
 
 <div class="plate">
   <div style="background:#b58a41;color:#000000"><b>brass</b><span>#b58a41</span><span>rules, eyebrows</span></div>
@@ -73,78 +86,52 @@ needs attention".
   <div style="background:#6e7677;color:#ffffff"><b>silver-deep</b><span>#6e7677</span><span>on paper</span></div>
 </div>
 
-## Glass
+### Glass
 
-Ten hues, weighted warm. The red shift is in the distribution rather than in one loud control: four
-hues sit between red and yellow, and the ground and chrome are warm-cast, so the whole system reads
-hot before any accent is spent.
+Glass marks meaning: a link, a badge, a status, or a note. There are ten hues, and four of them sit
+between red and yellow, so the palette feels warm.
 
-Every hue is given at two lightnesses — one for the black ground, one for paper. Contrast is
-measured against the ground each is used on.
+Each hue has two shades:
 
-| Hue | Angle | On black | Ratio | On paper | Ratio | Role |
+- a light shade for a dark background
+- a dark shade for a white background
+
+Each contrast ratio is measured against the background that shade is used on.
+
+| Hue | Angle | On black | Ratio | On white | Ratio | Role |
 | --- | --- | --- | --- | --- | --- | --- |
 | ruby | 27° | `#ff867a` | 8.94 | `#b53530` | 5.97 | danger |
-| ember | 47° | `#ff8f53` | 9.31 | `#b04000` | 5.87 | signal |
-| amber | 68° | `#f19c29` | 9.53 | `#a44f00` | 5.68 | categorical |
+| ember | 47° | `#ff8f53` | 9.31 | `#b04000` | 5.87 | primary action |
+| amber | 68° | `#f19c29` | 9.53 | `#a44f00` | 5.68 | accent |
 | gold | 92° | `#d4ad03` | 9.78 | `#8b6200` | 5.46 | warning |
-| verdant | 140° | `#78c966` | 10.35 | `#267e05` | 5.16 | categorical |
+| verdant | 140° | `#78c966` | 10.35 | `#267e05` | 5.16 | accent |
 | emerald | 165° | `#1dcf98` | 10.43 | `#008450` | 4.76 | success |
-| cyan | 195° | `#00cecf` | 10.73 | `#008386` | 4.57 | categorical |
+| cyan | 195° | `#00cecf` | 10.73 | `#008386` | 4.57 | accent |
 | sky | 228° | `#00c2fe` | 10.15 | `#0077b2` | 4.90 | info |
 | cobalt | 258° | `#70b1ff` | 9.42 | `#2065c5` | 5.63 | note |
-| violet | 292° | `#b49dff` | 9.21 | `#6e50be` | 5.91 | categorical |
+| violet | 292° | `#b49dff` | 9.21 | `#6e50be` | 5.91 | accent |
 
-## Three rules
+Ember is the primary button. Ruby is the button for an action that destroys something.
 
-**Ruby is the only solid fill.** Signal and danger are 20° apart, which is not enough hue separation
-on its own, so they separate by treatment instead. Every other control is an outline or a ghost, and
-a solid `#d3403a` fill means one thing: this destroys something. Nothing decorative may use ruby.
+## /manage
 
-**Came is structure, glass is state.** If it is a border, a rule, an eyebrow or a focus ring, it is
-brass or silver. If it carries meaning — a badge, a status, a link, an aside — it is glass. A panel
-never borrows a glass hue for its edge to look lively.
+`/manage` uses a neutral gray palette with one warm accent, a vermilion orange, for the primary
+action, links, focus rings, and charts. Its corners are rounder than on the sign-in pages, and its
+text is smaller, so tables and forms fit more on a screen.
 
-**The spare hues are categorical, not decorative.** Amber, verdant, cyan and violet are assigned by
-hashing a name, so a namespace or a scope keeps the same colour everywhere it appears — a table
-in `/manage`, docs example, chart series. Colour becomes identity rather than garnish.
-
-## Where it lives
-
-One daisyUI theme pair replaces the three that came before — `light`, `dark` and `console`. `/manage`
-no longer has a separate palette; it is the dense expression of the shared one, keeping 3px
-fields and tight rows while drawing every colour from the same place.
-
-```css
-/* server/app/frontend/entrypoints/app.css */
-@plugin "daisyui/theme" {
-  name: "rose";
-  prefersdark: true;
-  color-scheme: dark;
-
-  --color-base-100: #0f0b09;   /* lead-050, surface */
-  --color-base-200: #000000;   /* lead-000, ground  */
-  --color-base-300: #292421;   /* lead-200, line    */
-  --color-base-content: #e9e5e2;
-
-  --color-primary: #ff8f53;    /* ember, signal */
-  --color-secondary: #b58a41;  /* brass, came   */
-  --color-error: #ff867a;      /* ruby    */
-  --color-warning: #d4ad03;    /* gold    */
-  --color-success: #1dcf98;    /* emerald */
-  --color-info: #00c2fe;       /* sky     */
-
-  --radius-field: 3px;
-  --radius-box: 5px;
-}
-```
-
-`/manage` pins it with `data-theme="rose"`; sign-in leaves it unstamped and follows the system. This
-site maps the same values onto Starlight's `--sl-color-*` variables, so it inherits the palette
-rather than approximating it.
+| | Light | Dark |
+| --- | --- | --- |
+| Background | `#f4f4f5` | `#0a0a0b` |
+| Panels | `#ffffff` | `#131315` |
+| Text | `#18181b` | `#ededef` |
+| Accent | `#c2410c` | `#ff7a4a` |
+| Danger | `#b0183f` | `#ff7396` |
 
 ## Type
 
-Unchanged, and deliberately plain: Helvetica Neue with an Arial fallback, and a mono stack for
-client ids, URLs, scopes and figures. No display face and no webfont — spacing, grid, colour and
-hierarchy do the work.
+The sign-in pages and `/manage` use the system font stack, so text appears in each device's own
+typeface. Code, client IDs, URLs, scopes, and figures use the system monospace font.
+
+This site uses Helvetica Neue, with Helvetica and Arial as fallbacks.
+
+There are no display fonts and no web fonts. Spacing, grid, color, and hierarchy do the work.
