@@ -252,6 +252,7 @@ module Masks
 
       def enrollment_refusal(scopes)
         return "an archived client enrolls nothing" if archived?
+        return "a public client enrolls nothing" if public?
         return "only an approved client enrolls machines" unless approved?
         return "a client enrolls machines only after it claims a namespace" if namespaces.empty?
         return "a scope is required" if Scopes.list(scopes).empty?

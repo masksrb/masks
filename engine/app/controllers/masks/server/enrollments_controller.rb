@@ -15,7 +15,7 @@ module Masks
       before_action :no_store!
 
       def create
-        client = authenticate_client!
+        client = authenticate_app!
         token = EnrollmentToken.issue!(client, scope: params[:scope], name: params[:client_name],
                                                expires_in: params[:expires_in])
 
@@ -32,7 +32,7 @@ module Masks
       end
 
       def destroy
-        app = authenticate_client!
+        app = authenticate_app!
         machine = app.enrolled.find_by(client_id: params[:machine].to_s)
 
         return not_enrolled if machine.nil?
@@ -46,6 +46,14 @@ module Masks
       end
 
       private
+
+        def authenticate_app!
+          client = authenticate_client!
+
+          client_refused!("a public client proves nothing about itself, so it enrolls and unenrolls nothing") if client.public?
+
+          client
+        end
 
         def not_enrolled
           render json: {

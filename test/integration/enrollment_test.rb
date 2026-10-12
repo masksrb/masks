@@ -140,6 +140,25 @@ module Masks
         assert_response :unauthorized
       end
 
+      test "a public app enrolls nothing, since it proves nothing about itself" do
+        spa = owner(namespace: "spa:", name: "spa", token_endpoint_auth_method: "none")
+
+        post "/enrollments", params: { client_id: spa.client_id, scope: "spa:agent" }
+
+        assert_response :unauthorized
+        assert_equal "invalid_client", JSON.parse(response.body)["error"]
+        assert_not within { EnrollmentToken.exists?(client: spa) }
+      end
+
+      test "a token minted before the app went public no longer enrolls" do
+        secret = enroll["initial_access_token"]
+
+        within { @owner.update_columns(token_endpoint_auth_method: "none") }
+
+        assert_equal "invalid_client_metadata", redeem(secret)["error"]
+        assert_equal 0, within { @owner.enrolled.count }
+      end
+
       test "an archived app enrolls nothing" do
         within { @owner.update!(archived_at: Time.current) }
 
@@ -285,6 +304,17 @@ module Masks
         unenroll(owner(namespace: nil).client_id)
 
         assert_response :not_found
+      end
+
+      test "a public app unenrolls nothing, even a machine it once enrolled" do
+        registration = redeem(enroll["initial_access_token"])
+
+        within { @owner.update_columns(token_endpoint_auth_method: "none") }
+
+        delete "/enrollments/#{registration['client_id']}", params: { client_id: @owner.client_id }
+
+        assert_response :unauthorized
+        assert_not within { Client.find_by!(client_id: registration["client_id"]).archived? }
       end
 
       test "unenrolling needs the app to authenticate" do
