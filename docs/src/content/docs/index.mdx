@@ -18,17 +18,75 @@ hero:
       variant: minimal
 ---
 
-<div class="panes">
-  <div>
-    <b style="color:var(--glass-amber)"><a href="/quickstart/">Get started</a></b>
-    <span><a href="/guides/self-hosting/">Host masks yourself</a>, <a href="/guides/rails/">run it in your Rails app</a>, or <a href="/quickstart/#try-it-locally">try it on your computer</a>.</span>
-  </div>
-  <div>
-    <b style="color:var(--glass-verdant)"><a href="/reference/specs/">Reference</a></b>
-    <span>The <a href="/reference/ruby/">Ruby</a> and <a href="/reference/browser/">browser</a> SDKs, the <a href="/reference/manage/">manage API</a>, and the <a href="/reference/specs/">specifications</a> masks implements.</span>
-  </div>
-  <div>
-    <b style="color:var(--glass-cyan)"><a href="/guides/core-concepts/">Guides</a></b>
-    <span><a href="/guides/core-concepts/#tenants">Tenants</a>, <a href="/guides/core-concepts/#clients">clients</a>, <a href="/guides/connecting-via-sdk/">SDKs</a>, and <a href="/guides/sso-saml/">single sign-on and SAML</a>.</span>
-  </div>
+<div class="not-content home">
+  <section class="doors" aria-label="Where to start">
+    <div class="door" style="--hue: var(--glass-amber)">
+      <h2><a href="/quickstart/">Get started</a></h2>
+      <p>Run masks with Docker, inside a Rails app, or locally from the repository.</p>
+      <ul>
+        <li><a href="/guides/self-hosting/">Host masks yourself</a></li>
+        <li><a href="/guides/rails/">Add it to a Rails app</a></li>
+        <li><a href="/quickstart/#try-it-locally">Try it on your computer</a></li>
+      </ul>
+    </div>
+    <div class="door" style="--hue: var(--glass-cyan)">
+      <h2><a href="/guides/core-concepts/">Guides</a></h2>
+      <p>Tenants, actors, clients, and scopes, and how to set up each part of masks.</p>
+      <ul>
+        <li><a href="/guides/core-concepts/">Core concepts</a></li>
+        <li><a href="/guides/organizations/">Organizations</a></li>
+        <li><a href="/guides/sso-saml/">Single sign-on and SAML</a></li>
+      </ul>
+    </div>
+    <div class="door" style="--hue: var(--glass-verdant)">
+      <h2><a href="/reference/specs/">Reference</a></h2>
+      <p>The specifications masks implements, the manage API, the SDKs, and the environment variables.</p>
+      <ul>
+        <li><a href="/reference/specs/">OpenID Connect and OAuth</a></li>
+        <li><a href="/reference/manage/">The manage API</a></li>
+        <li><a href="/reference/environment/">Environment variables</a></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="does">
+    <h2 class="eyebrow">Features</h2>
+    <div class="does-grid">
+      <a class="feat" href="/reference/specs/" style="--hue: var(--glass-ember)">
+        <strong>OpenID Connect and OAuth 2.0</strong>
+        <span>Passes four OpenID Foundation certification plans with no failures.</span>
+      </a>
+      <a class="feat" href="/guides/core-concepts/#tenants" style="--hue: var(--glass-gold)">
+        <strong>Tenants</strong>
+        <span>Each tenant has its own actors, clients, and signing keys.</span>
+      </a>
+      <a class="feat" href="/guides/features/#second-factors" style="--hue: var(--glass-emerald)">
+        <strong>Passkeys and second factors</strong>
+        <span>Passkeys, authenticator apps, backup codes, and sign-in codes by email or text message.</span>
+      </a>
+      <a class="feat" href="/guides/sso-saml/" style="--hue: var(--glass-sky)">
+        <strong>Single sign-on</strong>
+        <span>Sign in with Google, Microsoft, or any OpenID Connect or SAML provider.</span>
+      </a>
+      <a class="feat" href="/guides/organizations/" style="--hue: var(--glass-cobalt)">
+        <strong>Organizations</strong>
+        <span>Each organization has its own members, roles, and sign-in policy.</span>
+      </a>
+      <a class="feat" href="/guides/event-streams/" style="--hue: var(--glass-violet)">
+        <strong>Event streams</strong>
+        <span>masks records each sign-in and change as an event, and sends events to a URL you choose.</span>
+      </a>
+    </div>
+  </section>
+
+  <section class="libs">
+    <p>SDKs</p>
+    <ul>
+      <li><a href="/guides/rails/">Ruby and Rails</a></li>
+      <li><a href="/reference/browser/">Browser</a></li>
+      <li><a href="/guides/other-languages/#node">Node</a></li>
+      <li><a href="/guides/other-languages/#python">Python</a></li>
+      <li><a href="/guides/other-languages/#go">Go</a></li>
+    </ul>
+  </section>
 </div>
