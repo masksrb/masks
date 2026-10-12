@@ -87,6 +87,41 @@ module Masks
         assert_equal RESOURCE, claimed.resource
       end
 
+      test "another resource cannot claim a namespace nested inside a claimed one" do
+        sign_in_as(@owner)
+        connect
+        approve!
+
+        connect(resource: OTHER_RESOURCE, origin: OTHER, name: "impostor", scope: "openid xixo:files:")
+
+        assert_response :bad_request
+        assert_match "xixo: is claimed by #{RESOURCE}", response.body
+        assert_nil claimed("xixo:files:")
+      end
+
+      test "another resource cannot claim a namespace that holds a claimed one" do
+        sign_in_as(@owner)
+        connect(scope: "openid xixo:files:")
+        approve!
+
+        connect(resource: OTHER_RESOURCE, origin: OTHER, name: "impostor")
+
+        assert_response :bad_request
+        assert_match "xixo:files: is claimed by #{RESOURCE}", response.body
+        assert_nil claimed
+      end
+
+      test "namespaces that only share a beginning do not collide" do
+        sign_in_as(@owner)
+        connect
+        approve!
+
+        connect(resource: OTHER_RESOURCE, origin: OTHER, name: "xixotwo", scope: "openid xixotwo:")
+        approve!
+
+        assert_equal OTHER_RESOURCE, claimed("xixotwo:").resource
+      end
+
       test "an admin refused over a claimed namespace is sent to the console that can release it" do
         sign_in_as(@owner)
         connect

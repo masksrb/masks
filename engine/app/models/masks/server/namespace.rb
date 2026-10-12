@@ -17,12 +17,15 @@ module Masks
           Scopes.list(scopes).select { |scope| Scopes.prefix?(scope) && !scope.start_with?(Scopes::NAMESPACE) }
         end
 
-        def named(scopes)
-          where(name: prefixes(scopes))
+        def overlapping(scopes)
+          names = prefixes(scopes)
+          return none if names.empty?
+
+          where(names.map { "(starts_with(name, ?) OR starts_with(?, name))" }.join(" OR "), *names.flat_map { |name| [ name, name ] })
         end
 
         def taken(handshake)
-          named(handshake.scopes).where.not(resource: handshake.resource.to_s)
+          overlapping(handshake.scopes).where.not(resource: handshake.resource.to_s)
         end
 
         def refusal(handshake)
