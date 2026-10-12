@@ -15,7 +15,6 @@ module Masks
           .auth-page {
             --signal: #{accent};
             --signal-ink: #{tenant.accent_ink};
-            --label: #{accent};
             --brass: #{accent};
             --ring: color-mix(in oklab, #{accent} 30%, transparent);
           }

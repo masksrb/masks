@@ -16,13 +16,13 @@
 
   --ground: #f5f1ee;
   --shade: 33 28 24;
-  --gold: #87611e;
-  --vermilion-field: rgba(176, 64, 0, 0.08);
-  --ring: rgba(176, 64, 0, 0.4);
+  --gold: var(--color-secondary);
+  --vermilion-field: color-mix(in oklab, var(--color-primary) 8%, transparent);
+  --ring: color-mix(in oklab, var(--color-primary) 40%, transparent);
   --focus: 2px solid var(--ring);
   --line: rgb(var(--shade) / 0.09);
   --line-firm: rgb(var(--shade) / 0.14);
-  --sheet: #ffffff;
+  --sheet: var(--color-base-100);
   --sheet-lift: 0 0 0 1px var(--line), 0 1px 2px rgb(var(--shade) / 0.04);
   --tray: #efe9e5;
   --tray-sink: inset 0 0 0 1px var(--line);
@@ -33,7 +33,7 @@
   --key-hot-hover: #c24e0c;
   --key-hot-lift: 0 1px 1px rgb(var(--shade) / 0.12);
   --knob: #ffffff;
-  --top: rgba(245, 241, 238, 0.96);
+  --top: color-mix(in srgb, var(--ground) 96%, transparent);
   --tray-bar: rgba(255, 255, 255, 0.96);
   --tray-bar-lift: 0 0 0 1px var(--line), 0 8px 24px rgb(var(--shade) / 0.1);
   --chart-ink: var(--color-primary);
@@ -109,24 +109,21 @@
 @media (prefers-color-scheme: dark) {
   .console {
     --ground: #0f0b09;
-    --shade: 0 0 0;
-    --gold: #deaf56;
-    --vermilion-field: rgba(255, 143, 83, 0.1);
-    --ring: rgba(255, 143, 83, 0.5);
+    --gold: var(--color-accent);
+    --vermilion-field: color-mix(in oklab, var(--color-primary) 10%, transparent);
+    --ring: color-mix(in oklab, var(--color-primary) 50%, transparent);
     --line: rgba(255, 238, 225, 0.075);
     --line-firm: rgba(255, 238, 225, 0.11);
-    --sheet: #15110e;
     --sheet-lift: 0 0 0 1px var(--line), 0 1px 2px rgba(0, 0, 0, 0.3);
     --tray: #0c0907;
-    --key: #1e1915;
+    --key: var(--color-base-200);
     --key-hover: #292421;
     --key-lift: inset 0 0 0 1px var(--line-firm), 0 1px 1px rgba(0, 0, 0, 0.3);
     --key-sink: inset 0 0 0 1px var(--line-firm), inset 0 1px 3px rgba(0, 0, 0, 0.5);
     --key-hot-hover: #ffa473;
     --key-hot-lift: 0 1px 1px rgba(0, 0, 0, 0.3);
-    --knob: #e9e5e2;
-    --top: rgba(15, 11, 9, 0.96);
-    --tray-bar: rgba(26, 22, 20, 0.96);
+    --knob: var(--color-neutral-content);
+    --tray-bar: color-mix(in srgb, var(--color-neutral) 96%, transparent);
     --tray-bar-lift: 0 0 0 1px var(--line-firm), 0 8px 24px rgba(0, 0, 0, 0.5);
 
     color-scheme: dark;
