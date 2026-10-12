@@ -599,9 +599,7 @@ func TestAServerSideStoreRotatesTheSessionOnSignIn(t *testing.T) {
 		t.Fatal("the stored session was not read")
 	}
 
-	store.lock.Lock()
-	sessions := len(store.held)
-	store.lock.Unlock()
+	sessions := store.entries.len()
 
 	if sessions != 1 {
 		t.Fatalf("the old session was kept: %d", sessions)

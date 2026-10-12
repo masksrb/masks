@@ -170,46 +170,23 @@ type DepartureStore interface {
 }
 
 type MemoryDepartures struct {
-	lock sync.Mutex
-	held map[string]memoryDeparture
-}
-
-type memoryDeparture struct {
-	at    time.Time
-	until time.Time
+	entries expiring[time.Time]
 }
 
 func (m *MemoryDepartures) Depart(_ context.Context, key string, at time.Time, expiresIn time.Duration) error {
-	m.lock.Lock()
-	defer m.lock.Unlock()
-
-	if m.held == nil {
-		m.held = map[string]memoryDeparture{}
-	}
-
-	now := time.Now()
-
-	for name, held := range m.held {
-		if now.After(held.until) {
-			delete(m.held, name)
+	m.entries.set(key, expiresIn, func(held time.Time, found bool) time.Time {
+		if found && held.After(at) {
+			return held
 		}
-	}
 
-	if held, found := m.held[key]; !found || at.After(held.at) {
-		m.held[key] = memoryDeparture{at: at, until: now.Add(expiresIn)}
-	}
+		return at
+	})
 
 	return nil
 }
 
 func (m *MemoryDepartures) DepartedAt(_ context.Context, key string) (time.Time, error) {
-	m.lock.Lock()
-	defer m.lock.Unlock()
+	held, _ := m.entries.get(key)
 
-	held, found := m.held[key]
-	if !found || time.Now().After(held.until) {
-		return time.Time{}, nil
-	}
-
-	return held.at, nil
+	return held, nil
 }

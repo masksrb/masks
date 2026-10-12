@@ -18,7 +18,6 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	masks "github.com/masksrb/masks/go"
@@ -45,54 +44,28 @@ type SessionStore interface {
 }
 
 type MemoryStore struct {
-	lock sync.Mutex
-	held map[string]memoryEntry
-}
-
-type memoryEntry struct {
-	data  []byte
-	until time.Time
+	entries expiring[[]byte]
 }
 
 func NewMemoryStore() *MemoryStore {
-	return &MemoryStore{held: map[string]memoryEntry{}}
+	return &MemoryStore{}
 }
 
 func (m *MemoryStore) Load(_ context.Context, id string) ([]byte, error) {
-	m.lock.Lock()
-	defer m.lock.Unlock()
+	held, _ := m.entries.get(id)
 
-	held, found := m.held[id]
-	if !found || time.Now().After(held.until) {
-		delete(m.held, id)
-		return nil, nil
-	}
-
-	return held.data, nil
+	return held, nil
 }
 
 func (m *MemoryStore) Save(_ context.Context, id string, data []byte, expiresIn time.Duration) error {
-	m.lock.Lock()
-	defer m.lock.Unlock()
-
-	now := time.Now()
-
-	for key, held := range m.held {
-		if now.After(held.until) {
-			delete(m.held, key)
-		}
-	}
-
-	m.held[id] = memoryEntry{data: slices.Clone(data), until: now.Add(expiresIn)}
+	kept := slices.Clone(data)
+	m.entries.set(id, expiresIn, func([]byte, bool) []byte { return kept })
 
 	return nil
 }
 
 func (m *MemoryStore) Delete(_ context.Context, id string) error {
-	m.lock.Lock()
-	defer m.lock.Unlock()
-
-	delete(m.held, id)
+	m.entries.delete(id)
 
 	return nil
 }
