@@ -250,7 +250,8 @@ Hold `started[:state]`, `started[:nonce]`, and `started[:verifier]` in the sessi
 browser to `started[:url]`. `start` sends a nonce only when the scope includes `openid`. Check the
 returned `state` yourself, and compare `identity["nonce"]` with the one you held.
 
-`Session` also has `refresh`, `exchange`, `client_credentials`, `enroll`, `unenroll`, `revoke`, `introspect`, `userinfo`, `end_session_url`, and
+`Session` also has `refresh`, `exchange`, `client_credentials`, `device_authorization`,
+`await_device`, `enroll`, `unenroll`, `revoke`, `introspect`, `userinfo`, `end_session_url`, and
 `transport`. It authenticates with `client_secret`, or with `private_key` and `key_id` for
 `private_key_jwt`. A `Masks::Client::Key` passed as `private_key` names itself by its thumbprint, so
 `key_id` can be left out.
@@ -304,11 +305,11 @@ access tokens there. `read`, `update`, and `delete` raise `Masks::Client::Foreig
 `registration_client_uri` names an origin other than the issuer's, and send nothing.
 
 A `Session` given `dpop:` sends a new DPoP proof with every request to the token endpoint:
-`complete`, `client_credentials`, `refresh`, and `exchange`. A server that answers
+`complete`, `client_credentials`, `refresh`, `exchange`, and `await_device`. A server that answers
 `use_dpop_nonce` with a `DPoP-Nonce` header gets one retry carrying that nonce, and the nonce is
 kept for that origin's next request. A token endpoint that answers a proven request with a `Bearer`
-token is refused with `invalid_dpop_proof`. Revocation, introspection, and enrollment are sent
-without a proof.
+token is refused with `invalid_dpop_proof`. Revocation, introspection, enrollment, and device
+authorization are sent without a proof.
 
 `transport` sends requests to a resource with those tokens. It takes the origins it may send them to
 and raises `Masks::Client::Foreign` for any other URL before it fetches a token.
@@ -334,6 +335,28 @@ api = session.transport("https://app.example.com", tokens: held) { |tokens| stor
 ```
 
 `Masks::Client::Transport.new(*origins, tokens:, key:)` builds one around tokens you already hold.
+
+### The device flow
+
+A device with no browser asks for a code, shows it, and polls until somebody approves it:
+
+```ruby
+device = session.device_authorization(scope: %w[openid offline_access], resource: "https://app.example.com/mcp")
+
+puts "Open #{device.verification_uri} and enter #{device.user_code}"
+
+tokens = session.await_device(device)
+```
+
+`await_device` waits `interval` seconds between polls, five when the server names none, and five
+seconds longer after each `slow_down`. It keeps polling through `authorization_pending`. It raises
+`Masks::Client::Rejected` with the server's code for `access_denied`, `expired_token`, or any other
+refusal, and raises `expired_token` without polling once `device.expires_at` has passed. A session
+holding a DPoP key proves each poll, and the tokens it returns are held to that key.
+
+Discovery and JWKS are cached for five minutes and refetched on an unknown `kid`, so a key rotation
+needs no restart. The cache lives on the `Issuer`, so use `Masks::Client::Issuer.resolve` instead
+of constructing one per request.
 
 ### The handshake
 

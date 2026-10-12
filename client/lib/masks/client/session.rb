@@ -137,6 +137,36 @@ module Masks
         token(form)
       end
 
+      def device_authorization(scope: nil, resource: nil)
+        form = [ [ "client_id", client_id ] ]
+
+        form << [ "scope", Array(scope).join(" ") ] if scope
+        Array(resource).each { |value| form << [ "resource", value ] }
+
+        Device.issued(post("device_authorization_endpoint", form))
+      end
+
+      def await_device(device, pause: Device::INTERVAL)
+        form = [ [ "grant_type", Device::GRANT_TYPE ], [ "device_code", device.device_code ], [ "client_id", client_id ] ]
+        interval = device.interval.positive? ? device.interval : pause
+
+        loop do
+          raise Rejected.new("expired_token", "the code expired before anyone approved it") if device.expired?
+
+          sleep(interval)
+
+          begin
+            return token(form)
+          rescue Rejected => e
+            case e.code
+            when "authorization_pending" then next
+            when "slow_down" then interval += pause
+            else raise
+            end
+          end
+        end
+      end
+
       def transport(*origins, tokens: nil, scope: nil, resource: nil, &keep)
         Transport.new(*origins, tokens: tokens, key: dpop) do |held|
           renewed = tokens ? renew(held, scope: scope, resource: resource) : client_credentials(scope: scope, resource: resource)

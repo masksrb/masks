@@ -462,6 +462,54 @@ Inherits `Error`.
 ::new(message, secret: nil)
 ```
 
+## Masks::Client::Device
+
+| Constant | Value |
+| --- | --- |
+| `GRANT_TYPE` | `"urn:ietf:params:oauth:grant-type:device_code".freeze` |
+| `INTERVAL` | `5` |
+| `REQUIRED` | `%w[device_code user_code verification_uri].freeze` |
+
+| Attribute | Access |
+| --- | --- |
+| `device_code` | R |
+| `expires_in` | R |
+| `interval` | R |
+| `obtained_at` | R |
+| `user_code` | R |
+| `verification_uri` | R |
+| `verification_uri_complete` | R |
+
+### ::issued
+
+```ruby
+::issued(body)
+```
+
+### ::new
+
+```ruby
+::new(body)
+```
+
+### #expired?
+
+```ruby
+#expired?()
+```
+
+### #expires_at
+
+```ruby
+#expires_at()
+```
+
+### #inspect
+
+```ruby
+#inspect()
+```
+
 ## Masks::Client::Enrollment
 
 | Attribute | Access |
@@ -509,6 +557,10 @@ Inherits `Masks::Client::Challenge`.
 ::new(code, description, scope: nil)
 ```
 
+## Masks::Client::Foreign
+
+Inherits `Masks::Client::Error`.
+
 ## Masks::Client::HTTP
 
 | Constant | Value |
@@ -534,6 +586,12 @@ Inherits `Masks::Client::Challenge`.
 #delete_form(url, form, headers = {})
 ```
 
+### #deliver
+
+```ruby
+#deliver(request)
+```
+
 ### #encoded
 
 ```ruby
@@ -544,6 +602,12 @@ Inherits `Masks::Client::Challenge`.
 
 ```ruby
 #fetch(url, headers = {})
+```
+
+### #form_request
+
+```ruby
+#form_request(verb, url, form, headers)
 ```
 
 ### #get
@@ -695,6 +759,7 @@ Inherits `Masks::Client::Error`.
 
 | Attribute | Access |
 | --- | --- |
+| `nonces` | R |
 | `url` | R |
 
 ### ::new
@@ -763,6 +828,104 @@ Inherits `Masks::Client::Error`.
 #tenant()
 ```
 
+## Masks::Client::Key
+
+| Constant | Value |
+| --- | --- |
+| `CURVE` | `"prime256v1".freeze` |
+| `ALGORITHM` | `"ES256".freeze` |
+| `PUBLIC` | `%w[kty crv x y].freeze` |
+
+| Attribute | Access |
+| --- | --- |
+| `kid` | R |
+| `private_key` | R |
+| `thumbprint` | R |
+
+### ::from
+
+```ruby
+::from(value)
+```
+
+### ::generate
+
+```ruby
+::generate()
+```
+
+### ::htu
+
+```ruby
+::htu(url)
+```
+
+### ::imported
+
+```ruby
+::imported(data)
+```
+
+### ::new
+
+```ruby
+::new(private_key)
+```
+
+### ::parse
+
+```ruby
+::parse(data)
+```
+
+### #inspect
+
+```ruby
+#inspect()
+```
+
+### #jwks
+
+```ruby
+#jwks()
+```
+
+### #proof
+
+```ruby
+#proof(method, url, access_token: nil, nonce: nil)
+```
+
+### #public_jwk
+
+```ruby
+#public_jwk()
+```
+
+### #sign
+
+```ruby
+#sign(claims, header = {})
+```
+
+### #to_h
+
+```ruby
+#to_h()
+```
+
+### #to_json
+
+```ruby
+#to_json(*)
+```
+
+### #to_pem
+
+```ruby
+#to_pem()
+```
+
 ## Masks::Client::Logout
 
 | Constant | Value |
@@ -815,6 +978,36 @@ Inherits `Masks::Client::Error`.
 
 ```ruby
 #validate!()
+```
+
+## Masks::Client::Nonces
+
+| Constant | Value |
+| --- | --- |
+| `HEADER` | `"DPoP-Nonce".freeze` |
+
+### ::new
+
+```ruby
+::new()
+```
+
+### ::origin
+
+```ruby
+::origin(url)
+```
+
+### #[]
+
+```ruby
+#[](url)
+```
+
+### #learn
+
+```ruby
+#learn(url, response)
 ```
 
 ## Masks::Client::Pkce
@@ -951,6 +1144,12 @@ Inherits `Masks::Client::Error`.
 ::create(issuer, token: nil, **attributes)
 ```
 
+### ::endpoint
+
+```ruby
+::endpoint(issuer, token)
+```
+
 ### ::fallback
 
 ```ruby
@@ -961,6 +1160,12 @@ Inherits `Masks::Client::Error`.
 
 ```ruby
 ::held(issuer, credentials)
+```
+
+### ::keyset
+
+```ruby
+::keyset(value)
 ```
 
 ### ::new
@@ -1014,7 +1219,7 @@ Inherits `Masks::Client::Error`.
 ### #session
 
 ```ruby
-#session(redirect_uri:, scope: Session::DEFAULT_SCOPE)
+#session(redirect_uri: nil, scope: Session::DEFAULT_SCOPE, **options)
 ```
 
 ### #update
@@ -1124,11 +1329,13 @@ Inherits `Masks::Client::Error`.
 | `ORGANIZATION_KEY` | `/\A[a-z0-9][a-z0-9-]*\z/` |
 | `ASSERTION_TYPE` | `"urn:ietf:params:oauth:client-assertion-type:jwt-bearer".freeze` |
 | `ASSERTION_LIFETIME` | `60` |
+| `NO_NONCE` | `"use_dpop_nonce".freeze` |
 
 | Attribute | Access |
 | --- | --- |
 | `client_id` | R |
 | `client_secret` | R |
+| `dpop` | R |
 | `issuer` | R |
 | `key_id` | R |
 | `private_key` | R |
@@ -1138,13 +1345,19 @@ Inherits `Masks::Client::Error`.
 ### ::new
 
 ```ruby
-::new(issuer:, client_id:, redirect_uri: nil, client_secret: nil, private_key: nil, key_id: nil, scope: DEFAULT_SCOPE)
+::new(issuer:, client_id:, redirect_uri: nil, client_secret: nil, private_key: nil, key_id: nil, dpop: nil, scope: DEFAULT_SCOPE)
 ```
 
 ### ::organization_key
 
 ```ruby
 ::organization_key(value)
+```
+
+### #await_device
+
+```ruby
+#await_device(device, pause: Device::INTERVAL)
 ```
 
 ### #client_credentials
@@ -1157,6 +1370,12 @@ Inherits `Masks::Client::Error`.
 
 ```ruby
 #complete(code:, verifier:, resource: nil)
+```
+
+### #device_authorization
+
+```ruby
+#device_authorization(scope: nil, resource: nil)
 ```
 
 ### #end_session_url
@@ -1217,6 +1436,12 @@ Inherits `Masks::Client::Error`.
 
 ```ruby
 #start(resource: nil, prompt: nil, scope: nil, state: SecureRandom.urlsafe_base64(24), nonce: SecureRandom.urlsafe_base64(24), max_age: nil, organization: nil)
+```
+
+### #transport
+
+```ruby
+#transport(*origins, tokens: nil, scope: nil, resource: nil, &keep)
 ```
 
 ### #unenroll
@@ -1318,6 +1543,12 @@ Inherits `Masks::Client::Error`.
 
 ```ruby
 #authorization()
+```
+
+### #bound?
+
+```ruby
+#bound?()
 ```
 
 ### #expired?
@@ -1430,6 +1661,77 @@ Inherits `Masks::Client::Error`.
 
 ```ruby
 #to_h()
+```
+
+## Masks::Client::Transport
+
+| Constant | Value |
+| --- | --- |
+| `VERBS` | `{ "GET" => Net::HTTP::Get, "HEAD" => Net::HTTP::Head, "POST" => Net::HTTP::Post, "PUT" => Net::HTTP::Put, "PATCH" => Net::HTTP::Patch, "DELETE" => Net::HTTP::Delete }.freeze` |
+
+| Attribute | Access |
+| --- | --- |
+| `key` | R |
+| `origins` | R |
+
+### ::new
+
+```ruby
+::new(*origins, tokens: nil, key: nil, &renew)
+```
+
+### #delete
+
+```ruby
+#delete(url, headers: {})
+```
+
+### #get
+
+```ruby
+#get(url, headers: {})
+```
+
+### #head
+
+```ruby
+#head(url, headers: {})
+```
+
+### #inspect
+
+```ruby
+#inspect()
+```
+
+### #patch
+
+```ruby
+#patch(url, body: nil, headers: {})
+```
+
+### #post
+
+```ruby
+#post(url, body: nil, headers: {})
+```
+
+### #put
+
+```ruby
+#put(url, body: nil, headers: {})
+```
+
+### #request
+
+```ruby
+#request(method, url, body: nil, headers: {})
+```
+
+### #tokens
+
+```ruby
+#tokens()
 ```
 
 ## Masks::Client::Unauthenticated
