@@ -52,10 +52,12 @@ UNREGISTERED = "unregistered"
 UNREACHABLE = "unreachable"
 RENEWAL_MEMORY = 60.0
 RENEWAL_STRIPES = 64
+LOGOUT_MEMORY = 600
 
 HELD = "masks"
 REQUESTS = "masks_requests"
 HANDSHAKES = "masks_handshakes"
+FAREWELLS = "masks_farewells"
 STEPPED_UP = "masks_stepped_up"
 RETURN_TO = "masks_return_to"
 RESTARTED = "masks_restarted_at"
@@ -298,6 +300,8 @@ class Masks:
         self._async_verifiers: dict[tuple[str, str], AsyncVerifier] = {}
         self._lock = threading.Lock()
         self._renewals: dict[str, tuple[float, Renewed]] = {}
+        self._renewal_lock = threading.Lock()
+        self._logouts = MemoryReplayStore()
         self._renew_locks = [threading.Lock() for _ in range(RENEWAL_STRIPES)]
         self._async_renew_locks: dict[int, anyio.Lock] = {}
 
@@ -501,7 +505,7 @@ class Masks:
             if error.code == "invalid_client":
                 return Renewed(UNREGISTERED)
 
-            return Renewed(REFUSED if error.status is not None and error.status < 500 else UNREACHABLE)
+            return Renewed(UNREACHABLE if outage(error) or error.status == 429 else REFUSED)
         except (httpx.HTTPError, Unavailable, Refusal):
             return Renewed(UNREACHABLE)
 
@@ -521,22 +525,37 @@ class Masks:
         return Renewed(RENEWED, refreshed, identity)
 
     def _remembered(self, key: str) -> Renewed | None:
-        now = time.monotonic()
-
-        with self._lock:
-            self._renewals = {held: found for held, found in self._renewals.items() if found[0] > now}
+        with self._renewal_lock:
             found = self._renewals.get(key)
 
-        return found[1] if found else None
+        return found[1] if found is not None and found[0] > time.monotonic() else None
 
     def _remember(self, key: str, renewed: Renewed) -> Renewed:
-        if renewed.outcome == RENEWED:
-            with self._lock:
-                self._renewals[key] = (time.monotonic() + RENEWAL_MEMORY, renewed)
+        if renewed.outcome != RENEWED:
+            return renewed
+
+        now = time.monotonic()
+
+        with self._renewal_lock:
+            while self._renewals:
+                oldest = next(iter(self._renewals))
+
+                if self._renewals[oldest][0] > now:
+                    break
+
+                del self._renewals[oldest]
+
+            self._renewals.pop(key, None)
+            self._renewals[key] = (now + RENEWAL_MEMORY, renewed)
 
         return renewed
 
-    def _renew(self, renewal: Renewal) -> Renewed:
+    def _renew(self, item: object) -> Renewed:
+        if not isinstance(item, Renewal):
+            raise TypeError(f"masks: a flow yielded {item!r}")
+
+        renewal = item
+
         key = hashlib.sha256(renewal.refresh_token.encode()).hexdigest()
 
         with self._renew_locks[int(key[:8], 16) % len(self._renew_locks)]:
@@ -544,7 +563,11 @@ class Masks:
 
             return found or self._remember(key, run(self._renewing(renewal), self.http))
 
-    async def _arenew(self, renewal: Renewal) -> Renewed:
+    async def _arenew(self, item: object) -> Renewed:
+        if not isinstance(item, Renewal):
+            raise TypeError(f"masks: a flow yielded {item!r}")
+
+        renewal = item
         key = hashlib.sha256(renewal.refresh_token.encode()).hexdigest()
         stripe = int(key[:8], 16) % RENEWAL_STRIPES
 
@@ -671,6 +694,9 @@ class Masks:
             flows = self.flows(request, issuer)
             signed = yield from flows._complete(started, request.query)
         except Error as error:
+            if outage(error):
+                raise
+
             self.forget(session)
 
             if error.code == "invalid_client" and self._disconnect(request, session):
@@ -715,22 +741,17 @@ class Masks:
         )
 
     def logout(self, request: Incoming, session: Session) -> Step[Answer]:
-        if request.method != "GET" and not self._same_origin(request):
+        if not self._same_origin(request):
             return self._refuse(request, "invalid_request", "that request came from another site", 403)
 
         token = self._token(session)
-        upstream = ""
+        everywhere = self.config.sign_out_of_issuer or bool(request.query.get("everywhere"))
+        flows: _Flows | None = None
 
         if self.configured(request):
             try:
                 issuer = yield from self.discover(request)
                 flows = self.flows(request, issuer)
-
-                if self.config.sign_out_of_issuer or request.query.get("everywhere"):
-                    upstream = flows.end_session_url(
-                        post_logout_redirect_uri=f"{self.base(request)}{local_path(self.config.after_sign_out) or '/'}",
-                        state=random_id(),
-                    )
 
                 if token is not None and token.refresh_token:
                     yield from flows._revoke(token.refresh_token, "refresh_token")
@@ -738,11 +759,30 @@ class Masks:
                 pass
 
         session.renew()
+        upstream = ""
+
+        if everywhere and flows is not None and flows.issuer.metadata.end_session_endpoint:
+            upstream = flows.end_session_url(
+                post_logout_redirect_uri=self.farewell_uri(request), state=Tracker(session, FAREWELLS).open()
+            )
 
         if request.wants_json:
             return Answer.json(200, {"signed_in": False, **({"logout_url": upstream} if upstream else {})})
 
         return Answer.redirect(upstream or self.config.after_sign_out)
+
+    def farewell_uri(self, request: Incoming) -> str:
+        return f"{self.base(request)}{self.path('/logout/return')}"
+
+    def logout_return(self, request: Incoming, session: Session) -> Step[Answer]:
+        yield from ()
+
+        if Tracker(session, FAREWELLS).claim(request.query.get("state", "")) is None:
+            return self._refuse(
+                request, "invalid_state", "that sign-out is not one this browser started, or it expired"
+            )
+
+        return Answer.redirect(local_path(self.config.after_sign_out) or "/")
 
     def session_answer(self, request: Incoming, session: Session) -> Step[Answer]:
         person = nobody(self.config.known)
@@ -827,6 +867,11 @@ class Masks:
                 400, {"error": "invalid_request", "error_description": str(error).removeprefix("masks: ")}
             )
 
+        if not self._logouts.first(f"{issuer.url}:{logout.id}", LOGOUT_MEMORY):
+            return Answer.json(
+                400, {"error": "invalid_request", "error_description": "that logout token was already used"}
+            )
+
         self.config.departures.record(subject=logout.subject, sid=logout.sid, at=time.time())
         self.config.backend.end(subject=logout.subject, sid=logout.sid)
 
@@ -845,9 +890,7 @@ class Masks:
 
         base = self.base(request)
         delegated = str(resolve(self.config.delegation_redirect_uri, request.native) or "")
-        backchannel = (
-            f"{base}{self.path('/logout/backchannel')}" if issuer.metadata.backchannel_logout_supported else ""
-        )
+        backchannel = f"{base}{self.path('/logout/backchannel')}"
 
         return Handshake(
             issuer,
@@ -857,6 +900,7 @@ class Masks:
             return_to=f"{base}{self.path('/handshake/callback')}",
             scope=self.config.approved_scope(),
             backchannel_logout_uri=backchannel,
+            post_logout_redirect_uri=self.farewell_uri(request),
         )
 
     def _guard(self, request: Incoming, session: Session) -> Step[Answer | None]:
@@ -879,6 +923,11 @@ class Masks:
         return None
 
     def _same_origin(self, request: Incoming) -> bool:
+        site = request.headers.get("Sec-Fetch-Site", "")
+
+        if site and site not in ("same-origin", "none"):
+            return False
+
         sent = request.headers.get("Origin", "")
 
         if not sent:
@@ -946,10 +995,18 @@ class Masks:
                 request, "invalid_state", "that connection request is not one this browser started, or it expired"
             )
 
+        if not self.credentials(request).writable:
+            return self._refuse(
+                request, "forbidden", "these credentials come from configuration and cannot change", 403
+            )
+
         try:
             issuer = yield from self.discover(request)
             registration = yield from self.handshake(request, issuer)._complete(request.query, state)
         except Error as error:
+            if outage(error):
+                raise
+
             return self._refuse(request, error.code, error.description)
 
         self.credentials(request).write(registration)
@@ -986,6 +1043,9 @@ class Masks:
                     )
                 )
             except Error as error:
+                if outage(error):
+                    return self._refuse(request, "temporarily_unavailable", "masks could not be reached", 503)
+
                 if error.status not in (401, 403, 404):
                     return self._refuse(request, error.code, error.description)
             except (MasksError, httpx.HTTPError):
@@ -1217,42 +1277,10 @@ class Masks:
         return await self.aanswer(self.session_check(request, session, names))
 
     def run(self, flow: Step[T]) -> T:
-        try:
-            item = next(flow)
-
-            while True:
-                if isinstance(item, Renewal):
-                    item = flow.send(self._renew(item))
-                    continue
-
-                try:
-                    response = fetch(item, self.http)
-                except (httpx.HTTPError, Error) as error:
-                    item = flow.throw(error)
-                    continue
-
-                item = flow.send(response)
-        except StopIteration as done:
-            return cast(T, done.value)
+        return run(flow, self.http, self._renew)
 
     async def arun(self, flow: Step[T]) -> T:
-        try:
-            item = next(flow)
-
-            while True:
-                if isinstance(item, Renewal):
-                    item = flow.send(await self._arenew(item))
-                    continue
-
-                try:
-                    response = await afetch(item, self.async_http)
-                except (httpx.HTTPError, Error) as error:
-                    item = flow.throw(error)
-                    continue
-
-                item = flow.send(response)
-        except StopIteration as done:
-            return cast(T, done.value)
+        return await arun(flow, self.async_http, self._arenew)
 
     def answer(self, flow: Step[T]) -> T | Answer:
         try:
@@ -1281,6 +1309,7 @@ class Masks:
             "start": self.start,
             "callback": self.callback,
             "logout": self.logout,
+            "logout_return": self.logout_return,
             "session": self.session_answer,
             "avatar": self.avatar,
             "handshake": self.handshake_show,
@@ -1296,6 +1325,7 @@ class Masks:
             (self.path("/session"), ("GET",), "session"),
             (self.path("/avatar"), ("GET",), "avatar"),
             (self.path("/logout"), ("GET", "POST", "DELETE"), "logout"),
+            (self.path("/logout/return"), ("GET",), "logout_return"),
             (self.path("/logout/backchannel"), ("POST",), "backchannel"),
             (self.path("/handshake"), ("GET",), "handshake"),
             (self.path("/handshake"), ("POST",), "handshake_begin"),
@@ -1303,6 +1333,10 @@ class Masks:
             (self.path("/handshake/disconnect"), ("POST",), "handshake_disconnect"),
             (self.path("/handshake/callback"), ("GET",), "handshake_callback"),
         ]
+
+
+def outage(error: Error) -> bool:
+    return error.code in ("server_error", "temporarily_unavailable") or (error.status or 0) >= 500
 
 
 def unreachable() -> Answer:

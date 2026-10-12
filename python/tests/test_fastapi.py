@@ -254,10 +254,47 @@ def test_signing_out_everywhere_goes_through_masks(app: TestClient, fake: Fake) 
     sign_in(app, fake)
 
     upstream = location(app.get("/auth/logout", params={"everywhere": "1"}, headers=HTML))
+    query = parse_qs(urlsplit(upstream).query)
 
     assert upstream.startswith(f"{ISSUER}/logout?")
-    assert parse_qs(urlsplit(upstream).query)["post_logout_redirect_uri"] == [f"{APP}/"]
+    assert query["post_logout_redirect_uri"] == [f"{APP}/auth/logout/return"]
+    assert app.get("/whoami").json() == {"signed_in": False}
+
+    back = app.get("/auth/logout/return", params={"state": query["state"][0]}, headers=HTML)
+
+    assert location(back) == "/"
+    assert app.get("/auth/logout/return", params={"state": query["state"][0]}, headers=JSON).status_code == 400
+    assert app.get("/auth/logout/return", params={"state": "forged"}, headers=JSON).json()["error"] == "invalid_state"
     assert app.post("/auth/logout", headers=JSON).json() == {"signed_in": False}
+
+
+def test_a_cross_site_request_cannot_sign_anyone_out(app: TestClient, fake: Fake) -> None:
+    sign_in(app, fake)
+
+    for method in ("GET", "POST"):
+        refused = app.request(
+            method, "/auth/logout", params={"everywhere": "1"}, headers={**HTML, "Sec-Fetch-Site": "cross-site"}
+        )
+
+        assert refused.status_code == 403
+
+    assert app.get("/whoami").json() == {"signed_in": True}
+    assert location(app.get("/auth/logout", headers={**HTML, "Sec-Fetch-Site": "same-origin"})) == "/"
+
+
+def test_a_refresh_masks_cannot_serve_keeps_the_session(
+    app: TestClient, fake: Fake, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    sign_in(app, fake)
+    later = time.time() + 7200
+    monkeypatch.setattr(masks.models.time, "time", lambda: later)
+    fake.unavailable_tokens = True
+
+    assert app.get("/whoami").json() == {"signed_in": False}
+
+    fake.unavailable_tokens = False
+
+    assert app.get("/whoami").json() == {"signed_in": True}
 
 
 def test_signing_out_from_another_site_is_refused(app: TestClient, fake: Fake) -> None:
@@ -398,6 +435,7 @@ def test_a_handshake_connects_the_app(fake: Fake) -> None:
         assert query["redirect_uris"] == [f"{APP}/auth/callback"]
         assert query["return_to"] == [f"{APP}/auth/handshake/callback"]
         assert query["backchannel_logout_uri"] == [f"{APP}/auth/logout/backchannel"]
+        assert query["post_logout_redirect_uri"] == [f"{APP}/auth/logout/return"]
         assert "catalog:admin" in query["scope"][0]
 
         assert location(client.get(fake.handshake(begun), headers=HTML)) == "/auth"
@@ -514,6 +552,51 @@ def test_requests_with_one_expired_session_share_one_refresh(
 
     assert app.get("/whoami").json() == {"signed_in": True}
     assert len(fake.grants) == 1
+
+
+def test_a_logout_token_is_used_once(app: TestClient, fake: Fake) -> None:
+    held = fake.logout_token("web", subject="ada")
+
+    assert app.post("/auth/logout/backchannel", data={"logout_token": held}).status_code == 200
+
+    reused = app.post("/auth/logout/backchannel", data={"logout_token": held})
+
+    assert reused.status_code == 400
+    assert "already used" in reused.json()["error_description"]
+
+
+class ReadOnly:
+    writable = False
+
+    def read(self) -> dict[str, str]:
+        return {}
+
+    def write(self, registration: Any) -> None:
+        raise TypeError("read only")
+
+    def clear(self) -> None:
+        raise TypeError("read only")
+
+
+def test_a_read_only_store_refuses_the_handshake_before_registering(fake: Fake) -> None:
+    application, _ = build(fake, credentials=ReadOnly())
+
+    with TestClient(application, base_url=APP, follow_redirects=False) as client:
+        begun = location(client.get("/auth/handshake", headers=HTML))
+        refused = client.get(fake.handshake(begun), headers=JSON)
+
+    assert refused.status_code == 403
+    assert "app" in fake.initial.values()
+
+
+def test_an_outage_during_the_handshake_is_unavailable(fake: Fake) -> None:
+    application, _ = build(fake, credentials=MemoryCredentials())
+
+    with TestClient(application, base_url=APP, follow_redirects=False) as client:
+        begun = location(client.get("/auth/handshake", headers=HTML))
+        fake.unavailable_tokens = True
+
+        assert client.get(fake.handshake(begun), headers=HTML).status_code == 503
 
 
 def test_back_channel_logout_calls_the_app(fake: Fake) -> None:

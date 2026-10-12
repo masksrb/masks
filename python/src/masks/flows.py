@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import ipaddress
 import json
-from collections.abc import Generator
+from collections.abc import Awaitable, Callable, Generator
 from typing import Any, TypeVar, cast
 from urllib.parse import urlsplit, urlunsplit
 
@@ -188,34 +188,52 @@ async def afetch(request: httpx.Request, http: httpx.AsyncClient) -> httpx.Respo
     return bounded(response, bytes(content))
 
 
-def run(flow: Flow[T], http: httpx.Client) -> T:
+def run(flow: Generator[Any, Any, T], http: httpx.Client, other: Callable[[Any], Any] | None = None) -> T:
     try:
-        request = next(flow)
+        item = next(flow)
 
         while True:
-            try:
-                response = fetch(request, http)
-            except (httpx.HTTPError, Error) as error:
-                request = flow.throw(error)
+            if not isinstance(item, httpx.Request):
+                if other is None:
+                    raise TypeError(f"masks: a flow yielded {item!r}, which is not a request")
+
+                item = flow.send(other(item))
                 continue
 
-            request = flow.send(response)
+            try:
+                response = fetch(item, http)
+            except (httpx.HTTPError, Error) as error:
+                item = flow.throw(error)
+                continue
+
+            item = flow.send(response)
     except StopIteration as done:
         return cast(T, done.value)
 
 
-async def arun(flow: Flow[T], http: httpx.AsyncClient) -> T:
+async def arun(
+    flow: Generator[Any, Any, T],
+    http: httpx.AsyncClient,
+    other: Callable[[Any], Awaitable[Any]] | None = None,
+) -> T:
     try:
-        request = next(flow)
+        item = next(flow)
 
         while True:
-            try:
-                response = await afetch(request, http)
-            except (httpx.HTTPError, Error) as error:
-                request = flow.throw(error)
+            if not isinstance(item, httpx.Request):
+                if other is None:
+                    raise TypeError(f"masks: a flow yielded {item!r}, which is not a request")
+
+                item = flow.send(await other(item))
                 continue
 
-            request = flow.send(response)
+            try:
+                response = await afetch(item, http)
+            except (httpx.HTTPError, Error) as error:
+                item = flow.throw(error)
+                continue
+
+            item = flow.send(response)
     except StopIteration as done:
         return cast(T, done.value)
 

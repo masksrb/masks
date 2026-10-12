@@ -218,6 +218,26 @@ def test_a_handshake_registers_the_app(fake: Fake, issuer: masks.Issuer) -> None
     assert fake.handshakes["app"] == "openid profile catalog:"
 
 
+def test_a_handshake_registers_logout_uris_the_issuer_takes(fake: Fake, issuer: masks.Issuer) -> None:
+    held = masks.Issuer(
+        url=issuer.url,
+        metadata=masks.Metadata(issuer=issuer.url, handshake_endpoint=f"{ISSUER}/handshake"),
+    )
+    shaking = handshake(
+        held,
+        backchannel_logout_uri=f"{APP}/auth/logout/backchannel",
+        post_logout_redirect_uri=f"{APP}/auth/logout/return",
+    )
+    query = parse_qs(urlsplit(shaking.start().url).query)
+
+    assert "backchannel_logout_uri" not in query
+    assert query["post_logout_redirect_uri"] == [f"{APP}/auth/logout/return"]
+    assert shaking.metadata().post_logout_redirect_uris == [f"{APP}/auth/logout/return"]
+
+    with pytest.raises(ValueError):
+        handshake(issuer, post_logout_redirect_uri="https://elsewhere.example/bye")
+
+
 @pytest.mark.parametrize(
     ("changes", "code"),
     [({"state": "forged"}, "invalid_state"), ({"iss": "https://elsewhere.example"}, "invalid_issuer")],

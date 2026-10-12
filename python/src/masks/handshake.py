@@ -47,6 +47,7 @@ class Handshake:
         return_to: str,
         scope: Sequence[str] = DEFAULT_SCOPE,
         backchannel_logout_uri: str = "",
+        post_logout_redirect_uri: str = "",
     ) -> None:
         plain = issuer.allow_plain_http
         self.issuer = issuer
@@ -56,7 +57,12 @@ class Handshake:
         self.return_to = absolute(return_to, "return_to", plain)
         self.scope = words(scope)
         self.backchannel_logout_uri = (
-            absolute(backchannel_logout_uri, "backchannel_logout_uri", plain) if backchannel_logout_uri else ""
+            absolute(backchannel_logout_uri, "backchannel_logout_uri", plain)
+            if backchannel_logout_uri and issuer.metadata.backchannel_logout_supported
+            else ""
+        )
+        self.post_logout_redirect_uri = (
+            absolute(post_logout_redirect_uri, "post_logout_redirect_uri", plain) if post_logout_redirect_uri else ""
         )
 
         if not self.redirect_uris:
@@ -68,7 +74,7 @@ class Handshake:
         home = origin(self.resource)
         elsewhere = [
             uri
-            for uri in [self.return_to, *self.redirect_uris, self.backchannel_logout_uri]
+            for uri in [self.return_to, *self.redirect_uris, self.backchannel_logout_uri, self.post_logout_redirect_uri]
             if uri and origin(uri) != home
         ]
 
@@ -92,6 +98,9 @@ class Handshake:
         if self.backchannel_logout_uri:
             pairs.append(("backchannel_logout_uri", self.backchannel_logout_uri))
 
+        if self.post_logout_redirect_uri:
+            pairs.append(("post_logout_redirect_uri", self.post_logout_redirect_uri))
+
         pairs.extend(("redirect_uris", uri) for uri in self.redirect_uris)
 
         return HandshakeRequest(url=f"{self.endpoint}?{urlencode(pairs)}", state=state)
@@ -104,6 +113,7 @@ class Handshake:
             scope=" ".join(self.scope),
             token_endpoint_auth_method=CLIENT_SECRET_BASIC,
             backchannel_logout_uri=self.backchannel_logout_uri or None,
+            post_logout_redirect_uris=[self.post_logout_redirect_uri] if self.post_logout_redirect_uri else None,
         )
 
     def _complete(self, params: Any, state: str) -> Flow[Registration]:

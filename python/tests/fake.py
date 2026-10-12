@@ -539,6 +539,9 @@ class Fake:
         return respond(200)
 
     def register(self, request: httpx.Request) -> httpx.Response:
+        if self.unavailable_tokens:
+            return oauth_error(503, "temporarily_unavailable")
+
         presented = request.headers.get("Authorization", "").removeprefix("Bearer ")
         client_id = self.initial.pop(presented, None)
 

@@ -206,6 +206,7 @@ class ClientMetadata:
     resources: list[str] | None = None
     dpop_bound_access_tokens: bool | None = None
     backchannel_logout_uri: str | None = None
+    post_logout_redirect_uris: list[str] | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {key: value for key, value in asdict(self).items() if value not in (None, "", [], {})}
