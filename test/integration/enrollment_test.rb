@@ -213,6 +213,18 @@ module Masks
                        "HTTP_AUTHORIZATION" => "Bearer #{registration['registration_access_token']}" }
       end
 
+      test "a short RSA key or an unknown curve is refused" do
+        short = { "keys" => [ JWT::JWK.new(OpenSSL::PKey::RSA.generate(1024), kid: "short").export.transform_keys(&:to_s) ] }
+        odd = machine_jwks.deep_dup.tap { |held| held["keys"].first["crv"] = "P-256K" }
+        long = { "keys" => [ JWT::JWK.new(OpenSSL::PKey::RSA.generate(2048), kid: "long").export.transform_keys(&:to_s) ] }
+
+        assert_match "at least 2048 bits", redeem(enroll["initial_access_token"], jwks: short)["error_description"]
+        assert_match "P-256K is not a curve", redeem(enroll["initial_access_token"], jwks: odd)["error_description"]
+
+        redeem(enroll["initial_access_token"], jwks: long)
+        assert_response :created
+      end
+
       test "a machine cannot widen what it was enrolled with" do
         registration = redeem(enroll["initial_access_token"])
 

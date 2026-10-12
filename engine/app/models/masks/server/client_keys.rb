@@ -9,6 +9,8 @@ module Masks
       SECRET = %w[d p q dp dq qi k].freeze
       ALGORITHMS = %w[RS256 RS384 RS512 PS256 PS384 PS512 ES256 ES384 ES512].freeze
       KINDS = %w[RSA EC].freeze
+      CURVES = %w[P-256 P-384 P-521].freeze
+      SHORTEST_RSA = 2048
       LEEWAY = 30
       LONGEST = 1.hour
 
@@ -23,8 +25,11 @@ module Masks
             raise Refused, "every key must be a JSON object" unless key.is_a?(Hash)
             raise Refused, "#{key['kty'].presence || 'that'} is not a kind of key a client signs with" unless KINDS.include?(key["kty"])
             raise Refused, "a client's keys must be public" if key.keys.any? { |field| SECRET.include?(field.to_s) }
+            raise Refused, "#{key['crv'].presence || 'that'} is not a curve a client signs with" if key["kty"] == "EC" && !CURVES.include?(key["crv"])
 
-            JWT::JWK.new(key).verify_key
+            verified = JWT::JWK.new(key).verify_key
+
+            raise Refused, "an RSA key must be at least #{SHORTEST_RSA} bits" if verified.is_a?(OpenSSL::PKey::RSA) && verified.n.num_bits < SHORTEST_RSA
           end
 
           held
