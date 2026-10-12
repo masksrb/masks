@@ -24,12 +24,12 @@ if (button) {
 
 for (const form of document.querySelectorAll("form")) {
   form.addEventListener("submit", (event) => {
-    if (form.dataset.sent) {
+    if (form.ariaBusy === "true") {
       event.preventDefault();
       return;
     }
 
-    form.dataset.sent = "true";
-    form.setAttribute("aria-busy", "true");
+    form.ariaBusy = "true";
+    for (const action of form.querySelectorAll(".action")) action.classList.add("action-busy");
   });
 }

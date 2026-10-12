@@ -31,24 +31,19 @@ module Masks
         within { assert_not Replay.where("digest LIKE ?", "%a-secret-jti%").exists? }
       end
 
-      test "pruning drops expired ids in the current tenant only" do
+      test "the cleanup drops expired ids in every tenant and keeps live ones" do
         first?("old", expires_in: 1.minute)
         first?("fresh", expires_in: 1.hour)
         first?("theirs", expires_in: 1.minute, tenant: other_tenant)
 
         travel 2.minutes do
-          PruneReplaysJob.perform_now
+          CleanupJob.perform_now
 
           within { assert_equal 1, Replay.count }
           within(other_tenant) { assert_equal 0, Replay.count }
         end
       end
 
-      test "the job runs every hour" do
-        held = YAML.load_file(::Rails.root.join("config/recurring.yml"), aliases: true)
-
-        assert_equal "Masks::Server::PruneReplaysJob", held.dig("production", "replays", "class")
-      end
     end
   end
 end

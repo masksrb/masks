@@ -3,8 +3,6 @@ module Masks
     class Replay < ApplicationRecord
       include TenantScoped
 
-      BATCH = 10_000
-
       class << self
         def first?(kind, id, expires_in:, within: nil)
           now = Time.current
@@ -18,10 +16,6 @@ module Masks
           SQL
 
           claimed.rows.any?
-        end
-
-        def prune!
-          where(expires_at: ..Time.current).in_batches(of: BATCH).delete_all
         end
 
         private
