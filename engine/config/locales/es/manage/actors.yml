@@ -32,7 +32,7 @@ es:
         invited: "Invitados"
         waiting: "Pendientes de aprobación"
         help: "Piden ayuda"
-        managers: "Administradores"
+        managers: "Gestores"
         suspended: "Suspendidos"
       columns:
         actor: "Actor"

@@ -134,7 +134,7 @@ es:
     too_many_requests: "Demasiadas solicitudes. Espera unos minutos."
     no_address: "Esta cuenta no tiene ninguna dirección que confirmar."
     already_confirmed: "Esa dirección ya está confirmada."
-    no_mailer: "Este servidor no puede enviar correo. Pregunta a un administrador."
+    no_mailer: "Este servidor no puede enviar correo. Pregunta a un gestor."
     sent: "Te enviamos un enlace de confirmación a %{email}."
 
   avatars:
@@ -145,7 +145,7 @@ es:
     answered: "esa solicitud de conexión ya se respondió"
     none_in_progress: "no hay ninguna solicitud de conexión en curso"
     not_permitted: "esta cuenta no puede conectar aplicaciones"
-    already_connected: "%{resource} ya está conectado; un administrador tiene que volver a conectarlo"
+    already_connected: "%{resource} ya está conectado; un gestor tiene que volver a conectarlo"
     beyond_account: "%{scopes} es más de lo que tiene esta cuenta"
     too_soon: "No se registró nada. Lee lo que pide y aprueba cuando termine la cuenta atrás."
 

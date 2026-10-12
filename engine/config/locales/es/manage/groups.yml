@@ -2,7 +2,7 @@ es:
   manage:
     groups:
       title: "Grupos"
-      lede: "Conjuntos de actores con nombre, como administradores o familia. Los clientes que piden el alcance groups ven cada grupo al que pertenece un actor, y un cliente se puede limitar a algunos grupos. Los clientes ven la clave de un grupo, y no se puede cambiar después. Los actores se unen a un grupo desde su propia página."
+      lede: "Conjuntos de actores con nombre, como gestores o familia. Los clientes que piden el alcance groups ven cada grupo al que pertenece un actor, y un cliente se puede limitar a algunos grupos. Los clientes ven la clave de un grupo, y no se puede cambiar después. Los actores se unen a un grupo desde su propia página."
       added: "%{name} está listo. Añade actores desde sus propias páginas."
       delete_confirm: "¿Eliminar %{name}? Los clientes limitados a él rechazan a sus actores."
       deleted: "%{name} se eliminó."

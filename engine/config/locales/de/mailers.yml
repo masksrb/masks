@@ -73,7 +73,7 @@ de:
         sign_in:
           risky: "Eine Anmeldung bei Ihrem Konto bei %{tenant} wirkte ungewöhnlich, daher wurde mehr verlangt oder sie wurde abgelehnt. Wenn Sie das nicht waren, ändern Sie Ihr Passwort."
         device:
-          blocked: "Ein Gerät wurde für Ihr Konto bei %{tenant} gesperrt. Es kann sich nicht anmelden, bis jemand es entsperrt."
+          blocked: "Ein Gerät wurde für Ihr Konto bei %{tenant} blockiert. Es kann sich nicht anmelden, bis jemand es freigibt."
         consent:
           granted: "%{client} wurde Zugriff auf Ihr Konto bei %{tenant} erlaubt und kann jetzt lesen, was Sie zu teilen zugestimmt haben."
         connection:

@@ -12,7 +12,7 @@ es:
         none: "ninguna"
         code: "código por correo"
         link: "enlace por correo"
-        approval: "aprobación de un administrador"
+        approval: "aprobación de un gestor"
       presence:
         "off": "desactivado"
         optional: "opcional"

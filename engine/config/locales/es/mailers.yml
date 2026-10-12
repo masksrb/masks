@@ -55,9 +55,9 @@ es:
           changed: "Se cambió el número de teléfono de tu cuenta de %{tenant}. Los códigos por SMS van al número nuevo."
           removed: "Se eliminó el número de teléfono de tu cuenta de %{tenant}."
         recovery:
-          requested: "Alguien que sabe iniciar sesión en tu cuenta de %{tenant} pidió a un administrador que restablezca sus segundos factores. Si no fuiste tú, cambia tu contraseña ahora."
+          requested: "Alguien que sabe iniciar sesión en tu cuenta de %{tenant} pidió a un gestor que restablezca sus segundos factores. Si no fuiste tú, cambia tu contraseña ahora."
         second_factors:
-          reset: "Un administrador restableció los segundos factores de tu cuenta de %{tenant}. El próximo inicio de sesión te pedirá configurar uno nuevo, y se cerraron todas las sesiones."
+          reset: "Un gestor restableció los segundos factores de tu cuenta de %{tenant}. El próximo inicio de sesión te pedirá configurar uno nuevo, y se cerraron todas las sesiones."
         authenticator:
           enabled: "Se añadió una aplicación de autenticación a tu cuenta de %{tenant}. Ahora el inicio de sesión pide su código."
           disabled: "Se eliminó la aplicación de autenticación de tu cuenta de %{tenant}. Ya no se pide al iniciar sesión."
@@ -94,7 +94,7 @@ es:
         membership:
           role_changed: "Si esto parece un error, pregunta a un propietario de %{organization}."
           removed: "Si esto parece un error, pide a un propietario de %{organization} que te vuelva a añadir."
-          suspended: "Si esto parece un error, pide a un administrador que restaure %{organization}."
+          suspended: "Si esto parece un error, pide a un gestor que restaure %{organization}."
 
     confirmation_code:
       subject: "%{code} es tu código de confirmación de %{tenant}"
@@ -103,7 +103,7 @@ es:
 
     approval_requested:
       subject: "%{nickname} espera que le dejen entrar en %{tenant}"
-      lede: "%{nickname} creó una cuenta en %{tenant}. No puede iniciar sesión hasta que un administrador la apruebe."
+      lede: "%{nickname} creó una cuenta en %{tenant}. No puede iniciar sesión hasta que un gestor la apruebe."
       action: "Revisar la cuenta"
 
     recovery_requested:
@@ -116,15 +116,15 @@ es:
         active: "Inicia sesión para conservar tu cuenta de %{tenant}"
         suspended: "Tu cuenta suspendida de %{tenant} se eliminará"
       lede:
-        suspend: "Hace tiempo que nadie inicia sesión en tu cuenta de %{tenant}. Si no inicias sesión antes del %{due}, se suspenderá y solo un administrador podrá restaurarla."
+        suspend: "Hace tiempo que nadie inicia sesión en tu cuenta de %{tenant}. Si no inicias sesión antes del %{due}, se suspenderá y solo un gestor podrá restaurarla."
         delete: "Hace tiempo que nadie inicia sesión en tu cuenta de %{tenant}. Si no inicias sesión antes del %{due}, se eliminará junto con todo lo que contiene."
-        delete_suspended: "Tu cuenta de %{tenant} se suspendió porque nadie la usaba. Se eliminará el %{due}, junto con todo lo que contiene, salvo que un administrador la restaure antes."
+        delete_suspended: "Tu cuenta de %{tenant} se suspendió porque nadie la usaba. Se eliminará el %{due}, junto con todo lo que contiene, salvo que un gestor la restaure antes."
       keep: "Con iniciar sesión una vez, se conserva."
       action: "Iniciar sesión"
 
     approved:
       subject: "Tu cuenta de %{tenant} está lista"
-      lede: "Un administrador aprobó tu cuenta en %{tenant}. Ya puedes iniciar sesión."
+      lede: "Un gestor aprobó tu cuenta en %{tenant}. Ya puedes iniciar sesión."
       action: "Iniciar sesión"
 
     email_verification:

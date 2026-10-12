@@ -37,10 +37,31 @@ Every screen uses one name for each thing. The words live in `engine/config/loca
 | **revoked** | cut off, ended | a session, token, or consent taken away |
 | **blocked** | banned | a device that is refused from then on |
 | **registered** | created | a client |
+| **customer** | client | the business an organization stands for, so it never reads as an OAuth client |
+| **known product** | preset, template | a client masks already knows how to set up |
 | **journey** | flow, context, trigger | what an email was sent from: a sign-in to an app, the account page, a manager, or masks on its own |
 
 `actor` is the model's name in code, in the GraphQL schema, and in the concept pages, and `/manage`
 uses the same word. Outside `/manage`, a screen says *account*.
+
+## Other languages
+
+German, Spanish, and French keep one word for each thing too.
+
+| English | German | Spanish | French |
+| --- | --- | --- | --- |
+| actor | Akteur | actor | acteur |
+| client | Client | cliente | client |
+| activity | Aktivität | actividad | activité |
+| manager | Verwalter | gestor | gestionnaire |
+| customer | Kunde | empresa cliente | entreprise cliente |
+| connected account | verbundenes Konto | cuenta conectada | compte associé |
+| passkey | Passkey | llave de acceso | clé d’accès |
+| second factor | zweiter Faktor | segundo factor | second facteur |
+| block (a device) | blockieren | bloquear | bloquer |
+| suspend (an actor) | sperren | suspender | suspendre |
+
+French says *compte associé* because *connecté* reads as signed in.
 
 ## Verbs and nouns
 

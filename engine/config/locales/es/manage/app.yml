@@ -19,6 +19,6 @@ es:
         clients: "Clientes"
       limited:
         read: "Puedes leerlo todo aquí y no cambiar nada."
-        support: "Puedes ayudar a los actores. La configuración, las claves y otros administradores necesitan un propietario."
+        support: "Puedes ayudar a los actores. La configuración, las claves y otros gestores necesitan un propietario."
         security: "Puedes cambiar claves, clientes, proveedores y políticas. Los actores necesitan soporte o un propietario."
-        both: "Puedes cambiar la configuración y ayudar a los actores. Otros administradores y la configuración del inquilino necesitan un propietario."
+        both: "Puedes cambiar la configuración y ayudar a los actores. Otros gestores y la configuración del inquilino necesitan un propietario."

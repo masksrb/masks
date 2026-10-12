@@ -54,7 +54,7 @@ es:
       all: "Todas las organizaciones"
       archived_alert: "Archivada el %{day}. Los miembros conservan sus roles, y restaurarla les permite volver a iniciar sesión."
       restore: "Restaurar"
-      ownerless: "Nadie es propietario de %{organization}, así que solo los administradores pueden cambiar sus miembros. Haz propietario a un miembro."
+      ownerless: "Nadie es propietario de %{organization}, así que solo los gestores pueden cambiar sus miembros. Haz propietario a un miembro."
       invitation_link: "No hay ningún servicio de correo configurado, así que envía tú mismo este enlace de invitación. Funciona una vez."
       members:
         title: "Miembros"

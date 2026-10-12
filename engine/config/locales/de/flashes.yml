@@ -2,7 +2,7 @@ de:
   devices:
     unknown: "Dieses Gerät gibt es in diesem Konto nicht."
     refused_agent: "Mit diesem Browser ist hier keine Anmeldung möglich."
-    blocked: "Dieses Gerät ist gesperrt."
+    blocked: "Dieses Gerät ist blockiert."
     renamed: "Gerät umbenannt."
     shared: "Auf diesem Gerät hat sich auch jemand anderes angemeldet, daher kann es hier nicht umbenannt werden."
     signed_out: "Dieses Gerät wurde abgemeldet."

@@ -49,7 +49,7 @@ es:
       confirm: "Confirmar contraseña"
       password_hint: "Al menos %{minimum} caracteres."
       edit: "Editar"
-      submit_first_run: "Crear el administrador"
+      submit_first_run: "Crear el gestor"
       submit_signup: "Crear mi cuenta"
       have_account: "¿Ya tienes una cuenta?"
       sign_in_instead: "Iniciar sesión"
@@ -84,10 +84,10 @@ es:
       stuck_unsupported: "El segundo factor de esta cuenta es una llave de acceso, y este navegador no admite llaves de acceso. Abre esta página en un navegador que las admita para continuar."
       stuck_no_script: "El segundo factor de esta cuenta es una llave de acceso, y una llave de acceso necesita JavaScript. Activa JavaScript para continuar."
       stuck_inbox: "Este inicio de sesión empezó desde tu bandeja de entrada, así que un código enviado allí no puede confirmarlo. Empieza de nuevo e inicia sesión con tu contraseña para usar un código por correo."
-      stuck_nothing: "Esta cuenta no tiene ningún segundo factor que este inicio de sesión pueda usar. Un administrador puede restablecerlo."
+      stuck_nothing: "Esta cuenta no tiene ningún segundo factor que este inicio de sesión pueda usar. Un gestor puede restablecerlo."
       recovery_request: "No puedo usar ninguno de estos"
-      recovery_ask: "Pedir ayuda a un administrador"
-      recovery_requested: "Se pidió a un administrador que restablezca tus segundos factores. Puede que se ponga en contacto contigo para asegurarse de que eres tú. Cuando lo haga, vuelve a iniciar sesión para configurar uno nuevo."
+      recovery_ask: "Pedir ayuda a un gestor"
+      recovery_requested: "Se pidió a un gestor que restablezca tus segundos factores. Puede que se ponga en contacto contigo para asegurarse de que eres tú. Cuando lo haga, vuelve a iniciar sesión para configurar uno nuevo."
       sent_to: "Enviado a %{to}."
       send_email: "Enviar un código por correo a %{to}"
       send_sms: "Enviar un código por SMS a %{to}"
@@ -163,7 +163,7 @@ es:
     prove_email:
       title: "Revisa tu correo"
       lede: "Te enviamos un código de seis dígitos a %{email}. Escríbelo para continuar."
-      no_mailer: "Este servidor todavía no puede enviar correo, así que no se puede usar una dirección para iniciar sesión. Usa tu apodo o pregunta a un administrador."
+      no_mailer: "Este servidor todavía no puede enviar correo, así que no se puede usar una dirección para iniciar sesión. Usa tu apodo o pregunta a un gestor."
 
     setup_configure:
       called: "Este servidor se llama"
@@ -176,13 +176,13 @@ es:
       lede: "Te enviamos un código de seis dígitos a %{email}."
       lede_link: "Te enviamos un enlace a %{email}. Ábrelo y esta página continuará sola."
       waiting: "Esperando a que se abra el enlace"
-      no_mailer: "Este servidor todavía no puede enviar correo, así que no se puede confirmar la dirección. Pregunta a un administrador."
+      no_mailer: "Este servidor todavía no puede enviar correo, así que no se puede confirmar la dirección. Pregunta a un gestor."
 
     confirm_phone:
       title: "Revisa tu teléfono"
       lede: "Te enviamos un código de seis dígitos a %{phone}."
       change_phone: "Usar otro número"
-      no_texts: "Este servidor todavía no puede enviar SMS, así que no se puede confirmar el número. Pregunta a un administrador."
+      no_texts: "Este servidor todavía no puede enviar SMS, así que no se puede confirmar el número. Pregunta a un gestor."
 
     add_phone:
       title: "Añade un número de teléfono"
@@ -190,8 +190,8 @@ es:
       hint: "En formato internacional, empezando por + y el código de país."
 
     awaiting_approval:
-      title: "Esperando a un administrador"
-      lede: "Tu cuenta está creada, pero un administrador tiene que dejarte entrar primero. Recibirás un correo cuando lo haga."
+      title: "Esperando a un gestor"
+      lede: "Tu cuenta está creada, pero un gestor tiene que dejarte entrar primero. Recibirás un correo cuando lo haga."
       waiting: "Comprobando cada pocos segundos"
       check: "Volver a comprobar"
 
@@ -251,13 +251,13 @@ es:
       invalid-phone: "Escribe el número de teléfono en formato internacional, como +15551234567."
       common-password: "Esa contraseña es de las más comunes. Elige otra."
       breached-password: "Esa contraseña apareció en una filtración de datos. Elige otra."
-      risky-sign-in: "Este inicio de sesión parece inusual, así que no puede continuar desde aquí. Prueba desde un dispositivo que hayas usado antes o pregunta a un administrador."
+      risky-sign-in: "Este inicio de sesión parece inusual, así que no puede continuar desde aquí. Prueba desde un dispositivo que hayas usado antes o pregunta a un gestor."
       confirmation-expired: "Ese código caducó. Envía otro."
       signup-domain-refused: "Aquí no se pueden crear cuentas con esa dirección."
       work-unsolved: "Este navegador no terminó la comprobación que frena los registros automáticos. Inténtalo de nuevo."
       invitation-expired: "Esa invitación ya no es válida. Pide otra."
       reset-expired: "Ese enlace de restablecimiento ya no es válido. Pide otro."
-      no-mailer: "Este servidor no puede enviar correo. Pregunta a un administrador."
+      no-mailer: "Este servidor no puede enviar correo. Pregunta a un gestor."
       sso-failed: "Ese inicio de sesión no se completó. Vuelve a intentarlo."
       sso-expired: "Ese inicio de sesión tardó demasiado. Vuelve a intentarlo."
       sso-unavailable: "Esa forma de iniciar sesión no está disponible."

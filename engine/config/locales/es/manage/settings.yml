@@ -13,7 +13,7 @@ es:
         hide: "Ocultar"
         mail:
           title: "Permite que masks envíe correo"
-          detail: "Las invitaciones, los restablecimientos de contraseña y los códigos de inicio de sesión se envían por correo. Hasta entonces, un administrador pasa cada enlace de invitación a mano."
+          detail: "Las invitaciones, los restablecimientos de contraseña y los códigos de inicio de sesión se envían por correo. Hasta entonces, un gestor pasa cada enlace de invitación a mano."
           action: "Añadir un servicio de correo"
         client:
           title: "Registra tu primer cliente"
@@ -84,7 +84,7 @@ es:
         networks_saved: "Redes de riesgo guardadas."
       idle:
         title: "Eliminación automática"
-        help: "Un actor con el que nadie inicia sesión ni se usa a través de un cliente se suspende y luego se elimina tras estos periodos. Cada paso se avisa por correo con al menos 30 días de antelación, e iniciar sesión antes de una suspensión conserva el actor. Con Suspender establecido, solo se eliminan los actores suspendidos por inactividad. Con Suspender en Nunca, los actores inactivos se eliminan directamente. El último administrador y los actores que un directorio aprovisiona mediante SCIM no se tocan."
+        help: "Un actor con el que nadie inicia sesión ni se usa a través de un cliente se suspende y luego se elimina tras estos periodos. Cada paso se avisa por correo con al menos 30 días de antelación, e iniciar sesión antes de una suspensión conserva el actor. Con Suspender establecido, solo se eliminan los actores suspendidos por inactividad. Con Suspender en Nunca, los actores inactivos se eliminan directamente. El último gestor y los actores que un directorio aprovisiona mediante SCIM no se tocan."
         suspend: "Suspender"
         delete: "Eliminar"
         updated: "Eliminación automática cambiada."

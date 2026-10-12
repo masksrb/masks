@@ -90,7 +90,7 @@ es:
       last_used: "Usada por última vez %{when}"
       approval:
         title: "Pendiente de aprobación"
-        lede: "No puede iniciar sesión hasta que un administrador lo apruebe."
+        lede: "No puede iniciar sesión hasta que un gestor lo apruebe."
         approved: "Aprobado. Ya puede iniciar sesión y se le ha avisado."
         approve: "Aprobar"
       recovery:
@@ -116,7 +116,7 @@ es:
       all_activity: "Toda la actividad"
       no_activity: "Nada todavía."
       danger: "Suspender o eliminar"
-      yourself: "Eres tú. Tiene que hacerlo otro administrador."
+      yourself: "Eres tú. Tiene que hacerlo otro gestor."
       suspend: "Suspender a %{identifier}"
       delete: "Eliminar a %{identifier}"
       parts:

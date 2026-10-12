@@ -141,7 +141,7 @@ de:
           here: "Dieses Gerät"
           signed_in: "Angemeldet"
           signed_out: "Abgemeldet"
-          blocked: "Gesperrt"
+          blocked: "Blockiert"
         seen: "Zuletzt gesehen vor %{age}."
         from: "Zuletzt verwendet von %{address}."
         skips_code: "Dieses Gerät muss keinen Code eingeben."

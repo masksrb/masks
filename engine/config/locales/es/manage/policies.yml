@@ -30,7 +30,7 @@ es:
         none: "Ninguna"
         code: "Código por correo"
         link: "Enlace por correo"
-        approval: "Aprobación de un administrador"
+        approval: "Aprobación de un gestor"
       summary:
         signup_open: "registro abierto"
         invitation_only: "solo por invitación"
@@ -85,7 +85,7 @@ es:
           all_providers: "Todos los proveedores"
         second_factor:
           legend: "Segundo factor"
-          required: "Obligatorio para todos, no solo para los administradores"
+          required: "Obligatorio para todos, no solo para los gestores"
           apps: "Se vuelve a pedir al iniciar sesión en un cliente si la sesión no usó uno"
         risk:
           legend: "Riesgo"

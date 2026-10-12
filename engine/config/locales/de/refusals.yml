@@ -3,11 +3,11 @@ de:
     show:
       browser: "Dieser Browser: %{label}"
       device:
-        page_title: "Dieses Gerät ist gesperrt"
-        state: "Gesperrt"
-        heading: "Dieses Gerät ist gesperrt"
-        lede: "%{tenant} lehnt jede Anfrage von diesem Browser ab, auch die Anmeldung, weil er über eine Kontoseite oder von einem Verwalter gesperrt wurde."
-        next: "Wenn das Ihr Gerät ist, bitten Sie einen Verwalter von %{tenant}, es zu entsperren. Die Anmeldung von einem anderen Gerät ist nicht betroffen."
+        page_title: "Dieses Gerät ist blockiert"
+        state: "Blockiert"
+        heading: "Dieses Gerät ist blockiert"
+        lede: "%{tenant} lehnt jede Anfrage von diesem Browser ab, auch die Anmeldung, weil er über eine Kontoseite oder von einem Verwalter blockiert wurde."
+        next: "Wenn das Ihr Gerät ist, bitten Sie einen Verwalter von %{tenant}, es zu freigeben. Die Anmeldung von einem anderen Gerät ist nicht betroffen."
       agent:
         page_title: "Mit diesem Browser ist hier keine Anmeldung möglich"
         state: "Abgelehnt"

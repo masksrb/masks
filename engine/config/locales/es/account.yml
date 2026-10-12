@@ -150,7 +150,7 @@ es:
 
       organizations:
         heading: "Organizaciones"
-        invited_by_manager: "Alguien invitado por un administrador"
+        invited_by_manager: "Alguien invitado por un gestor"
         role: "Eres %{role}"
         lede_owner: "Como propietario, decides quién pertenece aquí y qué rol tiene cada persona. Las aplicaciones que piden tu organización ven el rol."
         lede_member: "Las aplicaciones que piden tu organización ven que perteneces a ella y tu rol."

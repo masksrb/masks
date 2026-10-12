@@ -17,9 +17,9 @@ es:
           help: "Se envían durante un inicio de sesión. Cuando un cliente envió al actor allí, un cliente aprobado encabeza el correo con su logotipo y su nombre. Un inicio de sesión directo en la página de la cuenta no tiene cliente, y lo encabeza el inquilino."
           about: "Acerca de los correos enviados al iniciar sesión"
         manage:
-          title: "De un administrador"
-          help: "Se envían cuando un administrador actúa en /manage. Los encabeza el inquilino."
-          about: "Acerca de los correos enviados por un administrador"
+          title: "De un gestor"
+          help: "Se envían cuando un gestor actúa en /manage. Los encabeza el inquilino."
+          about: "Acerca de los correos enviados por un gestor"
         account:
           title: "Desde la página de la cuenta"
           help: "Se envían cuando un actor cambia algo en la página de su cuenta. Los encabeza el inquilino."

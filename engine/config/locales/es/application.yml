@@ -1,6 +1,6 @@
 es:
   application:
     person:
-      manager: "Administrador"
+      manager: "Gestor"
       unconfirmed: "sin confirmar"
       sign_out: "Cerrar sesión"

@@ -71,8 +71,8 @@ de:
         trusted: "Gerät als vertrauenswürdig markiert"
         named: "Gerät umbenannt"
         forgotten: "Gerät abgemeldet"
-        blocked: "Gerät gesperrt"
-        unblocked: "Gerät entsperrt"
+        blocked: "Gerät blockiert"
+        unblocked: "Gerät freigegeben"
       avatar:
         uploaded: "Foto hochgeladen"
         removed: "Foto entfernt"

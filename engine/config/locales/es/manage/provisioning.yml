@@ -11,7 +11,7 @@ es:
         year: "Un año"
       connect:
         title: "Conectar un directorio"
-        help: "Da al directorio esta URL y un token. Un actor aprovisionado se identifica por su correo, que masks da por confirmado, e inicia sesión a través de un proveedor o una invitación. A nadie que tenga un alcance masks: se le cambia la contraseña o el correo de esta forma, y el último administrador nunca se suspende ni se elimina."
+        help: "Da al directorio esta URL y un token. Un actor aprovisionado se identifica por su correo, que masks da por confirmado, e inicia sesión a través de un proveedor o una invitación. A nadie que tenga un alcance masks: se le cambia la contraseña o el correo de esta forma, y el último gestor nunca se suspende ni se elimina."
         base_url: "URL base de SCIM"
         label: "Etiqueta"
         provisions: "Aprovisiona"
