@@ -11,7 +11,7 @@
       <span class="person-sub">
         <%= details.join(" · ") %>
         <% if actor.email_unconfirmed? %>
-          <span class="person-note"><%= t("application.person.unconfirmed") %></span>
+          <span class="person-note"><%= local_assigns[:unconfirmed] || t("application.person.unconfirmed") %></span>
         <% end %>
       </span>
     <% end %>

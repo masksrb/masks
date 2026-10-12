@@ -1,84 +1,117 @@
-<% content_for :title, t(@existing ? ".page_title_again" : ".page_title") %>
+<% tenant = Masks::Server::Current.tenant&.name.to_s %>
+<% name = @handshake.name %>
+<% content_for :title, t(@existing ? ".page_title_again" : ".page_title", name: name) %>
 <% content_for :surface, "grant" %>
 
 <% content_for :scripts do %>
   <%= vite_javascript_tag "handshake" %>
 <% end %>
 
-<% hot, rest = ranked_scopes(@scopes) %>
-<% tenant = Masks::Server::Current.tenant&.name.to_s %>
+<% areas = Masks::Server::Namespace.prefixes(@handshake.scopes) %>
+<% plain = plain_scopes(@scopes, areas: areas) %>
+<% hot, rest = @scopes.to_a.partition { |scope, _| heeded_scope?(scope) } %>
+<% after_sign_out = @handshake.try(:post_logout_redirect_uri) %>
 
 <div class="auth-pair">
-  <span class="auth-mark auth-mark-client" aria-hidden="true"><%= @handshake.name.to_s.first&.upcase %></span>
+  <span class="auth-mark auth-mark-client" aria-hidden="true"><%= name.to_s.first&.upcase %></span>
   <span class="auth-wire"></span>
   <%= tenant_mark(Masks::Server::Current.tenant) %>
 </div>
 
 <div class="prompt-head">
-  <h1 class="prompt-title"><%= t(@existing ? ".title_again" : ".title") %></h1>
+  <h1 class="prompt-title"><%= t(@existing ? ".title_again" : ".title", name: name, tenant: tenant) %></h1>
+
+  <p class="handshake-origin">
+    <span class="handshake-origin-label"><%= t(".runs_at") %></span>
+    <span class="handshake-origin-value"><%= @handshake.origin %></span>
+  </p>
+
   <p class="prompt-lede">
-    <%= t(@existing ? ".lede_again_html" : ".lede_html", name: @handshake.name, tenant: tenant) %>
+    <%= t(@existing ? ".lede_again_html" : ".lede_html", name: name, tenant: tenant) %>
   </p>
 </div>
 
-<%= render "masks/server/application/person", actor: current_actor, sign_out: true %>
+<% if @existing %>
+  <% by_you = @existing.approved_by_id == current_actor.id %>
+  <% who = by_you ? nil : @existing.approved_by&.identifier || t(".someone") %>
+  <% date = l(@existing.approved_at.to_date, format: :long) %>
+  <div class="note note-warn handshake-replacing">
+    <strong><%= t(".stops_working", name: @existing.name) %></strong>
+    <span><%= by_you ? t(".connected_by_you", name: @existing.name, date: date) : t(".connected_by", name: @existing.name, who: who, date: date) %></span>
+  </div>
+<% end %>
 
-<div class="slab">
-  <% if @existing %>
-    <% who = @existing.approved_by_id == current_actor.id ? t(".you") : @existing.approved_by&.identifier || t(".someone") %>
-    <div class="ledger-row ledger-row-tight">
-      <span class="ledger-label"><%= t(".replaces") %></span>
-      <span class="ledger-value handshake-warn">
-        <%= t(".replaced", name: @existing.name, who: who, date: l(@existing.approved_at.to_date, format: :long)) %>
-      </span>
+<div class="handshake-as">
+  <span class="handshake-caption"><%= t(".signed_in_as") %></span>
+  <%= render "masks/server/application/person", actor: current_actor, sign_out: true, unconfirmed: t(".unconfirmed") %>
+</div>
+
+<div class="slab handshake-plain">
+  <% if plain[:heeds].any? %>
+    <div class="ledger-row">
+      <span class="ledger-label"><%= t(".check") %></span>
+      <ul class="handshake-heeds">
+        <% plain[:heeds].each do |scope, description| %>
+          <% why = if scope == Masks::Server::Scopes::OFFLINE then t(".heed.offline_access", name: name)
+                   elsif scope == Masks::Server::Scopes::DELEGATE then t(".heed.delegates", name: name)
+                   elsif scope.start_with?(Masks::Server::Scopes::DELEGATE) then t(".heed.delegate", name: name)
+                   elsif scope == Masks::Server::Scopes::MANAGE then t(".heed.manage", name: name)
+                   end %>
+          <li class="handshake-heed<%= " handshake-heed-alarm" if scope == Masks::Server::Scopes::MANAGE %>"<%= ' role="alert"'.html_safe if scope == Masks::Server::Scopes::MANAGE %>>
+            <span class="handshake-heed-what"><%= scope == Masks::Server::Scopes::DELEGATE ? t(".heed.delegates_title") : description %></span>
+            <% if why %>
+              <span class="handshake-heed-why"><%= why %></span>
+            <% end %>
+          </li>
+        <% end %>
+      </ul>
+
     </div>
   <% end %>
 
-  <div class="ledger-row">
-    <span class="ledger-label"><%= t(".may_ask") %></span>
-    <ul class="grant-scopes">
-      <% hot.each do |scope, description| %>
-        <li class="grant-scope grant-scope-hot">
-          <span><%= description %></span>
-          <span class="chip-key"><%= scope %></span>
-        </li>
+  <% if plain[:sees].any? %>
+    <div class="ledger-row">
+      <span class="ledger-label"><%= t(".sees", name: name) %></span>
+      <ul class="handshake-sees">
+        <% plain[:sees].each do |_, description| %>
+          <li><%= description %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <% if areas.any? %>
+    <div class="ledger-row">
+      <span class="ledger-label"><%= t(".area", name: name) %></span>
+      <p class="handshake-say">
+        <%= t(".area_says_html", name: name, namespaces: safe_join(areas.map { |area| content_tag(:code, area, class: "chip-key") }, ", ")) %>
+        <% if @granting.present? %><%= t(".area_yours") %><% end %>
+      </p>
+
+      <% if @beneath.present? %>
+        <details class="disclosure">
+          <summary class="textlink"><%= t(".beneath", count: @beneath.size) %></summary>
+          <ul class="grant-scopes">
+            <% @beneath.each do |scope, description| %>
+              <li class="grant-scope<%= " grant-scope-hot" if consequential_scope?(scope) %>">
+                <span><%= description %></span>
+                <span class="chip-key"><%= scope %></span>
+              </li>
+            <% end %>
+          </ul>
+        </details>
       <% end %>
+    </div>
+  <% end %>
 
-      <% if hot.any? && rest.any? %>
-        <li class="grant-scope-split"></li>
-      <% end %>
-
-      <% rest.each do |scope, description| %>
-        <li class="grant-scope">
-          <span><%= description %></span>
-          <span class="chip-key"><%= scope %></span>
-        </li>
-      <% end %>
-    </ul>
-
-    <% if @handshake.scopes.include?(Masks::Server::Scopes::MANAGE) %>
-      <div class="note note-warn" role="alert"><%= t(".manage_warning", name: @handshake.name) %></div>
-    <% end %>
-
-    <% if @beneath.present? %>
-      <details class="disclosure">
-        <summary class="textlink"><%= t(".beneath", count: @beneath.size) %></summary>
-        <ul class="grant-scopes">
-          <% @beneath.each do |scope, description| %>
-            <li class="grant-scope">
-              <span><%= description %></span>
-              <span class="chip-key"><%= scope %></span>
-            </li>
-          <% end %>
-        </ul>
-      </details>
-    <% end %>
-  </div>
-
-  <% if @granting.present? %>
-    <div class="ledger-row ledger-row-tight">
-      <span class="ledger-label"><%= t(".claims") %></span>
-      <span class="ledger-value"><%= t(".claimed", namespaces: @granting.to_sentence, name: @handshake.name) %></span>
+  <% if plain[:also].any? %>
+    <div class="ledger-row">
+      <span class="ledger-label"><%= t(".also", name: name) %></span>
+      <ul class="handshake-sees">
+        <% plain[:also].each do |_, description| %>
+          <li><%= description %></li>
+        <% end %>
+      </ul>
     </div>
   <% end %>
 </div>
@@ -87,6 +120,36 @@
   <summary class="textlink"><%= t(".details") %></summary>
 
   <div class="slab">
+    <div class="ledger-row ledger-row-tight">
+      <span class="ledger-label"><%= t(".scopes") %></span>
+      <ul class="grant-scopes">
+        <% (hot + rest).each do |scope, description| %>
+          <li class="grant-scope<%= " grant-scope-hot" if heeded_scope?(scope) %>">
+            <span><%= description %></span>
+            <span class="chip-key"><%= scope %></span>
+          </li>
+        <% end %>
+      </ul>
+
+      <% if @handshake.scopes.include?(Masks::Server::Scopes::MANAGE) %>
+        <div class="note note-warn"><%= t(".manage_warning", name: name) %></div>
+      <% end %>
+    </div>
+
+    <% if @granting.present? %>
+      <div class="ledger-row ledger-row-tight">
+        <span class="ledger-label"><%= t(".claims") %></span>
+        <span class="ledger-value"><%= t(".claimed", namespaces: @granting.to_sentence, name: name) %></span>
+      </div>
+    <% end %>
+
+    <% if @existing %>
+      <div class="ledger-row ledger-row-tight">
+        <span class="ledger-label"><%= t(".replaces") %></span>
+        <span class="ledger-value"><%= t(".replaced", name: @existing.name, who: who || t(".you"), date: date) %></span>
+      </div>
+    <% end %>
+
     <div class="ledger-row ledger-row-tight">
       <span class="ledger-label"><%= t(".client") %></span>
       <span class="ledger-value"><%= t(".credentials.#{@handshake.credentials}") %></span>
@@ -125,17 +188,24 @@
         <span class="ledger-value aside-mono"><%= @handshake.backchannel_logout_uri %></span>
       </div>
     <% end %>
+
+    <% if after_sign_out %>
+      <div class="ledger-row ledger-row-tight">
+        <span class="ledger-label"><%= t(".after_sign_out") %></span>
+        <span class="ledger-value aside-mono"><%= after_sign_out %></span>
+      </div>
+    <% end %>
   </div>
 </details>
 
 <%= form_with url: handshake_path, method: :post do |form| %>
   <%= hidden_field_tag :hid, @hid %>
   <%= hidden_field_tag :shown, @shown %>
-  <% approve = @existing ? "replace" : "register" %>
+  <% approve = @existing ? "reconnect" : "connect" %>
   <div class="action-row">
     <button type="submit" name="approve" value="yes" class="action action-grow action-countdown"
             data-countdown="<%= Masks::Server::HandshakesController::WAIT.to_i %>"
-            data-waiting="<%= t(".#{approve}_in", seconds: "%{seconds}") %>"><%= t(".#{approve}") %></button>
+            data-waiting="<%= t(".#{approve}_in", name: name, seconds: "%{seconds}") %>"><%= t(".#{approve}", name: name) %></button>
     <button type="submit" name="deny" value="yes" class="action action-quiet action-fit"><%= t(".cancel") %></button>
   </div>
 <% end %>

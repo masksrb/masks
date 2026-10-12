@@ -118,7 +118,7 @@ module Masks
         connect
 
         assert_response :success
-        assert_match "Replace an existing client?", response.body
+        assert_match "Reconnect xixo?", response.body
       end
 
       test "a public app asking for more than it was allowed is asked about again" do
@@ -129,7 +129,7 @@ module Masks
         connect(token_endpoint_auth_method: "none")
 
         assert_response :success
-        assert_match "Replace an existing client?", response.body
+        assert_match "Reconnect xixo?", response.body
       end
 
       test "a public app whose access was revoked is asked about again" do
@@ -141,7 +141,7 @@ module Masks
         connect(token_endpoint_auth_method: "none")
 
         assert_response :success
-        assert_match "Replace an existing client?", response.body
+        assert_match "Reconnect xixo?", response.body
       end
 
       test "a public app sent back somewhere new is asked about again" do
@@ -152,7 +152,7 @@ module Masks
         connect(token_endpoint_auth_method: "none", return_to: "#{APP}/elsewhere")
 
         assert_response :success
-        assert_match "Replace an existing client?", response.body
+        assert_match "Reconnect xixo?", response.body
       end
 
       test "a signed-in owner is shown what is being connected, and where it will be sent back" do
@@ -160,7 +160,7 @@ module Masks
         connect
 
         assert_response :success
-        assert_match "Register a new client?", response.body
+        assert_match "Connect xixo to Demo?", response.body
         assert_match APP, response.body
         assert_match "xixo:catalog:read", response.body
         assert_match REDIRECT_URI, response.body
@@ -503,13 +503,13 @@ module Masks
         assert_equal 0, within(@tenant) { Client.count }
       end
 
-      test "the request says it registers a client for everyone and allows only your account" do
+      test "the request says people can sign in to the app, and that only your account is allowed in for now" do
         sign_in_as(@owner)
         connect
 
-        assert_match "Register a new client?", response.body
-        assert_match "for everyone on", response.body
-        assert_match "allows only your account", response.body
+        assert_match "Connect xixo to Demo?", response.body
+        assert_match "People will be able to sign in to <strong>xixo</strong> with their Demo account", response.body
+        assert_match "For now only you are allowed in", response.body
         assert_match "Confidential. It receives a secret.", response.body
         assert_match RETURN_TO, response.body
       end
@@ -527,7 +527,7 @@ module Masks
         sign_in_as(manager)
         connect(scope: "#{SCOPE} masks:manage")
 
-        assert_match "change every setting on this server", response.body
+        assert_select ".handshake-plain .handshake-heed-alarm[role=alert]", text: /change every setting on this server/
       end
 
       test "replacing a client says whose it was and when it was approved" do
@@ -537,8 +537,35 @@ module Masks
 
         connect
 
-        assert_match "Replace an existing client?", response.body
+        assert_match "Reconnect xixo?", response.body
+        assert_match "The current xixo connection stops working.", response.body
+        assert_match "You connected xixo on", response.body
         assert_match "The xixo client you approved on", response.body
+      end
+
+      test "where the app runs is shown beside the question" do
+        sign_in_as(@owner)
+        connect
+
+        assert_select ".prompt-head .handshake-origin-value", text: APP
+      end
+
+      test "staying signed in and asking for accounts elsewhere are called out before the technical details" do
+        sign_in_as(@owner)
+        connect(scope: "#{SCOPE} masks:delegate:")
+
+        assert_select ".handshake-plain .handshake-heed-what", text: "Stay signed in"
+        assert_select ".handshake-plain .handshake-heed-what", text: "Ask people to connect their other accounts"
+        assert_select ".handshake-plain .handshake-sees li", text: "Your email"
+        assert_select ".handshake-more .chip-key", text: "masks:delegate:"
+        assert_select ".handshake-more .chip-key", text: "offline_access"
+      end
+
+      test "the approve button names the app" do
+        sign_in_as(@owner)
+        connect
+
+        assert_select "button[name=approve]", text: "Connect xixo"
       end
 
       test "a token minted for one tenant registers nothing at another" do
@@ -568,7 +595,7 @@ module Masks
         get resumed
 
         assert_response :success
-        assert_match "Register a new client?", response.body
+        assert_match "Connect xixo to Demo?", response.body
       end
 
       test "an approved client does not ask again for what a person already approved" do
