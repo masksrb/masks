@@ -1,7 +1,10 @@
 # masks for Go
 
-`github.com/masksrb/masks/go` connects a Go service or a machine to masks. It
-gets tokens as a client and checks them as an API.
+`github.com/masksrb/masks/go` connects a Go app, service, or machine to masks.
+It signs people in, gets tokens as a client, and checks them as an API.
+`github.com/masksrb/masks/go/web` builds a web app's sign-in on it, with routes,
+a sealed session, and middleware for `net/http`. See
+[Go apps](https://masks.pages.dev/guides/go/) for the web integration.
 
 ```sh
 go get github.com/masksrb/masks/go
@@ -10,18 +13,76 @@ go get github.com/masksrb/masks/go
 | Covers | |
 | --- | --- |
 | Discovery | The issuer's document, checked against the address it was fetched from. |
+| Handshake | masks' own registration for an app, approved in the browser and redeemed server to server. |
+| Signing people in | The code flow with PKCE, state, nonce, the `iss` answer, and a checked ID token, then userinfo and signing out at the issuer. |
 | Registration | Redeeming an initial access token, then reading, updating, and deleting the client. |
 | Enrollment | An app asking for initial access tokens for its machines, and unenrolling them. |
 | Client authentication | `client_secret_basic`, `client_secret_post`, `private_key_jwt`, and `none`. |
-| Grants | Client credentials, refresh tokens, the device flow, and token exchange. |
+| Grants | The authorization code, client credentials, refresh tokens, the device flow, and token exchange. |
+| Delegation | Connecting a person's account at a provider and getting its token later. |
+| Logout | Checking a back-channel logout token. |
 | DPoP | Tokens held to a key, and proofs on every request an `http.Client` sends. |
 | Revocation | Access and refresh tokens. |
 | Introspection | Asking the issuer whether a token is active and what it grants. |
 | Checking tokens | `at+jwt` access tokens, including DPoP-bound ones, in an API or as middleware, with a shared store of seen proofs. |
 
-Signing people in through a browser is left to
-[golang.org/x/oauth2](https://pkg.go.dev/golang.org/x/oauth2). See
-[Other languages](https://masks.pages.dev/guides/other-languages/#go).
+## A web app signs people in
+
+```go
+app, err := web.New(web.Config{
+	Issuer:   "https://auth.example.com",
+	Resource: "https://app.example.com",
+	Secret:   []byte(os.Getenv("SESSION_SECRET")),
+})
+
+mux.Handle("/auth/", app.Handler())
+mux.Handle("/settings", app.Require()(settings))
+```
+
+Open `/auth/handshake` once to connect the app. `web.PersonFrom(r.Context())`
+returns the signed-in person. The [Go apps](https://masks.pages.dev/guides/go/)
+guide covers organizations, privileges, sessions, tokens, and delegations.
+
+## The code flow without go/web
+
+```go
+client := issuer.Client(registration, nil, nil)
+client.RedirectURI = "https://app.example.com/callback"
+
+started, err := client.AuthCodeURL(masks.AuthRequest{Organization: "acme"})
+```
+
+Keep `started` (its `State`, `Nonce`, and `Verifier`) where only this browser
+can reach it, and send the browser to `started.URL`. On the callback:
+
+```go
+signed, err := client.Complete(ctx, r.URL.Query(), started)
+profile, err := client.UserInfo(ctx, signed.Token)
+```
+
+`Complete` refuses another `state`, another `iss`, and an ID token with another
+audience or nonce. `EndSessionURL` builds the address that signs the person out
+of masks.
+
+## The handshake
+
+```go
+handshake := &masks.Handshake{
+	Issuer:       issuer,
+	Name:         "Catalog",
+	Resource:     "https://app.example.com",
+	RedirectURIs: []string{"https://app.example.com/callback"},
+	ReturnTo:     "https://app.example.com/handshake/callback",
+	Scope:        []string{"openid", "profile", "email", "offline_access"},
+}
+
+target, state, err := handshake.Start()
+```
+
+Keep `state` with the browser and send it to `target`. When masks sends it back
+to `ReturnTo`, `handshake.Complete(ctx, r.URL.Query(), state)` registers the app
+and returns its registration with a client secret. Every URL shares the
+resource's origin.
 
 ## A machine signs in as itself
 
@@ -149,6 +210,20 @@ new token comes back held to the same key. An answer whose
 Asking for `masks.TokenTypeUpstreamAccessToken`, with the connection's id in
 `Audience`, returns the upstream provider's own token for a delegation. That
 token is a Bearer token even when the client holds a DPoP key.
+
+## Delegations
+
+```go
+started, err := client.StartDelegation("google", masks.AuthRequest{})
+connected, err := client.FinishDelegation(ctx, r.URL.Query(), started)
+
+upstream, err := client.UpstreamToken(ctx, connected.Secret, connected.Connection)
+```
+
+`client.RedirectURI` is the address the provider's answer comes back to. Save
+`connected.Secret`, and then each `upstream.Secret`, before anything else, since
+each call replaces it. A `*masks.DelegationError` carries the replacement even
+when the call fails after the refresh.
 
 ## Introspecting a token
 

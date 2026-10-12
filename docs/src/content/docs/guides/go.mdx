@@ -1,0 +1,382 @@
+---
+title: Go apps
+description: Sign people in to a Go web app with masks, guard routes by scope and role, accept tokens in an API, and enroll machines.
+---
+
+`github.com/masksrb/masks/go/web` signs people in to a Go web app against a masks server. It is
+plain `net/http`, so it works with the standard `ServeMux`, chi, gorilla/mux, and any router that
+takes an `http.Handler`. It covers what [`Masks::Rails`](/guides/rails/#client-mode) covers in a
+Rails app.
+
+```sh
+go get github.com/masksrb/masks/go
+```
+
+| Package | |
+| --- | --- |
+| `github.com/masksrb/masks/go` | The client: discovery, the handshake, the code flow, tokens, DPoP, introspection, token exchange, delegations, enrollment, and checking tokens. |
+| `github.com/masksrb/masks/go/web` | The web integration built on it: routes under `/auth`, a session, the signed-in person, and middleware. |
+
+## Setting up
+
+```go
+app, err := web.New(web.Config{
+	Issuer:   os.Getenv("MASKS_ISSUER"),
+	Resource: "https://app.example.com",
+	Name:     "Catalog",
+	Scope:    []string{"openid", "profile", "email", "offline_access"},
+	Secret:   []byte(os.Getenv("SESSION_SECRET")),
+})
+if err != nil {
+	log.Fatal(err)
+}
+
+mux := http.NewServeMux()
+mux.Handle("/auth/", app.Handler())
+mux.Handle("/settings", app.Require()(settings))
+```
+
+Set `MASKS_ISSUER` to the tenant you sign in against, such as `https://acme.auth.example.com`.
+`SESSION_SECRET` is at least 32 random bytes, such as the output of `openssl rand -hex 32`. Start
+the app and open `/auth/handshake`.
+
+| Setting | |
+| --- | --- |
+| `Issuer`, `IssuerFor` | The masks issuer, or a function that names one for each request. |
+| `Resource`, `ResourceFor` | The app's own absolute `https` URL. Sign-ins name it as their resource, and tokens for the API must name it as their audience. |
+| `Name` | The name the handshake gives the app. Defaults to the resource's host. |
+| `Scope` | What every sign-in asks for. It must include `openid`. Defaults to `openid profile email`. Add `offline_access` to refresh tokens. |
+| `Privileges` | See [privileges](#privileges). |
+| `Mount` | Where `Handler` answers. Defaults to `/auth`. |
+| `AfterSignIn`, `AfterSignOut` | Where a person goes after signing in or out. Both default to `/`. |
+| `SignOutOfIssuer` | Signs the person out of masks as well when they sign out of the app. |
+| `Secret`, `PreviousSecrets` | Seal the session. See [sessions](#sessions). |
+| `Credentials` | Where the handshake keeps the app's credentials. Defaults to `masks.json` in the working directory. |
+| `Manages` | Who may reconnect or disconnect the app once it is connected. |
+| `PlainHTTP` | Drops the `Secure` flag and the `__Host-` prefix from the cookie, and allows a plain `http` issuer, for development. |
+
+### With other routers
+
+`Handler` matches the full path, so it needs no prefix stripped. Each guard is a
+`func(http.Handler) http.Handler`.
+
+```go
+r := chi.NewRouter()
+r.Handle("/auth/*", app.Handler())
+r.With(app.Require("admin")).Get("/admin", admin)
+```
+
+```go
+r := mux.NewRouter()
+r.PathPrefix("/auth/").Handler(app.Handler())
+r.Handle("/admin", app.Require("admin")(admin))
+```
+
+Gin and Echo wrap `net/http` handlers and middleware with their own adapters:
+
+```go
+router := gin.Default()
+router.Any("/auth/*path", gin.WrapH(app.Handler()))
+router.GET("/admin", gin.WrapH(app.Require("admin")(admin)))
+```
+
+```go
+e := echo.New()
+e.Any("/auth/*", echo.WrapHandler(app.Handler()))
+e.GET("/admin", echo.WrapHandler(admin), echo.WrapMiddleware(app.Require("admin")))
+```
+
+## The handshake
+
+The handshake sends the browser to the masks server's approval screen. Approve it there, and the app
+redeems the one-time token that comes back server to server, so the client secret never passes
+through the browser. It registers the app for `Resource`, with `/auth/callback` as its redirect URI
+and `/auth/handshake/callback` as the address masks sends people back to.
+
+The app writes its credentials to `masks.json`, mode 600, and then starts a sign-in.
+A multi-tenant app implements `CredentialStore` instead, and its `Load`, `Save`, and `Forget` receive
+the request:
+
+```go
+type CredentialStore interface {
+	Load(r *http.Request) (*web.Credentials, error)
+	Save(r *http.Request, held *web.Credentials) error
+	Forget(r *http.Request) error
+}
+```
+
+`IssuerFor` and `ResourceFor` name the issuer and the resource for each request in the same way.
+Derive them from something the app trusts, such as a tenant it looked up by host, and never from a
+value the browser sends unchecked. A session is held to the issuer that signed it in, so it does not
+carry over to another tenant.
+
+Once the app is connected, `/auth/handshake` shows the connection to somebody `Manages` allows, with
+buttons to connect again and to disconnect. Disconnecting deletes the registration at masks and the
+credentials. A person who is not signed in goes to `AfterSignOut`, and anybody else is refused with
+`403`.
+
+```go
+Manages: func(r *http.Request, person *web.Person) bool { return person.HasPrivilege("admin") },
+```
+
+| Method | |
+| --- | --- |
+| `app.Connected(r)` | Whether the app holds credentials. |
+| `app.Registered(r)` | Whether masks still knows the app. A sign-in checks this first, and a client masks no longer knows sends the browser to the handshake again. |
+| `app.Client(r)` | The `masks.Client` for the app, for calls of your own. |
+
+## Signing in
+
+`Handler` answers these routes under `Mount`:
+
+| Route | |
+| --- | --- |
+| `GET /auth/` | Starts a sign-in. Takes `return_to`, `organization`, and `privilege`. |
+| `GET /auth/callback` | Finishes it. |
+| `GET /auth/session` | The signed-in person as JSON, for a single-page app. |
+| `GET /auth/avatar` | The person's photo, fetched from masks with their token. Takes `size`. |
+| `GET`, `POST`, or `DELETE /auth/logout` | Signs out. Takes `everywhere` to sign out of masks as well. |
+| `POST /auth/logout/backchannel` | Takes a back-channel logout token from masks. |
+| `GET` or `POST /auth/handshake` | Starts the handshake, or shows the connection. |
+| `GET /auth/handshake/callback` | Finishes the handshake. |
+| `POST /auth/handshake/disconnect` or `DELETE /auth/handshake` | Disconnects the app. |
+
+A sign-in uses PKCE, a `state`, and a `nonce`, checks the `iss` that masks sends back, and checks the
+ID token's signature, audience, and nonce. Up to five sign-ins can be in progress in one browser,
+each for an hour. A callback the browser did not start sends it to sign in again, once a
+minute, and is refused with `invalid_state` in between. `return_to` is followed only to a path on the app.
+
+| Middleware | |
+| --- | --- |
+| `app.Session` | Puts the person in the request's context, signed in or not. |
+| `app.Require(privileges...)` | Sends a signed-out visitor to sign in and back again, then checks each privilege. |
+| `app.Protect(privileges...)` | Checks an access token instead. See [accepting tokens](#accepting-tokens). |
+| `app.Either(privileges...)` | Checks a token when the request carries an `Authorization` header or no session, and the session otherwise. |
+
+A JSON request is answered with `401` and `login_required` or `handshake_required` and the URL to
+send the browser to, instead of a redirect.
+
+`web.PersonFrom(r.Context())` returns the person, and never `nil`:
+
+| Field or method | |
+| --- | --- |
+| `SignedIn` | Whether a sign-in is held and its token has not expired. |
+| `Subject`, `Name`, `Nickname`, `Email`, `EmailVerified` | Who signed in. |
+| `Picture`, `Avatars` | The `picture` claim, then the photo, then the identicon, and each avatar URL. |
+| `Tenant` | The tenant's `UUID`, `Subdomain`, and `Name`. |
+| `Organization`, `Organizations`, `HasRole("owner")` | See [organizations](#organizations). |
+| `Scopes`, `HasScope("catalog:read")` | What the token carries. |
+| `Privileges`, `HasPrivilege("admin")` | See [privileges](#privileges). |
+| `AccessToken` | The token to spend against a resource server. |
+| `Claim("groups", &groups)` | Any other claim the sign-in kept. |
+
+`GET /auth/session` answers the same fields as JSON, without `AccessToken`.
+
+`app.LoginURL(web.LoginOptions{ReturnTo: "/billing"})` builds a link to sign in, and
+`app.LogoutPath()` is the path a sign-out form posts to.
+
+### Refreshing
+
+A token that expires within 30 seconds is refreshed with its refresh token, and the person's name,
+photo, and organizations are read again from userinfo. Requests that arrive together with the same
+expired token share one refresh, since masks revokes a refresh token that is used twice. A refused
+refresh signs the person out.
+
+### Signing out
+
+A sign-out revokes the refresh token and clears the session. With `SignOutOfIssuer`, or
+`everywhere`, the browser goes on to masks to end its session there and comes back to
+`AfterSignOut`. A `POST` or `DELETE` from another site is refused with `403`.
+
+When masks ends a session itself, it sends a logout token to `/auth/logout/backchannel`. The app
+signs out the session it names, or every session of the person it names, at their next request. It
+remembers that in `Departures`, which is in memory by default. An app that runs as several
+processes sets `Departures` to a store they share. `LoggedOut` hears each logout as well.
+
+## Sessions
+
+The session lives in a cookie, sealed with AES-GCM under a key derived from `Secret`. It is
+`HttpOnly`, `Secure`, and `SameSite=Lax`, and named `__Host-masks`, so no other host can set it. A
+session too large for one cookie is split across several. It lasts 14 days, or `SessionLifetime`.
+
+The browser cannot read the tokens in the sealed cookie, and `/auth/session` leaves them out. The
+session is replaced at every sign-in.
+
+To keep sessions on the server, set `Sessions` to a `SessionStore`. The cookie then holds only the
+session's id, sealed, and the store holds the session, also sealed.
+
+```go
+type SessionStore interface {
+	Load(ctx context.Context, id string) ([]byte, error)
+	Save(ctx context.Context, id string, data []byte, expiresIn time.Duration) error
+	Delete(ctx context.Context, id string) error
+}
+```
+
+`web.NewMemoryStore()` keeps them in one process. To change the secret, move the old one to
+`PreviousSecrets`. Sessions sealed with it still open, and each is sealed with the new secret the
+next time it changes.
+
+## Organizations
+
+An app signs a person in as a member of one [organization](/guides/organizations/) when it asks for
+the `organization` scope. Name one for every sign-in with `Organization`, or for one sign-in with
+`/auth/?organization=acme`:
+
+```go
+web.Config{
+	Scope:        []string{"openid", "profile", "email", "offline_access", "organization"},
+	Organization: func(r *http.Request) string { return strings.Split(r.Host, ".")[0] },
+}
+```
+
+| | |
+| --- | --- |
+| `person.Organization` | The organization signed in to, with its `ID`, `Key`, `Name`, and `Role`, or `nil`. |
+| `person.HasRole("owner", "billing")` | Whether the person holds one of those roles in it. |
+| `person.Organizations` | Every organization the person has joined, each with the role held there. |
+| `app.LoginURL(web.LoginOptions{Organization: "globex"})` | Signs the person in again, naming another organization. |
+
+The app reads the organizations from userinfo at sign-in and at every refresh, so a changed role
+reaches it within an access token's lifetime.
+
+## Privileges
+
+A privilege is a name for what a route needs. It can ask for scopes the person holds in masks, a role
+in the organization they signed in to, or both:
+
+```go
+web.Config{
+	Scope: []string{"openid", "profile", "email", "offline_access", "organization", "catalog:read"},
+	Privileges: map[string]web.Privilege{
+		"admin":      {Scope: []string{"catalog:admin"}},
+		"billing":    {Role: []string{"owner", "billing"}},
+		"acme_admin": {Scope: []string{"catalog:admin"}, Role: []string{"owner"}, Organization: "acme"},
+	},
+}
+```
+
+`Role` takes one role or several, any of which will do, and `Organization` holds the privilege to
+one organization by key or id.
+
+```go
+mux.Handle("/settings", app.Require()(settings))
+mux.Handle("POST /settings", app.Require("admin")(saveSettings))
+```
+
+| | |
+| --- | --- |
+| The sign-in holds the privilege | The handler runs. |
+| A scope is missing | The browser goes through masks once, asking for the usual scopes and the privilege's, and comes back to the page it was on. A JSON request gets `403` with `privilege_required`, the `privileges`, and the `login_url` to send the browser to. |
+| masks did not grant the scope on that trip | `403 insufficient_scope`. The person does not hold it, so the app does not send them around again for five minutes. |
+| A role or organization does not match | `403 insufficient_role` or `insufficient_organization`, without a trip to masks. |
+
+Privilege scopes stay out of every ordinary sign-in. masks puts a scope in the token only for a person
+who already holds it, so asking never widens anyone's access. The handshake registers every
+privilege's scopes, so the issuer lets the app ask for them. Set `Namespace`, such as `catalog:`, to
+register the namespace in place of each scope under it.
+
+`Require`, `Protect`, `Either`, and `LoginURL` panic on a name that `Privileges` does not define. In
+a URL, the app ignores it.
+
+## Accepting tokens
+
+An app that is also a resource server checks access tokens with `Protect`. `Resource` is the audience
+tokens must name, and `ResourceScopes` lists the scopes it accepts.
+
+```go
+mux.Handle("GET /api/items", app.Protect("read")(items))
+mux.Handle("GET /.well-known/oauth-protected-resource", app.ResourceMetadata())
+```
+
+`Protect` takes the same [privileges](#privileges), roles and organizations included, and checks them
+against the token. A token that lacks one is refused with `403` and `insufficient_scope`,
+`insufficient_role`, or `insufficient_organization`. A refusal carries an RFC 6750 challenge whose
+`resource_metadata` points at `/.well-known/oauth-protected-resource`, which `ResourceMetadata`
+serves.
+
+A token [bound to a key with DPoP](/guides/security/#binding-a-token-with-dpop) is accepted only as
+`Authorization: DPoP` with a proof signed by that key, made for this request's method and URL and
+the token, made within the last minute, and not seen before. The URL is the resource's origin and the
+request's path, so a proxy in front of the app needs no other setting. Each process keeps the proofs
+it has seen in memory. To share them, set `Replay` to a `masks.ReplayStore`. When the store fails,
+the request is refused with `503`.
+
+Inside the handler, `web.PersonFrom(r.Context())` describes the token: `Subject`, `ClientID`,
+`Scopes`, `Organization`, `Tenant`, and the verified `Claims`.
+
+An API with no browser sign-in uses `masks.NewVerifier` from the client package without `web`. See
+the [package README](https://github.com/masksrb/masks/tree/main/go#checking-access-tokens).
+
+## Delegations
+
+A [delegation](/guides/connecting-via-sdk/#delegation) lets the app act as a person at a provider
+while they are away. Set `Delegates` and the path the provider's answer comes back to, and the
+handshake asks for `masks:delegate:` and registers that path:
+
+```go
+web.Config{
+	Delegates:      true,
+	DelegationPath: "/connect/callback",
+}
+```
+
+```go
+mux.HandleFunc("GET /connect", func(w http.ResponseWriter, r *http.Request) {
+	if err := app.StartDelegation(w, r, "google", masks.AuthRequest{}); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
+})
+
+mux.HandleFunc("GET /connect/callback", func(w http.ResponseWriter, r *http.Request) {
+	connected, err := app.FinishDelegation(w, r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	save(connected.Connection, connected.Secret)
+})
+```
+
+`FinishDelegation` refuses a connection that someone other than the person signed in finished. Keep
+the `Secret` encrypted. To call the provider later, ask for its token:
+
+```go
+client, err := app.Delegations(r)
+upstream, err := client.UpstreamToken(ctx, secret, connection)
+save(connection, upstream.Secret)
+```
+
+Save `upstream.Secret` before anything else, since each call replaces the secret. A
+`*masks.DelegationError` carries the replacement in `Secret` even when the call fails after the
+refresh. `errors.Is(err, masks.ErrDelegationUnavailable)` means masks or the provider did not answer
+and nothing was lost. `masks.ErrDelegationRefused` means masks refused the call, and `SignInAgain`
+reports a refusal that asks the person to sign in again.
+
+## Machines and enrollment
+
+A Go program on a machine, such as an agent an app installs, signs in as itself with the client
+package. See the [package README](https://github.com/masksrb/masks/tree/main/go) for keys, client
+credentials, DPoP, and the device flow.
+
+An app that has claimed a [namespace](/guides/core-concepts/#namespaces), through `Namespace` in
+its handshake, enrolls each machine without a browser. It asks masks for an initial access token and hands it to the machine:
+
+```go
+client, err := app.Client(r)
+enrollment, err := client.Enroll(ctx, masks.EnrollmentRequest{Scope: []string{"catalog:agent"}, Name: "nas"})
+```
+
+The machine makes its own keys and registers with the token:
+
+```go
+registration, err := issuer.Register(ctx, masks.ClientMetadata{
+	Name:                    "nas",
+	TokenEndpointAuthMethod: masks.PrivateKeyJWT,
+	JWKS:                    key.JWKS(),
+}, enrollment.InitialAccessToken)
+```
+
+`client.Unenroll(ctx, machineClientID)` archives the machine and revokes its tokens. See
+[enrolling a machine](/guides/features/#enrolling-a-machine).
