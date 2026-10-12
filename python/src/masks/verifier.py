@@ -3,7 +3,8 @@ from __future__ import annotations
 import hmac
 import inspect
 import time
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterator, Mapping, Sequence
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from typing import Any
 from urllib.parse import urlsplit, urlunsplit
@@ -12,7 +13,7 @@ import httpx
 import jwt
 
 from .dpop import DPOP, PROOF_TYPE, tidied, token_hash
-from .errors import InvalidToken
+from .errors import Error, InvalidToken, Unavailable
 from .flows import Flow, arun, default_async_http, default_http, get, required, run
 from .keys import PRIVATE_MEMBERS, thumbprint
 from .models import Issuer, Tenant
@@ -95,11 +96,19 @@ def remembered(answer: object) -> None:
         raise InvalidToken("masks: that proof has already been used")
 
     if answer is not True:
-        raise InvalidToken("masks: the replay store answered with something other than true or false")
+        raise Unavailable("masks: the replay store answered with something other than true or false")
 
 
-def unremembered() -> InvalidToken:
-    return InvalidToken("masks: the replay store could not say whether that proof is new")
+def unremembered() -> Unavailable:
+    return Unavailable("masks: the replay store could not say whether that proof is new")
+
+
+@contextmanager
+def fetching() -> Iterator[None]:
+    try:
+        yield
+    except (Error, httpx.HTTPError) as error:
+        raise Unavailable("masks: the issuer's keys could not be fetched") from error
 
 
 def unverified_header(token: str) -> dict[str, Any]:
@@ -269,15 +278,20 @@ class Verifier(_Verifying):
         http: httpx.Client | None = None,
         replay: ReplayStore | None = None,
     ) -> None:
+        if replay is not None and inspect.iscoroutinefunction(getattr(replay, "first", None)):
+            raise TypeError("masks: a Verifier needs a replay store that is not async; use AsyncVerifier")
+
         super().__init__(issuer, audience, public_url=public_url)
         self.http = http or default_http()
         self.replay: ReplayStore = replay if replay is not None else MemoryReplayStore()
 
     def verify(self, token: str) -> Claims:
-        return run(self._verify(token), self.http)
+        with fetching():
+            return run(self._verify(token), self.http)
 
     def authenticate(self, method: str, url: object, headers: Headers) -> Claims:
-        claims, seen = run(self._authenticate(method, url, headers), self.http)
+        with fetching():
+            claims, seen = run(self._authenticate(method, url, headers), self.http)
 
         if seen:
             try:
@@ -305,10 +319,12 @@ class AsyncVerifier(_Verifying):
         self.replay: ReplayStore | AsyncReplayStore = replay if replay is not None else MemoryReplayStore()
 
     async def verify(self, token: str) -> Claims:
-        return await arun(self._verify(token), self.http)
+        with fetching():
+            return await arun(self._verify(token), self.http)
 
     async def authenticate(self, method: str, url: object, headers: Headers) -> Claims:
-        claims, seen = await arun(self._authenticate(method, url, headers), self.http)
+        with fetching():
+            claims, seen = await arun(self._authenticate(method, url, headers), self.http)
 
         if seen:
             try:

@@ -192,6 +192,10 @@ The verifier checks the signature against the issuer's published keys, the
 needs a proof signed by its key, made for this method and URL, made in the last
 minute, and not seen before. A failed check raises `masks.InvalidToken`.
 
+When the verifier cannot reach the issuer's keys, or its replay store fails, it
+raises `masks.Unavailable`. The token may still be good, so answer `503` and
+let the client try again with the same token.
+
 Set `public_url` when a proxy sits in front of the API, since a proof names the
 address the client used.
 
@@ -214,10 +218,12 @@ class RedisReplay:
 verifier = masks.Verifier(issuer, "https://files.example.com", replay=RedisReplay(redis))
 ```
 
-`AsyncVerifier` also takes a store whose `first` is a coroutine. When the store
-raises or answers anything other than `True` or `False`, the request is refused
-with `masks.InvalidToken`. `masks.MemoryReplayStore` is the default, and one
-instance can be shared between verifiers in the same process.
+`AsyncVerifier` also takes a store whose `first` is a coroutine, and
+`Verifier` raises `TypeError` when given one. An answer of `False` raises
+`masks.InvalidToken`. When the store raises or answers anything other than
+`True` or `False`, the verifier raises `masks.Unavailable` from the store's
+error. `masks.MemoryReplayStore` is the default, and one instance can be shared
+between verifiers in the same process.
 
 ### Introspection
 
@@ -237,8 +243,9 @@ raises `masks.Error`.
 ### ASGI and FastAPI
 
 `masks.asgi.Middleware` checks every request with an `AsyncVerifier` and
-answers `401` with `WWW-Authenticate` challenges when the check fails. The
-claims are at `request.state.masks_claims`.
+answers `401` with `WWW-Authenticate` challenges when the check fails. It
+answers `503` with no challenge when the verifier raises `masks.Unavailable`.
+The claims are at `request.state.masks_claims`.
 
 ```python
 from fastapi import Depends, FastAPI, HTTPException, Request
@@ -269,7 +276,8 @@ async def files(claims: masks.Claims = Depends(reading)):
 Call `Verifier.authenticate` in a view decorator or a `before_request` hook.
 In Django, pass `request.method`, `request.build_absolute_uri()`, and
 `request.headers`. In Flask, pass `request.method`, `request.url`, and
-`request.headers`. Answer `401` when it raises `masks.InvalidToken`.
+`request.headers`. Answer `401` when it raises `masks.InvalidToken`, and `503`
+when it raises `masks.Unavailable`.
 
 ## Plain HTTP
 

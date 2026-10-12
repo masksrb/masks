@@ -22,6 +22,10 @@ class InvalidToken(MasksError):
     pass
 
 
+class Unavailable(MasksError):
+    pass
+
+
 class InsecureURL(MasksError):
     pass
 

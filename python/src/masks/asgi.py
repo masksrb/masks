@@ -5,7 +5,7 @@ from collections.abc import Awaitable, Callable, MutableMapping
 from typing import Any
 
 from .dpop import DPOP
-from .errors import InvalidToken
+from .errors import InvalidToken, Unavailable
 from .verifier import PROOF_ALGORITHMS, AsyncVerifier
 
 Scope = MutableMapping[str, Any]
@@ -60,11 +60,32 @@ class Middleware:
         except InvalidToken as error:
             await self._refuse(scope, send, str(error).removeprefix("masks: "))
             return
+        except Unavailable:
+            await self._unavailable(scope, send)
+            return
 
         scope[CLAIMS] = claims
         scope.setdefault("state", {})["masks_claims"] = claims
 
         await self.app(scope, receive, send)
+
+    async def _unavailable(self, scope: Scope, send: Send) -> None:
+        if scope["type"] == "websocket":
+            await send({"type": "websocket.close", "code": 1013})
+            return
+
+        body = json.dumps(
+            {"error": "temporarily_unavailable", "error_description": "the token could not be checked just now"}
+        ).encode()
+
+        await send(
+            {
+                "type": "http.response.start",
+                "status": 503,
+                "headers": [(b"content-type", b"application/json"), (b"retry-after", b"5")],
+            }
+        )
+        await send({"type": "http.response.body", "body": body})
 
     async def _refuse(self, scope: Scope, send: Send, description: str) -> None:
         if scope["type"] == "websocket":

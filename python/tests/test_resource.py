@@ -427,31 +427,64 @@ def test_a_bearer_token_never_reaches_the_replay_store(fake: Fake, issuer: masks
     assert store.asked == []
 
 
-@pytest.mark.parametrize(
-    ("answer", "said"),
-    [
-        (False, "already been used"),
-        (1, "something other than true or false"),
-        (None, "something other than true or false"),
-        (ConnectionError("redis is down"), "could not say"),
-    ],
-)
-def test_a_replay_store_refuses_unless_it_answers_true(
-    signed: masks.Client, issuer: masks.Issuer, fake: Fake, answer: object, said: str
+def test_a_replay_store_answering_false_is_a_replay(signed: masks.Client, issuer: masks.Issuer, fake: Fake) -> None:
+    verifier = masks.Verifier(issuer, AUDIENCE, http=fake.http(), replay=Remembering(False))
+    _, headers = bound_request(signed)
+
+    with pytest.raises(masks.InvalidToken, match="already been used"):
+        verifier.authenticate("GET", TARGET, headers)
+
+
+@pytest.mark.parametrize("answer", [1, None, "OK"])
+def test_a_replay_store_answering_something_else_is_unavailable(
+    signed: masks.Client, issuer: masks.Issuer, fake: Fake, answer: object
 ) -> None:
     verifier = masks.Verifier(issuer, AUDIENCE, http=fake.http(), replay=Remembering(answer))
     _, headers = bound_request(signed)
 
-    with pytest.raises(masks.InvalidToken, match=said):
+    with pytest.raises(masks.Unavailable, match="something other than true or false") as raised:
         verifier.authenticate("GET", TARGET, headers)
 
+    assert not isinstance(raised.value, masks.InvalidToken)
 
-def test_a_synchronous_verifier_refuses_an_async_store(signed: masks.Client, issuer: masks.Issuer, fake: Fake) -> None:
-    verifier = masks.Verifier(issuer, AUDIENCE, http=fake.http(), replay=AsyncRemembering())
+
+def test_a_failing_replay_store_is_unavailable(signed: masks.Client, issuer: masks.Issuer, fake: Fake) -> None:
+    down = ConnectionError("redis is down")
+    verifier = masks.Verifier(issuer, AUDIENCE, http=fake.http(), replay=Remembering(down))
     _, headers = bound_request(signed)
 
-    with pytest.raises(masks.InvalidToken, match="something other than true or false"):
+    with pytest.raises(masks.Unavailable, match="could not say") as raised:
         verifier.authenticate("GET", TARGET, headers)
+
+    assert raised.value.__cause__ is down
+
+
+def test_a_synchronous_verifier_refuses_an_async_store(issuer: masks.Issuer, fake: Fake) -> None:
+    with pytest.raises(TypeError):
+        masks.Verifier(issuer, AUDIENCE, http=fake.http(), replay=AsyncRemembering())
+
+
+def unreachable(request: httpx.Request) -> httpx.Response:
+    raise httpx.ConnectError("refused", request=request)
+
+
+@pytest.mark.parametrize(
+    "failure",
+    [
+        lambda request: httpx.Response(500, request=request),
+        lambda request: httpx.Response(200, content=b"not json", request=request),
+        unreachable,
+    ],
+)
+def test_a_failed_key_fetch_is_unavailable(
+    fake: Fake, issuer: masks.Issuer, failure: Callable[[httpx.Request], httpx.Response]
+) -> None:
+    verifier = masks.Verifier(issuer, AUDIENCE, http=httpx.Client(transport=httpx.MockTransport(failure)))
+
+    with pytest.raises(masks.Unavailable) as raised:
+        verifier.verify(fake.issue(good_claims()))
+
+    assert raised.value.__cause__ is not None
 
 
 def test_verifiers_can_share_a_replay_store(signed: masks.Client, issuer: masks.Issuer, fake: Fake) -> None:
@@ -495,20 +528,47 @@ async def test_an_async_verifier_awaits_its_replay_store(
     assert len(held.asked) == 1
 
 
-@pytest.mark.anyio
-async def test_the_asgi_middleware_refuses_when_the_replay_store_fails(
-    signed: masks.Client, issuer: masks.Issuer, fake: Fake
-) -> None:
+async def answered(signed: masks.Client, verifier: masks.AsyncVerifier) -> dict[str, Any]:
     async def app(scope: Any, _: Any, send: Any) -> None:
         await send({"type": "http.response.start", "status": 200, "headers": []})
 
-    verifier = masks.AsyncVerifier(
-        issuer, AUDIENCE, http=fake.async_http(), replay=AsyncRemembering(TimeoutError("no answer"))
-    )
     _, headers = bound_request(signed)
-
-    _, refused = await call(
+    _, started = await call(
         Middleware(app, verifier), [(name.lower().encode(), value.encode()) for name, value in headers.items()]
     )
 
-    assert refused["status"] == 401
+    return started
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("answer", [TimeoutError("no answer"), "OK"])
+async def test_the_asgi_middleware_is_unavailable_when_the_replay_store_fails(
+    signed: masks.Client, issuer: masks.Issuer, fake: Fake, answer: object
+) -> None:
+    verifier = masks.AsyncVerifier(issuer, AUDIENCE, http=fake.async_http(), replay=AsyncRemembering(answer))
+    started = await answered(signed, verifier)
+
+    assert started["status"] == 503
+    assert b"www-authenticate" not in [name for name, _ in started["headers"]]
+
+
+@pytest.mark.anyio
+async def test_the_asgi_middleware_is_unavailable_when_the_keys_cannot_be_fetched(
+    signed: masks.Client, issuer: masks.Issuer
+) -> None:
+    verifier = masks.AsyncVerifier(issuer, AUDIENCE, http=httpx.AsyncClient(transport=httpx.MockTransport(unreachable)))
+    started = await answered(signed, verifier)
+
+    assert started["status"] == 503
+    assert b"www-authenticate" not in [name for name, _ in started["headers"]]
+
+
+@pytest.mark.anyio
+async def test_the_asgi_middleware_refuses_a_replay_with_a_challenge(
+    signed: masks.Client, issuer: masks.Issuer, fake: Fake
+) -> None:
+    verifier = masks.AsyncVerifier(issuer, AUDIENCE, http=fake.async_http(), replay=AsyncRemembering(False))
+    started = await answered(signed, verifier)
+
+    assert started["status"] == 401
+    assert b"www-authenticate" in [name for name, _ in started["headers"]]

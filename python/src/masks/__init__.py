@@ -1,7 +1,7 @@
 from .auth import Auth
 from .client import AsyncClient, Client
 from .dpop import DPOP, proof
-from .errors import Error, ForeignOrigin, InsecureURL, InvalidToken, MasksError, has_code
+from .errors import Error, ForeignOrigin, InsecureURL, InvalidToken, MasksError, Unavailable, has_code
 from .flows import adiscover, adiscover_resource, discover, discover_resource
 from .keys import Key
 from .models import (
@@ -74,6 +74,7 @@ __all__ = [
     "Tenant",
     "Token",
     "TokenSource",
+    "Unavailable",
     "Verifier",
     "adiscover",
     "adiscover_resource",
