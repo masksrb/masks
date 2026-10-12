@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="<%= Masks::Server::Locales.tag %>" data-theme="rose">
+<html lang="<%= Masks::Server::Locales.tag %>">
   <head>
     <title><%= content_for(:title) || "Manage #{Masks::Server::Current.tenant&.name}" %></title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
     <meta name="masks-root" content="<%= request.script_name %>">
-    <meta name="color-scheme" content="dark">
+    <meta name="color-scheme" content="light dark">
     <link rel="icon" href="/masks-public/favicon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/masks-public/icon.png">
     <%= csrf_meta_tags %>

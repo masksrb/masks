@@ -92,19 +92,6 @@
   }
 }
 
-[data-theme="rose"] {
-  --glass-ruby: #ff867a;
-  --glass-ember: #ff8f53;
-  --glass-amber: #f19c29;
-  --glass-gold: #d4ad03;
-  --glass-verdant: #78c966;
-  --glass-emerald: #1dcf98;
-  --glass-cyan: #00cecf;
-  --glass-sky: #00c2fe;
-  --glass-cobalt: #70b1ff;
-  --glass-violet: #b49dff;
-}
-
 @layer components {
   .btn {
     display: inline-flex;
@@ -497,7 +484,7 @@
     --ink: #18181b;
     --ink-soft: #5c5c63;
 
-    --came: #8a5a1c;
+    --label: #8a5a1c;
     --brass: #8a5a1c;
     --brass-lit: #9b6a26;
     --signal: #b3380f;
@@ -533,7 +520,7 @@
       --ink: #ededef;
       --ink-soft: #9a9a9f;
 
-      --came: #c9a14a;
+      --label: #c9a14a;
       --brass: #c9a14a;
       --brass-lit: #e8c27a;
       --signal: #ff7a4a;
@@ -657,7 +644,7 @@
     font-weight: 700;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    color: var(--came);
+    color: var(--label);
   }
 
   .state::before {
@@ -734,7 +721,7 @@
     font-weight: 700;
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    color: var(--came);
+    color: var(--label);
     overflow-wrap: anywhere;
   }
 
@@ -791,7 +778,7 @@
 
   .app-tile:hover,
   .app-tile:focus-visible {
-    border-color: var(--came);
+    border-color: var(--label);
   }
 
   .app-tile-logo {
@@ -803,8 +790,8 @@
   .app-tile-initial {
     display: grid;
     place-items: center;
-    background: color-mix(in oklab, var(--came) 14%, transparent);
-    color: var(--came);
+    background: color-mix(in oklab, var(--label) 14%, transparent);
+    color: var(--label);
     font-weight: 600;
   }
 
@@ -822,7 +809,7 @@
 
   .auth-mark-pending {
     border-style: dashed;
-    color: var(--came);
+    color: var(--label);
   }
 
   .auth-mark-rose {
@@ -902,7 +889,7 @@
     font-weight: 700;
     letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: var(--came);
+    color: var(--label);
   }
 
   .place {
@@ -1139,7 +1126,7 @@
   }
 
   .pill:hover {
-    border-color: var(--came);
+    border-color: var(--label);
     color: var(--ink);
   }
 
@@ -1169,7 +1156,7 @@
     margin: 0 0 0.125rem 0.25rem;
     font-size: 0.875rem;
     font-weight: 500;
-    color: var(--came);
+    color: var(--label);
   }
 
   .entries {
@@ -1228,7 +1215,7 @@
     flex: none;
     margin-left: auto;
     font-size: 0.875rem;
-    color: var(--came);
+    color: var(--label);
     text-align: right;
   }
 
@@ -1330,7 +1317,7 @@
   }
 
   .item-more {
-    color: var(--came);
+    color: var(--label);
   }
 
   .item-delegations {
@@ -1476,7 +1463,7 @@
     padding: 0;
     font-size: 0.75rem;
     font-weight: 500;
-    color: var(--came);
+    color: var(--label);
   }
 
   .flow {
@@ -1601,7 +1588,7 @@
 
   .tabset-done {
     border-bottom-color: var(--glass-emerald);
-    color: var(--came);
+    color: var(--label);
   }
 
   .tabset-now {
@@ -1628,7 +1615,7 @@
     font-weight: 700;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--came);
+    color: var(--label);
   }
 
   .ledger-value {
@@ -2268,7 +2255,7 @@
   }
 
   .person-note {
-    color: var(--came);
+    color: var(--label);
   }
 
   .person-role {
