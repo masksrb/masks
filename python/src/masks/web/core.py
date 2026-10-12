@@ -153,6 +153,20 @@ class Answer:
         return next((value for held, value in self.headers if held.lower() == name.lower()), "")
 
 
+@dataclass(frozen=True)
+class Sealed:
+    name: str
+    value: str
+    max_age: int
+    secure: bool
+
+    @property
+    def header(self) -> str:
+        secure = "; Secure" if self.secure else ""
+
+        return f"{self.name}={self.value}; Path=/; Max-Age={self.max_age}; HttpOnly{secure}; SameSite=Lax"
+
+
 class Refusal(MasksError):
     def __init__(self, answer: Answer) -> None:
         super().__init__(f"masks: refused with {answer.status}")
@@ -279,7 +293,7 @@ class Masks:
     def load(self, cookie: str | None) -> Session:
         return self.config.backend.load(cookie)
 
-    def cookie(self, session: Session, secure_request: bool) -> str | None:
+    def seal(self, session: Session, secure_request: bool) -> Sealed | None:
         if not session.dirty:
             return None
 
@@ -287,14 +301,19 @@ class Masks:
         identity = self._held(session).get("identity") or {}
         tags = {name: str(identity[name]) for name in ("sub", "sid") if identity.get(name)}
         value = backend.save(session, tags)
-        secure = "; Secure" if self.config.cookie_secure or secure_request else ""
+        secure = self.config.cookie_secure or secure_request
+        session.modified = False
+        session.renewed = False
 
         if value is None:
-            return f"{backend.name}=; Path=/; Max-Age=0; HttpOnly{secure}; SameSite=Lax"
+            return Sealed(backend.name, "", 0, secure)
 
-        lifetime = max(int(session.issued_at + backend.lifetime - time.time()), 1)
+        return Sealed(backend.name, value, max(int(session.issued_at + backend.lifetime - time.time()), 1), secure)
 
-        return f"{backend.name}={value}; Path=/; Max-Age={lifetime}; HttpOnly{secure}; SameSite=Lax"
+    def cookie(self, session: Session, secure_request: bool) -> str | None:
+        sealed = self.seal(session, secure_request)
+
+        return sealed.header if sealed is not None else None
 
     def issuer_url(self, request: Incoming) -> str:
         found = str(resolve(self.config.issuer, request.native) or "").rstrip("/")

@@ -23,7 +23,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+django = ["django>=5.2"]
 fastapi = ["fastapi>=0.115"]
+flask = ["flask>=3.1"]
 
 [project.urls]
 Homepage = "https://masks.pages.dev"
@@ -53,6 +55,10 @@ exclude-newer = "2026-09-27T00:00:00Z"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 filterwarnings = ["ignore:Using `httpx` with `starlette.testclient`"]
+
+[[tool.mypy.overrides]]
+module = ["django.*"]
+ignore_missing_imports = true
 
 [tool.ruff]
 line-length = 120
