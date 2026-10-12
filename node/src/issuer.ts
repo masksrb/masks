@@ -40,6 +40,7 @@ export interface Metadata {
   jwks_uri?: string;
   registration_endpoint?: string;
   device_authorization_endpoint?: string;
+  enrollment_endpoint?: string;
   handshake_endpoint?: string;
   revocation_endpoint?: string;
   introspection_endpoint?: string;
@@ -71,6 +72,7 @@ const ENDPOINTS = [
   "jwks_uri",
   "registration_endpoint",
   "device_authorization_endpoint",
+  "enrollment_endpoint",
   "handshake_endpoint",
   "revocation_endpoint",
   "introspection_endpoint",

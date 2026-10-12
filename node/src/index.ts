@@ -4,6 +4,8 @@ export {
   Client,
   type ClientOptions,
   type DeviceAuthorization,
+  type Enrollment,
+  type EnrollmentRequest,
   GRANT_CLIENT_CREDENTIALS,
   GRANT_DEVICE_CODE,
   GRANT_REFRESH_TOKEN,

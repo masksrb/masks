@@ -336,6 +336,133 @@ test("a registration URI on another origin never sees the token", async () => {
   await assert.rejects(issuer.register({}, "one-time"), ForeignError);
 });
 
+test("an app enrolls a machine that registers itself", async () => {
+  const held = await fake();
+  const { client, issuer } = await signedClient(held);
+
+  const enrollment = await client.enroll({
+    scope: ["xixo:agent"],
+    name: "nas",
+    expiresIn: 900,
+  });
+
+  assert.equal(enrollment.scope, "xixo:agent");
+  assert.equal(enrollment.expires_in, 900);
+  assert.ok(enrollment.expires_at > Date.now() / 1000);
+  assert.deepEqual(held.enrollments.at(-1), {
+    app: "signed",
+    scope: "xixo:agent",
+    name: "nas",
+    expires_in: "900",
+    dpop: undefined,
+  });
+
+  const machineKey = await Key.generate();
+  const registration = await issuer.register(
+    { client_name: "nas", jwks: machineKey.jwks() },
+    enrollment.initial_access_token,
+  );
+
+  assert.equal(held.enrolled.get(registration.client_id), "signed");
+});
+
+test("an enrollment needs a scope and a lifetime in whole seconds", async () => {
+  const held = await fake();
+  const { client } = await signedClient(held);
+
+  await assert.rejects(client.enroll({ scope: [] }), /at least one scope/);
+  await assert.rejects(
+    client.enroll({ scope: ["xixo:agent"], expiresIn: 1.5 }),
+    /whole number/,
+  );
+  assert.equal(held.enrollments.length, 0);
+});
+
+test("an enrollment without a token is refused", async () => {
+  let base = "";
+  const server = await listen((request, response) => {
+    if (request.url === "/.well-known/openid-configuration") {
+      return json(response, 200, {
+        issuer: base,
+        enrollment_endpoint: `${base}/enrollments`,
+      });
+    }
+
+    json(response, 201, { scope: "xixo:agent", expires_in: 900 });
+  });
+  base = server.url;
+  closers.push(server.close);
+
+  const client = new Client({
+    issuer: await Issuer.discover(server.url),
+    id: "app",
+    secret: "secret",
+  });
+
+  await assert.rejects(
+    client.enroll({ scope: ["xixo:agent"] }),
+    /without an initial access token/,
+  );
+});
+
+test("an app unenrolls only the machines it enrolled", async () => {
+  const held = await fake();
+  const { client, issuer } = await signedClient(held);
+  held.add("other", { secret: "secret", method: "client_secret_basic" });
+
+  const { initial_access_token } = await client.enroll({
+    scope: ["xixo:agent"],
+  });
+  const machine = await issuer.register(
+    { jwks: (await Key.generate()).jwks() },
+    initial_access_token,
+  );
+
+  const other = new Client({ issuer, id: "other", secret: "secret" });
+
+  await assert.rejects(other.unenroll(machine.client_id), (error) => {
+    assert.equal(error.code, "invalid_request");
+    assert.equal(error.status, 404);
+    return true;
+  });
+  assert.ok(held.clients.has(machine.client_id));
+
+  await client.unenroll(machine.client_id);
+  assert.ok(!held.clients.has(machine.client_id));
+
+  await client.unenroll(machine.client_id);
+  await assert.rejects(client.unenroll(""), /client_id/);
+});
+
+test("unenrolling escapes the machine's client_id", async () => {
+  const seen = [];
+  let base = "";
+  const server = await listen((request, response) => {
+    if (request.url === "/.well-known/openid-configuration") {
+      return json(response, 200, {
+        issuer: base,
+        enrollment_endpoint: `${base}/enrollments`,
+      });
+    }
+
+    seen.push([request.method, request.url]);
+    response.writeHead(204);
+    response.end();
+  });
+  base = server.url;
+  closers.push(server.close);
+
+  const client = new Client({
+    issuer: await Issuer.discover(server.url),
+    id: "app",
+    secret: "secret",
+  });
+
+  await client.unenroll("../token?x=1");
+
+  assert.deepEqual(seen, [["DELETE", "/enrollments/..%2Ftoken%3Fx%3D1"]]);
+});
+
 test("keys survive JSON", async () => {
   const key = await Key.generate();
   const encoded = JSON.stringify(key);

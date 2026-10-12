@@ -50,6 +50,19 @@ export interface DeviceAuthorization {
   expires_at: number;
 }
 
+export interface EnrollmentRequest {
+  scope: string[];
+  name?: string;
+  expiresIn?: number;
+}
+
+export interface Enrollment {
+  initial_access_token: string;
+  scope: string;
+  expires_in: number;
+  expires_at: number;
+}
+
 export interface TokenSource {
   token(): Promise<Token>;
 }
@@ -186,6 +199,60 @@ export class Client {
     await this.#post(this.issuer.endpoint("revocation_endpoint"), form, false);
   }
 
+  async enroll(asked: EnrollmentRequest): Promise<Enrollment> {
+    const scope = (asked?.scope ?? []).filter(Boolean);
+
+    if (scope.length === 0) {
+      throw new Error("masks: an enrollment names at least one scope");
+    }
+
+    const form = new URLSearchParams({ scope: scope.join(" ") });
+
+    if (asked.name) form.set("client_name", asked.name);
+
+    if (asked.expiresIn !== undefined) {
+      form.set("expires_in", String(seconds(asked.expiresIn, "expiresIn")));
+    }
+
+    const held = await this.#post<Omit<Enrollment, "expires_at">>(
+      this.issuer.endpoint("enrollment_endpoint"),
+      form,
+      false,
+    );
+
+    if (
+      typeof held?.initial_access_token !== "string" ||
+      !held.initial_access_token
+    ) {
+      throw new MasksError(
+        "server_error",
+        "the enrollment endpoint answered without an initial access token",
+      );
+    }
+
+    const expiresIn = Number(held.expires_in ?? 0);
+
+    return {
+      initial_access_token: held.initial_access_token,
+      scope: typeof held.scope === "string" ? held.scope : "",
+      expires_in: expiresIn,
+      expires_at: Math.floor(Date.now() / 1000) + expiresIn,
+    };
+  }
+
+  async unenroll(machineId: string): Promise<void> {
+    if (typeof machineId !== "string" || machineId === "") {
+      throw new Error("masks: unenrolling names the machine's client_id");
+    }
+
+    await this.#send(
+      "DELETE",
+      `${this.issuer.endpoint("enrollment_endpoint").replace(/\/+$/, "")}/${encodeURIComponent(machineId)}`,
+      new URLSearchParams(),
+      false,
+    );
+  }
+
   credentialsSource(asked: TokenRequest = {}): TokenSource {
     return reuse(undefined, () => this.clientCredentials(asked));
   }
@@ -254,7 +321,17 @@ export class Client {
     return held;
   }
 
-  async #post<T>(
+  #post<T>(
+    endpoint: string,
+    form: URLSearchParams,
+    proven: boolean,
+    signal?: AbortSignal,
+  ): Promise<T> {
+    return this.#send<T>("POST", endpoint, form, proven, signal);
+  }
+
+  async #send<T>(
+    method: string,
     endpoint: string,
     form: URLSearchParams,
     proven: boolean,
@@ -262,8 +339,8 @@ export class Client {
   ): Promise<T> {
     for (let attempt = 0; ; attempt++) {
       const response = await this.issuer.fetch(endpoint, {
-        method: "POST",
-        ...(await this.#request(endpoint, form, proven, this.#nonce)),
+        method,
+        ...(await this.#request(method, endpoint, form, proven, this.#nonce)),
         redirect: "manual",
         signal,
       });
@@ -296,6 +373,7 @@ export class Client {
   }
 
   async #request(
+    method: string,
     endpoint: string,
     form: URLSearchParams,
     proven: boolean,
@@ -310,7 +388,7 @@ export class Client {
     await this.#authenticate(headers, held);
 
     if (proven && this.dpop) {
-      headers.dpop = await proof(this.dpop, "POST", endpoint, undefined, nonce);
+      headers.dpop = await proof(this.dpop, method, endpoint, undefined, nonce);
     }
 
     return { headers, body: held.toString() };
@@ -371,6 +449,14 @@ function formFor(asked: TokenRequest): URLSearchParams {
     form.append("resource", resource);
 
   return form;
+}
+
+function seconds(value: number, name: string): number {
+  if (!Number.isSafeInteger(value) || value <= 0) {
+    throw new Error(`masks: ${name} is a whole number of seconds`);
+  }
+
+  return value;
 }
 
 function formEscape(value: string): string {

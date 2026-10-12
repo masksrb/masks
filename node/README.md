@@ -13,6 +13,7 @@ npm install @masks/server
 | --- | --- |
 | Discovery | The issuer's document, checked against the address it was fetched from. |
 | Registration | Redeeming an initial access token, then reading, updating, and deleting the client. |
+| Enrollment | An app asking for initial access tokens for its own machines, and unenrolling them. |
 | Client authentication | `client_secret_basic`, `client_secret_post`, `private_key_jwt`, and `none`. |
 | Grants | Client credentials, refresh tokens, and the device flow. |
 | DPoP | Tokens held to a key, and proofs on every request a signed `fetch` sends. |
@@ -68,6 +69,35 @@ const client = issuer.client(registration, key, dpop);
 `readRegistration`, `updateRegistration`, and `deleteRegistration` manage the
 client with its registration access token. They send that token only to the
 issuer's own origin.
+
+## Enrolling machines
+
+An approved app that has claimed a namespace can enroll machines of its own,
+such as an agent it installs on each computer. The app asks for an initial
+access token, authenticating the way it does at the token endpoint, and hands
+the token to the machine.
+
+```ts
+const enrollment = await client.enroll({
+  scope: ["xixo:agent"],
+  name: "nas",
+  expiresIn: 900,
+});
+```
+
+`enrollment.initial_access_token` registers one machine once, before
+`enrollment.expires_at`. Every scope falls under one of the app's namespaces.
+`expiresIn` is in seconds, from a minute to an hour, and is 15 minutes
+when it is left out. The machine makes its own keys and redeems the token with
+`issuer.register({ client_name: "nas", jwks: key.jwks() }, token)`.
+
+```ts
+await client.unenroll(machine.client_id);
+```
+
+`unenroll` archives the machine and revokes its tokens. Unenrolling a machine
+twice succeeds both times. A machine the app did not enroll is refused with a
+`MasksError` whose `status` is 404.
 
 ## Calling an API
 

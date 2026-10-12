@@ -61,6 +61,8 @@ export class Fake {
   initial = new Map();
   assertions = new Set();
   revoked = [];
+  enrolled = new Map();
+  enrollments = [];
   pending = 0;
   slowed = false;
   nonce = "";
@@ -136,6 +138,7 @@ export class Fake {
         device_authorization_endpoint: `${this.url}/device_authorization`,
         revocation_endpoint: `${this.url}/revoke`,
         registration_endpoint: `${this.url}/register`,
+        enrollment_endpoint: `${this.url}/enrollments`,
       });
     }
 
@@ -172,6 +175,19 @@ export class Fake {
       this.revoked.push(form.get("token"));
       response.writeHead(200);
       return response.end();
+    }
+
+    if (request.method === "POST" && path === "/enrollments") {
+      return this.enroll(request, response, form);
+    }
+
+    if (request.method === "DELETE" && path.startsWith("/enrollments/")) {
+      return this.unenroll(
+        request,
+        response,
+        form,
+        decodeURIComponent(path.slice(13)),
+      );
     }
 
     if (request.method === "POST" && path === "/register") {
@@ -352,6 +368,48 @@ export class Fake {
       scope,
       refresh_token: refresh,
     });
+  }
+
+  async enroll(request, response, form) {
+    const { id, ok } = await this.authenticated(request, form);
+    if (!ok) return oauthError(response, 401, "invalid_client");
+
+    const scope = form.get("scope") ?? "";
+    if (!scope) return oauthError(response, 400, "invalid_request");
+
+    const token = random();
+    const expiresIn = Number(form.get("expires_in") || 900);
+
+    const machine = `machine-${random()}`;
+
+    this.initial.set(token, machine);
+    this.enrolled.set(machine, id);
+    this.enrollments.push({
+      app: id,
+      scope,
+      name: form.get("client_name"),
+      expires_in: form.get("expires_in"),
+      dpop: request.headers.dpop,
+    });
+
+    return json(response, 201, {
+      initial_access_token: token,
+      expires_in: expiresIn,
+      scope,
+    });
+  }
+
+  async unenroll(request, response, form, machine) {
+    const { id, ok } = await this.authenticated(request, form);
+    if (!ok) return oauthError(response, 401, "invalid_client");
+
+    if (this.enrolled.get(machine) !== id) {
+      return oauthError(response, 404, "invalid_request");
+    }
+
+    this.clients.delete(machine);
+    response.writeHead(204);
+    return response.end();
   }
 
   register(request, response, text) {
