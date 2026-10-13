@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.4.1](https://github.com/masksrb/masks/compare/client-v2.4.0...client-v2.4.1) (2026-10-13)
+
+
+### Documentation
+
+* each language has a group under Reference, with an overview, a page per framework, and its API reference ([64b7837](https://github.com/masksrb/masks/commit/64b7837e0484d11ddd5b4d926fc4aa800c06ed81))
+
 ## [2.4.0](https://github.com/masksrb/masks/compare/client-v2.3.0...client-v2.4.0) (2026-10-11)
 
 

@@ -1,5 +1,38 @@
 # Changelog
 
+## [0.8.0](https://github.com/masksrb/masks/compare/server-v0.7.0...server-v0.8.0) (2026-10-13)
+
+
+### Features
+
+* **server:** /manage, the sign-in pages, and the docs share one palette and one font stack ([17efe87](https://github.com/masksrb/masks/commit/17efe87c81c14d7541a37292bf58ba242836eca5))
+* **server:** an actor's page splits into Profile, Access, Sign-in, and Activity, and the overview leads with what needs a manager ([b929c24](https://github.com/masksrb/masks/commit/b929c240db282bf4cad24827ef3517c703f09e06))
+* **server:** an app asking to connect is described in plain words, with every technical detail one click away ([a2a0a57](https://github.com/masksrb/masks/commit/a2a0a570c8d66094a1344522fad40872eef96703))
+* **server:** an app that holds a namespace enrolls its own machines, each registering its own key and signing in as itself with DPoP-bound client credentials ([0e909e0](https://github.com/masksrb/masks/commit/0e909e0708bac3f9201647c2cdb82c9c757b7b39))
+* **server:** an app unenrolls a machine it enrolled, which archives the machine and revokes every token it holds ([8496c66](https://github.com/masksrb/masks/commit/8496c66f2b27ca28199bf843b5caed765de6831f))
+* **server:** an organization's page in manage opens on its members and keeps sign-in, roles, activity, and its details on their own tabs ([69ac750](https://github.com/masksrb/masks/commit/69ac750c646bf307bf5730d0c25997fc4594870d))
+* **server:** each provider has its own page with Setup, Sign-in, Clients, and Connected accounts, and adding one is a page of its own ([28cbe99](https://github.com/masksrb/masks/commit/28cbe994271aa27b63d0ecb32311c11cbe05c21c))
+* **server:** the actors and clients lists mark each row with small icons, so a row is one name, one line of detail, and the columns that sort ([b360dbb](https://github.com/masksrb/masks/commit/b360dbbfc72a69036f03dda120dcd0a9f8a0a423))
+
+
+### Fixes
+
+* **server:** a client assertion, a DPoP proof, or a proof of work is good once across every process, kept in a replays table ([9cf14ac](https://github.com/masksrb/masks/commit/9cf14acca8ef79e0cbf826ed5c447eafb9690d6a))
+* **server:** connecting an app sends its answer once, so a second click no longer lands on "no connection request is in progress" after the app was connected ([e4c68cc](https://github.com/masksrb/masks/commit/e4c68cc99d9d50eda9eebc2cc27affa124a551b6))
+* **server:** the activity log pages once, shortens IDs in an event's details, and names a machine enrollment request plainly ([9232fd0](https://github.com/masksrb/masks/commit/9232fd00074953f66ed00d0a1ee89578a990dc38))
+* **server:** the count of people waiting sits inside the Actors tab at text height, so the nav stays level ([6e24176](https://github.com/masksrb/masks/commit/6e241768a130643aab8e6c70843691345c7c7689))
+
+
+### Documentation
+
+* each language has a group under Reference, with an overview, a page per framework, and its API reference ([64b7837](https://github.com/masksrb/masks/commit/64b7837e0484d11ddd5b4d926fc4aa800c06ed81))
+
+
+### Refactoring
+
+* expired replay ids are swept by the cleanup with everything else, and connecting an app shows the busy look every prompt uses ([ec28183](https://github.com/masksrb/masks/commit/ec281835043a31cf24d5620d2869b283208e64cd))
+* **server:** /manage derives its surfaces from the shared palette, and --label folds into --brass ([c00d32b](https://github.com/masksrb/masks/commit/c00d32b821cc99b8cbc2903a7a4c0c08aa2770bd))
+
 ## [0.7.0](https://github.com/masksrb/masks/compare/server-v0.6.0...server-v0.7.0) (2026-10-11)
 
 
