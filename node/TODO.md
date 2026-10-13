@@ -33,4 +33,4 @@
 ## Testing
 
 - Only Node 26 with Express 5, Hono 4, and Next 16 has run. Express 4, Bun, Deno, and Workers have not.
-- `masksAuth` and `masksNext` have run against a live masks with Next.js 16.3. Express and Hono have run only against the fake issuer.
+- `masksAuth`, `masksNext`, Express 5, and Hono 4 on Node have run against a live masks: the handshake, the sign-in back to the page asked for, a step-up, the avatar, and sign-out. Back-channel logout has run only against the fake issuer, since masks in Docker cannot reach the host.
