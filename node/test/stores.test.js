@@ -130,3 +130,22 @@ test("an Upstash store needs its URL and token, and https away from this machine
   );
   assert.ok(upstashStore({ url: "http://localhost:8079", token: "t" }));
 });
+
+test("requireAuth takes a page to return to before its privileges", async () => {
+  const { requireArguments } = await import("../dist/app/requests.js");
+
+  assert.deepEqual(requireArguments(["admin", "billing"]), {
+    privileges: ["admin", "billing"],
+  });
+  assert.deepEqual(
+    requireArguments([{ returnTo: "/reports?year=2026" }, "admin"]),
+    {
+      returnTo: "/reports?year=2026",
+      privileges: ["admin"],
+    },
+  );
+  assert.deepEqual(requireArguments([{ returnTo: "https://evil.example/" }]), {
+    returnTo: undefined,
+    privileges: [],
+  });
+});

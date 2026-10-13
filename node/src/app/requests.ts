@@ -1,4 +1,5 @@
 import { MasksError } from "../errors.js";
+import type { Masked } from "./masked.js";
 
 export type PerRequest<T> = T | ((request: Request) => T | Promise<T>);
 
@@ -142,4 +143,31 @@ export function isNetwork(error: unknown): boolean {
   return (
     error instanceof TypeError && /fetch|network|connect/i.test(error.message)
   );
+}
+
+export interface RequireAuthOptions {
+  returnTo?: string;
+}
+
+export interface RequireAuth {
+  (...privileges: string[]): Promise<Masked>;
+  (options: RequireAuthOptions, ...privileges: string[]): Promise<Masked>;
+}
+
+export function requireArguments(asked: (string | RequireAuthOptions)[]): {
+  returnTo?: string;
+  privileges: string[];
+} {
+  const [first, ...rest] = asked;
+
+  if (first !== undefined && typeof first === "object") {
+    return {
+      returnTo: localPath(first.returnTo),
+      privileges: rest.filter((name) => typeof name === "string"),
+    };
+  }
+
+  return {
+    privileges: asked.filter((name) => typeof name === "string"),
+  };
 }

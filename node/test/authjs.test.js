@@ -515,6 +515,21 @@ test("with signOutOfIssuer, the signOut of next-auth/react goes on to sign out o
   assert.equal(back.headers.get("location"), "/goodbye");
 });
 
+test("a sign-in on an app masks no longer knows shakes hands again", async () => {
+  const held = await signedIn();
+  const { fake, browser, credentials } = held;
+  const { client_id } = await credentials.read(new Request(APP));
+
+  fake.registrations.delete(client_id);
+  const started = await browser.fetch("/api/auth/masks/signin?callbackUrl=/a");
+
+  assert.equal(await credentials.read(new Request(APP)), undefined);
+  assert.match(
+    started.headers.get("location"),
+    /\/api\/auth\/masks\/handshake/,
+  );
+});
+
 test("signing out without everywhere stays in the app", async () => {
   const held = await signedIn();
   const left = await held.browser.fetch("/api/auth/masks/logout", {

@@ -10,8 +10,7 @@
 - `upstashStore` has run against serverless-redis-http, which speaks Upstash's REST API, and `redisStore` against Redis 7 through node-redis 4 and ioredis 5. It has not run against Upstash itself.
 - The `signOut` server action going through `/api/auth/masks/logout` with `signOutOfIssuer` has not run in a live Next.js app. The `next-auth/react` path is tested against the Auth.js handlers.
 - The issuer, resource, and credentials cannot vary per request.
-- `requireAuth()` needs the proxy to know which page to return to. Without it, a sign-in returns to `/`.
-- Only `Masks` checks at sign-in that masks still knows the app.
+- Without the proxy, `requireAuth()` returns to the page only when the page names it with `returnTo`. Next.js gives a server component no other way to learn its path.
 - The live run used Next.js 16.3 and next-auth 5.0.0-beta.32 on Node 26. Other versions have not run.
 
 ## Testing

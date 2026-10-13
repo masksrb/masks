@@ -70,7 +70,8 @@ A server component cannot set cookies, and masks revokes a refresh token that is
 cookie to the page. Without the proxy, `requireAuth` sends a person whose token expired through
 `/auth/refresh`. `requireAuth` throws a `ForbiddenError` for a privilege the person does not hold,
 which the nearest `error.tsx` shows. To send people back to the page they were on, `requireAuth`
-reads the path the proxy records.
+reads the path the proxy records. Without the proxy, name the page first:
+`requireAuth({ returnTo: "/billing" }, "admin")`. Otherwise a sign-in comes back to `/`.
 
 ## Reference
 
@@ -82,7 +83,7 @@ sign in. It returns:
 | --- | --- |
 | `handlers` | `GET`, `POST`, and `DELETE` for `app/auth/[[...masks]]/route.ts`. |
 | `auth()` | The person, or `null` when nobody is signed in, in a server component, a server action, or a route handler. |
-| `requireAuth(...privileges)` | The same, after sending a signed-out visitor to sign in and checking each privilege. |
+| `requireAuth({ returnTo }, ...privileges)` | The same, after sending a signed-out visitor to sign in and checking each privilege. |
 | `withMasks(handler, ...privileges)` | Guards a route handler by session or by token, and passes `{ masked }` to it. |
 | `proxy` | Refreshes the session before a page renders. Sends a signed-out visitor to a path under one of `protect` to sign in. |
 | `masks` | The `Masks` underneath. |

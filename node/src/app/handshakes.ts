@@ -1,4 +1,4 @@
-import { isMasksError, UnavailableError } from "../errors.js";
+import { isMasksError, MasksError, UnavailableError } from "../errors.js";
 import { type Handshake, originOf } from "../handshake.js";
 import type { Issuer } from "../issuer.js";
 import type { CredentialStore } from "./credentials.js";
@@ -12,6 +12,7 @@ import {
   page,
   redirect,
 } from "./responses.js";
+import { remember } from "./stores.js";
 
 export interface HandshakeSite {
   origin: string;
@@ -45,8 +46,12 @@ export interface HandshakeHost {
   disconnected?(request: Request): Promise<void>;
 }
 
+const REMEMBERED_REGISTRATIONS = 1_000;
+const REGISTRATION_TRUSTED = 60_000;
+
 export class Handshakes {
   readonly #host: HandshakeHost;
+  readonly #registeredAt = new Map<string, number>();
 
   constructor(host: HandshakeHost) {
     this.#host = host;
@@ -218,6 +223,45 @@ export class Handshakes {
       "only somebody this app lets manage its connection can reconnect or disconnect it",
       site.cookies,
     );
+  }
+
+  async registered(request: Request): Promise<boolean> {
+    const held = await this.#host.credentials.read(request);
+
+    if (!held?.registration_client_uri || !held.registration_access_token)
+      return true;
+
+    try {
+      await (await this.#host.issuer(request)).readRegistration(held);
+      return true;
+    } catch (error) {
+      return !(
+        error instanceof MasksError &&
+        [401, 403, 404].includes(error.status ?? 0)
+      );
+    }
+  }
+
+  async stillRegistered(request: Request): Promise<boolean> {
+    const held = await this.#host.credentials.read(request);
+
+    if (!held?.client_id) return true;
+
+    const { issuer } = await this.#host.site(request);
+    const key = `${issuer} ${held.client_id}`;
+
+    if ((this.#registeredAt.get(key) ?? 0) > Date.now() - REGISTRATION_TRUSTED)
+      return true;
+
+    if (await this.registered(request)) {
+      remember(this.#registeredAt, key, Date.now(), REMEMBERED_REGISTRATIONS);
+      return true;
+    }
+
+    this.#registeredAt.delete(key);
+    await this.forget(request);
+
+    return false;
   }
 
   async disconnect(request: Request): Promise<boolean> {

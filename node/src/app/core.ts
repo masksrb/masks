@@ -1,7 +1,6 @@
 import { organizationKey } from "../claims.js";
 import { type Client, scopes as scopesOf, type Token } from "../client.js";
 import { DELEGATION_SCOPE } from "../delegations.js";
-import { MasksError } from "../errors.js";
 import { Handshake } from "../handshake.js";
 import type { IdTokenClaims, LogoutToken } from "../idtoken.js";
 import { RESOURCE_PATH } from "../issuer.js";
@@ -70,8 +69,6 @@ export interface MasksOptions {
 export const DEFAULT_SCOPE = ["openid", "profile", "email", "offline_access"];
 
 const REMEMBERED_VERIFIERS = 1_000;
-const REMEMBERED_REGISTRATIONS = 1_000;
-const REGISTRATION_TRUSTED = 60_000;
 
 export class Core {
   readonly options: MasksOptions;
@@ -88,7 +85,6 @@ export class Core {
     allowPlainHTTP: this.options.allowPlainHTTP,
   }));
   readonly #verifiers = new Map<string, Verifier>();
-  readonly #registeredAt = new Map<string, number>();
   readonly #visits = new WeakMap<Request, Promise<Visit>>();
 
   #sealer?: Sealer;
@@ -281,39 +277,6 @@ export class Core {
 
   async configured(visit: Visit): Promise<boolean> {
     return !!(await this.credentials.read(visit.request))?.client_id;
-  }
-
-  async registered(request: Request): Promise<boolean> {
-    const visit = await this.visit(request);
-    const held = await this.credentials.read(request);
-
-    if (!held?.registration_client_uri || !held.registration_access_token)
-      return true;
-
-    try {
-      await (await this.issuers.get(visit.issuerURL)).readRegistration(held);
-      return true;
-    } catch (error) {
-      return !(
-        error instanceof MasksError &&
-        [401, 403, 404].includes(error.status ?? 0)
-      );
-    }
-  }
-
-  async stillRegistered(visit: Visit, clientID: string): Promise<boolean> {
-    const key = `${visit.issuerURL} ${clientID}`;
-
-    if ((this.#registeredAt.get(key) ?? 0) > Date.now() - REGISTRATION_TRUSTED)
-      return true;
-
-    const known = await this.registered(visit.request);
-
-    if (known)
-      remember(this.#registeredAt, key, Date.now(), REMEMBERED_REGISTRATIONS);
-    else this.#registeredAt.delete(key);
-
-    return known;
   }
 
   async verifier(visit: Visit): Promise<Verifier> {

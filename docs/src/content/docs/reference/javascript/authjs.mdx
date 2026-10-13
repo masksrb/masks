@@ -65,11 +65,15 @@ export default async function Settings() {
 ```
 
 `requireAuth` returns a signed-in `Masked`, and asks masks once for a privilege's missing scopes.
+It sends a person back to the page the proxy records. Without the proxy, name the page first:
+`requireAuth({ returnTo: "/billing" }, "admin")`.
 `accessToken()` hands a fresh access token to server code. `session.masks` holds the person, with no
 token, and is typed on the Auth.js `Session`. The [reference](#reference) below lists everything `masksAuth` returns.
 
 A link to `/api/auth/masks/signin` signs in without a form. It takes `callbackUrl`, `organization`,
-`privilege`, and `prompt`.
+`privilege`, and `prompt`. Before a sign-in starts, there or through `signIn("masks")`, the app checks
+that masks still knows it, at most once a minute. When masks has forgotten it, the app forgets its
+credentials and shakes hands again.
 
 `masksAuth` answers its own [routes](#reference) under the Auth.js base path, `/api/auth/masks` by
 default.
@@ -156,7 +160,7 @@ It returns what `NextAuth` returns, and:
 | --- | --- |
 | `handlers` | `GET` and `POST`, which also answer the routes below. |
 | `auth()` | The Auth.js session. `session.masks` holds what `GET /auth/session` returns, and `session.user.id` is the subject. No token reaches the browser. |
-| `requireAuth(...privileges)` | A signed-in `Masked`. It sends a signed-out person to sign in, and asks masks for a privilege's missing scopes once. A missing role or organization throws `ForbiddenError`. |
+| `requireAuth({ returnTo }, ...privileges)` | A signed-in `Masked`. It sends a signed-out person to sign in, and asks masks for a privilege's missing scopes once. A missing role or organization throws `ForbiddenError`. |
 | `accessToken()` | The access token, refreshed when it is about to expire, for calling an API from the server. |
 | `proxy` | Refreshes the session before a page renders, and tells `requireAuth` which page to come back to. When your `authorized` callback refuses a page, the proxy sends its redirect or answer. |
 | `masks` | The `MasksAuth` underneath, with `delegations`, `startDelegation`, and `finishDelegation` as in [Masks](/reference/javascript/server/#masks). |

@@ -4,7 +4,13 @@ import { type NextRequest, NextResponse } from "next/server";
 import { replaceCookies } from "./app/cookies.js";
 import type { Masked } from "./app/masked.js";
 import { Masks, type MasksOptions } from "./app/masks.js";
-import { localPath, PATH_HEADER } from "./app/requests.js";
+import {
+  localPath,
+  PATH_HEADER,
+  type RequireAuth,
+  type RequireAuthOptions,
+  requireArguments,
+} from "./app/requests.js";
 import { withCookies } from "./app/responses.js";
 import { ForbiddenError } from "./claims.js";
 
@@ -30,7 +36,7 @@ export interface MasksNext {
     DELETE: (request: Request) => Promise<Response>;
   };
   auth: () => Promise<Masked | null>;
-  requireAuth: (...privileges: string[]) => Promise<Masked>;
+  requireAuth: RequireAuth;
   withMasks: <C extends RouteContext>(
     handler: MaskedHandler<C>,
     ...privileges: string[]
@@ -75,10 +81,12 @@ export function masksNext(options: MasksNextOptions = {}): MasksNext {
       return masked.signedIn ? masked : null;
     },
 
-    async requireAuth(...privileges: string[]) {
+    requireAuth: (async (...asked: (string | RequireAuthOptions)[]) => {
+      const { returnTo, privileges } = requireArguments(asked);
       const request = await current();
       const outcome = await masks.check(request, {
         privileges,
+        returnTo,
         refresh: false,
       });
 
@@ -89,7 +97,7 @@ export function masksNext(options: MasksNextOptions = {}): MasksNext {
         outcome.refusal.error ??
         new ForbiddenError("insufficient_scope", "this request is refused")
       );
-    },
+    }) as RequireAuth,
 
     withMasks<C extends RouteContext>(
       handler: MaskedHandler<C>,

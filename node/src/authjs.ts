@@ -20,7 +20,10 @@ import {
   isNetwork,
   localPath,
   PATH_HEADER,
+  type RequireAuth,
+  type RequireAuthOptions,
   readForm,
+  requireArguments,
   sameOrigin,
   wantsJSON,
 } from "./app/requests.js";
@@ -100,7 +103,7 @@ declare module "next-auth" {
 
 export interface MasksAuthResult extends NextAuthResult {
   masks: MasksAuth;
-  requireAuth: (...privileges: string[]) => Promise<Masked>;
+  requireAuth: RequireAuth;
   accessToken: () => Promise<string | undefined>;
   proxy: (request: Request) => Promise<Response>;
 }
@@ -255,6 +258,8 @@ export class MasksAuth {
         if (this.#callback(request)) return this.#replacing(request, original);
         if (this.#signingOut(request))
           return original(await this.#throughMasks(request));
+        if (this.#startingSignIn(request))
+          await this.#handshakes.stillRegistered(request);
 
         return original(request);
       };
@@ -268,7 +273,7 @@ export class MasksAuth {
       signOut: ((options?: { redirectTo?: string; redirect?: boolean }) =>
         this.#signOut(result, options)) as NextAuthResult["signOut"],
       masks: this,
-      requireAuth: (...privileges) => this.requireAuth(...privileges),
+      requireAuth: this.requireAuth.bind(this) as RequireAuth,
       accessToken: () => this.accessToken(),
       proxy: (request) => this.proxy(request),
     } as MasksAuthResult;
@@ -281,6 +286,13 @@ export class MasksAuth {
     if (callbackUrl) query.set("callbackUrl", callbackUrl);
 
     return `${this.logoutPath}?${query}`;
+  }
+
+  #startingSignIn(request: Request): boolean {
+    return (
+      request.method.toUpperCase() === "POST" &&
+      new URL(request.url).pathname === `${this.basePath}/signin/${this.id}`
+    );
   }
 
   #signingOut(request: Request): boolean {
@@ -478,11 +490,19 @@ export class MasksAuth {
     }
   }
 
-  async requireAuth(...names: string[]): Promise<Masked> {
+  requireAuth(...privileges: string[]): Promise<Masked>;
+  requireAuth(
+    options: RequireAuthOptions,
+    ...privileges: string[]
+  ): Promise<Masked>;
+  async requireAuth(
+    ...given: (string | RequireAuthOptions)[]
+  ): Promise<Masked> {
+    const { returnTo, privileges: names } = requireArguments(given);
     const { headers, cookies } = await nextHeaders();
     const { redirect: navigate } = await nextNavigation();
     const held = await headers();
-    const path = localPath(held.get(PATH_HEADER)) ?? "/";
+    const path = returnTo ?? localPath(held.get(PATH_HEADER)) ?? "/";
     const session = (await this.#bound().auth()) as Session | null;
     const masked = this.masked(session);
 
@@ -876,6 +896,8 @@ export class MasksAuth {
   }
 
   async #signInRoute(request: Request): Promise<Response> {
+    await this.#handshakes.stillRegistered(request);
+
     const params = new URL(request.url).searchParams;
     const callbackUrl = localPath(params.get("callbackUrl")) ?? "/";
     const names = (params.get("privilege") ?? "").split(/[\s,]+/);

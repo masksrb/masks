@@ -150,7 +150,7 @@ export class Masks {
   }
 
   registered(request: Request): Promise<boolean> {
-    return this.#core.registered(request);
+    return this.#core.handshakes.registered(request);
   }
 
   disconnect(request: Request): Promise<boolean> {

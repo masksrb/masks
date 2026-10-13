@@ -109,12 +109,9 @@ export async function handle(
 }
 
 async function start(core: Core, visit: Visit): Promise<Response> {
-  let client = await core.client(visit);
+  await core.handshakes.stillRegistered(visit.request);
 
-  if (client && !(await core.stillRegistered(visit, client.id))) {
-    await core.handshakes.forget(visit.request);
-    client = await core.client(visit);
-  }
+  const client = await core.client(visit);
 
   const params = visit.url.searchParams;
   const returnTo = core.returnTo(params.get("return_to"));
