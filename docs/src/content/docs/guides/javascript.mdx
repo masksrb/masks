@@ -1,6 +1,6 @@
 ---
 title: JavaScript apps
-description: Sign people in to a Next.js, Express, or Hono app with masks, guard routes by privilege, accept tokens in an API, and enroll machines.
+description: Sign people in to a Next.js, Auth.js, Express, or Hono app with masks, guard routes by privilege, accept tokens in an API, and enroll machines.
 ---
 
 `@masks/server` signs people in to a JavaScript server app against a masks server. It covers what
@@ -16,10 +16,11 @@ npm install @masks/server
 | --- | --- |
 | `@masks/server` | `Masks`, which answers a `Request` with a `Response`, and the client underneath it: discovery, the handshake, the code flow, tokens, DPoP, introspection, token exchange, delegations, enrollment, and checking tokens. |
 | `@masks/server/next` | Route handlers, server component helpers, and a proxy for the Next.js App Router. |
+| `@masks/server/authjs` | masks as an [Auth.js](#nextjs-with-authjs) provider, with the handshake, refresh, privileges, and back-channel logout. |
 | `@masks/server/express` | Middleware for Express. |
 | `@masks/server/hono` | Middleware for Hono, which also runs on Bun, Deno, and Cloudflare Workers. |
 
-`next`, `express`, and `hono` are optional peer dependencies. Install only the one your app uses.
+`next`, `next-auth`, `express`, and `hono` are optional peer dependencies. Install only the one your app uses.
 
 ## Setting up
 
@@ -71,6 +72,102 @@ export const config = { matcher: ["/((?!_next/static|_next/image|favicon.ico).*)
 
 Set the three variables, start the app, and open `/auth`. The first visit starts
 [the handshake](#the-handshake).
+
+### Next.js with Auth.js
+
+An app that already uses [Auth.js](https://authjs.dev) (`next-auth` 5) keeps it. `masksAuth` builds
+the Auth.js config and adds what masks offers beyond a plain OpenID Connect provider:
+
+- the handshake, so the app needs no client ID or secret
+- token refresh that uses each refresh token once, however many requests arrive together
+- organizations, the tenant, avatars, scopes, and privileges on the session
+- a trip through masks to ask for a missing privilege
+- back-channel logout, which ends the session when the person signs out of masks
+- revoking the refresh token when the person signs out
+
+```ts
+// auth.ts
+import NextAuth from "next-auth";
+import { masksAuth } from "@masks/server/authjs";
+
+export const { handlers, auth, signIn, signOut, guard, accessToken, proxy } = masksAuth(NextAuth, {
+  privileges: { admin: ["catalog:admin"] },
+  manages: "admin",
+});
+```
+
+```ts
+// app/api/auth/[...nextauth]/route.ts
+import { handlers } from "@/auth";
+
+export const { GET, POST } = handlers;
+```
+
+```ts
+// proxy.ts
+export { proxy } from "@/auth";
+```
+
+Set two variables, start the app, and sign in:
+
+| Variable | |
+| --- | --- |
+| `MASKS_ISSUER` | The tenant you sign in against. |
+| `AUTH_SECRET` | The Auth.js secret, such as the output of `openssl rand -base64 32`. |
+
+The first `signIn("masks")` runs [the handshake](#the-handshake). After the approval, the browser
+signs in and comes back to the page it started on. `MASKS_RESOURCE` names the app when the request's
+own origin is not its public address. Without it, `AUTH_URL` or the request's origin is used.
+
+The second argument takes every Auth.js option as well, such as `pages`, `callbacks`, and other
+`providers`. Your `jwt` and `session` callbacks run after the masks ones. Sessions are always JSON
+Web Tokens.
+
+#### In a page
+
+```tsx
+// app/settings/page.tsx
+import { auth, guard } from "@/auth";
+
+export default async function Settings() {
+  const masked = await guard("admin");
+
+  return <p>{masked.organization?.name}</p>;
+}
+```
+
+| | |
+| --- | --- |
+| `auth()` | The Auth.js session. `session.masks` holds what `GET /auth/session` returns in the other integrations, and `session.user.id` is the subject. No token reaches the browser. |
+| `guard(...privileges)` | A signed-in `Masked`. It sends a signed-out person to sign in, and asks masks for a privilege's missing scopes once. A missing role or organization throws `ForbiddenError`. |
+| `accessToken()` | The access token, refreshed when it is about to expire, for calling an API from the server. |
+| `proxy` | Refreshes the session before a page renders, and tells `guard` which page to come back to. |
+
+A link to `/api/auth/masks/signin` signs in without a form. It takes `callbackUrl`, `organization`,
+`privilege`, and `prompt`.
+
+#### Routes
+
+`masksAuth` adds these under the Auth.js base path, `/api/auth` by default:
+
+| Route | |
+| --- | --- |
+| `GET /api/auth/masks/signin` | Starts a sign-in. |
+| `GET /api/auth/masks/handshake` | Starts the handshake before the app is connected. After that, shows the connection to someone `manages` allows. |
+| `POST /api/auth/masks/handshake` | Reconnects. |
+| `POST /api/auth/masks/handshake/disconnect` | Disconnects. |
+| `GET /api/auth/masks/handshake/callback` | Where masks sends the browser after an approval. |
+| `POST /api/auth/masks/logout/backchannel` | Where masks posts a logout token. |
+
+#### Several servers
+
+Each refresh token is used once within one Node process. Next.js loads `auth.ts` more than once in a
+process, for the proxy and for the routes, and those copies share one record of refreshes and
+logouts. Separate servers do not share it. When the app runs on several servers or as serverless
+functions, two of them can refresh the same session at the same moment. masks then ends every token
+from that sign-in, and the person signs in again. Back-channel logout records are also kept per
+process. Pass `logouts` and `replay` stores that every server shares to make logouts reach all of
+them.
 
 ### Express
 

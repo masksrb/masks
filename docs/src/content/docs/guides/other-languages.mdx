@@ -160,24 +160,15 @@ const response = await api("https://files.example.com/files");
 
 ## Next.js
 
-Add masks to [Auth.js](https://authjs.dev) as an OpenID Connect provider. Register
-`https://app.example.com/api/auth/callback/masks` as the redirect URI.
+Add masks to [Auth.js](https://authjs.dev) with `masksAuth` from `@masks/server/authjs`. It runs the
+handshake, so the app needs no client ID or secret, and it refreshes tokens and honors back-channel
+logout. See [Next.js with Auth.js](/guides/javascript/#nextjs-with-authjs).
 
 ```ts
 import NextAuth from "next-auth";
+import { masksAuth } from "@masks/server/authjs";
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
-  providers: [
-    {
-      id: "masks",
-      name: "masks",
-      type: "oidc",
-      issuer: "https://auth.example.com",
-      clientId: process.env.AUTH_MASKS_ID,
-      clientSecret: process.env.AUTH_MASKS_SECRET,
-    },
-  ],
-});
+export const { handlers, auth, signIn, signOut } = masksAuth(NextAuth);
 ```
 
 A route handler checks access tokens with `@masks/server`'s verifier. This includes DPoP-bound

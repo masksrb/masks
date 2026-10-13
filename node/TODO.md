@@ -20,6 +20,16 @@
 - Split masks.ts along the seams go/web uses: session and flow state, routes, and guards.
 - The issuer's keys are fetched again on every request while masks is down. Back off.
 
+## Auth.js
+
+- Each refresh token is used once per process. Add a refresh store that several servers share, with a lock, so serverless apps cannot use one refresh token twice. Or have masks accept a refresh token again for a few seconds after it rotates.
+- The logout and replay stores default to memory. A serverless app needs shared ones to make back-channel logout reach every instance.
+- `signOut()` revokes the refresh token, but does not sign the person out of masks. Add a sign-out everywhere through `/api/auth/masks/logout`, with a registered post-logout URI.
+- Delegations and the avatar proxy are not offered through `masksAuth`.
+- The issuer, resource, and credentials cannot vary per request.
+- `guard()` needs the proxy to know which page to return to. Without it, a sign-in returns to `/`.
+- The live run used Next.js 16.3 and next-auth 5.0.0-beta.32 on Node 26. Other versions have not run.
+
 ## Security
 
 - Store the issuer in the session and forget a session from another issuer, as go/web does. This matters when one origin serves several issuers.
@@ -28,4 +38,4 @@
 
 - `auth()` and `requireAuth()` have not run inside a real Next.js request.
 - Only Node 26 with Express 5, Hono 4, and Next 16 has run. Express 4, Bun, Deno, and Workers have not.
-- Nothing has run against a live masks. Every test uses a fake issuer.
+- Only `masksAuth` has run against a live masks. The rest of the tests use a fake issuer.

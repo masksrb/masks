@@ -1,7 +1,7 @@
 # @masks/server
 
 `@masks/server` connects a JavaScript server to masks. It signs people in to a
-Next.js, Express, or Hono app, gets tokens as a client, and checks them as an
+Next.js, Auth.js, Express, or Hono app, gets tokens as a client, and checks them as an
 API. It uses only `fetch`, `Request`, `Response`, and Web Crypto, so it runs on
 Node 20 and later, Bun, and Deno.
 
@@ -12,7 +12,7 @@ npm install @masks/server
 | Covers | |
 | --- | --- |
 | Signing people in | The handshake, the code flow with PKCE, a sealed session cookie, refreshing, signing out, and back-channel logout, for any framework that speaks `Request` and `Response`. |
-| Frameworks | `@masks/server/next`, `@masks/server/express`, and `@masks/server/hono`. |
+| Frameworks | `@masks/server/next`, `@masks/server/authjs`, `@masks/server/express`, and `@masks/server/hono`. |
 | People | Organizations, roles, scopes, and privileges, with a trip through masks to ask for a missing scope. |
 | Discovery | The issuer's document, checked against the address it was fetched from. |
 | Registration | Redeeming an initial access token, then reading, updating, and deleting the client. |
@@ -99,6 +99,23 @@ The session cookie is sealed with AES-GCM, `HttpOnly`, `SameSite=Lax`, and
 Under the frameworks, `Client` runs the code flow on its own with `start` and
 `complete`, and `Handshake` and `Delegations` cover the handshake and provider
 connections.
+
+## Auth.js
+
+An app on [Auth.js](https://authjs.dev) (`next-auth` 5) adds masks as a
+provider with the handshake, token refresh, privileges, and back-channel logout:
+
+```ts
+// auth.ts
+import NextAuth from "next-auth";
+import { masksAuth } from "@masks/server/authjs";
+
+export const { handlers, auth, signIn, signOut, guard, accessToken, proxy } =
+  masksAuth(NextAuth, { privileges: { admin: ["catalog:admin"] } });
+```
+
+Set `MASKS_ISSUER` and `AUTH_SECRET`. The first `signIn("masks")` connects the
+app. See [Next.js with Auth.js](https://masks.pages.dev/guides/javascript/#nextjs-with-authjs).
 
 ## A server signs in as itself
 
