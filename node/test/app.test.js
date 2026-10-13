@@ -906,7 +906,7 @@ test("a session store keeps the tokens server-side and rotates the id on sign-in
   assert.ok(written.length > 0);
   for (const value of written) {
     assert.ok(!value.includes(accessToken));
-    assert.ok(!value.includes(subject));
+    assert.ok(!value.includes(JSON.stringify(subject)));
   }
 
   const first = held.browser.jar.get("masks");

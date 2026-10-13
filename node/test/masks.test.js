@@ -1065,22 +1065,37 @@ test("a verifier checks the token itself", async () => {
   };
 
   const cases = {
-    "another audience": await held.issue(
-      { ...good, aud: "https://other.example" },
-      "at+jwt",
-    ),
-    "another issuer": await held.issue(
-      { ...good, iss: "https://other.example" },
-      "at+jwt",
-    ),
-    expired: await held.issue({ ...good, exp: now - 3600 }, "at+jwt"),
-    "no jti": await held.issue(without("jti"), "at+jwt"),
-    "an ID token": await held.issue(good, "JWT"),
-    "not a JWT": "nonsense",
+    "another audience": [
+      await held.issue({ ...good, aud: "https://other.example" }, "at+jwt"),
+      "that token was issued for another app",
+    ],
+    "another issuer": [
+      await held.issue({ ...good, iss: "https://other.example" }, "at+jwt"),
+      "that token was issued by another server",
+    ],
+    expired: [
+      await held.issue({ ...good, exp: now - 3600 }, "at+jwt"),
+      "that token has expired",
+    ],
+    "no jti": [
+      await held.issue(without("jti"), "at+jwt"),
+      "that token is missing a claim it needs",
+    ],
+    "an ID token": [
+      await held.issue(good, "JWT"),
+      "that token is not typed at+jwt",
+    ],
+    "not a JWT": ["nonsense", "that token is not a signed JWT"],
   };
 
-  for (const [name, token] of Object.entries(cases)) {
-    await assert.rejects(verifier.verify(token), InvalidTokenError, name);
+  for (const [name, [token, said]] of Object.entries(cases)) {
+    await assert.rejects(
+      verifier.verify(token),
+      (error) =>
+        error instanceof InvalidTokenError &&
+        error.message === `masks: invalid token: ${said}`,
+      name,
+    );
   }
 
   const forged = await Key.generate();
@@ -1088,6 +1103,27 @@ test("a verifier checks the token itself", async () => {
     verifier.verify(await forged.sign("at+jwt", good, false)),
     InvalidTokenError,
   );
+});
+
+test("a request with no token is challenged with no error code", async () => {
+  const held = await fake();
+  const verifier = new Verifier(await Issuer.discover(held.url), held.audience);
+
+  const error = await verifier
+    .authenticate(new Request("https://api.example/files"))
+    .then(
+      () => assert.fail("a request with no token was accepted"),
+      (failed) => failed,
+    );
+
+  assert.ok(error instanceof InvalidTokenError);
+  assert.ok(error.missing);
+
+  const [bearer, dpop] = verifier.challengeHeaders(error);
+
+  assert.equal(bearer, "Bearer");
+  assert.match(dpop, /^DPoP algs="/);
+  assert.doesNotMatch(dpop, /error/);
 });
 
 test("a challenge names both schemes", async () => {

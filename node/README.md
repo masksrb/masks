@@ -299,7 +299,10 @@ The verifier checks the signature against the issuer's published keys, the
 needs a proof signed by its key, made for this method and URL, made in the last
 minute, and not seen before. A token that fails a check is an
 `InvalidTokenError`, and `challenge` and `refusal` answer it with `401` and a
-`WWW-Authenticate` challenge for both schemes.
+`WWW-Authenticate` challenge for both schemes. A request with no token is an
+`InvalidTokenError` whose `missing` is `true`, and its challenge carries no
+error code. The error's message names what failed in plain words, and the
+`jose` error that caused it is its `cause`.
 
 When the verifier cannot check a token at all, because the issuer's keys could
 not be fetched or the replay store failed, it throws an `UnavailableError` with

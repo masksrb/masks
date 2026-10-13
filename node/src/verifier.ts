@@ -1,7 +1,6 @@
 import {
   calculateJwkThumbprint,
   EmbeddedJWK,
-  errors,
   type JWK,
   type JWTHeaderParameters,
   type JWTPayload,
@@ -11,6 +10,7 @@ import { ForbiddenError } from "./claims.js";
 import { DPOP, PROOF_TYPE, type ProofClaims, tokenHash } from "./dpop.js";
 import { InvalidTokenError, UnavailableError } from "./errors.js";
 import type { Issuer, Tenant } from "./issuer.js";
+import { unverified } from "./jwt.js";
 import { MemoryReplayStore, type ReplayStore } from "./replay.js";
 
 const ACCESS_TOKEN_TYPE = "at+jwt";
@@ -91,16 +91,7 @@ export class Verifier {
         },
       ));
     } catch (error) {
-      if (error instanceof InvalidTokenError) throw error;
-
-      if (error instanceof errors.JOSEError) {
-        throw new InvalidTokenError(error.message);
-      }
-
-      throw new UnavailableError(
-        "the issuer's keys could not be fetched to check that token",
-        { cause: error },
-      );
+      throw unverified(error);
     }
 
     return payload as Claims;
@@ -144,8 +135,10 @@ export class Verifier {
     let scope: string | undefined;
 
     if (error instanceof InvalidTokenError) {
-      code = "invalid_token";
-      description = error.message.replace(/^masks: invalid token: /, "");
+      code = error.missing ? "" : "invalid_token";
+      description = error.missing
+        ? ""
+        : error.message.replace(/^masks: invalid token: /, "");
     } else if (error instanceof ForbiddenError) {
       code = error.code;
       description = error.description;
@@ -155,17 +148,17 @@ export class Verifier {
     }
 
     const parameters = [
-      `error="${code}"`,
-      `error_description="${quoted(description)}"`,
+      ...(code ? [`error="${code}"`] : []),
+      ...(description ? [`error_description="${quoted(description)}"`] : []),
       ...(scope ? [`scope="${quoted(scope)}"`] : []),
       ...(this.resourceMetadata
         ? [`resource_metadata="${quoted(this.resourceMetadata)}"`]
         : []),
-    ].join(", ");
+    ];
 
     return [
-      `Bearer ${parameters}`,
-      `${DPOP} ${parameters}, algs="${PROOF_ALGORITHMS.join(" ")}"`,
+      ["Bearer", parameters.join(", ")].filter(Boolean).join(" "),
+      `${DPOP} ${[...parameters, `algs="${PROOF_ALGORITHMS.join(" ")}"`].join(", ")}`,
     ];
   }
 
@@ -222,7 +215,9 @@ export class Verifier {
     const token = space > 0 ? authorization.slice(space + 1).trim() : "";
 
     if (!scheme || !token) {
-      throw new InvalidTokenError("the request carries no token");
+      throw new InvalidTokenError("the request carries no token", {
+        missing: true,
+      });
     }
 
     const claims = await this.verify(token);
