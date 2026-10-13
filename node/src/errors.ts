@@ -47,7 +47,22 @@ export class ForeignError extends Error {
 }
 
 export function hasCode(error: unknown, code: string): boolean {
-  return error instanceof MasksError && error.code === code;
+  return isMasksError(error) && error.code === code;
+}
+
+export function isMasksError(error: unknown): error is MasksError {
+  return (
+    error instanceof MasksError ||
+    (error instanceof Error &&
+      error.name === "MasksError" &&
+      typeof (error as { code?: unknown }).code === "string")
+  );
+}
+
+export function rejected(error: unknown): boolean {
+  return (
+    isMasksError(error) && (error.status ?? 0) < 500 && error.status !== 429
+  );
 }
 
 export const READ_LIMIT = 1 << 20;

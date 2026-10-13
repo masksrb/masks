@@ -11,7 +11,13 @@ import {
   DelegationRefused,
   Delegations,
 } from "../delegations.js";
-import { InvalidTokenError, MasksError, UnavailableError } from "../errors.js";
+import {
+  hasCode,
+  InvalidTokenError,
+  MasksError,
+  rejected,
+  UnavailableError,
+} from "../errors.js";
 import { Handshake } from "../handshake.js";
 import type { IdTokenClaims, LogoutToken } from "../idtoken.js";
 import { Issuer, RESOURCE_PATH } from "../issuer.js";
@@ -21,8 +27,14 @@ import { MemoryReplayStore, type ReplayStore } from "../replay.js";
 import { type Claims, Verifier } from "../verifier.js";
 import { type AvatarsLimit, avatarResponse } from "./avatar.js";
 import { parseCookies, readChunked, writeChunked } from "./cookies.js";
+import { firstLogout, loggedOut, recordLogout } from "./logouts.js";
 import { Masked } from "./masked.js";
-import { type PrivilegeSpec, Privileges, unique } from "./privileges.js";
+import {
+  approvedScope,
+  type PrivilegeSpec,
+  Privileges,
+  unique,
+} from "./privileges.js";
 import { Sealer } from "./seal.js";
 import {
   type CredentialStore,
@@ -129,6 +141,8 @@ export interface Connection {
   issuer?: string;
 }
 
+export const PATH_HEADER = "x-masks-path";
+
 export const DEFAULT_SCOPE = ["openid", "profile", "email", "offline_access"];
 
 const IDENTITY = [
@@ -150,7 +164,6 @@ const STEP_UP_WITHIN = 300;
 const RESTART_WITHIN = 60;
 const REFRESH_LEEWAY = 30;
 const REMEMBER_REFRESH = 60_000;
-const LOGOUT_MEMORY = 3600;
 const DISCOVERY_LIFETIME = 3600_000;
 const SESSION_PURPOSE = "session";
 const FLOW_PURPOSE = "flow";
@@ -1005,7 +1018,7 @@ export class Masks {
       throw error;
     }
 
-    if (!(await this.#firstLogout(visit, logout))) {
+    if (!(await firstLogout(this.#replay, visit.issuerURL, logout))) {
       return answer(
         visit,
         400,
@@ -1015,21 +1028,7 @@ export class Masks {
       );
     }
 
-    const at = Math.max(Number(logout.iat) || 0, now());
-
-    if (logout.sid)
-      await this.#logouts.record(
-        `${visit.issuerURL} sid ${logout.sid}`,
-        at,
-        this.maxAge,
-      );
-    if (logout.sub && !logout.sid) {
-      await this.#logouts.record(
-        `${visit.issuerURL} sub ${logout.sub}`,
-        at,
-        this.maxAge,
-      );
-    }
+    await recordLogout(this.#logouts, visit.issuerURL, logout, this.maxAge);
 
     if (this.#options.onLogout)
       await this.#options.onLogout(logout, visit.request);
@@ -1038,21 +1037,6 @@ export class Masks {
       status: 200,
       headers: { "cache-control": "no-store" },
     });
-  }
-
-  async #firstLogout(visit: Visit, logout: LogoutToken): Promise<boolean> {
-    try {
-      return (
-        (await this.#replay.first(
-          `${visit.issuerURL} logout ${logout.jti}`,
-          LOGOUT_MEMORY,
-        )) === true
-      );
-    } catch (error) {
-      throw new UnavailableError("the replay store could not be reached", {
-        cause: error,
-      });
-    }
   }
 
   async #handshakeShow(visit: Visit): Promise<Response> {
@@ -1218,24 +1202,15 @@ ${this.#credentials.clear ? `<form method="post" action="${escapeHTML(`${this.ha
       resource: visit.resource,
       redirectURIs: unique(redirectURIs),
       returnTo: this.#handshakeReturn(visit),
-      scope: this.#approvedScope(),
+      scope: approvedScope(
+        this.scope,
+        this.privileges,
+        this.#options.namespace,
+        this.#options.delegations ? [DELEGATION_SCOPE] : [],
+      ),
       backchannelLogoutURI: `${visit.origin}${this.basePath}/logout/backchannel`,
       postLogoutRedirectUri: this.#logoutReturn(visit),
     });
-  }
-
-  #approvedScope(): string[] {
-    const asked = unique([...this.scope, ...this.privileges.scopes()]);
-    const namespace = this.#options.namespace;
-    const delegated = this.#options.delegations ? [DELEGATION_SCOPE] : [];
-
-    if (!namespace) return [...asked, ...delegated];
-
-    return unique([
-      ...asked.filter((scope) => !scope.startsWith(namespace)),
-      namespace,
-      ...delegated,
-    ]);
   }
 
   async #identity(
@@ -1286,18 +1261,14 @@ ${this.#credentials.clear ? `<form method="post" action="${escapeHTML(`${this.ha
     try {
       refreshed = await pending;
     } catch (error) {
-      if (error instanceof MasksError && error.code === "invalid_client") {
+      if (hasCode(error, "invalid_client")) {
         await this.disconnect(visit.request);
         await this.#forget(visit);
 
         return undefined;
       }
 
-      if (
-        error instanceof MasksError &&
-        (error.status ?? 0) < 500 &&
-        error.status !== 429
-      ) {
+      if (rejected(error)) {
         await this.#forget(visit);
 
         return undefined;
@@ -1549,7 +1520,14 @@ ${this.#credentials.clear ? `<form method="post" action="${escapeHTML(`${this.ha
 
     if (!data || (data.expiresAt ?? 0) < now()) return undefined;
 
-    if (await this.#loggedOut(visit, data)) {
+    if (
+      await loggedOut(
+        this.#logouts,
+        visit.issuerURL,
+        data.identity ?? {},
+        data.signedInAt ?? 0,
+      )
+    ) {
       visit.session = { id: sealed.id, data };
       await this.#forget(visit);
 
@@ -1559,26 +1537,6 @@ ${this.#credentials.clear ? `<form method="post" action="${escapeHTML(`${this.ha
     visit.session = { id: sealed.id, data };
 
     return visit.session;
-  }
-
-  async #loggedOut(visit: Visit, data: SessionData): Promise<boolean> {
-    const since = data.signedInAt ?? 0;
-    const sid = data.identity?.sid;
-    const sub = data.identity?.sub;
-
-    if (typeof sid === "string" && sid !== "") {
-      const at = await this.#logouts.since(`${visit.issuerURL} sid ${sid}`);
-
-      if (at !== undefined && at >= since) return true;
-    }
-
-    if (typeof sub === "string" && sub !== "") {
-      const at = await this.#logouts.since(`${visit.issuerURL} sub ${sub}`);
-
-      if (at !== undefined && at >= since) return true;
-    }
-
-    return false;
   }
 
   async #writeSession(
@@ -1671,11 +1629,11 @@ ${this.#credentials.clear ? `<form method="post" action="${escapeHTML(`${this.ha
   }
 }
 
-function now(): number {
+export function now(): number {
   return Math.floor(Date.now() / 1000);
 }
 
-function fresh(tokens: HeldTokens): boolean {
+export function fresh(tokens: { expires_at?: number }): boolean {
   return !tokens.expires_at || tokens.expires_at - now() > REFRESH_LEEWAY;
 }
 
@@ -1903,15 +1861,26 @@ function answer(
   description: string,
   asJSON = false,
 ): Response {
-  if (asJSON || wantsJSON(visit.request)) {
+  return refusal(visit.request, status, code, description, visit.out, asJSON);
+}
+
+export function refusal(
+  request: Request,
+  status: number,
+  code: string,
+  description: string,
+  cookies: string[] = [],
+  asJSON = false,
+): Response {
+  if (asJSON || wantsJSON(request)) {
     return json(
       status,
       { error: code, error_description: description },
-      visit.out,
+      cookies,
     );
   }
 
-  return text(status, `${code}: ${description}`, visit.out);
+  return text(status, `${code}: ${description}`, cookies);
 }
 
 function forbid(visit: Visit, error: ForbiddenError): Response {

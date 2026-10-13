@@ -296,3 +296,22 @@ test("signing in again revokes the refresh token the session held before", async
 
   assert.equal(fake.revoked.length, 1);
 });
+
+test("an unconnected app cannot finish a sign-in through its stand-in provider", async () => {
+  const held = await setup();
+  const config = await held.auth.masks.config(new Request(APP));
+  const [provider] = config.providers;
+
+  assert.equal(provider.type, "oauth");
+  assert.equal(provider.authorization.url, `${APP}/api/auth/masks/handshake`);
+  assert.equal(new URL(provider.token).hostname, "masks.invalid");
+  assert.equal(new URL(provider.userinfo).hostname, "masks.invalid");
+
+  const account = { provider: "masks", type: "oauth", access_token: "a" };
+
+  assert.equal(await config.callbacks.signIn({ account }), false);
+  assert.equal(
+    await config.callbacks.jwt({ token: {}, account, profile: { sub: "x" } }),
+    null,
+  );
+});

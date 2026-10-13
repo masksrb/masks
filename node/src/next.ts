@@ -3,10 +3,10 @@ import { redirect } from "next/navigation.js";
 import { NextResponse } from "next/server.js";
 import { replaceCookies } from "./app/cookies.js";
 import type { Masked } from "./app/masked.js";
-import { Masks, type MasksOptions } from "./app/masks.js";
+import { Masks, type MasksOptions, PATH_HEADER } from "./app/masks.js";
 import { ForbiddenError } from "./claims.js";
 
-export const PATH_HEADER = "x-masks-path";
+export { PATH_HEADER };
 
 type RouteContext = { params?: Promise<Record<string, string | string[]>> };
 

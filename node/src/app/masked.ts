@@ -68,6 +68,30 @@ export class Masked {
     return new Masked({ signedIn: false, privileges });
   }
 
+  static fromJSON(held: MaskedJSON, privileges: Privileges): Masked {
+    if (!held.signed_in) return Masked.nobody(privileges);
+
+    return new Masked({
+      signedIn: true,
+      privileges,
+      scopes: held.scopes,
+      expiresAt: held.expires_at,
+      accountURL: held.account_url,
+      claims: {
+        sub: held.subject,
+        name: held.name,
+        preferred_username: held.nickname,
+        email: held.email,
+        email_verified: held.email_verified,
+        picture: held.picture,
+        "masks:avatars": held.avatars,
+        tenant: held.tenant,
+        org: held.organization,
+        orgs: held.organizations,
+      },
+    });
+  }
+
   get accessToken(): string | undefined {
     return this.signedIn ? this.#accessToken : undefined;
   }

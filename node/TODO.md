@@ -28,6 +28,7 @@
 - Delegations and the avatar proxy are not offered through `masksAuth`.
 - The issuer, resource, and credentials cannot vary per request.
 - `guard()` needs the proxy to know which page to return to. Without it, a sign-in returns to `/`.
+- `masksAuth` and `Masks` share the logout and scope helpers, but each still has its own handshake routes, manager check, and issuer cache. Move the connection lifecycle into one module both use.
 - The live run used Next.js 16.3 and next-auth 5.0.0-beta.32 on Node 26. Other versions have not run.
 
 ## Security

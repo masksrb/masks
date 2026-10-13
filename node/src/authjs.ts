@@ -1,21 +1,31 @@
+import { decodeJwt } from "jose";
 import type { NextAuthConfig, NextAuthResult, Session } from "next-auth";
-import { parseCookies, serialize } from "./app/cookies.js";
+import { parseCookies, replaceCookies, serialize } from "./app/cookies.js";
+import { firstLogout, loggedOut, recordLogout } from "./app/logouts.js";
 import { Masked, type MaskedJSON } from "./app/masked.js";
 import {
   DEFAULT_SCOPE,
   escapeHTML,
+  fresh,
   isNetwork,
   json,
   localPath,
+  PATH_HEADER,
   page,
   pick,
   redirect,
+  refusal,
   registrationOf,
   sameOrigin,
   text,
   wantsJSON,
 } from "./app/masks.js";
-import { type PrivilegeSpec, Privileges, unique } from "./app/privileges.js";
+import {
+  approvedScope,
+  type PrivilegeSpec,
+  Privileges,
+  unique,
+} from "./app/privileges.js";
 import {
   type CredentialStore,
   envCredentials,
@@ -28,12 +38,18 @@ import {
 import { ForbiddenError, organizationKey } from "./claims.js";
 import {
   type Client,
+  challenge,
   constantEqual,
   scopes as scopesOf,
-  type Token,
 } from "./client.js";
-import { InvalidTokenError, MasksError, UnavailableError } from "./errors.js";
-import { Handshake } from "./handshake.js";
+import {
+  hasCode,
+  InvalidTokenError,
+  isMasksError,
+  rejected,
+  UnavailableError,
+} from "./errors.js";
+import { Handshake, originOf } from "./handshake.js";
 import type { LogoutToken } from "./idtoken.js";
 import { Issuer } from "./issuer.js";
 import { MemoryReplayStore, type ReplayStore } from "./replay.js";
@@ -90,17 +106,32 @@ export interface MasksAuthResult extends NextAuthResult {
   proxy: (request: Request) => Promise<Response>;
 }
 
-export const PATH_HEADER = "x-masks-path";
-
 const PREFIX = "/masks";
 const HANDSHAKE_COOKIE = "masks-handshake";
 const STEPPED_COOKIE = "masks-stepped";
 const FLOW_LIFETIME = 3600;
 const STEP_UP_WITHIN = 300;
-const REFRESH_LEEWAY = 30;
-const LOGOUT_MEMORY = 3600;
 const DISCOVERY_LIFETIME = 3600_000;
+const PENDING_REFRESH = 60_000;
 const REMEMBERED_REFRESHES = 10_000;
+const NOWHERE = "https://masks.invalid/unconnected";
+const MASKS_OPTIONS = new Set([
+  "issuer",
+  "resource",
+  "name",
+  "id",
+  "label",
+  "scope",
+  "namespace",
+  "organization",
+  "privileges",
+  "manages",
+  "credentials",
+  "logouts",
+  "replay",
+  "onLogout",
+  "allowPlainHTTP",
+]);
 
 interface Remembered {
   until: number;
@@ -125,10 +156,10 @@ export class MasksAuth {
   readonly #credentials: CredentialStore;
   readonly #logouts: LogoutStore;
   readonly #replay: ReplayStore;
-  readonly #issuers = shared(
-    "authjs issuers",
-    () => new Map<string, { at: number; issuer: Promise<Issuer> }>(),
-  );
+  readonly #issuers = new Map<
+    string,
+    { at: number; issuer: Promise<Issuer> }
+  >();
   readonly #refreshes = shared(
     "authjs refreshes",
     () => new Map<string, Remembered>(),
@@ -250,56 +281,45 @@ export class MasksAuth {
       );
 
     if (before?.refresh_token && renewed) {
-      try {
-        await (await this.#client())?.revoke(
-          before.refresh_token,
-          "refresh_token",
-        );
-      } catch {}
+      await this.#revoke(before.refresh_token);
     }
 
     return answer;
   }
 
   async config(request?: Request): Promise<NextAuthConfig> {
-    const options = this.#options;
-    const origin = await this.#origin(request);
-    const credentials = await this.#credentials.read(
-      request ?? new Request(origin ?? "http://localhost"),
-    );
+    const held = await this.#requestFor(request);
+    const credentials = await this.#credentials.read(held);
     const {
       providers = [],
       callbacks = {},
       events = {},
       session,
-      issuer: _issuer,
-      resource: _resource,
-      name: _name,
-      id: _id,
-      label: _label,
-      scope: _scope,
-      namespace: _namespace,
-      organization: _organization,
-      privileges: _privileges,
-      manages: _manages,
-      credentials: _credentials,
-      logouts: _logouts,
-      replay: _replay,
-      onLogout: _onLogout,
-      allowPlainHTTP: _allowPlainHTTP,
-      ...rest
-    } = options;
+    } = this.#options;
+    const rest = Object.fromEntries(
+      Object.entries(this.#options).filter(([key]) => !MASKS_OPTIONS.has(key)),
+    );
 
     return {
       ...rest,
       basePath: this.basePath,
       session: { ...session, strategy: "jwt" },
       providers: [
-        credentials ? this.#provider(credentials) : this.#unconnected(origin),
+        credentials
+          ? this.#provider(credentials)
+          : this.#unconnected(new URL(held.url).origin),
         ...providers,
       ],
       callbacks: {
         ...callbacks,
+        signIn: async (params) => {
+          if (params.account?.provider === this.id) {
+            if (params.account.type !== "oidc") return false;
+            if (!(await this.#credentials.read(held))) return false;
+          }
+
+          return callbacks.signIn ? callbacks.signIn(params) : true;
+        },
         jwt: async (params) => {
           const token = await this.#jwt(params);
 
@@ -325,13 +345,7 @@ export class MasksAuth {
           const held =
             "token" in message ? heldOf(message.token?.masks) : undefined;
 
-          if (held?.refresh_token) {
-            try {
-              const client = await this.#client();
-
-              await client?.revoke(held.refresh_token, "refresh_token");
-            } catch {}
-          }
+          if (held?.refresh_token) await this.#revoke(held.refresh_token);
 
           await events.signOut?.(message);
         },
@@ -369,8 +383,8 @@ export class MasksAuth {
           return text(404, "not found", []);
       }
     } catch (error) {
-      if (error instanceof MasksError) {
-        return refuse(
+      if (isMasksError(error)) {
+        return refusal(
           request,
           400,
           error.code,
@@ -379,7 +393,7 @@ export class MasksAuth {
       }
 
       if (error instanceof UnavailableError || isNetwork(error)) {
-        return refuse(
+        return refusal(
           request,
           503,
           "temporarily_unavailable",
@@ -392,8 +406,8 @@ export class MasksAuth {
   }
 
   async guard(...names: string[]): Promise<Masked> {
-    const { headers, cookies } = await import("next/headers.js");
-    const { redirect: navigate } = await import("next/navigation.js");
+    const { headers, cookies } = await nextHeaders();
+    const { redirect: navigate } = await nextNavigation();
     const held = await headers();
     const path = localPath(held.get(PATH_HEADER)) ?? "/";
     const session = (await this.#bound().auth()) as MasksSession | null;
@@ -411,9 +425,9 @@ export class MasksAuth {
         !privilege.scopes.every((scope) => masked.scopes.includes(scope)),
     );
 
-    if (lacking.length === 0) {
-      masked.member(missing[0] as (typeof missing)[0]);
-    }
+    const [first] = missing;
+
+    if (lacking.length === 0 && first) masked.member(first);
 
     const stepped = (await cookies()).get(STEPPED_COOKIE)?.value;
     const asked = lacking.map((privilege) => privilege.name);
@@ -429,34 +443,13 @@ export class MasksAuth {
   }
 
   masked(session: MasksSession | null | undefined): Masked {
-    const held = session?.masks;
-
-    if (!held?.signed_in) return Masked.nobody(this.privileges);
-
-    return new Masked({
-      signedIn: true,
-      privileges: this.privileges,
-      scopes: held.scopes,
-      expiresAt: held.expires_at,
-      accountURL: held.account_url,
-      claims: {
-        sub: held.subject,
-        name: held.name,
-        preferred_username: held.nickname,
-        email: held.email,
-        email_verified: held.email_verified,
-        picture: held.picture,
-        "masks:avatars": held.avatars,
-        tenant: held.tenant,
-        org: held.organization,
-        orgs: held.organizations,
-      },
-    });
+    return session?.masks
+      ? Masked.fromJSON(session.masks, this.privileges)
+      : Masked.nobody(this.privileges);
   }
 
   async accessToken(): Promise<string | undefined> {
-    const { headers } = await import("next/headers.js");
-    const held = await headers();
+    const held = await (await nextHeaders()).headers();
     const signIn = await this.#signInFrom(held);
 
     if (!signIn) return undefined;
@@ -469,7 +462,7 @@ export class MasksAuth {
   }
 
   async proxy(request: Request): Promise<Response> {
-    const { NextResponse } = await import("next/server.js");
+    const { NextResponse } = await nextServer();
     const url = new URL(request.url);
     const forwarded = new Headers(request.headers);
 
@@ -478,12 +471,18 @@ export class MasksAuth {
     const authed = this.#bound().auth as unknown as (
       request: Request,
     ) => Promise<Response>;
-    const answered = await authed(request);
+    const written = (await authed(request)).headers.getSetCookie();
+
+    if (written.length > 0) {
+      forwarded.set(
+        "cookie",
+        replaceCookies(request.headers.get("cookie"), written),
+      );
+    }
+
     const response = NextResponse.next({ request: { headers: forwarded } });
 
-    for (const cookie of answered.headers.getSetCookie()) {
-      response.headers.append("set-cookie", cookie);
-    }
+    for (const cookie of written) response.headers.append("set-cookie", cookie);
 
     return response;
   }
@@ -496,6 +495,8 @@ export class MasksAuth {
     const { token, account, profile } = params;
 
     if (account && account.provider === this.id) {
+      if (account.type !== "oidc") return null;
+
       const signIn = this.#signedIn(account, profile ?? {});
 
       return {
@@ -510,27 +511,17 @@ export class MasksAuth {
     if (!held) return token;
     if (held.iss !== this.issuerURL) return null;
     if (await this.#departed(held)) return null;
-    if (fresh(held) || !held.refresh_token) return token;
-    if (!(await this.#client())) return token;
 
     try {
-      return { ...token, masks: await this.#renew(held) };
+      return { ...token, masks: await this.#fresh(held) };
     } catch (error) {
-      if (error instanceof MasksError && error.code === "invalid_client") {
+      if (hasCode(error, "invalid_client")) {
         await this.#disconnected();
 
         return null;
       }
 
-      if (
-        error instanceof MasksError &&
-        (error.status ?? 0) < 500 &&
-        error.status !== 429
-      ) {
-        return null;
-      }
-
-      return token;
+      return rejected(error) ? null : token;
     }
   }
 
@@ -540,13 +531,12 @@ export class MasksAuth {
   ): HeldSignIn {
     const claims = payloadOf(account.id_token);
     const sub = String(profile.sub ?? claims.sub ?? "");
-    const now = seconds();
 
     return {
       iss: this.issuerURL,
       sub,
       sid: typeof claims.sid === "string" ? claims.sid : undefined,
-      at: now,
+      at: Math.floor(Date.now() / 1000),
       access_token: String(account.access_token ?? ""),
       token_type: String(account.token_type ?? "Bearer"),
       refresh_token:
@@ -569,7 +559,15 @@ export class MasksAuth {
 
     if (!held) return session;
 
-    const masked = new Masked({
+    return {
+      ...session,
+      user: { ...session.user, id: held.sub },
+      masks: this.#maskedOf(held).toJSON(),
+    };
+  }
+
+  #maskedOf(held: HeldSignIn): Masked {
+    return new Masked({
       signedIn: true,
       privileges: this.privileges,
       claims: held.identity,
@@ -577,24 +575,10 @@ export class MasksAuth {
       expiresAt: held.expires_at,
       accountURL: `${held.iss}/`,
     });
-
-    return {
-      ...session,
-      user: { ...session.user, id: held.sub },
-      masks: masked.toJSON(),
-    };
   }
 
-  async #departed(held: HeldSignIn): Promise<boolean> {
-    if (held.sid) {
-      const at = await this.#logouts.since(`${held.iss} sid ${held.sid}`);
-
-      if (at !== undefined && at >= held.at) return true;
-    }
-
-    const at = await this.#logouts.since(`${held.iss} sub ${held.sub}`);
-
-    return at !== undefined && at >= held.at;
+  #departed(held: HeldSignIn): Promise<boolean> {
+    return loggedOut(this.#logouts, held.iss, held, held.at);
   }
 
   async #fresh(held: HeldSignIn): Promise<HeldSignIn> {
@@ -604,14 +588,14 @@ export class MasksAuth {
   }
 
   async #renew(held: HeldSignIn): Promise<HeldSignIn> {
-    const key = await digest(`${held.iss} ${held.refresh_token}`);
+    const key = await challenge(`${held.iss} ${held.refresh_token}`);
     const found = this.#refreshes.get(key);
 
     if (found && found.until > Date.now()) return found.renewed;
 
     const renewed = this.#refresh(held);
     const remembered: Remembered = {
-      until: Date.now() + FLOW_LIFETIME * 1000,
+      until: Date.now() + PENDING_REFRESH,
       renewed,
     };
 
@@ -620,18 +604,14 @@ export class MasksAuth {
     try {
       const answer = await renewed;
 
-      remembered.until =
-        Math.max(answer.expires_at ?? 0, seconds() + 60) * 1000;
+      remembered.until = Math.max(
+        (answer.expires_at ?? 0) * 1000,
+        Date.now() + PENDING_REFRESH,
+      );
 
       return answer;
     } catch (error) {
-      if (
-        !(error instanceof MasksError) ||
-        (error.status ?? 0) >= 500 ||
-        error.status === 429
-      ) {
-        this.#refreshes.delete(key);
-      }
+      if (!rejected(error)) this.#refreshes.delete(key);
 
       throw error;
     }
@@ -645,7 +625,7 @@ export class MasksAuth {
     }
 
     const resource = this.#resource();
-    const renewed: Token = await client.refresh(
+    const renewed = await client.refresh(
       held.refresh_token as string,
       resource ? { resource: [resource] } : {},
     );
@@ -670,18 +650,8 @@ export class MasksAuth {
   }
 
   #remember(key: string, remembered: Remembered): void {
-    const now = Date.now();
-
-    if (this.#refreshes.size >= REMEMBERED_REFRESHES) {
-      for (const [name, found] of this.#refreshes) {
-        if (found.until <= now) this.#refreshes.delete(name);
-      }
-    }
-
-    while (this.#refreshes.size >= REMEMBERED_REFRESHES) {
-      const oldest = this.#refreshes.keys().next().value;
-
-      if (oldest === undefined) break;
+    for (const oldest of this.#refreshes.keys()) {
+      if (this.#refreshes.size < REMEMBERED_REFRESHES) break;
       this.#refreshes.delete(oldest);
     }
 
@@ -689,7 +659,7 @@ export class MasksAuth {
   }
 
   async #signInFrom(held: Headers): Promise<HeldSignIn | undefined> {
-    const { getToken } = await import("next-auth/jwt");
+    const { getToken } = await nextAuthJWT();
     const cookies = parseCookies(held.get("cookie"));
     const secureCookie = [...cookies.keys()].some((name) =>
       name.startsWith("__Secure-authjs.session-token"),
@@ -747,9 +717,7 @@ export class MasksAuth {
     };
   }
 
-  #unconnected(origin: string | undefined) {
-    const target = `${origin ?? "http://localhost"}${this.handshakePath}`;
-
+  #unconnected(origin: string) {
     return {
       id: this.id,
       name: this.#options.label ?? "masks",
@@ -757,9 +725,12 @@ export class MasksAuth {
       clientId: "unconnected",
       clientSecret: "unconnected",
       checks: ["state"] as "state"[],
-      authorization: { url: target, params: { scope: "openid" } },
-      token: target,
-      userinfo: target,
+      authorization: {
+        url: `${origin}${this.handshakePath}`,
+        params: { scope: "openid" },
+      },
+      token: NOWHERE,
+      userinfo: NOWHERE,
     };
   }
 
@@ -771,7 +742,7 @@ export class MasksAuth {
     const organization = organizationKey(params.get("organization"));
     const prompt = params.get("prompt");
     const asked = new URLSearchParams();
-    const cookies: string[] = [];
+    let stepped: string | undefined;
 
     if (privileges.length > 0) {
       const scope = unique([
@@ -780,11 +751,10 @@ export class MasksAuth {
       ]);
 
       asked.set("scope", scope.join(" "));
-      cookies.push(
-        serialize(STEPPED_COOKIE, encodeURIComponent(privileges.join(" ")), {
-          secure: secure(request),
-          maxAge: STEP_UP_WITHIN,
-        }),
+      stepped = serialize(
+        STEPPED_COOKIE,
+        encodeURIComponent(privileges.join(" ")),
+        { secure: secure(request), maxAge: STEP_UP_WITHIN },
       );
     }
 
@@ -793,7 +763,7 @@ export class MasksAuth {
 
     const started = await this.#startSignIn(request, callbackUrl, asked);
 
-    for (const cookie of cookies) started.headers.append("set-cookie", cookie);
+    if (stepped) started.headers.append("set-cookie", stepped);
 
     return started;
   }
@@ -806,7 +776,6 @@ export class MasksAuth {
     const result = this.#bound();
     const origin = new URL(request.url).origin;
     const make = request.constructor as typeof Request;
-    const jar = parseCookies(request.headers.get("cookie"));
     const written: string[] = [];
     const forwarded = () => {
       const headers = new Headers(request.headers);
@@ -815,20 +784,13 @@ export class MasksAuth {
       headers.delete("content-length");
       headers.set(
         "cookie",
-        [...jar].map(([name, value]) => `${name}=${value}`).join("; "),
+        replaceCookies(request.headers.get("cookie"), written),
       );
 
       return headers;
     };
     const keep = (response: Response) => {
-      for (const line of response.headers.getSetCookie()) {
-        written.push(line);
-
-        const [pair = ""] = line.split(";");
-        const at = pair.indexOf("=");
-
-        if (at > 0) jar.set(pair.slice(0, at), pair.slice(at + 1));
-      }
+      written.push(...response.headers.getSetCookie());
     };
 
     const csrf = await result.handlers.GET(
@@ -864,7 +826,7 @@ export class MasksAuth {
     const location = started.headers.get("location");
 
     if (!location) {
-      return refuse(
+      return refusal(
         request,
         500,
         "signin_failed",
@@ -896,7 +858,7 @@ ${this.#credentials.clear ? `<form method="post" action="${path}/disconnect"><bu
 
   async #handshakeCreate(request: Request): Promise<Response> {
     if (!sameOrigin(request, new URL(request.url).origin)) {
-      return refuse(
+      return refusal(
         request,
         403,
         "forbidden",
@@ -914,7 +876,7 @@ ${this.#credentials.clear ? `<form method="post" action="${path}/disconnect"><bu
 
   async #handshakeDestroy(request: Request): Promise<Response> {
     if (!sameOrigin(request, new URL(request.url).origin)) {
-      return refuse(
+      return refusal(
         request,
         403,
         "forbidden",
@@ -930,7 +892,7 @@ ${this.#credentials.clear ? `<form method="post" action="${path}/disconnect"><bu
     if (refused) return refused;
 
     if (!this.#credentials.clear) {
-      return refuse(
+      return refusal(
         request,
         400,
         "invalid_request",
@@ -941,13 +903,9 @@ ${this.#credentials.clear ? `<form method="post" action="${path}/disconnect"><bu
     const held = await this.#credentials.read(request);
 
     if (held?.registration_access_token) {
-      const issuer = await this.#issuer();
-
       try {
-        await issuer.deleteRegistration(registrationOf(held));
-      } catch (error) {
-        if (!(error instanceof MasksError) || error.status !== 401) throw error;
-      }
+        await (await this.#issuer()).deleteRegistration(registrationOf(held));
+      } catch {}
     }
 
     await this.#credentials.clear(request);
@@ -969,7 +927,7 @@ ${this.#credentials.clear ? `<form method="post" action="${path}/disconnect"><bu
     });
 
     if (!held || !state || !constantEqual(held, state)) {
-      return refuse(
+      return refusal(
         request,
         400,
         "invalid_state",
@@ -984,7 +942,7 @@ ${this.#credentials.clear ? `<form method="post" action="${path}/disconnect"><bu
     }
 
     if (!this.#credentials.write) {
-      return refuse(
+      return refusal(
         request,
         500,
         "handshake_unsaved",
@@ -1041,43 +999,27 @@ ${this.#credentials.clear ? `<form method="post" action="${path}/disconnect"><bu
       resource,
       redirectURIs: [`${base}/callback/${this.id}`],
       returnTo: `${base}${PREFIX}/handshake/callback`,
-      scope: this.#approvedScope(),
+      scope: approvedScope(
+        this.scope,
+        this.privileges,
+        this.#options.namespace,
+      ),
       backchannelLogoutURI: `${base}${PREFIX}/logout/backchannel`,
     });
   }
 
-  #approvedScope(): string[] {
-    const asked = unique([...this.scope, ...this.privileges.scopes()]);
-    const namespace = this.#options.namespace;
-
-    if (!namespace) return asked;
-
-    return unique([
-      ...asked.filter((scope) => !scope.startsWith(namespace)),
-      namespace,
-    ]);
-  }
-
   async #manager(request: Request): Promise<Response | undefined> {
-    const answered = await this.#bound().handlers.GET(
-      new (request.constructor as typeof Request)(
-        `${new URL(request.url).origin}${this.basePath}/session`,
-        { headers: request.headers },
-      ) as Incoming,
-    );
-    const session = answered.ok
-      ? ((await answered.json()) as MasksSession | null)
-      : null;
-    const masked = this.masked(session);
-    const written = answered.headers.getSetCookie();
+    const held = await this.#signInFrom(request.headers);
 
-    if (!masked.signedIn) {
+    if (!held) {
       return redirect(
         this.signInPath({ returnTo: this.handshakePath }),
-        written,
+        [],
         303,
       );
     }
+
+    const masked = this.#maskedOf(held);
 
     const manages = this.#options.manages;
     let allowed = false;
@@ -1088,101 +1030,45 @@ ${this.#credentials.clear ? `<form method="post" action="${path}/disconnect"><bu
 
     if (allowed) return undefined;
 
-    return refuse(
+    return refusal(
       request,
       403,
       "forbidden",
       "only somebody this app lets manage its connection can reconnect or disconnect it",
-      written,
     );
   }
 
   async #backchannel(request: Request): Promise<Response> {
+    const refuse = (description: string) =>
+      refusal(request, 400, "invalid_request", description, [], true);
     const client = await this.#client(request);
 
-    if (!client) {
-      return json(
-        400,
-        {
-          error: "invalid_request",
-          error_description: "this app has not shaken hands with masks",
-        },
-        [],
-      );
-    }
+    if (!client) return refuse("this app has not shaken hands with masks");
 
-    const form = new URLSearchParams(await request.text());
-    const token = form.get("logout_token");
+    const token = new URLSearchParams(await request.text()).get("logout_token");
 
-    if (!token) {
-      return json(
-        400,
-        {
-          error: "invalid_request",
-          error_description: "logout_token is required",
-        },
-        [],
-      );
-    }
+    if (!token) return refuse("logout_token is required");
 
     let logout: LogoutToken;
 
     try {
       logout = await client.logoutToken(token);
     } catch (error) {
-      if (error instanceof InvalidTokenError) {
-        return json(
-          400,
-          { error: "invalid_request", error_description: error.message },
-          [],
-        );
-      }
+      if (error instanceof InvalidTokenError) return refuse(error.message);
 
       throw error;
     }
 
-    let first: boolean;
-
-    try {
-      first =
-        (await this.#replay.first(
-          `${this.issuerURL} logout ${logout.jti}`,
-          LOGOUT_MEMORY,
-        )) === true;
-    } catch (error) {
-      throw new UnavailableError("the replay store could not be reached", {
-        cause: error,
-      });
+    if (!(await firstLogout(this.#replay, this.issuerURL, logout))) {
+      return refuse("that logout token has already been used");
     }
 
-    if (!first) {
-      return json(
-        400,
-        {
-          error: "invalid_request",
-          error_description: "that logout token has already been used",
-        },
-        [],
-      );
-    }
-
-    const at = Math.max(Number(logout.iat) || 0, seconds());
-    const lifetime = Number(this.#options.session?.maxAge) || 30 * 24 * 3600;
-
-    if (logout.sid) {
-      await this.#logouts.record(
-        `${this.issuerURL} sid ${logout.sid}`,
-        at,
-        lifetime,
-      );
-    } else if (logout.sub) {
-      await this.#logouts.record(
-        `${this.issuerURL} sub ${logout.sub}`,
-        at,
-        lifetime,
-      );
-    }
-
+    await recordLogout(
+      this.#logouts,
+      this.issuerURL,
+      logout,
+      Number(this.#options.session?.maxAge) || 30 * 24 * 3600,
+    );
     await this.#options.onLogout?.(logout, request);
 
     return new Response(null, {
@@ -1196,24 +1082,27 @@ ${this.#credentials.clear ? `<form method="post" action="${path}/disconnect"><bu
   }
 
   async #client(request?: Request): Promise<Client | undefined> {
-    const origin = await this.#origin(request);
-    const held = await this.#credentials.read(
-      request ?? new Request(origin ?? "http://localhost"),
-    );
+    const held = await this.#credentials.read(await this.#requestFor(request));
 
     if (!held?.client_id) return undefined;
 
     return (await this.#issuer()).client(registrationOf(held));
   }
 
-  async #disconnected(): Promise<void> {
-    const origin = await this.#origin();
-
+  async #revoke(refreshToken: string): Promise<void> {
     try {
-      await this.#credentials.clear?.(
-        new Request(origin ?? "http://localhost"),
-      );
+      await (await this.#client())?.revoke(refreshToken, "refresh_token");
     } catch {}
+  }
+
+  async #disconnected(): Promise<void> {
+    try {
+      await this.#credentials.clear?.(await this.#requestFor());
+    } catch {}
+  }
+
+  async #requestFor(request?: Request): Promise<Request> {
+    return request ?? new Request(await this.#origin());
   }
 
   async #issuer(): Promise<Issuer> {
@@ -1247,24 +1136,23 @@ ${this.#credentials.clear ? `<form method="post" action="${path}/disconnect"><bu
     return url ? originOf(url) : undefined;
   }
 
-  async #origin(request?: Request): Promise<string | undefined> {
+  async #origin(): Promise<string> {
     const resource = this.#resource();
+    const named = resource && originOf(resource);
 
-    if (resource) return originOf(resource);
-    if (request) return new URL(request.url).origin;
+    if (named) return named;
 
     try {
-      const { headers } = await import("next/headers.js");
-      const held = await headers();
+      const held = await (await nextHeaders()).headers();
       const host = held.get("x-forwarded-host") ?? held.get("host");
       const proto =
         held.get("x-forwarded-proto") ??
         (host?.startsWith("localhost") ? "http" : "https");
 
-      return host ? `${proto}://${host}` : undefined;
-    } catch {
-      return undefined;
-    }
+      if (host) return `${proto}://${host}`;
+    } catch {}
+
+    return "http://localhost";
   }
 
   #bound(): NextAuthResult {
@@ -1290,28 +1178,8 @@ function heldOf(value: unknown): HeldSignIn | undefined {
     : undefined;
 }
 
-function fresh(held: HeldSignIn): boolean {
-  return !held.expires_at || held.expires_at - seconds() > REFRESH_LEEWAY;
-}
-
-function seconds(): number {
-  return Math.floor(Date.now() / 1000);
-}
-
 function trim(path: string): string {
   return `/${path.replace(/^\/+|\/+$/g, "")}`;
-}
-
-function originOf(url: string): string | undefined {
-  try {
-    const parsed = new URL(url);
-
-    return parsed.protocol === "https:" || parsed.protocol === "http:"
-      ? parsed.origin
-      : undefined;
-  } catch {
-    return undefined;
-  }
 }
 
 function secure(request: Request): boolean {
@@ -1345,17 +1213,7 @@ function payloadOf(token: unknown): Record<string, unknown> {
   if (typeof token !== "string") return {};
 
   try {
-    const [, body = ""] = token.split(".");
-    const parsed = JSON.parse(
-      new TextDecoder().decode(
-        Uint8Array.from(
-          atob(body.replace(/-/g, "+").replace(/_/g, "/")),
-          (character) => character.charCodeAt(0),
-        ),
-      ),
-    );
-
-    return parsed && typeof parsed === "object" ? parsed : {};
+    return decodeJwt(token);
   } catch {
     return {};
   }
@@ -1369,34 +1227,20 @@ function decode(value: string): string[] {
   }
 }
 
-async function digest(value: string): Promise<string> {
-  const hashed = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(value),
-  );
+function lazy<T>(load: () => Promise<T>): () => Promise<T> {
+  let held: Promise<T> | undefined;
 
-  return [...new Uint8Array(hashed)]
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
+  return () => {
+    held ??= load();
+    return held;
+  };
 }
 
-function refuse(
-  request: Request,
-  status: number,
-  code: string,
-  description: string,
-  cookies: string[] = [],
-): Response {
-  if (wantsJSON(request)) {
-    return json(
-      status,
-      { error: code, error_description: description },
-      cookies,
-    );
-  }
-
-  return text(status, `${code}: ${description}`, cookies);
-}
+const nextHeaders = lazy(() => import("next/headers.js"));
+const nextNavigation = lazy(() => import("next/navigation.js"));
+const nextServer = lazy(() => import("next/server.js"));
+const nextAuthJWT = lazy(() => import("next-auth/jwt"));
 
 export { Masked, type MaskedJSON } from "./app/masked.js";
 export { ForbiddenError } from "./claims.js";
+export { PATH_HEADER };

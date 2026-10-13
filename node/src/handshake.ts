@@ -173,7 +173,7 @@ export class Handshake {
   }
 }
 
-function originOf(value: string): string | undefined {
+export function originOf(value: string): string | undefined {
   try {
     const url = new URL(value);
 

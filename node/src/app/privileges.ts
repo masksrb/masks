@@ -85,3 +85,20 @@ export function list(value: string | string[] | undefined): string[] {
 export function unique(values: string[]): string[] {
   return [...new Set(values)];
 }
+
+export function approvedScope(
+  scope: string[],
+  privileges: Privileges,
+  namespace: string | undefined,
+  extra: string[] = [],
+): string[] {
+  const asked = unique([...scope, ...privileges.scopes()]);
+
+  if (!namespace) return [...asked, ...extra];
+
+  return unique([
+    ...asked.filter((held) => !held.startsWith(namespace)),
+    namespace,
+    ...extra,
+  ]);
+}

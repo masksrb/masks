@@ -25,6 +25,12 @@ export interface CredentialStore {
   clear?(request: Request): void | Promise<void>;
 }
 
+const RECHECK = 1000;
+
+function missing(error: unknown): boolean {
+  return (error as { code?: string })?.code === "ENOENT";
+}
+
 export function memoryStore(): SessionStore {
   const held = new Map<string, { data: unknown; until: number }>();
 
@@ -106,27 +112,34 @@ export function envCredentials(
 }
 
 export function fileCredentials(path = "masks.json"): CredentialStore {
-  let cached: { at: number; held: Credentials | undefined } | undefined;
+  let cached:
+    | { at: number; checked: number; held: Credentials | undefined }
+    | undefined;
+  let files: Promise<typeof import("node:fs/promises")> | undefined;
 
-  const fs = async () => import("node:fs/promises");
+  const fs = () => {
+    files ??= import("node:fs/promises");
+    return files;
+  };
 
   const changedAt = async (): Promise<number> => {
     try {
       return (await (await fs()).stat(path)).mtimeMs;
     } catch (error) {
-      if ((error as { code?: string })?.code === "ENOENT") return 0;
+      if (missing(error)) return 0;
       throw error;
     }
   };
 
   return {
     async read() {
+      if (cached && Date.now() - cached.checked < RECHECK) return cached.held;
+
       const at = await changedAt();
 
-      if (cached && cached.at === at) return cached.held;
-      if (at === 0) {
-        cached = { at, held: undefined };
-        return undefined;
+      if (cached && cached.at === at) {
+        cached.checked = Date.now();
+        return cached.held;
       }
 
       let held: Credentials | undefined;
@@ -139,15 +152,10 @@ export function fileCredentials(path = "masks.json"): CredentialStore {
             ? (parsed as Credentials)
             : undefined;
       } catch (error) {
-        if (
-          (error as { code?: string })?.code !== "ENOENT" &&
-          !(error instanceof SyntaxError)
-        ) {
-          throw error;
-        }
+        if (!missing(error) && !(error instanceof SyntaxError)) throw error;
       }
 
-      cached = { at, held };
+      cached = { at, checked: Date.now(), held };
 
       return held;
     },
@@ -162,17 +170,17 @@ export function fileCredentials(path = "masks.json"): CredentialStore {
       await files.rename(temporary, path);
       await files.chmod(path, 0o600);
 
-      cached = { at: await changedAt(), held };
+      cached = { at: await changedAt(), checked: Date.now(), held };
     },
     async clear() {
       await (await fs()).rm(path, { force: true });
-      cached = { at: 0, held: undefined };
+      cached = { at: 0, checked: Date.now(), held: undefined };
     },
   };
 }
 
 export function shared<T>(name: string, create: () => T): T {
-  const key = Symbol.for(`@masks/server ${name}`);
+  const key = Symbol.for(`@masks/server v1 ${name}`);
   const held = globalThis as unknown as Record<symbol, T | undefined>;
 
   held[key] ??= create();
