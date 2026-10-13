@@ -19,7 +19,9 @@ from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
 COOKIE = "__Host-masks"
 LIFETIME = 14 * 24 * 3600
-COOKIE_LIMIT = 4000
+COOKIE_PIECE = 3800
+COOKIE_PIECES = 8
+COOKIE_LIMIT = COOKIE_PIECE * COOKIE_PIECES
 SECRET_LENGTH = 32
 VERSION = "1"
 KEY_LIMIT = 128
@@ -35,6 +37,7 @@ class Session(MutableMapping[str, Any]):
         self.modified = False
         self.renewed = False
         self.ended_key = ""
+        self.cookie_names: tuple[str, ...] = ()
 
     def __getitem__(self, name: str) -> Any:
         return self.data[name]
@@ -193,12 +196,7 @@ class CookieSessions:
 
         nonce = secrets.token_bytes(12)
         packed = zlib.compress(json.dumps({"iat": session.issued_at, "data": session.data}).encode())
-        cookie = f"{VERSION}.{b64(nonce + self._keys[0].encrypt(nonce, packed, self._bound))}"
-
-        if len(cookie) > COOKIE_LIMIT:
-            raise ValueError("masks: this session no longer fits in a cookie; keep sessions on the server instead")
-
-        return cookie
+        return f"{VERSION}.{b64(nonce + self._keys[0].encrypt(nonce, packed, self._bound))}"
 
     def end(self, *, issuer: str, subject: str = "", sid: str = "") -> int | None:
         return None

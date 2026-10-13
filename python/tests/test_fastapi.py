@@ -73,6 +73,10 @@ def application(config: Config) -> tuple[FastAPI, Masks]:
     async def plain() -> dict[str, Any]:
         return {"plain": True}
 
+    @app.get("/note")
+    async def note(request: Request, size: str | None = None) -> dict[str, int]:
+        return scenarios.note(await auth.session(request), size)
+
     @app.get("/connect")
     async def connect(request: Request, provider: str) -> Response:
         return await auth.start_delegation(request, provider)

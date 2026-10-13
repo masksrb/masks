@@ -156,8 +156,9 @@ it, and `/auth/session` leaves them out.
 - To change the secret, pass a list with the new secret first. Sessions sealed with an older secret
   still open, and are sealed with the new one the next time they change.
 
-A cookie holds about 4 KB. A person in many organizations can outgrow it, and the app then raises
-`ValueError`. To keep sessions on the server instead, set `sessions`:
+A session larger than one cookie is split across several, named `__Host-masks`, `__Host-masks-1`,
+and so on, up to eight. Past about 30 KB, the app raises `ValueError`. To keep sessions on the
+server instead, set `sessions`:
 
 ```python
 from masks.web import MemorySessionStore, ServerSessions

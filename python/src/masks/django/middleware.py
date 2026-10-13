@@ -16,16 +16,16 @@ class MasksMiddleware:
 
     def __call__(self, request: HttpRequest) -> HttpResponse:
         held = engine()
-        request.masks_cookie = request.COOKIES.get(held.cookie_name)
+        request.masks_cookie = request.META.get("HTTP_COOKIE", "")
         request.masked = SimpleLazyObject(lambda: person(request))
         sent = self.get_response(request)
         session = getattr(request, "masks_session", None)
-        sealed = held.seal(session, request.is_secure()) if isinstance(session, Session) else None
+        written = held.seal(session, request.is_secure()) if isinstance(session, Session) else []
 
-        if sealed is not None:
+        if written:
             sent["Cache-Control"] = unshared(sent.get("Cache-Control", ""))
 
-        if sealed is not None and sealed.value:
+        for sealed in written:
             sent.set_cookie(
                 sealed.name,
                 sealed.value,
@@ -35,8 +35,6 @@ class MasksMiddleware:
                 httponly=True,
                 samesite="Lax",
             )
-        elif sealed is not None:
-            sent.delete_cookie(sealed.name, path="/", samesite="Lax")
 
         return sent
 

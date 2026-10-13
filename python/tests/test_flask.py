@@ -45,6 +45,10 @@ class FlaskBrowser:
         def plain() -> Any:
             return jsonify({"plain": True})
 
+        @app.get("/note")
+        def note() -> Any:
+            return jsonify(scenarios.note(auth.session(), request.args.get("size")))
+
         @app.get("/connect")
         def connect() -> Any:
             return auth.start_delegation(request.args["provider"])

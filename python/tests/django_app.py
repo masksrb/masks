@@ -6,8 +6,9 @@ from django.http import HttpRequest, JsonResponse
 from django.urls import include, path
 
 import masks
-from masks.django import finish_delegation, login_required, start_delegation, token_required
+from masks.django import finish_delegation, login_required, session_of, start_delegation, token_required
 
+from . import scenarios
 from .scenarios import connection
 
 
@@ -39,6 +40,10 @@ def plain(request: HttpRequest) -> Any:
     return JsonResponse({"plain": True})
 
 
+def note(request: HttpRequest) -> Any:
+    return JsonResponse(scenarios.note(session_of(request), request.GET.get("size")))
+
+
 def connect(request: HttpRequest) -> Any:
     return start_delegation(request, request.GET["provider"])
 
@@ -62,6 +67,7 @@ urlpatterns = [
     path("billing", billing),
     path("public", public),
     path("plain", plain),
+    path("note", note),
     path("connect", connect),
     path("connected", connected),
     path("api/catalog", catalog),

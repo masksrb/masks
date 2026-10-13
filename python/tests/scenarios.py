@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import json
+import secrets
 import time
-from collections.abc import Callable
+from collections.abc import Callable, MutableMapping
 from dataclasses import dataclass
 from typing import Any, Protocol
 from urllib.parse import parse_qs, urlsplit
@@ -54,6 +55,13 @@ class Browser(Protocol):
 
 
 Build = Callable[[Config], Browser]
+
+
+def note(session: MutableMapping[str, Any], size: str | None) -> dict[str, int]:
+    if size is not None:
+        session["note"] = secrets.token_hex(int(size) // 2)
+
+    return {"note": len(session.get("note", ""))}
 
 
 def connection(held: masks.HeldConnection) -> dict[str, Any]:
@@ -440,6 +448,24 @@ def passes_on_a_provider_refusal(build: Build, fake: Fake) -> None:
     assert browser.get(fake.authorize(started.location, "ada"), HTML).json() == {"error": "invalid_state"}
 
 
+def keeps_a_large_session_in_several_cookies(build: Build, fake: Fake) -> None:
+    browser = build(config(fake))
+    sign_in(browser, fake)
+    grown = browser.get("/note?size=9000")
+
+    assert [cookie.split("=")[0] for cookie in grown.cookies] == ["__Host-masks", "__Host-masks-1", "__Host-masks-2"]
+    assert browser.get("/note").json() == {"note": 9000}
+    assert browser.get("/me").json()["subject"] == "ada"
+
+    shrunk = browser.get("/note?size=0")
+    cleared = [cookie.split("=")[0] for cookie in shrunk.cookies if "max-age=0" in cookie.lower()]
+
+    assert len(shrunk.cookies) == 3
+    assert cleared == ["__Host-masks-1", "__Host-masks-2"]
+    assert browser.get("/note").json() == {"note": 0}
+    assert browser.get("/me").json()["subject"] == "ada"
+
+
 SCENARIOS = [
     signs_in_and_out,
     keeps_return_to_local,
@@ -466,6 +492,7 @@ SCENARIOS = [
     keeps_a_connection_to_its_browser,
     forgets_a_connection_when_someone_else_signs_in,
     passes_on_a_provider_refusal,
+    keeps_a_large_session_in_several_cookies,
 ]
 
 TIMED = [refreshes_and_forgets, keeps_a_refreshed_session_out_of_shared_caches]

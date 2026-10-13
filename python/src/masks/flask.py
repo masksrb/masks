@@ -13,7 +13,7 @@ from .client import Client
 from .errors import MasksError
 from .oidc import HeldConnection
 from .web.config import Config
-from .web.core import FORM_LIMIT, METADATA_PATH, Answer, Incoming, Refusal, cookie_named, too_large, unshared
+from .web.core import FORM_LIMIT, METADATA_PATH, Answer, Incoming, Refusal, too_large, unshared
 from .web.core import Masks as Engine
 from .web.person import Person
 from .web.sessions import Session
@@ -89,10 +89,12 @@ class Masks:
         session = g.get("masks_session")
 
         if isinstance(session, Session):
-            header = self.engine.cookie(session, request.is_secure)
+            written = self.engine.cookies(session, request.is_secure)
 
-            if header is not None:
+            if written:
                 sent.headers["Cache-Control"] = unshared(", ".join(sent.headers.getlist("Cache-Control")))
+
+            for header in written:
                 sent.headers.add("Set-Cookie", header)
 
         return sent
@@ -101,7 +103,7 @@ class Masks:
         found = g.get("masks_session")
 
         if not isinstance(found, Session):
-            found = self.engine.load(cookie_named(request.headers.get("Cookie", ""), self.engine.cookie_name))
+            found = self.engine.load(request.headers.get("Cookie", ""))
             g.masks_session = found
 
         return found

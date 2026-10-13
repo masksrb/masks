@@ -40,7 +40,7 @@ from ..verifier import PROOF_ALGORITHMS, AsyncVerifier, Claims, Verifier
 from .config import Config, resolve
 from .credentials import Credentials
 from .person import Person, Privilege, nobody, scoped
-from .sessions import Session
+from .sessions import COOKIE_PIECE, COOKIE_PIECES, Session
 
 T = TypeVar("T")
 
@@ -233,14 +233,20 @@ def unshared(cache_control: str) -> str:
     return cache_control if directives & {"private", "no-store"} else "no-store"
 
 
-def cookie_named(header: str, name: str) -> str | None:
+def cookies_in(header: str) -> dict[str, str]:
+    held: dict[str, str] = {}
+
     for part in header.split(";"):
         key, found, value = part.strip().partition("=")
 
-        if found and key == name:
-            return value.strip().strip('"')
+        if found and key not in held:
+            held[key] = value.strip().strip('"')
 
-    return None
+    return held
+
+
+def piece_name(name: str, index: int) -> str:
+    return f"{name}-{index}" if index else name
 
 
 def referring(request: Incoming) -> str:
@@ -343,21 +349,43 @@ class Masks:
     def path(self, name: str = "") -> str:
         return f"{self.config.prefix}{name}" or "/"
 
-    def load(self, cookie: str | None) -> Session:
-        return self.config.backend.load(cookie)
+    def _pieces(self, header: str) -> tuple[str | None, tuple[str, ...]]:
+        held = cookies_in(header)
+        names = []
 
-    async def aload(self, cookie: str | None) -> Session:
-        return await self.config.backend.aload(cookie)
+        for index in range(COOKIE_PIECES):
+            named = piece_name(self.cookie_name, index)
 
-    def seal(self, session: Session, secure_request: bool) -> Sealed | None:
+            if named not in held:
+                break
+
+            names.append(named)
+
+        return "".join(held[name] for name in names) or None, tuple(names)
+
+    def load(self, header: str) -> Session:
+        value, names = self._pieces(header)
+        session = self.config.backend.load(value)
+        session.cookie_names = names
+
+        return session
+
+    async def aload(self, header: str) -> Session:
+        value, names = self._pieces(header)
+        session = await self.config.backend.aload(value)
+        session.cookie_names = names
+
+        return session
+
+    def seal(self, session: Session, secure_request: bool) -> list[Sealed]:
         if not session.dirty:
-            return None
+            return []
 
         return self._sealed(session, self.config.backend.save(session, self._tags(session)), secure_request)
 
-    async def aseal(self, session: Session, secure_request: bool) -> Sealed | None:
+    async def aseal(self, session: Session, secure_request: bool) -> list[Sealed]:
         if not session.dirty:
-            return None
+            return []
 
         return self._sealed(session, await self.config.backend.asave(session, self._tags(session)), secure_request)
 
@@ -368,17 +396,24 @@ class Masks:
 
         return {"iss": str(held["issuer"]), **tags} if tags and held.get("issuer") else tags
 
-    def _sealed(self, session: Session, value: str | None, secure_request: bool) -> Sealed:
+    def _sealed(self, session: Session, value: str | None, secure_request: bool) -> list[Sealed]:
         secure = self.config.cookie_secure or secure_request
+        remaining = max(int(session.issued_at + self.config.backend.lifetime - time.time()), 1)
+        pieces = [(value or "")[start : start + COOKIE_PIECE] for start in range(0, len(value or ""), COOKIE_PIECE)]
+
+        if len(pieces) > COOKIE_PIECES:
+            raise ValueError("masks: this session no longer fits in cookies; keep sessions on the server instead")
+
+        sent = [
+            Sealed(piece_name(self.cookie_name, index), piece, remaining, secure) for index, piece in enumerate(pieces)
+        ]
+        written = {held.name for held in sent}
+        sent += [Sealed(name, "", 0, secure) for name in session.cookie_names if name not in written]
         session.modified = False
         session.renewed = False
+        session.cookie_names = tuple(held.name for held in sent if held.value)
 
-        if value is None:
-            return Sealed(self.cookie_name, "", 0, secure)
-
-        remaining = int(session.issued_at + self.config.backend.lifetime - time.time())
-
-        return Sealed(self.cookie_name, value, max(remaining, 1), secure)
+        return sent
 
     @property
     def cookie_name(self) -> str:
@@ -386,15 +421,11 @@ class Masks:
 
         return named if self.config.cookie_secure else named.removeprefix("__Host-").removeprefix("__Secure-")
 
-    def cookie(self, session: Session, secure_request: bool) -> str | None:
-        sealed = self.seal(session, secure_request)
+    def cookies(self, session: Session, secure_request: bool) -> list[str]:
+        return [held.header for held in self.seal(session, secure_request)]
 
-        return sealed.header if sealed is not None else None
-
-    async def acookie(self, session: Session, secure_request: bool) -> str | None:
-        sealed = await self.aseal(session, secure_request)
-
-        return sealed.header if sealed is not None else None
+    async def acookies(self, session: Session, secure_request: bool) -> list[str]:
+        return [held.header for held in await self.aseal(session, secure_request)]
 
     def issuer_url(self, request: Incoming) -> str:
         found = str(resolve(self.config.issuer, request.native) or "").rstrip("/")

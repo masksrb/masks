@@ -148,7 +148,7 @@ A store of your own has a `writable` attribute and these methods:
 
 | | |
 | --- | --- |
-| `CookieSessions(secret, name="__Host-masks", lifetime=...)` | The default. The cookie holds the session, sealed with AES-GCM. Raises `ValueError` past about 4 KB. |
+| `CookieSessions(secret, name="__Host-masks", lifetime=...)` | The default. The cookie holds the session, sealed with AES-GCM. Splits a large session across up to eight cookies, and raises `ValueError` past about 30 KB. |
 | `ServerSessions(store, name="__Host-masks", lifetime=...)` | The cookie holds a random id, and the store holds the session under a hash of it. |
 | `MemorySessionStore()` | A store in this process's memory. |
 

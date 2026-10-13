@@ -7,7 +7,6 @@
 
 ## masks.web
 
-- A cookie session larger than about 4 KB raises `ValueError`. Split it across several cookies, as go/web does.
 - The shared refresh and the memory of seen logout tokens work within one process only. Add stores several processes can share.
 
 ## Security

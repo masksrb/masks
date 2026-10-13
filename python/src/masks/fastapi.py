@@ -14,7 +14,7 @@ from .client import AsyncClient
 from .errors import MasksError
 from .oidc import HeldConnection
 from .web.config import Config
-from .web.core import FORM_LIMIT, METADATA_PATH, Answer, Incoming, Refusal, cookie_named, too_large, unshared
+from .web.core import FORM_LIMIT, METADATA_PATH, Answer, Incoming, Refusal, too_large, unshared
 from .web.core import Masks as Engine
 from .web.person import Person
 from .web.sessions import Session
@@ -24,19 +24,12 @@ SESSION = "masks.session"
 __all__ = ["Config", "Masks", "Person", "Refusal", "SessionMiddleware"]
 
 
-def cookie_from(scope: Scope, name: str) -> str | None:
-    for key, value in scope.get("headers") or []:
-        if key == b"cookie":
-            found = cookie_named(value.decode("latin-1"), name)
-
-            if found is not None:
-                return found
-
-    return None
+def cookie_header(scope: Scope) -> str:
+    return "; ".join(value.decode("latin-1") for key, value in scope.get("headers") or [] if key == b"cookie")
 
 
 class Lazy:
-    def __init__(self, engine: Engine, cookie: str | None) -> None:
+    def __init__(self, engine: Engine, cookie: str) -> None:
         self.engine = engine
         self.cookie = cookie
         self.session: Session | None = None
@@ -60,21 +53,21 @@ class SessionMiddleware:
             await self.app(scope, receive, send)
             return
 
-        lazy = Lazy(self.engine, cookie_from(scope, self.engine.cookie_name))
+        lazy = Lazy(self.engine, cookie_header(scope))
         scope[SESSION] = lazy
         secure = scope.get("scheme") in ("https", "wss")
 
         async def sending(message: Message) -> None:
             if message["type"] == "http.response.start" and lazy.session is not None:
-                header = await self.engine.acookie(lazy.session, secure)
+                written = await self.engine.acookies(lazy.session, secure)
 
-                if header is not None:
+                if written:
                     held = list(message.get("headers") or [])
                     cached = b", ".join(value for name, value in held if name.lower() == b"cache-control")
                     message["headers"] = [
                         *(pair for pair in held if pair[0].lower() != b"cache-control"),
                         (b"cache-control", unshared(cached.decode("latin-1")).encode("latin-1")),
-                        (b"set-cookie", header.encode("latin-1")),
+                        *((b"set-cookie", header.encode("latin-1")) for header in written),
                     ]
 
             await send(message)
