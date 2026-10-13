@@ -87,7 +87,7 @@ class ResourceTest < ClientTest
 
     assert_equal 401, error.status
     assert_nil error.code
-    refute_includes resource.challenge(error), "error="
+    refute_includes resource.challenge(error), "error"
   end
 
   def test_a_header_that_is_not_bearer_is_refused

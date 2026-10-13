@@ -24,6 +24,7 @@ class RackTest < ClientTest
     assert_equal 401, status
     assert_includes headers["www-authenticate"], "Bearer"
     assert_includes headers["www-authenticate"], "resource_metadata="
+    refute_includes headers["www-authenticate"], "error"
     assert_equal "no-store", headers["cache-control"]
     assert_equal "a bearer token is required", JSON.parse(body.first)["error_description"]
   end

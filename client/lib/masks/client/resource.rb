@@ -57,7 +57,7 @@ module Masks
 
         parameters = [
           [ "error", error.code ],
-          [ "error_description", error.description ],
+          [ "error_description", (error.description if error.code) ],
           [ "scope", error.scope || (scopes.join(" ") if scopes.any?) ],
           [ "resource_metadata", metadata_url ]
         ]
