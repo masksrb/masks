@@ -22,6 +22,12 @@
 docker pull ghcr.io/masksrb/masks:latest
 ```
 
+- [Host it yourself](https://masks.pages.dev/guides/self-hosting/) with the image, Postgres, and a reverse proxy.
+- [Mount it inside a Rails app](https://masks.pages.dev/reference/ruby/engine-mode/) with the `masks-server` gem.
+- [Build your own masks server](https://masks.pages.dev/reference/ruby/server-mode/) as a Rails app, the way the image is built.
+- [Put it in front of an app](https://masks.pages.dev/guides/forward-auth/) that has no sign-in, with Caddy, Traefik, or nginx.
+- [Try it on your computer](https://masks.pages.dev/quickstart/#try-it-locally) from this repository.
+
 ## Libraries
 
 | Language   | Package                                       | Guide                                                                    |
