@@ -1,6 +1,6 @@
-import { cookies, headers } from "next/headers.js";
-import { redirect } from "next/navigation.js";
-import { NextResponse } from "next/server.js";
+import { cookies, headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { NextResponse } from "next/server";
 import { replaceCookies } from "./app/cookies.js";
 import type { Masked } from "./app/masked.js";
 import { Masks, type MasksOptions, PATH_HEADER } from "./app/masks.js";
@@ -138,7 +138,7 @@ export function masksNext(options: Masks | MasksOptions = {}): MasksNext {
         if (guarded) {
           const outcome = await masks.guard(request);
 
-          if (outcome.response) return outcome.response;
+          if (outcome.response) return absolute(outcome.response, url);
 
           written = outcome.cookies;
         } else {
@@ -168,6 +168,18 @@ export function masksNext(options: Masks | MasksOptions = {}): MasksNext {
       };
     },
   };
+}
+
+function absolute(response: Response, url: URL): Response {
+  const location = response.headers.get("location");
+
+  if (!location) return response;
+
+  const headers = new Headers(response.headers);
+
+  headers.set("location", new URL(location, url).toString());
+
+  return new Response(response.body, { status: response.status, headers });
 }
 
 function withCookies(response: Response, written: string[]): Response {

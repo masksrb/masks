@@ -108,7 +108,7 @@ interface Pending {
 
 interface FlowData {
   requests?: Record<string, Pending>;
-  handshakes?: Record<string, { until: number }>;
+  handshakes?: Record<string, { until: number; returnTo?: string }>;
   logouts?: Record<string, { until: number }>;
   delegations?: Record<string, PendingDelegation>;
   steppedUp?: { privileges: string[]; at: number };
@@ -535,10 +535,6 @@ export class Masks {
     const visit = await this.#visit(request);
     const session = await this.#readSession(visit);
 
-    if (!session?.data.tokens && !(await this.#configured(visit))) {
-      return this.protect(request, ...names);
-    }
-
     if (!session?.data.tokens && wantsJSON(request)) {
       return this.protect(request, ...names);
     }
@@ -707,9 +703,13 @@ export class Masks {
       client = await this.#client(visit);
     }
 
-    if (!client) return redirect(this.handshakePath, visit.out);
-
     const params = visit.url.searchParams;
+    let returnTo = localPath(params.get("return_to") ?? undefined);
+
+    if (returnTo?.startsWith(this.basePath)) returnTo = undefined;
+
+    if (!client) return redirect(this.#handshakeURL(returnTo), visit.out);
+
     const named = this.privileges.known(
       (params.get("privilege") ?? "").split(/\s+/).filter(Boolean),
     );
@@ -731,9 +731,6 @@ export class Masks {
       organization,
     });
     const flow = await this.#readFlow(visit);
-    let returnTo = localPath(params.get("return_to") ?? undefined);
-
-    if (returnTo?.startsWith(this.basePath)) returnTo = undefined;
 
     flow.requests = keep(flow.requests, started.state, {
       verifier: started.verifier,
@@ -1087,8 +1084,9 @@ export class Masks {
     const params = visit.url.searchParams;
     const state = params.get("state") ?? "";
     const flow = await this.#readFlow(visit);
+    const pending = claim(flow.handshakes, state);
 
-    if (!claim(flow.handshakes, state)) {
+    if (!pending) {
       return answer(
         visit,
         400,
@@ -1123,7 +1121,7 @@ export class Masks {
       registration_client_uri: registration.registration_client_uri,
     });
 
-    return redirect(this.basePath, visit.out);
+    return redirect(this.loginURL({ returnTo: pending.returnTo }), visit.out);
   }
 
   async #beginHandshake(visit: Visit): Promise<Response> {
@@ -1131,8 +1129,13 @@ export class Masks {
     const started = handshake.start();
     const flow = await this.#readFlow(visit);
 
+    const returnTo = localPath(
+      visit.url.searchParams.get("return_to") ?? undefined,
+    );
+
     flow.handshakes = keep(flow.handshakes, started.state, {
       until: now() + FLOW_LIFETIME,
+      returnTo: returnTo?.startsWith(this.basePath) ? undefined : returnTo,
     });
     await this.#writeFlow(visit, flow);
 
@@ -1311,14 +1314,14 @@ export class Masks {
   ): Response {
     if (wantsJSON(visit.request)) return this.#refuseJSON(visit, reason);
 
-    if (reason === "handshake_required")
-      return redirect(this.handshakePath, visit.out);
-
     const returnTo =
       localPath(asked) ??
       (visit.request.method === "GET"
         ? `${visit.url.pathname}${visit.url.search}`
         : referring(visit.request));
+
+    if (reason === "handshake_required")
+      return redirect(this.#handshakeURL(returnTo), visit.out);
 
     if (refreshable) {
       const query = returnTo
@@ -1329,6 +1332,14 @@ export class Masks {
     }
 
     return redirect(this.loginURL({ returnTo }), visit.out);
+  }
+
+  #handshakeURL(returnTo: string | undefined): string {
+    const path = localPath(returnTo);
+
+    if (!path || path.startsWith(this.basePath)) return this.handshakePath;
+
+    return `${this.handshakePath}?${new URLSearchParams({ return_to: path })}`;
   }
 
   #refuseJSON(

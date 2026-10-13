@@ -32,6 +32,5 @@
 
 ## Testing
 
-- `auth()` and `requireAuth()` have not run inside a real Next.js request.
 - Only Node 26 with Express 5, Hono 4, and Next 16 has run. Express 4, Bun, Deno, and Workers have not.
-- Only `masksAuth` has run against a live masks. The rest of the tests use a fake issuer.
+- `masksAuth` and `masksNext` have run against a live masks with Next.js 16.3. Express and Hono have run only against the fake issuer.

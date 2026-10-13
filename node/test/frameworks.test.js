@@ -114,7 +114,7 @@ test("the Next.js proxy refreshes the session and hands it to the page", async (
   assert.equal(guarded.status, 302);
   assert.equal(
     guarded.headers.get("location"),
-    "/auth?return_to=%2Fdashboard%2Fsettings",
+    `${APP}/auth?return_to=%2Fdashboard%2Fsettings`,
   );
 
   const open = await proxy(signedOut.request("/about"));

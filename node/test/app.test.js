@@ -861,3 +861,43 @@ test("a session another issuer signed in is not honored", async () => {
 
   assert.equal((await answer.json()).signed_in, false);
 });
+
+test("a browser on an unconnected app is sent to connect it, and an API client is refused", async () => {
+  const held = await setup({ connected: false }, closers);
+  const page = await held.masks.guard(
+    held.browser.request("/dashboard", { headers: { accept: "text/html" } }),
+  );
+
+  assert.equal(page.response.status, 302);
+  assert.equal(
+    page.response.headers.get("location"),
+    "/auth/handshake?return_to=%2Fdashboard",
+  );
+
+  const api = await held.masks.guard(
+    held.browser.request("/api/items", {
+      headers: { accept: "application/json" },
+    }),
+  );
+
+  assert.equal(api.response.status, 401);
+});
+
+test("the first sign-in on an unconnected app comes back to its page after the handshake", async () => {
+  const held = await setup({ connected: false }, closers);
+  const first = await held.browser.fetch("/auth?return_to=/dashboard");
+
+  assert.equal(
+    first.headers.get("location"),
+    "/auth/handshake?return_to=%2Fdashboard",
+  );
+
+  const shaking = await held.browser.fetch(first.headers.get("location"));
+  const back = new URL(held.fake.shake(shaking.headers.get("location")));
+  const connected = await held.browser.fetch(`${back.pathname}${back.search}`);
+
+  assert.equal(
+    connected.headers.get("location"),
+    "/auth?return_to=%2Fdashboard",
+  );
+});

@@ -1660,9 +1660,9 @@ function lazy<T>(load: () => Promise<T>): () => Promise<T> {
   };
 }
 
-const nextHeaders = lazy(() => import("next/headers.js"));
-const nextNavigation = lazy(() => import("next/navigation.js"));
-const nextServer = lazy(() => import("next/server.js"));
+const nextHeaders = lazy(() => import("next/headers"));
+const nextNavigation = lazy(() => import("next/navigation"));
+const nextServer = lazy(() => import("next/server"));
 const nextAuthJWT = lazy(() => import("next-auth/jwt"));
 
 export { Masked, type MaskedJSON } from "./app/masked.js";
