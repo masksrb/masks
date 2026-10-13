@@ -34,6 +34,7 @@ export default defineConfig({
   // either, @astrojs/sitemap silently emits nothing and canonical URLs are absent.
   site: process.env.DOCS_SITE || "https://masks.pages.dev",
   image: { service: passthroughImageService() },
+  redirects: { "/reference/explorer": "/reference/manage/#explorer" },
   server: allowedHosts ? { host: true, allowedHosts } : {},
   vite: clientPort
     ? {
@@ -108,7 +109,6 @@ export default defineConfig({
           { label: "OpenID Connect and OAuth", slug: "reference/specs" },
           { label: "Environment variables", slug: "reference/environment" },
           { label: "Manage API", slug: "reference/manage" },
-          { label: "Manage API explorer", slug: "reference/explorer" },
           {
             label: "JavaScript",
             collapsed: true,

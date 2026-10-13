@@ -26,8 +26,11 @@ module Masks
           <<~HEAD
             ---
             title: Manage API
-            description: The GraphQL schema served at /manage/graphql.
+            description: The GraphQL schema served at /manage/graphql, with an explorer to browse it.
             ---
+
+            import sdl from "../../../assets/manage.graphql?raw";
+            import Explorer from "../../../components/Explorer.tsx";
 
             Everything `/manage` can ask for and everything it can change. `/manage/graphql` accepts a
             bearer carrying `masks:manage` or one of the narrower
@@ -37,6 +40,17 @@ module Masks
 
             Generated from `ManageSchema` by `./dev reference`. CI fails when this page and the
             schema disagree.
+
+            ## Explorer
+
+            The explorer shows this schema in GraphiQL, an in-browser tool for writing GraphQL
+            queries. Autocomplete, the docs pane, and validation all work on this page. The explorer
+            answers only introspection queries, which ask about the schema itself. It sends nothing
+            to a server.
+
+            To run a query, send it to your own server's `/manage/graphql`.
+
+            <Explorer client:only="react" sdl={sdl} />
           HEAD
         end
 

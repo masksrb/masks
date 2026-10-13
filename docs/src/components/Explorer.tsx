@@ -1,15 +1,15 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { GraphiQL } from "graphiql";
 import { buildSchema, getIntrospectionQuery, graphqlSync, parse } from "graphql";
 import "graphiql/style.css";
 
 const INTROSPECTION = new Set(["__schema", "__type", "__typename"]);
 
-const OPENING = `# Everything the console asks for on its Clients page.
+const OPENING = `# Everything /manage asks for on its Clients page.
 #
-# This explorer runs against the published schema, so autocomplete, the docs
-# pane and validation all work. Running a query needs a masks instance and a
-# bearer carrying masks:manage — point the endpoint below at your own.
+# This explorer holds the published schema, so autocomplete, the docs pane, and
+# validation all work. It answers only introspection queries. Send any other
+# query to your own server's /manage/graphql.
 
 query Clients {
   clients(archived: false, limit: 10) {
@@ -54,8 +54,8 @@ function offline(sdl: string) {
         errors: [
           {
             message:
-              "This explorer holds the schema, not a tenant. Point it at a masks instance with a " +
-              "bearer carrying masks:manage to run a query.",
+              "This explorer holds only the schema. Send this query to your own server's " +
+              "/manage/graphql with a bearer token that carries masks:manage.",
           },
         ],
       };
@@ -71,39 +71,11 @@ function offline(sdl: string) {
 }
 
 export default function Explorer({ sdl }: Props) {
-  const [endpoint, setEndpoint] = useState("");
-
-  const fetcher = useMemo(() => {
-    if (!endpoint.trim()) return offline(sdl);
-
-    return async ({ query, variables, operationName }: any) => {
-      const response = await fetch(endpoint.trim(), {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        credentials: "omit",
-        body: JSON.stringify({ query, variables, operationName }),
-      });
-
-      return response.json();
-    };
-  }, [endpoint, sdl]);
+  const fetcher = useMemo(() => offline(sdl), [sdl]);
 
   return (
     <div className="explorer">
-      <label className="explorer-endpoint">
-        <span>Endpoint</span>
-        <input
-          type="url"
-          value={endpoint}
-          spellCheck={false}
-          placeholder="https://your-tenant.example/manage/graphql — leave empty to browse the schema"
-          onChange={(event) => setEndpoint(event.target.value)}
-        />
-      </label>
-
-      <div className="explorer-frame">
-        <GraphiQL fetcher={fetcher} defaultQuery={OPENING} />
-      </div>
+      <GraphiQL fetcher={fetcher} defaultQuery={OPENING} />
     </div>
   );
 }
