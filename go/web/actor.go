@@ -14,7 +14,7 @@ var identityClaims = []string{
 	"org", "orgs", "groups", "sid",
 }
 
-type Person struct {
+type Actor struct {
 	SignedIn      bool                 `json:"signed_in"`
 	Subject       string               `json:"subject,omitempty"`
 	Name          string               `json:"name,omitempty"`
@@ -38,15 +38,15 @@ type Person struct {
 	Claims        *masks.Claims        `json:"-"`
 }
 
-func (p *Person) HasScope(scope string) bool {
+func (p *Actor) HasScope(scope string) bool {
 	return p.SignedIn && slices.Contains(p.Scopes, scope)
 }
 
-func (p *Person) HasRole(roles ...string) bool {
+func (p *Actor) HasRole(roles ...string) bool {
 	return p.SignedIn && p.Organization.HasRole(roles...)
 }
 
-func (p *Person) HasPrivilege(names ...string) bool {
+func (p *Actor) HasPrivilege(names ...string) bool {
 	if !p.SignedIn || len(names) == 0 {
 		return false
 	}
@@ -60,11 +60,11 @@ func (p *Person) HasPrivilege(names ...string) bool {
 	return true
 }
 
-func (p *Person) Claim(name string, into any) bool {
+func (p *Actor) Claim(name string, into any) bool {
 	return p.Identity != nil && p.Identity.Claim(name, into)
 }
 
-func (p *Person) refused(privilege Privilege) *Forbidden {
+func (p *Actor) refused(privilege Privilege) *Forbidden {
 	if len(privilege.Role) == 0 && privilege.Organization == "" {
 		return nil
 	}
@@ -85,7 +85,7 @@ func (p *Person) refused(privilege Privilege) *Forbidden {
 	return &Forbidden{Code: "insufficient_role", Description: held.Role + " in " + held.Key + " is not " + strings.Join(privilege.Role, " or ")}
 }
 
-func (p *Person) Holds(privilege Privilege) bool {
+func (p *Actor) Holds(privilege Privilege) bool {
 	if !p.SignedIn {
 		return false
 	}
@@ -99,7 +99,7 @@ func (p *Person) Holds(privilege Privilege) bool {
 	return p.refused(privilege) == nil
 }
 
-func (p *Person) Member(privilege Privilege) error {
+func (p *Actor) Member(privilege Privilege) error {
 	if !p.SignedIn {
 		return &Forbidden{Code: "login_required", Description: "nobody is signed in"}
 	}
@@ -111,8 +111,8 @@ func (p *Person) Member(privilege Privilege) error {
 	return nil
 }
 
-func (a *App) personFrom(identity *masks.Identity, token *masks.Token, account string) *Person {
-	held := &Person{
+func (a *App) actorFrom(identity *masks.Identity, token *masks.Token, account string) *Actor {
+	held := &Actor{
 		SignedIn:    true,
 		Scopes:      token.Scopes(),
 		AccessToken: token.AccessToken,
@@ -155,8 +155,8 @@ func (a *App) personFrom(identity *masks.Identity, token *masks.Token, account s
 	return held
 }
 
-func (a *App) personFromClaims(claims *masks.Claims, token string) *Person {
-	held := &Person{
+func (a *App) actorFromClaims(claims *masks.Claims, token string) *Actor {
+	held := &Actor{
 		SignedIn:     true,
 		Subject:      claims.Subject,
 		Scopes:       claims.Scopes(),
@@ -176,7 +176,7 @@ func (a *App) personFromClaims(claims *masks.Claims, token string) *Person {
 	return held
 }
 
-func (a *App) privilege(held *Person) {
+func (a *App) privilege(held *Actor) {
 	held.Privileges = []string{}
 
 	for _, name := range a.names {
@@ -186,22 +186,22 @@ func (a *App) privilege(held *Person) {
 	}
 }
 
-type personKey struct{}
+type actorKey struct{}
 
-func PersonFrom(ctx context.Context) *Person {
-	if held, ok := ctx.Value(personKey{}).(*Person); ok && held != nil {
+func ActorFrom(ctx context.Context) *Actor {
+	if held, ok := ctx.Value(actorKey{}).(*Actor); ok && held != nil {
 		return held
 	}
 
-	return &Person{Scopes: []string{}, Privileges: []string{}}
+	return &Actor{Scopes: []string{}, Privileges: []string{}}
 }
 
-func WithPerson(ctx context.Context, held *Person) context.Context {
-	return context.WithValue(ctx, personKey{}, held)
+func WithActor(ctx context.Context, held *Actor) context.Context {
+	return context.WithValue(ctx, actorKey{}, held)
 }
 
-func (p *Person) MarshalJSON() ([]byte, error) {
-	type plain Person
+func (p *Actor) MarshalJSON() ([]byte, error) {
+	type plain Actor
 
 	if !p.SignedIn {
 		return json.Marshal(map[string]bool{"signed_in": false})

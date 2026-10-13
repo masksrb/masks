@@ -13,12 +13,12 @@ import (
 
 func (a *App) Session(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		v, person, ok := a.current(w, r)
+		v, actor, ok := a.current(w, r)
 		if !ok || !a.save(w, r, v.state) {
 			return
 		}
 
-		next.ServeHTTP(w, r.WithContext(a.within(r.Context(), v, person)))
+		next.ServeHTTP(w, r.WithContext(a.within(r.Context(), v, actor)))
 	})
 }
 
@@ -35,7 +35,7 @@ func (a *App) Require(privileges ...string) func(http.Handler) http.Handler {
 }
 
 func (a *App) requireSession(w http.ResponseWriter, r *http.Request, v *visit, next http.Handler, names []string, wanted []Privilege) {
-	person, err := a.signedIn(r, v)
+	actor, err := a.signedIn(r, v)
 	if err != nil {
 		a.unavailable(w, r)
 		return
@@ -43,13 +43,13 @@ func (a *App) requireSession(w http.ResponseWriter, r *http.Request, v *visit, n
 
 	held := v.state
 
-	if !person.SignedIn {
+	if !actor.SignedIn {
 		a.signInFirst(w, r, v.site, held)
 		return
 	}
 
 	for _, privilege := range wanted {
-		if refused := person.refused(privilege); refused != nil {
+		if refused := actor.refused(privilege); refused != nil {
 			if a.save(w, r, held) {
 				a.forbid(w, r, refused)
 			}
@@ -62,7 +62,7 @@ func (a *App) requireSession(w http.ResponseWriter, r *http.Request, v *visit, n
 
 	for index, privilege := range wanted {
 		for _, scope := range privilege.Scope {
-			if !slices.Contains(person.Scopes, scope) && !slices.Contains(missing, names[index]) {
+			if !slices.Contains(actor.Scopes, scope) && !slices.Contains(missing, names[index]) {
 				missing = append(missing, names[index])
 			}
 		}
@@ -81,7 +81,7 @@ func (a *App) requireSession(w http.ResponseWriter, r *http.Request, v *visit, n
 		return
 	}
 
-	next.ServeHTTP(w, r.WithContext(a.within(r.Context(), v, person)))
+	next.ServeHTTP(w, r.WithContext(a.within(r.Context(), v, actor)))
 }
 
 func (a *App) signInFirst(w http.ResponseWriter, r *http.Request, s *site, held *state) {
@@ -254,7 +254,7 @@ func (a *App) requireToken(w http.ResponseWriter, r *http.Request, next http.Han
 		return
 	}
 
-	person := a.personFromClaims(claims, presentedToken(r))
+	actor := a.actorFromClaims(claims, presentedToken(r))
 	var scopes []string
 
 	for _, privilege := range wanted {
@@ -274,13 +274,13 @@ func (a *App) requireToken(w http.ResponseWriter, r *http.Request, next http.Han
 	}
 
 	for _, privilege := range wanted {
-		if refused := person.refused(privilege); refused != nil {
+		if refused := actor.refused(privilege); refused != nil {
 			a.challenge(w, verifier, http.StatusForbidden, refused)
 			return
 		}
 	}
 
-	next.ServeHTTP(w, r.WithContext(WithPerson(r.Context(), person)))
+	next.ServeHTTP(w, r.WithContext(WithActor(r.Context(), actor)))
 }
 
 func presentedToken(r *http.Request) string {
@@ -386,7 +386,7 @@ func (a *App) FinishDelegation(w http.ResponseWriter, r *http.Request) (*masks.C
 
 	held := v.state
 
-	person, err := a.signedIn(r, v)
+	actor, err := a.signedIn(r, v)
 	if err != nil {
 		return nil, err
 	}
@@ -406,7 +406,7 @@ func (a *App) FinishDelegation(w http.ResponseWriter, r *http.Request) (*masks.C
 		return nil, err
 	}
 
-	if person.SignedIn && connected.Subject != "" && connected.Subject != person.Subject {
+	if actor.SignedIn && connected.Subject != "" && connected.Subject != actor.Subject {
 		return nil, &masks.DelegationError{Code: "access_denied", Description: "someone other than the person signed in finished that connection"}
 	}
 

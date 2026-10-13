@@ -39,8 +39,8 @@ mux.Handle("/auth/", app.Handler())
 mux.Handle("/settings", app.Require()(settings))
 ```
 
-Open `/auth/handshake` once to connect the app. `web.PersonFrom(r.Context())`
-returns the signed-in person. The [Go apps](https://masks.pages.dev/reference/go/)
+Open `/auth/handshake` once to connect the app. `web.ActorFrom(r.Context())`
+returns the signed-in actor. The [Go apps](https://masks.pages.dev/reference/go/)
 guide covers organizations, privileges, sessions, tokens, and delegations.
 
 ## The code flow without go/web

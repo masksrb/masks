@@ -59,7 +59,7 @@ func newHarness(t *testing.T, change func(*Config)) *harness {
 			"globex":  {Organization: "globex"},
 			"read":    {Scope: []string{"catalog:read"}},
 		},
-		Manages: func(_ *http.Request, person *Person) bool { return person.HasRole("owner") },
+		Manages: func(_ *http.Request, actor *Actor) bool { return actor.HasRole("owner") },
 	}
 
 	if change != nil {
@@ -75,7 +75,7 @@ func newHarness(t *testing.T, change func(*Config)) *harness {
 	held.config = config
 
 	answer := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, PersonFrom(r.Context()))
+		writeJSON(w, http.StatusOK, ActorFrom(r.Context()))
 	})
 
 	mux := http.NewServeMux()
@@ -155,7 +155,7 @@ func (h *harness) connect() {
 	}
 }
 
-func (h *harness) person(path string, headers ...string) *Person {
+func (h *harness) actor(path string, headers ...string) *Actor {
 	h.t.Helper()
 
 	response, body := h.visit(http.MethodGet, path, headers...)
@@ -163,7 +163,7 @@ func (h *harness) person(path string, headers ...string) *Person {
 		h.t.Fatalf("%s answered %d: %s", path, response.StatusCode, body)
 	}
 
-	held := &Person{}
+	held := &Actor{}
 	if err := json.Unmarshal([]byte(body), held); err != nil {
 		h.t.Fatalf("%s answered %s", path, body)
 	}
@@ -205,10 +205,10 @@ func TestTheHandshakeConnectsTheAppAndSignsTheManagerIn(t *testing.T) {
 		t.Fatalf("unexpected credentials %s", saved)
 	}
 
-	person := h.person("/protected")
+	actor := h.actor("/protected")
 
-	if person.Subject != "ada" || person.Name != "Ada Lovelace" || len(person.Organizations) != 2 || person.Tenant.Subdomain != "acme" {
-		t.Fatalf("unexpected person %+v", person)
+	if actor.Subject != "ada" || actor.Name != "Ada Lovelace" || len(actor.Organizations) != 2 || actor.Tenant.Subdomain != "acme" {
+		t.Fatalf("unexpected person %+v", actor)
 	}
 
 	if h.issuer.resource != h.server.URL || h.issuer.asked.Get("resource") != h.server.URL {
@@ -264,9 +264,9 @@ func TestASignInNamesAnOrganizationAndKeepsReturnToLocal(t *testing.T) {
 		t.Fatalf("unexpected %v", h.issuer.asked)
 	}
 
-	person := h.person("/me")
-	if person.Organization == nil || person.Organization.Key != "acme" || !person.HasRole("owner") || !person.HasPrivilege("billing") {
-		t.Fatalf("unexpected %+v", person)
+	actor := h.actor("/me")
+	if actor.Organization == nil || actor.Organization.Key != "acme" || !actor.HasRole("owner") || !actor.HasPrivilege("billing") {
+		t.Fatalf("unexpected %+v", actor)
 	}
 
 	for _, evil := range []string{"//evil.example/x", "https://evil.example", "/\\evil.example", "/%0d%0aSet-Cookie:x"} {
@@ -298,8 +298,8 @@ func TestAPrivilegeAsksMasksOnceAndThenRefuses(t *testing.T) {
 	h.issuer.held = []string{"catalog:admin"}
 	h.visit(http.MethodGet, h.app.LoginURL(LoginOptions{Privileges: []string{"admin"}}))
 
-	if person := h.person("/admin"); !person.HasPrivilege("admin") || !person.HasScope("catalog:admin") {
-		t.Fatalf("unexpected %+v", person)
+	if actor := h.actor("/admin"); !actor.HasPrivilege("admin") || !actor.HasScope("catalog:admin") {
+		t.Fatalf("unexpected %+v", actor)
 	}
 
 	h.issuer.role = "member"
@@ -339,7 +339,7 @@ func TestARefreshIsSharedByRequestsThatArriveTogether(t *testing.T) {
 			}
 			defer response.Body.Close()
 
-			held := &Person{}
+			held := &Actor{}
 			if json.NewDecoder(response.Body).Decode(held) != nil || held.Name != "Ada King" {
 				failures <- "a request did not see the refreshed identity"
 			}
@@ -371,7 +371,7 @@ func TestARefreshIsSharedByProcessesThroughTheStore(t *testing.T) {
 
 	first := h.handler
 	other := second.Session(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, http.StatusOK, PersonFrom(r.Context()))
+		writeJSON(w, http.StatusOK, ActorFrom(r.Context()))
 	}))
 
 	h.handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -402,7 +402,7 @@ func TestARefreshIsSharedByProcessesThroughTheStore(t *testing.T) {
 			}
 			defer response.Body.Close()
 
-			held := &Person{}
+			held := &Actor{}
 			if json.NewDecoder(response.Body).Decode(held) != nil || held.Name != "Ada King" {
 				failures <- "a request did not see the refreshed identity"
 			}
@@ -421,7 +421,7 @@ func TestARefreshIsSharedByProcessesThroughTheStore(t *testing.T) {
 	}
 }
 
-func TestASpentRefreshTokenSignsThePersonOut(t *testing.T) {
+func TestASpentRefreshTokenSignsTheActorOut(t *testing.T) {
 	h := newHarness(t, nil)
 	h.issuer.expiresIn = 10
 	h.connect()
@@ -432,8 +432,8 @@ func TestASpentRefreshTokenSignsThePersonOut(t *testing.T) {
 	}
 	h.issuer.lock.Unlock()
 
-	if person := h.person("/me"); person.SignedIn {
-		t.Fatalf("expected the person to be signed out, got %+v", person)
+	if actor := h.actor("/me"); actor.SignedIn {
+		t.Fatalf("expected the person to be signed out, got %+v", actor)
 	}
 }
 
@@ -459,7 +459,7 @@ func TestSigningOutRevokesAndEndsTheIssuerSession(t *testing.T) {
 		t.Fatalf("a spent farewell was accepted again: %d", response.StatusCode)
 	}
 
-	if person := h.person("/me"); person.SignedIn {
+	if actor := h.actor("/me"); actor.SignedIn {
 		t.Fatal("still signed in")
 	}
 
@@ -490,7 +490,7 @@ func TestABackchannelLogoutEndsTheSession(t *testing.T) {
 		t.Fatalf("the logout answered %d with %+v", response.StatusCode, heard)
 	}
 
-	if person := h.person("/me"); person.SignedIn {
+	if actor := h.actor("/me"); actor.SignedIn {
 		t.Fatal("the session outlived its logout")
 	}
 
@@ -501,13 +501,13 @@ func TestABackchannelLogoutEndsTheSession(t *testing.T) {
 		t.Fatalf("a logout token was accepted twice: %d", replayed.StatusCode)
 	}
 
-	if person := h.person("/me"); !person.SignedIn {
+	if actor := h.actor("/me"); !actor.SignedIn {
 		t.Fatal("a replayed logout token ended a newer session")
 	}
 
 	h.visit(http.MethodGet, "/auth/")
 
-	if person := h.person("/me"); !person.SignedIn {
+	if actor := h.actor("/me"); !actor.SignedIn {
 		t.Fatal("a new sign-in after the logout was refused")
 	}
 }
@@ -570,16 +570,16 @@ func TestEitherAcceptsASessionOrAToken(t *testing.T) {
 	h := newHarness(t, nil)
 	h.connect()
 
-	if person := h.person("/either"); person.Subject != "ada" || person.Name == "" {
-		t.Fatalf("the session was not accepted: %+v", person)
+	if actor := h.actor("/either"); actor.Subject != "ada" || actor.Name == "" {
+		t.Fatalf("the session was not accepted: %+v", actor)
 	}
 
 	h.issuer.lock.Lock()
 	token := h.issuer.accessToken("bob", "agent", "", "", h.server.URL)
 	h.issuer.lock.Unlock()
 
-	if person := h.person("/either", "Authorization", "Bearer "+token); person.Subject != "bob" {
-		t.Fatalf("the token was not preferred: %+v", person)
+	if actor := h.actor("/either", "Authorization", "Bearer "+token); actor.Subject != "bob" {
+		t.Fatalf("the token was not preferred: %+v", actor)
 	}
 }
 
@@ -675,7 +675,7 @@ func TestAServerSideStoreRotatesTheSessionOnSignIn(t *testing.T) {
 		t.Fatalf("unexpected cookies %v then %v", before, after)
 	}
 
-	if person := h.person("/me"); !person.SignedIn {
+	if actor := h.actor("/me"); !actor.SignedIn {
 		t.Fatal("the stored session was not read")
 	}
 
@@ -686,7 +686,7 @@ func TestAServerSideStoreRotatesTheSessionOnSignIn(t *testing.T) {
 	}
 }
 
-func TestADelegationIsConnectedByThePersonSignedIn(t *testing.T) {
+func TestADelegationIsConnectedByTheActorSignedIn(t *testing.T) {
 	h := newHarness(t, func(config *Config) {
 		config.Delegates = true
 		config.DelegationPath = "/connect/callback"
@@ -744,13 +744,13 @@ func TestAnIssuerPerRequestKeepsTenantsApart(t *testing.T) {
 	parsed, _ := url.Parse(h.server.URL)
 	h.browser.Jar.SetCookies(parsed, []*http.Cookie{{Name: "tenant", Value: "other", Path: "/"}})
 
-	if person := h.person("/me"); person.SignedIn {
+	if actor := h.actor("/me"); actor.SignedIn {
 		t.Fatal("a session from one issuer was accepted for another")
 	}
 
 	h.connect()
 
-	if other.onlyClient() == "" || h.person("/me").Subject != "ada" {
+	if other.onlyClient() == "" || h.actor("/me").Subject != "ada" {
 		t.Fatal("the second tenant did not connect")
 	}
 }
@@ -874,13 +874,13 @@ func TestASessionOutlivesAnIssuerThatIsDown(t *testing.T) {
 	h.connect()
 	h.issuer.down = true
 
-	if person := h.person("/me"); person.SignedIn {
+	if actor := h.actor("/me"); actor.SignedIn {
 		t.Fatal("a refresh that masks could not answer still signed the person in")
 	}
 
 	h.issuer.down = false
 
-	if person := h.person("/me"); !person.SignedIn || person.Subject != "ada" {
+	if actor := h.actor("/me"); !actor.SignedIn || actor.Subject != "ada" {
 		t.Fatal("the session was forgotten while masks was down")
 	}
 }
@@ -895,7 +895,7 @@ func TestACrossSiteSignOutIsRefusedForEveryMethod(t *testing.T) {
 		}
 	}
 
-	if person := h.person("/me"); !person.SignedIn {
+	if actor := h.actor("/me"); !actor.SignedIn {
 		t.Fatal("a cross-site request signed the person out")
 	}
 }
@@ -991,7 +991,7 @@ func TestCredentialsAreHeldToTheirIssuer(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if person := h.person("/me"); !person.SignedIn {
+	if actor := h.actor("/me"); !actor.SignedIn {
 		t.Fatal("credentials without an issuer were refused for the only issuer")
 	}
 }
@@ -1027,7 +1027,7 @@ func TestASessionIsLoadedOnceWhenSessionWrapsEveryRoute(t *testing.T) {
 
 	h.connect()
 
-	if person := h.person("/protected"); !person.SignedIn {
+	if actor := h.actor("/protected"); !actor.SignedIn {
 		t.Fatal("the guarded route did not see the person")
 	}
 
@@ -1262,28 +1262,28 @@ func TestTheIssuerCacheIsBounded(t *testing.T) {
 	}
 }
 
-func TestAPersonChecksAPrivilegeOfTheirOwn(t *testing.T) {
-	person := &Person{SignedIn: true, Scopes: []string{"catalog:read"}, Organization: &masks.Organization{Key: "acme", Role: "member"}}
+func TestAnActorChecksAPrivilegeOfTheirOwn(t *testing.T) {
+	actor := &Actor{SignedIn: true, Scopes: []string{"catalog:read"}, Organization: &masks.Organization{Key: "acme", Role: "member"}}
 
-	if !person.Holds(Privilege{Scope: []string{"catalog:read"}}) || person.Holds(Privilege{Scope: []string{"catalog:admin"}}) {
+	if !actor.Holds(Privilege{Scope: []string{"catalog:read"}}) || actor.Holds(Privilege{Scope: []string{"catalog:admin"}}) {
 		t.Fatal("Holds misread the scopes")
 	}
 
 	var refused *Forbidden
 
-	if err := person.Member(Privilege{Role: []string{"owner"}}); !errors.As(err, &refused) || refused.Code != "insufficient_role" {
+	if err := actor.Member(Privilege{Role: []string{"owner"}}); !errors.As(err, &refused) || refused.Code != "insufficient_role" {
 		t.Fatalf("a member was taken for an owner: %v", err)
 	}
 
-	if err := person.Member(Privilege{Organization: "globex"}); !errors.As(err, &refused) || refused.Code != "insufficient_organization" {
+	if err := actor.Member(Privilege{Organization: "globex"}); !errors.As(err, &refused) || refused.Code != "insufficient_organization" {
 		t.Fatalf("acme was taken for globex: %v", err)
 	}
 
-	if err := person.Member(Privilege{Role: []string{"member"}, Organization: "acme"}); err != nil {
+	if err := actor.Member(Privilege{Role: []string{"member"}, Organization: "acme"}); err != nil {
 		t.Fatalf("a member of acme was refused: %v", err)
 	}
 
-	nobody := PersonFrom(context.Background())
+	nobody := ActorFrom(context.Background())
 
 	if nobody.Holds(Privilege{}) || nobody.Member(Privilege{}) == nil {
 		t.Fatal("somebody signed out holds a privilege")
@@ -1414,7 +1414,7 @@ func TestASignOutFormIsReadOnlyUpToItsLimit(t *testing.T) {
 		t.Fatalf("an oversized form still signed the person out of masks: %v", h.hops)
 	}
 
-	if person := h.person("/me"); person.SignedIn {
+	if actor := h.actor("/me"); actor.SignedIn {
 		t.Fatal("an oversized sign-out form left the person signed in")
 	}
 }

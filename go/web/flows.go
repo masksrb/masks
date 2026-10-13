@@ -59,9 +59,9 @@ func (a *App) guarded(next http.HandlerFunc) http.HandlerFunc {
 }
 
 type visit struct {
-	site   *site
-	state  *state
-	person *Person
+	site  *site
+	state *state
+	actor *Actor
 }
 
 type visitKey struct{ app *App }
@@ -94,40 +94,40 @@ func (a *App) visit(w http.ResponseWriter, r *http.Request) (*visit, bool) {
 	return held, true
 }
 
-func (a *App) current(w http.ResponseWriter, r *http.Request) (*visit, *Person, bool) {
+func (a *App) current(w http.ResponseWriter, r *http.Request) (*visit, *Actor, bool) {
 	held, ok := a.visit(w, r)
 	if !ok {
 		return nil, nil, false
 	}
 
-	person, err := a.signedIn(r, held)
+	actor, err := a.signedIn(r, held)
 	if err != nil {
 		a.unavailable(w, r)
 		return nil, nil, false
 	}
 
-	return held, person, true
+	return held, actor, true
 }
 
-func (a *App) within(ctx context.Context, held *visit, person *Person) context.Context {
-	return WithPerson(context.WithValue(ctx, visitKey{a}, held), person)
+func (a *App) within(ctx context.Context, held *visit, actor *Actor) context.Context {
+	return WithActor(context.WithValue(ctx, visitKey{a}, held), actor)
 }
 
-func (a *App) signedIn(r *http.Request, v *visit) (*Person, error) {
-	if v.person == nil {
-		person, err := a.person(r, v.site, v.state)
+func (a *App) signedIn(r *http.Request, v *visit) (*Actor, error) {
+	if v.actor == nil {
+		actor, err := a.actor(r, v.site, v.state)
 		if err != nil {
 			return nil, err
 		}
 
-		v.person = person
+		v.actor = actor
 	}
 
-	return v.person, nil
+	return v.actor, nil
 }
 
-func (a *App) person(r *http.Request, s *site, held *state) (*Person, error) {
-	nobody := PersonFrom(context.Background())
+func (a *App) actor(r *http.Request, s *site, held *state) (*Actor, error) {
+	nobody := ActorFrom(context.Background())
 	data := held.data
 
 	if s.held == nil || data.Token == nil {
@@ -171,7 +171,7 @@ func (a *App) person(r *http.Request, s *site, held *state) (*Person, error) {
 		}
 	}
 
-	return a.personFrom(data.Identity, data.Token, s.issuer.URL+"/"), nil
+	return a.actorFrom(data.Identity, data.Token, s.issuer.URL+"/"), nil
 }
 
 func (a *App) broken(w http.ResponseWriter, r *http.Request, err error) {
@@ -252,7 +252,7 @@ func (a *App) start(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) callback(w http.ResponseWriter, r *http.Request) {
-	v, person, ok := a.current(w, r)
+	v, actor, ok := a.current(w, r)
 	if !ok {
 		return
 	}
@@ -271,7 +271,7 @@ func (a *App) callback(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		a.stale(w, r, held, person)
+		a.stale(w, r, held, actor)
 
 		return
 	}
@@ -338,8 +338,8 @@ func (a *App) callback(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, target, http.StatusFound)
 }
 
-func (a *App) stale(w http.ResponseWriter, r *http.Request, held *state, person *Person) {
-	if person.SignedIn {
+func (a *App) stale(w http.ResponseWriter, r *http.Request, held *state, actor *Actor) {
+	if actor.SignedIn {
 		if a.save(w, r, held) {
 			http.Redirect(w, r, a.config.AfterSignIn, http.StatusFound)
 		}
@@ -363,14 +363,14 @@ func (a *App) stale(w http.ResponseWriter, r *http.Request, held *state, person 
 }
 
 func (a *App) describe(w http.ResponseWriter, r *http.Request) {
-	v, person, ok := a.current(w, r)
+	v, actor, ok := a.current(w, r)
 	if !ok {
 		return
 	}
 
 	s, held := v.site, v.state
 
-	if !person.SignedIn {
+	if !actor.SignedIn {
 		held.forget()
 
 		if a.save(w, r, held) {
@@ -381,7 +381,7 @@ func (a *App) describe(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if a.save(w, r, held) {
-		writeJSON(w, http.StatusOK, person)
+		writeJSON(w, http.StatusOK, actor)
 	}
 }
 
@@ -553,7 +553,7 @@ func (a *App) backchannel(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) avatar(w http.ResponseWriter, r *http.Request) {
-	v, person, ok := a.current(w, r)
+	v, actor, ok := a.current(w, r)
 	if !ok {
 		return
 	}
@@ -564,9 +564,9 @@ func (a *App) avatar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	photo := person.Avatars[masks.AvatarPhoto]
+	photo := actor.Avatars[masks.AvatarPhoto]
 
-	if !person.SignedIn || photo == "" || !strings.HasPrefix(photo, s.issuer.URL+"/") {
+	if !actor.SignedIn || photo == "" || !strings.HasPrefix(photo, s.issuer.URL+"/") {
 		http.NotFound(w, r)
 		return
 	}
@@ -633,13 +633,13 @@ var connectedPage = template.Must(template.New("connected").Parse(`<!doctype htm
 `))
 
 func (a *App) mayManage(w http.ResponseWriter, r *http.Request, v *visit) bool {
-	person, err := a.signedIn(r, v)
+	actor, err := a.signedIn(r, v)
 	if err != nil {
 		a.unavailable(w, r)
 		return false
 	}
 
-	if person.SignedIn && a.config.Manages != nil && a.config.Manages(r, person) {
+	if actor.SignedIn && a.config.Manages != nil && a.config.Manages(r, actor) {
 		return true
 	}
 
@@ -648,7 +648,7 @@ func (a *App) mayManage(w http.ResponseWriter, r *http.Request, v *visit) bool {
 	}
 
 	switch {
-	case person.SignedIn:
+	case actor.SignedIn:
 		a.refuse(w, r, http.StatusForbidden, "forbidden", "only somebody this app lets manage its connection can reconnect or disconnect it")
 	case wantsJSON(r):
 		writeJSON(w, http.StatusUnauthorized, a.refusal(r, v.site))

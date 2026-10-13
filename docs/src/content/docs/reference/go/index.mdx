@@ -130,7 +130,7 @@ for a JSON request, and anybody else is refused with `403`. The same check guard
 callback when the app is already connected.
 
 ```go
-Manages: func(r *http.Request, person *web.Person) bool { return person.HasPrivilege("admin") },
+Manages: func(r *http.Request, actor *web.Actor) bool { return actor.HasPrivilege("admin") },
 ```
 
 | Method | |
@@ -163,7 +163,7 @@ minute, and is refused with `invalid_state` in between. `return_to` is followed 
 
 | Middleware | |
 | --- | --- |
-| `app.Session` | Puts the person in the request's context, signed in or not. |
+| `app.Session` | Puts the actor in the request's context, signed in or not. |
 | `app.Require(privileges...)` | Sends a signed-out visitor to sign in and back again, then checks each privilege. |
 | `app.Protect(privileges...)` | Checks an access token instead. See [accepting tokens](#accepting-tokens). |
 | `app.Either(privileges...)` | Checks a token when the request carries an `Authorization` header or no session, and the session otherwise. |
@@ -171,7 +171,7 @@ minute, and is refused with `invalid_state` in between. `return_to` is followed 
 A JSON request is answered with `401` and `login_required` or `handshake_required` and the URL to
 send the browser to, instead of a redirect.
 
-`web.PersonFrom(r.Context())` returns the person, and never `nil`:
+`web.ActorFrom(r.Context())` returns the `*web.Actor` for the person signed in, and never `nil`:
 
 | Field or method | |
 | --- | --- |
@@ -274,9 +274,9 @@ web.Config{
 
 | | |
 | --- | --- |
-| `person.Organization` | The organization signed in to, with its `ID`, `Key`, `Name`, and `Role`, or `nil`. |
-| `person.HasRole("owner", "billing")` | Whether the person holds one of those roles in it. |
-| `person.Organizations` | Every organization the person has joined, each with the role held there. |
+| `actor.Organization` | The organization signed in to, with its `ID`, `Key`, `Name`, and `Role`, or `nil`. |
+| `actor.HasRole("owner", "billing")` | Whether the person holds one of those roles in it. |
+| `actor.Organizations` | Every organization the person has joined, each with the role held there. |
 | `app.LoginURL(web.LoginOptions{Organization: "globex"})` | Signs the person in again, naming another organization. |
 
 The app reads the organizations from userinfo at sign-in and at every refresh, so a changed role
@@ -343,7 +343,7 @@ the token, made within the last minute, and not seen before. The URL is the reso
 request's path, so a proxy in front of the app needs no other setting. The app remembers the proofs
 it has seen in `Store`. When the store fails, the request is refused with `503`.
 
-Inside the handler, `web.PersonFrom(r.Context())` describes the token: `Subject`, `ClientID`,
+Inside the handler, `web.ActorFrom(r.Context())` describes the token: `Subject`, `ClientID`,
 `Scopes`, `Organization`, `Tenant`, and the verified `Claims`.
 
 An API with no browser sign-in uses `masks.NewVerifier` from the client package without `web`. See

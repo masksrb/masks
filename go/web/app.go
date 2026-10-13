@@ -57,7 +57,7 @@ type Config struct {
 	PlainHTTP       bool
 
 	Credentials CredentialStore
-	Manages     func(*http.Request, *Person) bool
+	Manages     func(*http.Request, *Actor) bool
 	LoggedOut   func(*http.Request, *masks.LogoutToken) error
 	Store       Store
 
