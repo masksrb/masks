@@ -368,6 +368,14 @@ test("a back-channel logout ends the session it names", async () => {
   });
   assert.equal(refused.status, 400);
 
+  const flooded = await held.browser.fetch("/auth/logout/backchannel", {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: `logout_token=${"a".repeat(70 * 1024)}`,
+  });
+  assert.equal(flooded.status, 400);
+  assert.match(await flooded.text(), /larger than 64 KiB/);
+
   const token = await held.fake.logoutToken({ aud: "app", sid: "session-1" });
   const heardIt = await held.browser.fetch("/auth/logout/backchannel", {
     method: "POST",

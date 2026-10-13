@@ -181,6 +181,13 @@ test("a back-channel logout ends the session, and its token is used once", async
       body: new URLSearchParams({ logout_token: token }),
     });
 
+  const flooded = await browser.fetch("/api/auth/masks/logout/backchannel", {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: `logout_token=${"a".repeat(70 * 1024)}`,
+  });
+
+  assert.equal(flooded.status, 400);
   assert.equal((await post()).status, 200);
   assert.equal((await post()).status, 400);
   assert.equal(await session(browser), null);

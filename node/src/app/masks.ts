@@ -170,6 +170,7 @@ const REFRESH_LEEWAY = 30;
 const REMEMBER_REFRESH = 60_000;
 const SESSION_PURPOSE = "session";
 const FLOW_PURPOSE = "flow";
+const FORM_LIMIT = 64 * 1024;
 
 class Visit {
   readonly request: Request;
@@ -1005,8 +1006,7 @@ export class Masks {
         true,
       );
 
-    const form = new URLSearchParams(await visit.request.text());
-    const token = form.get("logout_token");
+    const token = (await readForm(visit.request)).get("logout_token");
 
     if (!token)
       return answer(
@@ -1782,6 +1782,50 @@ export function wantsJSON(request: Request): boolean {
     return true;
 
   return !(request.headers.get("accept") ?? "").includes("text/html");
+}
+
+export async function readForm(request: Request): Promise<URLSearchParams> {
+  if (Number(request.headers.get("content-length") ?? "0") > FORM_LIMIT) {
+    await request.body?.cancel();
+    throw tooLarge();
+  }
+
+  if (!request.body) return new URLSearchParams();
+
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    size += value.byteLength;
+
+    if (size > FORM_LIMIT) {
+      await reader.cancel();
+      throw tooLarge();
+    }
+
+    chunks.push(value);
+  }
+
+  const joined = new Uint8Array(size);
+  let offset = 0;
+
+  for (const chunk of chunks) {
+    joined.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  return new URLSearchParams(new TextDecoder().decode(joined));
+}
+
+function tooLarge(): MasksError {
+  return new MasksError(
+    "invalid_request",
+    "that request body is larger than 64 KiB",
+  );
 }
 
 export function sameOrigin(request: Request, origin: string): boolean {

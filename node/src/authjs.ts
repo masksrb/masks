@@ -17,6 +17,7 @@ import {
   now,
   PATH_HEADER,
   pick,
+  readForm,
   redirect,
   refusal,
   registrationOf,
@@ -668,8 +669,9 @@ export class MasksAuth {
     account: Record<string, unknown>,
     profile: Record<string, unknown>,
   ): HeldSignIn {
-    const claims = payloadOf(account.id_token);
-    const sub = String(profile.sub ?? claims.sub ?? "");
+    const decoded = payloadOf(account.id_token);
+    const sub = String(profile.sub ?? decoded.sub ?? "");
+    const claims = decoded.sub === sub ? decoded : {};
 
     return {
       iss: this.issuerURL,
@@ -1092,9 +1094,7 @@ export class MasksAuth {
     }
 
     const form =
-      request.method === "POST"
-        ? new URLSearchParams(await request.text())
-        : url.searchParams;
+      request.method === "POST" ? await readForm(request) : url.searchParams;
     const callbackUrl =
       localPath(
         form.get("callbackUrl") ?? url.searchParams.get("callbackUrl"),
@@ -1443,7 +1443,7 @@ export class MasksAuth {
 
     if (!client) return refuse("this app has not shaken hands with masks");
 
-    const token = new URLSearchParams(await request.text()).get("logout_token");
+    const token = (await readForm(request)).get("logout_token");
 
     if (!token) return refuse("logout_token is required");
 
