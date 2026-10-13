@@ -159,7 +159,8 @@ over LDAP is worth less than the second factor it skips.
 A wrong password, an unknown name, and every rule above answer `invalidCredentials`. A bind with a
 name and an empty password answers `unwillingToPerform`.
 
-masks records these events, with `via` set to `ldap`:
+masks records these events. **Sign-in refused** and **Sign-ins throttled** have `via` set to
+`ldap`.
 
 | Event | When |
 | --- | --- |

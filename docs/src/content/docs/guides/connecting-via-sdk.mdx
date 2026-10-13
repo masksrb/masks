@@ -29,22 +29,23 @@ The `masks` gem holds both Ruby SDKs. `Masks::Rails` loads only when Rails does.
 
 ### What each SDK covers
 
-|                                                                             | `Masks::Rails`               | `Masks::Client`         | `@masks/client`                       | `@masks/server` | Python | Go  |
-| --------------------------------------------------------------------------- | ---------------------------- | ----------------------- | ------------------------------------- | --------------- | ------ | --- |
-| Signing in with the code flow and PKCE                                      | Yes                          | Yes                     | Yes, through a backend or in the page | Yes             | Yes    | Yes |
-| The handshake                                                               | Yes                          | Yes                     | Starts it through a backend           | Yes             | Yes    | Yes |
-| Redeeming an initial access token                                           | Yes                          | Yes                     | No                                    | Yes             | Yes    | Yes |
-| [Enrolling and unenrolling machines](/guides/features/#enrolling-a-machine) | No                           | Yes                     | No                                    | Yes             | Yes    | Yes |
-| Refreshing tokens                                                           | Yes                          | Yes                     | Yes                                   | Yes             | Yes    | Yes |
-| Token exchange                                                              | No                           | Yes                     | No                                    | Yes             | Yes    | Yes |
-| [Delegation](#delegation)                                                   | Asks for it in its handshake | Yes                     | No                                    | Yes             | Yes    | Yes |
-| Client credentials and revocation                                           | No                           | Yes                     | No                                    | Yes             | Yes    | Yes |
-| Introspection                                                               | No                           | Yes                     | No                                    | Yes             | Yes    | Yes |
-| The device flow                                                             | No                           | Yes                     | No                                    | Yes             | Yes    | Yes |
-| `private_key_jwt` client authentication                                     | No                           | Yes                     | No                                    | Yes             | Yes    | Yes |
-| Sending DPoP proofs as a client                                             | No                           | Yes                     |                                       | Yes             | Yes    | Yes |
-| Checking access tokens, including DPoP-bound ones                           | Yes                          | Yes                     | No                                    | Yes             | Yes    | Yes |
-| One store of seen DPoP proofs for every process                             | Yes                          | With a store you supply | No                                    | Yes             | Yes    | Yes |
+|                                                                             | `Masks::Rails`               | `Masks::Client`         | `@masks/client`                       | `@masks/server`         | Python                  | Go                      |
+| --------------------------------------------------------------------------- | ---------------------------- | ----------------------- | ------------------------------------- | ----------------------- | ----------------------- | ----------------------- |
+| Signing in with the code flow and PKCE                                      | Yes                          | Yes                     | Yes, through a backend or in the page | Yes                     | Yes                     | Yes                     |
+| The handshake                                                               | Yes                          | Yes                     | Starts it through a backend           | Yes                     | Yes                     | Yes                     |
+| Redeeming an initial access token                                           | Yes                          | Yes                     | No                                    | Yes                     | Yes                     | Yes                     |
+| [Enrolling and unenrolling machines](/guides/features/#enrolling-a-machine) | No                           | Yes                     | No                                    | Yes                     | Yes                     | Yes                     |
+| Refreshing tokens                                                           | Yes                          | Yes                     | Yes                                   | Yes                     | Yes                     | Yes                     |
+| Token exchange                                                              | No                           | Yes                     | No                                    | Yes                     | Yes                     | Yes                     |
+| [Delegation](#delegation)                                                   | Asks for it in its handshake | Yes                     | No                                    | Yes                     | Yes                     | Yes                     |
+| Client credentials                                                          | No                           | Yes                     | No                                    | Yes                     | Yes                     | Yes                     |
+| Revocation                                                                  | No                           | Yes                     | Revokes its refresh token at sign-out | Yes                     | Yes                     | Yes                     |
+| Introspection                                                               | No                           | Yes                     | No                                    | Yes                     | Yes                     | Yes                     |
+| The device flow                                                             | No                           | Yes                     | No                                    | Yes                     | Yes                     | Yes                     |
+| `private_key_jwt` client authentication                                     | No                           | Yes                     | No                                    | Yes                     | Yes                     | Yes                     |
+| Sending DPoP proofs as a client                                             | No                           | Yes                     | Yes, with `dpop: true`                | Yes                     | Yes                     | Yes                     |
+| Checking access tokens, including DPoP-bound ones                           | Yes                          | Yes                     | No                                    | Yes                     | Yes                     | Yes                     |
+| One store of seen DPoP proofs for every process                             | Yes, in `Rails.cache`        | With a store you supply | No                                    | With a store you supply | With a store you supply | With a store you supply |
 
 The terms in this table mean:
 
@@ -60,7 +61,7 @@ The terms in this table mean:
 | Device flow               | A device with no browser shows a code. A person approves it on another device.                                                                                                                    |
 | `private_key_jwt`         | A client proves who it is with a message signed by its private key. It sends no secret.                                                                                                           |
 | DPoP                      | Ties a token to a key. Each request carries a proof signed by that key, so a copied token does not work without the key.                                                                          |
-| Store of seen DPoP proofs | An API refuses a proof it has seen before. A shared store lets every process of the API refuse it.                                                                                                |
+| Store of seen DPoP proofs | An API refuses a proof it has seen before. Without a shared store, each process of the API remembers only the proofs it has seen itself.                                                          |
 
 ## Connecting an app
 
@@ -136,6 +137,9 @@ In `/manage`, on the provider's **Clients** tab:
 
 An MCP server always allows delegation, so it has no switch. Delegation uses the provider's
 sign-in redirect URI, `/login/provider/<key>/callback`.
+
+Changing **What clients may do** asks everybody to connect again the next time an app sends them
+to `/authorize`.
 
 ### Let the app ask
 
@@ -281,40 +285,11 @@ repeat these steps.
 3. Use it within the client's refresh token lifetime, 30 days by default. Each refresh starts that
    time again.
 
-### What masks checks
-
-masks releases a provider token only when:
-
-- the client is approved and registered for token exchange
-- the masks token is live, issued to this client, and holds `masks:delegate:<provider>`
-- `audience` names exactly one connection, which is live and belongs to that token's person
-- the provider still allows delegation
-- the person's delegation to this client for this connection is live
-- the exchange sends no `scope`, `resource`, `requested_lifetime`, or `authorization_details`
-
-masks also:
-
-- records every release as a `delegation.released` event
-- encrypts provider tokens when it stores them
-- refreshes a provider token within a minute of its expiry, and runs one refresh at a time for each
-  connection
-
-After you change what a provider allows, masks asks each person to connect again the next time an
-app sends them to `/authorize`.
-
 ### MCP servers
 
 An MCP server that is its own OAuth server, such as `https://mcp.notion.com/mcp`, is a provider with
-the protocol `mcp`. Given its URL, masks:
-
-1. reads `/.well-known/oauth-protected-resource` for its authorization server
-   ([RFC 9728](https://www.rfc-editor.org/rfc/rfc9728))
-2. reads that server's metadata, which must offer PKCE with S256 and a registration endpoint
-3. registers itself ([RFC 7591](https://www.rfc-editor.org/rfc/rfc7591)), with a secret when the
-   server accepts one
-
-The authorization request, the code exchange, and each refresh name the server's URL as `resource`
-([RFC 8707](https://www.rfc-editor.org/rfc/rfc8707)).
+the protocol `mcp`. Given its URL, masks finds its authorization server and registers itself there.
+The server must offer PKCE with S256 and a registration endpoint.
 
 To call the MCP server:
 
@@ -418,8 +393,8 @@ less. Revoking the subject token revokes everything exchanged from it.
 
 ### Who is acting
 
-A token exchanged from an access token has an `act` claim naming its holder. When a token is exchanged again,
-the earlier `act` is nested inside the new one, so every holder stays listed:
+A token exchanged from an access token has an `act` claim naming its holder. When a token is
+exchanged again, the earlier `act` is nested inside the new one, so every holder stays listed:
 
 ```json
 {

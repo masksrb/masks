@@ -14,8 +14,8 @@ the handshake, sessions, and privileges that every framework shares.
    pip install "masks-client[django]"
    ```
 
-2. Set `MASKS` in your settings to a `Config`, or to a dict of its settings. `secret` defaults to
-   `SECRET_KEY`.
+2. Set `MASKS` in your settings to a dict of `Config` settings, or to a `Config`. A dict leaves out
+   `secret` to use `SECRET_KEY`. A `Config` needs its own `secret`.
 
    ```python
    MASKS = {

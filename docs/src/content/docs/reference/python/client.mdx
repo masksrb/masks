@@ -27,10 +27,10 @@ host.
 | ------------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `issuer`                  | Required                              | The masks issuer, such as `https://acme.auth.example.com`. _Request._                                                                                                               |
 | `resource`                | `""`                                  | The app's own absolute `https` URL. Sign-ins name it as their resource, and tokens for the app's API must name it as their audience. The handshake needs it. _Request._             |
-| `secret`                  | `""`                                  | At least 32 bytes that seal the cookie session. A list rotates secrets, newest first. Django and Flask use the app's own secret key when this is empty. Not needed with `sessions`. |
+| `secret`                  | `""`                                  | At least 32 bytes that seal the cookie session. A list rotates secrets, newest first. Not needed with `sessions`. Without either, `Config` raises `ValueError`. Django and Flask fill it in from the app's secret key only when their settings leave it out. |
 | `name`                    | `"An app"`                            | The name the handshake gives the app. _Request._                                                                                                                                    |
 | `scope`                   | `openid profile email offline_access` | What every sign-in asks for.                                                                                                                                                        |
-| `privileges`              | `{}`                                  | Names for what a route needs. See [privileges](#privileges).                                                                                                                        |
+| `privileges`              | `{}`                                  | Names for what a route needs. See [privileges](/reference/python/#privileges).                                                                                                      |
 | `namespace`               | `""`                                  | A scope prefix, such as `catalog:`. The handshake registers the namespace in place of each scope under it.                                                                          |
 | `organization`            | `""`                                  | The organization every sign-in names. _Request._                                                                                                                                    |
 | `resource_scopes`         | `()`                                  | The scopes the API accepts. A dict of scope to description also gives masks the sentence its consent screen shows.                                                                  |
@@ -79,13 +79,14 @@ A browser is redirected. A JSON request gets one of these:
 | `401`  | `handshake_required`                                                      | `handshake_url`           |
 | `403`  | `privilege_required`                                                      | `privileges`, `login_url` |
 | `403`  | `insufficient_scope`, `insufficient_role`, or `insufficient_organization` | `error_description`       |
-| `503`  | `temporarily_unavailable`                                                 | `error_description`       |
+
+A guard that cannot reach masks answers `503` with an HTML page, to a JSON request as well.
 
 A request counts as JSON when it sends `X-Requested-With: XMLHttpRequest`, a JSON `Accept` or
 `Content-Type`, or an `Accept` with neither `text/html` nor `*/*`.
 
-A guard that checks a token answers `401` with `Bearer` and `DPoP` challenges. Each challenge's
-`resource_metadata` names `/.well-known/oauth-protected-resource`.
+A guard that checks a token answers in JSON. See
+[accepting tokens](/reference/python/#accepting-tokens).
 
 ## The actor
 
@@ -114,19 +115,6 @@ A guard that checks a token answers `401` with `Bearer` and `DPoP` challenges. E
 
 An organization has `id`, `key`, `name`, `role`, `owner`, and `has_role(*roles)`.
 
-## Privileges
-
-`Config.privileges` maps a name to what the privilege needs.
-
-| Form                                                    | Needs                                                    |
-| ------------------------------------------------------- | -------------------------------------------------------- |
-| `["catalog:admin"]`                                     | Every scope in the list.                                 |
-| `{"scope": [...]}`                                      | The same as the list.                                    |
-| `{"role": "owner"}` or `{"role": ["owner", "billing"]}` | Any one of these roles in the organization signed in to. |
-| `{"organization": "acme"}`                              | The organization signed in to, by key or id.             |
-
-A privilege can combine `scope`, `role`, and `organization`.
-
 ## Credentials
 
 |                                                                |                                                                                                                                       |
@@ -150,8 +138,8 @@ issuer. Credentials that name no issuer work only when `issuer` is a fixed strin
 
 |                                                             |                                                                                                                                                              |
 | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `CookieSessions(secret, name="__Host-masks", lifetime=...)` | The default. The cookie holds the session, sealed with AES-GCM. Splits a large session across up to eight cookies, and raises `ValueError` past about 30 KB. |
-| `ServerSessions(store, name="__Host-masks", lifetime=...)`  | The cookie holds a random id, and the store holds the session under a hash of it.                                                                            |
+| `CookieSessions(secret, name="__Host-masks", lifetime=...)` | The default. The cookie holds the sealed session.                                    |
+| `ServerSessions(store, name="__Host-masks", lifetime=...)`  | The cookie holds a random id, and the store holds the session under a hash of it.   |
 | `MemorySessionStore()`                                      | A store in this process's memory.                                                                                                                            |
 
 A store of your own has these methods. In FastAPI they can be `async def`, as
@@ -167,8 +155,8 @@ A store of your own has these methods. In FastAPI they can be `async def`, as
 
 ## Stores
 
-`store` remembers four things: the result of each token refresh, the logouts masks sent, the logout
-tokens already used, and the DPoP proofs already seen.
+`store` remembers what [running several processes](/reference/python/#running-several-processes)
+lists.
 
 |                           |                                                                            |
 | ------------------------- | -------------------------------------------------------------------------- |
@@ -212,18 +200,58 @@ so the store holds no tokens anyone can read.
 | `device_authorization(scope=...)`, `await_device(device)`         | The device flow.                                                                              |
 | `revoke(token, hint="")`                                          | Ends a token.                                                                                 |
 | `introspect(token, hint="")`                                      | Asks masks whether a token is active.                                                         |
-| `exchange(subject_token, ...)`                                    | Trades one token for another.                                                                 |
+| `exchange(subject_token, ...)`                                    | Trades one token for another under RFC 8693. Takes `subject_token_type`, `actor_token`, `audience`, `scope`, `resource`, and `requested_lifetime`. |
 | `start_delegation(provider, redirect_uri)`                        | Starts connecting a provider for the signed-in person.                                        |
 | `finish_delegation(started, params)`                              | Finishes it. Returns a `HeldConnection` with `connection` and `secret`.                       |
 | `delegated_token(secret, connection=...)`                         | A provider token. Returns an `Upstream` with the new `secret`.                                |
-| `enroll(scope=..., client_name=..., expires_in=...)`              | An initial access token for one of the app's machines.                                        |
+| `enroll(scope=..., client_name=..., expires_in=...)`              | An initial access token for one of the app's machines. `expires_in` is 60 to 3600 seconds, and 15 minutes by default. |
 | `unenroll(client_id)`                                             | Removes a machine the app enrolled.                                                           |
 | `read_registration`, `update_registration`, `delete_registration` | Manage a registration.                                                                        |
-| `credentials_source(...)`, `refresh_source(token, ...)`           | Token sources that refresh before a token expires.                                            |
-| `http_client(source, *origins)`                                   | An `httpx` client that sends the token, and a DPoP proof with a `dpop` key, to those origins. |
+| `credentials_source(...)`, `refresh_source(token, ..., keep=...)` | Token sources that renew a token before it expires. `keep` gets each rotated token to save.  |
+| `auth(source, *origins)`                                          | An `httpx.Auth` that sends the token, and a DPoP proof with a `dpop` key, to those origins.   |
+| `http_client(source, *origins)`                                   | An `httpx` client with that `auth`.                                                           |
 
-`masks.Key.generate()` makes a P-256 key. `Key.from_jwk(jwk)` loads one, and `to_jwk()` and `jwks()`
-write it out.
+The client authenticates with `client_secret_basic` when `secret` is set, and with
+`private_key_jwt` when `key` is set. Pass `method` to choose another. With a `dpop` key, the client
+refuses a token that comes back unbound. `auth` raises `masks.ForeignOrigin` for a request to any
+origin it was not given.
+
+`masks.Handshake(issuer, name=..., resource=..., redirect_uris=..., return_to=...)` runs the
+[handshake](/reference/python/#the-handshake) in an app without a framework integration. `start()`
+returns the `url` to send the browser to and the `state` to keep in its session.
+`complete(params, state)` returns the `masks.Registration`.
+
+### Machines
+
+A machine keeps two P-256 keys. One signs its client assertions, and the other holds its tokens
+with DPoP.
+
+```python
+import masks
+
+key = masks.Key.generate()
+dpop = masks.Key.generate()
+
+issuer = masks.discover("https://acme.auth.example.com")
+registration = masks.Client.register(
+    issuer,
+    masks.ClientMetadata(client_name="nas", token_endpoint_auth_method=masks.PRIVATE_KEY_JWT, jwks=key.jwks()),
+    initial_access_token,
+)
+client = masks.Client.from_registration(issuer, registration, key=key, dpop=dpop)
+
+source = client.credentials_source(scope=["files:read"], resource=["https://files.example.com"])
+
+with client.http_client(source, "https://files.example.com") as api:
+    api.get("https://files.example.com/files")
+```
+
+`Key.from_jwk(jwk)` loads a key, and `to_jwk()` writes it out with its private half. Keep that file
+readable only by the machine's service user. `jwks()` is the public half to register.
+
+A machine with no browser can use the device flow. `device_authorization()` returns the
+`verification_uri` and `user_code` to show. `await_device(device)` waits until a person approves the
+code on another device. The synchronous form takes a `timeout` in seconds.
 
 ## Checking tokens
 
@@ -235,8 +263,11 @@ write it out.
 | `authenticate(method, url, headers)` | Checks the `Authorization` header and any `DPoP` proof. Returns `Claims`.               |
 | `verify(token)`                      | Checks the token alone and skips any DPoP proof. A request goes through `authenticate`. |
 
-`Claims` has `issuer`, `subject`, `audience`, `expiry`, `client_id`, `scope`, `scopes`, `tenant`,
-`act`, `thumbprint`, `bound`, `has_scope(scope)`, and `raw`.
+`Claims` has `issuer`, `subject`, `audience`, `expiry`, `issued_at`, `id`, `client_id`, `scope`,
+`scopes`, `tenant`, `act`, `thumbprint`, `bound`, `has_scope(scope)`, and `raw`.
+
+Pass the URL the client used. Set `public_url` when a proxy sits in front of the API, since a DPoP
+proof names that address.
 
 ### ASGI middleware
 
@@ -247,8 +278,9 @@ cannot check gets `503`.
 ### Replay stores
 
 A replay store remembers DPoP proofs. Its `first(key, expires_in)` returns `True` only the first
-time it sees a key. `MemoryReplayStore` keeps them in one process. An `AsyncVerifier`, and so a
-FastAPI app, also takes a store whose `first` is `async`.
+time it sees a key. `MemoryReplayStore` is the default, and keeps them in one process. An
+`AsyncVerifier` also takes a store whose `first` is `async`, and `Verifier` raises `TypeError` for
+one.
 
 ## Errors
 

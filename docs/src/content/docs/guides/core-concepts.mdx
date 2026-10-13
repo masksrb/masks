@@ -47,8 +47,8 @@ With Dynamic, the template decides how many tenants masks creates:
 
 ### Setting a tenant up
 
-Each new tenant has a setup token. masks prints it in the server's logs when it creates the tenant,
-and again on every boot until the tenant is set up:
+Each new tenant has a setup token. masks prints it in the server's logs when it creates the tenant.
+`bin/rails masks:tenants` prints it again each time it runs, until the tenant is set up:
 
 ```
 masks: demo is not set up. Its setup token is 7Hq2…
@@ -73,46 +73,30 @@ The screen does not appear again.
 
 ### Tenant settings
 
-A manager changes these settings in `/manage` without a restart. If an environment variable pins a
-setting, the manage API cannot change it. See
-[environment variables](/reference/environment/#sign-in-policy) for the variables that pin them.
+A manager changes a tenant's settings in `/manage`, under [Settings](/guides/manage/#settings),
+without a restart. An environment variable can pin some of them for every tenant, and then
+`/manage` cannot change them. See [environment variables](/reference/environment/#sign-in-policy).
 
-| Setting                           | Controls                                                                                                               |
-| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `named_by`                        | Which field every account must have. See [what names an account](#what-names-an-account).                              |
-| `dynamic_registration`            | Whether apps may [register themselves](/guides/features/#registering-a-client). It is `off`, `anything`, or `bounded`. |
-| `dynamic_client_scopes`           | The scopes a self-registered app may request when registration is `bounded`.                                           |
-| `browsers_only`, `blocked_agents` | Which user agents may sign in. A user agent is the browser or program making the request.                              |
-| Sign-in policy                    | The default [sign-in policy](/guides/features/#sign-in-policies).                                                      |
-| Sending services                  | How the tenant sends email and text messages, such as invitations, codes, and password resets.                         |
-| Idle accounts                     | When unused accounts are [suspended and deleted](/guides/features/#idle-accounts).                                     |
-
-A tenant with no sending service for email uses the server's SMTP settings, `MASKS_SMTP_ADDRESS`
-and `MASKS_MAIL_FROM`. With neither, a manager passes each invitation and password reset link along
-by hand.
+A tenant with no mail service of its own uses the server's SMTP settings, `MASKS_SMTP_ADDRESS` and
+`MASKS_MAIL_FROM`. With neither, a manager passes each invitation and password reset link along by
+hand.
 
 ## Actors
 
-An actor is an account. It has a nickname, an email address, or both, and a list of scopes.
-
-| Field                        |                                                                                      |
-| ---------------------------- | ------------------------------------------------------------------------------------ |
-| `nickname`                   | Typed at sign-in. It can be renamed.                                                 |
-| `email`, `email_verified_at` | The email address, and when it was confirmed.                                        |
-| `scopes`                     | The most any token for this actor can hold. An empty list means the standard scopes. |
-| `activated_at`               | Unset while an invitation is still open.                                             |
+An actor is an account. It has a nickname, an email address, or both, and a list of scopes. An
+empty list means the standard scopes.
 
 ### What names an account
 
-The tenant's `named_by` setting decides which field every account needs.
+The tenant's **Primary identifier** decides which field every account needs. `MASKS_NAMED_BY` pins
+it.
 
-| `named_by` |                                            |
-| ---------- | ------------------------------------------ |
-| `nickname` | Every account needs a nickname.            |
-| `email`    | Every account needs an email address.      |
-| `either`   | Either one is enough. This is the default. |
+| **Primary identifier** |                                            |
+| ---------------------- | ------------------------------------------ |
+| **Nickname**           | Every account needs a nickname.            |
+| **Email**              | Every account needs an email address.      |
+| **Either**             | Either one is enough. This is the default. |
 
-- A database constraint keeps at least one of the two on every account.
 - **An account that holds any [manage role](/guides/security/#manage-roles) needs both**, because
   invitations and password resets go to managers.
 - A person signs in with either field.
@@ -135,15 +119,9 @@ See [clients](/guides/features/#clients) to register and set up a client.
 
 A scope is a string that names something a token may do. masks reserves the `masks:` prefix.
 
-Seven scopes are standard:
-
-- `openid`
-- `profile`
-- `email`
-- `offline_access`
-- `identities`
-- [`organization`](/guides/organizations/#signing-in-as-a-member)
-- [`groups`](/guides/features/#groups)
+Seven scopes are standard: `openid`, `profile`, `email`, `offline_access`, `identities`,
+[`organization`](/guides/organizations/#signing-in-as-a-member), and
+[`groups`](/guides/features/#groups).
 
 The `masks:` scopes are:
 
@@ -163,7 +141,7 @@ Only an approved client may hold a `masks:` scope.
 A scope that ends in a colon is a prefix. An app claims a prefix as a [namespace](#namespaces).
 
 - A prefix covers every scope that starts with it. `things:` covers `things:read`.
-- No scope covers a bare prefix. An actor holds `things:` only when it is in their own list.
+- No scope covers a bare prefix, so a token never holds `things:` itself.
 
 ### The ceiling
 
@@ -172,14 +150,13 @@ A token holds the requested scopes that are in the actor's list. It can also hol
 
 These rules limit what a client may ask for:
 
-- A request that names a scope outside the client's `allowed_scopes` is refused whole, with
-  `invalid_scope`. masks issues nothing.
-- When `dynamic_registration` is `bounded`, a self-registered client is allowed only the scopes in
-  `dynamic_client_scopes`. When that list is empty, it is allowed the standard scopes. A
-  resource server's scope outside that list is refused to every self-registered client, even when
-  the resource server offers it.
-- When `dynamic_registration` is `anything`, a self-registered client is allowed any scope except a
-  `masks:` scope or a [prefix](#prefixes).
+- A request that names a scope the client may not request is refused whole, with `invalid_scope`.
+  masks issues nothing.
+- A self-registered client follows the tenant's **Dynamic registration** setting:
+  - With **On**, it may ask for any scope except a `masks:` scope or a [prefix](#prefixes).
+  - With **On, limited to these scopes**, it may ask only for the scopes chosen there. With none
+    chosen, it may ask for the standard scopes. This holds even for a scope that a resource server
+    offers.
 
 A refresh keeps the refresh token's scopes or fewer. It drops any scope that the client or the actor
 no longer holds.
@@ -195,26 +172,23 @@ registering each one.
 
 ### Claiming
 
-A namespace is claimed when someone approves a handshake that asks for a prefix. A handshake is the
-request an app makes to connect to a tenant.
+An app claims a namespace through a handshake that asks for a prefix. A handshake is the request an
+app makes to connect to a tenant.
 
-- The approver holds `masks:manage`, or holds `masks:handshake` and every scope the handshake asks
-  for.
+- Only someone who holds `masks:manage` can approve a handshake that asks for a prefix.
 - masks adds the prefix to the approver's scopes.
-
-Each name belongs to one resource. If a handshake asks for a prefix that another resource holds,
-masks refuses it before the approval screen. The refusal names that resource.
+- Each name belongs to one resource. If a handshake asks for a prefix that overlaps one another
+  resource holds, masks refuses it before the approval screen. The refusal names that resource.
 
 ### Releasing
 
-A claim stays after its client is gone. To free the name:
+A claim stays after its client is archived. To free the name:
 
 1. Archive the client that holds it.
 2. In `/manage`, open **Settings**, then the **General** tab, and choose **Release** beside the
    namespace.
 
 After a release, the scopes under the name mean something else to the next app that claims it.
-Claim a namespace only for an app that needs its own scopes.
 
 ## Signing keys
 

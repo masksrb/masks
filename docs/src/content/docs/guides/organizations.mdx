@@ -56,7 +56,9 @@ To invite someone from `/manage`:
 3. Choose a role.
 4. Choose **Invite**.
 
-An owner invites someone the same way from their account page, and chooses **Add**.
+An owner invites someone from **Organizations** on their own account page. They enter the address
+under **Add someone by email**, choose a role, and choose **Add**. An owner needs no `/manage`
+access, and reaches only the organizations they own.
 
 masks emails the person. The email names the organization, the role, and who invited them.
 
@@ -89,11 +91,13 @@ Some details about this rule:
 
 Only an account that holds the address, confirmed, can accept an invitation sent to that address.
 
+- The invitation waits on their account page, under **Waiting for you**. It shows who sent it, the
+  role, when it expires, and the address it went to.
 - An account whose address is not confirmed is asked to confirm it under **Email address** first.
 - An invitation sent to another address says where it went. The person signs in with that address.
   Or they ask an owner to invite the address on this account.
 - Signing in through the organization's own [provider](#provider) accepts a waiting invitation
-  without these checks. The provider vouches for the membership.
+  without these checks.
 
 Declining removes the invitation. An owner has to invite the person again.
 
@@ -134,9 +138,8 @@ An organization always keeps an owner.
 - When the last owner's account is deleted, masks records *Organization left without an owner*. Only
   managers can change its members until they make someone an owner.
 
-Some apps receive [shared signals](/guides/shared-signals/), which are security events masks sends to
-apps. An app that does, and has held a token for the organization, hears about role changes and
-removals as they happen.
+An app that receives [shared signals](/guides/shared-signals/), and holds a token for the
+organization, hears about role changes and removals as they happen.
 
 ### What members are told
 
@@ -152,26 +155,6 @@ masks emails a member when someone else changes their place in an organization.
 - These emails go only to a confirmed address.
 - Each person can turn them off on the account page, under **Emails we send you**, in the
   **Organizations** group. See [security emails](/guides/security/#security-emails).
-
-## Running an organization from the account page
-
-An owner runs their organizations from their own account page. They need no `/manage` access, and
-they cannot reach any other organization.
-
-Under **Organizations**, each organization they own shows:
-
-- how many members, owners, and open invitations it has
-- one row for each member or invitation
-- a form under the rows that adds someone by email
-
-From a row, the owner can:
-
-- choose another role and choose **Set role**
-- choose **Send again** or **Withdraw** for an invitation
-- choose **Remove** for a member
-
-Every member sees their role and can leave. An invitation appears under **Waiting for you**. It shows
-who sent it, the role, when it expires, and the address it went to.
 
 ## Signing in as a member
 
@@ -245,12 +228,9 @@ Everyone who signs in through it becomes a member, in the role their groups map 
 - The role is set again on every sign-in.
 - Sometimes the provider would take away the last owner's role. Then masks records *Organization role
   kept against the provider*, and the role stays.
-- An invited account that has no password yet is linked only when the provider vouches for the
-  address. The address is at a proven domain in the provider's email domains, or `trusts_email` is
-  on and the provider reports the address as confirmed. Otherwise the sign-in is refused, and the
-  invitation stays waiting.
-- Signing in through an account already connected to the provider accepts a waiting invitation to
-  the organization.
+- An invited account that has no password yet is linked only when masks
+  [trusts the address](/guides/sso-saml/#trusted-email-addresses) from the provider. Otherwise the
+  sign-in is refused, and the invitation stays waiting.
 - An existing account with the same address is linked only after that account signs in another way
   once. This is the same as with any [provider](/guides/sso-saml/#provider-roles).
 
@@ -292,35 +272,14 @@ roles through SCIM groups. See
 
 ### In a single-page app
 
-In session mode, `@masks/client` reads the organization from your backend's `/auth/session`.
-
-```js
-import { createSession, holdsRole } from "@masks/client";
-
-const auth = createSession();
-const account = await auth.require({ organization: "acme" });
-
-account.organization;
-account.organizations;
-holdsRole(account, "owner", "billing");
-
-auth.switchOrganization("globex");
-```
-
-- `switchOrganization` sends the person through sign-in again, naming the other organization.
-- The `Actor` components for React and Svelte show the current organization and role. When given
-  `onSwitchOrganization`, they also list the other organizations and switch to the one the person
-  picks.
-- In browser mode, `organization()` reads `org` from the ID token. `switchOrganization` starts a new
-  authorization naming the key.
-
-See [@masks/client](/reference/javascript/client/).
+In `@masks/client`, an account carries `organization` and `organizations`. `holdsRole` checks the
+role, and `switchOrganization` sends the person through sign-in again, naming another organization.
+The `Actor` components for React and Svelte list the other organizations when given
+`onSwitchOrganization`. See [@masks/client](/reference/javascript/client/).
 
 ## Organizations in /manage
 
-The overview counts actors, clients, organizations, and devices. It lists the first five
-organizations with their members and open invitations. An organization with no owner is marked
-**no owner**, both there and under **Organizations**.
+An organization with no owner is marked **no owner**, on the overview and under **Organizations**.
 
 An organization's page counts its members, owners, open invitations, and live tokens. It opens on
 **Members**.

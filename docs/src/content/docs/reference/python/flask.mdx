@@ -35,8 +35,8 @@ the handshake, sessions, and privileges that every framework shares.
    ```
 
 `Masks` registers the routes as a blueprint. It takes the settings as keywords or a `Config`, as
-`Masks(app, config)`. `secret` defaults to `app.secret_key`. `Masks()` followed by `init_app(app)`
-works as well.
+`Masks(app, config)`. Keywords that leave out `secret` use `app.secret_key`. A `Config` needs its
+own `secret`. `Masks()` followed by `init_app(app)` works as well.
 
 `masked` is the actor for the current request. The decorators take
 [privileges](/reference/python/#privileges).

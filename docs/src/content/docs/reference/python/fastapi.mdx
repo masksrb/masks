@@ -49,8 +49,8 @@ guard is a FastAPI dependency:
 
 Both raise `ValueError` for a privilege that `Config.privileges` does not name.
 
-A Starlette app without FastAPI adds `SessionMiddleware(app, masks=auth)` and mounts
-`auth.router.routes`.
+A Starlette app without FastAPI still needs the `fastapi` extra installed. It adds
+`SessionMiddleware(app, masks=auth)` and mounts `auth.router.routes`.
 
 The session is read the first time a request needs it, so a route that never asks for the actor
 reads nothing from a session store.

@@ -205,3 +205,88 @@ interface ReplayStore {
   first(key: string, expiresIn: number): boolean | Promise<boolean>;
 }
 ```
+
+## Client
+
+`Client` signs a server or a machine in to masks as itself, with nobody signed in. `masks.client`
+returns the app's own.
+
+```ts
+import { Client, Issuer, Key } from "@masks/server";
+
+const key = await Key.generate();
+const dpop = await Key.generate();
+
+const issuer = await Issuer.discover("https://acme.auth.example.com");
+const client = new Client({ issuer, id: clientId, key, dpop });
+
+const token = await client.clientCredentials({
+  scope: ["files:read"],
+  resource: ["https://files.example.com"],
+});
+```
+
+- `key` signs the client's assertions. `key.jwks()` is the public half to register.
+- `dpop` binds each token to a second key, so a token copied off the server does not work without
+  it. A token that comes back unbound is refused.
+- `JSON.stringify(key)` writes the private key. Keep it where only the service can read it, and read
+  it back with `Key.import`.
+- The client authenticates with `client_secret_basic` when `secret` is set, and with
+  `private_key_jwt` when `key` is set. `method` names another.
+- Every URL is `https`, except on `localhost`, a `.localhost` name, or a loopback address.
+  `allowPlainHTTP: true` in the options to `Issuer.discover` allows `http` on a private network.
+
+| Method                                                     |                                                                                                                                                                                                                                       |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `clientCredentials({ scope, resource })`                   | A token for the client itself.                                                                                                                                                                                                        |
+| `refresh(refreshToken)`                                    | A new token from a refresh token.                                                                                                                                                                                                     |
+| `start` and `complete`                                     | The code flow with PKCE, for a sign-in of your own.                                                                                                                                                                                   |
+| `deviceAuthorization({ scope })`, `awaitDevice(device)`    | The device flow. `awaitDevice` polls at the interval masks names, and stops when the code expires or its `signal` aborts.                                                                                                             |
+| `exchange(subjectToken, { scope, resource, lifetime })`    | Trades a token for a narrower one. See [exchanging a token](/guides/connecting-via-sdk/#exchanging-a-token).                                                                                                                          |
+| `revoke(token, hint)`                                      | Revokes an access token or a refresh token.                                                                                                                                                                                           |
+| `introspect(token, hint)`                                  | Asks masks whether a token is active. masks describes a token only to the client it was issued to, or to an approved client named in its audience that is not an enrolled machine. Any other token comes back as `{ active: false }`. |
+| `enroll({ scope, name, expiresIn })`, `unenroll(clientId)` | Gives out an initial access token for one machine, and archives a machine. See [machines and enrollment](/reference/javascript/#machines-and-enrollment).                                                                             |
+| `fetch(source, origins)`                                   | A `fetch` that gets tokens from `source` and sends them only to `origins`. With `dpop`, it signs a proof for each request. `credentialsSource` and `refreshSource` make a source.                                                     |
+
+`issuer.register(metadata, initialAccessToken)` redeems an initial access token, and
+`issuer.client(registration, key, dpop)` builds the client it registered.
+`readRegistration`, `updateRegistration`, and `deleteRegistration` manage it with its registration
+access token.
+
+## Verifier
+
+`Verifier` checks access tokens in an API with no browser sign-in:
+
+```ts
+import { hasScope, Verifier } from "@masks/server";
+
+const verifier = new Verifier(issuer, "https://files.example.com", {
+  publicURL: "https://files.example.com",
+});
+
+export async function GET(request: Request) {
+  try {
+    const claims = await verifier.authenticate(request);
+
+    if (!hasScope(claims, "files:read"))
+      return new Response(null, { status: 403 });
+
+    return Response.json({ subject: claims.sub });
+  } catch (error) {
+    return verifier.challenge(error);
+  }
+}
+```
+
+- `authenticateNode(request)` takes a Node or Express request. `refusal(error)` returns the
+  `status` and `headers` to send.
+- It checks tokens as in [accepting tokens](/reference/javascript/#accepting-tokens).
+- A token that fails a check throws an `InvalidTokenError`, answered with `401` and a challenge. A
+  request with no token throws one whose `missing` is `true`.
+- When the token cannot be checked, because the issuer's keys could not be fetched or the replay
+  store failed, it throws an `UnavailableError`, answered with `503` and no challenge.
+- Set `publicURL` when a proxy sits in front of the API, since a DPoP proof names the address the
+  client used.
+- An API on more than one instance sets `replay` to a store they share, such as
+  `replayStore(redisStore(send))`. By default each instance remembers the proofs it has seen in
+  memory, so a proof replayed to another instance passes.

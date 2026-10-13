@@ -15,12 +15,12 @@ npm install @masks/server
 Each framework has its own entry point and page. The framework is an optional peer dependency, so
 install only the one your app uses.
 
-| Page                                      | Import                                      | Peer dependency         |
-| ----------------------------------------- | ------------------------------------------- | ----------------------- |
-| [Next.js](/reference/javascript/nextjs/)  | `masksNext` from `@masks/server/next`       | `next` 15 or later      |
-| [Auth.js](/reference/javascript/authjs/)  | `masksAuth` from `@masks/server/authjs`     | `next-auth` 5           |
-| [Express](/reference/javascript/express/) | `masksExpress` from `@masks/server/express` | `express` 4.18 or later |
-| [Hono](/reference/javascript/hono/)       | `masksHono` from `@masks/server/hono`       | `hono` 4 or later       |
+| Page                                                 | Import                                      | Peer dependency         |
+| ---------------------------------------------------- | ------------------------------------------- | ----------------------- |
+| [Next.js](/reference/javascript/nextjs/)             | `masksNext` from `@masks/server/next`       | `next` 15 or later      |
+| [Auth.js](/reference/javascript/authjs/)             | `masksAuth` from `@masks/server/authjs`     | `next-auth` 5           |
+| [Express](/reference/javascript/express-and-hono/)   | `masksExpress` from `@masks/server/express` | `express` 4.18 or later |
+| [Hono](/reference/javascript/express-and-hono/#hono) | `masksHono` from `@masks/server/hono`       | `hono` 4 or later       |
 
 A site with no server uses `@masks/client` instead. See [static sites](/reference/javascript/static/).
 The [`@masks/server` reference](/reference/javascript/server/) lists every option, route, and
@@ -79,8 +79,9 @@ It asks for `scope` and the scopes of every [privilege](#privileges). Set `names
 
 ### Credentials
 
-By default, the app writes its credentials to `masks.json` in the working directory, with file mode 600. Add it to `.gitignore`. When `MASKS_CLIENT_ID` is set, the app reads `MASKS_CLIENT_ID` and
-`MASKS_CLIENT_SECRET` instead and writes nothing.
+By default, the app writes its credentials to `masks.json` in the working directory, with file
+mode 600. Add it to `.gitignore`. When `MASKS_CLIENT_ID` is set, the app reads `MASKS_CLIENT_ID`
+and `MASKS_CLIENT_SECRET` instead and writes nothing.
 
 A host with no writable disk, or a multi-tenant app, sets `credentials` to a store of its own:
 
@@ -129,7 +130,6 @@ sign-in starts at `/auth`, which takes `return_to`, `organization`, and `privile
 
 - A sign-in uses PKCE, a `state`, and a `nonce`.
 - The app checks the `iss` that masks sends back, and the ID token's signature, audience, and nonce.
-- Up to five sign-ins can be in progress in one browser, each for an hour.
 - A callback the browser did not start sends the browser to sign in again, at most once a minute.
   In between, it is refused with `invalid_state`.
 - `return_to` is followed only to a path on the app.
@@ -206,9 +206,8 @@ the new one the next time it changes.
 several processes, or on serverless functions, sets it to a
 [`Store`](/reference/javascript/server/#stores) they all reach, such as Redis. It holds:
 
-- Each refresh. The first process to see an expired token claims its refresh, and keeps the result
-  for the others, sealed with a key only that refresh token opens. The others wait for the result.
-  A refusal is kept too, so every process signs the person out.
+- Each refresh, so a session is refreshed once between the processes. A refusal is kept too, so
+  every process signs the person out.
 - The back-channel logouts masks sent, so every process ends those sessions.
 - The logout tokens and DPoP proofs already used, so none is accepted twice.
 
@@ -348,27 +347,21 @@ against the token:
 - When the app cannot check a token, because the issuer's keys could not be fetched or the store
   failed, it answers `503` with no challenge, so the client keeps a token that may be valid.
 
-The app fetches the issuer's keys again every five minutes. While masks cannot be reached:
-
-- A key fetched within the last hour still checks tokens. A key masks removed in that time stays
-  accepted until masks answers again or the hour ends.
-- The app fetches the keys again at most every 30 seconds.
-- It asks for the issuer's discovery again after 5 seconds, then waits twice as long after each
-  failure, up to a minute.
+The app fetches the issuer's keys again every five minutes. While masks cannot be reached, keys
+fetched within the last hour still check tokens.
 
 A token [bound to a key with DPoP](/guides/security/#binding-a-token-with-dpop) is accepted only as
 `Authorization: DPoP`, with a proof that:
 
 - is signed by that key
 - names this request's method, URL, and token
-- was made within the last minute
+- was made within the last 60 seconds, with 30 seconds of leeway for the clock
 - has not been seen before
 
 The URL is the resource's origin and the request's path, so a proxy in front of the app needs no
 other setting.
 
-An API with no browser sign-in uses `Verifier` from `@masks/server` on its own. See the
-[package README](https://github.com/masksrb/masks/tree/main/node#checking-access-tokens).
+An API with no browser sign-in uses [`Verifier`](/reference/javascript/server/#verifier) on its own.
 
 ## Delegations
 
@@ -432,8 +425,7 @@ call fails after the refresh.
 ## Machines and enrollment
 
 A JavaScript program on a machine, such as an agent an app installs, signs in as itself with
-`Client`. See the [package README](https://github.com/masksrb/masks/tree/main/node) for keys,
-client credentials, DPoP, and the device flow.
+[`Client`](/reference/javascript/server/#client).
 
 An app that has claimed a [namespace](/guides/core-concepts/#namespaces), through `namespace` in its
 handshake, enrolls each machine without a browser. It asks masks for an initial access token and

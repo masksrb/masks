@@ -68,8 +68,8 @@ Turn it on when the company directory decides who works there.
 
 Under either role:
 
-- An actor who already has the same email address is connected only when that address is
-  confirmed in masks, and only after they sign in another way once.
+- An actor who already has the same email address is connected only when both masks and the
+  provider confirm that address, and only after the actor signs in another way once.
 - An invited actor who has not accepted yet is connected at once, but only when masks
   [trusts the address](#trusted-email-addresses).
 
@@ -83,10 +83,11 @@ provider only when one of these is true:
 - **Trust the addresses it confirms** is on, and the provider reports the address as confirmed.
 
 Turn on **Trust the addresses it confirms** only for a provider that checks the person holds the
-mailbox.
+mailbox. SAML has no field for confirmation, so a SAML provider is trusted only for proven domains
+in **Email domains it answers for**.
 
-A trusted address is what lets a provider add an actor with an email address, take up an
-invitation, or change an actor's address.
+A trusted address lets a provider add an actor with an email address, take up an invitation, or
+change an actor's address.
 
 **Email domains** also limit who signs in. When the provider's **Email domains** or the policy's
 `email_domains` is set:
@@ -96,11 +97,7 @@ invitation, or change an actor's address.
   confirmed only in a proven domain on the provider's list.
 - Someone with no email address is refused.
 
-Edge cases:
-
-- SAML has no field for confirmation. A SAML provider is trusted only for proven domains in **Email
-  domains it answers for**.
-- With neither list set, a provider that adds actors can add someone who has no email address.
+With neither list set, a provider that adds actors can add someone who has no email address.
 
 ### Where a provider is offered
 
@@ -108,12 +105,12 @@ The [sign-in policy](/guides/features/#sign-in-policies) decides where a provide
 
 - `first_factors` must include `provider`.
 - `providers` lists which providers. **All providers** offers every one.
-- A provider that belongs to an [organization](/guides/organizations/#provider) is offered only to a
-  request that names the organization.
+- A provider that belongs to an [organization](/guides/organizations/#provider) is offered on the
+  sign-in page only to a request that names the organization.
 
-A signed-in actor can connect any offered provider under **Connected accounts** on their account
-page. They must have signed in within the last 15 minutes. masks refuses an account at
-the provider that is already connected to someone else.
+A signed-in actor can connect any provider their policy offers under **Connected accounts** on their
+account page. They must have signed in within the last 15 minutes. masks refuses an account at the
+provider that is already connected to someone else.
 
 ### Sending a domain to its provider
 
@@ -146,25 +143,25 @@ the usual way.
 masks checks the `id_token` from the provider:
 
 - Its signature, against the issuer's keys.
-- Its issuer, audience, and nonce, against the request.
+- Its issuer, against the provider's issuer.
+- Its audience and nonce, against the client and the request.
 
 The request uses PKCE, a one-time secret that stops someone else from using the sign-in code.
 
 The subject, the ID for the account at the provider, is `sub` by default. For a Microsoft directory,
-**Subject (sub or oid)** on the provider's page can name `oid` instead.
+**Subject (sub or oid)** on the provider's **Sign-in** tab can name `oid` instead.
+
+Apple sends the actor's name only on their first sign-in. masks keeps it.
 
 ### OAuth 2.0
 
-With no `id_token`, masks reads the provider's userinfo endpoint.
+With no `id_token`, masks reads the provider's userinfo endpoint. The request uses PKCE.
 
 - **Where each claim comes from** maps each claim to a path in the response, such as `data.id` for X
   or `id` for GitHub.
-- The request uses PKCE.
-- masks discards the provider's tokens once it has the profile.
-
-An **Emails URL** lists confirmed email addresses apart from the profile, as GitHub does. masks uses
-the primary confirmed address, or else another confirmed one. It ignores an address that appears only
-in the public profile.
+- An **Emails URL** lists confirmed email addresses apart from the profile, as GitHub does. masks
+  uses the primary confirmed address, or else another confirmed one. It ignores an address that
+  appears only in the public profile.
 
 ### SAML 2.0
 
@@ -180,37 +177,20 @@ in the public profile.
    under **Or paste the metadata**.
 4. Choose **Add**.
 
-masks reads a metadata URL again every night, so it picks up a rotated certificate.
-
-An assertion is the signed message in which the identity provider says who signed in. masks trusts
-an assertion only when all of these are true:
-
-- It is signed by a certificate in the identity provider's metadata.
-- It answers the request this browser sent (`InResponseTo`).
-- It names this service provider as audience and recipient.
-- It names the identity provider's entity ID as issuer.
-- It is within its validity window, with one minute allowed for clock drift.
-
-masks refuses responses that it did not ask for, such as ones the identity provider starts. Each
-request is answered once, so a response cannot be replayed.
-
 Set **Name ID format** to **Persistent**, or ask the identity provider for a persistent name ID. A
 transient name ID changes on every sign-in, so each sign-in looks like a new actor.
 
-### Apple
+masks reads a metadata URL again every night, so it picks up a rotated certificate.
 
-Apple's client secret is a short-lived ES256 token. masks signs it with the provider's `.p8` private
-key, so the provider stores a team ID, a key ID, and that key.
+An assertion is the signed message in which the identity provider says who signed in. masks trusts
+an assertion only when it:
 
-Apple sends the actor's name only on their first sign-in. masks keeps it.
+- is signed by a certificate in the identity provider's metadata
+- answers a request this browser sent, and only once
+- names this service provider as audience and recipient, and the identity provider as issuer
+- is within its validity window, with one minute allowed for clock drift
 
-### Posted callbacks
-
-Apple and SAML post back across sites. Browsers do not send a `SameSite=Lax` cookie with a
-cross-site POST. So masks:
-
-1. Holds the posted parameters for five minutes under a one-time handle.
-2. Redirects to the same URL as a GET, which sends the cookie.
+masks refuses a response it did not ask for, such as one the identity provider starts.
 
 ## SAML applications
 
@@ -232,21 +212,21 @@ masks is the identity provider for apps that sign actors in only over SAML 2.0.
 
 Most apps need only the metadata URL, which the client's page shows as **masks metadata**. After a
 [key rotation](/guides/security/#rotating-signing-keys), the app must read the metadata again. The
-retiring key's certificate stays in the metadata during the overlap.
+retiring key's certificate stays in the metadata until that key is retired.
 
 ### Registering one
 
 1. In `/manage`, open **Clients**, and choose **Add client**.
 2. Choose **Signs actors in over SAML**.
 3. Paste the app's metadata under **Its metadata**, and choose **Read it**. masks fills in the app's
-   entity ID, HTTP-POST assertion consumer services, request-signing certificate, and HTTP-POST
-   single logout URL.
+   entity ID, assertion consumer services, signing certificate, single logout URL, and whether it
+   signs its requests.
 4. Choose **Add the client**.
 
 A SAML app is an approved client with no grants and no secret. It cannot use `/authorize` or
 `/token`.
 
-The client's **General** tab holds its SAML settings:
+The **SAML** section of the client's **General** tab holds its settings:
 
 | Setting | |
 | --- | --- |
@@ -258,100 +238,76 @@ The client's **General** tab holds its SAML settings:
 | **Let actors start from masks** | Answer `/saml/initiate/<client_id>` without a request. The page shows the path as **Start from masks**. |
 | **Single logout URL** | Where masks posts its logout messages. Without one, the app takes no part in [single logout](#single-logout). |
 
-Its **Assertion consumer services** are the only URLs masks posts to.
+The client's **Endpoints** tab holds its **Assertion consumer services**, the only URLs masks posts
+to.
 
 ### What is checked
 
 masks shows an error and posts nothing when a request:
 
 - names an `Issuer` with no registered app
-- has an `AssertionConsumerServiceURL` that is not registered, uses an
-  `AssertionConsumerServiceIndex`, or asks for a binding other than HTTP-POST
+- names an assertion consumer service that is not registered, picks one by index, or asks for a
+  binding other than HTTP-POST
 - asks for a NameID format masks does not issue
-- is more than eight minutes old, is more than three minutes in the future, or has another
+- is more than eight minutes old, is more than three minutes in the future, or names another
   `Destination`
-- was already received, or repeats an `ID`
-- fails a required signature check (SHA-256 or stronger), or carries two signatures
-- repeats a parameter, or is larger than 64 kilobytes
-- declares a document type, which is how XML external entities get in
+- was already received
+- fails a required signature check, which needs SHA-256 or stronger
+- is larger than 64 kilobytes, or declares a document type
 
-| Request or outcome | Response |
-| --- | --- |
-| `ForceAuthn` | The actor signs in again. |
-| `IsPassive` | `NoPassive`, with no page shown. |
-| Suspended, declined, or stopped by the policy | `RequestDenied`, in place of an assertion. |
+`ForceAuthn` makes the actor sign in again. `IsPassive` gets `NoPassive`, with no page shown. An
+actor who is suspended, declines, or is stopped by the policy gets `RequestDenied`.
 
 ### What is asserted
 
-The response and the assertion are both signed with RSA-SHA256. The assertion:
+The response and the assertion are both signed with RSA-SHA256. The assertion is valid for five
+minutes, names the session in `SessionIndex`, and names `https://refeds.org/profile/mfa` when a
+second factor was used.
 
-- is addressed to the app's entity ID
-- is confirmed for the app's assertion consumer service and the request `ID`
-- is valid for five minutes
-- names the session in `SessionIndex`
-- names `https://refeds.org/profile/mfa` when a second factor was used
-
-By default, the attributes are `email`, `name`, `given_name`, `family_name`, and
-`preferred_username`, named after the claims they hold.
-
+- By default, the attributes are `email`, `name`, `given_name`, `family_name`, and
+  `preferred_username`, named after the claims they hold.
 - masks releases only what the actor's `openid profile email` consent covers.
 - masks releases an email address only once it is confirmed, as an attribute or as the NameID.
-- The posting page's content security policy allows only its own script.
+
+masks does not support encrypted assertions, the artifact and SOAP bindings, or choosing an
+assertion consumer service by index.
 
 ### Single logout
 
-Single logout means that signing out in one place signs the actor out of every app the session
-used. An app with a single logout URL takes part.
-
-- masks posts every logout message to that URL over HTTP-POST, signed with RSA-SHA256.
-- masks records each app a session signed in to, with the NameID the app was given.
+Single logout means that signing out in one place signs the actor out of every app the session used.
+An app takes part when it has a **Single logout URL**. masks posts every logout message to that URL
+over HTTP-POST, signed with RSA-SHA256.
 
 #### When the app signs a person out
 
-The app sends a `LogoutRequest` to `/saml/slo` over HTTP-Redirect or HTTP-POST. It must be signed on
-both bindings. masks shows an error and ends nothing when:
+The app sends a signed `LogoutRequest` to `/saml/slo`, over HTTP-Redirect or HTTP-POST. masks
+refuses it, and ends nothing, when:
 
 - the app has no single logout URL or no certificate
-- the request is unsigned, or its signature does not verify against the app's certificate with
-  SHA-256 or stronger
-- the request fails the age, `Destination`, replay, size, or document type checks an
-  `AuthnRequest` gets, or its `NotOnOrAfter` has passed
+- the signature is missing or does not verify against the app's certificate
+- the request fails the checks an `AuthnRequest` gets, or has expired
 - the request names no `NameID`
 
-Otherwise, masks ends every session in which the app was given that NameID.
-
-- A request that carries a `SessionIndex` ends only the sessions it names.
-- When no session matches, masks ends nothing and answers `Requester` with `UnknownPrincipal`.
-- Otherwise it answers `Success`.
-- Either answer is a signed `LogoutResponse`, posted to the single logout URL with the request's
-  `RelayState`.
+Otherwise, masks ends every session in which the app was given that NameID. A request that carries a
+`SessionIndex` ends only the sessions it names. masks answers with a signed `LogoutResponse`:
+`Success`, or `Requester` with `UnknownPrincipal` when nothing matched.
 
 An ended session ends as it does at `/logout`. OpenID Connect clients get their
-[back-channel logout](/guides/features/#telling-other-apps) tokens. The session's other SAML apps
-are signed out as the next section describes.
+[back-channel logout](/guides/features/#telling-other-apps) tokens, and the session's other SAML
+apps are signed out as the next section describes.
 
 #### When a person signs out of masks
 
-Each app with a single logout URL that the session signed in to gets one `LogoutRequest`. The
-request names the NameID and `SessionIndex` from that app's assertion.
+Each app with a single logout URL that the session signed in to gets one `LogoutRequest`. It names
+the NameID and `SessionIndex` from that app's assertion.
 
 | How the session ends | How the apps hear |
 | --- | --- |
-| `/logout`, which **Sign out** uses | The browser carries a `LogoutRequest` to each app in turn, and brings back its `LogoutResponse`. After the last app, the browser goes where the logout was going. |
-| An app's `LogoutRequest`, sent from the browser holding the session | The browser visits the other apps the same way. Then it carries masks' answer to the app that asked. |
-| Any other way. A manager signs the actor out, a device is signed out, the actor is suspended, the session times out, or an app sends a `LogoutRequest` without the session's cookie. | masks posts the `LogoutRequest` to each app from the server, as a `SAMLRequest` form field. A `2xx` or `3xx` answer counts as delivered. masks tries up to five times. A delivery that still fails is recorded as an event. |
-
-masks reads a `LogoutResponse` from an app only when it answers a request masks sent that app in the
-last ten minutes. masks checks it against the app's certificate when the app has one.
+| **Sign out**, or an app's `LogoutRequest` from the browser holding the session | The browser visits each app in turn. Then it goes where the logout was going, or back to the app that asked. |
+| Any other way, such as a manager signing the actor out, the actor being suspended, or the session timing out | masks posts the `LogoutRequest` to each app from the server. A `2xx` or `3xx` answer counts as delivered. masks tries up to five times, then records a failed delivery as an event. |
 
 A delivery from the server reaches an app without the actor's browser. So it ends only sessions the
 app can find by NameID or `SessionIndex`.
-
-masks does not support:
-
-- encrypted assertions
-- the artifact and SOAP bindings
-- choosing an assertion consumer service by index
 
 ## Provisioning
 
@@ -369,10 +325,10 @@ https://demo.masks.example/scim/v2
 ### Connecting a directory
 
 1. In `/manage`, open **Settings**, then **Directory**.
-2. Under **Connect a directory**, enter a **Label**, such as the directory's name.
-3. Under **Provisions**, choose **Every actor**, or **Only members of** one
+2. Under **Provisioning**, enter a label, such as the directory's name.
+3. If the tenant has organizations, choose **Every actor**, or **Only members of** one
    [organization](#a-directory-for-one-organization).
-4. Choose how long the token lives: 30 days, 90 days, or a year. The default is 90 days.
+4. Choose how long the token lives: **30 days**, **90 days**, or **A year**. The default is 90 days.
 5. Choose **Issue a token**, and copy it. masks shows it once.
 6. In the directory, enter the **SCIM base URL**, and enter the token as a bearer token. A bearer
    token is a secret that grants access to whoever sends it.
@@ -381,12 +337,12 @@ Issuing a token needs `masks:manage:security` or `masks:manage`. Only `masks:man
 for every actor, because that token reaches managers too. See
 [limits on the narrower roles](/guides/security/#limits-on-the-narrower-roles).
 
-Under **Tokens**, each token shows who issued it, when it was last used, and when it expires.
-**Revoke** refuses it from then on.
+Each token shows who issued it, when it was last used, and when it expires. **Revoke** refuses it
+from then on.
 
 A client can also provision. The client must:
 
-- be approved and allowed `masks:scim`
+- be allowed `masks:scim`
 - request its own token with [`client_credentials`](/guides/features/#signing-in-as-itself)
 - name the base URL as its `resource`
 
@@ -406,34 +362,19 @@ A client can also provision. The client must:
 | `password` | Set, if the directory sends one. |
 
 A provisioned actor holds the standard scopes. They have no password unless the directory sent one.
-They sign in in one of two ways:
+They sign in through a [provider](#providers) that trusts the same email address, or by accepting
+an invitation.
 
-- through a [provider](#providers) that trusts the same email address
-- by accepting an invitation
-
-| Filters | |
-| --- | --- |
-| Operators | `eq`, `ne`, `co`, `sw`, `ew`, `pr`, `gt`, `ge`, `lt`, `le` |
-| Joins | Up to four comparisons with `and`. |
-| Attributes | `id`, `userName`, `externalId`, `emails.value`, `displayName`, `name.givenName`, `name.familyName`, `active`, the `meta` dates |
-| `eq` only | `userName`, `active` |
-| Case | `externalId` compares exactly. The other attributes ignore case. |
-
-- Every response has a weak `ETag`, a tag for the version of the record. An `If-Match` naming an
-  older version is refused.
+- Filters join up to four comparisons with `and`. `externalId` compares exactly.
+- A user's `meta.version` is a weak `ETag`. A `PUT` or `PATCH` whose `If-Match` names an older
+  version is refused with `412`.
 - `/ServiceProviderConfig`, `/ResourceTypes`, and `/Schemas` describe the rest.
 - `/Groups` answers only a [directory for one organization](#roles-as-groups).
 - Bulk operations and sorting are not supported.
 
-### Suspending
-
-`active: false` suspends an actor, the same as **Suspend** in `/manage`. Every session ends, every
-token stops working, and sign-in is refused after the first factor. So entering a name alone does
-not reveal the suspension. See [suspending and deleting](/guides/features/#suspending-and-deleting).
-
-`active: true` restores the actor. `DELETE` removes them.
-
-### What a directory cannot do
+`active: false` suspends an actor, the same as suspending them in `/manage`. See
+[suspending and deleting](/guides/features/#suspending-and-deleting). `active: true` restores the
+actor. `DELETE` removes them.
 
 A provisioning token changes many accounts. So it cannot:
 
@@ -451,18 +392,16 @@ directory manages that customer's actors and nobody else.
 | Request | What happens |
 | --- | --- |
 | List or read users | Only the organization's members. Anyone else is not found. |
-| Create a user | A new actor that joins as `member`. Its email address must be at a proven domain that sends actors to one of the organization's providers, and is then treated as confirmed. Any other email address is refused with `400` before masks looks for an account holding it. A user without an email address is allowed. |
-| Replace or patch a user | Allowed only for an actor this directory created who belongs to no other organization and manages nothing. Anyone else is refused with `403`. So an owner who adds an existing account cannot then take it over through the directory. |
+| Create a user | A new actor that joins as `member`. Its email address must be at a proven domain that sends actors to one of the organization's providers, and is then treated as confirmed. Any other email address is refused with `400`. A user without an email address is allowed. |
+| Replace or patch a user | Allowed only for an actor this directory created who belongs to no other organization and manages nothing. Anyone else is refused with `403`. |
 | Delete a user | Removes them from the organization and revokes its tokens. The actor stays. |
 
-The organization's directory keeps its own `externalId` for each member. So two organizations'
-directories can use the same value.
+Each organization's directory keeps its own `externalId` for each member, so two organizations'
+directories can use the same value. An actor's **Access** tab in `/manage` shows them under
+**Provisioned**.
 
 A `userName`, email address, or `externalId` that is already taken is refused with `409`. The answer
-has the same `uniqueness` detail every time, so it does not say who holds the value or where.
-
-An actor's **Access** tab in `/manage` shows, under **Provisioned**, the `externalId` each
-organization's directory holds for them.
+is the same every time, so it does not say who holds the value or where.
 
 ### Roles as groups
 
@@ -475,10 +414,10 @@ is one group.
 
 | Request | What happens |
 | --- | --- |
-| List or read groups | Every role, `owner` and `member` included. Filter with `displayName eq` or `id eq`. `excludedAttributes=members` leaves members out. |
+| List or read groups | Every role, `owner` and `member` included. Filter with `displayName eq` or `id eq`. |
 | Add a member | Gives them that role in place of the one they held. |
-| Remove a member | Moves them back to `member`. Removing from `member` changes nothing. They stay in the organization. |
-| Replace members with `PUT` or a `replace` operation | Adds everyone named and moves everyone else back to `member`. Actors this directory did not create keep their role. For `member`, it only adds. |
+| Remove a member | Moves them back to `member`. They stay in the organization. |
+| Replace members | Adds everyone named and moves everyone else back to `member`. Actors this directory did not create keep their role. |
 | Create a group | Adds a role with that name. An existing role is a conflict. |
 | Delete a group | Removes the role once nobody holds it. `owner` and `member` cannot be deleted. |
 | Rename a group | Refused. |
@@ -486,8 +425,8 @@ is one group.
 A group takes only actors this directory created who belong to no other organization and manage
 nothing.
 
-- Naming anyone else is refused with `400`. The answer is the same whether or not the account
-  exists.
+- Adding anyone else is refused with `400`, and removing them with `403`. The answer is the same
+  whether or not the account exists.
 - Removing the last owner is refused with `409`.
 - A role change revokes the actor's access tokens for the organization. It is recorded in the
   organization's activity, marked as SCIM.

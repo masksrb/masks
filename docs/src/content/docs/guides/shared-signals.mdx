@@ -9,11 +9,12 @@ standard for passing security events between systems.
 - **As a transmitter**, masks pushes a signed security event token to a receiver when a session is
   revoked, a credential changes, or an account is suspended. The receiver can then act before the
   affected tokens expire.
-- **As a receiver**, masks takes events from a provider that actors sign in with, and signs the
-  account out. See [receiving signals from a provider](#receiving-signals-from-a-provider).
+- **As a receiver**, masks signs an actor out when the provider they sign in with says so. See
+  [receiving signals from a provider](#receiving-signals-from-a-provider).
 
 A receiver is the system that gets the events. A stream is the receiver's subscription: where to
-send events, and which ones.
+send events, and which ones. To send every event a tenant records to a security tool, use an
+[event stream](/guides/event-streams/).
 
 ## Register a receiver
 
@@ -142,7 +143,8 @@ A CAEP event holds `event_timestamp` and `initiating_entity`. `initiating_entity
 
 ## Failures
 
-masks tries a delivery up to eight times, with growing delays, until it gets a response from 200 to 299. After the last try, masks records a `signal.undelivered` event.
+masks tries a delivery up to eight times, with growing delays, until it gets a response from 200 to
+299. After the last try, masks records a `signal.undelivered` event.
 
 Delivery stops when you remove `masks:signals` from the client, or archive the client.
 

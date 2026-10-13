@@ -28,9 +28,9 @@ The image is `ghcr.io/masksrb/masks`.
 
 ## Libraries
 
-| Language   | Package                                       | Guide                                                                    |
+| Language   | Package                                       | Reference                                                                |
 | ---------- | --------------------------------------------- | ------------------------------------------------------------------------ |
-| Ruby       | [`masks`](client/), [`masks-server`](engine/) | [Rails and Rack](https://masks.pages.dev/reference/ruby/)                |
+| Ruby       | [`masks`](client/), [`masks-server`](engine/) | [Rails apps](https://masks.pages.dev/reference/ruby/)                    |
 | JavaScript | [`@masks/server`](node/)                      | [Next.js, Express, Hono](https://masks.pages.dev/reference/javascript/)  |
 | Browser    | [`@masks/client`](web/)                       | [Single-page apps](https://masks.pages.dev/reference/javascript/client/) |
 | Python     | [`masks-client`](python/)                     | [FastAPI, Django, Flask](https://masks.pages.dev/reference/python/)      |

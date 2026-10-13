@@ -12,20 +12,21 @@ after its own stylesheet.
 
 ## A logo and a color
 
-You can set a logo and a color without a stylesheet. An owner sets both in `/manage`, under
-**Settings**, then **General**, then **Branding**.
+You can set a logo and a color without a stylesheet. A manager who holds `masks:manage` sets both
+in `/manage`, under **Settings**, then **General**, then **Branding**.
 
 - The logo replaces the tenant's initial at the top of the sign-in, consent, and account pages. It
-  can be any image up to 4 megabytes. masks stores it at 256 pixels square.
-- The color tints the buttons and headings on those pages. It sets `--signal` and `--brass`, and
-  sets `--signal-ink` to black or white, whichever reads better on it.
+  can be an image up to 4 megabytes. masks stores it at 256 pixels square.
+- The **Accent color** tints the buttons and headings on those pages. It sets `--signal` and
+  `--brass`, and sets `--signal-ink` to black or white, whichever reads better on it.
 
 A theme loads after both, and can override them.
 
 ## Naming a theme
 
-masks reads themes from `/rails/themes`, or from the directory that `MASKS_THEMES_PATH` names. A
-file's name sets where it applies.
+masks reads themes from the directory that `MASKS_THEMES_PATH` names. Without it, masks reads the
+app's `themes` directory, which is `/rails/themes` in the container image. A file's name sets where
+it applies.
 
 | File                   | Applies to                                                                        |
 | ---------------------- | --------------------------------------------------------------------------------- |

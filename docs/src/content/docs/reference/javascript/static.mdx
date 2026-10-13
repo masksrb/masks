@@ -50,8 +50,8 @@ it serves, so there is no client to register and no secret to keep.
 
 4. Upload the build to any host that serves files, such as Cloudflare Pages.
 
-The tenant must allow dynamic registration, which a manager turns on under **Settings** in
-`/manage`.
+The tenant must allow dynamic registration. A manager turns it on in `/manage`, under **Settings**,
+then **General**, then **Dynamic registration**.
 
 ## How it works
 
@@ -71,8 +71,8 @@ The tenant must allow dynamic registration, which a manager turns on under **Set
   so a reload can still use the tokens.
 
 `MASKS_ORIGIN` must be the address people visit. A build for `https://catalog.example.com` does not
-sign anyone in on a preview address such as `https://abc123.catalog.pages.dev`, since the client ID
-names the first.
+sign anyone in on a preview address such as `https://abc123.catalog.pages.dev`, since the file names
+only the first.
 
 ## Requirements
 

@@ -122,12 +122,9 @@ the browser through `/api/auth/masks/logout` on its way to masks.
 
 Within one Node process, `masksAuth` refreshes each sign-in once, even though Next.js loads `auth.ts`
 once for the proxy and again for the routes. An app on several servers, or on serverless functions,
-sets `store` to a [`Store`](/reference/javascript/server/#stores) that every server shares. See
+sets `store` to a [`Store`](/reference/javascript/server/#stores) that every server shares, such as
+`upstashStore()` for Upstash Redis or Redis from the Vercel marketplace. See
 [running several processes](/reference/javascript/#running-several-processes) for what it holds.
-
-With [Upstash Redis](https://upstash.com/docs/redis/features/restapi), or Redis from the Vercel
-marketplace, `upstashStore()` reads `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`, or
-`KV_REST_API_URL` and `KV_REST_API_TOKEN`:
 
 ```ts
 // auth.ts
@@ -135,20 +132,10 @@ import NextAuth from "next-auth";
 import { upstashStore } from "@masks/server";
 import { masksAuth } from "@masks/server/authjs";
 
-export const {
-  handlers,
-  auth,
-  signIn,
-  signOut,
-  requireAuth,
-  accessToken,
-  proxy,
-} = masksAuth(NextAuth, {
+export const { handlers, auth, requireAuth, proxy } = masksAuth(NextAuth, {
   store: upstashStore(),
 });
 ```
-
-With another Redis, use `redisStore` and the client the app already has.
 
 ## Reference
 

@@ -3,92 +3,81 @@ title: Security
 description: Tenant isolation, manage roles, rate limits, risky sign-ins, security emails, outbound calls, signing-key rotation, pushed and signed requests, DPoP, and rich authorization requests.
 ---
 
-This page lists each threat masks defends against, and how. Each row links to its section.
-
-| Threat                                          | Defense                                                   | Section                                                           |
-| ----------------------------------------------- | --------------------------------------------------------- | ----------------------------------------------------------------- |
-| One tenant reading another's data               | Four layers of isolation. Postgres enforces one of them.  | [Tenant isolation](#tenant-isolation)                             |
-| A manager doing more than their job needs       | Four manage roles. masks checks them on every request.    | [Manage roles](#manage-roles)                                     |
-| Guessing a password or a code                   | Limits per IP address and per account.                    | [Rate limits](#rate-limits)                                       |
-| A stolen password used from somewhere new       | A risk score. A high score asks for more, or refuses.     | [Risky sign-ins](#risky-sign-ins)                                 |
-| A change to an account that nobody notices      | An email to the actor for each security change.           | [Security emails](#security-emails)                               |
-| Losing the record an auditor asks for           | Activity kept for up to seven years. Exports.             | [Keeping and exporting activity](#keeping-and-exporting-activity) |
-| An app making masks call a private address      | One check on every address an app or manager supplies.    | [Calls to other servers](#calls-to-other-servers)                 |
-| A signing key that leaked or is old             | Staged rotation. The old key still verifies for 24 hours. | [Rotating signing keys](#rotating-signing-keys)                   |
-| Request parameters leaking from the address bar | Pushed authorization requests.                            | [Pushed requests](#pushed-requests)                               |
-| A forged or changed authorization request       | Signed request objects.                                   | [Signed requests](#signed-requests)                               |
-| A stolen token used again by someone else       | Tokens bound to the client's key with DPoP.               | [Binding a token with DPoP](#binding-a-token-with-dpop)           |
-| A token that allows more than one action        | Authorization details checked against a schema.           | [Rich authorization requests](#rich-authorization-requests)       |
+This page covers how masks keeps tenants apart, limits managers and attackers, tells actors about
+changes, and hardens the requests apps send.
 
 Two related subjects live on other pages:
 
 - How masks encrypts secrets at rest: [self-hosting](/guides/self-hosting/#encryption-and-secrets).
-- How to block a device before it can try a password: [sessions and devices](/guides/features/#sessions-and-devices).
+- How to block a device before it can try a password:
+  [sessions and devices](/guides/features/#sessions-and-devices).
 
 ## Tenant isolation
 
-masks keeps each tenant's data apart with four layers.
+masks keeps each tenant's data apart in four ways:
 
-| Layer                      | What it does                                                                                   | If it fails                                                                                                  |
-| -------------------------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `TenantScoped`             | Scopes every query in the app to the current tenant.                                           | A forgotten scope would leak rows.                                                                           |
-| Row-level security         | Postgres filters every row by tenant, with `FORCE ROW LEVEL SECURITY`.                         | masks refuses to run as a role that bypasses it. In production, it also refuses a role that owns its tables. |
-| Per-tenant signing keys    | A token's `kid` (key ID) exists in one tenant's JWKS (its published list of public keys) only. | Verification refuses the token.                                                                              |
-| Per-tenant encryption keys | Each tenant's encrypted columns use a key derived from the primary key and the tenant's UUID.  | A ciphertext moved into another tenant fails to decrypt.                                                     |
+- The app limits every query to the current tenant.
+- Postgres row-level security filters every row by tenant, so a query the app forgets to limit
+  still sees one tenant's rows.
+- Each tenant signs tokens with its own keys. A token from one tenant fails verification in every
+  other.
+- Each tenant's encrypted columns use a key made from the primary key and the tenant's ID. A value
+  moved into another tenant fails to decrypt.
 
 Some database roles get around row-level security:
 
 - A `SUPERUSER` or `BYPASSRLS` role skips every policy, with no error.
 - The role that owns a table can switch its policy off with one `ALTER TABLE`.
 
-`Tenant.switch` checks the role once per process:
+So masks checks its database role the first time it enters a tenant:
 
-- It raises if the role holds either privilege.
-- In production, it also raises if the role owns a table that row-level security protects. Engine
-  mode skips this check.
+- It refuses to run as a role that holds either privilege.
+- Outside development and test, it also refuses a role that owns a table that row-level security
+  protects. Engine mode skips this check.
 
-So the server migrates as one role and serves as another. See
+This is why the server migrates as one role and serves as another. See
 [database roles](/guides/self-hosting/#database-roles).
 
 ### Entering a tenant
 
 masks enters a tenant before it runs any request or job.
 
-1. A Rack middleware looks up the hostname and enters its tenant before any controller runs. A
-   hostname with no tenant gets a 404 (Not Found) response.
-2. Each job records the tenant it was enqueued in. The worker enters that tenant before it performs
-   the job. A job enqueued outside a tenant raises. A maintenance job that works across every tenant
-   must declare it:
+- A request enters the tenant its hostname names. A hostname with no tenant gets a 404 (Not Found)
+  response.
+- A job enters the tenant it was enqueued in. A job enqueued outside a tenant raises an error. A
+  job that works across every tenant must declare it:
 
-   ```ruby
-   class CleanupJob < ApplicationJob
-     across_tenants!
-   end
-   ```
+  ```ruby
+  class CleanupJob < ApplicationJob
+    across_tenants!
+  end
+  ```
 
-Other code that works across tenants uses `Tenant.switch(tenant) { ... }`. It sets a session-scoped
-Postgres setting and opens no transaction.
-
-Outside a tenant, every query returns zero rows. This includes `Model.unscoped`.
+Other code that works across tenants uses `Tenant.switch(tenant) { ... }`. Outside a tenant, a query
+on a tenant's table returns no rows.
 
 ## Manage roles
 
-Each manager holds one or more of four scopes. A scope is a named permission.
+Each manager holds one or more of four scopes.
 
-| Scope                   | Can                                                                                                                                                                                                                                                      |
-| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `masks:manage:read`     | Read everything `/manage` shows. Change nothing.                                                                                                                                                                                                         |
-| `masks:manage:support`  | Read. Help actors: add, invite, and approve them, change their profiles, sign them out, suspend and restore them, reset passwords and second factors, and block their devices. Revoke their sessions, consents, and tokens. Change organization members. |
-| `masks:manage:security` | Read. Change signing keys, clients, providers, sign-in policies, sending services, event streams, organizations, groups, and domain claims. Issue provisioning tokens for one organization.                                                              |
-| `masks:manage`          | Everything. This includes tenant settings and branding, email templates, LDAP, serving a custom domain, the key rotation schedule, deleting actors, and granting any scope.                                                                              |
+| Scope | Can |
+| --- | --- |
+| `masks:manage:read` | Read everything `/manage` shows, and download activity. Change nothing. |
+| `masks:manage:support` | Read. Help actors: add, invite, and approve them, change their profiles, sign them out, suspend and restore them, reset passwords and second factors, and block their devices. Revoke their sessions, consents, and tokens. Change organization members. |
+| `masks:manage:security` | Read. Change signing keys, clients, SAML applications, providers, sign-in policies, sending services, event streams, organizations, groups, namespaces, and domain claims. Issue provisioning tokens for one organization. |
+| `masks:manage` | Everything. This includes tenant settings and branding, risky networks, email templates, LDAP, serving a custom domain, the key rotation schedule, deleting actors, and granting any scope. |
 
 How masks checks a role:
 
 - A token for `/manage` carries the scopes the actor holds and `/manage` asked for.
-- On every request, masks checks that the actor still holds those scopes.
-- Every mutation declares the least scope it needs. A mutation that declares none needs
-  `masks:manage`.
-- `/manage` shows a line at the top of each page that says what a viewer below `masks:manage` can do.
+- On every request, masks uses only the roles that both the token and the actor still hold.
+- Every mutation in the [manage API](/reference/manage/) needs one role. A mutation that names none
+  needs `masks:manage`.
+- For a manager below `masks:manage`, a line at the top of each page in `/manage` says what they can
+  change.
+
+Taking a role away takes effect on the actor's next request. When they hold no manage role at all,
+masks refuses their token.
 
 ### Limits on the narrower roles
 
@@ -108,59 +97,47 @@ A role below `masks:manage` has these limits:
 
 - **It cannot give out manage access.** It cannot give an actor or a client any manage scope or
   `masks:scim`. It cannot issue a provisioning token for every account. Either one would reach
-  managers through SCIM, the protocol a directory uses to add and change accounts.
+  managers through [SCIM](/guides/sso-saml/#provisioning).
 - **It cannot change a client that can carry a manage scope or `masks:scim`.** So it cannot point
   `/manage` at another address.
 - **It cannot connect `/manage` in a new browser.** It can open `/manage` in a new browser once an
   owner has connected it.
 
-Taking a role away ends it on the actor's next request. masks refuses their token, and `/manage`
-asks them to sign in again.
-
 ## Rate limits
 
-A rate limit counts attempts over a period of time. Once the count reaches the limit, masks answers
-with the HTTP status 429 (Too Many Requests).
+A rate limit counts attempts over a period of time. Once the count reaches the limit, masks refuses
+more. An API answers with the HTTP status 429 (Too Many Requests). A page in the browser shows a
+message.
 
-You set these limits with environment variables. See
-[rate limits](/reference/environment/#rate-limits) for what each one counts.
-
-| Limit                         | Counted per                |
-| ----------------------------- | -------------------------- |
-| `MASKS_ATTEMPT_LIMIT`         | IP address                 |
-| `MASKS_ACCOUNT_ATTEMPT_LIMIT` | Account                    |
-| `MASKS_RECOVERY_LIMIT`        | IP address or account      |
-| `MASKS_REGISTRATION_LIMIT`    | IP address                 |
-| `MASKS_DEVICE_CODE_LIMIT`     | IP address                 |
-| `MASKS_CLAIM_LIMIT`           | IP address, across tenants |
-| `MASKS_CLAIM_CEILING`         | The whole server           |
+The limits on sign-in attempts, codes, registrations, device codes, and new tenants are settings.
+See [rate limits](/reference/environment/#rate-limits) for each one and its default.
 
 These limits are fixed:
 
-| Endpoint                                                                 | Limit                          |
-| ------------------------------------------------------------------------ | ------------------------------ |
-| Token, pushed request, device authorization, and SAML sign-in and logout | 60 per IP address each minute  |
-| Introspection and revocation                                             | 120 per IP address each minute |
-| SCIM and received security events                                        | 600 per IP address each minute |
-| Enrollment, forward authentication, and `/metrics`                       | 30 per IP address each minute  |
-| Organization invitations                                                 | 30 per account each minute     |
-| Account download                                                         | 5 per account each hour        |
+| Endpoint | Limit |
+| --- | --- |
+| Token, pushed request, device authorization, and SAML sign-in and logout | 60 per IP address each minute |
+| Introspection and revocation | 120 per IP address each minute |
+| SCIM and received security events | 600 per IP address each minute |
+| Enrollment, forward authentication, and `/metrics` | 30 per IP address each minute |
+| Organization invitations | 30 per account each minute |
+| Account download | 5 per account each hour |
 
 ## Risky sign-ins
 
 masks can give each sign-in a risk score from 0 to 100. It does this when a sign-in policy sets a
 score to act on. The score is worked out right after the first factor.
 
-| Signal                                                                                                                                                      | Adds |
-| ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ---- |
-| A device the account has not signed in from in 90 days, or no device at all. A device that remembers the account's second factor does not count.            | 30   |
-| A network the account has not signed in from in 90 days. For IPv4, a network is a /24: addresses that share the first three numbers. For IPv6, it is a /48. | 25   |
-| An address in one of the tenant's **Risky networks**                                                                                                        | 50   |
-| Three or more refused attempts on the account in the last hour. Ten or more adds 40.                                                                        | 20   |
-| No sign-in for six months                                                                                                                                   | 10   |
-| A password found in a known breach                                                                                                                          | 40   |
+| Signal | Adds |
+| --- | --- |
+| A device the account has not signed in from in 90 days, or no device at all. A trusted device does not count. | 30 |
+| A network the account has not signed in from in 90 days. For IPv4, a network is the addresses that share the first three numbers (a /24). For IPv6, it is a /48. | 25 |
+| An address in one of the tenant's **Risky networks** | 50 |
+| Three or more refused attempts on the account in the last hour. Ten or more adds 40 instead. | 20 |
+| No sign-in for six months | 10 |
+| A password found in a known breach | 40 |
 
-An account with no sign-in in the last 90 days has nothing to compare. So the device and the network
+An account with no sign-in in the last 90 days has nothing to compare, so the device and the network
 add nothing.
 
 To act on the score, use **Risk** in a sign-in policy:
@@ -170,12 +147,11 @@ To act on the score, use **Risk** in a sign-in policy:
 - **Refuse at** stops the sign-in from that score up, and asks for the first factor again. It must
   be higher than the score that asks for a second factor.
 
-What happens with any score above zero:
+Any score above zero is recorded as `sign_in.risky`, with the signals, and the actor gets a security
+email.
 
-- masks records it as `sign_in.risky`, with the signals.
-- The actor gets a security email.
-
-The tenant's risky networks are under **Settings**, then **Policies**, then **Who may sign in**.
+A manager holding `masks:manage` lists the tenant's risky networks under **Settings**, then
+**Policies**, then **Who may sign in**.
 
 ### Breached passwords
 
@@ -188,28 +164,27 @@ The password never leaves the server:
 
 1. masks takes the password's SHA-1 hash, a fixed-length code computed from the password.
 2. It sends only the first five characters of the hash.
-3. It compares the rest of the hash itself. The full hash never leaves the server either.
+3. It compares the rest of the hash itself.
 
 What masks does with the result:
 
 - A new password that is breached is refused.
 - A breached password used to sign in adds to the risk score.
-- If the service does not answer within three seconds, masks allows the password.
+- If the service does not answer within three seconds, or answers with an error, masks allows the
+  password.
 
 ## Security emails
 
 masks emails an actor when something changes on their account.
 
-| Group                       | Sent when                                                                                                                                                                                                                    |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Password                    | The password is changed or reset.                                                                                                                                                                                            |
-| Factors                     | A passkey, an authenticator app, or email or SMS codes are added or removed. Backup codes are generated, or one is spent. The actor asks for help, or a manager resets their second factors.                                 |
-| Sessions                    | A new device signs in. A sign-in gets a risk score above zero. A session is signed out. A device is blocked.                                                                                                                 |
-| Apps and connected accounts | An app is allowed in. A connected account is connected or removed. A device sign-in is approved.                                                                                                                             |
-| Account                     | The phone number is changed or removed. A manager changes the actor's scopes. The actor downloads their account.                                                                                                             |
-| Organizations               | Someone else changes the actor's role in an organization, or removes them. Someone archives an organization the actor is signed in to an app for. See [what members are told](/guides/organizations/#what-members-are-told). |
-
-Rules for these emails:
+| Group | Sent when |
+| --- | --- |
+| Password | The password is changed or reset. |
+| Factors | A passkey, an authenticator app, or email or SMS codes are added or removed. Backup codes are generated, or one is spent. The actor asks for help, or a manager resets their second factors. |
+| Sessions | A new device signs in. A sign-in gets a risk score above zero. A session is signed out. A device is blocked. |
+| Apps and connected accounts | An app is allowed in. A connected account is connected or removed. A device sign-in is approved. |
+| Account | The phone number is changed or removed. A manager changes the actor's scopes. The actor downloads their account. |
+| Organizations | Someone else changes the actor's role in an organization, or removes them. Someone archives an organization the actor is signed in to an app for. See [what members are told](/guides/organizations/#what-members-are-told). |
 
 - masks reports a new sign-in once per device.
 - Emails go only to a confirmed address. An account with no confirmed address gets none, and the
@@ -218,22 +193,16 @@ Rules for these emails:
 - When the email address changes, masks also warns the previous address. This warning goes out
   even if the old address was not confirmed or the actor turned the group off.
 - Each email names the device and the IP address the change came from, in the actor's time zone.
+- An email about an approved app, such as one sent while someone signs in to it, is headed by that
+  app's logo and name. Every other email is headed by the tenant. An app nobody approved never heads
+  an email, so a self-registered app cannot use the tenant's mail to pass as someone else.
 
 To preview every email masks sends, open **Settings**, then **Messages**, then **Templates** in
 `/manage`. Each preview uses sample actors and the tenant's own name and links.
 
-Each email is headed by a name and logo:
-
-- An email about an approved app, such as one sent while someone signs in to it, is headed by that
-  app's logo and name.
-- Every other email is headed by the tenant.
-- An app nobody approved never heads an email. So a self-registered app cannot use the tenant's mail
-  to pass as someone else.
-
 ### Editing an email template
 
-A manager holding `masks:manage` can edit these templates under **Settings**, then **Messages**,
-then **Templates** in `/manage`:
+A manager holding `masks:manage` can edit these emails on the same page:
 
 - invitation
 - organization invitation
@@ -244,35 +213,30 @@ then **Templates** in `/manage`:
 - request for help, sent to managers
 - approval
 
-That manager can also add a signature that closes every email.
+They can also add **Closing lines on every email**.
 
-How the edits work:
-
-- The subject (up to 150 characters) replaces the subject masks writes. So does the opening text (up
-  to 2,000 characters). Leave either blank to keep masks' own.
+- The **Subject** (up to 150 characters) and the **Opening text** (up to 2,000 characters) replace
+  the ones masks writes. Leave either blank to keep masks' own.
 - Both are plain text. Markup shows as written, and no link can be added. A blank line starts a new
   paragraph.
 - `{{tenant}}`, `{{name}}`, `{{nickname}}`, `{{organization}}`, `{{role}}`, and `{{code}}` are
-  placeholders. Each one fills in where the email has it. The page lists which placeholders each
-  email offers. A placeholder an email does not offer is refused.
-- masks still adds the button or the code, and how long it lasts. It also adds the lines that tell
-  an actor what to do if it was not them. A password reset that a manager started still names the
-  manager.
+  placeholders. The page lists which ones each email offers. A placeholder an email does not offer
+  is refused.
+- masks still adds the button or the code, how long it lasts, and the lines that tell an actor what
+  to do if it was not them. A password reset that a manager started still names the manager.
 - A template applies in every language the tenant serves.
 - masks records each change as `mail_template.updated`.
 
 ## Keeping and exporting activity
 
-masks keeps each event for 180 days by default.
-
-To change how long, a manager holding `masks:manage` sets a period under **Settings**, then
-**General**, then **Activity**. It can be from 30 days to seven years. A nightly job deletes older
-events, so a shorter period takes effect the next night.
+masks keeps each event for 180 days by default. A manager holding `masks:manage` changes this under
+**Settings**, then **General**, then **Activity**, from 30 days to seven years. Older events are
+deleted each night, so a shorter period takes effect the next night.
 
 To download a copy:
 
 1. Open **Settings**, then **Activity**.
-2. Choose a range of up to 366 days.
+2. Choose a range of up to 366 days under **Export**.
 3. Choose **Download**.
 
 About the file:
@@ -289,31 +253,28 @@ For a copy that keeps up to date on its own, use an [event stream](/guides/event
 ## Calls to other servers
 
 masks calls addresses that apps and managers supply. A bad address could make masks call a server
-on a private network, so masks checks each one.
+on a private network, so masks checks each one. The calls are:
 
-masks makes these calls:
-
-- a client's `jwks_uri`, `sector_identifier_uri`, `logo_uri`, metadata document, back-channel logout
-  URI, SAML single logout URL, and shared signals endpoint
+- a client's keys, sector identifier, logo, metadata document, back-channel logout, SAML single
+  logout, and shared signals endpoint
 - a resource's protected resource metadata
 - every provider's endpoints and SAML metadata
 - each mail and SMS service
 - each event stream's endpoint
 - the Pwned Passwords API
 
-Each of these calls:
+For each call, masks:
 
-- has no username or password in the address
 - looks up the hostname, and refuses it if any of its addresses is private, loopback, link-local, or
   reserved
-- connects to the address it checked
-- stops at a time limit and a size limit set for each kind of call
+- connects to the address it checked, for every call except mail
+- stops at a time limit and a size limit
 
 In development and test, masks allows `http` and private addresses.
 
 Some apps and providers live on a private network, such as a tailnet (a private network across your
 devices) or an identity provider inside the office. List their address ranges in
-`MASKS_OUTBOUND_ALLOWED`, separated by commas. See [ENV vars](/reference/environment/).
+[`MASKS_OUTBOUND_ALLOWED`](/reference/environment/#outbound-calls).
 
 :::caution
 Every client that can register itself can make masks call a range in `MASKS_OUTBOUND_ALLOWED`. List
@@ -322,41 +283,42 @@ only the ranges you mean.
 
 ## Rotating signing keys
 
-masks stages a new key before it signs anything. Clients that cache the JWKS then fetch the key
-before they see a token it signed. See [signing keys](/guides/core-concepts/#signing-keys) for the
-states a key moves through.
+masks publishes a new key before it signs anything with it. Clients that cache the keys then have
+the new key before they see a token it signed. See
+[signing keys](/guides/core-concepts/#signing-keys) for the states a key moves through.
 
-| Action     | Does                                                                   | The outgoing key       |
-| ---------- | ---------------------------------------------------------------------- | ---------------------- |
-| Stage      | Publishes a new key ahead of time. One at a time.                      | Keeps signing.         |
-| Activate   | Makes the staged key the signing key.                                  | Verifies for 24 hours. |
-| Rotate now | Generates and activates a key at once. Use it when caches cannot wait. | Verifies for 24 hours. |
-| Discard    | Removes a staged key, which has signed nothing.                        | Keeps signing.         |
+Managers holding `masks:manage:security` or `masks:manage` rotate keys under **Settings**, then
+**General**, then **Signing keys**.
 
-- Only a staged key can be activated or discarded.
-- SAML applications must read masks' metadata again after a rotation.
+| Action | Does | The outgoing key |
+| --- | --- | --- |
+| **Stage** | Publishes a new key ahead of time. One at a time. | Keeps signing. |
+| **Activate** | Makes the staged key the signing key. | Verifies for 24 hours. |
+| **Rotate now** | Makes a key and signs with it at once. Use it when caches cannot wait. | Verifies for 24 hours. |
+| **Discard** | Removes a staged key, which has signed nothing. | Keeps signing. |
+
+SAML applications must read masks' metadata again after a key is staged, and before it is
+activated.
 
 ### Rotating on a schedule
 
-Rotation is by hand until a manager holding `masks:manage` picks a schedule. To pick one, open
-**Settings**, then **General**, then **Signing keys**, and choose every 30, 90, 180, or 365 days.
-
-A daily job then:
+**Rotation** is **By hand** until a manager holding `masks:manage` picks a schedule of every 30, 90,
+180, or 365 days. A daily job then:
 
 1. Stages the next key a day before the active key reaches that age.
-2. Activates it once it has been staged for a day. So clients that cache the JWKS see it before it
-   signs.
+2. Activates a key once it has been staged for a day.
 
-A key staged by hand is activated on the same schedule. The job records each step in the activity.
+With a schedule set, a key staged by hand is also activated a day after it is staged. The job
+records each step in the activity.
 
 ## Pushed requests
 
 A normal authorization request puts every parameter in the address bar. There, browser history,
 logs, and later pages can read it.
 
-A pushed request ([RFC 9126](https://www.rfc-editor.org/rfc/rfc9126.html)) sends the parameters to
-`/par` over the back channel, a direct call from the client's server to masks. Only a reference goes
-in the URL. Discovery advertises `pushed_authorization_request_endpoint`.
+A pushed request ([RFC 9126](https://www.rfc-editor.org/rfc/rfc9126.html)) sends the parameters
+from the client's server straight to `/par`. Only a reference goes in the URL. Discovery advertises
+`pushed_authorization_request_endpoint`.
 
 1. Post the parameters to `/par`. Authenticate the same way as at `/token`. Include `client_id` in
    the body, even with Basic auth. A public client sends its `client_id` and no secret.
@@ -387,13 +349,8 @@ in the URL. Discovery advertises `pushed_authorization_request_endpoint`.
      &request_uri=urn%3Aietf%3Aparams%3Aoauth%3Arequest_uri%3A8mZ1...
    ```
 
-The reference has these rules:
-
-- It lasts 90 seconds.
-- It works once.
-- It works only for the client that pushed it.
-- Following it twice, late, or with another `client_id` returns `invalid_request_uri`.
-- A wrong `client_id` does not use it up.
+The reference lasts 90 seconds, works once, and works only for the client that pushed it. Following
+it twice, late, or with another `client_id` returns `invalid_request_uri`.
 
 ### Requiring pushed requests
 
@@ -411,18 +368,14 @@ mutation {
 }
 ```
 
-After this:
-
-- masks refuses a plain `/authorize` link for that client with `invalid_request`.
-- Sign-in and consent continue the pushed request.
-
-A self-registered client can ask for the same setting when it registers.
+After this, masks refuses a plain `/authorize` link for that client with `invalid_request`. A
+self-registered client can ask for the same setting when it registers.
 
 ## Signed requests
 
-A client with `jwks` or a `jwks_uri` can send the whole request as a signed JWT. A JWT is a JSON
-token with a signature. This one is called a request object
-([RFC 9101](https://www.rfc-editor.org/rfc/rfc9101.html)), and it holds the parameters as claims:
+A client with `jwks` or a `jwks_uri` can send the whole request as a signed JWT, a JSON token with a
+signature. This is called a request object ([RFC 9101](https://www.rfc-editor.org/rfc/rfc9101.html)),
+and it holds the parameters as claims:
 
 ```json
 {
@@ -443,24 +396,22 @@ token with a signature. This one is called a request object
 
 Send it as `request`, next to `client_id`, to `/authorize` or `/par`.
 
-| Claim or property | Rule                                                                                  |
-| ----------------- | ------------------------------------------------------------------------------------- |
-| `typ`             | `oauth-authz-req+jwt`, `jwt`, or none.                                                |
-| Signature         | RSA, RSA-PSS, or ECDSA, with a registered key. `none` and shared secrets are refused. |
-| `iss`             | The client.                                                                           |
-| `aud`             | This issuer.                                                                          |
-| `client_id`       | The same as the `client_id` next to it.                                               |
-| `exp`             | Required. At most an hour away.                                                       |
-| `nbf`             | Optional. Not in the future, and at most an hour ago.                                 |
-| `jti`             | Optional. Used up on first use.                                                       |
-
-More rules:
+| Claim or property | Rule |
+| --- | --- |
+| `typ` | `oauth-authz-req+jwt`, `application/oauth-authz-req+jwt`, `jwt`, or none. |
+| Signature | RSA, RSA-PSS, or ECDSA, with a registered key. `none` and shared secrets are refused. |
+| `iss` | The client. |
+| `aud` | This issuer. |
+| `client_id` | The same as the `client_id` next to it. |
+| `exp` | Required. At most an hour away. |
+| `nbf` | Optional. Not in the future, and at most an hour ago. |
+| `jti` | Optional. Used up on first use. |
 
 - A pushed request or a request object is the whole request. masks ignores anything else in the
   `/authorize` query.
 - masks refuses a request object with `invalid_request_object` if it fails a rule, or if it holds
   its own `request` or `request_uri`.
-- `requireSignedRequestObject` requires signing, in the same way that
+- `requireSignedRequestObject` on `updateClient` requires signing, in the same way that
   `requirePushedAuthorizationRequests` requires pushing.
 - masks accepts only a `request_uri` it issued from `/par`. It never fetches one from a client URL.
 
@@ -504,15 +455,13 @@ DPoP: eyJ0eXAiOiJkcG9wK2p3dCIs...
 
 ### What masks refuses
 
-| Refused                                                                            | Why                                            |
-| ---------------------------------------------------------------------------------- | ---------------------------------------------- |
-| A bound token sent as `Bearer`                                                     | A bound token needs a proof.                   |
-| A proof whose `htm` or `htu` names another request                                 |                                                |
-| A proof with no `ath`, or the wrong one                                            |                                                |
-| A proof older than 90 seconds, or more than 30 seconds in the future               | A 60-second window, plus 30 seconds of leeway. |
-| A proof with no `jti`, or one already seen                                         | It is a replay.                                |
-| A proof that holds a private key, a symmetric key, or `alg: none`                  |                                                |
-| Any algorithm except `ES256`, `ES384`, `ES512`, `PS256`, `PS384`, `PS512`, `RS256` |                                                |
+- a bound token sent as `Bearer`
+- a proof whose `htm` or `htu` names another request
+- a proof with no `ath`, or the wrong one
+- a proof older than 90 seconds, or more than 30 seconds in the future
+- a proof with no `jti`, or one already seen
+- a proof that holds a private key, a symmetric key, or `alg: none`
+- any algorithm except `ES256`, `ES384`, `ES512`, `PS256`, `PS384`, `PS512`, and `RS256`
 
 A refused proof returns:
 
@@ -527,7 +476,7 @@ masks sends no nonce.
 
 ### Binding earlier
 
-- **Authorization code.** `dpop_jkt` on `/authorize` binds the code to the key. So an intercepted
+- **Authorization code.** `dpop_jkt` on `/authorize` binds the code to the key, so an intercepted
   code cannot be redeemed:
 
   ```
@@ -557,7 +506,7 @@ A scope says what kind of thing an app may do. `authorization_details`
 ### Declaring a type
 
 An approved client that serves these requests declares each type it accepts. It does this under
-**Authorization details** on its **Endpoints** tab in `/manage`.
+**Authorization details** on its **Endpoints** tab in `/manage`, in **Types it accepts**.
 
 A declaration has:
 
@@ -600,7 +549,7 @@ A declaration has:
 
 The app that asks:
 
-1. Registers the types it uses in `authorization_details_types`.
+1. Registers the types it uses in `authorization_details_types`, shown as **Types it may ask for**.
 2. Sends the details as a JSON array to `/authorize` or `/par`, or in a signed request object.
 
 ```
@@ -628,10 +577,8 @@ The consent screen lists each entry with its label and fields.
 - If any entry in a request is not kept, the screen asks about all of them.
 - An app that skips consent still asks about entries that are not kept.
 
-Where kept entries show:
-
-- The actor sees what is kept, and until when, under **Apps you have let in** on their account page.
-- A manager sees it on the actor's and the app's consents in `/manage`.
+The actor sees what is kept, and until when, under **Apps you have let in** on their account page. A
+manager sees it on the actor's and the app's consents in `/manage`.
 
 masks forgets a kept entry when the app is revoked, or when the client's
 [consent lifetime](/guides/features/#consent) ends.

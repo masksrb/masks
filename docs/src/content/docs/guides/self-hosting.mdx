@@ -8,15 +8,6 @@ migrates its databases each time it boots.
 
 ## What it runs
 
-masks is an OpenID Connect and OAuth 2.0 provider. These are the standard protocols apps use to
-sign people in and get tokens. masks:
-
-- authenticates people
-- issues and verifies tokens
-- publishes each tenant's signing keys
-
-It stores nothing about your application's data.
-
 The image runs Puma, the web server, in front of Rails, on port 3000. It needs one Postgres server,
 which holds three databases named from `POSTGRES_DATABASE`:
 
@@ -32,12 +23,12 @@ The only file it keeps on local disk is the master key.
 
 ## Image tags
 
-| Tag                            | Pushed on                                          | Platforms    |
-| ------------------------------ | -------------------------------------------------- | ------------ |
-| `:<version>`, such as `:0.8.0` | A server release.                                  | amd64, arm64 |
-| `:latest`                      | A server release. Moved to that release's version. | amd64, arm64 |
-| `:main`                        | Every push to main.                                | amd64        |
-| `:sha-<commit>`                | Every push to main, named by the full commit hash. | amd64        |
+| Tag                            | Pushed on                                          | Platforms                                |
+| ------------------------------ | -------------------------------------------------- | ---------------------------------------- |
+| `:<version>`, such as `:0.8.0` | A server release.                                  | amd64, arm64                             |
+| `:latest`                      | A server release. Moved to that release's version. | amd64, arm64                             |
+| `:main`                        | Every push to main.                                | amd64, and arm64 too on a server release |
+| `:sha-<commit>`                | Every push to main, named by the full commit hash. | amd64, and arm64 too on a server release |
 
 Pin a version, as the example below does. Read
 [CHANGELOG.md](https://github.com/masksrb/masks/blob/main/server/CHANGELOG.md) before you move to a
@@ -154,32 +145,15 @@ So masks connects as two roles.
 On every boot, the image's entrypoint:
 
 1. Runs `db:prepare` and `masks:grants` as the migration role.
-2. Starts the server as the serving role.
+2. Runs `masks:tenants`, which creates the declared tenants and prints the setup token of each one
+   that is not set up yet.
+3. Starts the server as the serving role.
 
 Two checks stop a server that is set up wrong:
 
 - The entrypoint refuses to start when `MASKS_MIGRATION_USER` is unset or names the serving role.
 - The server refuses to answer a request while its role is a superuser, has `BYPASSRLS`, or owns a
   table that row-level security protects.
-
-### Moving an existing database to two roles
-
-A server that migrated and served as one role owns everything it created. To move it to two roles:
-
-1. Before you upgrade, run this as a Postgres superuser in each of the three databases, such as
-   `masks`, `masks_cache`, and `masks_queue`:
-
-   ```sql
-   CREATE ROLE masks_owner WITH LOGIN PASSWORD '...' CREATEDB;
-   REASSIGN OWNED BY masks TO masks_owner;
-   ```
-
-   `CREATE ROLE` needs to run once, because roles belong to the whole Postgres server.
-
-2. Set `MASKS_MIGRATION_USER` and `MASKS_MIGRATION_PASSWORD`.
-3. Start the new image.
-
-Its first boot grants `masks` the access it serves with.
 
 ## Encryption and secrets
 
@@ -216,20 +190,8 @@ Keep the master key with your database backups. Losing it makes every encrypted 
 permanently.
 :::
 
-### Per-tenant keys
-
-Each tenant's encrypted columns use a key of that tenant's own. masks derives it from the
-encryption key and the tenant's UUID with HKDF-SHA256, a standard way to make new keys from one
-key. Nothing new needs storing or backing up.
-
-- A ciphertext copied from one tenant's rows cannot be read in another tenant.
-- Two tenants never share an encryption key.
-- Reading or writing an encrypted column outside its tenant raises an error.
-
-A database from an earlier version holds columns encrypted under the shared key. masks still reads
-them. At boot, `bin/rails masks:tenants` looks for a tenant whose columns use the shared key. If it
-finds one, it re-encrypts that tenant's columns under the tenant's own key and prints that it is
-done.
+Each tenant's encrypted columns use a key made from the master key and that tenant's own ID, so
+nothing else needs backing up. See [tenant isolation](/guides/security/#tenant-isolation).
 
 ### Running more than one replica
 
@@ -343,19 +305,15 @@ With more than one replica:
 ## Tenants
 
 A tenant is a separate set of accounts, clients, and signing keys at its own subdomain. The example
-declares one tenant, `acme`, with `MASKS_TENANTS`. See
-[declaring tenants](/guides/core-concepts/#declaring-tenants) for how each mode works.
+declares one tenant, `acme`, with `MASKS_TENANTS`.
 
-| Mode    | In the `masks` service's `environment` | Serves                                                                                                                            |
-| ------- | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| Multi   | `MASKS_TENANTS: acme,demo`             | Each tenant named, at its own host. Add each host to the `Caddyfile`.                                                             |
-| Single  | `MASKS_TENANT: acme`                   | One tenant, at the host the template gives it.                                                                                    |
-| Dynamic | Neither                                | A new tenant for each new host that matches the template. `MASKS_CLAIM_LIMIT` and `MASKS_CLAIM_CEILING` limit how many each hour. |
+- To serve more tenants, name each one in `MASKS_TENANTS`, such as `acme,demo`, and add each host
+  to the `Caddyfile`.
+- To serve one tenant, set `MASKS_TENANT` instead.
+- With neither set, masks creates tenants on its own as requests for new hosts arrive.
 
-Every other hostname gets a 404.
-
-`MASKS_SETUP_TOKEN` sets one setup token for every tenant. See
-[setting a tenant up](/guides/core-concepts/#setting-a-tenant-up).
+See [declaring tenants](/guides/core-concepts/#declaring-tenants) for each mode, and
+[setting a tenant up](/guides/core-concepts/#setting-a-tenant-up) for the setup token.
 
 ## Custom domains
 
@@ -376,8 +334,8 @@ What happens next:
 
 ### Certificates on demand
 
-Caddy can issue each host a certificate on demand. Before it issues one, it asks
-`/tls/allowed?domain=`. That path answers 200 only for a host a tenant serves.
+Caddy can issue each custom host a certificate on demand. Before it issues one, it asks
+`/tls/allowed?domain=`. That path answers 200 only for a custom host that a tenant serves.
 
 ```
 {

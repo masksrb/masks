@@ -32,7 +32,8 @@ Every framework takes the same `masks.web.Config`. Most apps set four things:
 - `resource`, the app's own absolute `https` URL
 - `name`, the name masks shows for the app
 - `secret`, at least 32 random bytes that seal the session, such as the output of
-  `openssl rand -hex 32`. Django and Flask use the app's own secret key when you leave it out.
+  `openssl rand -hex 32`. Django and Flask use the app's own secret key when their settings leave
+  it out. A `Config` made without a secret raises `ValueError`, unless it sets `sessions`.
 
 See [every setting](/reference/python/client/#config).
 
@@ -58,9 +59,9 @@ The handshake registers the app for `resource`, with these addresses:
 - `/auth/logout/return` as the address masks sends people back to after signing out of masks.
 - `/auth/logout/backchannel` for back-channel logout, when the issuer supports it.
 
-All of them must share the resource's origin, or the handshake refuses before the browser leaves.
-A credential store that cannot be written also refuses the handshake before masks registers
-anything.
+All of them must share the resource's origin, or the handshake raises `ValueError` before the
+browser leaves. A credential store that cannot be written refuses the handshake before masks
+registers anything.
 
 The app writes its credentials to `masks.json` with file mode 600. To keep them somewhere else, set
 `credentials` to one of the [credential stores](/reference/python/client/#credentials).
@@ -80,9 +81,10 @@ request in the same way.
 
 ### Managing the connection
 
-Once the app is connected, `/auth/handshake` shows the connection to somebody `manages` allows. It
-has buttons to connect again and to disconnect. Disconnecting deletes the registration at masks and
-the credentials.
+Until the app is connected, anybody who opens `/auth/handshake` starts the handshake. Once it is
+connected, `/auth/handshake` shows the connection to somebody `manages` allows, with a **Reconnect**
+button and a **Disconnect** button. **Disconnect** deletes the registration at masks and the
+credentials.
 
 - A person who is not signed in goes to `after_sign_out`.
 - Anybody else is refused with `403`.
@@ -94,7 +96,8 @@ Config(..., manages=lambda actor: actor.subject == os.environ["OWNER_SUB"])
 ```
 
 Before each sign-in, the app checks that masks still knows it. When masks does not, the app forgets
-its credentials and the browser goes to the handshake again.
+its credentials and the browser goes to the handshake again. Credentials that cannot be written,
+such as `StaticCredentials`, are kept.
 
 ## Signing in
 
@@ -130,13 +133,9 @@ and organizations are read again from userinfo, the masks endpoint that describe
 person.
 
 masks revokes a refresh token that is used twice, along with every token issued from it. So requests
-that arrive together with the same expired session share one refresh:
-
-1. The first request to claim the refresh token in [`store`](#running-several-processes) spends it.
-2. The app keeps the result there for a minute, sealed under a key made from that refresh token.
-3. Every request that brings the same refresh token gets that result.
-
-A store that cannot be reached counts as a refresh that masks does not answer.
+that arrive together with the same expired session share one refresh. The first request spends the
+refresh token, and the others get its result from [`store`](#running-several-processes) for a
+minute.
 
 - A refresh that masks refuses signs the person out.
 - A refresh that masks does not answer, or answers with a `5xx` or `429` status, leaves the session
@@ -149,8 +148,9 @@ A sign-out revokes the refresh token and clears the session. With `sign_out_of_i
 back to `/auth/logout/return`, which sends it on to `after_sign_out`. That return works once, within
 an hour, and only in the browser that signed out.
 
-A sign-out request of any method is refused with `403` when its `Sec-Fetch-Site` or `Origin` header
-names another site. So a page on another site cannot sign anybody out.
+A sign-out request of any method is refused with `403` when its `Sec-Fetch-Site` header is anything
+other than `same-origin` or `none`, or its `Origin` header names another origin. So a page on
+another site cannot sign anybody out.
 
 ### Back-channel logout
 
@@ -231,12 +231,13 @@ Config(
 )
 ```
 
-|                                         |                                                                                                   |
-| --------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `actor.organization`                    | The organization signed in to, with its `id`, `key`, `name`, and `role`. `None` if there is none. |
-| `actor.has_role("owner", "billing")`    | Whether the person holds one of those roles in it.                                                |
-| `actor.organizations`                   | Every organization the person has joined. Each one includes the role held there.                  |
-| `auth.login_url(organization="globex")` | Signs the person in again, naming another organization.                                           |
+- `actor.organization` is the organization signed in to, with its `id`, `key`, `name`, and `role`.
+  It is `None` when there is none.
+- `actor.organizations` lists every organization the person has joined, with the role held in each.
+- `actor.has_role("owner", "billing")` says whether the person holds one of those roles in the
+  organization signed in to.
+- `auth.login_url(organization="globex")` is a link that signs the person in again to another
+  organization.
 
 The app reads the organizations from userinfo at sign-in and at every refresh. So when a person's
 role changes, the app sees the change within the lifetime of one access token.
@@ -268,7 +269,7 @@ Config(
 | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | The sign-in holds the privilege            | The route runs.                                                                                                                                                                                                                                         |
 | A scope is missing                         | The browser goes through masks once. It asks for the usual scopes and the privilege's scopes, then comes back to the page it was on. A JSON request gets `403` with `privilege_required`, the `privileges`, and the `login_url` to send the browser to. |
-| masks did not grant the scope on that trip | `403 insufficient_scope`. The person does not hold the scope, so the app does not send them through masks again for five minutes.                                                                                                                       |
+| masks did not grant the scope on that trip | `403 insufficient_scope`, when the person comes back within five minutes. The person does not hold the scope, so the browser does not go back to masks in a loop.                                                                                      |
 | A role or organization does not match      | `403 insufficient_role` or `insufficient_organization`. The browser does not go through masks.                                                                                                                                                          |
 
 An ordinary sign-in never asks for privilege scopes. Asking for them never gives anyone more
@@ -314,7 +315,7 @@ only the holder of a private key use the token. A bound token is accepted only a
 
 - is signed by the token's key
 - names this request's method, URL, and token
-- was made within the last minute
+- was made within the last 60 seconds, with 30 seconds of leeway for clocks that differ
 - has not been seen before
 
 The URL is the resource's origin and the request's path, so a proxy in front of the app needs no
@@ -374,8 +375,8 @@ Save `upstream.secret` before anything else, since each call replaces the secret
 ## Machines and enrollment
 
 A Python program on a machine, such as an agent an app installs, signs in as itself with
-`masks.Client`. See the [package README](https://github.com/masksrb/masks/tree/main/python) for
-keys, client credentials, DPoP, and the device flow.
+`masks.Client`. See [machines](/reference/python/client/#machines) for keys, client credentials,
+DPoP, and the device flow.
 
 An app that has claimed a [namespace](/guides/core-concepts/#namespaces), through `namespace` in its
 handshake, enrolls each machine without a browser:
@@ -388,17 +389,8 @@ handshake, enrolls each machine without a browser:
    ```
 
 2. The app hands `enrollment.initial_access_token` to the machine.
-3. The machine makes its own key and registers with the token:
-
-   ```python
-   issuer = masks.discover("https://acme.auth.example.com")
-   key = masks.Key.generate()
-   registration = masks.Client.register(
-       issuer,
-       masks.ClientMetadata(client_name="nas", token_endpoint_auth_method=masks.PRIVATE_KEY_JWT, jwks=key.jwks()),
-       initial_access_token,
-   )
-   ```
+3. The machine makes its own keys and registers with the token, as
+   [machines](/reference/python/client/#machines) shows.
 
 `await client.unenroll(machine_client_id)` archives the machine and revokes its tokens. See
 [enrolling a machine](/guides/features/#enrolling-a-machine).

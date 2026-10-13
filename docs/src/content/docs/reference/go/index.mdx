@@ -81,19 +81,7 @@ r.PathPrefix("/auth/").Handler(app.Handler())
 r.Handle("/admin", app.Require("admin")(admin))
 ```
 
-Gin and Echo wrap `net/http` handlers and middleware with their own adapters:
-
-```go
-router := gin.Default()
-router.Any("/auth/*path", gin.WrapH(app.Handler()))
-router.GET("/admin", gin.WrapH(app.Require("admin")(admin)))
-```
-
-```go
-e := echo.New()
-e.Any("/auth/*", echo.WrapHandler(app.Handler()))
-e.GET("/admin", echo.WrapHandler(admin), echo.WrapMiddleware(app.Require("admin")))
-```
+Gin and Echo take them through their own adapters, such as `gin.WrapH` and `echo.WrapMiddleware`.
 
 ## The handshake
 
@@ -115,6 +103,7 @@ The handshake registers the app for `Resource`. It registers these addresses und
 
 The app writes its credentials to `masks.json`, with file mode 600, and then starts a sign-in. It
 reads the file again whenever it changes, so processes that share it see each other's handshake.
+`web.FileCredentials(path)` names another file.
 
 ### Several tenants
 
@@ -136,10 +125,8 @@ type CredentialStore interface {
 }
 ```
 
-The app reads each issuer's discovery document once and keeps it for an hour. After that, requests
-go on with the document it has while one request reads it again in the background. When masks
-cannot be reached, the app waits 5 seconds before it asks again, and twice as long after each
-failure, up to a minute. It keeps up to 1,000 issuers.
+The app keeps each issuer's discovery document for an hour, then reads it again in the background.
+When masks cannot be reached, the app waits longer before each new try, up to a minute.
 
 ### Managing the connection
 
@@ -227,11 +214,18 @@ person's name, photo, and organizations from userinfo again at the same time.
 - Requests that arrive together with the same expired token share one refresh, since masks revokes
   a refresh token that is used twice.
 - A refresh that masks refuses signs the person out.
+- When masks or the store cannot be reached, the request goes on as signed out. The session stays
+  as it was, so the next request tries again.
 
 ### Signing out
 
-A sign-out revokes the refresh token and clears the session. A sign-out from another site is refused
-with `403`, whatever its method.
+A sign-out revokes the refresh token and clears the session. A sign-out that the browser marks as
+coming from another site is refused with `403`, whatever its method.
+
+A `GET` sign-out signs out at once only when its `Sec-Fetch-Site` header is `same-origin` or `none`.
+A `GET` with no `Sec-Fetch-Site` header, which an older browser sends, answers a page with a Sign
+out button that posts to `/auth/logout`, and keeps `everywhere` when the link asked for it. A JSON
+request with no `Sec-Fetch-Site` header is refused with `403`.
 
 With `SignOutOfIssuer`, or `everywhere`, the browser goes on to masks to end its session there. It
 comes back to `/auth/logout/return`, and goes on to `AfterSignOut`. That return is accepted once,
@@ -240,7 +234,7 @@ within an hour, from the browser that signed out, and refused with `invalid_stat
 When masks ends a session itself, it sends a logout token to `/auth/logout/backchannel`. The app signs
 out the session the token names, or every session of the person it names, at their next request.
 
-- Each logout token is accepted once. A token with no `exp` is refused.
+- Each logout token is accepted once. A token with no `jti`, `iat`, or `exp` is refused.
 - The app remembers the logout in `Store`.
 - `LoggedOut` is called with each logout token. When it returns an error, the app answers `503`, and
   accepts the same token when masks sends it again.
@@ -296,8 +290,7 @@ app, err := web.New(web.Config{
 ```
 
 `redisstore.New` takes any `redis.UniversalClient` from `github.com/redis/go-redis/v9`, so a cluster
-or a sentinel works as well. When the store fails, a request that needs it is refused with `503`. A
-refresh that cannot reach the store leaves the session as it was, and the next request tries again.
+or a sentinel works as well. When the store fails, a request that needs it is refused with `503`.
 
 ## Organizations
 
@@ -387,7 +380,7 @@ A token [bound to a key with DPoP](/guides/security/#binding-a-token-with-dpop) 
 
 - is signed by that key
 - names this request's method, URL, and token
-- was made within the last minute
+- was made no more than 60 seconds ago, with 30 seconds of leeway for clocks that differ
 - has not been seen before
 
 The URL is the resource's origin and the request's path, so a proxy in front of the app needs no
@@ -396,8 +389,8 @@ other setting. The app remembers the proofs it has seen in `Store`.
 Inside the handler, `web.ActorFrom(r.Context())` describes the token: `Subject`, `ClientID`,
 `Scopes`, `Organization`, `Tenant`, and the verified `Claims`.
 
-An API with no browser sign-in uses `masks.NewVerifier` from the client package without `web`. See
-the [package README](https://github.com/masksrb/masks/tree/main/go#checking-access-tokens).
+An API with no browser sign-in checks tokens with the client package alone. See
+[checking tokens without go/web](#checking-tokens-without-goweb).
 
 ## Delegations
 
@@ -445,18 +438,19 @@ save(connection, upstream.Secret)
 
 Save `upstream.Secret` before anything else, since each call replaces the secret. A
 `*masks.DelegationError` carries the replacement in `Secret` even when the call fails after the
-refresh.
+refresh. The upstream token is a Bearer token, even when the client holds a DPoP key.
 
 - `errors.Is(err, masks.ErrDelegationUnavailable)` means masks or the provider did not answer, and
   nothing was lost.
 - `errors.Is(err, masks.ErrDelegationRefused)` means masks refused the call. Its `SignInAgain()` is
   `true` when the person has to sign in again.
 
-## Machines and enrollment
+## Machines
 
 A Go program on a machine, such as an agent an app installs, signs in as itself with the client
-package. See the [package README](https://github.com/masksrb/masks/tree/main/go) for keys, client
-credentials, DPoP, and the device flow.
+package. See [enrolling a machine](/guides/features/#enrolling-a-machine) for how masks treats it.
+
+### Enrolling a machine
 
 An app that has claimed a [namespace](/guides/core-concepts/#namespaces), through `Namespace` in its
 handshake, enrolls each machine without a browser. It asks masks for an initial access token and
@@ -464,20 +458,160 @@ hands it to the machine:
 
 ```go
 client, err := app.Client(r)
-enrollment, err := client.Enroll(r.Context(), masks.EnrollmentRequest{Scope: []string{"catalog:agent"}, Name: "nas"})
+enrollment, err := client.Enroll(r.Context(), masks.EnrollmentRequest{
+	Scope:    []string{"catalog:agent"},
+	Name:     "nas",
+	Lifetime: 15 * time.Minute,
+})
 ```
 
-The machine makes its own keys and registers with the token:
+- Each scope falls under one of the app's namespaces.
+- The token lasts from 1 minute to 1 hour, and 15 minutes when `Lifetime` is not set.
+- The token is spent the first time a machine registers with it.
+
+`client.Unenroll(ctx, machineClientID)` archives the machine and revokes every token it holds.
+Unenrolling a machine twice succeeds both times. A client the app did not enroll answers with a
+`*masks.Error` whose `Status` is `404`.
+
+### Registering with the token
+
+The machine keeps two P-256 keys. One signs its client assertions and the other holds its tokens,
+so a token copied off the machine does not work without the key.
 
 ```go
 key, err := masks.GenerateKey()
+dpop, err := masks.GenerateKey()
+
+saved, err := json.Marshal(map[string]*masks.Key{"key": key, "dpop": dpop})
+```
+
+`json.Marshal` writes the private key, so keep the file readable only by the machine's service
+user. `json.Unmarshal` reads the keys back.
+
+The machine registers its public key with the token. masks requires `JWKS` and refuses `JWKSURI`.
+
+```go
 issuer, err := masks.Discover(ctx, "https://acme.auth.example.com")
 registration, err := issuer.Register(ctx, masks.ClientMetadata{
 	Name:                    "nas",
 	TokenEndpointAuthMethod: masks.PrivateKeyJWT,
 	JWKS:                    key.JWKS(),
 }, enrollment.InitialAccessToken)
+
+client := issuer.Client(registration, key, dpop)
 ```
 
-`client.Unenroll(ctx, machineClientID)` archives the machine and revokes its tokens. See
-[enrolling a machine](/guides/features/#enrolling-a-machine).
+Keep the registration. `ReadRegistration`, `UpdateRegistration`, and `DeleteRegistration` manage
+the client with its registration access token, and send that token only to the issuer's own origin.
+
+### Getting tokens
+
+```go
+asked := masks.TokenRequest{Scope: []string{"files:read"}, Resource: []string{"https://files.example.com"}}
+token, err := client.ClientCredentials(ctx, asked)
+```
+
+`client.Method` defaults to `client_secret_basic` when `Secret` is set and to `private_key_jwt`
+when `Key` is. When `DPoP` is set, a token that comes back unbound is refused.
+
+`HTTPClient` returns an `http.Client` that fetches and reuses tokens and signs each request. It
+sends tokens only to the origins it is given, including after a redirect.
+
+```go
+api := client.HTTPClient(client.CredentialsSource(asked), "https://files.example.com")
+response, err := api.Get("https://files.example.com/files")
+```
+
+A token held to a key goes out as `Authorization: DPoP` with a new proof, and a server that asks
+for a DPoP nonce is answered once. `RefreshSource` renews a token with its refresh token and hands
+each rotated token to a callback to be saved.
+
+### The device flow
+
+A machine with no browser shows a code that a person approves on another device.
+
+```go
+device, err := client.DeviceAuthorization(ctx, masks.TokenRequest{Scope: []string{"openid", "offline_access"}})
+fmt.Printf("Open %s and enter %s\n", device.VerificationURI, device.UserCode)
+
+token, err := client.AwaitDevice(ctx, device)
+```
+
+`AwaitDevice` polls at the interval masks names, slows down when asked, and stops when the code
+expires or `ctx` ends.
+
+## Exchanging a token
+
+`Exchange` trades a token for another one with fewer scopes, another audience, or a shorter
+lifetime.
+
+```go
+narrowed, err := client.Exchange(ctx, masks.ExchangeRequest{
+	SubjectToken: token.AccessToken,
+	Scope:        []string{"files:read"},
+	Resource:     []string{"https://files.example.com"},
+	Lifetime:     5 * time.Minute,
+})
+```
+
+- `SubjectTokenType` and `ActorTokenType` default to an access token.
+- An `ActorToken` puts the party acting for the subject in the new token's `act` claim.
+- When `DPoP` is set, the new token comes back held to the same key.
+- An answer whose `issued_token_type` differs from the one asked for is refused.
+
+## Introspecting a token
+
+```go
+introspected, err := client.Introspect(ctx, token.AccessToken, "access_token")
+
+if introspected.HasScope("files:read") {
+	serve()
+}
+```
+
+masks describes a token to the client it was issued to. It also describes it to an approved client
+whose resources include one of the token's audiences, unless an app enrolled that client. Every
+other token comes back inactive. An inactive answer, or one whose `exp` has passed, returns an
+`Introspection` with every field empty, and `HasScope` is false.
+
+## Checking tokens without go/web
+
+```go
+verifier := masks.NewVerifier(issuer, "https://files.example.com")
+verifier.PublicURL = "https://files.example.com"
+
+http.Handle("/files", verifier.Middleware(files))
+```
+
+The verifier checks the signature against the issuer's published keys, the `at+jwt` type, the
+issuer, the audience, and the expiry. It checks a DPoP proof the same way
+[`Protect`](#accepting-tokens) does. Inside the handler, `masks.ClaimsFrom(ctx)` returns the
+claims, and `claims.HasScope` checks a scope.
+
+- Set `PublicURL` when a proxy sits in front of the API, since a proof names the address the client
+  used.
+- A token that fails its checks answers `401` with a challenge that carries `invalid_token`. A
+  request with no token answers `401` with a challenge that carries no error code.
+
+A verifier remembers the proofs it has seen in its own process. When an API runs as several
+processes, set `Replay` to a `masks.ReplayStore` they share. Its `First` answers true only the
+first time it sees a key. A store in Redis sets the key only when it is absent:
+
+```go
+verifier.Replay = masks.ReplayStoreFunc(func(ctx context.Context, key string, expiresIn time.Duration) (bool, error) {
+	return redis.SetNX(ctx, "dpop:"+key, 1, expiresIn).Result()
+})
+```
+
+An error from the store refuses the request with `masks.ErrReplayStore`, and the middleware answers
+`503`.
+
+## Redirects and plain HTTP
+
+A request that carries a credential does not follow a redirect. That covers the token, revocation,
+introspection, device, enrollment, and registration endpoints, so a client secret, a code, or a
+refresh token goes only to the address the issuer published. A redirect there is a
+`*masks.Error`.
+
+Every URL is `https`, except on this machine: `localhost`, a `.localhost` name, or a loopback
+address. `masks.AllowPlainHTTP()` lifts that for a private network.

@@ -1,72 +1,22 @@
 ---
 title: Enterprise
-description: The capabilities a company needs to audit, control, and prove how people sign in, with a link to each guide.
+description: Step-up authentication, and where to find the other features a company uses to control and audit how people sign in.
 ---
 
-This page lists what a company needs to audit, control, and prove how people sign in. Each section
-links to the guide that covers it, except step-up authentication, which this page covers.
+This page covers step-up authentication. The other features a company uses to control and audit how
+people sign in each have their own guide:
 
-## Activity
-
-masks records an event for each sign-in, consent, change a manager makes, revoked token, and signing
-key rotation. Each event names the action, the actor, who did it, the client, the device, the IP
-address, and the user agent.
-
-In `/manage`, **Settings**, then **Activity**, lists every event. Filter it by kind of event, by
-actor, or by client, or show **Only what is worth a look**, such as a refused sign-in.
-
-- [Keeping and exporting activity](/guides/security/#keeping-and-exporting-activity): keep events
-  from 30 days to seven years, and download a range as a file.
-- [Event streams](/guides/event-streams/): post each event, signed, to an HTTPS endpoint as it
-  happens.
-
-## Shared signals
-
-masks sends and receives security events through the OpenID Shared Signals Framework.
-
-- As a transmitter, masks pushes signed events to a receiver when a session is revoked, a credential
-  changes, or an account is suspended. See [shared signals](/guides/shared-signals/).
-- As a receiver, masks signs an actor out when their provider says a session was revoked or the
-  account was disabled. See
-  [receiving signals from a provider](/guides/shared-signals/#receiving-signals-from-a-provider).
-
-## Single sign-on and provisioning
-
-- [Providers](/guides/sso-saml/#providers): sign actors in through OpenID Connect, OAuth 2.0, and
-  SAML 2.0 providers.
-- [Sending a domain to its provider](/guides/sso-saml/#sending-a-domain-to-its-provider): send
-  someone who types an email address at a proven domain straight to their company's provider.
-- [SAML applications](/guides/sso-saml/#saml-applications): sign actors in to apps that speak only
-  SAML.
-- [Provisioning](/guides/sso-saml/#provisioning): keep actors in step with a directory over SCIM.
-
-## Custom domains
-
-A tenant can serve sign-in from its own host, such as `login.example.com`, as a second issuer beside
-its usual address. See [custom domains](/guides/self-hosting/#custom-domains).
-
-## Organizations
-
-An organization is a customer inside a tenant. Its members each hold a role, and an app that asks
-for the `organization` scope gets it in an `org` claim. An organization can have its own sign-in
-policy, provider, directory, and event stream. See [organizations](/guides/organizations/).
-
-## Manage roles
-
-`masks:manage:read`, `masks:manage:support`, and `masks:manage:security` let an auditor, a support
-team, and a security team each do their job in `/manage` and nothing more. See
-[manage roles](/guides/security/#manage-roles).
-
-## Sign-in policies
-
-A [sign-in policy](/guides/features/#sign-in-policies) sets:
-
-- [how long a session lasts](/guides/features/#how-long-a-session-lasts), and when an idle one ends
-- [an emailed code](/guides/features/#signing-in-with-an-emailed-code) as a first factor, with or
-  without a password
-- the risk score that asks for a second factor or refuses a
-  [risky sign-in](/guides/security/#risky-sign-ins)
-- whether a second factor is required
+| | |
+| --- | --- |
+| Activity | [Keeping and exporting activity](/guides/security/#keeping-and-exporting-activity), and [event streams](/guides/event-streams/) to a security tool. |
+| Shared signals | [Shared signals](/guides/shared-signals/) tell apps when a session ends, and let a provider sign an actor out. |
+| Single sign-on | [Providers](/guides/sso-saml/#providers), [sending a domain to its provider](/guides/sso-saml/#sending-a-domain-to-its-provider), and [SAML applications](/guides/sso-saml/#saml-applications). |
+| Provisioning | [SCIM](/guides/sso-saml/#provisioning) from a company directory. |
+| Organizations | [Organizations](/guides/organizations/), each with its own members, roles, and sign-in. |
+| Manage roles | [Narrower roles](/guides/security/#manage-roles) for auditors, support, and security teams. |
+| Sign-in policies | [Sign-in policies](/guides/features/#sign-in-policies) and [risky sign-ins](/guides/security/#risky-sign-ins). |
+| Custom domains | [Sign-in from a company's own host](/guides/self-hosting/#custom-domains). |
+| Token exchange | [Exchanging a token](/guides/connecting-via-sdk/#exchanging-a-token) for a narrower one. |
 
 ## Step-up authentication
 
@@ -78,26 +28,17 @@ ID tokens carry `auth_time`, `amr`, and `acr`. The `acr` is the level the sign-i
 A client asks for more on `/authorize`:
 
 - `max_age` or `prompt=login` asks for a fresh sign-in.
-- `acr_values=urn:masks:acr:mfa` asks for a second factor. So does asking for the `acr` claim with
-  only that value in the `claims` parameter.
+- `acr_values=urn:masks:acr:mfa` asks for a second factor. So does asking for the `acr` claim in the
+  ID token with only that value in the `claims` parameter.
 
 When a second factor is asked for:
 
 - A session that already used one is not asked again.
 - Otherwise masks asks for a second factor the actor holds, or asks them to add one.
-- `acr_values` lists the values the client accepts. A request that also accepts `urn:masks:acr:pwd`
-  is satisfied by a password.
+- A request that also accepts `urn:masks:acr:pwd` is satisfied by a password.
 
 Two settings under **Second factor** in a sign-in policy do the same for every sign-in:
 
 - **Required for everyone, not just managers** makes every actor hold a second factor.
 - **Asked again at a sign-in to a client when the session did not use one** asks for a second factor
   before the client receives a code, even when the session started with a password alone.
-
-## Token exchange
-
-A service acting for a person, including an AI agent, can trade the token it holds for a narrower
-one to use with a downstream service (RFC 8693). Each exchange is recorded as an event, and a
-[rich authorization request](/guides/security/#rich-authorization-requests) can limit the new token
-to one action, such as one payment to one payee. See
-[exchanging a token](/guides/connecting-via-sdk/#exchanging-a-token).

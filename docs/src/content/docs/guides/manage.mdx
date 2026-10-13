@@ -19,9 +19,8 @@ same things.
 ## Finding your way
 
 The bar at the top holds **Overview**, **Actors**, **Organizations**, and **Clients**, and a button
-that opens the settings. On a phone, the four sections move to a bar at the bottom of the screen.
-
-The **Actors** item shows a count of the actors waiting for approval or asking for help.
+that opens **Settings**. On a phone, the four sections move to a bar at the bottom of the screen.
+**Actors** shows a count of the actors waiting for approval or asking for help.
 
 Every page and tab has its own address:
 
@@ -34,71 +33,42 @@ Every page and tab has its own address:
 
 The overview starts with anything that needs a manager:
 
-- Actors waiting for approval. The link opens that filter on **Actors**.
-- Actors who [asked for help](/guides/features/#second-factors) signing in.
-- Events from the last day that are worth a look, such as a refused sign-in, a replayed refresh token,
-  or a blocked device. It names the latest one and links to **Activity**.
+- actors waiting for approval
+- actors who [asked for help](/guides/features/#second-factors) signing in
+- events from the last day that are worth a look, such as a refused sign-in or a blocked device
 
-Until each is done, the overview also shows these steps:
+While a tenant is new, the overview also shows the steps **Let masks send email**, **Register your
+first client**, and **Invite someone**. Each step goes away once it is done. **Hide** puts a step
+away in this browser only.
 
-1. **Let masks send email**, while the tenant has no mail service.
-2. **Register your first client**, while it has no clients.
-3. **Invite someone**, while it has one actor or none.
-
-**Hide** puts a step away in this browser only.
-
-Below that, the overview shows:
-
-- how many actors, clients, organizations, and devices the tenant has
-- a chart of sign-ins per day over 7, 30, or 90 days
-- the first few organizations and their members
-- the latest activity
+Below that, the overview shows counts, a chart of sign-ins per day, the first few organizations, and
+the latest activity.
 
 ## Actors
 
-The actors list marks each actor who:
-
-- holds a scope that starts with `masks:`
-- uses an authenticator app, with the number of backup codes left
-- is invited and has not signed in yet
-- has an email address they have not confirmed
-- is waiting for approval
-- is asking for help
-- is suspended
-- has a blocked device
-
-Filter the list with **Everyone**, **Invited**, **Awaiting approval**, **Asking for help**,
-**Managers**, and **Suspended**.
+The actors list marks what needs attention on each actor, such as an invitation not accepted, a
+suspension, or a blocked device. Filter the list with **Everyone**, **Invited**, **Awaiting
+approval**, **Asking for help**, **Managers**, and **Suspended**.
 
 - **Add actor** adds one actor.
 - **Invite many** invites several actors by email address at once, and can put them in groups.
 
-The same page lists **Devices**. Filter them with **Allowed**, **Blocked**, and **Never signed in**.
-Each device has a page of its own, with its activity. See
+The same page lists **Devices**. Each device has a page of its own, with its activity. See
 [sessions and devices](/guides/features/#sessions-and-devices).
 
 ### An actor's page
 
 When something about an actor needs a manager, the top of their page says so and holds the button
-that settles it:
-
-- an approval or a request for help
-- a suspension, with **Restore**
-- an invitation not yet accepted, with **Resend invitation**
-- an email address not yet confirmed, with **Send a confirmation link**
+that settles it, such as **Restore**, **Resend invitation**, or **Send a confirmation link**.
 
 | Tab          | What it holds                                                                                                                            |
 | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| **Profile**  | Their nickname, name, email address, and other profile details. Their photo. **Suspend or delete**.                                      |
+| **Profile**  | Their nickname, email address, other profile details, and photo. **Suspend or delete**.                                                  |
 | **Access**   | Their scopes and [groups](/guides/features/#groups). The IDs a directory gave them. The apps they have let in. Their connected accounts. |
 | **Sign-in**  | Their password, second factors, and passkeys. Where they are signed in. Their tokens.                                                    |
 | **Activity** | Their latest 25 events, with a link to **All activity**.                                                                                 |
 
 ## Organizations
-
-The organizations list shows each organization's members, open invitations, roles, and how its
-members sign in. It marks an organization that has no owner. Archived organizations are in a section
-of their own, with **Restore**.
 
 To add one, choose **Add organization**. An organization's page has five tabs: **Members**,
 **Sign-in**, **Roles**, **Activity**, and **General**. See
@@ -106,35 +76,35 @@ To add one, choose **Add organization**. An organization's page has five tabs: *
 
 ## Clients
 
-The clients list marks a client that registered itself, and says whether a manager has approved it.
-Archived clients show only when the **Archived** switch is on.
-
-To add a client, choose **Add client**. Pick the kind of client:
+To add a client, choose **Add client**, then pick **What kind of client**:
 
 - **Signs in as itself**
 - **Signs actors in**
 - **Signs actors in over SAML**
 - **A known product**, one of the [known products](/guides/features/#adding-a-known-app)
 
+The clients list marks a client that registered itself, and says whether a manager has approved it.
+Archived clients show only when the **Archived** switch is on.
+
 ### A client's page
 
-| Tab           | What it holds                                                                                                                                                                                                                                                                                                    |
-| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **General**   | Its name and how it proves who it is. Its SAML settings, for a SAML client. What actors see about it, such as its logo and home page. **Sign-in**: its sign-in policy, whether it must push or sign its requests, DPoP, consent, its token and consent lifetimes, and its back-channel logout URI. Archiving it. |
-| **Access**    | [Who may sign in](/guides/features/#who-may-sign-in-to-an-app), by group or organization role. The scopes it always gets, and the scopes it may ask for.                                                                                                                                                         |
-| **Endpoints** | Its redirect URIs, post-logout redirect URIs, and resources. Its keys. Its [authorization details](/guides/security/#rich-authorization-requests).                                                                                                                                                               |
-| **Usage**     | Who has let it in. Its live tokens. Its activity. The namespaces it claimed.                                                                                                                                                                                                                                     |
+| Tab           | What it holds                                                                                                                                                                                           |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **General**   | Its name and how it proves who it is. Its SAML settings, for a SAML client. What actors see about it, such as its logo. Its **Sign-in** settings, such as its policy and token lifetimes. Archiving it. |
+| **Access**    | [Who may sign in](/guides/features/#who-may-sign-in-to-an-app), by group or organization role. The scopes it always gets, and the scopes it may ask for.                                                |
+| **Endpoints** | Its redirect URIs, post-logout redirect URIs, and resources. Its keys. Its [authorization details](/guides/security/#rich-authorization-requests).                                                      |
+| **Usage**     | Who has let it in. Its live tokens. Its activity. The namespaces it claimed.                                                                                                                            |
 
 ## Settings
 
-| Tab           | What it holds                                                                                                                                                                                                         |
-| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **General**   | The tenant's name and branding. How long activity is kept. Dynamic registration. Signing keys. [Groups](/guides/features/#groups), domains, and [namespaces](/guides/core-concepts/#namespaces).                      |
-| **Policies**  | The [sign-in policies](/guides/features/#sign-in-policies), archived policies, and rules for the whole tenant: the primary identifier, the default policy, **Who may sign in**, and **Auto-deletion** of idle actors. |
-| **Providers** | The providers and MCP servers that actors sign in or connect with.                                                                                                                                                    |
-| **Directory** | The [LDAP](/guides/ldap/) server. [Provisioning](/guides/sso-saml/#provisioning) tokens.                                                                                                                              |
-| **Messages**  | **Sending** holds the services that send email and text messages. **Templates** holds the wording of each email.                                                                                                      |
-| **Activity**  | **Log** holds the tenant's whole activity, which you can filter by kind of event, narrow to what is worth a look, and export. **Streams** holds the [event streams](/guides/event-streams/).                          |
+| Tab           | What it holds                                                                                                                                                                                        |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **General**   | The tenant's name and branding. How long activity is kept. **Dynamic registration**. Signing keys. [Groups](/guides/features/#groups), domains, and [namespaces](/guides/core-concepts/#namespaces). |
+| **Policies**  | The [sign-in policies](/guides/features/#sign-in-policies), and rules for the whole tenant: **Primary identifier**, **Default policy**, **Who may sign in**, and **Auto-deletion** of idle actors.   |
+| **Providers** | The providers and MCP servers that actors sign in or connect with.                                                                                                                                   |
+| **Directory** | The [LDAP](/guides/ldap/) server. [Provisioning](/guides/sso-saml/#provisioning) tokens.                                                                                                             |
+| **Messages**  | **Sending** holds the services that send email and text messages. **Templates** holds the wording of each email.                                                                                     |
+| **Activity**  | **Log** holds the tenant's whole activity, which you can filter, narrow to what is worth a look, and export. **Streams** holds the [event streams](/guides/event-streams/).                          |
 
 The settings tabs also show who is signed in, with two buttons:
 
@@ -144,33 +114,18 @@ The settings tabs also show who is signed in, with two buttons:
 
 ### A provider's page
 
-The providers list shows each provider's protocol. It marks a provider that:
-
-- adds the actors it signs in
-- trusts the email addresses it confirms
-- accepts its [security events](/guides/shared-signals/)
-- lets clients use an actor's account there
-- has no client secret set
-
-Archived providers are in a section of their own, with **Restore**.
-
 To add a provider, choose **Add provider**. Start from a known provider, such as Google, GitHub, or
 Okta, or from a blank OpenID Connect, OAuth 2.0, SAML 2.0, or MCP provider.
 
-| Tab                    | What it holds                                                                                                                                                                                      |
-| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Setup**              | Its name. The values to give the provider. Its endpoints and credentials. Archiving it.                                                                                                            |
-| **Sign-in**            | The email domains it signs in. Whether it adds the actors it signs in, and the scopes a new actor gets. Whether it trusts their email addresses. Its security events. Where each claim comes from. |
-| **Clients**            | [Delegation](/guides/connecting-via-sdk/#set-up-the-provider): whether clients may use an actor's account there, and what they may do with it.                                                     |
-| **Connected accounts** | Every actor who has connected an account through it.                                                                                                                                               |
+| Tab                    | What it holds                                                                                                                                                         |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Setup**              | Its name. The values to give the provider. Its endpoints and credentials. Archiving it.                                                                               |
+| **Sign-in**            | The email domains it signs in. Whether it adds the actors it signs in, and whether it trusts their email addresses. Its security events. Where each claim comes from. |
+| **Clients**            | [Delegation](/guides/connecting-via-sdk/#set-up-the-provider): whether clients may use an actor's account there, and what they may do with it.                        |
+| **Connected accounts** | Every actor who has connected an account through it.                                                                                                                  |
 
-What each kind of provider shows:
-
-- An MCP server has no **Sign-in** tab. Its **Setup** tab has **Register again**.
-- A SAML provider has no **Clients** tab, and no setting to trust email addresses.
-- Only an OpenID Connect provider has security events.
-- The form for a known provider leaves out its endpoints and where each claim comes from. The
-  provider's page shows them once it is added.
+Not every provider has every tab. An MCP server has no **Sign-in** tab, and a SAML provider has no
+**Clients** tab.
 
 Your changes on a provider's page wait in a bar at the bottom of the screen. Choose **Save** to keep
 them, or **Discard** to drop them.

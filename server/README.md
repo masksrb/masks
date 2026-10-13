@@ -1,8 +1,8 @@
 # masks server
 
 The app that runs the masks provider on its own. It mounts the `masks-server` engine from
-[`../engine`](../engine) at `/` with the configuration the container image uses, which is Server
-mode in [Rails apps](https://masks.pages.dev/reference/ruby/). The provider's models, logins,
+[`../engine`](../engine) at `/` with the configuration the container image uses, which is
+[Server mode](https://masks.pages.dev/reference/ruby/server-mode/). The provider's models, logins,
 policies, jobs, and manage API live in the engine. This app holds what the image needs around it:
 
 ```

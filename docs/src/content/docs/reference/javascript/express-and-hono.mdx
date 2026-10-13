@@ -1,0 +1,80 @@
+---
+title: Express and Hono
+description: "Sign people in to an Express or Hono app with the masks middleware, and guard routes by privilege."
+---
+
+`masksExpress` from `@masks/server/express` and `masksHono` from `@masks/server/hono` read the
+[settings](/reference/javascript/#setting-up) every integration shares, and take every
+[option](/reference/javascript/server/#options).
+
+## Express
+
+```ts
+import express from "express";
+import { masksExpress, requireAuth } from "@masks/server/express";
+
+const app = express();
+
+app.use(
+  masksExpress({ name: "Catalog", privileges: { admin: ["catalog:admin"] } }),
+);
+app.get("/", (req, res) => res.json(req.masked));
+app.get("/settings", requireAuth("admin"), (req, res) =>
+  res.json({ subject: req.masked?.subject }),
+);
+```
+
+## Hono
+
+```ts
+import { Hono } from "hono";
+import { masksHono, requireAuth } from "@masks/server/hono";
+
+const app = new Hono();
+
+app.use(
+  masksHono({ name: "Catalog", privileges: { admin: ["catalog:admin"] } }),
+);
+app.get("/", (c) => c.json(c.get("masked")));
+app.get("/settings", requireAuth("admin"), (c) =>
+  c.json({ subject: c.get("masked").subject }),
+);
+```
+
+`c.get("masked")` is typed in any Hono app. A refusal is thrown as an `HTTPException` that carries
+the masks answer, so Hono sends that answer unless `app.onError` changes it.
+
+## How the middleware works
+
+- The middleware answers the `/auth` routes and `/.well-known/oauth-protected-resource`. On every
+  other request, it puts the person on `req.masked` or `c.get("masked")`, signed in or not.
+- `requireAuth(...privileges)` guards a route by session or by access token. It needs the
+  middleware to run first.
+- `session: false` skips reading the session on routes that `requireAuth` does not guard.
+- `masks` takes a `Masks` the app already built, used in place of a new one.
+
+## Cloudflare Workers
+
+On Cloudflare Workers, `masksHono` reads `MASKS_ISSUER`, `MASKS_RESOURCE`, and `MASKS_SECRET` from
+the Worker's variables and secrets.
+
+- A Worker has no file to write the handshake's credentials to. Set `MASKS_CLIENT_ID` and
+  `MASKS_CLIENT_SECRET` as secrets, or pass a `credentials` store of your own. See
+  [credentials](/reference/javascript/#credentials).
+- Each Worker isolate keeps its own memory. Set `store` to a
+  [`Store`](/reference/javascript/server/#stores) that every isolate shares. `upstashStore` reaches
+  Upstash with `fetch`, which a Worker has:
+
+```ts
+import { env } from "cloudflare:workers";
+import { upstashStore } from "@masks/server";
+
+app.use(
+  masksHono({
+    store: upstashStore({
+      url: env.UPSTASH_REDIS_REST_URL,
+      token: env.UPSTASH_REDIS_REST_TOKEN,
+    }),
+  }),
+);
+```

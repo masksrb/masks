@@ -42,8 +42,8 @@ which limits each query to one tenant's rows, keeps tenants apart. Two kinds of 
 so masks checks the role it serves as:
 
 - A role that holds `SUPERUSER` or `BYPASSRLS` is always refused.
-- Outside development, a role that owns masks' tables is refused, since an owner can turn
-  row-level security off.
+- Outside development and test, a role that owns masks' tables is refused, since an owner can
+  turn row-level security off.
 
 Migrate as one role and serve as another, as [database roles](/guides/self-hosting/#database-roles)
 describes. The serving role needs `SELECT`, `INSERT`, `UPDATE`, and `DELETE` on the tables and the

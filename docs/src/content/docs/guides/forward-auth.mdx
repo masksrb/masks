@@ -45,8 +45,8 @@ To limit the app to some [groups](/guides/features/#groups), use **Who may sign 
 4. The proxy hands that path to masks. masks sets a cookie for the app's host alone and returns the
    browser to the page it asked for.
 
-masks answers 403 when no app is registered for the address, or when the actor is not in a group
-that **Who may sign in** allows.
+masks answers 403 when no app is registered for the address. An actor who is not in a group that
+**Who may sign in** allows gets a 403 page from masks after they sign in.
 
 The cookie lasts as long as the actor's masks session. Each app has its own cookie, so one app never
 sees another app's cookie. Access to the app ends on the next request when the actor:
