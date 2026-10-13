@@ -145,6 +145,36 @@ test("a stale handshake callback is refused", async () => {
   assert.match(await answer.text(), /invalid_state/);
 });
 
+test("an error on a sign-in this browser did not start never repeats its text", async () => {
+  const held = await signedIn();
+  const forged = `/api/auth/callback/masks?${new URLSearchParams({
+    error: "access_denied",
+    error_description: "Call 555-0100 now",
+    state: "forged",
+    iss: held.fake.url,
+  })}`;
+
+  for (const browser of [
+    held.browser,
+    new Browser(held.browser.handler, APP),
+  ]) {
+    await browser.fetch("/api/auth/masks/signin?callbackUrl=/dashboard");
+
+    let answer = await browser.fetch(forged);
+
+    for (let hop = 0; hop < 5; hop++) {
+      const location = answer.headers.get("location") ?? "";
+      assert.doesNotMatch(location, /555-0100/);
+      assert.doesNotMatch(await answer.text(), /555-0100/);
+
+      if (!location.startsWith(APP)) break;
+
+      const next = new URL(location);
+      answer = await browser.fetch(`${next.pathname}${next.search}`);
+    }
+  }
+});
+
 test("an expired access token is refreshed once, however many requests arrive together", async () => {
   const held = await signedIn({
     before: (fake) => {

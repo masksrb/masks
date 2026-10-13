@@ -222,6 +222,22 @@ test("the organization and a declined sign-in are passed through", async () => {
   assert.equal((await answer.json()).error, "access_denied");
 });
 
+test("an error on a sign-in this browser did not start never repeats its text", async () => {
+  const { browser } = await setup({}, closers);
+  const forged =
+    "/auth/callback?error=access_denied&error_description=Call+555-0100+now&state=forged";
+
+  const page = await browser.fetch(forged);
+  const body = await page.text();
+  assert.equal(page.status, 400);
+  assert.doesNotMatch(body, /555-0100/);
+  assert.match(body, /invalid_state/);
+
+  const answer = await browser.fetch(forged, { headers: json });
+  assert.equal(answer.status, 400);
+  assert.equal((await answer.json()).error, "invalid_state");
+});
+
 test("an expiring token is refreshed once for concurrent requests", async () => {
   const held = await setup({}, closers);
   held.fake.lifetime = 5;

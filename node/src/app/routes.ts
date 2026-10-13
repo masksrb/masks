@@ -164,6 +164,15 @@ async function callback(core: Core, visit: Visit): Promise<Response> {
 
   if (pending) await core.sessions.writeFlow(visit, flow);
 
+  if (params.get("error") && !pending) {
+    return answer(
+      visit,
+      400,
+      "invalid_state",
+      "masks refused a sign-in that this browser did not start, or one that expired",
+    );
+  }
+
   if (params.get("error")) {
     return answer(
       visit,
