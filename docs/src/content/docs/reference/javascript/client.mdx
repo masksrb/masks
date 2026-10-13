@@ -955,14 +955,14 @@ Defined in: [jwt.ts:11](https://github.com/masksrb/masks/blob/main/web/src/jwt.t
 
 ### LoginOptions
 
-Defined in: [session.ts:16](https://github.com/masksrb/masks/blob/main/web/src/session.ts#L16)
+Defined in: [session.ts:15](https://github.com/masksrb/masks/blob/main/web/src/session.ts#L15)
 
 #### Properties
 
 | Property | Type | Defined in |
 | ------ | ------ | ------ |
-| <a id="organization-4"></a> `organization?` | `string` | [session.ts:18](https://github.com/masksrb/masks/blob/main/web/src/session.ts#L18) |
-| <a id="returnto-1"></a> `returnTo?` | `string` | [session.ts:17](https://github.com/masksrb/masks/blob/main/web/src/session.ts#L17) |
+| <a id="organization-4"></a> `organization?` | `string` | [session.ts:17](https://github.com/masksrb/masks/blob/main/web/src/session.ts#L17) |
+| <a id="returnto-1"></a> `returnTo?` | `string` | [session.ts:16](https://github.com/masksrb/masks/blob/main/web/src/session.ts#L16) |
 
 ***
 
@@ -1041,7 +1041,7 @@ Defined in: [types.ts:39](https://github.com/masksrb/masks/blob/main/web/src/typ
 
 ### SessionClient
 
-Defined in: [session.ts:21](https://github.com/masksrb/masks/blob/main/web/src/session.ts#L21)
+Defined in: [session.ts:20](https://github.com/masksrb/masks/blob/main/web/src/session.ts#L20)
 
 #### Methods
 
@@ -1053,7 +1053,7 @@ Defined in: [session.ts:21](https://github.com/masksrb/masks/blob/main/web/src/s
 avatarUrl(account, options?): string | null;
 ```
 
-Defined in: [session.ts:33](https://github.com/masksrb/masks/blob/main/web/src/session.ts#L33)
+Defined in: [session.ts:32](https://github.com/masksrb/masks/blob/main/web/src/session.ts#L32)
 
 ###### Parameters
 
@@ -1076,7 +1076,7 @@ Defined in: [session.ts:33](https://github.com/masksrb/masks/blob/main/web/src/s
 handshake(): void;
 ```
 
-Defined in: [session.ts:31](https://github.com/masksrb/masks/blob/main/web/src/session.ts#L31)
+Defined in: [session.ts:30](https://github.com/masksrb/masks/blob/main/web/src/session.ts#L30)
 
 ###### Returns
 
@@ -1090,7 +1090,7 @@ Defined in: [session.ts:31](https://github.com/masksrb/masks/blob/main/web/src/s
 handshakeUrl(): string;
 ```
 
-Defined in: [session.ts:32](https://github.com/masksrb/masks/blob/main/web/src/session.ts#L32)
+Defined in: [session.ts:31](https://github.com/masksrb/masks/blob/main/web/src/session.ts#L31)
 
 ###### Returns
 
@@ -1104,7 +1104,7 @@ Defined in: [session.ts:32](https://github.com/masksrb/masks/blob/main/web/src/s
 login(options?): void;
 ```
 
-Defined in: [session.ts:25](https://github.com/masksrb/masks/blob/main/web/src/session.ts#L25)
+Defined in: [session.ts:24](https://github.com/masksrb/masks/blob/main/web/src/session.ts#L24)
 
 ###### Parameters
 
@@ -1124,7 +1124,7 @@ Defined in: [session.ts:25](https://github.com/masksrb/masks/blob/main/web/src/s
 loginUrl(options?): string;
 ```
 
-Defined in: [session.ts:30](https://github.com/masksrb/masks/blob/main/web/src/session.ts#L30)
+Defined in: [session.ts:29](https://github.com/masksrb/masks/blob/main/web/src/session.ts#L29)
 
 ###### Parameters
 
@@ -1144,7 +1144,7 @@ Defined in: [session.ts:30](https://github.com/masksrb/masks/blob/main/web/src/s
 logout(options?): Promise<void>;
 ```
 
-Defined in: [session.ts:37](https://github.com/masksrb/masks/blob/main/web/src/session.ts#L37)
+Defined in: [session.ts:36](https://github.com/masksrb/masks/blob/main/web/src/session.ts#L36)
 
 ###### Parameters
 
@@ -1165,7 +1165,7 @@ Defined in: [session.ts:37](https://github.com/masksrb/masks/blob/main/web/src/s
 require(options?): Promise<Account>;
 ```
 
-Defined in: [session.ts:24](https://github.com/masksrb/masks/blob/main/web/src/session.ts#L24)
+Defined in: [session.ts:23](https://github.com/masksrb/masks/blob/main/web/src/session.ts#L23)
 
 ###### Parameters
 
@@ -1185,7 +1185,7 @@ Defined in: [session.ts:24](https://github.com/masksrb/masks/blob/main/web/src/s
 session(): Promise<Account | null>;
 ```
 
-Defined in: [session.ts:22](https://github.com/masksrb/masks/blob/main/web/src/session.ts#L22)
+Defined in: [session.ts:21](https://github.com/masksrb/masks/blob/main/web/src/session.ts#L21)
 
 ###### Returns
 
@@ -1199,7 +1199,7 @@ Defined in: [session.ts:22](https://github.com/masksrb/masks/blob/main/web/src/s
 status(): Promise<Status>;
 ```
 
-Defined in: [session.ts:23](https://github.com/masksrb/masks/blob/main/web/src/session.ts#L23)
+Defined in: [session.ts:22](https://github.com/masksrb/masks/blob/main/web/src/session.ts#L22)
 
 ###### Returns
 
@@ -1213,7 +1213,7 @@ Defined in: [session.ts:23](https://github.com/masksrb/masks/blob/main/web/src/s
 switchOrganization(key, options?): void;
 ```
 
-Defined in: [session.ts:26](https://github.com/masksrb/masks/blob/main/web/src/session.ts#L26)
+Defined in: [session.ts:25](https://github.com/masksrb/masks/blob/main/web/src/session.ts#L25)
 
 ###### Parameters
 
@@ -1232,15 +1232,15 @@ Defined in: [session.ts:26](https://github.com/masksrb/masks/blob/main/web/src/s
 
 ### SessionOptions
 
-Defined in: [session.ts:10](https://github.com/masksrb/masks/blob/main/web/src/session.ts#L10)
+Defined in: [session.ts:9](https://github.com/masksrb/masks/blob/main/web/src/session.ts#L9)
 
 #### Properties
 
 | Property | Type | Defined in |
 | ------ | ------ | ------ |
-| <a id="basepath"></a> `basePath?` | `string` | [session.ts:11](https://github.com/masksrb/masks/blob/main/web/src/session.ts#L11) |
-| <a id="csrftoken"></a> `csrfToken?` | () => `string` \| `null` | [session.ts:13](https://github.com/masksrb/masks/blob/main/web/src/session.ts#L13) |
-| <a id="fetch-2"></a> `fetch?` | (`input`, `init?`) => `Promise`\<`Response`\> | [session.ts:12](https://github.com/masksrb/masks/blob/main/web/src/session.ts#L12) |
+| <a id="basepath"></a> `basePath?` | `string` | [session.ts:10](https://github.com/masksrb/masks/blob/main/web/src/session.ts#L10) |
+| <a id="csrftoken"></a> `csrfToken?` | () => `string` \| `null` | [session.ts:12](https://github.com/masksrb/masks/blob/main/web/src/session.ts#L12) |
+| <a id="fetch-2"></a> `fetch?` | (`input`, `init?`) => `Promise`\<`Response`\> | [session.ts:11](https://github.com/masksrb/masks/blob/main/web/src/session.ts#L11) |
 
 ***
 
@@ -1398,7 +1398,7 @@ Defined in: [browser.ts:82](https://github.com/masksrb/masks/blob/main/web/src/b
 function createSession(options?): SessionClient;
 ```
 
-Defined in: [session.ts:60](https://github.com/masksrb/masks/blob/main/web/src/session.ts#L60)
+Defined in: [session.ts:59](https://github.com/masksrb/masks/blob/main/web/src/session.ts#L59)
 
 #### Parameters
 
