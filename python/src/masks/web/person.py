@@ -85,6 +85,7 @@ class Person:
     account_url: str = ""
     known: Mapping[str, Privilege] = field(default_factory=dict, repr=False)
     by_token: bool = False
+    avatar_url: str = ""
 
     def __getitem__(self, claim: str) -> Any:
         return self.claims.get(claim)
@@ -120,6 +121,9 @@ class Person:
 
     @property
     def picture(self) -> str:
+        if self.avatar_url and self.avatars.get("photo"):
+            return self.avatar_url
+
         return str(self.claims.get("picture") or self.avatars.get("photo") or self.avatars.get("identicon") or "")
 
     @property

@@ -114,7 +114,8 @@ def test_a_visitor_is_sent_through_masks_and_back(app: TestClient, fake: Fake) -
     assert me["email"] == "ada@example.com"
     assert me["account_url"] == f"{ISSUER}/"
     assert [held["key"] for held in me["organizations"]] == ["acme", "globex"]
-    assert me["picture"] == f"{ISSUER}/avatars/ada/photo"
+    assert me["picture"] == "/auth/avatar"
+    assert me["avatars"]["photo"] == f"{ISSUER}/avatars/ada/photo"
 
 
 def test_a_json_request_gets_401_with_a_login_url(app: TestClient) -> None:

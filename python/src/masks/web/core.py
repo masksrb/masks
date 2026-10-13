@@ -510,6 +510,7 @@ class Masks:
             expires_at=token.expires_at,
             account_url=self.account_url(request),
             known=self.config.known,
+            avatar_url=self.path("/avatar"),
         )
 
     def person(self, request: Incoming, session: Session) -> Step[Person]:

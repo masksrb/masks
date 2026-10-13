@@ -96,7 +96,7 @@ A guard that checks a token answers `401` with `Bearer` and `DPoP` challenges. E
 | --- | --- |
 | `signed_in` | Whether there is a sign-in and its token has not expired. |
 | `subject`, `name`, `nickname`, `email`, `email_verified` | Who signed in. |
-| `picture` | The `picture` claim, then the photo, then the identicon. |
+| `picture` | The app's `/auth/avatar` route when masks holds a photo, since the photo at masks loads only for someone signed in there. Otherwise the `picture` claim, then the identicon. |
 | `avatars` | Each avatar URL, by kind. |
 | `tenant` | The tenant's `uuid`, `subdomain`, and `name`. |
 | `organization` | The organization signed in to, or `None`. |
