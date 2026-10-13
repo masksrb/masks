@@ -47,8 +47,9 @@ It reads the [settings](/reference/python/#setting-up) every integration shares.
    ```
 
 `login_required` and `token_required` take privileges like the [FastAPI](/reference/python/fastapi/) guards, and `login_required`
-takes `tokens=True`. `request.masked` is the person on every request. Django's CSRF check stays on
-for every route except back-channel logout, so a sign-out form needs `{% csrf_token %}`.
+takes `tokens=True`. `request.masked` is the person on every request. masks' own routes check that a
+form came from this site, so Django's CSRF check is off for them, and a sign-out form needs no
+`{% csrf_token %}`.
 
 ## Reference
 
@@ -69,5 +70,3 @@ for every route except back-channel logout, so a sign-out form needs `{% csrf_to
 | `connected(request)` | Whether the app holds credentials. |
 | `person(request)` | The person, the same as `request.masked`. |
 | `engine()` | The shared engine built from `MASKS`. |
-
-Django's CSRF check covers every route except back-channel logout.

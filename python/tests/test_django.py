@@ -75,13 +75,18 @@ def test_django_over_time(scenario: Callable[..., None], fake: Fake, monkeypatch
     scenario(DjangoBrowser, fake, monkeypatch)
 
 
-def test_django_keeps_its_csrf_check_on_sign_out(fake: Fake) -> None:
+def test_masks_forms_check_their_own_origin_under_djangos_csrf_check(fake: Fake) -> None:
     browser = DjangoBrowser(scenarios.config(fake))
     browser.client = Client(HTTP_HOST="app.example", enforce_csrf_checks=True)
     scenarios.sign_in(browser, fake)
+    elsewhere = {"Origin": "https://elsewhere.example", **scenarios.JSON}
+    here = {"Origin": scenarios.APP, **scenarios.HTML}
 
-    assert browser.post("/auth/logout", scenarios.JSON).status == 403
+    assert browser.post("/auth/logout", elsewhere).status == 403
     assert browser.get("/me").status == 200
+    assert "/handshake" in browser.post("/auth/handshake", here).location
+    assert browser.post("/auth/logout", here).status == 303
+    assert browser.get("/me", scenarios.JSON).status == 401
 
 
 def test_django_refuses_an_async_session_store(fake: Fake) -> None:

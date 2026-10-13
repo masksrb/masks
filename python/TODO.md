@@ -7,5 +7,4 @@
 
 ## Testing
 
-- FastAPI and Flask have run against a live masks: the handshake, Reconnect, sign-in, a privilege step-up, a token at the API, a shared refresh across concurrent requests, and signing out everywhere. FastAPI also ran with an async server session store. Back-channel logout has not, since masks in Docker cannot reach the app on the host.
-- Django has not run against a live masks.
+- FastAPI, Flask, and Django have run against a live masks: the handshake, Reconnect, sign-in, a privilege step-up, a token at the API, a shared refresh across concurrent requests, and signing out everywhere. FastAPI also ran with an async server session store, and Django ran under gunicorn with three workers sharing a `RedisStore`. Back-channel logout has not, since masks in Docker cannot reach the app on the host.

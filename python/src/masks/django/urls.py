@@ -51,11 +51,7 @@ def patterns() -> list[Any]:
     found = []
 
     for route, methods in grouped.items():
-        view = dispatching(methods)
-
-        if "backchannel" in methods.values():
-            view = csrf_exempt(view)
-
+        view = csrf_exempt(dispatching(methods))
         found.append(path(route.lstrip("/"), view, name=f"masks_{route.strip('/').replace('/', '_') or 'start'}"))
 
     found.append(path(METADATA_PATH.lstrip("/"), metadata, name="masks_metadata"))
