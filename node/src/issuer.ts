@@ -6,6 +6,7 @@ import {
   InvalidTokenError,
   MasksError,
   redacted,
+  UnavailableError,
 } from "./errors.js";
 import { getJSON } from "./http.js";
 import type { Key } from "./key.js";
@@ -24,6 +25,7 @@ export const RESOURCE_PATH = "/.well-known/oauth-protected-resource";
 
 const KEYS_LIFETIME = 5 * 60 * 1000;
 const KEYS_PATIENCE = 30 * 1000;
+const KEYS_STALE = 60 * 60 * 1000;
 
 export interface Tenant {
   uuid?: string;
@@ -85,6 +87,7 @@ export class Issuer {
   readonly options: Options;
   #keys: JWK[] = [];
   #keysAt = 0;
+  #keysFailedAt = 0;
   #fetching?: Promise<void>;
 
   private constructor(url: string, metadata: Metadata, options: Options) {
@@ -173,28 +176,55 @@ export class Issuer {
   }
 
   async key(kid: string | undefined): Promise<JWK> {
-    const fresh = Date.now() - this.#keysAt < KEYS_LIFETIME;
     const found = () =>
       this.#keys.find(
         (held) => held.kid === kid && held.use !== "enc" && !("d" in held),
       );
+    const age = Date.now() - this.#keysAt;
 
-    if (kid && fresh && found()) return found() as JWK;
+    if (kid && age < KEYS_LIFETIME && found()) return found() as JWK;
 
-    if (Date.now() - this.#keysAt >= KEYS_PATIENCE) {
+    const stale = () => (kid && age < KEYS_STALE ? found() : undefined);
+
+    if (Date.now() - this.#keysFailedAt < KEYS_PATIENCE) {
+      const held = stale();
+
+      if (held) return held;
+
+      throw new UnavailableError(
+        `${this.url} could not be reached for its keys`,
+      );
+    }
+
+    if (age >= KEYS_PATIENCE) {
       this.#fetching ??= getJSON<{ keys?: JWK[] }>(
         this.options,
         this.endpoint("jwks_uri"),
       )
-        .then((held) => {
-          this.#keys = Array.isArray(held.keys) ? held.keys : [];
-          this.#keysAt = Date.now();
-        })
+        .then(
+          (held) => {
+            this.#keys = Array.isArray(held.keys) ? held.keys : [];
+            this.#keysAt = Date.now();
+            this.#keysFailedAt = 0;
+          },
+          (error: unknown) => {
+            this.#keysFailedAt = Date.now();
+            throw error;
+          },
+        )
         .finally(() => {
           this.#fetching = undefined;
         });
 
-      await this.#fetching;
+      try {
+        await this.#fetching;
+      } catch (error) {
+        const held = stale();
+
+        if (held) return held;
+
+        throw error;
+      }
     }
 
     const held = kid ? found() : undefined;

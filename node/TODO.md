@@ -15,7 +15,6 @@
 - Every sign-in start reads the registration from masks. Cache a good answer, or rely on `invalid_client`.
 - Remove `Visit.flowChanged`, `Privileges.names`, and the `SessionData | undefined` branch of the refresh.
 - Split masks.ts along the seams go/web uses: session and flow state, routes, and guards.
-- The issuer's keys are fetched again on every request while masks is down. Back off.
 
 ## Auth.js
 

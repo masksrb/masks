@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { after, mock, test } from "node:test";
 import { IssuerCache } from "../dist/app/issuers.js";
+import { Issuer, UnavailableError } from "../dist/index.js";
 import { Fake } from "./fake.js";
 
 const closers = [];
@@ -89,6 +90,39 @@ test("an issuer that cannot be reached is not asked again until the back-off end
     mock.timers.tick(5_000);
     await assert.rejects(cache.get(url));
     assert.equal(net.asked.length, 3);
+  } finally {
+    mock.timers.reset();
+  }
+});
+
+test("while masks is down, a known key keeps checking tokens and the keys are not fetched on every request", async () => {
+  const fake = await Fake.start();
+  closers.push(fake.close);
+  const net = counting();
+  const issuer = await Issuer.discover(fake.url, { fetch: net.fetcher });
+  const { keys } = await (
+    await fetch(`${fake.url}/.well-known/jwks.json`)
+  ).json();
+  const kid = keys[0].kid;
+  const fetched = () => net.asked.filter((url) => url.includes("jwks")).length;
+
+  mock.timers.enable({ apis: ["Date"], now: Date.now() });
+
+  try {
+    assert.equal((await issuer.key(kid)).kid, kid);
+    assert.equal(fetched(), 1);
+
+    mock.timers.tick(5 * 60 * 1000 + 1);
+    net.down(true);
+
+    assert.equal((await issuer.key(kid)).kid, kid);
+    assert.equal(fetched(), 2);
+    assert.equal((await issuer.key(kid)).kid, kid);
+    await assert.rejects(issuer.key("unknown"), UnavailableError);
+    assert.equal(fetched(), 2);
+
+    mock.timers.tick(60 * 60 * 1000);
+    await assert.rejects(issuer.key(kid));
   } finally {
     mock.timers.reset();
   }
