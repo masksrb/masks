@@ -4,6 +4,7 @@
     "includes": [
       "app/frontend/**/*.js",
       "app/frontend/**/*.svelte",
+      "test/frontend/**/*.js",
       "*.js",
       "*.json"
     ],
