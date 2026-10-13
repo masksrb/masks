@@ -6,93 +6,102 @@ description: The specifications masks implements, and how far each one goes.
 masks is an OpenID Connect provider. This page lists each specification it
 implements and the parts it leaves out.
 
-Four OpenID Foundation certification plans pass with no failures: `oidcc-config`
-and `oidcc-basic` with 2,194 conditions, `oidcc-rp-initiated-logout` with 642,
-and `oidcc-backchannel-rp-initiated-logout` with 104. `./dev conformance` runs
-all four against a local server.
+`./dev conformance` runs four OpenID Foundation certification plans against a
+local server: `oidcc-config`, `oidcc-basic`, `oidcc-rp-initiated-logout`, and
+`oidcc-backchannel-rp-initiated-logout`. All four pass with no failures.
 
-| | |
-| --- | --- |
-| ✅ | Implemented, covered by the test suite, and passing its conformance plan where one exists. |
-| ◐ | Partly implemented. The Coverage column names the parts left out. |
-| ✗ | Not implemented, and the discovery document says so. |
+|     |                                                                                            |
+| --- | ------------------------------------------------------------------------------------------ |
+| ✅  | Implemented, covered by the test suite, and passing its conformance plan where one exists. |
+| ◐   | Partly implemented. The Coverage column names the parts left out.                          |
+| ✗   | Not implemented, and the discovery document says so.                                       |
 
 ## Core
 
-| Specification | Status | Coverage |
-| --- | --- | --- |
-| [OpenID Connect Core 1.0](https://openid.net/specs/openid-connect-core-1_0.html) | ✅ | The authorization code flow, ID tokens, userinfo, `prompt`, `max_age`, `acr` and `amr`, and the `claims` parameter. |
-| [OpenID Connect Discovery 1.0](https://openid.net/specs/openid-connect-discovery-1_0.html) | ✅ | `/.well-known/openid-configuration`, one for each tenant. |
-| [OpenID Connect Dynamic Registration 1.0](https://openid.net/specs/openid-connect-registration-1_0.html) | ✅ | Bounded by the tenant's ceiling. |
-| [OAuth 2.0 (RFC 6749)](https://www.rfc-editor.org/rfc/rfc6749) | ◐ | The `authorization_code`, `refresh_token`, and `client_credentials` grants. The implicit and password grants are not offered. |
-| [Bearer tokens (RFC 6750)](https://www.rfc-editor.org/rfc/rfc6750) | ✅ | The userinfo endpoint reads a bearer token from the `Authorization` header, a form-encoded body, or the `access_token` query parameter. |
-| [JWT (RFC 7519)](https://www.rfc-editor.org/rfc/rfc7519) | ✅ | `RS256`, with a signing key for each tenant. ID tokens are typed `JWT`, access tokens `at+jwt`, and logout tokens `logout+jwt`. |
-| [JWK (RFC 7517)](https://www.rfc-editor.org/rfc/rfc7517) | ✅ | `/.well-known/jwks.json`, which also publishes staged and retired keys during a rotation. |
+| Specification                                                                                            | Status | Coverage                                                                                                                                                                                                                                     |
+| -------------------------------------------------------------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [OpenID Connect Core 1.0](https://openid.net/specs/openid-connect-core-1_0.html)                         | ✅     | The authorization code flow, ID tokens, userinfo, `prompt`, `max_age`, `acr` and `amr`, and the `claims` parameter.                                                                                                                          |
+| [OpenID Connect Discovery 1.0](https://openid.net/specs/openid-connect-discovery-1_0.html)               | ✅     | `/.well-known/openid-configuration`, one for each tenant.                                                                                                                                                                                    |
+| [Authorization server metadata (RFC 8414)](https://www.rfc-editor.org/rfc/rfc8414)                       | ✅     | `/.well-known/oauth-authorization-server` serves the same document as discovery.                                                                                                                                                             |
+| [OpenID Connect Dynamic Registration 1.0](https://openid.net/specs/openid-connect-registration-1_0.html) | ✅     | Bounded by the tenant's ceiling.                                                                                                                                                                                                             |
+| [OAuth 2.0 (RFC 6749)](https://www.rfc-editor.org/rfc/rfc6749)                                           | ◐      | The `authorization_code`, `refresh_token`, and `client_credentials` grants. The implicit and password grants are not offered.                                                                                                                |
+| [Bearer tokens (RFC 6750)](https://www.rfc-editor.org/rfc/rfc6750)                                       | ✅     | The userinfo endpoint reads a bearer token from the `Authorization` header, a form-encoded body, or the `access_token` query parameter.                                                                                                      |
+| [JWT (RFC 7519)](https://www.rfc-editor.org/rfc/rfc7519)                                                 | ✅     | masks signs with `RS256`, with a signing key for each tenant. ID tokens are typed `JWT`, access tokens `at+jwt`, and logout tokens `logout+jwt`. Request objects and client assertions may use `RS`, `PS`, or `ES` at 256, 384, or 512 bits. |
+| [JWK (RFC 7517)](https://www.rfc-editor.org/rfc/rfc7517)                                                 | ✅     | `/.well-known/jwks.json`. During a rotation, it also publishes the staged key and the key being retired.                                                                                                                                     |
 
 The only response type is `code`, and the only response mode is `query`.
 
 ## Hardening
 
-| Specification | Status | Coverage |
-| --- | --- | --- |
-| [PKCE (RFC 7636)](https://www.rfc-editor.org/rfc/rfc7636) | ✅ | `S256` only. Every public client must send a challenge. |
-| [Pushed authorization requests (RFC 9126)](https://www.rfc-editor.org/rfc/rfc9126) | ✅ | A client can be required to use them. See [pushed requests](/guides/security/#pushed-requests). |
-| [DPoP (RFC 9449)](https://www.rfc-editor.org/rfc/rfc9449) | ✅ | Includes `dpop_jkt`, bound refresh tokens, and `dpop_bound_access_tokens`. See [binding a token with DPoP](/guides/security/#binding-a-token-with-dpop). |
-| [Issuer identification (RFC 9207)](https://www.rfc-editor.org/rfc/rfc9207) | ✅ | `iss` on every authorization response. |
-| [Rich authorization requests (RFC 9396)](https://www.rfc-editor.org/rfc/rfc9396) | ✅ | `authorization_details` at `/authorize`, `/par`, in a signed request, and at the token endpoint for the code, refresh, and exchange grants, each checked against the type an approved client declared. See [rich authorization requests](/guides/security/#rich-authorization-requests). |
-| [Resource indicators (RFC 8707)](https://www.rfc-editor.org/rfc/rfc8707) | ✅ | `resource` narrows the audience at both the authorization and token endpoints. |
-| [Request objects, JAR (RFC 9101)](https://www.rfc-editor.org/rfc/rfc9101) | ◐ | A signed `request` at `/authorize` and `/par`, and a client can be required to sign. See [signed requests](/guides/security/#signed-requests). The only `request_uri` accepted is one issued by `/par`. Encrypted request objects are not read. |
-| [FAPI 2.0](https://openid.net/specs/fapi-security-profile-2_0-final.html) | ◐ | PAR, PKCE, `private_key_jwt`, DPoP, `iss` on the response, and signed requests, each of which a client can be required to use. The FAPI certification plan has not been run. |
+| Specification                                                                      | Status | Coverage                                                                                                                                                                                                                                                                                                                   |
+| ---------------------------------------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [PKCE (RFC 7636)](https://www.rfc-editor.org/rfc/rfc7636)                          | ✅     | `S256` only. Every public client must send a challenge.                                                                                                                                                                                                                                                                    |
+| [Pushed authorization requests (RFC 9126)](https://www.rfc-editor.org/rfc/rfc9126) | ✅     | A client can be required to use them. See [pushed requests](/guides/security/#pushed-requests).                                                                                                                                                                                                                            |
+| [DPoP (RFC 9449)](https://www.rfc-editor.org/rfc/rfc9449)                          | ✅     | Includes `dpop_jkt`, bound refresh tokens, and `dpop_bound_access_tokens`. See [binding a token with DPoP](/guides/security/#binding-a-token-with-dpop).                                                                                                                                                                   |
+| [Issuer identification (RFC 9207)](https://www.rfc-editor.org/rfc/rfc9207)         | ✅     | `iss` on every authorization response.                                                                                                                                                                                                                                                                                     |
+| [Rich authorization requests (RFC 9396)](https://www.rfc-editor.org/rfc/rfc9396)   | ✅     | `authorization_details` at `/authorize`, at `/par`, and in a signed request, each checked against the types an approved client declared. At the token endpoint, the code, refresh, and exchange grants can only narrow what was granted. See [rich authorization requests](/guides/security/#rich-authorization-requests). |
+| [Resource indicators (RFC 8707)](https://www.rfc-editor.org/rfc/rfc8707)           | ✅     | `resource` narrows the audience at both the authorization and token endpoints.                                                                                                                                                                                                                                             |
+| [Request objects, JAR (RFC 9101)](https://www.rfc-editor.org/rfc/rfc9101)          | ◐      | A signed `request` at `/authorize` and `/par`, and a client can be required to sign. See [signed requests](/guides/security/#signed-requests). The only `request_uri` accepted is one issued by `/par`. Encrypted request objects are not read.                                                                            |
+| [FAPI 2.0](https://openid.net/specs/fapi-security-profile-2_0-final.html)          | ◐      | PAR, PKCE, `private_key_jwt`, DPoP, `iss` on every response, and signed requests. A client can be required to use PAR, `private_key_jwt`, DPoP-bound access tokens, and signed requests. PKCE is required only of public clients. The FAPI certification plan has not been run.                                            |
 
 ## Grants
 
-| Specification | Status | Coverage |
-| --- | --- | --- |
-| [Device authorization (RFC 8628)](https://www.rfc-editor.org/rfc/rfc8628) | ✅ | See [device sign-in](/guides/features/#device-sign-in). |
-| [Token exchange (RFC 8693)](https://www.rfc-editor.org/rfc/rfc8693) | ✅ | Access tokens and ID tokens as the subject, actor tokens, a nested `act` chain, and a provider's access token for a [delegation](/guides/connecting-via-sdk/#delegation). Tokens signed by other issuers are not exchanged. See [exchanging a token](/guides/connecting-via-sdk/#exchanging-a-token). |
-| `client_credentials` | ✅ | For an approved client that authenticates. The token holds only scopes that do not act for a person. See [signing in as itself](/guides/features/#signing-in-as-itself). |
+| Specification                                                             | Status | Coverage                                                                                                                                                                                                                                                                                              |
+| ------------------------------------------------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Device authorization (RFC 8628)](https://www.rfc-editor.org/rfc/rfc8628) | ✅     | See [device sign-in](/guides/features/#device-sign-in).                                                                                                                                                                                                                                               |
+| [Token exchange (RFC 8693)](https://www.rfc-editor.org/rfc/rfc8693)       | ✅     | Access tokens and ID tokens as the subject, actor tokens, a nested `act` chain, and a provider's access token for a [delegation](/guides/connecting-via-sdk/#delegation). Tokens signed by other issuers are not exchanged. See [exchanging a token](/guides/connecting-via-sdk/#exchanging-a-token). |
+| `client_credentials`                                                      | ✅     | For an approved client that authenticates. The token holds only scopes that do not act for a person. See [signing in as itself](/guides/features/#signing-in-as-itself).                                                                                                                              |
 
 ## Tokens
 
-| Specification | Status | Coverage |
-| --- | --- | --- |
-| [Introspection (RFC 7662)](https://www.rfc-editor.org/rfc/rfc7662) | ✅ | A client can introspect its own tokens and the tokens issued for a resource it serves. |
-| [Revocation (RFC 7009)](https://www.rfc-editor.org/rfc/rfc7009) | ✅ | Revoking a refresh token also revokes the refresh tokens rotated from it and every access token issued from the same grant. |
-| [JWT access tokens (RFC 9068)](https://www.rfc-editor.org/rfc/rfc9068) | ✅ | Typed `at+jwt`, with `jti`, `client_id`, `scope`, `aud`, and `cnf`. An endpoint that expects an access token refuses a token of any other type. |
-| [Dynamic registration (RFC 7591)](https://www.rfc-editor.org/rfc/rfc7591) | ✅ | An initial access token comes from a handshake, or from `/enrollments` for an app [enrolling a machine](/guides/features/#enrolling-a-machine). |
-| [Registration management (RFC 7592)](https://www.rfc-editor.org/rfc/rfc7592) | ✅ | Read, update, and delete with a registration access token. |
-| [Client ID metadata documents](https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document/) | ✅ | A `client_id` that is an https URL is read as the client's metadata, within the tenant's ceiling. See [a client named by its metadata document](/guides/features/#a-client-named-by-its-metadata-document). |
-| [Protected resource metadata (RFC 9728)](https://www.rfc-editor.org/rfc/rfc9728) | ✅ | `/.well-known/oauth-protected-resource`. |
+| Specification                                                                                                  | Status | Coverage                                                                                                                                                                                                    |
+| -------------------------------------------------------------------------------------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Introspection (RFC 7662)](https://www.rfc-editor.org/rfc/rfc7662)                                             | ✅     | A client can introspect its own tokens and the tokens issued for a resource it serves.                                                                                                                      |
+| [Revocation (RFC 7009)](https://www.rfc-editor.org/rfc/rfc7009)                                                | ✅     | Revoking a refresh token also revokes the refresh tokens rotated from it and every access token issued from the same grant.                                                                                 |
+| Refresh token rotation                                                                                         | ✅     | Each refresh returns a new refresh token. Using a spent one revokes every refresh token rotated from the same grant.                                                                                        |
+| [JWT access tokens (RFC 9068)](https://www.rfc-editor.org/rfc/rfc9068)                                         | ✅     | Typed `at+jwt`, with `jti`, `client_id`, `scope`, `aud`, and `cnf`. An endpoint that expects an access token refuses a token of any other type.                                                             |
+| [Dynamic registration (RFC 7591)](https://www.rfc-editor.org/rfc/rfc7591)                                      | ✅     | Open to any client when the tenant allows it. An initial access token comes from a handshake, or from `/enrollments` for an app [enrolling a machine](/guides/features/#enrolling-a-machine).               |
+| [Registration management (RFC 7592)](https://www.rfc-editor.org/rfc/rfc7592)                                   | ✅     | Read, update, and delete with a registration access token.                                                                                                                                                  |
+| [Client ID metadata documents](https://datatracker.ietf.org/doc/draft-ietf-oauth-client-id-metadata-document/) | ✅     | A `client_id` that is an https URL is read as the client's metadata, within the tenant's ceiling. See [a client named by its metadata document](/guides/features/#a-client-named-by-its-metadata-document). |
+| [Protected resource metadata (RFC 9728)](https://www.rfc-editor.org/rfc/rfc9728)                               | ✅     | `/.well-known/oauth-protected-resource`.                                                                                                                                                                    |
 
 ## Sessions
 
-| Specification | Status | Coverage |
-| --- | --- | --- |
-| [Back-channel logout 1.0](https://openid.net/specs/openid-connect-backchannel-1_0.html) | ✅ | Signed logout tokens. Delivery is attempted up to five times, and a delivery that still fails is recorded as an event. |
-| [RP-initiated logout 1.0](https://openid.net/specs/openid-connect-rpinitiated-1_0.html) | ✅ | `end_session_endpoint`, with `id_token_hint`, `client_id`, `post_logout_redirect_uri`, and `state`. A request with no hint for the signed-in person asks before signing out. |
-| [Front-channel logout 1.0](https://openid.net/specs/openid-connect-frontchannel-1_0.html) | ✗ | Discovery sets `frontchannel_logout_supported` to `false`. |
-| [Session management 1.0](https://openid.net/specs/openid-connect-session-1_0.html) | ✗ | Not planned, because current browsers block the iframe it depends on. Discovery has no `check_session_iframe`. |
+| Specification                                                                             | Status | Coverage                                                                                                                                                                     |
+| ----------------------------------------------------------------------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Back-channel logout 1.0](https://openid.net/specs/openid-connect-backchannel-1_0.html)   | ✅     | Signed logout tokens. Delivery is attempted up to five times, and a delivery that still fails is recorded as an event.                                                       |
+| [RP-initiated logout 1.0](https://openid.net/specs/openid-connect-rpinitiated-1_0.html)   | ✅     | `end_session_endpoint`, with `id_token_hint`, `client_id`, `post_logout_redirect_uri`, and `state`. A request with no hint for the signed-in person asks before signing out. |
+| [Front-channel logout 1.0](https://openid.net/specs/openid-connect-frontchannel-1_0.html) | ✗      | Discovery sets `frontchannel_logout_supported` to `false`.                                                                                                                   |
+| [Session management 1.0](https://openid.net/specs/openid-connect-session-1_0.html)        | ✗      | Not planned, because current browsers block the iframe it depends on. Discovery has no `check_session_iframe`.                                                               |
+
+## Security events
+
+| Specification                                                                                    | Status | Coverage                                                                                                                                                                                                                                              |
+| ------------------------------------------------------------------------------------------------ | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Shared Signals Framework 1.0](https://openid.net/specs/openid-sharedsignals-framework-1_0.html) | ◐      | A transmitter with one stream for each receiver, and a receiver for a provider's events. Push delivery only ([RFC 8935](https://www.rfc-editor.org/rfc/rfc8935)). Subjects cannot be added or removed. See [shared signals](/guides/shared-signals/). |
+| [CAEP 1.0](https://openid.net/specs/openid-caep-1_0.html)                                        | ◐      | Sends `session-revoked`, `credential-change`, and `token-claims-change`. Acts on `session-revoked` and `credential-change` from a provider.                                                                                                           |
+| [RISC 1.0](https://openid.net/specs/openid-risc-1_0.html)                                        | ◐      | Sends `account-disabled` and `account-enabled`. Acts on `sessions-revoked`, `account-disabled`, `account-purged`, and `account-credential-change-required` from a provider.                                                                           |
 
 ## Identity
 
-| Specification | Status | Coverage |
-| --- | --- | --- |
-| Pairwise subject identifiers | ✅ | Includes a verified `sector_identifier_uri`. See [subject identifiers](/guides/features/#subject-identifiers). |
-| [WebAuthn Level 2](https://www.w3.org/TR/webauthn-2/) | ✅ | Passkeys, as a first factor or a second factor. |
-| [TOTP (RFC 6238)](https://www.rfc-editor.org/rfc/rfc6238) | ✅ | With backup codes. |
-| [SCIM 2.0](https://www.rfc-editor.org/rfc/rfc7644) | ◐ | `/Users` with filters, `PATCH`, ETags, and suspension, `/Groups` as an organization's roles, and the discovery endpoints. See [provisioning](/guides/sso-saml/#provisioning). Bulk operations and sorting are not implemented. |
-| SAML 2.0 | ◐ | Both directions. A SAML identity provider can sign people in to masks (see [providers](/guides/sso-saml/#providers)), and masks signs people in to SAML applications over HTTP-Redirect and HTTP-POST, checking signed requests (see [SAML applications](/guides/sso-saml/#saml-applications)). Single logout works in both directions for SAML applications, over HTTP-Redirect and HTTP-POST from the app and HTTP-POST from masks, through the browser on `/logout` and from the server otherwise (see [single logout](/guides/sso-saml/#single-logout)). Encrypted assertions and the SOAP binding are not implemented. |
+| Specification                                             | Status | Coverage                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| --------------------------------------------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Pairwise subject identifiers                              | ✅     | Includes a verified `sector_identifier_uri`. See [subject identifiers](/guides/features/#subject-identifiers).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| [WebAuthn Level 2](https://www.w3.org/TR/webauthn-2/)     | ✅     | Passkeys, as a first factor or a second factor.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| [TOTP (RFC 6238)](https://www.rfc-editor.org/rfc/rfc6238) | ✅     | With backup codes.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| [SCIM 2.0](https://www.rfc-editor.org/rfc/rfc7644)        | ◐      | `/Users` with filters, `PATCH`, ETags, and suspension, `/Groups` as an organization's roles, and the discovery endpoints. See [provisioning](/guides/sso-saml/#provisioning). Bulk operations and sorting are not implemented.                                                                                                                                                                                                                                                                                                                                                                                              |
+| SAML 2.0                                                  | ◐      | Both directions. A SAML identity provider can sign people in to masks (see [providers](/guides/sso-saml/#providers)), and masks signs people in to SAML applications over HTTP-Redirect and HTTP-POST, checking signed requests (see [SAML applications](/guides/sso-saml/#saml-applications)). Single logout works in both directions for SAML applications, over HTTP-Redirect and HTTP-POST from the app and HTTP-POST from masks, through the browser on `/logout` and from the server otherwise (see [single logout](/guides/sso-saml/#single-logout)). Encrypted assertions and the SOAP binding are not implemented. |
 
 ## Client authentication
 
 The token endpoint accepts four authentication methods.
 
-|                       |                                                                                                                  |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `client_secret_basic` | The secret in an HTTP Basic `Authorization` header. The default for a client added in `/manage`.                  |
-| `client_secret_post`  | The secret in the form body.                                                                                     |
+|                       |                                                                                                                                                             |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `client_secret_basic` | The secret in an HTTP Basic `Authorization` header. The default for a client added in `/manage`.                                                            |
+| `client_secret_post`  | The secret in the form body.                                                                                                                                |
 | `private_key_jwt`     | A JWT assertion ([RFC 7523](https://www.rfc-editor.org/rfc/rfc7523)) signed with RSA, RSA-PSS, or ECDSA, checked against the client's `jwks` or `jwks_uri`. |
-| `none`                | A public client, which must use PKCE.                                                                            |
+| `none`                | A public client, which must use PKCE.                                                                                                                       |
 
 See [client authentication](/guides/features/#client-authentication) for how each is configured.
 

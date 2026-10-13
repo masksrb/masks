@@ -3,24 +3,26 @@ title: Event streams
 description: Send each event a tenant records to an HTTPS endpoint, signed so the receiver can verify it.
 ---
 
-An event stream posts each event a tenant records to an HTTPS endpoint as it happens.
+An event stream posts each event a tenant records to an HTTPS endpoint as it happens. A security
+team can use one to collect events in a SIEM (security information and event management system), a
+tool that gathers security logs in one place.
 
-- A security team can use it to collect events in a SIEM (security information and event
-  management system), a tool that gathers security logs in one place.
 - Manage streams in `/manage`: open **Settings**, then the **Activity** tab, then **Streams**.
 - You can also manage them through the [manage API](/reference/manage/).
+- Changing a stream needs `masks:manage:security` or `masks:manage`. See
+  [manage roles](/guides/security/#manage-roles).
 
 ## Create a stream
 
 A stream has these parts:
 
-| | |
-| --- | --- |
-| `key` | A short ID for the stream. |
-| `name` | A name for people to read. |
-| `url` | The address of the HTTPS endpoint that receives events. |
-| Signing secret | Signs each delivery so the receiver can verify it. |
-| `actions` | Optional. The kinds of event to send. An empty list sends every action. |
+|                |                                                                                                                                                         |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `key`          | A short ID for the stream, in lowercase letters, digits, and dashes.                                                                                    |
+| `name`         | A name for people to read.                                                                                                                              |
+| `url`          | The address of the HTTPS endpoint that receives events.                                                                                                 |
+| Signing secret | Signs each delivery so the receiver can verify it.                                                                                                      |
+| `actions`      | Optional. The kinds of event to send. An empty list sends every action.                                                                                 |
 | `organization` | Optional. An organization's key. When set, the stream sends only that organization's events. A customer's activity can then go to that customer's SIEM. |
 
 `createEventStream` and `rotateEventStreamSecret` return the secret once. It cannot be read again.
@@ -33,33 +35,40 @@ curl -s "$MASKS/manage/graphql" -H "Authorization: Bearer $TOKEN" \
 
 Other mutations act on a stream once it exists:
 
-- `testEventStream` sends a `stream.tested` event and reports what the receiver answered.
-- `archiveEventStream` stops delivery.
+- `updateEventStream` changes its name, address, actions, or organization. An empty `organization`
+  sends every organization's events again.
+- `testEventStream` posts a test delivery and returns `delivered` and `failure`. It also records a
+  `stream.tested` event, which streams like any other.
+- `archiveEventStream` stops delivery. Deliveries already waiting are dropped.
 - `restoreEventStream` starts delivery again.
 
 ## What is sent
 
 Each event is a `POST` request with a JSON body.
 
-| Field | Meaning |
-| --- | --- |
-| `id` | The event's ID. Also sent as the `Masks-Delivery` header. |
-| `tenant` | The tenant's subdomain. |
-| `action` | The action, such as `session.started`. Also sent as the `Masks-Event` header. |
-| `created_at` | When it happened, in UTC. |
-| `actor` | The UUID of the account it happened to, or null. |
-| `by` | The UUID of the account that did it, or null. |
-| `client` | The `client_id` involved, or null. |
-| `organization` | The key of the organization the event belongs to, or null. |
-| `ip_address`, `user_agent` | Where it came from. |
-| `details` | Fields specific to the action. |
+| Field                      | Meaning                                                                       |
+| -------------------------- | ----------------------------------------------------------------------------- |
+| `id`                       | The event's ID. Also sent as the `Masks-Delivery` header.                     |
+| `tenant`                   | The tenant's subdomain.                                                       |
+| `action`                   | The action, such as `session.started`. Also sent as the `Masks-Event` header. |
+| `created_at`               | When it happened, in UTC.                                                     |
+| `actor`                    | The UUID of the account it happened to, or null.                              |
+| `by`                       | The UUID of the account that did it, or null.                                 |
+| `client`                   | The `client_id` involved, or null.                                            |
+| `organization`             | The key of the organization the event belongs to, or null.                    |
+| `ip_address`, `user_agent` | Where it came from.                                                           |
+| `details`                  | Fields specific to the action.                                                |
+
+A test delivery holds `id` set to null, `tenant`, `action` set to `stream.tested`, and
+`created_at`. Its `Masks-Delivery` header is empty.
 
 How delivery works:
 
 - Any response with a status code from 200 to 299 counts as delivered.
-- Each event is delivered at least once, so the same event can arrive more than once.
+- masks does not follow redirects.
+- Each event is delivered at least once, so the same event can arrive more than once. Use `id` to
+  discard a repeat.
 - Events can arrive out of order.
-- Use `id` to throw away a repeat.
 
 ## Verify a delivery
 
@@ -73,12 +82,12 @@ To verify a delivery on the receiver:
 
 1. Recompute the HMAC-SHA256 from the timestamp, a period, and the raw request body.
 2. Compare it with `v1` in constant time.
-3. Reject the request if its timestamp is more than five minutes from the current time.
+3. Refuse the request if its timestamp is more than five minutes from the current time.
 
 ## Failures
 
 A delivery that gets no response from 200 to 299 is tried up to eight times. The wait between tries
-grows each time.
+grows each time. Each try waits 5 seconds to connect and 10 seconds for an answer.
 
 - After the last try, masks records a `stream.failed` event. This event is never streamed.
 - The stream's `lastFailure` shows the latest error.
@@ -88,7 +97,10 @@ grows each time.
 
 - An address that does not use HTTPS.
 - An address that includes a username or password.
-- An address that resolves to a private, loopback, or link-local address. These are addresses inside
-  a private network, on the same machine, or on the local network link. masks checks this when the
-  stream is saved, and again on every delivery.
+- An address that resolves to a private, loopback, link-local, or other reserved network. masks
+  checks this when the stream is saved, and again on every delivery.
+  [`MASKS_OUTBOUND_ALLOWED`](/reference/environment/#outbound-calls) lists ranges masks may call
+  anyway.
 - An action masks does not record.
+
+In development and test, masks also accepts `http` addresses and private networks.

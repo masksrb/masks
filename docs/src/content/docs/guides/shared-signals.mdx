@@ -3,16 +3,14 @@ title: Shared signals
 description: Tell another system when a session ends or a credential changes, and act on the same events from a provider, using the OpenID Shared Signals Framework.
 ---
 
-masks tells other systems about security events as they happen, using the Shared Signals Framework
-(SSF). SSF is an OpenID standard for sending security events between systems.
+masks sends and receives security events with the Shared Signals Framework (SSF), an OpenID
+standard for passing security events between systems.
 
-masks works in both directions:
-
-- **As a transmitter**, masks sends events out. A receiver registers a stream, and masks pushes it
-  a signed security event token when a session is revoked, a credential changes, or an account is
-  suspended. The receiver can then act before the affected tokens expire.
-- **As a receiver**, masks takes events in. A provider that actors sign in with can tell masks to
-  sign someone out. See [receiving signals from a provider](#receiving-signals-from-a-provider).
+- **As a transmitter**, masks pushes a signed security event token to a receiver when a session is
+  revoked, a credential changes, or an account is suspended. The receiver can then act before the
+  affected tokens expire.
+- **As a receiver**, masks takes events from a provider that actors sign in with, and signs the
+  account out. See [receiving signals from a provider](#receiving-signals-from-a-provider).
 
 A receiver is the system that gets the events. A stream is the receiver's subscription: where to
 send events, and which ones.
@@ -22,28 +20,33 @@ send events, and which ones.
 A receiver is a confidential client that signs in as itself. A confidential client is one that can
 keep a secret.
 
-1. In `/manage`, add a client with the `client_credentials` grant.
-2. Add `masks:signals` to its allowed scopes.
+1. In `/manage`, add a client that **Signs in as itself**.
+2. Add `masks:signals` to its scopes.
 3. Have the receiver request a token with `grant_type=client_credentials` and
    `scope=masks:signals`.
-4. Have the receiver send that token as a bearer token to every endpoint below. A bearer token goes
-   in the `Authorization` header.
+4. Have the receiver send that token in the `Authorization` header, as a bearer token, to every
+   endpoint below.
 
-A token issued to an actor cannot manage a stream.
+masks refuses a token issued to an actor, to a public client, or to an archived client with `403`.
 
 ## Find the endpoints
 
-`/.well-known/ssf-configuration` lists the endpoints and the delivery methods.
+`/.well-known/ssf-configuration` lists the endpoints and the delivery methods. Each endpoint is a
+full URL under the tenant's issuer.
 
-| Field | Value |
-| --- | --- |
-| `issuer` | The tenant's issuer. |
-| `jwks_uri` | The keys that verify each security event token. |
-| `delivery_methods_supported` | `urn:ietf:rfc:8935`, push delivery. |
-| `configuration_endpoint` | `/ssf/streams` |
-| `status_endpoint` | `/ssf/status` |
-| `verification_endpoint` | `/ssf/verify` |
-| `default_subjects` | `ALL` |
+| Field                        | Value                                           |
+| ---------------------------- | ----------------------------------------------- |
+| `spec_version`               | `1_0`                                           |
+| `issuer`                     | The tenant's issuer.                            |
+| `jwks_uri`                   | The keys that verify each security event token. |
+| `delivery_methods_supported` | `urn:ietf:rfc:8935`, push delivery.             |
+| `configuration_endpoint`     | `/ssf/streams`                                  |
+| `status_endpoint`            | `/ssf/status`                                   |
+| `verification_endpoint`      | `/ssf/verify`                                   |
+| `authorization_schemes`      | OAuth 2.0 (`urn:ietf:rfc:6749`).                |
+| `default_subjects`           | `ALL`                                           |
+
+masks has no endpoints to add or remove subjects.
 
 ## Create a stream
 
@@ -65,47 +68,57 @@ curl -s "$MASKS/ssf/streams" -H "Authorization: Bearer $TOKEN" \
   }'
 ```
 
-The response holds `stream_id`, `iss`, `aud`, `events_supported`, `events_requested`, and
-`events_delivered`.
+The response holds `stream_id`, `iss`, `aud`, `delivery`, `description`, `events_supported`,
+`events_requested`, and `events_delivered`.
 
+- `events_delivered` is the requested events that masks sends. A stream with no
+  `events_requested` receives nothing.
+- masks refuses an event type it does not send with `400`.
 - The endpoint must be an HTTPS address on a public network.
-- masks sends `authorization_header` as the `Authorization` header of each delivery.
-- masks stores `authorization_header` encrypted, and never returns it.
+- masks sends `authorization_header` as the `Authorization` header of each delivery. It stores the
+  value encrypted and never returns it.
+- A second `POST` gets `409`.
 
 Manage the stream with these requests:
 
-| Request | Effect |
-| --- | --- |
-| `GET /ssf/streams` | Lists the receiver's stream. Returns it when `stream_id` is given. |
-| `PATCH /ssf/streams` | Changes the fields in the body. |
-| `PUT /ssf/streams` | Replaces the delivery, events, and description. |
-| `DELETE /ssf/streams?stream_id=` | Removes the stream. |
-| `GET /ssf/status?stream_id=` | Returns `enabled`, `paused`, or `disabled`. |
-| `POST /ssf/status` | Sets the status, with an optional `reason`. |
-| `POST /ssf/verify` | Sends a verification event that holds the `state` from the body. |
+| Request               | Effect                                                                                                                                       |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /ssf/streams`    | Returns a list that holds the receiver's stream. With `stream_id`, returns the stream.                                                       |
+| `PATCH /ssf/streams`  | Changes the fields in the body. A `delivery` must name `method` and `endpoint_url` again, and leaving out `authorization_header` removes it. |
+| `PUT /ssf/streams`    | Replaces the delivery, the requested events, and the description.                                                                            |
+| `DELETE /ssf/streams` | Removes the stream. Answers `204`.                                                                                                           |
+| `GET /ssf/status`     | Returns the `status`, which is `enabled`, `paused`, or `disabled`, and the `reason`.                                                         |
+| `POST /ssf/status`    | Sets the `status`, with an optional `reason`.                                                                                                |
+| `POST /ssf/verify`    | Sends a verification event that holds the `state` from the body. Answers `204`.                                                              |
 
-A paused or disabled stream delivers nothing. Events raised while a stream is paused are dropped.
+A paused stream sends only verification events. Events raised while it is paused are dropped. A
+disabled stream sends nothing, and `/ssf/verify` refuses it with `400`.
+
+An error has `error` set to `invalid_request` and an `error_description`. A `stream_id` that is
+not the receiver's stream gets `404`.
 
 ## What is sent
 
 masks sends events from two sets. CAEP (Continuous Access Evaluation Profile) covers sessions and
 credentials. RISC (Risk Incident Sharing and Coordination) covers accounts.
 
-| Event type | Sent when |
-| --- | --- |
-| CAEP `session-revoked` | A manager revokes a session or signs an actor out everywhere. An actor leaves or is removed from an organization. Their organization is archived. |
-| CAEP `credential-change` | A password changes or is reset. A passkey or authenticator app is added or removed. |
-| CAEP `token-claims-change` | An actor's role in an organization changes. The event's `claims` hold the new `org` claim. |
-| RISC `account-disabled` | An account is suspended. |
-| RISC `account-enabled` | A suspended account is restored. |
+| Event type                 | Sent when                                                                                                                                         |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CAEP `session-revoked`     | A manager revokes a session or signs an actor out everywhere. An actor leaves or is removed from an organization. Their organization is archived. |
+| CAEP `credential-change`   | A password changes or is reset. A passkey or authenticator app is added or removed.                                                               |
+| CAEP `token-claims-change` | An actor's role in an organization changes. The event's `claims` hold the new `org` claim.                                                        |
+| RISC `account-disabled`    | An account is suspended.                                                                                                                          |
+| RISC `account-enabled`     | A suspended account is restored.                                                                                                                  |
 
 Who the events are about:
 
-- A stream receives events only about actors who have signed in to its client, or consented to it.
-- An organization's events go only to a client that has held a token for that organization.
-- The subject is `{"format": "iss_sub", "iss": ..., "sub": ...}`. Here `sub` is the same subject
-  the client sees in ID tokens, including a pairwise one. A pairwise subject is one that differs
-  for each client.
+- A stream receives events only about actors who hold a live consent or a live token for its
+  client.
+- An organization's events go to a client only when the actor holds an unexpired token from that
+  client for that organization.
+- The subject is in `sub_id`, as `{"format": "iss_sub", "iss": ..., "sub": ...}`. Here `sub` is
+  the same subject the client sees in ID tokens, including a pairwise one. A pairwise subject is one
+  that differs for each client.
 
 ## Verify a delivery
 
@@ -124,13 +137,12 @@ To check a delivery:
 A CAEP event holds `event_timestamp` and `initiating_entity`. `initiating_entity` is:
 
 - `user` when the actor acted
-- `admin` when a manager acted
+- `admin` when someone else acted, such as a manager or an organization's owner
 - `system` otherwise
 
 ## Failures
 
-masks tries a delivery up to eight times, with growing delays, until it gets a 2xx (success)
-response. After the last attempt, masks records a `signal.undelivered` event.
+masks tries a delivery up to eight times, with growing delays, until it gets a response from 200 to 299. After the last try, masks records a `signal.undelivered` event.
 
 Delivery stops when you remove `masks:signals` from the client, or archive the client.
 
@@ -138,7 +150,7 @@ Delivery stops when you remove `masks:signals` from the client, or archive the c
 
 masks also receives security events from an OpenID Connect provider that actors sign in with.
 
-1. In `/manage`, turn on **Accept its security events** for the provider.
+1. In `/manage`, turn on **Accept its security events** on the provider's page.
 2. Give the provider this receiver endpoint for push delivery (RFC 8935):
 
 ```
@@ -151,29 +163,31 @@ when all of these are true:
 - `iss` is the provider's issuer, and the provider accepts security events.
 - It is signed by a key in the provider's `jwks_uri`, and typed `secevent+jwt`.
 - `aud` is the tenant's issuer or the endpoint above.
-- masks has not seen its `jti` in the last seven days.
+- `iat` is within the last seven days.
+- It has a `jti` that masks has not seen in the last seven days.
 
 Otherwise masks answers `400`. The body has `err` set to `invalid_issuer`, `invalid_key`,
-`invalid_audience`, or `invalid_request`, and a `description`.
+`invalid_audience`, or `invalid_request`, and a `description`. More than 600 requests in a minute
+from one IP address get `429`.
 
 ### What the events do
 
-These events sign the account out everywhere. That means every session, every refresh token, and
-every trusted device. masks records each one as a `signal.received` event on the account.
+These events sign the account out everywhere. That revokes every session and refresh token, and
+forgets every trusted device. masks records each one as a `signal.received` event on the account.
 
-| Event | |
-| --- | --- |
-| CAEP `session-revoked` | A session ended at the provider. |
-| CAEP `credential-change` | A password or factor changed at the provider. |
-| RISC `sessions-revoked` | Every session ended at the provider. |
-| RISC `account-disabled` | The account was disabled at the provider. |
-| RISC `account-purged` | The account was deleted at the provider. |
-| RISC `account-credential-change-required` | The provider asks for new credentials. |
+| Event                                     |                                               |
+| ----------------------------------------- | --------------------------------------------- |
+| CAEP `session-revoked`                    | A session ended at the provider.              |
+| CAEP `credential-change`                  | A password or factor changed at the provider. |
+| RISC `sessions-revoked`                   | Every session ended at the provider.          |
+| RISC `account-disabled`                   | The account was disabled at the provider.     |
+| RISC `account-purged`                     | The account was deleted at the provider.      |
+| RISC `account-credential-change-required` | The provider asks for new credentials.        |
 
-The account is the one connected to the provider with that subject. masks reads a subject in one
-of two formats:
+The account is the one connected to the provider with that subject. masks reads the subject from
+the event or from `sub_id`, in one of two formats:
 
 - `iss_sub`. Its `iss` must be the provider's issuer.
-- `email`. It matches the email address the connection holds.
+- `email`. It matches the email address the connected account holds. Case does not matter.
 
 masks accepts other event types and subjects, and changes nothing.

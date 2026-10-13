@@ -13,145 +13,101 @@ masks publishes for one language. With an SDK, an app:
 
 ## Choosing an SDK
 
-Pick the SDK for the place your app runs.
+Pick the SDK for the place your app runs. Each language's guide walks through the handshake,
+sign-in, and checking tokens.
 
-| SDK | For |
-| --- | --- |
-| [`Masks::Rails`](/reference/ruby/rails/) | A Rails app. An engine that mounts sign-in, the handshake, and token checks. |
-| [`Masks::Client`](/reference/ruby/client/) | Any Ruby process. `Masks::Rails` is built on it. |
-| [`@masks/client`](/reference/javascript/client/) | A single-page app, in the browser. |
-| [`github.com/masksrb/masks/go`](/reference/go/) | A Go web app, service, or machine, and a Go API. |
-| [`@masks/server`](/reference/javascript/server/) | A JavaScript server on Node, Next.js, Bun, or Deno, and a JavaScript API. |
-| [`masks-client`](/reference/python/) | A FastAPI, Django, or Flask app, a Python service or machine, and a Python API. |
+| SDK                                              | For                                                                                                                                     |
+| ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+| [`Masks::Rails`](/reference/ruby/rails/)         | A Rails app. An engine that mounts sign-in, the handshake, and token checks. See [Rails apps](/reference/ruby/).                        |
+| [`Masks::Client`](/reference/ruby/client/)       | Any Ruby process. `Masks::Rails` is built on it.                                                                                        |
+| [`@masks/client`](/reference/javascript/client/) | A single-page app, in the browser. See [static sites](/reference/javascript/static/).                                                   |
+| [`@masks/server`](/reference/javascript/server/) | A JavaScript server: Next.js, Auth.js, Express, Hono, or any app that takes a `Request`. See [JavaScript apps](/reference/javascript/). |
+| [`masks-client`](/reference/python/)             | A FastAPI, Django, or Flask app, a Python service or machine, and a Python API.                                                         |
+| [`github.com/masksrb/masks/go`](/reference/go/)  | A Go web app, service, or machine, and a Go API.                                                                                        |
 
 The `masks` gem holds both Ruby SDKs. `Masks::Rails` loads only when Rails does.
 
 ### What each SDK covers
 
-| | `Masks::Rails` | `Masks::Client` | `@masks/client` | Go | `@masks/server` | Python |
-| --- | --- | --- | --- | --- | --- | --- |
-| Signing in with the code flow and PKCE | Yes | Yes | Yes, through a backend or in the page | Yes | Yes | Yes |
-| The handshake | Yes | Yes | Starts it through a backend | Yes | Yes | Yes |
-| Redeeming an initial access token | Yes | Yes | No | Yes | Yes | Yes |
-| [Enrolling and unenrolling machines](/guides/features/#enrolling-a-machine) | No | Yes | No | Yes | Yes | Yes |
-| Refreshing tokens | Yes | Yes | Yes | Yes | Yes | Yes |
-| Token exchange | No | Yes | No | Yes | Yes | Yes |
-| [Delegation](#delegation) | Asks for it in its handshake | Yes | No | Yes | Yes | Yes |
-| Client credentials and revocation | No | Yes | No | Yes | Yes | Yes |
-| Introspection | No | Yes | No | Yes | Yes | Yes |
-| The device flow | No | Yes | No | Yes | Yes | Yes |
-| `private_key_jwt` client authentication | No | Yes | No | Yes | Yes | Yes |
-| Sending DPoP proofs as a client | No | Yes | No | Yes | Yes | Yes |
-| Checking access tokens, including DPoP-bound ones | Yes | Yes | No | Yes | Yes | Yes |
-| One store of seen DPoP proofs for every process | Yes | Yes | No | Yes | Yes | Yes |
+|                                                                             | `Masks::Rails`               | `Masks::Client`         | `@masks/client`                       | `@masks/server` | Python | Go  |
+| --------------------------------------------------------------------------- | ---------------------------- | ----------------------- | ------------------------------------- | --------------- | ------ | --- |
+| Signing in with the code flow and PKCE                                      | Yes                          | Yes                     | Yes, through a backend or in the page | Yes             | Yes    | Yes |
+| The handshake                                                               | Yes                          | Yes                     | Starts it through a backend           | Yes             | Yes    | Yes |
+| Redeeming an initial access token                                           | Yes                          | Yes                     | No                                    | Yes             | Yes    | Yes |
+| [Enrolling and unenrolling machines](/guides/features/#enrolling-a-machine) | No                           | Yes                     | No                                    | Yes             | Yes    | Yes |
+| Refreshing tokens                                                           | Yes                          | Yes                     | Yes                                   | Yes             | Yes    | Yes |
+| Token exchange                                                              | No                           | Yes                     | No                                    | Yes             | Yes    | Yes |
+| [Delegation](#delegation)                                                   | Asks for it in its handshake | Yes                     | No                                    | Yes             | Yes    | Yes |
+| Client credentials and revocation                                           | No                           | Yes                     | No                                    | Yes             | Yes    | Yes |
+| Introspection                                                               | No                           | Yes                     | No                                    | Yes             | Yes    | Yes |
+| The device flow                                                             | No                           | Yes                     | No                                    | Yes             | Yes    | Yes |
+| `private_key_jwt` client authentication                                     | No                           | Yes                     | No                                    | Yes             | Yes    | Yes |
+| Sending DPoP proofs as a client                                             | No                           | Yes                     | No                                    | Yes             | Yes    | Yes |
+| Checking access tokens, including DPoP-bound ones                           | Yes                          | Yes                     | No                                    | Yes             | Yes    | Yes |
+| One store of seen DPoP proofs for every process                             | Yes                          | With a store you supply | No                                    | Yes             | Yes    | Yes |
 
 The terms in this table mean:
 
-| | |
-| --- | --- |
-| Code flow and PKCE | The browser signs in at masks and comes back to the app with a one-time code. The app trades the code for tokens. PKCE (Proof Key for Code Exchange) makes sure only the app that asked can trade the code. |
-| Handshake | The way an app registers itself with masks. A person holding `masks:manage` or `masks:handshake` approves it in the browser. See [connecting an app](#connecting-an-app). |
-| Initial access token | A one-time token from masks that lets an app or a machine register itself as a client. |
-| Token exchange | Trading one token for another. See [exchanging a token](#exchanging-a-token). |
-| Client credentials | A client asking for a token as itself, with nobody signed in. |
-| Revocation | Telling masks to end a token. |
-| Introspection | Asking masks whether a token is active. |
-| Device flow | A device with no browser shows a code. A person approves it on another device. |
-| `private_key_jwt` | A client proves who it is with a message signed by its private key. It sends no secret. |
-| DPoP | Ties a token to a key. Each request carries a proof signed by that key, so a copied token is useless without the key. |
-| Store of seen DPoP proofs | An API refuses a proof it has seen before. A shared store lets every process of the API refuse it. |
-
-### Notes on each SDK
-
-`@masks/client` runs only in a browser and holds no client secret.
-
-- It verifies ID tokens.
-- It leaves access tokens to the API that receives them.
-
-Each language has a guide from the handshake to accepting tokens:
-
-- [Rails apps](/reference/ruby/)
-- [JavaScript apps](/reference/javascript/)
-- [Python apps](/reference/python/)
-- [Go apps](/reference/go/)
+|                           |                                                                                                                                                                                                   |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Code flow and PKCE        | The browser signs in at masks and comes back to the app with a one-time code. The app trades the code for tokens. PKCE (Proof Key for Code Exchange) lets only the app that asked trade the code. |
+| Handshake                 | The way an app registers itself with masks. See [connecting an app](#connecting-an-app).                                                                                                          |
+| Initial access token      | A one-time token from masks that lets an app or a machine register itself as a client.                                                                                                            |
+| Token exchange            | Trading one token for another. See [exchanging a token](#exchanging-a-token).                                                                                                                     |
+| Client credentials        | A client asking for a token as itself, with nobody signed in.                                                                                                                                     |
+| Revocation                | Telling masks to end a token.                                                                                                                                                                     |
+| Introspection             | Asking masks whether a token is active.                                                                                                                                                           |
+| Device flow               | A device with no browser shows a code. A person approves it on another device.                                                                                                                    |
+| `private_key_jwt`         | A client proves who it is with a message signed by its private key. It sends no secret.                                                                                                           |
+| DPoP                      | Ties a token to a key. Each request carries a proof signed by that key, so a copied token does not work without the key.                                                                          |
+| Store of seen DPoP proofs | An API refuses a proof it has seen before. A shared store lets every process of the API refuse it.                                                                                                |
 
 ## Connecting an app
 
-1. Install the SDK. For Rails, run `bin/rails generate masks:install`. See
-   [Rails apps](/reference/ruby/) for the whole walkthrough.
+1. Install the SDK. For Rails, run `bin/rails generate masks:install`.
 2. Set the issuer. This is the address masks answers at, such as `https://acme.auth.example.com`.
 3. Set the app's resource identifier. This is the app's own address, such as
-   `https://app.example.com`. The handshake requires a resource. The app's redirect URIs (the
-   addresses masks sends the browser back to) must share its origin, the same scheme, host, and
-   port.
+   `https://app.example.com`. The app's redirect URIs (the addresses masks sends the browser back
+   to) must share its origin: the same scheme, host, and port.
 4. Open the handshake. The browser goes to masks' approval screen.
-5. Approve it as a person holding `masks:manage` or `masks:handshake`. masks sends the credentials to
-   the app server to server, so no secret passes through the browser.
+5. Approve it as a person holding `masks:manage` or `masks:handshake`. masks sends the browser back
+   to the app with a one-time initial access token.
+6. The app redeems the token with masks, server to server, and receives its client ID and secret.
+   The secret never passes through the browser.
 
-The app is then an approved [client](/guides/features/#registering-a-client). Next:
-
-- Sign people in with the SDK's login URL.
-- Check access tokens on your API with the SDK's verifier.
+The app is then an approved [client](/guides/features/#registering-a-client). It signs people in
+with the SDK's login URL, and its API checks access tokens with the SDK's verifier.
 
 ### Handshake parameters
 
 The SDK sends these in the query of the handshake URL. Every address must share the resource's
 origin.
 
-| | |
-| --- | --- |
-| `client_name` | The name the approval screen shows. |
-| `resource` | The app's resource identifier. Required. |
-| `scope` | The scopes the app asks for, separated by spaces. Required. |
-| `redirect_uris` | Where masks sends the browser after a sign-in. Repeat it for each address. Required. |
-| `return_to` | Where masks sends the browser with the one-time token. Required. |
-| `state` | A value masks hands back unchanged to `return_to`. |
-| `token_endpoint_auth_method` | How the app authenticates. The default is `client_secret_basic`. |
-| `backchannel_logout_uri` | Where masks posts a logout token when it ends a session. Optional. |
-| `post_logout_redirect_uri` | Where masks sends the browser after the person signs out of masks. Optional. masks registers it as the client's post-logout redirect URI. Without it, a sign-out at masks cannot send the browser back to the app. |
+|                              |                                                                                                                                                       |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `client_name`                | The name the approval screen shows.                                                                                                                   |
+| `resource`                   | The app's resource identifier. Required.                                                                                                              |
+| `scope`                      | The scopes the app asks for, separated by spaces. Required.                                                                                           |
+| `redirect_uris`              | Where masks sends the browser after a sign-in. Repeat it for each address. Required.                                                                  |
+| `return_to`                  | Where masks sends the browser with the initial access token. Required.                                                                                |
+| `state`                      | A value masks hands back unchanged to `return_to`.                                                                                                    |
+| `token_endpoint_auth_method` | How the app authenticates. The default is `client_secret_basic`.                                                                                      |
+| `backchannel_logout_uri`     | Optional. Where masks posts a logout token when it ends a session.                                                                                    |
+| `post_logout_redirect_uri`   | Optional. Where masks sends the browser after the person signs out of masks. Without it, a sign-out at masks cannot send the browser back to the app. |
 
-## A single-page app
+### A single-page app
 
-A single-page app with no backend runs the code flow in the page with
-[`@masks/client`](/reference/javascript/client/).
+A single-page app with no backend runs the code flow in the page with `@masks/client`, as a public
+client that keeps its tokens in `sessionStorage`. See [static sites](/reference/javascript/static/).
 
-- It needs a public client, one registered with `token_endpoint_auth_method` set to `none`.
-- It keeps its tokens in `sessionStorage`.
-
-```js
-import { createBrowserClient } from "@masks/client";
-
-const auth = createBrowserClient({
-  issuer: "https://auth.example.com",
-  clientId: "spa",
-  redirectUri: "https://app.example.com/callback",
-  scope: ["openid", "profile"],
-  resource: "https://api.example.com",
-  dpop: true,
-});
-
-if (auth.pending()) {
-  const { identity, returnTo } = await auth.callback();
-}
-
-await auth.authorize({ returnTo: "/dashboard" });
-
-const response = await auth.fetch("https://api.example.com/files");
-```
-
-`fetch` refreshes the access token when it is close to expiring. With `dpop: true`, the page:
-
-- makes a key it cannot export
-- binds its tokens to that key
-- signs a proof for each request
-
-An app with a backend keeps the tokens on the backend, and the page holds only a cookie. The
-package's session mode talks to a backend running the `masks` gem's Rails engine.
+An app with a backend keeps the tokens on the backend, and the page holds only a cookie.
+`@masks/client`'s session mode talks to that backend, which runs `Masks::Rails`, `@masks/server`,
+the Python SDK, or the Go SDK.
 
 ## Delegation
 
 A **delegation** lets an app act as one person at a provider while nobody is signed in. For example,
-an app can sync a person's Google Drive at 3 a.m., or call their Notion MCP server.
+an app can sync a person's Google Drive at night, or call their Notion MCP server.
 
 - masks stores and refreshes the provider's tokens.
 - The app gets a token for one person's account, after that person consented to that app.
@@ -159,6 +115,10 @@ an app can sync a person's Google Drive at 3 a.m., or call their Notion MCP serv
 
 Each person sees every app using each of their accounts on their account page. They can stop any of
 them there.
+
+The [JavaScript](/reference/javascript/), [Python](/reference/python/), and [Go](/reference/go/)
+guides show their SDK's delegation helpers. This section shows the requests underneath, and the
+Ruby calls.
 
 ### Set up the provider
 
@@ -168,29 +128,33 @@ In `/manage`, on the provider's **Clients** tab:
 2. Fill in **What clients may do** with the provider's scopes beyond sign-in.
 3. Fill in **Extra parameters when connecting** if the provider needs them for a refresh token.
 
-| Provider | What clients may do | Extra parameters |
-| --- | --- | --- |
-| Google | `https://www.googleapis.com/auth/drive.readonly` | `access_type=offline prompt=consent` |
-| Microsoft | `offline_access Files.Read.All` | |
-| An MCP server | nothing | |
+| Provider      | What clients may do                              | Extra parameters                     |
+| ------------- | ------------------------------------------------ | ------------------------------------ |
+| Google        | `https://www.googleapis.com/auth/drive.readonly` | `access_type=offline prompt=consent` |
+| Microsoft     | `offline_access Files.Read.All`                  |                                      |
+| An MCP server | Leave it empty for whatever the server grants.   |                                      |
 
-Presets fill these in. Delegation uses the same redirect URI the provider has for sign-in.
+An MCP server always allows delegation, so it has no switch. Delegation uses the provider's
+sign-in redirect URI, `/login/provider/<key>/callback`.
 
 ### Let the app ask
 
-Only an approved client can receive a delegation. It needs two settings:
+Only an approved client can receive a delegation. Besides `openid` and `offline_access`, it needs:
 
-| | |
-| --- | --- |
-| `allowed_scopes` | `masks:delegate:` (every provider) or `masks:delegate:google` (one) |
-| `grant_types` | `refresh_token` and `urn:ietf:params:oauth:grant-type:token-exchange` |
+|                  |                                                                                              |
+| ---------------- | -------------------------------------------------------------------------------------------- |
+| `allowed_scopes` | `masks:delegate:` (every provider) or `masks:delegate:google` (one)                          |
+| `grant_types`    | `authorization_code`, `refresh_token`, and `urn:ietf:params:oauth:grant-type:token-exchange` |
 
-A handshake that asks for `masks:delegate:` sets both. With the Rails engine, set:
+A handshake that asks for a `masks:delegate:` scope sets the grant types. With `Masks::Rails`, set:
 
 ```ruby
 config.delegates = true
 config.delegation_redirect_uri = ->(request) { "#{request.base_url}/connect/callback" }
 ```
+
+`Masks::Rails` adds the scope and the redirect URI to its handshake. Your app answers the redirect
+URI itself, as in [from Ruby](#from-ruby).
 
 ### Connect an account
 
@@ -232,8 +196,13 @@ config.delegation_redirect_uri = ->(request) { "#{request.base_url}/connect/call
      "access_token": "eyJ…",
      "refresh_token": "Xk2…",
      "delegations": [
-       { "connection": "3f1c9a0e-…", "provider": "google", "provider_name": "Google",
-         "label": "ada@example.com", "subject": "8f4c…" }
+       {
+         "connection": "3f1c9a0e-…",
+         "provider": "google",
+         "provider_name": "Google",
+         "label": "ada@example.com",
+         "subject": "8f4c…"
+       }
      ]
    }
    ```
@@ -243,19 +212,19 @@ config.delegation_redirect_uri = ->(request) { "#{request.base_url}/connect/call
 `subject` is the same `sub` your sign-in receives. Use it to refuse a connection that someone other
 than the person who started it finished.
 
-| `error` | Means |
-| --- | --- |
-| `access_denied` | The person declined, or chose a provider account belonging to someone else in masks. |
-| `login_required` | Connecting needs a sign-in within 15 minutes. Send them again with `prompt=login`. |
-| `interaction_required` | You sent `prompt=none`, and masks has to ask something. |
-| `unauthorized_client` | The client is not approved. |
-| `invalid_scope` | No provider with that key allows delegation. |
+| `error`                | Means                                                                                                                                                     |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `access_denied`        | The person declined, took more than 15 minutes, or chose a provider account that is not theirs in masks. The provider refused, or is no longer available. |
+| `login_required`       | A first connection to a provider that also signs people in needs a sign-in within the last 15 minutes. Send them again with `prompt=login`.               |
+| `interaction_required` | You sent `prompt=none`, and masks has to ask something.                                                                                                   |
+| `unauthorized_client`  | The client is not approved.                                                                                                                               |
+| `invalid_scope`        | No provider with that key allows delegation.                                                                                                              |
 
 ### Get a provider token
 
 Follow these steps when you have no provider token, or when it is about to expire.
 
-1. Refresh the secret:
+1. Refresh the secret. Send no `scope`.
 
    ```
    POST https://auth.example.com/token
@@ -297,19 +266,20 @@ Follow these steps when you have no provider token, or when it is about to expir
 Call Google with `ya29.…` until the time in `expires_in` has passed. On a 401, discard the token and
 repeat these steps.
 
-| Response | Means | Do |
-| --- | --- | --- |
-| `400 invalid_grant` | The person stopped the app or disconnected, or the provider refused. | Ask them to connect again. |
-| `403 insufficient_scope` | The token lacks `masks:delegate:<provider>`. | Request the full scope on refresh. |
-| `503 temporarily_unavailable` | The provider did not respond. | Retry later. Nothing was lost. |
+| Response                      | Means                                                                                                                 | Do                             |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
+| `400 invalid_grant`           | The person stopped the app or disconnected, or the provider refused.                                                  | Ask them to connect again.     |
+| `400 insufficient_scope`      | The token lacks `masks:delegate:<provider>`. A refresh that sent a narrower `scope` drops it from every later secret. | Ask them to connect again.     |
+| `503 temporarily_unavailable` | The provider did not respond.                                                                                         | Retry later. Nothing was lost. |
 
 ### Rules for the secret
 
 1. Keep every new secret. Each refresh replaces it, even when the exchange after it fails.
 2. Refresh each secret from one place at a time. Using a secret twice revokes every secret in its
-   family, the newest one included, and the person has to connect again. Lock around the refresh if more than one
-   worker can reach it.
-3. Use it within 30 days. An unused secret expires, and each refresh starts the 30 days again.
+   family, the newest one included, and the person has to connect again. Lock around the refresh if
+   more than one worker can reach it.
+3. Use it within the client's refresh token lifetime, 30 days by default. Each refresh starts that
+   time again.
 
 ### What masks checks
 
@@ -317,10 +287,10 @@ masks releases a provider token only when:
 
 - the client is approved and registered for token exchange
 - the masks token is live, issued to this client, and holds `masks:delegate:<provider>`
-- the connection is live and belongs to that token's person
+- `audience` names exactly one connection, which is live and belongs to that token's person
 - the provider still allows delegation
 - the person's delegation to this client for this connection is live
-- the exchange sends no `scope`, `resource`, or `requested_lifetime`
+- the exchange sends no `scope`, `resource`, `requested_lifetime`, or `authorization_details`
 
 masks also:
 
@@ -329,7 +299,8 @@ masks also:
 - refreshes a provider token within a minute of its expiry, and runs one refresh at a time for each
   connection
 
-Changing what a provider allows makes everyone connect it again.
+After you change what a provider allows, masks asks each person to connect again the next time an
+app sends them to `/authorize`.
 
 ### MCP servers
 
@@ -338,11 +309,12 @@ the protocol `mcp`. Given its URL, masks:
 
 1. reads `/.well-known/oauth-protected-resource` for its authorization server
    ([RFC 9728](https://www.rfc-editor.org/rfc/rfc9728))
-2. reads that server's metadata, which must offer PKCE with S256 and dynamic registration
+2. reads that server's metadata, which must offer PKCE with S256 and a registration endpoint
 3. registers itself ([RFC 7591](https://www.rfc-editor.org/rfc/rfc7591)), with a secret when the
    server accepts one
 
-Every request names the server's URL as `resource` ([RFC 8707](https://www.rfc-editor.org/rfc/rfc8707)).
+The authorization request, the code exchange, and each refresh name the server's URL as `resource`
+([RFC 8707](https://www.rfc-editor.org/rfc/rfc8707)).
 
 To call the MCP server:
 
@@ -372,18 +344,24 @@ upstream.access_token
 - Retry after `Delegations::Unavailable`.
 - Both errors carry `secret` when masks had already rotated it.
 
-See [Masks::Client](/reference/ruby/client/) for the test fake.
+`Delegations::Fake` stands in for masks in tests. See [Masks::Client](/reference/ruby/client/).
 
 ## Calling a provider while the person is present
 
 An app that calls a provider only while the person uses it can run its own OAuth flow there. The
-`identities` scope names the person's connected accounts. The flow is then a redirect with a hint:
+`identities` scope adds the person's connected accounts to the claims, with an email address only
+when it is confirmed. The flow is then a redirect with a hint:
 
 ```json
 {
   "sub": "8f4c…",
   "identities": [
-    { "provider": "google", "protocol": "oidc", "sub": "10769150350006150715", "email": "ada@gmail.com" }
+    {
+      "provider": "google",
+      "protocol": "oidc",
+      "sub": "10769150350006150715",
+      "email": "ada@gmail.com"
+    }
   ]
 }
 ```
@@ -394,7 +372,7 @@ https://accounts.google.com/o/oauth2/v2/auth?…&login_hint=ada@gmail.com
 
 A [pairwise](/guides/features/#subject-identifiers) client never receives `identities`. A pairwise
 client sees a different subject for each person than every other client does. An upstream subject is
-the same for every client, so it would undo pairwise separation.
+the same for every client, so it would undo that separation.
 
 ## Exchanging a token
 
@@ -412,36 +390,36 @@ curl -u "$CLIENT_ID:$CLIENT_SECRET" https://auth.example.com/token \
   -d grant_type=urn:ietf:params:oauth:grant-type:token-exchange \
   -d subject_token="$ACCESS_TOKEN" \
   -d subject_token_type=urn:ietf:params:oauth:token-type:access_token \
-  -d scope="xixo:catalog:read" \
-  -d resource=https://xixo.example/mcp
+  -d scope="catalog:read" \
+  -d resource=https://search.example.com
 ```
 
 Each SDK sends the same request:
 
-| SDK | Call |
-| --- | --- |
-| Ruby | `Masks::Client::Session#exchange` |
-| Go | `Client.Exchange` |
-| `@masks/server` | `client.exchange` |
-| Python | `client.exchange` |
+| SDK             | Call                              |
+| --------------- | --------------------------------- |
+| Ruby            | `Masks::Client::Session#exchange` |
+| `@masks/server` | `client.exchange`                 |
+| Python          | `client.exchange`                 |
+| Go              | `Client.Exchange`                 |
 
 A client that holds its tokens to a DPoP key proves it on the exchange too.
 
 ### What can be exchanged
 
-| `subject_token_type` | At most | Expires no later than | Refused when |
-| --- | --- | --- | --- |
-| `…:access_token` | The subject token's scopes and resources. | The subject token. | It is not live, or another issuer signed it. |
-| `…:id_token` | What the person consented to for this client. | The ID token. | Its session ended, or it was issued to another client. |
-| `urn:masks:params:oauth:token-type:upstream_access_token` (requested) | See [delegation](#delegation). | | |
+| `subject_token_type`                                                  | At most                                                                | Expires no later than | Refused when                                                                 |
+| --------------------------------------------------------------------- | ---------------------------------------------------------------------- | --------------------- | ---------------------------------------------------------------------------- |
+| `…:access_token`                                                      | The subject token's scopes and resources, and the client's own scopes. | The subject token.    | It is not live, or another issuer signed it.                                 |
+| `…:id_token`                                                          | What the person consented to for this client.                          | The ID token.         | Its session ended, it was issued to another client, or the client is public. |
+| `urn:masks:params:oauth:token-type:upstream_access_token` (requested) | See [delegation](#delegation).                                         |                       |                                                                              |
 
 An exchange only narrows a token. `scope`, `resource`, and `requested_lifetime` can only ask for
 less. Revoking the subject token revokes everything exchanged from it.
 
 ### Who is acting
 
-Each exchanged token has an `act` claim naming its holder. When a token is exchanged again, the
-earlier `act` is nested inside the new one, so every holder stays listed:
+A token exchanged from an access token has an `act` claim naming its holder. When a token is exchanged again,
+the earlier `act` is nested inside the new one, so every holder stays listed:
 
 ```json
 {
@@ -477,7 +455,7 @@ its usual library, using the code flow with PKCE.
 2. Choose **Signs actors in**.
 3. Name the app.
 4. Enter its redirect URI.
-5. Copy the `client_id` and the client secret. masks shows them only once.
+5. Copy the client secret. masks shows it only once. The `client_id` stays on the client's page.
 
 The app also needs:
 
@@ -486,8 +464,8 @@ The app also needs:
 
 Ask for `groups` as well to receive the [groups claim](/guides/features/#groups).
 
-A service that signs in as itself is a client that **Signs in as itself**. It holds no redirect URI.
-It asks for its own token with client credentials, the grant for a client acting as itself.
+A service with nobody signed in is a client that **Signs in as itself**. It holds no redirect URI.
+It asks for its own token with client credentials.
 
 ### Checking access tokens
 
@@ -506,11 +484,13 @@ token. The proof must be:
 
 - signed by the token's key
 - made for this method and URL
-- made in the last minute
+- made within the last 90 seconds, which allows for clocks that differ
 - not seen before
 
-Set the verifier's public URL when a proxy sits in front of the API. A proof names the address the
-client used.
+A proof names the URL the client used. Behind a proxy, give the verifier the API's public URL:
+`publicURL` in `@masks/server`, `public_url` in Python, `PublicURL` in Go, and `url:` on
+`Masks::Client::Resource#authenticate` in Ruby. `Masks::Rails` uses the request's own URL, so it
+depends on Rails trusting the proxy's headers.
 
 In a language with no SDK, a JWT library checks a plain bearer token, a token that works for anyone
 who holds it. With [jose](https://github.com/panva/jose):

@@ -6,53 +6,55 @@ description: Put masks in front of an app that has no sign-in of its own, with C
 Forward authentication lets masks sign actors in to an app that has no sign-in of its own, such as a
 dashboard or an admin page.
 
-- The app sits behind a reverse proxy. A reverse proxy is a server that receives each request first
-  and passes it on to the app.
+- The app sits behind a reverse proxy, a server that receives each request first and passes it on
+  to the app.
 - The proxy asks masks about each request.
 - The proxy lets a request through only for an actor who is signed in to masks and may use the app.
-- The proxy passes the actor's name along to the app in headers.
+- The proxy passes the actor's details to the app in headers.
 
 ## Adding the app
 
-1. In `/manage`, open **Clients**.
-2. Choose **Add client**.
-3. Choose **A known product**.
-4. Pick **Any app behind Caddy, Traefik, or nginx**.
-5. Enter the app's address, such as `https://dash.example.com`.
+1. In `/manage`, open **Clients** and choose **Add client**.
+2. Under **What kind of client**, choose **A known product**.
+3. Under **Product**, choose **Any app behind Caddy, Traefik, or nginx**.
+4. Under **Its address**, enter the app's address, such as `https://dash.example.com`.
+5. Choose **Add the client**.
 
-masks registers the app and shows it under **Your apps**. It lists the proxy settings for that
-address below.
+masks registers the app and shows the proxy settings for that address. It also lists the app under
+**Your apps** on each person's account page.
 
 To limit the app to some [groups](/guides/features/#groups), use **Who may sign in** on its
-**Access** tab, as for any other app.
+**Access** tab, as for any other client.
 
 ## What happens
 
-1. The proxy asks masks' `/forward-auth` about each request. If the request has the app's cookie,
-   masks answers 200 with these headers, and the proxy hands them to the app:
+1. The proxy asks masks' `/forward-auth` about each request. If the request carries a live cookie
+   for the app, masks answers 200 with these headers, and the proxy hands them to the app:
 
-   | Header | |
-   | --- | --- |
-   | `Remote-User` | The actor's nickname. |
-   | `Remote-Email` | Their email address, when it is confirmed. |
-   | `Remote-Name` | Their name. |
-   | `Remote-Groups` | The [groups claim](/guides/features/#groups), separated by commas. |
+   | Header          |                                                                                     |
+   | --------------- | ----------------------------------------------------------------------------------- |
+   | `Remote-User`   | The actor's nickname, or their email address when they have no nickname.            |
+   | `Remote-Email`  | Their email address, when it is confirmed.                                          |
+   | `Remote-Name`   | Their name, when they have one.                                                     |
+   | `Remote-Groups` | The [groups claim](/guides/features/#groups), separated by commas. It can be empty. |
 
-2. If the request has no cookie, masks sends the browser to sign in on masks' own address. It skips
-   this if the actor is already signed in to masks.
+2. If the request has no live cookie, masks sends the browser to `/forward-auth/start` on masks'
+   own address. masks signs the actor in there, unless they are already signed in.
 3. masks sends the browser back to `/masks-auth/callback` on the app's address, with a code. The
    code works once, for that app only, for two minutes.
 4. The proxy hands that path to masks. masks sets a cookie for the app's host alone and returns the
    browser to the page it asked for.
 
-The cookie lasts as long as the actor's masks session. Access to every app behind the proxy ends on
-the next request when the actor:
+masks answers 403 when no app is registered for the address, or when the actor is not in a group
+that **Who may sign in** allows.
+
+The cookie lasts as long as the actor's masks session. Each app has its own cookie, so one app never
+sees another app's cookie. Access to the app ends on the next request when the actor:
 
 - signs out of masks
 - ends the session from the account page
 - is suspended
-
-Each app has its own cookie, so one app never sees another app's cookie.
+- is no longer in a group that **Who may sign in** allows
 
 ## Caddy
 
@@ -67,7 +69,7 @@ dash.example.com {
 }
 ```
 
-`header_up Host` is needed. Without it, Caddy sends the app's host to masks.
+Keep `header_up Host`. Without it, Caddy sends the app's host to masks.
 
 ## Traefik
 
@@ -77,14 +79,16 @@ http:
     masks:
       forwardAuth:
         address: https://auth.example.com/forward-auth
-        authResponseHeaders: [Remote-User, Remote-Email, Remote-Name, Remote-Groups]
+        authResponseHeaders:
+          [Remote-User, Remote-Email, Remote-Name, Remote-Groups]
 ```
 
 Add the `masks` middleware to the app's router.
 
 ## nginx
 
-nginx's `auth_request` cannot follow a redirect. So the nginx setup differs in two ways:
+nginx's `auth_request` cannot follow a redirect. For that reason, the nginx setup differs in two
+ways:
 
 - It asks masks for a 401 and sends the browser to sign in itself.
 - It hands the callback to masks with a location of its own.
@@ -115,9 +119,12 @@ location / {
 }
 ```
 
+To pass `Remote-Email`, `Remote-Name`, or `Remote-Groups` too, add an `auth_request_set` and a
+`proxy_set_header` line for each one, as for `Remote-User`.
+
 ## Headers the app can trust
 
-The app trusts `Remote-User` only because the proxy sets it. Set up two things:
+The app can trust `Remote-User` only because the proxy sets it. Set up two things:
 
 1. Make sure nothing reaches the app except through the proxy.
 2. Make the proxy drop any `Remote-` header a browser sends, before it adds the headers masks
