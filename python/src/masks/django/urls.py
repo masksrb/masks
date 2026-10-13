@@ -7,7 +7,7 @@ from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.urls import path
 from django.views.decorators.csrf import csrf_exempt
 
-from ..web.core import METADATA_PATH
+from ..web.core import FORM_LIMIT, METADATA_PATH, too_large
 from . import engine, incoming, response, session_of
 
 
@@ -24,6 +24,9 @@ def dispatching(methods: dict[str, str]) -> Callable[[HttpRequest], HttpResponse
         held = engine()
 
         if name == "backchannel":
+            if int(request.META.get("CONTENT_LENGTH") or 0) > FORM_LIMIT:
+                return response(too_large())
+
             return response(held.answer(held.backchannel(incoming(request))))
 
         return response(held.answer(held.handlers()[name](incoming(request), session_of(request))))

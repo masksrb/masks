@@ -70,6 +70,7 @@ RESTART_WITHIN = 60
 ISSUER_LIFETIME = 3600
 AVATAR_SIZES = (32, 64, 128, 256, 512)
 METADATA_PATH = "/.well-known/oauth-protected-resource"
+FORM_LIMIT = 64 * 1024
 
 IDENTITY = (
     "sub",
@@ -1410,6 +1411,10 @@ class Masks:
 
 def outage(error: Error) -> bool:
     return error.code in ("server_error", "temporarily_unavailable") or (error.status or 0) >= 500
+
+
+def too_large() -> Answer:
+    return Answer.json(413, {"error": "invalid_request", "error_description": "the request is too large"})
 
 
 def unreachable() -> Answer:

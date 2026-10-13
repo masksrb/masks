@@ -236,6 +236,132 @@ def proxies_the_avatar(build: Build, fake: Fake) -> None:
     assert photo.body == fake.photo
 
 
+class RecordingStore(MemorySessionStore):
+    def __init__(self) -> None:
+        super().__init__()
+        self.reads = 0
+
+    def read(self, key: str) -> dict[str, Any] | None:
+        self.reads += 1
+        return super().read(key)
+
+
+def shows_the_avatar_route_as_the_picture(build: Build, fake: Fake) -> None:
+    browser = build(config(fake))
+    sign_in(browser, fake)
+    me = browser.get("/me").json()
+
+    assert me["picture"] == "/auth/avatar"
+    assert me["avatars"]["photo"] == f"{ISSUER}/avatars/ada/photo"
+
+
+def refuses_a_sign_out_from_another_site(build: Build, fake: Fake) -> None:
+    browser = build(config(fake))
+    sign_in(browser, fake)
+
+    assert browser.post("/auth/logout", {**JSON, "Origin": "https://evil.example"}).status == 403
+    assert browser.post("/auth/logout", {**JSON, "Sec-Fetch-Site": "cross-site"}).status == 403
+    assert browser.get("/auth/logout?everywhere=1", {**HTML, "Sec-Fetch-Site": "cross-site"}).status == 403
+    assert browser.get("/me").status == 200
+    assert browser.post("/auth/logout", {**JSON, "Origin": APP}).json() == {"signed_in": False}
+
+
+def signs_out_everywhere(build: Build, fake: Fake) -> None:
+    browser = build(config(fake))
+    sign_in(browser, fake)
+    upstream = browser.post("/auth/logout?everywhere=1", HTML).location
+    query = parse_qs(urlsplit(upstream).query)
+
+    assert upstream.startswith(f"{ISSUER}/logout?")
+    assert query["post_logout_redirect_uri"] == [f"{APP}/auth/logout/return"]
+    assert browser.get("/me", JSON).status == 401
+    assert browser.get(f"/auth/logout/return?state={query['state'][0]}", HTML).location == "/"
+    assert browser.get(f"/auth/logout/return?state={query['state'][0]}", JSON).status == 400
+
+
+def restarts_a_forged_state_once(build: Build, fake: Fake) -> None:
+    browser = build(config(fake))
+    begun = browser.get("/auth", HTML).location
+    callback = fake.authorize(begun).replace("state=", "state=x")
+
+    assert browser.get(callback, HTML).location == "/auth"
+    assert browser.get(callback, JSON).json()["error"] == "invalid_state"
+
+
+def keeps_a_handshake_to_its_browser(build: Build, fake: Fake) -> None:
+    settings = config(fake, credentials=MemoryCredentials())
+    begun = build(settings).get("/auth/handshake", HTML).location
+
+    assert build(settings).get(fake.handshake(begun), JSON).json()["error"] == "invalid_state"
+
+
+def lets_only_a_manager_change_the_connection(build: Build, fake: Fake) -> None:
+    credentials = MemoryCredentials()
+    browser = build(config(fake, credentials=credentials))
+    browser.get(fake.handshake(browser.get("/auth/handshake", HTML).location), HTML)
+
+    assert browser.get("/auth/handshake", HTML).location == "/"
+
+    sign_in(browser, fake, subject="bob")
+
+    assert browser.get("/auth/handshake", JSON).status == 403
+    assert browser.post("/auth/handshake/disconnect", JSON).status == 403
+
+    sign_in(browser, fake)
+    page = browser.get("/auth/handshake", HTML)
+
+    assert f"form-action 'self' {ISSUER};" in page.headers["content-security-policy"]
+    assert b"Reconnect" in page.body
+    assert browser.post("/auth/handshake/disconnect", JSON).json()["connected"] is False
+    assert credentials.read() == {}
+
+
+def uses_a_logout_token_once(build: Build, fake: Fake) -> None:
+    browser = build(config(fake))
+    held = fake.logout_token("web", subject="ada")
+
+    assert browser.post("/auth/logout/backchannel", data={"logout_token": held}).status == 200
+
+    reused = browser.post("/auth/logout/backchannel", data={"logout_token": held})
+
+    assert reused.status == 400
+    assert "already used" in reused.json()["error_description"]
+
+
+def refuses_a_large_back_channel_request(build: Build, fake: Fake) -> None:
+    browser = build(config(fake))
+    answered = browser.post("/auth/logout/backchannel", data={"logout_token": "a" * (70 * 1024)})
+
+    assert answered.status == 413
+
+
+def reads_no_session_for_a_route_that_needs_none(build: Build, fake: Fake) -> None:
+    store = RecordingStore()
+    browser = build(config(fake, sessions=ServerSessions(store)))
+    sign_in(browser, fake)
+    reads = store.reads
+    plain = browser.get("/plain")
+
+    assert plain.status == 200
+    assert store.reads == reads
+    assert not plain.cookies
+
+
+def keeps_a_refreshed_session_out_of_shared_caches(build: Build, fake: Fake, monkeypatch: pytest.MonkeyPatch) -> None:
+    browser = build(config(fake))
+    sign_in(browser, fake)
+
+    assert browser.get("/public").headers["cache-control"] == "public, max-age=600"
+
+    later = time.time() + 7200
+    monkeypatch.setattr(masks.models.time, "time", lambda: later)
+    refreshed = browser.get("/public")
+
+    assert refreshed.json() == {"signed_in": True}
+    assert refreshed.cookies
+    assert refreshed.headers["cache-control"] == "no-store"
+
+
 SCENARIOS = [
     signs_in_and_out,
     keeps_return_to_local,
@@ -247,4 +373,15 @@ SCENARIOS = [
     shakes_hands,
     ends_sessions_from_the_back_channel,
     proxies_the_avatar,
+    shows_the_avatar_route_as_the_picture,
+    refuses_a_sign_out_from_another_site,
+    signs_out_everywhere,
+    restarts_a_forged_state_once,
+    keeps_a_handshake_to_its_browser,
+    lets_only_a_manager_change_the_connection,
+    uses_a_logout_token_once,
+    refuses_a_large_back_channel_request,
+    reads_no_session_for_a_route_that_needs_none,
 ]
+
+TIMED = [refreshes_and_forgets, keeps_a_refreshed_session_out_of_shared_caches]

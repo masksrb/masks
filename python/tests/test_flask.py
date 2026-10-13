@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any
+from typing import Any, cast
 from urllib.parse import urlsplit
 
 import httpx
@@ -9,7 +9,7 @@ import pytest
 from flask import Flask, jsonify
 
 from masks.flask import Masks, masked
-from masks.web import Config
+from masks.web import Config, ServerSessions
 
 from . import scenarios
 from .fake import Fake
@@ -35,6 +35,14 @@ class FlaskBrowser:
         @auth.required("billing")
         def billing() -> Any:
             return jsonify({"role": masked.organization.role if masked.organization else None})
+
+        @app.get("/public")
+        def public() -> Any:
+            return jsonify({"signed_in": masked.signed_in}), 200, {"Cache-Control": "public, max-age=600"}
+
+        @app.get("/plain")
+        def plain() -> Any:
+            return jsonify({"plain": True})
 
         @app.get("/api/catalog")
         @auth.protected("read")
@@ -63,8 +71,9 @@ def test_flask(scenario: Callable[..., None], fake: Fake) -> None:
     scenario(FlaskBrowser, fake)
 
 
-def test_flask_refreshes_and_forgets(fake: Fake, monkeypatch: pytest.MonkeyPatch) -> None:
-    scenarios.refreshes_and_forgets(FlaskBrowser, fake, monkeypatch)
+@pytest.mark.parametrize("scenario", scenarios.TIMED, ids=lambda scenario: scenario.__name__)
+def test_flask_over_time(scenario: Callable[..., None], fake: Fake, monkeypatch: pytest.MonkeyPatch) -> None:
+    scenario(FlaskBrowser, fake, monkeypatch)
 
 
 def test_flask_takes_the_secret_from_the_app(fake: Fake) -> None:
@@ -73,3 +82,52 @@ def test_flask_takes_the_secret_from_the_app(fake: Fake) -> None:
     auth = Masks(app, issuer="https://id.example", http=fake.http())
 
     assert auth.engine.config.backend.name == "__Host-masks"
+
+
+def test_a_privilege_named_before_init_app_is_checked_by_it(fake: Fake) -> None:
+    auth = Masks(issuer="https://id.example", http=fake.http())
+    app = Flask(__name__)
+    app.secret_key = "k" * 40
+
+    @app.get("/typo")
+    @auth.required("admni")
+    def typo() -> Any:
+        return "never"
+
+    with pytest.raises(ValueError, match="admni"):
+        auth.init_app(app)
+
+
+def test_an_async_session_store_is_refused_at_init_app(fake: Fake) -> None:
+    class AsyncStore:
+        async def read(self, key: str) -> None:
+            return None
+
+    with pytest.raises(TypeError, match="async framework"):
+        Masks(Flask(__name__), scenarios.config(fake, sessions=ServerSessions(cast(Any, AsyncStore()))))
+
+
+def test_an_app_factory_and_calls_inside_a_view(fake: Fake) -> None:
+    auth = Masks()
+
+    def create() -> Flask:
+        app = Flask(__name__)
+        auth.init_app(app)
+
+        @app.get("/inside")
+        def inside() -> Any:
+            person = auth.authorize("admin")
+            return jsonify({"subject": person.subject})
+
+        @app.get("/client")
+        def client() -> Any:
+            return jsonify({"client_id": auth.client().client_id, "connected": auth.connected()})
+
+        return app
+
+    auth._config = scenarios.config(fake)
+    app = create()
+    browser = app.test_client()
+
+    assert browser.get("/inside", base_url=APP).headers["Location"] == "/auth"
+    assert browser.get("/client", base_url=APP).json == {"client_id": "web", "connected": True}

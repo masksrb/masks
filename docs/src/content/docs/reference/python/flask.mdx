@@ -45,3 +45,9 @@ defaults to `app.secret_key`. `Masks()` followed by `init_app(app)` works as wel
 | `auth.registered()` | Whether masks still knows the app. |
 | `auth.connected()` | Whether the app holds credentials. |
 | `auth.session()` | The session, a mutable mapping. |
+
+`init_app` raises `ValueError` for a privilege that `privileges` does not name, even in a decorator
+applied before it ran. It raises `TypeError` for a session store with `async` methods.
+
+The session is read the first time a request needs it, so a view that never asks for the person
+reads nothing from a session store.

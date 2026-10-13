@@ -6,6 +6,7 @@ from django.http import HttpRequest, HttpResponse
 from django.utils.functional import SimpleLazyObject
 
 from ..web.core import Refusal, unshared
+from ..web.sessions import Session
 from . import engine, person, response
 
 
@@ -15,11 +16,11 @@ class MasksMiddleware:
 
     def __call__(self, request: HttpRequest) -> HttpResponse:
         held = engine()
-        session = held.load(request.COOKIES.get(held.cookie_name))
-        request.masks_session = session
+        request.masks_cookie = request.COOKIES.get(held.cookie_name)
         request.masked = SimpleLazyObject(lambda: person(request))
         sent = self.get_response(request)
-        sealed = held.seal(session, request.is_secure())
+        session = getattr(request, "masks_session", None)
+        sealed = held.seal(session, request.is_secure()) if isinstance(session, Session) else None
 
         if sealed is not None:
             sent["Cache-Control"] = unshared(sent.get("Cache-Control", ""))

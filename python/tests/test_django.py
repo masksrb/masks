@@ -1,16 +1,18 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Iterator
-from typing import Any
+from typing import Any, cast
 from urllib.parse import urlsplit
 
 import django
 import httpx
 import pytest
 from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
 from django.test import Client
 
-from masks.web import Config
+from masks.django import engine
+from masks.web import Config, ServerSessions
 
 from . import scenarios
 from .fake import ISSUER, Fake
@@ -68,8 +70,9 @@ def test_django(scenario: Callable[..., None], fake: Fake) -> None:
     scenario(DjangoBrowser, fake)
 
 
-def test_django_refreshes_and_forgets(fake: Fake, monkeypatch: pytest.MonkeyPatch) -> None:
-    scenarios.refreshes_and_forgets(DjangoBrowser, fake, monkeypatch)
+@pytest.mark.parametrize("scenario", scenarios.TIMED, ids=lambda scenario: scenario.__name__)
+def test_django_over_time(scenario: Callable[..., None], fake: Fake, monkeypatch: pytest.MonkeyPatch) -> None:
+    scenario(DjangoBrowser, fake, monkeypatch)
 
 
 def test_django_keeps_its_csrf_check_on_sign_out(fake: Fake) -> None:
@@ -79,3 +82,14 @@ def test_django_keeps_its_csrf_check_on_sign_out(fake: Fake) -> None:
 
     assert browser.post("/auth/logout", scenarios.JSON).status == 403
     assert browser.get("/me").status == 200
+
+
+def test_django_refuses_an_async_session_store(fake: Fake) -> None:
+    class AsyncStore:
+        async def read(self, key: str) -> None:
+            return None
+
+    settings.MASKS = scenarios.config(fake, sessions=ServerSessions(cast(Any, AsyncStore())))
+
+    with pytest.raises(ImproperlyConfigured, match="async framework"):
+        engine()

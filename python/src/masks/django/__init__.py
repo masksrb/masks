@@ -46,6 +46,10 @@ def engine() -> Engine:
     with _lock:
         if _built["source"] is not source:
             config = source if isinstance(source, Config) else Config(**{"secret": settings.SECRET_KEY, **source})
+
+            if getattr(config.backend, "asynchronous", False):
+                raise ImproperlyConfigured("masks: an async session store needs an async framework, such as FastAPI")
+
             _built["source"] = source
             _built["engine"] = Engine(config)
 
@@ -79,8 +83,14 @@ def response(answer: Answer) -> HttpResponse:
 def session_of(request: HttpRequest) -> Session:
     found = getattr(request, "masks_session", None)
 
-    if not isinstance(found, Session):
+    if isinstance(found, Session):
+        return found
+
+    if not hasattr(request, "masks_cookie"):
         raise ImproperlyConfigured("masks: add masks.django.middleware.MasksMiddleware to MIDDLEWARE")
+
+    found = engine().load(request.masks_cookie)
+    request.masks_session = found
 
     return found
 
@@ -104,8 +114,7 @@ def _guard(request: HttpRequest, privileges: Sequence[str], tokens: bool, only_t
     if only_tokens:
         found = held.protect(incoming(request), privileges)
     else:
-        session = getattr(request, "masks_session", None)
-        session = session if isinstance(session, Session) else (Session() if tokens else session_of(request))
+        session = Session() if tokens and not hasattr(request, "masks_cookie") else session_of(request)
         found = held.authorize(incoming(request), session, privileges, tokens=tokens)
 
     if isinstance(found, Answer):

@@ -25,6 +25,17 @@ def billing(request: HttpRequest) -> Any:
     return JsonResponse({"role": held.role if held else None})
 
 
+def public(request: HttpRequest) -> Any:
+    sent = JsonResponse({"signed_in": request.masked.signed_in})
+    sent["Cache-Control"] = "public, max-age=600"
+
+    return sent
+
+
+def plain(request: HttpRequest) -> Any:
+    return JsonResponse({"plain": True})
+
+
 @token_required("read")
 def catalog(request: HttpRequest) -> Any:
     return JsonResponse({"subject": request.masked.subject})
@@ -35,5 +46,7 @@ urlpatterns = [
     path("me", me),
     path("admin", admin),
     path("billing", billing),
+    path("public", public),
+    path("plain", plain),
     path("api/catalog", catalog),
 ]

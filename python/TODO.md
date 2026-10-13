@@ -14,7 +14,7 @@
 
 ## Security
 
-- The security review did not finish the Flask adapter or `web/credentials.py`.
+- The security review did not finish `web/credentials.py`.
 
 ## Testing
 

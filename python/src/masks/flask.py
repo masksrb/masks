@@ -6,12 +6,13 @@ from typing import Any, TypeVar, cast
 
 import httpx
 from flask import Blueprint, Flask, Response, current_app, g, jsonify, request
+from werkzeug.exceptions import RequestEntityTooLarge
 from werkzeug.local import LocalProxy
 
 from .client import Client
 from .errors import MasksError
 from .web.config import Config
-from .web.core import METADATA_PATH, Answer, Incoming, Refusal, cookie_named, unshared
+from .web.core import FORM_LIMIT, METADATA_PATH, Answer, Incoming, Refusal, cookie_named, too_large, unshared
 from .web.core import Masks as Engine
 from .web.person import Person
 from .web.sessions import Session
@@ -50,6 +51,7 @@ class Masks:
         self._config = config
         self._options = options
         self._engine: Engine | None = None
+        self._named: set[str] = set()
 
         if app is not None:
             self.init_app(app)
@@ -63,7 +65,11 @@ class Masks:
 
     def init_app(self, app: Flask) -> None:
         config = self._config or Config(**{"secret": app.secret_key or "", **self._options})
+        if getattr(config.backend, "asynchronous", False):
+            raise TypeError("masks: an async session store needs an async framework, such as FastAPI")
+
         self._engine = Engine(config)
+        self._known(sorted(self._named))
         app.extensions["masks"] = self
 
         blueprint = Blueprint("masks", __name__)
@@ -75,12 +81,8 @@ class Masks:
 
         blueprint.add_url_rule(METADATA_PATH, "metadata", self._metadata, methods=["GET"])
         app.register_blueprint(blueprint)
-        app.before_request(self._load)
         app.after_request(self._save)
         app.register_error_handler(Refusal, refused)
-
-    def _load(self) -> None:
-        g.masks_session = self.engine.load(cookie_named(request.headers.get("Cookie", ""), self.engine.cookie_name))
 
     def _save(self, sent: Response) -> Response:
         session = g.get("masks_session")
@@ -98,7 +100,7 @@ class Masks:
         found = g.get("masks_session")
 
         if not isinstance(found, Session):
-            found = Session()
+            found = self.engine.load(cookie_named(request.headers.get("Cookie", ""), self.engine.cookie_name))
             g.masks_session = found
 
         return found
@@ -106,7 +108,15 @@ class Masks:
     def _endpoint(self, name: str) -> Callable[[], Response]:
         def answer() -> Response:
             if name == "backchannel":
-                found = self.engine.answer(self.engine.backchannel(incoming()))
+                request.max_content_length = FORM_LIMIT
+                request.max_form_memory_size = FORM_LIMIT
+
+                try:
+                    held = incoming()
+                except RequestEntityTooLarge:
+                    return response(too_large())
+
+                found = self.engine.answer(self.engine.backchannel(held))
             else:
                 found = self.engine.answer(self.engine.handlers()[name](incoming(), self.session()))
 
@@ -178,6 +188,7 @@ class Masks:
 
     def _known(self, privileges: Sequence[str]) -> None:
         if self._engine is None:
+            self._named.update(privileges)
             return
 
         unknown = [name for name in privileges if name not in self._engine.config.known]

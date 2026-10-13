@@ -12,13 +12,12 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 from .client import AsyncClient
 from .errors import MasksError
 from .web.config import Config
-from .web.core import METADATA_PATH, Answer, Incoming, Refusal, cookie_named, unshared
+from .web.core import FORM_LIMIT, METADATA_PATH, Answer, Incoming, Refusal, cookie_named, too_large, unshared
 from .web.core import Masks as Engine
 from .web.person import Person
 from .web.sessions import Session
 
 SESSION = "masks.session"
-FORM_LIMIT = 64 * 1024
 
 __all__ = ["Config", "Masks", "Person", "Refusal", "SessionMiddleware"]
 
@@ -82,9 +81,7 @@ async def bounded_body(request: Request) -> bytes:
         body += chunk
 
         if len(body) > FORM_LIMIT:
-            raise Refusal(
-                Answer.json(413, {"error": "invalid_request", "error_description": "the request is too large"})
-            )
+            raise Refusal(too_large())
 
     return bytes(body)
 
