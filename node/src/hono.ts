@@ -1,6 +1,9 @@
 import type { MiddlewareHandler } from "hono";
+import { withWritten } from "./app/cookies.js";
 import type { Masked } from "./app/masked.js";
 import { Masks, type MasksOptions } from "./app/masks.js";
+
+const written = new WeakMap<Request, string[]>();
 
 export type MasksVariables = { masked: Masked };
 export type MasksEnv = { Variables: MasksVariables };
@@ -24,6 +27,7 @@ export function masksHono(
       const { masked, cookies } = await masks.masked(context.req.raw);
 
       context.set("masked", masked);
+      written.set(context.req.raw, cookies);
       for (const cookie of cookies) {
         context.header("Set-Cookie", cookie, { append: true });
       }
@@ -42,7 +46,10 @@ export function masked(
   const held = masks instanceof Masks ? masks : masks.masks;
 
   return async (context, next) => {
-    const outcome = await held.guard(context.req.raw, ...privileges);
+    const outcome = await held.guard(
+      withWritten(context.req.raw, written.get(context.req.raw) ?? []),
+      ...privileges,
+    );
 
     if (outcome.response) return outcome.response;
 

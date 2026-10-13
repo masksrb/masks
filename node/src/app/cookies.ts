@@ -121,3 +121,19 @@ export function replaceCookies(
 
   return [...held].map(([name, value]) => `${name}=${value}`).join("; ");
 }
+
+export function cookieName(line: string): string {
+  const pair = line.split(";")[0] ?? "";
+
+  return pair.slice(0, pair.indexOf("=")).trim();
+}
+
+export function withWritten(request: Request, written: string[]): Request {
+  if (written.length === 0) return request;
+
+  const headers = new Headers(request.headers);
+
+  headers.set("cookie", replaceCookies(request.headers.get("cookie"), written));
+
+  return new Request(request, { headers });
+}

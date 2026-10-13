@@ -2,7 +2,6 @@
 
 ## The app layer
 
-- A guarded Express or Hono request reads and seals the session two or three times, and can send two different `Set-Cookie` headers for one cookie. Keep what `masked()` resolves in a `WeakMap` keyed on the request, let `guard()` and `check()` reuse it, and remove `alreadySet`.
 - `guard()` builds two Visits. Let `check()` take the Visit `guard()` already has.
 - `handle()` resolves the issuer before it checks the path. Return early when `!owns(path)`, and add a public `mounted(pathname)` for `owns`, `handle`, and the Next proxy. Hono should filter the same way. The Next proxy treats the resource metadata path as a page.
 - `Outcome` is a finished `Response`, so the Next adapter forces `accept: text/html` and reads `Location`. Give a refusal a kind (`login`, `step_up`, `forbidden`, `handshake`), a URL, and `toResponse(request)`.

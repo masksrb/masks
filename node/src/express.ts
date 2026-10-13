@@ -4,8 +4,11 @@ import type {
   NextFunction,
   RequestHandler,
 } from "express";
+import { cookieName, withWritten } from "./app/cookies.js";
 import type { Masked } from "./app/masked.js";
 import { Masks, type MasksOptions } from "./app/masks.js";
+
+const written = new WeakMap<ExpressRequest, string[]>();
 
 declare global {
   namespace Express {
@@ -44,7 +47,8 @@ export function masksExpress(
         const { masked, cookies } = await masks.masked(web);
 
         request.masked = masked;
-        for (const cookie of cookies) response.append("Set-Cookie", cookie);
+        written.set(request, cookies);
+        setCookies(response, cookies);
       }
 
       next();
@@ -64,15 +68,15 @@ export function masked(
 
   return async (request, response, next) => {
     try {
-      const outcome = await held.guard(await toRequest(request), ...privileges);
+      const outcome = await held.guard(
+        withWritten(await toRequest(request), written.get(request) ?? []),
+        ...privileges,
+      );
 
       if (outcome.response) return await send(outcome.response, response);
 
       request.masked = outcome.masked;
-      for (const cookie of outcome.cookies) {
-        if (!alreadySet(response, cookie))
-          response.append("Set-Cookie", cookie);
-      }
+      setCookies(response, outcome.cookies);
 
       next();
     } catch (error) {
@@ -157,9 +161,7 @@ export async function send(
     response.setHeader(name, value);
   }
 
-  for (const cookie of answer.headers.getSetCookie()) {
-    if (!alreadySet(response, cookie)) response.append("Set-Cookie", cookie);
-  }
+  setCookies(response, answer.headers.getSetCookie());
 
   if (!answer.body) {
     response.end();
@@ -174,11 +176,16 @@ export async function send(
   }
 }
 
-function alreadySet(response: ExpressResponse, cookie: string): boolean {
-  const held = response.getHeader("set-cookie");
-  const list = Array.isArray(held) ? held : held ? [String(held)] : [];
+function setCookies(response: ExpressResponse, cookies: string[]): void {
+  if (cookies.length === 0) return;
 
-  return list.includes(cookie);
+  const names = new Set(cookies.map(cookieName));
+  const held = response.getHeader("set-cookie");
+  const kept = (Array.isArray(held) ? held : held ? [String(held)] : []).filter(
+    (line) => !names.has(cookieName(line)),
+  );
+
+  response.setHeader("Set-Cookie", [...kept, ...cookies]);
 }
 
 export { Masked } from "./app/masked.js";

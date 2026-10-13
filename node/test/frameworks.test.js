@@ -279,3 +279,48 @@ test("Hono mounts the routes, keeps the session, and guards by privilege", async
     refreshed.headers.getSetCookie().some((line) => line.startsWith("masks=")),
   );
 });
+
+test("a guarded Express or Hono request refreshes an expired session once and sets its cookie once", async () => {
+  for (const framework of ["express", "hono"]) {
+    const held = await setup({}, closers);
+    let handler;
+
+    if (framework === "express") {
+      const app = express();
+
+      app.use(masksExpress(held.masks));
+      app.get("/me", expressMasked(held.masks), (request, response) => {
+        response.json({ subject: request.masked.subject });
+      });
+      handler = viaHTTP(await serve(app));
+    } else {
+      const app = new Hono();
+
+      app.use(masksHono(held.masks));
+      app.get("/me", honoMasked(held.masks), (context) =>
+        context.json({ subject: context.get("masked").subject }),
+      );
+      handler = (request) => app.fetch(request);
+    }
+
+    const browser = new Browser(handler, APP);
+
+    held.fake.lifetime = 5;
+    await signIn({ ...held, browser });
+    held.fake.lifetime = 3600;
+
+    const before = held.fake.tokenRequests.length;
+    const me = await browser.fetch("/me");
+    const sessions = me.headers
+      .getSetCookie()
+      .filter((line) => line.startsWith("masks="));
+
+    assert.deepEqual(await me.json(), { subject: "ada" }, framework);
+    assert.equal(sessions.length, 1, framework);
+    assert.deepEqual(
+      held.fake.tokenRequests.slice(before),
+      ["refresh_token"],
+      framework,
+    );
+  }
+});
