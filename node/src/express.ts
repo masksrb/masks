@@ -30,7 +30,7 @@ export interface MasksExpressOptions extends MasksOptions {
 
 export function masksExpress(
   options: MasksExpressOptions = {},
-): RequestHandler & { masks: Masks } {
+): RequestHandler {
   const masks = Masks.from(options);
 
   const handler: RequestHandler = async (request, response, next) => {
@@ -63,7 +63,7 @@ export function masksExpress(
     }
   };
 
-  return Object.assign(handler, { masks });
+  return handler;
 }
 
 export function requireAuth(...privileges: string[]): RequestHandler {

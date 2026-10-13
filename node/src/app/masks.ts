@@ -47,8 +47,7 @@ import { Sealer } from "./seal.js";
 import {
   type CredentialStore,
   type Credentials,
-  envCredentials,
-  fileCredentials,
+  defaultCredentials,
   type LogoutStore,
   memoryLogouts,
   processEnv,
@@ -177,6 +176,7 @@ class Visit {
   readonly url: URL;
   readonly cookies: Map<string, string>;
   readonly out: string[] = [];
+  readonly handed = new Set<string>();
   origin = "";
   resource = "";
   secure = false;
@@ -228,10 +228,7 @@ export class Masks {
     this.scope = options.scope ?? DEFAULT_SCOPE;
     this.maxAge = options.maxAge ?? 14 * 24 * 3600;
     this.#credentials =
-      options.credentials ??
-      (this.#env.MASKS_CLIENT_ID
-        ? envCredentials("MASKS_CLIENT", this.#env)
-        : fileCredentials());
+      options.credentials ?? defaultCredentials(this.#env, "MASKS_CLIENT");
     this.#logouts =
       options.logouts ?? shared("app logouts", () => memoryLogouts());
     this.#replay =
@@ -373,7 +370,7 @@ export class Masks {
     const visit = await this.#visit(request);
     const data = await this.#current(visit);
 
-    return { masked: this.#masked(visit, data), cookies: visit.out };
+    return { masked: this.#masked(visit, data), cookies: handOut(visit) };
   }
 
   require(request: Request, ...names: string[]): Promise<Outcome> {
@@ -428,7 +425,7 @@ export class Masks {
       )
       .map((privilege) => privilege.name);
 
-    if (missing.length === 0) return { masked, cookies: visit.out };
+    if (missing.length === 0) return { masked, cookies: handOut(visit) };
 
     const flow = await this.#readFlow(visit);
     const stepped = flow.steppedUp;
@@ -719,7 +716,7 @@ export class Masks {
       masked.signedIn ? masked.subject : undefined,
     );
 
-    return { connection, cookies: visit.out };
+    return { connection, cookies: handOut(visit) };
   }
 
   async #stillRegistered(visit: Visit, clientID: string): Promise<boolean> {
@@ -1380,9 +1377,11 @@ export class Masks {
   #returnTo(asked: string | null | undefined): string | undefined {
     const path = localPath(asked);
 
-    const pathname = new URL(path ?? "/", "http://app").pathname;
+    if (!path) return undefined;
 
-    if (!path || (this.owns(pathname) && pathname !== this.handshakePath))
+    const { pathname } = new URL(path, "http://app");
+
+    if (this.owns(pathname) && pathname !== this.handshakePath)
       return undefined;
 
     return path;
@@ -1659,6 +1658,14 @@ export class Masks {
   #setCookies(visit: Visit, written: string[]): void {
     visit.out.splice(0, Infinity, ...mergeCookies(visit.out, written));
   }
+}
+
+function handOut(visit: Visit): string[] {
+  const fresh = visit.out.filter((line) => !visit.handed.has(line));
+
+  for (const line of fresh) visit.handed.add(line);
+
+  return fresh;
 }
 
 export function now(): number {

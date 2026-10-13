@@ -121,7 +121,7 @@ export function replaceCookies(
   return [...held].map(([name, value]) => `${name}=${value}`).join("; ");
 }
 
-export function cookieName(line: string): string {
+function cookieName(line: string): string {
   const pair = line.split(";")[0] ?? "";
 
   return pair.slice(0, pair.indexOf("=")).trim();

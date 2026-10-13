@@ -43,6 +43,7 @@ export interface MasksNext {
 
 export function masksNext(options: MasksNextOptions = {}): MasksNext {
   const masks = Masks.from(options);
+  const protect = options.protect ?? [];
 
   const handle = async (request: Request) =>
     (await masks.handle(request)) ?? new Response("not found", { status: 404 });
@@ -127,7 +128,7 @@ export function masksNext(options: MasksNextOptions = {}): MasksNext {
         return NextResponse.next({ request: { headers: forwarded } });
       }
 
-      const guarded = (options.protect ?? []).some((pattern) =>
+      const guarded = protect.some((pattern) =>
         typeof pattern === "string"
           ? url.pathname === pattern ||
             url.pathname.startsWith(`${pattern.replace(/\/+$/, "")}/`)

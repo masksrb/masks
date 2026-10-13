@@ -34,8 +34,7 @@ import {
 import { Sealer } from "./app/seal.js";
 import {
   type CredentialStore,
-  envCredentials,
-  fileCredentials,
+  defaultCredentials,
   type LogoutStore,
   memoryLogouts,
   processEnv,
@@ -205,21 +204,13 @@ export class MasksAuth {
     this.id = options.id ?? "masks";
     this.privileges = new Privileges(options.privileges);
     this.scope = options.scope ?? DEFAULT_SCOPE;
-    this.#credentials = options.credentials ?? this.#envCredentials();
+    this.#credentials =
+      options.credentials ??
+      defaultCredentials(processEnv(), `AUTH_${this.#envName}`, "MASKS_CLIENT");
     this.#logouts =
       options.logouts ?? shared("authjs logouts", () => memoryLogouts());
     this.#replay =
       options.replay ?? shared("authjs replay", () => new MemoryReplayStore());
-  }
-
-  #envCredentials(): CredentialStore {
-    const env = processEnv();
-    const named = `AUTH_${this.#envName}`;
-
-    if (env[`${named}_ID`]) return envCredentials(named);
-    if (env.MASKS_CLIENT_ID) return envCredentials();
-
-    return fileCredentials();
   }
 
   get #envName(): string {

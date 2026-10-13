@@ -167,10 +167,13 @@ export function memoryCredentials(initial?: Credentials): CredentialStore {
   };
 }
 
-export function envCredentials(
+export function envCredentials({
   prefix = "MASKS_CLIENT",
-  env: Record<string, string | undefined> = processEnv(),
-): CredentialStore {
+  env = processEnv(),
+}: {
+  prefix?: string;
+  env?: Record<string, string | undefined>;
+} = {}): CredentialStore {
   return {
     read() {
       const id = env[`${prefix}_ID`];
@@ -180,6 +183,15 @@ export function envCredentials(
         : undefined;
     },
   };
+}
+
+export function defaultCredentials(
+  env: Record<string, string | undefined>,
+  ...prefixes: string[]
+): CredentialStore {
+  const prefix = prefixes.find((named) => env[`${named}_ID`]);
+
+  return prefix ? envCredentials({ prefix, env }) : fileCredentials();
 }
 
 export function fileCredentials(path = "masks.json"): CredentialStore {

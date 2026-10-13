@@ -5,7 +5,7 @@ import type { Masked } from "./app/masked.js";
 import { Masks, type MasksOptions } from "./app/masks.js";
 import { processEnv } from "./app/stores.js";
 
-const installed = new WeakMap<Context, { masks: Masks; sent: Set<string> }>();
+const installed = new WeakMap<Context, Masks>();
 
 declare module "hono" {
   interface ContextVariableMap {
@@ -13,29 +13,26 @@ declare module "hono" {
   }
 }
 
-export type MasksVariables = { masked: Masked };
-export type MasksEnv = { Variables: MasksVariables };
-
 export interface MasksHonoOptions extends MasksOptions {
   masks?: Masks;
   session?: boolean;
 }
 
-export function masksHono(
-  options: MasksHonoOptions = {},
-): MiddlewareHandler & { readonly masks: Masks } {
+export function masksHono(options: MasksHonoOptions = {}): MiddlewareHandler {
   let built = options.masks;
-  const build = (bindings: unknown) =>
-    new Masks({ ...options, env: { ...processEnv(), ...strings(bindings) } });
 
-  const handler: MiddlewareHandler = async (context, next) => {
-    built ??= build(context.env);
+  return async (context, next) => {
+    built ??= new Masks({
+      ...options,
+      env: { ...processEnv(), ...strings(context.env) },
+    });
+
     const masks = built;
     const answer = await masks.handle(context.req.raw);
 
     if (answer) return answer;
 
-    installed.set(context, { masks, sent: new Set() });
+    installed.set(context, masks);
 
     if (options.session !== false) {
       const { masked, cookies } = await masks.masked(context.req.raw);
@@ -46,32 +43,15 @@ export function masksHono(
 
     await next();
   };
-
-  return Object.defineProperty(handler, "masks", {
-    get: () => {
-      built ??= build(undefined);
-      return built;
-    },
-  }) as MiddlewareHandler & { readonly masks: Masks };
-}
-
-function strings(bindings: unknown): Record<string, string> {
-  if (!bindings || typeof bindings !== "object") return {};
-
-  return Object.fromEntries(
-    Object.entries(bindings).filter(
-      (entry): entry is [string, string] => typeof entry[1] === "string",
-    ),
-  );
 }
 
 export function requireAuth(...privileges: string[]): MiddlewareHandler {
   return async (context, next) => {
-    const held = installed.get(context);
+    const masks = installed.get(context);
 
-    if (!held) throw new Error("masks: use masksHono before requireAuth");
+    if (!masks) throw new Error("masks: use masksHono before requireAuth");
 
-    const outcome = await held.masks.guard(context.req.raw, ...privileges);
+    const outcome = await masks.guard(context.req.raw, ...privileges);
 
     if (outcome.response) {
       throw new HTTPException(outcome.response.status as ContentfulStatusCode, {
@@ -88,14 +68,19 @@ export function requireAuth(...privileges: string[]): MiddlewareHandler {
 }
 
 function setCookies(context: Context, cookies: string[]): void {
-  const sent = installed.get(context)?.sent;
-
   for (const cookie of cookies) {
-    if (sent?.has(cookie)) continue;
-
-    sent?.add(cookie);
     context.header("Set-Cookie", cookie, { append: true });
   }
+}
+
+function strings(bindings: unknown): Record<string, string> {
+  if (!bindings || typeof bindings !== "object") return {};
+
+  return Object.fromEntries(
+    Object.entries(bindings).filter(
+      (entry): entry is [string, string] => typeof entry[1] === "string",
+    ),
+  );
 }
 
 export { Masked } from "./app/masked.js";
