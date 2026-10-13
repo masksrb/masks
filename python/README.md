@@ -40,12 +40,14 @@ from typing import Annotated
 from fastapi import Depends, FastAPI
 from masks.fastapi import Config, Masks, Person
 
-auth = Masks(Config(
-    issuer=os.environ["MASKS_ISSUER"],
-    resource="https://app.example.com",
-    name="Catalog",
-    secret=os.environ["SESSION_SECRET"],
-))
+auth = Masks(
+    Config(
+        issuer=os.environ["MASKS_ISSUER"],
+        resource="https://app.example.com",
+        name="Catalog",
+        secret=os.environ["SESSION_SECRET"],
+    )
+)
 
 app = FastAPI()
 auth.install(app)
