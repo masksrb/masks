@@ -2,7 +2,7 @@
 
 ## The app layer
 
-- The app layer cannot hold a DPoP-bound token. The avatar route sends its token through `signedFetch`, so it needs only the key once a session can hold one.
+- The app layer cannot hold a DPoP-bound token. A workable shape: a `dpop: true` option makes a key for each sign-in and keeps its private JWK in the sealed session, so any process can refresh it; `client.start`, `complete`, `refresh`, and `userinfo` take that key, and the avatar route's `signedFetch` already signs with it. Still open is how an app calls its own APIs with the token, since `masked.authorization` alone no longer works, so `Masked` would need a signed `fetch`.
 
 ## Auth.js
 
