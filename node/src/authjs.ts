@@ -117,13 +117,15 @@ export interface HeldSignIn {
   identity: Record<string, unknown>;
 }
 
-export interface MasksSession extends Session {
-  masks?: MaskedJSON;
+declare module "next-auth" {
+  interface Session {
+    masks?: MaskedJSON;
+  }
 }
 
 export interface MasksAuthResult extends NextAuthResult {
   masks: MasksAuth;
-  guard: (...privileges: string[]) => Promise<Masked>;
+  requireAuth: (...privileges: string[]) => Promise<Masked>;
   accessToken: () => Promise<string | undefined>;
   proxy: (request: Request) => Promise<Response>;
 }
@@ -203,13 +205,25 @@ export class MasksAuth {
     this.id = options.id ?? "masks";
     this.privileges = new Privileges(options.privileges);
     this.scope = options.scope ?? DEFAULT_SCOPE;
-    this.#credentials =
-      options.credentials ??
-      (processEnv().MASKS_CLIENT_ID ? envCredentials() : fileCredentials());
+    this.#credentials = options.credentials ?? this.#envCredentials();
     this.#logouts =
       options.logouts ?? shared("authjs logouts", () => memoryLogouts());
     this.#replay =
       options.replay ?? shared("authjs replay", () => new MemoryReplayStore());
+  }
+
+  #envCredentials(): CredentialStore {
+    const env = processEnv();
+    const named = `AUTH_${this.#envName}`;
+
+    if (env[`${named}_ID`]) return envCredentials(named);
+    if (env.MASKS_CLIENT_ID) return envCredentials();
+
+    return fileCredentials();
+  }
+
+  get #envName(): string {
+    return this.id.toUpperCase().replace(/[^A-Z0-9]/g, "_");
   }
 
   get basePath(): string {
@@ -230,11 +244,15 @@ export class MasksAuth {
   }
 
   get issuerURL(): string {
-    const named = this.#options.issuer ?? processEnv().MASKS_ISSUER;
+    const env = processEnv();
+    const named =
+      this.#options.issuer ??
+      env[`AUTH_${this.#envName}_ISSUER`] ??
+      env.MASKS_ISSUER;
 
     if (!named) {
       throw new Error(
-        "masks: set MASKS_ISSUER, or pass issuer, to name the masks server",
+        `masks: set AUTH_${this.#envName}_ISSUER, or pass issuer, to name the masks server`,
       );
     }
 
@@ -295,7 +313,7 @@ export class MasksAuth {
         POST: wrap(result.handlers.POST),
       },
       masks: this,
-      guard: (...privileges) => this.guard(...privileges),
+      requireAuth: (...privileges) => this.requireAuth(...privileges),
       accessToken: () => this.accessToken(),
       proxy: (request) => this.proxy(request),
     } as MasksAuthResult;
@@ -452,12 +470,12 @@ export class MasksAuth {
     }
   }
 
-  async guard(...names: string[]): Promise<Masked> {
+  async requireAuth(...names: string[]): Promise<Masked> {
     const { headers, cookies } = await nextHeaders();
     const { redirect: navigate } = await nextNavigation();
     const held = await headers();
     const path = localPath(held.get(PATH_HEADER)) ?? "/";
-    const session = (await this.#bound().auth()) as MasksSession | null;
+    const session = (await this.#bound().auth()) as Session | null;
     const masked = this.masked(session);
 
     if (!masked.signedIn) navigate(this.signInPath({ returnTo: path }));
@@ -482,7 +500,7 @@ export class MasksAuth {
     return navigate(this.signInPath({ returnTo: path, privilege: asked }));
   }
 
-  masked(session: MasksSession | null | undefined): Masked {
+  masked(session: Session | null | undefined): Masked {
     return session?.masks
       ? Masked.fromJSON(session.masks, this.privileges)
       : Masked.nobody(this.privileges);
@@ -597,7 +615,11 @@ export class MasksAuth {
     const authed = this.#bound().auth as unknown as (
       request: Request,
     ) => Promise<Response>;
-    const written = (await authed(request)).headers.getSetCookie();
+    const answered = await authed(request);
+
+    if (!answered.headers.has("x-middleware-next")) return answered;
+
+    const written = answered.headers.getSetCookie();
 
     if (written.length > 0) {
       forwarded.set(
@@ -679,7 +701,7 @@ export class MasksAuth {
   #session(params: {
     session: Session;
     token?: Record<string, unknown>;
-  }): MasksSession {
+  }): Session {
     const { session, token } = params;
     const held = heldOf(token?.masks);
 

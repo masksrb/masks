@@ -1,6 +1,6 @@
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import { replaceCookies } from "./app/cookies.js";
 import type { Masked } from "./app/masked.js";
 import {
@@ -16,11 +16,12 @@ export { PATH_HEADER };
 type RouteContext = { params?: Promise<Record<string, string | string[]>> };
 
 export type MaskedHandler<C extends RouteContext = RouteContext> = (
-  request: Request,
+  request: NextRequest,
   context: C & { masked: Masked },
 ) => Response | Promise<Response>;
 
-export interface ProxyOptions {
+export interface MasksNextOptions extends MasksOptions {
+  masks?: Masks;
   protect?: (string | RegExp)[];
 }
 
@@ -31,17 +32,16 @@ export interface MasksNext {
     POST: (request: Request) => Promise<Response>;
     DELETE: (request: Request) => Promise<Response>;
   };
-  metadata: (request: Request) => Promise<Response>;
-  auth: () => Promise<Masked>;
+  auth: () => Promise<Masked | null>;
   requireAuth: (...privileges: string[]) => Promise<Masked>;
   withMasks: <C extends RouteContext>(
     handler: MaskedHandler<C>,
     ...privileges: string[]
-  ) => (request: Request, context: C) => Promise<Response>;
-  proxy: (options?: ProxyOptions) => (request: Request) => Promise<Response>;
+  ) => (request: NextRequest, context: C) => Promise<Response>;
+  proxy: (request: Request) => Promise<Response>;
 }
 
-export function masksNext(options: Masks | MasksOptions = {}): MasksNext {
+export function masksNext(options: MasksNextOptions = {}): MasksNext {
   const masks = Masks.from(options);
 
   const handle = async (request: Request) =>
@@ -74,10 +74,10 @@ export function masksNext(options: Masks | MasksOptions = {}): MasksNext {
   return {
     masks,
     handlers: { GET: handle, POST: handle, DELETE: handle },
-    metadata: handle,
-
     async auth() {
-      return masks.peek(await current());
+      const masked = await masks.peek(await current());
+
+      return masked.signedIn ? masked : null;
     },
 
     async requireAuth(...privileges: string[]) {
@@ -103,7 +103,7 @@ export function masksNext(options: Masks | MasksOptions = {}): MasksNext {
       handler: MaskedHandler<C>,
       ...privileges: string[]
     ) {
-      return async (request: Request, context: C) => {
+      return async (request: NextRequest, context: C) => {
         const outcome = await masks.guard(request, ...privileges);
 
         if (outcome.response) return outcome.response;
@@ -117,57 +117,55 @@ export function masksNext(options: Masks | MasksOptions = {}): MasksNext {
       };
     },
 
-    proxy(asked: ProxyOptions = {}) {
-      return async (request: Request) => {
-        const url = new URL(request.url);
-        const forwarded = new Headers(request.headers);
+    async proxy(request: Request) {
+      const url = new URL(request.url);
+      const forwarded = new Headers(request.headers);
 
-        forwarded.set(PATH_HEADER, `${url.pathname}${url.search}`);
+      forwarded.set(PATH_HEADER, `${url.pathname}${url.search}`);
 
-        if (masks.owns(url.pathname)) {
-          return NextResponse.next({ request: { headers: forwarded } });
+      if (masks.owns(url.pathname)) {
+        return NextResponse.next({ request: { headers: forwarded } });
+      }
+
+      const guarded = (options.protect ?? []).some((pattern) =>
+        typeof pattern === "string"
+          ? url.pathname === pattern ||
+            url.pathname.startsWith(`${pattern.replace(/\/+$/, "")}/`)
+          : pattern.test(url.pathname),
+      );
+
+      let written: string[];
+
+      if (guarded) {
+        const outcome = await masks.guard(request);
+
+        if (outcome.response) return absolute(outcome.response, url);
+
+        written = outcome.cookies;
+      } else {
+        try {
+          written = (await masks.masked(request)).cookies;
+        } catch {
+          written = [];
         }
+      }
 
-        const guarded = (asked.protect ?? []).some((pattern) =>
-          typeof pattern === "string"
-            ? url.pathname === pattern ||
-              url.pathname.startsWith(`${pattern.replace(/\/+$/, "")}/`)
-            : pattern.test(url.pathname),
+      if (written.length > 0) {
+        forwarded.set(
+          "cookie",
+          replaceCookies(request.headers.get("cookie"), written),
         );
+      }
 
-        let written: string[];
+      const response = NextResponse.next({
+        request: { headers: forwarded },
+      });
 
-        if (guarded) {
-          const outcome = await masks.guard(request);
+      for (const cookie of written) {
+        response.headers.append("set-cookie", cookie);
+      }
 
-          if (outcome.response) return absolute(outcome.response, url);
-
-          written = outcome.cookies;
-        } else {
-          try {
-            written = (await masks.masked(request)).cookies;
-          } catch {
-            written = [];
-          }
-        }
-
-        if (written.length > 0) {
-          forwarded.set(
-            "cookie",
-            replaceCookies(request.headers.get("cookie"), written),
-          );
-        }
-
-        const response = NextResponse.next({
-          request: { headers: forwarded },
-        });
-
-        for (const cookie of written) {
-          response.headers.append("set-cookie", cookie);
-        }
-
-        return response;
-      };
+      return response;
     },
   };
 }

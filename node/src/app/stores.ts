@@ -168,14 +168,15 @@ export function memoryCredentials(initial?: Credentials): CredentialStore {
 }
 
 export function envCredentials(
+  prefix = "MASKS_CLIENT",
   env: Record<string, string | undefined> = processEnv(),
 ): CredentialStore {
   return {
     read() {
-      const id = env.MASKS_CLIENT_ID;
+      const id = env[`${prefix}_ID`];
 
       return id
-        ? { client_id: id, client_secret: env.MASKS_CLIENT_SECRET || undefined }
+        ? { client_id: id, client_secret: env[`${prefix}_SECRET`] || undefined }
         : undefined;
     },
   };

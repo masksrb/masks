@@ -3,8 +3,11 @@ import { createServer } from "node:http";
 import { after, test } from "node:test";
 import express from "express";
 import { Hono } from "hono";
-import { masked as expressMasked, masksExpress } from "../dist/express.js";
-import { masked as honoMasked, masksHono } from "../dist/hono.js";
+import {
+  requireAuth as expressRequireAuth,
+  masksExpress,
+} from "../dist/express.js";
+import { requireAuth as honoRequireAuth, masksHono } from "../dist/hono.js";
 import { masksNext } from "../dist/next.js";
 import { APP, Browser, setup, signIn } from "./browser.js";
 
@@ -16,7 +19,7 @@ after(async () => {
 
 test("Next.js route handlers run the sign-in", async () => {
   const held = await setup({}, closers);
-  const next = masksNext(held.masks);
+  const next = masksNext({ masks: held.masks });
   const browser = new Browser(async (request) => {
     const handler = next.handlers[request.method];
 
@@ -31,7 +34,7 @@ test("Next.js route handlers run the sign-in", async () => {
   const missing = await next.handlers.GET(new Request(`${APP}/auth/nowhere`));
   assert.equal(missing.status, 404);
 
-  const metadata = await next.metadata(
+  const metadata = await next.handlers.GET(
     new Request(`${APP}/.well-known/oauth-protected-resource`),
   );
   assert.equal((await metadata.json()).resource, APP);
@@ -42,7 +45,7 @@ test("withMasks guards a route handler by session or bearer token", async () => 
     { masks: { privileges: { read: ["catalog:read"] } } },
     closers,
   );
-  const next = masksNext(held.masks);
+  const next = masksNext({ masks: held.masks });
   await signIn(held);
 
   const GET = next.withMasks(async (_request, { masked, params }) =>
@@ -85,12 +88,11 @@ test("withMasks guards a route handler by session or bearer token", async () => 
 
 test("the Next.js proxy refreshes the session and hands it to the page", async () => {
   const held = await setup({}, closers);
-  const next = masksNext(held.masks);
+  const { proxy } = masksNext({ masks: held.masks, protect: ["/dashboard"] });
   held.fake.lifetime = 5;
   await signIn(held);
   held.fake.lifetime = 3600;
 
-  const proxy = next.proxy({ protect: ["/dashboard"] });
   const response = await proxy(held.browser.request("/reports?year=1"));
 
   assert.equal(response.headers.get("x-middleware-next"), "1");
@@ -181,25 +183,17 @@ test("Express mounts the routes, keeps the session, and guards by privilege", as
   const app = express();
 
   app.use(express.urlencoded({ extended: false }));
-  app.use(masksExpress(held.masks));
+  app.use(masksExpress({ masks: held.masks }));
   app.get("/", (request, response) => {
     response.json({ signed_in: request.masked?.signedIn ?? false });
   });
-  app.get(
-    "/admin",
-    expressMasked(held.masks, "admin"),
-    (_request, response) => {
-      response.json({ admin: true });
-    },
-  );
-  app.get(
-    "/api/catalog",
-    expressMasked(held.masks, "read"),
-    (request, response) => {
-      response.json({ subject: request.masked.subject });
-    },
-  );
-  app.post("/echo", expressMasked(held.masks), (request, response) => {
+  app.get("/admin", expressRequireAuth("admin"), (_request, response) => {
+    response.json({ admin: true });
+  });
+  app.get("/api/catalog", expressRequireAuth("read"), (request, response) => {
+    response.json({ subject: request.masked.subject });
+  });
+  app.post("/echo", expressRequireAuth(), (request, response) => {
     response.json({ body: request.body });
   });
 
@@ -245,14 +239,14 @@ test("Hono mounts the routes, keeps the session, and guards by privilege", async
   );
   const app = new Hono();
 
-  app.use(masksHono(held.masks));
+  app.use(masksHono({ masks: held.masks }));
   app.get("/", (context) =>
     context.json({ signed_in: context.get("masked").signedIn }),
   );
-  app.get("/admin", honoMasked(held.masks, "admin"), (context) =>
+  app.get("/admin", honoRequireAuth("admin"), (context) =>
     context.json({ admin: true }),
   );
-  app.get("/me", honoMasked(held.masks), (context) =>
+  app.get("/me", honoRequireAuth(), (context) =>
     context.json({ subject: context.get("masked").subject }),
   );
 
@@ -288,16 +282,16 @@ test("a guarded Express or Hono request refreshes an expired session once and se
     if (framework === "express") {
       const app = express();
 
-      app.use(masksExpress(held.masks));
-      app.get("/me", expressMasked(held.masks), (request, response) => {
+      app.use(masksExpress({ masks: held.masks }));
+      app.get("/me", expressRequireAuth(), (request, response) => {
         response.json({ subject: request.masked.subject });
       });
       handler = viaHTTP(await serve(app));
     } else {
       const app = new Hono();
 
-      app.use(masksHono(held.masks));
-      app.get("/me", honoMasked(held.masks), (context) =>
+      app.use(masksHono({ masks: held.masks }));
+      app.get("/me", honoRequireAuth(), (context) =>
         context.json({ subject: context.get("masked").subject }),
       );
       handler = (request) => app.fetch(request);
@@ -329,7 +323,7 @@ test("Express streams the avatar, and cuts off one larger than the app accepts",
   const held = await setup({ masks: { avatars: { bytes: 16 } } }, closers);
   const app = express();
 
-  app.use(masksExpress(held.masks));
+  app.use(masksExpress({ masks: held.masks }));
 
   const browser = new Browser(viaHTTP(await serve(app)), APP);
 
@@ -345,4 +339,46 @@ test("Express streams the avatar, and cuts off one larger than the app accepts",
 
     await large.arrayBuffer();
   });
+});
+
+test("a Hono refusal reaches app.onError, and requireAuth needs the middleware", async () => {
+  const held = await setup({}, closers);
+  const app = new Hono();
+
+  app.onError((error, context) =>
+    context.json({ status: error.getResponse?.().status }, 418),
+  );
+  app.get("/bare", honoRequireAuth(), (context) => context.text("never"));
+  app.use(masksHono({ masks: held.masks }));
+  app.get("/me", honoRequireAuth(), (context) => context.text("never"));
+
+  const refused = await app.fetch(
+    new Request(`${APP}/me`, { headers: { accept: "application/json" } }),
+  );
+  assert.equal(refused.status, 418);
+  assert.deepEqual(await refused.json(), { status: 401 });
+
+  const bare = await app.fetch(new Request(`${APP}/bare`));
+  assert.equal(bare.status, 418);
+});
+
+test("Express requireAuth without masksExpress is an error", async () => {
+  const app = express();
+
+  app.get("/me", expressRequireAuth(), (_request, response) =>
+    response.send("never"),
+  );
+  app.use((error, _request, response, _next) =>
+    response.status(500).json({ message: error.message }),
+  );
+
+  const server = app.listen(0);
+  closers.push(() => new Promise((resolve) => server.close(resolve)));
+  const answer = await fetch(`http://127.0.0.1:${server.address().port}/me`);
+
+  assert.equal(answer.status, 500);
+  assert.match(
+    (await answer.json()).message,
+    /masksExpress before requireAuth/,
+  );
 });

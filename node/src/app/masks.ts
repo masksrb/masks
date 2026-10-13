@@ -209,6 +209,7 @@ export class Masks {
   );
   readonly #verifiers = new Map<string, Verifier>();
   readonly #registeredAt = new Map<string, number>();
+  readonly #visits = new WeakMap<Request, Promise<Visit>>();
 
   #sealer?: Sealer;
 
@@ -1400,7 +1401,18 @@ export class Masks {
     );
   }
 
-  async #visit(request: Request): Promise<Visit> {
+  #visit(request: Request): Promise<Visit> {
+    let held = this.#visits.get(request);
+
+    if (!held) {
+      held = this.#newVisit(request);
+      this.#visits.set(request, held);
+    }
+
+    return held;
+  }
+
+  async #newVisit(request: Request): Promise<Visit> {
     const visit = new Visit(request);
     const issuer =
       (await resolve(this.#options.issuer, request)) ??

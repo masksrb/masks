@@ -2,7 +2,9 @@
 
 ## The app layer
 
-- `guard()` builds two Visits. Let `check()` take the Visit `guard()` already has.
+- Express, Hono, and Next.js answer 403 to a person who lacks the privilege that manages the connection. Auth.js asks masks for its scopes first. Share that decision.
+- On Workers, Hono's bindings do not reach the options. Let `masksHono` read `env(c)`.
+
 - `Outcome` is a finished `Response`, so the Next adapter forces `accept: text/html` and reads `Location`. Give a refusal a kind (`login`, `step_up`, `forbidden`, `handshake`), a URL, and `toResponse(request)`.
 - The avatar proxy sends a hand-built `authorization` header. Use `signedFetch`, so a DPoP-bound token sends a proof, once the app layer can hold DPoP-bound tokens. Replace `avatars: { bytes }` with `avatarBytes`.
 - The app layer writes its own 403 challenge. Use `Verifier.challengeHeaders` and `refusal`, which now build both challenges for 401 and 403.
@@ -13,11 +15,13 @@
 
 ## Auth.js
 
+- The proxy cannot wrap a handler of the app's own, as `auth((request) => ...)` can.
+
 - The `refreshes`, `logouts`, and `replay` stores default to memory, and the guide shows an Upstash setup. Ship ready-made Redis stores, or have masks accept a refresh token again for a few seconds after it rotates.
 - The Upstash example in the guide has not run against Upstash.
 - `signOut()` from `next-auth/react` and the `signOut` server action do not sign out of masks. Only `/api/auth/masks/logout` with `everywhere` does.
 - The issuer, resource, and credentials cannot vary per request.
-- `guard()` needs the proxy to know which page to return to. Without it, a sign-in returns to `/`.
+- `requireAuth()` needs the proxy to know which page to return to. Without it, a sign-in returns to `/`.
 - `masksAuth` and `Masks` share the logout, scope, delegation, and issuer-cache code, but each still has its own handshake routes and manager check. Move the connection lifecycle into one module both use.
 - The live run used Next.js 16.3 and next-auth 5.0.0-beta.32 on Node 26. Other versions have not run.
 

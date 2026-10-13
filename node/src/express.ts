@@ -4,14 +4,16 @@ import type { ReadableStream as NodeReadableStream } from "node:stream/web";
 import type {
   Request as ExpressRequest,
   Response as ExpressResponse,
-  NextFunction,
   RequestHandler,
 } from "express";
-import { cookieName, withWritten } from "./app/cookies.js";
+import { mergeCookies } from "./app/cookies.js";
 import type { Masked } from "./app/masked.js";
 import { Masks, type MasksOptions } from "./app/masks.js";
 
-const written = new WeakMap<ExpressRequest, string[]>();
+const installed = new WeakMap<
+  ExpressRequest,
+  { masks: Masks; web: Promise<Request> }
+>();
 
 declare global {
   namespace Express {
@@ -21,13 +23,13 @@ declare global {
   }
 }
 
-export interface MasksExpressOptions {
+export interface MasksExpressOptions extends MasksOptions {
+  masks?: Masks;
   session?: boolean;
 }
 
 export function masksExpress(
-  options: Masks | MasksOptions = {},
-  asked: MasksExpressOptions = {},
+  options: MasksExpressOptions = {},
 ): RequestHandler & { masks: Masks } {
   const masks = Masks.from(options);
 
@@ -39,18 +41,19 @@ export function masksExpress(
             .pathname,
         )
       ) {
-        const answer = await masks.handle(await toRequest(request, true));
+        const answer = await masks.handle(await toWebRequest(request, true));
 
-        if (answer) return await send(answer, response);
+        if (answer) return await sendWebResponse(answer, response);
       }
 
-      const web = await toRequest(request);
+      const web = toWebRequest(request);
 
-      if (asked.session !== false) {
-        const { masked, cookies } = await masks.masked(web);
+      installed.set(request, { masks, web });
+
+      if (options.session !== false) {
+        const { masked, cookies } = await masks.masked(await web);
 
         request.masked = masked;
-        written.set(request, cookies);
         setCookies(response, cookies);
       }
 
@@ -63,20 +66,19 @@ export function masksExpress(
   return Object.assign(handler, { masks });
 }
 
-export function masked(
-  masks: Masks | (RequestHandler & { masks: Masks }),
-  ...privileges: string[]
-): RequestHandler {
-  const held = Masks.from(masks);
-
+export function requireAuth(...privileges: string[]): RequestHandler {
   return async (request, response, next) => {
     try {
-      const outcome = await held.guard(
-        withWritten(await toRequest(request), written.get(request) ?? []),
-        ...privileges,
-      );
+      const held = installed.get(request);
 
-      if (outcome.response) return await send(outcome.response, response);
+      if (!held) {
+        throw new Error("masks: use masksExpress before requireAuth");
+      }
+
+      const outcome = await held.masks.guard(await held.web, ...privileges);
+
+      if (outcome.response)
+        return await sendWebResponse(outcome.response, response);
 
       request.masked = outcome.masked;
       setCookies(response, outcome.cookies);
@@ -88,7 +90,7 @@ export function masked(
   };
 }
 
-export async function toRequest(
+async function toWebRequest(
   request: ExpressRequest,
   withBody = false,
 ): Promise<Request> {
@@ -152,7 +154,7 @@ async function bodyOf(request: ExpressRequest): Promise<string | undefined> {
   return Buffer.concat(chunks).toString("utf8");
 }
 
-export async function send(
+async function sendWebResponse(
   answer: Response,
   response: ExpressResponse,
 ): Promise<void> {
@@ -185,15 +187,16 @@ export async function send(
 function setCookies(response: ExpressResponse, cookies: string[]): void {
   if (cookies.length === 0) return;
 
-  const names = new Set(cookies.map(cookieName));
   const held = response.getHeader("set-cookie");
-  const kept = (Array.isArray(held) ? held : held ? [String(held)] : []).filter(
-    (line) => !names.has(cookieName(line)),
-  );
 
-  response.setHeader("Set-Cookie", [...kept, ...cookies]);
+  response.setHeader(
+    "Set-Cookie",
+    mergeCookies(
+      Array.isArray(held) ? held : held ? [String(held)] : [],
+      cookies,
+    ),
+  );
 }
 
 export { Masked } from "./app/masked.js";
 export { Masks, type MasksOptions } from "./app/masks.js";
-export type { NextFunction };

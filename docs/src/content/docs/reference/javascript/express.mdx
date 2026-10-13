@@ -7,15 +7,15 @@ description: "Sign people in to an Express app with the masksExpress middleware,
 
 ```ts
 import express from "express";
-import { masked, masksExpress } from "@masks/server/express";
+import { masksExpress, requireAuth } from "@masks/server/express";
 
-const auth = masksExpress({ name: "Catalog", privileges: { admin: ["catalog:admin"] } });
 const app = express();
 
-app.use(auth);
+app.use(masksExpress({ name: "Catalog", privileges: { admin: ["catalog:admin"] } }));
 app.get("/", (req, res) => res.json(req.masked));
-app.get("/settings", masked(auth, "admin"), (req, res) => res.json({ subject: req.masked?.subject }));
+app.get("/settings", requireAuth("admin"), (req, res) => res.json({ subject: req.masked?.subject }));
 ```
 
 `masksExpress` answers the `/auth` routes, and on every other request puts the person on
-`req.masked`, signed in or not. `masked` guards a route.
+`req.masked`, signed in or not. `requireAuth` guards a route, and needs `masksExpress` to run first.
+Set `session: false` to skip reading the session on routes that `requireAuth` does not guard.

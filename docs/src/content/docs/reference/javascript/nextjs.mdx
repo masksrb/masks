@@ -13,10 +13,11 @@ Create one `Masks` for the app:
 // lib/masks.ts
 import { masksNext } from "@masks/server/next";
 
-export const { handlers, auth, requireAuth, withMasks, proxy, metadata, masks } = masksNext({
+export const { handlers, auth, requireAuth, withMasks, proxy, masks } = masksNext({
   name: "Catalog",
   scope: ["openid", "profile", "email", "offline_access", "organization"],
   privileges: { admin: ["catalog:admin"] },
+  protect: ["/dashboard"],
 });
 ```
 
@@ -32,10 +33,8 @@ export const { GET, POST, DELETE } = handlers;
 Add the proxy, so a session is refreshed before a page renders:
 
 ```ts
-// proxy.ts, or middleware.ts before Next.js 16
-import { proxy } from "@/lib/masks";
-
-export default proxy({ protect: ["/dashboard"] });
+// proxy.ts
+export { proxy } from "@/lib/masks";
 
 export const config = { matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"] };
 ```
@@ -45,7 +44,8 @@ Set the three variables, start the app, and open `/auth`. The first visit starts
 
 ## Guarding pages and routes
 
-`requireAuth` guards a page and `withMasks` guards a route handler:
+`auth()` returns the person, or `null` when nobody is signed in. `requireAuth` guards a page and
+`withMasks` guards a route handler:
 
 ```tsx
 // app/dashboard/page.tsx
@@ -74,14 +74,15 @@ reads the path the proxy records.
 
 ## Reference
 
-`masksNext(options)` returns:
+`masksNext(options)` takes the [options](/reference/javascript/server/#options) every integration
+shares, and `protect`: the paths, or regular expressions, whose signed-out visitors the proxy sends to
+sign in. It returns:
 
 | | |
 | --- | --- |
 | `handlers` | `GET`, `POST`, and `DELETE` for `app/auth/[[...masks]]/route.ts`. |
-| `auth()` | The person, in a server component, a server action, or a route handler. |
+| `auth()` | The person, or `null` when nobody is signed in, in a server component, a server action, or a route handler. |
 | `requireAuth(...privileges)` | The same, after sending a signed-out visitor to sign in and checking each privilege. |
 | `withMasks(handler, ...privileges)` | Guards a route handler by session or by token, and passes `{ masked }` to it. |
-| `proxy({ protect })` | Refreshes the session before a page renders. Sends a signed-out visitor to a path under one of `protect` to sign in. |
-| `metadata` | The `GET` handler for `/.well-known/oauth-protected-resource`. |
+| `proxy` | Refreshes the session before a page renders. Sends a signed-out visitor to a path under one of `protect` to sign in. |
 | `masks` | The `Masks` underneath. |

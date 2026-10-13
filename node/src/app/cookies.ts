@@ -132,13 +132,3 @@ export function mergeCookies(held: string[], written: string[]): string[] {
 
   return [...held.filter((line) => !names.has(cookieName(line))), ...written];
 }
-
-export function withWritten(request: Request, written: string[]): Request {
-  if (written.length === 0) return request;
-
-  const headers = new Headers(request.headers);
-
-  headers.set("cookie", replaceCookies(request.headers.get("cookie"), written));
-
-  return new Request(request, { headers });
-}

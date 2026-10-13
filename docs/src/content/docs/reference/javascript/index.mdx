@@ -234,7 +234,7 @@ An ordinary sign-in never asks for privilege scopes. masks puts a scope in the t
 person who already holds it, so asking never gives anyone more access. The handshake registers the
 scopes of every privilege, so the issuer lets the app ask for them.
 
-`require`, `protect`, `guard`, `requireAuth`, `withMasks`, `masked`, and `loginURL` throw on a name
+`require`, `protect`, `guard`, `requireAuth`, `withMasks`, and `loginURL` throw on a name
 that `privileges` does not define. In a URL, the app ignores it.
 
 ## Accepting tokens
@@ -251,10 +251,12 @@ export const GET = withMasks(async (request, { masked }) => Response.json({ subj
 
 ```ts
 // app/.well-known/oauth-protected-resource/route.ts
-export { metadata as GET } from "@/lib/masks";
+import { handlers } from "@/lib/masks";
+
+export const { GET } = handlers;
 ```
 
-In Express and Hono, `masked(auth, "read")` checks a token when the request carries one, and the
+In Express and Hono, `requireAuth("read")` checks a token when the request carries one, and the
 middleware serves `/.well-known/oauth-protected-resource` itself.
 
 The check takes the same [privileges](#privileges), roles and organizations included, and checks

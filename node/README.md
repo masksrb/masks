@@ -35,9 +35,10 @@ full. In a Next.js App Router app:
 // lib/masks.ts
 import { masksNext } from "@masks/server/next";
 
-export const { handlers, auth, requireAuth, withMasks, proxy, metadata, masks } = masksNext({
+export const { handlers, auth, requireAuth, withMasks, proxy, masks } = masksNext({
   name: "Catalog",
   privileges: { admin: ["catalog:admin"] },
+  protect: ["/dashboard"],
 });
 ```
 
@@ -49,10 +50,8 @@ export const { GET, POST, DELETE } = handlers;
 ```
 
 ```ts
-// proxy.ts, or middleware.ts before Next.js 16
-import { proxy } from "@/lib/masks";
-
-export default proxy({ protect: ["/dashboard"] });
+// proxy.ts
+export { proxy } from "@/lib/masks";
 ```
 
 ```tsx
@@ -74,22 +73,17 @@ credentials to `masks.json`. Keep that file out of version control.
 Express and Hono mount the same routes:
 
 ```ts
-import { masked, masksExpress } from "@masks/server/express";
+import { masksExpress, requireAuth } from "@masks/server/express";
 
-const auth = masksExpress({ privileges: { admin: ["catalog:admin"] } });
-
-app.use(auth);
-app.get("/settings", masked(auth, "admin"), (req, res) => res.json(req.masked));
+app.use(masksExpress({ privileges: { admin: ["catalog:admin"] } }));
+app.get("/settings", requireAuth("admin"), (req, res) => res.json(req.masked));
 ```
 
 ```ts
-import { masked, masksHono, type MasksEnv } from "@masks/server/hono";
+import { masksHono, requireAuth } from "@masks/server/hono";
 
-const auth = masksHono({ privileges: { admin: ["catalog:admin"] } });
-const app = new Hono<MasksEnv>();
-
-app.use(auth);
-app.get("/settings", masked(auth, "admin"), (c) => c.json(c.get("masked")));
+app.use(masksHono({ privileges: { admin: ["catalog:admin"] } }));
+app.get("/settings", requireAuth("admin"), (c) => c.json(c.get("masked")));
 ```
 
 The session cookie is sealed with AES-GCM, `HttpOnly`, `SameSite=Lax`, and
@@ -110,11 +104,11 @@ provider with the handshake, token refresh, privileges, and back-channel logout:
 import NextAuth from "next-auth";
 import { masksAuth } from "@masks/server/authjs";
 
-export const { handlers, auth, signIn, signOut, guard, accessToken, proxy } =
+export const { handlers, auth, signIn, signOut, requireAuth, accessToken, proxy } =
   masksAuth(NextAuth, { privileges: { admin: ["catalog:admin"] } });
 ```
 
-Set `MASKS_ISSUER` and `AUTH_SECRET`. The first `signIn("masks")` connects the
+Set `AUTH_MASKS_ISSUER` and `AUTH_SECRET`. The first `signIn("masks")` connects the
 app. See [Next.js with Auth.js](https://masks.pages.dev/reference/javascript/authjs/).
 
 ## A server signs in as itself

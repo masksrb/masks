@@ -12,8 +12,8 @@ The [JavaScript apps guide](/reference/javascript/) shows how to set each of the
 | `@masks/server` | `Masks`, which answers a `Request` with a `Response`, and the client underneath it: discovery, the handshake, the code flow, tokens, DPoP, introspection, token exchange, delegations, enrollment, and checking tokens. |
 | `@masks/server/next` | `masksNext`: route handlers, server component helpers, and a proxy for the Next.js App Router. |
 | `@masks/server/authjs` | `masksAuth`: masks as an Auth.js provider, with the handshake, refresh, privileges, and back-channel logout. |
-| `@masks/server/express` | `masksExpress` and `masked`: middleware for Express. |
-| `@masks/server/hono` | `masksHono` and `masked`: middleware for Hono, which also runs on Bun, Deno, and Cloudflare Workers. |
+| `@masks/server/express` | `masksExpress` and `requireAuth`: middleware for Express. |
+| `@masks/server/hono` | `masksHono` and `requireAuth`: middleware for Hono, which also runs on Bun, Deno, and Cloudflare Workers. |
 
 `next`, `next-auth`, `express`, and `hono` are optional peer dependencies.
 

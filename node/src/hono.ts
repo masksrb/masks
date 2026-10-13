@@ -1,36 +1,42 @@
-import type { MiddlewareHandler } from "hono";
-import { withWritten } from "./app/cookies.js";
+import type { Context, MiddlewareHandler } from "hono";
+import { HTTPException } from "hono/http-exception";
+import type { ContentfulStatusCode } from "hono/utils/http-status";
 import type { Masked } from "./app/masked.js";
 import { Masks, type MasksOptions } from "./app/masks.js";
 
-const written = new WeakMap<Request, string[]>();
+const installed = new WeakMap<Context, { masks: Masks; sent: Set<string> }>();
+
+declare module "hono" {
+  interface ContextVariableMap {
+    masked: Masked;
+  }
+}
 
 export type MasksVariables = { masked: Masked };
 export type MasksEnv = { Variables: MasksVariables };
 
-export interface MasksHonoOptions {
+export interface MasksHonoOptions extends MasksOptions {
+  masks?: Masks;
   session?: boolean;
 }
 
 export function masksHono(
-  options: Masks | MasksOptions = {},
-  asked: MasksHonoOptions = {},
-): MiddlewareHandler<MasksEnv> & { masks: Masks } {
+  options: MasksHonoOptions = {},
+): MiddlewareHandler & { masks: Masks } {
   const masks = Masks.from(options);
 
-  const handler: MiddlewareHandler<MasksEnv> = async (context, next) => {
+  const handler: MiddlewareHandler = async (context, next) => {
     const answer = await masks.handle(context.req.raw);
 
     if (answer) return answer;
 
-    if (asked.session !== false) {
+    installed.set(context, { masks, sent: new Set() });
+
+    if (options.session !== false) {
       const { masked, cookies } = await masks.masked(context.req.raw);
 
       context.set("masked", masked);
-      written.set(context.req.raw, cookies);
-      for (const cookie of cookies) {
-        context.header("Set-Cookie", cookie, { append: true });
-      }
+      setCookies(context, cookies);
     }
 
     await next();
@@ -39,27 +45,37 @@ export function masksHono(
   return Object.assign(handler, { masks });
 }
 
-export function masked(
-  masks: Masks | (MiddlewareHandler<MasksEnv> & { masks: Masks }),
-  ...privileges: string[]
-): MiddlewareHandler<MasksEnv> {
-  const held = Masks.from(masks);
-
+export function requireAuth(...privileges: string[]): MiddlewareHandler {
   return async (context, next) => {
-    const outcome = await held.guard(
-      withWritten(context.req.raw, written.get(context.req.raw) ?? []),
-      ...privileges,
-    );
+    const held = installed.get(context);
 
-    if (outcome.response) return outcome.response;
+    if (!held) throw new Error("masks: use masksHono before requireAuth");
+
+    const outcome = await held.masks.guard(context.req.raw, ...privileges);
+
+    if (outcome.response) {
+      throw new HTTPException(outcome.response.status as ContentfulStatusCode, {
+        res: outcome.response,
+        cause: outcome.error,
+      });
+    }
 
     context.set("masked", outcome.masked);
-    for (const cookie of outcome.cookies) {
-      context.header("Set-Cookie", cookie, { append: true });
-    }
+    setCookies(context, outcome.cookies);
 
     await next();
   };
+}
+
+function setCookies(context: Context, cookies: string[]): void {
+  const sent = installed.get(context)?.sent;
+
+  for (const cookie of cookies) {
+    if (sent?.has(cookie)) continue;
+
+    sent?.add(cookie);
+    context.header("Set-Cookie", cookie, { append: true });
+  }
 }
 
 export { Masked } from "./app/masked.js";

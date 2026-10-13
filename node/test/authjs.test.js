@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { after, test } from "node:test";
+import { NextRequest } from "next/server";
 import NextAuth from "next-auth";
 import { masksAuth } from "../dist/authjs.js";
 import { memoryCredentials } from "../dist/index.js";
@@ -568,4 +569,39 @@ test("a provider connection is finished only by the person who started it", asyn
     signedOut.headers.get("location"),
     "/api/auth/masks/signin?callbackUrl=%2Fconnect",
   );
+});
+
+test("the Auth.js names for the issuer and client are read from the environment", () => {
+  const before = { ...process.env };
+
+  try {
+    process.env.AUTH_MASKS_ISSUER = "https://masks.test";
+    process.env.AUTH_MASKS_ID = "from-auth-env";
+    const auth = masksAuth(NextAuth, { secret: SECRET, trustHost: true });
+
+    assert.equal(auth.masks.issuerURL, "https://masks.test");
+  } finally {
+    for (const name of ["AUTH_MASKS_ISSUER", "AUTH_MASKS_ID"]) {
+      if (before[name] === undefined) delete process.env[name];
+      else process.env[name] = before[name];
+    }
+  }
+});
+
+test("the proxy keeps the answer the authorized callback gives", async () => {
+  const held = await setup({
+    masks: {
+      callbacks: {
+        authorized: ({ auth, request }) =>
+          auth || !new URL(request.url).pathname.startsWith("/dashboard"),
+      },
+    },
+  });
+
+  const open = await held.auth.proxy(new NextRequest(`${APP}/about`));
+  assert.equal(open.headers.get("x-middleware-next"), "1");
+
+  const refused = await held.auth.proxy(new NextRequest(`${APP}/dashboard`));
+  assert.equal(refused.headers.get("x-middleware-next"), null);
+  assert.match(refused.headers.get("location") ?? "", /signin/);
 });

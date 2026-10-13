@@ -18,7 +18,7 @@ the Auth.js config and adds what masks offers beyond a plain OpenID Connect prov
 import NextAuth from "next-auth";
 import { masksAuth } from "@masks/server/authjs";
 
-export const { handlers, auth, signIn, signOut, guard, accessToken, proxy } = masksAuth(NextAuth, {
+export const { handlers, auth, signIn, signOut, requireAuth, accessToken, proxy } = masksAuth(NextAuth, {
   privileges: { admin: ["catalog:admin"] },
   manages: "admin",
 });
@@ -40,7 +40,7 @@ Set two variables, start the app, and sign in:
 
 | Variable | |
 | --- | --- |
-| `MASKS_ISSUER` | The tenant you sign in against. |
+| `AUTH_MASKS_ISSUER` | The tenant you sign in against. |
 | `AUTH_SECRET` | The Auth.js secret, such as the output of `openssl rand -base64 32`. |
 
 The first `signIn("masks")` runs [the handshake](/reference/javascript/#the-handshake). After the approval, the browser
@@ -55,18 +55,18 @@ Web Tokens.
 
 ```tsx
 // app/settings/page.tsx
-import { auth, guard } from "@/auth";
+import { requireAuth } from "@/auth";
 
 export default async function Settings() {
-  const masked = await guard("admin");
+  const masked = await requireAuth("admin");
 
   return <p>{masked.organization?.name}</p>;
 }
 ```
 
-`guard` returns a signed-in `Masked`, and asks masks once for a privilege's missing scopes.
+`requireAuth` returns a signed-in `Masked`, and asks masks once for a privilege's missing scopes.
 `accessToken()` hands a fresh access token to server code. `session.masks` holds the person, with no
-token. The [reference](#reference) below lists everything `masksAuth` returns.
+token, and is typed on the Auth.js `Session`. The [reference](#reference) below lists everything `masksAuth` returns.
 
 A link to `/api/auth/masks/signin` signs in without a form. It takes `callbackUrl`, `organization`,
 `privilege`, and `prompt`.
@@ -123,7 +123,7 @@ const redis = Redis.fromEnv();
 const once = async (key: string, expiresIn: number) =>
   (await redis.set(key, "1", { nx: true, ex: expiresIn })) === "OK";
 
-export const { handlers, auth, signIn, signOut, guard, accessToken, proxy } = masksAuth(NextAuth, {
+export const { handlers, auth, signIn, signOut, requireAuth, accessToken, proxy } = masksAuth(NextAuth, {
   refreshes: {
     get: async (key) => (await redis.get<string>(key)) ?? undefined,
     set: async (key, value, expiresIn) => {
@@ -151,12 +151,13 @@ on a later request.
 
 | Option | Default | |
 | --- | --- | --- |
-| `issuer` | `MASKS_ISSUER` | The tenant people sign in against. |
+| `issuer` | `AUTH_MASKS_ISSUER`, then `MASKS_ISSUER` | The tenant people sign in against. |
 | `resource` | `MASKS_RESOURCE`, then the origin of `AUTH_URL`, then the request's origin | The app's public address. |
 | `secret` | `AUTH_SECRET` | The Auth.js secret. It also seals what the refresh store holds. |
 | `id` | `masks` | The provider id, as in `signIn("masks")`. |
 | `label` | `masks` | The provider's name on the Auth.js sign-in page. |
-| `name`, `scope`, `namespace`, `organization`, `privileges`, `manages`, `credentials`, `delegations`, `avatars`, `signOutOfIssuer`, `onLogout`, `allowPlainHTTP` | | As in [options](/reference/javascript/server/#options). |
+| `credentials` | `AUTH_MASKS_ID` and `AUTH_MASKS_SECRET` when set, then `MASKS_CLIENT_ID` and `MASKS_CLIENT_SECRET`, then `masks.json` | A `CredentialStore` for the client the handshake registers. |
+| `name`, `scope`, `namespace`, `organization`, `privileges`, `manages`, `delegations`, `avatars`, `signOutOfIssuer`, `onLogout`, `allowPlainHTTP` | | As in [options](/reference/javascript/server/#options). |
 | `refreshes` | memory | A `RefreshStore` shared by every server, so each sign-in is refreshed once between them. |
 | `logouts` | memory | A `LogoutStore` shared by every server. |
 | `replay` | memory | A `ReplayStore` shared by every server, so each logout token works once. |
@@ -167,9 +168,9 @@ It returns what `NextAuth` returns, and:
 | --- | --- |
 | `handlers` | `GET` and `POST`, which also answer the routes below. |
 | `auth()` | The Auth.js session. `session.masks` holds what `GET /auth/session` returns, and `session.user.id` is the subject. No token reaches the browser. |
-| `guard(...privileges)` | A signed-in `Masked`. It sends a signed-out person to sign in, and asks masks for a privilege's missing scopes once. A missing role or organization throws `ForbiddenError`. |
+| `requireAuth(...privileges)` | A signed-in `Masked`. It sends a signed-out person to sign in, and asks masks for a privilege's missing scopes once. A missing role or organization throws `ForbiddenError`. |
 | `accessToken()` | The access token, refreshed when it is about to expire, for calling an API from the server. |
-| `proxy` | Refreshes the session before a page renders, and tells `guard` which page to come back to. |
+| `proxy` | Refreshes the session before a page renders, and tells `requireAuth` which page to come back to. When your `authorized` callback refuses a page, the proxy sends its redirect or answer. |
 | `masks` | The `MasksAuth` underneath, with `delegations`, `startDelegation`, and `finishDelegation` as in [Masks](/reference/javascript/server/#masks). |
 
 `session.user.image` is `/api/auth/masks/avatar` when masks holds a photo, since the photo needs the
