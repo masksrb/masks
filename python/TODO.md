@@ -18,5 +18,4 @@
 
 ## Testing
 
-- Under `pytest -W error`, collection fails on a Starlette TestClient deprecation warning about `httpx2`.
 - Nothing has run against a live masks. Every test uses a fake issuer.
