@@ -77,6 +77,28 @@ sign in. It follows a return path only if the path is on your own app.
 On a subdomain, masks has its own origin, and its cookies stay there. Sign your app in with
 [Client mode](/reference/ruby/#client-mode), and set `MASKS_ISSUER` to that subdomain.
 
+## Client mode against the masks you mount
+
+An app can sign in through Client mode against the masks it mounts, so that it holds access tokens
+and refresh tokens the same way it would with a masks server. Client mode fetches discovery, keys,
+and tokens over HTTP. Those calls go back to the app's own public address, which often cannot be
+reached from inside its container. `Masks::Client.embed` hands them to the engine inside the
+process:
+
+```ruby
+Masks::Client.embed(->(env) { Rails.application.executor.wrap { Masks::Server::Engine.call(env) } }) do |uri|
+  uri.host == "auth.example.com"
+end
+```
+
+The block names the URLs to keep in the process. Every other URL goes over the network. Each call
+runs on a thread of its own, with the same timeout and size limit as a call over the network. A
+plain `http` URL is still refused unless its host is a loopback host or `Masks::Client.plain_http`
+is set. `Masks::Client.embed(nil)` turns it off.
+
+When masks is mounted at a path, set `SCRIPT_NAME` to the path and remove it from `PATH_INFO`
+before you call the engine.
+
 ## What stays apart
 
 | | masks uses |

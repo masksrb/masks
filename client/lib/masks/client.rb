@@ -10,6 +10,7 @@ require "uri"
 require_relative "version"
 require_relative "client/errors"
 require_relative "client/http"
+require_relative "client/embedded"
 require_relative "client/pkce"
 require_relative "client/stores"
 require_relative "client/tracker"
@@ -54,6 +55,14 @@ module Masks
 
       def plain_http?
         @plain_http == true
+      end
+
+      def embed(app, &serves)
+        @embedded = app && Embedded.new(app, &serves)
+      end
+
+      def embedded_for(uri)
+        @embedded if @embedded&.serves?(uri)
       end
 
       # The process-wide cache of resolved issuers, so discovery is fetched

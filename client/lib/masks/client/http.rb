@@ -44,6 +44,9 @@ module Masks
 
       def fetch(url, headers = {})
         uri = checked(URI.parse(url.to_s))
+        embedded = Masks::Client.embedded_for(uri)
+
+        return embedded.deliver(Net::HTTP::Get.new(uri, headers)) if embedded
 
         Net::HTTP.start(
           uri.hostname, uri.port,
@@ -74,6 +77,9 @@ module Masks
 
       def deliver(request, limit: READ_LIMIT)
         uri = checked(request.uri)
+        embedded = Masks::Client.embedded_for(uri)
+
+        return embedded.deliver(request, limit: limit) if embedded
 
         Net::HTTP.start(
           uri.hostname, uri.port,

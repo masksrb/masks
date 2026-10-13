@@ -510,6 +510,41 @@ Inherits `Error`.
 #inspect()
 ```
 
+## Masks::Client::Embedded
+
+| Constant | Value |
+| --- | --- |
+| `LOOPBACK` | `"127.0.0.1".freeze` |
+| `DROPPED` | `%w[host accept-encoding connection content-length].freeze` |
+
+| Attribute | Access |
+| --- | --- |
+| `app` | R |
+
+### ::new
+
+```ruby
+::new(app, &serves)
+```
+
+### #deliver
+
+```ruby
+#deliver(request, limit: nil)
+```
+
+### #inspect
+
+```ruby
+#inspect()
+```
+
+### #serves?
+
+```ruby
+#serves?(uri)
+```
+
 ## Masks::Client::Enrollment
 
 | Attribute | Access |
