@@ -179,6 +179,27 @@ end
 Each key is a hash, and each refresh result is sealed with a key made from the old refresh token, so
 the cache holds no tokens anyone can read.
 
+When the cache cannot be reached:
+
+- A session whose token has expired is not refreshed. The request is treated as signed out, and the
+  session is kept for a later request.
+- A logout token gets `503`, so masks sends it again.
+- A request with a DPoP proof gets `503`, with no `WWW-Authenticate` header.
+- A request whose session cannot be checked for a logout gets `503`.
+
+`Rails.cache` hides most errors. A failed write returns `false`, and a failed read returns `nil`. The
+engine reads a key back after a failed write, so it can still tell an outage from a proof or token
+it has seen before. A failed read looks like an empty cache, so a logout check passes while the
+cache is down. To let the engine see every error, give the cache an `error_handler` that raises.
+`:redis_cache_store` and `:solid_cache_store` both take one:
+
+```ruby
+config.cache = ActiveSupport::Cache::RedisCacheStore.new(
+  url: ENV["REDIS_URL"],
+  error_handler: ->(exception:, **) { raise exception }
+)
+```
+
 ### Organizations
 
 When an app asks for the `organization` scope, a person signs in as a member of one

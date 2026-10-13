@@ -39,9 +39,15 @@ module Masks
       def depart!(issuer, logout)
         kind, value = logout.sid.to_s.empty? ? [ "sub", logout.subject ] : [ "sid", logout.sid ]
 
-        return if store.write(self.class.key("departed", issuer, kind, value), self.class.now, expires_in: DEPARTURE)
+        kept = begin
+          write(self.class.key("departed", issuer, kind, value), self.class.now, expires_in: DEPARTURE)
+        rescue Unavailable
+          false
+        end
 
-        store.delete(self.class.key("logout", issuer, logout.jti))
+        return if kept
+
+        forgotten { delete(self.class.key("logout", issuer, logout.jti)) }
 
         raise Unavailable, "the cache did not keep that logout"
       end
@@ -50,7 +56,7 @@ module Masks
         [ [ "sid", identity["sid"] ], [ "sub", identity["sub"] ] ].any? do |kind, value|
           next false if value.to_s.empty?
 
-          at = store.read(self.class.key("departed", issuer, kind, value))
+          at = read(self.class.key("departed", issuer, kind, value))
 
           at.is_a?(Integer) && at >= since
         end
@@ -67,18 +73,47 @@ module Masks
         begin
           held = yield
 
-          store.write(result, sealed(refresh_token, held), expires_in: RESULT) unless held.outcome == :unreachable
+          forgotten { write(result, sealed(refresh_token, held), expires_in: RESULT) } unless held.outcome == :unreachable
 
           held
         ensure
-          store.delete(claim)
+          forgotten { delete(claim) }
         end
       end
 
       private
 
         def add(key, expires_in)
-          store.write(key, 1, unless_exist: true, expires_in: expires_in) ? true : false
+          return true if write(key, 1, unless_exist: true, expires_in: expires_in)
+          return false unless read(key).nil?
+
+          raise Unavailable, "the cache neither kept that key nor holds it, so it is not answering"
+        end
+
+        def read(key)
+          reached { store.read(key) }
+        end
+
+        def write(key, value, **options)
+          reached { store.write(key, value, **options) }
+        end
+
+        def delete(key)
+          reached { store.delete(key) }
+        end
+
+        def reached
+          yield
+        rescue Unavailable
+          raise
+        rescue StandardError => e
+          raise Unavailable, "the cache could not be reached (#{e.class})"
+        end
+
+        def forgotten
+          yield
+        rescue Unavailable
+          nil
         end
 
         def logout_memory(logout)
@@ -94,7 +129,7 @@ module Masks
             found = opened(result, refresh_token)
 
             return found if found
-            return opened(result, refresh_token) || Renewal.unreachable if store.read(claim).nil?
+            return opened(result, refresh_token) || Renewal.unreachable if read(claim).nil?
           end
 
           Renewal.unreachable
@@ -119,7 +154,7 @@ module Masks
         end
 
         def opened(result, refresh_token)
-          held = store.read(result)
+          held = read(result)
 
           return nil if held.nil?
 

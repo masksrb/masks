@@ -8,6 +8,18 @@ require_relative "support/issuer"
 require_relative "support/dummy"
 require "rails/dom/testing"
 
+class SwallowingCache < ActiveSupport::Cache::MemoryStore
+  def read(*, **) = nil
+
+  def write(*, **) = false
+end
+
+class RaisingCache < ActiveSupport::Cache::MemoryStore
+  def read(*, **) = raise(IOError, "connection refused")
+
+  def write(*, **) = raise(IOError, "connection refused")
+end
+
 class EngineTest < ActiveSupport::TestCase
   include ActiveSupport::Testing::Assertions
 

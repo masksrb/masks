@@ -120,6 +120,15 @@ class ProtectedResourceTest < EngineIntegrationTest
     assert_equal "temporarily_unavailable", json["error"]
   end
 
+  test "a replay store that swallows its errors still answers 503, not a challenge" do
+    configure!(cache: SwallowingCache.new)
+
+    get "/api", headers: host.merge(proven)
+
+    assert_response :service_unavailable
+    assert_nil response.headers["WWW-Authenticate"]
+  end
+
   test "a proof seen before is still refused with a challenge" do
     presented = host.merge(proven)
 

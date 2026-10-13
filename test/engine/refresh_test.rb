@@ -46,6 +46,40 @@ class RefreshTest < EngineIntegrationTest
     assert_equal 2, issuer.refreshes.size
   end
 
+  test "a refresh while the cache is down keeps the session, so a later request tries again" do
+    sign_in!
+    Masks::Rails.config.cache = SwallowingCache.new
+
+    travel 2.hours do
+      get "/auth/session", headers: json_headers
+
+      assert_response :unauthorized
+      assert held_session.present?
+      assert_empty issuer.refreshes
+
+      Masks::Rails.config.cache = ActiveSupport::Cache::MemoryStore.new
+
+      get "/auth/session", headers: json_headers
+
+      assert_response :success
+    end
+  end
+
+  test "a cache that cannot say whether masks ended the session answers 503 and keeps it" do
+    sign_in!
+    Masks::Rails.config.cache = RaisingCache.new
+
+    get "/auth/session", headers: json_headers
+
+    assert_response :service_unavailable
+    assert_equal "temporarily_unavailable", json["error"]
+    assert held_session.present?
+
+    get "/dashboard", headers: host
+
+    assert_response :service_unavailable
+  end
+
   test "a refreshed session keeps when it signed in, so a later logout still reaches it" do
     sign_in!
     signed_in_at = held_session["signed_in_at"]

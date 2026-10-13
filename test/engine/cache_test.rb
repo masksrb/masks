@@ -101,6 +101,34 @@ class CacheTest < ActiveSupport::TestCase
     assert_equal :unreachable, @cache.renew(ISSUER, "other") { flunk "a result was trusted with the wrong key" }.outcome
   end
 
+  test "a cache that raises is an outage, never a repeat" do
+    cache = Masks::Rails::Cache.new(RaisingCache.new)
+    logout = Masks::Client::Logout.new("jti" => "j-1", "sub" => "actor-1", "exp" => Time.now.to_i + 60)
+
+    assert_raises(Masks::Rails::Cache::Unavailable) { cache.first?("proof", expires_in: 60) }
+    assert_raises(Masks::Rails::Cache::Unavailable) { cache.first_logout?(ISSUER, logout) }
+    assert_raises(Masks::Rails::Cache::Unavailable) { cache.departed?(ISSUER, { "sub" => "actor-1" }, since: 0) }
+  end
+
+  test "a cache that swallows its errors, as Rails.cache does, is still told apart from a repeat" do
+    cache = Masks::Rails::Cache.new(SwallowingCache.new)
+
+    assert_raises(Masks::Rails::Cache::Unavailable) { cache.first?("proof", expires_in: 60) }
+
+    assert @cache.first?("proof", expires_in: 60)
+    assert_not @cache.first?("proof", expires_in: 60)
+  end
+
+  test "a refresh whose result the cache cannot keep still hands back its tokens" do
+    store = Recording.new
+    def store.write(key, value, **options) = options[:unless_exist] ? super : raise(IOError, "connection refused")
+    fresh = tokens
+
+    renewal = Masks::Rails::Cache.new(store).renew(ISSUER, "spent") { Masks::Rails::Renewal.renewed(fresh, nil) }
+
+    assert_equal fresh.access_token, renewal.tokens.access_token
+  end
+
   test "a logout token is first once" do
     logout = Masks::Client::Logout.new("jti" => "j-1", "sub" => "actor-1", "exp" => Time.now.to_i + 60)
 

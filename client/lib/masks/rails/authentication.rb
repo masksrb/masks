@@ -9,6 +9,10 @@ module Masks
         if respond_to?(:helper_method)
           helper_method :masked, :masks_login_url
         end
+
+        if respond_to?(:rescue_from) && method_defined?(:render)
+          rescue_from Masks::Rails::Cache::Unavailable, with: :masks_cache_unavailable
+        end
       end
 
       REQUESTS = "masks_requests".freeze
@@ -157,7 +161,11 @@ module Masks
           return false
         end
 
-        renewal = masks_cache.renew(masks_config.issuer_for(request).to_s, spent) { masks_renewal(spent) }
+        renewal = begin
+          masks_cache.renew(masks_config.issuer_for(request).to_s, spent) { masks_renewal(spent) }
+        rescue Masks::Rails::Cache::Unavailable
+          Masks::Rails::Renewal.unreachable
+        end
 
         case renewal.outcome
         when :renewed
@@ -311,6 +319,18 @@ module Masks
 
           session[:masks_return_to] = request.fullpath if request.get?
           redirect_to Masks::Rails::Engine.routes.url_helpers.start_path
+        end
+
+        def masks_cache_unavailable(error)
+          response.headers["Cache-Control"] = "no-store"
+          response.headers["Retry-After"] = "5"
+
+          if masks_wants_json?
+            render json: { "error" => "temporarily_unavailable", "error_description" => error.message },
+                   status: :service_unavailable
+          else
+            render plain: "Signing in is unavailable right now. Try again in a moment.", status: :service_unavailable
+          end
         end
 
         def masks_refuse_json
