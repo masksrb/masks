@@ -170,8 +170,7 @@ module Masks
             name: held[:name] || name,
             grant_types: grant_types,
             response_types: held[:response_types].presence || response_types_for(grant_types),
-            allowed_scopes: Scopes.join(bounded(metadata.to_h.stringify_keys["scope"].presence ||
-                                                Current.tenant&.dynamic_client_ceiling || DEFAULT_SCOPES)),
+            allowed_scopes: Scopes.join(declared_scopes(metadata)),
             dynamic: true
           )
         end
@@ -205,6 +204,12 @@ module Masks
             approved_at: Time.current,
             dynamic: false
           ).issue_credentials!
+        end
+
+        def declared_scopes(metadata)
+          declared = metadata.to_h.stringify_keys["scope"]
+
+          Scopes.list(declared).empty? ? [] : bounded(declared)
         end
 
         def bounded(requested)
@@ -425,7 +430,11 @@ module Masks
       end
 
       def scope_list
-        Scopes.union(required_scopes, allowed_scopes)
+        Scopes.union(required_scopes, offered_scopes)
+      end
+
+      def follows_registration?
+        dynamic? && Scopes.list(allowed_scopes).empty?
       end
 
       def access_lifetime
@@ -443,7 +452,19 @@ module Masks
       def permitted_scopes(requested)
         return scope_list if Scopes.list(requested).empty?
 
-        Scopes.union(required_scopes, Scopes.granted(requested, allowed_scopes))
+        return Scopes.union(required_scopes, unreserved(requested)) if open_to_anything?
+
+        Scopes.union(required_scopes, Scopes.granted(requested, offered_scopes))
+      end
+
+      def refused_scopes(requested)
+        Scopes.list(requested) - permitted_scopes(requested)
+      end
+
+      def offered_scopes
+        return Scopes.list(allowed_scopes) unless follows_registration?
+
+        Current.tenant&.dynamic_client_ceiling || DEFAULT_SCOPES
       end
 
       def metadata
@@ -543,6 +564,14 @@ module Masks
 
         def loopback?(uri)
           self.class.loopback?(uri)
+        end
+
+        def open_to_anything?
+          follows_registration? && Current.tenant&.dynamic_registration == Tenant::REGISTRATION_ANYTHING
+        end
+
+        def unreserved(requested)
+          Scopes.list(requested).reject { |scope| Scopes.prefix?(scope) || Scopes.reserved(scope).any? }
         end
 
         def same_loopback?(registered, candidate)

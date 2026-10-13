@@ -8,7 +8,7 @@ module Masks
         end
 
         def scopes_are_permitted
-          refused = Scopes.refused(client.scope_list, requested_scopes)
+          refused = client.refused_scopes(requested_scopes)
 
           if refused.any?
             deny!("invalid_scope",

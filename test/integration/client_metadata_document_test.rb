@@ -142,7 +142,38 @@ module Masks
         authorize(client_id: DOCUMENT_URL, scope: "openid xixo:catalog:read")
 
         assert awaiting_consent?
-        assert_includes held.scope_list, "xixo:catalog:read"
+        assert_includes within { held.scope_list }, "xixo:catalog:read"
+      end
+
+      test "with registration on, a document that declares no scope may ask for a resource's scopes but never a masks scope" do
+        @tenant.update!(dynamic_registration: Tenant::REGISTRATION_ANYTHING)
+        publish(scope: nil)
+        sign_in_as(@actor)
+
+        authorize(client_id: DOCUMENT_URL, scope: "openid xixo:catalog:read")
+
+        assert awaiting_consent?
+        assert_equal %w[openid xixo:catalog:read], within { held.permitted_scopes("openid xixo:catalog:read masks:manage") }
+      end
+
+      test "a document that declares no scope follows the tenant's ceiling as it changes" do
+        @tenant.update!(dynamic_registration: Tenant::REGISTRATION_BOUNDED, dynamic_client_scopes: "openid profile")
+        publish(scope: nil)
+        within { ClientMetadataDocument.resolve(DOCUMENT_URL) }
+
+        assert_equal %w[openid], within { held.permitted_scopes("openid xixo:catalog:read") }
+
+        @tenant.update!(dynamic_client_scopes: "openid profile xixo:catalog:read")
+
+        assert_equal %w[openid xixo:catalog:read], within { held.permitted_scopes("openid xixo:catalog:read") }
+      end
+
+      test "a document that declares its scope keeps it when the ceiling grows" do
+        @tenant.update!(dynamic_registration: Tenant::REGISTRATION_BOUNDED, dynamic_client_scopes: "openid profile xixo:catalog:read")
+        publish(scope: "openid")
+        within { ClientMetadataDocument.resolve(DOCUMENT_URL) }
+
+        assert_equal %w[openid], within { held.permitted_scopes("openid xixo:catalog:read") }
       end
 
       test "a document that names another client_id is refused" do

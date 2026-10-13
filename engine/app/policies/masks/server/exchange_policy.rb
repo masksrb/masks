@@ -85,7 +85,7 @@ module Masks
         end
 
         def scopes_stay_within_the_client
-          beyond = Scopes.refused(client.scope_list, requested_scopes)
+          beyond = client.refused_scopes(requested_scopes)
 
           deny!("invalid_scope", "this client may not hold #{beyond.join(', ')}") if beyond.any?
         end
