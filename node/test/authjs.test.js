@@ -315,3 +315,75 @@ test("an unconnected app cannot finish a sign-in through its stand-in provider",
     null,
   );
 });
+
+test("servers that share a refresh store refresh a sign-in once between them", async () => {
+  const { memoryRefreshes } = await import("../dist/index.js");
+  const refreshes = memoryRefreshes();
+  const held = await signedIn({
+    masks: { refreshes },
+    before: (fake) => {
+      fake.lifetime = 1;
+    },
+  });
+  const { fake, browser, credentials } = held;
+  const other = masksAuth(NextAuth, {
+    issuer: fake.url,
+    resource: APP,
+    secret: SECRET,
+    trustHost: true,
+    credentials,
+    refreshes,
+  });
+  const second = new Browser((request) => other.handlers.GET(request), APP);
+  const forget = () =>
+    globalThis[Symbol.for("@masks/server v1 authjs refreshes")].clear();
+
+  second.jar = browser.jar;
+  fake.lifetime = 3600;
+
+  const before = fake.tokenRequests.length;
+  const first = session(browser);
+
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  forget();
+
+  const answers = [await first, await session(second)];
+
+  forget();
+  answers.push(await session(second));
+
+  const refreshed = fake.tokenRequests
+    .slice(before)
+    .filter((grant) => grant === "refresh_token");
+
+  assert.equal(refreshed.length, 1);
+  for (const answer of answers) assert.equal(answer.masks.subject, "ada");
+});
+
+test("a refusal one server saw signs the person out on every server", async () => {
+  const { memoryRefreshes } = await import("../dist/index.js");
+  const refreshes = memoryRefreshes();
+  const held = await signedIn({
+    masks: { refreshes },
+    before: (fake) => {
+      fake.lifetime = 1;
+    },
+  });
+  const { fake, browser } = held;
+
+  const elsewhere = new Browser(browser.handler, APP);
+
+  elsewhere.jar = new Map(browser.jar);
+  fake.refreshRefusal = { status: 400, code: "invalid_grant" };
+
+  assert.equal(await session(browser), null);
+
+  globalThis[Symbol.for("@masks/server v1 authjs refreshes")].clear();
+  fake.refreshRefusal = undefined;
+
+  assert.equal(await session(elsewhere), null);
+  assert.equal(
+    fake.tokenRequests.filter((grant) => grant === "refresh_token").length,
+    1,
+  );
+});

@@ -22,8 +22,8 @@
 
 ## Auth.js
 
-- Each refresh token is used once per process. Add a refresh store that several servers share, with a lock, so serverless apps cannot use one refresh token twice. Or have masks accept a refresh token again for a few seconds after it rotates.
-- The logout and replay stores default to memory. A serverless app needs shared ones to make back-channel logout reach every instance.
+- The `refreshes`, `logouts`, and `replay` stores default to memory, and the guide shows an Upstash setup. Ship ready-made Redis stores, or have masks accept a refresh token again for a few seconds after it rotates.
+- The Upstash example in the guide has not run against Upstash.
 - `signOut()` revokes the refresh token, but does not sign the person out of masks. Add a sign-out everywhere through `/api/auth/masks/logout`, with a registered post-logout URI.
 - Delegations and the avatar proxy are not offered through `masksAuth`.
 - The issuer, resource, and credentials cannot vary per request.

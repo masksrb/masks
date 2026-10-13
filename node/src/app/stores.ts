@@ -31,6 +31,37 @@ function missing(error: unknown): boolean {
   return (error as { code?: string })?.code === "ENOENT";
 }
 
+export interface RefreshStore {
+  get(key: string): string | undefined | Promise<string | undefined>;
+  set(key: string, value: string, expiresIn: number): void | Promise<void>;
+  claim(key: string, expiresIn: number): boolean | Promise<boolean>;
+}
+
+export function memoryRefreshes(): RefreshStore {
+  const held = new Map<string, { value: string; until: number }>();
+  const live = (key: string) => {
+    const found = held.get(key);
+
+    if (found && found.until < Date.now()) held.delete(key);
+
+    return held.get(key);
+  };
+
+  return {
+    get: (key) => live(key)?.value,
+    set(key, value, expiresIn) {
+      held.set(key, { value, until: Date.now() + expiresIn * 1000 });
+    },
+    claim(key, expiresIn) {
+      if (live(key)) return false;
+
+      held.set(key, { value: "", until: Date.now() + expiresIn * 1000 });
+
+      return true;
+    },
+  };
+}
+
 export function memoryStore(): SessionStore {
   const held = new Map<string, { data: unknown; until: number }>();
 

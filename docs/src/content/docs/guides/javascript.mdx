@@ -161,13 +161,52 @@ A link to `/api/auth/masks/signin` signs in without a form. It takes `callbackUr
 
 #### Several servers
 
-Each refresh token is used once within one Node process. Next.js loads `auth.ts` more than once in a
-process, for the proxy and for the routes, and those copies share one record of refreshes and
-logouts. Separate servers do not share it. When the app runs on several servers or as serverless
-functions, two of them can refresh the same session at the same moment. masks then ends every token
-from that sign-in, and the person signs in again. Back-channel logout records are also kept per
-process. Pass `logouts` and `replay` stores that every server shares to make logouts reach all of
-them.
+masks accepts each refresh token once. When two servers refresh the same sign-in at the same moment,
+masks ends every token from that sign-in, and the person has to sign in again. Within one Node process,
+`masksAuth` refreshes each sign-in once, even though Next.js loads `auth.ts` once for the proxy and
+again for the routes.
+
+An app on several servers, or on serverless functions, passes three stores that every server shares:
+
+| Option | Holds |
+| --- | --- |
+| `refreshes` | Which server is refreshing a sign-in, and the result, sealed with `AUTH_SECRET`. The first server refreshes, and the others wait up to 10 seconds for its result. A refusal is shared too, so every server signs the person out. |
+| `logouts` | The back-channel logouts masks sent, so every server ends those sessions. |
+| `replay` | The logout tokens already used, so none is accepted twice. |
+
+With [Upstash Redis](https://upstash.com/docs/redis/sdks/ts/overview):
+
+```ts
+// auth.ts
+import NextAuth from "next-auth";
+import { Redis } from "@upstash/redis";
+import { masksAuth } from "@masks/server/authjs";
+
+const redis = Redis.fromEnv();
+const once = async (key: string, expiresIn: number) =>
+  (await redis.set(key, "1", { nx: true, ex: expiresIn })) === "OK";
+
+export const { handlers, auth, signIn, signOut, guard, accessToken, proxy } = masksAuth(NextAuth, {
+  refreshes: {
+    get: async (key) => (await redis.get<string>(key)) ?? undefined,
+    set: async (key, value, expiresIn) => {
+      await redis.set(key, value, { ex: expiresIn });
+    },
+    claim: once,
+  },
+  logouts: {
+    record: async (key, at, expiresIn) => {
+      await redis.set(key, at, { ex: expiresIn });
+    },
+    since: async (key) => (await redis.get<number>(key)) ?? undefined,
+  },
+  replay: { first: once },
+});
+```
+
+`claim` and `first` must set a key only when it is absent, in one step, and answer whether they set
+it. When a store cannot be reached, the session keeps its current token and the refresh runs again
+on a later request.
 
 ### Express
 

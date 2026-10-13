@@ -26,6 +26,7 @@ import {
   Privileges,
   unique,
 } from "./app/privileges.js";
+import { Sealer } from "./app/seal.js";
 import {
   type CredentialStore,
   envCredentials,
@@ -33,6 +34,7 @@ import {
   type LogoutStore,
   memoryLogouts,
   processEnv,
+  type RefreshStore,
   shared,
 } from "./app/stores.js";
 import { ForbiddenError, organizationKey } from "./claims.js";
@@ -46,6 +48,7 @@ import {
   hasCode,
   InvalidTokenError,
   isMasksError,
+  MasksError,
   rejected,
   UnavailableError,
 } from "./errors.js";
@@ -78,6 +81,7 @@ export interface MasksAuthOptions extends Omit<NextAuthConfig, "providers"> {
   credentials?: CredentialStore;
   logouts?: LogoutStore;
   replay?: ReplayStore;
+  refreshes?: RefreshStore;
   onLogout?: (logout: LogoutToken, request: Request) => void | Promise<void>;
   allowPlainHTTP?: boolean;
 }
@@ -115,6 +119,10 @@ const DISCOVERY_LIFETIME = 3600_000;
 const PENDING_REFRESH = 60_000;
 const REMEMBERED_REFRESHES = 10_000;
 const NOWHERE = "https://masks.invalid/unconnected";
+const REFRESH_PURPOSE = "authjs refresh";
+const CLAIM_LIFETIME = 30;
+const WAIT_FOR_REFRESH = 10_000;
+const WAIT_STEP = 100;
 const MASKS_OPTIONS = new Set([
   "issuer",
   "resource",
@@ -129,6 +137,7 @@ const MASKS_OPTIONS = new Set([
   "credentials",
   "logouts",
   "replay",
+  "refreshes",
   "onLogout",
   "allowPlainHTTP",
 ]);
@@ -165,6 +174,7 @@ export class MasksAuth {
     () => new Map<string, Remembered>(),
   );
   #result?: NextAuthResult;
+  #sealer?: Sealer;
 
   constructor(options: MasksAuthOptions = {}) {
     this.#options = options;
@@ -593,7 +603,9 @@ export class MasksAuth {
 
     if (found && found.until > Date.now()) return found.renewed;
 
-    const renewed = this.#refresh(held);
+    const renewed = this.#options.refreshes
+      ? this.#refreshOnce(this.#options.refreshes, key, held)
+      : this.#refresh(held);
     const remembered: Remembered = {
       until: Date.now() + PENDING_REFRESH,
       renewed,
@@ -615,6 +627,107 @@ export class MasksAuth {
 
       throw error;
     }
+  }
+
+  async #refreshOnce(
+    store: RefreshStore,
+    key: string,
+    held: HeldSignIn,
+  ): Promise<HeldSignIn> {
+    const done = `masks refreshed ${key}`;
+    const shared = async () => {
+      try {
+        return await store.get(done);
+      } catch (error) {
+        throw new UnavailableError("the refresh store could not be reached", {
+          cause: error,
+        });
+      }
+    };
+    const settle = async (sealed: string) => {
+      const opened = await this.#seal.unseal<{
+        signIn?: HeldSignIn;
+        error?: { code: string; description?: string; status?: number };
+      }>(REFRESH_PURPOSE, sealed);
+
+      if (opened?.signIn) return opened.signIn;
+      if (opened?.error) {
+        const { code, description, status } = opened.error;
+
+        throw new MasksError(code, description, { status });
+      }
+
+      throw new UnavailableError(
+        "the refresh store held a result it cannot open",
+      );
+    };
+
+    const before = await shared();
+
+    if (before) return settle(before);
+
+    let claimed: boolean;
+
+    try {
+      claimed = await store.claim(`masks refreshing ${key}`, CLAIM_LIFETIME);
+    } catch (error) {
+      throw new UnavailableError("the refresh store could not be reached", {
+        cause: error,
+      });
+    }
+
+    if (!claimed) {
+      for (let waited = 0; waited < WAIT_FOR_REFRESH; waited += WAIT_STEP) {
+        await new Promise((resolve) => setTimeout(resolve, WAIT_STEP));
+
+        const found = await shared();
+
+        if (found) return settle(found);
+      }
+
+      throw new UnavailableError("another server is refreshing this sign-in");
+    }
+
+    try {
+      const signIn = await this.#refresh(held);
+      const left = (signIn.expires_at ?? 0) - Math.floor(Date.now() / 1000);
+
+      await store.set(
+        done,
+        await this.#seal.seal(REFRESH_PURPOSE, { signIn }),
+        Math.max(left, 60),
+      );
+
+      return signIn;
+    } catch (error) {
+      if (rejected(error) && isMasksError(error)) {
+        await store.set(
+          done,
+          await this.#seal.seal(REFRESH_PURPOSE, {
+            error: {
+              code: error.code,
+              description: error.description,
+              status: error.status,
+            },
+          }),
+          CLAIM_LIFETIME,
+        );
+      }
+
+      throw error;
+    }
+  }
+
+  get #seal(): Sealer {
+    if (!this.#sealer) {
+      const env = processEnv();
+      const secret =
+        this.#options.secret ?? env.AUTH_SECRET ?? env.NEXTAUTH_SECRET;
+
+      this.#sealer = new Sealer([secret ?? ""].flat());
+    }
+
+    return this.#sealer;
   }
 
   async #refresh(held: HeldSignIn): Promise<HeldSignIn> {
