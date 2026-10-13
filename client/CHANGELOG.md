@@ -1,5 +1,35 @@
 # Changelog
 
+## [0.11.0](https://github.com/masksrb/masks/compare/gem/v0.10.0...gem/v0.11.0) (2026-10-13)
+
+
+### Features
+
+* **client:** a session holds its tokens to a DPoP key and proves it on every token request ([be3732c](https://github.com/masksrb/masks/commit/be3732cec2873fed75d8c70591f9bb1a2dcfb93c))
+* **client:** a session runs the device flow and polls until somebody approves the code ([cd96836](https://github.com/masksrb/masks/commit/cd96836a9d97049f80b9efcf6eec8335e7650a6a))
+* **client:** config.replay names one store of seen DPoP proofs for every process of a Rails app ([e3baf5a](https://github.com/masksrb/masks/commit/e3baf5a04b652ec2205bbc88004cb37b78ac9b0e))
+* **client:** Masks::Client.embed answers an issuer's requests inside the process, for an app that mounts masks and signs in through it ([7473031](https://github.com/masksrb/masks/commit/74730318cd335a74207b1fea0156b646e61d74c1))
+* **client:** Session#enroll asks masks for an enrollment token that a machine spends once to register its own key ([be52734](https://github.com/masksrb/masks/commit/be52734f7d470140749bf2f2d208d81ca85bc42d))
+* **client:** Session#unenroll archives a machine the app enrolled and revokes its tokens ([2743890](https://github.com/masksrb/masks/commit/2743890063f1e3818f8acb29048bb549f1b94220))
+* **server:** /manage, the sign-in pages, and the docs share one palette and one font stack ([17efe87](https://github.com/masksrb/masks/commit/17efe87c81c14d7541a37292bf58ba242836eca5))
+
+
+### Fixes
+
+* **client:** signing out everywhere returns through the handshake callback masks registered, so masks no longer refuses it ([6eb6e70](https://github.com/masksrb/masks/commit/6eb6e7067d43803f0ac8dcfbc04e2d8057ac2ca0))
+* **client:** the gem speaks only https off loopback, reads at most 1 MB, and answers 503 when its replay store is down ([6c03a43](https://github.com/masksrb/masks/commit/6c03a430a500d3476e018cf650bf093ad2aca102))
+
+
+### Documentation
+
+* each language has a group under Reference, with an overview, a page per framework, and its API reference ([64b7837](https://github.com/masksrb/masks/commit/64b7837e0484d11ddd5b4d926fc4aa800c06ed81))
+* each SDK keeps a TODO of the cleanups, security follow-ups, and testing left from the framework integrations ([4c4353b](https://github.com/masksrb/masks/commit/4c4353b63713700034c78f3d3c0b3b45ac7b50b3))
+
+
+### Refactoring
+
+* **server:** /manage derives its surfaces from the shared palette, and --label folds into --brass ([c00d32b](https://github.com/masksrb/masks/commit/c00d32b821cc99b8cbc2903a7a4c0c08aa2770bd))
+
 ## [0.10.0](https://github.com/masksrb/masks/compare/gem/v0.9.2...gem/v0.10.0) (2026-10-11)
 
 
