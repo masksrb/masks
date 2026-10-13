@@ -1,5 +1,5 @@
 import time
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from typing import Annotated, Any
 from urllib.parse import parse_qs, urlsplit
 
@@ -498,9 +498,33 @@ def test_only_a_manager_sees_or_changes_the_connection(fake: Fake) -> None:
     assert "app" not in fake.registrations
 
 
-def test_back_channel_logout_ends_sessions_on_the_server(fake: Fake) -> None:
-    store = MemorySessionStore()
-    application, _ = build(fake, credentials=MemoryCredentials(), sessions=ServerSessions(store))
+class AsyncMemorySessionStore:
+    def __init__(self) -> None:
+        self.held = MemorySessionStore()
+        self.calls: list[str] = []
+
+    async def read(self, key: str) -> dict[str, Any] | None:
+        self.calls.append("read")
+        return self.held.read(key)
+
+    async def write(self, key: str, data: dict[str, Any], expires_in: int, tags: Mapping[str, str]) -> None:
+        self.calls.append("write")
+        self.held.write(key, data, expires_in, tags)
+
+    async def delete(self, key: str) -> None:
+        self.calls.append("delete")
+        self.held.delete(key)
+
+    async def end(self, *, subject: str = "", sid: str = "") -> int:
+        self.calls.append("end")
+        return self.held.end(subject=subject, sid=sid)
+
+
+@pytest.mark.parametrize("asynchronous", [False, True], ids=["sync store", "async store"])
+def test_back_channel_logout_ends_sessions_on_the_server(fake: Fake, asynchronous: bool) -> None:
+    held = AsyncMemorySessionStore() if asynchronous else None
+    store = held.held if held is not None else MemorySessionStore()
+    application, _ = build(fake, credentials=MemoryCredentials(), sessions=ServerSessions(held or store))
 
     with TestClient(application, base_url=APP, follow_redirects=False) as client:
         begun = location(client.get("/auth/handshake", headers=HTML))
@@ -524,6 +548,16 @@ def test_back_channel_logout_ends_sessions_on_the_server(fake: Fake) -> None:
 
         assert ended.status_code == 200
         assert client.get("/whoami").json() == {"signed_in": False}
+
+    if held is not None:
+        assert {"read", "write", "delete", "end"} <= set(held.calls)
+
+
+def test_an_async_session_store_needs_an_async_framework() -> None:
+    sessions = ServerSessions(AsyncMemorySessionStore())
+
+    with pytest.raises(TypeError, match="async framework"):
+        sessions.load("anything")
 
 
 def test_back_channel_logout_ends_cookie_sessions_too(app: TestClient, fake: Fake) -> None:

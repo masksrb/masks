@@ -11,7 +11,6 @@
 - A cookie session larger than about 4 KB raises `ValueError`. Split it across several cookies, as go/web does.
 - The avatar is buffered up to 1 MB. Stream it.
 - The shared refresh and the memory of seen logout tokens work within one process only. Add stores several processes can share.
-- Server-side session stores are synchronous only. Add an async store for FastAPI.
 
 ## Security
 

@@ -188,6 +188,12 @@ class Renewal:
 
 
 @dataclass(frozen=True)
+class Ending:
+    subject: str
+    sid: str
+
+
+@dataclass(frozen=True)
 class Renewed:
     outcome: str
     token: Token | None = None
@@ -325,14 +331,27 @@ class Masks:
     def load(self, cookie: str | None) -> Session:
         return self.config.backend.load(cookie)
 
+    async def aload(self, cookie: str | None) -> Session:
+        return await self.config.backend.aload(cookie)
+
     def seal(self, session: Session, secure_request: bool) -> Sealed | None:
         if not session.dirty:
             return None
 
-        backend = self.config.backend
+        return self._sealed(session, self.config.backend.save(session, self._tags(session)), secure_request)
+
+    async def aseal(self, session: Session, secure_request: bool) -> Sealed | None:
+        if not session.dirty:
+            return None
+
+        return self._sealed(session, await self.config.backend.asave(session, self._tags(session)), secure_request)
+
+    def _tags(self, session: Session) -> dict[str, str]:
         identity = self._held(session).get("identity") or {}
-        tags = {name: str(identity[name]) for name in ("sub", "sid") if identity.get(name)}
-        value = backend.save(session, tags)
+
+        return {name: str(identity[name]) for name in ("sub", "sid") if identity.get(name)}
+
+    def _sealed(self, session: Session, value: str | None, secure_request: bool) -> Sealed:
         secure = self.config.cookie_secure or secure_request
         session.modified = False
         session.renewed = False
@@ -340,7 +359,9 @@ class Masks:
         if value is None:
             return Sealed(self.cookie_name, "", 0, secure)
 
-        return Sealed(self.cookie_name, value, max(int(session.issued_at + backend.lifetime - time.time()), 1), secure)
+        remaining = int(session.issued_at + self.config.backend.lifetime - time.time())
+
+        return Sealed(self.cookie_name, value, max(remaining, 1), secure)
 
     @property
     def cookie_name(self) -> str:
@@ -350,6 +371,11 @@ class Masks:
 
     def cookie(self, session: Session, secure_request: bool) -> str | None:
         sealed = self.seal(session, secure_request)
+
+        return sealed.header if sealed is not None else None
+
+    async def acookie(self, session: Session, secure_request: bool) -> str | None:
+        sealed = await self.aseal(session, secure_request)
 
         return sealed.header if sealed is not None else None
 
@@ -550,12 +576,25 @@ class Masks:
 
         return renewed
 
-    def _renew(self, item: object) -> Renewed:
+    def _other(self, item: object) -> object:
+        if isinstance(item, Ending):
+            return self.config.backend.end(subject=item.subject, sid=item.sid)
+
         if not isinstance(item, Renewal):
             raise TypeError(f"masks: a flow yielded {item!r}")
 
-        renewal = item
+        return self._renew(item)
 
+    async def _aother(self, item: object) -> object:
+        if isinstance(item, Ending):
+            return await self.config.backend.aend(subject=item.subject, sid=item.sid)
+
+        if not isinstance(item, Renewal):
+            raise TypeError(f"masks: a flow yielded {item!r}")
+
+        return await self._arenew(item)
+
+    def _renew(self, renewal: Renewal) -> Renewed:
         key = hashlib.sha256(renewal.refresh_token.encode()).hexdigest()
 
         with self._renew_locks[int(key[:8], 16) % len(self._renew_locks)]:
@@ -563,11 +602,7 @@ class Masks:
 
             return found or self._remember(key, run(self._renewing(renewal), self.http))
 
-    async def _arenew(self, item: object) -> Renewed:
-        if not isinstance(item, Renewal):
-            raise TypeError(f"masks: a flow yielded {item!r}")
-
-        renewal = item
+    async def _arenew(self, renewal: Renewal) -> Renewed:
         key = hashlib.sha256(renewal.refresh_token.encode()).hexdigest()
         stripe = int(key[:8], 16) % RENEWAL_STRIPES
 
@@ -873,7 +908,7 @@ class Masks:
             )
 
         self.config.departures.record(subject=logout.subject, sid=logout.sid, at=time.time())
-        self.config.backend.end(subject=logout.subject, sid=logout.sid)
+        yield Ending(logout.subject, logout.sid)
 
         if self.config.logged_out is not None:
             self.config.logged_out(logout)
@@ -1277,10 +1312,10 @@ class Masks:
         return await self.aanswer(self.session_check(request, session, names))
 
     def run(self, flow: Step[T]) -> T:
-        return run(flow, self.http, self._renew)
+        return run(flow, self.http, self._other)
 
     async def arun(self, flow: Step[T]) -> T:
-        return await arun(flow, self.async_http, self._arenew)
+        return await arun(flow, self.async_http, self._aother)
 
     def answer(self, flow: Step[T]) -> T | Answer:
         try:

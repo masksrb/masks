@@ -3,13 +3,14 @@ from __future__ import annotations
 import base64
 import binascii
 import hashlib
+import inspect
 import json
 import secrets
 import threading
 import time
 import zlib
-from collections.abc import Iterator, Mapping, MutableMapping, Sequence
-from typing import Any, Protocol
+from collections.abc import Awaitable, Iterator, Mapping, MutableMapping, Sequence
+from typing import Any, Protocol, TypeVar, cast
 
 from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives import hashes
@@ -21,6 +22,9 @@ LIFETIME = 14 * 24 * 3600
 COOKIE_LIMIT = 4000
 SECRET_LENGTH = 32
 VERSION = "1"
+KEY_LIMIT = 128
+
+T = TypeVar("T")
 
 
 class Session(MutableMapping[str, Any]):
@@ -72,6 +76,16 @@ class SessionStore(Protocol):
     def end(self, *, subject: str = "", sid: str = "") -> int: ...
 
 
+class AsyncSessionStore(Protocol):
+    async def read(self, key: str) -> dict[str, Any] | None: ...
+
+    async def write(self, key: str, data: dict[str, Any], expires_in: int, tags: Mapping[str, str]) -> None: ...
+
+    async def delete(self, key: str) -> None: ...
+
+    async def end(self, *, subject: str = "", sid: str = "") -> int: ...
+
+
 class SessionBackend(Protocol):
     name: str
     lifetime: int
@@ -81,6 +95,19 @@ class SessionBackend(Protocol):
     def save(self, session: Session, tags: Mapping[str, str]) -> str | None: ...
 
     def end(self, *, subject: str = "", sid: str = "") -> int | None: ...
+
+    async def aload(self, cookie: str | None) -> Session: ...
+
+    async def asave(self, session: Session, tags: Mapping[str, str]) -> str | None: ...
+
+    async def aend(self, *, subject: str = "", sid: str = "") -> int | None: ...
+
+
+async def settled(value: T | Awaitable[T]) -> T:
+    if inspect.isawaitable(value):
+        return await value
+
+    return cast(T, value)
 
 
 def derived(secret: str | bytes, purpose: bytes) -> bytes:
@@ -176,53 +203,121 @@ class CookieSessions:
     def end(self, *, subject: str = "", sid: str = "") -> int | None:
         return None
 
+    async def aload(self, cookie: str | None) -> Session:
+        return self.load(cookie)
+
+    async def asave(self, session: Session, tags: Mapping[str, str]) -> str | None:
+        return self.save(session, tags)
+
+    async def aend(self, *, subject: str = "", sid: str = "") -> int | None:
+        return None
+
 
 def hashed(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
 
 
 class ServerSessions:
-    def __init__(self, store: SessionStore, *, name: str = COOKIE, lifetime: int = LIFETIME) -> None:
+    def __init__(
+        self, store: SessionStore | AsyncSessionStore, *, name: str = COOKIE, lifetime: int = LIFETIME
+    ) -> None:
         self.store = store
         self.name = name
         self.lifetime = lifetime
+        self.asynchronous = inspect.iscoroutinefunction(getattr(store, "read", None))
+
+    def _sync(self) -> SessionStore:
+        if self.asynchronous:
+            raise TypeError("masks: an async session store needs an async framework, such as FastAPI")
+
+        return cast(SessionStore, self.store)
 
     def load(self, cookie: str | None) -> Session:
-        if not cookie or len(cookie) > 128:
+        store = self._sync()
+
+        if not cookie or len(cookie) > KEY_LIMIT:
             return Session()
 
-        found = self.store.read(hashed(cookie))
+        session = self._opened(cookie, store.read(hashed(cookie)))
+
+        if session is None:
+            store.delete(hashed(cookie))
+            return Session()
+
+        return session
+
+    async def aload(self, cookie: str | None) -> Session:
+        if not cookie or len(cookie) > KEY_LIMIT:
+            return Session()
+
+        session = self._opened(cookie, await settled(self.store.read(hashed(cookie))))
+
+        if session is None:
+            await settled(self.store.delete(hashed(cookie)))
+            return Session()
+
+        return session
+
+    def _opened(self, cookie: str, found: object) -> Session | None:
+        if found is None:
+            return Session()
 
         if not isinstance(found, dict) or not isinstance(found.get("data"), dict):
-            return Session()
+            return None
 
         issued_at = found.get("iat")
 
         if not isinstance(issued_at, (int, float)) or issued_at + self.lifetime < time.time():
-            self.store.delete(hashed(cookie))
-            return Session()
+            return None
 
         return Session(found["data"], key=cookie, issued_at=float(issued_at))
 
     def save(self, session: Session, tags: Mapping[str, str]) -> str | None:
-        if session.ended_key:
-            self.store.delete(hashed(session.ended_key))
-            session.ended_key = ""
+        store = self._sync()
+
+        for key in self._ending(session):
+            store.delete(key)
 
         if not session.data:
-            if session.key:
-                self.store.delete(hashed(session.key))
-
             return None
 
-        session.key = session.key or secrets.token_urlsafe(32)
-        remaining = int(session.issued_at + self.lifetime - time.time())
-        self.store.write(hashed(session.key), {"iat": session.issued_at, "data": session.data}, max(remaining, 1), tags)
+        key, data, expires_in = self._written(session)
+        store.write(key, data, expires_in, tags)
 
         return session.key
 
+    async def asave(self, session: Session, tags: Mapping[str, str]) -> str | None:
+        for key in self._ending(session):
+            await settled(self.store.delete(key))
+
+        if not session.data:
+            return None
+
+        key, data, expires_in = self._written(session)
+        await settled(self.store.write(key, data, expires_in, tags))
+
+        return session.key
+
+    def _ending(self, session: Session) -> list[str]:
+        ended = [hashed(session.ended_key)] if session.ended_key else []
+        session.ended_key = ""
+
+        if not session.data and session.key:
+            ended.append(hashed(session.key))
+
+        return ended
+
+    def _written(self, session: Session) -> tuple[str, dict[str, Any], int]:
+        session.key = session.key or secrets.token_urlsafe(32)
+        remaining = int(session.issued_at + self.lifetime - time.time())
+
+        return hashed(session.key), {"iat": session.issued_at, "data": session.data}, max(remaining, 1)
+
     def end(self, *, subject: str = "", sid: str = "") -> int | None:
-        return self.store.end(subject=subject, sid=sid)
+        return self._sync().end(subject=subject, sid=sid)
+
+    async def aend(self, *, subject: str = "", sid: str = "") -> int | None:
+        return await settled(self.store.end(subject=subject, sid=sid))
 
 
 class MemorySessionStore:

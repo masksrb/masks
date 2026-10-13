@@ -321,6 +321,11 @@ store of your own has these methods:
 | `delete(key)` | Removes it. |
 | `end(subject=..., sid=...)` | Removes every session with that `sid`, or every session of that `subject`. Back-channel logout calls it. |
 
+In a FastAPI app, a store's methods can be `async def`, so a store that talks to Redis or a
+database does not hold up other requests while it waits. `masks.web.AsyncSessionStore` describes
+that kind of store. Django and Flask apps need a store with plain methods, and raise `TypeError`
+when given an async one.
+
 ## Organizations
 
 When an app asks for the `organization` scope, a person signs in as a member of one

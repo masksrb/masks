@@ -44,13 +44,13 @@ class SessionMiddleware:
             await self.app(scope, receive, send)
             return
 
-        session = self.engine.load(cookie_from(scope, self.engine.cookie_name))
+        session = await self.engine.aload(cookie_from(scope, self.engine.cookie_name))
         scope[SESSION] = session
         secure = scope.get("scheme") in ("https", "wss")
 
         async def sending(message: Message) -> None:
             if message["type"] == "http.response.start":
-                header = self.engine.cookie(session, secure)
+                header = await self.engine.acookie(session, secure)
 
                 if header is not None:
                     message.setdefault("headers", [])
