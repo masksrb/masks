@@ -37,6 +37,26 @@ import {
   unique,
 } from "./privileges.js";
 import { renew } from "./refresh.js";
+import {
+  isNetwork,
+  localPath,
+  type PerRequest,
+  presented,
+  readForm,
+  referring,
+  resolve,
+  sameOrigin,
+  unsafe,
+  wantsJSON,
+} from "./requests.js";
+import {
+  errorResponse,
+  escapeHTML,
+  json,
+  page,
+  redirect,
+  text,
+} from "./responses.js";
 import { Sealer } from "./seal.js";
 import {
   keyed,
@@ -47,8 +67,6 @@ import {
   type Store,
   shared,
 } from "./stores.js";
-
-type PerRequest<T> = T | ((request: Request) => T | Promise<T>);
 
 export interface MasksOptions {
   env?: Record<string, string | undefined>;
@@ -133,8 +151,6 @@ export interface Connection {
   issuer?: string;
 }
 
-export const PATH_HEADER = "x-masks-path";
-
 export const DEFAULT_SCOPE = ["openid", "profile", "email", "offline_access"];
 
 const IDENTITY = [
@@ -161,8 +177,6 @@ const REFRESH_LEEWAY = 30;
 const SESSION_PURPOSE = "session";
 const STORED_PURPOSE = "stored session";
 const FLOW_PURPOSE = "flow";
-const FORM_LIMIT = 64 * 1024;
-
 class Visit {
   readonly request: Request;
   readonly url: URL;
@@ -1715,128 +1729,6 @@ export function claim<T extends { until: number }>(
   return found && found.until > now() ? found : undefined;
 }
 
-async function resolve<T>(
-  value: PerRequest<T> | undefined,
-  request: Request,
-): Promise<T | undefined> {
-  if (typeof value === "function") {
-    return (value as (request: Request) => T | Promise<T>)(request);
-  }
-
-  return value;
-}
-
-export function localPath(
-  value: string | null | undefined,
-): string | undefined {
-  if (
-    typeof value !== "string" ||
-    !value.startsWith("/") ||
-    value.startsWith("//")
-  )
-    return undefined;
-  if (unsafe(value, 0x20) || value.includes("\\")) return undefined;
-
-  try {
-    const parsed = new URL(value, "http://masks.invalid");
-
-    if (
-      parsed.origin !== "http://masks.invalid" ||
-      parsed.pathname.startsWith("//")
-    )
-      return undefined;
-
-    return `${parsed.pathname}${parsed.search}`;
-  } catch {
-    return undefined;
-  }
-}
-
-function referring(request: Request): string | undefined {
-  const referer = request.headers.get("referer");
-
-  if (!referer) return undefined;
-
-  try {
-    const parsed = new URL(referer);
-
-    return localPath(`${parsed.pathname}${parsed.search}`);
-  } catch {
-    return undefined;
-  }
-}
-
-export function wantsJSON(request: Request): boolean {
-  if (
-    request.headers.get("x-requested-with")?.toLowerCase() === "xmlhttprequest"
-  )
-    return true;
-
-  return !(request.headers.get("accept") ?? "").includes("text/html");
-}
-
-export async function readForm(request: Request): Promise<URLSearchParams> {
-  if (Number(request.headers.get("content-length") ?? "0") > FORM_LIMIT) {
-    await request.body?.cancel();
-    throw tooLarge();
-  }
-
-  if (!request.body) return new URLSearchParams();
-
-  const reader = request.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let size = 0;
-
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    size += value.byteLength;
-
-    if (size > FORM_LIMIT) {
-      await reader.cancel();
-      throw tooLarge();
-    }
-
-    chunks.push(value);
-  }
-
-  const joined = new Uint8Array(size);
-  let offset = 0;
-
-  for (const chunk of chunks) {
-    joined.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-
-  return new URLSearchParams(new TextDecoder().decode(joined));
-}
-
-function tooLarge(): MasksError {
-  return new MasksError(
-    "invalid_request",
-    "that request body is larger than 64 KiB",
-  );
-}
-
-export function sameOrigin(request: Request, origin: string): boolean {
-  const site = request.headers.get("sec-fetch-site");
-
-  if (site && site !== "same-origin" && site !== "none") return false;
-
-  const named = request.headers.get("origin");
-
-  if (named !== null && named !== origin) return false;
-
-  return true;
-}
-
-function presented(request: Request): string | undefined {
-  return request.headers
-    .get("authorization")
-    ?.match(/^(?:Bearer|DPoP)[ \t]+(\S+)\s*$/i)?.[1];
-}
-
 function describe(error: Error): string {
   return error.message.replace(/^masks: (invalid token: )?/, "");
 }
@@ -1850,75 +1742,6 @@ function quote(value: string): string {
     .trim();
 }
 
-function unsafe(value: string, highest: number): boolean {
-  for (let index = 0; index < value.length; index++) {
-    const code = value.charCodeAt(index);
-
-    if (code <= highest || code === 0x7f) return true;
-  }
-
-  return false;
-}
-
-export function isNetwork(error: unknown): boolean {
-  return (
-    error instanceof TypeError && /fetch|network|connect/i.test(error.message)
-  );
-}
-
-function headersWith(
-  cookies: string[],
-  extra: Record<string, string> = {},
-): Headers {
-  const headers = new Headers(extra);
-
-  for (const cookie of cookies) headers.append("set-cookie", cookie);
-
-  return headers;
-}
-
-export function redirect(
-  location: string,
-  cookies: string[],
-  status = 302,
-): Response {
-  return new Response(null, {
-    status,
-    headers: headersWith(cookies, { location, "cache-control": "no-store" }),
-  });
-}
-
-export function json(
-  status: number,
-  body: unknown,
-  cookies: string[],
-  extra: Record<string, string> = {},
-): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: headersWith(cookies, {
-      "content-type": "application/json",
-      "cache-control": "no-store",
-      ...extra,
-    }),
-  });
-}
-
-export function text(
-  status: number,
-  body: string,
-  cookies: string[],
-): Response {
-  return new Response(body, {
-    status,
-    headers: headersWith(cookies, {
-      "content-type": "text/plain; charset=utf-8",
-      "cache-control": "no-store",
-      "x-content-type-options": "nosniff",
-    }),
-  });
-}
-
 function answer(
   visit: Visit,
   status: number,
@@ -1926,34 +1749,18 @@ function answer(
   description: string,
   asJSON = false,
 ): Response {
-  return refusal(visit.request, status, code, description, visit.out, asJSON);
-}
-
-export function refusal(
-  request: Request,
-  status: number,
-  code: string,
-  description: string,
-  cookies: string[] = [],
-  asJSON = false,
-): Response {
-  if (asJSON || wantsJSON(request)) {
-    return json(
-      status,
-      { error: code, error_description: description },
-      cookies,
-    );
-  }
-
-  return text(status, `${code}: ${description}`, cookies);
+  return errorResponse(
+    visit.request,
+    status,
+    code,
+    description,
+    visit.out,
+    asJSON,
+  );
 }
 
 function forbid(visit: Visit, error: ForbiddenError): Response {
   return answer(visit, 403, error.code, error.description);
-}
-
-export function escapeHTML(value: string): string {
-  return value.replace(/[&<>"']/g, (found) => `&#${found.charCodeAt(0)};`);
 }
 
 export function connectedPage(
@@ -1973,25 +1780,5 @@ export function connectedPage(
 ${disconnects ? `<form method="post" action="${path}/disconnect"><button type="submit">Disconnect it</button></form>` : ""}`,
     cookies,
     target ? [target] : [],
-  );
-}
-
-function page(
-  title: string,
-  body: string,
-  cookies: string[],
-  formTargets: string[],
-): Response {
-  return new Response(
-    `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeHTML(title)}</title><style>body{font-family:system-ui,sans-serif;max-width:36rem;margin:4rem auto;padding:0 1rem;line-height:1.5}form{display:inline-block;margin-right:.5rem}</style></head><body><h1>${escapeHTML(title)}</h1>${body}</body></html>`,
-    {
-      status: 200,
-      headers: headersWith(cookies, {
-        "content-type": "text/html; charset=utf-8",
-        "cache-control": "no-store",
-        "content-security-policy": `default-src 'none'; style-src 'unsafe-inline'; form-action ${["'self'", ...formTargets].join(" ")}; frame-ancestors 'none'`,
-        "x-frame-options": "DENY",
-      }),
-    },
   );
 }

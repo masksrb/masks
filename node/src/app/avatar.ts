@@ -1,3 +1,5 @@
+import { withCookies } from "./responses.js";
+
 const SIZES = [32, 64, 128, 256, 512];
 const MOST = 5 * 1024 * 1024;
 
@@ -131,10 +133,4 @@ function plain(status: number, cookies: string[]): Response {
     new Response(null, { status, headers: { "cache-control": "no-store" } }),
     cookies,
   );
-}
-
-function withCookies(response: Response, cookies: string[]): Response {
-  for (const cookie of cookies) response.headers.append("set-cookie", cookie);
-
-  return response;
 }

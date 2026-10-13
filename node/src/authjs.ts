@@ -11,19 +11,9 @@ import {
   connectedPage,
   DEFAULT_SCOPE,
   fresh,
-  isNetwork,
-  json,
   keep,
-  localPath,
   now,
-  PATH_HEADER,
   pick,
-  readForm,
-  redirect,
-  refusal,
-  sameOrigin,
-  text,
-  wantsJSON,
 } from "./app/masks.js";
 import {
   approvedScope,
@@ -33,6 +23,15 @@ import {
   unique,
 } from "./app/privileges.js";
 import { type Renewal, renew } from "./app/refresh.js";
+import {
+  isNetwork,
+  localPath,
+  PATH_HEADER,
+  readForm,
+  sameOrigin,
+  wantsJSON,
+} from "./app/requests.js";
+import { errorResponse, json, redirect, text } from "./app/responses.js";
 import { Sealer } from "./app/seal.js";
 import { memoryStore, processEnv, type Store, shared } from "./app/stores.js";
 import { avatarsOf, ForbiddenError, organizationKey } from "./claims.js";
@@ -402,7 +401,7 @@ export class MasksAuth {
       }
     } catch (error) {
       if (isMasksError(error)) {
-        return refusal(
+        return errorResponse(
           request,
           400,
           error.code,
@@ -411,7 +410,7 @@ export class MasksAuth {
       }
 
       if (error instanceof UnavailableError || isNetwork(error)) {
-        return refusal(
+        return errorResponse(
           request,
           503,
           "temporarily_unavailable",
@@ -867,7 +866,7 @@ export class MasksAuth {
     );
 
     if (!location) {
-      return refusal(
+      return errorResponse(
         request,
         500,
         "signin_failed",
@@ -933,7 +932,7 @@ export class MasksAuth {
     const url = new URL(request.url);
 
     if (!sameOrigin(request, url.origin)) {
-      return refusal(
+      return errorResponse(
         request,
         403,
         "forbidden",
@@ -993,7 +992,7 @@ export class MasksAuth {
     const [expected = "", callbackUrl] = decode(held ?? "");
 
     if (!held || !state || !constantEqual(expected, state)) {
-      return refusal(
+      return errorResponse(
         request,
         400,
         "invalid_state",
@@ -1079,7 +1078,7 @@ export class MasksAuth {
 
   async #handshakeCreate(request: Request): Promise<Response> {
     if (!sameOrigin(request, new URL(request.url).origin)) {
-      return refusal(
+      return errorResponse(
         request,
         403,
         "forbidden",
@@ -1097,7 +1096,7 @@ export class MasksAuth {
 
   async #handshakeDestroy(request: Request): Promise<Response> {
     if (!sameOrigin(request, new URL(request.url).origin)) {
-      return refusal(
+      return errorResponse(
         request,
         403,
         "forbidden",
@@ -1113,7 +1112,7 @@ export class MasksAuth {
     if (refused) return refused;
 
     if (!this.#credentials.clear) {
-      return refusal(
+      return errorResponse(
         request,
         400,
         "invalid_request",
@@ -1148,7 +1147,7 @@ export class MasksAuth {
     });
 
     if (!held || !state || !constantEqual(held, state)) {
-      return refusal(
+      return errorResponse(
         request,
         400,
         "invalid_state",
@@ -1163,7 +1162,7 @@ export class MasksAuth {
     }
 
     if (!this.#credentials.write) {
-      return refusal(
+      return errorResponse(
         request,
         500,
         "handshake_unsaved",
@@ -1272,7 +1271,7 @@ export class MasksAuth {
       );
     }
 
-    return refusal(
+    return errorResponse(
       request,
       403,
       "forbidden",
@@ -1282,7 +1281,7 @@ export class MasksAuth {
 
   async #backchannel(request: Request): Promise<Response> {
     const refuse = (description: string) =>
-      refusal(request, 400, "invalid_request", description, [], true);
+      errorResponse(request, 400, "invalid_request", description, [], true);
     const client = await this.#client(request);
 
     if (!client) return refuse("this app has not shaken hands with masks");

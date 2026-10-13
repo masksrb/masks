@@ -3,12 +3,9 @@ import { redirect } from "next/navigation";
 import { type NextRequest, NextResponse } from "next/server";
 import { replaceCookies } from "./app/cookies.js";
 import type { Masked } from "./app/masked.js";
-import {
-  localPath,
-  Masks,
-  type MasksOptions,
-  PATH_HEADER,
-} from "./app/masks.js";
+import { Masks, type MasksOptions } from "./app/masks.js";
+import { localPath, PATH_HEADER } from "./app/requests.js";
+import { withCookies } from "./app/responses.js";
 import { ForbiddenError } from "./claims.js";
 
 export { PATH_HEADER };
@@ -181,21 +178,6 @@ function absolute(response: Response, url: URL): Response {
   headers.set("location", new URL(location, url).toString());
 
   return new Response(response.body, { status: response.status, headers });
-}
-
-function withCookies(response: Response, written: string[]): Response {
-  if (written.length === 0) return response;
-
-  let answer = response;
-
-  try {
-    for (const cookie of written) answer.headers.append("set-cookie", cookie);
-  } catch {
-    answer = new Response(response.body, response);
-    for (const cookie of written) answer.headers.append("set-cookie", cookie);
-  }
-
-  return answer;
 }
 
 export { Masked } from "./app/masked.js";

@@ -10,7 +10,6 @@ export {
   type Connection as MasksConnection,
   DEFAULT_SCOPE,
   type HeldTokens,
-  localPath,
   Masks,
   type MasksOptions,
   type Outcome,
@@ -27,6 +26,7 @@ export {
   type UpstashOptions,
   upstashStore,
 } from "./app/redis.js";
+export { localPath } from "./app/requests.js";
 export { memoryStore, replayStore, type Store } from "./app/stores.js";
 export {
   type Avatars,

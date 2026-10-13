@@ -6,7 +6,6 @@
 - `Outcome` is a finished `Response`, so the Next adapter forces `accept: text/html` and reads `Location`. Give a refusal a kind (`login`, `step_up`, `forbidden`, `handshake`), a URL, and `toResponse(request)`.
 - The avatar proxy sends a hand-built `authorization` header. Use `signedFetch`, so a DPoP-bound token sends a proof, once the app layer can hold DPoP-bound tokens. Replace `avatars: { bytes }` with `avatarBytes`.
 - The app layer writes its own 403 challenge. Use `Verifier.challengeHeaders` and `refusal`, which now build both challenges for 401 and 403.
-- Move `headersWith`, `text`, `json`, and `redirect` into `app/responses.ts` and use them in avatar.ts and next.ts.
 - Split masks.ts along the seams go/web uses: session and flow state, routes, and guards.
 
 ## Auth.js
