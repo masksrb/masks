@@ -140,14 +140,27 @@ class ConfigurationTest < EngineTest
     end
   end
 
-  test "a resource server remembers proofs in this process unless a shared store is named" do
-    shared = Object.new
-    built = [ config.resource_server_for(request_for(HOST)) ]
-    configure!(replay: shared)
-    built << config.resource_server_for(request_for(HOST))
+  test "a resource server remembers proofs in the cache" do
+    shared = ActiveSupport::Cache::MemoryStore.new
+    configure!(cache: shared)
 
-    assert_same Masks::Client::Proof.memory, built.first.instance_variable_get(:@replay)
-    assert_same shared, built.last.instance_variable_get(:@replay)
+    assert_same shared, config.resource_server_for(request_for(HOST)).instance_variable_get(:@replay).store
+  end
+
+  test "the cache is Rails.cache, or this process's memory when Rails.cache keeps nothing" do
+    configure!(cache: nil)
+    held = Rails.cache
+
+    Rails.cache = ActiveSupport::Cache::MemoryStore.new
+
+    assert_same Rails.cache, config.cache
+
+    Rails.cache = ActiveSupport::Cache::NullStore.new
+
+    assert_kind_of ActiveSupport::Cache::MemoryStore, config.cache
+    assert_same config.cache, config.cache
+  ensure
+    Rails.cache = held
   end
 
   test "without a namespace the handshake asks for exactly what a sign-in does" do

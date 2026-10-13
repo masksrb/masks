@@ -132,6 +132,44 @@ app sends it on to `after_sign_out`. A request for JSON gets the masks address a
 app accepts that return once, within an hour, in the browser that signed out. See
 [Masks::Rails](/reference/ruby/rails/) for the full list.
 
+### Back-channel logout
+
+When masks ends a session itself, it sends a logout token to `/auth/logout/backchannel`. The
+handshake registers that address when the issuer says it sends logout tokens. The engine checks the
+token, then signs out the session it names, or every session of the person it names. The sign-out
+takes effect at that session's next request.
+
+- Each logout token is accepted once.
+- The engine remembers each logout in [`config.cache`](#running-several-processes), so it reaches
+  every process that shares the cache.
+- `config.logged_out`, a lambda that takes a `Masks::Client::Logout`, hears each logout as well.
+
+### Running several processes
+
+The engine keeps some things in `config.cache`:
+
+- the result of each token refresh, so requests that arrive together refresh once
+- the logouts masks sent, so a session ends in every process
+- the logout tokens and DPoP proofs already used
+
+`config.cache` is `Rails.cache` by default. When `Rails.cache` is a `:null_store`, which keeps
+nothing, the engine uses its own memory in each process.
+
+An app that runs as several processes, such as Puma with more than one worker, needs a cache they
+all share. Without one, two processes can refresh the same token at once. masks then treats the
+second refresh as a stolen token and revokes the tokens from both, so the person is signed out.
+`:solid_cache_store`, `:redis_cache_store`, and `:mem_cache_store` are shared. To use another cache
+than `Rails.cache`, set it:
+
+```ruby
+Masks::Rails.configure do |config|
+  config.cache = ActiveSupport::Cache::RedisCacheStore.new(url: ENV["REDIS_URL"])
+end
+```
+
+Each key is a hash, and each refresh result is sealed with a key made from the old refresh token, so
+the cache holds no tokens anyone can read.
+
 ### Organizations
 
 When an app asks for the `organization` scope, a person signs in as a member of one
@@ -303,7 +341,6 @@ The engine accepts a bound token only as `Authorization: DPoP`, with a `DPoP` pr
 
 A bound token sent as `Bearer` is refused.
 
-Each process keeps the proofs it has seen in memory. To share them across processes, set
-`config.replay` to any object whose `first?(key, expires_in:)` returns true only once for each key.
+The engine remembers the proofs it has seen in [`config.cache`](#running-several-processes).
 
 Outside Rails, [Masks::Client](/reference/ruby/client/) does the same without the engine.

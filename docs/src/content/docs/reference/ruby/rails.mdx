@@ -38,7 +38,7 @@ prose is the RDoc in the source.
 | `FAREWELLS` | `"masks_farewells".freeze` |
 | `STEPPED_UP` | `"masks_stepped_up".freeze` |
 | `STEP_UP_WITHIN` | `300` |
-| `IDENTITY` | `[ "sub", "name", "preferred_username", "email", "email_verified", "tenant", "picture", Masks::Client::Claims::AVATARS, Masks::Client::Claims::ORGANIZATION, Masks::Client::Claims::ORGANIZATIONS ].freeze` |
+| `IDENTITY` | `[ "sub", "sid", "name", "preferred_username", "email", "email_verified", "tenant", "picture", Masks::Client::Claims::AVATARS, Masks::Client::Claims::ORGANIZATION, Masks::Client::Claims::ORGANIZATIONS ].freeze` |
 
 ### #authenticate_masks!
 
@@ -56,6 +56,12 @@ prose is the RDoc in the source.
 
 ```ruby
 #masks_account_url()
+```
+
+### #masks_cache
+
+```ruby
+#masks_cache()
 ```
 
 ### #masks_configured?
@@ -178,6 +184,76 @@ prose is the RDoc in the source.
 #masks_tracker(key)
 ```
 
+## Masks::Rails::Cache
+
+| Constant | Value |
+| --- | --- |
+| `CLAIM` | `30` |
+| `RESULT` | `60` |
+| `WAIT` | `0.05` |
+| `PATIENCE` | `30` |
+| `LOGOUT` | `600` |
+| `DEPARTURE` | `30 * 24 * 3600` |
+| `CIPHER` | `"aes-256-gcm".freeze` |
+| `NONCE` | `12` |
+| `TAG` | `16` |
+
+| Attribute | Access |
+| --- | --- |
+| `store` | R |
+
+### ::key
+
+```ruby
+::key(*parts)
+```
+
+### ::new
+
+```ruby
+::new(store)
+```
+
+### ::now
+
+```ruby
+::now()
+```
+
+### #depart!
+
+```ruby
+#depart!(issuer, logout)
+```
+
+### #departed?
+
+```ruby
+#departed?(issuer, identity, since:)
+```
+
+### #first?
+
+```ruby
+#first?(key, expires_in:)
+```
+
+### #first_logout?
+
+```ruby
+#first_logout?(issuer, logout)
+```
+
+### #renew
+
+```ruby
+#renew(issuer, refresh_token)
+```
+
+## Masks::Rails::Cache::Unavailable
+
+Inherits `Masks::Client::Error`.
+
 ## Masks::Rails::Configurable
 
 ### #masks_config
@@ -198,6 +274,7 @@ prose is the RDoc in the source.
 | `after_sign_in` | RW |
 | `after_sign_out` | RW |
 | `authenticate_everything` | RW |
+| `cache` | W |
 | `credentials` | W |
 | `credentials_path` | RW |
 | `delegates` | RW |
@@ -212,7 +289,6 @@ prose is the RDoc in the source.
 | `parent_controller` | RW |
 | `privileges` | R |
 | `redirect_uri` | W |
-| `replay` | W |
 | `resource` | RW |
 | `resource_scopes` | RW |
 | `scope` | RW |
@@ -236,6 +312,12 @@ prose is the RDoc in the source.
 
 ```ruby
 #backchannel_logout_uri_for(request)
+```
+
+### #cache
+
+```ruby
+#cache()
 ```
 
 ### #can_forget?
@@ -344,12 +426,6 @@ prose is the RDoc in the source.
 
 ```ruby
 #redirect_uri_for(request)
-```
-
-### #replay
-
-```ruby
-#replay()
 ```
 
 ### #resource_for
@@ -628,4 +704,58 @@ Inherits `Rails::Engine`.
 
 ```ruby
 #masks_unavailable()
+```
+
+## Masks::Rails::Renewal
+
+| Constant | Value |
+| --- | --- |
+| `OUTCOMES` | `%i[renewed refused unregistered unreachable].freeze` |
+
+| Attribute | Access |
+| --- | --- |
+| `identity` | R |
+| `outcome` | R |
+| `tokens` | R |
+
+### ::from_h
+
+```ruby
+::from_h(body)
+```
+
+### ::new
+
+```ruby
+::new(outcome, tokens: nil, identity: nil)
+```
+
+### ::refused
+
+```ruby
+::refused()
+```
+
+### ::renewed
+
+```ruby
+::renewed(tokens, identity)
+```
+
+### ::unreachable
+
+```ruby
+::unreachable()
+```
+
+### ::unregistered
+
+```ruby
+::unregistered()
+```
+
+### #to_h
+
+```ruby
+#to_h()
 ```

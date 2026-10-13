@@ -203,6 +203,17 @@ no token for. Sizes are 32, 64, 128, 256, or 512.
 `logout_url`, the issuer's end-session endpoint. `config.sign_out_of_issuer = true` makes that the
 default for every sign-out.
 
+When masks ends a session, it posts a logout token to `/auth/logout/backchannel`. The engine signs
+out that session at its next request.
+
+### Several processes
+
+`config.cache` holds each token refresh, so requests that arrive together refresh once, along with
+the logouts masks sent and the logout tokens and DPoP proofs already used. It is `Rails.cache` by
+default, or each process's own memory when `Rails.cache` keeps nothing. An app with several
+processes needs a cache they share, such as `:solid_cache_store` or `:redis_cache_store`. Without
+one, two processes can refresh one token at once, and masks then revokes both.
+
 ### Configuration
 
 Every value that varies per request accepts a callable taking the request, which is what
@@ -225,7 +236,8 @@ a subdomain-per-tenant host needs.
 | `sign_out_of_issuer` | make every sign-out an RP-initiated logout |
 | `session_key` | the session key the tokens live under |
 | `delegates` / `delegation_redirect_uri` | ask for delegation in the handshake, and where connecting an account returns |
-| `replay` | where seen DPoP proofs are remembered, any object with `first?(key, expires_in:)`, this process's memory by default |
+| `cache` | where refreshes, logouts, and DPoP proofs are remembered, `Rails.cache` by default |
+| `logged_out` | a lambda that hears each back-channel logout |
 
 ## Any Ruby app
 
@@ -412,8 +424,8 @@ claims.tenant.subdomain
 accepted only as `Authorization: DPoP` with a proof signed by that key for this method, URL, and
 token, made within the last minute and never seen before. `proof`, `method`, and `url` are what it
 checks the proof against. Seen proofs are kept in the process's memory. A deployment with several
-processes passes `replay:` to `Resource.new`, or sets `config.replay` in a Rails app, to any object
-whose `first?(key, expires_in:)` answers true only once for each key across every process.
+processes passes `replay:` to `Resource.new` with any object whose `first?(key, expires_in:)`
+answers true only once for each key across every process. A Rails app keeps them in `config.cache`.
 
 When that store raises, `authenticate` raises `Masks::Client::ReplayUnavailable`, which is not a
 challenge. The Rack middleware and a Rails controller answer `503` with `temporarily_unavailable`

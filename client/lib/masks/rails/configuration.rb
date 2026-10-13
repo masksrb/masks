@@ -11,7 +11,7 @@ module Masks
                     :after_sign_out, :session_key, :sign_out_of_issuer, :parent_controller,
                     :credentials_path, :authenticate_everything, :delegates
       attr_writer :issuer, :redirect_uri, :name, :credentials, :store, :forget, :logged_out,
-                  :delegation_redirect_uri, :organization, :manages, :replay
+                  :delegation_redirect_uri, :organization, :manages, :cache
 
       def initialize
         @scope = Masks::Client::Session::DEFAULT_SCOPE
@@ -80,17 +80,13 @@ module Masks
       end
 
       def backchannel_logout_uri_for(request)
-        return nil unless @logged_out.respond_to?(:call)
-
         "#{request.base_url}#{routes.backchannel_logout_path}"
       end
 
       def logged_out!(request, logout)
-        return false unless @logged_out.respond_to?(:call)
+        return unless @logged_out.respond_to?(:call)
 
         @logged_out.arity == 1 ? @logged_out.call(logout) : @logged_out.call(request, logout)
-
-        true
       end
 
       def manages?(request, masked = nil)
@@ -139,12 +135,18 @@ module Masks
           issuer: issuer_for(request),
           url: url,
           scopes: resource_scopes,
-          replay: replay
+          replay: Cache.new(cache)
         )
       end
 
-      def replay
-        @replay || Masks::Client::Proof.memory
+      def cache
+        return @cache if @cache
+
+        held = ::Rails.cache if ::Rails.respond_to?(:cache)
+
+        return held unless held.nil? || held.is_a?(ActiveSupport::Cache::NullStore)
+
+        @process_cache ||= ActiveSupport::Cache::MemoryStore.new
       end
 
       def handshake_for(request)

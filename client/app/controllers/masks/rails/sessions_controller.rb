@@ -10,7 +10,7 @@ module Masks
 
           render json: masked.to_h
         else
-          masks_forget
+          masks_forget unless masks_configured?
           masks_refuse_json
         end
       end

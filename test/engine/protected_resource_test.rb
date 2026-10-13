@@ -108,9 +108,9 @@ class ProtectedResourceTest < EngineIntegrationTest
   end
 
   test "a replay store that fails answers 503 with no challenge, so the client keeps its token" do
-    failing = Object.new
-    def failing.first?(*, **) = raise(IOError, "connection refused")
-    configure!(replay: failing)
+    failing = ActiveSupport::Cache::MemoryStore.new
+    def failing.write(*, **) = raise(IOError, "connection refused")
+    configure!(cache: failing)
 
     get "/api", headers: host.merge(proven)
 
@@ -121,7 +121,6 @@ class ProtectedResourceTest < EngineIntegrationTest
   end
 
   test "a proof seen before is still refused with a challenge" do
-    configure!(replay: Masks::Client::Proof::Memory.new)
     presented = host.merge(proven)
 
     get "/api", headers: presented

@@ -19,6 +19,7 @@ class EngineTest < ActiveSupport::TestCase
     CREDENTIALS.clear!
     issuer.forgotten = false
     issuer.role = "member"
+    issuer.backchannel = true
     configure!
   end
 
@@ -43,7 +44,7 @@ class EngineTest < ActiveSupport::TestCase
       config.after_sign_out = overrides.fetch(:after_sign_out, "/")
       config.session_key = "masks"
       config.organization = overrides[:organization]
-      config.replay = overrides[:replay]
+      config.cache = overrides.fetch(:cache) { ActiveSupport::Cache::MemoryStore.new }
     end
   end
 
@@ -64,6 +65,10 @@ class EngineIntegrationTest < ActionDispatch::IntegrationTest
     issuer.id_tokens = :normal
     issuer.forgotten = false
     issuer.role = "member"
+    issuer.backchannel = true
+    issuer.refresh_outage = false
+    issuer.refresh_delay = 0
+    issuer.refreshes.clear
     configure!
   end
 
@@ -104,7 +109,7 @@ class EngineIntegrationTest < ActionDispatch::IntegrationTest
       config.after_sign_out = overrides.fetch(:after_sign_out, "/")
       config.session_key = "masks"
       config.organization = overrides[:organization]
-      config.replay = overrides[:replay]
+      config.cache = overrides.fetch(:cache) { ActiveSupport::Cache::MemoryStore.new }
     end
   end
 

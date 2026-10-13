@@ -40,12 +40,25 @@ module Masks
       def masks_tokens
         return @masks_tokens if defined?(@masks_tokens)
 
-        @masks_tokens = Masks::Client::Tokens.from_h(session[masks_config.session_key])
+        held = session[masks_config.session_key]
+
+        if held.present? && masks_departed?(held)
+          masks_forget
+          return nil
+        end
+
+        @masks_tokens = Masks::Client::Tokens.from_h(held)
+      end
+
+      def masks_cache
+        @masks_cache ||= Masks::Rails::Cache.new(masks_config.cache)
       end
 
       def masks_store(tokens, identity: nil)
         held = tokens.to_h.except("id_token")
+        held.delete("token_type") if held["token_type"] == "Bearer"
         held["identity"] = identity&.slice(*IDENTITY) || masks_held["identity"]
+        held["signed_in_at"] = masks_held["signed_in_at"] || Masks::Rails::Cache.now
 
         session[masks_config.session_key] = held.compact
         @masks_tokens = tokens
@@ -57,7 +70,7 @@ module Masks
       end
 
       IDENTITY = [
-        "sub", "name", "preferred_username", "email", "email_verified", "tenant",
+        "sub", "sid", "name", "preferred_username", "email", "email_verified", "tenant",
         "picture", Masks::Client::Claims::AVATARS, Masks::Client::Claims::ORGANIZATION,
         Masks::Client::Claims::ORGANIZATIONS
       ].freeze
@@ -129,22 +142,30 @@ module Masks
       end
 
       def masks_refresh!
-        return false unless masks_configured?
-        return false if masks_tokens&.refresh_token.nil?
+        return false unless masks_configured? && masks_tokens
 
-        refreshed = masks_session.refresh(
-          masks_tokens.refresh_token,
-          resource: masks_config.resource_for(request)
-        )
+        spent = masks_tokens.refresh_token
 
-        masks_store(refreshed, identity: masks_refreshed_identity(refreshed))
-        true
-      rescue Masks::Client::Unregistered
-        masks_disconnect!
-        false
-      rescue Masks::Client::Rejected
-        masks_forget
-        false
+        if spent.nil?
+          masks_forget
+          return false
+        end
+
+        renewal = masks_cache.renew(masks_config.issuer_for(request).to_s, spent) { masks_renewal(spent) }
+
+        case renewal.outcome
+        when :renewed
+          masks_store(renewal.tokens, identity: renewal.identity)
+          true
+        when :unregistered
+          masks_disconnect!
+          false
+        when :refused
+          masks_forget
+          false
+        else
+          false
+        end
       end
 
       def masks_refreshed_identity(tokens)
@@ -154,7 +175,9 @@ module Masks
 
         profile = masks_session.profile(tokens)
 
-        profile.empty? ? nil : held.merge(profile.slice(*IDENTITY))
+        return nil if profile.empty? || profile["sub"].to_s != held["sub"].to_s
+
+        held.merge(profile.slice(*IDENTITY))
       end
 
       def masks_login_url(return_to: nil, organization: nil, privilege: nil)
@@ -182,6 +205,29 @@ module Masks
       end
 
       private
+
+        def masks_departed?(held)
+          identity = held["identity"]
+
+          return false unless identity.is_a?(Hash)
+
+          masks_cache.departed?(masks_config.issuer_for(request).to_s, identity, since: held["signed_in_at"].to_i)
+        rescue Masks::Rails::Configuration::Unconfigured
+          false
+        end
+
+        def masks_renewal(spent)
+          refreshed = masks_session.refresh(spent, resource: masks_config.resource_for(request))
+          refreshed = Masks::Client::Tokens.from_h(refreshed.to_h.merge("refresh_token" => spent)) if refreshed.refresh_token.nil?
+
+          Masks::Rails::Renewal.renewed(refreshed, masks_refreshed_identity(refreshed))
+        rescue Masks::Client::Unregistered
+          Masks::Rails::Renewal.unregistered
+        rescue Masks::Client::Rejected => e
+          e.status.to_i >= 500 || e.status.to_i == 429 ? Masks::Rails::Renewal.unreachable : Masks::Rails::Renewal.refused
+        rescue Masks::Client::Error
+          Masks::Rails::Renewal.unreachable
+        end
 
         def masks_sign_out_upstream
           return nil unless masks_configured?

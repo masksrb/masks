@@ -7,7 +7,7 @@ require "base64"
 
 class TestIssuer
   ALGORITHM = "RS256".freeze
-  REASONS = { 400 => "Bad Request", 401 => "Unauthorized", 404 => "Not Found" }.freeze
+  REASONS = { 400 => "Bad Request", 401 => "Unauthorized", 404 => "Not Found", 503 => "Service Unavailable" }.freeze
 
   Refusal = Struct.new(:status, :body)
   Raw = Struct.new(:status, :content_type, :body, :location)
@@ -30,8 +30,8 @@ class TestIssuer
     }
   end
 
-  attr_reader :port, :registrations, :deletions, :revocations
-  attr_accessor :id_tokens, :forgotten, :role
+  attr_reader :port, :registrations, :deletions, :revocations, :refreshes
+  attr_accessor :id_tokens, :forgotten, :role, :backchannel, :refresh_outage, :refresh_delay
 
   def initialize
     @keys = {}
@@ -40,6 +40,10 @@ class TestIssuer
     @registrations = []
     @deletions = []
     @revocations = []
+    @refreshes = []
+    @backchannel = true
+    @refresh_outage = false
+    @refresh_delay = 0
     @id_tokens = :normal
     @forgotten = false
     @role = "member"
@@ -284,13 +288,18 @@ class TestIssuer
       end
 
       mint(subdomain: subdomain, audience: pending[:client_id], scopes: [], typ: "JWT",
-           nonce: nonce, name: "Test Owner",
+           nonce: nonce, sid: "session-1", name: "Test Owner",
            preferred_username: "owner", email: "owner@example.invalid",
            email_verified: true, "masks:avatars" => avatars(subdomain), "org" => organization_claim)
     end
 
     def refreshed(subdomain, form)
       return { "error" => "invalid_grant" } if form["refresh_token"].to_s.empty?
+
+      @lock.synchronize { @refreshes << form["refresh_token"] }
+      sleep refresh_delay if refresh_delay.positive?
+
+      return Refusal.new(503, { "error" => "temporarily_unavailable" }) if refresh_outage
 
       {
         "access_token" => mint(subdomain: subdomain, scopes: %w[catalog:read],
@@ -357,8 +366,8 @@ class TestIssuer
         "handshake_endpoint" => "#{url}/handshake",
         "revocation_endpoint" => "#{url}/revoke",
         "end_session_endpoint" => "#{url}/logout",
-        "backchannel_logout_supported" => true,
-        "backchannel_logout_session_supported" => true,
+        "backchannel_logout_supported" => backchannel,
+        "backchannel_logout_session_supported" => backchannel,
         "introspection_endpoint" => "#{url}/introspect",
         "avatar_endpoint" => "#{url}/avatars",
         "avatar_styles_supported" => %w[photo identicon initials],

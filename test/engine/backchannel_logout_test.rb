@@ -75,13 +75,91 @@ class BackchannelLogoutTest < EngineIntegrationTest
     assert_empty @heard
   end
 
-  test "an app that says nothing about logout tells the issuer nobody was signed out" do
+  test "an app that says nothing about logout still signs the session out" do
     Masks::Rails.config.logged_out = nil
 
     post_logout token
 
-    assert_response :not_implemented
+    assert_response :ok
     assert_equal "no-store", response.headers["Cache-Control"]
+  end
+
+  test "a logout token is accepted once" do
+    held = token
+
+    post_logout held
+
+    assert_response :ok
+
+    post_logout held
+
+    assert_response :bad_request
+    assert_match "already used", JSON.parse(response.body)["error_description"]
+    assert_equal 1, @heard.length
+  end
+
+  test "a cache that cannot keep the logout answers 503, so masks sends the token again" do
+    failing = ActiveSupport::Cache::MemoryStore.new
+    failing.instance_variable_set(:@refusing, true)
+    def failing.write(key, value, **options) = options[:unless_exist] || !@refusing ? super : false
+    Masks::Rails.config.cache = failing
+    held = token
+
+    post_logout held
+
+    assert_response :service_unavailable
+    assert_equal "temporarily_unavailable", JSON.parse(response.body)["error"]
+    assert_empty @heard
+
+    failing.instance_variable_set(:@refusing, false)
+
+    post_logout held
+
+    assert_response :ok
+  end
+
+  test "the browser signed in to the session masks ended is signed out at its next request" do
+    sign_in!
+
+    post_logout token
+
+    get "/auth/session", headers: { "HOST" => HOST, "HTTP_ACCEPT" => "application/json" }
+
+    assert_response :unauthorized
+    assert_nil request.session["masks"]
+  end
+
+  test "a logout that names only the person signs out every session of theirs" do
+    sign_in!
+
+    post_logout token("sid" => nil)
+
+    get "/dashboard", headers: { "HOST" => HOST }
+
+    assert_redirected_to "/auth/"
+  end
+
+  test "a logout of another session leaves this one signed in" do
+    sign_in!
+
+    post_logout token("sid" => "session-2")
+
+    get "/auth/session", headers: { "HOST" => HOST, "HTTP_ACCEPT" => "application/json" }
+
+    assert_response :success
+  end
+
+  test "signing in again after a logout starts a session the logout does not reach" do
+    sign_in!
+    post_logout token
+
+    travel 1.second do
+      sign_in!
+
+      get "/auth/session", headers: { "HOST" => HOST, "HTTP_ACCEPT" => "application/json" }
+    end
+
+    assert_response :success
   end
 
   test "the endpoint takes no csrf token, because the issuer has no browser" do
@@ -92,25 +170,24 @@ class BackchannelLogoutTest < EngineIntegrationTest
 end
 
 class BackchannelLogoutRegistrationTest < EngineTest
-  test "an app that says what to do about logout registers where to be told" do
-    Masks::Rails.config.logged_out = ->(logout) { logout }
+  def request
+    ActionDispatch::TestRequest.create.tap { |held| held.host = HOST }
+  end
 
-    request = ActionDispatch::TestRequest.create
-    request.host = HOST
-
+  test "the handshake registers where masks sends logout tokens" do
     handshake = Masks::Rails.config.handshake_for(request)
 
     assert_equal "#{request.base_url}/auth/logout/backchannel",
                  handshake.backchannel_logout_uri
     assert_includes handshake.url(state: "s-1"), "backchannel_logout_uri"
-  ensure
-    Masks::Rails.config.logged_out = nil
   end
 
-  test "an app that does not is not registered for it" do
-    request = ActionDispatch::TestRequest.create
-    request.host = HOST
+  test "an issuer that does not send logout tokens is not told where to send them" do
+    issuer.backchannel = false
 
-    assert_nil Masks::Rails.config.handshake_for(request).backchannel_logout_uri
+    handshake = Masks::Rails.config.handshake_for(request)
+
+    assert_nil handshake.backchannel_logout_uri
+    refute_includes handshake.url(state: "s-1"), "backchannel_logout_uri"
   end
 end
