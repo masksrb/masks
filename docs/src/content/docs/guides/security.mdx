@@ -95,8 +95,8 @@ How masks checks a role:
 A role below `masks:manage` has these limits:
 
 - **It cannot change another manager.** This includes a session, token, consent, connection, or
-  device that belongs to a manager. So support cannot change an owner's email address and then reset
-  their password.
+  device that belongs to a manager. So support cannot change a manager's email address and then
+  reset their password.
 - **It cannot take over anyone's account.** Three actions need both `masks:manage:support` and
   `masks:manage:security`, or `masks:manage`:
   - changing an actor's email address
@@ -232,8 +232,8 @@ Each email is headed by a name and logo:
 
 ### Editing an email template
 
-An owner can edit these templates under **Settings**, then **Messages**, then **Templates** in
-`/manage`:
+A manager holding `masks:manage` can edit these templates under **Settings**, then **Messages**,
+then **Templates** in `/manage`:
 
 - invitation
 - organization invitation
@@ -244,7 +244,7 @@ An owner can edit these templates under **Settings**, then **Messages**, then **
 - request for help, sent to managers
 - approval
 
-An owner can also add a signature that closes every email.
+That manager can also add a signature that closes every email.
 
 How the edits work:
 
@@ -265,9 +265,9 @@ How the edits work:
 
 masks keeps each event for 180 days by default.
 
-To change how long, an owner sets a period under **Settings**, then **General**, then
-**Activity**. It can be from 30 days to seven years. A nightly job deletes older events, so a
-shorter period takes effect the next night.
+To change how long, a manager holding `masks:manage` sets a period under **Settings**, then
+**General**, then **Activity**. It can be from 30 days to seven years. A nightly job deletes older
+events, so a shorter period takes effect the next night.
 
 To download a copy:
 
@@ -338,8 +338,8 @@ states a key moves through.
 
 ### Rotating on a schedule
 
-Rotation is by hand until an owner picks a schedule. To pick one, open **Settings**, then
-**General**, then **Signing keys**, and choose every 30, 90, 180, or 365 days.
+Rotation is by hand until a manager holding `masks:manage` picks a schedule. To pick one, open
+**Settings**, then **General**, then **Signing keys**, and choose every 30, 90, 180, or 365 days.
 
 A daily job then:
 
