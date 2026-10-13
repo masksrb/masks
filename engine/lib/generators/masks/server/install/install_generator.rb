@@ -95,8 +95,8 @@ module Masks
             say "    migrations_paths: <%= Masks::Server::Engine.root.join(\"db/migrate\") %>"
             say "    schema_dump: false"
             say ""
-            say "Its role must hold neither SUPERUSER nor BYPASSRLS, or masks refuses to start: row-level"
-            say "security is what keeps one tenant's accounts and keys away from another's."
+            say "Its role must hold neither SUPERUSER nor BYPASSRLS, or masks refuses every request that needs"
+            say "a tenant: row-level security is what keeps one tenant's accounts and keys away from another's."
             say ""
             say "Controllers that need the signed-in account include Masks::Server::Host, which gives them"
             say "masks_actor and require_masks_actor!." unless subdomain?
