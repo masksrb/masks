@@ -219,16 +219,16 @@ module Masks
         assert_redirected_to SIGNED_OUT
       end
 
-      test "where a handshake returns to is where a logout may send that client back" do
+      test "a handshake that names no post_logout_redirect_uri registers none, so a logout may not send that client to return_to" do
         sign_in_as(@owner)
         connect
         redeem(approve!)
 
-        assert_equal [ RETURN_TO ], approved.post_logout_redirect_uris
+        assert_empty approved.post_logout_redirect_uris
 
         delete "/logout", params: { client_id: approved.client_id, post_logout_redirect_uri: RETURN_TO }
 
-        assert_redirected_to RETURN_TO
+        assert_response :bad_request
       end
 
       test "a post_logout_redirect_uri somewhere other than the app's own origin is refused" do

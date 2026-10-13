@@ -284,7 +284,8 @@ CREATE TABLE public.clients (
     access_token_lifetime integer,
     refresh_token_lifetime integer,
     saml_slo_url character varying,
-    enrolled_by_id bigint
+    enrolled_by_id bigint,
+    handshake_return_to character varying
 );
 
 ALTER TABLE ONLY public.clients FORCE ROW LEVEL SECURITY;
@@ -3843,6 +3844,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261013010000'),
 ('20261012100000'),
 ('20261011190000'),
 ('20261011180000'),

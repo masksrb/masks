@@ -48,6 +48,7 @@ export function handshakeUrl(boot) {
     ["resource", boot.resource],
     ["scope", SCOPE.join(" ")],
     ["return_to", `${location.origin}${boot.root}`],
+    ["post_logout_redirect_uri", `${location.origin}${boot.root}`],
     ["token_endpoint_auth_method", "none"],
     ["redirect_uris", callbackUri(boot)],
   ]);
