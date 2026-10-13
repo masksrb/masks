@@ -25,7 +25,6 @@
 - The `refreshes`, `logouts`, and `replay` stores default to memory, and the guide shows an Upstash setup. Ship ready-made Redis stores, or have masks accept a refresh token again for a few seconds after it rotates.
 - The Upstash example in the guide has not run against Upstash.
 - `signOut()` from `next-auth/react` and the `signOut` server action do not sign out of masks. Only `/api/auth/masks/logout` with `everywhere` does.
-- Delegations through `masksAuth` have run only against the fake masks.
 - `Masked.picture` and `GET /auth/session` in `Masks` hand out the photo URL, which loads only for someone signed in to masks. Prefer the avatar route there too.
 - The issuer, resource, and credentials cannot vary per request.
 - `guard()` needs the proxy to know which page to return to. Without it, a sign-in returns to `/`.

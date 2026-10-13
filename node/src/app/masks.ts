@@ -18,7 +18,7 @@ import {
   rejected,
   UnavailableError,
 } from "../errors.js";
-import { Handshake } from "../handshake.js";
+import { Handshake, originOf } from "../handshake.js";
 import type { IdTokenClaims, LogoutToken } from "../idtoken.js";
 import { Issuer, RESOURCE_PATH } from "../issuer.js";
 import { random } from "../key.js";
@@ -1045,12 +1045,10 @@ export class Masks {
     const refused = await this.#manager(visit);
     if (refused) return refused;
 
-    return page(
-      "This app is connected",
-      `<p>Reconnecting replaces the credentials it holds with a fresh pair. It is how you rotate them, and how you move this app to another account. No secret passes through your browser.</p>
-<p>The app stops working between the approval and the moment it picks the new credentials up.</p>
-<form method="post" action="${escapeHTML(this.handshakePath)}"><button type="submit">Reconnect it</button></form>
-${this.#credentials.clear ? `<form method="post" action="${escapeHTML(`${this.handshakePath}/disconnect`)}"><button type="submit">Disconnect it</button></form>` : ""}`,
+    return connectedPage(
+      this.handshakePath,
+      visit.issuerURL,
+      Boolean(this.#credentials.clear),
       visit.out,
     );
   }
@@ -1891,7 +1889,32 @@ export function escapeHTML(value: string): string {
   return value.replace(/[&<>"']/g, (found) => `&#${found.charCodeAt(0)};`);
 }
 
-export function page(title: string, body: string, cookies: string[]): Response {
+export function connectedPage(
+  handshakePath: string,
+  issuer: string,
+  disconnects: boolean,
+  cookies: string[],
+): Response {
+  const path = escapeHTML(handshakePath);
+  const target = originOf(issuer);
+
+  return page(
+    "This app is connected",
+    `<p>Reconnecting replaces the credentials it holds with a fresh pair. It is how you rotate them, and how you move this app to another account. No secret passes through your browser.</p>
+<p>The app stops working between the approval and the moment it picks the new credentials up.</p>
+<form method="post" action="${path}"><button type="submit">Reconnect it</button></form>
+${disconnects ? `<form method="post" action="${path}/disconnect"><button type="submit">Disconnect it</button></form>` : ""}`,
+    cookies,
+    target ? [target] : [],
+  );
+}
+
+export function page(
+  title: string,
+  body: string,
+  cookies: string[],
+  formTargets: string[] = [],
+): Response {
   return new Response(
     `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeHTML(title)}</title><style>body{font-family:system-ui,sans-serif;max-width:36rem;margin:4rem auto;padding:0 1rem;line-height:1.5}form{display:inline-block;margin-right:.5rem}</style></head><body><h1>${escapeHTML(title)}</h1>${body}</body></html>`,
     {
@@ -1899,8 +1922,7 @@ export function page(title: string, body: string, cookies: string[]): Response {
       headers: headersWith(cookies, {
         "content-type": "text/html; charset=utf-8",
         "cache-control": "no-store",
-        "content-security-policy":
-          "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'",
+        "content-security-policy": `default-src 'none'; style-src 'unsafe-inline'; form-action ${["'self'", ...formTargets].join(" ")}; frame-ancestors 'none'`,
         "x-frame-options": "DENY",
       }),
     },

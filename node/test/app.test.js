@@ -641,6 +641,10 @@ test("only a manager reconnects or disconnects a connected app", async () => {
   const shown = await held.browser.fetch("/auth/handshake");
   assert.equal(shown.status, 200);
   assert.match(await shown.text(), /Reconnect it/);
+  assert.match(
+    shown.headers.get("content-security-policy"),
+    new RegExp(`form-action 'self' ${held.fake.url};`),
+  );
 
   const forged = await held.browser.fetch("/auth/handshake/disconnect", {
     method: "POST",

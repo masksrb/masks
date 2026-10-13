@@ -208,12 +208,45 @@ test("only a manager sees the connection, and a cross-site disconnect is refused
   const shown = await browser.fetch("/api/auth/masks/handshake");
   assert.equal(shown.status, 200);
   assert.match(await shown.text(), /This app is connected/);
+  assert.match(
+    shown.headers.get("content-security-policy"),
+    new RegExp(`form-action 'self' ${held.fake.url};`),
+  );
 
   const forged = await browser.fetch("/api/auth/masks/handshake/disconnect", {
     method: "POST",
     headers: { "sec-fetch-site": "cross-site" },
   });
   assert.equal(forged.status, 403);
+});
+
+test("a manager who signed in without the managing scopes is asked for them once", async () => {
+  const held = await signedIn({ masks: { manages: "admin" } });
+  const { fake, browser } = held;
+  const first = await browser.fetch("/api/auth/masks/handshake");
+
+  assert.equal(first.status, 303);
+  assert.equal(
+    first.headers.get("location"),
+    "/api/auth/masks/signin?callbackUrl=%2Fapi%2Fauth%2Fmasks%2Fhandshake&privilege=admin",
+  );
+
+  const declined = await throughMasks(
+    held,
+    await browser.fetch(first.headers.get("location")),
+    { scope: "openid profile email offline_access" },
+  );
+  assert.equal(declined.status, 403);
+
+  const granted = await throughMasks(
+    held,
+    await browser.fetch(first.headers.get("location")),
+  );
+  assert.equal(
+    fake.authorized.get("scope"),
+    "openid profile email offline_access catalog:admin",
+  );
+  assert.equal(granted.status, 200);
 });
 
 test("somebody who does not manage the app cannot see or change its connection", async () => {

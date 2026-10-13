@@ -6,8 +6,8 @@ import { firstLogout, loggedOut, recordLogout } from "./app/logouts.js";
 import { Masked, type MaskedJSON } from "./app/masked.js";
 import {
   claim,
+  connectedPage,
   DEFAULT_SCOPE,
-  escapeHTML,
   fresh,
   isNetwork,
   json,
@@ -15,7 +15,6 @@ import {
   localPath,
   now,
   PATH_HEADER,
-  page,
   pick,
   redirect,
   refusal,
@@ -1248,6 +1247,18 @@ export class MasksAuth {
     });
   }
 
+  #mayStepUp(request: Request, masked: Masked, name: string): boolean {
+    const { scopes } = this.privileges.get(name);
+    const stepped = parseCookies(request.headers.get("cookie")).get(
+      STEPPED_COOKIE,
+    );
+
+    return (
+      !scopes.every((scope) => masked.scopes.includes(scope)) &&
+      !(stepped && decode(stepped).includes(name))
+    );
+  }
+
   async #handshakeShow(request: Request): Promise<Response> {
     if (!(await this.#configured(request)))
       return this.#beginHandshake(request);
@@ -1255,14 +1266,10 @@ export class MasksAuth {
     const refused = await this.#manager(request);
     if (refused) return refused;
 
-    const path = escapeHTML(this.handshakePath);
-
-    return page(
-      "This app is connected",
-      `<p>Reconnecting replaces the credentials it holds with a fresh pair. It is how you rotate them, and how you move this app to another account. No secret passes through your browser.</p>
-<p>The app stops working between the approval and the moment it picks the new credentials up.</p>
-<form method="post" action="${path}"><button type="submit">Reconnect it</button></form>
-${this.#credentials.clear ? `<form method="post" action="${path}/disconnect"><button type="submit">Disconnect it</button></form>` : ""}`,
+    return connectedPage(
+      this.handshakePath,
+      this.issuerURL,
+      Boolean(this.#credentials.clear),
       [],
     );
   }
@@ -1445,6 +1452,17 @@ ${this.#credentials.clear ? `<form method="post" action="${path}/disconnect"><bu
       allowed = (await manages(request, masked)) === true;
 
     if (allowed) return undefined;
+
+    if (
+      typeof manages === "string" &&
+      this.#mayStepUp(request, masked, manages)
+    ) {
+      return redirect(
+        this.signInPath({ returnTo: this.handshakePath, privilege: manages }),
+        [],
+        303,
+      );
+    }
 
     return refusal(
       request,
