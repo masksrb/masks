@@ -1371,3 +1371,50 @@ func TestALogoutTokenIsRememberedPastItsExpiry(t *testing.T) {
 		}
 	}
 }
+
+func TestALogoutTheAppCouldNotFinishCanBeSentAgain(t *testing.T) {
+	h := newHarness(t, nil)
+	h.connect()
+
+	failures := 1
+	h.app.config.LoggedOut = func(*http.Request, *masks.LogoutToken) error {
+		if failures > 0 {
+			failures--
+			return errors.New("the app's own cleanup failed")
+		}
+
+		return nil
+	}
+
+	spent := h.issuer.logoutToken(h.issuer.onlyClient(), "sid-ada")
+
+	first, _ := http.PostForm(h.server.URL+"/auth/logout/backchannel", url.Values{"logout_token": {spent}})
+	again, _ := http.PostForm(h.server.URL+"/auth/logout/backchannel", url.Values{"logout_token": {spent}})
+
+	if first.StatusCode != http.StatusServiceUnavailable || again.StatusCode != http.StatusOK {
+		t.Fatalf("a logout that failed in LoggedOut answered %d and then %d", first.StatusCode, again.StatusCode)
+	}
+}
+
+func TestASignOutFormIsReadOnlyUpToItsLimit(t *testing.T) {
+	h := newHarness(t, func(config *Config) { config.SignOutOfIssuer = false })
+	h.connect()
+
+	body := "everywhere=1&padding=" + strings.Repeat("a", formLimit)
+	request, _ := http.NewRequest(http.MethodPost, h.server.URL+"/auth/logout", strings.NewReader(body))
+	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	response, err := h.browser.Do(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	response.Body.Close()
+
+	if strings.Contains(strings.Join(h.hops, " "), "/logout?") {
+		t.Fatalf("an oversized form still signed the person out of masks: %v", h.hops)
+	}
+
+	if person := h.person("/me"); person.SignedIn {
+		t.Fatal("an oversized sign-out form left the person signed in")
+	}
+}

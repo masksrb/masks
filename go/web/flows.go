@@ -19,6 +19,7 @@ import (
 
 const (
 	avatarLimit = 5 << 20
+	formLimit   = 64 << 10
 )
 
 var avatarSizes = []int{32, 64, 128, 256, 512}
@@ -406,6 +407,7 @@ func (a *App) logout(w http.ResponseWriter, r *http.Request) {
 
 	s, held := v.site, v.state
 
+	r.Body = http.MaxBytesReader(w, r.Body, formLimit)
 	everywhere := a.config.SignOutOfIssuer || r.FormValue("everywhere") != ""
 	upstream := ""
 	farewell := ""
@@ -493,7 +495,7 @@ func (a *App) backchannel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	r.Body = http.MaxBytesReader(w, r.Body, 64<<10)
+	r.Body = http.MaxBytesReader(w, r.Body, formLimit)
 	presented := r.PostFormValue("logout_token")
 
 	if presented == "" || s.held == nil {
@@ -525,8 +527,10 @@ func (a *App) backchannel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	seen := keyed("logout", s.issuer.URL, logout.ID)
+
 	if err := a.depart(r.Context(), s.issuer.URL, logout); err != nil {
-		_ = a.config.Store.Delete(r.Context(), keyed("logout", s.issuer.URL, logout.ID))
+		_ = a.config.Store.Delete(r.Context(), seen)
 		a.unavailable(w, r)
 
 		return
@@ -534,7 +538,9 @@ func (a *App) backchannel(w http.ResponseWriter, r *http.Request) {
 
 	if a.config.LoggedOut != nil {
 		if err := a.config.LoggedOut(r, logout); err != nil {
+			_ = a.config.Store.Delete(r.Context(), seen)
 			a.unavailable(w, r)
+
 			return
 		}
 	}
