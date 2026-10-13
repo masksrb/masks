@@ -113,3 +113,17 @@ export function base64url(bytes: ArrayBuffer | Uint8Array): string {
     .replace(/\//g, "_")
     .replace(/=+$/, "");
 }
+
+export function unbase64url(value: string): Uint8Array<ArrayBuffer> {
+  if (!/^[A-Za-z0-9_-]*$/.test(value)) throw new Error("not base64url");
+
+  const padded = value.replace(/-/g, "+").replace(/_/g, "/");
+  const binary = atob(padded + "=".repeat((4 - (padded.length % 4)) % 4));
+  const bytes = new Uint8Array(binary.length);
+
+  for (let index = 0; index < binary.length; index++) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+
+  return bytes;
+}

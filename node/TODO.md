@@ -6,17 +6,14 @@
 - `Outcome` is a finished `Response`, so the Next adapter forces `accept: text/html` and reads `Location`. Give a refusal a kind (`login`, `step_up`, `forbidden`, `handshake`), a URL, and `toResponse(request)`.
 - The avatar proxy sends a hand-built `authorization` header. Use `signedFetch`, so a DPoP-bound token sends a proof, once the app layer can hold DPoP-bound tokens. Replace `avatars: { bytes }` with `avatarBytes`.
 - The app layer writes its own 403 challenge. Use `Verifier.challengeHeaders` and `refusal`, which now build both challenges for 401 and 403.
-- `#client` builds a `Client` by hand. Use `clientFor(issuer, held)`, and make `Credentials` fit `Registration` so `registrationOf` can go.
 - Move `headersWith`, `text`, `json`, and `redirect` into `app/responses.ts` and use them in avatar.ts and next.ts.
-- Remove the `SessionData | undefined` branch of the refresh.
 - Split masks.ts along the seams go/web uses: session and flow state, routes, and guards.
 
 ## Auth.js
 
 - The proxy cannot wrap a handler of the app's own, as `auth((request) => ...)` can.
 
-- The `refreshes`, `logouts`, and `replay` stores default to memory, and the guide shows an Upstash setup. Ship ready-made Redis stores, or have masks accept a refresh token again for a few seconds after it rotates.
-- The Upstash example in the guide has not run against Upstash.
+- `upstashStore` has run against serverless-redis-http, which speaks Upstash's REST API, and `redisStore` against Redis 7 through node-redis 4 and ioredis 5. It has not run against Upstash itself.
 - `signOut()` from `next-auth/react` and the `signOut` server action do not sign out of masks. Only `/api/auth/masks/logout` with `everywhere` does.
 - The issuer, resource, and credentials cannot vary per request.
 - `requireAuth()` needs the proxy to know which page to return to. Without it, a sign-in returns to `/`.

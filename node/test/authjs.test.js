@@ -358,10 +358,10 @@ test("an unconnected app cannot finish a sign-in through its stand-in provider",
 });
 
 test("servers that share a refresh store refresh a sign-in once between them", async () => {
-  const { memoryRefreshes } = await import("../dist/index.js");
-  const refreshes = memoryRefreshes();
+  const { memoryStore } = await import("../dist/index.js");
+  const store = memoryStore();
   const held = await signedIn({
-    masks: { refreshes },
+    masks: { store },
     before: (fake) => {
       fake.lifetime = 1;
     },
@@ -373,11 +373,11 @@ test("servers that share a refresh store refresh a sign-in once between them", a
     secret: SECRET,
     trustHost: true,
     credentials,
-    refreshes,
+    store,
   });
   const second = new Browser((request) => other.handlers.GET(request), APP);
   const forget = () =>
-    globalThis[Symbol.for("@masks/server v1 authjs refreshes")].clear();
+    globalThis[Symbol.for("@masks/server v1 refreshes")].clear();
 
   second.jar = browser.jar;
   fake.lifetime = 3600;
@@ -402,10 +402,10 @@ test("servers that share a refresh store refresh a sign-in once between them", a
 });
 
 test("a refusal one server saw signs the person out on every server", async () => {
-  const { memoryRefreshes } = await import("../dist/index.js");
-  const refreshes = memoryRefreshes();
+  const { memoryStore } = await import("../dist/index.js");
+  const store = memoryStore();
   const held = await signedIn({
-    masks: { refreshes },
+    masks: { store },
     before: (fake) => {
       fake.lifetime = 1;
     },
@@ -419,7 +419,7 @@ test("a refusal one server saw signs the person out on every server", async () =
 
   assert.equal(await session(browser), null);
 
-  globalThis[Symbol.for("@masks/server v1 authjs refreshes")].clear();
+  globalThis[Symbol.for("@masks/server v1 refreshes")].clear();
   fake.refreshRefusal = undefined;
 
   assert.equal(await session(elsewhere), null);

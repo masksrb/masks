@@ -1,6 +1,6 @@
 import { ForbiddenError, organizationKey } from "../claims.js";
 import {
-  Client,
+  type Client,
   constantEqual,
   scopes as scopesOf,
   type Token,
@@ -13,19 +13,11 @@ import {
   type PendingDelegation,
   pendingFor,
 } from "../delegations.js";
-import {
-  hasCode,
-  InvalidTokenError,
-  MasksError,
-  rejected,
-  UnavailableError,
-} from "../errors.js";
+import { InvalidTokenError, MasksError, UnavailableError } from "../errors.js";
 import { Handshake, originOf } from "../handshake.js";
 import type { IdTokenClaims, LogoutToken } from "../idtoken.js";
 import { RESOURCE_PATH } from "../issuer.js";
 import { random } from "../key.js";
-import type { Registration } from "../registration.js";
-import { MemoryReplayStore, type ReplayStore } from "../replay.js";
 import { type Claims, Verifier } from "../verifier.js";
 import { type AvatarsLimit, avatarResponse } from "./avatar.js";
 import {
@@ -34,8 +26,9 @@ import {
   readChunked,
   writeChunked,
 } from "./cookies.js";
+import { type CredentialStore, defaultCredentials } from "./credentials.js";
 import { IssuerCache } from "./issuers.js";
-import { firstLogout, loggedOut, recordLogout } from "./logouts.js";
+import { acceptLogout, departed } from "./logouts.js";
 import { Masked } from "./masked.js";
 import {
   approvedScope,
@@ -43,16 +36,15 @@ import {
   Privileges,
   unique,
 } from "./privileges.js";
+import { renew } from "./refresh.js";
 import { Sealer } from "./seal.js";
 import {
-  type CredentialStore,
-  type Credentials,
-  defaultCredentials,
-  type LogoutStore,
-  memoryLogouts,
+  keyed,
+  memoryStore,
   processEnv,
   remember,
-  type SessionStore,
+  replayStore,
+  type Store,
   shared,
 } from "./stores.js";
 
@@ -74,10 +66,9 @@ export interface MasksOptions {
   signOutOfIssuer?: boolean;
   secret?: string | string[];
   maxAge?: number;
-  sessions?: SessionStore;
+  sessions?: Store;
+  store?: Store;
   credentials?: CredentialStore;
-  logouts?: LogoutStore;
-  replay?: ReplayStore;
   manages?:
     | string
     | ((request: Request, masked: Masked) => boolean | Promise<boolean>);
@@ -167,8 +158,8 @@ const REGISTRATION_TRUSTED = 60_000;
 const STEP_UP_WITHIN = 300;
 const RESTART_WITHIN = 60;
 const REFRESH_LEEWAY = 30;
-const REMEMBER_REFRESH = 60_000;
 const SESSION_PURPOSE = "session";
+const STORED_PURPOSE = "stored session";
 const FLOW_PURPOSE = "flow";
 const FORM_LIMIT = 64 * 1024;
 
@@ -199,16 +190,11 @@ export class Masks {
   readonly maxAge: number;
   readonly #options: MasksOptions;
   readonly #credentials: CredentialStore;
-  readonly #logouts: LogoutStore;
-  readonly #replay: ReplayStore;
+  readonly #store: Store;
   readonly #issuers = new IssuerCache(() => ({
     fetch: this.#options.fetch,
     allowPlainHTTP: this.#options.allowPlainHTTP,
   }));
-  readonly #refreshing = shared(
-    "app refreshing",
-    () => new Map<string, Promise<SessionData | undefined>>(),
-  );
   readonly #verifiers = new Map<string, Verifier>();
   readonly #registeredAt = new Map<string, number>();
   readonly #visits = new WeakMap<Request, Promise<Visit>>();
@@ -230,10 +216,7 @@ export class Masks {
     this.maxAge = options.maxAge ?? 14 * 24 * 3600;
     this.#credentials =
       options.credentials ?? defaultCredentials(this.#env, "MASKS_CLIENT");
-    this.#logouts =
-      options.logouts ?? shared("app logouts", () => memoryLogouts());
-    this.#replay =
-      options.replay ?? shared("app replay", () => new MemoryReplayStore());
+    this.#store = options.store ?? shared("store", () => memoryStore());
 
     if (options.secret !== undefined) this.#sealer = new Sealer(options.secret);
   }
@@ -607,9 +590,7 @@ export class Masks {
       return true;
 
     try {
-      await (await this.#issuers.get(visit.issuerURL)).readRegistration(
-        registrationOf(held),
-      );
+      await (await this.#issuers.get(visit.issuerURL)).readRegistration(held);
       return true;
     } catch (error) {
       return !(
@@ -628,7 +609,7 @@ export class Masks {
     if (held?.registration_client_uri && held.registration_access_token) {
       try {
         await (await this.#issuers.get(visit.issuerURL)).deleteRegistration(
-          registrationOf(held),
+          held,
         );
       } catch {}
     }
@@ -1029,7 +1010,9 @@ export class Masks {
       throw error;
     }
 
-    if (!(await firstLogout(this.#replay, visit.issuerURL, logout))) {
+    if (
+      !(await acceptLogout(this.#store, visit.issuerURL, logout, this.maxAge))
+    ) {
       return answer(
         visit,
         400,
@@ -1038,8 +1021,6 @@ export class Masks {
         true,
       );
     }
-
-    await recordLogout(this.#logouts, visit.issuerURL, logout, this.maxAge);
 
     if (this.#options.onLogout)
       await this.#options.onLogout(logout, visit.request);
@@ -1252,80 +1233,66 @@ export class Masks {
   async #current(visit: Visit): Promise<SessionData | undefined> {
     const session = await this.#readSession(visit);
     const data = session?.data;
+    const refreshToken = data?.tokens?.refresh_token;
 
-    if (!data?.tokens) return data;
-    if (fresh(data.tokens)) return data;
-    if (!data.tokens.refresh_token) return data;
+    if (!data?.tokens || fresh(data.tokens) || !refreshToken) return data;
 
     const client = await this.#client(visit);
     if (!client) return data;
 
-    const key = `${visit.issuerURL} ${data.tokens.refresh_token}`;
-    let pending = this.#refreshing.get(key);
+    const renewal = await renew({
+      store: this.#store,
+      issuer: visit.issuerURL,
+      refreshToken,
+      refresh: () => this.#refresh(visit, client, refreshToken, data.identity),
+      expiresAt: (renewed) => renewed.tokens.expires_at,
+    });
 
-    if (!pending) {
-      pending = this.#refresh(visit, client, data);
-      this.#refreshing.set(key, pending);
-      pending.then(
-        () =>
-          setTimeout(
-            () => this.#refreshing.delete(key),
-            REMEMBER_REFRESH,
-          ).unref?.(),
-        () => this.#refreshing.delete(key),
-      );
-    }
+    switch (renewal.outcome) {
+      case "renewed": {
+        const renewed = { ...data, ...renewal.value };
 
-    let refreshed: SessionData | undefined;
+        await this.#writeSession(visit, renewed, false);
 
-    try {
-      refreshed = await pending;
-    } catch (error) {
-      if (hasCode(error, "invalid_client")) {
+        return renewed;
+      }
+      case "unregistered":
         await this.disconnect(visit.request);
         await this.#forget(visit);
 
         return undefined;
-      }
-
-      if (rejected(error)) {
+      case "refused":
         await this.#forget(visit);
 
         return undefined;
-      }
-
-      return data;
+      default:
+        return data;
     }
-
-    if (!refreshed) return data;
-
-    await this.#writeSession(visit, refreshed, false);
-
-    return refreshed;
   }
 
   async #refresh(
     visit: Visit,
     client: Client,
-    data: SessionData,
-  ): Promise<SessionData> {
-    const renewed = await client.refresh(data.tokens?.refresh_token as string, {
+    refreshToken: string,
+    identity: Record<string, unknown> | undefined,
+  ): Promise<{ tokens: HeldTokens; identity?: Record<string, unknown> }> {
+    const renewed = await client.refresh(refreshToken, {
       resource: [visit.resource],
     });
 
-    renewed.refresh_token ??= data.tokens?.refresh_token;
+    renewed.refresh_token ??= refreshToken;
 
-    let identity = data.identity;
+    let kept = identity;
 
     try {
       const profile = await client.userinfo(renewed);
 
-      if (!identity?.sub || profile.sub === identity.sub) {
-        identity = pick({ ...(identity ?? {}), ...profile });
+      if (!kept?.sub || profile.sub === kept.sub) {
+        kept = pick({ ...(kept ?? {}), ...profile });
       }
     } catch {}
 
-    return { ...data, tokens: held(renewed), identity };
+    return { tokens: held(renewed), identity: kept };
   }
 
   #masked(visit: Visit, data: SessionData | undefined): Masked {
@@ -1470,11 +1437,7 @@ export class Masks {
 
     if (!held?.client_id) return undefined;
 
-    return new Client({
-      issuer: await this.#issuers.get(visit.issuerURL),
-      id: held.client_id,
-      secret: held.client_secret,
-    });
+    return (await this.#issuers.get(visit.issuerURL)).client(held);
   }
 
   async #configured(visit: Visit): Promise<boolean> {
@@ -1490,7 +1453,7 @@ export class Masks {
 
     const made = new Verifier(issuer, visit.resource, {
       publicURL: visit.origin,
-      replay: this.#replay,
+      replay: replayStore(this.#store),
       resourceMetadata: this.#metadataURL(visit),
     });
 
@@ -1544,20 +1507,18 @@ export class Masks {
 
     if (!sealed || !(sealed.until > now())) return undefined;
 
-    let data = sealed.data;
-
-    if (sealed.id && this.#options.sessions) {
-      data = (await this.#options.sessions.get(sealed.id)) as
-        | SessionData
-        | undefined;
-    }
+    const data = sealed.id
+      ? await this.#stored(sealed.id)
+      : this.#options.sessions
+        ? undefined
+        : sealed.data;
 
     if (!data || (data.expiresAt ?? 0) < now()) return undefined;
 
     if (
       data.issuer !== visit.issuerURL ||
-      (await loggedOut(
-        this.#logouts,
+      (await departed(
+        this.#store,
         visit.issuerURL,
         data.identity ?? {},
         data.signedInAt ?? 0,
@@ -1572,6 +1533,29 @@ export class Masks {
     visit.session = { id: sealed.id, data };
 
     return visit.session;
+  }
+
+  async #stored(id: string): Promise<SessionData | undefined> {
+    const store = this.#options.sessions;
+
+    if (!store) return undefined;
+
+    let held: string | undefined;
+
+    try {
+      held = await store.get(await keyed("session", id));
+    } catch (error) {
+      throw new UnavailableError("the session store could not be reached", {
+        cause: error,
+      });
+    }
+
+    const opened = await this.#seal.unseal<{ id: string; data: SessionData }>(
+      STORED_PURPOSE,
+      held,
+    );
+
+    return opened?.id === id ? opened.data : undefined;
   }
 
   async #writeSession(
@@ -1590,8 +1574,14 @@ export class Masks {
       const id = rotate || !previous ? random(32) : previous;
 
       await Promise.all([
-        store.set(id, data, Math.max(1, until - now())),
-        previous && previous !== id ? store.delete(previous) : undefined,
+        store.set(
+          await keyed("session", id),
+          await this.#seal.seal(STORED_PURPOSE, { id, data }),
+          Math.max(1, until - now()),
+        ),
+        previous && previous !== id
+          ? keyed("session", previous).then((key) => store.delete(key))
+          : undefined,
       ]);
 
       sealed = await this.#seal.seal(SESSION_PURPOSE, { id, until });
@@ -1613,7 +1603,8 @@ export class Masks {
   async #forget(visit: Visit): Promise<void> {
     const id = visit.session?.id;
 
-    if (id && this.#options.sessions) await this.#options.sessions.delete(id);
+    if (id && this.#options.sessions)
+      await this.#options.sessions.delete(await keyed("session", id));
 
     visit.session = null;
 
@@ -1873,15 +1864,6 @@ export function isNetwork(error: unknown): boolean {
   return (
     error instanceof TypeError && /fetch|network|connect/i.test(error.message)
   );
-}
-
-export function registrationOf(held: Credentials): Registration {
-  return {
-    client_id: held.client_id,
-    client_secret: held.client_secret,
-    registration_access_token: held.registration_access_token,
-    registration_client_uri: held.registration_client_uri,
-  };
 }
 
 function headersWith(

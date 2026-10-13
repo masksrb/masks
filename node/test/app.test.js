@@ -1,11 +1,6 @@
 import assert from "node:assert/strict";
 import { after, test } from "node:test";
-import {
-  Masks,
-  memoryCredentials,
-  memoryLogouts,
-  memoryStore,
-} from "../dist/index.js";
+import { Masks, memoryCredentials, memoryStore } from "../dist/index.js";
 import { APP, Browser, SECRET, setup, signIn } from "./browser.js";
 import { Fake } from "./fake.js";
 
@@ -254,6 +249,116 @@ test("an expiring token is refreshed once for concurrent requests", async () => 
   assert.equal(one.masked.accessToken, two.masked.accessToken);
 });
 
+test("servers that share a store refresh a session once between them", async () => {
+  const store = memoryStore();
+  const held = await setup({ masks: { store } }, closers);
+  const other = new Masks({
+    issuer: held.fake.url,
+    resource: APP,
+    secret: SECRET,
+    credentials: held.credentials,
+    store,
+  });
+  const flights = globalThis[Symbol.for("@masks/server v1 refreshes")];
+
+  held.fake.lifetime = 5;
+  await signIn(held);
+  held.fake.lifetime = 3600;
+
+  const before = held.fake.tokenRequests.filter(
+    (kind) => kind === "refresh_token",
+  ).length;
+  const first = held.masks.masked(held.browser.request("/"));
+
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  flights.clear();
+
+  const waited = await other.masked(held.browser.request("/"));
+  const done = await first;
+
+  flights.clear();
+
+  const later = await other.masked(held.browser.request("/"));
+
+  assert.equal(
+    held.fake.tokenRequests.filter((kind) => kind === "refresh_token").length,
+    before + 1,
+  );
+  for (const answer of [done, waited, later]) {
+    assert.ok(answer.masked.signedIn);
+    assert.equal(answer.masked.accessToken, done.masked.accessToken);
+  }
+});
+
+test("a refresh another server saw refused signs the session out here too", async () => {
+  const store = memoryStore();
+  const held = await setup({ masks: { store } }, closers);
+  const other = new Masks({
+    issuer: held.fake.url,
+    resource: APP,
+    secret: SECRET,
+    credentials: held.credentials,
+    store,
+  });
+
+  held.fake.lifetime = 5;
+  await signIn(held);
+  held.fake.refreshRefusal = { status: 400, code: "invalid_grant" };
+
+  assert.equal(
+    (await held.masks.masked(held.browser.request("/"))).masked.signedIn,
+    false,
+  );
+
+  held.fake.refreshRefusal = undefined;
+
+  const { masked, cookies } = await other.masked(held.browser.request("/"));
+
+  assert.equal(masked.signedIn, false);
+  assert.ok(cookies.some((line) => /^masks=; .*Max-Age=0/.test(line)));
+  assert.equal(
+    held.fake.tokenRequests.filter((kind) => kind === "refresh_token").length,
+    1,
+  );
+});
+
+test("a logout the store cannot record answers 503, and masks can send it again", async () => {
+  const kept = memoryStore();
+  let failing = true;
+  const store = {
+    ...kept,
+    set(key, value, expiresIn) {
+      if (failing) throw new Error("the store is down");
+      return kept.set(key, value, expiresIn);
+    },
+  };
+  const held = await setup({ masks: { store } }, closers);
+  await signIn(held, { sid: "session-1" });
+
+  const token = await held.fake.logoutToken({ aud: "app", sid: "session-1" });
+  const post = () =>
+    held.browser.fetch("/auth/logout/backchannel", {
+      method: "POST",
+      headers: { "content-type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ logout_token: token }).toString(),
+    });
+
+  assert.equal((await post()).status, 503);
+  assert.equal(
+    (await held.masks.peek(held.browser.request("/"))).signedIn,
+    true,
+  );
+
+  failing = false;
+
+  assert.equal((await post()).status, 200);
+  assert.equal((await post()).status, 400);
+  assert.equal(
+    (await held.masks.peek(held.browser.request("/"))).signedIn,
+    false,
+  );
+});
+
 test("a refused refresh forgets the session", async () => {
   const held = await setup({}, closers);
   held.fake.lifetime = 5;
@@ -350,10 +455,10 @@ test("signing out everywhere comes back once through the logout return", async (
 });
 
 test("a back-channel logout ends the session it names", async () => {
-  const logouts = memoryLogouts();
+  const store = memoryStore();
   const heard = [];
   const held = await setup(
-    { masks: { logouts, onLogout: (logout) => heard.push(logout.sid) } },
+    { masks: { store, onLogout: (logout) => heard.push(logout.sid) } },
     closers,
   );
   await signIn(held, { sid: "session-1" });
@@ -708,9 +813,26 @@ test("only a manager reconnects or disconnects a connected app", async () => {
 });
 
 test("a session store keeps the tokens server-side and rotates the id on sign-in", async () => {
-  const sessions = memoryStore();
+  const kept = memoryStore();
+  const written = [];
+  const sessions = {
+    ...kept,
+    set(key, value, expiresIn) {
+      written.push(key, value);
+      return kept.set(key, value, expiresIn);
+    },
+  };
   const held = await setup({ masks: { sessions } }, closers);
   await signIn(held);
+
+  const { accessToken, subject } = await held.masks.peek(
+    held.browser.request("/"),
+  );
+  assert.ok(written.length > 0);
+  for (const value of written) {
+    assert.ok(!value.includes(accessToken));
+    assert.ok(!value.includes(subject));
+  }
 
   const first = held.browser.jar.get("masks");
   assert.ok(first.length < 200);

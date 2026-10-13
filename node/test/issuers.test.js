@@ -1,12 +1,7 @@
 import assert from "node:assert/strict";
 import { after, mock, test } from "node:test";
 import { IssuerCache } from "../dist/app/issuers.js";
-import {
-  Issuer,
-  memoryRefreshes,
-  memoryStore,
-  UnavailableError,
-} from "../dist/index.js";
+import { Issuer, memoryStore, UnavailableError } from "../dist/index.js";
 import { Fake } from "./fake.js";
 
 const closers = [];
@@ -170,24 +165,26 @@ test("a rediscovered issuer keeps the keys it already fetched", async () => {
   }
 });
 
-test("the in-memory stores forget expired entries", async () => {
+test("the memory store forgets expired entries and adds a key once", async () => {
   mock.timers.enable({ apis: ["Date"], now: 0 });
 
   try {
-    const sessions = memoryStore();
-    const refreshes = memoryRefreshes();
+    const store = memoryStore();
 
-    await sessions.set("abandoned", { a: 1 }, 1);
-    await refreshes.set("abandoned", "x", 1);
+    await store.set("abandoned", "x", 1);
+    assert.equal(await store.add("claimed", "1", 1), true);
+    assert.equal(await store.add("claimed", "2", 1), false);
 
     mock.timers.tick(61_000);
-    await sessions.set("fresh", { b: 2 }, 60);
-    await refreshes.set("fresh", "y", 60);
+    await store.set("fresh", "y", 60);
 
-    assert.equal(await sessions.get("abandoned"), undefined);
-    assert.deepEqual(await sessions.get("fresh"), { b: 2 });
-    assert.equal(await refreshes.get("abandoned"), undefined);
-    assert.equal(await refreshes.get("fresh"), "y");
+    assert.equal(await store.get("abandoned"), undefined);
+    assert.equal(await store.get("fresh"), "y");
+    assert.equal(await store.add("claimed", "3", 1), true);
+    assert.equal(await store.get("claimed"), "3");
+
+    await store.delete("fresh");
+    assert.equal(await store.get("fresh"), undefined);
   } finally {
     mock.timers.reset();
   }

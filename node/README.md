@@ -90,6 +90,17 @@ The session cookie is sealed with AES-GCM, `HttpOnly`, `SameSite=Lax`, and
 `__Host-` on `https`. The access token stays on the server, and `req.masked`,
 `auth()`, and `/auth/session` leave it out of their JSON.
 
+An app that runs as more than one process shares one `store` between them, so
+each session is refreshed once and every process hears a back-channel logout.
+`redisStore` keeps it in Redis through the app's own client, and `upstashStore`
+reaches Upstash over HTTPS:
+
+```ts
+import { redisStore } from "@masks/server";
+
+masksExpress({ store: redisStore((command) => redis.sendCommand(command)) });
+```
+
 Under the frameworks, `Client` runs the code flow on its own with `start` and
 `complete`, and `Handshake` and `Delegations` cover the handshake and provider
 connections.
@@ -307,17 +318,13 @@ each instance of a scaled-out API keeps its own, and a proof replayed to
 another instance passes. An API on more than one instance names a shared store
 as `replay`. The store's `first(key, expiresIn)` returns `true` the first time
 it sees `key` within `expiresIn` seconds and `false` after, and may return a
-promise. With Redis:
+promise. `replayStore` builds one from a `Store`, such as one in Redis:
 
 ```ts
-const verifier = new Verifier(issuer, "https://files.example.com", {
-  replay: {
-    async first(key, expiresIn) {
-      const set = await redis.set(`masks:dpop:${key}`, "1", { NX: true, EX: expiresIn });
+import { redisStore, replayStore, Verifier } from "@masks/server";
 
-      return set === "OK";
-    },
-  },
+const verifier = new Verifier(issuer, "https://files.example.com", {
+  replay: replayStore(redisStore((command) => redis.sendCommand(command))),
 });
 ```
 

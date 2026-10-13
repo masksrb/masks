@@ -40,10 +40,9 @@ The [JavaScript apps guide](/reference/javascript/) shows how to set each of the
 | `afterSignOut` | `/` | Where a sign-out lands. |
 | `signOutOfIssuer` | `false` | Whether every sign-out also signs out of masks. |
 | `maxAge` | 14 days | How long a session lasts from its sign-in, in seconds. |
-| `sessions` | the cookie | A `SessionStore` that keeps sessions on the server. The cookie then holds only a sealed id. |
+| `sessions` | the cookie | A `Store` that keeps sessions on the server. The cookie then holds only a sealed id. |
+| `store` | memory | A `Store` that every process of the app shares. It holds the back-channel logouts masks sent, the DPoP proofs and logout tokens already used, and each refresh, so a session is refreshed once between the processes. |
 | `credentials` | `masks.json` | A `CredentialStore` for the client ID and secret the handshake returns. With `MASKS_CLIENT_ID` set, the app reads `MASKS_CLIENT_ID` and `MASKS_CLIENT_SECRET` and writes nothing. |
-| `logouts` | memory | A `LogoutStore` for the back-channel logouts masks sent. |
-| `replay` | memory | A `ReplayStore` for the DPoP proofs and logout tokens already used. |
 | `onLogout` | | Called with each back-channel logout token. |
 | `delegations` | | The path a provider connection comes back to. Setting it adds `masks:delegate:` to the handshake. |
 | `avatars` | 5 MB | `{ bytes }`, the largest photo the avatar route passes on. |
@@ -132,10 +131,11 @@ The person is a `Masked`, and never `undefined`:
 ## Stores
 
 ```ts
-interface SessionStore {
-  get(id: string): unknown | Promise<unknown>;
-  set(id: string, data: unknown, maxAge: number): void | Promise<void>;
-  delete(id: string): void | Promise<void>;
+interface Store {
+  add(key: string, value: string, expiresIn: number): boolean | Promise<boolean>;
+  get(key: string): string | undefined | Promise<string | undefined>;
+  set(key: string, value: string, expiresIn: number): void | Promise<void>;
+  delete(key: string): void | Promise<void>;
 }
 
 interface CredentialStore {
@@ -144,22 +144,38 @@ interface CredentialStore {
   clear?(request: Request): void | Promise<void>;
 }
 
-interface LogoutStore {
-  record(key: string, at: number, expiresIn: number): void | Promise<void>;
-  since(key: string): number | undefined | Promise<number | undefined>;
-}
+```
 
+`add` sets a key only when it is absent, in one step, and answers whether it set it. `expiresIn` is
+in seconds. Every key starts with `masks:` and is a hash, so no key names a token, and every value
+that holds a token is sealed.
+
+`memoryStore()` and `memoryCredentials()` keep each in one process. `redisStore(send)` keeps a
+`Store` in Redis through the client the app already has:
+
+```ts
+import { createClient } from "redis";
+import { Masks, redisStore } from "@masks/server";
+
+const redis = await createClient({ url: process.env.REDIS_URL }).connect();
+
+export const masks = new Masks({
+  store: redisStore((command) => redis.sendCommand(command)),
+});
+```
+
+With ioredis, `send` is `([name, ...rest]) => redis.call(name, ...rest)`.
+
+`upstashStore()` sends each command to [Upstash](https://upstash.com/docs/redis/features/restapi)
+over HTTPS with `fetch`, so it needs no client and runs on serverless functions and edge runtimes.
+It reads `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`, then `KV_REST_API_URL` and
+`KV_REST_API_TOKEN`, or takes `url` and `token`.
+
+`replayStore(store)` turns a `Store` into the `ReplayStore` a `Verifier` takes, so an API with no
+browser sign-in shares the proofs it has seen:
+
+```ts
 interface ReplayStore {
   first(key: string, expiresIn: number): boolean | Promise<boolean>;
 }
-
-interface RefreshStore {
-  get(key: string): string | undefined | Promise<string | undefined>;
-  set(key: string, value: string, expiresIn: number): void | Promise<void>;
-  claim(key: string, expiresIn: number): boolean | Promise<boolean>;
-}
 ```
-
-`first` and `claim` set a key only when it is absent, in one step, and answer whether they set it.
-`memoryStore()`, `memoryCredentials()`, `memoryLogouts()`, and `memoryRefreshes()` keep each in one
-process.

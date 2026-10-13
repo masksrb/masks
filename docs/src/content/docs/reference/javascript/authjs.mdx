@@ -103,47 +103,32 @@ masks ends every token from that sign-in, and the person has to sign in again. W
 `masksAuth` refreshes each sign-in once, even though Next.js loads `auth.ts` once for the proxy and
 again for the routes.
 
-An app on several servers, or on serverless functions, passes three stores that every server shares:
+An app on several servers, or on serverless functions, sets `store` to a
+[`Store`](/reference/javascript/server/#stores) that every server shares. It holds:
 
-| Option | Holds |
-| --- | --- |
-| `refreshes` | Which server is refreshing a sign-in, and the result, sealed with `AUTH_SECRET`. The first server refreshes, and the others wait up to 10 seconds for its result. A refusal is shared too, so every server signs the person out. |
-| `logouts` | The back-channel logouts masks sent, so every server ends those sessions. |
-| `replay` | The logout tokens already used, so none is accepted twice. |
+- Each refresh. The first server to see an expired token claims its refresh, and keeps the result
+  for the others, sealed with a key only that refresh token opens. The others wait for it. A refusal
+  is kept too, so every server signs the person out.
+- The back-channel logouts masks sent, so every server ends those sessions.
+- The logout tokens already used, so none is accepted twice.
 
-With [Upstash Redis](https://upstash.com/docs/redis/sdks/ts/overview):
+With [Upstash Redis](https://upstash.com/docs/redis/features/restapi), or Redis from the Vercel
+marketplace, `upstashStore()` reads `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`, or
+`KV_REST_API_URL` and `KV_REST_API_TOKEN`:
 
 ```ts
 // auth.ts
 import NextAuth from "next-auth";
-import { Redis } from "@upstash/redis";
+import { upstashStore } from "@masks/server";
 import { masksAuth } from "@masks/server/authjs";
 
-const redis = Redis.fromEnv();
-const once = async (key: string, expiresIn: number) =>
-  (await redis.set(key, "1", { nx: true, ex: expiresIn })) === "OK";
-
 export const { handlers, auth, signIn, signOut, requireAuth, accessToken, proxy } = masksAuth(NextAuth, {
-  refreshes: {
-    get: async (key) => (await redis.get<string>(key)) ?? undefined,
-    set: async (key, value, expiresIn) => {
-      await redis.set(key, value, { ex: expiresIn });
-    },
-    claim: once,
-  },
-  logouts: {
-    record: async (key, at, expiresIn) => {
-      await redis.set(key, at, { ex: expiresIn });
-    },
-    since: async (key) => (await redis.get<number>(key)) ?? undefined,
-  },
-  replay: { first: once },
+  store: upstashStore(),
 });
 ```
 
-`claim` and `first` must set a key only when it is absent, in one step, and answer whether they set
-it. When a store cannot be reached, the session keeps its current token and the refresh runs again
-on a later request.
+With another Redis, use `redisStore` and the client the app already has. When the store cannot be
+reached, the session keeps its current token and the refresh runs again on a later request.
 
 ## Reference
 
@@ -153,14 +138,12 @@ on a later request.
 | --- | --- | --- |
 | `issuer` | `AUTH_MASKS_ISSUER`, then `MASKS_ISSUER` | The tenant people sign in against. |
 | `resource` | `MASKS_RESOURCE`, then the origin of `AUTH_URL`, then the request's origin | The app's public address. |
-| `secret` | `AUTH_SECRET` | The Auth.js secret. It also seals what the refresh store holds. |
+| `secret` | `AUTH_SECRET` | The Auth.js secret. |
 | `id` | `masks` | The provider id, as in `signIn("masks")`. |
 | `label` | `masks` | The provider's name on the Auth.js sign-in page. |
 | `credentials` | `AUTH_MASKS_ID` and `AUTH_MASKS_SECRET` when set, then `MASKS_CLIENT_ID` and `MASKS_CLIENT_SECRET`, then `masks.json` | A `CredentialStore` for the client the handshake registers. |
 | `name`, `scope`, `namespace`, `organization`, `privileges`, `manages`, `delegations`, `avatars`, `signOutOfIssuer`, `onLogout`, `allowPlainHTTP` | | As in [options](/reference/javascript/server/#options). |
-| `refreshes` | memory | A `RefreshStore` shared by every server, so each sign-in is refreshed once between them. |
-| `logouts` | memory | A `LogoutStore` shared by every server. |
-| `replay` | memory | A `ReplayStore` shared by every server, so each logout token works once. |
+| `store` | memory | A [`Store`](/reference/javascript/server/#stores) shared by every server, so each sign-in is refreshed once between them, every server ends a session masks logged out, and each logout token works once. |
 
 It returns what `NextAuth` returns, and:
 

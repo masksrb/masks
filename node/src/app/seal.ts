@@ -1,4 +1,4 @@
-import { base64url } from "../key.js";
+import { base64url, unbase64url } from "../key.js";
 
 const VERSION = "v1";
 const MINIMUM = 32;
@@ -114,18 +114,4 @@ async function derive(secret: string, purpose: string): Promise<CryptoKey> {
 
 function label(purpose: string): Uint8Array<ArrayBuffer> {
   return new TextEncoder().encode(`masks/${purpose}`);
-}
-
-function unbase64url(value: string): Uint8Array<ArrayBuffer> {
-  if (!/^[A-Za-z0-9_-]*$/.test(value)) throw new Error("not base64url");
-
-  const padded = value.replace(/-/g, "+").replace(/_/g, "/");
-  const binary = atob(padded + "=".repeat((4 - (padded.length % 4)) % 4));
-  const bytes = new Uint8Array(binary.length);
-
-  for (let index = 0; index < binary.length; index++) {
-    bytes[index] = binary.charCodeAt(index);
-  }
-
-  return bytes;
 }

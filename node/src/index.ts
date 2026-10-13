@@ -1,3 +1,10 @@
+export {
+  type CredentialStore,
+  type Credentials,
+  envCredentials,
+  fileCredentials,
+  memoryCredentials,
+} from "./app/credentials.js";
 export { Masked, type MaskedJSON, type MaskedOptions } from "./app/masked.js";
 export {
   type Connection as MasksConnection,
@@ -15,18 +22,12 @@ export {
   Privileges,
 } from "./app/privileges.js";
 export {
-  type CredentialStore,
-  type Credentials,
-  envCredentials,
-  fileCredentials,
-  type LogoutStore,
-  memoryCredentials,
-  memoryLogouts,
-  memoryRefreshes,
-  memoryStore,
-  type RefreshStore,
-  type SessionStore,
-} from "./app/stores.js";
+  type RedisCommand,
+  redisStore,
+  type UpstashOptions,
+  upstashStore,
+} from "./app/redis.js";
+export { memoryStore, replayStore, type Store } from "./app/stores.js";
 export {
   type Avatars,
   avatarsOf,

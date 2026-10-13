@@ -134,6 +134,12 @@ expired token share one refresh, since masks revokes a refresh token that is use
 masks refuses signs the person out. A refresh that does not reach masks keeps the session for the
 next request.
 
+An app that runs as several processes sets `store` to a [`Store`](/reference/javascript/server/#stores)
+they share, such as Redis. The first process to see an expired token claims its refresh in the
+store, refreshes it, and keeps the result there for the others, sealed with a key only that refresh
+token opens. The others wait for the result and use it. A refusal is kept too, so every process
+signs the person out.
+
 ### Signing out
 
 A sign-out revokes the refresh token and clears the session. With `signOutOfIssuer`, or
@@ -143,8 +149,10 @@ browser, which works once, so a link to it from anywhere else is refused. A sign
 
 When masks ends a session itself, it sends a logout token to `/auth/logout/backchannel`. The app
 signs out the session it names, or every session of the person it names, at their next request. It
-remembers the logout in `logouts`, which is in memory by default. An app that runs as several
-processes sets `logouts` to a `LogoutStore` they share. `onLogout` hears each logout as well.
+remembers the logout in `store`, which is in memory by default, so an app that runs as several
+processes sets `store` to one they share. Each logout token is accepted once. When the store cannot
+be reached, the app answers `503` and accepts the same token when masks sends it again. `onLogout`
+hears each logout as well.
 
 ## Sessions
 
@@ -158,18 +166,10 @@ session is replaced at every sign-in. It records the issuer that signed the pers
 ignores it under any other issuer, so an app that serves several tenants from one origin keeps their
 sessions apart.
 
-To keep sessions on the server, set `sessions` to a `SessionStore`. The cookie then holds only the
-session's id, sealed, and a sign-in deletes the old id.
-
-```ts
-interface SessionStore {
-  get(id: string): unknown | Promise<unknown>;
-  set(id: string, data: unknown, maxAge: number): void | Promise<void>;
-  delete(id: string): void | Promise<void>;
-}
-```
-
-`memoryStore()` keeps them in one process. To change the secret, list the new one first:
+To keep sessions on the server, set `sessions` to a [`Store`](/reference/javascript/server/#stores).
+The cookie then holds only the session's id, sealed. The store holds the session, also sealed, under
+a key that names no token, and a sign-in deletes the old id. `memoryStore()` keeps them in one
+process. To change the secret, list the new one first:
 `secret: [next, previous]`, or `MASKS_SECRET=next,previous`. Sessions sealed with the old one still
 open, and each is sealed with the new one the next time it changes.
 
@@ -291,8 +291,8 @@ A token [bound to a key with DPoP](/guides/security/#binding-a-token-with-dpop) 
 - has not been seen before
 
 The URL is the resource's origin and the request's path, so a proxy in front of the app needs no
-other setting. Each process keeps the proofs it has seen in memory. To share them across processes,
-set `replay` to any object whose `first(key, expiresIn)` returns `true` only once for each key.
+other setting. The app keeps the proofs it has seen in `store`, so processes that share a store
+refuse a proof any of them has seen.
 
 An API with no browser sign-in uses `Verifier` from `@masks/server` on its own. See the
 [package README](https://github.com/masksrb/masks/tree/main/node#checking-access-tokens).

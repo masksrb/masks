@@ -2,8 +2,9 @@ import { decodeJwt } from "jose";
 import type { NextAuthConfig, NextAuthResult, Session } from "next-auth";
 import { type AvatarsLimit, avatarResponse } from "./app/avatar.js";
 import { parseCookies, replaceCookies, serialize } from "./app/cookies.js";
+import { type CredentialStore, defaultCredentials } from "./app/credentials.js";
 import { IssuerCache } from "./app/issuers.js";
-import { firstLogout, loggedOut, recordLogout } from "./app/logouts.js";
+import { acceptLogout, departed } from "./app/logouts.js";
 import { Masked, type MaskedJSON } from "./app/masked.js";
 import {
   claim,
@@ -20,7 +21,6 @@ import {
   readForm,
   redirect,
   refusal,
-  registrationOf,
   sameOrigin,
   text,
   wantsJSON,
@@ -32,24 +32,11 @@ import {
   Privileges,
   unique,
 } from "./app/privileges.js";
+import { type Renewal, renew } from "./app/refresh.js";
 import { Sealer } from "./app/seal.js";
-import {
-  type CredentialStore,
-  defaultCredentials,
-  type LogoutStore,
-  memoryLogouts,
-  processEnv,
-  type RefreshStore,
-  remember,
-  shared,
-} from "./app/stores.js";
+import { memoryStore, processEnv, type Store, shared } from "./app/stores.js";
 import { avatarsOf, ForbiddenError, organizationKey } from "./claims.js";
-import {
-  type Client,
-  challenge,
-  constantEqual,
-  scopes as scopesOf,
-} from "./client.js";
+import { type Client, constantEqual, scopes as scopesOf } from "./client.js";
 import {
   type Connection,
   DELEGATION_SCOPE,
@@ -59,18 +46,15 @@ import {
   pendingFor,
 } from "./delegations.js";
 import {
-  hasCode,
   InvalidTokenError,
   isMasksError,
   MasksError,
-  rejected,
   UnavailableError,
 } from "./errors.js";
 import { Handshake, originOf } from "./handshake.js";
 import type { LogoutToken } from "./idtoken.js";
 import type { Issuer } from "./issuer.js";
 import { random } from "./key.js";
-import { MemoryReplayStore, type ReplayStore } from "./replay.js";
 
 type NextAuth = (
   config: (request: Request | undefined) => Promise<NextAuthConfig>,
@@ -94,9 +78,7 @@ export interface MasksAuthOptions extends Omit<NextAuthConfig, "providers"> {
     | string
     | ((request: Request, masked: Masked) => boolean | Promise<boolean>);
   credentials?: CredentialStore;
-  logouts?: LogoutStore;
-  replay?: ReplayStore;
-  refreshes?: RefreshStore;
+  store?: Store;
   signOutOfIssuer?: boolean;
   delegations?: string;
   avatars?: AvatarsLimit;
@@ -138,13 +120,7 @@ const DELEGATION_COOKIE = "masks-delegation";
 const DELEGATION_PURPOSE = "authjs delegation";
 const FLOW_LIFETIME = 3600;
 const STEP_UP_WITHIN = 300;
-const PENDING_REFRESH = 60_000;
-const REMEMBERED_REFRESHES = 10_000;
 const NOWHERE = "https://masks.invalid/unconnected";
-const REFRESH_PURPOSE = "authjs refresh";
-const CLAIM_LIFETIME = 30;
-const WAIT_FOR_REFRESH = 10_000;
-const WAIT_STEP = 100;
 const MASKS_OPTIONS = new Set([
   "issuer",
   "resource",
@@ -157,20 +133,13 @@ const MASKS_OPTIONS = new Set([
   "privileges",
   "manages",
   "credentials",
-  "logouts",
-  "replay",
-  "refreshes",
+  "store",
   "signOutOfIssuer",
   "delegations",
   "avatars",
   "onLogout",
   "allowPlainHTTP",
 ]);
-
-interface Remembered {
-  until: number;
-  renewed: Promise<HeldSignIn>;
-}
 
 export function masksAuth(
   NextAuth: NextAuth,
@@ -188,15 +157,10 @@ export class MasksAuth {
   readonly scope: string[];
   readonly #options: MasksAuthOptions;
   readonly #credentials: CredentialStore;
-  readonly #logouts: LogoutStore;
-  readonly #replay: ReplayStore;
+  readonly #store: Store;
   readonly #issuers = new IssuerCache(() => ({
     allowPlainHTTP: this.#options.allowPlainHTTP,
   }));
-  readonly #refreshes = shared(
-    "authjs refreshes",
-    () => new Map<string, Remembered>(),
-  );
   #result?: NextAuthResult;
   #sealer?: Sealer;
 
@@ -208,10 +172,7 @@ export class MasksAuth {
     this.#credentials =
       options.credentials ??
       defaultCredentials(processEnv(), `AUTH_${this.#envName}`, "MASKS_CLIENT");
-    this.#logouts =
-      options.logouts ?? shared("authjs logouts", () => memoryLogouts());
-    this.#replay =
-      options.replay ?? shared("authjs replay", () => new MemoryReplayStore());
+    this.#store = options.store ?? shared("store", () => memoryStore());
   }
 
   get #envName(): string {
@@ -504,11 +465,11 @@ export class MasksAuth {
 
     if (!signIn) return undefined;
 
-    try {
-      return (await this.#fresh(signIn)).access_token;
-    } catch {
-      return undefined;
-    }
+    const renewal = await this.#fresh(signIn);
+
+    return renewal.outcome === "renewed"
+      ? renewal.value.access_token
+      : undefined;
   }
 
   async delegations(request: Request): Promise<Delegations> {
@@ -652,16 +613,19 @@ export class MasksAuth {
     if (held.iss !== this.issuerURL) return null;
     if (await this.#departed(held)) return null;
 
-    try {
-      return { ...token, masks: await this.#fresh(held) };
-    } catch (error) {
-      if (hasCode(error, "invalid_client")) {
+    const renewal = await this.#fresh(held);
+
+    switch (renewal.outcome) {
+      case "renewed":
+        return { ...token, masks: renewal.value };
+      case "unregistered":
         await this.#disconnected();
 
         return null;
-      }
-
-      return rejected(error) ? null : token;
+      case "refused":
+        return null;
+      default:
+        return token;
     }
   }
 
@@ -722,134 +686,22 @@ export class MasksAuth {
   }
 
   #departed(held: HeldSignIn): Promise<boolean> {
-    return loggedOut(this.#logouts, held.iss, held, held.at);
+    return departed(this.#store, held.iss, held, held.at);
   }
 
-  async #fresh(held: HeldSignIn): Promise<HeldSignIn> {
-    if (fresh(held) || !held.refresh_token) return held;
+  async #fresh(held: HeldSignIn): Promise<Renewal<HeldSignIn>> {
+    const refreshToken = held.refresh_token;
 
-    return this.#renew(held);
-  }
+    if (fresh(held) || !refreshToken)
+      return { outcome: "renewed", value: held };
 
-  async #renew(held: HeldSignIn): Promise<HeldSignIn> {
-    const key = await challenge(`${held.iss} ${held.refresh_token}`);
-    const found = this.#refreshes.get(key);
-
-    if (found && found.until > Date.now()) return found.renewed;
-
-    const renewed = this.#options.refreshes
-      ? this.#refreshOnce(this.#options.refreshes, key, held)
-      : this.#refresh(held);
-    const remembered: Remembered = {
-      until: Date.now() + PENDING_REFRESH,
-      renewed,
-    };
-
-    this.#remember(key, remembered);
-
-    try {
-      const answer = await renewed;
-
-      remembered.until = Math.max(
-        (answer.expires_at ?? 0) * 1000,
-        Date.now() + PENDING_REFRESH,
-      );
-
-      return answer;
-    } catch (error) {
-      if (!rejected(error)) this.#refreshes.delete(key);
-
-      throw error;
-    }
-  }
-
-  async #refreshOnce(
-    store: RefreshStore,
-    key: string,
-    held: HeldSignIn,
-  ): Promise<HeldSignIn> {
-    const done = `masks refreshed ${key}`;
-    const shared = async () => {
-      try {
-        return await store.get(done);
-      } catch (error) {
-        throw new UnavailableError("the refresh store could not be reached", {
-          cause: error,
-        });
-      }
-    };
-    const settle = async (sealed: string) => {
-      const opened = await this.#seal.unseal<{
-        signIn?: HeldSignIn;
-        error?: { code: string; description?: string; status?: number };
-      }>(REFRESH_PURPOSE, sealed);
-
-      if (opened?.signIn) return opened.signIn;
-      if (opened?.error) {
-        const { code, description, status } = opened.error;
-
-        throw new MasksError(code, description, { status });
-      }
-
-      throw new UnavailableError(
-        "the refresh store held a result it cannot open",
-      );
-    };
-
-    const before = await shared();
-
-    if (before) return settle(before);
-
-    let claimed: boolean;
-
-    try {
-      claimed = await store.claim(`masks refreshing ${key}`, CLAIM_LIFETIME);
-    } catch (error) {
-      throw new UnavailableError("the refresh store could not be reached", {
-        cause: error,
-      });
-    }
-
-    if (!claimed) {
-      for (let waited = 0; waited < WAIT_FOR_REFRESH; waited += WAIT_STEP) {
-        await new Promise((resolve) => setTimeout(resolve, WAIT_STEP));
-
-        const found = await shared();
-
-        if (found) return settle(found);
-      }
-
-      throw new UnavailableError("another server is refreshing this sign-in");
-    }
-
-    try {
-      const signIn = await this.#refresh(held);
-      const left = (signIn.expires_at ?? 0) - Math.floor(Date.now() / 1000);
-
-      await store.set(
-        done,
-        await this.#seal.seal(REFRESH_PURPOSE, { signIn }),
-        Math.max(left, 60),
-      );
-
-      return signIn;
-    } catch (error) {
-      if (rejected(error) && isMasksError(error)) {
-        await store.set(
-          done,
-          await this.#seal.seal(REFRESH_PURPOSE, {
-            error: {
-              code: error.code,
-              description: error.description,
-              status: error.status,
-            },
-          }),
-          CLAIM_LIFETIME,
-        );
-      }
-
-      throw error;
-    }
+    return renew({
+      store: this.#store,
+      issuer: held.iss,
+      refreshToken,
+      refresh: () => this.#refresh(held, refreshToken),
+      expiresAt: (renewed) => renewed.expires_at,
+    });
   }
 
   get #seal(): Sealer {
@@ -864,7 +716,7 @@ export class MasksAuth {
     return this.#sealer;
   }
 
-  async #refresh(held: HeldSignIn): Promise<HeldSignIn> {
+  async #refresh(held: HeldSignIn, refreshToken: string): Promise<HeldSignIn> {
     const client = await this.#client();
 
     if (!client) {
@@ -873,7 +725,7 @@ export class MasksAuth {
 
     const resource = this.#resource();
     const renewed = await client.refresh(
-      held.refresh_token as string,
+      refreshToken,
       resource ? { resource: [resource] } : {},
     );
     let identity = held.identity;
@@ -889,15 +741,11 @@ export class MasksAuth {
       ...held,
       access_token: renewed.access_token,
       token_type: renewed.token_type || "Bearer",
-      refresh_token: renewed.refresh_token ?? held.refresh_token,
+      refresh_token: renewed.refresh_token ?? refreshToken,
       expires_at: renewed.expires_at,
       scope: renewed.scope ?? held.scope,
       identity,
     };
-  }
-
-  #remember(key: string, remembered: Remembered): void {
-    remember(this.#refreshes, key, remembered, REMEMBERED_REFRESHES);
   }
 
   async #signInFrom(held: Headers): Promise<HeldSignIn | undefined> {
@@ -1163,15 +1011,11 @@ export class MasksAuth {
 
     if (!signIn || !photo) return text(404, "not found", []);
 
-    let held: HeldSignIn;
+    const renewal = await this.#fresh(signIn);
 
-    try {
-      held = await this.#fresh(signIn);
-    } catch (error) {
-      if (rejected(error)) return text(404, "not found", []);
+    if (renewal.outcome !== "renewed") return text(404, "not found", []);
 
-      throw error;
-    }
+    const held = renewal.value;
 
     return avatarResponse(
       {
@@ -1281,7 +1125,7 @@ export class MasksAuth {
 
     if (held?.registration_access_token) {
       try {
-        await (await this.#issuer()).deleteRegistration(registrationOf(held));
+        await (await this.#issuer()).deleteRegistration(held);
       } catch {}
     }
 
@@ -1457,16 +1301,14 @@ export class MasksAuth {
       throw error;
     }
 
-    if (!(await firstLogout(this.#replay, this.issuerURL, logout))) {
-      return refuse("that logout token has already been used");
-    }
-
-    await recordLogout(
-      this.#logouts,
+    const accepted = await acceptLogout(
+      this.#store,
       this.issuerURL,
       logout,
       Number(this.#options.session?.maxAge) || 30 * 24 * 3600,
     );
+
+    if (!accepted) return refuse("that logout token has already been used");
     await this.#options.onLogout?.(logout, request);
 
     return new Response(null, {
@@ -1484,7 +1326,7 @@ export class MasksAuth {
 
     if (!held?.client_id) return undefined;
 
-    return (await this.#issuer()).client(registrationOf(held));
+    return (await this.#issuer()).client(held);
   }
 
   async #revoke(refreshToken: string): Promise<void> {

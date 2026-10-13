@@ -1,55 +1,76 @@
 import { UnavailableError } from "../errors.js";
 import type { LogoutToken } from "../idtoken.js";
-import type { ReplayStore } from "../replay.js";
-import type { LogoutStore } from "./stores.js";
+import { keyed, type Store } from "./stores.js";
 
-const LOGOUT_MEMORY = 3600;
+const LOGOUT_MEMORY = 600;
 
-export async function firstLogout(
-  replay: ReplayStore,
-  issuer: string,
-  logout: LogoutToken,
-): Promise<boolean> {
-  try {
-    return (
-      (await replay.first(`${issuer} logout ${logout.jti}`, LOGOUT_MEMORY)) ===
-      true
-    );
-  } catch (error) {
-    throw new UnavailableError("the replay store could not be reached", {
-      cause: error,
-    });
-  }
-}
-
-export async function recordLogout(
-  logouts: LogoutStore,
+export async function acceptLogout(
+  store: Store,
   issuer: string,
   logout: LogoutToken,
   lifetime: number,
-): Promise<void> {
-  const key = logout.sid
-    ? `sid ${logout.sid}`
-    : logout.sub && `sub ${logout.sub}`;
+): Promise<boolean> {
+  const once = await keyed("logout", issuer, String(logout.jti ?? ""));
+  const memory = Math.max(
+    LOGOUT_MEMORY,
+    (Number(logout.exp) || 0) - Math.floor(Date.now() / 1000) + 60,
+  );
 
-  if (!key) return;
+  try {
+    if ((await store.add(once, "1", memory)) !== true) return false;
+  } catch (error) {
+    throw unreachable(error);
+  }
 
+  const [kind, value] = logout.sid
+    ? ["sid", logout.sid]
+    : ["sub", String(logout.sub ?? "")];
   const at = Math.max(Number(logout.iat) || 0, Math.floor(Date.now() / 1000));
 
-  await logouts.record(`${issuer} ${key}`, at, lifetime);
+  try {
+    await store.set(
+      await keyed("departed", issuer, kind, value),
+      String(at),
+      lifetime,
+    );
+  } catch (error) {
+    try {
+      await store.delete(once);
+    } catch {}
+
+    throw unreachable(error);
+  }
+
+  return true;
 }
 
-export async function loggedOut(
-  logouts: LogoutStore,
+export async function departed(
+  store: Store,
   issuer: string,
   held: { sid?: unknown; sub?: unknown },
   since: number,
 ): Promise<boolean> {
-  const ended = await Promise.all(
-    (["sid", "sub"] as const)
-      .filter((name) => typeof held[name] === "string" && held[name] !== "")
-      .map((name) => logouts.since(`${issuer} ${name} ${held[name]}`)),
-  );
+  let ended: (string | undefined)[];
 
-  return ended.some((at) => at !== undefined && at >= since);
+  try {
+    ended = await Promise.all(
+      (["sid", "sub"] as const)
+        .filter((name) => typeof held[name] === "string" && held[name] !== "")
+        .map(async (name) =>
+          store.get(
+            await keyed("departed", issuer, name, held[name] as string),
+          ),
+        ),
+    );
+  } catch (error) {
+    throw unreachable(error);
+  }
+
+  return ended.some((at) => at !== undefined && Number(at) >= since);
+}
+
+function unreachable(error: unknown): UnavailableError {
+  return new UnavailableError("the store could not be reached", {
+    cause: error,
+  });
 }
