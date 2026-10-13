@@ -407,11 +407,32 @@ class SessionTest < EngineIntegrationTest
     connect!
 
     get "/auth", headers: host
+    state = URI.decode_www_form(URI.parse(response.location).query).to_h["state"]
 
-    get "/auth/callback?error=access_denied&error_description=declined", headers: host
+    get "/auth/callback?error=access_denied&error_description=declined&state=#{state}", headers: host
 
     assert_response :bad_request
+    assert_includes response.body, "access_denied"
     assert_empty session_payload
+  end
+
+  test "an error on a sign-in this browser did not start never repeats its text" do
+    connect!
+
+    get "/auth", headers: host
+
+    get "/auth/callback?error=access_denied&error_description=Call+555-0100+now&state=forged", headers: host
+
+    assert_response :bad_request
+    assert_not_includes response.body, "555-0100"
+    assert_includes response.body, "invalid_state"
+
+    get "/auth/callback?error=access_denied&error_description=Call+555-0100+now&state=forged",
+        headers: host.merge("HTTP_ACCEPT" => "application/json")
+
+    assert_response :bad_request
+    assert_equal "invalid_state", json["error"]
+    assert_not_includes response.body, "555-0100"
   end
 
   test "where you were headed survives the round trip" do

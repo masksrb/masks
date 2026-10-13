@@ -40,7 +40,8 @@ module Masks
       def callback
         pending = masks_requests.claim(params[:state])
 
-        return refuse(params[:error], params[:error_description], pending) if params[:error].present?
+        return refuse(params[:error], params[:error_description], pending) if params[:error].present? && pending
+        return unstarted if params[:error].present?
         return stale if pending.nil?
 
         tokens = masks_session.complete(
@@ -135,6 +136,11 @@ module Masks
             "that sign-in request is not one this browser started, or it expired",
             :bad_request
           )
+        end
+
+        def unstarted
+          answer("invalid_state", "masks refused a sign-in that this browser did not start, or one that expired",
+                 :bad_request)
         end
 
         def stale_sign_out
