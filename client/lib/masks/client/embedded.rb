@@ -74,7 +74,7 @@ module Masks
             "SERVER_PORT" => uri.port.to_s,
             "SERVER_PROTOCOL" => "HTTP/1.1",
             "REMOTE_ADDR" => LOOPBACK,
-            "HTTP_HOST" => uri.port == uri.default_port ? uri.host : "#{uri.host}:#{uri.port}",
+            "HTTP_HOST" => Nonces.origin(uri).delete_prefix("#{uri.scheme}://"),
             "HTTPS" => uri.scheme == "https" ? "on" : "off",
             "rack.url_scheme" => uri.scheme,
             "rack.input" => StringIO.new(input),

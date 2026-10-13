@@ -43,19 +43,7 @@ module Masks
       end
 
       def fetch(url, headers = {})
-        uri = checked(URI.parse(url.to_s))
-        embedded = Masks::Client.embedded_for(uri)
-
-        return embedded.deliver(Net::HTTP::Get.new(uri, headers)) if embedded
-
-        Net::HTTP.start(
-          uri.hostname, uri.port,
-          use_ssl: uri.scheme == "https",
-          open_timeout: OPEN_TIMEOUT,
-          read_timeout: READ_TIMEOUT
-        ) { |http| http.request(Net::HTTP::Get.new(uri, headers)) }
-      rescue SystemCallError, SocketError, Net::OpenTimeout, Net::ReadTimeout, OpenSSL::SSL::SSLError => e
-        raise Unreachable, "#{uri.host} is unreachable (#{e.class})"
+        deliver(Net::HTTP::Get.new(checked(URI.parse(url.to_s)), headers), limit: nil)
       end
 
       def json(verb, url, body, headers)
