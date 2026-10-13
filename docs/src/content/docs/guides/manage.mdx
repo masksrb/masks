@@ -132,7 +132,7 @@ To add a client, choose **Add client**. Pick the kind of client:
 | **General**   | The tenant's name and branding. How long activity is kept. Dynamic registration. Signing keys. [Groups](/guides/features/#groups), domains, and [namespaces](/guides/core-concepts/#namespaces).                      |
 | **Policies**  | The [sign-in policies](/guides/features/#sign-in-policies), archived policies, and rules for the whole tenant: the primary identifier, the default policy, **Who may sign in**, and **Auto-deletion** of idle actors. |
 | **Providers** | The providers and MCP servers that actors sign in or connect with.                                                                                                                                                    |
-| **Directory** | The [LDAP](/guides/ldap/) server. [Provisioning](/guides/enterprise/) tokens.                                                                                                                                         |
+| **Directory** | The [LDAP](/guides/ldap/) server. [Provisioning](/guides/sso-saml/#provisioning) tokens.                                                                                                                              |
 | **Messages**  | **Sending** holds the services that send email and text messages. **Templates** holds the wording of each email.                                                                                                      |
 | **Activity**  | **Log** holds the tenant's whole activity, which you can filter by kind of event, narrow to what is worth a look, and export. **Streams** holds the [event streams](/guides/event-streams/).                          |
 
@@ -169,7 +169,8 @@ What each kind of provider shows:
 - An MCP server has no **Sign-in** tab. Its **Setup** tab has **Register again**.
 - A SAML provider has no **Clients** tab, and no setting to trust email addresses.
 - Only an OpenID Connect provider has security events.
-- Only a blank provider shows where each claim comes from.
+- The form for a known provider leaves out its endpoints and where each claim comes from. The
+  provider's page shows them once it is added.
 
 Your changes on a provider's page wait in a bar at the bottom of the screen. Choose **Save** to keep
 them, or **Discard** to drop them.
