@@ -453,3 +453,86 @@ test("signing out without everywhere stays in the app", async () => {
   assert.equal(left.headers.get("location"), "/bye");
   assert.equal(await session(held.browser), null);
 });
+
+test("the avatar comes through the app with the person's token", async () => {
+  const held = await signedIn();
+  const { fake, browser } = held;
+  const found = await session(browser);
+
+  assert.equal(found.user.image, "/api/auth/masks/avatar");
+  assert.equal(found.masks.avatar_url, "/api/auth/masks/avatar");
+
+  const photo = await browser.fetch("/api/auth/masks/avatar?size=100");
+  assert.equal(photo.status, 200);
+  assert.equal(photo.headers.get("content-type"), "image/png");
+  assert.equal(await photo.text(), "png-bytes");
+  assert.match(fake.avatarAsks.at(-1), /size=128/);
+
+  fake.avatarRedirect = "http://elsewhere.example/a.png";
+  assert.equal((await browser.fetch("/api/auth/masks/avatar")).status, 404);
+
+  const stranger = new Browser(browser.handler, APP);
+  assert.equal((await stranger.fetch("/api/auth/masks/avatar")).status, 404);
+});
+
+test("a provider connection is finished only by the person who started it", async () => {
+  const held = await signedIn({
+    masks: { delegations: "/connect/callback" },
+  });
+  const { fake, browser, auth } = held;
+  const asked = fake.handshakes[0];
+
+  assert.deepEqual(asked.getAll("redirect_uris"), [
+    `${APP}/api/auth/callback/masks`,
+    `${APP}/connect/callback`,
+  ]);
+  assert.match(asked.get("scope"), /(^| )masks:delegate:( |$)/);
+
+  const started = await auth.masks.startDelegation(
+    browser.request("/connect"),
+    "google",
+  );
+  browser.keep(started);
+  const back = new URL(fake.authorize(started.headers.get("location")));
+  const { connection, cookies } = await auth.masks.finishDelegation(
+    browser.request(`${back.pathname}${back.search}`),
+  );
+
+  assert.equal(back.pathname, "/connect/callback");
+  assert.equal(connection.connection, "connection-google");
+  assert.equal(connection.account, "ada");
+  assert.match(cookies[0], /^masks-delegation=;/);
+
+  const again = await auth.masks.startDelegation(
+    browser.request("/connect"),
+    "google",
+  );
+  browser.keep(again);
+  const someoneElse = new URL(
+    fake.authorize(again.headers.get("location"), { sub: "eve" }),
+  );
+  await assert.rejects(
+    auth.masks.finishDelegation(
+      browser.request(`${someoneElse.pathname}${someoneElse.search}`),
+    ),
+    (error) => error.code === "access_denied",
+  );
+
+  const stranger = new Browser(browser.handler, APP);
+  await assert.rejects(
+    auth.masks.finishDelegation(
+      stranger.request(`${back.pathname}${back.search}`),
+    ),
+    (error) => error.code === "invalid_state",
+  );
+
+  const signedOut = await auth.masks.startDelegation(
+    stranger.request("/connect"),
+    "google",
+  );
+  assert.equal(signedOut.status, 303);
+  assert.equal(
+    signedOut.headers.get("location"),
+    "/api/auth/masks/signin?callbackUrl=%2Fconnect",
+  );
+});

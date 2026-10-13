@@ -141,6 +141,7 @@ export default async function Settings() {
 | `auth()` | The Auth.js session. `session.masks` holds what `GET /auth/session` returns in the other integrations, and `session.user.id` is the subject. No token reaches the browser. |
 | `guard(...privileges)` | A signed-in `Masked`. It sends a signed-out person to sign in, and asks masks for a privilege's missing scopes once. A missing role or organization throws `ForbiddenError`. |
 | `accessToken()` | The access token, refreshed when it is about to expire, for calling an API from the server. |
+| `session.user.image` | `/api/auth/masks/avatar` when masks holds a photo, since the photo needs the person's token. Otherwise the `picture` claim, then the identicon. |
 | `proxy` | Refreshes the session before a page renders, and tells `guard` which page to come back to. |
 
 A link to `/api/auth/masks/signin` signs in without a form. It takes `callbackUrl`, `organization`,
@@ -159,6 +160,7 @@ A link to `/api/auth/masks/signin` signs in without a form. It takes `callbackUr
 | `GET /api/auth/masks/handshake/callback` | Where masks sends the browser after an approval. |
 | `GET` or `POST /api/auth/masks/logout` | Signs out. Takes `callbackUrl`, and `everywhere` to sign out of masks as well. |
 | `GET /api/auth/masks/logout/return` | Where masks sends the browser after a sign-out everywhere. |
+| `GET /api/auth/masks/avatar` | The person's photo, fetched from masks with their token. Takes `size`. |
 | `POST /api/auth/masks/logout/backchannel` | Where masks posts a logout token. |
 
 #### Signing out
@@ -594,6 +596,12 @@ handshake asks for `masks:delegate:` and registers that path:
 
 ```ts
 export const { masks } = masksNext({ delegations: "/connect/callback" });
+```
+
+With Auth.js, pass the same option to `masksAuth`, and use the `masks` it returns the same way:
+
+```ts
+export const { handlers, auth, masks } = masksAuth(NextAuth, { delegations: "/connect/callback" });
 ```
 
 ```ts

@@ -1,15 +1,19 @@
 import { decodeJwt } from "jose";
 import type { NextAuthConfig, NextAuthResult, Session } from "next-auth";
+import { type AvatarsLimit, avatarResponse } from "./app/avatar.js";
 import { parseCookies, replaceCookies, serialize } from "./app/cookies.js";
 import { firstLogout, loggedOut, recordLogout } from "./app/logouts.js";
 import { Masked, type MaskedJSON } from "./app/masked.js";
 import {
+  claim,
   DEFAULT_SCOPE,
   escapeHTML,
   fresh,
   isNetwork,
   json,
+  keep,
   localPath,
+  now,
   PATH_HEADER,
   page,
   pick,
@@ -37,13 +41,19 @@ import {
   type RefreshStore,
   shared,
 } from "./app/stores.js";
-import { ForbiddenError, organizationKey } from "./claims.js";
+import { avatarsOf, ForbiddenError, organizationKey } from "./claims.js";
 import {
   type Client,
   challenge,
   constantEqual,
   scopes as scopesOf,
 } from "./client.js";
+import {
+  type Connection,
+  DELEGATION_SCOPE,
+  DelegationRefused,
+  Delegations,
+} from "./delegations.js";
 import {
   hasCode,
   InvalidTokenError,
@@ -84,6 +94,8 @@ export interface MasksAuthOptions extends Omit<NextAuthConfig, "providers"> {
   replay?: ReplayStore;
   refreshes?: RefreshStore;
   signOutOfIssuer?: boolean;
+  delegations?: string;
+  avatars?: AvatarsLimit;
   onLogout?: (logout: LogoutToken, request: Request) => void | Promise<void>;
   allowPlainHTTP?: boolean;
 }
@@ -116,6 +128,8 @@ const PREFIX = "/masks";
 const HANDSHAKE_COOKIE = "masks-handshake";
 const STEPPED_COOKIE = "masks-stepped";
 const FAREWELL_COOKIE = "masks-farewell";
+const DELEGATION_COOKIE = "masks-delegation";
+const DELEGATION_PURPOSE = "authjs delegation";
 const FLOW_LIFETIME = 3600;
 const STEP_UP_WITHIN = 300;
 const DISCOVERY_LIFETIME = 3600_000;
@@ -142,9 +156,20 @@ const MASKS_OPTIONS = new Set([
   "replay",
   "refreshes",
   "signOutOfIssuer",
+  "delegations",
+  "avatars",
   "onLogout",
   "allowPlainHTTP",
 ]);
+
+interface DelegationPending {
+  verifier: string;
+  nonce?: string;
+  provider: string;
+  redirectURI: string;
+  account: string;
+  until: number;
+}
 
 interface Remembered {
   until: number;
@@ -249,6 +274,10 @@ export class MasksAuth {
 
   get logoutPath(): string {
     return `${this.basePath}${PREFIX}/logout`;
+  }
+
+  get avatarPath(): string {
+    return `${this.basePath}${PREFIX}/avatar`;
   }
 
   get handshakePath(): string {
@@ -400,6 +429,8 @@ export class MasksAuth {
           return await this.#logout(request);
         case "GET /logout/return":
           return this.#logoutReturn(request);
+        case "GET /avatar":
+          return await this.#avatar(request);
         case "POST /logout/backchannel":
           return await this.#backchannel(request);
         default:
@@ -482,6 +513,108 @@ export class MasksAuth {
     } catch {
       return undefined;
     }
+  }
+
+  async delegations(request: Request): Promise<Delegations> {
+    const redirectURI = this.#delegationReturn(request);
+
+    if (!redirectURI) {
+      throw new Error(
+        "masks: set delegations to the path a provider connection comes back to",
+      );
+    }
+
+    const client = await this.#client(request);
+
+    if (!client) {
+      throw new MasksError(
+        "handshake_required",
+        "this app has not shaken hands with masks",
+      );
+    }
+
+    return new Delegations(client, redirectURI);
+  }
+
+  async startDelegation(
+    request: Request,
+    provider: string,
+    asked: { prompt?: string; maxAge?: number } = {},
+  ): Promise<Response> {
+    const signIn = await this.#signInFrom(request.headers);
+
+    if (!signIn) {
+      const url = new URL(request.url);
+
+      return redirect(
+        this.signInPath({ returnTo: `${url.pathname}${url.search}` }),
+        [],
+        303,
+      );
+    }
+
+    const started = await (await this.delegations(request)).start({
+      provider,
+      ...asked,
+    });
+    const pending = keep(
+      await this.#pendingDelegations(request),
+      started.state,
+      {
+        verifier: started.verifier,
+        nonce: started.nonce,
+        provider: started.provider,
+        redirectURI: started.redirectURI,
+        account: signIn.sub,
+        until: now() + FLOW_LIFETIME,
+      },
+    );
+
+    return redirect(
+      started.url,
+      [await this.#delegationCookie(request, pending)],
+      303,
+    );
+  }
+
+  async finishDelegation(
+    request: Request,
+  ): Promise<{ connection: Connection; cookies: string[] }> {
+    const url = new URL(request.url);
+    const state = url.searchParams.get("state") ?? "";
+    const pending = await this.#pendingDelegations(request);
+    const found = claim(pending, state);
+
+    if (!found) {
+      throw new DelegationRefused(
+        "invalid_state",
+        "that connection was not started by this browser, or it expired",
+      );
+    }
+
+    const cookies = [await this.#delegationCookie(request, pending)];
+    const signIn = await this.#signInFrom(request.headers);
+
+    if (signIn?.sub !== found.account) {
+      throw new DelegationRefused(
+        "access_denied",
+        "that connection was started by somebody other than the person signed in",
+      );
+    }
+
+    const connection = await (await this.delegations(request)).finish(
+      url.searchParams,
+      { ...found, state, url: "" },
+    );
+
+    if (connection.account && connection.account !== found.account) {
+      throw new DelegationRefused(
+        "access_denied",
+        "masks connected that provider for another account",
+      );
+    }
+
+    return { connection, cookies };
   }
 
   async proxy(request: Request): Promise<Response> {
@@ -584,9 +717,19 @@ export class MasksAuth {
 
     return {
       ...session,
-      user: { ...session.user, id: held.sub },
+      user: { ...session.user, id: held.sub, image: this.#image(held) },
       masks: this.#maskedOf(held).toJSON(),
     };
+  }
+
+  #image(held: HeldSignIn): string | null {
+    const { picture } = held.identity;
+    const avatars = avatarsOf(held.identity);
+
+    if (avatars.photo) return this.avatarPath;
+    if (typeof picture === "string" && picture !== "") return picture;
+
+    return avatars.identicon ?? null;
   }
 
   #maskedOf(held: HeldSignIn): Masked {
@@ -597,6 +740,7 @@ export class MasksAuth {
       scopes: scopesOf(held),
       expiresAt: held.expires_at,
       accountURL: `${held.iss}/`,
+      avatarURL: this.avatarPath,
     });
   }
 
@@ -834,11 +978,7 @@ export class MasksAuth {
           (profile.preferred_username as string | undefined) ??
           null,
         email: (profile.email as string | undefined) ?? null,
-        image: new Masked({
-          signedIn: true,
-          privileges: this.privileges,
-          claims: profile,
-        }).picture,
+        image: null,
       }),
     };
   }
@@ -1004,7 +1144,7 @@ export class MasksAuth {
 
     const state = random();
     const target = client.endSessionURL({
-      postLogoutRedirectURI: `${originOf(this.#resource() ?? url.origin) ?? url.origin}${this.basePath}${PREFIX}/logout/return`,
+      postLogoutRedirectURI: `${this.#appOrigin(request)}${this.basePath}${PREFIX}/logout/return`,
       state,
     });
 
@@ -1045,6 +1185,67 @@ export class MasksAuth {
     }
 
     return redirect(localPath(callbackUrl) ?? "/", [cleared], 303);
+  }
+
+  async #avatar(request: Request): Promise<Response> {
+    const signIn = await this.#signInFrom(request.headers);
+    const photo = signIn && avatarsOf(signIn.identity).photo;
+
+    if (!signIn || !photo) return text(404, "not found", []);
+
+    let held: HeldSignIn;
+
+    try {
+      held = await this.#fresh(signIn);
+    } catch (error) {
+      if (rejected(error)) return text(404, "not found", []);
+
+      throw error;
+    }
+
+    return avatarResponse(
+      {
+        photo,
+        issuer: held.iss,
+        authorization: `${held.token_type} ${held.access_token}`,
+        size: new URL(request.url).searchParams.get("size"),
+        fetch: globalThis.fetch,
+        limit: this.#options.avatars,
+      },
+      [],
+    );
+  }
+
+  async #pendingDelegations(
+    request: Request,
+  ): Promise<Record<string, DelegationPending>> {
+    const held = parseCookies(request.headers.get("cookie")).get(
+      delegationCookie(request),
+    );
+    const opened = await this.#seal.unseal<Record<string, DelegationPending>>(
+      DELEGATION_PURPOSE,
+      held,
+    );
+
+    return Object.fromEntries(
+      Object.entries(opened ?? {}).filter(([, entry]) => entry.until > now()),
+    );
+  }
+
+  async #delegationCookie(
+    request: Request,
+    pending: Record<string, DelegationPending>,
+  ): Promise<string> {
+    const name = delegationCookie(request);
+
+    if (Object.keys(pending).length === 0) {
+      return serialize(name, "", { secure: secure(request), maxAge: 0 });
+    }
+
+    return serialize(name, await this.#seal.seal(DELEGATION_PURPOSE, pending), {
+      secure: secure(request),
+      maxAge: FLOW_LIFETIME,
+    });
   }
 
   async #handshakeShow(request: Request): Promise<Response> {
@@ -1200,19 +1401,23 @@ ${this.#credentials.clear ? `<form method="post" action="${path}/disconnect"><bu
 
   async #handshake(request: Request): Promise<Handshake> {
     const issuer = await this.#issuer();
-    const origin = new URL(request.url).origin;
-    const resource = this.#resource() ?? origin;
-    const base = `${originOf(resource) ?? origin}${this.basePath}`;
+    const resource = this.#resource() ?? new URL(request.url).origin;
+    const base = `${this.#appOrigin(request)}${this.basePath}`;
+    const delegation = this.#delegationReturn(request);
 
     return new Handshake(issuer, {
       name: this.#options.name || new URL(resource).host,
       resource,
-      redirectURIs: [`${base}/callback/${this.id}`],
+      redirectURIs: unique([
+        `${base}/callback/${this.id}`,
+        ...(delegation ? [delegation] : []),
+      ]),
       returnTo: `${base}${PREFIX}/handshake/callback`,
       scope: approvedScope(
         this.scope,
         this.privileges,
         this.#options.namespace,
+        delegation ? [DELEGATION_SCOPE] : [],
       ),
       backchannelLogoutURI: `${base}${PREFIX}/logout/backchannel`,
       postLogoutRedirectUri: `${base}${PREFIX}/logout/return`,
@@ -1336,6 +1541,20 @@ ${this.#credentials.clear ? `<form method="post" action="${path}/disconnect"><bu
     return issuer;
   }
 
+  #appOrigin(request: Request): string {
+    const origin = new URL(request.url).origin;
+
+    return originOf(this.#resource() ?? origin) ?? origin;
+  }
+
+  #delegationReturn(request: Request): string | undefined {
+    const path = this.#options.delegations;
+
+    if (!path) return undefined;
+
+    return `${this.#appOrigin(request)}${localPath(path) ?? "/"}`;
+  }
+
   #resource(): string | undefined {
     const env = processEnv();
     const named = this.#options.resource ?? env.MASKS_RESOURCE;
@@ -1399,6 +1618,10 @@ function secure(request: Request): boolean {
 
 function farewellCookie(request: Request): string {
   return secure(request) ? `__Host-${FAREWELL_COOKIE}` : FAREWELL_COOKIE;
+}
+
+function delegationCookie(request: Request): string {
+  return secure(request) ? `__Host-${DELEGATION_COOKIE}` : DELEGATION_COOKIE;
 }
 
 function handshakeCookie(request: Request): string {

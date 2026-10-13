@@ -1655,7 +1655,7 @@ export function pick(claims: Record<string, unknown>): Record<string, unknown> {
   );
 }
 
-function keep<T extends { until: number }>(
+export function keep<T extends { until: number }>(
   held: Record<string, T> | undefined,
   id: string,
   entry: T,
@@ -1669,7 +1669,7 @@ function keep<T extends { until: number }>(
   );
 }
 
-function claim<T extends { until: number }>(
+export function claim<T extends { until: number }>(
   held: Record<string, T> | undefined,
   id: string,
 ): T | undefined {
