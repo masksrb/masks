@@ -64,7 +64,7 @@ module Masks
           body = if type.kind.enum?
             values(type)
           elsif type.kind.scalar?
-            "A scalar. Serialized as a string unless a client says otherwise.\n"
+            "A scalar.\n"
           else
             fields(type)
           end
@@ -111,8 +111,7 @@ module Masks
           "#{named}#{taken.join}"
         end
 
-        # Every description in this schema is empty, because the code carries no
-        # comments. An empty column on every row is noise, so it only appears when
+        # An empty column on every row is noise, so it only appears when
         # something in that table actually filled it in.
         def cells(values, described)
           kept = described.any?(&:present?) ? values : values[0..-2]

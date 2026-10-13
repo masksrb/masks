@@ -744,7 +744,7 @@ type Mutation {
     baseUrl: String!
 
     """
-    What people see. The preset's name when left out.
+    What people see.
     """
     name: String
     preset: ID!

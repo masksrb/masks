@@ -8,7 +8,6 @@
 # defined, so requiring this gem outside \Rails costs nothing.
 #
 #   issuer = Masks::Client.issuer("https://auth.example")
-#   issuer.authorization_url(client_id: id, redirect_uri: uri)
 #
 # The provider itself is not in here. It is the masks-server gem, which runs
 # as an app of its own or mounted inside another Rails app.

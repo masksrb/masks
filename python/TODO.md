@@ -1,9 +1,5 @@
 # Python SDK to-do
 
-## Publishing
-
-- PyPI has a pending publisher for `masks-client`. The next release publishes it. After that, change the README's install line to `pip install masks-client`.
-
 ## Testing
 
 - FastAPI, Flask, and Django have run against a live masks: the handshake, Reconnect, sign-in, a privilege step-up, a token at the API, a shared refresh across concurrent requests, and signing out everywhere. FastAPI also ran with an async server session store, and Django ran under gunicorn with three workers sharing a `RedisStore`.

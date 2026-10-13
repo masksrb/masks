@@ -5,9 +5,7 @@ import "graphiql/style.css";
 
 const INTROSPECTION = new Set(["__schema", "__type", "__typename"]);
 
-const OPENING = `# Everything /manage asks for on its Clients page.
-#
-# This explorer holds the published schema, so autocomplete, the docs pane, and
+const OPENING = `# This explorer holds the published schema, so autocomplete, the docs pane, and
 # validation all work. It answers only introspection queries. Send any other
 # query to your own server's /manage/graphql.
 

@@ -13,10 +13,8 @@ module Masks
   # Three pieces do the work:
   #
   # [Configuration]    the issuer, credentials and routes, set once in an
-  #                    initializer and validated on boot rather than on the
-  #                    first request that needs them
-  # [Authentication]   +masks_login_url+, the callback, and the session the
-  #                    app reads +current_actor+ from
+  #                    initializer
+  # [Authentication]   +masks_login_url+, the callback, and the session
   # [ProtectedResource] the other direction — checking a bearer this app was
   #                    handed, for an API rather than a browser
   #

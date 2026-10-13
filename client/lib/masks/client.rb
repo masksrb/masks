@@ -46,9 +46,6 @@ module Masks
   # [verifier]  an API checking a bearer it was handed
   # [resource]  an API publishing what it is and which scopes it takes
   # [handshake] an app registering itself, once, without a copied secret
-  #
-  # Everything reachable from here talks HTTP to a masks issuer and holds no
-  # state of its own beyond the discovery cache in ::registry.
   module Client
     class << self
       attr_writer :plain_http
@@ -78,7 +75,6 @@ module Masks
       # cheap after the first.
       #
       #   issuer = Masks::Client.issuer("https://auth.example")
-      #   issuer.authorization_url(client_id: id, redirect_uri: uri)
       #
       # @return [Masks::Client::Issuer]
       def issuer(url, **options)

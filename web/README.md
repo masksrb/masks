@@ -123,17 +123,13 @@ It checks the signature against the issuer's JWKS, and the issuer, audience, exp
 
 Errors are `MasksError`, and the types are exported beside the functions.
 
-## Unreleased
-
-These are on `main` and arrive in the release after 2.2.0.
-
-### Organizations
+## Organizations
 
 `organization` on `createBrowserClient`, `authorize()`, and `login()` names the organization a person
 signs in to. `switchOrganization(key)` signs them in again naming another, and `holdsRole(account,
 ...roles)` asks about the role they hold.
 
-### Who's signed in
+## Who's signed in
 
 `Actor` renders an account as a name, a handle or email under it, an unconfirmed-email note, a
 manager badge, and an avatar that falls back to initials. It takes plain data as props, so it

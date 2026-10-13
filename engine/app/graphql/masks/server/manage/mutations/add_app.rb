@@ -7,7 +7,7 @@ module Masks
 
           argument :preset, ID
           argument :base_url, String, description: "Where the app is served, such as https://grafana.example.com."
-          argument :name, String, required: false, description: "What people see. The preset's name when left out."
+          argument :name, String, required: false, description: "What people see."
           argument :slug, String, required: false,
                    description: "The name some apps put in their redirect URI, such as Gitea's authentication source."
 
