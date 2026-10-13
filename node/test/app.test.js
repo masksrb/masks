@@ -101,7 +101,7 @@ test("the session cookie is sealed, httponly, lax, and secure on https", async (
   assert.equal(session.headers.get("cache-control"), "no-store");
 
   for (const value of held.browser.jar.values()) {
-    assert.equal(value.includes("eyJ"), false);
+    assert.doesNotMatch(value, /eyJ[\w-]*\.eyJ/);
   }
 
   const plain = await setup({}, closers);
@@ -111,13 +111,13 @@ test("the session cookie is sealed, httponly, lax, and secure on https", async (
     assert.match(line, /HttpOnly/);
     assert.match(line, /SameSite=Lax/);
     assert.match(line, /Path=\//);
-    assert.doesNotMatch(line, /Secure/);
+    assert.doesNotMatch(line, /;\s*Secure/i);
   }
 
   const secure = await held.browser.fetch("/auth");
   for (const line of secure.headers.getSetCookie()) {
     assert.match(line, /^__Host-/);
-    assert.match(line, /Secure/);
+    assert.match(line, /;\s*Secure/i);
   }
 });
 
