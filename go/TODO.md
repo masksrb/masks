@@ -2,7 +2,6 @@
 
 ## go/web
 
-- The avatar proxy builds its own HTTP client and Bearer header. Use the client's signing transport, so a DPoP-bound token sends a proof.
 - Issuer discovery runs inside the request when the cache is stale, once per request, and again on every request after a failure. Serve the stale issuer, refresh it once in the background, and back off after a failure. Bound the issuer and verifier caches.
 - Scope, Privileges, Name, and Mount cannot vary per request. Masks::Rails accepts a callable for most settings.
 - Add `holds?` and `member!` equivalents to Person.

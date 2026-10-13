@@ -578,13 +578,12 @@ func (a *App) avatar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	request.Header.Set("Authorization", "Bearer "+person.AccessToken)
 	request.Header.Set("Accept", "image/*")
 
-	client := http.Client{Timeout: 30 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
-	if a.config.HTTPClient != nil {
-		client.Transport = a.config.HTTPClient.Transport
-	}
+	token := held.data.Token
+	client := a.signIn(s).HTTPClient(masks.TokenSourceFunc(func(context.Context) (*masks.Token, error) { return token, nil }), s.issuer.URL)
+	client.Timeout = 30 * time.Second
+	client.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
 
 	response, err := client.Do(request)
 	if err != nil {
