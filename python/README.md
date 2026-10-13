@@ -1,7 +1,7 @@
 # masks for Python
 
-`masks-client` connects a Python service or a machine to masks. It gets tokens
-as a client and checks them as an API. Every call has a synchronous form and an
+`masks-client` connects a Python web app, service, or machine to masks. It signs
+people in, gets tokens as a client, and checks them as an API. Every call has a synchronous form and an
 `async` one.
 
 ```sh
@@ -23,9 +23,10 @@ The package installs from its release tag and is not on PyPI yet. It imports as
 | Introspection | Asking the issuer whether a token is still active. |
 | Checking tokens | `at+jwt` access tokens, including DPoP-bound ones, in any framework or as ASGI middleware. |
 
-Signing people in through a browser is left to an OpenID Connect library such
-as [Authlib](https://docs.authlib.org). See
-[Other languages](https://masks.pages.dev/guides/other-languages/#python).
+`masks.fastapi`, `masks.django`, and `masks.flask` sign people in to a web app.
+See [Python apps](https://masks.pages.dev/guides/python/) for the walkthrough and
+[masks-client](https://masks.pages.dev/reference/python/) for every setting and
+call.
 
 ## A machine signs in as itself
 

@@ -93,7 +93,9 @@ export default defineConfig({
         items: [
           { label: "Connecting via SDK", slug: "guides/connecting-via-sdk" },
           { label: "Rails apps", slug: "guides/rails" },
-          { label: "Other languages", slug: "guides/other-languages" },
+          { label: "JavaScript apps", slug: "guides/javascript" },
+          { label: "Python apps", slug: "guides/python" },
+          { label: "Go apps", slug: "guides/go" },
           { label: "Forward authentication", slug: "guides/forward-auth" },
         ],
       },

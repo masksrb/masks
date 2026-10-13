@@ -20,9 +20,9 @@ Pick the SDK for the place your app runs.
 | [`Masks::Rails`](/reference/rails/) | A Rails app. An engine that mounts sign-in, the handshake, and token checks. |
 | [`Masks::Client`](/reference/ruby/) | Any Ruby process. `Masks::Rails` is built on it. |
 | [`@masks/client`](/reference/browser/) | A single-page app, in the browser. |
-| [`github.com/masksrb/masks/go`](https://github.com/masksrb/masks/tree/main/go) | A Go service or a machine that signs in as itself, and a Go API. |
-| [`@masks/server`](https://github.com/masksrb/masks/tree/main/node) | A JavaScript server that signs in as itself, and a JavaScript API, on Node, Next.js, Bun, or Deno. |
-| [`masks-client`](https://github.com/masksrb/masks/tree/main/python) | A Python service or a machine that signs in as itself, and a Python API. |
+| [`github.com/masksrb/masks/go`](/guides/go/) | A Go web app, service, or machine, and a Go API. |
+| [`@masks/server`](/guides/javascript/) | A JavaScript server on Node, Next.js, Bun, or Deno, and a JavaScript API. |
+| [`masks-client`](/guides/python/) | A FastAPI, Django, or Flask app, a Python service or machine, and a Python API. |
 
 The `masks` gem holds both Ruby SDKs. `Masks::Rails` loads only when Rails does.
 
@@ -30,13 +30,13 @@ The `masks` gem holds both Ruby SDKs. `Masks::Rails` loads only when Rails does.
 
 | | `Masks::Rails` | `Masks::Client` | `@masks/client` | Go | `@masks/server` | Python |
 | --- | --- | --- | --- | --- | --- | --- |
-| Signing in with the code flow and PKCE | Yes | Yes | Yes, through a backend or in the page | No | No | No |
-| The handshake | Yes | Yes | Starts it through a backend | No | No | No |
+| Signing in with the code flow and PKCE | Yes | Yes | Yes, through a backend or in the page | Yes | Yes | Yes |
+| The handshake | Yes | Yes | Starts it through a backend | Yes | Yes | Yes |
 | Redeeming an initial access token | Yes | Yes | No | Yes | Yes | Yes |
 | [Enrolling and unenrolling machines](/guides/features/#enrolling-a-machine) | No | Yes | No | Yes | Yes | Yes |
 | Refreshing tokens | Yes | Yes | Yes | Yes | Yes | Yes |
 | Token exchange | No | Yes | No | Yes | Yes | Yes |
-| [Delegation](#delegation) | Asks for it in its handshake | Yes | No | No | No | No |
+| [Delegation](#delegation) | Asks for it in its handshake | Yes | No | Yes | Yes | Yes |
 | Client credentials and revocation | No | Yes | No | Yes | Yes | Yes |
 | Introspection | No | Yes | No | Yes | Yes | Yes |
 | The device flow | No | Yes | No | Yes | Yes | Yes |
@@ -68,17 +68,12 @@ The terms in this table mean:
 - It verifies ID tokens.
 - It leaves access tokens to the API that receives them.
 
-The Go SDK, `@masks/server`, and `masks-client` do not sign people in. An app signs people in with a
-common library, and the SDK's README covers the rest.
+Each language has a guide from the handshake to accepting tokens:
 
-| SDK | Signs people in through |
-| --- | --- |
-| Go | [golang.org/x/oauth2](/guides/other-languages/#go). The Go SDK's README covers the rest. |
-| `@masks/server` | [openid-client](/guides/other-languages/#node) or [Auth.js](/guides/other-languages/#nextjs). The `@masks/server` README covers the rest. |
-| `masks-client` | [Authlib](/guides/other-languages/#python). The `masks-client` README covers the rest. |
-
-The Go SDK, `@masks/server`, and `masks-client` have no delegation helper. Each can still ask for a
-provider token with a token exchange, as in [get a provider token](#get-a-provider-token).
+- [Rails apps](/guides/rails/)
+- [JavaScript apps](/guides/javascript/)
+- [Python apps](/guides/python/)
+- [Go apps](/guides/go/)
 
 ## Connecting an app
 
@@ -97,6 +92,44 @@ The app is then an approved [client](/guides/features/#registering-a-client). Ne
 
 - Sign people in with the SDK's login URL.
 - Check access tokens on your API with the SDK's verifier.
+
+## A single-page app
+
+A single-page app with no backend runs the code flow in the page with
+[`@masks/client`](/reference/browser/).
+
+- It needs a public client, one registered with `token_endpoint_auth_method` set to `none`.
+- It keeps its tokens in `sessionStorage`.
+
+```js
+import { createBrowserClient } from "@masks/client";
+
+const auth = createBrowserClient({
+  issuer: "https://auth.example.com",
+  clientId: "spa",
+  redirectUri: "https://app.example.com/callback",
+  scope: ["openid", "profile"],
+  resource: "https://api.example.com",
+  dpop: true,
+});
+
+if (auth.pending()) {
+  const { identity, returnTo } = await auth.callback();
+}
+
+await auth.authorize({ returnTo: "/dashboard" });
+
+const response = await auth.fetch("https://api.example.com/files");
+```
+
+`fetch` refreshes the access token when it is close to expiring. With `dpop: true`, the page:
+
+- makes a key it cannot export
+- binds its tokens to that key
+- signs a proof for each request
+
+An app with a backend keeps the tokens on the backend, and the page holds only a cookie. The
+package's session mode talks to a backend running the `masks` gem's Rails engine.
 
 ## Delegation
 
@@ -415,3 +448,71 @@ token was sent.
 
 masks does not exchange refresh tokens, SAML assertions, or other issuers' tokens. It does not read
 `may_act`.
+
+## Without an SDK
+
+masks is a standard OpenID Connect provider. An app in a language with no SDK signs people in with
+its usual library, using the code flow with PKCE.
+
+### Registering the app
+
+1. In `/manage`, open **Clients** and choose **Add client**.
+2. Choose **Signs actors in**.
+3. Name the app.
+4. Enter its redirect URI.
+5. Copy the `client_id` and the client secret. masks shows them only once.
+
+The app also needs:
+
+- the issuer, which is the address masks answers at, such as `https://auth.example.com`
+- discovery, which is at `/.well-known/openid-configuration` under the issuer
+
+Ask for `groups` as well to receive the [groups claim](/guides/features/#groups).
+
+A service that signs in as itself is a client that **Signs in as itself**. It holds no redirect URI.
+It asks for its own token with client credentials, the grant for a client acting as itself.
+
+### Checking access tokens
+
+An access token from masks is a JWT (JSON Web Token) of type `at+jwt`. masks signs it with a key
+published at `/.well-known/jwks.json`. An API checks:
+
+- its signature
+- its issuer
+- that `aud` names the API
+
+An app asks for a token for the API by sending `resource=https://api.example.com` when it signs in.
+The token's `scope` holds the granted scopes, separated by spaces.
+
+Each SDK's verifier makes all of those checks. It also checks the proof that comes with a DPoP-bound
+token. The proof must be:
+
+- signed by the token's key
+- made for this method and URL
+- made in the last minute
+- not seen before
+
+Set the verifier's public URL when a proxy sits in front of the API. A proof names the address the
+client used.
+
+In a language with no SDK, a JWT library checks a plain bearer token, a token that works for anyone
+who holds it. With [jose](https://github.com/panva/jose):
+
+```js
+import { createRemoteJWKSet, jwtVerify } from "jose";
+
+const keys = createRemoteJWKSet(
+  new URL("https://auth.example.com/.well-known/jwks.json"),
+);
+
+const { payload } = await jwtVerify(token, keys, {
+  issuer: "https://auth.example.com",
+  audience: "https://api.example.com",
+  typ: "at+jwt",
+});
+```
+
+:::caution
+That check alone accepts a DPoP-bound token without its proof. An API that receives DPoP-bound
+tokens uses an SDK's verifier.
+:::
