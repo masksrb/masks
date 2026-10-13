@@ -249,8 +249,8 @@ func (c *Client) VerifyLogoutToken(ctx context.Context, raw string) (*LogoutToke
 		return nil, err
 	}
 
-	if held.ID == "" || held.IssuedAt == nil {
-		return nil, invalid("a logout token carries jti and iat")
+	if held.ID == "" || held.IssuedAt == nil || held.Expiry == nil {
+		return nil, invalid("a logout token carries jti, iat, and exp")
 	}
 
 	expected := jwt.Expected{Issuer: c.Issuer.URL, AnyAudience: jwt.Audience{c.ID}, Time: time.Now()}

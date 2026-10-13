@@ -332,6 +332,8 @@ func TestALogoutTokenNamesTheSession(t *testing.T) {
 		"nobody":          held.issue(changed("sid", nil), "logout+jwt"),
 		"another client":  held.issue(changed("aud", "other"), "logout+jwt"),
 		"no jti":          held.issue(changed("jti", nil), "logout+jwt"),
+		"no exp":          held.issue(changed("exp", nil), "logout+jwt"),
+		"expired":         held.issue(changed("exp", time.Now().Add(-2*time.Minute).Unix()), "logout+jwt"),
 		"from the future": held.issue(changed("iat", time.Now().Add(time.Hour).Unix()), "logout+jwt"),
 	}
 

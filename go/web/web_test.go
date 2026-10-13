@@ -17,6 +17,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-jose/go-jose/v4/jwt"
+
 	masks "github.com/masksrb/masks/go"
 )
 
@@ -1342,5 +1344,30 @@ func TestProcessesThatShareACredentialsFileSeeEachOthersHandshake(t *testing.T) 
 
 	if held, _ := first.Load(nil); held != nil {
 		t.Fatalf("a disconnect left %+v behind", held)
+	}
+}
+
+func TestALogoutTokenIsRememberedPastItsExpiry(t *testing.T) {
+	store := &MemoryStore{}
+	app, err := New(Config{Issuer: "https://id.example", Resource: "https://app.example", Secret: secret(), Store: store})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, lasts := range []time.Duration{2 * time.Minute, 30 * time.Minute} {
+		logout := &masks.LogoutToken{}
+		logout.ID = "logout-" + lasts.String()
+		logout.Expiry = jwt.NewNumericDate(time.Now().Add(lasts))
+
+		if first, err := app.firstLogout(context.Background(), "https://id.example", logout); err != nil || !first {
+			t.Fatalf("the first logout answered %v, %v", first, err)
+		}
+
+		held := store.entries.held[keyed("logout", "https://id.example", logout.ID)]
+		want := max(logoutMemory, lasts+logoutOutlived)
+
+		if remembered := time.Until(held.until); remembered < want-time.Second || remembered > want+time.Second {
+			t.Fatalf("a token that lasts %s was remembered for %s", lasts, remembered)
+		}
 	}
 }

@@ -23,6 +23,7 @@ const (
 	renewalClaim   = 30 * time.Second
 	renewalWait    = 50 * time.Millisecond
 	logoutMemory   = 10 * time.Minute
+	logoutOutlived = 2 * time.Minute
 )
 
 type outcome string
@@ -262,11 +263,7 @@ func (a *App) depart(ctx context.Context, issuer string, logout *masks.LogoutTok
 }
 
 func (a *App) firstLogout(ctx context.Context, issuer string, logout *masks.LogoutToken) (bool, error) {
-	memory := logoutMemory
-
-	if logout.Expiry != nil {
-		memory = max(memory, time.Until(logout.Expiry.Time())+time.Minute)
-	}
+	memory := max(logoutMemory, time.Until(logout.Expiry.Time())+logoutOutlived)
 
 	return a.config.Store.Add(ctx, keyed("logout", issuer, logout.ID), []byte{1}, memory)
 }

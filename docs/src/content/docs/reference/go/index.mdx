@@ -208,7 +208,8 @@ site is refused with `403`, whatever its method.
 
 When masks ends a session itself, it sends a logout token to `/auth/logout/backchannel`. The app
 signs out the session it names, or every session of the person it names, at their next request. It
-accepts each logout token once, and remembers the logout in `Store`. `LoggedOut` hears each logout
+accepts each logout token once, and refuses one without an `exp`, so it remembers every token it
+accepted until that token expires. It remembers the logout in `Store`. `LoggedOut` hears each logout
 as well.
 
 ## Sessions
