@@ -274,7 +274,9 @@ The app fetches the issuer's keys again every five minutes. While masks cannot b
 
 - A key fetched within the last hour still checks tokens. A key masks removed in that time stays
   accepted until masks answers again or the hour ends.
-- The app tries again at most every 30 seconds, and the issuer's discovery at most every minute.
+- The app fetches the keys again at most every 30 seconds.
+- It asks for the issuer's discovery again after 5 seconds, then waits twice as long after each
+  failure, up to a minute.
 
 A token [bound to a key with DPoP](/guides/security/#binding-a-token-with-dpop) is accepted only as
 `Authorization: DPoP`, with a proof that:
