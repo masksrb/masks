@@ -6,17 +6,22 @@ module Masks
       AUTH_METHOD = "client_secret_basic".freeze
 
       attr_reader :issuer, :name, :resource, :redirect_uris, :scope, :return_to,
-                  :backchannel_logout_uri
+                  :post_logout_redirect_uri
 
       def initialize(issuer, name:, resource:, redirect_uris:, return_to:,
-                     scope: Session::DEFAULT_SCOPE, backchannel_logout_uri: nil)
+                     scope: Session::DEFAULT_SCOPE, backchannel_logout_uri: nil, post_logout_redirect_uri: nil)
         @issuer = Issuer.resolve(issuer)
         @name = name.to_s
         @resource = resource.to_s
         @redirect_uris = Array(redirect_uris).map(&:to_s)
         @scope = Array(scope).flat_map { |value| value.to_s.split(/\s+/) }.reject(&:empty?)
         @return_to = return_to.to_s
-        @backchannel_logout_uri = backchannel_logout_uri&.to_s
+        @backchannel_logout_uri = backchannel_logout_uri.to_s if present?(backchannel_logout_uri)
+        @post_logout_redirect_uri = post_logout_redirect_uri.to_s if present?(post_logout_redirect_uri)
+      end
+
+      def backchannel_logout_uri
+        @backchannel_logout_uri if @backchannel_logout_uri && issuer.backchannel_logout?
       end
 
       def endpoint
@@ -36,7 +41,10 @@ module Masks
           [ "state", state ]
         ]
 
-        query << [ "backchannel_logout_uri", backchannel_logout_uri ] if backchannel_logout_uri
+        backchannel = backchannel_logout_uri
+
+        query << [ "backchannel_logout_uri", backchannel ] if backchannel
+        query << [ "post_logout_redirect_uri", post_logout_redirect_uri ] if post_logout_redirect_uri
         redirect_uris.each { |uri| query << [ "redirect_uris", uri ] }
 
         "#{endpoint}?#{URI.encode_www_form(query)}"

@@ -93,6 +93,23 @@ The app is then an approved [client](/guides/features/#registering-a-client). Ne
 - Sign people in with the SDK's login URL.
 - Check access tokens on your API with the SDK's verifier.
 
+### Handshake parameters
+
+The SDK sends these in the query of the handshake URL. Every address must share the resource's
+origin.
+
+| | |
+| --- | --- |
+| `client_name` | The name the approval screen shows. |
+| `resource` | The app's resource identifier. Required. |
+| `scope` | The scopes the app asks for, separated by spaces. Required. |
+| `redirect_uris` | Where masks sends the browser after a sign-in. Repeat it for each address. Required. |
+| `return_to` | Where masks sends the browser with the one-time token. Required. |
+| `state` | A value masks hands back unchanged to `return_to`. |
+| `token_endpoint_auth_method` | How the app authenticates. The default is `client_secret_basic`. |
+| `backchannel_logout_uri` | Where masks posts a logout token when it ends a session. Optional. |
+| `post_logout_redirect_uri` | Where masks sends the browser after the person signs out of masks. Optional. masks registers it as the client's post-logout redirect URI, or `return_to` when it is left out. |
+
 ## A single-page app
 
 A single-page app with no backend runs the code flow in the page with

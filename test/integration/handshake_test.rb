@@ -205,6 +205,20 @@ module Masks
         assert_equal [ RESOURCE ], approved.resources
       end
 
+      SIGNED_OUT = "#{APP}/auth/logout/return".freeze
+
+      test "where a handshake says to send people after they sign out is where a logout may send that client back" do
+        sign_in_as(@owner)
+        connect(post_logout_redirect_uri: SIGNED_OUT)
+        redeem(approve!)
+
+        assert_equal [ SIGNED_OUT ], approved.post_logout_redirect_uris
+
+        delete "/logout", params: { client_id: approved.client_id, post_logout_redirect_uri: SIGNED_OUT }
+
+        assert_redirected_to SIGNED_OUT
+      end
+
       test "where a handshake returns to is where a logout may send that client back" do
         sign_in_as(@owner)
         connect
@@ -215,6 +229,21 @@ module Masks
         delete "/logout", params: { client_id: approved.client_id, post_logout_redirect_uri: RETURN_TO }
 
         assert_redirected_to RETURN_TO
+      end
+
+      test "a post_logout_redirect_uri somewhere other than the app's own origin is refused" do
+        sign_in_as(@owner)
+        connect(post_logout_redirect_uri: "https://elsewhere.test/bye")
+
+        assert_response :bad_request
+        assert_match "must share the origin", response.body
+      end
+
+      test "the person approving sees where the app sends people after they sign out" do
+        sign_in_as(@owner)
+        connect(post_logout_redirect_uri: SIGNED_OUT)
+
+        assert_includes response.body, SIGNED_OUT
       end
 
       test "an app that will ask people for their accounts elsewhere is approved for delegation, and claims no namespace" do

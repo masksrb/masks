@@ -127,7 +127,7 @@ token, such as the person's email address.
 
 To sign out, send `DELETE /auth/logout`. This revokes the refresh token and clears the session.
 With `config.sign_out_of_issuer = true`, or `everywhere` in the request, the browser goes on to
-masks to end its session there. masks sends the browser back to `/auth/handshake/callback`, and the
+masks to end its session there. masks sends the browser back to `/auth/logout/return`, and the
 app sends it on to `after_sign_out`. A request for JSON gets the masks address as `logout_url`. The
 app accepts that return once, within an hour, in the browser that signed out. See
 [Masks::Rails](/reference/ruby/rails/) for the full list.

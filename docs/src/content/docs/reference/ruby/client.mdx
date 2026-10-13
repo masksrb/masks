@@ -728,9 +728,9 @@ Inherits `Masks::Client::Error`.
 
 | Attribute | Access |
 | --- | --- |
-| `backchannel_logout_uri` | R |
 | `issuer` | R |
 | `name` | R |
+| `post_logout_redirect_uri` | R |
 | `redirect_uris` | R |
 | `resource` | R |
 | `return_to` | R |
@@ -739,7 +739,13 @@ Inherits `Masks::Client::Error`.
 ### ::new
 
 ```ruby
-::new(issuer, name:, resource:, redirect_uris:, return_to:, scope: Session::DEFAULT_SCOPE, backchannel_logout_uri: nil)
+::new(issuer, name:, resource:, redirect_uris:, return_to:, scope: Session::DEFAULT_SCOPE, backchannel_logout_uri: nil, post_logout_redirect_uri: nil)
+```
+
+### #backchannel_logout_uri
+
+```ruby
+#backchannel_logout_uri()
 ```
 
 ### #complete

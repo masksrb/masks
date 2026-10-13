@@ -522,8 +522,8 @@ class SessionTest < EngineIntegrationTest
 
     assert json["logout_url"].start_with?("#{issuer.url_for(SUBDOMAIN)}/logout")
     assert_equal "test-client", query["client_id"]
-    assert_equal "#{origin}/auth/handshake/callback", query["post_logout_redirect_uri"],
-                 "masks registers only the handshake callback as somewhere to send people after logout"
+    assert_equal "#{origin}/auth/logout/return", query["post_logout_redirect_uri"],
+                 "the handshake registered this as the one place masks sends people after logout"
     refute_empty query["state"]
   end
 
@@ -532,7 +532,7 @@ class SessionTest < EngineIntegrationTest
 
     state = sign_out_everywhere!
 
-    get "/auth/handshake/callback?state=#{state}", headers: host
+    get "/auth/logout/return?state=#{state}", headers: host
 
     assert_redirected_to "/goodbye"
   end
@@ -540,10 +540,10 @@ class SessionTest < EngineIntegrationTest
   test "the return from signing out everywhere is honoured once" do
     state = sign_out_everywhere!
 
-    get "/auth/handshake/callback?state=#{state}", headers: host
+    get "/auth/logout/return?state=#{state}", headers: host
     assert_redirected_to "/"
 
-    get "/auth/handshake/callback?state=#{state}", headers: host
+    get "/auth/logout/return?state=#{state}", headers: host
     assert_response :bad_request
     assert_includes response.body, "invalid_state"
   end
@@ -551,7 +551,7 @@ class SessionTest < EngineIntegrationTest
   test "a return from signing out with a state this browser did not send is refused" do
     sign_out_everywhere!
 
-    get "/auth/handshake/callback?state=forged", headers: host
+    get "/auth/logout/return?state=forged", headers: host
 
     assert_response :bad_request
     assert_includes response.body, "invalid_state"
@@ -561,7 +561,7 @@ class SessionTest < EngineIntegrationTest
     state = sign_out_everywhere!
 
     travel Masks::Client::Tracker::TTL + 1 do
-      get "/auth/handshake/callback?state=#{state}", headers: host
+      get "/auth/logout/return?state=#{state}", headers: host
     end
 
     assert_response :bad_request
@@ -573,12 +573,12 @@ class SessionTest < EngineIntegrationTest
 
     state = sign_out_everywhere!
 
-    get "/auth/handshake/callback?state=#{state}", headers: host
+    get "/auth/logout/return?state=#{state}", headers: host
 
     assert_redirected_to "/"
   end
 
-  test "a return from signing out is not taken for a handshake" do
+  test "the handshake callback leaves a sign-out for the sign-out return" do
     state = sign_out_everywhere!
     before = CREDENTIALS[HOST]
 
@@ -586,7 +586,7 @@ class SessionTest < EngineIntegrationTest
 
     assert_equal before, CREDENTIALS[HOST]
 
-    get "/auth/handshake/callback?state=#{state}", headers: host
+    get "/auth/logout/return?state=#{state}", headers: host
 
     assert_redirected_to "/"
   end
@@ -605,9 +605,9 @@ class SessionTest < EngineIntegrationTest
     query = URI.decode_www_form(URI.parse(response.location).query).to_h
 
     assert_equal "test-client", query["client_id"]
-    assert_equal "#{origin}/auth/handshake/callback", query["post_logout_redirect_uri"]
+    assert_equal "#{origin}/auth/logout/return", query["post_logout_redirect_uri"]
 
-    get "/auth/handshake/callback?state=#{query['state']}", headers: host
+    get "/auth/logout/return?state=#{query['state']}", headers: host
 
     assert_redirected_to "/"
   ensure

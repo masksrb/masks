@@ -71,6 +71,34 @@ class HandshakeTest < ClientTest
     assert_equal [ "a-state" ], held["state"]
   end
 
+  def test_where_masks_sends_people_after_they_sign_out_travels_in_the_query
+    held = query(post_logout_redirect_uri: "#{APP}/auth/logout/return")
+
+    assert_equal [ "#{APP}/auth/logout/return" ], held["post_logout_redirect_uri"]
+    assert_nil query["post_logout_redirect_uri"]
+  end
+
+  def test_a_backchannel_logout_uri_is_sent_to_an_issuer_that_advertises_backchannel_logout
+    issuer.override("/.well-known/openid-configuration",
+                    issuer.discovery.merge("backchannel_logout_supported" => true))
+
+    held = query(backchannel_logout_uri: "#{APP}/auth/logout/backchannel")
+
+    assert_equal [ "#{APP}/auth/logout/backchannel" ], held["backchannel_logout_uri"]
+  end
+
+  def test_a_backchannel_logout_uri_is_dropped_for_an_issuer_that_does_not_advertise_it
+    held = query(backchannel_logout_uri: "#{APP}/auth/logout/backchannel")
+
+    assert_nil held["backchannel_logout_uri"]
+  end
+
+  def test_a_backchannel_logout_uri_refuses_the_handshake_when_discovery_fails
+    issuer.override("/.well-known/openid-configuration", [ 503, { "error" => "temporarily_unavailable" } ])
+
+    assert_raises(Masks::Client::Error) { query(backchannel_logout_uri: "#{APP}/auth/logout/backchannel") }
+  end
+
   def test_redirect_uris_repeat_rather_than_joining
     held = query(redirect_uris: [ "#{APP}/a", "#{APP}/b" ])
 

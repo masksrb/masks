@@ -81,7 +81,6 @@ module Masks
 
       def backchannel_logout_uri_for(request)
         return nil unless @logged_out.respond_to?(:call)
-        return nil unless Masks::Client::Issuer.resolve(issuer_for(request)).backchannel_logout?
 
         "#{request.base_url}#{routes.backchannel_logout_path}"
       end
@@ -157,7 +156,8 @@ module Masks
           redirect_uris: [ redirect_uri_for(request), delegation_redirect_uri_for(request) ].compact.uniq,
           return_to: return_to_for(request),
           scope: approved_scope,
-          backchannel_logout_uri: backchannel_logout_uri_for(request)
+          backchannel_logout_uri: backchannel_logout_uri_for(request),
+          post_logout_redirect_uri: post_logout_redirect_uri_for(request)
         )
       end
 
@@ -194,13 +194,21 @@ module Masks
       end
 
       def return_to_for(request)
-        uri = URI.parse(redirect_uri_for(request))
-        port = ":#{uri.port}" unless uri.port == uri.default_port
+        "#{origin_for(request)}#{routes.handshake_callback_path}"
+      end
 
-        "#{uri.scheme}://#{uri.host}#{port}#{routes.handshake_callback_path}"
+      def post_logout_redirect_uri_for(request)
+        "#{origin_for(request)}#{routes.logout_return_path}"
       end
 
       private
+
+        def origin_for(request)
+          uri = URI.parse(redirect_uri_for(request))
+          port = ":#{uri.port}" unless uri.port == uri.default_port
+
+          "#{uri.scheme}://#{uri.host}#{port}"
+        end
 
         def routes
           Masks::Rails::Engine.routes.url_helpers

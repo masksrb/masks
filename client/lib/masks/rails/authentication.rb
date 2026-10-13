@@ -157,17 +157,6 @@ module Masks
         profile.empty? ? nil : held.merge(profile.slice(*IDENTITY))
       end
 
-      def masks_logout_url(state:)
-        return nil unless masks_configured?
-
-        masks_session.end_session_url(
-          post_logout_redirect_uri: masks_config.return_to_for(request),
-          state: state
-        )
-      rescue Masks::Client::Error
-        nil
-      end
-
       def masks_login_url(return_to: nil, organization: nil, privilege: nil)
         path = Masks::Rails::Engine.routes.url_helpers.start_path
         query = {
@@ -198,10 +187,14 @@ module Masks
           return nil unless masks_configured?
 
           farewell = masks_farewells.open
-          url = masks_logout_url(state: farewell.id)
 
-          masks_farewells.clear! if url.nil?
-          url
+          masks_session.end_session_url(
+            post_logout_redirect_uri: masks_config.post_logout_redirect_uri_for(request),
+            state: farewell.id
+          )
+        rescue Masks::Client::Error
+          masks_farewells.clear!
+          nil
         end
 
         def masks_after_sign_out_path

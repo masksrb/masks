@@ -123,7 +123,7 @@ module Masks
           {
             name: handshake.name,
             redirect_uris: handshake.redirect_uris,
-            post_logout_redirect_uris: [ handshake.return_to ].compact,
+            post_logout_redirect_uris: [ handshake.post_logout_redirect_uri || handshake.return_to ].compact,
             resources: [ handshake.resource ],
             allowed_scopes: Scopes.join(handshake.scopes),
             grant_types: handshake.grant_types,

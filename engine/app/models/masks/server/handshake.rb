@@ -4,7 +4,7 @@ module Masks
       GRANT_TYPES = %w[authorization_code refresh_token].freeze
 
       attr_reader :name, :redirect_uris, :resource, :scopes, :return_to, :state, :auth_method,
-                  :backchannel_logout_uri
+                  :backchannel_logout_uri, :post_logout_redirect_uri
 
       class << self
         def from_request(request)
@@ -19,7 +19,8 @@ module Masks
             return_to: params["return_to"],
             state: params["state"],
             auth_method: params["token_endpoint_auth_method"],
-            backchannel_logout_uri: params["backchannel_logout_uri"]
+            backchannel_logout_uri: params["backchannel_logout_uri"],
+            post_logout_redirect_uri: params["post_logout_redirect_uri"]
           )
         end
 
@@ -36,7 +37,8 @@ module Masks
             return_to: row.redirect_uri,
             state: held["state"],
             auth_method: held["auth_method"],
-            backchannel_logout_uri: held["backchannel_logout_uri"]
+            backchannel_logout_uri: held["backchannel_logout_uri"],
+            post_logout_redirect_uri: held["post_logout_redirect_uri"]
           )
         end
       end
@@ -54,7 +56,8 @@ module Masks
           "state" => state,
           "redirect_uris" => redirect_uris.sort,
           "auth_method" => auth_method,
-          "backchannel_logout_uri" => backchannel_logout_uri
+          "backchannel_logout_uri" => backchannel_logout_uri,
+          "post_logout_redirect_uri" => post_logout_redirect_uri
         }.compact
       end
 
@@ -73,12 +76,14 @@ module Masks
 
         pairs << [ "state", state ] if state
         pairs << [ "backchannel_logout_uri", backchannel_logout_uri ] if backchannel_logout_uri
+        pairs << [ "post_logout_redirect_uri", post_logout_redirect_uri ] if post_logout_redirect_uri
         redirect_uris.each { |uri| pairs << [ "redirect_uris", uri ] }
         pairs
       end
 
       def initialize(name: nil, redirect_uris: nil, resource: nil, scopes: nil,
-                     return_to: nil, state: nil, auth_method: nil, backchannel_logout_uri: nil)
+                     return_to: nil, state: nil, auth_method: nil, backchannel_logout_uri: nil,
+                     post_logout_redirect_uri: nil)
         @name = name.to_s.strip.presence || "An application"
         @redirect_uris = Array(redirect_uris).map(&:to_s).reject(&:empty?).uniq
         @resource = resource.to_s
@@ -87,6 +92,7 @@ module Masks
         @state = state.presence
         @auth_method = auth_method.to_s.presence || Client::DEFAULT_AUTH_METHOD
         @backchannel_logout_uri = backchannel_logout_uri.to_s.strip.presence
+        @post_logout_redirect_uri = post_logout_redirect_uri.to_s.strip.presence
       end
 
       def origin
@@ -134,7 +140,7 @@ module Masks
             return "token_endpoint_auth_method must be one of #{Client::AUTH_METHODS.join(', ')}"
           end
 
-          elsewhere = ([ return_to ] + redirect_uris + Array(backchannel_logout_uri))
+          elsewhere = ([ return_to ] + redirect_uris + Array(backchannel_logout_uri) + Array(post_logout_redirect_uri))
             .reject { |uri| origin_of(uri) == origin }
           return "everything must share the origin #{origin}: #{elsewhere.join(', ')}" if elsewhere.any?
 

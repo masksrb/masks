@@ -83,8 +83,14 @@ module Masks
         if masks_wants_json?
           render json: { "signed_in" => false, "logout_url" => upstream }.compact
         else
-          redirect_to upstream || masks_config.after_sign_out, allow_other_host: upstream.present?
+          redirect_to upstream || masks_after_sign_out_path, allow_other_host: upstream.present?
         end
+      end
+
+      def signed_out
+        return stale_sign_out if masks_farewells.claim(params[:state].to_s).nil?
+
+        redirect_to masks_after_sign_out_path
       end
 
       private
@@ -130,6 +136,11 @@ module Masks
           )
         end
 
+        def stale_sign_out
+          answer("invalid_state", "that sign-out is not one this browser started, or it expired", :bad_request,
+                 failed: "sign-out")
+        end
+
         def restart
           session[RESTARTED] = Time.now.to_i
           redirect_to start_path
@@ -145,11 +156,11 @@ module Masks
           answer(code, description, :bad_request)
         end
 
-        def answer(code, description, status)
+        def answer(code, description, status, failed: "sign-in")
           if masks_wants_json?
             render json: { "error" => code, "error_description" => description }, status: status
           else
-            render plain: "sign-in failed — #{code}: #{description}", status: status
+            render plain: "#{failed} failed — #{code}: #{description}", status: status
           end
         end
     end

@@ -40,6 +40,7 @@ class HandshakeTest < EngineIntegrationTest
     assert_equal [ "#{origin}/mcp" ], held["resource"]
     assert_equal [ "#{origin}/auth/callback" ], held["redirect_uris"]
     assert_equal [ "#{origin}/auth/handshake/callback" ], held["return_to"]
+    assert_equal [ "#{origin}/auth/logout/return" ], held["post_logout_redirect_uri"]
     assert_includes held["scope"].first.split(" "), "catalog:read"
     assert_equal [ "Catalog" ], held["client_name"]
     refute_empty held["state"]

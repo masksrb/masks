@@ -19,7 +19,8 @@ module Masks
             "redirect_uris" => handshake.redirect_uris,
             "state" => handshake.state,
             "auth_method" => handshake.auth_method,
-            "backchannel_logout_uri" => handshake.backchannel_logout_uri
+            "backchannel_logout_uri" => handshake.backchannel_logout_uri,
+            "post_logout_redirect_uri" => handshake.post_logout_redirect_uri
           }.compact
         )
       end
