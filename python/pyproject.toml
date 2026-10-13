@@ -52,7 +52,7 @@ build-backend = "hatchling.build"
 packages = ["src/masks"]
 
 [tool.uv]
-exclude-newer = "2026-09-27T00:00:00Z"
+exclude-newer = "2026-09-28T00:00:00Z"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
