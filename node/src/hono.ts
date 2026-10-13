@@ -3,6 +3,7 @@ import { HTTPException } from "hono/http-exception";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import type { Masked } from "./app/masked.js";
 import { Masks, type MasksOptions } from "./app/masks.js";
+import { processEnv } from "./app/stores.js";
 
 const installed = new WeakMap<Context, { masks: Masks; sent: Set<string> }>();
 
@@ -22,10 +23,14 @@ export interface MasksHonoOptions extends MasksOptions {
 
 export function masksHono(
   options: MasksHonoOptions = {},
-): MiddlewareHandler & { masks: Masks } {
-  const masks = Masks.from(options);
+): MiddlewareHandler & { readonly masks: Masks } {
+  let built = options.masks;
+  const build = (bindings: unknown) =>
+    new Masks({ ...options, env: { ...processEnv(), ...strings(bindings) } });
 
   const handler: MiddlewareHandler = async (context, next) => {
+    built ??= build(context.env);
+    const masks = built;
     const answer = await masks.handle(context.req.raw);
 
     if (answer) return answer;
@@ -42,7 +47,22 @@ export function masksHono(
     await next();
   };
 
-  return Object.assign(handler, { masks });
+  return Object.defineProperty(handler, "masks", {
+    get: () => {
+      built ??= build(undefined);
+      return built;
+    },
+  }) as MiddlewareHandler & { readonly masks: Masks };
+}
+
+function strings(bindings: unknown): Record<string, string> {
+  if (!bindings || typeof bindings !== "object") return {};
+
+  return Object.fromEntries(
+    Object.entries(bindings).filter(
+      (entry): entry is [string, string] => typeof entry[1] === "string",
+    ),
+  );
 }
 
 export function requireAuth(...privileges: string[]): MiddlewareHandler {

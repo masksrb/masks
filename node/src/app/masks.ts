@@ -60,6 +60,7 @@ import {
 type PerRequest<T> = T | ((request: Request) => T | Promise<T>);
 
 export interface MasksOptions {
+  env?: Record<string, string | undefined>;
   issuer?: PerRequest<string>;
   resource?: PerRequest<string>;
   name?: PerRequest<string>;
@@ -228,7 +229,9 @@ export class Masks {
     this.maxAge = options.maxAge ?? 14 * 24 * 3600;
     this.#credentials =
       options.credentials ??
-      (processEnv().MASKS_CLIENT_ID ? envCredentials() : fileCredentials());
+      (this.#env.MASKS_CLIENT_ID
+        ? envCredentials("MASKS_CLIENT", this.#env)
+        : fileCredentials());
     this.#logouts =
       options.logouts ?? shared("app logouts", () => memoryLogouts());
     this.#replay =
@@ -237,9 +240,13 @@ export class Masks {
     if (options.secret !== undefined) this.#sealer = new Sealer(options.secret);
   }
 
+  get #env(): Record<string, string | undefined> {
+    return this.#options.env ?? processEnv();
+  }
+
   get #seal(): Sealer {
     this.#sealer ??= new Sealer(
-      (processEnv().MASKS_SECRET ?? "").split(",").map((part) => part.trim()),
+      (this.#env.MASKS_SECRET ?? "").split(",").map((part) => part.trim()),
     );
 
     return this.#sealer;
@@ -1426,11 +1433,10 @@ export class Masks {
   async #newVisit(request: Request): Promise<Visit> {
     const visit = new Visit(request);
     const issuer =
-      (await resolve(this.#options.issuer, request)) ??
-      processEnv().MASKS_ISSUER;
+      (await resolve(this.#options.issuer, request)) ?? this.#env.MASKS_ISSUER;
     const resource =
       (await resolve(this.#options.resource, request)) ??
-      processEnv().MASKS_RESOURCE;
+      this.#env.MASKS_RESOURCE;
 
     if (!issuer)
       throw new Error(

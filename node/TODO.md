@@ -2,7 +2,6 @@
 
 ## The app layer
 
-- On Workers, Hono's bindings do not reach the options. Let `masksHono` read `env(c)`.
 
 - `Outcome` is a finished `Response`, so the Next adapter forces `accept: text/html` and reads `Location`. Give a refusal a kind (`login`, `step_up`, `forbidden`, `handshake`), a URL, and `toResponse(request)`.
 - The avatar proxy sends a hand-built `authorization` header. Use `signedFetch`, so a DPoP-bound token sends a proof, once the app layer can hold DPoP-bound tokens. Replace `avatars: { bytes }` with `avatarBytes`.

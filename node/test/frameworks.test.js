@@ -382,3 +382,24 @@ test("Express requireAuth without masksExpress is an error", async () => {
     /masksExpress before requireAuth/,
   );
 });
+
+test("Hono reads the issuer, resource, and secret from Workers bindings", async () => {
+  const held = await setup({}, closers);
+  const app = new Hono();
+  const bindings = {
+    MASKS_ISSUER: held.fake.url,
+    MASKS_RESOURCE: APP,
+    MASKS_SECRET: "a-workers-secret-that-is-long-enough-123456",
+    SESSIONS: {},
+  };
+
+  app.use(masksHono({ credentials: held.credentials, name: "Catalog" }));
+  app.get("/", (context) =>
+    context.json({ signed_in: context.get("masked").signedIn }),
+  );
+
+  const browser = new Browser((request) => app.fetch(request, bindings), APP);
+  const done = await signIn({ ...held, browser });
+
+  assert.deepEqual(await done.json(), { signed_in: true });
+});

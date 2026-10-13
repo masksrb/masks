@@ -20,5 +20,7 @@ app.get("/settings", requireAuth("admin"), (c) => c.json({ subject: c.get("maske
 is thrown as an `HTTPException` that carries the masks answer, so Hono sends that answer unless
 `app.onError` changes it.
 
-On Cloudflare Workers, pass `issuer`, `resource`, and `secret` directly, and set `credentials` to a
-store of your own, since there is no file to write. See [the handshake](/reference/javascript/#the-handshake).
+On Cloudflare Workers, `masksHono` reads `MASKS_ISSUER`, `MASKS_RESOURCE`, and `MASKS_SECRET` from
+the Worker's variables and secrets. A Worker has no file to write the handshake's credentials to, so
+set `MASKS_CLIENT_ID` and `MASKS_CLIENT_SECRET` as secrets, or pass a `credentials` store of your own.
+See [the handshake](/reference/javascript/#the-handshake).

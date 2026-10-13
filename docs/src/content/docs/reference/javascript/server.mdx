@@ -24,6 +24,7 @@ The [JavaScript apps guide](/reference/javascript/) shows how to set each of the
 
 | Option | Default | |
 | --- | --- | --- |
+| `env` | `process.env` | Where the `MASKS_` settings are read from, for a runtime with no `process.env`. |
 | `issuer` | `MASKS_ISSUER` | The tenant people sign in against, such as `https://acme.auth.example.com`. |
 | `resource` | `MASKS_RESOURCE` | The app's absolute URL. The handshake registers the app for it, and tokens for the app name it as their audience. |
 | `secret` | `MASKS_SECRET` | At least 32 characters that seal the session cookie. A list, or a comma-separated variable, puts the newest secret first. |
