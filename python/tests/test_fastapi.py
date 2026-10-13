@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 
 import masks
 from masks.fastapi import Masks
-from masks.web import Config, MemoryCredentials, MemorySessionStore, Person, ServerSessions
+from masks.web import Actor, Config, MemoryCredentials, MemorySessionStore, ServerSessions
 
 from . import scenarios
 from .fake import AUDIENCE, ISSUER, Fake, FakeClient
@@ -39,7 +39,7 @@ def build(fake: Fake, credentials: Any = None, **changes: Any) -> tuple[FastAPI,
         "credentials": credentials if credentials is not None else MemoryCredentials("web", "secret"),
         "scope": ["openid", "profile", "email", "offline_access", "organization"],
         "privileges": PRIVILEGES,
-        "manages": lambda person: person.subject == "ada",
+        "manages": lambda actor: actor.subject == "ada",
         "http": fake.http(),
         "async_http": fake.async_http(),
         **changes,
@@ -54,20 +54,20 @@ def application(config: Config) -> tuple[FastAPI, Masks]:
     auth.install(app)
 
     @app.get("/me")
-    async def me(person: Annotated[Person, Depends(auth.require())]) -> dict[str, Any]:
-        return person.to_dict()
+    async def me(actor: Annotated[Actor, Depends(auth.require())]) -> dict[str, Any]:
+        return actor.to_dict()
 
     @app.get("/admin")
-    async def admin(person: Annotated[Person, Depends(auth.require("admin"))]) -> dict[str, Any]:
-        return {"privileges": person.privileges}
+    async def admin(actor: Annotated[Actor, Depends(auth.require("admin"))]) -> dict[str, Any]:
+        return {"privileges": actor.privileges}
 
     @app.get("/billing")
-    async def billing(person: Annotated[Person, Depends(auth.require("billing"))]) -> dict[str, Any]:
-        return {"role": person.organization.role if person.organization else None}
+    async def billing(actor: Annotated[Actor, Depends(auth.require("billing"))]) -> dict[str, Any]:
+        return {"role": actor.organization.role if actor.organization else None}
 
     @app.get("/public")
-    async def public(person: Annotated[Person, Depends(auth.person)]) -> Response:
-        return JSONResponse({"signed_in": person.signed_in}, headers={"Cache-Control": "public, max-age=600"})
+    async def public(actor: Annotated[Actor, Depends(auth.actor)]) -> Response:
+        return JSONResponse({"signed_in": actor.signed_in}, headers={"Cache-Control": "public, max-age=600"})
 
     @app.get("/plain")
     async def plain() -> dict[str, Any]:
@@ -89,16 +89,16 @@ def application(config: Config) -> tuple[FastAPI, Masks]:
             return JSONResponse({"error": error.code}, status_code=400)
 
     @app.get("/whoami")
-    async def whoami(person: Annotated[Person, Depends(auth.person)]) -> dict[str, Any]:
-        return {"signed_in": person.signed_in}
+    async def whoami(actor: Annotated[Actor, Depends(auth.actor)]) -> dict[str, Any]:
+        return {"signed_in": actor.signed_in}
 
     @app.get("/api/catalog")
-    async def catalog(person: Annotated[Person, Depends(auth.protect("read"))]) -> dict[str, Any]:
-        return {"subject": person.subject, "by_token": person.by_token}
+    async def catalog(actor: Annotated[Actor, Depends(auth.protect("read"))]) -> dict[str, Any]:
+        return {"subject": actor.subject, "by_token": actor.by_token}
 
     @app.get("/either")
-    async def either(person: Annotated[Person, Depends(auth.require("read", tokens=True))]) -> dict[str, Any]:
-        return {"subject": person.subject, "by_token": person.by_token}
+    async def either(actor: Annotated[Actor, Depends(auth.require("read", tokens=True))]) -> dict[str, Any]:
+        return {"subject": actor.subject, "by_token": actor.by_token}
 
     @app.get("/client")
     async def client(request: Request) -> dict[str, Any]:
@@ -414,7 +414,7 @@ def test_a_refused_refresh_forgets_the_sign_in(app: TestClient, fake: Fake, monk
     assert app.get("/auth/session").json()["error"] == "login_required"
 
 
-def test_the_avatar_is_proxied_for_the_signed_in_person(app: TestClient, fake: Fake) -> None:
+def test_the_avatar_is_proxied_for_the_signed_in_actor(app: TestClient, fake: Fake) -> None:
     assert app.get("/auth/avatar").status_code == 404
 
     sign_in(app, fake)

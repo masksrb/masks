@@ -13,15 +13,15 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 from .client import AsyncClient
 from .errors import MasksError
 from .oidc import HeldConnection
+from .web.actor import Actor
 from .web.config import Config
 from .web.core import FORM_LIMIT, METADATA_PATH, Answer, Incoming, Refusal, too_large, unreachable, unshared
 from .web.core import Masks as Engine
-from .web.person import Person
 from .web.sessions import Session
 
 SESSION = "masks.session"
 
-__all__ = ["Config", "Masks", "Person", "Refusal", "SessionMiddleware"]
+__all__ = ["Actor", "Config", "Masks", "Refusal", "SessionMiddleware"]
 
 
 def cookie_header(scope: Scope) -> str:
@@ -173,13 +173,13 @@ class Masks:
     async def metadata(self, request: Request) -> Response:
         return JSONResponse(self.engine.metadata(await incoming(request)), headers={"Cache-Control": "max-age=300"})
 
-    async def person(self, request: Request) -> Person:
+    async def actor(self, request: Request) -> Actor:
         held = await incoming(request)
-        found = await self.engine.aanswer(self.engine.person(held, await session_of(request)))
+        found = await self.engine.aanswer(self.engine.actor(held, await session_of(request)))
 
-        return found if isinstance(found, Person) else Person(known=self.config.known)
+        return found if isinstance(found, Actor) else Actor(known=self.config.known)
 
-    async def authorize(self, request: Request, *privileges: str, tokens: bool = False) -> Person:
+    async def authorize(self, request: Request, *privileges: str, tokens: bool = False) -> Actor:
         held = await incoming(request)
         session = await self._session(request, tokens)
         found = await self.engine.aauthorize(held, session, privileges, tokens=tokens)
@@ -195,7 +195,7 @@ class Masks:
 
         return await session_of(request)
 
-    async def protected(self, request: Request, *privileges: str) -> Person:
+    async def protected(self, request: Request, *privileges: str) -> Actor:
         found = await self.engine.aprotect(await incoming(request), privileges)
 
         if isinstance(found, Answer):
@@ -203,18 +203,18 @@ class Masks:
 
         return found
 
-    def require(self, *privileges: str, tokens: bool = False) -> Callable[[Request], Awaitable[Person]]:
+    def require(self, *privileges: str, tokens: bool = False) -> Callable[[Request], Awaitable[Actor]]:
         self._known(privileges)
 
-        async def requiring(request: Request) -> Person:
+        async def requiring(request: Request) -> Actor:
             return await self.authorize(request, *privileges, tokens=tokens)
 
         return requiring
 
-    def protect(self, *privileges: str) -> Callable[[Request], Awaitable[Person]]:
+    def protect(self, *privileges: str) -> Callable[[Request], Awaitable[Actor]]:
         self._known(privileges)
 
-        async def protecting(request: Request) -> Person:
+        async def protecting(request: Request) -> Actor:
             return await self.protected(request, *privileges)
 
         return protecting

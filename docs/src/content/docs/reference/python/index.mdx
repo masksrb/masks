@@ -80,7 +80,7 @@ the credentials.
 
 ```python
 Config(..., manages="admin")
-Config(..., manages=lambda person: person.subject == os.environ["OWNER_SUB"])
+Config(..., manages=lambda actor: actor.subject == os.environ["OWNER_SUB"])
 ```
 
 Before each sign-in, the app checks that masks still knows it. When masks does not, the app forgets
@@ -104,8 +104,8 @@ not start sends it to sign in again, at most once a minute. In between, it is re
 A JSON request that needs a sign-in gets `401` with `login_required` or `handshake_required` and the
 URL to send the browser to. A browser is redirected.
 
-The person has the sign-in's claims, scopes, organizations, and privileges. See
-[the person](/reference/python/client/#the-person).
+The actor has the sign-in's claims, scopes, organizations, and privileges. See
+[the actor](/reference/python/client/#the-actor).
 
 A scope is a named permission that a token holds. A claim is one piece of information inside a
 token, such as the person's email address.
@@ -219,9 +219,9 @@ Config(
 
 | | |
 | --- | --- |
-| `person.organization` | The organization signed in to, with its `id`, `key`, `name`, and `role`. `None` if there is none. |
-| `person.has_role("owner", "billing")` | Whether the person holds one of those roles in it. |
-| `person.organizations` | Every organization the person has joined. Each one includes the role held there. |
+| `actor.organization` | The organization signed in to, with its `id`, `key`, `name`, and `role`. `None` if there is none. |
+| `actor.has_role("owner", "billing")` | Whether the person holds one of those roles in it. |
+| `actor.organizations` | Every organization the person has joined. Each one includes the role held there. |
 | `auth.login_url(organization="globex")` | Signs the person in again, naming another organization. |
 
 The app reads the organizations from userinfo at sign-in and at every refresh. So when a person's
@@ -276,8 +276,8 @@ A resource server is an app that accepts access tokens from other apps. Guard an
 
 ```python
 @app.get("/api/items")
-async def items(person: Annotated[Person, Depends(auth.protect("read"))]):
-    return {"for": person.subject}
+async def items(actor: Annotated[Actor, Depends(auth.protect("read"))]):
+    return {"for": actor.subject}
 ```
 
 The guard takes the same [privileges](#privileges), including roles and organizations, and checks
@@ -305,7 +305,7 @@ The URL is the resource's origin and the request's path, so a proxy in front of 
 other setting. The app remembers the proofs it has seen in
 [`store`](#running-several-processes).
 
-The person for a token has `by_token` set, and its claims are the token's claims.
+The actor for a token has `by_token` set, and its claims are the token's claims.
 
 An API with no browser sign-in can use `masks.Verifier` without `masks.web`. See the
 [package README](https://github.com/masksrb/masks/tree/main/python#checking-access-tokens).
@@ -326,9 +326,9 @@ async def connect(request: Request):
     return await auth.start_delegation(request, "google")
 
 @app.get("/connect/callback")
-async def connected(request: Request, person: Annotated[Person, Depends(auth.require())]):
+async def connected(request: Request, actor: Annotated[Actor, Depends(auth.require())]):
     held = await auth.finish_delegation(request)
-    save(person.subject, held.connection, held.secret)
+    save(actor.subject, held.connection, held.secret)
 ```
 
 `start_delegation` sends a visitor who is not signed in to sign in first. `finish_delegation`
@@ -348,7 +348,7 @@ in Django, and ask for the provider's token:
 
 ```python
 upstream = await client.delegated_token(secret, connection=connection)
-save(person.subject, connection, upstream.secret)
+save(actor.subject, connection, upstream.secret)
 ```
 
 Save `upstream.secret` before anything else, since each call replaces the secret.

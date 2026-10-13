@@ -25,7 +25,7 @@ def settings():
 ```
 
 `auth.required(*privileges)` and `auth.protected(*privileges)` work like the [FastAPI](/reference/python/fastapi/) guards, and
-`masked` is the person for the current request. You can also pass a `Config` as `Masks(app, config)`.
+`masked` is the actor for the current request. You can also pass a `Config` as `Masks(app, config)`.
 
 ## Reference
 
@@ -34,11 +34,11 @@ defaults to `app.secret_key`. `Masks()` followed by `init_app(app)` works as wel
 
 | | |
 | --- | --- |
-| `masked` | The person for the current request. |
+| `masked` | The actor for the current request. |
 | `@auth.required(*privileges, tokens=False)` | Needs a sign-in holding each privilege. |
 | `@auth.protected(*privileges)` | Needs an access token holding each privilege. |
 | `auth.authorize(*privileges, tokens=False)` | `required` inside a view. Raises `Refusal`. |
-| `auth.person` | The person, the same as `masked`. |
+| `auth.actor` | The actor, the same as `masked`. |
 | `auth.client()` | A `masks.Client` with the app's credentials. |
 | `auth.start_delegation(provider)` | Starts a [delegation](/reference/python/#delegations). Returns the redirect. |
 | `auth.finish_delegation()` | Finishes it. Returns a `masks.HeldConnection`. |
@@ -51,5 +51,5 @@ defaults to `app.secret_key`. `Masks()` followed by `init_app(app)` works as wel
 `init_app` raises `ValueError` for a privilege that `privileges` does not name, even in a decorator
 applied before it ran. It raises `TypeError` for a session store with `async` methods.
 
-The session is read the first time a request needs it, so a view that never asks for the person
+The session is read the first time a request needs it, so a view that never asks for the actor
 reads nothing from a session store.

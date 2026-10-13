@@ -7,8 +7,8 @@ from typing import Any, TypeAlias, TypeVar, cast
 import httpx
 
 from ..oidc import DELEGATE_SCOPE, Logout
+from .actor import Actor, Privilege, privileges
 from .credentials import Credentials, FileCredentials
-from .person import Person, Privilege, privileges
 from .sessions import LIFETIME, CookieSessions, SessionBackend
 from .stores import AsyncStore, MemoryStore, Store
 
@@ -46,7 +46,7 @@ class Config:
     after_sign_in: str = "/"
     after_sign_out: str = "/"
     sign_out_of_issuer: bool = False
-    manages: str | Callable[[Person], bool] | None = None
+    manages: str | Callable[[Actor], bool] | None = None
     logged_out: Callable[[Logout], None] | None = None
     delegation_redirect_uri: Setting[str] = ""
     allow_plain_http: bool = False
@@ -95,11 +95,11 @@ class Config:
 
         return [scope for scope in asked if not scope.startswith(self.namespace)] + [self.namespace, *delegated]
 
-    def manager(self, person: Person) -> bool:
+    def manager(self, actor: Actor) -> bool:
         if self.manages is None:
             return False
 
         if isinstance(self.manages, str):
-            return person.signed_in and person.has_privilege(self.manages)
+            return actor.signed_in and actor.has_privilege(self.manages)
 
-        return person.signed_in and bool(self.manages(person))
+        return actor.signed_in and bool(self.manages(actor))

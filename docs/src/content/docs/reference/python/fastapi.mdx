@@ -16,7 +16,7 @@ from typing import Annotated
 
 from fastapi import Depends, FastAPI
 
-from masks.fastapi import Config, Masks, Person
+from masks.fastapi import Actor, Config, Masks
 
 auth = Masks(Config(
     issuer=os.environ["MASKS_ISSUER"],
@@ -30,8 +30,8 @@ auth.install(app)
 
 
 @app.get("/settings")
-async def settings(person: Annotated[Person, Depends(auth.require())]):
-    return {"name": person.name}
+async def settings(actor: Annotated[Actor, Depends(auth.require())]):
+    return {"name": actor.name}
 ```
 
 `auth.require(*privileges)` sends a signed-out visitor to sign in and back again, then checks each
@@ -43,7 +43,7 @@ FastAPI can still add `masks.fastapi.SessionMiddleware` and mount `auth.router.r
 
 ## Reference
 
-`masks.fastapi` exports `Config`, `Masks`, `Person`, `Refusal`, and `SessionMiddleware`.
+`masks.fastapi` exports `Actor`, `Config`, `Masks`, `Refusal`, and `SessionMiddleware`.
 
 ```python
 auth = masks.fastapi.Masks(config)
@@ -54,7 +54,7 @@ auth.install(app)
 | --- | --- |
 | `install(app)` | Adds the session middleware, the routes, and the handler for refused requests. |
 | `router` | An `APIRouter` with the routes, for an app that adds the middleware itself. |
-| `person` | A dependency that gives the person, signed in or not. |
+| `actor` | A dependency that gives the actor, signed in or not. |
 | `require(*privileges, tokens=False)` | A dependency that needs a sign-in holding each privilege. With `tokens=True`, it checks a token when the request has an `Authorization` header or no session. |
 | `protect(*privileges)` | A dependency that needs an access token holding each privilege. |
 | `await authorize(request, *privileges, tokens=False)` | `require` inside a route. Raises `Refusal`. |
@@ -70,6 +70,6 @@ auth.install(app)
 | `await aclose()` | Closes the HTTP client. |
 
 `SessionMiddleware(app, masks=auth)` loads and saves the session in any Starlette app. It reads the
-session the first time a request needs it, so a route that never asks for the person reads nothing
+session the first time a request needs it, so a route that never asks for the actor reads nothing
 from a session store. `require`
 and `protect` raise `ValueError` for a privilege `Config.privileges` does not name.

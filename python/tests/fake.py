@@ -601,17 +601,15 @@ class Fake:
         resources = [value for name, value in parse_qsl(held.query) if name == "resource"]
         assert params["response_type"] == "code"
         assert params["code_challenge_method"] == "S256"
-        person = PEOPLE[subject]
+        actor = PEOPLE[subject]
         asked = params["scope"].split()
         granted = [
             scope
             for scope in asked
-            if ":" not in scope or scope in person["scopes"] or scope.startswith("masks:delegate:")
+            if ":" not in scope or scope in actor["scopes"] or scope.startswith("masks:delegate:")
         ]
         chosen = organization or params.get("organization")
-        org = (
-            next((held for held in person["orgs"] if held["key"] == chosen), None) if "organization" in asked else None
-        )
+        org = next((held for held in actor["orgs"] if held["key"] == chosen), None) if "organization" in asked else None
         code = secrets.token_urlsafe(16)
         self.codes[code] = {
             "client_id": params["client_id"],
@@ -685,7 +683,7 @@ class Fake:
         return respond(200, body)
 
     def id_token(self, grant: dict[str, Any], client_id: str, access: str) -> str:
-        person = PEOPLE[grant["subject"]]
+        actor = PEOPLE[grant["subject"]]
         now = int(time.time())
         digest = hashlib.sha256(access.encode()).digest()
         claims = {
@@ -698,8 +696,8 @@ class Fake:
             "sid": grant["sid"],
             "at_hash": encode(digest[:16]),
             "tenant": {"uuid": "t-1", "subdomain": "fake", "name": "Fake"},
-            "name": person["name"],
-            "masks:avatars": person.get("masks:avatars"),
+            "name": actor["name"],
+            "masks:avatars": actor.get("masks:avatars"),
             "org": grant["org"],
         }
 
@@ -742,12 +740,12 @@ class Fake:
             if thumbprint(header["jwk"]) != bound or proof["htm"] != "GET" or proof["htu"] != f"{ISSUER}/userinfo":
                 return oauth_error(401, "invalid_dpop_proof")
 
-        person = PEOPLE.get(claims["sub"])
+        actor = PEOPLE.get(claims["sub"])
 
-        if person is None:
+        if actor is None:
             return respond(200, {"sub": claims["sub"]})
 
-        return respond(200, {key: value for key, value in person.items() if key != "scopes"})
+        return respond(200, {key: value for key, value in actor.items() if key != "scopes"})
 
     def avatar(self, request: httpx.Request) -> httpx.Response:
         if self.presented(request.headers.get("Authorization", "").partition(" ")[2]) is None:

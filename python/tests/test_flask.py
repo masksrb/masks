@@ -134,8 +134,8 @@ def test_an_app_factory_and_calls_inside_a_view(fake: Fake) -> None:
 
         @app.get("/inside")
         def inside() -> Any:
-            person = auth.authorize("admin")
-            return jsonify({"subject": person.subject})
+            actor = auth.authorize("admin")
+            return jsonify({"subject": actor.subject})
 
         @app.get("/client")
         def client() -> Any:

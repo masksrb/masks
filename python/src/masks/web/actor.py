@@ -76,7 +76,7 @@ class Organization:
 
 
 @dataclass(frozen=True)
-class Person:
+class Actor:
     signed_in: bool = False
     claims: dict[str, Any] = field(default_factory=dict)
     scopes: tuple[str, ...] = ()
@@ -219,8 +219,8 @@ class Person:
         return {key: value for key, value in found.items() if value is not None}
 
 
-def nobody(known: Mapping[str, Privilege] | None = None) -> Person:
-    return Person(known=known or {})
+def nobody(known: Mapping[str, Privilege] | None = None) -> Actor:
+    return Actor(known=known or {})
 
 
 def privileges(spec: Mapping[str, Any]) -> dict[str, Privilege]:

@@ -12,16 +12,16 @@ from werkzeug.local import LocalProxy
 from .client import Client
 from .errors import MasksError
 from .oidc import HeldConnection
+from .web.actor import Actor
 from .web.config import Config
 from .web.core import FORM_LIMIT, METADATA_PATH, Answer, Incoming, Refusal, too_large, unreachable, unshared
 from .web.core import Masks as Engine
-from .web.person import Person
 from .web.sessions import Session
 from .web.stores import asynchronous
 
 F = TypeVar("F", bound=Callable[..., Any])
 
-__all__ = ["Config", "Masks", "Person", "masked"]
+__all__ = ["Actor", "Config", "Masks", "masked"]
 
 
 def incoming(form: bool = False) -> Incoming:
@@ -135,12 +135,12 @@ class Masks:
         return sent
 
     @property
-    def person(self) -> Person:
+    def actor(self) -> Actor:
         if "masked" not in g:
-            found = self.engine.answer(self.engine.person(incoming(), self.session()))
-            g.masked = found if isinstance(found, Person) else Person(known=self.engine.config.known)
+            found = self.engine.answer(self.engine.actor(incoming(), self.session()))
+            g.masked = found if isinstance(found, Actor) else Actor(known=self.engine.config.known)
 
-        return cast(Person, g.masked)
+        return cast(Actor, g.masked)
 
     def required(self, *privileges: str, tokens: bool = False) -> Callable[[F], F]:
         self._known(privileges)
@@ -180,7 +180,7 @@ class Masks:
 
         return decorate
 
-    def authorize(self, *privileges: str, tokens: bool = False) -> Person:
+    def authorize(self, *privileges: str, tokens: bool = False) -> Actor:
         found = self.engine.authorize(incoming(), self.session(), privileges, tokens=tokens)
 
         if isinstance(found, Answer):
@@ -235,4 +235,4 @@ def current() -> Masks:
     return cast(Masks, current_app.extensions["masks"])
 
 
-masked: Person = cast(Person, LocalProxy(lambda: current().person))
+masked: Actor = cast(Actor, LocalProxy(lambda: current().actor))

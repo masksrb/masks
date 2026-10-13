@@ -7,7 +7,7 @@ from django.utils.functional import SimpleLazyObject
 
 from ..web.core import Refusal, unshared
 from ..web.sessions import Session
-from . import engine, person, response
+from . import actor, engine, response
 
 
 class MasksMiddleware:
@@ -17,7 +17,7 @@ class MasksMiddleware:
     def __call__(self, request: HttpRequest) -> HttpResponse:
         held = engine()
         request.masks_cookie = request.META.get("HTTP_COOKIE", "")
-        request.masked = SimpleLazyObject(lambda: person(request))
+        request.masked = SimpleLazyObject(lambda: actor(request))
         sent = self.get_response(request)
         session = getattr(request, "masks_session", None)
         written = held.seal(session, request.is_secure()) if isinstance(session, Session) else []

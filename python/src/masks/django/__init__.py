@@ -13,25 +13,25 @@ from django.http import HttpRequest, HttpResponse
 from ..client import Client
 from ..errors import MasksError
 from ..oidc import HeldConnection
+from ..web.actor import Actor
 from ..web.config import Config
 from ..web.core import Answer, Incoming, Refusal, unreachable
 from ..web.core import Masks as Engine
-from ..web.person import Person
 from ..web.sessions import Session
 from ..web.stores import asynchronous
 
 F = TypeVar("F", bound=Callable[..., Any])
 
 __all__ = [
+    "Actor",
     "Config",
-    "Person",
+    "actor",
     "client",
     "connected",
     "engine",
     "finish_delegation",
     "login_required",
     "login_url",
-    "person",
     "registered",
     "start_delegation",
     "token_required",
@@ -99,15 +99,15 @@ def session_of(request: HttpRequest) -> Session:
     return found
 
 
-def person(request: HttpRequest) -> Person:
-    held = getattr(request, "_masks_person", None)
+def actor(request: HttpRequest) -> Actor:
+    held = getattr(request, "_masks_actor", None)
 
-    if isinstance(held, Person):
+    if isinstance(held, Actor):
         return held
 
-    found = engine().answer(engine().person(incoming(request), session_of(request)))
-    held = found if isinstance(found, Person) else Person(known=engine().config.known)
-    request._masks_person = held
+    found = engine().answer(engine().actor(incoming(request), session_of(request)))
+    held = found if isinstance(found, Actor) else Actor(known=engine().config.known)
+    request._masks_actor = held
 
     return held
 
@@ -124,7 +124,7 @@ def _guard(request: HttpRequest, privileges: Sequence[str], tokens: bool, only_t
     if isinstance(found, Answer):
         return response(found)
 
-    request._masks_person = found
+    request._masks_actor = found
     request.masked = found
 
     return None

@@ -38,7 +38,7 @@ import os
 from typing import Annotated
 
 from fastapi import Depends, FastAPI
-from masks.fastapi import Config, Masks, Person
+from masks.fastapi import Actor, Config, Masks
 
 auth = Masks(
     Config(
@@ -54,8 +54,8 @@ auth.install(app)
 
 
 @app.get("/settings")
-async def settings(person: Annotated[Person, Depends(auth.require())]):
-    return {"name": person.name}
+async def settings(actor: Annotated[Actor, Depends(auth.require())]):
+    return {"name": actor.name}
 ```
 
 To connect the app:

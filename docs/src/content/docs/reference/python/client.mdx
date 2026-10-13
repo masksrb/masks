@@ -9,7 +9,7 @@ walkthrough, read [Python apps](/reference/python/).
 | Module | |
 | --- | --- |
 | [`masks`](#the-client) | The client: discovery, the code flow, tokens, DPoP, introspection, token exchange, delegations, enrollment, and checking tokens. |
-| [`masks.web`](#config) | The parts every framework shares: `Config`, the person, sessions, and credentials. |
+| [`masks.web`](#config) | The parts every framework shares: `Config`, the actor, sessions, and credentials. |
 | [`masks.fastapi`](/reference/python/fastapi/) | The FastAPI integration. Install the `fastapi` extra. |
 | [`masks.django`](/reference/python/django/) | The Django integration. Install the `django` extra. |
 | [`masks.flask`](/reference/python/flask/) | The Flask integration. Install the `flask` extra. |
@@ -43,7 +43,7 @@ host.
 | `after_sign_in` | `"/"` | Where a person goes after signing in. |
 | `after_sign_out` | `"/"` | Where a person goes after signing out. |
 | `sign_out_of_issuer` | `False` | Signs the person out of masks too whenever they sign out of the app. |
-| `manages` | `None` | Who may connect the app again or disconnect it. A privilege name, or a function that takes a person and returns `True` or `False`. Nobody when `None`. |
+| `manages` | `None` | Who may connect the app again or disconnect it. A privilege name, or a function that takes an actor and returns `True` or `False`. Nobody when `None`. |
 | `logged_out` | `None` | A function that takes a `masks.Logout`, called on each back-channel logout. |
 | `delegation_redirect_uri` | `""` | The path or full address a provider's answer comes back to. The handshake then asks for `masks:delegate:` and registers this address. *Request.* |
 | `allow_plain_http` | `False` | Allows a plain `http` issuer on another machine. An issuer on this machine is always allowed. |
@@ -58,7 +58,7 @@ These answer under `prefix`.
 | --- | --- |
 | `GET /auth` | Starts a sign-in. Takes `return_to`, `organization`, and `privilege`. |
 | `GET /auth/callback` | Finishes a sign-in. |
-| `GET /auth/session` | The signed-in person as JSON, or `401`. |
+| `GET /auth/session` | The signed-in actor as JSON, or `401`. |
 | `GET /auth/avatar` | The person's photo, fetched from masks with their token. Takes `size`. |
 | `GET`, `POST`, or `DELETE /auth/logout` | Signs out. Takes `everywhere` to sign out of masks as well. |
 | `GET /auth/logout/return` | Where masks sends the browser after signing out of masks. |
@@ -87,9 +87,9 @@ A request counts as JSON when it sends `X-Requested-With: XMLHttpRequest`, a JSO
 A guard that checks a token answers `401` with `Bearer` and `DPoP` challenges. Each challenge's
 `resource_metadata` names `/.well-known/oauth-protected-resource`.
 
-## The person
+## The actor
 
-`masks.web.Person` is the person for a request.
+`masks.web.Actor` is the actor for a request.
 
 | | |
 | --- | --- |
@@ -107,9 +107,9 @@ A guard that checks a token answers `401` with `Bearer` and `DPoP` challenges. E
 | `privileges` | The names of the privileges the person holds. |
 | `has_privilege(*names)` | Whether the person holds every one of them. |
 | `access_token`, `expires_at` | The access token and when it expires. |
-| `by_token` | Whether the person came from an access token in place of a session. |
+| `by_token` | Whether the actor came from an access token in place of a session. |
 | `account_url` | The person's account page at masks. |
-| `person["claim"]`, `person.get("claim")` | Any other claim. |
+| `actor["claim"]`, `actor.get("claim")` | Any other claim. |
 | `to_dict()` | What `GET /auth/session` returns. It leaves out `access_token`. |
 
 An organization has `id`, `key`, `name`, `role`, `owner`, and `has_role(*roles)`.

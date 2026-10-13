@@ -1,7 +1,7 @@
+from .actor import Actor, Organization, Privilege
 from .config import Config
 from .core import Answer, Incoming, Masks, Refusal, local_path
 from .credentials import Credentials, FileCredentials, MemoryCredentials, StaticCredentials
-from .person import Organization, Person, Privilege
 from .sessions import (
     AsyncSessionStore,
     CookieSessions,
@@ -14,6 +14,7 @@ from .sessions import (
 from .stores import AsyncRedisStore, AsyncStore, MemoryStore, RedisStore, Store
 
 __all__ = [
+    "Actor",
     "Answer",
     "AsyncRedisStore",
     "AsyncSessionStore",
@@ -28,7 +29,6 @@ __all__ = [
     "MemorySessionStore",
     "MemoryStore",
     "Organization",
-    "Person",
     "Privilege",
     "RedisStore",
     "Refusal",

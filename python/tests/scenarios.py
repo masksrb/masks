@@ -83,7 +83,7 @@ def config(fake: Fake, **changes: Any) -> Config:
         "credentials": MemoryCredentials("web", "secret"),
         "scope": ["openid", "profile", "email", "offline_access", "organization"],
         "privileges": PRIVILEGES,
-        "manages": lambda person: person.subject == "ada",
+        "manages": lambda actor: actor.subject == "ada",
         "http": fake.http(),
         **changes,
     }

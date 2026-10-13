@@ -40,9 +40,9 @@ from ..keyset import same
 from ..models import Issuer, Registration, Token
 from ..oidc import AVATARS_CLAIM, AuthorizationRequest, HeldConnection, Logout, organization_key
 from ..verifier import PROOF_ALGORITHMS, AsyncVerifier, Claims, Verifier
+from .actor import Actor, Privilege, nobody, scoped
 from .config import Config, resolve
 from .credentials import Credentials
-from .person import Person, Privilege, nobody, scoped
 from .sessions import COOKIE_PIECE, COOKIE_PIECES, Session, b64, settled, unb64
 from .stores import AsyncReplays, AsyncStore, Replays, Store, asynchronous, keyed
 
@@ -566,13 +566,13 @@ class Masks:
         if HELD in session:
             del session[HELD]
 
-    def _person(self, request: Incoming, session: Session, token: Token | None, signed_in: bool) -> Person:
+    def _actor(self, request: Incoming, session: Session, token: Token | None, signed_in: bool) -> Actor:
         if token is None:
             return nobody(self.config.known)
 
         identity = self._held(session).get("identity") or {}
 
-        return Person(
+        return Actor(
             signed_in=signed_in,
             claims=dict(identity),
             scopes=tuple(token.scopes),
@@ -583,7 +583,7 @@ class Masks:
             avatar_url=self.path("/avatar"),
         )
 
-    def person(self, request: Incoming, session: Session) -> Step[Person]:
+    def actor(self, request: Incoming, session: Session) -> Step[Actor]:
         token = self._token(request, session)
         identity = dict(self._held(session).get("identity") or {})
 
@@ -599,16 +599,16 @@ class Masks:
             return nobody(self.config.known)
 
         if token.valid():
-            return self._person(request, session, token, True)
+            return self._actor(request, session, token, True)
 
         if not token.refresh_token or not self.configured(request):
-            return self._person(request, session, token, False)
+            return self._actor(request, session, token, False)
 
         renewed = yield Renewal(request, token.refresh_token, identity)
 
         if renewed.outcome == RENEWED and renewed.token is not None:
             self._store(request, session, renewed.token, renewed.identity)
-            return self._person(request, session, renewed.token, True)
+            return self._actor(request, session, renewed.token, True)
 
         if renewed.outcome == UNREGISTERED:
             self._disconnect(request, session)
@@ -617,7 +617,7 @@ class Masks:
 
         held = self._token(request, session)
 
-        return self._person(request, session, held, False) if held else nobody(self.config.known)
+        return self._actor(request, session, held, False) if held else nobody(self.config.known)
 
     def _renewing(self, renewal: Renewal) -> Flow[Renewed]:
         request = renewal.request
@@ -941,9 +941,9 @@ class Masks:
         return Answer.redirect(local_path(pending.get("return_to")) or self.config.after_sign_in)
 
     def _stale(self, request: Incoming, session: Session) -> Step[Answer]:
-        person = yield from self.person(request, session)
+        actor = yield from self.actor(request, session)
 
-        if person.signed_in:
+        if actor.signed_in:
             return Answer.redirect(self.config.after_sign_in)
 
         restarted = session.get(RESTARTED)
@@ -1002,13 +1002,13 @@ class Masks:
         return Answer.redirect(local_path(self.config.after_sign_out) or "/")
 
     def session_answer(self, request: Incoming, session: Session) -> Step[Answer]:
-        person = nobody(self.config.known)
+        actor = nobody(self.config.known)
 
         if self.configured(request):
-            person = yield from self.person(request, session)
+            actor = yield from self.actor(request, session)
 
-        if person.signed_in:
-            return Answer.json(200, person.to_dict())
+        if actor.signed_in:
+            return Answer.json(200, actor.to_dict())
 
         self.forget(session)
 
@@ -1020,11 +1020,11 @@ class Masks:
         return Answer.json(401, {"signed_in": False, "error": "login_required", "login_url": self.login_url()})
 
     def avatar(self, request: Incoming, session: Session) -> Step[Answer]:
-        person = yield from self.person(request, session)
-        photo = person.avatars.get("photo", "")
+        actor = yield from self.actor(request, session)
+        photo = actor.avatars.get("photo", "")
         home = f"{self.issuer_url(request)}/"
 
-        if not person.signed_in or not photo.startswith(home):
+        if not actor.signed_in or not photo.startswith(home):
             return Answer(404, headers=[("Cache-Control", "no-store")])
 
         asked = request.query.get("size", "")
@@ -1080,14 +1080,14 @@ class Masks:
         if not redirect_uri:
             raise ValueError("masks: set delegation_redirect_uri to the address a provider connection comes back to")
 
-        person = yield from self.person(request, session)
+        actor = yield from self.actor(request, session)
 
-        if not person.signed_in or not person.subject:
+        if not actor.signed_in or not actor.subject:
             return self._login_required(request, session)
 
         issuer = yield from self.discover(request)
         started = self.flows(request, issuer).start_delegation(provider, redirect_uri, prompt=prompt, max_age=max_age)
-        Tracker(session, DELEGATIONS).keep(started.state, request=started.to_dict(), account=person.subject)
+        Tracker(session, DELEGATIONS).keep(started.state, request=started.to_dict(), account=actor.subject)
 
         return Answer.redirect(started.url)
 
@@ -1100,9 +1100,9 @@ class Masks:
         if pending is None or not isinstance(pending.get("request"), dict):
             raise DelegationRefused("invalid_state", "that connection was not started by this browser, or it expired")
 
-        person = yield from self.person(request, session)
+        actor = yield from self.actor(request, session)
 
-        if not person.signed_in or person.subject != pending.get("account"):
+        if not actor.signed_in or actor.subject != pending.get("account"):
             raise DelegationRefused("access_denied", "someone other than the person signed in finished that connection")
 
         try:
@@ -1115,7 +1115,7 @@ class Masks:
         except (Error, Unavailable, httpx.HTTPError) as error:
             raise delegation_failure(error, "") from error
 
-        if held.account != person.subject:
+        if held.account != actor.subject:
             raise DelegationRefused("access_denied", "masks connected that provider for another account")
 
         return held
@@ -1186,15 +1186,15 @@ class Masks:
         if not self.configured(request):
             return None
 
-        person = yield from self.person(request, session)
+        actor = yield from self.actor(request, session)
 
-        if not person.signed_in:
+        if not actor.signed_in:
             if request.wants_json:
                 return Answer.json(401, {"signed_in": False, "error": "login_required", "login_url": self.login_url()})
 
             return Answer.redirect(self.config.after_sign_out)
 
-        if not self.config.manager(person):
+        if not self.config.manager(actor):
             return self._refuse(
                 request, "forbidden", "only somebody this app lets manage its connection can change it", 403
             )
@@ -1346,29 +1346,29 @@ class Masks:
 
         return Answer.redirect(self.path("/handshake"))
 
-    def session_check(self, request: Incoming, session: Session, names: Sequence[str]) -> Step[Person | Answer]:
+    def session_check(self, request: Incoming, session: Session, names: Sequence[str]) -> Step[Actor | Answer]:
         wanted = scoped(names, self.config.known)
 
         if not self.configured(request):
             return self._handshake_required(request)
 
-        person = yield from self.person(request, session)
+        actor = yield from self.actor(request, session)
 
-        if not person.signed_in:
+        if not actor.signed_in:
             self.forget(session)
             return self._login_required(request, session)
 
         try:
             for privilege in wanted:
                 if privilege.roles or privilege.organization:
-                    person.member(*privilege.roles, organization=privilege.organization)
+                    actor.member(*privilege.roles, organization=privilege.organization)
         except Forbidden as error:
             return self._forbid(request, error)
 
-        missing = [privilege.name for privilege in wanted if not set(privilege.scopes) <= set(person.scopes)]
+        missing = [privilege.name for privilege in wanted if not set(privilege.scopes) <= set(actor.scopes)]
 
         if not missing:
-            return person
+            return actor
 
         asked = session.pop(STEPPED_UP, None)
 
@@ -1462,8 +1462,8 @@ class Masks:
             401, {"error": "invalid_token", "error_description": said}, self.challenge(request, "invalid_token", said)
         )
 
-    def _granted(self, request: Incoming, claims: Claims, wanted: Sequence[Privilege]) -> Person:
-        person = Person(
+    def _granted(self, request: Incoming, claims: Claims, wanted: Sequence[Privilege]) -> Actor:
+        actor = Actor(
             signed_in=True,
             claims=dict(claims.raw),
             scopes=tuple(claims.scopes),
@@ -1475,13 +1475,13 @@ class Masks:
 
         for privilege in wanted:
             for scope in privilege.scopes:
-                if not person.permits(scope):
+                if not actor.permits(scope):
                     raise Forbidden("insufficient_scope", f"this token does not carry {scope}", scope=scope)
 
             if privilege.roles or privilege.organization:
-                person.member(*privilege.roles, organization=privilege.organization)
+                actor.member(*privilege.roles, organization=privilege.organization)
 
-        return person
+        return actor
 
     def _audience(self, request: Incoming) -> str:
         resource = self.resource(request)
@@ -1522,7 +1522,7 @@ class Masks:
 
             return self._async_verifiers[key]
 
-    def protect(self, request: Incoming, names: Sequence[str]) -> Person | Answer:
+    def protect(self, request: Incoming, names: Sequence[str]) -> Actor | Answer:
         wanted = scoped(names, self.config.known)
 
         try:
@@ -1535,7 +1535,7 @@ class Masks:
         except (Error, httpx.HTTPError) as error:
             return self._token_refusal(request, Unavailable(str(error)))
 
-    async def aprotect(self, request: Incoming, names: Sequence[str]) -> Person | Answer:
+    async def aprotect(self, request: Incoming, names: Sequence[str]) -> Actor | Answer:
         wanted = scoped(names, self.config.known)
 
         try:
@@ -1551,7 +1551,7 @@ class Masks:
 
     def authorize(
         self, request: Incoming, session: Session, names: Sequence[str], tokens: bool = False
-    ) -> Person | Answer:
+    ) -> Actor | Answer:
         if tokens and self.by_token(request, session):
             return self.protect(request, names)
 
@@ -1559,7 +1559,7 @@ class Masks:
 
     async def aauthorize(
         self, request: Incoming, session: Session, names: Sequence[str], tokens: bool = False
-    ) -> Person | Answer:
+    ) -> Actor | Answer:
         if tokens and self.by_token(request, session):
             return await self.aprotect(request, names)
 
