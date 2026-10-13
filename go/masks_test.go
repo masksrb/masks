@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -1041,5 +1042,49 @@ func TestAChallengePointsAtTheResourceMetadata(t *testing.T) {
 
 	if _, err := ResourceMetadataURL("files"); err == nil {
 		t.Fatal("a relative resource was accepted")
+	}
+}
+
+func TestACredentialIsNeverFollowedToAnotherAddress(t *testing.T) {
+	var reached atomic.Int32
+
+	elsewhere := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		reached.Add(1)
+		w.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(elsewhere.Close)
+
+	var issuer *httptest.Server
+	issuer = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/.well-known/openid-configuration" {
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(`{"issuer":"` + issuer.URL + `","token_endpoint":"` + issuer.URL + `/token","revocation_endpoint":"` + issuer.URL + `/revoke"}`))
+
+			return
+		}
+
+		http.Redirect(w, r, elsewhere.URL+r.URL.Path, http.StatusTemporaryRedirect)
+	}))
+	t.Cleanup(issuer.Close)
+
+	found, err := Discover(context.Background(), issuer.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, method := range []AuthMethod{ClientSecretPost, ClientSecretBasic} {
+		client := &Client{Issuer: found, ID: "app", Secret: "secret", Method: method}
+
+		if _, err := client.Refresh(context.Background(), "refresh-token", TokenRequest{}); err == nil {
+			t.Fatalf("a redirected token request succeeded with %s", method)
+		}
+
+		if err := client.Revoke(context.Background(), "refresh-token", GrantRefreshToken); err == nil {
+			t.Fatalf("a redirected revocation succeeded with %s", method)
+		}
+	}
+
+	if reached.Load() != 0 {
+		t.Fatalf("a client secret or refresh token was sent on to another address %d times", reached.Load())
 	}
 }

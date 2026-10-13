@@ -346,7 +346,14 @@ func (s settings) send(ctx context.Context, method, target, bearer string, body 
 func (s settings) do(request *http.Request) (*http.Response, error) {
 	request.Header.Set("Accept", "application/json")
 
-	return s.client.Do(request)
+	if request.Method == http.MethodGet && request.Header.Get("Authorization") == "" {
+		return s.client.Do(request)
+	}
+
+	held := *s.client
+	held.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+
+	return held.Do(request)
 }
 
 func decoded(response *http.Response, into any) error {
