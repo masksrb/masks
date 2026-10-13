@@ -506,6 +506,59 @@ class SessionTest < EngineIntegrationTest
     assert_response :unauthorized
   end
 
+  test "a link on another site cannot sign anybody out" do
+    sign_in!
+    revoked = issuer.revocations.size
+
+    get "/auth/logout?everywhere=1", headers: host.merge("HTTP_SEC_FETCH_SITE" => "cross-site")
+
+    assert_response :forbidden
+    assert_includes response.body, "that request came from another site"
+    refute_empty session_payload
+    assert_equal revoked, issuer.revocations.size
+  end
+
+  test "a form on a sibling site cannot sign anybody out" do
+    sign_in!
+
+    post "/auth/logout", headers: host.merge("HTTP_SEC_FETCH_SITE" => "same-site")
+
+    assert_response :forbidden
+    refute_empty session_payload
+  end
+
+  test "a sign-out whose Origin names another site is refused, whatever its method" do
+    sign_in!
+
+    [ "https://elsewhere.test", "null" ].each do |sent|
+      delete "/auth/logout", headers: host.merge("HTTP_ORIGIN" => sent, "HTTP_ACCEPT" => "application/json")
+
+      assert_response :forbidden
+      assert_equal "invalid_request", json["error"]
+    end
+
+    refute_empty session_payload
+  end
+
+  test "a sign-out from this app's own pages goes ahead" do
+    sign_in!
+
+    delete "/auth/logout", headers: host.merge("HTTP_ORIGIN" => origin, "HTTP_SEC_FETCH_SITE" => "same-origin",
+                                               "HTTP_ACCEPT" => "application/json")
+
+    assert_response :success
+    assert_empty session_payload
+  end
+
+  test "a sign-out typed into the address bar goes ahead" do
+    sign_in!
+
+    get "/auth/logout", headers: host.merge("HTTP_SEC_FETCH_SITE" => "none")
+
+    assert_redirected_to "/"
+    assert_empty session_payload
+  end
+
   test "signing out drops the local session and leaves the issuer's" do
     sign_in!
 

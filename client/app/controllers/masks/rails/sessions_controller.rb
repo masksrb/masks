@@ -3,6 +3,9 @@ module Masks
     class SessionsController < BaseController
       RESTARTED = "masks_restarted_at".freeze
       RESTART_WITHIN = 60
+      SAME_ORIGIN = %w[same-origin none].freeze
+
+      before_action :refuse_cross_site, only: :destroy
 
       def show
         if masks_configured? && (masks_signed_in? || (masks_tokens && masks_refresh!))
@@ -95,6 +98,26 @@ module Masks
       end
 
       private
+
+        def refuse_cross_site
+          return if same_origin?
+
+          answer("invalid_request", "that request came from another site", :forbidden, failed: "sign-out")
+        end
+
+        def same_origin?
+          site = request.headers["Sec-Fetch-Site"].to_s
+
+          return false unless site.empty? || SAME_ORIGIN.include?(site)
+
+          sent = request.headers["Origin"].to_s
+
+          sent.empty? || [ request.base_url, own_origin ].include?(sent)
+        end
+
+        def own_origin
+          URI.join(masks_config.redirect_uri_for(request), "/").to_s.chomp("/")
+        end
 
         def renew_session
           carried = session.to_hash.slice(REQUESTS, HANDSHAKES, Masks::Rails::Authentication::STEPPED_UP)

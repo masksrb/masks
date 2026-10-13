@@ -141,6 +141,9 @@ masks to end its session there. masks sends the browser back to `/auth/logout/re
 app sends it on to `after_sign_out`. A request for JSON gets the masks address as `logout_url`. The
 app accepts that return once, within an hour, in the browser that signed out.
 
+A sign-out request of any method is refused with `403` when its `Sec-Fetch-Site` or `Origin` header
+names another site. So a page on another site cannot sign anybody out.
+
 [Masks::Rails](/reference/ruby/rails/) lists every method and setting.
 
 ### Back-channel logout
