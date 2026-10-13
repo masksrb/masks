@@ -37,8 +37,27 @@ export interface RefreshStore {
   claim(key: string, expiresIn: number): boolean | Promise<boolean>;
 }
 
+const SWEEP_EVERY = 60_000;
+
+function sweeper(held: Map<string, { until: number }>): () => void {
+  let swept = Date.now();
+
+  return () => {
+    const now = Date.now();
+
+    if (now - swept < SWEEP_EVERY) return;
+
+    swept = now;
+
+    for (const [key, found] of held) {
+      if (found.until < now) held.delete(key);
+    }
+  };
+}
+
 export function memoryRefreshes(): RefreshStore {
   const held = new Map<string, { value: string; until: number }>();
+  const sweep = sweeper(held);
   const live = (key: string) => {
     const found = held.get(key);
 
@@ -50,9 +69,12 @@ export function memoryRefreshes(): RefreshStore {
   return {
     get: (key) => live(key)?.value,
     set(key, value, expiresIn) {
+      sweep();
       held.set(key, { value, until: Date.now() + expiresIn * 1000 });
     },
     claim(key, expiresIn) {
+      sweep();
+
       if (live(key)) return false;
 
       held.set(key, { value: "", until: Date.now() + expiresIn * 1000 });
@@ -64,6 +86,7 @@ export function memoryRefreshes(): RefreshStore {
 
 export function memoryStore(): SessionStore {
   const held = new Map<string, { data: unknown; until: number }>();
+  const sweep = sweeper(held);
 
   return {
     get(id) {
@@ -78,6 +101,7 @@ export function memoryStore(): SessionStore {
       return structuredClone(found.data);
     },
     set(id, data, maxAge) {
+      sweep();
       held.set(id, {
         data: structuredClone(data),
         until: Date.now() + maxAge * 1000,
@@ -91,14 +115,13 @@ export function memoryStore(): SessionStore {
 
 export function memoryLogouts(): LogoutStore {
   const held = new Map<string, { at: number; until: number }>();
+  const sweep = sweeper(held);
 
   return {
     record(key, at, expiresIn) {
       const now = Date.now();
 
-      for (const [name, found] of held) {
-        if (found.until < now) held.delete(name);
-      }
+      sweep();
 
       const before = held.get(key)?.at ?? 0;
       held.set(key, {

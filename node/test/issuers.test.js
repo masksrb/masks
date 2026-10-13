@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import { after, mock, test } from "node:test";
 import { IssuerCache } from "../dist/app/issuers.js";
-import { Issuer, UnavailableError } from "../dist/index.js";
+import {
+  Issuer,
+  memoryRefreshes,
+  memoryStore,
+  UnavailableError,
+} from "../dist/index.js";
 import { Fake } from "./fake.js";
 
 const closers = [];
@@ -123,6 +128,29 @@ test("while masks is down, a known key keeps checking tokens and the keys are no
 
     mock.timers.tick(60 * 60 * 1000);
     await assert.rejects(issuer.key(kid));
+  } finally {
+    mock.timers.reset();
+  }
+});
+
+test("the in-memory stores forget expired entries", async () => {
+  mock.timers.enable({ apis: ["Date"], now: 0 });
+
+  try {
+    const sessions = memoryStore();
+    const refreshes = memoryRefreshes();
+
+    await sessions.set("abandoned", { a: 1 }, 1);
+    await refreshes.set("abandoned", "x", 1);
+
+    mock.timers.tick(61_000);
+    await sessions.set("fresh", { b: 2 }, 60);
+    await refreshes.set("fresh", "y", 60);
+
+    assert.equal(await sessions.get("abandoned"), undefined);
+    assert.deepEqual(await sessions.get("fresh"), { b: 2 });
+    assert.equal(await refreshes.get("abandoned"), undefined);
+    assert.equal(await refreshes.get("fresh"), "y");
   } finally {
     mock.timers.reset();
   }
