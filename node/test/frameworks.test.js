@@ -324,3 +324,25 @@ test("a guarded Express or Hono request refreshes an expired session once and se
     );
   }
 });
+
+test("Express streams the avatar, and cuts off one larger than the app accepts", async () => {
+  const held = await setup({ masks: { avatars: { bytes: 16 } } }, closers);
+  const app = express();
+
+  app.use(masksExpress(held.masks));
+
+  const browser = new Browser(viaHTTP(await serve(app)), APP);
+
+  await signIn({ ...held, browser });
+
+  const photo = await browser.fetch("/auth/avatar");
+  assert.equal(photo.status, 200);
+  assert.equal(await photo.text(), "png-bytes");
+
+  held.fake.avatarBody = Buffer.alloc(4096);
+  await assert.rejects(async () => {
+    const large = await browser.fetch("/auth/avatar");
+
+    await large.arrayBuffer();
+  });
+});

@@ -4,7 +4,7 @@
 
 - `guard()` builds two Visits. Let `check()` take the Visit `guard()` already has.
 - `Outcome` is a finished `Response`, so the Next adapter forces `accept: text/html` and reads `Location`. Give a refusal a kind (`login`, `step_up`, `forbidden`, `handshake`), a URL, and `toResponse(request)`.
-- The avatar proxy sends a hand-built `authorization` header. Use `signedFetch`, so a DPoP-bound token sends a proof. Express buffers whole answers, so stream them with `Readable.fromWeb` and `stream.pipeline`. Replace `avatars: { bytes }` with `avatarBytes`.
+- The avatar proxy sends a hand-built `authorization` header. Use `signedFetch`, so a DPoP-bound token sends a proof, once the app layer can hold DPoP-bound tokens. Replace `avatars: { bytes }` with `avatarBytes`.
 - The app layer writes its own 403 challenge. Use `Verifier.challengeHeaders` and `refusal`, which now build both challenges for 401 and 403.
 - `#client` builds a `Client` by hand. Use `clientFor(issuer, held)`, and make `Credentials` fit `Registration` so `registrationOf` can go.
 - Move `headersWith`, `text`, `json`, and `redirect` into `app/responses.ts` and use them in avatar.ts and next.ts.

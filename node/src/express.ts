@@ -1,3 +1,6 @@
+import { Readable } from "node:stream";
+import { pipeline } from "node:stream/promises";
+import type { ReadableStream as NodeReadableStream } from "node:stream/web";
 import type {
   Request as ExpressRequest,
   Response as ExpressResponse,
@@ -169,10 +172,13 @@ export async function send(
   }
 
   try {
-    response.end(Buffer.from(await answer.arrayBuffer()));
+    await pipeline(
+      Readable.fromWeb(answer.body as NodeReadableStream<Uint8Array>),
+      response,
+    );
   } catch {
     if (!response.headersSent) response.status(502);
-    response.end();
+    response.destroy();
   }
 }
 
