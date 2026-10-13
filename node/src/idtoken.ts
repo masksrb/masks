@@ -29,6 +29,7 @@ export interface LogoutToken {
   iss: string;
   aud: string | string[];
   iat: number;
+  exp: number;
   jti: string;
   sub?: string;
   sid?: string;
@@ -66,7 +67,7 @@ export async function verifyLogoutToken(
   const claims = (await verifyIssued(issuer, token, {
     audience: clientId,
     types: ["logout+jwt"],
-    required: ["iss", "aud", "iat", "jti", "events"],
+    required: ["iss", "aud", "iat", "exp", "jti", "events"],
   })) as LogoutToken;
 
   if ("nonce" in claims) {

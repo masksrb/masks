@@ -3,6 +3,7 @@ import type { LogoutToken } from "../idtoken.js";
 import { keyed, type Store } from "./stores.js";
 
 const LOGOUT_MEMORY = 600;
+const LOGOUT_LEEWAY = 120;
 
 export async function acceptLogout(
   store: Store,
@@ -13,7 +14,7 @@ export async function acceptLogout(
   const once = await keyed("logout", issuer, String(logout.jti ?? ""));
   const memory = Math.max(
     LOGOUT_MEMORY,
-    (Number(logout.exp) || 0) - Math.floor(Date.now() / 1000) + 60,
+    logout.exp - Math.floor(Date.now() / 1000) + LOGOUT_LEEWAY,
   );
 
   try {

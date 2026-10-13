@@ -151,7 +151,7 @@ browser, which works once, so a link to it from anywhere else is refused. A sign
 When masks ends a session itself, it sends a logout token to `/auth/logout/backchannel`. The app
 signs out the session it names, or every session of the person it names, at their next request. It
 remembers the logout in `store`, which is in memory by default, so an app that runs as several
-processes sets `store` to one they share. Each logout token is accepted once. When the store cannot
+processes sets `store` to one they share. Each logout token is accepted once, and only before its `exp`. A token with no `exp` is refused. When the store cannot
 be reached, the app answers `503` and accepts the same token when masks sends it again. `onLogout`
 hears each logout as well.
 

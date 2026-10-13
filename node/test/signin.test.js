@@ -205,6 +205,16 @@ test("a logout token is checked before it ends anything", async () => {
     "no subject or session": await fake.logoutToken({ aud: "app" }),
     "another audience": await fake.logoutToken({ aud: "other", sub: "ada" }),
     "no event": await fake.logoutToken({ aud: "app", sub: "ada", events: {} }),
+    "no expiry": await fake.logoutToken({
+      aud: "app",
+      sub: "ada",
+      exp: undefined,
+    }),
+    "an expiry passed": await fake.logoutToken({
+      aud: "app",
+      sub: "ada",
+      exp: Math.floor(Date.now() / 1000) - 600,
+    }),
   };
 
   for (const [name, token] of Object.entries(cases)) {
