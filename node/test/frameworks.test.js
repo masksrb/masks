@@ -320,7 +320,7 @@ test("a guarded Express or Hono request refreshes an expired session once and se
 });
 
 test("Express streams the avatar, and cuts off one larger than the app accepts", async () => {
-  const held = await setup({ masks: { avatars: { bytes: 16 } } }, closers);
+  const held = await setup({ masks: { avatarBytes: 16 } }, closers);
   const app = express();
 
   app.use(masksExpress({ masks: held.masks }));

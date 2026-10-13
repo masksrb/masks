@@ -6,7 +6,6 @@ import { Handshake } from "../handshake.js";
 import type { IdTokenClaims, LogoutToken } from "../idtoken.js";
 import { RESOURCE_PATH } from "../issuer.js";
 import { Verifier } from "../verifier.js";
-import type { AvatarsLimit } from "./avatar.js";
 import { type CredentialStore, defaultCredentials } from "./credentials.js";
 import { IssuerCache } from "./issuers.js";
 import { Masked } from "./masked.js";
@@ -61,7 +60,7 @@ export interface MasksOptions {
     | ((request: Request, masked: Masked) => boolean | Promise<boolean>);
   delegations?: string;
   onLogout?: (logout: LogoutToken, request: Request) => void | Promise<void>;
-  avatars?: AvatarsLimit;
+  avatarBytes?: number;
   fetch?: typeof fetch;
   allowPlainHTTP?: boolean;
 }

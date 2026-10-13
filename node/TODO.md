@@ -3,7 +3,7 @@
 ## The app layer
 
 
-- The avatar proxy sends a hand-built `authorization` header. Use `signedFetch`, so a DPoP-bound token sends a proof, once the app layer can hold DPoP-bound tokens. Replace `avatars: { bytes }` with `avatarBytes`.
+- The app layer cannot hold a DPoP-bound token. The avatar route sends its token through `signedFetch`, so it needs only the key once a session can hold one.
 
 ## Auth.js
 

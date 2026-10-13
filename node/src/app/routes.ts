@@ -273,10 +273,10 @@ async function avatar(core: Core, visit: Visit): Promise<Response> {
     {
       photo,
       issuer: visit.issuerURL,
-      authorization: `${data.tokens.token_type} ${data.tokens.access_token}`,
+      token: data.tokens,
       size: visit.url.searchParams.get("size"),
-      fetch: core.options.fetch ?? globalThis.fetch,
-      limit: core.options.avatars,
+      fetch: core.options.fetch,
+      bytes: core.options.avatarBytes,
     },
     visit.out,
   );

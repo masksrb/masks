@@ -1,19 +1,16 @@
+import { signedFetch } from "../client.js";
 import { withCookies } from "./responses.js";
 
 const SIZES = [32, 64, 128, 256, 512];
 const MOST = 5 * 1024 * 1024;
 
-export interface AvatarsLimit {
-  bytes?: number;
-}
-
 export interface AvatarRequest {
   photo: string;
   issuer: string;
-  authorization: string;
+  token: { access_token: string; token_type: string };
   size: string | null;
-  fetch: typeof fetch;
-  limit?: AvatarsLimit;
+  fetch?: typeof fetch;
+  bytes?: number;
 }
 
 export async function avatarResponse(
@@ -37,10 +34,11 @@ export async function avatarResponse(
   let answer: Response;
 
   try {
-    answer = await asked.fetch(target, {
-      headers: { authorization: asked.authorization, accept: "image/*" },
-      redirect: "manual",
-    });
+    answer = await signedFetch({
+      source: { token: async () => asked.token },
+      origins: [asked.issuer],
+      fetch: asked.fetch,
+    })(target, { headers: { accept: "image/*" } });
   } catch {
     return plain(502, cookies);
   }
@@ -84,7 +82,7 @@ export async function avatarResponse(
     return missing(cookies);
   }
 
-  const most = asked.limit?.bytes ?? MOST;
+  const most = asked.bytes ?? MOST;
 
   if (Number(answer.headers.get("content-length") ?? "0") > most) {
     await answer.body.cancel();

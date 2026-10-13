@@ -45,7 +45,7 @@ The [JavaScript apps guide](/reference/javascript/) shows how to set each of the
 | `credentials` | `masks.json` | A `CredentialStore` for the client ID and secret the handshake returns. With `MASKS_CLIENT_ID` set, the app reads `MASKS_CLIENT_ID` and `MASKS_CLIENT_SECRET` and writes nothing. |
 | `onLogout` | | Called with each back-channel logout token. |
 | `delegations` | | The path a provider connection comes back to. Setting it adds `masks:delegate:` to the handshake. |
-| `avatars` | 5 MB | `{ bytes }`, the largest photo the avatar route passes on. |
+| `avatarBytes` | 5 MB | The largest photo the avatar route passes on, in bytes. |
 | `fetch` | `globalThis.fetch` | The `fetch` used for avatars. |
 | `allowPlainHTTP` | `false` | Whether an `http` issuer is accepted on a host other than `localhost`, a `.localhost` name, or a loopback address. |
 

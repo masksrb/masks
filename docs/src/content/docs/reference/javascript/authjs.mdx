@@ -142,7 +142,7 @@ reached, the session keeps its current token and the refresh runs again on a lat
 | `id` | `masks` | The provider id, as in `signIn("masks")`. |
 | `label` | `masks` | The provider's name on the Auth.js sign-in page. |
 | `credentials` | `AUTH_MASKS_ID` and `AUTH_MASKS_SECRET` when set, then `MASKS_CLIENT_ID` and `MASKS_CLIENT_SECRET`, then `masks.json` | A `CredentialStore` for the client the handshake registers. |
-| `name`, `scope`, `namespace`, `organization`, `privileges`, `manages`, `delegations`, `avatars`, `signOutOfIssuer`, `onLogout`, `allowPlainHTTP` | | As in [options](/reference/javascript/server/#options). |
+| `name`, `scope`, `namespace`, `organization`, `privileges`, `manages`, `delegations`, `avatarBytes`, `signOutOfIssuer`, `onLogout`, `allowPlainHTTP` | | As in [options](/reference/javascript/server/#options). |
 | `store` | memory | A [`Store`](/reference/javascript/server/#stores) shared by every server, so each sign-in is refreshed once between them, every server ends a session masks logged out, and each logout token works once. |
 
 It returns what `NextAuth` returns, and:

@@ -786,7 +786,7 @@ test("the avatar comes through this app with the person's token", async () => {
     resource: APP,
     secret: SECRET,
     credentials: held.credentials,
-    avatars: { bytes: 16 },
+    avatarBytes: 16,
   });
   const capped = await small.handle(held.browser.request("/auth/avatar"));
   await assert.rejects(capped.arrayBuffer());

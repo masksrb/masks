@@ -1,6 +1,6 @@
 import { decodeJwt } from "jose";
 import type { NextAuthConfig, NextAuthResult, Session } from "next-auth";
-import { type AvatarsLimit, avatarResponse } from "./app/avatar.js";
+import { avatarResponse } from "./app/avatar.js";
 import { parseCookies, replaceCookies, serialize } from "./app/cookies.js";
 import { DEFAULT_SCOPE } from "./app/core.js";
 import { type CredentialStore, defaultCredentials } from "./app/credentials.js";
@@ -74,7 +74,7 @@ export interface MasksAuthOptions extends Omit<NextAuthConfig, "providers"> {
   store?: Store;
   signOutOfIssuer?: boolean;
   delegations?: string;
-  avatars?: AvatarsLimit;
+  avatarBytes?: number;
   onLogout?: (logout: LogoutToken, request: Request) => void | Promise<void>;
   allowPlainHTTP?: boolean;
 }
@@ -129,7 +129,7 @@ const MASKS_OPTIONS = new Set([
   "store",
   "signOutOfIssuer",
   "delegations",
-  "avatars",
+  "avatarBytes",
   "onLogout",
   "allowPlainHTTP",
 ]);
@@ -1014,10 +1014,9 @@ export class MasksAuth {
       {
         photo,
         issuer: held.iss,
-        authorization: `${held.token_type} ${held.access_token}`,
+        token: held,
         size: new URL(request.url).searchParams.get("size"),
-        fetch: globalThis.fetch,
-        limit: this.#options.avatars,
+        bytes: this.#options.avatarBytes,
       },
       [],
     );
