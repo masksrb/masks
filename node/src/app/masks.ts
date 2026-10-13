@@ -33,6 +33,7 @@ import {
   memoryLogouts,
   processEnv,
   type SessionStore,
+  shared,
 } from "./stores.js";
 
 type PerRequest<T> = T | ((request: Request) => T | Promise<T>);
@@ -187,7 +188,10 @@ export class Masks {
     string,
     { at: number; issuer: Promise<Issuer> }
   >();
-  readonly #refreshing = new Map<string, Promise<SessionData | undefined>>();
+  readonly #refreshing = shared(
+    "app refreshing",
+    () => new Map<string, Promise<SessionData | undefined>>(),
+  );
   readonly #verifiers = new Map<string, Verifier>();
   #sealer?: Sealer;
 
@@ -200,8 +204,10 @@ export class Masks {
     this.#credentials =
       options.credentials ??
       (processEnv().MASKS_CLIENT_ID ? envCredentials() : fileCredentials());
-    this.#logouts = options.logouts ?? memoryLogouts();
-    this.#replay = options.replay ?? new MemoryReplayStore();
+    this.#logouts =
+      options.logouts ?? shared("app logouts", () => memoryLogouts());
+    this.#replay =
+      options.replay ?? shared("app replay", () => new MemoryReplayStore());
 
     if (options.secret !== undefined) this.#sealer = new Sealer(options.secret);
   }
@@ -1683,7 +1689,7 @@ function held(token: Token): HeldTokens {
   };
 }
 
-function pick(claims: Record<string, unknown>): Record<string, unknown> {
+export function pick(claims: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(
     IDENTITY.filter(
       (name) => claims[name] !== undefined && claims[name] !== null,
@@ -1822,13 +1828,13 @@ function unsafe(value: string, highest: number): boolean {
   return false;
 }
 
-function isNetwork(error: unknown): boolean {
+export function isNetwork(error: unknown): boolean {
   return (
     error instanceof TypeError && /fetch|network|connect/i.test(error.message)
   );
 }
 
-function registrationOf(held: Credentials): Registration {
+export function registrationOf(held: Credentials): Registration {
   return {
     client_id: held.client_id,
     client_secret: held.client_secret,
@@ -1875,7 +1881,11 @@ export function json(
   });
 }
 
-function text(status: number, body: string, cookies: string[]): Response {
+export function text(
+  status: number,
+  body: string,
+  cookies: string[],
+): Response {
   return new Response(body, {
     status,
     headers: headersWith(cookies, {
@@ -1908,11 +1918,11 @@ function forbid(visit: Visit, error: ForbiddenError): Response {
   return answer(visit, 403, error.code, error.description);
 }
 
-function escapeHTML(value: string): string {
+export function escapeHTML(value: string): string {
   return value.replace(/[&<>"']/g, (found) => `&#${found.charCodeAt(0)};`);
 }
 
-function page(title: string, body: string, cookies: string[]): Response {
+export function page(title: string, body: string, cookies: string[]): Response {
   return new Response(
     `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeHTML(title)}</title><style>body{font-family:system-ui,sans-serif;max-width:36rem;margin:4rem auto;padding:0 1rem;line-height:1.5}form{display:inline-block;margin-right:.5rem}</style></head><body><h1>${escapeHTML(title)}</h1>${body}</body></html>`,
     {

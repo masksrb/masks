@@ -106,21 +106,38 @@ export function envCredentials(
 }
 
 export function fileCredentials(path = "masks.json"): CredentialStore {
-  let cached: Credentials | null | undefined;
+  let cached: { at: number; held: Credentials | undefined } | undefined;
 
   const fs = async () => import("node:fs/promises");
 
+  const changedAt = async (): Promise<number> => {
+    try {
+      return (await (await fs()).stat(path)).mtimeMs;
+    } catch (error) {
+      if ((error as { code?: string })?.code === "ENOENT") return 0;
+      throw error;
+    }
+  };
+
   return {
     async read() {
-      if (cached !== undefined) return cached ?? undefined;
+      const at = await changedAt();
+
+      if (cached && cached.at === at) return cached.held;
+      if (at === 0) {
+        cached = { at, held: undefined };
+        return undefined;
+      }
+
+      let held: Credentials | undefined;
 
       try {
         const parsed = JSON.parse(await (await fs()).readFile(path, "utf8"));
 
-        cached =
+        held =
           parsed && typeof parsed.client_id === "string" && parsed.client_id
             ? (parsed as Credentials)
-            : null;
+            : undefined;
       } catch (error) {
         if (
           (error as { code?: string })?.code !== "ENOENT" &&
@@ -128,11 +145,11 @@ export function fileCredentials(path = "masks.json"): CredentialStore {
         ) {
           throw error;
         }
-
-        cached = null;
       }
 
-      return cached ?? undefined;
+      cached = { at, held };
+
+      return held;
     },
     async write(_request, credentials) {
       const files = await fs();
@@ -145,13 +162,22 @@ export function fileCredentials(path = "masks.json"): CredentialStore {
       await files.rename(temporary, path);
       await files.chmod(path, 0o600);
 
-      cached = held;
+      cached = { at: await changedAt(), held };
     },
     async clear() {
       await (await fs()).rm(path, { force: true });
-      cached = null;
+      cached = { at: 0, held: undefined };
     },
   };
+}
+
+export function shared<T>(name: string, create: () => T): T {
+  const key = Symbol.for(`@masks/server ${name}`);
+  const held = globalThis as unknown as Record<symbol, T | undefined>;
+
+  held[key] ??= create();
+
+  return held[key];
 }
 
 export function processEnv(): Record<string, string | undefined> {
