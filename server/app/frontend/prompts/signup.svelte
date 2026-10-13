@@ -19,7 +19,7 @@ const held = untrack(() => login.auth.signup ?? {});
 let token = $state("");
 let nickname = $state(held.nickname ?? "");
 let email = $state(held.email ?? "");
-let person = $state(held.name ?? "");
+let name = $state(held.name ?? "");
 let phone = $state(held.phone ?? "");
 let proving = $state(false);
 
@@ -56,7 +56,7 @@ async function onsubmit(event) {
   if (valid && !login.loading && !proving) {
     const work = await proof();
 
-    login.submit("signup", { token, nickname, email, name: person, phone, ...work });
+    login.submit("signup", { token, nickname, email, name, phone, ...work });
   }
 }
 </script>
@@ -75,10 +75,10 @@ async function onsubmit(event) {
         </label>
       {/if}
 
-      <label class="ledger-row ledger-step" class:ledger-step-done={filled(person)}>
+      <label class="ledger-row ledger-step" class:ledger-step-done={filled(name)}>
         <span class="ledger-label">{login.t("name")}</span>
         <!-- svelte-ignore a11y_autofocus -->
-        <input type="text" name="name" class="control" autocomplete="name" autofocus={!signup.token} bind:value={person} />
+        <input type="text" name="name" class="control" autocomplete="name" autofocus={!signup.token} bind:value={name} />
       </label>
 
       {#if asks.nickname !== "off"}

@@ -66,7 +66,7 @@ es:
         invite: "Invitar"
         cancel: "Cancelar"
         hint: "Se une cuando acepta, desde la dirección a la que invitas. Quien aún no es un actor recibe una invitación para registrarse."
-        person: "Actor"
+        actor: "Actor"
         empty:
           invited: "No hay invitaciones abiertas."
           owners: "Nadie es propietario de esta organización. Haz propietario a un miembro para que alguien pueda gestionarla."

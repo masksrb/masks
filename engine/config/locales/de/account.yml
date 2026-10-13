@@ -155,7 +155,7 @@ de:
         lede_owner: "Als Eigentümer entscheiden Sie, wer dazugehört und welche Rolle jede Person hat. Apps, die Ihre Organisation anfordern, sehen die Rolle."
         lede_member: "Apps, die Ihre Organisation anfordern, sehen, dass Sie dazugehören, und Ihre Rolle."
         members: "Mitglieder"
-        people:
+        member_count:
           one: "1 Mitglied"
           other: "%{count} Mitglieder"
         owners:
@@ -182,7 +182,7 @@ de:
         decline: "Ablehnen"
         confirm_decline: "Die Einladung zu %{organization} ablehnen? Ein Eigentümer muss Sie erneut einladen."
         set_role: "Rolle festlegen"
-        role_of: "Rolle von %{person}"
+        role_of: "Rolle von %{name}"
         remove: "Entfernen"
         withdraw: "Zurückziehen"
         resend: "Erneut senden"

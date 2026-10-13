@@ -66,7 +66,7 @@ de:
         invite: "Einladen"
         cancel: "Abbrechen"
         hint: "Die Eingeladenen treten bei, sobald sie von der eingeladenen Adresse aus annehmen. Wer noch kein Akteur ist, erhält eine Einladung zur Registrierung."
-        person: "Akteur"
+        actor: "Akteur"
         empty:
           invited: "Es gibt keine offenen Einladungen."
           owners: "Diese Organisation hat keinen Eigentümer. Machen Sie ein Mitglied zum Eigentümer, damit jemand sie verwalten kann."

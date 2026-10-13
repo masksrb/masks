@@ -155,7 +155,7 @@ en:
         lede_owner: "As an owner, you decide who belongs here and what role each person holds. Apps that ask for your organization see the role."
         lede_member: "Apps that ask for your organization see that you belong here, and your role."
         members: "Members"
-        people:
+        member_count:
           one: "1 member"
           other: "%{count} members"
         owners:
@@ -182,7 +182,7 @@ en:
         decline: "Decline"
         confirm_decline: "Decline the invitation to %{organization}? An owner has to invite you again."
         set_role: "Set role"
-        role_of: "Role of %{person}"
+        role_of: "Role of %{name}"
         remove: "Remove"
         withdraw: "Withdraw"
         resend: "Send again"

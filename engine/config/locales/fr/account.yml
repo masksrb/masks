@@ -155,7 +155,7 @@ fr:
         lede_owner: "En tant que propriétaire, vous décidez qui fait partie de l’organisation et quel rôle chaque personne occupe. Les applications qui demandent votre organisation voient ce rôle."
         lede_member: "Les applications qui demandent votre organisation voient que vous en faites partie, ainsi que votre rôle."
         members: "Membres"
-        people:
+        member_count:
           one: "1 membre"
           other: "%{count} membres"
         owners:
@@ -182,7 +182,7 @@ fr:
         decline: "Refuser"
         confirm_decline: "Refuser l’invitation à %{organization} ? Un propriétaire devra vous inviter à nouveau."
         set_role: "Définir le rôle"
-        role_of: "Rôle de %{person}"
+        role_of: "Rôle de %{name}"
         remove: "Retirer"
         withdraw: "Annuler"
         resend: "Renvoyer"

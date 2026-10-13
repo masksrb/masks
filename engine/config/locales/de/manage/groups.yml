@@ -6,7 +6,7 @@ de:
       added: "%{name} ist bereit. Fügen Sie Akteure auf deren eigenen Seiten hinzu."
       delete_confirm: "%{name} löschen? Clients, die darauf beschränkt sind, lehnen ihre Akteure ab."
       deleted: "%{name} ist gelöscht."
-      people:
+      actors:
         one: "%{count} Akteur"
         other: "%{count} Akteure"
       delete: "%{name} löschen"

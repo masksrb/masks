@@ -155,7 +155,7 @@ es:
         lede_owner: "Como propietario, decides quién pertenece aquí y qué rol tiene cada persona. Las aplicaciones que piden tu organización ven el rol."
         lede_member: "Las aplicaciones que piden tu organización ven que perteneces a ella y tu rol."
         members: "Miembros"
-        people:
+        member_count:
           one: "1 miembro"
           other: "%{count} miembros"
         owners:
@@ -182,7 +182,7 @@ es:
         decline: "Rechazar"
         confirm_decline: "¿Rechazar la invitación a %{organization}? Un propietario tendrá que volver a invitarte."
         set_role: "Establecer rol"
-        role_of: "Rol de %{person}"
+        role_of: "Rol de %{name}"
         remove: "Eliminar"
         withdraw: "Retirar"
         resend: "Volver a enviar"

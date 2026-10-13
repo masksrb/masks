@@ -648,7 +648,7 @@
 
           <Table
             columns={[
-              t("organization.members.person"),
+              t("organization.members.actor"),
               { label: t("organization.members.role"), hide: true },
               { label: "", right: true, hide: true },
             ]}

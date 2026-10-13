@@ -6,7 +6,7 @@ es:
       added: "%{name} está listo. Añade actores desde sus propias páginas."
       delete_confirm: "¿Eliminar %{name}? Los clientes limitados a él rechazan a sus actores."
       deleted: "%{name} se eliminó."
-      people:
+      actors:
         one: "%{count} actor"
         other: "%{count} actores"
       delete: "Eliminar %{name}"

@@ -72,7 +72,7 @@
 
           <% if own.owner? %>
             <p class="item-meta">
-              <%= account_text("organizations.people", count: joined) %>
+              <%= account_text("organizations.member_count", count: joined) %>
               · <%= account_text("organizations.owners", count: owners) %>
               <% if waiting.positive? %>
                 · <%= account_text("organizations.waiting_count", count: waiting) %>
@@ -81,8 +81,8 @@
 
             <div class="items">
               <% members.each do |member| %>
-                <% person = member.actor %>
-                <% yourself = person.id == own.actor_id %>
+                <% actor = member.actor %>
+                <% yourself = actor.id == own.actor_id %>
                 <% label = Masks::Server::Members.label(member) || account_text("organizations.invited_by_manager") %>
                 <div class="item item-member">
                   <span class="item-name">
@@ -111,7 +111,7 @@
                                       class: "control control-sm", id: "role-#{organization.key}-#{member.id}",
                                       disabled: yourself && alone,
                                       data: { autosubmit: true },
-                                      aria: { label: account_text("organizations.role_of", person: label) } %>
+                                      aria: { label: account_text("organizations.role_of", name: label) } %>
                       <button type="submit" class="action action-quiet action-sm" data-autosubmitted <%= "disabled" if yourself && alone %>>
                         <%= account_text("organizations.set_role") %>
                       </button>

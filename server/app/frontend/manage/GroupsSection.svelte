@@ -67,7 +67,7 @@
         <li>
           <span class="min-w-0 truncate text-sm font-medium">{group.name}</span>
           <code class="hint font-mono">{group.key}</code>
-          <span class="hint">{t("groups.people", { count: group.memberCount })}</span>
+          <span class="hint">{t("groups.actors", { count: group.memberCount })}</span>
           <button
             type="button"
             class="btn btn-ghost btn-xs ml-auto"

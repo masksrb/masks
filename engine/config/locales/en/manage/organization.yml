@@ -66,7 +66,7 @@ en:
         invite: "Invite"
         cancel: "Cancel"
         hint: "They join once they accept, from the address you invite. Somebody who is not an actor yet gets an invitation to sign up."
-        person: "Actor"
+        actor: "Actor"
         empty:
           invited: "No invitations are open."
           owners: "Nobody owns this organization. Make a member an owner so someone can manage it."

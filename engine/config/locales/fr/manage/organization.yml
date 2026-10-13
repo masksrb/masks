@@ -66,7 +66,7 @@ fr:
         invite: "Inviter"
         cancel: "Annuler"
         hint: "L’invité rejoint l’organisation dès qu’il accepte, depuis l’adresse que vous invitez. Quelqu’un qui n’est pas encore un acteur reçoit une invitation à s’inscrire."
-        person: "Acteur"
+        actor: "Acteur"
         empty:
           invited: "Aucune invitation en attente."
           owners: "Cette organisation n’a aucun propriétaire. Faites d’un membre un propriétaire pour que quelqu’un puisse la gérer."
