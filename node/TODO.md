@@ -2,7 +2,6 @@
 
 ## The app layer
 
-- Express, Hono, and Next.js answer 403 to a person who lacks the privilege that manages the connection. Auth.js asks masks for its scopes first. Share that decision.
 - On Workers, Hono's bindings do not reach the options. Let `masksHono` read `env(c)`.
 
 - `Outcome` is a finished `Response`, so the Next adapter forces `accept: text/html` and reads `Location`. Give a refusal a kind (`login`, `step_up`, `forbidden`, `handshake`), a URL, and `toResponse(request)`.

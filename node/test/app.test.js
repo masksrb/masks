@@ -638,8 +638,11 @@ test("only a manager reconnects or disconnects a connected app", async () => {
   );
 
   const signedOut = await held.browser.fetch("/auth/handshake");
-  assert.equal(signedOut.status, 303);
-  assert.equal(signedOut.headers.get("location"), "/");
+  assert.equal(signedOut.status, 302);
+  assert.equal(
+    signedOut.headers.get("location"),
+    "/auth?return_to=%2Fauth%2Fhandshake",
+  );
 
   await signIn(held);
   const shown = await held.browser.fetch("/auth/handshake");
@@ -678,6 +681,22 @@ test("only a manager reconnects or disconnects a connected app", async () => {
   );
   await signIn(member);
   assert.equal((await member.browser.fetch("/auth/handshake")).status, 403);
+
+  const scoped = await setup(
+    { masks: { privileges: { admin: ["catalog:admin"] }, manages: "admin" } },
+    closers,
+  );
+  await signIn(scoped);
+  const asked = await scoped.browser.fetch("/auth/handshake");
+  assert.equal(asked.status, 302);
+  assert.equal(
+    asked.headers.get("location"),
+    "/auth?return_to=%2Fauth%2Fhandshake&privilege=admin",
+  );
+
+  const back = await signIn(scoped, {}, asked.headers.get("location"));
+  assert.equal(back.status, 200);
+  assert.match(await back.text(), /Reconnect it/);
 });
 
 test("a session store keeps the tokens server-side and rotates the id on sign-in", async () => {

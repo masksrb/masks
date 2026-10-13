@@ -1170,20 +1170,29 @@ export class Masks {
   }
 
   async #manager(visit: Visit): Promise<Response | undefined> {
+    const manages = this.#options.manages;
+
+    if (typeof manages === "string") {
+      const outcome = await this.check(visit.request, {
+        privileges: [manages],
+        returnTo: this.handshakePath,
+      });
+
+      return outcome.response;
+    }
+
     const masked = this.#masked(visit, await this.#current(visit));
 
     if (!masked.signedIn) {
-      return redirect(this.#options.afterSignOut ?? "/", visit.out, 303);
+      return redirect(
+        this.loginURL({ returnTo: this.handshakePath }),
+        visit.out,
+        303,
+      );
     }
 
-    const manages = this.#options.manages;
-    let allowed = false;
-
-    if (typeof manages === "string") allowed = masked.privilege(manages);
-    else if (typeof manages === "function")
-      allowed = (await manages(visit.request, masked)) === true;
-
-    if (allowed) return undefined;
+    if (manages && (await manages(visit.request, masked)) === true)
+      return undefined;
 
     return answer(
       visit,
@@ -1364,7 +1373,9 @@ export class Masks {
   #returnTo(asked: string | null | undefined): string | undefined {
     const path = localPath(asked);
 
-    if (!path || this.owns(new URL(path, "http://app").pathname))
+    const pathname = new URL(path ?? "/", "http://app").pathname;
+
+    if (!path || (this.owns(pathname) && pathname !== this.handshakePath))
       return undefined;
 
     return path;
