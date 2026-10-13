@@ -133,6 +133,43 @@ test("while masks is down, a known key keeps checking tokens and the keys are no
   }
 });
 
+test("a rediscovered issuer keeps the keys it already fetched", async () => {
+  const fake = await Fake.start();
+  closers.push(fake.close);
+  const net = counting();
+  const cache = new IssuerCache(() => ({ fetch: net.fetcher }));
+  const { keys } = await (
+    await fetch(`${fake.url}/.well-known/jwks.json`)
+  ).json();
+  const kid = keys[0].kid;
+  const fetched = () => net.asked.filter((url) => url.includes("jwks")).length;
+
+  mock.timers.enable({ apis: ["Date"], now: Date.now() });
+
+  try {
+    const first = await cache.get(fake.url);
+    await first.key(kid);
+    assert.equal(fetched(), 1);
+
+    mock.timers.tick(3_600_001);
+    await first.key(kid);
+    assert.equal(fetched(), 2);
+    await cache.get(fake.url);
+
+    let second = first;
+    for (let tries = 0; second === first && tries < 100; tries++) {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      second = await cache.get(fake.url);
+    }
+
+    assert.notEqual(second, first);
+    assert.equal((await second.key(kid)).kid, kid);
+    assert.equal(fetched(), 2);
+  } finally {
+    mock.timers.reset();
+  }
+});
+
 test("the in-memory stores forget expired entries", async () => {
   mock.timers.enable({ apis: ["Date"], now: 0 });
 

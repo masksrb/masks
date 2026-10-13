@@ -1,4 +1,5 @@
 import { Issuer } from "../issuer.js";
+import { remember } from "./stores.js";
 
 const LIFETIME = 3600_000;
 const FIRST_BACKOFF = 5_000;
@@ -20,7 +21,7 @@ export class IssuerCache {
   readonly #held = new Map<string, Held>();
   readonly #options: () => Options;
 
-  constructor(options: () => Options = () => ({})) {
+  constructor(options: () => Options) {
     this.#options = options;
   }
 
@@ -47,14 +48,9 @@ export class IssuerCache {
 
     if (found) return found;
 
-    for (const oldest of this.#held.keys()) {
-      if (this.#held.size < REMEMBERED) break;
-      this.#held.delete(oldest);
-    }
-
     const created: Held = { at: 0, retryAt: 0, backoff: FIRST_BACKOFF };
 
-    this.#held.set(url, created);
+    remember(this.#held, url, created, REMEMBERED);
 
     return created;
   }
@@ -62,6 +58,7 @@ export class IssuerCache {
   #discover(url: string, held: Held): Promise<Issuer> {
     const pending = Issuer.discover(url, this.#options()).then(
       (issuer) => {
+        issuer.keepKeysOf(held.good);
         Object.assign(held, {
           good: issuer,
           at: Date.now(),

@@ -124,6 +124,14 @@ export class Issuer {
     return new Issuer(named, metadata, options);
   }
 
+  keepKeysOf(previous: Issuer | undefined): void {
+    if (!previous || previous.metadata.jwks_uri !== this.metadata.jwks_uri)
+      return;
+
+    this.#keys = previous.#keys;
+    this.#keysAt = previous.#keysAt;
+  }
+
   get fetch(): typeof fetch {
     return this.options.fetch ?? globalThis.fetch;
   }
@@ -184,47 +192,20 @@ export class Issuer {
 
     if (kid && age < KEYS_LIFETIME && found()) return found() as JWK;
 
-    const stale = () => (kid && age < KEYS_STALE ? found() : undefined);
-
-    if (Date.now() - this.#keysFailedAt < KEYS_PATIENCE) {
-      const held = stale();
-
-      if (held) return held;
-
-      throw new UnavailableError(
-        `${this.url} could not be reached for its keys`,
-      );
-    }
-
-    if (age >= KEYS_PATIENCE) {
-      this.#fetching ??= getJSON<{ keys?: JWK[] }>(
-        this.options,
-        this.endpoint("jwks_uri"),
-      )
-        .then(
-          (held) => {
-            this.#keys = Array.isArray(held.keys) ? held.keys : [];
-            this.#keysAt = Date.now();
-            this.#keysFailedAt = 0;
-          },
-          (error: unknown) => {
-            this.#keysFailedAt = Date.now();
-            throw error;
-          },
-        )
-        .finally(() => {
-          this.#fetching = undefined;
-        });
-
-      try {
-        await this.#fetching;
-      } catch (error) {
-        const held = stale();
-
-        if (held) return held;
-
-        throw error;
+    try {
+      if (Date.now() - this.#keysFailedAt < KEYS_PATIENCE) {
+        throw new UnavailableError(
+          `${this.url} could not be reached for its keys`,
+        );
       }
+
+      if (age >= KEYS_PATIENCE) await this.#fetchKeys();
+    } catch (error) {
+      const stale = kid && age < KEYS_STALE ? found() : undefined;
+
+      if (stale) return stale;
+
+      throw error;
     }
 
     const held = kid ? found() : undefined;
@@ -236,6 +217,29 @@ export class Issuer {
     }
 
     return held;
+  }
+
+  #fetchKeys(): Promise<void> {
+    this.#fetching ??= getJSON<{ keys?: JWK[] }>(
+      this.options,
+      this.endpoint("jwks_uri"),
+    )
+      .then(
+        (held) => {
+          this.#keys = Array.isArray(held.keys) ? held.keys : [];
+          this.#keysAt = Date.now();
+          this.#keysFailedAt = 0;
+        },
+        (error: unknown) => {
+          this.#keysFailedAt = Date.now();
+          throw error;
+        },
+      )
+      .finally(() => {
+        this.#fetching = undefined;
+      });
+
+    return this.#fetching;
   }
 }
 

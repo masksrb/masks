@@ -39,6 +39,22 @@ export interface RefreshStore {
 
 const SWEEP_EVERY = 60_000;
 
+export function remember<K, V>(
+  held: Map<K, V>,
+  key: K,
+  value: V,
+  limit: number,
+): void {
+  held.delete(key);
+
+  for (const oldest of held.keys()) {
+    if (held.size < limit) break;
+    held.delete(oldest);
+  }
+
+  held.set(key, value);
+}
+
 function sweeper(held: Map<string, { until: number }>): () => void {
   let swept = Date.now();
 

@@ -111,9 +111,8 @@ export function replaceCookies(
 
   for (const line of written) {
     const pair = line.split(";")[0] ?? "";
-    const at = pair.indexOf("=");
-    const name = pair.slice(0, at);
-    const value = pair.slice(at + 1);
+    const name = cookieName(line);
+    const value = pair.slice(pair.indexOf("=") + 1);
 
     if (/Max-Age=0(;|$)/.test(line)) held.delete(name);
     else held.set(name, value);
@@ -126,6 +125,12 @@ export function cookieName(line: string): string {
   const pair = line.split(";")[0] ?? "";
 
   return pair.slice(0, pair.indexOf("=")).trim();
+}
+
+export function mergeCookies(held: string[], written: string[]): string[] {
+  const names = new Set(written.map(cookieName));
+
+  return [...held.filter((line) => !names.has(cookieName(line))), ...written];
 }
 
 export function withWritten(request: Request, written: string[]): Request {

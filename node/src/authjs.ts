@@ -40,6 +40,7 @@ import {
   memoryLogouts,
   processEnv,
   type RefreshStore,
+  remember,
   shared,
 } from "./app/stores.js";
 import { avatarsOf, ForbiddenError, organizationKey } from "./claims.js";
@@ -881,12 +882,7 @@ export class MasksAuth {
   }
 
   #remember(key: string, remembered: Remembered): void {
-    for (const oldest of this.#refreshes.keys()) {
-      if (this.#refreshes.size < REMEMBERED_REFRESHES) break;
-      this.#refreshes.delete(oldest);
-    }
-
-    this.#refreshes.set(key, remembered);
+    remember(this.#refreshes, key, remembered, REMEMBERED_REFRESHES);
   }
 
   async #signInFrom(held: Headers): Promise<HeldSignIn | undefined> {
@@ -1591,10 +1587,11 @@ function lackingScopes(masked: Masked, wanted: Privilege[]): string[] {
 }
 
 function askedBefore(stepped: string | undefined, names: string[]): boolean {
-  return (
-    Boolean(stepped) &&
-    names.every((name) => decode(stepped ?? "").includes(name))
-  );
+  if (!stepped) return false;
+
+  const held = decode(stepped);
+
+  return names.every((name) => held.includes(name));
 }
 
 function callbackFrom(request: Request): string | undefined {

@@ -22,13 +22,18 @@ import {
 } from "../errors.js";
 import { Handshake, originOf } from "../handshake.js";
 import type { IdTokenClaims, LogoutToken } from "../idtoken.js";
-import { type Issuer, RESOURCE_PATH } from "../issuer.js";
+import { RESOURCE_PATH } from "../issuer.js";
 import { random } from "../key.js";
 import type { Registration } from "../registration.js";
 import { MemoryReplayStore, type ReplayStore } from "../replay.js";
 import { type Claims, Verifier } from "../verifier.js";
 import { type AvatarsLimit, avatarResponse } from "./avatar.js";
-import { parseCookies, readChunked, writeChunked } from "./cookies.js";
+import {
+  mergeCookies,
+  parseCookies,
+  readChunked,
+  writeChunked,
+} from "./cookies.js";
 import { IssuerCache } from "./issuers.js";
 import { firstLogout, loggedOut, recordLogout } from "./logouts.js";
 import { Masked } from "./masked.js";
@@ -47,6 +52,7 @@ import {
   type LogoutStore,
   memoryLogouts,
   processEnv,
+  remember,
   type SessionStore,
   shared,
 } from "./stores.js";
@@ -156,6 +162,7 @@ const IDENTITY = [
 const FLOW_LIFETIME = 3600;
 const FLOW_LIMIT = 5;
 const REMEMBERED_VERIFIERS = 1_000;
+const REMEMBERED_REGISTRATIONS = 1_000;
 const REGISTRATION_TRUSTED = 60_000;
 const STEP_UP_WITHIN = 300;
 const RESTART_WITHIN = 60;
@@ -594,7 +601,7 @@ export class Masks {
       return true;
 
     try {
-      await (await this.#issuer(visit.issuerURL)).readRegistration(
+      await (await this.#issuers.get(visit.issuerURL)).readRegistration(
         registrationOf(held),
       );
       return true;
@@ -614,7 +621,7 @@ export class Masks {
 
     if (held?.registration_client_uri && held.registration_access_token) {
       try {
-        await (await this.#issuer(visit.issuerURL)).deleteRegistration(
+        await (await this.#issuers.get(visit.issuerURL)).deleteRegistration(
           registrationOf(held),
         );
       } catch {}
@@ -715,13 +722,9 @@ export class Masks {
 
     const known = await this.registered(visit.request);
 
-    this.#registeredAt.delete(key);
-    if (known) this.#registeredAt.set(key, Date.now());
-
-    for (const oldest of this.#registeredAt.keys()) {
-      if (this.#registeredAt.size <= REMEMBERED_VERIFIERS) break;
-      this.#registeredAt.delete(oldest);
-    }
+    if (known)
+      remember(this.#registeredAt, key, Date.now(), REMEMBERED_REGISTRATIONS);
+    else this.#registeredAt.delete(key);
 
     return known;
   }
@@ -735,9 +738,7 @@ export class Masks {
     }
 
     const params = visit.url.searchParams;
-    let returnTo = localPath(params.get("return_to") ?? undefined);
-
-    if (returnTo?.startsWith(this.basePath)) returnTo = undefined;
+    const returnTo = this.#returnTo(params.get("return_to"));
 
     if (!client) return redirect(this.#handshakeURL(returnTo), visit.out);
 
@@ -868,9 +869,7 @@ export class Masks {
   }
 
   async #refreshRoute(visit: Visit): Promise<Response> {
-    const returnTo = localPath(
-      visit.url.searchParams.get("return_to") ?? undefined,
-    );
+    const returnTo = this.#returnTo(visit.url.searchParams.get("return_to"));
     const masked = this.#masked(visit, await this.#current(visit));
 
     if (masked.signedIn)
@@ -1160,13 +1159,9 @@ export class Masks {
     const started = handshake.start();
     const flow = await this.#readFlow(visit);
 
-    const returnTo = localPath(
-      visit.url.searchParams.get("return_to") ?? undefined,
-    );
-
     flow.handshakes = keep(flow.handshakes, started.state, {
       until: now() + FLOW_LIFETIME,
-      returnTo: returnTo?.startsWith(this.basePath) ? undefined : returnTo,
+      returnTo: this.#returnTo(visit.url.searchParams.get("return_to")),
     });
     await this.#writeFlow(visit, flow);
 
@@ -1198,7 +1193,7 @@ export class Masks {
   }
 
   async #handshake(visit: Visit): Promise<Handshake> {
-    const issuer = await this.#issuer(visit.issuerURL);
+    const issuer = await this.#issuers.get(visit.issuerURL);
     const redirectURIs = [this.#redirectURI(visit)];
 
     if (this.#options.delegations) {
@@ -1365,10 +1360,19 @@ export class Masks {
     return redirect(this.loginURL({ returnTo }), visit.out);
   }
 
-  #handshakeURL(returnTo: string | undefined): string {
-    const path = localPath(returnTo);
+  #returnTo(asked: string | null | undefined): string | undefined {
+    const path = localPath(asked);
 
-    if (!path || path.startsWith(this.basePath)) return this.handshakePath;
+    if (!path || this.owns(new URL(path, "http://app").pathname))
+      return undefined;
+
+    return path;
+  }
+
+  #handshakeURL(returnTo: string | undefined): string {
+    const path = this.#returnTo(returnTo);
+
+    if (!path) return this.handshakePath;
 
     return `${this.handshakePath}?${new URLSearchParams({ return_to: path })}`;
   }
@@ -1433,17 +1437,13 @@ export class Masks {
     return visit;
   }
 
-  #issuer(url: string): Promise<Issuer> {
-    return this.#issuers.get(url);
-  }
-
   async #client(visit: Visit): Promise<Client | undefined> {
     const held = await this.#credentials.read(visit.request);
 
     if (!held?.client_id) return undefined;
 
     return new Client({
-      issuer: await this.#issuer(visit.issuerURL),
+      issuer: await this.#issuers.get(visit.issuerURL),
       id: held.client_id,
       secret: held.client_secret,
     });
@@ -1455,7 +1455,7 @@ export class Masks {
 
   async #verifier(visit: Visit): Promise<Verifier> {
     const key = `${visit.issuerURL} ${visit.resource}`;
-    const issuer = await this.#issuer(visit.issuerURL);
+    const issuer = await this.#issuers.get(visit.issuerURL);
     const held = this.#verifiers.get(key);
 
     if (held?.issuer === issuer) return held;
@@ -1466,14 +1466,7 @@ export class Masks {
       resourceMetadata: this.#metadataURL(visit),
     });
 
-    this.#verifiers.delete(key);
-
-    for (const oldest of this.#verifiers.keys()) {
-      if (this.#verifiers.size < REMEMBERED_VERIFIERS) break;
-      this.#verifiers.delete(oldest);
-    }
-
-    this.#verifiers.set(key, made);
+    remember(this.#verifiers, key, made, REMEMBERED_VERIFIERS);
 
     return made;
   }
@@ -1635,13 +1628,7 @@ export class Masks {
   }
 
   #setCookies(visit: Visit, written: string[]): void {
-    for (const line of written) {
-      const name = line.slice(0, line.indexOf("="));
-      const at = visit.out.findIndex((held) => held.startsWith(`${name}=`));
-
-      if (at >= 0) visit.out.splice(at, 1);
-      visit.out.push(line);
-    }
+    visit.out.splice(0, Infinity, ...mergeCookies(visit.out, written));
   }
 }
 

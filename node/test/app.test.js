@@ -156,6 +156,8 @@ test("return_to is kept to this app's own paths", async () => {
 
   for (const [asked, landed] of [
     ["/reports?year=2026", "/reports"],
+    ["/authors", "/authors"],
+    ["/auth/session", "/"],
     ["https://evil.example/", "/"],
     ["//evil.example/", "/"],
     ["/\\evil.example", "/"],
