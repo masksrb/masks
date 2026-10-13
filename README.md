@@ -38,7 +38,7 @@ The image is `ghcr.io/masksrb/masks`.
 
 ## Contribute
 
-You need Ruby and a container runtime with Compose, such as Podman or Colima.
+You need Ruby and [Colima](https://github.com/abiosoft/colima).
 
 - `./dev` runs the provider at `http://masks.localhost:12345` and the docs at `http://masks.localhost:12346`.
 - `./dev test` runs every suite in containers.
