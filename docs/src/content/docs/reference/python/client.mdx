@@ -132,11 +132,11 @@ A privilege can combine `scope`, `role`, and `organization`.
 
 | | |
 | --- | --- |
-| `FileCredentials(path="masks.json")` | A file, written with mode 600. |
+| `FileCredentials(path="masks.json")` | A file, written with mode 600 in a folder it creates with mode 700. It is writable only when the app can create files in that folder. |
 | `MemoryCredentials(client_id="", client_secret="")` | This process's memory, for tests. |
 | `StaticCredentials(client_id, client_secret="")` | Credentials from configuration. The app cannot disconnect with these. |
 
-A store of your own has a `writable` attribute and these methods:
+A store of your own has a `writable` attribute, false when it cannot save, and these methods:
 
 | Method | |
 | --- | --- |

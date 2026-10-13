@@ -9,10 +9,6 @@
 
 - The shared refresh and the memory of seen logout tokens work within one process only. Add stores several processes can share.
 
-## Security
-
-- The security review did not finish `web/credentials.py`.
-
 ## Testing
 
 - FastAPI and Flask have run against a live masks: the handshake, Reconnect, sign-in, a privilege step-up, a token at the API, a shared refresh across concurrent requests, and signing out everywhere. FastAPI also ran with an async server session store. Back-channel logout has not, since masks in Docker cannot reach the app on the host.

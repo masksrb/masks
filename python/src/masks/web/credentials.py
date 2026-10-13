@@ -14,7 +14,8 @@ KEYS = ("client_id", "client_secret", "registration_access_token", "registration
 
 
 class Credentials(Protocol):
-    writable: bool
+    @property
+    def writable(self) -> bool: ...
 
     def read(self) -> dict[str, str]: ...
 
@@ -36,30 +37,42 @@ def held(registration: Registration) -> dict[str, str]:
 
 
 class FileCredentials:
-    writable = True
-
     def __init__(self, path: str | os.PathLike[str] = "masks.json") -> None:
         self.path = Path(path)
         self._lock = threading.Lock()
         self._held: dict[str, str] | None = None
-        self._read_at = 0.0
+        self._version: tuple[int, int, int] | None = None
+
+    @property
+    def writable(self) -> bool:
+        try:
+            self.path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+            descriptor, probe = tempfile.mkstemp(dir=self.path.parent, prefix=".masks-")
+            os.close(descriptor)
+            os.unlink(probe)
+        except OSError:
+            return False
+
+        return True
 
     def read(self) -> dict[str, str]:
         with self._lock:
             try:
-                changed = self.path.stat().st_mtime
+                found = self.path.stat()
             except FileNotFoundError:
                 self._held = None
                 return {}
 
-            if self._held is None or changed != self._read_at:
-                try:
-                    found = json.loads(self.path.read_text())
-                except (OSError, ValueError):
-                    found = {}
+            version = (found.st_ino, found.st_size, found.st_mtime_ns)
 
-                self._held = {key: str(value) for key, value in found.items()} if isinstance(found, dict) else {}
-                self._read_at = changed
+            if self._held is None or version != self._version:
+                try:
+                    parsed = json.loads(self.path.read_bytes())
+                except ValueError:
+                    parsed = {}
+
+                self._held = {key: str(value) for key, value in parsed.items()} if isinstance(parsed, dict) else {}
+                self._version = version
 
             return dict(self._held)
 
@@ -67,7 +80,7 @@ class FileCredentials:
         content = json.dumps(held(registration), indent=2)
 
         with self._lock:
-            self.path.parent.mkdir(parents=True, exist_ok=True)
+            self.path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
             descriptor, temporary = tempfile.mkstemp(dir=self.path.parent, prefix=".masks-")
 
             try:
@@ -75,6 +88,8 @@ class FileCredentials:
 
                 with os.fdopen(descriptor, "w") as file:
                     file.write(content)
+                    file.flush()
+                    os.fsync(file.fileno())
 
                 os.replace(temporary, self.path)
             except BaseException:

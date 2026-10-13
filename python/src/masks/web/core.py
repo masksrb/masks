@@ -1163,7 +1163,7 @@ class Masks:
 
         if not self.credentials(request).writable:
             return self._refuse(
-                request, "forbidden", "these credentials come from configuration and cannot change", 403
+                request, "forbidden", "this app cannot save new credentials, so its connection cannot change", 403
             )
 
         try:
@@ -1194,7 +1194,9 @@ class Masks:
         credentials = self.credentials(request)
 
         if not credentials.writable:
-            return self._refuse(request, "forbidden", "these credentials come from configuration", 403)
+            return self._refuse(
+                request, "forbidden", "this app cannot save new credentials, so its connection cannot change", 403
+            )
 
         held = credentials.read()
 
