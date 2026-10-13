@@ -2,19 +2,11 @@ import { decodeJwt } from "jose";
 import type { NextAuthConfig, NextAuthResult, Session } from "next-auth";
 import { type AvatarsLimit, avatarResponse } from "./app/avatar.js";
 import { parseCookies, replaceCookies, serialize } from "./app/cookies.js";
+import { DEFAULT_SCOPE } from "./app/core.js";
 import { type CredentialStore, defaultCredentials } from "./app/credentials.js";
 import { IssuerCache } from "./app/issuers.js";
 import { acceptLogout, departed } from "./app/logouts.js";
 import { Masked, type MaskedJSON } from "./app/masked.js";
-import {
-  claim,
-  connectedPage,
-  DEFAULT_SCOPE,
-  fresh,
-  keep,
-  now,
-  pick,
-} from "./app/masks.js";
 import {
   approvedScope,
   type Privilege,
@@ -32,7 +24,9 @@ import {
   wantsJSON,
 } from "./app/requests.js";
 import { errorResponse, json, redirect, text } from "./app/responses.js";
+import { connectedPage } from "./app/routes.js";
 import { Sealer } from "./app/seal.js";
+import { claim, fresh, keep, now, pick } from "./app/session.js";
 import { memoryStore, processEnv, type Store, shared } from "./app/stores.js";
 import { avatarsOf, ForbiddenError, organizationKey } from "./claims.js";
 import { type Client, constantEqual, scopes as scopesOf } from "./client.js";

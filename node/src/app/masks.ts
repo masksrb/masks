@@ -1,149 +1,22 @@
-import { ForbiddenError, organizationKey } from "../claims.js";
+import type { Client } from "../client.js";
 import {
-  type Client,
-  constantEqual,
-  scopes as scopesOf,
-  type Token,
-} from "../client.js";
-import {
-  DELEGATION_SCOPE,
   type Connection as DelegatedConnection,
   DelegationRefused,
   Delegations,
-  type PendingDelegation,
   pendingFor,
 } from "../delegations.js";
-import { InvalidTokenError, MasksError, UnavailableError } from "../errors.js";
-import { Handshake, originOf } from "../handshake.js";
-import type { IdTokenClaims, LogoutToken } from "../idtoken.js";
-import { RESOURCE_PATH } from "../issuer.js";
-import { random } from "../key.js";
-import { type Claims, Verifier } from "../verifier.js";
-import { type AvatarsLimit, avatarResponse } from "./avatar.js";
-import {
-  mergeCookies,
-  parseCookies,
-  readChunked,
-  writeChunked,
-} from "./cookies.js";
-import { type CredentialStore, defaultCredentials } from "./credentials.js";
-import { IssuerCache } from "./issuers.js";
-import { acceptLogout, departed } from "./logouts.js";
-import { Masked } from "./masked.js";
-import {
-  approvedScope,
-  type PrivilegeSpec,
-  Privileges,
-  unique,
-} from "./privileges.js";
-import { renew } from "./refresh.js";
-import {
-  isNetwork,
-  localPath,
-  type PerRequest,
-  presented,
-  readForm,
-  referring,
-  resolve,
-  sameOrigin,
-  unsafe,
-  wantsJSON,
-} from "./requests.js";
-import {
-  errorResponse,
-  escapeHTML,
-  json,
-  page,
-  redirect,
-  text,
-} from "./responses.js";
-import { Sealer } from "./seal.js";
-import {
-  keyed,
-  memoryStore,
-  processEnv,
-  remember,
-  replayStore,
-  type Store,
-  shared,
-} from "./stores.js";
+import { MasksError } from "../errors.js";
+import { Core, type MasksOptions } from "./core.js";
+import { check, guard, type Outcome, protect, refuse } from "./guard.js";
+import type { Masked } from "./masked.js";
+import type { Privileges } from "./privileges.js";
+import { redirect } from "./responses.js";
+import { handle } from "./routes.js";
+import { claim, FLOW_LIFETIME, keep, now } from "./session.js";
 
-export interface MasksOptions {
-  env?: Record<string, string | undefined>;
-  issuer?: PerRequest<string>;
-  resource?: PerRequest<string>;
-  name?: PerRequest<string>;
-  organization?: PerRequest<string | undefined>;
-  scope?: string[];
-  namespace?: string;
-  resourceScopes?: string[];
-  privileges?: Record<string, PrivilegeSpec>;
-  basePath?: string;
-  afterSignIn?: string;
-  afterSignOut?: string;
-  signOutOfIssuer?: boolean;
-  secret?: string | string[];
-  maxAge?: number;
-  sessions?: Store;
-  store?: Store;
-  credentials?: CredentialStore;
-  manages?:
-    | string
-    | ((request: Request, masked: Masked) => boolean | Promise<boolean>);
-  delegations?: string;
-  onLogout?: (logout: LogoutToken, request: Request) => void | Promise<void>;
-  avatars?: AvatarsLimit;
-  fetch?: typeof fetch;
-  allowPlainHTTP?: boolean;
-}
-
-export interface HeldTokens {
-  access_token: string;
-  token_type: string;
-  refresh_token?: string;
-  scope: string;
-  expires_at?: number;
-}
-
-export interface SessionData {
-  issuer?: string;
-  tokens?: HeldTokens;
-  identity?: Record<string, unknown>;
-  signedInAt?: number;
-  expiresAt?: number;
-}
-
-interface Pending {
-  verifier: string;
-  nonce?: string;
-  returnTo?: string;
-  redirectURI: string;
-  resource?: string[];
-  until: number;
-}
-
-interface FlowData {
-  requests?: Record<string, Pending>;
-  handshakes?: Record<string, { until: number; returnTo?: string }>;
-  logouts?: Record<string, { until: number }>;
-  delegations?: Record<string, PendingDelegation>;
-  steppedUp?: { privileges: string[]; at: number };
-  restartedAt?: number;
-}
-
-export type Outcome =
-  | {
-      masked: Masked;
-      cookies: string[];
-      response?: undefined;
-      error?: undefined;
-    }
-  | {
-      masked?: undefined;
-      cookies?: undefined;
-      response: Response;
-      error?: ForbiddenError;
-    };
+export { DEFAULT_SCOPE, type MasksOptions } from "./core.js";
+export type { Outcome } from "./guard.js";
+export type { HeldTokens, SessionData } from "./session.js";
 
 export interface Connection {
   connected: boolean;
@@ -151,69 +24,8 @@ export interface Connection {
   issuer?: string;
 }
 
-export const DEFAULT_SCOPE = ["openid", "profile", "email", "offline_access"];
-
-const IDENTITY = [
-  "sub",
-  "sid",
-  "name",
-  "preferred_username",
-  "email",
-  "email_verified",
-  "tenant",
-  "picture",
-  "masks:avatars",
-  "org",
-  "orgs",
-];
-const FLOW_LIFETIME = 3600;
-const FLOW_LIMIT = 5;
-const REMEMBERED_VERIFIERS = 1_000;
-const REMEMBERED_REGISTRATIONS = 1_000;
-const REGISTRATION_TRUSTED = 60_000;
-const STEP_UP_WITHIN = 300;
-const RESTART_WITHIN = 60;
-const REFRESH_LEEWAY = 30;
-const SESSION_PURPOSE = "session";
-const STORED_PURPOSE = "stored session";
-const FLOW_PURPOSE = "flow";
-class Visit {
-  readonly request: Request;
-  readonly url: URL;
-  readonly cookies: Map<string, string>;
-  readonly out: string[] = [];
-  readonly handed = new Set<string>();
-  origin = "";
-  resource = "";
-  secure = false;
-  issuerURL = "";
-  session?: { id?: string; data: SessionData } | null;
-  flow?: FlowData;
-
-  constructor(request: Request) {
-    this.request = request;
-    this.url = new URL(request.url);
-    this.cookies = parseCookies(request.headers.get("cookie"));
-  }
-}
-
 export class Masks {
-  readonly privileges: Privileges;
-  readonly basePath: string;
-  readonly scope: string[];
-  readonly maxAge: number;
-  readonly #options: MasksOptions;
-  readonly #credentials: CredentialStore;
-  readonly #store: Store;
-  readonly #issuers = new IssuerCache(() => ({
-    fetch: this.#options.fetch,
-    allowPlainHTTP: this.#options.allowPlainHTTP,
-  }));
-  readonly #verifiers = new Map<string, Verifier>();
-  readonly #registeredAt = new Map<string, number>();
-  readonly #visits = new WeakMap<Request, Promise<Visit>>();
-
-  #sealer?: Sealer;
+  readonly #core: Core;
 
   static from(source: Masks | MasksOptions | { masks: Masks }): Masks {
     if (source instanceof Masks) return source;
@@ -223,28 +35,31 @@ export class Masks {
   }
 
   constructor(options: MasksOptions = {}) {
-    this.#options = options;
-    this.privileges = new Privileges(options.privileges);
-    this.basePath = `/${(options.basePath ?? "/auth").replace(/^\/+|\/+$/g, "")}`;
-    this.scope = options.scope ?? DEFAULT_SCOPE;
-    this.maxAge = options.maxAge ?? 14 * 24 * 3600;
-    this.#credentials =
-      options.credentials ?? defaultCredentials(this.#env, "MASKS_CLIENT");
-    this.#store = options.store ?? shared("store", () => memoryStore());
-
-    if (options.secret !== undefined) this.#sealer = new Sealer(options.secret);
+    this.#core = new Core(options);
   }
 
-  get #env(): Record<string, string | undefined> {
-    return this.#options.env ?? processEnv();
+  get privileges(): Privileges {
+    return this.#core.privileges;
   }
 
-  get #seal(): Sealer {
-    this.#sealer ??= new Sealer(
-      (this.#env.MASKS_SECRET ?? "").split(",").map((part) => part.trim()),
-    );
+  get basePath(): string {
+    return this.#core.basePath;
+  }
 
-    return this.#sealer;
+  get scope(): string[] {
+    return this.#core.scope;
+  }
+
+  get maxAge(): number {
+    return this.#core.maxAge;
+  }
+
+  get logoutPath(): string {
+    return this.#core.logoutPath;
+  }
+
+  get handshakePath(): string {
+    return this.#core.handshakePath;
   }
 
   loginURL(
@@ -254,319 +69,57 @@ export class Masks {
       privilege?: string | string[];
     } = {},
   ): string {
-    const query = new URLSearchParams();
-    const returnTo = localPath(asked.returnTo);
-    const organization = organizationKey(asked.organization);
-    const privileges = [asked.privilege ?? []].flat();
-
-    for (const name of privileges) this.privileges.get(name);
-
-    if (returnTo) query.set("return_to", returnTo);
-    if (organization) query.set("organization", organization);
-    if (privileges.length > 0) query.set("privilege", privileges.join(" "));
-
-    const held = query.toString();
-
-    return held ? `${this.basePath}?${held}` : this.basePath;
+    return this.#core.loginURL(asked);
   }
 
   owns(pathname: string): boolean {
-    return (
-      pathname === this.basePath ||
-      pathname.startsWith(`${this.basePath}/`) ||
-      pathname.startsWith(RESOURCE_PATH)
-    );
+    return this.#core.owns(pathname);
   }
 
-  get logoutPath(): string {
-    return `${this.basePath}/logout`;
-  }
-
-  get handshakePath(): string {
-    return `${this.basePath}/handshake`;
-  }
-
-  async handle(request: Request): Promise<Response | undefined> {
-    if (!this.owns(new URL(request.url).pathname)) return undefined;
-
-    const visit = await this.#visit(request);
-    const path = visit.url.pathname;
-
-    if (request.method === "GET" && path === this.#metadataPath(visit)) {
-      return json(200, await this.metadata(request), [], {
-        "cache-control": "public, max-age=300",
-      });
-    }
-
-    if (path !== this.basePath && !path.startsWith(`${this.basePath}/`)) {
-      return undefined;
-    }
-
-    const route = path.slice(this.basePath.length).replace(/\/+$/, "") || "/";
-    const method = request.method.toUpperCase();
-
-    try {
-      switch (`${method} ${route}`) {
-        case "GET /":
-          return await this.#start(visit);
-        case "GET /callback":
-          return await this.#callback(visit);
-        case "GET /refresh":
-          return await this.#refreshRoute(visit);
-        case "GET /session":
-          return await this.#sessionRoute(visit);
-        case "GET /avatar":
-          return await this.#avatar(visit);
-        case "GET /logout":
-        case "POST /logout":
-        case "DELETE /logout":
-          return await this.#logout(visit);
-        case "GET /logout/return":
-          return await this.#logoutReturnRoute(visit);
-        case "POST /logout/backchannel":
-          return await this.#backchannel(visit);
-        case "GET /handshake":
-          return await this.#handshakeShow(visit);
-        case "POST /handshake":
-          return await this.#handshakeCreate(visit);
-        case "DELETE /handshake":
-        case "POST /handshake/disconnect":
-          return await this.#handshakeDestroy(visit);
-        case "GET /handshake/callback":
-          return await this.#handshakeCallback(visit);
-        default:
-          return text(404, "not found", visit.out);
-      }
-    } catch (error) {
-      if (error instanceof MasksError) {
-        return answer(visit, 400, error.code, error.description ?? error.code);
-      }
-
-      if (error instanceof UnavailableError || isNetwork(error)) {
-        return answer(
-          visit,
-          503,
-          "temporarily_unavailable",
-          "masks could not be reached",
-        );
-      }
-
-      throw error;
-    }
+  handle(request: Request): Promise<Response | undefined> {
+    return handle(this.#core, request, () => this.metadata(request));
   }
 
   async peek(request: Request): Promise<Masked> {
-    const visit = await this.#visit(request);
-    const session = await this.#readSession(visit);
+    const core = this.#core;
+    const visit = await core.visit(request);
+    const session = await core.sessions.read(visit);
 
-    return this.#masked(visit, session?.data);
+    return core.masked(visit, session?.data);
   }
 
   async masked(
     request: Request,
   ): Promise<{ masked: Masked; cookies: string[] }> {
-    const visit = await this.#visit(request);
-    const data = await this.#current(visit);
+    const core = this.#core;
+    const visit = await core.visit(request);
+    const data = await core.current(visit);
 
-    return { masked: this.#masked(visit, data), cookies: handOut(visit) };
+    return { masked: core.masked(visit, data), cookies: visit.handOut() };
   }
 
   require(request: Request, ...names: string[]): Promise<Outcome> {
-    return this.check(request, { privileges: names });
+    return check(this.#core, request, { privileges: names });
   }
 
-  async check(
+  check(
     request: Request,
     asked: { privileges?: string[]; refresh?: boolean; returnTo?: string } = {},
   ): Promise<Outcome> {
-    const wanted = (asked.privileges ?? [])
-      .flat()
-      .map((name) => this.privileges.get(name));
-    const visit = await this.#visit(request);
-
-    if (!(await this.#configured(visit))) {
-      return { response: this.#refuse(visit, "handshake_required") };
-    }
-
-    const data =
-      asked.refresh === false
-        ? (await this.#readSession(visit))?.data
-        : await this.#current(visit);
-    const masked = this.#masked(visit, data);
-
-    if (!masked.signedIn) {
-      const refreshable =
-        asked.refresh === false && !!data?.tokens?.refresh_token;
-
-      return {
-        response: this.#refuse(
-          visit,
-          "login_required",
-          asked.returnTo,
-          refreshable,
-        ),
-      };
-    }
-
-    try {
-      for (const privilege of wanted) masked.member(privilege);
-    } catch (error) {
-      if (error instanceof ForbiddenError)
-        return { response: forbid(visit, error), error };
-      throw error;
-    }
-
-    const missing = wanted
-      .filter(
-        (privilege) =>
-          !privilege.scopes.every((scope) => masked.permits(scope)),
-      )
-      .map((privilege) => privilege.name);
-
-    if (missing.length === 0) return { masked, cookies: handOut(visit) };
-
-    const flow = await this.#readFlow(visit);
-    const stepped = flow.steppedUp;
-
-    if (
-      stepped &&
-      missing.every((name) => stepped.privileges.includes(name)) &&
-      stepped.at > now() - STEP_UP_WITHIN
-    ) {
-      const error = new ForbiddenError(
-        "insufficient_scope",
-        `this account does not hold the ${missing.join(" and ")} privilege`,
-        {
-          scope: unique(
-            missing.flatMap((name) => this.privileges.get(name).scopes),
-          ).join(" "),
-        },
-      );
-
-      return { response: forbid(visit, error), error };
-    }
-
-    const returnTo =
-      asked.returnTo ??
-      (request.method === "GET"
-        ? `${visit.url.pathname}${visit.url.search}`
-        : referring(request));
-    const url = this.loginURL({ returnTo, privilege: missing });
-
-    if (wantsJSON(request)) {
-      return {
-        response: json(
-          403,
-          { error: "privilege_required", privileges: missing, login_url: url },
-          visit.out,
-        ),
-      };
-    }
-
-    return { response: redirect(url, visit.out) };
+    return check(this.#core, request, asked);
   }
 
-  async protect(request: Request, ...names: string[]): Promise<Outcome> {
-    const wanted = names.flat().map((name) => this.privileges.get(name));
-    const visit = await this.#visit(request);
-    let verifier: Verifier | undefined;
-    let claims: Claims;
-
-    try {
-      verifier = await this.#verifier(visit);
-      claims = await verifier.authenticate(request);
-    } catch (error) {
-      if (verifier && error instanceof InvalidTokenError) {
-        const headers = new Headers({ "cache-control": "no-store" });
-        for (const value of verifier.challengeHeaders(error))
-          headers.append("www-authenticate", value);
-
-        return {
-          response: Response.json(
-            { error: "invalid_token", error_description: describe(error) },
-            { status: 401, headers },
-          ),
-        };
-      }
-
-      return {
-        response: json(
-          503,
-          {
-            error: "temporarily_unavailable",
-            error_description: "the token could not be checked",
-          },
-          [],
-        ),
-      };
-    }
-
-    const masked = new Masked({
-      claims,
-      scopes: scopesOf(claims),
-      signedIn: true,
-      privileges: this.privileges,
-      accessToken: presented(request),
-      tokenType: claims.cnf?.jkt ? "DPoP" : "Bearer",
-      expiresAt: claims.exp,
-      accountURL: `${visit.issuerURL}/`,
-    });
-
-    try {
-      for (const privilege of wanted) {
-        for (const scope of privilege.scopes) {
-          if (!masked.permits(scope)) {
-            throw new ForbiddenError(
-              "insufficient_scope",
-              `this token does not carry ${scope}`,
-              {
-                scope: privilege.scopes.join(" "),
-              },
-            );
-          }
-        }
-
-        masked.member(privilege);
-      }
-    } catch (error) {
-      if (!(error instanceof ForbiddenError)) throw error;
-
-      const headers = new Headers({ "cache-control": "no-store" });
-      const scope = error.scope ? `, scope="${quote(error.scope)}"` : "";
-
-      headers.set(
-        "www-authenticate",
-        `Bearer error="${error.code}", error_description="${quote(error.description)}"${scope}, resource_metadata="${this.#metadataURL(visit)}"`,
-      );
-
-      return {
-        response: Response.json(
-          { error: error.code, error_description: error.description },
-          { status: 403, headers },
-        ),
-      };
-    }
-
-    return { masked, cookies: [] };
+  protect(request: Request, ...names: string[]): Promise<Outcome> {
+    return protect(this.#core, request, names);
   }
 
-  async guard(request: Request, ...names: string[]): Promise<Outcome> {
-    if (request.headers.get("authorization"))
-      return this.protect(request, ...names);
-
-    const visit = await this.#visit(request);
-    const session = await this.#readSession(visit);
-
-    if (!session?.data.tokens && wantsJSON(request)) {
-      return this.protect(request, ...names);
-    }
-
-    return this.require(request, ...names);
+  guard(request: Request, ...names: string[]): Promise<Outcome> {
+    return guard(this.#core, request, names);
   }
 
   async metadata(request: Request): Promise<Record<string, unknown>> {
-    const visit = await this.#visit(request);
-    const scopes = this.#options.resourceScopes ?? [];
+    const visit = await this.#core.visit(request);
+    const scopes = this.#core.options.resourceScopes ?? [];
     const answer: Record<string, unknown> = {
       resource: visit.resource,
       authorization_servers: [visit.issuerURL],
@@ -588,60 +141,33 @@ export class Masks {
   }
 
   async connection(request: Request): Promise<Connection> {
-    const visit = await this.#visit(request);
-    const held = await this.#credentials.read(request);
+    const visit = await this.#core.visit(request);
+    const held = await this.#core.credentials.read(request);
 
     return held?.client_id
       ? { connected: true, client_id: held.client_id, issuer: visit.issuerURL }
       : { connected: false, issuer: visit.issuerURL };
   }
 
-  async registered(request: Request): Promise<boolean> {
-    const visit = await this.#visit(request);
-    const held = await this.#credentials.read(request);
-
-    if (!held?.registration_client_uri || !held.registration_access_token)
-      return true;
-
-    try {
-      await (await this.#issuers.get(visit.issuerURL)).readRegistration(held);
-      return true;
-    } catch (error) {
-      return !(
-        error instanceof MasksError &&
-        [401, 403, 404].includes(error.status ?? 0)
-      );
-    }
+  registered(request: Request): Promise<boolean> {
+    return this.#core.registered(request);
   }
 
-  async disconnect(request: Request): Promise<boolean> {
-    if (!this.#credentials.clear) return false;
-
-    const visit = await this.#visit(request);
-    const held = await this.#credentials.read(request);
-
-    if (held?.registration_client_uri && held.registration_access_token) {
-      try {
-        await (await this.#issuers.get(visit.issuerURL)).deleteRegistration(
-          held,
-        );
-      } catch {}
-    }
-
-    await this.#credentials.clear(request);
-
-    return true;
+  disconnect(request: Request): Promise<boolean> {
+    return this.#core.disconnect(request);
   }
 
   async client(request: Request): Promise<Client | undefined> {
-    return this.#client(await this.#visit(request));
+    return this.#core.client(await this.#core.visit(request));
   }
 
   async delegations(request: Request): Promise<Delegations> {
-    const visit = await this.#visit(request);
-    const client = await this.#client(visit);
+    const core = this.#core;
+    const visit = await core.visit(request);
+    const client = await core.client(visit);
+    const back = core.delegationReturn(visit);
 
-    if (!this.#options.delegations) {
+    if (!back) {
       throw new Error(
         "masks: set delegations to the path a provider connection comes back to",
       );
@@ -653,10 +179,7 @@ export class Masks {
         "this app has not shaken hands with masks",
       );
 
-    return new Delegations(
-      client,
-      `${visit.origin}${localPath(this.#options.delegations) ?? "/"}`,
-    );
+    return new Delegations(client, back);
   }
 
   async startDelegation(
@@ -664,25 +187,26 @@ export class Masks {
     provider: string,
     asked: { prompt?: string; maxAge?: number } = {},
   ): Promise<Response> {
-    const visit = await this.#visit(request);
-    const masked = this.#masked(visit, await this.#current(visit));
+    const core = this.#core;
+    const visit = await core.visit(request);
+    const masked = core.masked(visit, await core.current(visit));
 
     if (!masked.signedIn || !masked.subject) {
-      return this.#refuse(visit, "login_required");
+      return refuse(core, visit, "login_required");
     }
 
     const started = await (await this.delegations(request)).start({
       provider,
       ...asked,
     });
-    const flow = await this.#readFlow(visit);
+    const flow = await core.sessions.readFlow(visit);
 
     flow.delegations = keep(
       flow.delegations,
       started.state,
       pendingFor(started, masked.subject, now() + FLOW_LIFETIME),
     );
-    await this.#writeFlow(visit, flow);
+    await core.sessions.writeFlow(visit, flow);
 
     return redirect(started.url, visit.out);
   }
@@ -690,8 +214,9 @@ export class Masks {
   async finishDelegation(
     request: Request,
   ): Promise<{ connection: DelegatedConnection; cookies: string[] }> {
-    const visit = await this.#visit(request);
-    const flow = await this.#readFlow(visit);
+    const core = this.#core;
+    const visit = await core.visit(request);
+    const flow = await core.sessions.readFlow(visit);
     const state = visit.url.searchParams.get("state") ?? "";
     const pending = claim(flow.delegations, state);
 
@@ -702,9 +227,9 @@ export class Masks {
       );
     }
 
-    await this.#writeFlow(visit, flow);
+    await core.sessions.writeFlow(visit, flow);
 
-    const masked = this.#masked(visit, await this.#current(visit));
+    const masked = core.masked(visit, await core.current(visit));
     const connection = await (await this.delegations(request)).finishFor(
       visit.url.searchParams,
       state,
@@ -712,1073 +237,6 @@ export class Masks {
       masked.signedIn ? masked.subject : undefined,
     );
 
-    return { connection, cookies: handOut(visit) };
+    return { connection, cookies: visit.handOut() };
   }
-
-  async #stillRegistered(visit: Visit, clientID: string): Promise<boolean> {
-    const key = `${visit.issuerURL} ${clientID}`;
-
-    if ((this.#registeredAt.get(key) ?? 0) > Date.now() - REGISTRATION_TRUSTED)
-      return true;
-
-    const known = await this.registered(visit.request);
-
-    if (known)
-      remember(this.#registeredAt, key, Date.now(), REMEMBERED_REGISTRATIONS);
-    else this.#registeredAt.delete(key);
-
-    return known;
-  }
-
-  async #start(visit: Visit): Promise<Response> {
-    let client = await this.#client(visit);
-
-    if (client && !(await this.#stillRegistered(visit, client.id))) {
-      await this.disconnect(visit.request);
-      client = await this.#client(visit);
-    }
-
-    const params = visit.url.searchParams;
-    const returnTo = this.#returnTo(params.get("return_to"));
-
-    if (!client) return redirect(this.#handshakeURL(returnTo), visit.out);
-
-    const named = this.privileges.known(
-      (params.get("privilege") ?? "").split(/\s+/).filter(Boolean),
-    );
-    const scope = named.length
-      ? unique([
-          ...this.scope,
-          ...named.flatMap((name) => this.privileges.get(name).scopes),
-        ])
-      : this.scope;
-    const organization =
-      organizationKey(params.get("organization")) ??
-      organizationKey(await resolve(this.#options.organization, visit.request));
-    const redirectURI = this.#redirectURI(visit);
-    const resource = [visit.resource];
-    const started = await client.start({
-      redirectURI,
-      scope,
-      resource,
-      organization,
-    });
-    const flow = await this.#readFlow(visit);
-
-    flow.requests = keep(flow.requests, started.state, {
-      verifier: started.verifier,
-      nonce: started.nonce,
-      returnTo,
-      redirectURI,
-      resource,
-      until: now() + FLOW_LIFETIME,
-    });
-
-    if (named.length > 0) flow.steppedUp = { privileges: named, at: now() };
-
-    await this.#writeFlow(visit, flow);
-
-    return redirect(started.url, visit.out);
-  }
-
-  async #callback(visit: Visit): Promise<Response> {
-    const params = visit.url.searchParams;
-    const flow = await this.#readFlow(visit);
-    const state = params.get("state") ?? "";
-    const pending = claim(flow.requests, state);
-
-    if (pending) await this.#writeFlow(visit, flow);
-
-    if (params.get("error")) {
-      return answer(
-        visit,
-        400,
-        params.get("error") ?? "access_denied",
-        params.get("error_description") ?? "masks did not sign you in",
-      );
-    }
-
-    if (!pending) return this.#stale(visit, flow);
-
-    const client = await this.#client(visit);
-
-    if (!client) return redirect(this.handshakePath, visit.out);
-
-    let signedIn: { token: Token; claims?: IdTokenClaims };
-
-    try {
-      signedIn = await client.complete(params, { ...pending, state });
-    } catch (error) {
-      if (
-        error instanceof MasksError &&
-        error.code === "invalid_client" &&
-        (await this.disconnect(visit.request))
-      ) {
-        return redirect(this.handshakePath, visit.out);
-      }
-
-      throw error;
-    }
-
-    const identity = await this.#identity(
-      client,
-      signedIn.token,
-      signedIn.claims,
-    );
-    const signedInAt = now();
-
-    await this.#writeSession(
-      visit,
-      {
-        issuer: visit.issuerURL,
-        tokens: held(signedIn.token),
-        identity,
-        signedInAt,
-        expiresAt: signedInAt + this.maxAge,
-      },
-      true,
-    );
-
-    return redirect(
-      pending.returnTo ?? this.#options.afterSignIn ?? "/",
-      visit.out,
-    );
-  }
-
-  async #stale(visit: Visit, flow: FlowData): Promise<Response> {
-    const masked = this.#masked(visit, await this.#current(visit));
-
-    if (masked.signedIn)
-      return redirect(this.#options.afterSignIn ?? "/", visit.out);
-
-    if (
-      !wantsJSON(visit.request) &&
-      (flow.restartedAt ?? 0) < now() - RESTART_WITHIN
-    ) {
-      flow.restartedAt = now();
-      await this.#writeFlow(visit, flow);
-
-      return redirect(this.basePath, visit.out);
-    }
-
-    return answer(
-      visit,
-      400,
-      "invalid_state",
-      "that sign-in request is not one this browser started, or it expired",
-    );
-  }
-
-  async #refreshRoute(visit: Visit): Promise<Response> {
-    const returnTo = this.#returnTo(visit.url.searchParams.get("return_to"));
-    const masked = this.#masked(visit, await this.#current(visit));
-
-    if (masked.signedIn)
-      return redirect(returnTo ?? this.#options.afterSignIn ?? "/", visit.out);
-
-    return redirect(this.loginURL({ returnTo }), visit.out);
-  }
-
-  async #sessionRoute(visit: Visit): Promise<Response> {
-    if (!(await this.#configured(visit)))
-      return this.#refuseJSON(visit, "handshake_required");
-
-    const masked = this.#masked(visit, await this.#current(visit));
-
-    if (!masked.signedIn) return this.#refuseJSON(visit, "login_required");
-
-    return json(200, masked.toJSON(), visit.out);
-  }
-
-  async #avatar(visit: Visit): Promise<Response> {
-    const data = await this.#current(visit);
-    const masked = this.#masked(visit, data);
-    const photo = masked.avatars.photo;
-
-    if (!masked.signedIn || !photo || !data?.tokens)
-      return text(404, "not found", visit.out);
-
-    return avatarResponse(
-      {
-        photo,
-        issuer: visit.issuerURL,
-        authorization: `${data.tokens.token_type} ${data.tokens.access_token}`,
-        size: visit.url.searchParams.get("size"),
-        fetch: this.#options.fetch ?? globalThis.fetch,
-        limit: this.#options.avatars,
-      },
-      visit.out,
-    );
-  }
-
-  async #logout(visit: Visit): Promise<Response> {
-    if (!sameOrigin(visit.request, visit.origin)) {
-      return answer(
-        visit,
-        403,
-        "forbidden",
-        "signing out is only asked for from this app",
-      );
-    }
-
-    const session = await this.#readSession(visit);
-    const client = await this.#client(visit);
-    const refresh = session?.data.tokens?.refresh_token;
-
-    if (client && refresh) {
-      try {
-        await client.revoke(refresh, "refresh_token");
-      } catch {}
-    }
-
-    await this.#forget(visit);
-
-    const everywhere =
-      this.#options.signOutOfIssuer === true ||
-      visit.url.searchParams.has("everywhere");
-    let upstream: string | undefined;
-
-    if (everywhere && client) {
-      try {
-        const state = random(16);
-        const flow = await this.#readFlow(visit);
-
-        flow.logouts = keep(flow.logouts, state, {
-          until: now() + FLOW_LIFETIME,
-        });
-        await this.#writeFlow(visit, flow);
-
-        upstream = client.endSessionURL({
-          postLogoutRedirectURI: this.#logoutReturn(visit),
-          state,
-        });
-      } catch {
-        upstream = undefined;
-      }
-    }
-
-    if (wantsJSON(visit.request)) {
-      return json(
-        200,
-        { signed_in: false, ...(upstream ? { logout_url: upstream } : {}) },
-        visit.out,
-      );
-    }
-
-    return redirect(
-      upstream ?? this.#options.afterSignOut ?? "/",
-      visit.out,
-      303,
-    );
-  }
-
-  async #logoutReturnRoute(visit: Visit): Promise<Response> {
-    const flow = await this.#readFlow(visit);
-
-    if (!claim(flow.logouts, visit.url.searchParams.get("state") ?? "")) {
-      return answer(
-        visit,
-        400,
-        "invalid_state",
-        "that sign-out is not one this browser started, or it expired",
-      );
-    }
-
-    await this.#writeFlow(visit, flow);
-
-    return redirect(localPath(this.#options.afterSignOut) ?? "/", visit.out);
-  }
-
-  async #backchannel(visit: Visit): Promise<Response> {
-    const client = await this.#client(visit);
-
-    if (!client)
-      return answer(
-        visit,
-        400,
-        "invalid_request",
-        "this app has not shaken hands with masks",
-        true,
-      );
-
-    const token = (await readForm(visit.request)).get("logout_token");
-
-    if (!token)
-      return answer(
-        visit,
-        400,
-        "invalid_request",
-        "logout_token is required",
-        true,
-      );
-
-    let logout: LogoutToken;
-
-    try {
-      logout = await client.logoutToken(token);
-    } catch (error) {
-      if (error instanceof InvalidTokenError) {
-        return answer(visit, 400, "invalid_request", describe(error), true);
-      }
-
-      throw error;
-    }
-
-    if (
-      !(await acceptLogout(this.#store, visit.issuerURL, logout, this.maxAge))
-    ) {
-      return answer(
-        visit,
-        400,
-        "invalid_request",
-        "that logout token has already been used",
-        true,
-      );
-    }
-
-    if (this.#options.onLogout)
-      await this.#options.onLogout(logout, visit.request);
-
-    return new Response(null, {
-      status: 200,
-      headers: { "cache-control": "no-store" },
-    });
-  }
-
-  async #handshakeShow(visit: Visit): Promise<Response> {
-    if (!(await this.#configured(visit))) return this.#beginHandshake(visit);
-
-    const refused = await this.#manager(visit);
-    if (refused) return refused;
-
-    return connectedPage(
-      this.handshakePath,
-      visit.issuerURL,
-      Boolean(this.#credentials.clear),
-      visit.out,
-    );
-  }
-
-  async #handshakeCreate(visit: Visit): Promise<Response> {
-    if (!sameOrigin(visit.request, visit.origin)) {
-      return answer(
-        visit,
-        403,
-        "forbidden",
-        "a handshake is only started from this app",
-      );
-    }
-
-    if (await this.#configured(visit)) {
-      const refused = await this.#manager(visit);
-      if (refused) return refused;
-    }
-
-    return this.#beginHandshake(visit);
-  }
-
-  async #handshakeDestroy(visit: Visit): Promise<Response> {
-    if (!sameOrigin(visit.request, visit.origin)) {
-      return answer(
-        visit,
-        403,
-        "forbidden",
-        "a disconnect is only asked for from this app",
-      );
-    }
-
-    if (!(await this.#configured(visit)))
-      return redirect(this.handshakePath, visit.out, 303);
-
-    const refused = await this.#manager(visit);
-    if (refused) return refused;
-
-    if (!(await this.disconnect(visit.request))) {
-      return answer(
-        visit,
-        400,
-        "invalid_request",
-        "the credential store cannot forget this connection",
-      );
-    }
-
-    await this.#forget(visit);
-
-    if (wantsJSON(visit.request))
-      return json(200, { connected: false }, visit.out);
-
-    return redirect(this.handshakePath, visit.out, 303);
-  }
-
-  async #handshakeCallback(visit: Visit): Promise<Response> {
-    const params = visit.url.searchParams;
-    const state = params.get("state") ?? "";
-    const flow = await this.#readFlow(visit);
-    const pending = claim(flow.handshakes, state);
-
-    if (!pending) {
-      return answer(
-        visit,
-        400,
-        "invalid_state",
-        "that connection request is not one this browser started, or it expired",
-      );
-    }
-
-    await this.#writeFlow(visit, flow);
-
-    if (await this.#configured(visit)) {
-      const refused = await this.#manager(visit);
-      if (refused) return refused;
-    }
-
-    if (!this.#credentials.write) {
-      return answer(
-        visit,
-        500,
-        "handshake_unsaved",
-        "the credential store cannot save this connection; set credentials to a store that writes",
-      );
-    }
-
-    const handshake = await this.#handshake(visit);
-    const registration = await handshake.complete(params, state);
-
-    await this.#credentials.write(visit.request, {
-      client_id: registration.client_id,
-      client_secret: registration.client_secret,
-      registration_access_token: registration.registration_access_token,
-      registration_client_uri: registration.registration_client_uri,
-    });
-
-    return redirect(this.loginURL({ returnTo: pending.returnTo }), visit.out);
-  }
-
-  async #beginHandshake(visit: Visit): Promise<Response> {
-    const handshake = await this.#handshake(visit);
-    const started = handshake.start();
-    const flow = await this.#readFlow(visit);
-
-    flow.handshakes = keep(flow.handshakes, started.state, {
-      until: now() + FLOW_LIFETIME,
-      returnTo: this.#returnTo(visit.url.searchParams.get("return_to")),
-    });
-    await this.#writeFlow(visit, flow);
-
-    return redirect(started.url, visit.out, 303);
-  }
-
-  async #manager(visit: Visit): Promise<Response | undefined> {
-    const manages = this.#options.manages;
-
-    if (typeof manages === "string") {
-      const outcome = await this.check(visit.request, {
-        privileges: [manages],
-        returnTo: this.handshakePath,
-      });
-
-      return outcome.response;
-    }
-
-    const masked = this.#masked(visit, await this.#current(visit));
-
-    if (!masked.signedIn) {
-      return redirect(
-        this.loginURL({ returnTo: this.handshakePath }),
-        visit.out,
-        303,
-      );
-    }
-
-    if (manages && (await manages(visit.request, masked)) === true)
-      return undefined;
-
-    return answer(
-      visit,
-      403,
-      "forbidden",
-      "only somebody this app lets manage its connection can reconnect or disconnect it",
-    );
-  }
-
-  async #handshake(visit: Visit): Promise<Handshake> {
-    const issuer = await this.#issuers.get(visit.issuerURL);
-    const redirectURIs = [this.#redirectURI(visit)];
-
-    if (this.#options.delegations) {
-      redirectURIs.push(
-        `${visit.origin}${localPath(this.#options.delegations) ?? "/"}`,
-      );
-    }
-
-    return new Handshake(issuer, {
-      name:
-        (await resolve(this.#options.name, visit.request)) || "An application",
-      resource: visit.resource,
-      redirectURIs: unique(redirectURIs),
-      returnTo: this.#handshakeReturn(visit),
-      scope: approvedScope(
-        this.scope,
-        this.privileges,
-        this.#options.namespace,
-        this.#options.delegations ? [DELEGATION_SCOPE] : [],
-      ),
-      backchannelLogoutURI: `${visit.origin}${this.basePath}/logout/backchannel`,
-      postLogoutRedirectUri: this.#logoutReturn(visit),
-    });
-  }
-
-  async #identity(
-    client: Client,
-    token: Token,
-    claims: IdTokenClaims | undefined,
-  ): Promise<Record<string, unknown>> {
-    let profile: Record<string, unknown> = {};
-
-    try {
-      const found = await client.userinfo(token);
-
-      if (!claims || found.sub === claims.sub) profile = found;
-    } catch {}
-
-    return pick({ ...profile, ...(claims ?? {}) });
-  }
-
-  async #current(visit: Visit): Promise<SessionData | undefined> {
-    const session = await this.#readSession(visit);
-    const data = session?.data;
-    const refreshToken = data?.tokens?.refresh_token;
-
-    if (!data?.tokens || fresh(data.tokens) || !refreshToken) return data;
-
-    const client = await this.#client(visit);
-    if (!client) return data;
-
-    const renewal = await renew({
-      store: this.#store,
-      issuer: visit.issuerURL,
-      refreshToken,
-      refresh: () => this.#refresh(visit, client, refreshToken, data.identity),
-      expiresAt: (renewed) => renewed.tokens.expires_at,
-    });
-
-    switch (renewal.outcome) {
-      case "renewed": {
-        const renewed = { ...data, ...renewal.value };
-
-        await this.#writeSession(visit, renewed, false);
-
-        return renewed;
-      }
-      case "unregistered":
-        await this.disconnect(visit.request);
-        await this.#forget(visit);
-
-        return undefined;
-      case "refused":
-        await this.#forget(visit);
-
-        return undefined;
-      default:
-        return data;
-    }
-  }
-
-  async #refresh(
-    visit: Visit,
-    client: Client,
-    refreshToken: string,
-    identity: Record<string, unknown> | undefined,
-  ): Promise<{ tokens: HeldTokens; identity?: Record<string, unknown> }> {
-    const renewed = await client.refresh(refreshToken, {
-      resource: [visit.resource],
-    });
-
-    renewed.refresh_token ??= refreshToken;
-
-    let kept = identity;
-
-    try {
-      const profile = await client.userinfo(renewed);
-
-      if (!kept?.sub || profile.sub === kept.sub) {
-        kept = pick({ ...(kept ?? {}), ...profile });
-      }
-    } catch {}
-
-    return { tokens: held(renewed), identity: kept };
-  }
-
-  #masked(visit: Visit, data: SessionData | undefined): Masked {
-    const tokens = data?.tokens;
-
-    if (!tokens) return Masked.nobody(this.privileges);
-
-    return new Masked({
-      claims: data.identity,
-      scopes: scopesOf(tokens),
-      signedIn: fresh(tokens),
-      privileges: this.privileges,
-      accessToken: tokens.access_token,
-      tokenType: tokens.token_type,
-      expiresAt: tokens.expires_at,
-      accountURL: visit.issuerURL ? `${visit.issuerURL}/` : undefined,
-      avatarURL: `${this.basePath}/avatar`,
-    });
-  }
-
-  #refuse(
-    visit: Visit,
-    reason: "handshake_required" | "login_required",
-    asked?: string,
-    refreshable = false,
-  ): Response {
-    if (wantsJSON(visit.request)) return this.#refuseJSON(visit, reason);
-
-    const returnTo =
-      localPath(asked) ??
-      (visit.request.method === "GET"
-        ? `${visit.url.pathname}${visit.url.search}`
-        : referring(visit.request));
-
-    if (reason === "handshake_required")
-      return redirect(this.#handshakeURL(returnTo), visit.out);
-
-    if (refreshable) {
-      const query = returnTo
-        ? `?${new URLSearchParams({ return_to: returnTo })}`
-        : "";
-
-      return redirect(`${this.basePath}/refresh${query}`, visit.out);
-    }
-
-    return redirect(this.loginURL({ returnTo }), visit.out);
-  }
-
-  #returnTo(asked: string | null | undefined): string | undefined {
-    const path = localPath(asked);
-
-    if (!path) return undefined;
-
-    const { pathname } = new URL(path, "http://app");
-
-    if (this.owns(pathname) && pathname !== this.handshakePath)
-      return undefined;
-
-    return path;
-  }
-
-  #handshakeURL(returnTo: string | undefined): string {
-    const path = this.#returnTo(returnTo);
-
-    if (!path) return this.handshakePath;
-
-    return `${this.handshakePath}?${new URLSearchParams({ return_to: path })}`;
-  }
-
-  #refuseJSON(
-    visit: Visit,
-    reason: "handshake_required" | "login_required",
-  ): Response {
-    if (reason === "handshake_required") {
-      return json(
-        401,
-        { signed_in: false, error: reason, handshake_url: this.handshakePath },
-        visit.out,
-      );
-    }
-
-    return json(
-      401,
-      {
-        signed_in: false,
-        error: reason,
-        login_url: this.loginURL({ returnTo: referring(visit.request) }),
-      },
-      visit.out,
-    );
-  }
-
-  #visit(request: Request): Promise<Visit> {
-    let held = this.#visits.get(request);
-
-    if (!held) {
-      held = this.#newVisit(request);
-      this.#visits.set(request, held);
-    }
-
-    return held;
-  }
-
-  async #newVisit(request: Request): Promise<Visit> {
-    const visit = new Visit(request);
-    const issuer =
-      (await resolve(this.#options.issuer, request)) ?? this.#env.MASKS_ISSUER;
-    const resource =
-      (await resolve(this.#options.resource, request)) ??
-      this.#env.MASKS_RESOURCE;
-
-    if (!issuer)
-      throw new Error(
-        "masks: set MASKS_ISSUER, or pass issuer, to name the masks server",
-      );
-    if (!resource) {
-      throw new Error(
-        "masks: set MASKS_RESOURCE, or pass resource, to name this app by its absolute URL",
-      );
-    }
-
-    let parsed: URL;
-
-    try {
-      parsed = new URL(resource);
-    } catch {
-      throw new Error(
-        "masks: resource is this app's absolute URL, such as https://app.example.com",
-      );
-    }
-
-    visit.issuerURL = issuer.replace(/\/+$/, "");
-    visit.resource = resource;
-    visit.origin = parsed.origin;
-    visit.secure = parsed.protocol === "https:";
-
-    return visit;
-  }
-
-  async #client(visit: Visit): Promise<Client | undefined> {
-    const held = await this.#credentials.read(visit.request);
-
-    if (!held?.client_id) return undefined;
-
-    return (await this.#issuers.get(visit.issuerURL)).client(held);
-  }
-
-  async #configured(visit: Visit): Promise<boolean> {
-    return !!(await this.#credentials.read(visit.request))?.client_id;
-  }
-
-  async #verifier(visit: Visit): Promise<Verifier> {
-    const key = `${visit.issuerURL} ${visit.resource}`;
-    const issuer = await this.#issuers.get(visit.issuerURL);
-    const held = this.#verifiers.get(key);
-
-    if (held?.issuer === issuer) return held;
-
-    const made = new Verifier(issuer, visit.resource, {
-      publicURL: visit.origin,
-      replay: replayStore(this.#store),
-      resourceMetadata: this.#metadataURL(visit),
-    });
-
-    remember(this.#verifiers, key, made, REMEMBERED_VERIFIERS);
-
-    return made;
-  }
-
-  #metadataPath(visit: Visit): string {
-    const path = new URL(visit.resource).pathname.replace(/\/+$/, "");
-
-    return `${RESOURCE_PATH}${path}`;
-  }
-
-  #metadataURL(visit: Visit): string {
-    return `${visit.origin}${this.#metadataPath(visit)}`;
-  }
-
-  #redirectURI(visit: Visit): string {
-    return `${visit.origin}${this.basePath}/callback`;
-  }
-
-  #logoutReturn(visit: Visit): string {
-    return `${visit.origin}${this.basePath}/logout/return`;
-  }
-
-  #handshakeReturn(visit: Visit): string {
-    return `${visit.origin}${this.basePath}/handshake/callback`;
-  }
-
-  #sessionCookie(visit: Visit): string {
-    return visit.secure ? "__Host-masks" : "masks";
-  }
-
-  #flowCookie(visit: Visit): string {
-    return visit.secure ? "__Host-masks-flow" : "masks-flow";
-  }
-
-  async #readSession(
-    visit: Visit,
-  ): Promise<{ id?: string; data: SessionData } | undefined> {
-    if (visit.session !== undefined) return visit.session ?? undefined;
-
-    visit.session = null;
-
-    const sealed = await this.#seal.unseal<{
-      id?: string;
-      data?: SessionData;
-      until: number;
-    }>(SESSION_PURPOSE, readChunked(visit.cookies, this.#sessionCookie(visit)));
-
-    if (!sealed || !(sealed.until > now())) return undefined;
-
-    const data = sealed.id
-      ? await this.#stored(sealed.id)
-      : this.#options.sessions
-        ? undefined
-        : sealed.data;
-
-    if (!data || (data.expiresAt ?? 0) < now()) return undefined;
-
-    if (
-      data.issuer !== visit.issuerURL ||
-      (await departed(
-        this.#store,
-        visit.issuerURL,
-        data.identity ?? {},
-        data.signedInAt ?? 0,
-      ))
-    ) {
-      visit.session = { id: sealed.id, data };
-      await this.#forget(visit);
-
-      return undefined;
-    }
-
-    visit.session = { id: sealed.id, data };
-
-    return visit.session;
-  }
-
-  async #stored(id: string): Promise<SessionData | undefined> {
-    const store = this.#options.sessions;
-
-    if (!store) return undefined;
-
-    let held: string | undefined;
-
-    try {
-      held = await store.get(await keyed("session", id));
-    } catch (error) {
-      throw new UnavailableError("the session store could not be reached", {
-        cause: error,
-      });
-    }
-
-    const opened = await this.#seal.unseal<{ id: string; data: SessionData }>(
-      STORED_PURPOSE,
-      held,
-    );
-
-    return opened?.id === id ? opened.data : undefined;
-  }
-
-  async #writeSession(
-    visit: Visit,
-    data: SessionData,
-    rotate: boolean,
-  ): Promise<void> {
-    if (visit.session === undefined) await this.#readSession(visit);
-
-    const store = this.#options.sessions;
-    const until = data.expiresAt ?? now() + this.maxAge;
-    const previous = visit.session?.id;
-    let sealed: string;
-
-    if (store) {
-      const id = rotate || !previous ? random(32) : previous;
-
-      await Promise.all([
-        store.set(
-          await keyed("session", id),
-          await this.#seal.seal(STORED_PURPOSE, { id, data }),
-          Math.max(1, until - now()),
-        ),
-        previous && previous !== id
-          ? keyed("session", previous).then((key) => store.delete(key))
-          : undefined,
-      ]);
-
-      sealed = await this.#seal.seal(SESSION_PURPOSE, { id, until });
-      visit.session = { id, data };
-    } else {
-      sealed = await this.#seal.seal(SESSION_PURPOSE, { data, until });
-      visit.session = { data };
-    }
-
-    this.#setCookies(
-      visit,
-      writeChunked(visit.cookies, this.#sessionCookie(visit), sealed, {
-        secure: visit.secure,
-        maxAge: Math.max(1, until - now()),
-      }),
-    );
-  }
-
-  async #forget(visit: Visit): Promise<void> {
-    const id = visit.session?.id;
-
-    if (id && this.#options.sessions)
-      await this.#options.sessions.delete(await keyed("session", id));
-
-    visit.session = null;
-
-    this.#setCookies(
-      visit,
-      writeChunked(visit.cookies, this.#sessionCookie(visit), undefined, {
-        secure: visit.secure,
-      }),
-    );
-  }
-
-  async #readFlow(visit: Visit): Promise<FlowData> {
-    if (visit.flow) return visit.flow;
-
-    const sealed = await this.#seal.unseal<{ flow: FlowData; until: number }>(
-      FLOW_PURPOSE,
-      visit.cookies.get(this.#flowCookie(visit)),
-    );
-
-    visit.flow = sealed && sealed.until > now() ? sealed.flow : {};
-
-    return visit.flow;
-  }
-
-  async #writeFlow(visit: Visit, flow: FlowData): Promise<void> {
-    visit.flow = flow;
-
-    const sealed = await this.#seal.seal(FLOW_PURPOSE, {
-      flow,
-      until: now() + FLOW_LIFETIME,
-    });
-
-    this.#setCookies(
-      visit,
-      writeChunked(visit.cookies, this.#flowCookie(visit), sealed, {
-        secure: visit.secure,
-        maxAge: FLOW_LIFETIME,
-      }),
-    );
-  }
-
-  #setCookies(visit: Visit, written: string[]): void {
-    visit.out.splice(0, Infinity, ...mergeCookies(visit.out, written));
-  }
-}
-
-function handOut(visit: Visit): string[] {
-  const fresh = visit.out.filter((line) => !visit.handed.has(line));
-
-  for (const line of fresh) visit.handed.add(line);
-
-  return fresh;
-}
-
-export function now(): number {
-  return Math.floor(Date.now() / 1000);
-}
-
-export function fresh(tokens: { expires_at?: number }): boolean {
-  return !tokens.expires_at || tokens.expires_at - now() > REFRESH_LEEWAY;
-}
-
-function held(token: Token): HeldTokens {
-  return {
-    access_token: token.access_token,
-    token_type: token.token_type || "Bearer",
-    refresh_token: token.refresh_token,
-    scope: token.scope ?? "",
-    expires_at: token.expires_at,
-  };
-}
-
-export function pick(claims: Record<string, unknown>): Record<string, unknown> {
-  return Object.fromEntries(
-    IDENTITY.filter(
-      (name) => claims[name] !== undefined && claims[name] !== null,
-    ).map((name) => [name, claims[name]]),
-  );
-}
-
-export function keep<T extends { until: number }>(
-  held: Record<string, T> | undefined,
-  id: string,
-  entry: T,
-): Record<string, T> {
-  const live = Object.entries(held ?? {}).filter(
-    ([, value]) => value?.until > now(),
-  );
-
-  return Object.fromEntries(
-    [...live, [id, entry] as [string, T]].slice(-FLOW_LIMIT),
-  );
-}
-
-export function claim<T extends { until: number }>(
-  held: Record<string, T> | undefined,
-  id: string,
-): T | undefined {
-  if (!held || !id) return undefined;
-
-  const match = Object.keys(held).find((key) => constantEqual(key, id));
-
-  if (!match) return undefined;
-
-  const found = held[match];
-  delete held[match];
-
-  return found && found.until > now() ? found : undefined;
-}
-
-function describe(error: Error): string {
-  return error.message.replace(/^masks: (invalid token: )?/, "");
-}
-
-function quote(value: string): string {
-  return [...value]
-    .map((found) =>
-      unsafe(found, 0x1f) || found === '"' || found === "\\" ? " " : found,
-    )
-    .join("")
-    .trim();
-}
-
-function answer(
-  visit: Visit,
-  status: number,
-  code: string,
-  description: string,
-  asJSON = false,
-): Response {
-  return errorResponse(
-    visit.request,
-    status,
-    code,
-    description,
-    visit.out,
-    asJSON,
-  );
-}
-
-function forbid(visit: Visit, error: ForbiddenError): Response {
-  return answer(visit, 403, error.code, error.description);
-}
-
-export function connectedPage(
-  handshakePath: string,
-  issuer: string,
-  disconnects: boolean,
-  cookies: string[],
-): Response {
-  const path = escapeHTML(handshakePath);
-  const target = originOf(issuer);
-
-  return page(
-    "This app is connected",
-    `<p>Reconnecting replaces the credentials it holds with a fresh pair. It is how you rotate them, and how you move this app to another account. No secret passes through your browser.</p>
-<p>The app stops working between the approval and the moment it picks the new credentials up.</p>
-<form method="post" action="${path}"><button type="submit">Reconnect it</button></form>
-${disconnects ? `<form method="post" action="${path}/disconnect"><button type="submit">Disconnect it</button></form>` : ""}`,
-    cookies,
-    target ? [target] : [],
-  );
 }
