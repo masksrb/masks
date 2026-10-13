@@ -65,7 +65,9 @@ The app writes its credentials to `masks.json` with file mode 600. To keep them 
 
 A multi-tenant app sets `credentials` to a function that takes the request and returns the store for
 that tenant. `issuer`, `resource`, `name`, `organization`, and `base_url` take a function of the
-request in the same way. Derive them from something the app trusts, such as a tenant it looked up by
+request in the same way. When `issuer` is a function, `Config` needs `credentials` as well, since one
+`masks.json` would send one tenant's client secret to another. The handshake saves the issuer with
+the credentials, and the app never uses them with another issuer. Derive them from something the app trusts, such as a tenant it looked up by
 host. Never use a value the browser sends without checking it.
 
 Once the app is connected, `/auth/handshake` shows the connection to somebody `manages` allows. It

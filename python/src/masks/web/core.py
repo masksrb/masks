@@ -453,10 +453,23 @@ class Masks:
         return found
 
     def credentials(self, request: Incoming) -> Credentials:
+        assert self.config.credentials is not None
+
         return resolve(self.config.credentials, request.native)
 
+    def held_credentials(self, request: Incoming) -> dict[str, str]:
+        held = self.credentials(request).read()
+        named = held.get("issuer", "").rstrip("/")
+
+        if held.get("client_id") and named != self.issuer_url(request) and (named or callable(self.config.issuer)):
+            raise Refusal(
+                self._refuse(request, "server_error", "the app's credentials were issued by another issuer", 500)
+            )
+
+        return held
+
     def configured(self, request: Incoming) -> bool:
-        return bool(self.credentials(request).read().get("client_id"))
+        return bool(self.held_credentials(request).get("client_id"))
 
     def resource(self, request: Incoming) -> str:
         return str(resolve(self.config.resource, request.native) or "")
@@ -493,7 +506,7 @@ class Masks:
         return found
 
     def flows(self, request: Incoming, issuer: Issuer) -> _Flows:
-        held = self.credentials(request).read()
+        held = self.held_credentials(request)
 
         if not held.get("client_id"):
             raise Refusal(self._handshake_required(request))
@@ -821,7 +834,7 @@ class Masks:
         return Answer.redirect(self.path())
 
     def registered(self, request: Incoming) -> Step[bool]:
-        held = self.credentials(request).read()
+        held = self.held_credentials(request)
 
         if not held.get("registration_client_uri") or not held.get("registration_access_token"):
             return bool(held.get("client_id"))
@@ -1214,7 +1227,7 @@ class Masks:
         status = {
             "connected": True,
             "issuer": self.issuer_url(request),
-            "client_id": held.read().get("client_id", ""),
+            "client_id": self.held_credentials(request).get("client_id", ""),
             "can_disconnect": held.writable,
         }
 
@@ -1278,7 +1291,7 @@ class Masks:
 
             return self._refuse(request, error.code, error.description)
 
-        self.credentials(request).write(registration)
+        self.credentials(request).write(self.issuer_url(request), registration)
 
         return Answer.redirect(self.path())
 
@@ -1301,7 +1314,7 @@ class Masks:
                 request, "forbidden", "this app cannot save new credentials, so its connection cannot change", 403
             )
 
-        held = credentials.read()
+        held = self.held_credentials(request)
 
         if held.get("registration_client_uri") and held.get("registration_access_token"):
             try:

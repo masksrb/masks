@@ -37,7 +37,7 @@ class Config:
     privileges: Mapping[str, Any] = field(default_factory=dict)
     namespace: str = ""
     organization: Setting[str] = ""
-    credentials: Setting[Credentials] = field(default_factory=FileCredentials)
+    credentials: Setting[Credentials] | None = None
     sessions: SessionBackend | None = None
     store: Store | AsyncStore = field(default_factory=MemoryStore)
     session_lifetime: int = LIFETIME
@@ -57,6 +57,14 @@ class Config:
     def __post_init__(self) -> None:
         self.prefix = "/" + self.prefix.strip("/") if self.prefix.strip("/") else ""
         self.known: dict[str, Privilege] = privileges(self.privileges)
+
+        if self.credentials is None:
+            if callable(self.issuer):
+                raise ValueError(
+                    "masks: an issuer that follows the request needs credentials that keep each issuer's apart"
+                )
+
+            self.credentials = FileCredentials()
 
         if self.sessions is None:
             if not self.secret:

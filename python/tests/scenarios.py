@@ -225,8 +225,19 @@ def shakes_hands(build: Build, fake: Fake) -> None:
     assert parse_qs(urlsplit(begun).query)["return_to"] == [f"{APP}/auth/handshake/callback"]
     assert browser.get(fake.handshake(begun), HTML).location == "/auth"
     assert credentials.read()["client_id"] == "app"
+    assert credentials.read()["issuer"] == ISSUER
     assert sign_in(browser, fake).location == "/"
     assert browser.get("/auth/handshake", JSON).json()["client_id"] == "app"
+
+
+def refuses_credentials_from_another_issuer(build: Build, fake: Fake) -> None:
+    elsewhere = MemoryCredentials("web", "secret", issuer="https://elsewhere.example")
+    browser = build(config(fake, credentials=elsewhere))
+    refused = browser.get("/auth", JSON)
+
+    assert refused.status == 500
+    assert "another issuer" in refused.json()["error_description"]
+    assert browser.get("/auth/handshake", JSON).status == 500
 
 
 def ends_sessions_from_the_back_channel(build: Build, fake: Fake) -> None:
@@ -475,6 +486,7 @@ SCENARIOS = [
     protects_an_api,
     answers_503_when_the_keys_are_down,
     shakes_hands,
+    refuses_credentials_from_another_issuer,
     ends_sessions_from_the_back_channel,
     proxies_the_avatar,
     shows_the_avatar_route_as_the_picture,

@@ -16,16 +16,19 @@ REGISTRATION = Registration(
     registration_client_uri="https://id.example/register/app",
 )
 
+ISSUER = "https://id.example"
+
 as_root = pytest.mark.skipif(hasattr(os, "geteuid") and os.geteuid() == 0, reason="root ignores file modes")
 
 
 def test_the_file_and_its_folder_are_private(tmp_path: Path) -> None:
     held = FileCredentials(tmp_path / "masks" / "masks.json")
-    held.write(REGISTRATION)
+    held.write(ISSUER, REGISTRATION)
 
     assert stat.S_IMODE((tmp_path / "masks").stat().st_mode) == 0o700
     assert stat.S_IMODE((tmp_path / "masks" / "masks.json").stat().st_mode) == 0o600
     assert held.read()["client_secret"] == "secret"
+    assert held.read()["issuer"] == ISSUER
     assert [path.name for path in (tmp_path / "masks").iterdir()] == ["masks.json"]
 
 
@@ -33,12 +36,12 @@ def test_a_write_from_another_process_is_read_within_the_same_second(tmp_path: P
     path = tmp_path / "masks.json"
     held = FileCredentials(path)
     other = FileCredentials(path)
-    held.write(REGISTRATION)
+    held.write(ISSUER, REGISTRATION)
     before = path.stat()
 
     assert held.read()["client_id"] == "app"
 
-    other.write(Registration(client_id="next", client_secret="secret"))
+    other.write(ISSUER, Registration(client_id="next", client_secret="secret"))
     os.utime(path, ns=(before.st_atime_ns, before.st_mtime_ns))
 
     assert held.read()["client_id"] == "next"
@@ -61,7 +64,7 @@ def test_a_folder_it_cannot_write_is_not_writable(tmp_path: Path) -> None:
 def test_a_file_it_cannot_read_is_an_error(tmp_path: Path) -> None:
     path = tmp_path / "masks.json"
     held = FileCredentials(path)
-    held.write(REGISTRATION)
+    held.write(ISSUER, REGISTRATION)
     path.chmod(0o000)
 
     try:

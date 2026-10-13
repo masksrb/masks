@@ -34,7 +34,7 @@ host.
 | `namespace` | `""` | A scope prefix, such as `catalog:`. The handshake registers the namespace in place of each scope under it. |
 | `organization` | `""` | The organization every sign-in names. *Request.* |
 | `resource_scopes` | `()` | The scopes the API accepts. A dict of scope to description also gives masks the sentence its consent screen shows. |
-| `credentials` | `FileCredentials()` | Where the handshake keeps the app's credentials. See [credentials](#credentials). *Request.* |
+| `credentials` | `FileCredentials()` | Where the handshake keeps the app's credentials. Needed when `issuer` is a function. See [credentials](#credentials). *Request.* |
 | `sessions` | Cookie sessions | Where sessions live. See [sessions](#sessions). |
 | `session_lifetime` | 14 days | How long a session lasts, in seconds. |
 | `store` | `MemoryStore()` | Where refreshes, logouts, and DPoP proofs are remembered. See [stores](#stores). |
@@ -132,16 +132,19 @@ A privilege can combine `scope`, `role`, and `organization`.
 | | |
 | --- | --- |
 | `FileCredentials(path="masks.json")` | A file, written with mode 600 in a folder it creates with mode 700. It is writable only when the app can create files in that folder. |
-| `MemoryCredentials(client_id="", client_secret="")` | This process's memory, for tests. |
-| `StaticCredentials(client_id, client_secret="")` | Credentials from configuration. The app cannot disconnect with these. |
+| `MemoryCredentials(client_id="", client_secret="", issuer="")` | This process's memory, for tests. |
+| `StaticCredentials(client_id, client_secret="", issuer="")` | Credentials from configuration. The app cannot disconnect with these. |
 
 A store of your own has a `writable` attribute, false when it cannot save, and these methods:
 
 | Method | |
 | --- | --- |
-| `read()` | Returns a dict with `client_id`, and `client_secret` when there is one. |
-| `write(registration)` | Saves a `masks.Registration`. |
+| `read()` | Returns a dict with `client_id`, and `issuer` and `client_secret` when there are. |
+| `write(issuer, registration)` | Saves a `masks.Registration` and the issuer that made it. |
 | `clear()` | Forgets the credentials. |
+
+The app uses credentials only with the issuer they name, and answers `500` for credentials from another
+issuer. Credentials that name no issuer work only when `issuer` is a fixed string.
 
 ## Sessions
 

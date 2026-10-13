@@ -726,7 +726,7 @@ class ReadOnly:
     def read(self) -> dict[str, str]:
         return {}
 
-    def write(self, registration: Any) -> None:
+    def write(self, issuer: str, registration: Any) -> None:
         raise TypeError("read only")
 
     def clear(self) -> None:
@@ -792,6 +792,20 @@ def test_settings_follow_the_request(fake: Fake) -> None:
 
             assert query["client_id"] == [client_id]
             assert query["redirect_uri"] == [f"https://{host}/auth/callback"]
+
+
+def test_an_issuer_per_request_holds_credentials_to_their_issuer(fake: Fake) -> None:
+    with pytest.raises(ValueError, match="keep each issuer's apart"):
+        Config(issuer=lambda request: ISSUER, secret=SECRET)
+
+    unnamed, _ = build(fake, issuer=lambda request: ISSUER)
+    named, _ = build(fake, issuer=lambda request: ISSUER, credentials=MemoryCredentials("web", "secret", issuer=ISSUER))
+
+    with TestClient(unnamed, base_url=APP, follow_redirects=False) as client:
+        assert client.get("/auth", headers=JSON).status_code == 500
+
+    with TestClient(named, base_url=APP, follow_redirects=False) as client:
+        assert location(client.get("/auth", headers=HTML)).startswith(f"{ISSUER}/authorize?")
 
 
 def test_an_unknown_privilege_is_a_mistake_in_the_app(fake: Fake) -> None:

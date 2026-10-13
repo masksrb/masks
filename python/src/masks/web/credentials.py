@@ -10,7 +10,7 @@ from typing import Protocol
 
 from ..models import Registration
 
-KEYS = ("client_id", "client_secret", "registration_access_token", "registration_client_uri")
+KEYS = ("issuer", "client_id", "client_secret", "registration_access_token", "registration_client_uri")
 
 
 class Credentials(Protocol):
@@ -19,13 +19,14 @@ class Credentials(Protocol):
 
     def read(self) -> dict[str, str]: ...
 
-    def write(self, registration: Registration) -> None: ...
+    def write(self, issuer: str, registration: Registration) -> None: ...
 
     def clear(self) -> None: ...
 
 
-def held(registration: Registration) -> dict[str, str]:
+def held(issuer: str, registration: Registration) -> dict[str, str]:
     found = {
+        "issuer": issuer,
         "client_id": registration.client_id,
         "client_secret": registration.client_secret or "",
         "registration_access_token": registration.registration_access_token or "",
@@ -34,6 +35,12 @@ def held(registration: Registration) -> dict[str, str]:
     }
 
     return {key: value for key, value in found.items() if value}
+
+
+def given(issuer: str, client_id: str, client_secret: str) -> dict[str, str]:
+    pairs = (("issuer", issuer.rstrip("/")), ("client_id", client_id), ("client_secret", client_secret))
+
+    return {key: value for key, value in pairs if value}
 
 
 class FileCredentials:
@@ -76,8 +83,8 @@ class FileCredentials:
 
             return dict(self._held)
 
-    def write(self, registration: Registration) -> None:
-        content = json.dumps(held(registration), indent=2)
+    def write(self, issuer: str, registration: Registration) -> None:
+        content = json.dumps(held(issuer, registration), indent=2)
 
         with self._lock:
             self.path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
@@ -107,16 +114,14 @@ class FileCredentials:
 class MemoryCredentials:
     writable = True
 
-    def __init__(self, client_id: str = "", client_secret: str = "") -> None:
-        self._held = {
-            key: value for key, value in (("client_id", client_id), ("client_secret", client_secret)) if value
-        }
+    def __init__(self, client_id: str = "", client_secret: str = "", issuer: str = "") -> None:
+        self._held = given(issuer, client_id, client_secret)
 
     def read(self) -> dict[str, str]:
         return dict(self._held)
 
-    def write(self, registration: Registration) -> None:
-        self._held = held(registration)
+    def write(self, issuer: str, registration: Registration) -> None:
+        self._held = held(issuer, registration)
 
     def clear(self) -> None:
         self._held = {}
@@ -125,18 +130,16 @@ class MemoryCredentials:
 class StaticCredentials:
     writable = False
 
-    def __init__(self, client_id: str, client_secret: str = "") -> None:
+    def __init__(self, client_id: str, client_secret: str = "", issuer: str = "") -> None:
         if not client_id:
             raise ValueError("masks: static credentials need a client_id")
 
-        self._held = {
-            key: value for key, value in (("client_id", client_id), ("client_secret", client_secret)) if value
-        }
+        self._held = given(issuer, client_id, client_secret)
 
     def read(self) -> dict[str, str]:
         return dict(self._held)
 
-    def write(self, registration: Registration) -> None:
+    def write(self, issuer: str, registration: Registration) -> None:
         raise TypeError("masks: these credentials come from configuration and cannot be replaced")
 
     def clear(self) -> None:
