@@ -543,7 +543,7 @@ export class Fake {
     return redirect.toString();
   }
 
-  person(sub) {
+  actor(sub) {
     return {
       name: "Ada Lovelace",
       preferred_username: "ada",
@@ -565,7 +565,7 @@ export class Fake {
 
   async signIn(response, id, held, jkt) {
     const now = Math.floor(Date.now() / 1000);
-    const person = this.person(held.sub);
+    const actor = this.actor(held.sub);
     const scopes = (held.scope ?? "").split(" ").filter(Boolean);
     const audience = held.resource?.length ? held.resource : [this.audience];
     const refresh = random();
@@ -576,8 +576,8 @@ export class Fake {
       access_token: await this.accessToken(held.sub, held.scope, jkt, {
         aud: audience.length === 1 ? audience[0] : audience,
         client_id: id,
-        ...(scopes.includes("organization") || person.org
-          ? { org: person.org }
+        ...(scopes.includes("organization") || actor.org
+          ? { org: actor.org }
           : {}),
       }),
       token_type: jkt ? "DPoP" : "Bearer",
@@ -596,9 +596,9 @@ export class Fake {
           iat: now,
           sid: held.sid,
           nonce: this.nonceOverride ?? held.nonce ?? undefined,
-          name: person.name,
-          email: person.email,
-          org: person.org,
+          name: actor.name,
+          email: actor.email,
+          org: actor.org,
         },
         "JWT",
       );
@@ -637,7 +637,7 @@ export class Fake {
 
       return json(response, 200, {
         sub: payload.sub,
-        ...this.person(payload.sub),
+        ...this.actor(payload.sub),
       });
     } catch {
       return oauthError(response, 401, "invalid_token");

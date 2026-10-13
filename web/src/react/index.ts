@@ -1,2 +1,2 @@
-export type { PersonProps } from "./Person.js";
-export { Person } from "./Person.js";
+export type { ActorProps } from "./Actor.js";
+export { Actor } from "./Actor.js";

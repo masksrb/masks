@@ -27,9 +27,9 @@
       "default": "./dist/react/index.js"
     },
     "./svelte": {
-      "svelte": "./dist/svelte/Person.svelte",
-      "types": "./dist/svelte/Person.svelte.d.ts",
-      "default": "./dist/svelte/Person.svelte"
+      "svelte": "./dist/svelte/Actor.svelte",
+      "types": "./dist/svelte/Actor.svelte.d.ts",
+      "default": "./dist/svelte/Actor.svelte"
     }
   },
   "files": [
@@ -40,7 +40,7 @@
   ],
   "sideEffects": false,
   "scripts": {
-    "build": "tsc -p tsconfig.json && mkdir -p dist/svelte && cp src/svelte/Person.svelte src/svelte/Person.svelte.d.ts dist/svelte/",
+    "build": "tsc -p tsconfig.json && mkdir -p dist/svelte && cp src/svelte/Actor.svelte src/svelte/Actor.svelte.d.ts dist/svelte/",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "biome check",
     "lint:fix": "biome check --write",

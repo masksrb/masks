@@ -1,6 +1,6 @@
 import type { Account, Organization } from "./types.js";
 
-export interface PersonInfo {
+export interface ActorInfo {
   name: string;
   details: string[];
   unconfirmed: boolean;
@@ -12,7 +12,7 @@ export interface PersonInfo {
   owner: boolean;
 }
 
-export function personFrom(account: Account): PersonInfo {
+export function actorFrom(account: Account): ActorInfo {
   const handle = account.nickname ? `@${account.nickname}` : null;
   const name = account.name?.trim() || handle || account.email || "";
   const details = [handle, account.email ?? null].filter(

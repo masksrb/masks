@@ -1155,7 +1155,7 @@ export class MasksAuth {
       handshake: (request) => this.#handshake(request),
       privileges: this.privileges,
       manages: this.#options.manages,
-      person: async (request) => {
+      actor: async (request) => {
         const held = await this.#signInFrom(request.headers);
 
         return held ? this.#maskedOf(held) : Masked.nobody(this.privileges);

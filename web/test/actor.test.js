@@ -1,22 +1,22 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { holdsRole, initials, personFrom } from "../dist/person.js";
+import { actorFrom, holdsRole, initials } from "../dist/actor.js";
 
 test("a name wins, then a handle, then an email, and nothing repeats", () => {
-  const full = personFrom({
+  const full = actorFrom({
     signed_in: true,
     name: "Ada Lovelace",
     nickname: "ada",
     email: "ada@example.com",
     scopes: [],
   });
-  const handle = personFrom({
+  const handle = actorFrom({
     signed_in: true,
     nickname: "ada",
     email: "ada@example.com",
     scopes: [],
   });
-  const bare = personFrom({
+  const bare = actorFrom({
     signed_in: true,
     email: "ada@example.com",
     scopes: [],
@@ -34,19 +34,19 @@ test("a name wins, then a handle, then an email, and nothing repeats", () => {
 });
 
 test("an unconfirmed email is flagged, a confirmed one is not", () => {
-  const unconfirmed = personFrom({
+  const unconfirmed = actorFrom({
     signed_in: true,
     email: "ada@example.com",
     email_verified: false,
     scopes: [],
   });
-  const confirmed = personFrom({
+  const confirmed = actorFrom({
     signed_in: true,
     email: "ada@example.com",
     email_verified: true,
     scopes: [],
   });
-  const none = personFrom({ signed_in: true, nickname: "ada", scopes: [] });
+  const none = actorFrom({ signed_in: true, nickname: "ada", scopes: [] });
 
   assert.equal(unconfirmed.unconfirmed, true);
   assert.equal(confirmed.unconfirmed, false);
@@ -55,7 +55,7 @@ test("an unconfirmed email is flagged, a confirmed one is not", () => {
 
 test("masks:manage marks someone a manager", () => {
   assert.equal(
-    personFrom({
+    actorFrom({
       signed_in: true,
       nickname: "ada",
       scopes: ["openid", "masks:manage"],
@@ -63,8 +63,7 @@ test("masks:manage marks someone a manager", () => {
     true,
   );
   assert.equal(
-    personFrom({ signed_in: true, nickname: "ada", scopes: ["openid"] })
-      .manager,
+    actorFrom({ signed_in: true, nickname: "ada", scopes: ["openid"] }).manager,
     false,
   );
 });
@@ -83,7 +82,7 @@ test("an organization brings its name and the person's role", () => {
     scopes: ["openid", "organization"],
     organization: { id: "org-1", key: "acme", name: "Acme", role: "owner" },
   };
-  const info = personFrom(account);
+  const info = actorFrom(account);
 
   assert.equal(info.organization.name, "Acme");
   assert.equal(info.role, "owner");
@@ -94,7 +93,7 @@ test("an organization brings its name and the person's role", () => {
 
 test("with no organization there is no role to hold", () => {
   const account = { signed_in: true, nickname: "ada", scopes: [] };
-  const info = personFrom(account);
+  const info = actorFrom(account);
 
   assert.equal(info.organization, null);
   assert.equal(info.role, null);
@@ -105,7 +104,7 @@ test("with no organization there is no role to hold", () => {
 test("the other organizations are the ones a person can switch to", () => {
   const acme = { id: "org-1", key: "acme", name: "Acme", role: "owner" };
   const globex = { id: "org-2", key: "globex", name: "Globex", role: "member" };
-  const info = personFrom({
+  const info = actorFrom({
     signed_in: true,
     name: "Ada",
     scopes: ["openid", "organization"],
@@ -115,5 +114,5 @@ test("the other organizations are the ones a person can switch to", () => {
 
   assert.deepEqual(info.organizations, [acme, globex]);
   assert.deepEqual(info.others, [globex]);
-  assert.deepEqual(personFrom({ signed_in: true, scopes: [] }).others, []);
+  assert.deepEqual(actorFrom({ signed_in: true, scopes: [] }).others, []);
 });

@@ -59,13 +59,13 @@ test("an app with no credentials shakes hands, then signs the person in", async 
   assert.equal(done.status, 200);
   assert.deepEqual(await done.json(), { path: "/", signed_in: true });
 
-  const person = await masks.peek(browser.request("/"));
-  assert.equal(person.subject, "ada");
-  assert.equal(person.name, "Ada Lovelace");
-  assert.equal(person.organization.key, "acme");
-  assert.equal(person.organizations.length, 2);
-  assert.ok(person.role("owner"));
-  assert.ok(person.accessToken);
+  const actor = await masks.peek(browser.request("/"));
+  assert.equal(actor.subject, "ada");
+  assert.equal(actor.name, "Ada Lovelace");
+  assert.equal(actor.organization.key, "acme");
+  assert.equal(actor.organizations.length, 2);
+  assert.ok(actor.role("owner"));
+  assert.ok(actor.accessToken);
   assert.deepEqual(await masks.connection(browser.request("/")), {
     connected: true,
     client_id: saved.client_id,

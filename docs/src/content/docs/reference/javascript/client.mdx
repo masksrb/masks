@@ -400,13 +400,35 @@ Defined in: [types.ts:22](https://github.com/masksrb/masks/blob/main/web/src/typ
 | <a id="expires_at"></a> `expires_at?` | `number` | [types.ts:35](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L35) |
 | <a id="name"></a> `name?` | `string` | [types.ts:25](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L25) |
 | <a id="nickname"></a> `nickname?` | `string` | [types.ts:26](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L26) |
-| <a id="organization"></a> `organization?` | [`Organization`](#organization-5) | [types.ts:32](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L32) |
-| <a id="organizations"></a> `organizations?` | [`Organization`](#organization-5)[] | [types.ts:33](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L33) |
+| <a id="organization"></a> `organization?` | [`Organization`](#organization-6) | [types.ts:32](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L32) |
+| <a id="organizations"></a> `organizations?` | [`Organization`](#organization-6)[] | [types.ts:33](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L33) |
 | <a id="picture"></a> `picture?` | `string` | [types.ts:29](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L29) |
 | <a id="scopes"></a> `scopes` | `string`[] | [types.ts:34](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L34) |
 | <a id="signed_in"></a> `signed_in` | `boolean` | [types.ts:23](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L23) |
 | <a id="subject"></a> `subject?` | `string` | [types.ts:24](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L24) |
 | <a id="tenant"></a> `tenant?` | [`Tenant`](#tenant-2) | [types.ts:31](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L31) |
+
+***
+
+<a id="actorinfo"></a>
+
+### ActorInfo
+
+Defined in: [actor.ts:3](https://github.com/masksrb/masks/blob/main/web/src/actor.ts#L3)
+
+#### Properties
+
+| Property | Type | Defined in |
+| ------ | ------ | ------ |
+| <a id="details"></a> `details` | `string`[] | [actor.ts:5](https://github.com/masksrb/masks/blob/main/web/src/actor.ts#L5) |
+| <a id="manager"></a> `manager` | `boolean` | [actor.ts:7](https://github.com/masksrb/masks/blob/main/web/src/actor.ts#L7) |
+| <a id="name-1"></a> `name` | `string` | [actor.ts:4](https://github.com/masksrb/masks/blob/main/web/src/actor.ts#L4) |
+| <a id="organization-1"></a> `organization` | [`Organization`](#organization-6) \| `null` | [actor.ts:8](https://github.com/masksrb/masks/blob/main/web/src/actor.ts#L8) |
+| <a id="organizations-1"></a> `organizations` | [`Organization`](#organization-6)[] | [actor.ts:9](https://github.com/masksrb/masks/blob/main/web/src/actor.ts#L9) |
+| <a id="others"></a> `others` | [`Organization`](#organization-6)[] | [actor.ts:10](https://github.com/masksrb/masks/blob/main/web/src/actor.ts#L10) |
+| <a id="owner"></a> `owner` | `boolean` | [actor.ts:12](https://github.com/masksrb/masks/blob/main/web/src/actor.ts#L12) |
+| <a id="role"></a> `role` | `string` \| `null` | [actor.ts:11](https://github.com/masksrb/masks/blob/main/web/src/actor.ts#L11) |
+| <a id="unconfirmed"></a> `unconfirmed` | `boolean` | [actor.ts:6](https://github.com/masksrb/masks/blob/main/web/src/actor.ts#L6) |
 
 ***
 
@@ -420,7 +442,7 @@ Defined in: [browser.ts:43](https://github.com/masksrb/masks/blob/main/web/src/b
 
 | Property | Type | Defined in |
 | ------ | ------ | ------ |
-| <a id="organization-1"></a> `organization?` | `string` | [browser.ts:46](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L46) |
+| <a id="organization-2"></a> `organization?` | `string` | [browser.ts:46](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L46) |
 | <a id="prompt"></a> `prompt?` | `string` | [browser.ts:45](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L45) |
 | <a id="returnto"></a> `returnTo?` | `string` | [browser.ts:44](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L44) |
 
@@ -692,7 +714,7 @@ Defined in: [browser.ts:79](https://github.com/masksrb/masks/blob/main/web/src/b
 
 `Promise`\<`void`\>
 
-<a id="organization-2"></a>
+<a id="organization-3"></a>
 
 ##### organization()
 
@@ -704,9 +726,9 @@ Defined in: [browser.ts:59](https://github.com/masksrb/masks/blob/main/web/src/b
 
 ###### Returns
 
-[`Organization`](#organization-5) \| `null`
+[`Organization`](#organization-6) \| `null`
 
-<a id="organizations-1"></a>
+<a id="organizations-2"></a>
 
 ##### organizations()
 
@@ -718,7 +740,7 @@ Defined in: [browser.ts:60](https://github.com/masksrb/masks/blob/main/web/src/b
 
 ###### Returns
 
-[`Organization`](#organization-5)[]
+[`Organization`](#organization-6)[]
 
 <a id="pending"></a>
 
@@ -854,7 +876,7 @@ Defined in: [browser.ts:18](https://github.com/masksrb/masks/blob/main/web/src/b
 | <a id="dpop"></a> `dpop?` | `boolean` | [browser.ts:27](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L27) |
 | <a id="fetch-1"></a> `fetch?` | (`input`, `init?`) => `Promise`\<`Response`\> | [browser.ts:25](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L25) |
 | <a id="issuer"></a> `issuer` | `string` | [browser.ts:19](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L19) |
-| <a id="organization-3"></a> `organization?` | `string` | [browser.ts:24](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L24) |
+| <a id="organization-4"></a> `organization?` | `string` | [browser.ts:24](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L24) |
 | <a id="redirecturi"></a> `redirectUri?` | `string` | [browser.ts:21](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L21) |
 | <a id="resource"></a> `resource?` | `string` \| `string`[] | [browser.ts:23](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L23) |
 | <a id="scope"></a> `scope?` | `string` \| `string`[] | [browser.ts:22](https://github.com/masksrb/masks/blob/main/web/src/browser.ts#L22) |
@@ -878,8 +900,8 @@ Defined in: [types.ts:51](https://github.com/masksrb/masks/blob/main/web/src/typ
 
 | Property | Type | Defined in |
 | ------ | ------ | ------ |
-| <a id="org"></a> `org?` | [`Organization`](#organization-5) | [types.ts:52](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L52) |
-| <a id="orgs"></a> `orgs?` | [`Organization`](#organization-5)[] | [types.ts:53](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L53) |
+| <a id="org"></a> `org?` | [`Organization`](#organization-6) | [types.ts:52](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L52) |
+| <a id="orgs"></a> `orgs?` | [`Organization`](#organization-6)[] | [types.ts:53](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L53) |
 
 ***
 
@@ -895,7 +917,7 @@ Defined in: [metadata.ts:9](https://github.com/masksrb/masks/blob/main/web/src/m
 | ------ | ------ | ------ |
 | <a id="dpop-1"></a> `dpop?` | `boolean` | [metadata.ts:16](https://github.com/masksrb/masks/blob/main/web/src/metadata.ts#L16) |
 | <a id="logouri"></a> `logoUri?` | `string` | [metadata.ts:15](https://github.com/masksrb/masks/blob/main/web/src/metadata.ts#L15) |
-| <a id="name-1"></a> `name` | `string` | [metadata.ts:11](https://github.com/masksrb/masks/blob/main/web/src/metadata.ts#L11) |
+| <a id="name-2"></a> `name` | `string` | [metadata.ts:11](https://github.com/masksrb/masks/blob/main/web/src/metadata.ts#L11) |
 | <a id="origin"></a> `origin` | `string` | [metadata.ts:10](https://github.com/masksrb/masks/blob/main/web/src/metadata.ts#L10) |
 | <a id="postlogoutredirecturis"></a> `postLogoutRedirectUris?` | `string`[] | [metadata.ts:13](https://github.com/masksrb/masks/blob/main/web/src/metadata.ts#L13) |
 | <a id="redirecturis"></a> `redirectUris?` | `string`[] | [metadata.ts:12](https://github.com/masksrb/masks/blob/main/web/src/metadata.ts#L12) |
@@ -961,7 +983,7 @@ Defined in: [session.ts:15](https://github.com/masksrb/masks/blob/main/web/src/s
 
 | Property | Type | Defined in |
 | ------ | ------ | ------ |
-| <a id="organization-4"></a> `organization?` | `string` | [session.ts:17](https://github.com/masksrb/masks/blob/main/web/src/session.ts#L17) |
+| <a id="organization-5"></a> `organization?` | `string` | [session.ts:17](https://github.com/masksrb/masks/blob/main/web/src/session.ts#L17) |
 | <a id="returnto-1"></a> `returnTo?` | `string` | [session.ts:16](https://github.com/masksrb/masks/blob/main/web/src/session.ts#L16) |
 
 ***
@@ -981,7 +1003,7 @@ Defined in: [browser.ts:38](https://github.com/masksrb/masks/blob/main/web/src/b
 
 ***
 
-<a id="organization-5"></a>
+<a id="organization-6"></a>
 
 ### Organization
 
@@ -993,30 +1015,8 @@ Defined in: [types.ts:15](https://github.com/masksrb/masks/blob/main/web/src/typ
 | ------ | ------ | ------ |
 | <a id="id"></a> `id` | `string` | [types.ts:16](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L16) |
 | <a id="key"></a> `key` | `string` | [types.ts:17](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L17) |
-| <a id="name-2"></a> `name` | `string` | [types.ts:18](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L18) |
-| <a id="role"></a> `role` | `string` | [types.ts:19](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L19) |
-
-***
-
-<a id="personinfo"></a>
-
-### PersonInfo
-
-Defined in: [person.ts:3](https://github.com/masksrb/masks/blob/main/web/src/person.ts#L3)
-
-#### Properties
-
-| Property | Type | Defined in |
-| ------ | ------ | ------ |
-| <a id="details"></a> `details` | `string`[] | [person.ts:5](https://github.com/masksrb/masks/blob/main/web/src/person.ts#L5) |
-| <a id="manager"></a> `manager` | `boolean` | [person.ts:7](https://github.com/masksrb/masks/blob/main/web/src/person.ts#L7) |
-| <a id="name-3"></a> `name` | `string` | [person.ts:4](https://github.com/masksrb/masks/blob/main/web/src/person.ts#L4) |
-| <a id="organization-6"></a> `organization` | [`Organization`](#organization-5) \| `null` | [person.ts:8](https://github.com/masksrb/masks/blob/main/web/src/person.ts#L8) |
-| <a id="organizations-2"></a> `organizations` | [`Organization`](#organization-5)[] | [person.ts:9](https://github.com/masksrb/masks/blob/main/web/src/person.ts#L9) |
-| <a id="others"></a> `others` | [`Organization`](#organization-5)[] | [person.ts:10](https://github.com/masksrb/masks/blob/main/web/src/person.ts#L10) |
-| <a id="owner"></a> `owner` | `boolean` | [person.ts:12](https://github.com/masksrb/masks/blob/main/web/src/person.ts#L12) |
-| <a id="role-1"></a> `role` | `string` \| `null` | [person.ts:11](https://github.com/masksrb/masks/blob/main/web/src/person.ts#L11) |
-| <a id="unconfirmed"></a> `unconfirmed` | `boolean` | [person.ts:6](https://github.com/masksrb/masks/blob/main/web/src/person.ts#L6) |
+| <a id="name-3"></a> `name` | `string` | [types.ts:18](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L18) |
+| <a id="role-1"></a> `role` | `string` | [types.ts:19](https://github.com/masksrb/masks/blob/main/web/src/types.ts#L19) |
 
 ***
 
@@ -1346,6 +1346,28 @@ Defined in: [metadata.ts:1](https://github.com/masksrb/masks/blob/main/web/src/m
 
 ## Functions
 
+<a id="actorfrom"></a>
+
+### actorFrom()
+
+```ts
+function actorFrom(account): ActorInfo;
+```
+
+Defined in: [actor.ts:15](https://github.com/masksrb/masks/blob/main/web/src/actor.ts#L15)
+
+#### Parameters
+
+| Parameter | Type |
+| ------ | ------ |
+| `account` | [`Account`](#account) |
+
+#### Returns
+
+[`ActorInfo`](#actorinfo)
+
+***
+
 <a id="clientmetadata"></a>
 
 ### clientMetadata()
@@ -1420,7 +1442,7 @@ Defined in: [session.ts:59](https://github.com/masksrb/masks/blob/main/web/src/s
 function holdsRole(account, ...roles): boolean;
 ```
 
-Defined in: [person.ts:42](https://github.com/masksrb/masks/blob/main/web/src/person.ts#L42)
+Defined in: [actor.ts:42](https://github.com/masksrb/masks/blob/main/web/src/actor.ts#L42)
 
 #### Parameters
 
@@ -1443,7 +1465,7 @@ Defined in: [person.ts:42](https://github.com/masksrb/masks/blob/main/web/src/pe
 function initials(name): string;
 ```
 
-Defined in: [person.ts:48](https://github.com/masksrb/masks/blob/main/web/src/person.ts#L48)
+Defined in: [actor.ts:48](https://github.com/masksrb/masks/blob/main/web/src/actor.ts#L48)
 
 #### Parameters
 
@@ -1482,28 +1504,6 @@ Defined in: [types.ts:114](https://github.com/masksrb/masks/blob/main/web/src/ty
 #### Returns
 
 [`MasksError`](#maskserror)
-
-***
-
-<a id="personfrom"></a>
-
-### personFrom()
-
-```ts
-function personFrom(account): PersonInfo;
-```
-
-Defined in: [person.ts:15](https://github.com/masksrb/masks/blob/main/web/src/person.ts#L15)
-
-#### Parameters
-
-| Parameter | Type |
-| ------ | ------ |
-| `account` | [`Account`](#account) |
-
-#### Returns
-
-[`PersonInfo`](#personinfo)
 
 ***
 

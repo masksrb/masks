@@ -433,7 +433,7 @@ export function handshakeHost(core: Core): HandshakeHost {
     },
     privileges: core.privileges,
     manages: core.options.manages,
-    async person(request) {
+    async actor(request) {
       const visit = await core.visit(request);
 
       return core.masked(visit, await core.current(visit));

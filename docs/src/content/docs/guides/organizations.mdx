@@ -300,7 +300,7 @@ auth.switchOrganization("globex");
 ```
 
 - `switchOrganization` sends the person through sign-in again, naming the other organization.
-- The `Person` components for React and Svelte list the other organizations. When given
+- The `Actor` components for React and Svelte list the other organizations. When given
   `onSwitchOrganization`, they switch to the one the person picks.
 - In browser mode, `organization()` reads `org` from the ID token. `switchOrganization` starts a new
   authorization naming the key.

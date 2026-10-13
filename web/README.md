@@ -55,9 +55,9 @@ const auth = createBrowserClient({
   resource: "https://api.example.com",
 });
 
-const person = await auth.ready();
+const actor = await auth.ready();
 
-if (!person) await auth.authorize({ returnTo: "/dashboard" });
+if (!actor) await auth.authorize({ returnTo: "/dashboard" });
 ```
 
 Build with `MASKS_ORIGIN` set to the site's public address. The client ID is then
@@ -134,14 +134,14 @@ signs in to. `switchOrganization(key)` signs them in again naming another, and `
 
 ### Who's signed in
 
-`Person` renders an account as a name, a handle or email under it, an unconfirmed-email note, a
+`Actor` renders an account as a name, a handle or email under it, an unconfirmed-email note, a
 manager badge, and an avatar that falls back to initials. It takes plain data as props, so it
 renders the same in a browser or on a server.
 
 ```jsx
-import { Person } from "@masks/client/react";
+import { Actor } from "@masks/client/react";
 
-<Person
+<Actor
   account={account}
   avatarUrl={auth.avatarUrl(account, { size: 88 })}
   onSignOut={() => auth.logout()}
@@ -150,15 +150,15 @@ import { Person } from "@masks/client/react";
 
 ```svelte
 <script>
-  import Person from "@masks/client/svelte";
+  import Actor from "@masks/client/svelte";
 </script>
 
-<Person account={account} avatarUrl={auth.avatarUrl(account, { size: 88 })} onSignOut={() => auth.logout()} />
+<Actor account={account} avatarUrl={auth.avatarUrl(account, { size: 88 })} onSignOut={() => auth.logout()} />
 ```
 
 Without `onSignOut`, no sign-out button renders. Both components read the account through
-`personFrom`, which the package root exports for other frameworks. The class names start with
-`masks-person`, and the package ships no CSS.
+`actorFrom`, which the package root exports for other frameworks. The class names start with
+`masks-actor`, and the package ships no CSS.
 
 ## Documentation
 

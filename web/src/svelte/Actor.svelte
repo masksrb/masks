@@ -1,5 +1,5 @@
 <script>
-import { initials, personFrom } from "../person.js";
+import { actorFrom, initials } from "../actor.js";
 
 let {
   account,
@@ -11,16 +11,16 @@ let {
   class: className = "",
 } = $props();
 
-const info = $derived(personFrom(account));
+const info = $derived(actorFrom(account));
 
 let broken = $state(null);
 const showsAvatar = $derived(avatarUrl && broken !== avatarUrl);
 </script>
 
-<div class={["masks-person", className].filter(Boolean).join(" ")}>
+<div class={["masks-actor", className].filter(Boolean).join(" ")}>
   {#if showsAvatar}
     <img
-      class="masks-person-avatar"
+      class="masks-actor-avatar"
       src={avatarUrl}
       alt=""
       width={size}
@@ -29,42 +29,42 @@ const showsAvatar = $derived(avatarUrl && broken !== avatarUrl);
     />
   {:else}
     <span
-      class="masks-person-avatar masks-person-avatar-letters"
+      class="masks-actor-avatar masks-actor-avatar-letters"
       style="width:{size}px;height:{size}px;font-size:{Math.round(size * 0.38)}px"
     >
       {initials(info.name)}
     </span>
   {/if}
 
-  <div class="masks-person-who">
-    <span class="masks-person-name">{info.name}</span>
+  <div class="masks-actor-who">
+    <span class="masks-actor-name">{info.name}</span>
 
     {#if info.details.length || info.unconfirmed}
-      <span class="masks-person-sub">
+      <span class="masks-actor-sub">
         {info.details.join(" · ")}
         {#if info.unconfirmed}
-          <span class="masks-person-note">unconfirmed</span>
+          <span class="masks-actor-note">unconfirmed</span>
         {/if}
       </span>
     {/if}
 
     {#if info.organization}
-      <span class="masks-person-org">
+      <span class="masks-actor-org">
         {info.organization.name}
-        <span class="masks-person-org-role">{info.role}</span>
+        <span class="masks-actor-org-role">{info.role}</span>
       </span>
     {/if}
 
     {#if info.manager}
-      <span class="masks-person-role">Manager</span>
+      <span class="masks-actor-role">Manager</span>
     {/if}
 
     {#if onSwitchOrganization && info.others.length}
-      <span class="masks-person-orgs">
+      <span class="masks-actor-orgs">
         {#each info.others as other (other.key)}
           <button
             type="button"
-            class="masks-person-switch"
+            class="masks-actor-switch"
             onclick={() => onSwitchOrganization(other.key)}
           >
             {other.name}
@@ -75,7 +75,7 @@ const showsAvatar = $derived(avatarUrl && broken !== avatarUrl);
   </div>
 
   {#if onSignOut}
-    <button type="button" class="masks-person-signout" onclick={onSignOut}>
+    <button type="button" class="masks-actor-signout" onclick={onSignOut}>
       {signOutLabel}
     </button>
   {/if}

@@ -1,7 +1,7 @@
 import type { Component } from "svelte";
 import type { Account } from "../types.js";
 
-export interface PersonProps {
+export interface ActorProps {
   account: Account;
   avatarUrl?: string | null;
   size?: number;
@@ -11,6 +11,6 @@ export interface PersonProps {
   class?: string;
 }
 
-declare const Person: Component<PersonProps>;
+declare const Actor: Component<ActorProps>;
 
-export default Person;
+export default Actor;

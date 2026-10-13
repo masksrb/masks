@@ -6,20 +6,20 @@ import { compile } from "svelte/compiler";
 import { render } from "svelte/server";
 
 const source = readFileSync(
-  new URL("../src/svelte/Person.svelte", import.meta.url),
+  new URL("../src/svelte/Actor.svelte", import.meta.url),
   "utf8",
 );
 const { js } = compile(source, {
   generate: "server",
-  filename: "Person.svelte",
+  filename: "Actor.svelte",
 });
 
 const compiledPath = fileURLToPath(
-  new URL("../dist/svelte/Person.server.test.js", import.meta.url),
+  new URL("../dist/svelte/Actor.server.test.js", import.meta.url),
 );
 writeFileSync(compiledPath, js.code);
 
-const { default: Person } = await import(`${compiledPath}?t=${Date.now()}`);
+const { default: Actor } = await import(`${compiledPath}?t=${Date.now()}`);
 
 rmSync(compiledPath);
 
@@ -31,8 +31,8 @@ const ACCOUNT = {
   scopes: ["openid", "masks:manage"],
 };
 
-test("the svelte Person server-renders with no window in sight, same shape as the react one", () => {
-  const { body } = render(Person, {
+test("the svelte Actor server-renders with no window in sight, same shape as the react one", () => {
+  const { body } = render(Actor, {
     props: {
       account: ACCOUNT,
       avatarUrl: "https://masks.test/avatars/a/photo/x",
@@ -49,22 +49,22 @@ test("the svelte Person server-renders with no window in sight, same shape as th
 });
 
 test("with no avatar it falls back to initials, and a sign-out button appears only when asked for", () => {
-  const { body: withoutSignOut } = render(Person, {
+  const { body: withoutSignOut } = render(Actor, {
     props: { account: ACCOUNT },
   });
-  const { body: withSignOut } = render(Person, {
+  const { body: withSignOut } = render(Actor, {
     props: { account: ACCOUNT, onSignOut: () => {}, signOutLabel: "Leave" },
   });
 
-  assert.match(withoutSignOut, /masks-person-avatar-letters/);
+  assert.match(withoutSignOut, /masks-actor-avatar-letters/);
   assert.match(withoutSignOut, />\s*AL\s*</);
-  assert.doesNotMatch(withoutSignOut, /masks-person-signout/);
-  assert.match(withSignOut, /masks-person-signout/);
+  assert.doesNotMatch(withoutSignOut, /masks-actor-signout/);
+  assert.match(withSignOut, /masks-actor-signout/);
   assert.match(withSignOut, />\s*Leave\s*</);
 });
 
-test("the svelte Person names the organization and the role held in it", () => {
-  const { body } = render(Person, {
+test("the svelte Actor names the organization and the role held in it", () => {
+  const { body } = render(Actor, {
     props: {
       account: {
         ...ACCOUNT,
@@ -78,16 +78,16 @@ test("the svelte Person names the organization and the role held in it", () => {
     },
   });
 
-  assert.match(body, /masks-person-org/);
+  assert.match(body, /masks-actor-org/);
   assert.match(body, /Acme/);
   assert.match(body, /billing/);
   assert.doesNotMatch(
-    render(Person, { props: { account: ACCOUNT } }).body,
-    /masks-person-org/,
+    render(Actor, { props: { account: ACCOUNT } }).body,
+    /masks-actor-org/,
   );
 });
 
-test("the svelte Person offers the other organizations only when it can switch", () => {
+test("the svelte Actor offers the other organizations only when it can switch", () => {
   const acme = { id: "org-1", key: "acme", name: "Acme", role: "owner" };
   const globex = { id: "org-2", key: "globex", name: "Globex", role: "member" };
   const account = {
@@ -96,15 +96,15 @@ test("the svelte Person offers the other organizations only when it can switch",
     organizations: [acme, globex],
   };
 
-  const { body } = render(Person, {
+  const { body } = render(Actor, {
     props: { account, onSwitchOrganization: () => {} },
   });
 
-  assert.match(body, /masks-person-orgs/);
-  assert.match(body, /masks-person-switch[^>]*>\s*Globex/);
-  assert.doesNotMatch(body, /masks-person-switch[^>]*>\s*Acme/);
+  assert.match(body, /masks-actor-orgs/);
+  assert.match(body, /masks-actor-switch[^>]*>\s*Globex/);
+  assert.doesNotMatch(body, /masks-actor-switch[^>]*>\s*Acme/);
   assert.doesNotMatch(
-    render(Person, { props: { account } }).body,
-    /masks-person-orgs/,
+    render(Actor, { props: { account } }).body,
+    /masks-actor-orgs/,
   );
 });

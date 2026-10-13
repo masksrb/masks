@@ -30,7 +30,7 @@ export interface HandshakeHost {
   readonly manages?:
     | string
     | ((request: Request, masked: Masked) => boolean | Promise<boolean>);
-  person(request: Request): Promise<Masked>;
+  actor(request: Request): Promise<Masked>;
   signInURL(returnTo: string, privileges: string[]): string;
   steppedUp(request: Request, privileges: string[]): Promise<boolean>;
   remember(request: Request, state: string): Promise<string[]>;
@@ -186,7 +186,7 @@ export class Handshakes {
   async manager(request: Request): Promise<Response | undefined> {
     const host = this.#host;
     const site = await host.site(request);
-    const masked = await host.person(request);
+    const masked = await host.actor(request);
 
     if (!masked.signedIn) {
       return redirect(

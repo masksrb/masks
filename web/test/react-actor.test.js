@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { Person } from "../dist/react/index.js";
+import { Actor } from "../dist/react/index.js";
 
 const ACCOUNT = {
   signed_in: true,
@@ -12,9 +12,9 @@ const ACCOUNT = {
   scopes: ["openid", "masks:manage"],
 };
 
-test("the react Person renders server-side with no window in sight", () => {
+test("the react Actor renders server-side with no window in sight", () => {
   const html = renderToStaticMarkup(
-    createElement(Person, {
+    createElement(Actor, {
       account: ACCOUNT,
       avatarUrl: "https://masks.test/avatars/a/photo/x",
     }),
@@ -31,26 +31,26 @@ test("the react Person renders server-side with no window in sight", () => {
 
 test("with no avatar it falls back to initials, and a sign-out button appears only when asked for", () => {
   const withoutSignOut = renderToStaticMarkup(
-    createElement(Person, { account: ACCOUNT }),
+    createElement(Actor, { account: ACCOUNT }),
   );
   const withSignOut = renderToStaticMarkup(
-    createElement(Person, {
+    createElement(Actor, {
       account: ACCOUNT,
       onSignOut: () => {},
       signOutLabel: "Leave",
     }),
   );
 
-  assert.match(withoutSignOut, /masks-person-avatar-letters/);
+  assert.match(withoutSignOut, /masks-actor-avatar-letters/);
   assert.match(withoutSignOut, />AL</);
-  assert.doesNotMatch(withoutSignOut, /masks-person-signout/);
-  assert.match(withSignOut, /masks-person-signout/);
+  assert.doesNotMatch(withoutSignOut, /masks-actor-signout/);
+  assert.match(withSignOut, /masks-actor-signout/);
   assert.match(withSignOut, />Leave</);
 });
 
-test("the react Person names the organization and the role held in it", () => {
+test("the react Actor names the organization and the role held in it", () => {
   const html = renderToStaticMarkup(
-    createElement(Person, {
+    createElement(Actor, {
       account: {
         ...ACCOUNT,
         organization: {
@@ -65,15 +65,15 @@ test("the react Person names the organization and the role held in it", () => {
 
   assert.match(
     html,
-    /class="masks-person-org">Acme<span class="masks-person-org-role">billing<\/span>/,
+    /class="masks-actor-org">Acme<span class="masks-actor-org-role">billing<\/span>/,
   );
   assert.doesNotMatch(
-    renderToStaticMarkup(createElement(Person, { account: ACCOUNT })),
-    /masks-person-org/,
+    renderToStaticMarkup(createElement(Actor, { account: ACCOUNT })),
+    /masks-actor-org/,
   );
 });
 
-test("the react Person offers the other organizations only when it can switch", () => {
+test("the react Actor offers the other organizations only when it can switch", () => {
   const acme = { id: "org-1", key: "acme", name: "Acme", role: "owner" };
   const globex = { id: "org-2", key: "globex", name: "Globex", role: "member" };
   const account = {
@@ -83,16 +83,16 @@ test("the react Person offers the other organizations only when it can switch", 
   };
 
   const html = renderToStaticMarkup(
-    createElement(Person, { account, onSwitchOrganization: () => {} }),
+    createElement(Actor, { account, onSwitchOrganization: () => {} }),
   );
 
   assert.match(
     html,
-    /class="masks-person-orgs"><button type="button" class="masks-person-switch">Globex<\/button>/,
+    /class="masks-actor-orgs"><button type="button" class="masks-actor-switch">Globex<\/button>/,
   );
-  assert.doesNotMatch(html, /masks-person-switch">Acme/);
+  assert.doesNotMatch(html, /masks-actor-switch">Acme/);
   assert.doesNotMatch(
-    renderToStaticMarkup(createElement(Person, { account })),
-    /masks-person-orgs/,
+    renderToStaticMarkup(createElement(Actor, { account })),
+    /masks-actor-orgs/,
   );
 });
