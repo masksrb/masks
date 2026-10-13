@@ -94,6 +94,7 @@ test("the session cookie is sealed, httponly, lax, and secure on https", async (
   assert.equal(body.subject, "ada");
   assert.equal(body.organization.key, "acme");
   assert.equal(body.avatar_url, "/auth/avatar");
+  assert.equal(body.picture, "/auth/avatar");
   assert.equal(body.account_url, `${held.fake.url}/`);
   assert.equal(JSON.stringify(body).includes("eyJ"), false);
   assert.equal(session.headers.get("cache-control"), "no-store");

@@ -117,7 +117,7 @@ The person is a `Masked`, and never `undefined`:
 | --- | --- |
 | `signedIn` | Whether a sign-in is held and its token has not expired. |
 | `subject`, `name`, `nickname`, `email`, `emailVerified` | Who signed in. |
-| `picture`, `avatars` | The `picture` claim, then the photo, then the identicon, and each avatar URL. |
+| `picture`, `avatars` | The app's avatar route when masks holds a photo, since the photo needs the person's token. Otherwise the `picture` claim, then the identicon. `avatars` holds each avatar URL. |
 | `tenant` | The tenant's `uuid`, `subdomain`, and `name`. |
 | `organization` | The organization signed in to, with its `id`, `key`, `name`, and `role`, or `undefined`. |
 | `organizations` | Every organization the person has joined, each with the role held there. |

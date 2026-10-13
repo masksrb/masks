@@ -73,6 +73,30 @@ export interface Connection {
   account?: string;
 }
 
+export interface PendingDelegation {
+  verifier: string;
+  nonce?: string;
+  provider: string;
+  redirectURI: string;
+  account: string;
+  until: number;
+}
+
+export function pendingFor(
+  started: DelegationStart,
+  account: string,
+  until: number,
+): PendingDelegation {
+  return {
+    verifier: started.verifier,
+    nonce: started.nonce,
+    provider: started.provider,
+    redirectURI: started.redirectURI,
+    account,
+    until,
+  };
+}
+
 export interface Upstream {
   access_token: string;
   expires_at: number;
@@ -175,6 +199,35 @@ export class Delegations {
       secret: token.refresh_token,
       account: claims?.sub,
     };
+  }
+
+  async finishFor(
+    returned: URLSearchParams,
+    state: string,
+    pending: PendingDelegation,
+    signedIn: string | undefined,
+  ): Promise<Connection> {
+    if (signedIn !== pending.account) {
+      throw new DelegationRefused(
+        "access_denied",
+        "that connection was started by somebody other than the person signed in",
+      );
+    }
+
+    const connection = await this.finish(returned, {
+      ...pending,
+      state,
+      url: "",
+    });
+
+    if (connection.account && connection.account !== pending.account) {
+      throw new DelegationRefused(
+        "access_denied",
+        "masks connected that provider for another account",
+      );
+    }
+
+    return connection;
   }
 
   async token(secret: string, connection: string): Promise<Upstream> {

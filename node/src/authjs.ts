@@ -25,6 +25,7 @@ import {
 } from "./app/masks.js";
 import {
   approvedScope,
+  type Privilege,
   type PrivilegeSpec,
   Privileges,
   unique,
@@ -52,6 +53,8 @@ import {
   DELEGATION_SCOPE,
   DelegationRefused,
   Delegations,
+  type PendingDelegation,
+  pendingFor,
 } from "./delegations.js";
 import {
   hasCode,
@@ -160,15 +163,6 @@ const MASKS_OPTIONS = new Set([
   "onLogout",
   "allowPlainHTTP",
 ]);
-
-interface DelegationPending {
-  verifier: string;
-  nonce?: string;
-  provider: string;
-  redirectURI: string;
-  account: string;
-  until: number;
-}
 
 interface Remembered {
   until: number;
@@ -473,19 +467,12 @@ export class MasksAuth {
 
     if (missing.length === 0) return masked;
 
-    const lacking = missing.filter(
-      (privilege) =>
-        !privilege.scopes.every((scope) => masked.scopes.includes(scope)),
-    );
-
+    const asked = lackingScopes(masked, missing);
     const [first] = missing;
 
-    if (lacking.length === 0 && first) masked.member(first);
+    if (asked.length === 0 && first) masked.member(first);
 
-    const stepped = (await cookies()).get(STEPPED_COOKIE)?.value;
-    const asked = lacking.map((privilege) => privilege.name);
-
-    if (stepped && asked.every((name) => decode(stepped).includes(name))) {
+    if (askedBefore((await cookies()).get(STEPPED_COOKIE)?.value, asked)) {
       throw new ForbiddenError(
         "insufficient_scope",
         `masks did not grant ${asked.join(", ")}`,
@@ -552,21 +539,15 @@ export class MasksAuth {
       );
     }
 
-    const started = await (await this.delegations(request)).start({
-      provider,
-      ...asked,
-    });
+    const [delegations, held] = await Promise.all([
+      this.delegations(request),
+      this.#pendingDelegations(request),
+    ]);
+    const started = await delegations.start({ provider, ...asked });
     const pending = keep(
-      await this.#pendingDelegations(request),
+      held,
       started.state,
-      {
-        verifier: started.verifier,
-        nonce: started.nonce,
-        provider: started.provider,
-        redirectURI: started.redirectURI,
-        account: signIn.sub,
-        until: now() + FLOW_LIFETIME,
-      },
+      pendingFor(started, signIn.sub, now() + FLOW_LIFETIME),
     );
 
     return redirect(
@@ -591,29 +572,19 @@ export class MasksAuth {
       );
     }
 
-    const cookies = [await this.#delegationCookie(request, pending)];
-    const signIn = await this.#signInFrom(request.headers);
-
-    if (signIn?.sub !== found.account) {
-      throw new DelegationRefused(
-        "access_denied",
-        "that connection was started by somebody other than the person signed in",
-      );
-    }
-
-    const connection = await (await this.delegations(request)).finish(
+    const [cookie, signIn, delegations] = await Promise.all([
+      this.#delegationCookie(request, pending),
+      this.#signInFrom(request.headers),
+      this.delegations(request),
+    ]);
+    const connection = await delegations.finishFor(
       url.searchParams,
-      { ...found, state, url: "" },
+      state,
+      found,
+      signIn?.sub,
     );
 
-    if (connection.account && connection.account !== found.account) {
-      throw new DelegationRefused(
-        "access_denied",
-        "masks connected that provider for another account",
-      );
-    }
-
-    return { connection, cookies };
+    return { connection, cookies: [cookie] };
   }
 
   async proxy(request: Request): Promise<Response> {
@@ -714,21 +685,13 @@ export class MasksAuth {
 
     if (!held) return session;
 
+    const masked = this.#maskedOf(held);
+
     return {
       ...session,
-      user: { ...session.user, id: held.sub, image: this.#image(held) },
-      masks: this.#maskedOf(held).toJSON(),
+      user: { ...session.user, id: held.sub, image: masked.picture ?? null },
+      masks: masked.toJSON(),
     };
-  }
-
-  #image(held: HeldSignIn): string | null {
-    const { picture } = held.identity;
-    const avatars = avatarsOf(held.identity);
-
-    if (avatars.photo) return this.avatarPath;
-    if (typeof picture === "string" && picture !== "") return picture;
-
-    return avatars.identicon ?? null;
   }
 
   #maskedOf(held: HeldSignIn): Masked {
@@ -1143,13 +1106,13 @@ export class MasksAuth {
 
     const state = random();
     const target = client.endSessionURL({
-      postLogoutRedirectURI: `${this.#appOrigin(request)}${this.basePath}${PREFIX}/logout/return`,
+      postLogoutRedirectURI: this.#logoutReturnURL(request),
       state,
     });
 
     written.push(
       serialize(
-        farewellCookie(request),
+        hostCookie(request, FAREWELL_COOKIE),
         encodeURIComponent(`${state} ${callbackUrl}`),
         { secure: secure(request), maxAge: FLOW_LIFETIME },
       ),
@@ -1165,9 +1128,9 @@ export class MasksAuth {
   #logoutReturn(request: Request): Response {
     const state = new URL(request.url).searchParams.get("state") ?? "";
     const held = parseCookies(request.headers.get("cookie")).get(
-      farewellCookie(request),
+      hostCookie(request, FAREWELL_COOKIE),
     );
-    const cleared = serialize(farewellCookie(request), "", {
+    const cleared = serialize(hostCookie(request, FAREWELL_COOKIE), "", {
       secure: secure(request),
       maxAge: 0,
     });
@@ -1217,11 +1180,11 @@ export class MasksAuth {
 
   async #pendingDelegations(
     request: Request,
-  ): Promise<Record<string, DelegationPending>> {
+  ): Promise<Record<string, PendingDelegation>> {
     const held = parseCookies(request.headers.get("cookie")).get(
-      delegationCookie(request),
+      hostCookie(request, DELEGATION_COOKIE),
     );
-    const opened = await this.#seal.unseal<Record<string, DelegationPending>>(
+    const opened = await this.#seal.unseal<Record<string, PendingDelegation>>(
       DELEGATION_PURPOSE,
       held,
     );
@@ -1233,9 +1196,9 @@ export class MasksAuth {
 
   async #delegationCookie(
     request: Request,
-    pending: Record<string, DelegationPending>,
+    pending: Record<string, PendingDelegation>,
   ): Promise<string> {
-    const name = delegationCookie(request);
+    const name = hostCookie(request, DELEGATION_COOKIE);
 
     if (Object.keys(pending).length === 0) {
       return serialize(name, "", { secure: secure(request), maxAge: 0 });
@@ -1245,18 +1208,6 @@ export class MasksAuth {
       secure: secure(request),
       maxAge: FLOW_LIFETIME,
     });
-  }
-
-  #mayStepUp(request: Request, masked: Masked, name: string): boolean {
-    const { scopes } = this.privileges.get(name);
-    const stepped = parseCookies(request.headers.get("cookie")).get(
-      STEPPED_COOKIE,
-    );
-
-    return (
-      !scopes.every((scope) => masked.scopes.includes(scope)) &&
-      !(stepped && decode(stepped).includes(name))
-    );
   }
 
   async #handshakeShow(request: Request): Promise<Response> {
@@ -1337,9 +1288,9 @@ export class MasksAuth {
     const params = new URL(request.url).searchParams;
     const state = params.get("state") ?? "";
     const held = parseCookies(request.headers.get("cookie")).get(
-      handshakeCookie(request),
+      hostCookie(request, HANDSHAKE_COOKIE),
     );
-    const cleared = serialize(handshakeCookie(request), "", {
+    const cleared = serialize(hostCookie(request, HANDSHAKE_COOKIE), "", {
       secure: secure(request),
       maxAge: 0,
     });
@@ -1397,7 +1348,7 @@ export class MasksAuth {
     return redirect(
       started.url,
       [
-        serialize(handshakeCookie(request), started.state, {
+        serialize(hostCookie(request, HANDSHAKE_COOKIE), started.state, {
           secure: secure(request),
           maxAge: FLOW_LIFETIME,
         }),
@@ -1427,7 +1378,7 @@ export class MasksAuth {
         delegation ? [DELEGATION_SCOPE] : [],
       ),
       backchannelLogoutURI: `${base}${PREFIX}/logout/backchannel`,
-      postLogoutRedirectUri: `${base}${PREFIX}/logout/return`,
+      postLogoutRedirectUri: this.#logoutReturnURL(request),
     });
   }
 
@@ -1453,12 +1404,17 @@ export class MasksAuth {
 
     if (allowed) return undefined;
 
-    if (
-      typeof manages === "string" &&
-      this.#mayStepUp(request, masked, manages)
-    ) {
+    const asked =
+      typeof manages === "string"
+        ? lackingScopes(masked, [this.privileges.get(manages)])
+        : [];
+    const stepped = parseCookies(request.headers.get("cookie")).get(
+      STEPPED_COOKIE,
+    );
+
+    if (asked.length > 0 && !askedBefore(stepped, asked)) {
       return redirect(
-        this.signInPath({ returnTo: this.handshakePath, privilege: manages }),
+        this.signInPath({ returnTo: this.handshakePath, privilege: asked }),
         [],
         303,
       );
@@ -1559,6 +1515,10 @@ export class MasksAuth {
     return issuer;
   }
 
+  #logoutReturnURL(request: Request): string {
+    return `${this.#appOrigin(request)}${this.logoutPath}/return`;
+  }
+
   #appOrigin(request: Request): string {
     const origin = new URL(request.url).origin;
 
@@ -1634,16 +1594,24 @@ function secure(request: Request): boolean {
   return new URL(request.url).protocol === "https:";
 }
 
-function farewellCookie(request: Request): string {
-  return secure(request) ? `__Host-${FAREWELL_COOKIE}` : FAREWELL_COOKIE;
+function hostCookie(request: Request, name: string): string {
+  return secure(request) ? `__Host-${name}` : name;
 }
 
-function delegationCookie(request: Request): string {
-  return secure(request) ? `__Host-${DELEGATION_COOKIE}` : DELEGATION_COOKIE;
+function lackingScopes(masked: Masked, wanted: Privilege[]): string[] {
+  return wanted
+    .filter(
+      (privilege) =>
+        !privilege.scopes.every((scope) => masked.scopes.includes(scope)),
+    )
+    .map((privilege) => privilege.name);
 }
 
-function handshakeCookie(request: Request): string {
-  return secure(request) ? `__Host-${HANDSHAKE_COOKIE}` : HANDSHAKE_COOKIE;
+function askedBefore(stepped: string | undefined, names: string[]): boolean {
+  return (
+    Boolean(stepped) &&
+    names.every((name) => decode(stepped ?? "").includes(name))
+  );
 }
 
 function callbackFrom(request: Request): string | undefined {

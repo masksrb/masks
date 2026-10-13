@@ -10,6 +10,8 @@ import {
   type Connection as DelegatedConnection,
   DelegationRefused,
   Delegations,
+  type PendingDelegation,
+  pendingFor,
 } from "../delegations.js";
 import {
   hasCode,
@@ -103,20 +105,11 @@ interface Pending {
   until: number;
 }
 
-interface DelegationPending {
-  verifier: string;
-  nonce?: string;
-  provider: string;
-  redirectURI: string;
-  account: string;
-  until: number;
-}
-
 interface FlowData {
   requests?: Record<string, Pending>;
   handshakes?: Record<string, { until: number }>;
   logouts?: Record<string, { until: number }>;
-  delegations?: Record<string, DelegationPending>;
+  delegations?: Record<string, PendingDelegation>;
   steppedUp?: { privileges: string[]; at: number };
   restartedAt?: number;
 }
@@ -667,14 +660,11 @@ export class Masks {
     });
     const flow = await this.#readFlow(visit);
 
-    flow.delegations = keep(flow.delegations, started.state, {
-      verifier: started.verifier,
-      nonce: started.nonce,
-      provider: started.provider,
-      redirectURI: started.redirectURI,
-      account: masked.subject,
-      until: now() + FLOW_LIFETIME,
-    });
+    flow.delegations = keep(
+      flow.delegations,
+      started.state,
+      pendingFor(started, masked.subject, now() + FLOW_LIFETIME),
+    );
     await this.#writeFlow(visit, flow);
 
     return redirect(started.url, visit.out);
@@ -698,25 +688,12 @@ export class Masks {
     await this.#writeFlow(visit, flow);
 
     const masked = this.#masked(visit, await this.#current(visit));
-
-    if (!masked.signedIn || masked.subject !== pending.account) {
-      throw new DelegationRefused(
-        "access_denied",
-        "that connection was started by somebody other than the person signed in",
-      );
-    }
-
-    const connection = await (await this.delegations(request)).finish(
+    const connection = await (await this.delegations(request)).finishFor(
       visit.url.searchParams,
-      { ...pending, state, url: "" },
+      state,
+      pending,
+      masked.signedIn ? masked.subject : undefined,
     );
-
-    if (connection.account && connection.account !== pending.account) {
-      throw new DelegationRefused(
-        "access_denied",
-        "masks connected that provider for another account",
-      );
-    }
 
     return { connection, cookies: visit.out };
   }
@@ -1909,11 +1886,11 @@ ${disconnects ? `<form method="post" action="${path}/disconnect"><button type="s
   );
 }
 
-export function page(
+function page(
   title: string,
   body: string,
   cookies: string[],
-  formTargets: string[] = [],
+  formTargets: string[],
 ): Response {
   return new Response(
     `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeHTML(title)}</title><style>body{font-family:system-ui,sans-serif;max-width:36rem;margin:4rem auto;padding:0 1rem;line-height:1.5}form{display:inline-block;margin-right:.5rem}</style></head><body><h1>${escapeHTML(title)}</h1>${body}</body></html>`,

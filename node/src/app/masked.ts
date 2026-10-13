@@ -77,6 +77,7 @@ export class Masked {
       scopes: held.scopes,
       expiresAt: held.expires_at,
       accountURL: held.account_url,
+      avatarURL: held.avatar_url,
       claims: {
         sub: held.subject,
         name: held.name,
@@ -127,6 +128,8 @@ export class Masked {
   }
 
   get picture(): string | undefined {
+    if (this.avatarURL && this.avatars.photo) return this.avatarURL;
+
     return pictureOf(this.claims);
   }
 
