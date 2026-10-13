@@ -22,6 +22,21 @@ module Masks
         assert_includes response.body, "/masks-public/favicon.svg"
       end
 
+      test "a HEAD request for a missing page names the type of the page it stands for" do
+        head "/no-such-page", headers: { "Accept" => "*/*" }
+
+        assert_response :not_found
+        assert_equal "text/html", response.media_type
+        assert_empty response.body
+      end
+
+      test "a HEAD request that asks for JSON is told the error is JSON" do
+        head "/no-such-page", headers: { "Accept" => "application/json" }
+
+        assert_response :not_found
+        assert_equal "application/json", response.media_type
+      end
+
       test "a browser that asks for /favicon.ico gets the masks mark" do
         get "/favicon.ico"
 

@@ -11,11 +11,13 @@ require "rails/test_unit/railtie"
 
 Bundler.require(*Rails.groups)
 
+require_relative "../lib/error_pages"
+
 module Server
   class Application < Rails::Application
     config.load_defaults 8.1
 
-    config.autoload_lib(ignore: %w[assets tasks])
+    config.autoload_lib(ignore: %w[assets tasks error_pages.rb])
 
     config.i18n.available_locales = Dir[Masks::Server::Engine.root.join("config/locales/*/")].map do |path|
       File.basename(path).to_sym
@@ -24,6 +26,8 @@ module Server
     config.i18n.fallbacks = true
 
     config.generators.system_tests = nil
+
+    config.exceptions_app = ErrorPages.new(Rails.public_path)
 
     config.active_record.schema_format = :sql
 
