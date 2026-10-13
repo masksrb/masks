@@ -38,7 +38,7 @@ docker pull ghcr.io/masksrb/masks:latest
 | Python     | [`masks-client`](python/)                     | [FastAPI, Django, Flask](https://masks.pages.dev/reference/python/)      |
 | Go         | [`github.com/masksrb/masks/go`](go/)          | [`net/http`](https://masks.pages.dev/reference/go/)                      |
 
-## Develop
+## Contribute
 
 You need Docker with Compose, and Ruby.
 
