@@ -61,7 +61,8 @@ profile, err := client.UserInfo(ctx, signed.Token)
 ```
 
 `Complete` refuses another `state`, another `iss`, and an ID token with another
-audience or nonce. `EndSessionURL` builds the address that signs the person out
+audience or nonce. When the request set `MaxAge`, it also refuses an ID token
+whose `auth_time` is older than that. `EndSessionURL` builds the address that signs the person out
 of masks.
 
 ## The handshake
@@ -272,6 +273,13 @@ verifier.Replay = masks.ReplayStoreFunc(func(ctx context.Context, key string, ex
 An error from the store refuses the request with `masks.ErrReplayStore`, and
 the middleware answers `503`. A token that fails its checks answers `401`
 with a challenge.
+
+## Redirects
+
+A request that carries a credential does not follow a redirect. That covers
+the token, revocation, introspection, device, enrollment, and registration
+endpoints, so a client secret, a code, or a refresh token goes only to the
+address the issuer published. A redirect there is an `*masks.Error`.
 
 ## Plain HTTP
 

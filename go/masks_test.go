@@ -1088,3 +1088,11 @@ func TestACredentialIsNeverFollowedToAnotherAddress(t *testing.T) {
 		t.Fatalf("a client secret or refresh token was sent on to another address %d times", reached.Load())
 	}
 }
+
+func TestAReusedTokenWithNothingToRenewItIsAnError(t *testing.T) {
+	source := ReuseTokenSource(&Token{AccessToken: "spent", Expiry: time.Now().Add(-time.Minute)}, nil)
+
+	if _, err := source.Token(context.Background()); err == nil {
+		t.Fatal("an expired token with nothing to renew it was handed out")
+	}
+}

@@ -29,7 +29,13 @@ type reused struct {
 }
 
 func ReuseTokenSource(held *Token, fetch TokenSourceFunc) TokenSource {
-	return &reused{held: held, fetch: func(ctx context.Context, _ *Token) (*Token, error) { return fetch(ctx) }}
+	return &reused{held: held, fetch: func(ctx context.Context, _ *Token) (*Token, error) {
+		if fetch == nil {
+			return nil, &Error{Code: "invalid_token", Description: "the token expired and nothing can fetch another"}
+		}
+
+		return fetch(ctx)
+	}}
 }
 
 func (r *reused) Token(ctx context.Context) (*Token, error) {
