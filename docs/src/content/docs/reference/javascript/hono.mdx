@@ -1,0 +1,21 @@
+---
+title: Hono
+description: "Sign people in to a Hono app on Node, Bun, Deno, or Cloudflare Workers with the masksHono middleware."
+---
+
+`masksHono` from `@masks/server/hono` reads the [options](/reference/javascript/#setting-up) every integration shares.
+
+```ts
+import { Hono } from "hono";
+import { masked, masksHono, type MasksEnv } from "@masks/server/hono";
+
+const auth = masksHono({ name: "Catalog", privileges: { admin: ["catalog:admin"] } });
+const app = new Hono<MasksEnv>();
+
+app.use(auth);
+app.get("/", (c) => c.json(c.get("masked")));
+app.get("/settings", masked(auth, "admin"), (c) => c.json({ subject: c.get("masked").subject }));
+```
+
+On Cloudflare Workers, pass `issuer`, `resource`, and `secret` directly, and set `credentials` to a
+store of your own, since there is no file to write. See [the handshake](/reference/javascript/#the-handshake).

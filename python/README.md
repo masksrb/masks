@@ -24,8 +24,8 @@ The package installs from its release tag and is not on PyPI yet. It imports as
 | Checking tokens | `at+jwt` access tokens, including DPoP-bound ones, in any framework or as ASGI middleware. |
 
 `masks.fastapi`, `masks.django`, and `masks.flask` sign people in to a web app.
-See [Python apps](https://masks.pages.dev/guides/python/) for the walkthrough and
-[masks-client](https://masks.pages.dev/reference/python/) for every setting and
+See [Python apps](https://masks.pages.dev/reference/python/) for the walkthrough and
+[masks-client](https://masks.pages.dev/reference/python/client/) for every setting and
 call.
 
 ## A machine signs in as itself

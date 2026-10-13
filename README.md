@@ -17,7 +17,7 @@ test/      the suites        all but web, which keeps its own in web/test
 ```
 
 The provider runs as an app of its own, which is what `server/` and the container image are, or
-mounted inside another Rails app. See [Rails apps](https://masks.pages.dev/guides/rails/) for the
+mounted inside another Rails app. See [Rails apps](https://masks.pages.dev/reference/ruby/) for the
 three modes, and [self-hosting](https://masks.pages.dev/guides/self-hosting/) for running the image
 with Postgres and a reverse proxy.
 

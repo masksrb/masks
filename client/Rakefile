@@ -5,7 +5,7 @@ require_relative "doc/mdx_generator"
 require_relative "doc/sdoc_compat"
 
 SDOC_SITE = "../docs/public/api/ruby".freeze
-MDX_PAGES = "../docs/src/content/docs/reference".freeze
+MDX_PAGES = "../docs/src/content/docs/reference/ruby".freeze
 MDX_SCRATCH = "tmp/mdx".freeze
 SOURCES = [ "lib/**/*.rb", "README.md" ].freeze
 

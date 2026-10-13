@@ -8,8 +8,8 @@ A Rails app can use masks in one of three modes.
 | Mode | Gemfile | What your app does |
 | --- | --- | --- |
 | [Client](#client-mode) | `gem "masks"` | Signs people in against a masks server that runs somewhere else. |
-| [Server](#server-mode) | `gem "masks-server"` | Is a masks server, and nothing else. |
-| [Engine](#engine-mode) | `gem "masks-server"` | Mounts masks inside itself. Signs its own people in through it. |
+| [Server](/reference/ruby/server-mode/) | `gem "masks-server"` | Is a masks server, and nothing else. |
+| [Engine](/reference/ruby/engine-mode/) | `gem "masks-server"` | Mounts masks inside itself. Signs its own people in through it. |
 
 Server mode and Engine mode use the same Rails engine, `Masks::Server::Engine`. They mount it in
 different ways:
@@ -130,7 +130,7 @@ With `config.sign_out_of_issuer = true`, or `everywhere` in the request, the bro
 masks to end its session there. masks sends the browser back to `/auth/handshake/callback`, and the
 app sends it on to `after_sign_out`. A request for JSON gets the masks address as `logout_url`. The
 app accepts that return once, within an hour, in the browser that signed out. See
-[Masks::Rails](/reference/rails/) for the full list.
+[Masks::Rails](/reference/ruby/rails/) for the full list.
 
 ### Organizations
 
@@ -306,129 +306,4 @@ A bound token sent as `Bearer` is refused.
 Each process keeps the proofs it has seen in memory. To share them across processes, set
 `config.replay` to any object whose `first?(key, expires_in:)` returns true only once for each key.
 
-Outside Rails, [Masks::Client](/reference/ruby/) does the same without the engine.
-
-## Server mode
-
-In Server mode, your app is a masks server.
-
-1. Add the gem to your Gemfile:
-
-   ```ruby
-   gem "masks-server"
-   ```
-
-2. Run the install generator:
-
-   ```sh
-   bin/rails generate masks:server:install --mode server
-   ```
-
-   The generator mounts masks at `/` and writes `config/initializers/masks_server.rb`.
-
-3. Connect to the database as a role that holds neither `SUPERUSER` nor `BYPASSRLS`. masks keeps
-   its tables in the primary database. [Row-level security](/guides/security/#tenant-isolation),
-   which limits each query to one tenant's rows, is what keeps tenants apart.
-4. Set `config.active_record.schema_format = :sql`. Row-level security does not survive a
-   `schema.rb`.
-5. Run `bin/rails db:prepare`.
-6. Run `bin/rails masks:tenants`.
-
-Your app reads the same environment variables as the [container image](/guides/self-hosting/). The
-container image is itself a Server-mode app. See [ENV vars](/reference/environment/) for every
-variable.
-
-## Engine mode
-
-In Engine mode, your app mounts masks inside itself.
-
-1. Add the gem to your Gemfile:
-
-   ```ruby
-   gem "masks-server"
-   ```
-
-2. Run the install generator with one of these commands:
-
-   ```sh
-   bin/rails generate masks:server:install --at /auth
-   bin/rails generate masks:server:install --host auth.example.com
-   ```
-
-   - The first command mounts masks at `/auth` on your app's own domain.
-   - The second command serves masks at the root of a subdomain.
-
-   Both write this configuration:
-
-   ```ruby
-   Rails.application.configure do
-     config.masks.mode = :engine
-     config.masks.database = :masks
-     config.masks.tenant = "app"
-   end
-   ```
-
-3. Add a database for masks, as described below.
-
-### A database of its own
-
-masks keeps its tables in a database of its own. Add it to `config/database.yml` in each
-environment:
-
-```yaml
-masks:
-  <<: *default
-  database: myapp_masks_<%= Rails.env %>
-  username: masks
-  migrations_paths: <%= Masks::Server::Engine.root.join("db/migrate") %>
-  schema_dump: false
-```
-
-Its role must hold neither `SUPERUSER` nor `BYPASSRLS`, or masks refuses to start. Then:
-
-1. Run `bin/rails db:prepare`.
-2. Run `bin/rails masks:tenants`.
-3. Open `/auth/login`.
-4. Set up the first account with the setup token that masks prints.
-
-### Signing your own people in
-
-When masks is mounted at a path, it shares your app's origin. Your controllers read the signed-in
-account from masks' session, with no OAuth round trip:
-
-```ruby
-class DashboardController < ApplicationController
-  include Masks::Server::Host
-
-  before_action :require_masks_actor!
-
-  def show
-    @person = masks_actor
-  end
-end
-```
-
-`require_masks_actor!` sends a signed-out visitor to masks' sign-in page, and back again after they
-sign in. It follows a return path only if the path is on your own app.
-
-On a subdomain, masks has its own origin, and its cookies stay there. Sign your app in with
-[Client mode](#client-mode), and set `MASKS_ISSUER` to that subdomain.
-
-### What stays apart
-
-| | masks uses |
-| --- | --- |
-| Tables | Its own database, through `config.masks.database`. |
-| Session | Its own cookie, `_masks_session`. Signing in to masks never resets your app's session. |
-| Secrets | Its own, from `config.masks.secret`. Or derived from your app's key under a label of its own. Your app's cookie jar cannot read masks' cookies. |
-| Encrypted columns | Its own key, derived the same way. From that key, one key for each tenant. |
-| Jobs | Its own job and mail classes carry a tenant. Your app's jobs are left alone. |
-| Routes | Only the paths it is mounted at. |
-
-| Setting | |
-| --- | --- |
-| `config.masks.mode` | `:server` or `:engine`. `MASKS_MODE` sets it too. |
-| `config.masks.database` | The `database.yml` entry masks uses in Engine mode. |
-| `config.masks.tenant` | The tenant your app's people belong to. |
-| `config.masks.secret` | The secret masks signs and encrypts with in Engine mode. Optional. |
-| `config.masks.public_origin_template` | The issuer, including the path it is mounted at, such as `https://app.example.com/auth`. Required in production. Set it through `MASKS_PUBLIC_ORIGIN_TEMPLATE` or here. |
+Outside Rails, [Masks::Client](/reference/ruby/client/) does the same without the engine.

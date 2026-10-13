@@ -1,0 +1,190 @@
+---
+title: Auth.js
+description: "Add masks to a Next.js app on Auth.js with masksAuth: the handshake, one refresh per token, privileges, avatars, and sign-out everywhere."
+---
+
+An app that already uses [Auth.js](https://authjs.dev) (`next-auth` 5) keeps it. `masksAuth` builds
+the Auth.js config and adds what masks offers beyond a plain OpenID Connect provider:
+
+- the handshake, so the app needs no client ID or secret
+- token refresh that uses each refresh token once, however many requests arrive together
+- organizations, the tenant, avatars, scopes, and privileges on the session
+- a trip through masks to ask for a missing privilege
+- back-channel logout, which ends the session when the person signs out of masks
+- revoking the refresh token when the person signs out
+
+```ts
+// auth.ts
+import NextAuth from "next-auth";
+import { masksAuth } from "@masks/server/authjs";
+
+export const { handlers, auth, signIn, signOut, guard, accessToken, proxy } = masksAuth(NextAuth, {
+  privileges: { admin: ["catalog:admin"] },
+  manages: "admin",
+});
+```
+
+```ts
+// app/api/auth/[...nextauth]/route.ts
+import { handlers } from "@/auth";
+
+export const { GET, POST } = handlers;
+```
+
+```ts
+// proxy.ts
+export { proxy } from "@/auth";
+```
+
+Set two variables, start the app, and sign in:
+
+| Variable | |
+| --- | --- |
+| `MASKS_ISSUER` | The tenant you sign in against. |
+| `AUTH_SECRET` | The Auth.js secret, such as the output of `openssl rand -base64 32`. |
+
+The first `signIn("masks")` runs [the handshake](/reference/javascript/#the-handshake). After the approval, the browser
+signs in and comes back to the page it started on. `MASKS_RESOURCE` names the app when the request's
+own origin is not its public address. Without it, `AUTH_URL` or the request's origin is used.
+
+The second argument takes every Auth.js option as well, such as `pages`, `callbacks`, and other
+`providers`. Your `jwt` and `session` callbacks run after the masks ones. Sessions are always JSON
+Web Tokens.
+
+## In a page
+
+```tsx
+// app/settings/page.tsx
+import { auth, guard } from "@/auth";
+
+export default async function Settings() {
+  const masked = await guard("admin");
+
+  return <p>{masked.organization?.name}</p>;
+}
+```
+
+`guard` returns a signed-in `Masked`, and asks masks once for a privilege's missing scopes.
+`accessToken()` hands a fresh access token to server code. `session.masks` holds the person, with no
+token. The [reference](#reference) below lists everything `masksAuth` returns.
+
+A link to `/api/auth/masks/signin` signs in without a form. It takes `callbackUrl`, `organization`,
+`privilege`, and `prompt`.
+
+`masksAuth` answers its own [routes](#reference) under the Auth.js base path, `/api/auth/masks` by
+default.
+
+## Signing out
+
+`signOut()` revokes the refresh token and clears the session. The person stays signed in to masks.
+
+To sign out of masks as well, post a form to `/api/auth/masks/logout` with `everywhere`:
+
+```tsx
+<form method="post" action="/api/auth/masks/logout">
+  <input type="hidden" name="everywhere" value="1" />
+  <input type="hidden" name="callbackUrl" value="/goodbye" />
+  <button type="submit">Sign out</button>
+</form>
+```
+
+The app signs the person out, and the browser goes on to masks to end its session there. masks
+sends it back through `/api/auth/masks/logout/return` to `callbackUrl`. That return carries a state
+the sign-out stored in the browser, which works once, so a link to it from anywhere else is refused.
+A sign-out from another site is refused with `403`.
+
+With the `signOutOfIssuer: true` option, every sign-out through that route signs out of masks.
+An app connected before this route existed has to reconnect once, so masks learns the return address.
+
+## Several servers
+
+masks accepts each refresh token once. When two servers refresh the same sign-in at the same moment,
+masks ends every token from that sign-in, and the person has to sign in again. Within one Node process,
+`masksAuth` refreshes each sign-in once, even though Next.js loads `auth.ts` once for the proxy and
+again for the routes.
+
+An app on several servers, or on serverless functions, passes three stores that every server shares:
+
+| Option | Holds |
+| --- | --- |
+| `refreshes` | Which server is refreshing a sign-in, and the result, sealed with `AUTH_SECRET`. The first server refreshes, and the others wait up to 10 seconds for its result. A refusal is shared too, so every server signs the person out. |
+| `logouts` | The back-channel logouts masks sent, so every server ends those sessions. |
+| `replay` | The logout tokens already used, so none is accepted twice. |
+
+With [Upstash Redis](https://upstash.com/docs/redis/sdks/ts/overview):
+
+```ts
+// auth.ts
+import NextAuth from "next-auth";
+import { Redis } from "@upstash/redis";
+import { masksAuth } from "@masks/server/authjs";
+
+const redis = Redis.fromEnv();
+const once = async (key: string, expiresIn: number) =>
+  (await redis.set(key, "1", { nx: true, ex: expiresIn })) === "OK";
+
+export const { handlers, auth, signIn, signOut, guard, accessToken, proxy } = masksAuth(NextAuth, {
+  refreshes: {
+    get: async (key) => (await redis.get<string>(key)) ?? undefined,
+    set: async (key, value, expiresIn) => {
+      await redis.set(key, value, { ex: expiresIn });
+    },
+    claim: once,
+  },
+  logouts: {
+    record: async (key, at, expiresIn) => {
+      await redis.set(key, at, { ex: expiresIn });
+    },
+    since: async (key) => (await redis.get<number>(key)) ?? undefined,
+  },
+  replay: { first: once },
+});
+```
+
+`claim` and `first` must set a key only when it is absent, in one step, and answer whether they set
+it. When a store cannot be reached, the session keeps its current token and the refresh runs again
+on a later request.
+
+## Reference
+
+`masksAuth(NextAuth, options)` takes every Auth.js option, and these:
+
+| Option | Default | |
+| --- | --- | --- |
+| `issuer` | `MASKS_ISSUER` | The tenant people sign in against. |
+| `resource` | `MASKS_RESOURCE`, then the origin of `AUTH_URL`, then the request's origin | The app's public address. |
+| `secret` | `AUTH_SECRET` | The Auth.js secret. It also seals what the refresh store holds. |
+| `id` | `masks` | The provider id, as in `signIn("masks")`. |
+| `label` | `masks` | The provider's name on the Auth.js sign-in page. |
+| `name`, `scope`, `namespace`, `organization`, `privileges`, `manages`, `credentials`, `delegations`, `avatars`, `signOutOfIssuer`, `onLogout`, `allowPlainHTTP` | | As in [options](/reference/javascript/server/#options). |
+| `refreshes` | memory | A `RefreshStore` shared by every server, so each sign-in is refreshed once between them. |
+| `logouts` | memory | A `LogoutStore` shared by every server. |
+| `replay` | memory | A `ReplayStore` shared by every server, so each logout token works once. |
+
+It returns what `NextAuth` returns, and:
+
+| | |
+| --- | --- |
+| `handlers` | `GET` and `POST`, which also answer the routes below. |
+| `auth()` | The Auth.js session. `session.masks` holds what `GET /auth/session` returns, and `session.user.id` is the subject. No token reaches the browser. |
+| `guard(...privileges)` | A signed-in `Masked`. It sends a signed-out person to sign in, and asks masks for a privilege's missing scopes once. A missing role or organization throws `ForbiddenError`. |
+| `accessToken()` | The access token, refreshed when it is about to expire, for calling an API from the server. |
+| `proxy` | Refreshes the session before a page renders, and tells `guard` which page to come back to. |
+| `masks` | The `MasksAuth` underneath, with `delegations`, `startDelegation`, and `finishDelegation` as in [Masks](/reference/javascript/server/#masks). |
+
+`session.user.image` is `/api/auth/masks/avatar` when masks holds a photo, since the photo needs the
+person's token. Otherwise it is the `picture` claim, then the identicon.
+
+These routes are answered under the Auth.js base path, `/api/auth` by default:
+
+| Route | |
+| --- | --- |
+| `GET /api/auth/masks/signin` | Starts a sign-in. Takes `callbackUrl`, `organization`, `privilege`, and `prompt`. |
+| `GET /api/auth/masks/handshake` | Starts the handshake before the app is connected. After that, shows the connection to someone `manages` allows. |
+| `POST /api/auth/masks/handshake` | Reconnects. |
+| `POST /api/auth/masks/handshake/disconnect` | Disconnects. |
+| `GET /api/auth/masks/handshake/callback` | Where masks sends the browser after an approval. |
+| `GET` or `POST /api/auth/masks/logout` | Signs out. Takes `callbackUrl`, and `everywhere` to sign out of masks as well. |
+| `GET /api/auth/masks/logout/return` | Where masks sends the browser after a sign-out everywhere. |
+| `GET /api/auth/masks/avatar` | The person's photo, fetched from masks with their token. Takes `size`. |
+| `POST /api/auth/masks/logout/backchannel` | Where masks posts a logout token. |

@@ -13,7 +13,7 @@ class RDoc::Generator::Mdx
 
   PAGES = {
     "Masks::Client" => {
-      file: "ruby.mdx",
+      file: "client.mdx",
       title: "Masks::Client",
       description: "The protocol half of the masks gem: discovery, PKCE, exchange, verification."
     },

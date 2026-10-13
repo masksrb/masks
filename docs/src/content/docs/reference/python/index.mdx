@@ -4,7 +4,7 @@ description: Sign people in to a FastAPI, Django, or Flask app with masks, guard
 ---
 
 `masks-client` signs people in to a Python web app against a masks server. It covers what
-[`Masks::Rails`](/guides/rails/#client-mode) covers in a Rails app: the handshake, the sign-in, a
+[`Masks::Rails`](/reference/ruby/#client-mode) covers in a Rails app: the handshake, the sign-in, a
 session, organizations, privileges, and checking access tokens. It works with FastAPI, Django, and
 Flask, and every call in the client also has an `async` form.
 
@@ -15,7 +15,7 @@ from the repository with the extra for your framework:
 pip install "masks-client[fastapi] @ git+https://github.com/masksrb/masks#subdirectory=python"
 ```
 
-[masks-client](/reference/python/) lists every setting, route, and call.
+[masks-client](/reference/python/client/) lists every setting, route, and call.
 
 ## Setting up
 
@@ -27,116 +27,19 @@ Every framework takes the same `masks.web.Config`. Most apps set four things:
 - `secret`, at least 32 random bytes that seal the session, such as the output of
   `openssl rand -hex 32`. Django and Flask use the app's own secret key when you leave it out.
 
-See [every setting](/reference/python/#config).
+See [every setting](/reference/python/client/#config).
 
-After you set up your framework below:
+Each framework has its own page:
+
+- [FastAPI](/reference/python/fastapi/)
+- [Django](/reference/python/django/)
+- [Flask](/reference/python/flask/)
+
+After you set up your framework:
 
 1. Set `MASKS_ISSUER` to the tenant you sign in against.
 2. Start the app.
 3. Open `/auth/handshake`.
-
-### FastAPI
-
-`Masks.install` adds the routes, the session middleware, and the answers for refused requests.
-Each guard is a FastAPI dependency.
-
-```python
-import os
-from typing import Annotated
-
-from fastapi import Depends, FastAPI
-
-from masks.fastapi import Config, Masks, Person
-
-auth = Masks(Config(
-    issuer=os.environ["MASKS_ISSUER"],
-    resource="https://app.example.com",
-    name="Catalog",
-    secret=os.environ["SESSION_SECRET"],
-))
-
-app = FastAPI()
-auth.install(app)
-
-
-@app.get("/settings")
-async def settings(person: Annotated[Person, Depends(auth.require())]):
-    return {"name": person.name}
-```
-
-`auth.require(*privileges)` sends a signed-out visitor to sign in and back again, then checks each
-privilege. `auth.protect(*privileges)` checks an access token instead. See
-[the FastAPI calls](/reference/python/#fastapi).
-
-`auth.authorize(request, *privileges)` runs the same check inside a route. A Starlette app without
-FastAPI can still add `masks.fastapi.SessionMiddleware` and mount `auth.router.routes`.
-
-### Django
-
-1. Set `MASKS` in your settings to a `Config`, or to a dict of its settings:
-
-   ```python
-   MASKS = {
-       "issuer": os.environ["MASKS_ISSUER"],
-       "resource": "https://app.example.com",
-       "name": "Catalog",
-   }
-   ```
-
-2. Add the middleware after Django's own:
-
-   ```python
-   MIDDLEWARE = [
-       ...,
-       "django.middleware.csrf.CsrfViewMiddleware",
-       "masks.django.middleware.MasksMiddleware",
-   ]
-   ```
-
-3. Include the routes at the root of your URLs. The paths already start with `/auth`:
-
-   ```python
-   urlpatterns = [
-       path("", include("masks.django.urls")),
-       ...
-   ]
-   ```
-
-4. Guard a view with a decorator:
-
-   ```python
-   from masks.django import login_required, token_required
-
-   @login_required()
-   def settings(request):
-       return render(request, "settings.html", {"person": request.masked})
-   ```
-
-`login_required` and `token_required` take privileges like the FastAPI guards, and `login_required`
-takes `tokens=True`. `request.masked` is the person on every request. Django's CSRF check stays on
-for every route except back-channel logout, so a sign-out form needs `{% csrf_token %}`.
-
-### Flask
-
-`Masks` registers a blueprint with the routes. The session secret defaults to `app.secret_key`.
-
-```python
-from flask import Flask
-from masks.flask import Masks, masked
-
-app = Flask(__name__)
-app.secret_key = os.environ["SESSION_SECRET"]
-auth = Masks(app, issuer=os.environ["MASKS_ISSUER"], resource="https://app.example.com")
-
-
-@app.get("/settings")
-@auth.required()
-def settings():
-    return {"name": masked.name}
-```
-
-`auth.required(*privileges)` and `auth.protected(*privileges)` work like the FastAPI guards, and
-`masked` is the person for the current request. You can also pass a `Config` as `Masks(app, config)`.
 
 ## The handshake
 
@@ -158,7 +61,7 @@ All of them must share the resource's origin, or the handshake refuses before th
 A credential store that cannot be written refuses the handshake before masks registers anything.
 
 The app writes its credentials to `masks.json` with file mode 600. To keep them somewhere else, set
-`credentials` to one of the [credential stores](/reference/python/#credentials).
+`credentials` to one of the [credential stores](/reference/python/client/#credentials).
 
 A multi-tenant app sets `credentials` to a function that takes the request and returns the store for
 that tenant. `issuer`, `resource`, `name`, `organization`, and `base_url` take a function of the
@@ -184,7 +87,7 @@ its credentials and the browser goes to the handshake again.
 ## Signing in
 
 The routes answer under `prefix`, which is `/auth` by default. `GET /auth` starts a sign-in, and
-`GET /auth/callback` finishes it. See [every route](/reference/python/#routes).
+`GET /auth/callback` finishes it. See [every route](/reference/python/client/#routes).
 
 A sign-in is protected in these ways:
 
@@ -200,7 +103,7 @@ A JSON request that needs a sign-in gets `401` with `login_required` or `handsha
 URL to send the browser to. A browser is redirected.
 
 The person has the sign-in's claims, scopes, organizations, and privileges. See
-[the person](/reference/python/#the-person).
+[the person](/reference/python/client/#the-person).
 
 A scope is a named permission that a token holds. A claim is one piece of information inside a
 token, such as the person's email address.
@@ -265,7 +168,7 @@ Config(..., sessions=ServerSessions(MemorySessionStore()))
 The cookie then holds only a random id. The store keeps each session under a hash of that id, so
 the ids cannot be read back from the store. `MemorySessionStore` keeps sessions in one process. A
 store of your own, such as one in Redis or a database, has the
-[store methods](/reference/python/#sessions). In a FastAPI app, they can be `async def`, so waiting
+[store methods](/reference/python/client/#sessions). In a FastAPI app, they can be `async def`, so waiting
 on the store does not hold up other requests.
 
 ## Organizations
@@ -394,7 +297,6 @@ from fastapi.responses import RedirectResponse
 
 import masks
 
-
 @app.get("/connect")
 async def connect(request: Request, person: Annotated[Person, Depends(auth.require())]):
     client = await auth.client(request)
@@ -402,7 +304,6 @@ async def connect(request: Request, person: Annotated[Person, Depends(auth.requi
     auth.session(request)["connecting"] = started.to_dict()
 
     return RedirectResponse(started.url, status_code=303)
-
 
 @app.get("/connect/callback")
 async def connected(request: Request, person: Annotated[Person, Depends(auth.require())]):

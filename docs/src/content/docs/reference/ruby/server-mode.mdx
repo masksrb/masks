@@ -1,0 +1,32 @@
+---
+title: Server mode
+description: "Run a Rails app that is a masks server and nothing else, with the masks-server gem mounted at the root."
+---
+
+In Server mode, your app is a masks server.
+
+1. Add the gem to your Gemfile:
+
+   ```ruby
+   gem "masks-server"
+   ```
+
+2. Run the install generator:
+
+   ```sh
+   bin/rails generate masks:server:install --mode server
+   ```
+
+   The generator mounts masks at `/` and writes `config/initializers/masks_server.rb`.
+
+3. Connect to the database as a role that holds neither `SUPERUSER` nor `BYPASSRLS`. masks keeps
+   its tables in the primary database. [Row-level security](/guides/security/#tenant-isolation),
+   which limits each query to one tenant's rows, is what keeps tenants apart.
+4. Set `config.active_record.schema_format = :sql`. Row-level security does not survive a
+   `schema.rb`.
+5. Run `bin/rails db:prepare`.
+6. Run `bin/rails masks:tenants`.
+
+Your app reads the same environment variables as the [container image](/guides/self-hosting/). The
+container image is itself a Server-mode app. See [ENV vars](/reference/environment/) for every
+variable.

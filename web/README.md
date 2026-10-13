@@ -154,6 +154,6 @@ Without `onSignOut`, no sign-out button renders. Both components read the accoun
 ## Documentation
 
 The full reference is generated from this package at
-[masks.pages.dev/reference/browser](https://masks.pages.dev/reference/browser/).
+[masks.pages.dev/reference/javascript/client](https://masks.pages.dev/reference/javascript/client/).
 
 MIT.

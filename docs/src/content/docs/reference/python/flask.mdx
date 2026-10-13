@@ -1,0 +1,47 @@
+---
+title: Flask
+description: "Sign people in to a Flask app with masks-client's blueprint and route decorators."
+---
+
+It reads the [settings](/reference/python/#setting-up) every integration shares. Install the `flask` extra.
+
+## Setting up
+
+`Masks` registers a blueprint with the routes. The session secret defaults to `app.secret_key`.
+
+```python
+from flask import Flask
+from masks.flask import Masks, masked
+
+app = Flask(__name__)
+app.secret_key = os.environ["SESSION_SECRET"]
+auth = Masks(app, issuer=os.environ["MASKS_ISSUER"], resource="https://app.example.com")
+
+
+@app.get("/settings")
+@auth.required()
+def settings():
+    return {"name": masked.name}
+```
+
+`auth.required(*privileges)` and `auth.protected(*privileges)` work like the [FastAPI](/reference/python/fastapi/) guards, and
+`masked` is the person for the current request. You can also pass a `Config` as `Masks(app, config)`.
+
+## Reference
+
+`Masks(app, config)` or `Masks(app, **settings)` registers the routes as a blueprint. The secret
+defaults to `app.secret_key`. `Masks()` followed by `init_app(app)` works as well.
+
+| | |
+| --- | --- |
+| `masked` | The person for the current request. |
+| `@auth.required(*privileges, tokens=False)` | Needs a sign-in holding each privilege. |
+| `@auth.protected(*privileges)` | Needs an access token holding each privilege. |
+| `auth.authorize(*privileges, tokens=False)` | `required` inside a view. Raises `Refusal`. |
+| `auth.person` | The person, the same as `masked`. |
+| `auth.client()` | A `masks.Client` with the app's credentials. |
+| `auth.login_url(return_to="", organization="", privilege=())` | A link that starts a sign-in. |
+| `auth.logout_url()` | The path a sign-out form posts to. |
+| `auth.registered()` | Whether masks still knows the app. |
+| `auth.connected()` | Whether the app holds credentials. |
+| `auth.session()` | The session, a mutable mapping. |

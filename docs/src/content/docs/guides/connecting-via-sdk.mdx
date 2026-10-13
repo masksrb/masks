@@ -17,12 +17,12 @@ Pick the SDK for the place your app runs.
 
 | SDK | For |
 | --- | --- |
-| [`Masks::Rails`](/reference/rails/) | A Rails app. An engine that mounts sign-in, the handshake, and token checks. |
-| [`Masks::Client`](/reference/ruby/) | Any Ruby process. `Masks::Rails` is built on it. |
-| [`@masks/client`](/reference/browser/) | A single-page app, in the browser. |
-| [`github.com/masksrb/masks/go`](/guides/go/) | A Go web app, service, or machine, and a Go API. |
-| [`@masks/server`](/reference/node/) | A JavaScript server on Node, Next.js, Bun, or Deno, and a JavaScript API. |
-| [`masks-client`](/guides/python/) | A FastAPI, Django, or Flask app, a Python service or machine, and a Python API. |
+| [`Masks::Rails`](/reference/ruby/rails/) | A Rails app. An engine that mounts sign-in, the handshake, and token checks. |
+| [`Masks::Client`](/reference/ruby/client/) | Any Ruby process. `Masks::Rails` is built on it. |
+| [`@masks/client`](/reference/javascript/client/) | A single-page app, in the browser. |
+| [`github.com/masksrb/masks/go`](/reference/go/) | A Go web app, service, or machine, and a Go API. |
+| [`@masks/server`](/reference/javascript/server/) | A JavaScript server on Node, Next.js, Bun, or Deno, and a JavaScript API. |
+| [`masks-client`](/reference/python/) | A FastAPI, Django, or Flask app, a Python service or machine, and a Python API. |
 
 The `masks` gem holds both Ruby SDKs. `Masks::Rails` loads only when Rails does.
 
@@ -70,15 +70,15 @@ The terms in this table mean:
 
 Each language has a guide from the handshake to accepting tokens:
 
-- [Rails apps](/guides/rails/)
-- [JavaScript apps](/guides/javascript/)
-- [Python apps](/guides/python/)
-- [Go apps](/guides/go/)
+- [Rails apps](/reference/ruby/)
+- [JavaScript apps](/reference/javascript/)
+- [Python apps](/reference/python/)
+- [Go apps](/reference/go/)
 
 ## Connecting an app
 
 1. Install the SDK. For Rails, run `bin/rails generate masks:install`. See
-   [Rails apps](/guides/rails/) for the whole walkthrough.
+   [Rails apps](/reference/ruby/) for the whole walkthrough.
 2. Set the issuer. This is the address masks answers at, such as `https://acme.auth.example.com`.
 3. Set the app's resource identifier. This is the app's own address, such as
    `https://app.example.com`. The handshake requires a resource. The app's redirect URIs (the
@@ -96,7 +96,7 @@ The app is then an approved [client](/guides/features/#registering-a-client). Ne
 ## A single-page app
 
 A single-page app with no backend runs the code flow in the page with
-[`@masks/client`](/reference/browser/).
+[`@masks/client`](/reference/javascript/client/).
 
 - It needs a public client, one registered with `token_endpoint_auth_method` set to `none`.
 - It keeps its tokens in `sessionStorage`.
@@ -355,7 +355,7 @@ upstream.access_token
 - Retry after `Delegations::Unavailable`.
 - Both errors carry `secret` when masks had already rotated it.
 
-See [Masks::Client](/reference/ruby/) for the test fake.
+See [Masks::Client](/reference/ruby/client/) for the test fake.
 
 ## Calling a provider while the person is present
 

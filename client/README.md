@@ -22,7 +22,7 @@ bin/rails generate masks:install --resource https://app.example.com
 
 That mounts the engine at `/auth`, writes `config/initializers/masks.rb`, and gitignores
 the file credentials land in. Set `MASKS_ISSUER`, start the app, and open
-`/auth/handshake`. [Rails apps](https://masks.pages.dev/guides/rails/) walks through the rest.
+`/auth/handshake`. [Rails apps](https://masks.pages.dev/reference/ruby/) walks through the rest.
 
 ### The handshake
 
@@ -94,7 +94,7 @@ sign-in. When a signed-in person lacks one, the browser goes through masks once 
 comes back, and the action answers `403` when masks does not grant it. A missing role or organization
 answers `403` at once. `masked.privilege?(:admin)` and `masked.privileges` tell a view what the sign-in
 holds, and `/auth/session` answers `privileges`. See
-[privileges](https://masks.pages.dev/guides/rails/#privileges).
+[privileges](https://masks.pages.dev/reference/ruby/#privileges).
 
 `config.authenticate_everything = true` includes `Authentication` on every controller. Otherwise
 include it where it applies.
@@ -102,7 +102,7 @@ include it where it applies.
 ### A single-page app in front of it
 
 `GET /auth/session` answers identity, tenant, and scopes as JSON, or `401` with where to send the
-browser. [`@masks/client`](https://masks.pages.dev/reference/browser/) reads it:
+browser. [`@masks/client`](https://masks.pages.dev/reference/javascript/client/) reads it:
 
 ```js
 import { createSession } from "@masks/client"

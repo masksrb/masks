@@ -4,15 +4,15 @@ description: Every setting, route, guard, and call in the Python SDK, for FastAP
 ---
 
 `masks-client` is the Python SDK. It imports as `masks` and needs Python 3.10 or later. For a
-walkthrough, read [Python apps](/guides/python/).
+walkthrough, read [Python apps](/reference/python/).
 
 | Module | |
 | --- | --- |
 | [`masks`](#the-client) | The client: discovery, the code flow, tokens, DPoP, introspection, token exchange, delegations, enrollment, and checking tokens. |
 | [`masks.web`](#config) | The parts every framework shares: `Config`, the person, sessions, and credentials. |
-| [`masks.fastapi`](#fastapi) | The FastAPI integration. Install the `fastapi` extra. |
-| [`masks.django`](#django) | The Django integration. Install the `django` extra. |
-| [`masks.flask`](#flask) | The Flask integration. Install the `flask` extra. |
+| [`masks.fastapi`](/reference/python/fastapi/) | The FastAPI integration. Install the `fastapi` extra. |
+| [`masks.django`](/reference/python/django/) | The Django integration. Install the `django` extra. |
+| [`masks.flask`](/reference/python/flask/) | The Flask integration. Install the `flask` extra. |
 | [`masks.asgi`](#asgi-middleware) | Middleware that checks tokens in any ASGI app. |
 
 ## Config
@@ -87,74 +87,6 @@ A request counts as JSON when it sends `X-Requested-With: XMLHttpRequest`, a JSO
 
 A guard that checks a token answers `401` with `Bearer` and `DPoP` challenges. Each challenge's
 `resource_metadata` names `/.well-known/oauth-protected-resource`.
-
-## FastAPI
-
-`masks.fastapi` exports `Config`, `Masks`, `Person`, `Refusal`, and `SessionMiddleware`.
-
-```python
-auth = masks.fastapi.Masks(config)
-auth.install(app)
-```
-
-| | |
-| --- | --- |
-| `install(app)` | Adds the session middleware, the routes, and the handler for refused requests. |
-| `router` | An `APIRouter` with the routes, for an app that adds the middleware itself. |
-| `person` | A dependency that gives the person, signed in or not. |
-| `require(*privileges, tokens=False)` | A dependency that needs a sign-in holding each privilege. With `tokens=True`, it checks a token when the request has an `Authorization` header or no session. |
-| `protect(*privileges)` | A dependency that needs an access token holding each privilege. |
-| `await authorize(request, *privileges, tokens=False)` | `require` inside a route. Raises `Refusal`. |
-| `await protected(request, *privileges)` | `protect` inside a route. Raises `Refusal`. |
-| `await client(request)` | A `masks.AsyncClient` with the app's credentials. |
-| `login_url(return_to="", organization="", privilege=())` | A link that starts a sign-in. |
-| `logout_url()` | The path a sign-out form posts to. |
-| `await registered(request)` | Whether masks still knows the app. |
-| `connected(request)` | Whether the app holds credentials. |
-| `session(request)` | The session, a mutable mapping. |
-| `await aclose()` | Closes the HTTP client. |
-
-`SessionMiddleware(app, masks=auth)` loads and saves the session in any Starlette app. `require`
-and `protect` raise `ValueError` for a privilege `Config.privileges` does not name.
-
-## Django
-
-1. Set `MASKS` in the settings to a `Config`, or to a dict of its settings.
-2. Add `masks.django.middleware.MasksMiddleware` after Django's own middleware.
-3. Include `masks.django.urls` at the root of the URLs.
-
-| | |
-| --- | --- |
-| `request.masked` | The person on every request. |
-| `@login_required(*privileges, tokens=False)` | Needs a sign-in holding each privilege, like `require` in FastAPI. |
-| `@token_required(*privileges)` | Needs an access token holding each privilege. |
-| `client(request)` | A `masks.Client` with the app's credentials. |
-| `login_url(return_to="", organization="", privilege=())` | A link that starts a sign-in. |
-| `registered(request)` | Whether masks still knows the app. |
-| `connected(request)` | Whether the app holds credentials. |
-| `person(request)` | The person, the same as `request.masked`. |
-| `engine()` | The shared engine built from `MASKS`. |
-
-Django's CSRF check covers every route except back-channel logout.
-
-## Flask
-
-`Masks(app, config)` or `Masks(app, **settings)` registers the routes as a blueprint. The secret
-defaults to `app.secret_key`. `Masks()` followed by `init_app(app)` works as well.
-
-| | |
-| --- | --- |
-| `masked` | The person for the current request. |
-| `@auth.required(*privileges, tokens=False)` | Needs a sign-in holding each privilege. |
-| `@auth.protected(*privileges)` | Needs an access token holding each privilege. |
-| `auth.authorize(*privileges, tokens=False)` | `required` inside a view. Raises `Refusal`. |
-| `auth.person` | The person, the same as `masked`. |
-| `auth.client()` | A `masks.Client` with the app's credentials. |
-| `auth.login_url(return_to="", organization="", privilege=())` | A link that starts a sign-in. |
-| `auth.logout_url()` | The path a sign-out form posts to. |
-| `auth.registered()` | Whether masks still knows the app. |
-| `auth.connected()` | Whether the app holds credentials. |
-| `auth.session()` | The session, a mutable mapping. |
 
 ## The person
 

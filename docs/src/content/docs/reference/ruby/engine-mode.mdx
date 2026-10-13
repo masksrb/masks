@@ -1,0 +1,97 @@
+---
+title: Engine mode
+description: "Mount masks inside a Rails app, at a path or on a subdomain, and sign the app's own people in through it."
+---
+
+In Engine mode, your app mounts masks inside itself.
+
+1. Add the gem to your Gemfile:
+
+   ```ruby
+   gem "masks-server"
+   ```
+
+2. Run the install generator with one of these commands:
+
+   ```sh
+   bin/rails generate masks:server:install --at /auth
+   bin/rails generate masks:server:install --host auth.example.com
+   ```
+
+   - The first command mounts masks at `/auth` on your app's own domain.
+   - The second command serves masks at the root of a subdomain.
+
+   Both write this configuration:
+
+   ```ruby
+   Rails.application.configure do
+     config.masks.mode = :engine
+     config.masks.database = :masks
+     config.masks.tenant = "app"
+   end
+   ```
+
+3. Add a database for masks, as described below.
+
+## A database of its own
+
+masks keeps its tables in a database of its own. Add it to `config/database.yml` in each
+environment:
+
+```yaml
+masks:
+  <<: *default
+  database: myapp_masks_<%= Rails.env %>
+  username: masks
+  migrations_paths: <%= Masks::Server::Engine.root.join("db/migrate") %>
+  schema_dump: false
+```
+
+Its role must hold neither `SUPERUSER` nor `BYPASSRLS`, or masks refuses to start. Then:
+
+1. Run `bin/rails db:prepare`.
+2. Run `bin/rails masks:tenants`.
+3. Open `/auth/login`.
+4. Set up the first account with the setup token that masks prints.
+
+## Signing your own people in
+
+When masks is mounted at a path, it shares your app's origin. Your controllers read the signed-in
+account from masks' session, with no OAuth round trip:
+
+```ruby
+class DashboardController < ApplicationController
+  include Masks::Server::Host
+
+  before_action :require_masks_actor!
+
+  def show
+    @person = masks_actor
+  end
+end
+```
+
+`require_masks_actor!` sends a signed-out visitor to masks' sign-in page, and back again after they
+sign in. It follows a return path only if the path is on your own app.
+
+On a subdomain, masks has its own origin, and its cookies stay there. Sign your app in with
+[Client mode](/reference/ruby/#client-mode), and set `MASKS_ISSUER` to that subdomain.
+
+## What stays apart
+
+| | masks uses |
+| --- | --- |
+| Tables | Its own database, through `config.masks.database`. |
+| Session | Its own cookie, `_masks_session`. Signing in to masks never resets your app's session. |
+| Secrets | Its own, from `config.masks.secret`. Or derived from your app's key under a label of its own. Your app's cookie jar cannot read masks' cookies. |
+| Encrypted columns | Its own key, derived the same way. From that key, one key for each tenant. |
+| Jobs | Its own job and mail classes carry a tenant. Your app's jobs are left alone. |
+| Routes | Only the paths it is mounted at. |
+
+| Setting | |
+| --- | --- |
+| `config.masks.mode` | `:server` or `:engine`. `MASKS_MODE` sets it too. |
+| `config.masks.database` | The `database.yml` entry masks uses in Engine mode. |
+| `config.masks.tenant` | The tenant your app's people belong to. |
+| `config.masks.secret` | The secret masks signs and encrypts with in Engine mode. Optional. |
+| `config.masks.public_origin_template` | The issuer, including the path it is mounted at, such as `https://app.example.com/auth`. Required in production. Set it through `MASKS_PUBLIC_ORIGIN_TEMPLATE` or here. |

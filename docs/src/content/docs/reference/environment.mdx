@@ -27,7 +27,7 @@ text, so a true or false setting is the text `true` or `false`.
 
 | Variable | Default | |
 | --- | --- | --- |
-| `MASKS_MODE` | `server` | `server` runs masks as its own app. `engine` runs it mounted inside another Rails app, with its own database, session, and secrets. `config.masks.mode` sets the same thing. See [Rails apps](/guides/rails/). |
+| `MASKS_MODE` | `server` | `server` runs masks as its own app. `engine` runs it mounted inside another Rails app, with its own database, session, and secrets. `config.masks.mode` sets the same thing. See [Rails apps](/reference/ruby/). |
 
 ### Required in production
 
@@ -249,13 +249,13 @@ issuer from the environment. The issuer is the masks address your app signs peop
 The initializer is your code, so you can rename this variable or remove it.
 
 When your app first connects to the issuer, masks writes the client's ID and secret to
-`config/masks.json`. masks never reads them from the environment. See [Masks::Rails](/reference/rails/).
+`config/masks.json`. masks never reads them from the environment. See [Masks::Rails](/reference/ruby/rails/).
 
 ## Client
 
 `Masks::Client` and `@masks/client` read no environment variables. You pass them the issuer and
-the client's credentials in code. See [Masks::Client](/reference/ruby/) and
-[@masks/client](/reference/browser/).
+the client's credentials in code. See [Masks::Client](/reference/ruby/client/) and
+[@masks/client](/reference/javascript/client/).
 
 ## Development
 

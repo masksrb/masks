@@ -3,7 +3,7 @@ title: "@masks/server"
 description: The options, routes, and methods of the JavaScript server package, for Next.js, Auth.js, Express, Hono, and any app that takes a Request.
 ---
 
-The [JavaScript apps guide](/guides/javascript/) shows how to set each of these up.
+The [JavaScript apps guide](/reference/javascript/) shows how to set each of these up.
 
 ## Imports
 
@@ -108,64 +108,6 @@ the response.
 | `masks.delegations(request)` | `Delegations` for the app's client. Needs `delegations`. |
 | `masks.startDelegation(request, provider, { prompt, maxAge })` | Sends a signed-in person to connect a provider. |
 | `masks.finishDelegation(request)` | The `connection` and its `secret`, and the `cookies` to set. |
-
-## Next.js
-
-`masksNext(options)` returns:
-
-| | |
-| --- | --- |
-| `handlers` | `GET`, `POST`, and `DELETE` for `app/auth/[[...masks]]/route.ts`. |
-| `auth()` | The person, in a server component, a server action, or a route handler. |
-| `requireAuth(...privileges)` | The same, after sending a signed-out visitor to sign in and checking each privilege. |
-| `withMasks(handler, ...privileges)` | Guards a route handler by session or by token, and passes `{ masked }` to it. |
-| `proxy({ protect })` | Refreshes the session before a page renders. Sends a signed-out visitor to a path under one of `protect` to sign in. |
-| `metadata` | The `GET` handler for `/.well-known/oauth-protected-resource`. |
-| `masks` | The `Masks` underneath. |
-
-## Auth.js
-
-`masksAuth(NextAuth, options)` takes every Auth.js option, and these:
-
-| Option | Default | |
-| --- | --- | --- |
-| `issuer` | `MASKS_ISSUER` | The tenant people sign in against. |
-| `resource` | `MASKS_RESOURCE`, then the origin of `AUTH_URL`, then the request's origin | The app's public address. |
-| `secret` | `AUTH_SECRET` | The Auth.js secret. It also seals what the refresh store holds. |
-| `id` | `masks` | The provider id, as in `signIn("masks")`. |
-| `label` | `masks` | The provider's name on the Auth.js sign-in page. |
-| `name`, `scope`, `namespace`, `organization`, `privileges`, `manages`, `credentials`, `delegations`, `avatars`, `signOutOfIssuer`, `onLogout`, `allowPlainHTTP` | | As in [options](#options). |
-| `refreshes` | memory | A `RefreshStore` shared by every server, so each sign-in is refreshed once between them. |
-| `logouts` | memory | A `LogoutStore` shared by every server. |
-| `replay` | memory | A `ReplayStore` shared by every server, so each logout token works once. |
-
-It returns what `NextAuth` returns, and:
-
-| | |
-| --- | --- |
-| `handlers` | `GET` and `POST`, which also answer the routes below. |
-| `auth()` | The Auth.js session. `session.masks` holds what `GET /auth/session` returns, and `session.user.id` is the subject. No token reaches the browser. |
-| `guard(...privileges)` | A signed-in `Masked`. It sends a signed-out person to sign in, and asks masks for a privilege's missing scopes once. A missing role or organization throws `ForbiddenError`. |
-| `accessToken()` | The access token, refreshed when it is about to expire, for calling an API from the server. |
-| `proxy` | Refreshes the session before a page renders, and tells `guard` which page to come back to. |
-| `masks` | The `MasksAuth` underneath, with `delegations`, `startDelegation`, and `finishDelegation` as in [Masks](#masks). |
-
-`session.user.image` is `/api/auth/masks/avatar` when masks holds a photo, since the photo needs the
-person's token. Otherwise it is the `picture` claim, then the identicon.
-
-These routes are answered under the Auth.js base path, `/api/auth` by default:
-
-| Route | |
-| --- | --- |
-| `GET /api/auth/masks/signin` | Starts a sign-in. Takes `callbackUrl`, `organization`, `privilege`, and `prompt`. |
-| `GET /api/auth/masks/handshake` | Starts the handshake before the app is connected. After that, shows the connection to someone `manages` allows. |
-| `POST /api/auth/masks/handshake` | Reconnects. |
-| `POST /api/auth/masks/handshake/disconnect` | Disconnects. |
-| `GET /api/auth/masks/handshake/callback` | Where masks sends the browser after an approval. |
-| `GET` or `POST /api/auth/masks/logout` | Signs out. Takes `callbackUrl`, and `everywhere` to sign out of masks as well. |
-| `GET /api/auth/masks/logout/return` | Where masks sends the browser after a sign-out everywhere. |
-| `GET /api/auth/masks/avatar` | The person's photo, fetched from masks with their token. Takes `size`. |
-| `POST /api/auth/masks/logout/backchannel` | Where masks posts a logout token. |
 
 ## Masked
 

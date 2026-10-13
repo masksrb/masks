@@ -1,0 +1,71 @@
+---
+title: FastAPI
+description: "Sign people in to a FastAPI or Starlette app with masks-client, and guard routes with dependencies."
+---
+
+It reads the [settings](/reference/python/#setting-up) every integration shares. Install the `fastapi` extra.
+
+## Setting up
+
+`Masks.install` adds the routes, the session middleware, and the answers for refused requests.
+Each guard is a FastAPI dependency.
+
+```python
+import os
+from typing import Annotated
+
+from fastapi import Depends, FastAPI
+
+from masks.fastapi import Config, Masks, Person
+
+auth = Masks(Config(
+    issuer=os.environ["MASKS_ISSUER"],
+    resource="https://app.example.com",
+    name="Catalog",
+    secret=os.environ["SESSION_SECRET"],
+))
+
+app = FastAPI()
+auth.install(app)
+
+
+@app.get("/settings")
+async def settings(person: Annotated[Person, Depends(auth.require())]):
+    return {"name": person.name}
+```
+
+`auth.require(*privileges)` sends a signed-out visitor to sign in and back again, then checks each
+privilege. `auth.protect(*privileges)` checks an access token instead. See
+[the reference](#reference).
+
+`auth.authorize(request, *privileges)` runs the same check inside a route. A Starlette app without
+FastAPI can still add `masks.fastapi.SessionMiddleware` and mount `auth.router.routes`.
+
+## Reference
+
+`masks.fastapi` exports `Config`, `Masks`, `Person`, `Refusal`, and `SessionMiddleware`.
+
+```python
+auth = masks.fastapi.Masks(config)
+auth.install(app)
+```
+
+| | |
+| --- | --- |
+| `install(app)` | Adds the session middleware, the routes, and the handler for refused requests. |
+| `router` | An `APIRouter` with the routes, for an app that adds the middleware itself. |
+| `person` | A dependency that gives the person, signed in or not. |
+| `require(*privileges, tokens=False)` | A dependency that needs a sign-in holding each privilege. With `tokens=True`, it checks a token when the request has an `Authorization` header or no session. |
+| `protect(*privileges)` | A dependency that needs an access token holding each privilege. |
+| `await authorize(request, *privileges, tokens=False)` | `require` inside a route. Raises `Refusal`. |
+| `await protected(request, *privileges)` | `protect` inside a route. Raises `Refusal`. |
+| `await client(request)` | A `masks.AsyncClient` with the app's credentials. |
+| `login_url(return_to="", organization="", privilege=())` | A link that starts a sign-in. |
+| `logout_url()` | The path a sign-out form posts to. |
+| `await registered(request)` | Whether masks still knows the app. |
+| `connected(request)` | Whether the app holds credentials. |
+| `session(request)` | The session, a mutable mapping. |
+| `await aclose()` | Closes the HTTP client. |
+
+`SessionMiddleware(app, masks=auth)` loads and saves the session in any Starlette app. `require`
+and `protect` raise `ValueError` for a privilege `Config.privileges` does not name.

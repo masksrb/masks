@@ -1,0 +1,21 @@
+---
+title: Express
+description: "Sign people in to an Express app with the masksExpress middleware, and guard routes by privilege."
+---
+
+`masksExpress` from `@masks/server/express` reads the [options](/reference/javascript/#setting-up) every integration shares.
+
+```ts
+import express from "express";
+import { masked, masksExpress } from "@masks/server/express";
+
+const auth = masksExpress({ name: "Catalog", privileges: { admin: ["catalog:admin"] } });
+const app = express();
+
+app.use(auth);
+app.get("/", (req, res) => res.json(req.masked));
+app.get("/settings", masked(auth, "admin"), (req, res) => res.json({ subject: req.masked?.subject }));
+```
+
+`masksExpress` answers the `/auth` routes, and on every other request puts the person on
+`req.masked`, signed in or not. `masked` guards a route.

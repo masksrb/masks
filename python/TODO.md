@@ -3,7 +3,7 @@
 ## Publishing
 
 - PyPI has a pending publisher for `masks-client`. The next release publishes it. After that, change the README's install line to `pip install masks-client`.
-- The README does not cover the web integrations, the handshake, or the code flow. The guide at guides/python.mdx does.
+- The README does not cover the web integrations, the handshake, or the code flow. The guide at reference/python/index.mdx does.
 
 ## masks.web
 

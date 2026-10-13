@@ -27,7 +27,7 @@ npm install @masks/server
 
 ## Signing people in
 
-The [JavaScript apps guide](https://masks.pages.dev/guides/javascript/) covers
+The [JavaScript apps guide](https://masks.pages.dev/reference/javascript/) covers
 the handshake, sessions, organizations, privileges, and accepting tokens in
 full. In a Next.js App Router app:
 
@@ -115,7 +115,7 @@ export const { handlers, auth, signIn, signOut, guard, accessToken, proxy } =
 ```
 
 Set `MASKS_ISSUER` and `AUTH_SECRET`. The first `signIn("masks")` connects the
-app. See [Next.js with Auth.js](https://masks.pages.dev/guides/javascript/#nextjs-with-authjs).
+app. See [Next.js with Auth.js](https://masks.pages.dev/reference/javascript/authjs/).
 
 ## A server signs in as itself
 

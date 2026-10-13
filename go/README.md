@@ -4,7 +4,7 @@
 It signs people in, gets tokens as a client, and checks them as an API.
 `github.com/masksrb/masks/go/web` builds a web app's sign-in on it, with routes,
 a sealed session, and middleware for `net/http`. See
-[Go apps](https://masks.pages.dev/guides/go/) for the web integration.
+[Go apps](https://masks.pages.dev/reference/go/) for the web integration.
 
 ```sh
 go get github.com/masksrb/masks/go
@@ -40,7 +40,7 @@ mux.Handle("/settings", app.Require()(settings))
 ```
 
 Open `/auth/handshake` once to connect the app. `web.PersonFrom(r.Context())`
-returns the signed-in person. The [Go apps](https://masks.pages.dev/guides/go/)
+returns the signed-in person. The [Go apps](https://masks.pages.dev/reference/go/)
 guide covers organizations, privileges, sessions, tokens, and delegations.
 
 ## The code flow without go/web
