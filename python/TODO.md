@@ -7,9 +7,7 @@
 
 ## masks.web
 
-- `finish_delegation` does not check that the person who finished a connection is the person signed in, as Go and Node do.
 - A cookie session larger than about 4 KB raises `ValueError`. Split it across several cookies, as go/web does.
-- The avatar is buffered up to 1 MB. Stream it.
 - The shared refresh and the memory of seen logout tokens work within one process only. Add stores several processes can share.
 
 ## Security

@@ -284,36 +284,38 @@ An API with no browser sign-in can use `masks.Verifier` without `masks.web`. See
 ## Delegations
 
 A [delegation](/guides/connecting-via-sdk/#delegation) lets the app act as a person at a provider
-while they are away. Set `delegation_redirect_uri` to the address the provider's answer comes back
-to. The handshake then asks for `masks:delegate:` and registers that address.
+while they are away. Set `delegation_redirect_uri` to the path the provider's answer comes back to.
+The handshake then asks for `masks:delegate:` and registers that address.
 
 ```python
-Config(..., delegation_redirect_uri="https://app.example.com/connect/callback")
+Config(..., delegation_redirect_uri="/connect/callback")
 ```
 
 ```python
-from fastapi import Request
-from fastapi.responses import RedirectResponse
-
-import masks
-
 @app.get("/connect")
-async def connect(request: Request, person: Annotated[Person, Depends(auth.require())]):
-    client = await auth.client(request)
-    started = client.start_delegation("google", "https://app.example.com/connect/callback")
-    auth.session(request)["connecting"] = started.to_dict()
-
-    return RedirectResponse(started.url, status_code=303)
+async def connect(request: Request):
+    return await auth.start_delegation(request, "google")
 
 @app.get("/connect/callback")
 async def connected(request: Request, person: Annotated[Person, Depends(auth.require())]):
-    client = await auth.client(request)
-    started = masks.AuthorizationRequest.from_dict(auth.session(request).pop("connecting"))
-    held = await client.finish_delegation(started, dict(request.query_params))
+    held = await auth.finish_delegation(request)
     save(person.subject, held.connection, held.secret)
 ```
 
-Keep the `secret` encrypted. To call the provider later, ask for its token:
+`start_delegation` sends a visitor who is not signed in to sign in first. `finish_delegation`
+raises `masks.DelegationRefused` when:
+
+- this browser did not start the connection, or it is more than an hour old,
+- someone else signed in after it started,
+- masks connected the provider for another account, or
+- the person said no at the provider.
+
+In Flask, call `auth.start_delegation("google")` and `auth.finish_delegation()`. In Django, call
+`masks.django.start_delegation(request, "google")` and `masks.django.finish_delegation(request)`.
+
+Keep the `secret` encrypted. To call the provider later, take the client from
+`await auth.client(request)` in FastAPI, `auth.client()` in Flask, or `masks.django.client(request)`
+in Django, and ask for the provider's token:
 
 ```python
 upstream = await client.delegated_token(secret, connection=connection)
@@ -326,9 +328,6 @@ Save `upstream.secret` before anything else, since each call replaces the secret
 - `masks.DelegationRefused` means masks refused the call. `sign_in_again` is true when the person
   has to sign in again.
 - Both carry the replacement in `secret` when masks had already replaced it.
-
-In Django and Flask, `masks.django.client(request)` and `auth.client()` return the synchronous
-`masks.Client`.
 
 ## Machines and enrollment
 

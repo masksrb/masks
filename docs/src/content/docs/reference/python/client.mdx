@@ -45,7 +45,7 @@ host.
 | `sign_out_of_issuer` | `False` | Signs the person out of masks too whenever they sign out of the app. |
 | `manages` | `None` | Who may connect the app again or disconnect it. A privilege name, or a function that takes a person and returns `True` or `False`. Nobody when `None`. |
 | `logged_out` | `None` | A function that takes a `masks.Logout`, called on each back-channel logout. |
-| `delegation_redirect_uri` | `""` | Where a provider's answer comes back to. The handshake then asks for `masks:delegate:` and registers this address. *Request.* |
+| `delegation_redirect_uri` | `""` | The path or full address a provider's answer comes back to. The handshake then asks for `masks:delegate:` and registers this address. *Request.* |
 | `replay` | `MemoryReplayStore()` | The store of seen DPoP proofs. See [replay stores](#replay-stores). |
 | `allow_plain_http` | `False` | Allows a plain `http` issuer on another machine. An issuer on this machine is always allowed. |
 | `cookie_secure` | `True` | `False` drops the `Secure` flag and the `__Host-` prefix, for development on plain `http`. |

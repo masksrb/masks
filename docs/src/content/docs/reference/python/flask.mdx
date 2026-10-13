@@ -40,6 +40,8 @@ defaults to `app.secret_key`. `Masks()` followed by `init_app(app)` works as wel
 | `auth.authorize(*privileges, tokens=False)` | `required` inside a view. Raises `Refusal`. |
 | `auth.person` | The person, the same as `masked`. |
 | `auth.client()` | A `masks.Client` with the app's credentials. |
+| `auth.start_delegation(provider)` | Starts a [delegation](/reference/python/#delegations). Returns the redirect. |
+| `auth.finish_delegation()` | Finishes it. Returns a `masks.HeldConnection`. |
 | `auth.login_url(return_to="", organization="", privilege=())` | A link that starts a sign-in. |
 | `auth.logout_url()` | The path a sign-out form posts to. |
 | `auth.registered()` | Whether masks still knows the app. |

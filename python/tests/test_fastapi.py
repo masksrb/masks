@@ -1,8 +1,10 @@
+import dataclasses
 import time
-from collections.abc import Iterator, Mapping
+from collections.abc import Callable, Iterator, Mapping
 from typing import Annotated, Any
 from urllib.parse import parse_qs, urlsplit
 
+import httpx
 import pytest
 from fastapi import Depends, FastAPI, Request
 from fastapi.responses import JSONResponse, Response
@@ -12,7 +14,9 @@ import masks
 from masks.fastapi import Masks
 from masks.web import Config, MemoryCredentials, MemorySessionStore, Person, ServerSessions
 
+from . import scenarios
 from .fake import AUDIENCE, ISSUER, Fake, FakeClient
+from .scenarios import Answered
 
 APP = "https://app.example"
 SECRET = "s" * 32
@@ -40,7 +44,12 @@ def build(fake: Fake, credentials: Any = None, **changes: Any) -> tuple[FastAPI,
         "async_http": fake.async_http(),
         **changes,
     }
-    auth = Masks(Config(**options))
+
+    return application(Config(**options))
+
+
+def application(config: Config) -> tuple[FastAPI, Masks]:
+    auth = Masks(config)
     app = FastAPI()
     auth.install(app)
 
@@ -59,6 +68,21 @@ def build(fake: Fake, credentials: Any = None, **changes: Any) -> tuple[FastAPI,
     @app.get("/public")
     async def public(person: Annotated[Person, Depends(auth.person)]) -> Response:
         return JSONResponse({"signed_in": person.signed_in}, headers={"Cache-Control": "public, max-age=600"})
+
+    @app.get("/plain")
+    async def plain() -> dict[str, Any]:
+        return {"plain": True}
+
+    @app.get("/connect")
+    async def connect(request: Request, provider: str) -> Response:
+        return await auth.start_delegation(request, provider)
+
+    @app.get("/connected")
+    async def connected(request: Request) -> Response:
+        try:
+            return JSONResponse(scenarios.connection(await auth.finish_delegation(request)))
+        except masks.DelegationRefused as error:
+            return JSONResponse({"error": error.code}, status_code=400)
 
     @app.get("/whoami")
     async def whoami(person: Annotated[Person, Depends(auth.person)]) -> dict[str, Any]:
@@ -88,6 +112,31 @@ def app(fake: Fake) -> Iterator[TestClient]:
 
     with TestClient(application, base_url=APP, follow_redirects=False) as client:
         yield client
+
+
+class FastAPIBrowser:
+    def __init__(self, config: Config, fake: Fake) -> None:
+        app, _ = application(dataclasses.replace(config, async_http=fake.async_http()))
+        self.client = TestClient(app, base_url=APP, follow_redirects=False)
+
+    def _answered(self, sent: Any) -> Answered:
+        return Answered(sent.status_code, sent.headers, sent.content)
+
+    def get(self, target: str, headers: dict[str, str] | None = None) -> Answered:
+        return self._answered(self.client.get(target, headers=headers or {}))
+
+    def post(self, target: str, headers: dict[str, str] | None = None, data: dict[str, str] | None = None) -> Answered:
+        return self._answered(self.client.post(target, headers=headers or {}, data=data))
+
+
+@pytest.mark.parametrize("scenario", scenarios.SCENARIOS, ids=lambda scenario: scenario.__name__)
+def test_fastapi(scenario: Callable[..., None], fake: Fake) -> None:
+    scenario(lambda config: FastAPIBrowser(config, fake), fake)
+
+
+@pytest.mark.parametrize("scenario", scenarios.TIMED, ids=lambda scenario: scenario.__name__)
+def test_fastapi_over_time(scenario: Callable[..., None], fake: Fake, monkeypatch: pytest.MonkeyPatch) -> None:
+    scenario(lambda config: FastAPIBrowser(config, fake), fake, monkeypatch)
 
 
 def location(response: Any) -> str:
@@ -750,3 +799,19 @@ def test_an_unknown_privilege_is_a_mistake_in_the_app(fake: Fake) -> None:
 def test_cookie_sessions_need_a_long_secret() -> None:
     with pytest.raises(ValueError):
         Config(issuer=ISSUER, secret="short")
+
+
+def test_a_connection_needs_a_delegation_redirect_uri(app: TestClient, fake: Fake) -> None:
+    sign_in(app, fake)
+
+    with pytest.raises(ValueError, match="delegation_redirect_uri"):
+        app.get("/connect", params={"provider": "github"})
+
+
+def test_a_delegation_path_is_registered_as_a_full_address(fake: Fake) -> None:
+    _, auth = build(fake, delegation_redirect_uri="/connected")
+    request = masks.web.core.Incoming("GET", f"{APP}/auth/handshake", httpx.Headers())
+    shaken = auth.engine.handshake(request, auth.engine.run(auth.engine.discover(request)))
+
+    assert f"{APP}/connected" in shaken.redirect_uris
+    assert "masks:delegate:" in shaken.scope

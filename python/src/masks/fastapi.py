@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable, Sequence
 from urllib.parse import parse_qsl
 
+import anyio
 import httpx
 from fastapi import APIRouter, FastAPI
 from starlette.requests import Request
@@ -11,6 +12,7 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from .client import AsyncClient
 from .errors import MasksError
+from .oidc import HeldConnection
 from .web.config import Config
 from .web.core import FORM_LIMIT, METADATA_PATH, Answer, Incoming, Refusal, cookie_named, too_large, unshared
 from .web.core import Masks as Engine
@@ -33,6 +35,21 @@ def cookie_from(scope: Scope, name: str) -> str | None:
     return None
 
 
+class Lazy:
+    def __init__(self, engine: Engine, cookie: str | None) -> None:
+        self.engine = engine
+        self.cookie = cookie
+        self.session: Session | None = None
+        self.lock = anyio.Lock()
+
+    async def load(self) -> Session:
+        async with self.lock:
+            if self.session is None:
+                self.session = await self.engine.aload(self.cookie)
+
+        return self.session
+
+
 class SessionMiddleware:
     def __init__(self, app: ASGIApp, masks: Masks) -> None:
         self.app = app
@@ -43,13 +60,13 @@ class SessionMiddleware:
             await self.app(scope, receive, send)
             return
 
-        session = await self.engine.aload(cookie_from(scope, self.engine.cookie_name))
-        scope[SESSION] = session
+        lazy = Lazy(self.engine, cookie_from(scope, self.engine.cookie_name))
+        scope[SESSION] = lazy
         secure = scope.get("scheme") in ("https", "wss")
 
         async def sending(message: Message) -> None:
-            if message["type"] == "http.response.start":
-                header = await self.engine.acookie(session, secure)
+            if message["type"] == "http.response.start" and lazy.session is not None:
+                header = await self.engine.acookie(lazy.session, secure)
 
                 if header is not None:
                     held = list(message.get("headers") or [])
@@ -65,13 +82,13 @@ class SessionMiddleware:
         await self.app(scope, receive, sending)
 
 
-def session_of(request: Request) -> Session:
+async def session_of(request: Request) -> Session:
     found = request.scope.get(SESSION)
 
-    if not isinstance(found, Session):
+    if not isinstance(found, Lazy):
         raise RuntimeError("masks: add masks.fastapi.SessionMiddleware, or call Masks.install, before using sessions")
 
-    return found
+    return await found.load()
 
 
 async def bounded_body(request: Request) -> bytes:
@@ -154,7 +171,7 @@ class Masks:
                 found = await self.engine.aanswer(self.engine.backchannel(held))
             else:
                 held = await incoming(request)
-                found = await self.engine.aanswer(self.engine.handlers()[name](held, session_of(request)))
+                found = await self.engine.aanswer(self.engine.handlers()[name](held, await session_of(request)))
 
             return response(found)
 
@@ -165,13 +182,13 @@ class Masks:
 
     async def person(self, request: Request) -> Person:
         held = await incoming(request)
-        found = await self.engine.aanswer(self.engine.person(held, session_of(request)))
+        found = await self.engine.aanswer(self.engine.person(held, await session_of(request)))
 
         return found if isinstance(found, Person) else Person(known=self.config.known)
 
     async def authorize(self, request: Request, *privileges: str, tokens: bool = False) -> Person:
         held = await incoming(request)
-        session = self._session(request, tokens)
+        session = await self._session(request, tokens)
         found = await self.engine.aauthorize(held, session, privileges, tokens=tokens)
 
         if isinstance(found, Answer):
@@ -179,13 +196,11 @@ class Masks:
 
         return found
 
-    def _session(self, request: Request, tokens: bool) -> Session:
-        found = request.scope.get(SESSION)
+    async def _session(self, request: Request, tokens: bool) -> Session:
+        if tokens and SESSION not in request.scope:
+            return Session()
 
-        if isinstance(found, Session):
-            return found
-
-        return Session() if tokens else session_of(request)
+        return await session_of(request)
 
     async def protected(self, request: Request, *privileges: str) -> Person:
         found = await self.engine.aprotect(await incoming(request), privileges)
@@ -229,6 +244,17 @@ class Masks:
         except (MasksError, httpx.HTTPError) as error:
             raise Refusal(Answer.page(503, "masks could not be reached", str(error))) from error
 
+    async def start_delegation(
+        self, request: Request, provider: str, *, prompt: str | None = None, max_age: int | None = None
+    ) -> Response:
+        held = await incoming(request)
+        flow = self.engine.start_delegation(held, await session_of(request), provider, prompt, max_age)
+
+        return response(await self.engine.aanswer(flow))
+
+    async def finish_delegation(self, request: Request) -> HeldConnection:
+        return await self.engine.arun(self.engine.finish_delegation(await incoming(request), await session_of(request)))
+
     def login_url(self, return_to: str = "", organization: str = "", privilege: Sequence[str] = ()) -> str:
         return self.engine.login_url(return_to, organization, privilege)
 
@@ -238,8 +264,8 @@ class Masks:
     async def registered(self, request: Request) -> bool:
         return await self.engine.arun(self.engine.registered(await incoming(request)))
 
-    def session(self, request: Request) -> Session:
-        return session_of(request)
+    async def session(self, request: Request) -> Session:
+        return await session_of(request)
 
     def connected(self, request: Request) -> bool:
         return self.engine.configured(Incoming("GET", str(request.url), httpx.Headers(), native=request))

@@ -6,8 +6,9 @@ from urllib.parse import urlsplit
 
 import httpx
 import pytest
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 
+import masks
 from masks.flask import Masks, masked
 from masks.web import Config, ServerSessions
 
@@ -43,6 +44,17 @@ class FlaskBrowser:
         @app.get("/plain")
         def plain() -> Any:
             return jsonify({"plain": True})
+
+        @app.get("/connect")
+        def connect() -> Any:
+            return auth.start_delegation(request.args["provider"])
+
+        @app.get("/connected")
+        def connected() -> Any:
+            try:
+                return jsonify(scenarios.connection(auth.finish_delegation()))
+            except masks.DelegationRefused as error:
+                return jsonify({"error": error.code}), 400
 
         @app.get("/api/catalog")
         @auth.protected("read")

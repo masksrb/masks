@@ -15,9 +15,9 @@ from urllib.parse import urlencode, urlsplit
 import anyio
 import httpx
 
-from ..client import AsyncClient, Client, _Flows
+from ..client import AsyncClient, Client, _Flows, delegation_failure
 from ..dpop import DPOP
-from ..errors import Error, Forbidden, InvalidToken, MasksError, Unavailable
+from ..errors import DelegationRefused, Error, Forbidden, InvalidToken, MasksError, Unavailable
 from ..flows import (
     Flow,
     afetch,
@@ -34,7 +34,7 @@ from ..handshake import Handshake
 from ..keys import random_id
 from ..keyset import same
 from ..models import Issuer, Registration, Token
-from ..oidc import AVATARS_CLAIM, AuthorizationRequest, organization_key
+from ..oidc import AVATARS_CLAIM, AuthorizationRequest, HeldConnection, organization_key
 from ..replay import MemoryReplayStore, ReplayStore
 from ..verifier import PROOF_ALGORITHMS, AsyncVerifier, Claims, Verifier
 from .config import Config, resolve
@@ -56,6 +56,7 @@ LOGOUT_MEMORY = 600
 
 HELD = "masks"
 REQUESTS = "masks_requests"
+DELEGATIONS = "masks_delegations"
 HANDSHAKES = "masks_handshakes"
 FAREWELLS = "masks_farewells"
 STEPPED_UP = "masks_stepped_up"
@@ -275,7 +276,9 @@ class Tracker:
         return dict(list(held.items())[-PENDING_LIMIT:])
 
     def open(self, **data: Any) -> str:
-        key = random_id()
+        return self.keep(random_id(), **data)
+
+    def keep(self, key: str, **data: Any) -> str:
         held = self._live()
         held[key] = {
             "data": {name: value for name, value in data.items() if value is not None},
@@ -415,6 +418,11 @@ class Masks:
         resource = self.resource(request)
 
         return named or (origin(resource) if resource else request.origin)
+
+    def delegation_uri(self, request: Incoming) -> str:
+        named = str(resolve(self.config.delegation_redirect_uri, request.native) or "")
+
+        return f"{self.base(request)}{named}" if named.startswith("/") else named
 
     def callback_uri(self, request: Incoming) -> str:
         return f"{self.base(request)}{self.path('/callback')}"
@@ -917,6 +925,59 @@ class Masks:
             ],
         )
 
+    def start_delegation(
+        self,
+        request: Incoming,
+        session: Session,
+        provider: str,
+        prompt: str | None = None,
+        max_age: int | None = None,
+    ) -> Step[Answer]:
+        redirect_uri = self.delegation_uri(request)
+
+        if not redirect_uri:
+            raise ValueError("masks: set delegation_redirect_uri to the address a provider connection comes back to")
+
+        person = yield from self.person(request, session)
+
+        if not person.signed_in or not person.subject:
+            return self._login_required(request, session)
+
+        issuer = yield from self.discover(request)
+        started = self.flows(request, issuer).start_delegation(provider, redirect_uri, prompt=prompt, max_age=max_age)
+        Tracker(session, DELEGATIONS).keep(started.state, request=started.to_dict(), account=person.subject)
+
+        return Answer.redirect(started.url)
+
+    def finish_delegation(self, request: Incoming, session: Session) -> Step[HeldConnection]:
+        pending = Tracker(session, DELEGATIONS).claim(request.query.get("state", ""))
+
+        if request.query.get("error"):
+            raise DelegationRefused(request.query["error"], request.query.get("error_description", ""))
+
+        if pending is None or not isinstance(pending.get("request"), dict):
+            raise DelegationRefused("invalid_state", "that connection was not started by this browser, or it expired")
+
+        person = yield from self.person(request, session)
+
+        if not person.signed_in or person.subject != pending.get("account"):
+            raise DelegationRefused("access_denied", "someone other than the person signed in finished that connection")
+
+        try:
+            issuer = yield from self.discover(request)
+            held = yield from self.flows(request, issuer)._finish_delegation(
+                AuthorizationRequest.from_dict(pending["request"]), request.query
+            )
+        except InvalidToken as error:
+            raise DelegationRefused("invalid_token", str(error).removeprefix("masks: ")) from error
+        except (Error, Unavailable, httpx.HTTPError) as error:
+            raise delegation_failure(error, "") from error
+
+        if held.account != person.subject:
+            raise DelegationRefused("access_denied", "masks connected that provider for another account")
+
+        return held
+
     def backchannel(self, request: Incoming) -> Step[Answer]:
         logout_token = request.form.get("logout_token", "")
 
@@ -957,7 +1018,7 @@ class Masks:
             )
 
         base = self.base(request)
-        delegated = str(resolve(self.config.delegation_redirect_uri, request.native) or "")
+        delegated = self.delegation_uri(request)
         backchannel = f"{base}{self.path('/logout/backchannel')}"
 
         return Handshake(

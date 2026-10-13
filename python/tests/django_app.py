@@ -5,7 +5,10 @@ from typing import Any
 from django.http import HttpRequest, JsonResponse
 from django.urls import include, path
 
-from masks.django import login_required, token_required
+import masks
+from masks.django import finish_delegation, login_required, start_delegation, token_required
+
+from .scenarios import connection
 
 
 @login_required()
@@ -36,6 +39,17 @@ def plain(request: HttpRequest) -> Any:
     return JsonResponse({"plain": True})
 
 
+def connect(request: HttpRequest) -> Any:
+    return start_delegation(request, request.GET["provider"])
+
+
+def connected(request: HttpRequest) -> Any:
+    try:
+        return JsonResponse(connection(finish_delegation(request)))
+    except masks.DelegationRefused as error:
+        return JsonResponse({"error": error.code}, status=400)
+
+
 @token_required("read")
 def catalog(request: HttpRequest) -> Any:
     return JsonResponse({"subject": request.masked.subject})
@@ -48,5 +62,7 @@ urlpatterns = [
     path("billing", billing),
     path("public", public),
     path("plain", plain),
+    path("connect", connect),
+    path("connected", connected),
     path("api/catalog", catalog),
 ]

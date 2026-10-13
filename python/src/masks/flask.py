@@ -11,6 +11,7 @@ from werkzeug.local import LocalProxy
 
 from .client import Client
 from .errors import MasksError
+from .oidc import HeldConnection
 from .web.config import Config
 from .web.core import FORM_LIMIT, METADATA_PATH, Answer, Incoming, Refusal, cookie_named, too_large, unshared
 from .web.core import Masks as Engine
@@ -205,6 +206,14 @@ class Masks:
             raise Refusal(Answer.page(503, "masks could not be reached", str(error))) from error
 
         return self.engine.client(held, issuer)
+
+    def start_delegation(self, provider: str, *, prompt: str | None = None, max_age: int | None = None) -> Response:
+        flow = self.engine.start_delegation(incoming(), self.session(), provider, prompt, max_age)
+
+        return response(self.engine.answer(flow))
+
+    def finish_delegation(self) -> HeldConnection:
+        return self.engine.run(self.engine.finish_delegation(incoming(), self.session()))
 
     def login_url(self, return_to: str = "", organization: str = "", privilege: Sequence[str] = ()) -> str:
         return self.engine.login_url(return_to, organization, privilege)

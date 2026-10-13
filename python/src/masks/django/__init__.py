@@ -12,6 +12,7 @@ from django.http import HttpRequest, HttpResponse
 
 from ..client import Client
 from ..errors import MasksError
+from ..oidc import HeldConnection
 from ..web.config import Config
 from ..web.core import Answer, Incoming, Refusal
 from ..web.core import Masks as Engine
@@ -26,10 +27,12 @@ __all__ = [
     "client",
     "connected",
     "engine",
+    "finish_delegation",
     "login_required",
     "login_url",
     "person",
     "registered",
+    "start_delegation",
     "token_required",
 ]
 
@@ -157,6 +160,18 @@ def client(request: HttpRequest) -> Client:
         raise Refusal(Answer.page(503, "masks could not be reached", str(error))) from error
 
     return engine().client(held, issuer)
+
+
+def start_delegation(
+    request: HttpRequest, provider: str, *, prompt: str | None = None, max_age: int | None = None
+) -> HttpResponse:
+    flow = engine().start_delegation(incoming(request), session_of(request), provider, prompt, max_age)
+
+    return response(engine().answer(flow))
+
+
+def finish_delegation(request: HttpRequest) -> HeldConnection:
+    return engine().run(engine().finish_delegation(incoming(request), session_of(request)))
 
 
 def connected(request: HttpRequest) -> bool:

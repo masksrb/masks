@@ -60,12 +60,16 @@ auth.install(app)
 | `await authorize(request, *privileges, tokens=False)` | `require` inside a route. Raises `Refusal`. |
 | `await protected(request, *privileges)` | `protect` inside a route. Raises `Refusal`. |
 | `await client(request)` | A `masks.AsyncClient` with the app's credentials. |
+| `await start_delegation(request, provider)` | Starts a [delegation](/reference/python/#delegations). Returns the redirect. |
+| `await finish_delegation(request)` | Finishes it. Returns a `masks.HeldConnection`. |
 | `login_url(return_to="", organization="", privilege=())` | A link that starts a sign-in. |
 | `logout_url()` | The path a sign-out form posts to. |
 | `await registered(request)` | Whether masks still knows the app. |
 | `connected(request)` | Whether the app holds credentials. |
-| `session(request)` | The session, a mutable mapping. |
+| `await session(request)` | The session, a mutable mapping. |
 | `await aclose()` | Closes the HTTP client. |
 
-`SessionMiddleware(app, masks=auth)` loads and saves the session in any Starlette app. `require`
+`SessionMiddleware(app, masks=auth)` loads and saves the session in any Starlette app. It reads the
+session the first time a request needs it, so a route that never asks for the person reads nothing
+from a session store. `require`
 and `protect` raise `ValueError` for a privilege `Config.privileges` does not name.

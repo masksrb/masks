@@ -56,6 +56,15 @@ class Browser(Protocol):
 Build = Callable[[Config], Browser]
 
 
+def connection(held: masks.HeldConnection) -> dict[str, Any]:
+    return {
+        "connection": held.connection,
+        "provider": held.provider,
+        "account": held.account,
+        "secret": bool(held.secret),
+    }
+
+
 def config(fake: Fake, **changes: Any) -> Config:
     fake.add("web", FakeClient(method="client_secret_basic", secret="secret"))
     options: dict[str, Any] = {
@@ -171,7 +180,7 @@ def protects_an_api(build: Build, fake: Fake) -> None:
 
     good = fake.access_token("caller", "catalog:read", "", subject="ada", audience=APP)
 
-    assert browser.get("/api/catalog", {"Authorization": f"Bearer {good}"}).json() == {"subject": "ada"}
+    assert browser.get("/api/catalog", {"Authorization": f"Bearer {good}"}).json()["subject"] == "ada"
 
     narrow = fake.access_token("caller", "profile", "", audience=APP)
 
@@ -362,6 +371,75 @@ def keeps_a_refreshed_session_out_of_shared_caches(build: Build, fake: Fake, mon
     assert refreshed.headers["cache-control"] == "no-store"
 
 
+def delegating(fake: Fake) -> Config:
+    return config(fake, delegation_redirect_uri="/connected")
+
+
+def connects_a_provider(build: Build, fake: Fake) -> None:
+    browser = build(delegating(fake))
+    sign_in(browser, fake)
+    started = browser.get("/connect?provider=github", HTML)
+
+    assert "masks%3Adelegate%3Agithub" in started.location
+    assert "redirect_uri=https%3A%2F%2Fapp.example%2Fconnected" in started.location
+
+    returned = fake.authorize(started.location, "ada")
+    connected = browser.get(returned, HTML)
+
+    assert connected.status == 200, connected.body
+    assert connected.json() == {
+        "connection": "c0ffee00-0000-4000-8000-000000000001",
+        "provider": "github",
+        "account": "ada",
+        "secret": True,
+    }
+    assert browser.get(returned, HTML).json() == {"error": "invalid_state"}
+
+
+def sends_a_visitor_to_sign_in_before_connecting(build: Build, fake: Fake) -> None:
+    browser = build(delegating(fake))
+
+    assert browser.get("/connect?provider=github", HTML).location == "/auth"
+    assert browser.get("/connect?provider=github", JSON).json()["error"] == "login_required"
+
+
+def refuses_a_connection_masks_made_for_another_account(build: Build, fake: Fake) -> None:
+    browser = build(delegating(fake))
+    sign_in(browser, fake)
+    started = browser.get("/connect?provider=github", HTML)
+
+    assert browser.get(fake.authorize(started.location, "bob"), HTML).json() == {"error": "access_denied"}
+
+
+def keeps_a_connection_to_its_browser(build: Build, fake: Fake) -> None:
+    browser = build(delegating(fake))
+    other = build(delegating(fake))
+    sign_in(browser, fake)
+    sign_in(other, fake)
+    started = browser.get("/connect?provider=github", HTML)
+
+    assert other.get(fake.authorize(started.location, "ada"), HTML).json() == {"error": "invalid_state"}
+
+
+def forgets_a_connection_when_someone_else_signs_in(build: Build, fake: Fake) -> None:
+    browser = build(delegating(fake))
+    sign_in(browser, fake)
+    started = browser.get("/connect?provider=github", HTML)
+    sign_in(browser, fake, "bob")
+
+    assert browser.get(fake.authorize(started.location, "ada"), HTML).json() == {"error": "invalid_state"}
+
+
+def passes_on_a_provider_refusal(build: Build, fake: Fake) -> None:
+    browser = build(delegating(fake))
+    sign_in(browser, fake)
+    started = browser.get("/connect?provider=github", HTML)
+    state = parse_qs(urlsplit(started.location).query)["state"][0]
+
+    assert browser.get(f"/connected?error=access_denied&state={state}", HTML).json() == {"error": "access_denied"}
+    assert browser.get(fake.authorize(started.location, "ada"), HTML).json() == {"error": "invalid_state"}
+
+
 SCENARIOS = [
     signs_in_and_out,
     keeps_return_to_local,
@@ -382,6 +460,12 @@ SCENARIOS = [
     uses_a_logout_token_once,
     refuses_a_large_back_channel_request,
     reads_no_session_for_a_route_that_needs_none,
+    connects_a_provider,
+    sends_a_visitor_to_sign_in_before_connecting,
+    refuses_a_connection_masks_made_for_another_account,
+    keeps_a_connection_to_its_browser,
+    forgets_a_connection_when_someone_else_signs_in,
+    passes_on_a_provider_refusal,
 ]
 
 TIMED = [refreshes_and_forgets, keeps_a_refreshed_session_out_of_shared_caches]

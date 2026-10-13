@@ -494,6 +494,7 @@ class _Flows:
             label=str(held.get("label") or ""),
             subject=str(held.get("subject") or ""),
             secret=signed.token.refresh_token,
+            account=str(signed.claims.get("sub") or ""),
         )
 
     def _delegated_token(self, secret: str, connection: str, rotated: list[str]) -> Flow[Upstream]:

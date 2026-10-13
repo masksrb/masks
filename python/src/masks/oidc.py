@@ -118,6 +118,7 @@ class HeldConnection:
     label: str = ""
     subject: str = ""
     secret: str = field(default="", repr=False)
+    account: str = ""
 
 
 @dataclass(frozen=True)

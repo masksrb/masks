@@ -62,6 +62,8 @@ for every route except back-channel logout, so a sign-out form needs `{% csrf_to
 | `@login_required(*privileges, tokens=False)` | Needs a sign-in holding each privilege, like `require` in [FastAPI](/reference/python/fastapi/). |
 | `@token_required(*privileges)` | Needs an access token holding each privilege. |
 | `client(request)` | A `masks.Client` with the app's credentials. |
+| `start_delegation(request, provider)` | Starts a [delegation](/reference/python/#delegations). Returns the redirect. |
+| `finish_delegation(request)` | Finishes it. Returns a `masks.HeldConnection`. |
 | `login_url(return_to="", organization="", privilege=())` | A link that starts a sign-in. |
 | `registered(request)` | Whether masks still knows the app. |
 | `connected(request)` | Whether the app holds credentials. |
