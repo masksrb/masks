@@ -16,6 +16,19 @@ module Masks
         end
       end
 
+      test "every endpoint discovery names for a page carries the grant" do
+        get "/.well-known/openid-configuration"
+        named = JSON.parse(response.body).values_at("jwks_uri", "token_endpoint", "revocation_endpoint",
+                                                    "userinfo_endpoint", "avatar_endpoint")
+
+        named.each do |url|
+          process :options, "#{URI.parse(url).path}#{'/someone/identicon' if url.end_with?('/avatars')}",
+                  headers: { "Origin" => ORIGIN, "Access-Control-Request-Method" => "GET" }
+
+          assert_equal "*", response.headers["access-control-allow-origin"], url
+        end
+      end
+
       test "the token endpoint answers a preflight that names DPoP" do
         process :options, "/token", headers: {
           "Origin" => ORIGIN,
