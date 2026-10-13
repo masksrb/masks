@@ -51,6 +51,7 @@ the app and open `/auth/handshake`.
 | `AfterSignIn`, `AfterSignOut` | Where a person goes after signing in or out. Both default to `/`. |
 | `SignOutOfIssuer` | Signs the person out of masks as well when they sign out of the app. |
 | `Secret`, `PreviousSecrets` | Seal the session. See [sessions](#sessions). |
+| `Store` | Where the app keeps what its processes share. See [stores](#stores). |
 | `Credentials` | Where the handshake keeps the app's credentials. Defaults to `masks.json` in the working directory. |
 | `Manages` | Who may reconnect or disconnect the app once it is connected. |
 | `PlainHTTP` | Drops the `Secure` flag and the `__Host-` prefix from the cookie, and allows a plain `http` issuer, for development. |
@@ -206,8 +207,8 @@ site is refused with `403`, whatever its method.
 
 When masks ends a session itself, it sends a logout token to `/auth/logout/backchannel`. The app
 signs out the session it names, or every session of the person it names, at their next request. It
-remembers that in `Departures`, which is in memory by default. An app that runs as several
-processes sets `Departures` to a store they share. `LoggedOut` hears each logout as well.
+accepts each logout token once, and remembers the logout in `Store`. `LoggedOut` hears each logout
+as well.
 
 ## Sessions
 
@@ -218,20 +219,43 @@ session too large for one cookie is split across several. It lasts 14 days, or `
 The browser cannot read the tokens in the sealed cookie, and `/auth/session` leaves them out. The
 session is replaced at every sign-in.
 
-To keep sessions on the server, set `Sessions` to a `SessionStore`. The cookie then holds only the
-session's id, sealed, and the store holds the session, also sealed.
+To keep sessions on the server, set `Sessions` to a [store](#stores). The cookie then holds only the
+session's id, sealed, and the store holds the session, also sealed. A session in the store gets a new
+id at every sign-in and sign-out. To change the secret, move the old one to `PreviousSecrets`.
+Sessions sealed with it still open, and each is sealed with the new secret the next time it changes.
+
+## Stores
+
+`Store` holds what an app's processes share: back-channel logouts, the DPoP proofs `Protect` has
+seen, and the result of each refresh, so that requests on several processes with the same expired
+token share one refresh. `Sessions` takes a store as well.
 
 ```go
-type SessionStore interface {
-	Load(ctx context.Context, id string) ([]byte, error)
-	Save(ctx context.Context, id string, data []byte, expiresIn time.Duration) error
-	Delete(ctx context.Context, id string) error
+type Store interface {
+	Add(ctx context.Context, key string, value []byte, expiresIn time.Duration) (bool, error)
+	Get(ctx context.Context, key string) ([]byte, error)
+	Set(ctx context.Context, key string, value []byte, expiresIn time.Duration) error
+	Delete(ctx context.Context, key string) error
 }
 ```
 
-`web.NewMemoryStore()` keeps them in one process. To change the secret, move the old one to
-`PreviousSecrets`. Sessions sealed with it still open, and each is sealed with the new secret the
-next time it changes.
+`Add` sets a key only when it is absent and answers whether it did. `Get` answers `nil` for a
+missing key. The default, `&web.MemoryStore{}`, keeps everything in one process. An app that runs as
+several processes uses Redis through `github.com/masksrb/masks/go/web/redisstore`:
+
+```go
+store := redisstore.New(redis.NewClient(&redis.Options{Addr: "localhost:6379"}))
+
+app, err := web.New(web.Config{
+	Store:    store,
+	Sessions: store,
+})
+```
+
+`redisstore.New` takes any `redis.UniversalClient` from `github.com/redis/go-redis/v9`, so a
+cluster or a sentinel works as well. When the store fails, a request that needs it is refused with
+`503`. A refresh that cannot reach the store leaves the session as it was, and the next request tries
+again.
 
 ## Organizations
 
@@ -314,9 +338,8 @@ serves.
 A token [bound to a key with DPoP](/guides/security/#binding-a-token-with-dpop) is accepted only as
 `Authorization: DPoP` with a proof signed by that key, made for this request's method and URL and
 the token, made within the last minute, and not seen before. The URL is the resource's origin and the
-request's path, so a proxy in front of the app needs no other setting. Each process keeps the proofs
-it has seen in memory. To share them, set `Replay` to a `masks.ReplayStore`. When the store fails,
-the request is refused with `503`.
+request's path, so a proxy in front of the app needs no other setting. The app remembers the proofs
+it has seen in `Store`. When the store fails, the request is refused with `503`.
 
 Inside the handler, `web.PersonFrom(r.Context())` describes the token: `Subject`, `ClientID`,
 `Scopes`, `Organization`, `Tenant`, and the verified `Claims`.
