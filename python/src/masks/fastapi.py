@@ -14,7 +14,7 @@ from .client import AsyncClient
 from .errors import MasksError
 from .oidc import HeldConnection
 from .web.config import Config
-from .web.core import FORM_LIMIT, METADATA_PATH, Answer, Incoming, Refusal, too_large, unshared
+from .web.core import FORM_LIMIT, METADATA_PATH, Answer, Incoming, Refusal, too_large, unreachable, unshared
 from .web.core import Masks as Engine
 from .web.person import Person
 from .web.sessions import Session
@@ -235,7 +235,7 @@ class Masks:
         except Refusal:
             raise
         except (MasksError, httpx.HTTPError) as error:
-            raise Refusal(Answer.page(503, "masks could not be reached", str(error))) from error
+            raise Refusal(unreachable()) from error
 
     async def start_delegation(
         self, request: Request, provider: str, *, prompt: str | None = None, max_age: int | None = None

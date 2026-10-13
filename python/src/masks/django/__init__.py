@@ -14,7 +14,7 @@ from ..client import Client
 from ..errors import MasksError
 from ..oidc import HeldConnection
 from ..web.config import Config
-from ..web.core import Answer, Incoming, Refusal
+from ..web.core import Answer, Incoming, Refusal, unreachable
 from ..web.core import Masks as Engine
 from ..web.person import Person
 from ..web.sessions import Session
@@ -60,13 +60,13 @@ def engine() -> Engine:
         return cast(Engine, _built["engine"])
 
 
-def incoming(request: HttpRequest) -> Incoming:
+def incoming(request: HttpRequest, form: bool = False) -> Incoming:
     return Incoming(
         method=str(request.method),
         url=request.build_absolute_uri(),
         headers=httpx.Headers({str(key): str(value) for key, value in request.headers.items()}),
         query={str(key): str(request.GET.getlist(key)[0]) for key in request.GET},
-        form={str(key): str(request.POST.getlist(key)[0]) for key in request.POST} if request.method == "POST" else {},
+        form={str(key): str(request.POST.getlist(key)[0]) for key in request.POST} if form else {},
         native=request,
     )
 
@@ -158,7 +158,7 @@ def client(request: HttpRequest) -> Client:
     try:
         issuer = engine().run(engine().discover(held))
     except (MasksError, httpx.HTTPError) as error:
-        raise Refusal(Answer.page(503, "masks could not be reached", str(error))) from error
+        raise Refusal(unreachable()) from error
 
     return engine().client(held, issuer)
 

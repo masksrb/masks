@@ -13,7 +13,7 @@ from .client import Client
 from .errors import MasksError
 from .oidc import HeldConnection
 from .web.config import Config
-from .web.core import FORM_LIMIT, METADATA_PATH, Answer, Incoming, Refusal, too_large, unshared
+from .web.core import FORM_LIMIT, METADATA_PATH, Answer, Incoming, Refusal, too_large, unreachable, unshared
 from .web.core import Masks as Engine
 from .web.person import Person
 from .web.sessions import Session
@@ -24,13 +24,13 @@ F = TypeVar("F", bound=Callable[..., Any])
 __all__ = ["Config", "Masks", "Person", "masked"]
 
 
-def incoming() -> Incoming:
+def incoming(form: bool = False) -> Incoming:
     return Incoming(
         method=request.method,
         url=request.url,
         headers=httpx.Headers(list(request.headers.items())),
         query={key: request.args.getlist(key)[0] for key in request.args},
-        form={key: request.form.getlist(key)[0] for key in request.form} if request.method == "POST" else {},
+        form={key: request.form.getlist(key)[0] for key in request.form} if form else {},
         native=request,
     )
 
@@ -116,7 +116,7 @@ class Masks:
                 request.max_form_memory_size = FORM_LIMIT
 
                 try:
-                    held = incoming()
+                    held = incoming(form=True)
                 except RequestEntityTooLarge:
                     return response(too_large())
 
@@ -206,7 +206,7 @@ class Masks:
         try:
             issuer = self.engine.run(self.engine.discover(held))
         except (MasksError, httpx.HTTPError) as error:
-            raise Refusal(Answer.page(503, "masks could not be reached", str(error))) from error
+            raise Refusal(unreachable()) from error
 
         return self.engine.client(held, issuer)
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import secrets
 import time
 from collections.abc import Callable, MutableMapping
@@ -107,7 +108,7 @@ def signs_in_and_out(build: Build, fake: Fake) -> None:
     assert landed.location == "/me"
     cookie = next(held for held in landed.cookies if held.startswith("__Host-masks="))
     assert "HttpOnly" in cookie and "Secure" in cookie and "SameSite=Lax" in cookie
-    assert "eyJ" not in cookie
+    assert re.fullmatch(r"1\.[\w-]+", cookie.split(";")[0].removeprefix("__Host-masks="))
 
     me = browser.get("/me").json()
     assert me["subject"] == "ada"
@@ -240,6 +241,15 @@ def refuses_credentials_from_another_issuer(build: Build, fake: Fake) -> None:
     assert browser.get("/auth/handshake", JSON).status == 500
 
 
+def shows_no_error_from_a_sign_in_this_browser_did_not_start(build: Build, fake: Fake) -> None:
+    browser = build(config(fake))
+    forged = browser.get("/auth/callback?error=access_denied&error_description=Call+555-0100+now&state=forged", HTML)
+
+    assert forged.status == 400
+    assert b"555-0100" not in forged.body
+    assert b"invalid_state" in forged.body
+
+
 def ends_sessions_from_the_back_channel(build: Build, fake: Fake) -> None:
     browser = build(config(fake, sessions=ServerSessions(MemorySessionStore())))
     sign_in(browser, fake)
@@ -262,6 +272,8 @@ def proxies_the_avatar(build: Build, fake: Fake) -> None:
 
     assert photo.status == 200
     assert photo.body == fake.photo
+    assert browser.get("/auth/avatar?size=64").status == 200
+    assert browser.get("/auth/avatar?size=" + "9" * 5000).status == 200
 
 
 class RecordingStore(MemorySessionStore):
@@ -487,6 +499,7 @@ SCENARIOS = [
     answers_503_when_the_keys_are_down,
     shakes_hands,
     refuses_credentials_from_another_issuer,
+    shows_no_error_from_a_sign_in_this_browser_did_not_start,
     ends_sessions_from_the_back_channel,
     proxies_the_avatar,
     shows_the_avatar_route_as_the_picture,

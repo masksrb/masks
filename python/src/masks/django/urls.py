@@ -27,7 +27,7 @@ def dispatching(methods: dict[str, str]) -> Callable[[HttpRequest], HttpResponse
             if int(request.META.get("CONTENT_LENGTH") or 0) > FORM_LIMIT:
                 return response(too_large())
 
-            return response(held.answer(held.backchannel(incoming(request))))
+            return response(held.answer(held.backchannel(incoming(request, form=True))))
 
         return response(held.answer(held.handlers()[name](incoming(request), session_of(request))))
 

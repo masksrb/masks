@@ -891,9 +891,13 @@ class Masks:
     def callback(self, request: Incoming, session: Session) -> Step[Answer]:
         pending = Tracker(session, REQUESTS).claim(request.query.get("state", ""))
 
+        if request.query.get("error") and pending is None:
+            return self._refuse(
+                request, "invalid_state", "that sign-in request is not one this browser started, or it expired"
+            )
+
         if request.query.get("error"):
-            if pending is not None:
-                self.forget(session)
+            self.forget(session)
 
             return self._refuse(request, request.query["error"], request.query.get("error_description", ""))
 
@@ -1026,7 +1030,7 @@ class Masks:
         asked = request.query.get("size", "")
 
         if asked:
-            wanted = int(asked) if asked.isdigit() else AVATAR_SIZES[-1]
+            wanted = int(asked) if asked.isdigit() and len(asked) <= 4 else AVATAR_SIZES[-1]
             photo = f"{photo}?size={next((size for size in AVATAR_SIZES if size >= wanted), AVATAR_SIZES[-1])}"
 
         token = self._token(request, session)

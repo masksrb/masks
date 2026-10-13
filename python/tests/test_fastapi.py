@@ -226,7 +226,9 @@ def test_a_forged_state_restarts_once_and_then_refuses(app: TestClient, fake: Fa
 
 
 def test_an_error_from_masks_is_shown(app: TestClient) -> None:
-    refused = app.get("/auth/callback", params={"error": "access_denied", "error_description": "no"}, headers=JSON)
+    state = parse_qs(urlsplit(location(app.get("/auth", headers=HTML))).query)["state"][0]
+    answer = {"error": "access_denied", "error_description": "no", "state": state}
+    refused = app.get("/auth/callback", params=answer, headers=JSON)
 
     assert refused.status_code == 400
     assert refused.json()["error"] == "access_denied"
