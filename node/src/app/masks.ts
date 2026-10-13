@@ -22,13 +22,14 @@ import {
 } from "../errors.js";
 import { Handshake, originOf } from "../handshake.js";
 import type { IdTokenClaims, LogoutToken } from "../idtoken.js";
-import { Issuer, RESOURCE_PATH } from "../issuer.js";
+import { type Issuer, RESOURCE_PATH } from "../issuer.js";
 import { random } from "../key.js";
 import type { Registration } from "../registration.js";
 import { MemoryReplayStore, type ReplayStore } from "../replay.js";
 import { type Claims, Verifier } from "../verifier.js";
 import { type AvatarsLimit, avatarResponse } from "./avatar.js";
 import { parseCookies, readChunked, writeChunked } from "./cookies.js";
+import { IssuerCache } from "./issuers.js";
 import { firstLogout, loggedOut, recordLogout } from "./logouts.js";
 import { Masked } from "./masked.js";
 import {
@@ -158,7 +159,6 @@ const STEP_UP_WITHIN = 300;
 const RESTART_WITHIN = 60;
 const REFRESH_LEEWAY = 30;
 const REMEMBER_REFRESH = 60_000;
-const DISCOVERY_LIFETIME = 3600_000;
 const SESSION_PURPOSE = "session";
 const FLOW_PURPOSE = "flow";
 
@@ -191,10 +191,10 @@ export class Masks {
   readonly #credentials: CredentialStore;
   readonly #logouts: LogoutStore;
   readonly #replay: ReplayStore;
-  readonly #issuers = new Map<
-    string,
-    { at: number; issuer: Promise<Issuer> }
-  >();
+  readonly #issuers = new IssuerCache(() => ({
+    fetch: this.#options.fetch,
+    allowPlainHTTP: this.#options.allowPlainHTTP,
+  }));
   readonly #refreshing = shared(
     "app refreshing",
     () => new Map<string, Promise<SessionData | undefined>>(),
@@ -1404,23 +1404,8 @@ export class Masks {
     return visit;
   }
 
-  async #issuer(url: string): Promise<Issuer> {
-    const cached = this.#issuers.get(url);
-
-    if (cached && Date.now() - cached.at < DISCOVERY_LIFETIME)
-      return cached.issuer;
-
-    const issuer = Issuer.discover(url, {
-      fetch: this.#options.fetch,
-      allowPlainHTTP: this.#options.allowPlainHTTP,
-    });
-
-    this.#issuers.set(url, { at: Date.now(), issuer });
-    issuer.catch(() => {
-      if (this.#issuers.get(url)?.issuer === issuer) this.#issuers.delete(url);
-    });
-
-    return issuer;
+  #issuer(url: string): Promise<Issuer> {
+    return this.#issuers.get(url);
   }
 
   async #client(visit: Visit): Promise<Client | undefined> {

@@ -2,6 +2,7 @@ import { decodeJwt } from "jose";
 import type { NextAuthConfig, NextAuthResult, Session } from "next-auth";
 import { type AvatarsLimit, avatarResponse } from "./app/avatar.js";
 import { parseCookies, replaceCookies, serialize } from "./app/cookies.js";
+import { IssuerCache } from "./app/issuers.js";
 import { firstLogout, loggedOut, recordLogout } from "./app/logouts.js";
 import { Masked, type MaskedJSON } from "./app/masked.js";
 import {
@@ -66,7 +67,7 @@ import {
 } from "./errors.js";
 import { Handshake, originOf } from "./handshake.js";
 import type { LogoutToken } from "./idtoken.js";
-import { Issuer } from "./issuer.js";
+import type { Issuer } from "./issuer.js";
 import { random } from "./key.js";
 import { MemoryReplayStore, type ReplayStore } from "./replay.js";
 
@@ -134,7 +135,6 @@ const DELEGATION_COOKIE = "masks-delegation";
 const DELEGATION_PURPOSE = "authjs delegation";
 const FLOW_LIFETIME = 3600;
 const STEP_UP_WITHIN = 300;
-const DISCOVERY_LIFETIME = 3600_000;
 const PENDING_REFRESH = 60_000;
 const REMEMBERED_REFRESHES = 10_000;
 const NOWHERE = "https://masks.invalid/unconnected";
@@ -187,10 +187,9 @@ export class MasksAuth {
   readonly #credentials: CredentialStore;
   readonly #logouts: LogoutStore;
   readonly #replay: ReplayStore;
-  readonly #issuers = new Map<
-    string,
-    { at: number; issuer: Promise<Issuer> }
-  >();
+  readonly #issuers = new IssuerCache(() => ({
+    allowPlainHTTP: this.#options.allowPlainHTTP,
+  }));
   readonly #refreshes = shared(
     "authjs refreshes",
     () => new Map<string, Remembered>(),
@@ -1495,24 +1494,8 @@ export class MasksAuth {
     return request ?? new Request(await this.#origin());
   }
 
-  async #issuer(): Promise<Issuer> {
-    const url = this.issuerURL;
-    const found = this.#issuers.get(url);
-
-    if (found && Date.now() - found.at < DISCOVERY_LIFETIME) {
-      return found.issuer;
-    }
-
-    const issuer = Issuer.discover(url, {
-      allowPlainHTTP: this.#options.allowPlainHTTP,
-    });
-
-    this.#issuers.set(url, { at: Date.now(), issuer });
-    issuer.catch(() => {
-      if (this.#issuers.get(url)?.issuer === issuer) this.#issuers.delete(url);
-    });
-
-    return issuer;
+  #issuer(): Promise<Issuer> {
+    return this.#issuers.get(this.issuerURL);
   }
 
   #logoutReturnURL(request: Request): string {

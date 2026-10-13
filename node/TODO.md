@@ -10,8 +10,7 @@
 - Move `headersWith`, `text`, `json`, and `redirect` into `app/responses.ts` and use them in avatar.ts and next.ts.
 - Replace `localOr` in next.ts with `localPath(...) ?? "/"`.
 - Add `Masks.from(x)` for the repeated `instanceof` checks in the adapters.
-- Issuer discovery waits inside the request when stale, and forgets the issuer after a failure. Serve the stale issuer while one refresh runs, and back off after a failure.
-- `memoryStore` and `memoryLogouts` never remove abandoned entries. Sweep them now and then. Bound the issuer and verifier caches.
+- `memoryStore` and `memoryLogouts` never remove abandoned entries. Sweep them now and then. Bound the verifier caches.
 - Run the sid and sub logout lookups at the same time, and the session store's `set` and `delete` on rotation too.
 - Every sign-in start reads the registration from masks. Cache a good answer, or rely on `invalid_client`.
 - Remove `Visit.flowChanged`, `Privileges.names`, and the `SessionData | undefined` branch of the refresh.
@@ -25,7 +24,7 @@
 - `signOut()` from `next-auth/react` and the `signOut` server action do not sign out of masks. Only `/api/auth/masks/logout` with `everywhere` does.
 - The issuer, resource, and credentials cannot vary per request.
 - `guard()` needs the proxy to know which page to return to. Without it, a sign-in returns to `/`.
-- `masksAuth` and `Masks` share the logout and scope helpers, but each still has its own handshake routes, manager check, and issuer cache. Move the connection lifecycle into one module both use.
+- `masksAuth` and `Masks` share the logout, scope, delegation, and issuer-cache code, but each still has its own handshake routes and manager check. Move the connection lifecycle into one module both use.
 - The live run used Next.js 16.3 and next-auth 5.0.0-beta.32 on Node 26. Other versions have not run.
 
 ## Testing
