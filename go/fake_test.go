@@ -48,7 +48,7 @@ type fakeCode struct {
 	resource     []string
 }
 
-type fakePerson struct {
+type fakeActor struct {
 	subject string
 	name    string
 	email   string
@@ -80,7 +80,7 @@ type fake struct {
 	issuedAs      string
 	codes         map[string]fakeCode
 	subjects      map[string]string
-	person        fakePerson
+	actor         fakeActor
 	declined      bool
 	asked         url.Values
 	handshake     url.Values
@@ -111,7 +111,7 @@ func newFake(t *testing.T) *fake {
 		seen:          map[string]url.Values{},
 		codes:         map[string]fakeCode{},
 		subjects:      map[string]string{},
-		person:        fakePerson{subject: "ada", name: "Ada Lovelace", email: "ada@example.com", role: "owner"},
+		actor:         fakeActor{subject: "ada", name: "Ada Lovelace", email: "ada@example.com", role: "owner"},
 	}
 
 	mux := http.NewServeMux()
@@ -788,7 +788,7 @@ func (f *fake) redeem(response http.ResponseWriter, request *http.Request, id st
 		return
 	}
 
-	subject := f.person.subject
+	subject := f.actor.subject
 	refresh := rand.Text()
 	client.refresh[refresh] = true
 	f.subjects[refresh] = subject
@@ -820,7 +820,7 @@ func (f *fake) redeem(response http.ResponseWriter, request *http.Request, id st
 		claims := map[string]any{
 			"iss": f.url(), "sub": subject, "aud": id, "nonce": code.nonce, "sid": "sid-" + subject,
 			"exp": time.Now().Add(15 * time.Minute).Unix(), "iat": time.Now().Unix(),
-			"name": f.person.name, "email": f.person.email, "email_verified": true,
+			"name": f.actor.name, "email": f.actor.email, "email_verified": true,
 			"at_hash": accessTokenHash(access), "tenant": map[string]string{"uuid": "t-1", "subdomain": "acme", "name": "Acme"},
 			"masks:avatars": map[string]any{"photo": nil, "identicon": f.url() + "/avatars/" + subject + "/identicon"},
 		}
@@ -830,7 +830,7 @@ func (f *fake) redeem(response http.ResponseWriter, request *http.Request, id st
 		}
 
 		if code.organization != "" {
-			claims["org"] = map[string]string{"id": "o-" + code.organization, "key": code.organization, "name": "Acme", "role": f.person.role}
+			claims["org"] = map[string]string{"id": "o-" + code.organization, "key": code.organization, "name": "Acme", "role": f.actor.role}
 		}
 
 		body["id_token"] = f.issue(claims, "JWT")
@@ -844,11 +844,11 @@ func (f *fake) userinfo(response http.ResponseWriter, request *http.Request) {
 
 	f.lock.Lock()
 	held, known := f.live[presented]
-	name := f.person.name
+	name := f.actor.name
 	if f.userinfoName != "" {
 		name = f.userinfoName
 	}
-	role := f.person.role
+	role := f.actor.role
 	f.lock.Unlock()
 
 	if !known || held.subject == held.client {
