@@ -76,10 +76,6 @@ func (a *App) current(r *http.Request) (*site, *state, *Person, error) {
 	return s, held, person, nil
 }
 
-func departureKey(issuer, kind, value string) string {
-	return issuer + " " + kind + " " + value
-}
-
 func (a *App) signedIn(r *http.Request, s *site, held *state) (*Person, error) {
 	nobody := PersonFrom(context.Background())
 	data := held.data
@@ -93,22 +89,14 @@ func (a *App) signedIn(r *http.Request, s *site, held *state) (*Person, error) {
 		return nobody, nil
 	}
 
-	if data.Identity != nil {
-		for kind, value := range map[string]string{"sub": data.Identity.Subject, "sid": data.Identity.SessionID} {
-			if value == "" {
-				continue
-			}
+	departed, err := a.departed(r.Context(), s.issuer.URL, data.Identity, data.SignedInAt)
+	if err != nil {
+		return nil, err
+	}
 
-			departed, err := a.config.Departures.DepartedAt(r.Context(), departureKey(s.issuer.URL, kind, value))
-			if err != nil {
-				return nil, err
-			}
-
-			if !departed.IsZero() && departed.UnixMilli() >= data.SignedInAt {
-				held.forget()
-				return nobody, nil
-			}
-		}
+	if departed {
+		held.forget()
+		return nobody, nil
 	}
 
 	if !data.Token.Valid() {
@@ -117,56 +105,23 @@ func (a *App) signedIn(r *http.Request, s *site, held *state) (*Person, error) {
 			return nobody, nil
 		}
 
-		token, identity, err := a.flights.do(data.Token.RefreshToken, func() (*masks.Token, *masks.Identity, error) {
-			ctx, cancel := context.WithTimeout(context.WithoutCancel(r.Context()), 30*time.Second)
-			defer cancel()
-
-			return a.refresh(ctx, s, data)
-		})
-
-		var refused *masks.Error
-
-		switch {
-		case errors.As(err, &refused) && refused.Code == "invalid_client":
+		switch renewal := a.renew(r.Context(), s, data); renewal.Outcome {
+		case renewed:
+			changed := held.change()
+			changed.Token, changed.Identity = renewal.Token, renewal.Identity
+		case unregistered:
 			_ = a.config.Credentials.Forget(r)
 			held.forget()
 			return nobody, nil
-		case errors.As(err, &refused) && refused.Status < http.StatusInternalServerError && refused.Status != http.StatusTooManyRequests:
+		case refused:
 			held.forget()
 			return nobody, nil
-		case err != nil:
+		default:
 			return nobody, nil
 		}
-
-		changed := held.change()
-		changed.Token, changed.Identity = token, identity
 	}
 
 	return a.personFrom(data.Identity, data.Token, s.issuer.URL+"/"), nil
-}
-
-func (a *App) refresh(ctx context.Context, s *site, data *session) (*masks.Token, *masks.Identity, error) {
-	client := a.signIn(s)
-
-	token, err := client.Refresh(ctx, data.Token.RefreshToken, masks.TokenRequest{Resource: []string{s.resource}})
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if token.RefreshToken == "" {
-		token.RefreshToken = data.Token.RefreshToken
-	}
-
-	token.IDToken = ""
-	identity := data.Identity
-
-	if profile, err := client.UserInfo(ctx, token); err == nil && identity != nil && profile.Subject == identity.Subject {
-		if merged, err := identity.Merged(profile, identityClaims...); err == nil {
-			identity = merged
-		}
-	}
-
-	return token, identity, nil
 }
 
 func (a *App) save(w http.ResponseWriter, r *http.Request, held *state) bool {
@@ -509,17 +464,22 @@ func (a *App) backchannel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	now := time.Now()
+	first, err := a.firstLogout(r.Context(), s.issuer.URL, logout)
+	if err != nil {
+		a.unavailable(w, r)
+		return
+	}
 
-	for kind, value := range map[string]string{"sub": logout.Subject, "sid": logout.SessionID} {
-		if value == "" || (kind == "sub" && logout.SessionID != "") {
-			continue
-		}
+	if !first {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid_request", "error_description": "that logout token was already used"})
+		return
+	}
 
-		if err := a.config.Departures.Depart(r.Context(), departureKey(s.issuer.URL, kind, value), now, a.config.SessionLifetime); err != nil {
-			a.unavailable(w, r)
-			return
-		}
+	if err := a.depart(r.Context(), s.issuer.URL, logout); err != nil {
+		_ = a.config.Store.Delete(r.Context(), keyed("logout", s.issuer.URL, logout.ID))
+		a.unavailable(w, r)
+
+		return
 	}
 
 	if a.config.LoggedOut != nil {

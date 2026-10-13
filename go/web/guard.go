@@ -239,7 +239,7 @@ func (a *App) verifier(r *http.Request) (*masks.Verifier, string, error) {
 	if held == nil || held.Issuer != issuer {
 		held = masks.NewVerifier(issuer, resource)
 		held.PublicURL = parsed.Scheme + "://" + parsed.Host
-		held.Replay = a.config.Replay
+		held.Replay = a.replay()
 		a.verifiers[key] = held
 	}
 

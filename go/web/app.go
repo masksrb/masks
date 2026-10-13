@@ -17,10 +17,7 @@ import (
 	masks "github.com/masksrb/masks/go"
 )
 
-const (
-	discoveryLifetime = time.Hour
-	refreshPatience   = 30 * time.Second
-)
+const discoveryLifetime = time.Hour
 
 type Privilege struct {
 	Scope        []string
@@ -48,19 +45,18 @@ type Config struct {
 
 	Secret          []byte
 	PreviousSecrets [][]byte
-	Sessions        SessionStore
+	Sessions        Store
 	SessionLifetime time.Duration
 	PlainHTTP       bool
 
 	Credentials CredentialStore
 	Manages     func(*http.Request, *Person) bool
-	Departures  DepartureStore
 	LoggedOut   func(*http.Request, *masks.LogoutToken) error
+	Store       Store
 
 	Delegates      bool
 	DelegationPath string
 
-	Replay     masks.ReplayStore
 	HTTPClient *http.Client
 	Options    []masks.Option
 }
@@ -128,8 +124,8 @@ func New(config Config) (*App, error) {
 		config.Credentials = FileCredentials("masks.json")
 	}
 
-	if config.Departures == nil {
-		config.Departures = &MemoryDepartures{}
+	if config.Store == nil {
+		config.Store = &MemoryStore{}
 	}
 
 	if config.Delegates && localPath(config.DelegationPath) == "" {
@@ -436,10 +432,7 @@ func (a *App) Registered(r *http.Request) (bool, error) {
 	return err == nil, err
 }
 
-var (
-	ErrNotConnected = errors.New("masks/web: this app has not shaken hands with its issuer")
-	errFlightFailed = errors.New("masks/web: the refresh stopped before it finished")
-)
+var ErrNotConnected = errors.New("masks/web: this app has not shaken hands with its issuer")
 
 type refusal struct {
 	code        string
@@ -515,56 +508,4 @@ func sameOrigin(r *http.Request) bool {
 	parsed, err := url.Parse(from)
 
 	return err == nil && strings.EqualFold(parsed.Host, r.Host)
-}
-
-type flights struct {
-	lock sync.Mutex
-	held map[string]*flight
-}
-
-type flight struct {
-	done     chan struct{}
-	token    *masks.Token
-	identity *masks.Identity
-	err      error
-	at       time.Time
-}
-
-func (f *flights) do(key string, run func() (*masks.Token, *masks.Identity, error)) (*masks.Token, *masks.Identity, error) {
-	f.lock.Lock()
-
-	if f.held == nil {
-		f.held = map[string]*flight{}
-	}
-
-	for name, held := range f.held {
-		if !held.at.IsZero() && time.Since(held.at) > refreshPatience {
-			delete(f.held, name)
-		}
-	}
-
-	if held, found := f.held[key]; found {
-		f.lock.Unlock()
-		<-held.done
-
-		return held.token, held.identity, held.err
-	}
-
-	held := &flight{done: make(chan struct{}), err: errFlightFailed}
-	f.held[key] = held
-	f.lock.Unlock()
-
-	defer func() {
-		f.lock.Lock()
-		held.at = time.Now()
-		if held.err != nil {
-			delete(f.held, key)
-		}
-		f.lock.Unlock()
-		close(held.done)
-	}()
-
-	held.token, held.identity, held.err = run()
-
-	return held.token, held.identity, held.err
 }

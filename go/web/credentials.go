@@ -1,7 +1,6 @@
 package web
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"io/fs"
@@ -162,31 +161,4 @@ func (f *fileCredentials) Forget(*http.Request) error {
 	}
 
 	return nil
-}
-
-type DepartureStore interface {
-	Depart(ctx context.Context, key string, at time.Time, expiresIn time.Duration) error
-	DepartedAt(ctx context.Context, key string) (time.Time, error)
-}
-
-type MemoryDepartures struct {
-	entries expiring[time.Time]
-}
-
-func (m *MemoryDepartures) Depart(_ context.Context, key string, at time.Time, expiresIn time.Duration) error {
-	m.entries.set(key, expiresIn, func(held time.Time, found bool) time.Time {
-		if found && held.After(at) {
-			return held
-		}
-
-		return at
-	})
-
-	return nil
-}
-
-func (m *MemoryDepartures) DepartedAt(_ context.Context, key string) (time.Time, error) {
-	held, _ := m.entries.get(key)
-
-	return held, nil
 }

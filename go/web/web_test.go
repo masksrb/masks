@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -27,6 +28,8 @@ type harness struct {
 	browser *http.Client
 	path    string
 	hops    []string
+	config  Config
+	handler http.Handler
 }
 
 func secret() []byte {
@@ -37,9 +40,7 @@ func newHarness(t *testing.T, change func(*Config)) *harness {
 	t.Helper()
 
 	held := &harness{t: t, issuer: newIssuer(t), path: filepath.Join(t.TempDir(), "masks.json")}
-	var handler http.Handler
-
-	held.server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { handler.ServeHTTP(w, r) }))
+	held.server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { held.handler.ServeHTTP(w, r) }))
 	t.Cleanup(held.server.Close)
 
 	config := Config{
@@ -69,6 +70,7 @@ func newHarness(t *testing.T, change func(*Config)) *harness {
 	}
 
 	held.app = app
+	held.config = config
 
 	answer := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, PersonFrom(r.Context()))
@@ -100,7 +102,7 @@ func newHarness(t *testing.T, change func(*Config)) *harness {
 		writeJSON(w, http.StatusOK, map[string]string{"connection": connected.Connection, "secret": connected.Secret})
 	})
 
-	handler = mux
+	held.handler = mux
 
 	jar, _ := cookiejar.New(nil)
 	held.browser = &http.Client{Jar: jar, CheckRedirect: func(r *http.Request, _ []*http.Request) error {
@@ -354,6 +356,69 @@ func TestARefreshIsSharedByRequestsThatArriveTogether(t *testing.T) {
 	}
 }
 
+func TestARefreshIsSharedByProcessesThroughTheStore(t *testing.T) {
+	h := newHarness(t, func(config *Config) { config.Store = &MemoryStore{} })
+	h.issuer.expiresIn = 10
+	h.connect()
+	h.issuer.name = "Ada King"
+
+	second, err := New(h.config)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	first := h.handler
+	other := second.Session(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, http.StatusOK, PersonFrom(r.Context()))
+	}))
+
+	h.handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("X-Process") == "2" {
+			other.ServeHTTP(w, r)
+			return
+		}
+
+		first.ServeHTTP(w, r)
+	})
+
+	var group sync.WaitGroup
+	failures := make(chan string, 8)
+
+	for index := range 8 {
+		group.Add(1)
+
+		go func() {
+			defer group.Done()
+
+			request, _ := http.NewRequest(http.MethodGet, h.server.URL+"/me", nil)
+			request.Header.Set("X-Process", strconv.Itoa(1+index%2))
+
+			response, err := h.browser.Do(request)
+			if err != nil {
+				failures <- err.Error()
+				return
+			}
+			defer response.Body.Close()
+
+			held := &Person{}
+			if json.NewDecoder(response.Body).Decode(held) != nil || held.Name != "Ada King" {
+				failures <- "a request did not see the refreshed identity"
+			}
+		}()
+	}
+
+	group.Wait()
+	close(failures)
+
+	for failure := range failures {
+		t.Fatal(failure)
+	}
+
+	if h.issuer.refreshed != 1 {
+		t.Fatalf("expected one refresh across both processes, got %d", h.issuer.refreshed)
+	}
+}
+
 func TestASpentRefreshTokenSignsThePersonOut(t *testing.T) {
 	h := newHarness(t, nil)
 	h.issuer.expiresIn = 10
@@ -416,13 +481,26 @@ func TestABackchannelLogoutEndsTheSession(t *testing.T) {
 		t.Fatalf("a bad logout token answered %d", response.StatusCode)
 	}
 
-	response, _ = http.PostForm(h.server.URL+"/auth/logout/backchannel", url.Values{"logout_token": {h.issuer.logoutToken(h.issuer.onlyClient(), "sid-ada")}})
+	spent := h.issuer.logoutToken(h.issuer.onlyClient(), "sid-ada")
+
+	response, _ = http.PostForm(h.server.URL+"/auth/logout/backchannel", url.Values{"logout_token": {spent}})
 	if response.StatusCode != http.StatusOK || heard == nil || heard.SessionID != "sid-ada" {
 		t.Fatalf("the logout answered %d with %+v", response.StatusCode, heard)
 	}
 
 	if person := h.person("/me"); person.SignedIn {
 		t.Fatal("the session outlived its logout")
+	}
+
+	h.visit(http.MethodGet, "/auth/")
+
+	replayed, _ := http.PostForm(h.server.URL+"/auth/logout/backchannel", url.Values{"logout_token": {spent}})
+	if replayed.StatusCode != http.StatusBadRequest {
+		t.Fatalf("a logout token was accepted twice: %d", replayed.StatusCode)
+	}
+
+	if person := h.person("/me"); !person.SignedIn {
+		t.Fatal("a replayed logout token ended a newer session")
 	}
 
 	h.visit(http.MethodGet, "/auth/")
@@ -582,7 +660,7 @@ func TestAStaleCallbackRestartsOnceThenRefuses(t *testing.T) {
 }
 
 func TestAServerSideStoreRotatesTheSessionOnSignIn(t *testing.T) {
-	store := NewMemoryStore()
+	store := &MemoryStore{}
 	h := newHarness(t, func(config *Config) { config.Sessions = store })
 
 	h.visit(http.MethodGet, "/auth/handshake")
@@ -755,12 +833,8 @@ func TestLocalPathsOnly(t *testing.T) {
 	}
 }
 
-func TestAReplayStoreThatFailsRefusesWith503(t *testing.T) {
-	h := newHarness(t, func(config *Config) {
-		config.Replay = masks.ReplayStoreFunc(func(context.Context, string, time.Duration) (bool, error) {
-			return false, errors.New("redis is down")
-		})
-	})
+func TestAStoreThatFailsRefusesAProofWith503(t *testing.T) {
+	h := newHarness(t, func(config *Config) { config.Store = failing{} })
 
 	key, err := masks.GenerateKey()
 	if err != nil {
@@ -830,25 +904,38 @@ func TestARefreshThatPanicsReleasesTheOthersWaiting(t *testing.T) {
 	func() {
 		defer func() { _ = recover() }()
 
-		held.do("token", func() (*masks.Token, *masks.Identity, error) { panic("boom") })
+		held.do("token", func() *renewal { panic("boom") })
 	}()
 
-	done := make(chan error, 1)
+	done := make(chan *renewal, 1)
 
 	go func() {
-		_, _, err := held.do("token", func() (*masks.Token, *masks.Identity, error) { return &masks.Token{}, nil, nil })
-		done <- err
+		done <- held.do("token", func() *renewal { return &renewal{Outcome: renewed} })
 	}()
 
 	select {
-	case err := <-done:
-		if err != nil {
-			t.Fatalf("the next refresh failed: %v", err)
+	case result := <-done:
+		if result.Outcome != renewed {
+			t.Fatalf("the next refresh failed: %v", result.Outcome)
 		}
 	case <-time.After(time.Second):
 		t.Fatal("the next refresh waited forever")
 	}
 }
+
+type failing struct{}
+
+func (failing) Add(context.Context, string, []byte, time.Duration) (bool, error) {
+	return false, errors.New("redis is down")
+}
+
+func (failing) Get(context.Context, string) ([]byte, error) { return nil, errors.New("redis is down") }
+
+func (failing) Set(context.Context, string, []byte, time.Duration) error {
+	return errors.New("redis is down")
+}
+
+func (failing) Delete(context.Context, string) error { return errors.New("redis is down") }
 
 type readOnly struct{ CredentialStore }
 

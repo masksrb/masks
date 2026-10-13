@@ -1,7 +1,6 @@
 package web
 
 import (
-	"context"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/hkdf"
@@ -36,39 +35,6 @@ const (
 )
 
 var errSealed = errors.New("masks/web: that value was not sealed with this app's secret")
-
-type SessionStore interface {
-	Load(ctx context.Context, id string) ([]byte, error)
-	Save(ctx context.Context, id string, data []byte, expiresIn time.Duration) error
-	Delete(ctx context.Context, id string) error
-}
-
-type MemoryStore struct {
-	entries expiring[[]byte]
-}
-
-func NewMemoryStore() *MemoryStore {
-	return &MemoryStore{}
-}
-
-func (m *MemoryStore) Load(_ context.Context, id string) ([]byte, error) {
-	held, _ := m.entries.get(id)
-
-	return held, nil
-}
-
-func (m *MemoryStore) Save(_ context.Context, id string, data []byte, expiresIn time.Duration) error {
-	kept := slices.Clone(data)
-	m.entries.set(id, expiresIn, func([]byte, bool) []byte { return kept })
-
-	return nil
-}
-
-func (m *MemoryStore) Delete(_ context.Context, id string) error {
-	m.entries.delete(id)
-
-	return nil
-}
 
 type sealer struct {
 	aeads []cipher.AEAD
@@ -305,7 +271,7 @@ func (a *App) load(r *http.Request) (*state, error) {
 	if a.config.Sessions != nil {
 		held.id = string(plain)
 
-		plain, err = a.config.Sessions.Load(r.Context(), held.id)
+		plain, err = a.config.Sessions.Get(r.Context(), keyed("session", held.id))
 		if err != nil {
 			return nil, err
 		}
@@ -340,7 +306,7 @@ func (a *App) commit(w http.ResponseWriter, r *http.Request, held *state) error 
 	empty := isEmpty(held.data)
 
 	if a.config.Sessions != nil && held.id != "" && (held.rotated || empty) {
-		if err := a.config.Sessions.Delete(r.Context(), held.id); err != nil {
+		if err := a.config.Sessions.Delete(r.Context(), keyed("session", held.id)); err != nil {
 			return err
 		}
 
@@ -366,7 +332,7 @@ func (a *App) commit(w http.ResponseWriter, r *http.Request, held *state) error 
 			held.id = rand.Text() + rand.Text()
 		}
 
-		if err := a.config.Sessions.Save(r.Context(), held.id, []byte(a.sealer.seal(plain, held.id, expiry)), a.config.SessionLifetime); err != nil {
+		if err := a.config.Sessions.Set(r.Context(), keyed("session", held.id), []byte(a.sealer.seal(plain, held.id, expiry)), a.config.SessionLifetime); err != nil {
 			return err
 		}
 
