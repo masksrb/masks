@@ -13,6 +13,7 @@ The package installs from its release tag and is not on PyPI yet. It imports as
 
 | Covers | |
 | --- | --- |
+| Web apps | FastAPI, Django, and Flask: the handshake, sign-in, sessions, and privileges. |
 | Discovery | The issuer's document, checked against the address it was fetched from. |
 | Registration | Redeeming an initial access token, then reading, updating, and deleting the client. |
 | Enrollment | An app asking for initial access tokens for its own machines, and unenrolling them. |
@@ -23,10 +24,110 @@ The package installs from its release tag and is not on PyPI yet. It imports as
 | Introspection | Asking the issuer whether a token is still active. |
 | Checking tokens | `at+jwt` access tokens, including DPoP-bound ones, in any framework or as ASGI middleware. |
 
-`masks.fastapi`, `masks.django`, and `masks.flask` sign people in to a web app.
 See [Python apps](https://masks.pages.dev/reference/python/) for the walkthrough and
 [masks-client](https://masks.pages.dev/reference/python/client/) for every setting and
 call.
+
+## Signing people in to a web app
+
+`masks.fastapi`, `masks.django`, and `masks.flask` add sign-in to a web app.
+Install the extra for your framework, such as `masks-client[fastapi]`.
+
+```python
+import os
+from typing import Annotated
+
+from fastapi import Depends, FastAPI
+from masks.fastapi import Config, Masks, Person
+
+auth = Masks(Config(
+    issuer=os.environ["MASKS_ISSUER"],
+    resource="https://app.example.com",
+    name="Catalog",
+    secret=os.environ["SESSION_SECRET"],
+))
+
+app = FastAPI()
+auth.install(app)
+
+
+@app.get("/settings")
+async def settings(person: Annotated[Person, Depends(auth.require())]):
+    return {"name": person.name}
+```
+
+To connect the app:
+
+1. Set `MASKS_ISSUER` to your masks tenant.
+2. Start the app.
+3. Open `/auth/handshake` and approve the app in masks.
+
+People then sign in at `/auth` and sign out at `/auth/logout`. The session is a
+sealed cookie. Django and Flask work the same way. See
+[Django](https://masks.pages.dev/reference/python/django/) and
+[Flask](https://masks.pages.dev/reference/python/flask/).
+
+An app that runs as several processes sets `store` to one they share, such as
+`masks.web.RedisStore`. The processes then refresh each token once, and a
+logout from masks reaches all of them.
+
+## The handshake
+
+The handshake connects an app to masks with no client ID or secret to copy.
+
+1. The browser goes to masks, where a manager approves the app.
+2. masks sends the browser back with a one-time token.
+3. The app redeems the token with masks directly and saves the client it gets
+   back. The secret never passes through the browser.
+
+The web integrations run the handshake at `/auth/handshake` and save the client
+in `masks.json`. Any other app uses `masks.Handshake`.
+
+```python
+handshake = masks.Handshake(
+    issuer,
+    name="Catalog",
+    resource="https://app.example.com",
+    redirect_uris=["https://app.example.com/callback"],
+    return_to="https://app.example.com/handshake/callback",
+)
+started = handshake.start()
+```
+
+Keep `started.state` in the browser's session and send the browser to
+`started.url`. When masks sends it back to `return_to`, finish the handshake:
+
+```python
+registration = handshake.complete(request.query_params, state)
+```
+
+`complete` checks the state and the issuer, then registers the client. Save
+`registration.client_id` and `registration.client_secret`. Every address in a
+handshake must share the resource's origin.
+
+## The code flow
+
+The code flow signs a person in through masks with PKCE. The web integrations
+run it at `/auth`. Any other app uses the client.
+
+```python
+client = masks.Client(issuer, client_id, secret=client_secret)
+started = client.start("https://app.example.com/callback", resource=["https://app.example.com"])
+session["sign_in"] = started.to_dict()
+```
+
+Send the browser to `started.url`. When masks sends it back to the callback,
+finish the sign-in:
+
+```python
+started = masks.AuthorizationRequest.from_dict(session.pop("sign_in"))
+signed_in = client.complete(started, request.query_params)
+```
+
+`complete` checks the state and the issuer, redeems the code, and checks the ID
+token. `signed_in.token` holds the tokens and `signed_in.claims` holds who signed
+in. `started` holds the PKCE verifier, so keep it where only this browser's
+session can reach it.
 
 ## A machine signs in as itself
 
