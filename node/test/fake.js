@@ -60,6 +60,7 @@ export class Fake {
   kid = "signing-1";
   clients = new Map();
   registrations = new Map();
+  registrationReads = 0;
   initial = new Map();
   assertions = new Set();
   revoked = [];
@@ -770,6 +771,8 @@ export class Fake {
   }
 
   registration(request, response, id, text) {
+    if (request.method === "GET") this.registrationReads += 1;
+
     const held = this.registrations.get(id);
     const client = this.clients.get(id);
 

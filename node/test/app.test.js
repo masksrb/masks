@@ -917,3 +917,18 @@ test("a path masks does not own is passed on without resolving the issuer", asyn
   assert.equal(await masks.handle(new Request(`${APP}/catalog`)), undefined);
   assert.equal(resolved, 0);
 });
+
+test("sign-ins a minute apart check that masks still knows the app once", async () => {
+  const held = await setup({ connected: false }, closers);
+  const shaking = await held.browser.fetch("/auth/handshake");
+  const back = new URL(held.fake.shake(shaking.headers.get("location")));
+  await held.browser.fetch(`${back.pathname}${back.search}`);
+
+  const before = held.fake.registrationReads;
+  const first = await held.browser.fetch("/auth");
+  const second = await held.browser.fetch("/auth");
+
+  assert.ok(first.headers.get("location").startsWith(held.fake.url));
+  assert.ok(second.headers.get("location").startsWith(held.fake.url));
+  assert.equal(held.fake.registrationReads - before, 1);
+});

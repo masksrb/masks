@@ -156,6 +156,7 @@ const IDENTITY = [
 const FLOW_LIFETIME = 3600;
 const FLOW_LIMIT = 5;
 const REMEMBERED_VERIFIERS = 1_000;
+const REGISTRATION_TRUSTED = 60_000;
 const STEP_UP_WITHIN = 300;
 const RESTART_WITHIN = 60;
 const REFRESH_LEEWAY = 30;
@@ -200,6 +201,7 @@ export class Masks {
     () => new Map<string, Promise<SessionData | undefined>>(),
   );
   readonly #verifiers = new Map<string, Verifier>();
+  readonly #registeredAt = new Map<string, number>();
 
   #sealer?: Sealer;
 
@@ -705,10 +707,29 @@ export class Masks {
     return { connection, cookies: visit.out };
   }
 
+  async #stillRegistered(visit: Visit, clientID: string): Promise<boolean> {
+    const key = `${visit.issuerURL} ${clientID}`;
+
+    if ((this.#registeredAt.get(key) ?? 0) > Date.now() - REGISTRATION_TRUSTED)
+      return true;
+
+    const known = await this.registered(visit.request);
+
+    this.#registeredAt.delete(key);
+    if (known) this.#registeredAt.set(key, Date.now());
+
+    for (const oldest of this.#registeredAt.keys()) {
+      if (this.#registeredAt.size <= REMEMBERED_VERIFIERS) break;
+      this.#registeredAt.delete(oldest);
+    }
+
+    return known;
+  }
+
   async #start(visit: Visit): Promise<Response> {
     let client = await this.#client(visit);
 
-    if (client && !(await this.registered(visit.request))) {
+    if (client && !(await this.#stillRegistered(visit, client.id))) {
       await this.disconnect(visit.request);
       client = await this.#client(visit);
     }
