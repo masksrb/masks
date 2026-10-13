@@ -60,14 +60,21 @@ const DATABASE = "masks";
 const SHELF = "keys";
 const HELD = "dpop";
 
+let database: Promise<IDBDatabase> | undefined;
+
 function opened(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
+  database ??= new Promise<IDBDatabase>((resolve, reject) => {
     const request = indexedDB.open(DATABASE, 1);
 
     request.onupgradeneeded = () => request.result.createObjectStore(SHELF);
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
+  }).catch((failure) => {
+    database = undefined;
+    throw failure;
   });
+
+  return database;
 }
 
 function answered<T>(request: IDBRequest<T>): Promise<T> {
@@ -78,12 +85,10 @@ function answered<T>(request: IDBRequest<T>): Promise<T> {
 }
 
 export async function heldDpopKey(): Promise<DpopKey> {
-  if (typeof indexedDB === "undefined") return createDpopKey();
-
   try {
-    const database = await opened();
+    const shelf = await opened();
     const found = (await answered(
-      database.transaction(SHELF).objectStore(SHELF).get(HELD),
+      shelf.transaction(SHELF).objectStore(SHELF).get(HELD),
     )) as DpopKey | undefined;
 
     if (found) return found;
@@ -91,10 +96,7 @@ export async function heldDpopKey(): Promise<DpopKey> {
     const made = await createDpopKey();
 
     await answered(
-      database
-        .transaction(SHELF, "readwrite")
-        .objectStore(SHELF)
-        .put(made, HELD),
+      shelf.transaction(SHELF, "readwrite").objectStore(SHELF).put(made, HELD),
     );
 
     return made;
@@ -104,13 +106,11 @@ export async function heldDpopKey(): Promise<DpopKey> {
 }
 
 export async function forgetDpopKey(): Promise<void> {
-  if (typeof indexedDB === "undefined") return;
-
   try {
-    const database = await opened();
+    const shelf = await opened();
 
     await answered(
-      database.transaction(SHELF, "readwrite").objectStore(SHELF).delete(HELD),
+      shelf.transaction(SHELF, "readwrite").objectStore(SHELF).delete(HELD),
     );
   } catch {}
 }

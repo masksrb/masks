@@ -1,9 +1,14 @@
 export const CLIENT_PATH = "/oauth/client.json";
 
+export function list(value: string | string[] | undefined): string[] {
+  if (!value) return [];
+
+  return Array.isArray(value) ? value : value.split(/\s+/).filter(Boolean);
+}
+
 export interface ClientMetadataOptions {
   origin: string;
   name: string;
-  path?: string;
   redirectUris?: string[];
   postLogoutRedirectUris?: string[];
   scope?: string | string[];
@@ -16,12 +21,10 @@ export function clientMetadata(
 ): Record<string, unknown> {
   const origin = new URL(options.origin).origin;
   const home = `${origin}/`;
-  const scope = Array.isArray(options.scope)
-    ? options.scope.join(" ")
-    : options.scope;
+  const scope = list(options.scope).join(" ");
 
   return {
-    client_id: `${origin}${options.path ?? CLIENT_PATH}`,
+    client_id: `${origin}${CLIENT_PATH}`,
     client_name: options.name,
     client_uri: home,
     redirect_uris: options.redirectUris ?? [home],

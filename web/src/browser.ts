@@ -1,6 +1,6 @@
 import { type DpopKey, dpopProof, forgetDpopKey, heldDpopKey } from "./dpop.js";
 import { type Jwk, verifyIdToken } from "./jwt.js";
-import { CLIENT_PATH } from "./metadata.js";
+import { CLIENT_PATH, list } from "./metadata.js";
 import { challenge, method, random } from "./pkce.js";
 import {
   type AvatarStyle,
@@ -79,12 +79,6 @@ export interface BrowserClient {
   logout(options?: LogoutOptions): Promise<void>;
 }
 
-function list(value: string | string[] | undefined): string[] {
-  if (!value) return [];
-
-  return Array.isArray(value) ? value : value.split(/\s+/).filter(Boolean);
-}
-
 export function createBrowserClient(options: BrowserOptions): BrowserClient {
   const issuer = options.issuer.replace(/\/$/, "");
   const call = options.fetch ?? globalThis.fetch.bind(globalThis);
@@ -129,6 +123,12 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
     return { DPoP: await dpopProof(await dpopKey, method, url, accessToken) };
   };
   let generation = 0;
+
+  const clear = () => {
+    held = null;
+    claims = null;
+    save();
+  };
 
   const save = () => {
     try {
@@ -350,9 +350,7 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
       tokens = await post(body);
     } catch (failure) {
       if ((failure as { code?: string }).code === "invalid_grant") {
-        held = null;
-        claims = null;
-        save();
+        clear();
       }
 
       throw failure;
@@ -463,7 +461,7 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
 
       if (waiting.nonce) {
         if (!tokens.id_token) {
-          held = null;
+          clear();
 
           throw masksError(
             "invalid_token",
@@ -479,8 +477,7 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
             keyFor,
           });
         } catch (failure) {
-          held = null;
-          claims = null;
+          clear();
 
           throw failure;
         }
@@ -488,8 +485,7 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
         const named = claims?.org?.key;
 
         if (waiting.organization && named && named !== waiting.organization) {
-          held = null;
-          claims = null;
+          clear();
 
           throw masksError(
             "invalid_token",
@@ -590,17 +586,17 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
       const leaving = held;
 
       generation += 1;
-      held = null;
-      claims = null;
       refreshing = null;
       dpopKey = null;
       store.removeItem(PENDING);
-      save();
-      await forgetDpopKey();
+      clear();
 
-      if (leaving?.refresh_token) {
-        await revoke(leaving.refresh_token).catch(() => undefined);
-      }
+      await Promise.all([
+        options.dpop ? forgetDpopKey() : undefined,
+        leaving?.refresh_token
+          ? revoke(leaving.refresh_token).catch(() => undefined)
+          : undefined,
+      ]);
 
       if (!everywhere) return;
 

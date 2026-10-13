@@ -38,7 +38,6 @@ export interface MasksVitePlugin {
 }
 
 export function masks(options: MasksViteOptions): MasksVitePlugin {
-  const path = options.path ?? CLIENT_PATH;
   const document = (origin: string) =>
     `${JSON.stringify(clientMetadata({ ...options, origin }), null, 2)}\n`;
 
@@ -47,7 +46,7 @@ export function masks(options: MasksViteOptions): MasksVitePlugin {
 
     configureServer(server) {
       server.middlewares.use((request, response, next) => {
-        if (request.url?.split("?")[0] !== path) return next();
+        if (request.url?.split("?")[0] !== CLIENT_PATH) return next();
 
         response.setHeader("Content-Type", "application/json");
         response.setHeader("Cache-Control", "no-cache");
@@ -70,7 +69,7 @@ export function masks(options: MasksViteOptions): MasksVitePlugin {
 
       this.emitFile({
         type: "asset",
-        fileName: path.replace(/^\/+/, ""),
+        fileName: CLIENT_PATH.slice(1),
         source: document(origin),
       });
     },
