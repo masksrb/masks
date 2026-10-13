@@ -270,6 +270,12 @@ A refusal carries an RFC 6750 challenge whose `resource_metadata` points at
 keys could not be fetched or the replay store failed, it answers `503` with no challenge, so the
 client keeps a token that may be fine.
 
+The app fetches the issuer's keys again every five minutes. While masks cannot be reached:
+
+- A key fetched within the last hour still checks tokens. A key masks removed in that time stays
+  accepted until masks answers again or the hour ends.
+- The app tries again at most every 30 seconds, and the issuer's discovery at most every minute.
+
 A token [bound to a key with DPoP](/guides/security/#binding-a-token-with-dpop) is accepted only as
 `Authorization: DPoP`, with a proof that:
 
