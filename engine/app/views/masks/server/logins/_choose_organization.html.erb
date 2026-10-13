@@ -4,7 +4,7 @@
            title: client ? t(".title_to", client: client) : t(".title"),
            lede: t(".lede") %>
 
-<%= render "masks/server/application/person", actor: login.actor, sign_out: true if login.actor %>
+<%= render "masks/server/application/actor", actor: login.actor, sign_out: true if login.actor %>
 
 <div class="providers">
   <% (login.as_json["organizations"] || []).each do |organization| %>

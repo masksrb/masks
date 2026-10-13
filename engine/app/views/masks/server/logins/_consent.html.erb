@@ -14,7 +14,7 @@
 
 <%= render "masks/server/logins/head", title: t(".title", client: login.client&.name) %>
 
-<%= render "masks/server/application/person", actor: login.actor, sign_out: true if login.actor %>
+<%= render "masks/server/application/actor", actor: login.actor, sign_out: true if login.actor %>
 
 <div class="slab">
   <div class="ledger-row">

@@ -416,8 +416,7 @@ module Masks
             "rid" => rid,
             "docs" => ::Rails.configuration.masks.docs_url,
             "actor" => actor && { "nickname" => actor.nickname, "name" => actor.name,
-                                  "identifier" => actor.identifier },
-            "person" => person_json,
+                                  "identifier" => actor.identifier, "card" => card_json },
             "client" => client_json,
             "tenant" => tenant && {
               "name" => tenant.name, "logo" => tenant.logo_url
@@ -429,10 +428,8 @@ module Masks
           answering.reduce(base) { |json, state| state.enabled? ? json.merge(state.as_json) : json }
         end
 
-        def person_json
-          return nil if actor.nil? || authenticated_at.nil?
-
-          actor.person_json
+        def card_json
+          actor.card_json if authenticated_at
         end
 
         def forget_vanished_actor!

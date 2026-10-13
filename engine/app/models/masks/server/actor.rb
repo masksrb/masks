@@ -190,14 +190,14 @@ module Masks
         holds?(Scopes::MANAGE)
       end
 
-      def person_json
+      def card_json
         style = Avatars.held?(self) ? Avatars::PHOTO : Avatars::FALLBACK
 
         {
           "name" => display_name,
           "details" => display_details,
-          "note" => (I18n.t("application.person.unconfirmed") if email_unconfirmed?),
-          "role" => (I18n.t("application.person.manager") if manages?),
+          "note" => (I18n.t("application.actor.unconfirmed") if email_unconfirmed?),
+          "role" => (I18n.t("application.actor.manager") if manages?),
           "avatar" => Avatars.url(self, style, subject: uuid, size: 128)
         }
       end

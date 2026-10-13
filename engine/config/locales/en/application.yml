@@ -1,6 +1,6 @@
 en:
   application:
-    person:
+    actor:
       manager: "Manager"
       unconfirmed: "unconfirmed"
       sign_out: "Sign out"

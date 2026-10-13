@@ -1,7 +1,7 @@
 <script>
 import { initials } from "../lib/initial.js";
 import Head from "../shared/Head.svelte";
-import Person from "../shared/Person.svelte";
+import Actor from "../shared/Actor.svelte";
 
 let { login } = $props();
 
@@ -27,8 +27,8 @@ async function choose(organization) {
   lede={login.t("lede")}
 />
 
-{#if login.auth.person}
-  <Person person={login.auth.person} signOut={login.t("sign_out")} />
+{#if login.auth.actor?.card}
+  <Actor actor={login.auth.actor.card} signOut={login.t("sign_out")} />
 {/if}
 
 <ul class="org-picks" aria-label={login.t("title")}>

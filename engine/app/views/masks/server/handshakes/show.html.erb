@@ -43,7 +43,7 @@
 
 <div class="handshake-as">
   <span class="handshake-caption"><%= t(".signed_in_as") %></span>
-  <%= render "masks/server/application/person", actor: current_actor, sign_out: true, unconfirmed: t(".unconfirmed") %>
+  <%= render "masks/server/application/actor", actor: current_actor, sign_out: true, unconfirmed: t(".unconfirmed") %>
 </div>
 
 <div class="slab handshake-plain">

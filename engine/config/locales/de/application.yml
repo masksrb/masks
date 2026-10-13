@@ -1,6 +1,6 @@
 de:
   application:
-    person:
+    actor:
       manager: "Verwalter"
       unconfirmed: "unbestätigt"
       sign_out: "Abmelden"

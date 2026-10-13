@@ -115,12 +115,12 @@ module Masks
       test "who is signing in is shown once the first factor passes and not before" do
         enable_otp(@actor)
 
-        assert_nil event("identify", identifier: "owner")["person"]
+        assert_nil event("identify", identifier: "owner")["actor"]
 
-        person = event("password", password: "password")["person"]
+        card = event("password", password: "password").dig("actor", "card")
 
-        assert_equal @actor.display_name, person["name"]
-        assert_match %r{/avatars/#{@actor.uuid}/}, person["avatar"]
+        assert_equal @actor.display_name, card["name"]
+        assert_match %r{/avatars/#{@actor.uuid}/}, card["avatar"]
       end
 
       test "one tenant's actor cannot sign in against another" do

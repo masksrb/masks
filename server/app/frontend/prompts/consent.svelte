@@ -3,7 +3,7 @@ import TenantMark from "../shared/TenantMark.svelte";
 import Action from "../shared/Action.svelte";
 import ClientMark from "../shared/ClientMark.svelte";
 import Head from "../shared/Head.svelte";
-import Person from "../shared/Person.svelte";
+import Actor from "../shared/Actor.svelte";
 import { ranked } from "../lib/scopes.js";
 
 let { login } = $props();
@@ -30,8 +30,8 @@ const links = $derived(
 
 <Head {login} title={login.t("title", { client })} />
 
-{#if login.auth.person}
-  <Person person={login.auth.person} signOut={login.t("sign_out")} />
+{#if login.auth.actor?.card}
+  <Actor actor={login.auth.actor.card} signOut={login.t("sign_out")} />
 {/if}
 
 <div class="slab">

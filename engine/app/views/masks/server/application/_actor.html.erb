@@ -1,0 +1,27 @@
+<% sign_out = local_assigns.fetch(:sign_out, false) %>
+<% details = actor.display_details %>
+
+<div class="actor">
+  <%= avatar_tag actor, size: 44, class: "actor-avatar" %>
+
+  <div class="actor-who">
+    <span class="actor-name"><%= actor.display_name %></span>
+
+    <% if details.any? || actor.email_unconfirmed? %>
+      <span class="actor-sub">
+        <%= details.join(" · ") %>
+        <% if actor.email_unconfirmed? %>
+          <span class="actor-note"><%= local_assigns[:unconfirmed] || t("application.actor.unconfirmed") %></span>
+        <% end %>
+      </span>
+    <% end %>
+
+    <% if actor.manages? %>
+      <span class="actor-role"><%= t("application.actor.manager") %></span>
+    <% end %>
+  </div>
+
+  <% if sign_out %>
+    <%= button_to t("application.actor.sign_out"), logout_path, class: "textlink", form_class: "signout" %>
+  <% end %>
+</div>

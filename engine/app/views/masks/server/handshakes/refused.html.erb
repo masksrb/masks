@@ -6,7 +6,7 @@
 <h1 class="prompt-title"><%= t(".title") %></h1>
 
 <% if current_actor %>
-  <%= render "masks/server/application/person", actor: current_actor, sign_out: true %>
+  <%= render "masks/server/application/actor", actor: current_actor, sign_out: true %>
 <% end %>
 
 <p class="said"><%= @description %></p>
