@@ -23,7 +23,7 @@ module Masks
 
       class << self
         def start!(actor:, device: nil, user_agent: nil, ip_address: nil, amr: [], origin: nil, policy: nil,
-                   first_factor: {})
+                   first_factor: {}, authenticated_at: nil)
           secret = SecureRandom.urlsafe_base64(48)
           lifetime = policy&.session_lifetime&.seconds || LIFETIME
           now = Time.current
@@ -36,7 +36,7 @@ module Masks
             user_agent: user_agent,
             ip_address: ip_address,
             origin: origin.presence || Current.origin,
-            authenticated_at: now,
+            authenticated_at: authenticated_at || now,
             last_seen_at: now,
             amr: Array(amr),
             first_factor: first_factor["factor"],
@@ -71,10 +71,12 @@ module Masks
         { "factor" => first_factor, "provider_id" => provider_id }.compact
       end
 
-      def first_factored!(held)
-        return if held["factor"].blank? || held == first_factored_by
+      def first_factored!(held, at: nil)
+        changes = {}
+        changes[:authenticated_at] = at if at.present? && (authenticated_at.nil? || at > authenticated_at)
+        changes.merge!(first_factor: held["factor"], provider_id: held["provider_id"]) if held["factor"].present? && held != first_factored_by
 
-        update!(first_factor: held["factor"], provider_id: held["provider_id"])
+        update!(changes) if changes.any?
       end
 
       def bound?

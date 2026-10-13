@@ -151,7 +151,8 @@ module Masks
           return unless login.actor
 
           if login.touched?(:first_factor)
-            sign_in(login.actor, amr: login.amr, policy: login.policy, first_factor: login.first_factored_by)
+            sign_in(login.actor, amr: login.amr, policy: login.policy, first_factor: login.first_factored_by,
+                                 authenticated_at: login.factored_at(:first_factor))
           elsif login.signed_in? && login.touched?(:second_factor)
             current_session.update!(amr: Array(current_session.amr) | login.amr)
           end

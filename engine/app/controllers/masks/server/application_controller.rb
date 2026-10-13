@@ -143,7 +143,7 @@ module Masks
           Current.device = device
         end
 
-        def sign_in(actor, amr: [], policy: nil, first_factor: {})
+        def sign_in(actor, amr: [], policy: nil, first_factor: {}, authenticated_at: nil)
           carried = session.to_hash.slice(REQUESTS, HANDSHAKES, "login", RETURN_TO)
           reset_session
           carried.each { |key, value| session[key] = value }
@@ -157,7 +157,8 @@ module Masks
             ip_address: request.remote_ip,
             amr: amr,
             policy: policy,
-            first_factor: first_factor
+            first_factor: first_factor,
+            authenticated_at: authenticated_at
           )
 
           cookies.encrypted[:masks_session] = {
@@ -301,17 +302,18 @@ module Masks
         end
 
         def settle!(login)
-          hold(login.actor, amr: login.amr, policy: login.policy, first_factor: login.first_factored_by)
+          hold(login.actor, amr: login.amr, policy: login.policy, first_factor: login.first_factored_by,
+                            authenticated_at: login.factored_at(:first_factor))
           forget_login
         end
 
-        def hold(actor, amr: [], policy: nil, first_factor: {})
+        def hold(actor, amr: [], policy: nil, first_factor: {}, authenticated_at: nil)
           return if actor.nil?
-          return current_session.first_factored!(first_factor) if current_session&.actor_id == actor.id
+          return current_session.first_factored!(first_factor, at: authenticated_at) if current_session&.actor_id == actor.id
 
           sign_out if current_session
 
-          sign_in(actor, amr: amr, policy: policy, first_factor: first_factor)
+          sign_in(actor, amr: amr, policy: policy, first_factor: first_factor, authenticated_at: authenticated_at)
         end
 
         def policy_denied(denial)

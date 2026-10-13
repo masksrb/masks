@@ -155,6 +155,49 @@ module Masks
         assert awaiting_login?
         assert_equal "first-factor", auth_data["prompt"]
       end
+
+      test "every ID token from one session carries the moment of its first factor as auth_time" do
+        authorize(client_id: @registration["client_id"], max_age: 10_000)
+        rid = current_rid
+
+        post "/login", params: { event: "identify", identifier: @actor.nickname, rid: rid }, as: :json
+        post "/login", params: { event: "password", password: "password", rid: rid }, as: :json
+        factored = Time.current.to_i
+
+        travel 3.seconds
+        post "/login", params: { event: "consent", approve: "yes", rid: rid }
+        follow_redirect! while response.redirect? && URI.parse(response.location).host.to_s.end_with?(".auth.test")
+        first = auth_time_for(code_from)
+
+        authorize(client_id: @registration["client_id"], max_age: 10_000, state: "again")
+        second = auth_time_for(code_from)
+
+        assert_equal factored, first
+        assert_equal first, second
+      end
+
+      test "signing in again for max_age moves auth_time forward, so the next authorization is silent" do
+        authorized_code(actor: @actor, registration: @registration)
+        within { Session.live.each { |record| record.update!(authenticated_at: 10.minutes.ago) } }
+
+        authorize(client_id: @registration["client_id"], max_age: 60)
+        advance!("password", password: "password")
+        renewed = auth_time_for(code_from)
+
+        authorize(client_id: @registration["client_id"], max_age: 60, state: "again")
+
+        assert response.redirect?
+        assert_in_delta Time.current.to_i, renewed, 5
+        assert_equal renewed, auth_time_for(code_from)
+      end
+
+      private
+        def auth_time_for(code)
+          tokens = token(grant_type: "authorization_code", code: code, redirect_uri: REDIRECT_URI, code_verifier: verifier,
+                         client_id: @registration["client_id"], client_secret: @registration["client_secret"])
+
+          claims_in(tokens.fetch("id_token"))["auth_time"]
+        end
     end
   end
 end
