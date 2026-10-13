@@ -49,7 +49,7 @@ func (a *App) requireSession(w http.ResponseWriter, r *http.Request, v *visit, n
 	}
 
 	for _, privilege := range wanted {
-		if refused := person.member(privilege); refused != nil {
+		if refused := person.refused(privilege); refused != nil {
 			if a.save(w, r, held) {
 				a.forbid(w, r, refused)
 			}
@@ -125,10 +125,10 @@ func (a *App) askAgain(w http.ResponseWriter, r *http.Request, held *state, miss
 		}
 
 		if a.save(w, r, held) {
-			a.forbid(w, r, &refusal{
-				code:        "insufficient_scope",
-				description: "this account does not hold the " + strings.Join(missing, " and ") + " privilege",
-				scope:       strings.Join(scopes, " "),
+			a.forbid(w, r, &Forbidden{
+				Code:        "insufficient_scope",
+				Description: "this account does not hold the " + strings.Join(missing, " and ") + " privilege",
+				Scope:       strings.Join(scopes, " "),
 			})
 		}
 
@@ -155,8 +155,8 @@ func (a *App) askAgain(w http.ResponseWriter, r *http.Request, held *state, miss
 	http.Redirect(w, r, target, http.StatusFound)
 }
 
-func (a *App) forbid(w http.ResponseWriter, r *http.Request, refused *refusal) {
-	a.refuse(w, r, http.StatusForbidden, refused.code, refused.description)
+func (a *App) forbid(w http.ResponseWriter, r *http.Request, refused *Forbidden) {
+	a.refuse(w, r, http.StatusForbidden, refused.Code, refused.Description)
 }
 
 func (a *App) Protect(privileges ...string) func(http.Handler) http.Handler {
@@ -249,7 +249,7 @@ func (a *App) requireToken(w http.ResponseWriter, r *http.Request, next http.Han
 			return
 		}
 
-		a.challenge(w, verifier, http.StatusUnauthorized, &refusal{code: "invalid_token", description: bad.Description})
+		a.challenge(w, verifier, http.StatusUnauthorized, &Forbidden{Code: "invalid_token", Description: bad.Description})
 
 		return
 	}
@@ -266,15 +266,15 @@ func (a *App) requireToken(w http.ResponseWriter, r *http.Request, next http.Han
 	}
 
 	if len(scopes) > 0 {
-		a.challenge(w, verifier, http.StatusForbidden, &refusal{
-			code: "insufficient_scope", description: "this token does not carry " + strings.Join(scopes, " "), scope: strings.Join(scopes, " "),
+		a.challenge(w, verifier, http.StatusForbidden, &Forbidden{
+			Code: "insufficient_scope", Description: "this token does not carry " + strings.Join(scopes, " "), Scope: strings.Join(scopes, " "),
 		})
 
 		return
 	}
 
 	for _, privilege := range wanted {
-		if refused := person.member(privilege); refused != nil {
+		if refused := person.refused(privilege); refused != nil {
 			a.challenge(w, verifier, http.StatusForbidden, refused)
 			return
 		}
@@ -289,17 +289,17 @@ func presentedToken(r *http.Request) string {
 	return strings.TrimSpace(token)
 }
 
-func (a *App) challenge(w http.ResponseWriter, verifier *masks.Verifier, status int, refused *refusal) {
-	scope := refused.scope
+func (a *App) challenge(w http.ResponseWriter, verifier *masks.Verifier, status int, refused *Forbidden) {
+	scope := refused.Scope
 	if scope == "" && len(a.config.ResourceScopes) > 0 {
 		scope = strings.Join(a.config.ResourceScopes, " ")
 	}
 
-	for _, challenge := range verifier.Challenge(refused.code, refused.description, scope) {
+	for _, challenge := range verifier.Challenge(refused.Code, refused.Description, scope) {
 		w.Header().Add("WWW-Authenticate", challenge)
 	}
 
-	writeJSON(w, status, map[string]string{"error": refused.code, "error_description": refused.description})
+	writeJSON(w, status, map[string]string{"error": refused.Code, "error_description": refused.Description})
 }
 
 func (a *App) ResourceMetadata() http.Handler {
@@ -321,8 +321,8 @@ func (a *App) ResourceMetadata() http.Handler {
 			body["scopes_supported"] = a.config.ResourceScopes
 		}
 
-		if a.config.Name != "" {
-			body["resource_name"] = a.config.Name
+		if name := a.nameFor(r); name != "" {
+			body["resource_name"] = name
 		}
 
 		w.Header().Set("Content-Type", "application/json")

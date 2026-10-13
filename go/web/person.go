@@ -64,35 +64,51 @@ func (p *Person) Claim(name string, into any) bool {
 	return p.Identity != nil && p.Identity.Claim(name, into)
 }
 
-func (p *Person) member(privilege Privilege) *refusal {
+func (p *Person) refused(privilege Privilege) *Forbidden {
 	if len(privilege.Role) == 0 && privilege.Organization == "" {
 		return nil
 	}
 
 	held := p.Organization
 	if held == nil || held.Key == "" {
-		return &refusal{code: "insufficient_organization", description: "this sign-in names no organization", scope: masks.ScopeOrganization}
+		return &Forbidden{Code: "insufficient_organization", Description: "this sign-in names no organization", Scope: masks.ScopeOrganization}
 	}
 
 	if privilege.Organization != "" && held.Key != privilege.Organization && held.ID != privilege.Organization {
-		return &refusal{code: "insufficient_organization", description: "this sign-in is for " + held.Key + ", not " + privilege.Organization}
+		return &Forbidden{Code: "insufficient_organization", Description: "this sign-in is for " + held.Key + ", not " + privilege.Organization}
 	}
 
 	if len(privilege.Role) == 0 || held.HasRole(privilege.Role...) {
 		return nil
 	}
 
-	return &refusal{code: "insufficient_role", description: held.Role + " in " + held.Key + " is not " + strings.Join(privilege.Role, " or ")}
+	return &Forbidden{Code: "insufficient_role", Description: held.Role + " in " + held.Key + " is not " + strings.Join(privilege.Role, " or ")}
 }
 
-func (p *Person) holds(privilege Privilege) bool {
+func (p *Person) Holds(privilege Privilege) bool {
+	if !p.SignedIn {
+		return false
+	}
+
 	for _, scope := range privilege.Scope {
 		if !slices.Contains(p.Scopes, scope) {
 			return false
 		}
 	}
 
-	return p.member(privilege) == nil
+	return p.refused(privilege) == nil
+}
+
+func (p *Person) Member(privilege Privilege) error {
+	if !p.SignedIn {
+		return &Forbidden{Code: "login_required", Description: "nobody is signed in"}
+	}
+
+	if refused := p.refused(privilege); refused != nil {
+		return refused
+	}
+
+	return nil
 }
 
 func (a *App) personFrom(identity *masks.Identity, token *masks.Token, account string) *Person {
@@ -164,7 +180,7 @@ func (a *App) privilege(held *Person) {
 	held.Privileges = []string{}
 
 	for _, name := range a.names {
-		if held.holds(a.config.Privileges[name]) {
+		if held.Holds(a.config.Privileges[name]) {
 			held.Privileges = append(held.Privileges, name)
 		}
 	}

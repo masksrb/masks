@@ -44,7 +44,7 @@ the app and open `/auth/handshake`.
 | --- | --- |
 | `Issuer`, `IssuerFor` | The masks issuer, or a function that names one for each request. |
 | `Resource`, `ResourceFor` | The app's own absolute `https` URL. Sign-ins name it as their resource, and tokens for the API must name it as their audience. |
-| `Name` | The name the handshake gives the app. Defaults to the resource's host. |
+| `Name`, `NameFor` | The name the handshake gives the app, or a function that names it for each request. Defaults to the resource's host. |
 | `Scope` | What every sign-in asks for. It must include `openid`. Defaults to `openid profile email`. Add `offline_access` to refresh tokens. |
 | `Privileges` | See [privileges](#privileges). |
 | `Mount` | Where `Handler` answers. Defaults to `/auth`. |
@@ -180,6 +180,7 @@ send the browser to, instead of a redirect.
 | `Organization`, `Organizations`, `HasRole("owner")` | See [organizations](#organizations). |
 | `Scopes`, `HasScope("catalog:read")` | What the token carries. |
 | `Privileges`, `HasPrivilege("admin")` | See [privileges](#privileges). |
+| `Holds(privilege)`, `Member(privilege)` | Check a `web.Privilege` that `Privileges` does not name. `Member` checks only its role and organization, and returns a `*web.Forbidden` with the reason. |
 | `AccessToken` | The token to spend against a resource server. |
 | `Claim("groups", &groups)` | Any other claim the sign-in kept. |
 

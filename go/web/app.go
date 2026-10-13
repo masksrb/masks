@@ -37,6 +37,7 @@ type Config struct {
 	Resource    string
 	ResourceFor func(*http.Request) (string, error)
 	Name        string
+	NameFor     func(*http.Request) string
 
 	Scope          []string
 	Namespace      string
@@ -379,8 +380,16 @@ func (a *App) approvedScope() []string {
 	return asked
 }
 
-func (a *App) handshake(s *site) *masks.Handshake {
-	name := a.config.Name
+func (a *App) nameFor(r *http.Request) string {
+	if a.config.NameFor != nil {
+		return a.config.NameFor(r)
+	}
+
+	return a.config.Name
+}
+
+func (a *App) handshake(r *http.Request, s *site) *masks.Handshake {
+	name := a.nameFor(r)
 	if name == "" {
 		name = strings.TrimPrefix(strings.TrimPrefix(s.origin, "https://"), "http://")
 	}
@@ -523,10 +532,14 @@ var (
 	ErrForeignCredentials = errors.New("masks/web: the app's credentials were issued by another issuer")
 )
 
-type refusal struct {
-	code        string
-	description string
-	scope       string
+type Forbidden struct {
+	Code        string
+	Description string
+	Scope       string
+}
+
+func (f *Forbidden) Error() string {
+	return "masks/web: " + f.Code + ": " + f.Description
 }
 
 func wantsJSON(r *http.Request) bool {

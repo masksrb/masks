@@ -1259,3 +1259,47 @@ func TestTheIssuerCacheIsBounded(t *testing.T) {
 		t.Fatalf("the cache holds %d issuers", held)
 	}
 }
+
+func TestAPersonChecksAPrivilegeOfTheirOwn(t *testing.T) {
+	person := &Person{SignedIn: true, Scopes: []string{"catalog:read"}, Organization: &masks.Organization{Key: "acme", Role: "member"}}
+
+	if !person.Holds(Privilege{Scope: []string{"catalog:read"}}) || person.Holds(Privilege{Scope: []string{"catalog:admin"}}) {
+		t.Fatal("Holds misread the scopes")
+	}
+
+	var refused *Forbidden
+
+	if err := person.Member(Privilege{Role: []string{"owner"}}); !errors.As(err, &refused) || refused.Code != "insufficient_role" {
+		t.Fatalf("a member was taken for an owner: %v", err)
+	}
+
+	if err := person.Member(Privilege{Organization: "globex"}); !errors.As(err, &refused) || refused.Code != "insufficient_organization" {
+		t.Fatalf("acme was taken for globex: %v", err)
+	}
+
+	if err := person.Member(Privilege{Role: []string{"member"}, Organization: "acme"}); err != nil {
+		t.Fatalf("a member of acme was refused: %v", err)
+	}
+
+	nobody := PersonFrom(context.Background())
+
+	if nobody.Holds(Privilege{}) || nobody.Member(Privilege{}) == nil {
+		t.Fatal("somebody signed out holds a privilege")
+	}
+}
+
+func TestTheNameCanBeChosenForEachRequest(t *testing.T) {
+	app, err := New(Config{
+		Issuer:   "https://id.example",
+		Resource: "https://app.example",
+		Secret:   secret(),
+		NameFor:  func(r *http.Request) string { return "Catalog for " + r.Host },
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if name := app.nameFor(httptest.NewRequest(http.MethodGet, "https://acme.app.example/", nil)); name != "Catalog for acme.app.example" {
+		t.Fatalf("the name was %q", name)
+	}
+}

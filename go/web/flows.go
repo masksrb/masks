@@ -675,7 +675,7 @@ func (a *App) showHandshake(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
 	_ = connectedPage.Execute(w, map[string]string{
-		"Name": a.handshake(s).Name, "Issuer": s.issuer.URL, "ClientID": s.held.ClientID, "Handshake": a.HandshakePath(),
+		"Name": a.handshake(r, s).Name, "Issuer": s.issuer.URL, "ClientID": s.held.ClientID, "Handshake": a.HandshakePath(),
 	})
 }
 
@@ -693,7 +693,7 @@ func (a *App) createHandshake(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) shake(w http.ResponseWriter, r *http.Request, v *visit) {
-	target, shaken, err := a.handshake(v.site).Start()
+	target, shaken, err := a.handshake(r, v.site).Start()
 	if err != nil {
 		a.failed(w, r, err)
 		return
@@ -737,7 +737,7 @@ func (a *App) handshakeCallback(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	registration, err := a.handshake(s).Complete(r.Context(), query, returned)
+	registration, err := a.handshake(r, s).Complete(r.Context(), query, returned)
 	if err != nil {
 		if a.save(w, r, held) {
 			a.failed(w, r, err)
