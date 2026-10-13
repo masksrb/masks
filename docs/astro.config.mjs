@@ -114,6 +114,7 @@ export default defineConfig({
           { label: "Manage API", slug: "reference/manage" },
           { label: "Manage API explorer", slug: "reference/explorer" },
           { label: "@masks/client", slug: "reference/browser" },
+          { label: "@masks/server", slug: "reference/node" },
           { label: "Masks::Client", slug: "reference/ruby" },
           { label: "Masks::Rails", slug: "reference/rails" },
           {

@@ -1,0 +1,222 @@
+---
+title: "@masks/server"
+description: The options, routes, and methods of the JavaScript server package, for Next.js, Auth.js, Express, Hono, and any app that takes a Request.
+---
+
+The [JavaScript apps guide](/guides/javascript/) shows how to set each of these up.
+
+## Imports
+
+| Import | |
+| --- | --- |
+| `@masks/server` | `Masks`, which answers a `Request` with a `Response`, and the client underneath it: discovery, the handshake, the code flow, tokens, DPoP, introspection, token exchange, delegations, enrollment, and checking tokens. |
+| `@masks/server/next` | `masksNext`: route handlers, server component helpers, and a proxy for the Next.js App Router. |
+| `@masks/server/authjs` | `masksAuth`: masks as an Auth.js provider, with the handshake, refresh, privileges, and back-channel logout. |
+| `@masks/server/express` | `masksExpress` and `masked`: middleware for Express. |
+| `@masks/server/hono` | `masksHono` and `masked`: middleware for Hono, which also runs on Bun, Deno, and Cloudflare Workers. |
+
+`next`, `next-auth`, `express`, and `hono` are optional peer dependencies.
+
+## Options
+
+`Masks`, `masksNext`, `masksExpress`, and `masksHono` take these options. `issuer`, `resource`,
+`name`, and `organization` also accept a function that takes the request.
+
+| Option | Default | |
+| --- | --- | --- |
+| `issuer` | `MASKS_ISSUER` | The tenant people sign in against, such as `https://acme.auth.example.com`. |
+| `resource` | `MASKS_RESOURCE` | The app's absolute URL. The handshake registers the app for it, and tokens for the app name it as their audience. |
+| `secret` | `MASKS_SECRET` | At least 32 characters that seal the session cookie. A list, or a comma-separated variable, puts the newest secret first. |
+| `name` | | The app's name on the masks approval screen. |
+| `scope` | `openid profile email offline_access` | The scopes every sign-in asks for. |
+| `privileges` | | Named [privileges](#privileges) that routes ask for. |
+| `manages` | | The privilege, or a function of the request and the person, that lets someone see, reconnect, and disconnect the app's connection. When it is not set, nobody can. |
+| `namespace` | | A scope namespace, such as `catalog:`, that the handshake registers once for every scope under it. |
+| `organization` | | The organization every sign-in names, by key or id. |
+| `resourceScopes` | | The scopes the app accepts in an access token. |
+| `basePath` | `/auth` | Where the [routes](#routes) are answered. |
+| `afterSignIn` | `/` | Where a sign-in lands when it names no `return_to`. |
+| `afterSignOut` | `/` | Where a sign-out lands. |
+| `signOutOfIssuer` | `false` | Whether every sign-out also signs out of masks. |
+| `maxAge` | 14 days | How long a session lasts from its sign-in, in seconds. |
+| `sessions` | the cookie | A `SessionStore` that keeps sessions on the server. The cookie then holds only a sealed id. |
+| `credentials` | `masks.json` | A `CredentialStore` for the client ID and secret the handshake returns. With `MASKS_CLIENT_ID` set, the app reads `MASKS_CLIENT_ID` and `MASKS_CLIENT_SECRET` and writes nothing. |
+| `logouts` | memory | A `LogoutStore` for the back-channel logouts masks sent. |
+| `replay` | memory | A `ReplayStore` for the DPoP proofs and logout tokens already used. |
+| `onLogout` | | Called with each back-channel logout token. |
+| `delegations` | | The path a provider connection comes back to. Setting it adds `masks:delegate:` to the handshake. |
+| `avatars` | 5 MB | `{ bytes }`, the largest photo the avatar route passes on. |
+| `fetch` | `globalThis.fetch` | The `fetch` used for avatars. |
+| `allowPlainHTTP` | `false` | Whether an `http` issuer is accepted on a host other than `localhost`, a `.localhost` name, or a loopback address. |
+
+### Privileges
+
+```ts
+privileges: {
+  admin: ["catalog:admin"],
+  billing: { role: ["owner", "billing"] },
+  acme_admin: { scope: ["catalog:admin"], role: "owner", organization: "acme" },
+}
+```
+
+| Key | |
+| --- | --- |
+| `scope` | Scopes the token has to hold. A list on its own is a short way to write `{ scope: [...] }`. |
+| `role` | One role or several in the organization signed in to. Any one is enough. |
+| `organization` | The one organization the privilege applies to, by key or id. |
+
+## Routes
+
+`Masks` answers these under `basePath`:
+
+| Route | |
+| --- | --- |
+| `GET /auth` | Starts a sign-in. Takes `return_to`, `organization`, and `privilege`. |
+| `GET /auth/callback` | Finishes it. |
+| `GET /auth/refresh` | Refreshes the session and goes back to `return_to`. |
+| `GET /auth/session` | The signed-in person as JSON, for a single-page app. |
+| `GET /auth/avatar` | The person's photo, fetched from masks with their token. Takes `size`. |
+| `GET`, `POST`, or `DELETE /auth/logout` | Signs out. Takes `everywhere` to sign out of masks as well. |
+| `GET /auth/logout/return` | Where masks sends the browser after signing out everywhere. |
+| `POST /auth/logout/backchannel` | Takes a back-channel logout token from masks. Each token works once. |
+| `GET` or `POST /auth/handshake` | Starts the handshake, or shows the connection. |
+| `GET /auth/handshake/callback` | Finishes the handshake. |
+| `POST /auth/handshake/disconnect` or `DELETE /auth/handshake` | Disconnects the app. |
+
+`masks.handle` also answers `/.well-known/oauth-protected-resource`.
+
+## Masks
+
+Each method takes the incoming `Request`. A `cookies` array holds `Set-Cookie` values to append to
+the response.
+
+| Method | |
+| --- | --- |
+| `masks.handle(request)` | Answers a masks route, or returns `undefined` for any other path. |
+| `masks.masked(request)` | The person, refreshing the session first, and the `cookies` to set. |
+| `masks.peek(request)` | The person, without refreshing or setting anything. |
+| `masks.require(request, ...privileges)` | The person and `cookies`, or the `response` that sends them to sign in or refuses them. |
+| `masks.protect(request, ...privileges)` | The same, for an access token. |
+| `masks.guard(request, ...privileges)` | `protect` when the request carries an `Authorization` header, or carries no session and wants JSON, and `require` otherwise. |
+| `masks.metadata(request)` | The protected resource metadata. |
+| `masks.loginURL({ returnTo, organization, privilege })` | A link that signs the person in. |
+| `masks.logoutPath` | The path a sign-out form posts to. |
+| `masks.connection(request)` | Whether the app holds credentials, with its `client_id`. |
+| `masks.registered(request)` | Whether masks still knows the app. |
+| `masks.disconnect(request)` | Deletes the registration and the credentials. |
+| `masks.client(request)` | The app's `Client`, for calls of your own. |
+| `masks.delegations(request)` | `Delegations` for the app's client. Needs `delegations`. |
+| `masks.startDelegation(request, provider, { prompt, maxAge })` | Sends a signed-in person to connect a provider. |
+| `masks.finishDelegation(request)` | The `connection` and its `secret`, and the `cookies` to set. |
+
+## Next.js
+
+`masksNext(options)` returns:
+
+| | |
+| --- | --- |
+| `handlers` | `GET`, `POST`, and `DELETE` for `app/auth/[[...masks]]/route.ts`. |
+| `auth()` | The person, in a server component, a server action, or a route handler. |
+| `requireAuth(...privileges)` | The same, after sending a signed-out visitor to sign in and checking each privilege. |
+| `withMasks(handler, ...privileges)` | Guards a route handler by session or by token, and passes `{ masked }` to it. |
+| `proxy({ protect })` | Refreshes the session before a page renders. Sends a signed-out visitor to a path under one of `protect` to sign in. |
+| `metadata` | The `GET` handler for `/.well-known/oauth-protected-resource`. |
+| `masks` | The `Masks` underneath. |
+
+## Auth.js
+
+`masksAuth(NextAuth, options)` takes every Auth.js option, and these:
+
+| Option | Default | |
+| --- | --- | --- |
+| `issuer` | `MASKS_ISSUER` | The tenant people sign in against. |
+| `resource` | `MASKS_RESOURCE`, then the origin of `AUTH_URL`, then the request's origin | The app's public address. |
+| `secret` | `AUTH_SECRET` | The Auth.js secret. It also seals what the refresh store holds. |
+| `id` | `masks` | The provider id, as in `signIn("masks")`. |
+| `label` | `masks` | The provider's name on the Auth.js sign-in page. |
+| `name`, `scope`, `namespace`, `organization`, `privileges`, `manages`, `credentials`, `delegations`, `avatars`, `signOutOfIssuer`, `onLogout`, `allowPlainHTTP` | | As in [options](#options). |
+| `refreshes` | memory | A `RefreshStore` shared by every server, so each sign-in is refreshed once between them. |
+| `logouts` | memory | A `LogoutStore` shared by every server. |
+| `replay` | memory | A `ReplayStore` shared by every server, so each logout token works once. |
+
+It returns what `NextAuth` returns, and:
+
+| | |
+| --- | --- |
+| `handlers` | `GET` and `POST`, which also answer the routes below. |
+| `auth()` | The Auth.js session. `session.masks` holds what `GET /auth/session` returns, and `session.user.id` is the subject. No token reaches the browser. |
+| `guard(...privileges)` | A signed-in `Masked`. It sends a signed-out person to sign in, and asks masks for a privilege's missing scopes once. A missing role or organization throws `ForbiddenError`. |
+| `accessToken()` | The access token, refreshed when it is about to expire, for calling an API from the server. |
+| `proxy` | Refreshes the session before a page renders, and tells `guard` which page to come back to. |
+| `masks` | The `MasksAuth` underneath, with `delegations`, `startDelegation`, and `finishDelegation` as in [Masks](#masks). |
+
+`session.user.image` is `/api/auth/masks/avatar` when masks holds a photo, since the photo needs the
+person's token. Otherwise it is the `picture` claim, then the identicon.
+
+These routes are answered under the Auth.js base path, `/api/auth` by default:
+
+| Route | |
+| --- | --- |
+| `GET /api/auth/masks/signin` | Starts a sign-in. Takes `callbackUrl`, `organization`, `privilege`, and `prompt`. |
+| `GET /api/auth/masks/handshake` | Starts the handshake before the app is connected. After that, shows the connection to someone `manages` allows. |
+| `POST /api/auth/masks/handshake` | Reconnects. |
+| `POST /api/auth/masks/handshake/disconnect` | Disconnects. |
+| `GET /api/auth/masks/handshake/callback` | Where masks sends the browser after an approval. |
+| `GET` or `POST /api/auth/masks/logout` | Signs out. Takes `callbackUrl`, and `everywhere` to sign out of masks as well. |
+| `GET /api/auth/masks/logout/return` | Where masks sends the browser after a sign-out everywhere. |
+| `GET /api/auth/masks/avatar` | The person's photo, fetched from masks with their token. Takes `size`. |
+| `POST /api/auth/masks/logout/backchannel` | Where masks posts a logout token. |
+
+## Masked
+
+The person is a `Masked`, and never `undefined`:
+
+| Property or method | |
+| --- | --- |
+| `signedIn` | Whether a sign-in is held and its token has not expired. |
+| `subject`, `name`, `nickname`, `email`, `emailVerified` | Who signed in. |
+| `picture`, `avatars` | The `picture` claim, then the photo, then the identicon, and each avatar URL. |
+| `tenant` | The tenant's `uuid`, `subdomain`, and `name`. |
+| `organization` | The organization signed in to, with its `id`, `key`, `name`, and `role`, or `undefined`. |
+| `organizations` | Every organization the person has joined, each with the role held there. |
+| `role("owner", "billing")` | Whether the person holds one of those roles in the organization signed in to. |
+| `scopes`, `permits("catalog:read")` | What the token holds. |
+| `privileges`, `privilege("admin")`, `holds("admin")` | The privileges the sign-in holds. |
+| `accessToken`, `authorization` | The token to send to a resource server, and the `Authorization` header that carries it. |
+| `claim("groups")` | Any other claim the sign-in kept. |
+| `toJSON()` | What `GET /auth/session` returns. It leaves out the access token. |
+
+## Stores
+
+```ts
+interface SessionStore {
+  get(id: string): unknown | Promise<unknown>;
+  set(id: string, data: unknown, maxAge: number): void | Promise<void>;
+  delete(id: string): void | Promise<void>;
+}
+
+interface CredentialStore {
+  read(request: Request): Credentials | undefined | Promise<Credentials | undefined>;
+  write?(request: Request, credentials: Credentials): void | Promise<void>;
+  clear?(request: Request): void | Promise<void>;
+}
+
+interface LogoutStore {
+  record(key: string, at: number, expiresIn: number): void | Promise<void>;
+  since(key: string): number | undefined | Promise<number | undefined>;
+}
+
+interface ReplayStore {
+  first(key: string, expiresIn: number): boolean | Promise<boolean>;
+}
+
+interface RefreshStore {
+  get(key: string): string | undefined | Promise<string | undefined>;
+  set(key: string, value: string, expiresIn: number): void | Promise<void>;
+  claim(key: string, expiresIn: number): boolean | Promise<boolean>;
+}
+```
+
+`first` and `claim` set a key only when it is absent, in one step, and answer whether they set it.
+`memoryStore()`, `memoryCredentials()`, `memoryLogouts()`, and `memoryRefreshes()` keep each in one
+process.
