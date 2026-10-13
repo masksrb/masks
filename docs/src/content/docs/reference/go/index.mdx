@@ -3,19 +3,20 @@ title: Go apps
 description: Sign people in to a Go web app with masks, guard routes by scope and role, accept tokens in an API, and enroll machines.
 ---
 
-`github.com/masksrb/masks/go/web` signs people in to a Go web app against a masks server. It is
-plain `net/http`, so it works with the standard `ServeMux`, chi, gorilla/mux, and any router that
-takes an `http.Handler`. It covers what [`Masks::Rails`](/reference/ruby/#client-mode) covers in a
-Rails app.
+`github.com/masksrb/masks/go/web` signs people in to a Go web app against a masks server. It covers
+what [`Masks::Rails`](/reference/ruby/#client-mode) covers in a Rails app. It is plain `net/http`, so
+it works with the standard `ServeMux`, chi, gorilla/mux, and any router that takes an
+`http.Handler`. It needs Go 1.25 or later.
 
 ```sh
 go get github.com/masksrb/masks/go
 ```
 
-| Package | |
-| --- | --- |
-| `github.com/masksrb/masks/go` | The client: discovery, the handshake, the code flow, tokens, DPoP, introspection, token exchange, delegations, enrollment, and checking tokens. |
-| `github.com/masksrb/masks/go/web` | The web integration built on it: routes under `/auth`, a session, the signed-in person, and middleware. |
+| Package                                      |                                                                                                                                                 |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `github.com/masksrb/masks/go`                | The client: discovery, the handshake, the code flow, tokens, DPoP, introspection, token exchange, delegations, enrollment, and checking tokens. |
+| `github.com/masksrb/masks/go/web`            | The web integration built on it: routes under `/auth`, a session, the signed-in actor, and middleware.                                          |
+| `github.com/masksrb/masks/go/web/redisstore` | A [store](#stores) in Redis.                                                                                                                    |
 
 ## Setting up
 
@@ -36,25 +37,32 @@ mux.Handle("/auth/", app.Handler())
 mux.Handle("/settings", app.Require()(settings))
 ```
 
-Set `MASKS_ISSUER` to the tenant you sign in against, such as `https://acme.auth.example.com`.
-`SESSION_SECRET` is at least 32 random bytes, such as the output of `openssl rand -hex 32`. Start
-the app and open `/auth/handshake`.
+1. Set `MASKS_ISSUER` to the tenant you sign in against, such as `https://acme.auth.example.com`.
+2. Set `SESSION_SECRET` to at least 32 random bytes, such as the output of `openssl rand -hex 32`.
+3. Start the app and open `/auth/handshake`.
 
-| Setting | |
-| --- | --- |
-| `Issuer`, `IssuerFor` | The masks issuer, or a function that names one for each request. |
-| `Resource`, `ResourceFor` | The app's own absolute `https` URL. Sign-ins name it as their resource, and tokens for the API must name it as their audience. |
-| `Name`, `NameFor` | The name the handshake gives the app, or a function that names it for each request. Defaults to the resource's host. |
-| `Scope` | What every sign-in asks for. It must include `openid`. Defaults to `openid profile email`. Add `offline_access` to refresh tokens. |
-| `Privileges` | See [privileges](#privileges). |
-| `Mount` | Where `Handler` answers. Defaults to `/auth`. |
-| `AfterSignIn`, `AfterSignOut` | Where a person goes after signing in or out. Both default to `/`. |
-| `SignOutOfIssuer` | Signs the person out of masks as well when they sign out of the app. |
-| `Secret`, `PreviousSecrets` | Seal the session. See [sessions](#sessions). |
-| `Store` | Where the app keeps what its processes share. See [stores](#stores). |
-| `Credentials` | Where the handshake keeps the app's credentials. Defaults to `masks.json` in the working directory. |
-| `Manages` | Who may reconnect or disconnect the app once it is connected. |
-| `PlainHTTP` | Drops the `Secure` flag and the `__Host-` prefix from the cookie, and allows a plain `http` issuer, for development. |
+| Setting                       |                                                                                                                                                                              |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Issuer`, `IssuerFor`         | The masks issuer, or a function that names one for each request.                                                                                                             |
+| `Resource`, `ResourceFor`     | The app's own absolute `https` URL, or a function that names it for each request. Sign-ins name it as their resource, and tokens for the API must name it as their audience. |
+| `Name`, `NameFor`             | The name the handshake gives the app, or a function that names it for each request. Defaults to the resource's host.                                                         |
+| `Scope`                       | What every sign-in asks for. It must include `openid`. Defaults to `openid profile email`. Add `offline_access` to refresh tokens.                                           |
+| `Namespace`                   | A scope namespace, such as `catalog:`, that the handshake registers once for every scope under it.                                                                           |
+| `Privileges`                  | See [privileges](#privileges).                                                                                                                                               |
+| `Organization`                | A function that names the organization for each sign-in. See [organizations](#organizations).                                                                                |
+| `ResourceScopes`              | The scopes the app accepts in an access token. See [accepting tokens](#accepting-tokens).                                                                                    |
+| `Mount`                       | Where `Handler` answers. Defaults to `/auth`.                                                                                                                                |
+| `AfterSignIn`, `AfterSignOut` | Where a person goes after signing in or out. Both default to `/`.                                                                                                            |
+| `SignOutOfIssuer`             | Signs the person out of masks as well when they sign out of the app.                                                                                                         |
+| `Secret`, `PreviousSecrets`   | Seal the session. See [sessions](#sessions).                                                                                                                                 |
+| `Sessions`, `SessionLifetime` | A store that keeps sessions on the server, and how long a session lasts. See [sessions](#sessions).                                                                          |
+| `Store`                       | Where the app keeps what its processes share. See [stores](#stores).                                                                                                         |
+| `Credentials`                 | Where the handshake keeps the app's credentials. Defaults to `masks.json` in the working directory.                                                                          |
+| `Manages`                     | Who may reconnect or disconnect the app once it is connected. When it is not set, nobody can.                                                                                |
+| `LoggedOut`                   | Called with each back-channel logout token.                                                                                                                                  |
+| `Delegates`, `DelegationPath` | Turn on [delegations](#delegations), and name the path a provider connection comes back to.                                                                                  |
+| `HTTPClient`, `Options`       | The `http.Client` for calls to masks, and other `masks.Option` values for the client package.                                                                                |
+| `PlainHTTP`                   | For development. Drops the `Secure` flag and the `__Host-` prefix from the cookie, and allows a plain `http` issuer and resource.                                            |
 
 ### With other routers
 
@@ -89,17 +97,36 @@ e.GET("/admin", echo.WrapHandler(admin), echo.WrapMiddleware(app.Require("admin"
 
 ## The handshake
 
-The handshake sends the browser to the masks server's approval screen. Approve it there, and the app
-redeems the one-time token that comes back server to server, so the client secret never passes
-through the browser. It registers the app for `Resource`, with `/auth/callback` as its redirect URI,
-`/auth/handshake/callback` as the address masks sends the approval back to, and
-`/auth/logout/return` as the only address masks returns to after signing a person out. When the
-issuer supports back-channel logout, it also registers `/auth/logout/backchannel`.
+The handshake connects the app to the masks server:
 
-The app writes its credentials to `masks.json`, mode 600, and then starts a sign-in. It reads the file
-again whenever it changes, so processes that share it see each other's handshake.
-A multi-tenant app implements `CredentialStore` instead, and its `Load`, `Save`, and `Forget` receive
-the request:
+1. The app sends the browser to the masks server's approval screen.
+2. You approve the app there.
+3. A one-time token comes back. The app redeems it by talking to the masks server directly, so the
+   client secret never passes through the browser.
+
+The handshake registers the app for `Resource`. It registers these addresses under `Mount`:
+
+|                            |                                                                                 |
+| -------------------------- | ------------------------------------------------------------------------------- |
+| `/auth/callback`           | The redirect URI for a sign-in.                                                 |
+| `/auth/handshake/callback` | Where masks sends the browser after the approval.                               |
+| `/auth/logout/return`      | The only address masks sends the browser back to after a sign-out.              |
+| `/auth/logout/backchannel` | Where masks posts a logout token, when the issuer supports back-channel logout. |
+
+The app writes its credentials to `masks.json`, with file mode 600, and then starts a sign-in. It
+reads the file again whenever it changes, so processes that share it see each other's handshake.
+
+### Several tenants
+
+`IssuerFor` and `ResourceFor` name the issuer and the resource for each request. Derive them from
+something the app trusts, such as a tenant it looked up by host, and never from a value the browser
+sends unchecked. A session is held to the issuer that signed it in, so it does not carry over to
+another tenant.
+
+`Credentials` names the issuer it came from, and the app refuses credentials from another issuer.
+With `IssuerFor`, `web.New` needs a `CredentialStore` that keeps each issuer's credentials apart,
+since one `masks.json` would hand one tenant's client secret to another. Its methods receive the
+request:
 
 ```go
 type CredentialStore interface {
@@ -109,82 +136,83 @@ type CredentialStore interface {
 }
 ```
 
-`IssuerFor` and `ResourceFor` name the issuer and the resource for each request in the same way.
-Derive them from something the app trusts, such as a tenant it looked up by host, and never from a
-value the browser sends unchecked. A session is held to the issuer that signed it in, so it does not
-carry over to another tenant.
-
-`Credentials` names the issuer it came from, and the app refuses credentials from another issuer. With
-`IssuerFor`, `web.New` needs a `CredentialStore` that keeps each issuer's credentials apart, since one
-`masks.json` would hand one tenant's client secret to another.
-
 The app reads each issuer's discovery document once and keeps it for an hour. After that, requests
 go on with the document it has while one request reads it again in the background. When masks
 cannot be reached, the app waits 5 seconds before it asks again, and twice as long after each
 failure, up to a minute. It keeps up to 1,000 issuers.
 
+### Managing the connection
+
 Once the app is connected, `/auth/handshake` shows the connection to somebody `Manages` allows, with
-buttons to connect again and to disconnect. Disconnecting deletes the registration at masks and the
-credentials. A person who is not signed in goes to `AfterSignOut`, or gets `401` with a `login_url`
-for a JSON request, and anybody else is refused with `403`. The same check guards the handshake's
-callback when the app is already connected.
+buttons to connect again and to disconnect. The same check guards the handshake's callback when the
+app is already connected.
 
 ```go
 Manages: func(r *http.Request, actor *web.Actor) bool { return actor.HasPrivilege("admin") },
 ```
 
-| Method | |
-| --- | --- |
-| `app.Connected(r)` | Whether the app holds credentials. |
-| `app.Registered(r)` | Whether masks still knows the app. A sign-in checks this first, and a client masks no longer knows sends the browser to the handshake again. |
-| `app.Client(r)` | The `masks.Client` for the app, for calls of your own. |
+- A person who is not signed in goes to `AfterSignOut`. A JSON request gets `401` with a
+  `login_url`.
+- Anybody else is refused with `403`.
+
+Disconnecting deletes the registration at masks and the credentials.
+
+| Method              |                                                                                                                                                  |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `app.Connected(r)`  | Whether the app holds credentials.                                                                                                               |
+| `app.Registered(r)` | Whether masks still knows the app. A sign-in checks this first, and when masks no longer knows the app, the browser goes to the handshake again. |
+| `app.Client(r)`     | The `masks.Client` for the app, for calls of your own.                                                                                           |
 
 ## Signing in
 
 `Handler` answers these routes under `Mount`:
 
-| Route | |
-| --- | --- |
-| `GET /auth/` | Starts a sign-in. Takes `return_to`, `organization`, and `privilege`. |
-| `GET /auth/callback` | Finishes it. |
-| `GET /auth/session` | The signed-in person as JSON, for a single-page app. |
-| `GET /auth/avatar` | The person's photo, fetched from masks with their token. Takes `size`. |
-| `GET`, `POST`, or `DELETE /auth/logout` | Signs out. Takes `everywhere` to sign out of masks as well. |
-| `GET /auth/logout/return` | Where masks sends the browser back after signing it out. |
-| `POST /auth/logout/backchannel` | Takes a back-channel logout token from masks. |
-| `GET` or `POST /auth/handshake` | Starts the handshake, or shows the connection. |
-| `GET /auth/handshake/callback` | Finishes the handshake. |
-| `POST /auth/handshake/disconnect` or `DELETE /auth/handshake` | Disconnects the app. |
+| Route                                                         |                                                                        |
+| ------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `GET /auth` or `GET /auth/`                                   | Starts a sign-in. Takes `return_to`, `organization`, and `privilege`.  |
+| `GET /auth/callback`                                          | Finishes it.                                                           |
+| `GET /auth/session`                                           | The signed-in actor as JSON, for a single-page app.                    |
+| `GET /auth/avatar`                                            | The person's photo, fetched from masks with their token. Takes `size`. |
+| `GET`, `POST`, or `DELETE /auth/logout`                       | Signs out. Takes `everywhere` to sign out of masks as well.            |
+| `GET /auth/logout/return`                                     | Where masks sends the browser back after signing it out.               |
+| `POST /auth/logout/backchannel`                               | Takes a back-channel logout token from masks.                          |
+| `GET` or `POST /auth/handshake`                               | Starts the handshake, or shows the connection.                         |
+| `GET /auth/handshake/callback`                                | Finishes the handshake.                                                |
+| `POST /auth/handshake/disconnect` or `DELETE /auth/handshake` | Disconnects the app.                                                   |
 
-A sign-in uses PKCE, a `state`, and a `nonce`, checks the `iss` that masks sends back, and checks the
-ID token's signature, audience, and nonce. Up to five sign-ins can be in progress in one browser,
-each for an hour. A callback the browser did not start sends it to sign in again, once a
-minute, and is refused with `invalid_state` in between. `return_to` is followed only to a path on the app.
+- A sign-in uses PKCE, a `state`, and a `nonce`.
+- The app checks the `iss` that masks sends back, and the ID token's signature, audience, and nonce.
+- Up to five sign-ins can be in progress in one browser, each for an hour.
+- A callback the browser did not start sends the browser to sign in again, at most once a minute.
+  In between, it is refused with `invalid_state`.
+- `return_to` is followed only to a path on the app.
 
-| Middleware | |
-| --- | --- |
-| `app.Session` | Puts the actor in the request's context, signed in or not. |
-| `app.Require(privileges...)` | Sends a signed-out visitor to sign in and back again, then checks each privilege. |
-| `app.Protect(privileges...)` | Checks an access token instead. See [accepting tokens](#accepting-tokens). |
-| `app.Either(privileges...)` | Checks a token when the request carries an `Authorization` header or no session, and the session otherwise. |
+| Middleware                   |                                                                                                             |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `app.Session`                | Puts the actor in the request's context, signed in or not.                                                  |
+| `app.Require(privileges...)` | Sends a signed-out visitor to sign in and back again, then checks each privilege.                           |
+| `app.Protect(privileges...)` | Checks an access token instead. See [accepting tokens](#accepting-tokens).                                  |
+| `app.Either(privileges...)`  | Checks a token when the request carries an `Authorization` header or no session, and the session otherwise. |
 
-A JSON request is answered with `401` and `login_required` or `handshake_required` and the URL to
-send the browser to, instead of a redirect.
+A JSON request gets `401` instead of a redirect, with `login_required` and a `login_url`, or
+`handshake_required` and a `handshake_url`.
 
 `web.ActorFrom(r.Context())` returns the `*web.Actor` for the person signed in, and never `nil`:
 
-| Field or method | |
-| --- | --- |
-| `SignedIn` | Whether a sign-in is held and its token has not expired. |
-| `Subject`, `Name`, `Nickname`, `Email`, `EmailVerified` | Who signed in. |
-| `Picture`, `Avatars` | The `picture` claim, then the photo, then the identicon, and each avatar URL. |
-| `Tenant` | The tenant's `UUID`, `Subdomain`, and `Name`. |
-| `Organization`, `Organizations`, `HasRole("owner")` | See [organizations](#organizations). |
-| `Scopes`, `HasScope("catalog:read")` | What the token carries. |
-| `Privileges`, `HasPrivilege("admin")` | See [privileges](#privileges). |
-| `Holds(privilege)`, `Member(privilege)` | Check a `web.Privilege` that `Privileges` does not name. `Member` checks only its role and organization, and returns a `*web.Forbidden` with the reason. |
-| `AccessToken` | The token to spend against a resource server. |
-| `Claim("groups", &groups)` | Any other claim the sign-in kept. |
+| Field or method                                         |                                                                                                                                                          |
+| ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SignedIn`                                              | Whether a sign-in is held and its token has not expired.                                                                                                 |
+| `Subject`, `Name`, `Nickname`, `Email`, `EmailVerified` | Who signed in.                                                                                                                                           |
+| `Picture`, `Avatars`                                    | The `picture` claim, then the photo, then the identicon, and each avatar URL.                                                                            |
+| `Tenant`                                                | The tenant's `UUID`, `Subdomain`, and `Name`.                                                                                                            |
+| `Organization`, `Organizations`, `HasRole("owner")`     | See [organizations](#organizations).                                                                                                                     |
+| `Groups`                                                | The groups the person belongs to.                                                                                                                        |
+| `Scopes`, `HasScope("catalog:read")`                    | What the token carries.                                                                                                                                  |
+| `Privileges`, `HasPrivilege("admin")`                   | See [privileges](#privileges).                                                                                                                           |
+| `Holds(privilege)`, `Member(privilege)`                 | Check a `web.Privilege` that `Privileges` does not name. `Member` checks only its role and organization, and returns a `*web.Forbidden` with the reason. |
+| `AccessToken`                                           | The token to send to a resource server.                                                                                                                  |
+| `ExpiresAt`, `AccountURL`                               | When the access token expires, in seconds since the epoch, and the person's account page at masks.                                                       |
+| `Claim("groups", &groups)`                              | Any other claim the sign-in kept.                                                                                                                        |
 
 `GET /auth/session` answers the same fields as JSON, without `AccessToken`.
 
@@ -193,44 +221,57 @@ send the browser to, instead of a redirect.
 
 ### Refreshing
 
-A token that expires within 30 seconds is refreshed with its refresh token, and the person's name,
-photo, and organizations are read again from userinfo. Requests that arrive together with the same
-expired token share one refresh, since masks revokes a refresh token that is used twice. A refused
-refresh signs the person out.
+A token that expires within 30 seconds is refreshed with its refresh token. The app reads the
+person's name, photo, and organizations from userinfo again at the same time.
+
+- Requests that arrive together with the same expired token share one refresh, since masks revokes
+  a refresh token that is used twice.
+- A refresh that masks refuses signs the person out.
 
 ### Signing out
 
-A sign-out revokes the refresh token and clears the session. With `SignOutOfIssuer`, or
-`everywhere`, the browser goes on to masks to end its session there, comes back to
-`/auth/logout/return`, and goes on to `AfterSignOut`. That return is accepted once, within an hour,
-from the browser that signed out, and refused with `invalid_state` otherwise. A sign-out from another
-site is refused with `403`, whatever its method.
+A sign-out revokes the refresh token and clears the session. A sign-out from another site is refused
+with `403`, whatever its method.
 
-When masks ends a session itself, it sends a logout token to `/auth/logout/backchannel`. The app
-signs out the session it names, or every session of the person it names, at their next request. It
-accepts each logout token once, and refuses one without an `exp`, so it remembers every token it
-accepted until that token expires. It remembers the logout in `Store`. `LoggedOut` hears each logout
-as well.
+With `SignOutOfIssuer`, or `everywhere`, the browser goes on to masks to end its session there. It
+comes back to `/auth/logout/return`, and goes on to `AfterSignOut`. That return is accepted once,
+within an hour, from the browser that signed out, and refused with `invalid_state` otherwise.
+
+When masks ends a session itself, it sends a logout token to `/auth/logout/backchannel`. The app signs
+out the session the token names, or every session of the person it names, at their next request.
+
+- Each logout token is accepted once. A token with no `exp` is refused.
+- The app remembers the logout in `Store`.
+- `LoggedOut` is called with each logout token. When it returns an error, the app answers `503`, and
+  accepts the same token when masks sends it again.
 
 ## Sessions
 
-The session lives in a cookie, sealed with AES-GCM under a key derived from `Secret`. It is
-`HttpOnly`, `Secure`, and `SameSite=Lax`, and named `__Host-masks`, so no other host can set it. A
-session too large for one cookie is split across several. It lasts 14 days, or `SessionLifetime`.
+The session lives in a cookie, sealed with AES-GCM under a key derived from `Secret`.
 
-The browser cannot read the tokens in the sealed cookie, and `/auth/session` leaves them out. The
-session is replaced at every sign-in.
+- It is `HttpOnly`, `Secure`, and `SameSite=Lax`, and named `__Host-masks`, so no other host can set
+  it.
+- A session too large for one cookie is split across up to eight.
+- It lasts 14 days, or `SessionLifetime`, from the last time it changed, such as at a sign-in or a
+  refresh.
+- The browser cannot read the tokens in it, and `/auth/session` leaves them out.
+- It is replaced at every sign-in.
 
 To keep sessions on the server, set `Sessions` to a [store](#stores). The cookie then holds only the
-session's id, sealed, and the store holds the session, also sealed. A session in the store gets a new
-id at every sign-in and sign-out. To change the secret, move the old one to `PreviousSecrets`.
-Sessions sealed with it still open, and each is sealed with the new secret the next time it changes.
+session's id, sealed, and the store holds the session, also sealed. A session in the store gets a
+new id at every sign-in and sign-out.
+
+To change the secret, move the old one to `PreviousSecrets`. Sessions sealed with it still open, and
+each is sealed with the new secret the next time it changes.
 
 ## Stores
 
-`Store` holds what an app's processes share: back-channel logouts, the DPoP proofs `Protect` has
-seen, and the result of each refresh, so that requests on several processes with the same expired
-token share one refresh. `Sessions` takes a store as well.
+`Store` holds what an app's processes share:
+
+- back-channel logouts
+- the DPoP proofs `Protect` has seen
+- the result of each refresh, so that requests on several processes with the same expired token
+  share one refresh
 
 ```go
 type Store interface {
@@ -254,10 +295,9 @@ app, err := web.New(web.Config{
 })
 ```
 
-`redisstore.New` takes any `redis.UniversalClient` from `github.com/redis/go-redis/v9`, so a
-cluster or a sentinel works as well. When the store fails, a request that needs it is refused with
-`503`. A refresh that cannot reach the store leaves the session as it was, and the next request tries
-again.
+`redisstore.New` takes any `redis.UniversalClient` from `github.com/redis/go-redis/v9`, so a cluster
+or a sentinel works as well. When the store fails, a request that needs it is refused with `503`. A
+refresh that cannot reach the store leaves the session as it was, and the next request tries again.
 
 ## Organizations
 
@@ -272,12 +312,12 @@ web.Config{
 }
 ```
 
-| | |
-| --- | --- |
-| `actor.Organization` | The organization signed in to, with its `ID`, `Key`, `Name`, and `Role`, or `nil`. |
-| `actor.HasRole("owner", "billing")` | Whether the person holds one of those roles in it. |
-| `actor.Organizations` | Every organization the person has joined, each with the role held there. |
-| `app.LoginURL(web.LoginOptions{Organization: "globex"})` | Signs the person in again, naming another organization. |
+|                                                          |                                                                                    |
+| -------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `actor.Organization`                                     | The organization signed in to, with its `ID`, `Key`, `Name`, and `Role`, or `nil`. |
+| `actor.HasRole("owner", "billing")`                      | Whether the person holds one of those roles in it.                                 |
+| `actor.Organizations`                                    | Every organization the person has joined, each with the role held there.           |
+| `app.LoginURL(web.LoginOptions{Organization: "globex"})` | Signs the person in again, naming another organization.                            |
 
 The app reads the organizations from userinfo at sign-in and at every refresh, so a changed role
 reaches it within an access token's lifetime.
@@ -298,28 +338,27 @@ web.Config{
 }
 ```
 
-`Role` takes one role or several, any of which will do, and `Organization` holds the privilege to
-one organization by key or id.
+- `Role` takes one role or several. Any one of them is enough.
+- `Organization` limits the privilege to one organization, named by key or id.
 
 ```go
 mux.Handle("/settings", app.Require()(settings))
 mux.Handle("POST /settings", app.Require("admin")(saveSettings))
 ```
 
-| | |
-| --- | --- |
-| The sign-in holds the privilege | The handler runs. |
-| A scope is missing | The browser goes through masks once, asking for the usual scopes and the privilege's, and comes back to the page it was on. A JSON request gets `403` with `privilege_required`, the `privileges`, and the `login_url` to send the browser to. |
-| masks did not grant the scope on that trip | `403 insufficient_scope`. The person does not hold it, so the app does not send them around again for five minutes. |
-| A role or organization does not match | `403 insufficient_role` or `insufficient_organization`, without a trip to masks. |
+|                                            |                                                                                                                                                                                                                                                         |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The sign-in holds the privilege            | The handler runs.                                                                                                                                                                                                                                       |
+| A scope is missing                         | The browser goes through masks once. It asks for the usual scopes and the privilege's scopes, then comes back to the page it was on. A JSON request gets `403` with `privilege_required`, the `privileges`, and the `login_url` to send the browser to. |
+| masks did not grant the scope on that trip | `403 insufficient_scope`. The person does not hold the scope, so the app does not send them through masks again for five minutes.                                                                                                                       |
+| A role or organization does not match      | `403 insufficient_role` or `insufficient_organization`. The browser does not go through masks.                                                                                                                                                          |
 
-Privilege scopes stay out of every ordinary sign-in. masks puts a scope in the token only for a person
-who already holds it, so asking never widens anyone's access. The handshake registers every
-privilege's scopes, so the issuer lets the app ask for them. Set `Namespace`, such as `catalog:`, to
-register the namespace in place of each scope under it.
+An ordinary sign-in never asks for privilege scopes. masks puts a scope in the token only for a
+person who already holds it, so asking never gives anyone more access. The handshake registers the
+scopes of every privilege, so the issuer lets the app ask for them.
 
 `Require`, `Protect`, `Either`, and `LoginURL` panic on a name that `Privileges` does not define. In
-a URL, the app ignores it.
+a URL, the app ignores the name.
 
 ## Accepting tokens
 
@@ -332,16 +371,26 @@ mux.Handle("GET /.well-known/oauth-protected-resource", app.ResourceMetadata())
 ```
 
 `Protect` takes the same [privileges](#privileges), roles and organizations included, and checks them
-against the token. A token that lacks one is refused with `403` and `insufficient_scope`,
-`insufficient_role`, or `insufficient_organization`. A refusal carries an RFC 6750 challenge whose
-`resource_metadata` points at `/.well-known/oauth-protected-resource`, which `ResourceMetadata`
-serves.
+against the token:
+
+- A missing or invalid token is refused with `401`.
+- A token that lacks a privilege is refused with `403` and `insufficient_scope`,
+  `insufficient_role`, or `insufficient_organization`.
+- A refusal carries an RFC 6750 challenge whose `resource_metadata` points at
+  `/.well-known/oauth-protected-resource`, which `ResourceMetadata` serves.
+- When the app cannot check a token, because masks could not be reached or the store failed, it
+  answers `503`.
 
 A token [bound to a key with DPoP](/guides/security/#binding-a-token-with-dpop) is accepted only as
-`Authorization: DPoP` with a proof signed by that key, made for this request's method and URL and
-the token, made within the last minute, and not seen before. The URL is the resource's origin and the
-request's path, so a proxy in front of the app needs no other setting. The app remembers the proofs
-it has seen in `Store`. When the store fails, the request is refused with `503`.
+`Authorization: DPoP`, with a proof that:
+
+- is signed by that key
+- names this request's method, URL, and token
+- was made within the last minute
+- has not been seen before
+
+The URL is the resource's origin and the request's path, so a proxy in front of the app needs no
+other setting. The app remembers the proofs it has seen in `Store`.
 
 Inside the handler, `web.ActorFrom(r.Context())` describes the token: `Subject`, `ClientID`,
 `Scopes`, `Organization`, `Tenant`, and the verified `Claims`.
@@ -352,8 +401,8 @@ the [package README](https://github.com/masksrb/masks/tree/main/go#checking-acce
 ## Delegations
 
 A [delegation](/guides/connecting-via-sdk/#delegation) lets the app act as a person at a provider
-while they are away. Set `Delegates` and the path the provider's answer comes back to, and the
-handshake asks for `masks:delegate:` and registers that path:
+while they are away. Set `Delegates` and the path the provider's answer comes back to. The handshake
+then asks for `masks:delegate:` and registers that path:
 
 ```go
 web.Config{
@@ -380,20 +429,25 @@ mux.HandleFunc("GET /connect/callback", func(w http.ResponseWriter, r *http.Requ
 })
 ```
 
-`FinishDelegation` refuses a connection that someone other than the person signed in finished. Keep
-the `Secret` encrypted. To call the provider later, ask for its token:
+`FinishDelegation` refuses a connection that this browser did not start, and one that masks made for
+somebody other than the person signed in.
+
+Keep the `Secret` encrypted. To call the provider later, ask for its token:
 
 ```go
 client, err := app.Delegations(r)
-upstream, err := client.UpstreamToken(ctx, secret, connection)
+upstream, err := client.UpstreamToken(r.Context(), secret, connection)
 save(connection, upstream.Secret)
 ```
 
 Save `upstream.Secret` before anything else, since each call replaces the secret. A
 `*masks.DelegationError` carries the replacement in `Secret` even when the call fails after the
-refresh. `errors.Is(err, masks.ErrDelegationUnavailable)` means masks or the provider did not answer
-and nothing was lost. `masks.ErrDelegationRefused` means masks refused the call, and `SignInAgain`
-reports a refusal that asks the person to sign in again.
+refresh.
+
+- `errors.Is(err, masks.ErrDelegationUnavailable)` means masks or the provider did not answer, and
+  nothing was lost.
+- `errors.Is(err, masks.ErrDelegationRefused)` means masks refused the call. Its `SignInAgain()` is
+  `true` when the person has to sign in again.
 
 ## Machines and enrollment
 
@@ -401,17 +455,20 @@ A Go program on a machine, such as an agent an app installs, signs in as itself 
 package. See the [package README](https://github.com/masksrb/masks/tree/main/go) for keys, client
 credentials, DPoP, and the device flow.
 
-An app that has claimed a [namespace](/guides/core-concepts/#namespaces), through `Namespace` in
-its handshake, enrolls each machine without a browser. It asks masks for an initial access token and hands it to the machine:
+An app that has claimed a [namespace](/guides/core-concepts/#namespaces), through `Namespace` in its
+handshake, enrolls each machine without a browser. It asks masks for an initial access token and
+hands it to the machine:
 
 ```go
 client, err := app.Client(r)
-enrollment, err := client.Enroll(ctx, masks.EnrollmentRequest{Scope: []string{"catalog:agent"}, Name: "nas"})
+enrollment, err := client.Enroll(r.Context(), masks.EnrollmentRequest{Scope: []string{"catalog:agent"}, Name: "nas"})
 ```
 
 The machine makes its own keys and registers with the token:
 
 ```go
+key, err := masks.GenerateKey()
+issuer, err := masks.Discover(ctx, "https://acme.auth.example.com")
 registration, err := issuer.Register(ctx, masks.ClientMetadata{
 	Name:                    "nas",
 	TokenEndpointAuthMethod: masks.PrivateKeyJWT,

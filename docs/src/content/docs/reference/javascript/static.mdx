@@ -17,7 +17,13 @@ it serves, so there is no client to register and no secret to keep.
    import { masks } from "@masks/client/vite";
 
    export default defineConfig({
-     plugins: [svelte(), masks({ name: "Catalog", scope: ["openid", "profile", "offline_access"] })],
+     plugins: [
+       svelte(),
+       masks({
+         name: "Catalog",
+         scope: ["openid", "profile", "offline_access"],
+       }),
+     ],
    });
    ```
 
@@ -31,9 +37,9 @@ it serves, so there is no client to register and no secret to keep.
      scope: ["openid", "profile", "offline_access"],
    });
 
-   const person = await auth.ready();
+   const actor = await auth.ready();
 
-   if (!person) await auth.authorize();
+   if (!actor) await auth.authorize();
    ```
 
 3. Build with the site's public address:
@@ -42,7 +48,7 @@ it serves, so there is no client to register and no secret to keep.
    MASKS_ORIGIN=https://catalog.example.com npm run build
    ```
 
-4. Upload the build to Cloudflare Pages, or to any host that serves files.
+4. Upload the build to any host that serves files, such as Cloudflare Pages.
 
 The tenant must allow dynamic registration, which a manager turns on under **Settings** in
 `/manage`.
@@ -53,8 +59,8 @@ The tenant must allow dynamic registration, which a manager turns on under **Set
   such as `https://catalog.example.com/oauth/client.json`. masks reads the file the first time
   somebody signs in. See [a client named by its metadata document](/guides/features/#a-client-named-by-its-metadata-document).
 - masks sends people back to the site's home page, `/`. `ready()` finishes the sign-in there, puts
-  the browser back on the page it started from, and returns the person. It returns `null` when
-  nobody is signed in.
+  the browser back on the page it started from, and returns the signed-in person's claims. It
+  returns `null` when nobody is signed in.
 - The tokens are kept in `sessionStorage`, so a reload keeps the person signed in. A new tab signs in
   again, which is quick while the person is still signed in to masks.
 - `auth.fetch(url)` calls an API with the access token, and refreshes it first when it is about to
@@ -87,15 +93,15 @@ names the first.
 
 `masks(options)` from `@masks/client/vite` takes:
 
-| Option | Default | |
-| --- | --- | --- |
-| `name` | | The name masks shows when it asks the person to approve the site. |
-| `origin` | `MASKS_ORIGIN` | The site's public address. The build stops when neither is set. |
-| `scope` | | The most a sign-in may ask for. |
-| `redirectUris` | the home page | Where masks may send people back to. |
-| `postLogoutRedirectUris` | the home page | Where masks may send people after signing out everywhere. |
-| `logoUri` | | A logo masks shows beside the name. |
-| `dpop` | `false` | Whether masks binds every token to a DPoP key. |
+| Option                   | Default        |                                                                   |
+| ------------------------ | -------------- | ----------------------------------------------------------------- |
+| `name`                   |                | The name masks shows when it asks the person to approve the site. |
+| `origin`                 | `MASKS_ORIGIN` | The site's public address. The build stops when neither is set.   |
+| `scope`                  |                | The most a sign-in may ask for.                                   |
+| `redirectUris`           | the home page  | Where masks may send people back to.                              |
+| `postLogoutRedirectUris` | the home page  | Where masks may send people after signing out everywhere.         |
+| `logoUri`                |                | A logo masks shows beside the name.                               |
+| `dpop`                   | `false`        | Whether masks binds every token to a DPoP key.                    |
 
 `clientMetadata(options)` from `@masks/client` returns the same file as an object, for a build that
 does not use Vite. `createBrowserClient` takes `clientId` and `redirectUri` for a site that does not

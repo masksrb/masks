@@ -3,49 +3,52 @@ title: Next.js
 description: "Sign people in to a Next.js App Router app with masksNext, guard pages and route handlers, and refresh sessions in the proxy."
 ---
 
-`masksNext` from `@masks/server/next` covers the App Router. It reads the [options](/reference/javascript/#setting-up) every integration shares.
+`masksNext` from `@masks/server/next` covers the App Router. It reads the
+[settings](/reference/javascript/#setting-up) every integration shares.
 
 ## Setting up
 
-Create one `Masks` for the app:
+1. Create one `Masks` for the app:
 
-```ts
-// lib/masks.ts
-import { masksNext } from "@masks/server/next";
+   ```ts
+   // lib/masks.ts
+   import { masksNext } from "@masks/server/next";
 
-export const { handlers, auth, requireAuth, withMasks, proxy, masks } = masksNext({
-  name: "Catalog",
-  scope: ["openid", "profile", "email", "offline_access", "organization"],
-  privileges: { admin: ["catalog:admin"] },
-  protect: ["/dashboard"],
-});
-```
+   export const { handlers, auth, requireAuth, withMasks, proxy, masks } =
+     masksNext({
+       name: "Catalog",
+       scope: ["openid", "profile", "email", "offline_access", "organization"],
+       privileges: { admin: ["catalog:admin"] },
+       protect: ["/dashboard"],
+     });
+   ```
 
-Mount every route under `/auth` with an optional catch-all route:
+2. Answer every route under `/auth` with an optional catch-all route:
 
-```ts
-// app/auth/[[...masks]]/route.ts
-import { handlers } from "@/lib/masks";
+   ```ts
+   // app/auth/[[...masks]]/route.ts
+   import { handlers } from "@/lib/masks";
 
-export const { GET, POST, DELETE } = handlers;
-```
+   export const { GET, POST, DELETE } = handlers;
+   ```
 
-Add the proxy, so a session is refreshed before a page renders:
+3. Add the proxy, which refreshes a session before a page renders:
 
-```ts
-// proxy.ts
-export { proxy } from "@/lib/masks";
+   ```ts
+   // proxy.ts
+   export { proxy } from "@/lib/masks";
 
-export const config = { matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"] };
-```
+   export const config = {
+     matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+   };
+   ```
 
-Set the three variables, start the app, and open `/auth`. The first visit starts
-[the handshake](/reference/javascript/#the-handshake).
+4. Set `MASKS_ISSUER`, `MASKS_RESOURCE`, and `MASKS_SECRET`, start the app, and open `/auth`. The
+   first visit starts [the handshake](/reference/javascript/#the-handshake).
 
 ## Guarding pages and routes
 
-`auth()` returns the person, or `null` when nobody is signed in. `requireAuth` guards a page and
-`withMasks` guards a route handler:
+`requireAuth` guards a page:
 
 ```tsx
 // app/dashboard/page.tsx
@@ -58,32 +61,47 @@ export default async function Dashboard() {
 }
 ```
 
+`withMasks` guards a route handler, by session or by access token:
+
 ```ts
 // app/api/items/route.ts
 import { withMasks } from "@/lib/masks";
 
-export const GET = withMasks(async (request, { masked }) => Response.json({ subject: masked.subject }));
+export const GET = withMasks(async (request, { masked }) =>
+  Response.json({ subject: masked.subject }),
+);
 ```
 
 A server component cannot set cookies, and masks revokes a refresh token that is used twice, so
 `auth` and `requireAuth` never refresh. The proxy refreshes the session first and hands the fresh
 cookie to the page. Without the proxy, `requireAuth` sends a person whose token expired through
-`/auth/refresh`. `requireAuth` throws a `ForbiddenError` for a privilege the person does not hold,
-which the nearest `error.tsx` shows. To send people back to the page they were on, `requireAuth`
-reads the path the proxy records. Without the proxy, name the page first:
-`requireAuth({ returnTo: "/billing" }, "admin")`. Otherwise a sign-in comes back to `/`.
+`/auth/refresh`.
+
+`requireAuth` sends a signed-out person to sign in, and asks masks once for a privilege's missing
+scopes. It throws a `ForbiddenError` for a privilege the person does not hold, which the nearest
+`error.tsx` shows.
+
+After a sign-in, `requireAuth` sends the person back to the path the proxy recorded. Without the
+proxy, name the page first, as in `requireAuth({ returnTo: "/billing" }, "admin")`. Otherwise the
+sign-in comes back to `/`.
 
 ## Reference
 
 `masksNext(options)` takes the [options](/reference/javascript/server/#options) every integration
-shares, and `protect`: the paths, or regular expressions, whose signed-out visitors the proxy sends to
-sign in. It returns:
+shares, and two more:
 
-| | |
-| --- | --- |
-| `handlers` | `GET`, `POST`, and `DELETE` for `app/auth/[[...masks]]/route.ts`. |
-| `auth()` | The person, or `null` when nobody is signed in, in a server component, a server action, or a route handler. |
-| `requireAuth({ returnTo }, ...privileges)` | The same, after sending a signed-out visitor to sign in and checking each privilege. |
-| `withMasks(handler, ...privileges)` | Guards a route handler by session or by token, and passes `{ masked }` to it. |
-| `proxy` | Refreshes the session before a page renders. Sends a signed-out visitor to a path under one of `protect` to sign in. |
-| `masks` | The `Masks` underneath. |
+| Option    |                                                                                                                              |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `protect` | Paths, or regular expressions, whose signed-out visitors the proxy sends to sign in. A path also covers every path under it. |
+| `masks`   | A `Masks` the app already built, used in place of a new one.                                                                 |
+
+It returns:
+
+|                                            |                                                                                                                      |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
+| `handlers`                                 | `GET`, `POST`, and `DELETE` for `app/auth/[[...masks]]/route.ts`.                                                    |
+| `auth()`                                   | The person, or `null` when nobody is signed in. It works in a server component, a server action, or a route handler. |
+| `requireAuth({ returnTo }, ...privileges)` | The person, after sending a signed-out visitor to sign in and checking each privilege. `{ returnTo }` is optional.   |
+| `withMasks(handler, ...privileges)`        | Guards a route handler by session or by access token, and passes `{ masked }` to it.                                 |
+| `proxy`                                    | Refreshes the session before a page renders, and sends a signed-out visitor to a path under `protect` to sign in.    |
+| `masks`                                    | The `Masks` underneath.                                                                                              |
