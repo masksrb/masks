@@ -22,8 +22,6 @@
 docker pull ghcr.io/masksrb/masks:latest
 ```
 
-Or mount it inside a Rails app. The [quickstart](https://masks.pages.dev/quickstart/) covers both.
-
 ## Libraries
 
 | Language   | Package                                       | Guide                                                                    |
