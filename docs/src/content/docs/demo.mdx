@@ -7,11 +7,8 @@ In this tutorial you run two tenants side by side and see that each one is separ
 its own set of accounts, clients, and signing keys. Each tenant is also its own issuer, the address
 its tokens name as the one that issued them.
 
-The two tenants are `demo` and `acme`. `./dev --multi` declares them. masks has no public demo
-server.
-
-The tutorial uses the dev stack from [Try it locally](/quickstart/#try-it-locally). You need Docker
-with Compose, and Ruby.
+masks has no public demo server. The tutorial uses the dev stack from
+[Try it locally](/quickstart/#try-it-locally).
 
 ## Start two tenants
 
@@ -22,7 +19,7 @@ with Compose, and Ruby.
    ./dev --multi
    ```
 
-The stack serves each tenant at its own name:
+The stack declares two tenants, `demo` and `acme`, and serves each at its own hostname:
 
 ```text
   masks   http://demo.masks.localhost:12345
@@ -30,8 +27,8 @@ The stack serves each tenant at its own name:
   docs    http://masks.localhost:12346
 ```
 
-masks reads the tenant from the `Host` header of each request. A name that no tenant uses gets a
-`404` with the body `no tenant is served at this hostname`. Try it:
+masks reads the tenant from the hostname of each request. A hostname that no tenant uses gets a
+`404` with the body `no tenant is served at this hostname`:
 
 ```sh
 curl http://nothing.masks.localhost:12345/.well-known/openid-configuration
@@ -59,26 +56,25 @@ curl http://nothing.masks.localhost:12345/.well-known/openid-configuration
    ```
 
    Each tenant publishes its own key, with its own `kid` (key ID). A token that `demo` signs has a
-   `kid` that `acme` does not publish. A client that trusts `acme` refuses that token.
+   `kid` that `acme` does not publish, so a client that trusts `acme` refuses that token.
 
 ## Set up each tenant
 
 1. Open `http://demo.masks.localhost:12345` in a browser. `demo` has no accounts yet, so it shows
    the **Set up demo** screen.
-2. Create its first account with the setup token `masks-dev`, and click **Finish setting up**.
-3. Open `http://acme.masks.localhost:12345`. `acme` still shows **Set up acme**, because the account
-   you made belongs to `demo` only.
-4. Set up `acme` too. The same nickname and email work, because no account at `demo` exists at
-   `acme`.
-5. Open **Manage this server** on each tenant.
+2. Enter the setup token `masks-dev`, and follow the screen to the end. See
+   [setting a tenant up](/guides/core-concepts/#setting-a-tenant-up) for each step.
+3. Open `http://acme.masks.localhost:12345`. It still shows **Set up acme**, because the account you
+   made belongs to `demo` only.
+4. Set up `acme` too. The same nickname and email address work, because no account at `demo` exists
+   at `acme`.
+5. On each tenant's account page, choose **Manage this server**.
 
-Each `/manage` lists only its own tenant's actors and clients. Each tenant keeps its own accounts,
-clients, and keys, and you set up each tenant's first account separately.
+Each `/manage` lists only its own tenant's actors and clients.
 
 ## Run the production image
 
-`./dev image` builds the production image. It runs the image with the same two tenants on port
-`5556`.
+`./dev image` builds the production image and runs it with the same two tenants on port `5556`.
 
 ```sh
 ./dev image
@@ -96,6 +92,9 @@ When every check passes, it prints:
   demo and acme each answer at their own origin, with keys of their own.
   http://demo.masks.localhost:5556
 ```
+
+The image does not use `masks-dev`. It prints a setup token for each tenant in the `masks-image`
+service's logs, as a production server does.
 
 `./dev down` stops the image along with the rest of the stack.
 
