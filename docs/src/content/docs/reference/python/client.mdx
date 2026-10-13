@@ -6,80 +6,80 @@ description: Every setting, route, guard, and call in the Python SDK, for FastAP
 `masks-client` is the Python SDK. It imports as `masks` and needs Python 3.10 or later. For a
 walkthrough, read [Python apps](/reference/python/).
 
-| Module | |
-| --- | --- |
-| [`masks`](#the-client) | The client: discovery, the code flow, tokens, DPoP, introspection, token exchange, delegations, enrollment, and checking tokens. |
-| [`masks.web`](#config) | The parts every framework shares: `Config`, the actor, sessions, and credentials. |
-| [`masks.fastapi`](/reference/python/fastapi/) | The FastAPI integration. Install the `fastapi` extra. |
-| [`masks.django`](/reference/python/django/) | The Django integration. Install the `django` extra. |
-| [`masks.flask`](/reference/python/flask/) | The Flask integration. Install the `flask` extra. |
-| [`masks.asgi`](#asgi-middleware) | Middleware that checks tokens in any ASGI app. |
+| Module                                        |                                                                                                                                  |
+| --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| [`masks`](#the-client)                        | The client: discovery, the code flow, tokens, DPoP, introspection, token exchange, delegations, enrollment, and checking tokens. |
+| [`masks.web`](#config)                        | The parts every framework shares: `Config`, the actor, sessions, and credentials.                                                |
+| [`masks.fastapi`](/reference/python/fastapi/) | The FastAPI integration. Install the `fastapi` extra.                                                                            |
+| [`masks.django`](/reference/python/django/)   | The Django integration. Install the `django` extra.                                                                              |
+| [`masks.flask`](/reference/python/flask/)     | The Flask integration. Install the `flask` extra.                                                                                |
+| [`masks.asgi`](#asgi-middleware)              | Middleware that checks tokens in any ASGI app.                                                                                   |
 
 ## Config
 
 `masks.web.Config` holds the settings for every framework. Each framework module also exports it.
 
-A setting marked *request* also takes a function. The function gets the framework's request and
+A setting marked _request_ also takes a function. The function gets the framework's request and
 returns the value. Derive the value from something the app trusts, such as a tenant it looked up by
 host.
 
-| Setting | Default | |
-| --- | --- | --- |
-| `issuer` | Required | The masks issuer, such as `https://acme.auth.example.com`. *Request.* |
-| `resource` | `""` | The app's own absolute `https` URL. Sign-ins name it as their resource, and tokens for the app's API must name it as their audience. The handshake needs it. *Request.* |
-| `secret` | `""` | At least 32 bytes that seal the cookie session. A list rotates secrets, newest first. Django and Flask use the app's own secret key when this is empty. Not needed with `sessions`. |
-| `name` | `"An app"` | The name the handshake gives the app. *Request.* |
-| `scope` | `openid profile email offline_access` | What every sign-in asks for. |
-| `privileges` | `{}` | Names for what a route needs. See [privileges](#privileges). |
-| `namespace` | `""` | A scope prefix, such as `catalog:`. The handshake registers the namespace in place of each scope under it. |
-| `organization` | `""` | The organization every sign-in names. *Request.* |
-| `resource_scopes` | `()` | The scopes the API accepts. A dict of scope to description also gives masks the sentence its consent screen shows. |
-| `credentials` | `FileCredentials()` | Where the handshake keeps the app's credentials. Needed when `issuer` is a function. See [credentials](#credentials). *Request.* |
-| `sessions` | Cookie sessions | Where sessions live. See [sessions](#sessions). |
-| `session_lifetime` | 14 days | How long a session lasts, in seconds. |
-| `store` | `MemoryStore()` | Where refreshes, logouts, and DPoP proofs are remembered. See [stores](#stores). |
-| `base_url` | `""` | The app's public origin, when it differs from the origin of `resource`. *Request.* |
-| `prefix` | `"/auth"` | Where the [routes](#routes) answer. |
-| `after_sign_in` | `"/"` | Where a person goes after signing in. |
-| `after_sign_out` | `"/"` | Where a person goes after signing out. |
-| `sign_out_of_issuer` | `False` | Signs the person out of masks too whenever they sign out of the app. |
-| `manages` | `None` | Who may connect the app again or disconnect it. A privilege name, or a function that takes an actor and returns `True` or `False`. Nobody when `None`. |
-| `logged_out` | `None` | A function that takes a `masks.Logout`, called on each back-channel logout. |
-| `delegation_redirect_uri` | `""` | The path or full address a provider's answer comes back to. The handshake then asks for `masks:delegate:` and registers this address. *Request.* |
-| `allow_plain_http` | `False` | Allows a plain `http` issuer on another machine. An issuer on this machine is always allowed. |
-| `cookie_secure` | `True` | `False` drops the `Secure` flag and the `__Host-` prefix, for development on plain `http`. |
-| `http`, `async_http` | Built-in | The `httpx.Client` and `httpx.AsyncClient` the app talks to masks with. |
+| Setting                   | Default                               |                                                                                                                                                                                     |
+| ------------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `issuer`                  | Required                              | The masks issuer, such as `https://acme.auth.example.com`. _Request._                                                                                                               |
+| `resource`                | `""`                                  | The app's own absolute `https` URL. Sign-ins name it as their resource, and tokens for the app's API must name it as their audience. The handshake needs it. _Request._             |
+| `secret`                  | `""`                                  | At least 32 bytes that seal the cookie session. A list rotates secrets, newest first. Django and Flask use the app's own secret key when this is empty. Not needed with `sessions`. |
+| `name`                    | `"An app"`                            | The name the handshake gives the app. _Request._                                                                                                                                    |
+| `scope`                   | `openid profile email offline_access` | What every sign-in asks for.                                                                                                                                                        |
+| `privileges`              | `{}`                                  | Names for what a route needs. See [privileges](#privileges).                                                                                                                        |
+| `namespace`               | `""`                                  | A scope prefix, such as `catalog:`. The handshake registers the namespace in place of each scope under it.                                                                          |
+| `organization`            | `""`                                  | The organization every sign-in names. _Request._                                                                                                                                    |
+| `resource_scopes`         | `()`                                  | The scopes the API accepts. A dict of scope to description also gives masks the sentence its consent screen shows.                                                                  |
+| `credentials`             | `FileCredentials()`                   | Where the handshake keeps the app's credentials. Needed when `issuer` is a function. See [credentials](#credentials). _Request._                                                    |
+| `sessions`                | Cookie sessions                       | Where sessions live. See [sessions](#sessions).                                                                                                                                     |
+| `session_lifetime`        | 14 days                               | How long a session lasts, in seconds.                                                                                                                                               |
+| `store`                   | `MemoryStore()`                       | Where refreshes, logouts, and DPoP proofs are remembered. See [stores](#stores).                                                                                                    |
+| `base_url`                | `""`                                  | The app's public origin, when it differs from the origin of `resource`. _Request._                                                                                                  |
+| `prefix`                  | `"/auth"`                             | Where the [routes](#routes) answer.                                                                                                                                                 |
+| `after_sign_in`           | `"/"`                                 | Where a person goes after signing in.                                                                                                                                               |
+| `after_sign_out`          | `"/"`                                 | Where a person goes after signing out.                                                                                                                                              |
+| `sign_out_of_issuer`      | `False`                               | Signs the person out of masks too whenever they sign out of the app.                                                                                                                |
+| `manages`                 | `None`                                | Who may connect the app again or disconnect it. A privilege name, or a function that takes an actor and returns `True` or `False`. Nobody when `None`.                              |
+| `logged_out`              | `None`                                | A function that takes a `masks.Logout`, called on each back-channel logout.                                                                                                         |
+| `delegation_redirect_uri` | `""`                                  | The path or full address a provider's answer comes back to. The handshake then asks for `masks:delegate:` and registers this address. _Request._                                    |
+| `allow_plain_http`        | `False`                               | Allows a plain `http` issuer on another machine. An issuer on this machine is always allowed.                                                                                       |
+| `cookie_secure`           | `True`                                | `False` drops the `Secure` flag and the `__Host-` prefix, for development on plain `http`.                                                                                          |
+| `http`, `async_http`      | Built-in                              | The `httpx.Client` and `httpx.AsyncClient` the app talks to masks with.                                                                                                             |
 
 ## Routes
 
 These answer under `prefix`.
 
-| Route | |
-| --- | --- |
-| `GET /auth` | Starts a sign-in. Takes `return_to`, `organization`, and `privilege`. |
-| `GET /auth/callback` | Finishes a sign-in. |
-| `GET /auth/session` | The signed-in actor as JSON, or `401`. |
-| `GET /auth/avatar` | The person's photo, fetched from masks with their token. Takes `size`. |
-| `GET`, `POST`, or `DELETE /auth/logout` | Signs out. Takes `everywhere` to sign out of masks as well. |
-| `GET /auth/logout/return` | Where masks sends the browser after signing out of masks. |
-| `POST /auth/logout/backchannel` | Takes a logout token from masks. Refuses a body over 64 KB. |
-| `GET /auth/handshake` | Starts the handshake, or shows the connection. |
-| `POST /auth/handshake` | Connects the app again. |
-| `GET /auth/handshake/callback` | Finishes the handshake. |
-| `POST /auth/handshake/disconnect` or `DELETE /auth/handshake` | Disconnects the app. |
-| `GET /.well-known/oauth-protected-resource` | The app's resource metadata. This route ignores `prefix`. |
+| Route                                                         |                                                                        |
+| ------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `GET /auth`                                                   | Starts a sign-in. Takes `return_to`, `organization`, and `privilege`.  |
+| `GET /auth/callback`                                          | Finishes a sign-in.                                                    |
+| `GET /auth/session`                                           | The signed-in actor as JSON, or `401`.                                 |
+| `GET /auth/avatar`                                            | The person's photo, fetched from masks with their token. Takes `size`. |
+| `GET`, `POST`, or `DELETE /auth/logout`                       | Signs out. Takes `everywhere` to sign out of masks as well.            |
+| `GET /auth/logout/return`                                     | Where masks sends the browser after signing out of masks.              |
+| `POST /auth/logout/backchannel`                               | Takes a logout token from masks. Refuses a body over 64 KB.            |
+| `GET /auth/handshake`                                         | Starts the handshake, or shows the connection.                         |
+| `POST /auth/handshake`                                        | Connects the app again.                                                |
+| `GET /auth/handshake/callback`                                | Finishes the handshake.                                                |
+| `POST /auth/handshake/disconnect` or `DELETE /auth/handshake` | Disconnects the app.                                                   |
+| `GET /.well-known/oauth-protected-resource`                   | The app's resource metadata. This route ignores `prefix`.              |
 
 ### Refused requests
 
 A browser is redirected. A JSON request gets one of these:
 
-| Status | `error` | Other fields |
-| --- | --- | --- |
-| `401` | `login_required` | `login_url` |
-| `401` | `handshake_required` | `handshake_url` |
-| `403` | `privilege_required` | `privileges`, `login_url` |
-| `403` | `insufficient_scope`, `insufficient_role`, or `insufficient_organization` | `error_description` |
-| `503` | `temporarily_unavailable` | `error_description` |
+| Status | `error`                                                                   | Other fields              |
+| ------ | ------------------------------------------------------------------------- | ------------------------- |
+| `401`  | `login_required`                                                          | `login_url`               |
+| `401`  | `handshake_required`                                                      | `handshake_url`           |
+| `403`  | `privilege_required`                                                      | `privileges`, `login_url` |
+| `403`  | `insufficient_scope`, `insufficient_role`, or `insufficient_organization` | `error_description`       |
+| `503`  | `temporarily_unavailable`                                                 | `error_description`       |
 
 A request counts as JSON when it sends `X-Requested-With: XMLHttpRequest`, a JSON `Accept` or
 `Content-Type`, or an `Accept` with neither `text/html` nor `*/*`.
@@ -91,26 +91,26 @@ A guard that checks a token answers `401` with `Bearer` and `DPoP` challenges. E
 
 `masks.web.Actor` is the actor for a request.
 
-| | |
-| --- | --- |
-| `signed_in` | Whether there is a sign-in and its token has not expired. |
-| `subject`, `name`, `nickname`, `email`, `email_verified` | Who signed in. |
-| `picture` | The app's `/auth/avatar` route when masks holds a photo, since the photo at masks loads only for someone signed in there. Otherwise the `picture` claim, then the identicon. |
-| `avatars` | Each avatar URL, by kind. |
-| `tenant` | The tenant's `uuid`, `subdomain`, and `name`. |
-| `organization` | The organization signed in to, or `None`. |
-| `organizations` | Every organization the person has joined. |
-| `has_role(*roles)` | Whether the person holds one of these roles in the organization. |
-| `member(*roles, organization="")` | The organization, or raises `Forbidden`. |
-| `scopes` | The scopes the token holds. |
-| `permits(scope)` | Whether the token holds the scope. |
-| `privileges` | The names of the privileges the person holds. |
-| `has_privilege(*names)` | Whether the person holds every one of them. |
-| `access_token`, `expires_at` | The access token and when it expires. |
-| `by_token` | Whether the actor came from an access token in place of a session. |
-| `account_url` | The person's account page at masks. |
-| `actor["claim"]`, `actor.get("claim")` | Any other claim. |
-| `to_dict()` | What `GET /auth/session` returns. It leaves out `access_token`. |
+|                                                          |                                                                                                                                                                              |
+| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `signed_in`                                              | Whether there is a sign-in and its token has not expired.                                                                                                                    |
+| `subject`, `name`, `nickname`, `email`, `email_verified` | Who signed in.                                                                                                                                                               |
+| `picture`                                                | The app's `/auth/avatar` route when masks holds a photo, since the photo at masks loads only for someone signed in there. Otherwise the `picture` claim, then the identicon. |
+| `avatars`                                                | Each avatar URL, by kind.                                                                                                                                                    |
+| `tenant`                                                 | The tenant's `uuid`, `subdomain`, and `name`.                                                                                                                                |
+| `organization`                                           | The organization signed in to, or `None`.                                                                                                                                    |
+| `organizations`                                          | Every organization the person has joined.                                                                                                                                    |
+| `has_role(*roles)`                                       | Whether the person holds one of these roles in the organization.                                                                                                             |
+| `member(*roles, organization="")`                        | The organization, or raises `masks.errors.Forbidden`, a `masks.Error`.                                                                                                       |
+| `scopes`                                                 | The scopes the token holds.                                                                                                                                                  |
+| `permits(scope)`                                         | Whether the token holds the scope.                                                                                                                                           |
+| `privileges`                                             | The names of the privileges the person holds.                                                                                                                                |
+| `has_privilege(*names)`                                  | Whether the person holds every one of them.                                                                                                                                  |
+| `access_token`, `expires_at`                             | The access token and when it expires.                                                                                                                                        |
+| `by_token`                                               | Whether the actor came from an access token in place of a session.                                                                                                           |
+| `account_url`                                            | The person's account page at masks.                                                                                                                                          |
+| `actor["claim"]`, `actor.get("claim")`                   | Any other claim.                                                                                                                                                             |
+| `to_dict()`                                              | What `GET /auth/session` returns. It leaves out `access_token`.                                                                                                              |
 
 An organization has `id`, `key`, `name`, `role`, `owner`, and `has_role(*roles)`.
 
@@ -118,71 +118,72 @@ An organization has `id`, `key`, `name`, `role`, `owner`, and `has_role(*roles)`
 
 `Config.privileges` maps a name to what the privilege needs.
 
-| Form | Needs |
-| --- | --- |
-| `["catalog:admin"]` | Every scope in the list. |
-| `{"scope": [...]}` | The same as the list. |
+| Form                                                    | Needs                                                    |
+| ------------------------------------------------------- | -------------------------------------------------------- |
+| `["catalog:admin"]`                                     | Every scope in the list.                                 |
+| `{"scope": [...]}`                                      | The same as the list.                                    |
 | `{"role": "owner"}` or `{"role": ["owner", "billing"]}` | Any one of these roles in the organization signed in to. |
-| `{"organization": "acme"}` | The organization signed in to, by key or id. |
+| `{"organization": "acme"}`                              | The organization signed in to, by key or id.             |
 
 A privilege can combine `scope`, `role`, and `organization`.
 
 ## Credentials
 
-| | |
-| --- | --- |
-| `FileCredentials(path="masks.json")` | A file, written with mode 600 in a folder it creates with mode 700. It is writable only when the app can create files in that folder. |
-| `MemoryCredentials(client_id="", client_secret="", issuer="")` | This process's memory, for tests. |
-| `StaticCredentials(client_id, client_secret="", issuer="")` | Credentials from configuration. The app cannot disconnect with these. |
+|                                                                |                                                                                                                                       |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `FileCredentials(path="masks.json")`                           | A file, written with mode 600 in a folder it creates with mode 700. It is writable only when the app can create files in that folder. |
+| `MemoryCredentials(client_id="", client_secret="", issuer="")` | This process's memory, for tests.                                                                                                     |
+| `StaticCredentials(client_id, client_secret="", issuer="")`    | Credentials from configuration. The app cannot disconnect with these.                                                                 |
 
 A store of your own has a `writable` attribute, false when it cannot save, and these methods:
 
-| Method | |
-| --- | --- |
-| `read()` | Returns a dict with `client_id`, and `issuer` and `client_secret` when there are. |
-| `write(issuer, registration)` | Saves a `masks.Registration` and the issuer that made it. |
-| `clear()` | Forgets the credentials. |
+| Method                        |                                                                                          |
+| ----------------------------- | ---------------------------------------------------------------------------------------- |
+| `read()`                      | Returns a dict with `client_id`, and with `issuer` and `client_secret` when it has them. |
+| `write(issuer, registration)` | Saves a `masks.Registration` and the issuer that made it.                                |
+| `clear()`                     | Forgets the credentials.                                                                 |
 
 The app uses credentials only with the issuer they name, and answers `500` for credentials from another
 issuer. Credentials that name no issuer work only when `issuer` is a fixed string.
 
 ## Sessions
 
-| | |
-| --- | --- |
+|                                                             |                                                                                                                                                              |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `CookieSessions(secret, name="__Host-masks", lifetime=...)` | The default. The cookie holds the session, sealed with AES-GCM. Splits a large session across up to eight cookies, and raises `ValueError` past about 30 KB. |
-| `ServerSessions(store, name="__Host-masks", lifetime=...)` | The cookie holds a random id, and the store holds the session under a hash of it. |
-| `MemorySessionStore()` | A store in this process's memory. |
+| `ServerSessions(store, name="__Host-masks", lifetime=...)`  | The cookie holds a random id, and the store holds the session under a hash of it.                                                                            |
+| `MemorySessionStore()`                                      | A store in this process's memory.                                                                                                                            |
 
 A store of your own has these methods. In FastAPI they can be `async def`, as
-`masks.web.AsyncSessionStore` describes. Django and Flask raise `TypeError` for an async store.
+`masks.web.AsyncSessionStore` describes. Django raises `ImproperlyConfigured` and Flask raises
+`TypeError` for an async store.
 
-| Method | |
-| --- | --- |
-| `read(key)` | Returns the session, or `None`. |
-| `write(key, data, expires_in, tags)` | Saves the session. `tags` holds the issuer as `iss`, the person's `sub`, and the session's `sid`. |
-| `delete(key)` | Removes the session. |
-| `end(issuer=..., subject=..., sid=...)` | Removes every session from that issuer with that `sid`, or every session of that `subject`. Back-channel logout calls it. |
+| Method                                  |                                                                                                                                                        |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `read(key)`                             | Returns the session, or `None`.                                                                                                                        |
+| `write(key, data, expires_in, tags)`    | Saves the session. `tags` holds the issuer as `iss`, the person's `sub`, and the session's `sid`.                                                      |
+| `delete(key)`                           | Removes the session.                                                                                                                                   |
+| `end(issuer=..., subject=..., sid=...)` | Removes every session from that issuer with that `sid`, or every session of that `subject`. Returns how many it removed. Back-channel logout calls it. |
 
 ## Stores
 
 `store` remembers four things: the result of each token refresh, the logouts masks sent, the logout
 tokens already used, and the DPoP proofs already seen.
 
-| | |
-| --- | --- |
-| `MemoryStore()` | The default. Keeps them in one process. |
-| `RedisStore(client)` | Keeps them in Redis, through a `redis.Redis` client. |
+|                           |                                                                            |
+| ------------------------- | -------------------------------------------------------------------------- |
+| `MemoryStore()`           | The default. Keeps them in one process.                                    |
+| `RedisStore(client)`      | Keeps them in Redis, through a `redis.Redis` client.                       |
 | `AsyncRedisStore(client)` | Keeps them in Redis, through a `redis.asyncio.Redis` client. FastAPI only. |
 
 A store of your own has these methods. In a FastAPI app, they can be `async def`.
 
-| Method | |
-| --- | --- |
+| Method                        |                                                                              |
+| ----------------------------- | ---------------------------------------------------------------------------- |
 | `add(key, value, expires_in)` | Saves the value only when the key is not there. Returns whether it saved it. |
-| `get(key)` | Returns the value, or `None`. |
-| `set(key, value, expires_in)` | Saves the value. |
-| `delete(key)` | Removes the key. |
+| `get(key)`                    | Returns the value, or `None`.                                                |
+| `set(key, value, expires_in)` | Saves the value.                                                             |
+| `delete(key)`                 | Removes the key.                                                             |
 
 Each key is a hash, and each refresh result is sealed with a key made from the old refresh token,
 so the store holds no tokens anyone can read.
@@ -196,30 +197,30 @@ so the store holds no tokens anyone can read.
 `masks.Client(issuer, client_id, ...)` takes `secret`, `method`, `key`, `dpop`, and `http`.
 `masks.AsyncClient` takes the same and has an `async` form of each call.
 
-| | |
-| --- | --- |
-| `Client.register(issuer, metadata, initial_access_token)` | Registers a client with an initial access token. |
-| `Client.from_registration(issuer, registration, ...)` | A client for a saved registration. |
-| `start(redirect_uri, scope=..., resource=..., organization=...)` | Starts a sign-in. Returns an `AuthorizationRequest` with its `url`. |
-| `complete(started, params)` | Finishes a sign-in. Returns a `SignIn` with `token` and `claims`. |
-| `userinfo(token)` | The person, from userinfo. |
-| `verify_id_token(id_token, nonce=..., access_token=...)` | Checks an ID token. |
-| `verify_logout_token(logout_token)` | Checks a logout token, which must have an expiry. Returns a `Logout`. |
-| `end_session_url(post_logout_redirect_uri=..., state=...)` | A link that signs the person out of masks. |
-| `client_credentials(scope=..., resource=...)` | A token for the client itself. |
-| `refresh(refresh_token, scope=..., resource=...)` | A new token from a refresh token. |
-| `device_authorization(scope=...)`, `await_device(device)` | The device flow. |
-| `revoke(token, hint="")` | Ends a token. |
-| `introspect(token, hint="")` | Asks masks whether a token is active. |
-| `exchange(subject_token, ...)` | Trades one token for another. |
-| `start_delegation(provider, redirect_uri)` | Starts connecting a provider for the signed-in person. |
-| `finish_delegation(started, params)` | Finishes it. Returns a `HeldConnection` with `connection` and `secret`. |
-| `delegated_token(secret, connection=...)` | A provider token. Returns an `Upstream` with the new `secret`. |
-| `enroll(scope=..., client_name=..., expires_in=...)` | An initial access token for one of the app's machines. |
-| `unenroll(client_id)` | Removes a machine the app enrolled. |
-| `read_registration`, `update_registration`, `delete_registration` | Manage a registration. |
-| `credentials_source(...)`, `refresh_source(token, ...)` | Token sources that refresh before a token expires. |
-| `http_client(source, *origins)` | An `httpx` client that sends the token, and a DPoP proof with a `dpop` key, to those origins. |
+|                                                                   |                                                                                               |
+| ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `Client.register(issuer, metadata, initial_access_token)`         | Registers a client with an initial access token.                                              |
+| `Client.from_registration(issuer, registration, ...)`             | A client for a saved registration.                                                            |
+| `start(redirect_uri, scope=..., resource=..., organization=...)`  | Starts a sign-in. Returns an `AuthorizationRequest` with its `url`.                           |
+| `complete(started, params)`                                       | Finishes a sign-in. Returns a `SignIn` with `token` and `claims`.                             |
+| `userinfo(token)`                                                 | The person, from userinfo.                                                                    |
+| `verify_id_token(id_token, nonce=..., access_token=...)`          | Checks an ID token.                                                                           |
+| `verify_logout_token(logout_token)`                               | Checks a logout token, which must have an expiry. Returns a `Logout`.                         |
+| `end_session_url(post_logout_redirect_uri=..., state=...)`        | A link that signs the person out of masks.                                                    |
+| `client_credentials(scope=..., resource=...)`                     | A token for the client itself.                                                                |
+| `refresh(refresh_token, scope=..., resource=...)`                 | A new token from a refresh token.                                                             |
+| `device_authorization(scope=...)`, `await_device(device)`         | The device flow.                                                                              |
+| `revoke(token, hint="")`                                          | Ends a token.                                                                                 |
+| `introspect(token, hint="")`                                      | Asks masks whether a token is active.                                                         |
+| `exchange(subject_token, ...)`                                    | Trades one token for another.                                                                 |
+| `start_delegation(provider, redirect_uri)`                        | Starts connecting a provider for the signed-in person.                                        |
+| `finish_delegation(started, params)`                              | Finishes it. Returns a `HeldConnection` with `connection` and `secret`.                       |
+| `delegated_token(secret, connection=...)`                         | A provider token. Returns an `Upstream` with the new `secret`.                                |
+| `enroll(scope=..., client_name=..., expires_in=...)`              | An initial access token for one of the app's machines.                                        |
+| `unenroll(client_id)`                                             | Removes a machine the app enrolled.                                                           |
+| `read_registration`, `update_registration`, `delete_registration` | Manage a registration.                                                                        |
+| `credentials_source(...)`, `refresh_source(token, ...)`           | Token sources that refresh before a token expires.                                            |
+| `http_client(source, *origins)`                                   | An `httpx` client that sends the token, and a DPoP proof with a `dpop` key, to those origins. |
 
 `masks.Key.generate()` makes a P-256 key. `Key.from_jwk(jwk)` loads one, and `to_jwk()` and `jwks()`
 write it out.
@@ -229,10 +230,10 @@ write it out.
 `masks.Verifier(issuer, audience, public_url=None, http=None, replay=None)` checks access tokens.
 `masks.AsyncVerifier` takes the same and is async.
 
-| | |
-| --- | --- |
-| `authenticate(method, url, headers)` | Checks the `Authorization` header and any `DPoP` proof. Returns `Claims`. |
-| `verify(token)` | Checks the token alone and skips any DPoP proof. A request goes through `authenticate`. |
+|                                      |                                                                                         |
+| ------------------------------------ | --------------------------------------------------------------------------------------- |
+| `authenticate(method, url, headers)` | Checks the `Authorization` header and any `DPoP` proof. Returns `Claims`.               |
+| `verify(token)`                      | Checks the token alone and skips any DPoP proof. A request goes through `authenticate`. |
 
 `Claims` has `issuer`, `subject`, `audience`, `expiry`, `client_id`, `scope`, `scopes`, `tenant`,
 `act`, `thumbprint`, `bound`, `has_scope(scope)`, and `raw`.
@@ -251,14 +252,14 @@ FastAPI app, also takes a store whose `first` is `async`.
 
 ## Errors
 
-| | |
-| --- | --- |
-| `masks.MasksError` | Every error the SDK raises. |
-| `masks.Error` | masks answered with an OAuth error. Has `code`, `description`, and `status`. |
-| `masks.InvalidToken` | A token or proof failed a check. |
-| `masks.Unavailable` | masks, its keys, or a replay store could not be reached. |
-| `masks.DelegationRefused` | masks refused a delegation call. `sign_in_again` says whether the person must sign in again. `secret` holds a replacement secret. |
-| `masks.DelegationUnavailable` | masks or the provider did not answer. `secret` holds a replacement secret. |
-| `masks.InsecureURL` | A plain `http` URL off this machine, without `allow_plain_http`. |
-| `masks.ForeignOrigin` | A URL on another origin than the one expected. |
-| `masks.web.Refusal` | A guard refused the request. `answer` holds the response. |
+|                               |                                                                                                                                   |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `masks.MasksError`            | Every error the SDK raises.                                                                                                       |
+| `masks.Error`                 | masks answered with an OAuth error. Has `code`, `description`, and `status`.                                                      |
+| `masks.InvalidToken`          | A token or proof failed a check.                                                                                                  |
+| `masks.Unavailable`           | masks, its keys, or a replay store could not be reached.                                                                          |
+| `masks.DelegationRefused`     | masks refused a delegation call. `sign_in_again` says whether the person must sign in again. `secret` holds a replacement secret. |
+| `masks.DelegationUnavailable` | masks or the provider did not answer. `secret` holds a replacement secret.                                                        |
+| `masks.InsecureURL`           | A plain `http` URL off this machine, without `allow_plain_http`.                                                                  |
+| `masks.ForeignOrigin`         | A URL on another origin than the one expected.                                                                                    |
+| `masks.web.Refusal`           | A guard refused the request. `answer` holds the response.                                                                         |

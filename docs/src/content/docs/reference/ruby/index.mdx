@@ -5,26 +5,29 @@ description: Use masks from a Rails app as a client, run a Rails app as a masks 
 
 A Rails app can use masks in one of three modes.
 
-| Mode | Gemfile | What your app does |
-| --- | --- | --- |
-| [Client](#client-mode) | `gem "masks"` | Signs people in against a masks server that runs somewhere else. |
-| [Server](/reference/ruby/server-mode/) | `gem "masks-server"` | Is a masks server, and nothing else. |
-| [Engine](/reference/ruby/engine-mode/) | `gem "masks-server"` | Mounts masks inside itself. Signs its own people in through it. |
+| Mode                                   | Gemfile              | What your app does                                               |
+| -------------------------------------- | -------------------- | ---------------------------------------------------------------- |
+| [Client](#client-mode)                 | `gem "masks"`        | Signs people in against a masks server that runs somewhere else. |
+| [Server](/reference/ruby/server-mode/) | `gem "masks-server"` | Is a masks server, and nothing else.                             |
+| [Engine](/reference/ruby/engine-mode/) | `gem "masks-server"` | Mounts masks inside itself. Signs its own people in through it.  |
 
-Server mode and Engine mode use the same Rails engine, `Masks::Server::Engine`. They mount it in
-different ways:
+Server mode and Engine mode use the same Rails engine, `Masks::Server::Engine`, and the same
+install generator. They mount it in different ways:
 
-- Server mode mounts it at the root, with the defaults the [container image](/guides/self-hosting/)
-  uses.
-- Engine mode mounts it at a path or on a subdomain. It keeps masks apart from the app around it.
+- Server mode mounts it at the root. The [container image](/guides/self-hosting/) is a Server-mode
+  app.
+- Engine mode mounts it at a path or on a subdomain, and keeps masks apart from the app around it.
 
 ## Client mode
 
 In Client mode, your app signs people in against a masks issuer. The issuer is the masks server,
 and the tenant on it, that signs people in and gives out tokens.
 
-`Masks::Rails` is a Rails engine inside the `masks` gem. It adds the sign-in flow to your app, so
-you only need to configure it.
+`Masks::Rails` is a Rails engine inside the `masks` gem. It adds the sign-in flow to your app, and
+you configure it in an initializer.
+
+A scope is a named permission that a token holds. A claim is one piece of information inside a
+token, such as the person's email address.
 
 1. Add the gem to your Gemfile:
 
@@ -38,8 +41,9 @@ you only need to configure it.
    bin/rails generate masks:install --resource https://app.example.com
    ```
 
-   The generator mounts the engine at `/auth`, writes `config/initializers/masks.rb`, and adds
-   `config/masks.json` to `.gitignore`. The initializer looks like this:
+   The generator mounts the engine at `/auth`, or at the path you give with `--mount`. It writes
+   `config/initializers/masks.rb` and adds `config/masks.json` to `.gitignore`. Leave out
+   `--resource` when the app does not accept tokens of its own. The initializer looks like this:
 
    ```ruby
    Masks::Rails.configure do |config|
@@ -57,15 +61,16 @@ you only need to configure it.
 
 ### The handshake
 
-The handshake connects your app to the masks server. It works like this:
+The handshake connects your app to the masks server:
 
 1. The handshake sends the browser to the masks server's approval screen.
 2. You approve the app there.
 3. A one-time token comes back. The engine redeems it by talking to the masks server directly, so
-   the secret never passes through the browser.
+   the client secret never passes through the browser.
 
-The handshake registers the app for `config.resource`. This must be an absolute URL on the app's
-own origin. If it is not set, `/auth/handshake` refuses.
+The handshake registers the app for `config.resource`, which must be an absolute `https` URL. If it
+is not set, `/auth/handshake` refuses. masks refuses the handshake unless every address it
+registers, such as `/auth/callback`, shares the resource's origin.
 
 Once the app is connected, only someone `config.manages` approves can reconnect or disconnect it.
 Set it to a [privilege](#privileges), or to a callable that takes the request, or the request and
@@ -107,38 +112,36 @@ The engine keeps the tokens and the person's claims in their own cookies:
   `SameSite=Lax`. Over https their name starts with `__Host-`.
 - A large session, such as one with a large access token, is split across up to eight cookies.
 - The Rails session holds only a random value that ties the cookies to it. When the app calls
-  `reset_session`, the person is signed out of masks too.
+  `reset_session`, the person is signed out of the app as well.
 
-| Method | |
-| --- | --- |
-| `masked!` | Sends a signed-out visitor to `masks_login_url` and stops the request. See [privileges](#privileges) for more. |
-| `masked` | The signed-in person and what they hold, described below. Also a view helper. |
+| Method              |                                                                                                                                                                                            |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `masked!`           | Sends a signed-out visitor to `masks_login_url` and stops the request. See [privileges](#privileges) for more.                                                                             |
+| `masked`            | The signed-in person and what they hold, described below. Also a view helper.                                                                                                              |
 | `masks_disconnect!` | Removes the connection. With the default store, it deletes `config/masks.json`. With a custom `config.store`, it calls `config.forget`, and returns `false` if `config.forget` is not set. |
 
 `masked` tells you everything about the sign-in:
 
-| | |
-| --- | --- |
-| `signed_in?` | Whether there is a sign-in and its token has not expired. |
-| `subject`, `name`, `nickname`, `email`, `email_verified?` | Who signed in. |
-| `picture`, `avatars` | `picture` is the `picture` claim, then the photo, then the identicon. `avatars` holds each avatar URL. |
-| `tenant` | The tenant's `uuid`, `subdomain`, and `name`. |
-| `organization`, `organizations`, `role?("owner")` | See [organizations](#organizations). |
-| `scopes`, `permits?("catalog:read")` | The scopes the token holds. |
-| `privileges`, `privilege?(:admin)` | See [privileges](#privileges). |
-| `access_token` | The token to send to a resource server. |
-| `masked["groups"]` | Any other claim. |
-| `to_h` | What `GET /auth/session` returns as JSON, for a single-page app. |
-
-A scope is a named permission that a token holds. A claim is one piece of information inside a
-token, such as the person's email address.
+|                                                           |                                                                                                        |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `signed_in?`                                              | Whether there is a sign-in and its token has not expired.                                              |
+| `subject`, `name`, `nickname`, `email`, `email_verified?` | Who signed in.                                                                                         |
+| `picture`, `avatars`                                      | `picture` is the `picture` claim, then the photo, then the identicon. `avatars` holds each avatar URL. |
+| `tenant`                                                  | The tenant's `uuid`, `subdomain`, and `name`.                                                          |
+| `organization`, `organizations`, `role?("owner")`         | See [organizations](#organizations).                                                                   |
+| `scopes`, `permits?("catalog:read")`                      | The scopes the token holds.                                                                            |
+| `privileges`, `privilege?(:admin)`                        | See [privileges](#privileges).                                                                         |
+| `access_token`                                            | The token to send to a resource server.                                                                |
+| `masked["groups"]`                                        | Any other claim.                                                                                       |
+| `to_h`                                                    | What `GET /auth/session` returns as JSON, for a single-page app.                                       |
 
 To sign out, send `DELETE /auth/logout`. This revokes the refresh token and clears the session.
 With `config.sign_out_of_issuer = true`, or `everywhere` in the request, the browser goes on to
 masks to end its session there. masks sends the browser back to `/auth/logout/return`, and the
 app sends it on to `after_sign_out`. A request for JSON gets the masks address as `logout_url`. The
-app accepts that return once, within an hour, in the browser that signed out. See
-[Masks::Rails](/reference/ruby/rails/) for the full list.
+app accepts that return once, within an hour, in the browser that signed out.
+
+[Masks::Rails](/reference/ruby/rails/) lists every method and setting.
 
 ### Back-channel logout
 
@@ -215,12 +218,12 @@ Masks::Rails.configure do |config|
 end
 ```
 
-| Method | |
-| --- | --- |
-| `masked.organization` | The organization signed in to, with its `id`, `key`, `name`, and `role`. `nil` if there is none. |
-| `masked.role?("owner", "billing")` | Whether the person holds one of those roles in it. |
-| `masked.organizations` | Every organization the person has joined. Each one includes the role held there. |
-| `masks_login_url(organization: "globex")` | Signs the person in again, naming another organization. |
+| Method                                    |                                                                                                  |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `masked.organization`                     | The organization signed in to, with its `id`, `key`, `name`, and `role`. `nil` if there is none. |
+| `masked.role?("owner", "billing")`        | Whether the person holds one of those roles in it.                                               |
+| `masked.organizations`                    | Every organization the person has joined. Each one includes the role held there.                 |
+| `masks_login_url(organization: "globex")` | Signs the person in again, naming another organization.                                          |
 
 `/auth/session` returns the same information as `organization` and `organizations`.
 
@@ -274,12 +277,12 @@ class SettingsController < ApplicationController
 end
 ```
 
-| | |
-| --- | --- |
-| The sign-in holds the privilege | The action runs. |
-| A scope is missing | The browser goes through masks once. It asks for the usual scopes and the privilege's scopes, then comes back to the page it was on. A person already signed in to masks sees a consent screen at most. A JSON request gets `403` with `privilege_required`, the `privileges`, and the `login_url` to send the browser to. |
-| masks did not grant the scope on that trip | `403 insufficient_scope`. The person does not hold the scope, so the app does not send them through masks again for five minutes. |
-| A role or organization does not match | `403 insufficient_role` or `insufficient_organization`. The browser does not go through masks. |
+|                                            |                                                                                                                                                                                                                                                                                                                            |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The sign-in holds the privilege            | The action runs.                                                                                                                                                                                                                                                                                                           |
+| A scope is missing                         | The browser goes through masks once. It asks for the usual scopes and the privilege's scopes, then comes back to the page it was on. A person already signed in to masks sees a consent screen at most. A JSON request gets `403` with `privilege_required`, the `privileges`, and the `login_url` to send the browser to. |
+| masks did not grant the scope on that trip | `403 insufficient_scope`. The person does not hold the scope, so the app does not send them through masks again for five minutes.                                                                                                                                                                                          |
+| A role or organization does not match      | `403 insufficient_role` or `insufficient_organization`. The browser does not go through masks.                                                                                                                                                                                                                             |
 
 An ordinary sign-in never asks for privilege scopes. Asking for them never gives anyone more
 access:
@@ -289,13 +292,13 @@ access:
 
 The handshake registers the scopes of every privilege, so the issuer lets the app ask for them.
 
-| Method | |
-| --- | --- |
-| `masked!(*privileges, only:, except:)` | Guards a controller. |
-| `authorize_masks!(*privileges)` | The same check inside an action. |
-| `masked.privilege?(:admin)` | Whether the sign-in holds a privilege. Use it to show or hide a control. |
-| `masked.privileges` | Every privilege the sign-in holds. `/auth/session` returns it as `privileges`. |
-| `masks_login_url(privilege: :admin)` | Signs the person in again and asks for a privilege, the same as `/auth?privilege=admin`. |
+| Method                                 |                                                                                          |
+| -------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `masked!(*privileges, only:, except:)` | Guards a controller.                                                                     |
+| `authorize_masks!(*privileges)`        | The same check inside an action.                                                         |
+| `masked.privilege?(:admin)`            | Whether the sign-in holds a privilege. Use it to show or hide a control.                 |
+| `masked.privileges`                    | Every privilege the sign-in holds. `/auth/session` returns it as `privileges`.           |
+| `masks_login_url(privilege: :admin)`   | Signs the person in again and asks for a privilege, the same as `/auth?privilege=admin`. |
 
 A name that `config.privileges` does not define raises `ArgumentError` in the app. In a URL, the
 engine ignores it.
@@ -311,7 +314,7 @@ resource server, it checks access tokens with `Masks::Rails::ProtectedResource`.
 
 ```ruby
 Masks::Rails.configure do |config|
-  config.privileges = { read: %w[xixo:catalog:read], write: %w[xixo:catalog:write] }
+  config.privileges = { read: %w[catalog:read], write: %w[catalog:write] }
 end
 
 class ApiController < ActionController::Base

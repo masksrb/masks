@@ -3,73 +3,77 @@ title: FastAPI
 description: "Sign people in to a FastAPI or Starlette app with masks-client, and guard routes with dependencies."
 ---
 
-It reads the [settings](/reference/python/#setting-up) every integration shares. Install the `fastapi` extra.
+`masks.fastapi` adds masks to a FastAPI app. [Python apps](/reference/python/) explains the
+settings, the handshake, sessions, and privileges that every framework shares.
 
 ## Setting up
 
-`Masks.install` adds the routes, the session middleware, and the answers for refused requests.
-Each guard is a FastAPI dependency.
+1. Install the package with the `fastapi` extra:
 
-```python
-import os
-from typing import Annotated
+   ```sh
+   pip install "masks-client[fastapi]"
+   ```
 
-from fastapi import Depends, FastAPI
+2. Create `Masks` with a `Config`, and install it on the app:
 
-from masks.fastapi import Actor, Config, Masks
+   ```python
+   import os
+   from typing import Annotated
 
-auth = Masks(Config(
-    issuer=os.environ["MASKS_ISSUER"],
-    resource="https://app.example.com",
-    name="Catalog",
-    secret=os.environ["SESSION_SECRET"],
-))
+   from fastapi import Depends, FastAPI
 
-app = FastAPI()
-auth.install(app)
+   from masks.fastapi import Actor, Config, Masks
+
+   auth = Masks(Config(
+       issuer=os.environ["MASKS_ISSUER"],
+       resource="https://app.example.com",
+       name="Catalog",
+       secret=os.environ["SESSION_SECRET"],
+   ))
+
+   app = FastAPI()
+   auth.install(app)
 
 
-@app.get("/settings")
-async def settings(actor: Annotated[Actor, Depends(auth.require())]):
-    return {"name": actor.name}
-```
+   @app.get("/settings")
+   async def settings(actor: Annotated[Actor, Depends(auth.require())]):
+       return {"name": actor.name}
+   ```
 
-`auth.require(*privileges)` sends a signed-out visitor to sign in and back again, then checks each
-privilege. `auth.protect(*privileges)` checks an access token instead. See
-[the reference](#reference).
+`install` adds the routes, the session middleware, and the handler for refused requests. Each
+guard is a FastAPI dependency:
 
-`auth.authorize(request, *privileges)` runs the same check inside a route. A Starlette app without
-FastAPI can still add `masks.fastapi.SessionMiddleware` and mount `auth.router.routes`.
+- `auth.require(*privileges)` sends a signed-out visitor to sign in and back again, then checks
+  each privilege.
+- `auth.protect(*privileges)` checks an access token.
+
+Both raise `ValueError` for a privilege that `Config.privileges` does not name.
+
+A Starlette app without FastAPI adds `SessionMiddleware(app, masks=auth)` and mounts
+`auth.router.routes`.
+
+The session is read the first time a request needs it, so a route that never asks for the actor
+reads nothing from a session store.
 
 ## Reference
 
 `masks.fastapi` exports `Actor`, `Config`, `Masks`, `Refusal`, and `SessionMiddleware`.
 
-```python
-auth = masks.fastapi.Masks(config)
-auth.install(app)
-```
-
-| | |
-| --- | --- |
-| `install(app)` | Adds the session middleware, the routes, and the handler for refused requests. |
-| `router` | An `APIRouter` with the routes, for an app that adds the middleware itself. |
-| `actor` | A dependency that gives the actor, signed in or not. |
-| `require(*privileges, tokens=False)` | A dependency that needs a sign-in holding each privilege. With `tokens=True`, it checks a token when the request has an `Authorization` header or no session. |
-| `protect(*privileges)` | A dependency that needs an access token holding each privilege. |
-| `await authorize(request, *privileges, tokens=False)` | `require` inside a route. Raises `Refusal`. |
-| `await protected(request, *privileges)` | `protect` inside a route. Raises `Refusal`. |
-| `await client(request)` | A `masks.AsyncClient` with the app's credentials. |
-| `await start_delegation(request, provider)` | Starts a [delegation](/reference/python/#delegations). Returns the redirect. |
-| `await finish_delegation(request)` | Finishes it. Returns a `masks.HeldConnection`. |
-| `login_url(return_to="", organization="", privilege=())` | A link that starts a sign-in. |
-| `logout_url()` | The path a sign-out form posts to. |
-| `await registered(request)` | Whether masks still knows the app. |
-| `connected(request)` | Whether the app holds credentials. |
-| `await session(request)` | The session, a mutable mapping. |
-| `await aclose()` | Closes the HTTP client. |
-
-`SessionMiddleware(app, masks=auth)` loads and saves the session in any Starlette app. It reads the
-session the first time a request needs it, so a route that never asks for the actor reads nothing
-from a session store. `require`
-and `protect` raise `ValueError` for a privilege `Config.privileges` does not name.
+|                                                                        |                                                                                                                                                               |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `install(app)`                                                         | Adds the session middleware, the routes, and the handler for refused requests.                                                                                |
+| `router`                                                               | An `APIRouter` with the routes, for an app that adds the middleware itself.                                                                                   |
+| `actor`                                                                | A dependency that gives the actor, signed in or not.                                                                                                          |
+| `require(*privileges, tokens=False)`                                   | A dependency that needs a sign-in holding each privilege. With `tokens=True`, it checks a token when the request has an `Authorization` header or no session. |
+| `protect(*privileges)`                                                 | A dependency that needs an access token holding each privilege.                                                                                               |
+| `await authorize(request, *privileges, tokens=False)`                  | `require` inside a route. Raises `Refusal`.                                                                                                                   |
+| `await protected(request, *privileges)`                                | `protect` inside a route. Raises `Refusal`.                                                                                                                   |
+| `await client(request)`                                                | A `masks.AsyncClient` with the app's credentials.                                                                                                             |
+| `await start_delegation(request, provider, prompt=None, max_age=None)` | Starts a [delegation](/reference/python/#delegations). Returns the redirect.                                                                                  |
+| `await finish_delegation(request)`                                     | Finishes it. Returns a `masks.HeldConnection`.                                                                                                                |
+| `login_url(return_to="", organization="", privilege=())`               | A link that starts a sign-in.                                                                                                                                 |
+| `logout_url()`                                                         | The path a sign-out form posts to.                                                                                                                            |
+| `await registered(request)`                                            | Whether masks still knows the app.                                                                                                                            |
+| `connected(request)`                                                   | Whether the app holds credentials.                                                                                                                            |
+| `await session(request)`                                               | The session, a mutable mapping.                                                                                                                               |
+| `await aclose()`                                                       | Closes the HTTP client.                                                                                                                                       |

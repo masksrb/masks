@@ -3,53 +3,67 @@ title: Flask
 description: "Sign people in to a Flask app with masks-client's blueprint and route decorators."
 ---
 
-It reads the [settings](/reference/python/#setting-up) every integration shares. Install the `flask` extra.
+`masks.flask` adds masks to a Flask app. [Python apps](/reference/python/) explains the settings,
+the handshake, sessions, and privileges that every framework shares.
 
 ## Setting up
 
-`Masks` registers a blueprint with the routes. The session secret defaults to `app.secret_key`.
+1. Install the package with the `flask` extra:
 
-```python
-from flask import Flask
-from masks.flask import Masks, masked
+   ```sh
+   pip install "masks-client[flask]"
+   ```
 
-app = Flask(__name__)
-app.secret_key = os.environ["SESSION_SECRET"]
-auth = Masks(app, issuer=os.environ["MASKS_ISSUER"], resource="https://app.example.com")
+2. Create `Masks` with the app and its settings:
+
+   ```python
+   import os
+
+   from flask import Flask
+
+   from masks.flask import Masks, masked
+
+   app = Flask(__name__)
+   app.secret_key = os.environ["SESSION_SECRET"]
+   auth = Masks(app, issuer=os.environ["MASKS_ISSUER"], resource="https://app.example.com")
 
 
-@app.get("/settings")
-@auth.required()
-def settings():
-    return {"name": masked.name}
-```
+   @app.get("/settings")
+   @auth.required()
+   def settings():
+       return {"name": masked.name}
+   ```
 
-`auth.required(*privileges)` and `auth.protected(*privileges)` work like the [FastAPI](/reference/python/fastapi/) guards, and
-`masked` is the actor for the current request. You can also pass a `Config` as `Masks(app, config)`.
+`Masks` registers the routes as a blueprint. It takes the settings as keywords or a `Config`, as
+`Masks(app, config)`. `secret` defaults to `app.secret_key`. `Masks()` followed by `init_app(app)`
+works as well.
 
-## Reference
+`masked` is the actor for the current request. The decorators take
+[privileges](/reference/python/#privileges).
 
-`Masks(app, config)` or `Masks(app, **settings)` registers the routes as a blueprint. The secret
-defaults to `app.secret_key`. `Masks()` followed by `init_app(app)` works as well.
+`init_app` raises these errors:
 
-| | |
-| --- | --- |
-| `masked` | The actor for the current request. |
-| `@auth.required(*privileges, tokens=False)` | Needs a sign-in holding each privilege. |
-| `@auth.protected(*privileges)` | Needs an access token holding each privilege. |
-| `auth.authorize(*privileges, tokens=False)` | `required` inside a view. Raises `Refusal`. |
-| `auth.actor` | The actor, the same as `masked`. |
-| `auth.client()` | A `masks.Client` with the app's credentials. |
-| `auth.start_delegation(provider)` | Starts a [delegation](/reference/python/#delegations). Returns the redirect. |
-| `auth.finish_delegation()` | Finishes it. Returns a `masks.HeldConnection`. |
-| `auth.login_url(return_to="", organization="", privilege=())` | A link that starts a sign-in. |
-| `auth.logout_url()` | The path a sign-out form posts to. |
-| `auth.registered()` | Whether masks still knows the app. |
-| `auth.connected()` | Whether the app holds credentials. |
-| `auth.session()` | The session, a mutable mapping. |
-
-`init_app` raises `ValueError` for a privilege that `privileges` does not name, even in a decorator
-applied before it ran. It raises `TypeError` for a session store with `async` methods.
+- `ValueError` for a privilege that `privileges` does not name, even in a decorator applied before
+  `init_app` ran.
+- `TypeError` for an async session store or `store`.
 
 The session is read the first time a request needs it, so a view that never asks for the actor
 reads nothing from a session store.
+
+## Reference
+
+|                                                               |                                                                                                                                             |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `masked`                                                      | The actor for the current request.                                                                                                          |
+| `@auth.required(*privileges, tokens=False)`                   | Needs a sign-in holding each privilege. With `tokens=True`, it checks a token when the request has an `Authorization` header or no session. |
+| `@auth.protected(*privileges)`                                | Needs an access token holding each privilege.                                                                                               |
+| `auth.authorize(*privileges, tokens=False)`                   | `required` inside a view. Raises `masks.web.Refusal`.                                                                                       |
+| `auth.actor`                                                  | The actor, the same as `masked`.                                                                                                            |
+| `auth.client()`                                               | A `masks.Client` with the app's credentials.                                                                                                |
+| `auth.start_delegation(provider, prompt=None, max_age=None)`  | Starts a [delegation](/reference/python/#delegations). Returns the redirect.                                                                |
+| `auth.finish_delegation()`                                    | Finishes it. Returns a `masks.HeldConnection`.                                                                                              |
+| `auth.login_url(return_to="", organization="", privilege=())` | A link that starts a sign-in.                                                                                                               |
+| `auth.logout_url()`                                           | The path a sign-out form posts to.                                                                                                          |
+| `auth.registered()`                                           | Whether masks still knows the app.                                                                                                          |
+| `auth.connected()`                                            | Whether the app holds credentials.                                                                                                          |
+| `auth.session()`                                              | The session, a mutable mapping.                                                                                                             |

@@ -6,16 +6,23 @@ description: Sign people in to a FastAPI, Django, or Flask app with masks, guard
 `masks-client` signs people in to a Python web app against a masks server. It covers what
 [`Masks::Rails`](/reference/ruby/#client-mode) covers in a Rails app: the handshake, the sign-in, a
 session, organizations, privileges, and checking access tokens. It works with FastAPI, Django, and
-Flask, and every call in the client also has an `async` form.
+Flask.
 
-The package imports as `masks` and needs Python 3.10 or later. It is not on PyPI yet, so install it
-from the repository with the extra for your framework:
+The package imports as `masks` and needs Python 3.10 or later. Install it from PyPI:
 
 ```sh
-pip install "masks-client[fastapi] @ git+https://github.com/masksrb/masks#subdirectory=python"
+pip install masks-client
 ```
 
-[masks-client](/reference/python/client/) lists every setting, route, and call.
+A web app adds the extra for its framework, such as `masks-client[fastapi]`. Each framework has its
+own page:
+
+- [FastAPI](/reference/python/fastapi/)
+- [Django](/reference/python/django/)
+- [Flask](/reference/python/flask/)
+
+[masks-client](/reference/python/client/) lists every setting, route, and call. The examples on this
+page use FastAPI. Each framework page lists the same calls for that framework.
 
 ## Setting up
 
@@ -28,12 +35,6 @@ Every framework takes the same `masks.web.Config`. Most apps set four things:
   `openssl rand -hex 32`. Django and Flask use the app's own secret key when you leave it out.
 
 See [every setting](/reference/python/client/#config).
-
-Each framework has its own page:
-
-- [FastAPI](/reference/python/fastapi/)
-- [Django](/reference/python/django/)
-- [Flask](/reference/python/flask/)
 
 After you set up your framework:
 
@@ -58,17 +59,26 @@ The handshake registers the app for `resource`, with these addresses:
 - `/auth/logout/backchannel` for back-channel logout, when the issuer supports it.
 
 All of them must share the resource's origin, or the handshake refuses before the browser leaves.
-A credential store that cannot be written refuses the handshake before masks registers anything.
+A credential store that cannot be written also refuses the handshake before masks registers
+anything.
 
 The app writes its credentials to `masks.json` with file mode 600. To keep them somewhere else, set
 `credentials` to one of the [credential stores](/reference/python/client/#credentials).
 
+### Several tenants
+
 A multi-tenant app sets `credentials` to a function that takes the request and returns the store for
 that tenant. `issuer`, `resource`, `name`, `organization`, and `base_url` take a function of the
-request in the same way. When `issuer` is a function, `Config` needs `credentials` as well, since one
-`masks.json` would send one tenant's client secret to another. The handshake saves the issuer with
-the credentials, and the app never uses them with another issuer. Derive them from something the app trusts, such as a tenant it looked up by
-host. Never use a value the browser sends without checking it.
+request in the same way.
+
+- When `issuer` is a function, `Config` needs `credentials` as well, since one `masks.json` would
+  send one tenant's client secret to another.
+- The handshake saves the issuer with the credentials, and the app never uses them with another
+  issuer.
+- Derive each value from something the app trusts, such as a tenant it looked up by host. Never use
+  a value the browser sends without checking it.
+
+### Managing the connection
 
 Once the app is connected, `/auth/handshake` shows the connection to somebody `manages` allows. It
 has buttons to connect again and to disconnect. Disconnecting deletes the registration at masks and
@@ -88,6 +98,9 @@ its credentials and the browser goes to the handshake again.
 
 ## Signing in
 
+A scope is a named permission that a token holds. A claim is one piece of information inside a
+token, such as the person's email address.
+
 The routes answer under `prefix`, which is `/auth` by default. `GET /auth` starts a sign-in, and
 `GET /auth/callback` finishes it. See [every route](/reference/python/client/#routes).
 
@@ -104,11 +117,8 @@ not start sends it to sign in again, at most once a minute. In between, it is re
 A JSON request that needs a sign-in gets `401` with `login_required` or `handshake_required` and the
 URL to send the browser to. A browser is redirected.
 
-The actor has the sign-in's claims, scopes, organizations, and privileges. See
+The actor holds the sign-in's claims, scopes, organizations, and privileges. See
 [the actor](/reference/python/client/#the-actor).
-
-A scope is a named permission that a token holds. A claim is one piece of information inside a
-token, such as the person's email address.
 
 `auth.login_url(return_to="/billing")` builds a link to sign in, and `auth.logout_url()` is the path
 a sign-out form posts to. In Django these are `masks.django.login_url` and the `/auth/logout` path.
@@ -120,10 +130,13 @@ and organizations are read again from userinfo, the masks endpoint that describe
 person.
 
 masks revokes a refresh token that is used twice, along with every token issued from it. So requests
-that arrive together with the same expired session share one refresh. The first request to claim
-the refresh token in [`store`](#running-several-processes) spends it. The app keeps the result there
-for a minute, sealed under a key made from that refresh token, and gives it to every request that
-brings the same one. A store that cannot be reached counts as a refresh that masks does not answer.
+that arrive together with the same expired session share one refresh:
+
+1. The first request to claim the refresh token in [`store`](#running-several-processes) spends it.
+2. The app keeps the result there for a minute, sealed under a key made from that refresh token.
+3. Every request that brings the same refresh token gets that result.
+
+A store that cannot be reached counts as a refresh that masks does not answer.
 
 - A refresh that masks refuses signs the person out.
 - A refresh that masks does not answer, or answers with a `5xx` or `429` status, leaves the session
@@ -132,12 +145,14 @@ brings the same one. A store that cannot be reached counts as a refresh that mas
 ### Signing out
 
 A sign-out revokes the refresh token and clears the session. With `sign_out_of_issuer`, or
-`everywhere`, the browser goes on to masks to end its session there. masks sends it back to
-`/auth/logout/return`, which sends it on to `after_sign_out`. That return works once, within an hour,
-and only in the browser that signed out.
+`everywhere` in the request, the browser goes on to masks to end its session there. masks sends it
+back to `/auth/logout/return`, which sends it on to `after_sign_out`. That return works once, within
+an hour, and only in the browser that signed out.
 
 A sign-out request of any method is refused with `403` when its `Sec-Fetch-Site` or `Origin` header
 names another site. So a page on another site cannot sign anybody out.
+
+### Back-channel logout
 
 When masks ends a session itself, it sends a logout token to `/auth/logout/backchannel`. The app
 checks the token, then signs out the session it names, or every session of the person it names. The
@@ -147,7 +162,7 @@ sign-out takes effect at that session's next request.
 - The app remembers each logout in [`store`](#running-several-processes), so it reaches every
   process that shares the store. When the store cannot save the logout, the app answers with an
   error and takes the same token when masks sends it again.
-- Sessions kept on the server are also deleted from the store.
+- Sessions kept on the server are also deleted from the session store.
 - `logged_out`, a function that takes a `masks.Logout`, hears each logout as well.
 
 ## Sessions
@@ -162,9 +177,9 @@ it, and `/auth/session` leaves them out.
 - To change the secret, pass a list with the new secret first. Sessions sealed with an older secret
   still open, and are sealed with the new one the next time they change.
 
-A session larger than one cookie is split across several, named `__Host-masks`, `__Host-masks-1`,
-and so on, up to eight. Past about 30 KB, the app raises `ValueError`. To keep sessions on the
-server instead, set `sessions`:
+A session larger than one cookie is split across up to eight cookies, named `__Host-masks`,
+`__Host-masks-1`, and so on. Past about 30 KB, the app raises `ValueError`. To keep sessions on the
+server, set `sessions`:
 
 ```python
 from masks.web import MemorySessionStore, ServerSessions
@@ -175,8 +190,7 @@ Config(..., sessions=ServerSessions(MemorySessionStore()))
 The cookie then holds only a random id. The store keeps each session under a hash of that id, so
 the ids cannot be read back from the store. `MemorySessionStore` keeps sessions in one process. A
 store of your own, such as one in Redis or a database, has the
-[store methods](/reference/python/client/#sessions). In a FastAPI app, they can be `async def`, so waiting
-on the store does not hold up other requests.
+[session store methods](/reference/python/client/#sessions).
 
 ## Running several processes
 
@@ -217,12 +231,12 @@ Config(
 )
 ```
 
-| | |
-| --- | --- |
-| `actor.organization` | The organization signed in to, with its `id`, `key`, `name`, and `role`. `None` if there is none. |
-| `actor.has_role("owner", "billing")` | Whether the person holds one of those roles in it. |
-| `actor.organizations` | Every organization the person has joined. Each one includes the role held there. |
-| `auth.login_url(organization="globex")` | Signs the person in again, naming another organization. |
+|                                         |                                                                                                   |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `actor.organization`                    | The organization signed in to, with its `id`, `key`, `name`, and `role`. `None` if there is none. |
+| `actor.has_role("owner", "billing")`    | Whether the person holds one of those roles in it.                                                |
+| `actor.organizations`                   | Every organization the person has joined. Each one includes the role held there.                  |
+| `auth.login_url(organization="globex")` | Signs the person in again, naming another organization.                                           |
 
 The app reads the organizations from userinfo at sign-in and at every refresh. So when a person's
 role changes, the app sees the change within the lifetime of one access token.
@@ -250,12 +264,12 @@ Config(
 - `role` takes one role or several. Any one of them is enough.
 - `organization` limits the privilege to one organization, named by key or id.
 
-| | |
-| --- | --- |
-| The sign-in holds the privilege | The route runs. |
-| A scope is missing | The browser goes through masks once. It asks for the usual scopes and the privilege's scopes, then comes back to the page it was on. A JSON request gets `403` with `privilege_required`, the `privileges`, and the `login_url` to send the browser to. |
-| masks did not grant the scope on that trip | `403 insufficient_scope`. The person does not hold the scope, so the app does not send them through masks again for five minutes. |
-| A role or organization does not match | `403 insufficient_role` or `insufficient_organization`. The browser does not go through masks. |
+|                                            |                                                                                                                                                                                                                                                         |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The sign-in holds the privilege            | The route runs.                                                                                                                                                                                                                                         |
+| A scope is missing                         | The browser goes through masks once. It asks for the usual scopes and the privilege's scopes, then comes back to the page it was on. A JSON request gets `403` with `privilege_required`, the `privileges`, and the `login_url` to send the browser to. |
+| masks did not grant the scope on that trip | `403 insufficient_scope`. The person does not hold the scope, so the app does not send them through masks again for five minutes.                                                                                                                       |
+| A role or organization does not match      | `403 insufficient_role` or `insufficient_organization`. The browser does not go through masks.                                                                                                                                                          |
 
 An ordinary sign-in never asks for privilege scopes. Asking for them never gives anyone more
 access, since masks puts a scope in the token only for a person who already holds it. The handshake
@@ -281,13 +295,14 @@ async def items(actor: Annotated[Actor, Depends(auth.protect("read"))]):
 ```
 
 The guard takes the same [privileges](#privileges), including roles and organizations, and checks
-them against the token.
+them against the token. The actor for a token has `by_token` set, and its claims are the token's
+claims.
 
-| | |
-| --- | --- |
-| No token, or a token that fails a check | `401` with RFC 6750 challenges for `Bearer` and `DPoP`. |
-| A token that lacks a privilege | `403` with `insufficient_scope`, `insufficient_role`, or `insufficient_organization`. |
-| The issuer's keys or the replay store cannot be reached | `503` with no challenge, since the token may still be good. |
+|                                                         |                                                                                       |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| No token, or a token that fails a check                 | `401` with RFC 6750 challenges for `Bearer` and `DPoP`.                               |
+| A token that lacks a privilege                          | `403` with `insufficient_scope`, `insufficient_role`, or `insufficient_organization`. |
+| The issuer's keys or the replay store cannot be reached | `503` with no challenge, since the token may still be good.                           |
 
 Each challenge's `resource_metadata` points at `/.well-known/oauth-protected-resource`, which the
 routes serve.
@@ -305,10 +320,8 @@ The URL is the resource's origin and the request's path, so a proxy in front of 
 other setting. The app remembers the proofs it has seen in
 [`store`](#running-several-processes).
 
-The actor for a token has `by_token` set, and its claims are the token's claims.
-
-An API with no browser sign-in can use `masks.Verifier` without `masks.web`. See the
-[package README](https://github.com/masksrb/masks/tree/main/python#checking-access-tokens).
+An API with no browser sign-in can use `masks.Verifier` without `masks.web`. See
+[checking tokens](/reference/python/client/#checking-tokens).
 
 ## Delegations
 
@@ -331,22 +344,21 @@ async def connected(request: Request, actor: Annotated[Actor, Depends(auth.requi
     save(actor.subject, held.connection, held.secret)
 ```
 
-`start_delegation` sends a visitor who is not signed in to sign in first. `finish_delegation`
-raises `masks.DelegationRefused` when:
+`start_delegation` sends a visitor who is not signed in to sign in first. It also takes `prompt`
+and `max_age`, which it sends to masks with the request. `finish_delegation` raises
+`masks.DelegationRefused` when:
 
-- this browser did not start the connection, or it is more than an hour old,
-- someone else signed in after it started,
-- masks connected the provider for another account, or
-- the person said no at the provider.
+- this browser did not start the connection, or it is more than an hour old
+- someone else signed in after it started
+- masks connected the provider for another account
+- masks' answer fails a check
+- the person said no at the provider
 
-In Flask, call `auth.start_delegation("google")` and `auth.finish_delegation()`. In Django, call
-`masks.django.start_delegation(request, "google")` and `masks.django.finish_delegation(request)`.
-
-Keep the `secret` encrypted. To call the provider later, take the client from
-`await auth.client(request)` in FastAPI, `auth.client()` in Flask, or `masks.django.client(request)`
-in Django, and ask for the provider's token:
+Keep the `secret` encrypted. To call the provider later, take the app's client and ask for the
+provider's token:
 
 ```python
+client = await auth.client(request)
 upstream = await client.delegated_token(secret, connection=connection)
 save(actor.subject, connection, upstream.secret)
 ```
@@ -360,9 +372,9 @@ Save `upstream.secret` before anything else, since each call replaces the secret
 
 ## Machines and enrollment
 
-A Python program on a machine, such as an agent an app installs, signs in as itself with `masks.Client`.
-See the [package README](https://github.com/masksrb/masks/tree/main/python) for keys, client
-credentials, DPoP, and the device flow.
+A Python program on a machine, such as an agent an app installs, signs in as itself with
+`masks.Client`. See the [package README](https://github.com/masksrb/masks/tree/main/python) for
+keys, client credentials, DPoP, and the device flow.
 
 An app that has claimed a [namespace](/guides/core-concepts/#namespaces), through `namespace` in its
 handshake, enrolls each machine without a browser:
@@ -375,14 +387,15 @@ handshake, enrolls each machine without a browser:
    ```
 
 2. The app hands `enrollment.initial_access_token` to the machine.
-3. The machine makes its own keys and registers with the token:
+3. The machine makes its own key and registers with the token:
 
    ```python
+   issuer = masks.discover("https://acme.auth.example.com")
    key = masks.Key.generate()
    registration = masks.Client.register(
        issuer,
        masks.ClientMetadata(client_name="nas", token_endpoint_auth_method=masks.PRIVATE_KEY_JWT, jwks=key.jwks()),
-       enrollment.initial_access_token,
+       initial_access_token,
    )
    ```
 

@@ -3,11 +3,19 @@ title: Django
 description: "Sign people in to a Django app with masks-client's middleware, URLs, and view decorators."
 ---
 
-It reads the [settings](/reference/python/#setting-up) every integration shares. Install the `django` extra.
+`masks.django` adds masks to a Django app. [Python apps](/reference/python/) explains the settings,
+the handshake, sessions, and privileges that every framework shares.
 
 ## Setting up
 
-1. Set `MASKS` in your settings to a `Config`, or to a dict of its settings:
+1. Install the package with the `django` extra:
+
+   ```sh
+   pip install "masks-client[django]"
+   ```
+
+2. Set `MASKS` in your settings to a `Config`, or to a dict of its settings. `secret` defaults to
+   `SECRET_KEY`.
 
    ```python
    MASKS = {
@@ -17,7 +25,7 @@ It reads the [settings](/reference/python/#setting-up) every integration shares.
    }
    ```
 
-2. Add the middleware after Django's own:
+3. Add the middleware after Django's own:
 
    ```python
    MIDDLEWARE = [
@@ -27,46 +35,49 @@ It reads the [settings](/reference/python/#setting-up) every integration shares.
    ]
    ```
 
-3. Include the routes at the root of your URLs. The paths already start with `/auth`:
+4. Include the routes at the root of your URLs. Their paths already start with `/auth`.
 
    ```python
+   from django.urls import include, path
+
    urlpatterns = [
        path("", include("masks.django.urls")),
        ...
    ]
    ```
 
-4. Guard a view with a decorator:
+5. Guard a view with a decorator:
 
    ```python
-   from masks.django import login_required, token_required
+   from masks.django import login_required
 
    @login_required()
    def settings(request):
        return render(request, "settings.html", {"actor": request.masked})
    ```
 
-`login_required` and `token_required` take privileges like the [FastAPI](/reference/python/fastapi/) guards, and `login_required`
-takes `tokens=True`. `request.masked` is the actor on every request. masks' own routes check that a
-form came from this site, so Django's CSRF check is off for them, and a sign-out form needs no
-`{% csrf_token %}`.
+`request.masked` is the actor on every request. The decorators take
+[privileges](/reference/python/#privileges).
+
+masks' own routes check that a form came from this site, so Django's CSRF check is off for them,
+and a sign-out form needs no `{% csrf_token %}`.
+
+An async session store or `store` raises `ImproperlyConfigured`. Use a synchronous one.
 
 ## Reference
 
-1. Set `MASKS` in the settings to a `Config`, or to a dict of its settings.
-2. Add `masks.django.middleware.MasksMiddleware` after Django's own middleware.
-3. Include `masks.django.urls` at the root of the URLs.
+`masks.django` exports these:
 
-| | |
-| --- | --- |
-| `request.masked` | The actor on every request. |
-| `@login_required(*privileges, tokens=False)` | Needs a sign-in holding each privilege, like `require` in [FastAPI](/reference/python/fastapi/). |
-| `@token_required(*privileges)` | Needs an access token holding each privilege. |
-| `client(request)` | A `masks.Client` with the app's credentials. |
-| `start_delegation(request, provider)` | Starts a [delegation](/reference/python/#delegations). Returns the redirect. |
-| `finish_delegation(request)` | Finishes it. Returns a `masks.HeldConnection`. |
-| `login_url(return_to="", organization="", privilege=())` | A link that starts a sign-in. |
-| `registered(request)` | Whether masks still knows the app. |
-| `connected(request)` | Whether the app holds credentials. |
-| `actor(request)` | The actor, the same as `request.masked`. |
-| `engine()` | The shared engine built from `MASKS`. |
+|                                                                  |                                                                                                                                             |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `request.masked`                                                 | The actor on every request.                                                                                                                 |
+| `@login_required(*privileges, tokens=False)`                     | Needs a sign-in holding each privilege. With `tokens=True`, it checks a token when the request has an `Authorization` header or no session. |
+| `@token_required(*privileges)`                                   | Needs an access token holding each privilege.                                                                                               |
+| `client(request)`                                                | A `masks.Client` with the app's credentials.                                                                                                |
+| `start_delegation(request, provider, prompt=None, max_age=None)` | Starts a [delegation](/reference/python/#delegations). Returns the redirect.                                                                |
+| `finish_delegation(request)`                                     | Finishes it. Returns a `masks.HeldConnection`.                                                                                              |
+| `login_url(return_to="", organization="", privilege=())`         | A link that starts a sign-in.                                                                                                               |
+| `registered(request)`                                            | Whether masks still knows the app.                                                                                                          |
+| `connected(request)`                                             | Whether the app holds credentials.                                                                                                          |
+| `actor(request)`                                                 | The actor, the same as `request.masked`.                                                                                                    |
+| `engine()`                                                       | The shared engine built from `MASKS`.                                                                                                       |

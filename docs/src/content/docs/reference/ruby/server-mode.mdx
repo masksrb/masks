@@ -3,7 +3,9 @@ title: Server mode
 description: "Run a Rails app that is a masks server and nothing else, with the masks-server gem mounted at the root."
 ---
 
-In Server mode, your app is a masks server.
+In Server mode, your app is a masks server and nothing else.
+
+## Setting up
 
 1. Add the gem to your Gemfile:
 
@@ -17,16 +19,41 @@ In Server mode, your app is a masks server.
    bin/rails generate masks:server:install --mode server
    ```
 
-   The generator mounts masks at `/` and writes `config/initializers/masks_server.rb`.
+   The generator mounts masks at `/` and writes `config/initializers/masks_server.rb`, which sets
+   `config.masks.mode = :server`. When the app has a `config/puma.rb`, the generator adds
+   `plugin :masks_ldap` to it, so Puma also serves [LDAP](/guides/ldap/).
 
-3. Connect to the database as a role that holds neither `SUPERUSER` nor `BYPASSRLS`. masks keeps
-   its tables in the primary database. [Row-level security](/guides/security/#tenant-isolation),
-   which limits each query to one tenant's rows, is what keeps tenants apart.
-4. Set `config.active_record.schema_format = :sql`. Row-level security does not survive a
+3. Set `config.active_record.schema_format = :sql`. Row-level security does not survive a
    `schema.rb`.
-5. Run `bin/rails db:prepare`.
-6. Run `bin/rails masks:tenants`.
+4. Set up the database roles, as described below.
+5. Set the Active Record encryption keys, `config.active_record.encryption.primary_key` and
+   `key_derivation_salt`. masks encrypts each tenant's secret columns under a key derived from them.
+6. Set `MASKS_PUBLIC_ORIGIN_TEMPLATE`, such as `https://auth.example.com`. masks builds the issuer
+   and every link it emails from it. Outside development and test, masks does not boot without it.
+7. Run `bin/rails db:prepare`.
+8. Run `bin/rails masks:tenants`. It creates each tenant that `MASKS_TENANTS` or `MASKS_TENANT`
+   names, and prints the setup token of each tenant that is not set up yet.
+9. Open `/login` and set up the first account with the setup token.
 
-Your app reads the same environment variables as the [container image](/guides/self-hosting/). The
-container image is itself a Server-mode app. See [ENV vars](/reference/environment/) for every
-variable.
+## Database roles
+
+masks keeps its tables in the primary database. [Row-level security](/guides/security/#tenant-isolation),
+which limits each query to one tenant's rows, keeps tenants apart. Two kinds of role get around it,
+so masks checks the role it serves as:
+
+- A role that holds `SUPERUSER` or `BYPASSRLS` is always refused.
+- Outside development, a role that owns masks' tables is refused, since an owner can turn
+  row-level security off.
+
+Migrate as one role and serve as another, as [database roles](/guides/self-hosting/#database-roles)
+describes. The serving role needs `SELECT`, `INSERT`, `UPDATE`, and `DELETE` on the tables and the
+sequences behind them.
+
+## Settings
+
+The gem reads masks' own settings from the environment, such as `MASKS_TENANTS` and
+`MASKS_SMTP_ADDRESS`. [Environment variables](/reference/environment/#server) lists them.
+
+Some variables on that page belong to the [container image](/guides/self-hosting/)'s app and are
+not part of the gem, such as `POSTGRES_HOST`, `MASKS_MASTER_KEY`, and `RAILS_FORCE_SSL`. Your app
+sets up its database, encryption keys, and SSL in its own way.

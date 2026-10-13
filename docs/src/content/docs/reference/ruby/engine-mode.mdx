@@ -3,7 +3,10 @@ title: Engine mode
 description: "Mount masks inside a Rails app, at a path or on a subdomain, and sign the app's own people in through it."
 ---
 
-In Engine mode, your app mounts masks inside itself.
+In Engine mode, your app mounts masks inside itself. masks keeps its own database, session, and
+secrets, apart from the app around it.
+
+## Setting up
 
 1. Add the gem to your Gemfile:
 
@@ -21,7 +24,7 @@ In Engine mode, your app mounts masks inside itself.
    - The first command mounts masks at `/auth` on your app's own domain.
    - The second command serves masks at the root of a subdomain.
 
-   Both write this configuration:
+   Both write `config/initializers/masks_server.rb`:
 
    ```ruby
    Rails.application.configure do
@@ -31,7 +34,17 @@ In Engine mode, your app mounts masks inside itself.
    end
    ```
 
+   `--database` and `--tenant` change the last two values. When the app has a `config/puma.rb`, the
+   generator adds `plugin :masks_ldap` to it, so Puma also serves [LDAP](/guides/ldap/).
+
 3. Add a database for masks, as described below.
+4. Set `config.masks.public_origin_template` to the issuer, such as `https://app.example.com/auth`
+   or `https://auth.example.com`. Outside development and test, masks does not boot without it.
+5. Run `bin/rails db:prepare`.
+6. Run `bin/rails masks:tenants`. It creates the tenant that `config.masks.tenant` names, and prints
+   its setup token.
+7. Open `/auth/login`, or `/login` on the subdomain, and set up the first account with the setup
+   token.
 
 ## A database of its own
 
@@ -47,17 +60,14 @@ masks:
   schema_dump: false
 ```
 
-Its role must hold neither `SUPERUSER` nor `BYPASSRLS`, or masks refuses to start. Then:
-
-1. Run `bin/rails db:prepare`.
-2. Run `bin/rails masks:tenants`.
-3. Open `/auth/login`.
-4. Set up the first account with the setup token that masks prints.
+Its role must hold neither `SUPERUSER` nor `BYPASSRLS`, or masks refuses to start.
+[Row-level security](/guides/security/#tenant-isolation), which limits each query to one tenant's
+rows, keeps tenants apart, and those roles get around it.
 
 ## Signing your own people in
 
 When masks is mounted at a path, it shares your app's origin. Your controllers read the signed-in
-account from masks' session, with no OAuth round trip:
+actor from masks' session, with no OAuth round trip:
 
 ```ruby
 class DashboardController < ApplicationController
@@ -66,13 +76,13 @@ class DashboardController < ApplicationController
   before_action :require_masks_actor!
 
   def show
-    @person = masks_actor
+    @actor = masks_actor
   end
 end
 ```
 
 `require_masks_actor!` sends a signed-out visitor to masks' sign-in page, and back again after they
-sign in. It follows a return path only if the path is on your own app.
+sign in. masks follows a return path only if the path is on your own app.
 
 On a subdomain, masks has its own origin, and its cookies stay there. Sign your app in with
 [Client mode](/reference/ruby/#client-mode), and set `MASKS_ISSUER` to that subdomain.
@@ -80,10 +90,10 @@ On a subdomain, masks has its own origin, and its cookies stay there. Sign your 
 ## Client mode against the masks you mount
 
 An app can sign in through Client mode against the masks it mounts, so that it holds access tokens
-and refresh tokens the same way it would with a masks server. Client mode fetches discovery, keys,
-and tokens over HTTP. Those calls go back to the app's own public address, which often cannot be
-reached from inside its container. `Masks::Client.embed` hands them to the engine inside the
-process:
+and refresh tokens the same way it would with a separate masks server. Client mode fetches
+discovery, keys, and tokens over HTTP, and those calls go to the app's own public address.
+`Masks::Client.embed` hands them to the engine inside the process, so they work when the app cannot
+reach its own public address:
 
 ```ruby
 Masks::Client.embed(->(env) { Rails.application.executor.wrap { Masks::Server::Engine.call(env) } }) do |uri|
@@ -91,29 +101,36 @@ Masks::Client.embed(->(env) { Rails.application.executor.wrap { Masks::Server::E
 end
 ```
 
-The block names the URLs to keep in the process. Every other URL goes over the network. Each call
-runs on a thread of its own, with the same timeout and size limit as a call over the network. A
-plain `http` URL is still refused unless its host is a loopback host or `Masks::Client.plain_http`
-is set. `Masks::Client.embed(nil)` turns it off.
+- The block names the URLs to keep in the process. Every other URL goes over the network.
+- Each call runs on a thread of its own, with the same timeout and size limit as a call over the
+  network.
+- A plain `http` URL is still refused unless its host is a loopback host or
+  `Masks::Client.plain_http` is set.
+- `Masks::Client.embed(nil)` turns it off.
 
 When masks is mounted at a path, set `SCRIPT_NAME` to the path and remove it from `PATH_INFO`
 before you call the engine.
 
 ## What stays apart
 
-| | masks uses |
-| --- | --- |
-| Tables | Its own database, through `config.masks.database`. |
-| Session | Its own cookie, `_masks_session`. Signing in to masks never resets your app's session. |
-| Secrets | Its own, from `config.masks.secret`. Or derived from your app's key under a label of its own. Your app's cookie jar cannot read masks' cookies. |
-| Encrypted columns | Its own key, derived the same way. From that key, one key for each tenant. |
-| Jobs | Its own job and mail classes carry a tenant. Your app's jobs are left alone. |
-| Routes | Only the paths it is mounted at. |
+|                   | masks uses                                                                                                                                 |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Tables            | Its own database, through `config.masks.database`.                                                                                         |
+| Session           | Its own cookie, `_masks_session`. Signing in to masks never resets your app's session.                                                     |
+| Secrets           | `config.masks.secret`, or a secret derived from your app's key under a label of its own. Your app's cookie jar cannot read masks' cookies. |
+| Encrypted columns | Its own key, derived the same way. From that key, one key for each tenant.                                                                 |
+| Jobs              | Its own job and mail classes carry a tenant. Your app's jobs are left alone.                                                               |
+| Routes            | Only the paths it is mounted at.                                                                                                           |
 
-| Setting | |
-| --- | --- |
-| `config.masks.mode` | `:server` or `:engine`. `MASKS_MODE` sets it too. |
-| `config.masks.database` | The `database.yml` entry masks uses in Engine mode. |
-| `config.masks.tenant` | The tenant your app's people belong to. |
-| `config.masks.secret` | The secret masks signs and encrypts with in Engine mode. Optional. |
-| `config.masks.public_origin_template` | The issuer, including the path it is mounted at, such as `https://app.example.com/auth`. Required in production. Set it through `MASKS_PUBLIC_ORIGIN_TEMPLATE` or here. |
+## Settings
+
+| Setting                               |                                                                                              |
+| ------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `config.masks.mode`                   | `:server` or `:engine`. `MASKS_MODE` sets it too.                                            |
+| `config.masks.database`               | The `database.yml` entry masks uses in Engine mode. Required in Engine mode.                 |
+| `config.masks.tenant`                 | The tenant your app's people belong to. `MASKS_TENANT` sets it too.                          |
+| `config.masks.secret`                 | The secret masks signs and encrypts with in Engine mode. Optional.                           |
+| `config.masks.public_origin_template` | The issuer, including the path it is mounted at. `MASKS_PUBLIC_ORIGIN_TEMPLATE` sets it too. |
+
+masks reads its other settings from the environment. See
+[Environment variables](/reference/environment/#server).
