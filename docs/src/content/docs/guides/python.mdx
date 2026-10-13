@@ -317,9 +317,9 @@ store of your own has these methods:
 | Method | |
 | --- | --- |
 | `read(key)` | Returns the session, or `None`. |
-| `write(key, data, expires_in, tags)` | Saves it. `tags` holds the person's `sub` and the session's `sid`. |
+| `write(key, data, expires_in, tags)` | Saves it. `tags` holds the issuer as `iss`, the person's `sub`, and the session's `sid`. |
 | `delete(key)` | Removes it. |
-| `end(subject=..., sid=...)` | Removes every session with that `sid`, or every session of that `subject`. Back-channel logout calls it. |
+| `end(issuer=..., subject=..., sid=...)` | Removes every session from that issuer with that `sid`, or every session of that `subject`. Back-channel logout calls it. |
 
 In a FastAPI app, a store's methods can be `async def`, so a store that talks to Redis or a
 database does not hold up other requests while it waits. `masks.web.AsyncSessionStore` describes

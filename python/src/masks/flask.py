@@ -11,7 +11,7 @@ from werkzeug.local import LocalProxy
 from .client import Client
 from .errors import MasksError
 from .web.config import Config
-from .web.core import METADATA_PATH, Answer, Incoming, Refusal, cookie_named
+from .web.core import METADATA_PATH, Answer, Incoming, Refusal, cookie_named, unshared
 from .web.core import Masks as Engine
 from .web.person import Person
 from .web.sessions import Session
@@ -89,6 +89,7 @@ class Masks:
             header = self.engine.cookie(session, request.is_secure)
 
             if header is not None:
+                sent.headers["Cache-Control"] = unshared(", ".join(sent.headers.getlist("Cache-Control")))
                 sent.headers.add("Set-Cookie", header)
 
         return sent

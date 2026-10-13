@@ -189,6 +189,7 @@ class Renewal:
 
 @dataclass(frozen=True)
 class Ending:
+    issuer: str
     subject: str
     sid: str
 
@@ -218,6 +219,12 @@ def local_path(value: object) -> str | None:
         return None
 
     return held.path + (f"?{held.query}" if held.query else "")
+
+
+def unshared(cache_control: str) -> str:
+    directives = {part.strip().split("=")[0].lower() for part in cache_control.split(",")}
+
+    return cache_control if directives & {"private", "no-store"} else "no-store"
 
 
 def cookie_named(header: str, name: str) -> str | None:
@@ -347,9 +354,11 @@ class Masks:
         return self._sealed(session, await self.config.backend.asave(session, self._tags(session)), secure_request)
 
     def _tags(self, session: Session) -> dict[str, str]:
-        identity = self._held(session).get("identity") or {}
+        held = self._held(session)
+        identity = held.get("identity") or {}
+        tags = {name: str(identity[name]) for name in ("sub", "sid") if identity.get(name)}
 
-        return {name: str(identity[name]) for name in ("sub", "sid") if identity.get(name)}
+        return {"iss": str(held["issuer"]), **tags} if tags and held.get("issuer") else tags
 
     def _sealed(self, session: Session, value: str | None, secure_request: bool) -> Sealed:
         secure = self.config.cookie_secure or secure_request
@@ -455,15 +464,29 @@ class Masks:
 
         return found if isinstance(found, dict) else {}
 
-    def _token(self, session: Session) -> Token | None:
-        found = self._held(session).get("token")
+    def _token(self, request: Incoming, session: Session) -> Token | None:
+        held = self._held(session)
+        found = held.get("token")
 
-        return Token.from_dict(found) if isinstance(found, dict) and found.get("access_token") else None
+        if not isinstance(found, dict) or not found.get("access_token"):
+            return None
 
-    def _store(self, session: Session, token: Token, identity: Mapping[str, Any] | None = None) -> None:
+        if held.get("issuer") != self.issuer_url(request):
+            self.forget(session)
+            return None
+
+        return Token.from_dict(found)
+
+    def _store(
+        self, request: Incoming, session: Session, token: Token, identity: Mapping[str, Any] | None = None
+    ) -> None:
         held = {key: value for key, value in token.to_dict().items() if key != "id_token"}
         kept = identity if identity is not None else self._held(session).get("identity") or {}
-        session[HELD] = {"token": held, "identity": {key: kept[key] for key in IDENTITY if key in kept}}
+        session[HELD] = {
+            "issuer": self.issuer_url(request),
+            "token": held,
+            "identity": {key: kept[key] for key in IDENTITY if key in kept},
+        }
 
     def forget(self, session: Session) -> None:
         if HELD in session:
@@ -486,14 +509,17 @@ class Masks:
         )
 
     def person(self, request: Incoming, session: Session) -> Step[Person]:
-        token = self._token(session)
+        token = self._token(request, session)
         identity = dict(self._held(session).get("identity") or {})
 
         if token is None:
             return nobody(self.config.known)
 
         if self.config.departures.departed(
-            subject=str(identity.get("sub") or ""), sid=str(identity.get("sid") or ""), since=session.issued_at
+            issuer=self.issuer_url(request),
+            subject=str(identity.get("sub") or ""),
+            sid=str(identity.get("sid") or ""),
+            since=session.issued_at,
         ):
             self.forget(session)
             return nobody(self.config.known)
@@ -507,7 +533,7 @@ class Masks:
         renewed = yield Renewal(request, token.refresh_token, identity)
 
         if renewed.outcome == RENEWED and renewed.token is not None:
-            self._store(session, renewed.token, renewed.identity)
+            self._store(request, session, renewed.token, renewed.identity)
             return self._person(request, session, renewed.token, True)
 
         if renewed.outcome == UNREGISTERED:
@@ -515,7 +541,7 @@ class Masks:
         elif renewed.outcome == REFUSED:
             self.forget(session)
 
-        held = self._token(session)
+        held = self._token(request, session)
 
         return self._person(request, session, held, False) if held else nobody(self.config.known)
 
@@ -578,7 +604,7 @@ class Masks:
 
     def _other(self, item: object) -> object:
         if isinstance(item, Ending):
-            return self.config.backend.end(subject=item.subject, sid=item.sid)
+            return self.config.backend.end(issuer=item.issuer, subject=item.subject, sid=item.sid)
 
         if not isinstance(item, Renewal):
             raise TypeError(f"masks: a flow yielded {item!r}")
@@ -587,7 +613,7 @@ class Masks:
 
     async def _aother(self, item: object) -> object:
         if isinstance(item, Ending):
-            return await self.config.backend.aend(subject=item.subject, sid=item.sid)
+            return await self.config.backend.aend(issuer=item.issuer, subject=item.subject, sid=item.sid)
 
         if not isinstance(item, Renewal):
             raise TypeError(f"masks: a flow yielded {item!r}")
@@ -754,7 +780,7 @@ class Masks:
             identity = {**profile, **identity}
 
         session.renew(keep=CARRIED)
-        self._store(session, signed.token, identity)
+        self._store(request, session, signed.token, identity)
 
         return Answer.redirect(local_path(pending.get("return_to")) or self.config.after_sign_in)
 
@@ -779,7 +805,7 @@ class Masks:
         if not self._same_origin(request):
             return self._refuse(request, "invalid_request", "that request came from another site", 403)
 
-        token = self._token(session)
+        token = self._token(request, session)
         everywhere = self.config.sign_out_of_issuer or bool(request.query.get("everywhere"))
         flows: _Flows | None = None
 
@@ -851,7 +877,7 @@ class Masks:
             wanted = int(asked) if asked.isdigit() else AVATAR_SIZES[-1]
             photo = f"{photo}?size={next((size for size in AVATAR_SIZES if size >= wanted), AVATAR_SIZES[-1])}"
 
-        token = self._token(session)
+        token = self._token(request, session)
         headers = {"Accept": "image/*", "Authorization": f"Bearer {token.access_token if token else ''}"}
 
         try:
@@ -907,8 +933,9 @@ class Masks:
                 400, {"error": "invalid_request", "error_description": "that logout token was already used"}
             )
 
-        self.config.departures.record(subject=logout.subject, sid=logout.sid, at=time.time())
-        yield Ending(logout.subject, logout.sid)
+        named = self.issuer_url(request)
+        self.config.departures.record(issuer=named, subject=logout.subject, sid=logout.sid, at=time.time())
+        yield Ending(named, logout.subject, logout.sid)
 
         if self.config.logged_out is not None:
             self.config.logged_out(logout)

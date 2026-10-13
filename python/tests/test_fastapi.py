@@ -5,6 +5,7 @@ from urllib.parse import parse_qs, urlsplit
 
 import pytest
 from fastapi import Depends, FastAPI, Request
+from fastapi.responses import JSONResponse, Response
 from fastapi.testclient import TestClient
 
 import masks
@@ -54,6 +55,10 @@ def build(fake: Fake, credentials: Any = None, **changes: Any) -> tuple[FastAPI,
     @app.get("/billing")
     async def billing(person: Annotated[Person, Depends(auth.require("billing"))]) -> dict[str, Any]:
         return {"role": person.organization.role if person.organization else None}
+
+    @app.get("/public")
+    async def public(person: Annotated[Person, Depends(auth.person)]) -> Response:
+        return JSONResponse({"signed_in": person.signed_in}, headers={"Cache-Control": "public, max-age=600"})
 
     @app.get("/whoami")
     async def whoami(person: Annotated[Person, Depends(auth.person)]) -> dict[str, Any]:
@@ -320,6 +325,29 @@ def test_an_expired_token_is_refreshed_with_the_identity(
     assert fake.userinfo_calls == calls + 1
 
 
+def test_a_refreshed_session_never_reaches_a_shared_cache(
+    app: TestClient, fake: Fake, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    sign_in(app, fake)
+
+    assert app.get("/public").headers["cache-control"] == "public, max-age=600"
+
+    later = time.time() + 7200
+    monkeypatch.setattr(masks.models.time, "time", lambda: later)
+    refreshed = app.get("/public")
+
+    assert "set-cookie" in refreshed.headers
+    assert refreshed.headers["cache-control"] == "no-store"
+
+
+def test_only_a_private_answer_may_carry_a_session() -> None:
+    assert masks.web.core.unshared("") == "no-store"
+    assert masks.web.core.unshared("public, max-age=600") == "no-store"
+    assert masks.web.core.unshared("s-maxage=60") == "no-store"
+    assert masks.web.core.unshared("private, max-age=60") == "private, max-age=60"
+    assert masks.web.core.unshared("No-Store") == "No-Store"
+
+
 def test_a_refused_refresh_forgets_the_sign_in(app: TestClient, fake: Fake, monkeypatch: pytest.MonkeyPatch) -> None:
     sign_in(app, fake)
     fake.clients["web"].refresh.clear()
@@ -515,9 +543,9 @@ class AsyncMemorySessionStore:
         self.calls.append("delete")
         self.held.delete(key)
 
-    async def end(self, *, subject: str = "", sid: str = "") -> int:
+    async def end(self, *, issuer: str, subject: str = "", sid: str = "") -> int:
         self.calls.append("end")
-        return self.held.end(subject=subject, sid=sid)
+        return self.held.end(issuer=issuer, subject=subject, sid=sid)
 
 
 @pytest.mark.parametrize("asynchronous", [False, True], ids=["sync store", "async store"])
@@ -551,6 +579,38 @@ def test_back_channel_logout_ends_sessions_on_the_server(fake: Fake, asynchronou
 
     if held is not None:
         assert {"read", "write", "delete", "end"} <= set(held.calls)
+
+
+def test_a_sign_in_from_another_issuer_is_forgotten(fake: Fake) -> None:
+    application, auth = build(fake)
+
+    with TestClient(application, base_url=APP, follow_redirects=False) as client:
+        sign_in(client, fake)
+
+        assert client.get("/whoami").json() == {"signed_in": True}
+
+        auth.config.issuer = "https://elsewhere.example"
+        assert client.get("/whoami").json() == {"signed_in": False}
+
+        auth.config.issuer = ISSUER
+
+        assert client.get("/whoami").json() == {"signed_in": False}
+
+
+def test_a_logout_reaches_only_sessions_from_its_issuer() -> None:
+    store = MemorySessionStore()
+    store.write("a", {"data": {}}, 60, {"iss": ISSUER, "sub": "ada", "sid": "s-1"})
+    store.write("b", {"data": {}}, 60, {"iss": "https://elsewhere.example", "sub": "ada", "sid": "s-1"})
+
+    assert store.end(issuer=ISSUER, subject="ada") == 1
+    assert store.read("a") is None
+    assert store.read("b") is not None
+
+    departures = masks.web.sessions.MemoryDepartures()
+    departures.record(issuer=ISSUER, subject="ada", sid="", at=time.time())
+
+    assert departures.departed(issuer=ISSUER, subject="ada", sid="s-1", since=time.time() - 5)
+    assert not departures.departed(issuer="https://elsewhere.example", subject="ada", sid="s-1", since=time.time() - 5)
 
 
 def test_an_async_session_store_needs_an_async_framework() -> None:
@@ -631,6 +691,17 @@ def test_an_outage_during_the_handshake_is_unavailable(fake: Fake) -> None:
         fake.unavailable_tokens = True
 
         assert client.get(fake.handshake(begun), headers=HTML).status_code == 503
+
+
+def test_a_large_back_channel_request_is_refused(app: TestClient) -> None:
+    answered = app.post(
+        "/auth/logout/backchannel",
+        content=b"logout_token=" + b"a" * (70 * 1024),
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+    )
+
+    assert answered.status_code == 413
+    assert answered.json()["error"] == "invalid_request"
 
 
 def test_back_channel_logout_calls_the_app(fake: Fake) -> None:

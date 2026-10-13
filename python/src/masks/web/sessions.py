@@ -73,7 +73,7 @@ class SessionStore(Protocol):
 
     def delete(self, key: str) -> None: ...
 
-    def end(self, *, subject: str = "", sid: str = "") -> int: ...
+    def end(self, *, issuer: str, subject: str = "", sid: str = "") -> int: ...
 
 
 class AsyncSessionStore(Protocol):
@@ -83,7 +83,7 @@ class AsyncSessionStore(Protocol):
 
     async def delete(self, key: str) -> None: ...
 
-    async def end(self, *, subject: str = "", sid: str = "") -> int: ...
+    async def end(self, *, issuer: str, subject: str = "", sid: str = "") -> int: ...
 
 
 class SessionBackend(Protocol):
@@ -94,13 +94,13 @@ class SessionBackend(Protocol):
 
     def save(self, session: Session, tags: Mapping[str, str]) -> str | None: ...
 
-    def end(self, *, subject: str = "", sid: str = "") -> int | None: ...
+    def end(self, *, issuer: str, subject: str = "", sid: str = "") -> int | None: ...
 
     async def aload(self, cookie: str | None) -> Session: ...
 
     async def asave(self, session: Session, tags: Mapping[str, str]) -> str | None: ...
 
-    async def aend(self, *, subject: str = "", sid: str = "") -> int | None: ...
+    async def aend(self, *, issuer: str, subject: str = "", sid: str = "") -> int | None: ...
 
 
 async def settled(value: T | Awaitable[T]) -> T:
@@ -200,7 +200,7 @@ class CookieSessions:
 
         return cookie
 
-    def end(self, *, subject: str = "", sid: str = "") -> int | None:
+    def end(self, *, issuer: str, subject: str = "", sid: str = "") -> int | None:
         return None
 
     async def aload(self, cookie: str | None) -> Session:
@@ -209,7 +209,7 @@ class CookieSessions:
     async def asave(self, session: Session, tags: Mapping[str, str]) -> str | None:
         return self.save(session, tags)
 
-    async def aend(self, *, subject: str = "", sid: str = "") -> int | None:
+    async def aend(self, *, issuer: str, subject: str = "", sid: str = "") -> int | None:
         return None
 
 
@@ -313,11 +313,11 @@ class ServerSessions:
 
         return hashed(session.key), {"iat": session.issued_at, "data": session.data}, max(remaining, 1)
 
-    def end(self, *, subject: str = "", sid: str = "") -> int | None:
-        return self._sync().end(subject=subject, sid=sid)
+    def end(self, *, issuer: str, subject: str = "", sid: str = "") -> int | None:
+        return self._sync().end(issuer=issuer, subject=subject, sid=sid)
 
-    async def aend(self, *, subject: str = "", sid: str = "") -> int | None:
-        return await settled(self.store.end(subject=subject, sid=sid))
+    async def aend(self, *, issuer: str, subject: str = "", sid: str = "") -> int | None:
+        return await settled(self.store.end(issuer=issuer, subject=subject, sid=sid))
 
 
 class MemorySessionStore:
@@ -343,12 +343,13 @@ class MemorySessionStore:
         with self._lock:
             self._held.pop(key, None)
 
-    def end(self, *, subject: str = "", sid: str = "") -> int:
+    def end(self, *, issuer: str, subject: str = "", sid: str = "") -> int:
         with self._lock:
             ended = [
                 key
                 for key, (_, _, tags) in self._held.items()
-                if (sid and tags.get("sid") == sid) or (subject and not sid and tags.get("sub") == subject)
+                if tags.get("iss") == issuer
+                and ((sid and tags.get("sid") == sid) or (subject and not sid and tags.get("sub") == subject))
             ]
 
             for key in ended:
@@ -358,21 +359,21 @@ class MemorySessionStore:
 
 
 class Departures(Protocol):
-    def record(self, *, subject: str, sid: str, at: float) -> None: ...
+    def record(self, *, issuer: str, subject: str, sid: str, at: float) -> None: ...
 
-    def departed(self, *, subject: str, sid: str, since: float) -> bool: ...
+    def departed(self, *, issuer: str, subject: str, sid: str, since: float) -> bool: ...
 
 
 class MemoryDepartures:
     def __init__(self, lifetime: int = LIFETIME) -> None:
         self.lifetime = lifetime
-        self._held: dict[tuple[str, str], float] = {}
+        self._held: dict[tuple[str, str, str], float] = {}
         self._lock = threading.Lock()
 
-    def record(self, *, subject: str, sid: str, at: float) -> None:
-        key = ("sid", sid) if sid else ("sub", subject)
+    def record(self, *, issuer: str, subject: str, sid: str, at: float) -> None:
+        key = (issuer, "sid", sid) if sid else (issuer, "sub", subject)
 
-        if not key[1]:
+        if not key[2]:
             return
 
         with self._lock:
@@ -380,11 +381,11 @@ class MemoryDepartures:
             self._held = {held: when for held, when in self._held.items() if when > horizon}
             self._held[key] = max(at, self._held.get(key, 0.0))
 
-    def departed(self, *, subject: str, sid: str, since: float) -> bool:
+    def departed(self, *, issuer: str, subject: str, sid: str, since: float) -> bool:
         with self._lock:
             found = [
-                self._held.get(("sid", sid), 0.0) if sid else 0.0,
-                self._held.get(("sub", subject), 0.0) if subject else 0.0,
+                self._held.get((issuer, "sid", sid), 0.0) if sid else 0.0,
+                self._held.get((issuer, "sub", subject), 0.0) if subject else 0.0,
             ]
 
         return any(when >= since for when in found if when)

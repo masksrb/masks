@@ -14,8 +14,7 @@
 
 ## Security
 
-- Store the issuer in the session and forget a session from another issuer, as go/web does. This matters when one origin serves several issuers.
-- The security review did not finish the Flask and FastAPI adapters or `web/credentials.py`.
+- The security review did not finish the Flask adapter or `web/credentials.py`.
 
 ## Testing
 

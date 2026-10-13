@@ -5,7 +5,7 @@ from collections.abc import Callable
 from django.http import HttpRequest, HttpResponse
 from django.utils.functional import SimpleLazyObject
 
-from ..web.core import Refusal
+from ..web.core import Refusal, unshared
 from . import engine, person, response
 
 
@@ -20,6 +20,9 @@ class MasksMiddleware:
         request.masked = SimpleLazyObject(lambda: person(request))
         sent = self.get_response(request)
         sealed = held.seal(session, request.is_secure())
+
+        if sealed is not None:
+            sent["Cache-Control"] = unshared(sent.get("Cache-Control", ""))
 
         if sealed is not None and sealed.value:
             sent.set_cookie(

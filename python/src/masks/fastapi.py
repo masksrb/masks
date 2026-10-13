@@ -12,7 +12,7 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 from .client import AsyncClient
 from .errors import MasksError
 from .web.config import Config
-from .web.core import METADATA_PATH, Answer, Incoming, Refusal, cookie_named
+from .web.core import METADATA_PATH, Answer, Incoming, Refusal, cookie_named, unshared
 from .web.core import Masks as Engine
 from .web.person import Person
 from .web.sessions import Session
@@ -53,8 +53,13 @@ class SessionMiddleware:
                 header = await self.engine.acookie(session, secure)
 
                 if header is not None:
-                    message.setdefault("headers", [])
-                    message["headers"] = [*message["headers"], (b"set-cookie", header.encode("latin-1"))]
+                    held = list(message.get("headers") or [])
+                    cached = b", ".join(value for name, value in held if name.lower() == b"cache-control")
+                    message["headers"] = [
+                        *(pair for pair in held if pair[0].lower() != b"cache-control"),
+                        (b"cache-control", unshared(cached.decode("latin-1")).encode("latin-1")),
+                        (b"set-cookie", header.encode("latin-1")),
+                    ]
 
             await send(message)
 
@@ -70,13 +75,26 @@ def session_of(request: Request) -> Session:
     return found
 
 
+async def bounded_body(request: Request) -> bytes:
+    body = bytearray()
+
+    async for chunk in request.stream():
+        body += chunk
+
+        if len(body) > FORM_LIMIT:
+            raise Refusal(
+                Answer.json(413, {"error": "invalid_request", "error_description": "the request is too large"})
+            )
+
+    return bytes(body)
+
+
 async def incoming(request: Request, form: bool = False) -> Incoming:
     query = {key: request.query_params.getlist(key)[0] for key in request.query_params}
     held: dict[str, str] = {}
 
     if form and request.headers.get("content-type", "").startswith("application/x-www-form-urlencoded"):
-        body = await request.body()
-        held = dict(parse_qsl(body.decode("utf-8", "replace")[:FORM_LIMIT], keep_blank_values=True))
+        held = dict(parse_qsl((await bounded_body(request)).decode("utf-8", "replace"), keep_blank_values=True))
 
     return Incoming(
         method=request.method,
@@ -131,7 +149,11 @@ class Masks:
     def endpoint(self, name: str) -> Callable[[Request], Awaitable[Response]]:
         async def answer(request: Request) -> Response:
             if name == "backchannel":
-                held = await incoming(request, form=True)
+                try:
+                    held = await incoming(request, form=True)
+                except Refusal as refusal:
+                    return response(refusal.answer)
+
                 found = await self.engine.aanswer(self.engine.backchannel(held))
             else:
                 held = await incoming(request)
