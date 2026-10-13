@@ -22,23 +22,17 @@
 docker pull ghcr.io/masksrb/masks:latest
 ```
 
-Or add the [`masks-server`](engine/) gem to a Rails app, which mounts masks as a Rails engine:
+Or mount it inside a Rails app. The [quickstart](https://masks.pages.dev/quickstart/) covers both.
 
-```ruby
-gem "masks-server"
-```
+## Libraries
 
-See [Engine mode](https://masks.pages.dev/reference/ruby/engine-mode/) to mount it beside your own app, or [Server mode](https://masks.pages.dev/reference/ruby/server-mode/) to run an app that is only masks.
-
-## Connect an app
-
-| Language   | Package                              | Guide                                                                    |
-| ---------- | ------------------------------------ | ------------------------------------------------------------------------ |
-| Ruby       | [`masks`](client/)                   | [Rails and Rack](https://masks.pages.dev/reference/ruby/)                |
-| JavaScript | [`@masks/server`](node/)             | [Next.js, Express, Hono](https://masks.pages.dev/reference/javascript/)  |
-| Browser    | [`@masks/client`](web/)              | [Single-page apps](https://masks.pages.dev/reference/javascript/client/) |
-| Python     | [`masks-client`](python/)            | [FastAPI, Django, Flask](https://masks.pages.dev/reference/python/)      |
-| Go         | [`github.com/masksrb/masks/go`](go/) | [`net/http`](https://masks.pages.dev/reference/go/)                      |
+| Language   | Package                                       | Guide                                                                    |
+| ---------- | --------------------------------------------- | ------------------------------------------------------------------------ |
+| Ruby       | [`masks`](client/), [`masks-server`](engine/) | [Rails and Rack](https://masks.pages.dev/reference/ruby/)                |
+| JavaScript | [`@masks/server`](node/)                      | [Next.js, Express, Hono](https://masks.pages.dev/reference/javascript/)  |
+| Browser    | [`@masks/client`](web/)                       | [Single-page apps](https://masks.pages.dev/reference/javascript/client/) |
+| Python     | [`masks-client`](python/)                     | [FastAPI, Django, Flask](https://masks.pages.dev/reference/python/)      |
+| Go         | [`github.com/masksrb/masks/go`](go/)          | [`net/http`](https://masks.pages.dev/reference/go/)                      |
 
 ## Develop
 
