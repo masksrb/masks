@@ -13,7 +13,7 @@
 - `signOut()` from `next-auth/react` and the `signOut` server action do not sign out of masks. Only `/api/auth/masks/logout` with `everywhere` does.
 - The issuer, resource, and credentials cannot vary per request.
 - `requireAuth()` needs the proxy to know which page to return to. Without it, a sign-in returns to `/`.
-- `masksAuth` and `Masks` share the logout, scope, delegation, and issuer-cache code, but each still has its own handshake routes and manager check. Move the connection lifecycle into one module both use.
+- `masksAuth` and `Masks` share the handshake routes through `Handshakes`, but each keeps its own manager check, and only `Masks` checks at sign-in that masks still knows the app.
 - The live run used Next.js 16.3 and next-auth 5.0.0-beta.32 on Node 26. Other versions have not run.
 
 ## Testing

@@ -962,6 +962,35 @@ test("an app masks no longer knows shakes hands again", async () => {
   assert.equal(await held.credentials.read(), undefined);
 });
 
+test("a disconnect masks cannot record keeps the credentials and answers 503", async () => {
+  const held = await setup(
+    { connected: false, masks: { manages: () => true } },
+    closers,
+  );
+  const first = await held.browser.fetch("/auth/handshake");
+  const back = new URL(held.fake.shake(first.headers.get("location")));
+  await held.browser.fetch(`${back.pathname}${back.search}`);
+  await signIn(held);
+
+  const saved = await held.credentials.read();
+  const disconnect = () =>
+    held.browser.fetch("/auth/handshake/disconnect", {
+      method: "POST",
+      headers: { origin: APP },
+    });
+
+  held.fake.registrationDown = true;
+  assert.equal((await disconnect()).status, 503);
+  assert.deepEqual(await held.credentials.read(), saved);
+
+  held.fake.registrationDown = false;
+  const gone = await disconnect();
+  assert.equal(gone.status, 303);
+  assert.equal(gone.headers.get("location"), "/auth/handshake");
+  assert.equal(await held.credentials.read(), undefined);
+  assert.equal(held.fake.registrations.has(saved.client_id), false);
+});
+
 test("a provider connection is finished only by the person who started it", async () => {
   const held = await setup(
     { masks: { delegations: "/connect/callback" } },

@@ -1,12 +1,12 @@
 import { organizationKey } from "../claims.js";
 import type { Token } from "../client.js";
 import { InvalidTokenError, MasksError, UnavailableError } from "../errors.js";
-import { originOf } from "../handshake.js";
 import type { IdTokenClaims, LogoutToken } from "../idtoken.js";
 import { random } from "../key.js";
 import { avatarResponse } from "./avatar.js";
 import type { Core } from "./core.js";
 import { answer, check, describe, handshakeJSON, loginJSON } from "./guard.js";
+import type { HandshakeHost } from "./handshakes.js";
 import { acceptLogout } from "./logouts.js";
 import { unique } from "./privileges.js";
 import {
@@ -17,7 +17,7 @@ import {
   sameOrigin,
   wantsJSON,
 } from "./requests.js";
-import { escapeHTML, json, page, redirect, text } from "./responses.js";
+import { json, redirect, text } from "./responses.js";
 import {
   claim,
   FLOW_LIFETIME,
@@ -73,14 +73,14 @@ export async function handle(
       case "POST /logout/backchannel":
         return await backchannel(core, visit);
       case "GET /handshake":
-        return await handshakeShow(core, visit);
+        return await core.handshakes.show(request);
       case "POST /handshake":
-        return await handshakeCreate(core, visit);
+        return await core.handshakes.create(request);
       case "DELETE /handshake":
       case "POST /handshake/disconnect":
-        return await handshakeDestroy(core, visit);
+        return await core.handshakes.destroy(request);
       case "GET /handshake/callback":
-        return await handshakeCallback(core, visit);
+        return await core.handshakes.callback(request);
       default:
         return text(404, "not found", visit.out);
     }
@@ -106,7 +106,7 @@ async function start(core: Core, visit: Visit): Promise<Response> {
   let client = await core.client(visit);
 
   if (client && !(await core.stillRegistered(visit, client.id))) {
-    await core.disconnect(visit.request);
+    await core.handshakes.forget(visit.request);
     client = await core.client(visit);
   }
 
@@ -184,7 +184,7 @@ async function callback(core: Core, visit: Visit): Promise<Response> {
     if (
       error instanceof MasksError &&
       error.code === "invalid_client" &&
-      (await core.disconnect(visit.request))
+      (await core.handshakes.forget(visit.request))
     ) {
       return redirect(core.handshakePath, visit.out);
     }
@@ -409,127 +409,60 @@ async function backchannel(core: Core, visit: Visit): Promise<Response> {
   });
 }
 
-async function handshakeShow(core: Core, visit: Visit): Promise<Response> {
-  if (!(await core.configured(visit))) return beginHandshake(core, visit);
+export function handshakeHost(core: Core): HandshakeHost {
+  return {
+    handshakePath: core.handshakePath,
+    credentials: core.credentials,
+    async site(request) {
+      const visit = await core.visit(request);
 
-  const refused = await manager(core, visit);
-  if (refused) return refused;
+      return {
+        origin: visit.origin,
+        issuer: visit.issuerURL,
+        cookies: visit.out,
+      };
+    },
+    async issuer(request) {
+      return core.issuers.get((await core.visit(request)).issuerURL);
+    },
+    async handshake(request) {
+      return core.handshake(await core.visit(request));
+    },
+    async manager(request) {
+      return manager(core, await core.visit(request));
+    },
+    async remember(request, state) {
+      const visit = await core.visit(request);
+      const flow = await core.sessions.readFlow(visit);
 
-  return connectedPage(
-    core.handshakePath,
-    visit.issuerURL,
-    Boolean(core.credentials.clear),
-    visit.out,
-  );
-}
+      flow.handshakes = keep(flow.handshakes, state, {
+        until: now() + FLOW_LIFETIME,
+        returnTo: core.returnTo(visit.url.searchParams.get("return_to")),
+      });
+      await core.sessions.writeFlow(visit, flow);
 
-async function handshakeCreate(core: Core, visit: Visit): Promise<Response> {
-  if (!sameOrigin(visit.request, visit.origin)) {
-    return answer(
-      visit,
-      403,
-      "forbidden",
-      "a handshake is only started from this app",
-    );
-  }
+      return [];
+    },
+    async recall(request, state) {
+      const visit = await core.visit(request);
+      const flow = await core.sessions.readFlow(visit);
+      const pending = claim(flow.handshakes, state);
 
-  if (await core.configured(visit)) {
-    const refused = await manager(core, visit);
-    if (refused) return refused;
-  }
+      if (!pending) return { found: false, cookies: [] };
 
-  return beginHandshake(core, visit);
-}
+      await core.sessions.writeFlow(visit, flow);
 
-async function handshakeDestroy(core: Core, visit: Visit): Promise<Response> {
-  if (!sameOrigin(visit.request, visit.origin)) {
-    return answer(
-      visit,
-      403,
-      "forbidden",
-      "a disconnect is only asked for from this app",
-    );
-  }
+      return { found: true, returnTo: pending.returnTo, cookies: [] };
+    },
+    async connected(request, returnTo) {
+      const visit = await core.visit(request);
 
-  if (!(await core.configured(visit)))
-    return redirect(core.handshakePath, visit.out, 303);
-
-  const refused = await manager(core, visit);
-  if (refused) return refused;
-
-  if (!(await core.disconnect(visit.request))) {
-    return answer(
-      visit,
-      400,
-      "invalid_request",
-      "the credential store cannot forget this connection",
-    );
-  }
-
-  await core.sessions.forget(visit);
-
-  if (wantsJSON(visit.request))
-    return json(200, { connected: false }, visit.out);
-
-  return redirect(core.handshakePath, visit.out, 303);
-}
-
-async function handshakeCallback(core: Core, visit: Visit): Promise<Response> {
-  const params = visit.url.searchParams;
-  const state = params.get("state") ?? "";
-  const flow = await core.sessions.readFlow(visit);
-  const pending = claim(flow.handshakes, state);
-
-  if (!pending) {
-    return answer(
-      visit,
-      400,
-      "invalid_state",
-      "that connection request is not one this browser started, or it expired",
-    );
-  }
-
-  await core.sessions.writeFlow(visit, flow);
-
-  if (await core.configured(visit)) {
-    const refused = await manager(core, visit);
-    if (refused) return refused;
-  }
-
-  if (!core.credentials.write) {
-    return answer(
-      visit,
-      500,
-      "handshake_unsaved",
-      "the credential store cannot save this connection; set credentials to a store that writes",
-    );
-  }
-
-  const handshake = await core.handshake(visit);
-  const registration = await handshake.complete(params, state);
-
-  await core.credentials.write(visit.request, {
-    client_id: registration.client_id,
-    client_secret: registration.client_secret,
-    registration_access_token: registration.registration_access_token,
-    registration_client_uri: registration.registration_client_uri,
-  });
-
-  return redirect(core.loginURL({ returnTo: pending.returnTo }), visit.out);
-}
-
-async function beginHandshake(core: Core, visit: Visit): Promise<Response> {
-  const handshake = await core.handshake(visit);
-  const started = handshake.start();
-  const flow = await core.sessions.readFlow(visit);
-
-  flow.handshakes = keep(flow.handshakes, started.state, {
-    until: now() + FLOW_LIFETIME,
-    returnTo: core.returnTo(visit.url.searchParams.get("return_to")),
-  });
-  await core.sessions.writeFlow(visit, flow);
-
-  return redirect(started.url, visit.out, 303);
+      return redirect(core.loginURL({ returnTo }), visit.out);
+    },
+    async disconnected(request) {
+      await core.sessions.forget(await core.visit(request));
+    },
+  };
 }
 
 async function manager(
@@ -565,25 +498,5 @@ async function manager(
     403,
     "forbidden",
     "only somebody this app lets manage its connection can reconnect or disconnect it",
-  );
-}
-
-export function connectedPage(
-  handshakePath: string,
-  issuer: string,
-  disconnects: boolean,
-  cookies: string[],
-): Response {
-  const path = escapeHTML(handshakePath);
-  const target = originOf(issuer);
-
-  return page(
-    "This app is connected",
-    `<p>Reconnecting replaces the credentials it holds with a fresh pair. It is how you rotate them, and how you move this app to another account. No secret passes through your browser.</p>
-<p>The app stops working between the approval and the moment it picks the new credentials up.</p>
-<form method="post" action="${path}"><button type="submit">Reconnect it</button></form>
-${disconnects ? `<form method="post" action="${path}/disconnect"><button type="submit">Disconnect it</button></form>` : ""}`,
-    cookies,
-    target ? [target] : [],
   );
 }

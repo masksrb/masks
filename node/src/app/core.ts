@@ -7,6 +7,7 @@ import type { IdTokenClaims, LogoutToken } from "../idtoken.js";
 import { RESOURCE_PATH } from "../issuer.js";
 import { Verifier } from "../verifier.js";
 import { type CredentialStore, defaultCredentials } from "./credentials.js";
+import { Handshakes } from "./handshakes.js";
 import { IssuerCache } from "./issuers.js";
 import { Masked } from "./masked.js";
 import {
@@ -17,6 +18,7 @@ import {
 } from "./privileges.js";
 import { renew } from "./refresh.js";
 import { localPath, type PerRequest, resolve } from "./requests.js";
+import { handshakeHost } from "./routes.js";
 import { Sealer } from "./seal.js";
 import {
   fresh,
@@ -80,6 +82,7 @@ export class Core {
   readonly credentials: CredentialStore;
   readonly store: Store;
   readonly sessions: Sessions;
+  readonly handshakes: Handshakes;
   readonly issuers = new IssuerCache(() => ({
     fetch: this.options.fetch,
     allowPlainHTTP: this.options.allowPlainHTTP,
@@ -105,6 +108,8 @@ export class Core {
       store: this.store,
       maxAge: this.maxAge,
     });
+
+    this.handshakes = new Handshakes(handshakeHost(this));
 
     if (options.secret !== undefined) this.#sealer = new Sealer(options.secret);
   }
@@ -219,7 +224,7 @@ export class Core {
         return renewed;
       }
       case "unregistered":
-        await this.disconnect(visit.request);
+        await this.handshakes.forget(visit.request);
         await this.sessions.forget(visit);
 
         return undefined;
@@ -309,25 +314,6 @@ export class Core {
     else this.#registeredAt.delete(key);
 
     return known;
-  }
-
-  async disconnect(request: Request): Promise<boolean> {
-    if (!this.credentials.clear) return false;
-
-    const visit = await this.visit(request);
-    const held = await this.credentials.read(request);
-
-    if (held?.registration_client_uri && held.registration_access_token) {
-      try {
-        await (await this.issuers.get(visit.issuerURL)).deleteRegistration(
-          held,
-        );
-      } catch {}
-    }
-
-    await this.credentials.clear(request);
-
-    return true;
   }
 
   async verifier(visit: Visit): Promise<Verifier> {

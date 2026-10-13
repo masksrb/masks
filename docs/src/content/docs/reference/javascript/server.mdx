@@ -103,7 +103,7 @@ the response.
 | `masks.logoutPath` | The path a sign-out form posts to. |
 | `masks.connection(request)` | Whether the app holds credentials, with its `client_id`. |
 | `masks.registered(request)` | Whether masks still knows the app. |
-| `masks.disconnect(request)` | Deletes the registration and the credentials. |
+| `masks.disconnect(request)` | Deletes the registration and the credentials. When masks cannot be reached, it throws an `UnavailableError` and keeps the credentials. |
 | `masks.client(request)` | The app's `Client`, for calls of your own. |
 | `masks.delegations(request)` | `Delegations` for the app's client. Needs `delegations`. |
 | `masks.startDelegation(request, provider, { prompt, maxAge })` | Sends a signed-in person to connect a provider. |

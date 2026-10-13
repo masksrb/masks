@@ -781,6 +781,10 @@ export class Fake {
     }
 
     if (request.method === "DELETE") {
+      if (this.registrationDown) {
+        return oauthError(response, 503, "temporarily_unavailable");
+      }
+
       this.registrations.delete(id);
       this.clients.delete(id);
       response.writeHead(204);

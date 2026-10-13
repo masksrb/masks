@@ -166,7 +166,7 @@ These routes are answered under the Auth.js base path, `/api/auth` by default:
 | `GET /api/auth/masks/signin` | Starts a sign-in. Takes `callbackUrl`, `organization`, `privilege`, and `prompt`. |
 | `GET /api/auth/masks/handshake` | Starts the handshake before the app is connected. After that, shows the connection to someone `manages` allows. |
 | `POST /api/auth/masks/handshake` | Reconnects. |
-| `POST /api/auth/masks/handshake/disconnect` | Disconnects. |
+| `POST /api/auth/masks/handshake/disconnect` | Disconnects, and goes back to the handshake. |
 | `GET /api/auth/masks/handshake/callback` | Where masks sends the browser after an approval. |
 | `GET` or `POST /api/auth/masks/logout` | Signs out. Takes `callbackUrl`, and `everywhere` to sign out of masks as well. |
 | `GET /api/auth/masks/logout/return` | Where masks sends the browser after a sign-out everywhere. |

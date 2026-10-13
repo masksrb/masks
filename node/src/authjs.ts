@@ -4,6 +4,7 @@ import { avatarResponse } from "./app/avatar.js";
 import { parseCookies, replaceCookies, serialize } from "./app/cookies.js";
 import { DEFAULT_SCOPE } from "./app/core.js";
 import { type CredentialStore, defaultCredentials } from "./app/credentials.js";
+import { type HandshakeHost, Handshakes } from "./app/handshakes.js";
 import { IssuerCache } from "./app/issuers.js";
 import { acceptLogout, departed } from "./app/logouts.js";
 import { Masked, type MaskedJSON } from "./app/masked.js";
@@ -24,7 +25,6 @@ import {
   wantsJSON,
 } from "./app/requests.js";
 import { errorResponse, json, redirect, text } from "./app/responses.js";
-import { connectedPage } from "./app/routes.js";
 import { Sealer } from "./app/seal.js";
 import { claim, fresh, keep, now, pick } from "./app/session.js";
 import { memoryStore, processEnv, type Store, shared } from "./app/stores.js";
@@ -151,6 +151,7 @@ export class MasksAuth {
   readonly #options: MasksAuthOptions;
   readonly #credentials: CredentialStore;
   readonly #store: Store;
+  readonly #handshakes: Handshakes;
   readonly #issuers = new IssuerCache(() => ({
     allowPlainHTTP: this.#options.allowPlainHTTP,
   }));
@@ -166,6 +167,7 @@ export class MasksAuth {
       options.credentials ??
       defaultCredentials(processEnv(), `AUTH_${this.#envName}`, "MASKS_CLIENT");
     this.#store = options.store ?? shared("store", () => memoryStore());
+    this.#handshakes = new Handshakes(this.#handshakeHost());
   }
 
   get #envName(): string {
@@ -373,14 +375,14 @@ export class MasksAuth {
         case "GET /signin":
           return await this.#signInRoute(request);
         case "GET /handshake":
-          return await this.#handshakeShow(request);
+          return await this.#handshakes.show(request);
         case "POST /handshake":
-          return await this.#handshakeCreate(request);
+          return await this.#handshakes.create(request);
         case "POST /handshake/disconnect":
         case "DELETE /handshake":
-          return await this.#handshakeDestroy(request);
+          return await this.#handshakes.destroy(request);
         case "GET /handshake/callback":
-          return await this.#handshakeCallback(request);
+          return await this.#handshakes.callback(request);
         case "GET /logout":
         case "POST /logout":
           return await this.#logout(request);
@@ -1054,151 +1056,55 @@ export class MasksAuth {
     });
   }
 
-  async #handshakeShow(request: Request): Promise<Response> {
-    if (!(await this.#configured(request)))
-      return this.#beginHandshake(request);
+  #handshakeHost(): HandshakeHost {
+    const masks = this;
 
-    const refused = await this.#manager(request);
-    if (refused) return refused;
-
-    return connectedPage(
-      this.handshakePath,
-      this.issuerURL,
-      Boolean(this.#credentials.clear),
-      [],
-    );
-  }
-
-  async #handshakeCreate(request: Request): Promise<Response> {
-    if (!sameOrigin(request, new URL(request.url).origin)) {
-      return errorResponse(
-        request,
-        403,
-        "forbidden",
-        "a handshake is only started from this app",
-      );
-    }
-
-    if (await this.#configured(request)) {
-      const refused = await this.#manager(request);
-      if (refused) return refused;
-    }
-
-    return this.#beginHandshake(request);
-  }
-
-  async #handshakeDestroy(request: Request): Promise<Response> {
-    if (!sameOrigin(request, new URL(request.url).origin)) {
-      return errorResponse(
-        request,
-        403,
-        "forbidden",
-        "a disconnect is only asked for from this app",
-      );
-    }
-
-    if (!(await this.#configured(request))) {
-      return redirect(this.handshakePath, [], 303);
-    }
-
-    const refused = await this.#manager(request);
-    if (refused) return refused;
-
-    if (!this.#credentials.clear) {
-      return errorResponse(
-        request,
-        400,
-        "invalid_request",
-        "the credential store cannot forget this connection",
-      );
-    }
-
-    const held = await this.#credentials.read(request);
-
-    if (held?.registration_access_token) {
-      try {
-        await (await this.#issuer()).deleteRegistration(held);
-      } catch {}
-    }
-
-    await this.#credentials.clear(request);
-
-    if (wantsJSON(request)) return json(200, { connected: false }, []);
-
-    return redirect("/", [], 303);
-  }
-
-  async #handshakeCallback(request: Request): Promise<Response> {
-    const params = new URL(request.url).searchParams;
-    const state = params.get("state") ?? "";
-    const held = parseCookies(request.headers.get("cookie")).get(
-      hostCookie(request, HANDSHAKE_COOKIE),
-    );
-    const cleared = serialize(hostCookie(request, HANDSHAKE_COOKIE), "", {
-      secure: secure(request),
-      maxAge: 0,
-    });
-
-    if (!held || !state || !constantEqual(held, state)) {
-      return errorResponse(
-        request,
-        400,
-        "invalid_state",
-        "that connection request is not one this browser started, or it expired",
-        [cleared],
-      );
-    }
-
-    if (await this.#configured(request)) {
-      const refused = await this.#manager(request);
-      if (refused) return refused;
-    }
-
-    if (!this.#credentials.write) {
-      return errorResponse(
-        request,
-        500,
-        "handshake_unsaved",
-        "the credential store cannot save this connection; set credentials to a store that writes",
-        [cleared],
-      );
-    }
-
-    const handshake = await this.#handshake(request);
-    const registration = await handshake.complete(params, state);
-
-    await this.#credentials.write(request, {
-      client_id: registration.client_id,
-      client_secret: registration.client_secret,
-      registration_access_token: registration.registration_access_token,
-      registration_client_uri: registration.registration_client_uri,
-    });
-
-    const started = await this.#startSignIn(
-      request,
-      callbackFrom(request) ?? "/",
-      new URLSearchParams(),
-    );
-
-    started.headers.append("set-cookie", cleared);
-
-    return started;
-  }
-
-  async #beginHandshake(request: Request): Promise<Response> {
-    const handshake = await this.#handshake(request);
-    const started = handshake.start();
-
-    return redirect(
-      started.url,
-      [
-        serialize(hostCookie(request, HANDSHAKE_COOKIE), started.state, {
+    return {
+      get handshakePath() {
+        return masks.handshakePath;
+      },
+      credentials: this.#credentials,
+      site: async (request) => ({
+        origin: this.#appOrigin(request),
+        issuer: this.issuerURL,
+        cookies: [],
+      }),
+      issuer: () => this.#issuer(),
+      handshake: (request) => this.#handshake(request),
+      manager: (request) => this.#manager(request),
+      remember: async (request, state) => [
+        serialize(hostCookie(request, HANDSHAKE_COOKIE), state, {
           secure: secure(request),
           maxAge: FLOW_LIFETIME,
         }),
       ],
-      303,
-    );
+      recall: async (request, state) => {
+        const held = parseCookies(request.headers.get("cookie")).get(
+          hostCookie(request, HANDSHAKE_COOKIE),
+        );
+        const cleared = serialize(hostCookie(request, HANDSHAKE_COOKIE), "", {
+          secure: secure(request),
+          maxAge: 0,
+        });
+
+        return {
+          found: !!held && !!state && constantEqual(held, state),
+          cookies: [cleared],
+        };
+      },
+      connected: async (request, _returnTo, cookies) => {
+        const started = await this.#startSignIn(
+          request,
+          callbackFrom(request) ?? "/",
+          new URLSearchParams(),
+        );
+
+        for (const cookie of cookies)
+          started.headers.append("set-cookie", cookie);
+
+        return started;
+      },
+    };
   }
 
   async #handshake(request: Request): Promise<Handshake> {
@@ -1309,10 +1215,6 @@ export class MasksAuth {
     });
   }
 
-  async #configured(request: Request): Promise<boolean> {
-    return !!(await this.#credentials.read(request))?.client_id;
-  }
-
   async #client(request?: Request): Promise<Client | undefined> {
     const held = await this.#credentials.read(await this.#requestFor(request));
 
@@ -1328,9 +1230,7 @@ export class MasksAuth {
   }
 
   async #disconnected(): Promise<void> {
-    try {
-      await this.#credentials.clear?.(await this.#requestFor());
-    } catch {}
+    await this.#handshakes.forget(await this.#requestFor());
   }
 
   async #requestFor(request?: Request): Promise<Request> {

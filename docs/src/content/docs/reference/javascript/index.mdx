@@ -85,7 +85,8 @@ looked up by host.
 
 Once the app is connected, `/auth/handshake` shows the connection to somebody `manages` allows, with
 buttons to reconnect and to disconnect. Disconnecting deletes the registration at masks and the
-credentials. A person who is not signed in goes to sign in and comes back to `/auth/handshake`. When
+credentials. When masks cannot be reached to delete the registration, the app keeps the credentials
+and answers `503`, so no registration is left behind that the app no longer knows. A person who is not signed in goes to sign in and comes back to `/auth/handshake`. When
 `manages` names a privilege whose scopes the person lacks, masks is asked for them once, as on any
 guarded page. Anybody else is refused with `403`. If `manages` is not set, the app refuses everyone.
 

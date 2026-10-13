@@ -154,7 +154,7 @@ export class Masks {
   }
 
   disconnect(request: Request): Promise<boolean> {
-    return this.#core.disconnect(request);
+    return this.#core.handshakes.disconnect(request);
   }
 
   async client(request: Request): Promise<Client | undefined> {
