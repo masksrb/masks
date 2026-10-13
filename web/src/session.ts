@@ -2,7 +2,6 @@ import {
   type Account,
   type AvatarStyle,
   masksError,
-  type Organization,
   type Refusal,
   type Status,
 } from "./types.js";

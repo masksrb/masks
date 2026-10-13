@@ -3,9 +3,9 @@ import { createHash, createSign, generateKeyPairSync } from "node:crypto";
 import { test } from "node:test";
 import { createBrowserClient } from "../dist/browser.js";
 import { clientMetadata } from "../dist/metadata.js";
-import { masks } from "../dist/vite.js";
 import { challenge, encode, random } from "../dist/pkce.js";
 import { InvalidGrant, LoginRequired, MasksError } from "../dist/types.js";
+import { masks } from "../dist/vite.js";
 
 const ISSUER = "https://demo.auth.test";
 const KID = "test-key";
