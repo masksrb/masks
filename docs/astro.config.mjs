@@ -117,6 +117,7 @@ export default defineConfig({
           { label: "@masks/server", slug: "reference/node" },
           { label: "Masks::Client", slug: "reference/ruby" },
           { label: "Masks::Rails", slug: "reference/rails" },
+          { label: "masks-client", slug: "reference/python" },
           {
             label: "Ruby API docs",
             link: "/api/ruby/",

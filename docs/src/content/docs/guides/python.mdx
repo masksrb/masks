@@ -15,31 +15,19 @@ from the repository with the extra for your framework:
 pip install "masks-client[fastapi] @ git+https://github.com/masksrb/masks#subdirectory=python"
 ```
 
-| Module | |
-| --- | --- |
-| `masks` | The client: discovery, the handshake, the code flow, tokens, DPoP, introspection, token exchange, delegations, enrollment, and checking tokens. |
-| `masks.web` | The parts every framework shares: `Config`, the person, sessions, and credentials. |
-| `masks.fastapi`, `masks.django`, `masks.flask` | One integration for each framework. Install the `fastapi`, `django`, or `flask` extra to use it. |
+[masks-client](/reference/python/) lists every setting, route, and call.
 
 ## Setting up
 
-Every framework takes the same `masks.web.Config`. These are the settings you usually need:
+Every framework takes the same `masks.web.Config`. Most apps set four things:
 
-| Setting | |
-| --- | --- |
-| `issuer` | The masks issuer, such as `https://acme.auth.example.com`. The issuer is the masks server, and the tenant on it, that signs people in. |
-| `resource` | The app's own absolute `https` URL. Sign-ins name it as their resource, and tokens for the app's API must name it as their audience. |
-| `secret` | At least 32 random bytes that seal the session, such as the output of `openssl rand -hex 32`. Django and Flask use the app's own secret key when you leave it out. |
-| `name` | The name the handshake gives the app. Defaults to `An app`. |
-| `scope` | What every sign-in asks for. Defaults to `openid profile email offline_access`. `offline_access` lets the app refresh tokens. |
-| `privileges` | See [privileges](#privileges). |
-| `prefix` | Where the routes answer. Defaults to `/auth`. |
-| `after_sign_in`, `after_sign_out` | Where a person goes after signing in or out. Both default to `/`. |
-| `sign_out_of_issuer` | Signs the person out of masks as well when they sign out of the app. |
-| `credentials` | Where the handshake keeps the app's credentials. Defaults to `masks.json` in the working directory. |
-| `manages` | Who may connect the app again or disconnect it, once it is connected. See [the handshake](#the-handshake). |
-| `cookie_secure` | Set it to `False` only in development on plain `http`. It drops the `Secure` flag from the cookie. |
-| `allow_plain_http` | Allows a plain `http` issuer on another machine, for a private network. An issuer on this machine is always allowed. |
+- `issuer`, the masks tenant that signs people in, such as `https://acme.auth.example.com`
+- `resource`, the app's own absolute `https` URL
+- `name`, the name masks shows for the app
+- `secret`, at least 32 random bytes that seal the session, such as the output of
+  `openssl rand -hex 32`. Django and Flask use the app's own secret key when you leave it out.
+
+See [every setting](/reference/python/#config).
 
 After you set up your framework below:
 
@@ -76,12 +64,9 @@ async def settings(person: Annotated[Person, Depends(auth.require())]):
     return {"name": person.name}
 ```
 
-| | |
-| --- | --- |
-| `auth.person` | A dependency that gives the person, signed in or not. |
-| `auth.require(*privileges)` | Sends a signed-out visitor to sign in and back again, then checks each privilege. |
-| `auth.protect(*privileges)` | Checks an access token instead. See [accepting tokens](#accepting-tokens). |
-| `auth.require(*privileges, tokens=True)` | Checks a token when the request has an `Authorization` header or no session, and the session otherwise. |
+`auth.require(*privileges)` sends a signed-out visitor to sign in and back again, then checks each
+privilege. `auth.protect(*privileges)` checks an access token instead. See
+[the FastAPI calls](/reference/python/#fastapi).
 
 `auth.authorize(request, *privileges)` runs the same check inside a route. A Starlette app without
 FastAPI can still add `masks.fastapi.SessionMiddleware` and mount `auth.router.routes`.
@@ -172,14 +157,8 @@ The handshake registers the app for `resource`, with these addresses:
 All of them must share the resource's origin, or the handshake refuses before the browser leaves.
 A credential store that cannot be written refuses the handshake before masks registers anything.
 
-The app writes its credentials to `masks.json` with file mode 600. Other places to keep them:
-
-| | |
-| --- | --- |
-| `FileCredentials(path)` | A file at another path. |
-| `MemoryCredentials()` | This process's memory, for tests. |
-| `StaticCredentials(client_id, client_secret)` | Credentials from your configuration. The app cannot disconnect with these. |
-| Your own class | Any object with `writable`, `read()`, `write(registration)`, and `clear()`. |
+The app writes its credentials to `masks.json` with file mode 600. To keep them somewhere else, set
+`credentials` to one of the [credential stores](/reference/python/#credentials).
 
 A multi-tenant app sets `credentials` to a function that takes the request and returns the store for
 that tenant. `issuer`, `resource`, `name`, `organization`, and `base_url` take a function of the
@@ -204,22 +183,8 @@ its credentials and the browser goes to the handshake again.
 
 ## Signing in
 
-These routes answer under `prefix`:
-
-| Route | |
-| --- | --- |
-| `GET /auth` | Starts a sign-in. Takes `return_to`, `organization`, and `privilege`. |
-| `GET /auth/callback` | Finishes it. |
-| `GET /auth/session` | The signed-in person as JSON, for a single-page app. |
-| `GET /auth/avatar` | The person's photo, fetched from masks with their token. Takes `size`. |
-| `GET`, `POST`, or `DELETE /auth/logout` | Signs out. Takes `everywhere` to sign out of masks as well. |
-| `GET /auth/logout/return` | Where masks sends the browser back after signing out of masks. |
-| `POST /auth/logout/backchannel` | Takes a back-channel logout token from masks. |
-| `GET /auth/handshake` | Starts the handshake, or shows the connection. |
-| `POST /auth/handshake` | Connects the app again. |
-| `GET /auth/handshake/callback` | Finishes the handshake. |
-| `POST /auth/handshake/disconnect` or `DELETE /auth/handshake` | Disconnects the app. |
-| `GET /.well-known/oauth-protected-resource` | The app's resource metadata. See [accepting tokens](#accepting-tokens). |
+The routes answer under `prefix`, which is `/auth` by default. `GET /auth` starts a sign-in, and
+`GET /auth/callback` finishes it. See [every route](/reference/python/#routes).
 
 A sign-in is protected in these ways:
 
@@ -234,21 +199,8 @@ not start sends it to sign in again, at most once a minute. In between, it is re
 A JSON request that needs a sign-in gets `401` with `login_required` or `handshake_required` and the
 URL to send the browser to. A browser is redirected.
 
-The person has these fields and methods:
-
-| | |
-| --- | --- |
-| `signed_in` | Whether there is a sign-in and its token has not expired. |
-| `subject`, `name`, `nickname`, `email`, `email_verified` | Who signed in. |
-| `picture`, `avatars` | `picture` is the `picture` claim, then the photo, then the identicon. `avatars` holds each avatar URL. |
-| `tenant` | The tenant's `uuid`, `subdomain`, and `name`. |
-| `organization`, `organizations`, `has_role("owner")` | See [organizations](#organizations). |
-| `scopes`, `permits("catalog:read")` | The scopes the token holds. |
-| `privileges`, `has_privilege("admin")` | See [privileges](#privileges). |
-| `access_token` | The token to send to a resource server. |
-| `account_url` | The person's account page at masks. |
-| `person["groups"]` | Any other claim the sign-in kept. |
-| `to_dict()` | What `GET /auth/session` returns. It leaves out `access_token`. |
+The person has the sign-in's claims, scopes, organizations, and privileges. See
+[the person](/reference/python/#the-person).
 
 A scope is a named permission that a token holds. A claim is one piece of information inside a
 token, such as the person's email address.
@@ -312,19 +264,9 @@ Config(..., sessions=ServerSessions(MemorySessionStore()))
 
 The cookie then holds only a random id. The store keeps each session under a hash of that id, so
 the ids cannot be read back from the store. `MemorySessionStore` keeps sessions in one process. A
-store of your own has these methods:
-
-| Method | |
-| --- | --- |
-| `read(key)` | Returns the session, or `None`. |
-| `write(key, data, expires_in, tags)` | Saves it. `tags` holds the issuer as `iss`, the person's `sub`, and the session's `sid`. |
-| `delete(key)` | Removes it. |
-| `end(issuer=..., subject=..., sid=...)` | Removes every session from that issuer with that `sid`, or every session of that `subject`. Back-channel logout calls it. |
-
-In a FastAPI app, a store's methods can be `async def`, so a store that talks to Redis or a
-database does not hold up other requests while it waits. `masks.web.AsyncSessionStore` describes
-that kind of store. Django and Flask apps need a store with plain methods, and raise `TypeError`
-when given an async one.
+store of your own, such as one in Redis or a database, has the
+[store methods](/reference/python/#sessions). In a FastAPI app, they can be `async def`, so waiting
+on the store does not hold up other requests.
 
 ## Organizations
 
