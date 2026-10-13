@@ -263,8 +263,11 @@ func (a *App) callback(w http.ResponseWriter, r *http.Request) {
 	pending := held.claim(query.Get("state"))
 
 	if pending == nil || pending.Provider != "" {
-		if code := query.Get("error"); code != "" {
-			a.refuse(w, r, http.StatusBadRequest, code, query.Get("error_description"))
+		if query.Get("error") != "" {
+			if a.save(w, r, held) {
+				a.refuse(w, r, http.StatusBadRequest, "invalid_state", "masks refused a sign-in that this browser did not start, or one that expired")
+			}
+
 			return
 		}
 

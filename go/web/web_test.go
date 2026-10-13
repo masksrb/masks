@@ -1418,3 +1418,14 @@ func TestASignOutFormIsReadOnlyUpToItsLimit(t *testing.T) {
 		t.Fatal("an oversized sign-out form left the person signed in")
 	}
 }
+
+func TestACallbackDoesNotRepeatTextItWasHanded(t *testing.T) {
+	h := newHarness(t, nil)
+	h.connect()
+
+	response, body := h.visit(http.MethodGet, "/auth/callback?error=access_denied&error_description=Call+555-0100+to+unlock+your+account&state=unknown")
+
+	if response.StatusCode != http.StatusBadRequest || strings.Contains(body, "555-0100") {
+		t.Fatalf("a callback this browser did not start answered %d: %s", response.StatusCode, body)
+	}
+}
