@@ -93,7 +93,12 @@ sends it back through `/api/auth/masks/logout/return` to `callbackUrl`. That ret
 the sign-out stored in the browser, which works once, so a link to it from anywhere else is refused.
 A sign-out from another site is refused with `403`.
 
-With the `signOutOfIssuer: true` option, every sign-out through that route signs out of masks.
+With the `signOutOfIssuer: true` option, every sign-out signs out of masks: that route, the
+`signOut` server action from `auth.ts`, and `signOut()` from `next-auth/react`. Auth.js clears the
+session, then sends the browser through `/api/auth/masks/logout` on its way to masks.
+`masks.signOutPath("/goodbye")` builds that address for a single sign-out, such as
+`signOut({ redirectTo: masks.signOutPath("/goodbye") })`.
+
 An app connected before this route existed has to reconnect once, so masks learns the return address.
 
 ## Several servers

@@ -810,7 +810,7 @@ test("only a manager reconnects or disconnects a connected app", async () => {
   );
 
   const signedOut = await held.browser.fetch("/auth/handshake");
-  assert.equal(signedOut.status, 302);
+  assert.equal(signedOut.status, 303);
   assert.equal(
     signedOut.headers.get("location"),
     "/auth?return_to=%2Fauth%2Fhandshake",
@@ -860,7 +860,7 @@ test("only a manager reconnects or disconnects a connected app", async () => {
   );
   await signIn(scoped);
   const asked = await scoped.browser.fetch("/auth/handshake");
-  assert.equal(asked.status, 302);
+  assert.equal(asked.status, 303);
   assert.equal(
     asked.headers.get("location"),
     "/auth?return_to=%2Fauth%2Fhandshake&privilege=admin",

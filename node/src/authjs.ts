@@ -248,11 +248,16 @@ export class MasksAuth {
 
     const wrap =
       (original: Handler): Handler =>
-      async (request: Incoming) =>
-        (await this.handle(request)) ??
-        (this.#callback(request)
-          ? this.#replacing(request, original)
-          : original(request));
+      async (request: Incoming) => {
+        const answered = await this.handle(request);
+
+        if (answered) return answered;
+        if (this.#callback(request)) return this.#replacing(request, original);
+        if (this.#signingOut(request))
+          return original(await this.#throughMasks(request));
+
+        return original(request);
+      };
 
     return {
       ...result,
@@ -260,11 +265,66 @@ export class MasksAuth {
         GET: wrap(result.handlers.GET),
         POST: wrap(result.handlers.POST),
       },
+      signOut: ((options?: { redirectTo?: string; redirect?: boolean }) =>
+        this.#signOut(result, options)) as NextAuthResult["signOut"],
       masks: this,
       requireAuth: (...privileges) => this.requireAuth(...privileges),
       accessToken: () => this.accessToken(),
       proxy: (request) => this.proxy(request),
     } as MasksAuthResult;
+  }
+
+  signOutPath(returnTo?: string): string {
+    const query = new URLSearchParams({ everywhere: "1" });
+    const callbackUrl = localPath(returnTo);
+
+    if (callbackUrl) query.set("callbackUrl", callbackUrl);
+
+    return `${this.logoutPath}?${query}`;
+  }
+
+  #signingOut(request: Request): boolean {
+    return (
+      this.#options.signOutOfIssuer === true &&
+      request.method.toUpperCase() === "POST" &&
+      new URL(request.url).pathname === `${this.basePath}/signout`
+    );
+  }
+
+  async #throughMasks(request: Incoming): Promise<Incoming> {
+    const form = await readForm(request);
+    const origin = new URL(request.url).origin;
+    const headers = new Headers(request.headers);
+    const make = request.constructor as typeof Request;
+
+    headers.delete("content-length");
+    form.set(
+      "callbackUrl",
+      `${origin}${this.signOutPath(sameSitePath(form.get("callbackUrl"), origin))}`,
+    );
+
+    return new make(request.url, {
+      method: "POST",
+      headers,
+      body: form,
+    }) as Incoming;
+  }
+
+  async #signOut(
+    result: NextAuthResult,
+    options: { redirectTo?: string; redirect?: boolean } = {},
+  ): Promise<unknown> {
+    if (this.#options.signOutOfIssuer !== true)
+      return result.signOut(options as never);
+
+    const held = await (await nextHeaders()).headers();
+    const origin = await this.#origin();
+    const back = options.redirectTo ?? held.get("referer") ?? undefined;
+
+    return result.signOut({
+      ...options,
+      redirectTo: `${origin}${this.signOutPath(sameSitePath(back, origin))}`,
+    } as never);
   }
 
   #callback(request: Request): boolean {
@@ -1071,7 +1131,20 @@ export class MasksAuth {
       }),
       issuer: () => this.#issuer(),
       handshake: (request) => this.#handshake(request),
-      manager: (request) => this.#manager(request),
+      privileges: this.privileges,
+      manages: this.#options.manages,
+      person: async (request) => {
+        const held = await this.#signInFrom(request.headers);
+
+        return held ? this.#maskedOf(held) : Masked.nobody(this.privileges);
+      },
+      signInURL: (returnTo, privilege) =>
+        this.signInPath({ returnTo, privilege }),
+      steppedUp: async (request, privileges) =>
+        askedBefore(
+          parseCookies(request.headers.get("cookie")).get(STEPPED_COOKIE),
+          privileges,
+        ),
       remember: async (request, state) => [
         serialize(hostCookie(request, HANDSHAKE_COOKIE), state, {
           secure: secure(request),
@@ -1130,52 +1203,6 @@ export class MasksAuth {
       backchannelLogoutURI: `${base}${PREFIX}/logout/backchannel`,
       postLogoutRedirectUri: this.#logoutReturnURL(request),
     });
-  }
-
-  async #manager(request: Request): Promise<Response | undefined> {
-    const held = await this.#signInFrom(request.headers);
-
-    if (!held) {
-      return redirect(
-        this.signInPath({ returnTo: this.handshakePath }),
-        [],
-        303,
-      );
-    }
-
-    const masked = this.#maskedOf(held);
-
-    const manages = this.#options.manages;
-    let allowed = false;
-
-    if (typeof manages === "string") allowed = masked.privilege(manages);
-    else if (typeof manages === "function")
-      allowed = (await manages(request, masked)) === true;
-
-    if (allowed) return undefined;
-
-    const asked =
-      typeof manages === "string"
-        ? lackingScopes(masked, [this.privileges.get(manages)])
-        : [];
-    const stepped = parseCookies(request.headers.get("cookie")).get(
-      STEPPED_COOKIE,
-    );
-
-    if (asked.length > 0 && !askedBefore(stepped, asked)) {
-      return redirect(
-        this.signInPath({ returnTo: this.handshakePath, privilege: asked }),
-        [],
-        303,
-      );
-    }
-
-    return errorResponse(
-      request,
-      403,
-      "forbidden",
-      "only somebody this app lets manage its connection can reconnect or disconnect it",
-    );
   }
 
   async #backchannel(request: Request): Promise<Response> {
@@ -1310,6 +1337,23 @@ function heldOf(value: unknown): HeldSignIn | undefined {
     typeof held.access_token === "string"
     ? held
     : undefined;
+}
+
+function sameSitePath(
+  value: string | null | undefined,
+  origin: string,
+): string | undefined {
+  if (!value) return undefined;
+
+  try {
+    const parsed = new URL(value, origin);
+
+    if (parsed.origin !== origin) return undefined;
+
+    return localPath(`${parsed.pathname}${parsed.search}`);
+  } catch {
+    return undefined;
+  }
 }
 
 function trim(path: string): string {

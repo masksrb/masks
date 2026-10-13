@@ -5,7 +5,13 @@ import type { IdTokenClaims, LogoutToken } from "../idtoken.js";
 import { random } from "../key.js";
 import { avatarResponse } from "./avatar.js";
 import type { Core } from "./core.js";
-import { answer, check, describe, handshakeJSON, loginJSON } from "./guard.js";
+import {
+  answer,
+  describe,
+  handshakeJSON,
+  loginJSON,
+  steppedUp,
+} from "./guard.js";
 import type { HandshakeHost } from "./handshakes.js";
 import { acceptLogout } from "./logouts.js";
 import { unique } from "./privileges.js";
@@ -428,8 +434,20 @@ export function handshakeHost(core: Core): HandshakeHost {
     async handshake(request) {
       return core.handshake(await core.visit(request));
     },
-    async manager(request) {
-      return manager(core, await core.visit(request));
+    privileges: core.privileges,
+    manages: core.options.manages,
+    async person(request) {
+      const visit = await core.visit(request);
+
+      return core.masked(visit, await core.current(visit));
+    },
+    signInURL: (returnTo, privileges) =>
+      core.loginURL({ returnTo, privilege: privileges }),
+    async steppedUp(request, privileges) {
+      return steppedUp(
+        await core.sessions.readFlow(await core.visit(request)),
+        privileges,
+      );
     },
     async remember(request, state) {
       const visit = await core.visit(request);
@@ -463,40 +481,4 @@ export function handshakeHost(core: Core): HandshakeHost {
       await core.sessions.forget(await core.visit(request));
     },
   };
-}
-
-async function manager(
-  core: Core,
-  visit: Visit,
-): Promise<Response | undefined> {
-  const manages = core.options.manages;
-
-  if (typeof manages === "string") {
-    const outcome = await check(core, visit.request, {
-      privileges: [manages],
-      returnTo: core.handshakePath,
-    });
-
-    return outcome.refusal?.toResponse();
-  }
-
-  const masked = core.masked(visit, await core.current(visit));
-
-  if (!masked.signedIn) {
-    return redirect(
-      core.loginURL({ returnTo: core.handshakePath }),
-      visit.out,
-      303,
-    );
-  }
-
-  if (manages && (await manages(visit.request, masked)) === true)
-    return undefined;
-
-  return answer(
-    visit,
-    403,
-    "forbidden",
-    "only somebody this app lets manage its connection can reconnect or disconnect it",
-  );
 }

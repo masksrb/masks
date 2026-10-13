@@ -7,7 +7,7 @@ import { Masked } from "./masked.js";
 import { unique } from "./privileges.js";
 import { localPath, presented, referring, wantsJSON } from "./requests.js";
 import { errorResponse, headersWith, json, redirect } from "./responses.js";
-import { now, type Visit } from "./session.js";
+import { type FlowData, now, type Visit } from "./session.js";
 
 export type RefusalKind =
   | "handshake"
@@ -103,14 +103,7 @@ export async function check(
 
   if (missing.length === 0) return { masked, cookies: visit.handOut() };
 
-  const flow = await core.sessions.readFlow(visit);
-  const stepped = flow.steppedUp;
-
-  if (
-    stepped &&
-    missing.every((name) => stepped.privileges.includes(name)) &&
-    stepped.at > now() - STEP_UP_WITHIN
-  ) {
+  if (steppedUp(await core.sessions.readFlow(visit), missing)) {
     const error = new ForbiddenError(
       "insufficient_scope",
       `this account does not hold the ${missing.join(" and ")} privilege`,
@@ -149,6 +142,16 @@ export async function check(
           : redirect(url, visit.out),
     }),
   };
+}
+
+export function steppedUp(flow: FlowData, names: string[]): boolean {
+  const stepped = flow.steppedUp;
+
+  return (
+    !!stepped &&
+    names.every((name) => stepped.privileges.includes(name)) &&
+    stepped.at > now() - STEP_UP_WITHIN
+  );
 }
 
 export async function protect(

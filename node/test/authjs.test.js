@@ -482,6 +482,39 @@ test("signing out ends the session here, and everywhere signs out of masks and c
   assert.equal(back.headers.get("location"), "/goodbye");
 });
 
+test("with signOutOfIssuer, the signOut of next-auth/react goes on to sign out of masks", async () => {
+  const held = await signedIn({ masks: { signOutOfIssuer: true } });
+  const { fake, browser } = held;
+  const { csrfToken } = await (await browser.fetch("/api/auth/csrf")).json();
+  const posted = await browser.fetch("/api/auth/signout", {
+    method: "POST",
+    headers: {
+      "content-type": "application/x-www-form-urlencoded",
+      "x-auth-return-redirect": "1",
+    },
+    body: new URLSearchParams({ csrfToken, callbackUrl: `${APP}/goodbye` }),
+  });
+  const { url } = await posted.json();
+
+  assert.equal(
+    url,
+    `${APP}/api/auth/masks/logout?everywhere=1&callbackUrl=%2Fgoodbye`,
+  );
+  assert.equal(await session(browser), null);
+
+  const left = await browser.fetch(new URL(url).pathname + new URL(url).search);
+  const target = new URL(left.headers.get("location"));
+
+  assert.equal(left.status, 303);
+  assert.equal(target.origin, fake.url);
+
+  const back = await browser.fetch(
+    `/api/auth/masks/logout/return?state=${target.searchParams.get("state")}`,
+  );
+
+  assert.equal(back.headers.get("location"), "/goodbye");
+});
+
 test("signing out without everywhere stays in the app", async () => {
   const held = await signedIn();
   const left = await held.browser.fetch("/api/auth/masks/logout", {

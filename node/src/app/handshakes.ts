@@ -2,6 +2,8 @@ import { isMasksError, UnavailableError } from "../errors.js";
 import { type Handshake, originOf } from "../handshake.js";
 import type { Issuer } from "../issuer.js";
 import type { CredentialStore } from "./credentials.js";
+import type { Masked } from "./masked.js";
+import type { Privileges } from "./privileges.js";
 import { sameOrigin, wantsJSON } from "./requests.js";
 import {
   errorResponse,
@@ -23,7 +25,13 @@ export interface HandshakeHost {
   site(request: Request): Promise<HandshakeSite>;
   issuer(request: Request): Promise<Issuer>;
   handshake(request: Request): Promise<Handshake>;
-  manager(request: Request): Promise<Response | undefined>;
+  readonly privileges: Privileges;
+  readonly manages?:
+    | string
+    | ((request: Request, masked: Masked) => boolean | Promise<boolean>);
+  person(request: Request): Promise<Masked>;
+  signInURL(returnTo: string, privileges: string[]): string;
+  steppedUp(request: Request, privileges: string[]): Promise<boolean>;
   remember(request: Request, state: string): Promise<string[]>;
   recall(
     request: Request,
@@ -51,7 +59,7 @@ export class Handshakes {
   async show(request: Request): Promise<Response> {
     if (!(await this.configured(request))) return this.#begin(request);
 
-    const refused = await this.#host.manager(request);
+    const refused = await this.manager(request);
     if (refused) return refused;
 
     const site = await this.#host.site(request);
@@ -78,7 +86,7 @@ export class Handshakes {
     }
 
     if (await this.configured(request)) {
-      const refused = await this.#host.manager(request);
+      const refused = await this.manager(request);
       if (refused) return refused;
     }
 
@@ -102,7 +110,7 @@ export class Handshakes {
     if (!(await this.configured(request)))
       return redirect(handshakePath, site.cookies, 303);
 
-    const refused = await this.#host.manager(request);
+    const refused = await this.manager(request);
     if (refused) return refused;
 
     if (!(await this.disconnect(request))) {
@@ -141,7 +149,7 @@ export class Handshakes {
     }
 
     if (await this.configured(request)) {
-      const refused = await this.#host.manager(request);
+      const refused = await this.manager(request);
       if (refused) return refused;
     }
 
@@ -168,6 +176,48 @@ export class Handshakes {
     });
 
     return this.#host.connected(request, recalled.returnTo, recalled.cookies);
+  }
+
+  async manager(request: Request): Promise<Response | undefined> {
+    const host = this.#host;
+    const site = await host.site(request);
+    const masked = await host.person(request);
+
+    if (!masked.signedIn) {
+      return redirect(
+        host.signInURL(host.handshakePath, []),
+        site.cookies,
+        303,
+      );
+    }
+
+    const { manages } = host;
+
+    if (typeof manages === "function") {
+      if ((await manages(request, masked)) === true) return undefined;
+    } else if (typeof manages === "string") {
+      const privilege = host.privileges.get(manages);
+
+      if (masked.holds(privilege)) return undefined;
+
+      const lacking = !privilege.scopes.every((scope) => masked.permits(scope));
+
+      if (lacking && !(await host.steppedUp(request, [privilege.name]))) {
+        return redirect(
+          host.signInURL(host.handshakePath, [privilege.name]),
+          site.cookies,
+          303,
+        );
+      }
+    }
+
+    return errorResponse(
+      request,
+      403,
+      "forbidden",
+      "only somebody this app lets manage its connection can reconnect or disconnect it",
+      site.cookies,
+    );
   }
 
   async disconnect(request: Request): Promise<boolean> {
