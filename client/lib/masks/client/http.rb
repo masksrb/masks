@@ -4,6 +4,7 @@ module Masks
       OPEN_TIMEOUT = 5
       READ_TIMEOUT = 10
       READ_LIMIT = 1 << 20
+      FETCH_LIMIT = 8 << 20
 
       module_function
 
@@ -43,7 +44,7 @@ module Masks
       end
 
       def fetch(url, headers = {})
-        deliver(Net::HTTP::Get.new(checked(URI.parse(url.to_s)), headers), limit: nil)
+        deliver(Net::HTTP::Get.new(checked(URI.parse(url.to_s)), headers), limit: FETCH_LIMIT)
       end
 
       def json(verb, url, body, headers)

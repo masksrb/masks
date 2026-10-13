@@ -43,6 +43,23 @@ class HttpTest < ClientTest
     assert_match "more than", error.message
   end
 
+  def test_a_fetch_over_eight_megabytes_is_refused
+    issuer.override("/photo", { "padding" => "a" * (8 << 20) })
+
+    error = assert_raises(Masks::Client::Error) { Masks::Client::HTTP.fetch("#{issuer.url}/photo") }
+
+    assert_match "more than", error.message
+  end
+
+  def test_a_fetch_under_its_limit_answers_with_the_whole_response
+    issuer.override("/photo", { "padding" => "a" * (2 << 20) })
+
+    answer = Masks::Client::HTTP.fetch("#{issuer.url}/photo")
+
+    assert_kind_of Net::HTTPSuccess, answer
+    assert_operator answer.body.bytesize, :>, 2 << 20
+  end
+
   def test_a_json_answer_that_is_not_an_object_is_refused
     issuer.override("/list", [ 200, [ "a", "b" ] ])
 
