@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import base64
 import hashlib
 import hmac
+import json
+import re
 import threading
 import time
 from collections.abc import Sequence
@@ -19,6 +22,8 @@ KEYS_LIFETIME = 300
 KEYS_PATIENCE = 30
 LEEWAY = 30
 
+SEGMENT = re.compile(r"[A-Za-z0-9_-]+")
+
 HASHES = {"RS256": hashlib.sha256, "ES256": hashlib.sha256}
 
 
@@ -29,10 +34,20 @@ def typed(header: dict[str, Any], accepted: Sequence[str]) -> bool:
 
 
 def unverified_header(token: str) -> dict[str, Any]:
+    segment, dot, rest = token.partition(".")
+
+    if not dot or rest.count(".") != 1 or not SEGMENT.fullmatch(segment) or len(segment) % 4 == 1:
+        raise InvalidToken("masks: that is not a signed JWT")
+
     try:
-        return jwt.get_unverified_header(token)
-    except jwt.PyJWTError as error:
+        header = json.loads(base64.urlsafe_b64decode(segment + "=" * (-len(segment) % 4)))
+    except ValueError as error:
         raise InvalidToken(f"masks: that is not a signed JWT: {error}") from error
+
+    if not isinstance(header, dict):
+        raise InvalidToken("masks: that is not a signed JWT: its header is not an object")
+
+    return header
 
 
 def half_hash(value: str, algorithm: str) -> str:
