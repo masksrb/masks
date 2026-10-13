@@ -710,6 +710,63 @@ func TestADelegationIsConnectedByTheActorSignedIn(t *testing.T) {
 	}
 }
 
+func TestADelegationNeedsSomebodySignedIn(t *testing.T) {
+	h := newHarness(t, func(config *Config) {
+		config.Delegates = true
+		config.DelegationPath = "/connect/callback"
+	})
+	h.connect()
+
+	jar, _ := cookiejar.New(nil)
+	h.browser.Jar = jar
+
+	response, body := h.visit(http.MethodGet, "/connect", "Accept", "application/json")
+	if response.StatusCode != http.StatusUnauthorized || !strings.Contains(body, "login_required") {
+		t.Fatalf("a delegation started with nobody signed in: %d %s", response.StatusCode, body)
+	}
+
+	if strings.Contains(h.issuer.asked.Get("scope"), "masks:delegate:") {
+		t.Fatal("masks was asked for a delegation with nobody signed in")
+	}
+}
+
+func TestADelegationIsHeldToThePersonWhoStartedIt(t *testing.T) {
+	h := newHarness(t, func(config *Config) {
+		config.Delegates = true
+		config.DelegationPath = "/connect/callback"
+	})
+	h.connect()
+
+	stopped := *h.browser
+	stopped.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+
+	started, err := stopped.Get(h.server.URL + "/connect")
+	if err != nil {
+		t.Fatal(err)
+	}
+	started.Body.Close()
+
+	provider := started.Header.Get("Location")
+	if started.StatusCode != http.StatusFound || !strings.Contains(provider, "masks%3Adelegate%3Agoogle") {
+		t.Fatalf("the delegation did not start: %d %s", started.StatusCode, provider)
+	}
+
+	h.issuer.lock.Lock()
+	h.issuer.signsIn = "grace"
+	h.issuer.lock.Unlock()
+
+	h.visit(http.MethodGet, "/auth/")
+
+	if actor := h.actor("/me"); actor.Subject != "grace" {
+		t.Fatalf("grace did not sign in: %s", actor.Subject)
+	}
+
+	response, body := h.visit(http.MethodGet, provider)
+	if response.StatusCode != http.StatusBadRequest || !strings.Contains(body, "someone other than the person signed in") {
+		t.Fatalf("a connection started by ada was finished for grace: %d %s", response.StatusCode, body)
+	}
+}
+
 func TestAnIssuerPerRequestKeepsTenantsApart(t *testing.T) {
 	other := newIssuer(t)
 	stores := map[string]CredentialStore{}

@@ -114,6 +114,7 @@ type pending struct {
 	masks.Authorization
 
 	ReturnTo string `json:"return_to,omitempty"`
+	Account  string `json:"account,omitempty"`
 	Expiry   int64  `json:"expiry"`
 }
 
@@ -163,6 +164,14 @@ func (s *state) renew(keep func(old *session) *session) {
 }
 
 func (s *state) open(authorization *masks.Authorization, returnTo string) {
+	s.keep(pending{Authorization: *authorization, ReturnTo: returnTo})
+}
+
+func (s *state) delegate(authorization *masks.Authorization, account string) {
+	s.keep(pending{Authorization: *authorization, Account: account})
+}
+
+func (s *state) keep(entry pending) {
 	held := s.change()
 	now := time.Now()
 
@@ -170,7 +179,8 @@ func (s *state) open(authorization *masks.Authorization, returnTo string) {
 		held.Requests = map[string]pending{}
 	}
 
-	held.Requests[authorization.State] = pending{Authorization: *authorization, ReturnTo: returnTo, Expiry: now.Add(pendingTTL).Unix()}
+	entry.Expiry = now.Add(pendingTTL).Unix()
+	held.Requests[entry.State] = entry
 	held.Requests = newest(held.Requests, func(entry pending) int64 { return entry.Expiry }, now)
 }
 

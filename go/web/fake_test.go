@@ -61,6 +61,7 @@ type issuer struct {
 	avatarType   string
 	backchannel  bool
 	delegateSubs string
+	signsIn      string
 	down         bool
 }
 
@@ -315,7 +316,12 @@ func (f *issuer) token(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		held = &issuedRefresh{client: id, subject: "ada", scope: code.scope, organization: code.organization}
+		subject := f.signsIn
+		if subject == "" {
+			subject = "ada"
+		}
+
+		held = &issuedRefresh{client: id, subject: subject, scope: code.scope, organization: code.organization}
 		f.resource = form.Get("resource")
 
 		refresh := rand.Text()
@@ -325,7 +331,7 @@ func (f *issuer) token(w http.ResponseWriter, r *http.Request) {
 		body := map[string]any{
 			"access_token": access, "token_type": "Bearer", "expires_in": f.expiresIn, "scope": held.scope, "refresh_token": refresh,
 			"id_token": f.issue(map[string]any{
-				"iss": f.url(), "sub": "ada", "aud": id, "nonce": code.nonce, "sid": "sid-ada",
+				"iss": f.url(), "sub": subject, "aud": id, "nonce": code.nonce, "sid": "sid-" + subject,
 				"exp": time.Now().Add(15 * time.Minute).Unix(), "iat": time.Now().Unix(),
 				"name": "Ada Lovelace", "email": "ada@example.com", "email_verified": true,
 				"masks:avatars": map[string]any{"photo": f.url() + "/avatars/ada/photo", "identicon": f.url() + "/avatars/ada/identicon"},
@@ -336,12 +342,12 @@ func (f *issuer) token(w http.ResponseWriter, r *http.Request) {
 
 		for scope := range strings.FieldsSeq(code.scope) {
 			if provider, found := strings.CutPrefix(scope, "masks:delegate:"); found {
-				subject := f.delegateSubs
-				if subject == "" {
-					subject = "ada"
+				connected := f.delegateSubs
+				if connected == "" {
+					connected = subject
 				}
 
-				body["delegations"] = []map[string]string{{"connection": "c-" + provider, "provider": provider, "subject": subject}}
+				body["delegations"] = []map[string]string{{"connection": "c-" + provider, "provider": provider, "subject": connected}}
 			}
 		}
 

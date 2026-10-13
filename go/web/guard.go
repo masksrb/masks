@@ -362,12 +362,22 @@ func (a *App) StartDelegation(w http.ResponseWriter, r *http.Request, provider s
 
 	held := v.state
 
+	actor, err := a.signedIn(r, v)
+	if err != nil {
+		return err
+	}
+
+	if !actor.SignedIn || actor.Subject == "" {
+		a.signInFirst(w, r, v.site, held)
+		return nil
+	}
+
 	started, err := client.StartDelegation(provider, asked)
 	if err != nil {
 		return err
 	}
 
-	held.open(started, "")
+	held.delegate(started, actor.Subject)
 
 	if err := a.commit(w, r, held); err != nil {
 		return err
@@ -401,13 +411,17 @@ func (a *App) FinishDelegation(w http.ResponseWriter, r *http.Request) (*masks.C
 		return nil, &masks.DelegationError{Code: "invalid_state", Description: "that connection is not one this browser started, or it expired"}
 	}
 
+	if !actor.SignedIn || pending.Account == "" || actor.Subject != pending.Account {
+		return nil, &masks.DelegationError{Code: "access_denied", Description: "someone other than the person signed in finished that connection"}
+	}
+
 	connected, err := client.FinishDelegation(r.Context(), r.URL.Query(), &pending.Authorization)
 	if err != nil {
 		return nil, err
 	}
 
-	if actor.SignedIn && connected.Subject != "" && connected.Subject != actor.Subject {
-		return nil, &masks.DelegationError{Code: "access_denied", Description: "someone other than the person signed in finished that connection"}
+	if connected.Subject != pending.Account {
+		return nil, &masks.DelegationError{Code: "access_denied", Description: "masks connected that provider for another account"}
 	}
 
 	return connected, nil

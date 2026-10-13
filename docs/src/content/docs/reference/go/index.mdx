@@ -429,8 +429,10 @@ mux.HandleFunc("GET /connect/callback", func(w http.ResponseWriter, r *http.Requ
 })
 ```
 
-`FinishDelegation` refuses a connection that this browser did not start, and one that masks made for
-somebody other than the person signed in.
+`StartDelegation` sends a person who is not signed in to sign in first, and returns no error. A
+request for JSON gets `401` with `login_required`. `FinishDelegation` refuses a connection that this
+browser did not start, that somebody other than the person signed in started, or that masks made for
+another account.
 
 Keep the `Secret` encrypted. To call the provider later, ask for its token:
 
