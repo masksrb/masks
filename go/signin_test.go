@@ -397,3 +397,34 @@ func TestADelegationConnectsAnAccountAndReleasesItsToken(t *testing.T) {
 		t.Fatalf("a failed exchange lost the rotated secret: %v", err)
 	}
 }
+
+func TestMaxAgeRefusesASignInThatIsTooOld(t *testing.T) {
+	held := newFake(t)
+	client := shookHands(t, held)
+
+	for _, check := range []struct {
+		name     string
+		authTime int64
+		accepted bool
+	}{
+		{"just now", time.Now().Unix(), true},
+		{"an hour ago", time.Now().Add(-time.Hour).Unix(), false},
+		{"never said", 0, false},
+	} {
+		t.Run(check.name, func(t *testing.T) {
+			held.lock.Lock()
+			held.authTime = check.authTime
+			held.lock.Unlock()
+
+			started, err := client.AuthCodeURL(AuthRequest{MaxAge: 5 * time.Minute})
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			_, err = client.Complete(context.Background(), visit(t, started.URL), started)
+			if (err == nil) != check.accepted {
+				t.Fatalf("a sign-in from %s answered %v", check.name, err)
+			}
+		})
+	}
+}

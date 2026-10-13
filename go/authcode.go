@@ -42,6 +42,7 @@ type Authorization struct {
 	Verifier string   `json:"verifier"`
 	Resource []string `json:"resource,omitempty"`
 	Provider string   `json:"provider,omitempty"`
+	MaxAge   int64    `json:"max_age,omitempty"`
 }
 
 type SignIn struct {
@@ -108,7 +109,8 @@ func (c *Client) AuthCodeURL(asked AuthRequest) (*Authorization, error) {
 	}
 
 	if asked.MaxAge > 0 {
-		query.Set("max_age", strconv.FormatInt(int64(asked.MaxAge/time.Second), 10))
+		held.MaxAge = int64(asked.MaxAge / time.Second)
+		query.Set("max_age", strconv.FormatInt(held.MaxAge, 10))
 	}
 
 	if key := OrganizationKey(asked.Organization); key != "" {
@@ -181,6 +183,11 @@ func (c *Client) Complete(ctx context.Context, returned url.Values, pending *Aut
 
 	if identity.AccessTokenHash != "" && !sameString(identity.AccessTokenHash, accessTokenHash(token.AccessToken)) {
 		return nil, invalid("that ID token was issued with another access token")
+	}
+
+	if pending.MaxAge > 0 && (identity.AuthTime == 0 ||
+		time.Since(time.Unix(identity.AuthTime, 0)) > time.Duration(pending.MaxAge)*time.Second+verifyLeeway) {
+		return nil, invalid("the person signed in longer ago than max_age allows")
 	}
 
 	signed.Identity = identity

@@ -76,6 +76,7 @@ type fake struct {
 	enrolledBy    map[string]string
 	seen          map[string]url.Values
 	staleActive   bool
+	authTime      int64
 	issuedAs      string
 	codes         map[string]fakeCode
 	subjects      map[string]string
@@ -822,6 +823,10 @@ func (f *fake) redeem(response http.ResponseWriter, request *http.Request, id st
 			"name": f.person.name, "email": f.person.email, "email_verified": true,
 			"at_hash": accessTokenHash(access), "tenant": map[string]string{"uuid": "t-1", "subdomain": "acme", "name": "Acme"},
 			"masks:avatars": map[string]any{"photo": nil, "identicon": f.url() + "/avatars/" + subject + "/identicon"},
+		}
+
+		if f.authTime != 0 {
+			claims["auth_time"] = f.authTime
 		}
 
 		if code.organization != "" {
