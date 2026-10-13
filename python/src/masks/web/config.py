@@ -7,10 +7,10 @@ from typing import Any, TypeAlias, TypeVar, cast
 import httpx
 
 from ..oidc import DELEGATE_SCOPE, Logout
-from ..replay import AsyncReplayStore, ReplayStore
 from .credentials import Credentials, FileCredentials
 from .person import Person, Privilege, privileges
-from .sessions import LIFETIME, CookieSessions, Departures, MemoryDepartures, SessionBackend
+from .sessions import LIFETIME, CookieSessions, SessionBackend
+from .stores import AsyncStore, MemoryStore, Store
 
 T = TypeVar("T")
 
@@ -39,7 +39,7 @@ class Config:
     organization: Setting[str] = ""
     credentials: Setting[Credentials] = field(default_factory=FileCredentials)
     sessions: SessionBackend | None = None
-    departures: Departures = field(default_factory=MemoryDepartures)
+    store: Store | AsyncStore = field(default_factory=MemoryStore)
     session_lifetime: int = LIFETIME
     base_url: Setting[str] = ""
     prefix: str = "/auth"
@@ -49,7 +49,6 @@ class Config:
     manages: str | Callable[[Person], bool] | None = None
     logged_out: Callable[[Logout], None] | None = None
     delegation_redirect_uri: Setting[str] = ""
-    replay: ReplayStore | AsyncReplayStore | None = None
     allow_plain_http: bool = False
     cookie_secure: bool = True
     http: httpx.Client | None = None

@@ -666,11 +666,12 @@ def test_a_logout_reaches_only_sessions_from_its_issuer() -> None:
     assert store.read("a") is None
     assert store.read("b") is not None
 
-    departures = masks.web.sessions.MemoryDepartures()
-    departures.record(issuer=ISSUER, subject="ada", sid="", at=time.time())
+    engine = masks.web.core.Masks(Config(issuer=ISSUER, secret=SECRET))
+    engine.run(engine._depart(ISSUER, "ada", ""))
 
-    assert departures.departed(issuer=ISSUER, subject="ada", sid="s-1", since=time.time() - 5)
-    assert not departures.departed(issuer="https://elsewhere.example", subject="ada", sid="s-1", since=time.time() - 5)
+    assert engine.run(engine._departed(ISSUER, "ada", "s-1", time.time() - 5))
+    assert not engine.run(engine._departed("https://elsewhere.example", "ada", "s-1", time.time() - 5))
+    assert not engine.run(engine._departed(ISSUER, "ada", "s-1", time.time() + 5))
 
 
 def test_an_async_session_store_needs_an_async_framework() -> None:

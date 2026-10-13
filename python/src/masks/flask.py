@@ -17,6 +17,7 @@ from .web.core import FORM_LIMIT, METADATA_PATH, Answer, Incoming, Refusal, too_
 from .web.core import Masks as Engine
 from .web.person import Person
 from .web.sessions import Session
+from .web.stores import asynchronous
 
 F = TypeVar("F", bound=Callable[..., Any])
 
@@ -66,7 +67,7 @@ class Masks:
 
     def init_app(self, app: Flask) -> None:
         config = self._config or Config(**{"secret": app.secret_key or "", **self._options})
-        if getattr(config.backend, "asynchronous", False):
+        if getattr(config.backend, "asynchronous", False) or asynchronous(config.store):
             raise TypeError("masks: an async session store needs an async framework, such as FastAPI")
 
         self._engine = Engine(config)

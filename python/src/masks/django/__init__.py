@@ -18,6 +18,7 @@ from ..web.core import Answer, Incoming, Refusal
 from ..web.core import Masks as Engine
 from ..web.person import Person
 from ..web.sessions import Session
+from ..web.stores import asynchronous
 
 F = TypeVar("F", bound=Callable[..., Any])
 
@@ -50,7 +51,7 @@ def engine() -> Engine:
         if _built["source"] is not source:
             config = source if isinstance(source, Config) else Config(**{"secret": settings.SECRET_KEY, **source})
 
-            if getattr(config.backend, "asynchronous", False):
+            if getattr(config.backend, "asynchronous", False) or asynchronous(config.store):
                 raise ImproperlyConfigured("masks: an async session store needs an async framework, such as FastAPI")
 
             _built["source"] = source

@@ -354,36 +354,3 @@ class MemorySessionStore:
                 del self._held[key]
 
             return len(ended)
-
-
-class Departures(Protocol):
-    def record(self, *, issuer: str, subject: str, sid: str, at: float) -> None: ...
-
-    def departed(self, *, issuer: str, subject: str, sid: str, since: float) -> bool: ...
-
-
-class MemoryDepartures:
-    def __init__(self, lifetime: int = LIFETIME) -> None:
-        self.lifetime = lifetime
-        self._held: dict[tuple[str, str, str], float] = {}
-        self._lock = threading.Lock()
-
-    def record(self, *, issuer: str, subject: str, sid: str, at: float) -> None:
-        key = (issuer, "sid", sid) if sid else (issuer, "sub", subject)
-
-        if not key[2]:
-            return
-
-        with self._lock:
-            horizon = time.time() - self.lifetime
-            self._held = {held: when for held, when in self._held.items() if when > horizon}
-            self._held[key] = max(at, self._held.get(key, 0.0))
-
-    def departed(self, *, issuer: str, subject: str, sid: str, since: float) -> bool:
-        with self._lock:
-            found = [
-                self._held.get((issuer, "sid", sid), 0.0) if sid else 0.0,
-                self._held.get((issuer, "sub", subject), 0.0) if subject else 0.0,
-            ]
-
-        return any(when >= since for when in found if when)

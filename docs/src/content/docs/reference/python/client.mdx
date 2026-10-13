@@ -37,7 +37,7 @@ host.
 | `credentials` | `FileCredentials()` | Where the handshake keeps the app's credentials. See [credentials](#credentials). *Request.* |
 | `sessions` | Cookie sessions | Where sessions live. See [sessions](#sessions). |
 | `session_lifetime` | 14 days | How long a session lasts, in seconds. |
-| `departures` | `MemoryDepartures()` | Where back-channel logouts are remembered. See [sessions](#sessions). |
+| `store` | `MemoryStore()` | Where refreshes, logouts, and DPoP proofs are remembered. See [stores](#stores). |
 | `base_url` | `""` | The app's public origin, when it differs from the origin of `resource`. *Request.* |
 | `prefix` | `"/auth"` | Where the [routes](#routes) answer. |
 | `after_sign_in` | `"/"` | Where a person goes after signing in. |
@@ -46,7 +46,6 @@ host.
 | `manages` | `None` | Who may connect the app again or disconnect it. A privilege name, or a function that takes a person and returns `True` or `False`. Nobody when `None`. |
 | `logged_out` | `None` | A function that takes a `masks.Logout`, called on each back-channel logout. |
 | `delegation_redirect_uri` | `""` | The path or full address a provider's answer comes back to. The handshake then asks for `masks:delegate:` and registers this address. *Request.* |
-| `replay` | `MemoryReplayStore()` | The store of seen DPoP proofs. See [replay stores](#replay-stores). |
 | `allow_plain_http` | `False` | Allows a plain `http` issuer on another machine. An issuer on this machine is always allowed. |
 | `cookie_secure` | `True` | `False` drops the `Secure` flag and the `__Host-` prefix, for development on plain `http`. |
 | `http`, `async_http` | Built-in | The `httpx.Client` and `httpx.AsyncClient` the app talks to masks with. |
@@ -162,13 +161,28 @@ A store of your own has these methods. In FastAPI they can be `async def`, as
 | `delete(key)` | Removes the session. |
 | `end(issuer=..., subject=..., sid=...)` | Removes every session from that issuer with that `sid`, or every session of that `subject`. Back-channel logout calls it. |
 
-`departures` remembers back-channel logouts, so a cookie session ends at its next request. A
-store of your own has these methods:
+## Stores
+
+`store` remembers four things: the result of each token refresh, the logouts masks sent, the logout
+tokens already used, and the DPoP proofs already seen.
+
+| | |
+| --- | --- |
+| `MemoryStore()` | The default. Keeps them in one process. |
+| `RedisStore(client)` | Keeps them in Redis, through a `redis.Redis` client. |
+| `AsyncRedisStore(client)` | Keeps them in Redis, through a `redis.asyncio.Redis` client. FastAPI only. |
+
+A store of your own has these methods. In a FastAPI app, they can be `async def`.
 
 | Method | |
 | --- | --- |
-| `record(issuer=..., subject=..., sid=..., at=...)` | Remembers a logout of one `sid`, or of every session of `subject`. |
-| `departed(issuer=..., subject=..., sid=..., since=...)` | Whether a logout of that `sid` or `subject` came at or after `since`. |
+| `add(key, value, expires_in)` | Saves the value only when the key is not there. Returns whether it saved it. |
+| `get(key)` | Returns the value, or `None`. |
+| `set(key, value, expires_in)` | Saves the value. |
+| `delete(key)` | Removes the key. |
+
+Each key is a hash, and each refresh result is sealed with a key made from the old refresh token,
+so the store holds no tokens anyone can read.
 
 ## The client
 

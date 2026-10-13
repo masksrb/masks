@@ -11,10 +11,13 @@ from .sessions import (
     SessionBackend,
     SessionStore,
 )
+from .stores import AsyncRedisStore, AsyncStore, MemoryStore, RedisStore, Store
 
 __all__ = [
     "Answer",
+    "AsyncRedisStore",
     "AsyncSessionStore",
+    "AsyncStore",
     "Config",
     "CookieSessions",
     "Credentials",
@@ -23,14 +26,17 @@ __all__ = [
     "Masks",
     "MemoryCredentials",
     "MemorySessionStore",
+    "MemoryStore",
     "Organization",
     "Person",
     "Privilege",
+    "RedisStore",
     "Refusal",
     "ServerSessions",
     "Session",
     "SessionBackend",
     "SessionStore",
     "StaticCredentials",
+    "Store",
     "local_path",
 ]

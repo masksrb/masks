@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import hashlib
 import html
-import inspect
 import json
 import re
+import secrets
 import threading
 import time
 from collections.abc import Callable, Generator, Mapping, Sequence
@@ -14,6 +14,10 @@ from urllib.parse import urlencode, urlsplit
 
 import anyio
 import httpx
+from cryptography.exceptions import InvalidTag
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 
 from ..client import AsyncClient, Client, _Flows, delegation_failure
 from ..dpop import DPOP
@@ -35,12 +39,12 @@ from ..keys import random_id
 from ..keyset import same
 from ..models import Issuer, Registration, Token
 from ..oidc import AVATARS_CLAIM, AuthorizationRequest, HeldConnection, organization_key
-from ..replay import MemoryReplayStore, ReplayStore
 from ..verifier import PROOF_ALGORITHMS, AsyncVerifier, Claims, Verifier
 from .config import Config, resolve
 from .credentials import Credentials
 from .person import Person, Privilege, nobody, scoped
-from .sessions import COOKIE_PIECE, COOKIE_PIECES, Session
+from .sessions import COOKIE_PIECE, COOKIE_PIECES, Session, b64, settled, unb64
+from .stores import AsyncReplays, AsyncStore, Replays, Store, asynchronous, keyed
 
 T = TypeVar("T")
 
@@ -50,7 +54,10 @@ RENEWED = "renewed"
 REFUSED = "refused"
 UNREGISTERED = "unregistered"
 UNREACHABLE = "unreachable"
-RENEWAL_MEMORY = 60.0
+RENEWAL_MEMORY = 60
+RENEWAL_CLAIM = 30
+RENEWAL_WAIT = 0.05
+RENEWAL_WAITS = 200
 RENEWAL_STRIPES = 64
 LOGOUT_MEMORY = 600
 
@@ -201,6 +208,19 @@ class Ending:
 
 
 @dataclass(frozen=True)
+class Stored:
+    operation: str
+    key: str
+    value: str = ""
+    expires_in: int = 0
+
+
+@dataclass(frozen=True)
+class Pause:
+    seconds: float
+
+
+@dataclass(frozen=True)
 class Renewed:
     outcome: str
     token: Token | None = None
@@ -319,16 +339,12 @@ class Tracker:
 class Masks:
     def __init__(self, config: Config) -> None:
         self.config = config
-        self.replay = config.replay or MemoryReplayStore()
         self._http = config.http
         self._async_http = config.async_http
         self._issuers: dict[str, tuple[Issuer, float]] = {}
         self._verifiers: dict[tuple[str, str], Verifier] = {}
         self._async_verifiers: dict[tuple[str, str], AsyncVerifier] = {}
         self._lock = threading.Lock()
-        self._renewals: dict[str, tuple[float, Renewed]] = {}
-        self._renewal_lock = threading.Lock()
-        self._logouts = MemoryReplayStore()
         self._renew_locks = [threading.Lock() for _ in range(RENEWAL_STRIPES)]
         self._async_renew_locks: dict[int, anyio.Lock] = {}
 
@@ -560,12 +576,11 @@ class Masks:
         if token is None:
             return nobody(self.config.known)
 
-        if self.config.departures.departed(
-            issuer=self.issuer_url(request),
-            subject=str(identity.get("sub") or ""),
-            sid=str(identity.get("sid") or ""),
-            since=session.issued_at,
-        ):
+        departed = yield from self._departed(
+            self.issuer_url(request), str(identity.get("sub") or ""), str(identity.get("sid") or ""), session.issued_at
+        )
+
+        if departed:
             self.forget(session)
             return nobody(self.config.known)
 
@@ -621,33 +636,94 @@ class Masks:
 
         return Renewed(RENEWED, refreshed, identity)
 
-    def _remembered(self, key: str) -> Renewed | None:
-        with self._renewal_lock:
-            found = self._renewals.get(key)
+    def _departed(self, issuer: str, subject: str, sid: str, since: float) -> Step[bool]:
+        for kind, value in (("sid", sid), ("sub", subject)):
+            if value:
+                at = yield Stored("get", keyed("departed", issuer, kind, value))
 
-        return found[1] if found is not None and found[0] > time.monotonic() else None
+                if at and float(at) >= since:
+                    return True
 
-    def _remember(self, key: str, renewed: Renewed) -> Renewed:
-        if renewed.outcome != RENEWED:
-            return renewed
+        return False
 
-        now = time.monotonic()
+    def _depart(self, issuer: str, subject: str, sid: str) -> Step[None]:
+        kind, value = ("sid", sid) if sid else ("sub", subject)
 
-        with self._renewal_lock:
-            while self._renewals:
-                oldest = next(iter(self._renewals))
+        if value:
+            yield Stored("set", keyed("departed", issuer, kind, value), str(time.time()), self.config.backend.lifetime)
 
-                if self._renewals[oldest][0] > now:
+    def _sealer(self, refresh_token: str) -> AESGCM:
+        derived = HKDF(algorithm=hashes.SHA256(), length=32, salt=b"masks", info=b"masks shared refresh")
+
+        return AESGCM(derived.derive(refresh_token.encode()))
+
+    def _sealed_renewal(self, refresh_token: str, renewed: Renewed) -> str:
+        nonce = secrets.token_bytes(12)
+        held = {
+            "outcome": renewed.outcome,
+            "token": renewed.token.to_dict() if renewed.token is not None else None,
+            "identity": renewed.identity,
+        }
+
+        return b64(nonce + self._sealer(refresh_token).encrypt(nonce, json.dumps(held).encode(), None))
+
+    def _opened_renewal(self, refresh_token: str, value: str) -> Renewed:
+        try:
+            raw = unb64(value)
+            held = json.loads(self._sealer(refresh_token).decrypt(raw[:12], raw[12:], None))
+        except (InvalidTag, ValueError):
+            return Renewed(UNREACHABLE)
+
+        token = held.get("token")
+
+        return Renewed(
+            str(held.get("outcome") or UNREACHABLE),
+            Token.from_dict(token) if isinstance(token, dict) else None,
+            held.get("identity") if isinstance(held.get("identity"), dict) else {},
+        )
+
+    def _sharing(self, renewal: Renewal) -> Step[Renewed]:
+        result = keyed("refreshed", renewal.refresh_token)
+        claim = keyed("refreshing", renewal.refresh_token)
+        found = yield Stored("get", result)
+
+        if found:
+            return self._opened_renewal(renewal.refresh_token, found)
+
+        claimed = yield Stored("add", claim, "1", RENEWAL_CLAIM)
+
+        if not claimed:
+            for _ in range(RENEWAL_WAITS):
+                yield Pause(RENEWAL_WAIT)
+                found = yield Stored("get", result)
+
+                if found:
+                    return self._opened_renewal(renewal.refresh_token, found)
+
+                pending = yield Stored("get", claim)
+
+                if not pending:
                     break
 
-                del self._renewals[oldest]
+            return Renewed(UNREACHABLE)
 
-            self._renewals.pop(key, None)
-            self._renewals[key] = (now + RENEWAL_MEMORY, renewed)
+        renewed = yield from self._renewing(renewal)
+
+        if renewed.outcome != UNREACHABLE:
+            yield Stored("set", result, self._sealed_renewal(renewal.refresh_token, renewed), RENEWAL_MEMORY)
+
+        yield Stored("delete", claim)
 
         return renewed
 
     def _other(self, item: object) -> object:
+        if isinstance(item, Stored):
+            return getattr(self.config.store, item.operation)(*stored(item))
+
+        if isinstance(item, Pause):
+            time.sleep(item.seconds)
+            return None
+
         if isinstance(item, Ending):
             return self.config.backend.end(issuer=item.issuer, subject=item.subject, sid=item.sid)
 
@@ -657,6 +733,13 @@ class Masks:
         return self._renew(item)
 
     async def _aother(self, item: object) -> object:
+        if isinstance(item, Stored):
+            return await settled(getattr(self.config.store, item.operation)(*stored(item)))
+
+        if isinstance(item, Pause):
+            await anyio.sleep(item.seconds)
+            return None
+
         if isinstance(item, Ending):
             return await self.config.backend.aend(issuer=item.issuer, subject=item.subject, sid=item.sid)
 
@@ -669,9 +752,7 @@ class Masks:
         key = hashlib.sha256(renewal.refresh_token.encode()).hexdigest()
 
         with self._renew_locks[int(key[:8], 16) % len(self._renew_locks)]:
-            found = self._remembered(key)
-
-            return found or self._remember(key, run(self._renewing(renewal), self.http))
+            return run(self._sharing(renewal), self.http, self._other)
 
     async def _arenew(self, renewal: Renewal) -> Renewed:
         key = hashlib.sha256(renewal.refresh_token.encode()).hexdigest()
@@ -681,9 +762,7 @@ class Masks:
             lock = self._async_renew_locks.setdefault(stripe, anyio.Lock())
 
         async with lock:
-            found = self._remembered(key)
-
-            return found or self._remember(key, await arun(self._renewing(renewal), self.async_http))
+            return await arun(self._sharing(renewal), self.async_http, self._aother)
 
     def _disconnect(self, request: Incoming, session: Session) -> bool:
         credentials = self.credentials(request)
@@ -1026,13 +1105,15 @@ class Masks:
                 400, {"error": "invalid_request", "error_description": str(error).removeprefix("masks: ")}
             )
 
-        if not self._logouts.first(f"{issuer.url}:{logout.id}", LOGOUT_MEMORY):
+        first = yield Stored("add", keyed("logout", issuer.url, logout.id), "1", LOGOUT_MEMORY)
+
+        if not first:
             return Answer.json(
                 400, {"error": "invalid_request", "error_description": "that logout token was already used"}
             )
 
         named = self.issuer_url(request)
-        self.config.departures.record(issuer=named, subject=logout.subject, sid=logout.sid, at=time.time())
+        yield from self._depart(named, logout.subject, logout.sid)
         yield Ending(named, logout.subject, logout.sid)
 
         if self.config.logged_out is not None:
@@ -1377,15 +1458,15 @@ class Masks:
 
         with self._lock:
             if key not in self._verifiers:
-                if inspect.iscoroutinefunction(getattr(self.replay, "first", None)):
-                    raise TypeError("masks: an async replay store needs an async framework")
+                if asynchronous(self.config.store):
+                    raise TypeError("masks: an async store needs an async framework, such as FastAPI")
 
                 self._verifiers[key] = Verifier(
                     issuer,
                     key[1],
                     public_url=self.base(request),
                     http=self.http,
-                    replay=cast(ReplayStore, self.replay),
+                    replay=Replays(cast(Store, self.config.store)),
                 )
 
             return self._verifiers[key]
@@ -1395,8 +1476,10 @@ class Masks:
 
         with self._lock:
             if key not in self._async_verifiers:
+                held = self.config.store
+                replay = AsyncReplays(cast(AsyncStore, held)) if asynchronous(held) else Replays(cast(Store, held))
                 self._async_verifiers[key] = AsyncVerifier(
-                    issuer, key[1], public_url=self.base(request), http=self.async_http, replay=self.replay
+                    issuer, key[1], public_url=self.base(request), http=self.async_http, replay=replay
                 )
 
             return self._async_verifiers[key]
@@ -1505,6 +1588,13 @@ class Masks:
 
 def outage(error: Error) -> bool:
     return error.code in ("server_error", "temporarily_unavailable") or (error.status or 0) >= 500
+
+
+def stored(item: Stored) -> tuple[Any, ...]:
+    if item.operation in ("get", "delete"):
+        return (item.key,)
+
+    return (item.key, item.value, item.expires_in)
 
 
 def too_large() -> Answer:

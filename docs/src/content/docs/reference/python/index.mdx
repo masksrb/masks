@@ -139,8 +139,8 @@ When masks ends a session itself, it sends a logout token to `/auth/logout/backc
 checks the token, then signs out the session it names, or every session of the person it names. The
 sign-out takes effect at that session's next request.
 
-- The app remembers each logout in `departures`, which is in memory by default. An app that runs as
-  several processes sets `departures` to a store they share, with `record` and `departed` methods.
+- The app remembers each logout in [`store`](#running-several-processes), so it reaches every
+  process that shares the store.
 - Sessions kept on the server are also deleted from the store.
 - `logged_out`, a function that takes a `masks.Logout`, hears each logout as well.
 
@@ -171,6 +171,29 @@ the ids cannot be read back from the store. `MemorySessionStore` keeps sessions 
 store of your own, such as one in Redis or a database, has the
 [store methods](/reference/python/client/#sessions). In a FastAPI app, they can be `async def`, so waiting
 on the store does not hold up other requests.
+
+## Running several processes
+
+Each process remembers some things in memory by default:
+
+- the result of each token refresh, so requests that arrive together refresh once
+- the logouts masks sent, so a cookie session ends in every process
+- the logout tokens and DPoP proofs already used
+
+An app that runs as several processes, such as under gunicorn with more than one worker, sets
+`store` to one they share. Without it, two processes can refresh the same token at once. masks then
+treats the second refresh as a stolen token and revokes the tokens from both, so the person is
+signed out.
+
+```python
+import redis
+from masks.web import RedisStore
+
+Config(..., store=RedisStore(redis.Redis.from_url(os.environ["REDIS_URL"])))
+```
+
+In FastAPI, use `AsyncRedisStore` with `redis.asyncio.Redis`. A store of your own has the
+[store methods](/reference/python/client/#stores).
 
 ## Organizations
 
@@ -273,9 +296,8 @@ only the holder of a private key use the token. A bound token is accepted only a
 - has not been seen before
 
 The URL is the resource's origin and the request's path, so a proxy in front of the app needs no
-other setting. Each process keeps the proofs it has seen in memory. To share them, set `replay` to an
-object whose `first(key, expires_in)` returns `True` only the first time it sees a key. FastAPI also
-takes a store whose `first` is a coroutine.
+other setting. The app remembers the proofs it has seen in
+[`store`](#running-several-processes).
 
 The person for a token has `by_token` set, and its claims are the token's claims.
 

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import time
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any, cast
 from urllib.parse import urlsplit
 
@@ -147,3 +149,46 @@ def test_an_app_factory_and_calls_inside_a_view(fake: Fake) -> None:
 
     assert browser.get("/inside", base_url=APP).headers["Location"] == "/auth"
     assert browser.get("/client", base_url=APP).json == {"client_id": "web", "connected": True}
+
+
+def stale_pair(fake: Fake, monkeypatch: pytest.MonkeyPatch) -> tuple[FlaskBrowser, FlaskBrowser, list[str]]:
+    held = scenarios.config(fake)
+    first = FlaskBrowser(held)
+    second = FlaskBrowser(held)
+    scenarios.sign_in(first, fake)
+    cookie = first.client.get_cookie("__Host-masks", domain="app.example")
+    assert cookie is not None
+    second.client.set_cookie("__Host-masks", cookie.value, domain="app.example", secure=True)
+    later = time.time() + 7200
+    monkeypatch.setattr(masks.models.time, "time", lambda: later)
+    refreshed: list[str] = []
+    token = fake.token
+
+    def counted(request: httpx.Request) -> httpx.Response:
+        if b"grant_type=refresh_token" in request.content:
+            refreshed.append("refresh")
+            time.sleep(0.2)
+
+        return token(request)
+
+    monkeypatch.setattr(fake, "token", counted)
+
+    return first, second, refreshed
+
+
+def test_two_workers_sharing_a_store_refresh_once(fake: Fake, monkeypatch: pytest.MonkeyPatch) -> None:
+    first, second, refreshed = stale_pair(fake, monkeypatch)
+
+    assert first.get("/public").json() == {"signed_in": True}
+    assert second.get("/public").json() == {"signed_in": True}
+    assert refreshed == ["refresh"]
+
+
+def test_two_workers_refreshing_at_once_refresh_once(fake: Fake, monkeypatch: pytest.MonkeyPatch) -> None:
+    first, second, refreshed = stale_pair(fake, monkeypatch)
+
+    with ThreadPoolExecutor(2) as pool:
+        answers = list(pool.map(lambda browser: browser.get("/public").json(), [first, second]))
+
+    assert answers == [{"signed_in": True}, {"signed_in": True}]
+    assert refreshed == ["refresh"]
