@@ -22,7 +22,13 @@
 docker pull ghcr.io/masksrb/masks:latest
 ```
 
-Or mount it inside a Rails app. The [quickstart](https://masks.pages.dev/quickstart/) covers both.
+Or add the [`masks-server`](engine/) gem to a Rails app, which mounts masks as a Rails engine:
+
+```ruby
+gem "masks-server"
+```
+
+See [Engine mode](https://masks.pages.dev/reference/ruby/engine-mode/) to mount it beside your own app, or [Server mode](https://masks.pages.dev/reference/ruby/server-mode/) to run an app that is only masks.
 
 ## Connect an app
 
