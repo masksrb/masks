@@ -519,6 +519,12 @@ def test_only_a_manager_sees_or_changes_the_connection(fake: Fake) -> None:
 
     assert shown == {"connected": True, "issuer": ISSUER, "client_id": "app", "can_disconnect": True}
 
+    page = client.get("/auth/handshake", headers=HTML)
+    policy = page.headers["content-security-policy"]
+
+    assert f"form-action 'self' {ISSUER};" in policy
+    assert "frame-ancestors 'none'" in policy
+
     gone = client.post("/auth/handshake/disconnect", headers=JSON)
 
     assert gone.json() == {"connected": False, "handshake_url": "/auth/handshake"}

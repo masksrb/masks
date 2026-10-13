@@ -145,7 +145,7 @@ class Answer:
         )
 
     @classmethod
-    def page(cls, status: int, title: str, said: str, extra: str = "") -> Answer:
+    def page(cls, status: int, title: str, said: str, extra: str = "", form_targets: Sequence[str] = ()) -> Answer:
         body = (
             "<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width'>"
             f"<title>{html.escape(title)}</title><main><h1>{html.escape(title)}</h1>"
@@ -158,7 +158,11 @@ class Answer:
             "text/html; charset=utf-8",
             [
                 ("Cache-Control", "no-store"),
-                ("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'"),
+                (
+                    "Content-Security-Policy",
+                    "default-src 'none'; style-src 'unsafe-inline'; "
+                    "form-action " + " ".join(["'self'", *form_targets]) + "; frame-ancestors 'none'",
+                ),
             ],
         )
 
@@ -1027,7 +1031,13 @@ class Masks:
             leaving = html.escape(self.path("/handshake/disconnect"))
             forms += f"<form method=post action='{leaving}'><button>Disconnect</button></form>"
 
-        return Answer.page(200, "Connected to masks", f"{status['client_id']} at {status['issuer']}", forms)
+        return Answer.page(
+            200,
+            "Connected to masks",
+            f"{status['client_id']} at {status['issuer']}",
+            forms,
+            form_targets=[origin(self.issuer_url(request))],
+        )
 
     def handshake_begin(self, request: Incoming, session: Session) -> Step[Answer]:
         if not self._same_origin(request):
