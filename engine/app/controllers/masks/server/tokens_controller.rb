@@ -42,7 +42,7 @@ module Masks
           return @proof if defined?(@proof)
 
           @proof = if Proof.presented?(request)
-            Proof.read!(request, url: "#{issuer.url}#{request.path}")
+            Proof.read!(request, url: "#{issuer.url}#{request.path_info}")
           end
         end
 

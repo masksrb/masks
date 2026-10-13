@@ -99,7 +99,7 @@ module Masks
         end
 
         def proof_for(secret = nil)
-          Proof.read!(request, url: "#{issuer.url}#{request.path}", access_token: secret)
+          Proof.read!(request, url: "#{issuer.url}#{request.path_info}", access_token: secret)
         end
 
         def held_token(secret)

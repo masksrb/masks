@@ -44,7 +44,7 @@ module Masks
         end
 
         def assertion_audiences
-          [ issuer.url, "#{issuer.url}/token", "#{issuer.url}#{request.path}" ].uniq
+          [ issuer.url, "#{issuer.url}/token", "#{issuer.url}#{request.path_info}" ].uniq
         end
 
         def presented_credentials

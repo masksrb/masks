@@ -51,11 +51,11 @@ module Masks
         JSON.parse(response.body)
       end
 
-      def assertion(client_id, key: @machine_key)
+      def assertion(client_id, key: @machine_key, audience: origin_for(@tenant))
         now = Time.current.to_i
 
         JWT.encode({
-          "iss" => client_id, "sub" => client_id, "aud" => origin_for(@tenant),
+          "iss" => client_id, "sub" => client_id, "aud" => audience,
           "iat" => now, "exp" => now + 60, "jti" => SecureRandom.uuid
         }, key, "ES256", { kid: "machine" })
       end
@@ -101,6 +101,20 @@ module Masks
         assert_equal RESOURCE, claims["aud"]
         assert_equal machine.client_id, claims["sub"]
         assert_equal dpop_jkt, claims.dig("cnf", "jkt")
+      end
+
+      test "a machine signs in to masks mounted under a path with a proof for the address it posts to" do
+        registration = redeem(enroll["initial_access_token"])
+        mounted = "#{origin_for(@tenant)}/id"
+
+        post "/token",
+             params: { grant_type: Client::CLIENT_CREDENTIALS, client_assertion_type: ASSERTION,
+                       client_assertion: assertion(registration["client_id"], audience: mounted) },
+             headers: with_dpop(method: "POST", url: "#{mounted}/token"),
+             env: { "SCRIPT_NAME" => "/id" }
+
+        assert_response :success
+        assert_equal "DPoP", JSON.parse(response.body)["token_type"]
       end
 
       test "an enrolled machine's token must be held to a key" do
