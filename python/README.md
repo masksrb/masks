@@ -5,11 +5,10 @@ people in, gets tokens as a client, and checks them as an API. Every call has a 
 `async` one.
 
 ```sh
-pip install "masks-client @ git+https://github.com/masksrb/masks@python-v0.1.0#subdirectory=python"
+pip install masks-client
 ```
 
-The package installs from its release tag and is not on PyPI yet. It imports as
-`masks` and needs Python 3.10 or later.
+It imports as `masks` and needs Python 3.10 or later.
 
 | Covers | |
 | --- | --- |
