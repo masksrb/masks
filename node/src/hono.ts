@@ -16,7 +16,7 @@ export function masksHono(
   options: Masks | MasksOptions = {},
   asked: MasksHonoOptions = {},
 ): MiddlewareHandler<MasksEnv> & { masks: Masks } {
-  const masks = options instanceof Masks ? options : new Masks(options);
+  const masks = Masks.from(options);
 
   const handler: MiddlewareHandler<MasksEnv> = async (context, next) => {
     const answer = await masks.handle(context.req.raw);
@@ -43,7 +43,7 @@ export function masked(
   masks: Masks | (MiddlewareHandler<MasksEnv> & { masks: Masks }),
   ...privileges: string[]
 ): MiddlewareHandler<MasksEnv> {
-  const held = masks instanceof Masks ? masks : masks.masks;
+  const held = Masks.from(masks);
 
   return async (context, next) => {
     const outcome = await held.guard(

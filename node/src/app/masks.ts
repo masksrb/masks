@@ -174,7 +174,6 @@ class Visit {
   issuerURL = "";
   session?: { id?: string; data: SessionData } | null;
   flow?: FlowData;
-  flowChanged = false;
 
   constructor(request: Request) {
     this.request = request;
@@ -203,6 +202,13 @@ export class Masks {
   readonly #verifiers = new Map<string, Verifier>();
 
   #sealer?: Sealer;
+
+  static from(source: Masks | MasksOptions | { masks: Masks }): Masks {
+    if (source instanceof Masks) return source;
+    if ("masks" in source && source.masks instanceof Masks) return source.masks;
+
+    return new Masks(source as MasksOptions);
+  }
 
   constructor(options: MasksOptions = {}) {
     this.#options = options;
@@ -1541,8 +1547,10 @@ export class Masks {
     if (store) {
       const id = rotate || !previous ? random(32) : previous;
 
-      await store.set(id, data, Math.max(1, until - now()));
-      if (previous && previous !== id) await store.delete(previous);
+      await Promise.all([
+        store.set(id, data, Math.max(1, until - now())),
+        previous && previous !== id ? store.delete(previous) : undefined,
+      ]);
 
       sealed = await this.#seal.seal(SESSION_PURPOSE, { id, until });
       visit.session = { id, data };

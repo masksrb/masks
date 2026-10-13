@@ -8,11 +8,8 @@
 - The app layer writes its own 403 challenge. Use `Verifier.challengeHeaders` and `refusal`, which now build both challenges for 401 and 403.
 - `#client` builds a `Client` by hand. Use `clientFor(issuer, held)`, and make `Credentials` fit `Registration` so `registrationOf` can go.
 - Move `headersWith`, `text`, `json`, and `redirect` into `app/responses.ts` and use them in avatar.ts and next.ts.
-- Replace `localOr` in next.ts with `localPath(...) ?? "/"`.
-- Add `Masks.from(x)` for the repeated `instanceof` checks in the adapters.
-- Run the sid and sub logout lookups at the same time, and the session store's `set` and `delete` on rotation too.
 - Every sign-in start reads the registration from masks. Cache a good answer, or rely on `invalid_client`.
-- Remove `Visit.flowChanged`, `Privileges.names`, and the `SessionData | undefined` branch of the refresh.
+- Remove the `SessionData | undefined` branch of the refresh.
 - Split masks.ts along the seams go/web uses: session and flow state, routes, and guards.
 
 ## Auth.js

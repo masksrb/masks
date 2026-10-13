@@ -3,7 +3,12 @@ import { redirect } from "next/navigation";
 import { NextResponse } from "next/server";
 import { replaceCookies } from "./app/cookies.js";
 import type { Masked } from "./app/masked.js";
-import { Masks, type MasksOptions, PATH_HEADER } from "./app/masks.js";
+import {
+  localPath,
+  Masks,
+  type MasksOptions,
+  PATH_HEADER,
+} from "./app/masks.js";
 import { ForbiddenError } from "./claims.js";
 
 export { PATH_HEADER };
@@ -37,7 +42,7 @@ export interface MasksNext {
 }
 
 export function masksNext(options: Masks | MasksOptions = {}): MasksNext {
-  const masks = options instanceof Masks ? options : new Masks(options);
+  const masks = Masks.from(options);
 
   const handle = async (request: Request) =>
     (await masks.handle(request)) ?? new Response("not found", { status: 404 });
@@ -45,7 +50,7 @@ export function masksNext(options: Masks | MasksOptions = {}): MasksNext {
   const current = async (): Promise<Request> => {
     const held = await headers();
     const jar = await cookies();
-    const path = localOr(held.get(PATH_HEADER), "/");
+    const path = localPath(held.get(PATH_HEADER)) ?? "/";
     const host = held.get("host") ?? "localhost";
     const forwarded = new Headers();
 
@@ -192,10 +197,6 @@ function withCookies(response: Response, written: string[]): Response {
   }
 
   return answer;
-}
-
-function localOr(value: string | null, fallback: string): string {
-  return value?.startsWith("/") && !value.startsWith("//") ? value : fallback;
 }
 
 export { Masked } from "./app/masked.js";

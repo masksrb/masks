@@ -26,7 +26,7 @@ export function masksExpress(
   options: Masks | MasksOptions = {},
   asked: MasksExpressOptions = {},
 ): RequestHandler & { masks: Masks } {
-  const masks = options instanceof Masks ? options : new Masks(options);
+  const masks = Masks.from(options);
 
   const handler: RequestHandler = async (request, response, next) => {
     try {
@@ -64,7 +64,7 @@ export function masked(
   masks: Masks | (RequestHandler & { masks: Masks }),
   ...privileges: string[]
 ): RequestHandler {
-  const held = masks instanceof Masks ? masks : masks.masks;
+  const held = Masks.from(masks);
 
   return async (request, response, next) => {
     try {

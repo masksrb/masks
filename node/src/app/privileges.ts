@@ -51,10 +51,6 @@ export class Privileges {
     }
   }
 
-  get names(): string[] {
-    return [...this.#held.keys()];
-  }
-
   all(): Privilege[] {
     return [...this.#held.values()];
   }
