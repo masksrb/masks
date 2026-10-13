@@ -18,7 +18,8 @@ Gem::Specification.new do |spec|
   }
   spec.required_ruby_version = ">= 3.4"
 
-  spec.files = Dir["app/**/*", "config/**/*", "db/**/*", "lib/**/*", "public/**/*", "version.txt"]
+  spec.files = Dir["app/**/*", "config/**/*", "db/**/*", "lib/**/*", "version.txt"] +
+               Dir.glob("public/**/*", File::FNM_DOTMATCH).reject { |path| File.directory?(path) }
   spec.require_paths = [ "lib" ]
 
   spec.add_dependency "rails", "~> 8.1"

@@ -148,6 +148,15 @@ jobs:
         working-directory: engine
         run: gem build masks-server.gemspec
 
+      - name: The gem holds the manifest its pages are rendered from
+        working-directory: engine
+        run: |
+          tar -xOf masks-server-*.gem data.tar.gz | tar -tz | grep -qx "public/masks-assets/.vite/manifest.json" ||
+            {
+              echo "::error::masks-server would ship without public/masks-assets/.vite/manifest.json, and every page it renders would fail."
+              exit 1
+            }
+
       - name: Push
         working-directory: engine
         run: gem push masks-server-*.gem
