@@ -730,7 +730,7 @@ func (a *App) handshakeCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := a.config.Credentials.Save(r, CredentialsFrom(registration)); err != nil {
+	if err := a.config.Credentials.Save(r, CredentialsFrom(s.issuer.URL, registration)); err != nil {
 		_ = s.issuer.DeleteRegistration(r.Context(), registration)
 		a.save(w, r, held)
 		a.refuse(w, r, http.StatusInternalServerError, "server_error", "the credentials could not be saved, so the app did not connect")

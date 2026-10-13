@@ -14,6 +14,7 @@ import (
 )
 
 type Credentials struct {
+	Issuer                  string    `json:"issuer,omitempty"`
 	ClientID                string    `json:"client_id"`
 	ClientSecret            string    `json:"client_secret,omitempty"`
 	RegistrationAccessToken string    `json:"registration_access_token,omitempty"`
@@ -21,8 +22,9 @@ type Credentials struct {
 	ConnectedAt             time.Time `json:"connected_at,omitzero"`
 }
 
-func CredentialsFrom(held *masks.Registration) *Credentials {
+func CredentialsFrom(issuer string, held *masks.Registration) *Credentials {
 	return &Credentials{
+		Issuer:                  issuer,
 		ClientID:                held.ClientID,
 		ClientSecret:            held.ClientSecret,
 		RegistrationAccessToken: held.RegistrationAccessToken,

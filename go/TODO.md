@@ -10,7 +10,6 @@
 - `site.client` builds a `masks.Client` by hand. Use `s.issuer.Client(s.held.Registration(), nil, nil)`.
 - Issuer discovery runs inside the request when the cache is stale, once per request, and again on every request after a failure. Serve the stale issuer, refresh it once in the background, and back off after a failure. Bound the issuer and verifier caches.
 - `start` resolves the site twice to check the registration. Split out `registered(ctx, s)`.
-- Back-channel logout should pick one key, sid if present and sub otherwise, and make one `Depart` call.
 - Share one scope-merge helper between `scopeFor` and `approvedScope`, and add `callbackURI` and `delegationURI` helpers.
 - Remove `Person.Expiry()` and `App.MetadataPath`, which nothing calls.
 - Scope, Privileges, Name, and Mount cannot vary per request. Masks::Rails accepts a callable for most settings.
@@ -18,8 +17,7 @@
 
 ## Security
 
-- Back-channel logout does not refuse a logout token whose jti it has seen before.
-- With `IssuerFor` and the default `FileCredentials("masks.json")`, every issuer shares one client secret. Key the file by issuer, or refuse that configuration.
+- `FileCredentials` reads its file once and keeps it. Two processes that share the file do not see each other's handshake, and one that meets `invalid_client` deletes a file the other just wrote. Read the file again when it changes.
 
 ## Testing
 

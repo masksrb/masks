@@ -950,3 +950,46 @@ func TestAStoreThatCannotSaveLeavesNoClientBehind(t *testing.T) {
 		t.Fatalf("expected 500 and no client, got %d and %q", response.StatusCode, h.issuer.onlyClient())
 	}
 }
+
+func TestCredentialsAreHeldToTheirIssuer(t *testing.T) {
+	_, err := New(Config{
+		IssuerFor: func(*http.Request) (string, error) { return "https://id.example", nil },
+		Resource:  "https://app.example",
+		Secret:    secret(),
+	})
+	if err == nil {
+		t.Fatal("an issuer per request was allowed to share one credentials file")
+	}
+
+	h := newHarness(t, nil)
+	h.connect()
+
+	saved, err := os.ReadFile(h.path)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	held := &Credentials{}
+	if err := json.Unmarshal(saved, held); err != nil || held.Issuer != h.issuer.url() {
+		t.Fatalf("the credentials do not name their issuer: %s", saved)
+	}
+
+	held.Issuer = "https://elsewhere.example"
+	h.app.config.Credentials = FileCredentials(h.path)
+	if err := h.app.config.Credentials.Save(nil, held); err != nil {
+		t.Fatal(err)
+	}
+
+	if response, _ := h.visit(http.MethodGet, "/me"); response.StatusCode == http.StatusOK {
+		t.Fatal("credentials from another issuer were used")
+	}
+
+	held.Issuer = ""
+	if err := h.app.config.Credentials.Save(nil, held); err != nil {
+		t.Fatal(err)
+	}
+
+	if person := h.person("/me"); !person.SignedIn {
+		t.Fatal("credentials without an issuer were refused for the only issuer")
+	}
+}

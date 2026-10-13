@@ -112,6 +112,10 @@ Derive them from something the app trusts, such as a tenant it looked up by host
 value the browser sends unchecked. A session is held to the issuer that signed it in, so it does not
 carry over to another tenant.
 
+`Credentials` names the issuer it came from, and the app refuses credentials from another issuer. With
+`IssuerFor`, `web.New` needs a `CredentialStore` that keeps each issuer's credentials apart, since one
+`masks.json` would hand one tenant's client secret to another.
+
 Once the app is connected, `/auth/handshake` shows the connection to somebody `Manages` allows, with
 buttons to connect again and to disconnect. Disconnecting deletes the registration at masks and the
 credentials. A person who is not signed in goes to `AfterSignOut`, and anybody else is refused with

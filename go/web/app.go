@@ -120,6 +120,10 @@ func New(config Config) (*App, error) {
 		config.SessionLifetime = 14 * 24 * time.Hour
 	}
 
+	if config.Credentials == nil && config.IssuerFor != nil {
+		return nil, errors.New("masks/web: Config.IssuerFor needs Credentials that keep each issuer's credentials apart")
+	}
+
 	if config.Credentials == nil {
 		config.Credentials = FileCredentials("masks.json")
 	}
@@ -236,6 +240,10 @@ func (a *App) site(r *http.Request) (*site, error) {
 	held, err := a.config.Credentials.Load(r)
 	if err != nil {
 		return nil, err
+	}
+
+	if held != nil && held.Issuer != issuer.URL && (held.Issuer != "" || a.config.IssuerFor != nil) {
+		return nil, ErrForeignCredentials
 	}
 
 	return &site{issuer: issuer, resource: resource, origin: parsed.Scheme + "://" + parsed.Host, held: held}, nil
@@ -432,7 +440,10 @@ func (a *App) Registered(r *http.Request) (bool, error) {
 	return err == nil, err
 }
 
-var ErrNotConnected = errors.New("masks/web: this app has not shaken hands with its issuer")
+var (
+	ErrNotConnected       = errors.New("masks/web: this app has not shaken hands with its issuer")
+	ErrForeignCredentials = errors.New("masks/web: the app's credentials were issued by another issuer")
+)
 
 type refusal struct {
 	code        string
