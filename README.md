@@ -40,7 +40,7 @@ docker pull ghcr.io/masksrb/masks:latest
 
 ## Contribute
 
-You need Ruby and a container runtime with the `docker compose` command, such as Docker Desktop, OrbStack, or Colima.
+You need Ruby and a container runtime with the `docker compose` command, such as Docker Desktop, OrbStack, Colima, or Podman.
 
 - `./dev` runs the provider at `http://masks.localhost:12345` and the docs at `http://masks.localhost:12346`.
 - `./dev test` runs every suite in containers.
