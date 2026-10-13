@@ -57,26 +57,75 @@ func (a *App) guarded(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-func (a *App) current(r *http.Request) (*site, *state, *Person, error) {
+type visit struct {
+	site   *site
+	state  *state
+	person *Person
+}
+
+type visitKey struct{ app *App }
+
+func (a *App) visiting(r *http.Request) (*visit, error) {
+	if held, ok := r.Context().Value(visitKey{a}).(*visit); ok {
+		return held, nil
+	}
+
 	s, err := a.site(r)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, err
 	}
 
 	held, err := a.load(r)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, err
 	}
 
-	person, err := a.signedIn(r, s, held)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	return s, held, person, nil
+	return &visit{site: s, state: held}, nil
 }
 
-func (a *App) signedIn(r *http.Request, s *site, held *state) (*Person, error) {
+func (a *App) visit(w http.ResponseWriter, r *http.Request) (*visit, bool) {
+	held, err := a.visiting(r)
+	if err != nil {
+		a.broken(w, r, err)
+		return nil, false
+	}
+
+	return held, true
+}
+
+func (a *App) current(w http.ResponseWriter, r *http.Request) (*visit, *Person, bool) {
+	held, ok := a.visit(w, r)
+	if !ok {
+		return nil, nil, false
+	}
+
+	person, err := a.signedIn(r, held)
+	if err != nil {
+		a.unavailable(w, r)
+		return nil, nil, false
+	}
+
+	return held, person, true
+}
+
+func (a *App) within(ctx context.Context, held *visit, person *Person) context.Context {
+	return WithPerson(context.WithValue(ctx, visitKey{a}, held), person)
+}
+
+func (a *App) signedIn(r *http.Request, v *visit) (*Person, error) {
+	if v.person == nil {
+		person, err := a.person(r, v.site, v.state)
+		if err != nil {
+			return nil, err
+		}
+
+		v.person = person
+	}
+
+	return v.person, nil
+}
+
+func (a *App) person(r *http.Request, s *site, held *state) (*Person, error) {
 	nobody := PersonFrom(context.Background())
 	data := held.data
 
@@ -124,6 +173,15 @@ func (a *App) signedIn(r *http.Request, s *site, held *state) (*Person, error) {
 	return a.personFrom(data.Identity, data.Token, s.issuer.URL+"/"), nil
 }
 
+func (a *App) broken(w http.ResponseWriter, r *http.Request, err error) {
+	if errors.Is(err, ErrForeignCredentials) {
+		a.refuse(w, r, http.StatusInternalServerError, "server_error", "the app's credentials were issued by another issuer")
+		return
+	}
+
+	a.unavailable(w, r)
+}
+
 func (a *App) save(w http.ResponseWriter, r *http.Request, held *state) bool {
 	if err := a.commit(w, r, held); err != nil {
 		a.refuse(w, r, http.StatusInternalServerError, "server_error", "the session could not be saved")
@@ -138,27 +196,22 @@ func (a *App) unavailable(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) start(w http.ResponseWriter, r *http.Request) {
-	s, err := a.site(r)
-	if err != nil {
-		a.unavailable(w, r)
+	v, ok := a.visit(w, r)
+	if !ok {
 		return
 	}
+
+	s, held := v.site, v.state
 
 	if s.held == nil {
 		http.Redirect(w, r, a.HandshakePath(), http.StatusFound)
 		return
 	}
 
-	if registered, err := a.Registered(r); err == nil && !registered {
+	if known, err := registered(r.Context(), s); err == nil && !known {
 		_ = a.config.Credentials.Forget(r)
 		http.Redirect(w, r, a.HandshakePath(), http.StatusFound)
 
-		return
-	}
-
-	held, err := a.load(r)
-	if err != nil {
-		a.unavailable(w, r)
 		return
 	}
 
@@ -198,11 +251,12 @@ func (a *App) start(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) callback(w http.ResponseWriter, r *http.Request) {
-	s, held, person, err := a.current(r)
-	if err != nil {
-		a.unavailable(w, r)
+	v, person, ok := a.current(w, r)
+	if !ok {
 		return
 	}
+
+	s, held := v.site, v.state
 
 	query := r.URL.Query()
 	pending := held.claim(query.Get("state"))
@@ -305,11 +359,12 @@ func (a *App) stale(w http.ResponseWriter, r *http.Request, held *state, person 
 }
 
 func (a *App) describe(w http.ResponseWriter, r *http.Request) {
-	s, held, person, err := a.current(r)
-	if err != nil {
-		a.unavailable(w, r)
+	v, person, ok := a.current(w, r)
+	if !ok {
 		return
 	}
+
+	s, held := v.site, v.state
 
 	if !person.SignedIn {
 		held.forget()
@@ -344,17 +399,12 @@ func referringPath(r *http.Request) string {
 }
 
 func (a *App) logout(w http.ResponseWriter, r *http.Request) {
-	s, err := a.site(r)
-	if err != nil {
-		a.unavailable(w, r)
+	v, ok := a.visit(w, r)
+	if !ok {
 		return
 	}
 
-	held, err := a.load(r)
-	if err != nil {
-		a.unavailable(w, r)
-		return
-	}
+	s, held := v.site, v.state
 
 	everywhere := a.config.SignOutOfIssuer || r.FormValue("everywhere") != ""
 	upstream := ""
@@ -439,7 +489,7 @@ func (a *App) farewell(w http.ResponseWriter, r *http.Request) {
 func (a *App) backchannel(w http.ResponseWriter, r *http.Request) {
 	s, err := a.site(r)
 	if err != nil {
-		a.unavailable(w, r)
+		a.broken(w, r, err)
 		return
 	}
 
@@ -494,11 +544,12 @@ func (a *App) backchannel(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) avatar(w http.ResponseWriter, r *http.Request) {
-	s, held, person, err := a.current(r)
-	if err != nil {
-		a.unavailable(w, r)
+	v, person, ok := a.current(w, r)
+	if !ok {
 		return
 	}
+
+	s, held := v.site, v.state
 
 	if !a.save(w, r, held) {
 		return
@@ -573,50 +624,47 @@ var connectedPage = template.Must(template.New("connected").Parse(`<!doctype htm
 <form method="post" action="{{.Handshake}}/disconnect"><button>Disconnect</button></form>
 `))
 
-func (a *App) manages(r *http.Request, s *site, held *state) (bool, *Person, error) {
-	person, err := a.signedIn(r, s, held)
+func (a *App) mayManage(w http.ResponseWriter, r *http.Request, v *visit) bool {
+	person, err := a.signedIn(r, v)
 	if err != nil {
-		return false, nil, err
+		a.unavailable(w, r)
+		return false
 	}
 
-	return a.config.Manages != nil && person.SignedIn && a.config.Manages(r, person), person, nil
+	if person.SignedIn && a.config.Manages != nil && a.config.Manages(r, person) {
+		return true
+	}
+
+	if !a.save(w, r, v.state) {
+		return false
+	}
+
+	switch {
+	case person.SignedIn:
+		a.refuse(w, r, http.StatusForbidden, "forbidden", "only somebody this app lets manage its connection can reconnect or disconnect it")
+	case wantsJSON(r):
+		writeJSON(w, http.StatusUnauthorized, a.refusal(r, v.site))
+	default:
+		http.Redirect(w, r, a.config.AfterSignOut, http.StatusFound)
+	}
+
+	return false
 }
 
 func (a *App) showHandshake(w http.ResponseWriter, r *http.Request) {
-	s, err := a.site(r)
-	if err != nil {
-		a.unavailable(w, r)
+	v, ok := a.visit(w, r)
+	if !ok {
 		return
 	}
+
+	s := v.site
 
 	if s.held == nil {
-		a.createHandshake(w, r)
+		a.shake(w, r, v)
 		return
 	}
 
-	held, err := a.load(r)
-	if err != nil {
-		a.unavailable(w, r)
-		return
-	}
-
-	allowed, person, err := a.manages(r, s, held)
-	if err != nil {
-		a.unavailable(w, r)
-		return
-	}
-
-	if !a.save(w, r, held) {
-		return
-	}
-
-	if !person.SignedIn {
-		http.Redirect(w, r, a.config.AfterSignOut, http.StatusFound)
-		return
-	}
-
-	if !allowed {
-		a.refuse(w, r, http.StatusForbidden, "forbidden", "only somebody this app lets manage its connection can reconnect or disconnect it")
+	if !a.mayManage(w, r, v) || !a.save(w, r, v.state) {
 		return
 	}
 
@@ -633,59 +681,39 @@ func (a *App) showHandshake(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) createHandshake(w http.ResponseWriter, r *http.Request) {
-	s, err := a.site(r)
-	if err != nil {
-		a.unavailable(w, r)
+	v, ok := a.visit(w, r)
+	if !ok {
 		return
 	}
 
-	held, err := a.load(r)
-	if err != nil {
-		a.unavailable(w, r)
+	if v.site.held != nil && !a.mayManage(w, r, v) {
 		return
 	}
 
-	if s.held != nil {
-		allowed, _, err := a.manages(r, s, held)
-		if err != nil {
-			a.unavailable(w, r)
-			return
-		}
+	a.shake(w, r, v)
+}
 
-		if !allowed {
-			a.save(w, r, held)
-			a.refuse(w, r, http.StatusForbidden, "forbidden", "only somebody this app lets manage its connection can reconnect or disconnect it")
-
-			return
-		}
-	}
-
-	target, shaken, err := a.handshake(s).Start()
+func (a *App) shake(w http.ResponseWriter, r *http.Request, v *visit) {
+	target, shaken, err := a.handshake(v.site).Start()
 	if err != nil {
 		a.failed(w, r, err)
 		return
 	}
 
-	held.shake(shaken)
+	v.state.shake(shaken)
 
-	if a.save(w, r, held) {
+	if a.save(w, r, v.state) {
 		http.Redirect(w, r, target, http.StatusFound)
 	}
 }
 
 func (a *App) handshakeCallback(w http.ResponseWriter, r *http.Request) {
-	s, err := a.site(r)
-	if err != nil {
-		a.unavailable(w, r)
+	v, ok := a.visit(w, r)
+	if !ok {
 		return
 	}
 
-	held, err := a.load(r)
-	if err != nil {
-		a.unavailable(w, r)
-		return
-	}
-
+	s, held := v.site, v.state
 	query := r.URL.Query()
 	returned := query.Get("state")
 
@@ -697,19 +725,8 @@ func (a *App) handshakeCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if s.held != nil {
-		allowed, _, err := a.manages(r, s, held)
-		if err != nil {
-			a.unavailable(w, r)
-			return
-		}
-
-		if !allowed {
-			a.save(w, r, held)
-			a.refuse(w, r, http.StatusForbidden, "forbidden", "only somebody this app lets manage its connection can reconnect or disconnect it")
-
-			return
-		}
+	if s.held != nil && !a.mayManage(w, r, v) {
+		return
 	}
 
 	if writable, ok := a.config.Credentials.(WritableStore); ok {
@@ -746,41 +763,19 @@ func (a *App) handshakeCallback(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) disconnect(w http.ResponseWriter, r *http.Request) {
-	s, err := a.site(r)
-	if err != nil {
-		a.unavailable(w, r)
+	v, ok := a.visit(w, r)
+	if !ok {
 		return
 	}
 
-	held, err := a.load(r)
-	if err != nil {
-		a.unavailable(w, r)
-		return
-	}
+	s, held := v.site, v.state
 
 	if s.held == nil {
 		http.Redirect(w, r, a.HandshakePath(), http.StatusFound)
 		return
 	}
 
-	allowed, person, err := a.manages(r, s, held)
-	if err != nil {
-		a.unavailable(w, r)
-		return
-	}
-
-	if !person.SignedIn {
-		if a.save(w, r, held) {
-			http.Redirect(w, r, a.config.AfterSignOut, http.StatusFound)
-		}
-
-		return
-	}
-
-	if !allowed {
-		a.save(w, r, held)
-		a.refuse(w, r, http.StatusForbidden, "forbidden", "only somebody this app lets manage its connection can reconnect or disconnect it")
-
+	if !a.mayManage(w, r, v) {
 		return
 	}
 

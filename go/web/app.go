@@ -218,23 +218,33 @@ func (a *App) issuerFor(r *http.Request) (*masks.Issuer, error) {
 	return found, nil
 }
 
+func (a *App) resourceFor(r *http.Request) (string, string, error) {
+	resource := a.config.Resource
+
+	if a.config.ResourceFor != nil {
+		var err error
+		if resource, err = a.config.ResourceFor(r); err != nil {
+			return "", "", err
+		}
+	}
+
+	parsed, err := url.Parse(resource)
+	if err != nil || parsed.Host == "" || (parsed.Scheme != "https" && !(a.config.PlainHTTP && parsed.Scheme == "http")) {
+		return "", "", fmt.Errorf("masks/web: %q is not an absolute https resource URL", resource)
+	}
+
+	return resource, parsed.Scheme + "://" + parsed.Host, nil
+}
+
 func (a *App) site(r *http.Request) (*site, error) {
 	issuer, err := a.issuerFor(r)
 	if err != nil {
 		return nil, err
 	}
 
-	resource := a.config.Resource
-
-	if a.config.ResourceFor != nil {
-		if resource, err = a.config.ResourceFor(r); err != nil {
-			return nil, err
-		}
-	}
-
-	parsed, err := url.Parse(resource)
-	if err != nil || parsed.Host == "" || (parsed.Scheme != "https" && !(a.config.PlainHTTP && parsed.Scheme == "http")) {
-		return nil, fmt.Errorf("masks/web: %q is not an absolute https resource URL", resource)
+	resource, origin, err := a.resourceFor(r)
+	if err != nil {
+		return nil, err
 	}
 
 	held, err := a.config.Credentials.Load(r)
@@ -246,7 +256,7 @@ func (a *App) site(r *http.Request) (*site, error) {
 		return nil, ErrForeignCredentials
 	}
 
-	return &site{issuer: issuer, resource: resource, origin: parsed.Scheme + "://" + parsed.Host, held: held}, nil
+	return &site{issuer: issuer, resource: resource, origin: origin, held: held}, nil
 }
 
 func (s *site) client(redirect string) *masks.Client {
@@ -254,11 +264,22 @@ func (s *site) client(redirect string) *masks.Client {
 		return &masks.Client{Issuer: s.issuer}
 	}
 
-	return &masks.Client{Issuer: s.issuer, ID: s.held.ClientID, Secret: s.held.ClientSecret, Method: masks.ClientSecretBasic, RedirectURI: redirect}
+	client := s.issuer.Client(s.held.Registration(), nil, nil)
+	client.RedirectURI = redirect
+
+	return client
 }
 
 func (a *App) signIn(s *site) *masks.Client {
-	return s.client(s.origin + a.config.Mount + "/callback")
+	return s.client(a.callbackURI(s))
+}
+
+func (a *App) callbackURI(s *site) string {
+	return s.origin + a.config.Mount + "/callback"
+}
+
+func (a *App) delegationURI(s *site) string {
+	return s.origin + localPath(a.config.DelegationPath)
 }
 
 func (a *App) farewellURI(s *site) string {
@@ -269,16 +290,22 @@ func (a *App) returnTo(s *site) string {
 	return s.origin + a.config.Mount + "/handshake/callback"
 }
 
-func (a *App) approvedScope() []string {
-	asked := slices.Clone(a.config.Scope)
+func withScopes(base []string, privileges ...Privilege) []string {
+	asked := slices.Clone(base)
 
-	for _, name := range a.names {
-		for _, scope := range a.config.Privileges[name].Scope {
+	for _, privilege := range privileges {
+		for _, scope := range privilege.Scope {
 			if !slices.Contains(asked, scope) {
 				asked = append(asked, scope)
 			}
 		}
 	}
+
+	return asked
+}
+
+func (a *App) approvedScope() []string {
+	asked := withScopes(a.config.Scope, a.mustPrivileges(a.names)...)
 
 	if a.config.Namespace != "" {
 		asked = slices.DeleteFunc(asked, func(scope string) bool { return strings.HasPrefix(scope, a.config.Namespace) })
@@ -298,10 +325,10 @@ func (a *App) handshake(s *site) *masks.Handshake {
 		name = strings.TrimPrefix(strings.TrimPrefix(s.origin, "https://"), "http://")
 	}
 
-	redirects := []string{s.origin + a.config.Mount + "/callback"}
+	redirects := []string{a.callbackURI(s)}
 
 	if a.config.Delegates {
-		redirects = append(redirects, s.origin+localPath(a.config.DelegationPath))
+		redirects = append(redirects, a.delegationURI(s))
 	}
 
 	return &masks.Handshake{
@@ -317,28 +344,15 @@ func (a *App) handshake(s *site) *masks.Handshake {
 }
 
 func (a *App) scopeFor(requested string) []string {
-	asked := slices.Clone(a.config.Scope)
-	extra := false
+	var asked []Privilege
 
 	for name := range strings.FieldsSeq(requested) {
-		privilege, found := a.config.Privileges[name]
-		if !found {
-			continue
-		}
-
-		for _, scope := range privilege.Scope {
-			if !slices.Contains(asked, scope) {
-				asked = append(asked, scope)
-				extra = true
-			}
+		if privilege, found := a.config.Privileges[name]; found {
+			asked = append(asked, privilege)
 		}
 	}
 
-	if !extra {
-		return a.config.Scope
-	}
-
-	return asked
+	return withScopes(a.config.Scope, asked...)
 }
 
 func (a *App) mustPrivileges(names []string) []Privilege {
@@ -422,6 +436,10 @@ func (a *App) Registered(r *http.Request) (bool, error) {
 		return false, err
 	}
 
+	return registered(r.Context(), s)
+}
+
+func registered(ctx context.Context, s *site) (bool, error) {
 	if s.held == nil {
 		return false, nil
 	}
@@ -430,7 +448,7 @@ func (a *App) Registered(r *http.Request) (bool, error) {
 		return true, nil
 	}
 
-	_, err = s.issuer.ReadRegistration(r.Context(), s.held.Registration())
+	_, err := s.issuer.ReadRegistration(ctx, s.held.Registration())
 
 	var refused *masks.Error
 	if errors.As(err, &refused) && slices.Contains([]int{http.StatusUnauthorized, http.StatusForbidden, http.StatusNotFound}, refused.Status) {

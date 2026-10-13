@@ -3,9 +3,7 @@ package web
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
-	"net/url"
 	"slices"
 	"strings"
 	"time"
@@ -13,21 +11,14 @@ import (
 	masks "github.com/masksrb/masks/go"
 )
 
-const resourcePath = "/.well-known/oauth-protected-resource"
-
 func (a *App) Session(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		_, held, person, err := a.current(r)
-		if err != nil {
-			a.unavailable(w, r)
+		v, person, ok := a.current(w, r)
+		if !ok || !a.save(w, r, v.state) {
 			return
 		}
 
-		if !a.save(w, r, held) {
-			return
-		}
-
-		next.ServeHTTP(w, r.WithContext(WithPerson(r.Context(), person)))
+		next.ServeHTTP(w, r.WithContext(a.within(r.Context(), v, person)))
 	})
 }
 
@@ -36,32 +27,24 @@ func (a *App) Require(privileges ...string) func(http.Handler) http.Handler {
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			a.requireSession(w, r, next, privileges, wanted)
+			if v, ok := a.visit(w, r); ok {
+				a.requireSession(w, r, v, next, privileges, wanted)
+			}
 		})
 	}
 }
 
-func (a *App) requireSession(w http.ResponseWriter, r *http.Request, next http.Handler, names []string, wanted []Privilege) {
-	s, err := a.site(r)
+func (a *App) requireSession(w http.ResponseWriter, r *http.Request, v *visit, next http.Handler, names []string, wanted []Privilege) {
+	person, err := a.signedIn(r, v)
 	if err != nil {
 		a.unavailable(w, r)
 		return
 	}
 
-	held, err := a.load(r)
-	if err != nil {
-		a.unavailable(w, r)
-		return
-	}
-
-	person, err := a.signedIn(r, s, held)
-	if err != nil {
-		a.unavailable(w, r)
-		return
-	}
+	held := v.state
 
 	if !person.SignedIn {
-		a.signInFirst(w, r, s, held)
+		a.signInFirst(w, r, v.site, held)
 		return
 	}
 
@@ -98,7 +81,7 @@ func (a *App) requireSession(w http.ResponseWriter, r *http.Request, next http.H
 		return
 	}
 
-	next.ServeHTTP(w, r.WithContext(WithPerson(r.Context(), person)))
+	next.ServeHTTP(w, r.WithContext(a.within(r.Context(), v, person)))
 }
 
 func (a *App) signInFirst(w http.ResponseWriter, r *http.Request, s *site, held *state) {
@@ -196,38 +179,35 @@ func (a *App) Either(privileges ...string) func(http.Handler) http.Handler {
 				return
 			}
 
-			held, err := a.load(r)
-			if err != nil {
-				a.unavailable(w, r)
+			v, ok := a.visit(w, r)
+			if !ok {
 				return
 			}
 
-			if held.data.Token == nil {
+			if v.state.data.Token == nil {
 				a.requireToken(w, r, next, wanted)
 				return
 			}
 
-			a.requireSession(w, r, next, privileges, wanted)
+			a.requireSession(w, r, v, next, privileges, wanted)
 		})
 	}
 }
 
-func (a *App) verifier(r *http.Request) (*masks.Verifier, string, error) {
+func (a *App) verifier(r *http.Request) (*masks.Verifier, error) {
 	issuer, err := a.issuerFor(r)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 
-	resource := a.config.Resource
-	if a.config.ResourceFor != nil {
-		if resource, err = a.config.ResourceFor(r); err != nil {
-			return nil, "", err
-		}
+	resource, origin, err := a.resourceFor(r)
+	if err != nil {
+		return nil, err
 	}
 
-	parsed, err := url.Parse(resource)
-	if err != nil || parsed.Host == "" {
-		return nil, "", fmt.Errorf("masks/web: %q is not an absolute resource URL", resource)
+	metadata, err := masks.ResourceMetadataURL(resource)
+	if err != nil {
+		return nil, err
 	}
 
 	key := issuer.URL + " " + resource
@@ -238,16 +218,17 @@ func (a *App) verifier(r *http.Request) (*masks.Verifier, string, error) {
 	held := a.verifiers[key]
 	if held == nil || held.Issuer != issuer {
 		held = masks.NewVerifier(issuer, resource)
-		held.PublicURL = parsed.Scheme + "://" + parsed.Host
+		held.PublicURL = origin
 		held.Replay = a.replay()
+		held.ResourceMetadata = metadata
 		a.verifiers[key] = held
 	}
 
-	return held, resource, nil
+	return held, nil
 }
 
 func (a *App) requireToken(w http.ResponseWriter, r *http.Request, next http.Handler, wanted []Privilege) {
-	verifier, resource, err := a.verifier(r)
+	verifier, err := a.verifier(r)
 	if err != nil {
 		a.unavailable(w, r)
 		return
@@ -261,7 +242,7 @@ func (a *App) requireToken(w http.ResponseWriter, r *http.Request, next http.Han
 			return
 		}
 
-		a.challenge(w, resource, http.StatusUnauthorized, &refusal{code: "invalid_token", description: bad.Description})
+		a.challenge(w, verifier, http.StatusUnauthorized, &refusal{code: "invalid_token", description: bad.Description})
 
 		return
 	}
@@ -278,7 +259,7 @@ func (a *App) requireToken(w http.ResponseWriter, r *http.Request, next http.Han
 	}
 
 	if len(scopes) > 0 {
-		a.challenge(w, resource, http.StatusForbidden, &refusal{
+		a.challenge(w, verifier, http.StatusForbidden, &refusal{
 			code: "insufficient_scope", description: "this token does not carry " + strings.Join(scopes, " "), scope: strings.Join(scopes, " "),
 		})
 
@@ -287,7 +268,7 @@ func (a *App) requireToken(w http.ResponseWriter, r *http.Request, next http.Han
 
 	for _, privilege := range wanted {
 		if refused := person.member(privilege); refused != nil {
-			a.challenge(w, resource, http.StatusForbidden, refused)
+			a.challenge(w, verifier, http.StatusForbidden, refused)
 			return
 		}
 	}
@@ -301,60 +282,32 @@ func presentedToken(r *http.Request) string {
 	return strings.TrimSpace(token)
 }
 
-func metadataURL(resource string) string {
-	parsed, err := url.Parse(resource)
-	if err != nil {
-		return ""
-	}
-
-	path := strings.TrimSuffix(parsed.EscapedPath(), "/")
-
-	return parsed.Scheme + "://" + parsed.Host + resourcePath + path
-}
-
-func quoted(value string) string {
-	return strings.Map(func(r rune) rune {
-		if r == '"' || r == '\\' || r < 0x20 || r == 0x7f {
-			return ' '
-		}
-
-		return r
-	}, value)
-}
-
-func (a *App) challenge(w http.ResponseWriter, resource string, status int, refused *refusal) {
+func (a *App) challenge(w http.ResponseWriter, verifier *masks.Verifier, status int, refused *refusal) {
 	scope := refused.scope
 	if scope == "" && len(a.config.ResourceScopes) > 0 {
 		scope = strings.Join(a.config.ResourceScopes, " ")
 	}
 
-	parameters := fmt.Sprintf(`error="%s", error_description="%s"`, quoted(refused.code), quoted(refused.description))
-
-	if scope != "" {
-		parameters += fmt.Sprintf(`, scope="%s"`, quoted(scope))
+	for _, challenge := range verifier.Challenge(refused.code, refused.description, scope) {
+		w.Header().Add("WWW-Authenticate", challenge)
 	}
-
-	parameters += fmt.Sprintf(`, resource_metadata="%s"`, quoted(metadataURL(resource)))
-
-	w.Header().Add("WWW-Authenticate", "Bearer "+parameters)
-	w.Header().Add("WWW-Authenticate", masks.DPoP+` algs="ES256 ES384 ES512 PS256 PS384 PS512 RS256", `+parameters)
 
 	writeJSON(w, status, map[string]string{"error": refused.code, "error_description": refused.description})
 }
 
 func (a *App) ResourceMetadata() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		verifier, resource, err := a.verifier(r)
+		verifier, err := a.verifier(r)
 		if err != nil {
 			a.unavailable(w, r)
 			return
 		}
 
 		body := map[string]any{
-			"resource":                          resource,
+			"resource":                          verifier.Audience[0],
 			"authorization_servers":             []string{verifier.Issuer.URL},
 			"bearer_methods_supported":          []string{"header"},
-			"dpop_signing_alg_values_supported": []string{"ES256", "ES384", "ES512", "PS256", "PS384", "PS512", "RS256"},
+			"dpop_signing_alg_values_supported": masks.ProofAlgorithms(),
 		}
 
 		if len(a.config.ResourceScopes) > 0 {
@@ -371,35 +324,21 @@ func (a *App) ResourceMetadata() http.Handler {
 	})
 }
 
-func (a *App) MetadataPath(r *http.Request) (string, error) {
-	_, resource, err := a.verifier(r)
-	if err != nil {
-		return "", err
-	}
-
-	parsed, err := url.Parse(metadataURL(resource))
-	if err != nil {
-		return "", err
-	}
-
-	return parsed.Path, nil
-}
-
-func (a *App) delegations(r *http.Request) (*site, *masks.Client, error) {
+func (a *App) delegations(r *http.Request) (*visit, *masks.Client, error) {
 	if !a.config.Delegates {
 		return nil, nil, errors.New("masks/web: Config.Delegates is off")
 	}
 
-	s, err := a.site(r)
+	v, err := a.visiting(r)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	if s.held == nil {
+	if v.site.held == nil {
 		return nil, nil, ErrNotConnected
 	}
 
-	return s, s.client(s.origin + localPath(a.config.DelegationPath)), nil
+	return v, v.site.client(a.delegationURI(v.site)), nil
 }
 
 func (a *App) Delegations(r *http.Request) (*masks.Client, error) {
@@ -409,15 +348,12 @@ func (a *App) Delegations(r *http.Request) (*masks.Client, error) {
 }
 
 func (a *App) StartDelegation(w http.ResponseWriter, r *http.Request, provider string, asked masks.AuthRequest) error {
-	_, client, err := a.delegations(r)
+	v, client, err := a.delegations(r)
 	if err != nil {
 		return err
 	}
 
-	held, err := a.load(r)
-	if err != nil {
-		return err
-	}
+	held := v.state
 
 	started, err := client.StartDelegation(provider, asked)
 	if err != nil {
@@ -436,17 +372,14 @@ func (a *App) StartDelegation(w http.ResponseWriter, r *http.Request, provider s
 }
 
 func (a *App) FinishDelegation(w http.ResponseWriter, r *http.Request) (*masks.Connected, error) {
-	s, client, err := a.delegations(r)
+	v, client, err := a.delegations(r)
 	if err != nil {
 		return nil, err
 	}
 
-	held, err := a.load(r)
-	if err != nil {
-		return nil, err
-	}
+	held := v.state
 
-	person, err := a.signedIn(r, s, held)
+	person, err := a.signedIn(r, v)
 	if err != nil {
 		return nil, err
 	}

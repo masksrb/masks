@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"slices"
 	"strings"
-	"time"
 
 	masks "github.com/masksrb/masks/go"
 )
@@ -37,14 +36,6 @@ type Person struct {
 	AccessToken   string               `json:"-"`
 	Identity      *masks.Identity      `json:"-"`
 	Claims        *masks.Claims        `json:"-"`
-}
-
-func (p *Person) Expiry() time.Time {
-	if p.ExpiresAt == 0 {
-		return time.Time{}
-	}
-
-	return time.Unix(p.ExpiresAt, 0)
 }
 
 func (p *Person) HasScope(scope string) bool {

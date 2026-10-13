@@ -243,6 +243,10 @@ func (a *App) cookieName() string {
 }
 
 func (a *App) load(r *http.Request) (*state, error) {
+	if held, ok := r.Context().Value(visitKey{a}).(*visit); ok {
+		return held.state, nil
+	}
+
 	name := a.cookieName()
 	held := &state{data: &session{}}
 
@@ -360,6 +364,8 @@ func (a *App) commit(w http.ResponseWriter, r *http.Request, held *state) error 
 }
 
 func (a *App) setChunks(w http.ResponseWriter, held *state, name string, chunks []string, expiry time.Time) {
+	unset(w.Header(), name)
+
 	written := map[string]bool{}
 
 	for index, chunk := range chunks {
@@ -378,7 +384,40 @@ func (a *App) setChunks(w http.ResponseWriter, held *state, name string, chunks 
 		}
 	}
 
-	held.present = slices.Collect(maps.Keys(written))
+	for name := range written {
+		if !slices.Contains(held.present, name) {
+			held.present = append(held.present, name)
+		}
+	}
+}
+
+func unset(header http.Header, name string) {
+	var kept []string
+
+	ours := chunkNames(name)
+
+	for _, line := range header.Values("Set-Cookie") {
+		if named, _, _ := strings.Cut(line, "="); !slices.Contains(ours, named) {
+			kept = append(kept, line)
+		}
+	}
+
+	if len(kept) == 0 {
+		header.Del("Set-Cookie")
+		return
+	}
+
+	header["Set-Cookie"] = kept
+}
+
+func chunkNames(name string) []string {
+	names := make([]string, chunkLimit)
+
+	for index := range chunkLimit {
+		names[index] = chunkName(name, index)
+	}
+
+	return names
 }
 
 func (a *App) cookie(name, value string) *http.Cookie {

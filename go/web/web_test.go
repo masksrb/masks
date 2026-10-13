@@ -993,3 +993,126 @@ func TestCredentialsAreHeldToTheirIssuer(t *testing.T) {
 		t.Fatal("credentials without an issuer were refused for the only issuer")
 	}
 }
+
+type counting struct {
+	MemoryStore
+	lock sync.Mutex
+	gets int
+}
+
+func (c *counting) Get(ctx context.Context, key string) ([]byte, error) {
+	c.lock.Lock()
+	c.gets++
+	c.lock.Unlock()
+
+	return c.MemoryStore.Get(ctx, key)
+}
+
+func (c *counting) reset() int {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	held := c.gets
+	c.gets = 0
+
+	return held
+}
+
+func TestASessionIsLoadedOnceWhenSessionWrapsEveryRoute(t *testing.T) {
+	sessions := &counting{}
+	h := newHarness(t, func(config *Config) { config.Sessions = sessions })
+	h.handler = h.app.Session(h.handler)
+
+	h.connect()
+
+	if person := h.person("/protected"); !person.SignedIn {
+		t.Fatal("the guarded route did not see the person")
+	}
+
+	sessions.reset()
+
+	response, _ := h.visit(http.MethodGet, "/protected")
+	if response.StatusCode != http.StatusOK {
+		t.Fatalf("the guarded route answered %d", response.StatusCode)
+	}
+
+	if loaded := sessions.reset(); loaded != 1 {
+		t.Fatalf("one request read the session %d times", loaded)
+	}
+
+	request := httptest.NewRequest(http.MethodGet, h.server.URL+"/protected", nil)
+	request.AddCookie(&http.Cookie{Name: "masks", Value: "stale"})
+	recorder := httptest.NewRecorder()
+	h.handler.ServeHTTP(recorder, request)
+
+	var written []string
+	for _, line := range recorder.Header().Values("Set-Cookie") {
+		if strings.HasPrefix(line, "masks=") {
+			written = append(written, line)
+		}
+	}
+
+	if recorder.Code != http.StatusFound || len(written) != 1 || strings.HasPrefix(written[0], "masks=;") {
+		t.Fatalf("a stale cookie answered %d and wrote %v", recorder.Code, written)
+	}
+}
+
+func TestATokenIsCheckedOnlyForAnHTTPSResource(t *testing.T) {
+	app, err := New(Config{Issuer: "https://id.example", Resource: "http://app.example", Secret: secret()})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	recorder := httptest.NewRecorder()
+	app.ResourceMetadata().ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/.well-known/oauth-protected-resource", nil))
+
+	if recorder.Code == http.StatusOK {
+		t.Fatal("an http resource was described")
+	}
+}
+
+func TestASecondSaveStillClearsTheChunksTheBrowserHeld(t *testing.T) {
+	app, err := New(Config{Issuer: "https://id.example", Resource: "https://app.example", Secret: secret()})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	request := httptest.NewRequest(http.MethodGet, "/", nil)
+	for _, name := range []string{"__Host-masks", "__Host-masks-1", "__Host-masks-2"} {
+		request.AddCookie(&http.Cookie{Name: name, Value: "stale"})
+	}
+
+	held, err := app.load(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	recorder := httptest.NewRecorder()
+	held.change().ReturnTo = "/first"
+
+	if err := app.commit(recorder, request, held); err != nil {
+		t.Fatal(err)
+	}
+
+	held.change().ReturnTo = "/second"
+
+	if err := app.commit(recorder, request, held); err != nil {
+		t.Fatal(err)
+	}
+
+	cleared := map[string]bool{}
+	kept := 0
+
+	for _, cookie := range (&http.Response{Header: recorder.Header()}).Cookies() {
+		switch {
+		case cookie.MaxAge < 0:
+			cleared[cookie.Name] = true
+		case cookie.Name == "__Host-masks":
+			kept++
+		}
+	}
+
+	if kept != 1 || !cleared["__Host-masks-1"] || !cleared["__Host-masks-2"] {
+		t.Fatalf("the second save left %v", recorder.Header().Values("Set-Cookie"))
+	}
+}

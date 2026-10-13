@@ -118,8 +118,9 @@ carry over to another tenant.
 
 Once the app is connected, `/auth/handshake` shows the connection to somebody `Manages` allows, with
 buttons to connect again and to disconnect. Disconnecting deletes the registration at masks and the
-credentials. A person who is not signed in goes to `AfterSignOut`, and anybody else is refused with
-`403`.
+credentials. A person who is not signed in goes to `AfterSignOut`, or gets `401` with a `login_url`
+for a JSON request, and anybody else is refused with `403`. The same check guards the handshake's
+callback when the app is already connected.
 
 ```go
 Manages: func(r *http.Request, person *web.Person) bool { return person.HasPrivilege("admin") },
