@@ -93,15 +93,15 @@ module Masks
         if config.named_by && !%w[nickname email either].include?(config.named_by)
           raise "MASKS_NAMED_BY is #{config.named_by.inspect}, and the only things an " \
                 "account can be named by are a nickname, an email address, or either one. " \
-                "Set it to nickname, email or either, or leave it unset and let the first-run " \
-                "screen decide."
+                "Set it to nickname, email or either, or leave it unset so each tenant's managers " \
+                "choose in /manage."
         end
 
         if config.dynamic_registration && !%w[off anything bounded].include?(config.dynamic_registration)
           raise "MASKS_DYNAMIC_REGISTRATION is #{config.dynamic_registration.inspect}. " \
                 "Dynamic registration is off, on for anything a manager does not have to grant, " \
                 "or on and bounded by MASKS_DYNAMIC_CLIENT_SCOPES. Set it to off, anything or " \
-                "bounded, or leave it unset and let the first-run screen decide."
+                "bounded, or leave it unset so each tenant's managers choose in /manage."
         end
 
         return if local || building

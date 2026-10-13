@@ -7,7 +7,7 @@ module Masks
         def service_provider_config
           scim({
             "schemas" => [ Scim::SERVICE_PROVIDER_CONFIG ],
-            "documentationUri" => "#{::Rails.configuration.masks.docs_url}/concepts/provisioning/",
+            "documentationUri" => "#{::Rails.configuration.masks.docs_url}/guides/sso-saml/#provisioning",
             "patch" => { "supported" => true },
             "bulk" => { "supported" => false, "maxOperations" => 0, "maxPayloadSize" => 0 },
             "filter" => { "supported" => true, "maxResults" => Scim::MAX_RESULTS },
