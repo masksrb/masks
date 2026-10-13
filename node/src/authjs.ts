@@ -55,6 +55,7 @@ import {
 import { Handshake, originOf } from "./handshake.js";
 import type { LogoutToken } from "./idtoken.js";
 import { Issuer } from "./issuer.js";
+import { random } from "./key.js";
 import { MemoryReplayStore, type ReplayStore } from "./replay.js";
 
 type NextAuth = (
@@ -82,6 +83,7 @@ export interface MasksAuthOptions extends Omit<NextAuthConfig, "providers"> {
   logouts?: LogoutStore;
   replay?: ReplayStore;
   refreshes?: RefreshStore;
+  signOutOfIssuer?: boolean;
   onLogout?: (logout: LogoutToken, request: Request) => void | Promise<void>;
   allowPlainHTTP?: boolean;
 }
@@ -113,6 +115,7 @@ export interface MasksAuthResult extends NextAuthResult {
 const PREFIX = "/masks";
 const HANDSHAKE_COOKIE = "masks-handshake";
 const STEPPED_COOKIE = "masks-stepped";
+const FAREWELL_COOKIE = "masks-farewell";
 const FLOW_LIFETIME = 3600;
 const STEP_UP_WITHIN = 300;
 const DISCOVERY_LIFETIME = 3600_000;
@@ -138,6 +141,7 @@ const MASKS_OPTIONS = new Set([
   "logouts",
   "replay",
   "refreshes",
+  "signOutOfIssuer",
   "onLogout",
   "allowPlainHTTP",
 ]);
@@ -241,6 +245,10 @@ export class MasksAuth {
     const path = `${this.basePath}${PREFIX}/signin`;
 
     return held ? `${path}?${held}` : path;
+  }
+
+  get logoutPath(): string {
+    return `${this.basePath}${PREFIX}/logout`;
   }
 
   get handshakePath(): string {
@@ -387,6 +395,11 @@ export class MasksAuth {
           return await this.#handshakeDestroy(request);
         case "GET /handshake/callback":
           return await this.#handshakeCallback(request);
+        case "GET /logout":
+        case "POST /logout":
+          return await this.#logout(request);
+        case "GET /logout/return":
+          return this.#logoutReturn(request);
         case "POST /logout/backchannel":
           return await this.#backchannel(request);
         default:
@@ -886,6 +899,30 @@ export class MasksAuth {
     callbackUrl: string,
     asked: URLSearchParams,
   ): Promise<Response> {
+    const query = asked.toString();
+    const { location, written } = await this.#act(
+      request,
+      `signin/${this.id}${query ? `?${query}` : ""}`,
+      callbackUrl,
+    );
+
+    if (!location) {
+      return refusal(
+        request,
+        500,
+        "signin_failed",
+        "Auth.js did not start the sign-in",
+      );
+    }
+
+    return redirect(location, written, 303);
+  }
+
+  async #act(
+    request: Request,
+    action: string,
+    callbackUrl: string,
+  ): Promise<{ location?: string; written: string[] }> {
     const result = this.#bound();
     const origin = new URL(request.url).origin;
     const make = request.constructor as typeof Request;
@@ -902,9 +939,6 @@ export class MasksAuth {
 
       return headers;
     };
-    const keep = (response: Response) => {
-      written.push(...response.headers.getSetCookie());
-    };
 
     const csrf = await result.handlers.GET(
       new make(`${origin}${this.basePath}/csrf`, {
@@ -912,42 +946,105 @@ export class MasksAuth {
       }) as Incoming,
     );
 
-    keep(csrf);
+    written.push(...csrf.headers.getSetCookie());
 
     const { csrfToken } = (await csrf.json()) as { csrfToken?: string };
-    const query = asked.toString();
     const headers = forwarded();
 
     headers.set("content-type", "application/x-www-form-urlencoded");
 
-    const started = await result.handlers.POST(
-      new make(
-        `${origin}${this.basePath}/signin/${this.id}${query ? `?${query}` : ""}`,
-        {
-          method: "POST",
-          headers,
-          body: new URLSearchParams({
-            csrfToken: csrfToken ?? "",
-            callbackUrl: `${origin}${callbackUrl}`,
-          }),
-        },
-      ) as Incoming,
+    const answered = await result.handlers.POST(
+      new make(`${origin}${this.basePath}/${action}`, {
+        method: "POST",
+        headers,
+        body: new URLSearchParams({
+          csrfToken: csrfToken ?? "",
+          callbackUrl: `${origin}${callbackUrl}`,
+        }),
+      }) as Incoming,
     );
 
-    keep(started);
+    written.push(...answered.headers.getSetCookie());
 
-    const location = started.headers.get("location");
+    return { location: answered.headers.get("location") ?? undefined, written };
+  }
 
-    if (!location) {
+  async #logout(request: Request): Promise<Response> {
+    const url = new URL(request.url);
+
+    if (!sameOrigin(request, url.origin)) {
       return refusal(
         request,
-        500,
-        "signin_failed",
-        "Auth.js did not start the sign-in",
+        403,
+        "forbidden",
+        "a sign-out is only asked for from this app",
       );
     }
 
-    return redirect(location, written, 303);
+    const form =
+      request.method === "POST"
+        ? new URLSearchParams(await request.text())
+        : url.searchParams;
+    const callbackUrl =
+      localPath(
+        form.get("callbackUrl") ?? url.searchParams.get("callbackUrl"),
+      ) ?? "/";
+    const everywhere =
+      form.has("everywhere") ||
+      url.searchParams.has("everywhere") ||
+      this.#options.signOutOfIssuer === true;
+    const client = everywhere ? await this.#client(request) : undefined;
+    const { written } = await this.#act(request, "signout", callbackUrl);
+
+    if (!client) {
+      if (wantsJSON(request)) return json(200, { signed_in: false }, written);
+
+      return redirect(callbackUrl, written, 303);
+    }
+
+    const state = random();
+    const target = client.endSessionURL({
+      postLogoutRedirectURI: `${originOf(this.#resource() ?? url.origin) ?? url.origin}${this.basePath}${PREFIX}/logout/return`,
+      state,
+    });
+
+    written.push(
+      serialize(
+        farewellCookie(request),
+        encodeURIComponent(`${state} ${callbackUrl}`),
+        { secure: secure(request), maxAge: FLOW_LIFETIME },
+      ),
+    );
+
+    if (wantsJSON(request)) {
+      return json(200, { signed_in: false, logout_url: target }, written);
+    }
+
+    return redirect(target, written, 303);
+  }
+
+  #logoutReturn(request: Request): Response {
+    const state = new URL(request.url).searchParams.get("state") ?? "";
+    const held = parseCookies(request.headers.get("cookie")).get(
+      farewellCookie(request),
+    );
+    const cleared = serialize(farewellCookie(request), "", {
+      secure: secure(request),
+      maxAge: 0,
+    });
+    const [expected = "", callbackUrl] = decode(held ?? "");
+
+    if (!held || !state || !constantEqual(expected, state)) {
+      return refusal(
+        request,
+        400,
+        "invalid_state",
+        "that sign-out is not one this browser started, or it expired",
+        [cleared],
+      );
+    }
+
+    return redirect(localPath(callbackUrl) ?? "/", [cleared], 303);
   }
 
   async #handshakeShow(request: Request): Promise<Response> {
@@ -1118,6 +1215,7 @@ ${this.#credentials.clear ? `<form method="post" action="${path}/disconnect"><bu
         this.#options.namespace,
       ),
       backchannelLogoutURI: `${base}${PREFIX}/logout/backchannel`,
+      postLogoutRedirectUri: `${base}${PREFIX}/logout/return`,
     });
   }
 
@@ -1297,6 +1395,10 @@ function trim(path: string): string {
 
 function secure(request: Request): boolean {
   return new URL(request.url).protocol === "https:";
+}
+
+function farewellCookie(request: Request): string {
+  return secure(request) ? `__Host-${FAREWELL_COOKIE}` : FAREWELL_COOKIE;
 }
 
 function handshakeCookie(request: Request): string {

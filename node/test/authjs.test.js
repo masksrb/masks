@@ -387,3 +387,69 @@ test("a refusal one server saw signs the person out on every server", async () =
     1,
   );
 });
+
+test("signing out ends the session here, and everywhere signs out of masks and comes back", async () => {
+  const held = await signedIn();
+  const { fake, browser, credentials } = held;
+  const { client_id } = await credentials.read(new Request(APP));
+
+  assert.equal(
+    fake.handshakes[0].get("post_logout_redirect_uri"),
+    `${APP}/api/auth/masks/logout/return`,
+  );
+
+  const forged = await browser.fetch("/api/auth/masks/logout", {
+    method: "POST",
+    headers: { "sec-fetch-site": "cross-site" },
+  });
+
+  assert.equal(forged.status, 403);
+  assert.ok((await session(browser)).masks);
+
+  const left = await browser.fetch(
+    "/api/auth/masks/logout?everywhere&callbackUrl=/goodbye",
+  );
+  const target = new URL(left.headers.get("location"));
+
+  assert.equal(left.status, 303);
+  assert.equal(target.origin, fake.url);
+  assert.equal(target.searchParams.get("client_id"), client_id);
+  assert.equal(
+    target.searchParams.get("post_logout_redirect_uri"),
+    `${APP}/api/auth/masks/logout/return`,
+  );
+  assert.equal(await session(browser), null);
+  assert.equal(fake.revoked.length, 1);
+
+  const stale = await browser.fetch(
+    "/api/auth/masks/logout/return?state=forged",
+  );
+
+  assert.equal(stale.status, 400);
+
+  const again = await browser.fetch(
+    "/api/auth/masks/logout?everywhere&callbackUrl=/goodbye",
+  );
+  const state = new URL(again.headers.get("location")).searchParams.get(
+    "state",
+  );
+  const back = await browser.fetch(
+    `/api/auth/masks/logout/return?state=${state}`,
+  );
+
+  assert.equal(back.status, 303);
+  assert.equal(back.headers.get("location"), "/goodbye");
+});
+
+test("signing out without everywhere stays in the app", async () => {
+  const held = await signedIn();
+  const left = await held.browser.fetch("/api/auth/masks/logout", {
+    method: "POST",
+    body: new URLSearchParams({ callbackUrl: "/bye" }),
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+  });
+
+  assert.equal(left.status, 303);
+  assert.equal(left.headers.get("location"), "/bye");
+  assert.equal(await session(held.browser), null);
+});
