@@ -35,7 +35,8 @@ In `/manage`, each change needs one of the [manage roles](/guides/security/#mana
 
 A role is a word that the member's tokens carry.
 
-- To add a role, open the organization's **Roles** tab and choose **Offer another role**.
+- To add a role, open the organization's **Roles** tab, enter it under **Offer another role**, and
+  choose **Add**.
 - A role uses lowercase letters, digits, dashes, and underscores. It is up to 40 characters long.
 - `owner` and `member` are always offered.
 - A role cannot be removed while someone holds it.
@@ -48,12 +49,14 @@ Adding someone to an organization invites them. Until they accept, the invitatio
 - no place in the list of organizations to choose from
 - nothing for the organization's directory to change
 
-To invite someone:
+To invite someone from `/manage`:
 
-1. Open the organization. Use its page in `/manage`, or the account page of one of its owners.
+1. Open the organization and choose **Add member**.
 2. Enter the person's email address.
 3. Choose a role.
-4. Choose **Add member** in `/manage`, or **Add** on the account page.
+4. Choose **Invite**.
+
+An owner invites someone the same way from their account page, and chooses **Add**.
 
 masks emails the person. The email names the organization, the role, and who invited them.
 
@@ -63,8 +66,8 @@ masks emails the person. The email names the organization, the role, and who inv
 | No account | An account invitation to choose a password. Once they have an account, the organization is waiting on their account page. |
 | An account with no confirmed address | Nothing is sent. The invitation waits on their account page. |
 
-Sometimes the tenant has no mail service and the deployment has no SMTP server (a mail server). Then
-`/manage` shows the account invitation's link so the manager can send it. The link works once.
+When neither the tenant nor the server has a way to send mail, `/manage` shows the account
+invitation's link so the manager can send it. The link works once.
 
 ### Who an owner can invite
 
@@ -217,9 +220,11 @@ organization's **Sign-in** tab in `/manage`.
 ### Policy
 
 A member signs in under the organization's policy first, ahead of the app's policy and the tenant's.
+The policy applies once masks knows the organization. That happens after the first factor, when masks
+takes the organization the app named or the person chooses one.
 
-- When the app names the organization on `/authorize`, the policy applies from the first step.
-- When the person chooses the organization, the policy applies from that choice on.
+When the app names the organization on `/authorize`, the first step can already offer the
+organization's own providers.
 
 Once the policy applies:
 
@@ -240,9 +245,12 @@ Everyone who signs in through it becomes a member, in the role their groups map 
 - The role is set again on every sign-in.
 - Sometimes the provider would take away the last owner's role. Then masks records *Organization role
   kept against the provider*, and the role stays.
-- It accepts a waiting invitation only for an address at one of its email domains. When
-  `trusts_email` is on, it also accepts one for an address it reports as confirmed. Any other
-  invitation is refused, and stays waiting.
+- An invited account that has no password yet is linked only when the provider vouches for the
+  address. The address is at a proven domain in the provider's email domains, or `trusts_email` is
+  on and the provider reports the address as confirmed. Otherwise the sign-in is refused, and the
+  invitation stays waiting.
+- Signing in through an account already connected to the provider accepts a waiting invitation to
+  the organization.
 - An existing account with the same address is linked only after that account signs in another way
   once. This is the same as with any [provider](/guides/sso-saml/#provider-roles).
 
@@ -300,8 +308,9 @@ auth.switchOrganization("globex");
 ```
 
 - `switchOrganization` sends the person through sign-in again, naming the other organization.
-- The `Actor` components for React and Svelte list the other organizations. When given
-  `onSwitchOrganization`, they switch to the one the person picks.
+- The `Actor` components for React and Svelte show the current organization and role. When given
+  `onSwitchOrganization`, they also list the other organizations and switch to the one the person
+  picks.
 - In browser mode, `organization()` reads `org` from the ID token. `switchOrganization` starts a new
   authorization naming the key.
 
@@ -318,11 +327,11 @@ An organization's page counts its members, owners, open invitations, and live to
 
 | Tab | Holds |
 | --- | --- |
-| **Members** | Everyone, owners, or open invitations. Each person's role. **Send again**, and removal. |
-| **Sign-in** | The sign-in policy. The organization's providers and their group mapping. Its proven domains. Any provisioning token for it. |
+| **Members** | **Everyone**, **Owners**, or **Invited**, which includes expired invitations. Each person's role. **Send again**, and removal. |
+| **Sign-in** | The sign-in policy. The organization's providers and their group mapping. Its domains, and whether each is proven. Any provisioning token for it. |
 | **Roles** | The roles it offers. How many members hold each. |
 | **Activity** | Changes to the organization. What happened while someone signed in as a member. |
-| **General** | Its name, key, and ID. The `organization=` value apps ask for it with. **Archive**, which names how many live tokens archiving revokes. |
+| **General** | Its name, key, and ID. The `organization=` value apps ask for it with. Archiving it, with how many live tokens that revokes. |
 
 Archiving an organization does two things:
 
