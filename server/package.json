@@ -6,7 +6,7 @@
     "lint:fix": "biome check --write",
     "format": "biome format --write",
     "check:svelte": "svelte-check --no-tsconfig --fail-on-warnings --output human",
-    "test": "node --test test/frontend/"
+    "test": "node --test \"test/frontend/*.test.js\""
   },
   "dependencies": {
     "@github/webauthn-json": "^2.1.1",
