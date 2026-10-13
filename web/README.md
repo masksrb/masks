@@ -10,13 +10,14 @@ npm install @masks/client
 ```
 
 It runs in a browser and holds no client secret. Token exchange, delegation, client credentials,
-introspection, and checking access tokens on an API belong to a server, and the
-[`masks`](https://rubygems.org/gems/masks) gem covers them for Ruby.
+introspection, and checking access tokens on an API belong to a server. The masks SDKs for
+[Ruby, JavaScript, Python, and Go](https://masks.pages.dev/guides/connecting-via-sdk/#choosing-an-sdk)
+cover them.
 
 ## Session mode
 
-The browser holds a cookie, and a backend running the `masks` gem's Rails engine holds the tokens, so
-no token reaches JavaScript. Use this mode whenever the app has a backend.
+The browser holds a cookie, and a backend running `Masks::Rails`, `@masks/server`, the Python
+package, or `go/web` holds the tokens, so no token reaches JavaScript. Use this mode whenever the app has a backend.
 
 ```js
 import { createSession } from "@masks/client";
