@@ -136,7 +136,7 @@ test("a server component without fresh tokens is sent through the refresh route"
     refresh: false,
   });
   assert.equal(
-    outcome.response.headers.get("location"),
+    outcome.refusal.toResponse().headers.get("location"),
     "/auth/refresh?return_to=%2Freports",
   );
 

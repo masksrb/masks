@@ -53,10 +53,12 @@ export function requireAuth(...privileges: string[]): MiddlewareHandler {
 
     const outcome = await masks.guard(context.req.raw, ...privileges);
 
-    if (outcome.response) {
-      throw new HTTPException(outcome.response.status as ContentfulStatusCode, {
-        res: outcome.response,
-        cause: outcome.error,
+    if (outcome.refusal) {
+      const res = outcome.refusal.toResponse();
+
+      throw new HTTPException(res.status as ContentfulStatusCode, {
+        res,
+        cause: outcome.refusal.error,
       });
     }
 

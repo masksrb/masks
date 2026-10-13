@@ -5,29 +5,50 @@ import type { Claims, Verifier } from "../verifier.js";
 import type { Core } from "./core.js";
 import { Masked } from "./masked.js";
 import { unique } from "./privileges.js";
-import {
-  localPath,
-  presented,
-  referring,
-  unsafe,
-  wantsJSON,
-} from "./requests.js";
-import { errorResponse, json, redirect } from "./responses.js";
+import { localPath, presented, referring, wantsJSON } from "./requests.js";
+import { errorResponse, headersWith, json, redirect } from "./responses.js";
 import { now, type Visit } from "./session.js";
 
+export type RefusalKind =
+  | "handshake"
+  | "login"
+  | "step_up"
+  | "forbidden"
+  | "invalid_token"
+  | "unavailable";
+
+export class Refusal {
+  readonly kind: RefusalKind;
+  readonly url?: string;
+  readonly error?: ForbiddenError | InvalidTokenError;
+  readonly cookies: string[];
+  readonly #request: Request;
+  readonly #answer: (request: Request) => Response;
+
+  constructor(fields: {
+    kind: RefusalKind;
+    request: Request;
+    cookies: string[];
+    answer: (request: Request) => Response;
+    url?: string;
+    error?: ForbiddenError | InvalidTokenError;
+  }) {
+    this.kind = fields.kind;
+    this.url = fields.url;
+    this.error = fields.error;
+    this.cookies = fields.cookies;
+    this.#request = fields.request;
+    this.#answer = fields.answer;
+  }
+
+  toResponse(request: Request = this.#request): Response {
+    return this.#answer(request);
+  }
+}
+
 export type Outcome =
-  | {
-      masked: Masked;
-      cookies: string[];
-      response?: undefined;
-      error?: undefined;
-    }
-  | {
-      masked?: undefined;
-      cookies?: undefined;
-      response: Response;
-      error?: ForbiddenError;
-    };
+  | { masked: Masked; cookies: string[]; refusal?: undefined }
+  | { masked?: undefined; cookies?: undefined; refusal: Refusal };
 
 export interface CheckOptions {
   privileges?: string[];
@@ -48,7 +69,7 @@ export async function check(
   const visit = await core.visit(request);
 
   if (!(await core.configured(visit))) {
-    return { response: refuse(core, visit, "handshake_required") };
+    return { refusal: handshakeRefusal(core, visit, asked.returnTo) };
   }
 
   const data =
@@ -62,13 +83,7 @@ export async function check(
       asked.refresh === false && !!data?.tokens?.refresh_token;
 
     return {
-      response: refuse(
-        core,
-        visit,
-        "login_required",
-        asked.returnTo,
-        refreshable,
-      ),
+      refusal: loginRefusal(core, visit, asked.returnTo, refreshable),
     };
   }
 
@@ -76,7 +91,7 @@ export async function check(
     for (const privilege of wanted) masked.member(privilege);
   } catch (error) {
     if (error instanceof ForbiddenError)
-      return { response: forbid(visit, error), error };
+      return { refusal: forbidden(visit, error) };
     throw error;
   }
 
@@ -106,27 +121,34 @@ export async function check(
       },
     );
 
-    return { response: forbid(visit, error), error };
+    return { refusal: forbidden(visit, error) };
   }
 
-  const returnTo =
-    asked.returnTo ??
-    (request.method === "GET"
-      ? `${visit.url.pathname}${visit.url.search}`
-      : referring(request));
-  const url = core.loginURL({ returnTo, privilege: missing });
+  const url = core.loginURL({
+    returnTo: returnPath(visit, asked.returnTo),
+    privilege: missing,
+  });
 
-  if (wantsJSON(request)) {
-    return {
-      response: json(
-        403,
-        { error: "privilege_required", privileges: missing, login_url: url },
-        visit.out,
-      ),
-    };
-  }
-
-  return { response: redirect(url, visit.out) };
+  return {
+    refusal: new Refusal({
+      kind: "step_up",
+      request,
+      url,
+      cookies: visit.out,
+      answer: (asking) =>
+        wantsJSON(asking)
+          ? json(
+              403,
+              {
+                error: "privilege_required",
+                privileges: missing,
+                login_url: url,
+              },
+              visit.out,
+            )
+          : redirect(url, visit.out),
+    }),
+  };
 }
 
 export async function protect(
@@ -144,27 +166,24 @@ export async function protect(
     claims = await verifier.authenticate(request);
   } catch (error) {
     if (verifier && error instanceof InvalidTokenError) {
-      const headers = new Headers({ "cache-control": "no-store" });
-      for (const value of verifier.challengeHeaders(error))
-        headers.append("www-authenticate", value);
-
-      return {
-        response: Response.json(
-          { error: "invalid_token", error_description: describe(error) },
-          { status: 401, headers },
-        ),
-      };
+      return { refusal: challenged(request, verifier, error) };
     }
 
     return {
-      response: json(
-        503,
-        {
-          error: "temporarily_unavailable",
-          error_description: "the token could not be checked",
-        },
-        [],
-      ),
+      refusal: new Refusal({
+        kind: "unavailable",
+        request,
+        cookies: [],
+        answer: () =>
+          json(
+            503,
+            {
+              error: "temporarily_unavailable",
+              error_description: "the token could not be checked",
+            },
+            [],
+          ),
+      }),
     };
   }
 
@@ -186,9 +205,7 @@ export async function protect(
           throw new ForbiddenError(
             "insufficient_scope",
             `this token does not carry ${scope}`,
-            {
-              scope: privilege.scopes.join(" "),
-            },
+            { scope: privilege.scopes.join(" ") },
           );
         }
       }
@@ -198,20 +215,7 @@ export async function protect(
   } catch (error) {
     if (!(error instanceof ForbiddenError)) throw error;
 
-    const headers = new Headers({ "cache-control": "no-store" });
-    const scope = error.scope ? `, scope="${quote(error.scope)}"` : "";
-
-    headers.set(
-      "www-authenticate",
-      `Bearer error="${error.code}", error_description="${quote(error.description)}"${scope}, resource_metadata="${core.metadataURL(visit)}"`,
-    );
-
-    return {
-      response: Response.json(
-        { error: error.code, error_description: error.description },
-        { status: 403, headers },
-      ),
-    };
+    return { refusal: challenged(request, verifier, error) };
   }
 
   return { masked, cookies: [] };
@@ -235,54 +239,72 @@ export async function guard(
   return check(core, request, { privileges: names });
 }
 
-export function refuse(
+export function handshakeRefusal(
   core: Core,
   visit: Visit,
-  reason: "handshake_required" | "login_required",
   asked?: string,
-  refreshable = false,
-): Response {
-  if (wantsJSON(visit.request)) return refuseJSON(core, visit, reason);
+): Refusal {
+  const url = core.handshakeURL(returnPath(visit, asked));
 
-  const returnTo =
-    localPath(asked) ??
-    (visit.request.method === "GET"
-      ? `${visit.url.pathname}${visit.url.search}`
-      : referring(visit.request));
-
-  if (reason === "handshake_required")
-    return redirect(core.handshakeURL(returnTo), visit.out);
-
-  if (refreshable) {
-    const query = returnTo
-      ? `?${new URLSearchParams({ return_to: returnTo })}`
-      : "";
-
-    return redirect(`${core.basePath}/refresh${query}`, visit.out);
-  }
-
-  return redirect(core.loginURL({ returnTo }), visit.out);
+  return new Refusal({
+    kind: "handshake",
+    request: visit.request,
+    url,
+    cookies: visit.out,
+    answer: (asking) =>
+      wantsJSON(asking) ? handshakeJSON(core, visit) : redirect(url, visit.out),
+  });
 }
 
-export function refuseJSON(
-  core: Core,
-  visit: Visit,
-  reason: "handshake_required" | "login_required",
-): Response {
-  if (reason === "handshake_required") {
-    return json(
-      401,
-      { signed_in: false, error: reason, handshake_url: core.handshakePath },
-      visit.out,
-    );
-  }
-
+export function handshakeJSON(core: Core, visit: Visit): Response {
   return json(
     401,
     {
       signed_in: false,
-      error: reason,
-      login_url: core.loginURL({ returnTo: referring(visit.request) }),
+      error: "handshake_required",
+      handshake_url: core.handshakePath,
+    },
+    visit.out,
+  );
+}
+
+export function loginRefusal(
+  core: Core,
+  visit: Visit,
+  asked?: string,
+  refreshable = false,
+): Refusal {
+  const returnTo = returnPath(visit, asked);
+  const query = returnTo
+    ? `?${new URLSearchParams({ return_to: returnTo })}`
+    : "";
+  const url = refreshable
+    ? `${core.basePath}/refresh${query}`
+    : core.loginURL({ returnTo });
+
+  return new Refusal({
+    kind: "login",
+    request: visit.request,
+    url,
+    cookies: visit.out,
+    answer: (asking) =>
+      wantsJSON(asking)
+        ? loginJSON(core, visit, asking)
+        : redirect(url, visit.out),
+  });
+}
+
+export function loginJSON(
+  core: Core,
+  visit: Visit,
+  asking: Request = visit.request,
+): Response {
+  return json(
+    401,
+    {
+      signed_in: false,
+      error: "login_required",
+      login_url: core.loginURL({ returnTo: referring(asking) }),
     },
     visit.out,
   );
@@ -305,19 +327,60 @@ export function answer(
   );
 }
 
-function forbid(visit: Visit, error: ForbiddenError): Response {
-  return answer(visit, 403, error.code, error.description);
-}
-
 export function describe(error: Error): string {
   return error.message.replace(/^masks: (invalid token: )?/, "");
 }
 
-function quote(value: string): string {
-  return [...value]
-    .map((found) =>
-      unsafe(found, 0x1f) || found === '"' || found === "\\" ? " " : found,
-    )
-    .join("")
-    .trim();
+function forbidden(visit: Visit, error: ForbiddenError): Refusal {
+  return new Refusal({
+    kind: "forbidden",
+    request: visit.request,
+    error,
+    cookies: visit.out,
+    answer: (asking) =>
+      errorResponse(asking, 403, error.code, error.description, visit.out),
+  });
+}
+
+function challenged(
+  request: Request,
+  verifier: Verifier,
+  error: InvalidTokenError | ForbiddenError,
+): Refusal {
+  const { status, headers } = verifier.refusal(error);
+  const body =
+    error instanceof InvalidTokenError
+      ? { error: "invalid_token", error_description: describe(error) }
+      : { error: error.code, error_description: error.description };
+
+  return new Refusal({
+    kind: error instanceof InvalidTokenError ? "invalid_token" : "forbidden",
+    request,
+    error,
+    cookies: [],
+    answer: () => {
+      const held = headersWith([], {
+        "content-type": "application/json",
+        "cache-control": "no-store",
+      });
+
+      for (const [name, values] of Object.entries(headers)) {
+        for (const value of values) held.append(name, value);
+      }
+
+      return new Response(JSON.stringify(body), { status, headers: held });
+    },
+  });
+}
+
+function returnPath(
+  visit: Visit,
+  asked: string | undefined,
+): string | undefined {
+  return (
+    localPath(asked) ??
+    (visit.request.method === "GET"
+      ? `${visit.url.pathname}${visit.url.search}`
+      : referring(visit.request))
+  );
 }

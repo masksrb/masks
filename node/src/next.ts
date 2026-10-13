@@ -61,9 +61,6 @@ export function masksNext(options: MasksNextOptions = {}): MasksNext {
         .join("; "),
     );
 
-    forwarded.set("accept", "text/html");
-    forwarded.delete("x-requested-with");
-
     return new Request(new URL(path, `https://${host}`), {
       headers: forwarded,
     });
@@ -85,14 +82,11 @@ export function masksNext(options: MasksNextOptions = {}): MasksNext {
         refresh: false,
       });
 
-      if (!outcome.response) return outcome.masked;
-
-      const location = outcome.response.headers.get("location");
-
-      if (location) redirect(location);
+      if (!outcome.refusal) return outcome.masked;
+      if (outcome.refusal.url) redirect(outcome.refusal.url);
 
       throw (
-        outcome.error ??
+        outcome.refusal.error ??
         new ForbiddenError("insufficient_scope", "this request is refused")
       );
     },
@@ -104,7 +98,7 @@ export function masksNext(options: MasksNextOptions = {}): MasksNext {
       return async (request: NextRequest, context: C) => {
         const outcome = await masks.guard(request, ...privileges);
 
-        if (outcome.response) return outcome.response;
+        if (outcome.refusal) return outcome.refusal.toResponse(request);
 
         const answer = await handler(request, {
           ...(context ?? ({} as C)),
@@ -137,7 +131,8 @@ export function masksNext(options: MasksNextOptions = {}): MasksNext {
       if (guarded) {
         const outcome = await masks.guard(request);
 
-        if (outcome.response) return absolute(outcome.response, url);
+        if (outcome.refusal)
+          return absolute(outcome.refusal.toResponse(request), url);
 
         written = outcome.cookies;
       } else {

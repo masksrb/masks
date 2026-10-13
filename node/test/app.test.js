@@ -525,7 +525,7 @@ test("a privilege sends the person through masks once, then refuses", async () =
   const request = () => held.browser.request("/settings?tab=2");
   const first = await held.masks.require(request(), "admin");
 
-  const login = first.response.headers.get("location");
+  const login = first.refusal.toResponse().headers.get("location");
   assert.equal(login, "/auth?return_to=%2Fsettings%3Ftab%3D2&privilege=admin");
 
   const started = await held.browser.fetch(login);
@@ -543,19 +543,24 @@ test("a privilege sends the person through masks once, then refuses", async () =
   await held.browser.fetch(`${back.pathname}${back.search}`);
 
   const second = await held.masks.require(request(), "admin");
-  assert.equal(second.response.status, 403);
-  assert.match(await second.response.text(), /insufficient_scope/);
+  assert.equal(second.refusal.toResponse().status, 403);
+  assert.match(await second.refusal.toResponse().text(), /insufficient_scope/);
 
   const fetched = await held.masks.require(
     held.browser.request("/settings", { headers: json }),
     "billing",
   );
-  assert.equal(fetched.response.status, 403);
-  assert.equal((await fetched.response.json()).error, "insufficient_role");
+  assert.equal(fetched.refusal.toResponse().status, 403);
+  assert.equal(
+    (await fetched.refusal.toResponse().json()).error,
+    "insufficient_role",
+  );
 
   const elsewhere = await held.masks.require(request(), "globex");
   assert.equal(
-    (await elsewhere.response.text()).startsWith("insufficient_organization"),
+    (await elsewhere.refusal.toResponse().text()).startsWith(
+      "insufficient_organization",
+    ),
     true,
   );
 
@@ -581,9 +586,9 @@ test("a JSON request for a missing privilege gets 403 with the login URL", async
     }),
     "admin",
   );
-  const body = await answer.response.json();
+  const body = await answer.refusal.toResponse().json();
 
-  assert.equal(answer.response.status, 403);
+  assert.equal(answer.refusal.toResponse().status, 403);
   assert.equal(body.error, "privilege_required");
   assert.deepEqual(body.privileges, ["admin"]);
   assert.equal(
@@ -596,14 +601,56 @@ test("a JSON request for a missing privilege gets 403 with the login URL", async
     signedOut.request("/api/things", { headers: json }),
   );
 
-  assert.equal(refused.response.status, 401);
-  assert.equal((await refused.response.json()).error, "login_required");
+  assert.equal(refused.refusal.toResponse().status, 401);
+  assert.equal(
+    (await refused.refusal.toResponse().json()).error,
+    "login_required",
+  );
 
   const page = await held.masks.require(signedOut.request("/things"));
   assert.equal(
-    page.response.headers.get("location"),
+    page.refusal.toResponse().headers.get("location"),
     "/auth?return_to=%2Fthings",
   );
+});
+
+test("a refusal names its kind and where a browser goes, whatever the request accepts", async () => {
+  const held = await setup(
+    { masks: { privileges: { admin: ["catalog:admin"] } } },
+    closers,
+  );
+  const signedOut = await held.masks.require(
+    held.browser.request("/reports", { headers: json }),
+  );
+
+  assert.equal(signedOut.refusal.kind, "login");
+  assert.equal(signedOut.refusal.url, "/auth?return_to=%2Freports");
+  assert.equal(signedOut.refusal.toResponse().status, 401);
+  assert.equal(
+    signedOut.refusal
+      .toResponse(held.browser.request("/reports"))
+      .headers.get("location"),
+    "/auth?return_to=%2Freports",
+  );
+
+  await signIn(held);
+
+  const stepUp = await held.masks.require(
+    held.browser.request("/admin", { headers: json }),
+    "admin",
+  );
+
+  assert.equal(stepUp.refusal.kind, "step_up");
+  assert.equal(stepUp.refusal.url, "/auth?return_to=%2Fadmin&privilege=admin");
+  assert.equal(stepUp.refusal.toResponse().status, 403);
+
+  const unconnected = await setup({ connected: false }, closers);
+  const handshake = await unconnected.masks.require(
+    unconnected.browser.request("/reports", { headers: json }),
+  );
+
+  assert.equal(handshake.refusal.kind, "handshake");
+  assert.equal(handshake.refusal.url, "/auth/handshake?return_to=%2Freports");
 });
 
 test("an API checks bearer tokens by scope, role, and organization", async () => {
@@ -631,18 +678,21 @@ test("an API checks bearer tokens by scope, role, and organization", async () =>
   assert.ok(ok.masked.permits("catalog:read"));
 
   const none = await masks.protect(call(), "read");
-  assert.equal(none.response.status, 401);
+  assert.equal(none.refusal.kind, "invalid_token");
+  assert.equal(none.refusal.toResponse().status, 401);
   assert.match(
-    none.response.headers.get("www-authenticate"),
+    none.refusal.toResponse().headers.get("www-authenticate"),
     new RegExp(
       `resource_metadata="${APP}/.well-known/oauth-protected-resource"`,
     ),
   );
 
   const role = await masks.protect(call(`Bearer ${token}`), "owner");
-  assert.equal(role.response.status, 403);
+  assert.equal(role.refusal.kind, "forbidden");
+  assert.equal(role.refusal.error.code, "insufficient_role");
+  assert.equal(role.refusal.toResponse().status, 403);
   assert.match(
-    role.response.headers.get("www-authenticate"),
+    role.refusal.toResponse().headers.get("www-authenticate"),
     /insufficient_role/,
   );
 
@@ -650,17 +700,23 @@ test("an API checks bearer tokens by scope, role, and organization", async () =>
     aud: APP,
   });
   const scope = await masks.protect(call(`Bearer ${narrow}`), "read");
-  assert.equal(scope.response.status, 403);
+  assert.equal(scope.refusal.toResponse().status, 403);
   assert.match(
-    scope.response.headers.get("www-authenticate"),
+    scope.refusal.toResponse().headers.get("www-authenticate"),
     /error="insufficient_scope".*scope="catalog:read"/,
+  );
+  assert.match(
+    scope.refusal.toResponse().headers.get("www-authenticate"),
+    /DPoP error="insufficient_scope".*resource_metadata=.*algs="ES256/,
   );
 
   const elsewhere = await fake.accessToken("ada", "catalog:read", undefined, {
     aud: "https://other.example",
   });
   assert.equal(
-    (await masks.protect(call(`Bearer ${elsewhere}`), "read")).response.status,
+    (
+      await masks.protect(call(`Bearer ${elsewhere}`), "read")
+    ).refusal.toResponse().status,
     401,
   );
 
@@ -690,8 +746,11 @@ test("an API checks bearer tokens by scope, role, and organization", async () =>
     credentials: memoryCredentials(),
   });
   const unavailable = await broken.protect(call(`Bearer ${token}`));
-  assert.equal(unavailable.response.status, 503);
-  assert.equal(unavailable.response.headers.get("www-authenticate"), null);
+  assert.equal(unavailable.refusal.toResponse().status, 503);
+  assert.equal(
+    unavailable.refusal.toResponse().headers.get("www-authenticate"),
+    null,
+  );
 });
 
 test("guard reads a bearer token when one is sent and the session otherwise", async () => {
@@ -704,7 +763,7 @@ test("guard reads a bearer token when one is sent and the session otherwise", as
   const byToken = await held.masks.guard(
     new Request(`${APP}/x`, { headers: { authorization: "Bearer nonsense" } }),
   );
-  assert.equal(byToken.response.status, 401);
+  assert.equal(byToken.refusal.toResponse().status, 401);
 });
 
 test("the avatar comes through this app with the person's token", async () => {
@@ -1019,9 +1078,9 @@ test("a browser on an unconnected app is sent to connect it, and an API client i
     held.browser.request("/dashboard", { headers: { accept: "text/html" } }),
   );
 
-  assert.equal(page.response.status, 302);
+  assert.equal(page.refusal.toResponse().status, 302);
   assert.equal(
-    page.response.headers.get("location"),
+    page.refusal.toResponse().headers.get("location"),
     "/auth/handshake?return_to=%2Fdashboard",
   );
 
@@ -1031,7 +1090,7 @@ test("a browser on an unconnected app is sent to connect it, and an API client i
     }),
   );
 
-  assert.equal(api.response.status, 401);
+  assert.equal(api.refusal.toResponse().status, 401);
 });
 
 test("the first sign-in on an unconnected app comes back to its page after the handshake", async () => {

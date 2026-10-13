@@ -95,7 +95,7 @@ the response.
 | `masks.handle(request)` | Answers a masks route, or returns `undefined` for any other path. |
 | `masks.masked(request)` | The person, refreshing the session first, and the `cookies` to set. |
 | `masks.peek(request)` | The person, without refreshing or setting anything. |
-| `masks.require(request, ...privileges)` | The person and `cookies`, or the `response` that sends them to sign in or refuses them. |
+| `masks.require(request, ...privileges)` | The person and `cookies`, or a [`refusal`](#refusals). |
 | `masks.protect(request, ...privileges)` | The same, for an access token. |
 | `masks.guard(request, ...privileges)` | `protect` when the request carries an `Authorization` header, or carries no session and wants JSON, and `require` otherwise. |
 | `masks.metadata(request)` | The protected resource metadata. |
@@ -108,6 +108,23 @@ the response.
 | `masks.delegations(request)` | `Delegations` for the app's client. Needs `delegations`. |
 | `masks.startDelegation(request, provider, { prompt, maxAge })` | Sends a signed-in person to connect a provider. |
 | `masks.finishDelegation(request)` | The `connection` and its `secret`, and the `cookies` to set. |
+
+### Refusals
+
+A `refusal` says why the request was refused and builds the answer:
+
+| Property or method | |
+| --- | --- |
+| `kind` | `handshake`, `login`, `step_up`, `forbidden`, `invalid_token`, or `unavailable`. |
+| `url` | Where to send a browser: the handshake, a sign-in, or a sign-in that asks for a privilege. Only `handshake`, `login`, and `step_up` have one. |
+| `error` | The `ForbiddenError` or `InvalidTokenError` behind a `forbidden` or `invalid_token` refusal. |
+| `toResponse(request)` | The answer for `request`, or for the request that was checked. A browser is sent to `url`, and a request that wants JSON gets `401` or `403` with the error. A refused token gets the `Bearer` and `DPoP` challenges. |
+
+```ts
+const outcome = await masks.require(request, "admin");
+
+if (outcome.refusal) return outcome.refusal.toResponse();
+```
 
 ## Masked
 

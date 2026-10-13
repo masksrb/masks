@@ -6,7 +6,7 @@ import type { IdTokenClaims, LogoutToken } from "../idtoken.js";
 import { random } from "../key.js";
 import { avatarResponse } from "./avatar.js";
 import type { Core } from "./core.js";
-import { answer, check, describe, refuseJSON } from "./guard.js";
+import { answer, check, describe, handshakeJSON, loginJSON } from "./guard.js";
 import { acceptLogout } from "./logouts.js";
 import { unique } from "./privileges.js";
 import {
@@ -252,12 +252,11 @@ async function refreshRoute(core: Core, visit: Visit): Promise<Response> {
 }
 
 async function sessionRoute(core: Core, visit: Visit): Promise<Response> {
-  if (!(await core.configured(visit)))
-    return refuseJSON(core, visit, "handshake_required");
+  if (!(await core.configured(visit))) return handshakeJSON(core, visit);
 
   const masked = core.masked(visit, await core.current(visit));
 
-  if (!masked.signedIn) return refuseJSON(core, visit, "login_required");
+  if (!masked.signedIn) return loginJSON(core, visit);
 
   return json(200, masked.toJSON(), visit.out);
 }
@@ -545,7 +544,7 @@ async function manager(
       returnTo: core.handshakePath,
     });
 
-    return outcome.response;
+    return outcome.refusal?.toResponse();
   }
 
   const masked = core.masked(visit, await core.current(visit));

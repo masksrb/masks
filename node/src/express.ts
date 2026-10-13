@@ -77,8 +77,8 @@ export function requireAuth(...privileges: string[]): RequestHandler {
 
       const outcome = await held.masks.guard(await held.web, ...privileges);
 
-      if (outcome.response)
-        return await sendWebResponse(outcome.response, response);
+      if (outcome.refusal)
+        return await sendWebResponse(outcome.refusal.toResponse(), response);
 
       request.masked = outcome.masked;
       setCookies(response, outcome.cookies);

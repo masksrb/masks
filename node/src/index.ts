@@ -13,6 +13,8 @@ export {
   Masks,
   type MasksOptions,
   type Outcome,
+  type Refusal,
+  type RefusalKind,
   type SessionData,
 } from "./app/masks.js";
 export {

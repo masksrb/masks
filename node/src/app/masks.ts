@@ -7,7 +7,7 @@ import {
 } from "../delegations.js";
 import { MasksError } from "../errors.js";
 import { Core, type MasksOptions } from "./core.js";
-import { check, guard, type Outcome, protect, refuse } from "./guard.js";
+import { check, guard, loginRefusal, type Outcome, protect } from "./guard.js";
 import type { Masked } from "./masked.js";
 import type { Privileges } from "./privileges.js";
 import { redirect } from "./responses.js";
@@ -15,7 +15,7 @@ import { handle } from "./routes.js";
 import { claim, FLOW_LIFETIME, keep, now } from "./session.js";
 
 export { DEFAULT_SCOPE, type MasksOptions } from "./core.js";
-export type { Outcome } from "./guard.js";
+export type { Outcome, Refusal, RefusalKind } from "./guard.js";
 export type { HeldTokens, SessionData } from "./session.js";
 
 export interface Connection {
@@ -192,7 +192,7 @@ export class Masks {
     const masked = core.masked(visit, await core.current(visit));
 
     if (!masked.signedIn || !masked.subject) {
-      return refuse(core, visit, "login_required");
+      return loginRefusal(core, visit).toResponse();
     }
 
     const started = await (await this.delegations(request)).start({
