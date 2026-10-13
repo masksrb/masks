@@ -18,4 +18,5 @@
 
 ## Testing
 
-- Nothing has run against a live masks. Every test uses a fake issuer.
+- FastAPI has run against a live masks: the handshake, Reconnect, sign-in, a privilege step-up, a token at the API, a shared refresh, and signing out everywhere, with cookie and async server sessions. Back-channel logout has not, since masks in Docker cannot reach the app on the host.
+- Django and Flask have not run against a live masks.
