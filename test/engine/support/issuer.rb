@@ -31,7 +31,7 @@ class TestIssuer
   end
 
   attr_reader :port, :registrations, :deletions, :revocations, :refreshes
-  attr_accessor :id_tokens, :forgotten, :role, :backchannel, :refresh_outage, :refresh_delay
+  attr_accessor :id_tokens, :forgotten, :role, :backchannel, :refresh_outage, :refresh_delay, :padding
 
   def initialize
     @keys = {}
@@ -44,6 +44,7 @@ class TestIssuer
     @backchannel = true
     @refresh_outage = false
     @refresh_delay = 0
+    @padding = 0
     @id_tokens = :normal
     @forgotten = false
     @role = "member"
@@ -269,7 +270,7 @@ class TestIssuer
       @organization = pending[:organization]
 
       {
-        "access_token" => mint(subdomain: subdomain, scopes: pending[:scopes], audience: audience),
+        "access_token" => mint(subdomain: subdomain, scopes: pending[:scopes], audience: audience, **padded),
         "id_token" => id_token_for(subdomain, pending),
         "refresh_token" => SecureRandom.urlsafe_base64(24),
         "token_type" => "Bearer",
@@ -291,6 +292,10 @@ class TestIssuer
            nonce: nonce, sid: "session-1", name: "Test Owner",
            preferred_username: "owner", email: "owner@example.invalid",
            email_verified: true, "masks:avatars" => avatars(subdomain), "org" => organization_claim)
+    end
+
+    def padded
+      padding.positive? ? { "padding" => SecureRandom.alphanumeric(padding) } : {}
     end
 
     def refreshed(subdomain, form)

@@ -40,7 +40,7 @@ module Masks
       def masks_tokens
         return @masks_tokens if defined?(@masks_tokens)
 
-        held = session[masks_config.session_key]
+        held = masks_held
 
         if held.present? && masks_departed?(held)
           masks_forget
@@ -60,13 +60,18 @@ module Masks
         held["identity"] = identity&.slice(*IDENTITY) || masks_held["identity"]
         held["signed_in_at"] = masks_held["signed_in_at"] || Masks::Rails::Cache.now
 
-        session[masks_config.session_key] = held.compact
+        masks_session_cookies.write(held.compact)
+        @masks_held = held.compact
         @masks_tokens = tokens
         @masked = nil
       end
 
       def masks_held
-        session[masks_config.session_key] || {}
+        @masks_held ||= masks_session_cookies.read || {}
+      end
+
+      def masks_session_cookies
+        Masks::Rails::SessionCookies.new(request, masks_config.session_key)
       end
 
       IDENTITY = [
@@ -82,7 +87,8 @@ module Masks
       end
 
       def masks_forget
-        session.delete(masks_config.session_key)
+        masks_session_cookies.clear
+        @masks_held = {}
         @masks_tokens = nil
         @masked = nil
       end

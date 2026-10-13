@@ -66,8 +66,9 @@ end
 `masked` is everything about the signed-in request in one object: `subject`, `name`, `nickname`,
 `email`, `picture`, `avatars`, `tenant`, `organization`, `organizations`, `role?`, `scopes`,
 `privileges`, `privilege?`, `access_token`, and `signed_in?`, with `masked["claim"]` for any other
-claim. In a view it is the same helper. Tokens live in the encrypted Rails session and never reach
-JavaScript.
+claim. In a view it is the same helper. Tokens live in encrypted, HttpOnly cookies and never reach
+JavaScript. A large session is split across up to eight cookies, and the Rails session holds only
+a random value that ties them to it, so `reset_session` signs the person out of masks too.
 
 ### Privileges
 
@@ -234,7 +235,7 @@ a subdomain-per-tenant host needs.
 | `parent_controller` | what the engine's pages inherit, for your layout |
 | `authenticate_everything` | include `Authentication` on every controller |
 | `sign_out_of_issuer` | make every sign-out an RP-initiated logout |
-| `session_key` | the session key the tokens live under |
+| `session_key` | the name of the cookies that hold the tokens, and of the session key that ties them to the Rails session |
 | `delegates` / `delegation_redirect_uri` | ask for delegation in the handshake, and where connecting an account returns |
 | `cache` | where refreshes, logouts, and DPoP proofs are remembered, `Rails.cache` by default |
 | `logged_out` | a lambda that hears each back-channel logout |

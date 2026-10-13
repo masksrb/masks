@@ -632,6 +632,6 @@ class SessionTest < EngineIntegrationTest
     end
 
     def session_payload
-      request.session["masks"] || {}
+      held_session
     end
 end

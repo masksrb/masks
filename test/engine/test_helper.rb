@@ -68,6 +68,7 @@ class EngineIntegrationTest < ActionDispatch::IntegrationTest
     issuer.backchannel = true
     issuer.refresh_outage = false
     issuer.refresh_delay = 0
+    issuer.padding = 0
     issuer.refreshes.clear
     configure!
   end
@@ -86,6 +87,13 @@ class EngineIntegrationTest < ActionDispatch::IntegrationTest
 
   def json
     JSON.parse(response.body)
+  end
+
+  def held_session(from = self)
+    named = (0...Masks::Rails::SessionCookies::PIECES).map { |index| index.zero? ? "masks" : "masks-#{index}" }
+    value = named.map { |name| from.cookies[name] }.take_while(&:present?).join
+
+    Masks::Rails::SessionCookies.open(value, from.request.session["masks"]) || {}
   end
 
   def origin

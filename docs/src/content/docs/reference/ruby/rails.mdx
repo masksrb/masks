@@ -160,6 +160,12 @@ prose is the RDoc in the source.
 #masks_session()
 ```
 
+### #masks_session_cookies
+
+```ruby
+#masks_session_cookies()
+```
+
 ### #masks_signed_in?
 
 ```ruby
@@ -759,3 +765,68 @@ Inherits `Rails::Engine`.
 ```ruby
 #to_h()
 ```
+
+## Masks::Rails::SessionCookies
+
+| Constant | Value |
+| --- | --- |
+| `VERSION` | `"v1".freeze` |
+| `PIECE` | `3800` |
+| `PIECES` | `8` |
+| `CIPHER` | `"aes-256-gcm".freeze` |
+| `NONCE` | `12` |
+| `TAG` | `16` |
+| `PURPOSE` | `"masks session cookie".freeze` |
+| `UNPACKED` | `PIECE * PIECES * 8` |
+
+### ::key
+
+```ruby
+::key()
+```
+
+### ::new
+
+```ruby
+::new(request, key)
+```
+
+### ::open
+
+```ruby
+::open(value, bound)
+```
+
+### ::seal
+
+```ruby
+::seal(held, bound)
+```
+
+### #clear
+
+```ruby
+#clear()
+```
+
+### #name
+
+```ruby
+#name(index)
+```
+
+### #read
+
+```ruby
+#read()
+```
+
+### #write
+
+```ruby
+#write(held)
+```
+
+## Masks::Rails::SessionCookies::Overflow
+
+Inherits `Masks::Client::Error`.

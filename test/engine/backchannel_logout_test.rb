@@ -126,7 +126,7 @@ class BackchannelLogoutTest < EngineIntegrationTest
     get "/auth/session", headers: { "HOST" => HOST, "HTTP_ACCEPT" => "application/json" }
 
     assert_response :unauthorized
-    assert_nil request.session["masks"]
+    assert_empty held_session
   end
 
   test "a logout that names only the person signs out every session of theirs" do

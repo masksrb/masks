@@ -101,6 +101,14 @@ end
 
 To include `Authentication` in every controller, set `config.authenticate_everything = true`.
 
+The engine keeps the tokens and the person's claims in their own cookies:
+
+- The cookies are encrypted with a key made from `secret_key_base`, and are `HttpOnly` and
+  `SameSite=Lax`. Over https their name starts with `__Host-`.
+- A large session, such as one with a large access token, is split across up to eight cookies.
+- The Rails session holds only a random value that ties the cookies to it. When the app calls
+  `reset_session`, the person is signed out of masks too.
+
 | Method | |
 | --- | --- |
 | `masked!` | Sends a signed-out visitor to `masks_login_url` and stops the request. See [privileges](#privileges) for more. |

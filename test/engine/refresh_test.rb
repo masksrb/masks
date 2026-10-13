@@ -1,17 +1,14 @@
 require_relative "test_helper"
 
 class RefreshTest < EngineIntegrationTest
-  COOKIE = "_masks_rails_test".freeze
-
   def json_headers
     host.merge("HTTP_ACCEPT" => "application/json")
   end
 
   test "two processes holding one expired session refresh it once and keep the same tokens" do
     sign_in!
-    held = cookies[COOKIE]
     other = open_session
-    other.cookies[COOKIE] = held
+    cookies.to_hash.each { |name, value| other.cookies[name] = value }
 
     travel 2.hours do
       get "/auth/session", headers: json_headers
@@ -24,8 +21,9 @@ class RefreshTest < EngineIntegrationTest
     end
 
     assert_equal 1, issuer.refreshes.size
-    assert_equal request.session["masks"]["access_token"], other.request.session["masks"]["access_token"]
-    assert_equal request.session["masks"]["refresh_token"], other.request.session["masks"]["refresh_token"]
+    assert held_session(other)["access_token"].present?
+    assert_equal held_session["access_token"], held_session(other)["access_token"]
+    assert_equal held_session["refresh_token"], held_session(other)["refresh_token"]
   end
 
   test "a refresh masks cannot answer keeps the session, so a later request tries again" do
@@ -36,7 +34,7 @@ class RefreshTest < EngineIntegrationTest
       get "/auth/session", headers: json_headers
 
       assert_response :unauthorized
-      assert request.session["masks"].present?
+      assert held_session.present?
 
       issuer.refresh_outage = false
 
@@ -50,14 +48,14 @@ class RefreshTest < EngineIntegrationTest
 
   test "a refreshed session keeps when it signed in, so a later logout still reaches it" do
     sign_in!
-    signed_in_at = request.session["masks"]["signed_in_at"]
+    signed_in_at = held_session["signed_in_at"]
 
     assert_kind_of Integer, signed_in_at
 
     travel 2.hours do
       get "/auth/session", headers: json_headers
 
-      assert_equal signed_in_at, request.session["masks"]["signed_in_at"]
+      assert_equal signed_in_at, held_session["signed_in_at"]
     end
   end
 end
