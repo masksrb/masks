@@ -7,6 +7,7 @@ module Masks
         app.config.masks = Configuration.defaults
       end
 
+      middleware.use BrowserAccess
       middleware.use Tenancy::Middleware
 
       initializer "masks_server.forwarded_app" do |app|

@@ -124,6 +124,11 @@ masks keeps a copy of the document and fetches it again later:
 A manager can archive the client to refuse it. Approving it keeps its redirect URIs, scopes, and
 keys. After that, later versions of the document change only its name, links, and logo.
 
+A page on another site can read discovery, the signing keys, and the answers from `/token`,
+`/revoke`, `/userinfo`, and `/avatars`. masks answers these with `Access-Control-Allow-Origin: *`
+and sends no cookies with them, so a site with no server can sign people in. See
+[static sites](/reference/javascript/static/).
+
 Discovery is the document at `/.well-known/openid-configuration` that tells apps what masks supports.
 It sets `client_id_metadata_document_supported` to `true` while the tenant allows dynamic
 registration. With registration off, masks fetches no documents.

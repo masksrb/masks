@@ -105,6 +105,7 @@ end
 
 require_relative "server/version"
 require_relative "server/configuration"
+require_relative "server/browser_access"
 require_relative "server/isolation"
 require_relative "server/tenant_key_provider"
 require_relative "server/forwarding"
