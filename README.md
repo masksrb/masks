@@ -18,9 +18,7 @@
 
 ## Run it
 
-```sh
-docker pull ghcr.io/masksrb/masks:latest
-```
+The image is `ghcr.io/masksrb/masks`.
 
 - [Host it yourself](https://masks.pages.dev/guides/self-hosting/) with the image, Postgres, and a reverse proxy.
 - [Mount it inside a Rails app](https://masks.pages.dev/reference/ruby/engine-mode/) with the `masks-server` gem.
@@ -40,7 +38,7 @@ docker pull ghcr.io/masksrb/masks:latest
 
 ## Contribute
 
-You need Ruby and a container runtime with the `docker compose` command, such as Docker Desktop, OrbStack, Colima, or Podman.
+You need Ruby and a container runtime that provides the `docker compose` command, such as Podman or Colima.
 
 - `./dev` runs the provider at `http://masks.localhost:12345` and the docs at `http://masks.localhost:12346`.
 - `./dev test` runs every suite in containers.
