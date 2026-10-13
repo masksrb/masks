@@ -267,6 +267,8 @@ export class Masks {
   }
 
   async handle(request: Request): Promise<Response | undefined> {
+    if (!this.owns(new URL(request.url).pathname)) return undefined;
+
     const visit = await this.#visit(request);
     const path = visit.url.pathname;
 

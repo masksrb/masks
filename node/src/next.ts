@@ -119,10 +119,7 @@ export function masksNext(options: Masks | MasksOptions = {}): MasksNext {
 
         forwarded.set(PATH_HEADER, `${url.pathname}${url.search}`);
 
-        if (
-          url.pathname === masks.basePath ||
-          url.pathname.startsWith(`${masks.basePath}/`)
-        ) {
+        if (masks.owns(url.pathname)) {
           return NextResponse.next({ request: { headers: forwarded } });
         }
 

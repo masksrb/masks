@@ -3,7 +3,6 @@
 ## The app layer
 
 - `guard()` builds two Visits. Let `check()` take the Visit `guard()` already has.
-- `handle()` resolves the issuer before it checks the path. Return early when `!owns(path)`, and add a public `mounted(pathname)` for `owns`, `handle`, and the Next proxy. Hono should filter the same way. The Next proxy treats the resource metadata path as a page.
 - `Outcome` is a finished `Response`, so the Next adapter forces `accept: text/html` and reads `Location`. Give a refusal a kind (`login`, `step_up`, `forbidden`, `handshake`), a URL, and `toResponse(request)`.
 - The avatar proxy sends a hand-built `authorization` header. Use `signedFetch`, so a DPoP-bound token sends a proof. Express buffers whole answers, so stream them with `Readable.fromWeb` and `stream.pipeline`. Replace `avatars: { bytes }` with `avatarBytes`.
 - The app layer writes its own 403 challenge. Use `Verifier.challengeHeaders` and `refusal`, which now build both challenges for 401 and 403.

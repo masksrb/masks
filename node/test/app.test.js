@@ -901,3 +901,19 @@ test("the first sign-in on an unconnected app comes back to its page after the h
     "/auth?return_to=%2Fdashboard",
   );
 });
+
+test("a path masks does not own is passed on without resolving the issuer", async () => {
+  let resolved = 0;
+  const masks = new Masks({
+    issuer: () => {
+      resolved += 1;
+      return "http://127.0.0.1:1";
+    },
+    resource: APP,
+    secret: SECRET,
+    credentials: memoryCredentials(),
+  });
+
+  assert.equal(await masks.handle(new Request(`${APP}/catalog`)), undefined);
+  assert.equal(resolved, 0);
+});
