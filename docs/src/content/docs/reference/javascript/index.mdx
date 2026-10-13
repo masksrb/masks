@@ -152,7 +152,9 @@ can set it. A session too large for one cookie is split across several. It lasts
 sign-in, or `maxAge` seconds.
 
 The browser cannot read the tokens in the sealed cookie, and `/auth/session` leaves them out. The
-session is replaced at every sign-in.
+session is replaced at every sign-in. It records the issuer that signed the person in, and the app
+ignores it under any other issuer, so an app that serves several tenants from one origin keeps their
+sessions apart.
 
 To keep sessions on the server, set `sessions` to a `SessionStore`. The cookie then holds only the
 session's id, sealed, and a sign-in deletes the old id.

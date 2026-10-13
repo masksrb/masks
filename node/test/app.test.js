@@ -7,6 +7,7 @@ import {
   memoryStore,
 } from "../dist/index.js";
 import { APP, Browser, SECRET, setup, signIn } from "./browser.js";
+import { Fake } from "./fake.js";
 
 const closers = [];
 
@@ -836,4 +837,27 @@ test("a credential store that cannot write refuses the handshake before masks re
   assert.match(await answer.text(), /handshake_unsaved/);
   assert.equal(held.fake.clients.size, before);
   assert.equal(held.fake.initial.size, 1);
+});
+
+test("a session another issuer signed in is not honored", async () => {
+  const held = await setup({}, closers);
+  await signIn(held);
+
+  const json = { accept: "application/json" };
+  const here = await held.browser.fetch("/auth/session", { headers: json });
+  assert.equal((await here.json()).signed_in, true);
+
+  const other = await Fake.start();
+  closers.push(other.close);
+  const elsewhere = new Masks({
+    issuer: other.url,
+    resource: APP,
+    secret: SECRET,
+    credentials: held.credentials,
+  });
+  const answer = await elsewhere.handle(
+    held.browser.request("/auth/session", { headers: json }),
+  );
+
+  assert.equal((await answer.json()).signed_in, false);
 });

@@ -30,10 +30,6 @@
 - `masksAuth` and `Masks` share the logout and scope helpers, but each still has its own handshake routes, manager check, and issuer cache. Move the connection lifecycle into one module both use.
 - The live run used Next.js 16.3 and next-auth 5.0.0-beta.32 on Node 26. Other versions have not run.
 
-## Security
-
-- Store the issuer in the session and forget a session from another issuer, as go/web does. This matters when one origin serves several issuers.
-
 ## Testing
 
 - `auth()` and `requireAuth()` have not run inside a real Next.js request.

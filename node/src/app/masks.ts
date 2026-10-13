@@ -90,6 +90,7 @@ export interface HeldTokens {
 }
 
 export interface SessionData {
+  issuer?: string;
   tokens?: HeldTokens;
   identity?: Record<string, unknown>;
   signedInAt?: number;
@@ -799,6 +800,7 @@ export class Masks {
     await this.#writeSession(
       visit,
       {
+        issuer: visit.issuerURL,
         tokens: held(signedIn.token),
         identity,
         signedInAt,
@@ -1496,12 +1498,13 @@ export class Masks {
     if (!data || (data.expiresAt ?? 0) < now()) return undefined;
 
     if (
-      await loggedOut(
+      data.issuer !== visit.issuerURL ||
+      (await loggedOut(
         this.#logouts,
         visit.issuerURL,
         data.identity ?? {},
         data.signedInAt ?? 0,
-      )
+      ))
     ) {
       visit.session = { id: sealed.id, data };
       await this.#forget(visit);
