@@ -80,6 +80,7 @@ module Masks
                                 headers: { "CONTENT_TYPE" => "application/json" }
 
         assert_response :unauthorized
+        assert_equal %(Bearer realm="#{origin_for(@tenant)}"), response.headers["WWW-Authenticate"]
       end
 
       test "a token without a manage scope is refused with insufficient_scope, naming the scopes" do

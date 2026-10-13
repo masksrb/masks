@@ -162,7 +162,14 @@ module Masks
         get "/userinfo"
 
         assert_response :unauthorized
-        assert_match "Bearer", response.headers["WWW-Authenticate"]
+        assert_equal %(Bearer realm="#{origin_for(@tenant)}"), response.headers["WWW-Authenticate"]
+      end
+
+      test "userinfo names the error when a token is unreadable" do
+        get "/userinfo", headers: { "HTTP_AUTHORIZATION" => "Bearer not-a-token" }
+
+        assert_response :unauthorized
+        assert_match 'error="invalid_token"', response.headers["WWW-Authenticate"]
       end
 
       test "userinfo refuses a token this tenant did not sign" do

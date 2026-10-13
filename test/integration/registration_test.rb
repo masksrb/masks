@@ -110,7 +110,16 @@ module Masks
         manage(:get, registered, token: SecureRandom.urlsafe_base64(48))
 
         assert_response :unauthorized
-        assert_match "Bearer", response.headers["WWW-Authenticate"]
+        assert_equal %(Bearer realm="#{origin_for(@tenant)}", error="invalid_token"), response.headers["WWW-Authenticate"]
+      end
+
+      test "a read that carries no registration token is asked for one, with no error code" do
+        registered = register
+
+        get "/register/#{registered['client_id']}"
+
+        assert_response :unauthorized
+        assert_equal %(Bearer realm="#{origin_for(@tenant)}"), response.headers["WWW-Authenticate"]
       end
 
       test "a registration token is refused against another tenant" do

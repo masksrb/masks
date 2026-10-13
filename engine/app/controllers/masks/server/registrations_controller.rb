@@ -133,6 +133,12 @@ module Masks
           }, status: :bad_request
         end
 
+        def ask_for_token
+          response.headers["WWW-Authenticate"] = %(Bearer realm="#{issuer.url}")
+
+          head :unauthorized
+        end
+
         def issued(client)
           client.metadata.merge(
             "client_secret" => client.secret,
@@ -155,7 +161,9 @@ module Masks
         end
 
         def unauthorized(description)
-          response.headers["WWW-Authenticate"] = %(Bearer error="invalid_token")
+          return ask_for_token if bearer.blank?
+
+          response.headers["WWW-Authenticate"] = %(Bearer realm="#{issuer.url}", error="invalid_token")
 
           render json: {
             "error" => "invalid_token",

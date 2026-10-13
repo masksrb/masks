@@ -19,7 +19,7 @@ module Masks
           answer = handler.call(request.env)
 
           return render_rack(answer) unless answer.first == 200
-          return refuse_token("a bearer token is required") if token.nil?
+          return ask_for_token if token.nil?
 
           yield token
         end
@@ -116,6 +116,12 @@ module Masks
           token unless token.nil? || token.bound?
         rescue Proof::Refused, Refused
           nil
+        end
+
+        def ask_for_token
+          response.headers["WWW-Authenticate"] = %(Bearer realm="#{issuer.url}")
+
+          head :unauthorized
         end
 
         def refuse_token(description)
