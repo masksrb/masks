@@ -96,7 +96,8 @@ through the browser. It registers the app for `Resource`, with `/auth/callback` 
 `/auth/logout/return` as the only address masks returns to after signing a person out. When the
 issuer supports back-channel logout, it also registers `/auth/logout/backchannel`.
 
-The app writes its credentials to `masks.json`, mode 600, and then starts a sign-in.
+The app writes its credentials to `masks.json`, mode 600, and then starts a sign-in. It reads the file
+again whenever it changes, so processes that share it see each other's handshake.
 A multi-tenant app implements `CredentialStore` instead, and its `Load`, `Save`, and `Forget` receive
 the request:
 

@@ -1303,3 +1303,44 @@ func TestTheNameCanBeChosenForEachRequest(t *testing.T) {
 		t.Fatalf("the name was %q", name)
 	}
 }
+
+func TestProcessesThatShareACredentialsFileSeeEachOthersHandshake(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "masks.json")
+	first, second := FileCredentials(path), FileCredentials(path)
+
+	if held, err := second.Load(nil); err != nil || held != nil {
+		t.Fatalf("an empty file loaded as %+v, %v", held, err)
+	}
+
+	if err := first.Save(nil, &Credentials{ClientID: "one", ClientSecret: "s1"}); err != nil {
+		t.Fatal(err)
+	}
+
+	if held, _ := second.Load(nil); held == nil || held.ClientID != "one" {
+		t.Fatalf("the other process did not see the handshake: %+v", held)
+	}
+
+	if err := first.Save(nil, &Credentials{ClientID: "two", ClientSecret: "s2"}); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := second.Forget(nil); err != nil {
+		t.Fatal(err)
+	}
+
+	if held, _ := first.Load(nil); held == nil || held.ClientID != "two" {
+		t.Fatal("a process forgot credentials it never held")
+	}
+
+	if held, _ := second.Load(nil); held == nil || held.ClientID != "two" {
+		t.Fatalf("the other process did not see the new handshake: %+v", held)
+	}
+
+	if err := second.Forget(nil); err != nil {
+		t.Fatal(err)
+	}
+
+	if held, _ := first.Load(nil); held != nil {
+		t.Fatalf("a disconnect left %+v behind", held)
+	}
+}

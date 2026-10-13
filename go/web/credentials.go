@@ -54,10 +54,11 @@ type WritableStore interface {
 }
 
 type fileCredentials struct {
-	path   string
-	lock   sync.Mutex
-	held   *Credentials
-	loaded bool
+	path string
+	lock sync.Mutex
+	held *Credentials
+	seen os.FileInfo
+	read bool
 }
 
 func FileCredentials(path string) CredentialStore {
@@ -68,15 +69,42 @@ func (f *fileCredentials) Load(*http.Request) (*Credentials, error) {
 	f.lock.Lock()
 	defer f.lock.Unlock()
 
-	if f.loaded {
+	return f.current()
+}
+
+func (f *fileCredentials) current() (*Credentials, error) {
+	info, err := os.Stat(f.path)
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return nil, err
+	}
+
+	if f.read && unchanged(f.seen, info) {
 		return f.held, nil
 	}
 
-	data, err := os.ReadFile(f.path)
+	held, err := readCredentials(f.path)
+	if err != nil {
+		return nil, err
+	}
+
+	f.held, f.seen, f.read = held, info, true
+
+	return held, nil
+}
+
+func unchanged(seen, info os.FileInfo) bool {
+	if seen == nil || info == nil {
+		return seen == nil && info == nil
+	}
+
+	return os.SameFile(seen, info) && seen.ModTime().Equal(info.ModTime()) && seen.Size() == info.Size()
+}
+
+func readCredentials(path string) (*Credentials, error) {
+	data, err := os.ReadFile(path)
 
 	switch {
 	case errors.Is(err, fs.ErrNotExist):
-		f.held, f.loaded = nil, true
 		return nil, nil
 	case err != nil:
 		return nil, err
@@ -85,11 +113,8 @@ func (f *fileCredentials) Load(*http.Request) (*Credentials, error) {
 	held := &Credentials{}
 
 	if err := json.Unmarshal(data, held); err != nil || held.ClientID == "" {
-		f.held, f.loaded = nil, true
 		return nil, nil
 	}
-
-	f.held, f.loaded = held, true
 
 	return held, nil
 }
@@ -147,7 +172,7 @@ func (f *fileCredentials) Save(_ *http.Request, held *Credentials) error {
 		return err
 	}
 
-	f.held, f.loaded = held, true
+	f.read = false
 
 	return nil
 }
@@ -156,11 +181,22 @@ func (f *fileCredentials) Forget(*http.Request) error {
 	f.lock.Lock()
 	defer f.lock.Unlock()
 
-	f.held, f.loaded = nil, true
+	known := f.held
+
+	held, err := f.current()
+	if err != nil {
+		return err
+	}
+
+	if held == nil || (known != nil && held.ClientID != known.ClientID) {
+		return nil
+	}
 
 	if err := os.Remove(f.path); err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return err
 	}
+
+	f.held, f.seen = nil, nil
 
 	return nil
 }
