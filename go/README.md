@@ -272,7 +272,8 @@ verifier.Replay = masks.ReplayStoreFunc(func(ctx context.Context, key string, ex
 
 An error from the store refuses the request with `masks.ErrReplayStore`, and
 the middleware answers `503`. A token that fails its checks answers `401`
-with a challenge.
+with a challenge that carries `invalid_token`. A request with no token
+answers `401` with a challenge that carries no error code.
 
 ## Redirects
 

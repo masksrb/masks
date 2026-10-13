@@ -140,7 +140,7 @@ func (c *Client) VerifyIDToken(ctx context.Context, raw string) (*Identity, erro
 	expected := jwt.Expected{Issuer: c.Issuer.URL, AnyAudience: jwt.Audience{c.ID}, Time: time.Now()}
 
 	if err := held.ValidateWithLeeway(expected, verifyLeeway); err != nil {
-		return nil, invalid("%v", err)
+		return nil, unverified(err)
 	}
 
 	if (len(held.Audience) > 1 || held.AuthorizedParty != "") && held.AuthorizedParty != c.ID {
@@ -153,7 +153,7 @@ func (c *Client) VerifyIDToken(ctx context.Context, raw string) (*Identity, erro
 func (i *Issuer) verified(ctx context.Context, raw string, types []string, into any) error {
 	parsed, err := jwt.ParseSigned(raw, tokenAlgorithms)
 	if err != nil {
-		return invalid("that token is not a signed JWT: %v", err)
+		return &InvalidTokenError{Description: "that token is not a signed JWT", cause: err}
 	}
 
 	if len(parsed.Headers) != 1 {
@@ -256,7 +256,7 @@ func (c *Client) VerifyLogoutToken(ctx context.Context, raw string) (*LogoutToke
 	expected := jwt.Expected{Issuer: c.Issuer.URL, AnyAudience: jwt.Audience{c.ID}, Time: time.Now()}
 
 	if err := held.ValidateWithLeeway(expected, time.Minute); err != nil {
-		return nil, invalid("%v", err)
+		return nil, unverified(err)
 	}
 
 	switch event, found := held.Events[BackchannelLogoutEvent]; {

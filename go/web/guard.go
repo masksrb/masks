@@ -249,7 +249,7 @@ func (a *App) requireToken(w http.ResponseWriter, r *http.Request, next http.Han
 			return
 		}
 
-		a.challenge(w, verifier, http.StatusUnauthorized, &Forbidden{Code: "invalid_token", Description: bad.Description})
+		a.challenge(w, verifier, http.StatusUnauthorized, &Forbidden{Code: bad.Code(), Description: bad.Description})
 
 		return
 	}
@@ -299,7 +299,12 @@ func (a *App) challenge(w http.ResponseWriter, verifier *masks.Verifier, status 
 		w.Header().Add("WWW-Authenticate", challenge)
 	}
 
-	writeJSON(w, status, map[string]string{"error": refused.Code, "error_description": refused.Description})
+	code := refused.Code
+	if code == "" {
+		code = "invalid_token"
+	}
+
+	writeJSON(w, status, map[string]string{"error": code, "error_description": refused.Description})
 }
 
 func (a *App) ResourceMetadata() http.Handler {

@@ -557,6 +557,16 @@ func TestAProtectedAPIChecksTheBearerToken(t *testing.T) {
 		}
 	}
 
+	response, _ = call("")
+	if challenge := response.Header.Get("WWW-Authenticate"); strings.Contains(challenge, "error") || !strings.Contains(challenge, `scope="catalog:read"`) {
+		t.Fatalf("a request with no token was given an error code: %s", challenge)
+	}
+
+	response, _ = call(elsewhere)
+	if challenge := response.Header.Get("WWW-Authenticate"); !strings.Contains(challenge, `error="invalid_token", error_description="that token was issued for another app"`) {
+		t.Fatalf("a token for another app was refused with %s", challenge)
+	}
+
 	metadata := map[string]any{}
 	response, body = h.visit(http.MethodGet, "/.well-known/oauth-protected-resource")
 	_ = json.Unmarshal([]byte(body), &metadata)

@@ -373,7 +373,8 @@ mux.Handle("GET /.well-known/oauth-protected-resource", app.ResourceMetadata())
 `Protect` takes the same [privileges](#privileges), roles and organizations included, and checks them
 against the token:
 
-- A missing or invalid token is refused with `401`.
+- A missing or invalid token is refused with `401`. The challenge for a missing token carries no
+  error code, as RFC 6750 asks. The one for an invalid token carries `invalid_token`.
 - A token that lacks a privilege is refused with `403` and `insufficient_scope`,
   `insufficient_role`, or `insufficient_organization`.
 - A refusal carries an RFC 6750 challenge whose `resource_metadata` points at

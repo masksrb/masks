@@ -38,6 +38,9 @@ var (
 
 type InvalidTokenError struct {
 	Description string
+	Missing     bool
+
+	cause error
 }
 
 func (e *InvalidTokenError) Error() string {
@@ -46,6 +49,18 @@ func (e *InvalidTokenError) Error() string {
 
 func (e *InvalidTokenError) Is(target error) bool {
 	return target == ErrInvalidToken
+}
+
+func (e *InvalidTokenError) Unwrap() error {
+	return e.cause
+}
+
+func (e *InvalidTokenError) Code() string {
+	if e.Missing {
+		return ""
+	}
+
+	return "invalid_token"
 }
 
 func invalid(format string, values ...any) error {

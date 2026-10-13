@@ -115,7 +115,7 @@ func NewVerifier(issuer *Issuer, audience ...string) *Verifier {
 func (v *Verifier) Verify(ctx context.Context, token string) (*Claims, error) {
 	parsed, err := jwt.ParseSigned(token, tokenAlgorithms)
 	if err != nil {
-		return nil, invalid("that token is not a signed JWT: %v", err)
+		return nil, &InvalidTokenError{Description: "that token is not a signed JWT", cause: err}
 	}
 
 	if len(parsed.Headers) != 1 {
@@ -146,7 +146,7 @@ func (v *Verifier) Verify(ctx context.Context, token string) (*Claims, error) {
 	expected := jwt.Expected{Issuer: v.Issuer.URL, AnyAudience: jwt.Audience(v.Audience), Time: time.Now()}
 
 	if err := claims.ValidateWithLeeway(expected, verifyLeeway); err != nil {
-		return nil, invalid("%v", err)
+		return nil, unverified(err)
 	}
 
 	return claims, nil
@@ -155,7 +155,7 @@ func (v *Verifier) Verify(ctx context.Context, token string) (*Claims, error) {
 func (v *Verifier) Authenticate(request *http.Request) (*Claims, error) {
 	scheme, token, found := strings.Cut(request.Header.Get("Authorization"), " ")
 	if !found || token == "" {
-		return nil, invalid("the request carries no token")
+		return nil, &InvalidTokenError{Description: "the request carries no token", Missing: true}
 	}
 
 	claims, err := v.Verify(request.Context(), token)
@@ -185,7 +185,7 @@ func (v *Verifier) Middleware(next http.Handler) http.Handler {
 				return
 			}
 
-			for _, challenge := range v.Challenge("invalid_token", refused.Description, "") {
+			for _, challenge := range v.Challenge(refused.Code(), refused.Description, "") {
 				response.Header().Add("WWW-Authenticate", challenge)
 			}
 
@@ -199,17 +199,43 @@ func (v *Verifier) Middleware(next http.Handler) http.Handler {
 }
 
 func (v *Verifier) Challenge(code, description, scope string) []string {
-	parameters := `error="` + quoted(code) + `"`
+	if code == "" {
+		description = ""
+	}
+
+	var parameters []string
 
 	for _, named := range [][2]string{
-		{"error_description", description}, {"scope", scope}, {"resource_metadata", v.ResourceMetadata},
+		{"error", code}, {"error_description", description}, {"scope", scope}, {"resource_metadata", v.ResourceMetadata},
 	} {
 		if named[1] != "" {
-			parameters += ", " + named[0] + `="` + quoted(named[1]) + `"`
+			parameters = append(parameters, named[0]+`="`+quoted(named[1])+`"`)
 		}
 	}
 
-	return []string{"Bearer " + parameters, DPoP + ` algs="` + proofAlgs + `", ` + parameters}
+	bearer := "Bearer"
+	if len(parameters) > 0 {
+		bearer += " " + strings.Join(parameters, ", ")
+	}
+
+	return []string{bearer, strings.Join(append([]string{DPoP + ` algs="` + proofAlgs + `"`}, parameters...), ", ")}
+}
+
+func unverified(err error) error {
+	description := "that token could not be verified"
+
+	switch {
+	case errors.Is(err, jwt.ErrExpired):
+		description = "that token has expired"
+	case errors.Is(err, jwt.ErrNotValidYet), errors.Is(err, jwt.ErrIssuedInTheFuture):
+		description = "that token is not valid yet"
+	case errors.Is(err, jwt.ErrInvalidIssuer):
+		description = "that token was issued by another server"
+	case errors.Is(err, jwt.ErrInvalidAudience):
+		description = "that token was issued for another app"
+	}
+
+	return &InvalidTokenError{Description: description, cause: err}
 }
 
 func quoted(value string) string {

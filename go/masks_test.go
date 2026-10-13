@@ -552,19 +552,22 @@ func TestAVerifierChecksTheTokenItself(t *testing.T) {
 		return held
 	}
 
-	cases := map[string]string{
-		"another audience": held.issue(changed("aud", "https://other.example"), accessTokenType),
-		"another issuer":   held.issue(changed("iss", "https://other.example"), accessTokenType),
-		"expired":          held.issue(changed("exp", time.Now().Add(-time.Hour).Unix()), accessTokenType),
-		"no jti":           held.issue(changed("jti", nil), accessTokenType),
-		"an ID token":      held.issue(good, "JWT"),
-		"not a JWT":        "nonsense",
+	cases := map[string][2]string{
+		"another audience": {held.issue(changed("aud", "https://other.example"), accessTokenType), "that token was issued for another app"},
+		"another issuer":   {held.issue(changed("iss", "https://other.example"), accessTokenType), "that token was issued by another server"},
+		"expired":          {held.issue(changed("exp", time.Now().Add(-time.Hour).Unix()), accessTokenType), "that token has expired"},
+		"no jti":           {held.issue(changed("jti", nil), accessTokenType), "a token carries jti and exp"},
+		"an ID token":      {held.issue(good, "JWT"), "that token is not typed at+jwt"},
+		"not a JWT":        {"nonsense", "that token is not a signed JWT"},
 	}
 
-	for name, token := range cases {
+	for name, refused := range cases {
 		t.Run(name, func(t *testing.T) {
-			if _, err := verifier.Verify(context.Background(), token); err == nil {
-				t.Fatal("it was accepted")
+			_, err := verifier.Verify(context.Background(), refused[0])
+
+			var bad *InvalidTokenError
+			if !errors.As(err, &bad) || bad.Description != refused[1] {
+				t.Fatalf("it was refused with %v", err)
 			}
 		})
 	}
@@ -584,8 +587,29 @@ func TestTheMiddlewareChallengesWithoutAToken(t *testing.T) {
 	}
 	response.Body.Close()
 
-	if response.StatusCode != http.StatusUnauthorized || len(response.Header.Values("WWW-Authenticate")) != 2 {
-		t.Fatalf("%d %v", response.StatusCode, response.Header.Values("WWW-Authenticate"))
+	challenges := response.Header.Values("WWW-Authenticate")
+
+	if response.StatusCode != http.StatusUnauthorized || len(challenges) != 2 || challenges[0] != "Bearer" ||
+		strings.Contains(challenges[1], "error") {
+		t.Fatalf("%d %q", response.StatusCode, challenges)
+	}
+}
+
+func TestTheMiddlewareNamesTheErrorForATokenItRefuses(t *testing.T) {
+	held := newFake(t)
+	resource := newResource(t, discovered(t, held), held.audience)
+
+	request, _ := http.NewRequest(http.MethodGet, resource.URL, nil)
+	request.Header.Set("Authorization", "Bearer nonsense")
+
+	response, err := http.DefaultClient.Do(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	response.Body.Close()
+
+	if challenge := response.Header.Get("WWW-Authenticate"); challenge != `Bearer error="invalid_token", error_description="that token is not a signed JWT"` {
+		t.Fatalf("%d %q", response.StatusCode, challenge)
 	}
 }
 
