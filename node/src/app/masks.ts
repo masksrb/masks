@@ -155,6 +155,7 @@ const IDENTITY = [
 ];
 const FLOW_LIFETIME = 3600;
 const FLOW_LIMIT = 5;
+const REMEMBERED_VERIFIERS = 1_000;
 const STEP_UP_WITHIN = 300;
 const RESTART_WITHIN = 60;
 const REFRESH_LEEWAY = 30;
@@ -200,6 +201,7 @@ export class Masks {
     () => new Map<string, Promise<SessionData | undefined>>(),
   );
   readonly #verifiers = new Map<string, Verifier>();
+
   #sealer?: Sealer;
 
   constructor(options: MasksOptions = {}) {
@@ -1426,18 +1428,27 @@ export class Masks {
 
   async #verifier(visit: Visit): Promise<Verifier> {
     const key = `${visit.issuerURL} ${visit.resource}`;
-    let held = this.#verifiers.get(key);
+    const issuer = await this.#issuer(visit.issuerURL);
+    const held = this.#verifiers.get(key);
 
-    if (!held) {
-      held = new Verifier(await this.#issuer(visit.issuerURL), visit.resource, {
-        publicURL: visit.origin,
-        replay: this.#replay,
-        resourceMetadata: this.#metadataURL(visit),
-      });
-      this.#verifiers.set(key, held);
+    if (held?.issuer === issuer) return held;
+
+    const made = new Verifier(issuer, visit.resource, {
+      publicURL: visit.origin,
+      replay: this.#replay,
+      resourceMetadata: this.#metadataURL(visit),
+    });
+
+    this.#verifiers.delete(key);
+
+    for (const oldest of this.#verifiers.keys()) {
+      if (this.#verifiers.size < REMEMBERED_VERIFIERS) break;
+      this.#verifiers.delete(oldest);
     }
 
-    return held;
+    this.#verifiers.set(key, made);
+
+    return made;
   }
 
   #metadataPath(visit: Visit): string {

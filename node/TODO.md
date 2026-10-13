@@ -10,7 +10,6 @@
 - Move `headersWith`, `text`, `json`, and `redirect` into `app/responses.ts` and use them in avatar.ts and next.ts.
 - Replace `localOr` in next.ts with `localPath(...) ?? "/"`.
 - Add `Masks.from(x)` for the repeated `instanceof` checks in the adapters.
-- Bound the verifier caches.
 - Run the sid and sub logout lookups at the same time, and the session store's `set` and `delete` on rotation too.
 - Every sign-in start reads the registration from masks. Cache a good answer, or rely on `invalid_client`.
 - Remove `Visit.flowChanged`, `Privileges.names`, and the `SessionData | undefined` branch of the refresh.
