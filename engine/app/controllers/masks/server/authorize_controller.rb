@@ -63,7 +63,7 @@ module Masks
             req.bad_request!(:invalid_client, unknown_client(req.client_id)) if client.nil?
             req.invalid_request!("redirect_uri is required") if req.redirect_uri.blank?
 
-            req.verify_redirect_uri!(client.redirect_uris)
+            req.verify_redirect_uri!(client.redirect_uri?(req.redirect_uri) ? [ req.redirect_uri.to_s ] : client.redirect_uris)
             req.verified_redirect_uri = with_issuer(req.verified_redirect_uri)
             res.redirect_uri = req.verified_redirect_uri
 

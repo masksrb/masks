@@ -381,7 +381,7 @@ module Masks
       end
 
       def redirect_uri?(candidate)
-        redirect_uris.include?(candidate.to_s)
+        redirect_uris.include?(candidate.to_s) || redirect_uris.any? { |registered| same_loopback?(registered, candidate.to_s) }
       end
 
       def grants?(grant_type)
@@ -543,6 +543,16 @@ module Masks
 
         def loopback?(uri)
           self.class.loopback?(uri)
+        end
+
+        def same_loopback?(registered, candidate)
+          held = URI.parse(registered)
+          asked = URI.parse(candidate)
+
+          [ held, asked ].all? { |uri| uri.instance_of?(URI::HTTP) && LOOPBACK.include?(uri.hostname) && uri.userinfo.nil? && uri.fragment.nil? } &&
+            held.hostname == asked.hostname && held.path == asked.path && held.query == asked.query
+        rescue URI::InvalidURIError
+          false
         end
 
         def grant_types_are_known

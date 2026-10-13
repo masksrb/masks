@@ -203,6 +203,29 @@ module Masks
         assert_response :bad_request
       end
 
+      test "a loopback redirect_uri in the document matches on any port, as Claude Code's does" do
+        publish(redirect_uris: [ "http://localhost/callback", "http://127.0.0.1/callback", "http://[::1]/callback" ])
+        sign_in_as(@actor)
+
+        %w[http://localhost:64730/callback http://127.0.0.1:50524/callback http://[::1]:8080/callback].each do |redirect_uri|
+          authorize(client_id: DOCUMENT_URL, redirect_uri: redirect_uri)
+
+          assert awaiting_consent?, "#{redirect_uri} is accepted"
+        end
+      end
+
+      test "a loopback redirect_uri still has to match its scheme, host, path, and query" do
+        publish(redirect_uris: [ "http://localhost/callback" ])
+        sign_in_as(@actor)
+
+        %w[https://localhost:64730/callback http://127.0.0.1:64730/callback http://localhost:64730/other
+           http://localhost:64730/callback?next=x http://localhost.example.com:64730/callback].each do |redirect_uri|
+          authorize(client_id: DOCUMENT_URL, redirect_uri: redirect_uri)
+
+          assert_response :bad_request, "#{redirect_uri} is refused"
+        end
+      end
+
       test "a document asks for no more than the tenant's ceiling and never a masks scope" do
         publish(scope: "openid masks:manage")
 
