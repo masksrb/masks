@@ -23,8 +23,7 @@ class BackchannelLogoutTest < EngineIntegrationTest
       **{
         "sid" => "session-1",
         "events" => { EVENT => {} },
-        "scope" => nil,
-        "exp" => nil
+        "scope" => nil
       }.merge(overrides)
     )
   end
@@ -61,7 +60,7 @@ class BackchannelLogoutTest < EngineIntegrationTest
   test "a token for another application is refused" do
     post_logout issuer.mint(
       subdomain: SUBDOMAIN, audience: "someone-else", subject: "actor-1", typ: "logout+jwt",
-      "events" => { EVENT => {} }, "scope" => nil, "exp" => nil
+      "events" => { EVENT => {} }, "scope" => nil
     )
 
     assert_response :bad_request
@@ -82,6 +81,13 @@ class BackchannelLogoutTest < EngineIntegrationTest
 
     assert_response :ok
     assert_equal "no-store", response.headers["Cache-Control"]
+  end
+
+  test "a logout token without an expiry is refused" do
+    post_logout token("exp" => nil)
+
+    assert_response :bad_request
+    assert_empty @heard
   end
 
   test "a logout token is accepted once" do

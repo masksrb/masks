@@ -18,6 +18,7 @@ class LogoutTest < Minitest::Test
       "iss" => @issuer.url,
       "aud" => CLIENT_ID,
       "iat" => Time.now.to_i,
+      "exp" => Time.now.to_i + 120,
       "jti" => SecureRandom.uuid,
       "sub" => "actor-1",
       "sid" => "session-1",
@@ -49,6 +50,20 @@ class LogoutTest < Minitest::Test
 
   def test_a_subject_alone_is_enough_too
     assert_equal "actor-1", verify(token("sid" => nil)).subject
+  end
+
+  def test_a_token_without_an_expiry_is_refused
+    refused token("exp" => nil)
+  end
+
+  def test_an_expired_token_is_refused
+    refused token("exp" => Time.now.to_i - 1)
+  end
+
+  def test_a_token_names_when_it_expires
+    at = Time.now.to_i + 120
+
+    assert_equal Time.at(at).utc, verify(token("exp" => at)).expires_at
   end
 
   def test_a_token_naming_neither_is_refused

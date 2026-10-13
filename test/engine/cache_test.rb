@@ -1,6 +1,8 @@
 require_relative "test_helper"
 
 class CacheTest < ActiveSupport::TestCase
+  include ActiveSupport::Testing::TimeHelpers
+
   ISSUER = "https://auth.example.test/demo".freeze
 
   class Recording < ActiveSupport::Cache::MemoryStore
@@ -100,10 +102,34 @@ class CacheTest < ActiveSupport::TestCase
   end
 
   test "a logout token is first once" do
-    logout = Masks::Client::Logout.new("jti" => "j-1", "sub" => "actor-1", "exp" => Time.now.to_i + 3600)
+    logout = Masks::Client::Logout.new("jti" => "j-1", "sub" => "actor-1", "exp" => Time.now.to_i + 60)
 
     assert @cache.first_logout?(ISSUER, logout)
     assert_not @cache.first_logout?(ISSUER, logout)
+  end
+
+  test "a logout token is remembered for ten minutes, or until two minutes after it expires" do
+    soon = Masks::Client::Logout.new("jti" => "j-1", "sub" => "actor-1", "exp" => Time.now.to_i + 60)
+    late = Masks::Client::Logout.new("jti" => "j-2", "sub" => "actor-1", "exp" => Time.now.to_i + 3600)
+
+    @cache.first_logout?(ISSUER, soon)
+    @cache.first_logout?(ISSUER, late)
+
+    travel 9.minutes do
+      assert_not @cache.first_logout?(ISSUER, soon)
+    end
+
+    travel 11.minutes do
+      assert @cache.first_logout?(ISSUER, soon)
+    end
+
+    travel 61.minutes do
+      assert_not @cache.first_logout?(ISSUER, late)
+    end
+
+    travel 63.minutes do
+      assert @cache.first_logout?(ISSUER, late)
+    end
   end
 
   test "a logout reaches sessions that began before it, by sid or by subject" do

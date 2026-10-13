@@ -8,6 +8,7 @@ module Masks
       WAIT = 0.05
       PATIENCE = 30
       LOGOUT = 600
+      LOGOUT_LEEWAY = 120
       DEPARTURE = 30 * 24 * 3600
       CIPHER = "aes-256-gcm".freeze
       NONCE = 12
@@ -81,11 +82,7 @@ module Masks
         end
 
         def logout_memory(logout)
-          expires = logout.claims["exp"]
-
-          return LOGOUT unless expires.is_a?(Numeric)
-
-          [ LOGOUT, expires.to_i - Time.now.to_i + 60 ].max
+          [ LOGOUT, logout.expires_at.to_i - Time.now.to_i + LOGOUT_LEEWAY ].max
         end
 
         def awaited(result, claim, refresh_token)

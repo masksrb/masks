@@ -9,7 +9,7 @@ module Masks
         def verify(token, issuer:, audience:, algorithms: ALGORITHMS)
           held = Verifier
             .new(issuer, audience: audience, algorithms: algorithms)
-            .verify(token, required: %w[iss aud iat jti events], typ: Verifier::LOGOUT_TOKEN)
+            .verify(token, required: %w[iss aud iat exp jti events], typ: Verifier::LOGOUT_TOKEN)
 
           new(held).validate!
         end
@@ -35,6 +35,10 @@ module Masks
 
       def issued_at
         Time.at(claims["iat"].to_i).utc
+      end
+
+      def expires_at
+        Time.at(claims["exp"].to_i).utc
       end
 
       def validate!
