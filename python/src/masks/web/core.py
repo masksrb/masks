@@ -1149,14 +1149,13 @@ class Masks:
 
         try:
             yield from self._depart(named, logout.subject, logout.sid)
+            yield Ending(named, logout.subject, logout.sid)
+
+            if self.config.logged_out is not None:
+                self.config.logged_out(logout)
         except Exception:
             yield Stored("delete", seen)
             raise
-
-        yield Ending(named, logout.subject, logout.sid)
-
-        if self.config.logged_out is not None:
-            self.config.logged_out(logout)
 
         return Answer(200, headers=[("Cache-Control", "no-store")])
 

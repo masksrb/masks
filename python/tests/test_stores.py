@@ -181,3 +181,18 @@ def test_a_refresh_lets_go_of_its_claim_when_the_result_cannot_be_shared(
 
     assert browser.get("/public").json() == {"signed_in": True}
     assert store.claims() == []
+
+
+def test_a_logout_token_is_taken_again_when_logged_out_fails(fake: Fake) -> None:
+    failing = [False, True]
+
+    def logged_out(logout: masks.Logout) -> None:
+        if failing.pop():
+            raise RuntimeError("the app could not finish the logout")
+
+    browser = FlaskBrowser(dataclasses.replace(scenarios.config(fake), logged_out=logged_out))
+    held = fake.logout_token("web", subject="ada")
+
+    assert browser.post("/auth/logout/backchannel", data={"logout_token": held}).status == 500
+    assert browser.post("/auth/logout/backchannel", data={"logout_token": held}).status == 200
+    assert browser.post("/auth/logout/backchannel", data={"logout_token": held}).status == 400
