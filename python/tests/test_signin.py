@@ -178,6 +178,7 @@ def test_logout_tokens_are_checked(web: masks.Client, fake: Fake) -> None:
         "a nonce": fake.logout_token("web", subject="ada", nonce="n"),
         "no event": fake.logout_token("web", subject="ada", events={"other": {}}),
         "the future": fake.logout_token("web", subject="ada", iat=int(time.time()) + 3600),
+        "no expiry": fake.logout_token("web", subject="ada", exp=None),
         "an ID token": fake.issue({"iss": ISSUER, "aud": "web", "sub": "ada", "iat": 1, "jti": "j"}, typ="JWT"),
     }
 

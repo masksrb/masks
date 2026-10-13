@@ -118,8 +118,10 @@ and organizations are read again from userinfo, the masks endpoint that describe
 person.
 
 masks revokes a refresh token that is used twice, along with every token issued from it. So requests
-that arrive together with the same expired session share one refresh. Each process remembers the
-result for a minute and gives it to every request that brings the same refresh token.
+that arrive together with the same expired session share one refresh. The first request to claim
+the refresh token in [`store`](#running-several-processes) spends it. The app keeps the result there
+for a minute, sealed under a key made from that refresh token, and gives it to every request that
+brings the same one. A store that cannot be reached counts as a refresh that masks does not answer.
 
 - A refresh that masks refuses signs the person out.
 - A refresh that masks does not answer, or answers with a `5xx` or `429` status, leaves the session
@@ -139,8 +141,10 @@ When masks ends a session itself, it sends a logout token to `/auth/logout/backc
 checks the token, then signs out the session it names, or every session of the person it names. The
 sign-out takes effect at that session's next request.
 
+- A logout token must have an expiry. The app takes each one once, and a token sent again gets `400`.
 - The app remembers each logout in [`store`](#running-several-processes), so it reaches every
-  process that shares the store.
+  process that shares the store. When the store cannot save the logout, the app answers with an
+  error and takes the same token when masks sends it again.
 - Sessions kept on the server are also deleted from the store.
 - `logged_out`, a function that takes a `masks.Logout`, hears each logout as well.
 

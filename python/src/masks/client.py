@@ -450,7 +450,7 @@ class _Flows:
 
     def _logout(self, logout_token: str) -> Flow[Logout]:
         claims, _ = yield from self.keys.verify(
-            logout_token, accepted=("logout+jwt",), audience=self.client_id, require=("iss", "aud", "iat", "jti")
+            logout_token, accepted=("logout+jwt",), audience=self.client_id, require=("iss", "aud", "iat", "exp", "jti")
         )
         events = claims.get("events")
 

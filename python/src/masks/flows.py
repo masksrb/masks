@@ -197,7 +197,13 @@ def run(flow: Generator[Any, Any, T], http: httpx.Client, other: Callable[[Any],
                 if other is None:
                     raise TypeError(f"masks: a flow yielded {item!r}, which is not a request")
 
-                item = flow.send(other(item))
+                try:
+                    answered = other(item)
+                except Exception as error:
+                    item = flow.throw(error)
+                    continue
+
+                item = flow.send(answered)
                 continue
 
             try:
@@ -224,7 +230,13 @@ async def arun(
                 if other is None:
                     raise TypeError(f"masks: a flow yielded {item!r}, which is not a request")
 
-                item = flow.send(await other(item))
+                try:
+                    answered = await other(item)
+                except Exception as error:
+                    item = flow.throw(error)
+                    continue
+
+                item = flow.send(answered)
                 continue
 
             try:

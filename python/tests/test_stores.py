@@ -10,14 +10,17 @@ import pytest
 from fastapi.testclient import TestClient
 from flask import Flask
 
+import masks
 from masks.flask import Masks
 from masks.web import AsyncRedisStore, MemoryStore, RedisStore
+from masks.web.core import LOGOUT_LEEWAY, LOGOUT_MEMORY, logout_memory
 from masks.web.stores import asynchronous
 
 from . import scenarios
 from .fake import Fake
 from .scenarios import APP, HTML
 from .test_fastapi import application
+from .test_flask import FlaskBrowser
 
 
 def contract(store: Any) -> None:
@@ -101,3 +104,80 @@ def test_flask_refuses_an_async_store(fake: Fake) -> None:
 
     with pytest.raises(TypeError, match="async framework"):
         Masks(app, issuer="https://id.example", http=fake.http(), store=AsyncRedisStore(fakeredis.FakeAsyncRedis()))
+
+
+class FailingStore(MemoryStore):
+    def __init__(self) -> None:
+        super().__init__()
+        self.failing: set[str] = set()
+
+    def add(self, key: str, value: str, expires_in: int) -> bool:
+        if "add" in self.failing:
+            raise ConnectionError("the store is down")
+
+        return super().add(key, value, expires_in)
+
+    def set(self, key: str, value: str, expires_in: int) -> None:
+        if "set" in self.failing:
+            raise ConnectionError("the store is down")
+
+        super().set(key, value, expires_in)
+
+    def claims(self) -> list[str]:
+        return [key for key, (value, _) in self._held.items() if value == "1"]
+
+
+def stale(fake: Fake, monkeypatch: pytest.MonkeyPatch, store: FailingStore) -> FlaskBrowser:
+    browser = FlaskBrowser(dataclasses.replace(scenarios.config(fake), store=store))
+    scenarios.sign_in(browser, fake)
+    later = time.time() + 7200
+    monkeypatch.setattr(masks.models.time, "time", lambda: later)
+
+    return browser
+
+
+def test_a_logout_token_is_taken_again_when_its_departure_was_not_recorded(fake: Fake) -> None:
+    store = FailingStore()
+    browser = FlaskBrowser(dataclasses.replace(scenarios.config(fake), store=store))
+    held = fake.logout_token("web", subject="ada")
+    store.failing.add("set")
+
+    assert browser.post("/auth/logout/backchannel", data={"logout_token": held}).status == 500
+
+    store.failing.clear()
+
+    assert browser.post("/auth/logout/backchannel", data={"logout_token": held}).status == 200
+    assert browser.post("/auth/logout/backchannel", data={"logout_token": held}).status == 400
+
+
+def test_a_logout_token_is_remembered_until_it_expires() -> None:
+    now = int(time.time())
+
+    def remembered(expires_in: int) -> int:
+        return logout_memory(masks.Logout("ada", "", "j", now, {"exp": now + expires_in}))
+
+    assert remembered(120) == LOGOUT_MEMORY
+    assert remembered(3600) >= 3600 + LOGOUT_LEEWAY - 1
+
+
+def test_a_store_outage_during_a_refresh_keeps_the_session(fake: Fake, monkeypatch: pytest.MonkeyPatch) -> None:
+    store = FailingStore()
+    browser = stale(fake, monkeypatch, store)
+    store.failing.add("add")
+
+    assert browser.get("/public").json() == {"signed_in": False}
+
+    store.failing.clear()
+
+    assert browser.get("/public").json() == {"signed_in": True}
+
+
+def test_a_refresh_lets_go_of_its_claim_when_the_result_cannot_be_shared(
+    fake: Fake, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    store = FailingStore()
+    browser = stale(fake, monkeypatch, store)
+    store.failing.add("set")
+
+    assert browser.get("/public").json() == {"signed_in": True}
+    assert store.claims() == []

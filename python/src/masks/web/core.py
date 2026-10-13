@@ -38,7 +38,7 @@ from ..handshake import Handshake
 from ..keys import random_id
 from ..keyset import same
 from ..models import Issuer, Registration, Token
-from ..oidc import AVATARS_CLAIM, AuthorizationRequest, HeldConnection, organization_key
+from ..oidc import AVATARS_CLAIM, AuthorizationRequest, HeldConnection, Logout, organization_key
 from ..verifier import PROOF_ALGORITHMS, AsyncVerifier, Claims, Verifier
 from .config import Config, resolve
 from .credentials import Credentials
@@ -60,6 +60,7 @@ RENEWAL_WAIT = 0.05
 RENEWAL_WAITS = 200
 RENEWAL_STRIPES = 64
 LOGOUT_MEMORY = 600
+LOGOUT_LEEWAY = 120
 
 HELD = "masks"
 REQUESTS = "masks_requests"
@@ -683,14 +684,18 @@ class Masks:
         )
 
     def _sharing(self, renewal: Renewal) -> Step[Renewed]:
-        result = keyed("refreshed", renewal.refresh_token)
-        claim = keyed("refreshing", renewal.refresh_token)
+        issuer = self.issuer_url(renewal.request)
+        result = keyed("refreshed", issuer, renewal.refresh_token)
+        claim = keyed("refreshing", issuer, renewal.refresh_token)
         found = yield Stored("get", result)
 
         if found:
             return self._opened_renewal(renewal.refresh_token, found)
 
-        claimed = yield Stored("add", claim, "1", RENEWAL_CLAIM)
+        try:
+            claimed = yield Stored("add", claim, "1", RENEWAL_CLAIM)
+        except Exception:
+            return Renewed(UNREACHABLE)
 
         if not claimed:
             for _ in range(RENEWAL_WAITS):
@@ -707,14 +712,24 @@ class Masks:
 
             return Renewed(UNREACHABLE)
 
-        renewed = yield from self._renewing(renewal)
+        try:
+            renewed = yield from self._renewing(renewal)
 
-        if renewed.outcome != UNREACHABLE:
-            yield Stored("set", result, self._sealed_renewal(renewal.refresh_token, renewed), RENEWAL_MEMORY)
+            if renewed.outcome != UNREACHABLE:
+                yield from self._share(result, renewal.refresh_token, renewed)
+        except Exception:
+            yield Stored("delete", claim)
+            raise
 
         yield Stored("delete", claim)
 
         return renewed
+
+    def _share(self, result: str, refresh_token: str, renewed: Renewed) -> Step[None]:
+        try:
+            yield Stored("set", result, self._sealed_renewal(refresh_token, renewed), RENEWAL_MEMORY)
+        except Exception:
+            return
 
     def _other(self, item: object) -> object:
         if isinstance(item, Stored):
@@ -1105,7 +1120,8 @@ class Masks:
                 400, {"error": "invalid_request", "error_description": str(error).removeprefix("masks: ")}
             )
 
-        first = yield Stored("add", keyed("logout", issuer.url, logout.id), "1", LOGOUT_MEMORY)
+        seen = keyed("logout", issuer.url, logout.id)
+        first = yield Stored("add", seen, "1", logout_memory(logout))
 
         if not first:
             return Answer.json(
@@ -1113,7 +1129,13 @@ class Masks:
             )
 
         named = self.issuer_url(request)
-        yield from self._depart(named, logout.subject, logout.sid)
+
+        try:
+            yield from self._depart(named, logout.subject, logout.sid)
+        except Exception:
+            yield Stored("delete", seen)
+            raise
+
         yield Ending(named, logout.subject, logout.sid)
 
         if self.config.logged_out is not None:
@@ -1588,6 +1610,10 @@ class Masks:
 
 def outage(error: Error) -> bool:
     return error.code in ("server_error", "temporarily_unavailable") or (error.status or 0) >= 500
+
+
+def logout_memory(logout: Logout) -> int:
+    return max(LOGOUT_MEMORY, int(float(logout.raw["exp"]) - time.time()) + LOGOUT_LEEWAY)
 
 
 def stored(item: Stored) -> tuple[Any, ...]:

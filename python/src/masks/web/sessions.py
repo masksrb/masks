@@ -110,7 +110,7 @@ async def settled(value: T | Awaitable[T]) -> T:
     if inspect.isawaitable(value):
         return await value
 
-    return cast(T, value)
+    return value
 
 
 def derived(secret: str | bytes, purpose: bytes) -> bytes:
