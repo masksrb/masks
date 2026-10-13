@@ -17,7 +17,13 @@ import (
 	masks "github.com/masksrb/masks/go"
 )
 
-const discoveryLifetime = time.Hour
+const (
+	discoveryLifetime = time.Hour
+	discoveryTimeout  = 30 * time.Second
+	firstBackoff      = 5 * time.Second
+	longestBackoff    = time.Minute
+	remembered        = 1000
+)
 
 type Privilege struct {
 	Scope        []string
@@ -75,8 +81,13 @@ type App struct {
 }
 
 type discovered struct {
-	issuer *masks.Issuer
-	at     time.Time
+	issuer  *masks.Issuer
+	at      time.Time
+	used    time.Time
+	failure error
+	retry   time.Time
+	backoff time.Duration
+	pending chan struct{}
 }
 
 type site struct {
@@ -185,37 +196,86 @@ func (a *App) issuerFor(r *http.Request) (*masks.Issuer, error) {
 	}
 
 	named = strings.TrimSuffix(named, "/")
+	now := time.Now()
 
 	a.lock.Lock()
 	held := a.issuers[named]
-	a.lock.Unlock()
 
-	if held != nil && time.Since(held.at) < discoveryLifetime {
-		return held.issuer, nil
+	if held == nil {
+		held = &discovered{backoff: firstBackoff}
+		a.rememberIssuer(named, held)
 	}
 
-	ctx, cancel := context.WithTimeout(context.WithoutCancel(r.Context()), 30*time.Second)
-	defer cancel()
+	held.used = now
+	stale := held.issuer == nil || now.Sub(held.at) >= discoveryLifetime
 
-	found, err := masks.Discover(ctx, named, a.config.Options...)
-	if err != nil {
-		if held != nil {
-			return held.issuer, nil
-		}
+	if stale && held.pending == nil && !now.Before(held.retry) {
+		held.pending = make(chan struct{})
+		go a.discover(named, held)
+	}
 
-		return nil, err
+	found, pending, failure := held.issuer, held.pending, held.failure
+	a.lock.Unlock()
+
+	if found != nil {
+		return found, nil
+	}
+
+	if pending == nil {
+		return nil, failure
+	}
+
+	select {
+	case <-pending:
+	case <-r.Context().Done():
+		return nil, r.Context().Err()
 	}
 
 	a.lock.Lock()
-	if held != nil {
-		held.at = time.Now()
-		found = held.issuer
-	} else {
-		a.issuers[named] = &discovered{issuer: found, at: time.Now()}
-	}
-	a.lock.Unlock()
+	defer a.lock.Unlock()
 
-	return found, nil
+	if held.issuer != nil {
+		return held.issuer, nil
+	}
+
+	return nil, held.failure
+}
+
+func (a *App) discover(named string, held *discovered) {
+	ctx, cancel := context.WithTimeout(context.Background(), discoveryTimeout)
+	defer cancel()
+
+	found, err := masks.Discover(ctx, named, a.config.Options...)
+
+	a.lock.Lock()
+	defer a.lock.Unlock()
+
+	if err != nil {
+		held.failure = err
+		held.retry = time.Now().Add(held.backoff)
+		held.backoff = min(2*held.backoff, longestBackoff)
+	} else {
+		held.issuer, held.at, held.failure, held.retry, held.backoff = found, time.Now(), nil, time.Time{}, firstBackoff
+	}
+
+	close(held.pending)
+	held.pending = nil
+}
+
+func (a *App) rememberIssuer(named string, held *discovered) {
+	if len(a.issuers) >= remembered {
+		oldest := ""
+
+		for name, entry := range a.issuers {
+			if oldest == "" || entry.used.Before(a.issuers[oldest].used) {
+				oldest = name
+			}
+		}
+
+		delete(a.issuers, oldest)
+	}
+
+	a.issuers[named] = held
 }
 
 func (a *App) resourceFor(r *http.Request) (string, string, error) {

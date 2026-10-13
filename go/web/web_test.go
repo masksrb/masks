@@ -1116,3 +1116,146 @@ func TestASecondSaveStillClearsTheChunksTheBrowserHeld(t *testing.T) {
 		t.Fatalf("the second save left %v", recorder.Header().Values("Set-Cookie"))
 	}
 }
+
+type discoveries struct {
+	lock  sync.Mutex
+	count int
+	gate  chan struct{}
+	fail  bool
+}
+
+func (d *discoveries) RoundTrip(r *http.Request) (*http.Response, error) {
+	if strings.HasSuffix(r.URL.Path, "/.well-known/openid-configuration") {
+		d.lock.Lock()
+		d.count++
+		gate, fail := d.gate, d.fail
+		d.lock.Unlock()
+
+		if gate != nil {
+			<-gate
+		}
+
+		if fail {
+			return nil, errors.New("masks is down")
+		}
+	}
+
+	return http.DefaultTransport.RoundTrip(r)
+}
+
+func (d *discoveries) seen() int {
+	d.lock.Lock()
+	defer d.lock.Unlock()
+
+	return d.count
+}
+
+func TestAStaleIssuerIsServedWhileOneRefreshRunsBehindIt(t *testing.T) {
+	counted := &discoveries{}
+	h := newHarness(t, func(config *Config) { config.HTTPClient = &http.Client{Transport: counted} })
+	h.connect()
+
+	request := httptest.NewRequest(http.MethodGet, "/", nil)
+
+	first, err := h.app.issuerFor(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	before := counted.seen()
+	gate := make(chan struct{})
+
+	counted.lock.Lock()
+	counted.gate = gate
+	counted.lock.Unlock()
+
+	h.app.lock.Lock()
+	h.app.issuers[h.issuer.url()].at = time.Now().Add(-2 * discoveryLifetime)
+	h.app.lock.Unlock()
+
+	for range 5 {
+		served, err := h.app.issuerFor(request)
+		if err != nil || served != first {
+			t.Fatalf("a stale issuer was not served while it refreshed: %v", err)
+		}
+	}
+
+	close(gate)
+
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		h.app.lock.Lock()
+		fresh := h.app.issuers[h.issuer.url()].pending == nil
+		h.app.lock.Unlock()
+
+		if fresh || time.Now().After(deadline) {
+			break
+		}
+
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	if refreshed := counted.seen() - before; refreshed != 1 {
+		t.Fatalf("five requests ran %d discoveries", refreshed)
+	}
+
+	if served, _ := h.app.issuerFor(request); served == first {
+		t.Fatal("the refreshed issuer was not kept")
+	}
+}
+
+func TestAnIssuerThatIsDownIsAskedAgainOnlyAfterAPause(t *testing.T) {
+	counted := &discoveries{fail: true}
+	h := newHarness(t, func(config *Config) { config.HTTPClient = &http.Client{Transport: counted} })
+	request := httptest.NewRequest(http.MethodGet, "/", nil)
+
+	for range 3 {
+		if _, err := h.app.issuerFor(request); err == nil {
+			t.Fatal("an issuer that is down was discovered")
+		}
+	}
+
+	if counted.seen() != 1 {
+		t.Fatalf("three requests ran %d discoveries while masks was down", counted.seen())
+	}
+
+	counted.lock.Lock()
+	counted.fail = false
+	counted.lock.Unlock()
+
+	h.app.lock.Lock()
+	h.app.issuers[h.issuer.url()].retry = time.Now()
+	h.app.lock.Unlock()
+
+	if _, err := h.app.issuerFor(request); err != nil {
+		t.Fatalf("the issuer was not discovered once it came back: %v", err)
+	}
+}
+
+func TestTheIssuerCacheIsBounded(t *testing.T) {
+	counted := &discoveries{fail: true}
+	app, err := New(Config{
+		IssuerFor:   func(r *http.Request) (string, error) { return "https://" + r.Host, nil },
+		Resource:    "https://app.example",
+		Secret:      secret(),
+		Credentials: FileCredentials(filepath.Join(t.TempDir(), "masks.json")),
+		HTTPClient:  &http.Client{Transport: counted},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for index := range remembered + 50 {
+		request := httptest.NewRequest(http.MethodGet, "/", nil)
+		request.Host = "tenant" + strconv.Itoa(index) + ".example"
+		_, _ = app.issuerFor(request)
+	}
+
+	app.lock.Lock()
+	held := len(app.issuers)
+	app.lock.Unlock()
+
+	if held > remembered {
+		t.Fatalf("the cache holds %d issuers", held)
+	}
+}

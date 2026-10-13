@@ -217,6 +217,13 @@ func (a *App) verifier(r *http.Request) (*masks.Verifier, error) {
 
 	held := a.verifiers[key]
 	if held == nil || held.Issuer != issuer {
+		if held == nil && len(a.verifiers) >= remembered {
+			for name := range a.verifiers {
+				delete(a.verifiers, name)
+				break
+			}
+		}
+
 		held = masks.NewVerifier(issuer, resource)
 		held.PublicURL = origin
 		held.Replay = a.replay()
