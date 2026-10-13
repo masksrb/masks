@@ -106,7 +106,16 @@ class ResourceTest < ClientTest
   def test_an_expired_token_is_refused
     token = issuer.access_token(expires_in: -60)
 
-    assert_raises(Masks::Client::Unauthorized) { resource.authenticate("Bearer #{token}") }
+    error = assert_raises(Masks::Client::Unauthorized) { resource.authenticate("Bearer #{token}") }
+
+    assert_equal "that token has expired", error.description
+  end
+
+  def test_a_token_that_is_not_a_jwt_is_described_in_plain_words
+    error = assert_raises(Masks::Client::Unauthorized) { resource.authenticate("Bearer not-a-token") }
+
+    assert_equal "that token was not signed by #{issuer.url}", error.description
+    assert_kind_of JWT::DecodeError, error.cause.cause
   end
 
   def test_a_token_signed_by_an_unpublished_key_is_refused

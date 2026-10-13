@@ -28,8 +28,16 @@ module Masks
         typed!(header["typ"], Array(typ))
 
         claims
-      rescue JWT::DecodeError => e
-        raise InvalidToken, e.message
+      rescue JWT::ExpiredSignature
+        raise InvalidToken, "that token has expired"
+      rescue JWT::InvalidIssuerError
+        raise InvalidToken, "that token was issued by another server"
+      rescue JWT::InvalidAudError
+        raise InvalidToken, "that token was issued for another app"
+      rescue JWT::MissingRequiredClaim
+        raise InvalidToken, "that token is missing a claim it needs"
+      rescue JWT::DecodeError
+        raise InvalidToken, "that token was not signed by #{issuer.url}"
       end
 
       private

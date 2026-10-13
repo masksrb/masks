@@ -50,8 +50,11 @@ module Masks
 
         def decode(bearer)
           claims_in_token(bearer.access_token)
+        rescue JWT::ExpiredSignature
+          bearer.invalid_token!("that token has expired")
         rescue JWT::DecodeError => e
-          bearer.invalid_token!(e.message)
+          ::Rails.logger.info("masks: an access token was refused: #{e.message}")
+          bearer.invalid_token!("that token is not one this server signed")
         end
 
         def claims_in_token(secret)
