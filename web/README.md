@@ -36,26 +36,35 @@ throwing, and `handshake()` starts the connect flow. CSRF tokens are read from a
 ## Browser mode
 
 With no backend, the page runs the authorization code flow with PKCE and keeps the tokens in
-`sessionStorage`. It needs a public client, one registered with `token_endpoint_auth_method` set to
-`none`.
+`sessionStorage`, so a reload keeps the person signed in. The Vite plugin writes a client metadata
+document into the build, and masks reads the site's client from it, so nothing is registered by hand.
+
+```js
+// vite.config.js
+import { masks } from "@masks/client/vite";
+
+export default defineConfig({ plugins: [masks({ name: "Catalog" })] });
+```
 
 ```js
 import { createBrowserClient } from "@masks/client";
 
 const auth = createBrowserClient({
   issuer: "https://auth.example.com",
-  clientId: "...",
-  redirectUri: "https://app.example.com/callback",
-  scope: ["openid", "profile"],
+  scope: ["openid", "profile", "offline_access"],
   resource: "https://api.example.com",
 });
 
-if (auth.pending()) {
-  const { identity, returnTo } = await auth.callback();
-}
+const person = await auth.ready();
 
-await auth.authorize({ returnTo: "/dashboard" });
+if (!person) await auth.authorize({ returnTo: "/dashboard" });
 ```
+
+Build with `MASKS_ORIGIN` set to the site's public address. The client ID is then
+`<origin>/oauth/client.json` and the redirect URI is `<origin>/`, which are the defaults.
+`ready()` finishes a sign-in when the page is the redirect, and returns the person or `null`. Pass
+`clientId` and `redirectUri` to use a public client registered with `token_endpoint_auth_method`
+set to `none` instead. The page must be served over `https` or from `localhost`.
 
 The client handles discovery, the PKCE challenge, state and nonce, the callback exchange, and
 `refresh()`. `accessToken()` and `authorization()` return what to attach to a request, and

@@ -7,6 +7,8 @@ export type {
 export { createBrowserClient } from "./browser.js";
 export type { Jwk, VerifyOptions } from "./jwt.js";
 export { verifyIdToken } from "./jwt.js";
+export type { ClientMetadataOptions } from "./metadata.js";
+export { CLIENT_PATH, clientMetadata } from "./metadata.js";
 export type { PersonInfo } from "./person.js";
 export { holdsRole, initials, personFrom } from "./person.js";
 export type {

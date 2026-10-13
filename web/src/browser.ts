@@ -1,5 +1,6 @@
-import { createDpopKey, type DpopKey, dpopProof } from "./dpop.js";
+import { type DpopKey, dpopProof, forgetDpopKey, heldDpopKey } from "./dpop.js";
 import { type Jwk, verifyIdToken } from "./jwt.js";
+import { CLIENT_PATH } from "./metadata.js";
 import { challenge, method, random } from "./pkce.js";
 import {
   type AvatarStyle,
@@ -12,11 +13,12 @@ import {
 } from "./types.js";
 
 const PENDING = "masks:pending";
+const SESSION = "masks:session";
 
 export interface BrowserOptions {
   issuer: string;
-  clientId: string;
-  redirectUri: string;
+  clientId?: string;
+  redirectUri?: string;
   scope?: string | string[];
   resource?: string | string[];
   organization?: string;
@@ -45,6 +47,7 @@ export interface AuthorizeOptions {
 }
 
 export interface BrowserClient {
+  ready(): Promise<Claims | null>;
   discover(): Promise<Discovery>;
   authorize(options?: AuthorizeOptions): Promise<void>;
   authorizeUrl(options?: AuthorizeOptions): Promise<string>;
@@ -88,10 +91,28 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
   const store = options.storage ?? globalThis.sessionStorage;
   const scope = list(options.scope ?? ["openid", "profile", "email"]);
   const resources = list(options.resource);
+  const here = globalThis.location?.origin;
+  const clientId = options.clientId ?? (here && `${here}${CLIENT_PATH}`);
+  const redirectUri = options.redirectUri ?? (here && `${here}/`);
 
+  if (!globalThis.crypto?.subtle) {
+    throw masksError(
+      "insecure_context",
+      "serve the page over https, or from localhost, since the browser hides the cryptography a sign-in needs on any other http page",
+    );
+  }
+
+  if (!clientId || !redirectUri) {
+    throw masksError(
+      "invalid_request",
+      "pass clientId and redirectUri when the client runs outside a browser",
+    );
+  }
+
+  const restored = restore(store);
   let document: Discovery | null = null;
-  let held: Tokens | null = null;
-  let claims: Claims | null = null;
+  let held: Tokens | null = restored?.tokens ?? null;
+  let claims: Claims | null = restored?.identity ?? null;
   let keys: Record<string, Jwk> | null = null;
   let refreshing: Promise<Tokens> | null = null;
   let dpopKey: Promise<DpopKey> | null = null;
@@ -103,11 +124,22 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
   ): Promise<Record<string, string>> => {
     if (!options.dpop) return {};
 
-    dpopKey ??= createDpopKey();
+    dpopKey ??= heldDpopKey();
 
     return { DPoP: await dpopProof(await dpopKey, method, url, accessToken) };
   };
   let generation = 0;
+
+  const save = () => {
+    try {
+      if (held) {
+        store.setItem(
+          SESSION,
+          JSON.stringify({ tokens: held, identity: claims }),
+        );
+      } else store.removeItem(SESSION);
+    } catch {}
+  };
 
   const discover = async (): Promise<Discovery> => {
     if (document) return document;
@@ -250,8 +282,8 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
 
     const query = new URLSearchParams([
       ["response_type", "code"],
-      ["client_id", options.clientId],
-      ["redirect_uri", options.redirectUri],
+      ["client_id", clientId],
+      ["redirect_uri", redirectUri],
       ["scope", scope.join(" ")],
       ["state", waiting.state],
       ["code_challenge", await challenge(verifier)],
@@ -307,13 +339,27 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
     const body = [
       ["grant_type", "refresh_token"],
       ["refresh_token", previous],
-      ["client_id", options.clientId],
+      ["client_id", clientId],
     ];
 
     for (const value of resources) body.push(["resource", value]);
 
-    const tokens = await post(body);
+    let tokens: Tokens;
+
+    try {
+      tokens = await post(body);
+    } catch (failure) {
+      if ((failure as { code?: string }).code === "invalid_grant") {
+        held = null;
+        claims = null;
+        save();
+      }
+
+      throw failure;
+    }
+
     tokens.refresh_token ??= previous;
+    save();
 
     return tokens;
   };
@@ -337,12 +383,26 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
       body: new URLSearchParams([
         ["token", token],
         ["token_type_hint", "refresh_token"],
-        ["client_id", options.clientId],
+        ["client_id", clientId],
       ]).toString(),
     });
   };
 
-  return {
+  const client: BrowserClient = {
+    async ready() {
+      const url = new URL(window.location.href);
+      const answered =
+        url.searchParams.has("code") || url.searchParams.has("error");
+
+      if (!answered || store.getItem(PENDING) === null) return claims;
+
+      const { returnTo } = await client.callback(url.href);
+
+      window.history.replaceState(window.history.state, "", returnTo);
+
+      return claims;
+    },
+
     discover,
     authorizeUrl,
     avatarUrl,
@@ -392,8 +452,8 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
       const body = [
         ["grant_type", "authorization_code"],
         ["code", code],
-        ["client_id", options.clientId],
-        ["redirect_uri", options.redirectUri],
+        ["client_id", clientId],
+        ["redirect_uri", redirectUri],
         ["code_verifier", waiting.verifier],
       ];
 
@@ -414,7 +474,7 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
         try {
           claims = await verifyIdToken(tokens.id_token, {
             issuer,
-            audience: options.clientId,
+            audience: clientId,
             nonce: waiting.nonce,
             keyFor,
           });
@@ -437,6 +497,8 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
           );
         }
       }
+
+      save();
 
       return { tokens, identity: claims, returnTo: waiting.returnTo };
     },
@@ -531,7 +593,10 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
       held = null;
       claims = null;
       refreshing = null;
+      dpopKey = null;
       store.removeItem(PENDING);
+      save();
+      await forgetDpopKey();
 
       if (leaving?.refresh_token) {
         await revoke(leaving.refresh_token).catch(() => undefined);
@@ -548,7 +613,7 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
         );
       }
 
-      const query = new URLSearchParams([["client_id", options.clientId]]);
+      const query = new URLSearchParams([["client_id", clientId]]);
 
       if (leaving?.id_token) query.append("id_token_hint", leaving.id_token);
       if (postLogoutRedirectUri) {
@@ -558,4 +623,19 @@ export function createBrowserClient(options: BrowserOptions): BrowserClient {
       window.location.assign(`${end_session_endpoint}?${query.toString()}`);
     },
   };
+
+  return client;
+}
+
+function restore(
+  store: Storage,
+): { tokens: Tokens; identity: Claims | null } | null {
+  try {
+    const raw = store.getItem(SESSION);
+    const found = raw ? JSON.parse(raw) : null;
+
+    return found?.tokens?.access_token ? found : null;
+  } catch {
+    return null;
+  }
 }

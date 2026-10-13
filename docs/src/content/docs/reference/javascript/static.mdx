@@ -1,0 +1,103 @@
+---
+title: Static sites
+description: "Sign people in to a site with no server, such as a Svelte or React app on Cloudflare Pages, with @masks/client and its Vite plugin."
+---
+
+A site with no server can sign people in from the browser. `@masks/client` runs the sign-in with
+PKCE and keeps the tokens in the browser tab. The site names itself to masks with a small JSON file
+it serves, so there is no client to register and no secret to keep.
+
+## Setting up
+
+1. Add the plugin to `vite.config.js`:
+
+   ```js
+   import { defineConfig } from "vite";
+   import { svelte } from "@sveltejs/vite-plugin-svelte";
+   import { masks } from "@masks/client/vite";
+
+   export default defineConfig({
+     plugins: [svelte(), masks({ name: "Catalog", scope: ["openid", "profile", "offline_access"] })],
+   });
+   ```
+
+2. Sign people in from the page:
+
+   ```js
+   import { createBrowserClient } from "@masks/client";
+
+   export const auth = createBrowserClient({
+     issuer: "https://acme.auth.example.com",
+     scope: ["openid", "profile", "offline_access"],
+   });
+
+   const person = await auth.ready();
+
+   if (!person) await auth.authorize();
+   ```
+
+3. Build with the site's public address:
+
+   ```sh
+   MASKS_ORIGIN=https://catalog.example.com npm run build
+   ```
+
+4. Upload the build to Cloudflare Pages, or to any host that serves files.
+
+The tenant must allow dynamic registration, which a manager turns on under **Settings** in
+`/manage`.
+
+## How it works
+
+- The plugin writes `oauth/client.json` into the build. The file's address is the site's client ID,
+  such as `https://catalog.example.com/oauth/client.json`. masks reads the file the first time
+  somebody signs in. See [a client named by its metadata document](/guides/features/#a-client-named-by-its-metadata-document).
+- masks sends people back to the site's home page, `/`. `ready()` finishes the sign-in there, puts
+  the browser back on the page it started from, and returns the person. It returns `null` when
+  nobody is signed in.
+- The tokens are kept in `sessionStorage`, so a reload keeps the person signed in. A new tab signs in
+  again, which is quick while the person is still signed in to masks.
+- `auth.fetch(url)` calls an API with the access token, and refreshes it first when it is about to
+  expire.
+- `auth.logout()` signs the person out of the site. `auth.logout({ everywhere: true })` also signs
+  them out of masks.
+- With `dpop: true`, tokens are bound to a key the page cannot export. The key is kept in IndexedDB,
+  so a reload can still use the tokens.
+
+`MASKS_ORIGIN` must be the address people visit. A build for `https://catalog.example.com` does not
+sign anyone in on a preview address such as `https://abc123.catalog.pages.dev`, since the client ID
+names the first.
+
+## Requirements
+
+- The page must be served over `https`, or from `localhost`. On any other `http` page the browser
+  hides the cryptography a sign-in needs, and `createBrowserClient` throws `insecure_context`.
+- masks must be able to fetch the file. A masks on the internet cannot reach `localhost`, so for
+  development, register a public client for `http://localhost:5173/` in `/manage` and pass its ID
+  while the site runs on the dev server:
+
+  ```js
+  createBrowserClient({
+    issuer: "https://acme.auth.example.com",
+    clientId: import.meta.env.DEV ? "the client ID from /manage" : undefined,
+  });
+  ```
+
+## Reference
+
+`masks(options)` from `@masks/client/vite` takes:
+
+| Option | Default | |
+| --- | --- | --- |
+| `name` | | The name masks shows when it asks the person to approve the site. |
+| `origin` | `MASKS_ORIGIN` | The site's public address. The build stops when neither is set. |
+| `scope` | | The most a sign-in may ask for. |
+| `path` | `/oauth/client.json` | Where the file is served. |
+| `redirectUris` | the home page | Where masks may send people back to. |
+| `postLogoutRedirectUris` | the home page | Where masks may send people after signing out everywhere. |
+| `logoUri` | | A logo masks shows beside the name. |
+| `dpop` | `false` | Whether masks binds every token to a DPoP key. |
+
+`clientMetadata(options)` from `@masks/client` returns the same file as an object, for a build that
+does not use Vite. `createBrowserClient` takes `clientId` and `redirectUri` for a site that does not
+use the file. See [`@masks/client`](/reference/javascript/client/) for every method.

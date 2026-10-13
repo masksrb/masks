@@ -55,3 +55,62 @@ export async function dpopProof(
 
   return `${signing}.${encode(signature)}`;
 }
+
+const DATABASE = "masks";
+const SHELF = "keys";
+const HELD = "dpop";
+
+function opened(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DATABASE, 1);
+
+    request.onupgradeneeded = () => request.result.createObjectStore(SHELF);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+function answered<T>(request: IDBRequest<T>): Promise<T> {
+  return new Promise((resolve, reject) => {
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+export async function heldDpopKey(): Promise<DpopKey> {
+  if (typeof indexedDB === "undefined") return createDpopKey();
+
+  try {
+    const database = await opened();
+    const found = (await answered(
+      database.transaction(SHELF).objectStore(SHELF).get(HELD),
+    )) as DpopKey | undefined;
+
+    if (found) return found;
+
+    const made = await createDpopKey();
+
+    await answered(
+      database
+        .transaction(SHELF, "readwrite")
+        .objectStore(SHELF)
+        .put(made, HELD),
+    );
+
+    return made;
+  } catch {
+    return createDpopKey();
+  }
+}
+
+export async function forgetDpopKey(): Promise<void> {
+  if (typeof indexedDB === "undefined") return;
+
+  try {
+    const database = await opened();
+
+    await answered(
+      database.transaction(SHELF, "readwrite").objectStore(SHELF).delete(HELD),
+    );
+  } catch {}
+}

@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { createHash, createSign, generateKeyPairSync } from "node:crypto";
 import { test } from "node:test";
 import { createBrowserClient } from "../dist/browser.js";
+import { clientMetadata } from "../dist/metadata.js";
+import { masks } from "../dist/vite.js";
 import { challenge, encode, random } from "../dist/pkce.js";
 import { InvalidGrant, LoginRequired, MasksError } from "../dist/types.js";
 
@@ -947,4 +949,165 @@ test("without dpop, fetch sends a bearer token and no proof", async () => {
   assert.equal(sent.get("Authorization"), "Bearer at-1");
   assert.equal(sent.get("DPoP"), null);
   assert.equal(await subject.proof("GET", "https://api.test/things"), null);
+});
+
+test("a signed-in session comes back after a reload, and logout forgets it", async () => {
+  const upstream = server();
+  const { subject, store } = client({ server: upstream });
+
+  const { state } = await landing(subject, store, upstream);
+  await subject.callback(`https://app.test/callback?code=a&state=${state}`);
+
+  const reloaded = client({ server: upstream, storage: store }).subject;
+  assert.equal(reloaded.accessToken(), "at-1");
+  assert.equal(reloaded.identity().sub, "actor-1");
+
+  await reloaded.logout();
+  assert.equal(
+    client({ server: upstream, storage: store }).subject.accessToken(),
+    null,
+  );
+});
+
+test("a refresh masks refuses forgets the stored session", async () => {
+  const upstream = server();
+  const { subject, store } = client({ server: upstream });
+
+  const { state } = await landing(subject, store, upstream);
+  await subject.callback(`https://app.test/callback?code=a&state=${state}`);
+
+  upstream.held.token = { error: "invalid_grant" };
+  upstream.held.status = 400;
+  await assert.rejects(subject.refresh(), InvalidGrant);
+
+  assert.equal(subject.accessToken(), null);
+  assert.equal(store.getItem("masks:session"), null);
+});
+
+test("in a browser, the client ID and redirect URI come from the page's origin, and ready() finishes a sign-in", async () => {
+  const upstream = server();
+  const store = memory();
+  const replaced = [];
+  const before = { location: globalThis.location, history: globalThis.history };
+
+  globalThis.location = new URL("https://catalog.test/reports?year=1");
+  globalThis.window = globalThis;
+  globalThis.history = {
+    state: null,
+    replaceState: (_state, _title, url) => replaced.push(url),
+  };
+
+  try {
+    const subject = createBrowserClient({
+      issuer: ISSUER,
+      fetch: upstream.fetch,
+      storage: store,
+    });
+
+    assert.equal(await subject.ready(), null);
+
+    const url = new URL(await subject.authorizeUrl());
+    assert.equal(
+      url.searchParams.get("client_id"),
+      "https://catalog.test/oauth/client.json",
+    );
+    assert.equal(url.searchParams.get("redirect_uri"), "https://catalog.test/");
+
+    const waiting = JSON.parse(store.getItem("masks:pending"));
+    upstream.held.token = {
+      ...GRANTED,
+      id_token: mint({
+        nonce: waiting.nonce,
+        aud: "https://catalog.test/oauth/client.json",
+      }),
+    };
+    globalThis.location = new URL(
+      `https://catalog.test/?code=a&state=${waiting.state}`,
+    );
+
+    const identity = await subject.ready();
+    assert.equal(identity.sub, "actor-1");
+    assert.deepEqual(replaced, ["/reports?year=1"]);
+  } finally {
+    globalThis.location = before.location;
+    globalThis.history = before.history;
+    delete globalThis.window;
+  }
+});
+
+test("outside a browser, the client ID and redirect URI are required", () => {
+  assert.throws(
+    () => createBrowserClient({ issuer: ISSUER }),
+    (error) => error instanceof MasksError && error.code === "invalid_request",
+  );
+});
+
+test("the client metadata document names a public client at its own address", () => {
+  assert.deepEqual(
+    clientMetadata({
+      origin: "https://catalog.pages.dev/anything",
+      name: "Catalog",
+      scope: ["openid", "profile"],
+      dpop: true,
+    }),
+    {
+      client_id: "https://catalog.pages.dev/oauth/client.json",
+      client_name: "Catalog",
+      client_uri: "https://catalog.pages.dev/",
+      redirect_uris: ["https://catalog.pages.dev/"],
+      post_logout_redirect_uris: ["https://catalog.pages.dev/"],
+      grant_types: ["authorization_code", "refresh_token"],
+      response_types: ["code"],
+      token_endpoint_auth_method: "none",
+      application_type: "web",
+      scope: "openid profile",
+      dpop_bound_access_tokens: true,
+    },
+  );
+});
+
+test("the Vite plugin serves the document in dev and writes it into the build", () => {
+  const plugin = masks({ name: "Catalog" });
+  let handler;
+  plugin.configureServer({ middlewares: { use: (fn) => (handler = fn) } });
+
+  const headers = {};
+  let body;
+  let passed = false;
+  handler(
+    { url: "/oauth/client.json?x=1", headers: { host: "localhost:5173" } },
+    {
+      setHeader: (name, value) => (headers[name] = value),
+      end: (text) => (body = text),
+    },
+    () => {},
+  );
+  handler({ url: "/", headers: {} }, {}, () => (passed = true));
+
+  assert.equal(
+    JSON.parse(body).client_id,
+    "http://localhost:5173/oauth/client.json",
+  );
+  assert.equal(headers["Content-Type"], "application/json");
+  assert.equal(passed, true);
+
+  const emitted = [];
+  const context = {
+    emitFile: (file) => emitted.push(file),
+    error: (message) => {
+      throw new Error(message);
+    },
+  };
+
+  assert.throws(() => plugin.generateBundle.call(context), /MASKS_ORIGIN/);
+
+  masks({
+    name: "Catalog",
+    origin: "https://catalog.pages.dev",
+  }).generateBundle.call(context);
+  assert.equal(emitted[0].fileName, "oauth/client.json");
+  assert.equal(
+    JSON.parse(emitted[0].source).client_id,
+    "https://catalog.pages.dev/oauth/client.json",
+  );
 });

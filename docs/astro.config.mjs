@@ -118,6 +118,7 @@ export default defineConfig({
               { label: "Auth.js", slug: "reference/javascript/authjs" },
               { label: "Express", slug: "reference/javascript/express" },
               { label: "Hono", slug: "reference/javascript/hono" },
+              { label: "Static sites", slug: "reference/javascript/static" },
               { label: "@masks/server", slug: "reference/javascript/server" },
               { label: "@masks/client", slug: "reference/javascript/client" },
             ],
