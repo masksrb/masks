@@ -257,6 +257,7 @@ FastAPI app, also takes a store whose `first` is `async`.
 | `masks.MasksError`            | Every error the SDK raises.                                                                                                       |
 | `masks.Error`                 | masks answered with an OAuth error. Has `code`, `description`, and `status`.                                                      |
 | `masks.InvalidToken`          | A token or proof failed a check.                                                                                                  |
+| `masks.MissingToken`          | A request carried no token. A kind of `masks.InvalidToken`.                                                                       |
 | `masks.Unavailable`           | masks, its keys, or a replay store could not be reached.                                                                          |
 | `masks.DelegationRefused`     | masks refused a delegation call. `sign_in_again` says whether the person must sign in again. `secret` holds a replacement secret. |
 | `masks.DelegationUnavailable` | masks or the provider did not answer. `secret` holds a replacement secret.                                                        |

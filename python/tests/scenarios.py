@@ -186,6 +186,7 @@ def protects_an_api(build: Build, fake: Fake) -> None:
 
     assert missing.status == 401
     assert "resource_metadata=" in missing.headers["www-authenticate"]
+    assert "error" not in missing.headers["www-authenticate"]
 
     good = fake.access_token("caller", "catalog:read", "", subject="ada", audience=APP)
 

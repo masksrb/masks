@@ -13,10 +13,10 @@ import httpx
 import jwt
 
 from .dpop import DPOP, PROOF_TYPE, tidied, token_hash
-from .errors import Error, InvalidToken, Unavailable
+from .errors import Error, InvalidToken, MissingToken, Unavailable
 from .flows import Flow, arun, default_async_http, default_http, run
 from .keys import PRIVATE_MEMBERS, thumbprint
-from .keyset import KeySet, unverified_header
+from .keyset import KeySet, unverified, unverified_header
 from .keyset import typed as accepts
 from .models import Issuer, Tenant
 from .replay import AsyncReplayStore, MemoryReplayStore, ReplayStore
@@ -140,7 +140,7 @@ class _Verifying:
                 options={"require": ["iss", "exp", "jti", "aud"]},
             )
         except jwt.PyJWTError as error:
-            raise InvalidToken(f"masks: {error}") from error
+            raise unverified(error) from error
 
         return Claims.from_dict(claims)
 
@@ -149,7 +149,7 @@ class _Verifying:
         scheme, _, token = held.get("Authorization", "").partition(" ")
 
         if not token:
-            raise InvalidToken("masks: the request carries no token")
+            raise MissingToken("masks: the request carries no token")
 
         claims = yield from self._verify(token)
 

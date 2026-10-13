@@ -22,6 +22,10 @@ class InvalidToken(MasksError):
     pass
 
 
+class MissingToken(InvalidToken):
+    pass
+
+
 class Unavailable(MasksError):
     pass
 

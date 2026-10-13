@@ -293,7 +293,9 @@ claims.has_scope("files:read")
 The verifier checks the signature against the issuer's published keys, the
 `at+jwt` type, the issuer, the audience, and the expiry. A DPoP-bound token
 needs a proof signed by its key, made for this method and URL, made in the last
-minute, and not seen before. A failed check raises `masks.InvalidToken`.
+minute, and not seen before. A failed check raises `masks.InvalidToken`, whose
+message names what failed in plain words. A request with no token raises
+`masks.MissingToken`, a kind of `masks.InvalidToken`.
 
 When the verifier cannot reach the issuer's keys, or its replay store fails, it
 raises `masks.Unavailable`. The token may still be good, so answer `503` and
@@ -346,7 +348,8 @@ raises `masks.Error`.
 ### ASGI and FastAPI
 
 `masks.asgi.Middleware` checks every request with an `AsyncVerifier` and
-answers `401` with `WWW-Authenticate` challenges when the check fails. It
+answers `401` with `WWW-Authenticate` challenges when the check fails. The
+challenges for a request with no token carry no error code, as RFC 6750 asks. It
 answers `503` with no challenge when the verifier raises `masks.Unavailable`.
 The claims are at `request.state.masks_claims`.
 

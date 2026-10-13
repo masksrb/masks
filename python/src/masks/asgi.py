@@ -5,7 +5,7 @@ from collections.abc import Awaitable, Callable, MutableMapping
 from typing import Any
 
 from .dpop import DPOP
-from .errors import InvalidToken, Unavailable
+from .errors import InvalidToken, MissingToken, Unavailable
 from .verifier import PROOF_ALGORITHMS, AsyncVerifier
 
 Scope = MutableMapping[str, Any]
@@ -17,12 +17,17 @@ CLAIMS = "masks.claims"
 
 
 def challenges(description: str) -> list[tuple[bytes, bytes]]:
+    algorithms = f'algs="{" ".join(PROOF_ALGORITHMS)}"'
+
+    if not description:
+        return [(b"www-authenticate", b"Bearer"), (b"www-authenticate", f"{DPOP} {algorithms}".encode())]
+
     quoted = description.replace("\\", "\\\\").replace('"', '\\"')
     challenge = f'error="invalid_token", error_description="{quoted}"'
 
     return [
         (b"www-authenticate", f"Bearer {challenge}".encode()),
-        (b"www-authenticate", f'{DPOP} {challenge}, algs="{" ".join(PROOF_ALGORITHMS)}"'.encode()),
+        (b"www-authenticate", f"{DPOP} {challenge}, {algorithms}".encode()),
     ]
 
 
@@ -57,6 +62,9 @@ class Middleware:
 
         try:
             claims = await self.verifier.authenticate(method, requested_url(scope), headers)
+        except MissingToken as error:
+            await self._refuse(scope, send, str(error).removeprefix("masks: "), missing=True)
+            return
         except InvalidToken as error:
             await self._refuse(scope, send, str(error).removeprefix("masks: "))
             return
@@ -87,7 +95,7 @@ class Middleware:
         )
         await send({"type": "http.response.body", "body": body})
 
-    async def _refuse(self, scope: Scope, send: Send, description: str) -> None:
+    async def _refuse(self, scope: Scope, send: Send, description: str, *, missing: bool = False) -> None:
         if scope["type"] == "websocket":
             await send({"type": "websocket.close", "code": 1008})
             return
@@ -98,7 +106,7 @@ class Middleware:
             {
                 "type": "http.response.start",
                 "status": 401,
-                "headers": [(b"content-type", b"application/json"), *challenges(description)],
+                "headers": [(b"content-type", b"application/json"), *challenges("" if missing else description)],
             }
         )
         await send({"type": "http.response.body", "body": body})

@@ -33,6 +33,27 @@ def typed(header: dict[str, Any], accepted: Sequence[str]) -> bool:
     return held in accepted
 
 
+def unverified(error: jwt.PyJWTError) -> InvalidToken:
+    if isinstance(error, jwt.ExpiredSignatureError):
+        said = "that token has expired"
+    elif isinstance(error, (jwt.ImmatureSignatureError, jwt.InvalidIssuedAtError)):
+        said = "that token is not valid yet"
+    elif isinstance(error, jwt.InvalidIssuerError):
+        said = "that token was issued by another server"
+    elif isinstance(error, jwt.InvalidAudienceError):
+        said = "that token was issued for another app"
+    elif isinstance(error, jwt.MissingRequiredClaimError):
+        said = "that token is missing a claim it needs"
+    elif isinstance(error, jwt.InvalidSignatureError):
+        said = "that token was not signed by this issuer"
+    elif isinstance(error, jwt.DecodeError):
+        said = "that token is not a signed JWT"
+    else:
+        said = "that token could not be verified"
+
+    return InvalidToken(f"masks: {said}")
+
+
 def unverified_header(token: str) -> dict[str, Any]:
     segment, dot, rest = token.partition(".")
 
@@ -42,7 +63,7 @@ def unverified_header(token: str) -> dict[str, Any]:
     try:
         header = json.loads(base64.urlsafe_b64decode(segment + "=" * (-len(segment) % 4)))
     except ValueError as error:
-        raise InvalidToken(f"masks: that is not a signed JWT: {error}") from error
+        raise InvalidToken("masks: that is not a signed JWT") from error
 
     if not isinstance(header, dict):
         raise InvalidToken("masks: that is not a signed JWT: its header is not an object")
@@ -119,7 +140,7 @@ class KeySet:
                 options={"require": list(require), "verify_aud": audience is not None},
             )
         except jwt.PyJWTError as error:
-            raise InvalidToken(f"masks: {error}") from error
+            raise unverified(error) from error
 
         return claims, str(algorithm)
 

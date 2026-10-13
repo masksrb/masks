@@ -261,6 +261,20 @@ def test_a_verifier_checks_the_token_itself(fake: Fake, issuer: masks.Issuer) ->
             verifier.verify(token)
             pytest.fail(f"{name} was accepted")
 
+    said = {
+        "another audience": "that token was issued for another app",
+        "another issuer": "that token was issued by another server",
+        "expired": "that token has expired",
+        "no jti": "that token is missing a claim it needs",
+        "not a JWT": "that is not a signed JWT",
+    }
+
+    for name, description in said.items():
+        with pytest.raises(masks.InvalidToken) as raised:
+            verifier.verify(refused[name])
+
+        assert str(raised.value) == f"masks: {description}", name
+
 
 def test_an_unknown_key_refetches_the_keys_at_most_once_in_a_while(fake: Fake, issuer: masks.Issuer) -> None:
     verifier = masks.Verifier(issuer, AUDIENCE, http=fake.http())
@@ -378,9 +392,16 @@ async def test_the_asgi_middleware(signed: masks.Client, issuer: masks.Issuer, f
     assert scope["state"]["masks_claims"].subject == "signed"
 
     _, refused = await call(middleware, [])
+    challenges = [value for name, value in refused["headers"] if name == b"www-authenticate"]
 
     assert refused["status"] == 401
-    assert len([name for name, _ in refused["headers"] if name == b"www-authenticate"]) == 2
+    assert challenges[0] == b"Bearer"
+    assert b"error" not in challenges[1]
+
+    _, refused = await call(middleware, [(b"authorization", b"Bearer nonsense")])
+    challenges = [value for name, value in refused["headers"] if name == b"www-authenticate"]
+
+    assert challenges[0] == b'Bearer error="invalid_token", error_description="that is not a signed JWT"'
 
 
 class Remembering:

@@ -9,6 +9,7 @@ from .errors import (
     InsecureURL,
     InvalidToken,
     MasksError,
+    MissingToken,
     Unavailable,
     has_code,
 )
@@ -96,6 +97,7 @@ __all__ = [
     "MasksError",
     "MemoryReplayStore",
     "Metadata",
+    "MissingToken",
     "Registration",
     "ReplayStore",
     "ResourceMetadata",
