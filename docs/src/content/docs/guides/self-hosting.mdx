@@ -3,12 +3,8 @@ title: Self-hosting
 description: Run the masks server in production.
 ---
 
-masks comes as a container image, a packaged copy of the server that Docker and similar tools run.
-Point it at a Postgres server, and it migrates its databases each time it boots.
-
-```sh
-docker pull ghcr.io/masksrb/masks:latest
-```
+masks comes as a container image, `ghcr.io/masksrb/masks`. Point it at a Postgres server, and it
+migrates its databases each time it boots.
 
 ## What it runs
 
@@ -21,9 +17,8 @@ sign people in and get tokens. masks:
 
 It stores nothing about your application's data.
 
-It runs as one container, with Puma in front of Rails. Puma is the web server that answers
-requests. It needs one Postgres server, which holds three databases named from
-`POSTGRES_DATABASE`:
+The image runs Puma, the web server, in front of Rails, on port 3000. It needs one Postgres server,
+which holds three databases named from `POSTGRES_DATABASE`:
 
 - the primary
 - a cache
@@ -31,38 +26,32 @@ requests. It needs one Postgres server, which holds three databases named from
 
 The only file it keeps on local disk is the master key.
 
-Background jobs, such as mail and retries, run in the web process by default. To move them to a
-second container that runs `bin/jobs`, set `MASKS_JOBS_IN_WEB_SERVER=false`.
-
-The web process also serves LDAP for apps that sign people in only over LDAP. See
-[LDAP](/guides/ldap/).
+- Background jobs, such as mail and retries, run in the web process by default. To move them to a
+  second container that runs `bin/jobs`, set `MASKS_JOBS_IN_WEB_SERVER=false`.
+- The web process also serves [LDAP](/guides/ldap/) for apps that sign people in only over LDAP.
 
 ## Image tags
 
-| Tag | Pushed on | Platforms |
-| --- | --- | --- |
-| `:main` | Every push to main. | amd64 |
-| `:sha-<commit>` | Every push to main. | amd64 |
-| `:<version>`, such as `:0.3.0` | A server release. | amd64, arm64 |
-| `:latest` | A server release. Moved to that release's version. | amd64, arm64 |
+| Tag                            | Pushed on                                          | Platforms    |
+| ------------------------------ | -------------------------------------------------- | ------------ |
+| `:<version>`, such as `:0.8.0` | A server release.                                  | amd64, arm64 |
+| `:latest`                      | A server release. Moved to that release's version. | amd64, arm64 |
+| `:main`                        | Every push to main.                                | amd64        |
+| `:sha-<commit>`                | Every push to main, named by the full commit hash. | amd64        |
 
-Pin a version. Read
+Pin a version, as the example below does. Read
 [CHANGELOG.md](https://github.com/masksrb/masks/blob/main/server/CHANGELOG.md) before you move to a
 new one.
 
-```yaml
-image: ghcr.io/masksrb/masks:0.3.0
-```
-
 ## Example `compose.yml`
 
-This file runs masks, Postgres, and Caddy. Caddy is a web server that gets TLS certificates and
-passes each request on to masks.
+This Compose file runs masks, Postgres, and Caddy. Caddy is a web server that gets TLS certificates
+and passes each request on to masks.
 
 ```yaml
 services:
   masks:
-    image: ghcr.io/masksrb/masks:latest
+    image: ghcr.io/masksrb/masks:0.8.0
     environment:
       POSTGRES_HOST: postgres
       POSTGRES_USER: masks
@@ -74,6 +63,9 @@ services:
       MASKS_PUBLIC_ORIGIN_TEMPLATE: https://%{subdomain}.auth.example.com
     volumes:
       - masks-storage:/rails/storage
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:3000/up"]
+      interval: 30s
     depends_on:
       - postgres
     logging:
@@ -107,37 +99,39 @@ volumes:
   caddy-data:
 ```
 
-The `Caddyfile`:
+The `Caddyfile` names each tenant's host:
 
 ```
-*.auth.example.com {
+acme.auth.example.com {
   reverse_proxy masks:3000
 }
 ```
 
-`initdb/01-roles.sql` creates the two roles masks connects as. It runs when the Postgres volume is
-first set up.
+Caddy gets a certificate for each host it names. A wildcard host such as `*.auth.example.com` needs
+a DNS challenge, and a Caddy build with your DNS provider's module.
+
+`initdb/01-roles.sql` creates the two [database roles](#database-roles) masks connects as. Postgres
+runs it once, when its volume is first set up.
 
 ```sql
 CREATE ROLE masks_owner WITH LOGIN PASSWORD '...' CREATEDB;
 CREATE ROLE masks WITH LOGIN PASSWORD '...';
 ```
 
-Every variable the server reads is in [ENV vars](/reference/environment/).
-
-The `logging` options cap each container's log, so a repeating fault cannot fill the disk.
+- The `logging` options cap the masks container's log, so a repeating fault cannot fill the disk.
+- Every variable the server reads is in [ENV vars](/reference/environment/).
 
 ### Health checks
 
-masks has two status pages. A health check is a request that a container runtime or a monitor makes
-again and again to see if a service works.
+A health check is a request that a container runtime or a monitor makes again and again to see if a
+service works. masks answers two.
 
-| Path | Answers |
-| --- | --- |
-| `/up` | `up` while the server can reach its database, job queue, and cache. `down` with a 503 when it cannot reach one of them. |
-| `/up/jobs` | `up` while every background job has succeeded for a day. Otherwise a 503 that names the job classes that failed. |
+| Path       | Answers                                                                                                                 |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `/up`      | `up` while the server can reach its database, job queue, and cache. `down` with a 503 when it cannot reach one of them. |
+| `/up/jobs` | `up` while no background job has failed in the last day. Otherwise a 503 that names the job classes that failed.        |
 
-- Use `/up` for the container's health check. It also catches a stopped job queue.
+- Use `/up` for the container's health check, as the example does.
 - Point a monitor at `/up/jobs`. Leave it out of the container's health check, because restarting
   the server does not fix a failing job.
 - The errors themselves are in the logs.
@@ -147,15 +141,15 @@ again and again to see if a service works.
 masks keeps tenants apart with row-level security in Postgres. Row-level security is a rule on
 each table that limits which rows a role can see. Two kinds of role can get around it:
 
-- A superuser bypasses it.
+- A superuser, or a role with `BYPASSRLS`, skips it.
 - The role that owns a table can switch it off with one `ALTER TABLE`.
 
 So masks connects as two roles.
 
-| Role | Variable | Holds |
-| --- | --- | --- |
-| `masks_owner` | `MASKS_MIGRATION_USER` | The databases and every table in them. `CREATEDB`, and nothing else. |
-| `masks` | `POSTGRES_USER` | `SELECT`, `INSERT`, `UPDATE`, and `DELETE` on the tables, and the sequences behind them. |
+| Role          | Variable               | Holds                                                                                    |
+| ------------- | ---------------------- | ---------------------------------------------------------------------------------------- |
+| `masks_owner` | `MASKS_MIGRATION_USER` | The databases and every table in them. `CREATEDB`, and nothing else.                     |
+| `masks`       | `POSTGRES_USER`        | `SELECT`, `INSERT`, `UPDATE`, and `DELETE` on the tables, and the sequences behind them. |
 
 On every boot, the image's entrypoint:
 
@@ -165,8 +159,8 @@ On every boot, the image's entrypoint:
 Two checks stop a server that is set up wrong:
 
 - The entrypoint refuses to start when `MASKS_MIGRATION_USER` is unset or names the serving role.
-- The server refuses to answer a request while its role owns a table that row-level security
-  protects.
+- The server refuses to answer a request while its role is a superuser, has `BYPASSRLS`, or owns a
+  table that row-level security protects.
 
 ### Moving an existing database to two roles
 
@@ -180,7 +174,7 @@ A server that migrated and served as one role owns everything it created. To mov
    REASSIGN OWNED BY masks TO masks_owner;
    ```
 
-   `CREATE ROLE` only needs to run once, because roles belong to the whole Postgres server.
+   `CREATE ROLE` needs to run once, because roles belong to the whole Postgres server.
 
 2. Set `MASKS_MIGRATION_USER` and `MASKS_MIGRATION_PASSWORD`.
 3. Start the new image.
@@ -199,23 +193,23 @@ them, someone needs the encryption keys as well as the database. These columns i
 - authenticator app secrets
 - provider credentials and sending service credentials
 - connected accounts' tokens
+- event stream secrets
 
-Four secrets protect this data. None of them appears in the compose file.
-
-| Secret | Protects |
-| --- | --- |
-| `SECRET_KEY_BASE` | The session cookie. Anyone holding it can forge one. |
-| `ENCRYPTION_PRIMARY_KEY` | The encrypted columns, through a key derived from it for each tenant. |
-| `ENCRYPTION_DETERMINISTIC_KEY` | Nothing yet. Rails requires it. |
-| `ENCRYPTION_KEY_DERIVATION_SALT` | The per-column keys derived from the two above. |
+### The master key
 
 On first boot, the image's entrypoint generates a master key and writes it to
-`/rails/storage/master.key`. On every boot, it derives all four secrets from that key.
+`/rails/storage/master.key`. On every boot, it derives four secrets from that key:
 
-- Keep that path on a volume, as the [example](#example-composeyml) does.
+- `SECRET_KEY_BASE` signs the session cookie. Anyone holding it can forge one.
+- `ENCRYPTION_PRIMARY_KEY`, `ENCRYPTION_DETERMINISTIC_KEY`, and `ENCRYPTION_KEY_DERIVATION_SALT`
+  make the keys for the encrypted columns.
+
+What to know about the master key:
+
+- Keep its path on a volume, as the [example](#example-composeyml) does.
 - A secret set as an environment variable takes precedence over the derived one.
-- See [ENV vars](/reference/environment/#required-in-production) for `MASKS_MASTER_KEY` and
-  `MASKS_MASTER_KEY_FILE`.
+- To keep the key elsewhere, use `MASKS_MASTER_KEY` or `MASKS_MASTER_KEY_FILE`. See
+  [ENV vars](/reference/environment/#required-in-production).
 
 :::caution
 Keep the master key with your database backups. Losing it makes every encrypted column unreadable,
@@ -224,17 +218,17 @@ permanently.
 
 ### Per-tenant keys
 
-Each tenant's encrypted columns use a key of that tenant's own. masks derives it from the primary
-key and the tenant's UUID with HKDF-SHA256, a standard way to make new keys from one key. Nothing
-new needs storing or backing up.
+Each tenant's encrypted columns use a key of that tenant's own. masks derives it from the
+encryption key and the tenant's UUID with HKDF-SHA256, a standard way to make new keys from one
+key. Nothing new needs storing or backing up.
 
 - A ciphertext copied from one tenant's rows cannot be read in another tenant.
 - Two tenants never share an encryption key.
-- Writing an encrypted column outside a tenant raises an error.
+- Reading or writing an encrypted column outside its tenant raises an error.
 
-A database from an earlier version holds columns encrypted under the shared primary key. masks still
-reads them. At boot, `bin/rails masks:tenants` looks for any column still under the shared key. If
-it finds one, it re-encrypts every encrypted column under its tenant's key and prints that it is
+A database from an earlier version holds columns encrypted under the shared key. masks still reads
+them. At boot, `bin/rails masks:tenants` looks for a tenant whose columns use the shared key. If it
+finds one, it re-encrypts that tenant's columns under the tenant's own key and prints that it is
 done.
 
 ### Running more than one replica
@@ -252,10 +246,9 @@ different key.
 ### Rotating the master key
 
 1. Set `MASKS_PREVIOUS_MASTER_KEY` to the key in use now.
-2. Put the new key in `MASKS_MASTER_KEY` or its file, and restart.
-3. At boot, masks re-encrypts every encrypted column with keys derived from the new one and prints
-   that it is done.
-4. Remove `MASKS_PREVIOUS_MASTER_KEY` and restart again.
+2. Put the new key in `MASKS_MASTER_KEY` or its file, and restart. At boot, masks re-encrypts every
+   encrypted column with keys derived from the new one and prints that it is done.
+3. Remove `MASKS_PREVIOUS_MASTER_KEY` and restart again.
 
 A new `SECRET_KEY_BASE` comes with the new key, so everyone signs in again after the restart.
 
@@ -275,21 +268,24 @@ masks can report figures to Prometheus, a tool that collects numbers from servic
          - targets: [masks:3000]
    ```
 
-Without the variable, `/metrics` answers 404.
+Without the variable, `/metrics` answers 404. It answers 30 requests from each IP address each
+minute.
 
-Each scrape counts from the database, so the figures agree across replicas.
+Each scrape counts from the database, so the figures agree across replicas. Every metric is a
+gauge.
 
-Every tenant reports these under a `tenant` label:
+| Metric                             | Counts                                                   |
+| ---------------------------------- | -------------------------------------------------------- |
+| `masks_tenants`                    | The tenants this server serves.                          |
+| `masks_actors`                     | The tenant's accounts.                                   |
+| `masks_sessions_live`              | The tenant's sessions that have not ended.               |
+| `masks_sign_ins_last_hour`         | The tenant's sign-ins in the last hour.                  |
+| `masks_sign_ins_refused_last_hour` | The tenant's refused sign-ins in the last hour.          |
+| `masks_access_tokens_last_hour`    | The tenant's access tokens issued in the last hour.      |
+| `masks_jobs_failed_last_day`       | The kinds of background job that failed in the last day. |
+| `masks_jobs_waiting`               | The background jobs ready to run and not yet picked up.  |
 
-- its accounts
-- its live sessions
-- its sign-ins, refused sign-ins, and access tokens from the last hour
-
-The server also reports:
-
-- its tenants
-- the kinds of job that failed in the last day
-- the jobs waiting to run
+The metrics that count something in a tenant carry a `tenant` label with its subdomain.
 
 ## Backups, restores, and upgrades
 
@@ -301,10 +297,11 @@ Back up the primary database and the master key together.
 
 ### Back up
 
-1. Dump the primary database:
+1. Dump the primary database as a Postgres superuser. Row-level security stops every other role from
+   reading all the rows, and the dump fails.
 
    ```sh
-   pg_dump --format=custom --file=masks.dump masks_production
+   pg_dump --username=postgres --format=custom --file=masks.dump masks
    ```
 
 2. Keep `master.key`, or the value of `MASKS_MASTER_KEY`, beside the dump.
@@ -319,8 +316,8 @@ Restore as the migration role, so the migration role owns every table again.
 2. Create the database as the migration role, and load the dump as it:
 
    ```sh
-   createdb --username=masks_owner masks_production
-   pg_restore --username=masks_owner --dbname=masks_production --no-owner masks.dump
+   createdb --username=masks_owner masks
+   pg_restore --username=masks_owner --dbname=masks --no-owner masks.dump
    ```
 
 3. Start the server with the same master key.
@@ -333,7 +330,7 @@ work again.
 
 1. Take a backup. Migrations do not run backwards.
 2. Read the release notes for anything that needs a step of your own.
-3. Pull the new image and restart.
+3. Change the image tag and restart.
 
 Each boot runs the migrations that have not run yet, so you can skip versions.
 
@@ -343,20 +340,22 @@ With more than one replica:
 2. Wait for `/up`.
 3. Replace the rest.
 
-## Multi-tenancy
+## Tenants
 
-A tenant is a separate set of accounts, clients, and signing keys at its own subdomain. The compose
-file above declares Multi mode. To change the mode, replace its `MASKS_TENANTS` line.
+A tenant is a separate set of accounts, clients, and signing keys at its own subdomain. The example
+declares one tenant, `acme`, with `MASKS_TENANTS`. See
+[declaring tenants](/guides/core-concepts/#declaring-tenants) for how each mode works.
 
-| Mode | In `masks:`'s `environment:` | An unseen hostname |
-| --- | --- | --- |
-| Single | `MASKS_TENANT: acme` | Served by that one tenant. |
-| Multi | `MASKS_TENANTS: acme,demo` | 404. |
-| Dynamic | Neither (remove the line) | Claims a new tenant, since the template has `%{subdomain}`. |
+| Mode    | In the `masks` service's `environment` | Serves                                                                                                                            |
+| ------- | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Multi   | `MASKS_TENANTS: acme,demo`             | Each tenant named, at its own host. Add each host to the `Caddyfile`.                                                             |
+| Single  | `MASKS_TENANT: acme`                   | One tenant, at the host the template gives it.                                                                                    |
+| Dynamic | Neither                                | A new tenant for each new host that matches the template. `MASKS_CLAIM_LIMIT` and `MASKS_CLAIM_CEILING` limit how many each hour. |
 
-- See [declaring tenants](/guides/core-concepts/#declaring-tenants) for how each mode works.
-- `MASKS_SETUP_TOKEN` sets one setup token for every tenant. See
-  [setting a tenant up](/guides/core-concepts/#setting-a-tenant-up).
+Every other hostname gets a 404.
+
+`MASKS_SETUP_TOKEN` sets one setup token for every tenant. See
+[setting a tenant up](/guides/core-concepts/#setting-a-tenant-up).
 
 ## Custom domains
 
@@ -387,7 +386,7 @@ Caddy can issue each host a certificate on demand. Before it issues one, it asks
   }
 }
 
-*.auth.example.com {
+acme.auth.example.com {
   reverse_proxy masks:3000
 }
 
@@ -402,7 +401,7 @@ https:// {
 ## Declaring apps in a file
 
 When a server's apps and groups live in a file, a rebuilt server comes back the same way. Mount the
-file and name it in `MASKS_CONFIG`. Every boot applies it.
+file into the container and set `MASKS_CONFIG` to its path. Every boot applies it.
 
 ```yaml
 name: Home
@@ -428,15 +427,18 @@ apps:
     refresh_token_lifetime: 604800
 ```
 
-| | |
-| --- | --- |
-| An app's key | Its `client_id`, unless `client_id` names another. The app's own settings never have to change. |
-| `preset`, `url`, `slug` | A [known product](/guides/features/#adding-a-known-app), as **Add client** registers it. |
-| `redirect_uris`, `scopes` | An app no preset covers. |
-| `client_secret_env` | The variable that holds the app's secret. Without it, masks makes a secret the first time and prints it to the logs once. |
-| `allowed_groups`, `access_token_lifetime`, `refresh_token_lifetime` | As on a client's **Access** and **General** tabs in `/manage`. |
-| `groups` | Each group's name. The nicknames or emails of its members. A member must already have an account. |
+|                                                                     |                                                                                                                           |
+| ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `name`, `accent_color`                                              | The tenant's name and color, as under **Branding** in `/manage`.                                                          |
+| An app's key                                                        | Its `client_id`, unless `client_id` names another. The app's own settings never have to change.                           |
+| `preset`, `url`, `slug`                                             | A [known product](/guides/features/#adding-a-known-app), as **Add client** registers it.                                  |
+| `redirect_uris`, `scopes`                                           | An app no preset covers. With neither `scopes` nor a preset, the app gets `openid profile email`.                         |
+| `name` under an app                                                 | The app's name. Without it, masks uses the preset's name or the app's key.                                                |
+| `client_secret_env`                                                 | The variable that holds the app's secret. Without it, masks makes a secret the first time and prints it to the logs once. |
+| `allowed_groups`, `access_token_lifetime`, `refresh_token_lifetime` | As on a client's **Access** and **General** tabs in `/manage`. Lifetimes are in seconds.                                  |
+| `groups`                                                            | Each group's name, and the nicknames or emails of its members. A member must already have an account.                     |
 
+- An app in the file is approved, and actors are not asked to consent to it.
 - Applying the file adds and updates. It never removes an app, a group, or a member the file no
   longer names.
 - A server with several tenants nests each one under `tenants:` by subdomain.
@@ -450,8 +452,8 @@ and backup codes.
 1. Name the account in `MASKS_RECOVER`:
 
    ```yaml
-       environment:
-         MASKS_RECOVER: acme/owner
+   environment:
+     MASKS_RECOVER: acme/owner
    ```
 
 2. Restart the server. At boot, masks removes that account's authenticator app, backup codes,
@@ -462,7 +464,7 @@ and backup codes.
    ```
 
 3. Open the link and choose a password.
-4. Sign in and set up a new second factor. masks asks a manager for one at that sign-in.
+4. Sign in and set up a new second factor. masks requires one of every manager.
 5. Remove `MASKS_RECOVER` and restart again. Every boot repeats the recovery while it is set.
 
 Both the new password and the new second factor appear in the account's activity.
@@ -472,18 +474,15 @@ by that nickname or email.
 
 ## System requirements
 
-masks is a small Rails app with no fixed CPU or memory minimum. Two variables size it.
-
-| Variable | Default | Sizes |
-| --- | --- | --- |
-| `RAILS_MAX_THREADS` | `3` | Puma's threads. When set, also the size of each database connection pool. |
-| `JOB_CONCURRENCY` | `1` | The job supervisor's worker processes, with three threads each. |
-
-Raise either one if requests or jobs queue up. See [Processes](/reference/environment/#processes).
+masks has no fixed CPU or memory minimum. `RAILS_MAX_THREADS` sizes Puma's threads, and
+`JOB_CONCURRENCY` sizes the background job workers. Raise either one if requests or jobs queue up.
+See [processes](/reference/environment/#processes).
 
 ## Next steps
 
-1. Fetch the tenant's discovery document:
+1. Read the tenant's setup token in the server's logs, open the tenant's address, and create the
+   first account. See [setting a tenant up](/guides/core-concepts/#setting-a-tenant-up).
+2. Fetch the tenant's discovery document:
 
    ```sh
    curl https://acme.auth.example.com/.well-known/openid-configuration
@@ -491,4 +490,4 @@ Raise either one if requests or jobs queue up. See [Processes](/reference/enviro
 
    It confirms the tenant's issuer, keys, and public origin.
 
-2. [Connect an app](/guides/connecting-via-sdk/#connecting-an-app).
+3. [Connect an app](/guides/connecting-via-sdk/#connecting-an-app).

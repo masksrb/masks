@@ -6,9 +6,9 @@ description: Restyle the sign-in and account pages for a tenant or a client with
 A theme is a CSS file that changes how the sign-in, consent, and account pages look. masks loads it
 after its own stylesheet.
 
-- In production, masks reads themes when the server starts. A new or changed file applies after a
-  restart.
 - In development, masks reads themes on every request.
+- Everywhere else, masks reads them once and keeps them until the server restarts. A new or changed
+  file applies after a restart.
 
 ## A logo and a color
 
@@ -17,8 +17,8 @@ You can set a logo and a color without a stylesheet. An owner sets both in `/man
 
 - The logo replaces the tenant's initial at the top of the sign-in, consent, and account pages. It
   can be any image up to 4 megabytes. masks stores it at 256 pixels square.
-- The color tints the buttons and headings on those pages. masks picks black or white text for
-  buttons, so the text stays readable.
+- The color tints the buttons and headings on those pages. It sets `--signal` and `--brass`, and
+  sets `--signal-ink` to black or white, whichever reads better on it.
 
 A theme loads after both, and can override them.
 
@@ -27,9 +27,9 @@ A theme loads after both, and can override them.
 masks reads themes from `/rails/themes`, or from the directory that `MASKS_THEMES_PATH` names. A
 file's name sets where it applies.
 
-| File | Applies to |
-| --- | --- |
-| `acme.css` | Every sign-in and account page of the tenant `acme`. |
+| File                   | Applies to                                                                        |
+| ---------------------- | --------------------------------------------------------------------------------- |
+| `acme.css`             | Every sign-in and account page of the tenant `acme`.                              |
 | `acme/<client_id>.css` | The sign-in and consent pages of `acme` while the person signs in to that client. |
 
 - A page loads the tenant's file first and the client's file second. The client's rules win when
@@ -79,37 +79,36 @@ file's name sets where it applies.
 3. Restart the server.
 
 masks serves the file from `/themes/<digest>.css`. The digest is a value computed from the file's
-contents, so it changes whenever the file changes. Browsers can cache each version with no time
-limit.
+contents, so it changes whenever the file changes. Browsers cache each version for a year.
 
 ## Custom properties
 
 A custom property is a CSS variable, a name that starts with `--`. Each one sets a color or a size
 that masks uses across the pages.
 
-| Property | |
-| --- | --- |
-| `--ground` | The page background. |
-| `--surface` | Panels, cards, and fields that sit on the ground. |
-| `--line` | Borders and dividers. |
-| `--line-firm` | Borders of fields and of hovered or focused controls. |
-| `--ink` | Body text. |
-| `--ink-soft` | Secondary text, hints, and labels. |
-| `--brass` | Structural rules, the edge of the tenant's mark, eyebrows, status labels, and the name beside an avatar. |
-| `--brass-lit` | Focus rings and the border of a focused field. |
-| `--signal` | The primary button, links, and selected controls. |
-| `--signal-ink` | Text on a solid `--signal` fill. |
-| `--bad`, `--bad-field` | Error text and the background behind it. |
-| `--warn`, `--warn-field` | Warning text and the background behind it. |
-| `--info`, `--info-field` | Informational text and the background behind it. |
-| `--glow` | The background of pills and plain notes. |
-| `--window` | The image cast as light across the top of the page. `url("/masks-public/icon.svg")` by default. `none` removes it. |
-| `--window-strength` | The opacity of that light, from `0` to `1`. |
-| `--pane` | The see-through fill of panels. Panels blur what is behind them. |
-| `--pane-rim` | The border of panels. |
-| `--pane-shine`, `--pane-sheen` | The highlight along a panel's top edge, and the gradient across its face. |
-| `--pane-shadow` | The shadow under panels. |
-| `--bend` | The corner radius of panels and controls. |
+| Property                       |                                                                                                                  |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
+| `--ground`                     | The page background.                                                                                             |
+| `--surface`                    | Panels, cards, and fields that sit on the ground.                                                                |
+| `--line`                       | Borders and dividers.                                                                                            |
+| `--line-firm`                  | Borders of fields and of hovered or focused controls.                                                            |
+| `--ink`                        | Body text.                                                                                                       |
+| `--ink-soft`                   | Secondary text, hints, and labels.                                                                               |
+| `--brass`                      | Structural rules, the edge of the tenant's mark, eyebrows, status labels, and the name beside an avatar.         |
+| `--brass-lit`                  | Focus rings and the border of a focused field.                                                                   |
+| `--signal`                     | The primary button, links, and selected controls.                                                                |
+| `--signal-ink`                 | Text on a solid `--signal` fill.                                                                                 |
+| `--bad`, `--bad-field`         | Error text and the background behind it.                                                                         |
+| `--warn`, `--warn-field`       | Warning text and the background behind it.                                                                       |
+| `--info`, `--info-field`       | Informational text and the background behind it.                                                                 |
+| `--glow`                       | The background of pills and plain notes.                                                                         |
+| `--window`                     | A blurred image behind the top right of the page. `url("/masks-public/icon.svg")` by default. `none` removes it. |
+| `--window-strength`            | The opacity of that image, from `0` to `1`.                                                                      |
+| `--pane`                       | The see-through fill of panels. Panels blur what is behind them.                                                 |
+| `--pane-rim`                   | The border of panels.                                                                                            |
+| `--pane-shine`, `--pane-sheen` | The highlight along a panel's top edge, and the gradient across its face.                                        |
+| `--pane-shadow`                | The shadow under panels.                                                                                         |
+| `--bend`                       | The corner radius of panels and controls.                                                                        |
 
 A theme may also style any other selector on these pages. The properties above stay the same
 between releases. Class names can change.
@@ -120,7 +119,7 @@ A theme does not change the pages' content security policy. This policy tells th
 page may load files from. Images and fonts load only from masks itself or from `data:` URIs. A
 `data:` URI holds the file's contents inside the stylesheet.
 
-So a theme must do one of these:
+A theme must do one of these:
 
 - Embed each image or font as a `data:` URI.
 - Name a font installed on the device.
