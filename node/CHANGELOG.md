@@ -1,5 +1,45 @@
 # Changelog
 
+## [0.3.0](https://github.com/masksrb/masks/compare/node-v0.2.0...node-v0.3.0) (2026-10-14)
+
+
+### Features
+
+* **node:** a Hono app on Cloudflare Workers reads its masks settings from the Worker's variables and secrets ([02ad5f7](https://github.com/masksrb/masks/commit/02ad5f766218c309d07117dec388103317c1a6df))
+* **node:** a refused check hands back a refusal with its kind, the URL a browser goes to, and toResponse ([08dc7fb](https://github.com/masksrb/masks/commit/08dc7fb56ca88ff7b32cb193bc1d325774d60e6f))
+* **node:** each framework adapter reads the way that framework's own auth packages do ([39615cc](https://github.com/masksrb/masks/commit/39615ccd05184d5276e58effbbbd21dd76cce750))
+* **node:** one Store holds an app's sessions, logouts, proofs, and refreshes, and redisStore and upstashStore keep it in Redis ([d934292](https://github.com/masksrb/masks/commit/d9342922045d45939c572b715cb22b716367fea4))
+* **node:** requireAuth takes the page to return to, and masksAuth checks at sign-in that masks still knows the app ([1758fd3](https://github.com/masksrb/masks/commit/1758fd346fe8c438a18a8ad9ddfe2c78ae8e9371))
+* **node:** with signOutOfIssuer, next-auth's signOut signs out of masks too, and Masks and masksAuth share one manager check ([b8626fc](https://github.com/masksrb/masks/commit/b8626fcd187bdcb870d09836ace02bd12fba03a5))
+
+
+### Fixes
+
+* **node:** a back-channel logout or sign-out form is read up to 64 KiB, and a sign-in keeps ID token claims only for the subject userinfo names ([6885555](https://github.com/masksrb/masks/commit/688555582a5da152c71a6e272b4749005ede3e4f))
+* **node:** a back-channel logout token without exp is refused, and its jti is remembered until two minutes past its expiry ([33161a2](https://github.com/masksrb/masks/commit/33161a2731d55715d959abd56891bf49c961698e))
+* **node:** a Masks app asks masks for the scopes that manage its connection, and sends a signed-out manager to sign in and back ([b127ccb](https://github.com/masksrb/masks/commit/b127ccb0a49a52bef9ee609d33a7111e2ed679d2))
+* **node:** a request with no token gets a challenge with no error code, and a refused token is described in plain words ([b6af9d3](https://github.com/masksrb/masks/commit/b6af9d3456d75966bbb21df94b2fd87a51af74ec))
+* **node:** a sign-in callback this browser did not start no longer repeats the error text in its URL ([1be9a29](https://github.com/masksrb/masks/commit/1be9a29d8a666f6d94c908f1de9fb41a1af0ce7c))
+
+
+### Documentation
+
+* every guide, SDK reference, and README says what masks does now, in fewer words ([7046f86](https://github.com/masksrb/masks/commit/7046f862c774f05407d92cd19779f53bf0b62595))
+* **node:** a Hono app on Workers shares its store between isolates through upstashStore ([483c398](https://github.com/masksrb/masks/commit/483c3986e57c0341c8f8ba3098d947b58b8aa167))
+* **node:** the to-do list records the test suite on Bun 1.4 and Deno 2.8 ([fc67a76](https://github.com/masksrb/masks/commit/fc67a769ef73d98949df4a86535c274d8445d837))
+* **node:** the to-do list sketches how a session could hold a DPoP-bound token ([b60fa3a](https://github.com/masksrb/masks/commit/b60fa3af70734f53f8dc1956d74a7e55af9bb7f7))
+
+
+### Refactoring
+
+* **node:** Masks and masksAuth share one handshake module, and a disconnect keeps the credentials when masks cannot delete the registration ([6d92fcf](https://github.com/masksrb/masks/commit/6d92fcffbfd8ebb7da3db715b7e2264c27e58410))
+* **node:** Masks hands out each cookie once per request, so every adapter only appends, and one helper picks where credentials come from ([5be64d8](https://github.com/masksrb/masks/commit/5be64d8b212a4507db669984ae253bb4fd8f6891))
+* **node:** masks.ts splits along go/web's seams, into session and flow state, the app's core, its routes, and its guards ([494a3fd](https://github.com/masksrb/masks/commit/494a3fd59954d810a42d0f5813437bc9c5591508))
+* **node:** one helper caps each remembered map, one rule decides where a sign-in may return, and a rediscovered issuer keeps its keys ([d8216f4](https://github.com/masksrb/masks/commit/d8216f4a687233e31bd3deb6d1a0ecc8b25d6232))
+* **node:** the avatar route sends the person's token through signedFetch, and avatarBytes caps the photo in place of avatars.bytes ([d3ee0a9](https://github.com/masksrb/masks/commit/d3ee0a95d74fd66830efbbe9221d1df5121cb636))
+* **node:** the response helpers live in app/responses.ts and the request helpers in app/requests.ts, and the avatar route and the Next.js adapter use them ([2d81543](https://github.com/masksrb/masks/commit/2d81543178f82a702472c87f9e3cb9a7eb935a8d))
+* **web:** Person is Actor in @masks/client, as masks names it everywhere else ([f356bd6](https://github.com/masksrb/masks/commit/f356bd64785e5ddb43baf7764b824f044beb3a49))
+
 ## [0.2.0](https://github.com/masksrb/masks/compare/node-v0.1.0...node-v0.2.0) (2026-10-13)
 
 

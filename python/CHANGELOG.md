@@ -1,5 +1,44 @@
 # Changelog
 
+## [0.3.0](https://github.com/masksrb/masks/compare/python-v0.2.0...python-v0.3.0) (2026-10-14)
+
+
+### Features
+
+* **python:** FastAPI, Flask, and Django start and finish a delegation in one call each, held to the person who started it ([6379371](https://github.com/masksrb/masks/commit/6379371d2875a0a51ba34edf75fc1e7f663e6578))
+* **python:** one store setting shares refreshes, logouts, and DPoP proofs across processes, with Redis stores built in ([acc525f](https://github.com/masksrb/masks/commit/acc525f2fae62024df322e98178d4692dca899f4))
+
+
+### Fixes
+
+* **python:** a back-channel logout that logged_out or the session store could not finish can be sent again ([2303852](https://github.com/masksrb/masks/commit/230385229dad987e2931fe5a62736b3d72360027))
+* **python:** a logout token whose departure cannot be saved is taken again, and a store outage during a refresh leaves the session as it is ([f348221](https://github.com/masksrb/masks/commit/f348221c4a7dce4d1c7ee0354d933daf06131174))
+* **python:** a session too large for one cookie is split across up to eight, as Go and Node do ([9c8b197](https://github.com/masksrb/masks/commit/9c8b19718321ae625701d9f866d6e77b15e90d38))
+* **python:** a sign-in error shows only for a sign-in this browser started, and an outage page no longer shows the error behind it ([8a40872](https://github.com/masksrb/masks/commit/8a40872a965ed6bd5f2da6555e700f58d496d864))
+* **python:** an app's credentials name their issuer, so one tenant's client secret is never sent to another ([89cf58a](https://github.com/masksrb/masks/commit/89cf58a6e58e7369115709e1e24460c6e9bf0c3b))
+* **python:** FileCredentials checks it can write its folder before the handshake registers, and reports a file it cannot read ([0e62845](https://github.com/masksrb/masks/commit/0e62845e2bdf912b2d6e5761d19822366610a05c))
+* **python:** Reconnect and Disconnect work in Django, since masks' own routes check their forms' origin themselves ([77a5ac9](https://github.com/masksrb/masks/commit/77a5ac9b85d24c43e643fbe28437bee38a8d7d8b))
+* **python:** the ASGI middleware sends no error code to a request with no token, and a refused token is described in plain words ([b82814c](https://github.com/masksrb/masks/commit/b82814ce463ac3da8819d78c2f252efe30561ebf))
+
+
+### Performance
+
+* **python:** a token's header is read from its first segment alone before PyJWT checks the whole token ([8650bd7](https://github.com/masksrb/masks/commit/8650bd702ba0ad1080d02787f6edd03c30d061f7))
+
+
+### Documentation
+
+* comments and pages no longer claim what masks stopped doing ([e0b1ba0](https://github.com/masksrb/masks/commit/e0b1ba0b71ccae8683b605f9442ee16c4afb5dd4))
+* every guide, SDK reference, and README says what masks does now, in fewer words ([7046f86](https://github.com/masksrb/masks/commit/7046f862c774f05407d92cd19779f53bf0b62595))
+* **python:** the README covers the web integrations, the handshake, and the code flow ([9ae0ced](https://github.com/masksrb/masks/commit/9ae0cedfdfb04390d00efded096a4ed1304a8c58))
+* **python:** the README installs masks-client from PyPI ([706bd20](https://github.com/masksrb/masks/commit/706bd20e177ad5bceb85d3b1ab8c4b6905a5da3e))
+* **python:** the to-do list records the live back-channel logout run ([34bca30](https://github.com/masksrb/masks/commit/34bca3006571aeba0ae8523ed1158ec603e5c14f))
+
+
+### Refactoring
+
+* **python:** the signed-in party is an Actor, the name masks itself uses ([ca4ca68](https://github.com/masksrb/masks/commit/ca4ca683c7f6ebe82197a8ae8a1f60e463eac252))
+
 ## [0.2.0](https://github.com/masksrb/masks/compare/python-v0.1.0...python-v0.2.0) (2026-10-13)
 
 

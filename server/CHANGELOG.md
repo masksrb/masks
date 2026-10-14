@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.9.0](https://github.com/masksrb/masks/compare/server-v0.8.0...server-v0.9.0) (2026-10-14)
+
+
+### Fixes
+
+* **engine:** a handshake registers only the post-logout address it names, and keeps its return_to apart, so a new return_to is still asked about ([47a8988](https://github.com/masksrb/masks/commit/47a898874ee2c00f9763a57624cc3cb207a7e48f))
+* **server:** a HEAD request for a missing page gets the content type of the page a GET would return ([763b7fa](https://github.com/masksrb/masks/commit/763b7fa0a4dc5d712a66a676f420692be20ce3d1))
+* **server:** error pages look like masks, and /favicon.ico serves the masks mark ([a388d76](https://github.com/masksrb/masks/commit/a388d76774dfb136b7fc06bebf03e47da303eb10))
+* **server:** what a person types before the sign-in script loads stays in the field ([befbaef](https://github.com/masksrb/masks/commit/befbaeff694d541f9e49c36c90dc9b8217678815))
+
+
+### Documentation
+
+* every guide, SDK reference, and README says what masks does now, in fewer words ([7046f86](https://github.com/masksrb/masks/commit/7046f862c774f05407d92cd19779f53bf0b62595))
+* the Manage API page holds the schema explorer, and /reference/explorer redirects to it ([9739b00](https://github.com/masksrb/masks/commit/9739b0047d187c943bb784124d924ec4c17233f4))
+
+
+### Refactoring
+
+* **engine:** account and manage locale keys, the profile icon, and the signup name field are named for actors and members ([3dbeec9](https://github.com/masksrb/masks/commit/3dbeec95c0ee8446f230c8ec48da8e2c44c22c54))
+* **engine:** the signed-in card is the actor partial and component, and the login JSON carries it as actor.card ([07892cb](https://github.com/masksrb/masks/commit/07892cb95ec16c8b65acee258938b18612830234))
+
 ## [0.8.0](https://github.com/masksrb/masks/compare/server-v0.7.0...server-v0.8.0) (2026-10-13)
 
 
