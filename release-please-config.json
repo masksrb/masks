@@ -72,7 +72,7 @@
         {
           "type": "toml",
           "path": "uv.lock",
-          "jsonpath": "$.package[?(@.name==='masks-client')].version"
+          "jsonpath": "$.package[?(@.name.value==='masks-client')].version"
         }
       ]
     }
