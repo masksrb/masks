@@ -4,8 +4,16 @@ module Masks
       RESTARTED = "masks_restarted_at".freeze
       RESTART_WITHIN = 60
       SAME_ORIGIN = %w[same-origin none].freeze
+      CONFIRMATION_HEADERS = {
+        "Cache-Control" => "no-store",
+        "X-Content-Type-Options" => "nosniff",
+        "X-Frame-Options" => "DENY",
+        "Content-Security-Policy" =>
+          "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'"
+      }.freeze
 
       before_action :refuse_cross_site, only: :destroy
+      before_action :confirm_sign_out, only: :destroy
 
       def show
         if masks_configured? && (masks_signed_in? || (masks_tokens && masks_refresh!))
@@ -103,6 +111,18 @@ module Masks
           return if same_origin?
 
           answer("invalid_request", "that request came from another site", :forbidden, failed: "sign-out")
+        end
+
+        def confirm_sign_out
+          return if request.post? || request.delete? || request.headers["Sec-Fetch-Site"].present?
+
+          if masks_wants_json?
+            return answer("invalid_request", "sign out with a POST from this site", :forbidden, failed: "sign-out")
+          end
+
+          @everywhere = params[:everywhere].present?
+          response.headers.merge!(CONFIRMATION_HEADERS)
+          render :confirm, formats: :html
         end
 
         def same_origin?

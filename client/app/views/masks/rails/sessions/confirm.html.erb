@@ -1,0 +1,12 @@
+<% content_for :title, "Sign out" %>
+
+<h1>Sign out</h1>
+
+<p>Select Sign out to finish signing out.</p>
+
+<%= form_with url: logout_path, method: :post do %>
+  <% if @everywhere %>
+    <input type="hidden" name="everywhere" value="1">
+  <% end %>
+  <button type="submit">Sign out</button>
+<% end %>

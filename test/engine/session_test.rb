@@ -559,6 +559,75 @@ class SessionTest < EngineIntegrationTest
     assert_empty session_payload
   end
 
+  test "a link followed from this app's own pages signs out" do
+    sign_in!
+
+    get "/auth/logout", headers: host.merge("HTTP_SEC_FETCH_SITE" => "same-origin")
+
+    assert_redirected_to "/"
+    assert_empty session_payload
+  end
+
+  test "a link followed by a browser that names no site asks before signing out" do
+    sign_in!
+    revoked = issuer.revocations.size
+
+    get "/auth/logout", headers: host
+
+    assert_response :success
+    assert_equal "text/html", response.media_type
+    assert_includes response.body, "<title>Sign out</title>"
+    assert_includes response.body, "Select Sign out to finish signing out."
+    assert_match %r{<form[^>]*action="/auth/logout"[^>]*method="post"}, response.body
+    refute_includes response.body, 'name="everywhere"'
+    refute_empty session_payload
+    assert_equal revoked, issuer.revocations.size
+  end
+
+  test "the question before signing out cannot be cached, framed, or load anything" do
+    sign_in!
+
+    get "/auth/logout", headers: host
+
+    assert_equal "no-store", response.headers["Cache-Control"]
+    assert_equal "nosniff", response.headers["X-Content-Type-Options"]
+    assert_equal "DENY", response.headers["X-Frame-Options"]
+    assert_equal "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'",
+                 response.headers["Content-Security-Policy"]
+  end
+
+  test "the question before signing out carries everywhere on to the form" do
+    sign_in!
+
+    get "/auth/logout?everywhere=1&return_to=https://elsewhere.test", headers: host
+
+    assert_response :success
+    assert_includes response.body, '<input type="hidden" name="everywhere" value="1">'
+    refute_includes response.body, "elsewhere.test"
+    refute_empty session_payload
+  end
+
+  test "answering the question signs out" do
+    sign_in!
+
+    get "/auth/logout", headers: host
+    post "/auth/logout", headers: host.merge("HTTP_ORIGIN" => origin)
+
+    assert_redirected_to "/"
+    assert_empty session_payload
+  end
+
+  test "a request for JSON that names no site is told to sign out with a POST" do
+    sign_in!
+
+    get "/auth/logout", headers: host.merge("HTTP_ACCEPT" => "application/json")
+
+    assert_response :forbidden
+    assert_equal "invalid_request", json["error"]
+    assert_equal "sign out with a POST from this site", json["error_description"]
+    refute_empty session_payload
+  end
+
   test "signing out drops the local session and leaves the issuer's" do
     sign_in!
 

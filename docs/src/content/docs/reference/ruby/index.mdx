@@ -143,6 +143,10 @@ To sign out, send `DELETE /auth/logout`. This revokes the refresh token and clea
 - A request for JSON gets the masks address as `logout_url`.
 - A sign-out request is refused with `403` when its `Sec-Fetch-Site` or `Origin` header names
   another site, so a page on another site cannot sign anybody out.
+- A `GET /auth/logout` from a browser that sends no `Sec-Fetch-Site` header shows a page with a
+  **Sign out** button, and the person is signed out when they select it. A request for JSON gets
+  `403` instead. A link on another site therefore cannot sign out somebody whose browser is too old
+  to send that header.
 
 [Masks::Rails](/reference/ruby/rails/) lists every method and setting.
 
