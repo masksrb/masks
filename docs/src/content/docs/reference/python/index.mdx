@@ -152,6 +152,10 @@ A sign-out request of any method is refused with `403` when its `Sec-Fetch-Site`
 other than `same-origin` or `none`, or its `Origin` header names another origin. So a page on
 another site cannot sign anybody out.
 
+A `GET` that sends no `Sec-Fetch-Site` header, as some older browsers do, does not sign out. A
+browser gets a page with a Sign out button that posts the sign-out, and keeps `everywhere`. A JSON
+request gets `403`.
+
 ### Back-channel logout
 
 When masks ends a session itself, it sends a logout token to `/auth/logout/backchannel`. The app

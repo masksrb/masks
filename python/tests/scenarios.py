@@ -307,6 +307,44 @@ def refuses_a_sign_out_from_another_site(build: Build, fake: Fake) -> None:
     assert browser.post("/auth/logout", {**JSON, "Origin": APP}).json() == {"signed_in": False}
 
 
+def asks_before_signing_out_a_browser_that_names_no_site(build: Build, fake: Fake) -> None:
+    browser = build(config(fake))
+    sign_in(browser, fake)
+    page = browser.get("/auth/logout?everywhere=1", HTML)
+
+    assert page.status == 200
+    assert page.headers["content-type"] == "text/html; charset=utf-8"
+    assert page.headers["cache-control"] == "no-store"
+    assert page.headers["x-content-type-options"] == "nosniff"
+    assert page.headers["x-frame-options"] == "DENY"
+    assert page.headers["content-security-policy"] == (
+        "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'"
+    )
+    assert b'<form method="post" action="/auth/logout"><input type="hidden" name="everywhere" value="1">' in page.body
+    assert b'name="everywhere"' not in browser.get("/auth/logout", HTML).body
+    assert browser.get("/me", JSON).status == 200
+
+    refused = browser.get("/auth/logout", JSON)
+
+    assert refused.status == 403
+    assert refused.json() == {"error": "invalid_request", "error_description": "sign out with a POST from this site"}
+    assert browser.get("/me", JSON).status == 200
+
+    upstream = browser.post("/auth/logout", {**HTML, "Origin": APP}, data={"everywhere": "1"}).location
+
+    assert upstream.startswith(f"{ISSUER}/logout?")
+    assert browser.get("/me", JSON).status == 401
+
+
+def signs_out_from_a_link_on_this_site(build: Build, fake: Fake) -> None:
+    for site in ("same-origin", "none"):
+        browser = build(config(fake))
+        sign_in(browser, fake)
+
+        assert browser.get("/auth/logout", {**HTML, "Sec-Fetch-Site": site}).location == "/"
+        assert browser.get("/me", JSON).status == 401
+
+
 def signs_out_everywhere(build: Build, fake: Fake) -> None:
     browser = build(config(fake))
     sign_in(browser, fake)
@@ -505,6 +543,8 @@ SCENARIOS = [
     proxies_the_avatar,
     shows_the_avatar_route_as_the_picture,
     refuses_a_sign_out_from_another_site,
+    asks_before_signing_out_a_browser_that_names_no_site,
+    signs_out_from_a_link_on_this_site,
     signs_out_everywhere,
     restarts_a_forged_state_once,
     keeps_a_handshake_to_its_browser,

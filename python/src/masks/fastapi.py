@@ -15,7 +15,17 @@ from .errors import MasksError
 from .oidc import HeldConnection
 from .web.actor import Actor
 from .web.config import Config
-from .web.core import FORM_LIMIT, METADATA_PATH, Answer, Incoming, Refusal, too_large, unreachable, unshared
+from .web.core import (
+    FORM_LIMIT,
+    FORM_ROUTES,
+    METADATA_PATH,
+    Answer,
+    Incoming,
+    Refusal,
+    too_large,
+    unreachable,
+    unshared,
+)
 from .web.core import Masks as Engine
 from .web.sessions import Session
 
@@ -155,15 +165,14 @@ class Masks:
 
     def endpoint(self, name: str) -> Callable[[Request], Awaitable[Response]]:
         async def answer(request: Request) -> Response:
-            if name == "backchannel":
-                try:
-                    held = await incoming(request, form=True)
-                except Refusal as refusal:
-                    return response(refusal.answer)
+            try:
+                held = await incoming(request, form=name in FORM_ROUTES)
+            except Refusal as refusal:
+                return response(refusal.answer)
 
+            if name == "backchannel":
                 found = await self.engine.aanswer(self.engine.backchannel(held))
             else:
-                held = await incoming(request)
                 found = await self.engine.aanswer(self.engine.handlers()[name](held, await session_of(request)))
 
             return response(found)

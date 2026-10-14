@@ -14,7 +14,17 @@ from .errors import MasksError
 from .oidc import HeldConnection
 from .web.actor import Actor
 from .web.config import Config
-from .web.core import FORM_LIMIT, METADATA_PATH, Answer, Incoming, Refusal, too_large, unreachable, unshared
+from .web.core import (
+    FORM_LIMIT,
+    FORM_ROUTES,
+    METADATA_PATH,
+    Answer,
+    Incoming,
+    Refusal,
+    too_large,
+    unreachable,
+    unshared,
+)
 from .web.core import Masks as Engine
 from .web.sessions import Session
 from .web.stores import asynchronous
@@ -111,18 +121,19 @@ class Masks:
 
     def _endpoint(self, name: str) -> Callable[[], Response]:
         def answer() -> Response:
-            if name == "backchannel":
+            if name in FORM_ROUTES:
                 request.max_content_length = FORM_LIMIT
                 request.max_form_memory_size = FORM_LIMIT
 
-                try:
-                    held = incoming(form=True)
-                except RequestEntityTooLarge:
-                    return response(too_large())
+            try:
+                held = incoming(form=name in FORM_ROUTES)
+            except RequestEntityTooLarge:
+                return response(too_large())
 
+            if name == "backchannel":
                 found = self.engine.answer(self.engine.backchannel(held))
             else:
-                found = self.engine.answer(self.engine.handlers()[name](incoming(), self.session()))
+                found = self.engine.answer(self.engine.handlers()[name](held, self.session()))
 
             return response(found)
 

@@ -80,6 +80,7 @@ ISSUER_LIFETIME = 3600
 AVATAR_SIZES = (32, 64, 128, 256, 512)
 METADATA_PATH = "/.well-known/oauth-protected-resource"
 FORM_LIMIT = 64 * 1024
+FORM_ROUTES = frozenset({"backchannel", "logout"})
 
 IDENTITY = (
     "sub",
@@ -152,6 +153,35 @@ class Answer:
             json.dumps(data).encode(),
             "application/json",
             [("Cache-Control", "no-store"), *headers],
+        )
+
+    @classmethod
+    def sign_out(cls, action: str, everywhere: bool) -> Answer:
+        held = '<input type="hidden" name="everywhere" value="1">' if everywhere else ""
+        body = (
+            '<!doctype html><html lang="en"><meta charset="utf-8">'
+            '<meta name="viewport" content="width=device-width, initial-scale=1">'
+            "<title>Sign out</title>"
+            "<style>body{font:16px/1.5 system-ui,sans-serif;max-width:28rem;margin:4rem auto;padding:0 1rem}"
+            "button{font:inherit;padding:.5rem 1rem}</style>"
+            "<h1>Sign out</h1><p>Select Sign out to finish signing out.</p>"
+            f'<form method="post" action="{html.escape(action, quote=True)}">{held}'
+            '<button type="submit">Sign out</button></form></html>'
+        )
+
+        return cls(
+            200,
+            body.encode(),
+            "text/html; charset=utf-8",
+            [
+                ("Cache-Control", "no-store"),
+                ("X-Content-Type-Options", "nosniff"),
+                ("X-Frame-Options", "DENY"),
+                (
+                    "Content-Security-Policy",
+                    "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'",
+                ),
+            ],
         )
 
     @classmethod
@@ -961,8 +991,18 @@ class Masks:
         if not self._same_origin(request):
             return self._refuse(request, "invalid_request", "that request came from another site", 403)
 
+        if request.method not in ("POST", "DELETE") and not request.headers.get("Sec-Fetch-Site"):
+            if request.wants_json:
+                return Answer.json(
+                    403, {"error": "invalid_request", "error_description": "sign out with a POST from this site"}
+                )
+
+            return Answer.sign_out(self.path("/logout"), everywhere=bool(request.query.get("everywhere")))
+
         token = self._token(request, session)
-        everywhere = self.config.sign_out_of_issuer or bool(request.query.get("everywhere"))
+        everywhere = self.config.sign_out_of_issuer or bool(
+            request.query.get("everywhere") or request.form.get("everywhere")
+        )
         flows: _Flows | None = None
 
         if self.configured(request):
