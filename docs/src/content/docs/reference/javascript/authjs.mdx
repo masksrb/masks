@@ -118,6 +118,11 @@ the browser through `/api/auth/masks/logout` on its way to masks.
 `masks.signOutPath("/goodbye")` builds that address for a single sign-out, as in
 `signOut({ redirectTo: masks.signOutPath("/goodbye") })`.
 
+A `GET` to `/api/auth/masks/logout` signs out at once only when its `Sec-Fetch-Site` header is
+`same-origin` or `none`. A `GET` with no `Sec-Fetch-Site` header, which an older browser sends,
+answers a page with a Sign out button that posts to `/api/auth/masks/logout`, and keeps `everywhere`
+and `callbackUrl`. A JSON request with no `Sec-Fetch-Site` header is refused with `403`.
+
 ## Several servers
 
 Within one Node process, `masksAuth` refreshes each sign-in once, even though Next.js loads `auth.ts`

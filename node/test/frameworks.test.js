@@ -17,6 +17,30 @@ after(async () => {
   for (const close of closers) await close();
 });
 
+async function signOutByButton(held, browser) {
+  await signIn({ ...held, browser });
+
+  const asked = await browser.fetch("/auth/logout?everywhere=1");
+
+  assert.equal(asked.status, 200);
+  assert.match(await asked.text(), /name="everywhere" value="1"/);
+  assert.deepEqual(await (await browser.fetch("/")).json(), {
+    signed_in: true,
+  });
+
+  const posted = await browser.fetch("/auth/logout", {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: "everywhere=1",
+  });
+
+  assert.equal(posted.status, 303);
+  assert.equal(new URL(posted.headers.get("location")).origin, held.fake.url);
+  assert.deepEqual(await (await browser.fetch("/")).json(), {
+    signed_in: false,
+  });
+}
+
 test("Next.js route handlers run the sign-in", async () => {
   const held = await setup({}, closers);
   const next = masksNext({ masks: held.masks });
@@ -38,6 +62,8 @@ test("Next.js route handlers run the sign-in", async () => {
     new Request(`${APP}/.well-known/oauth-protected-resource`),
   );
   assert.equal((await metadata.json()).resource, APP);
+
+  await signOutByButton(held, browser);
 });
 
 test("withMasks guards a route handler by session or bearer token", async () => {
@@ -214,6 +240,8 @@ test("Express mounts the routes, keeps the session, and guards by privilege", as
   });
   assert.deepEqual(await echoed.json(), { body: { a: "1" } });
 
+  await signOutByButton(held, browser);
+
   const token = await held.fake.accessToken("ada", "catalog:read", undefined, {
     aud: APP,
   });
@@ -272,6 +300,8 @@ test("Hono mounts the routes, keeps the session, and guards by privilege", async
   assert.ok(
     refreshed.headers.getSetCookie().some((line) => line.startsWith("masks=")),
   );
+
+  await signOutByButton(held, browser);
 });
 
 test("a guarded Express or Hono request refreshes an expired session once and sets its cookie once", async () => {

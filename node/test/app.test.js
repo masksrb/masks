@@ -431,6 +431,70 @@ test("signing out revokes the refresh token and refuses other sites", async () =
   );
 });
 
+test("a sign-out by GET that names no site asks first, and its button signs out", async () => {
+  const held = await setup({}, closers);
+  await signIn(held);
+  const signedIn = async () =>
+    (await held.masks.peek(held.browser.request("/"))).signedIn;
+
+  const crossSite = await held.browser.fetch("/auth/logout", {
+    headers: { "sec-fetch-site": "cross-site" },
+  });
+  assert.equal(crossSite.status, 403);
+
+  const refused = await held.browser.fetch("/auth/logout", { headers: json });
+  assert.equal(refused.status, 403);
+  assert.deepEqual(await refused.json(), {
+    error: "invalid_request",
+    error_description: "sign out with a POST from this site",
+  });
+
+  const asked = await held.browser.fetch("/auth/logout?everywhere=1");
+  const html = await asked.text();
+
+  assert.equal(asked.status, 200);
+  assert.equal(asked.headers.get("content-type"), "text/html; charset=utf-8");
+  assert.equal(asked.headers.get("cache-control"), "no-store");
+  assert.equal(asked.headers.get("x-content-type-options"), "nosniff");
+  assert.equal(asked.headers.get("x-frame-options"), "DENY");
+  assert.equal(
+    asked.headers.get("content-security-policy"),
+    "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'",
+  );
+  assert.match(html, /<title>Sign out<\/title>/);
+  assert.match(html, /<p>Select Sign out to finish signing out\.<\/p>/);
+  assert.match(html, /<form method="post" action="\/auth\/logout">/);
+  assert.match(html, /<input type="hidden" name="everywhere" value="1">/);
+  assert.match(html, /<button type="submit">Sign out<\/button>/);
+  assert.equal(held.fake.revoked.length, 0);
+  assert.equal(await signedIn(), true);
+
+  const plain = await (await held.browser.fetch("/auth/logout")).text();
+  assert.doesNotMatch(plain, /everywhere/);
+
+  const posted = await held.browser.fetch("/auth/logout", {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: "everywhere=1",
+  });
+  const upstream = new URL(posted.headers.get("location"));
+
+  assert.equal(posted.status, 303);
+  assert.equal(upstream.origin + upstream.pathname, `${held.fake.url}/logout`);
+  assert.equal(held.fake.revoked.length, 1);
+  assert.equal(await signedIn(), false);
+
+  await signIn(held);
+
+  const direct = await held.browser.fetch("/auth/logout", {
+    headers: { "sec-fetch-site": "same-origin" },
+  });
+
+  assert.equal(direct.status, 303);
+  assert.equal(direct.headers.get("location"), "/");
+  assert.equal(await signedIn(), false);
+});
+
 test("signing out everywhere comes back once through the logout return", async () => {
   const held = await setup({ masks: { afterSignOut: "/bye" } }, closers);
   await signIn(held);

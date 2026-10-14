@@ -91,8 +91,29 @@ export function page(
         "cache-control": "no-store",
         "content-security-policy": `default-src 'none'; style-src 'unsafe-inline'; form-action ${["'self'", ...formTargets].join(" ")}; frame-ancestors 'none'`,
         "x-frame-options": "DENY",
+        "x-content-type-options": "nosniff",
       }),
     },
+  );
+}
+
+export function signOutPage(
+  action: string,
+  carried: Record<string, string>,
+  cookies: string[],
+): Response {
+  const hidden = Object.entries(carried)
+    .map(
+      ([name, value]) =>
+        `<input type="hidden" name="${escapeHTML(name)}" value="${escapeHTML(value)}">`,
+    )
+    .join("");
+
+  return page(
+    "Sign out",
+    `<p>Select Sign out to finish signing out.</p><form method="post" action="${escapeHTML(action)}">${hidden}<button type="submit">Sign out</button></form>`,
+    cookies,
+    [],
   );
 }
 

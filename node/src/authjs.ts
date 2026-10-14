@@ -27,7 +27,13 @@ import {
   sameOrigin,
   wantsJSON,
 } from "./app/requests.js";
-import { errorResponse, json, redirect, text } from "./app/responses.js";
+import {
+  errorResponse,
+  json,
+  redirect,
+  signOutPage,
+  text,
+} from "./app/responses.js";
 import { Sealer } from "./app/seal.js";
 import { claim, fresh, keep, now, pick } from "./app/session.js";
 import { memoryStore, processEnv, type Store, shared } from "./app/stores.js";
@@ -1015,6 +1021,31 @@ export class MasksAuth {
         403,
         "forbidden",
         "a sign-out is only asked for from this app",
+      );
+    }
+
+    if (
+      request.method.toUpperCase() === "GET" &&
+      !request.headers.has("sec-fetch-site")
+    ) {
+      if (wantsJSON(request)) {
+        return errorResponse(
+          request,
+          403,
+          "invalid_request",
+          "sign out with a POST from this site",
+        );
+      }
+
+      const back = localPath(url.searchParams.get("callbackUrl"));
+
+      return signOutPage(
+        this.logoutPath,
+        {
+          ...(url.searchParams.has("everywhere") ? { everywhere: "1" } : {}),
+          ...(back ? { callbackUrl: back } : {}),
+        },
+        [],
       );
     }
 

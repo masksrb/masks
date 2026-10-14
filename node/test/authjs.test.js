@@ -479,6 +479,7 @@ test("signing out ends the session here, and everywhere signs out of masks and c
 
   const left = await browser.fetch(
     "/api/auth/masks/logout?everywhere&callbackUrl=/goodbye",
+    { headers: { "sec-fetch-site": "same-origin" } },
   );
   const target = new URL(left.headers.get("location"));
 
@@ -500,6 +501,7 @@ test("signing out ends the session here, and everywhere signs out of masks and c
 
   const again = await browser.fetch(
     "/api/auth/masks/logout?everywhere&callbackUrl=/goodbye",
+    { headers: { "sec-fetch-site": "same-origin" } },
   );
   const state = new URL(again.headers.get("location")).searchParams.get(
     "state",
@@ -509,6 +511,60 @@ test("signing out ends the session here, and everywhere signs out of masks and c
   );
 
   assert.equal(back.status, 303);
+  assert.equal(back.headers.get("location"), "/goodbye");
+});
+
+test("a sign-out by GET that names no site asks first, and its button signs out", async () => {
+  const { fake, browser } = await signedIn();
+  const path = "/api/auth/masks/logout?everywhere&callbackUrl=/goodbye";
+
+  const refused = await browser.fetch(path, {
+    headers: { accept: "application/json" },
+  });
+
+  assert.equal(refused.status, 403);
+  assert.deepEqual(await refused.json(), {
+    error: "invalid_request",
+    error_description: "sign out with a POST from this site",
+  });
+
+  const asked = await browser.fetch(path);
+  const html = await asked.text();
+
+  assert.equal(asked.status, 200);
+  assert.equal(asked.headers.get("content-type"), "text/html; charset=utf-8");
+  assert.equal(asked.headers.get("cache-control"), "no-store");
+  assert.match(
+    asked.headers.get("content-security-policy"),
+    /form-action 'self'; frame-ancestors 'none'/,
+  );
+  assert.match(
+    html,
+    /<form method="post" action="\/api\/auth\/masks\/logout">/,
+  );
+  assert.match(html, /name="everywhere" value="1"/);
+  assert.match(html, /name="callbackUrl" value="\/goodbye"/);
+  assert.ok((await session(browser)).masks);
+
+  const plain = await (await browser.fetch("/api/auth/masks/logout")).text();
+
+  assert.doesNotMatch(plain, /everywhere|callbackUrl/);
+
+  const posted = await browser.fetch("/api/auth/masks/logout", {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ everywhere: "1", callbackUrl: "/goodbye" }),
+  });
+  const target = new URL(posted.headers.get("location"));
+
+  assert.equal(posted.status, 303);
+  assert.equal(target.origin, fake.url);
+  assert.equal(await session(browser), null);
+
+  const back = await browser.fetch(
+    `/api/auth/masks/logout/return?state=${target.searchParams.get("state")}`,
+  );
+
   assert.equal(back.headers.get("location"), "/goodbye");
 });
 
@@ -532,7 +588,10 @@ test("with signOutOfIssuer, the signOut of next-auth/react goes on to sign out o
   );
   assert.equal(await session(browser), null);
 
-  const left = await browser.fetch(new URL(url).pathname + new URL(url).search);
+  const left = await browser.fetch(
+    new URL(url).pathname + new URL(url).search,
+    { headers: { "sec-fetch-site": "same-origin" } },
+  );
   const target = new URL(left.headers.get("location"));
 
   assert.equal(left.status, 303);
