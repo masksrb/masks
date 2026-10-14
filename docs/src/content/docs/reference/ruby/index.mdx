@@ -135,18 +135,21 @@ The engine keeps the tokens and the person's claims in their own cookies:
 | `masked["groups"]`                                        | Any other claim.                                                                                       |
 | `to_h`                                                    | What `GET /auth/session` returns as JSON, for a single-page app.                                       |
 
+### Signing out
+
 To sign out, send `DELETE /auth/logout`. This revokes the refresh token and clears the session.
 
 - With `config.sign_out_of_issuer = true`, or `everywhere` in the request, the browser goes on to
   masks to end its session there. masks sends it back to `/auth/logout/return`, and the app sends
   it on to `after_sign_out`.
 - A request for JSON gets the masks address as `logout_url`.
-- A sign-out request is refused with `403` when its `Sec-Fetch-Site` or `Origin` header names
-  another site, so a page on another site cannot sign anybody out.
-- A `GET /auth/logout` from a browser that sends no `Sec-Fetch-Site` header shows a page with a
-  **Sign out** button, and the person is signed out when they select it. A request for JSON gets
-  `403` instead. A link on another site therefore cannot sign out somebody whose browser is too old
-  to send that header.
+- A sign-out of any method is refused with `403` when its `Sec-Fetch-Site` header is anything
+  other than `same-origin` or `none`, or its `Origin` header names another origin.
+- A `GET` sign-out signs out at once when its `Sec-Fetch-Site` header is `same-origin` or `none`. A
+  `GET` with no `Sec-Fetch-Site` header, as older browsers send, does not sign out. A browser gets a
+  page with a **Sign out** button that posts to `/auth/logout` with the app's authenticity token
+  and keeps `everywhere`. A JSON request gets `403`. So a link on another site cannot sign anybody
+  out.
 
 [Masks::Rails](/reference/ruby/rails/) lists every method and setting.
 

@@ -22,12 +22,16 @@ people sign in each have their own guide:
 
 Some actions need a stronger or fresher sign-in than the session holds, such as moving money.
 
-ID tokens carry `auth_time`, `amr`, and `acr`. The `acr` is the level the sign-in reached:
-`urn:masks:acr:mfa` with a second factor, and `urn:masks:acr:pwd` without one.
+ID tokens carry `auth_time`, `amr`, and `acr`. The `auth_time` is the moment the actor gave their
+first factor, and every ID token from one session carries the same one until the actor signs in
+again. The `acr` is the level the sign-in reached: `urn:masks:acr:mfa` with a second factor, and
+`urn:masks:acr:pwd` without one.
 
 A client asks for more on `/authorize`:
 
-- `max_age` or `prompt=login` asks for a fresh sign-in.
+- `max_age` or `prompt=login` asks for a fresh sign-in, which moves the session's `auth_time`
+  forward. A later request with the same `max_age` asks again only once that many seconds have
+  passed.
 - `acr_values=urn:masks:acr:mfa` asks for a second factor. So does asking for the `acr` claim in the
   ID token with only that value in the `claims` parameter.
 

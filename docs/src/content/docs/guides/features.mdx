@@ -456,6 +456,12 @@ GET https://acme.auth.example.com/logout
 - A `GET` without an `id_token_hint` for the signed-in actor shows a confirmation screen first. A link
   on another site cannot sign someone out.
 
+Each server SDK protects the app's own sign-out too. It refuses a sign-out from another site with
+`403`. A `GET` from a browser that sends no `Sec-Fetch-Site` header, such as Safari before 16.4, gets
+a page with a **Sign out** button that posts the sign-out. See signing out for [Rails](/reference/ruby/#signing-out),
+[JavaScript](/reference/javascript/#signing-out), [Python](/reference/python/#signing-out), and
+[Go](/reference/go/#signing-out).
+
 ### Telling other apps
 
 When a session ends, masks tells every app the actor used in that session. This is back-channel

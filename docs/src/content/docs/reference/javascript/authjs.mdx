@@ -118,10 +118,11 @@ the browser through `/api/auth/masks/logout` on its way to masks.
 `masks.signOutPath("/goodbye")` builds that address for a single sign-out, as in
 `signOut({ redirectTo: masks.signOutPath("/goodbye") })`.
 
-A `GET` to `/api/auth/masks/logout` signs out at once only when its `Sec-Fetch-Site` header is
-`same-origin` or `none`. A `GET` with no `Sec-Fetch-Site` header, which an older browser sends,
-answers a page with a Sign out button that posts to `/api/auth/masks/logout`, and keeps `everywhere`
-and `callbackUrl`. A JSON request with no `Sec-Fetch-Site` header is refused with `403`.
+`/api/auth/masks/logout` refuses a sign-out from another site with `403`, as in
+[signing out](/reference/javascript/#signing-out). A `GET` to it signs out at once when its
+`Sec-Fetch-Site` header is `same-origin` or `none`. A `GET` with no `Sec-Fetch-Site` header, as
+older browsers send, does not sign out. A browser gets a page with a **Sign out** button that posts
+to `/api/auth/masks/logout` and keeps `everywhere` and `callbackUrl`. A JSON request gets `403`.
 
 ## Several servers
 

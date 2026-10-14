@@ -148,13 +148,13 @@ A sign-out revokes the refresh token and clears the session. With `sign_out_of_i
 back to `/auth/logout/return`, which sends it on to `after_sign_out`. That return works once, within
 an hour, and only in the browser that signed out.
 
-A sign-out request of any method is refused with `403` when its `Sec-Fetch-Site` header is anything
-other than `same-origin` or `none`, or its `Origin` header names another origin. So a page on
-another site cannot sign anybody out.
+A sign-out of any method is refused with `403` when its `Sec-Fetch-Site` header is anything other
+than `same-origin` or `none`, or its `Origin` header names another origin.
 
-A `GET` that sends no `Sec-Fetch-Site` header, as some older browsers do, does not sign out. A
-browser gets a page with a Sign out button that posts the sign-out, and keeps `everywhere`. A JSON
-request gets `403`.
+A `GET` sign-out signs out at once when its `Sec-Fetch-Site` header is `same-origin` or `none`. A
+`GET` with no `Sec-Fetch-Site` header, as older browsers send, does not sign out. A browser gets a
+page with a **Sign out** button that posts to `/auth/logout` and keeps `everywhere`. A JSON request
+gets `403`. So a link on another site cannot sign anybody out.
 
 ### Back-channel logout
 
