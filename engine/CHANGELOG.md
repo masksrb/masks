@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.9.1](https://github.com/masksrb/masks/compare/masks-server-v0.9.0...masks-server-v0.9.1) (2026-10-14)
+
+
+### Fixes
+
+* **server:** a proxy's certificate check reaches /tls/allowed at the server's own address once MASKS_ON_DEMAND_TLS is true, and the path stays closed until then ([5e38622](https://github.com/masksrb/masks/commit/5e3862271cb725e48c40ac2aacd5da9bd0cfe64b))
+
+
+### Refactoring
+
+* **engine:** a code, a device grant, and a SAML assertion read auth_time from the session alone, and first_factored! assigns and saves once ([79a2182](https://github.com/masksrb/masks/commit/79a2182d15c24128be0394f38b412523bb9ae2ac))
+
 ## [0.9.0](https://github.com/masksrb/masks/compare/masks-server-v0.8.0...masks-server-v0.9.0) (2026-10-14)
 
 

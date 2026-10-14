@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.1](https://github.com/masksrb/masks/compare/server-v0.9.0...server-v0.9.1) (2026-10-14)
+
+
+### Fixes
+
+* **server:** a proxy's certificate check reaches /tls/allowed at the server's own address once MASKS_ON_DEMAND_TLS is true, and the path stays closed until then ([5e38622](https://github.com/masksrb/masks/commit/5e3862271cb725e48c40ac2aacd5da9bd0cfe64b))
+
 ## [0.9.0](https://github.com/masksrb/masks/compare/server-v0.8.0...server-v0.9.0) (2026-10-14)
 
 
