@@ -496,7 +496,7 @@ class SessionTest < EngineIntegrationTest
   test "signing out drops the session" do
     sign_in!
 
-    post "/auth/logout", headers: host
+    post "/auth/logout", headers: host.merge("HTTP_ORIGIN" => origin)
 
     assert_redirected_to "/"
     assert_empty session_payload
@@ -579,20 +579,13 @@ class SessionTest < EngineIntegrationTest
     assert_includes response.body, "<title>Sign out</title>"
     assert_includes response.body, "Select Sign out to finish signing out."
     assert_match %r{<form[^>]*action="/auth/logout"[^>]*method="post"}, response.body
-    refute_includes response.body, 'name="everywhere"'
+    refute_includes response.body, "everywhere"
     refute_empty session_payload
     assert_equal revoked, issuer.revocations.size
-  end
-
-  test "the question before signing out cannot be cached, framed, or load anything" do
-    sign_in!
-
-    get "/auth/logout", headers: host
-
     assert_equal "no-store", response.headers["Cache-Control"]
     assert_equal "nosniff", response.headers["X-Content-Type-Options"]
     assert_equal "DENY", response.headers["X-Frame-Options"]
-    assert_equal "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'",
+    assert_equal "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'",
                  response.headers["Content-Security-Policy"]
   end
 
@@ -602,7 +595,7 @@ class SessionTest < EngineIntegrationTest
     get "/auth/logout?everywhere=1&return_to=https://elsewhere.test", headers: host
 
     assert_response :success
-    assert_includes response.body, '<input type="hidden" name="everywhere" value="1">'
+    assert_match %r{<form[^>]*action="/auth/logout\?everywhere=1"}, response.body
     refute_includes response.body, "elsewhere.test"
     refute_empty session_payload
   end
@@ -615,6 +608,18 @@ class SessionTest < EngineIntegrationTest
 
     assert_redirected_to "/"
     assert_empty session_payload
+  end
+
+  test "a POST that names no site is refused and keeps the session" do
+    sign_in!
+    revoked = issuer.revocations.size
+
+    post "/auth/logout", headers: host
+
+    assert_response :forbidden
+    assert_includes response.body, "that request came from another site"
+    refute_empty session_payload
+    assert_equal revoked, issuer.revocations.size
   end
 
   test "a request for JSON that names no site is told to sign out with a POST" do
@@ -631,7 +636,7 @@ class SessionTest < EngineIntegrationTest
   test "signing out drops the local session and leaves the issuer's" do
     sign_in!
 
-    delete "/auth/logout", headers: host.merge("HTTP_ACCEPT" => "application/json")
+    delete "/auth/logout", headers: host.merge("HTTP_ORIGIN" => origin, "HTTP_ACCEPT" => "application/json")
 
     assert_response :success
     assert_equal false, json["signed_in"]
@@ -645,7 +650,7 @@ class SessionTest < EngineIntegrationTest
     held = session_payload["refresh_token"]
     refute_nil held
 
-    delete "/auth/logout", headers: host.merge("HTTP_ACCEPT" => "application/json")
+    delete "/auth/logout", headers: host.merge("HTTP_ORIGIN" => origin, "HTTP_ACCEPT" => "application/json")
 
     revoked = issuer.revocations.last
 
@@ -656,7 +661,7 @@ class SessionTest < EngineIntegrationTest
   test "signing out everywhere hands back where to end the issuer's session" do
     sign_in!
 
-    delete "/auth/logout?everywhere=1", headers: host.merge("HTTP_ACCEPT" => "application/json")
+    delete "/auth/logout?everywhere=1", headers: host.merge("HTTP_ORIGIN" => origin, "HTTP_ACCEPT" => "application/json")
 
     assert_response :success
     assert_equal false, json["signed_in"]
@@ -739,7 +744,7 @@ class SessionTest < EngineIntegrationTest
 
     sign_in!
 
-    delete "/auth/logout", headers: host
+    delete "/auth/logout", headers: host.merge("HTTP_ORIGIN" => origin)
 
     assert_response :redirect
     assert response.location.start_with?("#{issuer.url_for(SUBDOMAIN)}/logout")
@@ -758,7 +763,7 @@ class SessionTest < EngineIntegrationTest
   end
 
   test "an unconnected app offers no logout url, rather than a broken one" do
-    delete "/auth/logout?everywhere=1", headers: host.merge("HTTP_ACCEPT" => "application/json")
+    delete "/auth/logout?everywhere=1", headers: host.merge("HTTP_ORIGIN" => origin, "HTTP_ACCEPT" => "application/json")
 
     assert_response :success
     assert_nil json["logout_url"]
@@ -769,7 +774,7 @@ class SessionTest < EngineIntegrationTest
     def sign_out_everywhere!
       sign_in!
 
-      delete "/auth/logout?everywhere=1", headers: host.merge("HTTP_ACCEPT" => "application/json")
+      delete "/auth/logout?everywhere=1", headers: host.merge("HTTP_ORIGIN" => origin, "HTTP_ACCEPT" => "application/json")
 
       URI.decode_www_form(URI.parse(json["logout_url"]).query).to_h.fetch("state")
     end

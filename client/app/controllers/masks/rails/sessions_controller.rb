@@ -8,12 +8,10 @@ module Masks
         "Cache-Control" => "no-store",
         "X-Content-Type-Options" => "nosniff",
         "X-Frame-Options" => "DENY",
-        "Content-Security-Policy" =>
-          "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'"
+        "Content-Security-Policy" => "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'"
       }.freeze
 
-      before_action :refuse_cross_site, only: :destroy
-      before_action :confirm_sign_out, only: :destroy
+      before_action :require_this_site, only: :destroy
 
       def show
         if masks_configured? && (masks_signed_in? || (masks_tokens && masks_refresh!))
@@ -107,32 +105,29 @@ module Masks
 
       private
 
-        def refuse_cross_site
-          return if same_origin?
+        def require_this_site
+          from = provenance
+          return if from == :this_site
 
-          answer("invalid_request", "that request came from another site", :forbidden, failed: "sign-out")
-        end
-
-        def confirm_sign_out
-          return if request.post? || request.delete? || request.headers["Sec-Fetch-Site"].present?
-
-          if masks_wants_json?
-            return answer("invalid_request", "sign out with a POST from this site", :forbidden, failed: "sign-out")
+          if from == :elsewhere || request.post? || request.delete?
+            return answer("invalid_request", "that request came from another site", :forbidden, failed: "sign-out")
           end
 
-          @everywhere = params[:everywhere].present?
+          return answer("invalid_request", "sign out with a POST from this site", :forbidden) if masks_wants_json?
+
+          @action = logout_path(request.query_parameters.slice("everywhere"))
           response.headers.merge!(CONFIRMATION_HEADERS)
           render :confirm, formats: :html
         end
 
-        def same_origin?
+        def provenance
           site = request.headers["Sec-Fetch-Site"].to_s
-
-          return false unless site.empty? || SAME_ORIGIN.include?(site)
-
           sent = request.headers["Origin"].to_s
 
-          sent.empty? || [ request.base_url, own_origin ].include?(sent)
+          return :elsewhere unless site.empty? || SAME_ORIGIN.include?(site)
+          return :elsewhere unless sent.empty? || [ request.base_url, own_origin ].include?(sent)
+
+          site.empty? && sent.empty? ? :unproven : :this_site
         end
 
         def own_origin

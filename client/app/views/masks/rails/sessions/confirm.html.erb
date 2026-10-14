@@ -4,9 +4,6 @@
 
 <p>Select Sign out to finish signing out.</p>
 
-<%= form_with url: logout_path, method: :post do %>
-  <% if @everywhere %>
-    <input type="hidden" name="everywhere" value="1">
-  <% end %>
+<%= form_with url: @action, method: :post do %>
   <button type="submit">Sign out</button>
 <% end %>

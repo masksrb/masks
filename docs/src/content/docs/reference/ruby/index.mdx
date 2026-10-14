@@ -144,9 +144,11 @@ To sign out, send `DELETE /auth/logout`. This revokes the refresh token and clea
   it on to `after_sign_out`.
 - A request for JSON gets the masks address as `logout_url`.
 - A sign-out of any method is refused with `403` when its `Sec-Fetch-Site` header is anything
-  other than `same-origin` or `none`, or its `Origin` header names another origin.
-- A `GET` sign-out signs out at once when its `Sec-Fetch-Site` header is `same-origin` or `none`. A
-  `GET` with no `Sec-Fetch-Site` header, as older browsers send, does not sign out. A browser gets a
+  other than `same-origin` or `none`, or its `Origin` header names another origin. A `POST` or
+  `DELETE` that sends neither header is refused the same way.
+- A `GET` sign-out signs out at once when its `Sec-Fetch-Site` header is `same-origin` or `none`, or
+  its `Origin` header names the app. A `GET` with neither header, as older browsers send, does not
+  sign out. A browser gets a
   page with a **Sign out** button that posts to `/auth/logout` with the app's authenticity token
   and keeps `everywhere`. A JSON request gets `403`. So a link on another site cannot sign anybody
   out.
