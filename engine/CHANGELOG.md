@@ -1,5 +1,39 @@
 # Changelog
 
+## [0.9.0](https://github.com/masksrb/masks/compare/masks-server-v0.8.0...masks-server-v0.9.0) (2026-10-14)
+
+
+### Features
+
+* **engine:** a page on another site reads discovery, the keys, and the token, revocation, userinfo, and avatar answers, so a site with no server can sign people in ([ff4a0f0](https://github.com/masksrb/masks/commit/ff4a0f01735dfab8fb13758d782f4b49a8e2d911))
+
+
+### Fixes
+
+* **client:** signing out of masks returns to /auth/logout/return, which the handshake registers as the app's post-logout address ([d1dbc05](https://github.com/masksrb/masks/commit/d1dbc05e6bcbe41a4143b1efde901495dd6dbcae))
+* **engine:** a client that declares no scope follows the registration setting, so with registration on it may ask for a resource's scopes ([bfbd156](https://github.com/masksrb/masks/commit/bfbd15606ebc77babed0d429b303a1caac459d15))
+* **engine:** a handshake registers only the post-logout address it names, and keeps its return_to apart, so a new return_to is still asked about ([47a8988](https://github.com/masksrb/masks/commit/47a898874ee2c00f9763a57624cc3cb207a7e48f))
+* **engine:** a loopback redirect_uri matches on any port, so Claude Code and other native apps can sign in ([f5038e3](https://github.com/masksrb/masks/commit/f5038e3e9855d6ed7053927381e0de877110d6fe))
+* **engine:** a machine signs in to masks mounted under a path, since its DPoP proof is checked against the address it posted to ([d919827](https://github.com/masksrb/masks/commit/d9198275b6f226e56ee72ce55766a1ae076baf20))
+* **engine:** a refused token is described in masks' own words, not the JWT library's ([dae249d](https://github.com/masksrb/masks/commit/dae249d348c65e83bf96f680746d60ba4642c58d))
+* **engine:** a request that carries no token is asked for one with no error code ([f8b464d](https://github.com/masksrb/masks/commit/f8b464d191f6b9f6ddfe412cc8708aea9dea7927))
+* **engine:** auth_time is the moment of the first factor in every ID token a session gives, and signing in again moves it forward ([c6f7dc0](https://github.com/masksrb/masks/commit/c6f7dc026148adaa9128ba9bb72910e570274ab5))
+* **engine:** the activity titles for adding, deleting, suspending, and restoring someone say Account, like the rest of the group ([71a1c09](https://github.com/masksrb/masks/commit/71a1c0905635a9b924527b9c98ab5abd0bdd30be))
+* **engine:** the boot errors for MASKS_NAMED_BY and MASKS_DYNAMIC_REGISTRATION say an unset value leaves the choice to /manage, and SCIM's documentationUri points at the provisioning guide ([fbe68ca](https://github.com/masksrb/masks/commit/fbe68cae7a4263da837ae7c8f226001c6dc1d903))
+* **engine:** the install generator says a role that bypasses row-level security fails every request that needs a tenant, since masks checks the role then and not at boot ([46d894e](https://github.com/masksrb/masks/commit/46d894e1ac69a3b5db79a8e04ea4a54e2d5aed0e))
+
+
+### Documentation
+
+* comments and pages no longer claim what masks stopped doing ([e0b1ba0](https://github.com/masksrb/masks/commit/e0b1ba0b71ccae8683b605f9442ee16c4afb5dd4))
+* the Manage API page holds the schema explorer, and /reference/explorer redirects to it ([9739b00](https://github.com/masksrb/masks/commit/9739b0047d187c943bb784124d924ec4c17233f4))
+
+
+### Refactoring
+
+* **engine:** account and manage locale keys, the profile icon, and the signup name field are named for actors and members ([3dbeec9](https://github.com/masksrb/masks/commit/3dbeec95c0ee8446f230c8ec48da8e2c44c22c54))
+* **engine:** the signed-in card is the actor partial and component, and the login JSON carries it as actor.card ([07892cb](https://github.com/masksrb/masks/commit/07892cb95ec16c8b65acee258938b18612830234))
+
 ## [0.8.0](https://github.com/masksrb/masks/compare/masks-server-v0.7.0...masks-server-v0.8.0) (2026-10-13)
 
 

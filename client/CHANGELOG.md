@@ -1,5 +1,38 @@
 # Changelog
 
+## [0.12.0](https://github.com/masksrb/masks/compare/gem/v0.11.0...gem/v0.12.0) (2026-10-14)
+
+
+### Features
+
+* **client:** config.cache shares refreshes, back-channel logouts, and DPoP proofs across a Rails app's processes ([1019324](https://github.com/masksrb/masks/commit/1019324f74d44aa9df62d860082c529f5effda44))
+
+
+### Fixes
+
+* **client:** a back-channel logout token must carry exp, and its jti is remembered until two minutes after it expires ([ffbf534](https://github.com/masksrb/masks/commit/ffbf53485583d342f0d6e147077b0c7df05c911f))
+* **client:** a cache outage is told apart from a repeat, so masks and DPoP clients get 503 instead of a refusal ([8884cb6](https://github.com/masksrb/masks/commit/8884cb680e802521a413ea17a96eedfec58cae35))
+* **client:** a page on another site can no longer sign somebody out of a Rails app ([96a084f](https://github.com/masksrb/masks/commit/96a084fe0172b27c1affe9461199335fe2b1bbba))
+* **client:** a Rails sign-in keeps its tokens in its own cookies, split across up to eight, so a large access token no longer overflows the session ([88325fb](https://github.com/masksrb/masks/commit/88325fbee0d54bd90ffe3e7286dfa1553582ff2d))
+* **client:** a sign-in callback this browser did not start no longer repeats the error text in its URL ([60574f2](https://github.com/masksrb/masks/commit/60574f263f11420933956354f3e1cae222cf0418))
+* **client:** HTTP.fetch reads at most 8 MB, so the avatar proxy cannot be made to hold an endless answer ([541c0b5](https://github.com/masksrb/masks/commit/541c0b56d648d8bee2eb7cb82ca5ac061adfc350))
+* **client:** signing out of masks returns to /auth/logout/return, which the handshake registers as the app's post-logout address ([d1dbc05](https://github.com/masksrb/masks/commit/d1dbc05e6bcbe41a4143b1efde901495dd6dbcae))
+* **client:** the challenge for a request with no token carries no error description ([b030959](https://github.com/masksrb/masks/commit/b030959d6fd1b2e32be7f8173b17cde4282d43cc))
+* **engine:** a handshake registers only the post-logout address it names, and keeps its return_to apart, so a new return_to is still asked about ([47a8988](https://github.com/masksrb/masks/commit/47a898874ee2c00f9763a57624cc3cb207a7e48f))
+* **engine:** a refused token is described in masks' own words, not the JWT library's ([dae249d](https://github.com/masksrb/masks/commit/dae249d348c65e83bf96f680746d60ba4642c58d))
+
+
+### Documentation
+
+* **client:** the to-do list records how close a Rails session sits to the cookie limit ([deedb14](https://github.com/masksrb/masks/commit/deedb144ba9458904348fa7482303d21691aefbf))
+* comments and pages no longer claim what masks stopped doing ([e0b1ba0](https://github.com/masksrb/masks/commit/e0b1ba0b71ccae8683b605f9442ee16c4afb5dd4))
+* every guide, SDK reference, and README says what masks does now, in fewer words ([7046f86](https://github.com/masksrb/masks/commit/7046f862c774f05407d92cd19779f53bf0b62595))
+
+
+### Refactoring
+
+* **client:** HTTP.fetch is a GET through deliver with no read limit, and an embedded request's Host comes from Nonces.origin ([0398e13](https://github.com/masksrb/masks/commit/0398e135ba1a41fd56007709bb35aef900f14e57))
+
 ## [0.11.0](https://github.com/masksrb/masks/compare/gem/v0.10.0...gem/v0.11.0) (2026-10-13)
 
 

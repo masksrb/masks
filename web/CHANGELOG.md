@@ -1,5 +1,26 @@
 # Changelog
 
+## [2.5.0](https://github.com/masksrb/masks/compare/client-v2.4.1...client-v2.5.0) (2026-10-14)
+
+
+### Features
+
+* **web:** a static site signs people in with no server, naming itself to masks through a client metadata document the Vite plugin writes ([02c0695](https://github.com/masksrb/masks/commit/02c0695ba26c287e30c6885be83b52cab81c8dac))
+
+
+### Documentation
+
+* comments and pages no longer claim what masks stopped doing ([e0b1ba0](https://github.com/masksrb/masks/commit/e0b1ba0b71ccae8683b605f9442ee16c4afb5dd4))
+* every guide, SDK reference, and README says what masks does now, in fewer words ([7046f86](https://github.com/masksrb/masks/commit/7046f862c774f05407d92cd19779f53bf0b62595))
+* **web:** the README names every backend that serves session mode and the SDKs that cover server work ([23da132](https://github.com/masksrb/masks/commit/23da132201c24318bcd11e547b81d973212cdaca))
+
+
+### Refactoring
+
+* **web:** Person is Actor in @masks/client, as masks names it everywhere else ([f356bd6](https://github.com/masksrb/masks/commit/f356bd64785e5ddb43baf7764b824f044beb3a49))
+* **web:** session.ts drops an unused import and the browser test sorts its imports, so the lint job passes ([e59902b](https://github.com/masksrb/masks/commit/e59902b390d6667e11ad4ab3e5ad61c3139017ea))
+* **web:** the client document is always at /oauth/client.json, logout touches IndexedDB only for DPoP, and one connection holds the key ([570dd80](https://github.com/masksrb/masks/commit/570dd80739c007b691a246a19ce8cb76bb0c0154))
+
 ## [2.4.1](https://github.com/masksrb/masks/compare/client-v2.4.0...client-v2.4.1) (2026-10-13)
 
 
