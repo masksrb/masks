@@ -157,6 +157,7 @@ module Masks
       end
 
       test "every ID token from one session carries the moment of its first factor as auth_time" do
+        freeze_time
         authorize(client_id: @registration["client_id"], max_age: 10_000)
         rid = current_rid
 
