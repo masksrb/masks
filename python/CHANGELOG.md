@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.1](https://github.com/masksrb/masks/compare/python-v0.3.0...python-v0.3.1) (2026-10-14)
+
+
+### Fixes
+
+* **python:** a sign-out link from a browser that names no site shows a Sign out button, so another site's link cannot sign anybody out ([8a7ab01](https://github.com/masksrb/masks/commit/8a7ab014d45e2741c36aa2cd979ea1e53579536a))
+* **python:** one provenance check guards every browser route, so a sign-out by POST that names no site is refused and the Sign out page posts back to its own address ([be39f6a](https://github.com/masksrb/masks/commit/be39f6a890539e811653e7460f1571af661ab3e3))
+
 ## [0.3.0](https://github.com/masksrb/masks/compare/python-v0.2.0...python-v0.3.0) (2026-10-14)
 
 

@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.1](https://github.com/masksrb/masks/compare/go/v0.3.0...go/v0.3.1) (2026-10-14)
+
+
+### Fixes
+
+* **go:** a sign-out link with no Sec-Fetch-Site shows a Sign out button instead of signing the person out ([6d8501c](https://github.com/masksrb/masks/commit/6d8501c41bc672c7625c78b03d2c5416e7b1e1fe))
+* **go:** the guard decides where a request came from, so a sign-out by POST that names no site is refused and the Sign out page posts back to its own address ([3d74076](https://github.com/masksrb/masks/commit/3d740768340f93e9e79a61c928235e076d2ce589))
+
 ## [0.3.0](https://github.com/masksrb/masks/compare/go/v0.2.0...go/v0.3.0) (2026-10-14)
 
 

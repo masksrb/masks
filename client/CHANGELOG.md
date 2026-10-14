@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.12.1](https://github.com/masksrb/masks/compare/gem/v0.12.0...gem/v0.12.1) (2026-10-14)
+
+
+### Fixes
+
+* **client:** a Rails sign-out link followed by a browser that names no site asks before signing out ([c62c6c1](https://github.com/masksrb/masks/commit/c62c6c1854bb2f7a60339468f6db1b408d6786b9))
+* **client:** one Rails guard decides where a sign-out came from, so a POST that names no site is refused and the Sign out page carries everywhere in its address ([ed86c45](https://github.com/masksrb/masks/commit/ed86c45692dc4d8a0614697ccc832fe1358bd58d))
+
 ## [0.12.0](https://github.com/masksrb/masks/compare/gem/v0.11.0...gem/v0.12.0) (2026-10-14)
 
 
