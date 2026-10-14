@@ -154,18 +154,18 @@ Disconnecting deletes the registration at masks and the credentials.
 
 `Handler` answers these routes under `Mount`:
 
-| Route                                                         |                                                                        |
-| ------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| `GET /auth` or `GET /auth/`                                   | Starts a sign-in. Takes `return_to`, `organization`, and `privilege`.  |
-| `GET /auth/callback`                                          | Finishes it.                                                           |
-| `GET /auth/session`                                           | The signed-in actor as JSON, for a single-page app.                    |
-| `GET /auth/avatar`                                            | The person's photo, fetched from masks with their token. Takes `size`. |
-| `GET`, `POST`, or `DELETE /auth/logout`                       | Signs out. Takes `everywhere` to sign out of masks as well.            |
-| `GET /auth/logout/return`                                     | Where masks sends the browser back after signing it out.               |
-| `POST /auth/logout/backchannel`                               | Takes a back-channel logout token from masks.                          |
-| `GET` or `POST /auth/handshake`                               | Starts the handshake, or shows the connection.                         |
-| `GET /auth/handshake/callback`                                | Finishes the handshake.                                                |
-| `POST /auth/handshake/disconnect` or `DELETE /auth/handshake` | Disconnects the app.                                                   |
+| Route                                                         |                                                                                                                             |
+| ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `GET /auth` or `GET /auth/`                                   | Starts a sign-in. Takes `return_to`, `organization`, and `privilege`.                                                       |
+| `GET /auth/callback`                                          | Finishes it.                                                                                                                |
+| `GET /auth/session`                                           | The signed-in actor as JSON, for a single-page app.                                                                         |
+| `GET /auth/avatar`                                            | The person's photo, fetched from masks with their token. Takes `size`.                                                      |
+| `GET`, `POST`, or `DELETE /auth/logout`                       | Signs out. Takes `everywhere` to sign out of masks as well. A browser that names no site gets a [page](#signing-out) first. |
+| `GET /auth/logout/return`                                     | Where masks sends the browser back after signing it out.                                                                    |
+| `POST /auth/logout/backchannel`                               | Takes a back-channel logout token from masks.                                                                               |
+| `GET` or `POST /auth/handshake`                               | Starts the handshake, or shows the connection.                                                                              |
+| `GET /auth/handshake/callback`                                | Finishes the handshake.                                                                                                     |
+| `POST /auth/handshake/disconnect` or `DELETE /auth/handshake` | Disconnects the app.                                                                                                        |
 
 - A sign-in uses PKCE, a `state`, and a `nonce`.
 - The app checks the `iss` that masks sends back, and the ID token's signature, audience, and nonce.
@@ -221,7 +221,7 @@ person's name, photo, and organizations from userinfo again at the same time.
 
 A sign-out revokes the refresh token and clears the session. A sign-out of any method is refused
 with `403` when its `Sec-Fetch-Site` header is anything other than `same-origin` or `none`, or its
-`Origin` header names another origin.
+`Origin` header names another origin. A `POST` or `DELETE` that sends neither header is refused too.
 
 A `GET` sign-out signs out at once when its `Sec-Fetch-Site` header is `same-origin` or `none`. A
 `GET` with no `Sec-Fetch-Site` header, as older browsers send, does not sign out. A browser gets a

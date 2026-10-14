@@ -593,21 +593,31 @@ func (a *App) failed(w http.ResponseWriter, r *http.Request, err error) {
 	a.refuse(w, r, http.StatusServiceUnavailable, "temporarily_unavailable", "masks could not be reached")
 }
 
-func sameOrigin(r *http.Request) bool {
+type provenance int
+
+const (
+	unproven provenance = iota
+	sameSite
+	crossSite
+)
+
+func provenanceOf(r *http.Request) provenance {
 	switch r.Header.Get("Sec-Fetch-Site") {
 	case "same-origin", "none":
-		return true
+		return sameSite
 	case "":
 	default:
-		return false
+		return crossSite
 	}
 
 	from := r.Header.Get("Origin")
 	if from == "" {
-		return true
+		return unproven
 	}
 
-	parsed, err := url.Parse(from)
+	if parsed, err := url.Parse(from); err == nil && strings.EqualFold(parsed.Host, r.Host) {
+		return sameSite
+	}
 
-	return err == nil && strings.EqualFold(parsed.Host, r.Host)
+	return crossSite
 }

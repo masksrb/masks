@@ -49,12 +49,19 @@ func (a *App) routes() http.Handler {
 
 func (a *App) guarded(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if !sameOrigin(r) {
-			a.refuse(w, r, http.StatusForbidden, "invalid_request", "that request came from another site")
-			return
-		}
+		switch provenanceOf(r) {
+		case sameSite:
+			next(w, r)
+		case unproven:
+			if r.Method == http.MethodGet || r.Method == http.MethodHead {
+				a.confirmLogout(w, r)
+				return
+			}
 
-		next(w, r)
+			fallthrough
+		default:
+			a.refuse(w, r, http.StatusForbidden, "invalid_request", "that request came from another site")
+		}
 	}
 }
 
@@ -403,11 +410,6 @@ func referringPath(r *http.Request) string {
 }
 
 func (a *App) logout(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost && r.Method != http.MethodDelete && r.Header.Get("Sec-Fetch-Site") == "" {
-		a.confirmLogout(w, r)
-		return
-	}
-
 	v, ok := a.visit(w, r)
 	if !ok {
 		return
@@ -472,8 +474,7 @@ var logoutPage = template.Must(template.New("logout").Parse(`<!doctype html>
 <style>body{font-family:system-ui,sans-serif;max-width:28rem;margin:4rem auto;padding:0 1rem;text-align:center}</style>
 <h1>Sign out</h1>
 <p>Select Sign out to finish signing out.</p>
-<form method="post" action="{{.Action}}">
-{{- if .Everywhere}}<input type="hidden" name="everywhere" value="1">{{end -}}
+<form method="post" action="{{.}}">
 <button type="submit">Sign out</button>
 </form>
 </html>
@@ -489,13 +490,14 @@ func (a *App) confirmLogout(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("X-Frame-Options", "DENY")
-	w.Header().Set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'")
-	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'")
 
-	_ = logoutPage.Execute(w, map[string]any{
-		"Action":     a.LogoutPath(),
-		"Everywhere": r.URL.Query().Get("everywhere") != "",
-	})
+	action := a.LogoutPath()
+	if r.URL.RawQuery != "" {
+		action += "?" + r.URL.RawQuery
+	}
+
+	_ = logoutPage.Execute(w, action)
 }
 
 func (a *App) farewell(w http.ResponseWriter, r *http.Request) {

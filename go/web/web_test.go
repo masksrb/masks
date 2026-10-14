@@ -982,12 +982,13 @@ func TestASignOutLinkWithNoFetchMetadataAsksForAPost(t *testing.T) {
 		}
 	}
 
-	if strings.Contains(body, "everywhere") {
-		t.Fatalf("the sign-out page asked to sign out everywhere unprompted: %s", body)
+	if strings.Contains(body, "everywhere") || strings.Contains(body, "hidden") {
+		t.Fatalf("the sign-out page carried a field nobody asked for: %s", body)
 	}
 
+	policy := response.Header.Get("Content-Security-Policy")
 	if response.Header.Get("Cache-Control") != "no-store" || response.Header.Get("X-Frame-Options") != "DENY" ||
-		!strings.Contains(response.Header.Get("Content-Security-Policy"), "frame-ancestors 'none'") {
+		!strings.Contains(policy, "frame-ancestors 'none'") || strings.Contains(policy, "form-action") {
 		t.Fatalf("the sign-out page answered with %v", response.Header)
 	}
 
@@ -1000,7 +1001,7 @@ func TestASignOutLinkWithNoFetchMetadataAsksForAPost(t *testing.T) {
 		t.Fatal("a HEAD to the sign-out route with no Sec-Fetch-Site signed the person out")
 	}
 
-	if _, body := h.visit(http.MethodGet, "/auth/logout?everywhere=1"); !strings.Contains(body, `<input type="hidden" name="everywhere" value="1">`) {
+	if _, body := h.visit(http.MethodGet, "/auth/logout?everywhere=1"); !strings.Contains(body, `<form method="post" action="/auth/logout?everywhere=1">`) {
 		t.Fatalf("the sign-out page dropped everywhere: %s", body)
 	}
 
@@ -1014,6 +1015,25 @@ func TestASignOutLinkWithNoFetchMetadataAsksForAPost(t *testing.T) {
 
 	if actor := h.actor("/me"); actor.SignedIn {
 		t.Fatal("the sign-out page's form left the person signed in")
+	}
+}
+
+func TestASignOutThatNamesNoSiteByPostOrDeleteIsRefused(t *testing.T) {
+	h := newHarness(t, func(config *Config) { config.SignOutOfIssuer = false })
+	h.connect()
+
+	for _, method := range []string{http.MethodPost, http.MethodDelete} {
+		if response, body := h.visit(method, "/auth/logout"); response.StatusCode != http.StatusForbidden || !strings.Contains(body, "another site") {
+			t.Fatalf("a %s sign-out with no Sec-Fetch-Site or Origin answered %d %s", method, response.StatusCode, body)
+		}
+	}
+
+	if response, body := h.visit(http.MethodPost, "/auth/handshake/disconnect"); response.StatusCode != http.StatusForbidden || !strings.Contains(body, "another site") {
+		t.Fatalf("a disconnect with no Sec-Fetch-Site or Origin answered %d %s", response.StatusCode, body)
+	}
+
+	if actor := h.actor("/me"); !actor.SignedIn {
+		t.Fatal("a sign-out with no Sec-Fetch-Site or Origin signed the person out")
 	}
 }
 
@@ -1535,6 +1555,7 @@ func TestASignOutFormIsReadOnlyUpToItsLimit(t *testing.T) {
 	body := "everywhere=1&padding=" + strings.Repeat("a", formLimit)
 	request, _ := http.NewRequest(http.MethodPost, h.server.URL+"/auth/logout", strings.NewReader(body))
 	request.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	request.Header.Set("Origin", h.server.URL)
 
 	response, err := h.browser.Do(request)
 	if err != nil {
