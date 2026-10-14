@@ -52,9 +52,6 @@ Rails.application.configure do
   end
 
   config.host_authorization = {
-    exclude: ->(request) {
-      Masks::Server::Tenancy::Middleware::TENANTLESS.include?(request.path) ||
-        Masks::Server::Tenant.serving(request.host).present?
-    }
+    exclude: ->(request) { Masks::Server::Tenancy::Middleware.excluded_from_host_check?(request) }
   }
 end

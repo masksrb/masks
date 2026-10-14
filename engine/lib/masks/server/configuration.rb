@@ -42,6 +42,7 @@ module Masks
         config.email_verification_lifetime = ENV.fetch("MASKS_EMAIL_VERIFICATION_LIFETIME", 2 * 24 * 60 * 60).to_i.seconds
         config.outbound_allowed = outbound_allowed(ENV["MASKS_OUTBOUND_ALLOWED"])
         config.ldap_port = ENV.fetch("MASKS_LDAP_PORT", 3389).to_i
+        config.on_demand_tls = ENV.fetch("MASKS_ON_DEMAND_TLS", "false")
         config.ldap_cert = ENV["MASKS_LDAP_CERT"].presence
         config.ldap_key = ENV["MASKS_LDAP_KEY"].presence
         config
@@ -102,6 +103,12 @@ module Masks
                 "Dynamic registration is off, on for anything a manager does not have to grant, " \
                 "or on and bounded by MASKS_DYNAMIC_CLIENT_SCOPES. Set it to off, anything or " \
                 "bounded, or leave it unset so each tenant's managers choose in /manage."
+        end
+
+        unless [ true, false, "true", "false" ].include?(config.on_demand_tls)
+          raise "MASKS_ON_DEMAND_TLS is #{config.on_demand_tls.inspect}. Set it to true to answer a " \
+                "proxy's certificate check at /tls/allowed, or to false, or leave it unset, to keep " \
+                "that path closed."
         end
 
         return if local || building

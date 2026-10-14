@@ -56,6 +56,24 @@ module Masks
         ::Rails.configuration.masks.public_origin_template = was
       end
 
+      def with_on_demand_tls(value = "true")
+        was = ::Rails.configuration.masks.on_demand_tls
+        ::Rails.configuration.masks.on_demand_tls = value
+
+        yield
+      ensure
+        ::Rails.configuration.masks.on_demand_tls = was
+      end
+
+      def through_host_check(path)
+        checked = ActionDispatch::HostAuthorization.new(
+          ::Rails.application, [ ".auth.example" ],
+          exclude: ->(request) { Tenancy::Middleware.excluded_from_host_check?(request) }
+        )
+
+        Rack::MockRequest.new(checked).get("http://masks:3000#{path}")
+      end
+
       def discovery_at(host)
         host! host
         get "/.well-known/openid-configuration"
@@ -117,13 +135,35 @@ module Masks
         prove
         within { @tenant.update!(custom_host: HOST) }
 
-        get "/tls/allowed", params: { domain: HOST }
+        with_on_demand_tls do
+          get "/tls/allowed", params: { domain: HOST }
 
-        assert_response :ok
+          assert_response :ok
 
-        get "/tls/allowed", params: { domain: "login.globex.example" }
+          get "/tls/allowed", params: { domain: "login.globex.example" }
 
-        assert_response :not_found
+          assert_response :not_found
+        end
+      end
+
+      test "the certificate check stays closed until on-demand TLS is turned on" do
+        prove
+        within { @tenant.update!(custom_host: HOST) }
+
+        with_on_demand_tls("false") do
+          assert_equal 403, through_host_check("/tls/allowed?domain=#{HOST}").status
+        end
+      end
+
+      test "the proxy reaches the certificate check at the server's own address, and nothing else there" do
+        prove
+        within { @tenant.update!(custom_host: HOST) }
+
+        with_on_demand_tls do
+          assert_equal 200, through_host_check("/tls/allowed?domain=#{HOST}").status
+          assert_equal 404, through_host_check("/tls/allowed?domain=login.globex.example").status
+          assert_equal 403, through_host_check("/.well-known/openid-configuration").status
+        end
       end
 
       test "releasing the domain stops serving the host" do

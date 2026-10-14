@@ -8,6 +8,14 @@ module Masks
         TENANTLESS = %w[/up /metrics].freeze
         TLS_ASK = "/tls/allowed".freeze
 
+        def self.excluded_from_host_check?(request)
+          TENANTLESS.include?(request.path) || certificate_check?(request) || Tenant.serving(request.host).present?
+        end
+
+        def self.certificate_check?(request)
+          request.path == TLS_ASK && ::Rails.configuration.masks.on_demand_tls.to_s == "true"
+        end
+
         def initialize(app)
           @app = app
         end
@@ -16,7 +24,7 @@ module Masks
           request = ActionDispatch::Request.new(env)
 
           return @app.call(env) if TENANTLESS.include?(request.path)
-          return allowed(request) if request.path == TLS_ASK
+          return allowed(request) if self.class.certificate_check?(request)
 
           tenant = Tenant.serving(request.host)
 
