@@ -165,12 +165,13 @@ person's name, photo, and organizations from userinfo again at the same time.
 
 A sign-out revokes the refresh token and clears the session. A sign-out of any method is refused
 with `403` when its `Sec-Fetch-Site` header is anything other than `same-origin` or `none`, or its
-`Origin` header names another origin.
+`Origin` header names another origin. A `POST` or `DELETE` that sends neither header is refused with
+`403` as well.
 
 A `GET` sign-out signs out at once when its `Sec-Fetch-Site` header is `same-origin` or `none`. A
 `GET` with no `Sec-Fetch-Site` header, as older browsers send, does not sign out. A browser gets a
-page with a **Sign out** button that posts to `/auth/logout` and keeps `everywhere`. A JSON request
-gets `403`. So a link on another site cannot sign anybody out.
+page with a **Sign out** button that posts to the same address, query included. A JSON request gets
+`403`. So a link on another site cannot sign anybody out.
 
 With `signOutOfIssuer`, or `everywhere`, the browser goes on to masks to end its session there. It
 comes back through `/auth/logout/return` to `afterSignOut`. That return carries a state the sign-out

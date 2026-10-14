@@ -122,7 +122,8 @@ the browser through `/api/auth/masks/logout` on its way to masks.
 [signing out](/reference/javascript/#signing-out). A `GET` to it signs out at once when its
 `Sec-Fetch-Site` header is `same-origin` or `none`. A `GET` with no `Sec-Fetch-Site` header, as
 older browsers send, does not sign out. A browser gets a page with a **Sign out** button that posts
-to `/api/auth/masks/logout` and keeps `everywhere` and `callbackUrl`. A JSON request gets `403`.
+to the same address, query included. A JSON request gets `403`. A `POST` that sends neither
+`Sec-Fetch-Site` nor `Origin` is refused with `403`.
 
 ## Several servers
 
@@ -175,14 +176,14 @@ person's token. Otherwise it is the `picture` claim, then the identicon.
 
 These routes are answered under the Auth.js base path, `/api/auth` by default:
 
-| Route                                                                             |                                                                                                                  |
-| --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `GET /api/auth/masks/signin`                                                      | Starts a sign-in. Takes `callbackUrl`, `organization`, `privilege`, and `prompt`, which is `login` or `consent`. |
-| `GET /api/auth/masks/handshake`                                                   | Starts the handshake before the app is connected. After that, shows the connection to somebody `manages` allows. |
-| `POST /api/auth/masks/handshake`                                                  | Reconnects.                                                                                                      |
-| `POST /api/auth/masks/handshake/disconnect` or `DELETE /api/auth/masks/handshake` | Disconnects, and goes back to the handshake.                                                                     |
-| `GET /api/auth/masks/handshake/callback`                                          | Where masks sends the browser after an approval.                                                                 |
-| `GET` or `POST /api/auth/masks/logout`                                            | Signs out. Takes `callbackUrl`, and `everywhere` to sign out of masks as well.                                   |
-| `GET /api/auth/masks/logout/return`                                               | Where masks sends the browser after a sign-out everywhere.                                                       |
-| `GET /api/auth/masks/avatar`                                                      | The person's photo, fetched from masks with their token. Takes `size`.                                           |
-| `POST /api/auth/masks/logout/backchannel`                                         | Where masks posts a logout token.                                                                                |
+| Route                                                                             |                                                                                                                                                |
+| --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /api/auth/masks/signin`                                                      | Starts a sign-in. Takes `callbackUrl`, `organization`, `privilege`, and `prompt`, which is `login` or `consent`.                               |
+| `GET /api/auth/masks/handshake`                                                   | Starts the handshake before the app is connected. After that, shows the connection to somebody `manages` allows.                               |
+| `POST /api/auth/masks/handshake`                                                  | Reconnects.                                                                                                                                    |
+| `POST /api/auth/masks/handshake/disconnect` or `DELETE /api/auth/masks/handshake` | Disconnects, and goes back to the handshake.                                                                                                   |
+| `GET /api/auth/masks/handshake/callback`                                          | Where masks sends the browser after an approval.                                                                                               |
+| `GET` or `POST /api/auth/masks/logout`                                            | Signs out. Takes `callbackUrl`, and `everywhere` to sign out of masks as well. A browser that names no site gets a [page](#signing-out) first. |
+| `GET /api/auth/masks/logout/return`                                               | Where masks sends the browser after a sign-out everywhere.                                                                                     |
+| `GET /api/auth/masks/avatar`                                                      | The person's photo, fetched from masks with their token. Takes `size`.                                                                         |
+| `POST /api/auth/masks/logout/backchannel`                                         | Where masks posts a logout token.                                                                                                              |

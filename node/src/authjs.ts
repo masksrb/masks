@@ -20,18 +20,18 @@ import {
   isNetwork,
   localPath,
   PATH_HEADER,
+  provenance,
   type RequireAuth,
   type RequireAuthOptions,
   readForm,
   requireArguments,
-  sameOrigin,
   wantsJSON,
 } from "./app/requests.js";
 import {
+  confirmSignOut,
   errorResponse,
   json,
   redirect,
-  signOutPage,
   text,
 } from "./app/responses.js";
 import { Sealer } from "./app/seal.js";
@@ -1015,7 +1015,9 @@ export class MasksAuth {
   async #logout(request: Request): Promise<Response> {
     const url = new URL(request.url);
 
-    if (!sameOrigin(request, url.origin)) {
+    const seen = provenance(request, url.origin);
+
+    if (seen === "cross-site") {
       return errorResponse(
         request,
         403,
@@ -1024,29 +1026,8 @@ export class MasksAuth {
       );
     }
 
-    if (
-      request.method.toUpperCase() === "GET" &&
-      !request.headers.has("sec-fetch-site")
-    ) {
-      if (wantsJSON(request)) {
-        return errorResponse(
-          request,
-          403,
-          "invalid_request",
-          "sign out with a POST from this site",
-        );
-      }
-
-      const back = localPath(url.searchParams.get("callbackUrl"));
-
-      return signOutPage(
-        this.logoutPath,
-        {
-          ...(url.searchParams.has("everywhere") ? { everywhere: "1" } : {}),
-          ...(back ? { callbackUrl: back } : {}),
-        },
-        [],
-      );
+    if (seen === "unproven") {
+      return confirmSignOut(request, `${this.logoutPath}${url.search}`, []);
     }
 
     const form =

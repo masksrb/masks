@@ -80,7 +80,7 @@ export function page(
   title: string,
   body: string,
   cookies: string[],
-  formTargets: string[],
+  formTargets: string[] | null,
 ): Response {
   return new Response(
     `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${escapeHTML(title)}</title><style>body{font-family:system-ui,sans-serif;max-width:36rem;margin:4rem auto;padding:0 1rem;line-height:1.5}form{display:inline-block;margin-right:.5rem}</style></head><body><h1>${escapeHTML(title)}</h1>${body}</body></html>`,
@@ -89,7 +89,7 @@ export function page(
       headers: headersWith(cookies, {
         "content-type": "text/html; charset=utf-8",
         "cache-control": "no-store",
-        "content-security-policy": `default-src 'none'; style-src 'unsafe-inline'; form-action ${["'self'", ...formTargets].join(" ")}; frame-ancestors 'none'`,
+        "content-security-policy": `default-src 'none'; style-src 'unsafe-inline';${formTargets ? ` form-action ${["'self'", ...formTargets].join(" ")};` : ""} frame-ancestors 'none'`,
         "x-frame-options": "DENY",
         "x-content-type-options": "nosniff",
       }),
@@ -97,23 +97,40 @@ export function page(
   );
 }
 
-export function signOutPage(
+export function fromAnotherSite(request: Request, cookies: string[]): Response {
+  return errorResponse(
+    request,
+    403,
+    "invalid_request",
+    "that request came from another site",
+    cookies,
+  );
+}
+
+export function confirmSignOut(
+  request: Request,
   action: string,
-  carried: Record<string, string>,
   cookies: string[],
 ): Response {
-  const hidden = Object.entries(carried)
-    .map(
-      ([name, value]) =>
-        `<input type="hidden" name="${escapeHTML(name)}" value="${escapeHTML(value)}">`,
-    )
-    .join("");
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    return fromAnotherSite(request, cookies);
+  }
+
+  if (wantsJSON(request)) {
+    return errorResponse(
+      request,
+      403,
+      "invalid_request",
+      "sign out with a POST from this site",
+      cookies,
+    );
+  }
 
   return page(
     "Sign out",
-    `<p>Select Sign out to finish signing out.</p><form method="post" action="${escapeHTML(action)}">${hidden}<button type="submit">Sign out</button></form>`,
+    `<p>Select Sign out to finish signing out.</p><form method="post" action="${escapeHTML(action)}"><button type="submit">Sign out</button></form>`,
     cookies,
-    [],
+    null,
   );
 }
 

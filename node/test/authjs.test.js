@@ -534,26 +534,27 @@ test("a sign-out by GET that names no site asks first, and its button signs out"
   assert.equal(asked.status, 200);
   assert.equal(asked.headers.get("content-type"), "text/html; charset=utf-8");
   assert.equal(asked.headers.get("cache-control"), "no-store");
-  assert.match(
+  assert.equal(
     asked.headers.get("content-security-policy"),
-    /form-action 'self'; frame-ancestors 'none'/,
+    "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'",
   );
   assert.match(
     html,
-    /<form method="post" action="\/api\/auth\/masks\/logout">/,
+    /<form method="post" action="\/api\/auth\/masks\/logout\?everywhere&#38;callbackUrl=\/goodbye">/,
   );
-  assert.match(html, /name="everywhere" value="1"/);
-  assert.match(html, /name="callbackUrl" value="\/goodbye"/);
+  assert.doesNotMatch(html, /type="hidden"/);
   assert.ok((await session(browser)).masks);
 
-  const plain = await (await browser.fetch("/api/auth/masks/logout")).text();
-
-  assert.doesNotMatch(plain, /everywhere|callbackUrl/);
-
-  const posted = await browser.fetch("/api/auth/masks/logout", {
+  const bare = await browser.fetch("/api/auth/masks/logout", {
     method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ everywhere: "1", callbackUrl: "/goodbye" }),
+  });
+
+  assert.equal(bare.status, 403);
+  assert.ok((await session(browser)).masks);
+
+  const posted = await browser.fetch(path, {
+    method: "POST",
+    headers: { origin: APP },
   });
   const target = new URL(posted.headers.get("location"));
 
@@ -624,7 +625,10 @@ test("signing out without everywhere stays in the app", async () => {
   const left = await held.browser.fetch("/api/auth/masks/logout", {
     method: "POST",
     body: new URLSearchParams({ callbackUrl: "/bye" }),
-    headers: { "content-type": "application/x-www-form-urlencoded" },
+    headers: {
+      "content-type": "application/x-www-form-urlencoded",
+      origin: APP,
+    },
   });
 
   assert.equal(left.status, 303);

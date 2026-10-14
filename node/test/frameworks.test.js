@@ -23,15 +23,14 @@ async function signOutByButton(held, browser) {
   const asked = await browser.fetch("/auth/logout?everywhere=1");
 
   assert.equal(asked.status, 200);
-  assert.match(await asked.text(), /name="everywhere" value="1"/);
+  assert.match(await asked.text(), /action="\/auth\/logout\?everywhere=1"/);
   assert.deepEqual(await (await browser.fetch("/")).json(), {
     signed_in: true,
   });
 
-  const posted = await browser.fetch("/auth/logout", {
+  const posted = await browser.fetch("/auth/logout?everywhere=1", {
     method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded" },
-    body: "everywhere=1",
+    headers: { origin: APP },
   });
 
   assert.equal(posted.status, 303);

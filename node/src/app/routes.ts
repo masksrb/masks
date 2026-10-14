@@ -18,12 +18,12 @@ import { unique } from "./privileges.js";
 import {
   isNetwork,
   localPath,
+  provenance,
   readForm,
   resolve,
-  sameOrigin,
   wantsJSON,
 } from "./requests.js";
-import { json, redirect, signOutPage, text } from "./responses.js";
+import { confirmSignOut, json, redirect, text } from "./responses.js";
 import {
   claim,
   FLOW_LIFETIME,
@@ -295,7 +295,9 @@ async function avatar(core: Core, visit: Visit): Promise<Response> {
 }
 
 async function logout(core: Core, visit: Visit): Promise<Response> {
-  if (!sameOrigin(visit.request, visit.origin)) {
+  const seen = provenance(visit.request, visit.origin);
+
+  if (seen === "cross-site") {
     return answer(
       visit,
       403,
@@ -304,28 +306,14 @@ async function logout(core: Core, visit: Visit): Promise<Response> {
     );
   }
 
-  const method = visit.request.method.toUpperCase();
-  const asked = visit.url.searchParams;
-
-  if (method === "GET" && !visit.request.headers.has("sec-fetch-site")) {
-    if (wantsJSON(visit.request)) {
-      return answer(
-        visit,
-        403,
-        "invalid_request",
-        "sign out with a POST from this site",
-      );
-    }
-
-    return signOutPage(
-      core.logoutPath,
-      asked.has("everywhere") ? { everywhere: "1" } : {},
+  if (seen === "unproven") {
+    return confirmSignOut(
+      visit.request,
+      `${core.logoutPath}${visit.url.search}`,
       visit.out,
     );
   }
 
-  const form =
-    method === "POST" ? await readForm(visit.request) : new URLSearchParams();
   const session = await core.sessions.read(visit);
   const client = await core.client(visit);
   const refresh = session?.data.tokens?.refresh_token;
@@ -340,8 +328,7 @@ async function logout(core: Core, visit: Visit): Promise<Response> {
 
   const everywhere =
     core.options.signOutOfIssuer === true ||
-    asked.has("everywhere") ||
-    form.has("everywhere");
+    visit.url.searchParams.has("everywhere");
   let upstream: string | undefined;
 
   if (everywhere && client) {

@@ -4,10 +4,11 @@ import type { Issuer } from "../issuer.js";
 import type { CredentialStore } from "./credentials.js";
 import type { Masked } from "./masked.js";
 import type { Privileges } from "./privileges.js";
-import { sameOrigin, wantsJSON } from "./requests.js";
+import { provenance, wantsJSON } from "./requests.js";
 import {
   errorResponse,
   escapeHTML,
+  fromAnotherSite,
   json,
   page,
   redirect,
@@ -80,7 +81,9 @@ export class Handshakes {
   async create(request: Request): Promise<Response> {
     const site = await this.#host.site(request);
 
-    if (!sameOrigin(request, site.origin)) {
+    const seen = provenance(request, site.origin);
+
+    if (seen === "cross-site") {
       return errorResponse(
         request,
         403,
@@ -89,6 +92,8 @@ export class Handshakes {
         site.cookies,
       );
     }
+
+    if (seen === "unproven") return fromAnotherSite(request, site.cookies);
 
     if (await this.configured(request)) {
       const refused = await this.manager(request);
@@ -102,7 +107,9 @@ export class Handshakes {
     const { handshakePath } = this.#host;
     const site = await this.#host.site(request);
 
-    if (!sameOrigin(request, site.origin)) {
+    const seen = provenance(request, site.origin);
+
+    if (seen === "cross-site") {
       return errorResponse(
         request,
         403,
@@ -111,6 +118,8 @@ export class Handshakes {
         site.cookies,
       );
     }
+
+    if (seen === "unproven") return fromAnotherSite(request, site.cookies);
 
     if (!(await this.configured(request)))
       return redirect(handshakePath, site.cookies, 303);

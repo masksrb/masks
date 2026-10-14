@@ -67,19 +67,19 @@ privileges: {
 
 `Masks` answers these under `basePath`:
 
-| Route                                                         |                                                                        |
-| ------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| `GET /auth`                                                   | Starts a sign-in. Takes `return_to`, `organization`, and `privilege`.  |
-| `GET /auth/callback`                                          | Finishes it.                                                           |
-| `GET /auth/refresh`                                           | Refreshes the session and goes back to `return_to`.                    |
-| `GET /auth/session`                                           | The signed-in person as JSON, for a single-page app.                   |
-| `GET /auth/avatar`                                            | The person's photo, fetched from masks with their token. Takes `size`. |
-| `GET`, `POST`, or `DELETE /auth/logout`                       | Signs out. Takes `everywhere` to sign out of masks as well.            |
-| `GET /auth/logout/return`                                     | Where masks sends the browser after signing out everywhere.            |
-| `POST /auth/logout/backchannel`                               | Takes a back-channel logout token from masks. Each token works once.   |
-| `GET` or `POST /auth/handshake`                               | Starts the handshake, or shows the connection.                         |
-| `GET /auth/handshake/callback`                                | Finishes the handshake.                                                |
-| `POST /auth/handshake/disconnect` or `DELETE /auth/handshake` | Disconnects the app.                                                   |
+| Route                                                         |                                                                                                                                                   |
+| ------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET /auth`                                                   | Starts a sign-in. Takes `return_to`, `organization`, and `privilege`.                                                                             |
+| `GET /auth/callback`                                          | Finishes it.                                                                                                                                      |
+| `GET /auth/refresh`                                           | Refreshes the session and goes back to `return_to`.                                                                                               |
+| `GET /auth/session`                                           | The signed-in person as JSON, for a single-page app.                                                                                              |
+| `GET /auth/avatar`                                            | The person's photo, fetched from masks with their token. Takes `size`.                                                                            |
+| `GET`, `POST`, or `DELETE /auth/logout`                       | Signs out. Takes `everywhere` to sign out of masks as well. A browser that names no site gets a [page](/reference/javascript/#signing-out) first. |
+| `GET /auth/logout/return`                                     | Where masks sends the browser after signing out everywhere.                                                                                       |
+| `POST /auth/logout/backchannel`                               | Takes a back-channel logout token from masks. Each token works once.                                                                              |
+| `GET` or `POST /auth/handshake`                               | Starts the handshake, or shows the connection.                                                                                                    |
+| `GET /auth/handshake/callback`                                | Finishes the handshake.                                                                                                                           |
+| `POST /auth/handshake/disconnect` or `DELETE /auth/handshake` | Disconnects the app.                                                                                                                              |
 
 `masks.handle` also answers `/.well-known/oauth-protected-resource`, followed by the path of
 `resource` when it has one.

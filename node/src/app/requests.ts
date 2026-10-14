@@ -111,7 +111,7 @@ function tooLarge(): MasksError {
   );
 }
 
-export function sameOrigin(request: Request, origin: string): boolean {
+function sameOrigin(request: Request, origin: string): boolean {
   const site = request.headers.get("sec-fetch-site");
 
   if (site && site !== "same-origin" && site !== "none") return false;
@@ -121,6 +121,18 @@ export function sameOrigin(request: Request, origin: string): boolean {
   if (named !== null && named !== origin) return false;
 
   return true;
+}
+
+export function provenance(
+  request: Request,
+  origin: string,
+): "cross-site" | "unproven" | "same-origin" {
+  if (!sameOrigin(request, origin)) return "cross-site";
+
+  const named =
+    request.headers.has("sec-fetch-site") || request.headers.has("origin");
+
+  return named ? "same-origin" : "unproven";
 }
 
 export function presented(request: Request): string | undefined {

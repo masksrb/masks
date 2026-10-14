@@ -459,23 +459,36 @@ test("a sign-out by GET that names no site asks first, and its button signs out"
   assert.equal(asked.headers.get("x-frame-options"), "DENY");
   assert.equal(
     asked.headers.get("content-security-policy"),
-    "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'",
+    "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'",
   );
   assert.match(html, /<title>Sign out<\/title>/);
   assert.match(html, /<p>Select Sign out to finish signing out\.<\/p>/);
-  assert.match(html, /<form method="post" action="\/auth\/logout">/);
-  assert.match(html, /<input type="hidden" name="everywhere" value="1">/);
+  assert.match(
+    html,
+    /<form method="post" action="\/auth\/logout\?everywhere=1">/,
+  );
+  assert.doesNotMatch(html, /type="hidden"/);
   assert.match(html, /<button type="submit">Sign out<\/button>/);
   assert.equal(held.fake.revoked.length, 0);
   assert.equal(await signedIn(), true);
 
   const plain = await (await held.browser.fetch("/auth/logout")).text();
-  assert.doesNotMatch(plain, /everywhere/);
+  assert.match(plain, /action="\/auth\/logout"/);
 
-  const posted = await held.browser.fetch("/auth/logout", {
+  const bare = await held.browser.fetch("/auth/logout", {
     method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded" },
-    body: "everywhere=1",
+    headers: json,
+  });
+  assert.equal(bare.status, 403);
+  assert.deepEqual(await bare.json(), {
+    error: "invalid_request",
+    error_description: "that request came from another site",
+  });
+  assert.equal(await signedIn(), true);
+
+  const posted = await held.browser.fetch("/auth/logout?everywhere=1", {
+    method: "POST",
+    headers: { origin: APP },
   });
   const upstream = new URL(posted.headers.get("location"));
 
@@ -501,7 +514,7 @@ test("signing out everywhere comes back once through the logout return", async (
 
   const out = await held.browser.fetch("/auth/logout?everywhere=1", {
     method: "DELETE",
-    headers: json,
+    headers: { ...json, origin: APP },
   });
   const { logout_url, signed_in } = await out.json();
   const upstream = new URL(logout_url);
