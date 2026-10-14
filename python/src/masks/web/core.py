@@ -80,7 +80,6 @@ ISSUER_LIFETIME = 3600
 AVATAR_SIZES = (32, 64, 128, 256, 512)
 METADATA_PATH = "/.well-known/oauth-protected-resource"
 FORM_LIMIT = 64 * 1024
-FORM_ROUTES = frozenset({"backchannel", "logout"})
 
 IDENTITY = (
     "sub",
@@ -156,36 +155,9 @@ class Answer:
         )
 
     @classmethod
-    def sign_out(cls, action: str, everywhere: bool) -> Answer:
-        held = '<input type="hidden" name="everywhere" value="1">' if everywhere else ""
-        body = (
-            '<!doctype html><html lang="en"><meta charset="utf-8">'
-            '<meta name="viewport" content="width=device-width, initial-scale=1">'
-            "<title>Sign out</title>"
-            "<style>body{font:16px/1.5 system-ui,sans-serif;max-width:28rem;margin:4rem auto;padding:0 1rem}"
-            "button{font:inherit;padding:.5rem 1rem}</style>"
-            "<h1>Sign out</h1><p>Select Sign out to finish signing out.</p>"
-            f'<form method="post" action="{html.escape(action, quote=True)}">{held}'
-            '<button type="submit">Sign out</button></form></html>'
-        )
-
-        return cls(
-            200,
-            body.encode(),
-            "text/html; charset=utf-8",
-            [
-                ("Cache-Control", "no-store"),
-                ("X-Content-Type-Options", "nosniff"),
-                ("X-Frame-Options", "DENY"),
-                (
-                    "Content-Security-Policy",
-                    "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'",
-                ),
-            ],
-        )
-
-    @classmethod
-    def page(cls, status: int, title: str, said: str, extra: str = "", form_targets: Sequence[str] = ()) -> Answer:
+    def page(
+        cls, status: int, title: str, said: str, extra: str = "", form_targets: Sequence[str] | None = ()
+    ) -> Answer:
         body = (
             "<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width'>"
             f"<title>{html.escape(title)}</title><main><h1>{html.escape(title)}</h1>"
@@ -198,10 +170,13 @@ class Answer:
             "text/html; charset=utf-8",
             [
                 ("Cache-Control", "no-store"),
+                ("X-Content-Type-Options", "nosniff"),
+                ("X-Frame-Options", "DENY"),
                 (
                     "Content-Security-Policy",
                     "default-src 'none'; style-src 'unsafe-inline'; "
-                    "form-action " + " ".join(["'self'", *form_targets]) + "; frame-ancestors 'none'",
+                    + ("" if form_targets is None else "form-action " + " ".join(["'self'", *form_targets]) + "; ")
+                    + "frame-ancestors 'none'",
                 ),
             ],
         )
@@ -988,21 +963,13 @@ class Masks:
         )
 
     def logout(self, request: Incoming, session: Session) -> Step[Answer]:
-        if not self._same_origin(request):
-            return self._refuse(request, "invalid_request", "that request came from another site", 403)
+        refused = self._provenance(request)
 
-        if request.method not in ("POST", "DELETE") and not request.headers.get("Sec-Fetch-Site"):
-            if request.wants_json:
-                return Answer.json(
-                    403, {"error": "invalid_request", "error_description": "sign out with a POST from this site"}
-                )
-
-            return Answer.sign_out(self.path("/logout"), everywhere=bool(request.query.get("everywhere")))
+        if refused is not None:
+            return refused
 
         token = self._token(request, session)
-        everywhere = self.config.sign_out_of_issuer or bool(
-            request.query.get("everywhere") or request.form.get("everywhere")
-        )
+        everywhere = self.config.sign_out_of_issuer or bool(request.query.get("everywhere"))
         flows: _Flows | None = None
 
         if self.configured(request):
@@ -1241,21 +1208,35 @@ class Masks:
 
         return None
 
-    def _same_origin(self, request: Incoming) -> bool:
+    def _provenance(self, request: Incoming) -> Answer | None:
         site = request.headers.get("Sec-Fetch-Site", "")
-
-        if site and site not in ("same-origin", "none"):
-            return False
-
         sent = request.headers.get("Origin", "")
 
-        if not sent:
-            return True
+        if site and site not in ("same-origin", "none"):
+            return self._refuse(request, "invalid_request", "that request came from another site", 403)
 
-        if sent == "null":
-            return False
+        if sent and (sent == "null" or origin(sent) not in (request.origin, origin(self.base(request)))):
+            return self._refuse(request, "invalid_request", "that request came from another site", 403)
 
-        return origin(sent) in (request.origin, origin(self.base(request)))
+        if site or sent:
+            return None
+
+        if request.method in ("POST", "DELETE"):
+            return self._refuse(request, "invalid_request", "that request came from another site", 403)
+
+        if request.wants_json:
+            return self._refuse(request, "invalid_request", "sign out with a POST from this site", 403)
+
+        query = urlsplit(request.url).query
+        action = html.escape(self.path("/logout") + (f"?{query}" if query else ""), quote=True)
+
+        return Answer.page(
+            200,
+            "Sign out",
+            "Select Sign out to finish signing out.",
+            f'<form method="post" action="{action}"><button type="submit">Sign out</button></form>',
+            form_targets=None,
+        )
 
     def handshake_show(self, request: Incoming, session: Session) -> Step[Answer]:
         refused = yield from self._guard(request, session)
@@ -1293,8 +1274,10 @@ class Masks:
         )
 
     def handshake_begin(self, request: Incoming, session: Session) -> Step[Answer]:
-        if not self._same_origin(request):
-            return self._refuse(request, "invalid_request", "that request came from another site", 403)
+        refused = self._provenance(request)
+
+        if refused is not None:
+            return refused
 
         refused = yield from self._guard(request, session)
 
@@ -1339,8 +1322,10 @@ class Masks:
         return Answer.redirect(self.path())
 
     def handshake_disconnect(self, request: Incoming, session: Session) -> Step[Answer]:
-        if not self._same_origin(request):
-            return self._refuse(request, "invalid_request", "that request came from another site", 403)
+        refused = self._provenance(request)
+
+        if refused is not None:
+            return refused
 
         if not self.configured(request):
             return Answer.redirect(self.path("/handshake"))

@@ -306,7 +306,7 @@ def test_signing_out_revokes_the_refresh_token(app: TestClient, fake: Fake) -> N
     sign_in(app, fake)
     revoked = len(fake.revoked)
 
-    assert location(app.post("/auth/logout", headers=HTML)) == "/"
+    assert location(app.post("/auth/logout", headers={**HTML, "Origin": APP})) == "/"
     assert len(fake.revoked) == revoked + 1
     assert app.get("/whoami").json() == {"signed_in": False}
 
@@ -326,7 +326,7 @@ def test_signing_out_everywhere_goes_through_masks(app: TestClient, fake: Fake) 
     assert location(back) == "/"
     assert app.get("/auth/logout/return", params={"state": query["state"][0]}, headers=JSON).status_code == 400
     assert app.get("/auth/logout/return", params={"state": "forged"}, headers=JSON).json()["error"] == "invalid_state"
-    assert app.post("/auth/logout", headers=JSON).json() == {"signed_in": False}
+    assert app.post("/auth/logout", headers={**JSON, "Origin": APP}).json() == {"signed_in": False}
 
 
 def test_a_cross_site_request_cannot_sign_anyone_out(app: TestClient, fake: Fake) -> None:
@@ -341,23 +341,6 @@ def test_a_cross_site_request_cannot_sign_anyone_out(app: TestClient, fake: Fake
 
     assert app.get("/whoami").json() == {"signed_in": True}
     assert location(app.get("/auth/logout", headers={**HTML, "Sec-Fetch-Site": "same-origin"})) == "/"
-
-
-def test_a_sign_out_link_from_a_browser_that_names_no_site_asks_first(app: TestClient, fake: Fake) -> None:
-    sign_in(app, fake)
-    page = app.get("/auth/logout", params={"everywhere": "1"}, headers=HTML)
-
-    assert page.status_code == 200
-    assert page.headers["x-frame-options"] == "DENY"
-    assert "form-action 'self'" in page.headers["content-security-policy"]
-    assert '<form method="post" action="/auth/logout"><input type="hidden" name="everywhere" value="1">' in page.text
-    assert app.get("/auth/logout", headers=JSON).json()["error_description"] == "sign out with a POST from this site"
-    assert app.get("/whoami").json() == {"signed_in": True}
-
-    upstream = location(app.post("/auth/logout", data={"everywhere": "1"}, headers={**HTML, "Origin": APP}))
-
-    assert upstream.startswith(f"{ISSUER}/logout?")
-    assert app.get("/whoami").json() == {"signed_in": False}
 
 
 def test_a_refresh_masks_cannot_serve_keeps_the_session(
@@ -598,7 +581,7 @@ def test_only_a_manager_sees_or_changes_the_connection(fake: Fake) -> None:
     assert f"form-action 'self' {ISSUER};" in policy
     assert "frame-ancestors 'none'" in policy
 
-    gone = client.post("/auth/handshake/disconnect", headers=JSON)
+    gone = client.post("/auth/handshake/disconnect", headers={**JSON, "Origin": APP})
 
     assert gone.json() == {"connected": False, "handshake_url": "/auth/handshake"}
     assert credentials.read() == {}

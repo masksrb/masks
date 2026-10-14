@@ -116,7 +116,7 @@ def signs_in_and_out(build: Build, fake: Fake) -> None:
     assert browser.get("/auth/session").json()["signed_in"] is True
 
     revoked = len(fake.revoked)
-    assert browser.post("/auth/logout", JSON).json() == {"signed_in": False}
+    assert browser.post("/auth/logout", {**JSON, "Origin": APP}).json() == {"signed_in": False}
     assert len(fake.revoked) == revoked + 1
     assert browser.get("/me", JSON).status == 401
 
@@ -318,10 +318,11 @@ def asks_before_signing_out_a_browser_that_names_no_site(build: Build, fake: Fak
     assert page.headers["x-content-type-options"] == "nosniff"
     assert page.headers["x-frame-options"] == "DENY"
     assert page.headers["content-security-policy"] == (
-        "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'"
+        "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'"
     )
-    assert b'<form method="post" action="/auth/logout"><input type="hidden" name="everywhere" value="1">' in page.body
-    assert b'name="everywhere"' not in browser.get("/auth/logout", HTML).body
+    assert b'<form method="post" action="/auth/logout?everywhere=1">' in page.body
+    assert b"<input" not in page.body
+    assert b'<form method="post" action="/auth/logout">' in browser.get("/auth/logout", HTML).body
     assert browser.get("/me", JSON).status == 200
 
     refused = browser.get("/auth/logout", JSON)
@@ -330,10 +331,21 @@ def asks_before_signing_out_a_browser_that_names_no_site(build: Build, fake: Fak
     assert refused.json() == {"error": "invalid_request", "error_description": "sign out with a POST from this site"}
     assert browser.get("/me", JSON).status == 200
 
-    upstream = browser.post("/auth/logout", {**HTML, "Origin": APP}, data={"everywhere": "1"}).location
+    upstream = browser.post("/auth/logout?everywhere=1", {**HTML, "Origin": APP}).location
 
     assert upstream.startswith(f"{ISSUER}/logout?")
     assert browser.get("/me", JSON).status == 401
+
+
+def refuses_a_sign_out_post_that_names_no_site(build: Build, fake: Fake) -> None:
+    browser = build(config(fake))
+    sign_in(browser, fake)
+    refused = browser.post("/auth/logout", JSON)
+
+    assert refused.status == 403
+    assert refused.json() == {"error": "invalid_request", "error_description": "that request came from another site"}
+    assert browser.post("/auth/handshake/disconnect", JSON).status == 403
+    assert browser.get("/me", JSON).status == 200
 
 
 def signs_out_from_a_link_on_this_site(build: Build, fake: Fake) -> None:
@@ -348,7 +360,7 @@ def signs_out_from_a_link_on_this_site(build: Build, fake: Fake) -> None:
 def signs_out_everywhere(build: Build, fake: Fake) -> None:
     browser = build(config(fake))
     sign_in(browser, fake)
-    upstream = browser.post("/auth/logout?everywhere=1", HTML).location
+    upstream = browser.post("/auth/logout?everywhere=1", {**HTML, "Origin": APP}).location
     query = parse_qs(urlsplit(upstream).query)
 
     assert upstream.startswith(f"{ISSUER}/logout?")
@@ -384,14 +396,14 @@ def lets_only_a_manager_change_the_connection(build: Build, fake: Fake) -> None:
     sign_in(browser, fake, subject="bob")
 
     assert browser.get("/auth/handshake", JSON).status == 403
-    assert browser.post("/auth/handshake/disconnect", JSON).status == 403
+    assert browser.post("/auth/handshake/disconnect", {**JSON, "Origin": APP}).status == 403
 
     sign_in(browser, fake)
     page = browser.get("/auth/handshake", HTML)
 
     assert f"form-action 'self' {ISSUER};" in page.headers["content-security-policy"]
     assert b"Reconnect" in page.body
-    assert browser.post("/auth/handshake/disconnect", JSON).json()["connected"] is False
+    assert browser.post("/auth/handshake/disconnect", {**JSON, "Origin": APP}).json()["connected"] is False
     assert credentials.read() == {}
 
 
@@ -544,6 +556,7 @@ SCENARIOS = [
     shows_the_avatar_route_as_the_picture,
     refuses_a_sign_out_from_another_site,
     asks_before_signing_out_a_browser_that_names_no_site,
+    refuses_a_sign_out_post_that_names_no_site,
     signs_out_from_a_link_on_this_site,
     signs_out_everywhere,
     restarts_a_forged_state_once,

@@ -149,11 +149,13 @@ back to `/auth/logout/return`, which sends it on to `after_sign_out`. That retur
 an hour, and only in the browser that signed out.
 
 A sign-out of any method is refused with `403` when its `Sec-Fetch-Site` header is anything other
-than `same-origin` or `none`, or its `Origin` header names another origin.
+than `same-origin` or `none`, or its `Origin` header names another origin. A `POST` or `DELETE`
+that sends neither header is refused too.
 
 A `GET` sign-out signs out at once when its `Sec-Fetch-Site` header is `same-origin` or `none`. A
 `GET` with no `Sec-Fetch-Site` header, as older browsers send, does not sign out. A browser gets a
-page with a **Sign out** button that posts to `/auth/logout` and keeps `everywhere`. A JSON request
+page with a **Sign out** button that posts to the same address, query included, so it keeps
+`everywhere`. A JSON request
 gets `403`. So a link on another site cannot sign anybody out.
 
 ### Back-channel logout
