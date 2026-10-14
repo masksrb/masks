@@ -72,11 +72,10 @@ module Masks
       end
 
       def first_factored!(held, at: nil)
-        changes = {}
-        changes[:authenticated_at] = at if at.present? && (authenticated_at.nil? || at > authenticated_at)
-        changes.merge!(first_factor: held["factor"], provider_id: held["provider_id"]) if held["factor"].present? && held != first_factored_by
+        self.authenticated_at = at if at && at > authenticated_at
+        assign_attributes(first_factor: held["factor"], provider_id: held["provider_id"]) if held["factor"].present?
 
-        update!(changes) if changes.any?
+        save! if changed?
       end
 
       def bound?

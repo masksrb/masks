@@ -303,7 +303,7 @@ module Masks
 
         def settle!(login)
           hold(login.actor, amr: login.amr, policy: login.policy, first_factor: login.first_factored_by,
-                            authenticated_at: login.factored_at(:first_factor))
+                            authenticated_at: login.authenticated_at)
           forget_login
         end
 

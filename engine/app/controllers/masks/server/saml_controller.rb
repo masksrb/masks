@@ -139,7 +139,7 @@ module Masks
           assertion = response_for(pending)
           encoded = assertion.success(
             actor: current_actor, session: current_session, name_id_format: saml["name_id_format"], scopes: scopes,
-            authenticated_at: login.authenticated_at || current_session&.authenticated_at,
+            authenticated_at: current_session&.authenticated_at,
             amr: login.amr.presence || current_session&.amr
           )
 
