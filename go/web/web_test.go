@@ -967,6 +967,71 @@ func TestACrossSiteSignOutIsRefusedForEveryMethod(t *testing.T) {
 	}
 }
 
+func TestASignOutLinkWithNoFetchMetadataAsksForAPost(t *testing.T) {
+	h := newHarness(t, func(config *Config) { config.SignOutOfIssuer = false })
+	h.connect()
+
+	response, body := h.visit(http.MethodGet, "/auth/logout")
+	if response.StatusCode != http.StatusOK || !strings.HasPrefix(response.Header.Get("Content-Type"), "text/html") {
+		t.Fatalf("a sign-out link with no Sec-Fetch-Site answered %d %s", response.StatusCode, response.Header.Get("Content-Type"))
+	}
+
+	for _, want := range []string{`<form method="post" action="/auth/logout">`, `<button type="submit">Sign out</button>`} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("the sign-out page is missing %s: %s", want, body)
+		}
+	}
+
+	if strings.Contains(body, "everywhere") {
+		t.Fatalf("the sign-out page asked to sign out everywhere unprompted: %s", body)
+	}
+
+	if response.Header.Get("Cache-Control") != "no-store" || response.Header.Get("X-Frame-Options") != "DENY" ||
+		!strings.Contains(response.Header.Get("Content-Security-Policy"), "frame-ancestors 'none'") {
+		t.Fatalf("the sign-out page answered with %v", response.Header)
+	}
+
+	if actor := h.actor("/me"); !actor.SignedIn {
+		t.Fatal("a sign-out link with no Sec-Fetch-Site signed the person out")
+	}
+
+	h.visit(http.MethodHead, "/auth/logout")
+	if actor := h.actor("/me"); !actor.SignedIn {
+		t.Fatal("a HEAD to the sign-out route with no Sec-Fetch-Site signed the person out")
+	}
+
+	if _, body := h.visit(http.MethodGet, "/auth/logout?everywhere=1"); !strings.Contains(body, `<input type="hidden" name="everywhere" value="1">`) {
+		t.Fatalf("the sign-out page dropped everywhere: %s", body)
+	}
+
+	if response, _ := h.visit(http.MethodGet, "/auth/logout", "Accept", "application/json"); response.StatusCode != http.StatusForbidden {
+		t.Fatalf("a JSON sign-out with no Sec-Fetch-Site answered %d", response.StatusCode)
+	}
+
+	if response, body := h.visit(http.MethodPost, "/auth/logout", "Origin", h.server.URL); response.StatusCode != http.StatusOK || body != "home" {
+		t.Fatalf("the sign-out page's form ended at %s with %d", response.Request.URL, response.StatusCode)
+	}
+
+	if actor := h.actor("/me"); actor.SignedIn {
+		t.Fatal("the sign-out page's form left the person signed in")
+	}
+}
+
+func TestASignOutLinkFromThisSiteSignsOutAtOnce(t *testing.T) {
+	for _, site := range []string{"same-origin", "none"} {
+		h := newHarness(t, func(config *Config) { config.SignOutOfIssuer = false })
+		h.connect()
+
+		if response, body := h.visit(http.MethodGet, "/auth/logout", "Sec-Fetch-Site", site); response.StatusCode != http.StatusOK || body != "home" {
+			t.Fatalf("a %s sign-out link ended at %s with %d", site, response.Request.URL, response.StatusCode)
+		}
+
+		if actor := h.actor("/me"); actor.SignedIn {
+			t.Fatalf("a %s sign-out link left the person signed in", site)
+		}
+	}
+}
+
 func TestARefreshThatPanicsReleasesTheOthersWaiting(t *testing.T) {
 	held := &flights{}
 

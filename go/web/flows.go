@@ -403,6 +403,11 @@ func referringPath(r *http.Request) string {
 }
 
 func (a *App) logout(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost && r.Method != http.MethodDelete && r.Header.Get("Sec-Fetch-Site") == "" {
+		a.confirmLogout(w, r)
+		return
+	}
+
 	v, ok := a.visit(w, r)
 	if !ok {
 		return
@@ -457,6 +462,40 @@ func (a *App) logout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, target, http.StatusFound)
+}
+
+var logoutPage = template.Must(template.New("logout").Parse(`<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign out</title>
+<style>body{font-family:system-ui,sans-serif;max-width:28rem;margin:4rem auto;padding:0 1rem;text-align:center}</style>
+<h1>Sign out</h1>
+<p>Select Sign out to finish signing out.</p>
+<form method="post" action="{{.Action}}">
+{{- if .Everywhere}}<input type="hidden" name="everywhere" value="1">{{end -}}
+<button type="submit">Sign out</button>
+</form>
+</html>
+`))
+
+func (a *App) confirmLogout(w http.ResponseWriter, r *http.Request) {
+	if wantsJSON(r) {
+		a.refuse(w, r, http.StatusForbidden, "invalid_request", "sign out with a POST from this site")
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("X-Frame-Options", "DENY")
+	w.Header().Set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'")
+	w.WriteHeader(http.StatusOK)
+
+	_ = logoutPage.Execute(w, map[string]any{
+		"Action":     a.LogoutPath(),
+		"Everywhere": r.URL.Query().Get("everywhere") != "",
+	})
 }
 
 func (a *App) farewell(w http.ResponseWriter, r *http.Request) {
