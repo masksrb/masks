@@ -238,6 +238,7 @@ fr:
       too-many-attempts: "Trop de tentatives. Patientez quelques minutes."
       too-many-attempts-for-account: "Trop de tentatives pour ce compte."
       too-many-codes: "Trop de codes ont été envoyés à cette adresse. Patientez quelques minutes."
+      too-many-texts: "Trop de codes ont été envoyés à ce numéro. Patientez quelques minutes."
       prove-email-first: "Saisissez d’abord le code envoyé à cette adresse."
       no-account-for-email: "Aucun compte ici n’utilise cette adresse."
       invalid-setup-token: "Ce jeton de configuration est incorrect."

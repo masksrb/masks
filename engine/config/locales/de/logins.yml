@@ -238,6 +238,7 @@ de:
       too-many-attempts: "Zu viele Versuche. Warten Sie einige Minuten."
       too-many-attempts-for-account: "Zu viele Versuche für dieses Konto."
       too-many-codes: "An diese Adresse wurden zu viele Codes gesendet. Warten Sie einige Minuten."
+      too-many-texts: "An diese Nummer wurden zu viele Codes gesendet. Warten Sie einige Minuten."
       prove-email-first: "Geben Sie zuerst den an diese Adresse gesendeten Code ein."
       no-account-for-email: "Kein Konto hier verwendet diese Adresse."
       invalid-setup-token: "Dieses Einrichtungstoken ist falsch."

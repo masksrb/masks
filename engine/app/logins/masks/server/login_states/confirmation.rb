@@ -23,11 +23,11 @@ module Masks
           resend
         end
 
-        handles "confirm:add-phone" do
+        handles "confirm:add-phone", limit: :sending do
           add_phone
         end
 
-        handles "confirm:change-phone" do
+        handles "confirm:change-phone", limit: :sending do
           change_phone
         end
 
@@ -129,9 +129,15 @@ module Masks
           end
 
           def send_code(channel)
+            @tokens&.delete(channel)
+
+            if ConfirmationCode.crowded?(actor: actor, channel: channel)
+              login.store[HELD] = held.merge("#{channel}_sent" => Time.current.to_i)
+              return warn!(channel == ConfirmationCode::PHONE ? "too-many-texts" : "too-many-codes")
+            end
+
             token = Confirmations.send_code(actor, channel, journey: Masks::Server::Journey.sign_in(login))
 
-            @tokens&.delete(channel)
             login.store[HELD] = held.merge(channel => token.id, "#{channel}_sent" => Time.current.to_i)
           end
 

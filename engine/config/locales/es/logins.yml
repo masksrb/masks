@@ -238,6 +238,7 @@ es:
       too-many-attempts: "Demasiados intentos. Espera unos minutos."
       too-many-attempts-for-account: "Demasiados intentos para esa cuenta."
       too-many-codes: "Se enviaron demasiados códigos a esa dirección. Espera unos minutos."
+      too-many-texts: "Se enviaron demasiados códigos a ese número. Espera unos minutos."
       prove-email-first: "Primero escribe el código enviado a esa dirección."
       no-account-for-email: "Ninguna cuenta de aquí usa esa dirección."
       invalid-setup-token: "Ese token de configuración no es correcto."

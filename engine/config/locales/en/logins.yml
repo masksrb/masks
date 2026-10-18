@@ -238,6 +238,7 @@ en:
       too-many-attempts: "Too many attempts. Wait a few minutes."
       too-many-attempts-for-account: "Too many attempts for that account."
       too-many-codes: "Too many codes have gone to that address. Wait a few minutes."
+      too-many-texts: "Too many codes have gone to that number. Wait a few minutes."
       prove-email-first: "Enter the code sent to that address first."
       no-account-for-email: "No account here uses that address."
       invalid-setup-token: "That setup token is wrong."

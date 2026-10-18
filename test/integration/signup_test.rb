@@ -272,6 +272,46 @@ module Masks
         assert created.phone_verified_at
       end
 
+      test "a phone that has had as many codes as the limit allows gets no more, however often it is changed" do
+        within(@tenant) { Senders::SmsLog.create!(key: "log", name: "Log", primary: true) }
+        policy!(phone: "required", phone_verified: true)
+
+        assert_equal "confirm-phone", sign_up(phone: "+15551234567")["prompt"]
+
+        within(@tenant) do
+          (::Rails.configuration.masks.recovery_limit - 1).times do
+            ConfirmationCode.open!(actor: created, channel: ConfirmationCode::PHONE, address: created.phone)
+          end
+        end
+        Senders::SmsLog.deliveries.clear
+
+        event("confirm:change-phone")
+        body = event("confirm:add-phone", phone: "+15557654321")
+
+        assert_equal "confirm-phone", body["prompt"]
+        assert_includes body["warnings"], "too-many-texts"
+        assert_empty Senders::SmsLog.deliveries
+      end
+
+      test "changing the phone over and over shares the sending limit with every other code" do
+        within(@tenant) { Senders::SmsLog.create!(key: "log", name: "Log", primary: true) }
+        policy!(phone: "required", phone_verified: true)
+
+        sign_up(phone: "+15551234567")
+
+        refused = nil
+
+        (::Rails.configuration.masks.recovery_limit + 1).times do |n|
+          event("confirm:change-phone")
+          event("confirm:add-phone", phone: "+1555000#{1000 + n}")
+
+          refused = response.status if response.status == 429
+        end
+
+        assert_equal 429, refused
+        assert_operator Senders::SmsLog.deliveries.size, :<=, ::Rails.configuration.masks.recovery_limit
+      end
+
       test "an existing account missing a phone the policy now requires is asked for one" do
         policy!(phone: "required")
 

@@ -97,7 +97,7 @@ gets the HTTP status 429 (Too Many Requests).
 | --- | --- | --- |
 | `MASKS_ATTEMPT_LIMIT` | `10` | Sign-in attempts from one IP address in 3 minutes. Includes sign-in through a provider and failed LDAP binds. |
 | `MASKS_ACCOUNT_ATTEMPT_LIMIT` | `5` | Sign-in attempts against one account in 3 minutes, from any IP address. Includes failed LDAP binds. Also limits how often a signed-in account changes its password, email address, or phone number, adds an authenticator app, or approves a sign-in on another device. |
-| `MASKS_RECOVERY_LIMIT` | `5` | Codes and links sent by email or text message in 15 minutes. Counted by IP address during sign-in. Counted by account when someone confirms an address. |
+| `MASKS_RECOVERY_LIMIT` | `5` | Codes and links sent by email or text message in 15 minutes. Counted by IP address during sign-in, and by account for every address or phone number a code goes to, including a phone added or changed during sign-in. |
 | `MASKS_REGISTRATION_LIMIT` | `10` | Dynamic client registrations from one IP address in 10 minutes. Also limits new [client metadata documents](/guides/features/#a-client-named-by-its-metadata-document). |
 | `MASKS_DEVICE_CODE_LIMIT` | `30` | Device user codes entered from one IP address in 3 minutes. |
 | `MASKS_CLAIM_LIMIT` | `3` | Tenants claimed from one IP address in an hour. Applies when a subdomain template claims a tenant on its first visit. Counted across the whole server. |
