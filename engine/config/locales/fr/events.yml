@@ -6,6 +6,8 @@ fr:
         ended: "Déconnexion"
         revoked: "Session révoquée"
         expired: "Session expirée"
+      notifications:
+        changed: "Notifications modifiées"
       logout:
         undelivered: "Déconnexion non transmise à une application"
       login:

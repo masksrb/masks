@@ -251,6 +251,10 @@ de:
         lede: "Alles hier ist aktiv, bis Sie es deaktivieren. Diese Nachrichten kommen, sobald etwas passiert, und auf keine kann geantwortet werden."
         silent: "Es wird nichts gesendet, weil diese Nachrichten nur an eine bestätigte E-Mail-Adresse gehen."
         submit: "Speichern"
+        kept: "Ein geändertes oder zurückgesetztes Passwort und eine riskante Anmeldung werden immer gemeldet."
+        always: "Immer"
+        again: "Ihre letzte Anmeldung ist eine Weile her, daher werden Sie zuerst gebeten, sich erneut anzumelden."
+        submit_again: "Erneut anmelden"
 
       export:
         heading: "Ihr Konto herunterladen"

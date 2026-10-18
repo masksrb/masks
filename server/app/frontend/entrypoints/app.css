@@ -1451,6 +1451,13 @@
     accent-color: var(--accent);
   }
 
+  .switch-kept {
+    flex: none;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--brass);
+  }
+
   .switch-set {
     display: flex;
     flex-direction: column;

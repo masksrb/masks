@@ -6,6 +6,8 @@ de:
         ended: "Abgemeldet"
         revoked: "Sitzung widerrufen"
         expired: "Sitzung abgelaufen"
+      notifications:
+        changed: "Benachrichtigungen geändert"
       logout:
         undelivered: "Abmeldung nicht an eine App zugestellt"
       login:

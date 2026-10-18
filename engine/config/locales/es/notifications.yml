@@ -5,6 +5,7 @@ es:
 
   notifications:
     saved: "Guardado."
+    again: "Vuelve a iniciar sesión para cambiar qué correos recibes. Hace tiempo que no lo haces."
 
     groups:
       password: "Contraseña"

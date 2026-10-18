@@ -31,7 +31,7 @@
 
   <%= render "masks/server/account/apps", apps: @apps, connections: @connections, linkable: @linkable %>
 
-  <%= render "masks/server/account/info", actor: @actor, directed: @directed %>
+  <%= render "masks/server/account/info", actor: @actor, directed: @directed, fresh: @fresh %>
 
   <%= render "masks/server/account/activity", events: @events %>
 

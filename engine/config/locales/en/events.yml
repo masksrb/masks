@@ -6,6 +6,8 @@ en:
         ended: "Signed out"
         revoked: "Session revoked"
         expired: "Session timed out"
+      notifications:
+        changed: "Notifications changed"
       logout:
         undelivered: "Sign-out not delivered to an app"
       login:

@@ -46,7 +46,11 @@
       </summary>
 
       <div class="entry-body">
-        <p class="aside"><%= account_text("notifications.lede") %></p>
+        <p class="aside"><%= account_text("notifications.lede") %> <%= account_text("notifications.kept") %></p>
+
+        <% unless fresh %>
+          <p class="aside"><%= account_text("notifications.again") %></p>
+        <% end %>
 
         <% unless Masks::Server::Notifications.mailable?(actor) %>
           <p class="aside aside-bad"><%= account_text("notifications.silent") %></p>
@@ -63,8 +67,12 @@
                 <% actions.each do |action| %>
                   <label class="switch">
                     <span><%= t("events.actions.#{action}") %></span>
-                    <%= check_box_tag "notifications[]", action, actor.notified?(action),
-                          id: "notify-#{action.tr('.', '-')}" %>
+                    <% if Masks::Server::Notifications.always?(action) %>
+                      <span class="switch-kept"><%= account_text("notifications.always") %></span>
+                    <% else %>
+                      <%= check_box_tag "notifications[]", action, actor.notified?(action),
+                            id: "notify-#{action.tr('.', '-')}" %>
+                    <% end %>
                   </label>
                 <% end %>
               </div>
@@ -72,7 +80,7 @@
           <% end %>
 
           <div class="action-row">
-            <button type="submit" class="action action-sm"><%= account_text("notifications.submit") %></button>
+            <button type="submit" class="action action-sm"><%= account_text(fresh ? "notifications.submit" : "notifications.submit_again") %></button>
           </div>
         <% end %>
       </div>

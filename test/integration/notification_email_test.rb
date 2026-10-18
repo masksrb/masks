@@ -21,6 +21,10 @@ module Masks
         patch "/account/password", params: { current_password: "password", password: "hunter2hunter2" }
       end
 
+      def add_passkey!
+        within(@tenant) { Event.record!(Event::PASSKEY_ADDED, actor: @actor, passkey: "laptop") }
+      end
+
       setup { ActionMailer::Base.deliveries.clear }
 
       test "a password change arrives as email with where and when it happened" do
@@ -48,14 +52,14 @@ module Masks
           sign_in_as(@actor)
 
           patch "/account/notifications",
-                params: { notifications: Notifications::MAILED - [ Event::PASSWORD_CHANGED ] }
+                params: { notifications: Notifications::MUTABLE - [ Event::PASSKEY_ADDED ] }
 
           assert_redirected_to "#{root_path}#notifications"
           ActionMailer::Base.deliveries.clear
 
-          subjects = delivered { change_password! }.map(&:subject)
+          subjects = delivered { add_passkey! }.map(&:subject)
 
-          refute subjects.any? { |subject| subject.include?("Password changed") }
+          refute subjects.any? { |subject| subject.include?("Passkey added") }
         end
       end
 
@@ -65,7 +69,63 @@ module Masks
 
           patch "/account/notifications", params: { notifications: [ "", "avatar.uploaded", "../../etc" ] }
 
-          within(@tenant) { assert_equal Notifications::MAILED.sort, @actor.reload.muted_notifications.sort }
+          within(@tenant) { assert_equal Notifications::MUTABLE.sort, @actor.reload.muted_notifications.sort }
+        end
+      end
+
+      test "a changed password is announced even when everything is turned off" do
+        with_mailer do
+          sign_in_as(@actor)
+
+          patch "/account/notifications", params: { notifications: [] }
+          ActionMailer::Base.deliveries.clear
+
+          subjects = delivered { change_password! }.map(&:subject)
+
+          assert subjects.any? { |subject| subject.include?("Password changed") }
+          within(@tenant) { refute_includes @actor.reload.muted_notifications, Event::PASSWORD_CHANGED }
+        end
+      end
+
+      test "the form says which emails are always sent" do
+        sign_in_as(@actor)
+        get "/"
+
+        assert_select "#notify-password-changed", count: 0
+        assert_select "#notify-session-started", count: 1
+        assert_includes response.body, "always announced"
+      end
+
+      test "changing which emails arrive is recorded as activity" do
+        sign_in_as(@actor)
+
+        patch "/account/notifications", params: { notifications: Notifications::MUTABLE - [ Event::SESSION_STARTED ] }
+
+        event = within(@tenant) { Event.where(action: Event::NOTIFICATIONS_CHANGED, actor: @actor).last }
+
+        assert event
+        assert_equal [ Event::SESSION_STARTED ], event.details["muted"]
+        assert_empty event.details["unmuted"]
+
+        patch "/account/notifications", params: { notifications: Notifications::MUTABLE }
+
+        event = within(@tenant) { Event.where(action: Event::NOTIFICATIONS_CHANGED, actor: @actor).last }
+
+        assert_equal [ Event::SESSION_STARTED ], event.details["unmuted"]
+
+        patch "/account/notifications", params: { notifications: Notifications::MUTABLE }
+
+        assert_equal 2, within(@tenant) { Event.where(action: Event::NOTIFICATIONS_CHANGED, actor: @actor).count }
+      end
+
+      test "turning emails off asks for a recent sign-in" do
+        sign_in_as(@actor)
+
+        travel 16.minutes do
+          patch "/account/notifications", params: { notifications: [] }
+
+          assert_redirected_to %r{/login}
+          within(@tenant) { assert_empty @actor.reload.muted_notifications }
         end
       end
 
@@ -113,8 +173,12 @@ module Masks
         sign_in_as(@actor)
         get root_path
 
-        Notifications::MAILED.each do |action|
+        Notifications::MUTABLE.each do |action|
           assert_select "input[type=checkbox][value=?][checked=checked]", action
+        end
+
+        Notifications::ALWAYS.each do |action|
+          assert_select "input[type=checkbox][value=?]", action, count: 0
         end
       end
     end

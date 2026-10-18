@@ -37,11 +37,20 @@ module Masks
 
       test "what is left out of the form is what gets muted" do
         within(@tenant) do
-          @actor.update!(notifications: [ Event::PASSWORD_CHANGED ])
+          @actor.update!(notifications: [ Event::SESSION_STARTED ])
 
-          assert @actor.notified?(Event::PASSWORD_CHANGED)
+          assert @actor.notified?(Event::SESSION_STARTED)
           refute @actor.notified?(Event::PASSKEY_ADDED)
-          assert_equal [ Event::PASSWORD_CHANGED ], @actor.notifications
+          assert_equal (Notifications::ALWAYS + [ Event::SESSION_STARTED ]).sort, @actor.notifications.sort
+        end
+      end
+
+      test "a password change, a password reset, and a risky sign-in cannot be muted" do
+        within(@tenant) do
+          @actor.update!(notifications: [])
+
+          Notifications::ALWAYS.each { |action| assert @actor.notified?(action) }
+          assert_equal Notifications::MUTABLE.sort, @actor.muted_notifications.sort
         end
       end
 

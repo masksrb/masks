@@ -189,7 +189,10 @@ masks emails an actor when something changes on their account.
 - masks reports a new sign-in once per device.
 - Emails go only to a confirmed address. An account with no confirmed address gets none, and the
   account page says so.
-- An actor can turn any group off under **Emails we send you** on the account page.
+- An actor can turn an email off under **Emails we send you** on the account page. A changed
+  password, a reset password, and a risky sign-in are always sent. Changing which emails arrive
+  asks for a sign-in within the last 15 minutes, and the change is recorded in the account's
+  activity as *Notifications changed*.
 - When the email address changes, masks also warns the previous address. This warning goes out
   even if the old address was not confirmed or the actor turned the group off.
 - Each email names the device and the IP address the change came from, in the actor's time zone.

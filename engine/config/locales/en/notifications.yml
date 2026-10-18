@@ -5,6 +5,7 @@ en:
 
   notifications:
     saved: "Saved."
+    again: "Sign in again to change which emails you get. It has been a while since you did."
 
     groups:
       password: "Password"

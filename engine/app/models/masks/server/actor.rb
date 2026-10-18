@@ -286,7 +286,7 @@ module Masks
       end
 
       def notified?(action)
-        Notifications.mailed?(action) && !muted_notifications.include?(action.to_s)
+        Notifications.mailed?(action) && (Notifications.always?(action) || !muted_notifications.include?(action.to_s))
       end
 
       def notifications
@@ -294,7 +294,7 @@ module Masks
       end
 
       def notifications=(wanted)
-        self.muted_notifications = Notifications::MAILED - Array(wanted).map(&:to_s)
+        self.muted_notifications = Notifications::MUTABLE - Array(wanted).map(&:to_s)
       end
 
       def otp?

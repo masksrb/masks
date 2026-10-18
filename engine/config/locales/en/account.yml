@@ -251,6 +251,10 @@ en:
         lede: "Everything here is on until you turn it off. These arrive as they happen, and none of them can be replied to."
         silent: "Nothing is being sent, because these only go to a confirmed email address."
         submit: "Save"
+        kept: "A changed or reset password and a risky sign-in are always announced."
+        always: "Always"
+        again: "You signed in a while ago, so you will be asked to sign in again first."
+        submit_again: "Sign in again"
 
       export:
         heading: "Download your account"

@@ -18,6 +18,7 @@ module Masks
 
       ACCOUNT_CREATED = "account.created".freeze
       ACCOUNT_EXPORTED = "account.exported".freeze
+      NOTIFICATIONS_CHANGED = "notifications.changed".freeze
       INVITATION_SENT = "invitation.sent".freeze
       INVITATION_ACCEPTED = "invitation.accepted".freeze
 

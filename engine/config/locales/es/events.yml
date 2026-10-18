@@ -6,6 +6,8 @@ es:
         ended: "Cerró sesión"
         revoked: "Sesión revocada"
         expired: "Sesión caducada"
+      notifications:
+        changed: "Notificaciones cambiadas"
       logout:
         undelivered: "Cierre de sesión no entregado a una aplicación"
       login:

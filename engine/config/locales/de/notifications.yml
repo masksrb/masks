@@ -5,6 +5,7 @@ de:
 
   notifications:
     saved: "Gespeichert."
+    again: "Melden Sie sich erneut an, um zu ändern, welche E-Mails Sie erhalten. Ihre letzte Anmeldung ist eine Weile her."
 
     groups:
       password: "Passwort"

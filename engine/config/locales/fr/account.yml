@@ -251,6 +251,10 @@ fr:
         lede: "Tout ce qui figure ici est activé jusqu’à ce que vous le désactiviez. Ces e-mails arrivent au fil des événements, et il n’est pas possible d’y répondre."
         silent: "Rien n’est envoyé, car ces e-mails ne partent que vers une adresse e-mail confirmée."
         submit: "Enregistrer"
+        kept: "Un mot de passe modifié ou réinitialisé et une connexion à risque sont toujours signalés."
+        always: "Toujours"
+        again: "Votre dernière connexion remonte à un moment, vous devrez donc d’abord vous reconnecter."
+        submit_again: "Se reconnecter"
 
       export:
         heading: "Télécharger votre compte"

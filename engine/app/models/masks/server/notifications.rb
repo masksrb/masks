@@ -51,11 +51,19 @@ module Masks
 
       MAILED = GROUPS.values.flatten.freeze
 
+      ALWAYS = [ Event::PASSWORD_CHANGED, Event::PASSWORD_RESET_COMPLETED, Event::SIGN_IN_RISKY ].freeze
+
+      MUTABLE = (MAILED - ALWAYS).freeze
+
       ONCE_PER_DEVICE = [ Event::SESSION_STARTED ].freeze
 
       class << self
         def mailed?(action)
           MAILED.include?(action.to_s)
+        end
+
+        def always?(action)
+          ALWAYS.include?(action.to_s)
         end
 
         def raised(event)

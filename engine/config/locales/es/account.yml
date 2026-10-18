@@ -251,6 +251,10 @@ es:
         lede: "Todo lo de aquí está activado hasta que lo desactives. Llegan en el momento en que ocurre y no se puede responder a ninguno."
         silent: "No se envía nada, porque solo van a una dirección de correo confirmada."
         submit: "Guardar"
+        kept: "Una contraseña cambiada o restablecida y un inicio de sesión de riesgo se avisan siempre."
+        always: "Siempre"
+        again: "Hace tiempo que iniciaste sesión, así que primero se te pedirá que vuelvas a iniciarla."
+        submit_again: "Volver a iniciar sesión"
 
       export:
         heading: "Descargar tu cuenta"

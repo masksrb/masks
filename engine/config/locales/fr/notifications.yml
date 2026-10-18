@@ -5,6 +5,7 @@ fr:
 
   notifications:
     saved: "Enregistré."
+    again: "Reconnectez-vous pour changer les e-mails que vous recevez. Votre dernière connexion remonte à un moment."
 
     groups:
       password: "Mot de passe"
