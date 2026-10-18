@@ -148,6 +148,7 @@ fr:
         consent: "Demander le consentement des acteurs"
         access: "Durée des jetons d’accès (minutes, vide pour une heure)"
         refresh: "Durée des jetons d’actualisation sans utilisation (jours, vide pour 30)"
+        refresh_absolute: "Fin des jetons d’actualisation après la connexion (jours, vide pour 90)"
         consent_lifetime: "Durée du consentement (jours, vide jusqu’à révocation)"
         logout: "URI de déconnexion back-channel"
         logout_session: "Son jeton de déconnexion indique la session (sid)"

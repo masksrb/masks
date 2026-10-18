@@ -36,6 +36,9 @@ module Masks
                    description: "Seconds an access token lasts, from 60 to a day. Zero goes back to an hour."
           argument :refresh_token_lifetime, Integer, required: false,
                    description: "Seconds a refresh token lasts unused, from 300 to 400 days. Zero goes back to 30 days."
+          argument :refresh_token_absolute_lifetime, Integer, required: false,
+                   description: "Seconds from a sign-in until its refresh tokens stop, however often they are used, " \
+                                "from 300 to 400 days. Zero goes back to 90 days."
           argument :allowed_groups, [ String ], required: false,
                    description: "Group keys, or organization roles as key:role, whose people may sign in to this client. Empty lets everyone in."
           argument :sign_in_policy, ID, required: false
@@ -68,6 +71,7 @@ module Masks
             attributes[:consent_lifetime] = nil if attributes[:consent_lifetime]&.zero?
             attributes[:access_token_lifetime] = nil if attributes[:access_token_lifetime]&.zero?
             attributes[:refresh_token_lifetime] = nil if attributes[:refresh_token_lifetime]&.zero?
+            attributes[:refresh_token_absolute_lifetime] = nil if attributes[:refresh_token_absolute_lifetime]&.zero?
             client.assign_attributes(attributes)
             client.response_types = client.default_response_types if attributes.key?(:grant_types)
             client.required_scopes = Scopes.join(required_scopes) unless required_scopes.nil?

@@ -285,7 +285,8 @@ CREATE TABLE public.clients (
     refresh_token_lifetime integer,
     saml_slo_url character varying,
     enrolled_by_id bigint,
-    handshake_return_to character varying
+    handshake_return_to character varying,
+    refresh_token_absolute_lifetime integer
 );
 
 ALTER TABLE ONLY public.clients FORCE ROW LEVEL SECURITY;

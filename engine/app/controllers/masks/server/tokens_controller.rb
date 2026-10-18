@@ -124,6 +124,7 @@ module Masks
 
           req.invalid_grant!("that refresh token was issued to another client") if token.client_id != client.id
           req.invalid_grant!("the session that refresh token was issued in has ended") if outlived?(token)
+          exhausted!(req, token, client)
           member!(req, token)
           consented!(req, token, client)
           Current.organization = token.organization
@@ -178,6 +179,13 @@ module Masks
           held = token.session
 
           held.present? && held.bounded? && !held.live?
+        end
+
+        def exhausted!(req, token, client)
+          return unless token.exhausted?(client.refresh_absolute_lifetime)
+
+          token.revoke_family!
+          req.invalid_grant!("the sign-in behind that refresh token is older than #{client.name} allows")
         end
 
         def replayed!(spent, client)

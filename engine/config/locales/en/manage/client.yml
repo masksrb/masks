@@ -148,6 +148,7 @@ en:
         consent: "Ask actors to consent"
         access: "Access tokens last (minutes, blank for an hour)"
         refresh: "Refresh tokens last unused (days, blank for 30)"
+        refresh_absolute: "Refresh tokens stop after a sign-in (days, blank for 90)"
         consent_lifetime: "Consent lasts (days, blank until revoked)"
         logout: "Back-channel logout URI"
         logout_session: "Its logout token names the session (sid)"

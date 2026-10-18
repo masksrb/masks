@@ -82,6 +82,8 @@ module Masks
       validate :resources_are_named_only_when_approved
       validates :access_token_lifetime, numericality: { only_integer: true, in: 60..1.day.to_i }, allow_nil: true
       validates :refresh_token_lifetime, numericality: { only_integer: true, in: 5.minutes.to_i..400.days.to_i }, allow_nil: true
+      validates :refresh_token_absolute_lifetime, numericality: { only_integer: true, in: 5.minutes.to_i..400.days.to_i },
+                                                  allow_nil: true
       validates :consent_lifetime, numericality: { only_integer: true, greater_than_or_equal_to: 300,
                                                    less_than_or_equal_to: Consent::LONGEST.to_i }, allow_nil: true
 
@@ -452,6 +454,10 @@ module Masks
 
       def refresh_lifetime
         refresh_token_lifetime&.seconds || RefreshToken.lifetime
+      end
+
+      def refresh_absolute_lifetime
+        refresh_token_absolute_lifetime&.seconds || RefreshToken.absolute_lifetime
       end
 
       def admits?(actor)

@@ -5,7 +5,7 @@ module Masks
 
       TENANT_KEYS = %w[name accent_color groups apps].freeze
       APP_KEYS = %w[preset url slug name client_id client_secret_env redirect_uris scopes allowed_groups
-                    access_token_lifetime refresh_token_lifetime].freeze
+                    access_token_lifetime refresh_token_lifetime refresh_token_absolute_lifetime].freeze
 
       def self.apply!(path = ::Rails.configuration.masks.config_path)
         return [] if path.blank?
@@ -92,6 +92,7 @@ module Masks
             allowed_groups: Array(declared["allowed_groups"]),
             access_token_lifetime: declared["access_token_lifetime"],
             refresh_token_lifetime: declared["refresh_token_lifetime"],
+            refresh_token_absolute_lifetime: declared["refresh_token_absolute_lifetime"],
             consent_required: false
           }
 

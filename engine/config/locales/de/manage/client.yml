@@ -148,6 +148,7 @@ de:
         consent: "Akteure um Zustimmung bitten"
         access: "Access-Tokens gelten (Minuten, leer für eine Stunde)"
         refresh: "Refresh-Tokens gelten ungenutzt (Tage, leer für 30)"
+        refresh_absolute: "Refresh-Tokens enden nach der Anmeldung (Tage, leer für 90)"
         consent_lifetime: "Zustimmung gilt (Tage, leer bis zum Widerruf)"
         logout: "Back-Channel-Logout-URI"
         logout_session: "Sein Logout-Token benennt die Sitzung (sid)"

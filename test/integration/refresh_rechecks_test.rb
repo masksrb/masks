@@ -71,6 +71,38 @@ module Masks
       test "a lifetime outside what masks allows is refused" do
         assert_raises(ActiveRecord::RecordInvalid) { within { client.update!(access_token_lifetime: 10) } }
         assert_raises(ActiveRecord::RecordInvalid) { within { client.update!(refresh_token_lifetime: 500.days.to_i) } }
+        assert_raises(ActiveRecord::RecordInvalid) { within { client.update!(refresh_token_absolute_lifetime: 10) } }
+      end
+
+      test "a refresh chain stops at the client's limit however often it is used" do
+        within { client.update!(refresh_token_lifetime: 1.day.to_i, refresh_token_absolute_lifetime: 2.days.to_i) }
+
+        issued = access_token_for(actor: @actor, registration: @registration)
+        travel 20.hours
+        rotated = refresh(issued["refresh_token"])
+        assert rotated["refresh_token"].present?
+        travel 20.hours
+        rotated = refresh(rotated["refresh_token"])
+        assert rotated["refresh_token"].present?
+        travel 20.hours
+
+        assert_equal "invalid_grant", refresh(rotated["refresh_token"])["error"]
+        assert_equal 0, within { AccessToken.live.where(client: client).count }
+      end
+
+      test "a refresh chain stops 90 days after the sign-in by default" do
+        issued = access_token_for(actor: @actor, registration: @registration)
+        held = issued["refresh_token"]
+
+        3.times do
+          travel 29.days
+          held = refresh(held)["refresh_token"]
+          assert held.present?
+        end
+
+        travel 29.days
+
+        assert_equal "invalid_grant", refresh(held)["error"]
       end
     end
   end

@@ -38,11 +38,15 @@ By default:
 - An access token lasts an hour.
 - A refresh token lasts 30 days unused, and each refresh starts the 30 days over. masks issues a
   refresh token only when the client is granted `offline_access`.
+- A sign-in's refresh tokens stop 90 days after the sign-in, however often they are used. The next
+  refresh fails with `invalid_grant`, and the person signs in again.
 
 A client's **General** tab sets its own lifetimes:
 
 - Access tokens from 1 minute to 1,440 minutes (a day).
-- Refresh tokens from 1 day to 400 days. The manage API accepts as little as 5 minutes.
+- Refresh tokens from 1 day to 400 days unused. The manage API accepts as little as 5 minutes.
+- Refresh tokens from 1 day to 400 days after the sign-in. The manage API accepts as little as 5
+  minutes.
 
 ### Adding a known app
 

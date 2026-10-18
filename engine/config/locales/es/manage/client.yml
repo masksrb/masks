@@ -148,6 +148,7 @@ es:
         consent: "Pedir el consentimiento de los actores"
         access: "Los tokens de acceso duran (minutos, vacío para una hora)"
         refresh: "Los tokens de actualización duran sin usarse (días, vacío para 30)"
+        refresh_absolute: "Los tokens de actualización terminan tras el inicio de sesión (días, vacío para 90)"
         consent_lifetime: "El consentimiento dura (días, vacío hasta que se revoque)"
         logout: "URI de cierre de sesión por back-channel"
         logout_session: "Su token de cierre de sesión nombra la sesión (sid)"

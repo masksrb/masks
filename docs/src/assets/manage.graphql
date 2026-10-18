@@ -270,6 +270,11 @@ type Client {
   redirectUris: [String!]!
 
   """
+  Seconds from a sign-in until its refresh tokens stop, however often they are used. Null is 90 days.
+  """
+  refreshTokenAbsoluteLifetime: Int
+
+  """
   Seconds a refresh token lasts unused. Each refresh starts it over. Null is 30 days.
   """
   refreshTokenLifetime: Int
@@ -1098,6 +1103,12 @@ type Mutation {
     policyUri: String
     postLogoutRedirectUris: [String!]
     redirectUris: [String!]
+
+    """
+    Seconds from a sign-in until its refresh tokens stop, however often they are
+    used, from 300 to 400 days. Zero goes back to 90 days.
+    """
+    refreshTokenAbsoluteLifetime: Int
 
     """
     Seconds a refresh token lasts unused, from 300 to 400 days. Zero goes back to 30 days.

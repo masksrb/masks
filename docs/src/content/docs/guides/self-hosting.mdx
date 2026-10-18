@@ -396,7 +396,7 @@ apps:
 | `redirect_uris`, `scopes`                                           | An app no preset covers. With neither `scopes` nor a preset, the app gets `openid profile email`.                         |
 | `name` under an app                                                 | The app's name. Without it, masks uses the preset's name or the app's key.                                                |
 | `client_secret_env`                                                 | The variable that holds the app's secret. Without it, masks makes a secret the first time and prints it to the logs once. |
-| `allowed_groups`, `access_token_lifetime`, `refresh_token_lifetime` | As on a client's **Access** and **General** tabs in `/manage`. Lifetimes are in seconds.                                  |
+| `allowed_groups`, `access_token_lifetime`, `refresh_token_lifetime`, `refresh_token_absolute_lifetime` | As on a client's **Access** and **General** tabs in `/manage`. Lifetimes are in seconds. |
 | `groups`                                                            | Each group's name, and the nicknames or emails of its members. A member must already have an account.                     |
 
 - An app in the file is approved, and actors are not asked to consent to it.

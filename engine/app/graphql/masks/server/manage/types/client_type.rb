@@ -16,6 +16,8 @@ module Masks
                 description: "Seconds an access token lasts. Null is an hour."
           field :refresh_token_lifetime, Integer,
                 description: "Seconds a refresh token lasts unused. Each refresh starts it over. Null is 30 days."
+          field :refresh_token_absolute_lifetime, Integer,
+                description: "Seconds from a sign-in until its refresh tokens stop, however often they are used. Null is 90 days."
           field :allowed_groups, [ String ], null: false,
                 description: "Group keys, or organization roles as key:role, whose people may sign in. Empty lets everyone in."
           field :namespaces, [ "Masks::Server::Manage::Types::NamespaceType" ], null: false

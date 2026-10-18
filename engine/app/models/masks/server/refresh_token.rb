@@ -5,6 +5,14 @@ module Masks
         30.days
       end
 
+      def self.absolute_lifetime
+        90.days
+      end
+
+      def exhausted?(limit)
+        root.created_at + limit <= Time.current
+      end
+
       def self.mint!(**attributes)
         super.tap { |token| token.actor&.active! }
       end

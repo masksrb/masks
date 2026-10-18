@@ -33,7 +33,7 @@
         backchannelLogoutUri backchannelLogoutSessionRequired
         requirePushedAuthorizationRequests requireSignedRequestObject consentRequired jwks jwksUri
         authorizationDetailsTypes authorizationDetailsSchemas consentLifetime
-        accessTokenLifetime refreshTokenLifetime
+        accessTokenLifetime refreshTokenLifetime refreshTokenAbsoluteLifetime
         protocol samlEntityId samlCertificate samlNameIdFormat samlRequestsSigned samlIdpInitiated samlAttributes samlSloUrl
         signInPolicy { ${POLICY_FIELDS} }
         events(limit: 25) {
@@ -78,6 +78,7 @@
   let lasts = $state("");
   let accessMinutes = $state("");
   let refreshDays = $state("");
+  let chainDays = $state("");
   let method = $state("");
   let sector = $state("");
   let metadataUrl = $state("");
@@ -144,6 +145,7 @@
       {
         accessTokenLifetime: accessMinutes ? Number(accessMinutes) * 60 : 0,
         refreshTokenLifetime: refreshDays ? Number(refreshDays) * 86400 : 0,
+        refreshTokenAbsoluteLifetime: chainDays ? Number(chainDays) * 86400 : 0,
         consentLifetime: lasts ? Number(lasts) * 86400 : 0,
       },
       t("client.notices.saved"),
@@ -182,6 +184,9 @@
       lasts = data.client?.consentLifetime ? String(Math.round(data.client.consentLifetime / 86400)) : "";
       accessMinutes = data.client?.accessTokenLifetime ? String(Math.round(data.client.accessTokenLifetime / 60)) : "";
       refreshDays = data.client?.refreshTokenLifetime ? String(Math.round(data.client.refreshTokenLifetime / 86400)) : "";
+      chainDays = data.client?.refreshTokenAbsoluteLifetime
+        ? String(Math.round(data.client.refreshTokenAbsoluteLifetime / 86400))
+        : "";
       declared = Object.keys(data.client?.authorizationDetailsSchemas ?? {}).length
         ? JSON.stringify(data.client.authorizationDetailsSchemas, null, 2)
         : "";
@@ -225,7 +230,7 @@
         $backchannelLogoutSessionRequired: Boolean, $clientUri: String, $logoUri: String,
         $tosUri: String, $policyUri: String, $authorizationDetailsTypes: [String!],
         $authorizationDetailsSchemas: JSON, $consentLifetime: Int, $allowedGroups: [String!],
-        $accessTokenLifetime: Int, $refreshTokenLifetime: Int
+        $accessTokenLifetime: Int, $refreshTokenLifetime: Int, $refreshTokenAbsoluteLifetime: Int
       ) {
         updateClient(
           clientId: $clientId, name: $name, requiredScopes: $requiredScopes,
@@ -260,6 +265,7 @@
           consentLifetime: $consentLifetime
           accessTokenLifetime: $accessTokenLifetime
           refreshTokenLifetime: $refreshTokenLifetime
+          refreshTokenAbsoluteLifetime: $refreshTokenAbsoluteLifetime
           allowedGroups: $allowedGroups
         ) {
           client { clientId }
@@ -936,9 +942,10 @@
               saveLifetimes();
             }}
           >
-            <div class="grid gap-3 sm:grid-cols-3">
+            <div class="grid gap-3 sm:grid-cols-2">
               <Field label={t("client.sign_in.access")} type="number" min="1" max="1440" bind:value={accessMinutes} />
               <Field label={t("client.sign_in.refresh")} type="number" min="1" max="400" bind:value={refreshDays} />
+              <Field label={t("client.sign_in.refresh_absolute")} type="number" min="1" max="400" bind:value={chainDays} />
               <Field label={t("client.sign_in.consent_lifetime")} type="number" min="1" max="400" bind:value={lasts} />
             </div>
 

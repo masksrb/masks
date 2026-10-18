@@ -51,6 +51,27 @@ module Masks
         create_client(@tenant, name: "Probe", approved_at: Time.current, **attributes)
       end
 
+      test "a refresh chain's limit is set from the console, and zero goes back to the default" do
+        client = probe
+
+        edit = "mutation Edit($clientId: ID!, $limit: Int) {
+          updateClient(clientId: $clientId, refreshTokenAbsoluteLifetime: $limit) {
+            client { refreshTokenAbsoluteLifetime }
+          }
+        }"
+
+        body = ask(edit, clientId: client.client_id, limit: 7.days.to_i)
+
+        assert_nil body["errors"]
+        assert_equal 7.days.to_i, body["data"]["updateClient"]["client"]["refreshTokenAbsoluteLifetime"]
+        assert_equal 7.days, within { client.reload.refresh_absolute_lifetime }
+
+        body = ask(edit, clientId: client.client_id, limit: 0)
+
+        assert_nil body["data"]["updateClient"]["client"]["refreshTokenAbsoluteLifetime"]
+        assert_equal 90.days, within { client.reload.refresh_absolute_lifetime }
+      end
+
       test "the redirect uris a client may use are edited from the console" do
         client = probe
 
