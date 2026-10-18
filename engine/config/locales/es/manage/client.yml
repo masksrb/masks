@@ -115,6 +115,8 @@ es:
         sector_placeholder: "necesario cuando sus URI de redirección abarcan varios hosts"
         unattended: "Inicia sesión por sí mismo (client_credentials)"
         rotate: "Rotar secreto"
+        secret_expires: "El secreto caduca el %{day}."
+        secret_expired: "El secreto caducó el %{day}. Rótalo, o nada podrá iniciar sesión con él."
         archive: "Archivar"
       saml:
         title: "SAML"

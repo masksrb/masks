@@ -115,6 +115,8 @@ fr:
         sector_placeholder: "nécessaire quand ses URI de redirection couvrent plusieurs hôtes"
         unattended: "Se connecte en son propre nom (client_credentials)"
         rotate: "Renouveler le secret"
+        secret_expires: "Le secret expire le %{day}."
+        secret_expired: "Le secret a expiré le %{day}. Renouvelez-le, sinon rien ne peut se connecter avec."
         archive: "Archiver"
       saml:
         title: "SAML"

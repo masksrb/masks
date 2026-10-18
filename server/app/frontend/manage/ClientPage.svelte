@@ -88,6 +88,7 @@
   let attributes = $state("");
   let loading = $state(true);
   let secret = $state(null);
+  let secretExpired = $derived(Boolean(client?.secretExpiresAt) && new Date(client.secretExpiresAt) < new Date());
 
   const NAME_IDS = [
     ["urn:oasis:names:tc:SAML:2.0:nameid-format:persistent", t("client.name_ids.persistent")],
@@ -705,6 +706,13 @@
           <div class="flex flex-wrap gap-2 pt-1">
             {#if client.tokenEndpointAuthMethod.startsWith("client_secret")}
               <button type="button" class="btn btn-sm" onclick={rotate}>{t("client.registration.rotate")}</button>
+              {#if client.secretExpiresAt}
+                <span class="self-center text-sm {secretExpired ? 'text-error' : 'opacity-70'}" role="status">
+                  {t(secretExpired ? "client.registration.secret_expired" : "client.registration.secret_expires", {
+                    day: day(client.secretExpiresAt),
+                  })}
+                </span>
+              {/if}
             {/if}
             {#if !client.archivedAt}
               <button type="button" class="btn btn-sm btn-error btn-outline" onclick={archive}>

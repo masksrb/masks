@@ -74,6 +74,30 @@ module Masks
         assert_equal "invalid_client", grant(secret: "nope")["error"]
       end
 
+      test "a secret past its expiry is refused, and the error says so" do
+        within { @service.update!(secret_expires_at: 1.minute.ago) }
+
+        body = grant
+
+        assert_equal "invalid_client", body["error"]
+        assert_match "expired", body["error_description"]
+      end
+
+      test "a wrong secret against an expired one says nothing about the expiry" do
+        within { @service.update!(secret_expires_at: 1.minute.ago) }
+
+        body = grant(secret: "nope")
+
+        assert_equal "invalid_client", body["error"]
+        refute_match "expired", body["error_description"].to_s
+      end
+
+      test "a secret that expires later still signs in" do
+        within { @service.update!(secret_expires_at: 1.day.from_now) }
+
+        assert grant["access_token"]
+      end
+
       test "a client not registered for the grant is refused" do
         other = service(grant_types: [ "authorization_code" ], response_types: [ "code" ],
                         redirect_uris: [ OidcFlow::REDIRECT_URI ])

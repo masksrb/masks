@@ -115,6 +115,8 @@ de:
         sector_placeholder: "nötig, wenn seine Redirect-URIs mehrere Hosts umfassen"
         unattended: "Meldet sich als er selbst an (client_credentials)"
         rotate: "Secret rotieren"
+        secret_expires: "Das Secret läuft am %{day} ab."
+        secret_expired: "Das Secret ist am %{day} abgelaufen. Rotieren Sie es, sonst kann sich nichts mehr damit anmelden."
         archive: "Archivieren"
       saml:
         title: "SAML"

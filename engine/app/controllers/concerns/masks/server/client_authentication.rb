@@ -16,9 +16,10 @@ module Masks
           client_refused!("no client is registered with that client_id") if client.nil?
           client_refused!("this client authenticates with a signed assertion, not a secret") if client.asserts?
 
-          client_refused! unless client.authenticate_secret(secret)
+          return client if client.authenticate_secret(secret)
 
-          client
+          client_refused!("this client's secret expired on #{client.secret_expires_at.iso8601}, and a manager rotates it") if client.secret_expired? && client.secret_matches?(secret)
+          client_refused!
         end
 
         def asserted_client(assertion)

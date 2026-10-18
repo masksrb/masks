@@ -115,6 +115,8 @@ en:
         sector_placeholder: "needed when its redirect URIs span several hosts"
         unattended: "Signs in as itself (client_credentials)"
         rotate: "Rotate secret"
+        secret_expires: "The secret expires on %{day}."
+        secret_expired: "The secret expired on %{day}. Rotate it, or nothing can sign in with it."
         archive: "Archive"
       saml:
         title: "SAML"

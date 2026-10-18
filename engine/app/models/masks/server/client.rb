@@ -377,12 +377,21 @@ module Masks
 
       def authenticate_secret(candidate)
         return true if public?
+
+        secret_matches?(candidate) && !secret_expired?
+      end
+
+      def secret_matches?(candidate)
         return false unless secret?
         return false if secret_digest.blank? || candidate.blank?
 
         BCrypt::Password.new(secret_digest) == candidate.to_s
       rescue BCrypt::Errors::InvalidHash
         false
+      end
+
+      def secret_expired?
+        secret_expires_at.present? && secret_expires_at.past?
       end
 
       def redirect_uri?(candidate)
