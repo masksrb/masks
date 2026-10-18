@@ -48,6 +48,18 @@ module Masks
         end
       end
 
+      test "a session revoked at the provider ends the access tokens the account holds" do
+        registration = register(@tenant)
+        code = authorized_code(actor: @actor, registration: registration, scope: "openid profile")
+        issued = token(grant_type: "authorization_code", code: code, redirect_uri: REDIRECT_URI, code_verifier: verifier,
+                       client_id: registration["client_id"], client_secret: registration["client_secret"])
+
+        deliver(event)
+
+        assert_response :accepted
+        within { assert_nil AccessToken.live.find_by(digest: claims_in(issued["access_token"])["jti"]) }
+      end
+
       test "an account named by email is found through its connection" do
         sign_in_as(@actor)
 

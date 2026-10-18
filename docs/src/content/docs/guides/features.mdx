@@ -483,11 +483,15 @@ logout.
 | --- | --- |
 | Revoke a session | That sign-in. |
 | Sign a device out | Every session and token on it, and its trusted second factor. |
-| Sign an actor out | Every session and refresh token on every device, and every trusted second factor. |
+| Sign an actor out | Every session, refresh token, and access token on every device, and every trusted second factor. |
 | Block a device | Every request from it, before any password is checked. |
 
 `/manage` also lists devices that never finished signing in, under **Never signed in**, so you can
 still block them.
+
+Signing an actor out everywhere is also what a password reset, a second-factor reset, a suspension,
+and a session-revoked signal from a provider do. Access tokens already issued stop working at once,
+so an app that checks a token with masks is refused on its next request.
 
 ### How long a session lasts
 
@@ -613,7 +617,7 @@ The change takes effect once the code is entered.
 - A person can also remove their phone number, unless the sign-in policy requires one.
 
 An account that signs in only with a passkey or another account can set a password from **Password**,
-after a recent sign-in. Setting it signs out every other session.
+after a recent sign-in. Setting it signs out every other session and ends the tokens they hold.
 
 Accounts a directory provisions over SCIM keep the name and addresses the directory gives them.
 

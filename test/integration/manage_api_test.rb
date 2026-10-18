@@ -688,13 +688,14 @@ module Masks
         assert_match(/nickname/i, body["errors"].first["message"])
       end
 
-      test "signing an actor out ends every session and refresh token they hold" do
+      test "signing an actor out ends every session, refresh token, and access token they hold" do
         held = bearer
         second = create_actor(@tenant, nickname: "second")
 
         within(@tenant) do
           Session.start!(actor: second)
           RefreshToken.mint!(actor: second, client: @client)
+          AccessToken.issue!(issuer: issuer_for(@tenant), actor: second, client: @client, scopes: "openid", audience: [])
         end
 
         ask(%(mutation { signOutActor(uuid: "#{second.uuid}") { actor { uuid } } }), held)
@@ -702,6 +703,7 @@ module Masks
         within(@tenant) do
           assert_empty Session.live.where(actor: second).to_a
           assert_empty RefreshToken.live.where(actor: second).to_a
+          assert_empty AccessToken.live.where(actor: second).to_a
         end
       end
 

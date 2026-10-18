@@ -282,6 +282,11 @@ module Masks
 
         held.find_each(&:revoke!)
         RefreshToken.where(actor_id: id).live.find_each(&:revoke!)
+
+        issued = AccessToken.where(actor_id: id).live
+        issued = issued.where.not(session_id: keeping.id) if keeping
+        issued.update_all(consumed_at: Time.current, updated_at: Time.current)
+
         DeviceFactor.forget!(actor: self)
       end
 
