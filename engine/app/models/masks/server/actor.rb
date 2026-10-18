@@ -33,6 +33,9 @@ module Masks
       has_many :groups, through: :group_members
 
       before_destroy :sign_out_everywhere!, prepend: true
+      before_destroy :release_nickname
+
+      attr_accessor :trusted_rename
 
       validates :nickname,
                 uniqueness: { scope: :tenant_id, case_sensitive: false },
@@ -52,8 +55,10 @@ module Masks
                 allow_blank: true
 
       validate :named
+      validate :nickname_free, if: -> { nickname.present? && will_save_change_to_nickname? && !trusted_rename }
 
       before_save :activate_once_a_password_exists
+      after_save :release_previous_nickname, if: :saved_change_to_nickname?
       before_save :forget_code_factors_for_new_addresses
       after_update :forget_mailed_links, if: :saved_change_to_email?
 
@@ -511,6 +516,19 @@ module Masks
           when Tenant::EMAIL then errors.add(:email, :blank) if email.blank?
           else errors.add(:base, :unnamed) if nickname.blank? && email.blank?
           end
+        end
+
+        def nickname_free
+          errors.add(:nickname, :held) if ReleasedNickname.held_from?(nickname, self)
+        end
+
+        def release_previous_nickname
+          ReleasedNickname.where(nickname: nickname.to_s.downcase, actor_id: id).delete_all if nickname.present?
+          ReleasedNickname.release!(nickname_before_last_save, actor: self)
+        end
+
+        def release_nickname
+          ReleasedNickname.release!(nickname, actor: self)
         end
 
         def manages_by_both

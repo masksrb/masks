@@ -6,3 +6,5 @@ de:
           attributes:
             base:
               unnamed: "Ein Konto braucht einen Spitznamen oder eine E-Mail-Adresse."
+            nickname:
+              held: "wurde vor Kurzem freigegeben und kann noch nicht übernommen werden"

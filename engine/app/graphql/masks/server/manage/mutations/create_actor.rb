@@ -18,6 +18,7 @@ module Masks
             granting!(scopes)
 
             actor = Actor.new(
+              trusted_rename: true,
               nickname: nickname,
               email: email,
               scopes: Scopes.join(Scopes.list(scopes).presence || Scopes::STANDARD)

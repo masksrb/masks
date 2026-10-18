@@ -129,6 +129,7 @@ es:
     directed: "El directorio de tu organización gestiona tu nombre."
     invalid: "%{errors}"
     updated: "Se guardaron tus datos."
+    again: "Vuelve a iniciar sesión para cambiar tu apodo. Hace tiempo que no lo haces."
 
   verifications:
     too_many_requests: "Demasiadas solicitudes. Espera unos minutos."

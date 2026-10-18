@@ -33,6 +33,7 @@ module Masks
           Event.where(created_at: ...tenant.event_retention.ago).in_batches(of: BATCH).delete_all
           Members.purge_lapsed!
           Replay.where(expires_at: ...Time.current).in_batches(of: BATCH).delete_all
+          ReleasedNickname.lapsed.in_batches(of: BATCH).delete_all
         end
 
         def sweep_tokens(cutoff)

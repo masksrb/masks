@@ -129,6 +129,7 @@ en:
     directed: "Your organization's directory manages your name."
     invalid: "%{errors}"
     updated: "Your details have been saved."
+    again: "Sign in again to change your nickname. It has been a while since you did."
 
   verifications:
     too_many_requests: "Too many requests. Wait a few minutes."

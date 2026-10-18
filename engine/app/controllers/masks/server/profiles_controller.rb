@@ -5,6 +5,7 @@ module Masks
 
       def update
         return refuse(t("profiles.directed")) if current_actor.directed?
+        return unless kept_nickname? || reauthenticated!("profile", t("profiles.again"))
 
         current_actor.assign_attributes(profile)
         changed = current_actor.changed
@@ -20,6 +21,10 @@ module Masks
 
         def profile
           params.permit(:name, :nickname).to_h.transform_values { |value| value.strip.presence }
+        end
+
+        def kept_nickname?
+          !profile.key?("nickname") || profile["nickname"] == current_actor.nickname
         end
 
         def require_actor

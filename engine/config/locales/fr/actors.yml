@@ -6,3 +6,5 @@ fr:
           attributes:
             base:
               unnamed: "Un compte doit avoir un pseudo ou une adresse e-mail."
+            nickname:
+              held: "a été libéré récemment et ne peut pas encore être repris"

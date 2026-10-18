@@ -29,6 +29,7 @@ module Masks
             needs!(:security, "changing someone's email address") if changing_email
             previous = actor.email if changing_email && actor.email_verified_at.present?
 
+            actor.trusted_rename = true
             actor.assign_attributes(attributes)
             actor.email_verified_at = nil if changing_email
             actor.phone_verified_at = nil if attributes.key?(:phone) && actor.phone_changed?

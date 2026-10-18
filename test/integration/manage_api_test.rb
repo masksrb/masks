@@ -141,6 +141,17 @@ module Masks
         assert_equal "America/Vancouver", body.dig("data", "updateActor", "actor", "zoneinfo")
       end
 
+      test "a manager can give an actor a nickname somebody else gave up" do
+        held = bearer
+        other = create_actor(@tenant, nickname: "grace", email: "grace@example.com")
+        within(@tenant) { other.update!(nickname: "admiral") }
+
+        body = ask(%(mutation { updateActor(uuid: "#{@actor.uuid}", nickname: "grace") { actor { nickname } } }), held)
+
+        assert_nil body["errors"]
+        assert_equal "grace", body.dig("data", "updateActor", "actor", "nickname")
+      end
+
       test "a profile field cleared to empty leaves the claim absent, not present and blank" do
         ask(%(mutation { updateActor(uuid: "#{@actor.uuid}", gender: "") { actor { gender } } }), bearer)
 

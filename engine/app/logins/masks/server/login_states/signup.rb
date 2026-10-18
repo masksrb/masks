@@ -280,6 +280,7 @@ module Masks
 
               now = Time.current
               actor = Masks::Server::Actor.new(
+                trusted_rename: @first_run,
                 nickname: held["nickname"],
                 email: held["email"],
                 name: held["name"],

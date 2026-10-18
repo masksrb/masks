@@ -118,6 +118,7 @@ module Masks
             raise Error.new(:bad_request, "userName is required", scim_type: "invalidValue") if value.blank?
 
             held = value.to_s.strip
+            actor.trusted_rename = true
 
             if held.match?(URI::MailTo::EMAIL_REGEXP)
               actor.email = held

@@ -129,3 +129,6 @@ The app can trust `Remote-User` only because the proxy sets it. Set up two thing
 1. Make sure nothing reaches the app except through the proxy.
 2. Make the proxy drop any `Remote-` header a browser sends, before it adds the headers masks
    answered with.
+
+A nickname that an actor gives up is held for 30 days, so a new account cannot become the old
+`Remote-User` right away. See [accounts](/guides/features/#accounts).

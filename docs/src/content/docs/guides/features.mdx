@@ -619,6 +619,13 @@ The change takes effect once the code is entered.
 An account that signs in only with a passkey or another account can set a password from **Password**,
 after a recent sign-in. Setting it signs out every other session and ends the tokens they hold.
 
+Changing a nickname asks for a sign-in within the last 15 minutes. A nickname that is given up,
+by a rename or by deleting the account, is held for 30 days. Nobody else can take it in that time,
+and the account that gave it up can take it back. Apps behind [forward auth](/guides/forward-auth/)
+and [LDAP](/guides/ldap/) know an actor by their nickname, so the hold keeps a new account from
+being taken for the old one. A manager or a directory can give the held nickname to someone else
+at once.
+
 Accounts a directory provisions over SCIM keep the name and addresses the directory gives them.
 
 When a manager changes someone's confirmed email address in `/manage`, masks mails the old address

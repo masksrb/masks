@@ -129,6 +129,7 @@ de:
     directed: "Das Verzeichnis Ihrer Organisation verwaltet Ihren Namen."
     invalid: "%{errors}"
     updated: "Ihre Angaben wurden gespeichert."
+    again: "Melden Sie sich erneut an, um Ihren Spitznamen zu ändern. Ihre letzte Anmeldung ist eine Weile her."
 
   verifications:
     too_many_requests: "Zu viele Anfragen. Warten Sie einige Minuten."

@@ -6,3 +6,5 @@ es:
           attributes:
             base:
               unnamed: "Una cuenta necesita un apodo o una dirección de correo."
+            nickname:
+              held: "se liberó hace poco y todavía no se puede usar"

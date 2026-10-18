@@ -6,3 +6,5 @@ en:
           attributes:
             base:
               unnamed: "An account needs a nickname or an email address."
+            nickname:
+              held: "was given up recently and cannot be taken yet"

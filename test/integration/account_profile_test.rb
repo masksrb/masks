@@ -34,6 +34,48 @@ module Masks
         assert_equal "ada", reloaded.nickname
       end
 
+      test "a nickname given up is held, and somebody else cannot take it for thirty days" do
+        sign_in_as(@actor)
+        patch "/account/profile", params: { nickname: "countess" }
+
+        other = create_actor(@tenant, nickname: "grace", email: "grace@example.com")
+        reset!
+        host! host_for(@tenant)
+        sign_in_as(other)
+        patch "/account/profile", params: { nickname: "ada" }
+
+        assert_match(/given up recently/, flash[:alert])
+        assert_equal "grace", within(@tenant) { other.reload.nickname }
+
+        travel ReleasedNickname::HOLD + 1.minute do
+          sign_in_as(other)
+          patch "/account/profile", params: { nickname: "ada" }
+
+          assert_redirected_to "/#profile"
+          assert_equal "ada", within(@tenant) { other.reload.nickname }
+        end
+      end
+
+      test "changing the nickname asks for a recent sign-in, and changing the name does not" do
+        sign_in_as(@actor)
+
+        travel 16.minutes do
+          patch "/account/profile", params: { name: "Ada Lovelace", nickname: "countess" }
+
+          assert_redirected_to %r{/login}
+          assert_equal "ada", reloaded.nickname
+
+          sign_in_as(@actor)
+        end
+
+        travel 32.minutes do
+          patch "/account/profile", params: { name: "Ada Lovelace", nickname: "ada" }
+
+          assert_redirected_to "/#profile"
+          assert_equal "Ada Lovelace", reloaded.name
+        end
+      end
+
       test "only the name and nickname can be changed this way" do
         sign_in_as(@actor)
 

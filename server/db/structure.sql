@@ -986,6 +986,40 @@ ALTER SEQUENCE public.providers_id_seq OWNED BY public.providers.id;
 
 
 --
+-- Name: released_nicknames; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.released_nicknames (
+    id bigint NOT NULL,
+    tenant_id bigint NOT NULL,
+    actor_id bigint,
+    nickname character varying NOT NULL,
+    released_at timestamp(6) without time zone NOT NULL
+);
+
+ALTER TABLE ONLY public.released_nicknames FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: released_nicknames_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.released_nicknames_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: released_nicknames_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.released_nicknames_id_seq OWNED BY public.released_nicknames.id;
+
+
+--
 -- Name: replays; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -1632,6 +1666,13 @@ ALTER TABLE ONLY public.providers ALTER COLUMN id SET DEFAULT nextval('public.pr
 
 
 --
+-- Name: released_nicknames id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.released_nicknames ALTER COLUMN id SET DEFAULT nextval('public.released_nicknames_id_seq'::regclass);
+
+
+--
 -- Name: replays id; Type: DEFAULT; Schema: public; Owner: -
 --
 
@@ -1882,6 +1923,14 @@ ALTER TABLE ONLY public.passkeys
 
 ALTER TABLE ONLY public.providers
     ADD CONSTRAINT providers_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: released_nicknames released_nicknames_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.released_nicknames
+    ADD CONSTRAINT released_nicknames_pkey PRIMARY KEY (id);
 
 
 --
@@ -2569,6 +2618,20 @@ CREATE UNIQUE INDEX index_providers_on_tenant_id_and_key ON public.providers USI
 
 
 --
+-- Name: index_released_nicknames_on_released_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_released_nicknames_on_released_at ON public.released_nicknames USING btree (released_at);
+
+
+--
+-- Name: index_released_nicknames_on_tenant_id_and_nickname; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX index_released_nicknames_on_tenant_id_and_nickname ON public.released_nicknames USING btree (tenant_id, nickname);
+
+
+--
 -- Name: index_replays_on_expires_at; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -3216,6 +3279,14 @@ ALTER TABLE ONLY public.events
 
 
 --
+-- Name: released_nicknames fk_rails_a1be058614; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.released_nicknames
+    ADD CONSTRAINT fk_rails_a1be058614 FOREIGN KEY (actor_id) REFERENCES public.actors(id) ON DELETE SET NULL;
+
+
+--
 -- Name: connections fk_rails_a26555371d; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3357,6 +3428,14 @@ ALTER TABLE ONLY public.delegations
 
 ALTER TABLE ONLY public.events
     ADD CONSTRAINT fk_rails_e77ed48c6c FOREIGN KEY (client_id) REFERENCES public.clients(id) ON DELETE SET NULL;
+
+
+--
+-- Name: released_nicknames fk_rails_e8a703b505; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.released_nicknames
+    ADD CONSTRAINT fk_rails_e8a703b505 FOREIGN KEY (tenant_id) REFERENCES public.tenants(id) ON DELETE CASCADE;
 
 
 --
@@ -3568,6 +3647,12 @@ ALTER TABLE public.passkeys ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.providers ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: released_nicknames; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.released_nicknames ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: replays; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -3756,6 +3841,13 @@ CREATE POLICY tenant_isolation ON public.providers USING ((tenant_id = (NULLIF(c
 
 
 --
+-- Name: released_nicknames tenant_isolation; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY tenant_isolation ON public.released_nicknames USING ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint)) WITH CHECK ((tenant_id = (NULLIF(current_setting('masks.tenant_id'::text, true), ''::text))::bigint));
+
+
+--
 -- Name: replays tenant_isolation; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -3844,6 +3936,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261018100000'),
 ('20261013010000'),
 ('20261012100000'),
 ('20261011190000'),

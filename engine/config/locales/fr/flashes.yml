@@ -129,6 +129,7 @@ fr:
     directed: "L’annuaire de votre organisation gère votre nom."
     invalid: "%{errors}"
     updated: "Vos informations ont été enregistrées."
+    again: "Reconnectez-vous pour changer votre pseudo. Votre dernière connexion remonte à un moment."
 
   verifications:
     too_many_requests: "Trop de demandes. Attendez quelques minutes."
