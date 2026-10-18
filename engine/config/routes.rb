@@ -18,6 +18,7 @@ Masks::Server::Engine.routes.draw do
   post "/ssf/events", to: "received_signals#create", as: :received_signals
 
   match "/authorize", to: "authorize#show", via: %i[get post], as: :authorize
+  get "/authorize/refused", to: "authorize#refused", as: :authorize_refused
   post "/par", to: "pushed_authorizations#create", as: :pushed_authorization
   post "/device_authorization", to: "device_authorizations#create", as: :device_authorization
 

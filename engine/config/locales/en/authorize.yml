@@ -5,3 +5,5 @@ en:
       stopped: "Stopped"
       heading: "The app asked for something this server will not do."
       contact: "Nothing was shared. The app has to fix this."
+      refused: "This sign-in was refused."
+      nothing_shared: "Nothing was shared with the app. You can close this page."

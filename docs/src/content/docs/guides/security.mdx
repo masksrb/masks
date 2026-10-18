@@ -314,6 +314,28 @@ activated.
 With a schedule set, a key staged by hand is also activated a day after it is staged. The job
 records each step in the activity.
 
+## Where a sign-in error goes
+
+A bad `/authorize` link ends with an error. Where masks sends that error depends on who registered
+the client.
+
+- An [approved client](/guides/features/#registering-a-client) hears the error at its `redirect_uri`,
+  with `error`, `error_description`, `state`, and `iss`, as OAuth describes.
+- A self-registered client's errors show on a page on masks. The person stays on masks and reads
+  what went wrong. Nothing is sent to the client's `redirect_uri`.
+
+This covers errors masks finds in the request, such as a scope the client does not hold, an
+unsupported `response_type`, or a request object that fails a rule, and sign-ins masks refuses, such
+as a suspended account, a group the person is not in, or a consent the person declined.
+
+Two answers go back to the `redirect_uri` whoever registered the client, because OpenID Connect
+requires them: `interaction_required` for a `prompt=none` request that needs the person, and a
+`redirect_uri` on masks' own origin.
+
+Registration is open by default, so anyone can register a client with a `redirect_uri` of their own.
+Without this rule, a link that starts at masks could bounce a person to any site with one bad
+parameter.
+
 ## Pushed requests
 
 A normal authorization request puts every parameter in the address bar. There, browser history,

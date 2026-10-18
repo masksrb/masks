@@ -5,3 +5,5 @@ es:
       stopped: "Detenida"
       heading: "La aplicación pidió algo que este servidor no hará."
       contact: "No se compartió nada. La aplicación tiene que corregirlo."
+      refused: "Este inicio de sesión fue rechazado."
+      nothing_shared: "No se compartió nada con la aplicación. Puede cerrar esta página."

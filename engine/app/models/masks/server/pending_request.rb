@@ -39,6 +39,14 @@ module Masks
         held("max_age")
       end
 
+      def refuse!(error, description)
+        update!(payload: (payload || {}).merge("refusal" => { "error" => error, "description" => description }))
+      end
+
+      def refusal
+        held("refusal")
+      end
+
       def issue_code!(actor:, device: nil, session: nil, authenticated_at: nil, amr: nil, organization: nil)
         AuthorizationCode.mint!(
           organization: organization,

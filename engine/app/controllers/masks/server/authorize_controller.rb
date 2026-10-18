@@ -45,12 +45,22 @@ module Masks
 
         login = advance(pending)
 
+        return redirect_to(refuse_on_masks(pending, login.refusal)) if login.refused? && !answerable?(pending)
         return answer(deny(pending, login.refusal.error, login.refusal.description)) if login.refused?
         return interaction_required(pending) if login.prompted? && pending.silent?
         return redirect_to(login.redirect_to, allow_other_host: true) if login.redirect_to.present?
         return prompt(login) unless login.settled?
 
         complete(pending, attempt, login)
+      end
+
+      def refused
+        refusal = refused_request(params[:rid])&.refusal
+
+        return show_error("invalid_request", "that sign-in request has expired", :bad_request) if refusal.nil?
+
+        @refused = true
+        show_error(refusal["error"], refusal["description"], :forbidden)
       end
 
       private
@@ -66,6 +76,7 @@ module Masks
             req.verify_redirect_uri!(client.redirect_uri?(req.redirect_uri) ? [ req.redirect_uri.to_s ] : client.redirect_uris)
             req.verified_redirect_uri = with_issuer(req.verified_redirect_uri)
             res.redirect_uri = req.verified_redirect_uri
+            req.verified_redirect_uri = nil unless hears_errors?(client, req.redirect_uri)
 
             permit(req) { authorization.validate! }
           end
@@ -121,21 +132,20 @@ module Masks
           client = Client.authenticating(params[:client_id])
           target = params[:redirect_uri].to_s
 
-          if target.present? && (client&.redirect_uri?(target) || ours?(target))
+          if target.present? && hears_errors?(client, target)
             return redirect_to refusal_uri(target, error), allow_other_host: true
           end
 
-          @error_code = error.error.to_s
-          @error_description = error.description
+          show_error(error.error.to_s, error.description, error.status)
+        end
+
+        def show_error(code, description, status)
+          @error_code = code
+          @error_description = description
 
           respond_to do |format|
-            format.html { render :error, status: error.status }
-            format.any do
-              render json: {
-                "error" => @error_code,
-                "error_description" => @error_description
-              }, status: error.status
-            end
+            format.html { render :error, status: status }
+            format.any { render json: { "error" => code, "error_description" => description }, status: status }
           end
         end
 
@@ -163,13 +173,8 @@ module Masks
           Rack::OAuth2::Server::Authorize::BadRequest.new(error, description)
         end
 
-        def ours?(target)
-          here = URI.parse(issuer.url)
-          there = URI.parse(target.to_s)
-
-          there.scheme == here.scheme && there.host == here.host && there.port == here.port
-        rescue URI::InvalidURIError
-          false
+        def hears_errors?(client, target)
+          ours?(target) || (client.present? && client.approved? && client.redirect_uri?(target))
         end
 
         def refusal_uri(target, error)

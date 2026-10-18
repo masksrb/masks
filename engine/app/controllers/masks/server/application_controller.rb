@@ -264,6 +264,34 @@ module Masks
           )
         end
 
+        def answerable?(pending)
+          authorization = pending.authorization
+
+          authorization.client&.approved? || ours?(authorization.redirect_uri)
+        end
+
+        def refuse_on_masks(pending, refusal)
+          pending.refuse!(refusal.error, refusal.description)
+          PendingRequest.claim(rid_for(pending))
+
+          authorize_refused_path(rid: rid_for(pending))
+        end
+
+        def refused_request(rid)
+          return nil if rid.blank? || !tracked(REQUESTS).value?(rid)
+
+          PendingRequest.spent(rid)&.then { |held| held if held.consumed? }
+        end
+
+        def ours?(target)
+          here = URI.parse(issuer.url)
+          there = URI.parse(target.to_s)
+
+          there.scheme == here.scheme && there.host == here.host && there.port == here.port
+        rescue URI::InvalidURIError
+          false
+        end
+
         def authorize_url_for(pending)
           "#{authorize_path}?#{URI.encode_www_form(pending.authorization.query_pairs)}"
         end

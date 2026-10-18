@@ -4,9 +4,9 @@
 <div id="authorize-error" class="flow" data-error="<%= @error_code %>">
   <span class="state state-bad"><%= t(".stopped") %></span>
 
-  <h1 class="prompt-title"><%= t(".heading") %></h1>
+  <h1 class="prompt-title"><%= @refused ? t(".refused") : t(".heading") %></h1>
 
   <p class="said"><%= @error_code %> — <%= @error_description %></p>
 
-  <p class="prompt-lede"><%= t(".contact") %></p>
+  <p class="prompt-lede"><%= @refused ? t(".nothing_shared") : t(".contact") %></p>
 </div>

@@ -174,12 +174,6 @@ module Masks
           )
         end
 
-        def refused_request(rid)
-          return nil if rid.blank? || !tracked(REQUESTS).value?(rid)
-
-          PendingRequest.spent(rid)&.then { |held| held if held.consumed? }
-        end
-
         def post(pending, encoded)
           post_saml(pending.client, pending.redirect_uri, "SAMLResponse", encoded, relay_state: pending.held("saml")["relay_state"])
         end

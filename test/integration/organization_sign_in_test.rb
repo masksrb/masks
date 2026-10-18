@@ -9,7 +9,7 @@ module Masks
       SCOPE = "openid profile email offline_access organization".freeze
 
       setup do
-        @registration = register(scope: SCOPE)
+        @registration = approve!(register(scope: SCOPE))
         host! host_for(@tenant)
         @acme = within { Organization.create!(key: "acme", name: "Acme", roles: [ "admin" ]) }
         @globex = within { Organization.create!(key: "globex", name: "Globex") }
@@ -142,7 +142,7 @@ module Masks
 
       test "an app without the organization scope that names an organization refuses a person outside it" do
         actor = create_actor(email: "ada@probe.example.com")
-        registration = register(scope: "openid profile")
+        registration = approve!(register(scope: "openid profile"))
         within { SignInPolicy.create!(key: "acme-lax", name: "Lax").tap { |policy| @acme.update!(sign_in_policy: policy) } }
 
         sign_in_as(actor)

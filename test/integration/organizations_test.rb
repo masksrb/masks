@@ -7,7 +7,7 @@ module Masks
 
       setup do
         @actor = create_actor(email: "ada@probe.example.com")
-        @registration = register(scope: SCOPE)
+        @registration = approve!(register(scope: SCOPE))
         host! host_for(@tenant)
 
         @acme = organization("acme", "Acme")

@@ -45,7 +45,7 @@ module Masks
 
       test "a scope the client never registered refuses the whole request" do
         actor = create_actor(@tenant, scopes: "openid profile email admin")
-        registration = registration_for(scope: "openid profile email")
+        registration = approve!(registration_for(scope: "openid profile email"))
 
         sign_in_as(actor)
         authorize(client_id: registration["client_id"], scope: REQUESTED)

@@ -5,3 +5,5 @@ fr:
       stopped: "Interrompu"
       heading: "L’application a demandé quelque chose que ce serveur refuse de faire."
       contact: "Rien n’a été partagé. C’est à l’application de corriger le problème."
+      refused: "Cette connexion a été refusée."
+      nothing_shared: "Rien n’a été partagé avec l’application. Vous pouvez fermer cette page."

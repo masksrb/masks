@@ -221,7 +221,8 @@ module Masks
 
       test "a client that requires pushing refuses an ordinary authorize link" do
         within(@tenant) do
-          Client.authenticating(@registration["client_id"]).update!(require_pushed_authorization_requests: true)
+          Client.authenticating(@registration["client_id"])
+                .update!(require_pushed_authorization_requests: true, approved_at: Time.current)
         end
 
         sign_in_as(@actor)

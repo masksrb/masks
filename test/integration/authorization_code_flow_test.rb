@@ -129,7 +129,7 @@ module Masks
       end
 
       test "a public client must send a code challenge" do
-        public_client = register(token_endpoint_auth_method: "none")
+        public_client = approve!(register(token_endpoint_auth_method: "none"))
         sign_in_as(@actor)
 
         authorize(
@@ -141,6 +141,7 @@ module Masks
       end
 
       test "plain is not an accepted challenge method" do
+        approve!(@registration)
         sign_in_as(@actor)
         authorize(client_id: @registration["client_id"], code_challenge_method: "plain")
 
@@ -156,18 +157,52 @@ module Masks
         assert_select "#authorize-error[data-error=?]", "invalid_request"
       end
 
-      test "a scope the client does not hold is refused" do
+      test "a scope an approved client does not hold is handed back to it" do
+        approve!(@registration)
         sign_in_as(@actor)
         authorize(client_id: @registration["client_id"], scope: "openid admin")
 
         assert_equal "invalid_scope", redirected["error"]
       end
 
-      test "an unsupported response_type is refused" do
+      test "an unsupported response_type is handed back to an approved client" do
+        approve!(@registration)
         sign_in_as(@actor)
         authorize(client_id: @registration["client_id"], response_type: "token")
 
         assert_equal "unsupported_response_type", redirected["error"]
+      end
+
+      test "a self-registered client's bad scope shows on masks instead of bouncing the person" do
+        sign_in_as(@actor)
+        authorize(client_id: @registration["client_id"], scope: "openid admin")
+
+        assert_response :bad_request
+        assert_select "#authorize-error[data-error=?]", "invalid_scope"
+      end
+
+      test "a self-registered client's unsupported response_type shows on masks" do
+        sign_in_as(@actor)
+        authorize(client_id: @registration["client_id"], response_type: "token")
+
+        assert_response :bad_request
+        assert_select "#authorize-error[data-error=?]", "unsupported_response_type"
+      end
+
+      test "a self-registered client's bad request object shows on masks" do
+        sign_in_as(@actor)
+        authorize(client_id: @registration["client_id"], request: "eyJhbGciOiJub25lIn0.e30.")
+
+        assert_response :bad_request
+        assert_select "#authorize-error[data-error=?]", "invalid_request_object"
+      end
+
+      test "a self-registered client still gets its code once the person signs in" do
+        sign_in_as(@actor)
+        authorize(client_id: @registration["client_id"])
+        consent! if awaiting_consent?
+
+        assert code_from.present?
       end
 
       test "an unsupported grant_type is refused" do
@@ -213,6 +248,7 @@ module Masks
       end
 
       test "a declined consent answers the client and mints nothing" do
+        approve!(@registration)
         sign_in_as(@actor)
         authorize(client_id: @registration["client_id"])
 
@@ -288,6 +324,7 @@ module Masks
       end
 
       test "an unsigned request object is refused rather than ignored" do
+        approve!(@registration)
         sign_in_as(@actor)
         authorize(client_id: @registration["client_id"], request: "eyJhbGciOiJub25lIn0.e30.")
 
@@ -295,6 +332,7 @@ module Masks
       end
 
       test "a request_uri is refused rather than ignored" do
+        approve!(@registration)
         sign_in_as(@actor)
         authorize(client_id: @registration["client_id"], request_uri: "https://client.example/req.jwt")
 

@@ -97,6 +97,11 @@ module Masks
         JSON.parse(response.body)
       end
 
+      def approve!(registration, tenant = @tenant)
+        within(tenant) { Client.find_by!(client_id: registration["client_id"]).update!(approved_at: Time.current) }
+        registration
+      end
+
       def sign_in_as(actor, password: "password")
         post "/login", params: { event: "identify", identifier: actor.nickname }, as: :json
         post "/login", params: { event: "password", password: password }, as: :json

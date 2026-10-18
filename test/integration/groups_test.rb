@@ -5,7 +5,7 @@ module Masks
     class GroupsTest < ActionDispatch::IntegrationTest
       setup do
         @actor = create_actor(email: "ada@example.com")
-        @registration = register(scope: "openid profile email offline_access groups")
+        @registration = approve!(register(scope: "openid profile email offline_access groups"))
         host! host_for(@tenant)
 
         @family = within { Group.create!(key: "family", name: "Family") }

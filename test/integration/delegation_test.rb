@@ -321,7 +321,10 @@ module Masks
 
         authorize(client_id: @client.client_id, scope: SCOPE)
 
-        assert_equal "unauthorized_client", redirected["error"]
+        follow_redirect!
+
+        assert_response :forbidden
+        assert_select "#authorize-error[data-error=?]", "unauthorized_client"
       end
 
       test "a different account than the one already connected is refused" do

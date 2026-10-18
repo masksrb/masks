@@ -56,7 +56,20 @@ module Masks
         assert awaiting_consent?
       end
 
-      test "declining sends access_denied back to the client" do
+      test "declining a self-registered client keeps the person on masks" do
+        sign_in_as(@actor)
+        authorize(client_id: @registration["client_id"], state: "opaque")
+
+        decline!
+
+        assert_response :forbidden
+        assert_select "#authorize-error[data-error=?]", "access_denied"
+        assert_select "h1", I18n.t("authorize.error.refused")
+        assert_equal 0, within { AuthorizationCode.count }
+      end
+
+      test "declining sends access_denied back to an approved client" do
+        approve!(@registration)
         sign_in_as(@actor)
         authorize(client_id: @registration["client_id"], state: "opaque")
 

@@ -5,3 +5,5 @@ de:
       stopped: "Angehalten"
       heading: "Die App hat etwas angefordert, das dieser Server nicht tut."
       contact: "Es wurde nichts geteilt. Die App muss das beheben."
+      refused: "Diese Anmeldung wurde abgelehnt."
+      nothing_shared: "Mit der App wurde nichts geteilt. Sie können diese Seite schließen."

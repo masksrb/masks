@@ -70,6 +70,7 @@ module Masks
       end
 
       test "a resource that is not an absolute URI is refused at authorize" do
+        approve!(@registration)
         sign_in_as(@actor)
         authorize(client_id: @registration["client_id"], resource: "not-a-uri")
 
@@ -77,6 +78,7 @@ module Masks
       end
 
       test "a resource carrying a fragment is refused at authorize" do
+        approve!(@registration)
         sign_in_as(@actor)
         authorize(client_id: @registration["client_id"], resource: "#{MCP}#part")
 
