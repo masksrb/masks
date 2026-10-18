@@ -130,6 +130,30 @@ module Masks
         assert_requested :get, JWKS_URI, times: 3
       end
 
+      test "an unknown kid reads the key set again once per interval, so a stranger cannot make masks fetch it over and over" do
+        stub_request(:get, JWKS_URI).to_return(status: 200, body: public_jwks.to_json)
+
+        remote = service(jwks: nil, jwks_uri: JWKS_URI)
+
+        assert grant(assertion(remote))["access_token"]
+        fetched = requested_times(JWKS_URI)
+
+        assert_equal "invalid_client", grant(assertion(remote, kid: "made-up"))["error"]
+        assert_equal "invalid_client", grant(assertion(remote, kid: "another"))["error"]
+        assert_requested :get, JWKS_URI, times: fetched + 1
+
+        travel(ClientKeys::LIFETIME + 1.second) do
+          rotated = OpenSSL::PKey::RSA.generate(2048)
+          stub_request(:get, JWKS_URI).to_return(status: 200, body: public_jwks(rotated, kid: "next").to_json)
+
+          assert grant(assertion(remote, key: rotated, kid: "next"))["access_token"]
+        end
+      end
+
+      def requested_times(uri)
+        WebMock::RequestRegistry.instance.times_executed(WebMock::RequestPattern.new(:get, uri))
+      end
+
       test "introspection accepts an assertion made out to its own endpoint" do
         access = grant["access_token"]
 

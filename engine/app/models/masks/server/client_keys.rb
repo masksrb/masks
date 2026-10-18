@@ -78,7 +78,7 @@ module Masks
         raise Refused, "#{algorithm.presence || 'that'} is not an algorithm #{subject} may be signed with" unless ALGORITHMS.include?(algorithm)
 
         verified = attempt(token, header, algorithm, fresh: false)
-        verified ||= attempt(token, header, algorithm, fresh: true) if remote? && unknown_kid?(header)
+        verified ||= attempt(token, header, algorithm, fresh: true) if remote? && unknown_kid?(header) && refetch_open?
 
         verified || raise(Refused, "#{subject} was not signed by a key this client registered")
       rescue JWT::DecodeError
@@ -127,8 +127,19 @@ module Masks
           kid ? held.select { |jwk| jwk["kid"] == kid } : held
         end
 
+        def refetch_open?
+          return false if ::Rails.cache.exist?(refetched_key)
+
+          ::Rails.cache.write(refetched_key, Time.current.to_i, expires_in: LIFETIME)
+          true
+        end
+
         def cache_key
           "client-jwks:#{client.tenant_id}:#{client.id}:#{Digest::SHA256.hexdigest(client.jwks_uri.to_s)}"
+        end
+
+        def refetched_key
+          "#{cache_key}:refetched"
         end
     end
   end

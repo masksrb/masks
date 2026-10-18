@@ -414,6 +414,9 @@ Send it as `request`, next to `client_id`, to `/authorize` or `/par`.
 - `requireSignedRequestObject` on `updateClient` requires signing, in the same way that
   `requirePushedAuthorizationRequests` requires pushing.
 - masks accepts only a `request_uri` it issued from `/par`. It never fetches one from a client URL.
+- A key set read from a `jwks_uri` is kept for five minutes. A key id masks has not seen makes it
+  read the set again, at most once in those five minutes, so a stranger cannot make masks fetch an
+  app's keys over and over.
 
 ## Binding a token with DPoP
 
