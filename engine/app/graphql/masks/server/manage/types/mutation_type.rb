@@ -41,6 +41,7 @@ module Masks
           field :update_client, mutation: Mutations::UpdateClient
           field :rotate_client_secret, mutation: Mutations::RotateClientSecret
           field :archive_client, mutation: Mutations::ArchiveClient
+          field :unenroll_client, mutation: Mutations::UnenrollClient
           field :restore_client, mutation: Mutations::RestoreClient
           field :release_namespace, mutation: Mutations::ReleaseNamespace
           field :discover_provider, mutation: Mutations::DiscoverProvider

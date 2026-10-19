@@ -1,0 +1,13 @@
+fr:
+  manage:
+    machines:
+      title: "Machines"
+      lede: "Clients que cette application a inscrits avec un jeton d'inscription. Chacun se connecte avec sa propre clé."
+      empty: "Cette application n'a pas encore inscrit de machine."
+      last_seen: "Dernière connexion %{day}"
+      never: "Jamais connectée"
+      enrolled: "Inscrite %{day}"
+      enrolled_by: "Une machine inscrite par"
+      revoke: "Révoquer"
+      revoke_confirm: "Révoquer %{name} ? Elle est archivée, chaque jeton prend fin et elle ne peut plus se connecter."
+      revoked: "%{name} est révoquée et ne peut plus se connecter."

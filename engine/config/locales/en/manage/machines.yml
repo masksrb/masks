@@ -1,0 +1,13 @@
+en:
+  manage:
+    machines:
+      title: "Machines"
+      lede: "Clients this app enrolled with an enrollment token. Each one signs in with its own key."
+      empty: "This app has not enrolled a machine yet."
+      last_seen: "Last signed in %{day}"
+      never: "Never signed in"
+      enrolled: "Enrolled %{day}"
+      enrolled_by: "A machine enrolled by"
+      revoke: "Revoke"
+      revoke_confirm: "Revoke %{name}? It is archived, every token it holds ends, and it can no longer sign in."
+      revoked: "%{name} is revoked and can no longer sign in."

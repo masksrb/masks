@@ -51,6 +51,76 @@ module Masks
         create_client(@tenant, name: "Probe", approved_at: Time.current, **attributes)
       end
 
+      def app_with_namespace
+        app = probe(name: "xixo", resources: [ "https://xixo.example.com/mcp" ],
+                    token_endpoint_auth_method: "client_secret_basic", grant_types: [ "authorization_code" ])
+
+        within(@tenant) do
+          Namespace.create!(name: "xixo:", client: app, resource: app.resources.first, claimed_at: Time.current)
+        end
+
+        app
+      end
+
+      def enrolled_machine(app)
+        within(@tenant) do
+          token = EnrollmentToken.issue!(app, scope: "xixo:agent", name: "nas")
+          key = OpenSSL::PKey::EC.generate("prime256v1")
+          jwks = { "keys" => [ JWT::JWK.new(key, kid: "machine").export.transform_keys(&:to_s) ] }
+
+          EnrollmentToken.redeem!(token.secret, { "client_name" => "nas", "jwks" => jwks })
+        end
+      end
+
+      MACHINES = <<~GRAPHQL
+        query($clientId: ID!) { client(clientId: $clientId) { enrolled { clientId name lastSeenAt } } }
+      GRAPHQL
+
+      test "an app's machines are listed with their last sign-in, and one is revoked from the console" do
+        app = app_with_namespace
+        machine = enrolled_machine(app)
+
+        within(@tenant) { AccessToken.mint!(client: machine, scopes: "xixo:agent", audience: app.resources) }
+
+        listed = ask(MACHINES, clientId: app.client_id).dig("data", "client", "enrolled")
+
+        assert_equal [ machine.client_id ], listed.map { |row| row["clientId"] }
+        assert_equal "nas", listed.first["name"]
+        assert listed.first["lastSeenAt"].present?
+
+        revoked = ask(<<~GRAPHQL, clientId: machine.client_id)
+          mutation($clientId: ID!) {
+            unenrollClient(clientId: $clientId) { client { archivedAt enrolledBy { clientId } } }
+          }
+        GRAPHQL
+
+        assert revoked.dig("data", "unenrollClient", "client", "archivedAt").present?
+        assert_equal app.client_id, revoked.dig("data", "unenrollClient", "client", "enrolledBy", "clientId")
+
+        within(@tenant) do
+          assert machine.reload.archived?
+          assert_equal 0, Token.where(client_id: machine.id, consumed_at: nil).count
+          assert Event.where(action: Event::CLIENT_UNENROLLED, client: machine).exists?
+        end
+
+        assert_empty ask(MACHINES, clientId: app.client_id).dig("data", "client", "enrolled")
+      end
+
+      test "a machine that never got a token has no last sign-in, and an app cannot be unenrolled" do
+        app = app_with_namespace
+        machine = enrolled_machine(app)
+
+        assert_nil ask(MACHINES, clientId: app.client_id).dig("data", "client", "enrolled", 0, "lastSeenAt")
+
+        refused = ask(<<~GRAPHQL, clientId: app.client_id)
+          mutation($clientId: ID!) { unenrollClient(clientId: $clientId) { client { archivedAt } } }
+        GRAPHQL
+
+        assert_match(/not a machine/, refused["errors"].to_s)
+        within(@tenant) { assert_not app.reload.archived? }
+        within(@tenant) { assert_not machine.reload.archived? }
+      end
+
       test "a refresh chain's limit is set from the console, and zero goes back to the default" do
         client = probe
 

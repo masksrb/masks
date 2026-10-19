@@ -5,6 +5,7 @@
   import { POLICY_FIELDS, policyDifferences } from "./lib/policies.js";
   import Consents from "./Consents.svelte";
   import Events from "./Events.svelte";
+  import Machines from "./Machines.svelte";
   import Namespaces from "./Namespaces.svelte";
   import Tokens from "./Tokens.svelte";
   import ScopesEditor from "./ScopesEditor.svelte";
@@ -43,6 +44,8 @@
           device { id label }
         }
         approvedBy { identifier }
+        enrolledBy { clientId name }
+        enrolled { clientId name lastSeenAt createdAt }
         namespaces { name resource claimedAt releasable }
         consents(limit: 25) {
           id scopes audience updatedAt expiresAt authorizationDetails
@@ -434,6 +437,13 @@
   <Page title={client.name} id={client.clientId} back={{ to: "/clients", label: t("client.back") }}>
     <Notices feedback={feedback.state} />
 
+    {#if client.enrolledBy}
+      <p class="hint text-sm">
+        {t("machines.enrolled_by")}
+        <Link to={`/clients/${client.enrolledBy.clientId}`} class="link link-hover">{client.enrolledBy.name}</Link>
+      </p>
+    {/if}
+
     {#if client.archivedAt}
       <div class="alert alert-warning alert-soft flex-wrap items-center gap-3 text-sm" role="status">
         <span>{t("client.archived_on", { day: day(client.archivedAt) })}</span>
@@ -632,6 +642,10 @@
 
         {#if client.namespaces.length}
           <Namespaces {api} rows={client.namespaces} onreleased={load} />
+        {/if}
+
+        {#if client.namespaces.length || client.enrolled.length}
+          <Machines {api} rows={client.enrolled} onrevoked={load} />
         {/if}
       {:else}
         <Section row title={t("client.registration.title")}>

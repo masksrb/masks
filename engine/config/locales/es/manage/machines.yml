@@ -1,0 +1,13 @@
+es:
+  manage:
+    machines:
+      title: "Máquinas"
+      lede: "Clientes que esta aplicación inscribió con un token de inscripción. Cada uno inicia sesión con su propia clave."
+      empty: "Esta aplicación aún no ha inscrito ninguna máquina."
+      last_seen: "Último inicio de sesión %{day}"
+      never: "Nunca ha iniciado sesión"
+      enrolled: "Inscrita %{day}"
+      enrolled_by: "Una máquina inscrita por"
+      revoke: "Revocar"
+      revoke_confirm: "¿Revocar %{name}? Se archiva, todos sus tokens terminan y ya no puede iniciar sesión."
+      revoked: "%{name} está revocada y ya no puede iniciar sesión."

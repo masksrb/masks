@@ -1,0 +1,13 @@
+de:
+  manage:
+    machines:
+      title: "Maschinen"
+      lede: "Clients, die diese App mit einem Registrierungstoken angemeldet hat. Jeder meldet sich mit einem eigenen Schlüssel an."
+      empty: "Diese App hat noch keine Maschine angemeldet."
+      last_seen: "Zuletzt angemeldet %{day}"
+      never: "Nie angemeldet"
+      enrolled: "Angemeldet %{day}"
+      enrolled_by: "Eine Maschine, angemeldet von"
+      revoke: "Widerrufen"
+      revoke_confirm: "%{name} widerrufen? Sie wird archiviert, jedes Token endet, und sie kann sich nicht mehr anmelden."
+      revoked: "%{name} ist widerrufen und kann sich nicht mehr anmelden."

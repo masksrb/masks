@@ -63,6 +63,8 @@ module Masks
                 description: "The app that enrolled this client as one of its machines. Archiving that app archives this client."
           field :enrolled, [ ClientType ], null: false,
                 description: "The machines this app enrolled that are not archived."
+          field :last_seen_at, GraphQL::Types::ISO8601DateTime,
+                description: "When this client last got a token. Null if it never has."
           field :archived_at, GraphQL::Types::ISO8601DateTime
           field :secret_expires_at, GraphQL::Types::ISO8601DateTime
           field :created_at, GraphQL::Types::ISO8601DateTime, null: false
@@ -83,6 +85,10 @@ module Masks
 
           def enrolled
             object.enrolled.active.order(:name)
+          end
+
+          def last_seen_at
+            Masks::Server::Token.where(kind: TokenType::GRANTS, client_id: object.id).maximum(:created_at)
           end
 
           def tokens(limit: nil)
