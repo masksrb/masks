@@ -238,8 +238,7 @@ masks can report figures to Prometheus, a tool that collects numbers from servic
 Without the variable, `/metrics` answers 404. It answers 30 requests from each IP address each
 minute.
 
-Each scrape counts from the database, so the figures agree across replicas. Every metric is a
-gauge.
+The gauges count from the database on each scrape, so their figures agree across replicas.
 
 | Metric                             | Counts                                                   |
 | ---------------------------------- | -------------------------------------------------------- |
@@ -253,6 +252,19 @@ gauge.
 | `masks_jobs_waiting`               | The background jobs ready to run and not yet picked up.  |
 
 The metrics that count something in a tenant carry a `tenant` label with its subdomain.
+
+Two more metrics time the requests the process answered since it started. Each replica reports its
+own figures, so scrape every replica.
+
+| Metric                  | Reports                                                                                  |
+| ----------------------- | ---------------------------------------------------------------------------------------- |
+| `masks_request_seconds` | A histogram of how long each request took, from 5 milliseconds to 10 seconds, by route. |
+| `masks_requests_total`  | The requests answered, by route and by status class: `2xx`, `3xx`, `4xx`, or `5xx`.     |
+
+The `route` label is `authorize`, `token`, `userinfo`, `login`, `manage`, `discovery`, or `other`.
+`authorize` covers `/authorize`, `/par`, and `/device_authorization`. `login` covers `/login` and
+`/logout`. `discovery` covers the `.well-known` documents and the key set. `manage` covers the
+console and its API. Scrapes of `/metrics` and `/up` are not counted.
 
 ## Backups, restores, and upgrades
 
