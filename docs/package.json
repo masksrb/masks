@@ -7,6 +7,8 @@
     "dev": "astro dev",
     "start": "astro dev",
     "build": "astro build",
+    "check": "CHECK_LINKS=1 astro build && node bin/readability.mjs",
+    "readability": "node bin/readability.mjs",
     "preview": "astro preview",
     "astro": "astro",
     "reference": "node bin/reference.mjs src/content/docs/reference/javascript/client.mdx && node bin/parity.mjs"
@@ -24,6 +26,7 @@
     "react-dom": "^19.3.0"
   },
   "devDependencies": {
+    "starlight-links-validator": "0.26.0",
     "typedoc": "^0.28.20",
     "typedoc-plugin-markdown": "^4.13.1",
     "typescript": "^6.0.3"

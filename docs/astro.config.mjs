@@ -3,6 +3,7 @@ import { defineConfig, passthroughImageService } from "astro/config";
 import starlight from "@astrojs/starlight";
 
 import react from "@astrojs/react";
+import starlightLinksValidator from "starlight-links-validator";
 
 // The RDoc site under public/api/ is plain files. Cloudflare Pages resolves a
 // directory to its index.html; `astro dev` does not, so /api/ruby/ 404s only
@@ -53,6 +54,9 @@ export default defineConfig({
     description:
       "Self-hosted auth for the open web, with a signing key for every tenant.",
     customCss: ["./src/styles/global.css"],
+    plugins: process.env.CHECK_LINKS
+      ? [starlightLinksValidator({ errorOnRelativeLinks: false, exclude: ["/api/**"] })]
+      : [],
     social: [
       {
         icon: "github",

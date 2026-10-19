@@ -70,11 +70,16 @@ jobs:
         working-directory: docs
         run: npm ci
 
-      - name: Build
+      - name: Build, and fail on a link that goes nowhere
         working-directory: docs
         env:
           DOCS_SITE: ${{ steps.target.outputs.site }}
+          CHECK_LINKS: "1"
         run: npm run build
+
+      - name: Report each page's reading grade
+        working-directory: docs
+        run: npm run readability
 
       - name: Check that this run can deploy
         id: deployable
