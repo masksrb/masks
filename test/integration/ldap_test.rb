@@ -348,6 +348,26 @@ module Masks
         assert_raises(RuntimeError) { Ldap::Listener.tls("/tmp/cert.pem", nil) }
       end
 
+      test "without a certificate the listener answers only on the server's own machine" do
+        config = ActiveSupport::OrderedOptions.new
+        config.ldap_port = 0
+        config.ldap_cert = nil
+        config.ldap_key = nil
+        config.ldap_plaintext = false
+
+        assert_equal "127.0.0.1", Ldap::Listener.from_configuration(config).host
+        assert Ldap::Listener.local_only?(config)
+
+        config.ldap_plaintext = true
+
+        assert_equal "0.0.0.0", Ldap::Listener.from_configuration(config).host
+        assert_not Ldap::Listener.local_only?(config)
+      end
+
+      test "with a certificate the listener answers on every address" do
+        assert_equal "0.0.0.0", Ldap::Listener.host_for(tls: OpenSSL::SSL::SSLContext.new, plaintext: false)
+      end
+
       test "an unbind closes the connection" do
         client = connect
         client.unbind

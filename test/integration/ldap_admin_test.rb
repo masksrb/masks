@@ -67,7 +67,11 @@ module Masks
       end
 
       test "an owner turns the LDAP directory on and off" do
-        assert_equal false, ask("{ tenant { ldapEnabled } ldapPort ldapTls }").dig("data", "tenant", "ldapEnabled")
+        facts = ask("{ tenant { ldapEnabled } ldapPort ldapTls ldapLocalOnly }")["data"]
+
+        assert_equal false, facts.dig("tenant", "ldapEnabled")
+        assert_equal false, facts["ldapTls"]
+        assert_equal true, facts["ldapLocalOnly"]
 
         ask("mutation { updateTenant(ldapEnabled: true) { tenant { ldapEnabled } } }")
         assert @tenant.reload.ldap?

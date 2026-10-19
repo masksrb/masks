@@ -17,6 +17,7 @@ de:
         address: "Adresse"
         port: "Port %{port}"
         ldaps: "Port %{port}, LDAPS"
+        local_only: "Ohne Zertifikat antwortet das Verzeichnis nur auf dem eigenen Rechner dieses Servers, damit kein Passwort unverschlüsselt über das Netz geht. Setzen Sie MASKS_LDAP_CERT und MASKS_LDAP_KEY, um LDAPS auf jeder Adresse anzubieten, oder MASKS_LDAP_PLAINTEXT=true in einem privaten Netz, dem Sie vertrauen."
         label: "Bezeichnung"
         issue: "Zugang ausstellen"
         shown_once: "Dieses Geheimnis wird nur einmal angezeigt. Kopieren Sie es jetzt."

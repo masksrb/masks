@@ -139,6 +139,9 @@ module Masks
           field :ldap_base_dn, String, null: false, description: "The base DN of this tenant's LDAP directory."
           field :ldap_port, Integer, null: false, description: "The port masks serves LDAP on."
           field :ldap_tls, Boolean, null: false, description: "Whether that port speaks LDAPS."
+          field :ldap_local_only, Boolean, null: false,
+                description: "Whether the directory answers only on the server's own machine, " \
+                             "since it has no certificate and MASKS_LDAP_PLAINTEXT is not set."
           field :saml_metadata_url, String, null: false
 
           field :minimum_password, Integer, null: false
@@ -234,6 +237,10 @@ module Masks
 
           def ldap_tls
             ::Rails.configuration.masks.ldap_cert.present?
+          end
+
+          def ldap_local_only
+            Ldap::Listener.local_only?
           end
 
           def ldap_base_dn

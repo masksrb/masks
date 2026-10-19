@@ -67,6 +67,7 @@ To run a query, send it to your own server's `/manage/graphql`.
 | `ldapBaseDn` | `String!` | The base DN of this tenant's LDAP directory. |
 | `ldapPort` | `Int!` | The port masks serves LDAP on. |
 | `ldapTls` | `Boolean!` | Whether that port speaks LDAPS. |
+| `ldapLocalOnly` | `Boolean!` | Whether the directory answers only on the server's own machine, since it has no certificate and MASKS_LDAP_PLAINTEXT is not set. |
 | `samlMetadataUrl` | `String!` |  |
 | `minimumPassword` | `Int!` |  |
 | `mailPreviews`<br />`client: ID` | [`[MailPreview!]!`](#mailpreview) |  |

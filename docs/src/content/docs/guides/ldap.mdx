@@ -55,8 +55,13 @@ With `MASKS_LDAP_CERT` and `MASKS_LDAP_KEY` set, the listener speaks LDAPS on th
 LDAP over an encrypted connection. `MASKS_LDAP_CERT` is a PEM file that holds the certificate,
 followed by any intermediates. See [environment variables](/reference/environment/#ldap).
 
-Without these two variables, the listener speaks plain LDAP, and passwords cross the network as they
-were typed. Use plain LDAP only on a private network that you trust.
+Without these two variables, the listener speaks plain LDAP and answers only on the server's own
+machine, at `127.0.0.1`, so no password crosses the network as it was typed. A service on the same
+machine can still bind. A service in another container cannot, since `127.0.0.1` inside the masks
+container is the container itself. `/manage` says so under **Directory** while this is the case.
+
+To serve plain LDAP on every network address anyway, set `MASKS_LDAP_PLAINTEXT` to `true`. Do this
+only on a private network that you trust, since every password then crosses it in the clear.
 
 StartTLS is not supported.
 

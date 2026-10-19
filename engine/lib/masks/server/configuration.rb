@@ -45,6 +45,7 @@ module Masks
         config.on_demand_tls = ENV.fetch("MASKS_ON_DEMAND_TLS", "false")
         config.ldap_cert = ENV["MASKS_LDAP_CERT"].presence
         config.ldap_key = ENV["MASKS_LDAP_KEY"].presence
+        config.ldap_plaintext = ENV.fetch("MASKS_LDAP_PLAINTEXT", "false") == "true"
         config
       end
 

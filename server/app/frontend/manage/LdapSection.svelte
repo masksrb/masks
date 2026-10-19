@@ -13,6 +13,7 @@
       ldapBaseDn
       ldapPort
       ldapTls
+      ldapLocalOnly
       ldapCredentials { id label bindDn usedAt createdAt issuedBy { identifier } }
       tenant { ldapEnabled ldapPasswordOnly }
     }
@@ -110,6 +111,10 @@
         <dt class="field-label">{t("ldap.connect.base_dn")}</dt>
         <dd><code class="font-mono text-xs break-all">{data.ldapBaseDn}</code></dd>
       </dl>
+
+      {#if data.ldapLocalOnly}
+        <p class="hint">{t("ldap.connect.local_only")}</p>
+      {/if}
 
       {#if data.ldapCredentials.length}
         <ul class="compact-list">

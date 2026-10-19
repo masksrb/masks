@@ -17,6 +17,7 @@ en:
         address: "Address"
         port: "Port %{port}"
         ldaps: "Port %{port}, LDAPS"
+        local_only: "Without a certificate, the directory answers only on this server's own machine, so no password crosses the network in the clear. Set MASKS_LDAP_CERT and MASKS_LDAP_KEY to serve LDAPS on every address, or MASKS_LDAP_PLAINTEXT=true on a private network you trust."
         label: "Label"
         issue: "Issue a credential"
         shown_once: "This secret is shown once. Copy it now."

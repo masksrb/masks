@@ -17,6 +17,7 @@ fr:
         address: "Adresse"
         port: "Port %{port}"
         ldaps: "Port %{port}, LDAPS"
+        local_only: "Sans certificat, l’annuaire ne répond que sur la machine de ce serveur, pour qu’aucun mot de passe ne traverse le réseau en clair. Définissez MASKS_LDAP_CERT et MASKS_LDAP_KEY pour servir LDAPS sur toutes les adresses, ou MASKS_LDAP_PLAINTEXT=true sur un réseau privé de confiance."
         label: "Libellé"
         issue: "Émettre un identifiant"
         shown_once: "Ce secret n'est affiché qu'une fois. Copiez-le maintenant."

@@ -6,11 +6,24 @@ module Masks
         IDLE = 5.minutes
         HANDSHAKE = 10.seconds
 
-        attr_reader :port
+        EVERY_ADDRESS = "0.0.0.0".freeze
+        THIS_MACHINE = "127.0.0.1".freeze
+
+        attr_reader :host, :port
 
         class << self
           def from_configuration(config = ::Rails.configuration.masks)
-            new(host: "0.0.0.0", port: config.ldap_port, tls: tls(config.ldap_cert, config.ldap_key))
+            tls = tls(config.ldap_cert, config.ldap_key)
+
+            new(host: host_for(tls: tls, plaintext: config.ldap_plaintext), port: config.ldap_port, tls: tls)
+          end
+
+          def host_for(tls:, plaintext:)
+            tls || plaintext ? EVERY_ADDRESS : THIS_MACHINE
+          end
+
+          def local_only?(config = ::Rails.configuration.masks)
+            config.ldap_cert.blank? && !config.ldap_plaintext
           end
 
           def tls(cert, key)
@@ -40,7 +53,7 @@ module Masks
         def start
           @server = TCPServer.new(@host, @wanted_port)
           @port = @server.local_address.ip_port
-          @logger.info("masks ldap: listening on #{@host}:#{@port}#{' with TLS' if @tls}")
+          @logger.info("masks ldap: listening on #{@host}:#{@port}#{' with TLS' if @tls}#{' on this machine only' if @host == THIS_MACHINE}")
           @acceptor = Thread.new { accept_loop }
           self
         end

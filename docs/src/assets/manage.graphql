@@ -1552,6 +1552,12 @@ type Query {
   ldapCredentials: [LdapCredential!]!
 
   """
+  Whether the directory answers only on the server's own machine, since it has
+  no certificate and MASKS_LDAP_PLAINTEXT is not set.
+  """
+  ldapLocalOnly: Boolean!
+
+  """
   The port masks serves LDAP on.
   """
   ldapPort: Int!

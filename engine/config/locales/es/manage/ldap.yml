@@ -17,6 +17,7 @@ es:
         address: "Dirección"
         port: "Puerto %{port}"
         ldaps: "Puerto %{port}, LDAPS"
+        local_only: "Sin certificado, el directorio responde solo en la propia máquina de este servidor, para que ninguna contraseña cruce la red sin cifrar. Defina MASKS_LDAP_CERT y MASKS_LDAP_KEY para servir LDAPS en todas las direcciones, o MASKS_LDAP_PLAINTEXT=true en una red privada de confianza."
         label: "Etiqueta"
         issue: "Emitir una credencial"
         shown_once: "Este secreto se muestra una sola vez. Cópialo ahora."

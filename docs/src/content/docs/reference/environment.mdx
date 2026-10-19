@@ -180,9 +180,10 @@ some apps use to look up accounts and check passwords. See [LDAP](/guides/ldap/)
 
 | Variable | Default | |
 | --- | --- | --- |
-| `MASKS_LDAP_PORT` | `3389` | The port the web server serves LDAP on, on every network address. |
+| `MASKS_LDAP_PORT` | `3389` | The port the web server serves LDAP on. With a certificate, or with `MASKS_LDAP_PLAINTEXT`, it listens on every network address. Otherwise it listens on `127.0.0.1` alone. |
 | `MASKS_LDAP_CERT` | none | A PEM file (a text file format for certificates and keys) that holds the certificate, followed by any intermediate certificates. With `MASKS_LDAP_KEY` set too, the server speaks LDAPS, which is LDAP over TLS. |
 | `MASKS_LDAP_KEY` | none | A PEM file that holds the certificate's private key. Set it together with `MASKS_LDAP_CERT`. |
+| `MASKS_LDAP_PLAINTEXT` | `false` | `true` serves plain LDAP on every network address without a certificate, so passwords cross the network as they were typed. Set it only on a private network that you trust. |
 
 ### Rails
 
