@@ -40,8 +40,13 @@ table = [
   "| **All plans** | #{totals.map { |n| "**#{n}**" }.join(' | ')} |"
 ].join("\n")
 
+notes = [
+  "Review means the suite asks a person for a screenshot of a page it cannot read: an error page, a second login, or the signed-out page. The HTTP tests under test/provider cover each of those pages.",
+  "Warnings carry a written reason in expected-failures.json, and skips carry one in expected-skips.json."
+]
+
 File.write(out, JSON.pretty_generate({ "plans" => plans, "totals" => statuses.zip(totals).to_h.merge("conditions_met" => totals[6], "conditions_failed" => totals[7], "conditions_warned" => totals[8]) }))
 
 summary = ENV["GITHUB_STEP_SUMMARY"]
-File.open(summary, "a") { |f| f.puts("## OpenID conformance", "", table, "") } if summary
-puts table
+File.open(summary, "a") { |f| f.puts("## OpenID conformance", "", table, "", *notes.map { |note| "- #{note}" }, "") } if summary
+puts table, "", notes
