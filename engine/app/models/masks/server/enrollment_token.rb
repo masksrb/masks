@@ -2,7 +2,7 @@ module Masks
   module Server
     class EnrollmentToken < Token
       SHORTEST = 1.minute
-      LONGEST = 1.hour
+      LONGEST = 1.day
 
       class << self
         def lifetime

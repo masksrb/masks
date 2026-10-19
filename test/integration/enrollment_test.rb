@@ -198,8 +198,8 @@ module Masks
         end
       end
 
-      test "a lifetime outside a minute to an hour is refused" do
-        %w[59 3601 soon].each do |lifetime|
+      test "a lifetime outside a minute to a day is refused" do
+        %w[59 86401 soon].each do |lifetime|
           assert_equal "invalid_request", enroll(expires_in: lifetime)["error"], lifetime
         end
       end

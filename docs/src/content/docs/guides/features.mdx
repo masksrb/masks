@@ -235,7 +235,7 @@ curl -u "$CLIENT_ID:$CLIENT_SECRET" https://acme.auth.example.com/enrollments \
 
 - Every scope must fall under one of the app's namespaces.
 - A prefix is refused, and so is any `masks:` scope.
-- The token lasts from a minute to an hour. The default is 15 minutes.
+- The token lasts from a minute to a day. The default is 15 minutes.
 - The token is spent the first time it registers a machine.
 - Discovery publishes the endpoint as `enrollment_endpoint`.
 
@@ -266,7 +266,8 @@ machine.
 - A machine can remove itself with a `DELETE` to its `registration_client_uri`.
 
 In the manage API, the new client names the app as `enrolledBy`. Archiving the app archives every
-machine it enrolled and revokes their tokens.
+machine it enrolled and revokes their tokens. The app's page in the console lists its machines under
+**Usage**, with when each one last signed in, and a manager can revoke one there.
 
 To unenroll a machine it enrolled, the app sends a `DELETE` to the same endpoint. It authenticates the
 same way:

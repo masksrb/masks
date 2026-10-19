@@ -12,6 +12,15 @@ module Masks
                    }, status: :too_many_requests
                  }
 
+      rate_limit to: 60, within: 1.hour, only: :create, name: "app",
+                 by: -> { [ current_tenant.id, claimed_client_id ].join(":") },
+                 with: -> {
+                   render json: {
+                     "error" => "too_many_requests",
+                     "error_description" => "too many enrollment tokens asked for by this app"
+                   }, status: :too_many_requests
+                 }
+
       before_action :no_store!
 
       def create
@@ -53,6 +62,14 @@ module Masks
           client_refused!("a public client proves nothing about itself, so it enrolls and unenrolls nothing") if client.public?
 
           client
+        end
+
+        def claimed_client_id
+          basic = ActionController::HttpAuthentication::Basic
+
+          named, = basic.user_name_and_password(request) if basic.has_basic_credentials?(request)
+
+          (named.presence || params[:client_id]).to_s
         end
 
         def not_enrolled
