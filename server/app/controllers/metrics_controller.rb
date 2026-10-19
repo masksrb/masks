@@ -29,6 +29,7 @@ class MetricsController < ActionController::Base
       lines = [ gauge("masks_tenants", "Tenants this server serves.", [ [ nil, tenants.size ] ]) ]
       GAUGES.each { |name, help| lines << gauge(name, help, held.map { |subdomain, counts| [ subdomain, counts.fetch(name) ] }) }
       lines.concat(jobs)
+      lines << RequestMetrics.to_s
 
       lines.join("\n") + "\n"
     end
