@@ -15,11 +15,11 @@ helps. You do not need to propose a fix.
 
 ## What happens next
 
-| Within   | masks                                                             |
-| -------- | ----------------------------------------------------------------- |
-| 3 days   | Answers the report and says whether it is a hole.                 |
-| 14 days  | Has a fix on `main` for a hole that lets someone in or leaks data. |
-| 90 days  | Has a fix on `main` for every other confirmed hole.               |
+| Within  | masks                                                              |
+| ------- | ------------------------------------------------------------------ |
+| 3 days  | Answers the report and says whether it is a hole.                  |
+| 14 days | Has a fix on `main` for a hole that lets someone in or leaks data. |
+| 90 days | Has a fix on `main` for every other confirmed hole.                |
 
 A fix ships in the next release, and the advisory is published with credit to the reporter unless
 they ask otherwise. A hole that affects a self-hosted deployment is also written up in the release
