@@ -1,0 +1,179 @@
+{
+  "sdks": [
+    { "key": "rails", "label": "`Masks::Rails`" },
+    { "key": "client", "label": "`Masks::Client`" },
+    { "key": "web", "label": "`@masks/client`" },
+    { "key": "node", "label": "`@masks/server`" },
+    { "key": "python", "label": "Python" },
+    { "key": "go", "label": "Go" }
+  ],
+  "features": [
+    {
+      "name": "Signing in with the code flow and PKCE",
+      "cells": {
+        "rails": { "file": "test/engine/session_test.rb", "test": "starting sends the browser to authorize with pkce, state and nonce" },
+        "client": { "file": "test/client/session_test.rb", "test": "test_the_authorization_url_carries_pkce_and_every_resource" },
+        "web": { "file": "web/test/browser.test.js", "test": "a callback exchanges the code and returns where to go back to", "note": "Yes, through a backend or in the page" },
+        "node": { "file": "node/test/signin.test.js", "test": "a sign-in goes through masks with PKCE, a nonce, and an organization" },
+        "python": { "file": "python/tests/test_signin.py", "test": "test_start_builds_a_pkce_request" },
+        "go": { "file": "go/signin_test.go", "test": "TestSigningInWithTheCodeFlow" }
+      }
+    },
+    {
+      "name": "The handshake",
+      "cells": {
+        "rails": { "file": "test/engine/handshake_test.rb", "test": "approving redeems the token server to server and hands the registration to the store" },
+        "client": { "file": "test/client/handshake_test.rb", "test": "test_completing_redeems_the_token_as_a_bearer_and_names_the_client" },
+        "web": { "file": "web/test/session.test.js", "test": "an app that has not shaken hands says so, rather than offering a login", "note": "Starts it through a backend" },
+        "node": { "file": "node/test/signin.test.js", "test": "a handshake asks masks to register this app and redeems the answer" },
+        "python": { "file": "python/tests/test_fastapi.py", "test": "test_a_handshake_connects_the_app" },
+        "go": { "file": "go/signin_test.go", "test": "TestAHandshakeRegistersTheAppWithASecret" }
+      }
+    },
+    {
+      "name": "Redeeming an initial access token",
+      "cells": {
+        "rails": { "file": "test/engine/handshake_test.rb", "test": "the secret never travels the browser" },
+        "client": { "file": "test/client/registration_test.rb", "test": "test_an_initial_access_token_is_sent_as_a_bearer" },
+        "web": "no",
+        "node": { "file": "node/test/masks.test.js", "test": "registration with an initial access token" },
+        "python": { "file": "python/tests/test_client.py", "test": "test_registration_with_an_initial_access_token" },
+        "go": { "file": "go/masks_test.go", "test": "TestRegistrationWithAnInitialAccessToken" }
+      }
+    },
+    {
+      "name": "Enrolling and unenrolling machines",
+      "link": "/guides/features/#enrolling-a-machine",
+      "cells": {
+        "rails": "no",
+        "client": { "file": "test/client/session_test.rb", "test": "test_an_app_unenrolls_a_machine_it_enrolled" },
+        "web": "no",
+        "node": { "file": "node/test/masks.test.js", "test": "an app unenrolls only the machines it enrolled" },
+        "python": { "file": "python/tests/test_client.py", "test": "test_an_app_unenrolls_only_its_own_machines" },
+        "go": { "file": "go/masks_test.go", "test": "TestAnAppEnrollsAMachineAndUnenrollsIt" }
+      }
+    },
+    {
+      "name": "Refreshing tokens",
+      "cells": {
+        "rails": { "file": "test/engine/refresh_test.rb", "test": "two processes holding one expired session refresh it once and keep the same tokens" },
+        "client": { "file": "test/client/machine_test.rb", "test": "test_a_transport_holding_tokens_refreshes_them_and_keeps_the_refresh_token" },
+        "web": { "file": "web/test/browser.test.js", "test": "refresh sends the refresh token and the resource" },
+        "node": { "file": "node/test/masks.test.js", "test": "a refresh source keeps each rotated token" },
+        "python": { "file": "python/tests/test_fastapi.py", "test": "test_an_expired_token_is_refreshed_with_the_identity" },
+        "go": { "file": "go/masks_test.go", "test": "TestARefreshSourceKeepsEachRotatedToken" }
+      }
+    },
+    {
+      "name": "Token exchange",
+      "cells": {
+        "rails": "no",
+        "client": { "file": "test/client/session_test.rb", "test": "test_an_exchange_carries_an_id_token_and_an_actor_token_when_given" },
+        "web": "no",
+        "node": { "file": "node/test/masks.test.js", "test": "a token exchange sends what it asks for and holds the token to its key" },
+        "python": { "file": "python/tests/test_client.py", "test": "test_an_exchange_acts_on_behalf_of_the_subject" },
+        "go": { "file": "go/masks_test.go", "test": "TestATokenExchangeKeepsTheKey" }
+      }
+    },
+    {
+      "name": "Delegation",
+      "link": "#delegation",
+      "cells": {
+        "rails": { "file": "test/engine/configuration_test.rb", "test": "an app that delegates asks the handshake for delegation too", "note": "Asks for it in its handshake" },
+        "client": { "file": "test/client/delegations_test.rb", "test": "test_finishing_holds_the_connection_and_a_secret" },
+        "web": "no",
+        "node": { "file": "node/test/signin.test.js", "test": "a delegation connects a provider and releases its token" },
+        "python": { "file": "python/tests/test_signin.py", "test": "test_a_delegation_holds_a_connection_and_releases_upstream_tokens" },
+        "go": { "file": "go/signin_test.go", "test": "TestADelegationConnectsAnAccountAndReleasesItsToken" }
+      }
+    },
+    {
+      "name": "Client credentials",
+      "cells": {
+        "rails": "no",
+        "client": { "file": "test/client/session_test.rb", "test": "test_a_service_asks_for_its_own_token_with_a_secret" },
+        "web": "no",
+        "node": { "file": "node/test/masks.test.js", "test": "client credentials with ${method}" },
+        "python": { "file": "python/tests/test_client.py", "test": "test_client_credentials_with_a_secret" },
+        "go": { "file": "go/masks_test.go", "test": "TestClientCredentialsWithASecret" }
+      }
+    },
+    {
+      "name": "Revocation",
+      "cells": {
+        "rails": { "file": "test/engine/session_test.rb", "test": "signing out revokes the refresh token at the issuer", "note": "Revokes its refresh token at sign-out" },
+        "client": { "file": "test/client/machine_test.rb", "test": "test_requests_off_the_token_endpoint_carry_no_proof" },
+        "web": { "file": "web/test/browser.test.js", "test": "logout revokes the refresh token", "note": "Revokes its refresh token at sign-out" },
+        "node": { "file": "node/test/masks.test.js", "test": "revocation sends the token" },
+        "python": { "file": "python/tests/test_client.py", "test": "test_revocation_sends_the_token" },
+        "go": { "file": "go/masks_test.go", "test": "TestRevocationSendsTheToken" }
+      }
+    },
+    {
+      "name": "Introspection",
+      "cells": {
+        "rails": "no",
+        "client": { "file": "test/client/session_test.rb", "test": "test_introspection_answers_a_claims_object_rather_than_a_hash" },
+        "web": "no",
+        "node": { "file": "node/test/masks.test.js", "test": "introspection describes an active token" },
+        "python": { "file": "python/tests/test_client.py", "test": "test_introspection_describes_a_live_token" },
+        "go": { "file": "go/masks_test.go", "test": "TestIntrospectionDescribesALiveToken" }
+      }
+    },
+    {
+      "name": "The device flow",
+      "cells": {
+        "rails": "no",
+        "client": { "file": "test/client/device_test.rb", "test": "test_polling_waits_through_pending_and_answers_the_tokens" },
+        "web": "no",
+        "node": { "file": "node/test/masks.test.js", "test": "the device flow waits for approval" },
+        "python": { "file": "python/tests/test_client.py", "test": "test_the_device_flow_waits_for_approval" },
+        "go": { "file": "go/masks_test.go", "test": "TestTheDeviceFlowWaitsForApproval" }
+      }
+    },
+    {
+      "name": "`private_key_jwt` client authentication",
+      "cells": {
+        "rails": "no",
+        "client": { "file": "test/client/session_test.rb", "test": "test_a_client_holding_a_private_key_signs_an_assertion_instead_of_sending_a_secret" },
+        "web": "no",
+        "node": { "file": "node/test/masks.test.js", "test": "a private_key_jwt client gets a token held to its key" },
+        "python": { "file": "python/tests/test_client.py", "test": "test_a_private_key_jwt_client_gets_a_token_held_to_its_key" },
+        "go": { "file": "go/masks_test.go", "test": "TestAPrivateKeyJWTClientGetsATokenHeldToItsKey" }
+      }
+    },
+    {
+      "name": "Sending DPoP proofs as a client",
+      "cells": {
+        "rails": "no",
+        "client": { "file": "test/client/machine_test.rb", "test": "test_every_token_request_carries_a_new_proof" },
+        "web": { "file": "web/test/browser.test.js", "test": "with dpop on, every token request carries a proof made with one key", "note": "Yes, with `dpop: true`" },
+        "node": { "file": "node/test/masks.test.js", "test": "a signed fetch signs each request for its resource" },
+        "python": { "file": "python/tests/test_signin.py", "test": "test_userinfo_with_a_held_token_sends_a_proof" },
+        "go": { "file": "go/masks_test.go", "test": "TestATransportSignsEachRequestForItsResource" }
+      }
+    },
+    {
+      "name": "Checking access tokens, including DPoP-bound ones",
+      "cells": {
+        "rails": { "file": "test/engine/protected_resource_test.rb", "test": "a proof seen before is still refused with a challenge" },
+        "client": { "file": "test/client/dpop_test.rb", "test": "test_a_bound_token_with_a_matching_proof_becomes_claims" },
+        "web": "no",
+        "node": { "file": "node/test/masks.test.js", "test": "a verifier refuses misused proofs" },
+        "python": { "file": "python/tests/test_resource.py", "test": "test_a_verifier_refuses_misused_proofs" },
+        "go": { "file": "go/masks_test.go", "test": "TestAVerifierRefusesMisusedProofs" }
+      }
+    },
+    {
+      "name": "One store of seen DPoP proofs for every process",
+      "cells": {
+        "rails": { "file": "test/engine/configuration_test.rb", "test": "a resource server remembers proofs in the cache", "note": "Yes, in `Rails.cache`" },
+        "client": { "file": "test/client/dpop_test.rb", "test": "test_a_proof_is_used_once_even_when_each_request_builds_its_own_resource", "note": "With a store you supply" },
+        "web": "no",
+        "node": { "file": "node/test/stores.test.js", "test": "a replay store over a Redis store accepts each proof once", "note": "With a store you supply" },
+        "python": { "file": "python/tests/test_resource.py", "test": "test_verifiers_can_share_a_replay_store", "note": "With a store you supply" },
+        "go": { "file": "go/masks_test.go", "test": "TestVerifiersSharingAReplayStoreRefuseAProofSeenByEither", "note": "With a store you supply" }
+      }
+    }
+  ]
+}

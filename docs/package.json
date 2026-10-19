@@ -9,7 +9,7 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "reference": "node bin/reference.mjs src/content/docs/reference/javascript/client.mdx"
+    "reference": "node bin/reference.mjs src/content/docs/reference/javascript/client.mdx && node bin/parity.mjs"
   },
   "dependencies": {
     "@astrojs/react": "^6.0.5",
