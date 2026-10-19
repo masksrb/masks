@@ -1,9 +1,14 @@
+require "strscan"
+
 module Masks
   module Server
     module Scim
       class Filter
         LONGEST = 512
-        COMPARISON = /\A\s*([A-Za-z][\w.:\[\]" -]*?)\s+(eq|ne|co|sw|ew|pr|gt|ge|lt|le)(?:\s+("(?:[^"\\]|\\.)*"|true|false|null|[\d.]+))?\s*\z/i
+        TOKEN = /"(?:[^"\\]|\\.)*"|(?:[^\s"\[]|\[[^\]]*\])+/
+        PATH = /\A[A-Za-z][\w.:\[\]" ]*\z/
+        VALUE = /\A(?:"(?:[^"\\]|\\.)*"|true|false|null|[\d.]+)\z/
+        OPERATORS = %w[eq ne co sw ew pr gt ge lt le].freeze
         ATTRIBUTES = {
           "id" => "actors.uuid",
           "username" => :user_name,
@@ -33,7 +38,7 @@ module Masks
         def apply(relation)
           raise Error.new(:bad_request, "a filter is at most #{LONGEST} characters", scim_type: "invalidFilter") if @expression.length > LONGEST
 
-          clauses = @expression.split(/\s+and\s+/i)
+          clauses = clauses_of(tokens)
 
           raise Error.new(:bad_request, "at most four comparisons joined by and are understood", scim_type: "invalidFilter") if clauses.size > 4
 
@@ -42,12 +47,44 @@ module Masks
 
         private
 
+          def tokens
+            scanner = StringScanner.new(@expression)
+            held = []
+
+            until scanner.eos?
+              next if scanner.skip(/\s+/)
+
+              token = scanner.scan(TOKEN)
+
+              raise unreadable(@expression) if token.nil?
+
+              held << token
+            end
+
+            held
+          end
+
+          def clauses_of(tokens)
+            clauses = [ [] ]
+
+            tokens.each do |token|
+              token.casecmp?("and") ? clauses << [] : clauses.last << token
+            end
+
+            clauses
+          end
+
+          def unreadable(clause)
+            Error.new(:bad_request, "#{clause.strip} is not a filter this server reads", scim_type: "invalidFilter")
+          end
+
           def compare(relation, clause)
-            match = COMPARISON.match(clause)
+            path, operator, raw = clause
 
-            raise Error.new(:bad_request, "#{clause.strip} is not a filter this server reads", scim_type: "invalidFilter") if match.nil?
+            raise unreadable(clause.join(" ")) unless clause.size.between?(2, 3)
+            raise unreadable(clause.join(" ")) unless PATH.match?(path) && OPERATORS.include?(operator.downcase)
+            raise unreadable(clause.join(" ")) unless raw.nil? || VALUE.match?(raw)
 
-            path, operator, raw = match.captures
             key = normalized(path)
             column = @columns[key]
             operator = operator.downcase
