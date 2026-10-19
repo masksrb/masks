@@ -116,7 +116,7 @@ export function masksError(
   description?: string,
   status?: number,
 ): MasksError {
-  const Kind = KINDS[code] ?? MasksError;
+  const Kind = Object.hasOwn(KINDS, code) ? KINDS[code] : MasksError;
   const error = new Kind(code, description, status);
 
   error.name = Kind.name;
