@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.5.1](https://github.com/masksrb/masks/compare/client-v2.5.0...client-v2.5.1) (2026-10-19)
+
+
+### Fixes
+
+* **web:** an error code from the server picks only a known error kind, never a property inherited by every object ([0039c85](https://github.com/masksrb/masks/commit/0039c853c684818c4e63ac6d4682e8821a174e07))
+
 ## [2.5.0](https://github.com/masksrb/masks/compare/client-v2.4.1...client-v2.5.0) (2026-10-14)
 
 

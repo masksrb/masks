@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.10.0](https://github.com/masksrb/masks/compare/masks-server-v0.9.0...masks-server-v0.10.0) (2026-10-19)
+
+
+### Fixes
+
+* **engine:** a client secret past its expiry is refused at the token endpoint, introspection, and revocation, and the client page says when the secret expires ([c21a8d5](https://github.com/masksrb/masks/commit/c21a8d5c3fb3ea34efd6b7f20c047507c3dcdeed))
+* **engine:** a client's key set is read again for an unknown key id at most once in five minutes, so a stranger cannot make masks fetch an app's jwks_uri over and over ([bab53e3](https://github.com/masksrb/masks/commit/bab53e31cd3fbfc44e398f7e476a9823e3d25462))
+* **engine:** a nickname given up is held for 30 days, and changing one asks for a recent sign-in ([6b71e7a](https://github.com/masksrb/masks/commit/6b71e7a35d11b23211d9eac0235f145828081d04))
+* **engine:** a phone added or changed during sign-in shares the sending limit and the per-account cap every other code has, so a new account cannot run up a texting bill ([870b550](https://github.com/masksrb/masks/commit/870b550cd01f77829fdba319979191a46a8f122a))
+* **engine:** a refresh token chain stops 90 days after the sign-in however often it is used, and a client sets its own limit ([154c985](https://github.com/masksrb/masks/commit/154c98509de7898c983006641fd084eb1854021e))
+* **engine:** a SCIM filter longer than 512 characters is refused before it is parsed ([bc783b6](https://github.com/masksrb/masks/commit/bc783b6af56e2a8fa9b26126328a6a0bfbedcb7a))
+* **engine:** a sign-in error goes back only to an approved client, and a self-registered client's errors show on masks ([918cd47](https://github.com/masksrb/masks/commit/918cd4779963f7f2b00fe8abdc5d560b2f1071e0))
+* **engine:** LDAP answers only on the server's own machine until it has a certificate, so no password crosses the network in the clear ([573aeab](https://github.com/masksrb/masks/commit/573aeabcf385eeb53162984bb96505aafc4b661a))
+* **engine:** signing out everywhere ends access tokens too, so a password reset, a second-factor reset, a received signal, or a manager's sign-out stops an app at once ([96cf188](https://github.com/masksrb/masks/commit/96cf18805b02157a9655e9bea798238a87f11ecb))
+* **engine:** the address channel is one of the two known names, taken from the list rather than from the request ([f9bee50](https://github.com/masksrb/masks/commit/f9bee5025d6191b5634f6b42ccf78ef0f260f8f5))
+* **engine:** the address form answers only for email and phone, so no other method of the account can be named in the URL ([0d23062](https://github.com/masksrb/masks/commit/0d2306203c7ca19c3fac72d630624a66d3c70fb7))
+* **engine:** turning off security mail asks for a recent sign-in and is recorded, and a changed password, a reset password, and a risky sign-in are always announced ([8e0f117](https://github.com/masksrb/masks/commit/8e0f1174fa237790c4e268684fc0be271158a846))
+* **server:** a proxy's certificate check reaches /tls/allowed at the server's own address once MASKS_ON_DEMAND_TLS is true, and the path stays closed until then ([5e38622](https://github.com/masksrb/masks/commit/5e3862271cb725e48c40ac2aacd5da9bd0cfe64b))
+
+
+### Refactoring
+
+* **engine:** a code, a device grant, and a SAML assertion read auth_time from the session alone, and first_factored! assigns and saves once ([79a2182](https://github.com/masksrb/masks/commit/79a2182d15c24128be0394f38b412523bb9ae2ac))
+* **engine:** a SCIM filter is read by a tokenizer that never backtracks ([c297ee9](https://github.com/masksrb/masks/commit/c297ee9d34fe22fe3e80cc4845c15fdb45a73f8f))
+
 ## [0.9.0](https://github.com/masksrb/masks/compare/masks-server-v0.8.0...masks-server-v0.9.0) (2026-10-14)
 
 

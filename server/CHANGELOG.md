@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.10.0](https://github.com/masksrb/masks/compare/server-v0.9.0...server-v0.10.0) (2026-10-19)
+
+
+### Features
+
+* **server:** /metrics reports how long authorize, token, and userinfo take, and how many requests each route answered ([d869c6c](https://github.com/masksrb/masks/commit/d869c6c6aa8e2da62146dd7b5dec89be313ab2c1))
+
+
+### Fixes
+
+* **engine:** a client secret past its expiry is refused at the token endpoint, introspection, and revocation, and the client page says when the secret expires ([c21a8d5](https://github.com/masksrb/masks/commit/c21a8d5c3fb3ea34efd6b7f20c047507c3dcdeed))
+* **engine:** a nickname given up is held for 30 days, and changing one asks for a recent sign-in ([6b71e7a](https://github.com/masksrb/masks/commit/6b71e7a35d11b23211d9eac0235f145828081d04))
+* **engine:** a refresh token chain stops 90 days after the sign-in however often it is used, and a client sets its own limit ([154c985](https://github.com/masksrb/masks/commit/154c98509de7898c983006641fd084eb1854021e))
+* **engine:** a sign-in error goes back only to an approved client, and a self-registered client's errors show on masks ([918cd47](https://github.com/masksrb/masks/commit/918cd4779963f7f2b00fe8abdc5d560b2f1071e0))
+* **engine:** LDAP answers only on the server's own machine until it has a certificate, so no password crosses the network in the clear ([573aeab](https://github.com/masksrb/masks/commit/573aeabcf385eeb53162984bb96505aafc4b661a))
+* **engine:** turning off security mail asks for a recent sign-in and is recorded, and a changed password, a reset password, and a risky sign-in are always announced ([8e0f117](https://github.com/masksrb/masks/commit/8e0f1174fa237790c4e268684fc0be271158a846))
+* **server:** a proxy's certificate check reaches /tls/allowed at the server's own address once MASKS_ON_DEMAND_TLS is true, and the path stays closed until then ([5e38622](https://github.com/masksrb/masks/commit/5e3862271cb725e48c40ac2aacd5da9bd0cfe64b))
+* **server:** the image takes css_parser 3.3.0, which closes a file read through [@import](https://github.com/import) and a slow regex in mail styling ([9328804](https://github.com/masksrb/masks/commit/9328804b171562cdd5deedb27568b766b07bb3d1))
+
 ## [0.9.0](https://github.com/masksrb/masks/compare/server-v0.8.0...server-v0.9.0) (2026-10-14)
 
 

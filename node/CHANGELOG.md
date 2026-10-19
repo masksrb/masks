@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.3.1](https://github.com/masksrb/masks/compare/node-v0.3.0...node-v0.3.1) (2026-10-19)
+
+
+### Fixes
+
+* **node:** a sign-out by GET from a browser that names no site shows a Sign out button that posts, so another site cannot sign somebody out of an app ([4c8561c](https://github.com/masksrb/masks/commit/4c8561c097f86c79cfdc32a74c4baf6db44d446f))
+* **node:** issuer and path strings lose their slashes with a loop, not a regex that backtracks ([430bab0](https://github.com/masksrb/masks/commit/430bab0515043486a89502f80f63370e7f35d7da))
+* **node:** one provenance check guards sign-out and the handshake, so a POST that names no site is refused and the Sign out page posts back to its own address ([2f91116](https://github.com/masksrb/masks/commit/2f91116ef60a9c4ba398180669fc08e65f8c7dad))
+
 ## [0.3.0](https://github.com/masksrb/masks/compare/node-v0.2.0...node-v0.3.0) (2026-10-14)
 
 
