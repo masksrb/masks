@@ -238,7 +238,7 @@ func TestTheSessionNeverCarriesATokenToTheBrowser(t *testing.T) {
 	}
 
 	for _, cookie := range h.cookies() {
-		if strings.Contains(cookie.Value, "eyJ") || strings.Contains(cookie.Value, "ada") {
+		if strings.Contains(cookie.Value, "eyJ") || strings.Contains(cookie.Value, h.issuer.url()) {
 			t.Fatalf("cookie %s is readable: %s", cookie.Name, cookie.Value)
 		}
 	}

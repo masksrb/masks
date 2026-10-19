@@ -184,7 +184,7 @@ def test_the_session_cookie_is_sealed_and_strict(app: TestClient, fake: Fake) ->
     cookie = landed.headers["set-cookie"]
 
     assert "HttpOnly" in cookie and "Secure" in cookie and "SameSite=Lax" in cookie
-    assert "ada" not in cookie and "eyJ" not in cookie
+    assert ISSUER not in cookie and "eyJ" not in cookie
 
     session = app.get("/auth/session")
 
