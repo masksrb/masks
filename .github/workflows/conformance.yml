@@ -11,6 +11,9 @@ on:
         description: Conformance suite release tag
         required: false
 
+permissions:
+  contents: read
+
 concurrency:
   group: conformance-${{ github.ref }}
   cancel-in-progress: true
