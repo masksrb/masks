@@ -24,6 +24,27 @@ module Masks
         end
       end
 
+      test "every preset's redirect is a URL with a scheme and a host, and the picker lists each one" do
+        keys = AppPreset.all.map(&:key)
+
+        %w[tailscale headscale home-assistant synapse bookstack wikijs minio argocd synology].each do |key|
+          assert_includes keys, key
+        end
+
+        AppPreset.all.each do |preset|
+          preset.redirect_uris(base: "https://app.example.com").each do |uri|
+            parsed = URI.parse(uri)
+
+            assert parsed.host.present? || parsed.scheme == "app.immich", "#{preset.key}: #{uri}"
+          end
+        end
+      end
+
+      test "a tailnet's redirect is Tailscale's own, whatever address the operator enters" do
+        assert_equal [ "https://login.tailscale.com/a/oauth_response" ],
+                     AppPreset.find("tailscale").redirect_uris(base: "https://login.tailscale.com")
+      end
+
       test "a redirect is built on the app's address without a doubled slash" do
         assert_equal [ "https://grafana.example.com/login/generic_oauth" ],
                      AppPreset.find("grafana").redirect_uris(base: "https://grafana.example.com/")

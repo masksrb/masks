@@ -182,6 +182,108 @@ module Masks
             [ "OAUTH_PROVIDER_NAME", "{tenant}" ], [ "ENABLE_OAUTH_SIGNUP", "true" ],
             [ "ENABLE_OAUTH_ROLE_MANAGEMENT", "true" ], [ "OAUTH_ROLES_CLAIM", "groups" ], [ "OAUTH_ADMIN_ROLES", "admins" ]
           ]
+        },
+        {
+          key: "tailscale", name: "Tailscale",
+          redirects: [ "https://login.tailscale.com/a/oauth_response" ],
+          scopes: %w[openid profile email],
+          guide: "https://tailscale.com/kb/1240/sso-custom-oidc",
+          settings: [
+            [ "WebFinger domain", "{masks_host}" ], [ "Issuer URL", "{issuer}" ],
+            [ "Client ID", "{client_id}" ], [ "Client secret", "{client_secret}" ]
+          ]
+        },
+        {
+          key: "headscale", name: "Headscale",
+          redirects: [ "{base}/oidc/callback" ],
+          scopes: %w[openid profile email groups],
+          guide: "https://headscale.net/stable/ref/oidc/",
+          settings: [
+            [ "oidc.issuer", "{issuer}" ], [ "oidc.client_id", "{client_id}" ], [ "oidc.client_secret", "{client_secret}" ],
+            [ "oidc.scope", "[openid, profile, email, groups]" ], [ "oidc.allowed_groups", "[admins]" ]
+          ]
+        },
+        {
+          key: "home-assistant", name: "Home Assistant (OIDC integration)",
+          redirects: [ "{base}/auth/oidc/callback" ],
+          scopes: %w[openid profile email groups],
+          guide: "https://github.com/christiaangoossens/hass-oidc-auth",
+          settings: [
+            [ "auth_oidc.discovery_url", "{discovery}" ], [ "auth_oidc.client_id", "{client_id}" ],
+            [ "auth_oidc.client_secret", "{client_secret}" ], [ "auth_oidc.display_name", "{tenant}" ],
+            [ "auth_oidc.roles.admin", "admins" ]
+          ]
+        },
+        {
+          key: "synapse", name: "Matrix (Synapse)", asks: { "name" => "masks" },
+          redirects: [ "{base}/_synapse/client/oidc/callback" ],
+          scopes: %w[openid profile email],
+          guide: "https://element-hq.github.io/synapse/latest/openid.html",
+          settings: [
+            [ "oidc_providers", "- idp_id: {name}\n  idp_name: {tenant}\n  issuer: {issuer}\n  client_id: {client_id}\n" \
+                                "  client_secret: {client_secret}\n  scopes: [openid, profile, email]\n" \
+                                "  user_mapping_provider:\n    config:\n      localpart_template: \"{{ user.preferred_username }}\"\n" \
+                                "      display_name_template: \"{{ user.name }}\"\n      email_template: \"{{ user.email }}\"" ]
+          ]
+        },
+        {
+          key: "bookstack", name: "BookStack",
+          redirects: [ "{base}/oidc/callback" ],
+          scopes: %w[openid profile email groups],
+          guide: "https://www.bookstackapp.com/docs/admin/oidc-auth/",
+          settings: [
+            [ "AUTH_METHOD", "oidc" ], [ "OIDC_NAME", "{tenant}" ], [ "OIDC_ISSUER", "{issuer}" ], [ "OIDC_ISSUER_DISCOVER", "true" ],
+            [ "OIDC_CLIENT_ID", "{client_id}" ], [ "OIDC_CLIENT_SECRET", "{client_secret}" ],
+            [ "OIDC_DISPLAY_NAME_CLAIMS", "name" ], [ "OIDC_ADDITIONAL_SCOPES", "groups" ],
+            [ "OIDC_USER_TO_GROUPS", "true" ], [ "OIDC_GROUPS_CLAIM", "groups" ], [ "OIDC_REMOVE_FROM_GROUPS", "true" ]
+          ]
+        },
+        {
+          key: "wikijs", name: "Wiki.js", asks: { "name" => "masks" },
+          redirects: [ "{base}/login/{name}/callback" ],
+          scopes: %w[openid profile email groups],
+          guide: "https://docs.requarks.io/auth/oidc",
+          settings: [
+            [ "Client ID", "{client_id}" ], [ "Client Secret", "{client_secret}" ],
+            [ "Authorization Endpoint URL", "{authorize}" ], [ "Token Endpoint URL", "{token}" ],
+            [ "User Info Endpoint URL", "{userinfo}" ], [ "Issuer", "{issuer}" ], [ "Logout URL", "{logout}" ],
+            [ "Email Claim", "email" ], [ "Display Name Claim", "name" ], [ "Groups Claim", "groups" ],
+            [ "Callback URL", "{base}/login/{name}/callback" ]
+          ]
+        },
+        {
+          key: "minio", name: "MinIO",
+          redirects: [ "{base}/oauth_callback" ],
+          scopes: %w[openid profile email groups],
+          guide: "https://min.io/docs/minio/linux/operations/external-iam/configure-openid-external-identity-management.html",
+          settings: [
+            [ "MINIO_IDENTITY_OPENID_CONFIG_URL", "{discovery}" ], [ "MINIO_IDENTITY_OPENID_CLIENT_ID", "{client_id}" ],
+            [ "MINIO_IDENTITY_OPENID_CLIENT_SECRET", "{client_secret}" ], [ "MINIO_IDENTITY_OPENID_SCOPES", "openid,profile,email,groups" ],
+            [ "MINIO_IDENTITY_OPENID_CLAIM_NAME", "groups" ], [ "MINIO_IDENTITY_OPENID_REDIRECT_URI", "{base}/oauth_callback" ],
+            [ "MINIO_IDENTITY_OPENID_DISPLAY_NAME", "{tenant}" ]
+          ]
+        },
+        {
+          key: "argocd", name: "Argo CD",
+          redirects: [ "{base}/auth/callback", "{base}/api/dex/callback" ],
+          scopes: %w[openid profile email groups],
+          guide: "https://argo-cd.readthedocs.io/en/stable/operator-manual/user-management/#existing-oidc-provider",
+          settings: [
+            [ "argocd-cm oidc.config", "name: {tenant}\nissuer: {issuer}\nclientID: {client_id}\nclientSecret: {client_secret}\n" \
+                                       "requestedScopes: [openid, profile, email, groups]" ],
+            [ "argocd-rbac-cm policy.csv", "g, admins, role:admin" ], [ "argocd-rbac-cm scopes", "[groups]" ]
+          ]
+        },
+        {
+          key: "synology", name: "Synology DSM",
+          redirects: [ "{base}", "{base}/" ],
+          scopes: %w[openid profile email],
+          guide: "https://kb.synology.com/en-global/DSM/help/DSM/AdminCenter/connection_sso_client",
+          settings: [
+            [ "Profile", "OIDC" ], [ "Name", "{tenant}" ], [ "Well Known URL", "{discovery}" ],
+            [ "Client ID", "{client_id}" ], [ "Client secret", "{client_secret}" ],
+            [ "Scope", "openid profile email" ], [ "Username claim", "preferred_username" ], [ "Redirect URI", "{base}" ]
+          ]
         }
       ].map(&:freeze).freeze
 

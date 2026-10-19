@@ -64,14 +64,35 @@ masks then:
 
 | App | Needs beyond its address |
 | --- | --- |
-| Grafana, Nextcloud, Immich, Outline, Audiobookshelf, Portainer, Vaultwarden, Mealie, Open WebUI | Nothing |
-| Gitea, Forgejo, Paperless-ngx, Proxmox VE, Jellyfin (SSO plugin) | **Name it uses for masks**. This is `masks` unless you change it. |
+| Grafana, Nextcloud, Immich, Outline, Audiobookshelf, Portainer, Vaultwarden, Mealie, Open WebUI, Headscale, Home Assistant (OIDC integration), BookStack, MinIO, Argo CD, Synology DSM | Nothing |
+| Gitea, Forgejo, Paperless-ngx, Proxmox VE, Jellyfin (SSO plugin), Matrix (Synapse) | **Name it uses for masks**. This is `masks` unless you change it. |
+| Wiki.js | **Name it uses for masks**. Wiki.js shows it in the strategy's callback URL. Copy it from there. |
+| Tailscale | Nothing. Its address is `https://login.tailscale.com`. See [signing in to a tailnet](#signing-in-to-a-tailnet). |
 | Any app behind Caddy, Traefik, or nginx | Nothing. See [forward authentication](/guides/forward-auth/). |
 
-Grafana, Nextcloud, Gitea, Forgejo, Paperless-ngx, Proxmox VE, Jellyfin, Mealie, and Open WebUI
-read the [groups claim](#groups). In Grafana, Gitea, Jellyfin, Mealie, and Open WebUI, the settings
-make the members of a group called `admins` the app's administrators. In every other app, choose
-the administrators in the app.
+Grafana, Nextcloud, Gitea, Forgejo, Paperless-ngx, Proxmox VE, Jellyfin, Mealie, Open WebUI,
+Headscale, Home Assistant, BookStack, Wiki.js, MinIO, and Argo CD read the [groups claim](#groups).
+In Grafana, Gitea, Jellyfin, Mealie, Open WebUI, Headscale, Home Assistant, and Argo CD, the
+settings make the members of a group called `admins` the app's administrators. In MinIO, name each
+group after the MinIO policy it should hold. In every other app, choose the administrators in the
+app.
+
+### Signing in to a tailnet
+
+Tailscale finds an identity provider through WebFinger, a lookup on the domain of a person's email
+address. masks answers it at `/.well-known/webfinger` for every account on the tenant's host, so
+the tenant's host has to be the domain of the email addresses people sign in with. An account whose
+email is `ada@id.example.com` needs masks at `https://id.example.com`.
+
+1. In masks, add Tailscale as a known app. Enter `https://login.tailscale.com` as its address and
+   keep the client ID and secret masks shows.
+2. In Tailscale, start a new tailnet with a custom OpenID Connect provider, enter an email address
+   on the tenant's host, and paste the issuer URL, client ID, and client secret.
+3. Sign in. Tailscale asks masks, and each person on the tenant joins the tailnet with their own
+   account.
+
+Headscale, the self-hosted control server, does not need WebFinger. Add it as a known app with its
+own address.
 
 ### A client named by its metadata document
 
