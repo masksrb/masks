@@ -45,6 +45,10 @@ jobs:
           docker compose logs --no-color server > results/suite.log 2>&1 || true
           docker compose logs --no-color masks > results/masks.log 2>&1 || true
 
+      - name: Count what passed, what needs review, and what was skipped
+        if: always()
+        run: ruby test/conformance/summary.rb
+
       - uses: actions/upload-artifact@v7
         if: always()
         with:
