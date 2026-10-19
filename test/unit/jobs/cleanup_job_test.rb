@@ -76,6 +76,38 @@ module Masks
         end
       end
 
+      test "a tenant with tens of thousands of ended rows is swept in bounded time, and metrics still count" do
+        now = Time.current
+
+        within do
+          Session.insert_all(Array.new(20_000) do
+            { tenant_id: @tenant.id, actor_id: @actor.id, digest: SecureRandom.hex(32), authenticated_at: now - 40.days,
+              expires_at: now - 30.days, created_at: now - 40.days, updated_at: now - 40.days }
+          end)
+          Token.insert_all(Array.new(20_000) do
+            { tenant_id: @tenant.id, kind: AccessToken.sti_name, actor_id: @actor.id, client_id: @client.id,
+              digest: SecureRandom.hex(32), expires_at: now - 30.days, created_at: now - 31.days, updated_at: now - 31.days }
+          end)
+          Token.insert_all(Array.new(1_000) do
+            { tenant_id: @tenant.id, kind: AccessToken.sti_name, actor_id: @actor.id, client_id: @client.id,
+              digest: SecureRandom.hex(32), expires_at: now + 1.hour, created_at: now - 1.minute, updated_at: now - 1.minute }
+          end)
+        end
+
+        started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+        CleanupJob.perform_now
+        elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - started
+
+        assert_operator elapsed, :<, 60
+        assert_equal 1_000, within { Token.count }
+        assert_equal 0, within { Session.count }
+
+        scraped = MetricsController::Metrics.new.to_s
+
+        assert_includes scraped, %(masks_access_tokens_last_hour{tenant="#{@tenant.subdomain}"} 1000)
+        assert_includes scraped, %(masks_sessions_live{tenant="#{@tenant.subdomain}"} 0)
+      end
+
       test "one tenant failing does not stop the others" do
         other = other_tenant
         stale = within(other) { Session.start!(actor: create_actor(other)).tap { |held| held.update!(expires_at: 1.minute.from_now) } }

@@ -2717,6 +2717,27 @@ CREATE INDEX index_sessions_on_tenant_id ON public.sessions USING btree (tenant_
 
 
 --
+-- Name: index_sessions_on_tenant_id_and_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_sessions_on_tenant_id_and_created_at ON public.sessions USING btree (tenant_id, created_at);
+
+
+--
+-- Name: index_sessions_on_tenant_id_and_expires_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_sessions_on_tenant_id_and_expires_at ON public.sessions USING btree (tenant_id, expires_at);
+
+
+--
+-- Name: index_sessions_on_tenant_id_and_revoked_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_sessions_on_tenant_id_and_revoked_at ON public.sessions USING btree (tenant_id, revoked_at) WHERE (revoked_at IS NOT NULL);
+
+
+--
 -- Name: index_sessions_on_tenant_id_and_uuid; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -2777,6 +2798,13 @@ CREATE INDEX index_signing_keys_on_tenant_id_and_activated_at ON public.signing_
 --
 
 CREATE UNIQUE INDEX index_signing_keys_on_tenant_id_and_kid ON public.signing_keys USING btree (tenant_id, kid);
+
+
+--
+-- Name: index_signing_keys_on_tenant_id_and_retired_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_signing_keys_on_tenant_id_and_retired_at ON public.signing_keys USING btree (tenant_id, retired_at) WHERE (retired_at IS NOT NULL);
 
 
 --
@@ -2896,6 +2924,20 @@ CREATE INDEX index_tokens_on_session_id ON public.tokens USING btree (session_id
 --
 
 CREATE INDEX index_tokens_on_tenant_id ON public.tokens USING btree (tenant_id);
+
+
+--
+-- Name: index_tokens_on_tenant_id_and_ended_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_tokens_on_tenant_id_and_ended_at ON public.tokens USING btree (tenant_id, LEAST(consumed_at, expires_at));
+
+
+--
+-- Name: index_tokens_on_tenant_id_and_kind_and_created_at; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX index_tokens_on_tenant_id_and_kind_and_created_at ON public.tokens USING btree (tenant_id, kind, created_at);
 
 
 --
@@ -3937,6 +3979,7 @@ ALTER TABLE public.tokens ENABLE ROW LEVEL SECURITY;
 SET search_path TO "$user", public;
 
 INSERT INTO "schema_migrations" (version) VALUES
+('20261019140000'),
 ('20261018110000'),
 ('20261018100000'),
 ('20261013010000'),

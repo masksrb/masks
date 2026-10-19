@@ -37,13 +37,11 @@ module Masks
         end
 
         def sweep_tokens(cutoff)
-          loop do
-            roots = Token.group("COALESCE(root_id, id)")
-              .having("MAX(LEAST(consumed_at, expires_at)) < ?", cutoff)
-              .limit(BATCH).pluck(Arel.sql("COALESCE(root_id, id)"))
-            break if roots.empty?
+          Token.where(root_id: nil).ended_before(cutoff).in_batches(of: BATCH) do |roots|
+            ids = roots.pluck(:id)
+            kept = Token.where(root_id: ids).where("LEAST(consumed_at, expires_at) >= ?", cutoff).distinct.pluck(:root_id)
 
-            Token.families(roots).delete_all
+            Token.families(ids - kept).delete_all
           end
 
           Token.where.not(kind: RefreshToken.sti_name).ended_before(cutoff)
