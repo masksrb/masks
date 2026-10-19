@@ -6,10 +6,10 @@ description: Every environment variable masks reads, and where each one applies.
 masks reads its settings from environment variables. This page lists every variable that the
 server and the development tools read, and points to the SDK pages for the variables each SDK reads.
 
-| Section                     | What reads it                                                                    |
-| --------------------------- | -------------------------------------------------------------------------------- |
-| [Server](#server)           | The `ghcr.io/masksrb/masks` image, or any other way of running `server/`.        |
-| [SDKs](#sdks)               | The libraries your apps use to connect to masks.                                 |
+| Section | What reads it |
+| --- | --- |
+| [Server](#server) | The `ghcr.io/masksrb/masks` image, or any other way of running `server/`. |
+| [SDKs](#sdks) | The libraries your apps use to connect to masks. |
 | [Development](#development) | `./dev`, the Compose stack, and the test suites. A deployed server ignores them. |
 
 `./dev reference` fails when the server or the development tools read a variable that this page
@@ -22,8 +22,8 @@ text, so a true or false setting is the text `true` or `false`.
 
 ### Mode
 
-| Variable     | Default  |                                                                                                                                                                                                                               |
-| ------------ | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Variable | Default | |
+| --- | --- | --- |
 | `MASKS_MODE` | `server` | `server` runs masks as its own app. `engine` runs it mounted inside another Rails app, with its own database, session, and secrets. `config.masks.mode` sets the same thing. See [engine mode](/reference/ruby/engine-mode/). |
 
 ### Required in production
@@ -33,18 +33,18 @@ In production, the server does not boot without these. The error names the missi
 The container image's entrypoint (the script that runs when the container starts) derives the
 first four from one master key. See [encryption and secrets](/guides/self-hosting/#encryption-and-secrets).
 
-| Variable                          | Default                     |                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| --------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SECRET_KEY_BASE`                 | derived                     | Signs and encrypts sessions and cookies. Rails reads it.                                                                                                                                                                                                                                                                                                                                                                                                            |
-| `ENCRYPTION_PRIMARY_KEY`          | derived                     | Encrypts the columns that hold secrets. These are signing keys, authenticator app secrets, provider and sending service credentials, connected accounts' tokens, stream secrets, pairwise salts, and setup tokens.                                                                                                                                                                                                                                                  |
-| `ENCRYPTION_DETERMINISTIC_KEY`    | derived                     | Encrypts columns that masks looks up by value. No column uses it yet. Rails requires it to be set.                                                                                                                                                                                                                                                                                                                                                                  |
-| `ENCRYPTION_KEY_DERIVATION_SALT`  | derived                     | Used with the two keys above to make a separate key for each column.                                                                                                                                                                                                                                                                                                                                                                                                |
-| `MASKS_MASTER_KEY`                | generated                   | The key the four above are derived from, when you do not set them yourself. Wins over `MASKS_MASTER_KEY_FILE` when both are set.                                                                                                                                                                                                                                                                                                                                    |
-| `MASKS_MASTER_KEY_FILE`           | `/rails/storage/master.key` | The file where the entrypoint reads the master key. If the file does not exist, the entrypoint generates a key and writes it there.                                                                                                                                                                                                                                                                                                                                 |
-| `MASKS_PREVIOUS_MASTER_KEY`       | none                        | The master key you used before a rotation. masks can still read columns encrypted with it. The next boot encrypts them again with the current key. Wins over `MASKS_PREVIOUS_MASTER_KEY_FILE` when both are set.                                                                                                                                                                                                                                                    |
-| `MASKS_PREVIOUS_MASTER_KEY_FILE`  | none                        | A file that holds the previous master key.                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| `ENCRYPTION_PREVIOUS_PRIMARY_KEY` | derived                     | The primary key derived from the previous master key, when you do not set it yourself.                                                                                                                                                                                                                                                                                                                                                                              |
-| `MASKS_PUBLIC_ORIGIN_TEMPLATE`    | none                        | The public origin (the scheme and host) of each tenant. `%{subdomain}` stands for the tenant's subdomain, as in `https://%{subdomain}.auth.example.com`. A template without `%{subdomain}` serves every tenant from one host. masks builds the issuer, the registration endpoint, and every link in an email from it. The server answers only hosts that match it and tenants' [custom domains](/guides/self-hosting/#custom-domains). Every other host gets a 404. |
+| Variable | Default | |
+| --- | --- | --- |
+| `SECRET_KEY_BASE` | derived | Signs and encrypts sessions and cookies. Rails reads it. |
+| `ENCRYPTION_PRIMARY_KEY` | derived | Encrypts the columns that hold secrets. These are signing keys, authenticator app secrets, provider and sending service credentials, connected accounts' tokens, stream secrets, pairwise salts, and setup tokens. |
+| `ENCRYPTION_DETERMINISTIC_KEY` | derived | Encrypts columns that masks looks up by value. No column uses it yet. Rails requires it to be set. |
+| `ENCRYPTION_KEY_DERIVATION_SALT` | derived | Used with the two keys above to make a separate key for each column. |
+| `MASKS_MASTER_KEY` | generated | The key the four above are derived from, when you do not set them yourself. Wins over `MASKS_MASTER_KEY_FILE` when both are set. |
+| `MASKS_MASTER_KEY_FILE` | `/rails/storage/master.key` | The file where the entrypoint reads the master key. If the file does not exist, the entrypoint generates a key and writes it there. |
+| `MASKS_PREVIOUS_MASTER_KEY` | none | The master key you used before a rotation. masks can still read columns encrypted with it. The next boot encrypts them again with the current key. Wins over `MASKS_PREVIOUS_MASTER_KEY_FILE` when both are set. |
+| `MASKS_PREVIOUS_MASTER_KEY_FILE` | none | A file that holds the previous master key. |
+| `ENCRYPTION_PREVIOUS_PRIMARY_KEY` | derived | The primary key derived from the previous master key, when you do not set it yourself. |
+| `MASKS_PUBLIC_ORIGIN_TEMPLATE` | none | The public origin (the scheme and host) of each tenant. `%{subdomain}` stands for the tenant's subdomain, as in `https://%{subdomain}.auth.example.com`. A template without `%{subdomain}` serves every tenant from one host. masks builds the issuer, the registration endpoint, and every link in an email from it. The server answers only hosts that match it and tenants' [custom domains](/guides/self-hosting/#custom-domains). Every other host gets a 404. |
 
 :::caution
 You cannot change `SECRET_KEY_BASE` or the three `ENCRYPTION_` values once masks has written data.
@@ -60,15 +60,15 @@ with [`SECRET_KEY_BASE_DUMMY`](#rails).
 
 A tenant is one separate set of actors, clients, and settings. Each tenant has its own subdomain.
 
-| Variable              | Default |                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| --------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `MASKS_TENANTS`       | none    | Declares Multi tenants. Lists the subdomains this server serves, separated by commas or spaces, such as `demo,acme`. The image's entrypoint creates any that do not exist before the server starts.                                                                                                                                                                                                                                                 |
-| `MASKS_TENANT`        | none    | Declares a Single tenant, the only one this server serves. You cannot set it together with `MASKS_TENANTS`.                                                                                                                                                                                                                                                                                                                                         |
-| `MASKS_CONFIG`        | none    | A YAML file of apps, groups, and tenant settings. masks applies it on every boot. See [declaring apps in a file](/guides/self-hosting/#declaring-apps-in-a-file).                                                                                                                                                                                                                                                                                   |
-| `MASKS_METRICS_TOKEN` | none    | Turns on `/metrics` for Prometheus. `/metrics` then answers only a request that carries this token. See [metrics](/guides/self-hosting/#metrics).                                                                                                                                                                                                                                                                                                   |
-| `MASKS_ON_DEMAND_TLS` | `false` | `true` opens `/tls/allowed`, which a proxy asks before it issues a certificate for a tenant's custom host. It answers from the server's own address, outside the hosts `MASKS_PUBLIC_ORIGIN_TEMPLATE` allows. See [certificates on demand](/guides/self-hosting/#certificates-on-demand).                                                                                                                                                           |
-| `MASKS_RECOVER`       | none    | Gets someone back into an account when nobody else can. For example, the only manager has lost their second factor. Name the account by nickname or email address. To pick one tenant, write `tenant/nickname`. At boot, masks removes the account's second factors and signs it out everywhere. It records both in the activity, and prints a link that sets a new password once. Unset it after use, because masks does this again on every boot. |
-| `MASKS_SETUP_TOKEN`   | none    | Replaces the setup token that masks generates for each tenant. One value applies to every tenant. Without it, each tenant gets its own token, printed in the server's logs. The first-run screen asks for the token before it creates a tenant's first account. Outside development, it must be at least 24 characters long. The dev stack sets it to `masks-dev`.                                                                                  |
+| Variable | Default | |
+| --- | --- | --- |
+| `MASKS_TENANTS` | none | Declares Multi tenants. Lists the subdomains this server serves, separated by commas or spaces, such as `demo,acme`. The image's entrypoint creates any that do not exist before the server starts. |
+| `MASKS_TENANT` | none | Declares a Single tenant, the only one this server serves. You cannot set it together with `MASKS_TENANTS`. |
+| `MASKS_CONFIG` | none | A YAML file of apps, groups, and tenant settings. masks applies it on every boot. See [declaring apps in a file](/guides/self-hosting/#declaring-apps-in-a-file). |
+| `MASKS_METRICS_TOKEN` | none | Turns on `/metrics` for Prometheus. `/metrics` then answers only a request that carries this token. See [metrics](/guides/self-hosting/#metrics). |
+| `MASKS_ON_DEMAND_TLS` | `false` | `true` opens `/tls/allowed`, which a proxy asks before it issues a certificate for a tenant's custom host. It answers from the server's own address, outside the hosts `MASKS_PUBLIC_ORIGIN_TEMPLATE` allows. See [certificates on demand](/guides/self-hosting/#certificates-on-demand). |
+| `MASKS_RECOVER` | none | Gets someone back into an account when nobody else can. For example, the only manager has lost their second factor. Name the account by nickname or email address. To pick one tenant, write `tenant/nickname`. At boot, masks removes the account's second factors and signs it out everywhere. It records both in the activity, and prints a link that sets a new password once. Unset it after use, because masks does this again on every boot. |
+| `MASKS_SETUP_TOKEN` | none | Replaces the setup token that masks generates for each tenant. One value applies to every tenant. Without it, each tenant gets its own token, printed in the server's logs. The first-run screen asks for the token before it creates a tenant's first account. Outside development, it must be at least 24 characters long. The dev stack sets it to `masks-dev`. |
 
 When both `MASKS_TENANTS` and `MASKS_TENANT` are unset, masks declares tenants dynamically. See
 [declaring tenants](/guides/core-concepts/#declaring-tenants) for how Single, Multi, and Dynamic
@@ -80,39 +80,39 @@ Most of these pin a setting. A pinned setting applies to every tenant. A tenant'
 choose it, and the manage API refuses to change it. `MASKS_DYNAMIC_CLIENT_SCOPES` is the one
 variable here that does not pin anything.
 
-| Variable                      | Default                                                                                    |                                                                                                                                                                                                                                                                                   |
-| ----------------------------- | ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `MASKS_NAMED_BY`              | per tenant, `either` until a manager changes it                                            | What an account signs in with: `nickname`, `email`, or `either`. Any other value stops the server from booting.                                                                                                                                                                   |
-| `MASKS_DYNAMIC_REGISTRATION`  | per tenant, `bounded` when a ceiling is set, otherwise `anything`                          | Whether clients may register themselves. `off` turns it off. `anything` allows any scope that a manager does not have to grant. `bounded` allows only the scopes in the ceiling. Any other value stops the server from booting.                                                   |
+| Variable | Default | |
+| --- | --- | --- |
+| `MASKS_NAMED_BY` | per tenant, `either` until a manager changes it | What an account signs in with: `nickname`, `email`, or `either`. Any other value stops the server from booting. |
+| `MASKS_DYNAMIC_REGISTRATION` | per tenant, `bounded` when a ceiling is set, otherwise `anything` | Whether clients may register themselves. `off` turns it off. `anything` allows any scope that a manager does not have to grant. `bounded` allows only the scopes in the ceiling. Any other value stops the server from booting. |
 | `MASKS_DYNAMIC_CLIENT_SCOPES` | `openid`, `profile`, `email`, `offline_access`, `identities`, `organization`, and `groups` | The ceiling, which is the set of scopes a client that registered itself may ask for. Separate them with spaces or commas. A tenant's own ceiling wins over this one. If you set this without `MASKS_DYNAMIC_REGISTRATION`, a tenant with no setting of its own becomes `bounded`. |
-| `MASKS_BROWSERS_ONLY`         | per tenant                                                                                 | `true` refuses sign-in from any user agent that is not a web browser. `false` allows them.                                                                                                                                                                                        |
-| `MASKS_BLOCKED_AGENTS`        | per tenant                                                                                 | User agents to refuse, separated by commas or new lines. An entry matches any user agent that contains it. Case does not matter.                                                                                                                                                  |
+| `MASKS_BROWSERS_ONLY` | per tenant | `true` refuses sign-in from any user agent that is not a web browser. `false` allows them. |
+| `MASKS_BLOCKED_AGENTS` | per tenant | User agents to refuse, separated by commas or new lines. An entry matches any user agent that contains it. Case does not matter. |
 
 ### Rate limits
 
 Each limit counts requests for each tenant within a fixed time window. A request over the limit
 gets the HTTP status 429 (Too Many Requests).
 
-| Variable                      | Default |                                                                                                                                                                                                                                                                         |
-| ----------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `MASKS_ATTEMPT_LIMIT`         | `10`    | Sign-in attempts from one IP address in 3 minutes. Includes sign-in through a provider and failed LDAP binds.                                                                                                                                                           |
-| `MASKS_ACCOUNT_ATTEMPT_LIMIT` | `5`     | Sign-in attempts against one account in 3 minutes, from any IP address. Includes failed LDAP binds. Also limits how often a signed-in account changes its password, email address, or phone number, adds an authenticator app, or approves a sign-in on another device. |
-| `MASKS_RECOVERY_LIMIT`        | `5`     | Codes and links sent by email or text message in 15 minutes. Counted by IP address during sign-in, and by account for every address or phone number a code goes to, including a phone added or changed during sign-in.                                                  |
-| `MASKS_REGISTRATION_LIMIT`    | `10`    | Dynamic client registrations from one IP address in 10 minutes. Also limits new [client metadata documents](/guides/features/#a-client-named-by-its-metadata-document).                                                                                                 |
-| `MASKS_DEVICE_CODE_LIMIT`     | `30`    | Device user codes entered from one IP address in 3 minutes.                                                                                                                                                                                                             |
-| `MASKS_CLAIM_LIMIT`           | `3`     | Tenants claimed from one IP address in an hour. Applies when a subdomain template claims a tenant on its first visit. Counted across the whole server.                                                                                                                  |
-| `MASKS_CLAIM_CEILING`         | `30`    | Tenants claimed from all IP addresses together in an hour, under the same template. Counted across the whole server.                                                                                                                                                    |
+| Variable | Default | |
+| --- | --- | --- |
+| `MASKS_ATTEMPT_LIMIT` | `10` | Sign-in attempts from one IP address in 3 minutes. Includes sign-in through a provider and failed LDAP binds. |
+| `MASKS_ACCOUNT_ATTEMPT_LIMIT` | `5` | Sign-in attempts against one account in 3 minutes, from any IP address. Includes failed LDAP binds. Also limits how often a signed-in account changes its password, email address, or phone number, adds an authenticator app, or approves a sign-in on another device. |
+| `MASKS_RECOVERY_LIMIT` | `5` | Codes and links sent by email or text message in 15 minutes. Counted by IP address during sign-in, and by account for every address or phone number a code goes to, including a phone added or changed during sign-in. |
+| `MASKS_REGISTRATION_LIMIT` | `10` | Dynamic client registrations from one IP address in 10 minutes. Also limits new [client metadata documents](/guides/features/#a-client-named-by-its-metadata-document). |
+| `MASKS_DEVICE_CODE_LIMIT` | `30` | Device user codes entered from one IP address in 3 minutes. |
+| `MASKS_CLAIM_LIMIT` | `3` | Tenants claimed from one IP address in an hour. Applies when a subdomain template claims a tenant on its first visit. Counted across the whole server. |
+| `MASKS_CLAIM_CEILING` | `30` | Tenants claimed from all IP addresses together in an hour, under the same template. Counted across the whole server. |
 
 ### Lifetimes
 
 Each value is a number of seconds.
 
-| Variable                                 | Default             |                                                                                                   |
-| ---------------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------- |
-| `MASKS_INVITATION_LIFETIME`              | `604800` (7 days)   | How long an invitation link works.                                                                |
+| Variable | Default | |
+| --- | --- | --- |
+| `MASKS_INVITATION_LIFETIME` | `604800` (7 days) | How long an invitation link works. |
 | `MASKS_ORGANIZATION_INVITATION_LIFETIME` | `1209600` (14 days) | How long someone can accept an invitation to an organization. Sending it again restarts the time. |
-| `MASKS_PASSWORD_RESET_LIFETIME`          | `1800` (30 minutes) | How long a password reset link works.                                                             |
-| `MASKS_EMAIL_VERIFICATION_LIFETIME`      | `172800` (2 days)   | How long an email confirmation link works.                                                        |
+| `MASKS_PASSWORD_RESET_LIFETIME` | `1800` (30 minutes) | How long a password reset link works. |
+| `MASKS_EMAIL_VERIFICATION_LIFETIME` | `172800` (2 days) | How long an email confirmation link works. |
 
 ### Mail
 
@@ -123,16 +123,16 @@ Without `MASKS_SMTP_ADDRESS`, the server sends no mail of its own. A tenant then
 service to send invitations, codes, and password resets. When a tenant has a mail service, masks
 uses it instead of these settings.
 
-| Variable                    | Default                               |                                                                                                                                                                                                                   |
-| --------------------------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `MASKS_MAIL_FROM`           | none                                  | The `From` address, such as `masks <auth@example.com>`. In production, it requires `MASKS_SMTP_ADDRESS`.                                                                                                          |
-| `MASKS_SMTP_ADDRESS`        | none                                  | The SMTP server's hostname. Setting it turns on SMTP delivery.                                                                                                                                                    |
-| `MASKS_SMTP_PORT`           | `587`                                 | The SMTP server's port.                                                                                                                                                                                           |
-| `MASKS_SMTP_TLS`            | `true` on port 465, otherwise `false` | `true` connects over TLS (Transport Layer Security, the encryption HTTPS uses). `false` connects without encryption and then switches to it with `STARTTLS`. masks checks the server's certificate in both cases. |
-| `MASKS_SMTP_USERNAME`       | none                                  |                                                                                                                                                                                                                   |
-| `MASKS_SMTP_PASSWORD`       | none                                  |                                                                                                                                                                                                                   |
-| `MASKS_SMTP_AUTHENTICATION` | `plain`                               | `plain`, `login`, or `cram_md5`.                                                                                                                                                                                  |
-| `MASKS_SMTP_DOMAIN`         | none                                  | The domain masks sends in the `HELO` greeting.                                                                                                                                                                    |
+| Variable | Default | |
+| --- | --- | --- |
+| `MASKS_MAIL_FROM` | none | The `From` address, such as `masks <auth@example.com>`. In production, it requires `MASKS_SMTP_ADDRESS`. |
+| `MASKS_SMTP_ADDRESS` | none | The SMTP server's hostname. Setting it turns on SMTP delivery. |
+| `MASKS_SMTP_PORT` | `587` | The SMTP server's port. |
+| `MASKS_SMTP_TLS` | `true` on port 465, otherwise `false` | `true` connects over TLS (Transport Layer Security, the encryption HTTPS uses). `false` connects without encryption and then switches to it with `STARTTLS`. masks checks the server's certificate in both cases. |
+| `MASKS_SMTP_USERNAME` | none | |
+| `MASKS_SMTP_PASSWORD` | none | |
+| `MASKS_SMTP_AUTHENTICATION` | `plain` | `plain`, `login`, or `cram_md5`. |
+| `MASKS_SMTP_DOMAIN` | none | The domain masks sends in the `HELO` greeting. |
 
 ### Database
 
@@ -149,52 +149,52 @@ can see. A superuser skips row-level security, and a table's owner can turn it o
 reason, the production server refuses to serve requests as a role that is either one. See
 [the database roles](/guides/self-hosting/#database-roles).
 
-| Variable                   | Default                                |                                                                                                                                                                                                                   |
-| -------------------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `POSTGRES_HOST`            | `127.0.0.1`                            |                                                                                                                                                                                                                   |
-| `POSTGRES_PORT`            | `5432` in production, `5435` otherwise | Development and test use the port the dev stack publishes by default.                                                                                                                                             |
-| `POSTGRES_USER`            | `masks`                                | The role that serves requests.                                                                                                                                                                                    |
-| `POSTGRES_PASSWORD`        | `masks`                                |                                                                                                                                                                                                                   |
-| `MASKS_MIGRATION_USER`     | none                                   | The role that owns the schema. Before it starts the server, the container image's entrypoint runs `db:prepare` and `masks:grants` as this role. The entrypoint does not start without it. Required in production. |
-| `MASKS_MIGRATION_PASSWORD` | none                                   | The password for `MASKS_MIGRATION_USER`.                                                                                                                                                                          |
-| `MASKS_SERVING_USER`       | none                                   | The role that `bin/rails masks:grants` gives table access to. The entrypoint sets it to `POSTGRES_USER`.                                                                                                          |
-| `POSTGRES_DATABASE`        | `masks_production`                     | The primary database's name in production. The cache and queue databases add `_cache` and `_queue` to it. Development and test use fixed names.                                                                   |
+| Variable | Default | |
+| --- | --- | --- |
+| `POSTGRES_HOST` | `127.0.0.1` | |
+| `POSTGRES_PORT` | `5432` in production, `5435` otherwise | Development and test use the port the dev stack publishes by default. |
+| `POSTGRES_USER` | `masks` | The role that serves requests. |
+| `POSTGRES_PASSWORD` | `masks` | |
+| `MASKS_MIGRATION_USER` | none | The role that owns the schema. Before it starts the server, the container image's entrypoint runs `db:prepare` and `masks:grants` as this role. The entrypoint does not start without it. Required in production. |
+| `MASKS_MIGRATION_PASSWORD` | none | The password for `MASKS_MIGRATION_USER`. |
+| `MASKS_SERVING_USER` | none | The role that `bin/rails masks:grants` gives table access to. The entrypoint sets it to `POSTGRES_USER`. |
+| `POSTGRES_DATABASE` | `masks_production` | The primary database's name in production. The cache and queue databases add `_cache` and `_queue` to it. Development and test use fixed names. |
 
 ### Processes
 
 The image runs the Puma web server in front of Rails, on `PORT`. See
 [self-hosting](/guides/self-hosting/#example-composeyml).
 
-| Variable                   | Default |                                                                                                                                          |
-| -------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `MASKS_JOBS_IN_WEB_SERVER` | `true`  | `true` runs background jobs inside the web server, so one container does both. `false` leaves jobs to a separate `bin/jobs` process.     |
-| `JOB_CONCURRENCY`          | `1`     | How many worker processes run background jobs. Each one runs 3 threads.                                                                  |
-| `RAILS_MAX_THREADS`        | `3`     | Puma threads in each process. It also sets the size of each database connection pool. When it is unset, each pool holds `5` connections. |
-| `PORT`                     | `3000`  | The port Puma listens on.                                                                                                                |
-| `PIDFILE`                  | none    | The file where Puma writes its process ID.                                                                                               |
+| Variable | Default | |
+| --- | --- | --- |
+| `MASKS_JOBS_IN_WEB_SERVER` | `true` | `true` runs background jobs inside the web server, so one container does both. `false` leaves jobs to a separate `bin/jobs` process. |
+| `JOB_CONCURRENCY` | `1` | How many worker processes run background jobs. Each one runs 3 threads. |
+| `RAILS_MAX_THREADS` | `3` | Puma threads in each process. It also sets the size of each database connection pool. When it is unset, each pool holds `5` connections. |
+| `PORT` | `3000` | The port Puma listens on. |
+| `PIDFILE` | none | The file where Puma writes its process ID. |
 
 ### LDAP
 
 The web server reads these to serve LDAP (Lightweight Directory Access Protocol), a protocol
 some apps use to look up accounts and check passwords. See [LDAP](/guides/ldap/).
 
-| Variable               | Default |                                                                                                                                                                                                                  |
-| ---------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `MASKS_LDAP_PORT`      | `3389`  | The port the web server serves LDAP on. With a certificate, or with `MASKS_LDAP_PLAINTEXT`, it listens on every network address. Otherwise it listens on `127.0.0.1` alone.                                      |
-| `MASKS_LDAP_CERT`      | none    | A PEM file (a text file format for certificates and keys) that holds the certificate, followed by any intermediate certificates. With `MASKS_LDAP_KEY` set too, the server speaks LDAPS, which is LDAP over TLS. |
-| `MASKS_LDAP_KEY`       | none    | A PEM file that holds the certificate's private key. Set it together with `MASKS_LDAP_CERT`.                                                                                                                     |
-| `MASKS_LDAP_PLAINTEXT` | `false` | `true` serves plain LDAP on every network address without a certificate, so passwords cross the network as they were typed. Set it only on a private network that you trust.                                     |
+| Variable | Default | |
+| --- | --- | --- |
+| `MASKS_LDAP_PORT` | `3389` | The port the web server serves LDAP on. With a certificate, or with `MASKS_LDAP_PLAINTEXT`, it listens on every network address. Otherwise it listens on `127.0.0.1` alone. |
+| `MASKS_LDAP_CERT` | none | A PEM file (a text file format for certificates and keys) that holds the certificate, followed by any intermediate certificates. With `MASKS_LDAP_KEY` set too, the server speaks LDAPS, which is LDAP over TLS. |
+| `MASKS_LDAP_KEY` | none | A PEM file that holds the certificate's private key. Set it together with `MASKS_LDAP_CERT`. |
+| `MASKS_LDAP_PLAINTEXT` | `false` | `true` serves plain LDAP on every network address without a certificate, so passwords cross the network as they were typed. Set it only on a private network that you trust. |
 
 ### Rails
 
-| Variable                | Default                   |                                                                                                                                                    |
-| ----------------------- | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `RAILS_ENV`             | `production` in the image | `production`, `development`, or `test`.                                                                                                            |
-| `RAILS_LOG_LEVEL`       | `info`                    | `debug`, `info`, `warn`, `error`, or `fatal`. Production only.                                                                                     |
-| `RAILS_ASSUME_SSL`      | `true`                    | Treats every request as HTTPS. Use it when a proxy in front of masks handles TLS. Production only.                                                 |
-| `RAILS_FORCE_SSL`       | `true`                    | Redirects HTTP to HTTPS and sends the `Strict-Transport-Security` header. Production only.                                                         |
-| `MASKS_TRUSTED_PROXIES` | none                      | The addresses or address ranges of the proxies in front of masks, separated by commas. masks adds them to the private ranges Rails already trusts. |
-| `SECRET_KEY_BASE_DUMMY` | unset                     | Boots with a throwaway secret and skips the production checks above. Use it for build steps only. A server running with it set is not secure.      |
+| Variable | Default | |
+| --- | --- | --- |
+| `RAILS_ENV` | `production` in the image | `production`, `development`, or `test`. |
+| `RAILS_LOG_LEVEL` | `info` | `debug`, `info`, `warn`, `error`, or `fatal`. Production only. |
+| `RAILS_ASSUME_SSL` | `true` | Treats every request as HTTPS. Use it when a proxy in front of masks handles TLS. Production only. |
+| `RAILS_FORCE_SSL` | `true` | Redirects HTTP to HTTPS and sends the `Strict-Transport-Security` header. Production only. |
+| `MASKS_TRUSTED_PROXIES` | none | The addresses or address ranges of the proxies in front of masks, separated by commas. masks adds them to the private ranges Rails already trusts. |
+| `SECRET_KEY_BASE_DUMMY` | unset | Boots with a throwaway secret and skips the production checks above. Use it for build steps only. A server running with it set is not secure. |
 
 A proxy passes on the visitor's IP address in headers. masks reads `X-Forwarded-For`,
 `X-Forwarded-Host`, `Client-IP`, and `Forwarded` only on a request from a trusted proxy. It drops
@@ -213,9 +213,9 @@ masks refuses to call an address on a private, loopback, or reserved network. Th
 - calls a provider or a text message service
 - delivers a back-channel logout, a security event, or an event stream
 
-| Variable                 | Default |                                                                                                                           |
-| ------------------------ | ------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `MASKS_OUTBOUND_ALLOWED` | none    | Address ranges masks may call anyway, separated by commas. For example, `100.64.0.0/10` allows apps on a private network. |
+| Variable | Default | |
+| --- | --- | --- |
+| `MASKS_OUTBOUND_ALLOWED` | none | Address ranges masks may call anyway, separated by commas. For example, `100.64.0.0/10` allows apps on a private network. |
 
 :::caution
 Any client that can register itself can make masks call the ranges in `MASKS_OUTBOUND_ALLOWED`.
@@ -224,14 +224,14 @@ List only the ranges you mean to allow.
 
 ### Themes
 
-| Variable            | Default         |                                                                                         |
-| ------------------- | --------------- | --------------------------------------------------------------------------------------- |
+| Variable | Default | |
+| --- | --- | --- |
 | `MASKS_THEMES_PATH` | `/rails/themes` | The folder of theme stylesheets. masks reads it at boot. See [themes](/guides/themes/). |
 
 ### Links
 
-| Variable         | Default                   |                                                                                                |
-| ---------------- | ------------------------- | ---------------------------------------------------------------------------------------------- |
+| Variable | Default | |
+| --- | --- | --- |
 | `MASKS_DOCS_URL` | `https://masks.pages.dev` | The documentation site that the first-run screens and SCIM's `/ServiceProviderConfig` link to. |
 
 ## SDKs
@@ -242,8 +242,8 @@ List only the ranges you mean to allow.
 in an initializer, a Ruby file your app runs when it starts. The initializer that
 `bin/rails generate masks:install` writes reads one variable:
 
-| Variable       | Default                    |                                                                                                                   |
-| -------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Variable | Default | |
+| --- | --- | --- |
 | `MASKS_ISSUER` | `https://auth.example.com` | The issuer, which is the masks address your app signs people in through, such as `https://demo.auth.example.com`. |
 
 The initializer is your code, so you can rename this variable or remove it. The handshake writes the
@@ -267,35 +267,35 @@ credentials in code. See [Python apps](/reference/python/) and [Go apps](/refere
 
 ### The dev stack
 
-| Variable                     | Default                   |                                                                                                                                             |
-| ---------------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `MASKS_PORT`                 | `12345`                   | The host port of the dev server.                                                                                                            |
-| `MASKS_DOCS_PORT`            | `12346`                   | The host port of the docs site.                                                                                                             |
-| `MASKS_VITE_PORT`            | `3036`                    | The host port of the Vite dev server.                                                                                                       |
-| `MASKS_IMAGE_PORT`           | `5556`                    | The host port of the production image. The `image` Compose profile builds and runs it.                                                      |
-| `MASKS_FIRST_SIGN_IN_PORT`   | `5557`                    | The host port of the throwaway stack that `./dev first-sign-in` times.                                                                      |
-| `MASKS_FIRST_SIGN_IN_BUDGET` | `120`                     | The seconds `./dev first-sign-in` allows from a fresh image to a signed-in account before it fails.                                         |
-| `MASKS_FIRST_SIGN_IN_TOKEN`  | a fixed value             | The setup token `./dev first-sign-in` gives its throwaway stack.                                                                            |
-| `GITHUB_STEP_SUMMARY`        | none                      | Set by GitHub Actions. When present, `./dev first-sign-in` and the conformance summary append their tables to the file it names.            |
-| `MASKS_POSTGRES_PORT`        | `5435`                    | The host port of PostgreSQL.                                                                                                                |
-| `MASKS_HOST_SUFFIX`          | `masks.localhost`         | The domain whose subdomains the dev server answers.                                                                                         |
-| `PG_BIN_PATH`                | none                      | A folder put first on `PATH` when masks writes `db/structure.sql`. Use it to pick a `pg_dump` that matches the server's PostgreSQL version. |
-| `DEV_ALLOWED_HOSTS`          | none                      | Hosts the Vite and Astro dev servers answer, separated by commas. Compose sets it.                                                          |
-| `DEV_CLIENT_PORT`            | none                      | The port the browser uses to reach the Vite or Astro dev server, so pages reload when files change. Compose sets it.                        |
-| `VITE_RUBY_HOST`             | `localhost`               | Where Rails finds the Vite dev server. `vite_ruby` reads it, and Compose sets it.                                                           |
-| `VITE_RUBY_SKIP_PROXY`       | `false`                   | `vite_ruby` reads it, and Compose sets it.                                                                                                  |
-| `DOCS_SITE`                  | `https://masks.pages.dev` | The docs site's published address, used for canonical links and the sitemap. The docs workflow sets it for preview deploys.                 |
+| Variable | Default | |
+| --- | --- | --- |
+| `MASKS_PORT` | `12345` | The host port of the dev server. |
+| `MASKS_DOCS_PORT` | `12346` | The host port of the docs site. |
+| `MASKS_VITE_PORT` | `3036` | The host port of the Vite dev server. |
+| `MASKS_IMAGE_PORT` | `5556` | The host port of the production image. The `image` Compose profile builds and runs it. |
+| `MASKS_FIRST_SIGN_IN_PORT` | `5557` | The host port of the throwaway stack that `./dev first-sign-in` times. |
+| `MASKS_FIRST_SIGN_IN_BUDGET` | `120` | The seconds `./dev first-sign-in` allows from a fresh image to a signed-in account before it fails. |
+| `MASKS_FIRST_SIGN_IN_TOKEN` | a fixed value | The setup token `./dev first-sign-in` gives its throwaway stack. |
+| `GITHUB_STEP_SUMMARY` | none | Set by GitHub Actions. When present, `./dev first-sign-in` and the conformance summary append their tables to the file it names. |
+| `MASKS_POSTGRES_PORT` | `5435` | The host port of PostgreSQL. |
+| `MASKS_HOST_SUFFIX` | `masks.localhost` | The domain whose subdomains the dev server answers. |
+| `PG_BIN_PATH` | none | A folder put first on `PATH` when masks writes `db/structure.sql`. Use it to pick a `pg_dump` that matches the server's PostgreSQL version. |
+| `DEV_ALLOWED_HOSTS` | none | Hosts the Vite and Astro dev servers answer, separated by commas. Compose sets it. |
+| `DEV_CLIENT_PORT` | none | The port the browser uses to reach the Vite or Astro dev server, so pages reload when files change. Compose sets it. |
+| `VITE_RUBY_HOST` | `localhost` | Where Rails finds the Vite dev server. `vite_ruby` reads it, and Compose sets it. |
+| `VITE_RUBY_SKIP_PROXY` | `false` | `vite_ruby` reads it, and Compose sets it. |
+| `DOCS_SITE` | `https://masks.pages.dev` | The docs site's published address, used for canonical links and the sitemap. The docs workflow sets it for preview deploys. |
 
 ### Tests
 
-| Variable            | Default                            |                                                                                                                                    |
-| ------------------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `MASKS_SERVER_ROOT` | `/rails`                           | Where the provider suite finds the Server-mode app's built test assets. The suite uses them for the test Engine-mode app it boots. |
-| `TEST_ENV_NUMBER`   | none                               | Added to the test database names, such as `masks_test2`. A second test run then uses its own database.                             |
-| `CI`                | unset                              | Loads the whole app up front in tests, as production does. It also makes `./dev test` use `compose.test.ci.yml`.                   |
-| `RUBOCOP_FORMAT`    | `progress`                         | The RuboCop output format for `./dev fmt --check`.                                                                                 |
-| `SUITE_REF`         | `release-v5.2.4`                   | The git tag of the OpenID conformance suite that `./dev conformance` checks out.                                                   |
-| `SUITE_REPO`        | the OpenID Foundation's repository | Where `./dev conformance` clones the suite from.                                                                                   |
-| `SUITE_PORT`        | `8443`                             | The port the conformance suite listens on.                                                                                         |
-| `OWNER`             | `owner`                            | The nickname of the account the conformance test plans sign in as.                                                                 |
-| `OWNER_PASSWORD`    | `password`                         | The password for `OWNER`.                                                                                                          |
+| Variable | Default | |
+| --- | --- | --- |
+| `MASKS_SERVER_ROOT` | `/rails` | Where the provider suite finds the Server-mode app's built test assets. The suite uses them for the test Engine-mode app it boots. |
+| `TEST_ENV_NUMBER` | none | Added to the test database names, such as `masks_test2`. A second test run then uses its own database. |
+| `CI` | unset | Loads the whole app up front in tests, as production does. It also makes `./dev test` use `compose.test.ci.yml`. |
+| `RUBOCOP_FORMAT` | `progress` | The RuboCop output format for `./dev fmt --check`. |
+| `SUITE_REF` | `release-v5.2.4` | The git tag of the OpenID conformance suite that `./dev conformance` checks out. |
+| `SUITE_REPO` | the OpenID Foundation's repository | Where `./dev conformance` clones the suite from. |
+| `SUITE_PORT` | `8443` | The port the conformance suite listens on. |
+| `OWNER` | `owner` | The nickname of the account the conformance test plans sign in as. |
+| `OWNER_PASSWORD` | `password` | The password for `OWNER`. |
