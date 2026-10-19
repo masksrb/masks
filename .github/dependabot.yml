@@ -23,6 +23,7 @@ updates:
     directories:
       - "/server"
       - "/web"
+      - "/node"
       - "/docs"
     schedule:
       interval: weekly
@@ -35,6 +36,24 @@ updates:
         dependency-type: development
         update-types: [minor, patch]
 
+  - package-ecosystem: pip
+    directory: "/python"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    groups:
+      python:
+        patterns: ["*"]
+
+  - package-ecosystem: gomod
+    directory: "/go"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    groups:
+      go:
+        patterns: ["*"]
+
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
@@ -45,12 +64,21 @@ updates:
         patterns: ["*"]
 
   - package-ecosystem: docker
-    directories:
-      - "/server"
-      - "/conformance"
+    directory: "/server"
     schedule:
       interval: weekly
     open-pull-requests-limit: 10
     groups:
       images:
+        patterns: ["*"]
+
+  - package-ecosystem: docker-compose
+    directories:
+      - "/"
+      - "/test/conformance"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    groups:
+      compose-images:
         patterns: ["*"]
