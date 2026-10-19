@@ -48,6 +48,8 @@ module Masks
         config.ldap_plaintext = ENV.fetch("MASKS_LDAP_PLAINTEXT", "false") == "true"
         config.worker_silence = ENV.fetch("MASKS_WORKER_SILENCE", 300).to_i.seconds
         config.queue_wait = ENV.fetch("MASKS_QUEUE_WAIT", 600).to_i.seconds
+        config.finished_job_retention = ENV.fetch("MASKS_FINISHED_JOB_RETENTION", 7 * 24 * 60 * 60).to_i.seconds
+        config.failed_job_retention = ENV.fetch("MASKS_FAILED_JOB_RETENTION", 30 * 24 * 60 * 60).to_i.seconds
         config
       end
 

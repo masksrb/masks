@@ -173,6 +173,8 @@ de:
       signal:
         undelivered: "Shared Signal nicht zugestellt"
         received: "Anbieter hat Abmeldung signalisiert"
+      text:
+        undelivered: "SMS nicht zugestellt"
       organization:
         created: "Organisation hinzugefügt"
         updated: "Organisation geändert"

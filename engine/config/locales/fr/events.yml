@@ -173,6 +173,8 @@ fr:
       signal:
         undelivered: "Signal partagé non transmis"
         received: "Déconnexion signalée par un fournisseur"
+      text:
+        undelivered: "SMS non transmis"
       organization:
         created: "Organisation ajoutée"
         updated: "Organisation modifiée"

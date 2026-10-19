@@ -171,6 +171,8 @@ The image runs the Puma web server in front of Rails, on `PORT`. See
 | `JOB_CONCURRENCY` | `1` | How many worker processes run background jobs. Each one runs 3 threads. |
 | `MASKS_WORKER_SILENCE` | `300` | Seconds a worker may go without reporting before `/up` answers `down`. `0` turns the check off, for a server whose jobs run elsewhere. See [health checks](/guides/self-hosting/#health-checks). |
 | `MASKS_QUEUE_WAIT` | `600` | Seconds a background job may wait to start before `/up` answers `down`. `0` turns the check off. |
+| `MASKS_FINISHED_JOB_RETENTION` | `604800` (7 days) | How long a finished background job stays in the queue database before the daily prune removes it. In seconds. |
+| `MASKS_FAILED_JOB_RETENTION` | `2592000` (30 days) | How long a failed background job stays in the queue database before the daily prune removes it. In seconds. |
 | `RAILS_MAX_THREADS` | `3` | Puma threads in each process. It also sets the size of each database connection pool. When it is unset, each pool holds `5` connections. |
 | `PORT` | `3000` | The port Puma listens on. |
 | `PIDFILE` | none | The file where Puma writes its process ID. |

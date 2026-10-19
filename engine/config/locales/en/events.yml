@@ -173,6 +173,8 @@ en:
       signal:
         undelivered: "Shared signal not delivered"
         received: "Provider signaled sign-out"
+      text:
+        undelivered: "Text message not delivered"
       organization:
         created: "Organization added"
         updated: "Organization changed"

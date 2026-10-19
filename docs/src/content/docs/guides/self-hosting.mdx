@@ -19,6 +19,9 @@ The only file it keeps on local disk is the master key.
 
 - Background jobs, such as mail and retries, run in the web process by default. To move them to a
   second container that runs `bin/jobs`, set `MASKS_JOBS_IN_WEB_SERVER=false`.
+- The job queue stays bounded. A daily prune removes finished jobs after 7 days and failed jobs
+  after 30 days. `MASKS_FINISHED_JOB_RETENTION` and `MASKS_FAILED_JOB_RETENTION` change those
+  times, in seconds. A failed job is in `/up/jobs` and the logs until then.
 - The web process also serves [LDAP](/guides/ldap/) for apps that sign people in only over LDAP.
 
 CI times a first sign-in on every push. It starts the image on an empty Postgres, waits for `/up`,

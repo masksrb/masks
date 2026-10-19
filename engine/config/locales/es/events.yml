@@ -173,6 +173,8 @@ es:
       signal:
         undelivered: "Señal compartida no entregada"
         received: "El proveedor señaló un cierre de sesión"
+      text:
+        undelivered: "Mensaje de texto no entregado"
       organization:
         created: "Organización añadida"
         updated: "Organización cambiada"

@@ -29,6 +29,11 @@ default: &default
     queue: maintenance
     schedule: every hour
 
+  prune_queue:
+    class: Masks::Server::PruneQueueJob
+    queue: maintenance
+    schedule: every day at 6am
+
 development:
   <<: *default
 
