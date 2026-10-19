@@ -55,6 +55,19 @@ module Masks
         JSON.parse(response.body)
       end
 
+      test "a channel that is not email or phone is not found, so no other method of the account is reached" do
+        sign_in_as(@actor)
+
+        post "/account/addresses/destroy", params: { address: "ada@new.example" }
+
+        assert_response :not_found
+        assert within(@tenant) { Actor.exists?(@actor.id) }
+
+        patch "/account/addresses/sign_out_everywhere!", params: { code: "000000" }
+
+        assert_response :not_found
+      end
+
       test "a person changes their email address once the new one proves it gets mail" do
         with_mailer do
           sign_in_as(@actor)

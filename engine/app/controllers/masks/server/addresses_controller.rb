@@ -8,6 +8,7 @@ module Masks
                  only: :update
 
       before_action :require_actor
+      before_action :known_channel
       before_action -> { reauthenticated!(anchor, t("addresses.again")) }
       before_action :refuse_directed
 
@@ -56,6 +57,10 @@ module Masks
 
         def channel
           params[:channel].to_s
+        end
+
+        def known_channel
+          head :not_found unless Addresses::CHANNELS.key?(channel)
         end
 
         def anchor
