@@ -21,6 +21,11 @@ The only file it keeps on local disk is the master key.
   second container that runs `bin/jobs`, set `MASKS_JOBS_IN_WEB_SERVER=false`.
 - The web process also serves [LDAP](/guides/ldap/) for apps that sign people in only over LDAP.
 
+CI times a first sign-in on every push. It starts the image on an empty Postgres, waits for `/up`,
+then creates the first manager and signs in. The seconds for each step are in the build job's
+summary on GitHub Actions. `./dev first-sign-in` runs the same check on your computer against any
+image, and fails when the whole thing takes longer than 120 seconds.
+
 ## Image tags
 
 | Tag                            | Pushed on                                          | Platforms                                |
@@ -388,16 +393,16 @@ apps:
     refresh_token_lifetime: 604800
 ```
 
-|                                                                     |                                                                                                                           |
-| ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| `name`, `accent_color`                                              | The tenant's name and color, as under **Branding** in `/manage`.                                                          |
-| An app's key                                                        | Its `client_id`, unless `client_id` names another. The app's own settings never have to change.                           |
-| `preset`, `url`, `slug`                                             | A [known product](/guides/features/#adding-a-known-app), as **Add client** registers it.                                  |
-| `redirect_uris`, `scopes`                                           | An app no preset covers. With neither `scopes` nor a preset, the app gets `openid profile email`.                         |
-| `name` under an app                                                 | The app's name. Without it, masks uses the preset's name or the app's key.                                                |
-| `client_secret_env`                                                 | The variable that holds the app's secret. Without it, masks makes a secret the first time and prints it to the logs once. |
-| `allowed_groups`, `access_token_lifetime`, `refresh_token_lifetime`, `refresh_token_absolute_lifetime` | As on a client's **Access** and **General** tabs in `/manage`. Lifetimes are in seconds. |
-| `groups`                                                            | Each group's name, and the nicknames or emails of its members. A member must already have an account.                     |
+|                                                                                                        |                                                                                                                           |
+| ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| `name`, `accent_color`                                                                                 | The tenant's name and color, as under **Branding** in `/manage`.                                                          |
+| An app's key                                                                                           | Its `client_id`, unless `client_id` names another. The app's own settings never have to change.                           |
+| `preset`, `url`, `slug`                                                                                | A [known product](/guides/features/#adding-a-known-app), as **Add client** registers it.                                  |
+| `redirect_uris`, `scopes`                                                                              | An app no preset covers. With neither `scopes` nor a preset, the app gets `openid profile email`.                         |
+| `name` under an app                                                                                    | The app's name. Without it, masks uses the preset's name or the app's key.                                                |
+| `client_secret_env`                                                                                    | The variable that holds the app's secret. Without it, masks makes a secret the first time and prints it to the logs once. |
+| `allowed_groups`, `access_token_lifetime`, `refresh_token_lifetime`, `refresh_token_absolute_lifetime` | As on a client's **Access** and **General** tabs in `/manage`. Lifetimes are in seconds.                                  |
+| `groups`                                                                                               | Each group's name, and the nicknames or emails of its members. A member must already have an account.                     |
 
 - An app in the file is approved, and actors are not asked to consent to it.
 - Applying the file adds and updates. It never removes an app, a group, or a member the file no

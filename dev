@@ -25,6 +25,7 @@ USAGE = <<~TEXT
     console        a rails console
     test [suite]   unit, integration, provider, engine, client, web, conformance
     image [build]  run the production image the way it deploys, and check it
+    first-sign-in [image]  time a fresh image to its first signed-in account
     conformance    up | run | logs | down | plans
     reference      regenerate the reference pages from the code
     fmt [--check]  format everything, or check it
@@ -105,6 +106,154 @@ def image(args)
 
   puts "\n  demo and acme each answer at their own origin, with keys of their own."
   puts "  http://demo.masks.localhost:#{IMAGE_PORT}\n\n"
+end
+
+FIRST_SIGN_IN_PORT = ENV.fetch("MASKS_FIRST_SIGN_IN_PORT", "5557")
+FIRST_SIGN_IN_BUDGET = ENV.fetch("MASKS_FIRST_SIGN_IN_BUDGET", "120").to_i
+FIRST_SIGN_IN_TOKEN = ENV.fetch("MASKS_FIRST_SIGN_IN_TOKEN", "first-sign-in-setup-token-not-for-real-use")
+FIRST_SIGN_IN_PASSWORD = "a-long-enough-password-for-the-first-manager"
+
+class FirstSignIn
+  Refused = Class.new(StandardError)
+
+  def initialize(port:, tenant:)
+    @http = Net::HTTP.new("127.0.0.1", port.to_i)
+    @host = "#{tenant}.localhost:#{port}"
+    @cookies = {}
+    @csrf = ""
+  end
+
+  def set_up!(token:)
+    page = get("/login")
+    refuse("the setup screen did not show: /login answered #{page.code}") unless page.code == "200" && page.body.include?("Set up")
+
+    body = post("signup", token: token, nickname: "owner", email: "owner@example.invalid",
+                          password: FIRST_SIGN_IN_PASSWORD, password_confirmation: FIRST_SIGN_IN_PASSWORD)
+    refuse("the first account was not created", body) unless body["prompt"] == "enrol"
+
+    secret = body.dig("enrolment", "otp", "secret").to_s.delete(" ")
+    refuse("no authenticator secret was offered", body) if secret.empty?
+
+    body = post("enrol:otp", code: totp(secret))
+    refuse("the authenticator code was not accepted", body) if body["warnings"].to_a.any?
+
+    body = post("enrol:done", kept: "1")
+    refuse("the second factor was not finished", body) unless body["prompt"] == "setup-configure"
+
+    body = post("setup-configure", called: "Acme")
+    refuse("setup did not settle", body) unless body["settled"]
+
+    page = get("/")
+    refuse("the account page did not answer 200 after setup: #{page.code}") unless page.code == "200"
+    refuse("the account page does not show the manager") unless page.body.include?("owner")
+  end
+
+  private
+
+    def refuse(message, body = nil)
+      detail = body && (body["warnings"] || body["prompt"])
+
+      raise Refused, [ message, detail && detail.inspect ].compact.join(": ")
+    end
+
+    def get(path)
+      request(Net::HTTP::Get.new(path, "Accept" => "text/html"))
+    end
+
+    def post(event, **fields)
+      request = Net::HTTP::Post.new("/login", "Content-Type" => "application/json",
+                                              "Accept" => "application/json", "X-CSRF-Token" => @csrf)
+      request.body = JSON.generate({ "event" => event }.merge(fields))
+
+      JSON.parse(request(request).body)
+    end
+
+    def request(request)
+      request["Host"] = @host
+      request["Cookie"] = @cookies.map { |name, value| "#{name}=#{value}" }.join("; ") if @cookies.any?
+
+      response = @http.request(request)
+
+      response.get_fields("set-cookie").to_a.each do |cookie|
+        name, value = cookie.split(";", 2).first.split("=", 2)
+        @cookies[name] = value
+      end
+
+      @csrf = response.body[/name="csrf-token" content="([^"]+)"/, 1] || @csrf if response["content-type"].to_s.include?("html")
+
+      response
+    end
+
+    def totp(secret)
+      alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"
+      bits = secret.upcase.delete("=").each_char.map { |char| alphabet.index(char).to_s(2).rjust(5, "0") }.join
+      key = [ bits[0, bits.size - bits.size % 8] ].pack("B*")
+      digest = OpenSSL::HMAC.digest("SHA1", key, [ Time.now.to_i / 30 ].pack("Q>"))
+      offset = digest.bytes.last & 0x0f
+
+      format("%06d", (digest[offset, 4].unpack1("N") & 0x7fffffff) % 1_000_000)
+    end
+end
+
+def first_sign_in(args)
+  image = args.first || "masks:dev"
+  here = File.join(ROOT, "test", "first_sign_in")
+  env = { "MASKS_IMAGE" => image, "MASKS_FIRST_SIGN_IN_PORT" => FIRST_SIGN_IN_PORT,
+          "MASKS_FIRST_SIGN_IN_TOKEN" => FIRST_SIGN_IN_TOKEN }
+  stack = ->(*command) { system(env, "docker", "compose", *command, chdir: here) }
+  clock = -> { Process.clock_gettime(Process::CLOCK_MONOTONIC) }
+
+  unless system("docker", "image", "inspect", image, out: File::NULL, err: File::NULL)
+    run!("docker", "pull", image)
+  end
+  stack.call("pull", "--quiet", "postgres") || die("postgres could not be pulled")
+  stack.call("down", "-v", "--remove-orphans")
+
+  started = clock.call
+  stack.call("up", "-d", "--quiet-pull") || die("the stack did not start")
+
+  up = URI("http://127.0.0.1:#{FIRST_SIGN_IN_PORT}/up")
+  loop do
+    begin
+      break if Net::HTTP.get_response(up).is_a?(Net::HTTPSuccess)
+    rescue SystemCallError, IOError
+      nil
+    end
+
+    die("masks did not answer /up within #{FIRST_SIGN_IN_BUDGET} seconds") if clock.call - started > FIRST_SIGN_IN_BUDGET
+    sleep 0.5
+  end
+  booted = clock.call
+
+  FirstSignIn.new(port: FIRST_SIGN_IN_PORT, tenant: "acme").set_up!(token: FIRST_SIGN_IN_TOKEN)
+  signed_in = clock.call
+
+  boot = booted - started
+  sign_in = signed_in - booted
+  total = signed_in - started
+
+  puts "\n  #{image}: #{format('%.1f', boot)} s from the containers starting to /up answering 200,"
+  puts "  then #{format('%.1f', sign_in)} s to set up and sign in the first manager."
+  puts "  #{format('%.1f', total)} s from a fresh image to a signed-in account, budget #{FIRST_SIGN_IN_BUDGET} s.\n\n"
+
+  if ENV["GITHUB_STEP_SUMMARY"]
+    File.open(ENV["GITHUB_STEP_SUMMARY"], "a") do |summary|
+      summary.puts "## First sign-in from a fresh image"
+      summary.puts
+      summary.puts "| Step | Seconds |"
+      summary.puts "| --- | ---: |"
+      summary.puts "| Containers starting to `/up` answering 200 | #{format('%.1f', boot)} |"
+      summary.puts "| `/up` to the first manager set up and signed in | #{format('%.1f', sign_in)} |"
+      summary.puts "| Total, budget #{FIRST_SIGN_IN_BUDGET} | #{format('%.1f', total)} |"
+    end
+  end
+
+  die("the first sign-in took #{format('%.1f', total)} s, over the budget of #{FIRST_SIGN_IN_BUDGET} s") if total > FIRST_SIGN_IN_BUDGET
+rescue FirstSignIn::Refused => error
+  stack.call("logs", "--no-color", "masks")
+  die("first sign-in failed: #{error.message}")
+ensure
+  stack&.call("down", "-v", "--remove-orphans")
 end
 
 SUITE_REF = ENV.fetch("SUITE_REF", "release-v5.2.4")
@@ -322,6 +471,7 @@ when "ps" then run!(*compose("ps", multi: multi))
 when "psql" then run!(*compose("exec", "postgres", "psql", "-U", "postgres", multi: multi))
 when "console" then run!(*compose("exec", "masks", "bin/rails", "console", multi: multi))
 when "image" then image(ARGV)
+when "first-sign-in" then first_sign_in(ARGV)
 when "test" then test(ARGV)
 when "conformance" then conformance(ARGV) || exit(1)
 when "reference" then reference

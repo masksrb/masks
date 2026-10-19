@@ -305,5 +305,9 @@ jobs:
             engine=engine
           platforms: linux/amd64
           push: false
+          load: true
+          tags: masks:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      - name: Seconds from a fresh image to a signed-in account
+        run: ./dev first-sign-in masks:ci
