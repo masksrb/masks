@@ -4,6 +4,7 @@ import { DELEGATION_SCOPE } from "../delegations.js";
 import { Handshake } from "../handshake.js";
 import type { IdTokenClaims, LogoutToken } from "../idtoken.js";
 import { RESOURCE_PATH } from "../issuer.js";
+import { unslashed, untrailed } from "../slashes.js";
 import { Verifier } from "../verifier.js";
 import { type CredentialStore, defaultCredentials } from "./credentials.js";
 import { Handshakes } from "./handshakes.js";
@@ -92,7 +93,7 @@ export class Core {
   constructor(options: MasksOptions) {
     this.options = options;
     this.privileges = new Privileges(options.privileges);
-    this.basePath = `/${(options.basePath ?? "/auth").replace(/^\/+|\/+$/g, "")}`;
+    this.basePath = `/${unslashed(options.basePath ?? "/auth")}`;
     this.scope = options.scope ?? DEFAULT_SCOPE;
     this.maxAge = options.maxAge ?? 14 * 24 * 3600;
     this.credentials =
@@ -322,7 +323,7 @@ export class Core {
   }
 
   metadataPath(visit: Visit): string {
-    const path = new URL(visit.resource).pathname.replace(/\/+$/, "");
+    const path = untrailed(new URL(visit.resource).pathname);
 
     return `${RESOURCE_PATH}${path}`;
   }
@@ -373,7 +374,7 @@ export class Core {
       );
     }
 
-    visit.issuerURL = issuer.replace(/\/+$/, "");
+    visit.issuerURL = untrailed(issuer);
     visit.resource = resource;
     visit.origin = parsed.origin;
     visit.secure = parsed.protocol === "https:";

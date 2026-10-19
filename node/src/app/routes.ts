@@ -3,6 +3,7 @@ import type { Token } from "../client.js";
 import { InvalidTokenError, MasksError, UnavailableError } from "../errors.js";
 import type { IdTokenClaims, LogoutToken } from "../idtoken.js";
 import { random } from "../key.js";
+import { untrailed } from "../slashes.js";
 import { avatarResponse } from "./avatar.js";
 import type { Core } from "./core.js";
 import {
@@ -55,7 +56,7 @@ export async function handle(
 
   if (path !== base && !path.startsWith(`${base}/`)) return undefined;
 
-  const route = path.slice(base.length).replace(/\/+$/, "") || "/";
+  const route = untrailed(path.slice(base.length)) || "/";
   const method = request.method.toUpperCase();
 
   try {

@@ -12,6 +12,7 @@ import { InvalidTokenError, UnavailableError } from "./errors.js";
 import type { Issuer, Tenant } from "./issuer.js";
 import { unverified } from "./jwt.js";
 import { MemoryReplayStore, type ReplayStore } from "./replay.js";
+import { untrailed } from "./slashes.js";
 
 const ACCESS_TOKEN_TYPE = "at+jwt";
 const PROOF_WINDOW = 60;
@@ -69,7 +70,10 @@ export class Verifier {
   ) {
     this.issuer = issuer;
     this.audience = Array.isArray(audience) ? audience : [audience];
-    this.publicURL = options.publicURL?.replace(/\/+$/, "");
+    this.publicURL =
+      options.publicURL === undefined
+        ? undefined
+        : untrailed(options.publicURL);
     this.replay = options.replay ?? new MemoryReplayStore();
     this.resourceMetadata = options.resourceMetadata;
   }

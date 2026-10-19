@@ -66,6 +66,7 @@ export interface ResourceMetadata {
 export type { Options } from "./http.js";
 
 import type { Options } from "./http.js";
+import { untrailed } from "./slashes.js";
 
 const ENDPOINTS = [
   "authorization_endpoint",
@@ -100,7 +101,7 @@ export class Issuer {
     issuer: string,
     options: Options = {},
   ): Promise<Issuer> {
-    const named = issuer.replace(/\/+$/, "");
+    const named = untrailed(issuer);
 
     check(named, options);
 
@@ -109,7 +110,7 @@ export class Issuer {
       `${named}${DISCOVERY_PATH}`,
     );
 
-    if (String(metadata.issuer ?? "").replace(/\/+$/, "") !== named) {
+    if (untrailed(String(metadata.issuer ?? "")) !== named) {
       throw new MasksError(
         "invalid_issuer",
         `${named} publishes a document naming ${JSON.stringify(metadata.issuer)}`,
@@ -247,7 +248,7 @@ export async function discoverResource(
   resource: string,
   options: Options = {},
 ): Promise<ResourceMetadata> {
-  const named = resource.replace(/\/+$/, "");
+  const named = untrailed(resource);
 
   check(named, options);
 
@@ -256,7 +257,7 @@ export async function discoverResource(
   const document = `${parsed.origin}${RESOURCE_PATH}${path}`;
   const found = await getJSON<ResourceMetadata>(options, document);
 
-  if (String(found.resource ?? "").replace(/\/+$/, "") !== named) {
+  if (untrailed(String(found.resource ?? "")) !== named) {
     throw new MasksError(
       "invalid_resource",
       `${named} publishes metadata naming ${JSON.stringify(found.resource)}`,

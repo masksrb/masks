@@ -13,6 +13,7 @@ import {
 } from "./app/requests.js";
 import { withCookies } from "./app/responses.js";
 import { ForbiddenError } from "./claims.js";
+import { untrailed } from "./slashes.js";
 
 export { PATH_HEADER };
 
@@ -130,7 +131,7 @@ export function masksNext(options: MasksNextOptions = {}): MasksNext {
       const guarded = protect.some((pattern) =>
         typeof pattern === "string"
           ? url.pathname === pattern ||
-            url.pathname.startsWith(`${pattern.replace(/\/+$/, "")}/`)
+            url.pathname.startsWith(`${untrailed(pattern)}/`)
           : pattern.test(url.pathname),
       );
 

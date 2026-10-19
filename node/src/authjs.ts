@@ -57,6 +57,7 @@ import { Handshake, originOf } from "./handshake.js";
 import type { LogoutToken } from "./idtoken.js";
 import type { Issuer } from "./issuer.js";
 import { random } from "./key.js";
+import { unslashed, untrailed } from "./slashes.js";
 
 type NextAuth = (
   config: (request: Request | undefined) => Promise<NextAuthConfig>,
@@ -213,7 +214,7 @@ export class MasksAuth {
       );
     }
 
-    return named.replace(/\/+$/, "");
+    return untrailed(named);
   }
 
   signInPath(
@@ -445,7 +446,7 @@ export class MasksAuth {
       return undefined;
     }
 
-    const route = url.pathname.slice(base.length).replace(/\/+$/, "") || "/";
+    const route = untrailed(url.pathname.slice(base.length)) || "/";
     const method = request.method.toUpperCase();
 
     try {
@@ -1391,7 +1392,7 @@ function sameSitePath(
 }
 
 function trim(path: string): string {
-  return `/${path.replace(/^\/+|\/+$/g, "")}`;
+  return `/${unslashed(path)}`;
 }
 
 function secure(request: Request): boolean {

@@ -3,6 +3,7 @@ import { MasksError } from "./errors.js";
 import type { Issuer } from "./issuer.js";
 import { random } from "./key.js";
 import type { Registration } from "./registration.js";
+import { untrailed } from "./slashes.js";
 
 export const HANDSHAKE_PATH = "/handshake";
 export const HANDSHAKE_GRANT_TYPES = ["authorization_code", "refresh_token"];
@@ -139,7 +140,7 @@ export class Handshake {
 
     const named = params.get("iss");
 
-    if (named && named.replace(/\/+$/, "") !== this.issuer.url) {
+    if (named && untrailed(named) !== this.issuer.url) {
       throw new MasksError(
         "invalid_issuer",
         `that came back from ${named}, and this app shakes hands with ${this.issuer.url}`,

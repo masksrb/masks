@@ -15,6 +15,7 @@ import {
 } from "./idtoken.js";
 import type { Issuer, Tenant } from "./issuer.js";
 import { base64url, type Key, random } from "./key.js";
+import { untrailed } from "./slashes.js";
 
 export type AuthMethod =
   | "client_secret_basic"
@@ -275,7 +276,7 @@ export class Client {
 
     const named = params.get("iss");
 
-    if (named !== null && named.replace(/\/+$/, "") !== this.issuer.url) {
+    if (named !== null && untrailed(named) !== this.issuer.url) {
       throw new MasksError(
         "invalid_issuer",
         `that sign-in came back from ${JSON.stringify(named)}`,
@@ -546,7 +547,7 @@ export class Client {
 
     if (
       held.iss !== undefined &&
-      String(held.iss).replace(/\/+$/, "") !== this.issuer.url
+      untrailed(String(held.iss)) !== this.issuer.url
     ) {
       throw new MasksError(
         "invalid_issuer",
@@ -605,7 +606,7 @@ export class Client {
 
     await this.#send(
       "DELETE",
-      `${this.issuer.endpoint("enrollment_endpoint").replace(/\/+$/, "")}/${encodeURIComponent(machineId)}`,
+      `${untrailed(this.issuer.endpoint("enrollment_endpoint"))}/${encodeURIComponent(machineId)}`,
       new URLSearchParams(),
       false,
     );
