@@ -26,7 +26,7 @@ es:
       area_yours: " Tú los recibes todos ahora."
       also: "%{name} también puede"
       details: "Detalles técnicos"
-      scopes: "Scopes"
+      scopes: "Alcances"
       client: "Credenciales"
       credentials:
         public: "Pública. No guarda ningún secreto."

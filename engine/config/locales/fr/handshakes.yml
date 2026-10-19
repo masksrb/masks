@@ -26,7 +26,7 @@ fr:
       area_yours: " Vous les recevez toutes dès maintenant."
       also: "%{name} peut aussi"
       details: "Détails techniques"
-      scopes: "Scopes"
+      scopes: "Portées"
       client: "Identifiants"
       credentials:
         public: "Publique. Elle ne détient aucun secret."

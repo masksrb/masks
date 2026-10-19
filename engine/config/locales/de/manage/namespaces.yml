@@ -1,7 +1,7 @@
 de:
   manage:
     namespaces:
-      title: "Namespaces"
+      title: "Namensräume"
       release_confirm: "%{name} freigeben? Der nächste Client, der ihn anfordert, erhält ihn, und die Scopes darunter bedeuten nicht mehr, was sie jetzt bedeuten."
       released: "%{name} kann wieder beansprucht werden."
       columns:

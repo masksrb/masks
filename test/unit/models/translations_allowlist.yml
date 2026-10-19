@@ -1,0 +1,82 @@
+everywhere:
+  - JSON
+  - HTML
+  - LDAP
+  - LDAPS
+  - SAML
+  - SMS
+  - ID
+  - "OpenID Connect"
+  - "OAuth 2.0"
+  - "SAML 2.0"
+  - "Entity ID"
+  - "Client ID"
+  - "Team ID"
+  - "Key ID"
+  - "Services ID"
+  - "name@example.com"
+  - Passkey
+  - Passkeys
+  - Realm
+  - URIs
+  - Tokens
+  - identicon
+  - "Port %{port}"
+  - "Port %{port}, LDAPS"
+  - "%{bits} bits"
+de:
+  - Code
+  - Name
+  - Details
+  - Scopes
+  - Client
+  - Clients
+  - Domain
+  - Domains
+  - Export
+  - Website
+  - Streams
+  - Branding
+  - Optional
+  - optional
+  - Rotation
+  - Subdomain
+  - Issuer
+  - Persistent
+  - Text
+  - Grants
+  - "In %{group}."
+  - "PAR optional."
+  - "%{label} (optional)"
+es:
+  - actor
+  - Actor
+  - General
+  - Roles
+  - "no"
+  - Endpoints
+  - "User agent"
+  - "%{count} actor"
+fr:
+  - Code
+  - Identification
+  - Configuration
+  - Confirmation
+  - Photo
+  - photo
+  - Sections
+  - Client
+  - Clients
+  - Secret
+  - Signature
+  - Messages
+  - Sessions
+  - Service
+  - Pages
+  - active
+  - code
+  - "User agent"
+  - "%{count} session"
+  - "%{count} sessions"
+  - "%{count} minute"
+  - "%{count} minutes"

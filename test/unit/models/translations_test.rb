@@ -45,6 +45,30 @@ module Masks
         end
       end
 
+      ALLOWLIST = YAML.load_file(File.expand_path("translations_allowlist.yml", __dir__))
+      TRANSLATED_BAR = 98.0
+
+      def allowed?(locale, value)
+        return true if value.gsub(PLACEHOLDER, "").gsub(/[[:punct:][:space:]]/, "").empty?
+
+        ALLOWLIST.fetch("everywhere").include?(value) || ALLOWLIST.fetch(locale, []).include?(value)
+      end
+
+      test "at least 98 percent of each language differs from English, allowing the words that are the same everywhere" do
+        english = held(:en).select { |_, value| value.is_a?(String) && value.strip.present? }
+
+        others.each do |locale|
+          translated = held(locale)
+          untranslated = english.select { |key, value| translated[key] == value && !allowed?(locale, value) }
+          share = 100.0 * (english.size - untranslated.size) / english.size
+
+          puts format("%<locale>s: %<share>.2f%% translated, %<left>d still English", locale: locale, share: share, left: untranslated.size)
+          untranslated.each { |key, value| puts "  #{key} = #{value.inspect}" }
+
+          assert_operator share, :>=, TRANSLATED_BAR, "#{locale} is #{share.round(2)}% translated; #{untranslated.size} values are still English"
+        end
+      end
+
       test "a dated string reads in the visitor's language" do
         I18n.with_locale(:fr) { assert_match "janvier", I18n.l(Date.new(2026, 1, 5), format: :long) }
         I18n.with_locale(:de) { assert_match "Januar", I18n.l(Date.new(2026, 1, 5), format: :long) }

@@ -173,7 +173,7 @@ fr:
         on_request: "Sur demande"
       uris:
         title: "URI"
-        acs: "Assertion consumer services"
+        acs: "Services consommateurs d'assertions"
         redirect: "Redirection"
         post_logout: "Redirection post-déconnexion"
         resources: "Ressources"

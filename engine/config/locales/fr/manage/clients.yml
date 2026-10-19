@@ -30,7 +30,7 @@ fr:
       metadata: "Ses métadonnées"
       read: "Les lire"
       entity_id: "Entity ID"
-      acs: "Assertion consumer services"
+      acs: "Services consommateurs d'assertions"
       certificate: "Certificat de signature, s’il signe ses requêtes"
       requests_signed: "Refuser les requêtes qu’il n’a pas signées"
       slo_url: "URL de déconnexion unique, s’il en a une"

@@ -77,7 +77,7 @@ fr:
         credentials: "Identifiants"
         services_id: "Services ID"
         client_id: "Client ID"
-        client_secret: "Client secret"
+        client_secret: "Secret du client"
         unchanged: "inchangé"
         team_id: "Team ID"
         key_id: "Key ID"
