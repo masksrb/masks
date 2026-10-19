@@ -10,6 +10,16 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/masksrb/masks/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/masksrb/masks/ci.yml?branch=main&label=CI" alt="CI"></a>
+  <a href="https://github.com/masksrb/masks/actions/workflows/conformance.yml"><img src="https://img.shields.io/github/actions/workflow/status/masksrb/masks/conformance.yml?branch=main&label=OpenID%20conformance" alt="OpenID conformance"></a>
+  <a href="https://github.com/masksrb/masks/pkgs/container/masks"><img src="https://img.shields.io/github/v/release/masksrb/masks?label=image" alt="Latest release"></a>
+  <a href="https://rubygems.org/gems/masks"><img src="https://img.shields.io/gem/dt/masks?label=masks%20gem" alt="masks gem downloads"></a>
+  <a href="https://www.npmjs.com/package/@masks/server"><img src="https://img.shields.io/npm/dm/%40masks%2Fserver?label=%40masks%2Fserver" alt="@masks/server downloads"></a>
+  <a href="https://pypi.org/project/masks-client/"><img src="https://img.shields.io/pypi/dm/masks-client?label=masks-client" alt="masks-client downloads"></a>
+  <a href="https://github.com/masksrb/masks/stargazers"><img src="https://img.shields.io/github/stars/masksrb/masks?style=flat" alt="Stars"></a>
+</p>
+
+<p align="center">
   <a href="https://masks.pages.dev/quickstart/"><b>Quickstart</b></a> ·
   <a href="https://masks.pages.dev">Documentation</a> ·
   <a href="https://masks.pages.dev/demo/">Demo</a> ·
@@ -35,6 +45,10 @@ The image is `ghcr.io/masksrb/masks`.
 | Browser    | [`@masks/client`](web/)                       | [Single-page apps](https://masks.pages.dev/reference/javascript/client/) |
 | Python     | [`masks-client`](python/)                     | [FastAPI, Django, Flask](https://masks.pages.dev/reference/python/)      |
 | Go         | [`github.com/masksrb/masks/go`](go/)          | [`net/http`](https://masks.pages.dev/reference/go/)                      |
+
+## Security
+
+Report a hole through [private vulnerability reporting](https://github.com/masksrb/masks/security/advisories/new). [SECURITY.md](SECURITY.md) says what counts and how fast masks answers.
 
 ## Contribute
 
