@@ -4,6 +4,7 @@ Masks::Server::Engine.routes.draw do
   get "/.well-known/jwks.json", to: "discovery#jwks"
   get "/.well-known/oauth-protected-resource(/*resource)", to: "discovery#resource"
   get "/.well-known/ssf-configuration", to: "signal_streams#configuration"
+  get "/.well-known/webfinger", to: "discovery#webfinger"
 
   scope "/ssf", controller: :signal_streams, defaults: { format: :json } do
     get "/streams", action: :show
