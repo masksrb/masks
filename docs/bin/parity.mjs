@@ -12,6 +12,7 @@ const BLOB = "https://github.com/masksrb/masks/blob/main";
 const { sdks, features } = JSON.parse(readFileSync(MANIFEST, "utf8"));
 
 const problems = [];
+const notes = [];
 
 function declared(file, name) {
   const forms = [`test "${name}"`, `def ${name}`, `test("${name}"`, `test(\`${name}\``, `func ${name}(`];
@@ -38,48 +39,81 @@ function prove(feature, sdk, cell) {
   return line;
 }
 
+function escape(text) {
+  return String(text)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("{", "&#123;")
+    .replaceAll("}", "&#125;");
+}
+
+function inline(text) {
+  return escape(text).replace(/`([^`]+)`/g, "<code>$1</code>");
+}
+
+function noted(note) {
+  let index = notes.indexOf(note);
+
+  if (index === -1) index = notes.push(note) - 1;
+
+  return index + 1;
+}
+
 let proven = 0;
 let claimed = 0;
 
 const rows = features.map((feature) => {
-  const name = feature.link ? `[${feature.name}](${feature.link})` : feature.name;
+  const name = feature.link ? `<a href="${escape(feature.link)}">${inline(feature.name)}</a>` : inline(feature.name);
 
   const cells = sdks.map((sdk) => {
     const cell = feature.cells[sdk.key];
 
     if (cell === undefined) {
       problems.push(`${feature.name} has no cell for ${sdk.label}`);
-      return "";
+      return "<td></td>";
     }
 
-    if (cell === "no") return "No";
+    if (cell === "no") return `<td class="no"><span title="${escape(`${sdk.label} does not do this`)}">–</span></td>`;
 
     claimed += 1;
 
-    if (cell.claimed) return "Unproven";
+    const mark = cell.note ? `<sup>${noted(cell.note)}</sup>` : "";
+
+    if (cell.claimed) return `<td class="unproven"><span title="Claimed, and no test proves it">?</span>${mark}</td>`;
 
     const line = prove(feature.name, sdk, cell);
 
-    if (!line) return "Unproven";
+    if (!line) return `<td class="unproven"><span title="Claimed, and no test proves it">?</span>${mark}</td>`;
 
     proven += 1;
 
-    return `[${cell.note ?? "Yes"}](${BLOB}/${cell.file}#L${line})`;
+    const title = escape(`${sdk.label}: proven by “${cell.test}” in ${cell.file}`);
+
+    return `<td class="yes"><a href="${BLOB}/${cell.file}#L${line}" title="${title}">✓</a>${mark}</td>`;
   });
 
-  return [name, ...cells];
+  return `<tr><th scope="row">${name}</th>${cells.join("")}</tr>`;
 });
 
-const header = ["", ...sdks.map((sdk) => sdk.label)];
-const widths = header.map((_, column) => Math.max(...[header, ...rows].map((row) => row[column].length), 3));
-const line = (row) => `| ${row.map((cell, column) => cell.padEnd(widths[column])).join(" | ")} |`;
+const head = sdks
+  .map((sdk) => `<th scope="col"><abbr title="${escape(sdk.label)}">${escape(sdk.short)}</abbr></th>`)
+  .join("");
 
 const table = [
-  line(header),
-  `| ${widths.map((width) => "-".repeat(width)).join(" | ")} |`,
-  ...rows.map(line),
-  "",
-  `${proven} of ${claimed} cells are proven by a test.`,
+  `<table class="parity">`,
+  `<thead><tr><th scope="col">What the SDK does</th>${head}</tr></thead>`,
+  `<tbody>`,
+  ...rows,
+  `</tbody>`,
+  `</table>`,
+  ``,
+  `<ol class="parity-notes">`,
+  ...notes.map((note) => `<li>${inline(note)}</li>`),
+  `</ol>`,
+  ``,
+  `<p class="parity-count">${proven} of ${claimed} cells are proven by a test. Each check mark opens the test.</p>`,
 ].join("\n");
 
 for (const problem of problems) console.error(problem);

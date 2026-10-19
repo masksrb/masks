@@ -458,6 +458,157 @@ table code {
   }
 }
 
+/* ---- The parity grid --------------------------------------------------- */
+
+/* Six SDKs across, one feature a row. A check mark is a link to the test. */
+.sl-markdown-content table.parity {
+  display: table;
+  width: 100%;
+  table-layout: fixed;
+  margin-block: 1.25rem 0.75rem;
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--pane);
+  overflow: hidden;
+}
+
+.sl-markdown-content .parity :is(th, td) {
+  padding: 0.6rem 0.25rem;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.sl-markdown-content .parity :is(th, td):first-child {
+  width: 30%;
+  padding-inline: 0.875rem 0.5rem;
+  text-align: start;
+}
+
+.sl-markdown-content .parity thead th {
+  padding-block: 0.7rem;
+  background: var(--gray-050);
+  border-bottom: 1px solid var(--gray-200);
+  font-size: 0.625rem;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  overflow-wrap: normal;
+}
+
+.sl-markdown-content .parity thead th:first-child {
+  color: var(--sl-color-gray-3);
+  letter-spacing: 0.06em;
+}
+
+.sl-markdown-content .parity abbr {
+  text-decoration: none;
+}
+
+.sl-markdown-content .parity tbody th {
+  font-size: var(--sl-text-sm);
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--sl-color-white);
+}
+
+.sl-markdown-content .parity tbody th a {
+  color: inherit;
+  text-decoration-color: var(--gray-400);
+}
+
+.sl-markdown-content .parity tbody tr:nth-child(even) :is(th, td) {
+  background: color-mix(in oklab, var(--gray-100) 55%, transparent);
+}
+
+.sl-markdown-content .parity tbody tr:hover :is(th, td) {
+  background: color-mix(in oklab, var(--glass-emerald) 7%, transparent);
+}
+
+.sl-markdown-content .parity td.yes a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.625rem;
+  height: 1.625rem;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--glass-emerald) 16%, transparent);
+  color: var(--glass-emerald);
+  font-weight: 700;
+  font-size: 0.875rem;
+  line-height: 1;
+  text-decoration: none;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.sl-markdown-content .parity td.yes a:hover,
+.sl-markdown-content .parity td.yes a:focus-visible {
+  background: var(--glass-emerald);
+  color: var(--gray-000);
+}
+
+.sl-markdown-content .parity td.no {
+  color: var(--gray-400);
+}
+
+.sl-markdown-content .parity td.unproven {
+  color: var(--glass-amber);
+  font-weight: 700;
+}
+
+.sl-markdown-content .parity sup {
+  margin-inline-start: 0.1rem;
+  font-size: 0.6rem;
+  font-weight: 700;
+  color: var(--brass);
+}
+
+.sl-markdown-content .parity-notes {
+  margin: 0;
+  padding-inline-start: 1.25rem;
+  font-size: var(--sl-text-sm);
+  line-height: 1.5;
+  color: var(--sl-color-gray-2);
+}
+
+.sl-markdown-content .parity-notes li {
+  margin-block: 0.2rem;
+}
+
+.sl-markdown-content .parity-notes li::marker {
+  color: var(--brass);
+  font-weight: 700;
+  font-size: 0.75rem;
+}
+
+.sl-markdown-content .parity-count {
+  margin-block: 0.75rem 0;
+  font-size: var(--sl-text-sm);
+  color: var(--sl-color-gray-3);
+}
+
+@media (max-width: 40rem) {
+  .sl-markdown-content .parity :is(th, td):first-child {
+    width: 36%;
+  }
+
+  .sl-markdown-content .parity thead th {
+    vertical-align: bottom;
+  }
+
+  .sl-markdown-content .parity thead th:not(:first-child) {
+    height: 5.75rem;
+    padding-block: 0.75rem 0.6rem;
+  }
+
+  .sl-markdown-content .parity thead th:not(:first-child) abbr {
+    display: inline-block;
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    line-height: 1;
+  }
+}
+
 /* ---- The explorer ------------------------------------------------------ */
 
 /* GraphiQL takes its theme from nine HSL triples. Handing it the rose palette
